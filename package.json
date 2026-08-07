@@ -14,8 +14,12 @@
     "@lynx-js/lynx-ui-button": "^3.135.0",
     "@lynx-js/motion": "^0.0.5",
     "@lynx-js/react": "0.123.2",
+    "@tanstack/query-core": "^5.101.4",
+    "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-router": "^1.170.0",
-    "url-search-params-polyfill": "^8.2.5"
+    "url-search-params-polyfill": "^8.2.5",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@lynx-js/preact-devtools": "5.0.1-20260716151326-abdb87c",

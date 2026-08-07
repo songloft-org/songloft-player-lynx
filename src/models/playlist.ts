@@ -1,0 +1,88 @@
+import { z } from 'zod'
+
+import { makeParsers, nowIso } from './_shared.js'
+
+/**
+ * Playlist model. snake_case wire → camelCase domain. The `labels` array
+ * carries `built_in` / `auto_created` / `hidden` markers; the derived booleans
+ * `isBuiltIn` / `isAutoCreated` / `isHidden` (Flutter getters) are computed at
+ * parse time. Equality is by `id` (`playlistEquals`).
+ */
+export const playlistSchema = z
+  .object({
+    id: z.number(),
+    type: z.enum(['normal', 'radio']).catch('normal'),
+    name: z.string().default(''),
+    description: z.string().nullish(),
+    cover_url: z.string().nullish(),
+    labels: z.array(z.string()).default([]),
+    song_count: z.number().default(0),
+    created_at: z.string().nullish(),
+    updated_at: z.string().nullish(),
+  })
+  .transform((p) => ({
+    id: p.id,
+    type: p.type,
+    name: p.name,
+    description: p.description ?? undefined,
+    coverUrl: p.cover_url ?? undefined,
+    labels: p.labels,
+    songCount: p.song_count,
+    createdAt: p.created_at ?? nowIso(),
+    updatedAt: p.updated_at ?? nowIso(),
+    isBuiltIn: p.labels.includes('built_in'),
+    isAutoCreated: p.labels.includes('auto_created'),
+    isHidden: p.labels.includes('hidden'),
+  }))
+
+export type Playlist = z.output<typeof playlistSchema>
+
+export interface PlaylistJson {
+  id: number
+  type: Playlist['type']
+  name: string
+  description: string | null
+  cover_url: string | null
+  labels: string[]
+  song_count: number
+  created_at: string
+  updated_at: string
+}
+
+export function playlistToJson(playlist: Playlist): PlaylistJson {
+  return {
+    id: playlist.id,
+    type: playlist.type,
+    name: playlist.name,
+    description: playlist.description ?? null,
+    cover_url: playlist.coverUrl ?? null,
+    labels: playlist.labels,
+    song_count: playlist.songCount,
+    created_at: playlist.createdAt,
+    updated_at: playlist.updatedAt,
+  }
+}
+
+export function playlistEquals(a: Playlist, b: Playlist): boolean {
+  return a.id === b.id
+}
+
+const playlistParsers = makeParsers(playlistSchema)
+export const parsePlaylist = playlistParsers.parse
+export const safeParsePlaylist = playlistParsers.safeParse
+
+export const playlistListResponseSchema = z
+  .object({
+    playlists: z.array(playlistSchema).default([]),
+    total: z.number().nullish(),
+  })
+  .transform((r) => ({
+    playlists: r.playlists,
+    total: r.total && r.total > 0 ? r.total : r.playlists.length,
+  }))
+
+export type PlaylistListResponse = z.output<typeof playlistListResponseSchema>
+
+const playlistListParsers = makeParsers(playlistListResponseSchema)
+export const parsePlaylistListResponse = playlistListParsers.parse
+export const safeParsePlaylistListResponse = playlistListParsers.safeParse
