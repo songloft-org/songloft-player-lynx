@@ -9,8 +9,10 @@ dist/
 # has its own .git and is NOT part of this project)
 songloft-player/
 
-# Local Claude Code settings (machine-specific)
+# Claude Code local state (machine-specific): settings + session memory/transcripts.
+# NOTE: .claude/skills/ (symlinks into .agents/skills) and CLAUDE.md ARE tracked.
 .claude/settings.local.json
+.claude/projects/
 
 # Logs / OS / editor
 *.log
