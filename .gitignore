@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.rspeedy/
+
+# Read-only Flutter reference snapshot (upstream repo songloft-org/songloft-player;
+# has its own .git and is NOT part of this project)
+songloft-player/
+
+# Local Claude Code settings (machine-specific)
+.claude/settings.local.json
+
+# Logs / OS / editor
+*.log
+.DS_Store
+coverage/
+*.tsbuildinfo
+
+# Env
+.env
+.env.*
+!.env.example

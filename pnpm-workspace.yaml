@@ -1,0 +1,2 @@
+patchedDependencies:
+  '@tanstack/router-core@1.171.18': patches/@tanstack__router-core@1.171.18.patch

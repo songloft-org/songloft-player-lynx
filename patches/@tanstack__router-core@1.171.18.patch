@@ -1,0 +1,13 @@
+diff --git a/dist/esm/router.js b/dist/esm/router.js
+index f21f6005431e4def69d19017c75dafbde634bcec..7eb38a003a6bd595ce21946a4880a1fe16f61a63 100644
+--- a/dist/esm/router.js
++++ b/dist/esm/router.js
+@@ -635,7 +635,7 @@ var RouterCore = class {
+ 			parseSearch: options.parseSearch ?? defaultParseSearch,
+ 			protocolAllowlist: options.protocolAllowlist ?? DEFAULT_PROTOCOL_ALLOWLIST
+ 		});
+-		if (!(isServer ?? typeof document === "undefined")) self.__TSR_ROUTER__ = this;
++		if (!(isServer ?? typeof document === "undefined") && typeof self !== "undefined") self.__TSR_ROUTER__ = this;
+ 	}
+ 	isShell() {
+ 		return !!this.options.isShell;

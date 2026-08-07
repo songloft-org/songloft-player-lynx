@@ -1,0 +1,63 @@
+/*
+ * LUNA-style design tokens exposed as CSS variables.
+ *
+ * These follow the semantic-token naming used by lynx-ui's Luna themes
+ * (surfaces / content / actions / structure), so screens can be styled against
+ * `var(--paper)`, `var(--content)`, `var(--primary)`, etc. Batch 1 ships a
+ * single dark theme; additional themes can be added as sibling selector blocks.
+ */
+
+.theme-root {
+  /* surfaces */
+  --canvas: #0d0d12;
+  --paper: #16161d;
+  --paper-clear: rgba(22, 22, 29, 0.72);
+
+  /* content (text) */
+  --content: #f5f5f7;
+  --content-2: #c7c7d1;
+  --content-muted: #8b8b98;
+
+  /* actions */
+  --primary: #7c5cff;
+  --primary-2: #6a49f2;
+  --primary-content: #ffffff;
+
+  /* structure */
+  --neutral-faint: #24242e;
+  --line: #2c2c38;
+  --rule: #3a3a48;
+
+  /* overlays */
+  --backdrop: rgba(0, 0, 0, 0.55);
+  --backdrop-heavy: rgba(0, 0, 0, 0.78);
+
+  /* spacing scale (px) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* type scale (px) */
+  --font-xs: 12px;
+  --font-sm: 14px;
+  --font-md: 16px;
+  --font-lg: 20px;
+  --font-xl: 28px;
+  --font-2xl: 36px;
+
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background-color: var(--canvas);
+  color: var(--content);
+}
