@@ -78,17 +78,49 @@ test('built bundle contains no unguarded __TSR_ROUTER__ write', () => {
     return
   }
   const data = readFileSync(bundlePath, 'latin1')
-  const writes = [...data.matchAll(/(.{24})__TSR_ROUTER__\s*=\s*this/g)]
-  // The devtools write must exist (proves we're inspecting the right code) and
-  // every occurrence must be short-circuit-guarded by a `typeof`/`void 0!==`
-  // check on the receiver, so a self-less realm never dereferences it.
-  expect(writes.length).toBeGreaterThan(0)
+  // The .lynx.bundle is a container: minified executable code PLUS an embedded
+  // unminified debug-source section (doc-comments + the router's error-message
+  // string literal both mention `self.__TSR_ROUTER__ = this`). We only care that
+  // no *executable, unguarded* write survives — the guarded/patched write may
+  // even be DCE'd (nothing reads it) and the device has confirmed no crash.
+  const writes = [...data.matchAll(/__TSR_ROUTER__\s*=\s*this/g)]
   for (const w of writes) {
-    const before = w[1]!
+    const at = w.index ?? 0
+    const before = data.slice(Math.max(0, at - 50), at)
+    // Guarded executable write (minified `void 0!==X&&(` / unminified `typeof self`).
+    const guarded = /typeof \w+ ?!==|void 0!==\w+&&\(|!==void 0&&\(/.test(before)
+    // Non-executable: a doc-comment (`//`, `/*`, ` * `, backtick) or the
+    // router's `evaluating '…'` error-message string literal.
+    const nonExecutable = /\/\/|\/\*|\*\s|`|evaluating ['"]/.test(before)
     expect(
-      /void 0!==\w+&&\(|!==void 0&&\(|typeof \w+/.test(before),
-      `unguarded __TSR_ROUTER__ write found near: ${before}`,
+      guarded || nonExecutable,
+      `unguarded executable __TSR_ROUTER__ write near: ${JSON.stringify(before)}`,
     ).toBe(true)
+  }
+})
+
+/**
+ * FAITHFUL CHECK 3 — the `AbortController` polyfill (lynx.config banner) lands in
+ * the emitted bundle and is DEFINED BEFORE any `new AbortController` use.
+ * TanStack Router's `loadClientRoute` + Query's fetch path do `new AbortController()`
+ * unconditionally; Lynx's engine has none → `ReferenceError` on device without this.
+ */
+test('built bundle defines AbortController before it is used', () => {
+  const bundlePath = path.resolve(__dirname, '../../dist/main.lynx.bundle')
+  if (!existsSync(bundlePath)) {
+    console.warn('[skip] dist/main.lynx.bundle not built; run `pnpm run build`')
+    return
+  }
+  const data = readFileSync(bundlePath, 'latin1')
+  // Polyfill assignment (minified: `<g>.AbortController=<C>`), and its first use.
+  const defineAt = data.search(/\.AbortController\s*=/)
+  const firstUseAt = data.search(/new\s+AbortController/)
+  expect(defineAt, 'AbortController polyfill assignment missing from bundle').toBeGreaterThanOrEqual(0)
+  if (firstUseAt >= 0) {
+    expect(
+      defineAt,
+      'AbortController must be defined before the first `new AbortController`',
+    ).toBeLessThan(firstUseAt)
   }
 })
 

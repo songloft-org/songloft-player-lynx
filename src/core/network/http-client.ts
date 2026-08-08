@@ -45,10 +45,16 @@ type FetchLike = (
  */
 export function createFetchTransport(fetchImpl?: FetchLike): Transport {
   return async (req) => {
-    const f = fetchImpl ?? (globalThis as { fetch?: FetchLike }).fetch
+    // Lynx exposes `fetch` as a BARE global (host-provided HTTP service), NOT as
+    // a `globalThis.fetch` property — same shape as `self`. Resolve the bare
+    // binding first (guarded by `typeof` so it never throws when truly absent),
+    // then fall back to `globalThis.fetch` (web/node), then the injected impl.
+    const bare: FetchLike | undefined =
+      typeof fetch !== 'undefined' ? (fetch as unknown as FetchLike) : undefined
+    const f = fetchImpl ?? bare ?? (globalThis as { fetch?: FetchLike }).fetch
     if (typeof f !== 'function') {
       throw new Error(
-        '[http] no fetch available — 待接 Lynx fetch（注入 Transport 或提供 globalThis.fetch）',
+        '[http] no fetch available — 待接 Lynx fetch（注入 Transport 或提供宿主 fetch）',
       )
     }
     const res = await f(req.url, {

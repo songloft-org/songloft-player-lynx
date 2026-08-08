@@ -32,6 +32,9 @@ Lynx 不是浏览器：**无 `window` / `document` / `self`**，无 DOM，双线
 
 - 引入任何第三方库前，警惕它访问裸 `self`/`window`/`document`/`navigator`——真机会崩，而本机 `build`/`tsc`/vitest 都可能测不到。
 - **`globalThis.self = globalThis` 兜底在 Lynx BTS 里对裸 `self` 无效**（BTS 裸 `self` 是独立绑定；node:vm/jsdom 会 fallthrough 因此本机测试会骗人）。正确做法：**优先 patch 掉该访问**（`typeof x` 守卫或改走 `globalThis`），而非注入全局。范例：`patches/@tanstack__router-core@*.patch`。
+- **Lynx 宿主提供的全局是「裸全局」而非 `globalThis.X`**：`fetch`（宿主 HTTP service，Android/iOS 2.18+）、`self` 等要用**裸标识符 + `typeof` 守卫**读取（`typeof fetch !== 'undefined' ? fetch : …`），别只查 `globalThis.fetch`（Lynx 上为 undefined）。范例：`src/core/network/http-client.ts`。
+- **缺失的「未声明」全局**（如 `AbortController`，Lynx 引擎无、读裸标识符抛 `ReferenceError`）用 **`globalThis.X = …` polyfill 有效**（未声明名的裸读会 fallthrough 到全局对象属性）——注入点是 `lynx.config.ts` 的 raw banner（覆盖 main-thread + background 两个 bundle、最先执行）。`AbortController` 已如此处理（TanStack Router/Query 都会 `new AbortController()`）。
+- **`dist/main.lynx.bundle` 是容器**：内含压缩可执行码 **+ 未压缩调试源段**（注释、错误消息字符串都会出现）。对产物做 grep 校验时要排除注释/字符串误匹配（见 `background-bundle-self.test.ts`）。
 - lynx-ui **按组件包导入**（如 `@lynx-js/lynx-ui-button`），勿用桶入口 `@lynx-js/lynx-ui`（桶入口会 eager 加载全部子包、污染测试环境）。
 
 ## 4. 分批工作流

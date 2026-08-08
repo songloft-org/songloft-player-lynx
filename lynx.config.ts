@@ -28,6 +28,32 @@ import { pluginTypeCheck } from '@rsbuild/plugin-type-check'
 const GLOBAL_SELF_BANNER =
   'globalThis.self=globalThis.self||globalThis;globalThis.window=globalThis.window||globalThis;'
 
+/**
+ * Lynx's engine provides NO `AbortController`/`AbortSignal` (a WHATWG API, not
+ * ECMAScript). TanStack Router's `loadClientRoute` and TanStack Query's fetch
+ * path both do `new AbortController()` unconditionally → on device this throws
+ * `ReferenceError: AbortController is not defined` (seen on the main thread
+ * during `checkAuth` → route load). Unlike `self` (a declared-but-undefined host
+ * binding), `AbortController` is *undeclared*, so defining `globalThis.AbortController`
+ * makes the bare reference resolve. Inject a minimal, existence-guarded polyfill
+ * as a raw banner so it exists on EVERY chunk (main-thread + background) before
+ * any router/query code runs. Real engines that already have it are untouched.
+ */
+const GLOBAL_ABORT_POLYFILL =
+  '(function(g){if(typeof g.AbortController!=="undefined")return;' +
+  'function S(){this.aborted=false;this.reason=undefined;this._l=[];}' +
+  'S.prototype.addEventListener=function(t,c){if(t==="abort")this._l.push(c);};' +
+  'S.prototype.removeEventListener=function(t,c){if(t==="abort")this._l=this._l.filter(function(f){return f!==c;});};' +
+  'S.prototype.dispatchEvent=function(e){var l=this._l.slice();for(var i=0;i<l.length;i++){try{l[i].call(this,e);}catch(_){}}' +
+  'if(typeof this.onabort==="function"){try{this.onabort(e);}catch(_){}}return true;};' +
+  'S.prototype.throwIfAborted=function(){if(this.aborted)throw this.reason;};' +
+  'function C(){this.signal=new S();}' +
+  'C.prototype.abort=function(r){var s=this.signal;if(s.aborted)return;s.aborted=true;' +
+  's.reason=r!==undefined?r:new Error("Aborted");s.dispatchEvent({type:"abort"});};' +
+  'g.AbortController=C;g.AbortSignal=S;})(globalThis);'
+
+const GLOBAL_BOOTSTRAP_BANNER = GLOBAL_SELF_BANNER + GLOBAL_ABORT_POLYFILL
+
 export default defineConfig({
   source: {
     alias: {
@@ -45,7 +71,7 @@ export default defineConfig({
     rspack: (_config, { appendPlugins }) => {
       appendPlugins(
         new rspack.BannerPlugin({
-          banner: GLOBAL_SELF_BANNER,
+          banner: GLOBAL_BOOTSTRAP_BANNER,
           raw: true,
           // JS chunks only — a raw JS banner must not be injected into CSS
           // assets (it would break the CSS minifier).
