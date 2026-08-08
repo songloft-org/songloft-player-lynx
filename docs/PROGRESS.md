@@ -13,8 +13,8 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 |---|---|---|---|---|
 | 1 | 脚手架 + 路由壳 + 主题地基 | ✅ 完成 | build/tsc/vitest 绿 | ✅ 已扫码通过 |
 | 2 | 核心基础设施（models/网络/存储/Query/Zustand）| ✅ 完成 | build/tsc/vitest 绿（53 测试）| — 纯基建，无 UI，免 |
-| 3 | auth feature（登录页 + 鉴权守卫 + token 持久化）| ✅ 完成（本机）| build/tsc/vitest 绿（69 测试）| ⏳ 待扫码 |
-| 4 | library feature（列表 + 分页）| ⛔ 未开始 | | |
+| 3 | auth feature（登录页 + 鉴权守卫 + token 持久化）| ✅ 完成 | build/tsc/vitest 绿（70 测试）| ✅ 真机登录通（admin/admin + LAN IP → 跳主界面）|
+| 4 | library feature（列表 + 分页）| ⏳ 进行中 | | |
 | 5 | player feature + TS mock 音频 | ⛔ 未开始 | | |
 | 后续 | playlist/home/settings → 真原生模块 → Lynxtron 桌面 → jsplugin/webview → DLNA → i18n → CI | ⛔ 未开始（真机/桌面绑定，本机不能自动验收）| | |
 
