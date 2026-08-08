@@ -23,6 +23,10 @@
   --primary-2: #6a49f2;
   --primary-content: #ffffff;
 
+  /* feedback */
+  --danger: #ff6b6b;
+  --danger-content: #ffffff;
+
   /* structure */
   --neutral-faint: #24242e;
   --line: #2c2c38;

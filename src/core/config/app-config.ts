@@ -28,6 +28,18 @@ export const defaultJsonHeaders: Readonly<Record<string, string>> = {
 
 const DEFAULT_BASE_URL = 'http://localhost:58091'
 
+/**
+ * Deployment mode, ported from the Flutter `AppConfig.deployMode`:
+ * - `standalone` — front/back split; the login page shows the API-address field
+ *   and the insecure-TLS toggle.
+ * - `embedded`   — bundled with a same-origin backend; those controls are hidden.
+ *
+ * On Lynx there is no compile-time `--dart-define`, so this is a runtime field
+ * defaulting to `standalone` (the dev/default posture). A future embedded build
+ * can flip it during bootstrap.
+ */
+export type DeployMode = 'standalone' | 'embedded'
+
 class AppConfigState {
   /** Identity base URL (what the user configured / the entry origin). */
   baseUrl: string = DEFAULT_BASE_URL
@@ -35,7 +47,24 @@ class AppConfigState {
   /** Path prefix for embedded sub-path deploys; empty for standalone. */
   basePath: string = ''
 
+  /** Deployment mode; drives which login-page controls are shown. */
+  deployMode: DeployMode = 'standalone'
+
+  /**
+   * User opt-in to skip TLS certificate validation (self-signed servers).
+   *
+   * ⚠️ Currently persisted + surfaced only. The actual TLS relaxation is a
+   * native/Web security-model concern (the Lynx `fetch` binding is undefined),
+   * so toggling this is a **no-op at the transport layer** for now. See PROGRESS.
+   */
+  insecureTls: boolean = false
+
   private _resolvedBaseUrlOverride: string | null = null
+
+  /** `true` when bundled with a same-origin backend (hides API-address UI). */
+  get isEmbedded(): boolean {
+    return this.deployMode === 'embedded'
+  }
 
   /**
    * The base URL network requests actually hit. Falls back to `baseUrl`; on
@@ -56,6 +85,8 @@ class AppConfigState {
   reset(): void {
     this.baseUrl = DEFAULT_BASE_URL
     this.basePath = ''
+    this.deployMode = 'standalone'
+    this.insecureTls = false
     this._resolvedBaseUrlOverride = null
   }
 }

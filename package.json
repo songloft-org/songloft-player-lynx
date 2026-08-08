@@ -12,6 +12,8 @@
   "dependencies": {
     "@lynx-js/lynx-ui": "^3.135.0",
     "@lynx-js/lynx-ui-button": "^3.135.0",
+    "@lynx-js/lynx-ui-input": "^3.135.0",
+    "@lynx-js/lynx-ui-switch": "^3.135.0",
     "@lynx-js/motion": "^0.0.5",
     "@lynx-js/react": "0.123.2",
     "@tanstack/query-core": "^5.101.4",

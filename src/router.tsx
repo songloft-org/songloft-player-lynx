@@ -4,14 +4,16 @@ import {
   createRoute,
   createRouter,
   Outlet,
+  redirect,
 } from '@tanstack/react-router'
 
 import { ensureRouterEnv } from './shims/router-env.js'
 import { ShellLayout } from './shared/layouts/ShellLayout.js'
 import { ThemeProvider } from './shared/theme/ThemeProvider.js'
+import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
+import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { LibraryPage } from './routes/LibraryPage.js'
 import { ListPage } from './routes/ListPage.js'
-import { LoginPage } from './routes/LoginPage.js'
 import { PlayerPage } from './routes/PlayerPage.js'
 import { SettingsPage } from './routes/SettingsPage.js'
 
@@ -21,6 +23,17 @@ import { SettingsPage } from './routes/SettingsPage.js'
  * later migration to file-based routing stays mechanical.
  */
 const rootRoute = createRootRoute({
+  // Auth guard: runs on every navigation before the matched route loads. The
+  // decision is a pure function (`evaluateAuthGuard`) reading the *vanilla*
+  // auth store (no React) — `unknown` never redirects, so the pre-`checkAuth`
+  // mount is not wrongly kicked. Mirrors the Flutter GoRouter `redirect`.
+  beforeLoad: ({ location }) => {
+    const target = evaluateAuthGuard(
+      useAuthStore.getState().status,
+      location.pathname,
+    )
+    if (target) throw redirect({ to: target })
+  },
   component: () => (
     <ThemeProvider>
       <Outlet />

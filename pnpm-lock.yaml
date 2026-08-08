@@ -19,6 +19,12 @@ importers:
       '@lynx-js/lynx-ui-button':
         specifier: ^3.135.0
         version: 3.135.4(@lynx-js/react@0.123.2(@lynx-js/types@4.0.0)(@types/react@19.2.18))(@lynx-js/types@4.0.0)(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@lynx-js/lynx-ui-input':
+        specifier: ^3.135.0
+        version: 3.135.4(@lynx-js/react@0.123.2(@lynx-js/types@4.0.0)(@types/react@19.2.18))(@lynx-js/types@4.0.0)(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@lynx-js/lynx-ui-switch':
+        specifier: ^3.135.0
+        version: 3.135.4(@lynx-js/react@0.123.2(@lynx-js/types@4.0.0)(@types/react@19.2.18))(@lynx-js/types@4.0.0)(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@lynx-js/motion':
         specifier: ^0.0.5
         version: 0.0.5(@lynx-js/react@0.123.2(@lynx-js/types@4.0.0)(@types/react@19.2.18))(@lynx-js/types@4.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

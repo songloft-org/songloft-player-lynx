@@ -1,7 +1,7 @@
 import '../shims/router-env.js'
 
 import '@testing-library/jest-dom'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import {
   act,
   fireEvent,
@@ -12,6 +12,27 @@ import { RouterProvider } from '@tanstack/react-router'
 
 import { App } from '../App.js'
 import { createAppRouter, router } from '../router.js'
+
+// Rendering `/login` (via <App/> or the router) pulls in facilities the
+// ReactLynx Vitest env cannot run — the lynx-ui native leaves `Input`/`Switch`
+// and the zustand `useAuthStore` subscription (`useSyncExternalStore`). Left
+// real, any one crashes the shared snapshot tree (`isListHolder`/`parentNode`)
+// and poisons later tests. Mock all three to plain stand-ins (shapes shared via
+// `_render-mocks`); the real components + store are used in build/dev/on-device.
+// See `_render-mocks.tsx` for the full rationale.
+vi.mock('@lynx-js/lynx-ui-input', async () =>
+  (await import('./_render-mocks.js')).mockLynxUiInput(),
+)
+vi.mock('@lynx-js/lynx-ui-switch', async () =>
+  (await import('./_render-mocks.js')).mockLynxUiSwitch(),
+)
+vi.mock('../features/auth/store/index.js', async () => {
+  const actual = await vi.importActual<
+    typeof import('../features/auth/store/index.js')
+  >('../features/auth/store/index.js')
+  const { makeAuthStoreMock } = await import('./_render-mocks.js')
+  return makeAuthStoreMock(actual)
+})
 
 /**
  * Renders a fresh app router seeded at `entry` (memory history) and returns the
@@ -45,27 +66,22 @@ test('renders the App at the initial /login route', async () => {
   expect(await findByText('Sign in to continue')).toBeInTheDocument()
 })
 
-test('navigates login -> list -> player via the router', async () => {
-  const appRouter = createAppRouter(['/login'])
+test('drives a real bindtap on the list screen into the player route', async () => {
+  // The auth store is still `unknown` here (no `checkAuth`), so the guard lets
+  // `/` render. The login button now triggers `authStore.login()` (network), so
+  // the bindtap -> router proof moves to the list screen's "Open player" button.
+  const appRouter = createAppRouter(['/'])
   await act(async () => {
     await appRouter.load()
   })
   render(<RouterProvider router={appRouter as never} />)
   const { getByText } = getQueriesForElement(elementTree.root!)
 
-  // Start on /login.
-  expect(appRouter.state.location.pathname).toBe('/login')
-
-  // Hop 1 (login -> list): driven by a real bindtap on the login action,
-  // proving the Link/navigate -> bindtap mapping reaches the router.
-  await act(async () => {
-    fireEvent.tap(getByText('Log in'))
-  })
   expect(appRouter.state.location.pathname).toBe('/')
 
-  // Hop 2 (list -> player).
+  // Real bindtap on the lynx-ui Button, proving onClick -> navigate -> router.
   await act(async () => {
-    await appRouter.navigate({ to: '/player' })
+    fireEvent.tap(getByText('Open player'))
   })
   expect(appRouter.state.location.pathname).toBe('/player')
 })

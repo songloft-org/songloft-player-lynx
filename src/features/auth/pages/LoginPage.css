@@ -1,0 +1,132 @@
+.login {
+  padding: var(--space-6) var(--space-5);
+}
+
+.login__card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 400px;
+  padding: var(--space-6) var(--space-5);
+  border-radius: var(--radius-lg);
+  background-color: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.login__title {
+  color: var(--content);
+  font-size: var(--font-xl);
+  font-weight: bold;
+  margin-bottom: var(--space-1);
+}
+
+.login__subtitle {
+  color: var(--content-muted);
+  font-size: var(--font-md);
+  margin-bottom: var(--space-5);
+}
+
+.login__field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--space-4);
+}
+
+.login__label {
+  color: var(--content-2);
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-2);
+}
+
+.login__input {
+  height: 44px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: var(--neutral-faint);
+  border: 1px solid var(--line);
+  color: var(--content);
+  font-size: var(--font-md);
+}
+
+.login__toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: var(--space-3);
+}
+
+.login__switch-track {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 44px;
+  height: 26px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background-color: var(--neutral-faint);
+  border: 1px solid var(--line);
+}
+
+.login__switch-track.ui-checked {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  justify-content: flex-end;
+}
+
+.login__switch-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background-color: var(--content);
+}
+
+.login__switch.ui-active {
+  opacity: 0.85;
+}
+
+.login__toggle-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin-left: var(--space-3);
+}
+
+.login__toggle-title {
+  color: var(--content);
+  font-size: var(--font-sm);
+}
+
+.login__toggle-subtitle {
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+}
+
+.login__error {
+  color: var(--danger);
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-3);
+}
+
+.login__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  margin-top: var(--space-2);
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.login__button--active {
+  background-color: var(--primary-2);
+}
+
+.login__button--disabled {
+  opacity: 0.5;
+}
+
+.login__button-text {
+  color: var(--primary-content);
+  font-size: var(--font-md);
+  font-weight: bold;
+}
