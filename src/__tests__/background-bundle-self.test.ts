@@ -201,6 +201,10 @@ function runInLynxLikeRealm(src: string): string | null {
   sandbox.self = undefined
   sandbox.window = undefined
   sandbox.document = undefined
+  // Lynx DOES provide timers (its clearTimeout is strict about Number args,
+  // which our router-core patch guards). Provide standard ones here.
+  sandbox.setTimeout = setTimeout
+  sandbox.clearTimeout = clearTimeout
   const react = makeReactStub()
   sandbox.require = () => react
   vm.createContext(sandbox)

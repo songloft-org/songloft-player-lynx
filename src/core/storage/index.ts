@@ -13,10 +13,17 @@ export { createMemoryStorage } from './memory-storage.js'
 export { createWebStorage } from './web-storage.js'
 export { createNativeStorage } from './native-storage.js'
 
+let warnedInterimStorage = false
+
 /**
  * Pick a `SongloftStorage` implementation by capability probe:
  * - a web-like realm (has `localStorage`) → web storage;
- * - otherwise → the native stub (throws until the JSB binding lands).
+ * - otherwise (Lynx runtime) → **in-memory** storage as an INTERIM (in-session,
+ *   NON-persistent — tokens are lost on app restart) so the app stays usable.
+ *
+ * The persistent native SongloftStorage (JSB) is a later batch; `createNativeStorage`
+ * is kept for explicit use once that binding lands (wire it in here then). We do
+ * NOT throw on Lynx anymore — a throwing stub blocked login on device.
  *
  * Pass an explicit `impl` to bypass detection (tests inject `createMemoryStorage()`).
  */
@@ -24,7 +31,15 @@ export function createSongloftStorage(impl?: SongloftStorage): SongloftStorage {
   if (impl) return impl
   const hasLocalStorage =
     typeof (globalThis as { localStorage?: unknown }).localStorage !== 'undefined'
-  return hasLocalStorage ? createWebStorage() : createNativeStorage()
+  if (hasLocalStorage) return createWebStorage()
+  if (!warnedInterimStorage) {
+    warnedInterimStorage = true
+    console.warn(
+      '[SongloftStorage] no localStorage; using in-memory storage (non-persistent) ' +
+        'until the native JSB module lands — sessions do not survive app restart',
+    )
+  }
+  return createMemoryStorage()
 }
 
 let singleton: SongloftStorage | null = null

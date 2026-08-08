@@ -1,3 +1,72 @@
+diff --git a/dist/esm/load-client.js b/dist/esm/load-client.js
+index e9bc451f7a9bdde536aa14de4265fb6f5801963a..56deb3e7f7cd2c9cd3e260c44b72ac54d0efbee5 100644
+--- a/dist/esm/load-client.js
++++ b/dist/esm/load-client.js
+@@ -2,6 +2,10 @@ import { isNotFound } from "./not-found.js";
+ import { isRedirect } from "./redirect.js";
+ import { hydrateSsrMatchId } from "./ssr/ssr-match-id.js";
+ import { getLocationChangeInfo, runRouteLifecycle } from "./router.js";
++// Lynx patch: clearTimeout throws "param 0 should be Number" on non-number args
++// (browsers/node treat clearTimeout(undefined) as a no-op). Guard it.
++const __realClearTimeout = typeof clearTimeout !== "undefined" ? clearTimeout : void 0;
++const __safeClearTimeout = (id) => { if (typeof id === "number" && __realClearTimeout) __realClearTimeout(id); };
+ //#region src/load-client.ts
+ function replaceRouteChunk(route, lazyFn) {
+ 	route.lazyFn = lazyFn ?? route.lazyFn;
+@@ -671,7 +675,7 @@ function offerPending(router, tx) {
+ 		session[0] = tx;
+ 		tookOver = true;
+ 	} else {
+-		clearTimeout(session?.[3]);
++		__safeClearTimeout(session?.[3]);
+ 		router._pending = session = void 0;
+ 	}
+ 	const config = pendingConfig(router, tx[3]);
+@@ -679,7 +683,7 @@ function offerPending(router, tx) {
+ 	const [delay, boundary, min, component] = config;
+ 	const matchId = tx[3][boundary].id;
+ 	if (!session || session[1] !== boundary || sessionMatchId !== matchId) {
+-		clearTimeout(session?.[3]);
++		__safeClearTimeout(session?.[3]);
+ 		const presented = router.stores.matches.get()[boundary];
+ 		const visible = presented?.id === matchId && presented.status === "pending";
+ 		router._pending = session = [
+@@ -694,7 +698,7 @@ function offerPending(router, tx) {
+ 	if (session[4] && !tookOver && session[5] === component) return;
+ 	session[5] = component;
+ 	if (!session[4]) {
+-		clearTimeout(session[3]);
++		__safeClearTimeout(session[3]);
+ 		const remaining = session[2] - Date.now();
+ 		if (remaining > 0) {
+ 			session[3] = setTimeout(() => {
+@@ -722,7 +726,7 @@ function offerPending(router, tx) {
+ function finishPending(router, tx) {
+ 	const session = router._pending;
+ 	if (session?.[0] === tx) {
+-		clearTimeout(session[3]);
++		__safeClearTimeout(session[3]);
+ 		router._pending = void 0;
+ 	}
+ }
+@@ -948,7 +952,7 @@ async function runClientTransaction(router, tx, forceStaleReload, onReady, sync,
+ 		* rendered, there is no minimum wait; if another load took it over, that
+ 		* load owns the deadline.
+ 		*/
+-		clearTimeout(pending[3]);
++		__safeClearTimeout(pending[3]);
+ 		if (pending[4]) {
+ 			const signal = tx[0].signal;
+ 			let rendered = false;
+@@ -965,7 +969,7 @@ async function runClientTransaction(router, tx, forceStaleReload, onReady, sync,
+ 							pending[3] = setTimeout(resolve, remaining);
+ 						}), signal);
+ 					} catch {}
+-					clearTimeout(pending[3]);
++					__safeClearTimeout(pending[3]);
+ 				}
+ 			}
+ 		}
 diff --git a/dist/esm/router.js b/dist/esm/router.js
 index f21f6005431e4def69d19017c75dafbde634bcec..7eb38a003a6bd595ce21946a4880a1fe16f61a63 100644
 --- a/dist/esm/router.js

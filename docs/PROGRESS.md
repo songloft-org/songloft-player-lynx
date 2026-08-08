@@ -1,7 +1,7 @@
 # 进展与交接（PROGRESS）
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
-> **最后更新**：2026-08-09 · 当前在做：批3（auth）真机扫码修复了两处运行时问题（AbortController / fetch），登录页真机渲染正常；下一步批4。
+> **最后更新**：2026-08-09 · 当前在做：批3（auth）真机扫码依次修复 4 处 Lynx 运行时问题（self.__TSR_ROUTER__ / AbortController / 裸全局 fetch / clearTimeout 严格性 + 存储降级），登录页真机渲染正常、可交互；下一步批4。
 
 ## 总览
 
@@ -49,6 +49,8 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 
 - [x] **Lynx `fetch` 是裸全局**（批3 真机修复）：Lynx 的 `fetch` 是宿主提供的 HTTP service（Android/iOS 2.18+），以**裸全局**暴露而非 `globalThis.fetch`（与 `self` 同）。`createFetchTransport` 已改为先取裸 `fetch`（`typeof fetch !== 'undefined'`）再回落 `globalThis.fetch`/注入。⚠️ 但**真机整登录 E2E 仍需后端可达**：手机上 `http://localhost:58091` 指向手机自身，须填开发机 LAN IP 且后端在跑；Lynx fetch 不支持 CORS/redirect/keepalive/FormData/Blob。
 - [x] **AbortController 真机缺失**（批3 真机修复）：Lynx 引擎**无** `AbortController`（`ReferenceError`），而 **TanStack Router `loadClientRoute` 与 Query 都无条件 `new AbortController()`**。已在 `lynx.config` banner 注入存在性守卫的全局 polyfill（覆盖 main-thread + background 两个 bundle、最先执行）；`AbortController` 是未声明标识符，故 `globalThis.AbortController=` 能让裸读解析（不同于 `self`）。回归测试断言产物里 polyfill 定义早于任何 `new AbortController`。批2 `configureQueryGlobals` 里的同类 polyfill 保留但非主修复。
+- [x] **Lynx `clearTimeout` 严格要 Number**（批3 真机修复）：`clearTimeout(undefined)` 在浏览器/node 是 no-op，Lynx 却抛 `param 0 should be Number`；TanStack Router `load-client.js` 的 `offerPending` 有 6 处 `clearTimeout(session?.[3])`（可为 undefined）。已扩展 `patches/@tanstack__router-core@*.patch`：模块顶层捕获真实 `clearTimeout`（typeof 守卫）并包一层「仅 Number 才调」的 `__safeClearTimeout`，替换 6 个调用点。
+- [x] **SongloftStorage 在 Lynx 降级为内存**（批3 真机修复）：设备无 `localStorage`，原选择落到**抛错的 native stub**（阻断登录）。改为降级到 `createMemoryStorage`（**in-session、非持久，重启丢 token**）并 `console.warn`；`createNativeStorage` 保留待原生 JSB 模块（后续批）接入时在 `createSongloftStorage` 里改回。⚠️ 当前登录仅会话内有效。
 - [ ] **QueryClientProvider 尚未接入 bootstrap**：Query 真正入包发生在后续接 `useQuery` 的 feature 批（批2 仅验证无 DOM 可用性，未挂到 `src/index.tsx`）。
 - [ ] **standalone/embedded 部署模式**：批3 登录页需保留 standalone 的 API 地址配置 + 不安全 TLS 开关分支（见 `AGENTS.md`）。
 - [ ] **native 原生模块全部待做**：SongloftAudio（批5 先 TS mock）、SongloftStorage 原生形态、SongloftBackend、SongloftPlatform——真机/桌面批次。

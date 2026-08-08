@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   '@tanstack/router-core@1.171.18':
-    hash: 864ec2d96a6a0c0be805e953b8eb647a5729f9c7e53e74c38465a9d93de0f96f
+    hash: 1242e2f333e119e37f7900cbfa74ae52216db40b09867d3375cbeffdf3ce38dd
     path: patches/@tanstack__router-core@1.171.18.patch
 
 importers:
@@ -4423,7 +4423,7 @@ snapshots:
     dependencies:
       '@tanstack/history': 1.162.1
       '@tanstack/react-store': 0.9.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@tanstack/router-core': 1.171.18(patch_hash=864ec2d96a6a0c0be805e953b8eb647a5729f9c7e53e74c38465a9d93de0f96f)
+      '@tanstack/router-core': 1.171.18(patch_hash=1242e2f333e119e37f7900cbfa74ae52216db40b09867d3375cbeffdf3ce38dd)
       isbot: 5.2.1
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
@@ -4435,7 +4435,7 @@ snapshots:
       react-dom: 19.2.8(react@19.2.8)
       use-sync-external-store: 1.6.0(react@19.2.8)
 
-  '@tanstack/router-core@1.171.18(patch_hash=864ec2d96a6a0c0be805e953b8eb647a5729f9c7e53e74c38465a9d93de0f96f)':
+  '@tanstack/router-core@1.171.18(patch_hash=1242e2f333e119e37f7900cbfa74ae52216db40b09867d3375cbeffdf3ce38dd)':
     dependencies:
       '@tanstack/history': 1.162.1
       cookie-es: 3.1.1
