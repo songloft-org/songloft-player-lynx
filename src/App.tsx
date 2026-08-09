@@ -1,7 +1,21 @@
+import { QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 
+// Configure the Query no-DOM globals (no-op focus/online managers +
+// AbortController existence polyfill) BEFORE the QueryClient is constructed,
+// then take the process-wide client. This is the first time batch-2's Query
+// layer is mounted into the render tree (roadmap R11): `useInfiniteQuery` in the
+// library feature reads this provider's client.
+import { configureQueryGlobals, getQueryClient } from './lib/query/index.js'
 import { router } from './router.js'
 
+configureQueryGlobals()
+const queryClient = getQueryClient()
+
 export function App() {
-  return <RouterProvider router={router} />
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  )
 }

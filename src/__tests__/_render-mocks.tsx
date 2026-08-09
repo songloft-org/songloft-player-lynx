@@ -74,6 +74,36 @@ export function mockLynxUiSwitch() {
 }
 
 /**
+ * Mock module for `../widgets/VirtualList.js` — the native Lynx `<list>` wrapper.
+ *
+ * `<list>`/`<list-item>` virtualize their children, so the ReactLynx Vitest env
+ * does not mount item content into the queryable tree (an on-device-only path).
+ * This stand-in renders each item into a plain `<view>` so render tests can
+ * assert the rows/cards actually produced. The real `<list>` ships in
+ * build/dev/on-device. Generic over the item type via `unknown`.
+ */
+interface VirtualListStubProps {
+  items?: readonly unknown[]
+  itemKey: (item: unknown, index: number) => string
+  renderItem: (item: unknown, index: number) => unknown
+  footer?: unknown
+  className?: string
+}
+
+export function mockVirtualList() {
+  return {
+    VirtualList: ({ items = [], itemKey, renderItem, footer, className }: VirtualListStubProps) => (
+      <view className={className}>
+        {items.map((item, index) => (
+          <view key={itemKey(item, index)}>{renderItem(item, index) as never}</view>
+        ))}
+        {footer ? <view>{footer as never}</view> : null}
+      </view>
+    ),
+  }
+}
+
+/**
  * Static auth state used by the mocked store. `status: 'unknown'` mirrors the
  * production store before `checkAuth()` runs, so `evaluateAuthGuard` allows both
  * `/login` and `/` — matching the render tests' existing assumptions.

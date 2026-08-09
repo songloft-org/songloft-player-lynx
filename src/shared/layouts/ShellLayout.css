@@ -19,6 +19,14 @@
   flex-direction: column;
   flex: 1;
   overflow: hidden;
+  /* Clear the status bar / notch on narrow devices so page headers (e.g. the
+     Library view switcher, which sits at the very top) are not occluded. */
+  padding-top: env(safe-area-inset-top);
+}
+
+/* On wide layouts the rail owns the top edge; the body content starts at 0. */
+.shell--wide .shell__body {
+  padding-top: 0;
 }
 
 /* Side rail (wide) */
@@ -27,6 +35,8 @@
   flex-direction: column;
   width: 220px;
   padding: var(--space-4);
+  /* Add the top safe-area inset on top of the base padding (0 on desktop). */
+  padding-top: calc(var(--space-4) + env(safe-area-inset-top));
   background-color: var(--paper);
   border-right: 1px solid var(--line);
 }
@@ -47,6 +57,8 @@
   height: 64px;
   background-color: var(--paper);
   border-top: 1px solid var(--line);
+  /* Clear the home indicator on devices with a bottom safe area. */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .nav-item {

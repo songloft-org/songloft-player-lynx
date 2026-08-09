@@ -1,0 +1,242 @@
+/*
+ * Library page styling — LUNA tokens only (no hardcoded colors / sizes beyond
+ * layout geometry). The `<list>` needs a resolved height to be scrollable, so
+ * the page is a flex column and the list flexes to fill it.
+ */
+
+.library {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  background-color: var(--canvas);
+}
+
+/* View switcher (Songs / Categories / Playlists) */
+.library__switcher {
+  display: flex;
+  flex-direction: row;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.library__tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-4);
+  margin-right: var(--space-2);
+  border-radius: var(--radius-pill);
+  background-color: var(--neutral-faint);
+}
+
+.library__tab--active {
+  background-color: var(--primary);
+}
+
+.library__tab-text {
+  color: var(--content-2);
+  font-size: var(--font-sm);
+  font-weight: bold;
+}
+
+.library__tab--active .library__tab-text {
+  color: var(--primary-content);
+}
+
+.library__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+/* Flat songs list */
+.library__list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  list-main-axis-gap: 1px;
+}
+
+.library__list-item {
+  width: 100%;
+}
+
+.library__footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.library__footer-text {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+}
+
+/* Song row */
+.song-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--canvas);
+  border-bottom: 1px solid var(--line);
+}
+
+.song-row__cover {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  background-color: var(--neutral-faint);
+}
+
+.song-row__cover--empty {
+  background-color: var(--neutral-faint);
+}
+
+.song-row__meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin-left: var(--space-3);
+  min-width: 0;
+}
+
+.song-row__title {
+  color: var(--content);
+  font-size: var(--font-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.song-row__subtitle {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.song-row__duration {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+  margin-left: var(--space-3);
+}
+
+/* Categories (facet grid) */
+.library__facets {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.library__facet-fields {
+  display: flex;
+  flex-direction: row;
+  padding: var(--space-3) var(--space-4);
+}
+
+.library__chip {
+  padding: var(--space-1) var(--space-3);
+  margin-right: var(--space-2);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background-color: var(--neutral-faint);
+}
+
+.library__chip--active {
+  border-color: var(--primary);
+  background-color: var(--paper);
+}
+
+.library__chip-text {
+  color: var(--content-2);
+  font-size: var(--font-xs);
+}
+
+.library__chip--active .library__chip-text {
+  color: var(--primary);
+}
+
+.library__grid-scroll {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.library__grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+}
+
+.facet-card {
+  display: flex;
+  flex-direction: column;
+  width: 33.33%;
+  padding: var(--space-2);
+}
+
+.facet-card__cover {
+  width: 100%;
+  height: 96px;
+  border-radius: var(--radius-md);
+  background-color: var(--neutral-faint);
+}
+
+.facet-card__cover--empty {
+  background-color: var(--neutral-faint);
+}
+
+.facet-card__value {
+  color: var(--content);
+  font-size: var(--font-sm);
+  margin-top: var(--space-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.facet-card__count {
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+}
+
+/* Loading / empty / error state */
+.library__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  padding: var(--space-6) var(--space-5);
+}
+
+.library__state-text {
+  color: var(--content-2);
+  font-size: var(--font-md);
+  font-weight: bold;
+}
+
+.library__state-text--error {
+  color: var(--danger);
+}
+
+.library__state-subtext {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+  margin-top: var(--space-2);
+}
