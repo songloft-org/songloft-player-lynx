@@ -23,6 +23,7 @@
 - 状态：**Zustand**（客户端态）；**TanStack Query**（服务端态，需 no-op `focusManager`/`onlineManager`）
 - 路由：**TanStack Router**（memory history；当前 code-based，日后可迁 file-based）
 - UI：**lynx-ui**（`@lynx-js/lynx-ui`）+ LUNA tokens + `@lynx-js/motion`。**禁止硬编码颜色/尺寸**，一律走 LUNA tokens / 主题 CSS 变量（`src/shared/theme/`）。
+- 数据模型：**zod**（`src/models`，snake_case↔camelCase transform）。**后端会发 `null`，而 zod `.default()` 只兜 `undefined` 不兜 `null`**——可空/可缺字段一律用 `.catch(fallback)`（+ 数值用 `z.coerce.number()`）对齐 Flutter 参考的 `_intFromJson`/`_labelsFromJson` 容错，否则一条 `labels:null`/`song_count:null` 就让整个列表 query 抛错（真机现象：整页 "Could not load …"，非空态）。范例：`src/models/playlist.ts`。
 - 桌面宿主：Lynxtron（后续批次）
 - 包管理器：**pnpm**（勿用 npm/yarn）
 

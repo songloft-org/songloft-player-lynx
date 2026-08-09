@@ -104,6 +104,37 @@ describe('PlaylistApi endpoints', () => {
     expect(res.total).toBe(1)
   })
 
+  test('tolerates null fields + stringified ints (real backend payload)', async () => {
+    // Reproduces the device "Could not load playlists." crash: the backend sends
+    // `null` for labels/song_count/type and a stringified id; `.default()` only
+    // covers `undefined`, so the schema must `.catch()`/coerce to not throw.
+    const cap = capture({
+      playlists: [
+        {
+          id: '3',
+          type: null,
+          name: 'Empty PL',
+          description: null,
+          cover_url: null,
+          labels: null,
+          song_count: null,
+          created_at: null,
+          updated_at: null,
+        },
+      ],
+      total: null,
+    })
+    const res = await new PlaylistApi(client(cap.transport)).getPlaylists()
+    expect(res.playlists).toHaveLength(1)
+    const pl = res.playlists[0]!
+    expect(pl.id).toBe(3) // coerced from "3"
+    expect(pl.type).toBe('normal') // null → catch default
+    expect(pl.labels).toEqual([]) // null → catch default
+    expect(pl.songCount).toBe(0) // null → catch default
+    expect(pl.isBuiltIn).toBe(false)
+    expect(res.total).toBe(1) // null total → inferred from length
+  })
+
   test('getPlaylist hits /playlists/{id} and parses a Playlist', async () => {
     const cap = capture({
       id: 7,

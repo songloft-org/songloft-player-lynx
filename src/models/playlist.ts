@@ -10,15 +10,19 @@ import { makeParsers, nowIso } from './_shared.js'
  */
 export const playlistSchema = z
   .object({
-    id: z.number(),
+    // Mirror the Flutter `_intFromJson`/`_labelsFromJson` tolerance: the backend
+    // sends nulls (e.g. `labels`/`song_count` null for empty/user playlists) and
+    // occasionally stringified ints. `.default()` only covers `undefined` (NOT
+    // `null`), so use `.catch()` + coercion to never throw on a live payload.
+    id: z.coerce.number().catch(0),
     type: z.enum(['normal', 'radio']).catch('normal'),
-    name: z.string().default(''),
-    description: z.string().nullish(),
-    cover_url: z.string().nullish(),
-    labels: z.array(z.string()).default([]),
-    song_count: z.number().default(0),
-    created_at: z.string().nullish(),
-    updated_at: z.string().nullish(),
+    name: z.string().catch(''),
+    description: z.string().nullish().catch(undefined),
+    cover_url: z.string().nullish().catch(undefined),
+    labels: z.array(z.string()).catch([]),
+    song_count: z.coerce.number().catch(0),
+    created_at: z.string().nullish().catch(undefined),
+    updated_at: z.string().nullish().catch(undefined),
   })
   .transform((p) => ({
     id: p.id,
@@ -73,8 +77,8 @@ export const safeParsePlaylist = playlistParsers.safeParse
 
 export const playlistListResponseSchema = z
   .object({
-    playlists: z.array(playlistSchema).default([]),
-    total: z.number().nullish(),
+    playlists: z.array(playlistSchema).catch([]),
+    total: z.coerce.number().nullish().catch(undefined),
   })
   .transform((r) => ({
     playlists: r.playlists,
