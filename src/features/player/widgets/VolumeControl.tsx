@@ -5,6 +5,7 @@ import {
   SliderTrack,
 } from '@lynx-js/lynx-ui-slider'
 
+import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { isMuted, usePlayerStore } from '../store/index.js'
 
 /**
@@ -21,7 +22,13 @@ export function VolumeControl() {
         className='player-volume__mute'
         bindtap={() => usePlayerStore.getState().toggleMute()}
       >
-        <text className='player-volume__icon'>{muted ? '🔇' : '🔊'}</text>
+        <view className='player-volume__icon'>
+          <Icon
+            name={muted ? 'volume-mute' : 'volume'}
+            size={20}
+            color={ICON_COLORS.content2}
+          />
+        </view>
       </view>
       <SliderRoot
         className='player-volume__slider'

@@ -77,11 +77,6 @@
   background-color: var(--neutral-faint);
 }
 
-.full-player__icon {
-  color: var(--content);
-  font-size: var(--font-lg);
-}
-
 .full-player__eyebrow {
   color: var(--content-muted);
   font-size: var(--font-xs);
@@ -123,11 +118,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.full-player__cover-glyph {
-  color: var(--content-muted);
-  font-size: var(--font-2xl);
 }
 
 .full-player__lyrics-pane {
@@ -187,6 +177,12 @@
 }
 
 .player-progress__indicator {
+  /* Overlay the rail (track is position:relative). lynx-ui controls the width
+     from the slider value. Without absolute positioning it flows as a SECOND
+     line instead of overlaying the track → the "two lines" artifact. */
+  position: absolute;
+  left: 0;
+  top: 0;
   height: 4px;
   border-radius: var(--radius-pill);
   background-color: var(--primary);
@@ -257,8 +253,9 @@
 }
 
 .player-controls__mode-glyph {
-  color: var(--content-2);
-  font-size: var(--font-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .player-controls__mode-label {
@@ -284,8 +281,9 @@
 }
 
 .player-volume__icon {
-  color: var(--content-2);
-  font-size: var(--font-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .player-volume__slider {
@@ -304,6 +302,10 @@
 }
 
 .player-volume__indicator {
+  /* Same overlay fix as the progress indicator (see above). */
+  position: absolute;
+  left: 0;
+  top: 0;
   height: 4px;
   border-radius: var(--radius-pill);
   background-color: var(--content-2);
@@ -358,6 +360,13 @@
   color: var(--primary);
   font-size: var(--font-lg);
   font-weight: bold;
+}
+
+/* Empty-line note glyph: center the icon within the line's row. */
+.player-lyrics__line--note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ── Playlist drawer (Sheet) ── */

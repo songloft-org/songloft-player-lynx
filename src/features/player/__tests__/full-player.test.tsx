@@ -48,7 +48,7 @@ async function renderPage() {
 }
 
 test('renders the now-playing header, song meta and transport', async () => {
-  const { queryByText, queryAllByText } = await renderPage()
+  const { queryByText, queryAllByText, queryByTestId } = await renderPage()
 
   expect(queryByText('Now Playing')).toBeInTheDocument()
   // The mocked Sheet renders the drawer's queue too, so the title/artist also
@@ -56,9 +56,17 @@ test('renders the now-playing header, song meta and transport', async () => {
   expect(queryAllByText('Mock Song').length).toBeGreaterThan(0)
   expect(queryAllByText('Mock Artist').length).toBeGreaterThan(0)
 
-  // Play glyph (paused mock state → shows ▶) and the play-mode label.
-  expect(queryByText('▶')).toBeInTheDocument()
+  // Transport icons (paused mock state → play icon, not pause) + skip controls,
+  // and the play-mode label (order mode → the "order" icon).
+  expect(queryByTestId('icon-play')).toBeInTheDocument()
+  expect(queryByTestId('icon-pause')).not.toBeInTheDocument()
+  expect(queryByTestId('icon-skip-prev')).toBeInTheDocument()
+  expect(queryByTestId('icon-skip-next')).toBeInTheDocument()
+  expect(queryByTestId('icon-order')).toBeInTheDocument()
   expect(queryByText('Order')).toBeInTheDocument()
+  // Topbar collapse + playlist icons.
+  expect(queryByTestId('icon-chevron-down')).toBeInTheDocument()
+  expect(queryByTestId('icon-menu')).toBeInTheDocument()
 })
 
 test('renders formatted current + total time from the store (30s / 200s)', async () => {

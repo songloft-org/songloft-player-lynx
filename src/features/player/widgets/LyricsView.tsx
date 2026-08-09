@@ -1,3 +1,4 @@
+import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { useLyricStore } from '../store/index.js'
 
 /**
@@ -29,16 +30,26 @@ export function LyricsView() {
   return (
     <scroll-view className='player-lyrics' scroll-y>
       <view className='player-lyrics__inner'>
-        {lyrics.map((line, index) => (
-          <text
-            key={`${index}:${line.timeMs}`}
-            className={index === currentIndex
-              ? 'player-lyrics__line player-lyrics__line--active'
-              : 'player-lyrics__line'}
-          >
-            {line.text || '♪'}
-          </text>
-        ))}
+        {lyrics.map((line, index) => {
+          const active = index === currentIndex
+          const cls = active
+            ? 'player-lyrics__line player-lyrics__line--active'
+            : 'player-lyrics__line'
+          // Empty lyric lines (instrumental breaks) show a small note glyph.
+          return line.text
+            ? (
+              <text key={`${index}:${line.timeMs}`} className={cls}>{line.text}</text>
+            )
+            : (
+              <view key={`${index}:${line.timeMs}`} className={`${cls} player-lyrics__line--note`}>
+                <Icon
+                  name='music'
+                  size={16}
+                  color={active ? ICON_COLORS.content : ICON_COLORS.contentMuted}
+                />
+              </view>
+            )
+        })}
       </view>
     </scroll-view>
   )

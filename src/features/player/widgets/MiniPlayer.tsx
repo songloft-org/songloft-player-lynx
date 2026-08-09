@@ -1,6 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
+import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { progressOf, usePlayerStore } from '../store/index.js'
 import './MiniPlayer.css'
 
@@ -40,7 +41,7 @@ export function MiniPlayer() {
           className='mini-player__play'
           catchtap={() => usePlayerStore.getState().togglePlay()}
         >
-          <text className='mini-player__play-glyph'>{isPlaying ? '⏸' : '▶'}</text>
+          <Icon name={isPlaying ? 'pause' : 'play'} size={22} color={ICON_COLORS.content} />
         </view>
       </view>
     </view>

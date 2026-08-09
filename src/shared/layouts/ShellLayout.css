@@ -95,13 +95,12 @@
   background-color: var(--neutral-faint);
 }
 
+/* Icon wrapper: the glyph color is injected into the SVG markup at render time
+   (active -> --primary, inactive -> --content-muted); this box just centers it. */
 .nav-item__icon {
-  color: var(--content-2);
-  font-size: var(--font-lg);
-}
-
-.nav-item--active .nav-item__icon {
-  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .nav-item__label {

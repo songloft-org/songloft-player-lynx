@@ -1,12 +1,14 @@
+import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import type { IconName } from '../../../shared/ui/icons.js'
 import { hasNext, hasPrev, usePlayerStore } from '../store/index.js'
 import type { PlayMode } from '../domain/play-mode.js'
 
-/** Glyph shown on the play-mode toggle for each mode. */
-const MODE_GLYPH: Record<PlayMode, string> = {
-  order: '➡',
-  loop: '🔁',
-  single: '🔂',
-  random: '🔀',
+/** Icon shown on the play-mode toggle for each mode. */
+const MODE_ICON: Record<PlayMode, IconName> = {
+  order: 'order',
+  loop: 'repeat',
+  single: 'repeat-one',
+  random: 'shuffle',
 }
 
 const MODE_LABEL: Record<PlayMode, string> = {
@@ -34,7 +36,9 @@ export function PlayControls() {
         className='player-controls__btn player-controls__btn--mode'
         bindtap={() => usePlayerStore.getState().cyclePlayMode()}
       >
-        <text className='player-controls__mode-glyph'>{MODE_GLYPH[playMode]}</text>
+        <view className='player-controls__mode-glyph'>
+          <Icon name={MODE_ICON[playMode]} size={20} color={ICON_COLORS.content2} />
+        </view>
         <text className='player-controls__mode-label'>{MODE_LABEL[playMode]}</text>
       </view>
 
@@ -44,16 +48,22 @@ export function PlayControls() {
           : 'player-controls__btn player-controls__btn--disabled'}
         bindtap={() => usePlayerStore.getState().playPrev()}
       >
-        <text className='player-controls__glyph'>⏮</text>
+        <Icon name='skip-prev' size={26} color={ICON_COLORS.content} />
       </view>
 
       <view
         className='player-controls__btn player-controls__btn--primary'
         bindtap={() => usePlayerStore.getState().togglePlay()}
       >
-        <text className='player-controls__glyph player-controls__glyph--primary'>
-          {isBuffering ? '…' : isPlaying ? '⏸' : '▶'}
-        </text>
+        {isBuffering
+          ? <text className='player-controls__glyph player-controls__glyph--primary'>…</text>
+          : (
+            <Icon
+              name={isPlaying ? 'pause' : 'play'}
+              size={30}
+              color={ICON_COLORS.primaryContent}
+            />
+          )}
       </view>
 
       <view
@@ -62,7 +72,7 @@ export function PlayControls() {
           : 'player-controls__btn player-controls__btn--disabled'}
         bindtap={() => usePlayerStore.getState().playNext()}
       >
-        <text className='player-controls__glyph'>⏭</text>
+        <Icon name='skip-next' size={26} color={ICON_COLORS.content} />
       </view>
     </view>
   )

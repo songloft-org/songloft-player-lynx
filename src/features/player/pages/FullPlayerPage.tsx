@@ -5,6 +5,7 @@ import { Swiper, SwiperItem } from '@lynx-js/lynx-ui-swiper'
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
+import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { usePlayerStore } from '../store/index.js'
 import { LyricsView } from '../widgets/LyricsView.js'
 import { PlayControls } from '../widgets/PlayControls.js'
@@ -20,7 +21,7 @@ function CoverArt({ song }: { song: Song }) {
       {cover
         ? <image className='full-player__cover' src={cover} />
         : <view className='full-player__cover full-player__cover--empty'>
-            <text className='full-player__cover-glyph'>♪</text>
+            <Icon name='music' size={56} color={ICON_COLORS.contentMuted} />
           </view>}
     </view>
   )
@@ -62,14 +63,14 @@ export function FullPlayerPage() {
     >
       <view className='full-player__topbar'>
         <view className='full-player__icon-btn' bindtap={() => navigate({ to: '/' })}>
-          <text className='full-player__icon'>⌄</text>
+          <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='full-player__eyebrow'>Now Playing</text>
         <view
           className='full-player__icon-btn'
           bindtap={() => usePlayerStore.getState().togglePlaylistDrawer()}
         >
-          <text className='full-player__icon'>☰</text>
+          <Icon name='menu' size={22} color={ICON_COLORS.content} />
         </view>
       </view>
 

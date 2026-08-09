@@ -5,6 +5,7 @@ import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { MiniPlayer } from '../../features/player/widgets/MiniPlayer.js'
 import { NAV_DESTINATIONS } from '../nav/destinations.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
+import { Icon, ICON_COLORS } from '../ui/Icon.js'
 import './ShellLayout.css'
 
 /**
@@ -29,7 +30,13 @@ export function ShellLayout() {
           className={active ? 'nav-item nav-item--active' : 'nav-item'}
           bindtap={() => navigate({ to: dest.path })}
         >
-          <text className='nav-item__icon'>{dest.icon}</text>
+          <view className='nav-item__icon'>
+            <Icon
+              name={dest.icon}
+              size={24}
+              color={active ? ICON_COLORS.primary : ICON_COLORS.contentMuted}
+            />
+          </view>
           <text className='nav-item__label'>{dest.label}</text>
         </view>
       )
