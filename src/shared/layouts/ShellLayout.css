@@ -69,10 +69,13 @@
   flex-direction: row;
   justify-content: space-around;
   align-items: center;
-  height: 64px;
   background-color: var(--paper);
   border-top: 1px solid var(--line);
-  /* Clear the home indicator on devices with a bottom safe area. */
+  /* Lynx default box-sizing is border-box: a plain `height: 64px` would let the
+     home-indicator `padding-bottom` eat INTO the 64px, shrinking the content
+     area until the 24px icon + label overlap. Reserve 64px of content ABOVE the
+     inset instead. */
+  height: calc(64px + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -107,10 +110,13 @@
   color: var(--content-muted);
   font-size: var(--font-xs);
   margin-left: 0;
+  /* Breathing room below the icon in the narrow (column) layout. */
+  margin-top: var(--space-1);
 }
 
 .shell--wide .nav-item__label {
   margin-left: var(--space-3);
+  margin-top: 0;
   font-size: var(--font-sm);
 }
 
