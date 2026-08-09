@@ -13,6 +13,7 @@ import { ThemeProvider } from './shared/theme/ThemeProvider.js'
 import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { LibraryPage } from './features/library/index.js'
+import { PlaylistDetailPage } from './features/playlist/index.js'
 import { ListPage } from './routes/ListPage.js'
 import { PlayerPage } from './routes/PlayerPage.js'
 import { SettingsPage } from './routes/SettingsPage.js'
@@ -80,10 +81,22 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 })
 
+/** `/playlists/$id` — playlist detail, inside the shell (batch 6). */
+const playlistDetailRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/playlists/$id',
+  component: PlaylistDetailPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   playerRoute,
-  shellRoute.addChildren([listRoute, libraryRoute, settingsRoute]),
+  shellRoute.addChildren([
+    listRoute,
+    libraryRoute,
+    settingsRoute,
+    playlistDetailRoute,
+  ]),
 ])
 
 export function createAppRouter(initialEntries: string[] = ['/login']) {

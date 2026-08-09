@@ -10,6 +10,9 @@ import {
   useFacetsInfiniteQuery,
   useSongsInfiniteQuery,
 } from '../data/songs-query.js'
+// The Playlists view lives in the playlist feature (batch 6); import the widget
+// directly so the library graph does not pull in the detail page eagerly.
+import { PlaylistsView } from '../../playlist/widgets/PlaylistsView.js'
 import { FacetCard } from '../widgets/FacetCard.js'
 import { SongRow } from '../widgets/SongRow.js'
 import { VirtualList } from '../widgets/VirtualList.js'
@@ -19,10 +22,10 @@ import './LibraryPage.css'
  * Library browse page (batch 4), rendered inside the shell at `/library`.
  *
  * Ported (trimmed) from the Flutter `LibraryPage`: a view switcher over a flat
- * **songs** list (infinite pagination) and a **categories** grid (facet
- * aggregation). The **playlists** view is a placeholder — playlists land in a
- * later batch. Multi-select, favourites, search, sort menus and the customize
- * editor from the Flutter page are likewise deferred.
+ * **songs** list (infinite pagination), a **categories** grid (facet
+ * aggregation), and a **playlists** grid (batch 6 — see `PlaylistsView`).
+ * Multi-select, favourites, search, sort menus and the customize editor from the
+ * Flutter page are deferred.
  *
  * List virtualization + load-more uses the native Lynx `<list>` element with
  * `bindscrolltolower` → `fetchNextPage()` (dependency-free vs. lynx-ui
@@ -72,7 +75,7 @@ export function LibraryPage() {
       <view className='library__body'>
         {view === 'songs' ? <SongsView /> : null}
         {view === 'facets' ? <FacetsView /> : null}
-        {view === 'playlists' ? <PlaylistsPlaceholder /> : null}
+        {view === 'playlists' ? <PlaylistsView /> : null}
       </view>
     </view>
   )
@@ -172,17 +175,6 @@ function FacetsView() {
               </scroll-view>
             )}
     </view>
-  )
-}
-
-// ── Playlists placeholder (later batch) ──────────────────────────────────────
-
-function PlaylistsPlaceholder() {
-  return (
-    <StateMessage
-      text='Playlists coming soon'
-      subtext='Playlist browsing arrives in a later batch.'
-    />
   )
 }
 

@@ -1,0 +1,99 @@
+/*
+ * Playlists library-view styling — LUNA tokens only (no hardcoded colors beyond
+ * layout geometry). The scroll container fills the library body; cards flow in a
+ * three-column wrapping grid mirroring the categories facet grid.
+ */
+
+.playlists {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.playlists__scroll {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.playlists__grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+}
+
+.playlist-card {
+  display: flex;
+  flex-direction: column;
+  width: 33.33%;
+  padding: var(--space-2);
+}
+
+.playlist-card__cover {
+  width: 100%;
+  height: 96px;
+  border-radius: var(--radius-md);
+  background-color: var(--neutral-faint);
+}
+
+.playlist-card__cover--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--neutral-faint);
+}
+
+.playlist-card__name {
+  color: var(--content);
+  font-size: var(--font-sm);
+  margin-top: var(--space-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playlist-card__count {
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+}
+
+.playlists__footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.playlists__footer-text {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+}
+
+.playlists__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  padding: var(--space-6) var(--space-5);
+}
+
+.playlists__state-text {
+  color: var(--content-2);
+  font-size: var(--font-md);
+  font-weight: bold;
+}
+
+.playlists__state-text--error {
+  color: var(--danger);
+}
+
+.playlists__state-subtext {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+  margin-top: var(--space-2);
+}

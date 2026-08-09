@@ -31,15 +31,25 @@ import type { Song, SongFacet } from '../../../models/song.js'
  * + formatted duration), the empty state, and the facet grid — not injected
  * fixtures echoed back.
  */
-const { songsHook, facetsHook } = vi.hoisted(() => ({
+const { songsHook, facetsHook, playlistsHook } = vi.hoisted(() => ({
   songsHook: vi.fn(),
   facetsHook: vi.fn(),
+  playlistsHook: vi.fn(),
 }))
 
 vi.mock('../data/songs-query.js', () => ({
   useSongsInfiniteQuery: songsHook,
   useFacetsInfiniteQuery: facetsHook,
   libraryQueryKeys: { songs: () => [], facets: () => [] },
+}))
+
+// The Playlists tab now renders the batch-6 `PlaylistsView` (which drives the
+// playlist infinite query via `useSyncExternalStore`); mock the hook to a static
+// shape and stub `useNavigate` so the tab renders without a live QueryClient.
+vi.mock('@tanstack/react-router', () => ({ useNavigate: () => () => {} }))
+vi.mock('../../playlist/data/playlist-query.js', () => ({
+  usePlaylistsInfiniteQuery: playlistsHook,
+  playlistQueryKeys: { list: () => [] },
 }))
 
 // `<list>`/`<list-item>` virtualize their children (not mounted into the env's
@@ -108,10 +118,23 @@ function facetsResult(pages: { facets: SongFacet[]; total: number }[], over = {}
   }
 }
 
+function playlistsResult(pages: { playlists: unknown[]; total: number }[], over = {}) {
+  return {
+    data: { pages },
+    isLoading: false,
+    isError: false,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
+    ...over,
+  }
+}
+
 beforeEach(() => {
   // Sensible defaults; individual tests override as needed.
   songsHook.mockReturnValue(songsResult([{ songs: [], total: 0 }]))
   facetsHook.mockReturnValue(facetsResult([{ facets: [], total: 0 }]))
+  playlistsHook.mockReturnValue(playlistsResult([{ playlists: [], total: 0 }]))
 })
 
 afterEach(() => {
@@ -190,10 +213,11 @@ test('categories view renders a facet grid after switching tabs', async () => {
   expect(queryByText('John Coltrane')).toBeInTheDocument()
 })
 
-test('playlists view shows the placeholder', async () => {
+test('playlists view renders the batch-6 PlaylistsView (empty state)', async () => {
   const { queryByText, getByText } = await renderPage()
   await act(async () => {
     fireEvent.tap(getByText('Playlists'))
   })
-  expect(queryByText('Playlists coming soon')).toBeInTheDocument()
+  // No longer a "coming soon" placeholder — the real view's empty state shows.
+  expect(queryByText('No playlists yet')).toBeInTheDocument()
 })

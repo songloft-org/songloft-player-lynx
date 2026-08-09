@@ -1,7 +1,7 @@
 # 进展与交接（PROGRESS）
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
-> **最后更新**：2026-08-09 · 最近完成：**UI 修整——emoji 图标 → Lynx `<svg>` 矢量 Icon 组件**（`src/shared/ui/Icon.tsx` + `icons.ts`，16 图标集，颜色注入 markup；替换 nav/播放控制/音量/全屏页/mini-player/歌词占位所有 emoji 图标；源码与产物 bundle 已无目标 emoji 字符；clean build + tsc + 159 vitest 全绿，见「已交付明细 · UI 修整」）。另修：**进度条/音量条「双线」** —— lynx-ui `SliderIndicator`（宽度受值控制的叠加层）缺 `position: absolute`，未叠在 `SliderTrack` rail 上而流成第二条线；给 `.player-progress__indicator`/`.player-volume__indicator` 加 `position:absolute; left:0; top:0`（track 已 `position:relative`）修复。此前：批5（player feature + TS mock 音频）本机自动验收全绿。下一步真机扫码验：登录→Library 点歌→mini-player→`/player`，图标渲染 + 进度条单线 + mock 进度前进/上一首/下一首/播放模式（歌词高亮依赖后端歌词可达）。
+> **最后更新**：2026-08-09 · 最近完成：**批6 playlist feature（歌单列表 + 详情 + Library「Playlists」视图）**——`src/features/playlist/`（api/data/widgets/pages 镜像 Flutter data/domain/presentation）：`PlaylistApi`（真实端点 `GET /playlists`、`GET /playlists/{id}`、`GET /playlists/{id}/songs`，query 拼接抽纯函数）+ 认证客户端单例（同批4 recipe）；`useInfiniteQuery`/`useQuery` 取数（歌单列表分页 + 详情 + 歌单内歌曲分页，getNextPageParam 纯函数）；Library「Playlists」占位换成 `PlaylistsView`（歌单网格→点卡片导航 `/playlists/$id`）；歌单详情页 `PlaylistDetailPage`（`/playlists/$id`，头部封面/名称/描述/歌数 + `SongRow`+`VirtualList` 触底分页 + 点歌 `playPlaylist`）。clean build（binary 容器，最长行 92259，`strings` 证 `/playlists`×23、`No playlists yet`/`No songs in this playlist`/`exclude_labels` 均入包）+ tsc + **183 vitest 全绿**（+24：playlist-api 9 / pagination 8 / playlists-view 4 / playlist-detail 3；`background-bundle-self`/`query-no-dom`/`router-no-dom` 对新鲜 dist 复跑绿）。下一步真机扫码验：登录→Library→Playlists 见歌单网格→点歌单→详情页头部 + 歌曲行→点歌 mini-player 出现。此前：**UI 修整——emoji 图标 → Lynx `<svg>` 矢量 Icon 组件**（`src/shared/ui/Icon.tsx` + `icons.ts`，16 图标集，颜色注入 markup；见「已交付明细 · UI 修整」）；进度条/音量条「双线」修复（`SliderIndicator` 加 `position:absolute`）；批5（player feature + TS mock 音频）本机自动验收全绿。
 
 ## 总览
 
@@ -16,7 +16,8 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 3 | auth feature（登录页 + 鉴权守卫 + token 持久化）| ✅ 完成 | build/tsc/vitest 绿（70 测试）| ✅ 真机登录通（admin/admin + LAN IP → 跳主界面）|
 | 4 | library feature（列表 + 分页）| ✅ 完成 | clean build/tsc/vitest 绿（99 测试）| ✅ 真机拉列表通（真实后端歌曲+封面+分页）；顶部安全区已修，待复扫 |
 | 5 | player feature + TS mock 音频 | ✅ 完成 | clean build/tsc/vitest 绿（159 测试）| ⏳ 待扫码（点歌→mini→全屏，mock 进度自动前进）|
-| 后续 | playlist/home/settings → 真原生模块（含真机音频）→ Lynxtron 桌面 → jsplugin/webview → DLNA → i18n → CI | ⛔ 未开始（真机/桌面绑定，本机不能自动验收）| | |
+| 6 | playlist feature（歌单列表 + 详情 + Library Playlists 视图）| ✅ 完成 | clean build/tsc/vitest 绿（183 测试）| ⏳ 待扫码（Library→Playlists→点歌单→详情→点歌播放）|
+| 后续 | home/settings → 真原生模块（含真机音频）→ Lynxtron 桌面 → jsplugin/webview → DLNA → i18n → CI | ⛔ 未开始（真机/桌面绑定，本机不能自动验收）| | |
 
 ## 已交付明细
 
@@ -72,6 +73,15 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 - **验收**：`rm -rf dist .rspeedy && pnpm run build` 绿（`main.lynx.bundle` 898.3 kB，含 `viewBox="0 0 24 24"` + 图标 path，确认矢量图标已入包）、`tsc --noEmit` 绿、`pnpm test` 159/159 绿。**已确认目标 emoji 图标字符（`⏮⏭⏸▶🔀🔁🔂➡🔊🔇☰⌄♪⚙⌂` 等）在源码与产物 bundle 中均为 0 命中**（散文注释里的 `→`/`⚠️`/`─` 非图标，保留）。
 - **遗留/注意**：① `<svg>` 官方仅列原生 Android/iOS/Harmony（+ `SVGProps` 标 web/PC，但 svg.md 未把桌面/clay 列为已证实）——本次目标移动端，**桌面 clay 的 `<svg>` 渲染未验**（记入既有风险 R2）。② 真机图标目测待扫码（本机 vitest 只证节点存在，不证像素）。③ `PlaylistDrawer` 的移除按钮 `✕`（U+2715，非本次 emoji 图标清单/验收范围）暂保留为文本，后续如需可一并接 Icon。④ `ICON_COLORS` 与 `tokens.css` 是手动同步，改主题色需两处一起改。
 
+### 批6 · playlist feature（歌单列表 + 详情 + Library Playlists 视图）
+- **playlist API**（`src/features/playlist/api/playlist-api.ts`）：包 batch-2 `HttpClient`，port Flutter `PlaylistApi` 的**读端点**（前缀 `/api/v1`，batch-2 zod 解析）——`getPlaylists`（`GET /playlists`，query `limit/offset` + 可选 `type`/`exclude_labels`/`keyword`，`parsePlaylistListResponse`）、`getPlaylist(id)`（`GET /playlists/{id}`，`parsePlaylist`）、`getPlaylistSongs(id)`（`GET /playlists/{id}/songs`，query `limit/offset` + 可选 `sort`/`order`/`keyword`，复用 `parseSongListResponse`）。query 拼接抽纯函数 `buildPlaylistsQuery`/`buildPlaylistSongsQuery`（默认 `limit=defaultPageSize=20`/`offset=0`，空串剪除，mirror Flutter `PlaylistApi`）单独单测。`api/index.ts` 懒建**认证客户端单例**（同批4 recipe：batch-2 `createApiClient`，Bearer + 单飞 401 refresh，`onTokenExpired → useAuthStore.logout()`）——与 library bundle 是同款 peer（共享同一 `TokenStore`，401 恢复跨 feature 一致）。
+- **取数与分页**（`src/features/playlist/data/`）：`usePlaylistsInfiniteQuery`（歌单列表分页，`getNextPageParam=playlistsNextPageParam` 纯函数）、`usePlaylistQuery(id)`（`useQuery` 详情，`enabled: id>0`）、`usePlaylistSongsInfiniteQuery(id)`（歌单内歌曲分页，**复用 library `songsNextPageParam`/`flattenSongs`**——歌单内歌曲即 `SongListResponse`）。新增纯函数 `playlistsLoadedCount`/`playlistsNextPageParam`/`flattenPlaylists`（复用 library `nextOffset`）单独单测（累计推进 / 到底停 / 空页 / flatten）。
+- **Library「Playlists」视图落地**（`src/features/playlist/widgets/PlaylistsView.tsx`，替换批4「Playlists coming soon」占位）：`<scroll-view>` 网格（同 facets 网格模式，非 `<list>`——子节点在测试可查）+ `PlaylistCard`（封面 or `music` Icon 占位 + 名称 + `<n> song(s)` 单复数）；点卡片 `navigate({ to: '/playlists/$id', params:{id} })`；加载/空（「No playlists yet」）/错误态齐备。`LibraryPage` 仅改 import + 分支渲染。
+- **歌单详情页**（`src/features/playlist/pages/PlaylistDetailPage.tsx`，路由 `/playlists/$id`，shell 内）：`useParams({strict:false})` 取 id；头部（返回键 `chevron-down`→`/library`、封面 or `music` 占位、名称/描述/`<n> song(s)`）+ 歌曲列表（**复用 library `SongRow` + `VirtualList`** + `bindscrolltolower` 触底 `fetchNextPage`）；点歌 `usePlayerStore.getState().playPlaylist(songs, index)`（直接 import store，不经 player 桶入口，避免 eager 拉 lynx-ui 手势叶子）；加载/空/错误态齐备。`.song-row` 规则在 `PlaylistDetailPage.css` 重声明（与 `LibraryPage.css` 相同）——详情路由可能在 library 页从未挂载时进入，Lynx CSS 全局作用域，重复同规则无害。**路由**：`router.tsx` 加 `playlistDetailRoute`（shell 子路由，`path:'/playlists/$id'`，typed param）。
+- **测试约定（沿用 `_render-mocks` 模式）**：渲染冒烟里 `useInfiniteQuery`/`useQuery` hooks（`useSyncExternalStore` 订阅→崩 `isListHolder` 类 + 需 live QueryClient/网络）用 `vi.fn()` 桩返静态形；`useNavigate`/`useParams` 桩；`<list>` 封装 `VirtualList` mock 成 plain `<view>`（`_render-mocks.mockVirtualList`）。真 hooks/组件/`<list>` 用于 build/dev/device。断言实质结构：PlaylistsView 卡片名 + 单复数歌数 + 空/加载/错误态；详情页头部（名称/描述/`2 songs`）+ 歌曲行（标题/`artist · album`/`05:27`·`09:05` 时长）+ 空/加载态；playlist-api query 拼接 + zod 解析（mock transport，验 URL 含参 + snake→camel + `isBuiltIn` 派生）。**批4 `library-page.test` 的 playlists 占位用例改为**：切 Playlists tab 断言 `PlaylistsView` 空态（并补 mock playlist-query hook + `useNavigate`）。
+- 验收：`rm -rf dist .rspeedy && pnpm run build`（`main.lynx.bundle` 920.8 kB binary 容器，最长行 92259=已压缩；`strings` 证 `/playlists`×23 / `No playlists yet` / `No songs in this playlist` / `Loading playlists` / `exclude_labels` 均入包）、`tsc --noEmit` 绿、`pnpm test` **183/183 绿**（新增 24：playlist-api 9 / pagination 8 / playlists-view 4 / playlist-detail 3；`background-bundle-self`/`query-no-dom`/`router-no-dom` 对新鲜 dist 复跑绿——无新增未守卫全局）。
+- **遗留/注意**：① 歌单 **CRUD**（创建/更新/删除/封面上传/批量删除）、**收藏歌单**（`favoritePlaylistId='1'`/`radioFavoritePlaylistId='2'` 已在 constants，本批未做特殊处理/入口）、**排序**（歌单排序 / 歌单内歌曲 reorder）、**可见性切换**、**touch 访问时间**、**song-ids 定位**、**搜索/多选** 均未 port（Flutter `PlaylistApi` 全端点 + 详情页有，本批裁到只读浏览）——记入下方 TODO。② 详情页在 shell 内渲染（底栏 nav 常驻），返回键固定回 `/library`（Flutter 是独立 appbar 页 + `context.pop()`）。③ 封面缓存刷新参数 `?_t=<updatedAt ms>`（Flutter `coverImageUrl`）未加，仅 `buildCoverUrl(coverUrl)`。④ 真机图标/网格/详情目测待扫码。
+
 ## 未完成 / 遗留事项（TODO & 风险）
 
 - [x] **Lynx `fetch` 是裸全局**（批3 真机修复）：Lynx 的 `fetch` 是宿主提供的 HTTP service（Android/iOS 2.18+），以**裸全局**暴露而非 `globalThis.fetch`（与 `self` 同）。`createFetchTransport` 已改为先取裸 `fetch`（`typeof fetch !== 'undefined'`）再回落 `globalThis.fetch`/注入。⚠️ 但**真机整登录 E2E 仍需后端可达**：手机上 `http://localhost:58091` 指向手机自身，须填开发机 LAN IP 且后端在跑；Lynx fetch 不支持 CORS/redirect/keepalive/FormData/Blob。
@@ -80,7 +90,7 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 - [x] **SongloftStorage 在 Lynx 降级为内存**（批3 真机修复）：设备无 `localStorage`，原选择落到**抛错的 native stub**（阻断登录）。改为降级到 `createMemoryStorage`（**in-session、非持久，重启丢 token**）并 `console.warn`；`createNativeStorage` 保留待原生 JSB 模块（后续批）接入时在 `createSongloftStorage` 里改回。⚠️ 当前登录仅会话内有效。
 - [x] **QueryClientProvider 已接入 bootstrap**（批4）：`src/App.tsx` 用 `<QueryClientProvider>`（`@tanstack/react-query`）包住 `<RouterProvider>`，`configureQueryGlobals()` 先于 `getQueryClient()`。Query 真正入包（`useInfiniteQuery`）；产物守卫（AbortController polyfill / `__TSR_ROUTER__`）经 `background-bundle-self` 回归测试确认仍在，无新增未守卫全局。⚠️ 真机整链路（列表拉取）待扫码验证（需后端可达 + LAN IP）。
 - [ ] **批4 遗留（library）**：
-  - **playlists 视图**仅占位（「Playlists coming soon」），歌单是后续批。
+  - [x] **playlists 视图**（批6 落地）：占位换成 `PlaylistsView`（歌单网格 + 点卡片→`/playlists/$id`）。
   - **收藏 / 多选 / 搜索 / 排序菜单 / 自定义视图编辑器 / 单曲点击进播放器**未做（Flutter `LibraryPage` 有，本批裁掉）——`SongRow.onTap` 已留钩子，接播放器批时接上。
   - **facet 卡片点击**未跳到「该分类下歌曲列表」（Flutter `CategorySongsPage`），本批仅展示网格。
   - **真机待扫码验列表拉取**：登录后进 `/library`，songs 视图应见分页歌曲行，触底加载下一页；facets 视图切 Artist/Album/Genre 见网格。
@@ -94,6 +104,13 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
   - **Home「Open player」简化**：恒跳 `/player`（无歌时全屏页显空态），未做「无歌则播放示例」。
   - **Flutter player 其余能力裁掉**：播放状态持久化/恢复、失败重试策略、预加载 prefetch、通知栏/锁屏媒体控件与收藏回调、Live Activity/悬浮歌词/桌面歌词、视频播放（`is_video`）、音轨切换、播放历史、`setSpeed/setShuffle` 无 UI——均后续批（多数真机/桌面绑定）。
   - **真机待扫码**：登录→Library 点歌→mini-player 出现→点开 `/player`；mock 进度条应自动前进、上一首/下一首/播放模式切换/音量/抽屉可用；lynx-ui `Slider`/`Sheet`/`Swiper` 三个手势叶子首次上真机（本机无法验手势）。
+- [ ] **批6 遗留（playlist）**：
+  - **歌单 CRUD 全裁**：创建/更新/删除/封面上传（`MultipartFile`，Lynx fetch 不支持 FormData——需原生上传通道）/批量删除均未 port（Flutter `PlaylistApi` 有）。本批只读浏览。
+  - **收藏歌单**：`favoritePlaylistId='1'`/`radioFavoritePlaylistId='2'` 常量已在 `constants.ts`，但**未做收藏入口 / 特殊处理**（内置歌单标识 `isBuiltIn` 已由 zod 派生，UI 未用）。
+  - **排序**：歌单排序（`PUT /playlists/reorder`）+ 歌单内歌曲 reorder（`PUT /playlists/{id}/songs/reorder`）+ `PlaylistSort`（拼音比较器）未 port；详情页无排序/搜索/多选（Flutter 有）。
+  - **其他端点**：`song-ids`（定位「某首歌排第几」）、`visibility`（隐藏切换）、`touch`（更新访问时间）、`addSongsToPlaylist`/`removeSongFromPlaylist` 未 port。
+  - **详情页在 shell 内**（底栏 nav 常驻），返回键固定回 `/library`（Flutter 独立 appbar 页 + `pop()`）；封面缓存刷新参数 `?_t=<updatedAt>` 未加。
+  - **真机待扫码**：登录→Library→切 Playlists 见歌单网格（封面/名称/歌数）→点歌单进 `/playlists/$id`（头部 + 歌曲行 + 触底分页）→点歌曲 `playPlaylist` → mini-player 出现。需后端可达 + LAN IP。
 - [ ] **native 原生模块全部待做**：SongloftAudio（批5 先 TS mock）、SongloftStorage 原生形态、SongloftBackend、SongloftPlatform——真机/桌面批次。
 - [ ] **i18n**：arb → i18next 转换脚本与接入未开始。
 - [ ] **风险登记**（详见 roadmap）：R2 桌面 clay 元素实测、R11 Query 无 DOM（本机已验证，真机待确认）、R13 lynx-ui Web/Desktop 覆盖、R5 音频后台播放各端差异。

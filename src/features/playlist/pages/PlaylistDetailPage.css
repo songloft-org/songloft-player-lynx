@@ -1,0 +1,195 @@
+/*
+ * Playlist detail styling — LUNA tokens only. Flex column: a fixed header over
+ * the flexing song list (the `<list>` needs a resolved height to scroll). The
+ * `.song-row` rules are redeclared here (identical to LibraryPage.css) so the
+ * detail route renders correctly even when the library page was never mounted;
+ * Lynx CSS is global-scoped, so the duplicate identical rules are harmless.
+ */
+
+.playlist-detail {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  background-color: var(--canvas);
+}
+
+.playlist-detail__header {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border-bottom: 1px solid var(--line);
+}
+
+.playlist-detail__topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+}
+
+.playlist-detail__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background-color: var(--neutral-faint);
+}
+
+.playlist-detail__hero {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-2) var(--space-4) var(--space-4) var(--space-4);
+}
+
+.playlist-detail__cover {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-md);
+  background-color: var(--neutral-faint);
+}
+
+.playlist-detail__cover--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--neutral-faint);
+}
+
+.playlist-detail__meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin-left: var(--space-4);
+  min-width: 0;
+}
+
+.playlist-detail__name {
+  color: var(--content);
+  font-size: var(--font-lg);
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playlist-detail__desc {
+  color: var(--content-2);
+  font-size: var(--font-sm);
+  margin-top: var(--space-2);
+}
+
+.playlist-detail__count {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+  margin-top: var(--space-2);
+}
+
+.playlist-detail__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.playlist-detail__list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.playlist-detail__footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.playlist-detail__footer-text {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+}
+
+.playlist-detail__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  padding: var(--space-6) var(--space-5);
+}
+
+.playlist-detail__state-text {
+  color: var(--content-2);
+  font-size: var(--font-md);
+  font-weight: bold;
+}
+
+.playlist-detail__state-text--error {
+  color: var(--danger);
+}
+
+/* Song row (identical to LibraryPage.css — see header note). */
+.song-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--canvas);
+  border-bottom: 1px solid var(--line);
+}
+
+.song-row__cover {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  background-color: var(--neutral-faint);
+}
+
+.song-row__cover--empty {
+  background-color: var(--neutral-faint);
+}
+
+.song-row__meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin-left: var(--space-3);
+  min-width: 0;
+}
+
+.song-row__title {
+  color: var(--content);
+  font-size: var(--font-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.song-row__subtitle {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.song-row__duration {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+  margin-left: var(--space-3);
+}
+
+.library__list-item {
+  width: 100%;
+}
