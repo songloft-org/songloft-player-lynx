@@ -72,6 +72,17 @@ const listRoute = createRoute({
 const libraryRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/library',
+  // `?view=` drives the active tab (songs/facets/playlists) so it survives
+  // remounts and is restored when returning from the playlist detail page.
+  // `view` is OPTIONAL so plain `navigate({ to: '/library' })` (e.g. the shell
+  // nav tab) stays valid and defaults to the songs view; the tab switcher and
+  // the playlist-detail back button pass an explicit `view`.
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { view?: 'songs' | 'facets' | 'playlists' } => {
+    const v = search.view
+    return v === 'songs' || v === 'facets' || v === 'playlists' ? { view: v } : {}
+  },
   component: LibraryPage,
 })
 

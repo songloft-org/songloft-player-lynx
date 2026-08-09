@@ -55,7 +55,7 @@ export function PlaylistDetailPage() {
       <view className='playlist-detail__topbar'>
         <view
           className='playlist-detail__back'
-          bindtap={() => navigate({ to: '/library' })}
+          bindtap={() => navigate({ to: '/library', search: { view: 'playlists' } })}
         >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>

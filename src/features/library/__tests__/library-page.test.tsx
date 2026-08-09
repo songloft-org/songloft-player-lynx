@@ -31,11 +31,17 @@ import type { Song, SongFacet } from '../../../models/song.js'
  * + formatted duration), the empty state, and the facet grid — not injected
  * fixtures echoed back.
  */
-const { songsHook, facetsHook, playlistsHook } = vi.hoisted(() => ({
-  songsHook: vi.fn(),
-  facetsHook: vi.fn(),
-  playlistsHook: vi.fn(),
-}))
+const { songsHook, facetsHook, playlistsHook, navigateSpy, searchHook } = vi.hoisted(
+  () => ({
+    songsHook: vi.fn(),
+    facetsHook: vi.fn(),
+    playlistsHook: vi.fn(),
+    navigateSpy: vi.fn(),
+    // The active view is now URL-driven (`?view=`); tests set it via this hook
+    // and assert tab taps call `navigate` (rather than toggling local state).
+    searchHook: vi.fn(),
+  }),
+)
 
 vi.mock('../data/songs-query.js', () => ({
   useSongsInfiniteQuery: songsHook,
@@ -46,7 +52,10 @@ vi.mock('../data/songs-query.js', () => ({
 // The Playlists tab now renders the batch-6 `PlaylistsView` (which drives the
 // playlist infinite query via `useSyncExternalStore`); mock the hook to a static
 // shape and stub `useNavigate` so the tab renders without a live QueryClient.
-vi.mock('@tanstack/react-router', () => ({ useNavigate: () => () => {} }))
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => navigateSpy,
+  useSearch: searchHook,
+}))
 vi.mock('../../playlist/data/playlist-query.js', () => ({
   usePlaylistsInfiniteQuery: playlistsHook,
   playlistQueryKeys: { list: () => [] },
@@ -135,6 +144,7 @@ beforeEach(() => {
   songsHook.mockReturnValue(songsResult([{ songs: [], total: 0 }]))
   facetsHook.mockReturnValue(facetsResult([{ facets: [], total: 0 }]))
   playlistsHook.mockReturnValue(playlistsResult([{ playlists: [], total: 0 }]))
+  searchHook.mockReturnValue({}) // default → songs view
 })
 
 afterEach(() => {
@@ -188,7 +198,8 @@ test('songs view shows the loading state', async () => {
   expect(queryByText('Loading songs…')).toBeInTheDocument()
 })
 
-test('categories view renders a facet grid after switching tabs', async () => {
+test('categories view renders a facet grid when ?view=facets', async () => {
+  searchHook.mockReturnValue({ view: 'facets' })
   facetsHook.mockReturnValue(
     facetsResult([
       {
@@ -200,11 +211,7 @@ test('categories view renders a facet grid after switching tabs', async () => {
       },
     ]),
   )
-  const { queryByText, getByText } = await renderPage()
-
-  await act(async () => {
-    fireEvent.tap(getByText('Categories'))
-  })
+  const { queryByText } = await renderPage()
 
   // Facet field chips + facet cards (value + "<n> songs").
   expect(queryByText('Artist')).toBeInTheDocument()
@@ -213,11 +220,20 @@ test('categories view renders a facet grid after switching tabs', async () => {
   expect(queryByText('John Coltrane')).toBeInTheDocument()
 })
 
-test('playlists view renders the batch-6 PlaylistsView (empty state)', async () => {
-  const { queryByText, getByText } = await renderPage()
-  await act(async () => {
-    fireEvent.tap(getByText('Playlists'))
-  })
+test('playlists view renders the batch-6 PlaylistsView (empty state) when ?view=playlists', async () => {
+  searchHook.mockReturnValue({ view: 'playlists' })
+  const { queryByText } = await renderPage()
   // No longer a "coming soon" placeholder — the real view's empty state shows.
   expect(queryByText('No playlists yet')).toBeInTheDocument()
+})
+
+test('tapping a tab navigates to /library with the view search param (URL-driven)', async () => {
+  const { getByText } = await renderPage()
+  await act(async () => {
+    fireEvent.tap(getByText('Categories'))
+  })
+  expect(navigateSpy).toHaveBeenCalledWith({
+    to: '/library',
+    search: { view: 'facets' },
+  })
 })

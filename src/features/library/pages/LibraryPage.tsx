@@ -1,4 +1,5 @@
 import { useState } from '@lynx-js/react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 
 // Import the store directly (not the player feature barrel) so the library
 // graph does not eagerly pull in the full player + its lynx-ui gesture leaves.
@@ -56,7 +57,12 @@ const VIEW_LABELS: Record<LibraryView, string> = {
 const SONGS_FILTERS: SongsFilters = { sort: 'added_at', order: 'desc' }
 
 export function LibraryPage() {
-  const [view, setView] = useState<LibraryView>('songs')
+  const navigate = useNavigate()
+  // View is URL-driven (`?view=`), so returning from a pushed route (e.g. the
+  // playlist detail page → `?view=playlists`) restores the tab the user was on,
+  // and it survives remounts. Mirrors the Flutter `?view=` query param.
+  const search = useSearch({ strict: false }) as { view?: LibraryView }
+  const view: LibraryView = search.view ?? 'songs'
 
   return (
     <view className='library'>
@@ -65,7 +71,7 @@ export function LibraryPage() {
           <view
             key={key}
             className={key === view ? 'library__tab library__tab--active' : 'library__tab'}
-            bindtap={() => setView(key)}
+            bindtap={() => navigate({ to: '/library', search: { view: key } })}
           >
             <text className='library__tab-text'>{VIEW_LABELS[key]}</text>
           </view>
