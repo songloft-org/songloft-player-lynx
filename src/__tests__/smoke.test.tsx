@@ -34,6 +34,26 @@ vi.mock('../features/auth/store/index.js', async () => {
   return makeAuthStoreMock(actual)
 })
 
+// Batch 5: the shell mini-player + the /player screen add lynx-ui native leaves
+// (Slider/Sheet/Swiper) and the zustand player store — same crash class as the
+// login screen. Mock them to static stand-ins (real ones ship on-device).
+vi.mock('@lynx-js/lynx-ui-slider', async () =>
+  (await import('./_render-mocks.js')).mockLynxUiSlider(),
+)
+vi.mock('@lynx-js/lynx-ui-sheet', async () =>
+  (await import('./_render-mocks.js')).mockLynxUiSheet(),
+)
+vi.mock('@lynx-js/lynx-ui-swiper', async () =>
+  (await import('./_render-mocks.js')).mockLynxUiSwiper(),
+)
+vi.mock('../features/player/store/player-store.js', async () => {
+  const actual = await vi.importActual<
+    typeof import('../features/player/store/player-store.js')
+  >('../features/player/store/player-store.js')
+  const { makePlayerStoreMock } = await import('./_render-mocks.js')
+  return makePlayerStoreMock(actual)
+})
+
 /**
  * Renders a fresh app router seeded at `entry` (memory history) and returns the
  * queries bound to the rendered tree.

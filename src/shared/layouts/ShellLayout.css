@@ -14,6 +14,21 @@
   flex-direction: row;
 }
 
+/* Content column: holds the routed body, the mini-player, and (narrow) the
+   bottom bar, so the mini-player can dock above the bar / at the column foot. */
+.shell__content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+/* On wide layouts the mini-player is the column's bottom edge, so it owns the
+   home-indicator inset (narrow layouts let the bottom bar handle it). */
+.shell--wide .mini-player {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 .shell__body {
   display: flex;
   flex-direction: column;

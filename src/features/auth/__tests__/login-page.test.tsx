@@ -30,6 +30,19 @@ vi.mock('@lynx-js/lynx-ui-input', async () =>
 vi.mock('@lynx-js/lynx-ui-switch', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSwitch(),
 )
+// Batch 5: the router now eagerly imports the /player route → FullPlayerPage,
+// which pulls in the lynx-ui gesture leaves (Slider/Sheet/Swiper) at module
+// load. Rendering the login screen *through the router* therefore evaluates
+// them; mock them (they corrupt the reconciler otherwise), same as Input/Switch.
+vi.mock('@lynx-js/lynx-ui-slider', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSlider(),
+)
+vi.mock('@lynx-js/lynx-ui-sheet', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSheet(),
+)
+vi.mock('@lynx-js/lynx-ui-swiper', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSwiper(),
+)
 vi.mock('../store/index.js', async () => {
   const actual =
     await vi.importActual<typeof import('../store/index.js')>('../store/index.js')

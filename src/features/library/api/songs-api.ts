@@ -182,4 +182,33 @@ export class SongsApi {
     const res = await this.client.get<unknown>(`${apiPrefix}/songs/${id}`)
     return parseSong(res.data)
   }
+
+  /**
+   * `GET <lyricUrl>` → the lyric payload `{ lyric, lxlyric, tlyric, rlyric }`.
+   *
+   * `lyricUrl` comes straight from `Song.lyricUrl` (a relative `/api/v1/...`
+   * path the authenticated client resolves against the base URL + injects the
+   * Bearer token). Only the plain `lyric` (LRC) field is consumed by the
+   * batch-5 player; word-by-word / translations are deferred.
+   */
+  async getLyric(lyricUrl: string): Promise<LyricPayload> {
+    const res = await this.client.get<unknown>(lyricUrl)
+    const body = (res.data ?? {}) as Record<string, unknown>
+    const str = (k: string): string | undefined =>
+      typeof body[k] === 'string' ? (body[k] as string) : undefined
+    return {
+      lyric: str('lyric'),
+      lxlyric: str('lxlyric'),
+      tlyric: str('tlyric'),
+      rlyric: str('rlyric'),
+    }
+  }
+}
+
+/** Lyric endpoint payload (only the plain `lyric` field is used in batch 5). */
+export interface LyricPayload {
+  lyric?: string
+  lxlyric?: string
+  tlyric?: string
+  rlyric?: string
 }

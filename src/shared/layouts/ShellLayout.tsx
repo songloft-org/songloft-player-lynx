@@ -1,5 +1,8 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 
+// Import MiniPlayer directly (not the player feature barrel) so the shell graph
+// does not eagerly pull in the full player + its lynx-ui gesture leaves.
+import { MiniPlayer } from '../../features/player/widgets/MiniPlayer.js'
 import { NAV_DESTINATIONS } from '../nav/destinations.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import './ShellLayout.css'
@@ -47,13 +50,19 @@ export function ShellLayout() {
         )
         : null}
 
-      <view className='shell__body'>
-        <Outlet />
-      </view>
+      <view className='shell__content'>
+        <view className='shell__body'>
+          <Outlet />
+        </view>
 
-      {isWide
-        ? null
-        : <view className='shell__bottombar'>{renderNavItems()}</view>}
+        {/* Mini-player sits above the bottom bar (narrow) / at the foot of the
+            content column (wide). Renders only when a song is loaded. */}
+        <MiniPlayer />
+
+        {isWide
+          ? null
+          : <view className='shell__bottombar'>{renderNavItems()}</view>}
+      </view>
     </view>
   )
 }

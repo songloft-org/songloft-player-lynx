@@ -13,6 +13,7 @@ export type {
   PageParams,
   FacetParams,
   SongIdsResponse,
+  LyricPayload,
 } from './songs-api.js'
 
 /**

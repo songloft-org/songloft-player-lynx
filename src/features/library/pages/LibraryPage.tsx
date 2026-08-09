@@ -1,5 +1,8 @@
 import { useState } from '@lynx-js/react'
 
+// Import the store directly (not the player feature barrel) so the library
+// graph does not eagerly pull in the full player + its lynx-ui gesture leaves.
+import { usePlayerStore } from '../../player/store/index.js'
 import type { Song, SongFacet } from '../../../models/song.js'
 import type { SongsFilters } from '../api/index.js'
 import { flattenFacets, flattenSongs } from '../data/pagination.js'
@@ -97,12 +100,20 @@ function SongsView() {
     }
   }
 
+  // Tapping a row plays it with the whole loaded list as the queue, then the
+  // mini-player appears (shell). `getState()` avoids a store subscription here.
+  const onTapSong = (_song: Song, index: number) => {
+    void usePlayerStore.getState().playPlaylist(songs, index)
+  }
+
   return (
     <VirtualList<Song>
       className='library__list'
       items={songs}
       itemKey={(song) => String(song.id)}
-      renderItem={(song, index) => <SongRow song={song} index={index} />}
+      renderItem={(song, index) => (
+        <SongRow song={song} index={index} onTap={onTapSong} />
+      )}
       onEndReached={onEndReached}
       footer={query.isFetchingNextPage
         ? (

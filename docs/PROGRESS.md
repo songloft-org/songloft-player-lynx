@@ -1,7 +1,7 @@
 # 进展与交接（PROGRESS）
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
-> **最后更新**：2026-08-09 · 当前在做：批4（library：歌曲列表 + 分页）本机自动验收已全绿（clean build 压缩产物 + tsc + 99 vitest），首次把 `QueryClientProvider` 挂进 bootstrap、`useInfiniteQuery` 真正入包；下一步真机扫码验列表拉取，再进批5。
+> **最后更新**：2026-08-09 · 当前在做：批5（player feature + TS mock 音频）本机自动验收已全绿（clean build 压缩产物 最长行 85540 + tsc + 159 vitest；`background-bundle-self`/`query-no-dom`/`router-no-dom` 对**新鲜 dist** 复跑通过）。SongloftAudio TS mock（定时器模拟进度）+ playerState/lyric store（状态机纯函数）+ 全屏播放页 + mini-player + Library 点歌接线均已落地。下一步真机扫码验：登录→Library 点歌→mini-player→`/player`，mock 进度条应自动前进、上一首/下一首/播放模式可用（歌词高亮依赖后端歌词可达）。
 
 ## 总览
 
@@ -15,8 +15,8 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 2 | 核心基础设施（models/网络/存储/Query/Zustand）| ✅ 完成 | build/tsc/vitest 绿（53 测试）| — 纯基建，无 UI，免 |
 | 3 | auth feature（登录页 + 鉴权守卫 + token 持久化）| ✅ 完成 | build/tsc/vitest 绿（70 测试）| ✅ 真机登录通（admin/admin + LAN IP → 跳主界面）|
 | 4 | library feature（列表 + 分页）| ✅ 完成 | clean build/tsc/vitest 绿（99 测试）| ✅ 真机拉列表通（真实后端歌曲+封面+分页）；顶部安全区已修，待复扫 |
-| 5 | player feature + TS mock 音频 | ⛔ 未开始 | | |
-| 后续 | playlist/home/settings → 真原生模块 → Lynxtron 桌面 → jsplugin/webview → DLNA → i18n → CI | ⛔ 未开始（真机/桌面绑定，本机不能自动验收）| | |
+| 5 | player feature + TS mock 音频 | ✅ 完成 | clean build/tsc/vitest 绿（159 测试）| ⏳ 待扫码（点歌→mini→全屏，mock 进度自动前进）|
+| 后续 | playlist/home/settings → 真原生模块（含真机音频）→ Lynxtron 桌面 → jsplugin/webview → DLNA → i18n → CI | ⛔ 未开始（真机/桌面绑定，本机不能自动验收）| | |
 
 ## 已交付明细
 
@@ -54,6 +54,15 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 - 验收：`rm -rf dist .rspeedy && pnpm run build`（压缩，最长行 66408；产物含 `QueryClient`/`fetchNextPage`/`getNextPageParam`/`scrolltolower`，AbortController polyfill offset 18137 早于首个 `new AbortController` offset 110209，`__TSR_ROUTER__` 守卫仍在——`background-bundle-self`/`query-no-dom`/`router-no-dom` 全绿）、`tsc --noEmit` 绿、`pnpm test` 99/99 绿。**真机验证**：登录后进 Library 真实拉到后端歌曲（封面/标题/artist·album/时长）+ 触底分页——R11（Query 无 DOM 集成）真机确认可用。
 - **安全区修复**（真机暴露）：narrow 下页面顶到状态栏/刘海、底栏顶 home indicator。在 `ShellLayout.css` 全局加 `.shell__body { padding-top: env(safe-area-inset-top) }`（wide 置 0，rail 顶部含 inset）与 `.shell__bottombar { padding-bottom: env(safe-area-inset-bottom) }`（Lynx 支持 `env(safe-area-inset-*)`）。影响 Home/Library/Settings 全部 shell 页。
 
+### 批5 · player feature + TS mock 音频
+- **SongloftAudio TS mock**（`src/native/`）：`audio-types.ts`（facade 接口 + `AudioEvent` 事件契约，mirror `docs/lynx_native_modules_spec.md#1`）、`mock-audio.ts`（`MockSongloftAudio`：`play` 后每 250ms 递增 position 并 emit `progress`，到 duration emit `completed`；`load/play/pause/stop/seek/setVolume/setSpeed/setQueue/next/previous/setRepeatMode/setShuffle` + EQ 占位；`on/off` 订阅）、`audio-facade.ts`（`getAudio()` 单例返 mock；`createNativeAudio()` 抛错 stub，真机批接 `NativeModules.SongloftAudio`）。**定时器严格性**：`safe-timers.ts` 的 `safeClearInterval/safeClearTimeout` 只在 `id != null` 时调宿主 clear——比 `typeof===number` 更正确（Lynx 句柄是 Number、node 句柄是对象，都放行；只挡 `undefined/null` 这个真正会让 Lynx 抛 `param 0 should be Number` 的情形），并有单测模拟「Lynx 严格 clear 抛错」证明不崩、以及「completed 后 interval 真停」。
+- **playerState store**（`src/features/player/store/player-store.ts`，zustand，对应 `playerStateProvider`+`PlayerNotifier`）：状态 mirror `player_state.dart`（ms 计时、volume 0-100），桥接 mock 音频事件（`progress`→currentTime/duration + 驱动歌词定位；`stateChanged`→isPlaying/isBuffering；`completed`→按 playMode 路由）。控制面 `playSong(song,queue?)`/`playPlaylist`/`togglePlay`/`playNext`/`playPrev`/`seek`/`seekBy`/`setVolume`/`toggleMute`/`setPlayMode`/`cyclePlayMode`/`addToPlaylist`/`removeFromPlaylist`/`reorderPlaylist`/`clearPlaylist`/`toggleFullPlayer`/`closeFullPlayer`/`togglePlaylistDrawer`/`closePlaylistDrawer`/`clearError`/`setSleepTimer*`/`cancelSleepTimer`。**状态机抽纯函数**（`domain/`）：`play-mode.ts`（`resolveNext/resolvePrev` order 到底/loop 环绕/single 停留/random 边界；`hasNext/hasPrev`；`cyclePlayMode`）、`sleep-timer.ts`（`tickSleepTimer`/`sleepTimerOnSongCompleted` 纯 reducer，store 管 1s interval）、`queue.ts`（`removeAt`/`moveItem`/`reorder` 保持当前曲锁定）、`derive.ts`（`hasSong/hasNext/hasPrev/progressOf/isMuted/nextSongOf` 派生选择器）。全部单独单测。
+- **歌词**（`src/features/player/`）：`domain/lyric-parser.ts` port（`parseLrc`/`parsePlain`/`findCurrentLine` 纯函数，ms 计时）；`store/lyric-store.ts`（`lyrics/currentIndex/isLoading/synced` + `loadForSong(song, fetcher?)` + `syncPosition(ms)`）。歌词来源 `data/lyric-source.ts` 复用 library 的**认证客户端**（新增 `SongsApi.getLyric(lyricUrl)`）——best-effort，无 lyricUrl 直接空态、失败不崩。逐字/翻译/罗马音解析本批未 port。
+- **UI**（`src/features/player/{pages,widgets}`）：全屏播放页 `FullPlayerPage`（`/player`，chrome-less，CSS transform slide-in）——封面 + 标题/艺人 + **lynx-ui `Slider` 进度条**（拖动 `onValueCommit`→seek）+ 时间 + 播放控制（上一首/播放暂停/下一首 + 播放模式切换）+ **`Slider` 音量** + 静音 + 打开抽屉 + 歌词视图（当前行高亮）；窄屏封面/歌词用 **lynx-ui `Swiper`** 两页横滑，宽屏并排。`MiniPlayer`（纯 `<view>`，无手势叶子）挂进 `ShellLayout`（narrow 底栏之上、wide 内容列底部，含安全区），仅 `hasSong` 显示，点开 `/player`。播放列表抽屉 `PlaylistDrawer`（**lynx-ui `Sheet`**，ref 命令式 open/close 跟随 `showPlaylistDrawer`，点选切歌/移除）。**接线**：Library `SongRow` 点击→`playPlaylist(当前列表, index)`→mini-player 出现；`/player` 空态（无歌）有占位 + 去 library。全走 LUNA tokens。
+- **新增 lynx-ui 组件包**：`@lynx-js/lynx-ui-slider`/`-sheet`/`-swiper`（按组件包导入，非桶入口）。
+- **测试约定（沿用 `_render-mocks` 模式）**：新增桩工厂 `mockLynxUiSlider/Sheet/Swiper`（原生手势叶子）+ `makePlayerStoreMock/makeLyricStoreMock`（`useSyncExternalStore` 订阅→静态非订阅读取器）。渲染冒烟 `full-player.test.tsx`（断言「Now Playing」/标题/艺人/▶/播放模式/`00:30`·`03:20` 时长）、`mini-player.test.tsx`（标题/副标题/播放键）。**router 现会 eager import `/player`→FullPlayerPage→lynx-ui 手势叶子**（import 期即污染 reconciler），故凡经 router 渲染的既有测试（`smoke.test`、`login-page.test`）也补上 slider/sheet/swiper 桩。真组件/真 store 用于 build/dev/device。
+- 验收：`rm -rf dist .rspeedy && pnpm run build`（压缩，最长行 85540，产物含 `Now Playing`/`Up next`/`setInterval` 计时；`background-bundle-self`/`query-no-dom`/`router-no-dom` 对新鲜 dist 复跑绿）、`tsc --noEmit` 绿、`pnpm test` 159/159 绿。
+
 ## 未完成 / 遗留事项（TODO & 风险）
 
 - [x] **Lynx `fetch` 是裸全局**（批3 真机修复）：Lynx 的 `fetch` 是宿主提供的 HTTP service（Android/iOS 2.18+），以**裸全局**暴露而非 `globalThis.fetch`（与 `self` 同）。`createFetchTransport` 已改为先取裸 `fetch`（`typeof fetch !== 'undefined'`）再回落 `globalThis.fetch`/注入。⚠️ 但**真机整登录 E2E 仍需后端可达**：手机上 `http://localhost:58091` 指向手机自身，须填开发机 LAN IP 且后端在跑；Lynx fetch 不支持 CORS/redirect/keepalive/FormData/Blob。
@@ -67,6 +76,15 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
   - **facet 卡片点击**未跳到「该分类下歌曲列表」（Flutter `CategorySongsPage`），本批仅展示网格。
   - **真机待扫码验列表拉取**：登录后进 `/library`，songs 视图应见分页歌曲行，触底加载下一页；facets 视图切 Artist/Album/Genre 见网格。
 - [ ] **standalone/embedded 部署模式**：批3 登录页需保留 standalone 的 API 地址配置 + 不安全 TLS 开关分支（见 `AGENTS.md`）。
+- [ ] **批5 遗留（player）**：
+  - **真原生音频**：本批仅 TS mock（定时器模拟进度，无真实解码/网络流/HLS/后台播放/系统媒体控件）。`createNativeAudio()` 为 stub，真机批接各端 `NativeModules.SongloftAudio`（ExoPlayer/AVPlayer/HTMLAudioElement+hls.js/libmpv）——facade 已就位，store 只依赖接口，替换透明。
+  - **均衡器**：mock 的 `setEqualizerEnabled/Band/getBands` 为占位（无 DSP），**无均衡器面板 UI**。
+  - **歌词拉取真机未验**：`SongsApi.getLyric` + `lyric-store.loadForSong` 已接认证客户端（best-effort），但需后端可达 + LAN IP 才能验；**逐字（lxlyric）/翻译（tlyric）/罗马音（rlyric）解析未 port**（仅普通 LRC + 纯文本降级）；本地歌词缓存（Flutter `LyricCacheService`）未做。歌词高亮在无后端歌词时无内容可高亮。
+  - **睡眠定时无 UI**：store 逻辑（时长倒计时 + afterSongs）+ 纯函数 + 单测齐备，但**未接入设置菜单/入口**。
+  - **播放队列拖拽排序无 UI**：`reorderPlaylist` action + `queue.reorder` 纯函数就位，但抽屉里仅「点选切歌 + 移除」，无 drag-reorder 手势（lynx-ui `sortable` 后续接）。
+  - **Home「Open player」简化**：恒跳 `/player`（无歌时全屏页显空态），未做「无歌则播放示例」。
+  - **Flutter player 其余能力裁掉**：播放状态持久化/恢复、失败重试策略、预加载 prefetch、通知栏/锁屏媒体控件与收藏回调、Live Activity/悬浮歌词/桌面歌词、视频播放（`is_video`）、音轨切换、播放历史、`setSpeed/setShuffle` 无 UI——均后续批（多数真机/桌面绑定）。
+  - **真机待扫码**：登录→Library 点歌→mini-player 出现→点开 `/player`；mock 进度条应自动前进、上一首/下一首/播放模式切换/音量/抽屉可用；lynx-ui `Slider`/`Sheet`/`Swiper` 三个手势叶子首次上真机（本机无法验手势）。
 - [ ] **native 原生模块全部待做**：SongloftAudio（批5 先 TS mock）、SongloftStorage 原生形态、SongloftBackend、SongloftPlatform——真机/桌面批次。
 - [ ] **i18n**：arb → i18next 转换脚本与接入未开始。
 - [ ] **风险登记**（详见 roadmap）：R2 桌面 clay 元素实测、R11 Query 无 DOM（本机已验证，真机待确认）、R13 lynx-ui Web/Desktop 覆盖、R5 音频后台播放各端差异。
