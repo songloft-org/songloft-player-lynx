@@ -6,6 +6,7 @@ import { Input } from '@lynx-js/lynx-ui-input'
 import { Switch, SwitchThumb, SwitchTrack } from '@lynx-js/lynx-ui-switch'
 
 import { appConfig } from '../../../core/config/app-config.js'
+import { getQueryClient } from '../../../lib/query/index.js'
 import { useAppSessionStore } from '../../../store/index.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { applyServerSettings } from '../data/settings-prefs.js'
@@ -41,6 +42,13 @@ export function ServerSettingsPage() {
     const normalized = await applyServerSettings({ url, insecureTls })
     // Reflect the new base into the reactive session store (UI concern).
     useAppSessionStore.getState().setBaseUrl(normalized)
+    // Invalidate cached data from the previous server — stale entries would
+    // otherwise linger until their queries naturally refetch.
+    try {
+      getQueryClient().clear()
+    } catch {
+      // query client may not be initialized yet
+    }
     setSaved(true)
     goBack()
   }
