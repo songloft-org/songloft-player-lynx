@@ -26,7 +26,7 @@ import {
  * `Icon` all run; assertions check the rendered structure + that interactions
  * call the correct store/config, not fixtures echoed back.
  */
-const { navigateSpy, logoutSpy, setPlayModeSpy, writePrefSpy, readPref, changeLangSpy } =
+const { navigateSpy, logoutSpy, setPlayModeSpy, writePrefSpy, readPref, changeLangSpy, changeThemeSpy } =
   vi.hoisted(() => ({
     navigateSpy: vi.fn(),
     logoutSpy: vi.fn(),
@@ -34,6 +34,7 @@ const { navigateSpy, logoutSpy, setPlayModeSpy, writePrefSpy, readPref, changeLa
     writePrefSpy: vi.fn(),
     readPref: vi.fn(async () => 'random' as const),
     changeLangSpy: vi.fn(async () => 'en' as const),
+    changeThemeSpy: vi.fn(async () => 'dark' as const),
   }))
 
 // react-i18next → deterministic English `t` (real English resource values); the
@@ -47,6 +48,18 @@ vi.mock('../../../i18n/index.js', () => ({
   PREF_LANGUAGE: 'app_language',
   coerceAppLanguage: (raw: unknown) => (raw === 'en' || raw === 'zh' ? raw : 'system'),
   changeAppLanguage: changeLangSpy,
+}))
+
+// theme model → real option list/coerce + a `changeAppTheme` spy, same shape as
+// the language mock above (the settings-switch wiring is observable without
+// driving the actual storage/ThemeProvider subscription).
+vi.mock('../../../shared/theme/theme-model.js', () => ({
+  APP_THEME_OPTIONS: ['system', 'light', 'dark'],
+  PREF_THEME: 'app_theme',
+  coerceAppTheme: (raw: unknown) => (raw === 'light' || raw === 'dark' ? raw : 'system'),
+  getAppTheme: () => 'dark',
+  resolveTheme: (app: string) => (app === 'system' ? 'dark' : app),
+  changeAppTheme: changeThemeSpy,
 }))
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigateSpy }))
@@ -100,8 +113,15 @@ test('renders every section, the play-mode options, version, server and log-out 
   expect(queryByTestId('language-en')).toBeInTheDocument()
   expect(queryByTestId('language-zh')).toBeInTheDocument()
 
-  // Persisted default (random play mode + system language) → two check glyphs.
-  expect(queryAllByTestId('icon-check')).toHaveLength(2)
+  // The three theme option rows.
+  expect(queryByTestId('theme-system')).toBeInTheDocument()
+  expect(queryByTestId('theme-light')).toBeInTheDocument()
+  expect(queryByTestId('theme-dark')).toBeInTheDocument()
+
+  // Persisted default (random play mode + system language + system theme,
+  // both re-reads resolving against the unmocked memory storage's null) →
+  // three check glyphs.
+  expect(queryAllByTestId('icon-check')).toHaveLength(3)
 
   // About shows the client version, and the log-out row is present.
   expect(queryByTestId('settings-version')).toBeInTheDocument()
@@ -117,6 +137,16 @@ test('selecting a language applies + persists it via changeAppLanguage', async (
   })
 
   expect(changeLangSpy).toHaveBeenCalledWith('zh')
+})
+
+test('selecting a theme applies + persists it via changeAppTheme', async () => {
+  const { queryByTestId } = await renderPage()
+
+  await act(async () => {
+    fireEvent.tap(queryByTestId('theme-light')!)
+  })
+
+  expect(changeThemeSpy).toHaveBeenCalledWith('light')
 })
 
 test('selecting a play mode applies it to the player store and persists it', async () => {

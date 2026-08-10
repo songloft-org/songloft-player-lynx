@@ -8,6 +8,7 @@ import { root } from '@lynx-js/react'
 import { App } from './App.js'
 import { useAuthStore } from './features/auth/store/index.js'
 import { applySavedLanguage } from './i18n/index.js'
+import { applySavedTheme } from './shared/theme/theme-model.js'
 import { router } from './router.js'
 
 root.render(<App />)
@@ -18,11 +19,12 @@ useAuthStore.subscribe((state, prev) => {
   if (state.status !== prev.status) void router.invalidate()
 })
 
-// One-time startup: apply the persisted UI language, hydrate persisted server
-// URL / insecure-TLS into config, then probe stored tokens to resolve
+// One-time startup: apply the persisted UI language + theme, hydrate persisted
+// server URL / insecure-TLS into config, then probe stored tokens to resolve
 // `unknown` → authenticated/unauthenticated.
 void (async () => {
   await applySavedLanguage()
+  await applySavedTheme()
   const { readDefaultPlayMode } = await import('./features/settings/data/settings-prefs.js')
   const savedMode = await readDefaultPlayMode()
   const { usePlayerStore } = await import('./features/player/store/index.js')

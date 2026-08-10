@@ -3,39 +3,19 @@
  *
  * These follow the semantic-token naming used by lynx-ui's Luna themes
  * (surfaces / content / actions / structure), so screens can be styled against
- * `var(--paper)`, `var(--content)`, `var(--primary)`, etc. Batch 1 ships a
- * single dark theme; additional themes can be added as sibling selector blocks.
+ * `var(--paper)`, `var(--content)`, `var(--primary)`, etc.
+ *
+ * `.theme-root` carries the theme-agnostic scale (spacing/radii/font sizes) and
+ * layout; the actual color values live in a sibling `.theme-<name>` class
+ * applied alongside it by `ThemeProvider` (`theme-root theme-dark` /
+ * `theme-root theme-light`), so switching themes is just swapping that second
+ * class — no component styling changes, everything already reads `var(--…)`.
+ * Compound class selectors (`.a.b`) already ship elsewhere in this codebase
+ * (`LoginPage.css` `.login__switch-track.ui-checked`), so this is not a new
+ * CSS-support risk.
  */
 
 .theme-root {
-  /* surfaces */
-  --canvas: #0d0d12;
-  --paper: #16161d;
-  --paper-clear: rgba(22, 22, 29, 0.72);
-
-  /* content (text) */
-  --content: #f5f5f7;
-  --content-2: #c7c7d1;
-  --content-muted: #8b8b98;
-
-  /* actions */
-  --primary: #7c5cff;
-  --primary-2: #6a49f2;
-  --primary-content: #ffffff;
-
-  /* feedback */
-  --danger: #ff6b6b;
-  --danger-content: #ffffff;
-
-  /* structure */
-  --neutral-faint: #24242e;
-  --line: #2c2c38;
-  --rule: #3a3a48;
-
-  /* overlays */
-  --backdrop: rgba(0, 0, 0, 0.55);
-  --backdrop-heavy: rgba(0, 0, 0, 0.78);
-
   /* spacing scale (px) */
   --space-1: 4px;
   --space-2: 8px;
@@ -64,4 +44,64 @@
   height: 100%;
   background-color: var(--canvas);
   color: var(--content);
+}
+
+.theme-root.theme-dark {
+  /* surfaces */
+  --canvas: #0d0d12;
+  --paper: #16161d;
+  --paper-clear: rgba(22, 22, 29, 0.72);
+
+  /* content (text) */
+  --content: #f5f5f7;
+  --content-2: #c7c7d1;
+  --content-muted: #8b8b98;
+
+  /* actions */
+  --primary: #7c5cff;
+  --primary-2: #6a49f2;
+  --primary-content: #ffffff;
+
+  /* feedback */
+  --danger: #ff6b6b;
+  --danger-content: #ffffff;
+
+  /* structure */
+  --neutral-faint: #24242e;
+  --line: #2c2c38;
+  --rule: #3a3a48;
+
+  /* overlays */
+  --backdrop: rgba(0, 0, 0, 0.55);
+  --backdrop-heavy: rgba(0, 0, 0, 0.78);
+}
+
+.theme-root.theme-light {
+  /* surfaces */
+  --canvas: #f4f4f7;
+  --paper: #ffffff;
+  --paper-clear: rgba(255, 255, 255, 0.72);
+
+  /* content (text) */
+  --content: #16161d;
+  --content-2: #4a4a57;
+  --content-muted: #7b7b88;
+
+  /* actions — deepened vs. dark's --primary for contrast on light surfaces */
+  --primary: #6a49f2;
+  --primary-2: #5a3ad1;
+  --primary-content: #ffffff;
+
+  /* feedback — deepened vs. dark's --danger for contrast on light surfaces */
+  --danger: #d64545;
+  --danger-content: #ffffff;
+
+  /* structure */
+  --neutral-faint: #ebebf0;
+  --line: #e2e2e8;
+  --rule: #d0d0d8;
+
+  /* overlays */
+  --backdrop: rgba(0, 0, 0, 0.45);
+  --backdrop-heavy: rgba(0, 0, 0, 0.68);
 }

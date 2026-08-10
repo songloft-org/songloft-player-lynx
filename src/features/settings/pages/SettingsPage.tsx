@@ -12,6 +12,14 @@ import {
   PREF_LANGUAGE,
 } from '../../../i18n/index.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
+import {
+  APP_THEME_OPTIONS,
+  type AppTheme,
+  changeAppTheme,
+  coerceAppTheme,
+  getAppTheme,
+  PREF_THEME,
+} from '../../../shared/theme/theme-model.js'
 // Vanilla (non-subscribing) store reads only — same pattern as HomePage /
 // LibraryPage — so the settings graph never mounts a zustand subscription
 // (which crashes the ReactLynx Vitest snapshot tree) and never pulls the player
@@ -39,8 +47,9 @@ import './SettingsPage.css'
  *   batch-5 player store);
  * - **Connection** (standalone only) — view the server address, open the server
  *   sub-page to switch it;
- * - **Appearance** — theme is dark-only today (light/system deferred, shown as a
- *   read-only row rather than half-building a light token set);
+ * - **Appearance** — theme (system/light/dark), persisted + applied live via
+ *   `theme-model.ts` (batch 13; light token set added alongside the
+ *   previously dark-only `tokens.css`);
  * - **About** — client version + current server + project info;
  * - **Account** — log out (two-tap confirm) → auth store `logout()` → `/login`.
  *
@@ -61,6 +70,18 @@ function languageLabelKey(lang: AppLanguage): string {
   }
 }
 
+/** i18n key for a theme option's label. */
+function themeLabelKey(theme: AppTheme): string {
+  switch (theme) {
+    case 'light':
+      return 'settings.themeLight'
+    case 'dark':
+      return 'settings.themeDark'
+    default:
+      return 'settings.themeSystem'
+  }
+}
+
 export function SettingsPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -73,6 +94,11 @@ export function SettingsPage() {
   // Persisted language choice ('system' until the pref resolves). Selecting an
   // option applies it to i18next live (re-renders the whole tree) + persists it.
   const [language, setLanguage] = useState<AppLanguage>('system')
+  // Persisted theme choice; initialised from the live module state (already
+  // applied at startup by `applySavedTheme`, see `src/index.tsx`), then
+  // overridden below once the persisted pref is re-read (same belt-and-suspenders
+  // pattern as `language`).
+  const [theme, setTheme] = useState<AppTheme>(getAppTheme)
 
   useEffect(() => {
     let cancelled = false
@@ -89,6 +115,16 @@ export function SettingsPage() {
         /* best-effort — leave 'system' */
       }
     })()
+    void (async () => {
+      try {
+        const saved = coerceAppTheme(
+          await getSongloftStorage().prefs.get(PREF_THEME),
+        )
+        if (!cancelled) setTheme(saved)
+      } catch {
+        /* best-effort — leave the live module state */
+      }
+    })()
     return () => {
       cancelled = true
     }
@@ -103,6 +139,11 @@ export function SettingsPage() {
   const selectLanguage = (next: AppLanguage) => {
     setLanguage(next)
     void changeAppLanguage(next)
+  }
+
+  const selectTheme = (next: AppTheme) => {
+    setTheme(next)
+    void changeAppTheme(next)
   }
 
   const serverText = serverDisplay(appConfig.baseUrl, appConfig.isEmbedded, {
@@ -177,14 +218,16 @@ export function SettingsPage() {
             : null}
 
           <SettingsSection title={t('settings.appearance')} icon='palette'>
-            <SettingsRow
-              icon='palette'
-              title={t('settings.theme')}
-              subtitle={t('settings.themeSubtitle')}
-              trailingText={t('settings.themeDark')}
-              disabled
-              testId='settings-theme'
-            />
+            {APP_THEME_OPTIONS.map((option) => (
+              <SettingsRow
+                key={option}
+                title={t(themeLabelKey(option))}
+                selected={option === theme}
+                trailingIcon={option === theme ? 'check' : undefined}
+                onTap={() => selectTheme(option)}
+                testId={`theme-${option}`}
+              />
+            ))}
           </SettingsSection>
 
           <SettingsSection title={t('settings.about')} icon='info'>
