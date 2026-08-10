@@ -4,14 +4,8 @@ name: Dev Build (Android APK)
 # an installable, side-loadable dev APK. Mirrors the "dev channel" pattern of the
 # Flutter product's build-and-release.yml (push→dev prerelease + artifact), but
 # builds the Lynx bundle + a plain LynxView host instead of Flutter.
+# Manual-only: run from the Actions tab ("Run workflow"). No auto-run on push.
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.gitignore'
   workflow_dispatch:
 
 # Only keep the latest run per ref.
@@ -93,7 +87,7 @@ jobs:
 
       # ---- Rolling `dev` prerelease (push to main only) ----
       - name: Update dev prerelease
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: dev
