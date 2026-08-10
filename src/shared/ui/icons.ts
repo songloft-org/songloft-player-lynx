@@ -29,6 +29,7 @@ export type IconName =
   | 'volume'
   | 'volume-mute'
   | 'chevron-down'
+  | 'chevron-up'
   | 'chevron-right'
   | 'menu'
   | 'info'
@@ -41,6 +42,8 @@ export type IconName =
   | 'plus'
   | 'heart'
   | 'heart-filled'
+  | 'sort'
+  | 'refresh'
 
 /** Shared stroke attributes for line icons. */
 function stroke(color: string): string {
@@ -126,6 +129,8 @@ const ICONS: Record<IconName, (color: string) => string> = {
 
   'chevron-down': (c) => `<path d="M6 9.5 12 15.5 18 9.5" ${stroke(c)}/>`,
 
+  'chevron-up': (c) => `<path d="M6 14.5 12 8.5 18 14.5" ${stroke(c)}/>`,
+
   'chevron-right': (c) => `<path d="M9.5 6 15.5 12 9.5 18" ${stroke(c)}/>`,
 
   menu: (c) => `<path d="M4 6h16M4 12h16M4 18h16" ${stroke(c)}/>`,
@@ -170,6 +175,17 @@ const ICONS: Record<IconName, (color: string) => string> = {
 
   'heart-filled': (c) =>
     `<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" ${fill(c)}/>`,
+
+  sort: (c) =>
+    `<path d="M3 6h13" ${stroke(c)}/>` +
+    `<path d="M3 12h9" ${stroke(c)}/>` +
+    `<path d="M3 18h5" ${stroke(c)}/>` +
+    `<path d="M17 4v14M17 18l4-4M17 18l-4-4" ${stroke(c)}/>`,
+
+  refresh: (c) =>
+    `<path d="M4 12a8 8 0 0 1 14.9-4.2M20 12a8 8 0 0 1-14.9 4.2" ${stroke(c)}/>` +
+    `<path d="M19 3v5h-5" ${stroke(c)}/>` +
+    `<path d="M5 21v-5h5" ${stroke(c)}/>`,
 }
 
 /** Build a complete inline SVG document string for `name`, colored with `color`. */

@@ -11,6 +11,7 @@ import {
   type LyricLine,
 } from '../domain/lyric-parser.js'
 import { defaultLyricFetcher, type LyricFetcher } from '../data/lyric-source.js'
+import { cacheLyric, getCachedLyric } from '../data/lyric-cache.js'
 
 export interface LyricState {
   lyrics: LyricLine[]
@@ -71,8 +72,25 @@ export const useLyricStore = create<LyricState>((set, get) => {
       }
       set({ ...EMPTY, isLoading: true })
       try {
-        const payload = await fetcher(song)
+        const cached = await getCachedLyric(song.id)
         if (token !== loadToken) return
+
+        let payload: { lyric?: string; tlyric?: string; rlyric?: string; lxlyric?: string }
+
+        if (cached) {
+          payload = cached
+        } else {
+          payload = await fetcher(song)
+          if (token !== loadToken) return
+          cacheLyric(song.id, {
+            lyric: payload.lyric,
+            tlyric: payload.tlyric,
+            rlyric: payload.rlyric,
+            lxlyric: payload.lxlyric,
+            cachedAt: Date.now(),
+          })
+        }
+
         const { lyrics, synced } = parseLyricText(payload.lyric ?? '', payload.lxlyric)
         let translationMap = EMPTY_MAP
         let romanizationMap = EMPTY_MAP
