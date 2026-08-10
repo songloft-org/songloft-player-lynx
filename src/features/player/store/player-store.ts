@@ -33,7 +33,7 @@ import type { PlayerData } from './derive.js'
 export interface PlayerState extends PlayerData {
   // ── playback ──
   playSong: (song: Song, queue?: Song[]) => Promise<void>
-  playPlaylist: (songs: Song[], startIndex?: number) => Promise<void>
+  playPlaylist: (songs: Song[], startIndex?: number, playlistId?: number) => Promise<void>
   togglePlay: () => Promise<void>
   playNext: () => Promise<void>
   playPrev: () => Promise<void>
@@ -94,6 +94,7 @@ const INITIAL: PlayerData = {
   sleepTimer: undefined,
   previousVolume: undefined,
   errorMessage: undefined,
+  sourcePlaylistId: undefined,
 }
 
 function durationMsOf(song: Song): number {
@@ -187,10 +188,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       await playAtIndex(index)
     },
 
-    playPlaylist: async (songs, startIndex = 0) => {
+    playPlaylist: async (songs, startIndex = 0, playlistId) => {
       if (songs.length === 0) return
       const index = Math.min(Math.max(0, startIndex), songs.length - 1)
-      set({ playlist: [...songs], currentIndex: index, currentSong: songs[index] })
+      set({
+        playlist: [...songs],
+        currentIndex: index,
+        currentSong: songs[index],
+        sourcePlaylistId: playlistId,
+      })
       void audio.setQueue(songs.map(toAudioItem), index)
       await playAtIndex(index)
     },

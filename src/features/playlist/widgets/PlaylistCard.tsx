@@ -13,9 +13,10 @@ import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 export interface PlaylistCardProps {
   playlist: Playlist
   onTap?: (playlist: Playlist) => void
+  isPlaying?: boolean
 }
 
-export function PlaylistCard({ playlist, onTap }: PlaylistCardProps) {
+export function PlaylistCard({ playlist, onTap, isPlaying }: PlaylistCardProps) {
   const { t } = useTranslation()
   const cover = playlist.coverUrl ? buildCoverUrl(playlist.coverUrl) : ''
   const count = t(
@@ -24,7 +25,10 @@ export function PlaylistCard({ playlist, onTap }: PlaylistCardProps) {
   )
 
   return (
-    <view className='playlist-card' bindtap={() => onTap?.(playlist)}>
+    <view
+      className={'playlist-card' + (isPlaying ? ' playlist-card--playing' : '')}
+      bindtap={() => onTap?.(playlist)}
+    >
       {cover
         ? <image className='playlist-card__cover' src={cover} />
         : (

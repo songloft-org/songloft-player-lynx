@@ -1,11 +1,10 @@
+import { useRef } from '@lynx-js/react'
+import type { NodesRef } from '@lynx-js/types'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-// Vanilla store readers (no subscription) — same pattern as LibraryPage — so the
-// home graph does not pull in a zustand subscription (which crashes the
-// ReactLynx Vitest snapshot tree) and stays free of the player barrel.
-import { useAuthStore } from '../../auth/store/index.js'
 import type { Playlist } from '../../../models/playlist.js'
+import { usePlayerStore } from '../../player/store/index.js'
 import { currentGreetingKey } from '../domain/greeting.js'
 import { useHomePlaylists } from '../data/home-query.js'
 import { homeSectionItems, homeSectionTotal, homeStats } from '../data/home-select.js'
@@ -25,14 +24,15 @@ import './HomePage.css'
  * the Flutter home is deferred to the jsplugin batch (see PROGRESS).
  *
  * Interactions: tapping a card → `/playlists/$id`; "View all" → the library
- * Playlists view (`/library?view=playlists`); "Log out" → `useAuthStore.logout()`
- * then `/login`.
+ * Playlists view (`/library?view=playlists`). Log out lives in Settings → Account
+ * (two-step confirm), not on this page.
  */
 export function HomePage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const normal = useHomePlaylists('normal')
   const radio = useHomePlaylists('radio')
+  const playingPlaylistId = usePlayerStore((s) => s.sourcePlaylistId)
 
   const normalItems = homeSectionItems(normal.data?.pages)
   const radioItems = homeSectionItems(radio.data?.pages)
@@ -58,9 +58,11 @@ export function HomePage() {
   const viewAllPlaylists = () => {
     void navigate({ to: '/library', search: { view: 'playlists' } })
   }
-  const logout = () => {
-    void useAuthStore.getState().logout()
-    void navigate({ to: '/login' })
+  const refreshRef = useRef<NodesRef>(null)
+  const onStartRefresh = () => {
+    void Promise.all([normal.refetch(), radio.refetch()]).finally(() => {
+      refreshRef.current?.invoke({ method: 'finishRefresh' }).exec()
+    })
   }
 
   return (
@@ -69,13 +71,17 @@ export function HomePage() {
         <text className='home__greeting' data-testid='home-greeting'>
           {t(currentGreetingKey())}
         </text>
-        <view className='home__spacer' />
-        <view className='home__logout' bindtap={logout}>
-          <text className='home__logout-text'>{t('home.logOut')}</text>
-        </view>
       </view>
 
-      <scroll-view className='home__scroll' scroll-y>
+      <refresh
+        ref={refreshRef}
+        className='home__refresh'
+        bindstartrefresh={onStartRefresh}
+      >
+        <refresh-header className='home__refresh-header'>
+          <text className='home__refresh-header-text'>{t('home.refreshing')}</text>
+        </refresh-header>
+        <scroll-view className='home__scroll' scroll-y>
         <view className='home__content'>
           {isFirstLoad
             ? <HomeState text={t('common.loading')} />
@@ -106,6 +112,7 @@ export function HomePage() {
                           onViewAll={viewAllPlaylists}
                           onRetry={() => void normal.refetch()}
                           onTapPlaylist={openPlaylist}
+                          playingPlaylistId={playingPlaylistId}
                         />
                       )
                       : null}
@@ -119,6 +126,7 @@ export function HomePage() {
                           onViewAll={viewAllPlaylists}
                           onRetry={() => void radio.refetch()}
                           onTapPlaylist={openPlaylist}
+                          playingPlaylistId={playingPlaylistId}
                         />
                       )
                       : null}
@@ -126,7 +134,8 @@ export function HomePage() {
                   </view>
                 )}
         </view>
-      </scroll-view>
+        </scroll-view>
+      </refresh>
     </view>
   )
 }

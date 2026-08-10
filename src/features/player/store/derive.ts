@@ -27,6 +27,7 @@ export interface PlayerData {
   /** Volume before muting, for restore on unmute. */
   previousVolume?: number
   errorMessage?: string
+  sourcePlaylistId?: number
 }
 
 export function hasSong(s: PlayerData): boolean {

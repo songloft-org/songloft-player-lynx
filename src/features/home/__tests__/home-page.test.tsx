@@ -30,6 +30,10 @@ vi.mock('react-i18next', async () =>
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => () => {} }))
 
+vi.mock('../../player/store/index.js', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).makePlayerStoreMock({}),
+)
+
 vi.mock('../data/home-query.js', () => ({
   useHomePlaylists: (type: string) => (type === 'radio' ? radioHook() : normalHook()),
 }))

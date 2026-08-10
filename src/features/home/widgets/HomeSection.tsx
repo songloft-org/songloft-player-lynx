@@ -24,6 +24,7 @@ export interface HomeSectionProps {
   onViewAll: () => void
   onRetry?: () => void
   onTapPlaylist: (playlist: Playlist) => void
+  playingPlaylistId?: number
 }
 
 export function HomeSection({
@@ -34,6 +35,7 @@ export function HomeSection({
   onViewAll,
   onRetry,
   onTapPlaylist,
+  playingPlaylistId,
 }: HomeSectionProps) {
   const { t } = useTranslation()
   return (
@@ -73,6 +75,7 @@ export function HomeSection({
                 key={String(playlist.id)}
                 playlist={playlist}
                 onTap={onTapPlaylist}
+                isPlaying={playingPlaylistId === playlist.id}
               />
             ))}
           </view>
