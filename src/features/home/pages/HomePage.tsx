@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 
 import type { Playlist } from '../../../models/playlist.js'
 import { usePlayerStore } from '../../player/store/index.js'
+import { PluginGrid } from '../../jsplugin/widgets/PluginGrid.js'
 import { currentGreetingKey } from '../domain/greeting.js'
 import { useHomePlaylists } from '../data/home-query.js'
 import { homeSectionItems, homeSectionTotal, homeStats } from '../data/home-select.js'
@@ -130,6 +131,7 @@ export function HomePage() {
                         />
                       )
                       : null}
+                    <PluginGrid />
                     <StatsStrip stats={stats} />
                   </view>
                 )}

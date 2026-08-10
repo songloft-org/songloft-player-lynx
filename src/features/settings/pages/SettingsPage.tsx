@@ -301,7 +301,14 @@ export function SettingsPage() {
           <SettingsSection title={t('settings.moreLater')} icon='settings'>
             <SettingsRow icon='library' title={t('settings.musicLibraryScan')} subtitle={t('settings.deferred')} disabled />
             <SettingsRow icon='settings' title={t('settings.storageCache')} subtitle={t('settings.deferred')} disabled />
-            <SettingsRow icon='menu' title={t('settings.plugins')} subtitle={t('settings.deferred')} disabled />
+            <SettingsRow
+              icon='menu'
+              title={t('settings.plugins')}
+              subtitle={t('jsplugin.managerSubtitle')}
+              trailingIcon='chevron-right'
+              onTap={() => void navigate({ to: '/settings/plugins' })}
+              testId='settings-plugins'
+            />
           </SettingsSection>
 
           <SettingsSection title={t('settings.account')} icon='logout'>

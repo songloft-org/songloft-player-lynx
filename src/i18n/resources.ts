@@ -185,6 +185,16 @@ export const en = {
     logsError: 'Could not reach the server to export logs.',
     logsEmpty: 'No logs.',
   },
+  jsplugin: {
+    gridTitle: 'Plugins',
+    managerTitle: 'Plugins',
+    managerSubtitle: 'Manage installed plugins',
+    updateAll: 'Update all',
+    loadError: 'Failed to load plugins.',
+    noPlugins: 'No plugins installed.',
+    enabled: 'On',
+    disabled: 'Off',
+  },
 }
 
 export const zh: TranslationTree = {
@@ -366,6 +376,16 @@ export const zh: TranslationTree = {
     logsLoading: '加载日志中…',
     logsError: '无法连接服务器导出日志。',
     logsEmpty: '暂无日志。',
+  },
+  jsplugin: {
+    gridTitle: '插件',
+    managerTitle: '插件管理',
+    managerSubtitle: '管理已安装的插件',
+    updateAll: '全部更新',
+    loadError: '加载插件失败。',
+    noPlugins: '暂无已安装的插件。',
+    enabled: '启用',
+    disabled: '禁用',
   },
 }
 

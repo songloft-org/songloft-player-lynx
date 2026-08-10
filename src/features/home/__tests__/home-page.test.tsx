@@ -34,6 +34,10 @@ vi.mock('../../player/store/index.js', async () =>
   (await import('../../../__tests__/_render-mocks.js')).makePlayerStoreMock({}),
 )
 
+vi.mock('../../jsplugin/widgets/PluginGrid.js', () => ({
+  PluginGrid: () => null,
+}))
+
 vi.mock('../data/home-query.js', () => ({
   useHomePlaylists: (type: string) => (type === 'radio' ? radioHook() : normalHook()),
 }))

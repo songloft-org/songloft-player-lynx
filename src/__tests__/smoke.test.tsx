@@ -76,6 +76,8 @@ vi.mock('../features/home/data/home-query.js', () => ({
               name: 'Morning Mix',
               labels: [],
               songCount: 3,
+              sortBy: 'position',
+              sortOrder: 'asc',
               createdAt: '',
               updatedAt: '',
               isBuiltIn: false,
@@ -91,6 +93,10 @@ vi.mock('../features/home/data/home-query.js', () => ({
     isError: false,
     refetch: () => {},
   }),
+}))
+
+vi.mock('../features/jsplugin/widgets/PluginGrid.js', () => ({
+  PluginGrid: () => null,
 }))
 
 /**
