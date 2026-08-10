@@ -1,4 +1,5 @@
 export { LibraryPage } from './pages/LibraryPage.js'
+export { CategorySongsPage } from './pages/CategorySongsPage.js'
 export {
   SongsApi,
   getSongsApi,

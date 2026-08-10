@@ -227,6 +227,29 @@ test('playlists view renders the batch-6 PlaylistsView (empty state) when ?view=
   expect(queryByText('No playlists yet')).toBeInTheDocument()
 })
 
+test('tapping a facet card navigates to the category drill-in with field/value/cover', async () => {
+  searchHook.mockReturnValue({ view: 'facets' })
+  facetsHook.mockReturnValue(
+    facetsResult([
+      {
+        facets: [
+          { value: 'Miles Davis', count: 12, coverUrl: 'covers/miles.jpg' },
+        ],
+        total: 1,
+      },
+    ]),
+  )
+  const { getByText } = await renderPage()
+  await act(async () => {
+    fireEvent.tap(getByText('Miles Davis'))
+  })
+  expect(navigateSpy).toHaveBeenCalledWith({
+    to: '/library/category/$field',
+    params: { field: 'artist' },
+    search: { value: 'Miles Davis', cover: 'covers/miles.jpg' },
+  })
+})
+
 test('tapping a tab navigates to /library with the view search param (URL-driven)', async () => {
   const { getByText } = await renderPage()
   await act(async () => {

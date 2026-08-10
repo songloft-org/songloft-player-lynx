@@ -138,6 +138,7 @@ function SongsView() {
 // ── Categories view (facet grid) ─────────────────────────────────────────────
 
 function FacetsView() {
+  const navigate = useNavigate()
   const [field, setField] = useState<FacetField>('artist')
   const query = useFacetsInfiniteQuery(field)
   const facets = flattenFacets(query.data?.pages)
@@ -175,7 +176,16 @@ function FacetsView() {
               >
                 <view className='library__grid'>
                   {facets.map((facet: SongFacet) => (
-                    <FacetCard key={`${field}:${facet.value}`} facet={facet} />
+                    <FacetCard
+                      key={`${field}:${facet.value}`}
+                      facet={facet}
+                      onTap={(f) =>
+                        navigate({
+                          to: '/library/category/$field',
+                          params: { field },
+                          search: { value: f.value, cover: f.coverUrl },
+                        })}
+                    />
                   ))}
                 </view>
               </scroll-view>

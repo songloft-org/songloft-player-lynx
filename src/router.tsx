@@ -12,7 +12,7 @@ import { ShellLayout } from './shared/layouts/ShellLayout.js'
 import { ThemeProvider } from './shared/theme/ThemeProvider.js'
 import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
-import { LibraryPage } from './features/library/index.js'
+import { CategorySongsPage, LibraryPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { ListPage } from './routes/ListPage.js'
 import { PlayerPage } from './routes/PlayerPage.js'
@@ -99,6 +99,27 @@ const playlistDetailRoute = createRoute({
   component: PlaylistDetailPage,
 })
 
+/**
+ * `/library/category/$field` — Categories facet drill-in (songs in a dimension
+ * value), inside the shell. `value` (the facet value) is required; `cover` is
+ * optional. Both are declared OPTIONAL in the return type so the drill-in is the
+ * only caller that must supply them — no other `navigate` targets this route, so
+ * this keeps `validateSearch` from making unrelated navigations type-invalid
+ * (same pattern as `libraryRoute`).
+ */
+const categorySongsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/library/category/$field',
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { value?: string; cover?: string } => {
+    const value = typeof search.value === 'string' ? search.value : ''
+    const cover = typeof search.cover === 'string' ? search.cover : undefined
+    return cover ? { value, cover } : { value }
+  },
+  component: CategorySongsPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   playerRoute,
@@ -107,6 +128,7 @@ const routeTree = rootRoute.addChildren([
     libraryRoute,
     settingsRoute,
     playlistDetailRoute,
+    categorySongsRoute,
   ]),
 ])
 
