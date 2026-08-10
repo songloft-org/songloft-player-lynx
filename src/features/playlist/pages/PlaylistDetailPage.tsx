@@ -18,8 +18,19 @@ import {
   useDeletePlaylistMutation,
   useUpdatePlaylistMutation,
   useRemoveSongMutation,
+  useReorderSongsMutation,
 } from '../data/playlist-mutations.js'
 import './PlaylistDetailPage.css'
+
+function moveItem<T>(items: T[], index: number, delta: -1 | 1): T[] {
+  const target = index + delta
+  if (target < 0 || target >= items.length) return items
+  const next = [...items]
+  const tmp = next[index]!
+  next[index] = next[target]!
+  next[target] = tmp
+  return next
+}
 
 export function PlaylistDetailPage() {
   const navigate = useNavigate()
@@ -44,11 +55,28 @@ export function PlaylistDetailPage() {
   const deleteMutation = useDeletePlaylistMutation()
   const updateMutation = useUpdatePlaylistMutation(id)
   const removeSongMutation = useRemoveSongMutation(id)
+  const reorderSongsMutation = useReorderSongsMutation(id)
 
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
   const [editDesc, setEditDesc] = useState('')
+  const [sortMode, setSortMode] = useState(false)
+  const [orderedSongs, setOrderedSongs] = useState<Song[]>([])
+  const canSort = !songsQuery.hasNextPage && songs.length > 1
+
+  const enterSortMode = () => {
+    setOrderedSongs(songs)
+    setSortMode(true)
+  }
+  const exitSortMode = () => {
+    setSortMode(false)
+  }
+  const moveSong = (index: number, delta: -1 | 1) => {
+    const next = moveItem(orderedSongs, index, delta)
+    setOrderedSongs(next)
+    reorderSongsMutation.mutate(next.map((s) => s.id))
+  }
 
   const onDelete = () => {
     if (!confirmDelete) {
@@ -92,7 +120,7 @@ export function PlaylistDetailPage() {
   }
 
   const onTapSong = (_song: Song, index: number) => {
-    void usePlayerStore.getState().playPlaylist(songs, index)
+    void usePlayerStore.getState().playPlaylist(songs, index, id)
   }
 
   const header = (
@@ -107,27 +135,45 @@ export function PlaylistDetailPage() {
         {!isBuiltIn
           ? (
             <view className='playlist-detail__topbar-actions'>
-              {!editing
+              {sortMode
+                ? (
+                  <view className='playlist-detail__action-btn' bindtap={exitSortMode}>
+                    <text className='playlist-detail__action-text'>{t('playlist.doneSorting')}</text>
+                  </view>
+                )
+                : null}
+              {!sortMode && !editing && canSort
+                ? (
+                  <view className='playlist-detail__action-btn' bindtap={enterSortMode}>
+                    <text className='playlist-detail__action-text'>{t('playlist.sortSongs')}</text>
+                  </view>
+                )
+                : null}
+              {!sortMode && !editing
                 ? (
                   <view className='playlist-detail__action-btn' bindtap={onStartEdit}>
                     <text className='playlist-detail__action-text'>{t('playlist.editPlaylist')}</text>
                   </view>
                 )
                 : null}
-              <view
-                className={confirmDelete
-                  ? 'playlist-detail__action-btn playlist-detail__action-btn--danger'
-                  : 'playlist-detail__action-btn'}
-                bindtap={onDelete}
-              >
-                <text
-                  className={confirmDelete
-                    ? 'playlist-detail__action-text playlist-detail__action-text--danger'
-                    : 'playlist-detail__action-text'}
-                >
-                  {confirmDelete ? t('playlist.deleteConfirm') : t('playlist.deletePlaylist')}
-                </text>
-              </view>
+              {!sortMode
+                ? (
+                  <view
+                    className={confirmDelete
+                      ? 'playlist-detail__action-btn playlist-detail__action-btn--danger'
+                      : 'playlist-detail__action-btn'}
+                    bindtap={onDelete}
+                  >
+                    <text
+                      className={confirmDelete
+                        ? 'playlist-detail__action-text playlist-detail__action-text--danger'
+                        : 'playlist-detail__action-text'}
+                    >
+                      {confirmDelete ? t('playlist.deleteConfirm') : t('playlist.deletePlaylist')}
+                    </text>
+                  </view>
+                )
+                : null}
             </view>
           )
           : null}
@@ -186,7 +232,47 @@ export function PlaylistDetailPage() {
     <view className='playlist-detail'>
       {header}
       <view className='playlist-detail__body'>
-        {songsQuery.isLoading
+        {sortMode
+          ? (
+            <scroll-view className='playlist-detail__sort-scroll' scroll-y>
+              <view className='playlist-detail__sort-list'>
+                {orderedSongs.map((song, index) => (
+                  <view key={String(song.id)} className='playlist-detail__sort-row'>
+                    <text className='playlist-detail__sort-row-name'>{song.title}</text>
+                    <view className='playlist-detail__sort-row-actions'>
+                      <view
+                        className={'playlist-detail__sort-btn' +
+                          (index === 0 ? ' playlist-detail__sort-btn--disabled' : '')}
+                        bindtap={() => moveSong(index, -1)}
+                        data-testid={`playlist-detail-move-up-${song.id}`}
+                      >
+                        <Icon
+                          name='chevron-up'
+                          size={18}
+                          color={index === 0 ? ICON_COLORS.contentMuted : ICON_COLORS.content}
+                        />
+                      </view>
+                      <view
+                        className={'playlist-detail__sort-btn' +
+                          (index === orderedSongs.length - 1 ? ' playlist-detail__sort-btn--disabled' : '')}
+                        bindtap={() => moveSong(index, 1)}
+                        data-testid={`playlist-detail-move-down-${song.id}`}
+                      >
+                        <Icon
+                          name='chevron-down'
+                          size={18}
+                          color={index === orderedSongs.length - 1
+                            ? ICON_COLORS.contentMuted
+                            : ICON_COLORS.content}
+                        />
+                      </view>
+                    </view>
+                  </view>
+                ))}
+              </view>
+            </scroll-view>
+          )
+          : songsQuery.isLoading
           ? <DetailState text={t('library.loadingSongs')} />
           : songsQuery.isError && songs.length === 0
             ? <DetailState text={t('playlist.songsError')} tone='error' />

@@ -213,6 +213,47 @@
   margin-right: var(--space-2);
 }
 
+.playlist-detail__sort-scroll {
+  width: 100%;
+  height: 100%;
+}
+
+.playlist-detail__sort-list {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--space-4);
+}
+
+.playlist-detail__sort-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.playlist-detail__sort-row-name {
+  flex: 1;
+  color: var(--content);
+  font-size: var(--font-md);
+}
+
+.playlist-detail__sort-row-actions {
+  display: flex;
+  flex-direction: row;
+}
+
+.playlist-detail__sort-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+}
+
+.playlist-detail__sort-btn--disabled {
+  opacity: 0.4;
+}
+
 /* Song row (identical to LibraryPage.css). */
 .song-row {
   display: flex;

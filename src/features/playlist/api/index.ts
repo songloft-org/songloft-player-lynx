@@ -9,6 +9,8 @@ export {
   buildCreatePlaylistBody,
   buildUpdatePlaylistBody,
   buildAddSongsBody,
+  buildReorderPlaylistsBody,
+  buildReorderSongsBody,
 } from './playlist-api.js'
 export type {
   PlaylistsFilters,

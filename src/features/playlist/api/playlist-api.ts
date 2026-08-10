@@ -94,6 +94,14 @@ export function buildAddSongsBody(songIds: number[]): { song_ids: number[] } {
   return { song_ids: songIds }
 }
 
+export function buildReorderPlaylistsBody(playlistIds: number[]): { playlist_ids: number[] } {
+  return { playlist_ids: playlistIds }
+}
+
+export function buildReorderSongsBody(songIds: number[]): { song_ids: number[] } {
+  return { song_ids: songIds }
+}
+
 export class PlaylistApi {
   constructor(private readonly client: HttpClient) {}
 
@@ -153,5 +161,19 @@ export class PlaylistApi {
 
   async removeSongFromPlaylist(playlistId: number, songId: number): Promise<void> {
     await this.client.delete(`${apiPrefix}/playlists/${playlistId}/songs/${songId}`)
+  }
+
+  async reorderPlaylists(playlistIds: number[]): Promise<void> {
+    await this.client.put(
+      `${apiPrefix}/playlists/reorder`,
+      buildReorderPlaylistsBody(playlistIds),
+    )
+  }
+
+  async reorderPlaylistSongs(playlistId: number, songIds: number[]): Promise<void> {
+    await this.client.put(
+      `${apiPrefix}/playlists/${playlistId}/songs/reorder`,
+      buildReorderSongsBody(songIds),
+    )
   }
 }

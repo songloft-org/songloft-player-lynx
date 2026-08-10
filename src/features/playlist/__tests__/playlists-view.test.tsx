@@ -2,13 +2,14 @@ import '../../../shims/router-env.js'
 
 import '@testing-library/jest-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { act, getQueriesForElement, render } from '@lynx-js/react/testing-library'
+import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 
 import type { Playlist } from '../../../models/playlist.js'
 
-const { listHook, createMutationHook } = vi.hoisted(() => ({
+const { listHook, createMutationHook, reorderMutationHook } = vi.hoisted(() => ({
   listHook: vi.fn(),
   createMutationHook: vi.fn(),
+  reorderMutationHook: vi.fn(),
 }))
 
 vi.mock('react-i18next', async () =>
@@ -28,6 +29,7 @@ vi.mock('../data/playlist-query.js', () => ({
 
 vi.mock('../data/playlist-mutations.js', () => ({
   useCreatePlaylistMutation: createMutationHook,
+  useReorderPlaylistsMutation: reorderMutationHook,
 }))
 
 const { PlaylistsView } = await import('../widgets/PlaylistsView.js')
@@ -73,6 +75,7 @@ function mutationResult(over = {}) {
 beforeEach(() => {
   listHook.mockReturnValue(listResult([{ playlists: [], total: 0 }]))
   createMutationHook.mockReturnValue(mutationResult())
+  reorderMutationHook.mockReturnValue(mutationResult())
 })
 
 afterEach(() => vi.clearAllMocks())
@@ -139,4 +142,52 @@ test('shows create playlist button even in empty state', async () => {
   listHook.mockReturnValue(listResult([{ playlists: [], total: 0 }]))
   const { queryByText } = await renderView()
   expect(queryByText('Create playlist')).toBeInTheDocument()
+})
+
+test('entering sort mode shows both playlist names and a done button', async () => {
+  listHook.mockReturnValue(
+    listResult([
+      {
+        playlists: [
+          makePlaylist(1, { name: 'Favorites' }),
+          makePlaylist(2, { name: 'Chill' }),
+        ],
+        total: 2,
+      },
+    ]),
+  )
+  const { queryByTestId, queryByText } = await renderView()
+  await act(async () => {
+    fireEvent.tap(queryByTestId('playlists-sort-toggle')!)
+    await Promise.resolve()
+  })
+  expect(queryByText('Favorites')).toBeInTheDocument()
+  expect(queryByText('Chill')).toBeInTheDocument()
+  expect(queryByText('Done')).toBeInTheDocument()
+})
+
+test('moving a playlist down submits the swapped order to the reorder mutation', async () => {
+  const mutate = vi.fn()
+  reorderMutationHook.mockReturnValue(mutationResult({ mutate }))
+  listHook.mockReturnValue(
+    listResult([
+      {
+        playlists: [
+          makePlaylist(1, { name: 'Favorites' }),
+          makePlaylist(2, { name: 'Chill' }),
+        ],
+        total: 2,
+      },
+    ]),
+  )
+  const { queryByTestId } = await renderView()
+  await act(async () => {
+    fireEvent.tap(queryByTestId('playlists-sort-toggle')!)
+    await Promise.resolve()
+  })
+  await act(async () => {
+    fireEvent.tap(queryByTestId('playlists-move-down-1')!)
+    await Promise.resolve()
+  })
+  expect(mutate).toHaveBeenCalledWith([2, 1])
 })

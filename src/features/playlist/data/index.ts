@@ -15,4 +15,6 @@ export {
   useDeletePlaylistMutation,
   useAddSongsMutation,
   useRemoveSongMutation,
+  useReorderPlaylistsMutation,
+  useReorderSongsMutation,
 } from './playlist-mutations.js'

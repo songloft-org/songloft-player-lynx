@@ -71,3 +71,30 @@ export function useRemoveSongMutation(playlistId: number) {
     },
   })
 }
+
+export function useReorderPlaylistsMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (playlistIds: number[]) =>
+      getPlaylistApi().reorderPlaylists(playlistIds),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['playlist', 'list'] })
+    },
+  })
+}
+
+export function useReorderSongsMutation(playlistId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (songIds: number[]) =>
+      getPlaylistApi().reorderPlaylistSongs(playlistId, songIds),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['playlist', 'songs', playlistId],
+      })
+      void queryClient.invalidateQueries({
+        queryKey: playlistQueryKeys.detail(playlistId),
+      })
+    },
+  })
+}

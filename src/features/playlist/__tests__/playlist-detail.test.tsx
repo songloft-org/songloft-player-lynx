@@ -2,17 +2,18 @@ import '../../../shims/router-env.js'
 
 import '@testing-library/jest-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { act, getQueriesForElement, render } from '@lynx-js/react/testing-library'
+import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 
 import type { Playlist } from '../../../models/playlist.js'
 import type { Song } from '../../../models/song.js'
 
-const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSongMutationHook } = vi.hoisted(() => ({
+const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSongMutationHook, reorderSongsMutationHook } = vi.hoisted(() => ({
   detailHook: vi.fn(),
   songsHook: vi.fn(),
   deleteMutationHook: vi.fn(),
   updateMutationHook: vi.fn(),
   removeSongMutationHook: vi.fn(),
+  reorderSongsMutationHook: vi.fn(),
 }))
 
 vi.mock('react-i18next', async () =>
@@ -38,6 +39,7 @@ vi.mock('../data/playlist-mutations.js', () => ({
   useDeletePlaylistMutation: deleteMutationHook,
   useUpdatePlaylistMutation: updateMutationHook,
   useRemoveSongMutation: removeSongMutationHook,
+  useReorderSongsMutation: reorderSongsMutationHook,
 }))
 
 vi.mock('../../library/widgets/VirtualList.js', async () =>
@@ -121,6 +123,7 @@ beforeEach(() => {
   deleteMutationHook.mockReturnValue(mutationResult())
   updateMutationHook.mockReturnValue(mutationResult())
   removeSongMutationHook.mockReturnValue(mutationResult())
+  reorderSongsMutationHook.mockReturnValue(mutationResult())
 })
 
 afterEach(() => vi.clearAllMocks())
@@ -185,4 +188,38 @@ test('hides delete and edit buttons for built-in playlists', async () => {
   const { queryByText } = await renderPage()
   expect(queryByText('Delete')).not.toBeInTheDocument()
   expect(queryByText('Edit')).not.toBeInTheDocument()
+})
+
+test('shows the reorder button once all songs are loaded', async () => {
+  songsHook.mockReturnValue(
+    songsResult([{ songs: [makeSong(1), makeSong(2)], total: 2 }], { hasNextPage: false }),
+  )
+  const { queryByText } = await renderPage()
+  expect(queryByText('Reorder')).toBeInTheDocument()
+})
+
+test('hides the reorder button while more pages remain unloaded', async () => {
+  songsHook.mockReturnValue(
+    songsResult([{ songs: [makeSong(1), makeSong(2)], total: 5 }], { hasNextPage: true }),
+  )
+  const { queryByText } = await renderPage()
+  expect(queryByText('Reorder')).not.toBeInTheDocument()
+})
+
+test('moving a song down submits the swapped order to the reorder mutation', async () => {
+  const mutate = vi.fn()
+  reorderSongsMutationHook.mockReturnValue(mutationResult({ mutate }))
+  songsHook.mockReturnValue(
+    songsResult([{ songs: [makeSong(1), makeSong(2)], total: 2 }], { hasNextPage: false }),
+  )
+  const { queryByText, queryByTestId } = await renderPage()
+  await act(async () => {
+    fireEvent.tap(queryByText('Reorder')!)
+    await Promise.resolve()
+  })
+  await act(async () => {
+    fireEvent.tap(queryByTestId('playlist-detail-move-down-1')!)
+    await Promise.resolve()
+  })
+  expect(mutate).toHaveBeenCalledWith([2, 1])
 })
