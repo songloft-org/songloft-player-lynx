@@ -36,8 +36,11 @@ export function LoginPage() {
 
   const showServerFields = !appConfig.isEmbedded
 
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
+  // DEV defaults for quick testing (admin/admin against the LAN backend). The
+  // API base URL defaults to `appConfig.baseUrl` (the LAN dev default). TODO:
+  // clear these before shipping.
+  const [username, setUsername] = useState('admin')
+  const [password, setPassword] = useState('admin')
   const [apiUrl, setApiUrl] = useState(showServerFields ? appConfig.baseUrl : '')
   const [insecureTls, setInsecureTls] = useState(appConfig.insecureTls)
 

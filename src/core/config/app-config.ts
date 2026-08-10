@@ -26,7 +26,10 @@ export const defaultJsonHeaders: Readonly<Record<string, string>> = {
   Accept: 'application/json',
 }
 
-const DEFAULT_BASE_URL = 'http://localhost:58091'
+// DEV default: point at the local test backend on the LAN so a phone on the
+// same network can reach it. TODO: revert to 'http://localhost:58091' (or make
+// it build-mode driven) before shipping.
+const DEFAULT_BASE_URL = 'http://30.211.128.187:58091'
 
 /**
  * Deployment mode, ported from the Flutter `AppConfig.deployMode`:
