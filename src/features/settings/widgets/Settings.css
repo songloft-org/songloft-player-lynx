@@ -1,0 +1,107 @@
+/*
+ * Settings section + row styling — LUNA tokens only (no hard-coded colors).
+ * Shared by SettingsSection / SettingsRow and imported by both the main and the
+ * server sub-page (Lynx CSS is global scope, so the sub-page gets these rules
+ * even when the main page never mounted — same approach as the batch-6 detail
+ * page re-declaring .song-row).
+ */
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  margin: var(--space-4) var(--space-4) 0;
+}
+
+.settings-section__header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: var(--space-2);
+  padding: 0 var(--space-1);
+}
+
+.settings-section__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: var(--space-2);
+}
+
+.settings-section__title {
+  color: var(--content-2);
+  font-size: var(--font-sm);
+  font-weight: bold;
+}
+
+.settings-section__card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  background-color: var(--paper);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+/* ── Row ─────────────────────────────────────────────────────────────────── */
+
+.settings-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-4);
+}
+
+.settings-row + .settings-row {
+  border-top: 1px solid var(--line);
+}
+
+.settings-row--active {
+  background-color: var(--neutral-faint);
+}
+
+.settings-row--disabled {
+  opacity: 0.45;
+}
+
+.settings-row__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  margin-right: var(--space-3);
+}
+
+.settings-row__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-row__title {
+  color: var(--content);
+  font-size: var(--font-md);
+}
+
+.settings-row__title--danger {
+  color: var(--danger);
+}
+
+.settings-row__subtitle {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+  margin-top: 2px;
+}
+
+.settings-row__trailing {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-left: var(--space-3);
+}
+
+.settings-row__trailing-text {
+  color: var(--content-2);
+  font-size: var(--font-sm);
+  margin-right: var(--space-2);
+}

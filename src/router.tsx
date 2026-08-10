@@ -15,8 +15,8 @@ import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { CategorySongsPage, LibraryPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
+import { ServerSettingsPage, SettingsPage } from './features/settings/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
-import { SettingsPage } from './routes/SettingsPage.js'
 
 /**
  * Batch 1 uses code-based route definitions (no file-based codegen plugin) to
@@ -98,6 +98,13 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 })
 
+/** `/settings/server` — standalone server-address sub-page, inside the shell. */
+const serverSettingsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/server',
+  component: ServerSettingsPage,
+})
+
 /** `/playlists/$id` — playlist detail, inside the shell (batch 6). */
 const playlistDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -133,6 +140,7 @@ const routeTree = rootRoute.addChildren([
     listRoute,
     libraryRoute,
     settingsRoute,
+    serverSettingsRoute,
     playlistDetailRoute,
     categorySongsRoute,
   ]),

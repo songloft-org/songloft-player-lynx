@@ -4,6 +4,14 @@
  * them without pulling in Lynx runtime globals.
  */
 
+/**
+ * Client (Lynx app) version string shown in Settings → About. There is no
+ * build-time version injection yet on Lynx (no `--dart-define`), so this is a
+ * hand-maintained constant. The server version is a separate concern (a
+ * `/version` API call) this batch does not make. Bump on release.
+ */
+export const clientVersion = '0.1.0-dev'
+
 /** Default page size for paginated list endpoints. */
 export const defaultPageSize = 20
 

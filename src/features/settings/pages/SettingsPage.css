@@ -1,0 +1,38 @@
+/*
+ * Settings page layout — LUNA tokens only. Fills the shell body: a fixed title
+ * topbar above a vertical scroll of sections. The shell body already applies the
+ * top safe-area inset, so the page adds none of its own.
+ */
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.settings__topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-4) var(--space-4) var(--space-3);
+}
+
+.settings__title {
+  color: var(--content);
+  font-size: var(--font-xl);
+  font-weight: bold;
+}
+
+.settings__scroll {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.settings__content {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--space-6);
+}

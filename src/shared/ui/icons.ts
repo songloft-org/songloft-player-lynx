@@ -29,7 +29,13 @@ export type IconName =
   | 'volume'
   | 'volume-mute'
   | 'chevron-down'
+  | 'chevron-right'
   | 'menu'
+  | 'info'
+  | 'logout'
+  | 'link'
+  | 'palette'
+  | 'check'
 
 /** Shared stroke attributes for line icons. */
 function stroke(color: string): string {
@@ -115,7 +121,36 @@ const ICONS: Record<IconName, (color: string) => string> = {
 
   'chevron-down': (c) => `<path d="M6 9.5 12 15.5 18 9.5" ${stroke(c)}/>`,
 
+  'chevron-right': (c) => `<path d="M9.5 6 15.5 12 9.5 18" ${stroke(c)}/>`,
+
   menu: (c) => `<path d="M4 6h16M4 12h16M4 18h16" ${stroke(c)}/>`,
+
+  // Info: circled "i".
+  info: (c) =>
+    `<circle cx="12" cy="12" r="9" ${stroke(c)}/>` +
+    `<path d="M12 11v5" ${stroke(c)}/>` +
+    `<path d="M12 7.6v.2" ${stroke(c)}/>`,
+
+  // Sign out: door + outward arrow.
+  logout: (c) =>
+    `<path d="M15 4h4v16h-4" ${stroke(c)}/>` +
+    `<path d="M4 12h11" ${stroke(c)}/>` +
+    `<path d="M9 7l-5 5 5 5" ${stroke(c)}/>`,
+
+  // Link / connection: two chain links.
+  link: (c) =>
+    `<path d="M9 15 15 9" ${stroke(c)}/>` +
+    `<path d="M11.5 6.5 13 5a4 4 0 0 1 6 6l-1.5 1.5" ${stroke(c)}/>` +
+    `<path d="M12.5 17.5 11 19a4 4 0 0 1-6-6l1.5-1.5" ${stroke(c)}/>`,
+
+  // Palette: appearance / theme.
+  palette: (c) =>
+    `<path d="M12 3a9 9 0 0 0 0 18c1 0 1.6-.8 1.6-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.4-9-7.4z" ${stroke(c)}/>` +
+    `<circle cx="7.5" cy="11.5" r="1" ${fill(c)}/>` +
+    `<circle cx="11" cy="7.5" r="1" ${fill(c)}/>` +
+    `<circle cx="15.5" cy="8.5" r="1" ${fill(c)}/>`,
+
+  check: (c) => `<path d="M5 12.5 10 17.5 19 6.5" ${stroke(c)}/>`,
 }
 
 /** Build a complete inline SVG document string for `name`, colored with `color`. */
