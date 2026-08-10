@@ -1,28 +1,8 @@
-/**
- * Inline i18next translation resources (batch 9).
- *
- * Scope is deliberately **curated to the strings the Lynx UI actually renders**
- * — not the full 5,500-line Flutter arb. `en` is the exact English copy the app
- * already shipped (so existing render assertions keep passing); `zh` is taken
- * from the Flutter reference `lib/l10n/app_zh.arb` where a key maps, and sensible
- * Simplified Chinese elsewhere. Full arb import is deferred (see the
- * `scripts/arb-to-i18next.ts` converter + PROGRESS).
- *
- * Keys are grouped by feature under the single default `translation` namespace
- * and read with dot notation (`t('home.myPlaylists')`). No plural-suffix keys
- * are used (see `common.songCountOne/Other` + the callers) so i18next never has
- * to touch `Intl.PluralRules` on a device whose engine may lack `Intl` — the
- * runtime stays no-DOM/no-Intl safe.
- */
-
-/** Language codes this build ships resources for. */
 export const SUPPORTED_LANGUAGES = ['en', 'zh'] as const
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 
-/** Fallback / default UI language. */
 export const DEFAULT_LANGUAGE: SupportedLanguage = 'en'
 
-/** Shape of one language's resource tree (derived from the English source). */
 export type TranslationTree = typeof en
 
 export const en = {
@@ -86,6 +66,11 @@ export const en = {
     loadingCategories: 'Loading categories…',
     categoriesError: 'Could not load categories.',
     noCategories: 'No categories',
+    searchPlaceholder: 'Search songs...',
+    noSearchResults: 'No results found',
+    sortRecent: 'Recent',
+    sortTitle: 'Title',
+    sortArtist: 'Artist',
   },
   category: {
     songsError: 'Could not load songs.',
@@ -99,6 +84,18 @@ export const en = {
     playlistsError: 'Could not load playlists.',
     noPlaylistsTitle: 'No playlists yet',
     noPlaylistsSubtitle: 'Playlists you create will appear here.',
+    createPlaylist: 'Create playlist',
+    namePlaceholder: 'Playlist name',
+    descriptionPlaceholder: 'Description (optional)',
+    create: 'Create',
+    cancel: 'Cancel',
+    creating: 'Creating…',
+    deletePlaylist: 'Delete',
+    deleteConfirm: 'Tap again to delete',
+    editPlaylist: 'Edit',
+    save: 'Save',
+    saving: 'Saving…',
+    removeSong: 'Remove',
   },
   player: {
     nowPlaying: 'Now Playing',
@@ -112,6 +109,14 @@ export const en = {
     upNext: 'Up next',
     loadingLyrics: 'Loading lyrics…',
     noLyrics: 'No lyrics',
+    sleepTimer: 'Sleep timer',
+    sleepTimerOff: 'Off',
+    sleepTimerMinutes: '{{count}} min',
+    sleepTimerAfterSongs: 'After {{count}} songs',
+    sleepTimerAfterSongsOne: 'After {{count}} song',
+    sleepTimerActive: 'Timer: {{time}}',
+    sleepTimerSongsLeft: '{{count}} songs left',
+    sleepTimerSongsLeftOne: '{{count}} song left',
   },
   settings: {
     title: 'Settings',
@@ -221,6 +226,11 @@ export const zh: TranslationTree = {
     loadingCategories: '加载分类中…',
     categoriesError: '无法加载分类。',
     noCategories: '暂无分类',
+    searchPlaceholder: '搜索歌曲...',
+    noSearchResults: '未找到结果',
+    sortRecent: '最近添加',
+    sortTitle: '标题',
+    sortArtist: '艺术家',
   },
   category: {
     songsError: '无法加载歌曲。',
@@ -234,6 +244,18 @@ export const zh: TranslationTree = {
     playlistsError: '无法加载歌单。',
     noPlaylistsTitle: '还没有歌单',
     noPlaylistsSubtitle: '你创建的歌单会显示在这里。',
+    createPlaylist: '创建歌单',
+    namePlaceholder: '歌单名称',
+    descriptionPlaceholder: '描述（可选）',
+    create: '创建',
+    cancel: '取消',
+    creating: '创建中…',
+    deletePlaylist: '删除',
+    deleteConfirm: '再次点按确认删除',
+    editPlaylist: '编辑',
+    save: '保存',
+    saving: '保存中…',
+    removeSong: '移除',
   },
   player: {
     nowPlaying: '正在播放',
@@ -247,6 +269,14 @@ export const zh: TranslationTree = {
     upNext: '播放队列',
     loadingLyrics: '加载歌词中…',
     noLyrics: '暂无歌词',
+    sleepTimer: '睡眠定时',
+    sleepTimerOff: '关闭',
+    sleepTimerMinutes: '{{count}} 分钟',
+    sleepTimerAfterSongs: '{{count}} 首歌后',
+    sleepTimerAfterSongsOne: '{{count}} 首歌后',
+    sleepTimerActive: '定时: {{time}}',
+    sleepTimerSongsLeft: '还剩 {{count}} 首',
+    sleepTimerSongsLeftOne: '还剩 {{count}} 首',
   },
   settings: {
     title: '设置',
@@ -295,7 +325,6 @@ export const zh: TranslationTree = {
   },
 }
 
-/** i18next `resources` map: one default `translation` namespace per language. */
 export const resources = {
   en: { translation: en },
   zh: { translation: zh },

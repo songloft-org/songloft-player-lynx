@@ -36,6 +36,9 @@ export type IconName =
   | 'link'
   | 'palette'
   | 'check'
+  | 'timer'
+  | 'x'
+  | 'plus'
 
 /** Shared stroke attributes for line icons. */
 function stroke(color: string): string {
@@ -151,6 +154,14 @@ const ICONS: Record<IconName, (color: string) => string> = {
     `<circle cx="15.5" cy="8.5" r="1" ${fill(c)}/>`,
 
   check: (c) => `<path d="M5 12.5 10 17.5 19 6.5" ${stroke(c)}/>`,
+
+  timer: (c) =>
+    `<circle cx="12" cy="12" r="9" ${stroke(c)}/>` +
+    `<path d="M12 7v5l3.5 3.5" ${stroke(c)}/>`,
+
+  x: (c) => `<path d="M6 6 18 18M18 6 6 18" ${stroke(c)}/>`,
+
+  plus: (c) => `<path d="M12 5v14M5 12h14" ${stroke(c)}/>`,
 }
 
 /** Build a complete inline SVG document string for `name`, colored with `color`. */

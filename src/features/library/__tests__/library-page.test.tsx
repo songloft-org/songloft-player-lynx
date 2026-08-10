@@ -11,40 +11,16 @@ import {
 
 import type { Song, SongFacet } from '../../../models/song.js'
 
-/**
- * LibraryPage render smoke.
- *
- * Like the login-page test, the two runtime facilities that crash the ReactLynx
- * Vitest snapshot tree are mocked to plain, non-subscribing stand-ins so the
- * page's real structure is still exercised (the real hooks/components ship in
- * build/dev/on-device):
- *
- *  - the TanStack Query **infinite-query hooks** (`useSongsInfiniteQuery` /
- *    `useFacetsInfiniteQuery`) subscribe via `useSyncExternalStore`; left real
- *    they trip the env's `isListHolder`/`parentNode` second-commit crash (same
- *    class as the zustand subscription in batch 3) and also require a live
- *    `QueryClientProvider` + network. Here they are `vi.fn()` returning static
- *    infinite-query shapes, so `flattenSongs`/`flattenFacets` + the view logic
- *    run against real data.
- *
- * The assertions check the real rendered structure: song rows (title + subtitle
- * + formatted duration), the empty state, and the facet grid — not injected
- * fixtures echoed back.
- */
 const { songsHook, facetsHook, playlistsHook, navigateSpy, searchHook } = vi.hoisted(
   () => ({
     songsHook: vi.fn(),
     facetsHook: vi.fn(),
     playlistsHook: vi.fn(),
     navigateSpy: vi.fn(),
-    // The active view is now URL-driven (`?view=`); tests set it via this hook
-    // and assert tab taps call `navigate` (rather than toggling local state).
     searchHook: vi.fn(),
   }),
 )
 
-// `useTranslation` subscribes to i18next + needs a global instance; mock it to a
-// deterministic English `t` (real English resource values) — see `_render-mocks`.
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
@@ -55,9 +31,6 @@ vi.mock('../data/songs-query.js', () => ({
   libraryQueryKeys: { songs: () => [], facets: () => [] },
 }))
 
-// The Playlists tab now renders the batch-6 `PlaylistsView` (which drives the
-// playlist infinite query via `useSyncExternalStore`); mock the hook to a static
-// shape and stub `useNavigate` so the tab renders without a live QueryClient.
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateSpy,
   useSearch: searchHook,
@@ -67,14 +40,22 @@ vi.mock('../../playlist/data/playlist-query.js', () => ({
   playlistQueryKeys: { list: () => [] },
 }))
 
-// `<list>`/`<list-item>` virtualize their children (not mounted into the env's
-// queryable tree), so the native-list wrapper is stubbed to plain `<view>`s.
-// The real `<list>` ships in build/dev/on-device. See `_render-mocks.tsx`.
+vi.mock('../../playlist/data/playlist-mutations.js', () => ({
+  useCreatePlaylistMutation: () => ({ mutate: vi.fn(), isPending: false }),
+}))
+
 vi.mock('../widgets/VirtualList.js', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockVirtualList(),
 )
 
-// Import AFTER the mock is registered.
+vi.mock('@lynx-js/lynx-ui-input', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
+)
+
+vi.mock('../data/use-debounce.js', () => ({
+  useDebounce: <T,>(value: T, _delay: number): T => value,
+}))
+
 const { LibraryPage } = await import('../pages/LibraryPage.js')
 
 function makeSong(id: number, over: Partial<Song> = {}): Song {
@@ -108,7 +89,6 @@ function makeSong(id: number, over: Partial<Song> = {}): Song {
   }
 }
 
-/** Minimal infinite-query result shape the page consumes. */
 function songsResult(pages: { songs: Song[]; total: number }[], over = {}) {
   return {
     data: { pages },
@@ -146,11 +126,10 @@ function playlistsResult(pages: { playlists: unknown[]; total: number }[], over 
 }
 
 beforeEach(() => {
-  // Sensible defaults; individual tests override as needed.
   songsHook.mockReturnValue(songsResult([{ songs: [], total: 0 }]))
   facetsHook.mockReturnValue(facetsResult([{ facets: [], total: 0 }]))
   playlistsHook.mockReturnValue(playlistsResult([{ playlists: [], total: 0 }]))
-  searchHook.mockReturnValue({}) // default → songs view
+  searchHook.mockReturnValue({})
 })
 
 afterEach(() => {
@@ -179,12 +158,10 @@ test('songs view renders the switcher and a row per song (title, subtitle, durat
   )
   const { queryByText, queryAllByText } = await renderPage()
 
-  // View switcher tabs.
   expect(queryByText('Songs')).toBeInTheDocument()
   expect(queryByText('Categories')).toBeInTheDocument()
   expect(queryByText('Playlists')).toBeInTheDocument()
 
-  // A row per song with title + "artist · album" subtitle + mm:ss duration.
   expect(queryByText('Blue in Green')).toBeInTheDocument()
   expect(queryByText('So What')).toBeInTheDocument()
   expect(queryAllByText('Miles · KOB')).toHaveLength(2)
@@ -204,6 +181,26 @@ test('songs view shows the loading state', async () => {
   expect(queryByText('Loading songs…')).toBeInTheDocument()
 })
 
+test('songs view renders search input and sort chips', async () => {
+  songsHook.mockReturnValue(songsResult([{ songs: [], total: 0 }]))
+  const { queryByText } = await renderPage()
+
+  expect(queryByText('Search songs...')).toBeInTheDocument()
+  expect(queryByText('Recent')).toBeInTheDocument()
+  expect(queryByText('Title')).toBeInTheDocument()
+  expect(queryByText('Artist')).toBeInTheDocument()
+})
+
+test('songs view passes search keyword and sort to useSongsInfiniteQuery', async () => {
+  songsHook.mockReturnValue(songsResult([{ songs: [], total: 0 }]))
+  await renderPage()
+
+  expect(songsHook).toHaveBeenCalledWith({
+    sort: 'added_at',
+    order: 'desc',
+  })
+})
+
 test('categories view renders a facet grid when ?view=facets', async () => {
   searchHook.mockReturnValue({ view: 'facets' })
   facetsHook.mockReturnValue(
@@ -219,7 +216,6 @@ test('categories view renders a facet grid when ?view=facets', async () => {
   )
   const { queryByText } = await renderPage()
 
-  // Facet field chips + facet cards (value + "<n> songs").
   expect(queryByText('Artist')).toBeInTheDocument()
   expect(queryByText('Miles Davis')).toBeInTheDocument()
   expect(queryByText('12 songs')).toBeInTheDocument()
@@ -227,14 +223,10 @@ test('categories view renders a facet grid when ?view=facets', async () => {
 })
 
 test('facet field is URL-driven (?field=album) and chip taps navigate with it', async () => {
-  // Regression: the active facet field was local state and reset to 'artist'
-  // when returning from a category drill-in. It is now `?field=`.
   searchHook.mockReturnValue({ view: 'facets', field: 'album' })
   facetsHook.mockReturnValue(facetsResult([{ facets: [], total: 0 }]))
   const { getByText } = await renderPage()
-  // The facets query is driven by the URL field, not the default 'artist'.
   expect(facetsHook).toHaveBeenCalledWith('album')
-  // Tapping a field chip navigates with the chosen field (URL-driven switch).
   await act(async () => {
     fireEvent.tap(getByText('Genre'))
   })
@@ -247,7 +239,6 @@ test('facet field is URL-driven (?field=album) and chip taps navigate with it', 
 test('playlists view renders the batch-6 PlaylistsView (empty state) when ?view=playlists', async () => {
   searchHook.mockReturnValue({ view: 'playlists' })
   const { queryByText } = await renderPage()
-  // No longer a "coming soon" placeholder — the real view's empty state shows.
   expect(queryByText('No playlists yet')).toBeInTheDocument()
 })
 

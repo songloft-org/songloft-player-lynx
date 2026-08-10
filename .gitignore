@@ -37,3 +37,5 @@ android/.cxx/
 # Embedded Lynx bundle: a build artifact copied from dist/ by
 # scripts/copy-bundle-android.mjs (produced fresh in CI); never commit it.
 android/app/src/main/assets/main.lynx.bundle
+.pnpm-store/
+bun.lock

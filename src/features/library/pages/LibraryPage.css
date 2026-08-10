@@ -53,6 +53,39 @@
   min-height: 0;
 }
 
+/* Songs view wrapper */
+.library__songs-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+/* Search bar */
+.library__search-bar {
+  display: flex;
+  flex-direction: row;
+  padding: var(--space-3) var(--space-4);
+}
+
+.library__search-input {
+  flex: 1;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background-color: var(--neutral-faint);
+  color: var(--content);
+  font-size: var(--font-sm);
+  padding: 0 var(--space-3);
+}
+
+/* Sort bar */
+.library__sort-bar {
+  display: flex;
+  flex-direction: row;
+  padding: 0 var(--space-4) var(--space-2);
+}
+
 /* Flat songs list */
 .library__list {
   display: flex;
