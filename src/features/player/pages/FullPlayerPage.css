@@ -470,6 +470,24 @@
   height: 32px;
 }
 
+.drawer__row-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.drawer__row-move {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 32px;
+}
+
+.drawer__row-move--disabled {
+  opacity: 0.3;
+}
+
 .drawer__row-remove-glyph {
   color: var(--content-muted);
   font-size: var(--font-md);

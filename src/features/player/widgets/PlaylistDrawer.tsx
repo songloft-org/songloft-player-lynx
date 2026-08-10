@@ -11,6 +11,7 @@ import {
 } from '@lynx-js/lynx-ui-sheet'
 
 import { usePlayerStore } from '../store/index.js'
+import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 
 /** Vertical drag-claim ranges for a bottom sheet (per lynx-ui Sheet docs). */
 const CLAIMED_ANGLES: [number, number][] = [
@@ -79,11 +80,41 @@ export function PlaylistDrawer() {
                     ? <text className='drawer__row-artist'>{song.artist}</text>
                     : null}
                 </view>
-                <view
-                  className='drawer__row-remove'
-                  catchtap={() => usePlayerStore.getState().removeFromPlaylist(index)}
-                >
-                  <text className='drawer__row-remove-glyph'>✕</text>
+                <view className='drawer__row-actions'>
+                  {playlist.length > 1
+                    ? (
+                      <>
+                        <view
+                          className={index === 0
+                            ? 'drawer__row-move drawer__row-move--disabled'
+                            : 'drawer__row-move'}
+                          catchtap={index === 0
+                            ? undefined
+                            : () => usePlayerStore.getState().reorderPlaylist(index, index - 1)}
+                          data-testid={`drawer-move-up-${song.id}`}
+                        >
+                          <Icon name='chevron-up' size={16} color={ICON_COLORS.contentMuted} />
+                        </view>
+                        <view
+                          className={index === playlist.length - 1
+                            ? 'drawer__row-move drawer__row-move--disabled'
+                            : 'drawer__row-move'}
+                          catchtap={index === playlist.length - 1
+                            ? undefined
+                            : () => usePlayerStore.getState().reorderPlaylist(index, index + 1)}
+                          data-testid={`drawer-move-down-${song.id}`}
+                        >
+                          <Icon name='chevron-down' size={16} color={ICON_COLORS.contentMuted} />
+                        </view>
+                      </>
+                    )
+                    : null}
+                  <view
+                    className='drawer__row-remove'
+                    catchtap={() => usePlayerStore.getState().removeFromPlaylist(index)}
+                  >
+                    <text className='drawer__row-remove-glyph'>✕</text>
+                  </view>
                 </view>
               </view>
             ))}
