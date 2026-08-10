@@ -474,3 +474,98 @@
   color: var(--content-muted);
   font-size: var(--font-md);
 }
+
+/* ── Sleep timer sheet ── */
+.sleep-timer__list {
+  flex: 1;
+}
+
+.sleep-timer__option {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+.sleep-timer__option--active {
+  background-color: var(--neutral-faint);
+}
+
+.sleep-timer__option-text {
+  color: var(--content);
+  font-size: var(--font-md);
+}
+
+.sleep-timer__option-text--active {
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.sleep-timer__option-text--off {
+  color: var(--danger);
+}
+
+.sleep-timer__divider {
+  height: 1px;
+  background-color: var(--rule);
+  margin: var(--space-2) var(--space-4);
+}
+
+/* ── Sleep timer button / indicator in topbar ── */
+.full-player__timer-wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.full-player__timer-remaining {
+  color: var(--primary);
+  font-size: var(--font-xs);
+  margin-right: var(--space-1);
+}
+
+/* ── Lyrics: word-level highlight + translation/romanization ── */
+.player-lyrics__line-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2) 0;
+}
+
+.player-lyrics__words-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: var(--space-2) 0;
+}
+
+.player-lyrics__word {
+  color: var(--content-muted);
+  font-size: var(--font-md);
+}
+
+.player-lyrics__word--active {
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.player-lyrics__word--past {
+  color: var(--content);
+}
+
+.player-lyrics__translation {
+  color: var(--content-2);
+  font-size: var(--font-sm);
+  text-align: center;
+  margin-top: var(--space-1);
+}
+
+.player-lyrics__romanization {
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+  text-align: center;
+  margin-bottom: var(--space-1);
+}

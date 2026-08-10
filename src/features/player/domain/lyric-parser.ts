@@ -1,17 +1,15 @@
-/**
- * LRC lyric parsing, ported from the Flutter `LyricParser` (the plain-LRC path;
- * word-by-word / translation merging are deferred to a later batch). Pure +
- * unit-tested. Times are stored as **milliseconds** (the Lynx player works in
- * ms), unlike the Dart `Duration`.
- */
-
-export interface LyricLine {
-  /** Absolute line time in milliseconds. */
-  timeMs: number
+export interface LyricWord {
   text: string
+  startMs: number
+  endMs: number
 }
 
-/** `[mm:ss]` or `[mm:ss.xx]` / `[mm:ss.xxx]` time tags. */
+export interface LyricLine {
+  timeMs: number
+  text: string
+  words?: LyricWord[]
+}
+
 const TIME_TAG = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g
 
 function toMs(min: string, sec: string, frac: string | undefined): number {
@@ -19,11 +17,6 @@ function toMs(min: string, sec: string, frac: string | undefined): number {
   return Number(min) * 60_000 + Number(sec) * 1_000 + ms
 }
 
-/**
- * Parse standard LRC. Supports multiple time tags per line
- * (`[00:01.00][00:02.00]text`) — each becomes its own line. Lines without a
- * time tag are skipped. Output is sorted ascending by time.
- */
 export function parseLrc(content: string): LyricLine[] {
   const out: LyricLine[] = []
   for (const raw of content.split('\n')) {
@@ -34,7 +27,6 @@ export function parseLrc(content: string): LyricLine[] {
     const matches = [...line.matchAll(TIME_TAG)]
     if (matches.length === 0) continue
 
-    // Text is whatever follows the last time tag on the line.
     const last = matches[matches.length - 1]
     const text = line.slice((last.index ?? 0) + last[0].length).trim()
 
@@ -46,10 +38,6 @@ export function parseLrc(content: string): LyricLine[] {
   return out
 }
 
-/**
- * Fallback for timestamp-less lyrics: split non-empty lines into static
- * `timeMs: 0` entries (no highlight / auto-scroll). Mirrors `parsePlain`.
- */
 export function parsePlain(content: string): LyricLine[] {
   const out: LyricLine[] = []
   for (const raw of content.split('\n')) {
@@ -60,11 +48,6 @@ export function parsePlain(content: string): LyricLine[] {
   return out
 }
 
-/**
- * Index of the line that should be highlighted at `positionMs` — the last line
- * whose time is `<= positionMs` (binary search). Returns `-1` before the first
- * line or when there are none. Mirrors `LyricParser.findCurrentLine`.
- */
 export function findCurrentLine(lines: readonly LyricLine[], positionMs: number): number {
   if (lines.length === 0) return -1
   if (positionMs < lines[0].timeMs) return -1
@@ -82,4 +65,126 @@ export function findCurrentLine(lines: readonly LyricLine[], positionMs: number)
     }
   }
   return result
+}
+
+const WORD_TAG = /<(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?>/g
+
+export function parseEnhancedLrc(content: string): LyricLine[] {
+  const out: LyricLine[] = []
+  for (const raw of content.split('\n')) {
+    const line = raw.trim()
+    if (line.length === 0) continue
+
+    TIME_TAG.lastIndex = 0
+    const lineMatches = [...line.matchAll(TIME_TAG)]
+    if (lineMatches.length === 0) continue
+
+    const lastLineTag = lineMatches[lineMatches.length - 1]
+    const lineTimeMs = toMs(lineMatches[0][1], lineMatches[0][2], lineMatches[0][3])
+    const afterLineTags = line.slice((lastLineTag.index ?? 0) + lastLineTag[0].length)
+
+    WORD_TAG.lastIndex = 0
+    const wordMatches = [...afterLineTags.matchAll(WORD_TAG)]
+
+    if (wordMatches.length === 0) {
+      const text = afterLineTags.trim()
+      for (const m of lineMatches) {
+        out.push({ timeMs: toMs(m[1], m[2], m[3]), text })
+      }
+      continue
+    }
+
+    const words: LyricWord[] = []
+    let fullText = ''
+
+    for (let i = 0; i < wordMatches.length; i++) {
+      const wm = wordMatches[i]
+      const startMs = toMs(wm[1], wm[2], wm[3])
+      const textStart = (wm.index ?? 0) + wm[0].length
+      let textEnd: number
+      if (i + 1 < wordMatches.length) {
+        textEnd = wordMatches[i + 1].index ?? textStart
+      } else {
+        textEnd = afterLineTags.length
+      }
+      const wordText = afterLineTags.slice(textStart, textEnd)
+
+      let endMs: number
+      if (i + 1 < wordMatches.length) {
+        endMs = toMs(
+          wordMatches[i + 1][1],
+          wordMatches[i + 1][2],
+          wordMatches[i + 1][3],
+        )
+      } else {
+        endMs = startMs + 1_000
+      }
+
+      if (wordText.length > 0) {
+        words.push({ text: wordText, startMs, endMs })
+        fullText += wordText
+      }
+    }
+
+    const textBeforeFirstWord = afterLineTags.slice(0, wordMatches[0].index ?? 0)
+    if (textBeforeFirstWord.trim().length > 0) {
+      words.unshift({
+        text: textBeforeFirstWord,
+        startMs: lineTimeMs,
+        endMs: words.length > 0 ? words[0].startMs : lineTimeMs + 500,
+      })
+      fullText = textBeforeFirstWord + fullText
+    }
+
+    if (words.length > 0 && words.length > 1) {
+      words[words.length - 1].endMs = Math.max(
+        words[words.length - 1].startMs + 100,
+        words[words.length - 1].endMs,
+      )
+    }
+
+    out.push({ timeMs: lineTimeMs, text: fullText.trim(), words })
+  }
+  out.sort((a, b) => a.timeMs - b.timeMs)
+  return out
+}
+
+export function parseTranslation(content: string): LyricLine[] {
+  return parseLrc(content)
+}
+
+export function mergeTranslations(
+  lyrics: readonly LyricLine[],
+  translations: readonly LyricLine[],
+): Map<number, string> {
+  const result = new Map<number, string>()
+  if (translations.length === 0) return result
+
+  for (let li = 0; li < lyrics.length; li++) {
+    const lineTime = lyrics[li].timeMs
+    let bestIdx = -1
+    let bestDiff = Infinity
+    for (let ti = 0; ti < translations.length; ti++) {
+      const diff = Math.abs(translations[ti].timeMs - lineTime)
+      if (diff < bestDiff) {
+        bestDiff = diff
+        bestIdx = ti
+      }
+    }
+    if (bestIdx >= 0 && bestDiff <= 500 && translations[bestIdx].text.length > 0) {
+      result.set(li, translations[bestIdx].text)
+    }
+  }
+  return result
+}
+
+export function findCurrentWord(
+  words: readonly LyricWord[],
+  positionMs: number,
+): number {
+  if (words.length === 0) return -1
+  for (let i = words.length - 1; i >= 0; i--) {
+    if (positionMs >= words[i].startMs) return i
+  }
+  return -1
 }

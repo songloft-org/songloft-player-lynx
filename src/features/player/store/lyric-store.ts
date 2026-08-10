@@ -3,36 +3,33 @@ import { create } from 'zustand'
 import type { Song } from '../../../models/song.js'
 import {
   findCurrentLine,
+  mergeTranslations,
+  parseEnhancedLrc,
   parseLrc,
   parsePlain,
+  parseTranslation,
   type LyricLine,
 } from '../domain/lyric-parser.js'
 import { defaultLyricFetcher, type LyricFetcher } from '../data/lyric-source.js'
 
-/**
- * Lyric state store (zustand), mirroring the Flutter `lyricStateProvider`.
- *
- * `loadForSong` fetches + parses the current song's LRC (best-effort — see
- * `lyric-source.ts`); `syncPosition` re-locates the highlighted line as the
- * player position advances. The parsing + line-location are pure functions
- * (`domain/lyric-parser.ts`), so only the async fetch + subscription live here.
- */
 export interface LyricState {
   lyrics: LyricLine[]
-  /** Highlighted line index, or `-1` (before first line / unsynced). */
   currentIndex: number
   isLoading: boolean
   loadFailed: boolean
-  /** `false` for timestamp-less (plain) lyrics — no highlight / auto-scroll. */
   synced: boolean
+  translationMap: Map<number, string>
+  romanizationMap: Map<number, string>
+  hasTranslation: boolean
+  hasRomanization: boolean
 
   loadForSong: (song: Song | undefined, fetcher?: LyricFetcher) => Promise<void>
-  /** Parse raw LRC/plain text directly (test + future-cache seam). */
   setLyricsFromText: (text: string) => void
-  /** Re-locate the highlighted line for the given player position (ms). */
   syncPosition: (positionMs: number) => void
   clear: () => void
 }
+
+const EMPTY_MAP = new Map<number, string>()
 
 const EMPTY = {
   lyrics: [] as LyricLine[],
@@ -40,20 +37,27 @@ const EMPTY = {
   isLoading: false,
   loadFailed: false,
   synced: true,
+  translationMap: EMPTY_MAP,
+  romanizationMap: EMPTY_MAP,
+  hasTranslation: false,
+  hasRomanization: false,
 }
 
-/** Parse a lyric payload's plain `lyric` field into lines + a `synced` flag. */
-function parseLyricText(text: string): { lyrics: LyricLine[]; synced: boolean } {
-  const trimmed = text.trim()
+function parseLyricText(text: string, enhanced?: string): { lyrics: LyricLine[]; synced: boolean } {
+  const trimmed = (enhanced ?? text).trim()
   if (trimmed.length === 0) return { lyrics: [], synced: true }
+
+  if (enhanced && enhanced.trim().length > 0) {
+    const lyrics = parseEnhancedLrc(enhanced)
+    if (lyrics.length > 0) return { lyrics, synced: true }
+  }
+
   const lyrics = parseLrc(text)
   if (lyrics.length > 0) return { lyrics, synced: true }
-  // No timestamps but non-empty → static plain lyrics.
   return { lyrics: parsePlain(text), synced: false }
 }
 
 export const useLyricStore = create<LyricState>((set, get) => {
-  // Guards against a slow fetch for a previous song overwriting a newer one.
   let loadToken = 0
 
   return {
@@ -68,9 +72,40 @@ export const useLyricStore = create<LyricState>((set, get) => {
       set({ ...EMPTY, isLoading: true })
       try {
         const payload = await fetcher(song)
-        if (token !== loadToken) return // superseded by a newer load
-        const { lyrics, synced } = parseLyricText(payload.lyric ?? '')
-        set({ lyrics, synced, currentIndex: -1, isLoading: false, loadFailed: false })
+        if (token !== loadToken) return
+        const { lyrics, synced } = parseLyricText(payload.lyric ?? '', payload.lxlyric)
+        let translationMap = EMPTY_MAP
+        let romanizationMap = EMPTY_MAP
+        let hasTranslation = false
+        let hasRomanization = false
+
+        if (payload.tlyric && payload.tlyric.trim().length > 0) {
+          const tLines = parseTranslation(payload.tlyric)
+          if (tLines.length > 0) {
+            translationMap = mergeTranslations(lyrics, tLines)
+            hasTranslation = translationMap.size > 0
+          }
+        }
+
+        if (payload.rlyric && payload.rlyric.trim().length > 0) {
+          const rLines = parseTranslation(payload.rlyric)
+          if (rLines.length > 0) {
+            romanizationMap = mergeTranslations(lyrics, rLines)
+            hasRomanization = romanizationMap.size > 0
+          }
+        }
+
+        set({
+          lyrics,
+          synced,
+          currentIndex: -1,
+          isLoading: false,
+          loadFailed: false,
+          translationMap,
+          romanizationMap,
+          hasTranslation,
+          hasRomanization,
+        })
       } catch {
         if (token !== loadToken) return
         set({ ...EMPTY, loadFailed: true })
@@ -78,9 +113,19 @@ export const useLyricStore = create<LyricState>((set, get) => {
     },
 
     setLyricsFromText: (text) => {
-      loadToken++ // cancel any in-flight fetch
+      loadToken++
       const { lyrics, synced } = parseLyricText(text)
-      set({ lyrics, synced, currentIndex: -1, isLoading: false, loadFailed: false })
+      set({
+        lyrics,
+        synced,
+        currentIndex: -1,
+        isLoading: false,
+        loadFailed: false,
+        translationMap: EMPTY_MAP,
+        romanizationMap: EMPTY_MAP,
+        hasTranslation: false,
+        hasRomanization: false,
+      })
     },
 
     syncPosition: (positionMs) => {

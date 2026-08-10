@@ -1,18 +1,44 @@
 import { useTranslation } from 'react-i18next'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { findCurrentWord, type LyricLine } from '../domain/lyric-parser.js'
 import { useLyricStore } from '../store/index.js'
+import { usePlayerStore } from '../store/index.js'
 
-/**
- * Scrolling lyrics list with the current line highlighted (driven by
- * `lyricStore.currentIndex`, which the player store updates from playback
- * position). Loading / empty states mirror the Flutter `LyricsView`.
- */
+function WordHighlightLine({
+  line,
+  positionMs,
+}: {
+  line: LyricLine
+  positionMs: number
+}) {
+  const words = line.words!
+  const currentWordIdx = findCurrentWord(words, positionMs)
+  return (
+    <view className='player-lyrics__words-row'>
+      {words.map((word, wi) => {
+        let cls = 'player-lyrics__word'
+        if (wi === currentWordIdx) {
+          cls = 'player-lyrics__word player-lyrics__word--active'
+        } else if (wi < currentWordIdx) {
+          cls = 'player-lyrics__word player-lyrics__word--past'
+        }
+        return (
+          <text key={`w-${wi}`} className={cls}>{word.text}</text>
+        )
+      })}
+    </view>
+  )
+}
+
 export function LyricsView() {
   const { t } = useTranslation()
   const lyrics = useLyricStore((s) => s.lyrics)
   const currentIndex = useLyricStore((s) => s.currentIndex)
   const isLoading = useLyricStore((s) => s.isLoading)
+  const translationMap = useLyricStore((s) => s.translationMap)
+  const romanizationMap = useLyricStore((s) => s.romanizationMap)
+  const currentTime = usePlayerStore((s) => s.currentTime)
 
   if (isLoading) {
     return (
@@ -35,16 +61,16 @@ export function LyricsView() {
       <view className='player-lyrics__inner'>
         {lyrics.map((line, index) => {
           const active = index === currentIndex
-          const cls = active
-            ? 'player-lyrics__line player-lyrics__line--active'
-            : 'player-lyrics__line'
-          // Empty lyric lines (instrumental breaks) show a small note glyph.
-          return line.text
-            ? (
-              <text key={`${index}:${line.timeMs}`} className={cls}>{line.text}</text>
-            )
-            : (
-              <view key={`${index}:${line.timeMs}`} className={`${cls} player-lyrics__line--note`}>
+          const translation = translationMap.get(index)
+          const romanization = romanizationMap.get(index)
+          const hasWords = active && line.words && line.words.length > 0
+
+          if (!line.text && !hasWords) {
+            const cls = active
+              ? 'player-lyrics__line player-lyrics__line--active player-lyrics__line--note'
+              : 'player-lyrics__line player-lyrics__line--note'
+            return (
+              <view key={`${index}:${line.timeMs}`} className={cls}>
                 <Icon
                   name='music'
                   size={16}
@@ -52,6 +78,39 @@ export function LyricsView() {
                 />
               </view>
             )
+          }
+
+          const hasExtra = translation || romanization || hasWords
+          if (!hasExtra) {
+            const cls = active
+              ? 'player-lyrics__line player-lyrics__line--active'
+              : 'player-lyrics__line'
+            return (
+              <text key={`${index}:${line.timeMs}`} className={cls}>{line.text}</text>
+            )
+          }
+
+          return (
+            <view key={`${index}:${line.timeMs}`} className='player-lyrics__line-group'>
+              {romanization
+                ? <text className='player-lyrics__romanization'>{romanization}</text>
+                : null}
+              {hasWords
+                ? <WordHighlightLine line={line} positionMs={currentTime} />
+                : (
+                  <text
+                    className={active
+                      ? 'player-lyrics__line player-lyrics__line--active'
+                      : 'player-lyrics__line'}
+                  >
+                    {line.text}
+                  </text>
+                )}
+              {translation
+                ? <text className='player-lyrics__translation'>{translation}</text>
+                : null}
+            </view>
+          )
         })}
       </view>
     </scroll-view>

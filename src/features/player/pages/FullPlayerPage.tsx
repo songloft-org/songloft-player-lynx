@@ -1,3 +1,4 @@
+import { useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -12,8 +13,16 @@ import { LyricsView } from '../widgets/LyricsView.js'
 import { PlayControls } from '../widgets/PlayControls.js'
 import { PlaylistDrawer } from '../widgets/PlaylistDrawer.js'
 import { ProgressBar } from '../widgets/ProgressBar.js'
+import { SleepTimerSheet } from '../widgets/SleepTimerSheet.js'
 import { VolumeControl } from '../widgets/VolumeControl.js'
 import './FullPlayerPage.css'
+
+function formatRemaining(ms: number): string {
+  const totalSec = Math.ceil(ms / 1_000)
+  const m = Math.floor(totalSec / 60)
+  const s = totalSec % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
 
 function CoverArt({ song }: { song: Song }) {
   const cover = song.coverUrl ? buildCoverUrl(song.coverUrl) : ''
@@ -28,21 +37,13 @@ function CoverArt({ song }: { song: Song }) {
   )
 }
 
-/**
- * Full-screen "Now Playing" page (chrome-less, at `/player`), the Lynx analogue
- * of the Flutter `MobilePlayer` / `DesktopFullPlayer`.
- *
- * - Narrow: cover + lyrics are a two-page horizontal `Swiper` (per the batch
- *   brief); wide: cover and lyrics sit side by side.
- * - Progress (drag-seek), transport, volume and a playlist-drawer trigger sit
- *   below. Renders an empty placeholder when nothing is loaded.
- * - The page slides in via CSS transform/opacity (`full-player--enter`).
- */
 export function FullPlayerPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const song = usePlayerStore((s) => s.currentSong)
+  const sleepTimer = usePlayerStore((s) => s.sleepTimer)
   const { width, isWide, onLayoutChange } = useBreakpoint()
+  const [showSleepTimer, setShowSleepTimer] = useState(false)
 
   if (!song) {
     return (
@@ -58,6 +59,16 @@ export function FullPlayerPage() {
     )
   }
 
+  const timerActive = sleepTimer != null
+  const timerLabel = sleepTimer
+    ? sleepTimer.mode === 'duration'
+      ? t('player.sleepTimerActive', { time: formatRemaining(sleepTimer.remainingMs ?? 0) })
+      : t(sleepTimer.remainingSongs === 1
+          ? 'player.sleepTimerSongsLeftOne'
+          : 'player.sleepTimerSongsLeft',
+        { count: sleepTimer.remainingSongs ?? 0 })
+    : undefined
+
   return (
     <view
       className='full-player full-player--enter'
@@ -68,11 +79,26 @@ export function FullPlayerPage() {
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='full-player__eyebrow'>{t('player.nowPlaying')}</text>
-        <view
-          className='full-player__icon-btn'
-          bindtap={() => usePlayerStore.getState().togglePlaylistDrawer()}
-        >
-          <Icon name='menu' size={22} color={ICON_COLORS.content} />
+        <view className='full-player__timer-wrap'>
+          {timerLabel
+            ? <text className='full-player__timer-remaining'>{timerLabel}</text>
+            : null}
+          <view
+            className='full-player__icon-btn'
+            bindtap={() => setShowSleepTimer(true)}
+          >
+            <Icon
+              name='timer'
+              size={20}
+              color={timerActive ? ICON_COLORS.primary : ICON_COLORS.content}
+            />
+          </view>
+          <view
+            className='full-player__icon-btn'
+            bindtap={() => usePlayerStore.getState().togglePlaylistDrawer()}
+          >
+            <Icon name='menu' size={22} color={ICON_COLORS.content} />
+          </view>
         </view>
       </view>
 
@@ -120,6 +146,7 @@ export function FullPlayerPage() {
       <VolumeControl />
 
       <PlaylistDrawer />
+      <SleepTimerSheet show={showSleepTimer} onClose={() => setShowSleepTimer(false)} />
     </view>
   )
 }
