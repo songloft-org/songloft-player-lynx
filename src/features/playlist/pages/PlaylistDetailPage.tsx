@@ -19,6 +19,8 @@ import {
   useUpdatePlaylistMutation,
   useRemoveSongMutation,
   useReorderSongsMutation,
+  useSetVisibilityMutation,
+  useUpdateSortMutation,
 } from '../data/playlist-mutations.js'
 import './PlaylistDetailPage.css'
 
@@ -39,10 +41,12 @@ export function PlaylistDetailPage() {
   const id = Number(params.id ?? 0) || 0
 
   const detail = usePlaylistQuery(id)
-  const songsQuery = usePlaylistSongsInfiniteQuery(id)
+  const playlist = detail.data
+  const currentSort = playlist?.sortBy ?? 'position'
+  const currentOrder = playlist?.sortOrder ?? 'asc'
+  const songsQuery = usePlaylistSongsInfiniteQuery(id, { sort: currentSort, order: currentOrder })
   const songs = flattenSongs(songsQuery.data?.pages)
 
-  const playlist = detail.data
   const cover = playlist?.coverUrl ? buildCoverUrl(playlist.coverUrl, playlist.updatedAt) : ''
   const songCount = playlist?.songCount ?? songs.length
   const countLabel = t(
@@ -51,11 +55,14 @@ export function PlaylistDetailPage() {
   )
 
   const isBuiltIn = playlist?.isBuiltIn ?? false
+  const isHidden = playlist?.isHidden ?? false
 
   const deleteMutation = useDeletePlaylistMutation()
   const updateMutation = useUpdatePlaylistMutation(id)
   const removeSongMutation = useRemoveSongMutation(id)
   const reorderSongsMutation = useReorderSongsMutation(id)
+  const visibilityMutation = useSetVisibilityMutation(id)
+  const sortMutation = useUpdateSortMutation(id)
 
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -76,6 +83,21 @@ export function PlaylistDetailPage() {
     const next = moveItem(orderedSongs, index, delta)
     setOrderedSongs(next)
     reorderSongsMutation.mutate(next.map((s) => s.id))
+  }
+
+  const toggleVisibility = () => {
+    visibilityMutation.mutate(!isHidden)
+  }
+
+  const sortOptions = [
+    { key: 'position', order: 'asc', label: t('playlist.sortPosition') },
+    { key: 'title', order: 'asc', label: t('playlist.sortTitle') },
+    { key: 'artist', order: 'asc', label: t('playlist.sortArtist') },
+    { key: 'created_at', order: 'desc', label: t('playlist.sortRecent') },
+  ] as const
+
+  const onSelectSort = (sortBy: string, sortOrder: string) => {
+    sortMutation.mutate({ sortBy, sortOrder })
   }
 
   const onDelete = () => {
@@ -174,6 +196,15 @@ export function PlaylistDetailPage() {
                   </view>
                 )
                 : null}
+              {!sortMode && !editing
+                ? (
+                  <view className='playlist-detail__action-btn' bindtap={toggleVisibility} data-testid='playlist-toggle-visibility'>
+                    <text className='playlist-detail__action-text'>
+                      {isHidden ? t('playlist.showPlaylist') : t('playlist.hidePlaylist')}
+                    </text>
+                  </view>
+                )
+                : null}
             </view>
           )
           : null}
@@ -231,6 +262,30 @@ export function PlaylistDetailPage() {
   return (
     <view className='playlist-detail'>
       {header}
+      {!sortMode && !editing && songs.length > 0
+        ? (
+          <view className='playlist-detail__sort-bar' data-testid='playlist-sort-bar'>
+            {sortOptions.map((opt) => (
+              <view
+                key={opt.key}
+                className={currentSort === opt.key
+                  ? 'playlist-detail__sort-chip playlist-detail__sort-chip--active'
+                  : 'playlist-detail__sort-chip'}
+                bindtap={() => onSelectSort(opt.key, opt.order)}
+                data-testid={`playlist-sort-${opt.key}`}
+              >
+                <text
+                  className={currentSort === opt.key
+                    ? 'playlist-detail__sort-chip-text playlist-detail__sort-chip-text--active'
+                    : 'playlist-detail__sort-chip-text'}
+                >
+                  {opt.label}
+                </text>
+              </view>
+            ))}
+          </view>
+        )
+        : null}
       <view className='playlist-detail__body'>
         {sortMode
           ? (

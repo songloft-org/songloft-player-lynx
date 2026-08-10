@@ -98,3 +98,33 @@ export function useReorderSongsMutation(playlistId: number) {
     },
   })
 }
+
+export function useSetVisibilityMutation(playlistId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (hidden: boolean) =>
+      getPlaylistApi().setPlaylistVisibility(playlistId, hidden),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: playlistQueryKeys.detail(playlistId),
+      })
+      void queryClient.invalidateQueries({ queryKey: ['playlist', 'list'] })
+    },
+  })
+}
+
+export function useUpdateSortMutation(playlistId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ sortBy, sortOrder }: { sortBy: string; sortOrder: string }) =>
+      getPlaylistApi().updatePlaylistSort(playlistId, sortBy, sortOrder),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['playlist', 'songs', playlistId],
+      })
+      void queryClient.invalidateQueries({
+        queryKey: playlistQueryKeys.detail(playlistId),
+      })
+    },
+  })
+}

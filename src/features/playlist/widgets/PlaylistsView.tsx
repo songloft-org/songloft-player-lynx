@@ -25,7 +25,8 @@ export function PlaylistsView() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const query = usePlaylistsInfiniteQuery()
-  const playlists = flattenPlaylists(query.data?.pages)
+  const allPlaylists = flattenPlaylists(query.data?.pages)
+  const playlists = allPlaylists.filter((p) => !p.isHidden)
   const createMutation = useCreatePlaylistMutation()
   const reorderMutation = useReorderPlaylistsMutation()
 

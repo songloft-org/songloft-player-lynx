@@ -176,4 +176,30 @@ export class PlaylistApi {
       buildReorderSongsBody(songIds),
     )
   }
+
+  async getPlaylistSongIds(id: number): Promise<number[]> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/playlists/${id}/song-ids`)
+    const data = res.data as Record<string, unknown> | undefined
+    const ids = Array.isArray(data?.ids) ? data.ids : []
+    return ids.map((v: unknown) => Number(v))
+  }
+
+  async touchPlaylist(id: number): Promise<void> {
+    await this.client.post(`${apiPrefix}/playlists/${id}/touch`)
+  }
+
+  async setPlaylistVisibility(id: number, hidden: boolean): Promise<Playlist> {
+    const res = await this.client.put<unknown>(
+      `${apiPrefix}/playlists/${id}/visibility`,
+      { hidden },
+    )
+    return parsePlaylist(res.data)
+  }
+
+  async updatePlaylistSort(id: number, sortBy: string, sortOrder: string): Promise<void> {
+    await this.client.put(`${apiPrefix}/playlists/${id}/sort`, {
+      sort_by: sortBy,
+      sort_order: sortOrder,
+    })
+  }
 }

@@ -43,6 +43,8 @@ function makePlaylist(id: number, over: Partial<Playlist> = {}): Playlist {
     coverUrl: undefined,
     labels: [],
     songCount: 0,
+    sortBy: 'position',
+    sortOrder: 'asc',
     createdAt: '',
     updatedAt: '',
     isBuiltIn: false,

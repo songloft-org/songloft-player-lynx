@@ -18,6 +18,8 @@ function pl(id: number): Playlist {
     coverUrl: undefined,
     labels: [],
     songCount: 0,
+    sortBy: 'position',
+    sortOrder: 'asc',
     createdAt: '',
     updatedAt: '',
     isBuiltIn: false,

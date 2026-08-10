@@ -8,6 +8,7 @@ import {
   safeClearInterval,
   type AudioItem,
 } from '../../../native/index.js'
+import { getPlaylistApi } from '../../playlist/api/index.js'
 import { cyclePlayMode, resolveNext, resolvePrev, type PlayMode } from '../domain/play-mode.js'
 import { moveItem, removeAt } from '../domain/queue.js'
 import {
@@ -198,6 +199,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         sourcePlaylistId: playlistId,
       })
       void audio.setQueue(songs.map(toAudioItem), index)
+      if (playlistId != null) {
+        void getPlaylistApi().touchPlaylist(playlistId).catch(() => {})
+      }
       await playAtIndex(index)
     },
 

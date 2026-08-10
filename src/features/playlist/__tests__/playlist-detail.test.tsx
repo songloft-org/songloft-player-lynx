@@ -7,13 +7,15 @@ import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/tes
 import type { Playlist } from '../../../models/playlist.js'
 import type { Song } from '../../../models/song.js'
 
-const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSongMutationHook, reorderSongsMutationHook } = vi.hoisted(() => ({
+const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSongMutationHook, reorderSongsMutationHook, visibilityMutationHook, sortMutationHook } = vi.hoisted(() => ({
   detailHook: vi.fn(),
   songsHook: vi.fn(),
   deleteMutationHook: vi.fn(),
   updateMutationHook: vi.fn(),
   removeSongMutationHook: vi.fn(),
   reorderSongsMutationHook: vi.fn(),
+  visibilityMutationHook: vi.fn(),
+  sortMutationHook: vi.fn(),
 }))
 
 vi.mock('react-i18next', async () =>
@@ -40,6 +42,8 @@ vi.mock('../data/playlist-mutations.js', () => ({
   useUpdatePlaylistMutation: updateMutationHook,
   useRemoveSongMutation: removeSongMutationHook,
   useReorderSongsMutation: reorderSongsMutationHook,
+  useSetVisibilityMutation: visibilityMutationHook,
+  useUpdateSortMutation: sortMutationHook,
 }))
 
 vi.mock('../../library/widgets/VirtualList.js', async () =>
@@ -88,6 +92,8 @@ function makePlaylist(over: Partial<Playlist> = {}): Playlist {
     coverUrl: undefined,
     labels: [],
     songCount: 2,
+    sortBy: 'position',
+    sortOrder: 'asc',
     createdAt: '',
     updatedAt: '',
     isBuiltIn: false,
@@ -124,6 +130,8 @@ beforeEach(() => {
   updateMutationHook.mockReturnValue(mutationResult())
   removeSongMutationHook.mockReturnValue(mutationResult())
   reorderSongsMutationHook.mockReturnValue(mutationResult())
+  visibilityMutationHook.mockReturnValue(mutationResult())
+  sortMutationHook.mockReturnValue(mutationResult())
 })
 
 afterEach(() => vi.clearAllMocks())

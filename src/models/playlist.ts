@@ -21,6 +21,8 @@ export const playlistSchema = z
     cover_url: z.string().nullish().catch(undefined),
     labels: z.array(z.string()).catch([]),
     song_count: z.coerce.number().catch(0),
+    sort_by: z.string().catch('position'),
+    sort_order: z.string().catch('asc'),
     created_at: z.string().nullish().catch(undefined),
     updated_at: z.string().nullish().catch(undefined),
   })
@@ -32,6 +34,8 @@ export const playlistSchema = z
     coverUrl: p.cover_url ?? undefined,
     labels: p.labels,
     songCount: p.song_count,
+    sortBy: p.sort_by,
+    sortOrder: p.sort_order,
     createdAt: p.created_at ?? nowIso(),
     updatedAt: p.updated_at ?? nowIso(),
     isBuiltIn: p.labels.includes('built_in'),
@@ -49,6 +53,8 @@ export interface PlaylistJson {
   cover_url: string | null
   labels: string[]
   song_count: number
+  sort_by: string
+  sort_order: string
   created_at: string
   updated_at: string
 }
@@ -62,6 +68,8 @@ export function playlistToJson(playlist: Playlist): PlaylistJson {
     cover_url: playlist.coverUrl ?? null,
     labels: playlist.labels,
     song_count: playlist.songCount,
+    sort_by: playlist.sortBy,
+    sort_order: playlist.sortOrder,
     created_at: playlist.createdAt,
     updated_at: playlist.updatedAt,
   }
