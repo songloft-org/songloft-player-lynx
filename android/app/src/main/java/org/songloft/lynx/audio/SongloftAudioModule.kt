@@ -47,7 +47,7 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
         SongloftAudioEngine.sink = this
     }
 
-    // ── source & transport ──
+    // -- source & transport --
 
     @LynxMethod
     fun load(url: String, opts: ReadableMap?) {
@@ -55,6 +55,9 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
         val hls = opts != null && opts.hasKey("hls") && opts.getBoolean("hls")
         val headers = opts?.takeIf { it.hasKey("headers") }?.getMap("headers")?.let(::toStringMap)
         val ctx = androidContext()
+        // Start the playback service BEFORE loading so the player is created in
+        // the service context (required for the media notification to work).
+        startPlaybackService(ctx)
         SongloftAudioEngine.runOnMain { SongloftAudioEngine.load(ctx, url, hls, headers) }
     }
 
@@ -92,7 +95,7 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
         SongloftAudioEngine.runOnMain { SongloftAudioEngine.setSpeed(rate.toFloat()) }
     }
 
-    // ── queue (JS-store-driven, mirrors the mock) ──
+    // -- queue (JS-store-driven, mirrors the mock) --
 
     @LynxMethod
     fun setQueue(items: ReadableArray?, startIndex: Double) {
@@ -121,7 +124,7 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
     fun setShuffle(on: Boolean) {
     }
 
-    // ── equalizer (stub; real DSP is a later batch) ──
+    // -- equalizer (stub; real DSP is a later batch) --
 
     @LynxMethod
     fun setEqualizerEnabled(on: Boolean) {
@@ -131,7 +134,7 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
     fun setEqualizerBand(index: Double, gainDb: Double) {
     }
 
-    // ── lifecycle ──
+    // -- lifecycle --
 
     @LynxMethod
     fun dispose() {
@@ -139,7 +142,7 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
         stopPlaybackService(androidContext())
     }
 
-    // ── AudioEventSink: forward engine events to the JS runtime ──
+    // -- AudioEventSink: forward engine events to the JS runtime --
 
     override fun emit(event: String, payload: Map<String, Any?>) {
         val params = JavaOnlyArray()
@@ -149,11 +152,18 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
         lynxContext().sendGlobalEvent(event, params)
     }
 
-    // ── helpers ──
+    // -- helpers --
 
-    // Foreground service start/stop is best-effort: the notification / background
-    // path is a batch-B2 stretch goal, so a failure here must NEVER break the
-    // guaranteed foreground-playback path.
+    /**
+     * Start the playback service so the player/session are created inside the
+     * service context. This is **critical** for the media notification: media3's
+     * `MediaSessionService` only manages the foreground notification when the
+     * `MediaSession` was constructed with the service as context.
+     *
+     * The call is best-effort: if it fails (e.g. background-start restrictions
+     * on newer Android when the app is not in the foreground), playback still
+     * works via the engine — only the notification is skipped.
+     */
     private fun startPlaybackService(context: Context) {
         try {
             val intent = Intent(context, SongloftPlaybackService::class.java)
