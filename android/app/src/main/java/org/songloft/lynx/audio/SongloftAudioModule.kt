@@ -1,0 +1,196 @@
+package org.songloft.lynx.audio
+
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import androidx.media3.common.util.UnstableApi
+import com.lynx.jsbridge.LynxMethod
+import com.lynx.jsbridge.LynxModule
+import com.lynx.react.bridge.JavaOnlyArray
+import com.lynx.react.bridge.JavaOnlyMap
+import com.lynx.react.bridge.ReadableMap
+import com.lynx.tasm.behavior.LynxContext
+
+/**
+ * Lynx native module `NativeModules.SongloftAudio` — the real Android audio
+ * backend (ExoPlayer / androidx.media3), replacing the batch-5 TS mock behind
+ * the same facade. Registered in `SongloftApplication` via
+ * `LynxEnv.inst().registerModule("SongloftAudio", SongloftAudioModule::class.java)`
+ * (the exact pattern from the official "Native Modules" guide).
+ *
+ * The method + event contract is kept **identical to the TS mock**
+ * (`src/native/audio-types.ts`) so the facade switch is clean and the player
+ * store is untouched:
+ *   methods  load / play / pause / stop / seek / setVolume / setSpeed +
+ *            setQueue / next / previous / setRepeatMode / setShuffle (queue is
+ *            JS-store-driven, same as the mock — these are minimal no-ops here) +
+ *            equalizer stubs.
+ *   events   emitted through `LynxContext.sendGlobalEvent` (see
+ *            [SongloftAudioEngine]): SongloftAudio.stateChanged / .progress /
+ *            .error — names byte-for-byte match the TS `GlobalEventEmitter`
+ *            listeners in `native-audio.ts`.
+ *
+ * `@LynxMethod`s are invoked on the background (BTS) thread; every call marshals
+ * onto the main looper inside the engine because ExoPlayer is single-threaded.
+ */
+@UnstableApi
+class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSink {
+
+    private fun androidContext(): Context = (mContext as LynxContext).getContext()
+
+    private fun lynxContext(): LynxContext = mContext as LynxContext
+
+    private fun ensureSink() {
+        // Install this module as the engine's event sink (idempotent).
+        SongloftAudioEngine.sink = this
+    }
+
+    // ── source & transport ──
+
+    @LynxMethod
+    fun load(url: String, opts: ReadableMap?) {
+        ensureSink()
+        val hls = opts != null && opts.hasKey("hls") && opts.getBoolean("hls")
+        val headers = opts?.takeIf { it.hasKey("headers") }?.getMap("headers")?.let(::toStringMap)
+        val ctx = androidContext()
+        SongloftAudioEngine.runOnMain { SongloftAudioEngine.load(ctx, url, hls, headers) }
+    }
+
+    @LynxMethod
+    fun play() {
+        ensureSink()
+        val ctx = androidContext()
+        startPlaybackService(ctx)
+        SongloftAudioEngine.runOnMain { SongloftAudioEngine.play(ctx) }
+    }
+
+    @LynxMethod
+    fun pause() {
+        SongloftAudioEngine.runOnMain { SongloftAudioEngine.pause() }
+    }
+
+    @LynxMethod
+    fun stop() {
+        SongloftAudioEngine.runOnMain { SongloftAudioEngine.stop() }
+        stopPlaybackService(androidContext())
+    }
+
+    @LynxMethod
+    fun seek(positionMs: Double) {
+        SongloftAudioEngine.runOnMain { SongloftAudioEngine.seek(positionMs.toLong()) }
+    }
+
+    @LynxMethod
+    fun setVolume(volume: Double) {
+        SongloftAudioEngine.runOnMain { SongloftAudioEngine.setVolume(volume.toFloat()) }
+    }
+
+    @LynxMethod
+    fun setSpeed(rate: Double) {
+        SongloftAudioEngine.runOnMain { SongloftAudioEngine.setSpeed(rate.toFloat()) }
+    }
+
+    // ── queue (JS-store-driven, mirrors the mock: minimal no-ops) ──
+
+    @LynxMethod
+    fun setQueue(items: com.lynx.react.bridge.ReadableArray?, startIndex: Double) {
+        // The JS player store owns the queue and calls load()/play() per track;
+        // the native side plays one item at a time (same behaviour as the mock).
+    }
+
+    @LynxMethod
+    fun next() {
+        // Advancing is decided by the JS store, which then calls load()+play().
+    }
+
+    @LynxMethod
+    fun previous() {
+    }
+
+    @LynxMethod
+    fun setRepeatMode(mode: String) {
+    }
+
+    @LynxMethod
+    fun setShuffle(on: Boolean) {
+    }
+
+    // ── equalizer (stub; real DSP is a later batch) ──
+
+    @LynxMethod
+    fun setEqualizerEnabled(on: Boolean) {
+    }
+
+    @LynxMethod
+    fun setEqualizerBand(index: Double, gainDb: Double) {
+    }
+
+    // ── lifecycle ──
+
+    @LynxMethod
+    fun dispose() {
+        SongloftAudioEngine.runOnMain { SongloftAudioEngine.release() }
+        stopPlaybackService(androidContext())
+    }
+
+    // ── AudioEventSink: forward engine events to the JS runtime ──
+
+    override fun emit(event: String, payload: Map<String, Any?>) {
+        val params = JavaOnlyArray()
+        params.pushMap(toJavaMap(payload))
+        // First arg = event name JS listens for; second = transparent params
+        // array delivered to the GlobalEventEmitter listener.
+        lynxContext().sendGlobalEvent(event, params)
+    }
+
+    // ── helpers ──
+
+    // Foreground service start/stop is best-effort: the notification / background
+    // path is a batch-B2 stretch goal, so a failure here must NEVER break the
+    // guaranteed foreground-playback path.
+    private fun startPlaybackService(context: Context) {
+        try {
+            val intent = Intent(context, SongloftPlaybackService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        } catch (_: Throwable) {
+            // e.g. background-start restrictions on newer Android — playback in
+            // the module still works; only the notification is skipped.
+        }
+    }
+
+    private fun stopPlaybackService(context: Context) {
+        try {
+            context.stopService(Intent(context, SongloftPlaybackService::class.java))
+        } catch (_: Throwable) {
+        }
+    }
+
+    private fun toJavaMap(payload: Map<String, Any?>): JavaOnlyMap {
+        val map = JavaOnlyMap()
+        for ((key, value) in payload) {
+            when (value) {
+                null -> map.putNull(key)
+                is Double -> map.putDouble(key, value)
+                is Int -> map.putInt(key, value)
+                is Boolean -> map.putBoolean(key, value)
+                is String -> map.putString(key, value)
+                else -> map.putString(key, value.toString())
+            }
+        }
+        return map
+    }
+
+    private fun toStringMap(readable: ReadableMap): Map<String, String> {
+        val out = HashMap<String, String>()
+        val it = readable.keySetIterator()
+        while (it.hasNextKey()) {
+            val key = it.nextKey()
+            out[key] = readable.getString(key) ?: ""
+        }
+        return out
+    }
+}

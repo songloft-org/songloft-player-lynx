@@ -15,6 +15,15 @@ export {
   createMockAudio,
   createNativeAudio,
   getAudio,
+  resolveAudio,
   setAudioForTests,
 } from './audio-facade.js'
+export {
+  NATIVE_EVENT,
+  NativeSongloftAudio,
+  isNativeAudioAvailable,
+  mapGlobalEvent,
+  type GlobalEventSubscriber,
+  type SongloftAudioNativeModule,
+} from './native-audio.js'
 export { safeClearInterval, safeClearTimeout } from './safe-timers.js'

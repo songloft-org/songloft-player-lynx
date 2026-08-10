@@ -10,6 +10,7 @@ import com.lynx.service.image.LynxImageService
 import com.lynx.service.log.LynxLogService
 import com.lynx.tasm.LynxEnv
 import com.lynx.tasm.service.LynxServiceCenter
+import org.songloft.lynx.audio.SongloftAudioModule
 
 /**
  * Application entry: initialises the Lynx runtime once, before any LynxView is
@@ -48,5 +49,10 @@ class SongloftApplication : Application() {
             null,
             null,
         )
+        // Register the real native audio backend (ExoPlayer). Exposed to JS as
+        // `NativeModules.SongloftAudio`; the name MUST match the TS facade's
+        // detection + the interface spec (`docs/lynx_native_modules_spec.md#1`).
+        // Pattern copied verbatim from the official Native Modules guide.
+        LynxEnv.inst().registerModule("SongloftAudio", SongloftAudioModule::class.java)
     }
 }

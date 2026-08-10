@@ -75,4 +75,12 @@ dependencies {
     implementation("org.lynxsdk.lynx:xelement-svg:3.8.0")
     implementation("org.lynxsdk.lynx:servalsvg:0.0.1-alpha.3")
     implementation("org.lynxsdk.lynx:xelement-refresh:3.8.0")
+
+    // ---- Native audio (SongloftAudio native module, batch B2) ----
+    // androidx.media3 (ExoPlayer). 1.3.1 is a proven stable release compatible
+    // with compileSdk 34 / minSdk 24. HLS support via media3-exoplayer-hls;
+    // system media session / notification via media3-session.
+    implementation("androidx.media3:media3-exoplayer:1.3.1")
+    implementation("androidx.media3:media3-exoplayer-hls:1.3.1")
+    implementation("androidx.media3:media3-session:1.3.1")
 }
