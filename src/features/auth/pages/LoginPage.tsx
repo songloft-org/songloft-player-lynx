@@ -38,11 +38,14 @@ export function LoginPage() {
 
   const showServerFields = !appConfig.isEmbedded
 
-  // DEV defaults for quick testing (admin/admin against the LAN backend). The
-  // API base URL defaults to `appConfig.baseUrl` (the LAN dev default). TODO:
-  // clear these before shipping.
-  const [username, setUsername] = useState('admin')
-  const [password, setPassword] = useState('admin')
+  // Prefilled asynchronously below from persisted prefs (last username /
+  // server URL) if available. Starting empty avoids a spurious native
+  // `setValue` round-trip (readonly-lock/unlock) on the controlled `Input`
+  // for a value the user never entered — on device this showed up as visible
+  // flicker on the password field / login button while storage reads race
+  // at startup (see AGENTS.md native-storage notes).
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [apiUrl, setApiUrl] = useState(showServerFields ? appConfig.baseUrl : '')
   const [insecureTls, setInsecureTls] = useState(appConfig.insecureTls)
 
