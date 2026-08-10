@@ -7,7 +7,9 @@
     "dev": "rspeedy dev",
     "preview": "rspeedy preview",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "copy-bundle:android": "node scripts/copy-bundle-android.mjs",
+    "build:android-bundle": "rspeedy build && node scripts/copy-bundle-android.mjs"
   },
   "dependencies": {
     "@lynx-js/lynx-ui": "^3.135.0",

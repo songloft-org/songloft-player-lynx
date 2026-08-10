@@ -1,0 +1,111 @@
+name: Dev Build (Android APK)
+
+# Phase B · B1: build the Android host that embeds our Lynx bundle and produce
+# an installable, side-loadable dev APK. Mirrors the "dev channel" pattern of the
+# Flutter product's build-and-release.yml (push→dev prerelease + artifact), but
+# builds the Lynx bundle + a plain LynxView host instead of Flutter.
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+  workflow_dispatch:
+
+# Only keep the latest run per ref.
+concurrency:
+  group: dev-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  android-dev-apk:
+    name: Android dev APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---- Front end: build the Lynx bundle, then embed it into the host ----
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Lynx bundle
+        run: pnpm run build
+
+      - name: Embed bundle into Android assets
+        run: node scripts/copy-bundle-android.mjs
+
+      # ---- Android toolchain ----
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Setup Gradle (with cache)
+        uses: gradle/actions/setup-gradle@v4
+
+      # ---- Build the debug APK (auto-signed with the debug keystore) ----
+      - name: Assemble debug APK
+        working-directory: android
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Locate APK
+        id: apk
+        run: |
+          APK=$(find android/app/build/outputs/apk/debug -name '*.apk' -print -quit)
+          if [ -z "$APK" ]; then
+            echo "No APK produced" >&2
+            exit 1
+          fi
+          cp "$APK" songloft-lynx-dev.apk
+          echo "path=songloft-lynx-dev.apk" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: songloft-lynx-dev-apk
+          path: songloft-lynx-dev.apk
+          if-no-files-found: error
+
+      # ---- Rolling `dev` prerelease (push to main only) ----
+      - name: Update dev prerelease
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev
+          name: Dev build
+          prerelease: true
+          make_latest: false
+          target_commitish: ${{ github.sha }}
+          body: |
+            Rolling development build of the Songloft Lynx Android host.
+            Commit: ${{ github.sha }}
+
+            Install: enable "install from unknown sources", then side-load
+            `songloft-lynx-dev.apk`. This is a debug-signed dev APK; it talks to
+            a dev backend over cleartext HTTP and embeds a mock audio engine.
+          files: songloft-lynx-dev.apk

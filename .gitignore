@@ -27,3 +27,13 @@ coverage/
 
 # Generated arb→i18next output (produced by scripts/arb-to-i18next.ts; not bundled)
 src/i18n/generated/
+
+# Android host build artifacts (Gradle source + wrapper ARE tracked)
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/.cxx/
+# Embedded Lynx bundle: a build artifact copied from dist/ by
+# scripts/copy-bundle-android.mjs (produced fresh in CI); never commit it.
+android/app/src/main/assets/main.lynx.bundle

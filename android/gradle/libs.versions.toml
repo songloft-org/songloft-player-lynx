@@ -1,0 +1,17 @@
+[versions]
+# Versions copied from the official lynx-family/integrating-lynx-demo-projects
+# KotlinEmptyProject (Lynx SDK 3.8.0). AGP 8.5.0 + Gradle 8.7 + Kotlin 1.9.0 are
+# a JDK-17-compatible, proven combination. Compose / test libs from the demo were
+# dropped: this host is a single plain LynxView Activity with no Compose UI.
+agp = "8.5.0"
+kotlin = "1.9.0"
+coreKtx = "1.13.1"
+lifecycleRuntimeKtx = "2.6.1"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

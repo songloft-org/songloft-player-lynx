@@ -1,0 +1,52 @@
+package org.songloft.lynx
+
+import android.app.Application
+import com.facebook.drawee.backends.pipeline.Fresco
+import com.facebook.imagepipeline.core.ImagePipelineConfig
+import com.facebook.imagepipeline.memory.PoolConfig
+import com.facebook.imagepipeline.memory.PoolFactory
+import com.lynx.service.http.LynxHttpService
+import com.lynx.service.image.LynxImageService
+import com.lynx.service.log.LynxLogService
+import com.lynx.tasm.LynxEnv
+import com.lynx.tasm.service.LynxServiceCenter
+
+/**
+ * Application entry: initialises the Lynx runtime once, before any LynxView is
+ * created. Registration order and service set mirror the official
+ * `integrating-lynx-demo-projects` KotlinEmptyProject (Lynx SDK 3.8.0), trimmed
+ * to the three services this app actually needs:
+ *   - image  → `<image>` cover art (backed by Fresco)
+ *   - log    → engine logging
+ *   - http   → the host HTTP service that backs the bare global `fetch` the
+ *              network layer relies on (see AGENTS.md §3; Android 2.18+)
+ * DevTool service is intentionally omitted (this is a standalone side-loadable
+ * dev APK, not an Explorer debugging host).
+ */
+class SongloftApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        initLynxService()
+        initLynxEnv()
+    }
+
+    private fun initLynxService() {
+        // Fresco backs LynxImageService; initialise it first.
+        val factory = PoolFactory(PoolConfig.newBuilder().build())
+        val builder = ImagePipelineConfig.newBuilder(applicationContext).setPoolFactory(factory)
+        Fresco.initialize(applicationContext, builder.build())
+
+        LynxServiceCenter.inst().registerService(LynxImageService.getInstance())
+        LynxServiceCenter.inst().registerService(LynxLogService)
+        LynxServiceCenter.inst().registerService(LynxHttpService)
+    }
+
+    private fun initLynxEnv() {
+        LynxEnv.inst().init(
+            this,
+            null,
+            null,
+            null,
+        )
+    }
+}
