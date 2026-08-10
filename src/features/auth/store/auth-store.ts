@@ -194,6 +194,13 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
       useAppSessionStore.getState().setUsername(null)
       set({ status: 'unauthenticated', isLoading: false, error: undefined })
 
+      try {
+        const { getQueryClient } = await import('../../../lib/query/index.js')
+        getQueryClient().clear()
+      } catch {
+        // query client may not be initialized yet
+      }
+
       // Best-effort server revoke; failure never blocks the local sign-out.
       try {
         const client = createLoginClient(appConfig.resolvedBaseUrl)

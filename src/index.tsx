@@ -23,6 +23,10 @@ useAuthStore.subscribe((state, prev) => {
 // `unknown` → authenticated/unauthenticated.
 void (async () => {
   await applySavedLanguage()
+  const { readDefaultPlayMode } = await import('./features/settings/data/settings-prefs.js')
+  const savedMode = await readDefaultPlayMode()
+  const { usePlayerStore } = await import('./features/player/store/index.js')
+  usePlayerStore.getState().setPlayMode(savedMode)
   const auth = useAuthStore.getState()
   await auth.hydrate()
   await auth.checkAuth()

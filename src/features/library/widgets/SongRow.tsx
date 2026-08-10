@@ -1,20 +1,17 @@
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
+import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { formatDuration } from '../data/format.js'
 
-/**
- * A single song row, ported from the Flutter `SongListTile` (mobile tile):
- * cover + title + artist/album subtitle + `mm:ss` duration. Favourite /
- * multi-select / context actions from the Flutter tile are deferred to a later
- * batch (see PROGRESS). Styled entirely via LUNA tokens (no hardcoded colors).
- */
 export interface SongRowProps {
   song: Song
   index: number
   onTap?: (song: Song, index: number) => void
+  isFavorite?: boolean
+  onToggleFavorite?: () => void
 }
 
-export function SongRow({ song, index, onTap }: SongRowProps) {
+export function SongRow({ song, index, onTap, isFavorite, onToggleFavorite }: SongRowProps) {
   const cover = song.coverUrl ? buildCoverUrl(song.coverUrl) : ''
   const subtitle = [song.artist, song.album].filter(Boolean).join(' · ')
 
@@ -30,6 +27,15 @@ export function SongRow({ song, index, onTap }: SongRowProps) {
           : null}
       </view>
       <text className='song-row__duration'>{formatDuration(song.duration)}</text>
+      {onToggleFavorite != null
+        ? <view className='song-row__fav' catchtap={() => onToggleFavorite()}>
+            <Icon
+              name={isFavorite ? 'heart-filled' : 'heart'}
+              size={18}
+              color={isFavorite ? ICON_COLORS.danger : ICON_COLORS.contentMuted}
+            />
+          </view>
+        : null}
     </view>
   )
 }

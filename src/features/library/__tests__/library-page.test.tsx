@@ -48,6 +48,11 @@ vi.mock('../widgets/VirtualList.js', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockVirtualList(),
 )
 
+vi.mock('../widgets/FavoriteSongRow.js', async () => {
+  const { SongRow } = await import('../widgets/SongRow.js')
+  return { FavoriteSongRow: SongRow }
+})
+
 vi.mock('@lynx-js/lynx-ui-input', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
 )

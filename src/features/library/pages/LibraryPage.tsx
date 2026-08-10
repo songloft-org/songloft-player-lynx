@@ -16,6 +16,7 @@ import {
 import { PlaylistsView } from '../../playlist/widgets/PlaylistsView.js'
 import { FacetCard } from '../widgets/FacetCard.js'
 import { SongRow } from '../widgets/SongRow.js'
+import { FavoriteSongRow } from '../widgets/FavoriteSongRow.js'
 import { VirtualList } from '../widgets/VirtualList.js'
 import './LibraryPage.css'
 
@@ -153,7 +154,7 @@ function SongsView() {
                 items={songs}
                 itemKey={(song) => String(song.id)}
                 renderItem={(song, index) => (
-                  <SongRow song={song} index={index} onTap={onTapSong} />
+                  <FavoriteSongRow song={song} index={index} onTap={onTapSong} />
                 )}
                 onEndReached={onEndReached}
                 footer={query.isFetchingNextPage
