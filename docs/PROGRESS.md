@@ -1,7 +1,7 @@
 # 进展与交接（PROGRESS）
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
-> **最后更新**：2026-08-10 · 最近完成（**批11 · 收藏/排序/歌词缓存/闪烁修复轮**）：**Library 收藏切换**（SongRow 心形图标 + `useFavoriteToggle` + catchtap 阻止穿透）+ **播放模式启动恢复**（index.tsx 读回 `default_play_mode` 应用到 store）+ **登出清 Query 缓存**；**修复真机登录页闪烁**（根因：LoginPage 硬编码 `admin`/`admin` 预填 + 异步用户名回填，撞上 B2 真实原生存储后繁忙的启动桥梁队列，lynx-ui 受控 Input 每次 value 变化都触发原生 setValue 往返，移除硬编码默认值）；**Home 首页**移除冗余登出按钮（已在 Settings→Account）+ 原生 `<refresh>`/`<refresh-header>` 下拉刷新（3.8+ 已验证支持，非猜测属性）+ 正在播放歌单高亮（`sourcePlaylistId`）；**Playlist 排序**（歌单列表 + 歌单内歌曲，chevron 上移/下移按钮代替拖拽，歌曲排序仅在全部页已加载时开放避免静默截断）；**Player 歌词本地缓存**（`SongloftStorage.prefs` 按 songId 缓存 lyric/tlyric/rlyric/lxlyric，命中跳过网络）。**过程注记**：4 个 subagent 中 3 个因模型配额超限中断（Home/登录闪烁排查/Playlist 排序各仅完成部分文件），由我直接在主线程补完剩余实现 + 集成修复（i18n 冲突、icons 类型不完整、测试 mock 缺失）；仅「歌词缓存」agent 完整跑完。build 1200.8 kB / tsc / **345 vitest** 全绿（本机 `ulimit -v 25GB` 硬限制导致 pnpm/rspeedy/vitest 崩溃，验收全程在 Docker 容器内完成）。
+> **最后更新**：2026-08-10 · 最近完成（**批12 · 小遗留项扫尾轮**）：**服务器地址切换清 Query 缓存**（`ServerSettingsPage` Save 成功后 `getQueryClient().clear()`，补齐批11 只做了登出场景的缺口）；**内置歌单标识**（`PlaylistCard` 对 `isBuiltIn` 歌单叠加小红心徽标）；**播放队列抽屉排序**（`PlaylistDrawer` 队列行加 chevron 上移/下移，复用 `reorderPlaylist`，仅 >1 首歌时显示；`catchtap` 阻止穿透到行的「点播」`bindtap`——**测试环境限制**：`fireEvent.tap()` 经验证不会触发纯 `catchtap`（无伴随 `bindtap`）处理器，与 `<refresh>` 的 `bindstartrefresh` 手势同属「仅真机可验」范畴，故该交互的单测只覆盖渲染结构非点击行为）；**修复 `pnpm-workspace.yaml` 遗留占位符 bug**（`allowBuilds.esbuild` 曾是字符串 `"set this to true or false"` 而非布尔值，导致新版 pnpm 每次 `install`/`run` 前置校验硬失败，本机与 CI 迟早都会踩——已改 `true`）。build 1207.3 kB / tsc / **348 vitest** 全绿。**上一批**（批11 · 收藏/排序/歌词缓存/闪烁修复轮）：**Library 收藏切换**（SongRow 心形图标 + `useFavoriteToggle` + catchtap 阻止穿透）+ **播放模式启动恢复**（index.tsx 读回 `default_play_mode` 应用到 store）+ **登出清 Query 缓存**；**修复真机登录页闪烁**（根因：LoginPage 硬编码 `admin`/`admin` 预填 + 异步用户名回填，撞上 B2 真实原生存储后繁忙的启动桥梁队列，lynx-ui 受控 Input 每次 value 变化都触发原生 setValue 往返，移除硬编码默认值）；**Home 首页**移除冗余登出按钮（已在 Settings→Account）+ 原生 `<refresh>`/`<refresh-header>` 下拉刷新（3.8+ 已验证支持，非猜测属性）+ 正在播放歌单高亮（`sourcePlaylistId`）；**Playlist 排序**（歌单列表 + 歌单内歌曲，chevron 上移/下移按钮代替拖拽，歌曲排序仅在全部页已加载时开放避免静默截断）；**Player 歌词本地缓存**（`SongloftStorage.prefs` 按 songId 缓存 lyric/tlyric/rlyric/lxlyric，命中跳过网络）。**过程注记**：4 个 subagent 中 3 个因模型配额超限中断（Home/登录闪烁排查/Playlist 排序各仅完成部分文件），由我直接在主线程补完剩余实现 + 集成修复（i18n 冲突、icons 类型不完整、测试 mock 缺失）；仅「歌词缓存」agent 完整跑完。build 1200.8 kB / tsc / **345 vitest** 全绿（本机 `ulimit -v 25GB` 硬限制导致 pnpm/rspeedy/vitest 崩溃，验收全程在 Docker 容器内完成）。
 
 ## 总览
 
@@ -24,6 +24,7 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | B2 | Android 真原生音频 SongloftAudio（ExoPlayer/media3）+ facade 原生/mock 切换；**+真机修复轮**（原生持久化存储/通知权限/通知栏/configChanges）| ✅ 完成（本机可验部分）| clean build（1103.7 kB）/copy script/tsc/**270 vitest** 全绿 | 真实播放✅；持久化/重登✅；通知权限弹窗✅；**通知栏控制❌（批10 修复待 CI 复验）** |
 | 10 | 功能补全轮（Library 搜索+排序 / Playlist CRUD / Player 睡眠定时+歌词增强 / Android 通知栏修复）| ✅ 完成 | clean build（1149.7 kB）/tsc/**332 vitest** 全绿 | ⏳ 待 CI 出新 APK 验通知栏 |
 | 11 | 收藏/排序/歌词缓存/闪烁修复轮（Library 收藏 / Home 刷新+高亮 / Playlist 排序 / Player 歌词缓存 / 登录页闪烁修复）| ✅ 完成 | clean build（1200.8 kB）/tsc/**345 vitest** 全绿 | ⏳ 待 CI 出新 APK 验登录页不再闪烁 + 下拉刷新手势 |
+| 12 | 小遗留项扫尾轮（服务器切换清缓存 / 内置歌单徽标 / 播放队列拖拽排序 UI / pnpm-workspace 占位符 bug 修复）| ✅ 完成 | clean build（1207.3 kB）/tsc/**348 vitest** 全绿 | ⏳ 待扫码验证队列 chevron 排序 + 服务器切换后旧数据不再残留 |
 | 后续 | B3 iOS 宿主 + AVPlayer + CI(No-Codesign) → Lynxtron 桌面 → jsplugin/webview → 库扫描/缓存/升级 ops → 下载/许可 → DLNA | ⛔ 未开始（真机/桌面/后端 ops 绑定，本机不能自动验收）| | |
 
 ## 已交付明细
@@ -118,7 +119,7 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 ### 批9 · i18n 国际化（Phase A 收尾，纯前端）
 - **i18n 基建**（`src/i18n/`）：装 `i18next@23` + `react-i18next@14`。`resources.ts` = **内联 en+zh 资源**（单一默认 `translation` 命名空间，按 feature 分组的点号 key，如 `home.myPlaylists`/`player.nowPlaying`/`settings.playModeOrderLabel`；`zh: TranslationTree = typeof en` → **编译期强制 en/zh 同形**）。`index.ts` = `initI18n(lng)`（同步 init：`initImmediate:false` + 内联 resources 无异步 backend → `t` 即刻可用；`fallbackLng`/`supportedLngs`/`interpolation.escapeValue:false`/`react.useSuspense:false`；**无 detector**——绝不引 `i18next-browser-languagedetector`；**`compatibilityJSON:'v3'`** 强制内建 CLDR 复数规则、永不走 `Intl.PluralRules`）+ 语言助手（`coerceAppLanguage` 容错回落 `system`、`resolveLanguage` `system→en`、`readSavedLanguage`、`applySavedLanguage`、`changeAppLanguage`——切 i18next + 持久化 prefs（key `app_language`；`system` 删 key））。`App.tsx` 渲染前 `initI18n()`；`index.tsx` bootstrap `await applySavedLanguage()`（读回持久化语言）。
 - **无 DOM/无 Intl 验证**：i18next core + react-i18next **源码零 `window`/`document`/`navigator`/`self`**（`i18n-no-dom.test.ts` 静态断言 dist 源；i18next 唯一 `Intl` 用法全 `typeof Intl` 守卫）；**执行验证**——esbuild 打包 i18next core + 我们的 resources，在 `self/window/document/navigator/Intl` 全 `undefined` 的 Lynx-BTS 形 realm 里跑 init+`t`+`changeLanguage`，证 `t('nav.home')`→`Home`、切 zh→`首页`、`songCountOther{count:5}`→`5 songs`（无 Intl.PluralRules）。默认 vitest 为 node env（无 jsdom，不骗人）。
-- **抽取并本地化的串**（跨全 feature，en=现有串、zh=参考 `app_zh.arb` 对应译文，对不上给合理简体）：`nav`（Home/Library/Settings）、`common`（Loading…/Loading more…/Retry/Unknown/Untitled/歌数单复数 `songCountOne/Other`）、`auth`（登录页全部：标题/副标题/用户名/密码/API 地址/不安全 TLS/登录/登录中）、`home`（4 段问候/退出/两区块标题/View all/统计/空态/整页与区块错误）、`library`（三 tab/facet 字段/加载空错误态）、`category`（drill-in 状态）、`playlist`（列表/详情/回退名/状态）、`player`（Now Playing/播放模式标签/Up next/歌词加载与空/空态页）、`settings`（六分组标题 + 4 播放模式 label/desc + 主题/关于/更多占位/账户/服务器子页/**语言分组**）。**shell nav** `destinations.ts` 改带 `labelKey`，ShellLayout `t()`。品牌名 `Songloft`、抽屉 `✕` 保留字面量。
+- **抽取并本地化的串**（跨全 feature，en=现有串、zh=参考 `app_zh.arb` 对应译文，对不上给合理简体）：`nav`（Home/Library/Settings）、`common`（Loading…/Loading more…/Retry/Unknown/Untitled/歌数单复数 `songCountOne/Other`）、`auth`（登录页全部：标题/副标题/用户名/密码/API 地址/不安全 TLS/登录/登录中）、`home`（4 段问候/退出/两区块标题/View all/统计/空态/整页与区块错误）、`library`（三 tab/facet 字段/加载空错误态）、`category`（drill-in 状态）、`playlist`（列表/详情/回退名/状态）、`player`（Now Playing/播放���������式标签/Up next/歌词加载与空/空态页）、`settings`（六分组标题 + 4 播放模式 label/desc + 主题/关于/更多占位/账户/服务器子页/**语言分组**）。**shell nav** `destinations.ts` 改带 `labelKey`，ShellLayout `t()`。品牌名 `Songloft`、抽屉 `✕` 保留字���量。
 - **纯函数改为返回 i18n key**（页面 `t()` 包裹，保持可单测不引 i18next）：`greeting.ts` `greetingKeyForHour/currentGreetingKey`（→ `home.greeting*`）；`settings-model.ts` `playModeLabelKey/playModeDescriptionKey`；`serverDisplay(baseUrl,isEmbedded,labels)` 改收「已本地化 labels 对象」（embedded/notConfigured 由调用方译）。歌数单复数**手动选 key**（`count===1?One:Other` + `{{count}}` 插值）——不用 i18next 复数后缀 key，规避 Intl.PluralRules。
 - **Settings 语言切换**（解掉批8 defer）：新增「语言」分组，三选项行 `跟随系统 / English / 中文`（选中显 `check`，tap → `changeAppLanguage()` 即时切 i18next（react-i18next 订阅触发全树重渲染）+ 写 prefs；挂载时读回持久化选择）。移除「更多设置」里的 Language disabled 占位。
 - **arb→i18next 转换脚本**（`scripts/arb-to-i18next.ts`，Node TS，`node scripts/arb-to-i18next.ts` 运行）：纯函数 `isArbMetaKey`（丢 `@meta`/`@@locale`）、`convertPlaceholders`（`{name}`→`{{name}}`）、`hasIcuComplexPlaceholder`/`complexKeys`（标记 ICU `{count,plural,…}` 需人工）、`arbToI18next`。CLI 读 `lib/l10n/app_{en,zh}.arb` → 写 `src/i18n/generated/{en,zh}.json`（**各 1276 key**，10 个 ICU 复数键已标记）。**产物取舍**：generated JSON **不被 app 引用**（app 只内联 `resources.ts` 的策展子集），故不进 Lynx 包；**全量运行时导入留后续**（避免包体撑爆——见遗留）。
@@ -201,6 +202,17 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 - **本机验收**：build **1200.8 kB**（含新增 lazy chunk：query/settings-prefs/player-store 各 0.99 kB，因 `index.tsx` 新增动态 `import()`）✓ / tsc ✓ / **345 vitest** 全绿（+13）✓。**注**：本机 `ulimit -v 25GB` 硬限制导致 pnpm/rspeedy/vitest 崩溃，验收全程在 Docker 容器内完成（`docker run node:22-slim` + bind mount）。
 - **真机待验**：登录页不再闪烁（需装新 APK）；首页下拉刷新手势（`<refresh>` 真机行为，本机 vitest 无法模拟 `bindstartrefresh` 手势触发，`fireEvent` 的 `eventMap` 未收录该事件名，只能真机验）；歌单/歌曲排序上移下移生效 + 提交到后端持久化；收藏心形图标切换 + 状态持久化；正在播放歌单卡片高亮边框。
 
+### 批12 · 小遗留项扫尾轮
+
+用户要求「先扫小遗留项」而非直接跳去 B3 iOS 宿主（路线图既定下一里程碑，工作量大、需 CI/真机验，暂缓）。逐一调研 PROGRESS 里标记未完成的小项，排除已隐性完成但文档未更新的（facet 卡片点击其实早已接线到 `CategorySongsPage`；下拉刷新/正在播放高亮已在批11做——本次一并纠正文档），实际动手的 3 项：
+
+- **服务器地址切换清 Query 缓存**（`ServerSettingsPage.tsx`）：Save 成功后同步 `getQueryClient().clear()`（改用**静态 import** 而非批11 登出流程的动态 `import()`——动态 import 在此页的 `bindtap` fire-and-forget 调用链里引入了不可控的真实模块加载延迟，导致已有的 `Save applies... then routes back` 测试断言 `navigateSpy` 未在单个 `await Promise.resolve()` 内触发，改静态 import 后同步完成、测试转绿）。
+- **内置歌单标识**（`PlaylistCard.tsx`）：`playlist.isBuiltIn` 时在封面右上角叠加 12px 心形徽标（`heart-filled` + `--primary` 底色圆点），复用 zod 派生字段，零新增依赖。
+- **播放队列抽屉排序**（`PlaylistDrawer.tsx`）：队列 >1 首歌时每行加 chevron 上移/下移（复用现有 `reorderPlaylist(oldIndex,newIndex)` action），`catchtap` 避免穿透到行的「点播」`bindtap`；边界行按钮视觉禁用（`catchtap=undefined` + 透明度样式），单曲队列整组隐藏（同 `playlist-detail`/`playlists-view` 既有排序「仅 >1 项开放」惯例）。**测试环境限制发现**：花了较长时间排查一个「催单测试点了按钮但 spy 零调用」的诡异现象，逐步实锤到——`@lynx-js/react/testing-library` 的 `fireEvent.tap()` 只会触发元素自身的 `bindtap`，**不会**触发一个只挂了 `catchtap`（没有伴随 `bindtap`）的元素的处理器，无论直接 tap 该元素还是 tap 其子节点触发「冒泡」都一样（用临时 `console.log` 加 `bindtap` 对照实测确认）。回看代码库，`MiniPlayer` 播放键与 `SongRow` 收藏心形早就是这个写法且从未被单测覆盖点击行为——本次之前一直是「未发现的坑」，不是新引入的。**修法**：不改产品代码（`catchtap` 是真机上正确的写法，真实设备的 tap 事件系统按预期工作，只有这个 JS 测试模拟器不支持），改为把这类交互归入「仅真机可验」范畴（与 `<refresh>` 的 `bindstartrefresh` 手势同类），单测只覆盖可验证的渲染结构（哪些行有排序按钮/单曲隐藏），移除了两个原计划断言点击行为的测试用例。
+- **修复 `pnpm-workspace.yaml` 占位符 bug**：`allowBuilds: { esbuild: "set this to true or false" }` ——字符串而非布尔值，是本 session 更早某次尝试修 pnpm 新版本 `ERR_PNPM_IGNORED_BUILDS` 硬失败（新版 pnpm 默认拒绝未批准的依赖构建脚本）留下的半成品，一直没生效，每次 Docker 内 `pnpm install`/`run` 都会在这道校验上失败退出。改成 `esbuild: true` 后 `pnpm install --frozen-lockfile` 恢复正常（不再需要 `--ignore-scripts` 绕过）。
+- **本机验收**：build **1207.3 kB** ✓ / tsc ✓ / **348 vitest** 全绿（+3：`playlists-view` 内置徽标测试 1 个、`playlist-drawer.test.tsx` 新文件 2 个渲染结构测试；`playlist-drawer` 原计划的点击行为测试因上述 `catchtap` 模拟限制而移除，净增 3）。Docker 容器验证全程未再手动加 `--ignore-scripts`。
+- **真机待验**：服务器切换后旧数据不再残留（切服务器 → 请求新数据 → 确认不是缓存的旧服务器数据）；播放队列抽屉 chevron 排序实际生效（真机 tap 手势，非本机模拟范畴）；内置歌单（Favorites/Favorite Radio）卡片右上角出现红心徽标。
+
 ## 未完成 / 遗留事项（TODO & 风险）
 
 - [x] **Lynx `fetch` 是裸全局**（批3 真机修复）：Lynx 的 `fetch` 是宿主提供的 HTTP service（Android/iOS 2.18+），以**裸全局**暴露而非 `globalThis.fetch`（与 `self` 同）。`createFetchTransport` 已改为先取裸 `fetch`（`typeof fetch !== 'undefined'`）再回落 `globalThis.fetch`/注入。⚠️ 但**真机整登录 E2E 仍需后端可达**：手机上 `http://localhost:58091` 指向手机自身，须填开发机 LAN IP 且后端在跑；Lynx fetch 不支持 CORS/redirect/keepalive/FormData/Blob。
@@ -212,7 +224,7 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
   - [x] **playlists 视图**（批6 落地）：占位换成 `PlaylistsView`（歌单网格 + 点卡片→`/playlists/$id`）。
   - [x] **搜索**（批10 完成）：防抖 Input + keyword 参数流到 API；排序 chip（Recent/Title/Artist）。
   - [x] **收藏**（批11 完成）：SongRow 心形图标切换（`useFavoriteToggle`）。**多选 / 排序菜单 / 自定义视图编辑器**未做（Flutter `LibraryPage` 有，本批裁掉）。
-  - **facet 卡片点击**未跳到「该分类下歌曲列表」（Flutter `CategorySongsPage`），本批仅展示网格。
+  - [x] **facet 卡片点击**跳到「该分类下歌曲列表」（`CategorySongsPage` + `/library/category/$field` 路由，早前批次已落地，此处补记）。
   - **真机待扫码验列表拉取**：登录后进 `/library`，songs 视图应见分页歌曲行，触底加载下一页；facets 视图切 Artist/Album/Genre 见网格。
 - [ ] **standalone/embedded 部署模式**：批3 登录页需保留 standalone 的 API 地址配置 + 不安全 TLS 开关分支（见 `AGENTS.md`）。
 - [ ] **批5 遗留（player）**：
@@ -236,7 +248,7 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
   - **首页 JS 插件 Tab / WebView 全裁**（`JSPluginGrid` + `plugin_tab_page`/`plugin_webview_page`/`plugin_render_*` + `PluginHostBridge`/`PluginRenderController`）——留 **jsplugin 阶段**（首页插件区块与 jsplugin feature 深耦合，需 WebView/iframe 宿主桥）。
   - **区块布局裁为截断网格**：未做窄屏横向轮播 / 宽屏可配置行列网格（`HomeGridConfig`、`homeGridConfigProvider`、宽屏「不限行数」自动续拉 `kHomeAutoLoadAllMaxItems`）；统一截断到 6 张三列平铺，超出靠「View all」。
   - **两区块「View all」共用 `/library?view=playlists`**：Lynx Library 无「电台」子视图（Flutter `?view=playlist_radio`），电台暂映射同一 Playlists 视图。
-  - **HeroCard 推荐卡未 port**；下拉刷新 / 加载慢提示 / 正在播放歌单高亮（`currentPlaylistId` 边框 + equalizer 遮罩）未 port；问候仅英文 4 段（无 i18n / noon 折进午后）。
+  - **HeroCard 推荐卡未 port**；加载慢提示 / equalizer 遮罩未 port；[x] **下拉刷新**（原生 `<refresh>`，批11）/ [x] **正在播放歌单高亮**（`sourcePlaylistId`，批11）已完成；问候仅英文 4 段（无 i18n / noon 折进午后）。
   - **真机待扫码**：登录→首页见问候 + 「我的歌单」「我的电台」两区块（封面/名称/歌数）+ 底部统计条 → 点歌单卡片进 `/playlists/$id` → 点「View all」到 Library Playlists → 点「Log out」回登录。需后端可达 + LAN IP。
 - [ ] **批8 遗留（settings）· defer 明细 + 归属阶段**：
   - **主题 light/system 切换** → **主题批（未排期，早于/随 Lynxtron 桌面）**：现只有一套 dark token（`tokens.css` `.theme-root`）；按铁律不硬造半套 light。当前只放只读 `Dark` 行。做时需新建整套 light/亮暗切换 token 集 + `ThemeProvider` 加 class 切换 + system 跟随（宿主 API）+ 主题包（`ThemePackManager`/`ThemePackApi`）。
@@ -252,7 +264,7 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
   - **日志级别 / 日志导出 / Web 调试控制台**（`logLevelProvider`/`log_export_service`/`webDebugConsoleProvider`）→ **诊断/CI 阶段**。
   - [x] **语言切换**（`LanguageSelector`/i18n）→ **批9 已解**：Settings 加「语言」分组（跟随系统/English/中文），`changeAppLanguage` 即时切 i18next + 持久化 prefs `app_language`，react-i18next 订阅触发全树重渲染。见「批9 · i18n 国际化」。
   - [x] **默认播放模式启动恢复**（批11 完成）：`src/index.tsx` 启动异步链读回 `readDefaultPlayMode()` 应用到 `usePlayerStore`（原生持久化已在 B2 落地，重启不再丢）。
-  - **登出确认为两步 tap**（非模态对话框，Lynx 无现成 dialog 原语）；服务器切换后**不重连/不刷新已有 Query 缓存**（下次请求自然走新地址，但已缓存数据不失效）——[x] **登出场景已加 `queryClient.clear()`**（批11），服务器切换场景仍未加。
+  - **登出确认为两步 tap**（非模态对话框，Lynx 无现成 dialog 原语）；[x] **登出场景**（批11）与 [x] **服务器切换场景**（批12）均已加 `queryClient.clear()`，避免旧服务器的缓存数据残留。
   - **真机待扫码**：登录→进 Settings 见六分组；选播放模式（选中态 + 若在播放则模式即时变）；进 Server 子页改地址/TLS → Save → 之后请求走新地址（需后端可达 + LAN IP）；两步登出回登录。lynx-ui `Input`/`Switch` 在服务器子页复用（批3 已证可渲染，手势本机不可验）。
 - [ ] **Phase B · B1 遗留（Android 宿主 / CI）**：
   - **APK 构建仅在 CI 验证**：本机无 Android SDK，`assembleDebug` 只能在 GitHub Actions 跑；首跑风险见上「CI 首跑风险预判」。宿主源、gradle 配置、Lynx 依赖坐标均照抄官方 demo 3.8.0 以降低失败率，但 CI 首次绿灯前不算真正可用。
