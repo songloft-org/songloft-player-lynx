@@ -29,13 +29,22 @@ export function PlaylistCard({ playlist, onTap, isPlaying }: PlaylistCardProps) 
       className={'playlist-card' + (isPlaying ? ' playlist-card--playing' : '')}
       bindtap={() => onTap?.(playlist)}
     >
-      {cover
-        ? <image className='playlist-card__cover' src={cover} />
-        : (
-          <view className='playlist-card__cover playlist-card__cover--empty'>
-            <Icon name='music' size={28} color={ICON_COLORS.contentMuted} />
-          </view>
-        )}
+      <view className='playlist-card__cover-wrap'>
+        {cover
+          ? <image className='playlist-card__cover' src={cover} />
+          : (
+            <view className='playlist-card__cover playlist-card__cover--empty'>
+              <Icon name='music' size={28} color={ICON_COLORS.contentMuted} />
+            </view>
+          )}
+        {playlist.isBuiltIn
+          ? (
+            <view className='playlist-card__badge' data-testid={`playlist-card-builtin-${playlist.id}`}>
+              <Icon name='heart-filled' size={12} color={ICON_COLORS.primaryContent} />
+            </view>
+          )
+          : null}
+      </view>
       <text className='playlist-card__name'>{playlist.name || t('common.untitled')}</text>
       <text className='playlist-card__count'>{count}</text>
     </view>

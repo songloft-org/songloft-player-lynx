@@ -108,6 +108,24 @@ test('renders a card per playlist with name and song count', async () => {
   expect(queryByText('1 song')).toBeInTheDocument()
 })
 
+test('shows a built-in badge only on built-in playlists', async () => {
+  listHook.mockReturnValue(
+    listResult([
+      {
+        playlists: [
+          makePlaylist(1, { name: 'Favorites', isBuiltIn: true }),
+          makePlaylist(2, { name: 'Chill', isBuiltIn: false }),
+        ],
+        total: 2,
+      },
+    ]),
+  )
+  const { queryByTestId } = await renderView()
+
+  expect(queryByTestId('playlist-card-builtin-1')).toBeInTheDocument()
+  expect(queryByTestId('playlist-card-builtin-2')).not.toBeInTheDocument()
+})
+
 test('shows the empty state when there are no playlists', async () => {
   listHook.mockReturnValue(listResult([{ playlists: [], total: 0 }]))
   const { queryByText } = await renderView()
