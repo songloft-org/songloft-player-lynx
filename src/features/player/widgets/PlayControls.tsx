@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { IconName } from '../../../shared/ui/icons.js'
 import { hasNext, hasPrev, usePlayerStore } from '../store/index.js'
@@ -11,11 +13,12 @@ const MODE_ICON: Record<PlayMode, IconName> = {
   random: 'shuffle',
 }
 
-const MODE_LABEL: Record<PlayMode, string> = {
-  order: 'Order',
-  loop: 'Repeat all',
-  single: 'Repeat one',
-  random: 'Shuffle',
+/** i18n key for the play-mode toggle label per mode. */
+const MODE_LABEL_KEY: Record<PlayMode, string> = {
+  order: 'player.modeOrder',
+  loop: 'player.modeLoop',
+  single: 'player.modeSingle',
+  random: 'player.modeRandom',
 }
 
 /**
@@ -24,6 +27,7 @@ const MODE_LABEL: Record<PlayMode, string> = {
  * the tap handlers so the buttons don't re-render on action identity.
  */
 export function PlayControls() {
+  const { t } = useTranslation()
   const isPlaying = usePlayerStore((s) => s.isPlaying)
   const isBuffering = usePlayerStore((s) => s.isBuffering)
   const playMode = usePlayerStore((s) => s.playMode)
@@ -39,7 +43,7 @@ export function PlayControls() {
         <view className='player-controls__mode-glyph'>
           <Icon name={MODE_ICON[playMode]} size={20} color={ICON_COLORS.content2} />
         </view>
-        <text className='player-controls__mode-label'>{MODE_LABEL[playMode]}</text>
+        <text className='player-controls__mode-label'>{t(MODE_LABEL_KEY[playMode])}</text>
       </view>
 
       <view

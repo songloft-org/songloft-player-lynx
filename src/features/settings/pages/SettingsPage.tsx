@@ -1,8 +1,17 @@
 import { useEffect, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 
 import { appConfig } from '../../../core/config/app-config.js'
 import { clientVersion, type PlayMode } from '../../../core/config/constants.js'
+import {
+  APP_LANGUAGE_OPTIONS,
+  type AppLanguage,
+  changeAppLanguage,
+  coerceAppLanguage,
+  PREF_LANGUAGE,
+} from '../../../i18n/index.js'
+import { getSongloftStorage } from '../../../core/storage/index.js'
 // Vanilla (non-subscribing) store reads only — same pattern as HomePage /
 // LibraryPage — so the settings graph never mounts a zustand subscription
 // (which crashes the ReactLynx Vitest snapshot tree) and never pulls the player
@@ -11,9 +20,9 @@ import { useAuthStore } from '../../auth/store/index.js'
 import { usePlayerStore } from '../../player/store/player-store.js'
 import {
   PLAY_MODE_OPTIONS,
-  playModeDescription,
+  playModeDescriptionKey,
   playModeIcon,
-  playModeLabel,
+  playModeLabelKey,
   serverDisplay,
 } from '../domain/settings-model.js'
 import { readDefaultPlayMode, writeDefaultPlayMode } from '../data/settings-prefs.js'
@@ -40,20 +49,46 @@ import './SettingsPage.css'
  * surfaced as a disabled "Coming later" section; see PROGRESS for the phase each
  * is deferred to.
  */
+/** i18n key for a language option's label. */
+function languageLabelKey(lang: AppLanguage): string {
+  switch (lang) {
+    case 'en':
+      return 'settings.languageEnglish'
+    case 'zh':
+      return 'settings.languageChinese'
+    default:
+      return 'settings.languageSystem'
+  }
+}
+
 export function SettingsPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   // Default play mode: initialise from the live player state (non-subscribing),
   // then override from the persisted pref once it resolves. Selecting an option
   // both persists it AND applies it to the live player (immediate effect).
   const [mode, setMode] = useState<PlayMode>(() => usePlayerStore.getState().playMode)
   const [confirmLogout, setConfirmLogout] = useState(false)
+  // Persisted language choice ('system' until the pref resolves). Selecting an
+  // option applies it to i18next live (re-renders the whole tree) + persists it.
+  const [language, setLanguage] = useState<AppLanguage>('system')
 
   useEffect(() => {
     let cancelled = false
     void readDefaultPlayMode().then((saved) => {
       if (!cancelled) setMode(saved)
     })
+    void (async () => {
+      try {
+        const saved = coerceAppLanguage(
+          await getSongloftStorage().prefs.get(PREF_LANGUAGE),
+        )
+        if (!cancelled) setLanguage(saved)
+      } catch {
+        /* best-effort — leave 'system' */
+      }
+    })()
     return () => {
       cancelled = true
     }
@@ -64,6 +99,16 @@ export function SettingsPage() {
     usePlayerStore.getState().setPlayMode(next)
     void writeDefaultPlayMode(next)
   }
+
+  const selectLanguage = (next: AppLanguage) => {
+    setLanguage(next)
+    void changeAppLanguage(next)
+  }
+
+  const serverText = serverDisplay(appConfig.baseUrl, appConfig.isEmbedded, {
+    embedded: t('settings.serverEmbedded'),
+    notConfigured: t('settings.serverNotConfigured'),
+  })
 
   const openServer = () => {
     void navigate({ to: '/settings/server' })
@@ -83,18 +128,18 @@ export function SettingsPage() {
   return (
     <view className='settings'>
       <view className='settings__topbar'>
-        <text className='settings__title'>Settings</text>
+        <text className='settings__title'>{t('settings.title')}</text>
       </view>
 
       <scroll-view className='settings__scroll' scroll-y>
         <view className='settings__content'>
-          <SettingsSection title='Playback' icon='play'>
+          <SettingsSection title={t('settings.playback')} icon='play'>
             {PLAY_MODE_OPTIONS.map((option) => (
               <SettingsRow
                 key={option}
                 icon={playModeIcon(option)}
-                title={playModeLabel(option)}
-                subtitle={playModeDescription(option)}
+                title={t(playModeLabelKey(option))}
+                subtitle={t(playModeDescriptionKey(option))}
                 selected={option === mode}
                 trailingIcon={option === mode ? 'check' : undefined}
                 onTap={() => selectMode(option)}
@@ -103,13 +148,26 @@ export function SettingsPage() {
             ))}
           </SettingsSection>
 
+          <SettingsSection title={t('settings.languageSection')} icon='settings'>
+            {APP_LANGUAGE_OPTIONS.map((option) => (
+              <SettingsRow
+                key={option}
+                title={t(languageLabelKey(option))}
+                selected={option === language}
+                trailingIcon={option === language ? 'check' : undefined}
+                onTap={() => selectLanguage(option)}
+                testId={`language-${option}`}
+              />
+            ))}
+          </SettingsSection>
+
           {showConnection
             ? (
-              <SettingsSection title='Connection' icon='link'>
+              <SettingsSection title={t('settings.connection')} icon='link'>
                 <SettingsRow
                   icon='link'
-                  title='Server'
-                  subtitle={serverDisplay(appConfig.baseUrl, appConfig.isEmbedded)}
+                  title={t('settings.server')}
+                  subtitle={serverText}
                   trailingIcon='chevron-right'
                   onTap={openServer}
                   testId='settings-server'
@@ -118,48 +176,47 @@ export function SettingsPage() {
             )
             : null}
 
-          <SettingsSection title='Appearance' icon='palette'>
+          <SettingsSection title={t('settings.appearance')} icon='palette'>
             <SettingsRow
               icon='palette'
-              title='Theme'
-              subtitle='Light and system themes coming in a later version'
-              trailingText='Dark'
+              title={t('settings.theme')}
+              subtitle={t('settings.themeSubtitle')}
+              trailingText={t('settings.themeDark')}
               disabled
               testId='settings-theme'
             />
           </SettingsSection>
 
-          <SettingsSection title='About' icon='info'>
+          <SettingsSection title={t('settings.about')} icon='info'>
             <SettingsRow
               icon='info'
-              title='App version'
+              title={t('settings.appVersion')}
               trailingText={clientVersion}
               testId='settings-version'
             />
             <SettingsRow
               icon='link'
-              title='Server'
-              subtitle={serverDisplay(appConfig.baseUrl, appConfig.isEmbedded)}
+              title={t('settings.server')}
+              subtitle={serverText}
             />
             <SettingsRow
               icon='music'
-              title='Songloft'
-              subtitle='github.com/songloft-org/songloft'
+              title={t('settings.songloft')}
+              subtitle={t('settings.songloftUrl')}
             />
           </SettingsSection>
 
-          <SettingsSection title='More settings (coming later)' icon='settings'>
-            <SettingsRow icon='library' title='Music library scan' subtitle='Deferred' disabled />
-            <SettingsRow icon='settings' title='Storage & cache' subtitle='Deferred' disabled />
-            <SettingsRow icon='menu' title='Plugins' subtitle='Deferred' disabled />
-            <SettingsRow icon='music' title='Language' subtitle='Deferred' disabled />
+          <SettingsSection title={t('settings.moreLater')} icon='settings'>
+            <SettingsRow icon='library' title={t('settings.musicLibraryScan')} subtitle={t('settings.deferred')} disabled />
+            <SettingsRow icon='settings' title={t('settings.storageCache')} subtitle={t('settings.deferred')} disabled />
+            <SettingsRow icon='menu' title={t('settings.plugins')} subtitle={t('settings.deferred')} disabled />
           </SettingsSection>
 
-          <SettingsSection title='Account' icon='logout'>
+          <SettingsSection title={t('settings.account')} icon='logout'>
             <SettingsRow
               icon='logout'
-              title={confirmLogout ? 'Tap again to log out' : 'Log out'}
-              subtitle={confirmLogout ? 'This signs you out of this device' : undefined}
+              title={confirmLogout ? t('settings.logOutConfirm') : t('settings.logOut')}
+              subtitle={confirmLogout ? t('settings.logOutConfirmSubtitle') : undefined}
               danger
               onTap={onLogout}
               testId='settings-logout'

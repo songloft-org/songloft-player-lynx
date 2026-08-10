@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { IconName } from '../../../shared/ui/icons.js'
 import type { HomeStats } from '../data/home-select.js'
@@ -9,13 +11,14 @@ import type { HomeStats } from '../data/home-select.js'
  * the whole library rather than the truncated section previews.
  */
 export function StatsStrip({ stats }: { stats: HomeStats }) {
+  const { t } = useTranslation()
   return (
     <view className='home-stats'>
-      <StatChip icon='library' label='Playlists' value={stats.normal} />
+      <StatChip icon='library' label={t('home.statPlaylists')} value={stats.normal} />
       <view className='home-stats__divider' />
-      <StatChip icon='music' label='Radios' value={stats.radio} />
+      <StatChip icon='music' label={t('home.statRadios')} value={stats.radio} />
       <view className='home-stats__divider' />
-      <StatChip icon='home' label='Total' value={stats.total} />
+      <StatChip icon='home' label={t('home.statTotal')} value={stats.total} />
     </view>
   )
 }

@@ -14,35 +14,39 @@ import type { IconName } from '../../../shared/ui/icons.js'
 /** Ordered list of selectable default play modes (mirrors `playModes`). */
 export const PLAY_MODE_OPTIONS: readonly PlayMode[] = playModes
 
-/** Human label for a play mode (Settings → Playback default-mode selector). */
-export function playModeLabel(mode: PlayMode): string {
+/**
+ * i18n **key** for a play mode's label (Settings → Playback default-mode
+ * selector). The page localises it via `t(...)`; keeping it a pure mode→key map
+ * leaves this unit-testable without pulling in i18next.
+ */
+export function playModeLabelKey(mode: PlayMode): string {
   switch (mode) {
     case playMode.order:
-      return 'Play in order'
+      return 'settings.playModeOrderLabel'
     case playMode.loop:
-      return 'Repeat all'
+      return 'settings.playModeLoopLabel'
     case playMode.single:
-      return 'Repeat one'
+      return 'settings.playModeSingleLabel'
     case playMode.random:
-      return 'Shuffle'
+      return 'settings.playModeRandomLabel'
     default:
-      return 'Play in order'
+      return 'settings.playModeOrderLabel'
   }
 }
 
-/** Short description for a play mode option row. */
-export function playModeDescription(mode: PlayMode): string {
+/** i18n key for a play mode option's short description row. */
+export function playModeDescriptionKey(mode: PlayMode): string {
   switch (mode) {
     case playMode.order:
-      return 'Stop after the last track'
+      return 'settings.playModeOrderDesc'
     case playMode.loop:
-      return 'Loop the whole queue'
+      return 'settings.playModeLoopDesc'
     case playMode.single:
-      return 'Repeat the current track'
+      return 'settings.playModeSingleDesc'
     case playMode.random:
-      return 'Play the queue in random order'
+      return 'settings.playModeRandomDesc'
     default:
-      return ''
+      return 'settings.playModeOrderDesc'
   }
 }
 
@@ -71,12 +75,26 @@ export function coercePlayMode(raw: string | null | undefined): PlayMode {
   return playModes.includes(raw as PlayMode) ? (raw as PlayMode) : playMode.order
 }
 
+/** Localised labels for the non-URL states of {@link serverDisplay}. */
+export interface ServerDisplayLabels {
+  /** Shown for embedded builds (same-origin backend, address hidden). */
+  embedded: string
+  /** Shown when no server URL is configured. */
+  notConfigured: string
+}
+
 /**
  * Label describing the current server connection, for the About/Connection
- * rows. Embedded builds hide the address entirely (same-origin backend).
+ * rows. Embedded builds hide the address entirely (same-origin backend). The
+ * caller supplies already-localised `labels` so this stays pure/testable and
+ * free of i18next.
  */
-export function serverDisplay(baseUrl: string, isEmbedded: boolean): string {
-  if (isEmbedded) return 'Songloft (embedded)'
+export function serverDisplay(
+  baseUrl: string,
+  isEmbedded: boolean,
+  labels: ServerDisplayLabels,
+): string {
+  if (isEmbedded) return labels.embedded
   const trimmed = baseUrl.trim()
-  return trimmed.length > 0 ? trimmed : 'Not configured'
+  return trimmed.length > 0 ? trimmed : labels.notConfigured
 }

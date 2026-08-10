@@ -7,4 +7,5 @@ export {
   HOME_SECTION_LIMIT,
 } from './data/home-select.js'
 export type { HomeStats } from './data/home-select.js'
-export { greetingForHour, currentGreeting } from './domain/greeting.js'
+export { greetingKeyForHour, currentGreetingKey } from './domain/greeting.js'
+export type { GreetingKey } from './domain/greeting.js'

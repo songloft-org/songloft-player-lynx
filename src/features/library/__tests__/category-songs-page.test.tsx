@@ -24,6 +24,10 @@ const { songsHook, paramsHook, searchHook } = vi.hoisted(() => ({
   searchHook: vi.fn(),
 }))
 
+vi.mock('react-i18next', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
+)
+
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => () => {},
   useParams: paramsHook,

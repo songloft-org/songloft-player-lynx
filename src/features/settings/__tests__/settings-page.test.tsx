@@ -26,15 +26,28 @@ import {
  * `Icon` all run; assertions check the rendered structure + that interactions
  * call the correct store/config, not fixtures echoed back.
  */
-const { navigateSpy, logoutSpy, setPlayModeSpy, writePrefSpy, readPref } = vi.hoisted(
-  () => ({
+const { navigateSpy, logoutSpy, setPlayModeSpy, writePrefSpy, readPref, changeLangSpy } =
+  vi.hoisted(() => ({
     navigateSpy: vi.fn(),
     logoutSpy: vi.fn(),
     setPlayModeSpy: vi.fn(),
     writePrefSpy: vi.fn(),
     readPref: vi.fn(async () => 'random' as const),
-  }),
+    changeLangSpy: vi.fn(async () => 'en' as const),
+  }))
+
+// react-i18next → deterministic English `t` (real English resource values); the
+// i18n module → real option list/coerce + a `changeAppLanguage` spy so the
+// language-switch wiring is observable without driving i18next/storage.
+vi.mock('react-i18next', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
+vi.mock('../../../i18n/index.js', () => ({
+  APP_LANGUAGE_OPTIONS: ['system', 'en', 'zh'],
+  PREF_LANGUAGE: 'app_language',
+  coerceAppLanguage: (raw: unknown) => (raw === 'en' || raw === 'zh' ? raw : 'system'),
+  changeAppLanguage: changeLangSpy,
+}))
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigateSpy }))
 
@@ -65,10 +78,11 @@ async function renderPage() {
 }
 
 test('renders every section, the play-mode options, version, server and log-out rows', async () => {
-  const { queryByText, queryByTestId } = await renderPage()
+  const { queryByText, queryByTestId, queryAllByTestId } = await renderPage()
 
   // Section headers.
   expect(queryByText('Playback')).toBeInTheDocument()
+  expect(queryByText('Language')).toBeInTheDocument()
   expect(queryByText('Connection')).toBeInTheDocument()
   expect(queryByText('Appearance')).toBeInTheDocument()
   expect(queryByText('About')).toBeInTheDocument()
@@ -81,13 +95,28 @@ test('renders every section, the play-mode options, version, server and log-out 
   expect(queryByTestId('play-mode-single')).toBeInTheDocument()
   expect(queryByTestId('play-mode-random')).toBeInTheDocument()
 
-  // Persisted default (random) → that row shows the check glyph.
-  expect(queryByTestId('icon-check')).toBeInTheDocument()
+  // The three language option rows.
+  expect(queryByTestId('language-system')).toBeInTheDocument()
+  expect(queryByTestId('language-en')).toBeInTheDocument()
+  expect(queryByTestId('language-zh')).toBeInTheDocument()
+
+  // Persisted default (random play mode + system language) → two check glyphs.
+  expect(queryAllByTestId('icon-check')).toHaveLength(2)
 
   // About shows the client version, and the log-out row is present.
   expect(queryByTestId('settings-version')).toBeInTheDocument()
   expect(queryByTestId('settings-server')).toBeInTheDocument()
   expect(queryByText('Log out')).toBeInTheDocument()
+})
+
+test('selecting a language applies + persists it via changeAppLanguage', async () => {
+  const { queryByTestId } = await renderPage()
+
+  await act(async () => {
+    fireEvent.tap(queryByTestId('language-zh')!)
+  })
+
+  expect(changeLangSpy).toHaveBeenCalledWith('zh')
 })
 
 test('selecting a play mode applies it to the player store and persists it', async () => {

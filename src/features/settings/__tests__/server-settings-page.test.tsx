@@ -24,6 +24,10 @@ const { navigateSpy, applySpy } = vi.hoisted(() => ({
   applySpy: vi.fn(async () => 'http://host:58091'),
 }))
 
+vi.mock('react-i18next', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
+)
+
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigateSpy }))
 
 vi.mock('@lynx-js/lynx-ui-input', async () =>

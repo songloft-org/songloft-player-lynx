@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { SongFacet } from '../../../models/song.js'
 
@@ -12,6 +14,7 @@ export interface FacetCardProps {
 }
 
 export function FacetCard({ facet, onTap }: FacetCardProps) {
+  const { t } = useTranslation()
   const cover = facet.coverUrl ? buildCoverUrl(facet.coverUrl) : ''
 
   return (
@@ -19,8 +22,12 @@ export function FacetCard({ facet, onTap }: FacetCardProps) {
       {cover
         ? <image className='facet-card__cover' src={cover} />
         : <view className='facet-card__cover facet-card__cover--empty' />}
-      <text className='facet-card__value'>{facet.value || 'Unknown'}</text>
-      <text className='facet-card__count'>{`${facet.count} songs`}</text>
+      <text className='facet-card__value'>{facet.value || t('common.unknown')}</text>
+      <text className='facet-card__count'>
+        {t(facet.count === 1 ? 'common.songCountOne' : 'common.songCountOther', {
+          count: facet.count,
+        })}
+      </text>
     </view>
   )
 }

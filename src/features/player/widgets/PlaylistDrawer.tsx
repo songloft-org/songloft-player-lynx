@@ -1,4 +1,5 @@
 import { useEffect, useRef } from '@lynx-js/react'
+import { useTranslation } from 'react-i18next'
 
 import {
   SheetBackdrop,
@@ -24,6 +25,7 @@ const CLAIMED_ANGLES: [number, number][] = [
  * sheet (backdrop / drag) routes back through `closePlaylistDrawer`.
  */
 export function PlaylistDrawer() {
+  const { t } = useTranslation()
   const show = usePlayerStore((s) => s.showPlaylistDrawer)
   const playlist = usePlayerStore((s) => s.playlist)
   const currentIndex = usePlayerStore((s) => s.currentIndex)
@@ -51,8 +53,13 @@ export function PlaylistDrawer() {
         <SheetContent className='drawer__content' innerClassName='drawer__inner'>
           <SheetHandle className='drawer__handle' />
           <view className='drawer__header'>
-            <text className='drawer__title'>Up next</text>
-            <text className='drawer__count'>{`${playlist.length} songs`}</text>
+            <text className='drawer__title'>{t('player.upNext')}</text>
+            <text className='drawer__count'>
+              {t(
+                playlist.length === 1 ? 'common.songCountOne' : 'common.songCountOther',
+                { count: playlist.length },
+              )}
+            </text>
           </view>
           <scroll-view className='drawer__list' scroll-y>
             {playlist.map((song, index) => (

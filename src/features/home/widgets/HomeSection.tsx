@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 import type { Playlist } from '../../../models/playlist.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { IconName } from '../../../shared/ui/icons.js'
@@ -33,6 +35,7 @@ export function HomeSection({
   onRetry,
   onTapPlaylist,
 }: HomeSectionProps) {
+  const { t } = useTranslation()
   return (
     <view className='home-section'>
       <view className='home-section__header'>
@@ -46,18 +49,18 @@ export function HomeSection({
         <text className='home-section__title'>{title}</text>
         <view className='home-section__spacer' />
         <view className='home-section__action' bindtap={() => onViewAll()}>
-          <text className='home-section__action-text'>View all</text>
+          <text className='home-section__action-text'>{t('home.viewAll')}</text>
         </view>
       </view>
 
       {failed && items.length === 0
         ? (
           <view className='home-section__error'>
-            <text className='home-section__error-text'>Couldn’t load this section.</text>
+            <text className='home-section__error-text'>{t('home.sectionError')}</text>
             {onRetry
               ? (
                 <view className='home-section__retry' bindtap={() => onRetry()}>
-                  <text className='home-section__retry-text'>Retry</text>
+                  <text className='home-section__retry-text'>{t('common.retry')}</text>
                 </view>
               )
               : null}

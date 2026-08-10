@@ -38,10 +38,59 @@
  */
 import { forwardRef } from '@lynx-js/react'
 
+import { en } from '../i18n/resources.js'
 import type { AuthState } from '../features/auth/store/index.js'
 import type { Song } from '../models/song.js'
 import type { PlayerState } from '../features/player/store/index.js'
 import type { LyricState } from '../features/player/store/index.js'
+
+// ── react-i18next render mock ────────────────────────────────────────────────
+//
+// `useTranslation()` subscribes to i18next language-change events (via
+// useState/useEffect) — a subscription that, like the zustand ones, can perturb
+// the ReactLynx Vitest snapshot tree. It also depends on a globally-initialised
+// i18next instance. Mock it to a deterministic `t` backed by the REAL English
+// resource tree, so render assertions still verify the actual shipped English
+// copy (not a fixture echoed back). Interpolates `{{count}}` etc. from options.
+// The real react-i18next + init are used in build/dev/on-device.
+
+function lookupEn(key: string): string | undefined {
+  const parts = key.split('.')
+  let node: unknown = en
+  for (const part of parts) {
+    if (node && typeof node === 'object' && part in (node as Record<string, unknown>)) {
+      node = (node as Record<string, unknown>)[part]
+    } else {
+      return undefined
+    }
+  }
+  return typeof node === 'string' ? node : undefined
+}
+
+/** Resolve a key to its English value with `{{var}}` interpolation from options. */
+export function translateEn(key: string, options?: Record<string, unknown>): string {
+  const template = lookupEn(key)
+  if (template === undefined) return key
+  if (!options) return template
+  return template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) =>
+    name in options ? String(options[name]) : `{{${name}}}`,
+  )
+}
+
+/** Mock module for `react-i18next` — deterministic English `t`, no subscription. */
+export function mockReactI18next() {
+  const i18n = {
+    language: 'en',
+    changeLanguage: async () => {},
+    on: () => {},
+    off: () => {},
+  }
+  return {
+    useTranslation: () => ({ t: translateEn, i18n, ready: true }),
+    initReactI18next: { type: '3rdParty', init: () => {} },
+    Trans: ({ children }: { children?: unknown }) => children as never,
+  }
+}
 
 /** Mock module for `@lynx-js/lynx-ui-input` — `Input` as a plain view/text. */
 export function mockLynxUiInput() {

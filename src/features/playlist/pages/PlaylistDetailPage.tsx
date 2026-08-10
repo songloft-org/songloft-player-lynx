@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
@@ -28,6 +29,7 @@ import './PlaylistDetailPage.css'
  */
 export function PlaylistDetailPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const params = useParams({ strict: false }) as { id?: string }
   const id = Number(params.id ?? 0) || 0
 
@@ -38,7 +40,10 @@ export function PlaylistDetailPage() {
   const playlist = detail.data
   const cover = playlist?.coverUrl ? buildCoverUrl(playlist.coverUrl) : ''
   const songCount = playlist?.songCount ?? songs.length
-  const countLabel = `${songCount} ${songCount === 1 ? 'song' : 'songs'}`
+  const countLabel = t(
+    songCount === 1 ? 'common.songCountOne' : 'common.songCountOther',
+    { count: songCount },
+  )
 
   const onEndReached = () => {
     if (songsQuery.hasNextPage && !songsQuery.isFetchingNextPage) {
@@ -70,7 +75,7 @@ export function PlaylistDetailPage() {
           )}
         <view className='playlist-detail__meta'>
           <text className='playlist-detail__name'>
-            {playlist?.name ?? (detail.isLoading ? 'Loading…' : 'Playlist')}
+            {playlist?.name ?? (detail.isLoading ? t('common.loading') : t('playlist.fallbackName'))}
           </text>
           {playlist?.description
             ? <text className='playlist-detail__desc'>{playlist.description}</text>
@@ -86,11 +91,11 @@ export function PlaylistDetailPage() {
       {header}
       <view className='playlist-detail__body'>
         {songsQuery.isLoading
-          ? <DetailState text='Loading songs…' />
+          ? <DetailState text={t('library.loadingSongs')} />
           : songsQuery.isError && songs.length === 0
-            ? <DetailState text='Could not load songs.' tone='error' />
+            ? <DetailState text={t('playlist.songsError')} tone='error' />
             : songs.length === 0
-              ? <DetailState text='No songs in this playlist' />
+              ? <DetailState text={t('playlist.noSongs')} />
               : (
                 <VirtualList<Song>
                   className='playlist-detail__list'
@@ -103,7 +108,7 @@ export function PlaylistDetailPage() {
                   footer={songsQuery.isFetchingNextPage
                     ? (
                       <view className='playlist-detail__footer'>
-                        <text className='playlist-detail__footer-text'>Loading more…</text>
+                        <text className='playlist-detail__footer-text'>{t('common.loadingMore')}</text>
                       </view>
                     )
                     : undefined}

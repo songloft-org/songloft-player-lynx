@@ -23,6 +23,10 @@ const { detailHook, songsHook } = vi.hoisted(() => ({
   songsHook: vi.fn(),
 }))
 
+vi.mock('react-i18next', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
+)
+
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => () => {},
   useParams: () => ({ id: '7' }),

@@ -24,3 +24,6 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Generated arb→i18next output (produced by scripts/arb-to-i18next.ts; not bundled)
+src/i18n/generated/

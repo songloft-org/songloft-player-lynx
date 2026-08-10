@@ -1,5 +1,6 @@
 import { useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 
 import { Input } from '@lynx-js/lynx-ui-input'
 import { Switch, SwitchThumb, SwitchTrack } from '@lynx-js/lynx-ui-switch'
@@ -23,6 +24,7 @@ import './ServerSettingsPage.css'
  */
 export function ServerSettingsPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const goBack = () => {
     void navigate({ to: '/settings' })
   }
@@ -49,7 +51,7 @@ export function ServerSettingsPage() {
         <view className='server-settings__back' bindtap={goBack} data-testid='server-back'>
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
-        <text className='server-settings__title'>Server</text>
+        <text className='server-settings__title'>{t('settings.serverPageTitle')}</text>
       </view>
 
       <scroll-view className='server-settings__scroll' scroll-y>
@@ -58,11 +60,11 @@ export function ServerSettingsPage() {
             ? (
               <view className='server-settings__card'>
                 <view className='server-settings__field'>
-                  <text className='server-settings__label'>API base URL</text>
+                  <text className='server-settings__label'>{t('settings.apiBaseUrl')}</text>
                   <Input
                     className='server-settings__input'
                     type='text'
-                    placeholder='http://localhost:58091'
+                    placeholder={t('settings.apiBaseUrlPlaceholder')}
                     value={url}
                     onInput={(value) => setUrl(value)}
                   />
@@ -79,15 +81,15 @@ export function ServerSettingsPage() {
                     </SwitchTrack>
                   </Switch>
                   <view className='server-settings__toggle-text'>
-                    <text className='server-settings__toggle-title'>Allow insecure TLS</text>
+                    <text className='server-settings__toggle-title'>{t('settings.insecureTls')}</text>
                     <text className='server-settings__toggle-subtitle'>
-                      Skip certificate validation (self-signed servers)
+                      {t('settings.insecureTlsHint')}
                     </text>
                   </view>
                 </view>
 
                 {saved
-                  ? <text className='server-settings__saved'>Saved. Requests now use the new server.</text>
+                  ? <text className='server-settings__saved'>{t('settings.savedNote')}</text>
                   : null}
 
                 <view
@@ -95,14 +97,14 @@ export function ServerSettingsPage() {
                   bindtap={canSave ? () => void onSave() : undefined}
                   data-testid='server-save'
                 >
-                  <text className='server-settings__save-text'>Save</text>
+                  <text className='server-settings__save-text'>{t('settings.save')}</text>
                 </view>
               </view>
             )
             : (
               <view className='server-settings__card'>
                 <text className='server-settings__note'>
-                  This build is bundled with its backend; the server address is fixed.
+                  {t('settings.embeddedNote')}
                 </text>
               </view>
             )}

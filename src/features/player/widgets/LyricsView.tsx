@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { useLyricStore } from '../store/index.js'
 
@@ -7,6 +9,7 @@ import { useLyricStore } from '../store/index.js'
  * position). Loading / empty states mirror the Flutter `LyricsView`.
  */
 export function LyricsView() {
+  const { t } = useTranslation()
   const lyrics = useLyricStore((s) => s.lyrics)
   const currentIndex = useLyricStore((s) => s.currentIndex)
   const isLoading = useLyricStore((s) => s.isLoading)
@@ -14,7 +17,7 @@ export function LyricsView() {
   if (isLoading) {
     return (
       <view className='player-lyrics player-lyrics--state'>
-        <text className='player-lyrics__state-text'>Loading lyrics…</text>
+        <text className='player-lyrics__state-text'>{t('player.loadingLyrics')}</text>
       </view>
     )
   }
@@ -22,7 +25,7 @@ export function LyricsView() {
   if (lyrics.length === 0) {
     return (
       <view className='player-lyrics player-lyrics--state'>
-        <text className='player-lyrics__state-text'>No lyrics</text>
+        <text className='player-lyrics__state-text'>{t('player.noLyrics')}</text>
       </view>
     )
   }

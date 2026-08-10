@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 
 import { Swiper, SwiperItem } from '@lynx-js/lynx-ui-swiper'
 
@@ -39,18 +40,19 @@ function CoverArt({ song }: { song: Song }) {
  */
 export function FullPlayerPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const song = usePlayerStore((s) => s.currentSong)
   const { width, isWide, onLayoutChange } = useBreakpoint()
 
   if (!song) {
     return (
       <view className='full-player full-player--enter full-player--empty'>
-        <text className='full-player__empty-title'>Nothing playing</text>
+        <text className='full-player__empty-title'>{t('player.nothingPlaying')}</text>
         <text className='full-player__empty-subtitle'>
-          Pick a song from your library to start.
+          {t('player.nothingPlayingSubtitle')}
         </text>
         <view className='full-player__empty-btn' bindtap={() => navigate({ to: '/library' })}>
-          <text className='full-player__empty-btn-text'>Go to library</text>
+          <text className='full-player__empty-btn-text'>{t('player.goToLibrary')}</text>
         </view>
       </view>
     )
@@ -65,7 +67,7 @@ export function FullPlayerPage() {
         <view className='full-player__icon-btn' bindtap={() => navigate({ to: '/' })}>
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
-        <text className='full-player__eyebrow'>Now Playing</text>
+        <text className='full-player__eyebrow'>{t('player.nowPlaying')}</text>
         <view
           className='full-player__icon-btn'
           bindtap={() => usePlayerStore.getState().togglePlaylistDrawer()}

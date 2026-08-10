@@ -7,6 +7,7 @@ import { root } from '@lynx-js/react'
 
 import { App } from './App.js'
 import { useAuthStore } from './features/auth/store/index.js'
+import { applySavedLanguage } from './i18n/index.js'
 import { router } from './router.js'
 
 root.render(<App />)
@@ -17,9 +18,11 @@ useAuthStore.subscribe((state, prev) => {
   if (state.status !== prev.status) void router.invalidate()
 })
 
-// One-time startup: hydrate persisted server URL / insecure-TLS into config,
-// then probe stored tokens to resolve `unknown` → authenticated/unauthenticated.
+// One-time startup: apply the persisted UI language, hydrate persisted server
+// URL / insecure-TLS into config, then probe stored tokens to resolve
+// `unknown` → authenticated/unauthenticated.
 void (async () => {
+  await applySavedLanguage()
   const auth = useAuthStore.getState()
   await auth.hydrate()
   await auth.checkAuth()

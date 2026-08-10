@@ -1,4 +1,5 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 
 // Import MiniPlayer directly (not the player feature barrel) so the shell graph
 // does not eagerly pull in the full player + its lynx-ui gesture leaves.
@@ -18,6 +19,7 @@ import './ShellLayout.css'
  */
 export function ShellLayout() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const { breakpoint, isWide, onLayoutChange } = useBreakpoint()
   const pathname = useRouterState({ select: s => s.location.pathname })
 
@@ -37,7 +39,7 @@ export function ShellLayout() {
               color={active ? ICON_COLORS.primary : ICON_COLORS.contentMuted}
             />
           </view>
-          <text className='nav-item__label'>{dest.label}</text>
+          <text className='nav-item__label'>{t(dest.labelKey)}</text>
         </view>
       )
     })

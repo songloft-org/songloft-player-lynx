@@ -1,11 +1,12 @@
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 
 // Vanilla store readers (no subscription) — same pattern as LibraryPage — so the
 // home graph does not pull in a zustand subscription (which crashes the
 // ReactLynx Vitest snapshot tree) and stays free of the player barrel.
 import { useAuthStore } from '../../auth/store/index.js'
 import type { Playlist } from '../../../models/playlist.js'
-import { currentGreeting } from '../domain/greeting.js'
+import { currentGreetingKey } from '../domain/greeting.js'
 import { useHomePlaylists } from '../data/home-query.js'
 import { homeSectionItems, homeSectionTotal, homeStats } from '../data/home-select.js'
 import { HomeSection } from '../widgets/HomeSection.js'
@@ -29,6 +30,7 @@ import './HomePage.css'
  */
 export function HomePage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const normal = useHomePlaylists('normal')
   const radio = useHomePlaylists('radio')
 
@@ -65,30 +67,30 @@ export function HomePage() {
     <view className='home'>
       <view className='home__topbar'>
         <text className='home__greeting' data-testid='home-greeting'>
-          {currentGreeting()}
+          {t(currentGreetingKey())}
         </text>
         <view className='home__spacer' />
         <view className='home__logout' bindtap={logout}>
-          <text className='home__logout-text'>Log out</text>
+          <text className='home__logout-text'>{t('home.logOut')}</text>
         </view>
       </view>
 
       <scroll-view className='home__scroll' scroll-y>
         <view className='home__content'>
           {isFirstLoad
-            ? <HomeState text='Loading…' />
+            ? <HomeState text={t('common.loading')} />
             : bothFailed
-              ? <HomeState text='Couldn’t load your home.' tone='error' />
+              ? <HomeState text={t('home.loadError')} tone='error' />
               : (normalItems.length === 0 && radioItems.length === 0 &&
                   !normalFailed && !radioFailed)
                 ? (
                   <view className='home__empty'>
-                    <text className='home__empty-title'>No playlists yet</text>
+                    <text className='home__empty-title'>{t('home.noPlaylistsTitle')}</text>
                     <text className='home__empty-subtitle'>
-                      Playlists you create will appear here.
+                      {t('home.noPlaylistsSubtitle')}
                     </text>
                     <view className='home__empty-action' bindtap={viewAllPlaylists}>
-                      <text className='home__empty-action-text'>Browse library</text>
+                      <text className='home__empty-action-text'>{t('home.browseLibrary')}</text>
                     </view>
                   </view>
                 )
@@ -97,7 +99,7 @@ export function HomePage() {
                     {normalItems.length > 0 || normalFailed
                       ? (
                         <HomeSection
-                          title='My Playlists'
+                          title={t('home.myPlaylists')}
                           icon='library'
                           items={normalItems}
                           failed={normalFailed}
@@ -110,7 +112,7 @@ export function HomePage() {
                     {radioItems.length > 0 || radioFailed
                       ? (
                         <HomeSection
-                          title='My Radios'
+                          title={t('home.myRadios')}
                           icon='music'
                           items={radioItems}
                           failed={radioFailed}

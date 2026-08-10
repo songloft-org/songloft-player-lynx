@@ -43,6 +43,12 @@ const { songsHook, facetsHook, playlistsHook, navigateSpy, searchHook } = vi.hoi
   }),
 )
 
+// `useTranslation` subscribes to i18next + needs a global instance; mock it to a
+// deterministic English `t` (real English resource values) — see `_render-mocks`.
+vi.mock('react-i18next', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
+)
+
 vi.mock('../data/songs-query.js', () => ({
   useSongsInfiniteQuery: songsHook,
   useFacetsInfiniteQuery: facetsHook,

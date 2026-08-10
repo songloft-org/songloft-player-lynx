@@ -1,4 +1,5 @@
 import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 
 // Import the store directly (not the player feature barrel) so the library
 // graph does not eagerly pull in the full player + its lynx-ui gesture leaves.
@@ -40,16 +41,20 @@ type FacetField = 'artist' | 'album' | 'genre'
 
 const FACET_FIELDS: readonly FacetField[] = ['artist', 'album', 'genre']
 
-const FACET_LABELS: Record<FacetField, string> = {
-  artist: 'Artist',
-  album: 'Album',
-  genre: 'Genre',
+/** i18n keys for facet field chips (localised at render). */
+const FACET_LABEL_KEYS: Record<FacetField, string> = {
+  artist: 'library.facetArtist',
+  album: 'library.facetAlbum',
+  genre: 'library.facetGenre',
 }
 
-const VIEW_LABELS: Record<LibraryView, string> = {
-  songs: 'Songs',
-  facets: 'Categories',
-  playlists: 'Playlists',
+const VIEW_ORDER: readonly LibraryView[] = ['songs', 'facets', 'playlists']
+
+/** i18n keys for the view switcher tabs (localised at render). */
+const VIEW_LABEL_KEYS: Record<LibraryView, string> = {
+  songs: 'library.tabSongs',
+  facets: 'library.tabCategories',
+  playlists: 'library.tabPlaylists',
 }
 
 /** Default flat-list filters (newest first), mirroring the Flutter default. */
@@ -57,6 +62,7 @@ const SONGS_FILTERS: SongsFilters = { sort: 'added_at', order: 'desc' }
 
 export function LibraryPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   // View is URL-driven (`?view=`), so returning from a pushed route (e.g. the
   // playlist detail page → `?view=playlists`) restores the tab the user was on,
   // and it survives remounts. Mirrors the Flutter `?view=` query param.
@@ -66,13 +72,13 @@ export function LibraryPage() {
   return (
     <view className='library'>
       <view className='library__switcher'>
-        {(Object.keys(VIEW_LABELS) as LibraryView[]).map((key) => (
+        {VIEW_ORDER.map((key) => (
           <view
             key={key}
             className={key === view ? 'library__tab library__tab--active' : 'library__tab'}
             bindtap={() => navigate({ to: '/library', search: { view: key } })}
           >
-            <text className='library__tab-text'>{VIEW_LABELS[key]}</text>
+            <text className='library__tab-text'>{t(VIEW_LABEL_KEYS[key])}</text>
           </view>
         ))}
       </view>
@@ -89,17 +95,18 @@ export function LibraryPage() {
 // ── Songs view (flat, infinite) ──────────────────────────────────────────────
 
 function SongsView() {
+  const { t } = useTranslation()
   const query = useSongsInfiniteQuery(SONGS_FILTERS)
   const songs = flattenSongs(query.data?.pages)
 
   if (query.isLoading) {
-    return <StateMessage text='Loading songs…' />
+    return <StateMessage text={t('library.loadingSongs')} />
   }
   if (query.isError && songs.length === 0) {
-    return <StateMessage text='Could not load songs. Pull to retry.' tone='error' />
+    return <StateMessage text={t('library.songsError')} tone='error' />
   }
   if (songs.length === 0) {
-    return <StateMessage text='No songs yet' subtext='Songs from your library will appear here.' />
+    return <StateMessage text={t('library.noSongs')} subtext={t('library.noSongsSubtitle')} />
   }
 
   const onEndReached = () => {
@@ -126,7 +133,7 @@ function SongsView() {
       footer={query.isFetchingNextPage
         ? (
           <view className='library__footer'>
-            <text className='library__footer-text'>Loading more…</text>
+            <text className='library__footer-text'>{t('common.loadingMore')}</text>
           </view>
         )
         : undefined}
@@ -138,6 +145,7 @@ function SongsView() {
 
 function FacetsView() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   // Facet field is URL-driven too (`?view=facets&field=album`), so returning
   // from a category drill-in restores the field the user was on (not 'artist').
   const search = useSearch({ strict: false }) as { field?: FacetField }
@@ -154,17 +162,17 @@ function FacetsView() {
             className={key === field ? 'library__chip library__chip--active' : 'library__chip'}
             bindtap={() => navigate({ to: '/library', search: { view: 'facets', field: key } })}
           >
-            <text className='library__chip-text'>{FACET_LABELS[key]}</text>
+            <text className='library__chip-text'>{t(FACET_LABEL_KEYS[key])}</text>
           </view>
         ))}
       </view>
 
       {query.isLoading
-        ? <StateMessage text='Loading categories…' />
+        ? <StateMessage text={t('library.loadingCategories')} />
         : query.isError && facets.length === 0
-          ? <StateMessage text='Could not load categories.' tone='error' />
+          ? <StateMessage text={t('library.categoriesError')} tone='error' />
           : facets.length === 0
-            ? <StateMessage text='No categories' />
+            ? <StateMessage text={t('library.noCategories')} />
             : (
               <scroll-view
                 className='library__grid-scroll'

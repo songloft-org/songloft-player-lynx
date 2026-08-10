@@ -20,6 +20,12 @@ import { createAppRouter, router } from '../router.js'
 // and poisons later tests. Mock all three to plain stand-ins (shapes shared via
 // `_render-mocks`); the real components + store are used in build/dev/on-device.
 // See `_render-mocks.tsx` for the full rationale.
+// i18n: mock react-i18next to a deterministic English `t` (real English
+// resource values) — `useTranslation` subscribes to i18next + needs a global
+// instance; the shell + every page under the router use it. See `_render-mocks`.
+vi.mock('react-i18next', async () =>
+  (await import('./_render-mocks.js')).mockReactI18next(),
+)
 vi.mock('@lynx-js/lynx-ui-input', async () =>
   (await import('./_render-mocks.js')).mockLynxUiInput(),
 )

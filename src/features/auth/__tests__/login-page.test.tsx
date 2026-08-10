@@ -24,6 +24,9 @@ import { createAppRouter } from '../../../router.js'
 //    trips the env's `isListHolder`/`parentNode` snapshot crash.
 //
 // The real components + store are used in build/dev/on-device.
+vi.mock('react-i18next', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
+)
 vi.mock('@lynx-js/lynx-ui-input', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
 )

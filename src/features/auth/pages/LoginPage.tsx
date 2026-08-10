@@ -1,5 +1,6 @@
 import { useEffect, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 
 // lynx-ui: imported per component package (never the `@lynx-js/lynx-ui` barrel,
 // which eagerly loads every sub-package and corrupts the test reconciler).
@@ -29,6 +30,7 @@ import './LoginPage.css'
  */
 export function LoginPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const isLoading = useAuthStore((s) => s.isLoading)
   const error = useAuthStore((s) => s.error)
@@ -91,25 +93,25 @@ export function LoginPage() {
   return (
     <view className='page page--centered login'>
       <view className='login__card'>
-        <text className='login__title'>Songloft</text>
-        <text className='login__subtitle'>Sign in to continue</text>
+        <text className='login__title'>{t('auth.title')}</text>
+        <text className='login__subtitle'>{t('auth.subtitle')}</text>
 
         <view className='login__field'>
-          <text className='login__label'>Username</text>
+          <text className='login__label'>{t('auth.username')}</text>
           <Input
             className='login__input'
-            placeholder='admin'
+            placeholder={t('auth.usernamePlaceholder')}
             value={username}
             onInput={(value) => setUsername(value)}
           />
         </view>
 
         <view className='login__field'>
-          <text className='login__label'>Password</text>
+          <text className='login__label'>{t('auth.password')}</text>
           <Input
             className='login__input'
             type='password'
-            placeholder='••••••••'
+            placeholder={t('auth.passwordPlaceholder')}
             value={password}
             confirmType='done'
             onInput={(value) => setPassword(value)}
@@ -119,11 +121,11 @@ export function LoginPage() {
 
         {showServerFields ? (
           <view className='login__field'>
-            <text className='login__label'>API base URL</text>
+            <text className='login__label'>{t('auth.apiBaseUrl')}</text>
             <Input
               className='login__input'
               type='text'
-              placeholder='http://localhost:58091'
+              placeholder={t('auth.apiBaseUrlPlaceholder')}
               value={apiUrl}
               onInput={(value) => setApiUrl(value)}
             />
@@ -139,10 +141,10 @@ export function LoginPage() {
               </Switch>
               <view className='login__toggle-text'>
                 <text className='login__toggle-title'>
-                  Allow insecure TLS
+                  {t('auth.insecureTls')}
                 </text>
                 <text className='login__toggle-subtitle'>
-                  Skip certificate validation (self-signed servers)
+                  {t('auth.insecureTlsHint')}
                 </text>
               </view>
             </view>
@@ -161,7 +163,7 @@ export function LoginPage() {
               }
             >
               <text className='login__button-text'>
-                {isLoading ? 'Signing in…' : 'Log in'}
+                {isLoading ? t('auth.signingIn') : t('auth.logIn')}
               </text>
             </view>
           )}

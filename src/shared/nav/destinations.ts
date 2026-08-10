@@ -10,12 +10,13 @@ import type { IconName } from '../ui/icons.js'
 
 export interface NavDestination {
   path: string
-  label: string
+  /** i18n key for the nav label (localised in the shell via `t(...)`). */
+  labelKey: string
   icon: IconName
 }
 
 export const NAV_DESTINATIONS: NavDestination[] = [
-  { path: '/', label: 'Home', icon: 'home' },
-  { path: '/library', label: 'Library', icon: 'library' },
-  { path: '/settings', label: 'Settings', icon: 'settings' },
+  { path: '/', labelKey: 'nav.home', icon: 'home' },
+  { path: '/library', labelKey: 'nav.library', icon: 'library' },
+  { path: '/settings', labelKey: 'nav.settings', icon: 'settings' },
 ]

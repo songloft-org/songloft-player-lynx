@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Playlist } from '../../../models/playlist.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
@@ -14,8 +16,12 @@ export interface PlaylistCardProps {
 }
 
 export function PlaylistCard({ playlist, onTap }: PlaylistCardProps) {
+  const { t } = useTranslation()
   const cover = playlist.coverUrl ? buildCoverUrl(playlist.coverUrl) : ''
-  const count = `${playlist.songCount} ${playlist.songCount === 1 ? 'song' : 'songs'}`
+  const count = t(
+    playlist.songCount === 1 ? 'common.songCountOne' : 'common.songCountOther',
+    { count: playlist.songCount },
+  )
 
   return (
     <view className='playlist-card' bindtap={() => onTap?.(playlist)}>
@@ -26,7 +32,7 @@ export function PlaylistCard({ playlist, onTap }: PlaylistCardProps) {
             <Icon name='music' size={28} color={ICON_COLORS.contentMuted} />
           </view>
         )}
-      <text className='playlist-card__name'>{playlist.name || 'Untitled'}</text>
+      <text className='playlist-card__name'>{playlist.name || t('common.untitled')}</text>
       <text className='playlist-card__count'>{count}</text>
     </view>
   )

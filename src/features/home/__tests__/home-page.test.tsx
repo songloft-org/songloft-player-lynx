@@ -24,6 +24,10 @@ const { normalHook, radioHook } = vi.hoisted(() => ({
   radioHook: vi.fn(),
 }))
 
+vi.mock('react-i18next', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
+)
+
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => () => {} }))
 
 vi.mock('../data/home-query.js', () => ({

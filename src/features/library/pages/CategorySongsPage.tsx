@@ -1,5 +1,6 @@
 import { useMemo } from '@lynx-js/react'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
@@ -32,10 +33,10 @@ import './CategorySongsPage.css'
 
 type FacetField = 'artist' | 'album' | 'genre'
 
-const FIELD_LABELS: Record<FacetField, string> = {
-  artist: 'Artist',
-  album: 'Album',
-  genre: 'Genre',
+const FIELD_LABEL_KEYS: Record<FacetField, string> = {
+  artist: 'library.facetArtist',
+  album: 'library.facetAlbum',
+  genre: 'library.facetGenre',
 }
 
 function normalizeField(field: string | undefined): FacetField {
@@ -44,6 +45,7 @@ function normalizeField(field: string | undefined): FacetField {
 
 export function CategorySongsPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const params = useParams({ strict: false }) as { field?: string }
   const search = useSearch({ strict: false }) as { value?: string; cover?: string }
 
@@ -89,8 +91,8 @@ export function CategorySongsPage() {
             </view>
           )}
         <view className='category-songs__meta'>
-          <text className='category-songs__label'>{FIELD_LABELS[field]}</text>
-          <text className='category-songs__name'>{value || 'Unknown'}</text>
+          <text className='category-songs__label'>{t(FIELD_LABEL_KEYS[field])}</text>
+          <text className='category-songs__name'>{value || t('common.unknown')}</text>
         </view>
       </view>
     </view>
@@ -101,11 +103,11 @@ export function CategorySongsPage() {
       {header}
       <view className='category-songs__body'>
         {songsQuery.isLoading
-          ? <CategoryState text='Loading songs…' />
+          ? <CategoryState text={t('library.loadingSongs')} />
           : songsQuery.isError && songs.length === 0
-            ? <CategoryState text='Could not load songs.' tone='error' />
+            ? <CategoryState text={t('category.songsError')} tone='error' />
             : songs.length === 0
-              ? <CategoryState text='No songs in this category' />
+              ? <CategoryState text={t('category.noSongs')} />
               : (
                 <VirtualList<Song>
                   className='category-songs__list'
@@ -118,7 +120,7 @@ export function CategorySongsPage() {
                   footer={songsQuery.isFetchingNextPage
                     ? (
                       <view className='category-songs__footer'>
-                        <text className='category-songs__footer-text'>Loading more…</text>
+                        <text className='category-songs__footer-text'>{t('common.loadingMore')}</text>
                       </view>
                     )
                     : undefined}

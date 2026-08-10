@@ -1,35 +1,35 @@
 import { describe, expect, test } from 'vitest'
 
-import { currentGreeting, greetingForHour } from '../domain/greeting.js'
+import { currentGreetingKey, greetingKeyForHour } from '../domain/greeting.js'
 
-describe('greetingForHour (pure)', () => {
-  test('late night (< 6) → Good night', () => {
-    expect(greetingForHour(0)).toBe('Good night')
-    expect(greetingForHour(5)).toBe('Good night')
+describe('greetingKeyForHour (pure)', () => {
+  test('late night (< 6) → night key', () => {
+    expect(greetingKeyForHour(0)).toBe('home.greetingNight')
+    expect(greetingKeyForHour(5)).toBe('home.greetingNight')
   })
 
-  test('morning (6–11) → Good morning', () => {
-    expect(greetingForHour(6)).toBe('Good morning')
-    expect(greetingForHour(11)).toBe('Good morning')
+  test('morning (6–11) → morning key', () => {
+    expect(greetingKeyForHour(6)).toBe('home.greetingMorning')
+    expect(greetingKeyForHour(11)).toBe('home.greetingMorning')
   })
 
-  test('midday/afternoon (12–17) → Good afternoon', () => {
-    expect(greetingForHour(12)).toBe('Good afternoon')
-    expect(greetingForHour(17)).toBe('Good afternoon')
+  test('midday/afternoon (12–17) → afternoon key', () => {
+    expect(greetingKeyForHour(12)).toBe('home.greetingAfternoon')
+    expect(greetingKeyForHour(17)).toBe('home.greetingAfternoon')
   })
 
-  test('evening (>= 18) → Good evening', () => {
-    expect(greetingForHour(18)).toBe('Good evening')
-    expect(greetingForHour(23)).toBe('Good evening')
+  test('evening (>= 18) → evening key', () => {
+    expect(greetingKeyForHour(18)).toBe('home.greetingEvening')
+    expect(greetingKeyForHour(23)).toBe('home.greetingEvening')
   })
 })
 
-describe('currentGreeting', () => {
+describe('currentGreetingKey', () => {
   test('uses the provided Date local hour', () => {
     const d = new Date()
     d.setHours(9, 0, 0, 0)
-    expect(currentGreeting(d)).toBe('Good morning')
+    expect(currentGreetingKey(d)).toBe('home.greetingMorning')
     d.setHours(20, 0, 0, 0)
-    expect(currentGreeting(d)).toBe('Good evening')
+    expect(currentGreetingKey(d)).toBe('home.greetingEvening')
   })
 })

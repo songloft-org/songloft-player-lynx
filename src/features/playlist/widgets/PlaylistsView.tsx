@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 
 import type { Playlist } from '../../../models/playlist.js'
 import { flattenPlaylists } from '../data/pagination.js'
@@ -16,20 +17,21 @@ import './PlaylistsView.css'
  */
 export function PlaylistsView() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const query = usePlaylistsInfiniteQuery()
   const playlists = flattenPlaylists(query.data?.pages)
 
   if (query.isLoading) {
-    return <PlaylistState text='Loading playlists…' />
+    return <PlaylistState text={t('playlist.loadingPlaylists')} />
   }
   if (query.isError && playlists.length === 0) {
-    return <PlaylistState text='Could not load playlists.' tone='error' />
+    return <PlaylistState text={t('playlist.playlistsError')} tone='error' />
   }
   if (playlists.length === 0) {
     return (
       <PlaylistState
-        text='No playlists yet'
-        subtext='Playlists you create will appear here.'
+        text={t('playlist.noPlaylistsTitle')}
+        subtext={t('playlist.noPlaylistsSubtitle')}
       />
     )
   }
@@ -58,7 +60,7 @@ export function PlaylistsView() {
         {query.isFetchingNextPage
           ? (
             <view className='playlists__footer'>
-              <text className='playlists__footer-text'>Loading more…</text>
+              <text className='playlists__footer-text'>{t('common.loadingMore')}</text>
             </view>
           )
           : null}

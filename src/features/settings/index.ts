@@ -2,12 +2,13 @@ export { SettingsPage } from './pages/SettingsPage.js'
 export { ServerSettingsPage } from './pages/ServerSettingsPage.js'
 export {
   PLAY_MODE_OPTIONS,
-  playModeLabel,
-  playModeDescription,
+  playModeLabelKey,
+  playModeDescriptionKey,
   playModeIcon,
   coercePlayMode,
   serverDisplay,
 } from './domain/settings-model.js'
+export type { ServerDisplayLabels } from './domain/settings-model.js'
 export {
   PREF_DEFAULT_PLAY_MODE,
   readDefaultPlayMode,

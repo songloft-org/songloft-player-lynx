@@ -10,7 +10,7 @@ import {
 import {
   coercePlayMode,
   playModeIcon,
-  playModeLabel,
+  playModeLabelKey,
   serverDisplay,
 } from '../domain/settings-model.js'
 import {
@@ -39,9 +39,9 @@ describe('coercePlayMode', () => {
 })
 
 describe('play mode presentation', () => {
-  test('label + icon per mode', () => {
-    expect(playModeLabel('order')).toBe('Play in order')
-    expect(playModeLabel('random')).toBe('Shuffle')
+  test('label key + icon per mode', () => {
+    expect(playModeLabelKey('order')).toBe('settings.playModeOrderLabel')
+    expect(playModeLabelKey('random')).toBe('settings.playModeRandomLabel')
     expect(playModeIcon('loop')).toBe('repeat')
     expect(playModeIcon('single')).toBe('repeat-one')
     expect(playModeIcon('random')).toBe('shuffle')
@@ -49,12 +49,13 @@ describe('play mode presentation', () => {
 })
 
 describe('serverDisplay', () => {
+  const labels = { embedded: 'Songloft (embedded)', notConfigured: 'Not configured' }
   test('embedded hides the address', () => {
-    expect(serverDisplay('http://x', true)).toBe('Songloft (embedded)')
+    expect(serverDisplay('http://x', true, labels)).toBe('Songloft (embedded)')
   })
-  test('standalone shows the url, or Not configured when empty', () => {
-    expect(serverDisplay('http://host:58091', false)).toBe('http://host:58091')
-    expect(serverDisplay('   ', false)).toBe('Not configured')
+  test('standalone shows the url, or the not-configured label when empty', () => {
+    expect(serverDisplay('http://host:58091', false, labels)).toBe('http://host:58091')
+    expect(serverDisplay('   ', false, labels)).toBe('Not configured')
   })
 })
 

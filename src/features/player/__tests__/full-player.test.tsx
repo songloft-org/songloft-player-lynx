@@ -10,6 +10,9 @@ import { act, getQueriesForElement, render } from '@lynx-js/react/testing-librar
  * render without a RouterProvider. Assertions check the real rendered structure
  * (title, artist, "Now Playing", play glyph, formatted times), not fixtures.
  */
+vi.mock('react-i18next', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
+)
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => () => {} }))
 vi.mock('@lynx-js/lynx-ui-slider', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSlider(),
