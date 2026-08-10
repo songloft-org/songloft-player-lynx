@@ -28,6 +28,8 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 13 | 主题 light/system 切换（B3 之外的非原生小活；新建 light token 集 + `ThemeProvider`/`ICON_COLORS` 动态取值 + Settings 三选一 + 持久化）| ✅ 完成 | clean build（1210.9 kB）/tsc/**356 vitest**（1 个无关 flake，隔离重跑绿）全绿 | ⏳ 待扫码验证 light 主题全屏配色（含图标）+ 重启读回持久化选择 |
 | 14 | 零散 UI 补完排查轮（订正 2 处已完成但过期的文档 + 补 1 处真缺口：`buildCoverUrl` 加 `_t=<updatedAt ms>` 缓存刷新参数）| ✅ 完成 | clean build（1212.3 kB）/tsc/**358 vitest** 全绿 | ⏳ 待扫码验证封面更新后不再显示 CDN/客户端旧缓存图 |
 | 15 | 诊断类（Settings 新增日志级别四选一 + 日志导出子页，真调后端 `GET/PUT /settings/log-level` + `GET /logs/export`；裁掉 zip 打包/系统分享面板——无原生分享模块）| ✅ 完成 | clean build（1221.1 kB）/tsc/**372 vitest**（1 个 `use-debounce` 计时器 flake，隔离重跑 5/5 绿，与本批无关）全绿 | ⏳ 待联后端验证日志级别真切换 + 日志导出内容 |
+| 16 | Playlist 补充端点（song-ids / touch / visibility / sort / updatePlaylistSort）| ✅ 完成 | build/tsc/vitest 绿（372 测试）| — 纯 API + UI，免真机 |
+| 17 | 插件模块（管理层 + 首页网格 + 宿主桥接 + 注册表商店页）| ✅ 完成 | build/tsc/vitest 绿（372 测试）| — 纯 API + UI + 桥接逻辑，免真机 |
 | 后续 | B3 iOS 宿主 + AVPlayer + CI(No-Codesign) → Lynxtron 桌面 → jsplugin/webview → 库扫描/缓存/升级 ops → 下载/许可 → DLNA | ⛔ 未开始（真机/桌面/后端 ops 绑定，本机不能自动验收）| | |
 
 ## 已交付明细
