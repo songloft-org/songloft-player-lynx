@@ -15,7 +15,7 @@ import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { CategorySongsPage, LibraryPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
-import { ServerSettingsPage, SettingsPage } from './features/settings/index.js'
+import { LogsPage, ServerSettingsPage, SettingsPage } from './features/settings/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
 
 /**
@@ -105,6 +105,13 @@ const serverSettingsRoute = createRoute({
   component: ServerSettingsPage,
 })
 
+/** `/settings/logs` — diagnostics log export sub-page, inside the shell (batch 15). */
+const logsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/logs',
+  component: LogsPage,
+})
+
 /** `/playlists/$id` — playlist detail, inside the shell (batch 6). */
 const playlistDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -141,6 +148,7 @@ const routeTree = rootRoute.addChildren([
     libraryRoute,
     settingsRoute,
     serverSettingsRoute,
+    logsRoute,
     playlistDetailRoute,
     categorySongsRoute,
   ]),

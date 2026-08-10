@@ -26,6 +26,8 @@ import {
 // barrel + its lynx-ui gesture leaves.
 import { useAuthStore } from '../../auth/store/index.js'
 import { usePlayerStore } from '../../player/store/player-store.js'
+import { getSettingsApi } from '../api/index.js'
+import { LOG_LEVELS, coerceLogLevel, logLevelLabelKey, type LogLevel } from '../domain/log-level.js'
 import {
   PLAY_MODE_OPTIONS,
   playModeDescriptionKey,
@@ -99,6 +101,13 @@ export function SettingsPage() {
   // overridden below once the persisted pref is re-read (same belt-and-suspenders
   // pattern as `language`).
   const [theme, setTheme] = useState<AppTheme>(getAppTheme)
+  // Backend log level (batch 15) — unlike theme/language this is a *server*
+  // setting (`GET/PUT /api/v1/settings/log-level`), so it has no local module
+  // state to seed from; starts at the same 'info' fallback the API layer uses
+  // and is best-effort overridden once the read resolves (offline/unreachable
+  // backend just leaves the fallback, same degrade-gracefully pattern as the
+  // rest of this page).
+  const [logLevel, setLogLevel] = useState<LogLevel>('info')
 
   useEffect(() => {
     let cancelled = false
@@ -125,6 +134,14 @@ export function SettingsPage() {
         /* best-effort — leave the live module state */
       }
     })()
+    void getSettingsApi()
+      .getLogLevel()
+      .then((level) => {
+        if (!cancelled) setLogLevel(coerceLogLevel(level))
+      })
+      .catch(() => {
+        /* best-effort — backend unreachable, keep the 'info' fallback */
+      })
     return () => {
       cancelled = true
     }
@@ -144,6 +161,17 @@ export function SettingsPage() {
   const selectTheme = (next: AppTheme) => {
     setTheme(next)
     void changeAppTheme(next)
+  }
+
+  const selectLogLevel = (next: LogLevel) => {
+    setLogLevel(next)
+    void getSettingsApi().setLogLevel(next).catch(() => {
+      /* best-effort — backend unreachable; local selection still reflects intent */
+    })
+  }
+
+  const openLogs = () => {
+    void navigate({ to: '/settings/logs' })
   }
 
   const serverText = serverDisplay(appConfig.baseUrl, appConfig.isEmbedded, {
@@ -228,6 +256,27 @@ export function SettingsPage() {
                 testId={`theme-${option}`}
               />
             ))}
+          </SettingsSection>
+
+          <SettingsSection title={t('settings.diagnostics')} icon='settings'>
+            {LOG_LEVELS.map((option) => (
+              <SettingsRow
+                key={option}
+                title={t(logLevelLabelKey(option))}
+                selected={option === logLevel}
+                trailingIcon={option === logLevel ? 'check' : undefined}
+                onTap={() => selectLogLevel(option)}
+                testId={`log-level-${option}`}
+              />
+            ))}
+            <SettingsRow
+              icon='menu'
+              title={t('settings.exportLogs')}
+              subtitle={t('settings.exportLogsSubtitle')}
+              trailingIcon='chevron-right'
+              onTap={openLogs}
+              testId='settings-export-logs'
+            />
           </SettingsSection>
 
           <SettingsSection title={t('settings.about')} icon='info'>

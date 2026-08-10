@@ -26,7 +26,7 @@ import {
  * `Icon` all run; assertions check the rendered structure + that interactions
  * call the correct store/config, not fixtures echoed back.
  */
-const { navigateSpy, logoutSpy, setPlayModeSpy, writePrefSpy, readPref, changeLangSpy, changeThemeSpy } =
+const { navigateSpy, logoutSpy, setPlayModeSpy, writePrefSpy, readPref, changeLangSpy, changeThemeSpy, getLogLevelSpy, setLogLevelSpy } =
   vi.hoisted(() => ({
     navigateSpy: vi.fn(),
     logoutSpy: vi.fn(),
@@ -35,6 +35,8 @@ const { navigateSpy, logoutSpy, setPlayModeSpy, writePrefSpy, readPref, changeLa
     readPref: vi.fn(async () => 'random' as const),
     changeLangSpy: vi.fn(async () => 'en' as const),
     changeThemeSpy: vi.fn(async () => 'dark' as const),
+    getLogLevelSpy: vi.fn(async () => 'warn' as const),
+    setLogLevelSpy: vi.fn(async () => {}),
   }))
 
 // react-i18next → deterministic English `t` (real English resource values); the
@@ -78,6 +80,10 @@ vi.mock('../data/settings-prefs.js', () => ({
   writeDefaultPlayMode: writePrefSpy,
 }))
 
+vi.mock('../api/index.js', () => ({
+  getSettingsApi: () => ({ getLogLevel: getLogLevelSpy, setLogLevel: setLogLevelSpy }),
+}))
+
 const { SettingsPage } = await import('../pages/SettingsPage.js')
 
 afterEach(() => vi.clearAllMocks())
@@ -98,6 +104,7 @@ test('renders every section, the play-mode options, version, server and log-out 
   expect(queryByText('Language')).toBeInTheDocument()
   expect(queryByText('Connection')).toBeInTheDocument()
   expect(queryByText('Appearance')).toBeInTheDocument()
+  expect(queryByText('Diagnostics')).toBeInTheDocument()
   expect(queryByText('About')).toBeInTheDocument()
   expect(queryByText('More settings (coming later)')).toBeInTheDocument()
   expect(queryByText('Account')).toBeInTheDocument()
@@ -118,10 +125,17 @@ test('renders every section, the play-mode options, version, server and log-out 
   expect(queryByTestId('theme-light')).toBeInTheDocument()
   expect(queryByTestId('theme-dark')).toBeInTheDocument()
 
-  // Persisted default (random play mode + system language + system theme,
-  // both re-reads resolving against the unmocked memory storage's null) →
-  // three check glyphs.
-  expect(queryAllByTestId('icon-check')).toHaveLength(3)
+  // The four log-level option rows + the export-logs row.
+  expect(queryByTestId('log-level-debug')).toBeInTheDocument()
+  expect(queryByTestId('log-level-info')).toBeInTheDocument()
+  expect(queryByTestId('log-level-warn')).toBeInTheDocument()
+  expect(queryByTestId('log-level-error')).toBeInTheDocument()
+  expect(queryByTestId('settings-export-logs')).toBeInTheDocument()
+
+  // Persisted default (random play mode + system language + system theme +
+  // warn log level, all re-resolved once their reads settle) → four check
+  // glyphs.
+  expect(queryAllByTestId('icon-check')).toHaveLength(4)
 
   // About shows the client version, and the log-out row is present.
   expect(queryByTestId('settings-version')).toBeInTheDocument()
@@ -147,6 +161,26 @@ test('selecting a theme applies + persists it via changeAppTheme', async () => {
   })
 
   expect(changeThemeSpy).toHaveBeenCalledWith('light')
+})
+
+test('selecting a log level persists it via SettingsApi.setLogLevel', async () => {
+  const { queryByTestId } = await renderPage()
+
+  await act(async () => {
+    fireEvent.tap(queryByTestId('log-level-error')!)
+  })
+
+  expect(setLogLevelSpy).toHaveBeenCalledWith('error')
+})
+
+test('the export-logs row navigates to the logs sub-page', async () => {
+  const { queryByTestId } = await renderPage()
+
+  await act(async () => {
+    fireEvent.tap(queryByTestId('settings-export-logs')!)
+  })
+
+  expect(navigateSpy).toHaveBeenCalledWith({ to: '/settings/logs' })
 })
 
 test('selecting a play mode applies it to the player store and persists it', async () => {
