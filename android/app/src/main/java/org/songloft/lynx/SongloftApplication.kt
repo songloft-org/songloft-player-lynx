@@ -11,6 +11,7 @@ import com.lynx.service.log.LynxLogService
 import com.lynx.tasm.LynxEnv
 import com.lynx.tasm.service.LynxServiceCenter
 import org.songloft.lynx.audio.SongloftAudioModule
+import org.songloft.lynx.storage.SongloftStorageModule
 
 /**
  * Application entry: initialises the Lynx runtime once, before any LynxView is
@@ -54,5 +55,10 @@ class SongloftApplication : Application() {
         // detection + the interface spec (`docs/lynx_native_modules_spec.md#1`).
         // Pattern copied verbatim from the official Native Modules guide.
         LynxEnv.inst().registerModule("SongloftAudio", SongloftAudioModule::class.java)
+        // Persistent key/value storage (SharedPreferences). Exposed as
+        // `NativeModules.SongloftStorage`; makes tokens / prefs / language
+        // survive app restart so the user is no longer bounced to /login after
+        // backgrounding. Name + methods match `src/core/storage/native-storage.ts`.
+        LynxEnv.inst().registerModule("SongloftStorage", SongloftStorageModule::class.java)
     }
 }

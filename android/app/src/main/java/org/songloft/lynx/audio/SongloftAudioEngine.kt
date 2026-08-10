@@ -3,8 +3,10 @@ package org.songloft.lynx.audio
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.net.Uri
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -57,6 +59,12 @@ object SongloftAudioEngine {
 
     private var progressActive = false
 
+    /**
+     * url → media metadata (title / artist / artwork), populated from the JS
+     * store's `setQueue` so the media notification / lock-screen has content.
+     */
+    private val metadataByUrl = HashMap<String, MediaMetadata>()
+
     private val progressTick = object : Runnable {
         override fun run() {
             emitProgress()
@@ -83,13 +91,36 @@ object SongloftAudioEngine {
 
     // ── controls (main thread) ──────────────────────────────────────────────
 
+    /**
+     * Replace the queue metadata (url → title/artist/artwork) so the media
+     * notification has content. Playback itself stays one-item-at-a-time driven
+     * by the JS store (same as the mock); this only feeds notification metadata.
+     */
+    fun setQueueMetadata(items: List<QueueMetadata>) {
+        metadataByUrl.clear()
+        for (item in items) {
+            if (item.url.isEmpty()) continue
+            val builder = MediaMetadata.Builder()
+            item.title?.let { builder.setTitle(it) }
+            item.artist?.let { builder.setArtist(it) }
+            item.artworkUrl?.takeIf { it.isNotEmpty() }?.let {
+                builder.setArtworkUri(Uri.parse(it))
+            }
+            metadataByUrl[item.url] = builder.build()
+        }
+    }
+
     fun load(context: Context, url: String, hls: Boolean, headers: Map<String, String>?) {
         val p = ensurePlayer(context)
         emitState("loading")
         val httpFactory = DefaultHttpDataSource.Factory().apply {
             if (!headers.isNullOrEmpty()) setDefaultRequestProperties(headers)
         }
-        val item = MediaItem.fromUri(url)
+        // Attach media metadata (if the JS store pre-registered it via setQueue)
+        // so the foreground notification / lock screen shows title + artist.
+        val itemBuilder = MediaItem.Builder().setUri(url)
+        metadataByUrl[url]?.let { itemBuilder.setMediaMetadata(it) }
+        val item = itemBuilder.build()
         val source = if (hls || url.endsWith(".m3u8")) {
             HlsMediaSource.Factory(httpFactory).createMediaSource(item)
         } else {
@@ -219,3 +250,11 @@ object SongloftAudioEngine {
 interface AudioEventSink {
     fun emit(event: String, payload: Map<String, Any?>)
 }
+
+/** One queue entry's notification metadata (parsed from the JS `setQueue`). */
+data class QueueMetadata(
+    val url: String,
+    val title: String?,
+    val artist: String?,
+    val artworkUrl: String?,
+)

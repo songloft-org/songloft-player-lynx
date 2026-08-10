@@ -28,6 +28,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:configChanges="orientation|screenSize|keyboardHidden|uiMode|smallestScreenSize|screenLayout|density"
             android:theme="@style/Theme.SongloftLynx">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -8,7 +8,9 @@ import com.lynx.jsbridge.LynxMethod
 import com.lynx.jsbridge.LynxModule
 import com.lynx.react.bridge.JavaOnlyArray
 import com.lynx.react.bridge.JavaOnlyMap
+import com.lynx.react.bridge.ReadableArray
 import com.lynx.react.bridge.ReadableMap
+import com.lynx.react.bridge.ReadableType
 import com.lynx.tasm.behavior.LynxContext
 
 /**
@@ -90,12 +92,16 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
         SongloftAudioEngine.runOnMain { SongloftAudioEngine.setSpeed(rate.toFloat()) }
     }
 
-    // ── queue (JS-store-driven, mirrors the mock: minimal no-ops) ──
+    // ── queue (JS-store-driven, mirrors the mock) ──
 
     @LynxMethod
-    fun setQueue(items: com.lynx.react.bridge.ReadableArray?, startIndex: Double) {
+    fun setQueue(items: ReadableArray?, startIndex: Double) {
         // The JS player store owns the queue and calls load()/play() per track;
         // the native side plays one item at a time (same behaviour as the mock).
+        // We DO capture per-track metadata (title/artist/url) so the media
+        // notification / lock-screen has content when a track is loaded.
+        val metadata = parseQueueMetadata(items)
+        SongloftAudioEngine.runOnMain { SongloftAudioEngine.setQueueMetadata(metadata) }
     }
 
     @LynxMethod
@@ -182,6 +188,31 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
             }
         }
         return map
+    }
+
+    /** Parse the JS queue (`AudioItem[]`) into notification metadata entries. */
+    private fun parseQueueMetadata(items: ReadableArray?): List<QueueMetadata> {
+        if (items == null) return emptyList()
+        val out = ArrayList<QueueMetadata>(items.size())
+        for (i in 0 until items.size()) {
+            if (items.getType(i) != ReadableType.Map) continue
+            val map = items.getMap(i) ?: continue
+            val url = optString(map, "url") ?: continue
+            out.add(
+                QueueMetadata(
+                    url = url,
+                    title = optString(map, "title"),
+                    artist = optString(map, "artist"),
+                    artworkUrl = optString(map, "artworkUrl"),
+                ),
+            )
+        }
+        return out
+    }
+
+    private fun optString(map: ReadableMap, key: String): String? {
+        if (!map.hasKey(key) || map.getType(key) != ReadableType.String) return null
+        return map.getString(key)
     }
 
     private fun toStringMap(readable: ReadableMap): Map<String, String> {

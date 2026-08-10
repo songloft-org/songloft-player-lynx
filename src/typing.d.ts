@@ -15,11 +15,18 @@
  */
 
 import type { SongloftAudioNativeModule } from './native/native-audio.js'
+import type { SongloftStorageNativeModule } from './core/storage/native-storage.js'
 
 declare module '@lynx-js/types/background' {
   interface NativeModules {
     /** Real native audio backend (ExoPlayer / AVPlayer). Absent in mock hosts. */
     SongloftAudio?: SongloftAudioNativeModule
+    /**
+     * Persistent native storage (Android SharedPreferences / iOS UserDefaults).
+     * Present on device → tokens / prefs survive app restart; absent in mock
+     * hosts (falls back to web/memory). Shape: `core/storage/native-storage.ts`.
+     */
+    SongloftStorage?: SongloftStorageNativeModule
   }
 }
 

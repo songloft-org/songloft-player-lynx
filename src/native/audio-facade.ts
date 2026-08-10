@@ -1,4 +1,5 @@
 import { MockSongloftAudio } from './mock-audio.js'
+import { readNativeModules } from './native-modules.js'
 import {
   NativeSongloftAudio,
   isNativeAudioAvailable,
@@ -25,22 +26,6 @@ let singleton: SongloftAudio | null = null
 /** Create a fresh mock audio instance (each call is independent — test hook). */
 export function createMockAudio(): SongloftAudio {
   return new MockSongloftAudio()
-}
-
-/**
- * Read the bare-global `NativeModules` bag safely. Like `fetch`/`self`, Lynx
- * exposes it as a bare identifier (not `globalThis.NativeModules`), so probe
- * with a `typeof` guard first (reading an undeclared bare identifier throws),
- * then fall back to `globalThis` (used by tests, which set it there).
- */
-function readNativeModules(): { SongloftAudio?: unknown } | undefined {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (typeof NativeModules !== 'undefined') return NativeModules as any
-  } catch {
-    // undeclared bare identifier — fall through to globalThis
-  }
-  return (globalThis as { NativeModules?: { SongloftAudio?: unknown } }).NativeModules
 }
 
 /**
