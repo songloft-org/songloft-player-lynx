@@ -1,4 +1,3 @@
-import { useState } from '@lynx-js/react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 
 // Import the store directly (not the player feature barrel) so the library
@@ -139,7 +138,10 @@ function SongsView() {
 
 function FacetsView() {
   const navigate = useNavigate()
-  const [field, setField] = useState<FacetField>('artist')
+  // Facet field is URL-driven too (`?view=facets&field=album`), so returning
+  // from a category drill-in restores the field the user was on (not 'artist').
+  const search = useSearch({ strict: false }) as { field?: FacetField }
+  const field: FacetField = search.field ?? 'artist'
   const query = useFacetsInfiniteQuery(field)
   const facets = flattenFacets(query.data?.pages)
 
@@ -150,7 +152,7 @@ function FacetsView() {
           <view
             key={key}
             className={key === field ? 'library__chip library__chip--active' : 'library__chip'}
-            bindtap={() => setField(key)}
+            bindtap={() => navigate({ to: '/library', search: { view: 'facets', field: key } })}
           >
             <text className='library__chip-text'>{FACET_LABELS[key]}</text>
           </view>

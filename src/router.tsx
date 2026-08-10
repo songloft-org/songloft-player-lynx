@@ -74,14 +74,20 @@ const libraryRoute = createRoute({
   path: '/library',
   // `?view=` drives the active tab (songs/facets/playlists) so it survives
   // remounts and is restored when returning from the playlist detail page.
-  // `view` is OPTIONAL so plain `navigate({ to: '/library' })` (e.g. the shell
-  // nav tab) stays valid and defaults to the songs view; the tab switcher and
-  // the playlist-detail back button pass an explicit `view`.
+  // `view` / `field` are OPTIONAL so plain `navigate({ to: '/library' })` (shell
+  // nav tab) stays valid and defaults to songs. `view` = active tab; `field` =
+  // active facet dimension in the Categories tab — both URL-driven so returning
+  // from a drill-in (category songs / playlist detail) restores the exact tab
+  // AND facet field the user was on.
   validateSearch: (
     search: Record<string, unknown>,
-  ): { view?: 'songs' | 'facets' | 'playlists' } => {
+  ): { view?: 'songs' | 'facets' | 'playlists'; field?: 'artist' | 'album' | 'genre' } => {
     const v = search.view
-    return v === 'songs' || v === 'facets' || v === 'playlists' ? { view: v } : {}
+    const f = search.field
+    return {
+      ...(v === 'songs' || v === 'facets' || v === 'playlists' ? { view: v } : {}),
+      ...(f === 'artist' || f === 'album' || f === 'genre' ? { field: f } : {}),
+    }
   },
   component: LibraryPage,
 })

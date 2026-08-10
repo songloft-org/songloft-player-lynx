@@ -220,6 +220,24 @@ test('categories view renders a facet grid when ?view=facets', async () => {
   expect(queryByText('John Coltrane')).toBeInTheDocument()
 })
 
+test('facet field is URL-driven (?field=album) and chip taps navigate with it', async () => {
+  // Regression: the active facet field was local state and reset to 'artist'
+  // when returning from a category drill-in. It is now `?field=`.
+  searchHook.mockReturnValue({ view: 'facets', field: 'album' })
+  facetsHook.mockReturnValue(facetsResult([{ facets: [], total: 0 }]))
+  const { getByText } = await renderPage()
+  // The facets query is driven by the URL field, not the default 'artist'.
+  expect(facetsHook).toHaveBeenCalledWith('album')
+  // Tapping a field chip navigates with the chosen field (URL-driven switch).
+  await act(async () => {
+    fireEvent.tap(getByText('Genre'))
+  })
+  expect(navigateSpy).toHaveBeenCalledWith({
+    to: '/library',
+    search: { view: 'facets', field: 'genre' },
+  })
+})
+
 test('playlists view renders the batch-6 PlaylistsView (empty state) when ?view=playlists', async () => {
   searchHook.mockReturnValue({ view: 'playlists' })
   const { queryByText } = await renderPage()

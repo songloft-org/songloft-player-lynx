@@ -75,7 +75,7 @@ export function CategorySongsPage() {
       <view className='category-songs__topbar'>
         <view
           className='category-songs__back'
-          bindtap={() => navigate({ to: '/library', search: { view: 'facets' } })}
+          bindtap={() => navigate({ to: '/library', search: { view: 'facets', field } })}
         >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
