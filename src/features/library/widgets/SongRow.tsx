@@ -12,7 +12,7 @@ export interface SongRowProps {
 }
 
 export function SongRow({ song, index, onTap, isFavorite, onToggleFavorite }: SongRowProps) {
-  const cover = song.coverUrl ? buildCoverUrl(song.coverUrl) : ''
+  const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
   const subtitle = [song.artist, song.album].filter(Boolean).join(' · ')
 
   return (

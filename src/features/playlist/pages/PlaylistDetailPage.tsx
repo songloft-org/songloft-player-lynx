@@ -43,7 +43,7 @@ export function PlaylistDetailPage() {
   const songs = flattenSongs(songsQuery.data?.pages)
 
   const playlist = detail.data
-  const cover = playlist?.coverUrl ? buildCoverUrl(playlist.coverUrl) : ''
+  const cover = playlist?.coverUrl ? buildCoverUrl(playlist.coverUrl, playlist.updatedAt) : ''
   const songCount = playlist?.songCount ?? songs.length
   const countLabel = t(
     songCount === 1 ? 'common.songCountOne' : 'common.songCountOther',

@@ -87,8 +87,18 @@ export function buildVideoHlsUrl(
   return opts.mediaVideoFlag ? appendMediaVideoParam(result) : result
 }
 
-export function buildCoverUrl(coverUrl: string, ctx: UrlContext = defaultUrlContext()): string {
-  return buildResourceUrl(coverUrl, ctx)
+export function buildCoverUrl(
+  coverUrl: string,
+  updatedAt?: string,
+  ctx: UrlContext = defaultUrlContext(),
+): string {
+  let result = buildResourceUrl(coverUrl, ctx)
+  if (!result) return ''
+  if (updatedAt) {
+    const ms = Date.parse(updatedAt)
+    if (!Number.isNaN(ms)) result = append(result, `_t=${ms}`)
+  }
+  return result
 }
 
 export function buildLyricUrl(lyricUrl: string, ctx: UrlContext = defaultUrlContext()): string {

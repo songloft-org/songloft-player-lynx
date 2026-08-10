@@ -20,7 +20,7 @@ export function MiniPlayer() {
 
   if (!song) return null
 
-  const cover = song.coverUrl ? buildCoverUrl(song.coverUrl) : ''
+  const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
   const subtitle = [song.artist, song.album].filter(Boolean).join(' · ')
   const pct = `${Math.round(progress * 100)}%`
 

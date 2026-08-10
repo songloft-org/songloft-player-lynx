@@ -25,7 +25,7 @@ function formatRemaining(ms: number): string {
 }
 
 function CoverArt({ song }: { song: Song }) {
-  const cover = song.coverUrl ? buildCoverUrl(song.coverUrl) : ''
+  const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
   return (
     <view className='full-player__cover-wrap'>
       {cover

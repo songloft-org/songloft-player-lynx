@@ -79,9 +79,19 @@ describe('UrlHelper', () => {
   })
 
   test('buildCoverUrl is buildResourceUrl', () => {
-    expect(buildCoverUrl('/api/v1/songs/1/cover', ctx)).toBe(
+    expect(buildCoverUrl('/api/v1/songs/1/cover', undefined, ctx)).toBe(
       'http://host:58091/api/v1/songs/1/cover?access_token=tok123',
     )
+  })
+
+  test('buildCoverUrl appends _t from a valid updatedAt', () => {
+    const url = buildCoverUrl('/api/v1/songs/1/cover', '2026-01-02T03:04:05.000Z', ctx)
+    expect(url).toContain(`_t=${Date.parse('2026-01-02T03:04:05.000Z')}`)
+  })
+
+  test('buildCoverUrl skips _t when updatedAt is missing or unparseable', () => {
+    expect(buildCoverUrl('/api/v1/songs/1/cover', undefined, ctx)).not.toContain('_t=')
+    expect(buildCoverUrl('/api/v1/songs/1/cover', 'not-a-date', ctx)).not.toContain('_t=')
   })
 
   test('empty input returns empty string', () => {

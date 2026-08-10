@@ -18,7 +18,7 @@ export interface PlaylistCardProps {
 
 export function PlaylistCard({ playlist, onTap, isPlaying }: PlaylistCardProps) {
   const { t } = useTranslation()
-  const cover = playlist.coverUrl ? buildCoverUrl(playlist.coverUrl) : ''
+  const cover = playlist.coverUrl ? buildCoverUrl(playlist.coverUrl, playlist.updatedAt) : ''
   const count = t(
     playlist.songCount === 1 ? 'common.songCountOne' : 'common.songCountOther',
     { count: playlist.songCount },
