@@ -16,7 +16,7 @@ import { CategorySongsPage, LibraryPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
 import { LogsPage, ServerSettingsPage, SettingsPage } from './features/settings/index.js'
-import { PluginManagerPage } from './features/jsplugin/index.js'
+import { PluginManagerPage, PluginRegistryPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
 
 /**
@@ -120,6 +120,13 @@ const pluginsRoute = createRoute({
   component: PluginManagerPage,
 })
 
+/** `/settings/plugins/registry` — plugin store/marketplace, inside the shell (batch 17). */
+const pluginRegistryRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/plugins/registry',
+  component: PluginRegistryPage,
+})
+
 /** `/playlists/$id` — playlist detail, inside the shell (batch 6). */
 const playlistDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -158,6 +165,7 @@ const routeTree = rootRoute.addChildren([
     serverSettingsRoute,
     logsRoute,
     pluginsRoute,
+    pluginRegistryRoute,
     playlistDetailRoute,
     categorySongsRoute,
   ]),

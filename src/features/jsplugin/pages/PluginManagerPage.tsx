@@ -54,6 +54,9 @@ export function PluginManagerPage() {
         </view>
         <text className='plugin-manager__title'>{t('jsplugin.managerTitle')}</text>
         <view className='plugin-manager__topbar-actions'>
+          <view className='plugin-manager__action-btn' bindtap={() => navigate({ to: '/settings/plugins/registry' })} data-testid='plugins-store'>
+            <text className='plugin-manager__action-text'>{t('jsplugin.store')}</text>
+          </view>
           <view className='plugin-manager__action-btn' bindtap={onUpdateAll} data-testid='plugins-update-all'>
             <text className='plugin-manager__action-text'>{t('jsplugin.updateAll')}</text>
           </view>
