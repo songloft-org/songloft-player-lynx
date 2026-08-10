@@ -1,25 +1,47 @@
+import { useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { Input } from '@lynx-js/lynx-ui-input'
 
 import type { Playlist } from '../../../models/playlist.js'
+import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { flattenPlaylists } from '../data/pagination.js'
 import { usePlaylistsInfiniteQuery } from '../data/playlist-query.js'
+import { useCreatePlaylistMutation } from '../data/playlist-mutations.js'
 import { PlaylistCard } from './PlaylistCard.js'
 import './PlaylistsView.css'
 
-/**
- * The "Playlists" view embedded in the library page (replaces the batch-4
- * placeholder). A responsive grid of {@link PlaylistCard}s fed by the infinite
- * playlist list; tapping a card navigates to the playlist detail route
- * (`/playlists/$id`). Loading / empty / error states are all covered. Uses a
- * `<scroll-view>` grid (children mount into the tree) with `bindscrolltolower`
- * load-more, mirroring the library categories grid.
- */
 export function PlaylistsView() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const query = usePlaylistsInfiniteQuery()
   const playlists = flattenPlaylists(query.data?.pages)
+  const createMutation = useCreatePlaylistMutation()
+
+  const [showForm, setShowForm] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newDesc, setNewDesc] = useState('')
+
+  const onCreateSubmit = () => {
+    const trimmed = newName.trim()
+    if (!trimmed || createMutation.isPending) return
+    createMutation.mutate(
+      { name: trimmed, description: newDesc.trim() || undefined },
+      {
+        onSuccess: () => {
+          setShowForm(false)
+          setNewName('')
+          setNewDesc('')
+        },
+      },
+    )
+  }
+
+  const onCancelCreate = () => {
+    setShowForm(false)
+    setNewName('')
+    setNewDesc('')
+  }
 
   if (query.isLoading) {
     return <PlaylistState text={t('playlist.loadingPlaylists')} />
@@ -27,21 +49,69 @@ export function PlaylistsView() {
   if (query.isError && playlists.length === 0) {
     return <PlaylistState text={t('playlist.playlistsError')} tone='error' />
   }
-  if (playlists.length === 0) {
-    return (
-      <PlaylistState
-        text={t('playlist.noPlaylistsTitle')}
-        subtext={t('playlist.noPlaylistsSubtitle')}
-      />
-    )
-  }
 
   const onTap = (playlist: Playlist) => {
     void navigate({ to: '/playlists/$id', params: { id: String(playlist.id) } })
   }
 
+  const createForm = showForm
+    ? (
+      <view className='playlists__create-form'>
+        <Input
+          className='playlists__create-input'
+          placeholder={t('playlist.namePlaceholder')}
+          value={newName}
+          onInput={(value: string) => setNewName(value)}
+        />
+        <Input
+          className='playlists__create-input'
+          placeholder={t('playlist.descriptionPlaceholder')}
+          value={newDesc}
+          onInput={(value: string) => setNewDesc(value)}
+        />
+        <view className='playlists__create-actions'>
+          <view className='playlists__create-btn' bindtap={onCancelCreate}>
+            <text className='playlists__create-btn-text'>{t('playlist.cancel')}</text>
+          </view>
+          <view
+            className='playlists__create-btn playlists__create-btn--primary'
+            bindtap={onCreateSubmit}
+          >
+            <text className='playlists__create-btn-text playlists__create-btn-text--primary'>
+              {createMutation.isPending ? t('playlist.creating') : t('playlist.create')}
+            </text>
+          </view>
+        </view>
+      </view>
+    )
+    : null
+
+  if (playlists.length === 0 && !showForm) {
+    return (
+      <view className='playlists'>
+        <view className='playlists__create-bar'>
+          <view className='playlists__create-trigger' bindtap={() => setShowForm(true)}>
+            <Icon name='plus' size={18} color={ICON_COLORS.content} />
+            <text className='playlists__create-trigger-text'>{t('playlist.createPlaylist')}</text>
+          </view>
+        </view>
+        <PlaylistState
+          text={t('playlist.noPlaylistsTitle')}
+          subtext={t('playlist.noPlaylistsSubtitle')}
+        />
+      </view>
+    )
+  }
+
   return (
     <view className='playlists'>
+      <view className='playlists__create-bar'>
+        <view className='playlists__create-trigger' bindtap={() => setShowForm(true)}>
+          <Icon name='plus' size={18} color={ICON_COLORS.content} />
+          <text className='playlists__create-trigger-text'>{t('playlist.createPlaylist')}</text>
+        </view>
+      </view>
+      {createForm}
       <scroll-view
         className='playlists__scroll'
         scroll-y

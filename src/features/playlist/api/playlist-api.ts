@@ -12,40 +12,14 @@ import {
   type SongListResponse,
 } from '../../../models/song.js'
 
-/**
- * Playlist API service, ported (read paths only) from the Flutter `PlaylistApi`
- * (`features/playlist/data/playlist_api.dart`). It wraps a batch-2 `HttpClient`
- * and parses every response through the batch-2 zod models (`Playlist` /
- * `PlaylistListResponse` / `SongListResponse`).
- *
- * Only the read endpoints the Lynx playlist batch needs are ported here:
- *  - `GET /playlists`            — paginated playlist list
- *  - `GET /playlists/{id}`       — single playlist detail
- *  - `GET /playlists/{id}/songs` — the songs inside a playlist (paginated)
- *
- * The mutating endpoints (create/update/delete/cover/reorder/visibility/touch/
- * add-remove songs/batch-delete) from the Flutter class are deferred to a later
- * batch (see PROGRESS).
- *
- * The query-string builders are pure + exported so the exact param wiring (which
- * filters are included, how empties are pruned, how pagination maps to
- * `limit`/`offset`) is unit-testable without a live transport.
- */
-
-/** Filters for the playlist list endpoint (`GET /playlists`). */
 export interface PlaylistsFilters {
-  /** Playlist type: `normal` / `radio`. */
   type?: string
-  /** Exclude playlists carrying these labels (e.g. `hidden`). */
   excludeLabels?: string
   keyword?: string
 }
 
-/** Filters for the playlist-songs endpoint (`GET /playlists/{id}/songs`). */
 export interface PlaylistSongsFilters {
-  /** Sort field, e.g. `position` / `title` / `added_at`. */
   sort?: string
-  /** Sort direction: `asc` / `desc`. */
   order?: string
   keyword?: string
 }
@@ -55,7 +29,16 @@ export interface PageParams {
   offset?: number
 }
 
-/** Append a string filter to `query` only when it is non-empty (Flutter parity). */
+export interface CreatePlaylistParams {
+  name: string
+  description?: string
+}
+
+export interface UpdatePlaylistParams {
+  name?: string
+  description?: string
+}
+
 function putStr(
   query: Record<string, string | number>,
   key: string,
@@ -64,7 +47,6 @@ function putStr(
   if (value != null && value !== '') query[key] = value
 }
 
-/** Build the `/playlists` query object (paginated). Pure + exported. */
 export function buildPlaylistsQuery(
   filters: PlaylistsFilters = {},
   page: PageParams = {},
@@ -79,7 +61,6 @@ export function buildPlaylistsQuery(
   return query
 }
 
-/** Build the `/playlists/{id}/songs` query object (paginated). Pure + exported. */
 export function buildPlaylistSongsQuery(
   filters: PlaylistSongsFilters = {},
   page: PageParams = {},
@@ -94,10 +75,28 @@ export function buildPlaylistSongsQuery(
   return query
 }
 
+export function buildCreatePlaylistBody(params: CreatePlaylistParams): Record<string, string> {
+  const body: Record<string, string> = { name: params.name }
+  if (params.description != null && params.description !== '') {
+    body.description = params.description
+  }
+  return body
+}
+
+export function buildUpdatePlaylistBody(params: UpdatePlaylistParams): Record<string, string> {
+  const body: Record<string, string> = {}
+  if (params.name != null && params.name !== '') body.name = params.name
+  if (params.description != null) body.description = params.description
+  return body
+}
+
+export function buildAddSongsBody(songIds: number[]): { song_ids: number[] } {
+  return { song_ids: songIds }
+}
+
 export class PlaylistApi {
   constructor(private readonly client: HttpClient) {}
 
-  /** `GET /playlists` → `{ playlists, total }` (paginated by `limit`/`offset`). */
   async getPlaylists(
     filters: PlaylistsFilters = {},
     page: PageParams = {},
@@ -108,13 +107,11 @@ export class PlaylistApi {
     return parsePlaylistListResponse(res.data)
   }
 
-  /** `GET /playlists/{id}` → `Playlist`. */
   async getPlaylist(id: number): Promise<Playlist> {
     const res = await this.client.get<unknown>(`${apiPrefix}/playlists/${id}`)
     return parsePlaylist(res.data)
   }
 
-  /** `GET /playlists/{id}/songs` → `{ songs, total }` (paginated). */
   async getPlaylistSongs(
     id: number,
     filters: PlaylistSongsFilters = {},
@@ -125,5 +122,36 @@ export class PlaylistApi {
       { query: buildPlaylistSongsQuery(filters, page) },
     )
     return parseSongListResponse(res.data)
+  }
+
+  async createPlaylist(params: CreatePlaylistParams): Promise<Playlist> {
+    const res = await this.client.post<unknown>(
+      `${apiPrefix}/playlists`,
+      buildCreatePlaylistBody(params),
+    )
+    return parsePlaylist(res.data)
+  }
+
+  async updatePlaylist(id: number, params: UpdatePlaylistParams): Promise<Playlist> {
+    const res = await this.client.put<unknown>(
+      `${apiPrefix}/playlists/${id}`,
+      buildUpdatePlaylistBody(params),
+    )
+    return parsePlaylist(res.data)
+  }
+
+  async deletePlaylist(id: number): Promise<void> {
+    await this.client.delete(`${apiPrefix}/playlists/${id}`)
+  }
+
+  async addSongsToPlaylist(id: number, songIds: number[]): Promise<void> {
+    await this.client.post(
+      `${apiPrefix}/playlists/${id}/songs`,
+      buildAddSongsBody(songIds),
+    )
+  }
+
+  async removeSongFromPlaylist(playlistId: number, songId: number): Promise<void> {
+    await this.client.delete(`${apiPrefix}/playlists/${playlistId}/songs/${songId}`)
   }
 }

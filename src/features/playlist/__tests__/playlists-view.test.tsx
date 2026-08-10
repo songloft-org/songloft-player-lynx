@@ -6,18 +6,10 @@ import { act, getQueriesForElement, render } from '@lynx-js/react/testing-librar
 
 import type { Playlist } from '../../../models/playlist.js'
 
-/**
- * PlaylistsView (library "Playlists" tab) render smoke.
- *
- * Same rule as the batch-4 library page test: the TanStack Query infinite hook
- * subscribes via `useSyncExternalStore` (crashes the ReactLynx Vitest snapshot
- * tree + needs a live QueryClient/network), so it is a `vi.fn()` returning a
- * static infinite-query shape. `useNavigate` is stubbed. `flattenPlaylists` +
- * the view logic + `PlaylistCard` (real) run against the injected data; the
- * assertions check the real rendered structure (card name + song count, empty
- * state), not fixtures echoed back.
- */
-const { listHook } = vi.hoisted(() => ({ listHook: vi.fn() }))
+const { listHook, createMutationHook } = vi.hoisted(() => ({
+  listHook: vi.fn(),
+  createMutationHook: vi.fn(),
+}))
 
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
@@ -25,9 +17,17 @@ vi.mock('react-i18next', async () =>
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => () => {} }))
 
+vi.mock('@lynx-js/lynx-ui-input', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
+)
+
 vi.mock('../data/playlist-query.js', () => ({
   usePlaylistsInfiniteQuery: listHook,
   playlistQueryKeys: { list: () => [] },
+}))
+
+vi.mock('../data/playlist-mutations.js', () => ({
+  useCreatePlaylistMutation: createMutationHook,
 }))
 
 const { PlaylistsView } = await import('../widgets/PlaylistsView.js')
@@ -62,8 +62,17 @@ function listResult(pages: { playlists: Playlist[]; total: number }[], over = {}
   }
 }
 
+function mutationResult(over = {}) {
+  return {
+    mutate: vi.fn(),
+    isPending: false,
+    ...over,
+  }
+}
+
 beforeEach(() => {
   listHook.mockReturnValue(listResult([{ playlists: [], total: 0 }]))
+  createMutationHook.mockReturnValue(mutationResult())
 })
 
 afterEach(() => vi.clearAllMocks())
@@ -93,7 +102,6 @@ test('renders a card per playlist with name and song count', async () => {
   expect(queryByText('Favorites')).toBeInTheDocument()
   expect(queryByText('5 songs')).toBeInTheDocument()
   expect(queryByText('Chill')).toBeInTheDocument()
-  // Singular pluralization.
   expect(queryByText('1 song')).toBeInTheDocument()
 })
 
@@ -115,4 +123,20 @@ test('shows the error state when the query errors with no data', async () => {
   )
   const { queryByText } = await renderView()
   expect(queryByText('Could not load playlists.')).toBeInTheDocument()
+})
+
+test('renders the create playlist button', async () => {
+  listHook.mockReturnValue(
+    listResult([
+      { playlists: [makePlaylist(1, { name: 'Test' })], total: 1 },
+    ]),
+  )
+  const { queryByText } = await renderView()
+  expect(queryByText('Create playlist')).toBeInTheDocument()
+})
+
+test('shows create playlist button even in empty state', async () => {
+  listHook.mockReturnValue(listResult([{ playlists: [], total: 0 }]))
+  const { queryByText } = await renderView()
+  expect(queryByText('Create playlist')).toBeInTheDocument()
 })

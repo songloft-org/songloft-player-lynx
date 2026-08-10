@@ -1,9 +1,3 @@
-/*
- * Playlists library-view styling — LUNA tokens only (no hardcoded colors beyond
- * layout geometry). The scroll container fills the library body; cards flow in a
- * three-column wrapping grid mirroring the categories facet grid.
- */
-
 .playlists {
   display: flex;
   flex-direction: column;
@@ -96,4 +90,65 @@
   color: var(--content-muted);
   font-size: var(--font-sm);
   margin-top: var(--space-2);
+}
+
+.playlists__create-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+}
+
+.playlists__create-trigger {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--neutral-faint);
+}
+
+.playlists__create-trigger-text {
+  color: var(--content);
+  font-size: var(--font-sm);
+  margin-left: var(--space-2);
+}
+
+.playlists__create-form {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--space-4) var(--space-3) var(--space-4);
+}
+
+.playlists__create-input {
+  margin-bottom: var(--space-2);
+}
+
+.playlists__create-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}
+
+.playlists__create-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  margin-left: var(--space-2);
+}
+
+.playlists__create-btn--primary {
+  background-color: var(--accent);
+}
+
+.playlists__create-btn-text {
+  color: var(--content-2);
+  font-size: var(--font-sm);
+}
+
+.playlists__create-btn-text--primary {
+  color: var(--content-on-accent);
 }

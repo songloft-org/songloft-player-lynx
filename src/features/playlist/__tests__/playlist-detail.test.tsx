@@ -7,20 +7,12 @@ import { act, getQueriesForElement, render } from '@lynx-js/react/testing-librar
 import type { Playlist } from '../../../models/playlist.js'
 import type { Song } from '../../../models/song.js'
 
-/**
- * PlaylistDetailPage render smoke.
- *
- * The detail (`useQuery`) + songs (`useInfiniteQuery`) hooks subscribe via
- * `useSyncExternalStore` (crash the ReactLynx Vitest snapshot tree + need a live
- * QueryClient/network), so both are `vi.fn()` returning static shapes.
- * `useNavigate`/`useParams` are stubbed, and the native `<list>` wrapper is
- * mocked to plain `<view>`s (children virtualize away in the env; real `<list>`
- * ships on-device). Assertions check the real header (name / description / count)
- * + the song rows produced from the injected data.
- */
-const { detailHook, songsHook } = vi.hoisted(() => ({
+const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSongMutationHook } = vi.hoisted(() => ({
   detailHook: vi.fn(),
   songsHook: vi.fn(),
+  deleteMutationHook: vi.fn(),
+  updateMutationHook: vi.fn(),
+  removeSongMutationHook: vi.fn(),
 }))
 
 vi.mock('react-i18next', async () =>
@@ -32,10 +24,20 @@ vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({ id: '7' }),
 }))
 
+vi.mock('@lynx-js/lynx-ui-input', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
+)
+
 vi.mock('../data/playlist-query.js', () => ({
   usePlaylistQuery: detailHook,
   usePlaylistSongsInfiniteQuery: songsHook,
   playlistQueryKeys: { detail: () => [], songs: () => [] },
+}))
+
+vi.mock('../data/playlist-mutations.js', () => ({
+  useDeletePlaylistMutation: deleteMutationHook,
+  useUpdatePlaylistMutation: updateMutationHook,
+  useRemoveSongMutation: removeSongMutationHook,
 }))
 
 vi.mock('../../library/widgets/VirtualList.js', async () =>
@@ -109,9 +111,16 @@ function songsResult(pages: { songs: Song[]; total: number }[], over = {}) {
   }
 }
 
+function mutationResult(over = {}) {
+  return { mutate: vi.fn(), isPending: false, ...over }
+}
+
 beforeEach(() => {
   detailHook.mockReturnValue(detailResult(makePlaylist()))
   songsHook.mockReturnValue(songsResult([{ songs: [], total: 0 }]))
+  deleteMutationHook.mockReturnValue(mutationResult())
+  updateMutationHook.mockReturnValue(mutationResult())
+  removeSongMutationHook.mockReturnValue(mutationResult())
 })
 
 afterEach(() => vi.clearAllMocks())
@@ -141,12 +150,10 @@ test('renders the header (name, description, song count) and a row per song', as
   )
   const { queryByText, queryAllByText } = await renderPage()
 
-  // Header.
   expect(queryByText('Road Trip')).toBeInTheDocument()
   expect(queryByText('For the drive')).toBeInTheDocument()
   expect(queryByText('2 songs')).toBeInTheDocument()
 
-  // Song rows (title + "artist · album" subtitle + mm:ss).
   expect(queryByText('Blue in Green')).toBeInTheDocument()
   expect(queryByText('So What')).toBeInTheDocument()
   expect(queryAllByText('Miles · KOB')).toHaveLength(2)
@@ -164,4 +171,18 @@ test('shows the loading state while songs load', async () => {
   songsHook.mockReturnValue(songsResult([], { isLoading: true, data: undefined }))
   const { queryByText } = await renderPage()
   expect(queryByText('Loading songs…')).toBeInTheDocument()
+})
+
+test('shows delete and edit buttons for non-built-in playlists', async () => {
+  detailHook.mockReturnValue(detailResult(makePlaylist({ isBuiltIn: false })))
+  const { queryByText } = await renderPage()
+  expect(queryByText('Delete')).toBeInTheDocument()
+  expect(queryByText('Edit')).toBeInTheDocument()
+})
+
+test('hides delete and edit buttons for built-in playlists', async () => {
+  detailHook.mockReturnValue(detailResult(makePlaylist({ isBuiltIn: true })))
+  const { queryByText } = await renderPage()
+  expect(queryByText('Delete')).not.toBeInTheDocument()
+  expect(queryByText('Edit')).not.toBeInTheDocument()
 })

@@ -1,11 +1,3 @@
-/*
- * Playlist detail styling — LUNA tokens only. Flex column: a fixed header over
- * the flexing song list (the `<list>` needs a resolved height to scroll). The
- * `.song-row` rules are redeclared here (identical to LibraryPage.css) so the
- * detail route renders correctly even when the library page was never mounted;
- * Lynx CSS is global-scoped, so the duplicate identical rules are harmless.
- */
-
 .playlist-detail {
   display: flex;
   flex-direction: column;
@@ -37,6 +29,35 @@
   height: 36px;
   border-radius: var(--radius-pill);
   background-color: var(--neutral-faint);
+}
+
+.playlist-detail__topbar-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-left: auto;
+}
+
+.playlist-detail__action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  margin-left: var(--space-2);
+}
+
+.playlist-detail__action-btn--danger {
+  background-color: var(--danger);
+}
+
+.playlist-detail__action-text {
+  color: var(--content-2);
+  font-size: var(--font-sm);
+}
+
+.playlist-detail__action-text--danger {
+  color: var(--content-on-accent);
 }
 
 .playlist-detail__hero {
@@ -137,15 +158,71 @@
   color: var(--danger);
 }
 
-/* Song row (identical to LibraryPage.css — see header note). */
-.song-row {
+.playlist-detail__edit-form {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) var(--space-4) var(--space-4) var(--space-4);
+}
+
+.playlist-detail__edit-input {
+  margin-bottom: var(--space-2);
+}
+
+.playlist-detail__edit-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}
+
+.playlist-detail__edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  margin-left: var(--space-2);
+}
+
+.playlist-detail__edit-btn--primary {
+  background-color: var(--accent);
+}
+
+.playlist-detail__edit-btn-text {
+  color: var(--content-2);
+  font-size: var(--font-sm);
+}
+
+.playlist-detail__edit-btn-text--primary {
+  color: var(--content-on-accent);
+}
+
+.playlist-detail__song-row-wrapper {
   display: flex;
   flex-direction: row;
   align-items: center;
   width: 100%;
+}
+
+.playlist-detail__remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-right: var(--space-2);
+}
+
+/* Song row (identical to LibraryPage.css). */
+.song-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex: 1;
   padding: var(--space-3) var(--space-4);
   background-color: var(--canvas);
   border-bottom: 1px solid var(--line);
+  min-width: 0;
 }
 
 .song-row__cover {

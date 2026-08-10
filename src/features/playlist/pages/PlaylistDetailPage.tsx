@@ -1,5 +1,7 @@
+import { useState } from '@lynx-js/react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { Input } from '@lynx-js/lynx-ui-input'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
@@ -7,26 +9,18 @@ import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { flattenSongs } from '../../library/data/pagination.js'
 import { SongRow } from '../../library/widgets/SongRow.js'
 import { VirtualList } from '../../library/widgets/VirtualList.js'
-// Import the player store directly (not the feature barrel) so the playlist
-// graph does not eagerly pull in the full player + its lynx-ui gesture leaves.
 import { usePlayerStore } from '../../player/store/index.js'
 import {
   usePlaylistQuery,
   usePlaylistSongsInfiniteQuery,
 } from '../data/playlist-query.js'
+import {
+  useDeletePlaylistMutation,
+  useUpdatePlaylistMutation,
+  useRemoveSongMutation,
+} from '../data/playlist-mutations.js'
 import './PlaylistDetailPage.css'
 
-/**
- * Playlist detail page (batch 6), rendered inside the shell at `/playlists/$id`.
- *
- * Ported (trimmed) from the Flutter `PlaylistDetailPage`: a header (cover / name
- * / description / song count) over the playlist's songs, paginated via the same
- * `SongRow` + `VirtualList` + `bindscrolltolower` load-more the library uses.
- * Tapping a song plays the whole loaded list from that index
- * (`usePlayerStore.playPlaylist`) → the mini-player appears. Sort / search /
- * multi-select / edit / reorder from the Flutter page are deferred (see
- * PROGRESS). Styled entirely via LUNA tokens.
- */
 export function PlaylistDetailPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -44,6 +38,52 @@ export function PlaylistDetailPage() {
     songCount === 1 ? 'common.songCountOne' : 'common.songCountOther',
     { count: songCount },
   )
+
+  const isBuiltIn = playlist?.isBuiltIn ?? false
+
+  const deleteMutation = useDeletePlaylistMutation()
+  const updateMutation = useUpdatePlaylistMutation(id)
+  const removeSongMutation = useRemoveSongMutation(id)
+
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editDesc, setEditDesc] = useState('')
+
+  const onDelete = () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      return
+    }
+    deleteMutation.mutate(id, {
+      onSuccess: () => {
+        void navigate({ to: '/library', search: { view: 'playlists' } })
+      },
+    })
+  }
+
+  const onStartEdit = () => {
+    setEditName(playlist?.name ?? '')
+    setEditDesc(playlist?.description ?? '')
+    setEditing(true)
+  }
+
+  const onCancelEdit = () => {
+    setEditing(false)
+  }
+
+  const onSaveEdit = () => {
+    const trimmedName = editName.trim()
+    if (!trimmedName || updateMutation.isPending) return
+    updateMutation.mutate(
+      { name: trimmedName, description: editDesc.trim() },
+      { onSuccess: () => setEditing(false) },
+    )
+  }
+
+  const onRemoveSong = (song: Song) => {
+    removeSongMutation.mutate(song.id)
+  }
 
   const onEndReached = () => {
     if (songsQuery.hasNextPage && !songsQuery.isFetchingNextPage) {
@@ -64,25 +104,81 @@ export function PlaylistDetailPage() {
         >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
-      </view>
-      <view className='playlist-detail__hero'>
-        {cover
-          ? <image className='playlist-detail__cover' src={cover} />
-          : (
-            <view className='playlist-detail__cover playlist-detail__cover--empty'>
-              <Icon name='music' size={40} color={ICON_COLORS.contentMuted} />
+        {!isBuiltIn
+          ? (
+            <view className='playlist-detail__topbar-actions'>
+              {!editing
+                ? (
+                  <view className='playlist-detail__action-btn' bindtap={onStartEdit}>
+                    <text className='playlist-detail__action-text'>{t('playlist.editPlaylist')}</text>
+                  </view>
+                )
+                : null}
+              <view
+                className={confirmDelete
+                  ? 'playlist-detail__action-btn playlist-detail__action-btn--danger'
+                  : 'playlist-detail__action-btn'}
+                bindtap={onDelete}
+              >
+                <text
+                  className={confirmDelete
+                    ? 'playlist-detail__action-text playlist-detail__action-text--danger'
+                    : 'playlist-detail__action-text'}
+                >
+                  {confirmDelete ? t('playlist.deleteConfirm') : t('playlist.deletePlaylist')}
+                </text>
+              </view>
             </view>
-          )}
-        <view className='playlist-detail__meta'>
-          <text className='playlist-detail__name'>
-            {playlist?.name ?? (detail.isLoading ? t('common.loading') : t('playlist.fallbackName'))}
-          </text>
-          {playlist?.description
-            ? <text className='playlist-detail__desc'>{playlist.description}</text>
-            : null}
-          <text className='playlist-detail__count'>{countLabel}</text>
-        </view>
+          )
+          : null}
       </view>
+      {editing
+        ? (
+          <view className='playlist-detail__edit-form'>
+            <Input
+              className='playlist-detail__edit-input'
+              placeholder={t('playlist.namePlaceholder')}
+              value={editName}
+              onInput={(value: string) => setEditName(value)}
+            />
+            <Input
+              className='playlist-detail__edit-input'
+              placeholder={t('playlist.descriptionPlaceholder')}
+              value={editDesc}
+              onInput={(value: string) => setEditDesc(value)}
+            />
+            <view className='playlist-detail__edit-actions'>
+              <view className='playlist-detail__edit-btn' bindtap={onCancelEdit}>
+                <text className='playlist-detail__edit-btn-text'>{t('playlist.cancel')}</text>
+              </view>
+              <view className='playlist-detail__edit-btn playlist-detail__edit-btn--primary' bindtap={onSaveEdit}>
+                <text className='playlist-detail__edit-btn-text playlist-detail__edit-btn-text--primary'>
+                  {updateMutation.isPending ? t('playlist.saving') : t('playlist.save')}
+                </text>
+              </view>
+            </view>
+          </view>
+        )
+        : (
+          <view className='playlist-detail__hero'>
+            {cover
+              ? <image className='playlist-detail__cover' src={cover} />
+              : (
+                <view className='playlist-detail__cover playlist-detail__cover--empty'>
+                  <Icon name='music' size={40} color={ICON_COLORS.contentMuted} />
+                </view>
+              )}
+            <view className='playlist-detail__meta'>
+              <text className='playlist-detail__name'>
+                {playlist?.name ?? (detail.isLoading ? t('common.loading') : t('playlist.fallbackName'))}
+              </text>
+              {playlist?.description
+                ? <text className='playlist-detail__desc'>{playlist.description}</text>
+                : null}
+              <text className='playlist-detail__count'>{countLabel}</text>
+            </view>
+          </view>
+        )}
     </view>
   )
 
@@ -102,7 +198,19 @@ export function PlaylistDetailPage() {
                   items={songs}
                   itemKey={(song) => String(song.id)}
                   renderItem={(song, index) => (
-                    <SongRow song={song} index={index} onTap={onTapSong} />
+                    <view className='playlist-detail__song-row-wrapper'>
+                      <SongRow song={song} index={index} onTap={onTapSong} />
+                      {!isBuiltIn
+                        ? (
+                          <view
+                            className='playlist-detail__remove-btn'
+                            bindtap={() => onRemoveSong(song)}
+                          >
+                            <Icon name='x' size={16} color={ICON_COLORS.contentMuted} />
+                          </view>
+                        )
+                        : null}
+                    </view>
                   )}
                   onEndReached={onEndReached}
                   footer={songsQuery.isFetchingNextPage

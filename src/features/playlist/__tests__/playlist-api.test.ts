@@ -7,20 +7,26 @@ import {
   PlaylistApi,
   buildPlaylistSongsQuery,
   buildPlaylistsQuery,
+  buildCreatePlaylistBody,
+  buildUpdatePlaylistBody,
+  buildAddSongsBody,
 } from '../api/playlist-api.js'
 
 function client(transport: Transport) {
   return createPublicClient({ transport, getBaseUrl: () => 'http://api.test' })
 }
 
-// A transport that captures the requested URL and returns a canned body.
-function capture(body: unknown): { transport: Transport; url: () => string } {
-  let seen = ''
+function capture(body: unknown): { transport: Transport; url: () => string; method: () => string; body: () => string | undefined } {
+  let seenUrl = ''
+  let seenMethod = ''
+  let seenBody: string | undefined
   const transport: Transport = async (req) => {
-    seen = req.url
+    seenUrl = req.url
+    seenMethod = req.method
+    seenBody = req.body
     return { status: 200, headers: {}, body: JSON.stringify(body) }
   }
-  return { transport, url: () => seen }
+  return { transport, url: () => seenUrl, method: () => seenMethod, body: () => seenBody }
 }
 
 describe('buildPlaylistsQuery (pure)', () => {
@@ -70,6 +76,54 @@ describe('buildPlaylistSongsQuery (pure)', () => {
   })
 })
 
+describe('buildCreatePlaylistBody (pure)', () => {
+  test('includes name only when no description', () => {
+    expect(buildCreatePlaylistBody({ name: 'My Playlist' })).toEqual({ name: 'My Playlist' })
+  })
+
+  test('includes both name and description', () => {
+    expect(buildCreatePlaylistBody({ name: 'Chill', description: 'Relaxing' })).toEqual({
+      name: 'Chill',
+      description: 'Relaxing',
+    })
+  })
+
+  test('drops empty description', () => {
+    expect(buildCreatePlaylistBody({ name: 'A', description: '' })).toEqual({ name: 'A' })
+  })
+})
+
+describe('buildUpdatePlaylistBody (pure)', () => {
+  test('includes only provided fields', () => {
+    expect(buildUpdatePlaylistBody({ name: 'New Name' })).toEqual({ name: 'New Name' })
+  })
+
+  test('includes both when both provided', () => {
+    expect(buildUpdatePlaylistBody({ name: 'X', description: 'Y' })).toEqual({
+      name: 'X',
+      description: 'Y',
+    })
+  })
+
+  test('includes description even if empty string (to clear it)', () => {
+    expect(buildUpdatePlaylistBody({ description: '' })).toEqual({ description: '' })
+  })
+
+  test('drops empty name', () => {
+    expect(buildUpdatePlaylistBody({ name: '' })).toEqual({})
+  })
+})
+
+describe('buildAddSongsBody (pure)', () => {
+  test('wraps song ids in song_ids array', () => {
+    expect(buildAddSongsBody([1, 2, 3])).toEqual({ song_ids: [1, 2, 3] })
+  })
+
+  test('handles empty array', () => {
+    expect(buildAddSongsBody([])).toEqual({ song_ids: [] })
+  })
+})
+
 describe('PlaylistApi endpoints', () => {
   test('getPlaylists hits /playlists with query params and parses {playlists,total}', async () => {
     const cap = capture({
@@ -89,7 +143,6 @@ describe('PlaylistApi endpoints', () => {
     expect(url).toContain('offset=20')
     expect(url).toContain('type=normal')
     expect(url).toContain('keyword=fav')
-    // Parsed through the batch-2 zod model (snake_case → camelCase + derived flags).
     expect(res.total).toBe(42)
     expect(res.playlists).toHaveLength(2)
     expect(res.playlists[0]!.name).toBe('Favorites')
@@ -105,9 +158,6 @@ describe('PlaylistApi endpoints', () => {
   })
 
   test('tolerates null fields + stringified ints (real backend payload)', async () => {
-    // Reproduces the device "Could not load playlists." crash: the backend sends
-    // `null` for labels/song_count/type and a stringified id; `.default()` only
-    // covers `undefined`, so the schema must `.catch()`/coerce to not throw.
     const cap = capture({
       playlists: [
         {
@@ -127,12 +177,12 @@ describe('PlaylistApi endpoints', () => {
     const res = await new PlaylistApi(client(cap.transport)).getPlaylists()
     expect(res.playlists).toHaveLength(1)
     const pl = res.playlists[0]!
-    expect(pl.id).toBe(3) // coerced from "3"
-    expect(pl.type).toBe('normal') // null → catch default
-    expect(pl.labels).toEqual([]) // null → catch default
-    expect(pl.songCount).toBe(0) // null → catch default
+    expect(pl.id).toBe(3)
+    expect(pl.type).toBe('normal')
+    expect(pl.labels).toEqual([])
+    expect(pl.songCount).toBe(0)
     expect(pl.isBuiltIn).toBe(false)
-    expect(res.total).toBe(1) // null total → inferred from length
+    expect(res.total).toBe(1)
   })
 
   test('getPlaylist hits /playlists/{id} and parses a Playlist', async () => {
@@ -172,5 +222,73 @@ describe('PlaylistApi endpoints', () => {
     expect(res.songs).toHaveLength(2)
     expect(res.songs[0]!.title).toBe('A')
     expect(res.songs[1]!.artist).toBeUndefined()
+  })
+
+  test('createPlaylist sends POST /playlists with name+description body', async () => {
+    const cap = capture({
+      id: 10,
+      type: 'normal',
+      name: 'New PL',
+      description: 'desc',
+      song_count: 0,
+    })
+    const pl = await new PlaylistApi(client(cap.transport)).createPlaylist({
+      name: 'New PL',
+      description: 'desc',
+    })
+    expect(cap.method()).toBe('POST')
+    expect(cap.url()).toContain(`${apiPrefix}/playlists`)
+    const sentBody = JSON.parse(cap.body()!)
+    expect(sentBody).toEqual({ name: 'New PL', description: 'desc' })
+    expect(pl.id).toBe(10)
+    expect(pl.name).toBe('New PL')
+  })
+
+  test('createPlaylist omits description when not provided', async () => {
+    const cap = capture({ id: 11, type: 'normal', name: 'Solo', song_count: 0 })
+    await new PlaylistApi(client(cap.transport)).createPlaylist({ name: 'Solo' })
+    const sentBody = JSON.parse(cap.body()!)
+    expect(sentBody).toEqual({ name: 'Solo' })
+    expect(sentBody.description).toBeUndefined()
+  })
+
+  test('updatePlaylist sends PUT /playlists/{id} with partial body', async () => {
+    const cap = capture({
+      id: 7,
+      type: 'normal',
+      name: 'Renamed',
+      song_count: 5,
+    })
+    const pl = await new PlaylistApi(client(cap.transport)).updatePlaylist(7, {
+      name: 'Renamed',
+    })
+    expect(cap.method()).toBe('PUT')
+    expect(cap.url()).toContain(`${apiPrefix}/playlists/7`)
+    const sentBody = JSON.parse(cap.body()!)
+    expect(sentBody).toEqual({ name: 'Renamed' })
+    expect(pl.name).toBe('Renamed')
+  })
+
+  test('deletePlaylist sends DELETE /playlists/{id}', async () => {
+    const cap = capture({})
+    await new PlaylistApi(client(cap.transport)).deletePlaylist(7)
+    expect(cap.method()).toBe('DELETE')
+    expect(cap.url()).toContain(`${apiPrefix}/playlists/7`)
+  })
+
+  test('addSongsToPlaylist sends POST /playlists/{id}/songs with song_ids', async () => {
+    const cap = capture({})
+    await new PlaylistApi(client(cap.transport)).addSongsToPlaylist(7, [1, 2, 3])
+    expect(cap.method()).toBe('POST')
+    expect(cap.url()).toContain(`${apiPrefix}/playlists/7/songs`)
+    const sentBody = JSON.parse(cap.body()!)
+    expect(sentBody).toEqual({ song_ids: [1, 2, 3] })
+  })
+
+  test('removeSongFromPlaylist sends DELETE /playlists/{id}/songs/{songId}', async () => {
+    const cap = capture({})
+    await new PlaylistApi(client(cap.transport)).removeSongFromPlaylist(7, 42)
+    expect(cap.method()).toBe('DELETE')
+    expect(cap.url()).toContain(`${apiPrefix}/playlists/7/songs/42`)
   })
 })
