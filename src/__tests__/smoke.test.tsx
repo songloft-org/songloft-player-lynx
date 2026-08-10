@@ -54,6 +54,39 @@ vi.mock('../features/player/store/player-store.js', async () => {
   return makePlayerStoreMock(actual)
 })
 
+// Batch 7: `/` is now the home page, whose sections read the playlist infinite
+// query (`useHomePlaylists` → `useSyncExternalStore`, same crash class + needs a
+// live QueryClient). Stub the hook to a static infinite-query shape so the shell
+// route renders without a QueryClient; the real hook ships on-device.
+vi.mock('../features/home/data/home-query.js', () => ({
+  useHomePlaylists: () => ({
+    data: {
+      pages: [
+        {
+          playlists: [
+            {
+              id: 1,
+              type: 'normal',
+              name: 'Morning Mix',
+              labels: [],
+              songCount: 3,
+              createdAt: '',
+              updatedAt: '',
+              isBuiltIn: false,
+              isAutoCreated: false,
+              isHidden: false,
+            },
+          ],
+          total: 1,
+        },
+      ],
+    },
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
+  }),
+}))
+
 /**
  * Renders a fresh app router seeded at `entry` (memory history) and returns the
  * queries bound to the rendered tree.
@@ -86,31 +119,34 @@ test('renders the App at the initial /login route', async () => {
   expect(await findByText('Sign in to continue')).toBeInTheDocument()
 })
 
-test('drives a real bindtap on the list screen into the player route', async () => {
+test('drives a real bindtap on the home screen into the library route', async () => {
   // The auth store is still `unknown` here (no `checkAuth`), so the guard lets
-  // `/` render. The login button now triggers `authStore.login()` (network), so
-  // the bindtap -> router proof moves to the list screen's "Open player" button.
+  // `/` render. The home "View all" affordance is a plain `bindtap` → navigate,
+  // so it proves the tap -> navigate -> router transition end to end.
   const appRouter = createAppRouter(['/'])
   await act(async () => {
     await appRouter.load()
   })
   render(<RouterProvider router={appRouter as never} />)
-  const { getByText } = getQueriesForElement(elementTree.root!)
+  const { getAllByText } = getQueriesForElement(elementTree.root!)
 
   expect(appRouter.state.location.pathname).toBe('/')
 
-  // Real bindtap on the lynx-ui Button, proving onClick -> navigate -> router.
+  // Real bindtap on a section's "View all", proving bindtap -> navigate -> router.
   await act(async () => {
-    fireEvent.tap(getByText('Open player'))
+    fireEvent.tap(getAllByText('View all')[0]!)
   })
-  expect(appRouter.state.location.pathname).toBe('/player')
+  expect(appRouter.state.location.pathname).toBe('/library')
 })
 
-test('renders the list screen inside the shell (incl. lynx-ui button)', async () => {
-  const { queryByText } = await renderRoute('/')
-  // Unique to ListPage (its lynx-ui Button label).
-  expect(queryByText('Open player')).toBeInTheDocument()
-  expect(queryByText('Your songs will appear here')).toBeInTheDocument()
+test('renders the home screen inside the shell', async () => {
+  const { queryByTestId, queryByText, getAllByText } = await renderRoute('/')
+  // The greeting + both section titles + a playlist card fed by the (stubbed)
+  // query (the stub feeds both sections, so the card name appears per section).
+  expect(queryByTestId('home-greeting')).toBeInTheDocument()
+  expect(queryByText('My Playlists')).toBeInTheDocument()
+  expect(queryByText('My Radios')).toBeInTheDocument()
+  expect(getAllByText('Morning Mix').length).toBeGreaterThan(0)
 })
 
 test('renders the chrome-less player screen', async () => {

@@ -14,7 +14,7 @@ import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { CategorySongsPage, LibraryPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
-import { ListPage } from './routes/ListPage.js'
+import { HomePage } from './features/home/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
 import { SettingsPage } from './routes/SettingsPage.js'
 
@@ -66,7 +66,7 @@ const shellRoute = createRoute({
 const listRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/',
-  component: ListPage,
+  component: HomePage,
 })
 
 const libraryRoute = createRoute({
