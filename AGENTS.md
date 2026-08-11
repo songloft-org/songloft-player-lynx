@@ -42,6 +42,9 @@ Lynx 不是浏览器：**无 `window` / `document` / `self`**，无 DOM，双线
 - **带连字符的 JSX 属性完全没有类型保护**：TypeScript 对含 `-` 的 JSX 属性名一律豁免未知属性检查，而 Lynx 的元素属性几乎全是这种形状。所以 `scroll-x`（**已废弃**，正确写法 `scroll-orientation="horizontal"`）、拼错的 `enable-nested-scrol` 都能过 `tsc` 和 build，只在真机上静默失效——与 CSS 侧的 `placeholder-color` 同一类陷阱。写这类属性时**必须配一条产物 grep 测试**证明它真进了模板（范例：`home-section-scroll.test.ts`）。
 - **`<refresh>` 吞掉横向手势**：`<refresh>` 内的横向 `scroll-view` 在 Android 上**完全收不到拖拽**（`bindscroll` 不触发），而 `getScrollInfo` 的 `scrollRange` 和 `scrollTo` 都正常——**测量对、程序滚动对、手指无效**，极易误判成 CSS 问题。`<refresh>` 没有手势过滤属性，唯一解法是手指按在横向区时把 `enable-refresh` 置 false（范例：`HomeSection` 的 `onStripTouch` → `HomePage`）。
 - **横向 `scroll-view` 的内容行必须 `width: max-content`**：否则它被按视口宽度布局、子元素溢出被裁，滚动时平移的正是这一行——于是 `scrollRange` 算得对但**视觉毫不动**。同时 scroll-view 自身只负责尺寸（显式 `width`+`height`），`display:flex` 要放在内层 view（本仓所有可用的 `scroll-y` 都是这个分工）。
+- **「跟随系统」（深浅色 / 语言）在 Lynx 里没有任何 JS 侧来源**：无 `prefers-color-scheme`、无 `matchMedia`、无 locale API（`SystemInfo.theme?: object` 也只是宿主 `setTheme` 塞进去的东西）。必须由宿主注入，且**两条通道都不可省**：`LynxLoadMeta.setGlobalProps` → `lynx.__globalProps` 送**初值**（在 `loadTemplate` 之前，所以首帧就是对的主题、不闪；原生模块 getter 做不到——异步、答案晚于启动帧），`LynxView.sendGlobalEvent` 送**变更**（globalProps 更新不会通知已在跑的页面）。**`LynxView.setGlobalProps` 两个重载都已弃用**，用 `LynxLoadMeta.Builder()`。范例：`src/native/system-appearance.ts` ↔ `android/.../system/SystemAppearance.kt`（key/事件名必须逐字对齐）。
+- **`android:configChanges` 漏一项就整包重载**：`uiMode` 只管深浅色；**语言切换要 `locale|layoutDirection`**，漏了会重建 Activity → bundle 重载、JS 状态全丢（还容易被误读成「跟随系统生效了」，因为重载后确实是新语言）。
+- **订阅到了、值没变，React 就不重渲染**：`'system'` 这类间接选择要把**已解析**的结果放进 state。`ThemeProvider` 原来存 `AppTheme` 选择，系统翻转时选择仍是 `'system'`、`setState` 同值写入被跳过——模型层全对而 UI 永不跟随（批21 真机 bug）。这类「订阅 + 派生值」一律存派生结果，并配一条渲染层断言。
 - **`<svg src={url}>` 远程加载在本宿主不可用**：URL 加载由宿主注册的 `GenericResourceFetcher` 负责，`android/` 宿主没注册，真机 logcat 报 `getGenericResourceFetcher is null, svg fetch src failed!` 且**无 `binderror` 可挂兜底**。远程 SVG 一律「用已鉴权 client 取文本（`parseJson: false`）→ `<svg content>`」，并校验响应确实以 `<svg` 开头（插件静态端点对未知路径会 SPA fallback 成 200 + HTML）。范例：`usePluginIconQuery`。
 
 ## 4. 分批工作流
@@ -70,6 +73,8 @@ pnpm test               # vitest run
   首轮 gradle 要下载依赖（~8 分钟），之后增量安装约 **4 秒**，可以快速迭代。
   用 `adb exec-out screencap -p > /tmp/x.png` 截图核对，`adb shell input tap/swipe` 驱动交互；
   判断「有没有变化」用 PIL 比对像素 bbox，比肉眼看截图可靠。
+  改系统设置的两个杠杆：`adb shell cmd uimode night yes|no`（深浅色）、
+  `adb shell cmd locale set-app-locales <pkg> --locales en-US`（应用语言，API 33+，传 `""` 清除）。
   **这条路解除了 PROGRESS 里长期的「Kotlin 只能靠 CI 验」限制**——原生改动现在能本机编译+运行。
 - LynxExplorer 扫码：`pnpm run dev` 起 dev server + 二维码。改前端时热更更快，但验不了原生。
 
@@ -88,6 +93,12 @@ pnpm test               # vitest run
 **验证要忠实**：不要只信 vitest（jsdom/node 环境与 Lynx BTS 语义不同）。凡涉及运行时全局/无 DOM 行为，**静态检查真机实际运行的产物**（build 后 grep `dist/main.lynx.bundle`；dev 则 curl dev server 的 `main.lynx.bundle`），确认危险代码已被守卫。参见 `src/__tests__/background-bundle-self.test.ts`、`router-no-dom.test.tsx`。
 
 - Vitest 测试文件正文中**禁止出现字面量 `@vitest-environment`**（散文里也会被 Vitest 当指令解析而切换环境）。
+
+> ⚠️ **验「跟随系统」类功能前，先确认应用里选中的就是「跟随系统」。** 批21 首次装包截图是
+> 浅色 + 中文、与系统设置完全一致，看着一次就成——实际是早前批次测试留下的**显式选择**
+> （语言=中文/外观=浅色）恰好撞上系统值，而显式选择下忽略系统变化正是**正确**行为。
+> 同理适用于任何「默认/自动」分支：**先把选项摆到被测分支，再判断结果**，否则显式配置
+> 会伪装成功能生效。
 
 ## 6. Git 提交约定
 

@@ -1,16 +1,25 @@
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test } from 'vitest'
 
 import { createMemoryStorage } from '../../../core/storage/index.js'
+import {
+  applySystemAppearance,
+  setSystemAppearanceForTests,
+} from '../../../native/system-appearance.js'
 import {
   applySavedTheme,
   changeAppTheme,
   coerceAppTheme,
+  DEFAULT_RESOLVED_THEME,
   getAppTheme,
   PREF_THEME,
   readSavedTheme,
   resolveTheme,
   subscribeAppTheme,
 } from '../theme-model.js'
+
+afterEach(() => {
+  setSystemAppearanceForTests(null)
+})
 
 describe('theme coercion + resolution (pure)', () => {
   test('coerceAppTheme accepts light/dark, else falls back to system', () => {
@@ -22,10 +31,61 @@ describe('theme coercion + resolution (pure)', () => {
     expect(coerceAppTheme('auto')).toBe('system')
   })
 
-  test('resolveTheme maps system → dark (no host signal yet), else itself', () => {
-    expect(resolveTheme('system')).toBe('dark')
-    expect(resolveTheme('light')).toBe('light')
+  test('resolveTheme returns an explicit choice unchanged, host or no host', () => {
+    setSystemAppearanceForTests({ theme: 'light', locale: null })
     expect(resolveTheme('dark')).toBe('dark')
+    setSystemAppearanceForTests({ theme: 'dark', locale: null })
+    expect(resolveTheme('light')).toBe('light')
+  })
+
+  test('resolveTheme("system") follows the host signal', () => {
+    setSystemAppearanceForTests({ theme: 'light', locale: null })
+    expect(resolveTheme('system')).toBe('light')
+
+    setSystemAppearanceForTests({ theme: 'dark', locale: null })
+    expect(resolveTheme('system')).toBe('dark')
+  })
+
+  test('resolveTheme("system") falls back only when the host reports nothing', () => {
+    setSystemAppearanceForTests({ theme: null, locale: 'zh-CN' })
+    expect(resolveTheme('system')).toBe(DEFAULT_RESOLVED_THEME)
+  })
+})
+
+describe('following the host theme (bug.md: 外观跟随系统没效果)', () => {
+  test('a host flip re-notifies subscribers while the choice is system', async () => {
+    const storage = createMemoryStorage()
+    setSystemAppearanceForTests({ theme: 'dark', locale: null })
+    await changeAppTheme('system', storage)
+
+    let notified = 0
+    subscribeAppTheme(() => {
+      notified += 1
+    })
+
+    applySystemAppearance({ theme: 'light', locale: null })
+
+    // The *choice* is still 'system' — only the resolution changed, which is why
+    // ThemeProvider must keep the resolved theme in state.
+    expect(getAppTheme()).toBe('system')
+    expect(resolveTheme(getAppTheme())).toBe('light')
+    expect(notified).toBe(1)
+  })
+
+  test('a host flip is ignored while the user picked a concrete theme', async () => {
+    const storage = createMemoryStorage()
+    setSystemAppearanceForTests({ theme: 'dark', locale: null })
+    await changeAppTheme('dark', storage)
+
+    let notified = 0
+    subscribeAppTheme(() => {
+      notified += 1
+    })
+
+    applySystemAppearance({ theme: 'light', locale: null })
+
+    expect(resolveTheme(getAppTheme())).toBe('dark')
+    expect(notified).toBe(0)
   })
 })
 

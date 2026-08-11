@@ -17,3 +17,23 @@ export function readNativeModules(): Record<string, unknown> | undefined {
   }
   return (globalThis as { NativeModules?: Record<string, unknown> }).NativeModules
 }
+
+/**
+ * The runtime `lynx` object, or `null` outside a Lynx host (tests / plain node).
+ * Same bare-global rule as {@link readNativeModules}: `lynx` is not declared on
+ * `globalThis`, so it must be probed with `typeof` before being read.
+ *
+ * Callers reach for this to get `lynx.getJSModule('GlobalEventEmitter')` (native
+ * event delivery) or `lynx.__globalProps` (host-injected page data).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function readLynxGlobal(): any | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (typeof lynx !== 'undefined') return lynx as any
+  } catch {
+    // undeclared bare identifier — fall through to globalThis
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (globalThis as any).lynx ?? null
+}

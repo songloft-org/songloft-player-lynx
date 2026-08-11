@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Dark variant, selected by the system `night` resource qualifier. See the
+         comment in `values/themes.xml`. -->
+    <style name="Theme.SongloftLynx" parent="android:Theme.Material.NoActionBar" />
+</resources>

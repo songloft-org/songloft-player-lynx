@@ -1,5 +1,5 @@
 import { MockSongloftAudio } from './mock-audio.js'
-import { readNativeModules } from './native-modules.js'
+import { readLynxGlobal, readNativeModules } from './native-modules.js'
 import {
   NativeSongloftAudio,
   isNativeAudioAvailable,
@@ -34,8 +34,7 @@ export function createMockAudio(): SongloftAudio {
  */
 function readGlobalEventEmitter(): GlobalEventSubscriber | null {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const l = typeof lynx !== 'undefined' ? (lynx as any) : (globalThis as any).lynx
+    const l = readLynxGlobal()
     if (l && typeof l.getJSModule === 'function') {
       return (l.getJSModule('GlobalEventEmitter') as GlobalEventSubscriber) ?? null
     }

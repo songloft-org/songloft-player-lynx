@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.SongloftLynx" parent="android:Theme.Material.NoActionBar" />
+    <!-- Light variant; `values-night/themes.xml` carries the dark one. This only
+         styles the *window* the LynxView is placed in — the UI itself is themed
+         by `src/shared/theme/tokens.css`. Splitting it by the `night` qualifier
+         keeps the launch frame (painted by the window background, before the
+         bundle renders) from flashing dark on a light system. -->
+    <style name="Theme.SongloftLynx" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>

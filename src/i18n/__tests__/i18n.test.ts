@@ -1,15 +1,25 @@
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test } from 'vitest'
 
 import { createMemoryStorage } from '../../core/storage/index.js'
+import {
+  applySystemAppearance,
+  setSystemAppearanceForTests,
+} from '../../native/system-appearance.js'
 import { en, resources, zh } from '../resources.js'
 import {
   changeAppLanguage,
   coerceAppLanguage,
+  DEFAULT_LANGUAGE,
   initI18n,
+  languageFromLocale,
   PREF_LANGUAGE,
   readSavedLanguage,
   resolveLanguage,
 } from '../index.js'
+
+afterEach(() => {
+  setSystemAppearanceForTests(null)
+})
 
 /** Recursively collect dotted leaf keys of a nested string tree. */
 function flattenKeys(obj: unknown, prefix = ''): string[] {
@@ -56,10 +66,80 @@ describe('language coercion + resolution (pure)', () => {
     expect(coerceAppLanguage('fr')).toBe('system')
   })
 
-  test('resolveLanguage maps system → default (en), else itself', () => {
-    expect(resolveLanguage('system')).toBe('en')
+  test('languageFromLocale matches on the primary subtag, case-insensitively', () => {
+    expect(languageFromLocale('zh')).toBe('zh')
+    expect(languageFromLocale('zh-CN')).toBe('zh')
+    expect(languageFromLocale('zh-Hans-CN')).toBe('zh')
+    expect(languageFromLocale('ZH-cn')).toBe('zh')
+    // Android's legacy underscore form, in case a host reports it that way.
+    expect(languageFromLocale('zh_TW')).toBe('zh')
+    expect(languageFromLocale('en-US')).toBe('en')
+    // A language we do not ship must not be invented — caller falls back.
+    expect(languageFromLocale('fr-FR')).toBeNull()
+    expect(languageFromLocale('')).toBeNull()
+    expect(languageFromLocale(null)).toBeNull()
+    expect(languageFromLocale(undefined)).toBeNull()
+  })
+
+  test('resolveLanguage returns an explicit choice unchanged', () => {
+    setSystemAppearanceForTests({ theme: null, locale: 'zh-CN' })
     expect(resolveLanguage('en')).toBe('en')
+    setSystemAppearanceForTests({ theme: null, locale: 'en-US' })
     expect(resolveLanguage('zh')).toBe('zh')
+  })
+
+  test('resolveLanguage("system") follows the host locale', () => {
+    setSystemAppearanceForTests({ theme: null, locale: 'zh-CN' })
+    expect(resolveLanguage('system')).toBe('zh')
+
+    setSystemAppearanceForTests({ theme: null, locale: 'en-GB' })
+    expect(resolveLanguage('system')).toBe('en')
+  })
+
+  test('resolveLanguage("system") falls back for an unshipped or absent locale', () => {
+    setSystemAppearanceForTests({ theme: null, locale: 'fr-FR' })
+    expect(resolveLanguage('system')).toBe(DEFAULT_LANGUAGE)
+
+    setSystemAppearanceForTests({ theme: null, locale: null })
+    expect(resolveLanguage('system')).toBe(DEFAULT_LANGUAGE)
+  })
+})
+
+describe('following the host locale (bug.md: 语言跟随系统没效果)', () => {
+  test('choosing "system" applies the host locale immediately, not the default', async () => {
+    const storage = createMemoryStorage()
+    setSystemAppearanceForTests({ theme: null, locale: 'zh-CN' })
+
+    const resolved = await changeAppLanguage('system', storage)
+
+    expect(resolved).toBe('zh')
+    expect(initI18n().t('nav.home')).toBe(zh.nav.home)
+    // Still stored as "follow the system", i.e. no pref.
+    expect(await storage.prefs.get(PREF_LANGUAGE)).toBeNull()
+  })
+
+  test('a host locale change re-applies while the choice is system', async () => {
+    const storage = createMemoryStorage()
+    setSystemAppearanceForTests({ theme: null, locale: 'en-US' })
+    await changeAppLanguage('system', storage)
+    expect(initI18n().t('nav.home')).toBe(en.nav.home)
+
+    applySystemAppearance({ theme: null, locale: 'zh-CN' })
+    // changeLanguage resolves on a microtask.
+    await Promise.resolve()
+
+    expect(initI18n().t('nav.home')).toBe(zh.nav.home)
+  })
+
+  test('a host locale change is ignored while the user picked a language', async () => {
+    const storage = createMemoryStorage()
+    setSystemAppearanceForTests({ theme: null, locale: 'en-US' })
+    await changeAppLanguage('en', storage)
+
+    applySystemAppearance({ theme: null, locale: 'zh-CN' })
+    await Promise.resolve()
+
+    expect(initI18n().t('nav.home')).toBe(en.nav.home)
   })
 })
 

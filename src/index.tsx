@@ -8,6 +8,7 @@ import { root } from '@lynx-js/react'
 import { App } from './App.js'
 import { useAuthStore } from './features/auth/store/index.js'
 import { applySavedLanguage } from './i18n/index.js'
+import { initSystemAppearance } from './native/system-appearance.js'
 import { applySavedTheme } from './shared/theme/theme-model.js'
 import { router } from './router.js'
 
@@ -23,6 +24,11 @@ useAuthStore.subscribe((state, prev) => {
 // server URL / insecure-TLS into config, then probe stored tokens to resolve
 // `unknown` → authenticated/unauthenticated.
 void (async () => {
+  // Before language/theme: both resolve `'system'` through the host appearance,
+  // and this installs the listener that keeps them following it. (The first
+  // render above already reads `lynx.__globalProps` lazily, so the launch frame
+  // is painted in the right theme without waiting for this.)
+  initSystemAppearance()
   await applySavedLanguage()
   await applySavedTheme()
   const { readDefaultPlayMode } = await import('./features/settings/data/settings-prefs.js')

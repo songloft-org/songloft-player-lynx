@@ -1,8 +1,9 @@
 # 进展与交接（PROGRESS）
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
-> **最后更新**：2026-08-11 · 最近完成（**批20 · bug.md 清理第一轮 · 6 条**）：**本批最大的变化是验证能力**——本机装上 Android SDK 后可 `gradlew installDebug` 直接装模拟器（API 33），**解除了本文件里长期的「Kotlin 只能靠 CI 验」限制**；首轮构建 8 分钟，之后增量安装 **4 秒**。6 条全部在模拟器上截图核对，不是「本机绿了就算」。修掉：① 首页横向滚动在 Android 上滑不动（**四个叠加缺陷**，最隐蔽的两个是「内容行缺 `width:max-content`」和「`<refresh>` 直接吞掉横向手势」——`getScrollInfo` 报 `scrollRange:264`、`scrollTo` 能改 `scrollX`，手指却全程无效，极易误判成 CSS 问题）+ 卡片改竖矩形（120×120 方形封面，`mode='aspectFill'` 修掉封面被拉扁）；② 插件图标不显示——`<svg src={url}>` **在本宿主根本不可用**（logcat: `getGenericResourceFetcher is null`），改走「已鉴权 client 取文本 → `<svg content>`」；③ 全屏播放器关闭回上次 tab（新增 `shared/nav/shell-navigation.ts`，回 `/library` 还带记忆的子页签）+ MiniPlayer 路由白名单（设置/插件页不再显示）；④ 删掉设置页播放设置分组，**并把持久化搬到播放器的模式按钮**（否则 `default_play_mode` 再没人写——已验杀进程重启后仍是 Repeat one）；⑤ 首页统计真读 `GET /songs/stats`（此前是拿歌单列表 `total` 拼的，名不符实；新建 `models/library-stats.ts`，实测 `total_duration` 单位是**秒**、`total_file_size` 对全 remote 库为 0 故 0 时不显示）；⑥ 插件页标题用 `displayName` 而非路由前缀 `entryPath`（Flutter 原版本就如此，是移植遗漏）。**顺手修掉一个未被报告的缺陷**：`PluginWebViewPage` 用 `document.documentElement` 嗅探主题（Lynx 无 DOM，守卫让它不崩但把每个插件都钉死在 `theme=dark`）。**新发现 3 条**记入 `bug.md`（首页下拉刷新不触发——**已用对照实验证明非本批引入**；插件 tab 图标仍是内置 settings 图标；插件 WebView 内容空白）。clean build 1379.0 kB（**零警告**）/`tsc -b --force`/**549 vitest**（+21）全绿；三道新闸各做过反向验证。
-> **上一批**（**批19b · 真机反馈修复**）：修掉「开关开/关在真机上完全无法区分」——lynx-ui `Switch` 自身不带样式、只把 `ui-checked` 追加到使用方 className 上，而三处手抄的 track CSS 里第三份漏了 `.ui-checked` 规则（也漏了 `flex-direction: row`）；根治办法是收敛出 `src/shared/ui/AppSwitch`（全 app 唯一一份开关样式）。**测试为何全绿**：Switch 的 mock 把 `checked` 整个丢了、ON/OFF 渲染成同一棵树——已改忠实版，并加两道反向验证过的闸（渲染层断言 `ui-checked` 落到 track + CSS 静态层断言 checked 规则存在且无第四份复制）。另清掉两条从未生效的样式（`text-transform` 无 Lynx 对应物故删除；`object-fit` 改用 `<image mode='aspectFit'>`），**构建警告归零**；并查明 `bug.md`「首页插件图标没显示」的根因是 7 个插件里 6 个图标是 `.svg` 而 Lynx `<image>` 原生路径不渲染 SVG（未修，留给那批）。**「扫描失败」不是客户端 bug**：后端（就跑在本机，cwd `/Users/hanxi/toy/songloft`）的 `music_path="music"` 指向不存在的 `.../songloft/music`；建该目录后扫描链路当场走通（`completed`，导入 0 首——本机确实没有音频文件）。顺带把 `GET /scan/directories` 从「未联调」转为已验证（真实响应 `{"directories": null, "root": "music"}`，空目录给 `null` 不是 `[]`）。build 1374.3 kB / `tsc -b` / **528 vitest** 全绿。
+> **最后更新**：2026-08-11 · 最近完成（**批21 · 外观/语言跟随系统**）：`bug.md` 第 13、14 条。这两个「跟随系统」选项此前**是纯标签、背后什么都没有**——`resolveTheme('system')` 硬编码返回 `'dark'`、`resolveLanguage('system')` 硬编码返回 `'en'`。Lynx 没有 `prefers-color-scheme`/`matchMedia`/locale API，信号只能由宿主给，故用**两条互补通道**：`LynxLoadMeta.setGlobalProps` 在 `loadTemplate` **之前**注入初值（首帧就是对的主题，**不闪**；原生模块 getter 做不到——异步、答案晚于启动帧）+ `sendGlobalEvent` 推运行中的变更（globalProps 更新不会通知已在跑的页面）。**`LynxView.setGlobalProps` 两个重载都已弃用**，替代品是 `LynxLoadMeta`。**manifest 的 `configChanges` 原来只有 `uiMode`**：深浅色能进 `onConfigurationChanged`，但语言切换会重建 Activity、整包重载 JS 状态全丢——补了 `locale|layoutDirection`。另拆 `values-night/themes.xml` 消掉启动帧闪深色。**JS 侧一个静默失效的 React 陷阱**：`ThemeProvider` 原来把 `AppTheme` 选择存 state，系统翻转时选择仍是 `'system'`、同值写入被 React 跳过 → 模型层全对而 UI 永不跟随；改存**已解析**主题。**差点误报**：首次装包截图是浅色+中文、与系统完全一致，看着一次就成——实际是早前批次留下的**显式选择**（语言=中文/外观=浅色）巧合撞上，而显式选择下忽略系统变化恰恰正确；改成「跟随系统」后才是真验证（**验「跟随系统」必须先确认选中的就是它**）。模拟器双向验过：冷启动跟随 + 运行中翻转系统深浅色/语言应用立刻跟随（未重启、未交互）。clean build 1382.0 kB（**零警告**）/`tsc -b --force`/**573 vitest**（+24）/Kotlin 零警告全绿；新增 3 道闸均反向验证过。
+> **上一批**（**批20 · bug.md 清理第一轮 · 6 条**）：**本批最大的变化是验证能力**——本机装上 Android SDK 后可 `gradlew installDebug` 直接装模拟器（API 33），**解除了本文件里长期的「Kotlin 只能靠 CI 验」限制**；首轮构建 8 分钟，之后增量安装 **4 秒**。6 条全部在模拟器上截图核对，不是「本机绿了就算」。修掉：① 首页横向滚动在 Android 上滑不动（**四个叠加缺陷**，最隐蔽的两个是「内容行缺 `width:max-content`」和「`<refresh>` 直接吞掉横向手势」——`getScrollInfo` 报 `scrollRange:264`、`scrollTo` 能改 `scrollX`，手指却全程无效，极易误判成 CSS 问题）+ 卡片改竖矩形（120×120 方形封面，`mode='aspectFill'` 修掉封面被拉扁）；② 插件图标不显示——`<svg src={url}>` **在本宿主根本不可用**（logcat: `getGenericResourceFetcher is null`），改走「已鉴权 client 取文本 → `<svg content>`」；③ 全屏播放器关闭回上次 tab（新增 `shared/nav/shell-navigation.ts`，回 `/library` 还带记忆的子页签）+ MiniPlayer 路由白名单（设置/插件页不再显示）；④ 删掉设置页播放设置分组，**并把持久化搬到播放器的模式按钮**（否则 `default_play_mode` 再没人写——已验杀进程重启后仍是 Repeat one）；⑤ 首页统计真读 `GET /songs/stats`（此前是拿歌单列表 `total` 拼的，名不符实；新建 `models/library-stats.ts`，实测 `total_duration` 单位是**秒**、`total_file_size` 对全 remote 库为 0 故 0 时不显示）；⑥ 插件页标题用 `displayName` 而非路由前缀 `entryPath`（Flutter 原版本就如此，是移植遗漏）。**顺手修掉一个未被报告的缺陷**：`PluginWebViewPage` 用 `document.documentElement` 嗅探主题（Lynx 无 DOM，守卫让它不崩但把每个插件都钉死在 `theme=dark`）。**新发现 3 条**记入 `bug.md`（首页下拉刷新不触发——**已用对照实验证明非本批引入**；插件 tab 图标仍是内置 settings 图标；插件 WebView 内容空白）。clean build 1379.0 kB（**零警告**）/`tsc -b --force`/**549 vitest**（+21）全绿；三道新闸各做过反向验证。
+> **上上批**（**批19b · 真机反馈修复**）：修掉「开关开/关在真机上完全无法区分」——lynx-ui `Switch` 自身不带样式、只把 `ui-checked` 追加到使用方 className 上，而三处手抄的 track CSS 里第三份漏了 `.ui-checked` 规则（也漏了 `flex-direction: row`）；根治办法是收敛出 `src/shared/ui/AppSwitch`（全 app 唯一一份开关样式）。**测试为何全绿**：Switch 的 mock 把 `checked` 整个丢了、ON/OFF 渲染成同一棵树——已改忠实版，并加两道反向验证过的闸（渲染层断言 `ui-checked` 落到 track + CSS 静态层断言 checked 规则存在且无第四份复制）。另清掉两条从未生效的样式（`text-transform` 无 Lynx 对应物故删除；`object-fit` 改用 `<image mode='aspectFit'>`），**构建警告归零**；并查明 `bug.md`「首页插件图标没显示」的根因是 7 个插件里 6 个图标是 `.svg` 而 Lynx `<image>` 原生路径不渲染 SVG（未修，留给那批）。**「扫描失败」不是客户端 bug**：后端（就跑在本机，cwd `/Users/hanxi/toy/songloft`）的 `music_path="music"` 指向不存在的 `.../songloft/music`；建该目录后扫描链路当场走通（`completed`，导入 0 首——本机确实没有音频文件）。顺带把 `GET /scan/directories` 从「未联调」转为已验证（真实响应 `{"directories": null, "root": "music"}`，空目录给 `null` 不是 `[]`）。build 1374.3 kB / `tsc -b` / **528 vitest** 全绿。
 > **上一批**（**批19 · 音乐库运维 · 扫描**）：解掉「Lynx 客户端无法扫描音乐库」这个唯一「不做就用不起来」的缺口——新建 `src/features/library-ops/` feature + `/settings/library` 子页，交付扫描主链路（跳过已存在/重新导入 + 2s 进度轮询 + 5 个状态态 + 取消）、懒加载目录树选择器（指定目录扫描）、5 个后端扫描开关、元数据刷新（含自身轮询）。**修掉 3 个 Flutter 缺陷**（`'error'` vs `'failed'` 状态机断裂导致扫描区空白 / 扫完不刷歌曲缓存导致看不到新歌 / 进度百分比两套口径）。轮询走 TanStack Query 函数式 `refetchInterval`（已实测 query-core 的三处 clear 都有 `void 0` 守卫），并摘掉一处**隐藏依赖**——`refetchIntervalInBackground: true`，否则轮询是靠 `focusManager.isFocused()` 的 `document === undefined` fall-through 侥幸工作的。**测试抓到两个真 bug**：`z.coerce.boolean()` 把 `"false"` 变 `true`；zod v4 里 object 内裸 `z.unknown()` 缺 key 会抛，且被外层 `.catch([])` 吞成空数组（真机目录树会永远为空）。i18n 78 key × 2 语言全部从 ARB dump 挖出、非自撰。**顺手修掉**批18c 那个无效的暗色 Input 提示文字修复（`placeholder-color` 被 template encode 移除，须用 `-x-` 前缀）。build 1375.5 kB / tsc / **521 vitest**（+149）全绿。**上上批**（批17 · 插件模块）：对照 Flutter 参考源（`songloft-player/lib/features/settings/`）发现 `logLevelProvider` 其实是**后端设置**（`GET/PUT /api/v1/settings/log-level`，不是本地开关），`LogExportService` 是拉后端日志 + 本机 `FileLogger` 文件打包 zip + 系统分享面板（`share_plus`）。Lynx 版裁剪：新建 `SettingsApi`（`getLogLevel`/`setLogLevel`/`exportLogs`，镜像 `PlaylistApi` 用法）+ Settings 新增「诊断」分组（日志级别四选一，真调后端接口）+ `/settings/logs` 子页拉 `GET /api/v1/logs/export` 纯文本滚动展示（离线/后端不可达降级成错误提示）；不做 zip 打包/系统分享（Lynx 无原生分享模块，留给未来原生模块批），不做 `webDebugConsoleProvider`（Flutter Web 平台专属，与 Lynx 无关）。build 1221.1 kB / tsc / **372 vitest**（1 个 `use-debounce` 计时器 flake，隔离重跑 5/5 绿，与本批无关）全绿。**上一批**（批14 · 零散 UI 补完排查轮）：排查用户举的两个「零散 UI」候选后发现其实**已经实现**、只是文档过期未更——① 收藏歌单标识/置顶：`PlaylistCard` 对 `isBuiltIn` 早已叠心形徽标（Favorites/Radio-Favorites 后端 label 均含 `built_in`），批11 的 chevron 手动排序已可置顶任意歌单；② 首页问候语 i18n：`greeting.ts`/`resources.ts` 早已是 4 档×中英双语。真正补的一个缺口：`buildCoverUrl` 加 `_t=<updatedAt ms>` 缓存刷新参数。**顺手发现并修复**：docs/PROGRESS.md 里 4 处 U+FFFD 乱码字节其实是我上一批用 `edit_file` 改动其他段落时工具自己引入的（不是历史遗留），从 git 历史找回干净原文逐一还原。build 1212.3 kB / tsc / **358 vitest** 全绿。
 
 ## 总览
@@ -39,7 +40,8 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 19 | **音乐库运维 · 扫描**（扫描主链路 + 目录树选择 + 5 个扫描开关 + 元数据刷新）| ✅ 完成 | clean build（1375.5 kB）/tsc/**521 vitest**（+149）全绿 | ⏳ **必须联后端真验**（本批唯一价值所在，见下）|
 | 19b | 真机反馈：开关开/关状态不可见（真 bug，已修）+ 构建警告归零（两条从未生效的样式）+ 「扫描失败」定位（后端 `music_path`，非客户端；建目录后链路走通）| ✅ 完成 | clean build（1374.3 kB，**警告归零**）/`tsc -b --force`/**528 vitest**（+4）全绿 | ✅ 开关状态已确认可见；⏳ 「真的导入歌曲」仍未验（该机无音频文件）|
 | 20 | **bug.md 清理第一轮**（首页横滚 + 卡片竖矩形 / 插件图标 SVG / 播放器返回 + MiniPlayer 白名单 / 删播放设置 / 统计走 `/songs/stats` / 插件页标题）+ **本机 Android SDK 打通** | ✅ 完成 | clean build（1379.0 kB，**零警告**）/`tsc -b --force`/**549 vitest**（+21）全绿 | ✅ **6 条全部模拟器截图验过**；⏳ 新发现 3 条已记 `bug.md`（下拉刷新不触发已证非本批引入）|
-| 后续 | 批21 外观/语言跟随系统（含 Android 原生） → 批22 通知栏按钮 → 批23 暗色对比度审计 → 重复检测/指纹 → 缓存管理 + 排除目录 → B3 iOS 宿主 + AVPlayer → Lynxtron 桌面 | ⛔ 未开始 | | |
+| 21 | **外观/语言跟随系统**（Android 宿主注入系统外观 → `lynx.__globalProps` + 全局事件；`resolveTheme`/`resolveLanguage` 真读宿主） | ✅ 完成 | clean build（1382.0 kB，**零警告**）/`tsc -b --force`/**573 vitest**（+24）全绿；Kotlin 零警告 | ✅ **模拟器双向验过**：冷启动跟随 + 运行中翻转系统深浅色/语言应用立刻跟随（未重启） |
+| 后续 | 批22 通知栏按钮 → 批23 暗色对比度审计 → 重复检测/指纹 → 缓存管理 + 排除目录 → B3 iOS 宿主 + AVPlayer → Lynxtron 桌面 | ⛔ 未开始 | | |
 
 ## 已交付明细
 
@@ -411,6 +413,52 @@ E LynxUISVG: getGenericResourceFetcher is null, svg fetch src failed! http://…
 #### 验收
 
 `pnpm run build` clean **1379.0 kB / 零警告** ✓ · `pnpm exec tsc -b --force` ✓ · `pnpm test` **549/549**（62 文件，+21）✓ · 产物 grep 确认 `scroll-orientation`/`enable-nested-scroll` 入包、`scroll-x` 仅剩注释 ✓ · 模拟器 6 条逐条截图核对 ✓。
+
+### 批21 · 外观/语言跟随系统（bug.md 第 13、14 条）
+
+「跟随系统」这两个选项此前**是纯标签、背后什么都没有**：`resolveTheme('system')` 直接返回硬编码 `'dark'`，`resolveLanguage('system')` 直接返回硬编码 `'en'`。Lynx 没有 `prefers-color-scheme`、没有 `matchMedia`、也没有 locale API，所以信号只能由宿主给。
+
+#### 1. 信号通路：两条通道，各有不可替代的作用
+
+| 通道 | 送什么 | 为什么不能只用另一条 |
+|---|---|---|
+| `LynxLoadMeta.setGlobalProps` → `lynx.__globalProps` | **初值** | 宿主在 `loadTemplate` **之前**注入，所以首帧就知道系统主题、**不闪错主题**。原生模块 getter 做不到——它是异步的，答案会在启动帧画完之后才到 |
+| `LynxView.sendGlobalEvent` → BTS `GlobalEventEmitter` | **变更** | globalProps 更新不会把变化推给已在运行的页面；Lynx 里没有别的东西会推系统配置变化 |
+
+两侧的 key/事件名必须逐字对齐（同音频模块的规矩）：`systemTheme`/`systemLocale`/`SongloftSystem.appearanceChanged`，Kotlin 侧集中在 `android/.../system/SystemAppearance.kt`，TS 侧集中在 `src/native/system-appearance.ts`。
+
+- **`LynxView.setGlobalProps` 两个重载都已弃用**（`Map` 和 `TemplateData` 版都报 deprecation），替代品是 `LynxLoadMeta.Builder().setUrl(...).setGlobalProps(TemplateData.fromMap(...))` + `loadTemplate(meta)` —— 一次调用同时带 url 和 globalProps，且 URL 仍走 `DemoTemplateProvider`（换 API 后已重新在模拟器上验过）
+- **manifest 的 `configChanges` 必须同时含 `uiMode` 和 `locale|layoutDirection`**。原来只有 `uiMode`：深浅色切换能进 `onConfigurationChanged`，但**语言切换会重建 Activity → 整包重载、JS 状态全丢**。补上后两者都走同一个回调
+- 宿主对「系统没说」诚实上报**空串**（`UI_MODE_NIGHT_UNDEFINED` / 空 locale 列表），由 JS 侧 coerce 成 `null` 再套各自的兜底；不在 Kotlin 里猜一个 `"light"`
+- `res/values-night/themes.xml` 拆出深色窗口主题（原来窗口恒为 `Theme.Material` 深色）。这管的是**启动帧**——bundle 渲染前那一帧由窗口背景绘制，不拆就会在浅色系统上闪一下深色（已截图确认现在不闪）
+
+#### 2. JS 侧：一个静默失效的 React 陷阱
+
+`ThemeProvider` 原来把 `AppTheme` **选择**存进 state（`useState(getAppTheme)`）。系统翻转时选择仍是 `'system'`，于是 `setTheme('system')` 是同值写入 → **React 直接跳过重渲染，主题永远不变**——模型层完全正确，UI 就是不跟随。改为存**已解析**的主题（`useState(() => resolveTheme(getAppTheme()))`）。`theme-provider.test.tsx` 专门盯这一条，反向验证时它正是唯一变红的用例（类名停在 `theme-root theme-dark`）。
+
+语言侧不是重渲染问题而是副作用：i18next 需要显式 `changeLanguage`，之后 react-i18next 自己会重渲染所有 `useTranslation` 消费者。
+
+#### 3. 差点误报：验证前必须确认应用处于「跟随系统」态
+
+第一次装包后截图是**浅色 + 中文**，与系统（night=no、zh-Hans-CN）完全一致，看起来一次就成。但翻转系统深色后应用不动——查设置页才发现**语言=中文、外观=浅色都是早前批次测试留下的显式选择**，浅色+中文纯属巧合，而显式选择下忽略系统变化恰恰是正确行为。把两项都改成「跟随系统」后才是真验证。**教训：验「跟随系统」必须先确认选中的就是「跟随系统」，否则显式选择会伪装成功能生效。**
+
+#### 4. 真机结论（模拟器 API 33，双向各验一次）
+
+- 冷启动：系统深色 → 应用深色（启动帧也是深色，无闪）；系统 `zh-Hans-CN` → 中文
+- 运行中翻转 `cmd uimode night yes/no`：**应用立刻跟随，未重启、未交互**（像素 bbox 覆盖整屏）
+- 运行中 `cmd locale set-app-locales org.songloft.lynx --locales en-US`：整个 UI 立刻变英文，且两处仍选中 "System default"；清除覆盖又变回中文
+- logcat 印证链路：`UpdateGlobalProps` → `LynxView sendGlobalEvent SongloftSystem.appearanceChanged` → `call jsmodule:GlobalEventEmitter.emit.SongloftSystem.appearanceChanged`
+
+#### 5. 本批新增的闸（均反向验证过会红）
+
+- `system-appearance.test.ts`（10 例）：宿主值全部按不可信处理（`''`/`'DARK'`/数字/`null` 一律 → `null`，绝不猜）；`lynx.__globalProps` **懒读**（证明首帧路径不依赖 `initSystemAppearance`）；重复 init 只装一个宿主监听
+- `theme-model.test.ts` +4、`i18n.test.ts` +6：`resolve*('system')` 真跟随宿主、显式选择不受宿主影响、宿主变化在「跟随」态下才触发
+- `theme-provider.test.tsx`（新）：渲染层证明根 `theme-<light|dark>` 类名会随宿主翻转而变
+- ⚠️ **`setSystemAppearanceForTests` 故意不清 listeners**：`theme-model`/`i18n` 每进程只订阅一次、无法重订阅，测试 hook 一清就把被测行为拆掉了，后续用例会「通过」但什么都没验（与批19b 那个丢 `checked` 的 Switch mock 同族）
+
+#### 验收
+
+`pnpm run build` clean **1382.0 kB / 零警告** ✓ · `pnpm exec tsc -b --force` ✓ · `pnpm test` **573/573**（64 文件，+24）✓ · `gradlew installDebug` **Kotlin 零警告** ✓ · 模拟器冷启动 + 双向实时切换逐条截图核对 ✓。
 
 ## 未完成 / 遗留事项（TODO & 风险）
 
