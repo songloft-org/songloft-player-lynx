@@ -29,7 +29,33 @@ export const defaultJsonHeaders: Readonly<Record<string, string>> = {
 // DEV default: point at the local test backend on the LAN so a phone on the
 // same network can reach it. TODO: revert to 'http://localhost:58091' (or make
 // it build-mode driven) before shipping.
-const DEFAULT_BASE_URL = 'http://30.211.128.187:58091'
+const DEFAULT_BASE_URL = 'http://30.211.129.24:58091'
+
+/**
+ * DEV convenience: credentials prefilled into the login form so device testing
+ * does not require typing on a phone keyboard. Same posture (and same cleanup
+ * obligation) as `DEFAULT_BASE_URL` above — both are the dev-only defaults to
+ * strip before shipping.
+ *
+ * ⚠️ **Consume these through the async prefill chain, never as a `useState`
+ * initial value for the username.** A hard-coded initial value plus the
+ * persisted-username read that follows it means the controlled lynx-ui `Input`
+ * receives two different `value` props during startup, and each one costs a
+ * native `setValue` round-trip (with a main-thread readonly lock/unlock). On
+ * device, with several native storage reads already contending for the JSB
+ * queue, that double write is what made the password field and login button
+ * visibly flicker — see the batch-11 entry in PROGRESS. Keeping the default at
+ * the tail of the existing async read keeps it at exactly one write.
+ *
+ * TODO: set both to '' before shipping.
+ */
+// Explicitly typed as `string` (not `as const`): a literal type here would make
+// `useState(devCredentials.password)` infer `useState<'admin'>` and reject the
+// user's own input in `setPassword`.
+export const devCredentials: { username: string; password: string } = {
+  username: 'admin',
+  password: 'admin',
+}
 
 /**
  * Deployment mode, ported from the Flutter `AppConfig.deployMode`:

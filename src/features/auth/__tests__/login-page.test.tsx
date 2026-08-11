@@ -84,6 +84,24 @@ test('renders the login page with title, labels and login button', async () => {
   expect(queryByText('Log in')).toBeInTheDocument()
 })
 
+/**
+ * The dev credentials (`devCredentials` in app-config) are meant to make device
+ * testing typing-free, so the form must be submittable straight after mount.
+ * `canSubmit` requires a non-empty username *and* password, so an enabled login
+ * button proves both prefills landed — the mocked `Input` does not render its
+ * value, so this is the observable proxy for it.
+ *
+ * This also guards the flicker fix indirectly: the username prefill has to
+ * arrive through the async chain, and if someone removes that tail the button
+ * stays disabled here.
+ */
+test('dev credentials prefill both fields so the form is submittable on mount', async () => {
+  const { queryByTestId } = await renderLogin()
+  const button = queryByTestId('login-button')
+  expect(button).toBeInTheDocument()
+  expect(button?.className).not.toContain('login__button--disabled')
+})
+
 test('standalone mode shows the API URL field + insecure-TLS toggle', async () => {
   appConfig.deployMode = 'standalone'
   const { queryByText } = await renderLogin()

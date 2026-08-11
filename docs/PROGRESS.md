@@ -364,17 +364,21 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
   - ~~「Lynx 无现成 dialog 原语」故登出用两步 tap~~ → **有 `lynx-ui-dialog`**（`DialogRoot`/`DialogTrigger`/`DialogBackdrop`/`DialogView`/`DialogContent`/`DialogButton`）。批20 重复检测的批量删除确认可用真对话框；登出的两步 tap 也可重估。
   - ~~「lynx-ui 无 sortable」故排序用 chevron 上移/下移按钮~~ → **有 `lynx-ui-sortable`**（还有 `lynx-ui-draggable`/`lynx-ui-swipe-action`）。歌单/歌曲/队列三处排序 UI 可从按钮式重估为拖拽。
   - 另有 `lynx-ui-checkbox` / `lynx-ui-radio-group`（多选一与勾选框的现成原语）、`lynx-ui-dialog`、`lynx-ui-popover`、`lynx-ui-form`、`lynx-ui-list`/`feed-list`/`scroll-view`、`lynx-ui-lazy-component`、`lynx-ui-presence`、`lynx-ui-overlay`、`lynx-ui-common`。批19 刻意**未引入任何新包**（目录树勾选自绘 = 两个 view + 一个 `check` Icon，比引入新原生手势叶子 + 写测试 mock 更省），但后续批可按需选用。
+- [x] **验收命令修正：`tsc --noEmit` 一直是空跑**（批19 发现，已改 `AGENTS.md` §5）。根 `tsconfig.json` 是 solution-style（`"files": []` + `references`），`tsc --noEmit` 对它的输入文件集为空——**什么都不检查、永远 exit 0**。自批1 起验收清单里的那一行是安慰剂；真正拦类型错误的一直是 `pnpm run build` 内的 rspeedy type checker。**正确命令是 `pnpm exec tsc -b`**（写 `*.tsbuildinfo`，已 gitignore；必要时 `--force`）。用 `tsc -b --force` 对全库跑过一次：**无历史遗留类型错误**（因为 build 一直在真检查）。
+  - 发现过程：批19 收尾加 dev 登录凭据时，`devCredentials` 用了 `as const` → `useState(devCredentials.password)` 推成 `useState<'admin'>` → `setPassword(string)` 类型不符。`tsc --noEmit` 静默通过，`pnpm run build` 报 `TS2345`。**教训**：用 grep 过滤 build 输出时会连错误一起滤掉——我第一次就这么漏看了一次失败的构建。
 - [ ] **风险登记**（详见 roadmap）：R2 桌面 clay 元素实测、R11 Query 无 DOM（本机已验证，真机待确认）、R13 lynx-ui Web/Desktop 覆盖、R5 音频后台播放各端差异。
 
 ## 如何恢复工作 / 交接
 
 ```
 pnpm install
-pnpm run build          # 构建
-pnpm exec tsc --noEmit  # 类型检查
+pnpm run build          # 构建（内含 type checker，是类型的真闸）
+pnpm exec tsc -b        # 类型检查（必须带 -b）
 pnpm test               # vitest（含无 DOM 与压缩产物回归测试）
 pnpm run dev            # dev server + 二维码，LynxExplorer 扫码目测
 ```
+> ⚠️ 类型检查用 `pnpm exec tsc -b`，**不要用 `tsc --noEmit`**（solution-style tsconfig 下是空跑，见上方遗留清单）。检查 build 输出时别用 grep 过滤，否则会滤掉编译错误。
+
 - 协作规则、目录边界、无 DOM 铁律、提交约定：见根目录 `AGENTS.md`。
 - 分批计划：`plan.md`；调研依据：`docs/` 四篇。
 - 只读参考快照：`songloft-player/`（禁改）。

@@ -48,11 +48,19 @@ Lynx 不是浏览器：**无 `window` / `document` / `self`**，无 DOM，双线
 
 本机自动验收：
 ```
-pnpm run build          # rspeedy 构建
-pnpm exec tsc --noEmit  # 类型检查
+pnpm run build          # rspeedy 构建（内含 type checker，是类型的真闸）
+pnpm exec tsc -b        # 类型检查（必须带 -b，见下）
 pnpm test               # vitest run
 ```
 真机目测：`pnpm run dev` 起 dev server + 二维码，用 **LynxExplorer** 扫码验证。
+
+> ⚠️ **类型检查必须用 `tsc -b`，`tsc --noEmit` 是空跑。** 根 `tsconfig.json` 是
+> solution-style（`"files": []` + `references` 指向 `./src` 与 `./tsconfig.node.json`），
+> 对它执行 `tsc --noEmit` 的输入文件集为空——**什么都不检查，永远 exit 0**。
+> 本仓库自批1 起验收清单里写的就是 `--noEmit`，所以那一行一直是安慰剂；真正拦住
+> 类型错误的是 `pnpm run build` 里的 rspeedy type checker（批19 实测：一个
+> `SetStateAction<'admin'>` 错误被 build 拦下、`--noEmit` 完全静默）。
+> `tsc -b` 会写 `*.tsbuildinfo`（已在 `.gitignore`）；改动没被检测到时用 `tsc -b --force`。
 
 **验证要忠实**：不要只信 vitest（jsdom/node 环境与 Lynx BTS 语义不同）。凡涉及运行时全局/无 DOM 行为，**静态检查真机实际运行的产物**（build 后 grep `dist/main.lynx.bundle`；dev 则 curl dev server 的 `main.lynx.bundle`），确认危险代码已被守卫。参见 `src/__tests__/background-bundle-self.test.ts`、`router-no-dom.test.tsx`。
 

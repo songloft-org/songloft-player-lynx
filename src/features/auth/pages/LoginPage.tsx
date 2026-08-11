@@ -8,7 +8,7 @@ import { Button } from '@lynx-js/lynx-ui-button'
 import { Input } from '@lynx-js/lynx-ui-input'
 import { Switch, SwitchThumb, SwitchTrack } from '@lynx-js/lynx-ui-switch'
 
-import { appConfig } from '../../../core/config/app-config.js'
+import { appConfig, devCredentials } from '../../../core/config/app-config.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import {
   PREF_LAST_USERNAME,
@@ -38,14 +38,19 @@ export function LoginPage() {
 
   const showServerFields = !appConfig.isEmbedded
 
-  // Prefilled asynchronously below from persisted prefs (last username /
-  // server URL) if available. Starting empty avoids a spurious native
-  // `setValue` round-trip (readonly-lock/unlock) on the controlled `Input`
-  // for a value the user never entered — on device this showed up as visible
-  // flicker on the password field / login button while storage reads race
-  // at startup (see AGENTS.md native-storage notes).
+  // Username starts empty and is written **once**, at the tail of the async
+  // prefill below (persisted value, else the dev default). Each distinct `value`
+  // prop on the controlled lynx-ui `Input` costs a native `setValue` round-trip
+  // with a main-thread readonly lock/unlock; an initial value *plus* the
+  // persisted read would be two, and on device — with several native storage
+  // reads already contending for the JSB queue — that double write is what made
+  // the password field and login button visibly flicker (batch 11 in PROGRESS).
+  // So do NOT "simplify" this to `useState(devCredentials.username)`.
   const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
+  // The password is never persisted, so it has no async write to collide with —
+  // a synchronous initial value here is the same single round-trip that `''`
+  // would have cost.
+  const [password, setPassword] = useState(devCredentials.password)
   const [apiUrl, setApiUrl] = useState(showServerFields ? appConfig.baseUrl : '')
   const [insecureTls, setInsecureTls] = useState(appConfig.insecureTls)
 
@@ -55,12 +60,15 @@ export function LoginPage() {
     let cancelled = false
     const storage = getSongloftStorage()
     void (async () => {
+      let savedName = ''
       try {
-        const savedName = await storage.prefs.get(PREF_LAST_USERNAME)
-        if (!cancelled && savedName) setUsername(savedName)
+        savedName = (await storage.prefs.get(PREF_LAST_USERNAME)) ?? ''
       } catch {
         /* ignore */
       }
+      // One write, whichever source wins — see the useState comment above.
+      const nextName = savedName || devCredentials.username
+      if (!cancelled && nextName) setUsername(nextName)
       if (!showServerFields) return
       try {
         const savedUrl = await storage.prefs.get(PREF_SERVER_URL)
@@ -164,6 +172,7 @@ export function LoginPage() {
                 (disabled ? ' login__button--disabled' : '') +
                 (active ? ' login__button--active' : '')
               }
+              data-testid='login-button'
             >
               <text className='login__button-text'>
                 {isLoading ? t('auth.signingIn') : t('auth.logIn')}
