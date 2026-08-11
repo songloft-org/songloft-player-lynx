@@ -101,8 +101,9 @@ test('the strip separates sizing (scroll-view) from layout (inner row)', () => {
   const card = /\.home-section__row\s+\.playlist-card\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
   expect(card).toMatch(/flex-shrink:\s*0/)
 
-  // Square cover, overriding the library grid's 96px without touching that page.
+  // Square cover, overriding the library grid's 104px without touching that page.
   const cover = /\.home-section__row\s+\.playlist-card__cover\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
+  expect(cover).toMatch(/width:\s*120px/)
   expect(cover).toMatch(/height:\s*120px/)
 })
 

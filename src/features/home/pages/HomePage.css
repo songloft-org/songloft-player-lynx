@@ -158,11 +158,12 @@
 }
 
 /*
- * Square cover, overriding the base `height: 96px` that is tuned for the library's
- * three-per-row grid. Overridden here rather than in `PlaylistsView.css` so the
- * library page keeps its own proportions.
+ * Square cover, overriding the base `width: 104px; height: 104px` that is tuned for
+ * the library's three-per-row grid. Overridden here rather than in
+ * `PlaylistsView.css` so the library page keeps its own proportions.
  */
 .home-section__row .playlist-card__cover {
+  width: 120px;
   height: 120px;
 }
 
