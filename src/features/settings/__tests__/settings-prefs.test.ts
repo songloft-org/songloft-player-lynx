@@ -7,12 +7,7 @@ import {
   PREF_INSECURE_TLS,
   PREF_SERVER_URL,
 } from '../../auth/store/index.js'
-import {
-  coercePlayMode,
-  playModeIcon,
-  playModeLabelKey,
-  serverDisplay,
-} from '../domain/settings-model.js'
+import { coercePlayMode, serverDisplay } from '../domain/settings-model.js'
 import {
   applyServerSettings,
   PREF_DEFAULT_PLAY_MODE,
@@ -38,15 +33,10 @@ describe('coercePlayMode', () => {
   })
 })
 
-describe('play mode presentation', () => {
-  test('label key + icon per mode', () => {
-    expect(playModeLabelKey('order')).toBe('settings.playModeOrderLabel')
-    expect(playModeLabelKey('random')).toBe('settings.playModeRandomLabel')
-    expect(playModeIcon('loop')).toBe('repeat')
-    expect(playModeIcon('single')).toBe('repeat-one')
-    expect(playModeIcon('random')).toBe('shuffle')
-  })
-})
+// The play-mode label/icon key maps are gone with the Settings → Playback section;
+// the player's own toggle owns its `player.mode*` maps. `coercePlayMode` stays
+// because the `default_play_mode` pref still round-trips (written by PlayControls,
+// read at startup in `src/index.tsx`) — see the round-trip test below.
 
 describe('serverDisplay', () => {
   const labels = { embedded: 'Songloft (embedded)', notConfigured: 'Not configured' }

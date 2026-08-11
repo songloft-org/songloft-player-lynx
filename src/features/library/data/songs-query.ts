@@ -24,6 +24,12 @@ export const libraryQueryKeys = {
   songs: (filters: SongsFilters) => ['library', 'songs', filters] as const,
   facets: (field: string, keyword: string) =>
     ['library', 'facets', field, keyword] as const,
+  /**
+   * Library totals. Deliberately under the same `['library']` prefix as the lists:
+   * the scan-completion effect (batch 19) invalidates that prefix, so finishing an
+   * import refreshes the home stats along with the song list.
+   */
+  stats: () => ['library', 'stats'] as const,
 }
 
 /** Infinite songs list for the given filters (flat "songs" view). */

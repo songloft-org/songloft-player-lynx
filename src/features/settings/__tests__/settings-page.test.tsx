@@ -96,11 +96,12 @@ async function renderPage() {
   return getQueriesForElement(elementTree.root!)
 }
 
-test('renders every section, the play-mode options, version, server and log-out rows', async () => {
+test('renders every section, version, server and log-out rows', async () => {
   const { queryByText, queryByTestId, queryAllByTestId } = await renderPage()
 
-  // Section headers.
-  expect(queryByText('Playback')).toBeInTheDocument()
+  // Section headers. No "Playback": play mode is set from the player's own toggle
+  // (bug.md — the duplicate section here was reported as clutter).
+  expect(queryByText('Playback')).not.toBeInTheDocument()
   expect(queryByText('Language')).toBeInTheDocument()
   expect(queryByText('Connection')).toBeInTheDocument()
   expect(queryByText('Appearance')).toBeInTheDocument()
@@ -109,11 +110,8 @@ test('renders every section, the play-mode options, version, server and log-out 
   expect(queryByText('More settings (coming later)')).toBeInTheDocument()
   expect(queryByText('Account')).toBeInTheDocument()
 
-  // The four play-mode option rows.
-  expect(queryByTestId('play-mode-order')).toBeInTheDocument()
-  expect(queryByTestId('play-mode-loop')).toBeInTheDocument()
-  expect(queryByTestId('play-mode-single')).toBeInTheDocument()
-  expect(queryByTestId('play-mode-random')).toBeInTheDocument()
+  expect(queryByTestId('play-mode-order')).not.toBeInTheDocument()
+  expect(queryByTestId('play-mode-random')).not.toBeInTheDocument()
 
   // The three language option rows.
   expect(queryByTestId('language-system')).toBeInTheDocument()
@@ -132,10 +130,10 @@ test('renders every section, the play-mode options, version, server and log-out 
   expect(queryByTestId('log-level-error')).toBeInTheDocument()
   expect(queryByTestId('settings-export-logs')).toBeInTheDocument()
 
-  // Persisted default (random play mode + system language + system theme +
-  // warn log level, all re-resolved once their reads settle) → four check
-  // glyphs.
-  expect(queryAllByTestId('icon-check')).toHaveLength(4)
+  // Persisted defaults (system language + system theme + warn log level, all
+  // re-resolved once their reads settle) → three check glyphs. Was four before the
+  // play-mode section went away.
+  expect(queryAllByTestId('icon-check')).toHaveLength(3)
 
   // About shows the client version, and the log-out row is present.
   expect(queryByTestId('settings-version')).toBeInTheDocument()
@@ -183,16 +181,8 @@ test('the export-logs row navigates to the logs sub-page', async () => {
   expect(navigateSpy).toHaveBeenCalledWith({ to: '/settings/logs' })
 })
 
-test('selecting a play mode applies it to the player store and persists it', async () => {
-  const { queryByTestId } = await renderPage()
-
-  await act(async () => {
-    fireEvent.tap(queryByTestId('play-mode-loop')!)
-  })
-
-  expect(setPlayModeSpy).toHaveBeenCalledWith('loop')
-  expect(writePrefSpy).toHaveBeenCalledWith('loop')
-})
+// Choosing a play mode moved to the player's own toggle, along with persisting it
+// — covered by `player/__tests__/full-player.test.tsx`.
 
 test('the server row navigates to the server sub-page', async () => {
   const { queryByTestId } = await renderPage()

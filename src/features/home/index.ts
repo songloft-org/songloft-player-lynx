@@ -1,11 +1,7 @@
 export { HomePage } from './pages/HomePage.js'
 export { useHomePlaylists } from './data/home-query.js'
-export {
-  homeSectionItems,
-  homeSectionTotal,
-  homeStats,
-  HOME_SECTION_LIMIT,
-} from './data/home-select.js'
-export type { HomeStats } from './data/home-select.js'
+export { useLibraryStatsQuery } from './data/home-stats-query.js'
+export { homeSectionItems, HOME_SECTION_LIMIT } from './data/home-select.js'
+export { formatBytes, splitDuration } from './domain/stats-format.js'
 export { greetingKeyForHour, currentGreetingKey } from './domain/greeting.js'
 export type { GreetingKey } from './domain/greeting.js'

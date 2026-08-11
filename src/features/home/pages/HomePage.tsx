@@ -1,14 +1,16 @@
-import { useRef } from '@lynx-js/react'
+import { useRef, useState } from '@lynx-js/react'
 import type { NodesRef } from '@lynx-js/types'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
+import { EMPTY_LIBRARY_STATS } from '../../../models/library-stats.js'
 import type { Playlist } from '../../../models/playlist.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import { PluginGrid } from '../../jsplugin/widgets/PluginGrid.js'
 import { currentGreetingKey } from '../domain/greeting.js'
 import { useHomePlaylists } from '../data/home-query.js'
-import { homeSectionItems, homeSectionTotal, homeStats } from '../data/home-select.js'
+import { useLibraryStatsQuery } from '../data/home-stats-query.js'
+import { homeSectionItems } from '../data/home-select.js'
 import { HomeSection } from '../widgets/HomeSection.js'
 import { StatsStrip } from '../widgets/StatsStrip.js'
 import './HomePage.css'
@@ -33,14 +35,15 @@ export function HomePage() {
   const { t } = useTranslation()
   const normal = useHomePlaylists('normal')
   const radio = useHomePlaylists('radio')
+  // Library totals come from `/songs/stats`, not from the two sections' `total`
+  // fields — those only ever described playlist counts. Falls back to zeroes while
+  // loading or if the read fails, so the panel degrades instead of disappearing.
+  const statsQuery = useLibraryStatsQuery()
   const playingPlaylistId = usePlayerStore((s) => s.sourcePlaylistId)
 
   const normalItems = homeSectionItems(normal.data?.pages)
   const radioItems = homeSectionItems(radio.data?.pages)
-  const stats = homeStats(
-    homeSectionTotal(normal.data?.pages),
-    homeSectionTotal(radio.data?.pages),
-  )
+  const stats = statsQuery.data ?? EMPTY_LIBRARY_STATS
 
   const normalFailed = normal.isError
   const radioFailed = radio.isError
@@ -60,8 +63,16 @@ export function HomePage() {
     void navigate({ to: '/library', search: { view: 'playlists' } })
   }
   const refreshRef = useRef<NodesRef>(null)
+  /**
+   * `<refresh>` swallows horizontal drags: with it in the tree the home strips
+   * measure and `scrollTo` correctly but never move under a finger (verified on
+   * device — removing `<refresh>` alone restores swiping). It exposes no gesture
+   * filter, so the strips tell us when a finger is on them and pull-to-refresh
+   * stands down for the duration.
+   */
+  const [refreshEnabled, setRefreshEnabled] = useState(true)
   const onStartRefresh = () => {
-    void Promise.all([normal.refetch(), radio.refetch()]).finally(() => {
+    void Promise.all([normal.refetch(), radio.refetch(), statsQuery.refetch()]).finally(() => {
       refreshRef.current?.invoke({ method: 'finishRefresh' }).exec()
     })
   }
@@ -77,6 +88,7 @@ export function HomePage() {
       <refresh
         ref={refreshRef}
         className='home__refresh'
+        enable-refresh={refreshEnabled}
         bindstartrefresh={onStartRefresh}
       >
         <refresh-header className='home__refresh-header'>
@@ -114,6 +126,7 @@ export function HomePage() {
                           onRetry={() => void normal.refetch()}
                           onTapPlaylist={openPlaylist}
                           playingPlaylistId={playingPlaylistId}
+                          onStripTouch={setRefreshEnabled}
                         />
                       )
                       : null}
@@ -128,6 +141,7 @@ export function HomePage() {
                           onRetry={() => void radio.refetch()}
                           onTapPlaylist={openPlaylist}
                           playingPlaylistId={playingPlaylistId}
+                          onStripTouch={setRefreshEnabled}
                         />
                       )
                       : null}

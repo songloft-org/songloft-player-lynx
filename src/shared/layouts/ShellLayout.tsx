@@ -7,6 +7,7 @@ import { MiniPlayer } from '../../features/player/widgets/MiniPlayer.js'
 import { usePluginTabs } from '../../features/jsplugin/index.js'
 import { getLastLibrarySearch } from '../../features/library/index.js'
 import { NAV_DESTINATIONS } from '../nav/destinations.js'
+import { setLastShellLocation, showsMiniPlayer } from '../nav/shell-navigation.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import { Icon, ICON_COLORS } from '../ui/Icon.js'
 import './ShellLayout.css'
@@ -26,6 +27,10 @@ export function ShellLayout() {
   const pathname = useRouterState({ select: s => s.location.pathname })
   const pluginTabsQuery = usePluginTabs()
   const pluginTabs = pluginTabsQuery.data ?? []
+
+  // Written during render, matching how `LibraryPage` records its search — the
+  // shell re-renders on every navigation, so there is nothing an effect would add.
+  setLastShellLocation(pathname)
 
   const renderNavItems = () => {
     const items = NAV_DESTINATIONS.map(dest => {
@@ -99,8 +104,10 @@ export function ShellLayout() {
         </view>
 
         {/* Mini-player sits above the bottom bar (narrow) / at the foot of the
-            content column (wide). Renders only when a song is loaded. */}
-        <MiniPlayer />
+            content column (wide). Renders only when a song is loaded AND the route
+            is a content-browsing one — the visibility rule lives here rather than
+            inside MiniPlayer so the widget stays unaware of routing. */}
+        {showsMiniPlayer(pathname) ? <MiniPlayer /> : null}
 
         {isWide
           ? null

@@ -32,6 +32,27 @@ export class JSPluginApi {
     return parseJSPluginListResponse(res.data)
   }
 
+  /**
+   * `GET /jsplugin/{entryPath}/static/{path}` as **text**, for SVG icon markup.
+   *
+   * `parseJson: false` (same as `SettingsApi.exportLogs`) keeps the body raw. The
+   * markup is fetched here rather than handed to `<svg src>` because the native SVG
+   * element cannot fetch a URL unless the Android host registers a
+   * `GenericResourceFetcher`, which this host does not — on device it logs
+   * `getGenericResourceFetcher is null, svg fetch src failed!` and renders nothing.
+   * `<svg content>` needs no host support and is the path the built-in icons use.
+   *
+   * Despite swagger declaring this endpoint auth-free, it answers 401 without a
+   * token — so it goes through the authenticated client.
+   */
+  async getStaticText(entryPath: string, path: string): Promise<string> {
+    const res = await this.client.get<string>(
+      `${apiPrefix}/jsplugin/${entryPath}/static/${path}`,
+      { parseJson: false },
+    )
+    return typeof res.data === 'string' ? res.data : ''
+  }
+
   async getPlugin(id: number): Promise<JSPlugin> {
     const res = await this.client.get<unknown>(`${apiPrefix}/jsplugins/${id}`)
     const data = res.data as Record<string, unknown> | undefined

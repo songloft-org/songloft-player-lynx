@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { IconName } from '../../../shared/ui/icons.js'
+import { writeDefaultPlayMode } from '../../settings/data/settings-prefs.js'
 import { hasNext, hasPrev, usePlayerStore } from '../store/index.js'
 import type { PlayMode } from '../domain/play-mode.js'
 
@@ -38,7 +39,14 @@ export function PlayControls() {
     <view className='player-controls'>
       <view
         className='player-controls__btn player-controls__btn--mode'
-        bindtap={() => usePlayerStore.getState().cyclePlayMode()}
+        // Persist the new mode as the default. This toggle used to only change the
+        // in-memory store, with persistence owned by a Settings row that has since
+        // been removed — without this the pref `src/index.tsx` restores at startup
+        // would never be written and the mode would reset every launch.
+        bindtap={() => {
+          usePlayerStore.getState().cyclePlayMode()
+          void writeDefaultPlayMode(usePlayerStore.getState().playMode)
+        }}
       >
         <view className='player-controls__mode-glyph'>
           <Icon name={MODE_ICON[playMode]} size={20} color={ICON_COLORS.content2} />

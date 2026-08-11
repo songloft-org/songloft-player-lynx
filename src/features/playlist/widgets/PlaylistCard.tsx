@@ -31,7 +31,11 @@ export function PlaylistCard({ playlist, onTap, isPlaying }: PlaylistCardProps) 
     >
       <view className='playlist-card__cover-wrap'>
         {cover
-          ? <image className='playlist-card__cover' src={cover} />
+          // `mode` is Lynx's fitting control (there is no `object-fit` CSS property
+          // on `<image>`). Without it the default `scaleToFill` stretches covers to
+          // the box — visible as squashed art now that the home strip uses a square.
+          // `aspectFill` == Flutter's `BoxFit.cover`, which the reference card used.
+          ? <image className='playlist-card__cover' mode='aspectFill' src={cover} />
           : (
             <view className='playlist-card__cover playlist-card__cover--empty'>
               <Icon name='music' size={28} color={ICON_COLORS.contentMuted} />

@@ -95,6 +95,26 @@ vi.mock('../features/home/data/home-query.js', () => ({
   }),
 }))
 
+// Batch 20: the home stats panel reads `/songs/stats` through `useQuery`, which
+// needs a live QueryClient this env does not provide — left real it throws inside
+// render and corrupts the shared snapshot tree for every later test in the file.
+vi.mock('../features/home/data/home-stats-query.js', () => ({
+  useLibraryStatsQuery: () => ({
+    data: {
+      totalSongs: 60,
+      localSongs: 0,
+      remoteSongs: 60,
+      radioSongs: 0,
+      artistCount: 27,
+      albumCount: 58,
+      genreCount: 0,
+      totalDuration: 9643,
+      totalFileSize: 0,
+    },
+    refetch: () => {},
+  }),
+}))
+
 vi.mock('../features/jsplugin/widgets/PluginGrid.js', () => ({
   PluginGrid: () => null,
 }))

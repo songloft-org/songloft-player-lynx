@@ -4,6 +4,7 @@ import '@testing-library/jest-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { act, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 
+import { parseLibraryStats } from '../../../models/library-stats.js'
 import type { Playlist } from '../../../models/playlist.js'
 
 /**
@@ -13,15 +14,16 @@ import type { Playlist } from '../../../models/playlist.js'
  * via `useSyncExternalStore` (crashes the ReactLynx Vitest snapshot tree + needs
  * a live QueryClient), so `useHomePlaylists` is a `vi.fn()` returning a static
  * infinite-query shape — dispatched per `type` so the two sections get distinct
- * data. `useNavigate` is stubbed. The real pure selectors (`homeSectionItems` /
- * `homeSectionTotal` / `homeStats`), `HomeSection`, `PlaylistCard` and
- * `StatsStrip` all run against the injected data; assertions check the rendered
- * structure (greeting, section titles, card names, stats, states), not fixtures
- * echoed back.
+ * data. The library-stats query is mocked for the same reason (there is no
+ * `QueryClientProvider` in these tests). `useNavigate` is stubbed. The real
+ * `homeSectionItems` selector, `HomeSection`, `PlaylistCard` and `StatsStrip` all
+ * run against the injected data; assertions check the rendered structure
+ * (greeting, section titles, card names, stats, states), not fixtures echoed back.
  */
-const { normalHook, radioHook } = vi.hoisted(() => ({
+const { normalHook, radioHook, statsHook } = vi.hoisted(() => ({
   normalHook: vi.fn(),
   radioHook: vi.fn(),
+  statsHook: vi.fn(),
 }))
 
 vi.mock('react-i18next', async () =>
@@ -40,6 +42,10 @@ vi.mock('../../jsplugin/widgets/PluginGrid.js', () => ({
 
 vi.mock('../data/home-query.js', () => ({
   useHomePlaylists: (type: string) => (type === 'radio' ? radioHook() : normalHook()),
+}))
+
+vi.mock('../data/home-stats-query.js', () => ({
+  useLibraryStatsQuery: () => statsHook(),
 }))
 
 const { HomePage } = await import('../pages/HomePage.js')
@@ -77,9 +83,15 @@ function result(
   }
 }
 
+/** A `/songs/stats` payload, run through the real schema so the shape cannot drift. */
+function stats(over: Record<string, number> = {}) {
+  return { data: parseLibraryStats(over), refetch: vi.fn() }
+}
+
 beforeEach(() => {
   normalHook.mockReturnValue(result([{ playlists: [], total: 0 }]))
   radioHook.mockReturnValue(result([{ playlists: [], total: 0 }]))
+  statsHook.mockReturnValue(stats())
 })
 
 afterEach(() => vi.clearAllMocks())
@@ -113,13 +125,59 @@ test('renders greeting, both sections, cards and the stats strip', async () => {
   expect(queryByText('Jazz Radio')).toBeInTheDocument()
   // Each section has its own "View all".
   expect(getAllByText('View all')).toHaveLength(2)
-  // Stats strip labels + backend totals (10 normal, 4 radio → 14 total).
-  expect(queryByText('Playlists')).toBeInTheDocument()
-  expect(queryByText('Radios')).toBeInTheDocument()
-  expect(queryByText('Total')).toBeInTheDocument()
-  expect(queryByText('10')).toBeInTheDocument()
-  expect(queryByText('4')).toBeInTheDocument()
-  expect(queryByText('14')).toBeInTheDocument()
+  expect(queryByTestId('home-stats')).toBeInTheDocument()
+})
+
+/**
+ * The stats panel only renders alongside the sections — an empty library shows the
+ * "no playlists yet" state instead — so these give the normal section one card.
+ */
+function withPlaylists() {
+  normalHook.mockReturnValue(result([{ playlists: [makePlaylist(1)], total: 1 }]))
+}
+
+test('the stats panel renders the library summary from /songs/stats', async () => {
+  withPlaylists()
+  // The live backend's actual shape (60 remote songs, 9643s, no local files).
+  statsHook.mockReturnValue(stats({
+    total_songs: 60,
+    local_songs: 0,
+    remote_songs: 60,
+    radio_songs: 0,
+    artist_count: 27,
+    album_count: 58,
+    genre_count: 0,
+    total_duration: 9643,
+    total_file_size: 0,
+  }))
+  const { queryByText } = await renderPage()
+
+  // Queried by class, not by text: `total_songs` and `remote_songs` are both 60
+  // here, so a bare text query cannot tell the headline from a cell.
+  const headline = elementTree.root!.querySelector('.home-stats__headline-value')
+  expect(headline?.textContent).toBe('60')
+  expect(queryByText('songs in library')).toBeInTheDocument()
+  // 9643s → 2h 40m, coarse rather than the hh:mm:ss the library song rows use.
+  expect(queryByText('2 h 40 min')).toBeInTheDocument()
+  expect(queryByText('27')).toBeInTheDocument()
+  expect(queryByText('58')).toBeInTheDocument()
+  // An all-remote library reports 0 bytes; "0 B" must not be rendered.
+  expect(queryByText('0 B on disk')).not.toBeInTheDocument()
+})
+
+test('the stats panel shows total size only when the library has local files', async () => {
+  withPlaylists()
+  statsHook.mockReturnValue(stats({ total_songs: 3, total_file_size: 1024 * 1024 * 12 }))
+  const { queryByText } = await renderPage()
+  expect(queryByText('12 MB on disk')).toBeInTheDocument()
+})
+
+test('a failed stats read degrades to zeroes instead of hiding the panel', async () => {
+  withPlaylists()
+  statsHook.mockReturnValue({ data: undefined, refetch: vi.fn() })
+  const { queryByTestId, queryByText } = await renderPage()
+  expect(queryByTestId('home-stats')).toBeInTheDocument()
+  expect(queryByText('songs in library')).toBeInTheDocument()
 })
 
 test('shows the first-load state while both sections load', async () => {

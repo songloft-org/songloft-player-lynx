@@ -6,17 +6,13 @@ import { useTranslation } from 'react-i18next'
 import { appConfig } from '../../../core/config/app-config.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { getAppTheme, resolveTheme } from '../../../shared/theme/theme-model.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import { handlePluginHostCall, type PluginHostContext } from '../domain/plugin-host-dispatch.js'
 import { getJSPluginApi } from '../api/index.js'
+import { usePluginsQuery } from '../data/jsplugin-query.js'
 import type { Song } from '../../../models/song.js'
 import './PluginWebViewPage.css'
-
-function resolveTheme(): string {
-  const root = typeof document !== 'undefined' ? document.documentElement : null
-  if (root?.classList.contains('theme-light')) return 'light'
-  return 'dark'
-}
 
 async function getAccessToken(): Promise<string> {
   try {
@@ -52,6 +48,15 @@ export function PluginWebViewPage() {
   const params = useParams({ strict: false }) as { entryPath?: string }
   const entryPath = params.entryPath ?? ''
 
+  // The route only carries `entryPath`, which is a *routing prefix* ("myplugin") —
+  // showing it as the title was a porting slip (the Flutter page titled itself with
+  // the plugin's display name). `displayName` rather than the raw `name`: the
+  // backend may omit `name`, and `displayName` is the null-safe wrapper this repo
+  // uses as the user-visible label everywhere else (grid, manager, tab config).
+  // Falls back to `entryPath` so the title never flashes empty while the list loads.
+  const { data: pluginList } = usePluginsQuery()
+  const title = pluginList?.plugins.find((p) => p.entryPath === entryPath)?.displayName || entryPath
+
   const [src, setSrc] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -61,7 +66,10 @@ export function PluginWebViewPage() {
     void (async () => {
       try {
         const token = await getAccessToken()
-        const theme = resolveTheme()
+        // Read the app's own theme state. This used to sniff `document.documentElement`
+        // for `theme-light`, and Lynx has no DOM — the guard kept it from crashing but
+        // pinned every plugin to `theme=dark`, even with light mode selected.
+        const theme = resolveTheme(getAppTheme())
         const base = `${appConfig.baseUrl}${appConfig.basePath}`
         const url = `${base}/api/v1/jsplugin/${entryPath}/?embed&theme=${theme}&access_token=${token}`
         setSrc(url)
@@ -114,7 +122,9 @@ export function PluginWebViewPage() {
           <view className='plugin-webview__back' bindtap={goBack}>
             <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
           </view>
-          <text className='plugin-webview__title'>{t('jsplugin.loading')}</text>
+          <text className='plugin-webview__title' data-testid='plugin-webview-title'>
+            {title || t('jsplugin.loading')}
+          </text>
         </view>
         <view className='plugin-webview__state'>
           <text className='plugin-webview__state-text'>{t('common.loading')}</text>
@@ -130,7 +140,7 @@ export function PluginWebViewPage() {
           <view className='plugin-webview__back' bindtap={goBack}>
             <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
           </view>
-          <text className='plugin-webview__title'>{entryPath}</text>
+          <text className='plugin-webview__title' data-testid='plugin-webview-title'>{title}</text>
         </view>
         <view className='plugin-webview__state'>
           <text className='plugin-webview__state-text plugin-webview__state-text--error'>{error}</text>
@@ -145,7 +155,7 @@ export function PluginWebViewPage() {
         <view className='plugin-webview__back' bindtap={goBack} data-testid='plugin-webview-back'>
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
-        <text className='plugin-webview__title'>{entryPath}</text>
+        <text className='plugin-webview__title' data-testid='plugin-webview-title'>{title}</text>
       </view>
       <webview
         ref={webviewRef}

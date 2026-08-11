@@ -2,12 +2,7 @@ import { describe, expect, test } from 'vitest'
 
 import type { PlaylistListResponse } from '../../../models/playlist.js'
 import type { Playlist } from '../../../models/playlist.js'
-import {
-  HOME_SECTION_LIMIT,
-  homeSectionItems,
-  homeSectionTotal,
-  homeStats,
-} from '../data/home-select.js'
+import { HOME_SECTION_LIMIT, homeSectionItems } from '../data/home-select.js'
 
 function pl(id: number): Playlist {
   return {
@@ -55,23 +50,6 @@ describe('homeSectionItems', () => {
   })
 })
 
-describe('homeSectionTotal', () => {
-  test('is 0 for empty/undefined pages', () => {
-    expect(homeSectionTotal(undefined)).toBe(0)
-    expect(homeSectionTotal([])).toBe(0)
-  })
-
-  test('uses the backend total (not the truncated preview length)', () => {
-    expect(homeSectionTotal([page([1, 2], 137)])).toBe(137)
-  })
-
-  test('falls back to the loaded length when total is absent/zero', () => {
-    expect(homeSectionTotal([page([1, 2, 3], 0)])).toBe(3)
-  })
-})
-
-describe('homeStats', () => {
-  test('sums the two section totals', () => {
-    expect(homeStats(10, 4)).toEqual({ normal: 10, radio: 4, total: 14 })
-  })
-})
+// `homeSectionTotal` / `homeStats` are gone: the stats panel reads `/songs/stats`
+// rather than being summed from playlist counts. Their replacements are covered by
+// `stats-format.test.ts` (formatting) and `home-page.test.tsx` (rendering).

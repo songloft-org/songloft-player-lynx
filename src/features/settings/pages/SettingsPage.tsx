@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { appConfig } from '../../../core/config/app-config.js'
-import { clientVersion, type PlayMode } from '../../../core/config/constants.js'
+import { clientVersion } from '../../../core/config/constants.js'
 import {
   APP_LANGUAGE_OPTIONS,
   type AppLanguage,
@@ -22,20 +22,11 @@ import {
 } from '../../../shared/theme/theme-model.js'
 // Vanilla (non-subscribing) store reads only — same pattern as HomePage /
 // LibraryPage — so the settings graph never mounts a zustand subscription
-// (which crashes the ReactLynx Vitest snapshot tree) and never pulls the player
-// barrel + its lynx-ui gesture leaves.
+// (which crashes the ReactLynx Vitest snapshot tree).
 import { useAuthStore } from '../../auth/store/index.js'
-import { usePlayerStore } from '../../player/store/player-store.js'
 import { getSettingsApi } from '../api/index.js'
 import { LOG_LEVELS, coerceLogLevel, logLevelLabelKey, type LogLevel } from '../domain/log-level.js'
-import {
-  PLAY_MODE_OPTIONS,
-  playModeDescriptionKey,
-  playModeIcon,
-  playModeLabelKey,
-  serverDisplay,
-} from '../domain/settings-model.js'
-import { readDefaultPlayMode, writeDefaultPlayMode } from '../data/settings-prefs.js'
+import { serverDisplay } from '../domain/settings-model.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import './SettingsPage.css'
@@ -45,8 +36,6 @@ import './SettingsPage.css'
  * the batch-1 placeholder.
  *
  * Ported as the **self-contained** slice of the Flutter settings surface:
- * - **Playback** — default play mode (persisted to prefs + applied live to the
- *   batch-5 player store);
  * - **Connection** (standalone only) — view the server address, open the server
  *   sub-page to switch it;
  * - **Appearance** — theme (system/light/dark), persisted + applied live via
@@ -59,6 +48,11 @@ import './SettingsPage.css'
  * downloads / licenses / language) depend on capabilities not yet built and are
  * surfaced as a disabled "Coming later" section; see PROGRESS for the phase each
  * is deferred to.
+ *
+ * There is deliberately **no Playback section**: play mode is set from the player's
+ * own mode toggle, which is where you are when you care about it, and duplicating
+ * it here was reported as clutter. `PlayControls` persists the choice, so the
+ * `default_play_mode` pref this page used to own still round-trips.
  */
 /** i18n key for a language option's label. */
 function languageLabelKey(lang: AppLanguage): string {
@@ -88,10 +82,6 @@ export function SettingsPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
-  // Default play mode: initialise from the live player state (non-subscribing),
-  // then override from the persisted pref once it resolves. Selecting an option
-  // both persists it AND applies it to the live player (immediate effect).
-  const [mode, setMode] = useState<PlayMode>(() => usePlayerStore.getState().playMode)
   const [confirmLogout, setConfirmLogout] = useState(false)
   // Persisted language choice ('system' until the pref resolves). Selecting an
   // option applies it to i18next live (re-renders the whole tree) + persists it.
@@ -111,9 +101,6 @@ export function SettingsPage() {
 
   useEffect(() => {
     let cancelled = false
-    void readDefaultPlayMode().then((saved) => {
-      if (!cancelled) setMode(saved)
-    })
     void (async () => {
       try {
         const saved = coerceAppLanguage(
@@ -146,12 +133,6 @@ export function SettingsPage() {
       cancelled = true
     }
   }, [])
-
-  const selectMode = (next: PlayMode) => {
-    setMode(next)
-    usePlayerStore.getState().setPlayMode(next)
-    void writeDefaultPlayMode(next)
-  }
 
   const selectLanguage = (next: AppLanguage) => {
     setLanguage(next)
@@ -202,21 +183,6 @@ export function SettingsPage() {
 
       <scroll-view className='settings__scroll' scroll-y>
         <view className='settings__content'>
-          <SettingsSection title={t('settings.playback')} icon='play'>
-            {PLAY_MODE_OPTIONS.map((option) => (
-              <SettingsRow
-                key={option}
-                icon={playModeIcon(option)}
-                title={t(playModeLabelKey(option))}
-                subtitle={t(playModeDescriptionKey(option))}
-                selected={option === mode}
-                trailingIcon={option === mode ? 'check' : undefined}
-                onTap={() => selectMode(option)}
-                testId={`play-mode-${option}`}
-              />
-            ))}
-          </SettingsSection>
-
           <SettingsSection title={t('settings.musicLibraryScan')} icon='library'>
             <SettingsRow
               icon='search'

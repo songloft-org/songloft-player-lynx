@@ -1,6 +1,7 @@
 import { apiPrefix } from '../../../core/config/app-config.js'
 import { defaultPageSize } from '../../../core/config/constants.js'
 import type { HttpClient } from '../../../core/network/http-client.js'
+import { parseLibraryStats, type LibraryStats } from '../../../models/library-stats.js'
 import {
   parseSong,
   parseSongFacetResponse,
@@ -17,8 +18,8 @@ import {
  * `SongListResponse` / `SongFacetResponse`).
  *
  * Only the read endpoints the Lynx library batch needs are ported here
- * (`/songs`, `/songs/facets`, `/songs/ids`, `/songs/{id}`); the mutating
- * endpoints (create/update/delete/played/clean) are deferred to later batches.
+ * (`/songs`, `/songs/facets`, `/songs/ids`, `/songs/{id}`, `/songs/stats`); the
+ * mutating endpoints (create/update/delete/played/clean) are deferred.
  *
  * The query-string builders are pure + exported so the exact param wiring
  * (which filters are included, how empties are pruned, how pagination maps to
@@ -163,6 +164,12 @@ export class SongsApi {
       query: buildFacetsQuery(field, params),
     })
     return parseSongFacetResponse(res.data)
+  }
+
+  /** `GET /songs/stats` → library totals (song counts, duration, size, facet counts). */
+  async getLibraryStats(): Promise<LibraryStats> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/songs/stats`)
+    return parseLibraryStats(res.data)
   }
 
   /** `GET /songs/ids` (same filters as `/songs`) → `{ ids, total }`. */

@@ -1,14 +1,7 @@
 export { SettingsPage } from './pages/SettingsPage.js'
 export { ServerSettingsPage } from './pages/ServerSettingsPage.js'
 export { LogsPage } from './pages/LogsPage.js'
-export {
-  PLAY_MODE_OPTIONS,
-  playModeLabelKey,
-  playModeDescriptionKey,
-  playModeIcon,
-  coercePlayMode,
-  serverDisplay,
-} from './domain/settings-model.js'
+export { coercePlayMode, serverDisplay } from './domain/settings-model.js'
 export type { ServerDisplayLabels } from './domain/settings-model.js'
 export {
   LOG_LEVELS,

@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom'
 import { afterEach, expect, test, vi } from 'vitest'
-import { act, getQueriesForElement, render } from '@lynx-js/react/testing-library'
+import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 
 /**
  * FullPlayerPage render smoke. Same pattern as the library/login tests: the
@@ -10,10 +10,20 @@ import { act, getQueriesForElement, render } from '@lynx-js/react/testing-librar
  * render without a RouterProvider. Assertions check the real rendered structure
  * (title, artist, "Now Playing", play glyph, formatted times), not fixtures.
  */
+const { navigateSpy, writePrefSpy } = vi.hoisted(() => ({
+  navigateSpy: vi.fn(),
+  writePrefSpy: vi.fn(),
+}))
+
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
-vi.mock('@tanstack/react-router', () => ({ useNavigate: () => () => {} }))
+vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigateSpy }))
+// Persisting the default play mode moved here from the (now removed) Settings →
+// Playback section, so this is where the round-trip is asserted.
+vi.mock('../../settings/data/settings-prefs.js', () => ({
+  writeDefaultPlayMode: writePrefSpy,
+}))
 vi.mock('@lynx-js/lynx-ui-slider', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSlider(),
 )
@@ -76,4 +86,30 @@ test('renders formatted current + total time from the store (30s / 200s)', async
   const { queryByText } = await renderPage()
   expect(queryByText('00:30')).toBeInTheDocument()
   expect(queryByText('03:20')).toBeInTheDocument()
+})
+
+test('cycling the play mode also persists it as the default', async () => {
+  const { queryByTestId } = await renderPage()
+
+  await act(async () => {
+    fireEvent.tap(queryByTestId('icon-order')!.parentElement!.parentElement!)
+  })
+
+  // The store mock leaves `playMode` at 'order', so that is what gets written —
+  // the point is that a write happens at all. Before this moved out of Settings,
+  // cycling the mode only touched memory and the pref never changed.
+  expect(writePrefSpy).toHaveBeenCalledWith('order')
+})
+
+test('closing returns to the last shell tab rather than always home', async () => {
+  const { setLastShellLocation } = await import('../../../shared/nav/shell-navigation.js')
+  setLastShellLocation('/library')
+  const { queryByTestId } = await renderPage()
+
+  await act(async () => {
+    fireEvent.tap(queryByTestId('full-player-close')!)
+  })
+
+  // `/library` also restores its remembered sub-tab, hence the `search` argument.
+  expect(navigateSpy).toHaveBeenCalledWith({ to: '/library', search: {} })
 })

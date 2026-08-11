@@ -39,6 +39,10 @@ Lynx 不是浏览器：**无 `window` / `document` / `self`**，无 DOM，双线
 - lynx-ui **按组件包导入**（如 `@lynx-js/lynx-ui-button`），勿用桶入口 `@lynx-js/lynx-ui`（桶入口会 eager 加载全部子包、污染测试环境）。
 - **lynx-ui 的 compound 组件自身不带样式**：`Switch`/`SwitchTrack`/`SwitchThumb` 这类只把 `ui-checked`/`ui-active`/`ui-disabled` 追加到你给的 className 上，**「选中/按下」的视觉完全由使用方样式表提供**——漏写 `.x.ui-checked` 规则，开关就永远长一个样（批19 真机 bug）。这类组件**一律走已封装好状态样式的 `src/shared/ui/AppSwitch.tsx`，不要再手搭 compound 树**（三处手抄导致第三份抄漏，`app-switch-css.test.ts` 现在会拦第四份）。
 - **测试 double 不许抹掉被测状态**：`_render-mocks.tsx` 里的 Switch stub 原先丢掉 `checked`，ON/OFF 渲染成同一棵树，于是上面那个 bug 一路绿灯上真机。mock 原生叶子时**必须保留「状态 → className/属性」这条映射**，否则渲染断言只是在验证 mock 自己。
+- **带连字符的 JSX 属性完全没有类型保护**：TypeScript 对含 `-` 的 JSX 属性名一律豁免未知属性检查，而 Lynx 的元素属性几乎全是这种形状。所以 `scroll-x`（**已废弃**，正确写法 `scroll-orientation="horizontal"`）、拼错的 `enable-nested-scrol` 都能过 `tsc` 和 build，只在真机上静默失效——与 CSS 侧的 `placeholder-color` 同一类陷阱。写这类属性时**必须配一条产物 grep 测试**证明它真进了模板（范例：`home-section-scroll.test.ts`）。
+- **`<refresh>` 吞掉横向手势**：`<refresh>` 内的横向 `scroll-view` 在 Android 上**完全收不到拖拽**（`bindscroll` 不触发），而 `getScrollInfo` 的 `scrollRange` 和 `scrollTo` 都正常——**测量对、程序滚动对、手指无效**，极易误判成 CSS 问题。`<refresh>` 没有手势过滤属性，唯一解法是手指按在横向区时把 `enable-refresh` 置 false（范例：`HomeSection` 的 `onStripTouch` → `HomePage`）。
+- **横向 `scroll-view` 的内容行必须 `width: max-content`**：否则它被按视口宽度布局、子元素溢出被裁，滚动时平移的正是这一行——于是 `scrollRange` 算得对但**视觉毫不动**。同时 scroll-view 自身只负责尺寸（显式 `width`+`height`），`display:flex` 要放在内层 view（本仓所有可用的 `scroll-y` 都是这个分工）。
+- **`<svg src={url}>` 远程加载在本宿主不可用**：URL 加载由宿主注册的 `GenericResourceFetcher` 负责，`android/` 宿主没注册，真机 logcat 报 `getGenericResourceFetcher is null, svg fetch src failed!` 且**无 `binderror` 可挂兜底**。远程 SVG 一律「用已鉴权 client 取文本（`parseJson: false`）→ `<svg content>`」，并校验响应确实以 `<svg` 开头（插件静态端点对未知路径会 SPA fallback 成 200 + HTML）。范例：`usePluginIconQuery`。
 
 ## 4. 分批工作流
 
@@ -54,7 +58,24 @@ pnpm run build          # rspeedy 构建（内含 type checker，是类型的真
 pnpm exec tsc -b        # 类型检查（必须带 -b，见下）
 pnpm test               # vitest run
 ```
-真机目测：`pnpm run dev` 起 dev server + 二维码，用 **LynxExplorer** 扫码验证。
+真机目测有两条路：
+- **Android 模拟器/真机（推荐，批20 起可用）**——本机已装 Android SDK，可直接出包并装设备：
+  ```
+  export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
+  pnpm run android:install      # build + 拷 bundle 进 assets + gradlew installDebug
+  adb reverse tcp:58091 tcp:58091   # 让设备的 localhost 指向宿主机后端
+  adb shell am start -n org.songloft.lynx/.MainActivity
+  adb logcat -s lynx:V LynxUISVG:E AndroidRuntime:E   # 真机报错都在这
+  ```
+  首轮 gradle 要下载依赖（~8 分钟），之后增量安装约 **4 秒**，可以快速迭代。
+  用 `adb exec-out screencap -p > /tmp/x.png` 截图核对，`adb shell input tap/swipe` 驱动交互；
+  判断「有没有变化」用 PIL 比对像素 bbox，比肉眼看截图可靠。
+  **这条路解除了 PROGRESS 里长期的「Kotlin 只能靠 CI 验」限制**——原生改动现在能本机编译+运行。
+- LynxExplorer 扫码：`pnpm run dev` 起 dev server + 二维码。改前端时热更更快，但验不了原生。
+
+> ⚠️ **`adb shell input swipe` 能驱动纵向滚动，但驱不动被 `<refresh>` 包裹的横向 scroll-view**
+> ——那不是模拟器的锅，是真实缺陷（见 §3）。要区分「手势没到」和「元素不能滚」，
+> 用 `getScrollInfo` 读 `scrollRange` + `scrollTo` 主动滚一次：两者正常而手指无效，就是手势被拦。
 
 > ⚠️ **类型检查必须用 `tsc -b`，`tsc --noEmit` 是空跑。** 根 `tsconfig.json` 是
 > solution-style（`"files": []` + `references` 指向 `./src` 与 `./tsconfig.node.json`），

@@ -1,7 +1,8 @@
 # 进展与交接（PROGRESS）
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
-> **最后更新**：2026-08-11 · 最近完成（**批19b · 真机反馈修复**）：修掉「开关开/关在真机上完全无法区分」——lynx-ui `Switch` 自身不带样式、只把 `ui-checked` 追加到使用方 className 上，而三处手抄的 track CSS 里第三份漏了 `.ui-checked` 规则（也漏了 `flex-direction: row`）；根治办法是收敛出 `src/shared/ui/AppSwitch`（全 app 唯一一份开关样式）。**测试为何全绿**：Switch 的 mock 把 `checked` 整个丢了、ON/OFF 渲染成同一棵树——已改忠实版，并加两道反向验证过的闸（渲染层断言 `ui-checked` 落到 track + CSS 静态层断言 checked 规则存在且无第四份复制）。另清掉两条从未生效的样式（`text-transform` 无 Lynx 对应物故删除；`object-fit` 改用 `<image mode='aspectFit'>`），**构建警告归零**；并查明 `bug.md`「首页插件图标没显示」的根因是 7 个插件里 6 个图标是 `.svg` 而 Lynx `<image>` 原生路径不渲染 SVG（未修，留给那批）。**「扫描失败」不是客户端 bug**：后端（就跑在本机，cwd `/Users/hanxi/toy/songloft`）的 `music_path="music"` 指向不存在的 `.../songloft/music`；建该目录后扫描链路当场走通（`completed`，导入 0 首——本机确实没有音频文件）。顺带把 `GET /scan/directories` 从「未联调」转为已验证（真实响应 `{"directories": null, "root": "music"}`，空目录给 `null` 不是 `[]`）。build 1374.3 kB / `tsc -b` / **528 vitest** 全绿。
+> **最后更新**：2026-08-11 · 最近完成（**批20 · bug.md 清理第一轮 · 6 条**）：**本批最大的变化是验证能力**——本机装上 Android SDK 后可 `gradlew installDebug` 直接装模拟器（API 33），**解除了本文件里长期的「Kotlin 只能靠 CI 验」限制**；首轮构建 8 分钟，之后增量安装 **4 秒**。6 条全部在模拟器上截图核对，不是「本机绿了就算」。修掉：① 首页横向滚动在 Android 上滑不动（**四个叠加缺陷**，最隐蔽的两个是「内容行缺 `width:max-content`」和「`<refresh>` 直接吞掉横向手势」——`getScrollInfo` 报 `scrollRange:264`、`scrollTo` 能改 `scrollX`，手指却全程无效，极易误判成 CSS 问题）+ 卡片改竖矩形（120×120 方形封面，`mode='aspectFill'` 修掉封面被拉扁）；② 插件图标不显示——`<svg src={url}>` **在本宿主根本不可用**（logcat: `getGenericResourceFetcher is null`），改走「已鉴权 client 取文本 → `<svg content>`」；③ 全屏播放器关闭回上次 tab（新增 `shared/nav/shell-navigation.ts`，回 `/library` 还带记忆的子页签）+ MiniPlayer 路由白名单（设置/插件页不再显示）；④ 删掉设置页播放设置分组，**并把持久化搬到播放器的模式按钮**（否则 `default_play_mode` 再没人写——已验杀进程重启后仍是 Repeat one）；⑤ 首页统计真读 `GET /songs/stats`（此前是拿歌单列表 `total` 拼的，名不符实；新建 `models/library-stats.ts`，实测 `total_duration` 单位是**秒**、`total_file_size` 对全 remote 库为 0 故 0 时不显示）；⑥ 插件页标题用 `displayName` 而非路由前缀 `entryPath`（Flutter 原版本就如此，是移植遗漏）。**顺手修掉一个未被报告的缺陷**：`PluginWebViewPage` 用 `document.documentElement` 嗅探主题（Lynx 无 DOM，守卫让它不崩但把每个插件都钉死在 `theme=dark`）。**新发现 3 条**记入 `bug.md`（首页下拉刷新不触发——**已用对照实验证明非本批引入**；插件 tab 图标仍是内置 settings 图标；插件 WebView 内容空白）。clean build 1379.0 kB（**零警告**）/`tsc -b --force`/**549 vitest**（+21）全绿；三道新闸各做过反向验证。
+> **上一批**（**批19b · 真机反馈修复**）：修掉「开关开/关在真机上完全无法区分」——lynx-ui `Switch` 自身不带样式、只把 `ui-checked` 追加到使用方 className 上，而三处手抄的 track CSS 里第三份漏了 `.ui-checked` 规则（也漏了 `flex-direction: row`）；根治办法是收敛出 `src/shared/ui/AppSwitch`（全 app 唯一一份开关样式）。**测试为何全绿**：Switch 的 mock 把 `checked` 整个丢了、ON/OFF 渲染成同一棵树——已改忠实版，并加两道反向验证过的闸（渲染层断言 `ui-checked` 落到 track + CSS 静态层断言 checked 规则存在且无第四份复制）。另清掉两条从未生效的样式（`text-transform` 无 Lynx 对应物故删除；`object-fit` 改用 `<image mode='aspectFit'>`），**构建警告归零**；并查明 `bug.md`「首页插件图标没显示」的根因是 7 个插件里 6 个图标是 `.svg` 而 Lynx `<image>` 原生路径不渲染 SVG（未修，留给那批）。**「扫描失败」不是客户端 bug**：后端（就跑在本机，cwd `/Users/hanxi/toy/songloft`）的 `music_path="music"` 指向不存在的 `.../songloft/music`；建该目录后扫描链路当场走通（`completed`，导入 0 首——本机确实没有音频文件）。顺带把 `GET /scan/directories` 从「未联调」转为已验证（真实响应 `{"directories": null, "root": "music"}`，空目录给 `null` 不是 `[]`）。build 1374.3 kB / `tsc -b` / **528 vitest** 全绿。
 > **上一批**（**批19 · 音乐库运维 · 扫描**）：解掉「Lynx 客户端无法扫描音乐库」这个唯一「不做就用不起来」的缺口——新建 `src/features/library-ops/` feature + `/settings/library` 子页，交付扫描主链路（跳过已存在/重新导入 + 2s 进度轮询 + 5 个状态态 + 取消）、懒加载目录树选择器（指定目录扫描）、5 个后端扫描开关、元数据刷新（含自身轮询）。**修掉 3 个 Flutter 缺陷**（`'error'` vs `'failed'` 状态机断裂导致扫描区空白 / 扫完不刷歌曲缓存导致看不到新歌 / 进度百分比两套口径）。轮询走 TanStack Query 函数式 `refetchInterval`（已实测 query-core 的三处 clear 都有 `void 0` 守卫），并摘掉一处**隐藏依赖**——`refetchIntervalInBackground: true`，否则轮询是靠 `focusManager.isFocused()` 的 `document === undefined` fall-through 侥幸工作的。**测试抓到两个真 bug**：`z.coerce.boolean()` 把 `"false"` 变 `true`；zod v4 里 object 内裸 `z.unknown()` 缺 key 会抛，且被外层 `.catch([])` 吞成空数组（真机目录树会永远为空）。i18n 78 key × 2 语言全部从 ARB dump 挖出、非自撰。**顺手修掉**批18c 那个无效的暗色 Input 提示文字修复（`placeholder-color` 被 template encode 移除，须用 `-x-` 前缀）。build 1375.5 kB / tsc / **521 vitest**（+149）全绿。**上上批**（批17 · 插件模块）：对照 Flutter 参考源（`songloft-player/lib/features/settings/`）发现 `logLevelProvider` 其实是**后端设置**（`GET/PUT /api/v1/settings/log-level`，不是本地开关），`LogExportService` 是拉后端日志 + 本机 `FileLogger` 文件打包 zip + 系统分享面板（`share_plus`）。Lynx 版裁剪：新建 `SettingsApi`（`getLogLevel`/`setLogLevel`/`exportLogs`，镜像 `PlaylistApi` 用法）+ Settings 新增「诊断」分组（日志级别四选一，真调后端接口）+ `/settings/logs` 子页拉 `GET /api/v1/logs/export` 纯文本滚动展示（离线/后端不可达降级成错误提示）；不做 zip 打包/系统分享（Lynx 无原生分享模块，留给未来原生模块批），不做 `webDebugConsoleProvider`（Flutter Web 平台专属，与 Lynx 无关）。build 1221.1 kB / tsc / **372 vitest**（1 个 `use-debounce` 计时器 flake，隔离重跑 5/5 绿，与本批无关）全绿。**上一批**（批14 · 零散 UI 补完排查轮）：排查用户举的两个「零散 UI」候选后发现其实**已经实现**、只是文档过期未更——① 收藏歌单标识/置顶：`PlaylistCard` 对 `isBuiltIn` 早已叠心形徽标（Favorites/Radio-Favorites 后端 label 均含 `built_in`），批11 的 chevron 手动排序已可置顶任意歌单；② 首页问候语 i18n：`greeting.ts`/`resources.ts` 早已是 4 档×中英双语。真正补的一个缺口：`buildCoverUrl` 加 `_t=<updatedAt ms>` 缓存刷新参数。**顺手发现并修复**：docs/PROGRESS.md 里 4 处 U+FFFD 乱码字节其实是我上一批用 `edit_file` 改动其他段落时工具自己引入的（不是历史遗留），从 git 历史找回干净原文逐一还原。build 1212.3 kB / tsc / **358 vitest** 全绿。
 
 ## 总览
@@ -37,7 +38,8 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 18d | Android 修复（通知栏 `addSession()` / 正式图标与名称 / CI release 签名）| ✅ 完成（本机可验部分）| workflow YAML + Kotlin 结构自查 | ⏳ 待 CI 出新 APK 验通知栏真出现 |
 | 19 | **音乐库运维 · 扫描**（扫描主链路 + 目录树选择 + 5 个扫描开关 + 元数据刷新）| ✅ 完成 | clean build（1375.5 kB）/tsc/**521 vitest**（+149）全绿 | ⏳ **必须联后端真验**（本批唯一价值所在，见下）|
 | 19b | 真机反馈：开关开/关状态不可见（真 bug，已修）+ 构建警告归零（两条从未生效的样式）+ 「扫描失败」定位（后端 `music_path`，非客户端；建目录后链路走通）| ✅ 完成 | clean build（1374.3 kB，**警告归零**）/`tsc -b --force`/**528 vitest**（+4）全绿 | ✅ 开关状态已确认可见；⏳ 「真的导入歌曲」仍未验（该机无音频文件）|
-| 后续 | 批20 重复检测/指纹 → 批21 缓存管理 + 排除目录 → B3 iOS 宿主 + AVPlayer → Lynxtron 桌面 → 升级 ops → 下载/许可 → DLNA | ⛔ 未开始 | | |
+| 20 | **bug.md 清理第一轮**（首页横滚 + 卡片竖矩形 / 插件图标 SVG / 播放器返回 + MiniPlayer 白名单 / 删播放设置 / 统计走 `/songs/stats` / 插件页标题）+ **本机 Android SDK 打通** | ✅ 完成 | clean build（1379.0 kB，**零警告**）/`tsc -b --force`/**549 vitest**（+21）全绿 | ✅ **6 条全部模拟器截图验过**；⏳ 新发现 3 条已记 `bug.md`（下拉刷新不触发已证非本批引入）|
+| 后续 | 批21 外观/语言跟随系统（含 Android 原生） → 批22 通知栏按钮 → 批23 暗色对比度审计 → 重复检测/指纹 → 缓存管理 + 排除目录 → B3 iOS 宿主 + AVPlayer → Lynxtron 桌面 | ⛔ 未开始 | | |
 
 ## 已交付明细
 
@@ -330,6 +332,85 @@ curl -X PUT "$BASE/api/v1/settings/music-path" -H "Authorization: Bearer $TOKEN"
 **顺带查明 `bug.md`「首页插件的图标没有正常显示出来」的根因**（本次未修，留给 bug.md 那批）：后端 `GET /jsplugins` 返回的 7 个插件里 **6 个 `icon` 是 `.svg`**（`icon.e24fa48a.svg` 等），而 Lynx 文档明确写 **`<image>` 在 Android/iOS/Harmony 原生路径下不负责 SVG 渲染，SVG 要用 `<svg>`**。所以那些图标是根本没渲染，不是尺寸/裁剪问题——`mode` 修好也只对那 1 个 `.png` 有效。修法需要按扩展名分流到 `<svg>`（`shared/ui/Icon.tsx` 已有 `<svg>` 用法可参考），并确认 `<svg>` 能否吃远端 URL。
 
 - **验收**：`pnpm run build` clean（**1374.3 kB**，**构建警告已清零**）✓ / `pnpm exec tsc -b --force` ✓ / `pnpm test` **528/528**（58 文件，+4）✓。真机已确认开关开/关可区分（截图：`扫描后自动创建歌单` = 紫色轨道 + thumb 靠右，与后端 `enabled:true` 一致）。
+
+### 批20 · bug.md 清理第一轮（6 条）+ 本机 Android SDK 打通
+
+#### 0. 验证能力：本机现在能出包并装模拟器
+
+此前本文件多处写着「本机无 Android SDK，不能 `assembleDebug`」，Kotlin 侧从批B1 起**只在 CI 编译过**，真机行为从未由 agent 验证。本批装了 SDK（`brew install --cask android-commandlinetools` + `sdkmanager "platforms;android-34" "build-tools;34.0.0"`，`ANDROID_HOME=/opt/homebrew/share/android-commandlinetools`，`android/local.properties` 已在 `.gitignore`）。
+
+- 首轮 `assembleDebug` 7m45s（下 Gradle 8.7 + 全部依赖），**之后 `pnpm run android:install` 增量 4 秒**，可快速迭代
+- 后端连通用 `adb reverse tcp:58091 tcp:58091`，不必改客户端里的 API 地址
+- 交互用 `adb shell input tap/swipe`，核对用 `adb exec-out screencap -p` + PIL 比对像素 bbox（比肉眼看截图可靠——本批多次靠 bbox 判定「到底动了没有」）
+- 新增 `package.json` 脚本 `android:install`；顺手把 `typecheck` 从安慰剂 `tsc --noEmit` 改成 `tsc -b`（AGENTS §5 早已记录此事，脚本一直没改）
+
+#### 1. 首页横向滚动在 Android 上滑不动 —— 四个叠加缺陷
+
+批18b 那次提交是**纯标签替换**（`<view>` → `<scroll-view scroll-x>`），把原 `<view>` 的 flex 样式原地留在了 scroll-view 上。四个缺陷任一都足以让手势失效，逐个在模拟器上排除：
+
+| # | 缺陷 | 为什么本机测不到 |
+|---|---|---|
+| 1 | `display:flex`+`gap`+`padding` 压在 scroll-view 自身、无内层内容 view | 纯 CSS 语义，vitest 不布局 |
+| 2 | 用了**已废弃**的 `scroll-x`（正确是 `scroll-orientation="horizontal"`，默认值 `vertical`） | **带连字符的 JSX 属性 TS 一律不检查**，`tsc`/build 全静默 |
+| 3 | 内容行缺 `width: max-content` | 同上，且现象极具误导性（见下） |
+| 4 | **`<refresh>` 吞掉横向手势** | 只在真机手势下暴露 |
+
+**最值得记住的是诊断过程**：加临时 `getScrollInfo`/`scrollTo` 诊断后读到 `{"scrollRange":264,"scrollX":150}` —— 测量正确（264 = 内容 804px − 视口 540px，与卡片数吻合）、`scrollTo` 能改滚动位置、`bindscroll` 也确实会被 `scrollTo` 触发，**但视觉毫不位移、手指全程无效**。这排除了所有 CSS/布局猜测，把范围锁到「渲染平移」和「手势路由」两件事上：前者是缺陷 3（平移的是内容行，而它只有视口宽），后者是缺陷 4（把 `<refresh>` 从树里摘掉，滑动立刻恢复——像素 bbox 从 `None` 变成 `(0,133,540,291)`）。
+
+`<refresh>` 没有任何手势过滤属性（只有 `enable-refresh` 开关），所以最终解法是**握手**：`HomeSection` 的横向 scroll-view 用 `bindtouchstart/end/cancel` 告知 `HomePage`，后者把 `enable-refresh` 置 false/true。已验证两者可共存（横滚正常 + 非横滚区行为不变）。`enable-nested-scroll` 也一并加上（默认 false）；`force-can-scroll`/`android-preference-consume-gesture`/`consume-slide-event` 试过**均无效**，已移除，不留无用属性。
+
+**卡片形状**（用户确认的「竖矩形」）：120×120 方形封面 + 48px 两行文字，用首页侧后代选择器覆盖基类的 `height:96px`（不动 `PlaylistsView.css`，否则曲库三列宫格跟着变）。顺带给 `PlaylistCard` 的 `<image>` 补 `mode='aspectFill'`（= `BoxFit.cover`）——此前无 `mode`，默认 `scaleToFill` 把封面拉扁，曲库页同样受益。
+
+#### 2. 插件图标不显示 —— `<svg src>` 在本宿主不可用
+
+按扩展名分流是对的（6/7 是 `.svg`，`<image>` 全端不渲染 SVG），但**先试的 `<svg src={url}>` 白屏**，logcat 给出决定性答案：
+
+```
+E LynxUISVG: getGenericResourceFetcher is null, svg fetch src failed! http://…/icon.27a432e2.svg?access_token=…
+```
+
+即远程 URL 加载委托给**宿主注册的 `GenericResourceFetcher`**，`android/` 宿主没注册。同一份日志里 `SrSVGRenderEngine`/`setViewBox` 正常刷 —— 内置 Icon 的 `content` 路径是好的。故改为：`JSPluginApi.getStaticText()`（`parseJson:false`，同 `SettingsApi.exportLogs`）拉文本 → `usePluginIconQuery`（`staleTime: Infinity`，图标文件名带内容 hash）→ `<svg content>`。并校验响应确实以 `<svg`/`<?xml` 开头，因为该端点对未知路径会 **SPA fallback 成 200 + `index.html`**（不是 404）。
+
+**两处 swagger 是错的**，实测更正：该端点 description 写「无需认证」但**无 token 返回 401**；`produces` 写 `application/octet-stream` 但实际是 `image/svg+xml`。
+
+#### 3. 播放器关闭返回 + MiniPlayer 可见性
+
+新增 `src/shared/nav/shell-navigation.ts`：`getLastShellLocation`/`setLastShellLocation`（模块级、会话内，照抄 `last-library-search` 的形）+ 纯谓词 `showsMiniPlayer(pathname)`。
+
+- 只记 tab 根（`/` 与 `/library`），详情路由不更新 —— 从曲库进歌单再播放，关闭回曲库（用户心里所处的 tab），同时让类型收敛成字面量联合、`navigate()` 保持类型安全
+- 回 `/library` 时带上 `getLastLibrarySearch()`，子页签不被重置（已验：曲库 Songs → 播放器 → 关闭 → 回到 Songs）
+- MiniPlayer 白名单 `/`、`/library*`、`/playlists/*`，判定放在 `ShellLayout`（widget 保持对路由无知）。用**白名单而非黑名单**，这样新增设置子页不会意外继承小播放器
+
+#### 4. 删设置页播放设置（并避免一个回退）
+
+删掉 Playback 分组后 `writeDefaultPlayMode` 会失去唯一调用方，而播放器的 `cyclePlayMode` **只改内存**——直接删会导致播放模式不再被记住。故把持久化搬到 `PlayControls` 的模式按钮上。**已端到端验证**：切到 Repeat one → `am force-stop` → 重启登录 → 仍是 Repeat one。连带清掉真死代码（`PLAY_MODE_OPTIONS`/`playModeLabelKey`/`playModeDescriptionKey`/`playModeIcon` + 9 个 i18n key × 2 语言）；`coercePlayMode` 保留（pref 仍在往返）。
+
+#### 5. 首页统计改用 `/songs/stats`
+
+此前是 `homeStats(normalTotal, radioTotal)` —— 只有「歌单数/电台数/总计」，却长得像曲库统计。新建 `models/library-stats.ts`（9 字段）+ `home-stats-query.ts`（同时是测试 mock 缝）+ 重做面板（歌曲总数与总时长为主，本地/远程/电台与歌手/专辑/流派为次）。
+
+- query key 挂在 `libraryQueryKeys.stats()` = `['library','stats']`，**沾批19 扫描完成失效 `['library']` 的光**，扫完导入自动刷新统计
+- 单位是实测的：`total_duration` 是**秒**（60 首 9643s ≈ 160s/首），`total_file_size` 对全 remote 库是 0 → **0 时不显示**，避免渲染无意义的「0 B」
+- **测试抓到一个真缺陷**：顶层 `z.object()` 对 `null`/非对象**仍会抛**（`.catch()` 只作用于字段），已加 `z.preprocess` 归一化 —— AGENTS §2 的容错铁律此前只覆盖了字段级
+- 时长不复用 `library/data/format.ts` 的 `formatDuration`：那是 `hh:mm:ss`（9643 → `02:40:43`），读起来像时间戳；库总时长要的是粗粒度「2 h 40 min」
+
+#### 6. 插件页标题 + 一个未被报告的主题缺陷
+
+`PluginWebViewPage` 标题原样输出路由参数 `entryPath`（swagger 里它的语义就是「路由前缀」）。改用 `displayName`（**不是裸 `name`** —— 后端可能不给 `name`，`displayName` 是 `p.name ?? basename(file_path)` 的空安全包装，也是本仓其它 4 处插件 UI 的一致惯例）；fallback 保留 `entryPath` 避免标题闪空。Flutter 原版标题本就是 `displayName`，属移植遗漏。
+
+**顺手修掉**：同文件的 `resolveTheme()` 在嗅探 `document.documentElement`。Lynx 无 DOM，`typeof` 守卫让它不崩，但让每个插件 WebView 永远收到 `theme=dark`（即使选了浅色）。改为读 `theme-model` 的真实状态。
+
+#### 本批新增的闸（均反向验证过会红）
+
+- `home-section-scroll.test.ts`：源码层断言 `scroll-orientation`/`enable-nested-scroll`/三个 touch 回调/`enable-refresh` 绑定；CSS 层断言 scroll-view 只管尺寸（**不含** `display:flex`）、内容行有 `width:max-content`、卡片 `flex-shrink:0`、封面 120px；**产物层**断言属性真进模板且 `scroll-x` 零命中（连字符属性没有类型保护，产物是唯一证据）
+- `plugin-icon.test.ts`：`isSvgIcon` 分流（含 `svg-preview.png` 这种陷阱名）+ `getStaticText` 用 `parseJson:false`
+- `library-stats.test.ts`：真后端响应逐字段 + null/字符串/非对象容错
+- `stats-format.test.ts`：`splitDuration`（9643 → 2h40m）+ `formatBytes`
+- `full-player.test.tsx`：新增「切模式会持久化」与「关闭回上次 tab」两例（持久化搬家后，覆盖也得跟着搬）
+
+#### 验收
+
+`pnpm run build` clean **1379.0 kB / 零警告** ✓ · `pnpm exec tsc -b --force` ✓ · `pnpm test` **549/549**（62 文件，+21）✓ · 产物 grep 确认 `scroll-orientation`/`enable-nested-scroll` 入包、`scroll-x` 仅剩注释 ✓ · 模拟器 6 条逐条截图核对 ✓。
 
 ## 未完成 / 遗留事项（TODO & 风险）
 

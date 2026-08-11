@@ -1,38 +1,67 @@
 import { useTranslation } from 'react-i18next'
 
+import type { LibraryStats } from '../../../models/library-stats.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
-import type { IconName } from '../../../shared/ui/icons.js'
-import type { HomeStats } from '../data/home-select.js'
+import { formatBytes, splitDuration } from '../domain/stats-format.js'
 
 /**
- * Bottom stats strip, ported from the Flutter home `StatsStrip`: three compact
- * figures (playlists / radios / total) on a primary-tinted panel. Counts come
- * from the backend `total` of each section (see `homeStats`), so they reflect
- * the whole library rather than the truncated section previews.
+ * Bottom library-summary panel, fed by `GET /songs/stats`.
+ *
+ * Three tiers: the headline song total with the library's total playing time
+ * beside it, then the per-kind split, then the catalogue dimensions. Total file
+ * size only appears when it is non-zero — an all-remote library reports 0 bytes,
+ * and "0 B" is noise rather than information.
  */
-export function StatsStrip({ stats }: { stats: HomeStats }) {
+export function StatsStrip({ stats }: { stats: LibraryStats }) {
   const { t } = useTranslation()
+  const { hours, minutes } = splitDuration(stats.totalDuration)
+  const duration = hours > 0
+    ? t('home.statDurationHm', { hours, minutes })
+    : t('home.statDurationM', { minutes })
+
   return (
-    <view className='home-stats'>
-      <StatChip icon='library' label={t('home.statPlaylists')} value={stats.normal} />
-      <view className='home-stats__divider' />
-      <StatChip icon='music' label={t('home.statRadios')} value={stats.radio} />
-      <view className='home-stats__divider' />
-      <StatChip icon='home' label={t('home.statTotal')} value={stats.total} />
+    <view className='home-stats' data-testid='home-stats'>
+      <view className='home-stats__headline'>
+        <view className='home-stats__headline-main'>
+          <text className='home-stats__headline-value'>{String(stats.totalSongs)}</text>
+          <text className='home-stats__headline-label'>{t('home.statSongs')}</text>
+        </view>
+        <view className='home-stats__headline-aside'>
+          <Icon name='music' size={16} color={ICON_COLORS.primaryContent} />
+          <text className='home-stats__headline-duration'>{duration}</text>
+        </view>
+      </view>
+
+      <view className='home-stats__row'>
+        <StatCell label={t('home.statLocal')} value={stats.localSongs} />
+        <StatCell label={t('home.statRemote')} value={stats.remoteSongs} />
+        <StatCell label={t('home.statRadios')} value={stats.radioSongs} />
+      </view>
+
+      <view className='home-stats__row'>
+        <StatCell label={t('home.statArtists')} value={stats.artistCount} />
+        <StatCell label={t('home.statAlbums')} value={stats.albumCount} />
+        <StatCell label={t('home.statGenres')} value={stats.genreCount} />
+      </view>
+
+      {stats.totalFileSize > 0
+        ? (
+          <view className='home-stats__footer'>
+            <text className='home-stats__footer-text'>
+              {t('home.statSize', { size: formatBytes(stats.totalFileSize) })}
+            </text>
+          </view>
+        )
+        : null}
     </view>
   )
 }
 
-function StatChip({ icon, label, value }: { icon: IconName; label: string; value: number }) {
+function StatCell({ label, value }: { label: string; value: number }) {
   return (
-    <view className='home-stats__chip'>
-      <view className='home-stats__chip-icon'>
-        <Icon name={icon} size={18} color={ICON_COLORS.primaryContent} />
-      </view>
-      <view className='home-stats__chip-meta'>
-        <text className='home-stats__chip-value'>{String(value)}</text>
-        <text className='home-stats__chip-label'>{label}</text>
-      </view>
+    <view className='home-stats__cell'>
+      <text className='home-stats__cell-value'>{String(value)}</text>
+      <text className='home-stats__cell-label'>{label}</text>
     </view>
   )
 }

@@ -102,18 +102,56 @@
   font-size: var(--font-sm);
 }
 
-.home-section__grid {
+/*
+ * Horizontal strip. The scroll-view is size-only and the flex row is a separate
+ * inner view — see the comment in `HomeSection.tsx` for why collapsing the two
+ * killed scrolling on Android. A horizontal scroller needs an explicit height
+ * (the vertical ones get by on `height: 100%` from a flex parent); this one is
+ * the card's own height: 120px square cover + ~44px for the two text rows, both
+ * of which are `nowrap` + ellipsis and so cannot grow.
+ */
+.home-section__scroll {
+  width: 100%;
+  height: 168px;
+}
+
+/*
+ * `width: max-content` is load-bearing, and was the actual fix. Without it this row
+ * is laid out at the scroll-view's own width, so the cards overflow it and get
+ * clipped: the scroll-view still measures the content correctly (`getScrollInfo`
+ * reported `scrollRange: 264`) and `scrollTo` still moved `scrollX` to 150 — but
+ * nothing visibly moved, because what translates is this row, and it was only as
+ * wide as the viewport. Sizing it to its content is what gives the scroller
+ * something longer than itself to slide.
+ */
+.home-section__row {
   display: flex;
   flex-direction: row;
-  flex-wrap: nowrap;
+  width: max-content;
   padding: 0 var(--space-3);
   gap: var(--space-3);
 }
 
-.home-section__grid .playlist-card {
+/*
+ * Fixed-width cards instead of the library grid's 33.33% columns. `flex-shrink: 0`
+ * is load-bearing: Lynx does not apply the web's automatic min-content protection
+ * when resolving `flex-shrink`, so without it the cards compress to fit the
+ * viewport and — again — leave no scroll range.
+ */
+.home-section__row .playlist-card {
   width: 120px;
   min-width: 120px;
+  flex-shrink: 0;
   padding: 0;
+}
+
+/*
+ * Square cover, overriding the base `height: 96px` that is tuned for the library's
+ * three-per-row grid. Overridden here rather than in `PlaylistsView.css` so the
+ * library page keeps its own proportions.
+ */
+.home-section__row .playlist-card__cover {
+  height: 120px;
 }
 
 .home-section__error {
@@ -143,52 +181,89 @@
   font-size: var(--font-sm);
 }
 
-/* ── Stats strip ─────────────────────────────────────────────────────────── */
+/* ── Library stats panel ─────────────────────────────────────────────────── */
 
 .home-stats {
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-around;
+  flex-direction: column;
   margin: var(--space-5) var(--space-4) 0;
-  padding: var(--space-4) var(--space-3);
+  padding: var(--space-4);
   border-radius: var(--radius-lg);
   background-color: var(--primary-2);
 }
 
-.home-stats__chip {
+.home-stats__headline {
   display: flex;
   flex-direction: row;
   align-items: center;
 }
 
-.home-stats__chip-icon {
+.home-stats__headline-main {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: var(--space-2);
+  flex-direction: row;
+  align-items: baseline;
+  flex: 1;
 }
 
-.home-stats__chip-meta {
+.home-stats__headline-value {
+  color: var(--primary-content);
+  font-size: var(--font-xl);
+  font-weight: bold;
+}
+
+.home-stats__headline-label {
+  color: var(--primary-content);
+  font-size: var(--font-sm);
+  margin-left: var(--space-2);
+}
+
+.home-stats__headline-aside {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.home-stats__headline-duration {
+  color: var(--primary-content);
+  font-size: var(--font-sm);
+  margin-left: var(--space-1);
+}
+
+.home-stats__row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-top: var(--space-3);
+}
+
+.home-stats__cell {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  flex: 1;
 }
 
-.home-stats__chip-value {
+.home-stats__cell-value {
   color: var(--primary-content);
   font-size: var(--font-md);
   font-weight: bold;
 }
 
-.home-stats__chip-label {
+.home-stats__cell-label {
   color: var(--primary-content);
   font-size: var(--font-xs);
 }
 
-.home-stats__divider {
-  width: 1px;
-  height: 28px;
-  background-color: var(--paper-clear);
+.home-stats__footer {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  margin-top: var(--space-3);
+}
+
+.home-stats__footer-text {
+  color: var(--primary-content);
+  font-size: var(--font-xs);
 }
 
 /* ── States (loading / error / empty) ───────────────────────────────────── */

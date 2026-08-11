@@ -6,6 +6,10 @@ import { Swiper, SwiperItem } from '@lynx-js/lynx-ui-swiper'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
+// Direct module import, not the library barrel: that would pull the whole library
+// feature (API client included) into the player's graph for one getter.
+import { getLastLibrarySearch } from '../../library/data/last-library-search.js'
+import { getLastShellLocation } from '../../../shared/nav/shell-navigation.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { usePlayerStore } from '../store/index.js'
@@ -45,6 +49,21 @@ export function FullPlayerPage() {
   const { width, isWide, onLayoutChange } = useBreakpoint()
   const [showSleepTimer, setShowSleepTimer] = useState(false)
 
+  /**
+   * Return to the tab the player was opened from, not always Home.
+   *
+   * Not `history.back()`: the memory history's first entry is `/login`, and any
+   * navigation the user did before opening the player would make "back" land
+   * somewhere arbitrary. The shell records its own last tab instead, which is also
+   * how the library remembers its sub-tab — restored here so returning to the
+   * library does not reset it.
+   */
+  const closePlayer = () => {
+    const target = getLastShellLocation()
+    if (target === '/library') navigate({ to: '/library', search: getLastLibrarySearch() })
+    else navigate({ to: target })
+  }
+
   if (!song) {
     return (
       <view className='full-player full-player--enter full-player--empty'>
@@ -75,7 +94,11 @@ export function FullPlayerPage() {
       bindlayoutchange={onLayoutChange}
     >
       <view className='full-player__topbar'>
-        <view className='full-player__icon-btn' bindtap={() => navigate({ to: '/' })}>
+        <view
+          className='full-player__icon-btn'
+          bindtap={closePlayer}
+          data-testid='full-player-close'
+        >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='full-player__eyebrow'>{t('player.nowPlaying')}</text>
