@@ -315,7 +315,16 @@ curl -X PUT "$BASE/api/v1/settings/music-path" -H "Authorization: Bearer $TOKEN"
 
 **建议把「音乐目录」这一行从批21 提前**：目录树与扫描两个功能都被它卡住，批19 的价值在服务端 path 配好之前无法体现。
 
-- **验收**：`pnpm run build` clean（**1374.3 kB**，构建警告只剩既有两条 `text-transform`/`object-fit`，无新增）✓ / `pnpm exec tsc -b --force` ✓ / `pnpm test` **527/527**（58 文件，+3）✓。
+#### 3) 顺带清掉两条构建警告（都是真无效声明，`css-defines` 里查无此属性）
+
+`pnpm run/dev build` 长期带两条 `⚠ Unsupported property … was removed during template encode`——**它们不是噪音，是两条从未生效的样式**（同批19 发现的 `placeholder-color`）：
+
+- `text-transform: uppercase`（`TabConfigPage.css`）：Lynx 无此属性，且**不存在 `-x-` 变体**，section 标题从来没大写过。直接删声明（改用 JS `toUpperCase()` 更糟：对 zh 是 no-op，且对有特殊大小写规则的语言是错的；app 其它页的 section 标题也都不大写）。
+- `object-fit: cover`（`PluginGrid.css`）：Lynx `<image>` 的适配**是元素属性 `mode`**（`scaleToFill`(默认)/`aspectFit`/`aspectFill`/`center`），没有 `object-fit` CSS。改为在 `<image>` 上写 `mode='aspectFit'`——取 `contain` 而非原声明的 `cover`，因为这些是 logo，裁掉非正方形 logo 的一部分不可接受。
+
+**顺带查明 `bug.md`「首页插件的图标没有正常显示出来」的根因**（本次未修，留给 bug.md 那批）：后端 `GET /jsplugins` 返回的 7 个插件里 **6 个 `icon` 是 `.svg`**（`icon.e24fa48a.svg` 等），而 Lynx 文档明确写 **`<image>` 在 Android/iOS/Harmony 原生路径下不负责 SVG 渲染，SVG 要用 `<svg>`**。所以那些图标是根本没渲染，不是尺寸/裁剪问题——`mode` 修好也只对那 1 个 `.png` 有效。修法需要按扩展名分流到 `<svg>`（`shared/ui/Icon.tsx` 已有 `<svg>` 用法可参考），并确认 `<svg>` 能否吃远端 URL。
+
+- **验收**：`pnpm run build` clean（**1374.3 kB**，**构建警告已清零**）✓ / `pnpm exec tsc -b --force` ✓ / `pnpm test` **527/527**（58 文件，+3）✓。
 
 ## 未完成 / 遗留事项（TODO & 风险）
 

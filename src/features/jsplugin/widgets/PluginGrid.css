@@ -37,7 +37,11 @@
   width: 40px;
   height: 40px;
   border-radius: var(--radius-sm);
-  object-fit: cover;
+  /*
+   * No `object-fit` here: Lynx `<image>` has no such CSS property (template encode
+   * dropped it with a build warning) — fitting is the element's `mode` attribute
+   * instead, set on the `<image>` in `PluginGrid.tsx`.
+   */
 }
 
 .plugin-grid__card-icon--placeholder {

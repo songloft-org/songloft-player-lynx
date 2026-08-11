@@ -44,7 +44,14 @@
   font-weight: 600;
   color: var(--content-muted);
   margin-bottom: var(--space-2);
-  text-transform: uppercase;
+  /*
+   * No `text-transform` here: Lynx has no such property (it is not in the
+   * `@lynx-js/css-defines` dataset at all) and template encode dropped it with a
+   * build warning, so the uppercasing never happened on device. Uppercasing in JS
+   * instead would be worse — it is a no-op for the zh copy and wrong for locales
+   * with special casing rules. Section titles elsewhere in the app are not
+   * uppercased either, so this now matches them.
+   */
 }
 
 .tab-config__row {

@@ -44,7 +44,15 @@ function PluginCard({ plugin, onTap }: { plugin: JSPlugin; onTap: () => void }) 
   return (
     <view className='plugin-grid__card' bindtap={onTap} data-testid={`plugin-card-${plugin.id}`}>
       {iconSrc
-        ? <image className='plugin-grid__card-icon' src={iconSrc} />
+        ? (
+          // `mode` is Lynx's fitting control — `<image>` has no `object-fit` CSS
+          // property (the declaration that used to sit in the stylesheet was
+          // dropped at template encode). `aspectFit` (= `contain`) rather than the
+          // old `cover`: these are logos, and cropping a non-square one cuts the
+          // mark. ⚠️ Most of these icons are `.svg`, which the native `<image>`
+          // does not render at all — see the note in PROGRESS.
+          <image className='plugin-grid__card-icon' mode='aspectFit' src={iconSrc} />
+        )
         : (
           <view className='plugin-grid__card-icon plugin-grid__card-icon--placeholder'>
             <Icon name='settings' size={24} color={ICON_COLORS.contentMuted} />
