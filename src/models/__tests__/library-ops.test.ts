@@ -3,8 +3,10 @@ import { describe, expect, test } from 'vitest'
 import {
   parseAutoScanSetting,
   parseDirectoryList,
+  parseDirNames,
   parseEnabledFlag,
   parseMetadataProgress,
+  parseMusicPathSetting,
   parseScanProgress,
 } from '../library-ops.js'
 
@@ -185,5 +187,65 @@ describe('parseDirectoryList', () => {
       directories: [{ name: 'ok', path: '/a' }, { name: 'broken' }, {}],
     })
     expect(list.directories).toEqual([{ name: 'ok', path: '/a', hasChildren: false }])
+  })
+})
+
+/**
+ * `path` here is the music root — batch 26. It is display-only (see the model
+ * doc comment); these tests only cover the wire→camelCase mapping and the
+ * per-field `.catch()` tolerance, not any write path.
+ */
+describe('parseMusicPathSetting', () => {
+  test('maps snake_case exclude lists to camelCase', () => {
+    const s = parseMusicPathSetting({
+      path: '/music',
+      exclude_dirs: ['.cache'],
+      exclude_paths: ['/music/tmp'],
+      auto_create_exclude_dirs: ['singles'],
+    })
+    expect(s).toEqual({
+      path: '/music',
+      excludeDirs: ['.cache'],
+      excludePaths: ['/music/tmp'],
+      autoCreateExcludeDirs: ['singles'],
+    })
+  })
+
+  test('an empty payload yields an all-empty setting, not a throw', () => {
+    expect(parseMusicPathSetting({})).toEqual({
+      path: '',
+      excludeDirs: [],
+      excludePaths: [],
+      autoCreateExcludeDirs: [],
+    })
+  })
+
+  test('null-heavy fields fall back per field instead of blanking the whole object', () => {
+    expect(parseMusicPathSetting({
+      path: null,
+      exclude_dirs: null,
+      exclude_paths: null,
+      auto_create_exclude_dirs: null,
+    })).toEqual({
+      path: '',
+      excludeDirs: [],
+      excludePaths: [],
+      autoCreateExcludeDirs: [],
+    })
+  })
+
+  test('a non-string entry in an exclude list falls back to an empty list', () => {
+    expect(parseMusicPathSetting({ exclude_dirs: ['ok', 5] }).excludeDirs).toEqual([])
+  })
+})
+
+describe('parseDirNames', () => {
+  test('unwraps the names array', () => {
+    expect(parseDirNames({ names: ['rock', 'jazz'] })).toEqual(['rock', 'jazz'])
+  })
+
+  test('a missing or null names key yields an empty list', () => {
+    expect(parseDirNames({})).toEqual([])
+    expect(parseDirNames({ names: null })).toEqual([])
   })
 })

@@ -3,7 +3,9 @@ import type { HttpClient } from '../../../core/network/http-client.js'
 import {
   parseAutoScanSetting,
   parseEnabledFlag,
+  parseMusicPathSetting,
   type AutoScanSetting,
+  type MusicPathSetting,
 } from '../../../models/library-ops.js'
 import {
   coerceIntervalSeconds,
@@ -120,5 +122,29 @@ export class ScanSettingsApi {
     await this.client.put<unknown>(`${apiPrefix}/settings/remote-title-source`, {
       title_source: titleSource,
     })
+  }
+
+  /* -------------------------------------------------- music path + exclude lists */
+
+  /** `GET /settings/music-path`. `path` is display-only — see model doc comment. */
+  async getMusicPath(): Promise<MusicPathSetting> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/settings/music-path`)
+    return parseMusicPathSetting(res.data)
+  }
+
+  /**
+   * `PUT /settings/music-path` — always sends the **full** object; the backend
+   * has no partial-update variant. Callers must pass `path` through unchanged
+   * (see `useUpdateExcludeConfig` in `data/exclude-dir-data.ts`, the only call
+   * site) — this method itself does not enforce that, it is a plain transport.
+   */
+  async updateMusicPath(setting: MusicPathSetting): Promise<MusicPathSetting> {
+    const res = await this.client.put<unknown>(`${apiPrefix}/settings/music-path`, {
+      path: setting.path,
+      exclude_dirs: setting.excludeDirs,
+      exclude_paths: setting.excludePaths,
+      auto_create_exclude_dirs: setting.autoCreateExcludeDirs,
+    })
+    return parseMusicPathSetting(res.data)
   }
 }

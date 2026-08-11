@@ -158,3 +158,53 @@ describe('auto scan', () => {
     expect(cap.body()).toBe(JSON.stringify({ enabled: true, interval_seconds: 10800 }))
   })
 })
+
+/**
+ * `path` is the music root — display-only everywhere above this layer (see the
+ * model doc comment). `updateMusicPath` is a plain transport: it sends whatever
+ * `path` it is given. The "path always comes from cache, never the caller"
+ * invariant is enforced one layer up, in `buildMusicPathUpdate`
+ * (`data/exclude-dir-data.ts`) — covered there, not here.
+ */
+describe('music path + exclude lists', () => {
+  test('getMusicPath GETs and maps snake_case', async () => {
+    const cap = capture(JSON.stringify({
+      path: '/music',
+      exclude_dirs: ['.cache'],
+      exclude_paths: [],
+      auto_create_exclude_dirs: [],
+    }))
+    const setting = await cap.api.getMusicPath()
+    expect(cap.method()).toBe('GET')
+    expect(cap.url()).toBe(url('/settings/music-path'))
+    expect(setting).toEqual({
+      path: '/music',
+      excludeDirs: ['.cache'],
+      excludePaths: [],
+      autoCreateExcludeDirs: [],
+    })
+  })
+
+  test('updateMusicPath PUTs the full object in snake_case, including path', async () => {
+    const cap = capture(JSON.stringify({
+      path: '/music',
+      exclude_dirs: ['a'],
+      exclude_paths: ['/music/b'],
+      auto_create_exclude_dirs: ['c'],
+    }))
+    await cap.api.updateMusicPath({
+      path: '/music',
+      excludeDirs: ['a'],
+      excludePaths: ['/music/b'],
+      autoCreateExcludeDirs: ['c'],
+    })
+    expect(cap.method()).toBe('PUT')
+    expect(cap.url()).toBe(url('/settings/music-path'))
+    expect(cap.body()).toBe(JSON.stringify({
+      path: '/music',
+      exclude_dirs: ['a'],
+      exclude_paths: ['/music/b'],
+      auto_create_exclude_dirs: ['c'],
+    }))
+  })
+})

@@ -2,6 +2,7 @@ import { apiPrefix } from '../../../core/config/app-config.js'
 import type { HttpClient } from '../../../core/network/http-client.js'
 import {
   parseDirectoryList,
+  parseDirNames,
   parseMetadataProgress,
   parseScanProgress,
   type DirectoryList,
@@ -97,5 +98,12 @@ export class ScanApi {
   /** `POST /songs/refresh-metadata/cancel`. */
   async cancelMetadataRefresh(): Promise<void> {
     await this.client.post<unknown>(`${apiPrefix}/songs/refresh-metadata/cancel`)
+  }
+
+  /** `GET /scan/dir-names` — every directory name under the music root, sorted;
+   * feeds the name-exclude tab's autocomplete. */
+  async getDirNames(): Promise<string[]> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/scan/dir-names`)
+    return parseDirNames(res.data)
   }
 }

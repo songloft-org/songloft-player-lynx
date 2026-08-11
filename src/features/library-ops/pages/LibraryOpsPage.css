@@ -326,3 +326,176 @@
  * this replaced had no `.ui-checked` rule, so every ON switch on this page
  * rendered identically to an OFF one.
  */
+
+/* ── Exclude-directory manager (batch 26) ─────────────────────────────────── */
+
+.libops-exclude__tabs {
+  display: flex;
+  flex-direction: row;
+  padding: var(--space-3) var(--space-4) 0;
+}
+
+.libops-exclude__tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  margin-right: var(--space-2);
+  background-color: var(--neutral-faint);
+}
+
+.libops-exclude__tab--active {
+  background-color: var(--primary);
+}
+
+.libops-exclude__tab-text {
+  color: var(--content-2);
+  font-size: var(--font-sm);
+}
+
+.libops-exclude__tab--active .libops-exclude__tab-text {
+  color: var(--primary-content);
+}
+
+.libops-exclude__read-error {
+  color: var(--danger);
+  font-size: var(--font-sm);
+  padding: 0 var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.libops-exclude__panel {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+}
+
+.libops-exclude__input-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.libops-exclude__input {
+  flex: 1;
+}
+
+.libops-exclude__add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-left: var(--space-2);
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.libops-exclude__music-dir {
+  color: var(--content-2);
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-2);
+}
+
+.libops-exclude__suggestions {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.libops-exclude__suggestion-row {
+  padding: var(--space-2) var(--space-3);
+}
+
+.libops-exclude__suggestion-row + .libops-exclude__suggestion-row {
+  border-top: 1px solid var(--line);
+}
+
+.libops-exclude__suggestion-text {
+  color: var(--content);
+  font-size: var(--font-sm);
+}
+
+.libops-exclude__chips {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-3);
+}
+
+.libops-exclude__chips-label {
+  color: var(--content-2);
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-2);
+}
+
+.libops-exclude__empty {
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+}
+
+.libops-exclude__chips-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.libops-exclude__chip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  margin-right: var(--space-2);
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-pill);
+  background-color: var(--neutral-faint);
+}
+
+.libops-exclude__chip-text {
+  color: var(--content-2);
+  font-size: var(--font-xs);
+}
+
+.libops-exclude__chip-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: var(--space-1);
+}
+
+.libops-exclude__save-row {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.libops-exclude__saved-note {
+  color: var(--primary);
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-2);
+}
+
+.libops-exclude__save-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background-color: var(--primary);
+}
+
+.libops-exclude__save-btn--disabled {
+  opacity: 0.45;
+}
+
+.libops-exclude__save-text {
+  color: var(--primary-content);
+  font-size: var(--font-md);
+}

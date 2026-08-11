@@ -43,6 +43,13 @@ const h = vi.hoisted(() => ({
   },
   setPlaylistMode: vi.fn(),
   setAutoScan: vi.fn(),
+  musicPathConfig: {
+    excludeDirs: [] as string[],
+    excludePaths: [] as string[],
+    autoCreateExcludeDirs: [] as string[],
+  },
+  dirNames: [] as string[],
+  updateExcludeConfig: vi.fn(),
 }))
 
 vi.mock('react-i18next', async () =>
@@ -51,6 +58,10 @@ vi.mock('react-i18next', async () =>
 
 vi.mock('@lynx-js/lynx-ui-switch', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSwitch(),
+)
+
+vi.mock('@lynx-js/lynx-ui-input', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
 )
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => h.navigateSpy }))
@@ -79,6 +90,9 @@ vi.mock('../data/index.js', () => ({
   useSetRemoteTitleSource: () => mutation(vi.fn()),
   useAutoScan: () => wrap(h.settings.autoScan),
   useSetAutoScan: () => mutation(h.setAutoScan),
+  useMusicPathSetting: () => wrap(h.musicPathConfig),
+  useDirNames: () => wrap(h.dirNames),
+  useUpdateExcludeConfig: () => mutation(h.updateExcludeConfig),
 }))
 
 const { LibraryOpsPage } = await import('../pages/LibraryOpsPage.js')
@@ -395,6 +409,18 @@ test('a failed config read is surfaced on the row instead of silently defaulting
   const { queryByTestId } = await renderPage()
   expect(queryByTestId('switch-auto-create')?.textContent)
     .toContain('Failed to read config')
+})
+
+/**
+ * The exclude-dir manager has no per-row subtitle slot (it is a freeform tab
+ * editor, not `SettingsRow`s), so a failed `musicPath` read is surfaced as a
+ * standalone hint instead — same failure, same "say so instead of lying
+ * silently" rule as the switches above, different rendering shape.
+ */
+test('a failed exclude-config read is surfaced instead of silently defaulting to empty lists', async () => {
+  h.settings.readFailed = true
+  const { queryByTestId } = await renderPage()
+  expect(queryByTestId('exclude-read-error')?.textContent).toContain('Failed to read config')
 })
 
 /* -------------------------------------------------------------------- metadata */

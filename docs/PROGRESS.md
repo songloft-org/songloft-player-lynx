@@ -1,7 +1,13 @@
 # 进展与交接（PROGRESS）
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
-> **最后更新**：2026-08-11 · 最近完成（**批25 · 首页下拉刷新·手动刷新按钮**）：`bug.md` 第 16 条。
+> **最后更新**：2026-08-11 · 最近完成（**批26 · 排除目录管理 + 开发环境定位**）：对齐 Flutter `ExcludeDirManager` 三 Tab 模型（按名称排除 / 按路径排除 / 自动建歌单排除名单），`path`（音乐根目录）保持只读不可编辑。
+
+**排除目录管理**（对齐 `songloft-player/lib/features/settings/presentation/widgets/exclude_dir_manager.dart`）：新增 `ExcludeDirSection`（三 Tab：名称排除 / 路径排除，复用批19 的 `DirectoryTree` / 自动建歌单排除名单），新增 `MusicPathSetting`/`dirNames` 模型 + `getMusicPath`/`updateMusicPath`/`getDirNames` API + 对应 data hooks，挂载进 `/settings/library`（`ScanSettingsSection` 与 `MetadataSection` 之间）。**核心不变式**：`path`（音乐根）永不可编辑——`useUpdateExcludeConfig` 的 `mutationFn` 永远从 `QueryClient` 缓存读 `path` 再拼接三个排除数组，草稿类型 `ExcludeConfigDraft = Omit<MusicPathSetting,'path'>` 在类型层就不允许调用方带 `path`；测试驱动发现并修复一个真实隐患——`buildMusicPathUpdate` 原实现 `{ path, ...draft }` 的字段顺序会让 `draft` 里意外出现的 `path` 覆盖掉安全值，改成 `{ ...draft, path }` 后 `path` 永远最后写、永远赢。也顺手核对并订正了 3 处过期未更新的 TODO（standalone/embedded 部署模式、本地歌词缓存、底部 Tab 配置——三者均早已完成，见下方遗留清单）。clean build / `tsc -b --force` / **604 vitest**（+26）全绿。
+
+**开发环境定位**（不改产品代码，纯本机排障，记录以免重复踩坑）：本机 `pnpm test`/`pnpm run build` 一度被 `RangeError: WebAssembly.instantiate(): Out of memory` 挡住——追踪到本沙箱 `ulimit -v` 硬上限（~23.8GB）与 V8 默认的 trap-handler-based WASM 越界检查冲突：每个 `WebAssembly.Memory` 实例的 guard-page 保留区高达约 10-12GB（与声明的 `maximum` 无关），该沙箱内最多只能同时存在 2 个这样的实例，而 Node 内建 `undici`（`lazyllhttp`）+ `@lynx-js/react` 的 transform WASM 加起来恰好是第 3 个，必炸。修复：设置 `NODE_OPTIONS=--disable-wasm-trap-handler`（Node 原生 flag，允许写进 `NODE_OPTIONS`），关闭 trap-handler 保留策略、改走显式边界检查，代价是极小的运行时开销，换来构建/测试链路完全打通。**这是本机会话级环境问题，不是仓库配置问题，不写入仓库文件**；下次在类似受限沙箱里遇到同样报错，直接设这个环境变量即可，不必重新排查。
+
+> **上一批**（**批25 · 首页下拉刷新·手动刷新按钮**）：`bug.md` 第 16 条。
 
 **首页下拉刷新**（fix: 添加手动刷新按钮）：根因是 Lynx 底层 `SmartRefreshLayout 3.0.0-alpha` 有已知的嵌套滚动回归——手势无法触发 `onRefresh` 回调。该 alpha 版本是 `xelement-refresh` 的传递依赖，无法降级（API 不兼容）。方案：在首页 topbar 添加刷新图标按钮，调用 `<refresh>` 元素的 `autoStartRefresh` 方法程序化触发刷新（走原有 `bindstartrefresh` → `refetch` → `finishRefresh` 路径）。`<refresh>` 元素保留用于视觉反馈（`<refresh-header>` 提示文字）。clean build / `tsc -b --force` / **578 vitest** 全绿。
 
@@ -55,7 +61,11 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 20 | **bug.md 清理第一轮**（首页横滚 + 卡片竖矩形 / 插件图标 SVG / 播放器返回 + MiniPlayer 白名单 / 删播放设置 / 统计走 `/songs/stats` / 插件页标题）+ **本机 Android SDK 打通** | ✅ 完成 | clean build（1379.0 kB，**零警告**）/`tsc -b --force`/**549 vitest**（+21）全绿 | ✅ **6 条全部模拟器截图验过**；⏳ 新发现 3 条已记 `bug.md`（下拉刷新不触发已证非本批引入）|
 | 21 | **外观/语言跟随系统**（Android 宿主注入系统外观 → `lynx.__globalProps` + 全局事件；`resolveTheme`/`resolveLanguage` 真读宿主） | ✅ 完成 | clean build（1382.0 kB，**零警告**）/`tsc -b --force`/**573 vitest**（+24）全绿；Kotlin 零警告 | ✅ **模拟器双向验过**：冷启动跟随 + 运行中翻转系统深浅色/语言应用立刻跟随（未重启） |
 | 22 | **通知栏下一曲/收藏按钮 + 正式小图标**（`RemoteCommandForwardingPlayer` 转发 next/previous 到 JS；`SessionCommand`+`setCustomLayout` 收藏按钮双向同步；`setSmallIcon` 换正式图标） | ✅ 完成 | clean build（1386.5 kB）/`tsc -b --force`/**578 vitest**（+5）全绿；Kotlin 编译干净 | ✅ **dumpsys 为准**（通知栏截图在此模拟器不可视）：next/previous 已用 `KEYCODE_MEDIA_NEXT/PREVIOUS`+logcat 验通；收藏点击分发未端到端外部触发（见 TODO） |
-| 后续 | 批23 暗色对比度审计 → 重复检测/指纹 → 缓存管理 + 排除目录 → B3 iOS 宿主 + AVPlayer → Lynxtron 桌面 | ⛔ 未开始 | | |
+| 23 | 登录居中 + 插件 tab 图标修复 | ✅ 完成 | build/tsc/**578 vitest** 全绿 | — `bug.md` 第 15、16 条，纯 CSS + 已有数据接线，免真机复验 |
+| 24 | 插件 WebView 空白修复（Lynx SDK 3.8.0→4.0.0） | ✅ 完成 | build/tsc/**578 vitest** 全绿 | ✅ 真机 WebView 正常渲染插件内容 |
+| 25 | 首页下拉刷新·手动刷新按钮 | ✅ 完成 | build/tsc/**578 vitest** 全绿 | ⏳ 待扫码验证刷新按钮触发 |
+| 26 | **排除目录管理**（对齐 Flutter `ExcludeDirManager` 三 Tab：名称排除/路径排除/自动建歌单排除名单；`path` 只读不可编辑）+ 开发环境 WASM OOM 定位 | ✅ 完成 | clean build/`tsc -b --force`/**604 vitest**（+26）全绿 | ⏳ 待扫码验证三 Tab 交互 + Save 写回（需后端可达 + LAN IP）|
+| 后续 | 暗色对比度审计 → 重复检测/指纹 → 缓存管理 → B3 iOS 宿主 + AVPlayer → Lynxtron 桌面 | ⛔ 未开始 | | |
 
 ## 已交付明细
 
@@ -502,6 +512,34 @@ JS 侧新增 `SongloftAudioModule.setFavorite(Boolean)`，双向链路：① 通
 
 `pnpm run build` clean **1386.5 kB** ✓ · `pnpm exec tsc -b --force` ✓ · `pnpm test` **578/578**（65 文件，+5）✓ · `gradlew compileDebugKotlin`/`installDebug` 干净（仅 `SongloftAudioModule` 里几处早已存在、与本批无关的 unused-parameter 警告，无新增）。模拟器上实测（`dumpsys` 为准，非视觉）：登录态已持久化，Library 点歌播放后 `dumpsys media_session` 显示 session `active=true`；`dumpsys notification --noredact` 显示 `actions=4`（跳转到上一项/暂停/跳转到下一项/收藏，`compactActions=[0,1,2]`）+ `icon=` 指向 `ic_launcher_monochrome`；`adb shell input keyevent KEYCODE_MEDIA_NEXT` 与 `KEYCODE_MEDIA_PREVIOUS` 均在 logcat 打出 `LynxContext sendGlobalEvent SongloftAudio.remoteCommand`，无崩溃。**收藏按钮的点击分发**（`onCustomCommand`）依赖真实 `MediaController` 客户端（下拉通知栏或车机），这台机器的通知栏本身不可视、也没有可脚本化的触发手段，本批**未能端到端外部触发**，但走的是与已验证的 next/previous 完全同一条 `sink.emit` 管线（同一方法、同一 media3 官方文档化模式），代码路径复用度高，风险已知且记入下方 TODO。
 
+### 批26 · 排除目录管理 + 开发环境定位
+
+用户先要求核对 `AGENTS.md`/`docs/PROGRESS.md` 的遗留事项清单是否还准确，深挖后发现批19 遗留清单里「音乐目录配置」的定位需要重新审视——不是缺一个可编辑的路径输入框，而是要对齐 Flutter 参考的排除目录管理。
+
+#### 1. 重新定位：`path` 不可编辑是产品设计，不是遗漏
+
+核对 `songloft-player/lib/features/settings/presentation/widgets/exclude_dir_manager.dart` 发现：**Flutter 参考里 `path`（音乐根）在任何界面都不可编辑**——`_saveConfig()` 永远原样回带 `current.path`，唯一的用户输入是三类排除名单（按名称排除 / 按路径排除 / 自动建歌单排除名单）。批19 遗留清单原先建议「把音乐目录单行配置从批21 提前」的方向是错的；正确的缺口是排除目录管理三 Tab，`path` 应保持只读。
+
+#### 2. 交付：三 Tab 排除目录管理
+
+新增 `src/models/library-ops.ts` 的 `musicPathSettingSchema`/`dirNamesSchema`（`GET/PUT /settings/music-path` + `GET /scan/dir-names`，逐字段 `.catch()` 容错，同批19 惯例）；`ScanSettingsApi.getMusicPath`/`updateMusicPath` + `ScanApi.getDirNames` 三个新方法；`data/exclude-dir-data.ts` 的 `useMusicPathSetting`/`useDirNames`/`useUpdateExcludeConfig`；`domain/exclude-dir-model.ts` 的纯函数（`filterDirNameSuggestions` 镜像 Flutter `Autocomplete.optionsBuilder`、`relativeToRoot` 镜像 Flutter 的路径显示裁剪）；`widgets/ExcludeDirSection.tsx`（三 Tab UI，路径 Tab 复用批19 的 `DirectoryTree` 组件与 `useDirectoryTree` hook）。挂载进 `LibraryOpsPage`（`ScanSettingsSection` 与 `MetadataSection` 之间）。草稿是本地 state，只在首次成功读取时 hydrate 一次（不在每次 background refetch 时覆盖，避免打断正在编辑的用户），点 Save 才提交——同 Flutter 参考的「本地 state + 单个 FilledButton」模式，非乐观更新。
+
+#### 3. 核心不变式与测试驱动发现的真 bug
+
+`path` 永不来自调用方：`ExcludeConfigDraft = Omit<MusicPathSetting,'path'>` 在类型层拒绝调用方携带 `path`；`buildMusicPathUpdate`（从 `useUpdateExcludeConfig` 的 `mutationFn` 中抽出的纯函数，同 `remote-setting.ts` 的 `applyOptimistic`/`rollback` 一样可脱离 `QueryClientProvider` 直接测）永远从 `QueryClient` 缓存读最后一次成功读取的 `path`。写单测时发现**实现本身有个真隐患**：最初的 `return { path, ...draft }` 里 `path` 在前、`...draft` 在后，对象展开语义下**后写的键会覆盖先写的键**——如果 `draft` 在类型系统之外意外带了自己的 `path`（例如经过某个更宽的对象、绕开了 `ExcludeConfigDraft` 类型），会被静默覆盖，正是这个不变式要防的场景。改成 `{ ...draft, path }` 后 `path` 永远最后写、永远赢；对应测试见 `exclude-dir-data.test.ts`。
+
+#### 4. 顺手订正 3 条过期 TODO
+
+复核 `docs/PROGRESS.md` 遗留清单时发现三条早已完成、只是文档未同步：standalone/embedded 部署模式（批3 `LoginPage.tsx` 早已实现）、本地歌词缓存（批11 `lyric-cache.ts` 早已实现）、底部 Tab 配置（jsplugin 阶段 `TabConfigPage.tsx` 早已实现）。均已在下方遗留清单里改标 `[x]` 并注明订正批次。
+
+#### 5. 开发环境：WASM OOM 定位（不改产品代码）
+
+本机 `pnpm test`/`pnpm run build` 一度被 `RangeError: WebAssembly.instantiate(): Out of memory` 挡住，逐层排查（`node --v8-options` 找 trap-handler 相关 flag → 用 `WebAssembly.Memory` 循环构造复现「最多 2 个实例」→ 挂 `WebAssembly.instantiate` 补丁定位调用方 → 测出 Node 内建 `undici`（`lazyllhttp`）也占一个名额）后确认根因：本沙箱 `ulimit -v` 硬上限约 23.8GB，V8 默认的 trap-handler-based WASM 越界检查会给每个 `WebAssembly.Memory` 保留约 10-12GB 的 guard-page 地址空间（与声明的 `maximum` 大小无关），该沙箱内最多能同时存在 2 个这样的实例；`undici` 的内建 HTTP 解析器 + `@lynx-js/react` 的 transform WASM 加起来正好是致命的第 3 个。修复：`NODE_OPTIONS=--disable-wasm-trap-handler`（Node 原生 flag，`NODE_OPTIONS` 允许写入，非 V8 passthrough 黑名单项），关闭 guard-page 保留策略、改走显式边界检查，构建/测试链路即刻打通，实测无性能可感差异。**这是本机会话级环境问题，与仓库配置无关，不写入仓库任何文件**——纯记录以免未来在同类受限沙箱里重新排查一遍。
+
+#### 6. 验收
+
+`pnpm run build` clean（1417.8 kB）✓ · `pnpm exec tsc -b --force` ✓ · `pnpm test` **604/604**（67 文件，+26）✓（均在 `NODE_OPTIONS=--disable-wasm-trap-handler` 下跑通，见上）。真机待扫码：进 `/settings/library` 见排除目录三 Tab、名称 Tab 输入建议、路径 Tab 复用目录树勾选、自动建歌单 Tab 输入，Save 后刷新页面确认三个数组落地且音乐根路径未变。
+
 ## 未完成 / 遗留事项（TODO & 风险）
 
 - [ ] **收藏按钮的 `onCustomCommand` 分发未端到端外部触发验证**（批22，见上）：需要真机/其他模拟器上可视的通知栏，或接一个真实 `MediaController` 客户端手动发 `sendCustomCommand`，才能验证点击本身（而非仅代码路径）。
@@ -517,11 +555,11 @@ JS 侧新增 `SongloftAudioModule.setFavorite(Boolean)`，双向链路：① 通
   - [x] **收藏**（批11 完成）：SongRow 心形图标切换（`useFavoriteToggle`）。**多选 / 排序菜单 / 自定义视图编辑器**未做（Flutter `LibraryPage` 有，本批裁掉）。
   - [x] **facet 卡片点击**跳到「该分类下歌曲列表」（`CategorySongsPage` + `/library/category/$field` 路由，早前批次已落地，此处补记）。
   - **真机待扫码验列表拉取**：登录后进 `/library`，songs 视图应见分页歌曲行，触底加载下一页；facets 视图切 Artist/Album/Genre 见网格。
-- [ ] **standalone/embedded 部署模式**：批3 登录页需保留 standalone 的 API 地址配置 + 不安全 TLS 开关分支（见 `AGENTS.md`）。
+- [x] **standalone/embedded 部署模式**：批3 登录页已保留 standalone 的 API 地址配置 + 不安全 TLS 开关分支（`LoginPage.tsx` 的 `showServerFields = !appConfig.isEmbedded`）——此条目为过期未更新，非新工作，批26 排查时代码核实补记。
 - [ ] **批5 遗留（player）**：
   - [x] **真原生音频（Android）**（B2 完成）：Android 已接真 ExoPlayer 原生模块 `NativeModules.SongloftAudio`（facade 原生可用切原生、否则回退 mock；store 不改）——见「Phase B · B2」。**iOS/Web/桌面仍待各自宿主批**（B3+）；**Android 真机真实播放 + 后台通知待 CI+装机验**（本机无 SDK）。
   - **均衡器**：mock 的 `setEqualizerEnabled/Band/getBands` 为占位（无 DSP），**无均衡器面板 UI**。
-  - **歌词拉取真机未验**：`SongsApi.getLyric` + `lyric-store.loadForSong` 已接认证客户端（best-effort），但需后端可达 + LAN IP 才能验；本地歌词缓存（Flutter `LyricCacheService`）未做。歌词高亮在无后端歌词时无内容可高亮。
+  - [x] **歌词拉取真机未验**：`SongsApi.getLyric` + `lyric-store.loadForSong` 已接认证客户端（best-effort），但需后端可达 + LAN IP 才能验；歌词高亮在无后端歌词时无内容可高亮。~~本地歌词缓存未做~~ → **批11 已完成**（`lyric-cache.ts` + `lyric-store.ts` 接线），此条目为过期未更新，批26 排查时代码核实订正。
   - [x] **逐字/翻译/罗马音歌词解析**（批10 完成）：`parseEnhancedLrc` + `mergeTranslations` + 词级高亮 + LyricsView 翻译/罗马音行渲染。
   - [x] **睡眠定时 UI**（批10 完成）：SleepTimerSheet 底部面板（时长 + 歌数选项）+ topbar timer 按钮 + 激活态显示。
   - [x] **播放队列排序**（批12 完成）：`PlaylistDrawer` 队列行加 chevron 上移/下移按钮（复用 `reorderPlaylist` action + `queue.reorder` 纯函数，同歌单/歌曲排序的按钮式方案，非 drag-reorder 手势），仅 >1 首歌时显示。
@@ -544,7 +582,7 @@ JS 侧新增 `SongloftAudioModule.setFavorite(Boolean)`，双向链路：① 通
 - [ ] **批8 遗留（settings）· defer 明细 + 归属阶段**：
   - [x] **主题 light/system 切换**（批13 完成）：新建 `src/shared/theme/theme-model.ts`（镜像 `i18n/index.ts` 的 `AppLanguage`/`system` 语义）+ `tokens.css` 拆分出 `.theme-root.theme-light`/`.theme-dark` 两套 token + `ThemeProvider` 订阅切换 + `Icon.tsx` 的 `ICON_COLORS` 改成按当前主题动态取值的 `Proxy`（因 `<svg content>` 不走 CSS cascade，硬编码色值必须跟着主题变，对 ~20 个调用文件零改动）+ Settings→Appearance 三选一（system/light/dark）替换原只读 Dark 行。`system` 目前回退到 `dark`（同语言模块 `system` 无宿主 API 时回退默认的既有先例）。**主题包**（可下载主题资源市场，`ThemePackManager`/`ThemePackApi`）**不在本批范围，仍未排期**——本批只做内置 light/dark 两套 token 的切换，不含第三方主题资源分发。
   - **多服务器管理**（`ServersPage`/`serversProvider`/`ServerConfig` 列表 + 增删改切）→ **真原生模块 / 桌面阶段**：本批只做「单一当前服务器地址查看 + 切换」（写 `appConfig`+prefs），未做多服务器列表/命名/持久化多条。
-  - **底部 Tab 配置**（`TabConfig`/`tabConfigProvider`，含 Library 开关 + 插件 tab 开关 + 12 tab 上限）→ **jsplugin 阶段**（依赖插件 tab；Lynx 当前固定 Home/Library/Settings 三 tab）。
+  - [x] **底部 Tab 配置**（`TabConfig`/`tabConfigProvider`，含 Library 开关 + 插件 tab 开关 + 12 tab 上限）→ **jsplugin 阶段已落地**：`jsplugin/pages/TabConfigPage.tsx` 已实现 Library 开关 + 每插件 tab 开关 + 12 tab 上限，此条目为过期未更新，批26 排查时代码核实订正。
   - **插件注册表 / 插件管理**（`JSPluginManager`/`jsPluginsProvider`/`pluginRegistry` 路由 + `PluginNavIcon`）、**渲染引擎**→ **jsplugin 阶段**。
   - **音乐库运维**：扫描（`ScanManager`/`scan_api`）、元数据刷新（`MetadataRefreshManager`）、重复检查（`duplicate_check_page`）→ **后端 ops 阶段（依赖 `SongloftBackend`）**。
   - **缓存管理**（`CacheManager`/`cache_api`/`song_cache_provider`/`web_cache`）、**升级/热更**（服务器升级 `UpgradeDialog`/`upgrade_api`、前端 `FrontendUpgradeDialog`/`frontend_version_api`、Android 热更 `PatchUpdateService`、自动检查开关）→ **后端 ops / 桌面/真机 阶段**（Lynx 无 flutter_patcher，热更整体删——见 overview §6）。
@@ -575,8 +613,8 @@ JS 侧新增 `SongloftAudioModule.setFavorite(Boolean)`，双向链路：① 通
   - **真机待验**：手动 Run CI workflow → 装 APK → 登录（LAN IP+后端）→ 点歌真实播放 + 进度前进 + 控制可用 + 切后台看通知。
 - [x] **i18n**（批9 完成）：i18next + react-i18next（无 detector / 无 DOM / 无 Intl，`compatibilityJSON:'v3'`）；en+zh 内联资源覆盖全 feature UI 串；Settings 语言切换即时生效 + 持久化；arb→i18next 转换脚本（`scripts/arb-to-i18next.ts`，1276 key，ICU 复数键已标记）。**全量 arb 运行时导入留后续**（app 仅内联策展子集，避免包体撑爆）；「跟随系统」暂回落默认（无宿主 locale API）；复数/日期未用 i18next Intl 能力（手动单复数）。见「批9 · i18n 国际化」。
 - [ ] **批19 遗留（音乐库运维）**：
-  - ⛔ **扫描真验被服务端音乐目录卡死（批19b 定位）**：该开发后端 `music_path = "music"`（相对路径，服务端不存在）→ `POST /scan` 必失败、`GET /scan/directories` 必 error，**客户端无过**。而客户端**没有音乐目录配置 UI**（划给了批21），用户无法在应用内自救。**建议把「音乐目录」单行配置从批21 提前**，或先用 `PUT /settings/music-path` 手工改（**必须回带三个排除数组，否则清空**）。详见「批19b」。
-  - **本批裁掉、已排期**：重复检测/指纹计算页（`/scan/fingerprints/*` + `/songs/duplicates` + `POST /songs/batch-delete` 批量删除确认）→ **批20**；缓存管理（`/cache-manage/*`）+ 排除目录管理（三类排除 + `PUT /settings/music-path` + `/scan/dir-names` 自动补全）→ **批21**。
+  - ⛔ **扫描真验被服务端音乐目录卡死（批19b 定位）**：该开发后端 `music_path = "music"`（相对路径，服务端不存在）→ `POST /scan` 必失败、`GET /scan/directories` 必 error，**客户端无过**。而客户端**没有音乐目录配置 UI**（划给了批21），用户无法在应用内自救。**建议把「音乐目录」单行配置从批21 提前**，或先用 `PUT /settings/music-path` 手工改（**必须回带三个排除数组，否则清空**）。详见「批19b」。**批26 复核**：根因其实是本机开发后端启动时 cwd 错误——`music_path` 相对路径按 cwd 解析，从 `mimusic/` 仓库根目录 `make run` 后端即可正确解析到真实音乐目录（112 个歌曲文件夹），扫描/目录列表随即恢复正常，**并非客户端缺陷**；也**不建议新增「音乐目录」编辑 UI**——核对 Flutter 参考（`exclude_dir_manager.dart`）确认 `path` 在整个产品里从未可编辑，只有下面三类排除列表可写，`PUT /settings/music-path` 手工改仍是运维兜底手段，不是产品交互路径。
+  - **本批裁掉、已排期**：重复检测/指纹计算页（`/scan/fingerprints/*` + `/songs/duplicates` + `POST /songs/batch-delete` 批量删除确认）→ **批20**；缓存管理（`/cache-manage/*`）→ **待排期**；[x] **排除目录管理**（三类排除 + `PUT /settings/music-path` + `/scan/dir-names` 自动补全）→ **批26 完成**，见下「批26」。
   - [x] **端点契约已用 `docs/swagger.json` 逐项核对**（用户在本批实施期间提供的后端权威契约，119 个 path）——**13 个端点的路径与方法全部吻合**；`ScanProgress` 14 字段（我用了 10 个）、`MetadataProgress` 4 字段、`AutoScanSetting` 2 字段全部吻合；**`services.ScanStatus` 的 9 个枚举值与实现逐字一致**；`handlers.ScanRequest` = `{paths?: string[], reimport?: boolean}` 且 swagger 明确「为空时扫描整个音乐根目录；非空时只扫描给定目录（含子目录）」，与 `buildScanBody` 的「空则不发该键」一致；`scanPlaylistModeRequest.mode` enum `directory|top_level|bubble_up`、`scanTitleSourceRequest.title_source` enum `tag|filename`（`example: "tag"`）、`remoteTitleSourceRequest`（**`example: "filename"`**——直接确认了那个与同类端点相反的默认值）全部吻合。
   - **swagger 驱动的改进**：`ScanProgress` 还有 `error`（「错误信息」）字段——已加入模型为 `errorMessage`，failed 态优先显示后端原因（复用 ARB 现成文案 `libops.scanFailed`），而非只给一个无从下手的「扫描出错」。
   - **swagger 未声明、仍待联调的点**：① ~~`GET /scan/directories` 的响应形状~~ **已在批19b 用真后端验证**：`{"directories": null, "root": "music"}`——`{directories, root}` 假设成立，且空目录时 `directories` 是 `null` 不是 `[]`、`root` 可为相对路径（两条已固化成模型测试）；② 6 个开关 GET 的**默认值**（swagger 不声明 default，`auto-create-playlists` 默认 true 等假设来自 Flutter）；③ `POST /scan` 带音乐根之外的 path 会 **400**（swagger 明确写了），当前会落进行内 banner，未做前端预校验；④ `POST /scan/cancel` 在无任务时的状态码；⑤ `cancelling` 态是否真能被观测到（还是后端直接跳 `cancelled`）；⑥ `creating_playlists` 阶段后端是否真拒绝取消（Flutter 也只是前端禁用按钮）。

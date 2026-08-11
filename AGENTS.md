@@ -92,6 +92,8 @@ pnpm test               # vitest run
 
 **验证要忠实**：不要只信 vitest（jsdom/node 环境与 Lynx BTS 语义不同）。凡涉及运行时全局/无 DOM 行为，**静态检查真机实际运行的产物**（build 后 grep `dist/main.lynx.bundle`；dev 则 curl dev server 的 `main.lynx.bundle`），确认危险代码已被守卫。参见 `src/__tests__/background-bundle-self.test.ts`、`router-no-dom.test.tsx`。
 
+> ⚠️ **受限沙箱里 `pnpm test`/`pnpm run build` 可能被 `WebAssembly.instantiate(): Out of memory` 挡住**（批26 定位）：根因是沙箱 `ulimit -v` 上限（约 23.8GB 这一档）配 V8 默认的 trap-handler-based WASM 越界检查——每个 `WebAssembly.Memory` 实例会保留约 10-12GB guard-page 地址空间（与声明的 `maximum` 无关），这类沙箱里最多只够 2 个实例，而 Node 内建 `undici`（`lazyllhttp`）加上 `@lynx-js/react` 的 transform WASM 刚好是致命的第 3 个。**遇到这个报错直接设 `NODE_OPTIONS=--disable-wasm-trap-handler` 再跑**（Node 原生 flag，允许写进 `NODE_OPTIONS`），关掉 guard-page 保留、改走显式边界检查，无需重新排查。这是运行环境问题，不是仓库配置问题，不必写进任何仓库文件。
+
 - Vitest 测试文件正文中**禁止出现字面量 `@vitest-environment`**（散文里也会被 Vitest 当指令解析而切换环境）。
 
 > ⚠️ **验「跟随系统」类功能前，先确认应用里选中的就是「跟随系统」。** 批21 首次装包截图是

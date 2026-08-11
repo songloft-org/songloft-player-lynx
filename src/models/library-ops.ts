@@ -227,3 +227,40 @@ export type DirectoryList = z.output<typeof directoryListSchema>
 const directoryListParsers = makeParsers(directoryListSchema)
 export const parseDirectoryList = directoryListParsers.parse
 export const safeParseDirectoryList = directoryListParsers.safeParse
+
+/**
+ * `GET/PUT /settings/music-path`. `path` is the music root — **display-only**
+ * everywhere in this app; see the Flutter reference `exclude_dir_manager.dart`,
+ * which never sends an edited `path` back on save (it re-reads the current
+ * value and echoes it unchanged). Only the three exclude lists are ever
+ * user-editable here.
+ */
+export const musicPathSettingSchema = z
+  .object({
+    path: z.string().catch(''),
+    exclude_dirs: z.array(z.string()).catch([]),
+    exclude_paths: z.array(z.string()).catch([]),
+    auto_create_exclude_dirs: z.array(z.string()).catch([]),
+  })
+  .transform((s) => ({
+    path: s.path,
+    excludeDirs: s.exclude_dirs,
+    excludePaths: s.exclude_paths,
+    autoCreateExcludeDirs: s.auto_create_exclude_dirs,
+  }))
+
+export type MusicPathSetting = z.output<typeof musicPathSettingSchema>
+
+const musicPathSettingParsers = makeParsers(musicPathSettingSchema)
+export const parseMusicPathSetting = musicPathSettingParsers.parse
+export const safeParseMusicPathSetting = musicPathSettingParsers.safeParse
+
+/** `GET /scan/dir-names` — flat, sorted list of every directory name under the
+ * music root, used for the name-exclude tab's autocomplete. */
+export const dirNamesSchema = z
+  .object({ names: z.array(z.string()).catch([]) })
+  .transform((r) => r.names)
+
+const dirNamesParsers = makeParsers(dirNamesSchema)
+export const parseDirNames = dirNamesParsers.parse
+export const safeParseDirNames = dirNamesParsers.safeParse

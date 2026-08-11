@@ -32,3 +32,10 @@ export {
 } from './scan-settings-data.js'
 export { useDirectoryTree } from './use-directory-tree.js'
 export type { DirectoryTreeActions } from './use-directory-tree.js'
+export {
+  useMusicPathSetting,
+  useDirNames,
+  useUpdateExcludeConfig,
+  buildMusicPathUpdate,
+} from './exclude-dir-data.js'
+export type { ExcludeConfigDraft } from './exclude-dir-data.js'

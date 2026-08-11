@@ -38,3 +38,11 @@ export type {
   MetadataViewKind,
 } from './domain/scan-model.js'
 export { getScanApi, getScanSettingsApi, resetLibraryOpsApiForTests } from './api/index.js'
+export { ExcludeDirSection } from './widgets/ExcludeDirSection.js'
+export {
+  EXCLUDE_TABS,
+  excludeTabLabelKey,
+  filterDirNameSuggestions,
+  relativeToRoot,
+} from './domain/exclude-dir-model.js'
+export type { ExcludeTab } from './domain/exclude-dir-model.js'

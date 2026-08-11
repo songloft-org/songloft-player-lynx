@@ -133,6 +133,21 @@ describe('ScanApi.getDirectories', () => {
   })
 })
 
+describe('ScanApi.getDirNames', () => {
+  test('GETs the dir-names endpoint and unwraps the array', async () => {
+    const cap = capture(200, JSON.stringify({ names: ['rock', 'jazz'] }))
+    const names = await new ScanApi(client(cap.transport)).getDirNames()
+    expect(cap.method()).toBe('GET')
+    expect(cap.url()).toBe(`http://api.test${apiPrefix}/scan/dir-names`)
+    expect(names).toEqual(['rock', 'jazz'])
+  })
+
+  test('a missing names key does not throw', async () => {
+    const cap = capture(200, '{}')
+    await expect(new ScanApi(client(cap.transport)).getDirNames()).resolves.toEqual([])
+  })
+})
+
 /** Metadata refresh lives under `/songs/*`, not `/scan/*` — easy to get wrong. */
 describe('ScanApi metadata endpoints', () => {
   test('startMetadataRefresh POSTs the songs endpoint with no body', async () => {

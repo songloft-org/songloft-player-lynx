@@ -15,6 +15,7 @@ import {
 } from '../data/index.js'
 import { toggleSelected } from '../domain/directory-tree.js'
 import type { ScanMode } from '../domain/scan-model.js'
+import { ExcludeDirSection } from '../widgets/ExcludeDirSection.js'
 import { MetadataSection } from '../widgets/MetadataSection.js'
 import { ScanSection } from '../widgets/ScanSection.js'
 import { ScanSettingsSection } from '../widgets/ScanSettingsSection.js'
@@ -22,13 +23,13 @@ import './LibraryOpsPage.css'
 
 /**
  * Music-library operations sub-page (`/settings/library`, inside the shell) —
- * batch 19. Replaces the long-standing disabled "Music library scan" placeholder
- * in Settings.
+ * batch 19, exclude-directory management added in batch 26. Replaces the
+ * long-standing disabled "Music library scan" placeholder in Settings.
  *
- * Ported from the Flutter `ScanManager` + `MetadataRefreshManager`
- * (`features/settings/presentation/widgets/`). Deliberately **not** ported in
- * this batch: duplicate detection, cache management and exclude-directory
- * management (see PROGRESS for their batch assignment).
+ * Ported from the Flutter `ScanManager` + `MetadataRefreshManager` +
+ * `ExcludeDirManager` (`features/settings/presentation/widgets/`). Deliberately
+ * **not** ported: duplicate detection and cache management (see PROGRESS for
+ * their batch assignment).
  *
  * All ephemeral state lives here rather than in a store: it is page-scoped, and
  * a module-level store would leak the previous visit's selection (or a previous
@@ -178,6 +179,8 @@ export function LibraryOpsPage() {
           />
 
           <ScanSettingsSection onWriteError={() => setWriteError(true)} />
+
+          <ExcludeDirSection onWriteError={() => setWriteError(true)} />
 
           <MetadataSection
             progress={metaProgress}
