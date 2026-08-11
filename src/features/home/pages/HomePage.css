@@ -26,6 +26,18 @@
   font-weight: bold;
 }
 
+.home__topbar-spacer {
+  flex: 1;
+}
+
+.home__refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  border-radius: var(--radius-pill);
+}
+
 .home__refresh {
   flex: 1;
   width: 100%;

@@ -13,6 +13,8 @@ import { useLibraryStatsQuery } from '../data/home-stats-query.js'
 import { homeSectionItems } from '../data/home-select.js'
 import { HomeSection } from '../widgets/HomeSection.js'
 import { StatsStrip } from '../widgets/StatsStrip.js'
+import { Icon } from '../../../shared/ui/Icon.js'
+import { ICON_COLORS } from '../../../shared/ui/Icon.js'
 import './HomePage.css'
 
 /**
@@ -69,12 +71,25 @@ export function HomePage() {
    * device — removing `<refresh>` alone restores swiping). It exposes no gesture
    * filter, so the strips tell us when a finger is on them and pull-to-refresh
    * stands down for the duration.
+   *
+   * Pull-to-refresh gesture does not fire on Android because the underlying
+   * SmartRefreshLayout 3.0.0-alpha has a known nested-scrolling regression (see
+   * PROGRESS). The `<refresh>` element is kept for the visual header feedback;
+   * refresh is triggered via the manual button in the top bar calling
+   * `autoStartRefresh`.
    */
   const [refreshEnabled, setRefreshEnabled] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const onStartRefresh = () => {
+    setRefreshing(true)
     void Promise.all([normal.refetch(), radio.refetch(), statsQuery.refetch()]).finally(() => {
       refreshRef.current?.invoke({ method: 'finishRefresh' }).exec()
+      setRefreshing(false)
     })
+  }
+  const handleManualRefresh = () => {
+    if (refreshing) return
+    refreshRef.current?.invoke({ method: 'autoStartRefresh' }).exec()
   }
 
   return (
@@ -83,6 +98,13 @@ export function HomePage() {
         <text className='home__greeting' data-testid='home-greeting'>
           {t(currentGreetingKey())}
         </text>
+        <view className='home__topbar-spacer' />
+        <view
+          className={refreshing ? 'home__refresh-btn home__refresh-btn--spinning' : 'home__refresh-btn'}
+          bindtap={handleManualRefresh}
+        >
+          <Icon name='refresh' size={20} color={ICON_COLORS.contentMuted} />
+        </view>
       </view>
 
       <refresh
