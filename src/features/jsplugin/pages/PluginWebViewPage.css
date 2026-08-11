@@ -3,7 +3,7 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background-color: var(--surface);
+  background-color: var(--canvas);
 }
 
 .plugin-webview__topbar {
@@ -46,5 +46,5 @@
 }
 
 .plugin-webview__state-text--error {
-  color: var(--error);
+  color: var(--danger);
 }

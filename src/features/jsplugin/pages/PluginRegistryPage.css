@@ -3,7 +3,7 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background-color: var(--surface);
+  background-color: var(--canvas);
 }
 
 .plugin-registry__topbar {
@@ -37,7 +37,7 @@
   flex: 1;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
-  background-color: var(--surface-raised);
+  background-color: var(--paper);
 }
 
 .plugin-registry__search-input {
@@ -48,7 +48,7 @@
 .plugin-registry__search-btn {
   padding: var(--space-2);
   border-radius: var(--radius-md);
-  background-color: var(--surface-raised);
+  background-color: var(--paper);
 }
 
 .plugin-registry__scroll {
@@ -66,7 +66,7 @@
   align-items: center;
   padding: var(--space-3) 0;
   border-bottom-width: 1px;
-  border-bottom-color: var(--border);
+  border-bottom-color: var(--line);
 }
 
 .plugin-registry__item-info {
@@ -101,19 +101,19 @@
 
 .plugin-registry__install-btn {
   padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-pill);
   background-color: var(--primary);
 }
 
 .plugin-registry__install-text {
   font-size: var(--font-sm);
-  color: var(--on-primary);
+  color: var(--primary-content);
 }
 
 .plugin-registry__installed {
   padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
-  background-color: var(--surface-raised);
+  border-radius: var(--radius-pill);
+  background-color: var(--paper);
 }
 
 .plugin-registry__installed-text {
@@ -133,7 +133,7 @@
 .plugin-registry__page-btn {
   padding: var(--space-2);
   border-radius: var(--radius-sm);
-  background-color: var(--surface-raised);
+  background-color: var(--paper);
 }
 
 .plugin-registry__page-btn--disabled {
@@ -149,7 +149,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-8);
+  padding: var(--space-6);
 }
 
 .plugin-registry__state-text {
@@ -158,5 +158,5 @@
 }
 
 .plugin-registry__state-text--error {
-  color: var(--error);
+  color: var(--danger);
 }

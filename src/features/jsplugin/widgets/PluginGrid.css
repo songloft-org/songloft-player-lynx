@@ -30,7 +30,7 @@
   width: 72px;
   padding: var(--space-2);
   border-radius: var(--radius-md);
-  background-color: var(--surface-raised);
+  background-color: var(--paper);
 }
 
 .plugin-grid__card-icon {
@@ -50,7 +50,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--surface);
+  background-color: var(--canvas);
 }
 
 .plugin-grid__card-name {

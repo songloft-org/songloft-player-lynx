@@ -218,7 +218,7 @@
 }
 
 .playlists__create-btn--primary {
-  background-color: var(--accent);
+  background-color: var(--primary);
 }
 
 .playlists__create-btn-text {
@@ -227,5 +227,5 @@
 }
 
 .playlists__create-btn-text--primary {
-  color: var(--content-on-accent);
+  color: var(--primary-content);
 }

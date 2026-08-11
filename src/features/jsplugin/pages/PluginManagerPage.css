@@ -3,7 +3,7 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background-color: var(--surface);
+  background-color: var(--canvas);
 }
 
 .plugin-manager__topbar {
@@ -33,8 +33,8 @@
 
 .plugin-manager__action-btn {
   padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
-  background-color: var(--surface-raised);
+  border-radius: var(--radius-pill);
+  background-color: var(--paper);
 }
 
 .plugin-manager__action-text {
@@ -57,7 +57,7 @@
   align-items: center;
   padding: var(--space-3) 0;
   border-bottom-width: 1px;
-  border-bottom-color: var(--border);
+  border-bottom-color: var(--line);
 }
 
 .plugin-manager__item-info {
@@ -90,7 +90,7 @@
 .plugin-manager__toggle {
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
-  background-color: var(--surface-raised);
+  background-color: var(--paper);
 }
 
 .plugin-manager__toggle--active {
@@ -103,7 +103,7 @@
 }
 
 .plugin-manager__toggle--active .plugin-manager__toggle-text {
-  color: var(--on-primary);
+  color: var(--primary-content);
 }
 
 .plugin-manager__delete {
@@ -112,14 +112,14 @@
 }
 
 .plugin-manager__delete--confirm {
-  background-color: var(--surface-raised);
+  background-color: var(--paper);
 }
 
 .plugin-manager__state {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-8);
+  padding: var(--space-6);
 }
 
 .plugin-manager__state-text {
@@ -128,5 +128,5 @@
 }
 
 .plugin-manager__state-text--error {
-  color: var(--error);
+  color: var(--danger);
 }

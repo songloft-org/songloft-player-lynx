@@ -3,7 +3,7 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background-color: var(--surface);
+  background-color: var(--canvas);
 }
 
 .tab-config__topbar {
@@ -60,7 +60,7 @@
   align-items: center;
   padding: var(--space-3) 0;
   border-bottom-width: 1px;
-  border-bottom-color: var(--border);
+  border-bottom-color: var(--line);
 }
 
 .tab-config__row--disabled {
@@ -78,14 +78,14 @@
   color: var(--content-muted);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
-  background-color: var(--surface-raised);
+  background-color: var(--paper);
 }
 
 .tab-config__check {
   width: 22px;
   height: 22px;
   border-radius: var(--radius-sm);
-  background-color: var(--surface-raised);
+  background-color: var(--paper);
   display: flex;
   align-items: center;
   justify-content: center;

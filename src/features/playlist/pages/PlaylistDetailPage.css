@@ -57,7 +57,7 @@
 }
 
 .playlist-detail__action-text--danger {
-  color: var(--content-on-accent);
+  color: var(--danger-content);
 }
 
 .playlist-detail__hero {
@@ -193,7 +193,7 @@
 }
 
 .playlist-detail__edit-btn--primary {
-  background-color: var(--accent);
+  background-color: var(--primary);
 }
 
 .playlist-detail__edit-btn-text {
@@ -202,7 +202,7 @@
 }
 
 .playlist-detail__edit-btn-text--primary {
-  color: var(--content-on-accent);
+  color: var(--primary-content);
 }
 
 .playlist-detail__song-row-wrapper {
@@ -230,8 +230,8 @@
 
 .playlist-detail__sort-chip {
   padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
-  background-color: var(--surface-raised);
+  border-radius: var(--radius-pill);
+  background-color: var(--paper);
 }
 
 .playlist-detail__sort-chip--active {
@@ -244,7 +244,7 @@
 }
 
 .playlist-detail__sort-chip-text--active {
-  color: var(--on-primary);
+  color: var(--primary-content);
 }
 
 .playlist-detail__sort-scroll {
