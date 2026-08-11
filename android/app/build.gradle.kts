@@ -77,13 +77,14 @@ dependencies {
 
     // ---- Lynx SDK (coordinates + versions copied verbatim from the official
     // integrating-lynx-demo-projects KotlinEmptyProject @ 3.8.0) ----
-    implementation("org.lynxsdk.lynx:lynx:3.8.0")
-    implementation("org.lynxsdk.lynx:lynx-jssdk:3.8.0")
-    implementation("org.lynxsdk.lynx:lynx-trace:3.8.0")
-    implementation("org.lynxsdk.lynx:primjs:3.8.0")
+    // Upgraded to 4.0.0 to get `<webview>` element support (xelement-webview).
+    implementation("org.lynxsdk.lynx:lynx:4.0.0")
+    implementation("org.lynxsdk.lynx:lynx-jssdk:4.0.0")
+    implementation("org.lynxsdk.lynx:lynx-trace:4.0.0")
+    implementation("org.lynxsdk.lynx:primjs:4.0.0")
 
     // image-service (backs `<image>` cover art)
-    implementation("org.lynxsdk.lynx:lynx-service-image:3.8.0")
+    implementation("org.lynxsdk.lynx:lynx-service-image:4.0.0")
     // Fresco backs the image-service; required for images to load.
     implementation("com.facebook.fresco:fresco:2.3.0")
     implementation("com.facebook.fresco:animated-gif:2.3.0")
@@ -92,20 +93,22 @@ dependencies {
     implementation("com.facebook.fresco:animated-base:2.3.0")
 
     // log-service
-    implementation("org.lynxsdk.lynx:lynx-service-log:3.8.0")
+    implementation("org.lynxsdk.lynx:lynx-service-log:4.0.0")
 
     // http-service (backs the bare global `fetch` the network layer uses)
-    implementation("org.lynxsdk.lynx:lynx-service-http:3.8.0")
+    implementation("org.lynxsdk.lynx:lynx-service-http:4.0.0")
     implementation("com.squareup.okhttp3:okhttp:4.9.0")
 
     // XElement family — needed by elements this app renders: `<svg>` (icons),
-    // `<input>` (login / server settings), overlay (Sheet), refresh.
-    implementation("org.lynxsdk.lynx:xelement:3.8.0")
-    implementation("org.lynxsdk.lynx:xelement-input:3.8.0")
-    implementation("org.lynxsdk.lynx:xelement-overlay:3.8.0")
-    implementation("org.lynxsdk.lynx:xelement-svg:3.8.0")
-    implementation("org.lynxsdk.lynx:servalsvg:0.0.1-alpha.3")
-    implementation("org.lynxsdk.lynx:xelement-refresh:3.8.0")
+    // `<input>` (login / server settings), overlay (Sheet), refresh,
+    // `<webview>` (plugin pages).
+    implementation("org.lynxsdk.lynx:xelement:4.0.0")
+    implementation("org.lynxsdk.lynx:xelement-input:4.0.0")
+    implementation("org.lynxsdk.lynx:xelement-overlay:4.0.0")
+    implementation("org.lynxsdk.lynx:xelement-svg:4.0.0")
+    implementation("org.lynxsdk.lynx:servalsvg:0.1.1")
+    implementation("org.lynxsdk.lynx:xelement-refresh:4.0.0")
+    implementation("org.lynxsdk.lynx:xelement-webview:4.0.0")
 
     // ---- Native audio (SongloftAudio native module, batch B2) ----
     // androidx.media3 (ExoPlayer). 1.3.1 is a proven stable release compatible
