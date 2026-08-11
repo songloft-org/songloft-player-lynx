@@ -5,12 +5,46 @@ import { useTranslation } from 'react-i18next'
 // does not eagerly pull in the full player + its lynx-ui gesture leaves.
 import { MiniPlayer } from '../../features/player/widgets/MiniPlayer.js'
 import { usePluginTabs } from '../../features/jsplugin/index.js'
+import { usePluginIconQuery } from '../../features/jsplugin/data/jsplugin-query.js'
+import { isSvgIcon } from '../../features/jsplugin/widgets/PluginGrid.js'
+import { buildCoverUrl } from '../../core/network/url-helper.js'
+import type { PluginTabEntry } from '../../features/jsplugin/data/tab-config.js'
 import { getLastLibrarySearch } from '../../features/library/index.js'
 import { NAV_DESTINATIONS } from '../nav/destinations.js'
 import { setLastShellLocation, showsMiniPlayer } from '../nav/shell-navigation.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import { Icon, ICON_COLORS } from '../ui/Icon.js'
 import './ShellLayout.css'
+
+/**
+ * Plugin tab icon in the nav bar.
+ *
+ * Most plugin icons are SVG served from the backend; we fetch the markup via
+ * `usePluginIconQuery` and render with `<svg content>`. Bitmap icons use
+ * `<image>`. When no icon is declared (or the SVG is still loading / failed),
+ * we fall back to the `settings` glyph — the same icon the old hardcoded code
+ * used for every plugin tab.
+ */
+function PluginTabIcon({ tab, active }: { tab: PluginTabEntry; active: boolean }) {
+  const icon = tab.icon ?? ''
+  const isSvg = isSvgIcon(icon)
+  const { data: markup } = usePluginIconQuery(tab.entryPath, icon, isSvg)
+  const color = active ? ICON_COLORS.primary : ICON_COLORS.contentMuted
+
+  if (icon && isSvg && markup) {
+    return <svg className='nav-item__plugin-icon' content={markup} />
+  }
+  if (icon && !isSvg) {
+    return (
+      <image
+        className='nav-item__plugin-icon'
+        mode='aspectFit'
+        src={buildCoverUrl(`/api/v1/jsplugin/${tab.entryPath}/static/${icon}`)}
+      />
+    )
+  }
+  return <Icon name='settings' size={24} color={color} />
+}
 
 /**
  * Adaptive navigation shell.
@@ -69,11 +103,7 @@ export function ShellLayout() {
           bindtap={() => navigate({ to: '/plugin/$entryPath', params: { entryPath: tab.entryPath } })}
         >
           <view className='nav-item__icon'>
-            <Icon
-              name='settings'
-              size={24}
-              color={active ? ICON_COLORS.primary : ICON_COLORS.contentMuted}
-            />
+            <PluginTabIcon tab={tab} active={active} />
           </view>
           <text className='nav-item__label'>{tab.name}</text>
         </view>,

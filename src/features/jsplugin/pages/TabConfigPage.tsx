@@ -72,6 +72,7 @@ export function TabConfigPage() {
         pluginId: plugin.id,
         entryPath: plugin.entryPath!,
         name: plugin.displayName,
+        icon: plugin.icon,
       }]
     }
     const next: TabConfig = { ...config, pluginTabs: nextTabs }

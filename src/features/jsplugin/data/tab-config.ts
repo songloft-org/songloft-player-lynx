@@ -6,6 +6,7 @@ export interface PluginTabEntry {
   pluginId: number
   entryPath: string
   name: string
+  icon?: string
 }
 
 export interface TabConfig {
@@ -20,6 +21,7 @@ export function parseTabConfig(data: unknown): TabConfig {
         pluginId: Number(e?.plugin_id ?? 0),
         entryPath: String(e?.entry_path ?? ''),
         name: String(e?.name ?? ''),
+        icon: String(e?.icon ?? '') || undefined,
       }))
     : []
   return {

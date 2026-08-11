@@ -106,6 +106,13 @@
   justify-content: center;
 }
 
+/* Plugin icon rendered via <svg content> or <image>. Same size as the built-in
+   Icon component default (24×24). */
+.nav-item__plugin-icon {
+  width: 24px;
+  height: 24px;
+}
+
 .nav-item__label {
   color: var(--content-muted);
   font-size: var(--font-xs);

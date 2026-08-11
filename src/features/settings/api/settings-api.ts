@@ -45,6 +45,7 @@ export class SettingsApi {
         plugin_id: t.pluginId,
         entry_path: t.entryPath,
         name: t.name,
+        icon: t.icon ?? '',
       })),
     }
     const res = await this.client.put<unknown>(`${apiPrefix}/settings/tab-config`, body)
