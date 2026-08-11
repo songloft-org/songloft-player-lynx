@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 // Import MiniPlayer directly (not the player feature barrel) so the shell graph
 // does not eagerly pull in the full player + its lynx-ui gesture leaves.
 import { MiniPlayer } from '../../features/player/widgets/MiniPlayer.js'
-import { usePluginTabs } from '../../features/jsplugin/index.js'
+import { usePluginTabsWithIcons } from '../../features/jsplugin/index.js'
 import { usePluginIconQuery } from '../../features/jsplugin/data/jsplugin-query.js'
 import { isSvgIcon } from '../../features/jsplugin/widgets/PluginGrid.js'
 import { buildCoverUrl } from '../../core/network/url-helper.js'
@@ -59,7 +59,7 @@ export function ShellLayout() {
   const { t } = useTranslation()
   const { breakpoint, isWide, onLayoutChange } = useBreakpoint()
   const pathname = useRouterState({ select: s => s.location.pathname })
-  const pluginTabsQuery = usePluginTabs()
+  const pluginTabsQuery = usePluginTabsWithIcons()
   const pluginTabs = pluginTabsQuery.data ?? []
 
   // Written during render, matching how `LibraryPage` records its search — the

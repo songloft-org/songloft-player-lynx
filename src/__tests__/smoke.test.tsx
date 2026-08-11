@@ -121,6 +121,7 @@ vi.mock('../features/jsplugin/widgets/PluginGrid.js', () => ({
 
 vi.mock('../features/jsplugin/index.js', () => ({
   usePluginTabs: () => ({ data: [] }),
+  usePluginTabsWithIcons: () => ({ data: [] }),
   PluginManagerPage: () => null,
   PluginRegistryPage: () => null,
   PluginWebViewPage: () => null,
