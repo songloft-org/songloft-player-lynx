@@ -20,7 +20,7 @@ export function FacetCard({ facet, onTap }: FacetCardProps) {
   return (
     <view className='facet-card' bindtap={() => onTap?.(facet)}>
       {cover
-        ? <image className='facet-card__cover' src={cover} />
+        ? <image className='facet-card__cover' mode='aspectFill' src={cover} />
         : <view className='facet-card__cover facet-card__cover--empty' />}
       <text className='facet-card__value'>{facet.value || t('common.unknown')}</text>
       <text className='facet-card__count'>
