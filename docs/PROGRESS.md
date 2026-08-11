@@ -31,6 +31,7 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 16 | Playlist 补充端点（song-ids / touch / visibility / sort / updatePlaylistSort）| ✅ 完成 | build/tsc/vitest 绿（372 测试）| — 纯 API + UI，免真机 |
 | 17 | 插件模块（管理层 + 首页网格 + 宿主桥接 + 注册表商店页）| ✅ 完成 | build/tsc/vitest 绿（372 测试）| — 纯 API + UI + 桥接逻辑，免真机 |
 | 18 | 插件 WebView 渲染 + 动态 Tab 显示（`<webview>` 内置元素 + tab-config API + Shell 动态 tab）| ✅ 完成 | build/tsc/vitest 绿（372 测试）| ⏳ 需后端 + 已安装插件才能真机验 |
+| 18b | Tab 配置页 + 首页区块横向滚动 | ✅ 完成 | build/tsc/vitest 绿（372 测试）| ⏳ 待扫码验横向滚动手势 |
 | 后续 | B3 iOS 宿主 + AVPlayer + CI(No-Codesign) → Lynxtron 桌面 → jsplugin/webview → 库扫描/缓存/升级 ops → 下载/许可 → DLNA | ⛔ 未开始（真机/桌面/后端 ops 绑定，本机不能自动验收）| | |
 
 ## 已交付明细
