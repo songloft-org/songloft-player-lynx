@@ -166,6 +166,20 @@ describe('parseDirectoryList', () => {
       .toEqual({ directories: [], root: '' })
   })
 
+  /**
+   * The real response, captured from a live backend (batch 19b). Swagger declares
+   * this endpoint's 200 as `additionalProperties: true`, so until now the
+   * `{directories, root}` shape was only an assumption inherited from the Flutter
+   * client — it is confirmed, with two details worth pinning:
+   *  - an empty directory yields `"directories": null`, **not** `[]` (the exact
+   *    `null` case AGENTS.md §2 warns about; survives only via `.catch([])`);
+   *  - `root` echoes `music_path` verbatim, so it can be a *relative* path.
+   */
+  test('the live-backend empty listing (`directories: null`) parses to an empty tree', () => {
+    expect(parseDirectoryList({ directories: null, root: 'music' }))
+      .toEqual({ directories: [], root: 'music' })
+  })
+
   test('entries without a usable path are dropped (Flutter threw on these)', () => {
     const list = parseDirectoryList({
       directories: [{ name: 'ok', path: '/a' }, { name: 'broken' }, {}],
