@@ -6,6 +6,8 @@ import { Input } from '@lynx-js/lynx-ui-input'
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { getLastShellLocation } from '../../../shared/nav/shell-navigation.js'
+import { getLastLibrarySearch } from '../../library/data/last-library-search.js'
 import { flattenSongs } from '../../library/data/pagination.js'
 import { SongRow } from '../../library/widgets/SongRow.js'
 import { VirtualList } from '../../library/widgets/VirtualList.js'
@@ -150,7 +152,16 @@ export function PlaylistDetailPage() {
       <view className='playlist-detail__topbar'>
         <view
           className='playlist-detail__back'
-          bindtap={() => navigate({ to: '/library', search: { view: 'playlists' } })}
+          bindtap={() => {
+            // Return to the shell tab the user was on before entering this
+            // detail page — Home or Library — rather than always Library.
+            const last = getLastShellLocation()
+            if (last === '/') {
+              navigate({ to: last })
+            } else {
+              navigate({ to: '/library', search: getLastLibrarySearch() })
+            }
+          }}
         >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
