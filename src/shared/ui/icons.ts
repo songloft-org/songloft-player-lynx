@@ -82,9 +82,9 @@ const ICONS: Record<IconName, (color: string) => string> = {
     `<circle cx="17" cy="16" r="3" ${stroke(c)}/>`,
 
   settings: (c) =>
-    `<circle cx="12" cy="12" r="3.4" ${stroke(c)}/>` +
-    `<path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3` +
-    `M4.9 4.9l2.1 2.1M16.9 16.9l2.1 2.1M4.9 19.1l2.1-2.1M16.9 7.1l2.1-2.1" ${stroke(c)}/>`,
+    `<circle cx="12" cy="12" r="3" ${fill(c)}/>` +
+    `<path d="M12 1.5v2.3M12 20.2v2.3M1.5 12h2.3M20.2 12h2.3` +
+    `M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" ${stroke(c)}/>`,
 
   play: (c) => `<path d="M7 4.5v15l12-7.5z" ${fill(c)}/>`,
 

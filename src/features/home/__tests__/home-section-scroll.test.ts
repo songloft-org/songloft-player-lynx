@@ -55,19 +55,10 @@ test('the home strip scrolls horizontally via scroll-orientation, not deprecated
   expect(src).toMatch(/enable-nested-scroll=\{true\}/)
 })
 
-test('the strip stands pull-to-refresh down while a finger is on it', () => {
-  // `<refresh>` swallows horizontal drags and offers no gesture filter, so this
-  // handshake is the only thing that makes the two coexist. Both halves matter:
-  // without the release the page could never be pulled to refresh again.
-  const strip = code('features/home/widgets/HomeSection.tsx')
-  expect(strip).toMatch(/bindtouchstart=\{\(\) => onStripTouch\?\.\(false\)\}/)
-  expect(strip).toMatch(/bindtouchend=\{\(\) => onStripTouch\?\.\(true\)\}/)
-  expect(strip).toMatch(/bindtouchcancel=\{\(\) => onStripTouch\?\.\(true\)\}/)
-
-  // And the page has to actually honour it.
+test('the vertical scroll-view uses enable-nested-scroll to coordinate with the refresh wrapper', () => {
   const page = code('features/home/pages/HomePage.tsx')
-  expect(page).toMatch(/enable-refresh=\{refreshEnabled\}/)
-  expect(page).toMatch(/onStripTouch=\{setRefreshEnabled\}/)
+  expect(page).toMatch(/enable-refresh=\{true\}/)
+  expect(page).toMatch(/enable-nested-scroll=\{true\}/)
 })
 
 test('no source file uses the deprecated scroll-x attribute', () => {

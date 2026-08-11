@@ -25,11 +25,6 @@ export interface HomeSectionProps {
   onRetry?: () => void
   onTapPlaylist: (playlist: Playlist) => void
   playingPlaylistId?: number
-  /**
-   * Told `false` while a finger is on the strip and `true` when it lifts, so the
-   * page's pull-to-refresh can stand down — see the comment on the scroll-view.
-   */
-  onStripTouch?: (refreshEnabled: boolean) => void
 }
 
 export function HomeSection({
@@ -41,7 +36,6 @@ export function HomeSection({
   onRetry,
   onTapPlaylist,
   playingPlaylistId,
-  onStripTouch,
 }: HomeSectionProps) {
   const { t } = useTranslation()
 
@@ -91,19 +85,11 @@ export function HomeSection({
           //  - `enable-nested-scroll` (default false) to coordinate with the vertical
           //    page scroller instead of fighting it. Not declared in `@lynx-js/types`
           //    for `<scroll-view>` — only `<list>` has it — so the bundle assertion in
-          //    `home-section-scroll.test.ts` is what proves it ships;
-          //  - `onStripTouch` disables the page's `<refresh>` for the duration of a
-          //    drag. `<refresh>` otherwise swallows horizontal gestures outright: with
-          //    it enabled the strip measured correctly and `scrollTo` moved `scrollX`,
-          //    yet nothing moved under a finger and `bindscroll` never fired. It has no
-          //    gesture filter of its own, so standing it down is the only lever.
+          //    `home-section-scroll.test.ts` is what proves it ships.
           <scroll-view
             className='home-section__scroll'
             scroll-orientation='horizontal'
             enable-nested-scroll={true}
-            bindtouchstart={() => onStripTouch?.(false)}
-            bindtouchend={() => onStripTouch?.(true)}
-            bindtouchcancel={() => onStripTouch?.(true)}
           >
             <view className='home-section__row'>
               {items.map((playlist) => (
