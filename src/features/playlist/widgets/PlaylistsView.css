@@ -22,7 +22,7 @@
 .playlist-card {
   display: flex;
   flex-direction: column;
-  width: 33.33%;
+  width: 120px;
   padding: var(--space-2);
 }
 
@@ -40,8 +40,8 @@
 }
 
 .playlist-card__cover {
-  width: 100%;
-  height: 96px;
+  width: 104px;
+  height: 104px;
   border-radius: var(--radius-md);
   background-color: var(--neutral-faint);
 }
