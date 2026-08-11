@@ -103,6 +103,7 @@ export function LoginPage() {
 
   return (
     <view className='page page--centered login'>
+      <view style={{ flex: 1 }} />
       <view className='login__card'>
         <text className='login__title'>{t('auth.title')}</text>
         <text className='login__subtitle'>{t('auth.subtitle')}</text>
@@ -176,6 +177,7 @@ export function LoginPage() {
           )}
         </Button>
       </view>
+      <view style={{ flex: 1 }} />
     </view>
   )
 }
