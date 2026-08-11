@@ -13,6 +13,7 @@ import {
   useFacetsInfiniteQuery,
   useSongsInfiniteQuery,
 } from '../data/songs-query.js'
+import { setLastLibrarySearch } from '../data/last-library-search.js'
 import { PlaylistsView } from '../../playlist/widgets/PlaylistsView.js'
 import { FacetCard } from '../widgets/FacetCard.js'
 import { SongRow } from '../widgets/SongRow.js'
@@ -57,6 +58,8 @@ export function LibraryPage() {
   const { t } = useTranslation()
   const search = useSearch({ strict: false }) as { view?: LibraryView }
   const view: LibraryView = search.view ?? 'songs'
+
+  setLastLibrarySearch(search as { view?: LibraryView; field?: FacetField })
 
   return (
     <view className='library'>

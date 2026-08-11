@@ -191,6 +191,7 @@
 
 .playlists__create-input {
   margin-bottom: var(--space-2);
+  placeholder-color: var(--content-muted);
 }
 
 .playlists__create-actions {

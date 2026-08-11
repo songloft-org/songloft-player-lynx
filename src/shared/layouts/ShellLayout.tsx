@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 // does not eagerly pull in the full player + its lynx-ui gesture leaves.
 import { MiniPlayer } from '../../features/player/widgets/MiniPlayer.js'
 import { usePluginTabs } from '../../features/jsplugin/index.js'
+import { getLastLibrarySearch } from '../../features/library/index.js'
 import { NAV_DESTINATIONS } from '../nav/destinations.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import { Icon, ICON_COLORS } from '../ui/Icon.js'
@@ -33,7 +34,13 @@ export function ShellLayout() {
         <view
           key={dest.path}
           className={active ? 'nav-item nav-item--active' : 'nav-item'}
-          bindtap={() => navigate({ to: dest.path })}
+          bindtap={() => {
+            if (dest.path === '/library') {
+              navigate({ to: '/library', search: getLastLibrarySearch() })
+            } else {
+              navigate({ to: dest.path })
+            }
+          }}
         >
           <view className='nav-item__icon'>
             <Icon

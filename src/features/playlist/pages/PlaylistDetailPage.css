@@ -166,6 +166,7 @@
 
 .playlist-detail__edit-input {
   margin-bottom: var(--space-2);
+  placeholder-color: var(--content-muted);
 }
 
 .playlist-detail__edit-actions {
