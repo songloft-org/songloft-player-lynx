@@ -1,6 +1,16 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+}
+
+// Read key.properties (local dev); CI passes env vars instead.
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -15,15 +25,36 @@ android {
         versionName = "0.1.0-dev"
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFilePath = System.getenv("ANDROID_KEYSTORE_PATH")
+                ?: keystoreProperties.getProperty("storeFile")
+            val storePass = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                ?: keystoreProperties.getProperty("storePassword")
+            val keyAliasVal = System.getenv("ANDROID_KEY_ALIAS")
+                ?: keystoreProperties.getProperty("keyAlias")
+            val keyPass = System.getenv("ANDROID_KEY_PASSWORD")
+                ?: keystoreProperties.getProperty("keyPassword")
+
+            if (storeFilePath != null) {
+                storeFile = file(storeFilePath)
+                storePassword = storePass
+                keyAlias = keyAliasVal
+                keyPassword = keyPass
+            }
+        }
+    }
+
     buildTypes {
-        // debug: signed with the auto-generated debug keystore → installable via
-        // side-load without any release signing config. This is the CI artifact.
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            val releaseConfig = signingConfigs.findByName("release")
+            signingConfig = if (releaseConfig?.storeFile != null) releaseConfig
+                else signingConfigs.getByName("debug")
         }
     }
     compileOptions {

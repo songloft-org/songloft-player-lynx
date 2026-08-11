@@ -44,6 +44,10 @@ class SongloftPlaybackService : MediaSessionService() {
         // Create (or re-bind) the player + session using this service's context
         // so the framework's notification manager can post the media notification.
         SongloftAudioEngine.initFromService(this)
+        // Register the session with this MediaSessionService so it manages the
+        // foreground notification lifecycle automatically. Without this call the
+        // service is unaware of the session and never posts the notification.
+        SongloftAudioEngine.mediaSession?.let { addSession(it) }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {

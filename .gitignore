@@ -39,3 +39,8 @@ android/.cxx/
 android/app/src/main/assets/main.lynx.bundle
 .pnpm-store/
 bun.lock
+-e 
+# Android signing (local only)
+android/key.properties
+*.jks
+*.keystore
