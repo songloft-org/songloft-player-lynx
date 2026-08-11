@@ -1,6 +1,7 @@
 import { apiPrefix } from '../../../core/config/app-config.js'
 import type { HttpClient } from '../../../core/network/http-client.js'
 import { coerceLogLevel, type LogLevel } from '../domain/log-level.js'
+import { parseTabConfig, type TabConfig } from '../../jsplugin/data/tab-config.js'
 
 /**
  * Settings backend API (Diagnostics slice only — batch 15). Mirrors the
@@ -30,5 +31,23 @@ export class SettingsApi {
   async exportLogs(): Promise<string> {
     const res = await this.client.get<string>(`${apiPrefix}/logs/export`, { parseJson: false })
     return typeof res.data === 'string' ? res.data : ''
+  }
+
+  async getTabConfig(): Promise<TabConfig> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/settings/tab-config`)
+    return parseTabConfig(res.data)
+  }
+
+  async updateTabConfig(config: TabConfig): Promise<TabConfig> {
+    const body = {
+      show_library: config.showLibrary,
+      plugin_tabs: config.pluginTabs.map((t) => ({
+        plugin_id: t.pluginId,
+        entry_path: t.entryPath,
+        name: t.name,
+      })),
+    }
+    const res = await this.client.put<unknown>(`${apiPrefix}/settings/tab-config`, body)
+    return parseTabConfig(res.data)
   }
 }

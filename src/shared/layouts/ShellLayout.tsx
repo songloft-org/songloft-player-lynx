@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 // Import MiniPlayer directly (not the player feature barrel) so the shell graph
 // does not eagerly pull in the full player + its lynx-ui gesture leaves.
 import { MiniPlayer } from '../../features/player/widgets/MiniPlayer.js'
+import { usePluginTabs } from '../../features/jsplugin/index.js'
 import { NAV_DESTINATIONS } from '../nav/destinations.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import { Icon, ICON_COLORS } from '../ui/Icon.js'
@@ -22,9 +23,11 @@ export function ShellLayout() {
   const { t } = useTranslation()
   const { breakpoint, isWide, onLayoutChange } = useBreakpoint()
   const pathname = useRouterState({ select: s => s.location.pathname })
+  const pluginTabsQuery = usePluginTabs()
+  const pluginTabs = pluginTabsQuery.data ?? []
 
-  const renderNavItems = () =>
-    NAV_DESTINATIONS.map(dest => {
+  const renderNavItems = () => {
+    const items = NAV_DESTINATIONS.map(dest => {
       const active = pathname === dest.path
       return (
         <view
@@ -43,6 +46,30 @@ export function ShellLayout() {
         </view>
       )
     })
+
+    for (const tab of pluginTabs) {
+      const pluginPath = `/plugin/${tab.entryPath}`
+      const active = pathname === pluginPath
+      items.push(
+        <view
+          key={pluginPath}
+          className={active ? 'nav-item nav-item--active' : 'nav-item'}
+          bindtap={() => navigate({ to: '/plugin/$entryPath', params: { entryPath: tab.entryPath } })}
+        >
+          <view className='nav-item__icon'>
+            <Icon
+              name='settings'
+              size={24}
+              color={active ? ICON_COLORS.primary : ICON_COLORS.contentMuted}
+            />
+          </view>
+          <text className='nav-item__label'>{tab.name}</text>
+        </view>,
+      )
+    }
+
+    return items
+  }
 
   return (
     <view

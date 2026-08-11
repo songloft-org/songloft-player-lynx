@@ -1,0 +1,50 @@
+.plugin-webview {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background-color: var(--surface);
+}
+
+.plugin-webview__topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+}
+
+.plugin-webview__back {
+  padding: var(--space-1);
+}
+
+.plugin-webview__title {
+  flex: 1;
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--content);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plugin-webview__frame {
+  flex: 1;
+  width: 100%;
+}
+
+.plugin-webview__state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plugin-webview__state-text {
+  font-size: var(--font-md);
+  color: var(--content-muted);
+}
+
+.plugin-webview__state-text--error {
+  color: var(--error);
+}

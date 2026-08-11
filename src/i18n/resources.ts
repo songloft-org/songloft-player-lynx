@@ -201,6 +201,7 @@ export const en = {
     install: 'Install',
     installed: 'Installed',
     hasUpdate: 'Update',
+    loading: 'Loading plugin…',
   },
 }
 
@@ -400,6 +401,7 @@ export const zh: TranslationTree = {
     install: '安装',
     installed: '已安装',
     hasUpdate: '更新',
+    loading: '加载插件中…',
   },
 }
 

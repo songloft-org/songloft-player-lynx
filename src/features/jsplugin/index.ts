@@ -1,5 +1,8 @@
 export { PluginManagerPage } from './pages/PluginManagerPage.js'
 export { PluginRegistryPage } from './pages/PluginRegistryPage.js'
+export { PluginWebViewPage } from './pages/PluginWebViewPage.js'
 export { PluginGrid } from './widgets/PluginGrid.js'
+export { usePluginTabs } from './data/tab-config.js'
+export type { PluginTabEntry, TabConfig } from './data/tab-config.js'
 export { handlePluginHostCall } from './domain/plugin-host-dispatch.js'
 export type { HostCallRequest, HostCallResult, PluginHostContext } from './domain/plugin-host-dispatch.js'

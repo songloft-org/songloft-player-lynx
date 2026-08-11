@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from '@tanstack/react-router'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
@@ -8,10 +9,17 @@ import './PluginGrid.css'
 
 export function PluginGrid() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { data } = usePluginsQuery()
   const activePlugins = (data?.plugins ?? []).filter((p) => p.isActive && p.entryPath)
 
   if (activePlugins.length === 0) return null
+
+  const onTap = (plugin: JSPlugin) => {
+    if (plugin.entryPath) {
+      void navigate({ to: '/plugin/$entryPath', params: { entryPath: plugin.entryPath } })
+    }
+  }
 
   return (
     <view className='plugin-grid'>
@@ -21,20 +29,20 @@ export function PluginGrid() {
       </view>
       <view className='plugin-grid__items'>
         {activePlugins.map((plugin) => (
-          <PluginCard key={String(plugin.id)} plugin={plugin} />
+          <PluginCard key={String(plugin.id)} plugin={plugin} onTap={() => onTap(plugin)} />
         ))}
       </view>
     </view>
   )
 }
 
-function PluginCard({ plugin }: { plugin: JSPlugin }) {
+function PluginCard({ plugin, onTap }: { plugin: JSPlugin; onTap: () => void }) {
   const iconSrc = plugin.icon && plugin.entryPath
     ? buildCoverUrl(`/api/v1/jsplugin/${plugin.entryPath}/static/${plugin.icon}`)
     : ''
 
   return (
-    <view className='plugin-grid__card' data-testid={`plugin-card-${plugin.id}`}>
+    <view className='plugin-grid__card' bindtap={onTap} data-testid={`plugin-card-${plugin.id}`}>
       {iconSrc
         ? <image className='plugin-grid__card-icon' src={iconSrc} />
         : (

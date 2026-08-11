@@ -99,6 +99,13 @@ vi.mock('../features/jsplugin/widgets/PluginGrid.js', () => ({
   PluginGrid: () => null,
 }))
 
+vi.mock('../features/jsplugin/index.js', () => ({
+  usePluginTabs: () => ({ data: [] }),
+  PluginManagerPage: () => null,
+  PluginRegistryPage: () => null,
+  PluginWebViewPage: () => null,
+}))
+
 /**
  * Renders a fresh app router seeded at `entry` (memory history) and returns the
  * queries bound to the rendered tree.
