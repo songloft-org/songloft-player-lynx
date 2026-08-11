@@ -16,7 +16,7 @@ import { CategorySongsPage, LibraryPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
 import { LogsPage, ServerSettingsPage, SettingsPage } from './features/settings/index.js'
-import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage } from './features/jsplugin/index.js'
+import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
 
 /**
@@ -134,6 +134,13 @@ const pluginWebViewRoute = createRoute({
   component: PluginWebViewPage,
 })
 
+/** `/settings/tab-config` — tab configuration page, inside the shell (batch 18). */
+const tabConfigRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/tab-config',
+  component: TabConfigPage,
+})
+
 /** `/playlists/$id` — playlist detail, inside the shell (batch 6). */
 const playlistDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -174,6 +181,7 @@ const routeTree = rootRoute.addChildren([
     pluginsRoute,
     pluginRegistryRoute,
     pluginWebViewRoute,
+    tabConfigRoute,
     playlistDetailRoute,
     categorySongsRoute,
   ]),

@@ -105,8 +105,15 @@
 .home-section__grid {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   padding: 0 var(--space-3);
+  gap: var(--space-3);
+}
+
+.home-section__grid .playlist-card {
+  width: 120px;
+  min-width: 120px;
+  padding: 0;
 }
 
 .home-section__error {

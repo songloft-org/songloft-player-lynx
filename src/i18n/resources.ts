@@ -202,6 +202,12 @@ export const en = {
     installed: 'Installed',
     hasUpdate: 'Update',
     loading: 'Loading plugin…',
+    tabConfigTitle: 'Tab Configuration',
+    tabConfigSubtitle: 'Choose which tabs appear in navigation',
+    tabBuiltIn: 'Built-in',
+    tabPlugins: 'Plugins',
+    tabFixed: 'Always',
+    tabLimitReached: 'Maximum {{max}} tabs reached.',
   },
 }
 
@@ -402,6 +408,12 @@ export const zh: TranslationTree = {
     installed: '已安装',
     hasUpdate: '更新',
     loading: '加载插件中…',
+    tabConfigTitle: 'Tab 配置',
+    tabConfigSubtitle: '选择导航栏中显示哪些标签页',
+    tabBuiltIn: '内置',
+    tabPlugins: '插件',
+    tabFixed: '固定',
+    tabLimitReached: '最多 {{max}} 个标签页。',
   },
 }
 

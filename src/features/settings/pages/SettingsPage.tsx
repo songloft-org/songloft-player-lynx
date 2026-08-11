@@ -309,6 +309,14 @@ export function SettingsPage() {
               onTap={() => void navigate({ to: '/settings/plugins' })}
               testId='settings-plugins'
             />
+            <SettingsRow
+              icon='menu'
+              title={t('jsplugin.tabConfigTitle')}
+              subtitle={t('jsplugin.tabConfigSubtitle')}
+              trailingIcon='chevron-right'
+              onTap={() => void navigate({ to: '/settings/tab-config' })}
+              testId='settings-tab-config'
+            />
           </SettingsSection>
 
           <SettingsSection title={t('settings.account')} icon='logout'>

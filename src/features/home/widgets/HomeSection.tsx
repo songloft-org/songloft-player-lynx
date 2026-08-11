@@ -69,7 +69,7 @@ export function HomeSection({
           </view>
         )
         : (
-          <view className='home-section__grid'>
+          <scroll-view className='home-section__grid' scroll-x>
             {items.map((playlist) => (
               <PlaylistCard
                 key={String(playlist.id)}
@@ -78,7 +78,7 @@ export function HomeSection({
                 isPlaying={playingPlaylistId === playlist.id}
               />
             ))}
-          </view>
+          </scroll-view>
         )}
     </view>
   )
