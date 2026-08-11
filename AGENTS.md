@@ -37,6 +37,8 @@ Lynx 不是浏览器：**无 `window` / `document` / `self`**，无 DOM，双线
 - **缺失的「未声明」全局**（如 `AbortController`，Lynx 引擎无、读裸标识符抛 `ReferenceError`）用 **`globalThis.X = …` polyfill 有效**（未声明名的裸读会 fallthrough 到全局对象属性）——注入点是 `lynx.config.ts` 的 raw banner（覆盖 main-thread + background 两个 bundle、最先执行）。`AbortController` 已如此处理（TanStack Router/Query 都会 `new AbortController()`）。
 - **`dist/main.lynx.bundle` 是容器**：内含压缩可执行码 **+ 未压缩调试源段**（注释、错误消息字符串都会出现）。对产物做 grep 校验时要排除注释/字符串误匹配（见 `background-bundle-self.test.ts`）。
 - lynx-ui **按组件包导入**（如 `@lynx-js/lynx-ui-button`），勿用桶入口 `@lynx-js/lynx-ui`（桶入口会 eager 加载全部子包、污染测试环境）。
+- **lynx-ui 的 compound 组件自身不带样式**：`Switch`/`SwitchTrack`/`SwitchThumb` 这类只把 `ui-checked`/`ui-active`/`ui-disabled` 追加到你给的 className 上，**「选中/按下」的视觉完全由使用方样式表提供**——漏写 `.x.ui-checked` 规则，开关就永远长一个样（批19 真机 bug）。这类组件**一律走已封装好状态样式的 `src/shared/ui/AppSwitch.tsx`，不要再手搭 compound 树**（三处手抄导致第三份抄漏，`app-switch-css.test.ts` 现在会拦第四份）。
+- **测试 double 不许抹掉被测状态**：`_render-mocks.tsx` 里的 Switch stub 原先丢掉 `checked`，ON/OFF 渲染成同一棵树，于是上面那个 bug 一路绿灯上真机。mock 原生叶子时**必须保留「状态 → className/属性」这条映射**，否则渲染断言只是在验证 mock 自己。
 
 ## 4. 分批工作流
 

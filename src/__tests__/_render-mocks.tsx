@@ -36,7 +36,7 @@
  *     return (await import('<path>/_render-mocks.js')).makeAuthStoreMock(actual)
  *   })
  */
-import { forwardRef } from '@lynx-js/react'
+import { createContext, forwardRef, useContext } from '@lynx-js/react'
 
 import { en } from '../i18n/resources.js'
 import type { AuthState } from '../features/auth/store/index.js'
@@ -109,21 +109,73 @@ export function mockLynxUiInput() {
   }
 }
 
-/** Mock module for `@lynx-js/lynx-ui-switch` — passthrough views. */
+/**
+ * Mock module for `@lynx-js/lynx-ui-switch` (a native gesture leaf, unmountable
+ * in this env).
+ *
+ * It reproduces the one behaviour that matters for assertions: the real component
+ * appends `ui-checked` / `ui-disabled` to **every** compound part's className
+ * (Switch, SwitchTrack, SwitchThumb — each reads the state off a context), which
+ * is the only channel through which switch state reaches CSS. The previous
+ * passthrough dropped the `checked` prop entirely, so a rendered ON switch was
+ * indistinguishable from an OFF one — and that blind spot is precisely how the
+ * batch-19 "every switch looks the same" bug reached a device with tests green.
+ *
+ * The root view also carries `bindtap` (as the real one does via `usePressTap`),
+ * so `fireEvent.tap` can drive `onChange` in tests.
+ */
 export function mockLynxUiSwitch() {
-  const Passthrough = ({
+  interface SwitchState {
+    checked: boolean
+    disabled: boolean
+  }
+  const SwitchStateContext = createContext<SwitchState>({
+    checked: false,
+    disabled: false,
+  })
+
+  const withState = (className: string | undefined, s: SwitchState): string =>
+    [className, s.checked ? 'ui-checked' : '', s.disabled ? 'ui-disabled' : '']
+      .filter(Boolean)
+      .join(' ')
+
+  const Part = ({
     className,
     children,
   }: {
     className?: string
     children?: unknown
-  }) => <view className={className}>{children as never}</view>
+  }) => (
+    <view className={withState(className, useContext(SwitchStateContext))}>
+      {children as never}
+    </view>
+  )
+
   return {
-    Switch: Passthrough,
-    SwitchTrack: Passthrough,
-    SwitchThumb: ({ className }: { className?: string }) => (
-      <view className={className} />
+    Switch: ({
+      className,
+      children,
+      checked = false,
+      disabled = false,
+      onChange,
+    }: {
+      className?: string
+      children?: unknown
+      checked?: boolean
+      disabled?: boolean
+      onChange?: (next: boolean) => void
+    }) => (
+      <SwitchStateContext.Provider value={{ checked, disabled }}>
+        <view
+          className={withState(className, { checked, disabled })}
+          bindtap={disabled ? undefined : () => onChange?.(!checked)}
+        >
+          {children as never}
+        </view>
+      </SwitchStateContext.Provider>
     ),
+    SwitchTrack: Part,
+    SwitchThumb: Part,
   }
 }
 

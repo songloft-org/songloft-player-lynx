@@ -5,7 +5,7 @@
 
 ## 总览
 
-Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migration_roadmap.md` **分批实现**，每批本机自动验收（`pnpm build` + `tsc --noEmit` + `vitest`）+（涉及 UI 时）真机扫码目测。技术栈见 `AGENTS.md`。
+Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migration_roadmap.md` **分批实现**，每批本机自动验收（`pnpm build` + `tsc -b` + `vitest`）+（涉及 UI 时）真机扫码目测。技术栈见 `AGENTS.md`。
 
 ## 批次状态
 
@@ -35,6 +35,7 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 18c | 零散修复（暗色 Input 提示文字色 / 曲库子页签记忆）| ✅ 完成 | build/tsc/vitest 绿（372 测试）| ⚠️ **提示文字色修复当时无效**（`placeholder-color` 被 Lynx template encode 移除，批19 改为 `-x-placeholder-color` 才生效）|
 | 18d | Android 修复（通知栏 `addSession()` / 正式图标与名称 / CI release 签名）| ✅ 完成（本机可验部分）| workflow YAML + Kotlin 结构自查 | ⏳ 待 CI 出新 APK 验通知栏真出现 |
 | 19 | **音乐库运维 · 扫描**（扫描主链路 + 目录树选择 + 5 个扫描开关 + 元数据刷新）| ✅ 完成 | clean build（1375.5 kB）/tsc/**521 vitest**（+149）全绿 | ⏳ **必须联后端真验**（本批唯一价值所在，见下）|
+| 19b | 真机反馈：开关开/关状态不可见（真 bug，已修）+ 「扫描失败」定位（后端 `music_path` 配置，非客户端）| ✅ 完成 | clean build（1374.3 kB）/`tsc -b --force`/**527 vitest**（+3）全绿 | ⏳ 扫描真验仍被服务端音乐目录卡住（见明细）|
 | 后续 | 批20 重复检测/指纹 → 批21 缓存管理 + 排除目录 → B3 iOS 宿主 + AVPlayer → Lynxtron 桌面 → 升级 ops → 下载/许可 → DLNA | ⛔ 未开始 | | |
 
 ## 已交付明细
@@ -275,6 +276,47 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 - **验收**：`rm -rf dist .rspeedy && pnpm run build`（**1375.5 kB**）✓ / `tsc --noEmit` ✓ / `pnpm test` **521/521**（+149：models 18 / scan-model 44 / scan-api 17 / scan-settings-api 17 / directory-tree 16 / remote-setting 8 / page 冒烟 29）✓ / 产物校验：7 个端点串 + 中英文案（`grep -a`，`strings` 会漏多字节 UTF-8）+ `libops-indeterminate` + `setTimeoutProvider` 均入包，`AbortController`/`__TSR_ROUTER__` 守卫仍在，`background-bundle-self`/`router-no-dom`/`query-no-dom` 对新鲜 dist 复跑绿 ✓。**本机 `ulimit -v` 已 unlimited，不再需要批10-12 那样进 Docker。**
 - **顺手修掉（本批范围外，验收时由构建警告暴露）**：批18c 的「暗色 Input 提示文字不可见」修复**当时无效**——CSS 里写的 `placeholder-color` 被 Lynx template encode 移除（构建有 `⚠ Unsupported property` 警告，当时未注意）。Lynx 要求 `-x-` 前缀变体，已把 5 个文件改成 `-x-placeholder-color`，警告消失。
 
+### 批19b · 真机反馈修复（开关状态不可见）+ 扫描失败定位
+
+#### 1) 真 bug：开关的开/关在真机上完全无法区分（已修）
+
+现象：音乐库页 6 个开关不论后端值是什么都长一个样。实测该机后端 `scan-auto-create-playlists=true`、`scan-title-source=filename`（都是「开」）与 `auto-scan=false`、`scan-auto-fingerprint=false`（「关」）渲染**像素一致**。
+
+**根因是 CSS，不是逻辑**：lynx-ui 的 `Switch` **自身不带任何样式**，只把 `ui-checked`/`ui-active`/`ui-disabled` 追加到每个 compound part 的 className 上——「选中」这个视觉状态**完全由使用方的样式表提供**。批19 的 `.libops__switch-track` 只写了底色，**没有 `.ui-checked` 规则**；也漏了 `flex-direction: row`（Lynx flex 默认 `column`，缺它 `justify-content: flex-end` 会把 thumb 推**下**去而不是推右）。
+
+**为什么会漏**：login / server-settings / library-ops **三处各自手抄了同一份 track/thumb CSS**，第三份抄漏了规则。所以修法是消掉复制源，而不是补一条规则：新增 **`src/shared/ui/AppSwitch.tsx` + `AppSwitch.css`（全 app 唯一一份开关样式）**，三处使用点改成 `<AppSwitch>`，删掉三份 CSS。顺带 `disabled` 现在真的透传给 lynx-ui（原先靠「不传 `onChange`」，按下仍有 press 动画，看着可点实则无效）。
+
+**为什么测试全绿——真正的教训**：`mockLynxUiSwitch()` 是个 passthrough，**把 `checked` 整个丢掉了**，ON 与 OFF 渲染成同一棵树，任何渲染断言都不可能发现。已改成忠实版（照真实组件把 `ui-checked`/`ui-disabled` 追加到三个 part 的 className；root 挂 `bindtap`，因此 `fireEvent.tap` 现在能驱动 `onChange`，批19 注释里「stubbed switch 不能 emit onChange」的限制随之解除）。
+
+两道新闸，**都做过反向验证**（破坏后确实变红）：
+
+- **渲染层**（`library-ops-page.test.tsx`）：ON 的 track 必须带 `ui-checked`、OFF 的必须不带。
+- **CSS 层**（`src/shared/ui/__tests__/app-switch-css.test.ts`）：共享样式表必须有 `.app-switch__track.ui-checked { background-color … justify-content: flex-end }` 与 track 的 `flex-direction: row`；且**除它以外任何 `.css` 都不许再出现开关样式**（拦第四份复制，比较前先剥注释）。渲染测试抓不到「缺一条 CSS 规则」，所以这道静态闸是必需的，不是锦上添花。
+- **产物校验**：从 `dist/main.lynx.bundle` 解出编译后的样式段，确认 `app-switch__track` + `ui-checked` → `{{--primary}}` / `flex-end` 真入包（复合选择器 `.a.b` 存活），三份旧类名 0 命中。
+
+#### 2) 「扫描失败」不是客户端 bug（后端 `music_path` 配置）
+
+真机报 `扫描失败: failed to scan files: no valid scan directory: [music]`。直连该机后端逐项复现：
+
+| 探测 | 结果 |
+|---|---|
+| `GET /settings/music-path` | `{"path":"music", …}` — **相对路径，且该目录在服务端不存在** |
+| `GET /scan/directories` | `{"detail":"directory does not exist: music"}` → 目录树只可能是 error 态 |
+| `POST /scan {"reimport":false}`（与客户端完全同形的 body） | HTTP 200 `扫描任务已启动`，随后 progress 转 `failed`，error 同上 |
+| `GET /songs/stats` | `local_songs: 0`（60 首全是 remote） |
+
+即**客户端发的 body 正确、后端错误也被如实展示**——这反过来验证了批19 修掉的 Flutter 缺陷 #1（Flutter 版在这里会是整块空白）。阻塞点在服务端 `music_path` 指向不存在的相对目录 `music`，而 Lynx 客户端**目前没有音乐目录配置 UI**（`/settings/music-path` PUT 划给了批21），用户在客户端内无法自救。改 path 的最小办法（**PUT 必须带上三个排除数组，否则会被清空**）：
+
+```
+curl -X PUT "$BASE/api/v1/settings/music-path" -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"path":"/绝对/音乐目录","exclude_dirs":["@eaDir","tmp"],"exclude_paths":[],"auto_create_exclude_dirs":["downloads"]}'
+```
+
+**建议把「音乐目录」这一行从批21 提前**：目录树与扫描两个功能都被它卡住，批19 的价值在服务端 path 配好之前无法体现。
+
+- **验收**：`pnpm run build` clean（**1374.3 kB**，构建警告只剩既有两条 `text-transform`/`object-fit`，无新增）✓ / `pnpm exec tsc -b --force` ✓ / `pnpm test` **527/527**（58 文件，+3）✓。
+
 ## 未完成 / 遗留事项（TODO & 风险）
 
 - [x] **Lynx `fetch` 是裸全局**（批3 真机修复）：Lynx 的 `fetch` 是宿主提供的 HTTP service（Android/iOS 2.18+），以**裸全局**暴露而非 `globalThis.fetch`（与 `self` 同）。`createFetchTransport` 已改为先取裸 `fetch`（`typeof fetch !== 'undefined'`）再回落 `globalThis.fetch`/注入。⚠️ 但**真机整登录 E2E 仍需后端可达**：手机上 `http://localhost:58091` 指向手机自身，须填开发机 LAN IP 且后端在跑；Lynx fetch 不支持 CORS/redirect/keepalive/FormData/Blob。
@@ -346,6 +388,7 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
   - **真机待验**：手动 Run CI workflow → 装 APK → 登录（LAN IP+后端）→ 点歌真实播放 + 进度前进 + 控制可用 + 切后台看通知。
 - [x] **i18n**（批9 完成）：i18next + react-i18next（无 detector / 无 DOM / 无 Intl，`compatibilityJSON:'v3'`）；en+zh 内联资源覆盖全 feature UI 串；Settings 语言切换即时生效 + 持久化；arb→i18next 转换脚本（`scripts/arb-to-i18next.ts`，1276 key，ICU 复数键已标记）。**全量 arb 运行时导入留后续**（app 仅内联策展子集，避免包体撑爆）；「跟随系统」暂回落默认（无宿主 locale API）；复数/日期未用 i18next Intl 能力（手动单复数）。见「批9 · i18n 国际化」。
 - [ ] **批19 遗留（音乐库运维）**：
+  - ⛔ **扫描真验被服务端音乐目录卡死（批19b 定位）**：该开发后端 `music_path = "music"`（相对路径，服务端不存在）→ `POST /scan` 必失败、`GET /scan/directories` 必 error，**客户端无过**。而客户端**没有音乐目录配置 UI**（划给了批21），用户无法在应用内自救。**建议把「音乐目录」单行配置从批21 提前**，或先用 `PUT /settings/music-path` 手工改（**必须回带三个排除数组，否则清空**）。详见「批19b」。
   - **本批裁掉、已排期**：重复检测/指纹计算页（`/scan/fingerprints/*` + `/songs/duplicates` + `POST /songs/batch-delete` 批量删除确认）→ **批20**；缓存管理（`/cache-manage/*`）+ 排除目录管理（三类排除 + `PUT /settings/music-path` + `/scan/dir-names` 自动补全）→ **批21**。
   - [x] **端点契约已用 `docs/swagger.json` 逐项核对**（用户在本批实施期间提供的后端权威契约，119 个 path）——**13 个端点的路径与方法全部吻合**；`ScanProgress` 14 字段（我用了 10 个）、`MetadataProgress` 4 字段、`AutoScanSetting` 2 字段全部吻合；**`services.ScanStatus` 的 9 个枚举值与实现逐字一致**；`handlers.ScanRequest` = `{paths?: string[], reimport?: boolean}` 且 swagger 明确「为空时扫描整个音乐根目录；非空时只扫描给定目录（含子目录）」，与 `buildScanBody` 的「空则不发该键」一致；`scanPlaylistModeRequest.mode` enum `directory|top_level|bubble_up`、`scanTitleSourceRequest.title_source` enum `tag|filename`（`example: "tag"`）、`remoteTitleSourceRequest`（**`example: "filename"`**——直接确认了那个与同类端点相反的默认值）全部吻合。
   - **swagger 驱动的改进**：`ScanProgress` 还有 `error`（「错误信息」）字段——已加入模型为 `errorMessage`，failed 态优先显示后端原因（复用 ARB 现成文案 `libops.scanFailed`），而非只给一个无从下手的「扫描出错」。

@@ -3,11 +3,11 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { Input } from '@lynx-js/lynx-ui-input'
-import { Switch, SwitchThumb, SwitchTrack } from '@lynx-js/lynx-ui-switch'
 
 import { appConfig } from '../../../core/config/app-config.js'
 import { getQueryClient } from '../../../lib/query/index.js'
 import { useAppSessionStore } from '../../../store/index.js'
+import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { applyServerSettings } from '../data/settings-prefs.js'
 import './ServerSettingsPage.css'
@@ -79,15 +79,10 @@ export function ServerSettingsPage() {
                 </view>
 
                 <view className='server-settings__toggle'>
-                  <Switch
-                    className='server-settings__switch'
+                  <AppSwitch
                     checked={insecureTls}
                     onChange={(checked) => setInsecureTls(checked)}
-                  >
-                    <SwitchTrack className='server-settings__switch-track'>
-                      <SwitchThumb className='server-settings__switch-thumb' />
-                    </SwitchTrack>
-                  </Switch>
+                  />
                   <view className='server-settings__toggle-text'>
                     <text className='server-settings__toggle-title'>{t('settings.insecureTls')}</text>
                     <text className='server-settings__toggle-subtitle'>

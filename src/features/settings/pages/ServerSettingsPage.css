@@ -85,34 +85,8 @@
   margin-bottom: var(--space-4);
 }
 
-.server-settings__switch-track {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  width: 44px;
-  height: 26px;
-  padding: 3px;
-  border-radius: var(--radius-pill);
-  background-color: var(--neutral-faint);
-  border: 1px solid var(--line);
-}
-
-.server-settings__switch-track.ui-checked {
-  background-color: var(--primary);
-  border-color: var(--primary);
-  justify-content: flex-end;
-}
-
-.server-settings__switch-thumb {
-  width: 20px;
-  height: 20px;
-  border-radius: var(--radius-pill);
-  background-color: var(--content);
-}
-
-.server-settings__switch.ui-active {
-  opacity: 0.85;
-}
+/* The toggle uses the shared `AppSwitch` — its CSS lives in
+ * `src/shared/ui/AppSwitch.css` (single source of truth for switch state). */
 
 .server-settings__toggle-text {
   display: flex;

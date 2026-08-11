@@ -1,0 +1,58 @@
+/*
+ * The app's ONLY switch styling — see `AppSwitch.tsx` for why it is centralised.
+ *
+ * lynx-ui's `Switch` ships no CSS of its own: the compound parts render as bare
+ * `<view>`s and the checked / pressed / disabled state reaches CSS *only* as the
+ * `ui-checked` / `ui-active` / `ui-disabled` classes the component appends to
+ * every part's own className. A track rule with no matching `.ui-checked` rule
+ * therefore renders ON pixel-identically to OFF.
+ *
+ * That is exactly the batch-19 device bug this file exists to make unrepeatable:
+ * three screens had each hand-rolled the same track/thumb CSS, and the third copy
+ * (the library-ops switch rows) dropped the `.ui-checked` rule — so switches whose
+ * backend value was `true` looked the same as the ones that were `false`.
+ * `app-switch-css.test.ts` fails if a second file starts styling a switch again.
+ */
+
+.app-switch.ui-active {
+  opacity: 0.85;
+}
+
+.app-switch__track {
+  display: flex;
+  /*
+   * Lynx's default `flex-direction` is `column`, not `row`. Without this the
+   * thumb sits on the *vertical* main axis and the `justify-content: flex-end`
+   * below would slide it DOWN instead of right — i.e. the checked state would
+   * still be invisible even with the rule present. (The dropped copy was missing
+   * both.)
+   */
+  flex-direction: row;
+  align-items: center;
+  width: 44px;
+  height: 26px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background-color: var(--neutral-faint);
+  border: 1px solid var(--line);
+}
+
+.app-switch__track.ui-checked {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  justify-content: flex-end;
+}
+
+.app-switch__thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background-color: var(--content);
+}
+
+/*
+ * Deliberately no `.ui-disabled` opacity here: every disabled switch in the app
+ * sits in a row that already dims its whole subtree (`.settings-row--disabled`),
+ * and stacking a second opacity would compound to ~0.2 and read as invisible.
+ * `disabled` is still forwarded to lynx-ui so it blocks the tap.
+ */

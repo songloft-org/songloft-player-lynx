@@ -6,9 +6,9 @@ import { useTranslation } from 'react-i18next'
 // which eagerly loads every sub-package and corrupts the test reconciler).
 import { Button } from '@lynx-js/lynx-ui-button'
 import { Input } from '@lynx-js/lynx-ui-input'
-import { Switch, SwitchThumb, SwitchTrack } from '@lynx-js/lynx-ui-switch'
 
 import { appConfig, devCredentials } from '../../../core/config/app-config.js'
+import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import {
   PREF_LAST_USERNAME,
@@ -141,15 +141,10 @@ export function LoginPage() {
               onInput={(value) => setApiUrl(value)}
             />
             <view className='login__toggle'>
-              <Switch
-                className='login__switch'
+              <AppSwitch
                 checked={insecureTls}
                 onChange={(checked) => setInsecureTls(checked)}
-              >
-                <SwitchTrack className='login__switch-track'>
-                  <SwitchThumb className='login__switch-thumb' />
-                </SwitchTrack>
-              </Switch>
+              />
               <view className='login__toggle-text'>
                 <text className='login__toggle-title'>
                   {t('auth.insecureTls')}

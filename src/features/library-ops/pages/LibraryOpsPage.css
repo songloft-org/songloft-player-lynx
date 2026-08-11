@@ -320,20 +320,9 @@
   margin-left: var(--space-1);
 }
 
-/* ── Switch (lynx-ui compound parts) ────────────────────────────────────── */
-
-.libops__switch-track {
-  display: flex;
-  width: 44px;
-  height: 26px;
-  border-radius: var(--radius-pill);
-  background-color: var(--rule);
-  padding: 2px;
-}
-
-.libops__switch-thumb {
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-pill);
-  background-color: var(--content);
-}
+/*
+ * The switch rows style nothing here on purpose — they use the shared
+ * `AppSwitch`, whose CSS lives in `src/shared/ui/AppSwitch.css`. The local copy
+ * this replaced had no `.ui-checked` rule, so every ON switch on this page
+ * rendered identically to an OFF one.
+ */

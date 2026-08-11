@@ -1,5 +1,4 @@
-import { Switch, SwitchThumb, SwitchTrack } from '@lynx-js/lynx-ui-switch'
-
+import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { IconName } from '../../../shared/ui/icons.js'
 
@@ -47,15 +46,7 @@ export function SwitchRow({
         {subtitle ? <text className='settings-row__subtitle'>{subtitle}</text> : null}
       </view>
       <view className='settings-row__trailing'>
-        <Switch
-          className='libops__switch'
-          checked={checked}
-          onChange={disabled ? undefined : onChange}
-        >
-          <SwitchTrack className='libops__switch-track'>
-            <SwitchThumb className='libops__switch-thumb' />
-          </SwitchTrack>
-        </Switch>
+        <AppSwitch checked={checked} disabled={disabled} onChange={onChange} />
       </view>
     </view>
   )

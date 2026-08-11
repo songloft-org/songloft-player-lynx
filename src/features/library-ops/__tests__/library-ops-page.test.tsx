@@ -331,6 +331,27 @@ test('all five scan preference controls render', async () => {
   }
 })
 
+/**
+ * Regression for the batch-19 device bug: the switches all looked the same
+ * whatever their value (`scan-auto-create-playlists` is `true` on the dev backend
+ * yet rendered as off). The class the switch puts on its track is the *only*
+ * channel through which state reaches CSS, so assert both polarities land — the
+ * companion `app-switch-css.test.ts` covers the stylesheet half.
+ *
+ * This assertion only became possible once `mockLynxUiSwitch` stopped discarding
+ * `checked`; the old passthrough is why tests stayed green through the bug.
+ */
+test('switch rows render their on/off state as a class on the track', async () => {
+  h.settings.autoCreate = true
+  h.settings.fingerprint = false
+  const { queryByTestId } = await renderPage()
+  const on = queryByTestId('switch-auto-create')?.querySelector('.app-switch__track')
+  const off = queryByTestId('switch-fingerprint')?.querySelector('.app-switch__track')
+  expect(on?.className).toContain('ui-checked')
+  expect(off).toBeInTheDocument()
+  expect(off?.className).not.toContain('ui-checked')
+})
+
 test('playlist mode options are selectable and report the current choice', async () => {
   const { queryByTestId } = await renderPage()
   expect(queryByTestId('playlist-mode-directory')).toBeInTheDocument()
