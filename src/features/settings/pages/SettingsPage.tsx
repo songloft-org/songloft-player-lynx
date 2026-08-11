@@ -217,6 +217,17 @@ export function SettingsPage() {
             ))}
           </SettingsSection>
 
+          <SettingsSection title={t('settings.musicLibraryScan')} icon='library'>
+            <SettingsRow
+              icon='search'
+              title={t('libops.pageTitle')}
+              subtitle={t('libops.entrySubtitle')}
+              trailingIcon='chevron-right'
+              onTap={() => void navigate({ to: '/settings/library' })}
+              testId='settings-library-ops'
+            />
+          </SettingsSection>
+
           <SettingsSection title={t('settings.languageSection')} icon='settings'>
             {APP_LANGUAGE_OPTIONS.map((option) => (
               <SettingsRow
@@ -299,7 +310,6 @@ export function SettingsPage() {
           </SettingsSection>
 
           <SettingsSection title={t('settings.moreLater')} icon='settings'>
-            <SettingsRow icon='library' title={t('settings.musicLibraryScan')} subtitle={t('settings.deferred')} disabled />
             <SettingsRow icon='settings' title={t('settings.storageCache')} subtitle={t('settings.deferred')} disabled />
             <SettingsRow
               icon='menu'

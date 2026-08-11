@@ -1,7 +1,7 @@
 # 进展与交接（PROGRESS）
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
-> **最后更新**：2026-08-10 · 最近完成（**批17 · 插件模块**）：对照 Flutter 参考源（`songloft-player/lib/features/settings/`）发现 `logLevelProvider` 其实是**后端设置**（`GET/PUT /api/v1/settings/log-level`，不是本地开关），`LogExportService` 是拉后端日志 + 本机 `FileLogger` 文件打包 zip + 系统分享面板（`share_plus`）。Lynx 版裁剪：新建 `SettingsApi`（`getLogLevel`/`setLogLevel`/`exportLogs`，镜像 `PlaylistApi` 用法）+ Settings 新增「诊断」分组（日志级别四选一，真调后端接口）+ `/settings/logs` 子页拉 `GET /api/v1/logs/export` 纯文本滚动展示（离线/后端不可达降级成错误提示）；不做 zip 打包/系统分享（Lynx 无原生分享模块，留给未来原生模块批），不做 `webDebugConsoleProvider`（Flutter Web 平台专属，与 Lynx 无关）。build 1221.1 kB / tsc / **372 vitest**（1 个 `use-debounce` 计时器 flake，隔离重跑 5/5 绿，与本批无关）全绿。**上一批**（批14 · 零散 UI 补完排查轮）：排查用户举的两个「零散 UI」候选后发现其实**已经实现**、只是文档过期未更——① 收藏歌单标识/置顶：`PlaylistCard` 对 `isBuiltIn` 早已叠心形徽标（Favorites/Radio-Favorites 后端 label 均含 `built_in`），批11 的 chevron 手动排序已可置顶任意歌单；② 首页问候语 i18n：`greeting.ts`/`resources.ts` 早已是 4 档×中英双语。真正补的一个缺口：`buildCoverUrl` 加 `_t=<updatedAt ms>` 缓存刷新参数。**顺手发现并修复**：docs/PROGRESS.md 里 4 处 U+FFFD 乱码字节其实是我上一批用 `edit_file` 改动其他段落时工具自己引入的（不是历史遗留），从 git 历史找回干净原文逐一还原。build 1212.3 kB / tsc / **358 vitest** 全绿。
+> **最后更新**：2026-08-11 · 最近完成（**批19 · 音乐库运维 · 扫描**）：解掉「Lynx 客户端无法扫描音乐库」这个唯一「不做就用不起来」的缺口——新建 `src/features/library-ops/` feature + `/settings/library` 子页，交付扫描主链路（跳过已存在/重新导入 + 2s 进度轮询 + 5 个状态态 + 取消）、懒加载目录树选择器（指定目录扫描）、5 个后端扫描开关、元数据刷新（含自身轮询）。**修掉 3 个 Flutter 缺陷**（`'error'` vs `'failed'` 状态机断裂导致扫描区空白 / 扫完不刷歌曲缓存导致看不到新歌 / 进度百分比两套口径）。轮询走 TanStack Query 函数式 `refetchInterval`（已实测 query-core 的三处 clear 都有 `void 0` 守卫），并摘掉一处**隐藏依赖**——`refetchIntervalInBackground: true`，否则轮询是靠 `focusManager.isFocused()` 的 `document === undefined` fall-through 侥幸工作的。**测试抓到两个真 bug**：`z.coerce.boolean()` 把 `"false"` 变 `true`；zod v4 里 object 内裸 `z.unknown()` 缺 key 会抛，且被外层 `.catch([])` 吞成空数组（真机目录树会永远为空）。i18n 78 key × 2 语言全部从 ARB dump 挖出、非自撰。**顺手修掉**批18c 那个无效的暗色 Input 提示文字修复（`placeholder-color` 被 template encode 移除，须用 `-x-` 前缀）。build 1375.5 kB / tsc / **521 vitest**（+149）全绿。**上上批**（批17 · 插件模块）：对照 Flutter 参考源（`songloft-player/lib/features/settings/`）发现 `logLevelProvider` 其实是**后端设置**（`GET/PUT /api/v1/settings/log-level`，不是本地开关），`LogExportService` 是拉后端日志 + 本机 `FileLogger` 文件打包 zip + 系统分享面板（`share_plus`）。Lynx 版裁剪：新建 `SettingsApi`（`getLogLevel`/`setLogLevel`/`exportLogs`，镜像 `PlaylistApi` 用法）+ Settings 新增「诊断」分组（日志级别四选一，真调后端接口）+ `/settings/logs` 子页拉 `GET /api/v1/logs/export` 纯文本滚动展示（离线/后端不可达降级成错误提示）；不做 zip 打包/系统分享（Lynx 无原生分享模块，留给未来原生模块批），不做 `webDebugConsoleProvider`（Flutter Web 平台专属，与 Lynx 无关）。build 1221.1 kB / tsc / **372 vitest**（1 个 `use-debounce` 计时器 flake，隔离重跑 5/5 绿，与本批无关）全绿。**上一批**（批14 · 零散 UI 补完排查轮）：排查用户举的两个「零散 UI」候选后发现其实**已经实现**、只是文档过期未更——① 收藏歌单标识/置顶：`PlaylistCard` 对 `isBuiltIn` 早已叠心形徽标（Favorites/Radio-Favorites 后端 label 均含 `built_in`），批11 的 chevron 手动排序已可置顶任意歌单；② 首页问候语 i18n：`greeting.ts`/`resources.ts` 早已是 4 档×中英双语。真正补的一个缺口：`buildCoverUrl` 加 `_t=<updatedAt ms>` 缓存刷新参数。**顺手发现并修复**：docs/PROGRESS.md 里 4 处 U+FFFD 乱码字节其实是我上一批用 `edit_file` 改动其他段落时工具自己引入的（不是历史遗留），从 git 历史找回干净原文逐一还原。build 1212.3 kB / tsc / **358 vitest** 全绿。
 
 ## 总览
 
@@ -32,7 +32,10 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 17 | 插件模块（管理层 + 首页网格 + 宿主桥接 + 注册表商店页）| ✅ 完成 | build/tsc/vitest 绿（372 测试）| — 纯 API + UI + 桥接逻辑，免真机 |
 | 18 | 插件 WebView 渲染 + 动态 Tab 显示（`<webview>` 内置元素 + tab-config API + Shell 动态 tab）| ✅ 完成 | build/tsc/vitest 绿（372 测试）| ⏳ 需后端 + 已安装插件才能真机验 |
 | 18b | Tab 配置页 + 首页区块横向滚动 | ✅ 完成 | build/tsc/vitest 绿（372 测试）| ⏳ 待扫码验横向滚动手势 |
-| 后续 | B3 iOS 宿主 + AVPlayer + CI(No-Codesign) → Lynxtron 桌面 → jsplugin/webview → 库扫描/缓存/升级 ops → 下载/许可 → DLNA | ⛔ 未开始（真机/桌面/后端 ops 绑定，本机不能自动验收）| | |
+| 18c | 零散修复（暗色 Input 提示文字色 / 曲库子页签记忆）| ✅ 完成 | build/tsc/vitest 绿（372 测试）| ⚠️ **提示文字色修复当时无效**（`placeholder-color` 被 Lynx template encode 移除，批19 改为 `-x-placeholder-color` 才生效）|
+| 18d | Android 修复（通知栏 `addSession()` / 正式图标与名称 / CI release 签名）| ✅ 完成（本机可验部分）| workflow YAML + Kotlin 结构自查 | ⏳ 待 CI 出新 APK 验通知栏真出现 |
+| 19 | **音乐库运维 · 扫描**（扫描主链路 + 目录树选择 + 5 个扫描开关 + 元数据刷新）| ✅ 完成 | clean build（1375.5 kB）/tsc/**521 vitest**（+149）全绿 | ⏳ **必须联后端真验**（本批唯一价值所在，见下）|
+| 后续 | 批20 重复检测/指纹 → 批21 缓存管理 + 排除目录 → B3 iOS 宿主 + AVPlayer → Lynxtron 桌面 → 升级 ops → 下载/许可 → DLNA | ⛔ 未开始 | | |
 
 ## 已交付明细
 
@@ -220,6 +223,58 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 - **本机验收**：build **1207.3 kB** ✓ / tsc ✓ / **348 vitest** 全绿（+3：`playlists-view` 内置徽标测试 1 个、`playlist-drawer.test.tsx` 新文件 2 个渲染结构测试；`playlist-drawer` 原计划的点击行为测试因上述 `catchtap` 模拟限制而移除，净增 3）。Docker 容器验证全程未再手动加 `--ignore-scripts`。
 - **真机待验**：服务器切换后旧数据不再残留（切服务器 → 请求新数据 → 确认不是缓存的旧服务器数据）；播放队列抽屉 chevron 排序实际生效（真机 tap 手势，非本机模拟范畴）；内置歌单（Favorites/Favorite Radio）卡片右上角出现红心徽标。
 
+### 批19 · 音乐库运维（扫描）
+
+**动机**：`SettingsPage` 里「音乐库扫描」一直是 disabled 占位行——**Lynx 客户端至今无法扫描音乐库**，歌曲只能靠 Flutter 客户端或直接调后端 API 导入。这是所有功能缺口里唯一「不做就用不起来」的一条。Flutter 侧「音乐库运维」合计约 4300 行 UI，一批装不下，故只做扫描主链路。
+
+- **新 feature `src/features/library-ops/`**（独立 feature，入口行在 Settings 里 → `/settings/library`，同 `jsplugin` 先例）。
+- **模型**（`src/models/library-ops.ts`）：`scanProgressSchema`（10 字段 + 派生 `percent`/`isScanning`/`isTerminal` 等）、`metadataProgressSchema`、`autoScanSettingSchema`、`dirEntrySchema`/`directoryListSchema`。**不改 `models/index.ts`**（沿用 `jsplugin.ts` 直接 import 模块的先例）。
+- **API**：`api/scan-api.ts`（`buildScanBody`/`buildDirectoriesQuery` 两个纯 builder + 7 个动作端点）、`api/scan-settings-api.ts`（6 组开关 GET/PUT）、`api/index.ts`（认证客户端单例 recipe）。
+- **domain**（全纯函数，重点单测对象）：`scan-model.ts`（`deriveScanView` 状态机 / `scanLines` 返回 i18n key+params / `scanPollInterval` / `metadataPollInterval` / `shouldInvalidateOnComplete` / `metadataViewKind` / 4 组选项表 + coerce / `dirDisplayName`）、`directory-tree.ts`（目录树 reducer）。
+- **data**：`scan-query.ts`（轮询）、`scan-mutations.ts`（4 动作 + `useScanCompletionEffect`）、`remote-setting.ts`（开关工厂 + 乐观更新/回滚）、`scan-settings-data.ts`（6 组具体化）、`use-directory-tree.ts`。
+- **UI**：`LibraryOpsPage`（页面级本地态：mode/selectedPaths/startError/writeError/forced/paused）+ `ScanSection`（5 态）/ `ScanSettingsSection` / `MetadataSection` / `DirectoryTree` / `SwitchRow` / `ProgressBar`。
+- **i18n**：新增 `libops` group，**78 key × 2 语言全部从 `src/i18n/generated/{en,zh}.json`（Flutter ARB dump）挖出**，非自撰文案（占位符已是 `{{var}}` 格式）。
+- **图标**：新增 7 个（`folder`/`folder-open`/`search`/`stop`/`warning`/`check-circle`/`fingerprint`）。警告态复用 `ICON_COLORS.danger`（主题无 warning/success 槽）。
+
+#### 修掉的 3 个 Flutter 缺陷（均有回归测试）
+
+1. **`'error'` vs `'failed'` 状态机断裂**：Flutter `startScan` 失败写 `status:'error'`，而 `isError` 判 `'failed'` → 5 个 UI 分支全落空、扫描区**整块空白**。修法：启动失败**不进 status**，`deriveScanView(progress, startError)` 显式接两个入参。测试：`startError=true` 时对任意 status 都返回 `failed`。
+2. **扫完看不到新歌**：Flutter 只 invalidate 歌单列表，歌曲/分面缓存没刷。修法：`invalidateAfterScan` 一并失效 `['library','songs']`/`['library','facets']`/`['playlist','list']` 三个前缀（覆盖全部 filter 变体）。
+3. **进度百分比两套口径**（ScanProgress 0-100 int / MetadataRefreshProgress 0.0-1.0 double）。修法：模型层 `.transform()` 统一成 0-100 整数，两者喂同一个 `ProgressBar`。
+
+#### 轮询：用 TanStack Query 函数式 `refetchInterval`，不手写 interval
+
+已实测 query-core 5.101.4：`#clearRefetchInterval`/`#clearStaleTimeout`/`clearGcTimeout` 三处都有 `!== void 0` 守卫，`undefined` 不会喂给 Lynx 严格的 `clearInterval`。三个 option 都是承重的：
+
+- **`staleTime: 0`** 覆盖全局 30s——否则 30s 内重进页面吃缓存，首次真读被推迟一个周期。
+- **`refetchIntervalInBackground: true`** 摘掉一处**隐藏依赖**：interval 回调只在 `refetchIntervalInBackground || focusManager.isFocused()` 时才 fetch，而我们装了 no-op focus listener 却从不 `setFocused`，`isFocused()` 靠 `globalThis.document?.visibilityState !== 'hidden'` → `undefined !== 'hidden'` → `true` fall-through。**今天能轮询是巧合**，谁要是哪天调了 `setFocused(false)` 轮询会静默死掉。
+- **`retry: 0`** 覆盖全局 `retry: 1`——一次失败的 poll 跳过即可，重试只是在同一周期内打两次。
+
+**启动竞态**（纯 data 派生会漏的真实 bug）：`POST /scan` 返回后后端 worker 可能还没起，首次 `GET /scan/progress` 仍是 `idle` → 轮询永远起不来。修法：粘性本地 `forced` 标志，启动成功置 true、首个终态清 false，参与 `scanPollInterval` 判定。
+
+**取消的两个刻意顺序**（照搬 Flutter 的正确处理）：先暂停轮询再发取消请求（否则等响应期间 poll 可能读到终态、抢先跳到 completed）；**取消失败必须把轮询接回去**（任务可能还在跑，冻结的进度条比失败的取消更糟）。
+
+**加固**：`configureQueryGlobals()` 里 `timeoutManager.setTimeoutProvider()` 注入走 `safe-timers` 的 provider。那三处 `!== void 0` 是依赖的内部实现细节，注入后即便未来版本去掉守卫也不会在真机上崩。
+
+#### 测试抓到的两个真 bug（否则真机才暴露）
+
+1. **`z.coerce.boolean()` 对 `"false"` 返回 `true`**（JS `Boolean("false")`）——比 Flutter 只接受真 bool 更糟。改用显式 `tolerantBoolean(fallback)`，且 fallback 必须逐端点传（`scan-auto-create-playlists` 默认 **true**、`remote-title-source` 默认 **filename**，与同类端点相反）。
+2. **zod v4 里 object 内的裸 `z.unknown()` 不是 optional**，缺 key 时抛 `invalid_type`——而这个抛错被外层 `z.array(dirEntrySchema).catch([])` **吞成了空数组**，真机上目录树会永远为空。修法：`z.unknown().optional()`。这正是 AGENTS.md §2 警告的「`.catch()` 掩盖内层错误」。
+
+#### 与 Flutter 的刻意 UI 偏离
+
+| Flutter | Lynx | 原因 |
+|---|---|---|
+| `SegmentedButton` / `DropdownButton` | 选项行 + `check` 图标 | Lynx 无这两个原语；沿用 `SettingsPage` 播放模式的既有惯例 |
+| 整行可点展开 + 行内 Checkbox | **勾选热区 + 箭头热区两个独立 `bindtap`** | 嵌套可点需内层 `catchtap`，而 `fireEvent.tap` 不触发只挂 `catchtap` 的元素（PROGRESS 批12）——拆开后本批**零 `catchtap`-only 交互**，两个交互都能单测 |
+| `LinearProgressIndicator(value: null)` | 计数文案（每 2s 变的真实数字）+ CSS `@keyframes` 滑块 | Lynx 无 indeterminate progress。动画失效时滑块静止在 30%，仍明显区别于 0% 空条，不会白屏 |
+| 目录树 `maxHeight: 300` 内嵌滚动 | 内联、不限高、随页面滚 | Lynx `scroll-view` 的 `enable-nested-scroll` 默认 `false`，内层会吞手势 |
+| `ResponsiveSnackBar` | 行内可关闭 banner | Lynx 无 toast 原语；顺带裁掉 Flutter 的两个成功 toast（无承载体，成功已由开关状态本身表达） |
+| 节点子目录存在各自 widget state | 扁平 `childrenByPath` 缓存 | Flutter 折叠即丢缓存、重开重拉；扁平缓存让「**首次**展开才懒加载」真正成立（有显式测试） |
+
+- **验收**：`rm -rf dist .rspeedy && pnpm run build`（**1375.5 kB**）✓ / `tsc --noEmit` ✓ / `pnpm test` **521/521**（+149：models 18 / scan-model 44 / scan-api 17 / scan-settings-api 17 / directory-tree 16 / remote-setting 8 / page 冒烟 29）✓ / 产物校验：7 个端点串 + 中英文案（`grep -a`，`strings` 会漏多字节 UTF-8）+ `libops-indeterminate` + `setTimeoutProvider` 均入包，`AbortController`/`__TSR_ROUTER__` 守卫仍在，`background-bundle-self`/`router-no-dom`/`query-no-dom` 对新鲜 dist 复跑绿 ✓。**本机 `ulimit -v` 已 unlimited，不再需要批10-12 那样进 Docker。**
+- **顺手修掉（本批范围外，验收时由构建警告暴露）**：批18c 的「暗色 Input 提示文字不可见」修复**当时无效**——CSS 里写的 `placeholder-color` 被 Lynx template encode 移除（构建有 `⚠ Unsupported property` 警告，当时未注意）。Lynx 要求 `-x-` 前缀变体，已把 5 个文件改成 `-x-placeholder-color`，警告消失。
+
 ## 未完成 / 遗留事项（TODO & 风险）
 
 - [x] **Lynx `fetch` 是裸全局**（批3 真机修复）：Lynx 的 `fetch` 是宿主提供的 HTTP service（Android/iOS 2.18+），以**裸全局**暴露而非 `globalThis.fetch`（与 `self` 同）。`createFetchTransport` 已改为先取裸 `fetch`（`typeof fetch !== 'undefined'`）再回落 `globalThis.fetch`/注入。⚠️ 但**真机整登录 E2E 仍需后端可达**：手机上 `http://localhost:58091` 指向手机自身，须填开发机 LAN IP 且后端在跑；Lynx fetch 不支持 CORS/redirect/keepalive/FormData/Blob。
@@ -290,6 +345,25 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
   - **release 签名 / iOS / 其余端**：同 B1 遗留；iOS AVPlayer 走 B3。
   - **真机待验**：手动 Run CI workflow → 装 APK → 登录（LAN IP+后端）→ 点歌真实播放 + 进度前进 + 控制可用 + 切后台看通知。
 - [x] **i18n**（批9 完成）：i18next + react-i18next（无 detector / 无 DOM / 无 Intl，`compatibilityJSON:'v3'`）；en+zh 内联资源覆盖全 feature UI 串；Settings 语言切换即时生效 + 持久化；arb→i18next 转换脚本（`scripts/arb-to-i18next.ts`，1276 key，ICU 复数键已标记）。**全量 arb 运行时导入留后续**（app 仅内联策展子集，避免包体撑爆）；「跟随系统」暂回落默认（无宿主 locale API）；复数/日期未用 i18next Intl 能力（手动单复数）。见「批9 · i18n 国际化」。
+- [ ] **批19 遗留（音乐库运维）**：
+  - **本批裁掉、已排期**：重复检测/指纹计算页（`/scan/fingerprints/*` + `/songs/duplicates` + `POST /songs/batch-delete` 批量删除确认）→ **批20**；缓存管理（`/cache-manage/*`）+ 排除目录管理（三类排除 + `PUT /settings/music-path` + `/scan/dir-names` 自动补全）→ **批21**。
+  - [x] **端点契约已用 `docs/swagger.json` 逐项核对**（用户在本批实施期间提供的后端权威契约，119 个 path）——**13 个端点的路径与方法全部吻合**；`ScanProgress` 14 字段（我用了 10 个）、`MetadataProgress` 4 字段、`AutoScanSetting` 2 字段全部吻合；**`services.ScanStatus` 的 9 个枚举值与实现逐字一致**；`handlers.ScanRequest` = `{paths?: string[], reimport?: boolean}` 且 swagger 明确「为空时扫描整个音乐根目录；非空时只扫描给定目录（含子目录）」，与 `buildScanBody` 的「空则不发该键」一致；`scanPlaylistModeRequest.mode` enum `directory|top_level|bubble_up`、`scanTitleSourceRequest.title_source` enum `tag|filename`（`example: "tag"`）、`remoteTitleSourceRequest`（**`example: "filename"`**——直接确认了那个与同类端点相反的默认值）全部吻合。
+  - **swagger 驱动的改进**：`ScanProgress` 还有 `error`（「错误信息」）字段——已加入模型为 `errorMessage`，failed 态优先显示后端原因（复用 ARB 现成文案 `libops.scanFailed`），而非只给一个无从下手的「扫描出错」。
+  - **swagger 未声明、仍待联调的点**：① `GET /scan/directories` 的响应在 swagger 里是 `additionalProperties: true`（无字段声明），`{directories, root}` 的假设仍来自 Flutter 客户端；② 6 个开关 GET 的**默认值**（swagger 不声明 default，`auto-create-playlists` 默认 true 等假设来自 Flutter）；③ `POST /scan` 带音乐根之外的 path 会 **400**（swagger 明确写了），当前会落进行内 banner，未做前端预校验；④ `POST /scan/cancel` 在无任务时的状态码；⑤ `cancelling` 态是否真能被观测到（还是后端直接跳 `cancelled`）；⑥ `creating_playlists` 阶段后端是否真拒绝取消（Flutter 也只是前端禁用按钮）。
+  - **swagger 里有但本批未用的字段**：`cleaned_files`（清理的过期文件数）、`start_time`/`end_time`——Flutter 也没展示，未 port。
+  - **刻意不做 `onSettled` invalidate**：开关 PUT 无返回体，invalidate 会立刻回读 GET；若后端最终一致或那次 GET 抖动，开关会在用户眼前弹回去。乐观值在页面重挂载前即为权威（Flutter 亦如此）。
+  - **深目录树无虚拟化**：音乐根下上千子目录时可能卡（`library/widgets/VirtualList.tsx` 已有，但递归树接虚拟列表需先摊平成扁平行数组，属独立工作量）。
+  - **首屏请求扇出 9 个**（扫描进度 + 元数据进度 + 6 开关 + 目录根）。LAN 后端应无碍，真机首屏值得看一眼；若需要可把目录根改成「展开『指定目录』区时才拉」。
+  - **`{{count}}` 未做复数 One-key 对**（en 侧 `{{count}} succeeded`/`{{count}} directories selected` 严格说复数敏感）。对齐 Flutter 现状 + AGENTS 的「手写 key 对、不用 Intl.PluralRules」，记为已知债务。
+  - **真机待验**：CSS `@keyframes`（**本仓库首次使用**）在 Android/iOS 的实际观感；lynx-ui `Switch` 在 6 开关同屏密度下的手势可靠性；目录树勾选/展开手势；扫描长任务期间 2s 轮询的电量/流量表现。
+- [ ] **构建期被移除的无效 CSS 声明**（`pnpm run build` 的 `⚠ Unsupported property … was removed during template encode` 警告，**这类警告要当错误看**）：
+  - [x] `placeholder-color` ×5 文件 → 批19 改为 `-x-placeholder-color`，警告消失、修复真正生效。
+  - [ ] `text-transform: uppercase`（`jsplugin/pages/TabConfigPage.css:47`）——Lynx 不支持（批4 就遇到过一次并移除，批18b 又引入）。修法：删声明，需要大写就直接写大写文案。
+  - [ ] `object-fit: cover`（`jsplugin/widgets/PluginGrid.css:40`）——Lynx `<image>` 不吃 `object-fit`，应改用元素属性 `mode`（如 `mode="aspectFill"`）。需改 JSX，未在批19 范围内。
+- [ ] **订正 3 条过期结论**（批19 调研发现 `@lynx-js/lynx-ui` 桶入口已把这些子包带进 `node_modules`，v3.135.4，Radix 风格 compound API；按组件包导入只需在 `package.json` 显式声明）：
+  - ~~「Lynx 无现成 dialog 原语」故登出用两步 tap~~ → **有 `lynx-ui-dialog`**（`DialogRoot`/`DialogTrigger`/`DialogBackdrop`/`DialogView`/`DialogContent`/`DialogButton`）。批20 重复检测的批量删除确认可用真对话框；登出的两步 tap 也可重估。
+  - ~~「lynx-ui 无 sortable」故排序用 chevron 上移/下移按钮~~ → **有 `lynx-ui-sortable`**（还有 `lynx-ui-draggable`/`lynx-ui-swipe-action`）。歌单/歌曲/队列三处排序 UI 可从按钮式重估为拖拽。
+  - 另有 `lynx-ui-checkbox` / `lynx-ui-radio-group`（多选一与勾选框的现成原语）、`lynx-ui-dialog`、`lynx-ui-popover`、`lynx-ui-form`、`lynx-ui-list`/`feed-list`/`scroll-view`、`lynx-ui-lazy-component`、`lynx-ui-presence`、`lynx-ui-overlay`、`lynx-ui-common`。批19 刻意**未引入任何新包**（目录树勾选自绘 = 两个 view + 一个 `check` Icon，比引入新原生手势叶子 + 写测试 mock 更省），但后续批可按需选用。
 - [ ] **风险登记**（详见 roadmap）：R2 桌面 clay 元素实测、R11 Query 无 DOM（本机已验证，真机待确认）、R13 lynx-ui Web/Desktop 覆盖、R5 音频后台播放各端差异。
 
 ## 如何恢复工作 / 交接

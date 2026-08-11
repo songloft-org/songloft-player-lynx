@@ -1,0 +1,339 @@
+/*
+ * Music-library operations sub-page — LUNA tokens only, no hard-coded colors or
+ * sizes. Topbar/scroll structure mirrors the diagnostics log sub-page; rows
+ * reuse the global `.settings-row*` / `.settings-section*` rules (Lynx CSS is
+ * global scope, so they apply even when the main Settings page never mounted).
+ */
+
+.libops {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.libops__topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-3);
+}
+
+.libops__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+}
+
+.libops__title {
+  color: var(--content);
+  font-size: var(--font-lg);
+  font-weight: bold;
+  margin-left: var(--space-2);
+}
+
+.libops__scroll {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.libops__content {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--space-6);
+}
+
+/* ── Inline error banner (Lynx has no toast primitive) ───────────────────── */
+
+.libops__banner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: var(--space-4) var(--space-4) 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background-color: var(--paper);
+  border: 1px solid var(--danger);
+}
+
+.libops__banner-text {
+  flex: 1;
+  color: var(--content);
+  font-size: var(--font-sm);
+  margin-left: var(--space-2);
+}
+
+.libops__banner-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+/* ── Progress ───────────────────────────────────────────────────────────── */
+
+.libops-progress {
+  width: 100%;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background-color: var(--rule);
+  overflow: hidden;
+}
+
+.libops-progress__fill {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+/*
+ * Indeterminate: a fixed-width block sliding across the track. Lynx has no
+ * indeterminate progress element, and `animation` is supported on
+ * android/ios/harmony/clay/web_lynx. If a backend ignores the animation the
+ * block simply rests at 30% — still clearly distinct from an empty 0% bar.
+ */
+.libops-progress__fill--indeterminate {
+  width: 30%;
+  animation: libops-indeterminate 1400ms linear infinite;
+}
+
+@keyframes libops-indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(333%);
+  }
+}
+
+/* ── State blocks (running / terminal summaries) ─────────────────────────── */
+
+.libops__state {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+}
+
+.libops__state + .libops__state {
+  border-top: 1px solid var(--line);
+}
+
+.libops__state-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.libops__state-title {
+  color: var(--content);
+  font-size: var(--font-md);
+  margin-left: var(--space-2);
+  flex: 1;
+}
+
+.libops__state-line {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+  margin-top: var(--space-2);
+}
+
+/* ── Action buttons ─────────────────────────────────────────────────────── */
+
+.libops__action-wrap {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+}
+
+.libops__action {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background-color: var(--primary);
+}
+
+.libops__action--ghost {
+  background-color: transparent;
+  border: 1px solid var(--line);
+}
+
+.libops__action--disabled {
+  opacity: 0.45;
+}
+
+.libops__action-text {
+  color: var(--primary-content);
+  font-size: var(--font-md);
+  margin-left: var(--space-2);
+}
+
+.libops__action-text--ghost {
+  color: var(--content);
+}
+
+/* ── Directory picker ───────────────────────────────────────────────────── */
+
+.libops__dirs {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+}
+
+/*
+ * Not a nested scroll region: Lynx `scroll-view` has `enable-nested-scroll`
+ * off by default, so an inner same-axis scroller swallows the gesture. The tree
+ * scrolls with the page instead, and is kept short by being collapsed by default.
+ */
+.libops-tree {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) 0;
+}
+
+.libops-tree__state {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+  padding: var(--space-4);
+}
+
+.libops-tree__branch {
+  display: flex;
+  flex-direction: column;
+}
+
+.libops-tree__row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  padding-right: var(--space-4);
+}
+
+.libops-tree__check-hit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.libops-tree__box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--content-muted);
+}
+
+.libops-tree__box--on {
+  background-color: var(--primary);
+  border: 1px solid var(--primary);
+}
+
+.libops-tree__name {
+  flex: 1;
+  color: var(--content);
+  font-size: var(--font-sm);
+  margin-left: var(--space-2);
+}
+
+.libops-tree__hint {
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+}
+
+.libops-tree__expand-hit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+/* ── Selected-path chips ────────────────────────────────────────────────── */
+
+.libops__chips {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) var(--space-4) var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.libops__chips-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.libops__chips-title {
+  flex: 1;
+  color: var(--content-2);
+  font-size: var(--font-sm);
+}
+
+.libops__chips-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1) var(--space-2);
+}
+
+.libops__chips-clear-text {
+  color: var(--primary);
+  font-size: var(--font-sm);
+}
+
+.libops__chips-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+
+.libops__chip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  margin-right: var(--space-2);
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-pill);
+  background-color: var(--neutral-faint);
+}
+
+.libops__chip-text {
+  color: var(--content-2);
+  font-size: var(--font-xs);
+  margin-left: var(--space-1);
+}
+
+/* ── Switch (lynx-ui compound parts) ────────────────────────────────────── */
+
+.libops__switch-track {
+  display: flex;
+  width: 44px;
+  height: 26px;
+  border-radius: var(--radius-pill);
+  background-color: var(--rule);
+  padding: 2px;
+}
+
+.libops__switch-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-pill);
+  background-color: var(--content);
+}

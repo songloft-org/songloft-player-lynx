@@ -2,8 +2,11 @@ import {
   QueryClient,
   focusManager,
   onlineManager,
+  timeoutManager,
   type QueryClientConfig,
 } from '@tanstack/query-core'
+
+import { safeClearInterval, safeClearTimeout } from '../../native/safe-timers.js'
 
 /**
  * TanStack Query, made safe for the Lynx no-DOM runtime.
@@ -36,12 +39,43 @@ export function configureQueryGlobals(): void {
   if (configured) return
   configured = true
   ensureAbortController()
+  installSafeTimeoutProvider()
   // No visibility source on Lynx: install a setup that registers no listener
   // and returns a no-op cleanup.
   focusManager.setEventListener(() => () => {})
   // Pin online and register no online/offline listener.
   onlineManager.setOnline(true)
   onlineManager.setEventListener(() => () => {})
+}
+
+/**
+ * Route query-core's timers through `safe-timers`.
+ *
+ * Lynx's native `clearTimeout`/`clearInterval` **throw** `param 0 should be
+ * Number` when handed `undefined`, where browsers and Node no-op (see
+ * `src/native/safe-timers.ts`). query-core 5.101 happens to guard all three of
+ * its clear sites with `!== void 0`, so it is safe today — but that is an
+ * internal implementation detail of a dependency we bump routinely, and a
+ * regression there would surface as a hard crash on device while every local
+ * test stayed green. `timeoutManager.setTimeoutProvider` is query-core's public
+ * injection point, so pinning the behaviour costs a few lines and removes the
+ * dependency on that detail entirely.
+ *
+ * Must run before the first query (query-core warns in dev if the provider is
+ * swapped after use) — `configureQueryGlobals()` is called before
+ * `getQueryClient()` in `App.tsx` and is idempotent.
+ */
+function installSafeTimeoutProvider(): void {
+  timeoutManager.setTimeoutProvider({
+    setTimeout: (callback, delay) => setTimeout(callback, delay),
+    clearTimeout: (id) => {
+      safeClearTimeout(id as number | null | undefined)
+    },
+    setInterval: (callback, delay) => setInterval(callback, delay),
+    clearInterval: (id) => {
+      safeClearInterval(id as number | null | undefined)
+    },
+  })
 }
 
 /** Minimal `AbortController`/`AbortSignal` polyfill for engines without it. */

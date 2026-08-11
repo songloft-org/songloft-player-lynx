@@ -75,7 +75,7 @@
   border: 1px solid var(--line);
   color: var(--content);
   font-size: var(--font-md);
-  placeholder-color: var(--content-muted);
+  -x-placeholder-color: var(--content-muted);
 }
 
 .server-settings__toggle {

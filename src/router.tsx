@@ -16,6 +16,7 @@ import { CategorySongsPage, LibraryPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
 import { LogsPage, ServerSettingsPage, SettingsPage } from './features/settings/index.js'
+import { LibraryOpsPage } from './features/library-ops/index.js'
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
 
@@ -113,6 +114,13 @@ const logsRoute = createRoute({
   component: LogsPage,
 })
 
+/** `/settings/library` — music-library operations (scan) sub-page, inside the shell (batch 19). */
+const libraryOpsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/library',
+  component: LibraryOpsPage,
+})
+
 /** `/settings/plugins` — plugin manager sub-page, inside the shell (batch 17). */
 const pluginsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -178,6 +186,7 @@ const routeTree = rootRoute.addChildren([
     settingsRoute,
     serverSettingsRoute,
     logsRoute,
+    libraryOpsRoute,
     pluginsRoute,
     pluginRegistryRoute,
     pluginWebViewRoute,

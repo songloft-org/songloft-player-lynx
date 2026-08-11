@@ -44,6 +44,13 @@ export type IconName =
   | 'heart-filled'
   | 'sort'
   | 'refresh'
+  | 'folder'
+  | 'folder-open'
+  | 'search'
+  | 'stop'
+  | 'warning'
+  | 'check-circle'
+  | 'fingerprint'
 
 /** Shared stroke attributes for line icons. */
 function stroke(color: string): string {
@@ -186,6 +193,47 @@ const ICONS: Record<IconName, (color: string) => string> = {
     `<path d="M4 12a8 8 0 0 1 14.9-4.2M20 12a8 8 0 0 1-14.9 4.2" ${stroke(c)}/>` +
     `<path d="M19 3v5h-5" ${stroke(c)}/>` +
     `<path d="M5 21v-5h5" ${stroke(c)}/>`,
+
+  // Folder (closed): tab on the top-left, body below.
+  folder: (c) =>
+    `<path d="M3 7.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2.5h8A1.5 1.5 0 0 1 20 10v7.5a1.5 1.5 0 0 1-1.5 1.5h-14A1.5 1.5 0 0 1 3 17.5z" ${stroke(c)}/>`,
+
+  // Folder (open): same tab, body skewed forward to read as "expanded".
+  'folder-open': (c) =>
+    `<path d="M3 7.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2.5h8A1.5 1.5 0 0 1 20 10v1.5" ${stroke(c)}/>` +
+    `<path d="M3 17.5V9.5h2.5l2.2 8H4.5A1.5 1.5 0 0 1 3 17.5z" ${stroke(c)}/>` +
+    `<path d="M7.7 17.5 5.5 9.5H21l-2.2 8z" ${stroke(c)}/>`,
+
+  // Magnifier: scan / start-scan action.
+  search: (c) =>
+    `<circle cx="10.5" cy="10.5" r="6.5" ${stroke(c)}/>` +
+    `<path d="M15.5 15.5 21 21" ${stroke(c)}/>`,
+
+  // Stop: circled square (cancel a running job).
+  stop: (c) =>
+    `<circle cx="12" cy="12" r="9" ${stroke(c)}/>` +
+    `<path d="M9.5 9.5h5v5h-5z" ${stroke(c)}/>`,
+
+  // Warning: triangle with a bang. Color it with `ICON_COLORS.danger` — there is
+  // no dedicated warning slot in the theme.
+  warning: (c) =>
+    `<path d="M12 4 21 19.5H3z" ${stroke(c)}/>` +
+    `<path d="M12 10v4.5" ${stroke(c)}/>` +
+    `<path d="M12 17.1v.2" ${stroke(c)}/>`,
+
+  // Circled check: a *status* badge (plain `check` means "selected").
+  'check-circle': (c) =>
+    `<circle cx="12" cy="12" r="9" ${stroke(c)}/>` +
+    `<path d="M8 12.5 11 15.5 16.5 9.5" ${stroke(c)}/>`,
+
+  // Fingerprint: nested arcs (audio-fingerprint setting).
+  fingerprint: (c) =>
+    `<path d="M12 4a8 8 0 0 0-8 8v2" ${stroke(c)}/>` +
+    `<path d="M20 14v-2a8 8 0 0 0-4-6.9" ${stroke(c)}/>` +
+    `<path d="M8 13a4 4 0 0 1 8 0v3" ${stroke(c)}/>` +
+    `<path d="M12 13v6" ${stroke(c)}/>` +
+    `<path d="M8 17v2" ${stroke(c)}/>` +
+    `<path d="M16 19v1" ${stroke(c)}/>`,
 }
 
 /** Build a complete inline SVG document string for `name`, colored with `color`. */
