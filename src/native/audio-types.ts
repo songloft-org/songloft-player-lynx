@@ -44,12 +44,16 @@ export interface EqualizerBand {
   gainDb: number
 }
 
+/** A media-notification / lock-screen remote command not backed by a real seek. */
+export type RemoteCommand = 'next' | 'previous' | 'toggleFavorite'
+
 /** Discriminated union of events the player emits (spec: `AudioEvent`). */
 export type AudioEvent =
   | { type: 'stateChanged'; state: AudioState }
   | { type: 'progress'; positionMs: number; bufferedMs: number; durationMs: number }
   | { type: 'queueIndexChanged'; index: number }
   | { type: 'error'; code: string; message: string }
+  | { type: 'remoteCommand'; command: RemoteCommand }
 
 export type AudioEventType = AudioEvent['type']
 
@@ -81,6 +85,10 @@ export interface SongloftAudio {
   previous(): Promise<void>
   setRepeatMode(mode: RepeatMode): Promise<void>
   setShuffle(on: boolean): Promise<void>
+
+  // ── media notification favorite button (native-only; mock is a no-op) ──
+  /** Push the current track's favorite state so the notification icon matches. */
+  setFavorite(isFavorite: boolean): Promise<void>
 
   // ── equalizer (placeholder; real DSP lands with native audio) ──
   setEqualizerEnabled(on: boolean): Promise<void>

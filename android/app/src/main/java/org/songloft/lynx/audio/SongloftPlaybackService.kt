@@ -2,8 +2,10 @@ package org.songloft.lynx.audio
 
 import android.content.Intent
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import org.songloft.lynx.R
 
 /**
  * Foreground media service backing background playback + notification /
@@ -41,6 +43,15 @@ class SongloftPlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
+        // Custom small icon so the media notification (and the badge over its
+        // large icon/artwork) shows the Songloft logo instead of media3's
+        // built-in music-note placeholder (`media3_notification_small_icon`).
+        // The monochrome adaptive-icon layer is already alpha-safe for this.
+        setMediaNotificationProvider(
+            DefaultMediaNotificationProvider(this).apply {
+                setSmallIcon(R.drawable.ic_launcher_monochrome)
+            },
+        )
         // Create (or re-bind) the player + session using this service's context
         // so the framework's notification manager can post the media notification.
         SongloftAudioEngine.initFromService(this)

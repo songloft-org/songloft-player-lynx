@@ -27,6 +27,7 @@ function makeNativeModule(): SongloftAudioNativeModule & Record<string, ReturnTy
     previous: vi.fn(),
     setRepeatMode: vi.fn(),
     setShuffle: vi.fn(),
+    setFavorite: vi.fn(),
     setEqualizerEnabled: vi.fn(),
     setEqualizerBand: vi.fn(),
     dispose: vi.fn(),
@@ -82,6 +83,7 @@ describe('mapGlobalEvent (native → facade decode)', () => {
     expect(NATIVE_EVENT.stateChanged).toBe('SongloftAudio.stateChanged')
     expect(NATIVE_EVENT.progress).toBe('SongloftAudio.progress')
     expect(NATIVE_EVENT.error).toBe('SongloftAudio.error')
+    expect(NATIVE_EVENT.remoteCommand).toBe('SongloftAudio.remoteCommand')
   })
 
   test('decodes stateChanged with a valid state', () => {
@@ -128,6 +130,23 @@ describe('mapGlobalEvent (native → facade decode)', () => {
   test('returns null for unrelated events', () => {
     expect(mapGlobalEvent('SomethingElse', { x: 1 })).toBeNull()
   })
+
+  test('decodes a valid remoteCommand and rejects an unknown one', () => {
+    expect(mapGlobalEvent(NATIVE_EVENT.remoteCommand, { command: 'next' })).toEqual({
+      type: 'remoteCommand',
+      command: 'next',
+    })
+    expect(mapGlobalEvent(NATIVE_EVENT.remoteCommand, { command: 'previous' })).toEqual({
+      type: 'remoteCommand',
+      command: 'previous',
+    })
+    expect(mapGlobalEvent(NATIVE_EVENT.remoteCommand, { command: 'toggleFavorite' })).toEqual({
+      type: 'remoteCommand',
+      command: 'toggleFavorite',
+    })
+    expect(mapGlobalEvent(NATIVE_EVENT.remoteCommand, { command: 'bogus' })).toBeNull()
+    expect(mapGlobalEvent(NATIVE_EVENT.remoteCommand, {})).toBeNull()
+  })
 })
 
 describe('NativeSongloftAudio (delegation + event bridge)', () => {
@@ -149,6 +168,13 @@ describe('NativeSongloftAudio (delegation + event bridge)', () => {
     expect(native.seek).toHaveBeenCalledWith(1234)
     expect(native.setVolume).toHaveBeenCalledWith(0.5)
     expect(native.setSpeed).toHaveBeenCalledWith(1.5)
+  })
+
+  test('setFavorite delegates to the native module', async () => {
+    const native = makeNativeModule()
+    const audio = new NativeSongloftAudio(native, null)
+    await audio.setFavorite(true)
+    expect(native.setFavorite).toHaveBeenCalledWith(true)
   })
 
   test('global events re-dispatch to facade listeners', () => {

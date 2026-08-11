@@ -1,6 +1,7 @@
 package org.songloft.lynx.audio
 
 import android.content.Context
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.net.Uri
@@ -14,7 +15,13 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
+import org.songloft.lynx.R
 
 /**
  * Process-wide audio engine backing [SongloftAudioModule] and
@@ -58,6 +65,16 @@ object SongloftAudioEngine {
     const val EVENT_STATE = "SongloftAudio.stateChanged"
     const val EVENT_PROGRESS = "SongloftAudio.progress"
     const val EVENT_ERROR = "SongloftAudio.error"
+    const val EVENT_REMOTE_COMMAND = "SongloftAudio.remoteCommand"
+
+    /** `remoteCommand` payload values — byte-for-byte match the TS `RemoteCommand` union. */
+    const val REMOTE_COMMAND_NEXT = "next"
+    const val REMOTE_COMMAND_PREVIOUS = "previous"
+    const val REMOTE_COMMAND_TOGGLE_FAVORITE = "toggleFavorite"
+
+    /** Custom session command backing the notification's favorite button. */
+    private const val FAVORITE_ACTION = "org.songloft.lynx.TOGGLE_FAVORITE"
+    private val FAVORITE_SESSION_COMMAND = SessionCommand(FAVORITE_ACTION, Bundle.EMPTY)
 
     /** Progress tick cadence (ms). */
     private const val PROGRESS_INTERVAL_MS = 500L
@@ -81,6 +98,68 @@ object SongloftAudioEngine {
     /** Read by [SongloftPlaybackService.onGetSession]. */
     val mediaSession: MediaSession?
         get() = mediaSessionInternal
+
+    /**
+     * Current track's favorite state, pushed from JS via [setFavorite]. Drives
+     * the notification's favorite button icon (filled vs outline).
+     */
+    @Volatile
+    private var isFavorite = false
+
+    /** MediaSession.Callback: advertises + handles the favorite custom command. */
+    private val sessionCallback = object : MediaSession.Callback {
+        override fun onConnect(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+        ): MediaSession.ConnectionResult {
+            val sessionCommands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS
+                .buildUpon()
+                .add(FAVORITE_SESSION_COMMAND)
+                .build()
+            return MediaSession.ConnectionResult.accept(
+                sessionCommands,
+                MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS,
+            )
+        }
+
+        override fun onCustomCommand(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            customCommand: SessionCommand,
+            args: Bundle,
+        ): ListenableFuture<SessionResult> {
+            if (customCommand.customAction == FAVORITE_ACTION) {
+                sink?.emit(EVENT_REMOTE_COMMAND, mapOf("command" to REMOTE_COMMAND_TOGGLE_FAVORITE))
+                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            }
+            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
+        }
+    }
+
+    /** The favorite [CommandButton] reflecting the current [isFavorite] state. */
+    private fun buildFavoriteButton(): CommandButton {
+        val iconRes = if (isFavorite) {
+            R.drawable.ic_notification_favorite_filled
+        } else {
+            R.drawable.ic_notification_favorite_border
+        }
+        return CommandButton.Builder()
+            .setSessionCommand(FAVORITE_SESSION_COMMAND)
+            .setIconResId(iconRes)
+            .setDisplayName(if (isFavorite) "取消收藏" else "收藏")
+            .build()
+    }
+
+    /**
+     * Update the favorite state pushed from JS (after a successful add/remove
+     * against the favorites playlist) and refresh the notification's favorite
+     * button icon. `setCustomLayout` is media3's documented mechanism for
+     * updating a session's custom notification buttons after construction.
+     */
+    fun setFavorite(value: Boolean) {
+        isFavorite = value
+        mediaSessionInternal?.setCustomLayout(listOf(buildFavoriteButton()))
+    }
 
     private var progressActive = false
 
@@ -119,12 +198,12 @@ object SongloftAudioEngine {
             // Player exists but was created before the service. Re-create the
             // MediaSession with the service context so notifications work.
             mediaSessionInternal?.release()
-            mediaSessionInternal = MediaSession.Builder(service, existingPlayer).build()
+            mediaSessionInternal = buildMediaSession(service, existingPlayer)
         } else {
             val created = ExoPlayer.Builder(service.applicationContext).build()
             created.addListener(playerListener)
             player = created
-            mediaSessionInternal = MediaSession.Builder(service, created).build()
+            mediaSessionInternal = buildMediaSession(service, created)
         }
         sessionBoundToService = true
     }
@@ -144,8 +223,23 @@ object SongloftAudioEngine {
         val created = ExoPlayer.Builder(appContext).build()
         created.addListener(playerListener)
         player = created
-        mediaSessionInternal = MediaSession.Builder(appContext, created).build()
+        mediaSessionInternal = buildMediaSession(appContext, created)
         return created
+    }
+
+    /**
+     * Build the [MediaSession] wrapping [rawPlayer] in a
+     * [RemoteCommandForwardingPlayer] (next/previous forwarded to JS) with the
+     * favorite [sessionCallback] + initial custom layout attached.
+     */
+    private fun buildMediaSession(context: Context, rawPlayer: ExoPlayer): MediaSession {
+        val forwardingPlayer = RemoteCommandForwardingPlayer(rawPlayer) { command ->
+            sink?.emit(EVENT_REMOTE_COMMAND, mapOf("command" to command))
+        }
+        return MediaSession.Builder(context, forwardingPlayer)
+            .setCallback(sessionCallback)
+            .setCustomLayout(listOf(buildFavoriteButton()))
+            .build()
     }
 
     // -- controls (main thread) ------------------------------------------------

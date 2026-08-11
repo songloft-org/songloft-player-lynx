@@ -124,6 +124,13 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
     fun setShuffle(on: Boolean) {
     }
 
+    // -- media notification favorite button --
+
+    @LynxMethod
+    fun setFavorite(isFavorite: Boolean) {
+        SongloftAudioEngine.runOnMain { SongloftAudioEngine.setFavorite(isFavorite) }
+    }
+
     // -- equalizer (stub; real DSP is a later batch) --
 
     @LynxMethod

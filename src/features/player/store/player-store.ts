@@ -5,9 +5,12 @@ import type { Song } from '../../../models/song.js'
 import {
   DEFAULT_DURATION_MS,
   getAudio,
+  isNativeAudioAvailable,
   safeClearInterval,
   type AudioItem,
 } from '../../../native/index.js'
+import { readNativeModules } from '../../../native/native-modules.js'
+import { getFavoriteState, toggleFavoriteNonReact } from '../../library/data/favorites.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
 import { cyclePlayMode, resolveNext, resolvePrev, type PlayMode } from '../domain/play-mode.js'
 import { moveItem, removeAt } from '../domain/queue.js'
@@ -112,6 +115,19 @@ function toAudioItem(song: Song): AudioItem {
   }
 }
 
+/**
+ * Push the given song's favorite state to the native media notification so its
+ * favorite button icon matches. No-op (and zero network) when no native audio
+ * module is present — e.g. in tests, or dev in a plain host — since there is no
+ * real notification to sync.
+ */
+function syncFavoriteToNative(songId: number): void {
+  if (!isNativeAudioAvailable(readNativeModules())) return
+  getFavoriteState(songId)
+    .then((isFavorite) => audio.setFavorite(isFavorite))
+    .catch(() => {})
+}
+
 export const usePlayerStore = create<PlayerState>((set, get) => {
   /** Load + play the song at `index` (index/currentSong already computable). */
   async function playAtIndex(index: number): Promise<void> {
@@ -128,6 +144,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       durationMs: durationMsOf(song),
     })
     await audio.play()
+    syncFavoriteToNative(song.id)
   }
 
   function stopSleepInterval(): void {
@@ -383,4 +400,30 @@ audio.on('stateChanged', (e) => {
 
 audio.on('error', (e) => {
   usePlayerStore.setState({ isPlaying: false, isBuffering: false, errorMessage: e.message })
+})
+
+/**
+ * Media-notification remote commands (Android media3 `RemoteCommandForwardingPlayer` /
+ * iOS `MPRemoteCommandCenter`, later). `next`/`previous` route through the same
+ * play-mode logic as the in-app buttons; `toggleFavorite` goes through the
+ * non-React favorites pathway (this runs outside the React tree) and pushes the
+ * resulting state back so the notification icon updates.
+ */
+audio.on('remoteCommand', (e) => {
+  switch (e.command) {
+    case 'next':
+      void usePlayerStore.getState().playNext()
+      break
+    case 'previous':
+      void usePlayerStore.getState().playPrev()
+      break
+    case 'toggleFavorite': {
+      const song = usePlayerStore.getState().currentSong
+      if (!song) break
+      toggleFavoriteNonReact(song.id)
+        .then((isFavorite) => audio.setFavorite(isFavorite))
+        .catch(() => {})
+      break
+    }
+  }
 })
