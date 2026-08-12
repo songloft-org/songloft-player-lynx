@@ -685,6 +685,7 @@ ReactLynx 本身就带正确兜底（resolved-Promise 微任务），只是仅�
 | 28 | 重复检测页三阶段的 **Status 阶段** + chromaprint 不可用时正确降级（警告 banner + 禁用开始按钮）；缓存管理页三区 + 真实数据；两页**都有完整样式**（CSS token 重映射真机生效） |
 | B2 | 本地歌曲**真实播放**（`progress` ×26、MediaSession `state=3`、position 前进）；remote 歌曲 502 时 `SongloftAudio.error` 事件桥接链路完整工作 |
 | 批3/11 | 两步登出确认 → 跳登录页 → 用户名/API 地址持久化回填 → 重新登录成功回首页，**全程 0 报错** |
+| **全新安装** | `pm clear` 清掉 token+prefs 后启动：**正确跳登录页**（这是 bug #2 修复的最强证据——修复前 `checkAuth` 从不执行、status 永远 `unknown`、守卫对 `unknown` 不重定向，无 token 时本该跳登录页却不会跳）；API 地址显示新默认值 `http://localhost:58091`；登录后首页数据全出，0 报错 |
 
 #### 6. 新增 4 道闸门（**均反向验证过会红**）
 
@@ -704,7 +705,12 @@ ReactLynx 本身就带正确兜底（resolved-Promise 微任务），只是仅�
 
 - [ ] **收藏按钮的 `onCustomCommand` 分发未端到端外部触发验证**（批22）：**批29 补验了一半**——`dumpsys media_session` 确认 `custom actions=[Action:mName='收藏']` 真的注册进了 session（此前只验证过代码路径）。仍缺的是**点击分发**：需要可视通知栏的真机，或接一个真实 `MediaController` 客户端发 `sendCustomCommand`。
 - [ ] **偶发全屏灰层（批29 发现，未定位）**：运行数分钟后整屏蒙 α≈0.6 中灰，重启即恢复，不影响功能。完整诊断数据与已排除项见「批29 §7」。需换真机（非 BlueStacks）复现定性。
-- [ ] **批28 的 Computing / Results 阶段仍未真机验**（批29 受阻于后端未装 chromaprint）：指纹计算进度轮询、重复组列表、bitRate 推荐保留、lynx-ui Dialog 删除确认都还没上过真机。装了 ffmpeg（含 chromaprint）的后端才能验。
+- [ ] **批28 的 Computing / Results 阶段仍未真机验**（批29 受阻于后端未装 chromaprint）：指纹计算进度轮询、重复组列表、bitRate 推荐保留、lynx-ui Dialog 删除确认都还没上过真机。**注意真正影响用户的降级分支已验过**（chromaprint 不可用 → 警告 banner + 禁用开始按钮），缺的是内部两个阶段。
+  - **测试数据现成**：`/Users/hanxi/toy/songloft/music/test-track-{1,2,3}.mp3` 三份 **file_size 完全相同（721126 字节）** 的同源副本，指纹应完全一致并归成一个 3 首重复组——不需要另造数据。
+  - **后端检测口径**（`internal/services/fingerprint.go`）：`ffmpeg -hide_banner -muxers` 输出含 `chromaprint` 即可用，**不是** `fpcalc` CLI。路径取 config 表的 `ffmpeg_path`（`internal/app/app.go:291`），**无 API 可改**，且 `chromaprintAvailable` 由 `sync.Once` 缓存 → **改任何相关东西都必须重启后端**。
+  - ⛔ **本机 Homebrew 路线已试过，不通，别再重复**（批29）：`brew install homebrew-ffmpeg/ffmpeg/ffmpeg --with-chromaprint` 撞两道墙——① **同名 formula 冲突**：必须先 `brew uninstall ffmpeg`（官方 tap 装的）；② **循环依赖**：`brew deps chromaprint` 含 `ffmpeg`，于是它又要把官方 ffmpeg 装回来、再次冲突。要绕开需要「装官方 ffmpeg → 装 chromaprint → `uninstall --ignore-dependencies ffmpeg` → 编译 homebrew-ffmpeg 版」这串脆弱序列，且中途还撞上一个 `openssl@3` bottle 的 `rb_sysopen: No such file or directory`（而该 bottle 文件实际存在，属 brew 缓存/API 不一致，需 `brew cleanup` 或 `HOMEBREW_NO_INSTALL_FROM_API=1`）。**结论：成本远超收益，已止损并恢复官方 ffmpeg。** 更省事的路子是用后端官方 Docker 镜像（页面提示原文就是「Docker 用户升级到最新镜像即可」），或换一台本就带 chromaprint 的后端环境。
+  - 另注：`brew tap homebrew-ffmpeg/ffmpeg` 本身也被本机 git 配置挡过——见下一条。
+- [ ] **本机环境坑：全局 git `insteadOf` 会打断一切 https clone**（批29 与 B3a 各自独立踩到）：`~/.gitconfig` 有 `url.git@github.com:.insteadOf https://github.com/`，把 CocoaPods / Homebrew 的 https clone 全部改写成 ssh，而本机 **22 端口不通** → `brew tap` 报 "Please make sure you have the correct access rights"、`pod install` 对 git 源 pod 报 `ssh: connect to host github.com port 22`。**绕法：命令前加 `GIT_CONFIG_GLOBAL=/dev/null`**（只影响该次调用，不改用户配置）。这是环境问题不是仓库问题，但因为报错信息完全不指向真因，值得记住。
 - [x] **`--primary-2` 补进对比度闸门**（批29 发现并当批补齐）：它承载白字（首页统计条底色），批27 的 `contrast.test.ts` 只审计了 `--primary`。**手算 5.46 达标、非缺陷**，但覆盖缺口是真的——已给 dark/light 各加一条「white on primary-2 ≥4.5」，`contrast.test.ts` 33 例全绿。发现方式值得记：是在真机截图上采样统计条底色、发现它既不是 `--primary` 也不是任何审计过的值，才反查出这个未被覆盖的色阶。
 
 - [x] **Lynx `fetch` 是裸全局**（批3 真机修复）：Lynx 的 `fetch` 是宿主提供的 HTTP service（Android/iOS 2.18+），以**裸全局**暴露而非 `globalThis.fetch`（与 `self` 同）。`createFetchTransport` 已改为先取裸 `fetch`（`typeof fetch !== 'undefined'`）再回落 `globalThis.fetch`/注入。⚠️ 但**真机整登录 E2E 仍需后端可达**：手机上 `http://localhost:58091` 指向手机自身，须填开发机 LAN IP 且后端在跑；Lynx fetch 不支持 CORS/redirect/keepalive/FormData/Blob。
