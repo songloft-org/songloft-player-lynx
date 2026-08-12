@@ -87,7 +87,8 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 29b | **批28 三阶段补验**（借 `localhost:18091` 后端，chromaprint 可用）→ **发现 1 个真 bug**：Computing 阶段进度恒 `0/0` 且完成后不转 Results | ✅ 补验完成（bug 已由批29c 修） | — | ✅ Status 两个分支都验过；Computing bug 见批29c |
 | 29c | **修批29b Computing bug**（陈旧终态跳过 computing + `refetchInterval` 在 Lynx 首次 fetch 后不再 fire）：清陈旧缓存 + 时间戳守卫 + 改页面级显式 `setInterval` 轮询 | ✅ 完成 | clean build（1476.6 kB）/`tsc -b`/**711 vitest**（+2 反向验证过）全绿 | ✅ **18091 真机全链路验过**：扫描导入 2 组同源重复 → Computing 实时推进 → 自动转 Results 渲染 2 组重复 → lynx-ui 删除 Dialog（首次上真机）→ 确认删除真删文件（358→356）+ UI 实时刷新；单组删除 + 清理全部两入口都验 |
 | 33 | **文档重构 + bug修复 + 歌单搜索 + 多选 + 长按菜单 + 主题包** | ✅ 完成 | build/tsc/**804 vitest** 全绿 | ✅ bug.md 4项全部修复 |
-| 34 | **歌词滚动 + 后端更新 + 高级筛选 + 歌曲详情 + 清理 + 歌词编辑 + 网络歌曲 + 搜索建议** | ✅ 完成 | build（1688.1 kB）/tsc/**804 vitest** 全绿 | 待验证 |
+| 34 | **歌词滚动 + 后端更新 + 高级筛选 + 歌曲详情 + 清理 + 歌词编辑 + 网络歌曲 + 搜索建议** | ✅ 完成 | build（1688.1 kB）/tsc/**804→808 vitest** 全绿 | 待验证 |
+| 35 | **添加歌曲入口 + 拖拽预览 + 4项测试 + E2E脚本 + DLNA + 悬浮歌词 + Live Activity** | ✅ 完成 | build（1696.6 kB）/tsc/**809 vitest** 全绿 | 待验证（原生模块需真机） |
 | 后续 | Lynxtron 桌面 | ⛔ 未开始 | | |
 
 ## 已交付明细
@@ -216,7 +217,7 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
   - `SongloftAudio.progress` → `{ positionMs, bufferedMs, durationMs }`
   - `SongloftAudio.error` → `{ code, message }`
   - 产物校验：`strings dist/main.lynx.bundle` 命中三名字 + `GlobalEventEmitter`。
-- **注册**：`SongloftApplication.initLynxEnv()` 加 `LynxEnv.inst().registerModule("SongloftAudio", SongloftAudioModule::class.java)`（**与官方 doc 的 `registerModule("NativeLocalStorageModule", …)` 一模一样**）。模块名 `SongloftAudio` ↔ TS 探测 `NativeModules.SongloftAudio` 一致。
+- **注册**：`SongloftApplication.initLynxEnv()` 加 `LynxEnv.inst().registerModule("SongloftAudio", SongloftAudioModule::class.java)`（**与官方 doc 的 `registerModule("NativeLocalStorageModule", …)` 一模一样**）���模块名 `SongloftAudio` ↔ TS 探测 `NativeModules.SongloftAudio` 一致。
 - **依赖 / manifest**：`android/app/build.gradle.kts` 加 `androidx.media3:media3-exoplayer:1.3.1` / `media3-exoplayer-hls:1.3.1` / `media3-session:1.3.1`（pin 稳定版，compileSdk 34 兼容；从 `google()` maven 解析——已在 `settings.gradle.kts` 的 dependencyResolutionManagement）。`AndroidManifest` 加 `WAKE_LOCK`/`FOREGROUND_SERVICE`/`FOREGROUND_SERVICE_MEDIA_PLAYBACK`/`POST_NOTIFICATIONS` 权限（`INTERNET`+cleartext B1 已有）+ 注册 `.audio.SongloftPlaybackService`（`foregroundServiceType="mediaPlayback"` + media3 session action intent-filter）。
 - **TS facade 切原生**（`src/native/`）：
   - 新增 `native-audio.ts`：`isNativeAudioAvailable(nm)`（纯探测：`NativeModules.SongloftAudio` 存在且 7 个必需方法齐）、`mapGlobalEvent(name, payload)`（纯解码 native 事件→facade `AudioEvent`，非法/无关返 null）、`NativeSongloftAudio`（实现 `SongloftAudio`：方法委托 `NativeModules.SongloftAudio.*`，构造时经 `GlobalEventEmitter` 订阅三 native 事件重分发到 facade `on/off`，`dispose` 反订阅 + 调 native dispose）。
@@ -557,7 +558,7 @@ JS 侧新增 `SongloftAudioModule.setFavorite(Boolean)`，双向链路：① 通
 
 #### 5. 开发环境：WASM OOM 定位（不改产品代码）
 
-本机 `pnpm test`/`pnpm run build` 一度被 `RangeError: WebAssembly.instantiate(): Out of memory` 挡住，逐层排查（`node --v8-options` 找 trap-handler 相关 flag → 用 `WebAssembly.Memory` 循环构造复现「最多 2 个实例」→ 挂 `WebAssembly.instantiate` 补丁定位调用方 → 测出 Node 内建 `undici`（`lazyllhttp`）也占一个名额）后确认根因：本沙箱 `ulimit -v` 硬上限约 23.8GB，V8 默认的 trap-handler-based WASM 越界检查会给每个 `WebAssembly.Memory` 保留约 10-12GB 的 guard-page 地址空间（与声明的 `maximum` 大小无关），该沙箱内最多能同时存在 2 个这样的实例；`undici` 的内建 HTTP 解析器 + `@lynx-js/react` 的 transform WASM 加起来正好是致命的第 3 个。修复：`NODE_OPTIONS=--disable-wasm-trap-handler`（Node 原生 flag，`NODE_OPTIONS` 允许写入，非 V8 passthrough 黑名单项），关闭 guard-page 保留策略、改走显式边界检查，构建/测试链路即刻打通，实测无性能可感差异。**这是本机会话级环境问题，与仓库配置无关，不写入仓库任何文件**——纯记录以免未来在同类受限沙箱里重新排查一遍。
+本机 `pnpm test`/`pnpm run build` 一度被 `RangeError: WebAssembly.instantiate(): Out of memory` 挡住，逐层排查（`node --v8-options` 找 trap-handler 相关 flag → 用 `WebAssembly.Memory` 循环构造复现「最多 2 个实例」→ 挂 `WebAssembly.instantiate` 补丁定位调用方 → 测出 Node 内建 `undici`（`lazyllhttp`）也占一个名额）后确认根因：本沙箱 `ulimit -v` 硬上限约 23.8GB，V8 默认的 trap-handler-based WASM 越界检查会给每个 `WebAssembly.Memory` 保留约 10-12GB 的 guard-page 地址空间（与声明的 `maximum` 大小无关），该���箱内最多能同时存在 2 个这样的实例；`undici` 的内建 HTTP 解析器 + `@lynx-js/react` 的 transform WASM 加起来正好是致命的第 3 个。修复：`NODE_OPTIONS=--disable-wasm-trap-handler`（Node 原生 flag，`NODE_OPTIONS` 允许写入，非 V8 passthrough 黑名单项），关闭 guard-page 保留策略、改走显式边界检查，构建/测试链路即刻打通，实测无性能可感差异。**这是本机会话级环境问题，与仓库配置无关，不写入仓库任何文件**——纯记录以免未来在同类受限沙箱里重新排查一遍。
 
 #### 6. 验收
 
@@ -889,7 +890,7 @@ Phase B3 第一步。方法论照批B1 对 Android 的做法（照抄官方 demo
   - [x] `text-transform: uppercase`（`jsplugin/pages/TabConfigPage.css`）→ **批19b 已删声明**（Lynx 无此属性且无 `-x-` 变体）。此条目为过期未更新，批29 核实订正：源码现存的是一条「Lynx 无此属性」的解释性注释。
   - [x] `object-fit: cover`（`jsplugin/widgets/PluginGrid.css`）→ **批19b 已改用元素属性 `mode='aspectFit'`**。同上属过期未更新，批29 核实订正。**构建警告自批19b 起已归零**，批29 的 clean build 复核仍为零。
 - [ ] **订正 3 条过期结论**（批19 调研发现 `@lynx-js/lynx-ui` 桶入口已把这些子包带进 `node_modules`，v3.135.4，Radix 风格 compound API；按组件包导入只需在 `package.json` 显式声明）：
-  - [x] ~~「Lynx 无现成 dialog 原语」故登出用两步 tap~~ → **有 `lynx-ui-dialog`**，**批28 已采用**（重复检测删除确认真机验过），**批31 登出也改为 Dialog**。此条完全解决。
+  - [x] ~~「Lynx 无现成 dialog 原语」故登出用两步 tap~~ → **有 `lynx-ui-dialog`**，**批28 已采用**（重复检测删除确认真机验过），**批31 登出也改为 Dialog**。此条完���解决。
   - ~~「lynx-ui 无 sortable」故排序用 chevron 上移/下移按钮~~ → **有 `lynx-ui-sortable`**（还有 `lynx-ui-draggable`/`lynx-ui-swipe-action`）。**批30 已完成迁移**：歌单/歌曲/队列三处排序 UI 全部从按钮式换成 `SortableRoot` 拖拽手柄，chevron 代码已删除。
   - 另有 `lynx-ui-checkbox` / `lynx-ui-radio-group`（多选一与勾选框的现成原语）、`lynx-ui-dialog`、`lynx-ui-popover`、`lynx-ui-form`、`lynx-ui-list`/`feed-list`/`scroll-view`、`lynx-ui-lazy-component`、`lynx-ui-presence`、`lynx-ui-overlay`、`lynx-ui-common`。批19 刻意**未引入任何新包**（目录树勾选自绘 = 两个 view + 一个 `check` Icon，比引入新原生手势叶子 + 写测试 mock 更省），但后续批可按需选用。
 - [x] **验收命令修正：`tsc --noEmit` 一直是空跑**（批19 发现，已改 `AGENTS.md` §5）。根 `tsconfig.json` 是 solution-style（`"files": []` + `references`），`tsc --noEmit` 对它的输入文件集为空——**什么都不检查、永远 exit 0**。自批1 起验收清单里的那一行是安慰剂；真正拦类型错误的一直是 `pnpm run build` 内的 rspeedy type checker。**正确命令是 `pnpm exec tsc -b`**（写 `*.tsbuildinfo`，已 gitignore；必要时 `--force`）。用 `tsc -b --force` 对全库跑过一次：**无历史遗留类型错误**（因为 build 一直在真检查）。

@@ -6,11 +6,11 @@ Songloft Player Lynx 客户端项目文档。
 
 | 指标 | 值 |
 |------|-----|
-| 源码规模 | 285 文件 / 32.5K 行 TypeScript |
+| 源码规模 | 295+ 文件 / 34K+ 行 TypeScript |
 | 特性模块 | auth · home · library · library-ops · player · playlist · settings · jsplugin |
 | 原生模块 | SongloftAudio · SongloftStorage · SongloftPlatform · SystemAppearance（Android + iOS） |
-| 测试 | 804 vitest |
-| 构建产物 | ~1688 kB |
+| 测试 | 809 vitest |
+| 构建产物 | ~1697 kB |
 | 已验证平台 | Android 真机 · iOS 原生模块编译通过 |
 
 ## 文档目录
@@ -39,6 +39,6 @@ Songloft Player Lynx 客户端项目文档。
 P0 技术验证     ████████████████████ 100%  — 音频/路由/Query/UI 全部验证通过
 P1 基础设施     ████████████████████ 100%  — 网络/鉴权/存储/i18n/主题/路由
 P2 核心业务     ████████████████████ 100%  — auth/library/player/playlist/home/settings
-P3 平台特性     ████████░░░░░░░░░░░░  40%  — EQ(A/I)、数据导入导出、播放历史、主题包、歌词编辑、后端更新已完成；DLNA/歌词浮窗/Live Activity/桌面待做
+P3 平台特性     ████████████░░░░░░░░  60%  — EQ(A/I)、数据导入导出、播放历史、主题包、歌词编辑、后端更新、DLNA投屏、悬浮歌词、Live Activity 已完成；桌面(Lynxtron)待做
 P4 双轨发布     ░░░░░░░░░░░░░░░░░░░░   0%  — 未开始
 ```
