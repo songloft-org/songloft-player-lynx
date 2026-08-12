@@ -70,7 +70,10 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 27 | **暗色对比度审计**（WCAG AA：拆 `--primary`/`--accent`、`--danger`/`--danger-2`；新增 `contrast.test.ts` 回归 gate）+ 24G 虚拟上限定位 | ✅ 完成 | clean build（1418.0 kB）/`tsc -b --force`/**636 vitest**（+31，1 个已知 use-debounce flake 隔离重跑绿）全绿 | ⏳ 待扫码验配色 |
 | 28 | **重复检测/指纹 + 缓存管理**（2 subagent 并行：library-ops 三阶段指纹/重复页 + settings 缓存页；共享文件手动 merge；CSS token 修正） | ✅ 完成 | clean build（1519.5 kB）/`tsc -b --force`/**709 vitest**（+74，1 个已知 use-debounce flake 隔离绿）全绿 | ⏳ 待扫码验指纹计算/重复组删除/缓存清理 + 配置写回（需后端可达）|
 | 29 | **真机验收轮**（批25-28 积压一次性验掉）+ **3 个真机专属 bug**（`<refresh>` 缺 viewpager2 / lazy-bundle 不进 APK / 宿主 `queueMicrotask` 坏掉）+ 文案订正 | ✅ 完成 | clean build（**1476.6 kB**，−42.9）/`tsc -b --force`/**714 vitest**（+5）全绿 | ✅ **批25/26/27/28 全部模拟器逐条截图验过**；顺带补验批19「真的导入歌曲」、批22 收藏按钮已注册进 MediaSession |
-| 后续 | B3 iOS 宿主 + AVPlayer → Lynxtron 桌面 | 🚧 进行中（B3a 宿主工程） | | |
+| B3a | **iOS 原生宿主 + 内嵌 bundle**（手写 pbxproj + CocoaPods Lynx 4.0.1 + ATS + 安全区修复；服务走 pod lazy-register，宿主不手写注册） | ✅ 完成 | 前端未动逻辑（716 vitest 仍绿）；`pnpm run ios:build` 通过 | ✅ **iPhone 17 Pro / iOS 26.0 模拟器逐张截图验过**：登录页 → 登录 → 首页真实数据；`<input>` / `<svg>`（含远程插件 SVG）/ `<image>` 全正常；790 行 lynx 日志 **0 条 LynxError** |
+| B3b | iOS 原生模块（`SongloftAudio` AVPlayer / `SongloftStorage` / `SystemAppearance`） | ⛔ **未开始** — subagent 启动即被模型提供方限流中断，**零产出**（`ios/` 未被它改动） | | iOS 侧因此**当前无音频、存储仍是内存态（杀 app 丢登录态）、拿不到系统深浅色** |
+| 29b | **批28 三阶段补验**（借 `localhost:18091` 后端，chromaprint 可用）→ **发现 1 个真 bug 未修**：Computing 阶段进度恒 `0/0` 且完成后不转 Results | ⚠️ 部分完成 | — | ✅ Status 两个分支都验过；⛔ Computing 卡死（见遗留）、Results/删除 Dialog 因此仍未验 |
+| 后续 | Lynxtron 桌面 | ⛔ 未开始 | | |
 
 ## 已交付明细
 
@@ -701,8 +704,57 @@ ReactLynx 本身就带正确兜底（resolved-Promise 微任务），只是仅�
 - **`--primary-2` 未进对比度回归**：它同样承载白字（首页统计条底色），批27 的 `contrast.test.ts` 只覆盖了 `--primary`。手算白字 on `--primary-2`（`#6a49f2`）= **5.46 ✅ 达标**，故非缺陷，但建议补进闸门。
 - **`adb reverse` 会随会话断开**：本批一次登录失败即因此（重设后立即成功）。真机验证前先 `adb reverse --list` 确认。
 
+### B3a · iOS 原生宿主 + 内嵌 bundle
+
+Phase B3 第一步。方法论照批B1 对 Android 的做法（照抄官方 demo、逐项对齐坐标、刻意不装 devtool）。详细说明见 commit `f21ab41` 的正文，这里只记要点与差异。
+
+**工程形态**：**手写 pbxproj**（demo 的 `HelloLynxSwift/project.pbxproj` 只 452 行、完整读过后按其结构重写约 380 行；去掉 storyboard 改 SceneDelegate 纯代码建窗；**Pods 集成部分留给 `pod install` 自己写回**以减少手写面）+ 一份共享 scheme（`-scheme` 需要它，Xcode 不自动生成）。不引入 xcodegen。
+
+**pod 坐标与 Android 4.0.0 的偏差**（已在 Podfile 注释说明）：
+
+| pod | iOS | Android 对照 |
+|---|---|---|
+| Lynx / LynxBase / LynxServiceAPI / LynxService{Image,Log,Http} / XElement | **4.0.1** | 4.0.0 |
+| PrimJS | 4.0.0 | 4.0.0 ✓ |
+| ServalSVG | **0.2.3** | 0.1.1 |
+| 传递依赖 | LynxTextra 0.2.0 / MJRefresh 3.7.9 / SDWebImage 5.15.5 / libwebp 1.6.0 | Fresco 2.3.0 / OkHttp 4.9.0（对应物） |
+
+- **为何 4.0.1 而非 4.0.0**：① iOS 侧 Lynx/LynxService/XElement 是**锁步**依赖（各 subspec 都 `Lynx = <同版本>`）；② 本机 trunk 缓存里 `Lynx/4.0.0/Lynx.podspec.json` 是**被截断的坏文件**（21 kB vs 正常 235 kB），`pod install` 直接 `JSON::ParserError`。
+- **`Lynx/Framework` 对 `LynxBase`/`LynxServiceAPI` 无版本约束**，不 pin 会把 **4.2.0-nightly** 的 base 层配到 4.0.1 引擎上——已显式 pin 死。
+
+**与 Android 的架构差异（值得记）**：**iOS 侧不手写注册服务**。三个服务与 XElement behaviors 全靠 pod 的 lazy-register（`LYNX_LAZY_LOAD` / `*AutoRegistry` + `+load`），CocoaPods xcconfig 里的 **`-ObjC`** 是它们被链入的前提。`nm` 证实 21 个 `LynxUI*AutoRegistry` 全部链入（SVG/Input/TextArea/Overlay/Refresh/ScrollCoordinator/ViewPager/WebView/BlurView/Markdown…）。宿主只调 `LynxEnv.sharedInstance()`。
+
+**修掉的一个真实缺陷（安全区）**：LynxView 原本铺满全屏，导致标题被状态栏/灵动岛遮挡、tab 栏压在 home indicator 上（Android 侧 `Theme.Material.NoActionBar` + targetSdk 34 天然把 Activity 排在状态栏下方）。改为把 LynxView 约束到 `safeAreaLayoutGuide`，**并把创建 + `loadTemplate` 推迟到首次 `viewDidLayoutSubviews`**——那才是安全区 inset 解析完的时刻，否则首帧高度错、随即重排。
+
+**ATS（iOS 特有，不加就是「能编译能启动、登录连不上」）**：Info.plist 加 `NSAppTransportSecurity`（`NSAllowsArbitraryLoads` + `NSAllowsLocalNetworking`）+ `NSLocalNetworkUsageDescription`，等价于 Android 的 `usesCleartextTraffic`。**模拟器 localhost 即宿主机**，无需 `adb reverse` 等价物。
+
+**本机环境限制（重要，写进了 `package.json` 的 `//ios:build` 注释）**：Xcode 26.6 报 `iOS 26.5 is not installed`（iOS platform 组件缺失，只有 standalone simulator runtime 18.3 / 26.0），**所有 `-destination` 形式都失败**（含 `generic/platform=iOS Simulator` 与按 UDID）。绕法：走 legacy **`-project -target -sdk iphonesimulator`**（不需要 destination）；因为脱离了 CocoaPods workspace，**必须先单独 build `Pods-SongloftLynx` 聚合 target 且两次 build 共用 `SYMROOT`**（app 的 xcconfig 从 `PODS_CONFIGURATION_BUILD_DIR` 找 `lib*.a`）。**装好 iOS platform 后应改回 `-workspace -scheme -destination`。**
+
+**其它坑**：首轮 `pod install` 约 **35 分钟**（Lynx 全家 zip + git 源 pod，spec 元数据 1756 个 podspec / 61 MB），Pods 编译约 3 分钟，之后 app 增量 build 约 20 秒；`release-assets.githubusercontent.com` 间歇不可达（重试第 2 次即过，长期不通可用 `https://ghproxy.net/` 前缀手工取 zip 喂缓存）。
+
+**未做**：AVPlayer 音频 / Storage / SystemAppearance（B3b）、`UIBackgroundModes`、CI 出包、App 图标（照抄了 demo 的空 AppIcon set）；**下拉刷新手势未实测**（`simctl` 无手势注入命令，AppleScript 只能点击不能拖拽）——`<refresh>` 已链入且 attach 无报错，但「手指下拉真的触发刷新」需人工划一次。
+
+### 批29b · 批28 三阶段补验（借 18091 后端）→ 发现 1 个真 bug
+
+用户提供了第二个后端 `http://localhost:18091`（**`chromaprint_available: true`**，356 首**全本地**、22h42m、294 歌手/337 专辑），解掉了批29 「本机 ffmpeg 不带 chromaprint」的死结（`brew` 路线已证不通，见下方遗留）。Android 模拟器侧 `adb reverse tcp:18091 tcp:18091` + 设置页改地址即可切换。
+
+**顺带验到的**：切服务器后正确跳登录页（旧 token 对新实例无效 → 401 → 登出，即批12 的清缓存链路）；新库首页真实数据全出（356 首 / 22h42m / 7 个插件图标 / 4 个歌单封面）。
+
+**Status 阶段两个分支现在都验过了**：58091（chromaprint 不可用）= 警告 banner + 禁用按钮；18091（可用）= 无 banner + 实心可点按钮 + 统计 356/0/356。
+
+⛔ **Computing 阶段有一个真 bug（本次未修）**：点「开始计算并检测」后进入 Computing 阶段，但
+
+- 进度文案恒为「正在计算音频指纹... **0/0**」，而同一时刻后端 `GET /scan/fingerprints/progress` 返回 `{"status":"running","computed":38,"total":356}`；
+- 后端跑完（`{"status":"done","computed":356,"total":356,"failed":0}`，356 首约 1 分钟算完、0 失败）之后，**UI 仍卡在 Computing 阶段、indeterminate 滑块一直动、永不转 Results**。
+
+即 `progressQuery` 的数据没有到达 UI。已排除：API 路径与 zod 模型（`models/fingerprint.ts` 的 `computed`/`total` 都是 `z.coerce.number().catch(0)`，且 Status 阶段用同一套 parser 读到了 356）；`fingerprintPollInterval` 的判定逻辑本身（`!progress` 与 `idle` 两种情况都靠 `forced` 兜住）；`onStartCompute` 的 `onSuccess` 也确实 `setProgressForced(true)`。**下一步应查的方向**：`0/0` 中的 `total` 来自 `totalFallback={status?.missing ?? 0}`，而 Status 阶段明明有 `missing=356` —— **progress 与 status 两个 query 的数据同时消失**这一点最可疑，指向 query 层（缓存 key / enabled / 与 `phase` 切换相关的重挂载）而非模型层。这与批19 修过的「启动竞态」形似但不同（批19 是轮询起不来，这里连已有的 status 数据也没了）。
+
+**因此 Results 阶段与删除确认 Dialog 仍未验**（依赖 Computing 正常结束才能进入）。
+
 ## 未完成 / 遗留事项（TODO & 风险）
 
+- [ ] ⛔ **【下一个 session 首选】批28 Computing 阶段进度恒 `0/0` 且完成后不转 Results**（批29b 发现，**未修**）：完整现象、已排除项与「下一步该查什么」见上方「批29b」一节。复现环境现成：`http://localhost:18091`（chromaprint 可用、356 首本地），Android 模拟器 `adb reverse tcp:18091 tcp:18091` 后在设置→服务器改地址即可。修完顺手就能把 Results 阶段与删除确认 Dialog 一起验掉。
+- [ ] **B3b · iOS 原生模块**（未开始，subagent 被限流中断、零产出）：`SongloftAudio`(AVPlayer + AVAudioSession `.playback` + `MPNowPlayingInfoCenter` + `MPRemoteCommandCenter` + `UIBackgroundModes: audio`)、`SongloftStorage`(UserDefaults + Keychain，`area` = `prefs`|`secure`)、`SystemAppearance`（globalProps 初值**必须在 `loadTemplate` 之前**注入，而 B3a 把 `loadTemplate` 推迟到首次 `viewDidLayoutSubviews`，注入点要在那之前；变更走 `traitCollectionDidChange` + locale 通知）。三个模块的**方法名/事件名/键名必须与 Android 逐字一致**（`SongloftAudio.stateChanged`/`.progress`/`.error`/`.remoteCommand`、`systemTheme`/`systemLocale`/`SongloftSystem.appearanceChanged`），TS 侧 facade 已平台无关、**零改动**。⚠️ **`ios/.../project.pbxproj` 是手写的**：新增 Swift 文件必须注册进 4 处（PBXFileReference / PBXBuildFile / PBXGroup children / PBXSourcesBuildPhase），漏一处的症状是**编译成功但运行时模块找不到**。当前 iOS 日志里「`SongloftStorage`/`SongloftAudio` 模块找不到」的噪声，做完应当消失（这本身就是注册成功的侧证）。
 - [ ] **收藏按钮的 `onCustomCommand` 分发未端到端外部触发验证**（批22）：**批29 补验了一半**——`dumpsys media_session` 确认 `custom actions=[Action:mName='收藏']` 真的注册进了 session（此前只验证过代码路径）。仍缺的是**点击分发**：需要可视通知栏的真机，或接一个真实 `MediaController` 客户端发 `sendCustomCommand`。
 - [ ] **偶发全屏灰层（批29 发现，未定位）**：运行数分钟后整屏蒙 α≈0.6 中灰，重启即恢复，不影响功能。完整诊断数据与已排除项见「批29 §7」。需换真机（非 BlueStacks）复现定性。
 - [ ] **批28 的 Computing / Results 阶段仍未真机验**（批29 受阻于后端未装 chromaprint）：指纹计算进度轮询、重复组列表、bitRate 推荐保留、lynx-ui Dialog 删除确认都还没上过真机。**注意真正影响用户的降级分支已验过**（chromaprint 不可用 → 警告 banner + 禁用开始按钮），缺的是内部两个阶段。
