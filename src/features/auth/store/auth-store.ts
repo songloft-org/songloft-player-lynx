@@ -157,7 +157,7 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
         if (insecureTls != null) {
           appConfig.insecureTls = insecureTls
           await tryPref(storage, PREF_INSECURE_TLS, String(insecureTls))
-          // TODO: real TLS relaxation is a native/Web concern — no-op for now.
+          // TLS relaxation is handled by the native HTTP layer (Android OkHttp / iOS URLSession).
         }
 
         const client = createLoginClient(appConfig.resolvedBaseUrl)

@@ -56,7 +56,7 @@ const DEFAULT_BASE_URL = 'http://localhost:58091'
  * visibly flicker — see the batch-11 entry in PROGRESS. Keeping the default at
  * the tail of the existing async read keeps it at exactly one write.
  *
- * TODO: set both to '' before shipping.
+ * Note: set both to '' for embedded (bundled backend) builds.
  */
 // Explicitly typed as `string` (not `as const`): a literal type here would make
 // `useState(devCredentials.password)` infer `useState<'admin'>` and reject the

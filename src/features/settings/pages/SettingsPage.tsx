@@ -12,6 +12,7 @@ import {
 
 import { apiPrefix, appConfig } from '../../../core/config/app-config.js'
 import { getCachedAccessToken } from '../../../core/network/token-cache.js'
+import { getFloatingLyricModule } from '../../../native/floating-lyric.js'
 import { openURL } from '../../../native/native-platform.js'
 import { clientVersion } from '../../../core/config/constants.js'
 import {
@@ -341,6 +342,17 @@ export function SettingsPage() {
               trailingIcon={autoResume ? 'check' : undefined}
               onTap={() => { const next = !autoResume; setAutoResume(next); void writeAutoResume(next) }}
               testId='settings-auto-resume'
+            />
+            <SettingsRow
+              icon='music'
+              title={t('settings.floatingLyrics')}
+              subtitle={t('settings.floatingLyricsSubtitle')}
+              trailingIcon='chevron-right'
+              onTap={() => {
+                const m = getFloatingLyricModule()
+                void m.requestPermission().then(granted => { if (granted) void m.show() })
+              }}
+              testId='settings-floating-lyrics'
             />
           </SettingsSection>
 

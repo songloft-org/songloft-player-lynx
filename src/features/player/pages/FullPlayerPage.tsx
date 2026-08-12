@@ -137,6 +137,12 @@ export function FullPlayerPage() {
           </view>
           <view
             className='full-player__icon-btn'
+            bindtap={() => void navigate({ to: '/player/dlna' })}
+          >
+            <Icon name='volume' size={20} color={ICON_COLORS.content} />
+          </view>
+          <view
+            className='full-player__icon-btn'
             bindtap={() => usePlayerStore.getState().togglePlaylistDrawer()}
           >
             <Icon name='menu' size={22} color={ICON_COLORS.content} />

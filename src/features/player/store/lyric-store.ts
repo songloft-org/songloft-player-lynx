@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 import type { Song } from '../../../models/song.js'
+import { getFloatingLyricModule } from '../../../native/floating-lyric.js'
 import {
   findCurrentLine,
   mergeTranslations,
@@ -160,7 +161,13 @@ export const useLyricStore = create<LyricState>((set, get) => {
       const { lyrics, synced, currentIndex } = get()
       if (!synced || lyrics.length === 0) return
       const next = findCurrentLine(lyrics, positionMs)
-      if (next !== currentIndex) set({ currentIndex: next })
+      if (next !== currentIndex) {
+        set({ currentIndex: next })
+        const line = lyrics[next]
+        if (line?.text) {
+          void getFloatingLyricModule().updateLyric(line.text)
+        }
+      }
     },
 
     clear: () => {

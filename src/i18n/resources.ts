@@ -165,7 +165,7 @@ export const en = {
     storageCache: 'Storage & cache',
     cacheManageSubtitle: 'Manage song cache & transcode settings',
     plugins: 'Plugins',
-    deferred: 'Deferred',
+
     account: 'Account',
     logOut: 'Log out',
     logOutConfirm: 'Confirm',
@@ -205,6 +205,8 @@ export const en = {
     playback: 'Playback',
     autoResume: 'Auto-resume on startup',
     autoResumeSubtitle: 'Continue playing from where you left off',
+    floatingLyrics: 'Floating lyrics',
+    floatingLyricsSubtitle: 'Show lyrics overlay on screen',
   },
   jsplugin: {
     gridTitle: 'Plugins',
@@ -606,7 +608,7 @@ export const zh: TranslationTree = {
     storageCache: '存储与缓存',
     cacheManageSubtitle: '管理歌曲缓存与转码设置',
     plugins: '插件',
-    deferred: '待实现',
+
     account: '账户',
     logOut: '退出登录',
     logOutConfirm: '确认',
@@ -646,6 +648,8 @@ export const zh: TranslationTree = {
     playback: '播放',
     autoResume: '启动时自动恢复播放',
     autoResumeSubtitle: '从上次停止的位置继续播放',
+    floatingLyrics: '悬浮歌词',
+    floatingLyricsSubtitle: '在屏幕上显示歌词浮窗',
   },
   jsplugin: {
     gridTitle: '插件',

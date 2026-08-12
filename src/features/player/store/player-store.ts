@@ -480,6 +480,29 @@ usePlayerStore.subscribe((state, prev) => {
   }, SAVE_DEBOUNCE_MS)
 })
 
+// Live Activity integration: update iOS lock screen widget on song/state change
+import { getLiveActivityModule } from '../../../native/live-activity.js'
+
+let _liveActivityId: string | null = null
+usePlayerStore.subscribe((state, prev) => {
+  const songChanged = state.currentSong !== prev.currentSong
+  const playStateChanged = state.isPlaying !== prev.isPlaying
+  if (!songChanged && !playStateChanged) return
+  const la = getLiveActivityModule()
+  const song = state.currentSong
+  if (!song) {
+    if (_liveActivityId) { void la.end(_liveActivityId); _liveActivityId = null }
+    return
+  }
+  if (!_liveActivityId) {
+    void la.start(song.title, song.artist ?? '').then(id => { _liveActivityId = id })
+  } else {
+    void la.update(_liveActivityId, song.title, song.artist ?? '', state.isPlaying)
+  }
+})
+
+
+
 export async function restorePlaybackState(): Promise<void> {
   const [saved, speed, autoResume] = await Promise.all([
     loadPlaybackState(), readPlaybackSpeed(), readAutoResume(),
