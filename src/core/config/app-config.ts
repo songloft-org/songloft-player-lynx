@@ -26,10 +26,19 @@ export const defaultJsonHeaders: Readonly<Record<string, string>> = {
   Accept: 'application/json',
 }
 
-// DEV default: point at the local test backend on the LAN so a phone on the
-// same network can reach it. TODO: revert to 'http://localhost:58091' (or make
-// it build-mode driven) before shipping.
-const DEFAULT_BASE_URL = 'http://30.211.129.24:58091'
+// DEV default: the local test backend. `localhost` is the right default for
+// BOTH emulator/simulator targets, so this must not be a LAN IP:
+//   - iOS Simulator shares the host's network stack — its `localhost` IS the
+//     host machine, nothing to set up.
+//   - Android emulator: `adb reverse tcp:58091 tcp:58091` forwards the device's
+//     localhost to the host (the workflow AGENTS.md §5 prescribes).
+// A hard-coded LAN IP rots the moment the host's address changes, and it fails
+// confusingly: the UI just shows "Could not load …" with no hint that the
+// address is stale. That is exactly what a stale `30.211.129.24` cost batch 29
+// at the start of its device pass. A real phone (not an emulator) still needs
+// the host's LAN IP — enter it on the login page, which persists it to prefs
+// and overrides this default.
+const DEFAULT_BASE_URL = 'http://localhost:58091'
 
 /**
  * DEV convenience: credentials prefilled into the login form so device testing
