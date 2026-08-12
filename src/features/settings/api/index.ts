@@ -2,9 +2,11 @@ import { createApiClient, type ApiClientBundle } from '../../../core/network/api
 import { useAuthStore } from '../../auth/store/index.js'
 import { CacheApi } from './cache-api.js'
 import { SettingsApi } from './settings-api.js'
+import { ThemePacksApi } from './theme-packs-api.js'
 
 export { CacheApi } from './cache-api.js'
 export { SettingsApi } from './settings-api.js'
+export { ThemePacksApi } from './theme-packs-api.js'
 
 /**
  * Process-wide authenticated API client bundle for the settings feature
@@ -33,6 +35,11 @@ export function getSettingsApi(): SettingsApi {
 /** The shared authenticated `CacheApi` (constructed over the singleton client). */
 export function getCacheApi(): CacheApi {
   return new CacheApi(getApiBundle().client)
+}
+
+/** The shared authenticated `ThemePacksApi`. */
+export function getThemePacksApi(): ThemePacksApi {
+  return new ThemePacksApi(getApiBundle().client)
 }
 
 /** Test hook: drop the memoized client so a fresh one is built next call. */

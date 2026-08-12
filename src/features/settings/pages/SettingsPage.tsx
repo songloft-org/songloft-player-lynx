@@ -262,6 +262,14 @@ export function SettingsPage() {
                 testId={`theme-${option}`}
               />
             ))}
+            <SettingsRow
+              icon='palette'
+              title={t('themePacks.title')}
+              subtitle={t('themePacks.subtitle')}
+              trailingIcon='chevron-right'
+              onTap={() => navigate({ to: '/settings/theme-packs' })}
+              testId='settings-theme-packs'
+            />
           </SettingsSection>
 
           <SettingsSection title={t('settings.diagnostics')} icon='settings'>
