@@ -1,4 +1,4 @@
-import { useEffect, useState } from '@lynx-js/react'
+import { useCallback, useEffect, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -25,6 +25,7 @@ import {
 // (which crashes the ReactLynx Vitest snapshot tree).
 import { useAuthStore } from '../../auth/store/index.js'
 import { getSettingsApi } from '../api/index.js'
+import { canExport, exportPlaylists, importPlaylists } from '../domain/data-transfer.js'
 import { LOG_LEVELS, coerceLogLevel, logLevelLabelKey, type LogLevel } from '../domain/log-level.js'
 import { serverDisplay } from '../domain/settings-model.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
@@ -292,6 +293,8 @@ export function SettingsPage() {
             />
           </SettingsSection>
 
+          <DataSection />
+
           <SettingsSection title={t('settings.account')} icon='logout'>
             <SettingsRow
               icon='logout'
@@ -305,5 +308,57 @@ export function SettingsPage() {
         </view>
       </scroll-view>
     </view>
+  )
+}
+
+function DataSection() {
+  const { t } = useTranslation()
+  const [importStatus, setImportStatus] = useState<string | null>(null)
+
+  const handleExport = useCallback(() => {
+    if (!canExport()) return
+    exportPlaylists()
+  }, [])
+
+  const handleImport = useCallback(async () => {
+    try {
+      setImportStatus(null)
+      const result = await importPlaylists()
+      setImportStatus(
+        t('data.importSuccess', {
+          created: result.playlists_created,
+          merged: result.playlists_merged,
+          songs: result.songs_created + result.songs_matched,
+        }),
+      )
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      if (msg === 'cancelled') {
+        setImportStatus(t('data.importCancelled'))
+      } else {
+        setImportStatus(t('data.importFailed', { error: msg }))
+      }
+    }
+  }, [t])
+
+  return (
+    <SettingsSection title={t('data.sectionTitle')} icon='folder'>
+      <SettingsRow
+        icon='link'
+        title={t('data.export')}
+        subtitle={t('data.exportSubtitle')}
+        trailingIcon='chevron-right'
+        onTap={handleExport}
+        testId='settings-export'
+      />
+      <SettingsRow
+        icon='folder-open'
+        title={t('data.import')}
+        subtitle={importStatus ?? t('data.importSubtitle')}
+        trailingIcon='chevron-right'
+        onTap={() => void handleImport()}
+        testId='settings-import'
+      />
+    </SettingsSection>
   )
 }

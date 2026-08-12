@@ -118,6 +118,7 @@ class ViewController: UIViewController {
     let config = LynxConfig(provider: SongloftTemplateProvider())
     config.register(SongloftAudioModule.self)
     config.register(SongloftStorageModule.self)
+    config.register(SongloftPlatformModule.self)
     return config
   }
 

@@ -37,6 +37,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".platform.FilePickerActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="false" />
+
         <!-- Foreground media service backing background playback + notification.
              The player lives in SongloftAudioEngine; this service hands media3
              the existing MediaSession (see SongloftPlaybackService). -->

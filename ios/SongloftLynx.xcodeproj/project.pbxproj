@@ -15,6 +15,7 @@
 		AA0000000000000000000027 /* SongloftStorageModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001D /* SongloftStorageModule.swift */; };
 		AA0000000000000000000028 /* SongloftAudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001E /* SongloftAudioEngine.swift */; };
 		AA0000000000000000000029 /* SongloftAudioModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001F /* SongloftAudioModule.swift */; };
+		AA000000000000000000002B /* SongloftPlatformModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000002A /* SongloftPlatformModule.swift */; };
 		AA0000000000000000000024 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001A /* Assets.xcassets */; };
 		AA0000000000000000000025 /* main.lynx.bundle in Resources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001B /* main.lynx.bundle */; };
 		B8AB53797D6BCB41C5BECE68 /* libPods-SongloftLynx.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D3E9A174D02DA94EF6B01346 /* libPods-SongloftLynx.a */; };
@@ -35,6 +36,7 @@
 		AA000000000000000000001D /* SongloftStorageModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongloftStorageModule.swift; sourceTree = "<group>"; };
 		AA000000000000000000001E /* SongloftAudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongloftAudioEngine.swift; sourceTree = "<group>"; };
 		AA000000000000000000001F /* SongloftAudioModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongloftAudioModule.swift; sourceTree = "<group>"; };
+		AA000000000000000000002A /* SongloftPlatformModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongloftPlatformModule.swift; sourceTree = "<group>"; };
 		D3E9A174D02DA94EF6B01346 /* libPods-SongloftLynx.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-SongloftLynx.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F6CF18F52AA4E9A635199544 /* Pods-SongloftLynx.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SongloftLynx.debug.xcconfig"; path = "Target Support Files/Pods-SongloftLynx/Pods-SongloftLynx.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -88,6 +90,7 @@
 				AA000000000000000000001D /* SongloftStorageModule.swift */,
 				AA000000000000000000001E /* SongloftAudioEngine.swift */,
 				AA000000000000000000001F /* SongloftAudioModule.swift */,
+				AA000000000000000000002A /* SongloftPlatformModule.swift */,
 				AA0000000000000000000018 /* SongloftLynx-Bridging-Header.h */,
 				AA000000000000000000001A /* Assets.xcassets */,
 				AA000000000000000000001B /* main.lynx.bundle */,
@@ -228,6 +231,7 @@
 				AA0000000000000000000027 /* SongloftStorageModule.swift in Sources */,
 				AA0000000000000000000028 /* SongloftAudioEngine.swift in Sources */,
 				AA0000000000000000000029 /* SongloftAudioModule.swift in Sources */,
+				AA000000000000000000002B /* SongloftPlatformModule.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
