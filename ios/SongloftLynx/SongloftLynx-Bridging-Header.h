@@ -8,3 +8,11 @@
 #import <Lynx/LynxEnv.h>
 #import <Lynx/LynxTemplateProvider.h>
 #import <Lynx/LynxView.h>
+
+// Native modules (batch B3b) + the load path that carries globalProps into the
+// first frame. `LynxContextModule` is the protocol a module adopts to receive a
+// `LynxContext` (needed for `sendGlobalEvent`); it pulls in `LynxModule.h` and
+// `LynxContext.h` itself.
+#import <Lynx/LynxContextModule.h>
+#import <Lynx/LynxLoadMeta.h>
+#import <Lynx/LynxTemplateData.h>

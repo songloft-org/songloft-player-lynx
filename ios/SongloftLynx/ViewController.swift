@@ -21,6 +21,11 @@ import UIKit
  *     because that is the first point where the safe-area insets are resolved —
  *     building earlier would render the launch frame at the wrong height and
  *     immediately re-lay it out.
+ *
+ * It also owns the two host→page channels the app needs beyond rendering:
+ * the native modules (registered on the `LynxConfig`, where Android registers
+ * them process-wide on `LynxEnv`) and the system appearance (see
+ * [pushAppearance]).
  */
 class ViewController: UIViewController {
   /// Asset base name. `SongloftTemplateProvider` appends the `.bundle`
@@ -31,6 +36,7 @@ class ViewController: UIViewController {
   private var lynxView: LynxView?
   /// Viewport the engine was last laid out for; used to skip no-op updates.
   private var laidOutSize: CGSize = .zero
+  private var localeObserver: NSObjectProtocol?
 
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -39,6 +45,13 @@ class ViewController: UIViewController {
     // which is what the Android host gets from splitting `themes.xml` by the
     // `night` resource qualifier (no flash of the wrong colour at launch).
     view.backgroundColor = .systemBackground
+    observeAppearanceChanges()
+  }
+
+  deinit {
+    if let localeObserver {
+      NotificationCenter.default.removeObserver(localeObserver)
+    }
   }
 
   override func viewDidLayoutSubviews() {
@@ -63,7 +76,7 @@ class ViewController: UIViewController {
     // so it stays the *full* screen — only the layout viewport is inset.
     let screenSize = view.window?.windowScene?.screen.bounds.size ?? view.bounds.size
     let lynxView = LynxView { builder in
-      builder.config = LynxConfig(provider: SongloftTemplateProvider())
+      builder.config = Self.buildConfig()
       builder.screenSize = screenSize
       builder.fontScale = 1.0
     }
@@ -75,6 +88,87 @@ class ViewController: UIViewController {
     view.addSubview(lynxView)
     self.lynxView = lynxView
 
-    lynxView.loadTemplate(fromURL: Self.bundleURL, initData: nil)
+    // `LynxLoadMeta` carries the globalProps *into* the load (the render applies
+    // `meta.globalProps` before it resolves the URL), so the very first frame
+    // already knows the system theme — no flash of the wrong one. A native-module
+    // getter could not manage that: it would be async and answer after the launch
+    // frame had painted. This is also why the load stayed here rather than moving
+    // earlier: the props must be set before `loadTemplate`, and `loadTemplate`
+    // must wait for the safe-area insets.
+    let meta = LynxLoadMeta()
+    meta.url = Self.bundleURL
+    meta.globalProps = LynxTemplateData(
+      dictionary: SystemAppearance.snapshot(traits: traitCollection)
+    )
+    lynxView.loadTemplate(meta)
+  }
+
+  /**
+   * The `LynxConfig` for our single LynxView: the template provider plus the two
+   * native modules. Registration must happen before the bundle loads, since the
+   * TS facades probe `NativeModules.*` during startup and permanently fall back
+   * to the mock audio / in-memory storage if a module is missing.
+   *
+   * Unlike the host services and XElement behaviors (which self-register through
+   * the pods' lazy-register mechanism — see `AppDelegate`), app-owned modules
+   * have to be registered by hand, and the `methodLookup` tables inside them are
+   * the only description of their JS surface.
+   */
+  private static func buildConfig() -> LynxConfig {
+    let config = LynxConfig(provider: SongloftTemplateProvider())
+    config.register(SongloftAudioModule.self)
+    config.register(SongloftStorageModule.self)
+    return config
+  }
+
+  // MARK: - System appearance
+
+  /**
+   * Dark-mode and language changes reach a *running* page only if the host pushes
+   * them: Lynx notifies nothing on its own, and `globalProps` updates do not
+   * reach an already-rendered page. So both channels are written on every change
+   * — `updateGlobalProps` so any later first read is correct, and a global event
+   * so the live page reacts now (`src/native/system-appearance.ts`).
+   *
+   * The two sources are deliberately different mechanisms:
+   *  - **theme** → trait changes. `registerForTraitChanges` is the iOS 17+ API;
+   *    `traitCollectionDidChange` is its (deprecated, but still delivered)
+   *    predecessor, kept for the 16.x floor this target supports.
+   *  - **locale** → `NSLocale.currentLocaleDidChange`. Changing the *app's*
+   *    language in Settings relaunches the process (so the `globalProps` initial
+   *    value covers it); this notification catches the region/system-language
+   *    edits that do not.
+   */
+  private func observeAppearanceChanges() {
+    if #available(iOS 17.0, *) {
+      registerForTraitChanges([UITraitUserInterfaceStyle.self]) {
+        (self: Self, _: UITraitCollection) in
+        self.pushAppearance()
+      }
+    }
+    localeObserver = NotificationCenter.default.addObserver(
+      forName: NSLocale.currentLocaleDidChangeNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      self?.pushAppearance()
+    }
+  }
+
+  override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+    super.traitCollectionDidChange(previousTraitCollection)
+    // On iOS 17+ `registerForTraitChanges` already delivers this.
+    if #available(iOS 17.0, *) { return }
+    guard traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) else {
+      return
+    }
+    pushAppearance()
+  }
+
+  private func pushAppearance() {
+    guard let lynxView else { return }
+    let appearance = SystemAppearance.snapshot(traits: traitCollection)
+    lynxView.updateGlobalProps(with: appearance)
+    lynxView.sendGlobalEvent(SystemAppearance.eventChanged, withParams: [appearance])
   }
 }

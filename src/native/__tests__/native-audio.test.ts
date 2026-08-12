@@ -170,6 +170,22 @@ describe('NativeSongloftAudio (delegation + event bridge)', () => {
     expect(native.setSpeed).toHaveBeenCalledWith(1.5)
   })
 
+  /**
+   * The store's usual call carries only the mock-only `durationMs`, so this is
+   * the shape that actually runs on a device. It must still be an **object**:
+   * iOS builds its ObjC invocation from the method signature and reports a
+   * `LynxError` for every object parameter that arrives nil, so a `null` here
+   * would log an engine error on every single track change.
+   */
+  test('load without native options passes an empty object, never null', async () => {
+    const native = makeNativeModule()
+    const audio = new NativeSongloftAudio(native, null)
+    await audio.load('http://x/a.mp3', { durationMs: 1000 })
+    await audio.load('http://x/b.mp3')
+    expect(native.load).toHaveBeenNthCalledWith(1, 'http://x/a.mp3', {})
+    expect(native.load).toHaveBeenNthCalledWith(2, 'http://x/b.mp3', {})
+  })
+
   test('setFavorite delegates to the native module', async () => {
     const native = makeNativeModule()
     const audio = new NativeSongloftAudio(native, null)

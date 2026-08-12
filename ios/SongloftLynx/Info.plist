@@ -29,6 +29,16 @@
 	<key>UILaunchScreen</key>
 	<dict/>
 
+	<!-- Background audio. Without this the system suspends the app (and its
+	     AVAudioSession) as soon as it leaves the foreground, so playback dies on
+	     screen lock / app switch. This plus `AVAudioSession.playback` in
+	     SongloftAudioEngine is the iOS replacement for Android's foreground
+	     MediaSessionService. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+
 	<!-- App Transport Security: the dev backend is plain-HTTP
 	     (http://localhost:58091), and in standalone mode the user can point the
 	     app at any self-hosted server — which may well be http on a LAN address.

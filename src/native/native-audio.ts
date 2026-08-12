@@ -68,7 +68,7 @@ const REQUIRED_METHODS = [
  * Methods are fire-and-forget; results/state come back over global events.
  */
 export interface SongloftAudioNativeModule {
-  load(url: string, opts: { hls?: boolean; headers?: Record<string, string> } | null): void
+  load(url: string, opts: { hls?: boolean; headers?: Record<string, string> }): void
   play(): void
   pause(): void
   stop(): void
@@ -180,12 +180,16 @@ export class NativeSongloftAudio implements SongloftAudio {
     // Only forward defined keys: passing `undefined` values across the bridge
     // can surface as a present-but-null key, which the native `getBoolean` /
     // `getMap` reads would choke on. `durationMs` is mock-only and dropped here.
-    let nativeOpts: { hls?: boolean; headers?: Record<string, string> } | null = null
-    if (opts && (opts.hls != null || opts.headers != null)) {
-      nativeOpts = {}
-      if (opts.hls != null) nativeOpts.hls = opts.hls
-      if (opts.headers != null) nativeOpts.headers = opts.headers
-    }
+    //
+    // Always an object, **never `null`** — even though the store's usual call
+    // carries no options at all. iOS builds the ObjC invocation from the method
+    // signature and reports a `LynxError` for every object parameter that
+    // arrives nil (`lynx_module_darwin.mm`: "NativeModule: sub class of
+    // NSObject"), so a null here would log an engine error on each track change.
+    // An empty map costs nothing and both hosts read it as "no options".
+    const nativeOpts: { hls?: boolean; headers?: Record<string, string> } = {}
+    if (opts?.hls != null) nativeOpts.hls = opts.hls
+    if (opts?.headers != null) nativeOpts.headers = opts.headers
     this.native.load(url, nativeOpts)
   }
 

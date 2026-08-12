@@ -11,6 +11,10 @@
 		AA0000000000000000000021 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000015 /* SceneDelegate.swift */; };
 		AA0000000000000000000022 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000016 /* ViewController.swift */; };
 		AA0000000000000000000023 /* SongloftTemplateProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000017 /* SongloftTemplateProvider.swift */; };
+		AA0000000000000000000026 /* SystemAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001C /* SystemAppearance.swift */; };
+		AA0000000000000000000027 /* SongloftStorageModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001D /* SongloftStorageModule.swift */; };
+		AA0000000000000000000028 /* SongloftAudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001E /* SongloftAudioEngine.swift */; };
+		AA0000000000000000000029 /* SongloftAudioModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001F /* SongloftAudioModule.swift */; };
 		AA0000000000000000000024 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001A /* Assets.xcassets */; };
 		AA0000000000000000000025 /* main.lynx.bundle in Resources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001B /* main.lynx.bundle */; };
 		B8AB53797D6BCB41C5BECE68 /* libPods-SongloftLynx.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D3E9A174D02DA94EF6B01346 /* libPods-SongloftLynx.a */; };
@@ -27,6 +31,10 @@
 		AA0000000000000000000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA000000000000000000001A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA000000000000000000001B /* main.lynx.bundle */ = {isa = PBXFileReference; lastKnownFileType = file; path = main.lynx.bundle; sourceTree = "<group>"; };
+		AA000000000000000000001C /* SystemAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAppearance.swift; sourceTree = "<group>"; };
+		AA000000000000000000001D /* SongloftStorageModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongloftStorageModule.swift; sourceTree = "<group>"; };
+		AA000000000000000000001E /* SongloftAudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongloftAudioEngine.swift; sourceTree = "<group>"; };
+		AA000000000000000000001F /* SongloftAudioModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongloftAudioModule.swift; sourceTree = "<group>"; };
 		D3E9A174D02DA94EF6B01346 /* libPods-SongloftLynx.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-SongloftLynx.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F6CF18F52AA4E9A635199544 /* Pods-SongloftLynx.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SongloftLynx.debug.xcconfig"; path = "Target Support Files/Pods-SongloftLynx/Pods-SongloftLynx.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -76,6 +84,10 @@
 				AA0000000000000000000015 /* SceneDelegate.swift */,
 				AA0000000000000000000016 /* ViewController.swift */,
 				AA0000000000000000000017 /* SongloftTemplateProvider.swift */,
+				AA000000000000000000001C /* SystemAppearance.swift */,
+				AA000000000000000000001D /* SongloftStorageModule.swift */,
+				AA000000000000000000001E /* SongloftAudioEngine.swift */,
+				AA000000000000000000001F /* SongloftAudioModule.swift */,
 				AA0000000000000000000018 /* SongloftLynx-Bridging-Header.h */,
 				AA000000000000000000001A /* Assets.xcassets */,
 				AA000000000000000000001B /* main.lynx.bundle */,
@@ -212,6 +224,10 @@
 				AA0000000000000000000021 /* SceneDelegate.swift in Sources */,
 				AA0000000000000000000022 /* ViewController.swift in Sources */,
 				AA0000000000000000000023 /* SongloftTemplateProvider.swift in Sources */,
+				AA0000000000000000000026 /* SystemAppearance.swift in Sources */,
+				AA0000000000000000000027 /* SongloftStorageModule.swift in Sources */,
+				AA0000000000000000000028 /* SongloftAudioEngine.swift in Sources */,
+				AA0000000000000000000029 /* SongloftAudioModule.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
