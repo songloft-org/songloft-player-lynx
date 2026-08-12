@@ -1,10 +1,12 @@
 # 进展与交接（PROGRESS）
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
-> **最后更新**：2026-08-12 · 最近完成（**批29 真机验收轮 + B3a iOS 宿主 + 批29b 补验**）。
+> **最后更新**：2026-08-12 · 最近完成（**批29c 修批29b Computing bug + B3a iOS 宿主**）。
+> **批29c**：修掉批29b 发现的 Computing 阶段 bug（点计算后卡 `0/0`、后端跑完 UI 不转 Results）。**真机三次复现 + 诊断条读数**定位到双层根因：① 开始新一轮计算时，progress query 还持有上一轮的**陈旧终态**（`done`/`cancelled`），page 的 auto-transition effect 用陈旧 `isFinished=true` 瞬间把 phase 从 computing 推到 results（跳过计算阶段）；② query-core 5.101 的函数式 `refetchInterval` 在本 Lynx 4.0 build 上**首次 fetch 后就不再 fire**（真机诊断：`refetchInterval` 被反复调用返回 `2000`、但实际 GET 冻结在 2 次、`computed/total` 停住不动，而同组件里自测 `setInterval` 每 2s 正常 fire）。修法：start mutation `onSuccess` invalidate progress + remove duplicates（清陈旧终态，`resetFingerprintCachesForNewRun`）+ auto-transition 加 `dataUpdatedAt >= 进入computing时间戳` 守卫（只认本轮的终态）+ **progress 轮询改成页面级显式 `setInterval` 驱动 `refetch()`**（不再依赖不可靠的 `refetchInterval`）。真机（18091，chromaprint 可用、356 首）逐张截图验过：点「重新计算全部指纹」→ 进 Computing、进度 6→30→…→356 实时推进 → done 后**自动转 Results**（空态）。新增 `fingerprint-mutations.test.ts` 2 例（反向验证过会红）。clean build（**1476.6 kB**）/`tsc -b`/**711 vitest** 全绿。⚠️ **Results 有重复组 + 删除 Dialog 的真机手势仍未验**——两个可用后端都造不出重复组数据（58091 有相同文件但无 chromaprint 算不了指纹；18091 chromaprint 可用但 356 首无重复、且是 SSH 隧道到远程、文件不可控）；渲染逻辑有 vitest 覆盖（`duplicate-check-page.test` 的 `results phase shows groups`）。
 > **B3a**：iOS 宿主工程落地，模拟器上从登录页一路验到首页（`<input>` / `<svg>`（含远程插件 SVG）/ `<image>` 全正常、790 行 lynx 日志 **0 条 LynxError**），顺手修掉一个安全区缺陷；Lynx iOS 用 **4.0.1**（与 Android 4.0.0 的偏差有据可查）。详见下方「B3a」一节。
 > **B3b（iOS 音频 / 存储 / 系统外观）未开始** —— subagent 启动即被模型提供方限流中断、**零产出**，故 iOS 侧当前**无音频、杀 app 丢登录态、拿不到系统深浅色**。
-> **批29b**：借用户提供的 `http://localhost:18091`（**chromaprint 可用**、356 首全本地）补验批28 —— Status 阶段两个分支现已都验过，但**发现一个真 bug 未修：Computing 阶段进度恒 `0/0`，后端跑完后 UI 永不转 Results**（详见「批29b」，**下个 session 首选任务**，复现环境现成）。
+>
+> **上一批**（**批29b**）：借用户提供的 `http://localhost:18091`（**chromaprint 可用**、356 首全本地）补验批28 —— Status 阶段两个分支都验过，并**发现 Computing 阶段 bug**（批29c 已修，见上）。
 >
 > **上一批**（**批29 · 真机验收轮：批25-28 积压 + 3 个真 bug**）：把积压 4 批的「⏳ 待扫码」一次性验掉，过程中查出并修掉 3 个**只在真机暴露、build/tsc/vitest 全绿却是坏的**缺陷：① **`<refresh>` 缺 `androidx.viewpager2` 依赖，attach 即崩**（`SmartRefreshLayout.onAttachedToWindow` → `SmartUtil.isContentView` → `ViewPager2` `NoClassDefFoundError`，LynxError 990200）——这是批20「`<refresh>` 吞横向手势」与批25「SmartRefreshLayout 3.0.0-alpha 嵌套滚动回归、无法降级」**两次误诊的真根因**，加一行依赖后原生下拉刷新彻底恢复（`refreshstatechange`→`startrefresh`→`finishRefresh` 真机闭环），批25 为绕行加的手动刷新按钮本就不必要；② **3 处动态 `import()` 的 lazy bundle 从未打进 APK assets**，其中 `index.tsx` 那两处无 try/catch，把启动链连带 `auth.hydrate()`/`auth.checkAuth()` 一起打断（auth status 永远停在 `unknown`，而 guard 对 `unknown` 不重定向，所以「看起来正常」）——改静态 import 后 `dist/lazy-bundle/` 消失、bundle **−40 kB**，并**推翻批20「已端到端验证播放模式持久化」的结论**（当时不可能成立，本批修好后才真验过）；③ **Lynx 4.0.0 宿主的 `lynx.queueMicrotask` 自身抛错**，而 ReactLynx 把它装成 **Preact 的 effect 调度器**（`options.requestAnimationFrame`），导致 `useEffect` flush 被静默丢弃——banner 替换成 ReactLynx 自己的 Promise 兜底实现。另修文案「更多设置（后续版本）」→「高级」（其下 3 项早已全部实现）。新增 4 道闸门**全部反向验证过会红**。clean build（**1476.6 kB**）/`tsc -b --force`/**714 vitest** 全绿。
 >
@@ -77,7 +79,8 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 29 | **真机验收轮**（批25-28 积压一次性验掉）+ **3 个真机专属 bug**（`<refresh>` 缺 viewpager2 / lazy-bundle 不进 APK / 宿主 `queueMicrotask` 坏掉）+ 文案订正 | ✅ 完成 | clean build（**1476.6 kB**，−42.9）/`tsc -b --force`/**714 vitest**（+5）全绿 | ✅ **批25/26/27/28 全部模拟器逐条截图验过**；顺带补验批19「真的导入歌曲」、批22 收藏按钮已注册进 MediaSession |
 | B3a | **iOS 原生宿主 + 内嵌 bundle**（手写 pbxproj + CocoaPods Lynx 4.0.1 + ATS + 安全区修复；服务走 pod lazy-register，宿主不手写注册） | ✅ 完成 | 前端未动逻辑（716 vitest 仍绿）；`pnpm run ios:build` 通过 | ✅ **iPhone 17 Pro / iOS 26.0 模拟器逐张截图验过**：登录页 → 登录 → 首页真实数据；`<input>` / `<svg>`（含远程插件 SVG）/ `<image>` 全正常；790 行 lynx 日志 **0 条 LynxError** |
 | B3b | iOS 原生模块（`SongloftAudio` AVPlayer / `SongloftStorage` / `SystemAppearance`） | ⛔ **未开始** — subagent 启动即被模型提供方限流中断，**零产出**（`ios/` 未被它改动） | | iOS 侧因此**当前无音频、存储仍是内存态（杀 app 丢登录态）、拿不到系统深浅色** |
-| 29b | **批28 三阶段补验**（借 `localhost:18091` 后端，chromaprint 可用）→ **发现 1 个真 bug 未修**：Computing 阶段进度恒 `0/0` 且完成后不转 Results | ⚠️ 部分完成 | — | ✅ Status 两个分支都验过；⛔ Computing 卡死（见遗留）、Results/删除 Dialog 因此仍未验 |
+| 29b | **批28 三阶段补验**（借 `localhost:18091` 后端，chromaprint 可用）→ **发现 1 个真 bug**：Computing 阶段进度恒 `0/0` 且完成后不转 Results | ✅ 补验完成（bug 已由批29c 修） | — | ✅ Status 两个分支都验过；Computing bug 见批29c |
+| 29c | **修批29b Computing bug**（陈旧终态跳过 computing + `refetchInterval` 在 Lynx 首次 fetch 后不再 fire）：清陈旧缓存 + 时间戳守卫 + 改页面级显式 `setInterval` 轮询 | ✅ 完成 | clean build（1476.6 kB）/`tsc -b`/**711 vitest**（+2 反向验证过）全绿 | ✅ **18091 真机逐张截图验过**：进 Computing → 进度实时推进 → 自动转 Results（空态）；⚠️ Results 有重复组 + 删除 Dialog 手势仍未验（造不出重复组数据，见遗留） |
 | 后续 | Lynxtron 桌面 | ⛔ 未开始 | | |
 
 ## 已交付明细
@@ -756,13 +759,33 @@ Phase B3 第一步。方法论照批B1 对 Android 的做法（照抄官方 demo
 
 **因此 Results 阶段与删除确认 Dialog 仍未验**（依赖 Computing 正常结束才能进入）。
 
+### 批29c · 修批29b Computing bug（双层根因，真机定位）
+
+批29b 判断「progress 与 status 两个 query 数据同时消失、指向 query 层」的方向对了一半——真相是**两个独立缺陷叠在一起**，靠往 `DuplicateCheckPage` 顶部塞一条把状态机真实值画到屏幕上的诊断条（`phase`/`forced`/`prog.status`/`dataUpdatedAt`/`fetchStatus`/一个自测 `setInterval` 计数器/`refetchInterval` 调用与返回值计数），在 18091 真机上多轮复现读数才拆开。
+
+**根因 1 — 陈旧终态跳过 computing（这是批29b「不转 Results」现象的另一面）**：进页面时 progress query 首拉会拿到后端上一轮留下的**终态**（`done`/`cancelled`，`isFinished=true`）。点「开始计算」后 `onStartCompute` 同步 `setPhase('computing')`，而此刻 progress 还是那个陈旧终态，于是 auto-transition effect（`progress.isFinished && phase==='computing'`）**立即命中**、把 phase 从 computing 推到 results——Computing 阶段被瞬间跳过（诊断条实测：点击后 `phase=results` 而 `prog.status=done`、`pUpd` 未变）。批29b 那个库 356 首**恰好无重复**，所以跳到 results 显示的是空态「未发现重复」，看着像「没进 computing」；换一个进页时 progress 是 `idle` 的库，则表现为卡在 computing `0/0`——**同一根因的两种表相**。
+
+**根因 2 — `refetchInterval` 在本 Lynx build 首次 fetch 后不再 fire**：即便绕过根因 1 真进了 computing，进度也卡 `0/356` 不动。诊断条实测：`refetchInterval` 函数**被反复调用（11 次）且每次都返回 `2000`**，但实际 `GET /scan/fingerprints/progress` **冻结在 2 次**（mount 1 次 + start 后 invalidate 1 次），`dataUpdatedAt` 不再变；同一组件里我塞的自测 `setInterval` **每 2s 正常 fire**（`selfTick` 稳定递增）。即 **Lynx BTS 的 `setInterval` 没问题、坏的是 query-core 5.101 把 `refetchInterval` 的 2000ms 定时器落地成真正周期回调这一步**（scan 页轮询看似可用，但它进度条那段是 indeterminate CSS 动画，容易被误读成「轮询在动」）。没有继续深挖 query-core 内部（observer 时序/`#updateRefetchInterval` 的 `mounted` 与 `nextRefetchInterval!==current` 分支），因为**绕过它比驯服它更稳**。
+
+**修法（三处，均已 clean build + 真机验证）**：
+1. `useStartFingerprintMutation` 的 `onSuccess` 调 `resetFingerprintCachesForNewRun(queryClient)`（抽成可单测的纯函数，同 `remote-setting.ts` 的 `applyOptimistic` 惯例）：`invalidateQueries(fingerprintProgress)` 清掉陈旧终态 + `removeQueries(duplicates)` 丢掉上一轮重复结果。这也补齐了 fingerprint start 一直缺、而 scan start 早就有的那次 invalidate。
+2. auto-transition effect 加时间戳守卫：进 computing 时 `computingSinceRef.current = Date.now()`，只有 `progress.isFinished && progressQuery.dataUpdatedAt >= computingSinceRef.current` 才转 results——**只认本轮产生的终态**，陈旧终态一律忽略（query-core 的 `dataUpdatedAt` 也用 `Date.now()`，同一时钟，比较有效）。
+3. **progress 轮询改成页面级显式 `setInterval` 驱动 `progressQuery.refetch()`**（`phase==='computing' && !progressPaused` 时每 `FINGERPRINT_POLL_MS` 拉一次，离开 computing/暂停/卸载时 `clearInterval`），彻底不再依赖 query-core 的 `refetchInterval`。`useFingerprintProgressQuery` 随之去掉 `forced`/`paused`/`refetchInterval`，`fingerprintPollInterval` 纯函数连同它的 7 个单测一并删除（不再有调用方，留着会误导）。`progressForced` state 也删了。
+
+**真机结果**（18091，chromaprint 可用、356 首、干净产物 1476.6 kB）：点「重新计算全部指纹」→ **进入 Computing 阶段**（不再瞬间跳走）→ 进度 `6/356`→`30/356`→…→`356/356` **实时推进**（determinate 进度条同步涨）→ 后端 `done` 后**自动转 Results**（空态「未发现重复歌曲」）。
+
+**新增闸门**：`fingerprint-mutations.test.ts` 2 例——`resetFingerprintCachesForNewRun` 对真 `QueryClient` 断言「陈旧终态被标记 invalidated」+「duplicates 被移除」，**反向验证过**（把函数体改 no-op 两条立即变红）。
+
+**仍未验（环境限制，见遗留清单）**：Results **有重复组**时的组列表 / bitRate 推荐 / lynx-ui 删除 Dialog 手势——两个后端都造不出重复组数据。
+
 ## 未完成 / 遗留事项（TODO & 风险）
 
-- [ ] ⛔ **【下一个 session 首选】批28 Computing 阶段进度恒 `0/0` 且完成后不转 Results**（批29b 发现，**未修**）：完整现象、已排除项与「下一步该查什么」见上方「批29b」一节。复现环境现成：`http://localhost:18091`（chromaprint 可用、356 首本地），Android 模拟器 `adb reverse tcp:18091 tcp:18091` 后在设置→服务器改地址即可。修完顺手就能把 Results 阶段与删除确认 Dialog 一起验掉。
+- [x] **批28 Computing 阶段进度恒 `0/0` 且完成后不转 Results**（批29b 发现 → **批29c 已修**）：双层根因（陈旧终态跳过 computing + `refetchInterval` 在 Lynx 首次 fetch 后不再 fire），修法见上方「批29c」小结与下方「批29c」详节。18091 真机逐张截图验过 Computing 推进 + 自动转 Results。
+- [ ] ⚠️ **Results 有重复组 + 删除 Dialog 的真机手势仍未验**（批29c 受阻于造不出重复组数据）：两个可用后端都不行——**58091**（本机，可造相同文件）chromaprint 不可用、指纹算不出来（`computed:0`）；**18091**（chromaprint 可用）356 首无重复、且是 SSH 隧道到远程机器、音乐文件不可控。要真验需要一个 **chromaprint 可用 + 音乐目录可写** 的后端：往目录放 2-3 份同源不同名/不同格式的音频 → 重算指纹 → 应归成一个重复组。渲染逻辑本身有 vitest 覆盖（`duplicate-check-page.test.tsx` 的 `results phase shows groups` 断言 `fp-group-0`/`fp-clean-all`），缺的只是真机点删除 Dialog 的手势。
 - [ ] **B3b · iOS 原生模块**（未开始，subagent 被限流中断、零产出）：`SongloftAudio`(AVPlayer + AVAudioSession `.playback` + `MPNowPlayingInfoCenter` + `MPRemoteCommandCenter` + `UIBackgroundModes: audio`)、`SongloftStorage`(UserDefaults + Keychain，`area` = `prefs`|`secure`)、`SystemAppearance`（globalProps 初值**必须在 `loadTemplate` 之前**注入，而 B3a 把 `loadTemplate` 推迟到首次 `viewDidLayoutSubviews`，注入点要在那之前；变更走 `traitCollectionDidChange` + locale 通知）。三个模块的**方法名/事件名/键名必须与 Android 逐字一致**（`SongloftAudio.stateChanged`/`.progress`/`.error`/`.remoteCommand`、`systemTheme`/`systemLocale`/`SongloftSystem.appearanceChanged`），TS 侧 facade 已平台无关、**零改动**。⚠️ **`ios/.../project.pbxproj` 是手写的**：新增 Swift 文件必须注册进 4 处（PBXFileReference / PBXBuildFile / PBXGroup children / PBXSourcesBuildPhase），漏一处的症状是**编译成功但运行时模块找不到**。当前 iOS 日志里「`SongloftStorage`/`SongloftAudio` 模块找不到」的噪声，做完应当消失（这本身就是注册成功的侧证）。
 - [ ] **收藏按钮的 `onCustomCommand` 分发未端到端外部触发验证**（批22）：**批29 补验了一半**——`dumpsys media_session` 确认 `custom actions=[Action:mName='收藏']` 真的注册进了 session（此前只验证过代码路径）。仍缺的是**点击分发**：需要可视通知栏的真机，或接一个真实 `MediaController` 客户端发 `sendCustomCommand`。
 - [ ] **偶发全屏灰层（批29 发现，未定位）**：运行数分钟后整屏蒙 α≈0.6 中灰，重启即恢复，不影响功能。完整诊断数据与已排除项见「批29 §7」。需换真机（非 BlueStacks）复现定性。
-- [ ] **批28 的 Computing / Results 阶段仍未真机验**（批29 受阻于后端未装 chromaprint）：指纹计算进度轮询、重复组列表、bitRate 推荐保留、lynx-ui Dialog 删除确认都还没上过真机。**注意真正影响用户的降级分支已验过**（chromaprint 不可用 → 警告 banner + 禁用开始按钮），缺的是内部两个阶段。
+- [x] **批28 的 Computing 阶段真机验**（批29c）：指纹计算进度轮询（`0/356`→`356/356` 实时推进）+ 完成后自动转 Results 已在 18091 真机验过。**重复组列表 / bitRate 推荐保留 / lynx-ui Dialog 删除确认** 仍未真机验（造不出重复组数据，见上「Results 有重复组…」条）。降级分支（chromaprint 不可用 → 警告 banner + 禁用按钮）批29 已验。
   - **测试数据现成**：`/Users/hanxi/toy/songloft/music/test-track-{1,2,3}.mp3` 三份 **file_size 完全相同（721126 字节）** 的同源副本，指纹应完全一致并归成一个 3 首重复组——不需要另造数据。
   - **后端检测口径**（`internal/services/fingerprint.go`）：`ffmpeg -hide_banner -muxers` 输出含 `chromaprint` 即可用，**不是** `fpcalc` CLI。路径取 config 表的 `ffmpeg_path`（`internal/app/app.go:291`），**无 API 可改**，且 `chromaprintAvailable` 由 `sync.Once` 缓存 → **改任何相关东西都必须重启后端**。
   - ⛔ **本机 Homebrew 路线已试过，不通，别再重复**（批29）：`brew install homebrew-ffmpeg/ffmpeg/ffmpeg --with-chromaprint` 撞两道墙——① **同名 formula 冲突**：必须先 `brew uninstall ffmpeg`（官方 tap 装的）；② **循环依赖**：`brew deps chromaprint` 含 `ffmpeg`，于是它又要把官方 ffmpeg 装回来、再次冲突。要绕开需要「装官方 ffmpeg → 装 chromaprint → `uninstall --ignore-dependencies ffmpeg` → 编译 homebrew-ffmpeg 版」这串脆弱序列，且中途还撞上一个 `openssl@3` bottle 的 `rb_sysopen: No such file or directory`（而该 bottle 文件实际存在，属 brew 缓存/API 不一致，需 `brew cleanup` 或 `HOMEBREW_NO_INSTALL_FROM_API=1`）。**结论：成本远超收益，已止损并恢复官方 ffmpeg。** 更省事的路子是用后端官方 Docker 镜像（页面提示原文就是「Docker 用户升级到最新镜像即可」），或换一台本就带 chromaprint 的后端环境。

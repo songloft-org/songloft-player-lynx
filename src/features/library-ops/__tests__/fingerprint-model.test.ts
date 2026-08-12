@@ -1,80 +1,12 @@
 import { describe, expect, test } from 'vitest'
 
-import type { FingerprintProgress } from '../../../models/fingerprint.js'
 import type { DuplicateGroup } from '../../../models/duplicate.js'
 import {
-  fingerprintPollInterval,
-  FINGERPRINT_POLL_MS,
   recommendedKeepId,
   groupDeleteIds,
   allDeleteIds,
   countTotalToDelete,
 } from '../domain/fingerprint-model.js'
-
-/* ─────────────────────────── fingerprintPollInterval ─────────────────────── */
-
-describe('fingerprintPollInterval', () => {
-  const running: FingerprintProgress = {
-    status: 'running',
-    computed: 10,
-    total: 100,
-    failed: 0,
-    percent: 10,
-    isRunning: true,
-    isFinished: false,
-    isIdle: false,
-  }
-
-  const done: FingerprintProgress = {
-    status: 'done',
-    computed: 100,
-    total: 100,
-    failed: 0,
-    percent: 100,
-    isRunning: false,
-    isFinished: true,
-    isIdle: false,
-  }
-
-  const idle: FingerprintProgress = {
-    status: 'idle',
-    computed: 0,
-    total: 0,
-    failed: 0,
-    percent: 0,
-    isRunning: false,
-    isFinished: false,
-    isIdle: true,
-  }
-
-  test('returns POLL_MS when running', () => {
-    expect(fingerprintPollInterval(running, false, false)).toBe(FINGERPRINT_POLL_MS)
-  })
-
-  test('returns false when done', () => {
-    expect(fingerprintPollInterval(done, false, false)).toBe(false)
-  })
-
-  test('returns false when paused', () => {
-    expect(fingerprintPollInterval(running, true, true)).toBe(false)
-  })
-
-  test('returns POLL_MS when forced even if idle', () => {
-    expect(fingerprintPollInterval(idle, true, false)).toBe(FINGERPRINT_POLL_MS)
-  })
-
-  test('returns false when idle and not forced', () => {
-    expect(fingerprintPollInterval(idle, false, false)).toBe(false)
-  })
-
-  test('returns POLL_MS when progress is undefined and forced', () => {
-    expect(fingerprintPollInterval(undefined, true, false)).toBe(FINGERPRINT_POLL_MS)
-  })
-
-  test('returns false when progress is undefined and not forced', () => {
-    expect(fingerprintPollInterval(undefined, false, false)).toBe(false)
-  })
-})
 
 /* ─────────────────────────── recommendedKeepId ───────────────────────────── */
 

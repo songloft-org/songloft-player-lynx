@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from '@lynx-js/react'
+import { useCallback, useEffect, useRef, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -14,6 +14,7 @@ import {
 } from '../data/index.js'
 import {
   type DuplicatePagePhase,
+  FINGERPRINT_POLL_MS,
   recommendedKeepId,
   countTotalToDelete,
   groupDeleteIds,
@@ -51,15 +52,19 @@ export function DuplicateCheckPage() {
   const [error, setError] = useState<string | null>(null)
 
   // ── Polling flags ──────────────────────────────────────────────────────────
-  const [progressForced, setProgressForced] = useState(false)
+  // Cancel handshake: pause the poll before sending the cancel request so a poll
+  // landing mid-flight cannot read the terminal state and jump the UI forward.
   const [progressPaused, setProgressPaused] = useState(false)
 
   // ── Queries ────────────────────────────────────────────────────────────────
   const statusQuery = useFingerprintStatusQuery()
-  const progressQuery = useFingerprintProgressQuery({
-    forced: progressForced,
-    paused: progressPaused,
-  })
+  // The progress query fetches once on mount (to auto-resume a computation that
+  // is already running when the page opens) and then whenever the explicit poll
+  // effect below calls `refetch()`. Its cadence is driven by that `setInterval`
+  // rather than query-core's `refetchInterval`, which proved unreliable on this
+  // Lynx build (batch 29b — the interval callback stopped firing after the first
+  // fetch, freezing the count while the backend advanced).
+  const progressQuery = useFingerprintProgressQuery()
   const [fetchDuplicates, setFetchDuplicates] = useState(false)
   const duplicatesQuery = useDuplicatesQuery(fetchDuplicates)
 
@@ -84,18 +89,58 @@ export function DuplicateCheckPage() {
   useEffect(() => {
     if (progress?.isRunning && phase === 'status') {
       setPhase('computing')
-      setProgressForced(true)
     }
   }, [progress?.isRunning, phase])
 
+  /**
+   * Explicit progress poll — the reliable replacement for query-core's
+   * `refetchInterval` (batch 29b).
+   *
+   * On this Lynx 4.0 build the functional `refetchInterval` stopped firing after
+   * its first fetch: verified on device that `computed/total` froze at the first
+   * value while the backend kept advancing, and the interval callback never ran
+   * again even though the interval function kept returning `2000`. A plain
+   * `setInterval` in the page **was** verified to fire every tick, so we drive
+   * the poll ourselves: while computing and not paused, `refetch()` the progress
+   * query every 2s. The interval tears down on leaving the computing phase, on
+   * pause (the cancel handshake), and on unmount.
+   */
+  const refetchProgress = progressQuery.refetch
+  useEffect(() => {
+    if (phase !== 'computing' || progressPaused) return
+    const id = setInterval(() => {
+      void refetchProgress()
+    }, FINGERPRINT_POLL_MS)
+    return () => clearInterval(id)
+  }, [phase, progressPaused, refetchProgress])
+
+  /**
+   * Ignore progress values fetched *before* the current computing run started.
+   *
+   * When the user starts a new run, the page flips to `computing` synchronously
+   * while the cached progress may still hold the previous run's **terminal**
+   * value (`done`/`cancelled`). The start mutation invalidates + refetches the
+   * progress query, but that GET is a round-trip — for one render the computing
+   * phase can still see the stale terminal progress. Without this guard the
+   * finished-transition below would fire on that stale value and skip straight
+   * to results (the batch 29b bug). We stamp the entry time on flipping to
+   * `computing` and only honour a *finished* progress whose data was updated
+   * after it.
+   */
+  const computingSinceRef = useRef(0)
+  useEffect(() => {
+    if (phase === 'computing') computingSinceRef.current = Date.now()
+  }, [phase])
+
   // ── Auto-transition: computing → results when finished ─────────────────────
   useEffect(() => {
-    if (progress?.isFinished && phase === 'computing') {
-      setProgressForced(false)
+    const freshlyFinished =
+      progress?.isFinished && progressQuery.dataUpdatedAt >= computingSinceRef.current
+    if (freshlyFinished && phase === 'computing') {
       setFetchDuplicates(true)
       setPhase('results')
     }
-  }, [progress?.isFinished, phase])
+  }, [progress?.isFinished, progressQuery.dataUpdatedAt, phase])
 
   // ── Pre-select recommended keeps when duplicates arrive ────────────────────
   useEffect(() => {
@@ -114,10 +159,7 @@ export function DuplicateCheckPage() {
   const onStartCompute = (params?: { recomputeAll?: boolean; retryFailed?: boolean }) => {
     setError(null)
     startFingerprint.mutate(params, {
-      onSuccess: () => {
-        setProgressForced(true)
-        setPhase('computing')
-      },
+      onSuccess: () => setPhase('computing'),
       onError: (e) => setError(String(e)),
     })
   }
@@ -127,15 +169,13 @@ export function DuplicateCheckPage() {
     cancelFingerprint.mutate(undefined, {
       onSuccess: () => {
         setProgressPaused(false)
-        setProgressForced(false)
         setPhase('status')
         void statusQuery.refetch()
       },
       onError: (e) => {
+        // Resume polling — the job may still be running.
         setProgressPaused(false)
         setError(String(e))
-        // Resume polling — the job may still be running.
-        setProgressForced(true)
       },
     })
   }

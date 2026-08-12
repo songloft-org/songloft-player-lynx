@@ -1,4 +1,3 @@
-import type { FingerprintProgress } from '../../../models/fingerprint.js'
 import type { DuplicateGroup, DuplicateSong } from '../../../models/duplicate.js'
 
 /**
@@ -16,27 +15,16 @@ export type DuplicatePagePhase = 'status' | 'computing' | 'results'
 
 /* ─────────────────────────── Polling constants ───────────────────────────── */
 
-/** Polling interval (ms) for fingerprint progress — matches Flutter's 2s. */
-export const FINGERPRINT_POLL_MS = 2000
-
 /**
- * Functional poll interval for the fingerprint progress query.
- * Returns `FINGERPRINT_POLL_MS` while computing, `false` otherwise.
+ * Polling interval (ms) for fingerprint progress — matches Flutter's 2s.
  *
- * `forced` covers the window between a successful POST and the first non-idle
- * GET response (same pattern as `scanPollInterval`).
- * `paused` stops polling before a cancel request is sent.
+ * The `DuplicateCheckPage` drives the poll with an explicit `setInterval` at
+ * this cadence rather than query-core's `refetchInterval` (batch 29b: the
+ * functional `refetchInterval` proved unreliable on the Lynx 4.0 build — the
+ * interval callback stopped firing after the first fetch, freezing the count
+ * while the backend advanced). See the poll effect in `DuplicateCheckPage`.
  */
-export function fingerprintPollInterval(
-  progress: FingerprintProgress | undefined,
-  forced: boolean,
-  paused: boolean,
-): number | false {
-  if (paused) return false
-  if (!progress) return forced ? FINGERPRINT_POLL_MS : false
-  if (progress.isFinished) return false
-  return forced || progress.isRunning ? FINGERPRINT_POLL_MS : false
-}
+export const FINGERPRINT_POLL_MS = 2000
 
 /* ─────────────────────────── Recommend-keep strategy ─────────────────────── */
 
