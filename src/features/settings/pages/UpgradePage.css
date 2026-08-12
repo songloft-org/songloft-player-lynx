@@ -1,0 +1,130 @@
+.upgrade-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.upgrade-page__topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+}
+
+.upgrade-page__back {
+  padding: var(--space-1);
+}
+
+.upgrade-page__title {
+  flex: 1;
+  font-size: var(--font-lg);
+  font-weight: bold;
+  color: var(--content);
+}
+
+.upgrade-page__content {
+  flex: 1;
+  padding: var(--space-4);
+}
+
+.upgrade-page__state {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+  text-align: center;
+  padding: var(--space-6) 0;
+}
+
+.upgrade-page__state--error {
+  color: var(--danger);
+}
+
+.upgrade-page__section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-6) 0;
+  gap: var(--space-3);
+}
+
+.upgrade-page__up-to-date {
+  font-size: var(--font-md);
+  font-weight: bold;
+  color: var(--content);
+}
+
+.upgrade-page__version {
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+}
+
+.upgrade-page__new-version {
+  font-size: var(--font-md);
+  font-weight: bold;
+  color: var(--accent);
+}
+
+.upgrade-page__current {
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+}
+
+.upgrade-page__changelog {
+  font-size: var(--font-sm);
+  color: var(--content-2);
+  padding: var(--space-3);
+  background-color: var(--paper);
+  border-radius: var(--radius-md);
+  width: 100%;
+}
+
+.upgrade-page__btn {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.upgrade-page__btn-text {
+  font-size: var(--font-sm);
+  color: var(--primary-content);
+  font-weight: bold;
+}
+
+.upgrade-page__progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-6) 0;
+  gap: var(--space-3);
+}
+
+.upgrade-page__progress-status {
+  font-size: var(--font-md);
+  font-weight: bold;
+  color: var(--content);
+}
+
+.upgrade-page__progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--paper);
+  overflow: hidden;
+}
+
+.upgrade-page__progress-fill {
+  height: 100%;
+  background-color: var(--primary);
+  border-radius: 3px;
+}
+
+.upgrade-page__progress-step {
+  font-size: var(--font-sm);
+  color: var(--content-2);
+}
+
+.upgrade-page__progress-pct {
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+}

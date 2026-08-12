@@ -56,8 +56,10 @@ export function LyricsView() {
     )
   }
 
+  const scrollTarget = currentIndex >= 0 ? `lyric-line-${currentIndex}` : undefined
+
   return (
-    <scroll-view className='player-lyrics' scroll-y>
+    <scroll-view className='player-lyrics' scroll-y scroll-into-view={scrollTarget} scroll-with-animation>
       <view className='player-lyrics__inner'>
         {lyrics.map((line, index) => {
           const active = index === currentIndex
@@ -70,7 +72,7 @@ export function LyricsView() {
               ? 'player-lyrics__line player-lyrics__line--active player-lyrics__line--note'
               : 'player-lyrics__line player-lyrics__line--note'
             return (
-              <view key={`${index}:${line.timeMs}`} className={cls}>
+              <view key={`${index}:${line.timeMs}`} id={`lyric-line-${index}`} className={cls}>
                 <Icon
                   name='music'
                   size={16}
@@ -86,12 +88,14 @@ export function LyricsView() {
               ? 'player-lyrics__line player-lyrics__line--active'
               : 'player-lyrics__line'
             return (
-              <text key={`${index}:${line.timeMs}`} className={cls}>{line.text}</text>
+              <view key={`${index}:${line.timeMs}`} id={`lyric-line-${index}`} className={cls}>
+                <text className={cls}>{line.text}</text>
+              </view>
             )
           }
 
           return (
-            <view key={`${index}:${line.timeMs}`} className='player-lyrics__line-group'>
+            <view key={`${index}:${line.timeMs}`} id={`lyric-line-${index}`} className='player-lyrics__line-group'>
               {romanization
                 ? <text className='player-lyrics__romanization'>{romanization}</text>
                 : null}

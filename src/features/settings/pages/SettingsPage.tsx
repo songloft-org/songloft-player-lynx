@@ -358,6 +358,7 @@ export function SettingsPage() {
               testId='settings-tab-config'
             />
             <SettingsRow icon='link' title={t('settings.networkProxy')} subtitle={t('settings.proxySubtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/proxy' })} testId='settings-proxy' />
+            <SettingsRow icon='refresh' title={t('upgrade.title')} subtitle={t('upgrade.subtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/upgrade' })} testId='settings-upgrade' />
           </SettingsSection>
 
           <DataSection />

@@ -1,5 +1,6 @@
 export { SettingsPage } from './pages/SettingsPage.js'
 export { ThemePacksPage } from './pages/ThemePacksPage.js'
+export { UpgradePage } from './pages/UpgradePage.js'
 export { ProxySettingsPage } from './pages/ProxySettingsPage.js'
 export { ServerSettingsPage } from './pages/ServerSettingsPage.js'
 
