@@ -2,6 +2,7 @@ import { create } from 'zustand'
 
 import { buildSongUrl } from '../../../core/network/url-helper.js'
 import { readAudioQuality } from '../../settings/data/settings-prefs.js'
+import { loadPlaybackState, savePlaybackState } from '../data/playback-persistence.js'
 import type { Song } from '../../../models/song.js'
 import {
   DEFAULT_DURATION_MS,
@@ -440,3 +441,38 @@ audio.on('remoteCommand', (e) => {
     }
   }
 })
+
+// ── playback state persistence ───────────────────────────────────────────────
+let _saveTimer: ReturnType<typeof setTimeout> | null = null
+const SAVE_DEBOUNCE_MS = 2_000
+
+usePlayerStore.subscribe((state, prev) => {
+  const queueChanged = state.playlist !== prev.playlist || state.currentIndex !== prev.currentIndex
+  const posChanged = Math.abs(state.currentTime - prev.currentTime) > 5_000
+  if (!queueChanged && !posChanged) return
+  if (_saveTimer != null) clearTimeout(_saveTimer)
+  _saveTimer = setTimeout(() => {
+    _saveTimer = null
+    void savePlaybackState(
+      state.playlist,
+      state.currentIndex,
+      state.currentTime,
+      state.sourcePlaylistId,
+    )
+  }, SAVE_DEBOUNCE_MS)
+})
+
+export async function restorePlaybackState(): Promise<void> {
+  const saved = await loadPlaybackState()
+  if (!saved || saved.playlist.length === 0) return
+  const song = saved.playlist[saved.currentIndex]
+  if (!song) return
+  usePlayerStore.setState({
+    playlist: saved.playlist,
+    currentIndex: saved.currentIndex,
+    currentSong: song,
+    currentTime: saved.positionMs,
+    duration: song.duration > 0 ? song.duration * 1000 : 0,
+    sourcePlaylistId: saved.sourcePlaylistId,
+  })
+}

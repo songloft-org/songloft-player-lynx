@@ -14,7 +14,7 @@ import { useAuthStore } from './features/auth/store/index.js'
 // awaits sit in the startup chain, it took `auth.hydrate()`/`auth.checkAuth()`
 // down with it (auth status stuck at `unknown` forever).
 import { readDefaultPlayMode } from './features/settings/data/settings-prefs.js'
-import { usePlayerStore } from './features/player/store/index.js'
+import { usePlayerStore, restorePlaybackState } from './features/player/store/index.js'
 import { applySavedLanguage } from './i18n/index.js'
 import { initSystemAppearance } from './native/system-appearance.js'
 import { applySavedTheme } from './shared/theme/theme-model.js'
@@ -41,6 +41,7 @@ void (async () => {
   await applySavedTheme()
   const savedMode = await readDefaultPlayMode()
   usePlayerStore.getState().setPlayMode(savedMode)
+  await restorePlaybackState()
   const auth = useAuthStore.getState()
   await auth.hydrate()
   await auth.checkAuth()
