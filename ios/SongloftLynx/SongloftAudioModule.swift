@@ -175,12 +175,16 @@ final class SongloftAudioModule: NSObject, LynxContextModule {
     engine.runOnMain { engine.setFavorite(isFavorite) }
   }
 
-  // MARK: - Equalizer (stub; real DSP is a later batch, as on Android)
+  // MARK: - Equalizer (10-band via MTAudioProcessingTap + kAudioUnitSubType_NBandEQ)
 
   @objc func setEqualizerEnabled(_ on: Bool) {
+    let engine = SongloftAudioEngine.shared
+    engine.runOnMain { engine.equalizer.setEnabled(on) }
   }
 
   @objc func setEqualizerBand(_ index: Double, gainDb: Double) {
+    let engine = SongloftAudioEngine.shared
+    engine.runOnMain { engine.equalizer.setBand(Int(index), gain: Float(gainDb)) }
   }
 
   // MARK: - Lifecycle

@@ -1,4 +1,5 @@
 import UIKit
+import UniformTypeIdentifiers
 
 /**
  * Lynx native module `NativeModules.SongloftPlatform` — platform utilities.
@@ -8,6 +9,9 @@ import UIKit
  * `org.songloft.lynx.platform.SongloftPlatformModule` (Android).
  */
 final class SongloftPlatformModule: NSObject, LynxModule {
+  @objc required init(param: Any) {}
+  override init() { super.init() }
+
   @objc static var name: String { "SongloftPlatform" }
 
   @objc static var methodLookup: [String: String] {
@@ -26,22 +30,18 @@ final class SongloftPlatformModule: NSObject, LynxModule {
     }
   }
 
-  /**
-   * Present a document picker, then multipart-upload the chosen file.
-   * Callback receives (error: String?, responseBody: String?).
-   */
   @objc func pickAndUploadFile(_ uploadUrl: String, fieldName: String, mimeType: String, callback: @escaping LynxCallbackBlock) {
     DispatchQueue.main.async {
       guard let vc = Self.topViewController() else {
-        callback(["no_view_controller", NSNull()])
+        callback(["no_view_controller", NSNull()] as NSArray)
         return
       }
-      let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.json, .data])
+      let types: [UTType] = [.json, .data]
+      let picker = UIDocumentPickerViewController(forOpeningContentTypes: types)
       picker.allowsMultipleSelection = false
       let delegate = PickerDelegate(uploadUrl: uploadUrl, fieldName: fieldName, callback: callback)
       picker.delegate = delegate
-      // Retain the delegate until dismissed
-      objc_setAssociatedObject(picker, "delegate", delegate, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+      objc_setAssociatedObject(picker, &PickerDelegate.key, delegate, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
       vc.present(picker, animated: true)
     }
   }
@@ -60,6 +60,8 @@ final class SongloftPlatformModule: NSObject, LynxModule {
 // MARK: - Picker delegate + upload
 
 private class PickerDelegate: NSObject, UIDocumentPickerDelegate {
+  static var key = "PickerDelegate"
+
   let uploadUrl: String
   let fieldName: String
   let callback: LynxCallbackBlock
@@ -72,28 +74,27 @@ private class PickerDelegate: NSObject, UIDocumentPickerDelegate {
 
   func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
     guard let fileUrl = urls.first else {
-      callback(["cancelled", NSNull()])
+      callback(["cancelled", NSNull()] as NSArray)
       return
     }
     let accessing = fileUrl.startAccessingSecurityScopedResource()
     defer { if accessing { fileUrl.stopAccessingSecurityScopedResource() } }
 
     guard let data = try? Data(contentsOf: fileUrl) else {
-      callback(["read_failed", NSNull()])
+      callback(["read_failed", NSNull()] as NSArray)
       return
     }
     let fileName = fileUrl.lastPathComponent
-
     upload(data: data, fileName: fileName)
   }
 
   func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-    callback(["cancelled", NSNull()])
+    callback(["cancelled", NSNull()] as NSArray)
   }
 
   private func upload(data: Data, fileName: String) {
     guard let url = URL(string: uploadUrl) else {
-      callback(["invalid_url", NSNull()])
+      callback(["invalid_url", NSNull()] as NSArray)
       return
     }
     let boundary = "----LynxBoundary\(UUID().uuidString)"
@@ -112,7 +113,7 @@ private class PickerDelegate: NSObject, UIDocumentPickerDelegate {
     URLSession.shared.dataTask(with: request) { [weak self] responseData, response, error in
       DispatchQueue.main.async {
         if let error {
-          self?.callback([error.localizedDescription, NSNull()])
+          self?.callback([error.localizedDescription, NSNull()] as NSArray)
           return
         }
         guard let httpResponse = response as? HTTPURLResponse,
@@ -121,11 +122,11 @@ private class PickerDelegate: NSObject, UIDocumentPickerDelegate {
         else {
           let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
           let errBody = responseData.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-          self?.callback(["HTTP \(statusCode): \(errBody)", NSNull()])
+          self?.callback(["HTTP \(statusCode): \(errBody)", NSNull()] as NSArray)
           return
         }
-        let body = String(data: responseData, encoding: .utf8) ?? ""
-        self?.callback([NSNull(), body])
+        let resultBody = String(data: responseData, encoding: .utf8) ?? ""
+        self?.callback([NSNull(), resultBody] as NSArray)
       }
     }.resume()
   }

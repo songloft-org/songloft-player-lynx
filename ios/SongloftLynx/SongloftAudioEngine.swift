@@ -71,6 +71,9 @@ final class SongloftAudioEngine {
   private var speed: Float = 1.0
   private var isFavorite = false
   private var remoteCommandsInstalled = false
+
+  /// 10-band parametric EQ, attached to each AVPlayerItem via MTAudioProcessingTap.
+  let equalizer = AudioEqualizer()
   /// Set when the current item played to its end, so the `rate → 0` that follows
   /// does not emit a spurious `paused` after `completed` (same guard as Kotlin's
   /// `playbackState != STATE_ENDED` check).
@@ -124,6 +127,9 @@ final class SongloftAudioEngine {
       options["AVURLAssetHTTPHeaderFieldsKey"] = headers
     }
     let item = AVPlayerItem(asset: AVURLAsset(url: assetURL, options: options))
+    if let mix = equalizer.buildAudioMix(for: item) {
+      item.audioMix = mix
+    }
     observe(item: item)
     player.replaceCurrentItem(with: item)
     updateNowPlaying()
