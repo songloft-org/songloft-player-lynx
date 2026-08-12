@@ -216,6 +216,25 @@ export class SongsApi {
     return { cleaned: Number(data.cleaned ?? data.count ?? 0) }
   }
 
+  async addRemoteSongs(songs: { title: string; url: string; artist?: string; album?: string; cover_url?: string; duration?: number }[]): Promise<void> {
+    await this.client.post(`${apiPrefix}/songs/remote`, songs)
+  }
+
+  async addRadioStations(stations: { title: string; url: string; cover_url?: string }[]): Promise<void> {
+    await this.client.post(`${apiPrefix}/songs/radio`, stations)
+  }
+
+  async writeTags(id: number): Promise<void> {
+    await this.client.put(`${apiPrefix}/songs/${id}/tags`, {})
+  }
+
+  async getSongNames(field: 'title' | 'artist' = 'title'): Promise<string[]> {
+    const res = await this.client.get<Record<string, unknown>>(`${apiPrefix}/songs/names`, { query: { field } })
+    const data = res.data ?? {}
+    const names = data.names ?? data.items ?? []
+    return Array.isArray(names) ? names.map(String) : []
+  }
+
   /**
    * `GET <lyricUrl>` → the lyric payload `{ lyric, lxlyric, tlyric, rlyric }`.
    *

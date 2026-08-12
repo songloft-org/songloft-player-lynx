@@ -1,0 +1,92 @@
+.add-songs {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.add-songs__topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+}
+
+.add-songs__back { padding: var(--space-1); }
+
+.add-songs__title {
+  flex: 1;
+  font-size: var(--font-lg);
+  font-weight: bold;
+  color: var(--content);
+}
+
+.add-songs__tabs {
+  display: flex;
+  flex-direction: row;
+  padding: 0 var(--space-4) var(--space-3);
+  gap: var(--space-2);
+}
+
+.add-songs__tab {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--paper);
+}
+
+.add-songs__tab--active {
+  background-color: var(--primary);
+}
+
+.add-songs__tab-text {
+  font-size: var(--font-sm);
+  color: var(--content);
+}
+
+.add-songs__tab--active .add-songs__tab-text {
+  color: var(--primary-content);
+}
+
+.add-songs__form {
+  flex: 1;
+  padding: 0 var(--space-4);
+}
+
+.add-songs__label {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-1);
+}
+
+.add-songs__input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--paper);
+  font-size: var(--font-sm);
+  color: var(--content);
+  -x-placeholder-color: var(--content-muted);
+}
+
+.add-songs__btn {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+  align-items: center;
+}
+
+.add-songs__btn-text {
+  font-size: var(--font-sm);
+  color: var(--primary-content);
+  font-weight: bold;
+  text-align: center;
+}
+
+.add-songs__result {
+  margin-top: var(--space-3);
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+  text-align: center;
+}

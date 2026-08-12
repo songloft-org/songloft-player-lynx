@@ -7,6 +7,7 @@ import { Input } from '@lynx-js/lynx-ui-input'
 
 import { usePlayerStore } from '../../player/store/index.js'
 import type { Song, SongFacet } from '../../../models/song.js'
+import { getSongsApi } from '../api/index.js'
 import type { SongsFilters } from '../api/index.js'
 import { flattenFacets, flattenSongs } from '../data/pagination.js'
 import { useDebounce } from '../data/use-debounce.js'
@@ -95,6 +96,7 @@ function SongsView() {
   const queryClient = useQueryClient()
   const [searchText, setSearchText] = useState('')
   const [sortField, setSortField] = useState<SortOption>('added_at')
+  const [suggestions, setSuggestions] = useState<string[]>([])
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [showPlaylistPicker, setShowPlaylistPicker] = useState(false)
@@ -104,6 +106,18 @@ function SongsView() {
   const [filterAlbum, setFilterAlbum] = useState('')
 
   const debouncedSearch = useDebounce(searchText, DEBOUNCE_MS)
+
+  // Autocomplete: fetch names matching prefix for suggestions
+  const [namesCache, setNamesCache] = useState<string[]>([])
+  const [namesFetched, setNamesFetched] = useState(false)
+  if (searchText.length >= 2 && !namesFetched) {
+    setNamesFetched(true)
+    void getSongsApi().getSongNames('title').then(setNamesCache).catch(() => {})
+  }
+  const activeSuggestions = searchText.length >= 2
+    ? namesCache.filter(n => n.toLowerCase().includes(searchText.toLowerCase())).slice(0, 5)
+    : []
+
   const hasFilters = !!(filterGenre || filterArtist || filterAlbum)
 
   const filters = useMemo<SongsFilters>(() => {
@@ -172,6 +186,17 @@ function SongsView() {
           value={searchText}
           onInput={(value: string) => setSearchText(value)}
         />
+        {activeSuggestions.length > 0
+          ? (
+            <view className='library__suggestions'>
+              {activeSuggestions.map(s => (
+                <view key={s} className='library__suggestion-item' bindtap={() => { setSearchText(s) }}>
+                  <text className='library__suggestion-text'>{s}</text>
+                </view>
+              ))}
+            </view>
+          )
+          : null}
       </view>
 
       <view className='library__sort-bar'>

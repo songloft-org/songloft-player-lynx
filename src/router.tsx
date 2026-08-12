@@ -12,7 +12,7 @@ import { ShellLayout } from './shared/layouts/ShellLayout.js'
 import { ThemeProvider } from './shared/theme/ThemeProvider.js'
 import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
-import { CategorySongsPage, LibraryPage, PlayHistoryPage, SongDetailPage } from './features/library/index.js'
+import { AddSongsPage, CategorySongsPage, LibraryPage, PlayHistoryPage, SongDetailPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
 import { CacheManagePage, EqualizerPage, ProxySettingsPage, ServerEditPage, ServerListPage, ServerSettingsPage, SettingsPage, ThemePacksPage, UpgradePage } from './features/settings/index.js'
@@ -251,6 +251,12 @@ const songDetailRoute = createRoute({
   component: SongDetailPage,
 })
 
+const addSongsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/library/add',
+  component: AddSongsPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   playerRoute,
@@ -278,6 +284,7 @@ const routeTree = rootRoute.addChildren([
     playHistoryRoute,
     categorySongsRoute,
     songDetailRoute,
+    addSongsRoute,
   ]),
 ])
 

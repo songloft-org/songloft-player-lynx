@@ -232,6 +232,16 @@ export const en = {
     tabFixed: 'Always',
     tabLimitReached: 'Maximum {{max}} tabs reached.',
   },
+  addSongs: {
+    title: 'Add Songs',
+    remote: 'Remote',
+    radio: 'Radio',
+    urlLabel: 'URL',
+    titleLabel: 'Title',
+    titlePlaceholder: 'Song title',
+    add: 'Add',
+    success: 'Added successfully',
+  },
   lyricEdit: {
     title: 'Edit Lyrics',
     placeholder: 'Paste LRC lyrics here…',
@@ -247,6 +257,9 @@ export const en = {
     type: 'Type',
     genre: 'Genre',
     year: 'Year',
+    writeTags: 'Write tags to file',
+    tagsWritten: 'Tags written',
+    tagsFailed: 'Write failed',
   },
   songMenu: {
     playNext: 'Play next',
@@ -654,6 +667,16 @@ export const zh: TranslationTree = {
     tabFixed: '固定',
     tabLimitReached: '最多 {{max}} 个标签页。',
   },
+  addSongs: {
+    title: '添加歌曲',
+    remote: '网络歌曲',
+    radio: '电台',
+    urlLabel: 'URL 地址',
+    titleLabel: '标题',
+    titlePlaceholder: '歌曲标题',
+    add: '添加',
+    success: '添加成功',
+  },
   lyricEdit: {
     title: '编辑歌词',
     placeholder: '在此粘贴 LRC 歌词…',
@@ -669,6 +692,9 @@ export const zh: TranslationTree = {
     type: '类型',
     genre: '流派',
     year: '年份',
+    writeTags: '写入标签到文件',
+    tagsWritten: '标签已写入',
+    tagsFailed: '写入失败',
   },
   songMenu: {
     playNext: '下一首播放',

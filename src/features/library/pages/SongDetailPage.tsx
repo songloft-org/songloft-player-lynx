@@ -22,6 +22,7 @@ export function SongDetailPage() {
   const [title, setTitle] = useState('')
   const [artist, setArtist] = useState('')
   const [album, setAlbum] = useState('')
+  const [tagStatus, setTagStatus] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -126,6 +127,19 @@ export function SongDetailPage() {
                       <view className='song-detail__row'>
                         <text className='song-detail__row-label'>{t('songDetail.year')}</text>
                         <text className='song-detail__row-value'>{String(song.year)}</text>
+                      </view>
+                    ) : null}
+                    {song.type === 'local' ? (
+                      <view className='song-detail__tags-section'>
+                        <view className='song-detail__save-btn' bindtap={() => {
+                          setTagStatus(null)
+                          void getSongsApi().writeTags(song.id)
+                            .then(() => setTagStatus(t('songDetail.tagsWritten')))
+                            .catch(() => setTagStatus(t('songDetail.tagsFailed')))
+                        }}>
+                          <text className='song-detail__save-btn-text'>{t('songDetail.writeTags')}</text>
+                        </view>
+                        {tagStatus ? <text className='song-detail__tag-result'>{tagStatus}</text> : null}
                       </view>
                     ) : null}
                   </view>
