@@ -28,6 +28,7 @@ export interface PlayerData {
   previousVolume?: number
   errorMessage?: string
   sourcePlaylistId?: number
+  speed: number
 }
 
 export function hasSong(s: PlayerData): boolean {

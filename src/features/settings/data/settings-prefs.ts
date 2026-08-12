@@ -23,6 +23,41 @@ export const PREF_DEFAULT_PLAY_MODE = 'default_play_mode'
 /** prefs key for audio streaming quality (bitrate). */
 export const PREF_AUDIO_QUALITY = 'audio_quality'
 
+/** prefs key for playback speed. */
+const PREF_PLAYBACK_SPEED = 'playback_speed'
+
+/** prefs key for auto-resume on startup. */
+const PREF_AUTO_RESUME = 'auto_resume'
+
+export async function readAutoResume(
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<boolean> {
+  const raw = await tryReadPref(storage, PREF_AUTO_RESUME)
+  return raw === 'true'
+}
+
+export async function writeAutoResume(
+  enabled: boolean,
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<void> {
+  await tryWritePref(storage, PREF_AUTO_RESUME, String(enabled))
+}
+
+export async function readPlaybackSpeed(
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<number> {
+  const raw = await tryReadPref(storage, PREF_PLAYBACK_SPEED)
+  const n = raw ? parseFloat(raw) : 1
+  return Number.isFinite(n) && n >= 0.25 && n <= 3 ? n : 1
+}
+
+export async function writePlaybackSpeed(
+  speed: number,
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<void> {
+  await tryWritePref(storage, PREF_PLAYBACK_SPEED, String(speed))
+}
+
 async function tryReadPref(
   storage: SongloftStorage,
   key: string,

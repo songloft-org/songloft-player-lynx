@@ -46,8 +46,16 @@ export function FullPlayerPage() {
   const { t } = useTranslation()
   const song = usePlayerStore((s) => s.currentSong)
   const sleepTimer = usePlayerStore((s) => s.sleepTimer)
+  const speed = usePlayerStore((s) => s.speed)
   const { width, isWide, onLayoutChange } = useBreakpoint()
   const [showSleepTimer, setShowSleepTimer] = useState(false)
+
+  const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
+  const cycleSpeed = () => {
+    const idx = SPEEDS.indexOf(speed)
+    const next = SPEEDS[(idx + 1) % SPEEDS.length]
+    void usePlayerStore.getState().setSpeed(next)
+  }
 
   /**
    * Return to the tab the player was opened from, not always Home.
@@ -103,6 +111,13 @@ export function FullPlayerPage() {
         </view>
         <text className='full-player__eyebrow'>{t('player.nowPlaying')}</text>
         <view className='full-player__timer-wrap'>
+          {speed !== 1
+            ? <view className='full-player__speed-btn' bindtap={cycleSpeed} data-testid='speed-btn'>
+                <text className='full-player__speed-text'>{speed}x</text>
+              </view>
+            : <view className='full-player__icon-btn' bindtap={cycleSpeed} data-testid='speed-btn'>
+                <text className='full-player__speed-text-idle'>1x</text>
+              </view>}
           {timerLabel
             ? <text className='full-player__timer-remaining'>{timerLabel}</text>
             : null}

@@ -81,6 +81,8 @@ vi.mock('../data/settings-prefs.js', () => ({
   writeDefaultPlayMode: writePrefSpy,
   readAudioQuality: vi.fn(async () => 'original'),
   writeAudioQuality: vi.fn(async () => {}),
+  readAutoResume: vi.fn(async () => false),
+  writeAutoResume: vi.fn(async () => {}),
   coerceAudioQuality: (raw: unknown) => (raw === '320' || raw === '192' || raw === '128' ? raw : 'original'),
 }))
 
@@ -111,9 +113,8 @@ async function renderPage() {
 test('renders every section, version, server and log-out rows', async () => {
   const { queryByText, queryByTestId, queryAllByTestId } = await renderPage()
 
-  // Section headers. No "Playback": play mode is set from the player's own toggle
-  // (bug.md — the duplicate section here was reported as clutter).
-  expect(queryByText('Playback')).not.toBeInTheDocument()
+  // Section headers.
+  expect(queryByText('Playback')).toBeInTheDocument()
   expect(queryByText('Language')).toBeInTheDocument()
   expect(queryByText('Connection')).toBeInTheDocument()
   expect(queryByText('Appearance')).toBeInTheDocument()

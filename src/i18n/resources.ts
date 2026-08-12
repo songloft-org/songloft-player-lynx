@@ -195,6 +195,9 @@ export const en = {
     proxySubtitle: 'HTTP & GitHub proxy settings',
     playHistory: 'Play history',
     playHistorySubtitle: 'Recently played songs',
+    playback: 'Playback',
+    autoResume: 'Auto-resume on startup',
+    autoResumeSubtitle: 'Continue playing from where you left off',
   },
   jsplugin: {
     gridTitle: 'Plugins',
@@ -551,6 +554,9 @@ export const zh: TranslationTree = {
     proxySubtitle: 'HTTP 与 GitHub 代理设置',
     playHistory: '播放历史',
     playHistorySubtitle: '最近播放的歌曲',
+    playback: '播放',
+    autoResume: '启动时自动恢复播放',
+    autoResumeSubtitle: '从上次停止的位置继续播放',
   },
   jsplugin: {
     gridTitle: '插件',

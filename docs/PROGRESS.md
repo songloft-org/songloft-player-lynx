@@ -2,7 +2,7 @@
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
 > **最后更新**：2026-08-12 · 最近完成（**批32 播放状态持久化/恢复 + 文档修正**，批31 登出 Dialog / 音频质量 / 播放历史 / 网络代理 / 数据导入导出 / iOS EQ DSP，批30 均衡器 UI+DSP / 多服务器管理 / lynx-ui-sortable 拖拽排序迁移，B3b iOS 原生模块（音频/存储/系统外观）验收通过）。
-> **批32**：① **播放状态持久化/恢复**：`playback-persistence.ts`（save queue/index/position/sourcePlaylistId to `SongloftStorage.prefs`），player-store subscribe 防抖 2s 自动保存，`index.tsx` 启动链 `restorePlaybackState()` 恢复（仅恢复状态不自动播放，mini-player 显示上次歌曲）。② **文档修正**：`HeroCard` 确认 Flutter 也未使用（widget 存在但无引用），标记为无需 port；全文移除「真机待扫码」阻塞语（用户有 Android/iOS 真机可测）；移除冗余「需后端可达 + LAN IP」。clean build（1596.2 kB）/`tsc -b`/804 vitest 全绿。
+> **批32**：四项功能。① **播放状态持久化/恢复**：`playback-persistence.ts`（save queue/index/position/sourcePlaylistId to `SongloftStorage.prefs`），player-store subscribe 防抖 2s 自动保存，`index.tsx` 启动链 `restorePlaybackState()` 恢复（mini-player 显示上次歌曲）。② **播放速度选择**：FullPlayerPage topbar 循环切换（0.5x/0.75x/1x/1.25x/1.5x/2x），persist 到 prefs，启动恢复。③ **启动自动恢复播放**：Settings「Playback」区 auto-resume 开关，开启后启动自动 seek+play。④ **文档修正**：`HeroCard` 确认 Flutter 死代码；移除全文「真机待扫码」阻塞语；标记 Android 真机播放已验证。clean build（1598.9 kB）/`tsc -b`/804 vitest 全绿。**Android 真机播放用户确认正常。**
 > **批31**：六项功能。① **iOS 均衡器 DSP**：`AudioEqualizer.swift`（`MTAudioProcessingTap` + `kAudioUnitSubType_NBandEQ` 10-band 参数 EQ），逐 AVPlayerItem 挂载 audioMix，`SongloftAudioModule` 的 `setEqualizerEnabled`/`setEqualizerBand` 从空壳变真实 DSP。② **数据导入导出**：`SongloftPlatformModule`（Android/iOS 原生），`openURL` 导出（浏览器下载 JSON）+ `pickAndUploadFile` 导入（原生文件选择器 + multipart 上传），Settings 新增 Data 区。③ **登出确认改 Dialog**：`SettingsPage` 原两步 tap 换成 `lynx-ui-dialog`（`DialogRoot`/`DialogView`/`DialogBackdrop`/`DialogContent`），带取消/确认按钮。④ **音频质量选择**：`PREF_AUDIO_QUALITY`（original/320/192/128）+ Settings Audio quality 四选一 + `player-store` `buildSongUrl` 传 `?quality=` 参数。⑤ **播放历史页**：`GET /play-history` API + `PlayHistoryPage`（路由 `/library/history`，歌曲列表 + 播放次数 + 相对时间），Settings Advanced 入口。⑥ **网络代理设置**：`ProxySettingsPage`（路由 `/settings/proxy`），4 个后端端点（http-proxy / github-proxy / hls-proxy / proxy-private-allowlist）GET/PUT，Input + Toggle + Save。**收藏按钮 `onCustomCommand` 用户真机确认正常**。clean build（1591.9 kB）/`tsc -b`/800 vitest 全绿。
 > **批30**：三条正交功能线并行落地。① **均衡器**：`eq-presets.ts`（7 预设 + clampGain/formatFreq 纯函数）+ `eq-store.ts`（Zustand，`SongloftStorage.prefs` 持久化 `eq_enabled`/`eq_bands`/`eq_preset`，每次变更同步到 audio facade）+ `EqualizerPage`（10 条竖向 `SliderRoot` + 预设 chip + 开关，路由 `/settings/eq`）；**Android DSP 已接**：`SongloftAudioEngine.kt` 新增 `android.media.audiofx.Equalizer`（`attachEqualizer`/`applyBandGain`/`setEqualizerEnabled`/`setEqualizerBand`/`releaseEqualizer`，随 ExoPlayer session 生命周期挂载/释放），`SongloftAudioModule.kt` 对应桥接方法。**iOS DSP 已接**（批31：`MTAudioProcessingTap` + `kAudioUnitSubType_NBandEQ`，见上方批31 小结）。② **多服务器管理**：`server-profile.ts`（zod schema）+ `server-store.ts`（profiles 列表 + `activeProfileId`，token 按 `token_access_${id}`/`token_refresh_${id}` 分 profile 隔离存储，`switchTo()` 切换时存出/取入 token + 更新 `appConfig` + 清 query cache，首次 hydrate 自动把旧版单服务器 URL+token 迁移成一条 Default profile）+ `ServerListPage`（列表/切换/两步 tap 删除）+ `ServerEditPage`（增/改表单）。③ **`lynx-ui-sortable` 拖拽排序迁移**：歌单列表（`PlaylistsView`）、歌单内歌曲（`PlaylistDetailPage`）、播放队列（`PlaylistDrawer`）三处排序 UI 从 chevron 上移/下移按钮全部换成 `SortableRoot`+`SortableItem`+`SortableItemArea` 拖拽手柄，`moveItem`/orderedXxx 中间态代码删除，直接对接既有 reorder mutation。新增 `mockLynxUiSortable()` 测试 mock（渲染纯 view，绕开原生手势 API）。**待验证**：EQ 滑杆拖动是否实际改变 Android 播放音色、拖拽排序三处手势手感、多服务器切换后歌单/队列是否正确重新拉取。clean build / `tsc -b` / vitest 全绿。
 > **批29c**：修掉批29b 发现的 Computing 阶段 bug（点计算后卡 `0/0`、后端跑完 UI 不转 Results）。**真机三次复现 + 诊断条读数**定位到双层根因：① 开始新一轮计算时，progress query 还持有上一轮的**陈旧终态**（`done`/`cancelled`），page 的 auto-transition effect 用陈旧 `isFinished=true` 瞬间把 phase 从 computing 推到 results（跳过计算阶段）；② query-core 5.101 的函数式 `refetchInterval` 在本 Lynx 4.0 build 上**首次 fetch 后就不再 fire**（真机诊断：`refetchInterval` 被反复调用返回 `2000`、但实际 GET 冻结在 2 次、`computed/total` 停住不动，而同组件里自测 `setInterval` 每 2s 正常 fire）。修法：start mutation `onSuccess` invalidate progress + remove duplicates（清陈旧终态，`resetFingerprintCachesForNewRun`）+ auto-transition 加 `dataUpdatedAt >= 进入computing时间戳` 守卫（只认本轮的终态）+ **progress 轮询改成页面级显式 `setInterval` 驱动 `refetch()`**（不再依赖不可靠的 `refetchInterval`）。**全链路真机验过（18091，chromaprint 可用）**：先用空库验 Computing 推进 + 自动转 Results 空态；随后**用户在音乐目录造了 2 组同源重复文件**（`咏春`/`咏春-same`、`半壶纱`/`半壶纱-same`），扫描导入 2 首 → 计算指纹 → **Results 正确渲染 2 组重复**（每组标「推荐」保留项 + bitRate 信息）→ **lynx-ui 删除 Dialog**（批28 首次引入、此前从未上真机）弹出「确认删除」→ 点确认走 `batchDelete` → 后端真删文件（358→357→356）+ UI `invalidate` 后**实时刷新组数**（2组→1组→空态）；「单组删除未选中」与「清理全部重复」两个入口都验过。新增 `fingerprint-mutations.test.ts` 2 例（反向验证过会红）。clean build（**1476.6 kB**）/`tsc -b`/**711 vitest** 全绿。
@@ -567,7 +567,7 @@ JS 侧新增 `SongloftAudioModule.setFavorite(Boolean)`，双向链路：① 通
 - **白字 on `--primary` #7c5cff（24 处按钮）= 4.35** ❌ 差 0.15。
 - **`--primary` 作强调文字 on paper = 4.14 / on neutral-faint = 3.54** ❌（14 处 `color: var(--primary)` 强调文字：激活态/链接/播放器时间标签等）。
 
-**核心矛盾**：dark 的 `--primary` 单值无法同时满足"白字在按钮底上 ≥4.5（要更深）"和"作文字在深底上 ≥4.5（要更浅）"——light 能单值是因为底是白�����深紫既可读又承白字），dark 底太深，必须拆 token。
+**核心矛盾**：dark 的 `--primary` 单值无法同时满足"白字在按钮底上 ≥4.5（要更深）"和"作文字在深底上 ≥4.5（要更浅）"——light 能单值是因为底是白�����深�����������既可读又承白字），dark 底太深，必须拆 token。
 
 **修法**（沿用既有 `--primary`/`--primary-2` 对称思路，不重命名、不动按钮调用点）：
 
@@ -843,13 +843,13 @@ Phase B3 第一步。方法论照批B1 对 Android 的做法（照抄官方 demo
   - [x] **缓存管理**（`CacheApi` 5 端点 + `CacheManagePage` 三区：只读统计/编辑配置/目录验证 + 两步 tap 清理确认）→ **批28 已完成**，路由 `/settings/cache`。
   - **升级/热更**（服务器升级 `UpgradeDialog`/`upgrade_api`、前端 `FrontendUpgradeDialog`/`frontend_version_api`、Android 热更 `PatchUpdateService`、自动检查开关）→ **后端 ops / 桌面/真机 阶段**（Lynx 无 flutter_patcher，热更整体删——见 overview §6）。
   - **下载 / 客户端下载页**（`client_download_page`/`cache_download_provider`）、**开源许可**（`licenses_page`，GPL/WebF 履行点——Lynx 无 WebF，按需重估）→ **桌面/发布阶段**。
-  - **网络高级项**：HTTP 代理 / GitHub 代理 / HLS 代理 / 代理 allowlist（`httpProxyProvider` 等）、**不安全 TLS 真正生效**（当前仅持久化 + 展示，transport 层 no-op，Lynx `fetch` 绑定不暴露 TLS 松弛）→ **真原生模块 / 网络阶段**。
+  - [x] **网络代理 UI**（**批31 已完成** `ProxySettingsPage`：HTTP 代理 / GitHub 代理 / HLS 代理 / 代理 allowlist 四端点 GET/PUT）。**不安全 TLS 真正生效**仍待原生模块（当前仅持久化 + 展示，transport 层 no-op，Lynx `fetch` 不暴露 TLS 松弛）。
   - [x] **数据导入导出**（批31 完成）：`SongloftPlatformModule`（Android/iOS 原生），`openURL` 导出 + `pickAndUploadFile` 原生 multipart 导入，Settings Data 区入口。
-  - **播放高级偏好**：音质选择（`audioQualityProvider`，转码参数）、音量归一化、启动自动播放/自动进歌词、通知栏歌词位置、桌面/悬浮歌词（字号/透明度/锁定）、`miniPlayerControls`（迷你条按钮集）、键盘快捷键（`shortcut_settings_page`）→ **真原生模块 / 桌面阶段**（多数依赖真原生音频/系统媒体控件/桌面窗口）。本批只做「默认播放模式」这一能映射到批5 store 的项。
+  - **播放高级偏好**：~~音质选择~~（**批31 已完成**）、~~播放速度~~（**批32 已完成**）、~~启动自动恢复~~（**批32 已完成**）、音量归一化、自动进歌词、通知栏歌词位置、桌面/悬浮歌词（字号/透明度/锁定）、`miniPlayerControls`（迷你条按钮集）、键盘快捷键（`shortcut_settings_page`）→ **真原生模块 / 桌面阶段**（多数依赖真原生音频/系统媒体控件/桌面窗口）。
   - [x] **日志级别 / 日志导出**（批15 完成）：`logLevelProvider` 其实是**后端设置**（`GET/PUT /api/v1/settings/log-level`，不是本地开关）——新建 `SettingsApi`（`getLogLevel`/`setLogLevel`/`exportLogs`，镜像 `PlaylistApi` 用法）+ Settings 新增「诊断」分组（日志级别四选一，真调后端接口）+ `/settings/logs` 子页拉 `GET /api/v1/logs/export` 纯文本滚动展示（离线/后端不可达降级成错误提示，同其它后端相关 Settings 子页）。**裁掉的部分**：Flutter 原版把后端日志 + 本机 `FileLogger` 文件打包成 zip、丢给系统分享面板（`share_plus`）——Lynx 没有对应的原生分享模块（同 SongloftAudio/Storage 一类缺口），留给未来原生模块批；本批只做纯文本查看，不打包不分享。**Web 调试控制台**（`webDebugConsoleProvider`）是 Flutter Web 平台专属的本地布尔开关，与 Lynx 无关，未 port。
   - [x] **语言切换**（`LanguageSelector`/i18n）→ **批9 已解**：Settings 加「语言」分组（跟随系统/English/中文），`changeAppLanguage` 即时切 i18next + 持久化 prefs `app_language`，react-i18next 订阅触发全树重渲染。见「批9 · i18n 国际化」。
   - [x] **默认播放模式启动恢复**（批11 完成）：`src/index.tsx` 启动异步链读回 `readDefaultPlayMode()` 应用到 `usePlayerStore`（原生持久化已在 B2 落地，重启不再丢）。
-  - **登出确认为两步 tap**（非模态对话框，Lynx 无现成 dialog 原语）；[x] **登出场景**（批11）与 [x] **服务器切换场景**（批12）均已加 `queryClient.clear()`，避免旧服务器的缓存数据残留。
+  - [x] **登出确认 Dialog**（**批31 已改为 lynx-ui-dialog 模态弹窗**，取代原两步 tap）；[x] **登出场景**（批11）与 [x] **服务器切换场景**（批12）均已加 `queryClient.clear()`，避免旧服务器的缓存数据残留。
   - **待验证**：登录→进 Settings 见六分组；选播放模式（选中态 + 若在播放则模式即时变）；进 Server 子页改地址/TLS → Save → 之后请求走新地址（）；两步登出回登录。lynx-ui `Input`/`Switch` 在服务器子页复用（批3 已证可渲染，手势本机不可验）。
 - [ ] **Phase B · B1 遗留（Android 宿主 / CI）**：
   - **APK 构建仅在 CI 验证**：本机无 Android SDK，`assembleDebug` 只能在 GitHub Actions 跑；首跑风险见上「CI 首跑风险预判」。宿主源、gradle 配置、Lynx 依赖坐标均照抄官方 demo 3.8.0 以降低失败率，但 CI 首次绿灯前不算真正可用。
@@ -866,7 +866,7 @@ Phase B3 第一步。方法论照批B1 对 Android 的做法（照抄官方 demo
   - **后台/通知栏/锁屏（R5）尽力项、真机未验**：`MediaSessionService`+`MediaSession`+前台服务+权限结构就位，模块 play 时 `startForegroundService`（try/catch 保护，失败不碍前台播放）；后台常驻 + 通知控件出不出、媒体键路由只能真机验。若不出通知，标准修法改走 `MediaController` 连服务驱动播放（当前 engine 自持 player）。
   - **EQ 仍 stub**（`setEqualizerEnabled`/`setEqualizerBand` 空实现，无 `Equalizer`(AudioEffect) DSP、无 `getEqualizerBands` 原生查询——facade 返标准 10 段 0dB）；`setQueue`/`next`/`previous`/`setRepeatMode`/`setShuffle` 原生为最小 no-op（队列/切歌由 JS store 驱动，同 mock 语义）。
   - **release 签名 / iOS / 其余端**：同 B1 遗留；iOS AVPlayer 走 B3。
-  - **真机待验**：手动 Run CI workflow → 装 APK → 登录（LAN IP+后端）→ 点歌真实播放 + 进度前进 + 控制可用 + 切后台看通知。
+  - [x] **Android 真机播放已验证**（用户确认：点歌真实播放 + 进度前进 + 控制可用）。后台通知待进一步验证。
 - [x] **i18n**（批9 完成）：i18next + react-i18next（无 detector / 无 DOM / 无 Intl，`compatibilityJSON:'v3'`）；en+zh 内联资源覆盖全 feature UI 串；Settings 语言切换即时生效 + 持久化；arb→i18next 转换脚本（`scripts/arb-to-i18next.ts`，1276 key，ICU 复数键已标记）。**全量 arb 运行时导入留后续**（app 仅内联策展子集，避免包体撑爆）；「跟随系统」暂回落默认（无宿主 locale API）；复数/日期未用 i18next Intl 能力（手动单复数）。见「批9 · i18n 国际化」。
 - [ ] **批19 遗留（音乐库运维）**：
   - ⛔ **扫描真验被服务端音乐目录卡死（批19b 定位）**：该开发后端 `music_path = "music"`（相对路径，服务端不存在）→ `POST /scan` 必失败、`GET /scan/directories` 必 error，**客户端无过**。而客户端**没有音乐目录配置 UI**（划给了批21），用户无法在应用内自救。**建议把「音乐目录」单行配置从批21 提前**，或先用 `PUT /settings/music-path` 手工改（**必须回带三个排除数组，否则清空**）。详见「批19b」。**批26 复核**：根因其实是本机开发后端启动时 cwd 错误——`music_path` 相对路径按 cwd 解析，从 `mimusic/` 仓库根目录 `make run` 后端即可正确解析到真实音乐目录（112 个歌曲文件夹），扫描/目录列表随即恢复正常，**并非客户端缺陷**；也**不建议新增「音乐目录」编辑 UI**——核对 Flutter 参考（`exclude_dir_manager.dart`）确认 `path` 在整个产品里从未可编辑，只有下面三类排除列表可写，`PUT /settings/music-path` 手工改仍是运维兜底手段，不是产品交互路径。
@@ -885,14 +885,14 @@ Phase B3 第一步。方法论照批B1 对 Android 的做法（照抄官方 demo
   - [x] `text-transform: uppercase`（`jsplugin/pages/TabConfigPage.css`）→ **批19b 已删声明**（Lynx 无此属性且无 `-x-` 变体）。此条目为过期未更新，批29 核实订正：源码现存的是一条「Lynx 无此属性」的解释性注释。
   - [x] `object-fit: cover`（`jsplugin/widgets/PluginGrid.css`）→ **批19b 已改用元素属性 `mode='aspectFit'`**。同上属过期未更新，批29 核实订正。**构建警告自批19b 起已归零**，批29 的 clean build 复核仍为零。
 - [ ] **订正 3 条过期结论**（批19 调研发现 `@lynx-js/lynx-ui` 桶入口已把这些子包带进 `node_modules`，v3.135.4，Radix 风格 compound API；按组件包导入只需在 `package.json` 显式声明）：
-  - ~~「Lynx 无现成 dialog 原语」故登出用两步 tap~~ → **有 `lynx-ui-dialog`**，**批28 已采用**（`DeleteConfirmDialog.tsx` 使用 `DialogRoot`/`DialogView`/`DialogContent`，重复检测删除确认真机验过）。登出仍是两步 tap（可重估但非阻塞）。
+  - [x] ~~「Lynx 无现成 dialog 原语」故登出用两步 tap~~ → **有 `lynx-ui-dialog`**，**批28 已采用**（重复检测删除确认真机验过），**批31 登出也改为 Dialog**。此条完全解决。
   - ~~「lynx-ui 无 sortable」故排序用 chevron 上移/下移按钮~~ → **有 `lynx-ui-sortable`**（还有 `lynx-ui-draggable`/`lynx-ui-swipe-action`）。**批30 已完成迁移**：歌单/歌曲/队列三处排序 UI 全部从按钮式换成 `SortableRoot` 拖拽手柄，chevron 代码已删除。
   - 另有 `lynx-ui-checkbox` / `lynx-ui-radio-group`（多选一与勾选框的现成原语）、`lynx-ui-dialog`、`lynx-ui-popover`、`lynx-ui-form`、`lynx-ui-list`/`feed-list`/`scroll-view`、`lynx-ui-lazy-component`、`lynx-ui-presence`、`lynx-ui-overlay`、`lynx-ui-common`。批19 刻意**未引入任何新包**（目录树勾选自绘 = 两个 view + 一个 `check` Icon，比引入新原生手势叶子 + 写测试 mock 更省），但后续批可按需选用。
 - [x] **验收命令修正：`tsc --noEmit` 一直是空跑**（批19 发现，已改 `AGENTS.md` §5）。根 `tsconfig.json` 是 solution-style（`"files": []` + `references`），`tsc --noEmit` 对它的输入文件集为空——**什么都不检查、永远 exit 0**。自批1 起验收清单里的那一行是安慰剂；真正拦类型错误的一直是 `pnpm run build` 内的 rspeedy type checker。**正确命令是 `pnpm exec tsc -b`**（写 `*.tsbuildinfo`，已 gitignore；必要时 `--force`）。用 `tsc -b --force` 对全库跑过一次：**无历史遗留类型错误**（因为 build 一直在真检查）。
   - 发现过程：批19 收尾加 dev 登录凭据时，`devCredentials` 用了 `as const` → `useState(devCredentials.password)` 推成 `useState<'admin'>` → `setPassword(string)` 类型不符。`tsc --noEmit` 静默通过，`pnpm run build` 报 `TS2345`。**教训**：用 grep 过滤 build 输出时��连错误一起滤掉——我第一次就这么漏看了一次失败的构建。
-- [ ] **风险登记**（详见 roadmap）：R2 桌面 clay 元素实测、R11 Query 无 DOM（本���已验证，真机待确认）、R13 lynx-ui Web/Desktop 覆盖、R5 音频后台播放各端差异。
+- [ ] **风险登记**（详��� roadmap���：R2 桌面 clay 元���实测、R11 Query 无 DOM（本���已验证，真机待确认）、R13 lynx-ui Web/Desktop 覆盖、R5 音频后台播放各端差异。
 
-## 如何恢复工作 / 交接
+## 如何恢复工作 / ���接
 
 ```
 pnpm install

@@ -33,7 +33,7 @@ import {
 // (which crashes the ReactLynx Vitest snapshot tree).
 import { useAuthStore } from '../../auth/store/index.js'
 import { getSettingsApi } from '../api/index.js'
-import { type AudioQuality, coerceAudioQuality, readAudioQuality, writeAudioQuality } from '../data/settings-prefs.js'
+import { type AudioQuality, coerceAudioQuality, readAudioQuality, readAutoResume, writeAudioQuality, writeAutoResume } from '../data/settings-prefs.js'
 import { setAudioQualityCache } from '../../player/store/player-store.js'
 import { canExport, exportPlaylists, importPlaylists } from '../domain/data-transfer.js'
 import { LOG_LEVELS, coerceLogLevel, logLevelLabelKey, type LogLevel } from '../domain/log-level.js'
@@ -112,6 +112,7 @@ export function SettingsPage() {
   // rest of this page).
   const [logLevel, setLogLevel] = useState<LogLevel>('info')
   const [audioQuality, setAudioQuality] = useState<AudioQuality>('original')
+  const [autoResume, setAutoResume] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -145,6 +146,9 @@ export function SettingsPage() {
       })
     void readAudioQuality()
       .then((q) => { if (!cancelled) setAudioQuality(q) })
+      .catch(() => {})
+    void readAutoResume()
+      .then((v) => { if (!cancelled) setAutoResume(v) })
       .catch(() => {})
     return () => {
       cancelled = true
@@ -306,6 +310,18 @@ export function SettingsPage() {
                 testId={`audio-quality-${option}`}
               />
             ))}
+          </SettingsSection>
+
+          <SettingsSection title={t('settings.playback')} icon='music'>
+            <SettingsRow
+              icon='music'
+              title={t('settings.autoResume')}
+              subtitle={t('settings.autoResumeSubtitle')}
+              selected={autoResume}
+              trailingIcon={autoResume ? 'check' : undefined}
+              onTap={() => { const next = !autoResume; setAutoResume(next); void writeAutoResume(next) }}
+              testId='settings-auto-resume'
+            />
           </SettingsSection>
 
           <SettingsSection title={t('settings.advanced')} icon='settings'>

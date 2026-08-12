@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 import { buildSongUrl } from '../../../core/network/url-helper.js'
-import { readAudioQuality } from '../../settings/data/settings-prefs.js'
+import { readAudioQuality, readAutoResume, readPlaybackSpeed, writePlaybackSpeed } from '../../settings/data/settings-prefs.js'
 import { loadPlaybackState, savePlaybackState } from '../data/playback-persistence.js'
 import type { Song } from '../../../models/song.js'
 import {
@@ -53,6 +53,7 @@ export interface PlayerState extends PlayerData {
   // ── mode ──
   setPlayMode: (mode: PlayMode) => void
   cyclePlayMode: () => void
+  setSpeed: (rate: number) => Promise<void>
 
   // ── queue edits ──
   addToPlaylist: (songs: Song[]) => void
@@ -101,6 +102,7 @@ const INITIAL: PlayerData = {
   previousVolume: undefined,
   errorMessage: undefined,
   sourcePlaylistId: undefined,
+  speed: 1,
 }
 
 function durationMsOf(song: Song): number {
@@ -296,6 +298,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     setPlayMode: (mode) => set({ playMode: mode }),
     cyclePlayMode: () => set((s) => ({ playMode: cyclePlayMode(s.playMode) })),
+    setSpeed: async (rate) => {
+      const clamped = Math.min(3, Math.max(0.25, rate))
+      set({ speed: clamped })
+      await audio.setSpeed(clamped)
+      void writePlaybackSpeed(clamped)
+    },
 
     addToPlaylist: (songs) => {
       if (songs.length === 0) return
@@ -463,7 +471,13 @@ usePlayerStore.subscribe((state, prev) => {
 })
 
 export async function restorePlaybackState(): Promise<void> {
-  const saved = await loadPlaybackState()
+  const [saved, speed, autoResume] = await Promise.all([
+    loadPlaybackState(), readPlaybackSpeed(), readAutoResume(),
+  ])
+  if (speed !== 1) {
+    usePlayerStore.setState({ speed })
+    void audio.setSpeed(speed)
+  }
   if (!saved || saved.playlist.length === 0) return
   const song = saved.playlist[saved.currentIndex]
   if (!song) return
@@ -475,4 +489,16 @@ export async function restorePlaybackState(): Promise<void> {
     duration: song.duration > 0 ? song.duration * 1000 : 0,
     sourcePlaylistId: saved.sourcePlaylistId,
   })
+  if (autoResume && song.url) {
+    void audio.setQueue(saved.playlist.map((s) => ({
+      id: s.id,
+      url: songUrl(s),
+      durationMs: s.duration > 0 ? s.duration * 1000 : DEFAULT_DURATION_MS,
+      title: s.title,
+      artist: s.artist,
+    })), saved.currentIndex)
+    void audio.load(songUrl(song), { durationMs: song.duration > 0 ? song.duration * 1000 : DEFAULT_DURATION_MS })
+      .then(() => audio.seek(saved.positionMs))
+      .then(() => audio.play())
+  }
 }

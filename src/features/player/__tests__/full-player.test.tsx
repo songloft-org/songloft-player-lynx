@@ -24,6 +24,8 @@ vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigateSpy }))
 vi.mock('../../settings/data/settings-prefs.js', () => ({
   writeDefaultPlayMode: writePrefSpy,
   readAudioQuality: vi.fn(async () => 'original'),
+  readPlaybackSpeed: vi.fn(async () => 1),
+  writePlaybackSpeed: vi.fn(async () => {}),
 }))
 vi.mock('@lynx-js/lynx-ui-slider', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSlider(),
