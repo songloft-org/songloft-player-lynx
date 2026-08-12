@@ -10,7 +10,7 @@ Songloft Player Lynx 客户端项目文档。
 | 特性模块 | auth · home · library · library-ops · player · playlist · settings · jsplugin |
 | 原生模块 | SongloftAudio · SongloftStorage · SongloftPlatform · SystemAppearance（Android + iOS） |
 | 测试 | 809 vitest |
-| 构建产物 | ~1697 kB |
+| 构建产物 | ~1699 kB |
 | 已验证平台 | Android 真机 · iOS 原生模块编译通过 |
 
 ## 文档目录
