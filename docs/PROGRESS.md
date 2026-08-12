@@ -1,7 +1,12 @@
 # 进展与交接（PROGRESS）
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
-> **最后更新**：2026-08-12 · 最近完成（**批29 · 真机验收轮：批25-28 积压 + 3 个真 bug**）：把积压 4 批的「⏳ 待扫码」一次性验掉，过程中查出并修掉 3 个**只在真机暴露、build/tsc/vitest 全绿却是坏的**缺陷：① **`<refresh>` 缺 `androidx.viewpager2` 依赖，attach 即崩**（`SmartRefreshLayout.onAttachedToWindow` → `SmartUtil.isContentView` → `ViewPager2` `NoClassDefFoundError`，LynxError 990200）——这是批20「`<refresh>` 吞横向手势」与批25「SmartRefreshLayout 3.0.0-alpha 嵌套滚动回归、无法降级」**两次误诊的真根因**，加一行依赖后原生下拉刷新彻底恢复（`refreshstatechange`→`startrefresh`→`finishRefresh` 真机闭环），批25 为绕行加的手动刷新按钮本就不必要；② **3 处动态 `import()` 的 lazy bundle 从未打进 APK assets**，其中 `index.tsx` 那两处无 try/catch，把启动链连带 `auth.hydrate()`/`auth.checkAuth()` 一起打断（auth status 永远停在 `unknown`，而 guard 对 `unknown` 不重定向，所以「看起来正常」）——改静态 import 后 `dist/lazy-bundle/` 消失、bundle **−40 kB**，并**推翻批20「已端到端验证播放模式持久化」的结论**（当时不可能成立，本批修好后才真验过）；③ **Lynx 4.0.0 宿主的 `lynx.queueMicrotask` 自身抛错**，而 ReactLynx 把它装成 **Preact 的 effect 调度器**（`options.requestAnimationFrame`），导致 `useEffect` flush 被静默丢弃——banner 替换成 ReactLynx 自己的 Promise 兜底实现。另修文案「更多设置（后续版本）」→「高级」（其下 3 项早已全部实现）。新增 4 道闸门**全部反向验证过会红**。clean build（**1476.6 kB**）/`tsc -b --force`/**714 vitest** 全绿。
+> **最后更新**：2026-08-12 · 最近完成（**批29 真机验收轮 + B3a iOS 宿主 + 批29b 补验**）。
+> **B3a**：iOS 宿主工程落地，模拟器上从登录页一路验到首页（`<input>` / `<svg>`（含远程插件 SVG）/ `<image>` 全正常、790 行 lynx 日志 **0 条 LynxError**），顺手修掉一个安全区缺陷；Lynx iOS 用 **4.0.1**（与 Android 4.0.0 的偏差有据可查）。详见下方「B3a」一节。
+> **B3b（iOS 音频 / 存储 / 系统外观）未开始** —— subagent 启动即被模型提供方限流中断、**零产出**，故 iOS 侧当前**无音频、杀 app 丢登录态、拿不到系统深浅色**。
+> **批29b**：借用户提供的 `http://localhost:18091`（**chromaprint 可用**、356 首全本地）补验批28 —— Status 阶段两个分支现已都验过，但**发现一个真 bug 未修：Computing 阶段进度恒 `0/0`，后端跑完后 UI 永不转 Results**（详见「批29b」，**下个 session 首选任务**，复现环境现成）。
+>
+> **上一批**（**批29 · 真机验收轮：批25-28 积压 + 3 个真 bug**）：把积压 4 批的「⏳ 待扫码」一次性验掉，过程中查出并修掉 3 个**只在真机暴露、build/tsc/vitest 全绿却是坏的**缺陷：① **`<refresh>` 缺 `androidx.viewpager2` 依赖，attach 即崩**（`SmartRefreshLayout.onAttachedToWindow` → `SmartUtil.isContentView` → `ViewPager2` `NoClassDefFoundError`，LynxError 990200）——这是批20「`<refresh>` 吞横向手势」与批25「SmartRefreshLayout 3.0.0-alpha 嵌套滚动回归、无法降级」**两次误诊的真根因**，加一行依赖后原生下拉刷新彻底恢复（`refreshstatechange`→`startrefresh`→`finishRefresh` 真机闭环），批25 为绕行加的手动刷新按钮本就不必要；② **3 处动态 `import()` 的 lazy bundle 从未打进 APK assets**，其中 `index.tsx` 那两处无 try/catch，把启动链连带 `auth.hydrate()`/`auth.checkAuth()` 一起打断（auth status 永远停在 `unknown`，而 guard 对 `unknown` 不重定向，所以「看起来正常」）——改静态 import 后 `dist/lazy-bundle/` 消失、bundle **−40 kB**，并**推翻批20「已端到端验证播放模式持久化」的结论**（当时不可能成立，本批修好后才真验过）；③ **Lynx 4.0.0 宿主的 `lynx.queueMicrotask` 自身抛错**，而 ReactLynx 把它装成 **Preact 的 effect 调度器**（`options.requestAnimationFrame`），导致 `useEffect` flush 被静默丢弃——banner 替换成 ReactLynx 自己的 Promise 兜底实现。另修文案「更多设置（后续版本）」→「高级」（其下 3 项早已全部实现）。新增 4 道闸门**全部反向验证过会红**。clean build（**1476.6 kB**）/`tsc -b --force`/**714 vitest** 全绿。
 >
 > **上一批**（**批28 · 重复检测/指纹 + 缓存管理**）：两条正交功能线并行实施（各一 subagent，共享文件手动 merge）。重复检测/指纹——FingerprintApi 6 端点 + 三阶段页面 DuplicateCheckPage（Status/Computing/Results）+ 指纹 2s 轮询 + 重复组按 bitRate 推荐保留 + lynx-ui Dialog 删除确认，53 测试。缓存管理——CacheApi 5 端点 + CacheManagePage 三区（只读统计/编辑表单/目录验证）+ 两步 tap 清理确认，21 测试。DuplicateCheckPage.css 原用 10 个仓库不存在的 `--color-*` token → 重映射到 repo token。clean build（1519.5 kB）/`tsc -b --force`/709 vitest 全绿。
 
@@ -865,6 +870,12 @@ pnpm run build          # 构建（内含 type checker，是类型的真闸）
 pnpm exec tsc -b        # 类型检查（必须带 -b）
 pnpm test               # vitest（含无 DOM 与压缩产物回归测试）
 pnpm run dev            # dev server + 二维码，LynxExplorer 扫码目测
+
+pnpm run android:install # Android：build + 拷 bundle + gradlew installDebug（需 ANDROID_HOME）
+adb reverse tcp:58091 tcp:58091   # 让设备 localhost 指向宿主机后端（每次 adb 重连都要重设）
+
+pnpm run ios:pods       # iOS：首次/依赖变更时（内含必要的 env 绕法，见 package.json 的 //ios:* 注释）
+pnpm run ios:run        # iOS：build + 装进已启动的模拟器 + 启动
 ```
 > ⚠️ 类型检查用 `pnpm exec tsc -b`，**不要用 `tsc --noEmit`**（solution-style tsconfig 下是空跑，见上方遗留清单）。检查 build 输出时别用 grep 过滤，否则会滤掉编译错误。
 
