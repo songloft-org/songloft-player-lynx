@@ -6,15 +6,17 @@ export interface FavoriteSongRowProps {
   song: Song
   index: number
   onTap?: (song: Song, index: number) => void
+  onLongPress?: (song: Song) => void
 }
 
-export function FavoriteSongRow({ song, index, onTap }: FavoriteSongRowProps) {
+export function FavoriteSongRow({ song, index, onTap, onLongPress }: FavoriteSongRowProps) {
   const { isFavorite, toggle } = useFavoriteToggle(song.id)
   return (
     <SongRow
       song={song}
       index={index}
       onTap={onTap}
+      onLongPress={onLongPress}
       isFavorite={isFavorite}
       onToggleFavorite={toggle}
     />

@@ -27,6 +27,15 @@ vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({ id: '7' }),
 }))
 
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+  useInfiniteQuery: () => ({ data: undefined, isLoading: false }),
+}))
+
+vi.mock('../../../shared/ui/SongContextMenu.js', () => ({
+  SongContextMenu: () => null,
+}))
+
 vi.mock('@lynx-js/lynx-ui-input', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
 )

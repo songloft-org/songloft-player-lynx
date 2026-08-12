@@ -230,6 +230,11 @@ export const en = {
     tabFixed: 'Always',
     tabLimitReached: 'Maximum {{max}} tabs reached.',
   },
+  songMenu: {
+    playNext: 'Play next',
+    addToQueue: 'Add to queue',
+    addToPlaylist: 'Add to playlist',
+  },
   eq: {
     title: 'Equalizer',
     subtitle: '10-band audio equalizer',
@@ -595,6 +600,11 @@ export const zh: TranslationTree = {
     tabPlugins: '插件',
     tabFixed: '固定',
     tabLimitReached: '最多 {{max}} 个标签页。',
+  },
+  songMenu: {
+    playNext: '下一首播放',
+    addToQueue: '添加到队列',
+    addToPlaylist: '添加到歌单',
   },
   eq: {
     title: '均衡器',

@@ -12,6 +12,7 @@ import { getLastLibrarySearch } from '../../library/data/last-library-search.js'
 import { useDebounce } from '../../library/data/use-debounce.js'
 import { flattenSongs } from '../../library/data/pagination.js'
 import { SongRow } from '../../library/widgets/SongRow.js'
+import { SongContextMenu } from '../../../shared/ui/SongContextMenu.js'
 import { VirtualList } from '../../library/widgets/VirtualList.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import {
@@ -64,6 +65,7 @@ export function PlaylistDetailPage() {
   const visibilityMutation = useSetVisibilityMutation(id)
   const sortMutation = useUpdateSortMutation(id)
 
+  const [contextSong, setContextSong] = useState<Song | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
@@ -340,7 +342,7 @@ export function PlaylistDetailPage() {
                   itemKey={(song) => String(song.id)}
                   renderItem={(song, index) => (
                     <view className='playlist-detail__song-row-wrapper'>
-                      <SongRow song={song} index={index} onTap={onTapSong} />
+                      <SongRow song={song} index={index} onTap={onTapSong} onLongPress={setContextSong} />
                       {!isBuiltIn
                         ? (
                           <view
@@ -364,6 +366,7 @@ export function PlaylistDetailPage() {
                 />
               )}
       </view>
+      <SongContextMenu song={contextSong} onClose={() => setContextSong(null)} />
     </view>
   )
 }

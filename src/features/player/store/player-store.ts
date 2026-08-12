@@ -57,6 +57,7 @@ export interface PlayerState extends PlayerData {
 
   // ── queue edits ──
   addToPlaylist: (songs: Song[]) => void
+  insertNextInQueue: (songs: Song[]) => void
   removeFromPlaylist: (index: number) => Promise<void>
   reorderPlaylist: (oldIndex: number, newIndex: number) => void
   clearPlaylist: () => void
@@ -310,6 +311,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       const list = [...get().playlist, ...songs]
       set({ playlist: list })
       void audio.setQueue(list.map(toAudioItem), get().currentIndex)
+    },
+
+    insertNextInQueue: (songs) => {
+      if (songs.length === 0) return
+      const s = get()
+      const insertAt = s.currentIndex + 1
+      const list = [...s.playlist.slice(0, insertAt), ...songs, ...s.playlist.slice(insertAt)]
+      set({ playlist: list })
+      void audio.setQueue(list.map(toAudioItem), s.currentIndex)
     },
 
     removeFromPlaylist: async (index) => {

@@ -7,16 +7,17 @@ export interface SongRowProps {
   song: Song
   index: number
   onTap?: (song: Song, index: number) => void
+  onLongPress?: (song: Song) => void
   isFavorite?: boolean
   onToggleFavorite?: () => void
 }
 
-export function SongRow({ song, index, onTap, isFavorite, onToggleFavorite }: SongRowProps) {
+export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleFavorite }: SongRowProps) {
   const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
   const subtitle = [song.artist, song.album].filter(Boolean).join(' · ')
 
   return (
-    <view className='song-row' bindtap={() => onTap?.(song, index)}>
+    <view className='song-row' bindtap={() => onTap?.(song, index)} bindlongpress={() => onLongPress?.(song)}>
       {cover
         ? <image className='song-row__cover' src={cover} />
         : <view className='song-row__cover song-row__cover--empty' />}

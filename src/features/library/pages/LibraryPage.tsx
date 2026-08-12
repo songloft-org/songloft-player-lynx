@@ -18,6 +18,7 @@ import { setLastLibrarySearch } from '../data/last-library-search.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
 import { usePlaylistsInfiniteQuery } from '../../playlist/data/playlist-query.js'
 import { PlaylistsView } from '../../playlist/widgets/PlaylistsView.js'
+import { SongContextMenu } from '../../../shared/ui/SongContextMenu.js'
 import { FacetCard } from '../widgets/FacetCard.js'
 import { SongRow } from '../widgets/SongRow.js'
 import { FavoriteSongRow } from '../widgets/FavoriteSongRow.js'
@@ -97,6 +98,7 @@ function SongsView() {
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [showPlaylistPicker, setShowPlaylistPicker] = useState(false)
+  const [contextSong, setContextSong] = useState<Song | null>(null)
 
   const debouncedSearch = useDebounce(searchText, DEBOUNCE_MS)
 
@@ -217,7 +219,7 @@ function SongsView() {
                       )
                       : null}
                     <view className='library__select-row-content'>
-                      <FavoriteSongRow song={song} index={index} onTap={onTapSong} />
+                      <FavoriteSongRow song={song} index={index} onTap={onTapSong} onLongPress={selectMode ? undefined : setContextSong} />
                     </view>
                   </view>
                 )}
@@ -264,6 +266,8 @@ function SongsView() {
           </view>
         )
         : null}
+
+      <SongContextMenu song={contextSong} onClose={() => setContextSong(null)} />
     </view>
   )
 }
