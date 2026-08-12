@@ -10,7 +10,15 @@
     "typecheck": "tsc -b",
     "copy-bundle:android": "node scripts/copy-bundle-android.mjs",
     "build:android-bundle": "rspeedy build && node scripts/copy-bundle-android.mjs",
-    "android:install": "pnpm run build:android-bundle && cd android && ./gradlew installDebug"
+    "android:install": "pnpm run build:android-bundle && cd android && ./gradlew installDebug",
+    "copy-bundle:ios": "node scripts/copy-bundle-ios.mjs",
+    "build:ios-bundle": "rspeedy build && node scripts/copy-bundle-ios.mjs",
+    "//ios:pods": "GIT_CONFIG_GLOBAL=/dev/null: this machine's ~/.gitconfig has `url.git@github.com:.insteadOf https://github.com/`, which rewrites every CocoaPods git clone to ssh — and port 22 is closed here, so MJRefresh/SDWebImage/PrimJS/ServalSVG (all git-sourced pods) fail with `ssh: connect to host github.com port 22`. Ignoring the global git config is the least invasive fix. If `pod install` instead dies with `JSON::ParserError - Failed to parse JSON at file: ~/.cocoapods/repos/trunk/...podspec.json`, the CDN spec cache holds a truncated download: delete that file (or prefix the command with `CP_HOME_DIR=/tmp/songloft-cp-home` to resolve against a throwaway spec cache).",
+    "ios:pods": "cd ios && GIT_CONFIG_GLOBAL=/dev/null pod install",
+    "//ios:build": "Why two xcodebuild calls with -project/-target instead of one -workspace/-scheme/-destination: this Xcode (26.6, SDK iphoneos26.5) reports NO eligible run destinations ('iOS 26.5 is not installed' — the iOS platform component is missing; only standalone simulator runtimes 18.3 / 26.0 are present), and every -destination form therefore fails with 'Unable to find a destination matching...'. The legacy -target + -sdk path needs no destination. Because the app target is built outside the CocoaPods workspace, the Pods aggregate has to be built first, and both builds must share SYMROOT so the app finds libPods-*.a where its xcconfig looks (PODS_CONFIGURATION_BUILD_DIR). Once the iOS platform is installed, `xcodebuild -workspace SongloftLynx.xcworkspace -scheme SongloftLynx -destination 'generic/platform=iOS Simulator'` is the form to prefer.",
+    "ios:build": "pnpm run build:ios-bundle && cd ios && xcodebuild -project Pods/Pods.xcodeproj -target Pods-SongloftLynx -sdk iphonesimulator -configuration Debug ARCHS=arm64 SYMROOT=\"$PWD/build\" build && xcodebuild -project SongloftLynx.xcodeproj -target SongloftLynx -sdk iphonesimulator -configuration Debug ARCHS=arm64 SYMROOT=\"$PWD/build\" build",
+    "//ios:run": "Needs a booted simulator (`xcrun simctl boot <udid>; open -a Simulator`) and `pnpm run ios:pods` once. The simulator's localhost IS the host machine, so there is no adb-reverse equivalent to set up for the dev backend on :58091.",
+    "ios:run": "pnpm run ios:build && xcrun simctl install booted ios/build/Debug-iphonesimulator/SongloftLynx.app && xcrun simctl launch booted org.songloft.lynx"
   },
   "dependencies": {
     "@lynx-js/lynx-ui": "^3.135.0",

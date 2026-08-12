@@ -37,6 +37,17 @@ android/.cxx/
 # Embedded Lynx bundle: a build artifact copied from dist/ by
 # scripts/copy-bundle-android.mjs (produced fresh in CI); never commit it.
 android/app/src/main/assets/main.lynx.bundle
+
+# iOS host build artifacts (Xcode project, Podfile and Podfile.lock ARE tracked —
+# same call as Android: sources + lockfile in, build output out)
+ios/Pods/
+ios/build/
+ios/*.xcworkspace
+ios/**/xcuserdata/
+ios/**/*.xcuserstate
+ios/DerivedData/
+# Embedded Lynx bundle: copied from dist/ by scripts/copy-bundle-ios.mjs.
+ios/SongloftLynx/main.lynx.bundle
 .pnpm-store/
 bun.lock
 -e 

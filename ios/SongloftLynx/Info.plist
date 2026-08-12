@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Songloft</string>
+
+	<!-- Programmatic window: the scene delegate builds it, no Main.storyboard.
+	     UILaunchScreen (empty dict) is the modern replacement for a launch
+	     storyboard; without either, iOS drops the app into a letterboxed
+	     compatibility mode on notched devices. -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UILaunchScreen</key>
+	<dict/>
+
+	<!-- App Transport Security: the dev backend is plain-HTTP
+	     (http://localhost:58091), and in standalone mode the user can point the
+	     app at any self-hosted server — which may well be http on a LAN address.
+	     ATS blocks all of that by default. This is the iOS equivalent of the
+	     Android host's `android:usesCleartextTraffic="true"`.
+	     NSAllowsLocalNetworking is kept alongside so that even a future
+	     App-Store-shaped build (arbitrary loads off) can still reach
+	     localhost / .local / LAN hosts. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<!-- iOS 14+ asks the user before an app may talk to LAN addresses; without
+	     this description string that access fails silently. (Simulator +
+	     localhost is loopback and exempt, real devices on a LAN are not.) -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Songloft needs local network access to reach a Songloft server running on your network.</string>
+</dict>
+</plist>
