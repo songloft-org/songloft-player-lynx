@@ -97,7 +97,7 @@ vi.mock('../data/settings-prefs.js', () => ({
 }))
 
 vi.mock('../api/index.js', () => ({
-  getSettingsApi: () => ({ getLogLevel: getLogLevelSpy, setLogLevel: setLogLevelSpy }),
+  getSettingsApi: () => ({ getLogLevel: getLogLevelSpy, setLogLevel: setLogLevelSpy, getVersion: vi.fn(async () => '1.0.0') }),
 }))
 
 vi.mock('@lynx-js/lynx-ui', () => ({

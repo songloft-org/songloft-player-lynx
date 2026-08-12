@@ -99,19 +99,24 @@ function SongsView() {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [showPlaylistPicker, setShowPlaylistPicker] = useState(false)
   const [contextSong, setContextSong] = useState<Song | null>(null)
+  const [filterGenre, setFilterGenre] = useState('')
+  const [filterArtist, setFilterArtist] = useState('')
+  const [filterAlbum, setFilterAlbum] = useState('')
 
   const debouncedSearch = useDebounce(searchText, DEBOUNCE_MS)
+  const hasFilters = !!(filterGenre || filterArtist || filterAlbum)
 
   const filters = useMemo<SongsFilters>(() => {
     const f: SongsFilters = {
       sort: sortField,
       order: sortField === 'added_at' ? 'desc' : 'asc',
     }
-    if (debouncedSearch.trim()) {
-      f.keyword = debouncedSearch.trim()
-    }
+    if (debouncedSearch.trim()) f.keyword = debouncedSearch.trim()
+    if (filterGenre) f.genre = filterGenre
+    if (filterArtist) f.artist = filterArtist
+    if (filterAlbum) f.album = filterAlbum
     return f
-  }, [sortField, debouncedSearch])
+  }, [sortField, debouncedSearch, filterGenre, filterArtist, filterAlbum])
 
   const query = useSongsInfiniteQuery(filters)
   const songs = flattenSongs(query.data?.pages)
@@ -191,6 +196,27 @@ function SongsView() {
               <text className='library__chip-text'>{t('library.select')}</text>
             </view>
           )}
+      </view>
+
+      <view className='library__filter-bar'>
+        <Input
+          className='library__filter-input'
+          placeholder={t('library.facetGenre')}
+          value={filterGenre}
+          onInput={(v: string) => setFilterGenre(v)}
+        />
+        <Input
+          className='library__filter-input'
+          placeholder={t('library.facetArtist')}
+          value={filterArtist}
+          onInput={(v: string) => setFilterArtist(v)}
+        />
+        <Input
+          className='library__filter-input'
+          placeholder={t('library.facetAlbum')}
+          value={filterAlbum}
+          onInput={(v: string) => setFilterAlbum(v)}
+        />
       </view>
 
       {query.isLoading

@@ -27,6 +27,12 @@ export class SettingsApi {
     await this.client.put(`${apiPrefix}/settings/log-level`, { level })
   }
 
+  async getVersion(): Promise<string> {
+    const res = await this.client.get<Record<string, unknown>>(`${apiPrefix}/version`)
+    const data = res.data ?? {}
+    return String(data.version ?? data.app_version ?? '')
+  }
+
   /** Raw (already backend-sanitized) log text; empty string if the body is empty. */
   async exportLogs(): Promise<string> {
     const res = await this.client.get<string>(`${apiPrefix}/logs/export`, { parseJson: false })

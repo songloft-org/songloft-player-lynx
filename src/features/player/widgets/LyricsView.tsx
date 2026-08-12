@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from '@tanstack/react-router'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { findCurrentWord, type LyricLine } from '../domain/lyric-parser.js'
@@ -33,6 +34,7 @@ function WordHighlightLine({
 
 export function LyricsView() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const lyrics = useLyricStore((s) => s.lyrics)
   const currentIndex = useLyricStore((s) => s.currentIndex)
   const isLoading = useLyricStore((s) => s.isLoading)
@@ -59,6 +61,11 @@ export function LyricsView() {
   const scrollTarget = currentIndex >= 0 ? `lyric-line-${currentIndex}` : undefined
 
   return (
+    <view className='player-lyrics__container'>
+      <view className='player-lyrics__edit-bar' bindtap={() => void navigate({ to: '/player/lyrics/edit' })}>
+        <Icon name='settings' size={14} color={ICON_COLORS.contentMuted} />
+        <text className='player-lyrics__edit-text'>{t('lyricEdit.title')}</text>
+      </view>
     <scroll-view className='player-lyrics' scroll-y scroll-into-view={scrollTarget} scroll-with-animation>
       <view className='player-lyrics__inner'>
         {lyrics.map((line, index) => {
@@ -118,5 +125,6 @@ export function LyricsView() {
         })}
       </view>
     </scroll-view>
+    </view>
   )
 }

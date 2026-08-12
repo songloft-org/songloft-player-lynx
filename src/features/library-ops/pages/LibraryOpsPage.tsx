@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { getSongsApi } from '../../library/api/index.js'
 import {
   useCancelMetadataRefreshMutation,
   useCancelScanMutation,
@@ -52,6 +53,8 @@ export function LibraryOpsPage() {
   const [scanPaused, setScanPaused] = useState(false)
   const [metaForced, setMetaForced] = useState(false)
   const [metaPaused, setMetaPaused] = useState(false)
+  const [cleaning, setCleaning] = useState(false)
+  const [cleanResult, setCleanResult] = useState<string | null>(null)
 
   const scanQuery = useScanProgressQuery({ forced: scanForced, paused: scanPaused })
   const metaQuery = useMetadataProgressQuery({ forced: metaForced, paused: metaPaused })
@@ -199,6 +202,27 @@ export function LibraryOpsPage() {
             <text className='libops__dup-entry-text'>{t('libops.duplicateDetection')}</text>
             <Icon name='chevron-right' size={16} color={ICON_COLORS.contentMuted} />
           </view>
+
+          <view
+            className='libops__dup-entry'
+            bindtap={() => {
+              if (cleaning) return
+              setCleaning(true)
+              setCleanResult(null)
+              void getSongsApi().cleanInvalidSongs()
+                .then(r => setCleanResult(t('libops.cleanResult', { count: r.cleaned })))
+                .catch(() => setCleanResult(t('libops.cleanFailed')))
+                .finally(() => setCleaning(false))
+            }}
+          >
+            <Icon name='stop' size={20} color={ICON_COLORS.danger} />
+            <text className='libops__dup-entry-text'>
+              {cleaning ? t('common.loading') : t('libops.cleanInvalid')}
+            </text>
+          </view>
+          {cleanResult
+            ? <text className='libops__clean-result'>{cleanResult}</text>
+            : null}
         </view>
       </scroll-view>
     </view>

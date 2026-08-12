@@ -196,12 +196,12 @@ test('songs view shows the loading state', async () => {
 
 test('songs view renders search input and sort chips', async () => {
   songsHook.mockReturnValue(songsResult([{ songs: [], total: 0 }]))
-  const { queryByText } = await renderPage()
+  const { queryByText, queryAllByText } = await renderPage()
 
   expect(queryByText('Search songs...')).toBeInTheDocument()
   expect(queryByText('Recent')).toBeInTheDocument()
   expect(queryByText('Title')).toBeInTheDocument()
-  expect(queryByText('Artist')).toBeInTheDocument()
+  expect(queryAllByText('Artist').length).toBeGreaterThanOrEqual(1)
 })
 
 test('songs view passes search keyword and sort to useSongsInfiniteQuery', async () => {

@@ -192,6 +192,30 @@ export class SongsApi {
     return parseSong(res.data)
   }
 
+  async updateSong(id: number, data: { title?: string; artist?: string; album?: string; url?: string; coverUrl?: string }): Promise<void> {
+    const body: Record<string, unknown> = {}
+    if (data.title !== undefined) body.title = data.title
+    if (data.artist !== undefined) body.artist = data.artist
+    if (data.album !== undefined) body.album = data.album
+    if (data.url !== undefined) body.url = data.url
+    if (data.coverUrl !== undefined) body.cover_url = data.coverUrl
+    await this.client.put(`${apiPrefix}/songs/${id}`, body)
+  }
+
+  async deleteSong(id: number): Promise<void> {
+    await this.client.delete(`${apiPrefix}/songs/${id}`)
+  }
+
+  async updateLyrics(id: number, data: { lyric?: string; tlyric?: string; rlyric?: string; lxlyric?: string }): Promise<void> {
+    await this.client.put(`${apiPrefix}/songs/${id}/lyrics`, data)
+  }
+
+  async cleanInvalidSongs(): Promise<{ cleaned: number }> {
+    const res = await this.client.post<Record<string, unknown>>(`${apiPrefix}/songs/clean`, {})
+    const data = res.data ?? {}
+    return { cleaned: Number(data.cleaned ?? data.count ?? 0) }
+  }
+
   /**
    * `GET <lyricUrl>` → the lyric payload `{ lyric, lxlyric, tlyric, rlyric }`.
    *

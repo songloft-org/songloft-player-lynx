@@ -115,6 +115,7 @@ export function SettingsPage() {
   const [logLevel, setLogLevel] = useState<LogLevel>('info')
   const [audioQuality, setAudioQuality] = useState<AudioQuality>('original')
   const [autoResume, setAutoResume] = useState(false)
+  const [backendVersion, setBackendVersion] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -151,6 +152,9 @@ export function SettingsPage() {
       .catch(() => {})
     void readAutoResume()
       .then((v) => { if (!cancelled) setAutoResume(v) })
+      .catch(() => {})
+    void getSettingsApi().getVersion()
+      .then((v) => { if (!cancelled) setBackendVersion(v) })
       .catch(() => {})
     return () => {
       cancelled = true
@@ -300,6 +304,9 @@ export function SettingsPage() {
               trailingText={clientVersion}
               testId='settings-version'
             />
+            {backendVersion
+              ? <SettingsRow icon='info' title={t('settings.backendVersion')} trailingText={backendVersion} />
+              : null}
             <SettingsRow
               icon='link'
               title={t('settings.server')}

@@ -516,3 +516,9 @@
   color: var(--primary-content);
   font-size: var(--font-md);
 }
+
+.libops__clean-result {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+}

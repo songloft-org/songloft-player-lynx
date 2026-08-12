@@ -23,9 +23,11 @@ export interface LyricState {
   romanizationMap: Map<number, string>
   hasTranslation: boolean
   hasRomanization: boolean
+  rawLyric: string | null
 
   loadForSong: (song: Song | undefined, fetcher?: LyricFetcher) => Promise<void>
   setLyricsFromText: (text: string) => void
+  setRawLyric: (text: string) => void
   syncPosition: (positionMs: number) => void
   clear: () => void
 }
@@ -42,6 +44,7 @@ const EMPTY = {
   romanizationMap: EMPTY_MAP,
   hasTranslation: false,
   hasRomanization: false,
+  rawLyric: null as string | null,
 }
 
 function parseLyricText(text: string, enhanced?: string): { lyrics: LyricLine[]; synced: boolean } {
@@ -123,6 +126,7 @@ export const useLyricStore = create<LyricState>((set, get) => {
           romanizationMap,
           hasTranslation,
           hasRomanization,
+          rawLyric: payload.lyric ?? null,
         })
       } catch {
         if (token !== loadToken) return
@@ -143,7 +147,13 @@ export const useLyricStore = create<LyricState>((set, get) => {
         romanizationMap: EMPTY_MAP,
         hasTranslation: false,
         hasRomanization: false,
+        rawLyric: text,
       })
+    },
+
+    setRawLyric: (text) => {
+      const { lyrics, synced } = parseLyricText(text)
+      set({ rawLyric: text, lyrics, synced, currentIndex: -1 })
     },
 
     syncPosition: (positionMs) => {

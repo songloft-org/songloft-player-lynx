@@ -1,6 +1,7 @@
 export { LibraryPage } from './pages/LibraryPage.js'
 export { CategorySongsPage } from './pages/CategorySongsPage.js'
 export { PlayHistoryPage } from './pages/PlayHistoryPage.js'
+export { SongDetailPage } from './pages/SongDetailPage.js'
 export { getLastLibrarySearch } from './data/last-library-search.js'
 export {
   SongsApi,

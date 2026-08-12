@@ -1,5 +1,6 @@
 import { useState } from '@lynx-js/react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import type { Song } from '../../models/song.js'
@@ -16,6 +17,7 @@ export interface SongContextMenuProps {
 
 export function SongContextMenu({ song, onClose }: SongContextMenuProps) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showPlaylists, setShowPlaylists] = useState(false)
   const playlistsQuery = usePlaylistsInfiniteQuery()
@@ -73,6 +75,10 @@ export function SongContextMenu({ song, onClose }: SongContextMenuProps) {
               <view className='song-ctx__item' bindtap={() => setShowPlaylists(true)}>
                 <Icon name='music' size={18} color={ICON_COLORS.content2} />
                 <text className='song-ctx__item-text'>{t('songMenu.addToPlaylist')}</text>
+              </view>
+              <view className='song-ctx__item' bindtap={() => { onClose(); void navigate({ to: '/library/song/$songId', params: { songId: String(song.id) } }) }}>
+                <Icon name='info' size={18} color={ICON_COLORS.content2} />
+                <text className='song-ctx__item-text'>{t('songMenu.viewDetail')}</text>
               </view>
             </view>
           )}

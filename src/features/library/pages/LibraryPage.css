@@ -395,3 +395,20 @@
   font-size: var(--font-sm);
   color: var(--content);
 }
+
+.library__filter-bar {
+  display: flex;
+  flex-direction: row;
+  padding: 0 var(--space-4) var(--space-2);
+  gap: var(--space-2);
+}
+
+.library__filter-input {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  background-color: var(--paper);
+  font-size: var(--font-xs);
+  color: var(--content);
+  -x-placeholder-color: var(--content-muted);
+}

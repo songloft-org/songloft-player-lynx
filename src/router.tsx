@@ -12,13 +12,14 @@ import { ShellLayout } from './shared/layouts/ShellLayout.js'
 import { ThemeProvider } from './shared/theme/ThemeProvider.js'
 import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
-import { CategorySongsPage, LibraryPage, PlayHistoryPage } from './features/library/index.js'
+import { CategorySongsPage, LibraryPage, PlayHistoryPage, SongDetailPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
 import { CacheManagePage, EqualizerPage, ProxySettingsPage, ServerEditPage, ServerListPage, ServerSettingsPage, SettingsPage, ThemePacksPage, UpgradePage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
+import { LyricEditPage } from './features/player/pages/LyricEditPage.js'
 
 /**
  * Batch 1 uses code-based route definitions (no file-based codegen plugin) to
@@ -56,6 +57,12 @@ const playerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/player',
   component: PlayerPage,
+})
+
+const lyricEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/player/lyrics/edit',
+  component: LyricEditPage,
 })
 
 /** Pathless layout route: everything under it renders inside the shell. */
@@ -238,9 +245,16 @@ const categorySongsRoute = createRoute({
   component: CategorySongsPage,
 })
 
+const songDetailRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/library/song/$songId',
+  component: SongDetailPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   playerRoute,
+  lyricEditRoute,
   shellRoute.addChildren([
     listRoute,
     libraryRoute,
@@ -263,6 +277,7 @@ const routeTree = rootRoute.addChildren([
     playlistDetailRoute,
     playHistoryRoute,
     categorySongsRoute,
+    songDetailRoute,
   ]),
 ])
 
