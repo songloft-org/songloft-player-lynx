@@ -310,6 +310,28 @@ export function mockLynxUiSwiper() {
   }
 }
 
+export function mockLynxUiSortable() {
+  return {
+    SortableRoot: ({
+      data,
+      children,
+    }: {
+      data: Array<{ getSortingKey: () => string; dataItem: unknown }>
+      children: (item: { getSortingKey: () => string; dataItem: unknown }) => unknown
+      onSortEnd?: (sorted: unknown[]) => void
+      [key: string]: unknown
+    }) => (
+      <view>
+        {data.map((item) => (
+          <view key={item.getSortingKey()}>{children(item) as never}</view>
+        ))}
+      </view>
+    ),
+    SortableItem: Pass,
+    SortableItemArea: Pass,
+  }
+}
+
 /** A minimal `Song` for the mocked player state. */
 function mockSong(): Song {
   return {

@@ -9,6 +9,7 @@ import {
   SheetView,
   type SheetRootRef,
 } from '@lynx-js/lynx-ui-sheet'
+import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-sortable'
 
 import { usePlayerStore } from '../store/index.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
@@ -19,12 +20,6 @@ const CLAIMED_ANGLES: [number, number][] = [
   [45, 135],
 ]
 
-/**
- * Playback-queue drawer, a lynx-ui bottom `Sheet` imperatively opened/closed to
- * follow the store's `showPlaylistDrawer` flag. Lists the current queue (current
- * track highlighted); tapping a row plays it, the ✕ removes it. Dismissing the
- * sheet (backdrop / drag) routes back through `closePlaylistDrawer`.
- */
 export function PlaylistDrawer() {
   const { t } = useTranslation()
   const show = usePlayerStore((s) => s.showPlaylistDrawer)
@@ -62,63 +57,59 @@ export function PlaylistDrawer() {
               )}
             </text>
           </view>
-          <scroll-view className='drawer__list' scroll-y>
-            {playlist.map((song, index) => (
-              <view
-                key={`${song.id}:${index}`}
-                className={index === currentIndex
+          <SortableRoot
+            as='ScrollView'
+            scrollableClassName='drawer__list'
+            data={playlist.map((song, index) => ({
+              getSortingKey: () => `${song.id}:${index}`,
+              dataItem: { song, index },
+            }))}
+            onSortEnd={(sorted) => {
+              const oldIndices = playlist.map((_, i) => i)
+              const newOrder = sorted.map((d) => d.dataItem.index)
+              // Find what moved: compare old vs new positions
+              for (let i = 0; i < newOrder.length; i++) {
+                if (newOrder[i] !== oldIndices[i]) {
+                  usePlayerStore.getState().reorderPlaylist(newOrder[i], i)
+                  break
+                }
+              }
+            }}
+          >
+            {(item) => (
+              <SortableItem
+                sortingKey={`${item.dataItem.song.id}:${item.dataItem.index}`}
+                as='DraggableRoot'
+                className={item.dataItem.index === currentIndex
                   ? 'drawer__row drawer__row--active'
                   : 'drawer__row'}
-                bindtap={() => {
-                  void usePlayerStore.getState().playPlaylist(playlist, index)
-                  usePlayerStore.getState().closePlaylistDrawer()
-                }}
               >
-                <view className='drawer__row-meta'>
-                  <text className='drawer__row-title'>{song.title}</text>
-                  {song.artist
-                    ? <text className='drawer__row-artist'>{song.artist}</text>
-                    : null}
-                </view>
-                <view className='drawer__row-actions'>
-                  {playlist.length > 1
-                    ? (
-                      <>
-                        <view
-                          className={index === 0
-                            ? 'drawer__row-move drawer__row-move--disabled'
-                            : 'drawer__row-move'}
-                          catchtap={index === 0
-                            ? undefined
-                            : () => usePlayerStore.getState().reorderPlaylist(index, index - 1)}
-                          data-testid={`drawer-move-up-${song.id}`}
-                        >
-                          <Icon name='chevron-up' size={16} color={ICON_COLORS.contentMuted} />
-                        </view>
-                        <view
-                          className={index === playlist.length - 1
-                            ? 'drawer__row-move drawer__row-move--disabled'
-                            : 'drawer__row-move'}
-                          catchtap={index === playlist.length - 1
-                            ? undefined
-                            : () => usePlayerStore.getState().reorderPlaylist(index, index + 1)}
-                          data-testid={`drawer-move-down-${song.id}`}
-                        >
-                          <Icon name='chevron-down' size={16} color={ICON_COLORS.contentMuted} />
-                        </view>
-                      </>
-                    )
-                    : null}
-                  <view
-                    className='drawer__row-remove'
-                    catchtap={() => usePlayerStore.getState().removeFromPlaylist(index)}
-                  >
-                    <text className='drawer__row-remove-glyph'>✕</text>
+                <SortableItemArea>
+                  <view className='drawer__row-handle' data-testid={`drawer-drag-${item.dataItem.song.id}`}>
+                    <Icon name='menu' size={16} color={ICON_COLORS.content2} />
                   </view>
+                </SortableItemArea>
+                <view
+                  className='drawer__row-meta'
+                  bindtap={() => {
+                    void usePlayerStore.getState().playPlaylist(playlist, item.dataItem.index)
+                    usePlayerStore.getState().closePlaylistDrawer()
+                  }}
+                >
+                  <text className='drawer__row-title'>{item.dataItem.song.title}</text>
+                  {item.dataItem.song.artist
+                    ? <text className='drawer__row-artist'>{item.dataItem.song.artist}</text>
+                    : null}
                 </view>
-              </view>
-            ))}
-          </scroll-view>
+                <view
+                  className='drawer__row-remove'
+                  catchtap={() => usePlayerStore.getState().removeFromPlaylist(item.dataItem.index)}
+                >
+                  <text className='drawer__row-remove-glyph'>✕</text>
+                </view>
+              </SortableItem>
+            )}
+          </SortableRoot>
         </SheetContent>
       </SheetView>
     </SheetRoot>

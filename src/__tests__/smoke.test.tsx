@@ -52,6 +52,9 @@ vi.mock('@lynx-js/lynx-ui-sheet', async () =>
 vi.mock('@lynx-js/lynx-ui-swiper', async () =>
   (await import('./_render-mocks.js')).mockLynxUiSwiper(),
 )
+vi.mock('@lynx-js/lynx-ui-sortable', async () =>
+  (await import('./_render-mocks.js')).mockLynxUiSortable(),
+)
 vi.mock('../features/player/store/player-store.js', async () => {
   const actual = await vi.importActual<
     typeof import('../features/player/store/player-store.js')

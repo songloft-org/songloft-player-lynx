@@ -167,20 +167,12 @@
   font-size: var(--font-md);
 }
 
-.playlists__sort-row-actions {
-  display: flex;
-  flex-direction: row;
-}
-
-.playlists__sort-btn {
+.playlists__sort-handle {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-2);
-}
-
-.playlists__sort-btn--disabled {
-  opacity: 0.4;
+  margin-right: var(--space-2);
 }
 
 .playlists__create-form {

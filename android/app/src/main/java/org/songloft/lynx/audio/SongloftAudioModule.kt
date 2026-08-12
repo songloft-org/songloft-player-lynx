@@ -131,14 +131,16 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
         SongloftAudioEngine.runOnMain { SongloftAudioEngine.setFavorite(isFavorite) }
     }
 
-    // -- equalizer (stub; real DSP is a later batch) --
+    // -- equalizer --
 
     @LynxMethod
     fun setEqualizerEnabled(on: Boolean) {
+        SongloftAudioEngine.runOnMain { SongloftAudioEngine.setEqualizerEnabled(on) }
     }
 
     @LynxMethod
     fun setEqualizerBand(index: Double, gainDb: Double) {
+        SongloftAudioEngine.runOnMain { SongloftAudioEngine.setEqualizerBand(index.toInt(), gainDb.toFloat()) }
     }
 
     // -- lifecycle --

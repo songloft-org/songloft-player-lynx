@@ -2,6 +2,7 @@ import { useState } from '@lynx-js/react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
+import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-sortable'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
@@ -26,15 +27,7 @@ import {
 } from '../data/playlist-mutations.js'
 import './PlaylistDetailPage.css'
 
-function moveItem<T>(items: T[], index: number, delta: -1 | 1): T[] {
-  const target = index + delta
-  if (target < 0 || target >= items.length) return items
-  const next = [...items]
-  const tmp = next[index]!
-  next[index] = next[target]!
-  next[target] = tmp
-  return next
-}
+
 
 export function PlaylistDetailPage() {
   const navigate = useNavigate()
@@ -71,20 +64,13 @@ export function PlaylistDetailPage() {
   const [editName, setEditName] = useState('')
   const [editDesc, setEditDesc] = useState('')
   const [sortMode, setSortMode] = useState(false)
-  const [orderedSongs, setOrderedSongs] = useState<Song[]>([])
   const canSort = !songsQuery.hasNextPage && songs.length > 1
 
   const enterSortMode = () => {
-    setOrderedSongs(songs)
     setSortMode(true)
   }
   const exitSortMode = () => {
     setSortMode(false)
-  }
-  const moveSong = (index: number, delta: -1 | 1) => {
-    const next = moveItem(orderedSongs, index, delta)
-    setOrderedSongs(next)
-    reorderSongsMutation.mutate(next.map((s) => s.id))
   }
 
   const toggleVisibility = () => {
@@ -300,43 +286,29 @@ export function PlaylistDetailPage() {
       <view className='playlist-detail__body'>
         {sortMode
           ? (
-            <scroll-view className='playlist-detail__sort-scroll' scroll-y>
-              <view className='playlist-detail__sort-list'>
-                {orderedSongs.map((song, index) => (
-                  <view key={String(song.id)} className='playlist-detail__sort-row'>
-                    <text className='playlist-detail__sort-row-name'>{song.title}</text>
-                    <view className='playlist-detail__sort-row-actions'>
-                      <view
-                        className={'playlist-detail__sort-btn' +
-                          (index === 0 ? ' playlist-detail__sort-btn--disabled' : '')}
-                        bindtap={() => moveSong(index, -1)}
-                        data-testid={`playlist-detail-move-up-${song.id}`}
-                      >
-                        <Icon
-                          name='chevron-up'
-                          size={18}
-                          color={index === 0 ? ICON_COLORS.contentMuted : ICON_COLORS.content}
-                        />
-                      </view>
-                      <view
-                        className={'playlist-detail__sort-btn' +
-                          (index === orderedSongs.length - 1 ? ' playlist-detail__sort-btn--disabled' : '')}
-                        bindtap={() => moveSong(index, 1)}
-                        data-testid={`playlist-detail-move-down-${song.id}`}
-                      >
-                        <Icon
-                          name='chevron-down'
-                          size={18}
-                          color={index === orderedSongs.length - 1
-                            ? ICON_COLORS.contentMuted
-                            : ICON_COLORS.content}
-                        />
-                      </view>
+            <SortableRoot
+              as='ScrollView'
+              scrollableClassName='playlist-detail__sort-scroll'
+              data={songs.map((s) => ({ getSortingKey: () => String(s.id), dataItem: s }))}
+              onSortEnd={(sorted) => {
+                reorderSongsMutation.mutate(sorted.map((d) => d.dataItem.id))
+              }}
+            >
+              {(item) => (
+                <SortableItem
+                  sortingKey={String(item.dataItem.id)}
+                  as='DraggableRoot'
+                  className='playlist-detail__sort-row'
+                >
+                  <SortableItemArea>
+                    <view className='playlist-detail__sort-handle' data-testid={`playlist-detail-drag-${item.dataItem.id}`}>
+                      <Icon name='menu' size={18} color={ICON_COLORS.content2} />
                     </view>
-                  </view>
-                ))}
-              </view>
-            </scroll-view>
+                  </SortableItemArea>
+                  <text className='playlist-detail__sort-row-name'>{item.dataItem.title}</text>
+                </SortableItem>
+              )}
+            </SortableRoot>
           )
           : songsQuery.isLoading
           ? <DetailState text={t('library.loadingSongs')} />

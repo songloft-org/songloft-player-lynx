@@ -31,6 +31,10 @@ vi.mock('@lynx-js/lynx-ui-input', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
 )
 
+vi.mock('@lynx-js/lynx-ui-sortable', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSortable(),
+)
+
 vi.mock('../data/playlist-query.js', () => ({
   usePlaylistQuery: detailHook,
   usePlaylistSongsInfiniteQuery: songsHook,
@@ -214,9 +218,7 @@ test('hides the reorder button while more pages remain unloaded', async () => {
   expect(queryByText('Reorder')).not.toBeInTheDocument()
 })
 
-test('moving a song down submits the swapped order to the reorder mutation', async () => {
-  const mutate = vi.fn()
-  reorderSongsMutationHook.mockReturnValue(mutationResult({ mutate }))
+test('sort mode renders drag handles for each song', async () => {
   songsHook.mockReturnValue(
     songsResult([{ songs: [makeSong(1), makeSong(2)], total: 2 }], { hasNextPage: false }),
   )
@@ -225,9 +227,6 @@ test('moving a song down submits the swapped order to the reorder mutation', asy
     fireEvent.tap(queryByText('Reorder')!)
     await Promise.resolve()
   })
-  await act(async () => {
-    fireEvent.tap(queryByTestId('playlist-detail-move-down-1')!)
-    await Promise.resolve()
-  })
-  expect(mutate).toHaveBeenCalledWith([2, 1])
+  expect(queryByTestId('playlist-detail-drag-1')).toBeInTheDocument()
+  expect(queryByTestId('playlist-detail-drag-2')).toBeInTheDocument()
 })

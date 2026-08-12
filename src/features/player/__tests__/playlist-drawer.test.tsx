@@ -24,6 +24,12 @@ vi.mock('react-i18next', async () =>
 vi.mock('@lynx-js/lynx-ui-sheet', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSheet(),
 )
+vi.mock('@lynx-js/lynx-ui-sortable', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSortable(),
+)
+vi.mock('@lynx-js/lynx-ui-sortable', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSortable(),
+)
 
 function song(id: number): Song {
   return { id, type: 'local', title: `Song ${id}`, artist: `Artist ${id}` } as Song
@@ -61,15 +67,14 @@ async function renderDrawer() {
   return getQueriesForElement(elementTree.root!)
 }
 
-test('renders move up/down affordances for every row when the queue has more than one song', async () => {
+test('renders drag handles for every row when the queue has more than one song', async () => {
   const { queryByTestId } = await renderDrawer()
-  expect(queryByTestId('drawer-move-up-2')).toBeInTheDocument()
-  expect(queryByTestId('drawer-move-down-2')).toBeInTheDocument()
+  expect(queryByTestId('drawer-drag-2')).toBeInTheDocument()
+  expect(queryByTestId('drawer-drag-3')).toBeInTheDocument()
 })
 
-test('hides move affordances entirely for a single-song queue', async () => {
+test('renders drag handle even for a single-song queue', async () => {
   state = { showPlaylistDrawer: true, playlist: [song(1)], currentIndex: 0 }
   const { queryByTestId } = await renderDrawer()
-  expect(queryByTestId('drawer-move-up-1')).not.toBeInTheDocument()
-  expect(queryByTestId('drawer-move-down-1')).not.toBeInTheDocument()
+  expect(queryByTestId('drawer-drag-1')).toBeInTheDocument()
 })

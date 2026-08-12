@@ -1,6 +1,7 @@
 package org.songloft.lynx.audio
 
 import android.content.Context
+import android.media.audiofx.Equalizer
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -161,6 +162,51 @@ object SongloftAudioEngine {
         mediaSessionInternal?.setCustomLayout(listOf(buildFavoriteButton()))
     }
 
+    // -- equalizer -------------------------------------------------------------
+
+    private var equalizer: Equalizer? = null
+    private var eqEnabled = false
+    private val eqPendingGains = HashMap<Int, Float>()
+
+    private fun attachEqualizer(audioSessionId: Int) {
+        try {
+            equalizer?.release()
+            val eq = Equalizer(0, audioSessionId)
+            eq.enabled = eqEnabled
+            for ((index, gainDb) in eqPendingGains) {
+                applyBandGain(eq, index, gainDb)
+            }
+            equalizer = eq
+        } catch (_: Throwable) {
+            // Some devices don't support Equalizer
+        }
+    }
+
+    private fun applyBandGain(eq: Equalizer, index: Int, gainDb: Float) {
+        val numBands = eq.numberOfBands.toInt()
+        if (index < 0 || index >= numBands) return
+        val milliBel = (gainDb * 100).toInt().toShort()
+        val range = eq.bandLevelRange
+        val clamped = milliBel.coerceIn(range[0], range[1])
+        eq.setBandLevel(index.toShort(), clamped)
+    }
+
+    fun setEqualizerEnabled(on: Boolean) {
+        eqEnabled = on
+        equalizer?.enabled = on
+    }
+
+    fun setEqualizerBand(index: Int, gainDb: Float) {
+        eqPendingGains[index] = gainDb
+        val eq = equalizer ?: return
+        applyBandGain(eq, index, gainDb)
+    }
+
+    private fun releaseEqualizer() {
+        equalizer?.release()
+        equalizer = null
+    }
+
     private var progressActive = false
 
     /**
@@ -204,6 +250,7 @@ object SongloftAudioEngine {
             created.addListener(playerListener)
             player = created
             mediaSessionInternal = buildMediaSession(service, created)
+            attachEqualizer(created.audioSessionId)
         }
         sessionBoundToService = true
     }
@@ -224,6 +271,7 @@ object SongloftAudioEngine {
         created.addListener(playerListener)
         player = created
         mediaSessionInternal = buildMediaSession(appContext, created)
+        attachEqualizer(created.audioSessionId)
         return created
     }
 
@@ -318,6 +366,7 @@ object SongloftAudioEngine {
     /** Full release -- called by the module's `dispose()`. */
     fun release() {
         stopProgress()
+        releaseEqualizer()
         mediaSessionInternal?.release()
         mediaSessionInternal = null
         player?.removeListener(playerListener)

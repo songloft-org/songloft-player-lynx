@@ -22,6 +22,10 @@ vi.mock('@lynx-js/lynx-ui-input', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
 )
 
+vi.mock('@lynx-js/lynx-ui-sortable', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSortable(),
+)
+
 vi.mock('../data/playlist-query.js', () => ({
   usePlaylistsInfiniteQuery: listHook,
   playlistQueryKeys: { list: () => [] },
@@ -186,9 +190,7 @@ test('entering sort mode shows both playlist names and a done button', async () 
   expect(queryByText('Done')).toBeInTheDocument()
 })
 
-test('moving a playlist down submits the swapped order to the reorder mutation', async () => {
-  const mutate = vi.fn()
-  reorderMutationHook.mockReturnValue(mutationResult({ mutate }))
+test('sort mode renders drag handles for each playlist', async () => {
   listHook.mockReturnValue(
     listResult([
       {
@@ -205,9 +207,6 @@ test('moving a playlist down submits the swapped order to the reorder mutation',
     fireEvent.tap(queryByTestId('playlists-sort-toggle')!)
     await Promise.resolve()
   })
-  await act(async () => {
-    fireEvent.tap(queryByTestId('playlists-move-down-1')!)
-    await Promise.resolve()
-  })
-  expect(mutate).toHaveBeenCalledWith([2, 1])
+  expect(queryByTestId('playlists-drag-1')).toBeInTheDocument()
+  expect(queryByTestId('playlists-drag-2')).toBeInTheDocument()
 })

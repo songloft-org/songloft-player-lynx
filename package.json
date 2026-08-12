@@ -26,6 +26,7 @@
     "@lynx-js/lynx-ui-input": "^3.135.0",
     "@lynx-js/lynx-ui-sheet": "^3.135.4",
     "@lynx-js/lynx-ui-slider": "^3.135.4",
+    "@lynx-js/lynx-ui-sortable": "^3.135.4",
     "@lynx-js/lynx-ui-swiper": "^3.135.4",
     "@lynx-js/lynx-ui-switch": "^3.135.0",
     "@lynx-js/motion": "^0.0.5",

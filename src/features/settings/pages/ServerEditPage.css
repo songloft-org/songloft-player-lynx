@@ -1,0 +1,106 @@
+.server-edit {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--background);
+}
+
+.server-edit__topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.server-edit__back {
+  padding: 4px;
+}
+
+.server-edit__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--content);
+}
+
+.server-edit__scroll {
+  flex: 1;
+}
+
+.server-edit__content {
+  padding: 16px;
+}
+
+.server-edit__card {
+  background-color: var(--paper);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.server-edit__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.server-edit__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--content);
+}
+
+.server-edit__input {
+  background-color: var(--background);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 15px;
+  color: var(--content);
+}
+
+.server-edit__toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.server-edit__toggle-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 2px;
+}
+
+.server-edit__toggle-title {
+  font-size: 15px;
+  color: var(--content);
+}
+
+.server-edit__toggle-subtitle {
+  font-size: 13px;
+  color: var(--content2);
+}
+
+.server-edit__save {
+  align-self: stretch;
+  padding: 12px;
+  border-radius: 8px;
+  background-color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.server-edit__save--disabled {
+  opacity: 0.5;
+}
+
+.server-edit__save-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--on-primary);
+}

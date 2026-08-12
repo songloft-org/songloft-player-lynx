@@ -160,10 +160,6 @@ export function SettingsPage() {
     notConfigured: t('settings.serverNotConfigured'),
   })
 
-  const openServer = () => {
-    void navigate({ to: '/settings/server' })
-  }
-
   const onLogout = () => {
     if (!confirmLogout) {
       setConfirmLogout(true)
@@ -212,10 +208,10 @@ export function SettingsPage() {
               <SettingsSection title={t('settings.connection')} icon='link'>
                 <SettingsRow
                   icon='link'
-                  title={t('settings.server')}
+                  title={t('servers.title')}
                   subtitle={serverText}
                   trailingIcon='chevron-right'
-                  onTap={openServer}
+                  onTap={() => void navigate({ to: '/settings/servers' })}
                   testId='settings-server'
                 />
               </SettingsSection>
@@ -276,6 +272,7 @@ export function SettingsPage() {
           </SettingsSection>
 
           <SettingsSection title={t('settings.advanced')} icon='settings'>
+            <SettingsRow icon='music' title={t('eq.title')} subtitle={t('eq.subtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/eq' })} testId='settings-eq' />
             <SettingsRow icon='settings' title={t('settings.storageCache')} subtitle={t('settings.cacheManageSubtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/cache' })} />
             <SettingsRow
               icon='menu'

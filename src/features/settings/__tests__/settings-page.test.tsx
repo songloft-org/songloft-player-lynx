@@ -191,7 +191,7 @@ test('the server row navigates to the server sub-page', async () => {
     fireEvent.tap(queryByTestId('settings-server')!)
   })
 
-  expect(navigateSpy).toHaveBeenCalledWith({ to: '/settings/server' })
+  expect(navigateSpy).toHaveBeenCalledWith({ to: '/settings/servers' })
 })
 
 test('log out is a two-tap confirm that calls auth logout then routes to /login', async () => {

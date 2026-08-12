@@ -476,16 +476,13 @@
   align-items: center;
 }
 
-.drawer__row-move {
+.drawer__row-handle {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 32px;
-}
-
-.drawer__row-move--disabled {
-  opacity: 0.3;
+  margin-right: 4px;
 }
 
 .drawer__row-remove-glyph {

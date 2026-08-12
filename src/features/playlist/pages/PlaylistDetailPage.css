@@ -272,20 +272,12 @@
   font-size: var(--font-md);
 }
 
-.playlist-detail__sort-row-actions {
-  display: flex;
-  flex-direction: row;
-}
-
-.playlist-detail__sort-btn {
+.playlist-detail__sort-handle {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-2);
-}
-
-.playlist-detail__sort-btn--disabled {
-  opacity: 0.4;
+  margin-right: var(--space-2);
 }
 
 /* Song row (identical to LibraryPage.css). */

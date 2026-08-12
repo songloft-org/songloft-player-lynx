@@ -15,7 +15,7 @@ import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { CategorySongsPage, LibraryPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
-import { CacheManagePage, LogsPage, ServerSettingsPage, SettingsPage } from './features/settings/index.js'
+import { CacheManagePage, EqualizerPage, LogsPage, ServerEditPage, ServerListPage, ServerSettingsPage, SettingsPage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
@@ -107,6 +107,27 @@ const serverSettingsRoute = createRoute({
   component: ServerSettingsPage,
 })
 
+/** `/settings/servers` — multi-server list page, inside the shell. */
+const serverListRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/servers',
+  component: ServerListPage,
+})
+
+/** `/settings/servers/add` — add new server page, inside the shell. */
+const serverAddRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/servers/add',
+  component: ServerEditPage,
+})
+
+/** `/settings/servers/edit/$id` — edit server page, inside the shell. */
+const serverEditRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/servers/edit/$id',
+  component: ServerEditPage,
+})
+
 /** `/settings/logs` — diagnostics log export sub-page, inside the shell (batch 15). */
 const logsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -126,6 +147,13 @@ const cacheManageRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings/cache',
   component: CacheManagePage,
+})
+
+/** `/settings/eq` — equalizer sub-page, inside the shell. */
+const equalizerRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/eq',
+  component: EqualizerPage,
 })
 
 /** `/settings/duplicates` — duplicate detection sub-page, inside the shell. */
@@ -199,9 +227,13 @@ const routeTree = rootRoute.addChildren([
     libraryRoute,
     settingsRoute,
     serverSettingsRoute,
+    serverListRoute,
+    serverAddRoute,
+    serverEditRoute,
     logsRoute,
     libraryOpsRoute,
     cacheManageRoute,
+    equalizerRoute,
     duplicatesRoute,
     pluginsRoute,
     pluginRegistryRoute,

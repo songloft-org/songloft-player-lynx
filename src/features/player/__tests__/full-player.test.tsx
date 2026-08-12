@@ -30,6 +30,9 @@ vi.mock('@lynx-js/lynx-ui-slider', async () =>
 vi.mock('@lynx-js/lynx-ui-sheet', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSheet(),
 )
+vi.mock('@lynx-js/lynx-ui-sortable', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSortable(),
+)
 vi.mock('@lynx-js/lynx-ui-swiper', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSwiper(),
 )
@@ -61,7 +64,7 @@ async function renderPage() {
 }
 
 test('renders the now-playing header, song meta and transport', async () => {
-  const { queryByText, queryAllByText, queryByTestId } = await renderPage()
+  const { queryByText, queryAllByText, queryByTestId, queryAllByTestId } = await renderPage()
 
   expect(queryByText('Now Playing')).toBeInTheDocument()
   // The mocked Sheet renders the drawer's queue too, so the title/artist also
@@ -77,9 +80,9 @@ test('renders the now-playing header, song meta and transport', async () => {
   expect(queryByTestId('icon-skip-next')).toBeInTheDocument()
   expect(queryByTestId('icon-order')).toBeInTheDocument()
   expect(queryByText('Order')).toBeInTheDocument()
-  // Topbar collapse + playlist icons.
+  // Topbar collapse + playlist icons (menu also appears on drag handles).
   expect(queryByTestId('icon-chevron-down')).toBeInTheDocument()
-  expect(queryByTestId('icon-menu')).toBeInTheDocument()
+  expect(queryAllByTestId('icon-menu').length).toBeGreaterThanOrEqual(1)
 })
 
 test('renders formatted current + total time from the store (30s / 200s)', async () => {
