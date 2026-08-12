@@ -1,0 +1,65 @@
+.dlna-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--bg);
+}
+
+.dlna-page__topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+}
+
+.dlna-page__back { padding: var(--space-1); }
+
+.dlna-page__title {
+  flex: 1;
+  font-size: var(--font-lg);
+  font-weight: bold;
+  color: var(--content);
+}
+
+.dlna-page__refresh { padding: var(--space-2); }
+
+.dlna-page__list { flex: 1; }
+
+.dlna-page__state {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+}
+
+.dlna-page__device {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+}
+
+.dlna-page__device-name {
+  flex: 1;
+  font-size: var(--font-sm);
+  color: var(--content);
+}
+
+.dlna-page__now {
+  padding: var(--space-3) var(--space-4);
+  border-top-width: 1px;
+  border-top-color: var(--border);
+}
+
+.dlna-page__now-label {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+}
+
+.dlna-page__now-song {
+  font-size: var(--font-sm);
+  color: var(--content);
+  margin-top: 2px;
+}

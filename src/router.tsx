@@ -20,6 +20,7 @@ import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
 import { LyricEditPage } from './features/player/pages/LyricEditPage.js'
+import { DlnaPage } from './features/player/pages/DlnaPage.js'
 
 /**
  * Batch 1 uses code-based route definitions (no file-based codegen plugin) to
@@ -63,6 +64,12 @@ const lyricEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/player/lyrics/edit',
   component: LyricEditPage,
+})
+
+const dlnaRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/player/dlna',
+  component: DlnaPage,
 })
 
 /** Pathless layout route: everything under it renders inside the shell. */
@@ -261,6 +268,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   playerRoute,
   lyricEditRoute,
+  dlnaRoute,
   shellRoute.addChildren([
     listRoute,
     libraryRoute,

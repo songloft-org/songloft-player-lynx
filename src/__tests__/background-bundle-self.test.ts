@@ -87,8 +87,8 @@ test('built bundle contains no unguarded __TSR_ROUTER__ write', () => {
   for (const w of writes) {
     const at = w.index ?? 0
     const before = data.slice(Math.max(0, at - 50), at)
-    // Guarded executable write (minified `void 0!==X&&(` / unminified `typeof self`).
-    const guarded = /typeof \w+ ?!==|void 0!==\w+&&\(|!==void 0&&\(/.test(before)
+    // Guarded executable write (minified `void 0!==X&&(` or `void 0!==X&&X.` / unminified `typeof self`).
+    const guarded = /typeof \w+ ?!==|void 0!==\w+&&[\(.]|!==void 0&&[\(.]/.test(before)
     // Non-executable: a doc-comment (`//`, `/*`, ` * `, backtick) or the
     // router's `evaluating '…'` error-message string literal.
     const nonExecutable = /\/\/|\/\*|\*\s|`|evaluating ['"]/.test(before)

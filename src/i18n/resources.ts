@@ -232,6 +232,12 @@ export const en = {
     tabFixed: 'Always',
     tabLimitReached: 'Maximum {{max}} tabs reached.',
   },
+  dlna: {
+    title: 'Cast to Device',
+    scanning: 'Scanning for devices…',
+    noDevices: 'No devices found.',
+    casting: 'Now casting:',
+  },
   addSongs: {
     title: 'Add Songs',
     remote: 'Remote',
@@ -666,6 +672,12 @@ export const zh: TranslationTree = {
     tabPlugins: '插件',
     tabFixed: '固定',
     tabLimitReached: '最多 {{max}} 个标签页。',
+  },
+  dlna: {
+    title: '投屏播放',
+    scanning: '正在搜索设备…',
+    noDevices: '未发现设备。',
+    casting: '正在投屏:',
   },
   addSongs: {
     title: '添加歌曲',
