@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 import { buildSongUrl } from '../../../core/network/url-helper.js'
+import { readAudioQuality } from '../../settings/data/settings-prefs.js'
 import type { Song } from '../../../models/song.js'
 import {
   DEFAULT_DURATION_MS,
@@ -105,10 +106,22 @@ function durationMsOf(song: Song): number {
   return song.duration > 0 ? song.duration * 1000 : DEFAULT_DURATION_MS
 }
 
+let _audioQuality: string | null = null
+readAudioQuality().then((q) => { _audioQuality = q === 'original' ? null : q }).catch(() => {})
+
+export function setAudioQualityCache(q: string | null): void {
+  _audioQuality = q
+}
+
+function songUrl(song: Song): string {
+  if (!song.url) return ''
+  return buildSongUrl(song.url, { songFormat: song.format, quality: _audioQuality })
+}
+
 function toAudioItem(song: Song): AudioItem {
   return {
     id: song.id,
-    url: song.url ? buildSongUrl(song.url) : '',
+    url: songUrl(song),
     durationMs: durationMsOf(song),
     title: song.title,
     artist: song.artist,
@@ -140,7 +153,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       errorMessage: undefined,
     })
     void useLyricStore.getState().loadForSong(song)
-    await audio.load(song.url ? buildSongUrl(song.url) : '', {
+    await audio.load(songUrl(song), {
       durationMs: durationMsOf(song),
     })
     await audio.play()

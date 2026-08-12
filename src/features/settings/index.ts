@@ -1,4 +1,5 @@
 export { SettingsPage } from './pages/SettingsPage.js'
+export { ProxySettingsPage } from './pages/ProxySettingsPage.js'
 export { ServerSettingsPage } from './pages/ServerSettingsPage.js'
 export { LogsPage } from './pages/LogsPage.js'
 export { CacheManagePage } from './pages/CacheManagePage.js'

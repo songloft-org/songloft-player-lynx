@@ -1,0 +1,84 @@
+.proxy-settings {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.proxy-settings__topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-4) var(--space-4) var(--space-3);
+}
+
+.proxy-settings__back {
+  margin-right: var(--space-3);
+}
+
+.proxy-settings__title {
+  color: var(--content);
+  font-size: var(--font-xl);
+  font-weight: bold;
+}
+
+.proxy-settings__scroll {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.proxy-settings__content {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--space-6);
+}
+
+.proxy-settings__status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.proxy-settings__status-text {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+}
+
+.proxy-settings__field {
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.proxy-settings__input {
+  width: 100%;
+  background-color: var(--neutral-faint);
+  border-radius: 8px;
+  padding: var(--space-3);
+  color: var(--content);
+  font-size: var(--font-sm);
+}
+
+.proxy-settings__input--tall {
+  min-height: 80px;
+}
+
+.proxy-settings__save-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.proxy-settings__save-btn {
+  background-color: var(--primary);
+  border-radius: 8px;
+  padding: var(--space-3) var(--space-6);
+}
+
+.proxy-settings__save-text {
+  color: #ffffff;
+  font-size: var(--font-sm);
+  font-weight: 600;
+}

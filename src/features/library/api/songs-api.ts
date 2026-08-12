@@ -3,9 +3,11 @@ import { defaultPageSize } from '../../../core/config/constants.js'
 import type { HttpClient } from '../../../core/network/http-client.js'
 import { parseLibraryStats, type LibraryStats } from '../../../models/library-stats.js'
 import {
+  parsePlayHistoryResponse,
   parseSong,
   parseSongFacetResponse,
   parseSongListResponse,
+  type PlayHistoryResponse,
   type Song,
   type SongFacetResponse,
   type SongListResponse,
@@ -209,6 +211,15 @@ export class SongsApi {
       tlyric: str('tlyric'),
       rlyric: str('rlyric'),
     }
+  }
+
+  async getPlayHistory(limit = 50): Promise<PlayHistoryResponse> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/play-history?limit=${limit}`)
+    return parsePlayHistoryResponse(res.data)
+  }
+
+  async deletePlayHistoryEntry(songId: number): Promise<void> {
+    await this.client.delete(`${apiPrefix}/play-history/entry?song_id=${songId}`)
   }
 }
 

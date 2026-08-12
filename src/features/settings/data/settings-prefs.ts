@@ -20,6 +20,9 @@ import { coercePlayMode } from '../domain/settings-model.js'
 /** prefs key for the default (preferred) play mode. */
 export const PREF_DEFAULT_PLAY_MODE = 'default_play_mode'
 
+/** prefs key for audio streaming quality (bitrate). */
+export const PREF_AUDIO_QUALITY = 'audio_quality'
+
 async function tryReadPref(
   storage: SongloftStorage,
   key: string,
@@ -86,4 +89,27 @@ export async function applyServerSettings(
   await tryWritePref(storage, PREF_SERVER_URL, normalized)
   await tryWritePref(storage, PREF_INSECURE_TLS, String(insecureTls))
   return normalized
+}
+
+// ─── Audio quality ───────────────────────────────────────────────────────────
+
+export type AudioQuality = 'original' | '320' | '192' | '128'
+
+const VALID_QUALITIES = new Set<string>(['original', '320', '192', '128'])
+
+export function coerceAudioQuality(raw: unknown): AudioQuality {
+  return typeof raw === 'string' && VALID_QUALITIES.has(raw) ? (raw as AudioQuality) : 'original'
+}
+
+export async function readAudioQuality(
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<AudioQuality> {
+  return coerceAudioQuality(await tryReadPref(storage, PREF_AUDIO_QUALITY))
+}
+
+export async function writeAudioQuality(
+  quality: AudioQuality,
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<void> {
+  await tryWritePref(storage, PREF_AUDIO_QUALITY, quality)
 }

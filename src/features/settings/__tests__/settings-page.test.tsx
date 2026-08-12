@@ -1,6 +1,7 @@
 import '../../../shims/router-env.js'
 
 import '@testing-library/jest-dom'
+import type { ReactNode } from '@lynx-js/react'
 import { afterEach, expect, test, vi } from 'vitest'
 import {
   act,
@@ -72,16 +73,27 @@ vi.mock('../../auth/store/index.js', () => ({
 
 vi.mock('../../player/store/player-store.js', async () => {
   const { makePlayerStoreMock } = await import('../../../__tests__/_render-mocks.js')
-  return makePlayerStoreMock({}, { playMode: 'order', setPlayMode: setPlayModeSpy })
+  return { ...makePlayerStoreMock({}, { playMode: 'order', setPlayMode: setPlayModeSpy }), setAudioQualityCache: vi.fn() }
 })
 
 vi.mock('../data/settings-prefs.js', () => ({
   readDefaultPlayMode: readPref,
   writeDefaultPlayMode: writePrefSpy,
+  readAudioQuality: vi.fn(async () => 'original'),
+  writeAudioQuality: vi.fn(async () => {}),
+  coerceAudioQuality: (raw: unknown) => (raw === '320' || raw === '192' || raw === '128' ? raw : 'original'),
 }))
 
 vi.mock('../api/index.js', () => ({
   getSettingsApi: () => ({ getLogLevel: getLogLevelSpy, setLogLevel: setLogLevelSpy }),
+}))
+
+vi.mock('@lynx-js/lynx-ui', () => ({
+  DialogRoot: ({ children, show }: { children: ReactNode; show: boolean }) => show ? <view>{children}</view> : null,
+  DialogView: ({ children }: { children: ReactNode }) => <view>{children}</view>,
+  DialogBackdrop: ({ children }: { children: ReactNode }) => <view>{children}</view>,
+  DialogContent: ({ children }: { children: ReactNode }) => <view>{children}</view>,
+  DialogClose: ({ children }: { children: ReactNode }) => <view>{children}</view>,
 }))
 
 const { SettingsPage } = await import('../pages/SettingsPage.js')
@@ -130,10 +142,9 @@ test('renders every section, version, server and log-out rows', async () => {
   expect(queryByTestId('log-level-error')).toBeInTheDocument()
   expect(queryByTestId('settings-export-logs')).toBeInTheDocument()
 
-  // Persisted defaults (system language + system theme + warn log level, all
-  // re-resolved once their reads settle) → three check glyphs. Was four before the
-  // play-mode section went away.
-  expect(queryAllByTestId('icon-check')).toHaveLength(3)
+  // Persisted defaults (system language + system theme + warn log level + audio
+  // quality original) → four check glyphs.
+  expect(queryAllByTestId('icon-check')).toHaveLength(4)
 
   // About shows the client version, and the log-out row is present.
   expect(queryByTestId('settings-version')).toBeInTheDocument()
@@ -194,20 +205,19 @@ test('the server row navigates to the server sub-page', async () => {
   expect(navigateSpy).toHaveBeenCalledWith({ to: '/settings/servers' })
 })
 
-test('log out is a two-tap confirm that calls auth logout then routes to /login', async () => {
-  const { queryByTestId, queryByText } = await renderPage()
+test('log out shows dialog, confirm calls auth logout then routes to /login', async () => {
+  const { queryByTestId } = await renderPage()
 
-  // First tap arms the confirm; no logout / navigation yet.
+  // Tap opens the dialog; no logout / navigation yet.
   await act(async () => {
     fireEvent.tap(queryByTestId('settings-logout')!)
   })
-  expect(queryByText('Tap again to log out')).toBeInTheDocument()
   expect(logoutSpy).not.toHaveBeenCalled()
   expect(navigateSpy).not.toHaveBeenCalled()
 
-  // Second tap logs out + routes to /login.
+  // Confirm button in dialog logs out + routes to /login.
   await act(async () => {
-    fireEvent.tap(queryByTestId('settings-logout')!)
+    fireEvent.tap(queryByTestId('logout-confirm')!)
   })
   expect(logoutSpy).toHaveBeenCalledTimes(1)
   expect(navigateSpy).toHaveBeenCalledWith({ to: '/login' })

@@ -2,6 +2,14 @@ import { useCallback, useEffect, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
+import {
+  DialogRoot,
+  DialogView,
+  DialogBackdrop,
+  DialogContent,
+  DialogClose,
+} from '@lynx-js/lynx-ui'
+
 import { appConfig } from '../../../core/config/app-config.js'
 import { clientVersion } from '../../../core/config/constants.js'
 import {
@@ -25,12 +33,16 @@ import {
 // (which crashes the ReactLynx Vitest snapshot tree).
 import { useAuthStore } from '../../auth/store/index.js'
 import { getSettingsApi } from '../api/index.js'
+import { type AudioQuality, coerceAudioQuality, readAudioQuality, writeAudioQuality } from '../data/settings-prefs.js'
+import { setAudioQualityCache } from '../../player/store/player-store.js'
 import { canExport, exportPlaylists, importPlaylists } from '../domain/data-transfer.js'
 import { LOG_LEVELS, coerceLogLevel, logLevelLabelKey, type LogLevel } from '../domain/log-level.js'
 import { serverDisplay } from '../domain/settings-model.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import './SettingsPage.css'
+
+const AUDIO_QUALITY_OPTIONS: AudioQuality[] = ['original', '320', '192', '128']
 
 /**
  * Settings page (batch 8), rendered inside the shell at `/settings`. Replaces
@@ -83,7 +95,7 @@ export function SettingsPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
-  const [confirmLogout, setConfirmLogout] = useState(false)
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   // Persisted language choice ('system' until the pref resolves). Selecting an
   // option applies it to i18next live (re-renders the whole tree) + persists it.
   const [language, setLanguage] = useState<AppLanguage>('system')
@@ -99,6 +111,7 @@ export function SettingsPage() {
   // backend just leaves the fallback, same degrade-gracefully pattern as the
   // rest of this page).
   const [logLevel, setLogLevel] = useState<LogLevel>('info')
+  const [audioQuality, setAudioQuality] = useState<AudioQuality>('original')
 
   useEffect(() => {
     let cancelled = false
@@ -130,6 +143,9 @@ export function SettingsPage() {
       .catch(() => {
         /* best-effort — backend unreachable, keep the 'info' fallback */
       })
+    void readAudioQuality()
+      .then((q) => { if (!cancelled) setAudioQuality(q) })
+      .catch(() => {})
     return () => {
       cancelled = true
     }
@@ -152,6 +168,12 @@ export function SettingsPage() {
     })
   }
 
+  const selectAudioQuality = (next: AudioQuality) => {
+    setAudioQuality(next)
+    setAudioQualityCache(next === 'original' ? null : next)
+    void writeAudioQuality(next)
+  }
+
   const openLogs = () => {
     void navigate({ to: '/settings/logs' })
   }
@@ -162,10 +184,11 @@ export function SettingsPage() {
   })
 
   const onLogout = () => {
-    if (!confirmLogout) {
-      setConfirmLogout(true)
-      return
-    }
+    setShowLogoutDialog(true)
+  }
+
+  const confirmLogout = () => {
+    setShowLogoutDialog(false)
     void useAuthStore.getState().logout()
     void navigate({ to: '/login' })
   }
@@ -272,7 +295,21 @@ export function SettingsPage() {
             />
           </SettingsSection>
 
+          <SettingsSection title={t('settings.audioQuality')} icon='music'>
+            {AUDIO_QUALITY_OPTIONS.map((option) => (
+              <SettingsRow
+                key={option}
+                title={t(`settings.quality_${option}`)}
+                selected={option === audioQuality}
+                trailingIcon={option === audioQuality ? 'check' : undefined}
+                onTap={() => selectAudioQuality(option)}
+                testId={`audio-quality-${option}`}
+              />
+            ))}
+          </SettingsSection>
+
           <SettingsSection title={t('settings.advanced')} icon='settings'>
+            <SettingsRow icon='music' title={t('settings.playHistory')} subtitle={t('settings.playHistorySubtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/library/history' })} testId='settings-play-history' />
             <SettingsRow icon='music' title={t('eq.title')} subtitle={t('eq.subtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/eq' })} testId='settings-eq' />
             <SettingsRow icon='settings' title={t('settings.storageCache')} subtitle={t('settings.cacheManageSubtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/cache' })} />
             <SettingsRow
@@ -291,6 +328,7 @@ export function SettingsPage() {
               onTap={() => void navigate({ to: '/settings/tab-config' })}
               testId='settings-tab-config'
             />
+            <SettingsRow icon='link' title={t('settings.networkProxy')} subtitle={t('settings.proxySubtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/proxy' })} testId='settings-proxy' />
           </SettingsSection>
 
           <DataSection />
@@ -298,8 +336,7 @@ export function SettingsPage() {
           <SettingsSection title={t('settings.account')} icon='logout'>
             <SettingsRow
               icon='logout'
-              title={confirmLogout ? t('settings.logOutConfirm') : t('settings.logOut')}
-              subtitle={confirmLogout ? t('settings.logOutConfirmSubtitle') : undefined}
+              title={t('settings.logOut')}
               danger
               onTap={onLogout}
               testId='settings-logout'
@@ -307,6 +344,30 @@ export function SettingsPage() {
           </SettingsSection>
         </view>
       </scroll-view>
+
+      <DialogRoot show={showLogoutDialog} onShowChange={(open) => { if (!open) setShowLogoutDialog(false) }}>
+        <DialogView>
+          <DialogBackdrop className='logout-dialog__backdrop' clickToClose>
+            <view className='logout-dialog__backdrop-inner' />
+          </DialogBackdrop>
+          <DialogContent className='logout-dialog__content'>
+            <view className='logout-dialog' data-testid='logout-dialog'>
+              <text className='logout-dialog__title'>{t('settings.logOut')}</text>
+              <text className='logout-dialog__message'>{t('settings.logOutConfirmSubtitle')}</text>
+              <view className='logout-dialog__actions'>
+                <DialogClose>
+                  <view className='logout-dialog__btn logout-dialog__btn--cancel' bindtap={() => setShowLogoutDialog(false)}>
+                    <text className='logout-dialog__btn-text'>{t('common.cancel')}</text>
+                  </view>
+                </DialogClose>
+                <view className='logout-dialog__btn logout-dialog__btn--confirm' bindtap={confirmLogout} data-testid='logout-confirm'>
+                  <text className='logout-dialog__btn-text logout-dialog__btn-text--confirm'>{t('settings.logOutConfirm')}</text>
+                </view>
+              </view>
+            </view>
+          </DialogContent>
+        </DialogView>
+      </DialogRoot>
     </view>
   )
 }

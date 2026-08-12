@@ -12,10 +12,10 @@ import { ShellLayout } from './shared/layouts/ShellLayout.js'
 import { ThemeProvider } from './shared/theme/ThemeProvider.js'
 import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
-import { CategorySongsPage, LibraryPage } from './features/library/index.js'
+import { CategorySongsPage, LibraryPage, PlayHistoryPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
-import { CacheManagePage, EqualizerPage, LogsPage, ServerEditPage, ServerListPage, ServerSettingsPage, SettingsPage } from './features/settings/index.js'
+import { CacheManagePage, EqualizerPage, LogsPage, ProxySettingsPage, ServerEditPage, ServerListPage, ServerSettingsPage, SettingsPage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
@@ -156,6 +156,13 @@ const equalizerRoute = createRoute({
   component: EqualizerPage,
 })
 
+/** `/settings/proxy` — proxy configuration sub-page, inside the shell. */
+const proxySettingsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/proxy',
+  component: ProxySettingsPage,
+})
+
 /** `/settings/duplicates` — duplicate detection sub-page, inside the shell. */
 const duplicatesRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -206,6 +213,13 @@ const playlistDetailRoute = createRoute({
  * this keeps `validateSearch` from making unrelated navigations type-invalid
  * (same pattern as `libraryRoute`).
  */
+/** `/library/history` — play history page, inside the shell. */
+const playHistoryRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/library/history',
+  component: PlayHistoryPage,
+})
+
 const categorySongsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/library/category/$field',
@@ -234,12 +248,14 @@ const routeTree = rootRoute.addChildren([
     libraryOpsRoute,
     cacheManageRoute,
     equalizerRoute,
+    proxySettingsRoute,
     duplicatesRoute,
     pluginsRoute,
     pluginRegistryRoute,
     pluginWebViewRoute,
     tabConfigRoute,
     playlistDetailRoute,
+    playHistoryRoute,
     categorySongsRoute,
   ]),
 ])

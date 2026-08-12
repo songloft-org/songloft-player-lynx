@@ -23,6 +23,7 @@ vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigateSpy }))
 // Playback section, so this is where the round-trip is asserted.
 vi.mock('../../settings/data/settings-prefs.js', () => ({
   writeDefaultPlayMode: writePrefSpy,
+  readAudioQuality: vi.fn(async () => 'original'),
 }))
 vi.mock('@lynx-js/lynx-ui-slider', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSlider(),

@@ -36,3 +36,83 @@
   flex-direction: column;
   padding-bottom: var(--space-6);
 }
+
+/* ─── Logout confirmation dialog ──────────────────────────────────────────── */
+.logout-dialog__backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.logout-dialog__backdrop-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--backdrop);
+}
+
+.logout-dialog__content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.logout-dialog {
+  background-color: var(--canvas);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 32px;
+  max-width: 360px;
+}
+
+.logout-dialog__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--content);
+  margin-bottom: 12px;
+}
+
+.logout-dialog__message {
+  font-size: 14px;
+  color: var(--content-muted);
+  line-height: 20px;
+  margin-bottom: 20px;
+}
+
+.logout-dialog__actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+}
+
+.logout-dialog__btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-left: 8px;
+}
+
+.logout-dialog__btn--cancel {
+  background-color: transparent;
+}
+
+.logout-dialog__btn--confirm {
+  background-color: var(--danger);
+}
+
+.logout-dialog__btn-text {
+  font-size: 14px;
+  color: var(--content);
+}
+
+.logout-dialog__btn-text--confirm {
+  color: var(--danger-content);
+}

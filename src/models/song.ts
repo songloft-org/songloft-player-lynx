@@ -181,3 +181,31 @@ export type SongFacetResponse = z.output<typeof songFacetResponseSchema>
 const songFacetResponseParsers = makeParsers(songFacetResponseSchema)
 export const parseSongFacetResponse = songFacetResponseParsers.parse
 export const safeParseSongFacetResponse = songFacetResponseParsers.safeParse
+
+// ── Play history response ───────────────────────────────────────────────────
+
+export const playHistoryEntrySchema = z
+  .object({
+    song: songSchema,
+    play_count: z.coerce.number().catch(0),
+    played_at: z.string().catch(''),
+  })
+  .transform((e) => ({
+    song: e.song,
+    playCount: e.play_count,
+    playedAt: e.played_at,
+  }))
+
+export type PlayHistoryEntry = z.output<typeof playHistoryEntrySchema>
+
+export const playHistoryResponseSchema = z
+  .object({
+    items: z.array(playHistoryEntrySchema).default([]),
+    total: z.coerce.number().catch(0),
+  })
+  .transform((r) => ({ items: r.items, total: r.total || r.items.length }))
+
+export type PlayHistoryResponse = z.output<typeof playHistoryResponseSchema>
+
+const playHistoryResponseParsers = makeParsers(playHistoryResponseSchema)
+export const parsePlayHistoryResponse = playHistoryResponseParsers.parse
