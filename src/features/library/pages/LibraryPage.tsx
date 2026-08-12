@@ -93,6 +93,7 @@ export function LibraryPage() {
 
 function SongsView() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [searchText, setSearchText] = useState('')
   const [sortField, setSortField] = useState<SortOption>('added_at')
@@ -210,6 +211,9 @@ function SongsView() {
           </view>
         ))}
         <view className='library__chip-spacer' />
+        <view className='library__chip' bindtap={() => navigate({ to: '/library/add' })}>
+          <text className='library__chip-text'>+</text>
+        </view>
         {selectMode
           ? (
             <view className='library__chip library__chip--active' bindtap={exitSelectMode}>

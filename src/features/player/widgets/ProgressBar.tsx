@@ -33,6 +33,13 @@ export function ProgressBar() {
 
   return (
     <view className='player-progress'>
+      {dragging
+        ? (
+          <view className='player-progress__preview'>
+            <text className='player-progress__preview-text'>{formatMs(shownMs)}</text>
+          </view>
+        )
+        : null}
       <SliderRoot
         className='player-progress__slider'
         value={value}

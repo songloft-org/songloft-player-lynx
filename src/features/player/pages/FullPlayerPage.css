@@ -183,6 +183,19 @@
   margin-bottom: var(--space-3);
 }
 
+.player-progress__preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-1);
+}
+
+.player-progress__preview-text {
+  font-size: var(--font-lg);
+  font-weight: bold;
+  color: var(--accent);
+}
+
 .player-progress__slider {
   width: 100%;
   height: 24px;
