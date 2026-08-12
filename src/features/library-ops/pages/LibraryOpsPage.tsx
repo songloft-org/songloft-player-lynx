@@ -190,6 +190,15 @@ export function LibraryOpsPage() {
             onCancel={onCancelMeta}
             onWriteError={() => setWriteError(true)}
           />
+
+          <view
+            className='libops__dup-entry'
+            bindtap={() => void navigate({ to: '/settings/duplicates' })}
+          >
+            <Icon name='fingerprint' size={20} color={ICON_COLORS.primary} />
+            <text className='libops__dup-entry-text'>{t('libops.duplicateDetection')}</text>
+            <Icon name='chevron-right' size={16} color={ICON_COLORS.contentMuted} />
+          </view>
         </view>
       </scroll-view>
     </view>

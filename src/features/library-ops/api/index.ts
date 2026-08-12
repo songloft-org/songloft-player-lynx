@@ -1,11 +1,13 @@
 import { createApiClient, type ApiClientBundle } from '../../../core/network/api-client.js'
 import { useAuthStore } from '../../auth/store/index.js'
+import { FingerprintApi } from './fingerprint-api.js'
 import { ScanApi } from './scan-api.js'
 import { ScanSettingsApi } from './scan-settings-api.js'
 
 export { ScanApi, buildScanBody, buildDirectoriesQuery } from './scan-api.js'
 export type { StartScanParams, ScanBody } from './scan-api.js'
 export { ScanSettingsApi } from './scan-settings-api.js'
+export { FingerprintApi } from './fingerprint-api.js'
 
 /**
  * Lazily-built authenticated client bundle for this feature (same recipe as
@@ -32,6 +34,10 @@ export function getScanApi(): ScanApi {
 
 export function getScanSettingsApi(): ScanSettingsApi {
   return new ScanSettingsApi(getApiBundle().client)
+}
+
+export function getFingerprintApi(): FingerprintApi {
+  return new FingerprintApi(getApiBundle().client)
 }
 
 export function resetLibraryOpsApiForTests(): void {

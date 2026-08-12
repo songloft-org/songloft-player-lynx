@@ -51,6 +51,9 @@ export const libopsQueryKeys = {
   remoteTitleSource: () => ['libops', 'remote-title-source'] as const,
   musicPathSetting: () => ['libops', 'music-path'] as const,
   dirNames: () => ['libops', 'dir-names'] as const,
+  fingerprintStatus: () => ['libops', 'fingerprint-status'] as const,
+  fingerprintProgress: () => ['libops', 'fingerprint-progress'] as const,
+  duplicates: () => ['libops', 'duplicates'] as const,
 }
 
 export interface PollOptions {

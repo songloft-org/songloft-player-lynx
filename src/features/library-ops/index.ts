@@ -1,4 +1,5 @@
 export { LibraryOpsPage } from './pages/LibraryOpsPage.js'
+export { DuplicateCheckPage } from './pages/DuplicateCheckPage.js'
 export {
   SCAN_MODES,
   PLAYLIST_MODES,

@@ -1,7 +1,9 @@
 import { createApiClient, type ApiClientBundle } from '../../../core/network/api-client.js'
 import { useAuthStore } from '../../auth/store/index.js'
+import { CacheApi } from './cache-api.js'
 import { SettingsApi } from './settings-api.js'
 
+export { CacheApi } from './cache-api.js'
 export { SettingsApi } from './settings-api.js'
 
 /**
@@ -26,6 +28,11 @@ function getApiBundle(): ApiClientBundle {
 /** The shared authenticated `SettingsApi` (constructed over the singleton client). */
 export function getSettingsApi(): SettingsApi {
   return new SettingsApi(getApiBundle().client)
+}
+
+/** The shared authenticated `CacheApi` (constructed over the singleton client). */
+export function getCacheApi(): CacheApi {
+  return new CacheApi(getApiBundle().client)
 }
 
 /** Test hook: drop the memoized client so a fresh one is built next call. */

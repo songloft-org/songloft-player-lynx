@@ -39,3 +39,10 @@ export {
   buildMusicPathUpdate,
 } from './exclude-dir-data.js'
 export type { ExcludeConfigDraft } from './exclude-dir-data.js'
+export { useFingerprintStatusQuery, useFingerprintProgressQuery } from './fingerprint-query.js'
+export {
+  useStartFingerprintMutation,
+  useCancelFingerprintMutation,
+  useBatchDeleteMutation,
+} from './fingerprint-mutations.js'
+export { useDuplicatesQuery } from './duplicate-query.js'

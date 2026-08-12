@@ -15,8 +15,8 @@ import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { CategorySongsPage, LibraryPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
-import { LogsPage, ServerSettingsPage, SettingsPage } from './features/settings/index.js'
-import { LibraryOpsPage } from './features/library-ops/index.js'
+import { CacheManagePage, LogsPage, ServerSettingsPage, SettingsPage } from './features/settings/index.js'
+import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
 
@@ -121,6 +121,20 @@ const libraryOpsRoute = createRoute({
   component: LibraryOpsPage,
 })
 
+/** `/settings/cache` — cache management sub-page, inside the shell. */
+const cacheManageRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/cache',
+  component: CacheManagePage,
+})
+
+/** `/settings/duplicates` — duplicate detection sub-page, inside the shell. */
+const duplicatesRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/duplicates',
+  component: DuplicateCheckPage,
+})
+
 /** `/settings/plugins` — plugin manager sub-page, inside the shell (batch 17). */
 const pluginsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -187,6 +201,8 @@ const routeTree = rootRoute.addChildren([
     serverSettingsRoute,
     logsRoute,
     libraryOpsRoute,
+    cacheManageRoute,
+    duplicatesRoute,
     pluginsRoute,
     pluginRegistryRoute,
     pluginWebViewRoute,
