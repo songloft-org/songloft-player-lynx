@@ -1,7 +1,7 @@
 # 进展与交接（PROGRESS）
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
-> **最后更新**：2026-08-11 · 最近完成（**批27 · 暗色对比度审计**）：暗色 token 逐对算 WCAG AA，修 3 个失败（danger 按钮白字 2.78 / primary 按钮白字 4.35 / primary 作强调文字 4.14），拆 `--primary`（fill）/`--accent`（文字）/`--danger`（文字）/`--danger-2`（按钮底）；新增 `contrast.test.ts` 作回归 gate。clean build（1418.0 kB）/tsc/636 vitest 全绿。
+> **最后更新**：2026-08-12 · 最近完成（**批28 · 重复检测/指纹 + 缓存管理**）：两条正交功能线并行实施（各一 subagent，共享文件手动 merge）。重复检测/指纹——FingerprintApi 6 端点 + 三阶段页面 DuplicateCheckPage（Status/Computing/Results）+ 指纹 2s 轮询 + 重复组按 bitRate 推荐保留 + lynx-ui Dialog 删除确认，53 测试。缓存管理——CacheApi 5 端点 + CacheManagePage 三区（只读统计/编辑表单/目录验证）+ 两步 tap 清理确认，21 测试。DuplicateCheckPage.css 原用 10 个仓库不存在的 `--color-*` token → 重映射到 repo token。clean build（1519.5 kB）/`tsc -b --force`/709 vitest 全绿。
 
 **排除目录管理**（对齐 `songloft-player/lib/features/settings/presentation/widgets/exclude_dir_manager.dart`）：新增 `ExcludeDirSection`（三 Tab：名称排除 / 路径排除，复用批19 的 `DirectoryTree` / 自动建歌单排除名单），新增 `MusicPathSetting`/`dirNames` 模型 + `getMusicPath`/`updateMusicPath`/`getDirNames` API + 对应 data hooks，挂载进 `/settings/library`（`ScanSettingsSection` 与 `MetadataSection` 之间）。**核心不变式**：`path`（音乐根）永不可编辑——`useUpdateExcludeConfig` 的 `mutationFn` 永远从 `QueryClient` 缓存读 `path` 再拼接三个排除数组，草稿类型 `ExcludeConfigDraft = Omit<MusicPathSetting,'path'>` 在类型层就不允许调用方带 `path`；测试驱动发现并修复一个真实隐患——`buildMusicPathUpdate` 原实现 `{ path, ...draft }` 的字段顺序会让 `draft` 里意外出现的 `path` 覆盖掉安全值，改成 `{ ...draft, path }` 后 `path` 永远最后写、永远赢。也顺手核对并订正了 3 处过期未更新的 TODO（standalone/embedded 部署模式、本地歌词缓存、底部 Tab 配置——三者均早已完成，见下方遗留清单）。clean build / `tsc -b --force` / **604 vitest**（+26）全绿。
 
@@ -66,7 +66,8 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 25 | 首页下拉刷新·手动刷新按钮 | ✅ 完成 | build/tsc/**578 vitest** 全绿 | ⏳ 待扫码验证刷新按钮触发 |
 | 26 | **排除目录管理**（对齐 Flutter `ExcludeDirManager` 三 Tab：名称排除/路径排除/自动建歌单排除名单；`path` 只读不可编辑）+ 开发环境 WASM OOM 定位 | ✅ 完成 | clean build/`tsc -b --force`/**604 vitest**（+26）全绿 | ⏳ 待扫码验证三 Tab 交互 + Save 写回（需后端可达 + LAN IP）|
 | 27 | **暗色对比度审计**（WCAG AA：拆 `--primary`/`--accent`、`--danger`/`--danger-2`；新增 `contrast.test.ts` 回归 gate）+ 24G 虚拟上限定位 | ✅ 完成 | clean build（1418.0 kB）/`tsc -b --force`/**636 vitest**（+31，1 个已知 use-debounce flake 隔离重跑绿）全绿 | ⏳ 待扫码验配色 |
-| 后续 | 重复检测/指纹 → 缓存管理 → B3 iOS 宿主 + AVPlayer → Lynxtron 桌面 | ⛔ 未开始 | | |
+| 28 | **重复检测/指纹 + 缓存管理**（2 subagent 并行：library-ops 三阶段指纹/重复页 + settings 缓存页；共享文件手动 merge；CSS token 修正） | ✅ 完成 | clean build（1519.5 kB）/`tsc -b --force`/**709 vitest**（+74，1 个已知 use-debounce flake 隔离绿）全绿 | ⏳ 待扫码验指纹计算/重复组删除/缓存清理 + 配置写回（需后端可达）|
+| 后续 | B3 iOS 宿主 + AVPlayer → Lynxtron 桌面 | ⛔ 未开始 | | |
 
 ## 已交付明细
 
@@ -572,6 +573,33 @@ JS 侧新增 `SongloftAudioModule.setFavorite(Boolean)`，双向链路：① 通
 mise exec node@22.23.1 -- env NODE_OPTIONS=--disable-wasm-trap-handler pnpm run build   # build（需 120G 上限）
 NODE_OPTIONS=--disable-wasm-trap-handler pnpm exec vitest run src/shared/theme/__tests__/contrast.test.ts   # 仅对比度 gate
 ```
+
+### 批28 · 重复检测/指纹 + 缓存管理（2 subagent 并行）
+
+**两条正交功能线并行实施**：各开一个 general-purpose subagent 独立写 API/Model/Data/UI/Test（worktree 隔离在此仓库不可用，改无隔离并行，约定双方都不碰共享文件，由主线最后手动 merge）。两条线领域完全正交——library-ops（指纹/重复）vs settings（缓存），改不同 feature 目录、不同 API 端点、不同 UI，merge 冲突只在机械的共享文件上（router/models/index/i18n）。
+
+**重复检测/指纹**（library-ops，对齐 Flutter `duplicate_check_page.dart` ~450 行三阶段页面）：
+- **FingerprintApi**（`api/fingerprint-api.ts`）6 端点：`GET /scan/fingerprints/status`（chromaprint 可用性 + computed/missing/failed 统计）/`POST /scan/fingerprints`（recompute_all/retry_failed）/`GET /scan/fingerprints/progress`（status/computed/total/failed）/`POST /scan/fingerprints/cancel`/`GET /songs/duplicates`（groups[fingerprint,songs[]]）/`POST /songs/batch-delete`（ids+delete_files）。
+- **zod 模型**：`models/fingerprint.ts` + `models/duplicate.ts`（容错解析，遵循 AGENTS §2 的 `z.coerce` + `.catch` 规则）。
+- **三阶段页面** `DuplicateCheckPage`：Status（指纹统计 + chromaprint 不可用则禁用开始按钮 + 提示）/ Computing（进度条 + 取消 + 2s 轮询 TanStack Query `refetchInterval`）/ Results（重复组列表 + 每组按 bitRate 最高推荐保留项 + Radio 单选保留 + 删其余 + 一键清理全部）。
+- **5 widgets**：FingerprintStatusCard / FingerprintComputingSection / DuplicateResultsSection / DuplicateGroupCard / DeleteConfirmDialog（首次用 lynx-ui Dialog——`DialogRoot`/`DialogContent`/`DialogBackdrop`）。
+- **入口**：`LibraryOpsPage` MetadataSection 后加 `libops__dup-entry` 行（fingerprint 图标 + chevron）→ `/settings/duplicates`。
+- 53 测试（api 8 / model 11+7 / domain 16 / page 11）。
+
+**缓存管理**（settings，对齐 Flutter `CacheManager`/`cache_api`）：
+- **CacheApi**（`api/cache-api.ts`）5 端点：`GET /cache-manage/stats`（file_count/max_size/total_size）/`GET|PUT /cache-manage/config`（cache_dir/transcode_format/transcode_quality/max_size）/`POST /cache-manage/clean`/`POST /cache-manage/validate-dir`（created/error/free_size/total_size/valid）。
+- **zod 模型** `domain/cache-model.ts`；**data hooks** `cache-query.ts` + `cache-mutations.ts`（mutate 后自动 invalidate stats/config）。
+- **`CacheManagePage` 三区**：只读统计（file_count + formatBytes + max_size，0=无限制）/ 编辑表单（缓存目录 + 验证按钮 + max_size + 转码格式/质量选择器 + 保存）/ 目录验证结果。清理用两步 tap 确认（同登出模式）。复用 `formatBytes`（home/stats-format）、`SettingsRow`、`SettingsSection`、`AppSwitch`。
+- **入口**：`SettingsPage` 原 disabled 占位行（`settings.storageCache` + `settings.deferred`）→ 改可点击 + chevron + 新 subtitle key → `/settings/cache`。
+- 21 测试（api 5 / model 9 / page 7）。
+
+**共享文件手动 merge**：`router.tsx` 加 `cacheManageRoute`（`/settings/cache`）+ `duplicatesRoute`（`/settings/duplicates`）两条 shellRoute 子路由 + 导入；`models/index.ts` 导出 fingerprint/duplicate；`library-ops/index.ts` 导出 DuplicateCheckPage；`settings/index.ts` 已由 agent 导出 CacheManagePage；`i18n/resources.ts` 加 4 key（en+zh：`settings.cacheManageSubtitle`、`libops.duplicateDetection` + `duplicateDetectionDesc`）。
+
+**CSS token 修正（重要）**：DuplicateCheckPage.css 原用了 10 个仓库不存在的 `--color-*` token（`--color-bg`/`--color-border`/`--color-error`/`--color-error-bg`/`--color-primary`/`--color-primary-bg`/`--color-surface-variant`/`--color-text`/`--color-text-secondary`/`--color-warning-bg`——agent 照搬了某种通用设计系统的命名，非本仓库 token）。Lynx 对未知 CSS var 当无效剥离，故整页会无样式。已全部重映射到 repo token：`--canvas`/`--line`/`--danger`/`--neutral-faint`/`--primary`/`--content`/`--content-muted`，error/warning 背景的 rgba fallback 直接裸用（仓库无对应 token，硬编码 tint 可接受），白字 `#ffffff` → `--primary-content`/`--danger-content`，dialog 背景 `rgba(0,0,0,0.5)` → `--backdrop`。CacheManagePage.css 的 token 本就全对（agent 照搬了 ServerSettingsPage.css）。**教训**：subagent 写 CSS 时须先读 `tokens.css` 确认 token 名，不能凭通用记忆。
+
+**已知 i18n 债务**：两个 agent 都用了内联 `useLocalT()` helper（按 `i18n.language` 选 en/zh）而非仓库惯例的 `resources.ts` + `t()`（批9 建立的 en/zh 严格同形内联资源）。页面功能正常，但与全 app 的 i18n 命名空间不一致。后续可统一搬进 `resources.ts`（非本批范围）。DuplicateCheckPage.css 另有 ~120 个硬编码 px 值（非 `--space-*` token），功能无碍、与本页自洽，留作低优先级债务。
+
+**验收**：`tsc -b --force` 零错误 / `pnpm run build` 1519.5 kB（批27 是 1418.0 kB，+101.5 kB 为两个 feature 的运行时代码）零 CSS 警告 / `pnpm test` 709 通过（批27 是 636，+74 = 53 指纹 + 21 缓存；1 个已知 `use-debounce` flake 隔离重跑绿，与本批无关）。
 
 ## 未完成 / 遗留事项（TODO & 风险）
 
