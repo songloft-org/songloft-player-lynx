@@ -7,6 +7,14 @@ import { root } from '@lynx-js/react'
 
 import { App } from './App.js'
 import { useAuthStore } from './features/auth/store/index.js'
+// Static, NOT `await import()`: dynamic imports compile to lazy bundles that are
+// separate files under `dist/lazy-bundle/`, and only `main.lynx.bundle` ships in
+// the app's assets — so on a device the lazy fetch fails with
+// `cannot read property 'getNativeLynx' of undefined` and, because these two
+// awaits sit in the startup chain, it took `auth.hydrate()`/`auth.checkAuth()`
+// down with it (auth status stuck at `unknown` forever).
+import { readDefaultPlayMode } from './features/settings/data/settings-prefs.js'
+import { usePlayerStore } from './features/player/store/index.js'
 import { applySavedLanguage } from './i18n/index.js'
 import { initSystemAppearance } from './native/system-appearance.js'
 import { applySavedTheme } from './shared/theme/theme-model.js'
@@ -31,9 +39,7 @@ void (async () => {
   initSystemAppearance()
   await applySavedLanguage()
   await applySavedTheme()
-  const { readDefaultPlayMode } = await import('./features/settings/data/settings-prefs.js')
   const savedMode = await readDefaultPlayMode()
-  const { usePlayerStore } = await import('./features/player/store/index.js')
   usePlayerStore.getState().setPlayMode(savedMode)
   const auth = useAuthStore.getState()
   await auth.hydrate()

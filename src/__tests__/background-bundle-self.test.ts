@@ -125,6 +125,56 @@ test('built bundle defines AbortController before it is used', () => {
 })
 
 /**
+ * FAITHFUL CHECK 4 — the `lynx.queueMicrotask` substitution (lynx.config banner)
+ * lands in the bundle and is installed BEFORE anything reads that property.
+ *
+ * Lynx 4.0.0's host `lynx.queueMicrotask` throws from inside its own
+ * implementation on device (`cannot read property 'getNativeLynx' of undefined`,
+ * LynxError 20100). ReactLynx picks it up unconditionally when present —
+ * `if (lynx.queueMicrotask) return (fn) => lynx.queueMicrotask(fn)` in
+ * `runtime/lib/utils.js`, then `options.requestAnimationFrame = lynxQueueMicrotask`
+ * in `runtime/lib/lynx.js` — so the broken function becomes **Preact's effect
+ * scheduler** and every flush it schedules is silently dropped. The banner swaps
+ * in the resolved-Promise microtask that ReactLynx itself falls back to.
+ */
+test('built bundle installs the lynx.queueMicrotask substitute before any use', () => {
+  const bundlePath = path.resolve(__dirname, '../../dist/main.lynx.bundle')
+  if (!existsSync(bundlePath)) {
+    console.warn('[skip] dist/main.lynx.bundle not built; run `pnpm run build`')
+    return
+  }
+  const data = readFileSync(bundlePath, 'latin1')
+  // The banner is minified along with everything else: the bare global `lynx`
+  // becomes a scope-hoisted alias, so match on the property write itself.
+  const installAt = data.search(/\.queueMicrotask\s*=\s*function/)
+  expect(
+    installAt,
+    'queueMicrotask substitution missing from bundle (lynx.config banner)',
+  ).toBeGreaterThanOrEqual(0)
+
+  // The banner guards itself with a `typeof lynx.queueMicrotask` check before
+  // assigning, so a bare property read is expected *inside* the banner. What
+  // must not precede the install is an actual CALL — that is how ReactLynx uses
+  // it (`(fn) => lynx.queueMicrotask(fn)`).
+  const calls = [...data.matchAll(/\.queueMicrotask\s*\(/g)].map((m) => m.index ?? 0)
+  const earliestCall = calls.length > 0 ? Math.min(...calls) : -1
+  if (earliestCall >= 0) {
+    expect(
+      installAt,
+      'the substitute must be installed before anything calls lynx.queueMicrotask',
+    ).toBeLessThan(earliestCall)
+  }
+
+  // And the banner must keep its own existence guard: substituting
+  // unconditionally would break hosts that legitimately lack the property.
+  const guardWindow = data.slice(Math.max(0, installAt - 400), installAt)
+  expect(
+    /typeof\s+\w+\.queueMicrotask|\.queueMicrotask\s*(?:!==?|==)/.test(guardWindow),
+    'expected a typeof guard on lynx.queueMicrotask before the substitution',
+  ).toBe(true)
+})
+
+/**
  * SECONDARY (execution) — the patched, minified createRouter does not throw in a
  * realm shaped like the Lynx background thread. `typeof self` behaves identically
  * in Node and on device, so this check is faithful for the guard under test.

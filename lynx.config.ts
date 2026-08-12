@@ -52,7 +52,37 @@ const GLOBAL_ABORT_POLYFILL =
   's.reason=r!==undefined?r:new Error("Aborted");s.dispatchEvent({type:"abort"});};' +
   'g.AbortController=C;g.AbortSignal=S;})(globalThis);'
 
-const GLOBAL_BOOTSTRAP_BANNER = GLOBAL_SELF_BANNER + GLOBAL_ABORT_POLYFILL
+/**
+ * Lynx 4.0.0's host `lynx.queueMicrotask` throws from inside its own
+ * implementation on device: `TypeError: cannot read property 'getNativeLynx' of
+ * undefined` (LynxError 20100, stack bottoms out at `lynx_core.js` —
+ * `queueMicrotask`). That matters far more than it looks, because ReactLynx does
+ *
+ *     if (lynx.queueMicrotask) return (fn) => lynx.queueMicrotask(fn)   // utils.js
+ *     options.requestAnimationFrame = lynxQueueMicrotask                // lynx.js
+ *
+ * i.e. the broken host function becomes **Preact's effect scheduler**. When it
+ * throws, the scheduled callback is never invoked, so that flush of `useEffect`
+ * is silently dropped (later renders mask it, which is why this shows up as
+ * intermittent stale UI rather than an obvious failure).
+ *
+ * ReactLynx already ships the correct fallback — a resolved-Promise microtask —
+ * but only picks it when `lynx.queueMicrotask` is absent. So substitute that
+ * same implementation onto `lynx` *before* any module is evaluated, keeping the
+ * property present (other readers still get a working scheduler) while making
+ * its behaviour sound. `lynx` is a BARE host global (like `fetch`/`self`), so it
+ * must be read as a bare identifier behind `typeof` — `globalThis.lynx` is not
+ * reliable (AGENTS.md §3).
+ */
+const GLOBAL_QUEUE_MICROTASK_FIX =
+  '(function(){try{if(typeof lynx==="undefined"||!lynx)return;' +
+  'if(typeof lynx.queueMicrotask!=="function")return;' +
+  'var P=globalThis.Promise;if(typeof P!=="function")return;var r=P.resolve();' +
+  'lynx.queueMicrotask=function(fn){r.then(fn).catch(function(e){' +
+  'setTimeout(function(){throw e;},0);});};}catch(_){}})();'
+
+const GLOBAL_BOOTSTRAP_BANNER =
+  GLOBAL_SELF_BANNER + GLOBAL_ABORT_POLYFILL + GLOBAL_QUEUE_MICROTASK_FIX
 
 export default defineConfig({
   source: {

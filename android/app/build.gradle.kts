@@ -110,6 +110,17 @@ dependencies {
     implementation("org.lynxsdk.lynx:xelement-refresh:4.0.0")
     implementation("org.lynxsdk.lynx:xelement-webview:4.0.0")
 
+    // `<refresh>` hard requirement, NOT declared by xelement-refresh.
+    // xelement-refresh embeds SmartRefreshLayout, whose SmartUtil.isContentView()
+    // resolves androidx.viewpager2.widget.ViewPager2 to pick the scrollable child.
+    // Without viewpager2 on the classpath that lookup throws NoClassDefFoundError
+    // from SmartRefreshLayout.onAttachedToWindow — i.e. every `<refresh>` element
+    // dies on attach (LynxError 990200), taking its subtree's gestures with it.
+    // This is the real root cause behind what batches 20 and 25 misdiagnosed as
+    // "<refresh> swallows horizontal gestures" / "SmartRefreshLayout 3.0.0-alpha
+    // nested-scroll regression": the container never finished attaching at all.
+    implementation("androidx.viewpager2:viewpager2:1.0.0")
+
     // ---- Native audio (SongloftAudio native module, batch B2) ----
     // androidx.media3 (ExoPlayer). 1.3.1 is a proven stable release compatible
     // with compileSdk 34 / minSdk 24. HLS support via media3-exoplayer-hls;

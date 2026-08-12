@@ -275,7 +275,7 @@ export function SettingsPage() {
             />
           </SettingsSection>
 
-          <SettingsSection title={t('settings.moreLater')} icon='settings'>
+          <SettingsSection title={t('settings.advanced')} icon='settings'>
             <SettingsRow icon='settings' title={t('settings.storageCache')} subtitle={t('settings.cacheManageSubtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/cache' })} />
             <SettingsRow
               icon='menu'

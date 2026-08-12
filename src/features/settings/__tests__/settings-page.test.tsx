@@ -107,7 +107,7 @@ test('renders every section, version, server and log-out rows', async () => {
   expect(queryByText('Appearance')).toBeInTheDocument()
   expect(queryByText('Diagnostics')).toBeInTheDocument()
   expect(queryByText('About')).toBeInTheDocument()
-  expect(queryByText('More settings (coming later)')).toBeInTheDocument()
+  expect(queryByText('Advanced')).toBeInTheDocument()
   expect(queryByText('Account')).toBeInTheDocument()
 
   expect(queryByTestId('play-mode-order')).not.toBeInTheDocument()

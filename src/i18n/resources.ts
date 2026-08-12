@@ -150,7 +150,10 @@ export const en = {
     appVersion: 'App version',
     songloft: 'Songloft',
     songloftUrl: 'github.com/songloft-org/songloft',
-    moreLater: 'More settings (coming later)',
+    // Was `moreLater: 'More settings (coming later)'` — every row under this
+    // heading (cache, plugins, tab config) is implemented and navigable now, so
+    // the "coming later" label was stale and read as if the app were unfinished.
+    advanced: 'Advanced',
     musicLibraryScan: 'Music library scan',
     storageCache: 'Storage & cache',
     cacheManageSubtitle: 'Manage song cache & transcode settings',
@@ -453,7 +456,7 @@ export const zh: TranslationTree = {
     appVersion: '客户端版本',
     songloft: 'Songloft',
     songloftUrl: 'github.com/songloft-org/songloft',
-    moreLater: '更多设置（后续版本）',
+    advanced: '高级',
     musicLibraryScan: '音乐库扫描',
     storageCache: '存储与缓存',
     cacheManageSubtitle: '管理歌曲缓存与转码设置',

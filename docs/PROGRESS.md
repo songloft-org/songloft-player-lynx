@@ -1,7 +1,9 @@
 # 进展与交接（PROGRESS）
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
-> **最后更新**：2026-08-12 · 最近完成（**批28 · 重复检测/指纹 + 缓存管理**）：两条正交功能线并行实施（各一 subagent，共享文件手动 merge）。重复检测/指纹——FingerprintApi 6 端点 + 三阶段页面 DuplicateCheckPage（Status/Computing/Results）+ 指纹 2s 轮询 + 重复组按 bitRate 推荐保留 + lynx-ui Dialog 删除确认，53 测试。缓存管理——CacheApi 5 端点 + CacheManagePage 三区（只读统计/编辑表单/目录验证）+ 两步 tap 清理确认，21 测试。DuplicateCheckPage.css 原用 10 个仓库不存在的 `--color-*` token → 重映射到 repo token。clean build（1519.5 kB）/`tsc -b --force`/709 vitest 全绿。
+> **最后更新**：2026-08-12 · 最近完成（**批29 · 真机验收轮：批25-28 积压 + 3 个真 bug**）：把积压 4 批的「⏳ 待扫码」一次性验掉，过程中查出并修掉 3 个**只在真机暴露、build/tsc/vitest 全绿却是坏的**缺陷：① **`<refresh>` 缺 `androidx.viewpager2` 依赖，attach 即崩**（`SmartRefreshLayout.onAttachedToWindow` → `SmartUtil.isContentView` → `ViewPager2` `NoClassDefFoundError`，LynxError 990200）——这是批20「`<refresh>` 吞横向手势」与批25「SmartRefreshLayout 3.0.0-alpha 嵌套滚动回归、无法降级」**两次误诊的真根因**，加一行依赖后原生下拉刷新彻底恢复（`refreshstatechange`→`startrefresh`→`finishRefresh` 真机闭环），批25 为绕行加的手动刷新按钮本就不必要；② **3 处动态 `import()` 的 lazy bundle 从未打进 APK assets**，其中 `index.tsx` 那两处无 try/catch，把启动链连带 `auth.hydrate()`/`auth.checkAuth()` 一起打断（auth status 永远停在 `unknown`，而 guard 对 `unknown` 不重定向，所以「看起来正常」）——改静态 import 后 `dist/lazy-bundle/` 消失、bundle **−40 kB**，并**推翻批20「已端到端验证播放模式持久化」的结论**（当时不可能成立，本批修好后才真验过）；③ **Lynx 4.0.0 宿主的 `lynx.queueMicrotask` 自身抛错**，而 ReactLynx 把它装成 **Preact 的 effect 调度器**（`options.requestAnimationFrame`），导致 `useEffect` flush 被静默丢弃——banner 替换成 ReactLynx 自己的 Promise 兜底实现。另修文案「更多设置（后续版本）」→「高级」（其下 3 项早已全部实现）。新增 4 道闸门**全部反向验证过会红**。clean build（**1476.6 kB**）/`tsc -b --force`/**714 vitest** 全绿。
+>
+> **上一批**（**批28 · 重复检测/指纹 + 缓存管理**）：两条正交功能线并行实施（各一 subagent，共享文件手动 merge）。重复检测/指纹——FingerprintApi 6 端点 + 三阶段页面 DuplicateCheckPage（Status/Computing/Results）+ 指纹 2s 轮询 + 重复组按 bitRate 推荐保留 + lynx-ui Dialog 删除确认，53 测试。缓存管理——CacheApi 5 端点 + CacheManagePage 三区（只读统计/编辑表单/目录验证）+ 两步 tap 清理确认，21 测试。DuplicateCheckPage.css 原用 10 个仓库不存在的 `--color-*` token → 重映射到 repo token。clean build（1519.5 kB）/`tsc -b --force`/709 vitest 全绿。
 
 **排除目录管理**（对齐 `songloft-player/lib/features/settings/presentation/widgets/exclude_dir_manager.dart`）：新增 `ExcludeDirSection`（三 Tab：名称排除 / 路径排除，复用批19 的 `DirectoryTree` / 自动建歌单排除名单），新增 `MusicPathSetting`/`dirNames` 模型 + `getMusicPath`/`updateMusicPath`/`getDirNames` API + 对应 data hooks，挂载进 `/settings/library`（`ScanSettingsSection` 与 `MetadataSection` 之间）。**核心不变式**：`path`（音乐根）永不可编辑——`useUpdateExcludeConfig` 的 `mutationFn` 永远从 `QueryClient` 缓存读 `path` 再拼接三个排除数组，草稿类型 `ExcludeConfigDraft = Omit<MusicPathSetting,'path'>` 在类型层就不允许调用方带 `path`；测试驱动发现并修复一个真实隐患——`buildMusicPathUpdate` 原实现 `{ path, ...draft }` 的字段顺序会让 `draft` 里意外出现的 `path` 覆盖掉安全值，改成 `{ ...draft, path }` 后 `path` 永远最后写、永远赢。也顺手核对并订正了 3 处过期未更新的 TODO（standalone/embedded 部署模式、本地歌词缓存、底部 Tab 配置——三者均早已完成，见下方遗留清单）。clean build / `tsc -b --force` / **604 vitest**（+26）全绿。
 
@@ -63,11 +65,12 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 22 | **通知栏下一曲/收藏按钮 + 正式小图标**（`RemoteCommandForwardingPlayer` 转发 next/previous 到 JS；`SessionCommand`+`setCustomLayout` 收藏按钮双向同步；`setSmallIcon` 换正式图标） | ✅ 完成 | clean build（1386.5 kB）/`tsc -b --force`/**578 vitest**（+5）全绿；Kotlin 编译干净 | ✅ **dumpsys 为准**（通知栏截图在此模拟器不可视）：next/previous 已用 `KEYCODE_MEDIA_NEXT/PREVIOUS`+logcat 验通；收藏点击分发未端到端外部触发（见 TODO） |
 | 23 | 登录居中 + 插件 tab 图标修复 | ✅ 完成 | build/tsc/**578 vitest** 全绿 | — `bug.md` 第 15、16 条，纯 CSS + 已有数据接线，免真机复验 |
 | 24 | 插件 WebView 空白修复（Lynx SDK 3.8.0→4.0.0） | ✅ 完成 | build/tsc/**578 vitest** 全绿 | ✅ 真机 WebView 正常渲染插件内容 |
-| 25 | 首页下拉刷新·手动刷新按钮 | ✅ 完成 | build/tsc/**578 vitest** 全绿 | ⏳ 待扫码验证刷新按钮触发 |
+| 25 | 首页下拉刷新·手动刷新按钮 | ⚠️ **根因误诊，批29 修正** | build/tsc/**578 vitest** 全绿 | 真根因是 `<refresh>` 缺 `androidx.viewpager2` 依赖、attach 即崩（非「SmartRefreshLayout alpha 嵌套滚动回归」）；批29 加依赖后原生下拉刷新恢复，本批加的手动按钮已被 `76329e3` 删除 |
 | 26 | **排除目录管理**（对齐 Flutter `ExcludeDirManager` 三 Tab：名称排除/路径排除/自动建歌单排除名单；`path` 只读不可编辑）+ 开发环境 WASM OOM 定位 | ✅ 完成 | clean build/`tsc -b --force`/**604 vitest**（+26）全绿 | ⏳ 待扫码验证三 Tab 交互 + Save 写回（需后端可达 + LAN IP）|
 | 27 | **暗色对比度审计**（WCAG AA：拆 `--primary`/`--accent`、`--danger`/`--danger-2`；新增 `contrast.test.ts` 回归 gate）+ 24G 虚拟上限定位 | ✅ 完成 | clean build（1418.0 kB）/`tsc -b --force`/**636 vitest**（+31，1 个已知 use-debounce flake 隔离重跑绿）全绿 | ⏳ 待扫码验配色 |
 | 28 | **重复检测/指纹 + 缓存管理**（2 subagent 并行：library-ops 三阶段指纹/重复页 + settings 缓存页；共享文件手动 merge；CSS token 修正） | ✅ 完成 | clean build（1519.5 kB）/`tsc -b --force`/**709 vitest**（+74，1 个已知 use-debounce flake 隔离绿）全绿 | ⏳ 待扫码验指纹计算/重复组删除/缓存清理 + 配置写回（需后端可达）|
-| 后续 | B3 iOS 宿主 + AVPlayer → Lynxtron 桌面 | ⛔ 未开始 | | |
+| 29 | **真机验收轮**（批25-28 积压一次性验掉）+ **3 个真机专属 bug**（`<refresh>` 缺 viewpager2 / lazy-bundle 不进 APK / 宿主 `queueMicrotask` 坏掉）+ 文案订正 | ✅ 完成 | clean build（**1476.6 kB**，−42.9）/`tsc -b --force`/**714 vitest**（+5）全绿 | ✅ **批25/26/27/28 全部模拟器逐条截图验过**；顺带补验批19「真的导入歌曲」、批22 收藏按钮已注册进 MediaSession |
+| 后续 | B3 iOS 宿主 + AVPlayer → Lynxtron 桌面 | 🚧 进行中（B3a 宿主工程） | | |
 
 ## 已交付明细
 
@@ -411,7 +414,7 @@ E LynxUISVG: getGenericResourceFetcher is null, svg fetch src failed! http://…
 
 #### 4. 删设置页播放设置（并避免一个回退）
 
-删掉 Playback 分组后 `writeDefaultPlayMode` 会失去唯一调用方，而播放器的 `cyclePlayMode` **只改内存**——直接删会导致播放模式不再被记住。故把持久化搬到 `PlayControls` 的模式按钮上。**已端到端验证**：切到 Repeat one → `am force-stop` → 重启登录 → 仍是 Repeat one。连带清掉真死代码（`PLAY_MODE_OPTIONS`/`playModeLabelKey`/`playModeDescriptionKey`/`playModeIcon` + 9 个 i18n key × 2 语言）；`coercePlayMode` 保留（pref 仍在往返）。
+删掉 Playback 分组后 `writeDefaultPlayMode` 会失去唯一调用方，而播放器的 `cyclePlayMode` **只改内存**——直接删会导致播放模式不再被记住。故把持久化搬到 `PlayControls` 的模式按钮上。~~**已端到端验证**：切到 Repeat one → `am force-stop` → 重启登录 → 仍是 Repeat one。~~ ⚠️ **批29 推翻此结论**：读回侧 `readDefaultPlayMode` → `setPlayMode` 位于 `index.tsx` 启动链中一处动态 `import()` **之后**，而 lazy bundle 从未打进 APK assets，该链在设备上一直是断的——所以这条持久化当时**不可能成立**（写入侧正常，读回侧从不执行）。批29 改静态 import 后**才真正验过**（切「单曲循环」→ force-stop → 重启 → 保持）。连带清掉真死代码（`PLAY_MODE_OPTIONS`/`playModeLabelKey`/`playModeDescriptionKey`/`playModeIcon` + 9 个 i18n key × 2 语言）；`coercePlayMode` 保留（pref 仍在往返）。
 
 #### 5. 首页统计改用 `/songs/stats`
 
@@ -601,9 +604,108 @@ NODE_OPTIONS=--disable-wasm-trap-handler pnpm exec vitest run src/shared/theme/_
 
 **验收**：`tsc -b --force` 零错误 / `pnpm run build` 1519.5 kB（批27 是 1418.0 kB，+101.5 kB 为两个 feature 的运行时代码）零 CSS 警告 / `pnpm test` 709 通过（批27 是 636，+74 = 53 指纹 + 21 缓存；1 个已知 `use-debounce` flake 隔离重跑绿，与本批无关）。
 
+### 批29 · 真机验收轮（批25-28 积压）+ 3 个真机专属 bug
+
+批25/26/27/28 全部标着「⏳ 待扫码」，约 +140 kB 代码从未上过真机，其中批28 是两个 subagent 并行生成、且已经踩过一次「10 个不存在的 `--color-*` token 导致整页无样式」。本批把这笔验证债一次性还掉。
+
+**三个 bug 的共同特征**：`pnpm run build` / `tsc -b` / 709 个 vitest 全绿，而真机是坏的。都只能靠 logcat + 截图发现。
+
+#### 1. `<refresh>` 缺 `androidx.viewpager2` → attach 即崩（被误诊两次的根因）
+
+logcat 给出决定性栈：
+
+```
+LynxError 990200: java.lang.NoClassDefFoundError: androidx/viewpager2/widget/ViewPager2
+  at SmartUtil.isContentView(SmartUtil.java:103)
+  at RefreshContentWrapper.findScrollableView(RefreshContentWrapper.java:65)
+  at SmartRefreshLayout.onAttachedToWindow(SmartRefreshLayout.java:456)
+```
+
+`xelement-refresh` 内嵌 SmartRefreshLayout，后者在挑选可滚动子视图时要解析 `ViewPager2`，而 **viewpager2 不是 xelement-refresh 的传递依赖**。缺它 → 每个 `<refresh>` 元素在 attach 阶段抛异常 → 容器压根没建起来，它的手势逻辑自然全不工作。
+
+这一条解释了两次历史误诊：
+
+| 批次 | 当时的归因 | 当时的处置 |
+|---|---|---|
+| 20 | 「`<refresh>` 吞掉横向手势」（无手势过滤属性，只能握手） | 加 `onStripTouch` 握手把 `enable-refresh` 置 false |
+| 25 | 「SmartRefreshLayout 3.0.0-alpha 嵌套滚动回归，是 `xelement-refresh` 传递依赖、API 不兼容无法降级」 | 加手动刷新按钮，`autoStartRefresh` 程序化触发 |
+
+两次都在绕行，没人查 attach 是否成功。加 `implementation("androidx.viewpager2:viewpager2:1.0.0")` 后 990200 归零，**原生下拉刷新真机闭环**：`refreshstatechange` → `startrefresh` → `SendPageEvent` → `InvokeUIMethod: finishRefresh`，`<refresh-header>` 的「下拉刷新...」提示与内容下移也都正常。批25 那个手动按钮本就不必要（后续 commit `76329e3` 已自行删掉它和握手）。
+
+#### 2. lazy bundle 从未打进 APK → 3 处动态 `import()` 全失效
+
+`dist/` 一直产出 3 个 `lazy-bundle/**.bundle`，而 `scripts/copy-bundle-android.mjs` **只拷 `main.lynx.bundle`** —— assets 里只有它一个，动态 import 在设备上永远取不到目标。
+
+| 位置 | 动态 import | 真机后果 |
+|---|---|---|
+| `index.tsx:34` / `:36` | `readDefaultPlayMode` / `usePlayerStore` | **无 try/catch**，启动链在此断裂 → 后面的 `auth.hydrate()`/`auth.checkAuth()` **从不执行** |
+| `auth-store.ts:198` | `getQueryClient` | 有 try/catch → 静默失败 → **登出不清 query 缓存**（批11 的修复实际失效） |
+
+启动链断裂最阴险：auth status 永远停在 `unknown`，而路由守卫**对 `unknown` 刻意不重定向**（批3 设计），加上 `TokenStore` 每次请求直读原生存储、token 照样带得上，于是「看起来完全正常」——实际上登录态检查从未运行过。
+
+修法是 3 处改静态 import（`lib/query` 只依赖 `query-core` + `safe-timers`，零循环依赖风险）。**产物级证明**：`dist/lazy-bundle/` 目录消失，bundle 1516.6 → 1476.2 kB（**−40 kB**，省掉 lazy 加载机制本身）。
+
+**连带推翻一个历史结论**：批20 写「已端到端验证：切到 Repeat one → `am force-stop` → 重启登录 → 仍是 Repeat one」——那不可能成立，因为 `setPlayMode(savedMode)` 就在断裂点之后。本批修复后**才真正验过**：切「单曲循环」→ `force-stop` → 重启 → 重新播放 → 仍是「单曲循环」。
+
+#### 3. Lynx 4.0.0 宿主的 `lynx.queueMicrotask` 抛错 → Preact effect 调度器失效
+
+`TypeError: cannot read property 'getNativeLynx' of undefined`（LynxError 20100），栈底就在 `lynx_core.js` 的 `queueMicrotask` 内部 —— **宿主自己的实现坏了**。这本来只是噪音，坏在 ReactLynx 无条件优先采用它：
+
+```js
+if (lynx.queueMicrotask) return (fn) => lynx.queueMicrotask(fn)  // runtime/lib/utils.js
+options.requestAnimationFrame = lynxQueueMicrotask                // runtime/lib/lynx.js
+```
+
+第二行把它装成 **Preact 的 effect flush 调度器**。宿主实现一抛异常，被调度的回调就再也不执行 → **那一批 `useEffect` 被静默丢弃**（后续渲染会顺带补上，所以表现为偶发的状态不更新，而不是明显失败）。
+
+ReactLynx 本身就带正确兜底（resolved-Promise 微任务），只是仅在该属性**缺失**时才走。故在 `lynx.config.ts` 的 raw banner 里把同一个实现**替换**上去（保留属性存在性，其他读者仍拿到可用调度器）。两个易踩的点：
+
+- **`lynx` 是裸全局**，必须裸标识符 + `typeof` 守卫读（`globalThis.lynx` 不可靠，同 `fetch`/`self`，AGENTS §3）。
+- **`raw: true` 的 banner 仍会被 minify**（raw 只是不加注释包装）：产物里 `lynx` 被 scope-hoist 成别名、`setTimeout` 也被压缩，所以产物断言要按**属性名**匹配（属性名不被 mangle），不能按源码字面量搜。
+
+#### 4. 顺手订正的过期文案与文档
+
+- **「更多设置（后续版本）」→「高级」**（i18n key `settings.moreLater` → `settings.advanced`）：其下 3 项（存储与缓存 批28 / 插件 批17 / Tab 配置）**全部已实现且可点击**，「后续版本」的标题让功能看起来还没做。
+- 遗留清单里 `text-transform` / `object-fit` 两条标着 `[ ]`，实际批19b 已修（源码里现在是「Lynx 无此属性」的解释性注释）——已订正。
+- **`bug.md` 从未进入 git**（`git log --all -- bug.md` 零命中，工作树也没有）。本文件仍有 12 处「`bug.md` 第 N 条」的引用（批20/21/23/24/25 的记录里），那是当时会话中用户提供的临时清单的编号——**该文件已不存在，编号无法再解析**。这些条目的实际内容都已写在各自批次的正文里，读正文即可；后续不要再新增对 `bug.md` 的引用。
+
+#### 5. 一次性验掉的真机清单
+
+| 批 | 验证结果 |
+|---|---|
+| 19 | 扫描完成 + **真的导入 3 首本地歌曲**（解掉批19b 遗留的「真的导入歌曲仍未验」）；元数据刷新「成功 3 首」 |
+| 19b | 6 个开关开/关视觉清晰可辨（浅色 + 暗色）；「歌单创建方式」正确联动 disabled |
+| 20 | 统计条走 `/songs/stats`（63 首 / 2h42m / 3 本地·60 远程 / 28 歌手·59 专辑 / 占用 2.1 MB）；封面 `aspectFill` 未拉扁；插件图标 `<svg content>` 正常 |
+| 21 | 外观「跟随系统」：`cmd uimode night yes` 后**立刻跟随**（未重启未交互），背景 `(13,13,18)` = `--canvas` |
+| 22 | `dumpsys media_session` 确认 `custom actions=[Action:mName='收藏']` —— **收藏按钮真的注册进 session**（批22 遗留项的一半） |
+| 23 | 登录页卡片垂直+水平居中；底栏插件 tab（洛雪音源/歌曲下载）彩色图标 |
+| 25 | 原生下拉刷新恢复（见上 §1） |
+| 26 | 排除目录三 Tab（按名称/按路径/自动创建排除）+ chip `@eaDir`/`tmp` 与后端数据一致 + 保存；浅色暗色均正常 |
+| 27 | `--accent` 精确命中（采样 `(151,120,253)` vs `#9879ff`）、`--primary` 精确命中（心形徽标 `(119,80,245)`）、`--danger` 作「退出登录」文字在暗色下清晰 |
+| 28 | 重复检测页三阶段的 **Status 阶段** + chromaprint 不可用时正确降级（警告 banner + 禁用开始按钮）；缓存管理页三区 + 真实数据；两页**都有完整样式**（CSS token 重映射真机生效） |
+| B2 | 本地歌曲**真实播放**（`progress` ×26、MediaSession `state=3`、position 前进）；remote 歌曲 502 时 `SongloftAudio.error` 事件桥接链路完整工作 |
+| 批3/11 | 两步登出确认 → 跳登录页 → 用户名/API 地址持久化回填 → 重新登录成功回首页，**全程 0 报错** |
+
+#### 6. 新增 4 道闸门（**均反向验证过会红**）
+
+- `src/__tests__/device-host-contract.test.ts`（新）：① `android/app/build.gradle.kts` 必须声明 `androidx.viewpager2`；② `src/` 下**不得有动态 `import()`**（扫描时跳过注释行与 `.test.tsx?`——测试里的 `await import()` 是仓库既有的 mock-then-load 模式）；③ 产物**不得出现 `dist/lazy-bundle/` 目录**。
+- `background-bundle-self.test.ts` +1：`queueMicrotask` 替换必须入包，且**安装点早于任何调用点**；同时断言 banner 自身保留 `typeof` 守卫（无条件替换会打坏真正缺该属性的宿主）。断言按属性名匹配而非源码字面量（见上 §3）。
+- 反向验证方式：用一条原子命令备份→破坏→跑测试→**无条件还原**（含移除 viewpager2、注入动态 import、拆掉 banner 拼接并重新 build），确认 4 条全部变红后还原重建。
+
+#### 7. 本批已知遗留 / 环境限制
+
+- ⚠️ **偶发全屏灰层（未定位，不影响功能）**：app 运行数分钟、多次导航后，整屏会蒙一层 **α≈0.6 的中灰**（同一 α 同时解释浅色 `255→178` 与暗色 `13→86`），**重启 app 即恢复**，冷启动后单步导航不复现。已排除的可能：① 不是 Android window 层——`dumpsys window` 显示可见 window 只有 `StatusBar` + `MainActivity` 全屏两个；② 不是 `com.droidrun.portal`（该机装的自动化工具）——其 window 消失后现象依旧；③ 不是仓库任何 backdrop token（`--backdrop` 是 `rgba(0,0,0,0.45/0.55)`，与 0.6 中灰不符）。**关键判别数据**：状态栏最亮仍为 255、app 区最亮降到 178，且灰层之上的白色文字仍是纯白 —— 说明该层位于**页面背景之上、内容之下**。该机是 BlueStacks 伪装成 SM-G998B（批22 已记录其 SystemUI 被改、通知栏不可视），需换真机复现才能定性。
+- **批28 的 Computing / Results 两个阶段仍未验**：该后端未装 ffmpeg/chromaprint（页面正确显示「需要安装 ffmpeg（含 chromaprint 支持）」并禁用开始按钮），指纹计算、重复组列表、按 bitRate 推荐保留、lynx-ui Dialog 删除确认**都还没上过真机**。
+- **remote 歌曲播放 502**：60 首 remote 曲目播放时后端返回 502（上游源不可用），属后端/网络，非客户端；本地 3 首正常。
+- **`--primary-2` 未进对比度回归**：它同样承载白字（首页统计条底色），批27 的 `contrast.test.ts` 只覆盖了 `--primary`。手算白字 on `--primary-2`（`#6a49f2`）= **5.46 ✅ 达标**，故非缺陷，但建议补进闸门。
+- **`adb reverse` 会随会话断开**：本批一次登录失败即因此（重设后立即成功）。真机验证前先 `adb reverse --list` 确认。
+
 ## 未完成 / 遗留事项（TODO & 风险）
 
-- [ ] **收藏按钮的 `onCustomCommand` 分发未端到端外部触发验证**（批22，见上）：需要真机/其他模拟器上可视的通知栏，或接一个真实 `MediaController` 客户端手动发 `sendCustomCommand`，才能验证点击本身（而非仅代码路径）。
+- [ ] **收藏按钮的 `onCustomCommand` 分发未端到端外部触发验证**（批22）：**批29 补验了一半**——`dumpsys media_session` 确认 `custom actions=[Action:mName='收藏']` 真的注册进了 session（此前只验证过代码路径）。仍缺的是**点击分发**：需要可视通知栏的真机，或接一个真实 `MediaController` 客户端发 `sendCustomCommand`。
+- [ ] **偶发全屏灰层（批29 发现，未定位）**：运行数分钟后整屏蒙 α≈0.6 中灰，重启即恢复，不影响功能。完整诊断数据与已排除项见「批29 §7」。需换真机（非 BlueStacks）复现定性。
+- [ ] **批28 的 Computing / Results 阶段仍未真机验**（批29 受阻于后端未装 chromaprint）：指纹计算进度轮询、重复组列表、bitRate 推荐保留、lynx-ui Dialog 删除确认都还没上过真机。装了 ffmpeg（含 chromaprint）的后端才能验。
+- [ ] **`--primary-2` 补进对比度闸门**（批29 发现）：它承载白字（首页统计条），批27 的 `contrast.test.ts` 未覆盖。实测 5.46 达标，属补齐覆盖而非修缺陷。
 
 - [x] **Lynx `fetch` 是裸全局**（批3 真机修复）：Lynx 的 `fetch` 是宿主提供的 HTTP service（Android/iOS 2.18+），以**裸全局**暴露而非 `globalThis.fetch`（与 `self` 同）。`createFetchTransport` 已改为先取裸 `fetch`（`typeof fetch !== 'undefined'`）再回落 `globalThis.fetch`/注入。⚠️ 但**真机整登录 E2E 仍需后端可达**：手机上 `http://localhost:58091` 指向手机自身，须填开发机 LAN IP 且后端在跑；Lynx fetch 不支持 CORS/redirect/keepalive/FormData/Blob。
 - [x] **AbortController 真机缺失**（批3 真机修复）：Lynx 引擎**无** `AbortController`（`ReferenceError`），而 **TanStack Router `loadClientRoute` 与 Query 都无条件 `new AbortController()`**。已在 `lynx.config` banner 注入存在性守卫的全局 polyfill（覆盖 main-thread + background 两个 bundle、最先执行）；`AbortController` 是未声明标识符，故 `globalThis.AbortController=` 能让裸读解析（不同于 `self`）。回归测试断言产物里 polyfill 定义早于任何 `new AbortController`。批2 `configureQueryGlobals` 里的同类 polyfill 保留但非主修复。
@@ -687,8 +789,8 @@ NODE_OPTIONS=--disable-wasm-trap-handler pnpm exec vitest run src/shared/theme/_
   - **真机待验**：CSS `@keyframes`（**本仓库首次使用**）在 Android/iOS 的实际观感；lynx-ui `Switch` 在 6 开关同屏密度下的手势可靠性；目录树勾选/展开手势；扫描长任务期间 2s 轮询的电量/流量表现。
 - [ ] **构建期被移除的无效 CSS 声明**（`pnpm run build` 的 `⚠ Unsupported property … was removed during template encode` 警告，**这类警告要当错误看**）：
   - [x] `placeholder-color` ×5 文件 → 批19 改为 `-x-placeholder-color`，警告消失、修复真正生效。
-  - [ ] `text-transform: uppercase`（`jsplugin/pages/TabConfigPage.css:47`）——Lynx 不支持（批4 就遇到过一次并移除，批18b 又引入）。修法：删声明，需要大写就直接写大写文案。
-  - [ ] `object-fit: cover`（`jsplugin/widgets/PluginGrid.css:40`）——Lynx `<image>` 不吃 `object-fit`，应改用元素属性 `mode`（如 `mode="aspectFill"`）。需改 JSX，未在批19 范围内。
+  - [x] `text-transform: uppercase`（`jsplugin/pages/TabConfigPage.css`）→ **批19b 已删声明**（Lynx 无此属性且无 `-x-` 变体）。此条目为过期未更新，批29 核实订正：源码现存的是一条「Lynx 无此属性」的解释性注释。
+  - [x] `object-fit: cover`（`jsplugin/widgets/PluginGrid.css`）→ **批19b 已改用元素属性 `mode='aspectFit'`**。同上属过期未更新，批29 核实订正。**构建警告自批19b 起已归零**，批29 的 clean build 复核仍为零。
 - [ ] **订正 3 条过期结论**（批19 调研发现 `@lynx-js/lynx-ui` 桶入口已把这些子包带进 `node_modules`，v3.135.4，Radix 风格 compound API；按组件包导入只需在 `package.json` 显式声明）：
   - ~~「Lynx 无现成 dialog 原语」故登出用两步 tap~~ → **有 `lynx-ui-dialog`**（`DialogRoot`/`DialogTrigger`/`DialogBackdrop`/`DialogView`/`DialogContent`/`DialogButton`）。批20 重复检测的批量删除确认可用真对话框；登出的两步 tap 也可重估。
   - ~~「lynx-ui 无 sortable」故排序用 chevron 上移/下移按钮~~ → **有 `lynx-ui-sortable`**（还有 `lynx-ui-draggable`/`lynx-ui-swipe-action`）。歌单/歌曲/队列三处排序 UI 可从按钮式重估为拖拽。

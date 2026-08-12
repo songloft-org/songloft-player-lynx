@@ -7,6 +7,11 @@ import { createPublicClient } from '../../../core/network/api-client.js'
 import { TokenStore } from '../../../core/network/token-store.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import type { SongloftStorage } from '../../../core/storage/types.js'
+// Static, NOT `await import()`: a dynamic import becomes a separate lazy bundle
+// that never ships in the app assets, so on a device the cache never got cleared
+// on sign-out. `lib/query` only pulls in query-core + safe-timers, so importing
+// it here is cycle-free.
+import { getQueryClient } from '../../../lib/query/index.js'
 import { useAppSessionStore } from '../../../store/index.js'
 import { AuthApi } from '../api/auth-api.js'
 import type { AuthStatus } from './guard.js'
@@ -195,7 +200,6 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
       set({ status: 'unauthenticated', isLoading: false, error: undefined })
 
       try {
-        const { getQueryClient } = await import('../../../lib/query/index.js')
         getQueryClient().clear()
       } catch {
         // query client may not be initialized yet
