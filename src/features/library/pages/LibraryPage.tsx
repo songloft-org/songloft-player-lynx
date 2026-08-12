@@ -1,5 +1,6 @@
 import { useMemo, useState } from '@lynx-js/react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import { Input } from '@lynx-js/lynx-ui-input'
@@ -14,6 +15,8 @@ import {
   useSongsInfiniteQuery,
 } from '../data/songs-query.js'
 import { setLastLibrarySearch } from '../data/last-library-search.js'
+import { getPlaylistApi } from '../../playlist/api/index.js'
+import { usePlaylistsInfiniteQuery } from '../../playlist/data/playlist-query.js'
 import { PlaylistsView } from '../../playlist/widgets/PlaylistsView.js'
 import { FacetCard } from '../widgets/FacetCard.js'
 import { SongRow } from '../widgets/SongRow.js'
@@ -88,8 +91,12 @@ export function LibraryPage() {
 
 function SongsView() {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
   const [searchText, setSearchText] = useState('')
   const [sortField, setSortField] = useState<SortOption>('added_at')
+  const [selectMode, setSelectMode] = useState(false)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [showPlaylistPicker, setShowPlaylistPicker] = useState(false)
 
   const debouncedSearch = useDebounce(searchText, DEBOUNCE_MS)
 
@@ -107,14 +114,46 @@ function SongsView() {
   const query = useSongsInfiniteQuery(filters)
   const songs = flattenSongs(query.data?.pages)
 
+  const playlistsQuery = usePlaylistsInfiniteQuery()
+  const playlists = playlistsQuery.data?.pages.flatMap(p => p.playlists) ?? []
+
   const onEndReached = () => {
     if (query.hasNextPage && !query.isFetchingNextPage) {
       void query.fetchNextPage()
     }
   }
 
-  const onTapSong = (_song: Song, index: number) => {
-    void usePlayerStore.getState().playPlaylist(songs, index)
+  const onTapSong = (song: Song, index: number) => {
+    if (selectMode) {
+      setSelected(prev => {
+        const next = new Set(prev)
+        if (next.has(song.id)) next.delete(song.id)
+        else next.add(song.id)
+        return next
+      })
+    } else {
+      void usePlayerStore.getState().playPlaylist(songs, index)
+    }
+  }
+
+  const enterSelectMode = () => {
+    setSelectMode(true)
+    setSelected(new Set())
+  }
+
+  const exitSelectMode = () => {
+    setSelectMode(false)
+    setSelected(new Set())
+    setShowPlaylistPicker(false)
+  }
+
+  const onAddToPlaylist = (playlistId: number) => {
+    const ids = Array.from(selected)
+    if (ids.length === 0) return
+    void getPlaylistApi().addSongsToPlaylist(playlistId, ids).then(() => {
+      void queryClient.invalidateQueries({ queryKey: ['playlist'] })
+      exitSelectMode()
+    })
   }
 
   return (
@@ -138,6 +177,18 @@ function SongsView() {
             <text className='library__chip-text'>{t(SORT_LABEL_KEYS[opt])}</text>
           </view>
         ))}
+        <view className='library__chip-spacer' />
+        {selectMode
+          ? (
+            <view className='library__chip library__chip--active' bindtap={exitSelectMode}>
+              <text className='library__chip-text'>{t('library.cancelSelect')}</text>
+            </view>
+          )
+          : (
+            <view className='library__chip' bindtap={enterSelectMode}>
+              <text className='library__chip-text'>{t('library.select')}</text>
+            </view>
+          )}
       </view>
 
       {query.isLoading
@@ -157,7 +208,18 @@ function SongsView() {
                 items={songs}
                 itemKey={(song) => String(song.id)}
                 renderItem={(song, index) => (
-                  <FavoriteSongRow song={song} index={index} onTap={onTapSong} />
+                  <view className={selectMode && selected.has(song.id) ? 'library__select-row library__select-row--selected' : 'library__select-row'}>
+                    {selectMode
+                      ? (
+                        <view className={selected.has(song.id) ? 'library__select-check library__select-check--on' : 'library__select-check'}>
+                          {selected.has(song.id) ? <text className='library__select-check-mark'>✓</text> : null}
+                        </view>
+                      )
+                      : null}
+                    <view className='library__select-row-content'>
+                      <FavoriteSongRow song={song} index={index} onTap={onTapSong} />
+                    </view>
+                  </view>
                 )}
                 onEndReached={onEndReached}
                 footer={query.isFetchingNextPage
@@ -169,6 +231,39 @@ function SongsView() {
                   : undefined}
               />
             )}
+
+      {selectMode && selected.size > 0 && !showPlaylistPicker
+        ? (
+          <view className='library__select-toolbar'>
+            <text className='library__select-toolbar-count'>
+              {t('library.selectedCount', { count: selected.size })}
+            </text>
+            <view className='library__select-toolbar-btn' bindtap={() => setShowPlaylistPicker(true)}>
+              <text className='library__select-toolbar-btn-text'>{t('library.addToPlaylist')}</text>
+            </view>
+          </view>
+        )
+        : null}
+
+      {showPlaylistPicker
+        ? (
+          <view className='library__playlist-picker'>
+            <view className='library__playlist-picker-header'>
+              <text className='library__playlist-picker-title'>{t('library.addToPlaylist')}</text>
+              <view className='library__playlist-picker-close' bindtap={() => setShowPlaylistPicker(false)}>
+                <text className='library__playlist-picker-close-text'>✕</text>
+              </view>
+            </view>
+            <scroll-view className='library__playlist-picker-list' scroll-y>
+              {playlists.filter(p => !p.isBuiltIn).map(p => (
+                <view key={String(p.id)} className='library__playlist-picker-item' bindtap={() => onAddToPlaylist(p.id)}>
+                  <text className='library__playlist-picker-item-text'>{p.name}</text>
+                </view>
+              ))}
+            </scroll-view>
+          </view>
+        )
+        : null}
     </view>
   )
 }

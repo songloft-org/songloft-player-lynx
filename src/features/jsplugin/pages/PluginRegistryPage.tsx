@@ -1,6 +1,7 @@
 import { useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { Input } from '@lynx-js/lynx-ui-input'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { RegistryPluginEntry } from '../../../models/jsplugin.js'
@@ -78,13 +79,15 @@ export function PluginRegistryPage() {
       </view>
 
       <view className='plugin-registry__search'>
-        <view className='plugin-registry__search-box'>
-          <text className='plugin-registry__search-input' data-testid='registry-search-display'>
-            {search || t('jsplugin.searchPlaceholder')}
-          </text>
-        </view>
+        <Input
+          className='plugin-registry__search-input'
+          value={search}
+          placeholder={t('jsplugin.searchPlaceholder')}
+          onInput={(value) => setSearch(value)}
+          onConfirm={onSearch}
+        />
         <view className='plugin-registry__search-btn' bindtap={onSearch} data-testid='registry-search-btn'>
-          <Icon name='menu' size={18} color={ICON_COLORS.content} />
+          <Icon name='refresh' size={18} color={ICON_COLORS.content} />
         </view>
       </view>
 

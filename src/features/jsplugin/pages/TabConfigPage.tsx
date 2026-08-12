@@ -1,5 +1,6 @@
 import { useEffect, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
@@ -13,6 +14,7 @@ const MAX_TABS = 12
 
 export function TabConfigPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { t } = useTranslation()
 
   const [config, setConfig] = useState<TabConfig | null>(null)
@@ -58,7 +60,9 @@ export function TabConfigPage() {
   const toggleLibrary = () => {
     const next: TabConfig = { ...config, showLibrary: !config.showLibrary }
     setConfig(next)
-    void getSettingsApi().updateTabConfig(next).catch(() => {})
+    void getSettingsApi().updateTabConfig(next)
+      .then(() => queryClient.invalidateQueries({ queryKey: ['settings', 'tab-config'] }))
+      .catch(() => {})
   }
 
   const togglePlugin = (plugin: JSPlugin) => {
@@ -77,7 +81,9 @@ export function TabConfigPage() {
     }
     const next: TabConfig = { ...config, pluginTabs: nextTabs }
     setConfig(next)
-    void getSettingsApi().updateTabConfig(next).catch(() => {})
+    void getSettingsApi().updateTabConfig(next)
+      .then(() => queryClient.invalidateQueries({ queryKey: ['settings', 'tab-config'] }))
+      .catch(() => {})
   }
 
   return (

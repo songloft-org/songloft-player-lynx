@@ -57,8 +57,16 @@ export function PluginManagerPage() {
           <view className='plugin-manager__action-btn' bindtap={() => navigate({ to: '/settings/plugins/registry' })} data-testid='plugins-store'>
             <text className='plugin-manager__action-text'>{t('jsplugin.store')}</text>
           </view>
-          <view className='plugin-manager__action-btn' bindtap={onUpdateAll} data-testid='plugins-update-all'>
-            <text className='plugin-manager__action-text'>{t('jsplugin.updateAll')}</text>
+          <view
+            className={updateAllMutation.isPending
+              ? 'plugin-manager__action-btn plugin-manager__action-btn--disabled'
+              : 'plugin-manager__action-btn'}
+            bindtap={onUpdateAll}
+            data-testid='plugins-update-all'
+          >
+            <text className='plugin-manager__action-text'>
+              {updateAllMutation.isPending ? t('common.loading') : t('jsplugin.updateAll')}
+            </text>
           </view>
         </view>
       </view>
@@ -89,7 +97,7 @@ export function PluginManagerPage() {
                           data-testid={`plugin-toggle-${plugin.id}`}
                         >
                           <text className='plugin-manager__toggle-text'>
-                            {plugin.isActive ? t('jsplugin.enabled') : t('jsplugin.disabled')}
+                            {plugin.isActive ? t('jsplugin.disable') : t('jsplugin.enable')}
                           </text>
                         </view>
                         <view

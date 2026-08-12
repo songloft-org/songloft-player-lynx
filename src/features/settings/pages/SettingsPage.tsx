@@ -10,7 +10,9 @@ import {
   DialogClose,
 } from '@lynx-js/lynx-ui'
 
-import { appConfig } from '../../../core/config/app-config.js'
+import { apiPrefix, appConfig } from '../../../core/config/app-config.js'
+import { getCachedAccessToken } from '../../../core/network/token-cache.js'
+import { openURL } from '../../../native/native-platform.js'
 import { clientVersion } from '../../../core/config/constants.js'
 import {
   APP_LANGUAGE_OPTIONS,
@@ -179,7 +181,10 @@ export function SettingsPage() {
   }
 
   const openLogs = () => {
-    void navigate({ to: '/settings/logs' })
+    const token = getCachedAccessToken()
+    if (!token) return
+    const url = `${appConfig.resolvedBaseUrl}${apiPrefix}/logs/export?access_token=${encodeURIComponent(token)}`
+    openURL(url)
   }
 
   const serverText = serverDisplay(appConfig.baseUrl, appConfig.isEmbedded, {

@@ -9,6 +9,7 @@ import type { Song } from '../../../models/song.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { getLastShellLocation } from '../../../shared/nav/shell-navigation.js'
 import { getLastLibrarySearch } from '../../library/data/last-library-search.js'
+import { useDebounce } from '../../library/data/use-debounce.js'
 import { flattenSongs } from '../../library/data/pagination.js'
 import { SongRow } from '../../library/widgets/SongRow.js'
 import { VirtualList } from '../../library/widgets/VirtualList.js'
@@ -35,11 +36,15 @@ export function PlaylistDetailPage() {
   const params = useParams({ strict: false }) as { id?: string }
   const id = Number(params.id ?? 0) || 0
 
+  const [searchText, setSearchText] = useState('')
+  const debouncedKeyword = useDebounce(searchText, 300)
+
   const detail = usePlaylistQuery(id)
   const playlist = detail.data
   const currentSort = playlist?.sortBy ?? 'position'
   const currentOrder = playlist?.sortOrder ?? 'asc'
-  const songsQuery = usePlaylistSongsInfiniteQuery(id, { sort: currentSort, order: currentOrder })
+  const keyword = debouncedKeyword.trim() || undefined
+  const songsQuery = usePlaylistSongsInfiniteQuery(id, { sort: currentSort, order: currentOrder, keyword })
   const songs = flattenSongs(songsQuery.data?.pages)
 
   const cover = playlist?.coverUrl ? buildCoverUrl(playlist.coverUrl, playlist.updatedAt) : ''
@@ -259,6 +264,18 @@ export function PlaylistDetailPage() {
   return (
     <view className='playlist-detail'>
       {header}
+      {!sortMode && !editing
+        ? (
+          <view className='playlist-detail__search-bar'>
+            <Input
+              className='playlist-detail__search-input'
+              placeholder={t('library.searchPlaceholder')}
+              value={searchText}
+              onInput={(value: string) => setSearchText(value)}
+            />
+          </view>
+        )
+        : null}
       {!sortMode && !editing && songs.length > 0
         ? (
           <view className='playlist-detail__sort-bar' data-testid='playlist-sort-bar'>

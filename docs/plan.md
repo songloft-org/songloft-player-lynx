@@ -1,5 +1,8 @@
 # Songloft Player: Flutter 到 Lynx 迁移调研文档
 
+> **⚠️ 文档性质：原始调研母本**
+> 本文档是 4 篇迁移调研子文档（overview/capability_matrix/native_modules_spec/roadmap）的母本，产出于项目启动前。当前项目已完成 P0–P2，实际状态见 [README.md](./README.md)。
+
 ## 摘要
 
 产出物是 4 篇中文 Markdown 文档，落在新建目录 `/Users/hanxi/toy/songloft-player-lynx/docs/`。本次**不写任何业务代码，不改动 `songloft-player/` 下任何文件**。

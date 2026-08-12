@@ -1,4 +1,4 @@
-import { useState } from '@lynx-js/react'
+import { useEffect, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -49,6 +49,10 @@ export function FullPlayerPage() {
   const speed = usePlayerStore((s) => s.speed)
   const { width, isWide, onLayoutChange } = useBreakpoint()
   const [showSleepTimer, setShowSleepTimer] = useState(false)
+
+  useEffect(() => {
+    return () => { usePlayerStore.getState().closePlaylistDrawer() }
+  }, [])
 
   const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
   const cycleSpeed = () => {

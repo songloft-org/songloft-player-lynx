@@ -1,5 +1,14 @@
 # Songloft Player：Lynx 自研原生能力规范
 
+> **⚠️ 文档性质：预研阶段参考**
+> 本文档产出于迁移启动前。以下模块已实现（Android + iOS）：
+> - **SongloftAudio** ✅ — ExoPlayer/AVPlayer + MediaSession + EQ DSP（10段），TS 侧 `src/native/audio-facade.ts`
+> - **SongloftStorage** ✅ — prefs(SharedPreferences/UserDefaults) + secure(Keystore/Keychain)，TS 侧 `src/core/storage/`
+> - **SongloftPlatform** 🔶 — 文件选择/URL打开已实现；DLNA/Live Activity/悬浮歌词未实现
+> - **SongloftBackend** ⬜ — 当前 standalone 模式直连后端，embedded 模式未实现
+>
+> 当前实际接口以代码为准，草案仅作历史参考。见 [README.md](./README.md)。
+
 > 本文档为迁移调研第 3 篇，是**迁移工作量的核心**：列出 Lynx 缺失、须自研的原生能力清单与接口草案。总览见 [lynx_migration_overview.md](./lynx_migration_overview.md)，能力对照见 [lynx_capability_matrix.md](./lynx_capability_matrix.md)，路线见 [lynx_migration_roadmap.md](./lynx_migration_roadmap.md)。
 >
 > **组织方式**：移动端（A/I）按 Lynx Autolink 库形态组织（`lynx.lib.json`）；桌面端（M/Win）按 Lynxtron 两条路径组织（Node.js 原生模块 / Lynx 原生能力库，AutoLink `--platforms lynxtron` + `pluginLynxtron()`）；Web 走纯 TS + 浏览器 API。

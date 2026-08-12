@@ -15,7 +15,7 @@ import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { CategorySongsPage, LibraryPage, PlayHistoryPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
-import { CacheManagePage, EqualizerPage, LogsPage, ProxySettingsPage, ServerEditPage, ServerListPage, ServerSettingsPage, SettingsPage } from './features/settings/index.js'
+import { CacheManagePage, EqualizerPage, ProxySettingsPage, ServerEditPage, ServerListPage, ServerSettingsPage, SettingsPage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
@@ -128,13 +128,6 @@ const serverEditRoute = createRoute({
   component: ServerEditPage,
 })
 
-/** `/settings/logs` — diagnostics log export sub-page, inside the shell (batch 15). */
-const logsRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/settings/logs',
-  component: LogsPage,
-})
-
 /** `/settings/library` — music-library operations (scan) sub-page, inside the shell (batch 19). */
 const libraryOpsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -244,7 +237,6 @@ const routeTree = rootRoute.addChildren([
     serverListRoute,
     serverAddRoute,
     serverEditRoute,
-    logsRoute,
     libraryOpsRoute,
     cacheManageRoute,
     equalizerRoute,

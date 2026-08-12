@@ -221,6 +221,20 @@
   margin-right: var(--space-2);
 }
 
+.playlist-detail__search-bar {
+  padding: var(--space-2) var(--space-4);
+}
+
+.playlist-detail__search-input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--paper);
+  font-size: var(--font-sm);
+  color: var(--content);
+  -x-placeholder-color: var(--content-muted);
+}
+
 .playlist-detail__sort-bar {
   display: flex;
   flex-direction: row;

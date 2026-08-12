@@ -27,7 +27,7 @@ import {
  * `Icon` all run; assertions check the rendered structure + that interactions
  * call the correct store/config, not fixtures echoed back.
  */
-const { navigateSpy, logoutSpy, setPlayModeSpy, writePrefSpy, readPref, changeLangSpy, changeThemeSpy, getLogLevelSpy, setLogLevelSpy } =
+const { navigateSpy, logoutSpy, setPlayModeSpy, writePrefSpy, readPref, changeLangSpy, changeThemeSpy, getLogLevelSpy, setLogLevelSpy, openURLSpy } =
   vi.hoisted(() => ({
     navigateSpy: vi.fn(),
     logoutSpy: vi.fn(),
@@ -38,6 +38,7 @@ const { navigateSpy, logoutSpy, setPlayModeSpy, writePrefSpy, readPref, changeLa
     changeThemeSpy: vi.fn(async () => 'dark' as const),
     getLogLevelSpy: vi.fn(async () => 'warn' as const),
     setLogLevelSpy: vi.fn(async () => {}),
+    openURLSpy: vi.fn(),
   }))
 
 // react-i18next → deterministic English `t` (real English resource values); the
@@ -66,6 +67,15 @@ vi.mock('../../../shared/theme/theme-model.js', () => ({
 }))
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigateSpy }))
+
+vi.mock('../../../core/network/token-cache.js', () => ({
+  getCachedAccessToken: () => 'test-token',
+}))
+
+vi.mock('../../../native/native-platform.js', () => ({
+  openURL: openURLSpy,
+  isNativePlatformAvailable: () => true,
+}))
 
 vi.mock('../../auth/store/index.js', () => ({
   useAuthStore: { getState: () => ({ logout: logoutSpy }) },
@@ -183,14 +193,14 @@ test('selecting a log level persists it via SettingsApi.setLogLevel', async () =
   expect(setLogLevelSpy).toHaveBeenCalledWith('error')
 })
 
-test('the export-logs row navigates to the logs sub-page', async () => {
+test('the export-logs row triggers openURL with logs endpoint', async () => {
   const { queryByTestId } = await renderPage()
 
   await act(async () => {
     fireEvent.tap(queryByTestId('settings-export-logs')!)
   })
 
-  expect(navigateSpy).toHaveBeenCalledWith({ to: '/settings/logs' })
+  expect(openURLSpy).toHaveBeenCalledWith(expect.stringContaining('/logs/export'))
 })
 
 // Choosing a play mode moved to the player's own toggle, along with persisting it

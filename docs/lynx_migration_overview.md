@@ -1,5 +1,8 @@
 # Songloft Player：Flutter → Lynx 迁移总览
 
+> **⚠️ 文档性质：预研阶段参考**
+> 本文档产出于迁移启动前，用于论证可行性。项目已完成 P0–P2（技术验证 + 基础设施 + 核心业务），下列结论大部分已被实践验证。当前项目实际状态见 [README.md](./README.md)。
+
 > 本文档为迁移调研的第 1 篇，聚焦**为什么迁、迁到什么、代价与收益的总判断**。逐项能力对照见 [lynx_capability_matrix.md](./lynx_capability_matrix.md)，自研原生能力清单见 [lynx_native_modules_spec.md](./lynx_native_modules_spec.md)，分阶段路线见 [lynx_migration_roadmap.md](./lynx_migration_roadmap.md)。
 >
 > **文档版本约定**：本系列所有 Lynx 能力结论均以 **Lynx 4.0** 稳定版为基线；**Lynxtron 相关结论出自官方 `/next/`（canary）文档**（正式版仍标注为 Coming soon，API 可能变动），引用处单独标注。日后随 Lynx 迭代需按当时版本复核。

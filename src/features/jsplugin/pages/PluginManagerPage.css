@@ -37,6 +37,10 @@
   background-color: var(--paper);
 }
 
+.plugin-manager__action-btn--disabled {
+  opacity: 0.5;
+}
+
 .plugin-manager__action-text {
   font-size: var(--font-sm);
   color: var(--accent);

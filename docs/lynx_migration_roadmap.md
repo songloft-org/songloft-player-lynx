@@ -1,5 +1,15 @@
 # Songloft Player：Flutter → Lynx 迁移路线图
 
+> **⚠️ 文档性质：预研阶段参考**
+> 本文档产出于迁移启动前。当前进度：
+> - **P0 技术验证** ✅ 全部通过（音频真机30+分钟稳定、TanStack Router/Query 集成验证、lynx-ui 可用）
+> - **P1 基础设施** ✅ 完成（网络/鉴权/存储/i18n/主题/路由/Android+iOS 宿主）
+> - **P2 核心业务** ✅ 完成（auth/library/player/playlist/home/settings 全部实现，32批迭代）
+> - **P3 平台特性** 🔶 进行中（EQ 双端 DSP 完成；DLNA/歌词/Live Activity/桌面待做）
+> - **P4 双轨发布** ⬜ 未开始
+>
+> 见 [README.md](./README.md) 了解详细状态。
+
 > 本文档为迁移调研第 4 篇。分阶段路线，每阶段给出目标、范围、**可验证的退出判据**、以及「不通过则回退」的决策点。总览见 [lynx_migration_overview.md](./lynx_migration_overview.md)，能力对照见 [lynx_capability_matrix.md](./lynx_capability_matrix.md)，原生模块见 [lynx_native_modules_spec.md](./lynx_native_modules_spec.md)。
 >
 > **原则**：路线以 P0 技术验证闸门开局，**不预先承诺全量迁移**；每个决策点明确「通过则进入下阶段 / 不通过则回退或止损」。

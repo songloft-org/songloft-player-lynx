@@ -279,3 +279,119 @@
   font-size: var(--font-sm);
   margin-top: var(--space-2);
 }
+
+.library__chip-spacer {
+  flex: 1;
+}
+
+.library__select-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.library__select-row--selected {
+  background-color: var(--paper);
+}
+
+.library__select-row-content {
+  flex: 1;
+}
+
+.library__select-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  border-width: 2px;
+  border-color: var(--content-muted);
+  margin-left: var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.library__select-check--on {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.library__select-check-mark {
+  color: var(--primary-content);
+  font-size: 12px;
+}
+
+.library__select-toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--paper);
+  border-top-width: 1px;
+  border-top-color: var(--border);
+}
+
+.library__select-toolbar-count {
+  flex: 1;
+  font-size: var(--font-sm);
+  color: var(--content);
+}
+
+.library__select-toolbar-btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.library__select-toolbar-btn-text {
+  font-size: var(--font-sm);
+  color: var(--primary-content);
+}
+
+.library__playlist-picker {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background-color: var(--surface);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+}
+
+.library__playlist-picker-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-4);
+}
+
+.library__playlist-picker-title {
+  flex: 1;
+  font-size: var(--font-md);
+  font-weight: bold;
+  color: var(--content);
+}
+
+.library__playlist-picker-close {
+  padding: var(--space-2);
+}
+
+.library__playlist-picker-close-text {
+  color: var(--content-muted);
+  font-size: var(--font-md);
+}
+
+.library__playlist-picker-list {
+  flex: 1;
+}
+
+.library__playlist-picker-item {
+  padding: var(--space-3) var(--space-4);
+}
+
+.library__playlist-picker-item-text {
+  font-size: var(--font-sm);
+  color: var(--content);
+}

@@ -35,6 +35,13 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateSpy,
   useSearch: searchHook,
 }))
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+  useInfiniteQuery: playlistsHook,
+}))
+vi.mock('../../playlist/api/index.js', () => ({
+  getPlaylistApi: () => ({ addSongsToPlaylist: vi.fn(async () => {}) }),
+}))
 vi.mock('../../playlist/data/playlist-query.js', () => ({
   usePlaylistsInfiniteQuery: playlistsHook,
   playlistQueryKeys: { list: () => [] },

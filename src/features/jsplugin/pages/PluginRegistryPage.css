@@ -33,16 +33,14 @@
   gap: var(--space-2);
 }
 
-.plugin-registry__search-box {
+.plugin-registry__search-input {
   flex: 1;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   background-color: var(--paper);
-}
-
-.plugin-registry__search-input {
   font-size: var(--font-sm);
-  color: var(--content-muted);
+  color: var(--content);
+  -x-placeholder-color: var(--content-muted);
 }
 
 .plugin-registry__search-btn {
