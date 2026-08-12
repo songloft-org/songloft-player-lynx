@@ -98,7 +98,7 @@
 }
 
 .home-section__action-text {
-  color: var(--primary);
+  color: var(--accent);
   font-size: var(--font-sm);
 }
 
@@ -178,7 +178,7 @@
 }
 
 .home-section__retry-text {
-  color: var(--primary);
+  color: var(--accent);
   font-size: var(--font-sm);
 }
 

@@ -357,7 +357,7 @@
 }
 
 .player-lyrics__line--active {
-  color: var(--primary);
+  color: var(--accent);
   font-size: var(--font-lg);
   font-weight: bold;
 }
@@ -453,7 +453,7 @@
 }
 
 .drawer__row--active .drawer__row-title {
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .drawer__row-artist {
@@ -517,7 +517,7 @@
 }
 
 .sleep-timer__option-text--active {
-  color: var(--primary);
+  color: var(--accent);
   font-weight: bold;
 }
 
@@ -539,7 +539,7 @@
 }
 
 .full-player__timer-remaining {
-  color: var(--primary);
+  color: var(--accent);
   font-size: var(--font-xs);
   margin-right: var(--space-1);
 }
@@ -566,7 +566,7 @@
 }
 
 .player-lyrics__word--active {
-  color: var(--primary);
+  color: var(--accent);
   font-weight: bold;
 }
 

@@ -106,7 +106,7 @@
 }
 
 .server-settings__saved {
-  color: var(--primary);
+  color: var(--accent);
   font-size: var(--font-sm);
   margin-bottom: var(--space-3);
 }

@@ -31,7 +31,7 @@
 }
 
 .playlist-card--playing .playlist-card__name {
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .playlist-card__cover-wrap {

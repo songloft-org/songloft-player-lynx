@@ -205,7 +205,7 @@
 }
 
 .library__chip--active .library__chip-text {
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .library__grid-scroll {

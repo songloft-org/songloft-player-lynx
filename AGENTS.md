@@ -94,6 +94,8 @@ pnpm test               # vitest run
 
 > ⚠️ **受限沙箱里 `pnpm test`/`pnpm run build` 可能被 `WebAssembly.instantiate(): Out of memory` 挡住**（批26 定位）：根因是沙箱 `ulimit -v` 上限（约 23.8GB 这一档）配 V8 默认的 trap-handler-based WASM 越界检查——每个 `WebAssembly.Memory` 实例会保留约 10-12GB guard-page 地址空间（与声明的 `maximum` 无关），这类沙箱里最多只够 2 个实例，而 Node 内建 `undici`（`lazyllhttp`）加上 `@lynx-js/react` 的 transform WASM 刚好是致命的第 3 个。**遇到这个报错直接设 `NODE_OPTIONS=--disable-wasm-trap-handler` 再跑**（Node 原生 flag，允许写进 `NODE_OPTIONS`），关掉 guard-page 保留、改走显式边界检查，无需重新排查。这是运行环境问题，不是仓库配置问题，不必写进任何仓库文件。
 
+> ⚠️ **`pnpm run build` 在 24G 虚拟上限下仍会 OOM（批27 定位）**：`NODE_OPTIONS=--disable-wasm-trap-handler` 对 `pnpm test` 够用，但 `pnpm run build` 里 Rspack 的 loader worker（`node::worker::Worker`）会另起 V8 Isolate，与主进程已占的 WASM 虚拟叠加，撞 `Failed to reserve virtual memory for CodeRange` / `SegmentedTable::InitializeTable`。实测 2 个 4GB-max WASM 在 flag 下从 21.7G 降到 9.1G（flag 生效），但 build 的实例更多。**根因是本机 `~/.bashrc` 里 `ulimit -v 25000000`（≈24G，且无 `-S` 同时锁了硬限）**——改这行（提到 120G = `ulimit -v 120000000` 或 `unlimited`）后**必须重启 cloudcli-runner 会话**新上限才生效（当前会话硬限已锁，`ulimit -v unlimited` 报 Operation not permitted）。`RSPACK_LOADER_WORKER_THREADS=1` / `--single-threaded` / 调 `--max-old-space-size` 都救不了，唯一解是抬 `ulimit -v`。
+
 - Vitest 测试文件正文中**禁止出现字面量 `@vitest-environment`**（散文里也会被 Vitest 当指令解析而切换环境）。
 
 > ⚠️ **验「跟随系统」类功能前，先确认应用里选中的就是「跟随系统」。** 批21 首次装包截图是

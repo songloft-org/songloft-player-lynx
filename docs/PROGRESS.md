@@ -1,7 +1,7 @@
 # 进展与交接（PROGRESS）
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
-> **最后更新**：2026-08-11 · 最近完成（**批26 · 排除目录管理 + 开发环境定位**）：对齐 Flutter `ExcludeDirManager` 三 Tab 模型（按名称排除 / 按路径排除 / 自动建歌单排除名单），`path`（音乐根目录）保持只读不可编辑。
+> **最后更新**：2026-08-11 · 最近完成（**批27 · 暗色对比度审计**）：暗色 token 逐对算 WCAG AA，修 3 个失败（danger 按钮白字 2.78 / primary 按钮白字 4.35 / primary 作强调文字 4.14），拆 `--primary`（fill）/`--accent`（文字）/`--danger`（文字）/`--danger-2`（按钮底）；新增 `contrast.test.ts` 作回归 gate。clean build（1418.0 kB）/tsc/636 vitest 全绿。
 
 **排除目录管理**（对齐 `songloft-player/lib/features/settings/presentation/widgets/exclude_dir_manager.dart`）：新增 `ExcludeDirSection`（三 Tab：名称排除 / 路径排除，复用批19 的 `DirectoryTree` / 自动建歌单排除名单），新增 `MusicPathSetting`/`dirNames` 模型 + `getMusicPath`/`updateMusicPath`/`getDirNames` API + 对应 data hooks，挂载进 `/settings/library`（`ScanSettingsSection` 与 `MetadataSection` 之间）。**核心不变式**：`path`（音乐根）永不可编辑——`useUpdateExcludeConfig` 的 `mutationFn` 永远从 `QueryClient` 缓存读 `path` 再拼接三个排除数组，草稿类型 `ExcludeConfigDraft = Omit<MusicPathSetting,'path'>` 在类型层就不允许调用方带 `path`；测试驱动发现并修复一个真实隐患——`buildMusicPathUpdate` 原实现 `{ path, ...draft }` 的字段顺序会让 `draft` 里意外出现的 `path` 覆盖掉安全值，改成 `{ ...draft, path }` 后 `path` 永远最后写、永远赢。也顺手核对并订正了 3 处过期未更新的 TODO（standalone/embedded 部署模式、本地歌词缓存、底部 Tab 配置——三者均早已完成，见下方遗留清单）。clean build / `tsc -b --force` / **604 vitest**（+26）全绿。
 
@@ -65,7 +65,8 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 24 | 插件 WebView 空白修复（Lynx SDK 3.8.0→4.0.0） | ✅ 完成 | build/tsc/**578 vitest** 全绿 | ✅ 真机 WebView 正常渲染插件内容 |
 | 25 | 首页下拉刷新·手动刷新按钮 | ✅ 完成 | build/tsc/**578 vitest** 全绿 | ⏳ 待扫码验证刷新按钮触发 |
 | 26 | **排除目录管理**（对齐 Flutter `ExcludeDirManager` 三 Tab：名称排除/路径排除/自动建歌单排除名单；`path` 只读不可编辑）+ 开发环境 WASM OOM 定位 | ✅ 完成 | clean build/`tsc -b --force`/**604 vitest**（+26）全绿 | ⏳ 待扫码验证三 Tab 交互 + Save 写回（需后端可达 + LAN IP）|
-| 后续 | 暗色对比度审计 → 重复检测/指纹 → 缓存管理 → B3 iOS 宿主 + AVPlayer → Lynxtron 桌面 | ⛔ 未开始 | | |
+| 27 | **暗色对比度审计**（WCAG AA：拆 `--primary`/`--accent`、`--danger`/`--danger-2`；新增 `contrast.test.ts` 回归 gate）+ 24G 虚拟上限定位 | ✅ 完成 | clean build（1418.0 kB）/`tsc -b --force`/**636 vitest**（+31，1 个已知 use-debounce flake 隔离重跑绿）全绿 | ⏳ 待扫码验配色 |
+| 后续 | 重复检测/指纹 → 缓存管理 → B3 iOS 宿主 + AVPlayer → Lynxtron 桌面 | ⛔ 未开始 | | |
 
 ## 已交付明细
 
@@ -125,7 +126,7 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 - **playlist API**（`src/features/playlist/api/playlist-api.ts`）：包 batch-2 `HttpClient`，port Flutter `PlaylistApi` 的**读端点**（前缀 `/api/v1`，batch-2 zod 解析）——`getPlaylists`（`GET /playlists`，query `limit/offset` + 可选 `type`/`exclude_labels`/`keyword`，`parsePlaylistListResponse`）、`getPlaylist(id)`（`GET /playlists/{id}`，`parsePlaylist`）、`getPlaylistSongs(id)`（`GET /playlists/{id}/songs`，query `limit/offset` + 可选 `sort`/`order`/`keyword`，复用 `parseSongListResponse`）。query 拼接抽纯函数 `buildPlaylistsQuery`/`buildPlaylistSongsQuery`（默认 `limit=defaultPageSize=20`/`offset=0`，空串剪除，mirror Flutter `PlaylistApi`）单独单测。`api/index.ts` 懒建**认证客户端单例**（同批4 recipe：batch-2 `createApiClient`，Bearer + 单飞 401 refresh，`onTokenExpired → useAuthStore.logout()`）——与 library bundle 是同款 peer（共享同一 `TokenStore`，401 恢复跨 feature 一致）。
 - **取数与分页**（`src/features/playlist/data/`）：`usePlaylistsInfiniteQuery`（歌单列表分页，`getNextPageParam=playlistsNextPageParam` 纯函数）、`usePlaylistQuery(id)`（`useQuery` 详情，`enabled: id>0`）、`usePlaylistSongsInfiniteQuery(id)`（歌单内歌曲分页，**复用 library `songsNextPageParam`/`flattenSongs`**——歌单内歌曲即 `SongListResponse`）。新增纯函数 `playlistsLoadedCount`/`playlistsNextPageParam`/`flattenPlaylists`（复用 library `nextOffset`）单独单测（累计推进 / 到底停 / 空页 / flatten）。
 - **Library「Playlists」视图落地**（`src/features/playlist/widgets/PlaylistsView.tsx`，替换批4「Playlists coming soon」占位）：`<scroll-view>` 网格（同 facets 网格模式，非 `<list>`——子节点在测试可查）+ `PlaylistCard`（封面 or `music` Icon 占位 + 名称 + `<n> song(s)` 单复数）；点卡片 `navigate({ to: '/playlists/$id', params:{id} })`；加载/空（「No playlists yet」）/错误态齐备。`LibraryPage` 仅改 import + 分支渲染。
-- **歌单详情页**（`src/features/playlist/pages/PlaylistDetailPage.tsx`，路由 `/playlists/$id`，shell 内）：`useParams({strict:false})` 取 id；头部（返回键 `chevron-down`→`/library`、封面 or `music` 占位、名称/描述/`<n> song(s)`）+ 歌曲列表（**复用 library `SongRow` + `VirtualList`** + `bindscrolltolower` 触底 `fetchNextPage`）；点歌 `usePlayerStore.getState().playPlaylist(songs, index)`（直接 import store，不经 player 桶入口，避免 eager 拉 lynx-ui 手势叶子）；加载/空/错误态齐备。`.song-row` 规则在 `PlaylistDetailPage.css` 重声明（与 `LibraryPage.css` 相同）——详情路由可能在 library 页从未挂载时进入，Lynx CSS 全局作用域，重复同规则无害。**路由**：`router.tsx` 加 `playlistDetailRoute`（shell 子路由，`path:'/playlists/$id'`，typed param）。
+- **歌单详情页**（`src/features/playlist/pages/PlaylistDetailPage.tsx`，路由 `/playlists/$id`，shell 内）：`useParams({strict:false})` 取 id；头部（返回键 `chevron-down`→`/library`、封面 or `music` 占位、名称/描述/`<n> song(s)`）+ 歌曲列表（**复用 library `SongRow` + `VirtualList`** + `bindscrolltolower` 触��� `fetchNextPage`）；点歌 `usePlayerStore.getState().playPlaylist(songs, index)`（直接 import store，不经 player 桶入口，避免 eager 拉 lynx-ui 手势叶子）；加载/空/错误态齐备。`.song-row` 规则在 `PlaylistDetailPage.css` 重声明（与 `LibraryPage.css` 相同）——详情路由可能在 library 页从未挂载时进入，Lynx CSS 全局作用域，重复同规则无害。**路由**：`router.tsx` 加 `playlistDetailRoute`（shell 子路由，`path:'/playlists/$id'`，typed param）。
 - **测试约定（沿用 `_render-mocks` 模式）**：渲染冒烟里 `useInfiniteQuery`/`useQuery` hooks（`useSyncExternalStore` 订阅→崩 `isListHolder` 类 + 需 live QueryClient/网络）用 `vi.fn()` 桩返静态形；`useNavigate`/`useParams` 桩；`<list>` 封装 `VirtualList` mock 成 plain `<view>`（`_render-mocks.mockVirtualList`）。真 hooks/组件/`<list>` 用于 build/dev/device。断言实质结构：PlaylistsView 卡片名 + 单复数歌数 + 空/加载/错误态；详情页头部（名称/描述/`2 songs`）+ 歌曲行（标题/`artist · album`/`05:27`·`09:05` 时长）+ 空/加载态；playlist-api query 拼接 + zod 解析（mock transport，验 URL 含参 + snake→camel + `isBuiltIn` 派生）。**批4 `library-page.test` 的 playlists 占位用例改为**：切 Playlists tab 断言 `PlaylistsView` 空态（并补 mock playlist-query hook + `useNavigate`）。
 - 验收：`rm -rf dist .rspeedy && pnpm run build`（`main.lynx.bundle` 920.8 kB binary 容器，最长行 92259=已压缩；`strings` 证 `/playlists`×23 / `No playlists yet` / `No songs in this playlist` / `Loading playlists` / `exclude_labels` 均入包）、`tsc --noEmit` 绿、`pnpm test` **183/183 绿**（新增 24：playlist-api 9 / pagination 8 / playlists-view 4 / playlist-detail 3；`background-bundle-self`/`query-no-dom`/`router-no-dom` 对新鲜 dist 复跑绿——无新增未守卫全局）。
 - **遗留/注意**：① 歌单 **CRUD**（创建/更新/删除/封面上传/批量删除）、**收藏歌单**（`favoritePlaylistId='1'`/`radioFavoritePlaylistId='2'` 已在 constants，本批未做特殊处理/入口）、**排序**（歌单排序 / 歌单内歌曲 reorder）、**可见性切换**、**touch 访问时间**、**song-ids 定位**、**搜索/多选** 均未 port（Flutter `PlaylistApi` 全端点 + 详情页有，本批裁到只读浏览）——记入下方 TODO。② 详情页在 shell 内渲染（底栏 nav 常驻），返回键固定回 `/library`（Flutter 是独立 appbar 页 + `context.pop()`）。③ [x] **封面缓存刷新参数**（批14 完成）：`buildCoverUrl(coverUrl, updatedAt?)` 已加 `_t=<updatedAt ms>`。④ 真机图标/网格/详情目测待扫码。
@@ -539,6 +540,38 @@ JS 侧新增 `SongloftAudioModule.setFavorite(Boolean)`，双向链路：① 通
 #### 6. 验收
 
 `pnpm run build` clean（1417.8 kB）✓ · `pnpm exec tsc -b --force` ✓ · `pnpm test` **604/604**（67 文件，+26）✓（均在 `NODE_OPTIONS=--disable-wasm-trap-handler` 下跑通，见上）。真机待扫码：进 `/settings/library` 见排除目录三 Tab、名称 Tab 输入建议、路径 Tab 复用目录树勾选、自动建歌单 Tab 输入，Save 后刷新页面确认三个数组落地且音乐根路径未变。
+
+### 批27 · 暗色对比度审计 + 24G 虚拟上限定位
+
+把暗色主题 token 逐对算了 WCAG 2.1 AA 相对亮度对比（正文 4.5:1、大字/UI 3:1），暗色三底面 `--canvas` #0d0d12 / `--paper` #16161d / `--neutral-faint` #24242e。审计发现 3 个真实失败：
+
+- **白字 on `--danger` #ff6b6b（danger 按钮）= 2.78** ❌ 连 3:1 都不达（删除/移除按钮不可读）。
+- **白字 on `--primary` #7c5cff（24 处按钮）= 4.35** ❌ 差 0.15。
+- **`--primary` 作强调文字 on paper = 4.14 / on neutral-faint = 3.54** ❌（14 处 `color: var(--primary)` 强调文字：激活态/链接/播放器时间标签等）。
+
+**核心矛盾**：dark 的 `--primary` 单值无法同时满足"白字在按钮底上 ≥4.5（要更深）"和"作文字在深底上 ≥4.5（要更浅）"——light 能单值是因为底是白（深紫既可读又承白字），dark 底太深，必须拆 token。
+
+**修法**（沿用既有 `--primary`/`--primary-2` 对称思路，不重命名、不动按钮调用点）：
+
+| token | dark 旧→新 | 用途 | 关键比值 |
+|---|---|---|---|
+| `--primary` | #7c5cff→**#7750f5** | 按钮/边框/图标填充 | 白字 4.94 ✅ / on neutral-faint(UI) 3.11 ✅ |
+| `--accent`（新增） | **#9879ff** | 强调**文字** | on paper 5.58 / on neutral-faint 4.77 ✅ |
+| `--danger` | #ff6b6b 不变 | danger **文字** | 6.49 ✅ |
+| `--danger-2`（新增） | **#cf444f** | danger **按钮底** | 白字 4.57 ✅ |
+
+24 处 `background-color: var(--primary)` 按钮**不动**——只把色值加深一档，24 个按钮白字对比同时从 4.35→4.94 达标。14 处 `color: var(--primary)` 改指 `--accent`。1 处 `background-color: var(--danger)`（PlaylistDetailPage 删除按钮）改指 `--danger-2`。light 块补 `--accent`=#6a49f2 / `--danger-2`=#cf444f（CSS 跨主题共享，必须两块都定义；light 无视觉变化）。`Icon.tsx` `PALETTES.dark.primary` 同步 #7750f5（SVG 注入色不走 CSS 级联，必须与 tokens.css 手动同步——该文件已有此约定注释）。
+
+**回归 gate**：新增 `src/shared/theme/__tests__/contrast.test.ts`——用 `fs.readFileSync` 读 `tokens.css`、正则解析每个 `.theme-<name>` 块的 hex、对 dark/light 关键配对算 WCAG 比值断言 ≥ AA。**改色值时测试直接红**，无需手动维护色值副本。31 个测试全绿。
+
+**24G 虚拟上限定位（build 闸门卡点）**：`pnpm run build` 在 24G 会话下崩 `Failed to reserve virtual memory for CodeRange`（Rspack loader worker 起 V8 Isolate 叠加主进程 WASM 虚拟）。实测 `--disable-wasm-trap-handler` 把 2 个 4GB-max WASM 从 21.7G 压到 9.1G（flag 生效），但 build 实例更多仍不够。根因是 `~/.bashrc` `ulimit -v 25000000`（≈24G，无 `-S` 同时锁硬限）。**已改 `.bashrc` 至 `ulimit -v 120000000`（120G），重启会话后 build 1418.0 kB 绿**。详见 `AGENTS.md` §5。
+
+**遗留**：① light 的 `--danger` 作文字 on paper = 4.38（大字达标、正文差 0.12）、`--content-muted` on paper = 4.17——属 light 主题审计范畴，本批不动，留待后续 light 专项。② 真机像素复核（配色肉眼是否更可读）留扫码批次。
+
+```
+mise exec node@22.23.1 -- env NODE_OPTIONS=--disable-wasm-trap-handler pnpm run build   # build（需 120G 上限）
+NODE_OPTIONS=--disable-wasm-trap-handler pnpm exec vitest run src/shared/theme/__tests__/contrast.test.ts   # 仅对比度 gate
+```
 
 ## 未完成 / 遗留事项（TODO & 风险）
 

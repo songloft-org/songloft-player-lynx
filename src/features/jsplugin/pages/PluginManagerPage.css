@@ -39,7 +39,7 @@
 
 .plugin-manager__action-text {
   font-size: var(--font-sm);
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .plugin-manager__scroll {

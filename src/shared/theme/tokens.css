@@ -57,14 +57,19 @@
   --content-2: #c7c7d1;
   --content-muted: #8b8b98;
 
-  /* actions */
-  --primary: #7c5cff;
+  /* actions — --primary is for fills/borders/icons (white text on it clears AA);
+     --accent is the lighter shade for accent TEXT on dark surfaces, since one
+     shade can't both carry white text and read as text on near-black. */
+  --primary: #7750f5;
   --primary-2: #6a49f2;
   --primary-content: #ffffff;
+  --accent: #9879ff;
 
-  /* feedback */
+  /* feedback — --danger stays vivid for TEXT (reads well on dark);
+     --danger-2 is the deeper shade for danger button fills (white-on AA). */
   --danger: #ff6b6b;
   --danger-content: #ffffff;
+  --danger-2: #cf444f;
 
   /* structure */
   --neutral-faint: #24242e;
@@ -91,10 +96,12 @@
   --primary: #6a49f2;
   --primary-2: #5a3ad1;
   --primary-content: #ffffff;
+  --accent: #6a49f2; /* light surfaces are bright, --primary itself reads as text */
 
   /* feedback — deepened vs. dark's --danger for contrast on light surfaces */
   --danger: #d64545;
   --danger-content: #ffffff;
+  --danger-2: #cf444f; /* deeper shade for danger button fills (white-on AA) */
 
   /* structure */
   --neutral-faint: #ebebf0;

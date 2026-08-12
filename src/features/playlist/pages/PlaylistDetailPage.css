@@ -48,7 +48,7 @@
 }
 
 .playlist-detail__action-btn--danger {
-  background-color: var(--danger);
+  background-color: var(--danger-2);
 }
 
 .playlist-detail__action-text {

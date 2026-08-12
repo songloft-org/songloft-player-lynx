@@ -18,7 +18,7 @@ const PALETTES: Record<ResolvedTheme, {
   danger: string
 }> = {
   dark: {
-    primary: '#7c5cff', // --primary
+    primary: '#7750f5', // --primary (dark; deepened for white-on-button AA)
     primaryContent: '#ffffff', // --primary-content
     content: '#f5f5f7', // --content
     content2: '#c7c7d1', // --content-2

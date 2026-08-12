@@ -57,7 +57,7 @@
 }
 
 .shell__brand {
-  color: var(--primary);
+  color: var(--accent);
   font-size: var(--font-lg);
   font-weight: bold;
   margin-bottom: var(--space-5);

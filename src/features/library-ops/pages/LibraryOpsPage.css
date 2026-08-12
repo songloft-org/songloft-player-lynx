@@ -292,7 +292,7 @@
 }
 
 .libops__chips-clear-text {
-  color: var(--primary);
+  color: var(--accent);
   font-size: var(--font-sm);
 }
 
@@ -477,7 +477,7 @@
 }
 
 .libops-exclude__saved-note {
-  color: var(--primary);
+  color: var(--accent);
   font-size: var(--font-sm);
   margin-bottom: var(--space-2);
 }
