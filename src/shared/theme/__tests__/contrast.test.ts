@@ -146,6 +146,13 @@ describe('dark theme contrast (WCAG AA)', () => {
   test('white on danger-2 (button) ≥4.5', () => {
     expectAA(WHITE, DARK['danger-2'], 'white on danger-2')
   })
+  // `--primary-2` also carries white text (the home stats strip is filled with
+  // it), so it needs the same 4.5 as `--primary`. Batch 27 audited only
+  // `--primary` and missed this; batch 29 caught it by sampling the strip on a
+  // device and finding a shade the audit never checked.
+  test('white on primary-2 (filled panel) ≥4.5', () => {
+    expectAA(WHITE, DARK['primary-2'], 'white on primary-2')
+  })
 
   // primary is now the deep fill shade; as a border/UI graphic it only needs 3:1.
   test('primary as UI/border on paper ≥3', () => {
@@ -175,6 +182,9 @@ describe('light theme contrast (WCAG AA; dark is the audited scope, light is a p
   })
   test('white on danger-2 (button) ≥4.5', () => {
     expectAA(WHITE, LIGHT['danger-2'], 'white on danger-2')
+  })
+  test('white on primary-2 (filled panel) ≥4.5', () => {
+    expectAA(WHITE, LIGHT['primary-2'], 'white on primary-2')
   })
 
   // Known light-theme gaps (large-text-only, 3:1): muted/danger-as-text on

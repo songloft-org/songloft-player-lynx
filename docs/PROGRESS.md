@@ -705,7 +705,7 @@ ReactLynx 本身就带正确兜底（resolved-Promise 微任务），只是仅�
 - [ ] **收藏按钮的 `onCustomCommand` 分发未端到端外部触发验证**（批22）：**批29 补验了一半**——`dumpsys media_session` 确认 `custom actions=[Action:mName='收藏']` 真的注册进了 session（此前只验证过代码路径）。仍缺的是**点击分发**：需要可视通知栏的真机，或接一个真实 `MediaController` 客户端发 `sendCustomCommand`。
 - [ ] **偶发全屏灰层（批29 发现，未定位）**：运行数分钟后整屏蒙 α≈0.6 中灰，重启即恢复，不影响功能。完整诊断数据与已排除项见「批29 §7」。需换真机（非 BlueStacks）复现定性。
 - [ ] **批28 的 Computing / Results 阶段仍未真机验**（批29 受阻于后端未装 chromaprint）：指纹计算进度轮询、重复组列表、bitRate 推荐保留、lynx-ui Dialog 删除确认都还没上过真机。装了 ffmpeg（含 chromaprint）的后端才能验。
-- [ ] **`--primary-2` 补进对比度闸门**（批29 发现）：它承载白字（首页统计条），批27 的 `contrast.test.ts` 未覆盖。实测 5.46 达标，属补齐覆盖而非修缺陷。
+- [x] **`--primary-2` 补进对比度闸门**（批29 发现并当批补齐）：它承载白字（首页统计条底色），批27 的 `contrast.test.ts` 只审计了 `--primary`。**手算 5.46 达标、非缺陷**，但覆盖缺口是真的——已给 dark/light 各加一条「white on primary-2 ≥4.5」，`contrast.test.ts` 33 例全绿。发现方式值得记：是在真机截图上采样统计条底色、发现它既不是 `--primary` 也不是任何审计过的值，才反查出这个未被覆盖的色阶。
 
 - [x] **Lynx `fetch` 是裸全局**（批3 真机修复）：Lynx 的 `fetch` 是宿主提供的 HTTP service（Android/iOS 2.18+），以**裸全局**暴露而非 `globalThis.fetch`（与 `self` 同）。`createFetchTransport` 已改为先取裸 `fetch`（`typeof fetch !== 'undefined'`）再回落 `globalThis.fetch`/注入。⚠️ 但**真机整登录 E2E 仍需后端可达**：手机上 `http://localhost:58091` 指向手机自身，须填开发机 LAN IP 且后端在跑；Lynx fetch 不支持 CORS/redirect/keepalive/FormData/Blob。
 - [x] **AbortController 真机缺失**（批3 真机修复）：Lynx 引擎**无** `AbortController`（`ReferenceError`），而 **TanStack Router `loadClientRoute` 与 Query 都无条件 `new AbortController()`**。已在 `lynx.config` banner 注入存在性守卫的全局 polyfill（覆盖 main-thread + background 两个 bundle、最先执行）；`AbortController` 是未声明标识符，故 `globalThis.AbortController=` 能让裸读解析（不同于 `self`）。回归测试断言产物里 polyfill 定义早于任何 `new AbortController`。批2 `configureQueryGlobals` 里的同类 polyfill 保留但非主修复。
