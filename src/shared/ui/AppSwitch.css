@@ -33,13 +33,12 @@
   height: 26px;
   padding: 3px;
   border-radius: var(--radius-pill);
-  background-color: var(--neutral-faint);
-  border: 1px solid var(--line);
+  /* Muse Toggle: off = the strong-border grey, visible in both themes. */
+  background-color: var(--rule);
 }
 
 .app-switch__track.ui-checked {
   background-color: var(--primary);
-  border-color: var(--primary);
   justify-content: flex-end;
 }
 
@@ -47,7 +46,10 @@
   width: 20px;
   height: 20px;
   border-radius: var(--radius-pill);
-  background-color: var(--content);
+  /* Thumb = canvas colour (white in light, near-black in dark) so it reads on
+     both the grey off-track and the accent on-track. Muse §4.4. */
+  background-color: var(--canvas);
+  box-shadow: var(--shadow-sm);
 }
 
 /*

@@ -17,21 +17,24 @@ const PALETTES: Record<ResolvedTheme, {
   contentMuted: string
   danger: string
 }> = {
+  // Muse dark: ink-accent inverts to white. Keep in sync with tokens.css
+  // `.theme-dark` — `<svg content>` is outside the CSS cascade (see icons.ts).
   dark: {
-    primary: '#7750f5', // --primary (dark; deepened for white-on-button AA)
-    primaryContent: '#ffffff', // --primary-content
+    primary: '#ffffff', // --primary
+    primaryContent: '#0f0f11', // --primary-content
     content: '#f5f5f7', // --content
-    content2: '#c7c7d1', // --content-2
-    contentMuted: '#8b8b98', // --content-muted
-    danger: '#ff6b6b', // --danger
+    content2: '#a1a1a8', // --content-2
+    contentMuted: '#8b8b98', // --content-muted (AA-brightened; see tokens.css)
+    danger: '#ff6b6b', // --danger (AA-brightened for dark)
   },
+  // Muse light: ink-black accent (#111).
   light: {
-    primary: '#6a49f2', // --primary
+    primary: '#111111', // --primary
     primaryContent: '#ffffff', // --primary-content
-    content: '#16161d', // --content
-    content2: '#4a4a57', // --content-2
-    contentMuted: '#7b7b88', // --content-muted
-    danger: '#d64545', // --danger
+    content: '#111111', // --content
+    content2: '#6b6b74', // --content-2
+    contentMuted: '#7b7b88', // --content-muted (AA-deepened; see tokens.css)
+    danger: '#d64545', // --danger (Muse brick red)
   },
 }
 

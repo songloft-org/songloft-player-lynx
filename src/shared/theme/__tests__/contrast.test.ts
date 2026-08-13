@@ -3,15 +3,18 @@ import { resolve } from 'node:path'
 import { describe, expect, test } from 'vitest'
 
 /**
- * WCAG 2.1 contrast regression gate for the LUNA tokens in `tokens.css`.
+ * WCAG 2.1 contrast regression gate for the Muse tokens in `tokens.css`.
  *
- * The dark theme was audited in 批27: a single `--primary` shade can't both
- * carry white button text (needs to be deep) and read as accent text on
- * near-black surfaces (needs to be light), so `--primary` is the deep
- * fill/border shade and `--accent` is the lighter text shade — ditto
- * `--danger` (vivid text) vs `--danger-2` (deep button fill). This test reads
- * the actual `tokens.css` (not a hand-maintained copy) so any color edit that
- * regresses contrast turns the build red.
+ * Muse uses a single ink accent channel: light --primary is #111 with white
+ * --primary-content (button text); dark inverts it — --primary is #ffffff with
+ * near-black --primary-content. So the button/panel text pair audited below is
+ * primary-content-on-primary, not a hardcoded white. `--danger` is a red used
+ * on TEXT only; a single shade can't meet 4.5 on both light (#fafafa) and dark
+ * (#1f1f25) surfaces, so it stays per-theme (the dark shade is brighter).
+ * `--content-muted` (tertiary/placeholder text) likewise stays per-theme to
+ * clear 4.5 (dark) / 3 (light). This test reads the actual `tokens.css` (not a
+ * hand-maintained copy) so any color edit that regresses contrast turns the
+ * build red.
  *
  * Thresholds: normal text 4.5:1, large text / UI graphics 3:1.
  */
@@ -140,18 +143,22 @@ describe('dark theme contrast (WCAG AA)', () => {
     expectAA(DARK['danger'], DARK[s], `danger on ${s}`)
   })
 
-  test('white on primary (button) ≥4.5', () => {
-    expectAA(WHITE, DARK['primary'], 'white on primary')
+  // Muse inverts the dark accent: --primary is white, so button/panel TEXT is
+  // --primary-content (near-black), not white. The gate therefore checks
+  // primary-content-on-primary, the real pair the button renders. (Light keeps
+  // primary-content = white, so the pair is unchanged there.)
+  test('button text (primary-content) on primary ≥4.5', () => {
+    expectAA(DARK['primary-content'], DARK['primary'], 'primary-content on primary')
   })
   test('white on danger-2 (button) ≥4.5', () => {
     expectAA(WHITE, DARK['danger-2'], 'white on danger-2')
   })
-  // `--primary-2` also carries white text (the home stats strip is filled with
-  // it), so it needs the same 4.5 as `--primary`. Batch 27 audited only
-  // `--primary` and missed this; batch 29 caught it by sampling the strip on a
-  // device and finding a shade the audit never checked.
-  test('white on primary-2 (filled panel) ≥4.5', () => {
-    expectAA(WHITE, DARK['primary-2'], 'white on primary-2')
+  // `--primary-2` also carries primary-content text (the home stats strip is
+  // filled with it), so it needs the same 4.5 as `--primary`. Batch 27 audited
+  // only `--primary` and missed this; batch 29 caught it by sampling the strip
+  // on a device and finding a shade the audit never checked.
+  test('panel text (primary-content) on primary-2 ≥4.5', () => {
+    expectAA(DARK['primary-content'], DARK['primary-2'], 'primary-content on primary-2')
   })
 
   // primary is now the deep fill shade; as a border/UI graphic it only needs 3:1.
@@ -177,14 +184,14 @@ describe('light theme contrast (WCAG AA; dark is the audited scope, light is a p
     expectAA(LIGHT['accent'], LIGHT['paper'], 'accent on paper')
     expectAA(LIGHT['accent'], LIGHT['canvas'], 'accent on canvas')
   })
-  test('white on primary (button) ≥4.5', () => {
-    expectAA(WHITE, LIGHT['primary'], 'white on primary')
+  test('button text (primary-content) on primary ≥4.5', () => {
+    expectAA(LIGHT['primary-content'], LIGHT['primary'], 'primary-content on primary')
   })
   test('white on danger-2 (button) ≥4.5', () => {
     expectAA(WHITE, LIGHT['danger-2'], 'white on danger-2')
   })
-  test('white on primary-2 (filled panel) ≥4.5', () => {
-    expectAA(WHITE, LIGHT['primary-2'], 'white on primary-2')
+  test('panel text (primary-content) on primary-2 ≥4.5', () => {
+    expectAA(LIGHT['primary-content'], LIGHT['primary-2'], 'primary-content on primary-2')
   })
 
   // Known light-theme gaps (large-text-only, 3:1): muted/danger-as-text on

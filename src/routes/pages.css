@@ -31,7 +31,14 @@
   flex-direction: column;
 }
 
-/* A plain tappable pill used for placeholder navigation. */
+/* Muse buttons (DESIGN.md §4.1) — only three kinds exist:
+ *   primary  = ink fill + canvas text, pill, the page's most eye-catching element
+ *   ghost    = transparent + hairline rule border, ink text
+ *   danger   = transparent, red TEXT only (never a red fill block)
+ * No `:hover` in Lynx; press feedback is `--neutral-faint` via `.luna-button--active`.
+ */
+
+/* A plain tappable pill used for placeholder navigation — Muse ghost button. */
 .pill {
   display: flex;
   align-items: center;
@@ -39,8 +46,8 @@
   padding: var(--space-3) var(--space-5);
   margin-bottom: var(--space-3);
   border-radius: var(--radius-pill);
-  background-color: var(--neutral-faint);
-  border: 1px solid var(--line);
+  background-color: transparent;
+  border: 1px solid var(--rule);
 }
 
 .pill__text {
@@ -48,7 +55,7 @@
   font-size: var(--font-md);
 }
 
-/* lynx-ui Button skin (the component itself is unstyled). */
+/* lynx-ui Button skin (the component itself is unstyled) — Muse primary. */
 .luna-button {
   display: flex;
   align-items: center;
@@ -60,11 +67,38 @@
 }
 
 .luna-button--active {
-  background-color: var(--primary-2);
+  background-color: var(--primary);
+  opacity: 0.85;
 }
 
 .luna-button__text {
   color: var(--primary-content);
   font-size: var(--font-md);
   font-weight: bold;
+}
+
+/* Muse danger button — red text on a hairline border, transparent body.
+   Use for destructive single actions (logout confirm etc.). */
+.btn--danger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  border: 1px solid var(--rule);
+}
+
+.btn--danger__text {
+  color: var(--danger);
+  font-size: var(--font-md);
+  font-weight: 500;
+}
+
+/* Muse card — soft surface + hairline border, radius-lg. Hover adds NO shadow
+   (Muse §4.2: shadow is only for floating elements). */
+.muse-card {
+  background-color: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
 }

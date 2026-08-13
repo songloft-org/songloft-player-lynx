@@ -52,9 +52,9 @@ export type IconName =
   | 'check-circle'
   | 'fingerprint'
 
-/** Shared stroke attributes for line icons. */
+/** Shared stroke attributes for line icons — Muse §4.5 stroke-width 1.6. */
 function stroke(color: string): string {
-  return `fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`
+  return `fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"`
 }
 
 /** Shared fill attribute for solid icons. */

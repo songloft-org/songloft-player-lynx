@@ -23,11 +23,9 @@
   min-width: 0;
 }
 
-/* On wide layouts the mini-player is the column's bottom edge, so it owns the
-   home-indicator inset (narrow layouts let the bottom bar handle it). */
-.shell--wide .mini-player {
-  padding-bottom: env(safe-area-inset-bottom);
-}
+/* On wide layouts the mini-player is the column's bottom edge; its own CSS
+   clears the home-indicator inset via margin (it floats rather than docks), so
+   the shell does not add padding here. */
 
 .shell__body {
   display: flex;
@@ -95,7 +93,15 @@
 }
 
 .nav-item--active {
-  background-color: var(--neutral-faint);
+  background-color: var(--primary);
+}
+
+/* Active nav: ink fill inverts the glyph + label to the accent-contrast
+   colour. The glyph SVG colour is injected at render time via ICON_COLORS, so
+   the shell passes ICON_COLORS.primaryContent when active — see ShellLayout.tsx.
+   This rule only handles the text, which can't be injected. */
+.nav-item--active .nav-item__label {
+  color: var(--primary-content);
 }
 
 /* Icon wrapper: the glyph color is injected into the SVG markup at render time
@@ -125,8 +131,4 @@
   margin-left: var(--space-3);
   margin-top: 0;
   font-size: var(--font-sm);
-}
-
-.nav-item--active .nav-item__label {
-  color: var(--content);
 }

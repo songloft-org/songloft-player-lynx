@@ -1,18 +1,21 @@
 /*
- * LUNA-style design tokens exposed as CSS variables.
+ * Muse design tokens (see design-example/.specs/DESIGN.md).
  *
- * These follow the semantic-token naming used by lynx-ui's Luna themes
- * (surfaces / content / actions / structure), so screens can be styled against
- * `var(--paper)`, `var(--content)`, `var(--primary)`, etc.
+ * "用最少的视觉语言,呈现最完整的产品结构" — one ink accent, white/#fafafa
+ * surfaces, hairline #ececee separators, radius hierarchy, minimal shadow.
  *
- * `.theme-root` carries the theme-agnostic scale (spacing/radii/font sizes) and
- * layout; the actual color values live in a sibling `.theme-<name>` class
+ * `.theme-root` carries the theme-agnostic scale (spacing/radii/font sizes/shadows)
+ * and layout; the actual color values live in a sibling `.theme-<name>` class
  * applied alongside it by `ThemeProvider` (`theme-root theme-dark` /
  * `theme-root theme-light`), so switching themes is just swapping that second
- * class — no component styling changes, everything already reads `var(--…)`.
+ * class — no component styling changes, everything already reads `var(--…))`.
  * Compound class selectors (`.a.b`) already ship elsewhere in this codebase
  * (`LoginPage.css` `.login__switch-track.ui-checked`), so this is not a new
  * CSS-support risk.
+ *
+ * Token names are preserved vs. the old LUNA set so every consumer adopts the
+ * new palette without a single edit. Only values change (plus a few new
+ * additions: --radius-xl, --shadow-*, --mobile-nav-height).
  */
 
 .theme-root {
@@ -24,10 +27,11 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  /* radii */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  /* radii — Muse hierarchy: small 8 / medium 12 / large 20 / xl 28 / pill 999 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
   --radius-pill: 999px;
 
   /* type scale (px) */
@@ -38,6 +42,9 @@
   --font-xl: 28px;
   --font-2xl: 36px;
 
+  /* layout sizes */
+  --mobile-nav-height: 60px;
+
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -46,69 +53,86 @@
   color: var(--content);
 }
 
+/* ── Dark — Muse dark is a re-tuned set, not a simple invert (#0f0f11 etc.) ─ */
 .theme-root.theme-dark {
   /* surfaces */
-  --canvas: #0d0d12;
-  --paper: #16161d;
-  --paper-clear: rgba(22, 22, 29, 0.72);
+  --canvas: #0f0f11;
+  --paper: #17171b;
+  --paper-clear: rgba(23, 23, 27, 0.9);
 
   /* content (text) */
   --content: #f5f5f7;
-  --content-2: #c7c7d1;
+  --content-2: #a1a1a8;
+  /* tertiary text — Muse wants #6c6c74, but it misses AA 4.5 on dark surfaces
+     (3.15 on neutral-faint). Brightened to the AA-passing mid-grey. */
   --content-muted: #8b8b98;
 
-  /* actions — --primary is for fills/borders/icons (white text on it clears AA);
-     --accent is the lighter shade for accent TEXT on dark surfaces, since one
-     shade can't both carry white text and read as text on near-black. */
-  --primary: #7750f5;
-  --primary-2: #6a49f2;
-  --primary-content: #ffffff;
-  --accent: #9879ff;
+  /* actions — Muse has ONE accent channel; dark inverts it to white.
+     --primary is the accent for fills/borders/icons (dark surface under it);
+     --accent is the same shade for accent TEXT on dark surfaces. */
+  --primary: #ffffff;
+  --primary-2: #ffffff;
+  --primary-content: #0f0f11;
+  --accent: #ffffff;
 
-  /* feedback — --danger stays vivid for TEXT (reads well on dark);
-     --danger-2 is the deeper shade for danger button fills (white-on AA). */
+  /* feedback — danger is a single red for TEXT only (Muse §3.1). On dark
+     surfaces Muse's #d64545 misses AA 4.5 (4.37 on canvas), so the dark theme
+     keeps the brighter AA-passing red; light keeps the Muse brick red. */
   --danger: #ff6b6b;
   --danger-content: #ffffff;
   --danger-2: #cf444f;
 
-  /* structure */
-  --neutral-faint: #24242e;
-  --line: #2c2c38;
-  --rule: #3a3a48;
+  /* structure — hairline separators, only structural */
+  --neutral-faint: #1f1f25;
+  --line: #26262c;
+  --rule: #38383f;
 
   /* overlays */
   --backdrop: rgba(0, 0, 0, 0.55);
   --backdrop-heavy: rgba(0, 0, 0, 0.78);
+
+  /* shadows — tinted off the ink, never pure black, never colored (Muse §3.5) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.6);
 }
 
+/* ── Light — Muse canonical: pure white canvas, #fafafa soft surface ─────── */
 .theme-root.theme-light {
   /* surfaces */
-  --canvas: #f4f4f7;
-  --paper: #ffffff;
-  --paper-clear: rgba(255, 255, 255, 0.72);
+  --canvas: #ffffff;
+  --paper: #fafafa;
+  --paper-clear: rgba(255, 255, 255, 0.9);
 
   /* content (text) */
-  --content: #16161d;
-  --content-2: #4a4a57;
+  --content: #111111;
+  --content-2: #6b6b74;
+  /* tertiary text — Muse #a0a0a8 misses even the 3:1 large-text gate on #fafafa
+     (2.49). Deepened to the AA-passing mid-grey. */
   --content-muted: #7b7b88;
 
-  /* actions — deepened vs. dark's --primary for contrast on light surfaces */
-  --primary: #6a49f2;
-  --primary-2: #5a3ad1;
+  /* actions — ink-black accent (#111, near-black not pure). One channel. */
+  --primary: #111111;
+  --primary-2: #111111;
   --primary-content: #ffffff;
-  --accent: #6a49f2; /* light surfaces are bright, --primary itself reads as text */
+  --accent: #111111;
 
-  /* feedback — deepened vs. dark's --danger for contrast on light surfaces */
+  /* feedback — danger red, TEXT only */
   --danger: #d64545;
   --danger-content: #ffffff;
-  --danger-2: #cf444f; /* deeper shade for danger button fills (white-on AA) */
+  --danger-2: #cf444f;
 
-  /* structure */
-  --neutral-faint: #ebebf0;
-  --line: #e2e2e8;
-  --rule: #d0d0d8;
+  /* structure — #ececee is "细到几乎看不见,只提供结构感" */
+  --neutral-faint: #f4f4f5;
+  --line: #ececee;
+  --rule: #dcdce0;
 
   /* overlays */
-  --backdrop: rgba(0, 0, 0, 0.45);
-  --backdrop-heavy: rgba(0, 0, 0, 0.68);
+  --backdrop: rgba(0, 0, 0, 0.35);
+  --backdrop-heavy: rgba(0, 0, 0, 0.5);
+
+  /* shadows — tinted off #111, not pure black (would be too heavy) */
+  --shadow-sm: 0 1px 2px rgba(17, 17, 17, 0.04);
+  --shadow-md: 0 4px 20px rgba(17, 17, 17, 0.08);
+  --shadow-lg: 0 12px 40px rgba(17, 17, 17, 0.14);
 }

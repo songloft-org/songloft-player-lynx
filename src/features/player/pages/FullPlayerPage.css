@@ -74,7 +74,8 @@
   width: 40px;
   height: 40px;
   border-radius: var(--radius-pill);
-  background-color: var(--neutral-faint);
+  /* Muse icon buttons are transparent — shadow is only for floating elements. */
+  background-color: transparent;
 }
 
 .full-player__speed-btn {
@@ -91,7 +92,7 @@
 .full-player__speed-text {
   font-size: 12px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--primary-content);
 }
 
 .full-player__speed-text-idle {
@@ -132,8 +133,10 @@
 .full-player__cover {
   width: 260px;
   height: 260px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background-color: var(--paper);
+  /* Muse: the cover is the one place a large shadow is earned (§3.5). */
+  box-shadow: var(--shadow-lg);
 }
 
 .full-player__cover--empty {
@@ -234,6 +237,7 @@
   height: 14px;
   border-radius: var(--radius-pill);
   background-color: var(--primary-content);
+  box-shadow: var(--shadow-sm);
 }
 
 .player-progress__times {
@@ -275,6 +279,8 @@
   width: 68px;
   height: 68px;
   background-color: var(--primary);
+  /* Muse §3.5: the primary play button earns a floating shadow. */
+  box-shadow: var(--shadow-md);
 }
 
 .player-controls__glyph {
@@ -337,13 +343,14 @@
 }
 
 .player-volume__indicator {
-  /* Same overlay fix as the progress indicator (see above). */
+  /* Same overlay fix as the progress indicator (see above). One accent
+     channel — volume rides the same ink indicator as progress (Muse §2.2). */
   position: absolute;
   left: 0;
   top: 0;
   height: 4px;
   border-radius: var(--radius-pill);
-  background-color: var(--content-2);
+  background-color: var(--primary);
 }
 
 .player-volume__thumb-wrap {
@@ -356,7 +363,8 @@
   width: 12px;
   height: 12px;
   border-radius: var(--radius-pill);
-  background-color: var(--content);
+  background-color: var(--primary-content);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ── Lyrics ── */
@@ -441,8 +449,8 @@
 
 .drawer__content {
   background-color: var(--paper);
-  border-top-left-radius: var(--radius-lg);
-  border-top-right-radius: var(--radius-lg);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
 }
 
 .drawer__inner {

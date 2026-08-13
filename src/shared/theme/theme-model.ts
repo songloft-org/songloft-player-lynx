@@ -42,7 +42,7 @@ export type AppTheme = 'system' | ResolvedTheme
 export const APP_THEME_OPTIONS: readonly AppTheme[] = ['system', 'light', 'dark']
 
 /** Fallback for `'system'` on hosts that report no dark-mode signal at all. */
-export const DEFAULT_RESOLVED_THEME: ResolvedTheme = 'dark'
+export const DEFAULT_RESOLVED_THEME: ResolvedTheme = 'light'
 
 /** True when `value` is one of the concrete resolved themes. */
 export function isResolvedTheme(value: unknown): value is ResolvedTheme {

@@ -1,21 +1,37 @@
-/* Mini-player bar. LUNA tokens only. */
+/*
+ * Mini-player — Muse floating rounded bar.
+ *
+ * In-flow inside the shell content column (sits above the bottom bar on narrow,
+ * at the column foot on wide); side + bottom margins give it the floating gap,
+ * --radius-lg + --shadow-md make it the one floating element that earns a shadow
+ * (Muse §3.5). LUNA tokens only.
+ */
 
 .mini-player {
   display: flex;
   flex-direction: column;
-  width: 100%;
+  margin: 0 var(--space-2) var(--space-2);
   background-color: var(--paper);
-  border-top: 1px solid var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+/* Wide: a touch more side gap and clear the bottom safe-area inset via margin
+   (the bar floats above the home indicator rather than docking into it). */
+.shell--wide .mini-player {
+  margin: 0 var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
 }
 
 .mini-player__progress {
   width: 100%;
-  height: 2px;
-  background-color: var(--rule);
+  height: 3px;
+  background-color: var(--line);
 }
 
 .mini-player__progress-fill {
-  height: 2px;
+  height: 3px;
   background-color: var(--primary);
 }
 
@@ -47,7 +63,7 @@
 .mini-player__title {
   color: var(--content);
   font-size: var(--font-sm);
-  font-weight: bold;
+  font-weight: 600;
 }
 
 .mini-player__subtitle {
@@ -56,6 +72,7 @@
   margin-top: 2px;
 }
 
+/* Play button — Muse primary: ink fill + accent-contrast glyph. */
 .mini-player__play {
   display: flex;
   align-items: center;
@@ -63,6 +80,5 @@
   width: 44px;
   height: 44px;
   border-radius: var(--radius-pill);
-  background-color: var(--neutral-faint);
+  background-color: var(--primary);
 }
-

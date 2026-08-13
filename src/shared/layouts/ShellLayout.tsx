@@ -29,7 +29,7 @@ function PluginTabIcon({ tab, active }: { tab: PluginTabEntry; active: boolean }
   const icon = tab.icon ?? ''
   const isSvg = isSvgIcon(icon)
   const { data: markup } = usePluginIconQuery(tab.entryPath, icon, isSvg)
-  const color = active ? ICON_COLORS.primary : ICON_COLORS.contentMuted
+  const color = active ? ICON_COLORS.primaryContent : ICON_COLORS.contentMuted
 
   if (icon && isSvg && markup) {
     return <svg className='nav-item__plugin-icon' content={markup} />
@@ -85,7 +85,7 @@ export function ShellLayout() {
             <Icon
               name={dest.icon}
               size={24}
-              color={active ? ICON_COLORS.primary : ICON_COLORS.contentMuted}
+              color={active ? ICON_COLORS.primaryContent : ICON_COLORS.contentMuted}
             />
           </view>
           <text className='nav-item__label'>{t(dest.labelKey)}</text>
