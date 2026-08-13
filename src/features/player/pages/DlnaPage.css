@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--bg);
+  background-color: var(--canvas);
 }
 
 .dlna-page__topbar {
@@ -50,7 +50,7 @@
 .dlna-page__now {
   padding: var(--space-3) var(--space-4);
   border-top-width: 1px;
-  border-top-color: var(--border);
+  border-top-color: var(--line);
 }
 
 .dlna-page__now-label {

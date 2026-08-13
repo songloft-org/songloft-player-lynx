@@ -51,7 +51,8 @@
 .song-detail__cover {
   width: 160px;
   height: 160px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
 }
 
 .song-detail__cover--empty {
@@ -70,7 +71,7 @@
   flex-direction: row;
   padding: var(--space-3) 0;
   border-bottom-width: 1px;
-  border-bottom-color: var(--border);
+  border-bottom-color: var(--line);
 }
 
 .song-detail__row-label {

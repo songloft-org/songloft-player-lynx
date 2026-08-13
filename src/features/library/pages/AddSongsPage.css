@@ -21,30 +21,32 @@
   color: var(--content);
 }
 
+/* Tabs — Muse underline style, matching the Library view switcher. */
 .add-songs__tabs {
   display: flex;
   flex-direction: row;
-  padding: 0 var(--space-4) var(--space-3);
-  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--line);
 }
 
 .add-songs__tab {
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-pill);
-  background-color: var(--paper);
+  padding: var(--space-2) 0;
+  border-bottom: 2px solid transparent;
 }
 
 .add-songs__tab--active {
-  background-color: var(--primary);
+  border-bottom-color: var(--primary);
 }
 
 .add-songs__tab-text {
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--content-muted);
 }
 
 .add-songs__tab--active .add-songs__tab-text {
-  color: var(--primary-content);
+  color: var(--content);
+  font-weight: 600;
 }
 
 .add-songs__form {

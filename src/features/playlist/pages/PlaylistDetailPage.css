@@ -48,7 +48,8 @@
 }
 
 .playlist-detail__action-btn--danger {
-  background-color: var(--danger-2);
+  background-color: transparent;
+  border: 1px solid var(--danger);
 }
 
 .playlist-detail__action-text {
@@ -57,7 +58,7 @@
 }
 
 .playlist-detail__action-text--danger {
-  color: var(--danger-content);
+  color: var(--danger);
 }
 
 .playlist-detail__hero {
