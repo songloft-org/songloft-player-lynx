@@ -329,10 +329,14 @@ export function PlaylistDetailPage() {
       <view className='playlist-detail__body'>
         {sortMode
           ? (
-            <SortableRoot
-              as='ScrollView'
-              scrollableClassName='playlist-detail__sort-scroll'
-              data={songs.map((s) => ({ getSortingKey: () => String(s.id), dataItem: s }))}
+            <scroll-view
+              className='playlist-detail__sort-scroll'
+              scroll-y
+              lower-threshold={200}
+              bindscrolltolower={onEndReached}
+            >
+              <SortableRoot
+                data={songs.map((s) => ({ getSortingKey: () => String(s.id), dataItem: s }))}
               onSortEnd={(sorted) => {
                 // Find the moved song by comparing the new order against the
                 // original. Only one item moves per drag gesture, so a simple
@@ -368,6 +372,7 @@ export function PlaylistDetailPage() {
                 </SortableItem>
               )}
             </SortableRoot>
+            </scroll-view>
           )
           : songsQuery.isLoading
           ? <DetailState text={t('library.loadingSongs')} />
