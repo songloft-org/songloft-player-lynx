@@ -57,7 +57,7 @@ test('the home strip scrolls horizontally via scroll-orientation, not deprecated
 
 test('the vertical scroll-view uses enable-nested-scroll to coordinate with the refresh wrapper', () => {
   const page = code('features/home/pages/HomePage.tsx')
-  expect(page).toMatch(/enable-refresh=\{true\}/)
+  expect(page).toMatch(/enable-refresh=\{!isWeb\}/)
   expect(page).toMatch(/enable-nested-scroll=\{true\}/)
 })
 

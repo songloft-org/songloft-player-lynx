@@ -1,7 +1,9 @@
-import { useEffect, useRef } from '@lynx-js/react'
+import { useRef } from '@lynx-js/react'
 import type { NodesRef } from '@lynx-js/types'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+
+import { isWebEnvironment } from '../../../native/web-platform.js'
 
 import { EMPTY_LIBRARY_STATS } from '../../../models/library-stats.js'
 import type { Playlist } from '../../../models/playlist.js'
@@ -64,18 +66,12 @@ export function HomePage() {
     void navigate({ to: '/library', search: { view: 'playlists' } })
   }
   const refreshRef = useRef<NodesRef>(null)
+  const isWeb = isWebEnvironment()
   const onStartRefresh = () => {
     void Promise.all([normal.refetch(), radio.refetch(), statsQuery.refetch()]).finally(() => {
       refreshRef.current?.invoke({ method: 'finishRefresh' }).exec()
     })
   }
-
-  // On Web, the <refresh> IntersectionObserver may fire immediately on mount,
-  // causing the refresh indicator to appear permanently. Call finishRefresh
-  // after mount to clear any spurious refresh state.
-  useEffect(() => {
-    refreshRef.current?.invoke({ method: 'finishRefresh' }).exec()
-  }, [])
 
   return (
     <view className='home'>
@@ -88,7 +84,7 @@ export function HomePage() {
       <refresh
         ref={refreshRef}
         className='home__refresh'
-        enable-refresh={true}
+        enable-refresh={!isWeb}
         bindstartrefresh={onStartRefresh}
       >
         <refresh-header className='home__refresh-header'>
