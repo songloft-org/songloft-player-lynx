@@ -13,11 +13,12 @@
   background-color: var(--canvas);
 }
 
-/* View switcher (Songs / Categories / Playlists) */
+/* View switcher (Songs / Categories / Playlists) — Muse tab style:
+   hairline container border + ink underline on the active tab (no pill fill). */
 .library__switcher {
   display: flex;
   flex-direction: row;
-  padding: var(--space-3) var(--space-4);
+  padding: 0 var(--space-4);
   border-bottom: 1px solid var(--line);
 }
 
@@ -25,24 +26,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-2) var(--space-4);
-  margin-right: var(--space-2);
-  border-radius: var(--radius-pill);
-  background-color: var(--neutral-faint);
+  padding: var(--space-3) var(--space-3);
+  margin-right: var(--space-4);
+  border-bottom: 2px solid transparent;
 }
 
 .library__tab--active {
-  background-color: var(--primary);
+  border-bottom-color: var(--primary);
 }
 
 .library__tab-text {
-  color: var(--content-2);
+  color: var(--content-muted);
   font-size: var(--font-sm);
-  font-weight: bold;
+  font-weight: 500;
 }
 
 .library__tab--active .library__tab-text {
-  color: var(--primary-content);
+  color: var(--content);
+  font-weight: 600;
 }
 
 .library__body {
@@ -190,13 +191,13 @@
   padding: var(--space-1) var(--space-3);
   margin-right: var(--space-2);
   border-radius: var(--radius-pill);
-  border: 1px solid var(--line);
-  background-color: var(--neutral-faint);
+  border: 1px solid var(--rule);
+  background-color: transparent;
 }
 
 .library__chip--active {
   border-color: var(--primary);
-  background-color: var(--paper);
+  background-color: transparent;
 }
 
 .library__chip-text {
@@ -205,7 +206,7 @@
 }
 
 .library__chip--active .library__chip-text {
-  color: var(--accent);
+  color: var(--primary);
 }
 
 .library__grid-scroll {
@@ -327,7 +328,7 @@
   padding: var(--space-3) var(--space-4);
   background-color: var(--paper);
   border-top-width: 1px;
-  border-top-color: var(--border);
+  border-top-color: var(--line);
 }
 
 .library__select-toolbar-count {
@@ -353,9 +354,9 @@
   left: 0;
   right: 0;
   height: 50%;
-  background-color: var(--surface);
-  border-top-left-radius: var(--radius-lg);
-  border-top-right-radius: var(--radius-lg);
+  background-color: var(--paper);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
 }

@@ -67,25 +67,26 @@
 }
 
 .logout-dialog {
-  background-color: var(--canvas);
-  border-radius: 12px;
-  padding: 24px;
-  margin: 32px;
+  background-color: var(--paper);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  padding: var(--space-5);
+  margin: var(--space-6);
   max-width: 360px;
 }
 
 .logout-dialog__title {
-  font-size: 16px;
+  font-size: var(--font-md);
   font-weight: 600;
   color: var(--content);
-  margin-bottom: 12px;
+  margin-bottom: var(--space-2);
 }
 
 .logout-dialog__message {
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: var(--content-muted);
-  line-height: 20px;
-  margin-bottom: 20px;
+  line-height: var(--font-lg);
+  margin-bottom: var(--space-5);
 }
 
 .logout-dialog__actions {
@@ -95,24 +96,28 @@
 }
 
 .logout-dialog__btn {
-  padding: 8px 16px;
-  border-radius: 6px;
-  margin-left: 8px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  margin-left: var(--space-2);
 }
 
+/* Muse ghost (cancel) + danger-ghost (confirm): transparent bodies, hairline
+   borders — danger is red TEXT only, never a red fill block (Muse §4.1). */
 .logout-dialog__btn--cancel {
   background-color: transparent;
+  border: 1px solid var(--rule);
 }
 
 .logout-dialog__btn--confirm {
-  background-color: var(--danger);
+  background-color: transparent;
+  border: 1px solid var(--danger);
 }
 
 .logout-dialog__btn-text {
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: var(--content);
 }
 
 .logout-dialog__btn-text--confirm {
-  color: var(--danger-content);
+  color: var(--danger);
 }
