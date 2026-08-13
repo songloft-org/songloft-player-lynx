@@ -12,10 +12,10 @@ import { useCreatePlaylistMutation, useReorderPlaylistsMutation } from '../data/
 import { PlaylistCard } from './PlaylistCard.js'
 import './PlaylistsView.css'
 
-export function PlaylistsView() {
+export function PlaylistsView({ type }: { type?: string } = {}) {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const query = usePlaylistsInfiniteQuery()
+  const query = usePlaylistsInfiniteQuery(type ? { type } : {})
   const allPlaylists = flattenPlaylists(query.data?.pages)
   const playlists = allPlaylists.filter((p) => !p.isHidden)
   const createMutation = useCreatePlaylistMutation()

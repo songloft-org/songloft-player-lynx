@@ -26,7 +26,7 @@ import { FavoriteSongRow } from '../widgets/FavoriteSongRow.js'
 import { VirtualList } from '../widgets/VirtualList.js'
 import './LibraryPage.css'
 
-type LibraryView = 'songs' | 'facets' | 'playlists'
+type LibraryView = 'songs' | 'facets' | 'playlists' | 'radio'
 
 type FacetField = 'artist' | 'album' | 'genre'
 
@@ -38,12 +38,13 @@ const FACET_LABEL_KEYS: Record<FacetField, string> = {
   genre: 'library.facetGenre',
 }
 
-const VIEW_ORDER: readonly LibraryView[] = ['songs', 'facets', 'playlists']
+const VIEW_ORDER: readonly LibraryView[] = ['songs', 'facets', 'playlists', 'radio']
 
 const VIEW_LABEL_KEYS: Record<LibraryView, string> = {
   songs: 'library.tabSongs',
   facets: 'library.tabCategories',
   playlists: 'library.tabPlaylists',
+  radio: 'library.tabRadio',
 }
 
 export type SortOption = 'added_at' | 'title' | 'artist'
@@ -83,7 +84,8 @@ export function LibraryPage() {
       <view className='library__body'>
         {view === 'songs' ? <SongsView /> : null}
         {view === 'facets' ? <FacetsView /> : null}
-        {view === 'playlists' ? <PlaylistsView /> : null}
+        {view === 'playlists' ? <PlaylistsView type='normal' /> : null}
+        {view === 'radio' ? <PlaylistsView type='radio' /> : null}
       </view>
     </view>
   )

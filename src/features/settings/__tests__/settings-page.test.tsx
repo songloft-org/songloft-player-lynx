@@ -83,7 +83,7 @@ vi.mock('../../auth/store/index.js', () => ({
 
 vi.mock('../../player/store/player-store.js', async () => {
   const { makePlayerStoreMock } = await import('../../../__tests__/_render-mocks.js')
-  return { ...makePlayerStoreMock({}, { playMode: 'order', setPlayMode: setPlayModeSpy }), setAudioQualityCache: vi.fn() }
+  return { ...makePlayerStoreMock({}, { playMode: 'order', setPlayMode: setPlayModeSpy }), setAudioQualityCache: vi.fn(), setNormalizeEnabled: vi.fn() }
 })
 
 vi.mock('../data/settings-prefs.js', () => ({
@@ -93,6 +93,8 @@ vi.mock('../data/settings-prefs.js', () => ({
   writeAudioQuality: vi.fn(async () => {}),
   readAutoResume: vi.fn(async () => false),
   writeAutoResume: vi.fn(async () => {}),
+  readNormalize: vi.fn(async () => false),
+  writeNormalize: vi.fn(async () => {}),
   coerceAudioQuality: (raw: unknown) => (raw === '320' || raw === '192' || raw === '128' ? raw : 'original'),
 }))
 

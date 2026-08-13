@@ -44,6 +44,7 @@ export interface SongUrlOptions {
   hlsDirect?: boolean
   audioTrack?: number | null
   platform?: AudioPlatform
+  normalize?: boolean
 }
 
 export function buildSongUrl(
@@ -62,6 +63,7 @@ export function buildSongUrl(
   }
   if (quality && quality !== 'original') result = append(result, `quality=${quality}`)
   if (hlsDirect) result = append(result, 'hls=direct')
+  if (opts.normalize) result = append(result, 'normalize=1')
   return result
 }
 

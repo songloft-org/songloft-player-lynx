@@ -1,4 +1,4 @@
-type LibrarySearch = { view?: 'songs' | 'facets' | 'playlists'; field?: 'artist' | 'album' | 'genre' }
+type LibrarySearch = { view?: 'songs' | 'facets' | 'playlists' | 'radio'; field?: 'artist' | 'album' | 'genre' }
 
 let last: LibrarySearch = {}
 

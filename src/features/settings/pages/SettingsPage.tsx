@@ -36,8 +36,8 @@ import {
 // (which crashes the ReactLynx Vitest snapshot tree).
 import { useAuthStore } from '../../auth/store/index.js'
 import { getSettingsApi } from '../api/index.js'
-import { type AudioQuality, coerceAudioQuality, readAudioQuality, readAutoResume, writeAudioQuality, writeAutoResume } from '../data/settings-prefs.js'
-import { setAudioQualityCache } from '../../player/store/player-store.js'
+import { type AudioQuality, coerceAudioQuality, readAudioQuality, readAutoResume, readNormalize, writeAudioQuality, writeAutoResume, writeNormalize } from '../data/settings-prefs.js'
+import { setAudioQualityCache, setNormalizeEnabled } from '../../player/store/player-store.js'
 import { canExport, exportPlaylists, importPlaylists } from '../domain/data-transfer.js'
 import { LOG_LEVELS, coerceLogLevel, logLevelLabelKey, type LogLevel } from '../domain/log-level.js'
 import { serverDisplay } from '../domain/settings-model.js'
@@ -116,6 +116,7 @@ export function SettingsPage() {
   const [logLevel, setLogLevel] = useState<LogLevel>('info')
   const [audioQuality, setAudioQuality] = useState<AudioQuality>('original')
   const [autoResume, setAutoResume] = useState(false)
+  const [normalize, setNormalize] = useState(false)
   const [backendVersion, setBackendVersion] = useState('')
 
   useEffect(() => {
@@ -153,6 +154,9 @@ export function SettingsPage() {
       .catch(() => {})
     void readAutoResume()
       .then((v) => { if (!cancelled) setAutoResume(v) })
+      .catch(() => {})
+    void readNormalize()
+      .then((v) => { if (!cancelled) setNormalize(v) })
       .catch(() => {})
     void getSettingsApi().getVersion()
       .then((v) => { if (!cancelled) setBackendVersion(v) })
@@ -342,6 +346,15 @@ export function SettingsPage() {
               trailingIcon={autoResume ? 'check' : undefined}
               onTap={() => { const next = !autoResume; setAutoResume(next); void writeAutoResume(next) }}
               testId='settings-auto-resume'
+            />
+            <SettingsRow
+              icon='volume'
+              title={t('settings.normalize')}
+              subtitle={t('settings.normalizeSubtitle')}
+              selected={normalize}
+              trailingIcon={normalize ? 'check' : undefined}
+              onTap={() => { const next = !normalize; setNormalize(next); setNormalizeEnabled(next); void writeNormalize(next) }}
+              testId='settings-normalize'
             />
             <SettingsRow
               icon='music'

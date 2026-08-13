@@ -148,3 +148,19 @@ export async function writeAudioQuality(
 ): Promise<void> {
   await tryWritePref(storage, PREF_AUDIO_QUALITY, quality)
 }
+
+const PREF_NORMALIZE = 'volume_normalize'
+
+export async function readNormalize(
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<boolean> {
+  const raw = await tryReadPref(storage, PREF_NORMALIZE)
+  return raw === 'true'
+}
+
+export async function writeNormalize(
+  enabled: boolean,
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<void> {
+  await tryWritePref(storage, PREF_NORMALIZE, String(enabled))
+}

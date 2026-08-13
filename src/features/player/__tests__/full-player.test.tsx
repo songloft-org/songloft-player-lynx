@@ -24,6 +24,7 @@ vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigateSpy }))
 vi.mock('../../settings/data/settings-prefs.js', () => ({
   writeDefaultPlayMode: writePrefSpy,
   readAudioQuality: vi.fn(async () => 'original'),
+  readNormalize: vi.fn(async () => false),
   readPlaybackSpeed: vi.fn(async () => 1),
   writePlaybackSpeed: vi.fn(async () => {}),
 }))

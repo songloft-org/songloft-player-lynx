@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { Playlist } from '../../../models/playlist.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { IconName } from '../../../shared/ui/icons.js'
+import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 // Reuse the batch-6 playlist card (cover / music-note placeholder + name +
 // song-count). Its base rules are global CSS tuned for the library's three-per-row
 // grid (`width: 33.33%`, cover `height: 96px`); the home strip overrides both into
@@ -38,9 +39,19 @@ export function HomeSection({
   playingPlaylistId,
 }: HomeSectionProps) {
   const { t } = useTranslation()
+  const { isWide, onLayoutChange } = useBreakpoint()
+
+  const cards = items.map((playlist) => (
+    <PlaylistCard
+      key={String(playlist.id)}
+      playlist={playlist}
+      onTap={onTapPlaylist}
+      isPlaying={playingPlaylistId === playlist.id}
+    />
+  ))
 
   return (
-    <view className='home-section'>
+    <view className='home-section' bindlayoutchange={onLayoutChange}>
       <view className='home-section__header'>
         {icon
           ? (
@@ -69,40 +80,23 @@ export function HomeSection({
               : null}
           </view>
         )
-        : (
-          // Structure and attributes here were all established on-device; each line
-          // fixes a distinct defect that batch 18b's tag swap introduced or left:
-          //
-          //  - the scroll-view carries ONLY size + scrolling, with the flex row in an
-          //    inner `<view>`. `display:flex` on the scroll-view itself makes the cards
-          //    flex items of the scroller's own box, and `.home-section__row` needs
-          //    `width: max-content` or it is laid out at viewport width and there is
-          //    nothing longer than the viewport to translate;
-          //  - `scroll-orientation`, not the deprecated `scroll-x`, whose per-platform
-          //    legacy alias is why this ever worked on iOS but not Android. Lynx's
-          //    hyphenated attributes are exempt from TypeScript's unknown-property
-          //    check, so a wrong name here fails silently (as `placeholder-color` did);
-          //  - `enable-nested-scroll` (default false) to coordinate with the vertical
-          //    page scroller instead of fighting it. Not declared in `@lynx-js/types`
-          //    for `<scroll-view>` — only `<list>` has it — so the bundle assertion in
-          //    `home-section-scroll.test.ts` is what proves it ships.
-          <scroll-view
-            className='home-section__scroll'
-            scroll-orientation='horizontal'
-            enable-nested-scroll={true}
-          >
-            <view className='home-section__row'>
-              {items.map((playlist) => (
-                <PlaylistCard
-                  key={String(playlist.id)}
-                  playlist={playlist}
-                  onTap={onTapPlaylist}
-                  isPlaying={playingPlaylistId === playlist.id}
-                />
-              ))}
+        : isWide
+          ? (
+            <view className='home-section__grid'>
+              {cards}
             </view>
-          </scroll-view>
-        )}
+          )
+          : (
+            <scroll-view
+              className='home-section__scroll'
+              scroll-orientation='horizontal'
+              enable-nested-scroll={true}
+            >
+              <view className='home-section__row'>
+                {cards}
+              </view>
+            </scroll-view>
+          )}
     </view>
   )
 }

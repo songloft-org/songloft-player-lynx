@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 import { buildSongUrl } from '../../../core/network/url-helper.js'
-import { readAudioQuality, readAutoResume, readPlaybackSpeed, writePlaybackSpeed } from '../../settings/data/settings-prefs.js'
+import { readAudioQuality, readAutoResume, readNormalize, readPlaybackSpeed, writePlaybackSpeed } from '../../settings/data/settings-prefs.js'
 import { loadPlaybackState, savePlaybackState } from '../data/playback-persistence.js'
 import type { Song } from '../../../models/song.js'
 import {
@@ -117,9 +117,20 @@ export function setAudioQualityCache(q: string | null): void {
   _audioQuality = q
 }
 
+let _normalize = false
+readNormalize().then((v) => { _normalize = v }).catch(() => {})
+
+export function setNormalizeEnabled(enabled: boolean): void {
+  _normalize = enabled
+}
+
+export function isNormalizeEnabled(): boolean {
+  return _normalize
+}
+
 function songUrl(song: Song): string {
   if (!song.url) return ''
-  return buildSongUrl(song.url, { songFormat: song.format, quality: _audioQuality })
+  return buildSongUrl(song.url, { songFormat: song.format, quality: _audioQuality, normalize: _normalize })
 }
 
 function toAudioItem(song: Song): AudioItem {

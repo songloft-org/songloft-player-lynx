@@ -155,6 +155,29 @@
   height: 120px;
 }
 
+/*
+ * Wide-screen grid: 3 columns of equal-width cards, replacing the horizontal
+ * scroll strip on tablet/desktop. Cards reuse the same square-cover style.
+ */
+.home-section__grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  padding: 0 var(--space-3);
+  gap: var(--space-3);
+}
+
+.home-section__grid .playlist-card {
+  width: 30%;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.home-section__grid .playlist-card__cover {
+  width: 100%;
+  aspect-ratio: 1;
+}
+
 .home-section__error {
   display: flex;
   flex-direction: row;

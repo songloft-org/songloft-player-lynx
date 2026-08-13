@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { isWebEnvironment } from '../../../native/web-platform.js'
+import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 
 import { EMPTY_LIBRARY_STATS } from '../../../models/library-stats.js'
 import type { Playlist } from '../../../models/playlist.js'
@@ -44,8 +45,10 @@ export function HomePage() {
   const statsQuery = useLibraryStatsQuery()
   const playingPlaylistId = usePlayerStore((s) => s.sourcePlaylistId)
 
-  const normalItems = homeSectionItems(normal.data?.pages)
-  const radioItems = homeSectionItems(radio.data?.pages)
+  const { isWide: homeIsWide, onLayoutChange: homeLayoutChange } = useBreakpoint()
+  const sectionLimit = homeIsWide ? 9 : 6
+  const normalItems = homeSectionItems(normal.data?.pages, sectionLimit)
+  const radioItems = homeSectionItems(radio.data?.pages, sectionLimit)
   const stats = statsQuery.data ?? EMPTY_LIBRARY_STATS
 
   const normalFailed = normal.isError
@@ -59,11 +62,11 @@ export function HomePage() {
   const openPlaylist = (playlist: Playlist) => {
     void navigate({ to: '/playlists/$id', params: { id: String(playlist.id) } })
   }
-  // Both sections' "View all" lead to the library Playlists view. Lynx's library
-  // has no separate radio sub-view (Flutter used `?view=playlist_radio`), so
-  // radio maps to the same tab — noted in PROGRESS.
   const viewAllPlaylists = () => {
     void navigate({ to: '/library', search: { view: 'playlists' } })
+  }
+  const viewAllRadios = () => {
+    void navigate({ to: '/library', search: { view: 'radio' } })
   }
   const refreshRef = useRef<NodesRef>(null)
   const isWeb = isWebEnvironment()
@@ -74,7 +77,7 @@ export function HomePage() {
   }
 
   return (
-    <view className='home'>
+    <view className='home' bindlayoutchange={homeLayoutChange}>
       <view className='home__topbar'>
         <text className='home__greeting' data-testid='home-greeting'>
           {t(currentGreetingKey())}
@@ -132,7 +135,7 @@ export function HomePage() {
                           icon='music'
                           items={radioItems}
                           failed={radioFailed}
-                          onViewAll={viewAllPlaylists}
+                          onViewAll={viewAllRadios}
                           onRetry={() => void radio.refetch()}
                           onTapPlaylist={openPlaylist}
                           playingPlaylistId={playingPlaylistId}
