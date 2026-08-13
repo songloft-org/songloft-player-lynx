@@ -8,7 +8,7 @@ import ActivityKit
 /// NOTE: This is a stub. The actual Widget Extension target and ActivityAttributes
 /// must be added to the Xcode project separately. This module handles the host-side
 /// start/update/end lifecycle.
-@available(iOS 16.1, *)
+@available(iOS 16.2, *)
 enum LiveActivityModule {
     static let moduleName = "SongloftLiveActivity"
 
