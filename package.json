@@ -7,6 +7,12 @@
     "dev": "rspeedy dev",
     "preview": "rspeedy preview",
     "test": "vitest run",
+    "test:e2e": "vitest run --config e2e/vitest.config.ts",
+    "test:e2e:android": "E2E_PLATFORM=android pnpm run test:e2e",
+    "test:e2e:ios": "E2E_PLATFORM=ios pnpm run test:e2e",
+    "e2e:ios:setup": "node scripts/e2e-ios-setup.mjs",
+    "e2e:ios": "pnpm run e2e:ios:setup && E2E_PLATFORM=ios pnpm run test:e2e",
+    "e2e:ios:full": "pnpm run ios:build && pnpm run e2e:ios",
     "typecheck": "tsc -b",
     "copy-bundle:android": "node scripts/copy-bundle-android.mjs",
     "build:android-bundle": "rspeedy build && node scripts/copy-bundle-android.mjs",
@@ -48,10 +54,13 @@
     "@lynx-js/types": "4.0.0",
     "@rsbuild/plugin-type-check": "1.5.0",
     "@testing-library/jest-dom": "^6.9.1",
+    "@types/node": "^26.2.0",
     "@types/react": "^19.2.17",
+    "@types/ws": "^8.18.1",
     "jsdom": "^27.4.0",
     "typescript": "~6.0.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "ws": "^8.21.2"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

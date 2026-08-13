@@ -55,3 +55,7 @@ bun.lock
 android/key.properties
 *.jks
 *.keystore
+
+# E2E test artifacts (reports + screenshots — generated per run, not versioned)
+e2e/reports/
+e2e/screenshots/

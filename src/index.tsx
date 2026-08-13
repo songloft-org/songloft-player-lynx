@@ -3,6 +3,7 @@ import './shims/router-env.js'
 
 import '@lynx-js/preact-devtools'
 import '@lynx-js/react/debug'
+import './e2e-bridge.js'
 import { root } from '@lynx-js/react'
 
 import { App } from './App.js'

@@ -65,6 +65,27 @@ adb reverse tcp:58091 tcp:58091
 adb logcat -s lynx:V LynxUISVG:E AndroidRuntime:E
 ```
 
+### E2E 行为测试
+
+```bash
+# Android（需 adb 连接 + debug APK 已安装）
+pnpm run test:e2e:android
+
+# iOS（一键：自动 boot 模拟器 + 检查安装 + 运行场景）
+pnpm run e2e:ios
+
+# iOS 全流程（含构建：build → pod install → boot → install → test）
+pnpm run e2e:ios:full
+
+# 仅准备 iOS 环境（不运行测试）
+pnpm run e2e:ios:setup
+```
+
+测试通过 Lynx Inspector Protocol (WebSocket) 驱动设备上的 App。
+场景跨平台复用（`e2e/scenarios/`），iOS 额外有系统外观测试。
+测试报告输出到 `e2e/reports/`，截图在 `e2e/screenshots/`（均已 gitignore）。
+详见 `docs/behavior-testing-design.md` 和 `e2e/` 目录。
+
 ### Git
 
 - 分支：`main`，远程：`origin`（`git@github.com:songloft-org/songloft-player-lynx.git`）

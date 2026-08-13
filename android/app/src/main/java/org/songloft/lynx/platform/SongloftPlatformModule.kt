@@ -7,9 +7,9 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.OpenableColumns
-import com.lynx.tasm.behavior.utils.LynxUIMethodModule
+import com.lynx.jsbridge.LynxModule
 import com.lynx.react.bridge.Callback
-import com.lynx.tasm.annotation.LynxMethod
+import com.lynx.jsbridge.LynxMethod
 import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -19,7 +19,7 @@ import java.util.UUID
  * Platform utilities native module — opens URLs and performs file-pick-then-upload.
  * Exposed to JS as `NativeModules.SongloftPlatform`.
  */
-class SongloftPlatformModule(private val context: Context) : LynxUIMethodModule(context) {
+class SongloftPlatformModule(context: Context) : LynxModule(context) {
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -29,7 +29,7 @@ class SongloftPlatformModule(private val context: Context) : LynxUIMethodModule(
             try {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
+                mContext.startActivity(intent)
             } catch (_: Throwable) {}
         }
     }
@@ -41,7 +41,7 @@ class SongloftPlatformModule(private val context: Context) : LynxUIMethodModule(
     @LynxMethod
     fun pickAndUploadFile(uploadUrl: String, fieldName: String, mimeType: String, callback: Callback) {
         mainHandler.post {
-            FilePicker.pick(context, mimeType) { uri ->
+            FilePicker.pick(mContext, mimeType) { uri ->
                 if (uri == null) {
                     callback.invoke("cancelled", null)
                     return@pick
@@ -85,14 +85,14 @@ class SongloftPlatformModule(private val context: Context) : LynxUIMethodModule(
         out.write("Content-Disposition: form-data; name=\"$fieldName\"; filename=\"$fileName\"$crlf".toByteArray())
         out.write("Content-Type: application/json$crlf".toByteArray())
         out.write(crlf.toByteArray())
-        context.contentResolver.openInputStream(uri)?.use { input ->
+        mContext.contentResolver.openInputStream(uri)?.use { input ->
             input.copyTo(out)
         }
         out.write("$crlf--$boundary--$crlf".toByteArray())
     }
 
     private fun getFileName(uri: Uri): String? {
-        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+        mContext.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) {
                 val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                 if (idx >= 0) return cursor.getString(idx)

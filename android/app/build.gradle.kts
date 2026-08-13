@@ -99,6 +99,10 @@ dependencies {
     implementation("org.lynxsdk.lynx:lynx-service-http:4.0.0")
     implementation("com.squareup.okhttp3:okhttp:4.9.0")
 
+    // devtool-service (Lynx Inspector Protocol for e2e testing via WebSocket)
+    implementation("org.lynxsdk.lynx:lynx-service-devtool:4.0.0")
+    implementation("org.lynxsdk.lynx:debug-router:0.0.20")
+
     // XElement family — needed by elements this app renders: `<svg>` (icons),
     // `<input>` (login / server settings), overlay (Sheet), refresh,
     // `<webview>` (plugin pages).

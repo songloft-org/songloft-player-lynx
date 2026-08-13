@@ -20,11 +20,14 @@ import UIKit
 class AppDelegate: UIResponder, UIApplicationDelegate {
   var window: UIWindow?
 
+  private let testBridgeServer = TestBridgeServer()
+
   func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     LynxEnv.sharedInstance()
+    testBridgeServer.start()
     return true
   }
 }

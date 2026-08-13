@@ -5,6 +5,7 @@ import com.facebook.drawee.backends.pipeline.Fresco
 import com.facebook.imagepipeline.core.ImagePipelineConfig
 import com.facebook.imagepipeline.memory.PoolConfig
 import com.facebook.imagepipeline.memory.PoolFactory
+import com.lynx.service.devtool.LynxDevToolService
 import com.lynx.service.http.LynxHttpService
 import com.lynx.service.image.LynxImageService
 import com.lynx.service.log.LynxLogService
@@ -13,6 +14,8 @@ import com.lynx.tasm.service.LynxServiceCenter
 import org.songloft.lynx.audio.SongloftAudioModule
 import org.songloft.lynx.platform.SongloftPlatformModule
 import org.songloft.lynx.storage.SongloftStorageModule
+import org.songloft.lynx.test.SongloftTestBridgeModule
+import org.songloft.lynx.test.TestBridgeServer
 
 /**
  * Application entry: initialises the Lynx runtime once, before any LynxView is
@@ -23,8 +26,8 @@ import org.songloft.lynx.storage.SongloftStorageModule
  *   - log    → engine logging
  *   - http   → the host HTTP service that backs the bare global `fetch` the
  *              network layer relies on (see AGENTS.md §3; Android 2.18+)
- * DevTool service is intentionally omitted (this is a standalone side-loadable
- * dev APK, not an Explorer debugging host).
+ * DevTool service is included to enable the Lynx Inspector Protocol (WebSocket)
+ * for e2e behavior testing via the `e2e/` driver.
  */
 class SongloftApplication : Application() {
     override fun onCreate() {
@@ -42,6 +45,9 @@ class SongloftApplication : Application() {
         LynxServiceCenter.inst().registerService(LynxImageService.getInstance())
         LynxServiceCenter.inst().registerService(LynxLogService)
         LynxServiceCenter.inst().registerService(LynxHttpService)
+        LynxServiceCenter.inst().registerService(LynxDevToolService.INSTANCE)
+        LynxDevToolService.INSTANCE.devtoolEnvInit(this)
+        LynxDevToolService.INSTANCE.lynxDebugPresetValue = true
     }
 
     private fun initLynxEnv() {
@@ -51,6 +57,8 @@ class SongloftApplication : Application() {
             null,
             null,
         )
+        LynxEnv.inst().enableDevtool(true)
+        LynxEnv.inst().enableLynxDebug(true)
         // Register the real native audio backend (ExoPlayer). Exposed to JS as
         // `NativeModules.SongloftAudio`; the name MUST match the TS facade's
         // detection + the interface spec (`docs/lynx_native_modules_spec.md#1`).
@@ -62,5 +70,9 @@ class SongloftApplication : Application() {
         // backgrounding. Name + methods match `src/core/storage/native-storage.ts`.
         LynxEnv.inst().registerModule("SongloftStorage", SongloftStorageModule::class.java)
         LynxEnv.inst().registerModule("SongloftPlatform", SongloftPlatformModule::class.java)
+        LynxEnv.inst().registerModule("SongloftTestBridge", SongloftTestBridgeModule::class.java)
+
+        // Start the TCP test bridge server for e2e driver communication
+        TestBridgeServer().start()
     }
 }

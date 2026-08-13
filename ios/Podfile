@@ -45,12 +45,13 @@ target 'SongloftLynx' do
   #   Log   → engine logging
   #   Http  → the host HTTP service that backs the BARE global `fetch` the network
   #           layer relies on (AGENTS.md §3). Without it every request dies.
-  # `Devtool` is intentionally omitted — this is a standalone, side-loadable dev
-  # app, not an Explorer debugging host (same call as the Android host).
+  # `Devtool` enables the Lynx Inspector Protocol (WebSocket) for e2e behavior
+  # testing via the `e2e/` driver.
   pod 'LynxService', '4.0.1', :subspecs => [
     'Image',
     'Log',
     'Http',
+    'Devtool',
   ]
 
   # LynxService/Image dependencies (versions pinned by the podspec itself).

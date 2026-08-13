@@ -119,6 +119,7 @@ class ViewController: UIViewController {
     config.register(SongloftAudioModule.self)
     config.register(SongloftStorageModule.self)
     config.register(SongloftPlatformModule.self)
+    config.register(SongloftTestBridgeModule.self)
     return config
   }
 

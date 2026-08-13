@@ -1,0 +1,8 @@
+{
+  "token": "e2e-test-jwt-token-fixed",
+  "user": {
+    "id": 1,
+    "username": "admin",
+    "isAdmin": true
+  }
+}

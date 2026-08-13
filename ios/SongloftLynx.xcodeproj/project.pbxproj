@@ -16,6 +16,8 @@
 		AA0000000000000000000028 /* SongloftAudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001E /* SongloftAudioEngine.swift */; };
 		AA0000000000000000000029 /* SongloftAudioModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001F /* SongloftAudioModule.swift */; };
 		AA000000000000000000002B /* SongloftPlatformModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000002A /* SongloftPlatformModule.swift */; };
+		AA0000000000000000000030 /* SongloftTestBridgeModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000031 /* SongloftTestBridgeModule.swift */; };
+		AA0000000000000000000032 /* TestBridgeServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000033 /* TestBridgeServer.swift */; };
 		AA000000000000000000002D /* AudioEqualizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000002C /* AudioEqualizer.swift */; };
 		AA000000000000000000002F /* LiveActivityModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000002E /* LiveActivityModule.swift */; };
 		AA0000000000000000000024 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001A /* Assets.xcassets */; };
@@ -39,6 +41,8 @@
 		AA000000000000000000001E /* SongloftAudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongloftAudioEngine.swift; sourceTree = "<group>"; };
 		AA000000000000000000001F /* SongloftAudioModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongloftAudioModule.swift; sourceTree = "<group>"; };
 		AA000000000000000000002A /* SongloftPlatformModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongloftPlatformModule.swift; sourceTree = "<group>"; };
+		AA0000000000000000000031 /* SongloftTestBridgeModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongloftTestBridgeModule.swift; sourceTree = "<group>"; };
+		AA0000000000000000000033 /* TestBridgeServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestBridgeServer.swift; sourceTree = "<group>"; };
 		AA000000000000000000002C /* AudioEqualizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEqualizer.swift; sourceTree = "<group>"; };
 		AA000000000000000000002E /* LiveActivityModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityModule.swift; sourceTree = "<group>"; };
 		D3E9A174D02DA94EF6B01346 /* libPods-SongloftLynx.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-SongloftLynx.a"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -95,6 +99,8 @@
 				AA000000000000000000001E /* SongloftAudioEngine.swift */,
 				AA000000000000000000001F /* SongloftAudioModule.swift */,
 				AA000000000000000000002A /* SongloftPlatformModule.swift */,
+				AA0000000000000000000031 /* SongloftTestBridgeModule.swift */,
+				AA0000000000000000000033 /* TestBridgeServer.swift */,
 				AA000000000000000000002C /* AudioEqualizer.swift */,
 				AA000000000000000000002E /* LiveActivityModule.swift */,
 				AA0000000000000000000018 /* SongloftLynx-Bridging-Header.h */,
@@ -238,6 +244,8 @@
 				AA0000000000000000000028 /* SongloftAudioEngine.swift in Sources */,
 				AA0000000000000000000029 /* SongloftAudioModule.swift in Sources */,
 				AA000000000000000000002B /* SongloftPlatformModule.swift in Sources */,
+				AA0000000000000000000030 /* SongloftTestBridgeModule.swift in Sources */,
+				AA0000000000000000000032 /* TestBridgeServer.swift in Sources */,
 				AA000000000000000000002D /* AudioEqualizer.swift in Sources */,
 				AA000000000000000000002F /* LiveActivityModule.swift in Sources */,
 			);
