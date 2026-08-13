@@ -161,9 +161,3 @@
 - ❌ `appearance: none` 滑块 → 用 Lynx 的 SliderRoot
 
 ✅ 可用：CSS 变量、flex（含 `gap`）、`border-radius`、`box-shadow`、`@keyframes`、`transform`、`position: fixed`、`env(safe-area-inset-*)`、`calc()`、`overflow: hidden`/`scroll`、`white-space`/`text-overflow`。
-
----
-
-## 关于 design-example 目录
-
-`design-example/` 曾是项目根下的一个独立参考子目录，包含一个 React DOM 实现的 Muse 音乐播放器，用于视觉对照。已于 2025-08 移除（重构完成后不再需要）。
