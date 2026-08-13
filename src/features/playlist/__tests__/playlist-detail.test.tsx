@@ -7,13 +7,13 @@ import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/tes
 import type { Playlist } from '../../../models/playlist.js'
 import type { Song } from '../../../models/song.js'
 
-const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSongMutationHook, reorderSongsMutationHook, visibilityMutationHook, sortMutationHook } = vi.hoisted(() => ({
+const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSongMutationHook, moveSongMutationHook, visibilityMutationHook, sortMutationHook } = vi.hoisted(() => ({
   detailHook: vi.fn(),
   songsHook: vi.fn(),
   deleteMutationHook: vi.fn(),
   updateMutationHook: vi.fn(),
   removeSongMutationHook: vi.fn(),
-  reorderSongsMutationHook: vi.fn(),
+  moveSongMutationHook: vi.fn(),
   visibilityMutationHook: vi.fn(),
   sortMutationHook: vi.fn(),
 }))
@@ -54,7 +54,7 @@ vi.mock('../data/playlist-mutations.js', () => ({
   useDeletePlaylistMutation: deleteMutationHook,
   useUpdatePlaylistMutation: updateMutationHook,
   useRemoveSongMutation: removeSongMutationHook,
-  useReorderSongsMutation: reorderSongsMutationHook,
+  useMoveSongMutation: moveSongMutationHook,
   useSetVisibilityMutation: visibilityMutationHook,
   useUpdateSortMutation: sortMutationHook,
 }))
@@ -142,7 +142,7 @@ beforeEach(() => {
   deleteMutationHook.mockReturnValue(mutationResult())
   updateMutationHook.mockReturnValue(mutationResult())
   removeSongMutationHook.mockReturnValue(mutationResult())
-  reorderSongsMutationHook.mockReturnValue(mutationResult())
+  moveSongMutationHook.mockReturnValue(mutationResult())
   visibilityMutationHook.mockReturnValue(mutationResult())
   sortMutationHook.mockReturnValue(mutationResult())
 })
@@ -219,12 +219,12 @@ test('shows the reorder button once all songs are loaded', async () => {
   expect(queryByText('Reorder')).toBeInTheDocument()
 })
 
-test('hides the reorder button while more pages remain unloaded', async () => {
+test('shows the reorder button even while more pages remain unloaded', async () => {
   songsHook.mockReturnValue(
     songsResult([{ songs: [makeSong(1), makeSong(2)], total: 5 }], { hasNextPage: true }),
   )
   const { queryByText } = await renderPage()
-  expect(queryByText('Reorder')).not.toBeInTheDocument()
+  expect(queryByText('Reorder')).toBeInTheDocument()
 })
 
 test('sort mode renders drag handles for each song', async () => {

@@ -202,4 +202,16 @@ export class PlaylistApi {
       sort_order: sortOrder,
     })
   }
+
+  /** Move a single song to a new position (does not reload the full list). */
+  async movePlaylistSong(
+    id: number,
+    songId: number,
+    afterSongId: number | null,
+  ): Promise<void> {
+    await this.client.put(`${apiPrefix}/playlists/${id}/songs/move`, {
+      song_id: songId,
+      after_song_id: afterSongId,
+    })
+  }
 }

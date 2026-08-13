@@ -99,6 +99,28 @@ export function useReorderSongsMutation(playlistId: number) {
   })
 }
 
+/** Move a single song to a new position — no full-list reorder needed. */
+export function useMoveSongMutation(playlistId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      songId,
+      afterSongId,
+    }: {
+      songId: number
+      afterSongId: number | null
+    }) => getPlaylistApi().movePlaylistSong(playlistId, songId, afterSongId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['playlist', 'songs', playlistId],
+      })
+      void queryClient.invalidateQueries({
+        queryKey: playlistQueryKeys.detail(playlistId),
+      })
+    },
+  })
+}
+
 export function useSetVisibilityMutation(playlistId: number) {
   const queryClient = useQueryClient()
   return useMutation({

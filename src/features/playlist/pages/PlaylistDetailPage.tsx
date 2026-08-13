@@ -21,9 +21,9 @@ import {
 } from '../data/playlist-query.js'
 import {
   useDeletePlaylistMutation,
+  useMoveSongMutation,
   useUpdatePlaylistMutation,
   useRemoveSongMutation,
-  useReorderSongsMutation,
   useSetVisibilityMutation,
   useUpdateSortMutation,
 } from '../data/playlist-mutations.js'
@@ -81,7 +81,7 @@ export function PlaylistDetailPage() {
   const deleteMutation = useDeletePlaylistMutation()
   const updateMutation = useUpdatePlaylistMutation(id)
   const removeSongMutation = useRemoveSongMutation(id)
-  const reorderSongsMutation = useReorderSongsMutation(id)
+  const moveSongMutation = useMoveSongMutation(id)
   const visibilityMutation = useSetVisibilityMutation(id)
   const sortMutation = useUpdateSortMutation(id)
 
@@ -91,7 +91,7 @@ export function PlaylistDetailPage() {
   const [editName, setEditName] = useState('')
   const [editDesc, setEditDesc] = useState('')
   const [sortMode, setSortMode] = useState(false)
-  const canSort = !songsQuery.hasNextPage && songs.length > 1
+  const canSort = songs.length > 1
 
   const enterSortMode = () => {
     setSortMode(true)
@@ -334,7 +334,23 @@ export function PlaylistDetailPage() {
               scrollableClassName='playlist-detail__sort-scroll'
               data={songs.map((s) => ({ getSortingKey: () => String(s.id), dataItem: s }))}
               onSortEnd={(sorted) => {
-                reorderSongsMutation.mutate(sorted.map((d) => d.dataItem.id))
+                // Find the moved song by comparing the new order against the
+                // original. Only one item moves per drag gesture, so a simple
+                // position diff identifies it.
+                const origPos = new Map(songs.map((s, i) => [s.id, i]))
+                const moved = sorted.find(
+                  (s, i) => origPos.get(s.dataItem.id) !== i,
+                )?.dataItem
+                if (!moved) return
+                const newIdx = sorted.findIndex(
+                  (s) => s.dataItem.id === moved.id,
+                )
+                moveSongMutation.mutate({
+                  songId: moved.id,
+                  afterSongId: newIdx > 0
+                    ? sorted[newIdx - 1].dataItem.id
+                    : null,
+                })
               }}
             >
               {(item) => (
