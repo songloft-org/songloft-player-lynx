@@ -33,7 +33,7 @@ export function ServerEditPage() {
     if (editId && existing) {
       await useServerStore.getState().editProfile(editId, { name, url, insecureTls })
     } else {
-      await useServerStore.getState().addProfile(name, url, insecureTls)
+      await useServerStore.getState().addProfile({ name, url, insecureTls })
     }
     goBack()
   }

@@ -51,7 +51,7 @@ afterEach(() => vi.clearAllMocks())
 
 describe('addProfile', () => {
   test('adds a profile and persists', async () => {
-    const profile = await useServerStore.getState().addProfile('Test', 'http://test:8080')
+    const profile = await useServerStore.getState().addProfile({ name: 'Test', url: 'http://test:8080' })
     expect(profile.name).toBe('Test')
     expect(profile.url).toBe('http://test:8080')
     expect(profile.id).toMatch(/^srv_/)
@@ -65,7 +65,7 @@ describe('addProfile', () => {
 
 describe('editProfile', () => {
   test('updates name and url', async () => {
-    const profile = await useServerStore.getState().addProfile('Old', 'http://old')
+    const profile = await useServerStore.getState().addProfile({ name: 'Old', url: 'http://old' })
     await useServerStore.getState().editProfile(profile.id, { name: 'New', url: 'http://new' })
     const updated = useServerStore.getState().profiles[0]
     expect(updated.name).toBe('New')
@@ -75,7 +75,7 @@ describe('editProfile', () => {
 
 describe('removeProfile', () => {
   test('removes profile and cleans up tokens', async () => {
-    const profile = await useServerStore.getState().addProfile('Rm', 'http://rm')
+    const profile = await useServerStore.getState().addProfile({ name: 'Rm', url: 'http://rm' })
     await useServerStore.getState().removeProfile(profile.id)
     expect(useServerStore.getState().profiles).toHaveLength(0)
     expect(storageMock.secure.remove).toHaveBeenCalledWith(`token_access_${profile.id}`)
@@ -85,8 +85,8 @@ describe('removeProfile', () => {
 
 describe('switchTo', () => {
   test('saves current tokens and loads target tokens', async () => {
-    const p1 = await useServerStore.getState().addProfile('S1', 'http://s1')
-    const p2 = await useServerStore.getState().addProfile('S2', 'http://s2')
+    const p1 = await useServerStore.getState().addProfile({ name: 'S1', url: 'http://s1' })
+    const p2 = await useServerStore.getState().addProfile({ name: 'S2', url: 'http://s2' })
     useServerStore.setState({ activeProfileId: p1.id })
 
     // Mock current tokens
@@ -111,8 +111,8 @@ describe('switchTo', () => {
   })
 
   test('returns hasToken=false when target has no tokens', async () => {
-    const p1 = await useServerStore.getState().addProfile('S1', 'http://s1')
-    const p2 = await useServerStore.getState().addProfile('S2', 'http://s2')
+    const p1 = await useServerStore.getState().addProfile({ name: 'S1', url: 'http://s1' })
+    const p2 = await useServerStore.getState().addProfile({ name: 'S2', url: 'http://s2' })
     useServerStore.setState({ activeProfileId: p1.id })
 
     storageMock.secure.get.mockResolvedValue(null)

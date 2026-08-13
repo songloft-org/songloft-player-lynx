@@ -1,9 +1,9 @@
-const API_BASE = 'http://localhost:58091'
+const API_BASE = process.env.E2E_API_BASE ?? 'http://localhost:58091'
 
 let cachedToken: string | null = null
 let cachedSongs: any[] | null = null
 
-async function getToken(): Promise<string> {
+export async function getToken(): Promise<string> {
   if (cachedToken) return cachedToken
   const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
     method: 'POST',

@@ -125,7 +125,7 @@ export class AndroidDriver implements E2EDriver {
       { attempts: 15, delay: 500 },
     )
     await this.bridge.evaluate(`
-      globalThis.__E2E_APP_CONFIG__.resolvedBaseUrl = 'http://localhost:58091'
+      globalThis.__E2E_APP_CONFIG__.resolvedBaseUrl = '${process.env.E2E_API_BASE ?? 'http://localhost:58091'}'
     `)
   }
 

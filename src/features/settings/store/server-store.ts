@@ -22,7 +22,7 @@ export interface ServerStoreState {
   profiles: ServerProfile[]
   activeProfileId: string | null
   hydrate: () => Promise<void>
-  addProfile: (name: string, url: string, insecureTls?: boolean) => Promise<ServerProfile>
+  addProfile: (params: { name: string; url: string; insecureTls?: boolean }) => Promise<ServerProfile>
   editProfile: (id: string, patch: { name?: string; url?: string; insecureTls?: boolean }) => Promise<void>
   removeProfile: (id: string) => Promise<void>
   switchTo: (id: string) => Promise<{ hasToken: boolean }>
@@ -81,7 +81,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
     }
   },
 
-  async addProfile(name, url, insecureTls = false) {
+  async addProfile({ name, url, insecureTls = false }) {
     const profile: ServerProfile = {
       id: generateId(),
       name,

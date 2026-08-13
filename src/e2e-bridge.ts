@@ -11,13 +11,21 @@
  */
 import { usePlayerStore } from './features/player/store/player-store.js'
 import { useAuthStore } from './features/auth/store/auth-store.js'
+import { useLyricStore } from './features/player/store/lyric-store.js'
+import { useEqStore } from './features/settings/store/eq-store.js'
+import { useServerStore } from './features/settings/store/server-store.js'
 import { appConfig } from './core/config/app-config.js'
+import { router } from './router.js'
 import { readNativeModules, readLynxGlobal } from './native/native-modules.js'
 
 // Expose stores and config globally for direct access in eval expressions
 ;(globalThis as Record<string, unknown>).__E2E_PLAYER_STORE__ = usePlayerStore
 ;(globalThis as Record<string, unknown>).__E2E_AUTH_STORE__ = useAuthStore
+;(globalThis as Record<string, unknown>).__E2E_LYRIC_STORE__ = useLyricStore
+;(globalThis as Record<string, unknown>).__E2E_EQ_STORE__ = useEqStore
+;(globalThis as Record<string, unknown>).__E2E_SERVER_STORE__ = useServerStore
 ;(globalThis as Record<string, unknown>).__E2E_APP_CONFIG__ = appConfig
+;(globalThis as Record<string, unknown>).__E2E_ROUTER__ = router
 
 // Register the TestBridge eval listener
 function setupTestBridgeListener(): void {

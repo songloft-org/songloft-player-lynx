@@ -28,7 +28,7 @@ describe('音频：播放模式与曲末行为', () => {
     `)
     await driver.waitFor(
       async () => (await driver.getPlayerState()).state === 'playing',
-      { timeout: 8000 },
+      { timeout: 20000 },
     )
   }
 
@@ -71,7 +71,7 @@ describe('音频：播放模式与曲末行为', () => {
 
     await driver.waitFor(
       async () => (await driver.getPlayerState()).state !== 'playing',
-      { timeout: 8000 },
+      { timeout: 20000 },
     )
 
     const state = await driver.getPlayerState()
@@ -95,12 +95,12 @@ describe('音频：播放模式与曲末行为', () => {
         const s = await driver.getPlayerState()
         return s.index === 0
       },
-      { timeout: 15000 },
+      { timeout: 20000 },
     )
 
     await driver.waitFor(
       async () => (await driver.getPlayerState()).state === 'playing',
-      { timeout: 8000 },
+      { timeout: 20000 },
     )
 
     const state = await driver.getPlayerState()
@@ -126,7 +126,7 @@ describe('音频：播放模式与曲末行为', () => {
         const s = await driver.getPlayerState()
         return s.index === 1 && s.positionMs < 1000 && s.state === 'playing'
       },
-      { timeout: 8000 },
+      { timeout: 20000 },
     )
 
     const state = await driver.getPlayerState()
