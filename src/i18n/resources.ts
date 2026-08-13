@@ -1,7 +1,7 @@
 export const SUPPORTED_LANGUAGES = ['en', 'zh'] as const
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 
-export const DEFAULT_LANGUAGE: SupportedLanguage = 'en'
+export const DEFAULT_LANGUAGE: SupportedLanguage = 'zh'
 
 export type TranslationTree = typeof en
 

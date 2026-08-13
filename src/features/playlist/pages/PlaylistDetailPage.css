@@ -82,12 +82,27 @@
   background-color: var(--neutral-faint);
 }
 
+/*
+ * Cap the meta column at the cover height (96px). The title and song count are
+ * stable, always-visible lines at the top; only the description scrolls, in the
+ * space left below them. This keeps the count from being pushed off-screen by a
+ * long description (it is a summary, not prose) while still letting overlong
+ * descriptions overflow without growing the header past the cover.
+ */
 .playlist-detail__meta {
   display: flex;
   flex-direction: column;
   flex: 1;
+  height: 96px;
   margin-left: var(--space-4);
   min-width: 0;
+}
+
+.playlist-detail__desc-scroll {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  margin-top: var(--space-2);
 }
 
 .playlist-detail__name {
@@ -102,13 +117,12 @@
 .playlist-detail__desc {
   color: var(--content-2);
   font-size: var(--font-sm);
-  margin-top: var(--space-2);
 }
 
 .playlist-detail__count {
   color: var(--content-muted);
   font-size: var(--font-sm);
-  margin-top: var(--space-2);
+  margin-top: var(--space-1);
 }
 
 .playlist-detail__body {

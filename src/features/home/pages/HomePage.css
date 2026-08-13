@@ -184,13 +184,22 @@
 
 /* ── Library stats panel ─────────────────────────────────────────────────── */
 
+/*
+ * Quiet paper card — not an inverted accent block. A library summary is
+ * information, not a call to action, so it stays on `--paper` with a hairline
+ * `--line` edge and ink (`--content`) numerals. Filling it with `--primary`
+ * would make the whole panel pitch-black in light mode / stark white in dark
+ * mode and steal focus from the real primary CTAs (Muse §3.1: one accent
+ * channel).
+ */
 .home-stats {
   display: flex;
   flex-direction: column;
   margin: var(--space-5) var(--space-4) 0;
   padding: var(--space-4);
   border-radius: var(--radius-lg);
-  background-color: var(--primary-2);
+  background-color: var(--paper);
+  border: 1px solid var(--line);
 }
 
 .home-stats__headline {
@@ -207,13 +216,13 @@
 }
 
 .home-stats__headline-value {
-  color: var(--primary-content);
+  color: var(--content);
   font-size: var(--font-xl);
   font-weight: bold;
 }
 
 .home-stats__headline-label {
-  color: var(--primary-content);
+  color: var(--content-2);
   font-size: var(--font-sm);
   margin-left: var(--space-2);
 }
@@ -225,7 +234,7 @@
 }
 
 .home-stats__headline-duration {
-  color: var(--primary-content);
+  color: var(--content-2);
   font-size: var(--font-sm);
   margin-left: var(--space-1);
 }
@@ -245,13 +254,13 @@
 }
 
 .home-stats__cell-value {
-  color: var(--primary-content);
+  color: var(--content);
   font-size: var(--font-md);
   font-weight: bold;
 }
 
 .home-stats__cell-label {
-  color: var(--primary-content);
+  color: var(--content-2);
   font-size: var(--font-xs);
 }
 
@@ -263,7 +272,7 @@
 }
 
 .home-stats__footer-text {
-  color: var(--primary-content);
+  color: var(--content-muted);
   font-size: var(--font-xs);
 }
 

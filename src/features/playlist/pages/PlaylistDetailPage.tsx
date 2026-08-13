@@ -1,4 +1,4 @@
-import { useState } from '@lynx-js/react'
+import { useRef, useState } from '@lynx-js/react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
@@ -48,7 +48,27 @@ export function PlaylistDetailPage() {
   const songsQuery = usePlaylistSongsInfiniteQuery(id, { sort: currentSort, order: currentOrder, keyword })
   const songs = flattenSongs(songsQuery.data?.pages)
 
-  const cover = playlist?.coverUrl ? buildCoverUrl(playlist.coverUrl, playlist.updatedAt) : ''
+  // Last-built cover URL keyed by cover path — see `cover` below.
+  const coverUrlRef = useRef<{ path: string; built: string }>({
+    path: '',
+    built: '',
+  })
+
+  const cover = (() => {
+    const path = playlist?.coverUrl
+    if (!path) return ''
+    // Rebuild (cache-bust) only when the cover path itself changes. The
+    // backend bumps `updatedAt` for unrelated reasons — toggling visibility,
+    // changing sort — and feeding that into buildCoverUrl would change the
+    // image URL on every such update and reload the <image>, making the cover
+    // flash. Same path → keep the already-loaded URL.
+    if (coverUrlRef.current.path === path && coverUrlRef.current.built) {
+      return coverUrlRef.current.built
+    }
+    const built = buildCoverUrl(path, playlist?.updatedAt)
+    coverUrlRef.current = { path, built }
+    return built
+  })()
   const songCount = playlist?.songCount ?? songs.length
   const countLabel = t(
     songCount === 1 ? 'common.songCountOne' : 'common.songCountOther',
@@ -88,7 +108,7 @@ export function PlaylistDetailPage() {
     { key: 'position', order: 'asc', label: t('playlist.sortPosition') },
     { key: 'title', order: 'asc', label: t('playlist.sortTitle') },
     { key: 'artist', order: 'asc', label: t('playlist.sortArtist') },
-    { key: 'created_at', order: 'desc', label: t('playlist.sortRecent') },
+    { key: 'added_at', order: 'desc', label: t('playlist.sortRecent') },
   ] as const
 
   const onSelectSort = (sortBy: string, sortOrder: string) => {
@@ -253,10 +273,14 @@ export function PlaylistDetailPage() {
               <text className='playlist-detail__name'>
                 {playlist?.name ?? (detail.isLoading ? t('common.loading') : t('playlist.fallbackName'))}
               </text>
-              {playlist?.description
-                ? <text className='playlist-detail__desc'>{playlist.description}</text>
-                : null}
               <text className='playlist-detail__count'>{countLabel}</text>
+              {playlist?.description
+                ? (
+                  <scroll-view scroll-y className='playlist-detail__desc-scroll'>
+                    <text className='playlist-detail__desc'>{playlist.description}</text>
+                  </scroll-view>
+                )
+                : null}
             </view>
           </view>
         )}

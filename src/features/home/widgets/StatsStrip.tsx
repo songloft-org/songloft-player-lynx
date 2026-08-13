@@ -27,7 +27,7 @@ export function StatsStrip({ stats }: { stats: LibraryStats }) {
           <text className='home-stats__headline-label'>{t('home.statSongs')}</text>
         </view>
         <view className='home-stats__headline-aside'>
-          <Icon name='music' size={16} color={ICON_COLORS.primaryContent} />
+          <Icon name='music' size={16} color={ICON_COLORS.content2} />
           <text className='home-stats__headline-duration'>{duration}</text>
         </view>
       </view>

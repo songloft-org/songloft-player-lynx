@@ -167,7 +167,7 @@ describe('changeAppLanguage (persists + switches i18next)', () => {
     await storage.prefs.set(PREF_LANGUAGE, 'zh')
 
     const resolved = await changeAppLanguage('system', storage)
-    expect(resolved).toBe('en')
+    expect(resolved).toBe(DEFAULT_LANGUAGE)
     expect(await storage.prefs.get(PREF_LANGUAGE)).toBeNull()
     expect(await readSavedLanguage(storage)).toBe('system')
   })
