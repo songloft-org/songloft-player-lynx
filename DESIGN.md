@@ -166,4 +166,4 @@
 
 ## 关于 design-example 目录
 
-`design-example/` 是项目根下的一个独立参考子目录，包含一个 React DOM 实现的 Muse 音乐播放器，用于视觉对照。**不纳入主应用代码提交**（保持 `git` 未跟踪）。其 `.specs/DESIGN.md` 是 Muse 原始设计规格，本文件是主应用的实际实现记录。
+`design-example/` 曾是项目根下的一个独立参考子目录，包含一个 React DOM 实现的 Muse 音乐播放器，用于视觉对照。已于 2025-08 移除（重构完成后不再需要）。
