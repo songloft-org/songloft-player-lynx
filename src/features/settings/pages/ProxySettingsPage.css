@@ -78,7 +78,7 @@
 }
 
 .proxy-settings__save-text {
-  color: #ffffff;
+  color: var(--primary-content);
   font-size: var(--font-sm);
   font-weight: 600;
 }

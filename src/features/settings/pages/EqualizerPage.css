@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--background);
+  background-color: var(--canvas);
 }
 
 .eq-page__topbar {
@@ -11,7 +11,7 @@
   align-items: center;
   padding: 12px 16px;
   gap: 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 
 .eq-page__back {
@@ -74,7 +74,7 @@
 }
 
 .eq-page__chip--active .eq-page__chip-text {
-  color: var(--on-primary);
+  color: var(--primary-content);
 }
 
 .eq-page__bands {
@@ -98,7 +98,7 @@
 
 .eq-page__band-gain {
   font-size: 11px;
-  color: var(--content2);
+  color: var(--content-2);
   text-align: center;
   min-width: 28px;
 }
@@ -149,7 +149,7 @@
 
 .eq-page__band-freq {
   font-size: 10px;
-  color: var(--content2);
+  color: var(--content-2);
   text-align: center;
 }
 

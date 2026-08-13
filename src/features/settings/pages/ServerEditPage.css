@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--background);
+  background-color: var(--canvas);
 }
 
 .server-edit__topbar {
@@ -11,7 +11,7 @@
   align-items: center;
   padding: 12px 16px;
   gap: 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 
 .server-edit__back {
@@ -54,7 +54,8 @@
 }
 
 .server-edit__input {
-  background-color: var(--background);
+  background-color: var(--canvas);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 12px;
   font-size: 15px;
@@ -82,7 +83,7 @@
 
 .server-edit__toggle-subtitle {
   font-size: 13px;
-  color: var(--content2);
+  color: var(--content-2);
 }
 
 .server-edit__save {
@@ -102,5 +103,5 @@
 .server-edit__save-text {
   font-size: 15px;
   font-weight: 600;
-  color: var(--on-primary);
+  color: var(--primary-content);
 }

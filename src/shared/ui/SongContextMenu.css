@@ -21,9 +21,9 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: var(--surface);
-  border-top-left-radius: var(--radius-lg);
-  border-top-right-radius: var(--radius-lg);
+  background-color: var(--paper);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
   padding-bottom: var(--space-6);
   max-height: 60%;
   display: flex;
@@ -33,7 +33,7 @@
 .song-ctx__header {
   padding: var(--space-4);
   border-bottom-width: 1px;
-  border-bottom-color: var(--border);
+  border-bottom-color: var(--line);
 }
 
 .song-ctx__song-title {
