@@ -54,7 +54,8 @@
   align-items: center;
   padding: 12px;
   margin-bottom: 16px;
-  background-color: rgba(220, 38, 38, 0.1);
+  background-color: var(--neutral-faint);
+  border: 1px solid var(--line);
   border-radius: 8px;
 }
 
@@ -133,7 +134,8 @@
   flex-direction: row;
   align-items: flex-start;
   padding: 12px;
-  background-color: rgba(245, 158, 11, 0.1);
+  background-color: var(--neutral-faint);
+  border: 1px solid var(--line);
   border-radius: 8px;
   margin-bottom: 16px;
 }
