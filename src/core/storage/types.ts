@@ -1,6 +1,6 @@
 /**
  * `SongloftStorage` facade — the contract from
- * `docs/lynx_native_modules_spec.md#2-songloftstorage`.
+ * `docs/migration/lynx_native_modules_spec.md#2-songloftstorage`.
  *
  * Three namespaces:
  * - `prefs`   — non-sensitive key/value (SharedPreferences / UserDefaults / localStorage).

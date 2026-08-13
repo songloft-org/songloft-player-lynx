@@ -4,7 +4,7 @@
  * persisted and applied immediately, and `'system'` follows the host OS.
  *
  * **`'system'` (batch 21).** It used to be a label with nothing behind it,
- * resolving to a hardcoded `'dark'` — exactly `docs/bug.md`'s "外观跟随系统没
+ * resolving to a hardcoded `'dark'` — exactly `docs/tracking/bug.md`'s "外观跟随系统没
  * 效果，始终是深色". Lynx has no `prefers-color-scheme`, so the signal comes from
  * the host via `src/native/system-appearance.ts`, and
  * {@link DEFAULT_RESOLVED_THEME} is now only the fallback for hosts that inject
@@ -13,7 +13,7 @@
  * **Live re-render without `useSyncExternalStore`.** `ThemeProvider` mounts at
  * the very root of the router tree (see `router.tsx`), so every rendered page
  * sits underneath it. `useSyncExternalStore`-based subscriptions (zustand,
- * `useInfiniteQuery`) are documented (`docs/PROGRESS.md`) to crash with
+ * `useInfiniteQuery`) are documented (`docs/tracking/PROGRESS.md`) to crash with
  * `isListHolder` in the ReactLynx Vitest render tree during the initial
  * dual-thread lifecycle flush, and every affected page needed a store mock to
  * work around it. Putting that pattern at the tree root would force every

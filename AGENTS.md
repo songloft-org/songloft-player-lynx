@@ -23,7 +23,11 @@ src/                    Lynx 客户端源码（所有业务代码）
   shims/                环境兼容 polyfill
 android/                Android 宿主 + 原生模块（Kotlin）
 ios/                    iOS 宿主 + 原生模块（Swift）
-docs/                   项目文档
+docs/                   项目文档（见 docs/README.md）
+  reference/           规范与参考（api-design-conventions.md、swagger.json）
+  migration/           迁移调研历史
+  testing/             E2E 测试架构设计
+  tracking/            开发进展（PROGRESS.md）与 bug 跟踪
 patches/                依赖补丁（必须提交）
 songloft-player/        Flutter 版只读参考（.gitignore 排除，禁止修改）
 ```
@@ -47,6 +51,12 @@ songloft-player/        Flutter 版只读参考（.gitignore 排除，禁止修�
 
 - 默认 `http://localhost:58091`，账号 `admin/admin`，接口 `/api/v1`
 - standalone 模式显示地址配置 UI；embedded 模式隐藏
+
+### Store / API 设计
+
+- 新增 store 方法、修改签名前先查 `docs/reference/api-design-conventions.md`（参数风格、数值范围、命名、E2E store 暴露约定）
+- 参数风格：1–2 个标量用位置参数；≥3 个或含可选参数用对象参数
+- 数值范围：音量 store 层 0-100 整数、native 层 0-1 浮点，转换由 store action 完成
 
 ### 验收命令
 
@@ -81,10 +91,10 @@ pnpm run e2e:ios:full
 pnpm run e2e:ios:setup
 ```
 
-测试通过 Lynx Inspector Protocol (WebSocket) 驱动设备上的 App。
+测试通过 TestBridge（native TCP 9230 → JS eval）驱动设备上的 App，store 经 `src/e2e-bridge.ts` 暴露到 `globalThis.__E2E_*__`。
 场景跨平台复用（`e2e/scenarios/`），iOS 额外有系统外观测试。
 测试报告输出到 `e2e/reports/`，截图在 `e2e/screenshots/`（均已 gitignore）。
-详见 `docs/behavior-testing-design.md` 和 `e2e/` 目录。
+详见 `docs/testing/behavior-testing-design.md` 和 `e2e/` 目录。
 
 ### Git
 
@@ -95,8 +105,8 @@ pnpm run e2e:ios:setup
 
 ### 工作流
 
-- 按 `docs/plan.md` 顺序分批实现，一批一个聚焦范围
-- 每批验收后更新 `docs/PROGRESS.md`
+- 按 `docs/migration/plan.md` 顺序分批实现，一批一个聚焦范围
+- 每批验收后更新 `docs/tracking/PROGRESS.md`
 - 每批验收后暂停等确认，再进下一批
 
 ## 4. Lynx 关键约束
