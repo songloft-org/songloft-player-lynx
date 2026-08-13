@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Songloft</title>
+  <link href="/web-core/static/css/index.css" rel="stylesheet">
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      overscroll-behavior: none;
+    }
+    lynx-view {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <!-- Remove transform-vh/vw: they cause content height mismatch and pull-to-refresh -->
+  <lynx-view
+    id="app"
+    url="/main.lynx.bundle"
+  ></lynx-view>
+
+  <script defer src="/web-core/static/js/index.js"></script>
+  <script>
+    (function() {
+      var lynxView = document.getElementById('app');
+
+      lynxView.addEventListener('lynxviewready', function() {
+        lynxView.globalProps = {
+          systemTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+          systemLocale: navigator.language.startsWith('zh') ? 'zh' : 'en',
+        };
+      });
+
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+        lynxView.sendGlobalEvent('SongloftSystem.appearanceChanged', {
+          theme: e.matches ? 'dark' : 'light'
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

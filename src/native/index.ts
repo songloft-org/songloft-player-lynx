@@ -26,4 +26,8 @@ export {
   type GlobalEventSubscriber,
   type SongloftAudioNativeModule,
 } from './native-audio.js'
+export { WebSongloftAudio, isWebAudioEnvironment } from './web-audio.js'
+export { isWebEnvironment, webOpenURL, webPickAndUploadFile } from './web-platform.js'
+export { getPlatformCapabilities } from './platform-capabilities.js'
+export type { PlatformCapabilities } from './platform-capabilities.js'
 export { safeClearInterval, safeClearTimeout } from './safe-timers.js'

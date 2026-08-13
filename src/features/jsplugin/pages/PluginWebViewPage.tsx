@@ -11,6 +11,7 @@ import { usePlayerStore } from '../../player/store/index.js'
 import { handlePluginHostCall, type PluginHostContext } from '../domain/plugin-host-dispatch.js'
 import { getJSPluginApi } from '../api/index.js'
 import { usePluginsQuery } from '../data/jsplugin-query.js'
+import { isWebEnvironment } from '../../../native/web-platform.js'
 import type { Song } from '../../../models/song.js'
 import './PluginWebViewPage.css'
 
@@ -115,6 +116,8 @@ export function PluginWebViewPage() {
     navigate({ to: '/' })
   }
 
+  const isWeb = isWebEnvironment()
+
   if (loading) {
     return (
       <view className='plugin-webview'>
@@ -144,6 +147,23 @@ export function PluginWebViewPage() {
         </view>
         <view className='plugin-webview__state'>
           <text className='plugin-webview__state-text plugin-webview__state-text--error'>{error}</text>
+        </view>
+      </view>
+    )
+  }
+
+  // Web platform: webview is not available, show a fallback
+  if (isWeb) {
+    return (
+      <view className='plugin-webview'>
+        <view className='plugin-webview__topbar'>
+          <view className='plugin-webview__back' bindtap={goBack} data-testid='plugin-webview-back'>
+            <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
+          </view>
+          <text className='plugin-webview__title' data-testid='plugin-webview-title'>{title}</text>
+        </view>
+        <view className='plugin-webview__state'>
+          <text className='plugin-webview__state-text'>{t('jsplugin.webview_unavailable')}</text>
         </view>
       </view>
     )

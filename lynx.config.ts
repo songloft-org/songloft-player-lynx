@@ -26,7 +26,7 @@ import { pluginTypeCheck } from '@rsbuild/plugin-type-check'
  * define `document`, keeping router-core on its non-DOM (non-SSR) branch.
  */
 const GLOBAL_SELF_BANNER =
-  'globalThis.self=globalThis.self||globalThis;globalThis.window=globalThis.window||globalThis;'
+  'typeof globalThis.self==="undefined"&&(globalThis.self=globalThis);'
 
 /**
  * Lynx's engine provides NO `AbortController`/`AbortSignal` (a WHATWG API, not
@@ -128,4 +128,15 @@ export default defineConfig({
     }),
     pluginTypeCheck(),
   ],
+
+  // Web environment: produces a main-thread JS bundle for @lynx-js/web-core.
+  environments: {
+    web: {
+      output: {
+        distPath: {
+          root: 'dist/web',
+        },
+      },
+    },
+  },
 })

@@ -1,4 +1,5 @@
 import { readNativeModules } from './native-modules.js'
+import { isWebEnvironment, webOpenURL, webPickAndUploadFile } from './web-platform.js'
 
 interface SongloftPlatformNative {
   openURL(url: string): void
@@ -20,26 +21,33 @@ function getModule(): SongloftPlatformNative | null {
 }
 
 export function isNativePlatformAvailable(): boolean {
-  return getModule() !== null
+  return getModule() !== null || isWebEnvironment()
 }
 
 export function openURL(url: string): void {
-  getModule()?.openURL(url)
+  const mod = getModule()
+  if (mod) {
+    mod.openURL(url)
+  } else if (isWebEnvironment()) {
+    webOpenURL(url)
+  }
 }
 
 export function pickAndUploadFile(uploadUrl: string, fieldName: string, mimeType: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const mod = getModule()
-    if (!mod) {
-      reject(new Error('SongloftPlatform native module not available'))
-      return
-    }
-    mod.pickAndUploadFile(uploadUrl, fieldName, mimeType, (error, responseBody) => {
-      if (error) {
-        reject(new Error(error))
-      } else {
-        resolve(responseBody ?? '')
-      }
+  const mod = getModule()
+  if (mod) {
+    return new Promise((resolve, reject) => {
+      mod.pickAndUploadFile(uploadUrl, fieldName, mimeType, (error, responseBody) => {
+        if (error) {
+          reject(new Error(error))
+        } else {
+          resolve(responseBody ?? '')
+        }
+      })
     })
-  })
+  }
+  if (isWebEnvironment()) {
+    return webPickAndUploadFile(uploadUrl, fieldName, mimeType)
+  }
+  return Promise.reject(new Error('SongloftPlatform native module not available'))
 }

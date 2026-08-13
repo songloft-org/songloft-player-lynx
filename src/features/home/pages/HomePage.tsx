@@ -1,4 +1,4 @@
-import { useRef } from '@lynx-js/react'
+import { useEffect, useRef } from '@lynx-js/react'
 import type { NodesRef } from '@lynx-js/types'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
@@ -69,6 +69,13 @@ export function HomePage() {
       refreshRef.current?.invoke({ method: 'finishRefresh' }).exec()
     })
   }
+
+  // On Web, the <refresh> IntersectionObserver may fire immediately on mount,
+  // causing the refresh indicator to appear permanently. Call finishRefresh
+  // after mount to clear any spurious refresh state.
+  useEffect(() => {
+    refreshRef.current?.invoke({ method: 'finishRefresh' }).exec()
+  }, [])
 
   return (
     <view className='home'>

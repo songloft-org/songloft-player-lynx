@@ -1,4 +1,5 @@
 import { MockSongloftAudio } from './mock-audio.js'
+import { WebSongloftAudio, isWebAudioEnvironment } from './web-audio.js'
 import { readLynxGlobal, readNativeModules } from './native-modules.js'
 import {
   NativeSongloftAudio,
@@ -58,6 +59,10 @@ export function resolveAudio(): SongloftAudio {
     } catch {
       // Any failure constructing the native binding → fall back to the mock.
     }
+  }
+  // Web environment: use HTMLAudioElement-based playback
+  if (isWebAudioEnvironment()) {
+    return new WebSongloftAudio()
   }
   return createMockAudio()
 }
