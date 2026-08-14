@@ -1,7 +1,7 @@
 # 工作交接（2026-08-14）
 
 > 本文件是**给接手 AI 的交接说明**。读完这一篇就能继续干活；细节在链接里。
-> 一句话现状：**批41–44 全部完成，工作树干净、闸门全绿（932 vitest）**。审计计划已闭合。
+> 一句话现状：**批41–44 审计计划全部完成，工作树干净、闸门全绿（940 vitest）**。审计计划已闭合，剩余 2 条已知缺陷 + 1 条悬案。
 
 ---
 
@@ -37,7 +37,7 @@
 
 ### 工作树状态
 
-干净。最后一道闸门：`build` 双产物零告警 / `tsc -b` / **932 vitest（97 文件）** 全绿。
+干净。最后一道闸门：`build` 双产物零告警 / `tsc -b` / **940 vitest（97 文件）** 全绿。
 
 ---
 
@@ -55,7 +55,38 @@
 
 ## 3. 剩余工作
 
-**批41–44 全部完成。** 审计计划已闭合。后续功能开发从批45 开始。
+**批41–44 审计计划已闭合。** 以下是从 `bug.md` 和审计计划中提取的已知待办项：
+
+### 已知缺陷
+
+| 条目 | 严重度 | 状态 |
+|---|---|---|
+| **`setInsecureTls` / `setArtworkUri` 只有 Android** | P2 | iOS 侧 `setInsecureTls` 不在 `methodLookup`，`setArtworkUri` 解析后丢弃。ATS 已由 `Info.plist` 的 `NSAllowsArbitraryLoads` 解决；自签名证书需实现 `URLSessionDelegate`。`setArtworkUri` 的 iOS 侧需先异步下载再包装为 `MPMediaItemArtwork`（不能像 Android 那样传 URI）。 |
+| **偶发全屏灰层** | 未定位 | 运行数分钟后整屏蒙中灰，重启即恢复。最可查嫌疑是 lynx-ui Sheet 的 backdrop 泄漏。**下次出现时跑**：`adb logcat \| grep -i "\[Sheet\] Invalid state transition"`（库自带的免费探针）。若真机（非 BlueStacks）复现不了，降级为环境记录。 |
+
+### 明确不做（来自审计计划 §明确不做）
+
+键盘快捷键、HomeGridConfig、/configs KV 编辑器、完整 GPL 全文许可页、升级的版本选择/手动上传/回退、客户端下载页、Web 调试控制台、热更、桌面歌词独立窗口、深目录树虚拟化、Settings 主从九分类 IA、黑胶唱片环动画。
+
+### e2e 测试
+
+27 个 scenario 文件，107 个测试用例，**全部需要设备（adb / iOS Simulator）**。当前环境无设备，无法运行。接手后在设备上跑：
+
+```bash
+pnpm run test:e2e:android   # Android 设备
+pnpm run test:e2e:ios       # iOS 模拟器
+```
+
+### 后续功能方向（批45+）
+
+- **视频播放完整实现**：当前只有 ▶ 标识，需原生视频渲染面
+- **Web 音频 EQ/HLS/MediaSession**：`web/audio-host.js` 目前只实现了基础播放
+- **Web 端 `openURL` / 文件选择**：`web-audio.ts` 同构的主线程桥接可解锁
+- **渐进式队列加载**：当前一次性加载全部
+- **歌词时间轴校准页**：编辑器中缺
+- **音轨选择器**：`?track=N` 已通，缺枚举端点
+- **下一曲 prefetch**：提前加载音频资源
+- **单曲离线缓存**：需原生 fs 支持
 
 ---
 
