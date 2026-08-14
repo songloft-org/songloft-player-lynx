@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { apiPrefix } from '../core/config/app-config.js'
 import { createApiClient } from '../core/network/api-client.js'
+import { getSharedApiBundle, getSharedTokenStore, resetSharedApiBundleForTests } from '../core/network/api-client.js'
 import { ApiError, type Transport } from '../core/network/http-client.js'
 import { TokenStore } from '../core/network/token-store.js'
 import { createMemoryStorage } from '../core/storage/index.js'
@@ -133,5 +134,32 @@ describe('AuthInterceptor', () => {
     expect(res.status).toBe(200)
     expect(t.refreshCount).toBe(0)
     expect(t.calls[0]!.auth).toBe('Bearer new-access')
+  })
+})
+
+describe('getSharedApiBundle (P2-1 singleton)', () => {
+  beforeEach(() => {
+    resetSharedApiBundleForTests()
+  })
+
+  test('returns the same bundle on repeated calls', () => {
+    const a = getSharedApiBundle()
+    const b = getSharedApiBundle()
+    expect(a).toBe(b)
+    expect(a.tokens).toBe(b.tokens)
+    expect(a.client).toBe(b.client)
+    expect(a.interceptor).toBe(b.interceptor)
+  })
+
+  test('getSharedTokenStore returns the shared singleton token store', () => {
+    const store = getSharedTokenStore()
+    expect(store).toBe(getSharedApiBundle().tokens)
+  })
+
+  test('resetSharedApiBundleForTests makes the next call create a fresh bundle', () => {
+    const a = getSharedApiBundle()
+    resetSharedApiBundleForTests()
+    const b = getSharedApiBundle()
+    expect(a).not.toBe(b)
   })
 })

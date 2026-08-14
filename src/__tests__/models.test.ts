@@ -19,6 +19,8 @@ import {
   songEquals,
   songToJson,
 } from '../models/index.js'
+import { buildCreatePlaylistBody } from '../features/playlist/api/playlist-api.js'
+import { parseRegistryRefreshResponse } from '../models/jsplugin.js'
 
 describe('Song', () => {
   const wire = {
@@ -217,5 +219,65 @@ describe('ApiResponse', () => {
     expect(isApiError(ok)).toBe(false)
     expect(isApiError(bad)).toBe(true)
     expect(bad.detail).toBe('detail')
+  })
+})
+
+describe('buildCreatePlaylistBody', () => {
+  test('includes type when provided', () => {
+    expect(buildCreatePlaylistBody({ name: 'Test', type: 'radio' })).toEqual({
+      name: 'Test',
+      type: 'radio',
+    })
+  })
+
+  test('omits type when not provided', () => {
+    expect(buildCreatePlaylistBody({ name: 'Test' })).toEqual({ name: 'Test' })
+  })
+
+  test('omits empty type', () => {
+    expect(buildCreatePlaylistBody({ name: 'Test', type: '' })).toEqual({
+      name: 'Test',
+    })
+  })
+})
+
+describe('registry plugin entry', () => {
+  test('parses conflict field', () => {
+    const res = parseRegistryRefreshResponse({
+      plugins: [
+        {
+          name: 'P',
+          entry_path: 'p',
+          version: '1.0',
+          download_url: 'http://x/p.zip',
+          installed: false,
+          conflict: 'Plugin "p" already installed by another source',
+        },
+      ],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    })
+    expect(res.plugins[0]!.conflict).toBe(
+      'Plugin "p" already installed by another source',
+    )
+  })
+
+  test('conflict is undefined when absent', () => {
+    const res = parseRegistryRefreshResponse({
+      plugins: [
+        {
+          name: 'P',
+          entry_path: 'p',
+          version: '1.0',
+          download_url: 'http://x/p.zip',
+          installed: false,
+        },
+      ],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    })
+    expect(res.plugins[0]!.conflict).toBeUndefined()
   })
 })
