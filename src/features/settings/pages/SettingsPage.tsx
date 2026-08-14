@@ -361,7 +361,7 @@ export function SettingsPage() {
               subtitle={t('settings.normalizeSubtitle')}
               selected={normalize}
               trailingIcon={normalize ? 'check' : undefined}
-              onTap={() => { const next = !normalize; setNormalize(next); setNormalizeEnabled(next); void writeNormalize(next) }}
+              onTap={() => { const next = !normalize; setNormalize(next); setNormalizeEnabled(next); void writeNormalize(next); void getSettingsApi().updateVolumeNormalize(next).catch(() => {}) }}
               testId='settings-normalize'
             />
             {/* SongloftFloatingLyric is not registered on any host yet (see fix

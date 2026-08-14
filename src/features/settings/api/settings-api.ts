@@ -57,4 +57,38 @@ export class SettingsApi {
     const res = await this.client.put<unknown>(`${apiPrefix}/settings/tab-config`, body)
     return parseTabConfig(res.data)
   }
+
+  // ── User preferences (cloud-synced) ────────────────────────────────────
+
+  async getUserPreferences(): Promise<Record<string, unknown>> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/settings/user-preferences`)
+    return (res.data ?? {}) as Record<string, unknown>
+  }
+
+  async updateUserPreferences(prefs: Record<string, unknown>): Promise<void> {
+    await this.client.put(`${apiPrefix}/settings/user-preferences`, prefs)
+  }
+
+  // ── Equalizer (cloud-synced) ───────────────────────────────────────────
+
+  async getEqualizer(): Promise<Record<string, unknown>> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/settings/equalizer`)
+    return (res.data ?? {}) as Record<string, unknown>
+  }
+
+  async updateEqualizer(eq: Record<string, unknown>): Promise<void> {
+    await this.client.put(`${apiPrefix}/settings/equalizer`, eq)
+  }
+
+  // ── Volume normalize (cloud-synced; also read by miot plugin) ──────────
+
+  async getVolumeNormalize(): Promise<boolean> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/settings/volume-normalize`)
+    const data = (res.data ?? {}) as Record<string, unknown>
+    return data.enabled === true
+  }
+
+  async updateVolumeNormalize(enabled: boolean): Promise<void> {
+    await this.client.put(`${apiPrefix}/settings/volume-normalize`, { enabled })
+  }
 }
