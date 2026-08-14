@@ -3,7 +3,7 @@ import type { NodesRef } from '@lynx-js/types'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-import { isWebEnvironment } from '../../../native/web-platform.js'
+import { isWebPlatform } from '../../../native/web-platform.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 
 import { EMPTY_LIBRARY_STATS } from '../../../models/library-stats.js'
@@ -76,12 +76,74 @@ export function HomePage() {
     void navigate({ to: '/library', search: { view: 'radio' } })
   }
   const refreshRef = useRef<NodesRef>(null)
-  const isWeb = isWebEnvironment()
+  // Platform, not realm: this render runs on the background thread, which on Web
+  // is a worker with no `window`/`document` (see `isWebPlatform`).
+  const isWeb = isWebPlatform()
   const onStartRefresh = () => {
     void Promise.all([normal.refetch(), radio.refetch(), statsQuery.refetch()]).finally(() => {
       refreshRef.current?.invoke({ method: 'finishRefresh' }).exec()
     })
   }
+
+  const scroller = (
+    <scroll-view className='home__scroll' scroll-y enable-nested-scroll={true}>
+      <view className='home__content'>
+        {isFirstLoad
+          ? loadingSlow
+            ? <HomeState text={t('home.loadingSlow')} action={t('common.retry')} onAction={() => { void normal.refetch(); void radio.refetch() }} />
+            : <HomeState text={t('common.loading')} />
+          : bothFailed
+            ? <HomeState text={t('home.loadError')} tone='error' />
+            : (normalItems.length === 0 && radioItems.length === 0 &&
+                !normalFailed && !radioFailed)
+              ? (
+                <view className='home__empty'>
+                  <text className='home__empty-title'>{t('home.noPlaylistsTitle')}</text>
+                  <text className='home__empty-subtitle'>
+                    {t('home.noPlaylistsSubtitle')}
+                  </text>
+                  <view className='home__empty-action' bindtap={viewAllPlaylists}>
+                    <text className='home__empty-action-text'>{t('home.browseLibrary')}</text>
+                  </view>
+                </view>
+              )
+              : (
+                <view>
+                  {normalItems.length > 0 || normalFailed
+                    ? (
+                      <HomeSection
+                        title={t('home.myPlaylists')}
+                        icon='library'
+                        items={normalItems}
+                        failed={normalFailed}
+                        onViewAll={viewAllPlaylists}
+                        onRetry={() => void normal.refetch()}
+                        onTapPlaylist={openPlaylist}
+                        playingPlaylistId={playingPlaylistId}
+                      />
+                    )
+                    : null}
+                  {radioItems.length > 0 || radioFailed
+                    ? (
+                      <HomeSection
+                        title={t('home.myRadios')}
+                        icon='music'
+                        items={radioItems}
+                        failed={radioFailed}
+                        onViewAll={viewAllRadios}
+                        onRetry={() => void radio.refetch()}
+                        onTapPlaylist={openPlaylist}
+                        playingPlaylistId={playingPlaylistId}
+                      />
+                    )
+                    : null}
+                  <PluginGrid />
+                  <StatsStrip stats={stats} />
+                </view>
+              )}
+      </view>
+    </scroll-view>
+  )
 
   return (
     <view className='home' bindlayoutchange={homeLayoutChange}>
@@ -91,73 +153,29 @@ export function HomePage() {
         </text>
       </view>
 
-      <refresh
-        ref={refreshRef}
-        className='home__refresh'
-        enable-refresh={!isWeb}
-        bindstartrefresh={onStartRefresh}
-      >
-        <refresh-header className='home__refresh-header'>
-          <text className='home__refresh-header-text'>{t('home.refreshing')}</text>
-        </refresh-header>
-        <scroll-view className='home__scroll' scroll-y enable-nested-scroll={true}>
-        <view className='home__content'>
-          {isFirstLoad
-            ? loadingSlow
-              ? <HomeState text={t('home.loadingSlow')} action={t('common.retry')} onAction={() => { void normal.refetch(); void radio.refetch() }} />
-              : <HomeState text={t('common.loading')} />
-            : bothFailed
-              ? <HomeState text={t('home.loadError')} tone='error' />
-              : (normalItems.length === 0 && radioItems.length === 0 &&
-                  !normalFailed && !radioFailed)
-                ? (
-                  <view className='home__empty'>
-                    <text className='home__empty-title'>{t('home.noPlaylistsTitle')}</text>
-                    <text className='home__empty-subtitle'>
-                      {t('home.noPlaylistsSubtitle')}
-                    </text>
-                    <view className='home__empty-action' bindtap={viewAllPlaylists}>
-                      <text className='home__empty-action-text'>{t('home.browseLibrary')}</text>
-                    </view>
-                  </view>
-                )
-                : (
-                  <view>
-                    {normalItems.length > 0 || normalFailed
-                      ? (
-                        <HomeSection
-                          title={t('home.myPlaylists')}
-                          icon='library'
-                          items={normalItems}
-                          failed={normalFailed}
-                          onViewAll={viewAllPlaylists}
-                          onRetry={() => void normal.refetch()}
-                          onTapPlaylist={openPlaylist}
-                          playingPlaylistId={playingPlaylistId}
-                        />
-                      )
-                      : null}
-                    {radioItems.length > 0 || radioFailed
-                      ? (
-                        <HomeSection
-                          title={t('home.myRadios')}
-                          icon='music'
-                          items={radioItems}
-                          failed={radioFailed}
-                          onViewAll={viewAllRadios}
-                          onRetry={() => void radio.refetch()}
-                          onTapPlaylist={openPlaylist}
-                          playingPlaylistId={playingPlaylistId}
-                        />
-                      )
-                      : null}
-                    <PluginGrid />
-                    <StatsStrip stats={stats} />
-                  </view>
-                )}
-        </view>
-        </scroll-view>
-      </refresh>
+      {/*
+        * Web has no `<refresh>`: it is missing from web-core's tag map, so both it
+        * and `<refresh-header>` reach the DOM as unknown elements and the header's
+        * label renders as plain page content — a permanent "下拉刷新…" line under the
+        * greeting. `enable-refresh={false}` cannot suppress that (web-elements'
+        * hiding rules target `x-refresh-header`), so the wrapper is left out of the
+        * tree entirely and the scroller stands alone in a plain host view.
+        */}
+      {isWeb
+        ? <view className='home__scroll-host'>{scroller}</view>
+        : (
+          <refresh
+            ref={refreshRef}
+            className='home__refresh'
+            enable-refresh={true}
+            bindstartrefresh={onStartRefresh}
+          >
+            <refresh-header className='home__refresh-header'>
+              <text className='home__refresh-header-text'>{t('home.refreshing')}</text>
+            </refresh-header>
+            {scroller}
+          </refresh>
+        )}
     </view>
   )
 }

@@ -11,7 +11,7 @@ import { usePlayerStore } from '../../player/store/index.js'
 import { handlePluginHostCall, type PluginHostContext } from '../domain/plugin-host-dispatch.js'
 import { getJSPluginApi } from '../api/index.js'
 import { usePluginsQuery } from '../data/jsplugin-query.js'
-import { isWebEnvironment } from '../../../native/web-platform.js'
+import { isWebPlatform } from '../../../native/web-platform.js'
 import type { Song } from '../../../models/song.js'
 import './PluginWebViewPage.css'
 
@@ -116,7 +116,11 @@ export function PluginWebViewPage() {
     navigate({ to: '/' })
   }
 
-  const isWeb = isWebEnvironment()
+  // Platform, not realm — on Web this component renders in a worker with no
+  // `window`/`document`, so `isWebEnvironment()` would answer `false` here and
+  // the fallback below would be skipped in favour of a `<webview>` that Web has
+  // no implementation for (blank area). See `isWebPlatform`.
+  const isWeb = isWebPlatform()
 
   if (loading) {
     return (

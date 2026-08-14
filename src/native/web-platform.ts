@@ -6,11 +6,44 @@
  * is not available.
  */
 
+import { readSystemInfo } from './native-modules.js'
+
 /**
- * Detect if we're running in a Web environment (browser).
+ * Detect if the **current realm** has a DOM, i.e. whether `window`/`document`
+ * may be touched at all.
+ *
+ * This is NOT a platform check. On Web, `@lynx-js/web-core` runs the app's
+ * background thread in a real `Worker` (`new Worker(…, {name:'lynx-bg'})`), and
+ * a worker realm has neither `window` nor `document` — so this returns `false`
+ * for most application code even though the platform *is* Web. Use it only to
+ * guard the DOM calls below; use {@link isWebPlatform} for rendering decisions.
  */
 export function isWebEnvironment(): boolean {
   return typeof window !== 'undefined' && typeof document !== 'undefined'
+}
+
+/**
+ * Detect if we're running **on the Web platform**, from either Lynx thread.
+ *
+ * `SystemInfo.platform` is `'web'` under `@lynx-js/web-core` (its
+ * `systemInfoBase`) and `'Android'`/`'iOS'`/… on device; web-core forwards the
+ * same object into the background worker, so unlike {@link isWebEnvironment}
+ * this answer does not depend on which realm asks.
+ *
+ * Why this matters: `<refresh>`/`<refresh-header>` and `<webview>` have **no Web
+ * implementation** — they are absent from web-core's `LYNX_TAG_TO_HTML_TAG_MAP`
+ * and web-elements registers `x-refresh-view`/`x-webview` instead — so they land
+ * in the DOM as unknown elements whose children render as ordinary content. That
+ * has to be decided structurally at render time, which is exactly the code that
+ * runs in the worker. `isWebEnvironment()` there is `false`, which is how the
+ * home page kept shipping a permanently visible "下拉刷新…" label on Web.
+ *
+ * Read through the untyped bag rather than `SystemInfo.platform` directly: Lynx's
+ * own `PlatformType` predates the Web target and does not list `'web'`.
+ */
+export function isWebPlatform(): boolean {
+  const platform = readSystemInfo()?.['platform']
+  return typeof platform === 'string' && platform.toLowerCase() === 'web'
 }
 
 /**

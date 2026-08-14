@@ -57,8 +57,32 @@ test('the home strip scrolls horizontally via scroll-orientation, not deprecated
 
 test('the vertical scroll-view uses enable-nested-scroll to coordinate with the refresh wrapper', () => {
   const page = code('features/home/pages/HomePage.tsx')
-  expect(page).toMatch(/enable-refresh=\{!isWeb\}/)
+  expect(page).toMatch(/enable-refresh=\{true\}/)
   expect(page).toMatch(/enable-nested-scroll=\{true\}/)
+})
+
+/**
+ * Web has no `<refresh>`: web-core's `LYNX_TAG_TO_HTML_TAG_MAP` has no entry for
+ * it, and web-elements registers `x-refresh-view`/`x-refresh-header` — so both
+ * tags reach the DOM as unknown elements and the header's label renders as plain
+ * page content ("下拉刷新…" pinned under the greeting).
+ *
+ * Two earlier attempts failed here. `finishRefresh()` in a mount effect raced the
+ * element; then `enable-refresh={!isWeb}` looked right but never fired, twice over
+ * — the attribute cannot hide an element web-elements does not know, and `isWeb`
+ * came from `isWebEnvironment()`, which probes `window`/`document` and therefore
+ * answers `false` in the web-core background *worker* where this render actually
+ * runs. So: keep the platform test on `SystemInfo` (`isWebPlatform`), and keep the
+ * wrapper out of the tree on Web rather than trying to switch it off.
+ */
+test('the home page omits the refresh wrapper on Web instead of disabling it', () => {
+  const page = code('features/home/pages/HomePage.tsx')
+  expect(page).toMatch(/isWebPlatform\(\)/)
+  expect(page).not.toMatch(/isWebEnvironment/)
+  // The wrapper is a branch, not an always-rendered element with a flag.
+  expect(page).toMatch(/isWeb\s*\?\s*<view className='home__scroll-host'>/)
+  const platform = code('native/web-platform.ts')
+  expect(platform).toMatch(/readSystemInfo\(\)\?\.\['platform'\]/)
 })
 
 test('no source file uses the deprecated scroll-x attribute', () => {

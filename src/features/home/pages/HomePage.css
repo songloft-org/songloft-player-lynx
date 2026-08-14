@@ -26,7 +26,16 @@
   font-weight: bold;
 }
 
-.home__refresh {
+/*
+ * `.home__scroll-host` is the Web stand-in for `.home__refresh`: Web has no
+ * `<refresh>` element, so there the page wraps the scroller in a plain view
+ * instead (see HomePage.tsx). Identical constraints, so `.home__scroll`'s
+ * `height: 100%` resolves against the space left below the topbar either way.
+ */
+.home__refresh,
+.home__scroll-host {
+  display: flex;
+  flex-direction: column;
   flex: 1;
   width: 100%;
   min-height: 0;
