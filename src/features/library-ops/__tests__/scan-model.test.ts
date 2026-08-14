@@ -172,8 +172,21 @@ describe('scanPollInterval', () => {
     expect(scanPollInterval(undefined, true, true)).toBe(false)
   })
 
-  test('forced still stops once a terminal state arrives', () => {
-    expect(scanPollInterval(progress('completed'), true, false)).toBe(false)
+  /**
+   * `forced` outranks a terminal status on purpose. Right after a start, the
+   * first `GET /scan/progress` can still carry the *previous* run's terminal
+   * value (the worker hasn't flipped state yet); stopping there is exactly the
+   * "refresh again does nothing" bug. Termination is the *caller's* job: it
+   * clears `forced` once a terminal status arrives that is newer than the start
+   * (`dataUpdatedAt >= startedAt`), mirroring `DuplicateCheckPage`.
+   */
+  test('forced keeps polling even over a (possibly stale) terminal state', () => {
+    expect(scanPollInterval(progress('completed'), true, false)).toBe(POLL_MS)
+    expect(scanPollInterval(progress('failed'), true, false)).toBe(POLL_MS)
+  })
+
+  test('without forced, a terminal state stops polling', () => {
+    expect(scanPollInterval(progress('completed'), false, false)).toBe(false)
   })
 })
 
@@ -183,7 +196,11 @@ describe('metadataPollInterval', () => {
       .toBe(POLL_MS)
     expect(metadataPollInterval(parseMetadataProgress({ status: 'cancelling' }), false, false))
       .toBe(POLL_MS)
+    // forced outranks a (possibly stale) terminal `done` — same reasoning as the
+    // scan case above; the caller clears `forced` on a fresh terminal state.
     expect(metadataPollInterval(parseMetadataProgress({ status: 'done' }), true, false))
+      .toBe(POLL_MS)
+    expect(metadataPollInterval(parseMetadataProgress({ status: 'done' }), false, false))
       .toBe(false)
     expect(metadataPollInterval(parseMetadataProgress({ status: 'idle' }), false, false))
       .toBe(false)

@@ -295,14 +295,23 @@ export const POLL_MS = 2000
 /**
  * Poll period for the scan progress query, or `false` to stop.
  *
- * `forced` is a **sticky local flag set right after a successful `POST /scan`**
- * and cleared on the first terminal status. Without it there is a real race: the
- * backend worker may not have started when the first `GET /scan/progress` lands,
- * so the response is still `idle` — and a purely data-derived interval would
- * never start polling at all, leaving the user staring at an idle page while the
- * scan runs.
+ * `forced` means **"a run was just started and we have not yet seen fresh
+ * evidence of its outcome"**. It exists for a real race: the backend worker may
+ * not have started when the first `GET /scan/progress` lands, so the response
+ * still describes the *previous* run — often a terminal `completed`/`done`. A
+ * purely data-derived interval would then never start polling at all.
  *
- * `paused` is the cancel handshake (stop polling *before* sending cancel).
+ * **`forced` therefore outranks a terminal status.** It used to be checked
+ * *after* it, which short-circuited the very race it was added for: tapping
+ * "refresh again" right after a finished run left the page showing the previous
+ * result with no progress bar, while the job ran to completion in the background
+ * (only leaving and re-entering the page recovered). Termination is not at risk
+ * because the caller clears `forced` as soon as a terminal status arrives that is
+ * newer than the start (`dataUpdatedAt >= startedAt`), mirroring
+ * `DuplicateCheckPage`'s `computingSinceRef` guard.
+ *
+ * `paused` is the cancel handshake (stop polling *before* sending cancel), and
+ * outranks everything.
  */
 export function scanPollInterval(
   progress: ScanProgress | undefined,
@@ -310,21 +319,23 @@ export function scanPollInterval(
   paused: boolean,
 ): number | false {
   if (paused) return false
-  if (!progress) return forced ? POLL_MS : false
+  if (forced) return POLL_MS
+  if (!progress) return false
   if (progress.isTerminal) return false
-  return forced || progress.isScanning ? POLL_MS : false
+  return progress.isScanning ? POLL_MS : false
 }
 
-/** Same contract for the metadata-refresh poll. */
+/** Same contract for the metadata-refresh poll — see {@link scanPollInterval}. */
 export function metadataPollInterval(
   progress: MetadataProgress | undefined,
   forced: boolean,
   paused: boolean,
 ): number | false {
   if (paused) return false
-  if (!progress) return forced ? POLL_MS : false
+  if (forced) return POLL_MS
+  if (!progress) return false
   if (progress.isDone) return false
-  return forced || progress.isRunning ? POLL_MS : false
+  return progress.isRunning ? POLL_MS : false
 }
 
 /**

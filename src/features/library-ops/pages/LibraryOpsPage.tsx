@@ -1,4 +1,4 @@
-import { useEffect, useState } from '@lynx-js/react'
+import { useEffect, useRef, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -104,20 +104,37 @@ export function LibraryOpsPage() {
 
   const { tree, actions: treeActions } = useDirectoryTree()
 
-  // Drop the sticky poll flags once the server reports a terminal state.
+  /**
+   * Drop the sticky poll flags once the server reports a terminal state **that is
+   * newer than the start** — the same guard `DuplicateCheckPage` uses.
+   *
+   * Without the freshness check, starting a run right after a finished one cleared
+   * the flag against the *previous* run's terminal status (the GET is a
+   * round-trip, so for a moment the cache still holds it). Combined with the poll
+   * decision that used to short-circuit on terminal, the effect was: tap "refresh
+   * again" → no progress bar, stale result on screen, job running invisibly.
+   */
+  const scanStartedAtRef = useRef(0)
+  const metaStartedAtRef = useRef(0)
+  const scanTerminalIsFresh = scanQuery.dataUpdatedAt >= scanStartedAtRef.current
+  const metaTerminalIsFresh = metaQuery.dataUpdatedAt >= metaStartedAtRef.current
+
   useEffect(() => {
-    if (progress?.isTerminal) setScanForced(false)
-  }, [progress?.isTerminal])
+    if (progress?.isTerminal && scanTerminalIsFresh) setScanForced(false)
+  }, [progress?.isTerminal, scanTerminalIsFresh])
   useEffect(() => {
-    if (metaProgress?.isDone) setMetaForced(false)
-  }, [metaProgress?.isDone])
+    if (metaProgress?.isDone && metaTerminalIsFresh) setMetaForced(false)
+  }, [metaProgress?.isDone, metaTerminalIsFresh])
 
   const onStartScan = () => {
     setStartError(false)
     startScan.mutate(
       { reimport: mode === 'reimport', paths: selectedPaths },
       {
-        onSuccess: () => setScanForced(true),
+        onSuccess: () => {
+          scanStartedAtRef.current = Date.now()
+          setScanForced(true)
+        },
         onError: () => setStartError(true),
       },
     )
@@ -149,7 +166,10 @@ export function LibraryOpsPage() {
 
   const onStartMeta = () => {
     startMeta.mutate(undefined, {
-      onSuccess: () => setMetaForced(true),
+      onSuccess: () => {
+        metaStartedAtRef.current = Date.now()
+        setMetaForced(true)
+      },
       onError: () => setWriteError(true),
     })
   }
