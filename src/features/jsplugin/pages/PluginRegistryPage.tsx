@@ -49,14 +49,22 @@ export function PluginRegistryPage() {
   }
 
   const onInstall = (plugin: RegistryPluginEntry) => {
+    // If a conflict is reported and the user hasn't confirmed, show the warning.
+    if (plugin.conflict && confirmConflict !== plugin.entryPath) {
+      setConfirmConflict(plugin.entryPath)
+      return
+    }
+    setConfirmConflict(null)
     installMutation.mutate(
-      { downloadUrl: plugin.downloadUrl, sourceUrl: plugin.sourceUrl },
+      { downloadUrl: plugin.downloadUrl, sourceUrl: plugin.sourceUrl, overwrite: !!plugin.conflict },
       { onSuccess: () => doFetch(page, search) },
     )
   }
 
   // Auto-fetch on first render
   const [didInit, setDidInit] = useState(false)
+  const [confirmConflict, setConfirmConflict] = useState<string | null>(null)
+
   if (!didInit) {
     setDidInit(true)
     doFetch(1, '')
@@ -120,15 +128,30 @@ export function PluginRegistryPage() {
                               </text>
                             </view>
                           )
-                          : (
-                            <view
-                              className='plugin-registry__install-btn'
-                              bindtap={() => onInstall(plugin)}
-                              data-testid={`registry-install-${plugin.entryPath}`}
-                            >
-                              <text className='plugin-registry__install-text'>{t('jsplugin.install')}</text>
-                            </view>
-                          )}
+                          : confirmConflict === plugin.entryPath
+                            ? (
+                              <view className='plugin-registry__conflict'>
+                                <text className='plugin-registry__conflict-text'>
+                                  {plugin.conflict ?? t('jsplugin.conflictWarning')}
+                                </text>
+                                <view
+                                  className='plugin-registry__install-btn'
+                                  bindtap={() => onInstall(plugin)}
+                                  data-testid={`registry-install-${plugin.entryPath}`}
+                                >
+                                  <text className='plugin-registry__install-text'>{t('jsplugin.installAnyway')}</text>
+                                </view>
+                              </view>
+                            )
+                            : (
+                              <view
+                                className='plugin-registry__install-btn'
+                                bindtap={() => onInstall(plugin)}
+                                data-testid={`registry-install-${plugin.entryPath}`}
+                              >
+                                <text className='plugin-registry__install-text'>{t('jsplugin.install')}</text>
+                              </view>
+                            )}
                       </view>
                     </view>
                   ))}

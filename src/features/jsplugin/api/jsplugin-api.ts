@@ -129,4 +129,20 @@ export class JSPluginApi {
   getUploadUrl(): string {
     return `${apiPrefix}/jsplugins/upload`
   }
+
+  // ── Plugin registries (source management) ──────────────────────────────
+
+  async getPluginRegistries(): Promise<Array<{ url: string; name?: string }>> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/settings/plugin-registries`)
+    const data = (res.data ?? {}) as Record<string, unknown>
+    const registries = Array.isArray(data.registries) ? data.registries : []
+    return registries.map((r: unknown) => {
+      const item = r as Record<string, unknown>
+      return { url: String(item.url ?? ''), name: item.name as string | undefined }
+    })
+  }
+
+  async updatePluginRegistries(registries: Array<{ url: string; name?: string }>): Promise<void> {
+    await this.client.put(`${apiPrefix}/settings/plugin-registries`, { registries })
+  }
 }

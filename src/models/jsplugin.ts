@@ -73,6 +73,7 @@ export const registryPluginEntrySchema = z
     has_update: z.boolean().catch(false),
     source_url: z.string().nullish().catch(undefined),
     identity: z.string().nullish().catch(undefined),
+    conflict: z.string().nullish().catch(undefined),
   })
   .transform((p) => ({
     name: p.name,
@@ -88,6 +89,7 @@ export const registryPluginEntrySchema = z
     hasUpdate: p.has_update,
     sourceUrl: p.source_url ?? undefined,
     identity: p.identity ?? undefined,
+    conflict: p.conflict ?? undefined,
   }))
 
 export type RegistryPluginEntry = z.output<typeof registryPluginEntrySchema>
