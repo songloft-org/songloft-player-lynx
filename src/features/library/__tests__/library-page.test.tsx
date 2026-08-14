@@ -50,6 +50,7 @@ vi.mock('../../playlist/data/playlist-query.js', () => ({
 vi.mock('../../playlist/data/playlist-mutations.js', () => ({
   useCreatePlaylistMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useReorderPlaylistsMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeletePlaylistMutation: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(async () => {}) }),
 }))
 
 vi.mock('../widgets/VirtualList.js', async () =>

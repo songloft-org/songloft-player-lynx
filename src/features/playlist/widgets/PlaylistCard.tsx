@@ -48,6 +48,16 @@ export function PlaylistCard({ playlist, onTap, isPlaying }: PlaylistCardProps) 
             </view>
           )
           : null}
+        {isPlaying
+          ? (
+            <view className='playlist-card__eq-bars'>
+              <view className='playlist-card__eq-bar playlist-card__eq-bar--1' />
+              <view className='playlist-card__eq-bar playlist-card__eq-bar--2' />
+              <view className='playlist-card__eq-bar playlist-card__eq-bar--3' />
+              <view className='playlist-card__eq-bar playlist-card__eq-bar--4' />
+            </view>
+          )
+          : null}
       </view>
       <text className='playlist-card__name'>{playlist.name || t('common.untitled')}</text>
       <text className='playlist-card__count'>{count}</text>

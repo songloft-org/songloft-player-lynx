@@ -34,6 +34,62 @@
   color: var(--accent);
 }
 
+.playlist-card__eq-bars {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 2px;
+  height: 16px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.playlist-card__eq-bar {
+  width: 3px;
+  background-color: var(--primary);
+  border-radius: 1px;
+  animation-name: eq-bounce;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+.playlist-card__eq-bar--1 {
+  height: 4px;
+  animation-duration: 0.4s;
+}
+
+.playlist-card__eq-bar--2 {
+  height: 8px;
+  animation-duration: 0.5s;
+  animation-delay: 0.1s;
+}
+
+.playlist-card__eq-bar--3 {
+  height: 6px;
+  animation-duration: 0.35s;
+  animation-delay: 0.2s;
+}
+
+.playlist-card__eq-bar--4 {
+  height: 10px;
+  animation-duration: 0.45s;
+  animation-delay: 0.15s;
+}
+
+@keyframes eq-bounce {
+  from {
+    height: 3px;
+  }
+  to {
+    height: 12px;
+  }
+}
+
 .playlist-card__cover-wrap {
   position: relative;
   width: 100%;
@@ -227,4 +283,62 @@
 
 .playlists__create-btn-text--primary {
   color: var(--primary-content);
+}
+
+.playlists__grid-item {
+  position: relative;
+}
+
+.playlists__select-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  border-width: 2px;
+  border-color: var(--content-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--surface);
+}
+
+.playlists__select-badge--on {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.playlists__select-badge-mark {
+  color: var(--on-primary);
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.playlists__select-toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--surface);
+  border-top-width: 1px;
+  border-top-color: var(--neutral-faint);
+}
+
+.playlists__select-toolbar-count {
+  color: var(--content);
+  font-size: var(--font-sm);
+}
+
+.playlists__select-toolbar-btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background-color: var(--danger);
+}
+
+.playlists__select-toolbar-btn-text {
+  color: var(--on-primary);
+  font-size: var(--font-sm);
+  font-weight: bold;
 }

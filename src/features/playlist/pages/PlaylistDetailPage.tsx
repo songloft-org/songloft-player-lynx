@@ -92,6 +92,8 @@ export function PlaylistDetailPage() {
   const [editName, setEditName] = useState('')
   const [editDesc, setEditDesc] = useState('')
   const [sortMode, setSortMode] = useState(false)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
   const canSort = songs.length > 1
 
   const enterSortMode = () => {
@@ -99,6 +101,19 @@ export function PlaylistDetailPage() {
   }
   const exitSortMode = () => {
     setSortMode(false)
+  }
+  const enterSelectMode = () => {
+    setSelectMode(true)
+    setSelected(new Set())
+  }
+  const exitSelectMode = () => {
+    setSelectMode(false)
+    setSelected(new Set())
+  }
+  const batchRemove = () => {
+    const ids = Array.from(selected)
+    if (ids.length === 0) return
+    void Promise.all(ids.map((songId) => removeSongMutation.mutateAsync(songId))).then(exitSelectMode)
   }
 
   const toggleVisibility = () => {
@@ -157,8 +172,17 @@ export function PlaylistDetailPage() {
     }
   }
 
-  const onTapSong = (_song: Song, index: number) => {
-    void usePlayerStore.getState().playPlaylist(songs, index, id)
+  const onTapSong = (song: Song, index: number) => {
+    if (selectMode) {
+      setSelected((prev) => {
+        const next = new Set(prev)
+        if (next.has(song.id)) next.delete(song.id)
+        else next.add(song.id)
+        return next
+      })
+    } else {
+      void usePlayerStore.getState().playPlaylist(songs, index, id)
+    }
   }
 
   const header = (
@@ -228,6 +252,21 @@ export function PlaylistDetailPage() {
                       {isHidden ? t('playlist.showPlaylist') : t('playlist.hidePlaylist')}
                     </text>
                   </view>
+                )
+                : null}
+              {!sortMode && !editing && songs.length > 0
+                ? (
+                  selectMode
+                    ? (
+                      <view className='playlist-detail__action-btn' bindtap={exitSelectMode}>
+                        <text className='playlist-detail__action-text'>{t('library.cancelSelect')}</text>
+                      </view>
+                    )
+                    : (
+                      <view className='playlist-detail__action-btn' bindtap={enterSelectMode} data-testid='playlist-select-toggle'>
+                        <text className='playlist-detail__action-text'>{t('library.select')}</text>
+                      </view>
+                    )
                 )
                 : null}
             </view>
@@ -402,9 +441,18 @@ export function PlaylistDetailPage() {
                   items={songs}
                   itemKey={(song) => String(song.id)}
                   renderItem={(song, index) => (
-                    <view className='playlist-detail__song-row-wrapper'>
-                      <SongRow song={song} index={index} onTap={onTapSong} onLongPress={setContextSong} />
-                      {!isBuiltIn
+                    <view className={selectMode && selected.has(song.id) ? 'playlist-detail__song-row-wrapper playlist-detail__song-row-wrapper--selected' : 'playlist-detail__song-row-wrapper'}>
+                      {selectMode
+                        ? (
+                          <view className={selected.has(song.id) ? 'playlist-detail__select-check playlist-detail__select-check--on' : 'playlist-detail__select-check'}>
+                            {selected.has(song.id) ? <text className='playlist-detail__select-mark'>✓</text> : null}
+                          </view>
+                        )
+                        : null}
+                      <view className='playlist-detail__song-row-content'>
+                        <SongRow song={song} index={index} onTap={onTapSong} onLongPress={selectMode ? undefined : setContextSong} />
+                      </view>
+                      {!isBuiltIn && !selectMode
                         ? (
                           <view
                             className='playlist-detail__remove-btn'
@@ -427,6 +475,18 @@ export function PlaylistDetailPage() {
                 />
               )}
       </view>
+      {selectMode && selected.size > 0
+        ? (
+          <view className='playlist-detail__select-toolbar'>
+            <text className='playlist-detail__select-toolbar-count'>
+              {t('library.selectedCount', { count: selected.size })}
+            </text>
+            <view className='playlist-detail__select-toolbar-btn' bindtap={batchRemove}>
+              <text className='playlist-detail__select-toolbar-btn-text'>{t('playlist.removeSong')}</text>
+            </view>
+          </view>
+        )
+        : null}
       <SongContextMenu song={contextSong} onClose={() => setContextSong(null)} />
     </view>
   )

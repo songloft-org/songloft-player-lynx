@@ -34,6 +34,7 @@ vi.mock('../data/playlist-query.js', () => ({
 vi.mock('../data/playlist-mutations.js', () => ({
   useCreatePlaylistMutation: createMutationHook,
   useReorderPlaylistsMutation: reorderMutationHook,
+  useDeletePlaylistMutation: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(async () => {}) }),
 }))
 
 const { PlaylistsView } = await import('../widgets/PlaylistsView.js')

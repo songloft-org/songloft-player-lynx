@@ -9,7 +9,7 @@ import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { pinyinCompare } from '../../../shared/sort/pinyin-compare.js'
 import { flattenPlaylists } from '../data/pagination.js'
 import { usePlaylistsInfiniteQuery } from '../data/playlist-query.js'
-import { useCreatePlaylistMutation, useReorderPlaylistsMutation } from '../data/playlist-mutations.js'
+import { useCreatePlaylistMutation, useDeletePlaylistMutation, useReorderPlaylistsMutation } from '../data/playlist-mutations.js'
 import { PlaylistCard } from './PlaylistCard.js'
 import './PlaylistsView.css'
 
@@ -21,11 +21,15 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
   const playlists = allPlaylists.filter((p) => !p.isHidden)
   const createMutation = useCreatePlaylistMutation()
   const reorderMutation = useReorderPlaylistsMutation()
+  const deleteMutation = useDeletePlaylistMutation()
 
   const [showForm, setShowForm] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
   const [sortMode, setSortMode] = useState(false)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
 
   const onCreateSubmit = () => {
     const trimmed = newName.trim()
@@ -56,7 +60,32 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
   }
 
   const onTap = (playlist: Playlist) => {
+    if (selectMode) {
+      setSelected((prev) => {
+        const next = new Set(prev)
+        if (next.has(playlist.id)) next.delete(playlist.id)
+        else next.add(playlist.id)
+        return next
+      })
+      return
+    }
     void navigate({ to: '/playlists/$id', params: { id: String(playlist.id) } })
+  }
+
+  const enterSelectMode = () => {
+    setSelectMode(true)
+    setSelected(new Set())
+    setConfirmBatchDelete(false)
+  }
+  const exitSelectMode = () => {
+    setSelectMode(false)
+    setSelected(new Set())
+    setConfirmBatchDelete(false)
+  }
+  const batchDelete = () => {
+    if (!confirmBatchDelete) { setConfirmBatchDelete(true); return }
+    const ids = Array.from(selected).filter((id) => !playlists.find((p) => p.id === id)?.isBuiltIn)
+    void Promise.all(ids.map((id) => deleteMutation.mutateAsync(id))).then(exitSelectMode)
   }
 
   const createForm = showForm
@@ -154,31 +183,46 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
           <text className='playlists__create-trigger-text'>{t('playlist.createPlaylist')}</text>
         </view>
         {playlists.length > 1 && !showForm
-          ? (
-            <view className='playlists__sort-actions'>
-              <view
-                className='playlists__create-trigger'
-                bindtap={() => {
-                  const sorted = [...playlists].sort((a, b) => pinyinCompare(a.name, b.name))
-                  const sortedIds = sorted.map((p) => p.id)
-                  const originalIds = playlists.map((p) => p.id)
-                  if (sortedIds.every((id, i) => id === originalIds[i])) return
-                  reorderMutation.mutate(sortedIds)
-                }}
-                data-testid='playlists-sort-az'
-              >
-                <Icon name='sort' size={18} color={ICON_COLORS.content} />
-                <text className='playlists__create-trigger-text'>{t('playlist.sortAZ')}</text>
+          ? selectMode
+            ? (
+              <view className='playlists__sort-actions'>
+                <view className='playlists__create-trigger' bindtap={exitSelectMode}>
+                  <text className='playlists__create-trigger-text'>{t('library.cancelSelect')}</text>
+                </view>
               </view>
-              <view
-                className='playlists__create-trigger'
-                bindtap={() => setSortMode(true)}
-                data-testid='playlists-sort-toggle'
-              >
-                <Icon name='menu' size={18} color={ICON_COLORS.content} />
+            )
+            : (
+              <view className='playlists__sort-actions'>
+                <view
+                  className='playlists__create-trigger'
+                  bindtap={() => {
+                    const sorted = [...playlists].sort((a, b) => pinyinCompare(a.name, b.name))
+                    const sortedIds = sorted.map((p) => p.id)
+                    const originalIds = playlists.map((p) => p.id)
+                    if (sortedIds.every((id, i) => id === originalIds[i])) return
+                    reorderMutation.mutate(sortedIds)
+                  }}
+                  data-testid='playlists-sort-az'
+                >
+                  <Icon name='sort' size={18} color={ICON_COLORS.content} />
+                  <text className='playlists__create-trigger-text'>{t('playlist.sortAZ')}</text>
+                </view>
+                <view
+                  className='playlists__create-trigger'
+                  bindtap={enterSelectMode}
+                  data-testid='playlists-select-toggle'
+                >
+                  <Icon name='check' size={18} color={ICON_COLORS.content} />
+                </view>
+                <view
+                  className='playlists__create-trigger'
+                  bindtap={() => setSortMode(true)}
+                  data-testid='playlists-sort-toggle'
+                >
+                  <Icon name='menu' size={18} color={ICON_COLORS.content} />
+                </view>
               </view>
-            </view>
-          )
+            )
           : null}
       </view>
       {createForm}
@@ -194,7 +238,16 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
       >
         <view className='playlists__grid'>
           {playlists.map((playlist) => (
-            <PlaylistCard key={String(playlist.id)} playlist={playlist} onTap={onTap} />
+            <view key={String(playlist.id)} className='playlists__grid-item'>
+              <PlaylistCard playlist={playlist} onTap={onTap} />
+              {selectMode
+                ? (
+                  <view className={selected.has(playlist.id) ? 'playlists__select-badge playlists__select-badge--on' : 'playlists__select-badge'}>
+                    {selected.has(playlist.id) ? <text className='playlists__select-badge-mark'>✓</text> : null}
+                  </view>
+                )
+                : null}
+            </view>
           ))}
         </view>
         {query.isFetchingNextPage
@@ -205,6 +258,20 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
           )
           : null}
       </scroll-view>
+      {selectMode && selected.size > 0
+        ? (
+          <view className='playlists__select-toolbar'>
+            <text className='playlists__select-toolbar-count'>
+              {t('library.selectedCount', { count: selected.size })}
+            </text>
+            <view className='playlists__select-toolbar-btn' bindtap={batchDelete}>
+              <text className='playlists__select-toolbar-btn-text'>
+                {confirmBatchDelete ? t('playlist.deleteConfirm') : t('playlist.deletePlaylist')}
+              </text>
+            </view>
+          </view>
+        )
+        : null}
     </view>
   )
 }
