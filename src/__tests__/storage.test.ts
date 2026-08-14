@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 
 import {
+  createIndexedDBStorage,
   createMemoryStorage,
   createNativeStorage,
   createSongloftStorage,
@@ -40,6 +41,69 @@ function fakeNativeStorageModule(): SongloftStorageNativeModule & {
     },
     dump(area) {
       return Object.fromEntries(areaMap(area))
+    },
+  }
+}
+
+/**
+ * Minimal `IDBFactory` stand-in: enough of the request/transaction protocol for
+ * `idb-storage.ts` to exercise its real code paths (jsdom ships no IndexedDB, and
+ * the point of these tests is our commit/read logic, not a browser's).
+ *
+ * Handlers are invoked on a later microtask, like the real thing — assigning
+ * `onsuccess` after the call must still work — and `oncomplete` fires strictly
+ * after the request's own `onsuccess`, which is what makes the `committed()`
+ * wait in `set`/`remove` meaningful.
+ */
+function fakeIndexedDB(opts: { failOpen?: boolean; stallOpen?: boolean } = {}) {
+  const data = new Map<string, string>()
+  const later = (fn: () => void) => void Promise.resolve().then(fn)
+
+  const makeRequest = <T,>(run: () => T) => {
+    const req: Record<string, unknown> = { result: undefined, error: null }
+    later(() => {
+      try {
+        req.result = run()
+        ;(req.onsuccess as (() => void) | undefined)?.()
+      } catch (e) {
+        req.error = e
+        ;(req.onerror as (() => void) | undefined)?.()
+      }
+    })
+    return req
+  }
+
+  const store = {
+    get: (k: string) => makeRequest(() => (data.has(k) ? data.get(k) : undefined)),
+    put: (v: string, k: string) => makeRequest(() => void data.set(k, v)),
+    delete: (k: string) => makeRequest(() => void data.delete(k)),
+    getAllKeys: () => makeRequest(() => [...data.keys()]),
+  }
+
+  const db = {
+    objectStoreNames: { contains: () => true },
+    createObjectStore: () => store,
+    transaction: () => {
+      const tx: Record<string, unknown> = { objectStore: () => store }
+      // Two microtask hops: after the request's own handler, never before.
+      later(() => later(() => (tx.oncomplete as (() => void) | undefined)?.()))
+      return tx
+    },
+  }
+
+  return {
+    dump: () => Object.fromEntries(data),
+    factory: {
+      open: () => {
+        const req: Record<string, unknown> = { result: db, error: null }
+        if (!opts.stallOpen) {
+          later(() => {
+            if (opts.failOpen) (req.onerror as (() => void) | undefined)?.()
+            else (req.onsuccess as (() => void) | undefined)?.()
+          })
+        }
+        return req
+      },
     },
   }
 }
@@ -156,10 +220,99 @@ describe('isNativeStorageAvailable (probe)', () => {
   })
 })
 
-describe('createSongloftStorage selection (native → web → memory)', () => {
+/**
+ * The Web platform's persistent backend. It exists because the realm this app
+ * renders in — web-core's background `Worker` — has no `localStorage` at all, so
+ * the probe used to fall through to memory and every reload logged the user out.
+ */
+describe('IndexedDB storage', () => {
+  const asFactory = (f: { open: () => unknown }) => f as unknown as IDBFactory
+
+  test('prefs and secure round-trip and persist under separate namespaces', async () => {
+    const idb = fakeIndexedDB()
+    const s = createIndexedDBStorage(asFactory(idb.factory))
+    await s.prefs.set('server_url', 'http://localhost:58091')
+    await s.secure.set('access_token', 'tok')
+    expect(await s.prefs.get('server_url')).toBe('http://localhost:58091')
+    expect(await s.secure.get('access_token')).toBe('tok')
+    // Same key in both spaces must not collide.
+    await s.prefs.set('access_token', 'not-a-token')
+    expect(await s.secure.get('access_token')).toBe('tok')
+    // Committed to the store, not just held in the process (this is the bug).
+    expect(idb.dump()).toEqual({
+      'prefs.server_url': 'http://localhost:58091',
+      'prefs.access_token': 'not-a-token',
+      'secure.access_token': 'tok',
+    })
+  })
+
+  test('a reopened database sees what the previous session wrote', async () => {
+    const idb = fakeIndexedDB()
+    const first = createIndexedDBStorage(asFactory(idb.factory))
+    await first.secure.set('access_token', 'survives')
+    // Fresh instance, same backing store = the page reload this fixes.
+    const second = createIndexedDBStorage(asFactory(idb.factory))
+    expect(await second.secure.get('access_token')).toBe('survives')
+  })
+
+  test('keys are filtered by namespace and returned unprefixed', async () => {
+    const idb = fakeIndexedDB()
+    const s = createIndexedDBStorage(asFactory(idb.factory))
+    await s.prefs.set('a', '1')
+    await s.prefs.set('b', '2')
+    await s.secure.set('c', '3')
+    expect((await s.prefs.keys()).sort()).toEqual(['a', 'b'])
+  })
+
+  test('remove deletes from the store, not just the process mirror', async () => {
+    const idb = fakeIndexedDB()
+    const s = createIndexedDBStorage(asFactory(idb.factory))
+    await s.secure.set('access_token', 'tok')
+    await s.secure.remove('access_token')
+    expect(await s.secure.get('access_token')).toBeNull()
+    expect(idb.dump()).toEqual({})
+  })
+
+  test('an unopenable database degrades to the session instead of failing', async () => {
+    const idb = fakeIndexedDB({ failOpen: true })
+    const s = createIndexedDBStorage(asFactory(idb.factory))
+    await s.prefs.set('k', 'v')
+    // Usable in-session…
+    expect(await s.prefs.get('k')).toBe('v')
+    expect(await s.prefs.keys()).toEqual(['k'])
+    // …but nothing was persisted, and no call rejected.
+    expect(idb.dump()).toEqual({})
+  })
+
+  test('an open that never settles times out rather than hanging auth bootstrap', async () => {
+    vi.useFakeTimers()
+    try {
+      const idb = fakeIndexedDB({ stallOpen: true })
+      const s = createIndexedDBStorage(asFactory(idb.factory))
+      const read = s.prefs.get('k')
+      let settled = false
+      void read.then(() => (settled = true))
+      await vi.advanceTimersByTimeAsync(2999)
+      expect(settled).toBe(false)
+      await vi.advanceTimersByTimeAsync(2)
+      expect(await read).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  test('no factory at all still yields a working, non-persistent storage', async () => {
+    const s = createIndexedDBStorage()
+    await s.prefs.set('k', 'v')
+    expect(await s.prefs.get('k')).toBe('v')
+  })
+})
+
+describe('createSongloftStorage selection (native → web → indexedDB → memory)', () => {
   afterEach(() => {
     delete (globalThis as { NativeModules?: unknown }).NativeModules
     delete (globalThis as { localStorage?: unknown }).localStorage
+    delete (globalThis as { indexedDB?: unknown }).indexedDB
   })
 
   test('prefers the persistent native module when present', async () => {
@@ -184,7 +337,33 @@ describe('createSongloftStorage selection (native → web → memory)', () => {
     ).toBe('v')
   })
 
-  test('falls back to in-memory storage when neither is available', async () => {
+  /**
+   * The Web platform's actual shape: web-core's `Worker` realm has `indexedDB`
+   * but no `localStorage`. Before this branch existed the probe reached memory
+   * storage here and tokens died with the page.
+   */
+  test('falls back to IndexedDB when only indexedDB exists (the Web worker realm)', async () => {
+    const idb = fakeIndexedDB()
+    ;(globalThis as { indexedDB?: unknown }).indexedDB = idb.factory
+    const s = createSongloftStorage()
+    await s.secure.set('access_token', 'tok')
+    expect(await s.secure.get('access_token')).toBe('tok')
+    // Chose IndexedDB, i.e. wrote through to a store that survives a reload.
+    expect(idb.dump()).toEqual({ 'secure.access_token': 'tok' })
+  })
+
+  test('prefers localStorage over indexedDB when a realm has both', async () => {
+    const local = fakeLocalStorage()
+    const idb = fakeIndexedDB()
+    ;(globalThis as { localStorage?: unknown }).localStorage = local
+    ;(globalThis as { indexedDB?: unknown }).indexedDB = idb.factory
+    const s = createSongloftStorage()
+    await s.prefs.set('k', 'v')
+    expect(local.getItem('songloft.prefs.k')).toBe('v')
+    expect(idb.dump()).toEqual({})
+  })
+
+  test('falls back to in-memory storage when none is available', async () => {
     const s = createSongloftStorage()
     await s.prefs.set('k', 'v')
     expect(await s.prefs.get('k')).toBe('v')
