@@ -303,6 +303,7 @@
 
 .home__state {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: var(--space-6) var(--space-5);
@@ -318,6 +319,18 @@
   color: var(--danger);
 }
 
+.home__state-action {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.home__state-action-text {
+  color: var(--on-primary);
+  font-size: var(--font-sm);
+  font-weight: bold;
+}
 .home__empty {
   display: flex;
   flex-direction: column;

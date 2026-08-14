@@ -322,6 +322,13 @@ export function SettingsPage() {
               title={t('settings.songloft')}
               subtitle={t('settings.songloftUrl')}
             />
+            <SettingsRow
+              icon='info'
+              title={t('settings.licenses')}
+              trailingIcon='chevron-right'
+              onTap={() => void navigate({ to: '/settings/licenses' })}
+              testId='settings-licenses'
+            />
           </SettingsSection>
 
           <SettingsSection title={t('settings.audioQuality')} icon='music'>

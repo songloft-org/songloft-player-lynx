@@ -1,4 +1,4 @@
-import { useRef } from '@lynx-js/react'
+import { useEffect, useRef, useState } from '@lynx-js/react'
 import type { NodesRef } from '@lynx-js/types'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
@@ -59,6 +59,13 @@ export function HomePage() {
   const bothFailed = normalFailed && radioFailed &&
     normalItems.length === 0 && radioItems.length === 0
 
+  const [loadingSlow, setLoadingSlow] = useState(false)
+  useEffect(() => {
+    if (!isFirstLoad) { setLoadingSlow(false); return }
+    const timer = setTimeout(() => setLoadingSlow(true), 5000)
+    return () => clearTimeout(timer)
+  }, [isFirstLoad])
+
   const openPlaylist = (playlist: Playlist) => {
     void navigate({ to: '/playlists/$id', params: { id: String(playlist.id) } })
   }
@@ -96,7 +103,9 @@ export function HomePage() {
         <scroll-view className='home__scroll' scroll-y enable-nested-scroll={true}>
         <view className='home__content'>
           {isFirstLoad
-            ? <HomeState text={t('common.loading')} />
+            ? loadingSlow
+              ? <HomeState text={t('home.loadingSlow')} action={t('common.retry')} onAction={() => { void normal.refetch(); void radio.refetch() }} />
+              : <HomeState text={t('common.loading')} />
             : bothFailed
               ? <HomeState text={t('home.loadError')} tone='error' />
               : (normalItems.length === 0 && radioItems.length === 0 &&
@@ -153,7 +162,7 @@ export function HomePage() {
   )
 }
 
-function HomeState({ text, tone }: { text: string; tone?: 'error' }) {
+function HomeState({ text, tone, action, onAction }: { text: string; tone?: 'error'; action?: string; onAction?: () => void }) {
   return (
     <view className='home__state'>
       <text
@@ -163,6 +172,13 @@ function HomeState({ text, tone }: { text: string; tone?: 'error' }) {
       >
         {text}
       </text>
+      {action && onAction
+        ? (
+          <view className='home__state-action' bindtap={onAction}>
+            <text className='home__state-action-text'>{action}</text>
+          </view>
+        )
+        : null}
     </view>
   )
 }

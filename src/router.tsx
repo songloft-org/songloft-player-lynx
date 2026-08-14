@@ -15,7 +15,7 @@ import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { AddSongsPage, CategorySongsPage, LibraryPage, PlayHistoryPage, SongDetailPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
-import { CacheManagePage, EqualizerPage, ProxySettingsPage, ServerEditPage, ServerListPage, ServerSettingsPage, SettingsPage, ThemePacksPage, UpgradePage } from './features/settings/index.js'
+import { CacheManagePage, EqualizerPage, LicensesPage, ProxySettingsPage, ServerEditPage, ServerListPage, ServerSettingsPage, SettingsPage, ThemePacksPage, UpgradePage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
@@ -182,6 +182,12 @@ const upgradeRoute = createRoute({
   component: UpgradePage,
 })
 
+const licensesRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/licenses',
+  component: LicensesPage,
+})
+
 /** `/settings/duplicates` — duplicate detection sub-page, inside the shell. */
 const duplicatesRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -283,6 +289,7 @@ const routeTree = rootRoute.addChildren([
     proxySettingsRoute,
     themePacksRoute,
     upgradeRoute,
+    licensesRoute,
     duplicatesRoute,
     pluginsRoute,
     pluginRegistryRoute,

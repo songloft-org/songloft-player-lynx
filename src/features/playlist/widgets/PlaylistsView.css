@@ -141,6 +141,13 @@
   margin-left: var(--space-2);
 }
 
+.playlists__sort-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .playlists__sort-title {
   color: var(--content);
   font-size: var(--font-md);

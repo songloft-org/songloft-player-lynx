@@ -82,6 +82,24 @@
   background-color: var(--neutral-faint);
 }
 
+.playlist-detail__cover-wrapper {
+  position: relative;
+}
+
+.playlist-detail__cover-upload {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background-color: var(--neutral-faint);
+  opacity: 0.9;
+}
+
 /*
  * Cap the meta column at the cover height (96px). The title and song count are
  * stable, always-visible lines at the top; only the description scrolls, in the

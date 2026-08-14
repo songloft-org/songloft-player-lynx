@@ -6,6 +6,7 @@ import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-s
 
 import type { Playlist } from '../../../models/playlist.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { pinyinCompare } from '../../../shared/sort/pinyin-compare.js'
 import { flattenPlaylists } from '../data/pagination.js'
 import { usePlaylistsInfiniteQuery } from '../data/playlist-query.js'
 import { useCreatePlaylistMutation, useReorderPlaylistsMutation } from '../data/playlist-mutations.js'
@@ -154,12 +155,28 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
         </view>
         {playlists.length > 1 && !showForm
           ? (
-            <view
-              className='playlists__create-trigger'
-              bindtap={() => setSortMode(true)}
-              data-testid='playlists-sort-toggle'
-            >
-              <Icon name='sort' size={18} color={ICON_COLORS.content} />
+            <view className='playlists__sort-actions'>
+              <view
+                className='playlists__create-trigger'
+                bindtap={() => {
+                  const sorted = [...playlists].sort((a, b) => pinyinCompare(a.name, b.name))
+                  const sortedIds = sorted.map((p) => p.id)
+                  const originalIds = playlists.map((p) => p.id)
+                  if (sortedIds.every((id, i) => id === originalIds[i])) return
+                  reorderMutation.mutate(sortedIds)
+                }}
+                data-testid='playlists-sort-az'
+              >
+                <Icon name='sort' size={18} color={ICON_COLORS.content} />
+                <text className='playlists__create-trigger-text'>{t('playlist.sortAZ')}</text>
+              </view>
+              <view
+                className='playlists__create-trigger'
+                bindtap={() => setSortMode(true)}
+                data-testid='playlists-sort-toggle'
+              >
+                <Icon name='menu' size={18} color={ICON_COLORS.content} />
+              </view>
             </view>
           )
           : null}

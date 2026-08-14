@@ -7,6 +7,7 @@ import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-s
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { canUploadCover, uploadPlaylistCover } from '../domain/cover-upload.js'
 import { getLastShellLocation } from '../../../shared/nav/shell-navigation.js'
 import { getLastLibrarySearch } from '../../library/data/last-library-search.js'
 import { useDebounce } from '../../library/data/use-debounce.js'
@@ -262,13 +263,28 @@ export function PlaylistDetailPage() {
         )
         : (
           <view className='playlist-detail__hero'>
-            {cover
-              ? <image className='playlist-detail__cover' src={cover} />
-              : (
-                <view className='playlist-detail__cover playlist-detail__cover--empty'>
-                  <Icon name='music' size={40} color={ICON_COLORS.contentMuted} />
-                </view>
-              )}
+            <view className='playlist-detail__cover-wrapper'>
+              {cover
+                ? <image className='playlist-detail__cover' src={cover} />
+                : (
+                  <view className='playlist-detail__cover playlist-detail__cover--empty'>
+                    <Icon name='music' size={40} color={ICON_COLORS.contentMuted} />
+                  </view>
+                )}
+              {!isBuiltIn && canUploadCover()
+                ? (
+                  <view
+                    className='playlist-detail__cover-upload'
+                    bindtap={() => {
+                      void uploadPlaylistCover(id).then(() => void detail.refetch())
+                    }}
+                    data-testid='playlist-cover-upload'
+                  >
+                    <Icon name='plus' size={16} color={ICON_COLORS.content} />
+                  </view>
+                )
+                : null}
+            </view>
             <view className='playlist-detail__meta'>
               <text className='playlist-detail__name'>
                 {playlist?.name ?? (detail.isLoading ? t('common.loading') : t('playlist.fallbackName'))}
