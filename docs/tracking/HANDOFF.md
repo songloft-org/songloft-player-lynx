@@ -1,7 +1,7 @@
 # 工作交接（2026-08-14）
 
 > 本文件是**给接手 AI 的交接说明**。读完这一篇就能继续干活；细节在链接里。
-> 一句话现状：**批41（三条 P0）+ 批42（一眼可见缺陷 13 条全部）已完成并提交，工作树干净、闸门全绿（901 vitest）**。剩三条 P0、批43 结构性重构、批44 功能缺口。
+> 一句话现状：**批41（三条 P0）+ 批42（13 条全部）+ 批43 P0 三条（Web 音频/宿主页/后端地址）已完成并提交，工作树干净、闸门全绿（902 vitest）**。剩批43 结构性（P2-1/P2-3）、批44 功能缺口。
 
 ---
 
@@ -47,9 +47,9 @@
 - **P1-12 多选状态跨搜索/筛选残留** ✅已完成（2026-08-14）：`src/features/library/pages/LibraryPage.tsx` 加 `useEffect` 在 `debouncedSearch`/`filterGenre`/`filterArtist`/`filterAlbum` 变化时清空 `selected`。配回归测试 `library-page.test.tsx`（901 vitest，摘掉修复即变红）。
 
 ### 批43 · 结构性（各自独立成批）
-- **P0-2 Web 没有声音**（最大的活）：`web-audio.ts` 是 dead code，worker realm 探测恒 false 落到 mock。改判断救不回来（`new Audio()` 等是主线程 API），正解是经 web-core `nativeModulesMap` 在主线程注册宿主 `SongloftAudio`，复用已测的 native 分支。它同时解锁 Web 的 `openURL`/文件选择。
-- **P0-4 embedded 无宿主页**：`copy-bundle-web.mjs` 的 `if (!isEmbedded)` 守着唯一 index.html 拷贝。动之前先跟后端仓库确认 `songloft-player-build/web-embedded` 仍是 `make build` 读取的路径。
-- **P0-5 后端地址硬编码 localhost**：worker realm 的 `location.origin` 可用但无人读，用它自动判 embedded/同源。
+- **P0-2 Web 没有声音** ✅已完成（2026-08-14）：新增 `web/audio-host.js`，主线程创建 `HTMLAudioElement` 注册为 `NativeModules.SongloftAudio`（via `lynxView.nativeModulesMap`），worker 走已验证的 `NativeSongloftAudio` 分支。EQ/HLS/MediaSession 作为后续跟进。
+- **P0-4 embedded 无宿主页** ✅已完成（2026-08-14）：`copy-bundle-web.mjs` 移除 `if (!isEmbedded)` 守卫，embedded 也拷贝 index.html；`app-config.ts` 自动检测 Web 平台设 `deployMode='embedded'` 隐藏 API 地址字段。
+- **P0-5 后端地址硬编码 localhost** ✅已完成（2026-08-14）：`app-config.ts` 用 `self.location.origin` 自动检测 Web 平台 serving origin 作为默认 base URL。Lynx 原生回退 `localhost:58091`。
 - **P2-1 TokenStore/Interceptor 收口单例**：现在 6 份，收口后 `invalidateTokenCaches()` 的实例登记表可删。
 - **P2-3 原生模块补齐**：悬浮歌词（Android 未注册）、Live Activity（iOS 不是 Lynx 模块）、契约闸门扩到批35+ 模块。**先扩闸门再修**，否则修完无人守。
 
