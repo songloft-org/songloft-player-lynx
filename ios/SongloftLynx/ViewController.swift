@@ -121,6 +121,7 @@ class ViewController: UIViewController {
     config.register(SongloftPlatformModule.self)
     config.register(SongloftDlnaModule.self)
     config.register(SongloftTestBridgeModule.self)
+    config.register(LiveActivityModule.self)
     return config
   }
 

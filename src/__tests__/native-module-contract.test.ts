@@ -34,6 +34,9 @@ const read = (relative: string): string =>
 const ANDROID_AUDIO = 'android/app/src/main/java/org/songloft/lynx/audio'
 const ANDROID_STORAGE = 'android/app/src/main/java/org/songloft/lynx/storage'
 const ANDROID_SYSTEM = 'android/app/src/main/java/org/songloft/lynx/system'
+const ANDROID_PLATFORM = 'android/app/src/main/java/org/songloft/lynx/platform'
+const ANDROID_DLNA = 'android/app/src/main/java/org/songloft/lynx/dlna'
+const ANDROID_LYRIC = 'android/app/src/main/java/org/songloft/lynx/lyric'
 const IOS_DIR = 'ios/SongloftLynx'
 
 /** Both hosts' sources concatenated, per subsystem. */
@@ -58,11 +61,33 @@ const hosts = {
       read('android/app/src/main/java/org/songloft/lynx/MainActivity.kt'),
     ios: read(`${IOS_DIR}/SystemAppearance.swift`) + read(`${IOS_DIR}/ViewController.swift`),
   },
+  // Batch 35+ modules (P2-3: contract gate expansion)
+  platform: {
+    android: read(`${ANDROID_PLATFORM}/SongloftPlatformModule.kt`),
+    ios: read(`${IOS_DIR}/SongloftPlatformModule.swift`),
+  },
+  dlna: {
+    android: read(`${ANDROID_DLNA}/SongloftDlnaModule.kt`),
+    ios: read(`${IOS_DIR}/SongloftDlnaModule.swift`),
+  },
+  floatingLyric: {
+    android: read(`${ANDROID_LYRIC}/FloatingLyricModule.kt`),
+  },
+  liveActivity: {
+    ios: read(`${IOS_DIR}/LiveActivityModule.swift`),
+  },
+  // Android module registration (SongloftApplication.kt)
+  androidApp: read('android/app/src/main/java/org/songloft/lynx/SongloftApplication.kt'),
+  // iOS module registration (ViewController.swift buildConfig)
+  iosViewController: read(`${IOS_DIR}/ViewController.swift`),
 }
 
 /** Method names declared on a TS native-module interface, in source order. */
 function interfaceMethods(source: string, interfaceName: string): string[] {
-  const start = source.indexOf(`export interface ${interfaceName} {`)
+  const start =
+    source.indexOf(`export interface ${interfaceName} {`) !== -1
+      ? source.indexOf(`export interface ${interfaceName} {`)
+      : source.indexOf(`interface ${interfaceName} {`)
   expect(start, `interface ${interfaceName} not found`).toBeGreaterThan(-1)
   const body = source.slice(start, source.indexOf('\n}', start))
   return [...body.matchAll(/^\s{2}(?:\/\*\*.*)?(\w+)\??\(/gm)].map((m) => m[1] as string)
@@ -248,4 +273,118 @@ test('iOS declares the audio background mode and activates a playback session', 
   expect(plist).toContain('<key>UIBackgroundModes</key>')
   expect(plist.slice(plist.indexOf('UIBackgroundModes'))).toContain('<string>audio</string>')
   expect(hosts.audio.ios).toMatch(/setCategory\(\.playback/)
+})
+
+// ── Batch 35+ modules (P2-3 contract gate expansion) ─────────────────────────
+
+describe('SongloftPlatform module methods exist on both hosts', () => {
+  const methods = interfaceMethods(
+    read('src/native/native-platform.ts'),
+    'SongloftPlatformNative',
+  )
+
+  test('the interface was parsed', () => {
+    expect(methods).toContain('openURL')
+    expect(methods.length).toBeGreaterThanOrEqual(3)
+  })
+
+  test.each(methods.filter((m) => m !== 'setInsecureTls'))('SongloftPlatform.%s', (method) => {
+    expect(hosts.platform.android, `Kotlin has no @LynxMethod ${method}`).toContain(
+      `fun ${method}(`,
+    )
+    expect(hosts.platform.ios, `Swift has no func ${method}`).toContain(`func ${method}(`)
+    expect(hosts.platform.ios, `methodLookup is missing "${method}"`).toContain(`"${method}":`)
+  })
+
+  // setInsecureTls is Android-only (iOS uses ATS plist + custom URLSessionDelegate).
+  test('setInsecureTls is Android-only', () => {
+    expect(hosts.platform.android).toContain('fun setInsecureTls(')
+  })
+})
+
+describe('SongloftDlna module methods exist on both hosts', () => {
+  const methods = interfaceMethods(
+    read('src/native/dlna.ts'),
+    'NativeDlnaModule',
+  )
+
+  test('the interface was parsed', () => {
+    expect(methods).toContain('startDiscovery')
+    expect(methods.length).toBeGreaterThanOrEqual(5)
+  })
+
+  test.each(methods)('SongloftDlna.%s', (method) => {
+    expect(hosts.dlna.android, `Kotlin has no @LynxMethod ${method}`).toContain(
+      `fun ${method}(`,
+    )
+    expect(hosts.dlna.ios, `Swift has no func ${method}`).toContain(`func ${method}(`)
+    expect(hosts.dlna.ios, `methodLookup is missing "${method}"`).toContain(`"${method}":`)
+  })
+})
+
+describe('SongloftFloatingLyric module methods exist on Android', () => {
+  // The TS interface is in floating-lyric.ts (Promise-shaped, no native interface).
+  // The native methods are: requestPermission, show, updateLyric, hide, isShowing.
+  const methods = ['requestPermission', 'show', 'updateLyric', 'hide', 'isShowing']
+
+  test.each(methods)('FloatingLyricModule.%s has @LynxMethod and uses Callback', (method) => {
+    const src = hosts.floatingLyric.android
+    // Each method must carry @LynxMethod so Lynx discovers it.
+    expect(
+      src,
+      `FloatingLyricModule.${method} is missing @LynxMethod — it is invisible to JS`,
+    ).toMatch(new RegExp(`@LynxMethod\\s+fun ${method}\\(`))
+    // The method signature must use com.lynx.react.bridge.Callback, not a Kotlin
+    // lambda. A lambda is not a registered Lynx type and silently fails.
+    expect(
+      src,
+      `FloatingLyricModule.${method} must use Callback, not a plain lambda`,
+    ).toMatch(new RegExp(`fun ${method}\\([^)]*callback:\\s*Callback`))
+  })
+})
+
+describe('SongloftLiveActivity is a proper Lynx module on iOS', () => {
+  const src = hosts.liveActivity.ios
+  const methods = ['start', 'update', 'end']
+
+  test('LiveActivityModule is a class (not an enum) and conforms to LynxModule', () => {
+    // An enum cannot be registered as a Lynx module; it must be a class.
+    expect(src, 'LiveActivityModule must be a class, not an enum').toContain('class LiveActivityModule')
+    expect(src, 'LiveActivityModule must conform to LynxModule').toContain('LynxModule')
+  })
+
+  test('LiveActivityModule has @objc, name, and methodLookup', () => {
+    expect(src, 'LiveActivityModule must have @objc methods').toContain('@objc')
+    expect(src, 'static var name is required for Lynx module registration').toContain('static var name')
+    expect(src, 'methodLookup is required — JS methods are invisible without it').toContain('methodLookup')
+  })
+
+  test.each(methods)('LiveActivityModule.%s is in methodLookup', (method) => {
+    expect(src, `methodLookup is missing "${method}"`).toContain(`"${method}":`)
+  })
+})
+
+describe('every native module is registered in the host bootstrap', () => {
+  const modules = [
+    { name: 'SongloftAudio', android: 'SongloftAudioModule', ios: 'SongloftAudioModule' },
+    { name: 'SongloftStorage', android: 'SongloftStorageModule', ios: 'SongloftStorageModule' },
+    { name: 'SongloftPlatform', android: 'SongloftPlatformModule', ios: 'SongloftPlatformModule' },
+    { name: 'SongloftDlna', android: 'SongloftDlnaModule', ios: 'SongloftDlnaModule' },
+    { name: 'SongloftFloatingLyric', android: 'FloatingLyricModule', ios: null },
+    { name: 'SongloftLiveActivity', android: null, ios: 'LiveActivityModule' },
+  ]
+
+  test.each(modules.filter((m) => m.android))('%s is registered on Android', (mod) => {
+    expect(
+      hosts.androidApp,
+      `${mod.name} not registered in SongloftApplication.kt`,
+    ).toContain(`registerModule("${mod.name}", ${mod.android}::class.java)`)
+  })
+
+  test.each(modules.filter((m) => m.ios))('%s is registered on iOS', (mod) => {
+    expect(
+      hosts.iosViewController,
+      `${mod.name} not registered in ViewController.swift buildConfig`,
+    ).toContain(mod.ios!)
+  })
 })

@@ -1,16 +1,24 @@
 import Foundation
 import ActivityKit
 
-/// TS-side interface: `SongloftLiveActivity.start/update/end`
-/// This module manages a Live Activity showing the current song on the lock screen.
-/// Requires iOS 16.1+ and a Widget Extension target (SongloftLynxWidgets).
+/// Lynx native module `NativeModules.SongloftLiveActivity` — manages a Live
+/// Activity showing the current song on the lock screen.
 ///
-/// NOTE: This is a stub. The actual Widget Extension target and ActivityAttributes
-/// must be added to the Xcode project separately. This module handles the host-side
-/// start/update/end lifecycle.
+/// Requires iOS 16.1+ and a Widget Extension target (SongloftLynxWidgets).
 @available(iOS 16.2, *)
-enum LiveActivityModule {
-    static let moduleName = "SongloftLiveActivity"
+final class LiveActivityModule: NSObject, LynxModule {
+    @objc required init(param: Any) {}
+    override init() { super.init() }
+
+    @objc static var name: String { "SongloftLiveActivity" }
+
+    @objc static var methodLookup: [String: String] {
+        [
+            "start": NSStringFromSelector(#selector(LiveActivityModule.start(_:callback:))),
+            "update": NSStringFromSelector(#selector(LiveActivityModule.update(_:callback:))),
+            "end": NSStringFromSelector(#selector(LiveActivityModule.end(_:callback:))),
+        ]
+    }
 
     struct NowPlayingAttributes: ActivityAttributes {
         public struct ContentState: Codable, Hashable {
@@ -21,9 +29,20 @@ enum LiveActivityModule {
         var startedAt: Date
     }
 
-    private static var currentActivity: Activity<NowPlayingAttributes>?
+    private var currentActivity: Activity<NowPlayingAttributes>?
 
-    static func start(title: String, artist: String) -> String {
+    // MARK: - JS Methods
+
+    /// start(title, artist) → callback(activityId: String)
+    @objc func start(_ args: String, callback: @escaping (String) -> Void) {
+        guard let data = args.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let title = json["title"] as? String,
+              let artist = json["artist"] as? String
+        else {
+            callback("")
+            return
+        }
         let attributes = NowPlayingAttributes(startedAt: Date())
         let state = NowPlayingAttributes.ContentState(
             title: title,
@@ -36,14 +55,25 @@ enum LiveActivityModule {
                 content: .init(state: state, staleDate: nil)
             )
             currentActivity = activity
-            return activity.id
+            callback(activity.id)
         } catch {
-            return ""
+            callback("")
         }
     }
 
-    static func update(id: String, title: String, artist: String, isPlaying: Bool) {
-        guard let activity = currentActivity, activity.id == id else { return }
+    /// update(id, title, artist, isPlaying) → callback("{}")
+    @objc func update(_ args: String, callback: @escaping (String) -> Void) {
+        guard let data = args.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let id = json["id"] as? String,
+              let activity = currentActivity, activity.id == id
+        else {
+            callback("{}")
+            return
+        }
+        let title = json["title"] as? String ?? ""
+        let artist = json["artist"] as? String ?? ""
+        let isPlaying = json["isPlaying"] as? Bool ?? false
         let state = NowPlayingAttributes.ContentState(
             title: title,
             artist: artist,
@@ -51,14 +81,24 @@ enum LiveActivityModule {
         )
         Task {
             await activity.update(.init(state: state, staleDate: nil))
+            callback("{}")
         }
     }
 
-    static func end(id: String) {
-        guard let activity = currentActivity, activity.id == id else { return }
+    /// end(id) → callback("{}")
+    @objc func end(_ args: String, callback: @escaping (String) -> Void) {
+        guard let data = args.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let id = json["id"] as? String,
+              let activity = currentActivity, activity.id == id
+        else {
+            callback("{}")
+            return
+        }
         Task {
             await activity.end(nil, dismissalPolicy: .immediate)
             currentActivity = nil
+            callback("{}")
         }
     }
 }

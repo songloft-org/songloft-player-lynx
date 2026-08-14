@@ -6,13 +6,45 @@ export interface LiveActivityModule {
   end(id: string): Promise<void>
 }
 
+/**
+ * The native module is callback-based (Lynx convention). Methods take
+ * (argsJson: String, callback: (String) -> Void). This adapter promisifies them.
+ */
+interface NativeLiveActivity {
+  start(args: string, callback: (result: string) => void): void
+  update(args: string, callback: (result: string) => void): void
+  end(args: string, callback: (result: string) => void): void
+}
+
+function createNativeAdapter(native: NativeLiveActivity): LiveActivityModule {
+  return {
+    start(title: string, artist: string) {
+      return new Promise<string>((resolve) => {
+        native.start(JSON.stringify({ title, artist }), (result) => {
+          resolve(result || '')
+        })
+      })
+    },
+    update(id: string, title: string, artist: string, isPlaying: boolean) {
+      return new Promise<void>((resolve) => {
+        native.update(JSON.stringify({ id, title, artist, isPlaying }), () => resolve())
+      })
+    },
+    end(id: string) {
+      return new Promise<void>((resolve) => {
+        native.end(JSON.stringify({ id }), () => resolve())
+      })
+    },
+  }
+}
+
 let cached: LiveActivityModule | null = null
 
 export function getLiveActivityModule(): LiveActivityModule {
   if (cached) return cached
   const nm = readNativeModules()
   if (nm?.SongloftLiveActivity) {
-    cached = nm.SongloftLiveActivity as LiveActivityModule
+    cached = createNativeAdapter(nm.SongloftLiveActivity as unknown as NativeLiveActivity)
     return cached
   }
   cached = {

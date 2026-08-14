@@ -7,6 +7,7 @@ import android.os.Build
 import android.provider.Settings
 import com.lynx.jsbridge.LynxModule
 import com.lynx.jsbridge.LynxMethod
+import com.lynx.react.bridge.Callback
 import com.lynx.tasm.behavior.LynxContext
 import org.json.JSONObject
 
@@ -25,11 +26,12 @@ class FloatingLyricModule(context: Context) : LynxModule(context) {
         }
     }
 
-    fun requestPermission(args: String, callback: (String) -> Unit) {
+    @LynxMethod
+    fun requestPermission(args: String, callback: Callback) {
         val ctx = (mContext as LynxContext).getContext()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (Settings.canDrawOverlays(ctx)) {
-                callback(JSONObject().put("result", true).toString())
+                callback.invoke(JSONObject().put("result", true).toString())
             } else {
                 val intent = Intent(
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -37,42 +39,46 @@ class FloatingLyricModule(context: Context) : LynxModule(context) {
                 )
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 ctx.startActivity(intent)
-                callback(JSONObject().put("result", false).toString())
+                callback.invoke(JSONObject().put("result", false).toString())
             }
         } else {
-            callback(JSONObject().put("result", true).toString())
+            callback.invoke(JSONObject().put("result", true).toString())
         }
     }
 
-    fun show(args: String, callback: (String) -> Unit) {
+    @LynxMethod
+    fun show(args: String, callback: Callback) {
         val ctx = (mContext as LynxContext).getContext()
         val intent = Intent(ctx, FloatingLyricService::class.java).apply {
             action = "SHOW"
         }
         ctx.startService(intent)
-        callback("{}")
+        callback.invoke("{}")
     }
 
-    fun updateLyric(args: String, callback: (String) -> Unit) {
+    @LynxMethod
+    fun updateLyric(args: String, callback: Callback) {
         try {
             val json = JSONObject(args)
             val line = json.optString("line", "")
             service?.updateText(line)
         } catch (_: Exception) {}
-        callback("{}")
+        callback.invoke("{}")
     }
 
-    fun hide(args: String, callback: (String) -> Unit) {
+    @LynxMethod
+    fun hide(args: String, callback: Callback) {
         val ctx = (mContext as LynxContext).getContext()
         val intent = Intent(ctx, FloatingLyricService::class.java).apply {
             action = "HIDE"
         }
         ctx.startService(intent)
-        callback("{}")
+        callback.invoke("{}")
     }
 
-    fun isShowing(args: String, callback: (String) -> Unit) {
+    @LynxMethod
+    fun isShowing(args: String, callback: Callback) {
         val showing = service?.isShowing() ?: false
-        callback(JSONObject().put("result", showing).toString())
+        callback.invoke(JSONObject().put("result", showing).toString())
     }
 }
