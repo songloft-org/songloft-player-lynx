@@ -286,6 +286,8 @@ export const en = {
     scanning: 'Scanning for devices…',
     noDevices: 'No devices found.',
     casting: 'Now casting:',
+    unavailable: 'Casting needs the native app — it is not available in a browser.',
+    failed: 'Casting failed: {{error}}',
   },
   addSongs: {
     title: 'Add Songs',
@@ -817,6 +819,8 @@ export const zh: TranslationTree = {
     scanning: '正在搜索设备…',
     noDevices: '未发现设备。',
     casting: '正在投屏:',
+    unavailable: '投屏需要原生客户端，浏览器中不可用。',
+    failed: '投屏失败: {{error}}',
   },
   addSongs: {
     title: '添加歌曲',

@@ -1,24 +1,29 @@
 /**
- * Platform capability detection.
+ * What the current platform can actually do.
  *
- * Provides a unified view of what features are available on the current
- * platform (native, Web, or test). The native modules graceful-degradation
- * stubs already handle missing features at runtime, but for the Web platform
- * we also want to **hide** UI entries that will never work (e.g. floating
- * lyrics, Live Activity, DLNA).
+ * The native bindings all degrade gracefully — a missing module becomes an inert
+ * stub rather than a crash — but a *silent* no-op is its own bug: on Web the cast
+ * screen scanned forever, the floating-lyrics switch did nothing when tapped, and
+ * "export data" was a dead button. Entries that can never work here should not be
+ * offered at all.
+ *
+ * ⚠️ This module was written for exactly that purpose and then **never wired to
+ * anything** — it had no callers, and computed an `isWeb` it never used
+ * (`tsconfig` has no `noUnusedLocals`, so nothing complained). If you add a
+ * capability here, add its consumer in the same change.
  */
 
 import { readNativeModules } from './native-modules.js'
-import { isWebEnvironment } from './web-platform.js'
+import { isWebPlatform } from './web-platform.js'
 
 export interface PlatformCapabilities {
-  /** User-facing floating lyrics overlay (Android overlay / iOS Live Activity). */
+  /** User-facing floating lyrics overlay (Android overlay window). */
   floatingLyric: boolean
   /** iOS Dynamic Island / Lock Screen live activity. */
   liveActivity: boolean
   /** DLNA/UPnP media casting. */
   dlna: boolean
-  /** Native file picker (Web fallback uses `<input type="file">`). */
+  /** Native file picker (Web has `<input type="file">`, but not from this realm). */
   nativeFilePicker: boolean
   /** Bundle mode (Go backend embedded in the client). */
   bundleMode: boolean
@@ -28,41 +33,35 @@ export interface PlatformCapabilities {
   systemTray: boolean
 }
 
-/**
- * Detect whether a native module with the given name exists.
- */
+/** True when a native module of this name is present in the host bag. */
 function hasNativeModule(name: string): boolean {
   const mods = readNativeModules()
   return mods != null && name in mods
 }
 
 /**
- * Return the capabilities for the current platform.
+ * Capabilities of the current platform.
+ *
+ * Each feature keys off **its own** module rather than a blanket "is any native
+ * module present" flag, because they genuinely diverge: as of the 2026-08-14
+ * audit `SongloftFloatingLyric` is not registered on Android and
+ * `SongloftLiveActivity` is not a Lynx module on iOS, so both correctly report
+ * `false` here even on a device.
  */
 export function getPlatformCapabilities(): PlatformCapabilities {
-  const isWeb = isWebEnvironment()
-  const hasNative = hasNativeModule('SongloftPlatform')
+  const isWeb = isWebPlatform()
+  const hasPlatform = hasNativeModule('SongloftPlatform')
 
   return {
-    // Floating lyrics requires an Android overlay or iOS activity — not possible on Web.
-    floatingLyric: hasNative && hasNativeModule('SongloftFloatingLyric'),
-
-    // Live Activity is iOS-only.
-    liveActivity: hasNative && hasNativeModule('SongloftLiveActivity'),
-
-    // DLNA requires native discovery & casting.
-    dlna: hasNative && hasNativeModule('SongloftDlna'),
-
-    // Web has a file picker via `<input type="file">`, but it's not "native".
-    nativeFilePicker: hasNative,
-
-    // Bundle mode is not available on Web.
-    bundleMode: hasNative,
-
-    // Data transfer: Web can use download/upload, native has file picker.
-    dataTransfer: true,
-
-    // System tray is desktop-only (Lynxtron).
-    systemTray: hasNative,
+    floatingLyric: hasNativeModule('SongloftFloatingLyric'),
+    liveActivity: hasNativeModule('SongloftLiveActivity'),
+    dlna: hasNativeModule('SongloftDlna'),
+    nativeFilePicker: hasPlatform,
+    bundleMode: hasPlatform,
+    // `openURL` / `pickAndUploadFile` need main-thread APIs (`window.open`,
+    // `document.createElement`) that the render realm does not have, so on Web
+    // both directions are dead until a host bridge exists (fix plan P2-2).
+    dataTransfer: isWeb ? false : hasPlatform,
+    systemTray: !isWeb && hasPlatform,
   }
 }

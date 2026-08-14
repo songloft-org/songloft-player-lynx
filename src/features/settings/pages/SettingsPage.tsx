@@ -12,6 +12,7 @@ import {
 
 import { apiPrefix, appConfig } from '../../../core/config/app-config.js'
 import { getCachedAccessToken } from '../../../core/network/token-cache.js'
+import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 import { getFloatingLyricModule } from '../../../native/floating-lyric.js'
 import { openURL } from '../../../native/native-platform.js'
 import { clientVersion } from '../../../core/config/constants.js'
@@ -363,17 +364,24 @@ export function SettingsPage() {
               onTap={() => { const next = !normalize; setNormalize(next); setNormalizeEnabled(next); void writeNormalize(next) }}
               testId='settings-normalize'
             />
-            <SettingsRow
-              icon='music'
-              title={t('settings.floatingLyrics')}
-              subtitle={t('settings.floatingLyricsSubtitle')}
-              trailingIcon='chevron-right'
-              onTap={() => {
-                const m = getFloatingLyricModule()
-                void m.requestPermission().then(granted => { if (granted) void m.show() })
-              }}
-              testId='settings-floating-lyrics'
-            />
+            {/* SongloftFloatingLyric is not registered on any host yet (see fix
+                plan P2-3), so this row's stub always refuses the permission and
+                the tap does nothing. Hide it until the module actually exists. */}
+            {getPlatformCapabilities().floatingLyric
+              ? (
+                <SettingsRow
+                  icon='music'
+                  title={t('settings.floatingLyrics')}
+                  subtitle={t('settings.floatingLyricsSubtitle')}
+                  trailingIcon='chevron-right'
+                  onTap={() => {
+                    const m = getFloatingLyricModule()
+                    void m.requestPermission().then(granted => { if (granted) void m.show() })
+                  }}
+                  testId='settings-floating-lyrics'
+                />
+              )
+              : null}
           </SettingsSection>
 
           <SettingsSection title={t('settings.advanced')} icon='settings'>
@@ -444,6 +452,11 @@ export function SettingsPage() {
 function DataSection() {
   const { t } = useTranslation()
   const [importStatus, setImportStatus] = useState<string | null>(null)
+  // Both directions go through the platform module's file picker / openURL, which
+  // do not exist in the render realm on Web. Rendering the rows anyway meant
+  // "export" was a dead tap and "import" surfaced the internal string
+  // "SongloftPlatform native module not available" to the user.
+  const canTransfer = getPlatformCapabilities().dataTransfer
 
   const handleExport = useCallback(() => {
     if (!canExport()) return
@@ -470,6 +483,8 @@ function DataSection() {
       }
     }
   }, [t])
+
+  if (!canTransfer) return null
 
   return (
     <SettingsSection title={t('data.sectionTitle')} icon='folder'>

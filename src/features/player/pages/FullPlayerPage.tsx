@@ -10,6 +10,7 @@ import type { Song } from '../../../models/song.js'
 // feature (API client included) into the player's graph for one getter.
 import { getLastLibrarySearch } from '../../library/data/last-library-search.js'
 import { getLastShellLocation } from '../../../shared/nav/shell-navigation.js'
+import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { usePlayerStore } from '../store/index.js'
@@ -135,12 +136,19 @@ export function FullPlayerPage() {
               color={timerActive ? ICON_COLORS.primary : ICON_COLORS.content}
             />
           </view>
-          <view
-            className='full-player__icon-btn'
-            bindtap={() => void navigate({ to: '/player/dlna' })}
-          >
-            <Icon name='volume' size={20} color={ICON_COLORS.content} />
-          </view>
+          {/* No DLNA module (Web, or a build without it) ⇒ the cast screen could
+              only ever scan forever, so do not offer the entry at all. */}
+          {getPlatformCapabilities().dlna
+            ? (
+              <view
+                className='full-player__icon-btn'
+                bindtap={() => void navigate({ to: '/player/dlna' })}
+                data-testid='full-player-dlna'
+              >
+                <Icon name='volume' size={20} color={ICON_COLORS.content} />
+              </view>
+            )
+            : null}
           <view
             className='full-player__icon-btn'
             bindtap={() => usePlayerStore.getState().togglePlaylistDrawer()}

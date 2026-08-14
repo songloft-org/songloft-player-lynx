@@ -1,12 +1,16 @@
-import { useEffect, useState } from '@lynx-js/react'
+import { useCallback, useEffect, useRef, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { getDlnaModule, type DlnaDevice } from '../../../native/dlna.js'
+import { safeClearTimeout } from '../../../native/safe-timers.js'
 import { usePlayerStore } from '../store/index.js'
 import { buildSongUrl } from '../../../core/network/url-helper.js'
 import './DlnaPage.css'
+
+/** SSDP replies trickle in; give them this long before reading the device list. */
+const DISCOVERY_SETTLE_MS = 3000
 
 export function DlnaPage() {
   const navigate = useNavigate()
@@ -16,28 +20,56 @@ export function DlnaPage() {
   const [devices, setDevices] = useState<DlnaDevice[]>([])
   const [scanning, setScanning] = useState(false)
   const [casting, setCasting] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const dlna = getDlnaModule()
+  /** Pending "collect results" timer, so unmounting mid-scan cannot setState. */
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const startScan = () => {
+  const startScan = useCallback(() => {
+    if (!dlna.available) return
+    setError(null)
     setScanning(true)
-    void dlna.startDiscovery().then(() => {
-      setTimeout(() => {
-        void dlna.getDevices().then(setDevices).finally(() => setScanning(false))
-      }, 3000)
-    })
-  }
+    // Every call here can reject now that the native adapter surfaces `{error}`
+    // payloads instead of pretending to be a Promise. Unhandled, a rejection here
+    // is what crashed this page on mount for every Android user.
+    void dlna
+      .startDiscovery()
+      .then(() => {
+        settleTimer.current = setTimeout(() => {
+          settleTimer.current = null
+          void dlna
+            .getDevices()
+            .then(setDevices)
+            .catch((e: unknown) => setError(String(e instanceof Error ? e.message : e)))
+            .then(() => setScanning(false))
+        }, DISCOVERY_SETTLE_MS)
+      })
+      .catch((e: unknown) => {
+        setScanning(false)
+        setError(String(e instanceof Error ? e.message : e))
+      })
+  }, [dlna])
 
   useEffect(() => {
     startScan()
-    return () => { void dlna.stopDiscovery() }
-  }, [])
+    return () => {
+      settleTimer.current = safeClearTimeout(settleTimer.current as unknown as number)
+      if (dlna.available) void dlna.stopDiscovery().catch(() => {})
+    }
+  }, [startScan, dlna])
 
   const onCast = (device: DlnaDevice) => {
     if (!song || !song.url) return
+    setError(null)
     setCasting(device.id)
     const url = buildSongUrl(song.url ?? '')
-    void dlna.cast(device.id, url, song.title)
+    // Without this catch a failed cast left the check mark on forever, which reads
+    // as "casting" while nothing is playing anywhere.
+    void dlna.cast(device.id, url, song.title).catch((e: unknown) => {
+      setCasting(null)
+      setError(String(e instanceof Error ? e.message : e))
+    })
   }
 
   return (
@@ -53,7 +85,11 @@ export function DlnaPage() {
       </view>
 
       <scroll-view className='dlna-page__list' scroll-y>
-        {scanning
+        {!dlna.available
+          ? <text className='dlna-page__state'>{t('dlna.unavailable')}</text>
+          : error
+          ? <text className='dlna-page__state'>{t('dlna.failed', { error })}</text>
+          : scanning
           ? <text className='dlna-page__state'>{t('dlna.scanning')}</text>
           : devices.length === 0
             ? <text className='dlna-page__state'>{t('dlna.noDevices')}</text>
