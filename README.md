@@ -60,7 +60,7 @@ pnpm run build:web-embedded   # 供后端嵌入的产物
 ## 测试
 
 ```bash
-pnpm test                 # 单元测试（858 用例 / 93 文件）
+pnpm test                 # 单元测试（900 用例 / 97 文件）
 pnpm exec tsc -b          # 类型检查（必须带 -b；--noEmit 对本仓库是空跑）
 pnpm run test:e2e:android # E2E 行为测试（Android，需 adb + debug APK）
 pnpm run e2e:ios:full     # E2E 全流程（iOS，含构建）

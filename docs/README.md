@@ -21,7 +21,7 @@ docs/
 |------|-----|
 | 源码规模 | 342 文件 / ~41.8K 行（ts + tsx + css） |
 | 特性模块 | auth · home · library · library-ops · player · playlist · settings · jsplugin |
-| 测试 | **858** vitest（93 文件）+ 27 个 E2E 场景 |
+| 测试 | **900** vitest（97 文件）+ 27 个 E2E 场景 |
 | 构建产物 | ~1.8 MB（未压缩） |
 | 目标平台 | Android · iOS · Web（桌面 Lynxtron 未开始） |
 
@@ -77,7 +77,8 @@ docs/
 
 | 文件 | 说明 |
 |------|------|
-| [PROGRESS.md](./tracking/PROGRESS.md) | 分批开发进展记录（批1–40 + 批40 后修），每批交付内容与遗留事项 |
+| [HANDOFF.md](./tracking/HANDOFF.md) | **工作交接**（2026-08-14）：现状、三条铁律、剩余工作优先级、文档地图 —— 接手先读这篇 |
+| [PROGRESS.md](./tracking/PROGRESS.md) | 分批开发进展记录（批1–42 + 批40 后修），每批交付内容与遗留事项 |
 | [bug.md](./tracking/bug.md) | 手动测试与代码审计发现的 bug 跟踪清单 |
 
 ## 迁移路线完成度

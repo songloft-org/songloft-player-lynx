@@ -47,19 +47,19 @@
 
 ### P1 — 一眼可见 / 一改就好
 
-- [ ] **登出确认框的取消按钮字面显示 `common.cancel`** ✅复核 —— `SettingsPage.tsx:429` 调它，而 `resources.ts` 的 `common` 组没有 `cancel` key。中英双语都是裸 key。现有 i18n 闸门只防 en/zh 漂移、不防未定义 key
-- [ ] **播放进度从不落盘，「续播」永远从 0 开始** ✅复核 —— `player-store.ts:564` 的阈值是 `> 5_000` ms，而 progress 步长 250/500ms，正常播放中永不成立；唯一触发是切歌归 0（存的正是 0）。附带 `setTimeout` 回调用的是闭包捕获的旧快照
-- [ ] **DLNA 页在 Android 真机上一进去就崩** ✅复核 —— `dlna.ts:22` 把 callback 式原生模块直接 `as DlnaModule` 强转成 Promise 接口，`DlnaPage.tsx:24` 的 `.then()` 落在 `undefined` 上。仓库自己的约定写在 `native-storage.ts:13`
-- [ ] **切换服务器立刻被踢回登录，并连带抹掉目标服务器的 token** ✅复核 —— `switchTo`（`server-store.ts:149`）只写 secure storage，而 `TokenStore.getAccessToken()`（`token-store.ts:22`）永不回读 storage，没有任何地方让它失效
-- [ ] **冷启动后 mini player 的播放键完全无效** 🔍待复核 —— 自动续播默认关闭时 `restorePlaybackState` 只写 store 不 `load`，`togglePlay` 也不补 load，原生侧无 media item 时静默 no-op。被 `mock-audio.ts:65`（play 不需先 load）掩盖
-- [ ] **元数据「再次刷新」点了不开始轮询** 🔍待复核 —— `scan-model.ts:319` 把终态判断放在 `forced` 之前短路掉它；**且 `scan-model.test.ts:175` 把这个 bug 断言成了契约**
-- [ ] **`getPlatformCapabilities()` 是死代码** 🔍待复核 —— 全库无调用点，`:43` 算出的 `isWeb` 也没用。这是「Web 上 DLNA 按钮/悬浮歌词开关/数据导出点了没反应」的共同上游
-- [ ] **HTTP 请求没有任何超时** 🔍待复核 —— `http-client.ts:156` 把两个 timeout 读进字段后从未使用，transport 也不传 `signal`。后端可连但不响应时转圈永不结束
-- [ ] **收藏歌单 ID 拉取可能死循环刷请求** 🔍待复核 —— `favorites.ts:16` 的 `for(;;)` 只看累计条数、不看本页是否为空。该函数每次切歌都会被调到
-- [ ] **升级进度轮询在后端重启后永不停止** 🔍待复核 —— `UpgradePage.tsx:71` 无 `.catch()`、无失败计数
-- [ ] **多选状态跨搜索/筛选残留** 🔍待复核 —— `LibraryPage.tsx:104` 的 `selected` 与 `filters` 无联动，会把屏幕上不存在的歌加进歌单
-- [ ] **队列有重复歌曲时拖动排序把「当前播放」钉错** 🔍待复核 —— `queue.ts:89` 用 `indexOf` 按对象身份定位
-- [ ] **iOS Live Activity 重复 start 泄漏锁屏卡片** 🔍待复核 —— 无 in-flight 标记，且 native 失败返回 `''` 而 `if (!id)` 对空串恒真 → 每次切歌重新 start、永不 `end()`
+- [x] **登出确认框的取消按钮字面显示 `common.cancel`**（批42 已修）—— 补 en/zh `cancel` key + 新增「扫描全部字面量 `t('…')` 断言 key 存在」闸门
+- [x] **播放进度从不落盘，「续播」永远从 0 开始**（批42 已修）—— 阈值 `>5000ms` 在 250/500ms 步长下永不成立，改 10s 桶下标 + flush 时读最新 state
+- [x] **DLNA 页在 Android 真机上一进去就崩**（批42 已修）—— 按 Kotlin/Swift 真实契约重写适配层 promisify，禁止 `as DlnaModule` 强转
+- [x] **切换服务器立刻被踢回登录，并连带抹掉目标服务器的 token**（批42 已修）—— 新增 `invalidateTokenCaches()`，switchTo 写完 storage 后统一失效缓存
+- [x] **冷启动后 mini player 的播放键完全无效**（批42 已修）—— 新增 `_loadedSongId` 跟踪引擎持有的歌，togglePlay 不一致时补 load；此前被 mock 掩盖
+- [x] **元数据「再次刷新」点了不开始轮询**（批42 已修）—— forced 改为优先于终态 + 页面用 `dataUpdatedAt >= startedAt` 守卫；原测试把 bug 断言成契约已订正
+- [x] **`getPlatformCapabilities()` 是死代码**（批42 已修）—— 改 `isWebPlatform()` + 每能力看自己的模块，接上投屏按钮/悬浮歌词行/DataSection 三个消费点
+- [x] **HTTP 请求没有任何超时**（批42 已修）—— `TransportRequest` 加 `timeoutMs`，AbortController + `Promise.race`，新增 `HttpTimeoutError`
+- [x] **收藏歌单 ID 拉取可能死循环刷请求**（批42 已修）—— 空页即停 + 200 页兜底
+- [x] **升级进度轮询在后端重启后永不停止**（批42 已修）—— 容忍 15 次失败后落终态；顺带修 error 只在 `!checkResult` 时渲染的第二处问题
+- [ ] **多选状态跨搜索/筛选残留** 🔍待复核 —— `LibraryPage.tsx:104` 的 `selected` 与 `filters` 无联动，会把屏幕上不存在的歌加进歌单（**批42 唯一未修项**）
+- [x] **队列有重复歌曲时拖动排序把「当前播放」钉错**（批42 已修）—— `indexOf` 按对象身份改纯下标算术
+- [x] **iOS Live Activity 重复 start 泄漏锁屏卡片**（批42 已修 JS 侧）—— 补 in-flight 标记 + 空 id 闭锁；⚠️ iOS 原生模块本身还没注册为 Lynx 模块（见 P2），接通后才能真机验
 
 ### P2 — 结构性
 
