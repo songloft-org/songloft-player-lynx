@@ -21,7 +21,7 @@ docs/
 |------|-----|
 | 源码规模 | 342 文件 / ~41.8K 行（ts + tsx + css） |
 | 特性模块 | auth · home · library · library-ops · player · playlist · settings · jsplugin |
-| 测试 | **850** vitest（92 文件）+ 27 个 E2E 场景 |
+| 测试 | **858** vitest（93 文件）+ 27 个 E2E 场景 |
 | 构建产物 | ~1.8 MB（未压缩） |
 | 目标平台 | Android · iOS · Web（桌面 Lynxtron 未开始） |
 
@@ -30,8 +30,8 @@ docs/
 | 平台 | 状态 |
 |------|------|
 | Android | ✅ 真机验证通过（播放 / 通知栏 / 扫描 / 重复检测全链路） |
-| iOS | ⛔ **自批39（`5f51f0c`）起 `project.pbxproj` 损坏，完全无法构建**。修复见 `plans/2026-08-14-audit-fix-plan.md` P0-1 |
-| Web | ⚠️ 可登录浏览，但**没有音频**（`web-audio.ts` 实际是 dead code）；`build:web` 产物黑屏（`web:dev` 正常）。见同文档 P0-2 / P0-3 |
+| iOS | ✅ 可构建（批41 修复了批39 引入的 `project.pbxproj` 损坏，`BUILD SUCCEEDED`）。原生模块中 Live Activity 仍未注册，见下方 P3 分解 |
+| Web | ⚠️ 产物可正常加载并渲染（批41 修复黑屏），但**没有音频** —— `web-audio.ts` 实际是 dead code，见 `plans/2026-08-14-audit-fix-plan.md` P0-2 |
 
 ## reference/ — 规范与参考
 

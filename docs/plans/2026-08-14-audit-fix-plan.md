@@ -47,9 +47,13 @@ Lynx 是双线程模型，而 `@lynx-js/web-core` 把**背景线程实现为真�
 
 ## 批41 · P0 阻断
 
+> **状态：P0-0 / P0-1 / P0-3 已完成**（2026-08-14，见 `../tracking/PROGRESS.md` 批41）。P0-2 / P0-4 / P0-5 仍未开始。
+>
 > 排在最前的 P0-0 是**修文档时顺手撞出来的**，不在四路审计的产出里 —— 它一行就能修，但影响面比其他所有 P0 都大。
+>
+> ⚠️ **P0-3 的根因在实施中被推翻了一半**：文件名只是表层，真根因是加载方式（`import.meta` 要求 `type="module"`）。下方 P0-3 小节已订正——**这条值得记**：如果当时只按原判断改文件名就收工，页面依然是黑的，而所有闸门都会绿。
 
-### P0-0 `pnpm run build` 不再产出原生 bundle，Android/iOS 一直在打包陈旧产物 ✅复核
+### P0-0 `pnpm run build` 不再产出原生 bundle，Android/iOS 一直在打包陈旧产物 ✅已修复
 
 **证据**：`lynx.config.ts:133` 的 `environments: { web: { … } }` **替换**掉了 rspeedy 的隐式默认环境，而不是追加。于是 `rspeedy build` 只构建 `web`：
 
@@ -65,7 +69,7 @@ dist/web/main.web.bundle   1807.6 kB      ← 只有这一个
 
 **时间线**（已核对 commit 时间与文件 mtime）：`2330c22`（Web 支持）于 08-13 23:35 引入该 `environments` 块；`dist/main.lynx.bundle` 的 mtime 停在 **08-13 22:52**，即那之前。发现时它是 **6.5 MB** —— 一份 `rspeedy dev` 留下的未压缩 dev bundle（生产版约 1.76 MB）。**自 08-13 23:35 之后的任何原生构建都在嵌入这份陈旧 dev 产物**，两次 Web 修复与其后的改动均不在其中。
 
-**修法（已验证可行）**：显式声明两个环境。
+**已落地的修法**：显式声明两个环境。
 
 ```ts
 environments: {
@@ -76,11 +80,11 @@ environments: {
 
 改完 `pnpm run build` 同时输出两个产物（实测 `dist/main.lynx.bundle` 1762.1 kB + `dist/web/main.web.bundle` 1807.6 kB）。
 
-**必须同时做**：给 `copy-bundle-android.mjs` / `copy-bundle-ios.mjs` 加**新鲜度断言** —— 若 `dist/main.lynx.bundle` 的 mtime 早于本次构建开始时间（或早于 `src/` 里最新的源文件），直接 fail 而不是静默拷贝。这类「构建产物悄悄过期」的缺陷不该靠人眼发现第二次。
+**同时落地**：新增 `scripts/assert-bundle-fresh.mjs`，两个 copy-bundle 脚本都改为调用它 —— 若 `dist/main.lynx.bundle` 的 mtime 早于 `src/` 或 `lynx.config.ts`/`package.json` 里最新的源文件，**直接 fail 并给出「检查 build 输出是否列出 File (lynx)」的指引**，而不是静默拷贝。`existsSync` 抓不到这类缺陷，因为文件确实存在，只有年龄能暴露它。
 
-**工作量**：修复极小，新鲜度断言小。
+**验收**：`pnpm run build` 同时输出 `dist/main.lynx.bundle`（1762.1 kB）与 `dist/web/main.web.bundle`（1807.6 kB）；两个 copy 脚本正常拷贝；反向验证 —— `touch src/index.tsx` 后再拷贝，脚本以退出码 1 拒绝并提示 stale。
 
-### P0-1 iOS 工程文件损坏，自批39 起完全无法构建 ✅复核
+### P0-1 iOS 工程文件损坏，自批39 起完全无法构建 ✅已修复
 
 **证据**：`ios/SongloftLynx.xcodeproj/project.pbxproj:255` 在 `PBXSourcesBuildPhase` 的 `files = ( … );` **数组内部**插进了一行 `PBXBuildFile` 赋值语句（第 23 行已有正确的那一份，这是重复）。实测：
 
@@ -91,11 +95,11 @@ Error Domain=NSCocoaErrorDomain Code=3840 "JSON text did not start with array or
 
 `5f51f0c`（批39 DLNA）引入。`ios/build/DerivedData` 最后修改时间早于该提交，即**该提交后 iOS 一次都没构建过**；批39/40 声称的「build 全绿」全部只是 rspeedy 的 JS 产物。
 
-**修法**：删掉 `:255` 那一行。
+**已落地的修法**：删掉 `:255` 那一行；契约闸门新增 `describe('the hand-written pbxproj is structurally well-formed')`（2 例）—— ① 元素列表体内不得出现 `{isa = …}` 对象赋值（按括号深度逐行判定，注释与字符串先剥离）；② 括号与花括号配平。纯 JS，不依赖 Xcode，CI 可跑。
 
-**必须同时做**——否则同类错误还会再来：给契约闸门补一条**真解析** pbxproj 的断言。最省的做法是断言 `xcodebuild -list` 退出码为 0（需 macOS + Xcode，用 `it.skipIf` 在无 Xcode 环境跳过）；纯 JS 的替代方案是写一个最小括号/分号配平检查，至少能抓住「数组里出现赋值语句」这一类。
+**一个值得记的观测**：反向验证时，**「括号配平」那条在损坏文件上是绿的** —— 畸形行本身是配平的。真正起作用的是「列表里不许有赋值」这条精准断言。泛泛的结构检查给不出这个保证。
 
-**工作量**：修复极小，闸门小。
+**验收**：`xcodebuild -list` 恢复正常；**`pnpm run ios:build` 完整通过（`BUILD SUCCEEDED` ×2，`.app` 内含 `main.lynx.bundle`）** —— 不只是能解析，是真的编译出来了。闸门反向验证精确报出 `line 255: AA…0035 /* SongloftDlnaModule.swift in Sources */ = {isa = PBXBuildFile; …}`。
 
 ### P0-2 Web 端完全没有声音，而且看起来一切正常 ✅复核
 
@@ -113,22 +117,34 @@ Error Domain=NSCocoaErrorDomain Code=3840 "JSON text did not start with array or
 
 **工作量**：注释极小；真实现（批43）大。
 
-### P0-3 `pnpm run build:web` 的产物是黑屏 ✅复核
+### P0-3 `pnpm run build:web` 的产物是黑屏 ✅已修复（根因两层，第二层是实施时才发现的）
 
-**证据**：文件名对不上。
+**第一层（审计发现）**：文件名对不上。
 
 | | |
 |---|---|
-| `web/index.html:9,32` 请求 | `/web-core/static/css/index.css`、`/web-core/static/js/index.js` |
-| `web/dist/` 实际产出（已 `ls` 确认） | `css/client.css`、`js/client.js` |
+| `web/index.html` 原先请求 | `/web-core/static/{css/index.css, js/index.js}` |
+| `build:web` 实际产出 | `css/client.css`、`js/client.js` |
 
-`<lynx-view>` 因此永不 upgrade，页面全黑且**不打任何应用层错误**。
+**为什么一直没被发现（包括审计前的我）**：`serve.mjs` 优先使用 dev-middleware 的 `www/static`（那里确实叫 `index.js`），所以 `web:dev` 正常、`build:web` 坏；之前用无头浏览器验证两次 Web 修复时走的恰好是前者，**完整绕过了这个 bug**。
 
-**为什么一直没被发现（包括审计前的我）**：`web/serve.mjs:41` 优先使用 dev-middleware 的 `www/static`（那里确实叫 `index.js`），只在缺失时才回落 `client_prod`。所以 `web:dev` 正常、`build:web` 坏；而之前验证 Web 修复时走的恰好是前者，**绕过了这个 bug**。
+**第二层（改完文件名后才暴露，靠真的加载产物才发现）**：页面**依然全黑**。真实异常是
 
-**修法**：拷贝时 rename，或让 `index.html` 指向 prod 名。**同时**给闸门加一条：断言 `web/dist/index.html` 里引用的每个本地资源路径在 `web/dist/` 下真实存在。这条测试是纯文件系统检查，比任何浏览器验证都便宜。
+```
+Cannot use 'import.meta' outside a module
+```
 
-**工作量**：小。
+`client_prod` 的入口是 **ES module**，必须 `<script type="module">`；原先是 `<script defer>`。而这个异常**不进 `console.error`**（只走 `pageerror`），所以表现是「资源全 200、零 console 错误、`<lynx-view>` 就是不 upgrade」。dev-middleware 那份入口是传统 IIFE，没有这个约束——这也解释了为什么两套资源看起来「只差一个文件名」。
+
+**已落地的修法**：
+
+1. `web/index.html` 指向 `client.css`/`client.js`，且入口改为 `<script type="module">`（module 默认 deferred，原 `defer` 已多余）
+2. `serve.mjs` 与 `copy-bundle-web.mjs` **统一用 `client_prod`** —— 两套资源除入口文件名外结构完全相同（async chunk、wasm 哈希、版本号都一致），统一后「dev 能跑 / prod 不能跑」这个类别从结构上消失
+3. 新增闸门 `src/__tests__/web-host-page.test.ts`（6 例）：index.html 的每个本地引用都能在 `client_prod` 里解析、bundle 名与拷贝脚本一致、**入口以 module 加载**、serve 与 copy 用同一套资源。两条关键断言都做过反向验证
+
+**验收**：`build:web` 产物用无头 Chrome 真的打开 —— `lynx-view` 已注册（`x-view`/`x-text`/`x-image` 均在）、wasm 200、**零 pageerror**、登录页完整渲染（截图确认 Muse 配色 + 中文 locale + TLS 开关）。
+
+**教训**：如果按审计的原判断只改文件名就收工，页面依然是黑的，而 build/tsc/test 全绿。**「资源 200」不等于「脚本跑起来了」**。
 
 ### P0-4 embedded 模式的 Web 产物根本没有宿主页 🔍待复核
 

@@ -129,8 +129,18 @@ export default defineConfig({
     pluginTypeCheck(),
   ],
 
-  // Web environment: produces a main-thread JS bundle for @lynx-js/web-core.
+  // Declaring `environments` REPLACES rspeedy's implicit default environment
+  // rather than extending it, so `lynx` has to be listed explicitly even though
+  // it needs no options. Dropping it does not fail the build — `rspeedy build`
+  // just quietly stops emitting `dist/main.lynx.bundle`, while the copy-bundle
+  // scripts keep shipping whatever stale file is left in `dist/` (that is how a
+  // 6.5 MB dev bundle ended up in the native packages; see
+  // docs/plans/2026-08-14-audit-fix-plan.md P0-0). `scripts/assert-bundle-fresh.mjs`
+  // now catches a regression here, and a build must list BOTH bundles.
   environments: {
+    // Native (Android / iOS): dist/main.lynx.bundle
+    lynx: {},
+    // Web: a main-thread JS bundle for @lynx-js/web-core → dist/web/main.web.bundle
     web: {
       output: {
         distPath: {

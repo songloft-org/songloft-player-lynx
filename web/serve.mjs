@@ -28,24 +28,21 @@ const PORT = process.env.PORT ?? 3000
 // Path to the Lynx web bundle (built with `rspeedy build --environment web`).
 const BUNDLE_PATH = resolve(repoRoot, 'dist', 'web', 'main.web.bundle')
 
-// Resolve @lynx-js/web-core assets. Prefer the dev middleware bundle (www/)
-// over the production bundle (client_prod/), as the dev bundle is designed to
-// work with the Rspeedy/rsbuild output format.
+// Resolve @lynx-js/web-core assets — the SAME set `scripts/copy-bundle-web.mjs`
+// ships (client_prod/), on purpose.
+//
+// This used to prefer the dev-middleware copy (www/static). The two sets are
+// structurally identical — same async chunks, same wasm hashes, same 0.23.1 —
+// and differ only in the entry filename (index.js vs client.js). That single
+// difference meant `web:dev` and `build:web` loaded different files, so a
+// black-screen bug in the deployable output (index.html referenced the dev-only
+// names, which `build:web` never copies) stayed invisible through every local
+// check. Serving exactly what we ship makes that divergence impossible.
 function findWebCorePath() {
   const pnpmDir = resolve(repoRoot, 'node_modules', '.pnpm')
   if (!existsSync(pnpmDir)) return null
 
-  const entries = readdirSync(pnpmDir)
-
-  // Prefer the dev middleware bundle (has index.js, used by rspeedy dev)
-  const devMatch = entries.find(e => e.startsWith('@lynx-js+web-rsbuild-server-middleware@'))
-  if (devMatch) {
-    const p = resolve(pnpmDir, devMatch, 'node_modules', '@lynx-js', 'web-rsbuild-server-middleware', 'www', 'static')
-    if (existsSync(p)) return p
-  }
-
-  // Fallback: production bundle
-  const prodMatch = entries.find(e => e.startsWith('@lynx-js+web-core@'))
+  const prodMatch = readdirSync(pnpmDir).find(e => e.startsWith('@lynx-js+web-core@'))
   if (prodMatch) {
     const p = resolve(pnpmDir, prodMatch, 'node_modules', '@lynx-js', 'web-core', 'dist', 'client_prod', 'static')
     if (existsSync(p)) return p

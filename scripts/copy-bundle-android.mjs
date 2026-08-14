@@ -9,9 +9,11 @@
  *
  * Usage: `node scripts/copy-bundle-android.mjs`
  */
-import { copyFileSync, mkdirSync, existsSync, statSync } from 'node:fs'
+import { copyFileSync, mkdirSync, statSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { assertBundleFresh } from './assert-bundle-fresh.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(here, '..')
@@ -19,13 +21,8 @@ const repoRoot = resolve(here, '..')
 const SRC = resolve(repoRoot, 'dist', 'main.lynx.bundle')
 const DEST = resolve(repoRoot, 'android', 'app', 'src', 'main', 'assets', 'main.lynx.bundle')
 
-if (!existsSync(SRC)) {
-  console.error(
-    `[copy-bundle-android] Missing ${SRC}\n` +
-      `Run \`pnpm run build\` first so the Lynx bundle exists.`,
-  )
-  process.exit(1)
-}
+// Existence is not enough — a stale bundle also exists. See the helper's header.
+assertBundleFresh(SRC, 'copy-bundle-android')
 
 mkdirSync(dirname(DEST), { recursive: true })
 copyFileSync(SRC, DEST)

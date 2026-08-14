@@ -70,7 +70,7 @@ pnpm exec tsc -b        # 独立类型检查（必须 -b，--noEmit 无效）
 pnpm test               # vitest
 ```
 
-⚠️ **当前 `pnpm run build` 只构建 web 环境，不产出 `dist/main.lynx.bundle`**（`lynx.config.ts` 的 `environments` 块替换掉了隐式默认环境，未显式声明 `lynx`）。后果：`build:android-bundle` / `build:ios-bundle` 会把 `dist/` 里遗留的**陈旧** bundle 拷进 APK/.app。修法见 `docs/plans/2026-08-14-audit-fix-plan.md` **P0-0**；未修之前，出原生包前先确认 `dist/main.lynx.bundle` 的 mtime 是本次构建产生的。
+`pnpm run build` 必须列出**两个**产物 —— `File (lynx)` 与 `File (web)`。只有 web 那一行说明 `lynx.config.ts` 的 `environments` 里少了 `lynx: {}`：`environments` 是**替换**隐式默认环境而非扩展它，漏掉不会让构建失败，只会静默停止产出 `dist/main.lynx.bundle`，而 copy-bundle 脚本照拷 `dist/` 里的陈旧文件（`scripts/assert-bundle-fresh.mjs` 现在会拦住这种情况）。
 
 **上面几条都只覆盖 JS 产物**，不覆盖两个宿主。改动 `ios/` 或 `web/` 时必须另加：
 
@@ -161,7 +161,8 @@ pnpm run build:web-embedded   # 产物给后端嵌入（songloft-player-build/we
 - 已知**在 Web 上是 no-op 的属性**：`enable-nested-scroll`、`scroll-into-view`（web-elements 只认命令式 `__scrollIntoView`，故歌词自动滚动在 Web 上不工作）、`<list>` 的 px 形式 `lower-threshold`（它只认 `lower-threshold-item-count`；`scroll-view` 上的 px 形式**是**有效的）。
 - **Web 无 secure enclave**：`SongloftStorage` 的 `secure` 命名空间在 Web 上只是命名空间，安全性等同任何同源脚本。
 - 会话持久化走 `core/storage/idb-storage.ts`（IndexedDB）——worker realm 没有 `localStorage`，探测顺序是 native → localStorage → **IndexedDB** → 内存。
-- **`web:dev` 能跑不代表 `build:web` 能跑**：`serve.mjs` 优先用 dev-middleware 的 `www/static`（文件名 `index.js`），而 `build:web` 拷的是 `client_prod/static`（文件名 `client.js`）。验证 Web 改动时**至少跑一次 `build:web` 并打开产物**，否则会绕过这一整类问题。
+- **web-core 的宿主脚本必须用 `<script type="module">`**：`client_prod` 的入口用了 `import.meta`，当作传统脚本加载会抛 `Cannot use 'import.meta' outside a module` —— 这是个**不进 `console.error` 的未捕获异常**，`<lynx-view>` 不 upgrade、整页纯黑、零诊断信息。dev-middleware 那份是 IIFE 没这个约束，这正是「`web:dev` 能跑」长期掩盖问题的原因。`serve.mjs` 与 `copy-bundle-web.mjs` 现已统一用 `client_prod`（两套资源除入口文件名外完全相同），并有 vitest 闸门锁住「index.html 的每个本地引用都存在」+「入口以 module 加载」。
+- **验证 Web 改动时至少跑一次 `build:web` 并真的打开产物**。只跑 `web:dev` 证明不了产物可用——这一条已经吃过两次亏。
 
 ### lynx-ui
 

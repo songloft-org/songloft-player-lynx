@@ -60,7 +60,7 @@ pnpm run build:web-embedded   # 供后端嵌入的产物
 ## 测试
 
 ```bash
-pnpm test                 # 单元测试（850 用例 / 92 文件）
+pnpm test                 # 单元测试（858 用例 / 93 文件）
 pnpm exec tsc -b          # 类型检查（必须带 -b；--noEmit 对本仓库是空跑）
 pnpm run test:e2e:android # E2E 行为测试（Android，需 adb + debug APK）
 pnpm run e2e:ios:full     # E2E 全流程（iOS，含构建）
@@ -107,4 +107,4 @@ docs/             项目文档（见下）
 
 迁移路线 P0–P2 已完成，P3 平台特性约 55%，P4 双轨发布未开始。
 
-**当前各平台可用性**（2026-08-14 审计）：Android ✅ 真机验证通过；iOS ⛔ 工程文件损坏、暂时无法构建；Web ⚠️ 可浏览但无音频。逐项状态见 [docs/README.md](./docs/README.md#平台可用性2026-08-14-审计后的真实状态)，修复排期见 [修复计划](./docs/plans/2026-08-14-audit-fix-plan.md)，历史进展见 [PROGRESS.md](./docs/tracking/PROGRESS.md)。
+**当前各平台可用性**（批41 后）：Android ✅ 真机验证通过；iOS ✅ 可构建；Web ⚠️ 可加载渲染但**无音频**。逐项状态见 [docs/README.md](./docs/README.md#平台可用性2026-08-14-审计后的真实状态)，剩余修复排期见 [修复计划](./docs/plans/2026-08-14-audit-fix-plan.md)，历史进展见 [PROGRESS.md](./docs/tracking/PROGRESS.md)。

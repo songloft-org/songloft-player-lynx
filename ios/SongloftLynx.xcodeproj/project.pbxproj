@@ -252,7 +252,6 @@
 				AA000000000000000000002D /* AudioEqualizer.swift in Sources */,
 				AA000000000000000000002F /* LiveActivityModule.swift in Sources */,
 				AA0000000000000000000035 /* SongloftDlnaModule.swift in Sources */,
-		AA0000000000000000000035 /* SongloftDlnaModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000034 /* SongloftDlnaModule.swift */; };
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

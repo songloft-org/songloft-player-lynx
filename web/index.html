@@ -6,7 +6,15 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Songloft</title>
-  <link href="/web-core/static/css/index.css" rel="stylesheet">
+  <!--
+    These two names must match what scripts/copy-bundle-web.mjs actually copies,
+    i.e. @lynx-js/web-core's client_prod assets (client.css / client.js). They
+    used to say index.css / index.js — the dev-middleware naming — so `build:web`
+    produced a page that 404'd both entry files and rendered a black screen,
+    while `web:dev` worked because serve.mjs was reading a different directory.
+    A vitest gate now asserts every local ref here exists in the output.
+  -->
+  <link href="/web-core/static/css/client.css" rel="stylesheet">
   <style>
     html, body {
       margin: 0;
@@ -29,7 +37,16 @@
     url="/main.lynx.bundle"
   ></lynx-view>
 
-  <script defer src="/web-core/static/js/index.js"></script>
+  <!--
+    `type="module"` is REQUIRED, not stylistic: web-core's production client
+    (client_prod) uses `import.meta`, so loading it as a classic script dies with
+    "Cannot use 'import.meta' outside a module" — an uncaught exception that never
+    reaches console.error, so the page just stays black with no diagnostic. (The
+    dev-middleware build is a plain IIFE and does not have this constraint, which
+    is why `web:dev` used to work while `build:web` did not.) Modules are deferred
+    by default, so the old `defer` attribute is now redundant.
+  -->
+  <script type="module" src="/web-core/static/js/client.js"></script>
   <script>
     (function() {
       var lynxView = document.getElementById('app');

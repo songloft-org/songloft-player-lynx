@@ -191,6 +191,53 @@ describe('every iOS Swift source is registered in the hand-written pbxproj', () 
 })
 
 /**
+ * The registration checks above are substring containment — and that is exactly
+ * how a broken pbxproj slipped past them. Batch 39 pasted a `PBXBuildFile`
+ * assignment *inside* the `PBXSourcesBuildPhase` `files = ( … );` array; because
+ * the malformed line still contains `SongloftDlnaModule.swift in Sources`, all
+ * four assertions stayed green while `xcodebuild -list` failed outright and iOS
+ * could not be built for two entire batches.
+ *
+ * A gate that only proves a string is present cannot prove the file parses. So
+ * check structure too. This runs everywhere (no Xcode needed) and targets the
+ * failure class directly: the body of an element list may hold list entries and
+ * nothing else — an `{isa = …}` object assignment there means the file is
+ * corrupt, no matter which identifiers appear in it.
+ */
+describe('the hand-written pbxproj is structurally well-formed', () => {
+  const pbxproj = read(`${IOS_DIR}.xcodeproj/project.pbxproj`)
+
+  /** Drop `/* … *​/` comments and quoted strings so their punctuation is not counted. */
+  const sanitize = (line: string): string =>
+    line.replace(/\/\*[\s\S]*?\*\//g, '').replace(/"[^"]*"/g, '')
+
+  test('no object assignment leaks into an element list body', () => {
+    let depth = 0
+    const offenders: string[] = []
+    pbxproj.split('\n').forEach((line, index) => {
+      if (depth > 0 && line.includes('{isa =')) {
+        offenders.push(`line ${index + 1}: ${line.trim()}`)
+      }
+      for (const ch of sanitize(line)) {
+        if (ch === '(') depth += 1
+        else if (ch === ')') depth -= 1
+      }
+    })
+    expect(
+      offenders,
+      'a PBXBuildFile-style assignment belongs in its own section, never inside a files/children list',
+    ).toEqual([])
+  })
+
+  test('parens and braces are balanced', () => {
+    const body = sanitize(pbxproj)
+    const count = (ch: string): number => body.split(ch).length - 1
+    expect(count('('), 'unbalanced parens').toBe(count(')'))
+    expect(count('{'), 'unbalanced braces').toBe(count('}'))
+  })
+})
+
+/**
  * Background playback needs the Info.plist declaration *and* the `.playback`
  * audio session; either alone is silent. iOS suspends the app on backgrounding
  * without the plist key, so playback stops on screen lock — the same class of
