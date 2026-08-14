@@ -1,18 +1,9 @@
-import { useCallback } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 
 import { RadioGroupRoot, Radio, RadioIndicator } from '@lynx-js/lynx-ui'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { DuplicateGroup, DuplicateSong } from '../../../models/duplicate.js'
-
-function useLocalT() {
-  const { i18n } = useTranslation()
-  return useCallback(
-    (en: string, zh: string): string => (i18n.language === 'zh' ? zh : en),
-    [i18n.language],
-  )
-}
 
 export interface DuplicateGroupCardProps {
   groupIndex: number
@@ -39,7 +30,7 @@ export function DuplicateGroupCard({
   onToggleIgnore,
   onDeleteUnselected,
 }: DuplicateGroupCardProps) {
-  const lt = useLocalT()
+  const { t } = useTranslation()
 
   return (
     <view
@@ -49,7 +40,7 @@ export function DuplicateGroupCard({
       {/* Header */}
       <view className='fp-group__header'>
         <text className='fp-group__title'>
-          {lt(`Duplicate group ${groupIndex + 1}`, `重复组 ${groupIndex + 1}`)}
+          {t('libops.dupGroupTitle', { index: groupIndex + 1 })}
         </text>
         <view
           className='fp-group__ignore-btn'
@@ -58,8 +49,8 @@ export function DuplicateGroupCard({
         >
           <text className='fp-group__ignore-text'>
             {ignored
-              ? lt('Unignore', '取消忽略')
-              : lt('Ignore this group', '忽略此组')}
+              ? t('libops.dupUnignore')
+              : t('libops.dupIgnoreGroup')}
           </text>
         </view>
       </view>
@@ -90,7 +81,7 @@ export function DuplicateGroupCard({
             >
               <Icon name='x' size={16} color={ICON_COLORS.danger} />
               <text className='fp-group__delete-text'>
-                {lt('Delete unselected', '删除未选中')}
+                {t('libops.dupDeleteUnselected')}
               </text>
             </view>
           </view>
@@ -109,7 +100,7 @@ interface SongTileProps {
 }
 
 function SongTile({ song, isKeep, isRecommended }: SongTileProps) {
-  const lt = useLocalT()
+  const { t } = useTranslation()
 
   return (
     <Radio value={String(song.id)} className='fp-group__song-radio'>
@@ -124,7 +115,7 @@ function SongTile({ song, isKeep, isRecommended }: SongTileProps) {
               ? (
                 <view className='fp-group__badge'>
                   <text className='fp-group__badge-text'>
-                    {lt('Recommended', '推荐')}
+                    {t('libops.dupRecommended')}
                   </text>
                 </view>
               )

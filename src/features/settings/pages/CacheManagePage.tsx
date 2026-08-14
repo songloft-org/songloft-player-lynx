@@ -1,4 +1,4 @@
-import { useCallback, useState } from '@lynx-js/react'
+import { useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -19,24 +19,12 @@ import { SettingsSection } from '../widgets/SettingsSection.js'
 import './CacheManagePage.css'
 
 /**
- * Inline i18n helper — returns zh string when language is Chinese, en otherwise.
- * All user-visible text is kept here (not in resources.ts) per the task spec.
- */
-function useLocalT() {
-  const { i18n } = useTranslation()
-  return useCallback(
-    (en: string, zh: string): string => (i18n.language === 'zh' ? zh : en),
-    [i18n.language],
-  )
-}
-
-/**
  * Cache management sub-page (`/settings/cache`, inside the shell). Three
  * sections: stats overview, editable config, directory validation result.
  */
 export function CacheManagePage() {
   const navigate = useNavigate()
-  const lt = useLocalT()
+  const { t } = useTranslation()
 
   // ── Data queries ───────────────────────────────────────────────────────────
   const statsQuery = useCacheStatsQuery()
@@ -110,7 +98,7 @@ export function CacheManagePage() {
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='cache-manage__title'>
-          {lt('Cache Management', '缓存管理')}
+          {t('cacheManage.title')}
         </text>
       </view>
 
@@ -118,28 +106,28 @@ export function CacheManagePage() {
         <view className='cache-manage__content'>
           {/* ─── Section 1: Cache Stats (read-only) ─────────────────────── */}
           <SettingsSection
-            title={lt('Cache Overview', '缓存概览')}
+            title={t('cacheManage.overviewSection')}
             icon='info'
           >
             <SettingsRow
               icon='music'
-              title={lt('Cached Files', '缓存文件数')}
+              title={t('cacheManage.fileCount')}
               trailingText={stats ? String(stats.fileCount) : '-'}
               testId='cache-file-count'
             />
             <SettingsRow
               icon='menu'
-              title={lt('Total Size', '缓存总大小')}
+              title={t('cacheManage.totalSize')}
               trailingText={stats ? formatBytes(stats.totalSize) : '-'}
               testId='cache-total-size'
             />
             <SettingsRow
               icon='settings'
-              title={lt('Max Size Limit', '最大大小限制')}
+              title={t('cacheManage.maxSizeLimit')}
               trailingText={
                 stats
                   ? stats.maxSize === 0
-                    ? lt('Unlimited', '无限制')
+                    ? t('cacheManage.unlimited')
                     : formatBytes(stats.maxSize)
                   : '-'
               }
@@ -149,12 +137,12 @@ export function CacheManagePage() {
               icon='logout'
               title={
                 confirmClean
-                  ? lt('Confirm Clean?', '确认清理？')
-                  : lt('Clean All Cache', '清理全部缓存')
+                  ? t('cacheManage.confirmClean')
+                  : t('cacheManage.cleanAll')
               }
               subtitle={
                 confirmClean
-                  ? lt('Tap again to confirm', '再次点击确认')
+                  ? t('cacheManage.cleanConfirmHint')
                   : undefined
               }
               danger
@@ -165,13 +153,13 @@ export function CacheManagePage() {
 
           {/* ─── Section 2: Cache Config (editable) ─────────────────────── */}
           <SettingsSection
-            title={lt('Cache Configuration', '缓存配置')}
+            title={t('cacheManage.configSection')}
             icon='settings'
           >
             {/* Cache directory */}
             <view className='cache-manage__field'>
               <text className='cache-manage__label'>
-                {lt('Cache Directory', '缓存目录')}
+                {t('cacheManage.cacheDir')}
               </text>
               <Input
                 className='cache-manage__input'
@@ -184,7 +172,7 @@ export function CacheManagePage() {
               {config?.defaultCacheDir
                 ? (
                   <text className='cache-manage__validate-info'>
-                    {lt('Default: ', '默认: ')}{config.defaultCacheDir}
+                    {t('cacheManage.defaultPrefix')}{config.defaultCacheDir}
                   </text>
                 )
                 : null}
@@ -195,7 +183,7 @@ export function CacheManagePage() {
                   data-testid='cache-validate-btn'
                 >
                   <text className='cache-manage__btn-text cache-manage__btn-text--secondary'>
-                    {lt('Validate', '验证')}
+                    {t('cacheManage.validate')}
                   </text>
                 </view>
               </view>
@@ -204,7 +192,7 @@ export function CacheManagePage() {
             {/* Max cache size */}
             <view className='cache-manage__field'>
               <text className='cache-manage__label'>
-                {lt('Max Cache Size (bytes, 0=unlimited)', '最大缓存大小（字节，0=无限制）')}
+                {t('cacheManage.maxSizeLabel')}
               </text>
               <Input
                 className='cache-manage__input'
@@ -219,12 +207,12 @@ export function CacheManagePage() {
             {/* Transcode format selector */}
             <view className='cache-manage__field'>
               <text className='cache-manage__label'>
-                {lt('Transcode Format', '转码格式')}
+                {t('cacheManage.transcodeFormat')}
               </text>
               {TRANSCODE_FORMATS.map((fmt) => (
                 <SettingsRow
                   key={fmt || '__none'}
-                  title={fmt === '' ? lt('No transcode', '不转码') : fmt.toUpperCase()}
+                  title={fmt === '' ? t('cacheManage.noTranscode') : fmt.toUpperCase()}
                   selected={effectiveFormat === fmt}
                   trailingIcon={effectiveFormat === fmt ? 'check' : undefined}
                   onTap={() => setTranscodeFormat(fmt)}
@@ -236,7 +224,7 @@ export function CacheManagePage() {
             {/* Transcode quality selector */}
             <view className='cache-manage__field'>
               <text className='cache-manage__label'>
-                {lt('Transcode Quality', '转码质量')}
+                {t('cacheManage.transcodeQuality')}
               </text>
               {TRANSCODE_QUALITIES.map((q) => (
                 <SettingsRow
@@ -257,7 +245,7 @@ export function CacheManagePage() {
               data-testid='cache-save'
             >
               <text className='cache-manage__save-text'>
-                {lt('Save Configuration', '保存配置')}
+                {t('cacheManage.saveConfig')}
               </text>
             </view>
           </SettingsSection>
@@ -266,32 +254,32 @@ export function CacheManagePage() {
           {validateResult
             ? (
               <SettingsSection
-                title={lt('Validation Result', '验证结果')}
+                title={t('cacheManage.validationSection')}
                 icon='info'
               >
                 <view className='cache-manage__validate-result' data-testid='validate-result'>
                   {validateResult.valid
                     ? (
                       <text className='cache-manage__validate-ok'>
-                        {lt('Directory is valid', '目录有效')}
+                        {t('cacheManage.dirValid')}
                         {validateResult.created
-                          ? ` (${lt('created', '已创建')})`
+                          ? ` (${t('cacheManage.dirCreated')})`
                           : ''}
                       </text>
                     )
                     : (
                       <text className='cache-manage__validate-err'>
-                        {lt('Directory is invalid', '目录无效')}
+                        {t('cacheManage.dirInvalid')}
                         {validateResult.error
                           ? `: ${validateResult.error}`
                           : ''}
                       </text>
                     )}
                   <text className='cache-manage__validate-info'>
-                    {lt('Total space: ', '总空间: ')}{formatBytes(validateResult.totalSize)}
+                    {t('cacheManage.totalSpacePrefix')}{formatBytes(validateResult.totalSize)}
                   </text>
                   <text className='cache-manage__validate-info'>
-                    {lt('Free space: ', '剩余空间: ')}{formatBytes(validateResult.freeSize)}
+                    {t('cacheManage.freeSpacePrefix')}{formatBytes(validateResult.freeSize)}
                   </text>
                 </view>
               </SettingsSection>

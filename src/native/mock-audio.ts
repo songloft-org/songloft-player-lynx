@@ -159,6 +159,19 @@ export class MockSongloftAudio implements SongloftAudio {
     this.listeners.clear()
   }
 
+  /**
+   * Test hook (not part of `SongloftAudio`): emit a playback failure.
+   *
+   * The mock never fails on its own — `load` always resolves through
+   * `loading` → `ready` — so the error path has no other way to be exercised.
+   * The player store's retry/backoff is the thing that needs it.
+   */
+  simulateError(message = 'mock failure', code = 'mock'): void {
+    this.stopTick()
+    this.setState('error')
+    this.emit({ type: 'error', code, message })
+  }
+
   // ── internals ──
 
   private setState(state: AudioState): void {

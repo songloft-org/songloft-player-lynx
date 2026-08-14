@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-import { buildSongUrl } from '../../../core/network/url-helper.js'
+import { buildCoverUrl, buildSongUrl } from '../../../core/network/url-helper.js'
 import { readAudioQuality, readAutoResume, readNormalize, readPlaybackSpeed, writePlaybackSpeed } from '../../settings/data/settings-prefs.js'
 import { loadPlaybackState, savePlaybackState } from '../data/playback-persistence.js'
 import type { Song } from '../../../models/song.js'
@@ -133,6 +133,17 @@ function songUrl(song: Song): string {
   return buildSongUrl(song.url, { songFormat: song.format, quality: _audioQuality, normalize: _normalize })
 }
 
+/**
+ * Cover URL for the native media notification, or `undefined` when there is
+ * nothing to show. Must be the same fully-resolved form the UI uses
+ * (`buildCoverUrl` adds the base URL and the `access_token` the cover endpoint
+ * requires) — the native side only does `Uri.parse` on it, no auth of its own.
+ */
+function artworkUrlOf(song: Song): string | undefined {
+  if (!song.coverUrl) return undefined
+  return buildCoverUrl(song.coverUrl, song.updatedAt) || undefined
+}
+
 function toAudioItem(song: Song): AudioItem {
   return {
     id: song.id,
@@ -140,6 +151,7 @@ function toAudioItem(song: Song): AudioItem {
     durationMs: durationMsOf(song),
     title: song.title,
     artist: song.artist,
+    artworkUrl: artworkUrlOf(song),
   }
 }
 
@@ -156,11 +168,78 @@ function syncFavoriteToNative(songId: number): void {
     .catch(() => {})
 }
 
+/* ------------------------------------------------------ playback error retry */
+
+/**
+ * Exponential backoff for a failed load/stream. A remote song behind a flaky
+ * gateway (a 502, a dropped connection mid-stream) used to just stop dead.
+ *
+ * Three deliberate choices, each of which the obvious implementation gets wrong:
+ *
+ * 1. **The budget resets per song, not on every successful `playing` state.**
+ *    Resetting on success reads more natural but lets a *flapping* stream (plays
+ *    a second, drops, plays a second, drops) retry forever and hammer the
+ *    server. Bound to the song instead: at most three attempts per song, until
+ *    the user's next explicit action moves playback somewhere new.
+ * 2. **The retry deliberately bypasses `playAtIndex`.** That action calls
+ *    `cancelRetry()` — it represents fresh user intent — so routing a retry
+ *    through it would zero the counter on every attempt and never terminate.
+ * 3. **It re-seeks to where the failure happened.** A mid-stream drop at 2:30
+ *    that silently restarts the track from 0 is worse than not retrying at all.
+ */
+const RETRY_DELAYS_MS = [1_000, 3_000, 9_000]
+let _retryCount = 0
+// Guarded `clearTimeout` rather than `safeClearTimeout`: this handle is a
+// `setTimeout` return value (a `Timeout` under the Node typings), matching how
+// `_saveTimer` below is handled. Lynx's strict `clearTimeout` still never sees a
+// nullish argument, which is the crash the helper exists to prevent.
+let _retryTimer: ReturnType<typeof setTimeout> | null = null
+let _retrySongId: number | null = null
+
+function clearRetryTimer(): void {
+  if (_retryTimer != null) clearTimeout(_retryTimer)
+  _retryTimer = null
+}
+
+/** Drop any pending retry and restore the full budget (new user intent). */
+function cancelRetry(): void {
+  clearRetryTimer()
+  _retryCount = 0
+  _retrySongId = null
+}
+
+function scheduleRetry(song: Song, positionMs: number): void {
+  if (_retrySongId !== song.id) {
+    _retryCount = 0
+    _retrySongId = song.id
+  }
+  const delay = RETRY_DELAYS_MS[_retryCount]
+  // Budget exhausted — leave `errorMessage` standing rather than retrying forever.
+  if (delay === undefined) return
+  _retryCount += 1
+
+  clearRetryTimer()
+  _retryTimer = setTimeout(() => {
+    _retryTimer = null
+    // The user may have skipped, stopped, or picked another song while we waited;
+    // reloading here would yank playback back to a track they left behind.
+    if (usePlayerStore.getState().currentSong?.id !== song.id) return
+    usePlayerStore.setState({ errorMessage: undefined, isBuffering: true })
+    void audio.load(songUrl(song), { durationMs: durationMsOf(song) })
+      .then(() => (positionMs > 0 ? audio.seek(positionMs) : undefined))
+      .then(() => audio.play())
+      // A failure here re-emits `error`, which schedules the next attempt; there
+      // is nothing to do with the rejection itself.
+      .catch(() => {})
+  }, delay)
+}
+
 export const usePlayerStore = create<PlayerState>((set, get) => {
   /** Load + play the song at `index` (index/currentSong already computable). */
   async function playAtIndex(index: number): Promise<void> {
     const song = get().playlist[index]
     if (!song) return
+    cancelRetry()
     set({
       currentIndex: index,
       currentSong: song,
@@ -396,6 +475,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     reset: () => {
       stopSleepInterval()
+      cancelRetry()
       void audio.stop()
       set({ ...INITIAL })
       useLyricStore.getState().clear()
@@ -442,7 +522,11 @@ audio.on('stateChanged', (e) => {
 })
 
 audio.on('error', (e) => {
+  const { currentSong, currentTime } = usePlayerStore.getState()
   usePlayerStore.setState({ isPlaying: false, isBuffering: false, errorMessage: e.message })
+  // Retry transparently; `scheduleRetry` is a no-op once the song's budget is spent,
+  // so the error state above is what the user is left with after the last attempt.
+  if (currentSong) scheduleRetry(currentSong, currentTime)
 })
 
 /**
@@ -534,14 +618,11 @@ export async function restorePlaybackState(): Promise<void> {
     sourcePlaylistId: saved.sourcePlaylistId,
   })
   if (autoResume && song.url) {
-    void audio.setQueue(saved.playlist.map((s) => ({
-      id: s.id,
-      url: songUrl(s),
-      durationMs: s.duration > 0 ? s.duration * 1000 : DEFAULT_DURATION_MS,
-      title: s.title,
-      artist: s.artist,
-    })), saved.currentIndex)
-    void audio.load(songUrl(song), { durationMs: song.duration > 0 ? song.duration * 1000 : DEFAULT_DURATION_MS })
+    // Use the shared `toAudioItem`/`durationMsOf` rather than re-inlining the
+    // mapping: this path used to carry its own copy, which silently omitted any
+    // field added to the queue item (it missed `artworkUrl` on arrival).
+    void audio.setQueue(saved.playlist.map(toAudioItem), saved.currentIndex)
+    void audio.load(songUrl(song), { durationMs: durationMsOf(song) })
       .then(() => audio.seek(saved.positionMs))
       .then(() => audio.play())
   }

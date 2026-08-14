@@ -28,6 +28,14 @@ export interface AudioItem {
   durationMs?: number
   title?: string
   artist?: string
+  /**
+   * Fully-resolved cover URL (base + `access_token`) for the media notification
+   * and lock screen. Both native modules already read this key off the bridge
+   * (`parseQueueMetadata`) — Android feeds it to `MediaMetadata.setArtworkUri`
+   * and media3 fetches it asynchronously. Omit rather than pass an empty string
+   * when the song has no cover.
+   */
+  artworkUrl?: string
 }
 
 /** Options for `load`. `durationMs` is a mock-only extension (native ignores it). */

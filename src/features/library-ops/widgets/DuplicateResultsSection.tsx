@@ -1,16 +1,7 @@
-import { useCallback } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { DuplicatesResult } from '../../../models/duplicate.js'
-
-function useLocalT() {
-  const { i18n } = useTranslation()
-  return useCallback(
-    (en: string, zh: string): string => (i18n.language === 'zh' ? zh : en),
-    [i18n.language],
-  )
-}
 
 export interface DuplicateResultsSectionProps {
   duplicates: DuplicatesResult
@@ -30,7 +21,7 @@ export function DuplicateResultsSection({
   onCleanAll,
   onRecheck,
 }: DuplicateResultsSectionProps) {
-  const lt = useLocalT()
+  const { t } = useTranslation()
 
   // No duplicates found
   if (duplicates.groups.length === 0) {
@@ -38,15 +29,15 @@ export function DuplicateResultsSection({
       <view className='fp-results fp-results--empty' data-testid='fp-no-results'>
         <Icon name='check-circle' size={48} color={ICON_COLORS.primary} />
         <text className='fp-results__empty-title'>
-          {lt('No duplicate songs found', '未发现重复歌曲')}
+          {t('libops.dupNoneFound')}
         </text>
         <text className='fp-results__empty-hint'>
-          {lt('Your music library is clean!', '音乐库很干净！')}
+          {t('libops.dupNoneHint')}
         </text>
         <view className='fp-results__recheck' bindtap={onRecheck} data-testid='fp-recheck'>
           <Icon name='refresh' size={16} color={ICON_COLORS.primary} />
           <text className='fp-results__recheck-text'>
-            {lt('Recheck', '重新检测')}
+            {t('libops.dupRecheck')}
           </text>
         </view>
       </view>
@@ -57,15 +48,15 @@ export function DuplicateResultsSection({
     <view className='fp-results' data-testid='fp-results'>
       <view className='fp-results__summary'>
         <text className='fp-results__summary-text'>
-          {lt(
-            `Found ${duplicates.totalGroups} duplicate groups (${duplicates.totalDuplicates} songs total)`,
-            `发现 ${duplicates.totalGroups} 组重复（共 ${duplicates.totalDuplicates} 首歌曲）`,
-          )}
+          {t('libops.dupSummary', {
+            groups: duplicates.totalGroups,
+            songs: duplicates.totalDuplicates,
+          })}
         </text>
         {ignoredCount > 0
           ? (
             <text className='fp-results__ignored'>
-              {lt(`${ignoredCount} groups ignored`, `已忽略 ${ignoredCount} 组`)}
+              {t('libops.dupIgnoredCount', { count: ignoredCount })}
             </text>
           )
           : null}
@@ -80,10 +71,7 @@ export function DuplicateResultsSection({
           >
             <Icon name='x' size={16} color='#ffffff' />
             <text className='fp-results__clean-all-text'>
-              {lt(
-                `Clean all duplicates (delete ${totalToDelete})`,
-                `清理全部重复（删除 ${totalToDelete} 首）`,
-              )}
+              {t('libops.dupCleanAll', { count: totalToDelete })}
             </text>
           </view>
         )
@@ -92,7 +80,7 @@ export function DuplicateResultsSection({
       <view className='fp-results__recheck' bindtap={onRecheck} data-testid='fp-recheck'>
         <Icon name='refresh' size={16} color={ICON_COLORS.primary} />
         <text className='fp-results__recheck-text'>
-          {lt('Recheck', '重新检测')}
+          {t('libops.dupRecheck')}
         </text>
       </view>
     </view>

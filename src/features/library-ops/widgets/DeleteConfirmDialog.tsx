@@ -1,4 +1,3 @@
-import { useCallback } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -8,14 +7,6 @@ import {
   DialogContent,
   DialogClose,
 } from '@lynx-js/lynx-ui'
-
-function useLocalT() {
-  const { i18n } = useTranslation()
-  return useCallback(
-    (en: string, zh: string): string => (i18n.language === 'zh' ? zh : en),
-    [i18n.language],
-  )
-}
 
 export interface DeleteConfirmDialogProps {
   show: boolean
@@ -37,7 +28,7 @@ export function DeleteConfirmDialog({
   onConfirm,
   onCancel,
 }: DeleteConfirmDialogProps) {
-  const lt = useLocalT()
+  const { t } = useTranslation()
 
   return (
     <DialogRoot show={show} onShowChange={(open) => { if (!open) onCancel() }}>
@@ -48,13 +39,10 @@ export function DeleteConfirmDialog({
         <DialogContent className='fp-dialog__content'>
           <view className='fp-dialog' data-testid='fp-delete-dialog'>
             <text className='fp-dialog__title'>
-              {lt('Confirm deletion', '确认删除')}
+              {t('libops.dupConfirmDelete')}
             </text>
             <text className='fp-dialog__message'>
-              {lt(
-                `This will delete ${count} duplicate songs and their audio files, keeping the selected version in each group. This action cannot be undone.`,
-                `将删除 ${count} 首重复歌曲及其对应的音频文件，保留每组中选中的版本。此操作不可撤销。`,
-              )}
+              {t('libops.dupDeleteMessage', { count })}
             </text>
             <view className='fp-dialog__actions'>
               <DialogClose>
@@ -64,7 +52,7 @@ export function DeleteConfirmDialog({
                   data-testid='fp-delete-cancel'
                 >
                   <text className='fp-dialog__btn-text'>
-                    {lt('Cancel', '取消')}
+                    {t('libops.cancel')}
                   </text>
                 </view>
               </DialogClose>
@@ -74,7 +62,7 @@ export function DeleteConfirmDialog({
                 data-testid='fp-delete-confirm'
               >
                 <text className='fp-dialog__btn-text fp-dialog__btn-text--confirm'>
-                  {lt('Confirm deletion', '确认删除')}
+                  {t('libops.dupConfirmDelete')}
                 </text>
               </view>
             </view>

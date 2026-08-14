@@ -18,17 +18,9 @@ interface ProxyState {
   allowlist: string
 }
 
-function useLocalT() {
-  const { i18n } = useTranslation()
-  return useCallback(
-    (en: string, zh: string): string => (i18n.language === 'zh' ? zh : en),
-    [i18n.language],
-  )
-}
-
 export function ProxySettingsPage() {
   const navigate = useNavigate()
-  const lt = useLocalT()
+  const { t } = useTranslation()
 
   const [state, setState] = useState<ProxyState>({
     httpProxy: '',
@@ -108,17 +100,17 @@ export function ProxySettingsPage() {
         <view className='proxy-settings__back' bindtap={() => void navigate({ to: '/settings' })}>
           <Icon name='chevron-down' size={20} />
         </view>
-        <text className='proxy-settings__title'>{lt('Network Proxy', '网络代理')}</text>
+        <text className='proxy-settings__title'>{t('proxy.title')}</text>
       </view>
 
       <scroll-view className='proxy-settings__scroll' scroll-y>
         {loading ? (
           <view className='proxy-settings__status'>
-            <text className='proxy-settings__status-text'>{lt('Loading…', '加载中…')}</text>
+            <text className='proxy-settings__status-text'>{t('common.loading')}</text>
           </view>
         ) : (
           <view className='proxy-settings__content'>
-            <SettingsSection title={lt('HTTP Proxy', 'HTTP 代理')} icon='link'>
+            <SettingsSection title={t('proxy.httpSection')} icon='link'>
               <view className='proxy-settings__field'>
                 <Input
                   className='proxy-settings__input'
@@ -129,7 +121,7 @@ export function ProxySettingsPage() {
               </view>
             </SettingsSection>
 
-            <SettingsSection title={lt('GitHub Proxy', 'GitHub 代理')} icon='link'>
+            <SettingsSection title={t('proxy.githubSection')} icon='link'>
               <view className='proxy-settings__field'>
                 <Input
                   className='proxy-settings__input'
@@ -140,22 +132,22 @@ export function ProxySettingsPage() {
               </view>
             </SettingsSection>
 
-            <SettingsSection title={lt('HLS Proxy', 'HLS 代理')} icon='link'>
+            <SettingsSection title={t('proxy.hlsSection')} icon='link'>
               <SettingsRow
                 icon='check'
-                title={lt('Enable HLS proxy', '启用 HLS 代理')}
+                title={t('proxy.hlsEnable')}
                 selected={state.hlsEnabled}
                 trailingIcon={state.hlsEnabled ? 'check' : undefined}
                 onTap={() => setState(s => ({ ...s, hlsEnabled: !s.hlsEnabled }))}
               />
             </SettingsSection>
 
-            <SettingsSection title={lt('Private Allowlist', '私有域白名单')} icon='link'>
+            <SettingsSection title={t('proxy.allowlistSection')} icon='link'>
               <view className='proxy-settings__field'>
                 <Input
                   className='proxy-settings__input proxy-settings__input--tall'
                   value={state.allowlist}
-                  placeholder={lt('One IP or CIDR per line', '每行一个 IP 或 CIDR')}
+                  placeholder={t('proxy.allowlistPlaceholder')}
                   onInput={(value: string) => setState(s => ({ ...s, allowlist: value }))}
                 />
               </view>
@@ -164,7 +156,7 @@ export function ProxySettingsPage() {
             <view className='proxy-settings__save-area'>
               <view className='proxy-settings__save-btn' bindtap={save}>
                 <text className='proxy-settings__save-text'>
-                  {saved ? lt('Saved', '已保存') : lt('Save', '保存')}
+                  {saved ? t('proxy.saved') : t('proxy.save')}
                 </text>
               </view>
             </view>

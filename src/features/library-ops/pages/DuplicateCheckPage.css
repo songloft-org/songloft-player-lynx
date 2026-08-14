@@ -11,18 +11,18 @@
   flex-direction: row;
   align-items: center;
   height: 48px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border-bottom: 1px solid var(--line);
 }
 
 .dup-check__back {
   padding: 6px;
-  margin-right: 8px;
+  margin-right: var(--space-2);
   transform: rotate(90deg);
 }
 
 .dup-check__title {
-  font-size: 16px;
+  font-size: var(--font-md);
   font-weight: 600;
   color: var(--content);
 }
@@ -32,18 +32,18 @@
 }
 
 .dup-check__content {
-  padding: 16px;
+  padding: var(--space-4);
 }
 
 .dup-check__loading {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px 0;
+  padding: var(--space-6) 0;
 }
 
 .dup-check__loading-text {
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: var(--content-muted);
 }
 
@@ -52,51 +52,51 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 12px;
-  margin-bottom: 16px;
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
   background-color: var(--neutral-faint);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .dup-check__error-text {
   flex: 1;
   font-size: 13px;
   color: var(--danger);
-  margin-left: 8px;
+  margin-left: var(--space-2);
 }
 
 .dup-check__error-close {
-  padding: 4px;
+  padding: var(--space-1);
 }
 
 /* ─── Fingerprint status phase ────────────────────────────────────────────── */
 .fp-status__intro {
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: var(--content-muted);
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
   line-height: 20px;
 }
 
 .fp-status__card {
-  padding: 16px;
+  padding: var(--space-4);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  margin-bottom: 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-4);
 }
 
 .fp-status__card-header {
   display: flex;
   flex-direction: row;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .fp-status__card-title {
-  font-size: 14px;
+  font-size: var(--font-sm);
   font-weight: 600;
   color: var(--content);
-  margin-left: 8px;
+  margin-left: var(--space-2);
 }
 
 .fp-status__row {
@@ -104,16 +104,16 @@
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 0;
+  padding: var(--space-1) 0;
 }
 
 .fp-status__label {
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: var(--content);
 }
 
 .fp-status__value {
-  font-size: 14px;
+  font-size: var(--font-sm);
   font-weight: 500;
   color: var(--content);
 }
@@ -123,9 +123,9 @@
 }
 
 .fp-status__hint {
-  font-size: 12px;
+  font-size: var(--font-xs);
   color: var(--content-muted);
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
   line-height: 16px;
 }
 
@@ -133,18 +133,18 @@
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  padding: 12px;
+  padding: var(--space-3);
   background-color: var(--neutral-faint);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  margin-bottom: 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-4);
 }
 
 .fp-status__warning-text {
   flex: 1;
   font-size: 13px;
   color: var(--content);
-  margin-left: 8px;
+  margin-left: var(--space-2);
   line-height: 18px;
 }
 
@@ -154,9 +154,9 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  padding: 12px 16px;
-  border-radius: 8px;
-  margin-bottom: 8px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
 }
 
 .fp-status__btn--primary {
@@ -173,9 +173,9 @@
 }
 
 .fp-status__btn-text {
-  font-size: 14px;
+  font-size: var(--font-sm);
   font-weight: 500;
-  margin-left: 8px;
+  margin-left: var(--space-2);
 }
 
 .fp-status__btn-text--primary {
@@ -188,25 +188,25 @@
 
 /* ─── Computing phase ─────────────────────────────────────────────────────── */
 .fp-computing {
-  padding: 4px 0;
+  padding: var(--space-1) 0;
 }
 
 .fp-computing__text {
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: var(--content);
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 
 .fp-computing__failed {
   font-size: 13px;
   color: var(--danger);
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 .fp-computing__hint {
-  font-size: 12px;
+  font-size: var(--font-xs);
   color: var(--content-muted);
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .fp-computing__cancel {
@@ -214,10 +214,10 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  margin-top: 16px;
+  border-radius: var(--radius-sm);
+  margin-top: var(--space-4);
 }
 
 .fp-computing__cancel--disabled {
@@ -225,59 +225,59 @@
 }
 
 .fp-computing__cancel-text {
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: var(--content);
-  margin-left: 8px;
+  margin-left: var(--space-2);
 }
 
 .fp-computing__cancel-hint {
-  font-size: 12px;
+  font-size: var(--font-xs);
   color: var(--content-muted);
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 /* ─── Results phase ───────────────────────────────────────────────────────── */
 .fp-results {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .fp-results--empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 32px 0;
+  padding: var(--space-6) 0;
 }
 
 .fp-results__empty-title {
-  font-size: 16px;
+  font-size: var(--font-md);
   font-weight: 600;
   color: var(--content);
-  margin-top: 16px;
+  margin-top: var(--space-4);
 }
 
 .fp-results__empty-hint {
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: var(--content-muted);
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .fp-results__summary {
-  padding: 16px;
-  background-color: var(--neutral-faint));
-  border-radius: 8px;
-  margin-bottom: 12px;
+  padding: var(--space-4);
+  background-color: var(--neutral-faint);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-3);
 }
 
 .fp-results__summary-text {
-  font-size: 14px;
+  font-size: var(--font-sm);
   font-weight: 500;
   color: var(--content);
 }
 
 .fp-results__ignored {
-  font-size: 12px;
+  font-size: var(--font-xs);
   color: var(--content-muted);
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 .fp-results__clean-all {
@@ -285,17 +285,17 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   background-color: var(--danger);
-  border-radius: 8px;
-  margin-bottom: 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-3);
 }
 
 .fp-results__clean-all-text {
-  font-size: 14px;
+  font-size: var(--font-sm);
   font-weight: 500;
   color: var(--danger-content);
-  margin-left: 8px;
+  margin-left: var(--space-2);
 }
 
 .fp-results__recheck {
@@ -303,23 +303,23 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  padding: 10px 16px;
+  padding: 10px var(--space-4);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .fp-results__recheck-text {
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: var(--primary);
-  margin-left: 8px;
+  margin-left: var(--space-2);
 }
 
 /* ─── Group card ──────────────────────────────────────────────────────────── */
 .fp-group {
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
 }
 
 .fp-group--ignored {
@@ -331,42 +331,42 @@
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .fp-group__title {
-  font-size: 14px;
+  font-size: var(--font-sm);
   font-weight: 600;
   color: var(--primary);
 }
 
 .fp-group__ignore-btn {
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
 }
 
 .fp-group__ignore-text {
-  font-size: 12px;
+  font-size: var(--font-xs);
   color: var(--content-muted);
 }
 
 .fp-group__songs {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .fp-group__song-radio {
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 .fp-group__song {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  padding: 8px 0;
+  padding: var(--space-2) 0;
 }
 
 .fp-group__radio-indicator {
   margin-top: 2px;
-  margin-right: 8px;
+  margin-right: var(--space-2);
 }
 
 .fp-group__song-info {
@@ -380,7 +380,7 @@
 }
 
 .fp-group__song-title {
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: var(--content);
   flex: 1;
 }
@@ -391,9 +391,9 @@
 
 .fp-group__badge {
   padding: 2px 6px;
-  background-color: var(--neutral-faint));
+  background-color: var(--neutral-faint);
   border-radius: 4px;
-  margin-left: 8px;
+  margin-left: var(--space-2);
 }
 
 .fp-group__badge-text {
@@ -402,13 +402,13 @@
 }
 
 .fp-group__song-path {
-  font-size: 12px;
+  font-size: var(--font-xs);
   color: var(--content-muted);
   margin-top: 2px;
 }
 
 .fp-group__song-meta {
-  font-size: 12px;
+  font-size: var(--font-xs);
   color: var(--content-muted);
   margin-top: 2px;
 }
@@ -418,16 +418,16 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  padding: 10px 16px;
+  padding: 10px var(--space-4);
   border: 1px solid var(--danger);
-  border-radius: 8px;
-  margin-top: 12px;
+  border-radius: var(--radius-sm);
+  margin-top: var(--space-3);
 }
 
 .fp-group__delete-text {
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: var(--danger);
-  margin-left: 8px;
+  margin-left: var(--space-2);
 }
 
 /* ─── Delete confirmation dialog ──────────────────────────────────────────── */
@@ -461,21 +461,21 @@
 
 .fp-dialog {
   background-color: var(--canvas);
-  border-radius: 12px;
-  padding: 24px;
-  margin: 32px;
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  margin: var(--space-6);
   max-width: 360px;
 }
 
 .fp-dialog__title {
-  font-size: 16px;
+  font-size: var(--font-md);
   font-weight: 600;
   color: var(--content);
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .fp-dialog__message {
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: var(--content-muted);
   line-height: 20px;
   margin-bottom: 20px;
@@ -488,9 +488,9 @@
 }
 
 .fp-dialog__btn {
-  padding: 8px 16px;
+  padding: var(--space-2) var(--space-4);
   border-radius: 6px;
-  margin-left: 8px;
+  margin-left: var(--space-2);
 }
 
 .fp-dialog__btn--cancel {
@@ -502,7 +502,7 @@
 }
 
 .fp-dialog__btn-text {
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: var(--content);
 }
 

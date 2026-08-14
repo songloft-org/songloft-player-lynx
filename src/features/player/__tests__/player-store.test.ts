@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import type { Song } from '../../../models/song.js'
+import { getAudio } from '../../../native/index.js'
+import type { MockSongloftAudio } from '../../../native/mock-audio.js'
 import { usePlayerStore } from '../store/player-store.js'
 
 /**
@@ -134,6 +136,123 @@ describe('volume + mute', () => {
     expect(usePlayerStore.getState().previousVolume).toBe(40)
     await usePlayerStore.getState().toggleMute()
     expect(usePlayerStore.getState().volume).toBe(40)
+  })
+})
+
+/**
+ * Batch 40: a failed load/stream retries with exponential backoff instead of
+ * stopping dead. The delays are 1s / 3s / 9s, the budget is per-song, and the
+ * retry re-seeks to where the failure happened.
+ */
+describe('playback error retry', () => {
+  const mock = () => getAudio() as MockSongloftAudio
+
+  test('retries after 1s and resumes from the failure position', async () => {
+    await usePlayerStore.getState().playPlaylist([song(1, 300)], 0)
+    await flush()
+    vi.advanceTimersByTime(2_000) // play up to 2s in
+    const loadSpy = vi.spyOn(getAudio(), 'load')
+    const seekSpy = vi.spyOn(getAudio(), 'seek')
+
+    mock().simulateError('502')
+    expect(usePlayerStore.getState().errorMessage).toBe('502')
+    expect(loadSpy).not.toHaveBeenCalled() // still waiting out the backoff
+
+    vi.advanceTimersByTime(1_000)
+    await flush()
+    expect(loadSpy).toHaveBeenCalledTimes(1)
+    expect(seekSpy).toHaveBeenCalledWith(2_000)
+    // A retry in flight must not keep showing the old failure.
+    expect(usePlayerStore.getState().errorMessage).toBeUndefined()
+
+    loadSpy.mockRestore()
+    seekSpy.mockRestore()
+  })
+
+  test('gives up after three attempts and leaves the error standing', async () => {
+    await usePlayerStore.getState().playPlaylist([song(1, 300)], 0)
+    await flush()
+    const loadSpy = vi.spyOn(getAudio(), 'load')
+
+    for (const delay of [1_000, 3_000, 9_000]) {
+      mock().simulateError('502')
+      vi.advanceTimersByTime(delay)
+      await flush()
+    }
+    expect(loadSpy).toHaveBeenCalledTimes(3)
+
+    // Fourth failure: the budget is spent, so nothing more is scheduled.
+    mock().simulateError('502')
+    vi.advanceTimersByTime(60_000)
+    await flush()
+    expect(loadSpy).toHaveBeenCalledTimes(3)
+    expect(usePlayerStore.getState().errorMessage).toBe('502')
+
+    loadSpy.mockRestore()
+  })
+
+  test('a pending retry is dropped when the user moves to another song', async () => {
+    await usePlayerStore.getState().playPlaylist([song(1, 300), song(2, 300)], 0)
+    await flush()
+
+    mock().simulateError('502')
+    await usePlayerStore.getState().playNext()
+    await flush()
+    const loadSpy = vi.spyOn(getAudio(), 'load')
+
+    vi.advanceTimersByTime(30_000)
+    await flush()
+    // The retry must not yank playback back to song 1.
+    expect(loadSpy).not.toHaveBeenCalled()
+    expect(usePlayerStore.getState().currentSong?.id).toBe(2)
+
+    loadSpy.mockRestore()
+  })
+
+  test('each song gets its own retry budget', async () => {
+    await usePlayerStore.getState().playPlaylist([song(1, 300), song(2, 300)], 0)
+    await flush()
+
+    // Spend song 1's budget entirely.
+    for (const delay of [1_000, 3_000, 9_000]) {
+      mock().simulateError('502')
+      vi.advanceTimersByTime(delay)
+      await flush()
+    }
+    mock().simulateError('502')
+
+    await usePlayerStore.getState().playNext()
+    await flush()
+    const loadSpy = vi.spyOn(getAudio(), 'load')
+
+    mock().simulateError('502')
+    vi.advanceTimersByTime(1_000)
+    await flush()
+    expect(loadSpy).toHaveBeenCalledTimes(1)
+
+    loadSpy.mockRestore()
+  })
+})
+
+/**
+ * Batch 40: the native queue carries `artworkUrl` so the media notification and
+ * lock screen can show the cover. The interesting part is not that the field is
+ * copied but that it is **resolved** — the native side only `Uri.parse`s it, so
+ * a bare `/api/v1/...` path (or one missing `access_token`) renders no artwork.
+ */
+describe('native queue metadata', () => {
+  test('setQueue carries a resolved artwork URL, and omits it with no cover', async () => {
+    const spy = vi.spyOn(getAudio(), 'setQueue')
+    const withCover = { ...song(1, 30), coverUrl: '/api/v1/songs/1/cover' } as Song
+
+    await usePlayerStore.getState().playPlaylist([withCover, song(2, 30)], 0)
+    await flush()
+
+    const items = spy.mock.calls[0]?.[0]
+    expect(items?.[0]?.artworkUrl).toContain('/api/v1/songs/1/cover')
+    expect(items?.[0]?.artworkUrl).toContain('access_token=')
+    expect(items?.[1]?.artworkUrl).toBeUndefined()
+    spy.mockRestore()
   })
 })
 

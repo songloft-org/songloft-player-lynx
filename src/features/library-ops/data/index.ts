@@ -1,5 +1,4 @@
 export { libopsQueryKeys, useScanProgressQuery, useMetadataProgressQuery } from './scan-query.js'
-export type { PollOptions } from './scan-query.js'
 export {
   invalidateAfterScan,
   useScanCompletionEffect,

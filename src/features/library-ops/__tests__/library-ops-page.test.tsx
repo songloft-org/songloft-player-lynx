@@ -6,6 +6,7 @@ import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/tes
 
 import { parseMetadataProgress, parseScanProgress } from '../../../models/library-ops.js'
 import { initialTreeState, withRootLoaded } from '../domain/directory-tree.js'
+import { POLL_MS } from '../domain/scan-model.js'
 
 /**
  * LibraryOpsPage render smoke (batch 19).
@@ -32,6 +33,7 @@ const h = vi.hoisted(() => ({
   cancelMeta: vi.fn(),
   toggleExpand: vi.fn(),
   refetch: vi.fn(),
+  refetchMeta: vi.fn(),
   settings: {
     autoCreate: true,
     playlistMode: 'directory',
@@ -71,7 +73,7 @@ const mutation = (fn: ReturnType<typeof vi.fn>) => ({ mutate: fn, isPending: fal
 
 vi.mock('../data/index.js', () => ({
   useScanProgressQuery: () => ({ data: h.scanData, refetch: h.refetch }),
-  useMetadataProgressQuery: () => ({ data: h.metaData }),
+  useMetadataProgressQuery: () => ({ data: h.metaData, refetch: h.refetchMeta }),
   useScanCompletionEffect: () => {},
   useStartScanMutation: () => mutation(h.startScan),
   useCancelScanMutation: () => mutation(h.cancelScan),
@@ -113,7 +115,11 @@ beforeEach(() => {
   h.settings.readFailed = false
 })
 
-afterEach(() => vi.clearAllMocks())
+afterEach(() => {
+  // The polling tests below install fake timers; restore for everyone else.
+  vi.useRealTimers()
+  vi.clearAllMocks()
+})
 
 async function renderPage() {
   render(<LibraryOpsPage />)
@@ -466,6 +472,87 @@ test('a finished run that processed nothing falls back to the idle row', async (
   const { queryByTestId } = await renderPage()
   expect(queryByTestId('meta-phase-idle')).toBeInTheDocument()
   expect(queryByTestId('meta-phase-done')).not.toBeInTheDocument()
+})
+
+/* -------------------------------------------------------------------- polling */
+
+/**
+ * Batch 40: the progress polls moved off query-core's `refetchInterval` onto an
+ * explicit `setInterval` in the page, because the former stops firing after the
+ * first fetch on this Lynx build (see `data/scan-query.ts`).
+ *
+ * These tests exist because the old arrangement had **no** coverage and worked by
+ * accident: the interval callback was gated on `focusManager.isFocused()`, which
+ * returned `true` only because `globalThis.document` is undefined on Lynx. A
+ * single `setFocused(false)` anywhere would have killed progress polling silently.
+ * So assert the interval actually re-fetches, and actually stops when terminal.
+ */
+async function renderWithFakeTimers() {
+  vi.useFakeTimers()
+  const q = await renderPage()
+  // The mount fetch is query-core's, not the interval's — ignore it.
+  h.refetch.mockClear()
+  h.refetchMeta.mockClear()
+  return q
+}
+
+test('a live scan re-fetches progress on every poll tick', async () => {
+  h.scanData = parseScanProgress({ status: 'importing', scanned_files: 10, total_files: 100 })
+  await renderWithFakeTimers()
+
+  await act(async () => {
+    vi.advanceTimersByTime(POLL_MS)
+  })
+  expect(h.refetch).toHaveBeenCalledTimes(1)
+
+  // The tick must keep repeating, not fire once — that was the exact defect.
+  await act(async () => {
+    vi.advanceTimersByTime(POLL_MS * 3)
+  })
+  expect(h.refetch).toHaveBeenCalledTimes(4)
+})
+
+test('a terminal scan stops polling', async () => {
+  h.scanData = parseScanProgress({ status: 'completed', local_song_count: 5 })
+  await renderWithFakeTimers()
+
+  await act(async () => {
+    vi.advanceTimersByTime(POLL_MS * 5)
+  })
+  expect(h.refetch).not.toHaveBeenCalled()
+})
+
+test('an idle scan does not poll until a run is started', async () => {
+  h.scanData = parseScanProgress({ status: 'idle' })
+  const { queryByTestId } = await renderWithFakeTimers()
+
+  await act(async () => {
+    vi.advanceTimersByTime(POLL_MS * 2)
+  })
+  expect(h.refetch).not.toHaveBeenCalled()
+
+  // `onSuccess` sets the sticky `forced` flag, which is what arms the interval
+  // while the backend still answers `idle`.
+  h.startScan.mockImplementation((_params, opts) => opts?.onSuccess?.(undefined))
+  await act(async () => {
+    fireEvent.tap(queryByTestId('scan-start')!)
+  })
+  await act(async () => {
+    vi.advanceTimersByTime(POLL_MS)
+  })
+  expect(h.refetch).toHaveBeenCalledTimes(1)
+})
+
+test('the metadata refresh polls on its own interval', async () => {
+  h.metaData = parseMetadataProgress({ status: 'running', total: 10, processed: 4 })
+  await renderWithFakeTimers()
+
+  await act(async () => {
+    vi.advanceTimersByTime(POLL_MS * 2)
+  })
+  expect(h.refetchMeta).toHaveBeenCalledTimes(2)
+  // The scan is idle here, so its interval must stay disarmed.
+  expect(h.refetch).not.toHaveBeenCalled()
 })
 
 /* ------------------------------------------------------------------- chrome */

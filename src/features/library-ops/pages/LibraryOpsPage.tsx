@@ -15,6 +15,7 @@ import {
   useStartScanMutation,
 } from '../data/index.js'
 import { toggleSelected } from '../domain/directory-tree.js'
+import { metadataPollInterval, scanPollInterval } from '../domain/scan-model.js'
 import type { ScanMode } from '../domain/scan-model.js'
 import { ExcludeDirSection } from '../widgets/ExcludeDirSection.js'
 import { MetadataSection } from '../widgets/MetadataSection.js'
@@ -56,12 +57,45 @@ export function LibraryOpsPage() {
   const [cleaning, setCleaning] = useState(false)
   const [cleanResult, setCleanResult] = useState<string | null>(null)
 
-  const scanQuery = useScanProgressQuery({ forced: scanForced, paused: scanPaused })
-  const metaQuery = useMetadataProgressQuery({ forced: metaForced, paused: metaPaused })
+  // Both queries fetch on mount and are then re-fetched by the explicit poll
+  // effects below — query-core's `refetchInterval` is unreliable on this Lynx
+  // build (see the doc block in `data/scan-query.ts`).
+  const scanQuery = useScanProgressQuery()
+  const metaQuery = useMetadataProgressQuery()
   const progress = scanQuery.data
   const metaProgress = metaQuery.data
 
   useScanCompletionEffect(progress)
+
+  /**
+   * Explicit progress polls, mirroring `DuplicateCheckPage` (batch 29b/40).
+   *
+   * `scanPollInterval` / `metadataPollInterval` remain the single source of truth
+   * for the poll decision: they return the period in ms while the job is live and
+   * `false` once it is terminal (or paused for the cancel handshake). Deriving a
+   * **primitive** delay and depending on that — rather than on the `progress`
+   * object — matters: the object gets a new identity on every poll response, so
+   * depending on it would tear down and re-arm the interval on every tick.
+   */
+  const scanDelay = scanPollInterval(progress, scanForced, scanPaused)
+  const refetchScan = scanQuery.refetch
+  useEffect(() => {
+    if (scanDelay === false) return
+    const id = setInterval(() => {
+      void refetchScan()
+    }, scanDelay)
+    return () => clearInterval(id)
+  }, [scanDelay, refetchScan])
+
+  const metaDelay = metadataPollInterval(metaProgress, metaForced, metaPaused)
+  const refetchMeta = metaQuery.refetch
+  useEffect(() => {
+    if (metaDelay === false) return
+    const id = setInterval(() => {
+      void refetchMeta()
+    }, metaDelay)
+    return () => clearInterval(id)
+  }, [metaDelay, refetchMeta])
 
   const startScan = useStartScanMutation()
   const cancelScan = useCancelScanMutation()

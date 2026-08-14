@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from '@lynx-js/react'
+import { useEffect, useRef, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -27,14 +27,6 @@ import { FingerprintComputingSection } from '../widgets/FingerprintComputingSect
 import { FingerprintStatusCard } from '../widgets/FingerprintStatusCard.js'
 import './DuplicateCheckPage.css'
 
-function useLocalT() {
-  const { i18n } = useTranslation()
-  return useCallback(
-    (en: string, zh: string): string => (i18n.language === 'zh' ? zh : en),
-    [i18n.language],
-  )
-}
-
 /**
  * Duplicate detection / fingerprint page — three-phase state machine:
  * 1. **Status** — show fingerprint stats + start/recompute actions
@@ -45,7 +37,7 @@ function useLocalT() {
  */
 export function DuplicateCheckPage() {
   const navigate = useNavigate()
-  const lt = useLocalT()
+  const { t } = useTranslation()
 
   // ── Phase state machine ────────────────────────────────────────────────────
   const [phase, setPhase] = useState<DuplicatePagePhase>('status')
@@ -263,7 +255,7 @@ export function DuplicateCheckPage() {
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='dup-check__title'>
-          {lt('Duplicate detection', '重复歌曲检测')}
+          {t('libops.duplicateDetection')}
         </text>
       </view>
 
@@ -305,7 +297,7 @@ export function DuplicateCheckPage() {
             ? (
               <view className='dup-check__loading' data-testid='dup-check-loading'>
                 <text className='dup-check__loading-text'>
-                  {lt('Loading...', '加载中...')}
+                  {t('libops.dupLoading')}
                 </text>
               </view>
             )
@@ -331,7 +323,7 @@ export function DuplicateCheckPage() {
                   ? (
                     <view className='dup-check__loading' data-testid='fp-results-loading'>
                       <text className='dup-check__loading-text'>
-                        {lt('Loading duplicates...', '正在加载重复结果...')}
+                        {t('libops.dupLoadingResults')}
                       </text>
                     </view>
                   )
