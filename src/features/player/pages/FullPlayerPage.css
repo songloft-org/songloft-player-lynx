@@ -145,6 +145,24 @@
   justify-content: center;
 }
 
+.full-player__video-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  background-color: var(--backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.full-player__video-badge-text {
+  color: var(--content);
+  font-size: 14px;
+}
+
 .full-player__lyrics-pane {
   flex: 1;
   height: 100%;

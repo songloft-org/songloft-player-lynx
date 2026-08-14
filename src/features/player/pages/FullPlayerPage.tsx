@@ -31,6 +31,8 @@ function formatRemaining(ms: number): string {
 
 function CoverArt({ song }: { song: Song }) {
   const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
+  const isVideo = song.isVideo
+
   return (
     <view className='full-player__cover-wrap'>
       {cover
@@ -38,6 +40,13 @@ function CoverArt({ song }: { song: Song }) {
         : <view className='full-player__cover full-player__cover--empty'>
             <Icon name='music' size={56} color={ICON_COLORS.contentMuted} />
           </view>}
+      {isVideo
+        ? (
+          <view className='full-player__video-badge'>
+            <text className='full-player__video-badge-text'>▶</text>
+          </view>
+        )
+        : null}
     </view>
   )
 }
