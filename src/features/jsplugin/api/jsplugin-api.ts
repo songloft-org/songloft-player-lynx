@@ -124,4 +124,9 @@ export class JSPluginApi {
     if (params.overwrite) body.overwrite = true
     await this.client.post(`${apiPrefix}/jsplugins/registry/install`, body)
   }
+
+  /** `POST /jsplugins/upload` — upload a plugin ZIP file (multipart). */
+  getUploadUrl(): string {
+    return `${apiPrefix}/jsplugins/upload`
+  }
 }

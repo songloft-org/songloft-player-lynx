@@ -3,8 +3,10 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { pickAndUploadFile } from '../../../native/native-platform.js'
 import type { JSPlugin } from '../../../models/jsplugin.js'
 import { usePluginsQuery } from '../data/jsplugin-query.js'
+import { getJSPluginApi } from '../api/index.js'
 import {
   useTogglePluginMutation,
   useDeletePluginMutation,
@@ -15,7 +17,7 @@ import './PluginManagerPage.css'
 export function PluginManagerPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { data, isLoading, isError } = usePluginsQuery()
+  const { data, isLoading, isError, refetch } = usePluginsQuery()
   const plugins = data?.plugins ?? []
 
   const toggleMutation = useTogglePluginMutation()
@@ -23,6 +25,7 @@ export function PluginManagerPage() {
   const updateAllMutation = useUpdateAllPluginsMutation()
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  const [installing, setInstalling] = useState(false)
 
   const onToggle = (plugin: JSPlugin) => {
     toggleMutation.mutate({ id: plugin.id, enable: !plugin.isActive })
@@ -42,6 +45,20 @@ export function PluginManagerPage() {
     updateAllMutation.mutate()
   }
 
+  const onInstallFromFile = async () => {
+    if (installing) return
+    setInstalling(true)
+    try {
+      const uploadUrl = getJSPluginApi().getUploadUrl()
+      await pickAndUploadFile(uploadUrl, 'plugin', 'application/zip')
+      void refetch()
+    } catch {
+      // User cancelled or upload failed; silently ignore.
+    } finally {
+      setInstalling(false)
+    }
+  }
+
   return (
     <view className='plugin-manager'>
       <view className='plugin-manager__topbar'>
@@ -54,6 +71,11 @@ export function PluginManagerPage() {
         </view>
         <text className='plugin-manager__title'>{t('jsplugin.managerTitle')}</text>
         <view className='plugin-manager__topbar-actions'>
+          <view className='plugin-manager__action-btn' bindtap={onInstallFromFile} data-testid='plugins-upload'>
+            <text className='plugin-manager__action-text'>
+              {installing ? t('common.loading') : t('jsplugin.installFromFile')}
+            </text>
+          </view>
           <view className='plugin-manager__action-btn' bindtap={() => navigate({ to: '/settings/plugins/registry' })} data-testid='plugins-store'>
             <text className='plugin-manager__action-text'>{t('jsplugin.store')}</text>
           </view>
