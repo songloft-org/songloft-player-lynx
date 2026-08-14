@@ -63,7 +63,7 @@
 
 ### P2 — 结构性
 
-- [ ] **每个 feature 各建一套 `TokenStore` + `AuthInterceptor`** 🔍待复核 —— `api-client.ts:54` 每次 `new`，共 6 份。后果：换账号后曲库仍带上一个账号的 token（后端会正常返数据，用户看到别人的库）；token 过期时多个 bundle 各刷一次 refresh 互相覆盖
+- [x] **每个 feature 各建一套 `TokenStore` + `AuthInterceptor`** 🔍待复核 —— `api-client.ts:54` 每次 `new`，共 6 份。后果：换账号后曲库仍带上一个账号的 token（后端会正常返数据，用户看到别人的库）；token 过期时多个 bundle 各刷一次 refresh 互相覆盖（批43 P2-1 已修：`getSharedApiBundle()` 进程级单例）
 - [ ] **悬浮歌词（Android）五重死** 🔍待复核 —— `FloatingLyricModule.kt` 5 个方法全无 `@LynxMethod`（第 9 行却 import 了）+ `SongloftApplication.kt:67` 未注册 + 签名与 TS 不符 + 清单缺 `SYSTEM_ALERT_WINDOW` 与 service 声明。`lyric-store.ts:168` 每行歌词都在往 stub 里写
 - [ ] **Live Activity（iOS）不是 Lynx 模块** 🔍待复核 —— `LiveActivityModule.swift:12` 是普通 `enum`，无 `@objc`/`name`/`methodLookup`，也不在 `buildConfig()` 里
 - [ ] **契约闸门不覆盖批35+ 的原生模块** 🔍待复核 —— `SongloftPlatform`/`SongloftDlna`/`SongloftFloatingLyric`/`SongloftLiveActivity` 都在闸门外，且闸门完全不验证「注册」这件事
