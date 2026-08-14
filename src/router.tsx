@@ -15,7 +15,7 @@ import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { AddSongsPage, CategorySongsPage, LibraryPage, PlayHistoryPage, SongDetailPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
-import { CacheManagePage, EqualizerPage, LicensesPage, ProxySettingsPage, ServerEditPage, ServerListPage, ServerSettingsPage, SettingsPage, ThemePacksPage, UpgradePage } from './features/settings/index.js'
+import { CacheManagePage, EqualizerPage, LicensesPage, ProxySettingsPage, ServerEditPage, ServerListPage, ServerSettingsPage, SettingsPage, ThemePacksPage, UpgradePage, BrowseViewsPage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
@@ -223,6 +223,13 @@ const tabConfigRoute = createRoute({
   component: TabConfigPage,
 })
 
+/** `/settings/browse-views` — library browse views configuration, inside the shell. */
+const browseViewsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/browse-views',
+  component: BrowseViewsPage,
+})
+
 /** `/playlists/$id` — playlist detail, inside the shell (batch 6). */
 const playlistDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -295,6 +302,7 @@ const routeTree = rootRoute.addChildren([
     pluginRegistryRoute,
     pluginWebViewRoute,
     tabConfigRoute,
+    browseViewsRoute,
     playlistDetailRoute,
     playHistoryRoute,
     categorySongsRoute,

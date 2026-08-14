@@ -386,6 +386,7 @@ export function SettingsPage() {
 
           <SettingsSection title={t('settings.advanced')} icon='settings'>
             <SettingsRow icon='music' title={t('settings.playHistory')} subtitle={t('settings.playHistorySubtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/library/history' })} testId='settings-play-history' />
+            <SettingsRow icon='music' title={t('library.browseViews')} subtitle={t('library.browseViewsSubtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/browse-views' })} testId='settings-browse-views' />
             <SettingsRow icon='music' title={t('eq.title')} subtitle={t('eq.subtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/eq' })} testId='settings-eq' />
             <SettingsRow icon='settings' title={t('settings.storageCache')} subtitle={t('settings.cacheManageSubtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/cache' })} />
             <SettingsRow

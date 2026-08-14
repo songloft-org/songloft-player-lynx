@@ -9,6 +9,7 @@ export { CacheManagePage } from './pages/CacheManagePage.js'
 export { EqualizerPage } from './pages/EqualizerPage.js'
 export { ServerListPage } from './pages/ServerListPage.js'
 export { ServerEditPage } from './pages/ServerEditPage.js'
+export { BrowseViewsPage } from './pages/BrowseViewsPage.js'
 export { coercePlayMode, serverDisplay } from './domain/settings-model.js'
 export type { ServerDisplayLabels } from './domain/settings-model.js'
 export {

@@ -91,4 +91,69 @@ export class SettingsApi {
   async updateVolumeNormalize(enabled: boolean): Promise<void> {
     await this.client.put(`${apiPrefix}/settings/volume-normalize`, { enabled })
   }
+
+  // ── Library browse (views configuration) ───────────────────────────────
+
+  async getLibraryBrowse(): Promise<LibraryBrowseConfig> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/settings/library-browse`)
+    return parseLibraryBrowseConfig(res.data)
+  }
+
+  async updateLibraryBrowse(config: LibraryBrowseConfig): Promise<void> {
+    await this.client.put(`${apiPrefix}/settings/library-browse`, {
+      views: config.views.map((v) => ({
+        id: v.id,
+        visible: v.visible,
+        order: v.order,
+      })),
+    })
+  }
+}
+
+/** A single browse view (song source + facet dimension). */
+export interface BrowseView {
+  id: string
+  labelKey: string
+  type: 'source' | 'facet'
+  visible: boolean
+  order: number
+}
+
+/** Library browse configuration — 14 views defined by the backend. */
+export interface LibraryBrowseConfig {
+  views: BrowseView[]
+}
+
+const KNOWN_VIEWS: BrowseView[] = [
+  { id: 'local', labelKey: 'library.browseLocal', type: 'source', visible: true, order: 0 },
+  { id: 'remote', labelKey: 'library.browseRemote', type: 'source', visible: true, order: 1 },
+  { id: 'radio', labelKey: 'library.browseRadio', type: 'source', visible: true, order: 2 },
+  { id: 'artist', labelKey: 'library.facetArtist', type: 'facet', visible: true, order: 3 },
+  { id: 'album', labelKey: 'library.facetAlbum', type: 'facet', visible: true, order: 4 },
+  { id: 'genre', labelKey: 'library.facetGenre', type: 'facet', visible: true, order: 5 },
+  { id: 'year', labelKey: 'library.browseYear', type: 'facet', visible: true, order: 6 },
+  { id: 'decade', labelKey: 'library.browseDecade', type: 'facet', visible: true, order: 7 },
+  { id: 'language', labelKey: 'library.browseLanguage', type: 'facet', visible: true, order: 8 },
+  { id: 'style', labelKey: 'library.browseStyle', type: 'facet', visible: true, order: 9 },
+  { id: 'folder', labelKey: 'library.browseFolder', type: 'source', visible: true, order: 10 },
+  { id: 'recent', labelKey: 'library.browseRecent', type: 'source', visible: true, order: 11 },
+  { id: 'favorites', labelKey: 'library.browseFavorites', type: 'source', visible: true, order: 12 },
+  { id: 'random', labelKey: 'library.browseRandom', type: 'source', visible: true, order: 13 },
+]
+
+function parseLibraryBrowseConfig(data: unknown): LibraryBrowseConfig {
+  const obj = (data ?? {}) as Record<string, unknown>
+  const rawViews = Array.isArray(obj.views) ? obj.views : []
+  const serverMap = new Map<string, { visible: boolean; order: number }>()
+  for (const v of rawViews) {
+    const item = v as Record<string, unknown>
+    const id = String(item.id ?? '')
+    if (id) serverMap.set(id, { visible: item.visible !== false, order: Number(item.order ?? 0) })
+  }
+  // Merge server config over known defaults.
+  const views = KNOWN_VIEWS.map((kv) => {
+    const server = serverMap.get(kv.id)
+    return server ? { ...kv, visible: server.visible, order: server.order } : kv
+  })
+  return { views }
 }

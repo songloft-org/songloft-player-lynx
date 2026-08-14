@@ -5,6 +5,7 @@ import { ThemePacksApi } from './theme-packs-api.js'
 
 export { CacheApi } from './cache-api.js'
 export { SettingsApi } from './settings-api.js'
+export type { BrowseView, LibraryBrowseConfig } from './settings-api.js'
 export { ThemePacksApi } from './theme-packs-api.js'
 
 export function getSettingsApi(): SettingsApi {
