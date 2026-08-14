@@ -292,6 +292,8 @@ export const en = {
     casting: 'Now casting:',
     unavailable: 'Casting needs the native app — it is not available in a browser.',
     failed: 'Casting failed: {{error}}',
+    disconnect: 'Disconnect',
+    connected: 'Connected',
   },
   addSongs: {
     title: 'Add Songs',
@@ -831,6 +833,8 @@ export const zh: TranslationTree = {
     casting: '正在投屏:',
     unavailable: '投屏需要原生客户端，浏览器中不可用。',
     failed: '投屏失败: {{error}}',
+    disconnect: '断开连接',
+    connected: '已连接',
   },
   addSongs: {
     title: '添加歌曲',

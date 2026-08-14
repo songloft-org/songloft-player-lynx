@@ -64,12 +64,20 @@ export function DlnaPage() {
     setError(null)
     setCasting(device.id)
     const url = buildSongUrl(song.url ?? '')
-    // Without this catch a failed cast left the check mark on forever, which reads
-    // as "casting" while nothing is playing anywhere.
-    void dlna.cast(device.id, url, song.title).catch((e: unknown) => {
+    void dlna.cast(device.id, url, song.title).then(() => {
+      // Pause local playback so we don't get dual audio.
+      void usePlayerStore.getState().togglePlay()
+    }).catch((e: unknown) => {
       setCasting(null)
       setError(String(e instanceof Error ? e.message : e))
     })
+  }
+
+  const onDisconnect = () => {
+    if (casting) {
+      void dlna.control('stop', { deviceId: casting }).catch(() => {})
+      setCasting(null)
+    }
   }
 
   return (
@@ -109,6 +117,13 @@ export function DlnaPage() {
           <view className='dlna-page__now'>
             <text className='dlna-page__now-label'>{t('dlna.casting')}</text>
             <text className='dlna-page__now-song'>{song.title}</text>
+            {casting
+              ? (
+                <view className='dlna-page__disconnect' bindtap={onDisconnect}>
+                  <text className='dlna-page__disconnect-text'>{t('dlna.disconnect')}</text>
+                </view>
+              )
+              : null}
           </view>
         )
         : null}
