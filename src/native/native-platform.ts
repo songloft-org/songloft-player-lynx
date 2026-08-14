@@ -9,6 +9,7 @@ interface SongloftPlatformNative {
     mimeType: string,
     callback: (error: string | null, responseBody: string | null) => void,
   ): void
+  setInsecureTls?(enabled: boolean): void
 }
 
 function getModule(): SongloftPlatformNative | null {
@@ -30,6 +31,13 @@ export function openURL(url: string): void {
     mod.openURL(url)
   } else if (isWebEnvironment()) {
     webOpenURL(url)
+  }
+}
+
+export function applyInsecureTls(enabled: boolean): void {
+  const mod = getModule()
+  if (mod?.setInsecureTls) {
+    mod.setInsecureTls(enabled)
   }
 }
 

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network security config for Songloft Lynx.
+  - Cleartext (HTTP) is allowed globally (dev convenience; same as usesCleartextTraffic=true).
+  - User-installed CA certificates are trusted (enables self-signed servers when
+    the user installs the CA cert on the device).
+  - For production releases, restrict to specific domains or remove user trust anchors.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

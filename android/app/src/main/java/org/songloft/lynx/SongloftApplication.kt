@@ -12,6 +12,7 @@ import com.lynx.service.log.LynxLogService
 import com.lynx.tasm.LynxEnv
 import com.lynx.tasm.service.LynxServiceCenter
 import org.songloft.lynx.audio.SongloftAudioModule
+import org.songloft.lynx.dlna.SongloftDlnaModule
 import org.songloft.lynx.platform.SongloftPlatformModule
 import org.songloft.lynx.storage.SongloftStorageModule
 import org.songloft.lynx.test.SongloftTestBridgeModule
@@ -70,6 +71,7 @@ class SongloftApplication : Application() {
         // backgrounding. Name + methods match `src/core/storage/native-storage.ts`.
         LynxEnv.inst().registerModule("SongloftStorage", SongloftStorageModule::class.java)
         LynxEnv.inst().registerModule("SongloftPlatform", SongloftPlatformModule::class.java)
+        LynxEnv.inst().registerModule("SongloftDlna", SongloftDlnaModule::class.java)
         LynxEnv.inst().registerModule("SongloftTestBridge", SongloftTestBridgeModule::class.java)
 
         // Start the TCP test bridge server for e2e driver communication

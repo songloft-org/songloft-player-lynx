@@ -12,6 +12,7 @@ import type { SongloftStorage } from '../../../core/storage/types.js'
 // on sign-out. `lib/query` only pulls in query-core + safe-timers, so importing
 // it here is cycle-free.
 import { getQueryClient } from '../../../lib/query/index.js'
+import { applyInsecureTls } from '../../../native/native-platform.js'
 import { useAppSessionStore } from '../../../store/index.js'
 import { AuthApi } from '../api/auth-api.js'
 import type { AuthStatus } from './guard.js'
@@ -127,7 +128,10 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
         appConfig.resolvedBaseUrl = serverUrl
         useAppSessionStore.getState().setBaseUrl(serverUrl)
       }
-      if (insecure != null) appConfig.insecureTls = insecure === 'true'
+      if (insecure != null) {
+        appConfig.insecureTls = insecure === 'true'
+        applyInsecureTls(appConfig.insecureTls)
+      }
     },
 
     checkAuth: async () => {
@@ -157,7 +161,7 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
         if (insecureTls != null) {
           appConfig.insecureTls = insecureTls
           await tryPref(storage, PREF_INSECURE_TLS, String(insecureTls))
-          // TLS relaxation is handled by the native HTTP layer (Android OkHttp / iOS URLSession).
+          applyInsecureTls(insecureTls)
         }
 
         const client = createLoginClient(appConfig.resolvedBaseUrl)

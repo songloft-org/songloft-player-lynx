@@ -100,4 +100,25 @@ class SongloftPlatformModule(context: Context) : LynxModule(context) {
         }
         return null
     }
+
+    /**
+     * Enable trust-all certificate validation for HTTPS connections.
+     * Called from JS when `appConfig.insecureTls` is true (self-signed servers).
+     */
+    @LynxMethod
+    fun setInsecureTls(enabled: Boolean) {
+        if (enabled) {
+            try {
+                val trustAll = arrayOf<javax.net.ssl.TrustManager>(object : javax.net.ssl.X509TrustManager {
+                    override fun checkClientTrusted(chain: Array<java.security.cert.X509Certificate>?, authType: String?) {}
+                    override fun checkServerTrusted(chain: Array<java.security.cert.X509Certificate>?, authType: String?) {}
+                    override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
+                })
+                val sslContext = javax.net.ssl.SSLContext.getInstance("TLS")
+                sslContext.init(null, trustAll, java.security.SecureRandom())
+                javax.net.ssl.HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.socketFactory)
+                javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier { _, _ -> true }
+            } catch (_: Exception) {}
+        }
+    }
 }
