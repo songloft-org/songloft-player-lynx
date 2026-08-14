@@ -440,6 +440,11 @@
   margin-left: var(--space-3);
 }
 
+/* Current song highlight */
+.song-row--current .song-row__title {
+  color: var(--accent);
+}
+
 .library__list-item {
   width: 100%;
 }

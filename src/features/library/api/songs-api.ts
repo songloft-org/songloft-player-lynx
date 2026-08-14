@@ -264,6 +264,22 @@ export class SongsApi {
   async deletePlayHistoryEntry(songId: number): Promise<void> {
     await this.client.delete(`${apiPrefix}/play-history/entry?song_id=${songId}`)
   }
+
+  /**
+   * `POST /songs/{id}/played` — record a play event for history.
+   * Fire-and-forget (the store never awaits this). `contextType` / `contextKey`
+   * let the backend tag the source (e.g. `playlist` / `library`).
+   */
+  async recordPlayed(
+    songId: number,
+    contextType?: string,
+    contextKey?: string,
+  ): Promise<void> {
+    const body: Record<string, unknown> = {}
+    if (contextType) body.context_type = contextType
+    if (contextKey) body.context_key = contextKey
+    await this.client.post(`${apiPrefix}/songs/${songId}/played`, body)
+  }
 }
 
 /** Lyric endpoint payload (only the plain `lyric` field is used in batch 5). */

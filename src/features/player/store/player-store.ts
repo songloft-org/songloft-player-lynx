@@ -14,6 +14,7 @@ import {
 import { readNativeModules } from '../../../native/native-modules.js'
 import { getFavoriteState, toggleFavoriteNonReact } from '../../library/data/favorites.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
+import { getSongsApi } from '../../library/api/index.js'
 import { cyclePlayMode, resolveNext, resolvePrev, type PlayMode } from '../domain/play-mode.js'
 import { moveItem, removeAt } from '../domain/queue.js'
 import {
@@ -195,6 +196,9 @@ let _retryCount = 0
 // nullish argument, which is the crash the helper exists to prevent.
 let _retryTimer: ReturnType<typeof setTimeout> | null = null
 let _retrySongId: number | null = null
+/** Consecutive songs that failed and were skipped; reset on user action. */
+let _consecutiveSkips = 0
+const MAX_CONSECUTIVE_SKIPS = 3
 
 /**
  * Id of the song currently loaded into the audio engine, or null if the engine
@@ -219,6 +223,7 @@ function cancelRetry(): void {
   clearRetryTimer()
   _retryCount = 0
   _retrySongId = null
+  _consecutiveSkips = 0
 }
 
 function scheduleRetry(song: Song, positionMs: number): void {
@@ -227,8 +232,21 @@ function scheduleRetry(song: Song, positionMs: number): void {
     _retrySongId = song.id
   }
   const delay = RETRY_DELAYS_MS[_retryCount]
-  // Budget exhausted — leave `errorMessage` standing rather than retrying forever.
-  if (delay === undefined) return
+  // Budget exhausted — skip to the next song instead of freezing the queue.
+  // A single bad track (corrupt file, dead URL) used to leave `errorMessage`
+  // standing forever with no way forward except manual intervention. Flutter
+  // auto-skips up to 3 consecutive failures; we do the same.
+  if (delay === undefined) {
+    _consecutiveSkips += 1
+    if (_consecutiveSkips > MAX_CONSECUTIVE_SKIPS) return
+    // Find the next playable index via the same logic as `playNext`.
+    const s = usePlayerStore.getState()
+    const nextIdx = resolveNext(s.playMode, s.currentIndex, s.playlist.length)
+    if (nextIdx != null && nextIdx !== s.currentIndex) {
+      void usePlayerStore.getState().playNext()
+    }
+    return
+  }
   _retryCount += 1
 
   clearRetryTimer()
@@ -266,6 +284,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     _loadedSongId = song.id
     await audio.play()
     syncFavoriteToNative(song.id)
+    // Record the play event for history (fire-and-forget).
+    const playlistId = get().sourcePlaylistId
+    void getSongsApi().recordPlayed(
+      song.id,
+      playlistId != null ? 'playlist' : 'library',
+      playlistId != null ? String(playlistId) : undefined,
+    ).catch(() => {})
   }
 
   function stopSleepInterval(): void {

@@ -1,4 +1,5 @@
 import type { Song } from '../../../models/song.js'
+import { usePlayerStore } from '../../player/store/index.js'
 import { useFavoriteToggle } from '../data/favorites.js'
 import { SongRow } from './SongRow.js'
 
@@ -11,6 +12,7 @@ export interface FavoriteSongRowProps {
 
 export function FavoriteSongRow({ song, index, onTap, onLongPress }: FavoriteSongRowProps) {
   const { isFavorite, toggle } = useFavoriteToggle(song.id)
+  const currentSongId = usePlayerStore((s) => s.currentSong?.id)
   return (
     <SongRow
       song={song}
@@ -19,6 +21,7 @@ export function FavoriteSongRow({ song, index, onTap, onLongPress }: FavoriteSon
       onLongPress={onLongPress}
       isFavorite={isFavorite}
       onToggleFavorite={toggle}
+      isCurrentSong={currentSongId === song.id}
     />
   )
 }

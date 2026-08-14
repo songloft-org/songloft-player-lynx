@@ -172,6 +172,11 @@
   padding: var(--space-1);
 }
 
+/* Current song highlight */
+.song-row--current .song-row__title {
+  color: var(--accent);
+}
+
 /* Categories (facet grid) */
 .library__facets {
   display: flex;
