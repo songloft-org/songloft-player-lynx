@@ -1,7 +1,7 @@
 # 工作交接（2026-08-14）
 
 > 本文件是**给接手 AI 的交接说明**。读完这一篇就能继续干活；细节在链接里。
-> 一句话现状：**批41（三条 P0）+ 批42（一眼可见缺陷 13 条中的 12 条）已完成并提交，工作树干净、闸门全绿（900 vitest）**。剩 P1-12 一条小修、三条 P0、批43 结构性重构、批44 功能缺口。
+> 一句话现状：**批41（三条 P0）+ 批42（一眼可见缺陷 13 条全部）已完成并提交，工作树干净、闸门全绿（901 vitest）**。剩三条 P0、批43 结构性重构、批44 功能缺口。
 
 ---
 
@@ -44,7 +44,7 @@
 权威清单在 [`../plans/2026-08-14-audit-fix-plan.md`](../plans/2026-08-14-audit-fix-plan.md)，`bug.md` 是缺陷视角的同一份。下面是接手后实际要做的顺序：
 
 ### 立刻可做（小修）
-- **P1-12 多选状态跨搜索/筛选残留**（批42 唯一漏网）：`src/features/library/pages/LibraryPage.tsx:104` 的 `selected` 与 `filters`/`debouncedSearch` 无联动。加一个 `useEffect` 在筛选变化时清空（或求交集）。配回归测试。
+- **P1-12 多选状态跨搜索/筛选残留** ✅已完成（2026-08-14）：`src/features/library/pages/LibraryPage.tsx` 加 `useEffect` 在 `debouncedSearch`/`filterGenre`/`filterArtist`/`filterAlbum` 变化时清空 `selected`。配回归测试 `library-page.test.tsx`（901 vitest，摘掉修复即变红）。
 
 ### 批43 · 结构性（各自独立成批）
 - **P0-2 Web 没有声音**（最大的活）：`web-audio.ts` 是 dead code，worker realm 探测恒 false 落到 mock。改判断救不回来（`new Audio()` 等是主线程 API），正解是经 web-core `nativeModulesMap` 在主线程注册宿主 `SongloftAudio`，复用已测的 native 分支。它同时解锁 Web 的 `openURL`/文件选择。

@@ -1,4 +1,4 @@
-import { useMemo, useState } from '@lynx-js/react'
+import { useEffect, useMemo, useState } from '@lynx-js/react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -134,6 +134,13 @@ function SongsView() {
     if (filterAlbum) f.album = filterAlbum
     return f
   }, [sortField, debouncedSearch, filterGenre, filterArtist, filterAlbum])
+
+  // Clear multi-select when the visible song list changes (search / filter).
+  // Otherwise selected IDs from the previous result set linger and get added to
+  // playlists even though they are no longer visible.
+  useEffect(() => {
+    setSelected(new Set())
+  }, [debouncedSearch, filterGenre, filterArtist, filterAlbum])
 
   const query = useSongsInfiniteQuery(filters)
   const songs = flattenSongs(query.data?.pages)

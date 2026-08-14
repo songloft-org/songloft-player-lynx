@@ -21,6 +21,14 @@ const { songsHook, facetsHook, playlistsHook, navigateSpy, searchHook } = vi.hoi
   }),
 )
 
+// Captured onInput callbacks from filter Inputs so tests can simulate typing.
+// The default Input mock is a static placeholder — it never calls onInput.
+// We capture the real handlers here so the regression test for P1-12 can
+// trigger a filter change and assert the multi-select is cleared.
+const { filterInputs } = vi.hoisted(() => ({
+  filterInputs: [] as Array<{ placeholder: string; onInput: (v: string) => void }>,
+}))
+
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
@@ -62,9 +70,26 @@ vi.mock('../widgets/FavoriteSongRow.js', async () => {
   return { FavoriteSongRow: SongRow }
 })
 
-vi.mock('@lynx-js/lynx-ui-input', async () =>
-  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
-)
+vi.mock('@lynx-js/lynx-ui-input', () => ({
+  Input: (props: Record<string, unknown>) => {
+    // Capture onInput callbacks so tests can simulate filter/search input.
+    // The default mock from _render-mocks is a static placeholder — it never
+    // calls onInput, which makes it impossible to test state changes triggered
+    // by user typing. This wrapper pushes every onInput-bearing Input into
+    // the hoisted array; tests find the one they need by placeholder text.
+    if (typeof props.onInput === 'function') {
+      filterInputs.push({
+        placeholder: props.placeholder as string,
+        onInput: props.onInput as (v: string) => void,
+      })
+    }
+    return (
+      <view className={props.className as string}>
+        <text>{(props.value || props.placeholder) as string}</text>
+      </view>
+    )
+  },
+}))
 
 vi.mock('../data/use-debounce.js', () => ({
   useDebounce: <T,>(value: T, _delay: number): T => value,
@@ -144,6 +169,7 @@ beforeEach(() => {
   facetsHook.mockReturnValue(facetsResult([{ facets: [], total: 0 }]))
   playlistsHook.mockReturnValue(playlistsResult([{ playlists: [], total: 0 }]))
   searchHook.mockReturnValue({})
+  filterInputs.length = 0
 })
 
 afterEach(() => {
@@ -288,4 +314,47 @@ test('tapping a tab navigates to /library with the view search param (URL-driven
     to: '/library',
     search: { view: 'facets' },
   })
+})
+
+// P1-12 regression: multi-select must clear when the visible song list changes
+// (search or filter). Without the useEffect, selected IDs from the previous
+// result set linger and get added to playlists even though they are no longer
+// visible. To verify "remove fix → turns red": comment out the useEffect in
+// LibraryPage.tsx and this test will fail — the toolbar still shows "1 selected"
+// after the filter change.
+test('multi-select is cleared when a filter changes', async () => {
+  songsHook.mockReturnValue(
+    songsResult([
+      {
+        songs: [makeSong(1, { title: 'Track A' }), makeSong(2, { title: 'Track B' })],
+        total: 2,
+      },
+    ]),
+  )
+  const { getByText, queryByText } = await renderPage()
+
+  // Enter select mode.
+  await act(async () => {
+    fireEvent.tap(getByText('Select'))
+  })
+
+  // Tap a song row to select it.
+  await act(async () => {
+    fireEvent.tap(getByText('Track A'))
+  })
+
+  // Toolbar shows the selected count.
+  expect(queryByText('1 selected')).toBeInTheDocument()
+
+  // Simulate typing in the Genre filter input.
+  const genreInput = filterInputs.find(
+    (i) => i.placeholder === 'Genre',
+  )
+  expect(genreInput).toBeDefined()
+  await act(async () => {
+    genreInput!.onInput('Rock')
+  })
+
+  // The useEffect should have cleared the selection — toolbar must be gone.
+  expect(queryByText('1 selected')).not.toBeInTheDocument()
 })

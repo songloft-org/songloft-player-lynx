@@ -57,7 +57,7 @@
 - [x] **HTTP 请求没有任何超时**（批42 已修）—— `TransportRequest` 加 `timeoutMs`，AbortController + `Promise.race`，新增 `HttpTimeoutError`
 - [x] **收藏歌单 ID 拉取可能死循环刷请求**（批42 已修）—— 空页即停 + 200 页兜底
 - [x] **升级进度轮询在后端重启后永不停止**（批42 已修）—— 容忍 15 次失败后落终态；顺带修 error 只在 `!checkResult` 时渲染的第二处问题
-- [ ] **多选状态跨搜索/筛选残留** 🔍待复核 —— `LibraryPage.tsx:104` 的 `selected` 与 `filters` 无联动，会把屏幕上不存在的歌加进歌单（**批42 唯一未修项**）
+- [x] **多选状态跨搜索/筛选残留** 🔍待复核 —— `LibraryPage.tsx:104` 的 `selected` 与 `filters` 无联动，会把屏幕上不存在的歌加进歌单（**批42 唯一未修项**）
 - [x] **队列有重复歌曲时拖动排序把「当前播放」钉错**（批42 已修）—— `indexOf` 按对象身份改纯下标算术
 - [x] **iOS Live Activity 重复 start 泄漏锁屏卡片**（批42 已修 JS 侧）—— 补 in-flight 标记 + 空 id 闭锁；⚠️ iOS 原生模块本身还没注册为 Lynx 模块（见 P2），接通后才能真机验
 
