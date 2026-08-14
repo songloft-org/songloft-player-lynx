@@ -27,6 +27,8 @@ export interface ServerStoreState {
   editProfile: (id: string, patch: { name?: string; url?: string; insecureTls?: boolean }) => Promise<void>
   removeProfile: (id: string) => Promise<void>
   switchTo: (id: string) => Promise<{ hasToken: boolean }>
+  /** Probe a server URL to see if it's reachable (returns true/false). */
+  probeProfile: (url: string) => Promise<boolean>
 }
 
 function persistProfiles(profiles: ServerProfile[], activeId: string | null) {
@@ -60,7 +62,30 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
       if (rawProfiles) {
         const parsed = ServerProfileList.safeParse(JSON.parse(rawProfiles))
         if (parsed.success) {
-          set({ profiles: parsed.data, activeProfileId: activeId })
+          const profiles = parsed.data
+          set({ profiles, activeProfileId: activeId })
+
+          // Auto-probe: if the active profile is unreachable, try others.
+          if (activeId && profiles.length > 1) {
+            const active = profiles.find((p) => p.id === activeId)
+            if (active) {
+              const reachable = await get().probeProfile(active.url)
+              if (!reachable) {
+                // Try each other profile in parallel (capped at 2.5s total).
+                const others = profiles.filter((p) => p.id !== activeId)
+                const results = await Promise.all(
+                  others.map(async (p) => ({
+                    id: p.id,
+                    reachable: await get().probeProfile(p.url),
+                  })),
+                )
+                const firstReachable = results.find((r) => r.reachable)
+                if (firstReachable) {
+                  await get().switchTo(firstReachable.id)
+                }
+              }
+            }
+          }
           return
         }
       }
@@ -186,5 +211,20 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
     try { getQueryClient().clear() } catch { /* */ }
 
     return { hasToken }
+  },
+
+  async probeProfile(url: string) {
+    try {
+      const normalized = normalizeServerUrl(url)
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 2500)
+      const resp = await fetch(`${normalized}/api/v1/health`, {
+        signal: controller.signal,
+      })
+      clearTimeout(timer)
+      return resp.ok
+    } catch {
+      return false
+    }
   },
 }))
