@@ -53,6 +53,10 @@ async function getProgress(): Promise<UpgradeProgress> {
   }
 }
 
+const POLL_INTERVAL_MS = 2000
+/** ~30s of consecutive failures — long enough for a real backend restart. */
+const MAX_POLL_FAILURES = 15
+
 export function UpgradePage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -70,18 +74,39 @@ export function UpgradePage() {
       .finally(() => setChecking(false))
   }, [])
 
+  /**
+   * Poll the backend's own upgrade progress.
+   *
+   * The request is expected to fail for a while: `replacing`/`restarting` means
+   * the server we are polling is being replaced under us. So failures cannot be
+   * fatal — but they cannot be ignored either. Previously this was a bare
+   * `void getProgress().then(…)`: on a backend that never came back, every tick
+   * raised an unhandled rejection, `upgrading` stayed true forever, and the UI
+   * sat on the last known percentage with no conclusion. Tolerate a restart-sized
+   * outage, then give up with an actionable message.
+   */
   useEffect(() => {
     if (!upgrading) return
+    let failures = 0
     const timer = setInterval(() => {
-      void getProgress().then(p => {
-        setProgress(p)
-        if (p.status === 'completed' || p.status === 'failed') {
-          setUpgrading(false)
-        }
-      })
-    }, 2000)
+      void getProgress()
+        .then(p => {
+          failures = 0
+          setProgress(p)
+          if (p.status === 'completed' || p.status === 'failed') {
+            setUpgrading(false)
+          }
+        })
+        .catch(() => {
+          failures += 1
+          if (failures >= MAX_POLL_FAILURES) {
+            setUpgrading(false)
+            setError(t('upgrade.progressLost'))
+          }
+        })
+    }, POLL_INTERVAL_MS)
     return () => clearInterval(timer)
-  }, [upgrading])
+  }, [upgrading, t])
 
   const onStartUpgrade = () => {
     setUpgrading(true)
@@ -139,7 +164,11 @@ export function UpgradePage() {
                     {checkResult.changelog
                       ? <text className='upgrade-page__changelog'>{checkResult.changelog}</text>
                       : null}
-                    <view className='upgrade-page__btn' bindtap={onStartUpgrade}>
+                    <view
+                      className='upgrade-page__btn'
+                      bindtap={onStartUpgrade}
+                      data-testid='upgrade-start'
+                    >
                       <text className='upgrade-page__btn-text'>{t('upgrade.start')}</text>
                     </view>
                   </view>
@@ -157,6 +186,16 @@ export function UpgradePage() {
               <text className='upgrade-page__progress-pct'>{progress.progress}%</text>
             </view>
           )
+          : null}
+
+        {/*
+          Errors raised *after* a successful version check need their own slot:
+          the branch above only renders `error` when `!checkResult`, so both the
+          "start upgrade failed" and "lost contact while polling" messages were
+          set into state and then never shown to anyone.
+        */}
+        {error && checkResult
+          ? <text className='upgrade-page__state upgrade-page__state--error'>{error}</text>
           : null}
 
         {progress?.status === 'completed'

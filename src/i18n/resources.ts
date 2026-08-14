@@ -15,6 +15,7 @@ export const en = {
     loading: 'Loading…',
     loadingMore: 'Loading more…',
     retry: 'Retry',
+    cancel: 'Cancel',
     unknown: 'Unknown',
     untitled: 'Untitled',
     songCountOne: '{{count}} song',
@@ -336,6 +337,7 @@ export const en = {
     restarting: 'Restarting…',
     completed: 'Update complete',
     failed: 'Update failed',
+    progressLost: 'Lost contact with the server while updating. It may still be restarting — reopen this page to check.',
   },
   themePacks: {
     title: 'Theme Packs',
@@ -548,6 +550,7 @@ export const zh: TranslationTree = {
     loading: '加载中…',
     loadingMore: '加载更多…',
     retry: '重试',
+    cancel: '取消',
     unknown: '未知',
     untitled: '未命名',
     songCountOne: '{{count}} 首',
@@ -865,6 +868,7 @@ export const zh: TranslationTree = {
     restarting: '重启中…',
     completed: '更新完成',
     failed: '更新失败',
+    progressLost: '更新过程中与服务器失去联系。它可能仍在重启——重新打开本页查看结果。',
   },
   themePacks: {
     title: '主题包',

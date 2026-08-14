@@ -82,12 +82,34 @@ export function moveItem(
   ) {
     return { playlist, currentIndex, currentSong: songAt(playlist, currentIndex) }
   }
-  const pinned = songAt(playlist, currentIndex)
   const next = [...playlist]
   const [moved] = next.splice(from, 1)
   next.splice(to, 0, moved)
-  const newIndex = pinned ? next.indexOf(pinned) : currentIndex
+  const newIndex = indexAfterMove(currentIndex, from, to)
   return { playlist: next, currentIndex: newIndex, currentSong: songAt(next, newIndex) }
+}
+
+/**
+ * Where `currentIndex` lands after moving `from` → `to`, derived from the indices
+ * alone.
+ *
+ * This used to be `next.indexOf(pinned)`, i.e. locate the playing song by object
+ * identity. The same `Song` object legitimately appears twice in a queue — "add
+ * to queue" on a song already queued pushes the very same reference — and
+ * `indexOf` then always reports the *first* copy. Reordering with a duplicate
+ * present would silently re-pin `currentIndex` to the wrong entry, so progress
+ * and the now-playing highlight drifted onto a different row than the audio.
+ *
+ * Arithmetic has no such ambiguity. An out-of-range `currentIndex` (notably -1,
+ * "nothing playing") is passed through untouched.
+ */
+function indexAfterMove(currentIndex: number, from: number, to: number): number {
+  if (currentIndex < 0) return currentIndex
+  if (currentIndex === from) return to
+  // Removing an earlier item shifts us down; re-inserting at/before us shifts us back up.
+  if (from < currentIndex) return to >= currentIndex ? currentIndex - 1 : currentIndex
+  // Removing a later item leaves us put; inserting at/before us pushes us down.
+  return to <= currentIndex ? currentIndex + 1 : currentIndex
 }
 
 /**

@@ -55,3 +55,41 @@ describe('getFavoriteState', () => {
     expect(await getFavoriteState(1)).toBe(false)
   })
 })
+
+/**
+ * `fetchFavoriteSongIds` pages until it has `total` ids. Counting alone is not a
+ * termination guarantee: whenever the server reports more rows than it returns
+ * — a join row outliving its deleted song, a filtered page, an offset past the
+ * end — the loop never satisfies its exit and re-requests forever. And because
+ * `getFavoriteState` runs on **every track change**, the symptom is a permanent
+ * request storm, not one stuck call. Stopping on an empty page is the real fix.
+ */
+describe('favorite id paging terminates on bad server data', () => {
+  test('a short page against an inflated total stops instead of looping', async () => {
+    // Server claims 500 favorites but only ever returns these two, then nothing.
+    mockApi.getPlaylistSongs
+      .mockResolvedValueOnce({ songs: [{ id: 1 }, { id: 2 }], total: 500 })
+      .mockResolvedValue({ songs: [], total: 500 })
+
+    expect(await getFavoriteState(1)).toBe(true)
+    expect(await getFavoriteState(99)).toBe(false)
+    // Page 1 had rows, page 2 was empty and ended it. Anything more means looping.
+    expect(mockApi.getPlaylistSongs).toHaveBeenCalledTimes(2)
+  })
+
+  test('an immediately empty page does not request again', async () => {
+    mockApi.getPlaylistSongs.mockResolvedValue({ songs: [], total: 42 })
+
+    expect(await getFavoriteState(1)).toBe(false)
+    expect(mockApi.getPlaylistSongs).toHaveBeenCalledTimes(1)
+  })
+
+  test('genuine multi-page favorites are still read to the end', async () => {
+    mockApi.getPlaylistSongs
+      .mockResolvedValueOnce({ songs: [{ id: 1 }, { id: 2 }], total: 3 })
+      .mockResolvedValueOnce({ songs: [{ id: 7 }], total: 3 })
+
+    expect(await getFavoriteState(7)).toBe(true)
+    expect(mockApi.getPlaylistSongs).toHaveBeenCalledTimes(2)
+  })
+})

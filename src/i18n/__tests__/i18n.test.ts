@@ -1,3 +1,6 @@
+import { readFileSync, readdirSync } from 'node:fs'
+import path from 'node:path'
+
 import { afterEach, describe, expect, test } from 'vitest'
 
 import { createMemoryStorage } from '../../core/storage/index.js'
@@ -53,6 +56,47 @@ describe('resource completeness', () => {
   test('resources map wires each language under the default `translation` namespace', () => {
     expect(resources.en.translation).toBe(en)
     expect(resources.zh.translation).toBe(zh)
+  })
+
+  /**
+   * The two checks above only prove en and zh agree with *each other*. A key that
+   * exists in neither slips through both, and i18next renders the key name — so
+   * the logout dialog's cancel button literally read `common.cancel` on screen,
+   * in both languages, until an audit spotted it.
+   *
+   * This walks the source for literal `t('…')` calls and requires each key to
+   * exist. Template-literal keys (built at runtime) cannot be resolved statically
+   * and are listed in `DYNAMIC_KEY_PREFIXES`; their leaves are covered by the
+   * shape tests above.
+   */
+  test('every literal t() key in src/ exists in the resource tree', () => {
+    const DYNAMIC_KEY_PREFIXES = ['settings.quality_', 'eq.preset_']
+    const defined = new Set(flattenKeys(en))
+    const srcDir = path.resolve(__dirname, '..', '..')
+
+    const files: string[] = []
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name)
+        if (entry.isDirectory()) walk(full)
+        else if (/\.tsx?$/.test(entry.name)) files.push(full)
+      }
+    }
+    walk(srcDir)
+
+    const missing: string[] = []
+    for (const file of files) {
+      const source = readFileSync(file, 'utf8')
+      for (const match of source.matchAll(/\bt\(\s*'([a-zA-Z0-9_.]+)'/g)) {
+        const key = match[1]!
+        if (defined.has(key)) continue
+        if (DYNAMIC_KEY_PREFIXES.some((p) => key.startsWith(p))) continue
+        missing.push(`${path.relative(srcDir, file)}: t('${key}')`)
+      }
+    }
+
+    expect(files.length, 'no sources scanned — the walk is broken').toBeGreaterThan(100)
+    expect(missing, 'these keys render as their own name in the UI').toEqual([])
   })
 })
 

@@ -8,18 +8,35 @@ import { getPlaylistApi } from '../../playlist/api/index.js'
 const FAV_QUERY_KEY = ['favorites', 'songIds'] as const
 const FAV_STALE_TIME_MS = 60_000
 
+/** Hard cap on pages, so a bad `total` can never spin forever. 200 × 200 songs. */
+const FAV_MAX_PAGES = 200
+
+/**
+ * Every favorited song id, paged out of the built-in Favorites playlist.
+ *
+ * The loop needs two exits, not one. Counting against `res.total` alone
+ * deadlocks whenever the server reports more rows than it hands back — a join
+ * row surviving its deleted song, a filtered page, an offset past the end — and
+ * this runs on **every track change** (`getFavoriteState`), so the failure mode
+ * is an endless request storm rather than a single stuck call. Stopping on an
+ * empty page is the real termination guarantee; `FAV_MAX_PAGES` is the backstop.
+ */
 async function fetchFavoriteSongIds(): Promise<Set<number>> {
   const api = getPlaylistApi()
-  const pages: number[] = []
-  let offset = 0
+  const ids: number[] = []
   const limit = 200
-  for (;;) {
-    const res = await api.getPlaylistSongs(Number(favoritePlaylistId), {}, { offset, limit })
-    for (const s of res.songs) pages.push(s.id)
-    if (pages.length >= res.total) break
-    offset += limit
+  for (let page = 0; page < FAV_MAX_PAGES; page += 1) {
+    const res = await api.getPlaylistSongs(
+      Number(favoritePlaylistId),
+      {},
+      { offset: page * limit, limit },
+    )
+    // No progress ⇒ nothing left to read, whatever `total` claims.
+    if (res.songs.length === 0) break
+    for (const s of res.songs) ids.push(s.id)
+    if (ids.length >= res.total) break
   }
-  return new Set(pages)
+  return new Set(ids)
 }
 
 function useFavoriteSongIds() {
