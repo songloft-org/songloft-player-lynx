@@ -4,6 +4,7 @@ import {
   receiveTimeoutMs,
 } from '../config/app-config.js'
 import { appConfig } from '../config/app-config.js'
+import { safeClearTimeout } from '../../native/safe-timers.js'
 
 /**
  * Transport-agnostic HTTP layer.
@@ -18,6 +19,11 @@ import { appConfig } from '../config/app-config.js'
 export interface TransportRequest {
   url: string
   method: string
+  /**
+   * Abandon the request after this many ms. Optional so injected transports
+   * (tests, custom hosts) may ignore it; `createFetchTransport` honours it.
+   */
+  timeoutMs?: number
   headers: Record<string, string>
   body?: string
 }
@@ -39,9 +45,39 @@ type FetchLike = (
   text: () => Promise<string>
 }>
 
+/** Thrown when a request exceeds its `timeoutMs`. Distinct from `ApiError`: there is no HTTP status. */
+export class HttpTimeoutError extends Error {
+  readonly timeoutMs: number
+  constructor(timeoutMs: number, url: string) {
+    super(`[http] request timed out after ${timeoutMs}ms: ${url}`)
+    this.name = 'HttpTimeoutError'
+    this.timeoutMs = timeoutMs
+  }
+}
+
+/** A best-effort `AbortController`; the banner polyfill has no real abort. */
+function newAbortController(): { signal?: unknown; abort?: () => void } | null {
+  const Ctor = (globalThis as { AbortController?: new () => { signal?: unknown; abort?: () => void } })
+    .AbortController
+  if (typeof Ctor !== 'function') return null
+  try {
+    return new Ctor()
+  } catch {
+    return null
+  }
+}
+
 /**
  * Default transport over `globalThis.fetch` (or an injected `fetch`). Resolves
  * `fetch` on each call; throws a clear error when it is missing.
+ *
+ * **Timeouts.** `HttpClient` passes `timeoutMs` through; without it a server that
+ * accepts the connection and then never answers (firewall DROP, wedged backend,
+ * black-hole proxy) leaves the promise pending forever — the spinner never stops
+ * and there is no error to offer a retry against. `signal` is passed so hosts
+ * that support it free the socket, but the `Promise.race` is what guarantees the
+ * promise settles: Lynx's host `fetch` may ignore `signal`, and the banner's
+ * `AbortController` polyfill cannot actually abort anything.
  */
 export function createFetchTransport(fetchImpl?: FetchLike): Transport {
   return async (req) => {
@@ -57,11 +93,38 @@ export function createFetchTransport(fetchImpl?: FetchLike): Transport {
         '[http] no fetch available — 待接 Lynx fetch（注入 Transport 或提供宿主 fetch）',
       )
     }
-    const res = await f(req.url, {
-      method: req.method,
-      headers: req.headers,
-      body: req.body,
-    })
+    const controller = req.timeoutMs && req.timeoutMs > 0 ? newAbortController() : null
+    const send = (): Promise<Awaited<ReturnType<FetchLike>>> =>
+      f(req.url, {
+        method: req.method,
+        headers: req.headers,
+        body: req.body,
+        ...(controller?.signal != null ? { signal: controller.signal } : {}),
+      })
+
+    let res: Awaited<ReturnType<FetchLike>>
+    if (req.timeoutMs && req.timeoutMs > 0) {
+      const timeoutMs = req.timeoutMs
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const expiry = new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => {
+          try {
+            controller?.abort?.()
+          } catch {
+            // a polyfilled controller may not implement abort
+          }
+          reject(new HttpTimeoutError(timeoutMs, req.url))
+        }, timeoutMs)
+      })
+      try {
+        res = await Promise.race([send(), expiry])
+      } finally {
+        safeClearTimeout(timer as unknown as number)
+      }
+    } else {
+      res = await send()
+    }
+
     const headers: Record<string, string> = {}
     res.headers?.forEach?.((value, key) => {
       headers[key] = value
@@ -153,7 +216,13 @@ export class HttpClient {
   private readonly getBasePath: () => string
   private readonly defaultHeaders: Record<string, string>
   private readonly interceptor: HttpInterceptor | null
+  /**
+   * Kept for parity with the Flutter client's Dio options, but **not enforced**:
+   * neither `fetch` nor Lynx's host HTTP service exposes a connect phase separate
+   * from the response, so `receiveTimeoutMs` is the only deadline we can apply.
+   */
   readonly connectTimeoutMs: number
+  /** Whole-request deadline, enforced by `createFetchTransport`. */
   readonly receiveTimeoutMs: number
 
   constructor(options: HttpClientOptions) {
@@ -188,8 +257,16 @@ export class HttpClient {
     if (useInterceptor) await this.interceptor!.onRequest?.(ctx)
 
     const url = this.buildUrl(path, options.query)
+    // `receiveTimeoutMs` was read into a field and then never used — every request
+    // could hang forever. Pass it to the transport so the promise always settles.
     const send = (h: Record<string, string>): Promise<TransportResponse> =>
-      this.transport({ url, method, headers: h, body: bodyStr })
+      this.transport({
+        url,
+        method,
+        headers: h,
+        body: bodyStr,
+        timeoutMs: this.receiveTimeoutMs,
+      })
 
     let res = await send(ctx.headers)
 

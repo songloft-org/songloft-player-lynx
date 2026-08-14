@@ -41,6 +41,7 @@ vi.mock('../../auth/store/index.js', () => ({
 }))
 
 const { useServerStore } = await import('../store/server-store.js')
+const { TokenStore } = await import('../../../core/network/token-store.js')
 
 beforeEach(() => {
   useServerStore.setState({ profiles: [], activeProfileId: null })
@@ -108,6 +109,42 @@ describe('switchTo', () => {
     // Loaded incoming tokens
     expect(storageMock.secure.set).toHaveBeenCalledWith('access_token', 'tok_a2')
     expect(storageMock.secure.set).toHaveBeenCalledWith('refresh_token', 'tok_r2')
+  })
+
+  /**
+   * The assertions above only prove tokens were written to storage. The client
+   * does not read storage on every request — each `TokenStore` caches the access
+   * token in memory and short-circuits on it, so writing behind its back changed
+   * nothing: requests kept going to the new server carrying the OLD server's
+   * token → 401 → refresh with the old refresh token → fail → logout, which also
+   * wiped the tokens the new profile legitimately had. Assert through a real
+   * TokenStore, not through the storage spy.
+   */
+  test('a live TokenStore sees the target profile token, not the cached one', async () => {
+    const p1 = await useServerStore.getState().addProfile({ name: 'S1', url: 'http://s1' })
+    const p2 = await useServerStore.getState().addProfile({ name: 'S2', url: 'http://s2' })
+    useServerStore.setState({ activeProfileId: p1.id })
+
+    const stored = new Map<string, string>([
+      ['access_token', 'tok_a'],
+      ['refresh_token', 'tok_r'],
+      [`token_access_${p2.id}`, 'tok_a2'],
+      [`token_refresh_${p2.id}`, 'tok_r2'],
+    ])
+    storageMock.secure.get.mockImplementation(async (key: string) => stored.get(key) ?? null)
+    storageMock.secure.set.mockImplementation(async (key: string, value: string) => {
+      stored.set(key, value)
+    })
+
+    // A store that has already served a request for the OLD profile, so its
+    // in-memory cache holds tok_a.
+    const tokens = new TokenStore()
+    expect(await tokens.getAccessToken()).toBe('tok_a')
+
+    await useServerStore.getState().switchTo(p2.id)
+
+    expect(await tokens.getAccessToken()).toBe('tok_a2')
+    expect(await tokens.getRefreshToken()).toBe('tok_r2')
   })
 
   test('returns hasToken=false when target has no tokens', async () => {
