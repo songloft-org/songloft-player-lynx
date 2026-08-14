@@ -59,5 +59,9 @@ android/key.properties
 # E2E test artifacts (reports + screenshots — generated per run, not versioned)
 e2e/reports/
 e2e/screenshots/
+
+# Scratch plans (agent working notes). Anchored to the repo root ON PURPOSE:
+# a bare `plans/` matches at ANY depth and silently swallowed `docs/plans/`,
+# which IS versioned. Durable plans belong in docs/plans/.
 .claude/plans/
-plans/
+/plans/

@@ -8,7 +8,7 @@
 > - **P3 平台特性** 🔶 进行中（EQ 双端 DSP 完成；DLNA/歌词/Live Activity/桌面待做）
 > - **P4 双轨发布** ⬜ 未开始
 >
-> 见 [README.md](./README.md) 了解详细状态。
+> 见 [docs/README.md](../README.md) 了解详细状态。
 
 > 本文档为迁移调研第 4 篇。分阶段路线，每阶段给出目标、范围、**可验证的退出判据**、以及「不通过则回退」的决策点。总览见 [lynx_migration_overview.md](./lynx_migration_overview.md)，能力对照见 [lynx_capability_matrix.md](./lynx_capability_matrix.md)，原生模块见 [lynx_native_modules_spec.md](./lynx_native_modules_spec.md)。
 >

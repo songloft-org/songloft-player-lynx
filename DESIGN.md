@@ -1,6 +1,9 @@
 # Songloft Player — Muse 设计语言
 
-> 本文件记录应用当前采用的 **Muse** 设计规范。Muse 是围绕「单色强调 + 极致留白 + 线性图标」构建的套壳式设计语言，脱胎于对 LUNA 紫色体系的全面重构（2025-08）。
+> 本文件记录应用当前采用的 **Muse** 设计规范。Muse 是围绕「单色强调 + 极致留白 + 线性图标」构建的套壳式设计语言，脱胎于对 LUNA 紫色体系的全面重构（2026-08，commit `65aacf5`）。
+>
+> 落地位置：`src/shared/theme/tokens.css`（token 定义）+ `ThemeProvider`（`theme-root theme-dark` / `theme-light` 两套色值）。
+> ⚠️ **源码注释里仍有 18 个文件写着「LUNA tokens only」**，那是重构前的旧称，指的就是本文档的 Muse token 体系——术语待统一，不影响行为。
 
 ---
 

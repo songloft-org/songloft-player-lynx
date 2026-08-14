@@ -1,7 +1,7 @@
 # Songloft Player：Flutter → Lynx 能力对照矩阵
 
 > **⚠️ 文档性质：预研阶段参考**
-> 本文档产出于迁移启动前。核心能力（音频/存储/网络/鉴权/UI 组件）已在 Android + iOS 实现并验证。剩余未实现项：桌面端(Lynxtron)、DLNA、Live Activity、悬浮歌词。当前实际状态见 [README.md](./README.md)。
+> 本文档产出于迁移启动前。核心能力（音频/存储/网络/鉴权/UI 组件）已在 Android + iOS 实现并验证。剩余未实现项：桌面端(Lynxtron)、视频播放(`is_video`)、DLNA、Live Activity、悬浮歌词——后三项已有代码但 2026-08-14 审计核实**从未跑通**（详见 [修复计划](../plans/2026-08-14-audit-fix-plan.md)）。当前实际状态见 [docs/README.md](../README.md)。
 
 > 本文档为迁移调研第 2 篇。逐项列出现有 Flutter 实现 → Lynx 侧方案 → 平台可用性 → 工作量档位 → 风险等级。总览见 [lynx_migration_overview.md](./lynx_migration_overview.md)，自研原生能力接口草案见 [lynx_native_modules_spec.md](./lynx_native_modules_spec.md)，路线见 [lynx_migration_roadmap.md](./lynx_migration_roadmap.md)。
 >
