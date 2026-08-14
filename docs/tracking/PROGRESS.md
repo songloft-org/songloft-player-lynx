@@ -1,7 +1,8 @@
 # 进展与交接（PROGRESS）
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
-> **最后更新**：2026-08-14 · 最近完成（**批38** 歌单多选批量操作/EQ动画，**批37** 拼音排序/加载慢提示/封面上传/开源许可页，**批36** Library电台子视图/宽屏首页网格/音量均衡开关 + web下拉刷新修复，**批34** 歌词自动滚动/后端更新/版本显示/高级筛选/歌曲详情编辑/清理无效歌曲/歌词编辑/网络歌曲导入/电台导入/标签写入/搜索建议，**批33** 文档重构/插件bug修复/Tab即时生效/日志直接下载/歌单搜索/多选操作/灰层修复/iOS图标/长按菜单/主题包管理）。
+> **最后更新**：2026-08-14 · 最近完成（**批39** DLNA原生模块/不安全TLS生效，**批38** 歌单多选批量操作/EQ动画，**批37** 拼音排序/加载慢提示/封面上传/开源许可页，**批36** Library电台子视图/宽屏首页网格/音量均衡开关 + web下拉刷新修复，**批34** 歌词自动滚动/后端更新/版本显示/高级筛选/歌曲详情编辑/清理无效歌曲/歌词编辑/网络歌曲导入/电台导入/标签写入/搜索建议，**批33** 文档重构/插件bug修复/Tab即时生效/日志直接下载/歌单搜索/多选操作/灰层修复/iOS图标/长按菜单/主题包管理）。
+> **批39**：3项原生功能。① **Android DLNA 模块**：`SongloftDlnaModule.kt`，SSDP M-SEARCH 发现 + SOAP AVTransport 控制（SetAVTransportURI/Play/Pause/Stop/Seek），注册为 `NativeModules.SongloftDlna`。② **iOS DLNA 模块**：`SongloftDlnaModule.swift`，NWConnection UDP 多播发现 + 同样 SOAP 控制。③ **不安全 TLS 生效**：`network_security_config.xml` 信任用户证书 + `setInsecureTls` 运行时设置 trust-all SSLSocketFactory，auth-store hydration/login 时调用。build 1792.7 kB / tsc / 824 vitest 全绿。
 > **批38**：3项功能。① **歌单详情页多选批量移除**：Select 按钮 + 复选框 + 底部 toolbar 批量移除选中歌曲。② **歌单列表多选批量删除**：选择图标 + 卡片徽章 + 两步确认批量删除（内置歌单保护）。③ **EQ bars 动画**：正在播放的歌单卡片封面左下角 4 杆 CSS keyframe 跳动动画。build 1792.5 kB / tsc / 824 vitest 全绿。
 > **批37**：4项功能。① **拼音排序**：`src/shared/sort/pinyin-compare.ts`（localeCompare('zh') + 数字前缀感知），PlaylistsView「A-Z」按钮一键按拼音重排歌单。② **首页加载慢提示**：首次加载 >5s 后显示「加载时间较长」+ 重试按钮。③ **歌单封面上传**：PlaylistDetailPage 封面区「+」覆盖按钮，复用原生 multipart 通道 → `POST /playlists/{id}/cover`。④ **开源许可页**：`/settings/licenses` 列出运行时依赖及许可证类型，Settings About 区入口。build 1776.3 kB / tsc / 824 vitest 全绿。
 > **批36**：3项功能 + 1修复。① **Library 电台子视图**：`PlaylistsView` 接受 `type` prop，Library 新增 Radio tab，首页电台 View all 独立导航。② **宽屏首页网格布局**：平板/桌面（≥600px）下 HomeSection 改为 3 列网格（9 张卡片），移动端保持横向滚动。③ **音量均衡开关**：Settings Playback 区 normalize toggle，`buildSongUrl` 追加 `normalize=1`，持久化到本地 prefs。④ **web 下拉刷新修复**：`enable-refresh={!isWeb}` 解决 IntersectionObserver 导致指示器永久显示。build 1764.7 kB / tsc / 811 vitest 全绿。
@@ -95,6 +96,7 @@ Flutter 版 → Lynx 客户端的整体重写，按 `plan.md` / `docs/lynx_migra
 | 36 | **Library 电台子视图 + 宽屏首页网格 + 音量均衡开关** | ✅ 完成 | build（1764.7 kB）/tsc/**811 vitest** 全绿 | 待验证 |
 | 37 | **拼音排序 + 加载慢提示 + 封面上传 + 开源许可页** | ✅ 完成 | build（1776.3 kB）/tsc/**824 vitest** 全绿 | 待验证 |
 | 38 | **歌单多选批量操作 + EQ bars 动画** | ✅ 完成 | build（1792.5 kB）/tsc/**824 vitest** 全绿 | 待验证 |
+| 39 | **DLNA 原生模块 + 不安全 TLS 生效** | ✅ 完成 | build（1792.7 kB）/tsc/**824 vitest** 全绿 | 需真机验证 |
 | 后续 | Lynxtron 桌面 | ⛔ 未开始 | | |
 
 ## 已交付明细
