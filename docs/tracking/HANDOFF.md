@@ -1,7 +1,7 @@
 # 工作交接（2026-08-14）
 
 > 本文件是**给接手 AI 的交接说明**。读完这一篇就能继续干活；细节在链接里。
-> 一句话现状：**批41（三条 P0）+ 批42（13 条全部）+ 批43 P0 三条（Web 音频/宿主页/后端地址）+ P2-1（TokenStore 收口）已完成并提交，工作树干净、闸门全绿（902 vitest）**。剩批43 P2-3（原生模块补齐）、批44 功能缺口。
+> 一句话现状：**批41 + 批42 + 批43 全部完成，工作树干净、闸门全绿（932 vitest）**。剩批44 功能缺口。
 
 ---
 
@@ -51,7 +51,7 @@
 - **P0-4 embedded 无宿主页** ✅已完成（2026-08-14）：`copy-bundle-web.mjs` 移除 `if (!isEmbedded)` 守卫，embedded 也拷贝 index.html；`app-config.ts` 自动检测 Web 平台设 `deployMode='embedded'` 隐藏 API 地址字段。
 - **P0-5 后端地址硬编码 localhost** ✅已完成（2026-08-14）：`app-config.ts` 用 `self.location.origin` 自动检测 Web 平台 serving origin 作为默认 base URL。Lynx 原生回退 `localhost:58091`。
 - **P2-1 TokenStore/Interceptor 收口单例** ✅已完成（2026-08-14）：`getSharedApiBundle()` 进程级单例，5 个 feature API 全部改用共享 bundle。`token-store.ts` 移除 `liveStores` + `invalidateTokenCaches()`。`server-store` 改为 `getSharedTokenStore().invalidateCache()`。
-- **P2-3 原生模块补齐**：悬浮歌词（Android 未注册）、Live Activity（iOS 不是 Lynx 模块）、契约闸门扩到批35+ 模块。**先扩闸门再修**，否则修完无人守。
+- **P2-3 原生模块补齐** ✅已完成（2026-08-14）：Android `FloatingLyricModule` 加 `@LynxMethod` + `Callback` 签名 + 注册；iOS `LiveActivityModule` enum→class 重构（`@objc`/`name`/`methodLookup`）+ 注册；TS 适配层 promisify。契约闸门扩到 6 个模块双端 +30 例（932 vitest）。
 
 ### 批44 · 功能缺口
 见计划文档「批44+」表（播放历史上报 / 播放全部 / 正在播放高亮 / 坏歌跳下一首 / 隐藏歌单找回 / 删歌入口 / library-browse / 偏好上云 等）。
