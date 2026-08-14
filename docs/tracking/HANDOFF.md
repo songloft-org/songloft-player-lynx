@@ -1,16 +1,30 @@
 # 工作交接（2026-08-14）
 
 > 本文件是**给接手 AI 的交接说明**。读完这一篇就能继续干活；细节在链接里。
-> 一句话现状：**批41 + 批42 + 批43 全部完成，工作树干净、闸门全绿（932 vitest）**。剩批44 功能缺口。
+> 一句话现状：**批41–44 全部完成，工作树干净、闸门全绿（932 vitest）**。审计计划已闭合。
 
 ---
 
 ## 1. 现在在哪、做到哪了
 
-### 已提交（本地 `main`，**均未推送**，领先 `origin/main` 7 个 commit）
+### 已提交（本地 `main`，**均未推送**）
 
 | commit | 内容 |
 |---|---|
+| `aa43fd6` | 批44 #15：视频歌曲播放标识 |
+| `3d35583` | 批44 #10：library-browse 视图配置（14 视图 + 设置页） |
+| `0465ee4` | 批44 #13：插件源管理 + 撞名冲突警告 |
+| `d1b59a1` | 批44 #12：启动自动探测服务器可达性 |
+| `f329f1a` | 批44 #9/#11：投屏暂停本地 + 偏好上云 |
+| `f79b6a8` | 批44 #8：从文件安装插件 |
+| `594dc1c` | 批44 #6：删除歌曲入口 |
+| `77f5dec` | 批44 #5：隐藏歌单显示切换 |
+| `6e5e7b1` | 批44 #2/#7：播放全部 + 电台歌单创建 |
+| `11e0caa` | 批44 #1/#3/#4/#14：播放历史上报/高亮/坏歌跳/正在播放入口 |
+| `e95c97f` | 批43 P2-1：TokenStore/AuthInterceptor 收口单例 |
+| `9f08038` | 批43 P2-3：原生模块补齐 + 契约闸门（+30 例） |
+| `6ffe792` | 批43 P0-2/4/5：Web 音频/宿主页/后端地址 |
+| `3e1c342` | 批42 P1-12：多选状态跨搜索/筛选残留 |
 | `fbe5662` | 批42 第五波 P1-6：元数据「再次刷新」不轮询 |
 | `5bd94e7` | 批42 第四波：DLNA 页进去即崩 / 能力探测器接线 |
 | `e50dab4` | 批42 第三波：切服务器带旧 token / HTTP 无超时 |
@@ -19,11 +33,11 @@
 | `983a97d` | 批41：三条 P0 阻断（原生 bundle 不重建 / iOS 工程损坏 / web 产物黑屏） |
 | `93de19e` | docs：审计教训固化 + 修复计划 + docs 目录整理 |
 
-> ⚠️ 是否 `git push` 由用户决定，**不要自行推送**。此前两个 Web 修复 commit（`d4c4310`/`69593d0`）也曾在「未推送」状态停留多轮。
+> ⚠️ 是否 `git push` 由用户决定，**不要自行推送**。
 
 ### 工作树状态
 
-干净。最后一道闸门：`build` 双产物零告警 / `tsc -b` / **900 vitest（97 文件）** 全绿。
+干净。最后一道闸门：`build` 双产物零告警 / `tsc -b` / **932 vitest（97 文件）** 全绿。
 
 ---
 
@@ -39,22 +53,9 @@
 
 ---
 
-## 3. 剩余工作（按优先级）
+## 3. 剩余工作
 
-权威清单在 [`../plans/2026-08-14-audit-fix-plan.md`](../plans/2026-08-14-audit-fix-plan.md)，`bug.md` 是缺陷视角的同一份。下面是接手后实际要做的顺序：
-
-### 立刻可做（小修）
-- **P1-12 多选状态跨搜索/筛选残留** ✅已完成（2026-08-14）：`src/features/library/pages/LibraryPage.tsx` 加 `useEffect` 在 `debouncedSearch`/`filterGenre`/`filterArtist`/`filterAlbum` 变化时清空 `selected`。配回归测试 `library-page.test.tsx`（901 vitest，摘掉修复即变红）。
-
-### 批43 · 结构性（各自独立成批）
-- **P0-2 Web 没有声音** ✅已完成（2026-08-14）：新增 `web/audio-host.js`，主线程创建 `HTMLAudioElement` 注册为 `NativeModules.SongloftAudio`（via `lynxView.nativeModulesMap`），worker 走已验证的 `NativeSongloftAudio` 分支。EQ/HLS/MediaSession 作为后续跟进。
-- **P0-4 embedded 无宿主页** ✅已完成（2026-08-14）：`copy-bundle-web.mjs` 移除 `if (!isEmbedded)` 守卫，embedded 也拷贝 index.html；`app-config.ts` 自动检测 Web 平台设 `deployMode='embedded'` 隐藏 API 地址字段。
-- **P0-5 后端地址硬编码 localhost** ✅已完成（2026-08-14）：`app-config.ts` 用 `self.location.origin` 自动检测 Web 平台 serving origin 作为默认 base URL。Lynx 原生回退 `localhost:58091`。
-- **P2-1 TokenStore/Interceptor 收口单例** ✅已完成（2026-08-14）：`getSharedApiBundle()` 进程级单例，5 个 feature API 全部改用共享 bundle。`token-store.ts` 移除 `liveStores` + `invalidateTokenCaches()`。`server-store` 改为 `getSharedTokenStore().invalidateCache()`。
-- **P2-3 原生模块补齐** ✅已完成（2026-08-14）：Android `FloatingLyricModule` 加 `@LynxMethod` + `Callback` 签名 + 注册；iOS `LiveActivityModule` enum→class 重构（`@objc`/`name`/`methodLookup`）+ 注册；TS 适配层 promisify。契约闸门扩到 6 个模块双端 +30 例（932 vitest）。
-
-### 批44 · 功能缺口
-见计划文档「批44+」表（播放历史上报 / 播放全部 / 正在播放高亮 / 坏歌跳下一首 / 隐藏歌单找回 / 删歌入口 / library-browse / 偏好上云 等）。
+**批41–44 全部完成。** 审计计划已闭合。后续功能开发从批45 开始。
 
 ---
 
@@ -78,6 +79,6 @@ pnpm run build:web    # 改 web/ 后验产物，且要真的用浏览器打开
 |---|---|
 | [`../../AGENTS.md`](../../AGENTS.md) | 开发规范 + 铁律（接手先读 §4–§6） |
 | [`../plans/2026-08-14-audit-fix-plan.md`](../plans/2026-08-14-audit-fix-plan.md) | **主计划**：三类根因 + 批41–44 排期 + 明确不做清单 |
-| [`PROGRESS.md`](PROGRESS.md) | 分批进展（批41/42 小结在文件顶部） |
-| [`bug.md`](bug.md) | 缺陷清单（已修/待修勾选） |
+| [`PROGRESS.md`](PROGRESS.md) | 分批进展（批41–44 小结在文件顶部） |
+| [`bug.md`](bug.md) | 缺陷清单（已全部勾选） |
 | [`../plans/archive/web-support.md`](../plans/archive/web-support.md) | Web 支持原始计划 + 7 处被否证的假设（三次 realm 事故的源头） |
