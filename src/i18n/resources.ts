@@ -326,6 +326,8 @@ export const en = {
     addToQueue: 'Add to queue',
     addToPlaylist: 'Add to playlist',
     viewDetail: 'Song detail',
+    deleteSong: 'Delete song',
+    deleteConfirm: 'Tap again to delete',
   },
   upgrade: {
     title: 'Backend Update',
@@ -862,6 +864,8 @@ export const zh: TranslationTree = {
     addToQueue: '添加到队列',
     addToPlaylist: '添加到歌单',
     viewDetail: '歌曲详情',
+    deleteSong: '删除歌曲',
+    deleteConfirm: '再次点按确认删除',
   },
   upgrade: {
     title: '后端更新',

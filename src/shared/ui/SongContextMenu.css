@@ -69,3 +69,7 @@
   font-size: var(--font-sm);
   color: var(--content);
 }
+
+.song-ctx__item-text--danger {
+  color: var(--danger);
+}

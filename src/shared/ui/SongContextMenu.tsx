@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import type { Song } from '../../models/song.js'
 import { usePlayerStore } from '../../features/player/store/index.js'
 import { getPlaylistApi } from '../../features/playlist/api/index.js'
+import { getSongsApi } from '../../features/library/api/index.js'
 import { usePlaylistsInfiniteQuery } from '../../features/playlist/data/playlist-query.js'
 import { Icon, ICON_COLORS } from './Icon.js'
 import './SongContextMenu.css'
@@ -20,6 +21,7 @@ export function SongContextMenu({ song, onClose }: SongContextMenuProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showPlaylists, setShowPlaylists] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const playlistsQuery = usePlaylistsInfiniteQuery()
   const playlists = playlistsQuery.data?.pages.flatMap(p => p.playlists) ?? []
 
@@ -40,6 +42,17 @@ export function SongContextMenu({ song, onClose }: SongContextMenuProps) {
       void queryClient.invalidateQueries({ queryKey: ['playlist'] })
     })
     onClose()
+  }
+
+  const onDelete = () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      return
+    }
+    void getSongsApi().deleteSong(song.id).then(() => {
+      void queryClient.invalidateQueries({ queryKey: ['songs'] })
+      onClose()
+    })
   }
 
   return (
@@ -79,6 +92,12 @@ export function SongContextMenu({ song, onClose }: SongContextMenuProps) {
               <view className='song-ctx__item' bindtap={() => { onClose(); void navigate({ to: '/library/song/$songId', params: { songId: String(song.id) } }) }}>
                 <Icon name='info' size={18} color={ICON_COLORS.content2} />
                 <text className='song-ctx__item-text'>{t('songMenu.viewDetail')}</text>
+              </view>
+              <view className='song-ctx__item' bindtap={onDelete}>
+                <Icon name='x' size={18} color={ICON_COLORS.danger} />
+                <text className={confirmDelete ? 'song-ctx__item-text song-ctx__item-text--danger' : 'song-ctx__item-text'}>
+                  {confirmDelete ? t('songMenu.deleteConfirm') : t('songMenu.deleteSong')}
+                </text>
               </view>
             </view>
           )}
