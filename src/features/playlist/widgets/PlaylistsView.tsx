@@ -18,7 +18,9 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
   const { t } = useTranslation()
   const query = usePlaylistsInfiniteQuery(type ? { type } : {})
   const allPlaylists = flattenPlaylists(query.data?.pages)
-  const playlists = allPlaylists.filter((p) => !p.isHidden)
+  const [showHidden, setShowHidden] = useState(false)
+  const playlists = showHidden ? allPlaylists : allPlaylists.filter((p) => !p.isHidden)
+  const hiddenCount = allPlaylists.filter((p) => p.isHidden).length
   const createMutation = useCreatePlaylistMutation()
   const reorderMutation = useReorderPlaylistsMutation()
   const deleteMutation = useDeletePlaylistMutation()
@@ -182,6 +184,15 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
           <Icon name='plus' size={18} color={ICON_COLORS.content} />
           <text className='playlists__create-trigger-text'>{t('playlist.createPlaylist')}</text>
         </view>
+        {hiddenCount > 0
+          ? (
+            <view className='playlists__create-trigger' bindtap={() => setShowHidden(!showHidden)}>
+              <text className='playlists__create-trigger-text'>
+                {showHidden ? t('playlist.hideHidden') : t('playlist.showHidden', { count: hiddenCount })}
+              </text>
+            </view>
+          )
+          : null}
         {playlists.length > 1 && !showForm
           ? selectMode
             ? (
