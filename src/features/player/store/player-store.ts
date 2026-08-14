@@ -196,6 +196,19 @@ let _retryCount = 0
 let _retryTimer: ReturnType<typeof setTimeout> | null = null
 let _retrySongId: number | null = null
 
+/**
+ * Id of the song currently loaded into the audio engine, or null if the engine
+ * holds nothing. This is engine state, not store state — they diverge whenever
+ * the store is restored from disk without loading audio (auto-resume off), which
+ * is exactly the case `togglePlay` has to detect.
+ */
+let _loadedSongId: number | null = null
+
+/** Test hook: forget what the engine holds (each scenario starts cold). */
+export function resetLoadedSongForTests(): void {
+  _loadedSongId = null
+}
+
 function clearRetryTimer(): void {
   if (_retryTimer != null) clearTimeout(_retryTimer)
   _retryTimer = null
@@ -250,6 +263,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     await audio.load(songUrl(song), {
       durationMs: durationMsOf(song),
     })
+    _loadedSongId = song.id
     await audio.play()
     syncFavoriteToNative(song.id)
   }
@@ -329,11 +343,30 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       await playAtIndex(index)
     },
 
+    /**
+     * `audio.play()` alone is not enough to start playback: the native engine
+     * needs a media item first, and after a cold start with auto-resume OFF (the
+     * default) the store has a `currentSong` that was never handed to the engine
+     * — `restorePlaybackState` only writes state in that case. ExoPlayer and
+     * AVPlayer both treat `play()` with no item as a silent no-op, so the mini
+     * player's play button did nothing at all, not even flip its icon.
+     *
+     * The mock audio hides this (its `play()` starts ticking without a `load()`),
+     * which is why no test caught it. `_loadedSongId` tracks what the engine
+     * actually holds so we can load on demand.
+     */
     togglePlay: async () => {
       const s = get()
       if (!s.currentSong) return
-      if (s.isPlaying) await audio.pause()
-      else await audio.play()
+      if (s.isPlaying) {
+        await audio.pause()
+        return
+      }
+      if (_loadedSongId !== s.currentSong.id) {
+        await playAtIndex(s.currentIndex >= 0 ? s.currentIndex : 0)
+        return
+      }
+      await audio.play()
     },
 
     playNext: async () => {
@@ -558,20 +591,36 @@ audio.on('remoteCommand', (e) => {
 // ── playback state persistence ───────────────────────────────────────────────
 let _saveTimer: ReturnType<typeof setTimeout> | null = null
 const SAVE_DEBOUNCE_MS = 2_000
+/** Persist at most one position write per this many ms of playback. */
+const SAVE_POSITION_STEP_MS = 10_000
 
+/**
+ * Mirror the queue and playback position to storage so a cold start can resume.
+ *
+ * The position trigger used to be `|currentTime - prev.currentTime| > 5000`,
+ * which **never fires during playback**: progress arrives every 250ms (mock/web)
+ * or 500ms (Android), so consecutive deltas are two orders of magnitude too
+ * small. The only jumps big enough were track changes resetting to 0 — so the
+ * value on disk was reliably 0 and "resume playback" always restarted the song.
+ *
+ * Compare bucket indices instead: a write happens once per
+ * `SAVE_POSITION_STEP_MS` of progress regardless of tick size, and seeks land in
+ * a new bucket immediately.
+ */
 usePlayerStore.subscribe((state, prev) => {
   const queueChanged = state.playlist !== prev.playlist || state.currentIndex !== prev.currentIndex
-  const posChanged = Math.abs(state.currentTime - prev.currentTime) > 5_000
-  if (!queueChanged && !posChanged) return
+  const bucket = Math.floor(state.currentTime / SAVE_POSITION_STEP_MS)
+  const prevBucket = Math.floor(prev.currentTime / SAVE_POSITION_STEP_MS)
+  if (!queueChanged && bucket === prevBucket) return
   if (_saveTimer != null) clearTimeout(_saveTimer)
   _saveTimer = setTimeout(() => {
     _saveTimer = null
-    void savePlaybackState(
-      state.playlist,
-      state.currentIndex,
-      state.currentTime,
-      state.sourcePlaylistId,
-    )
+    // Read through the store rather than the captured `state`: this fires up to
+    // SAVE_DEBOUNCE_MS later, and the snapshot that scheduled it is stale by then
+    // (a debounced write would otherwise persist a position 2s behind reality,
+    // or a queue the user has since changed).
+    const s = usePlayerStore.getState()
+    void savePlaybackState(s.playlist, s.currentIndex, s.currentTime, s.sourcePlaylistId)
   }, SAVE_DEBOUNCE_MS)
 })
 
@@ -579,22 +628,67 @@ usePlayerStore.subscribe((state, prev) => {
 import { getLiveActivityModule } from '../../../native/live-activity.js'
 
 let _liveActivityId: string | null = null
+/** True while a `start()` is in flight — see the dedup notes below. */
+let _liveActivityStarting = false
+/** Set once `start()` has answered with an empty id: the feature is off. */
+let _liveActivityUnavailable = false
+
+/**
+ * Mirror the now-playing song to the iOS lock-screen Live Activity.
+ *
+ * Two dedup hazards, both caused by treating `_liveActivityId` as the only state:
+ *
+ * 1. **`start()` is async.** Two rapid song changes (auto-advance immediately
+ *    followed by a manual "next") both observe `_liveActivityId === null` and
+ *    both call `Activity.request`. The second overwrites native's
+ *    `currentActivity`, so the first is never `end()`ed and lingers on the lock
+ *    screen until iOS times it out. Hence `_liveActivityStarting`.
+ * 2. **Failure returns `''`, which is falsy.** When the user has Live Activities
+ *    switched off (or the first request is denied in background), every later
+ *    song/state change re-entered the `start()` branch, so it retried forever and
+ *    never reached `update()`. An empty answer now latches the feature off.
+ */
 usePlayerStore.subscribe((state, prev) => {
   const songChanged = state.currentSong !== prev.currentSong
   const playStateChanged = state.isPlaying !== prev.isPlaying
   if (!songChanged && !playStateChanged) return
+  if (_liveActivityUnavailable) return
   const la = getLiveActivityModule()
   const song = state.currentSong
   if (!song) {
-    if (_liveActivityId) { void la.end(_liveActivityId); _liveActivityId = null }
+    if (_liveActivityId) {
+      void la.end(_liveActivityId)
+      _liveActivityId = null
+    }
     return
   }
-  if (!_liveActivityId) {
-    void la.start(song.title, song.artist ?? '').then(id => { _liveActivityId = id })
-  } else {
+  if (_liveActivityId) {
     void la.update(_liveActivityId, song.title, song.artist ?? '', state.isPlaying)
+    return
   }
+  if (_liveActivityStarting) return
+  _liveActivityStarting = true
+  void la
+    .start(song.title, song.artist ?? '')
+    .then((id) => {
+      if (id) _liveActivityId = id
+      // An empty id means the host refused; stop asking on every track change.
+      else _liveActivityUnavailable = true
+    })
+    .catch(() => {
+      _liveActivityUnavailable = true
+    })
+    .then(() => {
+      _liveActivityStarting = false
+    })
 })
+
+/** Test hook: forget Live Activity bookkeeping between scenarios. */
+export function resetLiveActivityForTests(): void {
+  _liveActivityId = null
+  _liveActivityStarting = false
+  _liveActivityUnavailable = false
+}
 
 
 

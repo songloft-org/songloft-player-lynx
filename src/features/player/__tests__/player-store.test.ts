@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import type { Song } from '../../../models/song.js'
 import { getAudio } from '../../../native/index.js'
 import type { MockSongloftAudio } from '../../../native/mock-audio.js'
-import { usePlayerStore } from '../store/player-store.js'
+import { resetLoadedSongForTests, usePlayerStore } from '../store/player-store.js'
 
 /**
  * Player-store ↔ mock-audio bridge. Uses the real singleton store + mock audio
@@ -267,5 +267,54 @@ describe('duration sleep timer countdown', () => {
     await flush()
     expect(usePlayerStore.getState().sleepTimer).toBeUndefined()
     expect(usePlayerStore.getState().isPlaying).toBe(false)
+  })
+})
+
+/**
+ * A cold start with auto-resume OFF (the default) restores `currentSong` into the
+ * store but deliberately does not hand it to the audio engine. `togglePlay` then
+ * used to call `audio.play()` straight away — and both ExoPlayer and AVPlayer
+ * treat `play()` with no media item as a silent no-op, so the mini player's play
+ * button did nothing whatsoever, not even flip its icon.
+ *
+ * The mock is what hid this: its `play()` starts ticking without a prior
+ * `load()`, so every existing test "passed" against an engine state that cannot
+ * occur on a device. These tests assert the load happens.
+ */
+describe('togglePlay when the engine holds nothing (cold start, auto-resume off)', () => {
+  test('loads the restored song instead of no-op playing', async () => {
+    const audio = getAudio() as MockSongloftAudio
+    const loadSpy = vi.spyOn(audio, 'load')
+    // Exactly what restorePlaybackState leaves behind with autoResume=false.
+    resetLoadedSongForTests()
+    usePlayerStore.setState({
+      playlist: [song(7, 300)],
+      currentIndex: 0,
+      currentSong: song(7, 300),
+      currentTime: 42_000,
+      isPlaying: false,
+    })
+
+    await usePlayerStore.getState().togglePlay()
+    await flush()
+
+    expect(loadSpy).toHaveBeenCalledTimes(1)
+    expect(usePlayerStore.getState().isPlaying).toBe(true)
+    loadSpy.mockRestore()
+  })
+
+  test('does not reload when the engine already holds the current song', async () => {
+    const audio = getAudio() as MockSongloftAudio
+    await usePlayerStore.getState().playPlaylist([song(1, 300)], 0)
+    await flush()
+
+    const loadSpy = vi.spyOn(audio, 'load')
+    await usePlayerStore.getState().togglePlay() // pause
+    await usePlayerStore.getState().togglePlay() // resume
+    await flush()
+
+    expect(loadSpy).not.toHaveBeenCalled()
+    expect(usePlayerStore.getState().isPlaying).toBe(true)
+    loadSpy.mockRestore()
   })
 })
