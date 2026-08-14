@@ -26,6 +26,24 @@ export const defaultJsonHeaders: Readonly<Record<string, string>> = {
   Accept: 'application/json',
 }
 
+/**
+ * Resolve the default base URL for the current runtime.
+ *
+ * In a web worker, `self.location.origin` still reports the page origin
+ * (e.g. `http://192.168.1.5:58091`), so the login form is pre-filled with
+ * the correct server address instead of `localhost`. On Lynx native, `self`
+ * has no `location` — fall back to the emulator/simulator default.
+ */
+function resolveDefaultBaseUrl(): string {
+  try {
+    const origin = (self as unknown as { location?: { origin?: string } }).location?.origin
+    if (origin && origin !== 'null' && origin.startsWith('http')) return origin
+  } catch {
+    // self.location not available (Lynx native runtime)
+  }
+  return 'http://localhost:58091'
+}
+
 // DEV default: the local test backend. `localhost` is the right default for
 // BOTH emulator/simulator targets, so this must not be a LAN IP:
 //   - iOS Simulator shares the host's network stack — its `localhost` IS the
@@ -38,7 +56,11 @@ export const defaultJsonHeaders: Readonly<Record<string, string>> = {
 // at the start of its device pass. A real phone (not an emulator) still needs
 // the host's LAN IP — enter it on the login page, which persists it to prefs
 // and overrides this default.
-const DEFAULT_BASE_URL = 'http://localhost:58091'
+//
+// On the Web platform the default is resolved from `self.location.origin` at
+// module load time, so it automatically matches the serving origin whether
+// standalone (same-origin backend) or embedded (Go reverse-proxy).
+const DEFAULT_BASE_URL = resolveDefaultBaseUrl()
 
 /**
  * DEV convenience: credentials prefilled into the login form so device testing
@@ -78,6 +100,25 @@ export const devCredentials: { username: string; password: string } = {
  */
 export type DeployMode = 'standalone' | 'embedded'
 
+/**
+ * Resolve the default deploy mode for the current runtime.
+ *
+ * On the Web platform (detected via `self.location.origin`, which is available
+ * in the worker realm and reports the page origin), the backend is always at
+ * the same origin — the API-address field and insecure-TLS toggle are hidden.
+ * On Lynx native, the user may need to point at a different host, so the
+ * default is `standalone` (server-address UI visible).
+ */
+function resolveDeployMode(): DeployMode {
+  try {
+    const origin = (self as unknown as { location?: { origin?: string } }).location?.origin
+    if (origin && origin !== 'null' && origin.startsWith('http')) return 'embedded'
+  } catch {
+    // self.location not available (Lynx native runtime)
+  }
+  return 'standalone'
+}
+
 class AppConfigState {
   /** Identity base URL (what the user configured / the entry origin). */
   baseUrl: string = DEFAULT_BASE_URL
@@ -86,7 +127,7 @@ class AppConfigState {
   basePath: string = ''
 
   /** Deployment mode; drives which login-page controls are shown. */
-  deployMode: DeployMode = 'standalone'
+  deployMode: DeployMode = resolveDeployMode()
 
   /**
    * User opt-in to skip TLS certificate validation (self-signed servers).
@@ -123,7 +164,7 @@ class AppConfigState {
   reset(): void {
     this.baseUrl = DEFAULT_BASE_URL
     this.basePath = ''
-    this.deployMode = 'standalone'
+    this.deployMode = resolveDeployMode()
     this.insecureTls = false
     this._resolvedBaseUrlOverride = null
   }

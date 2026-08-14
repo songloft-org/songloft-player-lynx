@@ -12,7 +12,7 @@
  *   node scripts/copy-bundle-web.mjs           # standalone web deployment
  *   node scripts/copy-bundle-web.mjs --embedded # embedded Go backend
  */
-import { copyFileSync, mkdirSync, existsSync, readdirSync, statSync, cpSync } from 'node:fs'
+import { copyFileSync, mkdirSync, existsSync, readdirSync, rmSync, statSync, cpSync } from 'node:fs'
 import { dirname, resolve, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -61,13 +61,27 @@ const webCoreDest = resolve(DEST_BASE, 'web-core', 'static')
 mkdirSync(webCoreDest, { recursive: true })
 cpSync(webCoreStatic, webCoreDest, { recursive: true })
 
-// Copy HTML host page
-if (!isEmbedded) {
-  const htmlSrc = resolve(repoRoot, 'web', 'index.html')
-  const htmlDest = resolve(DEST_BASE, 'index.html')
-  if (existsSync(htmlSrc)) {
-    copyFileSync(htmlSrc, htmlDest)
-  }
+// Copy HTML host page. The same index.html serves both standalone and embedded
+// modes — the app auto-detects the Web platform via `self.location.origin` and
+// hides the server-address UI accordingly.
+//
+// For embedded, wipe the target directory first so stale files from a previous
+// build (e.g. canvaskit/ from the old Flutter app) don't linger in the Go binary.
+if (isEmbedded && existsSync(DEST_BASE)) {
+  rmSync(DEST_BASE, { recursive: true, force: true })
+}
+const htmlSrc = resolve(repoRoot, 'web', 'index.html')
+const htmlDest = resolve(DEST_BASE, 'index.html')
+if (existsSync(htmlSrc)) {
+  mkdirSync(dirname(htmlDest), { recursive: true })
+  copyFileSync(htmlSrc, htmlDest)
+}
+
+// Copy audio-host.js (main-thread audio adapter registered as a native module).
+const audioHostSrc = resolve(repoRoot, 'web', 'audio-host.js')
+const audioHostDest = resolve(DEST_BASE, 'audio-host.js')
+if (existsSync(audioHostSrc)) {
+  copyFileSync(audioHostSrc, audioHostDest)
 }
 
 console.log(`[copy-bundle-web] Deployed to ${DEST_BASE}`)

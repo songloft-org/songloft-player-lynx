@@ -47,7 +47,7 @@ describe('web/index.html references files the build actually ships', () => {
   const refs = [...html.matchAll(/(?:href|src|url)="(\/[^"]+)"/g)].map((m) => m[1])
 
   test('the host page has local refs at all', () => {
-    expect(refs.length).toBeGreaterThanOrEqual(3)
+    expect(refs.length).toBeGreaterThanOrEqual(4)
   })
 
   test.each(refs.filter((r) => r.startsWith('/web-core/static/')))(
@@ -86,6 +86,19 @@ describe('web/index.html references files the build actually ships', () => {
     expect(read('scripts/copy-bundle-web.mjs')).toContain(
       `'${bundleRefs[0]!.replace(/^\//, '')}'`,
     )
+  })
+
+  test('audio-host.js is referenced and exists in web/', () => {
+    const audioRefs = refs.filter((r) => r.endsWith('/audio-host.js'))
+    expect(audioRefs, 'index.html must load audio-host.js').toHaveLength(1)
+    expect(
+      existsSync(path.join(repoRoot, 'web', 'audio-host.js')),
+      'web/audio-host.js does not exist',
+    ).toBe(true)
+    expect(
+      read('scripts/copy-bundle-web.mjs'),
+      'copy-bundle-web.mjs must copy audio-host.js',
+    ).toContain("'audio-host.js'")
   })
 })
 

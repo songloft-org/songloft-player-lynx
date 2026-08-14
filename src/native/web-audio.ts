@@ -7,6 +7,20 @@
  *
  * The facade contract (methods, event types, state vocabulary) is identical to
  * the TS mock and the native binding, so swapping is transparent to the store.
+ *
+ * ⚠️ **This class is currently dead code (2026-08-14).** The web-core runtime
+ * runs the app in a real Web Worker, where `HTMLAudioElement` / `Audio` /
+ * `AudioContext` / `navigator.mediaSession` are all undefined. The
+ * `isWebAudioEnvironment()` probe below is permanently false, so
+ * `audio-facade.ts` never constructs `WebSongloftAudio`, and the player falls
+ * through to the silent mock.
+ *
+ * The fix registers a main-thread `HTMLAudioElement` as a native module
+ * (`web/audio-host.js` → `lynxView.nativeModulesMap`), which makes
+ * `NativeModules.SongloftAudio` resolve in the worker and lets the already-tested
+ * `NativeSongloftAudio` path handle playback. This class is retained for
+ * reference — its EQ / HLS / MediaSession logic may be ported to the main-thread
+ * adapter in a follow-up.
  */
 
 import {

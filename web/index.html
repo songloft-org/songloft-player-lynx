@@ -29,6 +29,13 @@
       display: block;
     }
   </style>
+  <!--
+    audio-host.js MUST load before the web-core client module so
+    nativeModulesMap is populated when the LynxView custom element upgrades.
+    It registers a main-thread HTMLAudioElement as NativeModules.SongloftAudio,
+    unlocking the same NativeSongloftAudio path used on Android/iOS.
+  -->
+  <script src="/audio-host.js"></script>
 </head>
 <body>
   <!-- Remove transform-vh/vw: they cause content height mismatch and pull-to-refresh -->
