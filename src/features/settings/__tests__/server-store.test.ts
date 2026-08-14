@@ -31,9 +31,15 @@ vi.mock('../../../store/index.js', () => ({
   useAppSessionStore: { getState: () => ({ setBaseUrl: vi.fn() }) },
 }))
 
-vi.mock('../../../core/config/app-config.js', () => ({
-  appConfig: { baseUrl: '', resolvedBaseUrl: '', insecureTls: false },
-}))
+vi.mock('../../../core/config/app-config.js', async () => {
+  const actual = await vi.importActual<typeof import('../../../core/config/app-config.js')>(
+    '../../../core/config/app-config.js',
+  )
+  return {
+    ...actual,
+    appConfig: { baseUrl: '', resolvedBaseUrl: '', insecureTls: false },
+  }
+})
 
 vi.mock('../../auth/store/index.js', () => ({
   normalizeServerUrl: (url: string) => url.trim().replace(/\/+$/, ''),
@@ -42,9 +48,13 @@ vi.mock('../../auth/store/index.js', () => ({
 
 const { useServerStore } = await import('../store/server-store.js')
 const { TokenStore } = await import('../../../core/network/token-store.js')
+const { getSharedTokenStore, resetSharedApiBundleForTests } = await import(
+  '../../../core/network/api-client.js'
+)
 
 beforeEach(() => {
   useServerStore.setState({ profiles: [], activeProfileId: null })
+  resetSharedApiBundleForTests()
   vi.clearAllMocks()
 })
 
@@ -113,12 +123,15 @@ describe('switchTo', () => {
 
   /**
    * The assertions above only prove tokens were written to storage. The client
-   * does not read storage on every request — each `TokenStore` caches the access
+   * does not read storage on every request — the `TokenStore` caches the access
    * token in memory and short-circuits on it, so writing behind its back changed
    * nothing: requests kept going to the new server carrying the OLD server's
    * token → 401 → refresh with the old refresh token → fail → logout, which also
-   * wiped the tokens the new profile legitimately had. Assert through a real
-   * TokenStore, not through the storage spy.
+   * wiped the tokens the new profile legitimately had.
+   *
+   * After P2-1, the process has a single shared `TokenStore`. `switchTo` calls
+   * `getSharedTokenStore().invalidateCache()` on it — assert the shared store
+   * (not a standalone one) sees the new token.
    */
   test('a live TokenStore sees the target profile token, not the cached one', async () => {
     const p1 = await useServerStore.getState().addProfile({ name: 'S1', url: 'http://s1' })
@@ -136,9 +149,9 @@ describe('switchTo', () => {
       stored.set(key, value)
     })
 
-    // A store that has already served a request for the OLD profile, so its
-    // in-memory cache holds tok_a.
-    const tokens = new TokenStore()
+    // The shared TokenStore has already served a request for the OLD profile,
+    // so its in-memory cache holds tok_a.
+    const tokens = getSharedTokenStore()
     expect(await tokens.getAccessToken()).toBe('tok_a')
 
     await useServerStore.getState().switchTo(p2.id)

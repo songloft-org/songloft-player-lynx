@@ -23,6 +23,11 @@ export { getCachedAccessToken, setCachedAccessToken } from './token-cache.js'
 export {
   createApiClient,
   createPublicClient,
+  getSharedApiBundle,
+  getSharedTokenStore,
+  getSharedClient,
+  setSharedOnTokenExpired,
+  resetSharedApiBundleForTests,
 } from './api-client.js'
 export type {
   ClientBaseOptions,

@@ -7,7 +7,7 @@ import { useAppSessionStore } from '../../../store/index.js'
 import { ServerProfileList, type ServerProfile } from '../../../models/server-profile.js'
 import { normalizeServerUrl, PREF_SERVER_URL } from '../../auth/store/index.js'
 import { setCachedAccessToken } from '../../../core/network/token-cache.js'
-import { invalidateTokenCaches } from '../../../core/network/token-store.js'
+import { getSharedTokenStore } from '../../../core/network/api-client.js'
 
 const PREF_SERVER_PROFILES = 'server_profiles'
 const PREF_ACTIVE_PROFILE_ID = 'server_active_profile'
@@ -161,12 +161,12 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
       }
     } catch { /* best-effort */ }
 
-    // The writes above went straight to storage, behind the back of every
-    // TokenStore's in-memory cache — and those caches short-circuit reads and
-    // never re-read storage. Without this the app would keep sending the previous
+    // The writes above went straight to storage, behind the back of the
+    // TokenStore's in-memory cache — and that cache short-circuits reads and
+    // never re-reads storage. Without this the app would keep sending the previous
     // profile's access token to the new server: 401 → refresh with the old refresh
     // token → fail → logout, wiping the tokens this profile legitimately had.
-    invalidateTokenCaches()
+    getSharedTokenStore().invalidateCache()
 
     // Update app config
     appConfig.baseUrl = target.url

@@ -1,5 +1,4 @@
-import { createApiClient, type ApiClientBundle } from '../../../core/network/api-client.js'
-import { useAuthStore } from '../../auth/store/index.js'
+import { getSharedApiBundle } from '../../../core/network/api-client.js'
 import { PlaylistApi } from './playlist-api.js'
 
 export {
@@ -20,23 +19,6 @@ export type {
   UpdatePlaylistParams,
 } from './playlist-api.js'
 
-let bundle: ApiClientBundle | null = null
-
-function getApiBundle(): ApiClientBundle {
-  if (!bundle) {
-    bundle = createApiClient({
-      onTokenExpired: () => {
-        void useAuthStore.getState().logout()
-      },
-    })
-  }
-  return bundle
-}
-
 export function getPlaylistApi(): PlaylistApi {
-  return new PlaylistApi(getApiBundle().client)
-}
-
-export function resetPlaylistApiForTests(): void {
-  bundle = null
+  return new PlaylistApi(getSharedApiBundle().client)
 }

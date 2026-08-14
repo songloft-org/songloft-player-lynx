@@ -38,7 +38,7 @@ export type {
   ProgressLine,
   MetadataViewKind,
 } from './domain/scan-model.js'
-export { getScanApi, getScanSettingsApi, resetLibraryOpsApiForTests } from './api/index.js'
+export { getScanApi, getScanSettingsApi } from './api/index.js'
 export { ExcludeDirSection } from './widgets/ExcludeDirSection.js'
 export {
   EXCLUDE_TABS,

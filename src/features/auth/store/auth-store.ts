@@ -4,7 +4,8 @@ import { appConfig } from '../../../core/config/app-config.js'
 import { ApiError } from '../../../core/network/http-client.js'
 import type { HttpClient } from '../../../core/network/http-client.js'
 import { createPublicClient } from '../../../core/network/api-client.js'
-import { TokenStore } from '../../../core/network/token-store.js'
+import { getSharedTokenStore, setSharedOnTokenExpired } from '../../../core/network/api-client.js'
+import type { TokenStore } from '../../../core/network/token-store.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import type { SongloftStorage } from '../../../core/storage/types.js'
 // Static, NOT `await import()`: a dynamic import becomes a separate lazy bundle
@@ -64,7 +65,7 @@ export function defaultAuthStoreDeps(): AuthStoreDeps {
   const storage = getSongloftStorage()
   return {
     storage,
-    tokenStore: new TokenStore(storage.secure),
+    tokenStore: getSharedTokenStore(),
     createLoginClient: (baseUrl) =>
       createPublicClient({ getBaseUrl: () => baseUrl }),
   }
@@ -224,3 +225,10 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
 
 /** Process-wide auth store (production dependencies). */
 export const useAuthStore = createAuthStore()
+
+// Wire the shared auth interceptor's session-expired callback to the auth
+// store's logout. This was previously done per-feature (six copies); now it
+// fires once for the process-wide singleton (P2-1).
+setSharedOnTokenExpired(() => {
+  void useAuthStore.getState().logout()
+})

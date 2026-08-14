@@ -86,3 +86,64 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClientBundle
 }
 
 export { ApiError }
+
+// ── Process-wide shared bundle (P2-1 singleton consolidation) ────────────────
+//
+// Before this, each feature (library / playlist / settings / jsplugin /
+// library-ops / auth) built its own `createApiClient` bundle, giving the
+// process six independent `TokenStore` + `AuthInterceptor` pairs. That caused
+// two bugs:
+//   1. Token refresh was instance-local — multiple bundles each fired their own
+//      `/auth/refresh` when the token expired, overwriting each other's stored
+//      tokens.
+//   2. Switching servers wrote the new token to storage, but each bundle's
+//      in-memory cache was never invalidated, so some bundles kept using the
+//      old token → 401 → logout.
+//
+// The shared bundle is a single process-wide `TokenStore` + `AuthInterceptor`
+// constructed lazily on first use. Every feature wraps only its own `XxxApi`
+// class around the shared `HttpClient`. The `liveStores` set and
+// `invalidateTokenCaches()` in `token-store.ts` are now unnecessary and can be
+// removed.
+
+let sharedBundle: ApiClientBundle | null = null
+
+/**
+ * Callback fired when the shared interceptor's token refresh fails (session
+ * expired). Set by the auth store during initialization. The indirection avoids
+ * a circular import: core/network → features/auth/store.
+ */
+let onSharedTokenExpired: (() => void | Promise<void>) | undefined
+
+/** Register the session-expired handler for the shared auth interceptor. */
+export function setSharedOnTokenExpired(cb: () => void | Promise<void>): void {
+  onSharedTokenExpired = cb
+}
+
+/** Process-wide singleton `TokenStore` backed by the ambient secure storage. */
+export function getSharedTokenStore(): TokenStore {
+  return getSharedApiBundle().tokens
+}
+
+/** Process-wide singleton `HttpClient` (with auth interceptor). */
+export function getSharedClient(): HttpClient {
+  return getSharedApiBundle().client
+}
+
+/** Process-wide singleton `ApiClientBundle`. Created lazily; idempotent. */
+export function getSharedApiBundle(): ApiClientBundle {
+  if (!sharedBundle) {
+    sharedBundle = createApiClient({
+      onTokenExpired: () => {
+        onSharedTokenExpired?.()
+      },
+    })
+  }
+  return sharedBundle
+}
+
+/** Test hook: drop the shared bundle so a fresh one is built next call. */
+export function resetSharedApiBundleForTests(): void {
+  sharedBundle = null
+  onSharedTokenExpired = undefined
+}
