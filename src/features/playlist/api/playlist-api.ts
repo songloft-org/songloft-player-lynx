@@ -32,6 +32,8 @@ export interface PageParams {
 export interface CreatePlaylistParams {
   name: string
   description?: string
+  /** Playlist type: `normal` (default) or `radio`. */
+  type?: string
 }
 
 export interface UpdatePlaylistParams {
@@ -79,6 +81,9 @@ export function buildCreatePlaylistBody(params: CreatePlaylistParams): Record<st
   const body: Record<string, string> = { name: params.name }
   if (params.description != null && params.description !== '') {
     body.description = params.description
+  }
+  if (params.type != null && params.type !== '') {
+    body.type = params.type
   }
   return body
 }

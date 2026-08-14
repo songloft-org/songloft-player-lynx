@@ -185,6 +185,11 @@ export function PlaylistDetailPage() {
     }
   }
 
+  const playAll = () => {
+    if (songs.length === 0) return
+    void usePlayerStore.getState().playPlaylist(songs, 0, id)
+  }
+
   const header = (
     <view className='playlist-detail__header'>
       <view className='playlist-detail__topbar'>
@@ -267,6 +272,13 @@ export function PlaylistDetailPage() {
                         <text className='playlist-detail__action-text'>{t('library.select')}</text>
                       </view>
                     )
+                )
+                : null}
+              {!sortMode && !editing && !selectMode && songs.length > 0
+                ? (
+                  <view className='playlist-detail__action-btn' bindtap={playAll}>
+                    <text className='playlist-detail__action-text'>{t('playlist.playAll')}</text>
+                  </view>
                 )
                 : null}
             </view>

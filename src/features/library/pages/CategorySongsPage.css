@@ -40,6 +40,21 @@
   background-color: var(--neutral-faint);
 }
 
+.category-songs__play-all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  margin-left: auto;
+}
+
+.category-songs__play-all-text {
+  color: var(--accent);
+  font-size: var(--font-sm);
+  font-weight: bold;
+}
+
 .category-songs__hero {
   display: flex;
   flex-direction: row;

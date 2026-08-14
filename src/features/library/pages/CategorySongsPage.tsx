@@ -72,6 +72,11 @@ export function CategorySongsPage() {
     void usePlayerStore.getState().playPlaylist(songs, index)
   }
 
+  const playAll = () => {
+    if (songs.length === 0) return
+    void usePlayerStore.getState().playPlaylist(songs, 0)
+  }
+
   const header = (
     <view className='category-songs__header'>
       <view className='category-songs__topbar'>
@@ -81,6 +86,13 @@ export function CategorySongsPage() {
         >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
+        {songs.length > 0
+          ? (
+            <view className='category-songs__play-all' bindtap={playAll}>
+              <text className='category-songs__play-all-text'>{t('playlist.playAll')}</text>
+            </view>
+          )
+          : null}
       </view>
       <view className='category-songs__hero'>
         {cover
