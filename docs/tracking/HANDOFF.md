@@ -1,7 +1,7 @@
 # 工作交接（2026-08-15）
 
 > 本文件是**给接手 AI 的交接说明**。读完这一篇就能继续干活；细节在链接里。
-> 一句话现状：**批41–45 完成，工作树干净、闸门全绿（949 vitest）+ Android 可真编译**。审计计划已闭合；批45 收口了原生缺口，代价是 **iOS 侧代码从未编译过**（见 §3）。
+> 一句话现状：**批41–45 完成，iOS 已在 Mac 上首次编译通过、e2e 首次在 iOS 模拟器上跑**（104/110，6 个失败已分类记录，见 §3 与 `bug.md`）。闸门全绿（949 vitest + ios:build + Android 可真编译）。审计计划已闭合。
 
 ---
 
@@ -43,9 +43,13 @@
 
 ### 工作树状态
 
-干净（批45 已入 `755172d`）。闸门：`build` 双产物 / `tsc -b` / **949 vitest（97 文件）** / `android/gradlew assembleDebug` 全绿。
+**有未提交改动**（2026-08-15 Mac 侧 iOS 编译收口，等用户确认后提交）：
 
-⚠️ **这四条闸门里没有一条读过 Swift**。批45 在 `ios/` 下新增 2 个 Swift、改了 4 个 Swift，另动了 bridging header / Podfile / pbxproj —— 全部未编译，详见 §3。
+- `ios/SongloftLynx/SongloftHttpService.swift` / `AppDelegate.swift` —— Swift 导入名修正（见 §3 对照表）
+- `ios/SongloftLynx/ViewController.swift` —— `LiveActivityModule` 注册包 `if #available(iOS 16.2, *)`
+- `docs/tracking/{HANDOFF,PROGRESS}.md` / `docs/tracking/bug.md` —— 本批记录
+
+闸门：`build` 双产物 / `tsc -b` / **949 vitest（97 文件）** / `android/gradlew assembleDebug` / **`pnpm run ios:build`（Pods + app 全 BUILD SUCCEEDED）** 全绿。iOS e2e 首跑 104/110（6 个失败见 `bug.md`「iOS e2e 首次运行发现」）。
 
 ---
 
@@ -71,31 +75,35 @@
 
 改动：两侧各自**替换宿主 HTTP service** 拿到 TLS 钩子（`net/SongloftHttpService.kt` / `SongloftHttpService.swift`，iOS 顺带从 Podfile 摘掉 `LynxService/Http`），`InsecureTls` 收口三条出站路径且双向可逆；iOS 补锁屏封面；TS 侧补两处漏掉的 `applyInsecureTls`；4 条闸门收紧。详见 `PROGRESS.md` 批45 段与 `AGENTS.md` §5 新增的「宿主 HTTP service 是我们自己的」。
 
-### ⚠️ 接手第一件事：在 Mac 上编译 iOS
+### ✅ iOS 已在 Mac 上编译通过（2026-08-15，Xcode 26.6 / Swift 6.3.3）
 
-**批45 的 Swift 代码一行都没编译过** —— 开发机是 Linux，无 `xcodebuild`/`swift`。协议签名不是猜的（从 maven / GitHub release 拉下 SDK 源码和官方参考实现读出来的），所有 ObjC 接口点也都用了显式 `@objc(selector)` + 与 Swift 导入名对齐的双保险，但仍需：
+批45 的 Swift 代码首次编译，命中的正是预测的「Swift 怎么看 ObjC 声明」类问题，均已修复
+（**只改 Swift 名、不动 `@objc(selector)`**）。importer 的重命名启发式实际做的事是
+**剥掉与参数类型名重复的 label 词**，真实导入名与 ObjC selector 的对照：
 
-```bash
-cd ios && pod install          # Podfile 变了（摘掉 Http subspec），必须重跑
-pnpm run ios:build
-```
-
-最可能出问题的两点，都是「Swift 怎么看 ObjC 声明」：
-
-1. `SongloftHttpService` 对 `LynxServiceHttpProtocol` 的一致性 —— Swift 按它**自己导入的方法名**匹配 @objc 协议要求，不只看 selector。已按「导入名 + 显式 selector」双写（`invoke(withRequest:callback:)` / `@objc(invokeWithRequest:callback:)`），若仍不认，调整 Swift 方法名而**不要**动 selector。
-2. `AppDelegate.registerHttpService()` 里 `LynxServices.registerService(withProtocol:protocol:)` 的导入签名（ObjC 原型 `+registerServiceWithProtocol:protocol:`，第二个实参标签是 Swift 关键字）。
-
-批45 触及的 iOS 文件（7 个，全部未编译）：
-
-| 文件 | 改动 |
+| ObjC selector | Swift 导入名（编译器认的） |
 |---|---|
-| `InsecureTls.swift` | **新增** —— flag + `URLSessionDelegate` + 共享 session + `AVAssetResourceLoaderDelegate` |
-| `SongloftHttpService.swift` | **新增** —— `LynxServiceHttpProtocol` 实现 + 流式接收器 |
-| `AppDelegate.swift` | 注册 HTTP service（在 `LynxEnv.sharedInstance()` 之后） |
-| `SongloftPlatformModule.swift` | `methodLookup` 加 `setInsecureTls` + 上传改共享 session |
-| `SongloftAudioEngine.swift` | 锁屏封面 + 给 asset 挂 resource loader |
-| `SongloftDlnaModule.swift` | SOAP 改共享 session |
-| `SongloftLynx-Bridging-Header.h` / `Podfile` / `project.pbxproj` | 引入 public 头 / 摘 `Http` subspec / 登记两个新文件 |
+| `invokeWithRequest:callback:` | `invoke(with:callback:)`（剥 `Request` ≈ `LynxHttpRequest`） |
+| `invokeStreamingWithRequest:callback:withDelegate:` | `invokeStreaming(with:callback:with:)`（剥 `Request`/`Delegate`） |
+| `processChunkedData:withData:` | `processChunkedData(_:with:)`（剥 `Data` ≈ `NSData`） |
+| `+registerServiceWithProtocol:protocol:` | `registerService(withProtocol:protocol:)`（原样） |
+| `+getInstanceWithProtocol:` | `getInstanceWith(_:)`（保基础词、剥 `Protocol`；**不是** `getInstance(with:)` 也不是 `instance(withProtocol:)`） |
+
+预测的第 2 点（`registerService(withProtocol:protocol:)`）一次通过；卡住的是
+`getInstance`——猜的三种形态全错，最后用探针文件（刻意写错的类型标注）让编译器
+报出真实签名。结论已写进 `AppDelegate.registerHttpService()` 注释。
+
+**第 4个问题是预测之外的**：前三个修完后浮出 `ViewController.buildConfig()` 里
+`config.register(LiveActivityModule.self)` 无可用性守卫——类是 `@available(iOS 16.2, *)`
+（ActivityKit 硬需求）而部署目标 16.0，直接硬编译错。该行是批43（`9f08038`）加的，
+同样从未编译过。修法：包 `if #available(iOS 16.2, *)`，16.0/16.1 上模块不注册、
+TS 侧可选链降级 no-op；契约闸门的断言是 `buildConfig()` 切片内
+`toContain('config.register(LiveActivityModule.self)')`，包裹不影响。
+
+验证链：`pod install`（Podfile 摘了 `LynxService/Http`，必须重跑）→
+`pnpm run ios:build`（双 JS 产物 + Pods + app 全 BUILD SUCCEEDED）→
+模拟器（iPhone 16 Pro / iOS 18.3）启动、首屏渲染、6 个原生模块全注册、
+TestBridge ping/eval 正常。
 
 ### 需要再读 Lynx SDK 源码时（本地不留副本）
 
@@ -140,12 +148,29 @@ cd android && ./gradlew --no-daemon assembleDebug
 
 ### e2e 测试
 
-27 个 scenario 文件，107 个测试用例，**全部需要设备（adb / iOS Simulator）**。当前环境无设备，无法运行。接手后在设备上跑：
+27 个 scenario 文件，110 个测试用例，**全部需要设备（adb / iOS Simulator）**：
 
 ```bash
 pnpm run test:e2e:android   # Android 设备
 pnpm run test:e2e:ios       # iOS 模拟器
 ```
+
+**iOS 首跑结果（2026-08-15，iPhone 16 Pro / iOS 18.3，外部真实服务器 :58091）**：
+**104 passed / 6 failed**。6 个失败已分类记入 `bug.md`「iOS e2e 首次运行发现」：
+音频 3 条是 iOS 引擎与 Android 参考行为的真实语义差异（时长上报时机 / 低速 tick
+粒度 / error 后透明重试中间态），appearance 3 条是测试从 BTS realm 读
+`lynx.__globalProps`（那里没有 `lynx`）的读错对象。**音频基础播放、队列、曲末行为、
+其余 23 个文件全绿**——批45 替换的宿主 HTTP service 在 iOS 上工作正常（登录/拉数据
+全走它）。
+
+**跑 iOS e2e 前先确认 9230 没被占**：模拟器 App 与宿主共享端口空间，
+`lsof -iTCP:9230 -sTCP:LISTEN -P` 里可能同时出现**别的模拟器上残留的旧
+SongloftLynx 实例**（`*:9230`）和 `adb forward` 残留（`localhost:9230`，
+绑得更具体、会抢走宿主侧连接）。新实例 bind 失败只打一行
+`[TestBridge] bind() failed: 48`，e2e 会连上错误的监听者或连不上。
+清理：kill 旧实例 + `adb forward --remove tcp:9230`，再重启 App。
+另注意：**只留一台 Booted 模拟器**——`getBootedSimulator()` 取 JSON 列表里
+第一个 Booted 设备，多台并存时选择不确定。
 
 ### 后续功能方向（批46+）
 

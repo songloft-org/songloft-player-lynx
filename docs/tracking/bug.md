@@ -76,3 +76,40 @@
 ### 仍未定位
 
 - [ ] **偶发全屏灰层**（批29 发现）—— 运行数分钟后整屏蒙中灰，重启即恢复，不影响功能。审计补了一步算术：暗色读数 `13→86` 是**变亮**，纯黑半透层数学上不可能，联立得约 `#838383@0.62`，而仓库与 lynx-ui 里都没有这个颜色。最可查嫌疑是 lynx-ui Sheet 的 backdrop 泄漏。**下次出现时先跑** `adb logcat | grep -i "\[Sheet\] Invalid state transition"`（库自带的免费探针）
+
+## iOS e2e 首次运行发现（2026-08-15，均未修）
+
+> 背景：iOS 侧在批45 之后才第一次真正编译（Mac/Xcode 26.6），e2e 也是**首次**在 iOS
+> 模拟器（iPhone 16 Pro / iOS 18.3）上跑——此前 107 例只在 Android 上绿过。全量结果
+> **104 passed / 6 failed**。下方 6 条按根因分两类。**音频三条是 iOS 引擎与 Android 参考
+> 行为的真实差异**（Android 是测试的参考实现）；**appearance 三条是测试自身读错了对象**。
+> 修复排期未定，等用户确认是否开新批。
+
+### 音频引擎语义差异（3 条，宿主侧为主）
+
+- [ ] **`audio-playback`：`playing` 到达时 `durationMs` 仍为 0** —— iOS 的时长只随
+  0.5s 周期的 progress tick 上报（`emitProgress`），不随 `ready`/`playing` 状态事件携带；
+  测试在 waitFor 到 `playing` 后**立即**读状态，落在首个 tick 之前。手动复现：播放 3s 后
+  duration 正常（45035ms）。修法二选一：iOS 在 `onItemStatus(.readyToPlay)` 时即发一次带
+  duration 的 progress（对齐 Android「状态到位即可读时长」），或测试侧 waitFor duration>0。
+- [ ] **`audio-speed`：0.5 倍速 1s 内进度推进为 0（2 倍速同场景通过）** —— 低速下每个
+  0.5s tick 只推进 ~250ms，测试的 start/end 两次读取（各含 eval 往返）恰好夹在同一个 tick
+  区间内；且该测试紧跟 2 倍速用例，有累积状态。手动单独复现 0.5x+seek(0) 推进正常。
+  修法：测试放宽窗口/提高下限容差，或 progress tick 加密（与 Android 250ms 对齐）。
+- [ ] **`audio-error`：坏 URL 后 state 停在 `loading` 而非 `error`** —— store 收到 error
+  事件后 `scheduleRetry` **透明重试**，重试的 `load+play` 又让 iOS 发 `loading`
+  （`waitingToPlayAtSpecifiedRate`）把 `isBuffering` 置回 true，测试读到的是重试中间态
+  （errorMessage 已有、isBuffering 又真）。Android ExoPlayer 失败更快、重试预算在测试窗口内
+  耗尽故能落到终态 `error`。修法：对齐 iOS 失败路径的时序，或测试等待重试预算耗尽。
+
+### appearance 测试读错对象（3 条，测试侧）
+
+- [ ] **`ios-appearance` 全部 3 例：theme 读到 `'unknown'`** —— 测试 eval 读
+  `lynx.__globalProps.theme`，但 eval 跑在 **BTS realm**，那里 `lynx` 根本不存在
+  （实测 `typeof lynx === 'undefined'`）——`__globalProps` 是主线程 Lepus realm 的全局。
+  这是 AGENTS.md 反复警告的 realm 隔离，测试写出来从未跑过所以没暴露。**宿主功能本身未证伪**：
+  `ViewController.pushAppearance()`（updateGlobalProps + sendGlobalEvent）与
+  `system-appearance.ts`→`theme-model` 链路代码俱在。修法：测试改读 BTS 可达的真实 theme
+  状态（如把 theme-model 的 resolved theme 暴露进 e2e-bridge），**不要**读 `__globalProps`。
+  修测试前应先验宿主链路真能跟随系统外观（切 dark/light 看 theme-model 值），避免把真 bug
+  误当测试 bug 改掉。
