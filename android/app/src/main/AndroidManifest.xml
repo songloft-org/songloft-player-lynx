@@ -14,6 +14,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Floating lyrics overlay (SongloftFloatingLyric / FloatingLyricService).
+         Without this declaration the app never appears in "Display over other
+         apps", so `Settings.canDrawOverlays()` can only ever return false and the
+         user has no way to grant it — the toggle in Settings looks live and does
+         nothing. Batch 43 believed this line was already here; it was not. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
     <application
         android:name=".SongloftApplication"
         android:allowBackup="true"
@@ -56,6 +63,17 @@
                 <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>
         </service>
+
+        <!-- Overlay window holding the current lyric line. Started by
+             FloatingLyricModule.show() via startService(); an undeclared service
+             cannot be resolved, and `startService` does not throw for that — the
+             system logs one "Unable to start service … not found" line and the
+             call returns, so the overlay simply never appeared. Deliberately not
+             a foreground service: it owns no playback, and the window itself is
+             what has to survive (see FloatingLyricService). -->
+        <service
+            android:name=".lyric.FloatingLyricService"
+            android:exported="false" />
     </application>
 
 </manifest>

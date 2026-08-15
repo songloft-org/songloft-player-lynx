@@ -218,6 +218,7 @@ cached = nm.SongloftDlna as DlnaModule
 | SongloftStorageModule | `storage/` | SharedPreferences（prefs）+ Keystore（secure） |
 | SongloftPlatformModule | `platform/` | 文件选择、URL 打开、insecureTls 开关 |
 | SystemAppearance | `system/` | 深浅色/语言注入 + 变更事件 |
+| SongloftFloatingLyric | `lyric/` | 悬浮歌词覆盖层（`SYSTEM_ALERT_WINDOW` + `FloatingLyricService`；两者都必须在 manifest 里声明，见下方闸门一节） |
 | （非 Lynx 模块）| `net/` | `SongloftHttpService` = 宿主 `fetch` 服务；`InsecureTls` = TLS 开关 |
 
 ### iOS（Swift）
@@ -241,7 +242,21 @@ cached = nm.SongloftDlna as DlnaModule
 - iOS 注册断言限定在 `buildConfig()` **切片内**且**先剥注释** —— 只查类名会被 import / 文档注释骗过，不剥注释会被「整行注释掉的 `config.register(...)`」骗过（批45 实测过这一条）
 - `project.pbxproj` 与 `Info.plist` 都另有**结构可解析性**闸门（括号配对、标签嵌套、`<key>` 必须有兄弟值），因为子串断言分不清「格式正确」与「恰好含这几个字符」——批39 的教训
 
-仍未被守住的：`AndroidManifest.xml` **完全无闸门**（权限 / service 声明漏写无人拦）。新增模块时按 `hosts` 表 + modules 表 + 一段 `describe` 三处扩闸门。详见 `docs/plans/2026-08-14-audit-fix-plan.md`。
+新增模块时按 `hosts` 表 + modules 表 + 一段 `describe` 三处扩闸门。详见 `docs/plans/2026-08-14-audit-fix-plan.md`。
+
+### `AndroidManifest.xml` 也是契约面（批48）
+
+`src/__tests__/android-manifest-contract.test.ts` 守住它。此前它是唯一**完全没有闸门**的原生契约面，代价是悬浮歌词整个功能死了四个批次没人发现：manifest 既没声明 `SYSTEM_ALERT_WINDOW` 也没声明 `FloatingLyricService`，而**两处都是静默失败** —— `startService()` 解析不到未声明的 Service 不抛异常（系统只打一行 `Unable to start service … not found`），权限未声明则让 app 不出现在「显示在其他应用上层」里，于是 `canDrawOverlays()` 只可能是 false、用户无从授权。更糟的是批43 把这两项记成了「此前已有」，而**没有任何东西会去读那个文件**，所以这句错话与代码之间四个批次里没有对账机会。
+
+闸门**从 Kotlin 源码推导需求，不硬编码清单**（这样新加一个 Service 不需要谁记得来扩这个文件）：
+
+- 基类名以 `Service`/`Activity` 结尾的类必须有 `<service>`/`<activity>` 声明；**反向也验**，防改名留下悬空声明
+- 用了 `TYPE_APPLICATION_OVERLAY` / `canDrawOverlays` ⇒ 必须声明 `SYSTEM_ALERT_WINDOW`
+- 每个 `foregroundServiceType` ⇒ 必须有配套权限（Android 14 起缺了是 `startForeground()` 处的硬 `SecurityException`）
+- `MainActivity` 的 `configChanges` 必须含 `uiMode|locale|layoutDirection`（§4 早就要求，此前无人验）
+- XML 结构可解析（同 pbxproj / Info.plist 那两条的理由）
+
+**改 Kotlin 侧的 View 时另记一条**：原生模块方法跑在 Lynx JS 线程上，碰主线程创建的 View 会抛 `CalledFromWrongThreadException`，而模块里常见的 `catch (_: Exception) {}` 会把它整个吞掉——悬浮歌词就是这样「窗口浮出来了、一行歌词也不显示、logcat 干净」。`FloatingLyricService.updateText` 现在经 `Handler(Looper.getMainLooper())` post。判定这类问题**不要靠截图**（当时是白字白底，看不出区别），用与配色无关的量：`dumpsys window windows` 里的 `Requested h` / `mLayoutSeq` 在文本真的写进去时必然变化。
 
 ### 宿主 HTTP service 是我们自己的（批45，改网络层前必读）
 

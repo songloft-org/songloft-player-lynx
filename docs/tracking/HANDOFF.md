@@ -1,7 +1,7 @@
-# 工作交接（2026-08-15）
+# 工作交接（2026-08-16）
 
 > 本文件是**给接手 AI 的交接说明**。读完这一篇就能继续干活；细节在链接里。
-> 一句话现状：**批41–47 完成，两个平台的 e2e 都是全绿** —— **iOS 110/110**、Android 107/110（3 例平台门控跳过）。闸门全绿（952 vitest + `ios:build` + Android 可真编译 + 双产物）。审计计划已闭合；iOS e2e 首跑的 6 个失败在批46 全部修完，自签名 TLS 实测挖出的两条缺陷（iOS 媒体流不通 / 关开关不立即生效）在批47 修完并实测通过。
+> 一句话现状：**批41–48 完成，两个平台的 e2e 都是全绿** —— Android **112/115**（3 例 `ios-appearance` 跳过）、iOS **110/115**（5 例 Android 专属的悬浮歌词跳过）。闸门全绿（**959 vitest / 98 文件** + `ios:build` + Android 可真编译 + 双产物）。审计计划已闭合；iOS e2e 首跑的 6 个失败在批46 修完，自签名 TLS 的两条缺陷在批47 修完并实测通过，批48 修掉了悬浮歌词**从未工作过**的第四、第五重死并给 `AndroidManifest.xml` 补上了它此前完全缺失的闸门。
 
 ---
 
@@ -9,13 +9,14 @@
 
 ### 已提交
 
-批41–44 的 15 个 commit **已推送**（`main` 与 `origin/main` 同步）。此前本文件写的「均未推送」已过期。
-
-批45 的两个 commit 也已推送。**`main` 现在领先 `origin/main`**（批45 iOS 编译收口与批46 的 commit 未推送，是否 `git push` 由用户决定）。
+批41–47 的 commit **全部已推送**（`main` 与 `origin/main` 同步，`git rev-list --left-right --count origin/main...main` = `0 0`）。
 
 | commit | 内容 |
 |---|---|
-| （批46） | iOS e2e 6 个失败全修：时长播种/守卫 + tick 墙钟节奏 + itemFailed + appearance 读 BTS |
+| （批48） | 悬浮歌词第四/五重死（manifest 两行声明 + 主线程 hop）+ AndroidManifest 闸门 7 例 + Android 悬浮歌词 e2e 5 例 + 清 11 个死 i18n key |
+| `f849804` | 批47：自签名下 iOS 媒体流可播（`InsecureMediaLoader`）+ 关开关立即生效 |
+| `4a8153d` | docs：自签名 TLS 四步实测，确认批45 生效并判定两条缺陷 |
+| `8f446d1` | 批46：iOS e2e 首跑 6 个失败全修（110/110） |
 | `0745418` | docs：记录 iOS 首次编译收口与 e2e 首跑结果（104/110） |
 | `f8a060d` | 批45 Swift 首次编译收口（导入名对齐 + LiveActivity 可用性守卫） |
 | `36f2f99` | docs：HANDOFF 订正推送状态 |
@@ -47,9 +48,9 @@
 
 ### 工作树状态
 
-批46 的改动**尚未提交**（等用户确认）：`ios/SongloftLynx/SongloftAudioEngine.swift`、`src/features/player/store/player-store.ts`、`src/native/mock-audio.ts`、`src/e2e-bridge.ts`、3 个 e2e scenario、`docs/tracking/*`。
+批48 的改动**尚未提交**（等用户确认）：`android/app/src/main/AndroidManifest.xml`、`android/…/lyric/FloatingLyricService.kt`、`src/__tests__/android-manifest-contract.test.ts`（新）、`src/e2e-bridge.ts`、`src/i18n/resources.ts`、`e2e/scenarios/android-floating-lyric.scenario.ts`（新）、`AGENTS.md`、`docs/tracking/*`。
 
-闸门：`build` 双产物 / `tsc -b` / **951 vitest（97 文件）** / `android/gradlew assembleDebug` / **`pnpm run ios:build`（Pods + app 全 BUILD SUCCEEDED）** 全绿。**iOS e2e 110/110** + **Android e2e 107/110**（3 例平台门控跳过）。
+闸门：`build` 双产物 / `tsc -b` / **959 vitest（98 文件）** / `android/gradlew assembleDebug` 全绿。**Android e2e 112/115**（3 例 `ios-appearance` 平台门控跳过）。
 
 ---
 
@@ -68,6 +69,15 @@
 ---
 
 ## 3. 批45–46 与剩余工作
+
+### 批48 做了什么（悬浮歌词从未工作过 + manifest 闸门补位）
+
+起点是一次「还剩什么没做」的巡查：`AndroidManifest.xml` 无闸门这条 P3 挂在清单上很久，顺着它去读文件，发现批43 记为「此前已有」的两项**都不存在**。逐条根因在 [`bug.md`](bug.md)「批48」段，这里留**方法论上值得带走的四点**：
+
+1. **没有闸门的文件上，任何结论都会腐烂。** 批43 那句「SYSTEM_ALERT_WINDOW 权限与 service 声明此前已有」是错的，而它活了四个批次——因为**没有任何东西会去读那个文件**。这不是谁不小心，是缺少对账机制的必然结果。补闸门时刻意**从 Kotlin 源码推导需求**（基类名以 `Service`/`Activity` 结尾就必须有声明），这样下一个新组件不需要谁记得来扩这个测试。
+2. **静默失败要主动去想「如果它坏了，我会看到什么」。** 这个功能的三重死没有一次能让页面侧看到错误：`startService` 对未声明的 Service **不抛异常**、权限未声明只是让 app 不出现在授权列表里、`updateText` 的线程异常被模块的裸 `catch (_: Exception) {}` 吞掉。TS facade 三种情况都返回 resolved promise。所以新加的 e2e 断言全部落在**进程外**的 `dumpsys` 上——只问 `isShowing()` 等于让嫌疑人自证清白。
+3. **截图证明不了「文本写进去了」。** 覆盖层是白字白底，肉眼与截图都看不出差别。定位靠的是与配色无关的量：`dumpsys window windows` 里 `Requested h` / `mLayoutSeq` / frame 在写入前后**逐字节相同** → 压根没重排。修完后 46→48、4748→4749。**这也顺便成了免费的反向验证**：摘掉主线程 hop 就回到 46。
+4. **平台门控的默认值要跟 driver 对齐。** 新 scenario 用 `E2E_PLATFORM === 'android'` 门控，结果在裸 `pnpm run test:e2e` 下 5 例**整体跳过**（`createDriver()` 把未设该变量视为 Android）。第一次全量跑就是这么「通过」的——107 passed / **8** skipped，比预期多 5 个 skip，只有盯着 skip 数才看得出来。
 
 ### 批46 做了什么（iOS e2e 首跑的 6 个失败，全修完）
 
@@ -147,7 +157,6 @@ cd android && ./gradlew --no-daemon assembleDebug
 |---|---|---|
 | **HLS 播放列表内的绝对 https URI（自签名下）** | P3 | 批47 修完 iOS 自签名媒体流后剩下的唯一缺口：播放列表里的**相对** URI 会继续带自定义 scheme 回到 `InsecureMediaLoader`（Songloft 自己的 HLS 反代产出的正是相对 URL，所以按构造是通的），但**绝对** `https://` URI 由 AVFoundation 自行加载、撞同一道证书墙。**两条都没有可测的自签名 HLS 源，未实测**。 |
 | **偶发全屏灰层** | 未定位 | 运行数分钟后整屏蒙中灰，重启即恢复。最可查嫌疑是 lynx-ui Sheet 的 backdrop 泄漏。**下次出现时跑**：`adb logcat \| grep -i "\[Sheet\] Invalid state transition"`（库自带的免费探针）。若真机（非 BlueStacks）复现不了，降级为环境记录。 |
-| **`AndroidManifest.xml` 完全无闸门** | P3 | 权限 / service 声明漏写无人拦（批43 的悬浮歌词就吃过这个）。其余原生契约面已被闸门覆盖。 |
 
 ### ✅ 自签名功能实测 + 批47 收口（2026-08-15，iOS 18.3 模拟器 + Android 模拟器）
 
@@ -165,17 +174,17 @@ cd android && ./gradlew --no-daemon assembleDebug
 
 ### e2e 测试
 
-27 个 scenario 文件，110 个测试用例，**全部需要设备（adb / iOS Simulator）**：
+28 个 scenario 文件，115 个测试用例，**全部需要设备（adb / iOS Simulator）**：
 
 ```bash
 pnpm run test:e2e:android   # Android 设备
 pnpm run test:e2e:ios       # iOS 模拟器
 ```
 
-**当前结果（2026-08-15，批46 后）**：**iOS 110/110**（iPhone 16 Pro / iOS 18.3，外部真实
-服务器 :58091）· **Android 107/110**（3 例是 `ios-appearance`，平台门控跳过，属预期）。
-首跑那 6 个失败的完整根因记录留在 `bug.md`「iOS e2e 首次运行发现」，其中两条的**首跑归因
-已被实测推翻**，值得一读——那是本项目「先量化再改」的最新一课。
+**当前结果（2026-08-16，批48 后）**：**Android 112/115**（3 例 `ios-appearance` 平台门控跳过）
+· **iOS 110/115**（5 例 Android 专属的悬浮歌词跳过；`e2e:ios:full` 全流程复跑，无跨平台回归）。
+批46 那 6 个失败的完整根因记录留在 `bug.md`「iOS e2e 首次运行发现」，其中两条的**首跑归因
+已被实测推翻**，值得一读——那是本项目「先量化再改」的一课；批48 的三重静默死是另一课。
 
 **跑 e2e 前必做的三件环境检查**（每一条都真的踩过）：
 

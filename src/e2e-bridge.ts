@@ -17,6 +17,7 @@ import { useServerStore } from './features/settings/store/server-store.js'
 import { appConfig } from './core/config/app-config.js'
 import { router } from './router.js'
 import { readNativeModules, readLynxGlobal } from './native/native-modules.js'
+import { getFloatingLyricModule } from './native/floating-lyric.js'
 import { getSystemAppearance } from './native/system-appearance.js'
 import { changeAppTheme, getAppTheme, resolveTheme } from './shared/theme/theme-model.js'
 
@@ -42,6 +43,19 @@ import { changeAppTheme, getAppTheme, resolveTheme } from './shared/theme/theme-
   getAppTheme,
   resolveTheme,
   changeAppTheme,
+}
+// Floating-lyrics overlay (Android). Same realm problem as the theme block above,
+// one level worse: `NativeModules` is not reachable from the eval scope *at all*
+// — neither bare nor on `globalThis` (measured) — so a test cannot poke a native
+// module directly the way it can a store. Every call is forwarded through the
+// facade rather than a cached instance, because `getFloatingLyricModule()` latches
+// its no-op fallback on first call and bundle init is too early to resolve it.
+;(globalThis as Record<string, unknown>).__E2E_FLOATING_LYRIC__ = {
+  requestPermission: () => getFloatingLyricModule().requestPermission(),
+  show: () => getFloatingLyricModule().show(),
+  updateLyric: (line: string) => getFloatingLyricModule().updateLyric(line),
+  hide: () => getFloatingLyricModule().hide(),
+  isShowing: () => getFloatingLyricModule().isShowing(),
 }
 
 // Register the TestBridge eval listener

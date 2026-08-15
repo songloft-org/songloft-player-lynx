@@ -64,7 +64,8 @@
 ### P2 — 结构性
 
 - [x] **每个 feature 各建一套 `TokenStore` + `AuthInterceptor`** 🔍待复核 —— `api-client.ts:54` 每次 `new`，共 6 份。后果：换账号后曲库仍带上一个账号的 token（后端会正常返数据，用户看到别人的库）；token 过期时多个 bundle 各刷一次 refresh 互相覆盖（批43 P2-1 已修：`getSharedApiBundle()` 进程级单例）
-- [x] **悬浮歌词（Android）五重死** 🔍待复核 —— `FloatingLyricModule.kt` 5 个方法全无 `@LynxMethod`（第 9 行却 import 了）+ `SongloftApplication.kt:67` 未注册 + 签名与 TS 不符 + 清单缺 `SYSTEM_ALERT_WINDOW` 与 service 声明。`lyric-store.ts:168` 每行歌词都在往 stub 里写（批43 已修：加 @LynxMethod + Callback + 注册；SYSTEM_ALERT_WINDOW 权限与 service 声明此前已有）
+- [x] **悬浮歌词（Android）五重死** 🔍待复核 —— `FloatingLyricModule.kt` 5 个方法全无 `@LynxMethod`（第 9 行却 import 了）+ `SongloftApplication.kt:67` 未注册 + 签名与 TS 不符 + 清单缺 `SYSTEM_ALERT_WINDOW` 与 service 声明。`lyric-store.ts:168` 每行歌词都在往 stub 里写（批43 修了前三重：加 @LynxMethod + Callback + 注册）
+  - ⚠️ **批43 那句「SYSTEM_ALERT_WINDOW 权限与 service 声明此前已有」是错的**，批48 对源 manifest 与**合并后**的 manifest 双向核实：两者都没有。所以审计原判的第四、第五重死一直活着，见下面批48 那两条。这条错误结论能活四个批次，直接原因就是「`AndroidManifest.xml` 完全无闸门」——没有任何东西会去读那个文件，于是一句未经核实的话与代码之间没有任何对账机制
 - [x] **Live Activity（iOS）不是 Lynx 模块** 🔍待复核 —— `LiveActivityModule.swift:12` 是普通 `enum`，无 `@objc`/`name`/`methodLookup`，也不在 `buildConfig()` 里（批43 已修：enum→class + @objc/name/methodLookup + 注册）
 - [x] **契约闸门不覆盖批35+ 的原生模块** 🔍待复核 —— `SongloftPlatform`/`SongloftDlna`/`SongloftFloatingLyric`/`SongloftLiveActivity` 都在闸门外，且闸门完全不验证「注册」这件事（批43 已修：+30 例闸门，覆盖 6 模块双端方法/注册/@LynxMethod/class 结构）
 - [x] **`setInsecureTls` / `setArtworkUri` 只有 Android**（批45 已修）—— 复核时发现描述本身有偏差，且缺口比记录的更深：
@@ -73,6 +74,47 @@
   - 修法：两侧各自**替换宿主 HTTP service**（`net/SongloftHttpService.kt` / `SongloftHttpService.swift`）以拿到 TLS 钩子，`InsecureTls` 收口三条出站路径且**双向可逆**；TS 侧补上 `applyServerSettings` 与切服务器档案两处漏掉的 `applyInsecureTls`
 - [x] **iOS 自签名 + 媒体流不通 —— 批47 已修（实测通过）** —— 修法就是批45 判定的那条：`InsecureMediaLoader` 把 asset URL 的 scheme 换成 `songloft-insecure-https`，AVFoundation 因无法自行加载而把每个加载请求交给我们，由 `InsecureTls.session`（信任已放宽的那个）拉字节范围。**实测**（自签名 20 分钟本地曲）：播放推进 `pos=0→1500`、`dur=1200039`，seek 到 19 分钟落在 `1158000`，代理侧看到 `bytes=0-1`（content-info）→ `bytes=0-` → `bytes=20471-`（非零偏移）三种请求；关掉开关后走原生加载，全量 e2e 110/110 无回归。**过程里踩了两个坑，都写进了代码注释**：① 加载器回调队列一开始挂在 `.main`，而 `buildAudioMix` 会在主线程同步等 asset 轨道 → 送数据的线程正是被阻塞的那个，**自己锁死自己**，表现是每次尝试卡约 10 秒后 `-11800`、HTTP 请求在 AVFoundation 放弃之后才发出（设备日志 `curll_respondToHandleRequestCompletionOnQueue: … timed-out on handler`）；② 第一版用 completion-handler 一次性收，`requestsAllDataToEndOfResource` 会把整条剩余音轨读进内存（实测 19MB 文件来了一个 19MB buffer），且 AVFoundation 从此只从头消费、seek 不发新 range，改成流式 `respond(with:)` 后非零偏移的 range 才出现。**仍未做**：播放列表内的**绝对** `https://` URI（AVFoundation 会自己去加载，撞同一道墙）；相对 URI 因为继续带自定义 scheme 会回到加载器，而 Songloft 自己的 HLS 反代产出的正是相对 URL，所以那条按构造是通的，**但没有可测的自签名 HLS 源，未实测**
 - [x] **`setInsecureTls` 关闭后不影响已建立的连接 —— 批47 已修（iOS）** —— `InsecureTls.update()` 在值真变化时 `invalidateAndCancel()` 并重建 session，丢掉连接池。实测：同一 URL（不换 hostname、不重启 App）关掉开关后登录立刻 `HTTP 499`。**Android 侧已补测，本来就是立即生效的**，原因不是巧合：`SongloftHttpService.clientFor()` 在标志变化时重建 `OkHttpClient`（OkHttp 的 TLS 配置按 client 不可变），新 client 自带新连接池。两端语义现已对齐
+
+### 批48 · 悬浮歌词的第四、第五重死（实测确认并修复）
+
+> 起因是一次「还剩什么没做」的巡查：`AndroidManifest.xml` 无闸门这条 P3 一直挂在清单上，
+> 顺着它去读文件，发现批43 记为「此前已有」的两项**都不存在**。功能自始至终没工作过。
+
+- [x] **manifest 缺 `SYSTEM_ALERT_WINDOW` 与 `FloatingLyricService` 声明**（批48 已修）——
+  两处都是**静默**失败，这是它能活这么久的原因：`Context.startService()` 解析不到未声明的
+  Service **不抛异常**，系统只打一行 `Unable to start service … not found` 就返回；权限未声明
+  则让 app 根本不出现在「显示在其他应用上层」列表里，于是 `Settings.canDrawOverlays()` 只可能
+  返回 false，**用户没有任何途径授权**。设置页那个开关是真的（`getPlatformCapabilities().floatingLyric`
+  在 Android 上为 true，因为模块本身批43 已注册），点了就是没反应。修法：补两行声明；
+  实测（Android 13 模拟器）`requestPermission → true`、`dumpsys activity services` 里
+  `FloatingLyricService` 在跑、`dumpsys window windows` 多出 `Window{… u0 org.songloft.lynx}`
+  覆盖窗口，`hide()` 后两者都消失
+- [x] **`updateText` 在 Lynx JS 线程上碰 View，异常被模块的裸 `catch` 吞掉**（批48 已修）——
+  上面两行补完后覆盖窗口浮出来了，但**一行歌词也没显示**。截图看不出问题（白字白底），
+  改用与配色无关的量才定位：写入歌词前后窗口的 `Requested h=46`、`frame=[0,1354][1280,1400]`、
+  `mLayoutSeq=4724` **逐字节相同** —— 压根没重排。而 `isShowing()` 返回 true 说明静态 `service`
+  引用是好的，所以只能是 `textView?.text = line` 本身失败：它跑在 JS 线程，而只有创建 View 的
+  线程能碰它（`setText` → `requestLayout` → `CalledFromWrongThreadException`），
+  偏偏 `FloatingLyricModule.updateLyric` 用 `catch (_: Exception) {}` 把它整个吞了，
+  logcat 里连一行都没有。修法：`updateText` 经 `Handler(Looper.getMainLooper())` post。
+  修后同一量测 `h` 46→48、`mLayoutSeq` 4748→4749、frame 顶边 1354→1352，截图上歌词可见
+  - 顺带修了可读性：覆盖层原本是白字+黑投影、**无背景**，浮在浅色应用上几乎不可见
+    （就在 Songloft 自己的白色首页上实测到）。加了半透明深色底
+- [x] **`AndroidManifest.xml` 完全无闸门**（批48 已修）—— 新增 `src/__tests__/android-manifest-contract.test.ts`
+  7 例，**从 Kotlin 源码推导需求而非硬编码清单**：每个基类名以 `Service`/`Activity` 结尾的类都必须有
+  声明（反向亦然，防改名留下悬空声明）、用了 `TYPE_APPLICATION_OVERLAY`/`canDrawOverlays` 就必须声明
+  `SYSTEM_ALERT_WINDOW`、每个 `foregroundServiceType` 必须有配套权限（Android 14 起缺了是硬
+  `SecurityException`）、`MainActivity` 的 `configChanges` 必须含 `uiMode|locale|layoutDirection`
+  （AGENTS.md §4 的要求，此前同样无人验）、以及 XML 结构可解析。六条各自反向验证过：摘掉被守护的
+  东西只点亮对应那条
+- [x] **悬浮歌词此前零 e2e 覆盖**（批48 已补）—— 新增 `e2e/scenarios/android-floating-lyric.scenario.ts`
+  5 例，断言全部落在**进程外**的 `dumpsys` 上（service 在跑 / 覆盖窗口存在 / 收到歌词后窗口真的重排），
+  因为三重死没有一次能让页面侧看到错误——TS facade 无论如何都返回 resolved promise，
+  只问 `isShowing()` 等于让嫌疑人自证清白。反向验证：摘掉主线程 hop 后那条立刻红
+  （`expected 46 to be greater than 66`）
+  - **门控写法有个坑**：`E2E_PLATFORM === 'android'` 会让这 5 例在裸 `pnpm run test:e2e` 下**整体跳过**，
+    而 `createDriver()` 把未设该变量视为 Android。第一次全量跑就是这么「通过」的（107 passed / 8 skipped，
+    比预期多 5 个 skip）。正确写法是 `(process.env.E2E_PLATFORM ?? 'android') === 'android'`
 
 ### 仍未定位
 
