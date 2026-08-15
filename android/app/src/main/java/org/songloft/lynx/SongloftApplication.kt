@@ -6,7 +6,6 @@ import com.facebook.imagepipeline.core.ImagePipelineConfig
 import com.facebook.imagepipeline.memory.PoolConfig
 import com.facebook.imagepipeline.memory.PoolFactory
 import com.lynx.service.devtool.LynxDevToolService
-import com.lynx.service.http.LynxHttpService
 import com.lynx.service.image.LynxImageService
 import com.lynx.service.log.LynxLogService
 import com.lynx.tasm.LynxEnv
@@ -14,6 +13,7 @@ import com.lynx.tasm.service.LynxServiceCenter
 import org.songloft.lynx.audio.SongloftAudioModule
 import org.songloft.lynx.dlna.SongloftDlnaModule
 import org.songloft.lynx.lyric.FloatingLyricModule
+import org.songloft.lynx.net.SongloftHttpService
 import org.songloft.lynx.platform.SongloftPlatformModule
 import org.songloft.lynx.storage.SongloftStorageModule
 import org.songloft.lynx.test.SongloftTestBridgeModule
@@ -27,7 +27,8 @@ import org.songloft.lynx.test.TestBridgeServer
  *   - image  → `<image>` cover art (backed by Fresco)
  *   - log    → engine logging
  *   - http   → the host HTTP service that backs the bare global `fetch` the
- *              network layer relies on (see AGENTS.md §3; Android 2.18+)
+ *              network layer relies on (see AGENTS.md §3; Android 2.18+).
+ *              **Ours, not the SDK's** — see [SongloftHttpService].
  * DevTool service is included to enable the Lynx Inspector Protocol (WebSocket)
  * for e2e behavior testing via the `e2e/` driver.
  */
@@ -46,7 +47,13 @@ class SongloftApplication : Application() {
 
         LynxServiceCenter.inst().registerService(LynxImageService.getInstance())
         LynxServiceCenter.inst().registerService(LynxLogService)
-        LynxServiceCenter.inst().registerService(LynxHttpService)
+        // Deliberately NOT `com.lynx.service.http.LynxHttpService`: services bind
+        // by `getServiceClass()` (which ILynxHttpService forbids overriding), so
+        // registering ours *instead of* the SDK's is what makes the choice
+        // deterministic. Ours is a transcription of it plus a TLS hook — the SDK
+        // client is private, which is why "allow insecure TLS" never reached
+        // `fetch` before. See `net/SongloftHttpService.kt`.
+        LynxServiceCenter.inst().registerService(SongloftHttpService)
         LynxServiceCenter.inst().registerService(LynxDevToolService.INSTANCE)
         LynxDevToolService.INSTANCE.devtoolEnvInit(this)
         LynxDevToolService.INSTANCE.lynxDebugPresetValue = true

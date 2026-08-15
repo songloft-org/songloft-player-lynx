@@ -10,6 +10,7 @@ import android.provider.OpenableColumns
 import com.lynx.jsbridge.LynxModule
 import com.lynx.react.bridge.Callback
 import com.lynx.jsbridge.LynxMethod
+import org.songloft.lynx.net.InsecureTls
 import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -62,6 +63,10 @@ class SongloftPlatformModule(context: Context) : LynxModule(context) {
         val boundary = "----LynxBoundary${UUID.randomUUID()}"
         val fileName = getFileName(uri) ?: "import.json"
         val conn = URL(uploadUrl).openConnection() as HttpURLConnection
+        // Relaxed per connection rather than relying on the JVM-wide defaults
+        // InsecureTls also mutates for ExoPlayer's sake: this path stays correct
+        // if that global mutation is ever dropped.
+        InsecureTls.configure(conn)
         conn.doOutput = true
         conn.requestMethod = "POST"
         conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
@@ -102,23 +107,18 @@ class SongloftPlatformModule(context: Context) : LynxModule(context) {
     }
 
     /**
-     * Enable trust-all certificate validation for HTTPS connections.
-     * Called from JS when `appConfig.insecureTls` is true (self-signed servers).
+     * Enable or disable trust-all certificate validation (self-signed servers).
+     * Called from JS whenever `appConfig.insecureTls` is written — login,
+     * startup hydrate, the server settings page, and profile switches.
+     *
+     * All the work lives in [InsecureTls] because the relaxation has to reach
+     * three unrelated transports (the OkHttp-backed host `fetch` service,
+     * ExoPlayer, and this module's own uploads), and because it must be
+     * **reversible**: `enabled = false` used to be silently ignored, leaving a
+     * process-wide trust-all in place until the app was killed.
      */
     @LynxMethod
     fun setInsecureTls(enabled: Boolean) {
-        if (enabled) {
-            try {
-                val trustAll = arrayOf<javax.net.ssl.TrustManager>(object : javax.net.ssl.X509TrustManager {
-                    override fun checkClientTrusted(chain: Array<java.security.cert.X509Certificate>?, authType: String?) {}
-                    override fun checkServerTrusted(chain: Array<java.security.cert.X509Certificate>?, authType: String?) {}
-                    override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
-                })
-                val sslContext = javax.net.ssl.SSLContext.getInstance("TLS")
-                sslContext.init(null, trustAll, java.security.SecureRandom())
-                javax.net.ssl.HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.socketFactory)
-                javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier { _, _ -> true }
-            } catch (_: Exception) {}
-        }
+        InsecureTls.update(enabled)
     }
 }

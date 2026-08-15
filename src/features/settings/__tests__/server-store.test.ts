@@ -46,6 +46,11 @@ vi.mock('../../auth/store/index.js', () => ({
   PREF_SERVER_URL: 'server_url',
 }))
 
+vi.mock('../../../native/native-platform.js', () => ({
+  applyInsecureTls: vi.fn(),
+}))
+
+const { applyInsecureTls } = await import('../../../native/native-platform.js')
 const { useServerStore } = await import('../store/server-store.js')
 const { TokenStore } = await import('../../../core/network/token-store.js')
 const { getSharedTokenStore, resetSharedApiBundleForTests } = await import(
@@ -168,6 +173,26 @@ describe('switchTo', () => {
     storageMock.secure.get.mockResolvedValue(null)
     const result = await useServerStore.getState().switchTo(p2.id)
     expect(result.hasToken).toBe(false)
+  })
+
+  // Regression: the switch wrote `appConfig.insecureTls` from the target profile
+  // but never told the hosts, so the transport kept the *previous* profile's TLS
+  // trust. Both directions are asserted: relaxing for a self-signed profile and
+  // re-tightening when moving back to a public one (the dangerous half — a
+  // process-wide trust-all that outlives the profile it was enabled for).
+  test('pushes the target profile TLS flag to the host transport', async () => {
+    const lan = await useServerStore.getState().addProfile({
+      name: 'LAN', url: 'https://lan', insecureTls: true,
+    })
+    const pub = await useServerStore.getState().addProfile({
+      name: 'Public', url: 'https://public', insecureTls: false,
+    })
+
+    await useServerStore.getState().switchTo(lan.id)
+    expect(applyInsecureTls).toHaveBeenLastCalledWith(true)
+
+    await useServerStore.getState().switchTo(pub.id)
+    expect(applyInsecureTls).toHaveBeenLastCalledWith(false)
   })
 })
 

@@ -9,7 +9,7 @@ interface SongloftPlatformNative {
     mimeType: string,
     callback: (error: string | null, responseBody: string | null) => void,
   ): void
-  setInsecureTls?(enabled: boolean): void
+  setInsecureTls(enabled: boolean): void
 }
 
 function getModule(): SongloftPlatformNative | null {
@@ -34,9 +34,23 @@ export function openURL(url: string): void {
   }
 }
 
+/**
+ * Push the user's "allow insecure TLS" choice into the host transport.
+ *
+ * The interface declares `setInsecureTls` as **required** so `tsc` and the
+ * native-module contract gate keep all three sides (TS / Kotlin / Swift) in
+ * step — it was optional before, and the optional chain silently swallowed the
+ * fact that iOS never implemented it at all.
+ *
+ * The runtime `typeof` check stays regardless: a JS bundle can be hot-updated
+ * onto an older native shell, and calling a method that shell lacks would throw
+ * on a path (login / server switch) where throwing is worse than not relaxing.
+ *
+ * No-op on Web — the browser owns certificate trust.
+ */
 export function applyInsecureTls(enabled: boolean): void {
   const mod = getModule()
-  if (mod?.setInsecureTls) {
+  if (mod && typeof mod.setInsecureTls === 'function') {
     mod.setInsecureTls(enabled)
   }
 }

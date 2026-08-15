@@ -93,6 +93,32 @@ function interfaceMethods(source: string, interfaceName: string): string[] {
   return [...body.matchAll(/^\s{2}(?:\/\*\*.*)?(\w+)\??\(/gm)].map((m) => m[1] as string)
 }
 
+/**
+ * Assert the Kotlin host really exposes `method` to JS.
+ *
+ * The **annotation** is the contract, not the function. A plain `fun x()` without
+ * `@LynxMethod` compiles fine, registers nothing, and the TS facade's optional
+ * call swallows the resulting no-op — exactly the failure this gate exists to
+ * catch. Four call sites used to assert only `fun x(` while their failure message
+ * claimed to be checking the annotation, so the gate was blind to the one thing
+ * it advertised.
+ */
+function expectLynxMethod(source: string, method: string): void {
+  expect(source, `Kotlin has no @LynxMethod ${method}`).toMatch(
+    new RegExp(`@LynxMethod\\s+fun ${method}\\(`),
+  )
+}
+
+/**
+ * Assert the Swift host exposes `method`. Both halves are required: the method
+ * itself *and* its `methodLookup` entry — a method missing from the lookup table
+ * does not exist as far as JS is concerned.
+ */
+function expectSwiftMethod(source: string, method: string): void {
+  expect(source, `Swift has no func ${method}`).toContain(`func ${method}(`)
+  expect(source, `methodLookup is missing "${method}"`).toContain(`"${method}":`)
+}
+
 describe('audio global-event names reach both hosts verbatim', () => {
   const names = [...Object.values(NATIVE_EVENT)]
 
@@ -153,21 +179,13 @@ describe('native module method names exist on both hosts', () => {
   })
 
   test.each(audioMethods)('SongloftAudio.%s', (method) => {
-    expect(hosts.audioModule.android, `Kotlin has no @LynxMethod ${method}`).toContain(
-      `fun ${method}(`,
-    )
-    // iOS needs both halves: the Swift method *and* its `methodLookup` entry —
-    // a method without a lookup entry does not exist as far as JS is concerned.
-    expect(hosts.audioModule.ios, `Swift has no func ${method}`).toContain(`func ${method}(`)
-    expect(hosts.audioModule.ios, `methodLookup is missing "${method}"`).toContain(`"${method}":`)
+    expectLynxMethod(hosts.audioModule.android, method)
+    expectSwiftMethod(hosts.audioModule.ios, method)
   })
 
   test.each(storageMethods)('SongloftStorage.%s', (method) => {
-    expect(hosts.storage.android, `Kotlin has no @LynxMethod ${method}`).toContain(
-      `fun ${method}(`,
-    )
-    expect(hosts.storage.ios, `Swift has no func ${method}`).toContain(`func ${method}(`)
-    expect(hosts.storage.ios, `methodLookup is missing "${method}"`).toContain(`"${method}":`)
+    expectLynxMethod(hosts.storage.android, method)
+    expectSwiftMethod(hosts.storage.ios, method)
   })
 
   /**
@@ -275,6 +293,52 @@ test('iOS declares the audio background mode and activates a playback session', 
   expect(hosts.audio.ios).toMatch(/setCategory\(\.playback/)
 })
 
+/**
+ * Info.plist gets the same structural treatment as the pbxproj above, and for the
+ * same reason: every other assertion against it is a substring check, and a
+ * substring check cannot tell a well-formed file from one that merely contains
+ * the right characters. A malformed plist fails at build/launch time, which this
+ * repo has already learned is far too late (batch 39's pbxproj).
+ */
+describe('the iOS Info.plist is structurally well-formed', () => {
+  const plist = read(`${IOS_DIR}/Info.plist`)
+
+  test('tags are balanced and properly nested', () => {
+    const withoutComments = plist.replace(/<!--[\s\S]*?-->/g, '')
+    const stack: string[] = []
+    const mismatches: string[] = []
+    for (const [, closing, name, selfClosing] of withoutComments.matchAll(
+      /<(\/?)([a-zA-Z][\w:-]*)[^>]*?(\/?)>/g,
+    )) {
+      if (selfClosing === '/') continue
+      if (closing === '/') {
+        if (stack.pop() !== name) mismatches.push(`unexpected </${name}>`)
+      } else {
+        stack.push(name as string)
+      }
+    }
+    expect(mismatches, 'malformed plist markup').toEqual([])
+    expect(stack, 'unclosed plist tags').toEqual([])
+  })
+
+  test('every <key> has a sibling value element', () => {
+    // `<key>` followed immediately by another `<key>` means a value went missing,
+    // which the XML parser accepts and the plist loader silently mis-reads.
+    expect(plist).not.toMatch(/<key>[^<]*<\/key>\s*<key>/)
+  })
+
+  /**
+   * `NSAllowsArbitraryLoads` had no gate at all, while a comment in this very
+   * file credited it with something it cannot do (accepting self-signed certs —
+   * that is `InsecureTls`'s job). It is still needed for plain-HTTP servers,
+   * which is the common LAN setup, so it is pinned here.
+   */
+  test('ATS still permits cleartext HTTP for LAN servers', () => {
+    expect(plist).toContain('<key>NSAppTransportSecurity</key>')
+    expect(plist).toMatch(/<key>NSAllowsArbitraryLoads<\/key>\s*<true\/>/)
+  })
+})
+
 // ── Batch 35+ modules (P2-3 contract gate expansion) ─────────────────────────
 
 describe('SongloftPlatform module methods exist on both hosts', () => {
@@ -288,17 +352,14 @@ describe('SongloftPlatform module methods exist on both hosts', () => {
     expect(methods.length).toBeGreaterThanOrEqual(3)
   })
 
-  test.each(methods.filter((m) => m !== 'setInsecureTls'))('SongloftPlatform.%s', (method) => {
-    expect(hosts.platform.android, `Kotlin has no @LynxMethod ${method}`).toContain(
-      `fun ${method}(`,
-    )
-    expect(hosts.platform.ios, `Swift has no func ${method}`).toContain(`func ${method}(`)
-    expect(hosts.platform.ios, `methodLookup is missing "${method}"`).toContain(`"${method}":`)
-  })
-
-  // setInsecureTls is Android-only (iOS uses ATS plist + custom URLSessionDelegate).
-  test('setInsecureTls is Android-only', () => {
-    expect(hosts.platform.android).toContain('fun setInsecureTls(')
+  // `setInsecureTls` used to be excluded here, with a note claiming iOS covered
+  // it via "ATS plist + custom URLSessionDelegate". Only the plist half existed,
+  // and ATS relaxes *cleartext HTTP* — it has no bearing on certificate
+  // validation, so self-signed servers were simply unreachable on iOS. Now that
+  // both hosts implement it, it belongs in the main loop like everything else.
+  test.each(methods)('SongloftPlatform.%s', (method) => {
+    expectLynxMethod(hosts.platform.android, method)
+    expectSwiftMethod(hosts.platform.ios, method)
   })
 })
 
@@ -314,11 +375,8 @@ describe('SongloftDlna module methods exist on both hosts', () => {
   })
 
   test.each(methods)('SongloftDlna.%s', (method) => {
-    expect(hosts.dlna.android, `Kotlin has no @LynxMethod ${method}`).toContain(
-      `fun ${method}(`,
-    )
-    expect(hosts.dlna.ios, `Swift has no func ${method}`).toContain(`func ${method}(`)
-    expect(hosts.dlna.ios, `methodLookup is missing "${method}"`).toContain(`"${method}":`)
+    expectLynxMethod(hosts.dlna.android, method)
+    expectSwiftMethod(hosts.dlna.ios, method)
   })
 })
 
@@ -381,10 +439,69 @@ describe('every native module is registered in the host bootstrap', () => {
     ).toContain(`registerModule("${mod.name}", ${mod.android}::class.java)`)
   })
 
+  /**
+   * Narrowed three ways, each closing a hole the previous version had:
+   *  - to the `buildConfig()` body, not the whole file (a mention in an import or
+   *    a doc comment elsewhere used to satisfy it);
+   *  - to the actual `config.register(…)` call, not the bare class name;
+   *  - **with comments stripped**, because a commented-out registration still
+   *    contains the call as a substring. Verified by commenting one out and
+   *    watching this go red — the un-stripped version stayed green, which is the
+   *    same substring-vs-semantics trap as batch 39's pbxproj gate.
+   */
+  const buildConfigBody = ((): string => {
+    const start = hosts.iosViewController.indexOf('private static func buildConfig()')
+    expect(start, 'buildConfig() not found in ViewController.swift').toBeGreaterThan(-1)
+    return hosts.iosViewController
+      .slice(start, hosts.iosViewController.indexOf('\n  }', start))
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '')
+  })()
+
   test.each(modules.filter((m) => m.ios))('%s is registered on iOS', (mod) => {
     expect(
-      hosts.iosViewController,
+      buildConfigBody,
       `${mod.name} not registered in ViewController.swift buildConfig`,
-    ).toContain(mod.ios!)
+    ).toContain(`config.register(${mod.ios!}.self)`)
+  })
+})
+
+/**
+ * The host HTTP service backs the bare global `fetch`, so losing it breaks every
+ * request in the app. Batch 45 replaced the SDK's implementation on both hosts to
+ * get a TLS hook (`InsecureTls`), which means there is no longer a stock service
+ * to silently fall back to — hence a gate.
+ *
+ * The iOS half also asserts the *absence* of the pod: our service and the SDK's
+ * would otherwise both bind `LynxServiceHttpProtocol`, with no documented winner.
+ */
+describe('the host HTTP service is ours, on both hosts', () => {
+  test('Android registers SongloftHttpService instead of the SDK one', () => {
+    expect(hosts.androidApp).toContain('registerService(SongloftHttpService)')
+    expect(
+      hosts.androidApp,
+      'the SDK LynxHttpService is registered too — two implementations of ILynxHttpService',
+    ).not.toContain('registerService(LynxHttpService)')
+  })
+
+  test('iOS registers SongloftHttpService and drops the LynxService/Http subspec', () => {
+    const appDelegate = read(`${IOS_DIR}/AppDelegate.swift`)
+    expect(appDelegate).toContain('LynxServices.registerService(')
+    expect(appDelegate).toContain('SongloftHttpService.self')
+    expect(appDelegate).toContain('NSProtocolFromString("LynxServiceHttpProtocol")')
+
+    // Registration has to follow the lazy-register flush that touching
+    // `LynxEnv.sharedInstance()` performs, or the pods' self-registrations
+    // could land afterwards.
+    expect(appDelegate.indexOf('LynxEnv.sharedInstance()')).toBeLessThan(
+      appDelegate.indexOf('registerHttpService()'),
+    )
+
+    const podfile = read('ios/Podfile')
+    const lynxService = podfile.slice(
+      podfile.indexOf("pod 'LynxService'"),
+      podfile.indexOf(']', podfile.indexOf("pod 'LynxService'")),
+    )
+    expect(lynxService, 'Podfile still pulls LynxService/Http').not.toContain("'Http'")
   })
 })

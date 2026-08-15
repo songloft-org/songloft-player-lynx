@@ -40,17 +40,23 @@ target 'SongloftLynx' do
   pod 'PrimJS', '4.0.0', :subspecs => ['quickjs', 'napi']
 
   # ---- Host services -----------------------------------------------------
-  # Same three services the Android host registers in SongloftApplication:
+  # Host services the Android host also registers in SongloftApplication:
   #   Image → `<image>` cover art (backed by SDWebImage on iOS / Fresco on Android)
   #   Log   → engine logging
-  #   Http  → the host HTTP service that backs the BARE global `fetch` the network
-  #           layer relies on (AGENTS.md §3). Without it every request dies.
   # `Devtool` enables the Lynx Inspector Protocol (WebSocket) for e2e behavior
   # testing via the `e2e/` driver.
+  #
+  # `Http` is DELIBERATELY ABSENT (batch 45). The host HTTP service backs the BARE
+  # global `fetch` the network layer relies on (AGENTS.md §3) and without one every
+  # request dies — but ours is supplied by `SongloftLynx/SongloftHttpService.swift`
+  # and registered explicitly in `AppDelegate`. The SDK's version routes through
+  # `URLSession.shared`, which cannot take a delegate, so it can never accept a
+  # self-signed certificate; that is why "allow insecure TLS" was a no-op on iOS.
+  # Keeping this subspec would leave two implementations competing for the same
+  # protocol binding with no documented winner.
   pod 'LynxService', '4.0.1', :subspecs => [
     'Image',
     'Log',
-    'Http',
     'Devtool',
   ]
 

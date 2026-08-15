@@ -16,3 +16,11 @@
 #import <Lynx/LynxContextModule.h>
 #import <Lynx/LynxLoadMeta.h>
 #import <Lynx/LynxTemplateData.h>
+
+// Host HTTP service (batch 45). `LynxServiceHttpProtocol.h` transitively brings
+// in `LynxHttpRequest`/`LynxHttpResponse`, the `LynxHttpCallback` block typedef,
+// `LynxHttpInterceptor` and `LynxHttpStreamingDelegate`; `ServiceAPI.h` is where
+// `LynxServices` (the runtime registration entry point) lives. Both are listed
+// explicitly rather than relying on that transitivity.
+#import <Lynx/LynxServiceHttpProtocol.h>
+#import <LynxServiceAPI/ServiceAPI.h>

@@ -20,7 +20,24 @@ final class SongloftPlatformModule: NSObject, LynxModule {
       "pickAndUploadFile": NSStringFromSelector(
         #selector(SongloftPlatformModule.pickAndUploadFile(_:fieldName:mimeType:callback:))
       ),
+      "setInsecureTls": NSStringFromSelector(
+        #selector(SongloftPlatformModule.setInsecureTls(_:))
+      ),
     ]
+  }
+
+  /**
+   * Enable or disable trust-all certificate validation (self-signed servers).
+   * Called from JS whenever `appConfig.insecureTls` is written — login, startup
+   * hydrate, the server settings page, and profile switches.
+   *
+   * Was Android-only until batch 45; the contract gate even carried a comment
+   * claiming iOS covered this via "ATS plist + custom URLSessionDelegate", but
+   * only the plist half existed and ATS does not affect certificate validation.
+   * See `InsecureTls` for the three transports this has to reach.
+   */
+  @objc func setInsecureTls(_ enabled: Bool) {
+    InsecureTls.shared.update(enabled)
   }
 
   @objc func openURL(_ url: String) {
@@ -110,7 +127,10 @@ private class PickerDelegate: NSObject, UIDocumentPickerDelegate {
     body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
     request.httpBody = body
 
-    URLSession.shared.dataTask(with: request) { [weak self] responseData, response, error in
+    // `InsecureTls.session` rather than `URLSession.shared`: the latter takes no
+    // delegate, so it can never accept a self-signed certificate — and importing
+    // a backup to a self-signed server is exactly this code path.
+    InsecureTls.shared.session.dataTask(with: request) { [weak self] responseData, response, error in
       DispatchQueue.main.async {
         if let error {
           self?.callback([error.localizedDescription, NSNull()] as NSArray)

@@ -1,5 +1,6 @@
 import AVFoundation
 import MediaPlayer
+import UIKit
 
 /**
  * Process-wide audio engine backing [SongloftAudioModule] — the iOS counterpart
@@ -66,6 +67,14 @@ final class SongloftAudioEngine {
   private var metadataByURL: [String: QueueMetadata] = [:]
   private var currentURL: String?
 
+  /// Artwork URL → decoded lock-screen image. Keyed by artwork URL rather than by
+  /// song so re-queueing the same track never re-downloads, and deliberately not
+  /// cleared by `setQueueMetadata` for the same reason.
+  private var artworkCache: [String: MPMediaItemArtwork] = [:]
+  /// Artwork URLs with a fetch in flight — `updateNowPlaying()` runs on every
+  /// progress tick, so without this a slow download would be started ~2×/second.
+  private var artworkInFlight: Set<String> = []
+
   /// Playback rate the JS store asked for; re-applied on every `play()` because
   /// `AVPlayer.rate` is reset to 1.0 whenever playback restarts.
   private var speed: Float = 1.0
@@ -126,7 +135,10 @@ final class SongloftAudioEngine {
       // headers because `buildSongUrl` already carries auth.
       options["AVURLAssetHTTPHeaderFieldsKey"] = headers
     }
-    let item = AVPlayerItem(asset: AVURLAsset(url: assetURL, options: options))
+    let asset = AVURLAsset(url: assetURL, options: options)
+    // Lets a self-signed media stream play — best-effort, see `attachIfNeeded`.
+    InsecureTls.shared.attachIfNeeded(to: asset)
+    let item = AVPlayerItem(asset: asset)
     if let mix = equalizer.buildAudioMix(for: item) {
       item.audioMix = mix
     }
@@ -359,7 +371,49 @@ final class SongloftAudioEngine {
     if let artist = metadata?.artist { info[MPMediaItemPropertyArtist] = artist }
     let duration = Self.milliseconds(item.duration) / 1000
     if duration > 0 { info[MPMediaItemPropertyPlaybackDuration] = duration }
+    if let artworkUrl = metadata?.artworkUrl, !artworkUrl.isEmpty {
+      if let artwork = artworkCache[artworkUrl] {
+        info[MPMediaItemPropertyArtwork] = artwork
+      } else {
+        fetchArtwork(artworkUrl)
+      }
+    }
     MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+  }
+
+  /**
+   * Download and decode one artwork image, then re-run [updateNowPlaying].
+   *
+   * Re-running is not laziness: [updateNowPlaying] rebuilds `info` from scratch
+   * and assigns the whole dictionary, so poking `nowPlayingInfo` directly here
+   * would be erased by the very next progress tick. Going back through it also
+   * means the artwork gets picked up by whichever of the seven call sites fires
+   * next, with no separate "is the artwork ready" state to keep in sync.
+   *
+   * Fetched via `InsecureTls.session` because the cover lives on the same server
+   * as the audio — for a self-signed host, `URLSession.shared` would fail here
+   * while playback itself worked.
+   */
+  private func fetchArtwork(_ artworkUrl: String) {
+    guard !artworkInFlight.contains(artworkUrl), let url = URL(string: artworkUrl) else { return }
+    artworkInFlight.insert(artworkUrl)
+
+    InsecureTls.shared.session.dataTask(with: url) { [weak self] data, _, _ in
+      guard let self else { return }
+      let image = data.flatMap { UIImage(data: $0) }
+      self.runOnMain {
+        self.artworkInFlight.remove(artworkUrl)
+        guard let image else { return }
+        self.artworkCache[artworkUrl] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        // The track may have changed while this was downloading; only refresh if
+        // the finished image still belongs to what is playing. It stays cached
+        // either way, so coming back to that track is instant.
+        let playingArtwork = self.currentURL.flatMap { self.metadataByURL[$0] }?.artworkUrl
+        if playingArtwork == artworkUrl {
+          self.updateNowPlaying()
+        }
+      }
+    }.resume()
   }
 
   /**
@@ -415,9 +469,10 @@ final class SongloftAudioEngine {
 }
 
 /// One queue entry's lock-screen metadata (parsed from the JS `setQueue`).
-/// `artworkUrl` mirrors the Kotlin `QueueMetadata` field; the JS store does not
-/// send it yet, and iOS artwork would additionally need the image fetched into
-/// an `MPMediaItemArtwork`, so nothing consumes it here.
+/// `artworkUrl` mirrors the Kotlin `QueueMetadata` field. Unlike Android — where
+/// media3 fetches `MediaMetadata.artworkUri` itself — iOS needs the bytes
+/// downloaded and wrapped in an `MPMediaItemArtwork` by hand; see
+/// `SongloftAudioEngine.fetchArtwork`.
 struct QueueMetadata {
   let url: String
   let title: String?

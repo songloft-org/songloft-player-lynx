@@ -1,6 +1,14 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+
+// The host owns TLS trust, so `applyServerSettings` writing `appConfig` is only
+// half the job — it has to push the flag down too. Mocked so the assertion is
+// about the call, not about a native module that does not exist under vitest.
+vi.mock('../../../native/native-platform.js', () => ({
+  applyInsecureTls: vi.fn(),
+}))
 
 import { appConfig } from '../../../core/config/app-config.js'
+import { applyInsecureTls } from '../../../native/native-platform.js'
 import { playMode } from '../../../core/config/constants.js'
 import { createMemoryStorage } from '../../../core/storage/index.js'
 import {
@@ -16,6 +24,7 @@ import {
 } from '../data/settings-prefs.js'
 
 afterEach(() => appConfig.reset())
+beforeEach(() => vi.mocked(applyInsecureTls).mockClear())
 
 describe('coercePlayMode', () => {
   test('passes through the four valid modes', () => {
@@ -88,5 +97,20 @@ describe('applyServerSettings', () => {
     // request, so a switch here changes subsequent requests without a rebuild.
     expect(appConfig.resolvedBaseUrl).toBe('http://new:9000')
     expect(appConfig.insecureTls).toBe(false)
+  })
+
+  // Regression: this used to write `appConfig.insecureTls` and stop there, so a
+  // user who enabled the toggle on the Server Settings page kept hitting cert
+  // errors — the hosts were never told. Both directions matter: switching back
+  // to a public server has to re-tighten trust, not leave it relaxed.
+  test('pushes the flag to the host transport, in both directions', async () => {
+    const storage = createMemoryStorage()
+
+    await applyServerSettings({ url: 'https://self-signed:58091', insecureTls: true }, storage)
+    expect(applyInsecureTls).toHaveBeenCalledWith(true)
+
+    await applyServerSettings({ url: 'https://public:58091', insecureTls: false }, storage)
+    expect(applyInsecureTls).toHaveBeenLastCalledWith(false)
+    expect(applyInsecureTls).toHaveBeenCalledTimes(2)
   })
 })

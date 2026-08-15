@@ -8,6 +8,7 @@ import { ServerProfileList, type ServerProfile } from '../../../models/server-pr
 import { normalizeServerUrl, PREF_SERVER_URL } from '../../auth/store/index.js'
 import { setCachedAccessToken } from '../../../core/network/token-cache.js'
 import { getSharedTokenStore } from '../../../core/network/api-client.js'
+import { applyInsecureTls } from '../../../native/native-platform.js'
 
 const PREF_SERVER_PROFILES = 'server_profiles'
 const PREF_ACTIVE_PROFILE_ID = 'server_active_profile'
@@ -197,6 +198,10 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
     appConfig.baseUrl = target.url
     appConfig.resolvedBaseUrl = target.url
     appConfig.insecureTls = target.insecureTls
+    // Profiles carry their own TLS setting, so switching has to re-push it:
+    // going from a self-signed profile to a public one must re-tighten trust,
+    // and the reverse must relax it — neither happens by writing `appConfig`.
+    applyInsecureTls(target.insecureTls)
     useAppSessionStore.getState().setBaseUrl(target.url)
     void storage.prefs.set(PREF_SERVER_URL, target.url).catch(() => {})
 

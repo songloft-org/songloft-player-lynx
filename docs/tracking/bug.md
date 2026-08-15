@@ -67,7 +67,11 @@
 - [x] **悬浮歌词（Android）五重死** 🔍待复核 —— `FloatingLyricModule.kt` 5 个方法全无 `@LynxMethod`（第 9 行却 import 了）+ `SongloftApplication.kt:67` 未注册 + 签名与 TS 不符 + 清单缺 `SYSTEM_ALERT_WINDOW` 与 service 声明。`lyric-store.ts:168` 每行歌词都在往 stub 里写（批43 已修：加 @LynxMethod + Callback + 注册；SYSTEM_ALERT_WINDOW 权限与 service 声明此前已有）
 - [x] **Live Activity（iOS）不是 Lynx 模块** 🔍待复核 —— `LiveActivityModule.swift:12` 是普通 `enum`，无 `@objc`/`name`/`methodLookup`，也不在 `buildConfig()` 里（批43 已修：enum→class + @objc/name/methodLookup + 注册）
 - [x] **契约闸门不覆盖批35+ 的原生模块** 🔍待复核 —— `SongloftPlatform`/`SongloftDlna`/`SongloftFloatingLyric`/`SongloftLiveActivity` 都在闸门外，且闸门完全不验证「注册」这件事（批43 已修：+30 例闸门，覆盖 6 模块双端方法/注册/@LynxMethod/class 结构）
-- [ ] **`setInsecureTls` / `setArtworkUri` 只有 Android** ✅复核（前者）—— iOS 侧分别不在 `methodLookup`、解析后丢弃
+- [x] **`setInsecureTls` / `setArtworkUri` 只有 Android**（批45 已修）—— 复核时发现描述本身有偏差，且缺口比记录的更深：
+  - **`setArtworkUri` 不是桥接方法**，它是 Android 引擎内部调用的 Media3 `MediaMetadata.setArtworkUri`；跨桥的是 `setQueue` 里的 `artworkUrl`。iOS 侧一路解析并存进 `metadataByURL`，但 `updateNowPlaying()` 从不读它 → 锁屏/控制中心/CarPlay 永远无封面。已补 `artworkCache` + 异步拉取 + 回主线程重走 `updateNowPlaying()`（该函数每次都重建整个 `nowPlayingInfo`，直接改字典会被下一个 tick 抹掉）
+  - **`setInsecureTls` 两个宿主都是半残的**，不只 iOS 缺失。Android 把 trust-all 装在 `HttpsURLConnection` 进程全局默认上，而 JS `fetch` 走 OkHttp、完全无视它 → **开了开关仍然登录不上自签名服务器**，也就是这个功能的唯一用途失效；且 `enabled=false` 被静默忽略，trust-all 留到进程被杀。iOS 则连方法都没有，闸门里那句「iOS uses ATS plist + custom URLSessionDelegate」只有前半句为真，而 ATS 只放开明文 HTTP、与证书校验无关
+  - 修法：两侧各自**替换宿主 HTTP service**（`net/SongloftHttpService.kt` / `SongloftHttpService.swift`）以拿到 TLS 钩子，`InsecureTls` 收口三条出站路径且**双向可逆**；TS 侧补上 `applyServerSettings` 与切服务器档案两处漏掉的 `applyInsecureTls`
+- [ ] **iOS 自签名 + 媒体流可能仍不通**（批45 留下的 TODO）—— iOS 上「让 AVPlayer 接受自签名证书」只能靠 `AVAssetResourceLoaderDelegate.resourceLoader(_:shouldWaitForResponseTo:)`，Apple 从未保证它会为普通 `http(s)` 资源投递 server-trust 挑战（历史上部分 OS 版本会、部分不会）。已挂上（`InsecureTls.attachIfNeeded`），**但本机无 macOS 无真机，未验证是否触发**。判定方法：对自签名服务器**登录成功但播放失败**即说明没触发。真要保证得走「自定义 scheme 代理 + 自己喂 `AVAssetResourceLoadingRequest`」，等于重写字节范围流式加载并改写 HLS 播放列表内的子请求 URL，本批刻意不做
 
 ### 仍未定位
 

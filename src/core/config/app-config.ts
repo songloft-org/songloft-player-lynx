@@ -132,9 +132,15 @@ class AppConfigState {
   /**
    * User opt-in to skip TLS certificate validation (self-signed servers).
    *
-   * ⚠️ Currently persisted + surfaced only. The actual TLS relaxation is a
-   * native/Web security-model concern (the Lynx `fetch` binding is undefined),
-   * so toggling this is a **no-op at the transport layer** for now. See PROGRESS.
+   * Writing this field is **not** enough — the transport lives in the hosts, so
+   * every write must be paired with `applyInsecureTls()`
+   * (`native/native-platform.ts`), which forwards to
+   * `SongloftPlatform.setInsecureTls`. Four sites do this today: the auth store's
+   * `hydrate` + `login`, `applyServerSettings`, and the server-profile switch.
+   * Two of them used to forget, leaving the hosts on a stale flag.
+   *
+   * On Web this is inert: the browser owns certificate trust and no page-level
+   * API can relax it.
    */
   insecureTls: boolean = false
 

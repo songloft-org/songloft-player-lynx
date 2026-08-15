@@ -314,6 +314,13 @@ object SongloftAudioEngine {
     fun load(context: Context, url: String, hls: Boolean, headers: Map<String, String>?) {
         val p = ensurePlayer(context)
         emitState("loading")
+        // `DefaultHttpDataSource` is HttpURLConnection-backed and exposes no SSL
+        // hook, so self-signed servers work here only because
+        // `org.songloft.lynx.net.InsecureTls.update` mutates the process-wide
+        // `HttpsURLConnection` defaults. That coupling is intentional, not an
+        // oversight: making it explicit means switching to `OkHttpDataSource`,
+        // i.e. a new `media3-datasource-okhttp` dependency to align in version
+        // with the rest of media3. Not worth it for one TLS flag.
         val httpFactory = DefaultHttpDataSource.Factory().apply {
             if (!headers.isNullOrEmpty()) setDefaultRequestProperties(headers)
         }

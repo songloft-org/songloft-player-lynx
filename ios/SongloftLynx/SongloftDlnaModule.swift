@@ -230,7 +230,10 @@ final class SongloftDlnaModule: NSObject, LynxModule {
 
         let sem = DispatchSemaphore(value: 0)
         var error: Error?
-        URLSession.shared.dataTask(with: request) { _, _, err in
+        // `InsecureTls.session`, not `URLSession.shared` — renderers on the LAN
+        // routinely present self-signed certificates, and `shared` takes no
+        // delegate so it can never accept one.
+        InsecureTls.shared.session.dataTask(with: request) { _, _, err in
             error = err
             sem.signal()
         }.resume()

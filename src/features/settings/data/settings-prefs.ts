@@ -10,6 +10,7 @@ import { appConfig } from '../../../core/config/app-config.js'
 import type { PlayMode } from '../../../core/config/constants.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import type { SongloftStorage } from '../../../core/storage/types.js'
+import { applyInsecureTls } from '../../../native/native-platform.js'
 import {
   normalizeServerUrl,
   PREF_INSECURE_TLS,
@@ -99,7 +100,7 @@ export async function writeDefaultPlayMode(
 export interface ServerSettings {
   /** Server base URL as entered by the user (will be normalized). */
   url: string
-  /** Skip TLS cert validation (persisted; transport no-op today — see AppConfig). */
+  /** Skip TLS cert validation; pushed to the host transport on apply. */
   insecureTls: boolean
 }
 
@@ -121,6 +122,9 @@ export async function applyServerSettings(
   appConfig.baseUrl = normalized
   appConfig.resolvedBaseUrl = normalized
   appConfig.insecureTls = insecureTls
+  // The hosts hold their own TLS trust config, so the flag has to be pushed —
+  // writing `appConfig` alone leaves the transport on the previous setting.
+  applyInsecureTls(insecureTls)
   await tryWritePref(storage, PREF_SERVER_URL, normalized)
   await tryWritePref(storage, PREF_INSECURE_TLS, String(insecureTls))
   return normalized

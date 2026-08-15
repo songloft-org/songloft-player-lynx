@@ -216,8 +216,9 @@ cached = nm.SongloftDlna as DlnaModule
 |------|------|------|
 | SongloftAudioModule | `audio/` | ExoPlayer + MediaSession + 前台服务 + EQ |
 | SongloftStorageModule | `storage/` | SharedPreferences（prefs）+ Keystore（secure） |
-| SongloftPlatformModule | `platform/` | 文件选择、URL 打开 |
+| SongloftPlatformModule | `platform/` | 文件选择、URL 打开、insecureTls 开关 |
 | SystemAppearance | `system/` | 深浅色/语言注入 + 变更事件 |
+| （非 Lynx 模块）| `net/` | `SongloftHttpService` = 宿主 `fetch` 服务；`InsecureTls` = TLS 开关 |
 
 ### iOS（Swift）
 
@@ -226,22 +227,37 @@ cached = nm.SongloftDlna as DlnaModule
 | SongloftAudioModule | `SongloftAudioModule.swift` + `SongloftAudioEngine.swift` | AVPlayer + MediaSession + EQ DSP |
 | AudioEqualizer | `AudioEqualizer.swift` | MTAudioProcessingTap + NBandEQ |
 | SongloftStorageModule | `SongloftStorageModule.swift` | UserDefaults + Keychain |
-| SongloftPlatformModule | `SongloftPlatformModule.swift` | 文件选择、URL 打开 |
+| SongloftPlatformModule | `SongloftPlatformModule.swift` | 文件选择、URL 打开、insecureTls 开关 |
 | SystemAppearance | `SystemAppearance.swift` | 深浅色/语言注入 |
+| （非 Lynx 模块）| `SongloftHttpService.swift` / `InsecureTls.swift` | 宿主 `fetch` 服务 / TLS 开关 + 共享 `URLSession` |
 
-### 契约闸门的覆盖范围（有盲区）
+### 契约闸门的覆盖范围
 
-`src/__tests__/native-module-contract.test.ts` 逐字校验 iOS⇔Android 的方法名/事件名/键名，但**只覆盖上面两张表里的模块**。批35 之后新增的 `SongloftDlna` / `SongloftFloatingLyric` / `SongloftLiveActivity` **不在闸门内**，且闸门**完全不验证「注册」这件事**。审计发现的实际状态：
+`src/__tests__/native-module-contract.test.ts` 逐字校验 iOS⇔Android 的方法名/事件名/键名。**批41–45 后已无模块级盲区**：Audio / Storage / Platform / Dlna / FloatingLyric / LiveActivity 全在闸门内，注册也验（Android 的 `registerModule(...)` 与 iOS `buildConfig()` 里的 `config.register(...)`），每个 `ios/SongloftLynx/*.swift` 还会被逐一核对 pbxproj 四处登记。
 
-| 模块 | 状态 |
-|---|---|
-| SongloftDlna | 两端已注册且 `@LynxMethod` 齐全，但 **TS 侧调用约定错**（见上方铁律），页面进去即崩 |
-| SongloftFloatingLyric | Android **未注册 + 5 个方法全无 `@LynxMethod` + 清单缺权限/service**；iOS 无对应实现 |
-| SongloftLiveActivity | iOS 侧是普通 `enum`，**不是 Lynx 模块**（无 `@objc`/`name`/`methodLookup`，也不在 `buildConfig()`） |
-| `setInsecureTls` | 仅 Android；iOS 不在 `methodLookup` |
-| `setArtworkUri`（通知栏封面） | 仅 Android；iOS 解析后丢弃 |
+闸门现在验的是**语义而非子串**，三处刻意如此（都是踩过才补上的）：
 
-改这些模块前**先把闸门扩到它们身上**，否则修完仍然无人守。详见 `docs/plans/2026-08-14-audit-fix-plan.md`。
+- Kotlin 侧断言 `@LynxMethod\s+fun X(` 正则，不是 `fun X(` 子串 —— 后者抓不到「方法在、注解没了」，而那恰好是静默 no-op 的成因，且旧断言的失败信息还谎称自己在验注解
+- iOS 注册断言限定在 `buildConfig()` **切片内**且**先剥注释** —— 只查类名会被 import / 文档注释骗过，不剥注释会被「整行注释掉的 `config.register(...)`」骗过（批45 实测过这一条）
+- `project.pbxproj` 与 `Info.plist` 都另有**结构可解析性**闸门（括号配对、标签嵌套、`<key>` 必须有兄弟值），因为子串断言分不清「格式正确」与「恰好含这几个字符」——批39 的教训
+
+仍未被守住的：`AndroidManifest.xml` **完全无闸门**（权限 / service 声明漏写无人拦）。新增模块时按 `hosts` 表 + modules 表 + 一段 `describe` 三处扩闸门。详见 `docs/plans/2026-08-14-audit-fix-plan.md`。
+
+### 宿主 HTTP service 是我们自己的（批45，改网络层前必读）
+
+两个宿主的 `fetch` 都**不再走 SDK 的 HTTP service**，换成了自己的实现，唯一目的是拿到 TLS 钩子：
+
+| | 实现 | 注册 |
+|---|---|---|
+| Android | `net/SongloftHttpService.kt`（`ILynxHttpService`） | `SongloftApplication` 里注册它而**不注册** `com.lynx.service.http.LynxHttpService` |
+| iOS | `SongloftHttpService.swift`（`LynxServiceHttpProtocol`） | `ios/Podfile` **摘掉 `LynxService/Http` subspec**，`AppDelegate` 在 `LynxEnv.sharedInstance()` 之后显式注册 |
+
+- 起因：SDK 两侧的实现都把 client 私有化（Android 是私有 `OkHttpClient()`，iOS 直接用不能挂 delegate 的 `URLSession.shared`），所以「允许不安全的 TLS」**根本到不了 `fetch`**，自签名服务器连登录都过不去
+- 两边都是「替换」而非「覆盖」：服务按接口/协议绑定，谁赢没有文档保证，所以直接不给竞争者留位置
+- 失败模式是**响亮的**（丢了注册 → 请求全死），刻意不做成「静默回落到忽略 TLS 设置的 SDK 实现」
+- 请求/响应映射是 SDK 实现的**逐行转写**（同样的 499 哨兵、同样的 header 拼接、同样的 streaming 分支），只在 TLS 配置一处分叉 —— 改这两个文件时保持这个性质
+- **`InsecureTls` 是三条出站路径的唯一开关**（`net/InsecureTls.kt` / `InsecureTls.swift`）：`fetch`、媒体流、以及模块自己的上传/SOAP/封面。iOS 的媒体流那条走 `AVAssetResourceLoaderDelegate`，**可能在部分 iOS 版本上不触发**，见该文件注释与 `docs/tracking/bug.md`
+- iOS 的 `NSAllowsArbitraryLoads` 只放开**明文 HTTP**，与证书校验无关 —— 曾有注释把它当成自签名支持的依据，那是错的
 
 ## 6. 测试与闸门原则（来自三次教训）
 
