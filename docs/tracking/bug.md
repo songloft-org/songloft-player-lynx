@@ -77,39 +77,58 @@
 
 - [ ] **偶发全屏灰层**（批29 发现）—— 运行数分钟后整屏蒙中灰，重启即恢复，不影响功能。审计补了一步算术：暗色读数 `13→86` 是**变亮**，纯黑半透层数学上不可能，联立得约 `#838383@0.62`，而仓库与 lynx-ui 里都没有这个颜色。最可查嫌疑是 lynx-ui Sheet 的 backdrop 泄漏。**下次出现时先跑** `adb logcat | grep -i "\[Sheet\] Invalid state transition"`（库自带的免费探针）
 
-## iOS e2e 首次运行发现（2026-08-15，均未修）
+## iOS e2e 首次运行发现（2026-08-15，批46 已全部修完）
 
 > 背景：iOS 侧在批45 之后才第一次真正编译（Mac/Xcode 26.6），e2e 也是**首次**在 iOS
-> 模拟器（iPhone 16 Pro / iOS 18.3）上跑——此前 107 例只在 Android 上绿过。全量结果
-> **104 passed / 6 failed**。下方 6 条按根因分两类。**音频三条是 iOS 引擎与 Android 参考
-> 行为的真实差异**（Android 是测试的参考实现）；**appearance 三条是测试自身读错了对象**。
-> 修复排期未定，等用户确认是否开新批。
+> 模拟器（iPhone 16 Pro / iOS 18.3）上跑——此前 107 例只在 Android 上绿过。首跑
+> **104 passed / 6 failed**，批46 修完后 **iOS 110/110**、Android 107/110（3 例平台门控跳过）。
+> 6 条按根因分两类：音频三条是 iOS 引擎与 Android 参考行为的真实差异（Android 是测试的参考
+> 实现），appearance 三条是测试自身读错了对象。**首跑时对前两条的归因有偏差，实测推翻了它们**
+> ——原文保留在每条的「首跑记录」里，实测结论见「实测」。
 
 ### 音频引擎语义差异（3 条，宿主侧为主）
 
-- [ ] **`audio-playback`：`playing` 到达时 `durationMs` 仍为 0** —— iOS 的时长只随
-  0.5s 周期的 progress tick 上报（`emitProgress`），不随 `ready`/`playing` 状态事件携带；
-  测试在 waitFor 到 `playing` 后**立即**读状态，落在首个 tick 之前。手动复现：播放 3s 后
-  duration 正常（45035ms）。修法二选一：iOS 在 `onItemStatus(.readyToPlay)` 时即发一次带
-  duration 的 progress（对齐 Android「状态到位即可读时长」），或测试侧 waitFor duration>0。
-- [ ] **`audio-speed`：0.5 倍速 1s 内进度推进为 0（2 倍速同场景通过）** —— 低速下每个
-  0.5s tick 只推进 ~250ms，测试的 start/end 两次读取（各含 eval 往返）恰好夹在同一个 tick
-  区间内；且该测试紧跟 2 倍速用例，有累积状态。手动单独复现 0.5x+seek(0) 推进正常。
-  修法：测试放宽窗口/提高下限容差，或 progress tick 加密（与 Android 250ms 对齐）。
-- [ ] **`audio-error`：坏 URL 后 state 停在 `loading` 而非 `error`** —— store 收到 error
-  事件后 `scheduleRetry` **透明重试**，重试的 `load+play` 又让 iOS 发 `loading`
-  （`waitingToPlayAtSpecifiedRate`）把 `isBuffering` 置回 true，测试读到的是重试中间态
-  （errorMessage 已有、isBuffering 又真）。Android ExoPlayer 失败更快、重试预算在测试窗口内
-  耗尽故能落到终态 `error`。修法：对齐 iOS 失败路径的时序，或测试等待重试预算耗尽。
+- [x] **`audio-playback`：`playing` 到达时 `durationMs` 仍为 0**（批46 已修）
+  - 首跑记录：以为「iOS 时长只随 0.5s tick 上报」，修法是在 `.readyToPlay` 补发一次 progress。
+  - **实测推翻**：`.readyToPlay` 时 AVPlayer 的 `item.duration` **本就还是 `indefinite`**（补发
+    了也是 0），真正解析出的 45035.10ms 对应整数采样数 1986048/44100，是**解码整段后**才得到的。
+    所以在宿主侧「提早发」无解。
+  - 真根因在 JS：`player-store.ts` 的 progress 处理 **无条件** `duration: e.durationMs`，而两个
+    宿主都把「未知」归一成 0（`C.TIME_UNSET` / `indefinite`），于是 0 反过来**抹掉**已知时长。
+    Android 只是因为 ExoPlayer 在 READY 就知道时长才没暴露。附带的真实缺陷：`playAtIndex`
+    从不写 `duration`，**切歌后总时长会沿用上一首**，直到宿主上报。
+  - 修法：`stateDurationMsOf()` 用服务端元数据播种 `duration`（`playAtIndex` + 恢复播放两处共用），
+    progress 处理改为 `e.durationMs > 0 ? e.durationMs : s.duration`。两条各配一个反向验证过的
+    单测；`mock-audio` 补 `simulateUnknownDurationProgress()`——mock 一直被 `load` **直接告知**
+    时长并同步回显，真实宿主做不到，这正是掩盖该 bug 的前置条件缺口。
+- [x] **`audio-speed`：0.5 倍速 1s 内进度推进为 0（2 倍速同场景通过）**（批46 已修）
+  - 首跑记录：以为「低速下每 tick 只推进 250ms，两次读取夹在同一 tick 区间内」。
+  - **实测推翻**：tick 数与位置探针显示，0.5x 下**每 tick 仍推进 500ms，但间隔是 1.0 秒墙钟**
+    ——`addPeriodicTimeObserver(forInterval:)` 的间隔按**媒体时间**计，实际墙钟间隔是
+    `interval / rate`。1 秒窗口于是只能抓到 0 或 1 个 tick（首跑抓到 0，`dbg.count=0`），
+    测试是**结构性 flaky**，播放本身完全正常。
+  - 修法：`installTimeObserver()` 按 `progressIntervalSeconds * speed` 安装并在 `setSpeed`
+    变更时重装，把墙钟节奏钉回 500ms（Android `PROGRESS_INTERVAL_MS` 就是 `postDelayed` 的
+    墙钟 500ms）。实测三速率均为 500ms/tick：1x +500、0.5x +250、2x +1000。
+  - 连带：每 tick 步长在 2x 变为 1000ms，旧的 1 秒窗口对 2x 也有约 10% 概率抓到 3 个 tick 而
+    误判，故两条速度断言统一改为 2 秒窗口 + 容得下一整个 tick 的容差带（`measureAdvancement`）。
+  - 同时**回退**了首跑时加的 seek 后 `playImmediately` 恢复（`intendedPlaying`）：那是基于
+    「seek 把播放停了」的猜测，根因既已查明，留着就是无法证伪也无回归测试的推测性改动。
+- [x] **`audio-error`：坏 URL 后 state 停在 `loading` 而非 `error`**（批46 已修）—— 归因成立：
+  AVPlayer 在 item 失败后**仍继续**发 `timeControlStatus` 转换（`waitingToPlay` → 我们发
+  `loading`），把 JS 刚落定的 error 态盖掉；ExoPlayer 失败后转 idle 并安静。修法：`itemFailed`
+  标记，失败后到下次 `load()` 之前不再由 `timeControlStatus` 发状态。
 
 ### appearance 测试读错对象（3 条，测试侧）
 
-- [ ] **`ios-appearance` 全部 3 例：theme 读到 `'unknown'`** —— 测试 eval 读
+- [x] **`ios-appearance` 全部 3 例：theme 读到 `'unknown'`**（批46 已修）—— 测试 eval 读
   `lynx.__globalProps.theme`，但 eval 跑在 **BTS realm**，那里 `lynx` 根本不存在
   （实测 `typeof lynx === 'undefined'`）——`__globalProps` 是主线程 Lepus realm 的全局。
-  这是 AGENTS.md 反复警告的 realm 隔离，测试写出来从未跑过所以没暴露。**宿主功能本身未证伪**：
-  `ViewController.pushAppearance()`（updateGlobalProps + sendGlobalEvent）与
-  `system-appearance.ts`→`theme-model` 链路代码俱在。修法：测试改读 BTS 可达的真实 theme
-  状态（如把 theme-model 的 resolved theme 暴露进 e2e-bridge），**不要**读 `__globalProps`。
-  修测试前应先验宿主链路真能跟随系统外观（切 dark/light 看 theme-model 值），避免把真 bug
-  误当测试 bug 改掉。
+  这是 AGENTS.md 反复警告的 realm 隔离，测试写出来从未跑过所以没暴露。宿主功能本身没问题。
+  修法：`e2e-bridge` 暴露 `__E2E_APPEARANCE__`（`getSystemAppearance` / `getAppTheme` /
+  `resolveTheme` / `changeAppTheme`），测试断言 `resolveTheme(getAppTheme())`。
+  - **照 bug.md 当时那条警告先验了宿主链路，结果真挖出一条**：只断言 `getSystemAppearance()`
+    是不够的——那台模拟器持久化的 app 主题是 `'light'`（用户覆盖），此时 app **本就不该**跟随
+    系统，而只读系统值的断言照样全绿，测的是空气。故测试改为自己用 `changeAppTheme('system')`
+    建立前提、结束后还原，并同时断言 `appTheme === 'system'` 与**解析后**的 `resolvedTheme`
+    ——后者才是 app 真正渲染的主题，对得上用例名。

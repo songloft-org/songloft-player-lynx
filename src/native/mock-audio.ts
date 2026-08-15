@@ -172,6 +172,20 @@ export class MockSongloftAudio implements SongloftAudio {
     this.emit({ type: 'error', code, message })
   }
 
+  /**
+   * Test hook (not part of `SongloftAudio`): emit a `progress` event whose duration
+   * is not known yet.
+   *
+   * Both hosts do this for real — ExoPlayer's `C.TIME_UNSET` and AVPlayer's
+   * `indefinite` are each normalised to 0 — and AVPlayer stays there for the first
+   * moment of a remote track. The mock is handed the duration up front by `load`, so
+   * it otherwise never reproduces that precondition, which is what let the store's
+   * unconditional `duration: e.durationMs` blank the total time unnoticed.
+   */
+  simulateUnknownDurationProgress(positionMs = this.positionMs): void {
+    this.emit({ type: 'progress', positionMs, bufferedMs: 0, durationMs: 0 })
+  }
+
   // ── internals ──
 
   private setState(state: AudioState): void {

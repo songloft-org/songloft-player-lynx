@@ -262,7 +262,7 @@ cached = nm.SongloftDlna as DlnaModule
 ## 6. 测试与闸门原则（来自三次教训）
 
 - **闸门要验语义，不验子串**。pbxproj 闸门用 `.toContain('X.swift in Sources')`，而写坏的那行**恰好包含该子串**，于是专为「漏登记」设的闸门对真正发生的「写坏了」全绿。结构化文件（pbxproj/plist/JSON）应验**可解析性**。
-- **mock 必须保留真实实现的前置条件**。`mock-audio.ts` 的 `play()` 不需要先 `load()` 就能 tick，于是「冷启动播放键无效」在测试里永远不可见。同族前例：Switch mock 丢掉 `checked` 映射。
+- **mock 必须保留真实实现的前置条件**。`mock-audio.ts` 的 `play()` 不需要先 `load()` 就能 tick，于是「冷启动播放键无效」在测试里永远不可见。同族前例：Switch mock 丢掉 `checked` 映射。**批46 又一例**：mock 被 `load` **直接告知**时长并同步回显，而真实宿主必须先解析容器、在此之前一律上报 `durationMs: 0`（`C.TIME_UNSET` / `indefinite` 都归一成 0），于是「store 用这个 0 抹掉已知时长」在测试里无法复现——补了 `simulateUnknownDurationProgress()` 才测得到。**判断标准：mock 能不能表达真实宿主的「我还不知道」状态。**
 - **写断言时先反向验证它会红**。`scan-model.test.ts` 有一条断言把「元数据再次刷新点了不轮询」这个 bug 当成契约固化了。
 - **能力探测器与消费点同批落地**。`platform-capabilities.ts` 写好了却全库无调用点（`tsconfig` 未开 `noUnusedLocals`），导致 Web 上一批入口点了没反应。
 - **i18n 闸门只防 en/zh 漂移，不防未定义 key** —— 这就是登出弹窗的取消按钮字面显示 `common.cancel` 的原因。加 key 时记得两侧同形。

@@ -1,7 +1,7 @@
 # 工作交接（2026-08-15）
 
 > 本文件是**给接手 AI 的交接说明**。读完这一篇就能继续干活；细节在链接里。
-> 一句话现状：**批41–45 完成，iOS 已在 Mac 上首次编译通过、e2e 首次在 iOS 模拟器上跑**（104/110，6 个失败已分类记录，见 §3 与 `bug.md`）。闸门全绿（949 vitest + ios:build + Android 可真编译）。审计计划已闭合。
+> 一句话现状：**批41–46 完成，两个平台的 e2e 都是全绿** —— **iOS 110/110**、Android 107/110（3 例平台门控跳过）。闸门全绿（951 vitest + `ios:build` + Android 可真编译 + 双产物）。审计计划已闭合，iOS e2e 首跑的 6 个失败已在批46 全部修完。
 
 ---
 
@@ -11,10 +11,14 @@
 
 批41–44 的 15 个 commit **已推送**（`main` 与 `origin/main` 同步）。此前本文件写的「均未推送」已过期。
 
-批45 的两个 commit 也已推送，`main` 与 `origin/main` 同步。
+批45 的两个 commit 也已推送。**`main` 现在领先 `origin/main`**（批45 iOS 编译收口与批46 的 commit 未推送，是否 `git push` 由用户决定）。
 
 | commit | 内容 |
 |---|---|
+| （批46） | iOS e2e 6 个失败全修：时长播种/守卫 + tick 墙钟节奏 + itemFailed + appearance 读 BTS |
+| `0745418` | docs：记录 iOS 首次编译收口与 e2e 首跑结果（104/110） |
+| `f8a060d` | 批45 Swift 首次编译收口（导入名对齐 + LiveActivity 可用性守卫） |
+| `36f2f99` | docs：HANDOFF 订正推送状态 |
 | `ba6f7e3` | 批45 docs：HANDOFF 补 iOS 编译交接清单 + SDK 工件 URL |
 | `755172d` | 批45：insecureTls 三条出站路径生效 + iOS 锁屏封面 + 闸门收紧（**iOS 未编译**，见 §3） |
 | `aa43fd6` | 批44 #15：视频歌曲播放标识 |
@@ -43,13 +47,9 @@
 
 ### 工作树状态
 
-**有未提交改动**（2026-08-15 Mac 侧 iOS 编译收口，等用户确认后提交）：
+批46 的改动**尚未提交**（等用户确认）：`ios/SongloftLynx/SongloftAudioEngine.swift`、`src/features/player/store/player-store.ts`、`src/native/mock-audio.ts`、`src/e2e-bridge.ts`、3 个 e2e scenario、`docs/tracking/*`。
 
-- `ios/SongloftLynx/SongloftHttpService.swift` / `AppDelegate.swift` —— Swift 导入名修正（见 §3 对照表）
-- `ios/SongloftLynx/ViewController.swift` —— `LiveActivityModule` 注册包 `if #available(iOS 16.2, *)`
-- `docs/tracking/{HANDOFF,PROGRESS}.md` / `docs/tracking/bug.md` —— 本批记录
-
-闸门：`build` 双产物 / `tsc -b` / **949 vitest（97 文件）** / `android/gradlew assembleDebug` / **`pnpm run ios:build`（Pods + app 全 BUILD SUCCEEDED）** 全绿。iOS e2e 首跑 104/110（6 个失败见 `bug.md`「iOS e2e 首次运行发现」）。
+闸门：`build` 双产物 / `tsc -b` / **951 vitest（97 文件）** / `android/gradlew assembleDebug` / **`pnpm run ios:build`（Pods + app 全 BUILD SUCCEEDED）** 全绿。**iOS e2e 110/110** + **Android e2e 107/110**（3 例平台门控跳过）。
 
 ---
 
@@ -61,13 +61,24 @@
 
 2. **原生模块禁止强转成 Promise。** Lynx 原生方法是 callback 式，promisify 必须在 TS 适配层做（参考 `core/storage/native-storage.ts`）。`nm.X as SomePromiseInterface` 会让 `.then()` 落在 `undefined` 上——DLNA 页就是这么崩的。
 
-3. **闸门要验语义，不验子串；mock 要保留真实前置条件；断言先反向验证会红。** pbxproj 闸门用 `.toContain` 被畸形行骗过；`mock-audio` 的 `play()` 不需先 `load()`，掩盖了冷启动播放键无效。本项目习惯：**每条修复都配一个「摘掉修复即变红」的回归测试**。批45 又踩了一次同款：新写的 iOS 注册闸门第一版仍是子串检查，被「整行注释掉的 `config.register(...)`」骗过——**反向验证是唯一发现它的手段**。
+3. **闸门要验语义，不验子串；mock 要保留真实前置条件；断言先反向验证会红。** pbxproj 闸门用 `.toContain` 被畸形行骗过；`mock-audio` 的 `play()` 不需先 `load()`，掩盖了冷启动播放键无效。本项目习惯：**每条修复都配一个「摘掉修复即变红」的回归测试**。批45 又踩了一次同款：新写的 iOS 注册闸门第一版仍是子串检查，被「整行注释掉的 `config.register(...)`」骗过——**反向验证是唯一发现它的手段**。批46 是 mock 那一面的又一例：mock 被 `load` 直接告知时长，永远表达不出真实宿主「我还不知道」（`durationMs: 0`）的状态，于是「store 用 0 抹掉已知时长」测不出来；**问一句「mock 能表达宿主的未知态吗」就能提前发现**。批46 还有一条反向验证救回来的：写的第一版播种测试摘掉修复后**依然是绿的**——它测的是 mock 的同步回显，不是修复本身。
 
 4. **`fetch` 走的是我们自己的宿主 HTTP service，不是 SDK 的。** 两侧都替换了（`net/SongloftHttpService.kt` / `SongloftHttpService.swift`），iOS 还从 Podfile 摘掉了 `LynxService/Http`。动网络层前先读 AGENTS.md §5 那一节：SDK 实现把 client 私有化（iOS 用的是不能挂 delegate 的 `URLSession.shared`），所以「允许不安全的 TLS」到不了 `fetch`，这才是替换的唯一理由。改这两个文件要保持「SDK 实现的逐行转写，只在 TLS 一处分叉」这个性质。
 
 ---
 
-## 3. 批45 与剩余工作
+## 3. 批45–46 与剩余工作
+
+### 批46 做了什么（iOS e2e 首跑的 6 个失败，全修完）
+
+首跑 104/110 → **iOS 110/110**。逐条根因与修法在 [`bug.md`](bug.md)「iOS e2e 首次运行发现」与 `PROGRESS.md` 批46 段，这里只留下**方法论上值得带走的四点**：
+
+1. **首跑时对两条失败的归因是错的**，都是「看现象合理推断」而非量化。实测推翻：`durationMs` 不是「iOS 只随 tick 上报」（`.readyToPlay` 时 `item.duration` 本就还是 `indefinite`），0.5x 不是「每 tick 只推 250ms」（每 tick 仍推 500ms，**是间隔被拉成 1 秒墙钟**）。**先用一次性探针把现象量化，再动代码** —— TestBridge 可以直接驱动设备上的 store，写个临时 `zz-probe.scenario.ts` 密集采样几秒就够，比连猜带改省好几轮 iOS 构建。
+2. **`addPeriodicTimeObserver(forInterval:)` 的间隔按媒体时间计**，墙钟间隔是 `interval / rate`；Android 的 tick 是 `postDelayed` 的墙钟 500ms。两者要对齐就得把间隔按 rate 缩放（`installTimeObserver`）。
+3. **改了 tick 步长就要重算所有依赖它的断言**。我把 2x 的每 tick 步长变成 1000ms，旧的 1 秒窗口对 2x 就有约 10% 概率误判 —— 那是**我自己引入的新 flake**，不改测试等于埋雷。同一轮还顺带发现 `audio-playback` 的 seek 断言本就是刀锋（容差 500ms 恰好等于它自己 sleep 500ms 的合法推进量，实测 500.216 > 500）。
+4. **「测试读错对象」不等于「宿主没问题」**。bug.md 当时留了一句「修测试前先验宿主链路」，照做后真挖出一条：只断言 `getSystemAppearance()` 是在测空气 —— 那台模拟器持久化的 app 主题是 `'light'`，此时 app **本就不该**跟随系统，而这种断言照样全绿。测试要自己用 `changeAppTheme('system')` 建立前提，并断言**解析后**的 `resolveTheme(getAppTheme())`。
+
+另外**回退了**首跑时加的推测性改动（seek 完成后 `playImmediately` 恢复播放，`intendedPlaying` 一族）：它基于「seek 把播放停了」的猜测，根因既已查明，留着就是无法证伪、也没有回归测试的代码。
 
 ### 批45 做了什么
 
@@ -155,24 +166,28 @@ pnpm run test:e2e:android   # Android 设备
 pnpm run test:e2e:ios       # iOS 模拟器
 ```
 
-**iOS 首跑结果（2026-08-15，iPhone 16 Pro / iOS 18.3，外部真实服务器 :58091）**：
-**104 passed / 6 failed**。6 个失败已分类记入 `bug.md`「iOS e2e 首次运行发现」：
-音频 3 条是 iOS 引擎与 Android 参考行为的真实语义差异（时长上报时机 / 低速 tick
-粒度 / error 后透明重试中间态），appearance 3 条是测试从 BTS realm 读
-`lynx.__globalProps`（那里没有 `lynx`）的读错对象。**音频基础播放、队列、曲末行为、
-其余 23 个文件全绿**——批45 替换的宿主 HTTP service 在 iOS 上工作正常（登录/拉数据
-全走它）。
+**当前结果（2026-08-15，批46 后）**：**iOS 110/110**（iPhone 16 Pro / iOS 18.3，外部真实
+服务器 :58091）· **Android 107/110**（3 例是 `ios-appearance`，平台门控跳过，属预期）。
+首跑那 6 个失败的完整根因记录留在 `bug.md`「iOS e2e 首次运行发现」，其中两条的**首跑归因
+已被实测推翻**，值得一读——那是本项目「先量化再改」的最新一课。
 
-**跑 iOS e2e 前先确认 9230 没被占**：模拟器 App 与宿主共享端口空间，
-`lsof -iTCP:9230 -sTCP:LISTEN -P` 里可能同时出现**别的模拟器上残留的旧
-SongloftLynx 实例**（`*:9230`）和 `adb forward` 残留（`localhost:9230`，
-绑得更具体、会抢走宿主侧连接）。新实例 bind 失败只打一行
-`[TestBridge] bind() failed: 48`，e2e 会连上错误的监听者或连不上。
-清理：kill 旧实例 + `adb forward --remove tcp:9230`，再重启 App。
-另注意：**只留一台 Booted 模拟器**——`getBootedSimulator()` 取 JSON 列表里
-第一个 Booted 设备，多台并存时选择不确定。
+**跑 e2e 前必做的三件环境检查**（每一条都真的踩过）：
 
-### 后续功能方向（批46+）
+1. **改了 JS bundle 或原生代码后，`simctl install` 不会替换已在运行的进程** ——
+   必须先 `xcrun simctl terminate <udid> org.songloft.lynx`，否则测试跑的还是旧 bundle。
+2. **跑过 Android e2e 之后，残留的 `adb forward localhost:9230` 会抢走宿主侧连接** ——
+   它绑得比模拟器 App 的 `*:9230` 更具体，于是 iOS 测试会**静默连到 Android 上的 App**。
+   批46 就这么被骗过一次（表现是 `changeAppTheme is not a function`，因为 Android 那份是旧
+   bundle）。跑 iOS 前先 `adb forward --remove tcp:9230`。
+3. **9230 没被别的残留实例占**：`lsof -iTCP:9230 -sTCP:LISTEN -P` 检查；新实例 bind 失败只打
+   一行 `[TestBridge] bind() failed: 48`。另外**只留一台 Booted 模拟器** ——
+   `getBootedSimulator()` 取 JSON 列表里第一个 Booted 设备，多台并存时选择不确定。
+
+**需要弄清「宿主到底发了什么」时，写个一次性探针 scenario**（如 `zz-probe.scenario.ts`，跑完删）：
+TestBridge 能直接 eval 到 store，密集轮询 `getPlayerState()` 几秒就能把 tick 节奏、事件时序量化
+出来。批46 的两条错误归因就是这么推翻的，比连猜带改省好几轮 iOS 构建。
+
+### 后续功能方向（批47+）
 
 - **视频播放完整实现**：当前只有 ▶ 标识，需原生视频渲染面
 - **Web 音频 EQ/HLS/MediaSession**：`web/audio-host.js` 目前只实现了基础播放

@@ -76,15 +76,25 @@ describe('音频：基础播放', () => {
   })
 
   test('拖动进度条跳转到指定位置', async () => {
+    // Deliberately *behind* the current position (~3s by now), so a seek that
+    // silently did nothing lands far above the band asserted below.
     const targetMs = 1500
+    const t0 = Date.now()
     await driver.evaluateJS(`
       globalThis.__E2E_PLAYER_STORE__.getState().seek(${targetMs})
     `)
     await driver.sleep(500)
-
     const state = await driver.getPlayerState()
-    // Allow 500ms tolerance for seek imprecision
-    expect(Math.abs(state.positionMs - targetMs)).toBeLessThan(500)
+    const elapsed = Date.now() - t0
+
+    // Playback keeps running while we wait, so the landing point is `target` plus up
+    // to `elapsed` of real time, quantised to the host's 500ms progress tick — hence
+    // one whole tick of slack on each side. A fixed ±500ms window around `target`
+    // reads tighter but is only ever satisfied by luck: at 1x the single tick during
+    // the 500ms wait lands exactly on the boundary (measured 500.2 against a budget
+    // of 500), leaving nothing for the seek imprecision it was meant to cover.
+    expect(state.positionMs).toBeGreaterThan(targetMs - 600)
+    expect(state.positionMs).toBeLessThan(targetMs + elapsed + 600)
     await stepScreenshot(driver, 'after-seek')
   })
 })

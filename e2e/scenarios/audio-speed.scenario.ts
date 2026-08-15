@@ -6,6 +6,23 @@ import { fetchRealSongs } from '../fixtures/songs.js'
 describe('音频：播放速度', () => {
   let driver: E2EDriver
 
+  /**
+   * Advancement of the store's position over ~2 real seconds.
+   *
+   * The position only moves when a host progress event lands, and both hosts tick on
+   * a 500 ms wall-clock cadence, so each step is `500 × rate` ms and the count of
+   * steps inside the window is off by one depending on where the window falls
+   * relative to the tick phase. A 1-second window makes that off-by-one worth 50% of
+   * the reading — which is exactly how the 0.5× case used to fail (it caught either
+   * zero steps or one). Two seconds keeps one stray tick inside the tolerance band.
+   */
+  async function measureAdvancement(): Promise<number> {
+    const start = (await driver.getPlayerState()).positionMs
+    await driver.sleep(2000)
+    const end = (await driver.getPlayerState()).positionMs
+    return end - start
+  }
+
   beforeAll(async () => {
     driver = await createDriver()
     await driver.launch()
@@ -51,14 +68,12 @@ describe('音频：播放速度', () => {
     `)
     await driver.sleep(200)
 
-    const start = (await driver.getPlayerState()).positionMs
-    await driver.sleep(1000)
-    const end = (await driver.getPlayerState()).positionMs
-
-    const advancement = end - start
-    // At 2x speed over 1 real second, should advance ~2000ms (with tolerance)
-    expect(advancement).toBeGreaterThan(1500)
-    expect(advancement).toBeLessThan(2800)
+    const advancement = await measureAdvancement()
+    // At 2x over ~2 real seconds the position should advance ~4000ms. The band has
+    // to absorb one whole tick of quantisation (see [measureAdvancement]), which at
+    // 2x is 1000ms; 1x would land at ~2000ms, well outside.
+    expect(advancement).toBeGreaterThan(3000)
+    expect(advancement).toBeLessThan(5600)
   })
 
   test('0.5 倍速下进度推进变慢', async () => {
@@ -72,14 +87,11 @@ describe('音频：播放速度', () => {
     `)
     await driver.sleep(200)
 
-    const start = (await driver.getPlayerState()).positionMs
-    await driver.sleep(1000)
-    const end = (await driver.getPlayerState()).positionMs
-
-    const advancement = end - start
-    // At 0.5x speed over 1 real second, should advance ~500ms (with tolerance)
-    expect(advancement).toBeGreaterThan(300)
-    expect(advancement).toBeLessThan(900)
+    const advancement = await measureAdvancement()
+    // At 0.5x over ~2 real seconds the position should advance ~1000ms. 1x would
+    // land at ~2000ms, outside the band.
+    expect(advancement).toBeGreaterThan(700)
+    expect(advancement).toBeLessThan(1600)
   })
 
   test('速度被限制在 [0.25, 3] 范围内', async () => {

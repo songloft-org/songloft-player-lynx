@@ -51,7 +51,10 @@ final class SongloftAudioEngine {
   static let remoteCommandPrevious = "previous"
   static let remoteCommandToggleFavorite = "toggleFavorite"
 
-  /// Progress tick cadence, matching the Kotlin engine's `PROGRESS_INTERVAL_MS`.
+  /// Progress tick cadence in **wall-clock** seconds, matching the Kotlin engine's
+  /// `PROGRESS_INTERVAL_MS` (a `postDelayed` loop, so its 500 ms is real time and
+  /// independent of the playback rate). Holding that on iOS takes an extra step, see
+  /// [installTimeObserver].
   private static let progressIntervalSeconds = 0.5
 
   /// Installed by the module; forwards events to `LynxContext.sendGlobalEvent`.
@@ -88,6 +91,14 @@ final class SongloftAudioEngine {
   /// `playbackState != STATE_ENDED` check).
   private var reachedEnd = false
 
+  /// Set when the current item failed fatally (bad URL / undecodable). AVPlayer —
+  /// unlike ExoPlayer, which goes idle and stays quiet — keeps firing
+  /// `timeControlStatus` transitions after a failure (`waitingToPlay` → `loading`),
+  /// which would clobber the `isBuffering=false` the JS error handler just wrote and
+  /// leave the store stuck reporting `loading` instead of `error`. Suppress
+  /// timeControlStatus state emissions until the next `load()` clears this.
+  private var itemFailed = false
+
   private init() {}
 
   /// Run `block` on the main thread (immediately if already there).
@@ -118,6 +129,7 @@ final class SongloftAudioEngine {
     installRemoteCommands()
     let player = ensurePlayer()
     reachedEnd = false
+    itemFailed = false
     currentURL = url
     emitState("loading")
 
@@ -188,10 +200,14 @@ final class SongloftAudioEngine {
   }
 
   func setSpeed(_ rate: Float) {
+    let previous = speed
     speed = min(max(rate, 0.5), 3)
     // Only touch `rate` while playing — assigning it to a paused player would
     // start playback.
     if let player, player.timeControlStatus == .playing { player.rate = speed }
+    // The tick interval is denominated in media time, so it has to be re-derived
+    // from the new rate to keep the wall-clock cadence — see [installTimeObserver].
+    if let player, speed != previous { installTimeObserver(on: player) }
     updateNowPlaying()
   }
 
@@ -237,14 +253,35 @@ final class SongloftAudioEngine {
       [weak self] player, _ in
       self?.onTimeControlStatus(of: player)
     }
-    timeObserver = created.addPeriodicTimeObserver(
-      forInterval: CMTime(seconds: Self.progressIntervalSeconds, preferredTimescale: 600),
+    installTimeObserver(on: created)
+    player = created
+    return created
+  }
+
+  /**
+   * (Re)install the progress tick.
+   *
+   * `addPeriodicTimeObserver(forInterval:)` counts in the *item's* timeline, not in
+   * real time, so a fixed interval fires every `interval / rate` wall seconds: at
+   * 0.5× a 0.5 s interval ticks once per **second** (measured: position advanced in
+   * 500 ms steps once a second, so a 1 s sample window saw either no movement or a
+   * full 500 ms jump), and at 3× it would tick six times a second. Android's tick is
+   * a `postDelayed` loop and therefore fixed in wall time, so scaling the interval by
+   * the rate is what makes the two hosts report progress at the same cadence.
+   */
+  private func installTimeObserver(on player: AVPlayer) {
+    if let timeObserver {
+      player.removeTimeObserver(timeObserver)
+    }
+    timeObserver = player.addPeriodicTimeObserver(
+      forInterval: CMTime(
+        seconds: Self.progressIntervalSeconds * Double(speed),
+        preferredTimescale: 600
+      ),
       queue: .main
     ) { [weak self] _ in
       self?.emitProgress()
     }
-    player = created
-    return created
   }
 
   /**
@@ -283,6 +320,7 @@ final class SongloftAudioEngine {
       emitState("ready")
       updateNowPlaying()
     case .failed:
+      itemFailed = true
       let error = item.error as NSError?
       emit(
         Self.eventError,
@@ -298,9 +336,18 @@ final class SongloftAudioEngine {
   }
 
   private func onTimeControlStatus(of player: AVPlayer) {
+    // A fatally-failed item keeps transitioning timeControlStatus; reporting those
+    // would override the error state the JS side just settled on. See [itemFailed].
+    guard !itemFailed else { return }
     switch player.timeControlStatus {
     case .playing:
       emitState("playing")
+      // Kotlin's `startProgress()` does `mainHandler.post(progressTick)`, i.e. the
+      // first tick lands immediately after `playing` rather than one interval later.
+      // The periodic observer has no equivalent, so emit that first tick by hand —
+      // without it the position/duration a consumer reads right after `playing` are
+      // up to one interval stale.
+      emitProgress()
     case .waitingToPlayAtSpecifiedRate:
       // Stalled / buffering — the same condition Android reports as
       // `Player.STATE_BUFFERING` → `loading`.

@@ -111,6 +111,21 @@ function durationMsOf(song: Song): number {
   return song.duration > 0 ? song.duration * 1000 : DEFAULT_DURATION_MS
 }
 
+/**
+ * Duration for the *store* (and therefore the seek bar), where [durationMsOf]'s
+ * placeholder fallback would render a total time that is simply wrong. 0 means
+ * "unknown" and lets the first host progress event fill it in.
+ *
+ * Seeding this from the server's metadata is what keeps the total time correct
+ * across a track change: the hosts normalise a not-yet-known duration to 0
+ * (ExoPlayer's `C.TIME_UNSET`, AVPlayer's `indefinite`), and AVPlayer only resolves
+ * the duration of a remote MP3 some way into playback — until then the store would
+ * otherwise still be showing the *previous* song's duration.
+ */
+function stateDurationMsOf(song: Song): number {
+  return song.duration > 0 ? song.duration * 1000 : 0
+}
+
 let _audioQuality: string | null = null
 readAudioQuality().then((q) => { _audioQuality = q === 'original' ? null : q }).catch(() => {})
 
@@ -275,6 +290,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       currentIndex: index,
       currentSong: song,
       currentTime: 0,
+      duration: stateDurationMsOf(song),
       errorMessage: undefined,
     })
     void useLyricStore.getState().loadForSong(song)
@@ -548,7 +564,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 // native module posts these over the event channel. `completed` drives
 // play-mode routing via the store's own actions.
 audio.on('progress', (e) => {
-  usePlayerStore.setState({ currentTime: e.positionMs, duration: e.durationMs })
+  // A `durationMs` of 0 means "the host does not know yet", not "zero long", so it
+  // must never erase a duration already in the store (seeded from the server's
+  // metadata by `playAtIndex`, see [stateDurationMsOf]). AVPlayer reports 0 for the
+  // first moment of a remote track, which would otherwise blank the total time and
+  // collapse the seek bar until it resolves.
+  usePlayerStore.setState((s) => ({
+    currentTime: e.positionMs,
+    duration: e.durationMs > 0 ? e.durationMs : s.duration,
+  }))
   useLyricStore.getState().syncPosition(e.positionMs)
 })
 
@@ -733,7 +757,7 @@ export async function restorePlaybackState(): Promise<void> {
     currentIndex: saved.currentIndex,
     currentSong: song,
     currentTime: saved.positionMs,
-    duration: song.duration > 0 ? song.duration * 1000 : 0,
+    duration: stateDurationMsOf(song),
     sourcePlaylistId: saved.sourcePlaylistId,
   })
   if (autoResume && song.url) {

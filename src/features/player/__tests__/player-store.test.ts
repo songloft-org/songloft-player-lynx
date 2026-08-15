@@ -66,6 +66,41 @@ describe('playback + progress', () => {
     await usePlayerStore.getState().seekBy(999_999)
     expect(usePlayerStore.getState().currentTime).toBe(10_000)
   })
+
+  test('a progress event with an unknown duration keeps the known one', async () => {
+    await usePlayerStore.getState().playPlaylist([song(1, 30)], 0)
+    await flush()
+    expect(usePlayerStore.getState().duration).toBe(30_000)
+
+    // What AVPlayer reports for the first moment of a remote track. Position must
+    // still land; the duration must not be blanked.
+    ;(getAudio() as MockSongloftAudio).simulateUnknownDurationProgress(1_234)
+
+    expect(usePlayerStore.getState().currentTime).toBe(1_234)
+    expect(usePlayerStore.getState().duration).toBe(30_000)
+  })
+
+  test('a track change updates the duration without waiting for the host', async () => {
+    await usePlayerStore.getState().playPlaylist([song(1, 30), song(2, 90)], 0)
+    await flush()
+    expect(usePlayerStore.getState().duration).toBe(30_000)
+
+    // The mock is *handed* the duration by `load` and echoes it back synchronously,
+    // which no real host can do — AVPlayer has to parse the container first, and
+    // reports 0 until it has. Stub `load` silent to reproduce that: the store must
+    // then have the new duration from the song metadata alone, or the seek bar stays
+    // sized to the previous track until the host catches up.
+    const loadSpy = vi.spyOn(getAudio(), 'load').mockResolvedValue(undefined)
+    try {
+      void usePlayerStore.getState().playNext()
+
+      expect(usePlayerStore.getState().currentSong?.id).toBe(2)
+      expect(usePlayerStore.getState().duration).toBe(90_000)
+    } finally {
+      loadSpy.mockRestore()
+    }
+    await flush()
+  })
 })
 
 describe('completion routing by play mode', () => {

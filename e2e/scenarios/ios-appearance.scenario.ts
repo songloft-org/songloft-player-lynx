@@ -13,15 +13,67 @@ import { createDriver, type E2EDriver } from '../driver/index.js'
 describe('iOS: system appearance follow', () => {
   let driver: E2EDriver
 
+  /**
+   * The app's own view of the appearance, read from the BTS realm.
+   *
+   * Reading `lynx.__globalProps`, as this scenario originally did, cannot work: the
+   * eval runs in the BTS global scope, where the bare `lynx` global does not exist
+   * (it lives in the bundle's module wrapper scope), so the theme came back
+   * `'unknown'` even with a perfectly working host chain. `__E2E_APPEARANCE__` is
+   * exposed by `src/e2e-bridge.ts` for this reason.
+   *
+   * `resolvedTheme` is the reading that matches this scenario's name — it is what the
+   * app actually renders, so it covers the app-side resolution on top of the host→BTS
+   * delivery that `systemTheme` alone would prove. `appTheme` comes along as the
+   * precondition: with a user override in effect, `'system'` is never consulted and
+   * the other two readings would be unrelated to each other.
+   */
+  async function readAppearance(): Promise<{
+    systemTheme: string | null
+    appTheme: string
+    resolvedTheme: string
+  }> {
+    return driver.evaluateJS(`
+      (() => {
+        const a = globalThis.__E2E_APPEARANCE__;
+        return {
+          systemTheme: a.getSystemAppearance().theme,
+          appTheme: a.getAppTheme(),
+          resolvedTheme: a.resolveTheme(a.getAppTheme()),
+        };
+      })()
+    `)
+  }
+
+  /** The device's persisted theme choice, restored in `afterAll`. */
+  let savedAppTheme = 'system'
+
   beforeAll(async () => {
     if (process.env.E2E_PLATFORM !== 'ios') return
     driver = await createDriver()
     await driver.launch()
     await driver.login('admin', 'admin')
+
+    // "Follows the system" is only meaningful while the user's choice IS 'system'.
+    // The device carries that choice across installs, and this simulator was in fact
+    // pinned to 'light' — under which the app correctly ignores the system and every
+    // assertion below would be testing nothing. Set it explicitly (this also removes
+    // the pref, so it survives the relaunch in the cold-start test) and put the
+    // original back afterwards.
+    savedAppTheme = await driver.evaluateJS<string>(`
+      (() => globalThis.__E2E_APPEARANCE__.getAppTheme())()
+    `)
+    await driver.evaluateJS(`
+      globalThis.__E2E_APPEARANCE__.changeAppTheme('system')
+    `)
+    await driver.sleep(300)
   })
 
   afterAll(async () => {
     if (process.env.E2E_PLATFORM !== 'ios') return
+    await driver.evaluateJS(`
+      globalThis.__E2E_APPEARANCE__.changeAppTheme(${JSON.stringify(savedAppTheme)})
+    `)
     // Restore light mode
     if (driver.setSystemTheme) {
       await driver.setSystemTheme('light')
@@ -37,25 +89,10 @@ describe('iOS: system appearance follow', () => {
       await driver.setSystemTheme('dark')
       await driver.sleep(1500)
 
-      const theme = await driver.evaluateJS<string>(`
-        (() => {
-          const store = globalThis.__E2E_PLAYER_STORE__;
-          // The theme is stored in the theme model, read from shared state
-          return document?.documentElement?.getAttribute('data-theme') ??
-                 globalThis.__CURRENT_THEME__ ?? 'unknown';
-        })()
-      `)
-
-      // The app should now be in dark mode. Exact assertion depends on how the
-      // theme store exposes its value — at minimum, the system appearance listener
-      // should have received the change.
-      const appearance = await driver.evaluateJS<{ theme: string }>(`
-        (() => {
-          const lynxObj = (typeof lynx !== 'undefined') ? lynx : globalThis.lynx;
-          return { theme: lynxObj?.__globalProps?.theme ?? 'unknown' };
-        })()
-      `)
-      expect(appearance.theme).toBe('dark')
+      const appearance = await readAppearance()
+      expect(appearance.appTheme).toBe('system')
+      expect(appearance.systemTheme).toBe('dark')
+      expect(appearance.resolvedTheme).toBe('dark')
 
       await driver.screenshot('dark-mode-home')
     },
@@ -69,13 +106,10 @@ describe('iOS: system appearance follow', () => {
       await driver.setSystemTheme('light')
       await driver.sleep(1500)
 
-      const appearance = await driver.evaluateJS<{ theme: string }>(`
-        (() => {
-          const lynxObj = (typeof lynx !== 'undefined') ? lynx : globalThis.lynx;
-          return { theme: lynxObj?.__globalProps?.theme ?? 'unknown' };
-        })()
-      `)
-      expect(appearance.theme).toBe('light')
+      const appearance = await readAppearance()
+      expect(appearance.appTheme).toBe('system')
+      expect(appearance.systemTheme).toBe('light')
+      expect(appearance.resolvedTheme).toBe('light')
 
       await driver.screenshot('light-mode-home')
     },
@@ -97,14 +131,14 @@ describe('iOS: system appearance follow', () => {
       await driver.launch()
       await driver.sleep(500)
 
-      // The very first globalProps should carry 'dark' (set via LynxLoadMeta)
-      const appearance = await driver.evaluateJS<{ theme: string }>(`
-        (() => {
-          const lynxObj = (typeof lynx !== 'undefined') ? lynx : globalThis.lynx;
-          return { theme: lynxObj?.__globalProps?.theme ?? 'unknown' };
-        })()
-      `)
-      expect(appearance.theme).toBe('dark')
+      // The very first `globalProps` should carry 'dark' — `system-appearance.ts`
+      // reads them on startup precisely so the launch frame paints the right theme,
+      // which is what makes this the no-flash assertion rather than just another
+      // change-event one.
+      const appearance = await readAppearance()
+      expect(appearance.appTheme).toBe('system')
+      expect(appearance.systemTheme).toBe('dark')
+      expect(appearance.resolvedTheme).toBe('dark')
 
       await driver.screenshot('cold-start-dark')
 

@@ -17,6 +17,8 @@ import { useServerStore } from './features/settings/store/server-store.js'
 import { appConfig } from './core/config/app-config.js'
 import { router } from './router.js'
 import { readNativeModules, readLynxGlobal } from './native/native-modules.js'
+import { getSystemAppearance } from './native/system-appearance.js'
+import { changeAppTheme, getAppTheme, resolveTheme } from './shared/theme/theme-model.js'
 
 // Expose stores and config globally for direct access in eval expressions
 ;(globalThis as Record<string, unknown>).__E2E_PLAYER_STORE__ = usePlayerStore
@@ -26,6 +28,21 @@ import { readNativeModules, readLynxGlobal } from './native/native-modules.js'
 ;(globalThis as Record<string, unknown>).__E2E_SERVER_STORE__ = useServerStore
 ;(globalThis as Record<string, unknown>).__E2E_APP_CONFIG__ = appConfig
 ;(globalThis as Record<string, unknown>).__E2E_ROUTER__ = router
+// Theme / system-appearance accessors. The e2e eval runs in the BTS global scope
+// where the bare `lynx` global (and thus `lynx.__globalProps`) is NOT visible —
+// it lives in the bundle's module wrapper scope — so tests must read the theme
+// through these BTS-reachable functions instead of `lynx.__globalProps`.
+//
+// `resolveTheme` + `getAppTheme` are what let a test assert the theme the app
+// actually renders rather than merely the value the host pushed; `changeAppTheme` is
+// the same entry point the settings page uses, so a test can establish the
+// `'system'` precondition instead of inheriting whatever the device last persisted.
+;(globalThis as Record<string, unknown>).__E2E_APPEARANCE__ = {
+  getSystemAppearance,
+  getAppTheme,
+  resolveTheme,
+  changeAppTheme,
+}
 
 // Register the TestBridge eval listener
 function setupTestBridgeListener(): void {
