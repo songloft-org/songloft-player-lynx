@@ -26,11 +26,15 @@ import Foundation
  * service that ignores the TLS setting. That is the intended failure mode — loud
  * beats quietly-wrong.
  *
- * Every method carries an explicit `@objc(selector)` **and** is named the way the
- * ObjC importer would name it (`invoke(withRequest:callback:)`, not
- * `invoke(request:callback:)`). Belt and braces: the selector is the real
- * contract, but Swift's protocol-conformance check goes through its own imported
- * view of the requirement, so both spellings have to line up.
+ * Every method carries an explicit `@objc(selector)` — the selector is the real
+ * contract. The Swift method names, by contrast, must match what the **importer**
+ * makes of the ObjC protocol, and its renaming heuristics strip label words that
+ * repeat the parameter type name: `invokeWithRequest:` + `LynxHttpRequest*`
+ * imports as `invoke(with:)`, `withDelegate:` + `LynxHttpStreamingDelegate*` as
+ * `with:`, `processChunkedData:withData:` + `NSData*` as `processChunkedData(_:with:)`.
+ * Swift's protocol-conformance check goes through that imported view, so the
+ * names below follow the importer, not the ObjC spelling (first compiled on
+ * macOS — the Linux dev machine could not).
  */
 @objc(SongloftHttpService)
 final class SongloftHttpService: NSObject, LynxServiceHttpProtocol {
@@ -67,7 +71,7 @@ final class SongloftHttpService: NSObject, LynxServiceHttpProtocol {
   }
 
   @objc(invokeWithRequest:callback:)
-  func invoke(withRequest request: LynxHttpRequest, callback: @escaping LynxHttpCallback) {
+  func invoke(with request: LynxHttpRequest, callback: @escaping LynxHttpCallback) {
     guard let urlRequest = Self.nsRequest(from: request) else {
       callback(Self.failure(request, "invalid url"))
       return
@@ -96,9 +100,9 @@ final class SongloftHttpService: NSObject, LynxServiceHttpProtocol {
 
   @objc(invokeStreamingWithRequest:callback:withDelegate:)
   func invokeStreaming(
-    withRequest request: LynxHttpRequest,
+    with request: LynxHttpRequest,
     callback: @escaping LynxHttpCallback,
-    withDelegate delegate: LynxHttpStreamingDelegate
+    with delegate: LynxHttpStreamingDelegate
   ) {
     guard let urlRequest = Self.nsRequest(from: request) else {
       callback(Self.failure(request, "invalid url"))
@@ -189,7 +193,7 @@ private final class StreamingReceiver: NSObject, URLSessionDataDelegate {
 
   func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
     if useDeprecatedStreamingConfig {
-      delegate.processChunkedData(buffer, withData: data)
+      delegate.processChunkedData(buffer, with: data)
     } else {
       delegate.processStreamingData(data)
     }

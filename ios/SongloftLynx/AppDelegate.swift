@@ -42,7 +42,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
    * Runs *after* `LynxEnv.sharedInstance()` so it lands after the lazy-register
    * flush. The protocol object has to be looked up by name because `@protocol()`
    * is a C construct with no Swift equivalent; the ObjC entry point is
-   * `+[LynxServices registerServiceWithProtocol:protocol:]`.
+   * `+[LynxServices registerServiceWithProtocol:protocol:]`. Mind the Swift
+   * import names, which the importer reshapes unevenly: registration becomes
+   * `registerService(withProtocol:protocol:)`, but the lookup keeps its base
+   * word and drops the type-repeating one — `getInstanceWith(_:)`, not
+   * `getInstance(with:)` nor `instance(withProtocol:)`.
    */
   private func registerHttpService() {
     guard let httpProtocol = NSProtocolFromString("LynxServiceHttpProtocol") else {
@@ -51,7 +55,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
     LynxServices.registerService(withProtocol: SongloftHttpService.self, protocol: httpProtocol)
     assert(
-      LynxServices.getInstance(with: httpProtocol) is SongloftHttpService,
+      LynxServices.getInstanceWith(httpProtocol) is SongloftHttpService,
       "host HTTP service is not ours — check the Podfile still excludes LynxService/Http"
     )
   }
