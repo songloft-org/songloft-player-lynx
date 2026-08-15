@@ -145,13 +145,20 @@ cd android && ./gradlew --no-daemon assembleDebug
 
 | 条目 | 严重度 | 状态 |
 |---|---|---|
-| **iOS 自签名 + 媒体流可能仍不通** | P2 | 让 AVPlayer 接受自签名证书只能靠 `AVAssetResourceLoaderDelegate.resourceLoader(_:shouldWaitForResponseTo:)`，Apple 从未保证它会为普通 `http(s)` 资源投递 server-trust 挑战。已挂上但未验证。**判定**：对自签名服务器登录成功但播放失败即说明没触发。保证做法要自定义 scheme 代理 + 自己喂 `AVAssetResourceLoadingRequest`（等于重写字节范围流式加载 + 改写 HLS 播放列表内 URL），批45 刻意不做。 |
+| **iOS 自签名 + 媒体流不通（已实测确认）** | P2 | 批46 实测判定成立：`AVAssetResourceLoaderDelegate.shouldWaitForResponseTo` **不会**为普通 https 资源投递 server-trust 挑战（iOS 18.3）。表现正是批45 预设的判定条件——开关打开后**登录成功、播放立刻 `state=error` + `The certificate for this server is invalid.`**。**影响**：自签名服务器在 iOS 上「能登录、能浏览、不能播放」。修法只剩自定义 scheme 代理 + 自己喂 `AVAssetResourceLoadingRequest`（重写字节范围流式加载 + 改写 HLS 播放列表内 URL），仍未做。 |
+| **`setInsecureTls` 关闭不影响已建立的连接** | P3 | 批46 实测：开关关掉后**换 hostname**（强制新连接）立刻失败 ✓，但**同一 URL** 仍成功——TLS 按连接协商，复用连接池里的连接不再发起挑战。代码注释「tightens the *next* connection」准确，但「双向可逆」易被读成「立即生效」。要立即生效需 `update(false)` 时 `invalidateAndCancel()` 并重建 session。Android/OkHttp 同有连接池，未实测。 |
 | **偶发全屏灰层** | 未定位 | 运行数分钟后整屏蒙中灰，重启即恢复。最可查嫌疑是 lynx-ui Sheet 的 backdrop 泄漏。**下次出现时跑**：`adb logcat \| grep -i "\[Sheet\] Invalid state transition"`（库自带的免费探针）。若真机（非 BlueStacks）复现不了，降级为环境记录。 |
 | **`AndroidManifest.xml` 完全无闸门** | P3 | 权限 / service 声明漏写无人拦（批43 的悬浮歌词就吃过这个）。其余原生契约面已被闸门覆盖。 |
 
-### 自签名功能实测（唯一能证明批45 达到目的的证据）
+### ✅ 自签名功能实测（2026-08-15 已在 iOS 18.3 模拟器上做完）
 
-起一台自签名证书的 Songloft（`https://<lan-ip>:58091`），四步：① 开关**关** → 登录应失败；② 开关**开** → 登录成功（证明 fetch 路径通了，这是 Android 旧实现失效的那条）+ 出声 + 锁屏有封面；③ 开关再**关**、不重启 App → 登录应**重新失败**（证明可逆，旧实现这一步会错误地继续成功）；④ iOS 第 ② 步若登录成功而播放无声 → 上面那条 TODO 生效。
+**批45 的目的达到了**：开关打开后自签名服务器**登录成功**，关掉再用新连接就立刻失败 —— `fetch` 路径确实通了（这正是 Android 旧实现失效的那条）。另外两个发现见上面的「已知缺陷」表：**媒体流不通**（P2 判定成立）与**关闭开关不影响已建立的连接**（P3）。
+
+复现环境（约 5 分钟即可重搭，**刻意不入库**）：后端没有 TLS 参数，所以在前面挂一个自签名的 TLS 反代——`openssl req -x509 -newkey rsa:2048 -nodes -days 2 -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"` 生成证书，再用 20 行 Go（`httputil.NewSingleHostReverseProxy` + `ListenAndServeTLS`）把 `https://127.0.0.1:58543` 转发到 `http://127.0.0.1:58091`。模拟器的 localhost 就是宿主，直接可达。
+
+驱动方式：`__E2E_AUTH_STORE__.getState().login({ username, password, apiBaseUrl, insecureTls })` —— 这个 action 直接吃 `insecureTls` 参数，四步实测一条 eval 就够；播放侧用 `__E2E_PLAYER_STORE__.playSong(song)`（歌曲元数据从宿主侧明文 :58091 取，媒体 URL 由 app 按自己配置的 https base 拼），然后读 `getPlayerState()` 的 `state`/`errorMessage`。
+
+**验证「开关关掉是否生效」时必须换 hostname**（如 `https://localhost:58543` 对 `https://127.0.0.1:58543`，证书两个 SAN 都签了）。同一 URL 会复用连接池里已经握过手的连接，测出来的是假绿——**第一次实测就被这一点骗过**：跑第二轮时连 ① 都「成功」了，因为上一轮结束时开关是开的、连接还热着。
 
 ### 明确不做（来自审计计划 §明确不做）
 
