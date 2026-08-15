@@ -22,6 +22,7 @@
 		AA000000000000000000002F /* LiveActivityModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000002E /* LiveActivityModule.swift */; };
 		AA0000000000000000000035 /* SongloftDlnaModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000034 /* SongloftDlnaModule.swift */; };
 		AA0000000000000000000037 /* InsecureTls.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000036 /* InsecureTls.swift */; };
+		AA0000000000000000000041 /* InsecureMediaLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000040 /* InsecureMediaLoader.swift */; };
 		AA0000000000000000000039 /* SongloftHttpService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000038 /* SongloftHttpService.swift */; };
 		AA0000000000000000000024 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001A /* Assets.xcassets */; };
 		AA0000000000000000000025 /* main.lynx.bundle in Resources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001B /* main.lynx.bundle */; };
@@ -50,6 +51,7 @@
 		AA000000000000000000002E /* LiveActivityModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityModule.swift; sourceTree = "<group>"; };
 		AA0000000000000000000034 /* SongloftDlnaModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongloftDlnaModule.swift; sourceTree = "<group>"; };
 		AA0000000000000000000036 /* InsecureTls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsecureTls.swift; sourceTree = "<group>"; };
+		AA0000000000000000000040 /* InsecureMediaLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsecureMediaLoader.swift; sourceTree = "<group>"; };
 		AA0000000000000000000038 /* SongloftHttpService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongloftHttpService.swift; sourceTree = "<group>"; };
 		D3E9A174D02DA94EF6B01346 /* libPods-SongloftLynx.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-SongloftLynx.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F6CF18F52AA4E9A635199544 /* Pods-SongloftLynx.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SongloftLynx.debug.xcconfig"; path = "Target Support Files/Pods-SongloftLynx/Pods-SongloftLynx.debug.xcconfig"; sourceTree = "<group>"; };
@@ -111,6 +113,7 @@
 				AA000000000000000000002E /* LiveActivityModule.swift */,
 				AA0000000000000000000034 /* SongloftDlnaModule.swift */,
 				AA0000000000000000000036 /* InsecureTls.swift */,
+				AA0000000000000000000040 /* InsecureMediaLoader.swift */,
 				AA0000000000000000000038 /* SongloftHttpService.swift */,
 				AA0000000000000000000018 /* SongloftLynx-Bridging-Header.h */,
 				AA000000000000000000001A /* Assets.xcassets */,
@@ -259,6 +262,7 @@
 				AA000000000000000000002F /* LiveActivityModule.swift in Sources */,
 				AA0000000000000000000035 /* SongloftDlnaModule.swift in Sources */,
 				AA0000000000000000000037 /* InsecureTls.swift in Sources */,
+				AA0000000000000000000041 /* InsecureMediaLoader.swift in Sources */,
 				AA0000000000000000000039 /* SongloftHttpService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -1,7 +1,7 @@
 # 工作交接（2026-08-15）
 
 > 本文件是**给接手 AI 的交接说明**。读完这一篇就能继续干活；细节在链接里。
-> 一句话现状：**批41–46 完成，两个平台的 e2e 都是全绿** —— **iOS 110/110**、Android 107/110（3 例平台门控跳过）。闸门全绿（951 vitest + `ios:build` + Android 可真编译 + 双产物）。审计计划已闭合，iOS e2e 首跑的 6 个失败已在批46 全部修完。
+> 一句话现状：**批41–47 完成，两个平台的 e2e 都是全绿** —— **iOS 110/110**、Android 107/110（3 例平台门控跳过）。闸门全绿（952 vitest + `ios:build` + Android 可真编译 + 双产物）。审计计划已闭合；iOS e2e 首跑的 6 个失败在批46 全部修完，自签名 TLS 实测挖出的两条缺陷（iOS 媒体流不通 / 关开关不立即生效）在批47 修完并实测通过。
 
 ---
 
@@ -145,14 +145,13 @@ cd android && ./gradlew --no-daemon assembleDebug
 
 | 条目 | 严重度 | 状态 |
 |---|---|---|
-| **iOS 自签名 + 媒体流不通（已实测确认）** | P2 | 批46 实测判定成立：`AVAssetResourceLoaderDelegate.shouldWaitForResponseTo` **不会**为普通 https 资源投递 server-trust 挑战（iOS 18.3）。表现正是批45 预设的判定条件——开关打开后**登录成功、播放立刻 `state=error` + `The certificate for this server is invalid.`**。**影响**：自签名服务器在 iOS 上「能登录、能浏览、不能播放」。修法只剩自定义 scheme 代理 + 自己喂 `AVAssetResourceLoadingRequest`（重写字节范围流式加载 + 改写 HLS 播放列表内 URL），仍未做。 |
-| **`setInsecureTls` 关闭不影响已建立的连接** | P3 | 批46 实测：开关关掉后**换 hostname**（强制新连接）立刻失败 ✓，但**同一 URL** 仍成功——TLS 按连接协商，复用连接池里的连接不再发起挑战。代码注释「tightens the *next* connection」准确，但「双向可逆」易被读成「立即生效」。要立即生效需 `update(false)` 时 `invalidateAndCancel()` 并重建 session。Android/OkHttp 同有连接池，未实测。 |
+| **HLS 播放列表内的绝对 https URI（自签名下）** | P3 | 批47 修完 iOS 自签名媒体流后剩下的唯一缺口：播放列表里的**相对** URI 会继续带自定义 scheme 回到 `InsecureMediaLoader`（Songloft 自己的 HLS 反代产出的正是相对 URL，所以按构造是通的），但**绝对** `https://` URI 由 AVFoundation 自行加载、撞同一道证书墙。**两条都没有可测的自签名 HLS 源，未实测**。 |
 | **偶发全屏灰层** | 未定位 | 运行数分钟后整屏蒙中灰，重启即恢复。最可查嫌疑是 lynx-ui Sheet 的 backdrop 泄漏。**下次出现时跑**：`adb logcat \| grep -i "\[Sheet\] Invalid state transition"`（库自带的免费探针）。若真机（非 BlueStacks）复现不了，降级为环境记录。 |
 | **`AndroidManifest.xml` 完全无闸门** | P3 | 权限 / service 声明漏写无人拦（批43 的悬浮歌词就吃过这个）。其余原生契约面已被闸门覆盖。 |
 
-### ✅ 自签名功能实测（2026-08-15 已在 iOS 18.3 模拟器上做完）
+### ✅ 自签名功能实测 + 批47 收口（2026-08-15，iOS 18.3 模拟器 + Android 模拟器）
 
-**批45 的目的达到了**：开关打开后自签名服务器**登录成功**，关掉再用新连接就立刻失败 —— `fetch` 路径确实通了（这正是 Android 旧实现失效的那条）。另外两个发现见上面的「已知缺陷」表：**媒体流不通**（P2 判定成立）与**关闭开关不影响已建立的连接**（P3）。
+**批45 的目的达到了**，且批46 实测挖出的两条缺陷已在**批47 修完并实测通过**：iOS 自签名下现在**能播放**（`InsecureMediaLoader`：换自定义 scheme 让 AVFoundation 把加载请求交给我们，自己流式拉字节范围），关掉开关**同一 URL 立即生效**（`update()` 失效并重建 `URLSession`，丢掉连接池）。Android 侧补测确认它本来就立即生效——`clientFor()` 在标志变化时重建 `OkHttpClient`，新 client 自带新连接池。剩下的唯一缺口见「已知缺陷」表里的 HLS 绝对 URI 那条。
 
 复现环境（约 5 分钟即可重搭，**刻意不入库**）：后端没有 TLS 参数，所以在前面挂一个自签名的 TLS 反代——`openssl req -x509 -newkey rsa:2048 -nodes -days 2 -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"` 生成证书，再用 20 行 Go（`httputil.NewSingleHostReverseProxy` + `ListenAndServeTLS`）把 `https://127.0.0.1:58543` 转发到 `http://127.0.0.1:58091`。模拟器的 localhost 就是宿主，直接可达。
 

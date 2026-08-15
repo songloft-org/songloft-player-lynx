@@ -229,7 +229,7 @@ cached = nm.SongloftDlna as DlnaModule
 | SongloftStorageModule | `SongloftStorageModule.swift` | UserDefaults + Keychain |
 | SongloftPlatformModule | `SongloftPlatformModule.swift` | 文件选择、URL 打开、insecureTls 开关 |
 | SystemAppearance | `SystemAppearance.swift` | 深浅色/语言注入 |
-| （非 Lynx 模块）| `SongloftHttpService.swift` / `InsecureTls.swift` | 宿主 `fetch` 服务 / TLS 开关 + 共享 `URLSession` |
+| （非 Lynx 模块）| `SongloftHttpService.swift` / `InsecureTls.swift` / `InsecureMediaLoader.swift` | 宿主 `fetch` 服务 / TLS 开关 + 共享 `URLSession` / 自签名下的媒体字节流加载器 |
 
 ### 契约闸门的覆盖范围
 
@@ -256,7 +256,8 @@ cached = nm.SongloftDlna as DlnaModule
 - 两边都是「替换」而非「覆盖」：服务按接口/协议绑定，谁赢没有文档保证，所以直接不给竞争者留位置
 - 失败模式是**响亮的**（丢了注册 → 请求全死），刻意不做成「静默回落到忽略 TLS 设置的 SDK 实现」
 - 请求/响应映射是 SDK 实现的**逐行转写**（同样的 499 哨兵、同样的 header 拼接、同样的 streaming 分支），只在 TLS 配置一处分叉 —— 改这两个文件时保持这个性质
-- **`InsecureTls` 是三条出站路径的唯一开关**（`net/InsecureTls.kt` / `InsecureTls.swift`）：`fetch`、媒体流、以及模块自己的上传/SOAP/封面。iOS 的媒体流那条走 `AVAssetResourceLoaderDelegate`，**可能在部分 iOS 版本上不触发**，见该文件注释与 `docs/tracking/bug.md`
+- **`InsecureTls` 是三条出站路径的唯一开关**（`net/InsecureTls.kt` / `InsecureTls.swift`）：`fetch`、媒体流、以及模块自己的上传/SOAP/封面。**iOS 的媒体流不是靠答复 AVFoundation 的信任挑战**——`AVAssetResourceLoaderDelegate.shouldWaitForResponseTo` 实测（iOS 18.3）对普通 `https` 资源根本不触发，那段代码已删。现在走 `InsecureMediaLoader`：把 asset URL 的 scheme 换成 `songloft-insecure-https`，AVFoundation 因无法自行加载而把每个加载请求交给我们，由 `InsecureTls.session` 拉字节范围。**改它时两条不能碰**：① 加载器的回调队列**不能是 `.main`**（`buildAudioMix` 会在主线程同步等 asset 轨道，回调挂主线程就是自己锁死自己，表现为每次尝试卡约 10 秒后 `-11800`）；② 必须**流式**喂 `respond(with:)`，用 completion-handler 一次性收会把整条剩余音轨读进内存（实测 19MB 文件来了一个 19MB buffer），且 AVFoundation 从此只会从头消费、seek 不会发新的 range
+- **关掉开关要立即生效，两端机制不同**：Android 的 `SongloftHttpService.clientFor()` 在标志变化时**重建 OkHttpClient**，新 client 自带新连接池，天然立即生效；iOS 的 `URLSession` 会复用已握手的连接（TLS 按连接协商，复用时不再发起 server-trust 挑战），所以 `InsecureTls.update()` 必须 `invalidateAndCancel()` 并重建 session。**验证「关掉是否生效」时如果不换 hostname，就要确认这条逻辑在**，否则测到的是热连接
 - iOS 的 `NSAllowsArbitraryLoads` 只放开**明文 HTTP**，与证书校验无关 —— 曾有注释把它当成自签名支持的依据，那是错的
 
 ## 6. 测试与闸门原则（来自三次教训）

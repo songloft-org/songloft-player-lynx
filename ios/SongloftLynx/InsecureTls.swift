@@ -1,4 +1,3 @@
-import AVFoundation
 import Foundation
 
 /**
@@ -20,15 +19,21 @@ import Foundation
  *     `LynxHttpService` precisely because that one uses `URLSession.shared`
  *     (line-for-line: `NSURLSession *session = [NSURLSession sharedSession]`)
  *     and `sharedSession` cannot take a delegate.
- *  2. **AVPlayer media streaming** — [attachIfNeeded], see the caveat there.
+ *  2. **AVPlayer media streaming** — [InsecureMediaLoader], which loads the bytes
+ *     itself over [session]. Answering AVFoundation's own trust challenge is not an
+ *     option: this class used to implement
+ *     `AVAssetResourceLoaderDelegate.shouldWaitForResponseTo:` for that, and it was
+ *     measured on iOS 18.3 to never be called for a plain `https` asset (login worked,
+ *     playback failed with "The certificate for this server is invalid."), so that
+ *     code is gone rather than left as a decoy.
  *  3. **This app's own requests** — the platform module's upload, the DLNA SOAP
  *     control calls, and lock-screen artwork, all switched from
  *     `URLSession.shared` to [session].
  *
- * ⚠️ Relaxing trust is reversible here, unlike the old Android implementation
- * which ignored `enabled == false`: [handle] re-reads [enabled] on every
- * challenge, so turning the switch off tightens the *next* connection with no
- * session teardown needed.
+ * Relaxing trust is reversible, unlike the old Android implementation which ignored
+ * `enabled == false`: [handle] re-reads [enabled] on every challenge. That alone was
+ * not enough to make "off" take effect immediately, though — see [update] for the
+ * connection-pool half of it.
  */
 final class InsecureTls: NSObject {
   static let shared = InsecureTls()
@@ -44,25 +49,60 @@ final class InsecureTls: NSObject {
     return _enabled
   }
 
+  /**
+   * Flip the switch, dropping [session] (and therefore its connection pool) when the
+   * value actually changes.
+   *
+   * **Why the pool has to go.** TLS is negotiated per *connection*, and `URLSession`
+   * keeps connections alive for reuse. A request that reuses a connection which
+   * handshook while the switch was on never issues another server-trust challenge, so
+   * [handle] — correct as it is — is simply never consulted, and the tightened
+   * setting appears to be ignored until the connection happens to go idle. Measured:
+   * with the switch off again but the same `https://127.0.0.1:58543` URL, login kept
+   * succeeding against a self-signed server; only pointing at another hostname for
+   * the same server (a different pool entry, so a fresh handshake) failed as it
+   * should. Discarding the session is what makes "off" mean off *now*.
+   *
+   * `invalidateAndCancel` also kills requests in flight. That is deliberate: the
+   * whole point of switching off mid-session is to stop talking to a server we no
+   * longer trust, so finishing those requests would defeat it.
+   *
+   * The no-change guard matters — `applyInsecureTls` runs on every login and on every
+   * server-settings write, and nuking the connection pool on each of those would be a
+   * needless round of handshakes.
+   */
   func update(_ value: Bool) {
     lock.lock()
+    guard _enabled != value else {
+      lock.unlock()
+      return
+    }
     _enabled = value
+    let stale = _session
+    _session = nil
     lock.unlock()
+    stale?.invalidateAndCancel()
   }
+
+  private var _session: URLSession?
 
   /**
    * Shared session for one-shot requests. `delegateQueue: nil` gives it a serial
    * background queue, matching `URLSession.shared`'s threading so callers that
    * were ported off `shared` need no other change.
    *
-   * The session retains its delegate (`self`) and `self` is a singleton, so the
-   * apparent cycle never leaks.
+   * Created on demand rather than stored once, because [update] throws the old one
+   * away; a `lazy var` could not be reset. The session retains its delegate (`self`)
+   * and `self` is a singleton, so the apparent cycle never leaks.
    */
-  lazy var session: URLSession = URLSession(
-    configuration: .default,
-    delegate: self,
-    delegateQueue: nil
-  )
+  var session: URLSession {
+    lock.lock()
+    defer { lock.unlock() }
+    if let _session { return _session }
+    let created = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
+    _session = created
+    return created
+  }
 
   /**
    * The trust policy, factored out so *any* delegate can apply it in one line —
@@ -85,27 +125,6 @@ final class InsecureTls: NSObject {
     return (.useCredential, URLCredential(trust: trust))
   }
 
-  /**
-   * Attach ourselves as the asset's resource-loader delegate so a self-signed
-   * media stream can play.
-   *
-   * ⚠️ **This may not fire.** `AVAssetResourceLoaderDelegate`'s
-   * `shouldWaitForResponseTo:` is documented for authentication challenges, but
-   * Apple never guaranteed delivery for plain `http(s)` assets — historically it
-   * arrives on some OS versions and not others. It is attached because it costs
-   * ~15 lines and fixes the case when it does work.
-   *
-   * The guaranteed-but-expensive alternative is a custom URL scheme
-   * (`songloft-https://`) whose loading we service ourselves through [session],
-   * which means reimplementing byte-range streaming *and* rewriting the URLs
-   * inside HLS playlists. Not done — tracked in `docs/tracking/bug.md`. Verify on
-   * a real device: if playback fails against a self-signed server while login
-   * works, this callback is not firing and that TODO is the fix.
-   */
-  func attachIfNeeded(to asset: AVURLAsset) {
-    guard enabled else { return }
-    asset.resourceLoader.setDelegate(self, queue: .main)
-  }
 }
 
 extension InsecureTls: URLSessionDelegate {
@@ -119,22 +138,3 @@ extension InsecureTls: URLSessionDelegate {
   }
 }
 
-extension InsecureTls: AVAssetResourceLoaderDelegate {
-  func resourceLoader(
-    _ resourceLoader: AVAssetResourceLoader,
-    shouldWaitForResponseTo authenticationChallenge: URLAuthenticationChallenge
-  ) -> Bool {
-    guard enabled,
-          authenticationChallenge.protectionSpace.authenticationMethod
-            == NSURLAuthenticationMethodServerTrust,
-          let trust = authenticationChallenge.protectionSpace.serverTrust
-    else {
-      return false
-    }
-    authenticationChallenge.sender?.use(
-      URLCredential(trust: trust),
-      for: authenticationChallenge
-    )
-    return true
-  }
-}

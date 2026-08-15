@@ -147,9 +147,17 @@ final class SongloftAudioEngine {
       // headers because `buildSongUrl` already carries auth.
       options["AVURLAssetHTTPHeaderFieldsKey"] = headers
     }
-    let asset = AVURLAsset(url: assetURL, options: options)
-    // Lets a self-signed media stream play — best-effort, see `attachIfNeeded`.
-    InsecureTls.shared.attachIfNeeded(to: asset)
+    // With "allow insecure TLS" on, an https asset is loaded by us rather than by
+    // AVFoundation (which cannot be talked out of rejecting the certificate) — see
+    // `InsecureMediaLoader`. A no-op in every other case.
+    let asset = AVURLAsset(url: InsecureMediaLoader.assetURL(for: assetURL), options: options)
+    // Not `.main`: `buildAudioMix` below blocks the main thread on the asset's tracks,
+    // so the loader's callbacks have to be serviceable from another queue or the two
+    // deadlock — see `InsecureMediaLoader.callbackQueue`.
+    asset.resourceLoader.setDelegate(
+      InsecureMediaLoader.shared,
+      queue: InsecureMediaLoader.shared.callbackQueue
+    )
     let item = AVPlayerItem(asset: asset)
     if let mix = equalizer.buildAudioMix(for: item) {
       item.audioMix = mix
