@@ -12,6 +12,7 @@ import {
   type AudioItem,
 } from '../../../native/index.js'
 import { readNativeModules } from '../../../native/native-modules.js'
+import { getPlatformTarget } from '../../../native/platform-target.js'
 import { getFavoriteState, toggleFavoriteNonReact } from '../../library/data/favorites.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
 import { getSongsApi } from '../../library/api/index.js'
@@ -144,9 +145,23 @@ export function isNormalizeEnabled(): boolean {
   return _normalize
 }
 
+/**
+ * Playback URL for the native engine.
+ *
+ * `platform` is not optional in practice: without it `getTranscodeFormat` falls back
+ * to `'web'`, the most restrictive format set. On a device that meant two wrong
+ * answers at once — `ogg`/`opus` were left untranscoded for AVPlayer, which cannot
+ * play them, while every video container was sent `?format=mp3`, which makes the
+ * server run `-vn` and drop the picture.
+ */
 function songUrl(song: Song): string {
   if (!song.url) return ''
-  return buildSongUrl(song.url, { songFormat: song.format, quality: _audioQuality, normalize: _normalize })
+  return buildSongUrl(song.url, {
+    songFormat: song.format,
+    quality: _audioQuality,
+    normalize: _normalize,
+    platform: getPlatformTarget(),
+  })
 }
 
 /**

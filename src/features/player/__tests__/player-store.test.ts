@@ -353,3 +353,53 @@ describe('togglePlay when the engine holds nothing (cold start, auto-resume off)
     loadSpy.mockRestore()
   })
 })
+
+/**
+ * The URL handed to the engine is the only place the transcode decision becomes
+ * observable, and it was wrong on every device: `songUrl()` passed no `platform`, so
+ * `getTranscodeFormat` fell back to its `'web'` default. A video song therefore
+ * arrived with `?format=mp3` — the client asking the server to run `-vn` and drop
+ * the picture.
+ *
+ * `SystemInfo` is injected directly because that is what `getPlatformTarget()` reads,
+ * and it is present in both Lynx realms (see `platform-target.ts`).
+ */
+describe('playback URL carries the real platform', () => {
+  const g = globalThis as Record<string, unknown>
+
+  async function urlFor(format: string, platform: string, isVideo = false): Promise<string> {
+    g.SystemInfo = { platform }
+    // The store skips `load` when the engine already holds that song id, and
+    // `_loadedSongId` survives `reset()`. Without this the spy records nothing and
+    // every assertion below passes against an empty string.
+    resetLoadedSongForTests()
+    const loadSpy = vi.spyOn(getAudio(), 'load').mockResolvedValue(undefined)
+    const track = { ...song(1, 300), url: '/api/v1/songs/1/play', format, isVideo } as Song
+    await usePlayerStore.getState().playPlaylist([track], 0)
+    await flush()
+    const url = (loadSpy.mock.calls[0]?.[0] as string | undefined) ?? ''
+    loadSpy.mockRestore()
+    delete g.SystemInfo
+    expect(url, 'nothing reached the engine, so the real assertion would be vacuous')
+      .toContain('/api/v1/songs/1/play')
+    return url
+  }
+
+  test('iOS gets ogg transcoded, which is what makes it playable at all', async () => {
+    expect(await urlFor('ogg', 'iOS')).toContain('format=mp3')
+  })
+
+  test('an MP4-container video song is not asked to strip its picture', async () => {
+    // mp4 normalises to 'm4a', which every platform set holds, so this URL was
+    // already clean. Pinned because it is the container the first video songs use.
+    expect(await urlFor('mp4', 'Android', true)).not.toContain('format=')
+  })
+
+  test('Android keeps transcoding containers whose codecs are not guaranteed', async () => {
+    expect(await urlFor('mkv', 'Android')).toContain('format=mp3')
+  })
+
+  test('with no host the URL stays the old, safe one', async () => {
+    expect(await urlFor('aiff', 'web')).toContain('format=mp3')
+  })
+})

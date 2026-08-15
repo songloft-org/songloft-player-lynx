@@ -82,8 +82,37 @@ function platformFormats(platform: AudioPlatform): Set<string> {
 }
 
 /**
+ * Video/Matroska containers whose **audio track** a device player can be trusted
+ * to demux on its own. Deliberately just the MP4 family.
+ *
+ * The rest of {@link VIDEO_CONTAINERS} plus `mka` keep being transcoded to mp3 on
+ * every platform, and that is a decision rather than an oversight:
+ *
+ * - The container name does not reveal the codec inside it. A `.mka` may hold
+ *   FLAC (fine everywhere) or AC-3/DTS (needs a licence many Android devices do
+ *   not have) — a container-level allowlist would trade a working stream for an
+ *   occasional silent one.
+ * - AVFoundation cannot demux Matroska/AVI/FLV/ASF/RealMedia/MPEG-PS at all, and
+ *   standalone `.ts` is not supported outside HLS. On iOS those *must* be
+ *   transcoded or the song simply will not play.
+ * - Nothing is lost for actual video songs: they do not come through here at all.
+ *   `player-store` sends them to the video endpoints (`?media=video` or
+ *   `/video-hls/`), which serve the original container untouched.
+ *
+ * Net effect: every URL this function produced before `platform` was threaded
+ * through stays byte-identical except audio-only `.m4v`/`.3gp` **on a device**,
+ * which now play without a server round-trip. Web is untouched.
+ */
+const DEMUXABLE_VIDEO_CONTAINERS = new Set(['m4v', '3gp'])
+
+/**
  * The container to request via `?format=`, or `null` for native playback.
  * `native` platforms (libmpv-class players) transcode nothing.
+ *
+ * ⚠️ `platform` defaults to `'web'`, the most restrictive set. That default used to
+ * be what every caller got — `player-store`'s `songUrl()` never passed one — which
+ * is how video songs ended up asking the server for `?format=mp3`, i.e. asking it
+ * to run `-vn` and throw the picture away. Pass a real platform.
  */
 export function getTranscodeFormat(
   songFormat: string | null | undefined,
@@ -92,9 +121,14 @@ export function getTranscodeFormat(
   if (!songFormat) return null
   const fmt = normalizeFormat(songFormat.toLowerCase())
   if (fmt == null) return null
-  const isWeb = platform === 'web'
-  if (fmt === 'mka') return isWeb ? 'mp3' : null
-  if (VIDEO_CONTAINERS.has(fmt)) return isWeb ? 'mp3' : null
+  if (fmt === 'mka' || VIDEO_CONTAINERS.has(fmt)) {
+    // Web stays exactly as it was: `<audio>` is the consumer there, and this
+    // function is the only thing standing between it and a container it cannot
+    // open. No reason to widen that surface in a batch about native video.
+    if (platform === 'web') return 'mp3'
+    if (platform === 'native' || DEMUXABLE_VIDEO_CONTAINERS.has(fmt)) return null
+    return 'mp3'
+  }
   const supported = platformFormats(platform)
   if (supported.size === 0) return null
   if (supported.has(fmt)) return null
