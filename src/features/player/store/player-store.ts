@@ -694,17 +694,28 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 // Subscribe once at module load. The mock emits synchronously; on device the
 // native module posts these over the event channel. `completed` drives
 // play-mode routing via the store's own actions.
+let _prefetchedForIndex: number | null = null
+
 audio.on('progress', (e) => {
-  // A `durationMs` of 0 means "the host does not know yet", not "zero long", so it
-  // must never erase a duration already in the store (seeded from the server's
-  // metadata by `playAtIndex`, see [stateDurationMsOf]). AVPlayer reports 0 for the
-  // first moment of a remote track, which would otherwise blank the total time and
-  // collapse the seek bar until it resolves.
   usePlayerStore.setState((s) => ({
     currentTime: e.positionMs,
     duration: e.durationMs > 0 ? e.durationMs : s.duration,
   }))
   useLyricStore.getState().syncPosition(e.positionMs)
+
+  const s = usePlayerStore.getState()
+  if (
+    s.duration > 0 &&
+    e.positionMs > s.duration * 0.8 &&
+    _prefetchedForIndex !== s.currentIndex
+  ) {
+    _prefetchedForIndex = s.currentIndex
+    const nextIdx = resolveNext(s.playMode, s.currentIndex, s.playlist.length)
+    if (nextIdx != null && s.playlist[nextIdx]) {
+      const url = songUrl(s.playlist[nextIdx])
+      if (url) void fetch(url, { method: 'HEAD' }).catch(() => {})
+    }
+  }
 })
 
 audio.on('stateChanged', (e) => {
