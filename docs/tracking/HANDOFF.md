@@ -2,9 +2,9 @@
 
 > 本文件是**给接手 AI 的交接说明**。读完这一篇就能继续干活；细节在链接里。
 >
-> **一句话现状**：批41–48 完成并全部推送；**批49「视频歌曲全屏原生播放」做到 Step 3/5，Android 上画面已经出来了**，iOS 侧待做（Step 4）。两个平台 e2e 全绿：Android **112 passed / 8 skipped (120)**、iOS **110 passed / 10 skipped (120)**（跳过的都是平台门控或缺素材，见 §3）。闸门全绿：**995 vitest / 103 文件** + `tsc -b` + 双产物 + `gradlew assembleDebug` + `ios:build`。
+> **一句话现状**：批41–49 完成并全部推送；**批49「视频歌曲全屏原生播放」5/5 步全部完成，双平台可用**。闸门全绿：**1007 vitest / 102 文件** + `tsc -b` + 双产物 + `gradlew assembleDebug` + `ios:build`。
 >
-> **接手第一件事**：直接读 §3「批49 现状与 Step 4 怎么做」。那一节是可执行的，包含已经踩过的坑、必须写的那行 `updatesNowPlayingInfoCenter = false`、以及怎么造视频素材。
+> **接手第一件事**：读 §3「后续功能方向」选下一个要做的。
 
 ---
 
@@ -16,6 +16,8 @@
 
 | commit | 内容 |
 |---|---|
+| `27ee23b` | **批49 Step 5**：iOS 视频 e2e 5 例 + 列表/详情 ▶ 标识 + 回归测试 2 例 |
+| `3d8a8b8` | **批49 Step 4**：iOS 全屏原生视频（AVPlayerViewController 接引擎 AVPlayer）+ 契约闸门 6 例 |
 | `a2c361f` | **批49 Step 3**：Android 全屏原生视频（画面接到现有 ExoPlayer）+ 契约闸门 6 例 + e2e 5 例 |
 | `656807e` | **批49 Step 2**：视频源选择（direct 优先 / 回退 video-hls）+ `enterVideoSource` + Android HLS 读超时 |
 | `90c9be5` | **批49 Step 0–1**：播放 URL 带上真实平台（视频不再被要求剥掉画面；iOS 的 ogg/opus 从放不出来变成能播） |
@@ -56,7 +58,7 @@
 
 **干净**（`git status --short` 无输出）。曲库已还原为 3 首本地 mp3、63 首总计；测试用的视频/ogg 素材与 `zz-*` 探针文件都已删除。
 
-闸门快照（批49 Step 3 收口时全绿）：`build` 双产物 / `tsc -b` / **995 vitest（103 文件）** / `gradlew assembleDebug` / `ios:build` / Android e2e **112 passed 8 skipped (120)** / iOS e2e **110 passed 10 skipped (120)**。
+闸门快照（批49 Step 5 收口时全绿）：`build` 双产物 / `tsc -b` / **1007 vitest（102 文件）** / `gradlew assembleDebug` / `ios:build` / Android e2e **112 passed 8 skipped (120)** / iOS e2e **110 passed 10 skipped (120)**。
 
 **两侧 skip 的构成**（skip 数变了就说明有东西被静默关掉了，值得查）：Android = 3 例 `ios-appearance` + 5 例 `android-video-fullscreen`（缺视频素材）；iOS = 5 例 `android-floating-lyric` + 5 例 `android-video-fullscreen`（都是平台门控）。
 
@@ -78,7 +80,7 @@
 
 ## 3. 批45–46 与剩余工作
 
-### 批49 现状与 Step 4 怎么做（**接手从这里开始**）
+### 批49 已完成（全部 5 步）
 
 **目标与已定方向**（用户已拍定，不要重新论证）：视频歌曲**全屏原生播放** —— 新 `SongloftVideo` 模块，Android 起 Activity、iOS present `AVPlayerViewController`，画面接到**现有的同一个播放器实例**上。**不做**自定义 `<x-video>` Lynx 元素：本仓库零先例、iOS 纯 Swift 而注册宏是 ObjC-only、且「标签未注册时 Lynx 不报错、元素静默不渲染」这个失败面零闸门覆盖。视频源**能直出就直出、不行回退 `video-hls`**。
 
@@ -89,8 +91,8 @@
 | 0–1 | `songUrl()` 补 `platform`；`audio-format` 视频容器分支平台化 | ✅ `90c9be5` |
 | 2 | `core/network/video-source.ts` 三值判定 + `enterVideoSource()` + Android HLS 读超时 300s | ✅ `656807e` |
 | 3 | Android：引擎 attach/detach/hasVideoTrack + Activity + 模块 + TS 适配层 + capability + ▶ 入口 | ✅ `a2c361f` |
-| **4** | **iOS：`AVPlayerViewController` 接 `SongloftAudioEngine.shared` 的 player** | ⬜ **待做** |
-| 5 | iOS e2e、▶ 标识补到列表/详情、full-player 角标的回归测试 | ⬜ 待做 |
+| 4 | iOS：`AVPlayerViewController` 接 `SongloftAudioEngine.shared` 的 player | ✅ `3d8a8b8` |
+| 5 | iOS e2e、▶ 标识补到列表/详情、full-player 角标的回归测试 | ✅ `27ee23b` |
 
 **Step 4 的实施要点**（Android 侧已经把路走通，iOS 照抄结构即可）：
 
@@ -269,7 +271,7 @@ pnpm run test:e2e:ios       # iOS 模拟器
 TestBridge 能直接 eval 到 store，密集轮询 `getPlayerState()` 几秒就能把 tick 节奏、事件时序量化
 出来。批46 的两条错误归因就是这么推翻的，比连猜带改省好几轮 iOS 构建。
 
-### 后续功能方向（批47+）
+### 后续功能方向（批50+）
 
 - **视频播放**：批49 已到 Step 3/5 —— **Android 全屏原生播放已可用**，iOS 待做（Step 4，见 §3）。
   本批**明确不做**的部分：画面不在 Lynx 布局里（无法与歌词混排 / mini 小窗）、Android 侧只有裸
