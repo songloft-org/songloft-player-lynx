@@ -1,7 +1,10 @@
 # 工作交接（2026-08-16）
 
 > 本文件是**给接手 AI 的交接说明**。读完这一篇就能继续干活；细节在链接里。
-> 一句话现状：**批41–48 完成，两个平台的 e2e 都是全绿** —— Android **112/115**（3 例 `ios-appearance` 跳过）、iOS **110/115**（5 例 Android 专属的悬浮歌词跳过）。闸门全绿（**959 vitest / 98 文件** + `ios:build` + Android 可真编译 + 双产物）。审计计划已闭合；iOS e2e 首跑的 6 个失败在批46 修完，自签名 TLS 的两条缺陷在批47 修完并实测通过，批48 修掉了悬浮歌词**从未工作过**的第四、第五重死并给 `AndroidManifest.xml` 补上了它此前完全缺失的闸门。
+>
+> **一句话现状**：批41–48 完成并全部推送；**批49「视频歌曲全屏原生播放」做到 Step 3/5，Android 上画面已经出来了**，iOS 侧待做（Step 4）。两个平台 e2e 全绿：Android **112 passed / 8 skipped (120)**、iOS **110 passed / 10 skipped (120)**（跳过的都是平台门控或缺素材，见 §3）。闸门全绿：**995 vitest / 103 文件** + `tsc -b` + 双产物 + `gradlew assembleDebug` + `ios:build`。
+>
+> **接手第一件事**：直接读 §3「批49 现状与 Step 4 怎么做」。那一节是可执行的，包含已经踩过的坑、必须写的那行 `updatesNowPlayingInfoCenter = false`、以及怎么造视频素材。
 
 ---
 
@@ -9,11 +12,14 @@
 
 ### 已提交
 
-批41–47 的 commit **全部已推送**（`main` 与 `origin/main` 同步，`git rev-list --left-right --count origin/main...main` = `0 0`）。
+**全部已推送**，`main` 与 `origin/main` 同步（`git rev-list --left-right --count origin/main...main` = `0 0`）。
 
 | commit | 内容 |
 |---|---|
-| （批48） | 悬浮歌词第四/五重死（manifest 两行声明 + 主线程 hop）+ AndroidManifest 闸门 7 例 + Android 悬浮歌词 e2e 5 例 + 清 11 个死 i18n key |
+| `a2c361f` | **批49 Step 3**：Android 全屏原生视频（画面接到现有 ExoPlayer）+ 契约闸门 6 例 + e2e 5 例 |
+| `656807e` | **批49 Step 2**：视频源选择（direct 优先 / 回退 video-hls）+ `enterVideoSource` + Android HLS 读超时 |
+| `90c9be5` | **批49 Step 0–1**：播放 URL 带上真实平台（视频不再被要求剥掉画面；iOS 的 ogg/opus 从放不出来变成能播） |
+| `3df1299` | 批48：悬浮歌词第四/五重死（manifest 两行声明 + 主线程 hop）+ AndroidManifest 闸门 7 例 + Android 悬浮歌词 e2e 5 例 + 清 11 个死 i18n key |
 | `f849804` | 批47：自签名下 iOS 媒体流可播（`InsecureMediaLoader`）+ 关开关立即生效 |
 | `4a8153d` | docs：自签名 TLS 四步实测，确认批45 生效并判定两条缺陷 |
 | `8f446d1` | 批46：iOS e2e 首跑 6 个失败全修（110/110） |
@@ -48,9 +54,11 @@
 
 ### 工作树状态
 
-批48 的改动**尚未提交**（等用户确认）：`android/app/src/main/AndroidManifest.xml`、`android/…/lyric/FloatingLyricService.kt`、`src/__tests__/android-manifest-contract.test.ts`（新）、`src/e2e-bridge.ts`、`src/i18n/resources.ts`、`e2e/scenarios/android-floating-lyric.scenario.ts`（新）、`AGENTS.md`、`docs/tracking/*`。
+**干净**（`git status --short` 无输出）。曲库已还原为 3 首本地 mp3、63 首总计；测试用的视频/ogg 素材与 `zz-*` 探针文件都已删除。
 
-闸门：`build` 双产物 / `tsc -b` / **959 vitest（98 文件）** / `android/gradlew assembleDebug` 全绿。**Android e2e 112/115**（3 例 `ios-appearance` 平台门控跳过）。
+闸门快照（批49 Step 3 收口时全绿）：`build` 双产物 / `tsc -b` / **995 vitest（103 文件）** / `gradlew assembleDebug` / `ios:build` / Android e2e **112 passed 8 skipped (120)** / iOS e2e **110 passed 10 skipped (120)**。
+
+**两侧 skip 的构成**（skip 数变了就说明有东西被静默关掉了，值得查）：Android = 3 例 `ios-appearance` + 5 例 `android-video-fullscreen`（缺视频素材）；iOS = 5 例 `android-floating-lyric` + 5 例 `android-video-fullscreen`（都是平台门控）。
 
 ---
 
@@ -69,6 +77,49 @@
 ---
 
 ## 3. 批45–46 与剩余工作
+
+### 批49 现状与 Step 4 怎么做（**接手从这里开始**）
+
+**目标与已定方向**（用户已拍定，不要重新论证）：视频歌曲**全屏原生播放** —— 新 `SongloftVideo` 模块，Android 起 Activity、iOS present `AVPlayerViewController`，画面接到**现有的同一个播放器实例**上。**不做**自定义 `<x-video>` Lynx 元素：本仓库零先例、iOS 纯 Swift 而注册宏是 ObjC-only、且「标签未注册时 Lynx 不报错、元素静默不渲染」这个失败面零闸门覆盖。视频源**能直出就直出、不行回退 `video-hls`**。
+
+**已完成 Step 0–3**（逐条根因与实测数据在 `PROGRESS.md` 批49 段）：
+
+| Step | 内容 | 状态 |
+|---|---|---|
+| 0–1 | `songUrl()` 补 `platform`；`audio-format` 视频容器分支平台化 | ✅ `90c9be5` |
+| 2 | `core/network/video-source.ts` 三值判定 + `enterVideoSource()` + Android HLS 读超时 300s | ✅ `656807e` |
+| 3 | Android：引擎 attach/detach/hasVideoTrack + Activity + 模块 + TS 适配层 + capability + ▶ 入口 | ✅ `a2c361f` |
+| **4** | **iOS：`AVPlayerViewController` 接 `SongloftAudioEngine.shared` 的 player** | ⬜ **待做** |
+| 5 | iOS e2e、▶ 标识补到列表/详情、full-player 角标的回归测试 | ⬜ 待做 |
+
+**Step 4 的实施要点**（Android 侧已经把路走通，iOS 照抄结构即可）：
+
+1. 引擎（`ios/SongloftLynx/SongloftAudioEngine.swift`，`:63 private var player: AVPlayer?`）加一个**受控** accessor，不要暴露 player 本身。Android 侧的对应物是 `attachVideoOutput(view) { w,h -> }`。iOS 建议 `func attachVideoOutput(_ sink: @escaping (AVPlayer) -> Void)` —— 用闭包是为了让引擎不必 `import AVKit`，`AVPlayerViewController` 的生命周期归模块管。
+2. 新 `ios/SongloftLynx/SongloftVideoModule.swift`：`name = "SongloftVideo"` + `methodLookup` 三项（`open`/`close`/`isOpen`），骨架照 `SongloftDlnaModule.swift`。`topViewController()` 那 6 行可以照抄 `SongloftPlatformModule.swift:67-74`（**别去改那个在用的文件**）。
+3. **`vc.updatesNowPlayingInfoCenter = false` 必须写**。它默认 `true`，`AVPlayerViewController` 会拿自己那套信息覆盖引擎 `updateNowPlaying()` 写的 title/artist/artwork。症状是「全屏看过一次之后锁屏信息变了」，**纯真机可见，任何单测都抓不到**——所以顺手把这条加进契约闸门。
+4. `close` 时**先 `vc.player = nil` 再 dismiss**：AVPlayerViewController 在某些关闭路径上会 `pause()` 它持有的 player。真机上必须验一次「退出全屏后音频还在走」。
+5. 注册两处：`ViewController.buildConfig()` 里 `config.register(SongloftVideoModule.self)`，以及 **pbxproj 四处**。契约闸门会逐个 `ios/SongloftLynx/*.swift` 核对，漏了立刻红；改完 pbxproj 记得 `xcodebuild -list` 确认还能解析（批39 的教训）。
+6. 契约闸门里 `modules` 表那行现在是 `{ name: 'SongloftVideo', android: 'SongloftVideoModule', ios: null }` —— Step 4 把 `ios` 填上，注册断言会自动生效。`hosts.video` 也要补 `ios` 分支。
+7. **两条真机项无法靠闸门代替**：全屏期间 EQ 是否仍生效；锁屏元数据是否还是我们写的。
+
+**Step 3 里被实测纠正的两处设计**（iOS 会遇到同族问题，先知道省一轮）：
+
+- **「有没有视频轨」不能问 `videoSize`**：没有 surface 就没有帧输出，尺寸永远是空的 —— 鸡生蛋。Android 改读 `currentTracks` 的轨道组。iOS 的对应物是 `item.asset.tracks(withMediaType: .video)`，**注意别在主线程同步等 asset**（批47 的 `InsecureMediaLoader` 就是这么把自己锁死的）。
+- **画面会被拉伸**：Android 上 `MATCH_PARENT` 的 SurfaceView 把 640×360 抻成竖屏形状，靠截图才发现，任何状态断言都是绿的。iOS 用 `vc.videoGravity = .resizeAspect` 一行解决。
+
+**造视频素材**（每次实测都要，用完 `POST /api/v1/songs/clean` 收尾）：
+
+```bash
+ffmpeg -f lavfi -i "testsrc2=size=640x360:rate=25:duration=60" \
+       -f lavfi -i "sine=frequency=330:duration=60" \
+       -c:v libx264 -pix_fmt yuv420p -preset veryfast -c:a aac -shortest \
+       /Users/hanxi/toy/songloft/music/zz-video-probe.mp4
+# 等 12 秒过文件稳定阈值，再 POST /api/v1/scan
+```
+
+`testsrc2` 自带走动的时间码，两张间隔 1.5s 的截图不同即「画面在动」——这是与配色无关的活性判据，比肉眼看截图可靠。
+
+**后端已就绪、客户端已接的部分**：`?media=video`（直出原容器，忽略 format/quality/normalize）、`/songs/{id}/video-hls/playlist.m3u8`（H.264+AAC 实时转码，**转完再播**，缺 ffmpeg 返 503）。判定表在 `src/core/network/video-source.ts`，其中 **`'m4a'` 属于视频直出集合不是笔误**：后端 `songs.format` 用 tag 库的家族命名，一个 H.264+AAC 的 `.mp4` 扫进来是 `format: 'm4a', is_video: true`（实测）。
 
 ### 批48 做了什么（悬浮歌词从未工作过 + manifest 闸门补位）
 
@@ -156,6 +207,7 @@ cd android && ./gradlew --no-daemon assembleDebug
 | 条目 | 严重度 | 状态 |
 |---|---|---|
 | **HLS 播放列表内的绝对 https URI（自签名下）** | P3 | 批47 修完 iOS 自签名媒体流后剩下的唯一缺口：播放列表里的**相对** URI 会继续带自定义 scheme 回到 `InsecureMediaLoader`（Songloft 自己的 HLS 反代产出的正是相对 URL，所以按构造是通的），但**绝对** `https://` URI 由 AVFoundation 自行加载、撞同一道证书墙。**两条都没有可测的自签名 HLS 源，未实测**。 |
+| **疑似：Android 上 HLS 电台落到 `ProgressiveMediaSource`** | P2？ | `SongloftAudioEngine.load` 判 `hls \|\| url.endsWith(".m3u8")`，而 `buildSongUrl` 追加了 `?access_token=`，**后缀判断恒不成立**；电台也没有调用方传 `hls: true`（批49 只给 `/video-hls/` 传了）。按父仓库 AGENTS 的说法这会导致直播播不了。**刻意未修**：手上没有可用电台源，改了就是无法证伪的推测性修改。验证与两种修法见 [`bug.md`](bug.md)「批49 途中发现」 |
 | **偶发全屏灰层** | 未定位 | 运行数分钟后整屏蒙中灰，重启即恢复。最可查嫌疑是 lynx-ui Sheet 的 backdrop 泄漏。**下次出现时跑**：`adb logcat \| grep -i "\[Sheet\] Invalid state transition"`（库自带的免费探针）。若真机（非 BlueStacks）复现不了，降级为环境记录。 |
 
 ### ✅ 自签名功能实测 + 批47 收口（2026-08-15，iOS 18.3 模拟器 + Android 模拟器）
@@ -174,19 +226,22 @@ cd android && ./gradlew --no-daemon assembleDebug
 
 ### e2e 测试
 
-28 个 scenario 文件，115 个测试用例，**全部需要设备（adb / iOS Simulator）**：
+29 个 scenario 文件，120 个测试用例，**全部需要设备（adb / iOS Simulator）**：
 
 ```bash
 pnpm run test:e2e:android   # Android 设备
 pnpm run test:e2e:ios       # iOS 模拟器
 ```
 
-**当前结果（2026-08-16，批48 后）**：**Android 112/115**（3 例 `ios-appearance` 平台门控跳过）
-· **iOS 110/115**（5 例 Android 专属的悬浮歌词跳过；`e2e:ios:full` 全流程复跑，无跨平台回归）。
+**当前结果（2026-08-16，批49 Step 3 后）**：**Android 112 passed / 8 skipped (120)** ·
+**iOS 110 passed / 10 skipped (120)**。skip 的构成见 §1「工作树状态」——**skip 数变了要查**，
+批48 就出现过「门控条件写反、5 例整体静默跳过而报全绿」。`android-video-fullscreen`
+在曲库没有视频歌时**可见地 skip**（模块级 `await fetchVideoSong()` + `test.skipIf`），
+不是每个 test 里 `return` 的假绿；素材命令见 §3 批49 段。
 批46 那 6 个失败的完整根因记录留在 `bug.md`「iOS e2e 首次运行发现」，其中两条的**首跑归因
 已被实测推翻**，值得一读——那是本项目「先量化再改」的一课；批48 的三重静默死是另一课。
 
-**跑 e2e 前必做的三件环境检查**（每一条都真的踩过）：
+**跑 e2e 前必做的四件环境检查**（每一条都真的踩过，且失败时都不报错、只让你得出错误结论）：
 
 1. **改了 JS bundle 或原生代码后，`simctl install` 不会替换已在运行的进程** ——
    必须先 `xcrun simctl terminate <udid> org.songloft.lynx`，否则测试跑的还是旧 bundle。
@@ -194,9 +249,21 @@ pnpm run test:e2e:ios       # iOS 模拟器
    它绑得比模拟器 App 的 `*:9230` 更具体，于是 iOS 测试会**静默连到 Android 上的 App**。
    批46 就这么被骗过一次（表现是 `changeAppTheme is not a function`，因为 Android 那份是旧
    bundle）。跑 iOS 前先 `adb forward --remove tcp:9230`。
-3. **9230 没被别的残留实例占**：`lsof -iTCP:9230 -sTCP:LISTEN -P` 检查；新实例 bind 失败只打
+3. **`e2e:ios:setup` 已装就不重装**（`scripts/e2e-ios-setup.mjs:107` 是 `if (!isAppInstalled(...))`）——
+   所以 `pnpm run ios:build` 之后必须自己 `xcrun simctl terminate <udid> org.songloft.lynx`
+   + `xcrun simctl install <udid> ios/build/Debug-iphonesimulator/SongloftLynx.app`。
+   批49 第一次复测就因为这条得出了「修了也没用」的错误结论。
+4. **9230 没被别的残留实例占**：`lsof -iTCP:9230 -sTCP:LISTEN -P` 检查；新实例 bind 失败只打
    一行 `[TestBridge] bind() failed: 48`。另外**只留一台 Booted 模拟器** ——
    `getBootedSimulator()` 取 JSON 列表里第一个 Booted 设备，多台并存时选择不确定。
+
+**`src/e2e-bridge.ts` 暴露的把手**（`NativeModules` 在 eval scope 里**完全不可达**，裸的和
+`globalThis` 上都没有 —— 实测过，所以原生能力只能经这些把手驱动）：
+`__E2E_PLAYER_STORE__` / `__E2E_AUTH_STORE__` / `__E2E_LYRIC_STORE__` / `__E2E_EQ_STORE__` /
+`__E2E_SERVER_STORE__` / `__E2E_APP_CONFIG__` / `__E2E_ROUTER__` / `__E2E_APPEARANCE__` /
+`__E2E_FLOATING_LYRIC__` / `__E2E_VIDEO__`（后者含 `open`/`close`/`isOpen`/`available`/
+`platformTarget`/`sourceKind`/`enterVideoSource` —— 平台读数与源判定也暴露出来，因为视频这块
+「没画面」的真实原因往往是决策错了而不是调用失败）。
 
 **需要弄清「宿主到底发了什么」时，写个一次性探针 scenario**（如 `zz-probe.scenario.ts`，跑完删）：
 TestBridge 能直接 eval 到 store，密集轮询 `getPlayerState()` 几秒就能把 tick 节奏、事件时序量化
@@ -204,7 +271,11 @@ TestBridge 能直接 eval 到 store，密集轮询 `getPlayerState()` 几秒就�
 
 ### 后续功能方向（批47+）
 
-- **视频播放完整实现**：当前只有 ▶ 标识，需原生视频渲染面
+- **视频播放**：批49 已到 Step 3/5 —— **Android 全屏原生播放已可用**，iOS 待做（Step 4，见 §3）。
+  本批**明确不做**的部分：画面不在 Lynx 布局里（无法与歌词混排 / mini 小窗）、Android 侧只有裸
+  surface 没有原生控件（要控件就得引 `media3-ui` 的 `PlayerView`，那套控件会跟 Lynx 控件抢
+  transport）、PiP 两端都不做、`avi/flv/mpg` 依赖服务端转码、mkv 里的 AC-3/DTS 音轨在很多
+  Android 设备上无授权可能「有画无声」
 - **Web 音频 EQ/HLS/MediaSession**：`web/audio-host.js` 目前只实现了基础播放
 - **Web 端 `openURL` / 文件选择**：`web-audio.ts` 同构的主线程桥接可解锁
 - **渐进式队列加载**：当前一次性加载全部

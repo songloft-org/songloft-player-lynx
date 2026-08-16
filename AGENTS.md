@@ -219,6 +219,7 @@ cached = nm.SongloftDlna as DlnaModule
 | SongloftPlatformModule | `platform/` | 文件选择、URL 打开、insecureTls 开关 |
 | SystemAppearance | `system/` | 深浅色/语言注入 + 变更事件 |
 | SongloftFloatingLyric | `lyric/` | 悬浮歌词覆盖层（`SYSTEM_ALERT_WINDOW` + `FloatingLyricService`；两者都必须在 manifest 里声明，见下方闸门一节） |
+| SongloftVideo | `video/` | 全屏视频画面。**不持有播放器**：`SongloftVideoActivity` 只把 SurfaceView 借给引擎（`attachVideoOutput`），退出时必须 `detachVideoOutput`，否则 ExoPlayer 继续往已销毁的窗口画、下一首纯音频歌在 video renderer 里静默死掉 |
 | （非 Lynx 模块）| `net/` | `SongloftHttpService` = 宿主 `fetch` 服务；`InsecureTls` = TLS 开关 |
 
 ### iOS（Swift）
@@ -243,6 +244,27 @@ cached = nm.SongloftDlna as DlnaModule
 - `project.pbxproj` 与 `Info.plist` 都另有**结构可解析性**闸门（括号配对、标签嵌套、`<key>` 必须有兄弟值），因为子串断言分不清「格式正确」与「恰好含这几个字符」——批39 的教训
 
 新增模块时按 `hosts` 表 + modules 表 + 一段 `describe` 三处扩闸门。详见 `docs/plans/2026-08-14-audit-fix-plan.md`。
+
+### 视频画面借用同一个播放器（批49）
+
+全屏视频**不新建播放器**。`SongloftVideoActivity`（Android）只把 `SurfaceView` 借给
+`SongloftAudioEngine` 里那个正在放的 `ExoPlayer`（`attachVideoOutput`），iOS 侧同理把
+`AVPlayer` 交给 `AVPlayerViewController`。这样 EQ / `MediaSession` / 锁屏 / 进度事件 /
+`InsecureTls` 全部零改动继承，也不存在音画不同步或两个 `MediaSession` 抢锁屏。改这块时四条不能碰：
+
+- **退出必须 `detachVideoOutput()`**。ExoPlayer 会一直往拿到的 `Surface` 上画，屏没了还画就变成
+  往已销毁的窗口提交 buffer：logcat 刷 `Surface … abandoned`，**下一首纯音频歌**在 video renderer
+  里死掉，而应用内完全静默。`android-video-fullscreen.scenario.ts` 最后那条 e2e 专门抓它
+- **判断「有没有视频轨」不能读 `videoSize`**：没有 surface 就没有帧输出，尺寸永远是空的 —— 鸡生蛋。
+  用 `currentTracks` 的轨道组（来自轨道选择，与是否渲染无关）。这个判断有存在必要：`songs.is_video`
+  是扫描时按原文件记的，而远端歌可能是从 `-vn` 转过的缓存里发的
+- **画面要 letterbox**。`MATCH_PARENT` 的 surface 会把 640×360 抻成设备形状，**任何状态断言都是绿的**，
+  只有截图能看出来。Android 用 `onVideoSizeChanged` → `applyAspect()`；iOS 用 `videoGravity = .resizeAspect`
+- **iOS 的 `AVPlayerViewController` 必须 `updatesNowPlayingInfoCenter = false`**，否则它会拿自己那套
+  信息覆盖引擎写的锁屏 title/artist/artwork。纯真机可见，单测抓不到，故进了契约闸门
+
+视频源的 direct/转码判定在 `src/core/network/video-source.ts`。那里的 **`'m4a'` 属于视频直出集合不是笔误**：
+后端 `songs.format` 用 tag 库的家族命名，一个 H.264+AAC 的 `.mp4` 扫进来是 `format: 'm4a', is_video: true`（实测）。
 
 ### `AndroidManifest.xml` 也是契约面（批48）
 
