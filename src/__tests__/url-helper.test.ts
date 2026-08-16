@@ -71,11 +71,16 @@ describe('UrlHelper', () => {
     expect(buildVideoUrl('/api/v1/songs/1/play', ctx)).toContain('media=video')
   })
 
-  test('buildVideoHlsUrl builds m3u8 path with optional media=video', () => {
-    expect(buildVideoHlsUrl(5, {}, ctx)).toBe(
+  test('buildVideoHlsUrl builds the m3u8 path and nothing else', () => {
+    expect(buildVideoHlsUrl(5, ctx)).toBe(
       'http://host:58091/api/v1/songs/5/video-hls/playlist.m3u8?access_token=tok123',
     )
-    expect(buildVideoHlsUrl(5, { mediaVideoFlag: true }, ctx)).toContain('media=video')
+    // `media=video` belongs to /songs/{id}/play, not here. The old `mediaVideoFlag`
+    // option appended it to an endpoint that takes only the song id — a knob wired
+    // to nothing, kept alive by the assertion that used to be on this line.
+    expect(buildVideoHlsUrl(5, ctx)).not.toContain('media=video')
+    // The token query is why callers cannot sniff for a '.m3u8' suffix.
+    expect(buildVideoHlsUrl(5, ctx).endsWith('.m3u8')).toBe(false)
   })
 
   test('buildCoverUrl is buildResourceUrl', () => {

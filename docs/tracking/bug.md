@@ -116,6 +116,17 @@
     而 `createDriver()` 把未设该变量视为 Android。第一次全量跑就是这么「通过」的（107 passed / 8 skipped，
     比预期多 5 个 skip）。正确写法是 `(process.env.E2E_PLATFORM ?? 'android') === 'android'`
 
+### 批49 途中发现，**未修（无法验证）**
+
+- [ ] **疑似：Android 上 HLS 电台会落到 `ProgressiveMediaSource`** —— `SongloftAudioEngine.load` 的判定是
+  `hls || url.endsWith(".m3u8")`，而我们的 `buildSongUrl` 会追加 `?access_token=…`，于是**后缀判断恒不成立**；
+  同时全库没有任何调用方给电台传 `hls: true`（批49 只给 `/video-hls/` 传）。按父仓库 AGENTS.md 的说法
+  「无后缀会落到 ProgressiveMediaSource 导致直播无法播」，那么 Android 上的 HLS 电台应当是坏的。
+  **刻意不改**：手上没有可用的电台源，改了就是一处无法证伪、也没有回归测试的推测性修改（批46 回退
+  `intendedPlaying` 就是这个教训）。**验证方式**：`POST /songs/radio` 建一个真 HLS 电台，
+  Android 上播，`adb logcat` 看用的是 `HlsMediaSource` 还是 `ProgressiveMediaSource`；确认后修法有两种
+  ——调用方传 `hls: true`（更符合现有约定），或把后缀判定改成只看 `?` 之前的路径
+
 ### 仍未定位
 
 - [ ] **偶发全屏灰层**（批29 发现）—— 运行数分钟后整屏蒙中灰，重启即恢复，不影响功能。审计补了一步算术：暗色读数 `13→86` 是**变亮**，纯黑半透层数学上不可能，联立得约 `#838383@0.62`，而仓库与 lynx-ui 里都没有这个颜色。最可查嫌疑是 lynx-ui Sheet 的 backdrop 泄漏。**下次出现时先跑** `adb logcat | grep -i "\[Sheet\] Invalid state transition"`（库自带的免费探针）

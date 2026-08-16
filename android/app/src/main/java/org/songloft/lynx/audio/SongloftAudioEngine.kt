@@ -80,6 +80,12 @@ object SongloftAudioEngine {
     /** Progress tick cadence (ms). */
     private const val PROGRESS_INTERVAL_MS = 500L
 
+    /**
+     * Read timeout for HLS, where the first response may be a server-side transcode
+     * in progress rather than a stalled connection (see [load]).
+     */
+    private const val HLS_READ_TIMEOUT_MS = 300_000
+
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private var player: ExoPlayer? = null
@@ -330,6 +336,17 @@ object SongloftAudioEngine {
         metadataByUrl[url]?.let { itemBuilder.setMediaMetadata(it) }
         val item = itemBuilder.build()
         val source = if (hls || url.endsWith(".m3u8")) {
+            // `/video-hls/playlist.m3u8` transcodes the **whole file** before it
+            // answers, so the first request can sit there for minutes on a weak
+            // server. `DefaultHttpDataSource`'s 8 s default read timeout turns that
+            // into a `SocketTimeoutException` surfacing as a generic playback error —
+            // indistinguishable from the 503 the same endpoint returns when ffmpeg is
+            // missing, which is the wrong thing to go looking at.
+            //
+            // The cost: a genuinely stalled HLS stream now takes this long to fail
+            // instead of 8 s. Acceptable while the only caller passing `hls` is the
+            // video transcode, where waiting *is* the expected state.
+            httpFactory.setReadTimeoutMs(HLS_READ_TIMEOUT_MS)
             HlsMediaSource.Factory(httpFactory).createMediaSource(item)
         } else {
             ProgressiveMediaSource.Factory(httpFactory).createMediaSource(item)

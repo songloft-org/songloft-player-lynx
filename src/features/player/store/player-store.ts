@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 
-import { buildCoverUrl, buildSongUrl } from '../../../core/network/url-helper.js'
+import {
+  buildCoverUrl,
+  buildSongUrl,
+  buildVideoHlsUrl,
+  buildVideoUrl,
+} from '../../../core/network/url-helper.js'
+import { resolveVideoSourceKind } from '../../../core/network/video-source.js'
 import { readAudioQuality, readAutoResume, readNormalize, readPlaybackSpeed, writePlaybackSpeed } from '../../settings/data/settings-prefs.js'
 import { loadPlaybackState, savePlaybackState } from '../data/playback-persistence.js'
 import type { Song } from '../../../models/song.js'
@@ -75,6 +81,16 @@ export interface PlayerState extends PlayerData {
   setSleepTimerByDuration: (durationMs: number) => void
   setSleepTimerAfterSongs: (count: number) => void
   cancelSleepTimer: () => void
+
+  /**
+   * Switch the current song to the server-transcoded HLS video stream.
+   *
+   * Only meaningful for a video song whose container the device cannot demux; for
+   * everything else the stream already carries the picture and this is a no-op. The
+   * promise resolves once playback resumes, which may be minutes away — the endpoint
+   * transcodes the whole file before answering.
+   */
+  enterVideoSource: () => Promise<void>
 
   // ── test/reset hook ──
   reset: () => void
@@ -165,6 +181,47 @@ function songUrl(song: Song): string {
 }
 
 /**
+ * The song whose picture the user asked for, so the transcoded HLS stream survives
+ * a retry.
+ *
+ * Without it, `RETRY_DELAYS_MS`'s reload would quietly fall back to the audio URL
+ * and the video would vanish mid-playback — the kind of regression that looks like a
+ * server hiccup.
+ */
+let _videoSourceSongId: number | null = null
+
+/** What the engine should load, and whether it is a playlist rather than a file. */
+interface PlaybackSource {
+  url: string
+  hls: boolean
+}
+
+/**
+ * Resolve a song to the stream the engine should open.
+ *
+ * A video song whose container the device can demux is loaded **as video from the
+ * start**, not switched over when the user opens the fullscreen player. That is the
+ * whole point of reusing the one player instance: attaching a surface to a stream
+ * that already carries a video track is instant and cannot interrupt playback, while
+ * swapping the source would cost a reload and a seek. It also costs nothing extra in
+ * bytes — with no `format=` the server was already sending the original container,
+ * video track included.
+ *
+ * Containers that need re-encoding are the exception: `/video-hls/` blocks until the
+ * whole file is transcoded, so it is only used once the user actually asks
+ * ({@link enterVideoSource}), never by default.
+ */
+function playbackSourceFor(song: Song): PlaybackSource {
+  if (!song.url) return { url: '', hls: false }
+  const kind = resolveVideoSourceKind(song, getPlatformTarget())
+  if (kind === 'direct') return { url: buildVideoUrl(song.url), hls: false }
+  if (kind === 'hls' && _videoSourceSongId === song.id) {
+    return { url: buildVideoHlsUrl(song.id), hls: true }
+  }
+  return { url: songUrl(song), hls: false }
+}
+
+/**
  * Cover URL for the native media notification, or `undefined` when there is
  * nothing to show. Must be the same fully-resolved form the UI uses
  * (`buildCoverUrl` adds the base URL and the `access_token` the cover endpoint
@@ -241,6 +298,7 @@ let _loadedSongId: number | null = null
 /** Test hook: forget what the engine holds (each scenario starts cold). */
 export function resetLoadedSongForTests(): void {
   _loadedSongId = null
+  _videoSourceSongId = null
 }
 
 function clearRetryTimer(): void {
@@ -286,7 +344,8 @@ function scheduleRetry(song: Song, positionMs: number): void {
     // reloading here would yank playback back to a track they left behind.
     if (usePlayerStore.getState().currentSong?.id !== song.id) return
     usePlayerStore.setState({ errorMessage: undefined, isBuffering: true })
-    void audio.load(songUrl(song), { durationMs: durationMsOf(song) })
+    const retrySource = playbackSourceFor(song)
+    void audio.load(retrySource.url, { durationMs: durationMsOf(song), hls: retrySource.hls })
       .then(() => (positionMs > 0 ? audio.seek(positionMs) : undefined))
       .then(() => audio.play())
       // A failure here re-emits `error`, which schedules the next attempt; there
@@ -309,8 +368,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       errorMessage: undefined,
     })
     void useLyricStore.getState().loadForSong(song)
-    await audio.load(songUrl(song), {
+    const source = playbackSourceFor(song)
+    await audio.load(source.url, {
       durationMs: durationMsOf(song),
+      hls: source.hls,
     })
     _loadedSongId = song.id
     await audio.play()
@@ -562,10 +623,38 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       set({ sleepTimer: undefined })
     },
 
+    enterVideoSource: async () => {
+      const song = get().currentSong
+      if (!song) return
+      if (resolveVideoSourceKind(song, getPlatformTarget()) !== 'hls') return
+      if (_videoSourceSongId === song.id) return
+
+      _videoSourceSongId = song.id
+      const positionMs = get().currentTime
+      const source = playbackSourceFor(song)
+      set({ errorMessage: undefined, isBuffering: true })
+      try {
+        // The first request to `/video-hls/` returns only once the server has
+        // transcoded the whole file, so this await can take minutes on a weak NAS.
+        // Callers show a pending state rather than a progress bar — the endpoint
+        // reports nothing until it is done.
+        await audio.load(source.url, { durationMs: durationMsOf(song), hls: source.hls })
+        _loadedSongId = song.id
+        if (positionMs > 0) await audio.seek(positionMs)
+        await audio.play()
+      } catch (e) {
+        // 503 means the server has no ffmpeg, or the transcode failed. Fall back to
+        // the audio stream so the user keeps listening instead of losing playback.
+        _videoSourceSongId = null
+        set({ errorMessage: String(e), isBuffering: false })
+      }
+    },
+
     reset: () => {
       stopSleepInterval()
       cancelRetry()
       void audio.stop()
+      _videoSourceSongId = null
       set({ ...INITIAL })
       useLyricStore.getState().clear()
     },
@@ -780,7 +869,8 @@ export async function restorePlaybackState(): Promise<void> {
     // mapping: this path used to carry its own copy, which silently omitted any
     // field added to the queue item (it missed `artworkUrl` on arrival).
     void audio.setQueue(saved.playlist.map(toAudioItem), saved.currentIndex)
-    void audio.load(songUrl(song), { durationMs: durationMsOf(song) })
+    const restored = playbackSourceFor(song)
+    void audio.load(restored.url, { durationMs: durationMsOf(song), hls: restored.hls })
       .then(() => audio.seek(saved.positionMs))
       .then(() => audio.play())
   }

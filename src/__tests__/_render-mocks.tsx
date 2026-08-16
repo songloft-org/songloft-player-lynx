@@ -398,6 +398,7 @@ function mockPlayerState(over: Partial<PlayerState> = {}): PlayerState {
     setSleepTimerByDuration: noop,
     setSleepTimerAfterSongs: noop,
     cancelSleepTimer: noop,
+    enterVideoSource: asyncNoop,
     reset: noop,
     _onCompleted: noop,
     ...over,

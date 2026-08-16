@@ -73,20 +73,38 @@ export function appendMediaVideoParam(url: string): string {
   return append(url, 'media=video')
 }
 
+/**
+ * The song's own stream with the picture kept.
+ *
+ * `media=video` makes the server hand over the **original container** and ignore
+ * `format`/`quality`/`normalize` — all three imply `-vn` on the server side, which
+ * would strip the video track. So this URL deliberately carries none of them, and
+ * volume normalisation cannot apply while watching: the backend cannot do both.
+ */
 export function buildVideoUrl(url: string, ctx: UrlContext = defaultUrlContext()): string {
   const result = buildResourceUrl(url, ctx)
   if (!result) return ''
   return appendMediaVideoParam(result)
 }
 
+/**
+ * Master playlist for the server-side H.264+AAC transcode of a video song.
+ *
+ * Note what is **not** here: `media=video`. That parameter belongs to
+ * `/songs/{id}/play` and means "serve the original container"; this endpoint takes
+ * only the song id (`docs/swagger.json`). It used to accept a `mediaVideoFlag`
+ * option that appended it anyway — a knob wired to nothing, kept alive by its own
+ * unit test.
+ *
+ * The result carries a query string (`?access_token=…`), so anything sniffing for a
+ * `.m3u8` **suffix on the whole URL** will miss it. Callers pass `hls: true` to the
+ * audio facade instead of relying on the extension.
+ */
 export function buildVideoHlsUrl(
   songId: number,
-  opts: { mediaVideoFlag?: boolean } = {},
   ctx: UrlContext = defaultUrlContext(),
 ): string {
-  const result = buildResourceUrl(`/api/v1/songs/${songId}/video-hls/playlist.m3u8`, ctx)
-  if (!result) return ''
-  return opts.mediaVideoFlag ? appendMediaVideoParam(result) : result
+  return buildResourceUrl(`/api/v1/songs/${songId}/video-hls/playlist.m3u8`, ctx)
 }
 
 export function buildCoverUrl(

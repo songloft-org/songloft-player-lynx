@@ -403,3 +403,111 @@ describe('playback URL carries the real platform', () => {
     expect(await urlFor('aiff', 'web')).toContain('format=mp3')
   })
 })
+
+/**
+ * Which stream a video song opens with. The picture has to be in the stream from the
+ * start for attaching a surface to be instant — swapping the source when the user
+ * taps fullscreen would cost a reload and a seek, which is exactly the interruption
+ * that reusing one player instance is supposed to avoid.
+ */
+describe('video songs open the video stream', () => {
+  const g = globalThis as Record<string, unknown>
+
+  async function loadCallFor(
+    format: string,
+    platform: string,
+    prime?: () => Promise<void>,
+  ): Promise<{ url: string; hls: boolean | undefined }> {
+    g.SystemInfo = { platform }
+    resetLoadedSongForTests()
+    const loadSpy = vi.spyOn(getAudio(), 'load').mockResolvedValue(undefined)
+    const track = {
+      ...song(1, 300),
+      url: '/api/v1/songs/1/play',
+      format,
+      isVideo: true,
+    } as Song
+    await usePlayerStore.getState().playPlaylist([track], 0)
+    await flush()
+    if (prime) {
+      loadSpy.mockClear()
+      await prime()
+      await flush()
+    }
+    const call = loadSpy.mock.calls[0]
+    loadSpy.mockRestore()
+    delete g.SystemInfo
+    expect(call, 'nothing reached the engine, so the assertions below would be vacuous')
+      .toBeDefined()
+    return {
+      url: (call?.[0] as string) ?? '',
+      hls: (call?.[1] as { hls?: boolean } | undefined)?.hls,
+    }
+  }
+
+  test('a directly playable container asks for media=video, not a transcode', async () => {
+    const { url, hls } = await loadCallFor('mp4', 'Android')
+    expect(url).toContain('media=video')
+    expect(url).not.toContain('format=')
+    expect(hls).toBe(false)
+  })
+
+  test('mkv is direct on Android but not on iOS', async () => {
+    expect((await loadCallFor('mkv', 'Android')).url).toContain('media=video')
+    // AVFoundation cannot demux Matroska, so iOS keeps the audio stream until the
+    // user actually asks for the picture — `/video-hls/` transcodes the whole file
+    // before it answers, which is not something to pay for by default.
+    const ios = await loadCallFor('mkv', 'iOS')
+    expect(ios.url).not.toContain('media=video')
+    expect(ios.url).not.toContain('video-hls')
+  })
+
+  test('enterVideoSource switches iOS to the transcoded playlist, with hls set', async () => {
+    const { url, hls } = await loadCallFor('mkv', 'iOS', () =>
+      usePlayerStore.getState().enterVideoSource(),
+    )
+    expect(url).toContain('/video-hls/playlist.m3u8')
+    // The token query means the URL does not end in `.m3u8`, so the engine's
+    // extension sniff cannot see it — the flag is the only thing that works.
+    expect(url.endsWith('.m3u8')).toBe(false)
+    expect(hls).toBe(true)
+  })
+
+  test('a retry after enterVideoSource keeps the video stream', async () => {
+    // Without `_videoSourceSongId` the retry would quietly reload the audio URL and
+    // the picture would vanish mid-playback, looking like a server hiccup.
+    g.SystemInfo = { platform: 'iOS' }
+    resetLoadedSongForTests()
+    const track = {
+      ...song(1, 300), url: '/api/v1/songs/1/play', format: 'mkv', isVideo: true,
+    } as Song
+    await usePlayerStore.getState().playPlaylist([track], 0)
+    await flush()
+    await usePlayerStore.getState().enterVideoSource()
+    await flush()
+
+    const loadSpy = vi.spyOn(getAudio(), 'load').mockResolvedValue(undefined)
+    ;(getAudio() as MockSongloftAudio).simulateError('502')
+    vi.advanceTimersByTime(1_000)
+    await flush()
+    expect(loadSpy.mock.calls[0]?.[0] as string).toContain('/video-hls/')
+    loadSpy.mockRestore()
+    delete g.SystemInfo
+  })
+
+  test('enterVideoSource is a no-op for a container that already carries video', async () => {
+    g.SystemInfo = { platform: 'Android' }
+    resetLoadedSongForTests()
+    const track = {
+      ...song(1, 300), url: '/api/v1/songs/1/play', format: 'mp4', isVideo: true,
+    } as Song
+    await usePlayerStore.getState().playPlaylist([track], 0)
+    await flush()
+    const loadSpy = vi.spyOn(getAudio(), 'load').mockResolvedValue(undefined)
+    await usePlayerStore.getState().enterVideoSource()
+    await flush()
+    expect(loadSpy).not.toHaveBeenCalled()
+    loadSpy.mockRestore()
+    delete g.SystemInfo
+  })
+})
