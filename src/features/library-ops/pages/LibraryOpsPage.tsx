@@ -161,7 +161,20 @@ export function LibraryOpsPage() {
   const onResetScan = () => {
     setStartError(false)
     setScanForced(false)
-    void scanQuery.refetch()
+    void scanQuery.refetch().then(() => {
+      // After clearing state, automatically trigger a new scan so the user
+      // does not have to tap "start" again — "rescan" means "do it now".
+      startScan.mutate(
+        { reimport: mode === 'reimport', paths: selectedPaths },
+        {
+          onSuccess: () => {
+            scanStartedAtRef.current = Date.now()
+            setScanForced(true)
+          },
+          onError: () => setStartError(true),
+        },
+      )
+    })
   }
 
   const onStartMeta = () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from '@lynx-js/react'
+import { useCallback, useEffect, useRef, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -42,8 +42,20 @@ import { setAudioQualityCache, setNormalizeEnabled } from '../../player/store/pl
 import { canExport, exportPlaylists, importPlaylists } from '../domain/data-transfer.js'
 import { LOG_LEVELS, coerceLogLevel, logLevelLabelKey, type LogLevel } from '../domain/log-level.js'
 import { serverDisplay } from '../domain/settings-model.js'
+import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
+import { LibraryOpsPage } from '../../library-ops/pages/LibraryOpsPage.js'
+import { PluginManagerPage } from '../../jsplugin/pages/PluginManagerPage.js'
+import { TabConfigPage } from '../../jsplugin/pages/TabConfigPage.js'
+import { CacheManagePage } from './CacheManagePage.js'
+import { EqualizerPage } from './EqualizerPage.js'
+import { LicensesPage } from './LicensesPage.js'
+import { ProxySettingsPage } from './ProxySettingsPage.js'
+import { ServerListPage } from './ServerListPage.js'
+import { ThemePacksPage } from './ThemePacksPage.js'
+import { UpgradePage } from './UpgradePage.js'
+import { BrowseViewsPage } from './BrowseViewsPage.js'
 import './SettingsPage.css'
 
 const AUDIO_QUALITY_OPTIONS: AudioQuality[] = ['original', '320', '192', '128']
@@ -95,9 +107,40 @@ function themeLabelKey(theme: AppTheme): string {
   }
 }
 
+/** Width threshold (px) for activating the dual-column layout. */
+const DUAL_COLUMN_MIN_WIDTH = 768
+
+/**
+ * Sub-page identifiers for the right pane in dual-column mode.
+ * Each value corresponds to a navigation target that would normally route away.
+ */
+type SettingsSubPage =
+  | 'library'
+  | 'servers'
+  | 'theme-packs'
+  | 'cache'
+  | 'eq'
+  | 'proxy'
+  | 'upgrade'
+  | 'licenses'
+  | 'browse-views'
+  | 'plugins'
+  | 'tab-config'
+  | null
+
 export function SettingsPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
+
+  const scrollRef = useRef(0)
+  const { width: layoutWidth, onLayoutChange } = useBreakpoint()
+  const isDualColumn = layoutWidth >= DUAL_COLUMN_MIN_WIDTH
+
+  /**
+   * Active sub-page for the right pane in dual-column mode. When `null`, the
+   * right pane shows a placeholder prompt.
+   */
+  const [activeSubPage, setActiveSubPage] = useState<SettingsSubPage>(null)
 
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   // Persisted language choice ('system' until the pref resolves). Selecting an
@@ -214,13 +257,31 @@ export function SettingsPage() {
 
   const showConnection = !appConfig.isEmbedded
 
+  /**
+   * Navigate to a sub-page: in dual-column mode, show it in the right pane;
+   * in single-column mode, use the router.
+   */
+  const goToSubPage = (page: SettingsSubPage, route: string) => {
+    if (isDualColumn) {
+      setActiveSubPage(page)
+    } else {
+      void navigate({ to: route })
+    }
+  }
+
   return (
-    <view className='settings'>
+    <view className='settings' bindlayoutchange={onLayoutChange}>
       <view className='settings__topbar'>
         <text className='settings__title'>{t('settings.title')}</text>
       </view>
 
-      <scroll-view className='settings__scroll' scroll-y>
+      <view className={isDualColumn ? 'settings__body settings__body--dual' : 'settings__body'}>
+      <scroll-view
+        className={isDualColumn ? 'settings__scroll settings__scroll--dual' : 'settings__scroll'}
+        scroll-y
+        scroll-top={scrollRef.current}
+        bindscroll={(e: { detail: { scrollTop: number } }) => { scrollRef.current = e.detail.scrollTop }}
+      >
         <view className='settings__content'>
           <SettingsSection title={t('settings.musicLibraryScan')} icon='library'>
             <SettingsRow
@@ -228,7 +289,7 @@ export function SettingsPage() {
               title={t('libops.pageTitle')}
               subtitle={t('libops.entrySubtitle')}
               trailingIcon='chevron-right'
-              onTap={() => void navigate({ to: '/settings/library' })}
+              onTap={() => goToSubPage('library', '/settings/library')}
               testId='settings-library-ops'
             />
           </SettingsSection>
@@ -254,7 +315,7 @@ export function SettingsPage() {
                   title={t('servers.title')}
                   subtitle={serverText}
                   trailingIcon='chevron-right'
-                  onTap={() => void navigate({ to: '/settings/servers' })}
+                  onTap={() => goToSubPage('servers', '/settings/servers')}
                   testId='settings-server'
                 />
               </SettingsSection>
@@ -277,7 +338,7 @@ export function SettingsPage() {
               title={t('themePacks.title')}
               subtitle={t('themePacks.subtitle')}
               trailingIcon='chevron-right'
-              onTap={() => navigate({ to: '/settings/theme-packs' })}
+              onTap={() => goToSubPage('theme-packs', '/settings/theme-packs')}
               testId='settings-theme-packs'
             />
           </SettingsSection>
@@ -327,7 +388,7 @@ export function SettingsPage() {
               icon='info'
               title={t('settings.licenses')}
               trailingIcon='chevron-right'
-              onTap={() => void navigate({ to: '/settings/licenses' })}
+              onTap={() => goToSubPage('licenses', '/settings/licenses')}
               testId='settings-licenses'
             />
           </SettingsSection>
@@ -386,15 +447,15 @@ export function SettingsPage() {
 
           <SettingsSection title={t('settings.advanced')} icon='settings'>
             <SettingsRow icon='music' title={t('settings.playHistory')} subtitle={t('settings.playHistorySubtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/library/history' })} testId='settings-play-history' />
-            <SettingsRow icon='music' title={t('library.browseViews')} subtitle={t('library.browseViewsSubtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/browse-views' })} testId='settings-browse-views' />
-            <SettingsRow icon='music' title={t('eq.title')} subtitle={t('eq.subtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/eq' })} testId='settings-eq' />
-            <SettingsRow icon='settings' title={t('settings.storageCache')} subtitle={t('settings.cacheManageSubtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/cache' })} />
+            <SettingsRow icon='music' title={t('library.browseViews')} subtitle={t('library.browseViewsSubtitle')} trailingIcon='chevron-right' onTap={() => goToSubPage('browse-views', '/settings/browse-views')} testId='settings-browse-views' />
+            <SettingsRow icon='music' title={t('eq.title')} subtitle={t('eq.subtitle')} trailingIcon='chevron-right' onTap={() => goToSubPage('eq', '/settings/eq')} testId='settings-eq' />
+            <SettingsRow icon='settings' title={t('settings.storageCache')} subtitle={t('settings.cacheManageSubtitle')} trailingIcon='chevron-right' onTap={() => goToSubPage('cache', '/settings/cache')} />
             <SettingsRow
               icon='menu'
               title={t('settings.plugins')}
               subtitle={t('jsplugin.managerSubtitle')}
               trailingIcon='chevron-right'
-              onTap={() => void navigate({ to: '/settings/plugins' })}
+              onTap={() => goToSubPage('plugins', '/settings/plugins')}
               testId='settings-plugins'
             />
             <SettingsRow
@@ -402,11 +463,11 @@ export function SettingsPage() {
               title={t('jsplugin.tabConfigTitle')}
               subtitle={t('jsplugin.tabConfigSubtitle')}
               trailingIcon='chevron-right'
-              onTap={() => void navigate({ to: '/settings/tab-config' })}
+              onTap={() => goToSubPage('tab-config', '/settings/tab-config')}
               testId='settings-tab-config'
             />
-            <SettingsRow icon='link' title={t('settings.networkProxy')} subtitle={t('settings.proxySubtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/proxy' })} testId='settings-proxy' />
-            <SettingsRow icon='refresh' title={t('upgrade.title')} subtitle={t('upgrade.subtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/settings/upgrade' })} testId='settings-upgrade' />
+            <SettingsRow icon='link' title={t('settings.networkProxy')} subtitle={t('settings.proxySubtitle')} trailingIcon='chevron-right' onTap={() => goToSubPage('proxy', '/settings/proxy')} testId='settings-proxy' />
+            <SettingsRow icon='refresh' title={t('upgrade.title')} subtitle={t('upgrade.subtitle')} trailingIcon='chevron-right' onTap={() => goToSubPage('upgrade', '/settings/upgrade')} testId='settings-upgrade' />
           </SettingsSection>
 
           <DataSection />
@@ -422,6 +483,15 @@ export function SettingsPage() {
           </SettingsSection>
         </view>
       </scroll-view>
+
+      {isDualColumn
+        ? (
+          <view className='settings__detail' data-testid='settings-detail-pane'>
+            <SettingsDetailPane activeSubPage={activeSubPage} />
+          </view>
+        )
+        : null}
+      </view>
 
       <DialogRoot show={showLogoutDialog} onShowChange={(open) => { if (!open) setShowLogoutDialog(false) }}>
         <DialogView>
@@ -507,4 +577,43 @@ function DataSection() {
       />
     </SettingsSection>
   )
+}
+
+/**
+ * Renders the appropriate sub-page component in the right pane of the
+ * dual-column layout. Returns a placeholder when no sub-page is selected.
+ */
+function SettingsDetailPane({ activeSubPage }: { activeSubPage: SettingsSubPage }) {
+  switch (activeSubPage) {
+    case 'library':
+      return <LibraryOpsPage />
+    case 'servers':
+      return <ServerListPage />
+    case 'theme-packs':
+      return <ThemePacksPage />
+    case 'cache':
+      return <CacheManagePage />
+    case 'eq':
+      return <EqualizerPage />
+    case 'proxy':
+      return <ProxySettingsPage />
+    case 'upgrade':
+      return <UpgradePage />
+    case 'licenses':
+      return <LicensesPage />
+    case 'browse-views':
+      return <BrowseViewsPage />
+    case 'plugins':
+      return <PluginManagerPage />
+    case 'tab-config':
+      return <TabConfigPage />
+    default:
+      return (
+        <view className='settings__detail-placeholder'>
+          <text className='settings__detail-placeholder-text'>
+            Select an item from the list
+          </text>
+        </view>
+      )
+  }
 }

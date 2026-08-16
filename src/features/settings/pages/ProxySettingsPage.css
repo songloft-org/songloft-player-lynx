@@ -48,14 +48,29 @@
 }
 
 .proxy-settings__field {
+  position: relative;
   padding: 0 var(--space-4) var(--space-3);
 }
 
 .proxy-settings__input {
+  position: relative;
   width: 100%;
   background-color: var(--neutral-faint);
   border-radius: 8px;
   padding: var(--space-3);
+  color: var(--content);
+  font-size: var(--font-sm);
+}
+
+.proxy-settings__switch-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+}
+
+.proxy-settings__switch-label {
   color: var(--content);
   font-size: var(--font-sm);
 }

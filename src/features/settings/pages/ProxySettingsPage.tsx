@@ -6,6 +6,7 @@ import { Input } from '@lynx-js/lynx-ui-input'
 
 import { apiPrefix, appConfig } from '../../../core/config/app-config.js'
 import { getCachedAccessToken } from '../../../core/network/token-cache.js'
+import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { Icon } from '../../../shared/ui/Icon.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
@@ -133,13 +134,13 @@ export function ProxySettingsPage() {
             </SettingsSection>
 
             <SettingsSection title={t('proxy.hlsSection')} icon='link'>
-              <SettingsRow
-                icon='check'
-                title={t('proxy.hlsEnable')}
-                selected={state.hlsEnabled}
-                trailingIcon={state.hlsEnabled ? 'check' : undefined}
-                onTap={() => setState(s => ({ ...s, hlsEnabled: !s.hlsEnabled }))}
-              />
+              <view className='proxy-settings__switch-row'>
+                <text className='proxy-settings__switch-label'>{t('proxy.hlsEnable')}</text>
+                <AppSwitch
+                  checked={state.hlsEnabled}
+                  onChange={(checked) => setState(s => ({ ...s, hlsEnabled: checked }))}
+                />
+              </view>
             </SettingsSection>
 
             <SettingsSection title={t('proxy.allowlistSection')} icon='link'>

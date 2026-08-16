@@ -23,7 +23,7 @@ export function PlayHistoryPage() {
       .getPlayHistory(50)
       .then((res) => {
         if (!cancelled) {
-          setEntries(res.items)
+          setEntries(res?.items ?? [])
           setLoading(false)
         }
       })
@@ -37,7 +37,7 @@ export function PlayHistoryPage() {
   }, [])
 
   const playSong = useCallback((song: Song, index: number) => {
-    const songs = entries.map((e) => e.song)
+    const songs = entries.map((e) => e.song).filter(Boolean)
     usePlayerStore.getState().playPlaylist(songs, index)
     void navigate({ to: '/player' })
   }, [entries, navigate])
@@ -79,12 +79,12 @@ export function PlayHistoryPage() {
           </view>
         ) : (
           <view className='play-history__list'>
-            {entries.map((entry, idx) => (
+            {entries.filter((e) => e?.song != null).map((entry, idx) => (
               <view key={`${entry.song.id}-${idx}`} className='play-history__entry'>
                 <SongRow song={entry.song} index={idx} onTap={playSong} />
                 <view className='play-history__entry-meta'>
-                  <text className='play-history__entry-time'>{formatTime(entry.playedAt)}</text>
-                  <text className='play-history__entry-count'>×{entry.playCount}</text>
+                  <text className='play-history__entry-time'>{formatTime(entry.playedAt ?? '')}</text>
+                  <text className='play-history__entry-count'>×{entry.playCount ?? 0}</text>
                 </view>
               </view>
             ))}
