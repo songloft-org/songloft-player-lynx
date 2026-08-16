@@ -435,10 +435,13 @@ function mockLyricState(over: Partial<LyricState> = {}): LyricState {
     hasTranslation: false,
     hasRomanization: false,
     rawLyric: null,
+    offsetMs: 0,
     loadForSong: asyncNoop,
     setLyricsFromText: noop,
     setRawLyric: noop,
     syncPosition: noop,
+    setOffset: noop,
+    adjustOffset: noop,
     clear: noop,
     ...over,
   }

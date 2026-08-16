@@ -25,11 +25,14 @@ export interface LyricState {
   hasTranslation: boolean
   hasRomanization: boolean
   rawLyric: string | null
+  offsetMs: number
 
   loadForSong: (song: Song | undefined, fetcher?: LyricFetcher) => Promise<void>
   setLyricsFromText: (text: string) => void
   setRawLyric: (text: string) => void
   syncPosition: (positionMs: number) => void
+  setOffset: (ms: number) => void
+  adjustOffset: (deltaMs: number) => void
   clear: () => void
 }
 
@@ -46,6 +49,7 @@ const EMPTY = {
   hasTranslation: false,
   hasRomanization: false,
   rawLyric: null as string | null,
+  offsetMs: 0,
 }
 
 function parseLyricText(text: string, enhanced?: string): { lyrics: LyricLine[]; synced: boolean } {
@@ -158,9 +162,9 @@ export const useLyricStore = create<LyricState>((set, get) => {
     },
 
     syncPosition: (positionMs) => {
-      const { lyrics, synced, currentIndex } = get()
+      const { lyrics, synced, currentIndex, offsetMs } = get()
       if (!synced || lyrics.length === 0) return
-      const next = findCurrentLine(lyrics, positionMs)
+      const next = findCurrentLine(lyrics, positionMs + offsetMs)
       if (next !== currentIndex) {
         set({ currentIndex: next })
         const line = lyrics[next]
@@ -168,6 +172,14 @@ export const useLyricStore = create<LyricState>((set, get) => {
           void getFloatingLyricModule().updateLyric(line.text)
         }
       }
+    },
+
+    setOffset: (ms) => {
+      set({ offsetMs: ms })
+    },
+
+    adjustOffset: (deltaMs) => {
+      set({ offsetMs: get().offsetMs + deltaMs })
     },
 
     clear: () => {

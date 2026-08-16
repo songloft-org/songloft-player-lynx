@@ -20,6 +20,7 @@ import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
 import { LyricEditPage } from './features/player/pages/LyricEditPage.js'
+import { LyricCalibratePage } from './features/player/pages/LyricCalibratePage.js'
 import { DlnaPage } from './features/player/pages/DlnaPage.js'
 
 /**
@@ -64,6 +65,12 @@ const lyricEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/player/lyrics/edit',
   component: LyricEditPage,
+})
+
+const lyricCalibrateRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/player/lyrics/calibrate',
+  component: LyricCalibratePage,
 })
 
 const dlnaRoute = createRoute({
@@ -281,6 +288,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   playerRoute,
   lyricEditRoute,
+  lyricCalibrateRoute,
   dlnaRoute,
   shellRoute.addChildren([
     listRoute,

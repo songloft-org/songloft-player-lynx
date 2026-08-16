@@ -321,6 +321,12 @@ export const en = {
     placeholder: 'Paste LRC lyrics here…',
     saved: 'Saved',
   },
+  lyricCalibrate: {
+    title: 'Lyric Timing',
+    reset: 'Reset',
+    hint: 'Adjust lyric offset',
+    explain: 'Positive = lyrics appear earlier; Negative = lyrics appear later',
+  },
   songDetail: {
     title: 'Song Detail',
     edit: 'Edit',
@@ -867,6 +873,12 @@ export const zh: TranslationTree = {
     title: '编辑歌词',
     placeholder: '在此粘贴 LRC 歌词…',
     saved: '已保存',
+  },
+  lyricCalibrate: {
+    title: '歌词时间轴',
+    reset: '重置',
+    hint: '调整歌词偏移',
+    explain: '正值 = 歌词提前显示；负值 = 歌词延后显示',
   },
   songDetail: {
     title: '歌曲详情',

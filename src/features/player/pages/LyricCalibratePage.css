@@ -1,0 +1,83 @@
+.lyric-calibrate {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--surface);
+}
+
+.lyric-calibrate__topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.lyric-calibrate__back {
+  padding: var(--space-2);
+}
+
+.lyric-calibrate__title {
+  flex: 1;
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--content);
+  margin-left: var(--space-2);
+}
+
+.lyric-calibrate__reset {
+  padding: var(--space-2) var(--space-3);
+}
+
+.lyric-calibrate__reset-text {
+  color: var(--accent);
+  font-size: var(--font-sm);
+}
+
+.lyric-calibrate__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.lyric-calibrate__hint {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-4);
+}
+
+.lyric-calibrate__value {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--content);
+  margin-bottom: var(--space-6);
+  font-variant-numeric: tabular-nums;
+}
+
+.lyric-calibrate__controls {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-3);
+}
+
+.lyric-calibrate__btn {
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--surface-raised);
+  border-radius: var(--radius-md);
+}
+
+.lyric-calibrate__btn-text {
+  color: var(--content);
+  font-size: var(--font-md);
+  font-weight: 500;
+}
+
+.lyric-calibrate__explain {
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+  margin-top: var(--space-6);
+  text-align: center;
+}
