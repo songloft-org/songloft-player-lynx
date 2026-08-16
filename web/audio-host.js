@@ -10,15 +10,11 @@
  * web-core client module, so nativeModulesMap is populated when the LynxView
  * initializes.
  *
- * Architecture:
- *   Worker (player-store) → NativeSongloftAudio → native module bridge
- *   → Main thread (this file) → HTMLAudioElement
- *   Events flow back: HTMLAudioElement → this file → sendGlobalEvent
- *   → Worker GlobalEventEmitter → NativeSongloftAudio → player-store
- *
- * The native module interface is fire-and-forget (void methods); the worker's
- * NativeSongloftAudio promisifies them. Events (stateChanged, progress, error)
- * travel back as Lynx global events.
+ * Features:
+ *   - Basic playback (load/play/pause/stop/seek/volume/speed)
+ *   - 10-band EQ via Web Audio API BiquadFilterNode chain
+ *   - HLS via hls.js (with native HLS fallback for Safari)
+ *   - MediaSession for lock-screen / system media controls
  */
 
 (function () {
@@ -29,10 +25,8 @@
 
   // ── constants ──
 
-  /** Progress tick cadence (ms) — matches the native event cadence. */
   var TICK_MS = 250
 
-  /** Valid state strings, byte-for-byte match with AudioState. */
   var STATE_IDLE = 'idle'
   var STATE_LOADING = 'loading'
   var STATE_READY = 'ready'
@@ -40,6 +34,14 @@
   var STATE_PAUSED = 'paused'
   var STATE_COMPLETED = 'completed'
   var STATE_ERROR = 'error'
+
+  var EQ_FREQS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
+  var EQ_TYPES = [
+    'lowshelf',
+    'peaking', 'peaking', 'peaking', 'peaking',
+    'peaking', 'peaking', 'peaking', 'peaking',
+    'highshelf',
+  ]
 
   // ── audio element ──
 
@@ -54,27 +56,146 @@
   var speed = 1
   var progressTimer = null
 
+  // ── HLS ──
+
+  var hlsInstance = null
+
+  function cleanupHls() {
+    if (hlsInstance) {
+      try { hlsInstance.destroy() } catch (_) {}
+      hlsInstance = null
+    }
+  }
+
+  function loadHls(url) {
+    var Hls = window.Hls
+    if (Hls && typeof Hls.isSupported === 'function' && Hls.isSupported()) {
+      var hls = new Hls()
+      hls.on('hlsError', function (_, data) {
+        console.warn('[audio-host] hls.js error:', data)
+      })
+      hls.attachMedia(audio)
+      hls.loadSource(url)
+      hlsInstance = hls
+    } else {
+      // Native HLS fallback (Safari)
+      audio.src = url
+    }
+  }
+
+  // ── EQ (Web Audio API) ──
+
+  var eqContext = null
+  var eqSource = null
+  var eqFilters = []
+  var eqEnabled = false
+  var eqGains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+  function ensureEqContext() {
+    if (eqContext) return
+    var ctx = new AudioContext()
+    eqContext = ctx
+    eqSource = ctx.createMediaElementSource(audio)
+
+    eqFilters = []
+    for (var i = 0; i < EQ_FREQS.length; i++) {
+      var filter = ctx.createBiquadFilter()
+      filter.type = EQ_TYPES[i]
+      filter.frequency.value = EQ_FREQS[i]
+      filter.Q.value = 1
+      filter.gain.value = eqGains[i]
+      eqFilters.push(filter)
+    }
+    // Start bypassed (direct to destination)
+    eqSource.connect(ctx.destination)
+  }
+
+  function connectEq() {
+    if (!eqSource || !eqContext || eqFilters.length === 0) return
+    try { eqSource.disconnect() } catch (_) {}
+
+    eqSource.connect(eqFilters[0])
+    for (var i = 0; i < eqFilters.length - 1; i++) {
+      eqFilters[i].connect(eqFilters[i + 1])
+    }
+    eqFilters[eqFilters.length - 1].connect(eqContext.destination)
+  }
+
+  function disconnectEq() {
+    if (!eqSource || !eqContext) return
+    try { eqSource.disconnect() } catch (_) {}
+    for (var i = 0; i < eqFilters.length; i++) {
+      try { eqFilters[i].disconnect() } catch (_) {}
+    }
+    eqSource.connect(eqContext.destination)
+  }
+
+  // ── MediaSession ──
+
+  var queueItems = []
+  var queueIndex = 0
+
+  function updateMediaSession() {
+    if (!('mediaSession' in navigator)) return
+    var item = queueItems[queueIndex]
+    if (!item) return
+
+    var meta = { title: item.title || 'Unknown', artist: item.artist || '' }
+    if (item.artworkUrl) {
+      meta.artwork = [{ src: item.artworkUrl }]
+    }
+    navigator.mediaSession.metadata = new MediaMetadata(meta)
+
+    navigator.mediaSession.setActionHandler('play', function () {
+      audio.play()
+    })
+    navigator.mediaSession.setActionHandler('pause', function () {
+      audio.pause()
+    })
+    navigator.mediaSession.setActionHandler('previoustrack', function () {
+      sendEvent('SongloftAudio.remoteCommand', { command: 'previous' })
+    })
+    navigator.mediaSession.setActionHandler('nexttrack', function () {
+      sendEvent('SongloftAudio.remoteCommand', { command: 'next' })
+    })
+    navigator.mediaSession.setActionHandler('seekbackward', function () {
+      var sec = Math.max(0, audio.currentTime - 10)
+      audio.currentTime = sec
+      positionMs = Math.round(sec * 1000)
+      emitProgress()
+    })
+    navigator.mediaSession.setActionHandler('seekforward', function () {
+      var sec = Math.min(audio.duration || 0, audio.currentTime + 10)
+      audio.currentTime = sec
+      positionMs = Math.round(sec * 1000)
+      emitProgress()
+    })
+  }
+
+  function updateMediaSessionPlayback() {
+    if (!('mediaSession' in navigator)) return
+    navigator.mediaSession.playbackState = state === STATE_PLAYING ? 'playing' : 'paused'
+  }
+
   // ── event forwarding ──
 
   function sendEvent(name, data) {
     try {
       lynxView.sendGlobalEvent(name, data)
-    } catch (_) {
-      // LynxView not yet initialized; the event is early enough that it
-      // wouldn't have a listener anyway.
-    }
+    } catch (_) {}
   }
 
   function emitState(newState) {
     if (state === newState) return
     state = newState
     sendEvent('SongloftAudio.stateChanged', { state: state })
+    updateMediaSessionPlayback()
   }
 
   function emitProgress() {
     sendEvent('SongloftAudio.progress', {
       positionMs: positionMs,
-      bufferedMs: positionMs + 5000, // rough estimate
+      bufferedMs: positionMs + 5000,
       durationMs: durationMs,
     })
   }
@@ -118,11 +239,14 @@
   audio.addEventListener('play', function () {
     emitState(STATE_PLAYING)
     startProgress()
+    // Resume AudioContext if suspended (autoplay policy)
+    if (eqContext && eqContext.state === 'suspended') {
+      eqContext.resume()
+    }
   })
 
   audio.addEventListener('pause', function () {
     stopProgress()
-    // Don't emit 'paused' if we ended — the 'ended' handler already did.
     if (!audio.ended) {
       emitState(STATE_PAUSED)
     }
@@ -145,9 +269,7 @@
     )
   })
 
-  audio.addEventListener('waiting', function () {
-    // Buffering — the store can show a spinner.
-  })
+  audio.addEventListener('waiting', function () {})
 
   audio.addEventListener('canplay', function () {
     if (state === STATE_LOADING) {
@@ -156,30 +278,30 @@
   })
 
   // ── native module implementation ──
-  //
-  // Implements the SongloftAudioNativeModule interface. All methods are
-  // fire-and-forget (void); the worker's NativeSongloftAudio promisifies them.
-  // Method names and signatures must match the Kotlin/Swift native modules.
 
   var songloftAudio = {
     load: function (url, opts) {
       stopProgress()
+      cleanupHls()
       positionMs = 0
       durationMs = 0
       audio.currentTime = 0
       audio.src = ''
-      // Let the src clear propagate before setting the new one.
-      audio.src = url
-      // loadstart → loadedmetadata will handle state transitions.
+
+      if (opts && opts.hls) {
+        loadHls(url)
+      } else {
+        audio.src = url
+      }
+
+      updateMediaSession()
     },
 
     play: function () {
       if (state === STATE_COMPLETED) {
         audio.currentTime = 0
       }
-      audio.play().catch(function (_) {
-        // Autoplay may be blocked; the error event will fire.
-      })
+      audio.play().catch(function (_) {})
     },
 
     pause: function () {
@@ -190,6 +312,7 @@
       audio.pause()
       audio.currentTime = 0
       audio.src = ''
+      cleanupHls()
       stopProgress()
       positionMs = 0
       emitState(STATE_IDLE)
@@ -213,50 +336,59 @@
       audio.playbackRate = speed
     },
 
-    setQueue: function (_items, _startIndex) {
-      // Queue management is handled by the player store; the native module
-      // plays one item at a time. No-op on the web side.
+    setQueue: function (items, startIndex) {
+      queueItems = items || []
+      queueIndex = startIndex || 0
+      updateMediaSession()
     },
 
     next: function () {
-      // The store drives queue navigation; the native module just plays
-      // whatever is loaded. No-op.
+      sendEvent('SongloftAudio.remoteCommand', { command: 'next' })
     },
 
     previous: function () {
-      // No-op (same as next).
+      sendEvent('SongloftAudio.remoteCommand', { command: 'previous' })
     },
 
-    setRepeatMode: function (_mode) {
-      // Handled by the store.
+    setRepeatMode: function (_mode) {},
+
+    setShuffle: function (_on) {},
+
+    setFavorite: function (_isFavorite) {},
+
+    setEqualizerEnabled: function (on) {
+      eqEnabled = on
+      ensureEqContext()
+      if (on) {
+        connectEq()
+      } else {
+        disconnectEq()
+      }
     },
 
-    setShuffle: function (_on) {
-      // Handled by the store.
-    },
-
-    setFavorite: function (_isFavorite) {
-      // Handled by the UI.
-    },
-
-    setEqualizerEnabled: function (_on) {
-      // Follow-up: Web Audio API BiquadFilterNode chain.
-    },
-
-    setEqualizerBand: function (_index, _gainDb) {
-      // Follow-up: same as above.
+    setEqualizerBand: function (index, gainDb) {
+      if (index < 0 || index >= 10) return
+      eqGains[index] = gainDb
+      if (eqFilters[index]) {
+        eqFilters[index].gain.value = gainDb
+      }
     },
 
     dispose: function () {
       stopProgress()
+      cleanupHls()
       audio.pause()
       audio.src = ''
       audio.removeAttribute('src')
+      if (eqContext) {
+        eqContext.close().catch(function () {})
+        eqContext = null
+        eqSource = null
+        eqFilters = []
+      }
     },
   }
 
-  // Register the native module before the LynxView initializes.
-  // web-core reads nativeModulesMap during the custom element upgrade.
   lynxView.nativeModulesMap = Object.assign(
     {},
     lynxView.nativeModulesMap || {},
