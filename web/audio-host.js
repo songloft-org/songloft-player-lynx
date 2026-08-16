@@ -389,6 +389,69 @@
     },
   }
 
+  // ── SongloftStorage module (IndexedDB) ──
+
+  var DB_NAME = 'songloft_storage'
+  var DB_VERSION = 1
+  var dbReady = null
+
+  function openDb() {
+    if (dbReady) return dbReady
+    dbReady = new Promise(function (resolve, reject) {
+      var req = indexedDB.open(DB_NAME, DB_VERSION)
+      req.onupgradeneeded = function (e) {
+        var db = e.target.result
+        if (!db.objectStoreNames.contains('prefs')) db.createObjectStore('prefs')
+        if (!db.objectStoreNames.contains('secure')) db.createObjectStore('secure')
+      }
+      req.onsuccess = function (e) { resolve(e.target.result) }
+      req.onerror = function () { reject(req.error) }
+    })
+    return dbReady
+  }
+
+  var songloftStorage = {
+    getItem: function (area, key, callback) {
+      openDb().then(function (db) {
+        var store = area === 'secure' ? 'secure' : 'prefs'
+        var tx = db.transaction(store, 'readonly')
+        var req = tx.objectStore(store).get(key)
+        req.onsuccess = function () { callback(req.result !== undefined ? req.result : null) }
+        req.onerror = function () { callback(null) }
+      }).catch(function () { callback(null) })
+    },
+
+    setItem: function (area, key, value) {
+      openDb().then(function (db) {
+        var store = area === 'secure' ? 'secure' : 'prefs'
+        var tx = db.transaction(store, 'readwrite')
+        tx.objectStore(store).put(value, key)
+      }).catch(function () {})
+    },
+
+    removeItem: function (area, key) {
+      openDb().then(function (db) {
+        var store = area === 'secure' ? 'secure' : 'prefs'
+        var tx = db.transaction(store, 'readwrite')
+        tx.objectStore(store).delete(key)
+      }).catch(function () {})
+    },
+
+    getKeys: function (area, callback) {
+      openDb().then(function (db) {
+        var store = area === 'secure' ? 'secure' : 'prefs'
+        var tx = db.transaction(store, 'readonly')
+        var req = tx.objectStore(store).getAllKeys()
+        req.onsuccess = function () { callback(req.result || []) }
+        req.onerror = function () { callback([]) }
+      }).catch(function () { callback([]) })
+    },
+
+    getPath: function (name, callback) {
+      callback('/web-virtual/' + name)
+    },
+  }
+
   // ── SongloftPlatform module (openURL + file picker) ──
 
   var songloftPlatform = {
@@ -437,6 +500,6 @@
   lynxView.nativeModulesMap = Object.assign(
     {},
     lynxView.nativeModulesMap || {},
-    { SongloftAudio: songloftAudio, SongloftPlatform: songloftPlatform },
+    { SongloftAudio: songloftAudio, SongloftStorage: songloftStorage, SongloftPlatform: songloftPlatform },
   )
 })()
