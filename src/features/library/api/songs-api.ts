@@ -29,6 +29,13 @@ import {
  */
 
 /** Shared filter set for the songs list + song-ids endpoints. */
+export interface AudioTrackInfo {
+  index: number
+  codec: string
+  language: string | null
+  title: string | null
+}
+
 export interface SongsFilters {
   /** Song source type: `local` / `remote` / `radio`. */
   type?: string
@@ -200,6 +207,17 @@ export class SongsApi {
     if (data.url !== undefined) body.url = data.url
     if (data.coverUrl !== undefined) body.cover_url = data.coverUrl
     await this.client.put(`${apiPrefix}/songs/${id}`, body)
+  }
+
+  async getTracks(id: number): Promise<AudioTrackInfo[]> {
+    const res = await this.client.get<unknown[]>(`${apiPrefix}/songs/${id}/tracks`)
+    const raw = Array.isArray(res.data) ? res.data : []
+    return raw.map((t: any) => ({
+      index: typeof t.index === 'number' ? t.index : 0,
+      codec: String(t.codec ?? ''),
+      language: t.language ?? null,
+      title: t.title ?? null,
+    }))
   }
 
   async deleteSong(id: number): Promise<void> {

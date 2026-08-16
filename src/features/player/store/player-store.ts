@@ -77,6 +77,9 @@ export interface PlayerState extends PlayerData {
   closePlaylistDrawer: () => void
   clearError: () => void
 
+  // ── audio track ──
+  setAudioTrack: (trackIndex: number | null) => Promise<void>
+
   // ── sleep timer ──
   setSleepTimerByDuration: (durationMs: number) => void
   setSleepTimerAfterSongs: (count: number) => void
@@ -170,6 +173,8 @@ export function isNormalizeEnabled(): boolean {
  * play them, while every video container was sent `?format=mp3`, which makes the
  * server run `-vn` and drop the picture.
  */
+let _audioTrack: number | null = null
+
 function songUrl(song: Song): string {
   if (!song.url) return ''
   return buildSongUrl(song.url, {
@@ -177,6 +182,7 @@ function songUrl(song: Song): string {
     quality: _audioQuality,
     normalize: _normalize,
     platform: getPlatformTarget(),
+    audioTrack: _audioTrack,
   })
 }
 
@@ -614,6 +620,18 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     togglePlaylistDrawer: () => set((s) => ({ showPlaylistDrawer: !s.showPlaylistDrawer })),
     closePlaylistDrawer: () => set({ showPlaylistDrawer: false }),
     clearError: () => set({ errorMessage: undefined }),
+
+    setAudioTrack: async (trackIndex) => {
+      _audioTrack = trackIndex
+      const song = get().currentSong
+      if (song) {
+        const pos = get().currentTime
+        const source = playbackSourceFor(song)
+        await audio.load(source.url, { hls: source.hls })
+        await audio.seek(pos)
+        await audio.play()
+      }
+    },
 
     setSleepTimerByDuration: (durationMs) => {
       const status = sleepTimerByDuration(durationMs)
