@@ -14,6 +14,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import android.view.SurfaceView
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.session.CommandButton
@@ -228,6 +229,78 @@ object SongloftAudioEngine {
         }
     }
 
+    /**
+     * Surface currently receiving the video track, if a fullscreen video screen is up.
+     *
+     * Held as a field rather than only handed to the player because the player is
+     * created lazily on two different paths ([initFromService] / [ensurePlayer]) — a
+     * screen that opened first would otherwise attach to nothing.
+     */
+    private var videoOutput: SurfaceView? = null
+
+    /**
+     * Route the video track of whatever is playing into [view].
+     *
+     * Deliberately not an `exposed player` getter: the caller gets to display the
+     * picture, not to drive transport, seek or replace the item. Everything else
+     * about playback keeps flowing through this engine, which is what makes opening
+     * the video screen free — attaching a surface to a stream that already carries a
+     * video track touches neither the `MediaSource` nor the audio renderer, so
+     * position and state do not so much as blink.
+     *
+     * Main thread only, like every other public member here.
+     */
+    /**
+     * Called with the decoded video's pixel dimensions whenever they become known, so
+     * the display can letterbox instead of stretching. Set alongside the surface.
+     */
+    private var videoSizeListener: ((Int, Int) -> Unit)? = null
+
+    fun attachVideoOutput(view: SurfaceView, onVideoSize: ((Int, Int) -> Unit)? = null) {
+        videoOutput = view
+        videoSizeListener = onVideoSize
+        player?.setVideoSurfaceView(view)
+        // The size may already be known from an earlier attach, in which case no
+        // change event is coming — hand over what we have.
+        player?.videoSize?.takeIf { it.width > 0 && it.height > 0 }?.let {
+            onVideoSize?.invoke(it.width, it.height)
+        }
+    }
+
+    /**
+     * Stop routing video and drop the reference.
+     *
+     * **Not optional on the way out.** ExoPlayer keeps writing to a `Surface` it was
+     * given, so a screen that goes away without calling this leaves the player
+     * pushing frames at a destroyed window: logcat fills with `Surface … abandoned`
+     * and the *next* audio-only track fails inside the video renderer — playback dies
+     * with nothing on screen to explain why.
+     */
+    fun detachVideoOutput() {
+        videoOutput = null
+        videoSizeListener = null
+        player?.clearVideoSurface()
+    }
+
+    /**
+     * Whether the stream being played actually contains a video track.
+     *
+     * Read from the **track groups**, not from `player.videoSize`. The size only
+     * becomes known once the decoder has produced a frame, and without a surface it
+     * never does — so asking about the size before opening the video screen is a
+     * chicken-and-egg question that always answers "no picture". Track groups come
+     * from track selection and are known as soon as the media is prepared.
+     *
+     * Worth asking at all because `songs.is_video` is recorded from the *original*
+     * file at scan time, while a remote song may be served out of a cache entry that
+     * was transcoded with `-vn` (see the parent repo's AGENTS.md on cache transcode) —
+     * metadata says video, the stream has none, and the screen would just be black.
+     */
+    fun hasVideoTrack(): Boolean {
+        val groups = player?.currentTracks?.groups ?: return false
+        return groups.any { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
+    }
+
     /** Run [block] on the main looper (immediately if already there). */
     fun runOnMain(block: () -> Unit) {
         if (Looper.myLooper() == Looper.getMainLooper()) block()
@@ -255,6 +328,9 @@ object SongloftAudioEngine {
             val created = ExoPlayer.Builder(service.applicationContext).build()
             created.addListener(playerListener)
             player = created
+            // A video screen may already be up (it can open before the service
+            // finishes starting); re-apply so it is not left with a blank surface.
+            videoOutput?.let { created.setVideoSurfaceView(it) }
             mediaSessionInternal = buildMediaSession(service, created)
             attachEqualizer(created.audioSessionId)
         }
@@ -276,6 +352,7 @@ object SongloftAudioEngine {
         val created = ExoPlayer.Builder(appContext).build()
         created.addListener(playerListener)
         player = created
+        videoOutput?.let { created.setVideoSurfaceView(it) }
         mediaSessionInternal = buildMediaSession(appContext, created)
         attachEqualizer(created.audioSessionId)
         return created
@@ -444,6 +521,20 @@ object SongloftAudioEngine {
     // -- ExoPlayer listener -> facade events -----------------------------------
 
     private val playerListener = object : Player.Listener {
+        /**
+         * Forward the decoded video dimensions to whoever is displaying them.
+         *
+         * The video screen cannot work this out for itself: `player.videoSize` is only
+         * populated once a frame has been decoded, which cannot happen before it has
+         * lent the player a surface. Without this the surface just fills its parent and
+         * every video is stretched to the device's aspect ratio.
+         */
+        override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+            if (videoSize.width > 0 && videoSize.height > 0) {
+                videoSizeListener?.invoke(videoSize.width, videoSize.height)
+            }
+        }
+
         override fun onPlaybackStateChanged(state: Int) {
             when (state) {
                 Player.STATE_BUFFERING -> emitState("loading")

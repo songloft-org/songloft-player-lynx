@@ -52,6 +52,18 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:exported="false" />
 
+        <!-- Fullscreen surface for the video track of the song the audio engine is
+             already playing. `configChanges` is not optional: without it a rotation
+             recreates the activity, which destroys and rebuilds the SurfaceView and
+             blinks the picture. `singleTop` keeps a second instance from stealing the
+             one video output. -->
+        <activity
+            android:name=".video.SongloftVideoActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|density|uiMode" />
+
         <!-- Foreground media service backing background playback + notification.
              The player lives in SongloftAudioEngine; this service hands media3
              the existing MediaSession (see SongloftPlaybackService). -->

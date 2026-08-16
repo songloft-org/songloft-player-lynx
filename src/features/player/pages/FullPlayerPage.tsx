@@ -10,7 +10,10 @@ import type { Song } from '../../../models/song.js'
 // feature (API client included) into the player's graph for one getter.
 import { getLastLibrarySearch } from '../../library/data/last-library-search.js'
 import { getLastShellLocation } from '../../../shared/nav/shell-navigation.js'
+import { resolveVideoSourceKind } from '../../../core/network/video-source.js'
 import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
+import { getPlatformTarget } from '../../../native/platform-target.js'
+import { getVideoModule } from '../../../native/video.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { usePlayerStore } from '../store/index.js'
@@ -29,9 +32,49 @@ function formatRemaining(ms: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+/**
+ * Cover, with the ▶ badge doubling as the entry point to fullscreen video.
+ *
+ * The badge stays visible whenever the song has a video track, because it is also
+ * plain metadata ("this is a music video"). It only becomes *tappable* where a
+ * fullscreen surface actually exists and the container can be shown — on Web, or in a
+ * build without the native module, tapping would be the silent no-op this repo has
+ * already shipped three times.
+ *
+ * `kind === 'hls'` means the server has to transcode the file before anything can be
+ * drawn, and it answers only when the whole transcode is done. So that path shows a
+ * pending state and switches the source first; `'direct'` opens straight away,
+ * because the picture is already in the stream being played.
+ */
 function CoverArt({ song }: { song: Song }) {
   const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
-  const isVideo = song.isVideo
+  const { t } = useTranslation()
+  const [pending, setPending] = useState(false)
+  const [note, setNote] = useState('')
+
+  const kind = resolveVideoSourceKind(song, getPlatformTarget())
+  const canWatch = getPlatformCapabilities().video && kind !== 'none'
+
+  useEffect(() => {
+    setPending(false)
+    setNote('')
+  }, [song.id])
+
+  const openVideo = async (): Promise<void> => {
+    setNote('')
+    setPending(true)
+    try {
+      if (kind === 'hls') await usePlayerStore.getState().enterVideoSource()
+      const shown = await getVideoModule().open()
+      // The host refuses when the stream turns out to carry no video track — a real
+      // case for remote songs cached through `-vn`, and one only the host can see.
+      if (!shown) setNote(t('player.videoNoTrack'))
+    } catch {
+      setNote(t('player.videoUnavailable'))
+    } finally {
+      setPending(false)
+    }
+  }
 
   return (
     <view className='full-player__cover-wrap'>
@@ -40,12 +83,19 @@ function CoverArt({ song }: { song: Song }) {
         : <view className='full-player__cover full-player__cover--empty'>
             <Icon name='music' size={56} color={ICON_COLORS.contentMuted} />
           </view>}
-      {isVideo
+      {song.isVideo
         ? (
-          <view className='full-player__video-badge'>
-            <text className='full-player__video-badge-text'>▶</text>
+          <view
+            className='full-player__video-badge'
+            bindtap={canWatch && !pending ? () => { void openVideo() } : undefined}
+            data-testid={canWatch ? 'video-fullscreen' : undefined}
+          >
+            <text className='full-player__video-badge-text'>{pending ? '…' : '▶'}</text>
           </view>
         )
+        : null}
+      {note
+        ? <text className='full-player__video-note'>{note}</text>
         : null}
     </view>
   )

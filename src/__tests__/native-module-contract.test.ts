@@ -37,6 +37,7 @@ const ANDROID_SYSTEM = 'android/app/src/main/java/org/songloft/lynx/system'
 const ANDROID_PLATFORM = 'android/app/src/main/java/org/songloft/lynx/platform'
 const ANDROID_DLNA = 'android/app/src/main/java/org/songloft/lynx/dlna'
 const ANDROID_LYRIC = 'android/app/src/main/java/org/songloft/lynx/lyric'
+const ANDROID_VIDEO = 'android/app/src/main/java/org/songloft/lynx/video'
 const IOS_DIR = 'ios/SongloftLynx'
 
 /** Both hosts' sources concatenated, per subsystem. */
@@ -72,6 +73,10 @@ const hosts = {
   },
   floatingLyric: {
     android: read(`${ANDROID_LYRIC}/FloatingLyricModule.kt`),
+  },
+  video: {
+    android: read(`${ANDROID_VIDEO}/SongloftVideoModule.kt`),
+    androidActivity: read(`${ANDROID_VIDEO}/SongloftVideoActivity.kt`),
   },
   liveActivity: {
     ios: read(`${IOS_DIR}/LiveActivityModule.swift`),
@@ -401,6 +406,63 @@ describe('SongloftFloatingLyric module methods exist on Android', () => {
   })
 })
 
+/**
+ * Fullscreen video: the module surface plus the two things that are invisible from
+ * JS and only observable on a device.
+ *
+ * The whole design rests on the video screen borrowing the **one** player rather than
+ * opening a second one, and both halves of that borrowing fail silently:
+ * `attachVideoOutput` missing means the screen opens onto nothing (a black rectangle
+ * with audio), and `detachVideoOutput` missing means ExoPlayer keeps drawing into a
+ * destroyed window and the *next* audio-only track dies inside the video renderer.
+ */
+describe('SongloftVideo module surface (Android)', () => {
+  const methods = interfaceMethods(read('src/native/video.ts'), 'NativeVideoModule')
+
+  test('the interface was parsed (guard against a silent empty list)', () => {
+    expect(methods).toEqual(['open', 'close', 'isOpen'])
+  })
+
+  test.each(methods)('SongloftVideoModule.%s has @LynxMethod and uses Callback', (method) => {
+    expectLynxMethod(hosts.video.android, method)
+    expect(
+      hosts.video.android,
+      `SongloftVideoModule.${method} must take a Callback, not a Kotlin lambda`,
+    ).toMatch(new RegExp(`fun ${method}\\([^)]*callback:\\s*Callback`))
+  })
+
+  test('the close event name matches the TS listener verbatim', () => {
+    expect(hosts.video.android).toContain('SongloftVideo.closed')
+  })
+
+  test('the engine can lend out a surface, and the screen hands it back', () => {
+    expect(
+      hosts.audio.android,
+      'engine exposes no attachVideoOutput — the video screen would open onto nothing',
+    ).toContain('fun attachVideoOutput')
+    expect(hosts.audio.android).toContain('fun detachVideoOutput')
+    expect(
+      hosts.video.androidActivity,
+      'the video screen never detaches: ExoPlayer would keep drawing into a dead window',
+    ).toContain('detachVideoOutput')
+  })
+
+  test('the screen touches the player only on the main thread', () => {
+    // A `@LynxMethod` arrives on the BTS thread and ExoPlayer is main-thread-only.
+    // Batch 48 shipped the same mistake in FloatingLyricService, where the resulting
+    // CalledFromWrongThreadException was swallowed by a bare catch.
+    expect(hosts.video.androidActivity).toContain('runOnMain')
+    expect(hosts.video.android).toContain('runOnMain')
+  })
+
+  test('the host refuses to open a screen with no video track', () => {
+    // `songs.is_video` comes from the original file at scan time; a remote song may be
+    // served from a cache entry transcoded with `-vn`. Only the host can tell.
+    expect(hosts.video.android).toContain('hasVideoTrack')
+    expect(hosts.audio.android).toContain('fun hasVideoTrack')
+  })
+})
+
 describe('SongloftLiveActivity is a proper Lynx module on iOS', () => {
   const src = hosts.liveActivity.ios
   const methods = ['start', 'update', 'end']
@@ -430,6 +492,7 @@ describe('every native module is registered in the host bootstrap', () => {
     { name: 'SongloftDlna', android: 'SongloftDlnaModule', ios: 'SongloftDlnaModule' },
     { name: 'SongloftFloatingLyric', android: 'FloatingLyricModule', ios: null },
     { name: 'SongloftLiveActivity', android: null, ios: 'LiveActivityModule' },
+    { name: 'SongloftVideo', android: 'SongloftVideoModule', ios: null },
   ]
 
   test.each(modules.filter((m) => m.android))('%s is registered on Android', (mod) => {

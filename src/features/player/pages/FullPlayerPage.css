@@ -163,6 +163,17 @@
   font-size: 14px;
 }
 
+/* Why the picture could not be shown (no video track, or no host support). */
+.full-player__video-note {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  color: var(--content-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
 .full-player__lyrics-pane {
   flex: 1;
   height: 100%;

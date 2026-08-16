@@ -18,6 +18,9 @@ import { appConfig } from './core/config/app-config.js'
 import { router } from './router.js'
 import { readNativeModules, readLynxGlobal } from './native/native-modules.js'
 import { getFloatingLyricModule } from './native/floating-lyric.js'
+import { getVideoModule } from './native/video.js'
+import { getPlatformTarget } from './native/platform-target.js'
+import { resolveVideoSourceKind } from './core/network/video-source.js'
 import { getSystemAppearance } from './native/system-appearance.js'
 import { changeAppTheme, getAppTheme, resolveTheme } from './shared/theme/theme-model.js'
 
@@ -56,6 +59,23 @@ import { changeAppTheme, getAppTheme, resolveTheme } from './shared/theme/theme-
   updateLyric: (line: string) => getFloatingLyricModule().updateLyric(line),
   hide: () => getFloatingLyricModule().hide(),
   isShowing: () => getFloatingLyricModule().isShowing(),
+}
+// Fullscreen video. `platformTarget` / `sourceKind` are exposed alongside the module
+// calls because the interesting failures are decisions, not calls: a wrong platform
+// read or a container on the wrong side of the direct/transcode split both end in
+// "no picture" with nothing on screen to say which.
+;(globalThis as Record<string, unknown>).__E2E_VIDEO__ = {
+  open: () => getVideoModule().open(),
+  close: () => getVideoModule().close(),
+  isOpen: () => getVideoModule().isOpen(),
+  available: () => getVideoModule().available,
+  platformTarget: () => getPlatformTarget(),
+  sourceKind: (songJson: string) =>
+    resolveVideoSourceKind(
+      JSON.parse(songJson) as Parameters<typeof resolveVideoSourceKind>[0],
+      getPlatformTarget(),
+    ),
+  enterVideoSource: () => usePlayerStore.getState().enterVideoSource(),
 }
 
 // Register the TestBridge eval listener

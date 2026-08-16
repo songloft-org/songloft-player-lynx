@@ -31,6 +31,15 @@ export interface PlatformCapabilities {
   dataTransfer: boolean
   /** System tray / minimize-to-tray (desktop only). */
   systemTray: boolean
+  /**
+   * Fullscreen native video playback.
+   *
+   * Keyed off its own module rather than the shared `hasPlatform`: Web registers a
+   * `SongloftAudio` host module but has no video surface at all — Lynx 4.0.x ships no
+   * video element and web-core's tag map has no entry for one — so a shared flag
+   * would claim a capability that cannot exist there.
+   */
+  video: boolean
 }
 
 /** True when a native module of this name is present in the host bag. */
@@ -63,5 +72,6 @@ export function getPlatformCapabilities(): PlatformCapabilities {
     // both directions are dead until a host bridge exists (fix plan P2-2).
     dataTransfer: isWeb ? false : hasPlatform,
     systemTray: !isWeb && hasPlatform,
+    video: hasNativeModule('SongloftVideo'),
   }
 }

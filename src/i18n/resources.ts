@@ -157,6 +157,8 @@ export const en = {
     sleepTimerActive: 'Timer: {{time}}',
     sleepTimerSongsLeft: '{{count}} songs left',
     sleepTimerSongsLeftOne: '{{count}} song left',
+    videoNoTrack: 'This file has no video track',
+    videoUnavailable: 'Video playback is unavailable',
   },
   settings: {
     title: 'Settings',
@@ -706,6 +708,8 @@ export const zh: TranslationTree = {
     sleepTimerActive: '定时: {{time}}',
     sleepTimerSongsLeft: '还剩 {{count}} 首',
     sleepTimerSongsLeftOne: '还剩 {{count}} 首',
+    videoNoTrack: '该文件没有视频轨',
+    videoUnavailable: '视频播放不可用',
   },
   settings: {
     title: '设置',
