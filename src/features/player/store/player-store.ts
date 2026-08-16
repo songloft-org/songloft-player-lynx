@@ -31,6 +31,7 @@ import {
   tickSleepTimer,
   type SleepTimerStatus,
 } from '../domain/sleep-timer.js'
+import { getCachedPath } from '../data/song-cache.js'
 import { useLyricStore } from './lyric-store.js'
 import type { PlayerData } from './derive.js'
 
@@ -383,7 +384,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       errorMessage: undefined,
     })
     void useLyricStore.getState().loadForSong(song)
-    const source = playbackSourceFor(song)
+    const cached = await getCachedPath(song.id).catch(() => null)
+    const source = cached
+      ? { url: cached, hls: false }
+      : playbackSourceFor(song)
     await audio.load(source.url, {
       durationMs: durationMsOf(song),
       hls: source.hls,
