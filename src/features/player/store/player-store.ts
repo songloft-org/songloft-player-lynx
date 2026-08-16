@@ -243,6 +243,15 @@ function toAudioItem(song: Song): AudioItem {
   }
 }
 
+const QUEUE_WINDOW = 5
+
+function syncQueueWindow(playlist: Song[], index: number): void {
+  const start = Math.max(0, index - QUEUE_WINDOW)
+  const end = Math.min(playlist.length, index + QUEUE_WINDOW + 1)
+  const window = playlist.slice(start, end)
+  void audio.setQueue(window.map(toAudioItem), index - start)
+}
+
 /**
  * Push the given song's favorite state to the native media notification so its
  * favorite button icon matches. No-op (and zero network) when no native audio
@@ -440,7 +449,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         list.findIndex((s) => s.id === song.id),
       )
       set({ playlist: list, currentIndex: index, currentSong: list[index] })
-      void audio.setQueue(list.map(toAudioItem), index)
+      syncQueueWindow(list, index)
       await playAtIndex(index)
     },
 
@@ -453,7 +462,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         currentSong: songs[index],
         sourcePlaylistId: playlistId,
       })
-      void audio.setQueue(songs.map(toAudioItem), index)
+      syncQueueWindow(songs, index)
       if (playlistId != null) {
         void getPlaylistApi().touchPlaylist(playlistId).catch(() => {})
       }
@@ -550,7 +559,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       if (songs.length === 0) return
       const list = [...get().playlist, ...songs]
       set({ playlist: list })
-      void audio.setQueue(list.map(toAudioItem), get().currentIndex)
+      syncQueueWindow(list, get().currentIndex)
     },
 
     insertNextInQueue: (songs) => {
@@ -559,7 +568,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       const insertAt = s.currentIndex + 1
       const list = [...s.playlist.slice(0, insertAt), ...songs, ...s.playlist.slice(insertAt)]
       set({ playlist: list })
-      void audio.setQueue(list.map(toAudioItem), s.currentIndex)
+      syncQueueWindow(list, s.currentIndex)
     },
 
     removeFromPlaylist: async (index) => {
@@ -576,7 +585,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         useLyricStore.getState().clear()
         return
       }
-      void audio.setQueue(result.playlist.map(toAudioItem), result.currentIndex)
+      syncQueueWindow(result.playlist, result.currentIndex)
       if (result.removedCurrent) await playAtIndex(result.currentIndex)
     },
 
@@ -584,7 +593,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       const s = get()
       const result = moveItem(s.playlist, s.currentIndex, oldIndex, newIndex)
       set({ playlist: result.playlist, currentIndex: result.currentIndex })
-      void audio.setQueue(result.playlist.map(toAudioItem), result.currentIndex)
+      syncQueueWindow(result.playlist, result.currentIndex)
     },
 
     clearPlaylist: () => {
@@ -868,7 +877,7 @@ export async function restorePlaybackState(): Promise<void> {
     // Use the shared `toAudioItem`/`durationMsOf` rather than re-inlining the
     // mapping: this path used to carry its own copy, which silently omitted any
     // field added to the queue item (it missed `artworkUrl` on arrival).
-    void audio.setQueue(saved.playlist.map(toAudioItem), saved.currentIndex)
+    syncQueueWindow(saved.playlist, saved.currentIndex)
     const restored = playbackSourceFor(song)
     void audio.load(restored.url, { durationMs: durationMsOf(song), hls: restored.hls })
       .then(() => audio.seek(saved.positionMs))
