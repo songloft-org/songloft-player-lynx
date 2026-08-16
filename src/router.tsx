@@ -104,12 +104,12 @@ const libraryRoute = createRoute({
   // AND facet field the user was on.
   validateSearch: (
     search: Record<string, unknown>,
-  ): { view?: 'songs' | 'facets' | 'playlists' | 'radio'; field?: 'artist' | 'album' | 'genre' } => {
+  ): { view?: 'songs' | 'facets' | 'playlists' | 'radio'; field?: string } => {
     const v = search.view
     const f = search.field
     return {
       ...(v === 'songs' || v === 'facets' || v === 'playlists' || v === 'radio' ? { view: v } : {}),
-      ...(f === 'artist' || f === 'album' || f === 'genre' ? { field: f } : {}),
+      ...(typeof f === 'string' && f ? { field: f } : {}),
     }
   },
   component: LibraryPage,

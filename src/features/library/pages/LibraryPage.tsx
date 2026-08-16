@@ -24,18 +24,30 @@ import { FacetCard } from '../widgets/FacetCard.js'
 import { SongRow } from '../widgets/SongRow.js'
 import { FavoriteSongRow } from '../widgets/FavoriteSongRow.js'
 import { VirtualList } from '../widgets/VirtualList.js'
+import { useBrowseViews } from '../data/use-browse-views.js'
+import type { BrowseView } from '../../settings/api/settings-api.js'
 import './LibraryPage.css'
 
 type LibraryView = 'songs' | 'facets' | 'playlists' | 'radio'
 
-type FacetField = 'artist' | 'album' | 'genre'
+/** All supported facet field IDs (superset of the original artist/album/genre). */
+type FacetField = 'artist' | 'album' | 'genre' | 'year' | 'decade' | 'language' | 'style'
 
-const FACET_FIELDS: readonly FacetField[] = ['artist', 'album', 'genre']
+/** Source view IDs that navigate to CategorySongsPage with a `type` filter. */
+type SourceViewId = 'local' | 'remote' | 'radio' | 'folder' | 'recent' | 'favorites' | 'random'
 
-const FACET_LABEL_KEYS: Record<FacetField, string> = {
-  artist: 'library.facetArtist',
-  album: 'library.facetAlbum',
-  genre: 'library.facetGenre',
+/** Facet IDs that the backend `/songs/facets` endpoint currently supports. */
+const SUPPORTED_FACETS: ReadonlySet<string> = new Set(['artist', 'album', 'genre'])
+
+/** Map source view IDs to the SongsFilters they produce in CategorySongsPage. */
+const SOURCE_FILTERS: Record<SourceViewId, Partial<SongsFilters>> = {
+  local: { type: 'local' },
+  remote: { type: 'remote' },
+  radio: { type: 'radio' },
+  folder: { pathPrefix: '' },
+  recent: { sort: 'added_at', order: 'desc' },
+  favorites: { excludePlaylistLabels: 'none' },
+  random: { sort: 'random' },
 }
 
 const VIEW_ORDER: readonly LibraryView[] = ['songs', 'facets', 'playlists', 'radio']
@@ -65,7 +77,7 @@ export function LibraryPage() {
   const search = useSearch({ strict: false }) as { view?: LibraryView }
   const view: LibraryView = search.view ?? 'songs'
 
-  setLastLibrarySearch(search as { view?: LibraryView; field?: FacetField })
+  setLastLibrarySearch(search as { view?: LibraryView; field?: string })
 
   return (
     <view className='library'>
@@ -336,63 +348,97 @@ function SongsView() {
   )
 }
 
-// ── Categories view (facet grid) ─────────────────────────────────────────────
+// ── Categories view (dynamic browse views) ───────────────────────────────────
 
 function FacetsView() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const search = useSearch({ strict: false }) as { field?: FacetField }
-  const field: FacetField = search.field ?? 'artist'
-  const query = useFacetsInfiniteQuery(field)
+  const search = useSearch({ strict: false }) as { field?: string }
+  const { views, loading: browseLoading } = useBrowseViews()
+
+  // Determine active field: URL-driven or first available facet view
+  const facetViews = views.filter((v) => v.type === 'facet')
+  const sourceViews = views.filter((v) => v.type === 'source')
+
+  const activeFacetField: string | undefined = search.field && facetViews.some((v) => v.id === search.field)
+    ? search.field
+    : facetViews.length > 0 ? facetViews[0].id : undefined
+
+  // Only fetch facets when a facet chip is active (not a source view)
+  const isSourceActive = search.field ? sourceViews.some((v) => v.id === search.field) : false
+  const queryField = isSourceActive ? '' : (activeFacetField ?? '')
+  const query = useFacetsInfiniteQuery(queryField)
   const facets = flattenFacets(query.data?.pages)
+
+  const handleChipTap = (browseView: BrowseView) => {
+    if (browseView.type === 'source') {
+      // Navigate to CategorySongsPage with the source filter
+      navigate({
+        to: '/library/category/$field',
+        params: { field: browseView.id },
+        search: { value: t(browseView.labelKey) },
+      })
+    } else {
+      // Facet type: switch the active facet field
+      navigate({ to: '/library', search: { view: 'facets', field: browseView.id } })
+    }
+  }
 
   return (
     <view className='library__facets'>
       <view className='library__facet-fields'>
-        {FACET_FIELDS.map((key) => (
+        {views.map((v) => (
           <view
-            key={key}
-            className={key === field ? 'library__chip library__chip--active' : 'library__chip'}
-            bindtap={() => navigate({ to: '/library', search: { view: 'facets', field: key } })}
+            key={v.id}
+            className={
+              v.type === 'facet' && v.id === activeFacetField
+                ? 'library__chip library__chip--active'
+                : 'library__chip'
+            }
+            bindtap={() => handleChipTap(v)}
           >
-            <text className='library__chip-text'>{t(FACET_LABEL_KEYS[key])}</text>
+            <text className='library__chip-text'>{t(v.labelKey)}</text>
           </view>
         ))}
       </view>
 
-      {query.isLoading
-        ? <StateMessage text={t('library.loadingCategories')} />
-        : query.isError && facets.length === 0
-          ? <StateMessage text={t('library.categoriesError')} tone='error' />
-          : facets.length === 0
-            ? <StateMessage text={t('library.noCategories')} />
-            : (
-              <scroll-view
-                className='library__grid-scroll'
-                scroll-y
-                lower-threshold={200}
-                bindscrolltolower={() => {
-                  if (query.hasNextPage && !query.isFetchingNextPage) {
-                    void query.fetchNextPage()
-                  }
-                }}
-              >
-                <view className='library__grid'>
-                  {facets.map((facet: SongFacet) => (
-                    <FacetCard
-                      key={`${field}:${facet.value}`}
-                      facet={facet}
-                      onTap={(f) =>
-                        navigate({
-                          to: '/library/category/$field',
-                          params: { field },
-                          search: { value: f.value, cover: f.coverUrl },
-                        })}
-                    />
-                  ))}
-                </view>
-              </scroll-view>
-            )}
+      {!isSourceActive && queryField
+        ? (
+          query.isLoading
+            ? <StateMessage text={t('library.loadingCategories')} />
+            : query.isError && facets.length === 0
+              ? <StateMessage text={t('library.categoriesError')} tone='error' />
+              : facets.length === 0
+                ? <StateMessage text={t('library.noCategories')} />
+                : (
+                  <scroll-view
+                    className='library__grid-scroll'
+                    scroll-y
+                    lower-threshold={200}
+                    bindscrolltolower={() => {
+                      if (query.hasNextPage && !query.isFetchingNextPage) {
+                        void query.fetchNextPage()
+                      }
+                    }}
+                  >
+                    <view className='library__grid'>
+                      {facets.map((facet: SongFacet) => (
+                        <FacetCard
+                          key={`${queryField}:${facet.value}`}
+                          facet={facet}
+                          onTap={(f) =>
+                            navigate({
+                              to: '/library/category/$field',
+                              params: { field: queryField },
+                              search: { value: f.value, cover: f.coverUrl },
+                            })}
+                        />
+                      ))}
+                    </view>
+                  </scroll-view>
+                )
+        )
+        : null}
     </view>
   )
 }

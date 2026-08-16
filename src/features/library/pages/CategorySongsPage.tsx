@@ -17,30 +17,77 @@ import { VirtualList } from '../widgets/VirtualList.js'
 import './CategorySongsPage.css'
 
 /**
- * Category songs page (Categories → facet drill-in), rendered inside the shell
- * at `/library/category/$field`.
+ * Category songs page (Categories → facet/source drill-in), rendered inside the
+ * shell at `/library/category/$field`.
  *
- * Ported (trimmed) from the Flutter `CategorySongsPage`
- * (`features/library/presentation/category_songs_page.dart` + route
- * `/library/categories/:field?value=&cover=`): tapping a facet card in the
- * Categories view opens the flat list of songs in that dimension value. Mirrors
- * the `PlaylistDetailPage` + `SongsView` pattern — a header (field label / value
- * / optional cover) over the songs, paginated via the same `SongRow` +
- * `VirtualList` + `bindscrolltolower` load-more. Tapping a song plays the whole
- * loaded list from that index (`usePlayerStore.playPlaylist`) → the mini-player
- * appears. Styled entirely via LUNA tokens.
+ * Supports both facet fields (artist/album/genre/year/decade/language/style) and
+ * source fields (local/remote/radio/folder/recent/favorites/random). The filter
+ * applied to the songs query is determined by the field type.
  */
 
-type FacetField = 'artist' | 'album' | 'genre'
+/** All recognized category field IDs. */
+type CategoryField =
+  | 'artist' | 'album' | 'genre' | 'year' | 'decade' | 'language' | 'style'
+  | 'local' | 'remote' | 'radio' | 'folder' | 'recent' | 'favorites' | 'random'
 
-const FIELD_LABEL_KEYS: Record<FacetField, string> = {
+const FIELD_LABEL_KEYS: Record<CategoryField, string> = {
   artist: 'library.facetArtist',
   album: 'library.facetAlbum',
   genre: 'library.facetGenre',
+  year: 'library.browseYear',
+  decade: 'library.browseDecade',
+  language: 'library.browseLanguage',
+  style: 'library.browseStyle',
+  local: 'library.browseLocal',
+  remote: 'library.browseRemote',
+  radio: 'library.browseRadio',
+  folder: 'library.browseFolder',
+  recent: 'library.browseRecent',
+  favorites: 'library.browseFavorites',
+  random: 'library.browseRandom',
 }
 
-function normalizeField(field: string | undefined): FacetField {
-  return field === 'album' || field === 'genre' ? field : 'artist'
+/** Set of valid field IDs for runtime validation. */
+const VALID_FIELDS: ReadonlySet<string> = new Set(Object.keys(FIELD_LABEL_KEYS))
+
+/** Source view IDs that filter by song type or special sort. */
+const SOURCE_FIELDS: ReadonlySet<string> = new Set([
+  'local', 'remote', 'radio', 'folder', 'recent', 'favorites', 'random',
+])
+
+function normalizeField(field: string | undefined): CategoryField {
+  if (field && VALID_FIELDS.has(field)) return field as CategoryField
+  return 'artist'
+}
+
+/** Build the SongsFilters for the given field and optional value. */
+function buildFiltersForField(field: CategoryField, value: string): SongsFilters {
+  const base: SongsFilters = { sort: 'added_at', order: 'desc' }
+
+  if (SOURCE_FIELDS.has(field)) {
+    switch (field) {
+      case 'local': return { ...base, type: 'local' }
+      case 'remote': return { ...base, type: 'remote' }
+      case 'radio': return { ...base, type: 'radio' }
+      case 'folder': return { ...base, pathPrefix: value || undefined }
+      case 'recent': return { sort: 'added_at', order: 'desc' }
+      case 'favorites': return { ...base, excludePlaylistLabels: 'none' }
+      case 'random': return { ...base, sort: 'random' }
+      default: return base
+    }
+  }
+
+  // Facet fields: filter by dimension value
+  switch (field) {
+    case 'artist': return { ...base, artist: value }
+    case 'album': return { ...base, album: value }
+    case 'genre': return { ...base, genre: value }
+    case 'year': return { ...base, year: Number(value) || undefined }
+    case 'decade': return { ...base, decade: Number(value) || undefined }
+    case 'language': return { ...base, language: value }
+    case 'style': return { ...base, style: value }
+    default: return base
+  }
 }
 
 export function CategorySongsPage() {
@@ -53,9 +100,8 @@ export function CategorySongsPage() {
   const value = search.value ?? ''
   const cover = search.cover ? buildCoverUrl(search.cover) : ''
 
-  // Filter by the drilled dimension, newest first (mirrors the songs view).
   const filters = useMemo<SongsFilters>(
-    () => ({ [field]: value, sort: 'added_at', order: 'desc' }),
+    () => buildFiltersForField(field, value),
     [field, value],
   )
 
