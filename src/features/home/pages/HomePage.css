@@ -26,54 +26,7 @@
   font-weight: bold;
 }
 
-/* ── Now-playing entry bar ──────────────────────────────────────────────── */
 
-.home__now-playing {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  margin: 0 var(--space-4) var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background-color: var(--paper);
-  border: 1px solid var(--line);
-}
-
-.home__now-playing-indicator {
-  width: 4px;
-  height: 24px;
-  border-radius: 2px;
-  background-color: var(--accent);
-  margin-right: var(--space-3);
-}
-
-.home__now-playing-info {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-.home__now-playing-title {
-  color: var(--content);
-  font-size: var(--font-sm);
-  font-weight: bold;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.home__now-playing-artist {
-  color: var(--content-2);
-  font-size: var(--font-xs);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.home__now-playing-chevron {
-  color: var(--content-muted);
-  font-size: var(--font-lg);
-  margin-left: var(--space-2);
-}
 
 /*
  * `.home__scroll-host` is the Web stand-in for `.home__refresh`: Web has no

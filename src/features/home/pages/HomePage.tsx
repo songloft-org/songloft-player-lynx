@@ -44,8 +44,6 @@ export function HomePage() {
   // loading or if the read fails, so the panel degrades instead of disappearing.
   const statsQuery = useLibraryStatsQuery()
   const playingPlaylistId = usePlayerStore((s) => s.sourcePlaylistId)
-  const currentSong = usePlayerStore((s) => s.currentSong)
-  const isPlaying = usePlayerStore((s) => s.isPlaying)
 
   const { isWide: homeIsWide, onLayoutChange: homeLayoutChange } = useBreakpoint()
   const sectionLimit = homeIsWide ? 9 : 6
@@ -76,9 +74,6 @@ export function HomePage() {
   }
   const viewAllRadios = () => {
     void navigate({ to: '/library', search: { view: 'radio' } })
-  }
-  const openPlayer = () => {
-    void navigate({ to: '/player' })
   }
   const refreshRef = useRef<NodesRef>(null)
   // Platform, not realm: this render runs on the background thread, which on Web
@@ -157,23 +152,6 @@ export function HomePage() {
           {t(currentGreetingKey())}
         </text>
       </view>
-
-      {currentSong
-        ? (
-          <view className='home__now-playing' bindtap={openPlayer}>
-            <view className='home__now-playing-indicator' />
-            <view className='home__now-playing-info'>
-              <text className='home__now-playing-title'>
-                {currentSong.title}
-              </text>
-              <text className='home__now-playing-artist'>
-                {currentSong.artist ?? t('common.unknown')}
-              </text>
-            </view>
-            <text className='home__now-playing-chevron'>›</text>
-          </view>
-        )
-        : null}
 
       {/*
         * Web has no `<refresh>`: it is missing from web-core's tag map, so both it
