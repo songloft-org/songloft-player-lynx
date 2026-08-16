@@ -113,6 +113,10 @@ const DUAL_COLUMN_MIN_WIDTH = 768
 /**
  * Sub-page identifiers for the right pane in dual-column mode.
  * Each value corresponds to a navigation target that would normally route away.
+ *
+ * There is deliberately no "nothing selected" member: an empty right pane is
+ * dead space on a wide screen, so the pane always shows a page and defaults to
+ * the first row of the list ({@link DEFAULT_SUB_PAGE}).
  */
 type SettingsSubPage =
   | 'library'
@@ -126,7 +130,9 @@ type SettingsSubPage =
   | 'browse-views'
   | 'plugins'
   | 'tab-config'
-  | null
+
+/** Sub-page shown in the right pane before the user picks one. */
+const DEFAULT_SUB_PAGE: SettingsSubPage = 'library'
 
 export function SettingsPage() {
   const navigate = useNavigate()
@@ -137,10 +143,10 @@ export function SettingsPage() {
   const isDualColumn = layoutWidth >= DUAL_COLUMN_MIN_WIDTH
 
   /**
-   * Active sub-page for the right pane in dual-column mode. When `null`, the
-   * right pane shows a placeholder prompt.
+   * Active sub-page for the right pane in dual-column mode. Seeded with the
+   * first row of the list so the pane is never blank on a wide screen.
    */
-  const [activeSubPage, setActiveSubPage] = useState<SettingsSubPage>(null)
+  const [activeSubPage, setActiveSubPage] = useState<SettingsSubPage>(DEFAULT_SUB_PAGE)
 
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   // Persisted language choice ('system' until the pref resolves). Selecting an
@@ -269,6 +275,14 @@ export function SettingsPage() {
     }
   }
 
+  /**
+   * Whether a sub-page row is the one currently shown in the right pane. Only
+   * meaningful in dual-column mode — in single-column mode the rows are plain
+   * navigation entries and highlighting one of them would look like a stuck
+   * selection.
+   */
+  const isActive = (page: SettingsSubPage) => isDualColumn && activeSubPage === page
+
   return (
     <view className='settings' bindlayoutchange={onLayoutChange}>
       <view className='settings__topbar'>
@@ -289,6 +303,7 @@ export function SettingsPage() {
               title={t('libops.pageTitle')}
               subtitle={t('libops.entrySubtitle')}
               trailingIcon='chevron-right'
+              selected={isActive('library')}
               onTap={() => goToSubPage('library', '/settings/library')}
               testId='settings-library-ops'
             />
@@ -315,6 +330,7 @@ export function SettingsPage() {
                   title={t('servers.title')}
                   subtitle={serverText}
                   trailingIcon='chevron-right'
+                  selected={isActive('servers')}
                   onTap={() => goToSubPage('servers', '/settings/servers')}
                   testId='settings-server'
                 />
@@ -338,6 +354,7 @@ export function SettingsPage() {
               title={t('themePacks.title')}
               subtitle={t('themePacks.subtitle')}
               trailingIcon='chevron-right'
+              selected={isActive('theme-packs')}
               onTap={() => goToSubPage('theme-packs', '/settings/theme-packs')}
               testId='settings-theme-packs'
             />
@@ -388,6 +405,7 @@ export function SettingsPage() {
               icon='info'
               title={t('settings.licenses')}
               trailingIcon='chevron-right'
+              selected={isActive('licenses')}
               onTap={() => goToSubPage('licenses', '/settings/licenses')}
               testId='settings-licenses'
             />
@@ -447,14 +465,15 @@ export function SettingsPage() {
 
           <SettingsSection title={t('settings.advanced')} icon='settings'>
             <SettingsRow icon='music' title={t('settings.playHistory')} subtitle={t('settings.playHistorySubtitle')} trailingIcon='chevron-right' onTap={() => void navigate({ to: '/library/history' })} testId='settings-play-history' />
-            <SettingsRow icon='music' title={t('library.browseViews')} subtitle={t('library.browseViewsSubtitle')} trailingIcon='chevron-right' onTap={() => goToSubPage('browse-views', '/settings/browse-views')} testId='settings-browse-views' />
-            <SettingsRow icon='music' title={t('eq.title')} subtitle={t('eq.subtitle')} trailingIcon='chevron-right' onTap={() => goToSubPage('eq', '/settings/eq')} testId='settings-eq' />
-            <SettingsRow icon='settings' title={t('settings.storageCache')} subtitle={t('settings.cacheManageSubtitle')} trailingIcon='chevron-right' onTap={() => goToSubPage('cache', '/settings/cache')} />
+            <SettingsRow icon='music' title={t('library.browseViews')} subtitle={t('library.browseViewsSubtitle')} trailingIcon='chevron-right' selected={isActive('browse-views')} onTap={() => goToSubPage('browse-views', '/settings/browse-views')} testId='settings-browse-views' />
+            <SettingsRow icon='music' title={t('eq.title')} subtitle={t('eq.subtitle')} trailingIcon='chevron-right' selected={isActive('eq')} onTap={() => goToSubPage('eq', '/settings/eq')} testId='settings-eq' />
+            <SettingsRow icon='settings' title={t('settings.storageCache')} subtitle={t('settings.cacheManageSubtitle')} trailingIcon='chevron-right' selected={isActive('cache')} onTap={() => goToSubPage('cache', '/settings/cache')} />
             <SettingsRow
               icon='menu'
               title={t('settings.plugins')}
               subtitle={t('jsplugin.managerSubtitle')}
               trailingIcon='chevron-right'
+              selected={isActive('plugins')}
               onTap={() => goToSubPage('plugins', '/settings/plugins')}
               testId='settings-plugins'
             />
@@ -463,11 +482,12 @@ export function SettingsPage() {
               title={t('jsplugin.tabConfigTitle')}
               subtitle={t('jsplugin.tabConfigSubtitle')}
               trailingIcon='chevron-right'
+              selected={isActive('tab-config')}
               onTap={() => goToSubPage('tab-config', '/settings/tab-config')}
               testId='settings-tab-config'
             />
-            <SettingsRow icon='link' title={t('settings.networkProxy')} subtitle={t('settings.proxySubtitle')} trailingIcon='chevron-right' onTap={() => goToSubPage('proxy', '/settings/proxy')} testId='settings-proxy' />
-            <SettingsRow icon='refresh' title={t('upgrade.title')} subtitle={t('upgrade.subtitle')} trailingIcon='chevron-right' onTap={() => goToSubPage('upgrade', '/settings/upgrade')} testId='settings-upgrade' />
+            <SettingsRow icon='link' title={t('settings.networkProxy')} subtitle={t('settings.proxySubtitle')} trailingIcon='chevron-right' selected={isActive('proxy')} onTap={() => goToSubPage('proxy', '/settings/proxy')} testId='settings-proxy' />
+            <SettingsRow icon='refresh' title={t('upgrade.title')} subtitle={t('upgrade.subtitle')} trailingIcon='chevron-right' selected={isActive('upgrade')} onTap={() => goToSubPage('upgrade', '/settings/upgrade')} testId='settings-upgrade' />
           </SettingsSection>
 
           <DataSection />
@@ -581,12 +601,11 @@ function DataSection() {
 
 /**
  * Renders the appropriate sub-page component in the right pane of the
- * dual-column layout. Returns a placeholder when no sub-page is selected.
+ * dual-column layout. The pane always holds a page — `library` doubles as the
+ * default (see {@link DEFAULT_SUB_PAGE}), so there is no empty state.
  */
 function SettingsDetailPane({ activeSubPage }: { activeSubPage: SettingsSubPage }) {
   switch (activeSubPage) {
-    case 'library':
-      return <LibraryOpsPage />
     case 'servers':
       return <ServerListPage />
     case 'theme-packs':
@@ -607,13 +626,8 @@ function SettingsDetailPane({ activeSubPage }: { activeSubPage: SettingsSubPage 
       return <PluginManagerPage />
     case 'tab-config':
       return <TabConfigPage />
+    case 'library':
     default:
-      return (
-        <view className='settings__detail-placeholder'>
-          <text className='settings__detail-placeholder-text'>
-            Select an item from the list
-          </text>
-        </view>
-      )
+      return <LibraryOpsPage />
   }
 }

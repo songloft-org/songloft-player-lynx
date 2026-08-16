@@ -66,18 +66,6 @@
   min-height: 0;
 }
 
-.settings__detail-placeholder {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-}
-
-.settings__detail-placeholder-text {
-  color: var(--content-muted);
-  font-size: var(--font-md);
-}
-
 /* ─── Logout confirmation dialog ──────────────────────────────────────────── */
 .logout-dialog__backdrop {
   position: fixed;
