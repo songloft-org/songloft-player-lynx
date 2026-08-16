@@ -251,6 +251,25 @@ final class SongloftAudioEngine {
     try? AVAudioSession.sharedInstance().setActive(false)
   }
 
+  // MARK: - Video output
+
+  private var videoOutputAttached = false
+
+  func attachVideoOutput(_ sink: @escaping (AVPlayer) -> Void) {
+    videoOutputAttached = true
+    if let player { sink(player) }
+  }
+
+  func detachVideoOutput() {
+    videoOutputAttached = false
+  }
+
+  func hasVideoTrack() -> Bool {
+    guard let item = player?.currentItem else { return false }
+    guard item.status == .readyToPlay else { return false }
+    return item.tracks.contains { $0.assetTrack?.mediaType == .video }
+  }
+
   // MARK: - Player lifecycle
 
   private func ensurePlayer() -> AVPlayer {

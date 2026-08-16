@@ -121,6 +121,7 @@ class ViewController: UIViewController {
     config.register(SongloftPlatformModule.self)
     config.register(SongloftDlnaModule.self)
     config.register(SongloftTestBridgeModule.self)
+    config.register(SongloftVideoModule.self)
     // LiveActivityModule is @available(iOS 16.2, *) (ActivityKit floor) while the
     // deployment target stays 16.0, so the registration itself needs the guard —
     // referencing the class outside it is a hard compile error, not a runtime one.

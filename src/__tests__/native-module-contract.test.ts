@@ -77,6 +77,7 @@ const hosts = {
   video: {
     android: read(`${ANDROID_VIDEO}/SongloftVideoModule.kt`),
     androidActivity: read(`${ANDROID_VIDEO}/SongloftVideoActivity.kt`),
+    ios: read(`${IOS_DIR}/SongloftVideoModule.swift`),
   },
   liveActivity: {
     ios: read(`${IOS_DIR}/LiveActivityModule.swift`),
@@ -463,6 +464,51 @@ describe('SongloftVideo module surface (Android)', () => {
   })
 })
 
+describe('SongloftVideo module surface (iOS)', () => {
+  const methods = interfaceMethods(read('src/native/video.ts'), 'NativeVideoModule')
+
+  test.each(methods)('SongloftVideoModule.%s exists in Swift with methodLookup', (method) => {
+    expectSwiftMethod(hosts.video.ios, method)
+  })
+
+  test('the close event name matches the TS listener verbatim', () => {
+    expect(hosts.video.ios).toContain('SongloftVideo.closed')
+  })
+
+  test('the engine can lend out the player, and the module hands it back', () => {
+    expect(
+      hosts.audio.ios,
+      'engine exposes no attachVideoOutput — the video screen would open onto nothing',
+    ).toContain('func attachVideoOutput')
+    expect(hosts.audio.ios).toContain('func detachVideoOutput')
+    expect(
+      hosts.video.ios,
+      'the video module never detaches: AVPlayer would keep feeding a dismissed vc',
+    ).toContain('detachVideoOutput')
+  })
+
+  test('updatesNowPlayingInfoCenter is disabled', () => {
+    expect(
+      hosts.video.ios,
+      'AVPlayerViewController would overwrite our lock-screen metadata without this',
+    ).toContain('updatesNowPlayingInfoCenter = false')
+  })
+
+  test('player is nil-ed before dismiss to prevent AVPlayerViewController from pausing', () => {
+    const src = hosts.video.ios
+    const nilIndex = src.indexOf('vc.player = nil')
+    const dismissIndex = src.indexOf('dismiss(animated:')
+    expect(nilIndex, 'vc.player = nil must appear').toBeGreaterThan(-1)
+    expect(dismissIndex, 'dismiss must appear').toBeGreaterThan(-1)
+    expect(nilIndex, 'vc.player = nil must come before dismiss').toBeLessThan(dismissIndex)
+  })
+
+  test('the host refuses to open when there is no video track', () => {
+    expect(hosts.video.ios).toContain('hasVideoTrack')
+    expect(hosts.audio.ios).toContain('func hasVideoTrack')
+  })
+})
+
 describe('SongloftLiveActivity is a proper Lynx module on iOS', () => {
   const src = hosts.liveActivity.ios
   const methods = ['start', 'update', 'end']
@@ -492,7 +538,7 @@ describe('every native module is registered in the host bootstrap', () => {
     { name: 'SongloftDlna', android: 'SongloftDlnaModule', ios: 'SongloftDlnaModule' },
     { name: 'SongloftFloatingLyric', android: 'FloatingLyricModule', ios: null },
     { name: 'SongloftLiveActivity', android: null, ios: 'LiveActivityModule' },
-    { name: 'SongloftVideo', android: 'SongloftVideoModule', ios: null },
+    { name: 'SongloftVideo', android: 'SongloftVideoModule', ios: 'SongloftVideoModule' },
   ]
 
   test.each(modules.filter((m) => m.android))('%s is registered on Android', (mod) => {
