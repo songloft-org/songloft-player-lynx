@@ -23,7 +23,10 @@ export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleF
         ? <image className='song-row__cover' src={cover} />
         : <view className='song-row__cover song-row__cover--empty' />}
       <view className='song-row__meta'>
-        <text className='song-row__title'>{song.title}</text>
+        <view className='song-row__title-row'>
+          <text className='song-row__title'>{song.title}</text>
+          {song.isVideo ? <text className='song-row__video-badge'>▶</text> : null}
+        </view>
         {subtitle
           ? <text className='song-row__subtitle'>{subtitle}</text>
           : null}

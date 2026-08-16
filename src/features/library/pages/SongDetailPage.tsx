@@ -115,7 +115,7 @@ export function SongDetailPage() {
                     </view>
                     <view className='song-detail__row'>
                       <text className='song-detail__row-label'>{t('songDetail.type')}</text>
-                      <text className='song-detail__row-value'>{song.type}</text>
+                      <text className='song-detail__row-value'>{song.type}{song.isVideo ? ' ▶' : ''}</text>
                     </view>
                     {song.genre ? (
                       <view className='song-detail__row'>

@@ -152,6 +152,18 @@
   white-space: nowrap;
 }
 
+.song-row__title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.song-row__video-badge {
+  color: var(--accent);
+  font-size: var(--font-xs);
+  margin-left: var(--space-1);
+}
+
 .song-row__subtitle {
   color: var(--content-muted);
   font-size: var(--font-sm);
