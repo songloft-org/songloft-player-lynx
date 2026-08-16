@@ -389,9 +389,54 @@
     },
   }
 
+  // ── SongloftPlatform module (openURL + file picker) ──
+
+  var songloftPlatform = {
+    openURL: function (url) {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    },
+
+    pickAndUploadFile: function (uploadUrl, fieldName, mimeType, callback) {
+      var input = document.createElement('input')
+      input.type = 'file'
+      input.accept = mimeType || '*/*'
+      input.style.display = 'none'
+      document.body.appendChild(input)
+
+      input.addEventListener('change', function () {
+        var file = input.files && input.files[0]
+        input.remove()
+        if (!file) {
+          callback('cancelled', null)
+          return
+        }
+        var form = new FormData()
+        form.append(fieldName, file)
+        fetch(uploadUrl, { method: 'POST', body: form, credentials: 'same-origin' })
+          .then(function (resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status)
+            return resp.text()
+          })
+          .then(function (text) { callback(null, text) })
+          .catch(function (err) { callback(err.message || 'upload failed', null) })
+      })
+
+      input.addEventListener('cancel', function () {
+        input.remove()
+        callback('cancelled', null)
+      })
+
+      input.click()
+    },
+
+    setInsecureTls: function (_enabled) {
+      // No-op on Web — the browser owns certificate trust.
+    },
+  }
+
   lynxView.nativeModulesMap = Object.assign(
     {},
     lynxView.nativeModulesMap || {},
-    { SongloftAudio: songloftAudio },
+    { SongloftAudio: songloftAudio, SongloftPlatform: songloftPlatform },
   )
 })()
