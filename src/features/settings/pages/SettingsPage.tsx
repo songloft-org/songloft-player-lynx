@@ -44,6 +44,7 @@ import { SettingsSection } from '../widgets/SettingsSection.js'
 import { SwitchRow } from '../widgets/SwitchRow.js'
 import { LibraryOpsPage } from '../../library-ops/pages/LibraryOpsPage.js'
 import { PluginManagerPage } from '../../jsplugin/pages/PluginManagerPage.js'
+import { PluginRegistryPage } from '../../jsplugin/pages/PluginRegistryPage.js'
 import { TabConfigPage } from '../../jsplugin/pages/TabConfigPage.js'
 import { CacheManagePage } from './CacheManagePage.js'
 import { EqualizerPage } from './EqualizerPage.js'
@@ -128,6 +129,7 @@ type SettingsSubPage =
   | 'licenses'
   | 'browse-views'
   | 'plugins'
+  | 'registry'
   | 'tab-config'
 
 /** Sub-page shown in the right pane before the user picks one. */
@@ -561,7 +563,7 @@ export function SettingsPage() {
               title={t('settings.plugins')}
               subtitle={t('jsplugin.managerSubtitle')}
               trailingIcon='chevron-right'
-              selected={isActive('plugins')}
+              selected={isActive('plugins') || (isDualColumn && activeSubPage === 'registry')}
               onTap={() => goToSubPage('plugins', '/settings/plugins')}
               testId='settings-plugins'
             />
@@ -738,7 +740,7 @@ export function SettingsPage() {
       {isDualColumn
         ? (
           <view className='settings__detail' data-testid='settings-detail-pane'>
-            <SettingsDetailPane activeSubPage={activeSubPage} />
+            <SettingsDetailPane activeSubPage={activeSubPage} onOpenSubPage={setActiveSubPage} />
           </view>
         )
         : null}
@@ -821,8 +823,20 @@ function DataSection() {
  * Renders the appropriate sub-page component in the right pane of the
  * dual-column layout. The pane always holds a page — `library` doubles as the
  * default (see {@link DEFAULT_SUB_PAGE}), so there is no empty state.
+ *
+ * `onOpenSubPage` lets a pane swap to another sub-page *without* a route
+ * navigation. The plugin store uses it: `plugins → registry` is a drill-in, and
+ * routing to `/settings/plugins/registry` would unmount this whole master–detail
+ * page and drop the settings list (the wide-screen "first-level" menu). Staying
+ * in the pane keeps it, exactly like every other level-2 sub-page does.
  */
-function SettingsDetailPane({ activeSubPage }: { activeSubPage: SettingsSubPage }) {
+function SettingsDetailPane({
+  activeSubPage,
+  onOpenSubPage,
+}: {
+  activeSubPage: SettingsSubPage
+  onOpenSubPage: (page: SettingsSubPage) => void
+}) {
   switch (activeSubPage) {
     case 'servers':
       return <ServerListPage />
@@ -841,7 +855,9 @@ function SettingsDetailPane({ activeSubPage }: { activeSubPage: SettingsSubPage 
     case 'browse-views':
       return <BrowseViewsPage />
     case 'plugins':
-      return <PluginManagerPage />
+      return <PluginManagerPage onOpenStore={() => onOpenSubPage('registry')} />
+    case 'registry':
+      return <PluginRegistryPage onBack={() => onOpenSubPage('plugins')} />
     case 'tab-config':
       return <TabConfigPage />
     case 'library':

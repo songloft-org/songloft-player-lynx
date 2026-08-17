@@ -195,3 +195,33 @@ test('cancelling the file picker is not an error', async () => {
 
   expect(queryByTestId('plugins-install-error')).not.toBeInTheDocument()
 })
+
+test('the store button routes when the page is standalone', async () => {
+  // Single-column (or a direct /settings/plugins visit) has no settings pane to
+  // stay inside, so the store is a normal route.
+  const { getByTestId } = await renderPage()
+
+  await act(async () => {
+    fireEvent.tap(getByTestId('plugins-store')!)
+  })
+
+  expect(h.navigate).toHaveBeenCalledWith({ to: '/settings/plugins/registry' })
+})
+
+test('the store button defers to onOpenStore inside the settings pane', async () => {
+  // In the wide master–detail layout the page sits in the right pane; routing
+  // would unmount SettingsPage and drop the settings list, so the pane swap wins.
+  const onOpenStore = vi.fn()
+  render(<PluginManagerPage onOpenStore={onOpenStore} />)
+  await act(async () => {
+    await Promise.resolve()
+  })
+  const { getByTestId } = getQueriesForElement(elementTree.root!)
+
+  await act(async () => {
+    fireEvent.tap(getByTestId('plugins-store')!)
+  })
+
+  expect(onOpenStore).toHaveBeenCalledTimes(1)
+  expect(h.navigate).not.toHaveBeenCalled()
+})

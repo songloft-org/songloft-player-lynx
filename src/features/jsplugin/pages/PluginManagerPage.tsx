@@ -15,7 +15,7 @@ import {
 } from '../data/jsplugin-mutations.js'
 import './PluginManagerPage.css'
 
-export function PluginManagerPage() {
+export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { data, isLoading, isError, refetch } = usePluginsQuery()
@@ -61,6 +61,20 @@ export function PluginManagerPage() {
     updateAllMutation.mutate()
   }
 
+  /**
+   * Open the plugin store. In the wide settings master–detail this page sits in
+   * the right pane and `onOpenStore` swaps the pane to the registry in place —
+   * a route navigation would unmount SettingsPage and drop the settings list. As
+   * a standalone route (single-column) there is no pane, so fall back to routing.
+   */
+  const onStore = () => {
+    if (onOpenStore) {
+      onOpenStore()
+    } else {
+      navigate({ to: '/settings/plugins/registry' })
+    }
+  }
+
   const onInstallFromFile = async () => {
     if (installing) return
     setInstalling(true)
@@ -100,7 +114,7 @@ export function PluginManagerPage() {
               {installing ? t('common.loading') : t('jsplugin.installFromFile')}
             </text>
           </view>
-          <view className='plugin-manager__action-btn' bindtap={() => navigate({ to: '/settings/plugins/registry' })} data-testid='plugins-store'>
+          <view className='plugin-manager__action-btn' bindtap={onStore} data-testid='plugins-store'>
             <text className='plugin-manager__action-text'>{t('jsplugin.store')}</text>
           </view>
           <view

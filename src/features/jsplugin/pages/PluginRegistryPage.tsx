@@ -9,7 +9,7 @@ import { getJSPluginApi } from '../api/index.js'
 import { useInstallFromRegistryMutation } from '../data/jsplugin-mutations.js'
 import './PluginRegistryPage.css'
 
-export function PluginRegistryPage() {
+export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const installMutation = useInstallFromRegistryMutation()
@@ -48,6 +48,20 @@ export function PluginRegistryPage() {
     if (page > 1) doFetch(page - 1, search)
   }
 
+  /**
+   * Return to the plugin manager. In the wide settings master–detail this page
+   * sits in the right pane and `onBack` swaps the pane back in place; as a
+   * standalone route (single-column) fall back to routing. Mirrors
+   * `PluginManagerPage.onStore`.
+   */
+  const goBack = () => {
+    if (onBack) {
+      onBack()
+    } else {
+      navigate({ to: '/settings/plugins' })
+    }
+  }
+
   const onInstall = (plugin: RegistryPluginEntry) => {
     // If a conflict is reported and the user hasn't confirmed, show the warning.
     if (plugin.conflict && confirmConflict !== plugin.entryPath) {
@@ -78,7 +92,7 @@ export function PluginRegistryPage() {
       <view className='plugin-registry__topbar'>
         <view
           className='plugin-registry__back'
-          bindtap={() => navigate({ to: '/settings/plugins' })}
+          bindtap={goBack}
           data-testid='registry-back'
         >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
