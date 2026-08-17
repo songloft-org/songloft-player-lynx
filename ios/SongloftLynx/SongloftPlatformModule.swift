@@ -23,6 +23,9 @@ final class SongloftPlatformModule: NSObject, LynxModule {
       "setInsecureTls": NSStringFromSelector(
         #selector(SongloftPlatformModule.setInsecureTls(_:))
       ),
+      "setClipboard": NSStringFromSelector(
+        #selector(SongloftPlatformModule.setClipboard(_:))
+      ),
     ]
   }
 
@@ -38,6 +41,13 @@ final class SongloftPlatformModule: NSObject, LynxModule {
    */
   @objc func setInsecureTls(_ enabled: Bool) {
     InsecureTls.shared.update(enabled)
+  }
+
+  /// Copy `text` to the system clipboard. `UIPasteboard` is main-thread-only.
+  @objc func setClipboard(_ text: String) {
+    DispatchQueue.main.async {
+      UIPasteboard.general.string = text
+    }
   }
 
   @objc func openURL(_ url: String) {

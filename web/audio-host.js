@@ -452,7 +452,22 @@
     },
   }
 
-  // ── SongloftPlatform module (openURL + file picker) ──
+  // ── SongloftPlatform module (openURL + file picker + clipboard) ──
+
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement('textarea')
+      ta.value = text
+      ta.setAttribute('readonly', '')
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      ta.remove()
+    } catch (e) { /* nothing further to try */ }
+  }
+
 
   var songloftPlatform = {
     openURL: function (url) {
@@ -490,6 +505,20 @@
       })
 
       input.click()
+    },
+
+    setClipboard: function (text) {
+      // `navigator.clipboard` needs a secure context, and this call arrives a
+      // bridge hop away from the user gesture, so the async API can be rejected
+      // for lost user activation. The textarea + execCommand path has no such
+      // requirement and is the fallback rather than the primary.
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text)['catch'](function () { legacyCopy(text) })
+          return
+        }
+      } catch (e) { /* fall through */ }
+      legacyCopy(text)
     },
 
     setInsecureTls: function (_enabled) {

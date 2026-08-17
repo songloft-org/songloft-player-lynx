@@ -1,6 +1,8 @@
 package org.songloft.lynx.platform
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -31,6 +33,24 @@ class SongloftPlatformModule(context: Context) : LynxModule(context) {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 mContext.startActivity(intent)
+            } catch (_: Throwable) {}
+        }
+    }
+
+    /**
+     * Copy `text` to the system clipboard.
+     *
+     * Posted to the main thread deliberately: module methods run on the Lynx JS
+     * thread, and `ClipboardManager.setPrimaryClip` reaches into window-owned
+     * state — the same trap that silently killed the floating lyric overlay
+     * (batch 48), where a bare `catch` swallowed the wrong-thread exception.
+     */
+    @LynxMethod
+    fun setClipboard(text: String) {
+        mainHandler.post {
+            try {
+                val manager = mContext.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                manager?.setPrimaryClip(ClipData.newPlainText("songloft", text))
             } catch (_: Throwable) {}
         }
     }

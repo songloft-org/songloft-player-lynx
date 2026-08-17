@@ -6,11 +6,31 @@ import { Input, TextArea } from '@lynx-js/lynx-ui-input'
 
 import { apiPrefix, appConfig } from '../../../core/config/app-config.js'
 import { getCachedAccessToken } from '../../../core/network/token-cache.js'
+import { copyToClipboard } from '../../../native/native-platform.js'
 import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
-import { Icon } from '../../../shared/ui/Icon.js'
+import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import './ProxySettingsPage.css'
+
+/**
+ * The prompt handed to an AI to find working GitHub mirrors, ported verbatim from
+ * the Flutter reference (`github_proxy_dialog.dart`).
+ *
+ * Deliberately **not** an i18n key: it is not UI copy, it is the text the user
+ * pastes into a chat. Translating it would mean maintaining two prompts that must
+ * stay semantically identical, and the reference keeps a single Chinese constant
+ * for the same reason.
+ *
+ * Exported so its content can be asserted without rendering the page — this page
+ * loads its four settings with raw `fetch` inside an effect (every other settings
+ * page goes through the api + query layer), and that loading gate does not flush
+ * in the ReactLynx test harness.
+ */
+export const AI_PROMPT = '请帮我找几个目前可用的 GitHub 文件加速/反代服务（GitHub proxy mirror），'
+  + '要求：1) 免费、无需注册；2) 支持代理 github.com 和 raw.githubusercontent.com 的文件下载；'
+  + '3) 用法是在原始 URL 前拼接代理前缀，如 https://代理地址/https://github.com/...。'
+  + '请给出 3-5 个可用的代理地址（以 https:// 开头、/ 结尾），并注明各自的特点。'
 
 interface ProxyState {
   httpProxy: string
@@ -31,6 +51,7 @@ export function ProxySettingsPage() {
   })
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
+  const [promptCopied, setPromptCopied] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -130,6 +151,25 @@ export function ProxySettingsPage() {
                   placeholder='http://proxy:8080'
                   onInput={(value: string) => setState(s => ({ ...s, githubProxy: value }))}
                 />
+                {/*
+                  Finding a working mirror is the hard part of this field — they
+                  come and go — so the reference offers the prompt rather than a
+                  preset list that would rot. Same affordance here.
+                */}
+                <view
+                  className='proxy-settings__prompt-btn'
+                  bindtap={() => {
+                    copyToClipboard(AI_PROMPT)
+                    setPromptCopied(true)
+                    setTimeout(() => setPromptCopied(false), 2000)
+                  }}
+                  data-testid='github-copy-prompt'
+                >
+                  <Icon name='info' size={14} color={ICON_COLORS.primary} />
+                  <text className='proxy-settings__prompt-text'>
+                    {promptCopied ? t('proxy.githubPromptCopied') : t('proxy.githubCopyPrompt')}
+                  </text>
+                </view>
               </view>
             </SettingsSection>
 

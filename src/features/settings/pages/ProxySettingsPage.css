@@ -135,3 +135,20 @@
   font-size: var(--font-sm);
   font-weight: 600;
 }
+
+/* "Copy prompt to ask AI" — a text affordance under the GitHub proxy field, not a
+   filled button: it is a helper, not the field's primary action. */
+.proxy-settings__prompt-btn {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  align-self: flex-start;
+  margin-top: var(--space-3);
+  padding: var(--space-1) 0;
+}
+
+.proxy-settings__prompt-text {
+  color: var(--accent);
+  font-size: var(--font-sm);
+  margin-left: var(--space-2);
+}
