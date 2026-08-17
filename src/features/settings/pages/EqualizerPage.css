@@ -104,7 +104,7 @@
 }
 
 .eq-page__band-slider-wrap {
-  height: 260px;
+  height: 180px;
   width: 36px;
   display: flex;
   align-items: center;
@@ -112,17 +112,17 @@
 }
 
 .eq-page__band-slider {
-  width: 260px;
+  width: 180px;
   height: 36px;
   transform: rotate(-90deg);
 }
 
 .eq-page__band-track {
   position: relative;
-  height: 4px;
+  height: 6px;
   width: 100%;
   background-color: var(--neutral-faint);
-  border-radius: 2px;
+  border-radius: 3px;
 }
 
 .eq-page__band-indicator {
