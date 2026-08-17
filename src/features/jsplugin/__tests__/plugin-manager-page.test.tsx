@@ -50,11 +50,14 @@ vi.mock('../../../native/native-platform.js', () => ({
   pickAndUploadFile: h.pickAndUpload,
 }))
 
-// lynx-ui Dialog renders through a portal-ish tree; the stub keeps the controlled
-// `show` semantics, which is all these assertions depend on.
+// lynx-ui Dialog keeps its tree **mounted** while the panel animates out — `show`
+// only toggles the animation, not the subtree. The stub reproduces that (marking
+// the hidden state instead of unmounting), because unmounting would hide exactly
+// the regression these tests pin: a dialog whose subject is cleared while it is
+// still visible on screen.
 vi.mock('@lynx-js/lynx-ui', () => ({
   DialogRoot: ({ children, show }: { children: ReactNode; show: boolean }) =>
-    show ? <view>{children}</view> : null,
+    <view data-testid='stub-dialogroot' data-dialoghidden={show ? 'false' : 'true'}>{children}</view>,
   DialogView: ({ children }: { children: ReactNode }) => <view>{children}</view>,
   DialogBackdrop: ({ children }: { children: ReactNode }) => <view>{children}</view>,
   DialogContent: ({ children }: { children: ReactNode }) => <view>{children}</view>,
@@ -90,26 +93,58 @@ async function renderPage() {
   return getQueriesForElement(elementTree.root!)
 }
 
+/**
+ * The dialog is mounted but hidden until something is being deleted. The
+ * visibility marker lives on the stub's root wrapper, not on the inner panel.
+ */
+function dialogState(queryByTestId: (id: string) => Element | null) {
+  const root = queryByTestId('stub-dialogroot')
+  const panel = queryByTestId('plugin-delete-dialog')
+  return {
+    mounted: panel !== null,
+    visible: root?.getAttribute('data-dialoghidden') === 'false',
+    text: panel?.textContent ?? '',
+  }
+}
+
 test('tapping delete asks instead of deleting', async () => {
   const { queryByTestId, getByTestId } = await renderPage()
-  expect(queryByTestId('plugin-delete-dialog')).not.toBeInTheDocument()
+  expect(dialogState(queryByTestId).visible).toBe(false)
 
   await act(async () => {
     fireEvent.tap(getByTestId('plugin-delete-7'))
   })
 
-  expect(queryByTestId('plugin-delete-dialog')).toBeInTheDocument()
+  expect(dialogState(queryByTestId).visible).toBe(true)
   expect(h.del).not.toHaveBeenCalled()
 })
 
 test('the dialog names the plugin it is about to remove', async () => {
   // Without the name, a mis-tap on a list of seven plugins is unrecoverable.
-  const { getByTestId } = await renderPage()
+  const { getByTestId, queryByTestId } = await renderPage()
   await act(async () => {
     fireEvent.tap(getByTestId('plugin-delete-7'))
   })
-  // Scoped to the dialog: the list row behind it carries the same name.
-  expect(getByTestId('plugin-delete-dialog').textContent).toContain('歌曲下载')
+  expect(dialogState(queryByTestId).text).toContain('歌曲下载')
+})
+
+test('the name survives the close animation', async () => {
+  // The reported bug: cancelling cleared the subject while lynx-ui was still
+  // animating the panel out, so the dialog lingered reading 「将删除「」…」. The
+  // subject must outlive the close.
+  const { getByTestId, queryByTestId } = await renderPage()
+
+  await act(async () => {
+    fireEvent.tap(getByTestId('plugin-delete-7'))
+  })
+  await act(async () => {
+    fireEvent.tap(getByTestId('plugin-delete-cancel'))
+  })
+
+  const state = dialogState(queryByTestId)
+  expect(state.visible).toBe(false)
+  expect(state.text).toContain('歌曲下载')
+  expect(state.text).not.toContain('「」')
 })
 
 test('confirming deletes, cancelling does not', async () => {
@@ -122,7 +157,7 @@ test('confirming deletes, cancelling does not', async () => {
     fireEvent.tap(getByTestId('plugin-delete-cancel'))
   })
   expect(h.del).not.toHaveBeenCalled()
-  expect(queryByTestId('plugin-delete-dialog')).not.toBeInTheDocument()
+  expect(dialogState(queryByTestId).visible).toBe(false)
 
   await act(async () => {
     fireEvent.tap(getByTestId('plugin-delete-7'))
@@ -130,7 +165,7 @@ test('confirming deletes, cancelling does not', async () => {
   await act(async () => {
     fireEvent.tap(getByTestId('plugin-delete-confirm'))
   })
-  expect(h.del).toHaveBeenCalledWith(7, expect.anything())
+  expect(h.del).toHaveBeenCalledWith(7)
 })
 
 test('a failed install surfaces the reason instead of doing nothing', async () => {

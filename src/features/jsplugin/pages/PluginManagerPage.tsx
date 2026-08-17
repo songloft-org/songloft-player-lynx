@@ -25,8 +25,17 @@ export function PluginManagerPage() {
   const deleteMutation = useDeletePluginMutation()
   const updateAllMutation = useUpdateAllPluginsMutation()
 
-  // The plugin awaiting deletion, held whole so the dialog can name it.
+  /*
+   * The dialog's visibility and its subject are separate state on purpose. Driving
+   * `show` off `pendingDelete !== null` meant cancelling cleared the subject while
+   * lynx-ui was still animating the panel out — so for the length of that
+   * animation the dialog stayed on screen reading 「将删除「」…」 with an empty
+   * name, which is what got reported as "cancel shows an extra screen".
+   * The subject now outlives the close and is only replaced when the next delete
+   * opens.
+   */
   const [pendingDelete, setPendingDelete] = useState<JSPlugin | null>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const [installing, setInstalling] = useState(false)
   const [installError, setInstallError] = useState<string | null>(null)
 
@@ -44,9 +53,8 @@ export function PluginManagerPage() {
   const onConfirmDelete = () => {
     const plugin = pendingDelete
     if (!plugin) return
-    deleteMutation.mutate(plugin.id, {
-      onSettled: () => setPendingDelete(null),
-    })
+    setDeleteOpen(false)
+    deleteMutation.mutate(plugin.id)
   }
 
   const onUpdateAll = () => {
@@ -150,7 +158,7 @@ export function PluginManagerPage() {
                         </view>
                         <view
                           className='plugin-manager__delete'
-                          bindtap={() => setPendingDelete(plugin)}
+                          bindtap={() => { setPendingDelete(plugin); setDeleteOpen(true) }}
                           data-testid={`plugin-delete-${plugin.id}`}
                         >
                           <Icon name='x' size={16} color={ICON_COLORS.contentMuted} />
@@ -163,12 +171,12 @@ export function PluginManagerPage() {
       </scroll-view>
 
       <ConfirmDialog
-        show={pendingDelete !== null}
+        show={deleteOpen}
         title={t('jsplugin.uninstallTitle')}
         message={t('jsplugin.uninstallMessage', { name: pendingDelete?.displayName ?? '' })}
         confirmLabel={t('jsplugin.uninstallConfirm')}
         onConfirm={onConfirmDelete}
-        onCancel={() => setPendingDelete(null)}
+        onCancel={() => setDeleteOpen(false)}
         testId='plugin-delete-dialog'
         confirmTestId='plugin-delete-confirm'
         cancelTestId='plugin-delete-cancel'

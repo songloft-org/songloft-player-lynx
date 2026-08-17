@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
+  '@lynx-js/web-core@0.23.1':
+    hash: 8a2ddbb1ba9ae7ae67810da16fc1e0732aa95a3cb6beb90d3fb20af26f927cee
+    path: patches/@lynx-js__web-core@0.23.1.patch
   '@tanstack/router-core@1.171.18':
     hash: 1242e2f333e119e37f7900cbfa74ae52216db40b09867d3375cbeffdf3ce38dd
     path: patches/@tanstack__router-core@1.171.18.patch
@@ -83,6 +86,9 @@ importers:
       '@lynx-js/types':
         specifier: 4.0.0
         version: 4.0.0
+      '@lynx-js/web-core':
+        specifier: 0.23.1
+        version: 0.23.1(patch_hash=8a2ddbb1ba9ae7ae67810da16fc1e0732aa95a3cb6beb90d3fb20af26f927cee)(@lynx-js/css-serializer@0.1.7)(tslib@2.8.1)
       '@rsbuild/plugin-type-check':
         specifier: 1.5.0
         version: 1.5.0(@rsbuild/core@2.1.7)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(typescript@6.0.3)
@@ -1299,9 +1305,6 @@ packages:
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
-
-  '@types/node@26.1.2':
-    resolution: {integrity: sha512-Vu4a5UFA9rIIFJ7rB/Vaafh9lrCQszopTCx6KjFboXTGQbPNasehVR5TEiithSDGyd1DEiUByggTZsg8jukeIg==}
 
   '@types/node@26.2.0':
     resolution: {integrity: sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg==}
@@ -4055,7 +4058,7 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.31
       '@lynx-js/css-serializer': 0.1.7
       '@lynx-js/tasm': 0.0.49
-      '@lynx-js/web-core': 0.23.1(@lynx-js/css-serializer@0.1.7)(tslib@2.8.1)
+      '@lynx-js/web-core': 0.23.1(patch_hash=8a2ddbb1ba9ae7ae67810da16fc1e0732aa95a3cb6beb90d3fb20af26f927cee)(@lynx-js/css-serializer@0.1.7)(tslib@2.8.1)
       '@lynx-js/webpack-runtime-globals': 0.0.7
       '@rspack/lite-tapable': 1.1.2
       css-tree: 3.2.1
@@ -4073,7 +4076,7 @@ snapshots:
     dependencies:
       '@lynx-js/react': 0.123.2(@lynx-js/types@4.0.0)(@types/react@19.2.18)
 
-  '@lynx-js/web-core@0.23.1(@lynx-js/css-serializer@0.1.7)(tslib@2.8.1)':
+  '@lynx-js/web-core@0.23.1(patch_hash=8a2ddbb1ba9ae7ae67810da16fc1e0732aa95a3cb6beb90d3fb20af26f927cee)(@lynx-js/css-serializer@0.1.7)(tslib@2.8.1)':
     dependencies:
       '@lynx-js/web-elements': 0.12.7(tslib@2.8.1)
       '@lynx-js/web-worker-rpc': 0.23.1
@@ -4557,10 +4560,6 @@ snapshots:
   '@types/js-cookie@3.0.6': {}
 
   '@types/json-schema@7.0.15': {}
-
-  '@types/node@26.1.2':
-    dependencies:
-      undici-types: 8.3.0
 
   '@types/node@26.2.0':
     dependencies:
@@ -5609,7 +5608,7 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 26.1.2
+      '@types/node': 26.2.0
       merge-stream: 2.0.0
       supports-color: 8.1.1
 

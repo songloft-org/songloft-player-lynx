@@ -103,6 +103,68 @@ describe('web/index.html references files the build actually ships', () => {
 })
 
 /**
+ * `nativeModulesMap` values are **ESM URLs** the background worker `import()`s.
+ * web-core does `Promise.all` over every entry, so a single value that is not a
+ * resolvable URL — a plain object, or a path to a file that was never created /
+ * copied — rejects the whole lot and `NativeModules` loses *every* custom module.
+ * That is exactly how the file picker, the clipboard and Web audio were all
+ * silently dead at once. These assertions keep each registered URL pointing at a
+ * real file that the copy script ships.
+ */
+describe('nativeModulesMap points at real, shipped ESM modules', () => {
+  const host = read('web/audio-host.js')
+  const copyScript = read('scripts/copy-bundle-web.mjs')
+
+  // Registration lines look like `SongloftAudio: '/songloft-audio-module.js',`.
+  // Matching the whole file is safe: the dispatch site uses `=== 'SongloftAudio'`
+  // (no colon) and the adapter variables are lowercase `songloftAudio`.
+  const entries = [...host.matchAll(/Songloft\w+\s*:\s*([^,\n]+)/g)]
+    .map((m) => m[1]!.trim())
+
+  test('the map registers at least the platform and audio modules', () => {
+    expect(entries).toContain("'/songloft-platform-module.js'")
+    expect(entries).toContain("'/songloft-audio-module.js'")
+  })
+
+  test('every registered value is a URL string, not a plain object', () => {
+    // A non-string value is the regression that sank everything: web-core does
+    // `import(value)`, so an object becomes `import("[object Object]")`, rejects,
+    // and `Promise.all` drops *every* custom module at once.
+    for (const value of entries) {
+      expect(
+        value.startsWith("'") && value.endsWith("'"),
+        `nativeModulesMap entry must be a URL string, got: ${value}`,
+      ).toBe(true)
+    }
+  })
+
+  const moduleUrls = entries
+    .filter((v) => v.startsWith("'"))
+    .map((v) => v.slice(1, -1))
+
+  test.each(moduleUrls)('%s exists in web/ and is copied by the deploy script', (url) => {
+    const file = url.replace(/^\//, '')
+    expect(
+      existsSync(path.join(repoRoot, 'web', file)),
+      `web/${file} is registered in nativeModulesMap but does not exist`,
+    ).toBe(true)
+    expect(
+      copyScript,
+      `copy-bundle-web.mjs must copy ${file} or the deployed product 404s on it`,
+    ).toContain(`'${file}'`)
+  })
+
+  test.each(moduleUrls)('%s has a default-export factory', (url) => {
+    const file = url.replace(/^\//, '')
+    const src = read(path.join('web', file))
+    expect(
+      src,
+      `${file} must default-export the (nativeModules, call) => module factory web-core invokes`,
+    ).toMatch(/export default function/)
+  })
+})
+
+/**
  * The divergence that hid the bug: two copies of the same web-core, differing
  * only in entry filename. Keep the dev server and the deployable on one set.
  */

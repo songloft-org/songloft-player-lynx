@@ -77,11 +77,19 @@ if (existsSync(htmlSrc)) {
   copyFileSync(htmlSrc, htmlDest)
 }
 
-// Copy audio-host.js (main-thread audio adapter registered as a native module).
-const audioHostSrc = resolve(repoRoot, 'web', 'audio-host.js')
-const audioHostDest = resolve(DEST_BASE, 'audio-host.js')
-if (existsSync(audioHostSrc)) {
-  copyFileSync(audioHostSrc, audioHostDest)
+/*
+ * Copy the main-thread host scripts.
+ *
+ * The `songloft-*-module.js` files are not optional decoration: `nativeModulesMap`
+ * points the background worker at those **URLs**, so if one is missing from the
+ * deployed product the import rejects and `NativeModules` loses every custom
+ * module. A `web:sync` that forgets them looks fine and breaks the file picker,
+ * the clipboard, audio — anything on those modules.
+ */
+for (const name of ['audio-host.js', 'hls.min.js', 'songloft-platform-module.js', 'songloft-audio-module.js']) {
+  const src = resolve(repoRoot, 'web', name)
+  if (!existsSync(src)) throw new Error(`[copy-bundle-web] missing host script: ${name}`)
+  copyFileSync(src, resolve(DEST_BASE, name))
 }
 
 console.log(`[copy-bundle-web] Deployed to ${DEST_BASE}`)

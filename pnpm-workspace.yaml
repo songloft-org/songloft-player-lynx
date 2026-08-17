@@ -1,4 +1,6 @@
 allowBuilds:
   esbuild: true
+
 patchedDependencies:
+  '@lynx-js/web-core@0.23.1': patches/@lynx-js__web-core@0.23.1.patch
   '@tanstack/router-core@1.171.18': patches/@tanstack__router-core@1.171.18.patch

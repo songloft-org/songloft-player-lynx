@@ -144,6 +144,22 @@ const server = createServer((req, res) => {
     return
   }
 
+  // Route: root-level static files from the web/ source directory
+  // (audio-host.js, songloft-platform-module.js, songloft-audio-module.js)
+  {
+    const requested = url.slice(1) // strip leading /
+    // Only serve top-level files; reject paths that would escape the directory.
+    if (requested && !requested.includes('/') && !requested.includes('\\')) {
+      const filePath = resolve(__dirname, requested)
+      // Safety: ensure the resolved path is still directly under __dirname
+      if (filePath.startsWith(__dirname + '/') && existsSync(filePath)) {
+        const ext = extname(filePath)
+        const mime = MIME[ext] ?? 'application/octet-stream'
+        return serveFile(res, filePath, mime)
+      }
+    }
+  }
+
   // Fallback: 404
   res.writeHead(404, { 'Content-Type': 'text/plain' })
   res.end('Not found')

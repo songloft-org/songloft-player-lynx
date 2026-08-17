@@ -389,69 +389,6 @@
     },
   }
 
-  // ── SongloftStorage module (IndexedDB) ──
-
-  var DB_NAME = 'songloft_storage'
-  var DB_VERSION = 1
-  var dbReady = null
-
-  function openDb() {
-    if (dbReady) return dbReady
-    dbReady = new Promise(function (resolve, reject) {
-      var req = indexedDB.open(DB_NAME, DB_VERSION)
-      req.onupgradeneeded = function (e) {
-        var db = e.target.result
-        if (!db.objectStoreNames.contains('prefs')) db.createObjectStore('prefs')
-        if (!db.objectStoreNames.contains('secure')) db.createObjectStore('secure')
-      }
-      req.onsuccess = function (e) { resolve(e.target.result) }
-      req.onerror = function () { reject(req.error) }
-    })
-    return dbReady
-  }
-
-  var songloftStorage = {
-    getItem: function (area, key, callback) {
-      openDb().then(function (db) {
-        var store = area === 'secure' ? 'secure' : 'prefs'
-        var tx = db.transaction(store, 'readonly')
-        var req = tx.objectStore(store).get(key)
-        req.onsuccess = function () { callback(req.result !== undefined ? req.result : null) }
-        req.onerror = function () { callback(null) }
-      }).catch(function () { callback(null) })
-    },
-
-    setItem: function (area, key, value) {
-      openDb().then(function (db) {
-        var store = area === 'secure' ? 'secure' : 'prefs'
-        var tx = db.transaction(store, 'readwrite')
-        tx.objectStore(store).put(value, key)
-      }).catch(function () {})
-    },
-
-    removeItem: function (area, key) {
-      openDb().then(function (db) {
-        var store = area === 'secure' ? 'secure' : 'prefs'
-        var tx = db.transaction(store, 'readwrite')
-        tx.objectStore(store).delete(key)
-      }).catch(function () {})
-    },
-
-    getKeys: function (area, callback) {
-      openDb().then(function (db) {
-        var store = area === 'secure' ? 'secure' : 'prefs'
-        var tx = db.transaction(store, 'readonly')
-        var req = tx.objectStore(store).getAllKeys()
-        req.onsuccess = function () { callback(req.result || []) }
-        req.onerror = function () { callback([]) }
-      }).catch(function () { callback([]) })
-    },
-
-    getPath: function (name, callback) {
-      callback('/web-virtual/' + name)
-    },
-  }
-
   // ── SongloftPlatform module (openURL + file picker + clipboard) ──
 
   function legacyCopy(text) {
@@ -526,9 +463,67 @@
     },
   }
 
+  /*
+   * Registration, in the shape web-core actually consumes.
+   *
+   * `nativeModulesMap`'s values are **ESM URLs** that the background worker
+   * `import()`s; the default export is a factory `(nativeModules, call) => module`.
+   * This file used to hand it the objects below directly, which made every entry
+   * `import("[object Object]")` — the import rejected, `Promise.all` in
+   * `createNativeModules` rejected with it, and `NativeModules` was left holding
+   * only web-core's own `bridge` and `LynxExposureModule`. So *none* of the modules
+   * existed on Web, silently: the plugin file picker said "SongloftPlatform native
+   * module not available", the clipboard write did nothing, and the Web audio fix
+   * from batch 43 never took effect (the facade fell through to the silent mock).
+   *
+   * `SongloftStorage` is deliberately **not** registered. The worker already has a
+   * working IndexedDB backend (`core/storage/idb-storage.ts`, DB `songloft`), and
+   * this file's storage object uses a *different* DB (`songloft_storage`) — wiring
+   * it in would switch the backend out from under the persisted login token and
+   * log the user out on refresh. Leaving it out lets storage detection fall through
+   * to `idb-storage`, exactly as it does today.
+   */
   lynxView.nativeModulesMap = Object.assign(
     {},
     lynxView.nativeModulesMap || {},
-    { SongloftAudio: songloftAudio, SongloftStorage: songloftStorage, SongloftPlatform: songloftPlatform },
+    {
+      SongloftAudio: '/songloft-audio-module.js',
+      SongloftPlatform: '/songloft-platform-module.js',
+    },
   )
+
+  /** Main-thread half of `SongloftPlatform`: this is where the DOM lives. */
+  var platformHandlers = {
+    openURL: function (args) {
+      songloftPlatform.openURL(args[0])
+    },
+    setClipboard: function (args) {
+      songloftPlatform.setClipboard(args[0])
+    },
+    pickAndUploadFile: function (args) {
+      return new Promise(function (resolve) {
+        songloftPlatform.pickAndUploadFile(args[0], args[1], args[2], function (error, body) {
+          resolve({ error: error, body: body })
+        })
+      })
+    },
+  }
+
+  var previousCall = lynxView.onNativeModulesCall
+  lynxView.onNativeModulesCall = function (name, data, moduleName) {
+    if (moduleName === 'SongloftPlatform') {
+      var handler = platformHandlers[name]
+      if (handler) return handler(data || [])
+      return undefined
+    }
+    if (moduleName === 'SongloftAudio') {
+      // Every audio method is fire-and-forget with positional args, so relay
+      // straight to the HTMLAudioElement adapter. Playback events return via
+      // `sendGlobalEvent`, not this channel.
+      var fn = songloftAudio[name]
+      if (typeof fn === 'function') return fn.apply(songloftAudio, data || [])
+      return undefined
+    }
+    return previousCall ? previousCall(name, data, moduleName) : undefined
+  }
 })()

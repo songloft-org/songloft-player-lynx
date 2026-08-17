@@ -1,0 +1,19 @@
+diff --git a/dist/client/mainthread/LynxView.js b/dist/client/mainthread/LynxView.js
+index 037109820dc709e61424b6f5c4d02d6e8acbd807..8e0178e913452193ffb194ca9a2760322691178f 100644
+--- a/dist/client/mainthread/LynxView.js
++++ b/dist/client/mainthread/LynxView.js
+@@ -71,7 +71,13 @@ export class LynxViewElement extends HTMLElement {
+      * @property nativeModulesMap
+      * @default {}
+      */
+-    nativeModulesMap;
++    #nativeModulesMap;
++    get nativeModulesMap() {
++        return this.#nativeModulesMap;
++    }
++    set nativeModulesMap(val) {
++        this.#nativeModulesMap = val;
++    }
+     /**
+      * @param
+      * @property napiModulesMap

@@ -29,14 +29,6 @@
       display: block;
     }
   </style>
-  <!--
-    audio-host.js MUST load before the web-core client module so
-    nativeModulesMap is populated when the LynxView custom element upgrades.
-    It registers a main-thread HTMLAudioElement as NativeModules.SongloftAudio,
-    unlocking the same NativeSongloftAudio path used on Android/iOS.
-  -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
-  <script src="/audio-host.js"></script>
 </head>
 <body>
   <!-- Remove transform-vh/vw: they cause content height mismatch and pull-to-refresh -->
@@ -44,6 +36,19 @@
     id="app"
     url="/main.lynx.bundle"
   ></lynx-view>
+
+  <!--
+    audio-host.js MUST load before the web-core client module so
+    nativeModulesMap is populated when the LynxView custom element upgrades.
+    It registers a main-thread HTMLAudioElement as NativeModules.SongloftAudio,
+    unlocking the same NativeSongloftAudio path used on Android/iOS.
+
+    It is placed AFTER the <lynx-view> element (so document.getElementById('app')
+    finds it) but BEFORE the web-core client module (so nativeModulesMap is set
+    before the custom element upgrades and reads it).
+  -->
+  <script src="/hls.min.js"></script>
+  <script src="/audio-host.js"></script>
 
   <!--
     `type="module"` is REQUIRED, not stylistic: web-core's production client
