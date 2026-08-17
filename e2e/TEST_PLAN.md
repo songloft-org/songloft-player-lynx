@@ -123,7 +123,7 @@
 | # | 测试用例 | 验证点 |
 |---|---------|--------|
 | 1 | 加载列表详情（名称、歌曲数） | playlist query 数据完整 |
-| 2 | 点击歌曲播放整个列表 | player playlist 匹配，sourcePlaylistId 正确 |
+| 2 | 点击歌曲播放整个列表 | player playlist 匹配，`playbackContext` 为 `{type:'playlist',key:'<id>'}`（`sourcePlaylistId` 由它派生） |
 | 3 | 搜索列表内歌曲 | keyword 过滤生效 |
 | 4 | 排序切换（位置/标题/艺术家/最近） | sortBy 字段变化 |
 | 5 | 编辑列表名称 | mutation 成功，名称更新 |
@@ -149,13 +149,14 @@
 
 ### 9. 播放历史 (`play-history.scenario.ts`)
 
-**路由：** `/library/history`
+**入口：** 歌单详情页 / 分类歌曲页的历史按钮打开的面板（**没有**独立路由，也没有设置页入口 —— 历史按播放上下文分桶，脱离上下文无从查询）
+
+历史的读取从 **Node 侧**发 HTTP，不走 `evaluateJS`（Lynx BTS 无 `fetch`）。断言落在服务端状态上：只断言"歌在播"会让一个完全不落库的客户端照样绿灯，这正是之前发生过的事。
 
 | # | 测试用例 | 验证点 |
 |---|---------|--------|
-| 1 | 播放一首歌后查看历史 | 历史列表包含刚播放的歌曲 |
-| 2 | 历史列表按时间倒序 | 最新播放在最前 |
-| 3 | 清空播放历史 | 列表变空 |
+| 1 | 带 playlist 上下文起播 | `GET /play-history?context_type=playlist&context_key=1` 出现该歌 |
+| 2 | 不带上下文起播 | 该桶仍为空，且 store 的 `playbackContext` 为 null |
 
 ---
 

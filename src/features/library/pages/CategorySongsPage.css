@@ -40,13 +40,32 @@
   background-color: var(--neutral-faint);
 }
 
+/* Holds "play all" + the history button; owns the flush-right margin so the two
+   do not each claim a share of the free space. */
+.category-songs__topbar-right {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
 .category-songs__play-all {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  margin-left: auto;
+}
+
+.category-songs__icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background-color: var(--neutral-faint);
 }
 
 .category-songs__play-all-text {

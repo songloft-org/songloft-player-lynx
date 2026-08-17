@@ -15,7 +15,9 @@ import { flattenSongs } from '../../library/data/pagination.js'
 import { SongRow } from '../../library/widgets/SongRow.js'
 import { SongContextMenu } from '../../../shared/ui/SongContextMenu.js'
 import { VirtualList } from '../../library/widgets/VirtualList.js'
+import { playlistContext } from '../../player/domain/playback-context.js'
 import { usePlayerStore } from '../../player/store/index.js'
+import { PlayHistoryPanel } from '../../player/widgets/PlayHistoryPanel.js'
 import {
   usePlaylistQuery,
   usePlaylistSongsInfiniteQuery,
@@ -37,6 +39,8 @@ export function PlaylistDetailPage() {
   const { t } = useTranslation()
   const params = useParams({ strict: false }) as { id?: string }
   const id = Number(params.id ?? 0) || 0
+  /** Playback context for this playlist; `undefined` when the route param is missing. */
+  const playlistCtx = playlistContext(id)
 
   const [searchText, setSearchText] = useState('')
   const debouncedKeyword = useDebounce(searchText, 300)
@@ -87,6 +91,7 @@ export function PlaylistDetailPage() {
   const sortMutation = useUpdateSortMutation(id)
 
   const [contextSong, setContextSong] = useState<Song | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
@@ -181,13 +186,13 @@ export function PlaylistDetailPage() {
         return next
       })
     } else {
-      void usePlayerStore.getState().playPlaylist(songs, index, id)
+      void usePlayerStore.getState().playPlaylist(songs, index, playlistCtx)
     }
   }
 
   const playAll = () => {
     if (songs.length === 0) return
-    void usePlayerStore.getState().playPlaylist(songs, 0, id)
+    void usePlayerStore.getState().playPlaylist(songs, 0, playlistCtx)
   }
 
   const header = (
@@ -208,6 +213,30 @@ export function PlaylistDetailPage() {
         >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
+        {/*
+          Right-hand group. It exists unconditionally so that the single
+          `margin-left: auto` lives here: the actions block below is built-in-only,
+          and giving the history button its own auto margin would make the two
+          split the free space instead of both sitting flush right.
+        */}
+        <view className='playlist-detail__topbar-right'>
+        {/*
+          Play history is available for **every** playlist, built-in ones
+          included (the Flutter menu item is unconditional), so this sits outside
+          the `!isBuiltIn` block below. Hidden while sorting or editing, where the
+          topbar belongs to that mode.
+        */}
+        {playlistCtx && !sortMode && !editing
+          ? (
+            <view
+              className='playlist-detail__icon-btn'
+              bindtap={() => setShowHistory(true)}
+              data-testid='playlist-detail-history'
+            >
+              <Icon name='history' size={20} color={ICON_COLORS.content2} />
+            </view>
+          )
+          : null}
         {!isBuiltIn
           ? (
             <view className='playlist-detail__topbar-actions'>
@@ -284,6 +313,7 @@ export function PlaylistDetailPage() {
             </view>
           )
           : null}
+        </view>
       </view>
       {editing
         ? (
@@ -500,6 +530,17 @@ export function PlaylistDetailPage() {
         )
         : null}
       <SongContextMenu song={contextSong} onClose={() => setContextSong(null)} />
+      {/* Mounted only while open, so entering the page costs no history request. */}
+      {showHistory && playlistCtx
+        ? (
+          <PlayHistoryPanel
+            context={playlistCtx}
+            title={t('history.titleFor', { name: playlist?.name ?? '' })}
+            queue={songs}
+            onClose={() => setShowHistory(false)}
+          />
+        )
+        : null}
     </view>
   )
 }

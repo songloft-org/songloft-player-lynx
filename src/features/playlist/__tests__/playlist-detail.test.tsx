@@ -30,6 +30,8 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useInfiniteQuery: () => ({ data: undefined, isLoading: false }),
+  // Used by the play-history panel this page can open.
+  useQuery: () => ({ data: { items: [], total: 0 }, isLoading: false, isError: false, refetch: vi.fn() }),
 }))
 
 vi.mock('../../../shared/ui/SongContextMenu.js', () => ({
@@ -209,6 +211,25 @@ test('hides delete and edit buttons for built-in playlists', async () => {
   const { queryByText } = await renderPage()
   expect(queryByText('Delete')).not.toBeInTheDocument()
   expect(queryByText('Edit')).not.toBeInTheDocument()
+})
+
+test('shows the play-history button for built-in playlists too', async () => {
+  // The Flutter menu item is unconditional, and "Favorites" is exactly the
+  // playlist a user replays from — so this must not live in the `!isBuiltIn`
+  // block that hides Delete/Edit.
+  detailHook.mockReturnValue(detailResult(makePlaylist({ isBuiltIn: true })))
+  const { queryByTestId } = await renderPage()
+  expect(queryByTestId('playlist-detail-history')).toBeInTheDocument()
+})
+
+test('opens the play-history panel on tap', async () => {
+  const { queryByTestId, getByTestId } = await renderPage()
+  expect(queryByTestId('play-history-panel')).not.toBeInTheDocument()
+
+  fireEvent.tap(getByTestId('playlist-detail-history'), {})
+  await act(async () => { await Promise.resolve() })
+
+  expect(queryByTestId('play-history-panel')).toBeInTheDocument()
 })
 
 test('shows the reorder button once all songs are loaded', async () => {

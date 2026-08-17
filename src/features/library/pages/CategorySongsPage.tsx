@@ -1,4 +1,4 @@
-import { useMemo } from '@lynx-js/react'
+import { useMemo, useState } from '@lynx-js/react'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -7,8 +7,13 @@ import type { Song } from '../../../models/song.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 // Import the player store directly (not the player feature barrel) so the
 // library graph does not eagerly pull in the full player + its lynx-ui gesture
-// leaves.
+// leaves. Same reason for reaching into the domain module for the context
+// helper.
+import { facetContext } from '../../player/domain/playback-context.js'
 import { usePlayerStore } from '../../player/store/index.js'
+// Safe with respect to the note above: the panel is built from plain views, not
+// lynx-ui gesture components.
+import { PlayHistoryPanel } from '../../player/widgets/PlayHistoryPanel.js'
 import type { SongsFilters } from '../api/index.js'
 import { flattenSongs } from '../data/pagination.js'
 import { useSongsInfiniteQuery } from '../data/songs-query.js'
@@ -114,13 +119,21 @@ export function CategorySongsPage() {
     }
   }
 
+  /**
+   * Playback context for this drill-in. `undefined` for source fields
+   * (favorites/random/…) and for the empty "unknown <dimension>" bucket —
+   * neither is a history context, so playback there is not recorded.
+   */
+  const playbackCtx = useMemo(() => facetContext(field, value), [field, value])
+  const [showHistory, setShowHistory] = useState(false)
+
   const onTapSong = (_song: Song, index: number) => {
-    void usePlayerStore.getState().playPlaylist(songs, index)
+    void usePlayerStore.getState().playPlaylist(songs, index, playbackCtx)
   }
 
   const playAll = () => {
     if (songs.length === 0) return
-    void usePlayerStore.getState().playPlaylist(songs, 0)
+    void usePlayerStore.getState().playPlaylist(songs, 0, playbackCtx)
   }
 
   const header = (
@@ -132,13 +145,31 @@ export function CategorySongsPage() {
         >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
-        {songs.length > 0
-          ? (
-            <view className='category-songs__play-all' bindtap={playAll}>
-              <text className='category-songs__play-all-text'>{t('playlist.playAll')}</text>
-            </view>
-          )
-          : null}
+        <view className='category-songs__topbar-right'>
+          {songs.length > 0
+            ? (
+              <view className='category-songs__play-all' bindtap={playAll}>
+                <text className='category-songs__play-all-text'>{t('playlist.playAll')}</text>
+              </view>
+            )
+            : null}
+          {/*
+            One entry point covers all seven facet dimensions. Absent for source
+            fields (favorites/random/…) and the empty "unknown" bucket, which are
+            not history contexts — `playbackCtx` is what decides that.
+          */}
+          {playbackCtx
+            ? (
+              <view
+                className='category-songs__icon-btn'
+                bindtap={() => setShowHistory(true)}
+                data-testid='category-songs-history'
+              >
+                <Icon name='history' size={20} color={ICON_COLORS.content2} />
+              </view>
+            )
+            : null}
+        </view>
       </view>
       <view className='category-songs__hero'>
         {cover
@@ -185,6 +216,17 @@ export function CategorySongsPage() {
                 />
               )}
       </view>
+      {/* Mounted only while open, so entering the page costs no history request. */}
+      {showHistory && playbackCtx
+        ? (
+          <PlayHistoryPanel
+            context={playbackCtx}
+            title={t('history.titleFor', { name: value || t('common.unknown') })}
+            queue={songs}
+            onClose={() => setShowHistory(false)}
+          />
+        )
+        : null}
     </view>
   )
 }

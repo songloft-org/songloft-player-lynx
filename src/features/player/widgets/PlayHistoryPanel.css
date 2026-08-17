@@ -1,0 +1,168 @@
+/*
+ * Play-history panel — LUNA tokens only. Same shape as `SongContextMenu.css`:
+ * a fixed root, an absolute backdrop, and a bottom sheet-like panel.
+ *
+ * Deliberately does not declare `.song-row`: the router eagerly imports every
+ * page, so the three existing copies of those rules are already in the bundle
+ * and effectively global. A fourth copy would compete with them at equal
+ * specificity, decided by source order.
+ */
+
+.play-history {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.play-history__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--backdrop);
+}
+
+.play-history__panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 70%;
+  padding-bottom: var(--space-4);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  background-color: var(--paper);
+}
+
+.play-history__header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-4);
+  border-bottom-width: 1px;
+  border-bottom-color: var(--line);
+}
+
+.play-history__title {
+  flex: 1;
+  color: var(--content);
+  font-size: var(--font-md);
+  font-weight: bold;
+  /* Explicit line box so CJK ascenders are not clipped by the header padding. */
+  line-height: var(--font-lg);
+}
+
+.play-history__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+}
+
+.play-history__list {
+  flex: 1;
+}
+
+.play-history__entry {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding-right: var(--space-3);
+}
+
+.play-history__entry-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.play-history__entry-meta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.play-history__entry-time {
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+}
+
+.play-history__entry-count {
+  color: var(--content-2);
+  font-size: var(--font-xs);
+}
+
+.play-history__entry-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+}
+
+.play-history__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-6) var(--space-4);
+}
+
+.play-history__state-text {
+  color: var(--content-2);
+  font-size: var(--font-sm);
+  line-height: var(--font-lg);
+}
+
+.play-history__state-hint {
+  margin-top: var(--space-2);
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+  line-height: var(--font-md);
+  text-align: center;
+}
+
+.play-history__retry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  margin-top: var(--space-3);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  background-color: var(--neutral-faint);
+  border: 1px solid var(--line);
+}
+
+.play-history__retry-text {
+  color: var(--content);
+  font-size: var(--font-sm);
+}
+
+.play-history__clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  margin: var(--space-3) var(--space-4) 0;
+  border-radius: var(--radius-pill);
+  background-color: var(--neutral-faint);
+  border: 1px solid var(--line);
+}
+
+.play-history__clear--confirm {
+  border-color: var(--danger);
+}
+
+.play-history__clear-text {
+  color: var(--danger);
+  font-size: var(--font-sm);
+}

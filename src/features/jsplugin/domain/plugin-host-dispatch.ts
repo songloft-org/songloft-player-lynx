@@ -1,5 +1,6 @@
 import type { Song } from '../../../models/song.js'
 import type { PlayMode } from '../../player/domain/play-mode.js'
+import { playlistContext } from '../../player/domain/playback-context.js'
 import { usePlayerStore } from '../../player/store/index.js'
 
 export interface HostCallRequest {
@@ -59,8 +60,12 @@ async function dispatchPlayer(
       const songs = await ctx.resolveSongs(ids)
       if (songs.length === 0) throw new Error('no valid songs resolved')
       const startIndex = Number(params.startIndex ?? 0)
-      const playlistId = params.sourcePlaylistId != null ? Number(params.sourcePlaylistId) : undefined
-      await store.playPlaylist(songs, startIndex, playlistId)
+      // Plugins only ever express a playlist source (the inbound key is
+      // `sourcePlaylistId`), so facet contexts are not reachable from here.
+      const context = params.sourcePlaylistId != null
+        ? playlistContext(Number(params.sourcePlaylistId))
+        : undefined
+      await store.playPlaylist(songs, startIndex, context)
       return null
     }
 

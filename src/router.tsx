@@ -12,7 +12,7 @@ import { ShellLayout } from './shared/layouts/ShellLayout.js'
 import { ThemeProvider } from './shared/theme/ThemeProvider.js'
 import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
-import { AddSongsPage, CategorySongsPage, LibraryPage, PlayHistoryPage, SongDetailPage } from './features/library/index.js'
+import { AddSongsPage, CategorySongsPage, LibraryPage, SongDetailPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
 import { CacheManagePage, EqualizerPage, LicensesPage, ProxySettingsPage, ServerEditPage, ServerListPage, ServerSettingsPage, SettingsPage, ThemePacksPage, UpgradePage, BrowseViewsPage } from './features/settings/index.js'
@@ -252,13 +252,6 @@ const playlistDetailRoute = createRoute({
  * this keeps `validateSearch` from making unrelated navigations type-invalid
  * (same pattern as `libraryRoute`).
  */
-/** `/library/history` — play history page, inside the shell. */
-const playHistoryRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/library/history',
-  component: PlayHistoryPage,
-})
-
 const categorySongsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/library/category/$field',
@@ -312,7 +305,6 @@ const routeTree = rootRoute.addChildren([
     tabConfigRoute,
     browseViewsRoute,
     playlistDetailRoute,
-    playHistoryRoute,
     categorySongsRoute,
     songDetailRoute,
     addSongsRoute,

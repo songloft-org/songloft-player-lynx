@@ -127,6 +127,20 @@
   Android 上播，`adb logcat` 看用的是 `HlsMediaSource` 还是 `ProgressiveMediaSource`；确认后修法有两种
   ——调用方传 `hls: true`（更符合现有约定），或把后缀判定改成只看 `?` 之前的路径
 
+### 刻意推迟的清理（批50 记录）
+
+- [ ] **`.song-row` 有三份互相冲突的副本** —— 同一套规则分别写在 `LibraryPage.css:118`、
+  `CategorySongsPage.css:152`、`PlaylistDetailPage.css:390`，且**不等价**：一份是 `width: 100%`，
+  另一份是 `flex: 1; min-width: 0`（`PlaylistDetailPage` 把 `SongRow` 放在 `SortableItem` 里，
+  需要后者）。因为 `router.tsx` eager import 每个页面，三份从启动起全在 bundle 里、同特异性，
+  **靠源码顺序决定谁赢**。正解是提取成 `SongRow.css` 由组件自己 import，但那必须在冲突规则里
+  挑一个赢家，而仓库**没有任何视觉闸门**能抓到回归——只能靠真机截图逐页对比。批50 因此刻意
+  没做，新增的 `PlayHistoryPanel.css` 也刻意**不放**第四份副本
+- [ ] **`savePlaybackState` 是 4 个位置参数** —— 违反 `docs/reference/api-design-conventions.md`
+  的「≥3 个或含可选参数用对象参数」。改成对象参数会让 `position-persistence.test.ts` 里
+  `mock.calls[..][2]` 那种按位取值的断言失效，收益不抵 churn，批50 只把第 4 参从
+  `sourcePlaylistId?: number` 换成了 `context?: PlaybackContext`
+
 ### 仍未定位
 
 - [ ] **偶发全屏灰层**（批29 发现）—— 运行数分钟后整屏蒙中灰，重启即恢复，不影响功能。审计补了一步算术：暗色读数 `13→86` 是**变亮**，纯黑半透层数学上不可能，联立得约 `#838383@0.62`，而仓库与 lynx-ui 里都没有这个颜色。最可查嫌疑是 lynx-ui Sheet 的 backdrop 泄漏。**下次出现时先跑** `adb logcat | grep -i "\[Sheet\] Invalid state transition"`（库自带的免费探针）

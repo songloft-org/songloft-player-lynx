@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import type { Song } from '../../../models/song.js'
+import type { PlaybackContext } from '../domain/playback-context.js'
 
 /**
  * Behaviour tests for the two module-level `usePlayerStore.subscribe` side
@@ -15,7 +16,7 @@ const savePlaybackState = vi.fn(
     _playlist: Song[],
     _currentIndex: number,
     _positionMs: number,
-    _sourcePlaylistId?: number,
+    _context?: PlaybackContext,
   ) => {},
 )
 vi.mock('../data/playback-persistence.js', async (importOriginal) => ({

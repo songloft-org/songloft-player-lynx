@@ -12,7 +12,38 @@ vi.mock('../../../core/storage/index.js', () => ({
   }),
 }))
 
+import type { Song } from '../../../models/song.js'
 import { loadPlaybackState, savePlaybackState } from '../data/playback-persistence.js'
+import { playlistContext } from '../domain/playback-context.js'
+
+/** Parsed (camelCase) form of {@link SONG_JSON}, as the store holds it. */
+const SONG: Song = {
+  id: 1,
+  type: 'local' as const,
+  title: 'Test Song',
+  artist: 'Artist',
+  album: undefined,
+  year: 0,
+  genre: undefined,
+  language: undefined,
+  style: undefined,
+  duration: 200,
+  filePath: '/music/test.mp3',
+  url: '/stream/1',
+  coverUrl: undefined,
+  lyricUrl: undefined,
+  lyricRemoteUrl: undefined,
+  fileSize: 5000,
+  format: 'mp3',
+  bitRate: 320,
+  sampleRate: 44100,
+  sourceUrl: undefined,
+  sourceCoverUrl: undefined,
+  isLive: false,
+  isVideo: false,
+  addedAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+}
 
 const SONG_JSON = {
   id: 1,
@@ -50,13 +81,7 @@ describe('playback-persistence', () => {
   })
 
   test('round-trips save and load', async () => {
-    const song = { ...SONG_JSON }
-    await savePlaybackState(
-      [{ id: 1, type: 'local' as const, title: 'Test Song', artist: 'Artist', album: undefined, year: 0, genre: undefined, language: undefined, style: undefined, duration: 200, filePath: '/music/test.mp3', url: '/stream/1', coverUrl: undefined, lyricUrl: undefined, lyricRemoteUrl: undefined, fileSize: 5000, format: 'mp3', bitRate: 320, sampleRate: 44100, sourceUrl: undefined, sourceCoverUrl: undefined, isLive: false, isVideo: false, addedAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' }],
-      0,
-      15000,
-      42,
-    )
+    await savePlaybackState([SONG], 0, 15000, playlistContext(42))
 
     const restored = await loadPlaybackState()
     expect(restored).not.toBeNull()
@@ -64,7 +89,36 @@ describe('playback-persistence', () => {
     expect(restored!.playlist[0].title).toBe('Test Song')
     expect(restored!.currentIndex).toBe(0)
     expect(restored!.positionMs).toBe(15000)
+    expect(restored!.context).toEqual({ type: 'playlist', key: '42' })
     expect(restored!.sourcePlaylistId).toBe(42)
+  })
+
+  test('round-trips a facet context, including a key needing URL encoding', async () => {
+    await savePlaybackState([SONG], 0, 0, { type: 'artist', key: 'AC/DC & 周杰伦' })
+
+    const restored = await loadPlaybackState()
+    expect(restored!.context).toEqual({ type: 'artist', key: 'AC/DC & 周杰伦' })
+    // Facet contexts have no playlist ID — and must not surface NaN.
+    expect(restored!.sourcePlaylistId).toBeUndefined()
+  })
+
+  test('falls back to the legacy playlist-only key written by older builds', async () => {
+    mockStorage.set('playback_queue', JSON.stringify([SONG_JSON]))
+    mockStorage.set('playback_source_playlist', '7')
+
+    const restored = await loadPlaybackState()
+    expect(restored!.context).toEqual({ type: 'playlist', key: '7' })
+    expect(restored!.sourcePlaylistId).toBe(7)
+  })
+
+  test('a corrupt context pref loses the context, not the whole queue', async () => {
+    mockStorage.set('playback_queue', JSON.stringify([SONG_JSON]))
+    mockStorage.set('playback_context', '{not json')
+
+    const restored = await loadPlaybackState()
+    expect(restored).not.toBeNull()
+    expect(restored!.playlist).toHaveLength(1)
+    expect(restored!.context).toBeUndefined()
   })
 
   test('clears state when saving empty playlist', async () => {

@@ -23,6 +23,7 @@ import { getFavoriteState, toggleFavoriteNonReact } from '../../library/data/fav
 import { getPlaylistApi } from '../../playlist/api/index.js'
 import { getSongsApi } from '../../library/api/index.js'
 import { cyclePlayMode, resolveNext, resolvePrev, type PlayMode } from '../domain/play-mode.js'
+import { playlistIdOf, type PlaybackContext } from '../domain/playback-context.js'
 import { moveItem, removeAt } from '../domain/queue.js'
 import {
   sleepTimerAfterSongs,
@@ -48,7 +49,11 @@ import type { PlayerData } from './derive.js'
 export interface PlayerState extends PlayerData {
   // ── playback ──
   playSong: (song: Song, queue?: Song[]) => Promise<void>
-  playPlaylist: (songs: Song[], startIndex?: number, playlistId?: number) => Promise<void>
+  playPlaylist: (
+    songs: Song[],
+    startIndex?: number,
+    context?: PlaybackContext,
+  ) => Promise<void>
   togglePlay: () => Promise<void>
   playNext: () => Promise<void>
   playPrev: () => Promise<void>
@@ -124,6 +129,7 @@ const INITIAL: PlayerData = {
   sleepTimer: undefined,
   previousVolume: undefined,
   errorMessage: undefined,
+  playbackContext: undefined,
   sourcePlaylistId: undefined,
   speed: 1,
 }
@@ -395,13 +401,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     _loadedSongId = song.id
     await audio.play()
     syncFavoriteToNative(song.id)
-    // Record the play event for history (fire-and-forget).
-    const playlistId = get().sourcePlaylistId
-    void getSongsApi().recordPlayed(
-      song.id,
-      playlistId != null ? 'playlist' : 'library',
-      playlistId != null ? String(playlistId) : undefined,
-    ).catch(() => {})
+    // Report the play event (fire-and-forget). The context decides whether it
+    // also lands in play history: without one the backend just broadcasts the
+    // event to plugins, which is right for playback that has no stable context.
+    // There is no "library" bucket to fall back on — that value is rejected.
+    void getSongsApi().recordPlayed(song.id, get().playbackContext).catch(() => {})
   }
 
   function stopSleepInterval(): void {
@@ -458,18 +462,34 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         0,
         list.findIndex((s) => s.id === song.id),
       )
-      set({ playlist: list, currentIndex: index, currentSong: list[index] })
+      // Clears the playback context: a bare single song was not started from a
+      // playlist or a facet, so keeping the previous one would record it into
+      // whatever the user last played from. A consequence worth keeping in mind
+      // — playback started this way is deliberately *not* recorded in any
+      // history, which matches the Flutter reference. Do not "fix" that by
+      // reinstating a fallback context.
+      set({
+        playlist: list,
+        currentIndex: index,
+        currentSong: list[index],
+        playbackContext: undefined,
+        sourcePlaylistId: undefined,
+      })
       syncQueueWindow(list, index)
       await playAtIndex(index)
     },
 
-    playPlaylist: async (songs, startIndex = 0, playlistId) => {
+    playPlaylist: async (songs, startIndex = 0, context) => {
       if (songs.length === 0) return
       const index = Math.min(Math.max(0, startIndex), songs.length - 1)
+      const playlistId = playlistIdOf(context)
       set({
         playlist: [...songs],
         currentIndex: index,
         currentSong: songs[index],
+        playbackContext: context,
+        // Derived, not independent: keeps the Home "now playing" highlight and
+        // the `source_playlist_id` plugin contract working unchanged.
         sourcePlaylistId: playlistId,
       })
       syncQueueWindow(songs, index)
@@ -815,7 +835,7 @@ usePlayerStore.subscribe((state, prev) => {
     // (a debounced write would otherwise persist a position 2s behind reality,
     // or a queue the user has since changed).
     const s = usePlayerStore.getState()
-    void savePlaybackState(s.playlist, s.currentIndex, s.currentTime, s.sourcePlaylistId)
+    void savePlaybackState(s.playlist, s.currentIndex, s.currentTime, s.playbackContext)
   }, SAVE_DEBOUNCE_MS)
 })
 
@@ -904,6 +924,7 @@ export async function restorePlaybackState(): Promise<void> {
     currentSong: song,
     currentTime: saved.positionMs,
     duration: stateDurationMsOf(song),
+    playbackContext: saved.context,
     sourcePlaylistId: saved.sourcePlaylistId,
   })
   if (autoResume && song.url) {

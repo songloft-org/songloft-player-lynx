@@ -151,3 +151,24 @@ test('shows the loading state while songs load', async () => {
   const { queryByText } = await renderPage()
   expect(queryByText('Loading songs…')).toBeInTheDocument()
 })
+
+test('shows the play-history button for a facet dimension', async () => {
+  paramsHook.mockReturnValue({ field: 'artist' })
+  searchHook.mockReturnValue({ value: 'Miles Davis' })
+  const { queryByTestId } = await renderPage()
+  expect(queryByTestId('category-songs-history')).toBeInTheDocument()
+})
+
+test('hides it for source fields, which are not history contexts', async () => {
+  paramsHook.mockReturnValue({ field: 'favorites' })
+  searchHook.mockReturnValue({ value: 'whatever' })
+  const { queryByTestId } = await renderPage()
+  expect(queryByTestId('category-songs-history')).not.toBeInTheDocument()
+})
+
+test('hides it for the empty "unknown" bucket, which the backend would reject', async () => {
+  paramsHook.mockReturnValue({ field: 'artist' })
+  searchHook.mockReturnValue({ value: '' })
+  const { queryByTestId } = await renderPage()
+  expect(queryByTestId('category-songs-history')).not.toBeInTheDocument()
+})

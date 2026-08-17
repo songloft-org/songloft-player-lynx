@@ -1,5 +1,6 @@
 import type { Song } from '../../../models/song.js'
 import { hasNextForMode, hasPrevForMode, type PlayMode } from '../domain/play-mode.js'
+import type { PlaybackContext } from '../domain/playback-context.js'
 import type { SleepTimerStatus } from '../domain/sleep-timer.js'
 
 /**
@@ -27,6 +28,14 @@ export interface PlayerData {
   /** Volume before muting, for restore on unmute. */
   previousVolume?: number
   errorMessage?: string
+  /** Where the current queue was started from; drives play-history recording. */
+  playbackContext?: PlaybackContext
+  /**
+   * Playlist ID of {@link playbackContext}, `undefined` for facet contexts.
+   * Derived — never set on its own. Kept as a field (rather than a getter) so
+   * zustand selectors can subscribe to it, and because JS plugins read it as
+   * `source_playlist_id`.
+   */
   sourcePlaylistId?: number
   speed: number
 }

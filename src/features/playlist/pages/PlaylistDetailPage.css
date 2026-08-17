@@ -31,11 +31,28 @@
   background-color: var(--neutral-faint);
 }
 
-.playlist-detail__topbar-actions {
+/* Holds the history button + the (built-in-only) actions block, flush right. */
+.playlist-detail__topbar-right {
   display: flex;
   flex-direction: row;
   align-items: center;
   margin-left: auto;
+}
+
+.playlist-detail__icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background-color: var(--neutral-faint);
+}
+
+.playlist-detail__topbar-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 }
 
 .playlist-detail__action-btn {

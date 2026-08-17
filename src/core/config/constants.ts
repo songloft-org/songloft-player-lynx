@@ -18,6 +18,20 @@ export const defaultPageSize = 20
 /** Hard upper bound the backend accepts for a single page. */
 export const maxPageSize = 100
 
+/**
+ * Entries the backend keeps per playback context (`MaxPlayHistoryPerContext`).
+ * A hard cap, not a page size — `/play-history` does not paginate.
+ */
+export const maxPlayHistoryEntries = 50
+
+/**
+ * `source` reported with play events (`POST /songs/{id}/played`) and forwarded
+ * to subscribed JS plugins. Same value the Flutter client sends: the two are the
+ * same product, and a distinct value would make any downstream source filter
+ * silently miss this client.
+ */
+export const playEventSource = 'songloft-player'
+
 /** Built-in "Favorites" playlist id (normal). */
 export const favoritePlaylistId = '1'
 

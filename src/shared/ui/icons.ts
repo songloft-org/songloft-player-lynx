@@ -38,6 +38,7 @@ export type IconName =
   | 'palette'
   | 'check'
   | 'timer'
+  | 'history'
   | 'x'
   | 'plus'
   | 'heart'
@@ -172,6 +173,13 @@ const ICONS: Record<IconName, (color: string) => string> = {
   timer: (c) =>
     `<circle cx="12" cy="12" r="9" ${stroke(c)}/>` +
     `<path d="M12 7v5l3.5 3.5" ${stroke(c)}/>`,
+
+  // History: a clock with a counter-clockwise arrow (the `timer` dial plus a
+  // rewind arc), for "what was played here before".
+  history: (c) =>
+    `<path d="M3.5 12a8.5 8.5 0 1 0 2.8-6.3" ${stroke(c)}/>` +
+    `<path d="M3 4.5V9h4.5" ${stroke(c)}/>` +
+    `<path d="M12 8v4.5l3 2" ${stroke(c)}/>`,
 
   x: (c) => `<path d="M6 6 18 18M18 6 6 18" ${stroke(c)}/>`,
 

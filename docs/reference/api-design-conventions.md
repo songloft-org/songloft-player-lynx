@@ -30,7 +30,9 @@ removeProfile(id: string)
 // ✅ 对象参数 — ≥3 个参数或含可选
 login(args: LoginArgs)                       // { username, password, apiBaseUrl?, insecureTls? }
 addProfile(params: AddProfileParams)         // { name, url, insecureTls? }
-playPlaylist(songs, startIndex?, playlistId?) // 例外：保持位置参数因为历史原因 + 前两个参数使用频率 100%
+playPlaylist(songs, startIndex?, context?)   // 例外：保持位置参数因为历史原因 + 前两个参数使用频率 100%
+                                             // 第三参是 PlaybackContext（歌单 或 7 个分面维度），
+                                             // 决定这次播放记进哪个播放历史桶；无上下文时省略
 
 // ✅ ID + patch
 editProfile(id: string, patch: { name?; url?; insecureTls? })

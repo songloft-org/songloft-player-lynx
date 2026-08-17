@@ -1,6 +1,11 @@
 import { apiPrefix } from '../../../core/config/app-config.js'
-import { defaultPageSize } from '../../../core/config/constants.js'
+import {
+  defaultPageSize,
+  maxPlayHistoryEntries,
+  playEventSource,
+} from '../../../core/config/constants.js'
 import type { HttpClient } from '../../../core/network/http-client.js'
+import type { PlaybackContext } from '../../player/domain/playback-context.js'
 import { parseLibraryStats, type LibraryStats } from '../../../models/library-stats.js'
 import {
   parsePlayHistoryResponse,
@@ -274,30 +279,85 @@ export class SongsApi {
     }
   }
 
-  async getPlayHistory(limit = 50): Promise<PlayHistoryResponse> {
-    const res = await this.client.get<unknown>(`${apiPrefix}/play-history?limit=${limit}`)
+  /**
+   * `GET /play-history` — the most recently played songs *within one playback
+   * context*. Both context params are required by the backend; there is no
+   * global "recently played" endpoint.
+   */
+  async getPlayHistory(
+    context: PlaybackContext,
+    limit = maxPlayHistoryEntries,
+  ): Promise<PlayHistoryResponse> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/play-history`, {
+      query: { ...contextQuery(context), limit },
+    })
     return parsePlayHistoryResponse(res.data)
   }
 
-  async deletePlayHistoryEntry(songId: number): Promise<void> {
-    await this.client.delete(`${apiPrefix}/play-history/entry?song_id=${songId}`)
+  /** `DELETE /play-history` — clear one context's history, returns the count. */
+  async clearPlayHistory(context: PlaybackContext): Promise<number> {
+    const res = await this.client.delete<unknown>(`${apiPrefix}/play-history`, {
+      query: contextQuery(context),
+    })
+    const deleted = (res.data as { deleted?: unknown } | null)?.deleted
+    return typeof deleted === 'number' ? deleted : 0
+  }
+
+  /** `DELETE /play-history/entry` — drop one song from one context's history. */
+  async deletePlayHistoryEntry(context: PlaybackContext, songId: number): Promise<void> {
+    await this.client.delete(`${apiPrefix}/play-history/entry`, {
+      query: { ...contextQuery(context), song_id: songId },
+    })
   }
 
   /**
-   * `POST /songs/{id}/played` — record a play event for history.
-   * Fire-and-forget (the store never awaits this). `contextType` / `contextKey`
-   * let the backend tag the source (e.g. `playlist` / `library`).
+   * `POST /songs/{id}/played` — record a play event.
+   *
+   * Fire-and-forget (the store never awaits this). Pass a context to have the
+   * event recorded into that context's play history; without one the backend
+   * only broadcasts the event to plugins, which is correct for playback that has
+   * no stable context (the flat library list).
    */
-  async recordPlayed(
-    songId: number,
-    contextType?: string,
-    contextKey?: string,
-  ): Promise<void> {
-    const body: Record<string, unknown> = {}
-    if (contextType) body.context_type = contextType
-    if (contextKey) body.context_key = contextKey
-    await this.client.post(`${apiPrefix}/songs/${songId}/played`, body)
+  async recordPlayed(songId: number, context?: PlaybackContext): Promise<void> {
+    await this.client.post(`${apiPrefix}/songs/${songId}/played`, undefined, {
+      query: playedEventParams(context),
+    })
   }
+}
+
+/**
+ * Query params for `POST /songs/{id}/played`.
+ *
+ * Pure + exported because the exact wiring is the whole bug this replaced: the
+ * backend reads `type` / `source` / `context_type` / `context_key` **from the
+ * query string** and defaults `type` to `finish`, while only `type=play` is
+ * recorded into history (`internal/handlers/music.go`, `SongPlayed`). The old
+ * implementation put the context in the JSON body and never sent `type`, so
+ * every call returned 204 and recorded nothing — for every context, including
+ * playlists. Unit-tested rather than trusted.
+ */
+export function playedEventParams(
+  context?: PlaybackContext,
+): Record<string, string | number> {
+  const params: Record<string, string | number> = {
+    type: 'play',
+    source: playEventSource,
+  }
+  if (context) {
+    params.context_type = context.type
+    params.context_key = context.key
+  }
+  return params
+}
+
+/**
+ * Context params for the three `/play-history` endpoints.
+ *
+ * Values are handed to `HttpClient` as `query` and encoded there — do **not**
+ * `encodeURIComponent` here, or an artist named `周杰伦` goes out double-encoded.
+ */
+function contextQuery(context: PlaybackContext): Record<string, string> {
+  return { context_type: context.type, context_key: context.key }
 }
 
 /** Lyric endpoint payload (only the plain `lyric` field is used in batch 5). */

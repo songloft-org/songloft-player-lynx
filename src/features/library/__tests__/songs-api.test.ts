@@ -8,6 +8,7 @@ import {
   buildFacetsQuery,
   buildSongIdsQuery,
   buildSongsQuery,
+  playedEventParams,
 } from '../api/songs-api.js'
 
 function client(transport: Transport) {
@@ -172,5 +173,104 @@ describe('SongsApi endpoints', () => {
     expect(song.id).toBe(9)
     expect(song.title).toBe('Nine')
     expect(song.album).toBe('Album')
+  })
+})
+
+// A transport that captures the whole request, not just the URL — the play-event
+// bug lived in the method/body/query split, which `capture` cannot see.
+function captureRequest(body: unknown): {
+  transport: Transport
+  req: () => { url: string, method?: string, body?: unknown }
+} {
+  let seen: { url: string, method?: string, body?: unknown } = { url: '' }
+  const transport: Transport = async (r) => {
+    seen = { url: r.url, method: r.method, body: r.body }
+    return { status: 200, headers: {}, body: JSON.stringify(body) }
+  }
+  return { transport, req: () => seen }
+}
+
+describe('playedEventParams (pure)', () => {
+  test('always reports type=play and the client source', () => {
+    // `type` is the whole ballgame: the backend defaults it to `finish` and only
+    // records history for `play`. Omitting it is what made every call a no-op.
+    expect(playedEventParams()).toEqual({ type: 'play', source: 'songloft-player' })
+  })
+
+  test('carries the context when there is one', () => {
+    expect(playedEventParams({ type: 'artist', key: '周杰伦' })).toEqual({
+      type: 'play',
+      source: 'songloft-player',
+      context_type: 'artist',
+      context_key: '周杰伦',
+    })
+  })
+})
+
+describe('play history endpoints', () => {
+  test('recordPlayed puts type + context in the QUERY, not the body', async () => {
+    const cap = captureRequest(null)
+    await new SongsApi(client(cap.transport)).recordPlayed(5, { type: 'playlist', key: '3' })
+    const { url, method, body } = cap.req()
+    expect(method).toBe('POST')
+    expect(url).toContain(`${apiPrefix}/songs/5/played?`)
+    expect(url).toContain('type=play')
+    expect(url).toContain('context_type=playlist')
+    expect(url).toContain('context_key=3')
+    // The previous implementation sent the context here and no `type` at all,
+    // so the backend recorded nothing while still answering 204.
+    expect(body).toBeUndefined()
+  })
+
+  test('recordPlayed without a context sends no context params', async () => {
+    const cap = captureRequest(null)
+    await new SongsApi(client(cap.transport)).recordPlayed(5)
+    const url = cap.req().url
+    expect(url).toContain('type=play')
+    expect(url).not.toContain('context_type')
+    expect(url).not.toContain('context_key')
+  })
+
+  test('getPlayHistory sends both context params and the limit', async () => {
+    const cap = captureRequest({ items: [], total: 0 })
+    await new SongsApi(client(cap.transport)).getPlayHistory({ type: 'album', key: 'Kind of Blue' })
+    const url = cap.req().url
+    expect(url).toContain(`${apiPrefix}/play-history?`)
+    expect(url).toContain('context_type=album')
+    expect(url).toContain('context_key=Kind%20of%20Blue')
+    expect(url).toContain('limit=50')
+  })
+
+  test('context keys are encoded exactly once', async () => {
+    const cap = captureRequest({ items: [], total: 0 })
+    await new SongsApi(client(cap.transport)).getPlayHistory({ type: 'artist', key: 'AC/DC & 周杰伦' })
+    const url = cap.req().url
+    // HttpClient.buildQuery already encodes; encoding again here would turn the
+    // leading `%` of each escape into `%25`.
+    expect(url).toContain('context_key=AC%2FDC%20%26%20%E5%91%A8%E6%9D%B0%E4%BC%A6')
+    expect(url).not.toContain('%25')
+  })
+
+  test('clearPlayHistory deletes the context and returns the count', async () => {
+    const cap = captureRequest({ deleted: 4 })
+    const deleted = await new SongsApi(client(cap.transport))
+      .clearPlayHistory({ type: 'playlist', key: '2' })
+    const { url, method } = cap.req()
+    expect(method).toBe('DELETE')
+    expect(url).toContain(`${apiPrefix}/play-history?`)
+    expect(url).toContain('context_key=2')
+    expect(deleted).toBe(4)
+  })
+
+  test('deletePlayHistoryEntry scopes the deletion to one context', async () => {
+    const cap = captureRequest(null)
+    await new SongsApi(client(cap.transport))
+      .deletePlayHistoryEntry({ type: 'genre', key: 'Jazz' }, 11)
+    const { url, method } = cap.req()
+    expect(method).toBe('DELETE')
+    expect(url).toContain(`${apiPrefix}/play-history/entry?`)
+    expect(url).toContain('context_type=genre')
+    expect(url).toContain('context_key=Jazz')
+    expect(url).toContain('song_id=11')
   })
 })
