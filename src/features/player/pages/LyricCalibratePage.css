@@ -54,7 +54,12 @@
   font-weight: 700;
   color: var(--content);
   margin-bottom: var(--space-6);
-  font-variant-numeric: tabular-nums;
+  /*
+   * No `font-variant-numeric: tabular-nums` — Lynx has no such property, so the
+   * template encoder stripped it and only left a build warning behind (AGENTS §7
+   * treats those as errors). It was never in effect. Non-jittering digits would
+   * need a monospaced `font-family` instead.
+   */
 }
 
 .lyric-calibrate__controls {

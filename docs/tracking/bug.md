@@ -145,6 +145,11 @@
   「看不清」——只在原生两端修好了。修法是在同一条规则里**并列写上 `--placeholder-color: var(--content-muted)`**
   （自定义属性 Lynx 原生会照常解析、无用即无害），要动 15 个字段全部一起改才有意义，故未随批51 顺手做。
   `input-css.test.ts` 的注释里记了这件事，将来改的是那 15 条规则、不是那道闸门
+- [x] **构建警告不再是零**（AGENTS §7 与本文件都写着「自批19b 起归零」，实际已漂）——
+  `LyricCalibratePage.css` 有一句 `font-variant-numeric: tabular-nums`，Lynx 无此属性，
+  模板编码阶段被剥掉只留一行 warning，**从落地起就没生效过**。批51 顺手删掉恢复零警告
+  （删它对渲染是纯 no-op）。真要数字不跳动得改 `font-family` 用等宽字体。
+  教训同 `AndroidManifest.xml` 那条：**没有闸门读的东西，写在文档里的「已归零」不会自己保持为真**
 
 ### 刻意推迟的清理（批50 记录）
 
