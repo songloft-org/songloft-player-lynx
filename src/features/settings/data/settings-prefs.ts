@@ -265,3 +265,19 @@ export async function writeFloatingLyricOpacity(
 ): Promise<void> {
   await tryWritePref(storage, PREF_FLOATING_LYRIC_OPACITY, String(opacity))
 }
+
+const PREF_FLOATING_LYRIC_ENABLED = 'floating_lyric_enabled'
+
+export async function readFloatingLyricEnabled(
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<boolean> {
+  const raw = await tryReadPref(storage, PREF_FLOATING_LYRIC_ENABLED)
+  return raw === 'true'
+}
+
+export async function writeFloatingLyricEnabled(
+  enabled: boolean,
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<void> {
+  await tryWritePref(storage, PREF_FLOATING_LYRIC_ENABLED, String(enabled))
+}
