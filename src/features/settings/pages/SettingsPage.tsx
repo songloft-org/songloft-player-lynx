@@ -274,13 +274,14 @@ export function SettingsPage() {
   }
 
   /**
-   * Export logs (Flutter `LogExportService` parity). On native the backend +
-   * client logs are zipped and handed to the OS share sheet; on Web there is
-   * no share target reachable from this realm, so the pre-alignment behavior
-   * is kept — open the sanitized backend log URL in the browser.
+   * Export logs (Flutter `LogExportService` parity). Backend + client logs are
+   * zipped and handed over via `shareFile` — the OS share sheet on native, a
+   * browser download on Web. Only when `shareFile` is unavailable (e.g. a host
+   * that predates it) does this fall back to opening the sanitized backend log
+   * URL directly — that path has no client logs, so it is the degraded option.
    */
   const onExportLogs = () => {
-    if (!getPlatformCapabilities().shareSheet) {
+    if (!getPlatformCapabilities().fileExport) {
       const token = getCachedAccessToken()
       if (!token) return
       const url = `${appConfig.resolvedBaseUrl}${apiPrefix}/logs/export?access_token=${encodeURIComponent(token)}`

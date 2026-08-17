@@ -461,6 +461,33 @@
     setInsecureTls: function (_enabled) {
       // No-op on Web — the browser owns certificate trust.
     },
+
+    /**
+     * Hand a base64-encoded file to the user. Web has no OS share sheet, so
+     * this decodes the payload and triggers a browser download through an
+     * object-URL anchor. The native hosts present their share sheet instead —
+     * the TS facade (`shareFile`) is identical on all three.
+     */
+    shareFile: function (base64, fileName, mimeType, callback) {
+      try {
+        var bin = atob(base64)
+        var bytes = new Uint8Array(bin.length)
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+        var blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' })
+        var url = URL.createObjectURL(blob)
+        var a = document.createElement('a')
+        a.href = url
+        a.download = fileName || 'songloft-logs.zip'
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        // Give the browser a beat to start the download before revoking.
+        setTimeout(function () { URL.revokeObjectURL(url) }, 1000)
+        callback(null)
+      } catch (e) {
+        callback((e && e.message) || 'download failed')
+      }
+    },
   }
 
   /*
@@ -504,6 +531,13 @@
       return new Promise(function (resolve) {
         songloftPlatform.pickAndUploadFile(args[0], args[1], args[2], function (error, body) {
           resolve({ error: error, body: body })
+        })
+      })
+    },
+    shareFile: function (args) {
+      return new Promise(function (resolve) {
+        songloftPlatform.shareFile(args[0], args[1], args[2], function (error) {
+          resolve({ error: error })
         })
       })
     },

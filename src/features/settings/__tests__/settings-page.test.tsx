@@ -240,9 +240,10 @@ test('selecting a log level persists it via SettingsApi.setLogLevel', async () =
   expect(setLogLevelSpy).toHaveBeenCalledWith('error')
 })
 
-test('the export-logs row falls back to openURL without a share sheet', async () => {
-  // No NativeModules in the unit-test realm → `shareSheet` capability is off,
-  // so the pre-alignment behavior applies: open the backend log URL directly.
+test('the export-logs row falls back to openURL when file export is unavailable', async () => {
+  // No NativeModules in the unit-test realm → `fileExport` capability is off,
+  // so the degraded path applies: open the backend log URL directly (no client
+  // logs in that one).
   const { queryByTestId } = await renderPage()
 
   await act(async () => {
@@ -253,9 +254,10 @@ test('the export-logs row falls back to openURL without a share sheet', async ()
   expect(exportLogsActionSpy).not.toHaveBeenCalled()
 })
 
-test('the export-logs row uses the zip+share flow when a share sheet exists', async () => {
-  // A host exposing SongloftPlatform.shareFile turns the capability on, so the
-  // row must go through the Flutter-parity export instead of openURL.
+test('the export-logs row uses the zip flow when shareFile is available', async () => {
+  // A host exposing SongloftPlatform.shareFile (native share sheet or web
+  // download) turns the capability on, so the row must go through the
+  // Flutter-parity export — which includes the client logs — instead of openURL.
   ;(globalThis as Record<string, unknown>).NativeModules = {
     SongloftPlatform: { shareFile: () => {} },
   }

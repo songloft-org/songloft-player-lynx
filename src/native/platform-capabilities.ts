@@ -41,15 +41,17 @@ export interface PlatformCapabilities {
    */
   video: boolean
   /**
-   * OS share sheet for handing over files (log-export zip).
+   * Can hand a file over to the user — the log-export zip.
    *
-   * Needs the `SongloftPlatform` native module's `shareFile` — Android
-   * `ACTION_SEND` chooser / iOS `UIActivityViewController`. Web has no share
-   * target reachable from the worker realm, so it is always false there and
-   * callers fall back (log export opens the backend log URL in the browser,
-   * the pre-alignment behavior).
+   * Needs the `SongloftPlatform` module's `shareFile`. On native that presents
+   * the OS share sheet (Android `ACTION_SEND` chooser / iOS
+   * `UIActivityViewController`); on Web the host bridge decodes the payload and
+   * triggers a browser download (there is no share sheet there). Keyed off the
+   * **method**, not the module, and deliberately NOT gated on `isWeb`: Web
+   * registers `SongloftPlatform` through `nativeModulesMap` and now implements
+   * `shareFile`, so it reports true like the devices do.
    */
-  shareSheet: boolean
+  fileExport: boolean
 }
 
 /** True when a native module of this name is present in the host bag. */
@@ -98,7 +100,8 @@ export function getPlatformCapabilities(): PlatformCapabilities {
     systemTray: !isWeb && hasPlatform,
     video: hasNativeModule('SongloftVideo'),
     // Method-level check, not module-level: `shareFile` postdates the module
-    // itself, so an older shell may register `SongloftPlatform` without it.
-    shareSheet: isWeb ? false : hasNativeMethod('SongloftPlatform', 'shareFile'),
+    // itself, so an older shell may register `SongloftPlatform` without it. Not
+    // gated on `isWeb` — Web implements `shareFile` as a browser download.
+    fileExport: hasNativeMethod('SongloftPlatform', 'shareFile'),
   }
 }

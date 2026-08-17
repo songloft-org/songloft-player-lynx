@@ -48,5 +48,21 @@ export default function (_nativeModules, call) {
         (err) => callback(String((err && err.message) || err || 'upload failed'), null),
       )
     },
+
+    /**
+     * Hand a base64-encoded file to the user. On native this is the OS share
+     * sheet; on Web the main thread decodes it and triggers a browser download
+     * (there is no share sheet here). Same callback adaptation as
+     * `pickAndUploadFile`.
+     */
+    shareFile(base64, fileName, mimeType, callback) {
+      call('shareFile', [base64, fileName, mimeType]).then(
+        (res) => {
+          const out = res || {}
+          callback(out.error ?? null)
+        },
+        (err) => callback(String((err && err.message) || err || 'share failed')),
+      )
+    },
   }
 }
