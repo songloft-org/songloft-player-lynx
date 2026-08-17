@@ -73,7 +73,7 @@
 .library__search-input {
   flex: 1;
   height: 36px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background-color: var(--neutral-faint);
   color: var(--content);
   font-size: var(--font-sm);
@@ -421,11 +421,14 @@
   gap: var(--space-2);
 }
 
+/* Search-bar form: `--neutral-faint` fill, no hairline — matching
+   `.library__search-input` above. The old `--paper` was the *card* token, on a
+   transparent bar over canvas: #fafafa on #ffffff, about 1.04:1, no visible field. */
 .library__filter-input {
   flex: 1;
   padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-md);
-  background-color: var(--paper);
+  border-radius: var(--radius-sm);
+  background-color: var(--neutral-faint);
   font-size: var(--font-xs);
   color: var(--content);
   -x-placeholder-color: var(--content-muted);

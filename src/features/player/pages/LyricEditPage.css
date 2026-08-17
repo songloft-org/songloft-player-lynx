@@ -38,12 +38,16 @@
   padding: 0 var(--space-4) var(--space-4);
 }
 
+/* Full-page editor — `--neutral-faint` fill like every other field, no hairline
+   (it fills the body, so an outline would just trace the page). Note this is a
+   **raw** `<textarea>`, not the lynx-ui component; `input-css.test.ts` matches
+   lowercase tags specifically so this one stays in scope. */
 .lyric-edit__textarea {
   width: 100%;
   height: 100%;
   padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background-color: var(--paper);
+  border-radius: var(--radius-sm);
+  background-color: var(--neutral-faint);
   font-size: var(--font-sm);
   color: var(--content);
   line-height: 1.6;

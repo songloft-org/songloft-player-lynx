@@ -61,11 +61,13 @@
   margin-bottom: var(--space-1);
 }
 
+/* Form field — see the note on `.song-detail__input` for why `--paper` was wrong. */
 .add-songs__input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  background-color: var(--paper);
+  border-radius: var(--radius-sm);
+  background-color: var(--neutral-faint);
+  border: 1px solid var(--line);
   font-size: var(--font-sm);
   color: var(--content);
   -x-placeholder-color: var(--content-muted);

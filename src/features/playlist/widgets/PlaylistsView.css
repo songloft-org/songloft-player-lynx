@@ -247,7 +247,7 @@
 .playlists__create-input {
   height: 44px;
   padding: 0 var(--space-4);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background-color: var(--neutral-faint);
   border: 1px solid var(--line);
   color: var(--content);

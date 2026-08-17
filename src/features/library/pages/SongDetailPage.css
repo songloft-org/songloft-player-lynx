@@ -97,11 +97,21 @@
   margin-bottom: var(--space-1);
 }
 
+/*
+ * Form field: `--neutral-faint` fill + `--line` hairline, same as every other
+ * form field (login / server / proxy / cache / playlist).
+ *
+ * It used to be filled with `--paper`, which DESIGN.md assigns to cards floating
+ * *on* canvas — and with no border on a transparent page that put #fafafa on
+ * #ffffff, a contrast ratio of about 1.04:1. The field had no perceivable edge at
+ * all; only the placeholder text showed where to tap.
+ */
 .song-detail__input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  background-color: var(--paper);
+  border-radius: var(--radius-sm);
+  background-color: var(--neutral-faint);
+  border: 1px solid var(--line);
   font-size: var(--font-sm);
   color: var(--content);
   -x-placeholder-color: var(--content-muted);

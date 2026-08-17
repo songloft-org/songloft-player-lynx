@@ -47,36 +47,60 @@
   font-size: var(--font-sm);
 }
 
+/*
+ * Fields live inside a `SettingsSection` card, which owns the rounded border and
+ * `overflow: hidden` and is built for rows that pad themselves — so the padding
+ * here has to be symmetric, same as `.settings-row` and the cache-config fields.
+ *
+ * It used to be `0 var(--space-4) var(--space-3)`, which pinned the input to the
+ * card's top edge with the white gap only underneath; worse, 16px in from the
+ * sides is *inside* the card's 20px (`--radius-lg`) corner arc, so
+ * `overflow: hidden` sliced the input's top corners off against the card's curve.
+ */
 .proxy-settings__field {
-  position: relative;
-  padding: 0 var(--space-4) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
 }
 
+/* Matches `.cache-manage__input` / `.server-settings__input` — the other two
+   settings sub-pages with text fields. */
 .proxy-settings__input {
-  position: relative;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  height: 44px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-sm);
   background-color: var(--neutral-faint);
-  border-radius: 8px;
-  padding: var(--space-3);
+  border: 1px solid var(--line);
   color: var(--content);
-  font-size: var(--font-sm);
+  font-size: var(--font-md);
+  -x-placeholder-color: var(--content-muted);
 }
 
+/* Same inset as the fields above and as `.settings-row`, so all four cards on the
+   page line their contents up at the same edge. */
 .proxy-settings__switch-row {
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4);
 }
 
 .proxy-settings__switch-label {
   color: var(--content);
-  font-size: var(--font-sm);
+  font-size: var(--font-md);
 }
 
+/* The allowlist is a `TextArea` (one entry per line), so the box grows with the
+   lines instead of stretching a single-line field, and the text starts at the top
+   rather than floating in the vertical middle of an 80px box. */
 .proxy-settings__input--tall {
-  min-height: 80px;
+  height: auto;
+  min-height: 96px;
+  padding: var(--space-3) var(--space-4);
 }
 
 .proxy-settings__save-area {

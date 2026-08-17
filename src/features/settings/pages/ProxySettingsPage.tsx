@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-import { Input } from '@lynx-js/lynx-ui-input'
+import { Input, TextArea } from '@lynx-js/lynx-ui-input'
 
 import { apiPrefix, appConfig } from '../../../core/config/app-config.js'
 import { getCachedAccessToken } from '../../../core/network/token-cache.js'
@@ -145,10 +145,18 @@ export function ProxySettingsPage() {
 
             <SettingsSection title={t('proxy.allowlistSection')} icon='link'>
               <view className='proxy-settings__field'>
-                <Input
+                {/*
+                  A `TextArea`, not an `Input`: `save` splits this value on `\n`
+                  and the placeholder asks for one entry per line, but a
+                  single-line `<input>` cannot hold a newline — so only ever one
+                  entry could be entered. `maxLength` too, because the shared
+                  default of 140 caps the list at roughly eight CIDRs.
+                */}
+                <TextArea
                   className='proxy-settings__input proxy-settings__input--tall'
                   value={state.allowlist}
                   placeholder={t('proxy.allowlistPlaceholder')}
+                  maxLength={2000}
                   onInput={(value: string) => setState(s => ({ ...s, allowlist: value }))}
                 />
               </view>

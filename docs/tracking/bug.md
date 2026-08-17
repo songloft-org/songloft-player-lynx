@@ -29,6 +29,14 @@
 - [x] ios端主题/语言有没有正常同步？应用图标有没有正常打包？（批33：代码审计确认 SystemAppearance 正确，补充 AppIcon PNG）
 - [x] 日志导出功能需要完善，不需要展开看日志，直接导出zip包就行。（批33：改为 openURL 直接下载，移除内联查看页面）
 - [x] web 版本首页顶部仍显示「下拉刷新」几个字（批36 那次修复无效：`enable-refresh={!isWeb}` 里的 `isWebEnvironment()` 探测 `window`/`document`，而这段渲染跑在 web-core 的 background **Worker** 里，那里两者都不存在，所以 `isWeb` 恒为 false、属性恒为 `"true"`。更根本的是 Web 没有 `<refresh>` 实现（web-core 的 `LYNX_TAG_TO_HTML_TAG_MAP` 无此条目、web-elements 注册的是 `x-refresh-view`），两个标签作为未知元素落进 DOM，header 的文案就成了普通页面内容，属性开关无论如何都关不掉它。改为按 `SystemInfo.platform` 判定（两个 realm 都有）并在 Web 上整段不渲染 `<refresh>`；同一根因还让插件 WebView 页在 Web 上渲染无实现的 `<webview>` 而非 fallback 文案，一并修掉）
+- [x] 网络代理页的输入框与卡片边框位置不对（`.proxy-settings__field` 的 padding 是 `0 var(--space-4) var(--space-3)`——**顶部为 0**，于是输入框顶边贴死在卡片内边缘、白色留白只出现在下方；更糟的是左右缩进 16px 恰好落在卡片 `--radius-lg`（20px）圆角的弧线区内，而 `.settings-section__card` 带 `overflow: hidden`，输入框上面两个角**被卡片的圆弧削掉**。与缓存配置那次是同一个根因：字段塞进「为自带内边距的行设计」的卡片里却给了不对称 padding。改为对称 `var(--space-4)`，并把输入框样式对齐同为设置子页的 `.cache-manage__input` / `.server-settings__input`）
+  - 顺带查出**同一批修过的 `-x-placeholder-color` 漂了三处**：14 个 `<Input>`/`<TextArea>` 里 `proxy-settings__input`、`server-edit__input`、`libops-exclude__input` 都没写，而清单第一条「暗色输入框提示文字看不清」早已标记为批19 修完。`libops-exclude__input` 更彻底——只有一句 `flex: 1`，连背景、边框、文字色都没有。三处已补齐，并新增 `shared/ui/__tests__/input-css.test.ts`：**从 TSX 里扫出所有 `<Input>`/`<TextArea>` 的 className 反推需求**（而不是硬编码清单），少一个就报出类名。反向验证过：摘掉任一处立刻红
+  - **随后把全库 15 个文本字段逐个过了一遍**（不是 14 个：`LyricEditPage` 用的是**裸 `<textarea>`** 而非 lynx-ui 组件，只认组件名的闸门会静默漏掉它，已扩到匹配小写裸标签并加了一条专门钉住它在扫描范围内的用例）。结论：**贴边/削角那个几何问题别处没有**——全库 `overflow: hidden` + 圆角的容器里只有 `.settings-section__card` 装输入框，而只有网络代理与缓存配置往它里面塞字段。但查出另一族按 `DESIGN.md` 判定的 token 误用：
+    - **6 处用 `--paper`（`DESIGN.md:28`「浮于 canvas 上的卡片/面板」）或 `--canvas`（「最底层背景」）当输入框底**，而 `:30` 明写 `--neutral-faint` 是「极弱填充（**输入框底**、标签底）」。这不是审美问题：那 6 处都无边框且坐在透明页面上，浅色下是 `#fafafa` 压 `#ffffff`，**对比度约 1.04:1 —— 看不出哪里是输入框**，只能看见占位符（`song-detail` / `add-songs` / `library__filter` / `playlist-detail__search` / `plugin-registry__search` / `lyric-edit__textarea`，另有 `server-edit` 用 `--canvas` 与页面同色）
+    - **15 处全用 `--radius-md`**（`:59`「普通卡片」），而 `:58` 指定输入框用 `--radius-sm`
+  - 按形态收敛成两种：**表单字段** 10 个 = `--neutral-faint` + `--line` hairline；**搜索条与全页歌词编辑器** 5 个 = `--neutral-faint` 无描边（对齐本来就正确的 `library__search-input`）。半径 15 处统一 `--radius-sm`。`plugin-registry__search-btn` 跟着旁边的输入框一起改，否则它会变成这一对里更淡、更圆的那半边
+  - 三条不变量都进了 `input-css.test.ts`（占位符色 / 填充 token / 圆角 token），逐条反向验证过。**闸门从 TSX 反推字段清单**，所以新写的输入框一落地就自动受约束
+  - 私有域白名单那个字段是**单行 `<input>`**，而 `save()` 按 `\n` 切分、占位符写着「每行一个 IP 或 CIDR」——单行 input 装不进换行符，**多条白名单从来输入不了**。换成 `TextArea`（`<textarea>` 在 Android xelement 4.0.0 / iOS XElement 4.0.1 / web-core 三端都注册了，已逐一核实），`maxLength` 从共享默认 140 提到 2000（140 只够约八条 CIDR）
 - [x] 设置页从二级页面返回后落回顶部，没记住一级列表的滚动位置（滚动偏移存在页面自己的 `useRef` 里，而 `/settings/cache` 这类子页是**兄弟路由**不是嵌套路由——打开子页会把 `SettingsPage` 整个卸载，per-mount 的 ref 随之归零，所以 `scroll-top={scrollRef.current}` 自上线起**没有恢复过任何一次**：每次挂载读到的都是 0。改为 `shared/nav/scroll-memory.ts` 的模块级会话记忆（沿用 `last-library-search` / `shell-navigation` 的既有写法）+ `initial-scroll-offset`。**选 `initial-scroll-offset` 而不是 `scroll-top` 是查过三端 SDK 的**，因为文档对这两个属性都没给平台矩阵：前者在 Android `UIScrollView`/`LynxUIScrollView`、iOS `LynxUIScroller`/`LynxUIScrollView`、web-elements `ScrollAttributes` 五处全部有实现，且**都会等到内容布局完成**才应用（Android 在 `handleComputeScroll()` 里反复重试直到 `offset + height <= contentHeight`，iOS 排进 `scrollReadyBlock`，web 等一帧 `requestAnimationFrame`）——挂载那一刻内容还没测量，正需要这个延迟；`scroll-top` 则在**两条 new-arch 路径上压根不存在**，Android 默认路径上还是「立即」变体。另有一个单位坑：Android 的 `LynxScrollEvent.setScrollParams` 把 `scrollTop` 经 `pxToDip` 报出，`setInitialScrollOffset` 再经 `dipToPx` 收回，两头刚好对齐；把 px 值喂给这个属性会按屏幕密度成倍越界、直接落到页面底部）
 - [x] web 平台刷新页面就掉登录（根因就写在控制台那行 warn 里：`no NativeModules.SongloftStorage and no localStorage; using in-memory storage`。web-core 把 app 跑在真 `Worker` 里，而 Web Storage 是 window-only，所以 worker realm 的 `localStorage`/`sessionStorage` 都是 undefined，能力探测一路落到 `createMemoryStorage()`，token 随页面一起没了。新增 `idb-storage.ts`：worker realm 里 `indexedDB` 原生可用（实测 put/get 往返成功），插在 localStorage 与 memory 之间。刻意不走「桥到主线程 localStorage」——那要给 `web/index.html` 与嵌入产物各塞一个宿主文件，而 IDB 零宿主配合。`open` 带 3s 超时兜底：auth bootstrap 等着第一次读，另一个 tab 触发 version-change blocked 时浏览器既不 fire `onsuccess` 也不 fire `onerror`，不设超时就是白屏挂死）
 
@@ -127,6 +135,16 @@
   `intendedPlaying` 就是这个教训）。**验证方式**：`POST /songs/radio` 建一个真 HLS 电台，
   Android 上播，`adb logcat` 看用的是 `HlsMediaSource` 还是 `ProgressiveMediaSource`；确认后修法有两种
   ——调用方传 `hls: true`（更符合现有约定），或把后缀判定改成只看 `?` 之前的路径
+
+### 批51 途中发现，未修
+
+- [ ] **`-x-placeholder-color` 在 Web 上是个空转的声明** —— 查 `dist/web/main.web.bundle` 确认它逐字进了产物的
+  CSS，而浏览器对未知属性直接丢弃；`@lynx-js/web-elements` 的占位符颜色走的是另一条路
+  （`x-input::part(input)::placeholder { color: var(--placeholder-color) }`，一个真正的 CSS 自定义属性），
+  没人把两者接起来。所以 **Web 上所有输入框的占位符恒为库自带的 `grey`**，暗色下就是清单第一条那个
+  「看不清」——只在原生两端修好了。修法是在同一条规则里**并列写上 `--placeholder-color: var(--content-muted)`**
+  （自定义属性 Lynx 原生会照常解析、无用即无害），要动 15 个字段全部一起改才有意义，故未随批51 顺手做。
+  `input-css.test.ts` 的注释里记了这件事，将来改的是那 15 条规则、不是那道闸门
 
 ### 刻意推迟的清理（批50 记录）
 

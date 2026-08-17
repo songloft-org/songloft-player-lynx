@@ -217,7 +217,7 @@
 .playlist-detail__edit-input {
   height: 44px;
   padding: 0 var(--space-4);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background-color: var(--neutral-faint);
   border: 1px solid var(--line);
   color: var(--content);
@@ -334,11 +334,13 @@
   padding: var(--space-2) var(--space-4);
 }
 
+/* Search-bar form: `--neutral-faint` fill, no hairline (see `.library__search-input`).
+   `--paper` is the card token and left no visible field on the transparent bar. */
 .playlist-detail__search-input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  background-color: var(--paper);
+  border-radius: var(--radius-sm);
+  background-color: var(--neutral-faint);
   font-size: var(--font-sm);
   color: var(--content);
   -x-placeholder-color: var(--content-muted);

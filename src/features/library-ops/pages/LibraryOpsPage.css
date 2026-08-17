@@ -395,8 +395,24 @@
   align-items: center;
 }
 
+/*
+ * This was `flex: 1` and nothing else — no surface, no text colour, no
+ * placeholder colour — so it inherited whatever the host draws by default and was
+ * the one text field on the settings surface that looked like nothing at all (and
+ * on the dark theme, read like nothing either). Styled to match the other fields.
+ */
 .libops-exclude__input {
   flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  height: 44px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--neutral-faint);
+  border: 1px solid var(--line);
+  color: var(--content);
+  font-size: var(--font-md);
+  -x-placeholder-color: var(--content-muted);
 }
 
 .libops-exclude__add-btn {

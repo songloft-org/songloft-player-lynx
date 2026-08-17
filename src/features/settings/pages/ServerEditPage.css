@@ -53,13 +53,22 @@
   color: var(--content);
 }
 
+/*
+ * Form field. The fill was `--canvas` — the token for the *bottom layer
+ * background* — so the field was painted the same colour as the page behind it and
+ * only the hairline gave it away. `--neutral-faint` is what DESIGN.md assigns to
+ * input fills.
+ */
 .server-edit__input {
-  background-color: var(--canvas);
+  background-color: var(--neutral-faint);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   font-size: 15px;
   color: var(--content);
+  /* Without this the placeholder keeps the host's own default, which is
+     unreadable on the dark theme — the batch-19 bug, missed here. */
+  -x-placeholder-color: var(--content-muted);
 }
 
 .server-edit__toggle {
