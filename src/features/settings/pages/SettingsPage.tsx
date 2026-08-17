@@ -300,15 +300,25 @@ export function SettingsPage() {
         data-testid='settings-scroll'
       >
         <view className='settings__content'>
-          <SettingsSection title={t('settings.musicLibraryScan')} icon='library'>
+          <SettingsSection title={t('settings.appearance')} icon='palette'>
+            {APP_THEME_OPTIONS.map((option) => (
+              <SettingsRow
+                key={option}
+                title={t(themeLabelKey(option))}
+                selected={option === theme}
+                trailingIcon={option === theme ? 'check' : undefined}
+                onTap={() => selectTheme(option)}
+                testId={`theme-${option}`}
+              />
+            ))}
             <SettingsRow
-              icon='search'
-              title={t('libops.pageTitle')}
-              subtitle={t('libops.entrySubtitle')}
+              icon='palette'
+              title={t('themePacks.title')}
+              subtitle={t('themePacks.subtitle')}
               trailingIcon='chevron-right'
-              selected={isActive('library')}
-              onTap={() => goToSubPage('library', '/settings/library')}
-              testId='settings-library-ops'
+              selected={isActive('theme-packs')}
+              onTap={() => goToSubPage('theme-packs', '/settings/theme-packs')}
+              testId='settings-theme-packs'
             />
           </SettingsSection>
 
@@ -341,26 +351,111 @@ export function SettingsPage() {
             )
             : null}
 
-          <SettingsSection title={t('settings.appearance')} icon='palette'>
-            {APP_THEME_OPTIONS.map((option) => (
+          <SettingsSection title={t('settings.audioQuality')} icon='music'>
+            {AUDIO_QUALITY_OPTIONS.map((option) => (
               <SettingsRow
                 key={option}
-                title={t(themeLabelKey(option))}
-                selected={option === theme}
-                trailingIcon={option === theme ? 'check' : undefined}
-                onTap={() => selectTheme(option)}
-                testId={`theme-${option}`}
+                title={t(`settings.quality_${option}`)}
+                selected={option === audioQuality}
+                trailingIcon={option === audioQuality ? 'check' : undefined}
+                onTap={() => selectAudioQuality(option)}
+                testId={`audio-quality-${option}`}
               />
             ))}
-            <SettingsRow
-              icon='palette'
-              title={t('themePacks.title')}
-              subtitle={t('themePacks.subtitle')}
-              trailingIcon='chevron-right'
-              selected={isActive('theme-packs')}
-              onTap={() => goToSubPage('theme-packs', '/settings/theme-packs')}
-              testId='settings-theme-packs'
+          </SettingsSection>
+
+          <SettingsSection title={t('settings.playback')} icon='music'>
+            <SwitchRow
+              icon='music'
+              title={t('settings.autoResume')}
+              subtitle={t('settings.autoResumeSubtitle')}
+              checked={autoResume}
+              onChange={(next) => { setAutoResume(next); void writeAutoResume(next) }}
+              testId='settings-auto-resume'
             />
+            <SwitchRow
+              icon='volume'
+              title={t('settings.normalize')}
+              subtitle={t('settings.normalizeSubtitle')}
+              checked={normalize}
+              onChange={(next) => { setNormalize(next); setNormalizeEnabled(next); void writeNormalize(next); void getSettingsApi().updateVolumeNormalize(next).catch(() => {}) }}
+              testId='settings-normalize'
+            />
+            <SettingsRow
+              icon='music'
+              title={t('eq.title')}
+              subtitle={t('eq.subtitle')}
+              trailingIcon='chevron-right'
+              selected={isActive('eq')}
+              onTap={() => goToSubPage('eq', '/settings/eq')}
+              testId='settings-eq'
+            />
+            {getPlatformCapabilities().floatingLyric
+              ? (
+                <SettingsRow
+                  icon='music'
+                  title={t('settings.floatingLyrics')}
+                  subtitle={t('settings.floatingLyricsSubtitle')}
+                  trailingIcon='chevron-right'
+                  onTap={() => {
+                    const m = getFloatingLyricModule()
+                    void m.requestPermission().then(granted => { if (granted) void m.show() })
+                  }}
+                  testId='settings-floating-lyrics'
+                />
+              )
+              : null}
+          </SettingsSection>
+
+          <SettingsSection title={t('settings.librarySection')} icon='library'>
+            <SettingsRow
+              icon='search'
+              title={t('libops.pageTitle')}
+              subtitle={t('libops.entrySubtitle')}
+              trailingIcon='chevron-right'
+              selected={isActive('library')}
+              onTap={() => goToSubPage('library', '/settings/library')}
+              testId='settings-library-ops'
+            />
+            <SettingsRow
+              icon='music'
+              title={t('library.browseViews')}
+              subtitle={t('library.browseViewsSubtitle')}
+              trailingIcon='chevron-right'
+              selected={isActive('browse-views')}
+              onTap={() => goToSubPage('browse-views', '/settings/browse-views')}
+              testId='settings-browse-views'
+            />
+          </SettingsSection>
+
+          <SettingsSection title={t('settings.advanced')} icon='settings'>
+            <SettingsRow
+              icon='settings'
+              title={t('settings.storageCache')}
+              subtitle={t('settings.cacheManageSubtitle')}
+              trailingIcon='chevron-right'
+              selected={isActive('cache')}
+              onTap={() => goToSubPage('cache', '/settings/cache')}
+            />
+            <SettingsRow
+              icon='menu'
+              title={t('settings.plugins')}
+              subtitle={t('jsplugin.managerSubtitle')}
+              trailingIcon='chevron-right'
+              selected={isActive('plugins')}
+              onTap={() => goToSubPage('plugins', '/settings/plugins')}
+              testId='settings-plugins'
+            />
+            <SettingsRow
+              icon='menu'
+              title={t('jsplugin.tabConfigTitle')}
+              subtitle={t('jsplugin.tabConfigSubtitle')}
+              trailingIcon='chevron-right'
+              selected={isActive('tab-config')}
+              onTap={() => goToSubPage('tab-config', '/settings/tab-config')}
+              testId='settings-tab-config'
+            />
+            <SettingsRow icon='link' title={t('settings.networkProxy')} subtitle={t('settings.proxySubtitle')} trailingIcon='chevron-right' selected={isActive('proxy')} onTap={() => goToSubPage('proxy', '/settings/proxy')} testId='settings-proxy' />
           </SettingsSection>
 
           <SettingsSection title={t('settings.diagnostics')} icon='settings'>
@@ -383,6 +478,8 @@ export function SettingsPage() {
               testId='settings-export-logs'
             />
           </SettingsSection>
+
+          <DataSection />
 
           <SettingsSection title={t('settings.about')} icon='info'>
             <SettingsRow
@@ -412,91 +509,16 @@ export function SettingsPage() {
               onTap={() => goToSubPage('licenses', '/settings/licenses')}
               testId='settings-licenses'
             />
-          </SettingsSection>
-
-          <SettingsSection title={t('settings.audioQuality')} icon='music'>
-            {AUDIO_QUALITY_OPTIONS.map((option) => (
-              <SettingsRow
-                key={option}
-                title={t(`settings.quality_${option}`)}
-                selected={option === audioQuality}
-                trailingIcon={option === audioQuality ? 'check' : undefined}
-                onTap={() => selectAudioQuality(option)}
-                testId={`audio-quality-${option}`}
-              />
-            ))}
-          </SettingsSection>
-
-          <SettingsSection title={t('settings.playback')} icon='music'>
-            {/*
-              Switches, not trailing checks. These two are on/off; the check in the
-              rows above means "this is the option chosen out of the group", and
-              spelling both with the same glyph is what made the page look like it
-              had two unrelated conventions.
-            */}
-            <SwitchRow
-              icon='music'
-              title={t('settings.autoResume')}
-              subtitle={t('settings.autoResumeSubtitle')}
-              checked={autoResume}
-              onChange={(next) => { setAutoResume(next); void writeAutoResume(next) }}
-              testId='settings-auto-resume'
-            />
-            <SwitchRow
-              icon='volume'
-              title={t('settings.normalize')}
-              subtitle={t('settings.normalizeSubtitle')}
-              checked={normalize}
-              onChange={(next) => { setNormalize(next); setNormalizeEnabled(next); void writeNormalize(next); void getSettingsApi().updateVolumeNormalize(next).catch(() => {}) }}
-              testId='settings-normalize'
-            />
-            {/* SongloftFloatingLyric is not registered on any host yet (see fix
-                plan P2-3), so this row's stub always refuses the permission and
-                the tap does nothing. Hide it until the module actually exists. */}
-            {getPlatformCapabilities().floatingLyric
-              ? (
-                <SettingsRow
-                  icon='music'
-                  title={t('settings.floatingLyrics')}
-                  subtitle={t('settings.floatingLyricsSubtitle')}
-                  trailingIcon='chevron-right'
-                  onTap={() => {
-                    const m = getFloatingLyricModule()
-                    void m.requestPermission().then(granted => { if (granted) void m.show() })
-                  }}
-                  testId='settings-floating-lyrics'
-                />
-              )
-              : null}
-          </SettingsSection>
-
-          <SettingsSection title={t('settings.advanced')} icon='settings'>
-            <SettingsRow icon='music' title={t('library.browseViews')} subtitle={t('library.browseViewsSubtitle')} trailingIcon='chevron-right' selected={isActive('browse-views')} onTap={() => goToSubPage('browse-views', '/settings/browse-views')} testId='settings-browse-views' />
-            <SettingsRow icon='music' title={t('eq.title')} subtitle={t('eq.subtitle')} trailingIcon='chevron-right' selected={isActive('eq')} onTap={() => goToSubPage('eq', '/settings/eq')} testId='settings-eq' />
-            <SettingsRow icon='settings' title={t('settings.storageCache')} subtitle={t('settings.cacheManageSubtitle')} trailingIcon='chevron-right' selected={isActive('cache')} onTap={() => goToSubPage('cache', '/settings/cache')} />
             <SettingsRow
-              icon='menu'
-              title={t('settings.plugins')}
-              subtitle={t('jsplugin.managerSubtitle')}
+              icon='refresh'
+              title={t('upgrade.title')}
+              subtitle={t('upgrade.subtitle')}
               trailingIcon='chevron-right'
-              selected={isActive('plugins')}
-              onTap={() => goToSubPage('plugins', '/settings/plugins')}
-              testId='settings-plugins'
+              selected={isActive('upgrade')}
+              onTap={() => goToSubPage('upgrade', '/settings/upgrade')}
+              testId='settings-upgrade'
             />
-            <SettingsRow
-              icon='menu'
-              title={t('jsplugin.tabConfigTitle')}
-              subtitle={t('jsplugin.tabConfigSubtitle')}
-              trailingIcon='chevron-right'
-              selected={isActive('tab-config')}
-              onTap={() => goToSubPage('tab-config', '/settings/tab-config')}
-              testId='settings-tab-config'
-            />
-            <SettingsRow icon='link' title={t('settings.networkProxy')} subtitle={t('settings.proxySubtitle')} trailingIcon='chevron-right' selected={isActive('proxy')} onTap={() => goToSubPage('proxy', '/settings/proxy')} testId='settings-proxy' />
-            <SettingsRow icon='refresh' title={t('upgrade.title')} subtitle={t('upgrade.subtitle')} trailingIcon='chevron-right' selected={isActive('upgrade')} onTap={() => goToSubPage('upgrade', '/settings/upgrade')} testId='settings-upgrade' />
           </SettingsSection>
-
-          <DataSection />
 
           <SettingsSection title={t('settings.account')} icon='logout'>
             <SettingsRow

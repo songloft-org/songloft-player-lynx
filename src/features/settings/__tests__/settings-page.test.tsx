@@ -146,13 +146,15 @@ test('renders every section, version, server and log-out rows', async () => {
   const { queryByText, queryByTestId, queryAllByTestId } = await renderPage()
 
   // Section headers.
-  expect(queryByText('Playback')).toBeInTheDocument()
+  expect(queryByText('Appearance')).toBeInTheDocument()
   expect(queryByText('Language')).toBeInTheDocument()
   expect(queryByText('Connection')).toBeInTheDocument()
-  expect(queryByText('Appearance')).toBeInTheDocument()
+  expect(queryByText('Audio quality')).toBeInTheDocument()
+  expect(queryByText('Playback')).toBeInTheDocument()
+  expect(queryByText('Library')).toBeInTheDocument()
+  expect(queryByText('Advanced')).toBeInTheDocument()
   expect(queryByText('Diagnostics')).toBeInTheDocument()
   expect(queryByText('About')).toBeInTheDocument()
-  expect(queryByText('Advanced')).toBeInTheDocument()
   expect(queryByText('Account')).toBeInTheDocument()
 
   expect(queryByTestId('play-mode-order')).not.toBeInTheDocument()

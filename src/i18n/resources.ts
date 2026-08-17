@@ -182,6 +182,7 @@ export const en = {
     // the "coming later" label was stale and read as if the app were unfinished.
     advanced: 'Advanced',
     musicLibraryScan: 'Music library scan',
+    librarySection: 'Library',
     storageCache: 'Storage & cache',
     cacheManageSubtitle: 'Manage song cache & transcode settings',
     plugins: 'Plugins',
@@ -747,6 +748,7 @@ export const zh: TranslationTree = {
     licensesIntro: '本应用使用了以下开源软件：',
     advanced: '高级',
     musicLibraryScan: '音乐库扫描',
+    librarySection: '曲库管理',
     storageCache: '存储与缓存',
     cacheManageSubtitle: '管理歌曲缓存与转码设置',
     plugins: '插件',
