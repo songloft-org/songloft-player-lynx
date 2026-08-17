@@ -6,6 +6,7 @@ import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-s
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
+import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { canUploadCover, uploadPlaylistCover } from '../domain/cover-upload.js'
 import { getLastShellLocation } from '../../../shared/nav/shell-navigation.js'
@@ -486,8 +487,8 @@ export function PlaylistDetailPage() {
                     <view className={selectMode && selected.has(song.id) ? 'playlist-detail__song-row-wrapper playlist-detail__song-row-wrapper--selected' : 'playlist-detail__song-row-wrapper'}>
                       {selectMode
                         ? (
-                          <view className={selected.has(song.id) ? 'playlist-detail__select-check playlist-detail__select-check--on' : 'playlist-detail__select-check'}>
-                            {selected.has(song.id) ? <text className='playlist-detail__select-mark'>✓</text> : null}
+                          <view className='playlist-detail__select-box'>
+                            <AppCheckbox checked={selected.has(song.id)} />
                           </view>
                         )
                         : null}

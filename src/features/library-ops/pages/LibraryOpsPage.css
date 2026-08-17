@@ -228,21 +228,6 @@
   height: 32px;
 }
 
-.libops-tree__box {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--content-muted);
-}
-
-.libops-tree__box--on {
-  background-color: var(--primary);
-  border: 1px solid var(--primary);
-}
-
 .libops-tree__name {
   flex: 1;
   color: var(--content);

@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { getSettingsApi } from '../api/index.js'
 import type { BrowseView } from '../api/settings-api.js'
+import { SettingsSection } from '../widgets/SettingsSection.js'
+import { SwitchRow } from '../widgets/SwitchRow.js'
 import './BrowseViewsPage.css'
 
 export function BrowseViewsPage() {
@@ -39,14 +41,23 @@ export function BrowseViewsPage() {
       <scroll-view className='browse-views__scroll' scroll-y>
         {loading
           ? <text className='browse-views__state'>{t('common.loading')}</text>
-          : views.map((view) => (
-            <view key={view.id} className='browse-views__row' bindtap={() => toggleView(view.id)}>
-              <text className='browse-views__row-label'>{t(view.labelKey)}</text>
-              <view className={view.visible ? 'browse-views__toggle browse-views__toggle--on' : 'browse-views__toggle'}>
-                {view.visible ? <text className='browse-views__toggle-mark'>✓</text> : null}
-              </view>
-            </view>
-          ))}
+          : (
+            // Each view's visibility is its own on/off, so each row is a switch.
+            // These used to be hand-drawn 22px boxes with a literal `✓` text
+            // character in them — a third convention on the settings surface, and
+            // the only place in the app that drew a tick without the icon set.
+            <SettingsSection title={t('library.browseViews')} icon='library'>
+              {views.map((view) => (
+                <SwitchRow
+                  key={view.id}
+                  title={t(view.labelKey)}
+                  checked={view.visible}
+                  onChange={() => toggleView(view.id)}
+                  testId={`browse-view-${view.id}`}
+                />
+              ))}
+            </SettingsSection>
+          )}
       </scroll-view>
     </view>
   )

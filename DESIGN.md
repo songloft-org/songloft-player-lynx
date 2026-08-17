@@ -140,9 +140,29 @@
 - 选中态：`--primary` 填充 + `--primary-content` 文字。
 - 示例：Library 排序选项、歌单详情排序条。
 
+### 状态控件：三种角色，各一种控件（铁律）
+
+同一件事只有一种画法。这三者曾被混用——设置页里布尔值有时是开关、有时是尾部对勾，
+而「勾」又分带框与不带框，带框的还有六种互不相同的画法（18/20/22/24px、方形/圆形、
+1px/2px/无描边，其中四处用文本字符 `✓` 而不是图标集）。
+
+| 角色 | 控件 | 实现 |
+|---|---|---|
+| **开/关一件事** | Switch | `SwitchRow`（设置行）/ `AppSwitch`（裸控件） |
+| **一组里选一个** | 尾部对勾（无框） | `SettingsRow` 的 `trailingIcon='check'` + `selected` |
+| **列表里勾选若干** | Checkbox（方形带框） | `AppCheckbox` |
+
+判定：**能同时选中多个 → Checkbox；互斥 → 对勾；只有开和关 → Switch。**
+圆形永远不用于多选（圆形读作单选）。
+
 ### Switch（开关）
 - `--line` 底色 track + `--primary` 选中 track + `--canvas` 圆形 thumb + `--shadow-sm`。
 - 通过 `.ui-checked` class 切换状态。
+
+### Checkbox（复选框）
+- 20×20 + `--radius-sm` + 1px `--content-muted` 描边，未选中时透明底。
+- 选中：`--primary` 填充 + `--primary-content` 对勾（图标集的 `check`，14px）。
+- **纯展示**：不带 `bindtap`，点击由外层行/命中区负责，否则触摸目标会缩到 20px。
 
 ### 列表行（SongRow）
 - `--canvas` 底色 + `--line` 分隔线。

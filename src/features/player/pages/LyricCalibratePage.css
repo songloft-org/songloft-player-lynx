@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--surface);
+  background-color: var(--canvas);
 }
 
 .lyric-calibrate__topbar {
@@ -10,7 +10,7 @@
   flex-direction: row;
   align-items: center;
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 
 .lyric-calibrate__back {
@@ -70,7 +70,7 @@
 
 .lyric-calibrate__btn {
   padding: var(--space-3) var(--space-4);
-  background-color: var(--surface-raised);
+  background-color: var(--neutral-faint);
   border-radius: var(--radius-md);
 }
 

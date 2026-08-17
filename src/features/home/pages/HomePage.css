@@ -338,7 +338,7 @@
 }
 
 .home__state-action-text {
-  color: var(--on-primary);
+  color: var(--primary-content);
   font-size: var(--font-sm);
   font-weight: bold;
 }

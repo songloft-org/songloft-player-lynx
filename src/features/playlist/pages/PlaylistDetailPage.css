@@ -263,34 +263,15 @@
 }
 
 .playlist-detail__song-row-wrapper--selected {
-  background-color: var(--primary-faint);
+  background-color: var(--paper);
 }
 
 .playlist-detail__song-row-content {
   flex: 1;
 }
 
-.playlist-detail__select-check {
-  width: 24px;
-  height: 24px;
-  border-radius: 12px;
-  border-width: 2px;
-  border-color: var(--content-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.playlist-detail__select-box {
   margin-left: var(--space-3);
-}
-
-.playlist-detail__select-check--on {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
-
-.playlist-detail__select-mark {
-  color: var(--on-primary);
-  font-size: 12px;
-  font-weight: bold;
 }
 
 .playlist-detail__select-toolbar {
@@ -299,7 +280,7 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-3) var(--space-4);
-  background-color: var(--surface);
+  background-color: var(--paper);
   border-top-width: 1px;
   border-top-color: var(--neutral-faint);
 }
@@ -316,7 +297,7 @@
 }
 
 .playlist-detail__select-toolbar-btn-text {
-  color: var(--on-primary);
+  color: var(--primary-content);
   font-size: var(--font-sm);
   font-weight: bold;
 }

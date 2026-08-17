@@ -1,6 +1,7 @@
 import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { IconName } from '../../../shared/ui/icons.js'
+import './Settings.css'
 
 export interface SwitchRowProps {
   icon?: IconName
@@ -17,9 +18,15 @@ export interface SwitchRowProps {
  * `SwitchListTile`.
  *
  * `SettingsRow` cannot host this: its trailing slot only accepts a string plus
- * an icon name, and it takes no children. The row reuses the shared
- * `.settings-row*` classes (Lynx CSS is global scope) so it lines up pixel-wise
- * with the plain rows next to it in the same card.
+ * an icon name, and it takes no children. It reuses the same `.settings-row*`
+ * rules, so it lines up pixel-wise with the plain rows beside it in a card —
+ * which is why it lives next to `SettingsRow` rather than in `shared/ui`.
+ *
+ * **This is the only way to render a boolean.** DESIGN.md defines exactly one
+ * state control (Switch), and the settings surface used to spell booleans three
+ * different ways: a switch here, a bare trailing check in Settings → Playback, and
+ * two hand-rolled boxed checks in Browse views / Tab config. A trailing check is
+ * for picking one option *out of a group*; on/off is a switch.
  */
 export function SwitchRow({
   icon,

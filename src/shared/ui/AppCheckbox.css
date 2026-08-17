@@ -1,0 +1,29 @@
+/*
+ * Checkbox — the one box-and-tick in the app.
+ *
+ * Four hand-rolled copies existed before this, no two alike: 18px / 20px / 22px,
+ * `--radius-sm` / a hardcoded 4px / a 10px radius that made it a **circle** (a
+ * circle reads as single-choice, which is the opposite of what a multi-select
+ * means), 1px / 2px / no border at all, and two of them drew the tick as a literal
+ * `✓` text character instead of the icon set. Tokens per DESIGN.md: `--primary`
+ * fill with a `--primary-content` tick, so it inverts correctly on the dark theme.
+ *
+ * Presentational only — the surrounding row owns the tap target, as every call
+ * site already did.
+ */
+
+.app-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--content-muted);
+  background-color: transparent;
+}
+
+.app-checkbox--on {
+  background-color: var(--primary);
+  border: 1px solid var(--primary);
+}

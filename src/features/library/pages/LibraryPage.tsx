@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Input } from '@lynx-js/lynx-ui-input'
 
+import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import type { Song, SongFacet } from '../../../models/song.js'
 import { getSongsApi } from '../api/index.js'
@@ -289,8 +290,8 @@ function SongsView() {
                   <view className={selectMode && selected.has(song.id) ? 'library__select-row library__select-row--selected' : 'library__select-row'}>
                     {selectMode
                       ? (
-                        <view className={selected.has(song.id) ? 'library__select-check library__select-check--on' : 'library__select-check'}>
-                          {selected.has(song.id) ? <text className='library__select-check-mark'>✓</text> : null}
+                        <view className='library__select-box'>
+                          <AppCheckbox checked={selected.has(song.id)} />
                         </view>
                       )
                       : null}

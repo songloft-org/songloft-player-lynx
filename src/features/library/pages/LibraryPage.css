@@ -312,30 +312,12 @@
   background-color: var(--paper);
 }
 
+.library__select-box {
+  margin-left: var(--space-3);
+}
+
 .library__select-row-content {
   flex: 1;
-}
-
-.library__select-check {
-  width: 20px;
-  height: 20px;
-  border-radius: 10px;
-  border-width: 2px;
-  border-color: var(--content-muted);
-  margin-left: var(--space-3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.library__select-check--on {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
-
-.library__select-check-mark {
-  color: var(--primary-content);
-  font-size: 12px;
 }
 
 .library__select-toolbar {

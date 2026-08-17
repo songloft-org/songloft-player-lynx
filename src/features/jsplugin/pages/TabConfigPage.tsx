@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { JSPlugin } from '../../../models/jsplugin.js'
 import { getSettingsApi } from '../../settings/api/index.js'
+import { SwitchRow } from '../../settings/widgets/SwitchRow.js'
 import { getJSPluginApi } from '../api/index.js'
 import type { PluginTabEntry, TabConfig } from '../data/tab-config.js'
 import './TabConfigPage.css'
@@ -103,14 +104,17 @@ export function TabConfigPage() {
             <text className='tab-config__row-name'>{t('nav.home')}</text>
             <text className='tab-config__row-badge'>{t('jsplugin.tabFixed')}</text>
           </view>
-          <view className='tab-config__row' bindtap={toggleLibrary} data-testid='tab-toggle-library'>
-            <text className='tab-config__row-name'>{t('nav.library')}</text>
-            <view className={config.showLibrary ? 'tab-config__check tab-config__check--on' : 'tab-config__check'}>
-              {config.showLibrary
-                ? <Icon name='check' size={14} color={ICON_COLORS.primaryContent} />
-                : null}
-            </view>
-          </view>
+          {/*
+            Showing a tab is on/off, so it is a switch. These rows used to draw
+            their own 22px box-and-tick — a different shape *and* a different
+            convention from the switches everywhere else in settings.
+          */}
+          <SwitchRow
+            title={t('nav.library')}
+            checked={config.showLibrary}
+            onChange={toggleLibrary}
+            testId='tab-toggle-library'
+          />
           <view className='tab-config__row'>
             <text className='tab-config__row-name'>{t('nav.settings')}</text>
             <text className='tab-config__row-badge'>{t('jsplugin.tabFixed')}</text>
@@ -125,19 +129,14 @@ export function TabConfigPage() {
                 const enabled = isPluginInTabs(plugin)
                 const disabled = !enabled && atLimit
                 return (
-                  <view
+                  <SwitchRow
                     key={String(plugin.id)}
-                    className={disabled ? 'tab-config__row tab-config__row--disabled' : 'tab-config__row'}
-                    bindtap={() => togglePlugin(plugin)}
-                    data-testid={`tab-toggle-${plugin.id}`}
-                  >
-                    <text className='tab-config__row-name'>{plugin.displayName}</text>
-                    <view className={enabled ? 'tab-config__check tab-config__check--on' : 'tab-config__check'}>
-                      {enabled
-                        ? <Icon name='check' size={14} color={ICON_COLORS.primaryContent} />
-                        : null}
-                    </view>
-                  </view>
+                    title={plugin.displayName}
+                    checked={enabled}
+                    disabled={disabled}
+                    onChange={() => togglePlugin(plugin)}
+                    testId={`tab-toggle-${plugin.id}`}
+                  />
                 )
               })}
               {atLimit

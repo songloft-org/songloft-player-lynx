@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
 import type { DirEntry } from '../../../models/library-ops.js'
+import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { DirectoryTreeActions } from '../data/use-directory-tree.js'
 import {
@@ -93,13 +94,7 @@ function DirectoryNode({ entry, depth, ...rest }: NodeProps) {
           bindtap={() => onTogglePath(entry.path)}
           data-testid={`dir-check-${entry.path}`}
         >
-          <view
-            className={selected
-              ? 'libops-tree__box libops-tree__box--on'
-              : 'libops-tree__box'}
-          >
-            {selected ? <Icon name='check' size={14} color={ICON_COLORS.primaryContent} /> : null}
-          </view>
+          <AppCheckbox checked={selected} />
         </view>
 
         <Icon

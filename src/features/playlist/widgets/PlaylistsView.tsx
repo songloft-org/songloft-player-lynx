@@ -5,6 +5,7 @@ import { Input } from '@lynx-js/lynx-ui-input'
 import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-sortable'
 
 import type { Playlist } from '../../../models/playlist.js'
+import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { pinyinCompare } from '../../../shared/sort/pinyin-compare.js'
 import { flattenPlaylists } from '../data/pagination.js'
@@ -253,8 +254,8 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
               <PlaylistCard playlist={playlist} onTap={onTap} />
               {selectMode
                 ? (
-                  <view className={selected.has(playlist.id) ? 'playlists__select-badge playlists__select-badge--on' : 'playlists__select-badge'}>
-                    {selected.has(playlist.id) ? <text className='playlists__select-badge-mark'>✓</text> : null}
+                  <view className='playlists__select-badge'>
+                    <AppCheckbox checked={selected.has(playlist.id)} />
                   </view>
                 )
                 : null}

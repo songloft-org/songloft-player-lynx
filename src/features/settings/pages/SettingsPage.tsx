@@ -46,6 +46,7 @@ import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { useScrollMemory } from '../../../shared/nav/scroll-memory.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
+import { SwitchRow } from '../widgets/SwitchRow.js'
 import { LibraryOpsPage } from '../../library-ops/pages/LibraryOpsPage.js'
 import { PluginManagerPage } from '../../jsplugin/pages/PluginManagerPage.js'
 import { TabConfigPage } from '../../jsplugin/pages/TabConfigPage.js'
@@ -434,22 +435,26 @@ export function SettingsPage() {
           </SettingsSection>
 
           <SettingsSection title={t('settings.playback')} icon='music'>
-            <SettingsRow
+            {/*
+              Switches, not trailing checks. These two are on/off; the check in the
+              rows above means "this is the option chosen out of the group", and
+              spelling both with the same glyph is what made the page look like it
+              had two unrelated conventions.
+            */}
+            <SwitchRow
               icon='music'
               title={t('settings.autoResume')}
               subtitle={t('settings.autoResumeSubtitle')}
-              selected={autoResume}
-              trailingIcon={autoResume ? 'check' : undefined}
-              onTap={() => { const next = !autoResume; setAutoResume(next); void writeAutoResume(next) }}
+              checked={autoResume}
+              onChange={(next) => { setAutoResume(next); void writeAutoResume(next) }}
               testId='settings-auto-resume'
             />
-            <SettingsRow
+            <SwitchRow
               icon='volume'
               title={t('settings.normalize')}
               subtitle={t('settings.normalizeSubtitle')}
-              selected={normalize}
-              trailingIcon={normalize ? 'check' : undefined}
-              onTap={() => { const next = !normalize; setNormalize(next); setNormalizeEnabled(next); void writeNormalize(next); void getSettingsApi().updateVolumeNormalize(next).catch(() => {}) }}
+              checked={normalize}
+              onChange={(next) => { setNormalize(next); setNormalizeEnabled(next); void writeNormalize(next); void getSettingsApi().updateVolumeNormalize(next).catch(() => {}) }}
               testId='settings-normalize'
             />
             {/* SongloftFloatingLyric is not registered on any host yet (see fix

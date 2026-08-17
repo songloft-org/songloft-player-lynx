@@ -10,7 +10,7 @@ import {
   metadataViewKind,
 } from '../domain/scan-model.js'
 import { ProgressBar } from './ProgressBar.js'
-import { SwitchRow } from './SwitchRow.js'
+import { SwitchRow } from '../../settings/widgets/SwitchRow.js'
 
 export interface MetadataSectionProps {
   progress: MetadataProgress | undefined

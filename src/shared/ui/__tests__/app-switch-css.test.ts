@@ -51,3 +51,34 @@ test('no screen re-forks the switch CSS', () => {
     .filter((f) => /switch-track|switch-thumb|app-switch/.test(rules(f)))
   expect(forked).toEqual([])
 })
+
+/**
+ * Same drift, one control over: six screens had each hand-drawn a box-and-tick,
+ * no two alike — 18/20/22/24px, `--radius-sm` / a hardcoded 4px / a radius that
+ * made it a **circle** (which reads as single-choice, the opposite of a
+ * multi-select), 1px / 2px / no border, and four of the six drew the tick as a
+ * literal `✓` character instead of the icon set. Two of those ticks were invisible
+ * because their colour was an undefined token (see `tokens-defined.test.ts`).
+ */
+test('the shared checkbox styles the checked state', () => {
+  const css = rules('shared/ui/AppCheckbox.css')
+  expect(css).toMatch(/\.app-checkbox\s*\{/)
+  expect(css).toMatch(/\.app-checkbox--on\s*\{[^}]*background-color:\s*var\(--primary\)/)
+  // A square, not a circle: the circle is what made a multi-select look like a
+  // radio group.
+  expect(css).toMatch(/\.app-checkbox\s*\{[^}]*border-radius:\s*var\(--radius-sm\)/)
+})
+
+test('no screen re-forks the checkbox CSS', () => {
+  const forked = cssFiles(SRC)
+    .filter((f) => f !== 'shared/ui/AppCheckbox.css')
+    .filter((f) => {
+      const css = rules(f)
+      // A rule that both draws a box and fills it with the primary colour is a
+      // checkbox by any other name.
+      return /border-radius[^;]*;[^}]*border-(width|:)/.test(css)
+        && /background-color:\s*var\(--primary\)[^}]*\}/.test(css)
+        && /(check|toggle|badge|box)/.test(css)
+    })
+  expect(forked).toEqual([])
+})

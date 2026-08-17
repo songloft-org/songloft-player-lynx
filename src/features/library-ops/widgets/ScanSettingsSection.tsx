@@ -23,7 +23,7 @@ import {
   playlistModeDescKey,
   playlistModeLabelKey,
 } from '../domain/scan-model.js'
-import { SwitchRow } from './SwitchRow.js'
+import { SwitchRow } from '../../settings/widgets/SwitchRow.js'
 
 export interface ScanSettingsSectionProps {
   onWriteError: () => void

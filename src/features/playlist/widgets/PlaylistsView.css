@@ -289,30 +289,11 @@
   position: relative;
 }
 
+/* Positioning only — the box itself is `AppCheckbox`. */
 .playlists__select-badge {
   position: absolute;
   top: 4px;
   right: 4px;
-  width: 22px;
-  height: 22px;
-  border-radius: 11px;
-  border-width: 2px;
-  border-color: var(--content-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--surface);
-}
-
-.playlists__select-badge--on {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
-
-.playlists__select-badge-mark {
-  color: var(--on-primary);
-  font-size: 11px;
-  font-weight: bold;
 }
 
 .playlists__select-toolbar {
@@ -321,7 +302,7 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-3) var(--space-4);
-  background-color: var(--surface);
+  background-color: var(--paper);
   border-top-width: 1px;
   border-top-color: var(--neutral-faint);
 }
@@ -338,7 +319,7 @@
 }
 
 .playlists__select-toolbar-btn-text {
-  color: var(--on-primary);
+  color: var(--primary-content);
   font-size: var(--font-sm);
   font-weight: bold;
 }
