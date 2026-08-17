@@ -119,10 +119,10 @@
 
 .eq-page__band-track {
   position: relative;
-  height: 6px;
+  height: 12px;
   width: 100%;
   background-color: var(--neutral-faint);
-  border-radius: 3px;
+  border-radius: 6px;
 }
 
 .eq-page__band-indicator {
