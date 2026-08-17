@@ -39,20 +39,26 @@ function BandSlider({ hz, gainDb, onChange }: {
   gainDb: number
   onChange: (ratio: number) => void
 }) {
-  const wrapperRef = useRef<{ getBoundingClientRect: () => { top: number; height: number } } | null>(null)
+  const sliderRef = useRef<{ getBoundingClientRect: () => { top: number; height: number } } | null>(null)
+  const rectRef = useRef<{ top: number; height: number } | null>(null)
   const value = gainToSlider(gainDb)
 
-  const resolveRatio = useCallback((clientY: number) => {
-    const el = wrapperRef.current
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    const ratio = 1 - Math.max(0, Math.min(1, (clientY - rect.top) / rect.height))
-    onChange(ratio)
-  }, [onChange])
+  const ensureRect = useCallback(() => {
+    if (rectRef.current) return rectRef.current
+    const el = sliderRef.current
+    if (!el) return null
+    const r = el.getBoundingClientRect()
+    rectRef.current = { top: r.top, height: r.height }
+    return rectRef.current
+  }, [])
 
-  const handleTouch = useCallback((e: { touches: Array<{ clientY: number }> }) => {
-    if (e.touches?.[0]) resolveRatio(e.touches[0].clientY)
-  }, [resolveRatio])
+  const handleTouch = useCallback((e: { detail?: { y: number } }) => {
+    if (!e.detail) return
+    const rect = ensureRect()
+    if (!rect || rect.height <= 0) return
+    const ratio = 1 - Math.max(0, Math.min(1, (e.detail.y - rect.top) / rect.height))
+    onChange(ratio)
+  }, [onChange, ensureRect])
 
   return (
     <view className='eq-page__band'>
@@ -61,12 +67,12 @@ function BandSlider({ hz, gainDb, onChange }: {
       </text>
       <view
         className='eq-page__band-slider-wrap'
-        bindtouchstart={handleTouch}
-        bindtouchmove={handleTouch}
+        catchtouchstart={handleTouch}
+        catchtouchmove={handleTouch}
       >
         <view
           // @ts-expect-error Lynx ref type
-          ref={wrapperRef}
+          ref={sliderRef}
           className='eq-page__band-track'
         >
           <view
