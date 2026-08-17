@@ -62,11 +62,26 @@
   flex-direction: column;
 }
 
-.server-list__delete {
+.server-list__actions {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
   align-self: flex-end;
-  padding: 4px 12px;
   margin-top: 2px;
   margin-bottom: 8px;
+}
+
+.server-list__edit {
+  padding: 4px 12px;
+}
+
+.server-list__edit-text {
+  font-size: 13px;
+  color: var(--primary);
+}
+
+.server-list__delete {
+  padding: 4px 12px;
 }
 
 .server-list__delete-text {

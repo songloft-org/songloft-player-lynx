@@ -79,16 +79,25 @@ export function ServerListPage() {
                     testId={`server-${profile.id}`}
                   />
                   {profile.id !== activeProfileId ? (
-                    <view
-                      className='server-list__delete'
-                      bindtap={() => void onDeleteProfile(profile.id)}
-                      data-testid={`server-delete-${profile.id}`}
-                    >
-                      <text className='server-list__delete-text'>
-                        {confirmDeleteId === profile.id
-                          ? t('servers.deleteConfirm')
-                          : t('servers.delete')}
-                      </text>
+                    <view className='server-list__actions'>
+                      <view
+                        className='server-list__edit'
+                        bindtap={() => void navigate({ to: `/settings/servers/edit/$id`, params: { id: profile.id } })}
+                        data-testid={`server-edit-${profile.id}`}
+                      >
+                        <text className='server-list__edit-text'>{t('servers.edit')}</text>
+                      </view>
+                      <view
+                        className='server-list__delete'
+                        bindtap={() => void onDeleteProfile(profile.id)}
+                        data-testid={`server-delete-${profile.id}`}
+                      >
+                        <text className='server-list__delete-text'>
+                          {confirmDeleteId === profile.id
+                            ? t('servers.deleteConfirm')
+                            : t('servers.delete')}
+                        </text>
+                      </view>
                     </view>
                   ) : null}
                 </view>
