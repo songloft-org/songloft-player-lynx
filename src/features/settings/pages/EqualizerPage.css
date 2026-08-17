@@ -112,7 +112,11 @@
   min-height: 0;
   display: flex;
   justify-content: center;
-  touch-action: none;
+  /*
+   * Gesture ownership is handled by `consume-slide-event` on this element (see
+   * EqualizerPage.tsx) — not `touch-action`, which Lynx does not support and
+   * strips during template encode.
+   */
 }
 
 .eq-page__band-track {
