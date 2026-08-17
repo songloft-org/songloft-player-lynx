@@ -15,7 +15,7 @@
 .settings-section__header {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: var(--space-2);
   padding: 0 var(--space-1);
 }
@@ -25,12 +25,25 @@
   align-items: center;
   justify-content: center;
   margin-right: var(--space-2);
+  margin-top: 1px;
+}
+
+.settings-section__header-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .settings-section__title {
   color: var(--content-2);
   font-size: var(--font-sm);
   font-weight: bold;
+}
+
+.settings-section__subtitle {
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+  margin-top: 1px;
 }
 
 .settings-section__card {

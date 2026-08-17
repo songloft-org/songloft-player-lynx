@@ -157,15 +157,12 @@ test('renders every section, version, server and log-out rows', async () => {
 
   // Section headers.
   expect(queryByText('Appearance')).toBeInTheDocument()
-  expect(queryByText('Language')).toBeInTheDocument()
-  expect(queryByText('Connection')).toBeInTheDocument()
-  expect(queryByText('Audio quality')).toBeInTheDocument()
   expect(queryByText('Playback')).toBeInTheDocument()
-  expect(queryByText('Lyrics')).toBeInTheDocument()
   expect(queryByText('Library')).toBeInTheDocument()
-  expect(queryByText('Advanced')).toBeInTheDocument()
-  expect(queryByText('Diagnostics')).toBeInTheDocument()
-  expect(queryByText('About')).toBeInTheDocument()
+  expect(queryByText('Extensions')).toBeInTheDocument()
+  expect(queryByText('Cache')).toBeInTheDocument()
+  expect(queryByText('Network')).toBeInTheDocument()
+  expect(queryByText('About & Updates')).toBeInTheDocument()
   expect(queryByText('Account')).toBeInTheDocument()
 
   expect(queryByTestId('play-mode-order')).not.toBeInTheDocument()

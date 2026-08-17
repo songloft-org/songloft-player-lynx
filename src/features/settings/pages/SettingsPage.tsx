@@ -322,7 +322,12 @@ export function SettingsPage() {
         data-testid='settings-scroll'
       >
         <view className='settings__content'>
-          <SettingsSection title={t('settings.appearance')} icon='palette'>
+          {/* ── 1. Appearance ─────────────────────────────────────────── */}
+          <SettingsSection
+            title={t('settings.categoryAppearance')}
+            subtitle={t('settings.categoryAppearanceSubtitle')}
+            icon='palette'
+          >
             {APP_THEME_OPTIONS.map((option) => (
               <SettingsRow
                 key={option}
@@ -331,6 +336,16 @@ export function SettingsPage() {
                 trailingIcon={option === theme ? 'check' : undefined}
                 onTap={() => selectTheme(option)}
                 testId={`theme-${option}`}
+              />
+            ))}
+            {APP_LANGUAGE_OPTIONS.map((option) => (
+              <SettingsRow
+                key={option}
+                title={t(languageLabelKey(option))}
+                selected={option === language}
+                trailingIcon={option === language ? 'check' : undefined}
+                onTap={() => selectLanguage(option)}
+                testId={`language-${option}`}
               />
             ))}
             <SettingsRow
@@ -344,36 +359,12 @@ export function SettingsPage() {
             />
           </SettingsSection>
 
-          <SettingsSection title={t('settings.languageSection')} icon='settings'>
-            {APP_LANGUAGE_OPTIONS.map((option) => (
-              <SettingsRow
-                key={option}
-                title={t(languageLabelKey(option))}
-                selected={option === language}
-                trailingIcon={option === language ? 'check' : undefined}
-                onTap={() => selectLanguage(option)}
-                testId={`language-${option}`}
-              />
-            ))}
-          </SettingsSection>
-
-          {showConnection
-            ? (
-              <SettingsSection title={t('settings.connection')} icon='link'>
-                <SettingsRow
-                  icon='link'
-                  title={t('servers.title')}
-                  subtitle={serverText}
-                  trailingIcon='chevron-right'
-                  selected={isActive('servers')}
-                  onTap={() => goToSubPage('servers', '/settings/servers')}
-                  testId='settings-server'
-                />
-              </SettingsSection>
-            )
-            : null}
-
-          <SettingsSection title={t('settings.audioQuality')} icon='music'>
+          {/* ── 2. Playback ───────────────────────────────────────────── */}
+          <SettingsSection
+            title={t('settings.categoryPlayback')}
+            subtitle={t('settings.categoryPlaybackSubtitle')}
+            icon='music'
+          >
             {AUDIO_QUALITY_OPTIONS.map((option) => (
               <SettingsRow
                 key={option}
@@ -384,9 +375,6 @@ export function SettingsPage() {
                 testId={`audio-quality-${option}`}
               />
             ))}
-          </SettingsSection>
-
-          <SettingsSection title={t('settings.playback')} icon='music'>
             <SwitchRow
               icon='music'
               title={t('settings.autoResume')}
@@ -412,9 +400,6 @@ export function SettingsPage() {
               onTap={() => goToSubPage('eq', '/settings/eq')}
               testId='settings-eq'
             />
-          </SettingsSection>
-
-          <SettingsSection title={t('settings.lyricsSection')} icon='music'>
             <SwitchRow
               icon='music'
               title={t('settings.autoEnterLyrics')}
@@ -477,7 +462,12 @@ export function SettingsPage() {
               : null}
           </SettingsSection>
 
-          <SettingsSection title={t('settings.librarySection')} icon='library'>
+          {/* ── 3. Library ────────────────────────────────────────────── */}
+          <SettingsSection
+            title={t('settings.categoryLibrary')}
+            subtitle={t('settings.categoryLibrarySubtitle')}
+            icon='library'
+          >
             <SettingsRow
               icon='search'
               title={t('libops.pageTitle')}
@@ -498,15 +488,12 @@ export function SettingsPage() {
             />
           </SettingsSection>
 
-          <SettingsSection title={t('settings.advanced')} icon='settings'>
-            <SettingsRow
-              icon='settings'
-              title={t('settings.storageCache')}
-              subtitle={t('settings.cacheManageSubtitle')}
-              trailingIcon='chevron-right'
-              selected={isActive('cache')}
-              onTap={() => goToSubPage('cache', '/settings/cache')}
-            />
+          {/* ── 4. Extensions ─────────────────────────────────────────── */}
+          <SettingsSection
+            title={t('settings.categoryExtensions')}
+            subtitle={t('settings.categoryExtensionsSubtitle')}
+            icon='settings'
+          >
             <SettingsRow
               icon='menu'
               title={t('settings.plugins')}
@@ -525,33 +512,63 @@ export function SettingsPage() {
               onTap={() => goToSubPage('tab-config', '/settings/tab-config')}
               testId='settings-tab-config'
             />
-            <SettingsRow icon='link' title={t('settings.networkProxy')} subtitle={t('settings.proxySubtitle')} trailingIcon='chevron-right' selected={isActive('proxy')} onTap={() => goToSubPage('proxy', '/settings/proxy')} testId='settings-proxy' />
           </SettingsSection>
 
-          <SettingsSection title={t('settings.diagnostics')} icon='settings'>
-            {LOG_LEVELS.map((option) => (
-              <SettingsRow
-                key={option}
-                title={t(logLevelLabelKey(option))}
-                selected={option === logLevel}
-                trailingIcon={option === logLevel ? 'check' : undefined}
-                onTap={() => selectLogLevel(option)}
-                testId={`log-level-${option}`}
-              />
-            ))}
+          {/* ── 5. Cache ──────────────────────────────────────────────── */}
+          <SettingsSection
+            title={t('settings.categoryCache')}
+            subtitle={t('settings.categoryCacheSubtitle')}
+            icon='settings'
+          >
             <SettingsRow
-              icon='menu'
-              title={t('settings.exportLogs')}
-              subtitle={t('settings.exportLogsSubtitle')}
+              icon='settings'
+              title={t('settings.storageCache')}
+              subtitle={t('settings.cacheManageSubtitle')}
               trailingIcon='chevron-right'
-              onTap={openLogs}
-              testId='settings-export-logs'
+              selected={isActive('cache')}
+              onTap={() => goToSubPage('cache', '/settings/cache')}
             />
           </SettingsSection>
 
+          {/* ── 6. Network ────────────────────────────────────────────── */}
+          <SettingsSection
+            title={t('settings.categoryNetwork')}
+            subtitle={t('settings.categoryNetworkSubtitle')}
+            icon='link'
+          >
+            {showConnection
+              ? (
+                <SettingsRow
+                  icon='link'
+                  title={t('servers.title')}
+                  subtitle={serverText}
+                  trailingIcon='chevron-right'
+                  selected={isActive('servers')}
+                  onTap={() => goToSubPage('servers', '/settings/servers')}
+                  testId='settings-server'
+                />
+              )
+              : null}
+            <SettingsRow
+              icon='link'
+              title={t('settings.networkProxy')}
+              subtitle={t('settings.proxySubtitle')}
+              trailingIcon='chevron-right'
+              selected={isActive('proxy')}
+              onTap={() => goToSubPage('proxy', '/settings/proxy')}
+              testId='settings-proxy'
+            />
+          </SettingsSection>
+
+          {/* ── 7. Data ───────────────────────────────────────────────── */}
           <DataSection />
 
-          <SettingsSection title={t('settings.about')} icon='info'>
+          {/* ── 8. About & Updates ─────────────────────────────────────── */}
+          <SettingsSection
+            title={t('settings.categoryAbout')}
+            subtitle={t('settings.categoryAboutSubtitle')}
+            icon='info'
+          >
             <SettingsRow
               icon='info'
               title={t('settings.appVersion')}
@@ -588,9 +605,32 @@ export function SettingsPage() {
               onTap={() => goToSubPage('upgrade', '/settings/upgrade')}
               testId='settings-upgrade'
             />
+            {LOG_LEVELS.map((option) => (
+              <SettingsRow
+                key={option}
+                title={t(logLevelLabelKey(option))}
+                selected={option === logLevel}
+                trailingIcon={option === logLevel ? 'check' : undefined}
+                onTap={() => selectLogLevel(option)}
+                testId={`log-level-${option}`}
+              />
+            ))}
+            <SettingsRow
+              icon='menu'
+              title={t('settings.exportLogs')}
+              subtitle={t('settings.exportLogsSubtitle')}
+              trailingIcon='chevron-right'
+              onTap={openLogs}
+              testId='settings-export-logs'
+            />
           </SettingsSection>
 
-          <SettingsSection title={t('settings.account')} icon='logout'>
+          {/* ── 9. Account ────────────────────────────────────────────── */}
+          <SettingsSection
+            title={t('settings.categoryAccount')}
+            subtitle={t('settings.categoryAccountSubtitle')}
+            icon='logout'
+          >
             <SettingsRow
               icon='logout'
               title={t('settings.logOut')}
