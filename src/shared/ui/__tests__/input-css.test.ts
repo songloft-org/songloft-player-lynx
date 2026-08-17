@@ -44,32 +44,47 @@ function allCss(): string {
 }
 
 /**
- * Class names carried by every text field in the tree.
+ * Every text field in the tree, one entry per distinct `className` string.
  *
- * The lowercase `input` / `textarea` alternatives are not redundant: `LyricEditPage`
- * renders a **raw** `<textarea>` rather than the lynx-ui component, and a gate that
- * only knew about the components would have skipped it silently — the same shape of
- * blind spot as a contract gate that only reads one of two hosts.
+ * Deliberately **not** keyed by the base class: `proxy-settings__input` is worn by
+ * two `<Input>`s *and* by the allowlist `<TextArea>` (which adds a `--tall`
+ * modifier). A first-wins map keyed on the base class recorded that field as
+ * single-line and quietly excluded it from the multi-line gate below — caught only
+ * because the reverse-verification of that gate refused to go red.
+ *
+ * The lowercase `input` / `textarea` alternatives are not redundant either:
+ * `LyricEditPage` renders a **raw** `<textarea>` rather than the lynx-ui component,
+ * and a gate that only knew the component names would have skipped it silently.
  *
  * Only static string literals are matched. That is all the tree currently uses, and
- * a dynamic className would slip past this gate — so if one ever appears, give it a
- * static base class rather than loosening the pattern.
+ * a dynamic className would slip past — so if one ever appears, give it a static
+ * base class rather than loosening the pattern.
  */
-function inputClassNames(): string[] {
-  const found = new Set<string>()
+function textFields(): { classes: string[]; multiline: boolean }[] {
+  const found = new Map<string, { classes: string[]; multiline: boolean }>()
   for (const file of filesWithExt(SRC, '.tsx')) {
     if (file.includes('__tests__')) continue
     const src = readFileSync(file, 'utf8')
     for (
       const m of src.matchAll(
-        /<(?:Input|TextArea|input|textarea)\b[^>]*?className='([^']+)'/g,
+        /<(Input|TextArea|input|textarea)\b[^>]*?className='([^']+)'/g,
       )
     ) {
-      // The first class is the styled base; modifiers only tweak it.
-      found.add(m[1]!.split(/\s+/)[0]!)
+      const key = m[2]!
+      if (!found.has(key)) {
+        found.set(key, {
+          classes: key.split(/\s+/),
+          multiline: m[1]!.toLowerCase() === 'textarea',
+        })
+      }
     }
   }
-  return [...found].sort()
+  return [...found.values()]
+}
+
+/** Distinct styled base classes — the first class of each field. */
+function inputClassNames(): string[] {
+  return [...new Set(textFields().map((f) => f.classes[0]!))].sort()
 }
 
 test('the tree actually has text fields to check', () => {
@@ -81,6 +96,31 @@ test('the tree actually has text fields to check', () => {
 /** The declaration block of `.cls`, or `''` if the class has no rule at all. */
 function ruleFor(cls: string, css: string): string {
   return new RegExp(`\\.${cls}\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? ''
+}
+
+/**
+ * The `width` / `height` a field ends up with, given all the classes it wears.
+ *
+ * Every one of these rules is a single class, so they all have equal specificity
+ * and the **last one declared wins** — which is why a modifier that comes later in
+ * the stylesheet can neutralise a `width: 100%` on its base class. Resolving that
+ * matters here: `.proxy-settings__input` legitimately keeps `width: 100%` for the
+ * two single-line inputs that share it, and only the `--tall` modifier overrides it.
+ */
+function effectiveSize(classes: string[], css: string): { width: string; height: string } {
+  const out = { width: '', height: '' }
+  for (const prop of ['width', 'height'] as const) {
+    let bestAt = -1
+    for (const cls of classes) {
+      const at = css.search(new RegExp(`\\.${cls}\\s*\\{`))
+      const value = new RegExp(`(?:^|;|\\n)\\s*${prop}:\\s*([^;\\n]+)`).exec(ruleFor(cls, css))?.[1]
+      if (value !== undefined && at > bestAt) {
+        bestAt = at
+        out[prop] = value.trim()
+      }
+    }
+  }
+  return out
 }
 
 test('every text field sets -x-placeholder-color', () => {
@@ -114,6 +154,31 @@ test('every text field uses the --radius-sm corner', () => {
     .map((cls) => [cls, /border-radius:\s*([^;\n]+)/.exec(ruleFor(cls, css))?.[1]?.trim()])
     .filter(([, radius]) => radius !== 'var(--radius-sm)')
   expect(wrong).toEqual([])
+})
+
+/**
+ * Multi-line fields must not size themselves with a percentage width.
+ *
+ * `@lynx-js/web-elements` styles the real control through `::part()`, and
+ * `x-textarea.css` forwards `width` and `padding` to it but **not `box-sizing`* —
+ * where `x-input.css` forwards both. So a `<textarea>` keeps the UA's
+ * `content-box` while inheriting the percentage, and its border box ends up
+ * `padding + border` wider than its container: measured in headless Chrome, the
+ * allowlist field's right edge sat at 417px against a 383px card, visibly poking
+ * out. Flex stretch / `flex: 1` size the *outer* box, so they are correct under
+ * either box model. Native is unaffected (Lynx defaults to border-box), which is
+ * exactly why this only ever shows up in a browser.
+ *
+ * `<input>` is deliberately not covered: it *does* inherit `box-sizing`, and seven
+ * fields rely on `width: 100%`.
+ */
+test('multi-line fields are sized by flex, not by a percentage width', () => {
+  const css = allCss()
+  const offenders = textFields()
+    .filter((f) => f.multiline)
+    .map((f) => [f.classes.join(' '), effectiveSize(f.classes, css)] as const)
+    .filter(([, size]) => /%/.test(size.width) || /%/.test(size.height))
+  expect(offenders).toEqual([])
 })
 
 test('the raw <textarea> on the lyric editor is in scope', () => {

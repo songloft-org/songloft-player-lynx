@@ -94,10 +94,24 @@
   font-size: var(--font-md);
 }
 
-/* The allowlist is a `TextArea` (one entry per line), so the box grows with the
-   lines instead of stretching a single-line field, and the text starts at the top
-   rather than floating in the vertical middle of an 80px box. */
+/*
+ * The allowlist is a `TextArea` (one entry per line), so the box grows with the
+ * lines instead of stretching a single-line field, and the text starts at the top
+ * rather than floating in the vertical middle of an 80px box.
+ *
+ * `width: auto` is load-bearing, and only on Web. `@lynx-js/web-elements` styles
+ * the real control through `::part()`, and `x-textarea.css` forwards `width` and
+ * `padding` to it but **not `box-sizing`** — where `x-input.css` forwards both. So
+ * the inner `<textarea>` keeps the UA's `content-box` while inheriting
+ * `width: 100%`, and its border box ends up 34px (2×16 padding + 2×1 border) wider
+ * than the field, poking out through the card's right edge. Measured in headless
+ * Chrome: right edge 417px against a 383px field. Dropping the explicit width lets
+ * flex `stretch` size it instead, which is defined on the *outer* box and so is
+ * correct under either box model — 383px, flush. Native is unaffected either way
+ * (Lynx defaults to border-box).
+ */
 .proxy-settings__input--tall {
+  width: auto;
   height: auto;
   min-height: 96px;
   padding: var(--space-3) var(--space-4);
