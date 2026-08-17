@@ -1,4 +1,5 @@
-import { apiPrefix } from '../../../core/config/app-config.js'
+import { apiPrefix, appConfig } from '../../../core/config/app-config.js'
+import { getCachedAccessToken } from '../../../core/network/token-cache.js'
 import type { HttpClient } from '../../../core/network/http-client.js'
 import {
   parseJSPlugin,
@@ -126,8 +127,22 @@ export class JSPluginApi {
   }
 
   /** `POST /jsplugins/upload` — upload a plugin ZIP file (multipart). */
+  /**
+   * Absolute upload URL, with the token in the query string.
+   *
+   * Both parts are load-bearing, and neither was there: this returned the bare
+   * path `/api/v1/jsplugins/upload`, which the *native* uploader cannot resolve at
+   * all (it is a raw multipart POST through OkHttp / URLSession, not our
+   * `HttpClient`) and which the Web host resolved against the page origin — right
+   * only in embedded mode. And since that POST bypasses `HttpClient`, no
+   * interceptor attaches the bearer token, so the endpoint (`@Security
+   * BearerAuth`) answered 401 every time. `access_token` is the documented query
+   * fallback the auth middleware accepts, and the same trick `openLogs` uses.
+   */
   getUploadUrl(): string {
-    return `${apiPrefix}/jsplugins/upload`
+    const token = getCachedAccessToken()
+    const base = `${appConfig.resolvedBaseUrl}${apiPrefix}/jsplugins/upload`
+    return token ? `${base}?access_token=${encodeURIComponent(token)}` : base
   }
 
   // ── Plugin registries (source management) ──────────────────────────────

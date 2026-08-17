@@ -1,12 +1,6 @@
 import { useTranslation } from 'react-i18next'
 
-import {
-  DialogRoot,
-  DialogView,
-  DialogBackdrop,
-  DialogContent,
-  DialogClose,
-} from '@lynx-js/lynx-ui'
+import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
 
 export interface DeleteConfirmDialogProps {
   show: boolean
@@ -16,59 +10,28 @@ export interface DeleteConfirmDialogProps {
 }
 
 /**
- * Deletion confirmation dialog — wraps lynx-ui Dialog in controlled mode.
+ * Duplicate-deletion confirmation — the wording, over the shared
+ * {@link ConfirmDialog}.
  *
- * If Dialog has compatibility issues on a given platform, the page can fall back
- * to the two-tap confirm pattern used in CacheManagePage. This component
- * encapsulates that decision.
+ * This used to carry its own copy of the dialog markup and stylesheet, which had
+ * drifted into a solid red confirm button; DESIGN.md allows `--danger` as text
+ * only, never as a fill.
  */
-export function DeleteConfirmDialog({
-  show,
-  count,
-  onConfirm,
-  onCancel,
-}: DeleteConfirmDialogProps) {
+export function DeleteConfirmDialog({ show, count, onConfirm, onCancel }: DeleteConfirmDialogProps) {
   const { t } = useTranslation()
 
   return (
-    <DialogRoot show={show} onShowChange={(open) => { if (!open) onCancel() }}>
-      <DialogView>
-        <DialogBackdrop className='fp-dialog__backdrop' clickToClose>
-          <view className='fp-dialog__backdrop-inner' />
-        </DialogBackdrop>
-        <DialogContent className='fp-dialog__content'>
-          <view className='fp-dialog' data-testid='fp-delete-dialog'>
-            <text className='fp-dialog__title'>
-              {t('libops.dupConfirmDelete')}
-            </text>
-            <text className='fp-dialog__message'>
-              {t('libops.dupDeleteMessage', { count })}
-            </text>
-            <view className='fp-dialog__actions'>
-              <DialogClose>
-                <view
-                  className='fp-dialog__btn fp-dialog__btn--cancel'
-                  bindtap={onCancel}
-                  data-testid='fp-delete-cancel'
-                >
-                  <text className='fp-dialog__btn-text'>
-                    {t('libops.cancel')}
-                  </text>
-                </view>
-              </DialogClose>
-              <view
-                className='fp-dialog__btn fp-dialog__btn--confirm'
-                bindtap={onConfirm}
-                data-testid='fp-delete-confirm'
-              >
-                <text className='fp-dialog__btn-text fp-dialog__btn-text--confirm'>
-                  {t('libops.dupConfirmDelete')}
-                </text>
-              </view>
-            </view>
-          </view>
-        </DialogContent>
-      </DialogView>
-    </DialogRoot>
+    <ConfirmDialog
+      show={show}
+      title={t('libops.dupConfirmDelete')}
+      message={t('libops.dupDeleteMessage', { count })}
+      confirmLabel={t('libops.dupConfirmDelete')}
+      cancelLabel={t('libops.cancel')}
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+      testId='fp-delete-dialog'
+      confirmTestId='fp-delete-confirm'
+      cancelTestId='fp-delete-cancel'
+    />
   )
 }

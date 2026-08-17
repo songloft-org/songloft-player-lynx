@@ -1,0 +1,93 @@
+/*
+ * The one confirmation dialog.
+ *
+ * Two forks existed — `logout-dialog__*` in Settings and `fp-dialog__*` in the
+ * duplicate-detection page — and they had already drifted apart on the point
+ * DESIGN.md is explicit about: `--danger` is "危险色（仅文字，不做彩色背景块）",
+ * which the Settings copy honoured (ghost body, red hairline, red label) and the
+ * other did not (a solid red fill). This set keeps the compliant treatment.
+ */
+
+.confirm-dialog__backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.confirm-dialog__backdrop-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--backdrop);
+}
+
+.confirm-dialog__content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.confirm-dialog {
+  background-color: var(--paper);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  padding: var(--space-5);
+  margin: var(--space-6);
+  max-width: 360px;
+}
+
+.confirm-dialog__title {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--content);
+  margin-bottom: var(--space-2);
+}
+
+.confirm-dialog__message {
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+  line-height: var(--font-lg);
+  margin-bottom: var(--space-5);
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+}
+
+.confirm-dialog__btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  margin-left: var(--space-2);
+}
+
+/* Muse ghost (cancel) + danger-ghost (confirm): transparent bodies, hairline
+   borders — danger is red TEXT only, never a red fill block (DESIGN.md). */
+.confirm-dialog__btn--cancel {
+  background-color: transparent;
+  border: 1px solid var(--rule);
+}
+
+.confirm-dialog__btn--confirm {
+  background-color: transparent;
+  border: 1px solid var(--danger);
+}
+
+.confirm-dialog__btn-text {
+  font-size: var(--font-sm);
+  color: var(--content);
+}
+
+.confirm-dialog__btn-text--confirm {
+  color: var(--danger);
+}

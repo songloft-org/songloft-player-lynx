@@ -115,10 +115,6 @@
   border-radius: var(--radius-sm);
 }
 
-.plugin-manager__delete--confirm {
-  background-color: var(--paper);
-}
-
 .plugin-manager__state {
   display: flex;
   align-items: center;
@@ -133,4 +129,15 @@
 
 .plugin-manager__state-text--error {
   color: var(--danger);
+}
+
+/* Install failures used to vanish into an empty `catch`; this is where they land
+   now. Inline rather than a toast — Lynx has no toast primitive. */
+.plugin-manager__error {
+  padding: var(--space-2) var(--space-4);
+}
+
+.plugin-manager__error-text {
+  color: var(--danger);
+  font-size: var(--font-sm);
 }

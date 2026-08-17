@@ -2,6 +2,7 @@ import { useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
+import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { pickAndUploadFile } from '../../../native/native-platform.js'
 import type { JSPlugin } from '../../../models/jsplugin.js'
@@ -24,20 +25,27 @@ export function PluginManagerPage() {
   const deleteMutation = useDeletePluginMutation()
   const updateAllMutation = useUpdateAllPluginsMutation()
 
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  // The plugin awaiting deletion, held whole so the dialog can name it.
+  const [pendingDelete, setPendingDelete] = useState<JSPlugin | null>(null)
   const [installing, setInstalling] = useState(false)
+  const [installError, setInstallError] = useState<string | null>(null)
 
   const onToggle = (plugin: JSPlugin) => {
     toggleMutation.mutate({ id: plugin.id, enable: !plugin.isActive })
   }
 
-  const onDelete = (plugin: JSPlugin) => {
-    if (confirmDeleteId !== plugin.id) {
-      setConfirmDeleteId(plugin.id)
-      return
-    }
+  /**
+   * Uninstalling deletes the plugin's files and its stored data, so it asks first.
+   *
+   * This used to be a two-tap confirm on the `×` glyph, whose entire armed-state
+   * feedback was the 16px icon turning red — indistinguishable from a hover tint,
+   * and reported as "there is no confirmation".
+   */
+  const onConfirmDelete = () => {
+    const plugin = pendingDelete
+    if (!plugin) return
     deleteMutation.mutate(plugin.id, {
-      onSuccess: () => setConfirmDeleteId(null),
+      onSettled: () => setPendingDelete(null),
     })
   }
 
@@ -48,12 +56,20 @@ export function PluginManagerPage() {
   const onInstallFromFile = async () => {
     if (installing) return
     setInstalling(true)
+    setInstallError(null)
     try {
       const uploadUrl = getJSPluginApi().getUploadUrl()
       await pickAndUploadFile(uploadUrl, 'plugin', 'application/zip')
       void refetch()
-    } catch {
-      // User cancelled or upload failed; silently ignore.
+    } catch (e: unknown) {
+      /*
+       * Never swallow this. The upload URL used to be a bare relative path with no
+       * credentials, so the POST was a guaranteed 401 on every platform — and
+       * because the failure landed in an empty `catch`, the button simply did
+       * nothing, which is exactly how it was reported. Cancelling is not an error.
+       */
+      const msg = e instanceof Error ? e.message : String(e)
+      if (msg !== 'cancelled') setInstallError(msg || t('jsplugin.installFailed'))
     } finally {
       setInstalling(false)
     }
@@ -93,6 +109,16 @@ export function PluginManagerPage() {
         </view>
       </view>
 
+      {installError
+        ? (
+          <view className='plugin-manager__error' data-testid='plugins-install-error'>
+            <text className='plugin-manager__error-text'>
+              {t('jsplugin.installFailed')}: {installError}
+            </text>
+          </view>
+        )
+        : null}
+
       <scroll-view className='plugin-manager__scroll' scroll-y>
         {isLoading
           ? <PluginState text={t('common.loading')} testId='plugins-loading' />
@@ -123,17 +149,11 @@ export function PluginManagerPage() {
                           </text>
                         </view>
                         <view
-                          className={confirmDeleteId === plugin.id
-                            ? 'plugin-manager__delete plugin-manager__delete--confirm'
-                            : 'plugin-manager__delete'}
-                          bindtap={() => onDelete(plugin)}
+                          className='plugin-manager__delete'
+                          bindtap={() => setPendingDelete(plugin)}
                           data-testid={`plugin-delete-${plugin.id}`}
                         >
-                          <Icon
-                            name='x'
-                            size={16}
-                            color={confirmDeleteId === plugin.id ? ICON_COLORS.danger : ICON_COLORS.contentMuted}
-                          />
+                          <Icon name='x' size={16} color={ICON_COLORS.contentMuted} />
                         </view>
                       </view>
                     </view>
@@ -141,6 +161,18 @@ export function PluginManagerPage() {
                 </view>
               )}
       </scroll-view>
+
+      <ConfirmDialog
+        show={pendingDelete !== null}
+        title={t('jsplugin.uninstallTitle')}
+        message={t('jsplugin.uninstallMessage', { name: pendingDelete?.displayName ?? '' })}
+        confirmLabel={t('jsplugin.uninstallConfirm')}
+        onConfirm={onConfirmDelete}
+        onCancel={() => setPendingDelete(null)}
+        testId='plugin-delete-dialog'
+        confirmTestId='plugin-delete-confirm'
+        cancelTestId='plugin-delete-cancel'
+      />
     </view>
   )
 }

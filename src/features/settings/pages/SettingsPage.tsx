@@ -2,14 +2,6 @@ import { useCallback, useEffect, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-import {
-  DialogRoot,
-  DialogView,
-  DialogBackdrop,
-  DialogContent,
-  DialogClose,
-} from '@lynx-js/lynx-ui'
-
 import { apiPrefix, appConfig } from '../../../core/config/app-config.js'
 import { getCachedAccessToken } from '../../../core/network/token-cache.js'
 import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
@@ -44,6 +36,7 @@ import { LOG_LEVELS, coerceLogLevel, logLevelLabelKey, type LogLevel } from '../
 import { serverDisplay } from '../domain/settings-model.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { useScrollMemory } from '../../../shared/nav/scroll-memory.js'
+import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import { SwitchRow } from '../widgets/SwitchRow.js'
@@ -526,29 +519,16 @@ export function SettingsPage() {
         : null}
       </view>
 
-      <DialogRoot show={showLogoutDialog} onShowChange={(open) => { if (!open) setShowLogoutDialog(false) }}>
-        <DialogView>
-          <DialogBackdrop className='logout-dialog__backdrop' clickToClose>
-            <view className='logout-dialog__backdrop-inner' />
-          </DialogBackdrop>
-          <DialogContent className='logout-dialog__content'>
-            <view className='logout-dialog' data-testid='logout-dialog'>
-              <text className='logout-dialog__title'>{t('settings.logOut')}</text>
-              <text className='logout-dialog__message'>{t('settings.logOutConfirmSubtitle')}</text>
-              <view className='logout-dialog__actions'>
-                <DialogClose>
-                  <view className='logout-dialog__btn logout-dialog__btn--cancel' bindtap={() => setShowLogoutDialog(false)}>
-                    <text className='logout-dialog__btn-text'>{t('common.cancel')}</text>
-                  </view>
-                </DialogClose>
-                <view className='logout-dialog__btn logout-dialog__btn--confirm' bindtap={confirmLogout} data-testid='logout-confirm'>
-                  <text className='logout-dialog__btn-text logout-dialog__btn-text--confirm'>{t('settings.logOutConfirm')}</text>
-                </view>
-              </view>
-            </view>
-          </DialogContent>
-        </DialogView>
-      </DialogRoot>
+      <ConfirmDialog
+        show={showLogoutDialog}
+        title={t('settings.logOut')}
+        message={t('settings.logOutConfirmSubtitle')}
+        confirmLabel={t('settings.logOutConfirm')}
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutDialog(false)}
+        testId='logout-dialog'
+        confirmTestId='logout-confirm'
+      />
     </view>
   )
 }

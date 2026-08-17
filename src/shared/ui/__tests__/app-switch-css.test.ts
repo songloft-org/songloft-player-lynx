@@ -82,3 +82,13 @@ test('no screen re-forks the checkbox CSS', () => {
     })
   expect(forked).toEqual([])
 })
+
+test('no screen re-forks the confirmation-dialog CSS', () => {
+  // Two copies existed (Settings' logout, the duplicate-detection page) and had
+  // already diverged on DESIGN.md's rule that `--danger` is text only, never a
+  // fill. A third copy is how that rule gets lost again.
+  const forked = cssFiles(SRC)
+    .filter((f) => f !== 'shared/ui/ConfirmDialog.css')
+    .filter((f) => /__backdrop-inner|dialog__btn|dialog__actions/.test(rules(f)))
+  expect(forked).toEqual([])
+})
