@@ -32,11 +32,13 @@ import { getSettingsApi } from '../api/index.js'
 import { type AudioQuality, type FloatingLyricFontSize, type FloatingLyricOpacity, coerceAudioQuality, readAudioQuality, readAutoEnterLyrics, readAutoResume, readFloatingLyricEnabled, readFloatingLyricFontSize, readFloatingLyricLocked, readFloatingLyricOpacity, readNormalize, readNotificationLyricInTitle, writeAudioQuality, writeAutoEnterLyrics, writeAutoResume, writeFloatingLyricEnabled, writeFloatingLyricFontSize, writeFloatingLyricLocked, writeFloatingLyricOpacity, writeNormalize, writeNotificationLyricInTitle } from '../data/settings-prefs.js'
 import { setAudioQualityCache, setNormalizeEnabled } from '../../player/store/player-store.js'
 import { canExport, exportPlaylists, importPlaylists } from '../domain/data-transfer.js'
+import { exportAndShareLogs } from '../data/log-export.js'
 import { LOG_LEVELS, coerceLogLevel, logLevelLabelKey, type LogLevel } from '../domain/log-level.js'
 import { serverDisplay } from '../domain/settings-model.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { useScrollMemory } from '../../../shared/nav/scroll-memory.js'
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
+import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import { SwitchRow } from '../widgets/SwitchRow.js'
@@ -178,6 +180,10 @@ export function SettingsPage() {
   const [floatingLyricLocked, setFloatingLyricLocked] = useState(false)
   const [floatingLyricOpacity, setFloatingLyricOpacity] = useState<FloatingLyricOpacity>(0.4)
   const [backendVersion, setBackendVersion] = useState('')
+  // Log export (Flutter `LogExportService` parity): busy flag + inline notice
+  // (Lynx has no toast primitive; same banner pattern as LibraryOpsPage).
+  const [exportingLogs, setExportingLogs] = useState(false)
+  const [exportNotice, setExportNotice] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -267,11 +273,36 @@ export function SettingsPage() {
     void writeAudioQuality(next)
   }
 
-  const openLogs = () => {
-    const token = getCachedAccessToken()
-    if (!token) return
-    const url = `${appConfig.resolvedBaseUrl}${apiPrefix}/logs/export?access_token=${encodeURIComponent(token)}`
-    openURL(url)
+  /**
+   * Export logs (Flutter `LogExportService` parity). On native the backend +
+   * client logs are zipped and handed to the OS share sheet; on Web there is
+   * no share target reachable from this realm, so the pre-alignment behavior
+   * is kept — open the sanitized backend log URL in the browser.
+   */
+  const onExportLogs = () => {
+    if (!getPlatformCapabilities().shareSheet) {
+      const token = getCachedAccessToken()
+      if (!token) return
+      const url = `${appConfig.resolvedBaseUrl}${apiPrefix}/logs/export?access_token=${encodeURIComponent(token)}`
+      openURL(url)
+      return
+    }
+    if (exportingLogs) return
+    setExportingLogs(true)
+    setExportNotice(null)
+    void exportAndShareLogs()
+      .then((result) => {
+        setExportNotice(result.hasBackend
+          ? { kind: 'success', text: t('settings.exportLogsSuccess') }
+          : { kind: 'success', text: t('settings.exportLogsSuccessNoBackend') })
+      })
+      .catch((e: unknown) => {
+        const message = e instanceof Error ? e.message : String(e)
+        setExportNotice({ kind: 'error', text: t('settings.exportLogsFailed', { error: message }) })
+      })
+      .finally(() => {
+        setExportingLogs(false)
+      })
   }
 
   const serverText = serverDisplay(appConfig.baseUrl, appConfig.isEmbedded, {
@@ -637,22 +668,51 @@ export function SettingsPage() {
             />
           </SettingsSection>
           <SettingsSection title={t('settings.diagnostics')} icon='settings'>
-            {LOG_LEVELS.map((option) => (
-              <SettingsRow
-                key={option}
-                title={t(logLevelLabelKey(option))}
-                selected={option === logLevel}
-                trailingIcon={option === logLevel ? 'check' : undefined}
-                onTap={() => selectLogLevel(option)}
-                testId={`log-level-${option}`}
-              />
-            ))}
+            {/* Nested section so the four level rows read as "log level
+                options" — Flutter has a dedicated 日志等级 tile for this. */}
+            <SettingsSection title={t('settings.logLevelTitle')}>
+              {LOG_LEVELS.map((option) => (
+                <SettingsRow
+                  key={option}
+                  title={t(logLevelLabelKey(option))}
+                  selected={option === logLevel}
+                  trailingIcon={option === logLevel ? 'check' : undefined}
+                  onTap={() => selectLogLevel(option)}
+                  testId={`log-level-${option}`}
+                />
+              ))}
+            </SettingsSection>
+            {exportNotice
+              ? (
+                <view
+                  className={exportNotice.kind === 'error'
+                    ? 'settings__banner settings__banner--error'
+                    : 'settings__banner'}
+                  data-testid='export-logs-notice'
+                >
+                  <Icon
+                    name={exportNotice.kind === 'error' ? 'warning' : 'check-circle'}
+                    size={18}
+                    color={exportNotice.kind === 'error' ? ICON_COLORS.danger : ICON_COLORS.primary}
+                  />
+                  <text className='settings__banner-text'>{exportNotice.text}</text>
+                  <view
+                    className='settings__banner-close'
+                    bindtap={() => setExportNotice(null)}
+                    data-testid='export-logs-notice-dismiss'
+                  >
+                    <Icon name='x' size={16} color={ICON_COLORS.content2} />
+                  </view>
+                </view>
+              )
+              : null}
             <SettingsRow
               icon='menu'
               title={t('settings.exportLogs')}
-              subtitle={t('settings.exportLogsSubtitle')}
+              subtitle={exportingLogs ? t('settings.exportLogsBusy') : t('settings.exportLogsSubtitle')}
               trailingIcon='chevron-right'
-              onTap={openLogs}
+              disabled={exportingLogs}
+              onTap={onExportLogs}
               testId='settings-export-logs'
             />
           </SettingsSection>

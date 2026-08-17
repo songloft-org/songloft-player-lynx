@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Paths the FileProvider (see AndroidManifest) may hand out as content://
+     URIs. Deliberately just the one staging directory the log-export share
+     uses — the narrower the grant surface, the better. -->
+<paths>
+    <cache-path
+        name="shared"
+        path="shared/" />
+</paths>

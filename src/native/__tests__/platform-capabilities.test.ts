@@ -48,6 +48,13 @@ describe('on the Web platform', () => {
     // openURL / pickAndUploadFile need main-thread APIs the render realm lacks.
     expect(getPlatformCapabilities().dataTransfer).toBe(false)
   })
+
+  test('the share sheet is off even if a platform module were present', () => {
+    asWeb()
+    g.NativeModules = { SongloftPlatform: { shareFile: () => {} } }
+    // No OS share target is reachable from the worker realm.
+    expect(getPlatformCapabilities().shareSheet).toBe(false)
+  })
 })
 
 describe('on a device host', () => {
@@ -74,6 +81,17 @@ describe('on a device host', () => {
     const caps = getPlatformCapabilities()
     expect(caps.floatingLyric).toBe(true)
     expect(caps.liveActivity).toBe(true)
+  })
+
+  test('the share sheet needs the shareFile method, not just the module', () => {
+    // A hot-updated bundle on an older shell sees SongloftPlatform without
+    // shareFile — advertising the capability there would surface an export row
+    // that only errors out when tapped.
+    withModules('SongloftPlatform')
+    expect(getPlatformCapabilities().shareSheet).toBe(false)
+
+    g.NativeModules = { SongloftPlatform: { shareFile: () => {} } }
+    expect(getPlatformCapabilities().shareSheet).toBe(true)
   })
 })
 

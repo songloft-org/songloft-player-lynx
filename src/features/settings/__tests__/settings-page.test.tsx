@@ -27,7 +27,7 @@ import {
  * `Icon` all run; assertions check the rendered structure + that interactions
  * call the correct store/config, not fixtures echoed back.
  */
-const { navigateSpy, logoutSpy, setPlayModeSpy, writePrefSpy, readPref, changeLangSpy, changeThemeSpy, getLogLevelSpy, setLogLevelSpy, openURLSpy } =
+const { navigateSpy, logoutSpy, setPlayModeSpy, writePrefSpy, readPref, changeLangSpy, changeThemeSpy, getLogLevelSpy, setLogLevelSpy, openURLSpy, exportLogsActionSpy } =
   vi.hoisted(() => ({
     navigateSpy: vi.fn(),
     logoutSpy: vi.fn(),
@@ -39,6 +39,7 @@ const { navigateSpy, logoutSpy, setPlayModeSpy, writePrefSpy, readPref, changeLa
     getLogLevelSpy: vi.fn(async () => 'warn' as const),
     setLogLevelSpy: vi.fn(async () => {}),
     openURLSpy: vi.fn(),
+    exportLogsActionSpy: vi.fn(async () => ({ hasBackend: true, hasFrontend: true })),
   }))
 
 // react-i18next → deterministic English `t` (real English resource values); the
@@ -114,6 +115,13 @@ vi.mock('../api/index.js', () => ({
   getSettingsApi: () => ({ getLogLevel: getLogLevelSpy, setLogLevel: setLogLevelSpy, getVersion: vi.fn(async () => '1.0.0') }),
 }))
 
+// The export orchestrator is covered by log-export.test.ts; here it is a spy so
+// the row's capability-based dispatch (share sheet vs. openURL fallback) is
+// observable without zipping anything.
+vi.mock('../data/log-export.js', () => ({
+  exportAndShareLogs: exportLogsActionSpy,
+}))
+
 vi.mock('@lynx-js/lynx-ui', () => ({
   DialogRoot: ({ children, show }: { children: ReactNode; show: boolean }) => show ? <view>{children}</view> : null,
   DialogView: ({ children }: { children: ReactNode }) => <view>{children}</view>,
@@ -130,7 +138,10 @@ const { clearScrollMemory } = await import('../../../shared/nav/scroll-memory.js
 const { SettingsPage } = await import('../pages/SettingsPage.js')
 
 beforeEach(() => clearScrollMemory())
-afterEach(() => vi.clearAllMocks())
+afterEach(() => {
+  vi.clearAllMocks()
+  delete (globalThis as Record<string, unknown>).NativeModules
+})
 
 async function renderPage() {
   const { unmount } = render(<SettingsPage />)
@@ -180,7 +191,9 @@ test('renders every section, version, server and log-out rows', async () => {
   expect(queryByTestId('theme-light')).toBeInTheDocument()
   expect(queryByTestId('theme-dark')).toBeInTheDocument()
 
-  // The four log-level option rows + the export-logs row.
+  // The four log-level option rows + the export-logs row, with the log-level
+  // group carrying its own title (Flutter has a dedicated 日志等级 tile).
+  expect(queryByText('Log level')).toBeInTheDocument()
   expect(queryByTestId('log-level-debug')).toBeInTheDocument()
   expect(queryByTestId('log-level-info')).toBeInTheDocument()
   expect(queryByTestId('log-level-warn')).toBeInTheDocument()
@@ -227,7 +240,9 @@ test('selecting a log level persists it via SettingsApi.setLogLevel', async () =
   expect(setLogLevelSpy).toHaveBeenCalledWith('error')
 })
 
-test('the export-logs row triggers openURL with logs endpoint', async () => {
+test('the export-logs row falls back to openURL without a share sheet', async () => {
+  // No NativeModules in the unit-test realm → `shareSheet` capability is off,
+  // so the pre-alignment behavior applies: open the backend log URL directly.
   const { queryByTestId } = await renderPage()
 
   await act(async () => {
@@ -235,6 +250,23 @@ test('the export-logs row triggers openURL with logs endpoint', async () => {
   })
 
   expect(openURLSpy).toHaveBeenCalledWith(expect.stringContaining('/logs/export'))
+  expect(exportLogsActionSpy).not.toHaveBeenCalled()
+})
+
+test('the export-logs row uses the zip+share flow when a share sheet exists', async () => {
+  // A host exposing SongloftPlatform.shareFile turns the capability on, so the
+  // row must go through the Flutter-parity export instead of openURL.
+  ;(globalThis as Record<string, unknown>).NativeModules = {
+    SongloftPlatform: { shareFile: () => {} },
+  }
+  const { queryByTestId } = await renderPage()
+
+  await act(async () => {
+    fireEvent.tap(queryByTestId('settings-export-logs')!)
+  })
+
+  expect(exportLogsActionSpy).toHaveBeenCalledTimes(1)
+  expect(openURLSpy).not.toHaveBeenCalled()
 })
 
 // Choosing a play mode moved to the player's own toggle, along with persisting it

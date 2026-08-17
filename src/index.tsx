@@ -8,6 +8,7 @@ import { root } from '@lynx-js/react'
 
 import { App } from './App.js'
 import { useAuthStore } from './features/auth/store/index.js'
+import { initClientLogger } from './core/logging/client-logger.js'
 // Static, NOT `await import()`: dynamic imports compile to lazy bundles that are
 // separate files under `dist/lazy-bundle/`, and only `main.lynx.bundle` ships in
 // the app's assets — so on a device the lazy fetch fails with
@@ -20,6 +21,11 @@ import { applySavedLanguage } from './i18n/index.js'
 import { initSystemAppearance } from './native/system-appearance.js'
 import { applySavedTheme } from './shared/theme/theme-model.js'
 import { router } from './router.js'
+
+// Start client logging before the first render so startup/render issues are
+// captured (Lynx port of Flutter's `FileLogger.init` in `main.dart`). Module
+// imports are hoisted above, so this is as early as the app's own code gets.
+initClientLogger()
 
 root.render(<App />)
 

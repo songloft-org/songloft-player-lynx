@@ -26,6 +26,15 @@ final class SongloftPlatformModule: NSObject, LynxModule {
       "setClipboard": NSStringFromSelector(
         #selector(SongloftPlatformModule.setClipboard(_:))
       ),
+      "logWrite": NSStringFromSelector(
+        #selector(SongloftPlatformModule.logWrite(_:))
+      ),
+      "logRead": NSStringFromSelector(
+        #selector(SongloftPlatformModule.logRead(_:))
+      ),
+      "shareFile": NSStringFromSelector(
+        #selector(SongloftPlatformModule.shareFile(_:fileName:mimeType:callback:))
+      ),
     ]
   }
 
@@ -81,6 +90,153 @@ final class SongloftPlatformModule: NSObject, LynxModule {
     var top = root
     while let presented = top.presentedViewController { top = presented }
     return top
+  }
+
+  // MARK: - Client log file (Lynx port of Flutter's FileLogger)
+  //
+  // The TS layer (`core/logging/client-logger.ts`) owns timestamps and token
+  // redaction; this side is a dumb appender that owns the file lifecycle —
+  // per-day file name, 3-day cleanup and the 20 MB per-session cap, mirroring
+  // `file_logger_native.dart`.
+
+  private static let logQueue = DispatchQueue(label: "org.songloft.lynx.clientlog")
+  private static var logFileUrl: URL?
+  private static var logSessionBytes = 0
+  private static var logCapReached = false
+  private static let logMaxSessionBytes = 20 * 1024 * 1024
+  private static let logMaxAgeDays = 3
+  // Same file-name shape as Flutter's `_logNamePattern`, so cleanup only ever
+  // touches files this feature wrote.
+  private static let logNamePattern = try! NSRegularExpression(
+    pattern: "^songloft_(\\d{4}-\\d{2}-\\d{2})(?:_[A-Za-z0-9]+)?\\.log$"
+  )
+  private static let logDateFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    return formatter
+  }()
+
+  private static func logDirectory() -> URL? {
+    guard let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+    else { return nil }
+    let dir = base.appendingPathComponent("logs", isDirectory: true)
+    do {
+      try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+      return dir
+    } catch {
+      return nil
+    }
+  }
+
+  /// Lazily create today's log file and sweep files older than 3 days.
+  private static func ensureLogFile() -> URL? {
+    if let existing = logFileUrl { return existing }
+    guard let dir = logDirectory() else { return nil }
+    cleanOldLogs(in: dir)
+    let url = dir.appendingPathComponent("songloft_\(logDateFormatter.string(from: Date())).log")
+    logFileUrl = url
+    return url
+  }
+
+  private static func cleanOldLogs(in dir: URL) {
+    let cutoff = Date().addingTimeInterval(-Double(logMaxAgeDays) * 24 * 60 * 60)
+    guard let entries = try? FileManager.default.contentsOfDirectory(
+      at: dir, includingPropertiesForKeys: nil
+    ) else { return }
+    for entry in entries {
+      let name = entry.lastPathComponent
+      let range = NSRange(name.startIndex..<name.endIndex, in: name)
+      guard let match = logNamePattern.firstMatch(in: name, range: range),
+        let dateRange = Range(match.range(at: 1), in: name),
+        let date = logDateFormatter.date(from: String(name[dateRange]))
+      else { continue }
+      if date < cutoff {
+        try? FileManager.default.removeItem(at: entry)
+      }
+    }
+  }
+
+  /// Append one already-formatted line. Fire-and-forget: JS never waits.
+  @objc func logWrite(_ line: String) {
+    Self.logQueue.async {
+      guard !Self.logCapReached, let url = Self.ensureLogFile() else { return }
+      guard let data = (line + "\n").data(using: .utf8) else { return }
+      if Self.logSessionBytes + data.count > Self.logMaxSessionBytes {
+        Self.logCapReached = true
+        let notice = "[FileLogger] session log cap reached "
+          + "(\(Self.logMaxSessionBytes / (1024 * 1024))MB); further lines go to console only\n"
+        if let noticeData = notice.data(using: .utf8) {
+          Self.append(noticeData, to: url)
+        }
+        return
+      }
+      Self.append(data, to: url)
+      Self.logSessionBytes += data.count
+    }
+  }
+
+  private static func append(_ data: Data, to url: URL) {
+    if FileManager.default.fileExists(atPath: url.path) {
+      if let handle = try? FileHandle(forWritingTo: url) {
+        defer { try? handle.close() }
+        _ = try? handle.seekToEnd()
+        try? handle.write(contentsOf: data)
+      }
+    } else {
+      try? data.write(to: url, options: .atomic)
+    }
+  }
+
+  /// Read the current log file; callback receives (error, content-or-null).
+  @objc func logRead(_ callback: @escaping LynxCallbackBlock) {
+    Self.logQueue.async {
+      guard let url = Self.ensureLogFile(),
+        FileManager.default.fileExists(atPath: url.path),
+        let data = try? Data(contentsOf: url),
+        let content = String(data: data, encoding: .utf8)
+      else {
+        DispatchQueue.main.async { callback([NSNull(), NSNull()] as NSArray) }
+        return
+      }
+      DispatchQueue.main.async { callback([NSNull(), content] as NSArray) }
+    }
+  }
+
+  /**
+   * Decode a base64 payload into a temp file and present the OS share sheet
+   * (`UIActivityViewController`). Callback receives (error-or-null).
+   */
+  @objc func shareFile(_ base64: String, fileName: String, mimeType: String, callback: @escaping LynxCallbackBlock) {
+    guard let data = Data(base64Encoded: base64) else {
+      callback(["decode_failed", NSNull()] as NSArray)
+      return
+    }
+    // The name comes from our own TS layer, but strip separators anyway so it
+    // cannot escape the temp directory.
+    let safeName = (fileName as NSString).lastPathComponent
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(safeName)
+    do {
+      try data.write(to: url, options: .atomic)
+    } catch {
+      callback(["write_failed", NSNull()] as NSArray)
+      return
+    }
+    DispatchQueue.main.async {
+      guard let vc = Self.topViewController() else {
+        callback(["no_view_controller", NSNull()] as NSArray)
+        return
+      }
+      let activity = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+      // iPad presents popovers from a bar-button anchor; on iPhone this is nil
+      // and the property is ignored.
+      activity.popoverPresentationController?.sourceView = vc.view
+      activity.popoverPresentationController?.sourceRect = CGRect(
+        x: vc.view.bounds.midX, y: vc.view.bounds.midY, width: 0, height: 0
+      )
+      vc.present(activity, animated: true)
+      callback([NSNull(), NSNull()] as NSArray)
+    }
   }
 }
 

@@ -86,6 +86,21 @@
         <service
             android:name=".lyric.FloatingLyricService"
             android:exported="false" />
+
+        <!-- Shares files (the log-export zip) with other apps:
+             SongloftPlatformModule.shareFile stages the file under
+             cacheDir/shared/ and hands out a content:// URI through this
+             provider. `file_paths.xml` declares that one directory; nothing
+             else becomes shareable. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

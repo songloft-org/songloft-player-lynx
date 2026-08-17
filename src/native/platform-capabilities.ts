@@ -40,12 +40,36 @@ export interface PlatformCapabilities {
    * would claim a capability that cannot exist there.
    */
   video: boolean
+  /**
+   * OS share sheet for handing over files (log-export zip).
+   *
+   * Needs the `SongloftPlatform` native module's `shareFile` — Android
+   * `ACTION_SEND` chooser / iOS `UIActivityViewController`. Web has no share
+   * target reachable from the worker realm, so it is always false there and
+   * callers fall back (log export opens the backend log URL in the browser,
+   * the pre-alignment behavior).
+   */
+  shareSheet: boolean
 }
 
 /** True when a native module of this name is present in the host bag. */
 function hasNativeModule(name: string): boolean {
   const mods = readNativeModules()
   return mods != null && name in mods
+}
+
+/**
+ * True when the named module exposes the named method. A module-level check is
+ * not enough for methods added after first release: a hot-updated JS bundle on
+ * an older native shell sees the module but not the method, and offering a
+ * feature that then rejects at call time is exactly the silent-dead-button
+ * class of bug this module exists to prevent.
+ */
+function hasNativeMethod(moduleName: string, methodName: string): boolean {
+  const mods = readNativeModules()
+  if (mods == null) return false
+  const mod = mods[moduleName] as Record<string, unknown> | undefined
+  return mod != null && typeof mod[methodName] === 'function'
 }
 
 /**
@@ -73,5 +97,8 @@ export function getPlatformCapabilities(): PlatformCapabilities {
     dataTransfer: isWeb ? false : hasPlatform,
     systemTray: !isWeb && hasPlatform,
     video: hasNativeModule('SongloftVideo'),
+    // Method-level check, not module-level: `shareFile` postdates the module
+    // itself, so an older shell may register `SongloftPlatform` without it.
+    shareSheet: isWeb ? false : hasNativeMethod('SongloftPlatform', 'shareFile'),
   }
 }
