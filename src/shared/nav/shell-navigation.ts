@@ -51,3 +51,46 @@ export function showsMiniPlayer(pathname: string): boolean {
     || pathname.startsWith('/library/')
     || pathname.startsWith('/playlists/')
 }
+
+/**
+ * Whether the nav destination `navPath` owns `pathname` — i.e. whether its tab
+ * should be lit while that route is showing.
+ *
+ * The shell used to compare `pathname === dest.path`, so **every sub-page left the
+ * whole nav bar dark**: opening Settings → Plugins, or drilling into a library
+ * category, lit nothing at all. The Flutter reference
+ * (`shell_layout.dart:_getCurrentIndex`) has always matched by prefix, and this
+ * mirrors it, including its two judgement calls:
+ *
+ * - `/playlists*` belongs to **Library**, not Home («歌单已并入曲库» in the
+ *   reference), even though a playlist can be opened from Home. Which tab you
+ *   *return* to is a separate question, and {@link getLastShellLocation} already
+ *   answers it from history rather than from the path.
+ * - Home owns nothing by prefix — `/` is a prefix of everything. It is the
+ *   fallback in {@link activeNavPath} instead, so an unrecognised route still
+ *   lights one tab rather than none.
+ */
+export function navPathOwns(navPath: string, pathname: string): boolean {
+  if (pathname === navPath) return true
+  if (navPath === '/') return false
+  if (pathname.startsWith(`${navPath}/`)) return true
+  if (navPath === '/library') {
+    return pathname === '/playlists' || pathname.startsWith('/playlists/')
+  }
+  return false
+}
+
+/**
+ * Which of the currently rendered `navPaths` should be lit for `pathname`.
+ *
+ * `navPaths` is the live list — the three built-in destinations plus one per
+ * enabled plugin tab — because a plugin tab's path is only known at runtime.
+ * Longest match wins, so `/plugin/miot` is not shadowed by a shorter sibling.
+ */
+export function activeNavPath(
+  pathname: string,
+  navPaths: readonly string[],
+): string | undefined {
+  const byLength = [...navPaths].sort((a, b) => b.length - a.length)
+  return byLength.find((p) => navPathOwns(p, pathname)) ?? navPaths.find((p) => p === '/')
+}

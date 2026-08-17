@@ -11,7 +11,7 @@ import { buildCoverUrl } from '../../core/network/url-helper.js'
 import type { PluginTabEntry } from '../../features/jsplugin/data/tab-config.js'
 import { getLastLibrarySearch } from '../../features/library/index.js'
 import { NAV_DESTINATIONS } from '../nav/destinations.js'
-import { setLastShellLocation, showsMiniPlayer } from '../nav/shell-navigation.js'
+import { activeNavPath, setLastShellLocation, showsMiniPlayer } from '../nav/shell-navigation.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import { Icon, ICON_COLORS } from '../ui/Icon.js'
 import './ShellLayout.css'
@@ -67,8 +67,16 @@ export function ShellLayout() {
   setLastShellLocation(pathname)
 
   const renderNavItems = () => {
+    // Which tab is lit. Matched by ownership, not equality — otherwise every
+    // sub-page (Settings → Plugins, a library category, a playlist) leaves the
+    // whole bar dark. See `navPathOwns`.
+    const litPath = activeNavPath(pathname, [
+      ...NAV_DESTINATIONS.map(d => d.path),
+      ...pluginTabs.map(tab => `/plugin/${tab.entryPath}`),
+    ])
+
     const items = NAV_DESTINATIONS.map(dest => {
-      const active = pathname === dest.path
+      const active = litPath === dest.path
       return (
         <view
           key={dest.path}
@@ -95,7 +103,7 @@ export function ShellLayout() {
 
     for (const tab of pluginTabs) {
       const pluginPath = `/plugin/${tab.entryPath}`
-      const active = pathname === pluginPath
+      const active = litPath === pluginPath
       items.push(
         <view
           key={pluginPath}
