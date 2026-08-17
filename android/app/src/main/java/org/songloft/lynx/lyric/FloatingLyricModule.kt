@@ -81,4 +81,34 @@ class FloatingLyricModule(context: Context) : LynxModule(context) {
         val showing = service?.isShowing() ?: false
         callback.invoke(JSONObject().put("result", showing).toString())
     }
+
+    @LynxMethod
+    fun setFontSize(args: String, callback: Callback) {
+        try {
+            val json = JSONObject(args)
+            val size = json.optString("size", "medium")
+            service?.setFontSize(size)
+        } catch (_: Exception) {}
+        callback.invoke("{}")
+    }
+
+    @LynxMethod
+    fun setLocked(args: String, callback: Callback) {
+        try {
+            val json = JSONObject(args)
+            val locked = json.optBoolean("locked", false)
+            service?.setLocked(locked)
+        } catch (_: Exception) {}
+        callback.invoke("{}")
+    }
+
+    @LynxMethod
+    fun setOpacity(args: String, callback: Callback) {
+        try {
+            val json = JSONObject(args)
+            val opacity = json.optDouble("opacity", 0.4)
+            service?.setOpacity(opacity.toFloat())
+        } catch (_: Exception) {}
+        callback.invoke("{}")
+    }
 }

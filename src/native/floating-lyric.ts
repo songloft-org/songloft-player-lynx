@@ -6,6 +6,9 @@ export interface FloatingLyricModule {
   updateLyric(line: string): Promise<void>
   hide(): Promise<void>
   isShowing(): Promise<boolean>
+  setFontSize(size: 'small' | 'medium' | 'large'): Promise<void>
+  setLocked(locked: boolean): Promise<void>
+  setOpacity(opacity: number): Promise<void>
 }
 
 /**
@@ -18,6 +21,9 @@ interface NativeFloatingLyric {
   updateLyric(args: string, callback: (result: string) => void): void
   hide(args: string, callback: (result: string) => void): void
   isShowing(args: string, callback: (result: string) => void): void
+  setFontSize(args: string, callback: (result: string) => void): void
+  setLocked(args: string, callback: (result: string) => void): void
+  setOpacity(args: string, callback: (result: string) => void): void
 }
 
 function createNativeAdapter(native: NativeFloatingLyric): FloatingLyricModule {
@@ -69,6 +75,21 @@ function createNativeAdapter(native: NativeFloatingLyric): FloatingLyricModule {
         })
       })
     },
+    setFontSize(size: 'small' | 'medium' | 'large') {
+      return new Promise((resolve) => {
+        native.setFontSize(JSON.stringify({ size }), () => resolve())
+      })
+    },
+    setLocked(locked: boolean) {
+      return new Promise((resolve) => {
+        native.setLocked(JSON.stringify({ locked }), () => resolve())
+      })
+    },
+    setOpacity(opacity: number) {
+      return new Promise((resolve) => {
+        native.setOpacity(JSON.stringify({ opacity }), () => resolve())
+      })
+    },
   }
 }
 
@@ -87,6 +108,9 @@ export function getFloatingLyricModule(): FloatingLyricModule {
     updateLyric: async () => {},
     hide: async () => {},
     isShowing: async () => false,
+    setFontSize: async () => {},
+    setLocked: async () => {},
+    setOpacity: async () => {},
   }
   return cached
 }

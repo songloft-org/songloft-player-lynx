@@ -95,6 +95,16 @@ vi.mock('../data/settings-prefs.js', () => ({
   writeAutoResume: vi.fn(async () => {}),
   readNormalize: vi.fn(async () => false),
   writeNormalize: vi.fn(async () => {}),
+  readAutoEnterLyrics: vi.fn(async () => false),
+  writeAutoEnterLyrics: vi.fn(async () => {}),
+  readNotificationLyricInTitle: vi.fn(async () => true),
+  writeNotificationLyricInTitle: vi.fn(async () => {}),
+  readFloatingLyricFontSize: vi.fn(async () => 'medium'),
+  writeFloatingLyricFontSize: vi.fn(async () => {}),
+  readFloatingLyricLocked: vi.fn(async () => false),
+  writeFloatingLyricLocked: vi.fn(async () => {}),
+  readFloatingLyricOpacity: vi.fn(async () => 0.4),
+  writeFloatingLyricOpacity: vi.fn(async () => {}),
   coerceAudioQuality: (raw: unknown) => (raw === '320' || raw === '192' || raw === '128' ? raw : 'original'),
 }))
 
@@ -151,6 +161,7 @@ test('renders every section, version, server and log-out rows', async () => {
   expect(queryByText('Connection')).toBeInTheDocument()
   expect(queryByText('Audio quality')).toBeInTheDocument()
   expect(queryByText('Playback')).toBeInTheDocument()
+  expect(queryByText('Lyrics')).toBeInTheDocument()
   expect(queryByText('Library')).toBeInTheDocument()
   expect(queryByText('Advanced')).toBeInTheDocument()
   expect(queryByText('Diagnostics')).toBeInTheDocument()

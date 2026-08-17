@@ -65,6 +65,43 @@ class FloatingLyricService : Service() {
 
     fun isShowing(): Boolean = showing
 
+    fun setFontSize(size: String) {
+        mainHandler.post {
+            val textSize = when (size) {
+                "small" -> 14f
+                "large" -> 20f
+                else -> 16f
+            }
+            textView?.textSize = textSize
+        }
+    }
+
+    fun setLocked(locked: Boolean) {
+        mainHandler.post {
+            textView?.let { view ->
+                val wm = windowManager ?: return@post
+                val params = view.layoutParams as WindowManager.LayoutParams
+                if (locked) {
+                    params.flags = params.flags or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                } else {
+                    params.flags = params.flags and
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv() and
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
+                }
+                wm.updateViewLayout(view, params)
+            }
+        }
+    }
+
+    fun setOpacity(opacity: Float) {
+        mainHandler.post {
+            val alpha = (opacity * 255).toInt().coerceIn(0, 255)
+            textView?.setBackgroundColor(Color.argb(alpha, 0, 0, 0))
+        }
+    }
+
     private fun showOverlay() {
         if (showing) return
 

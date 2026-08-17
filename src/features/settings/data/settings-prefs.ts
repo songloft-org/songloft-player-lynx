@@ -168,3 +168,100 @@ export async function writeNormalize(
 ): Promise<void> {
   await tryWritePref(storage, PREF_NORMALIZE, String(enabled))
 }
+
+// ─── Lyrics preferences ─────────────────────────────────────────────────────
+
+const PREF_AUTO_ENTER_LYRICS = 'auto_enter_lyrics'
+
+export async function readAutoEnterLyrics(
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<boolean> {
+  const raw = await tryReadPref(storage, PREF_AUTO_ENTER_LYRICS)
+  return raw === 'true'
+}
+
+export async function writeAutoEnterLyrics(
+  enabled: boolean,
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<void> {
+  await tryWritePref(storage, PREF_AUTO_ENTER_LYRICS, String(enabled))
+}
+
+const PREF_NOTIFICATION_LYRIC_IN_TITLE = 'notification_lyric_in_title'
+
+export async function readNotificationLyricInTitle(
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<boolean> {
+  const raw = await tryReadPref(storage, PREF_NOTIFICATION_LYRIC_IN_TITLE)
+  return raw !== 'false' // default true
+}
+
+export async function writeNotificationLyricInTitle(
+  enabled: boolean,
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<void> {
+  await tryWritePref(storage, PREF_NOTIFICATION_LYRIC_IN_TITLE, String(enabled))
+}
+
+export type FloatingLyricFontSize = 'small' | 'medium' | 'large'
+const FONT_SIZES: readonly FloatingLyricFontSize[] = ['small', 'medium', 'large']
+
+export function coerceFloatingLyricFontSize(raw: unknown): FloatingLyricFontSize {
+  return typeof raw === 'string' && FONT_SIZES.includes(raw as FloatingLyricFontSize)
+    ? (raw as FloatingLyricFontSize)
+    : 'medium'
+}
+
+const PREF_FLOATING_LYRIC_FONT_SIZE = 'floating_lyric_font_size'
+
+export async function readFloatingLyricFontSize(
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<FloatingLyricFontSize> {
+  return coerceFloatingLyricFontSize(await tryReadPref(storage, PREF_FLOATING_LYRIC_FONT_SIZE))
+}
+
+export async function writeFloatingLyricFontSize(
+  size: FloatingLyricFontSize,
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<void> {
+  await tryWritePref(storage, PREF_FLOATING_LYRIC_FONT_SIZE, size)
+}
+
+const PREF_FLOATING_LYRIC_LOCKED = 'floating_lyric_locked'
+
+export async function readFloatingLyricLocked(
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<boolean> {
+  const raw = await tryReadPref(storage, PREF_FLOATING_LYRIC_LOCKED)
+  return raw === 'true'
+}
+
+export async function writeFloatingLyricLocked(
+  locked: boolean,
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<void> {
+  await tryWritePref(storage, PREF_FLOATING_LYRIC_LOCKED, String(locked))
+}
+
+export type FloatingLyricOpacity = 0.2 | 0.4 | 0.6 | 0.8
+const OPACITIES = new Set(['0.2', '0.4', '0.6', '0.8'])
+
+export function coerceFloatingLyricOpacity(raw: unknown): FloatingLyricOpacity {
+  const v = typeof raw === 'number' ? raw : typeof raw === 'string' ? parseFloat(raw) : NaN
+  return Number.isFinite(v) && OPACITIES.has(String(v)) ? (v as FloatingLyricOpacity) : 0.4
+}
+
+const PREF_FLOATING_LYRIC_OPACITY = 'floating_lyric_opacity'
+
+export async function readFloatingLyricOpacity(
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<FloatingLyricOpacity> {
+  return coerceFloatingLyricOpacity(await tryReadPref(storage, PREF_FLOATING_LYRIC_OPACITY))
+}
+
+export async function writeFloatingLyricOpacity(
+  opacity: FloatingLyricOpacity,
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<void> {
+  await tryWritePref(storage, PREF_FLOATING_LYRIC_OPACITY, String(opacity))
+}

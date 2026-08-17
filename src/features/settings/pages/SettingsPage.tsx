@@ -29,7 +29,7 @@ import {
 // (which crashes the ReactLynx Vitest snapshot tree).
 import { useAuthStore } from '../../auth/store/index.js'
 import { getSettingsApi } from '../api/index.js'
-import { type AudioQuality, coerceAudioQuality, readAudioQuality, readAutoResume, readNormalize, writeAudioQuality, writeAutoResume, writeNormalize } from '../data/settings-prefs.js'
+import { type AudioQuality, type FloatingLyricFontSize, type FloatingLyricOpacity, coerceAudioQuality, readAudioQuality, readAutoEnterLyrics, readAutoResume, readFloatingLyricFontSize, readFloatingLyricLocked, readFloatingLyricOpacity, readNormalize, readNotificationLyricInTitle, writeAudioQuality, writeAutoEnterLyrics, writeAutoResume, writeFloatingLyricFontSize, writeFloatingLyricLocked, writeFloatingLyricOpacity, writeNormalize, writeNotificationLyricInTitle } from '../data/settings-prefs.js'
 import { setAudioQualityCache, setNormalizeEnabled } from '../../player/store/player-store.js'
 import { canExport, exportPlaylists, importPlaylists } from '../domain/data-transfer.js'
 import { LOG_LEVELS, coerceLogLevel, logLevelLabelKey, type LogLevel } from '../domain/log-level.js'
@@ -54,6 +54,8 @@ import { BrowseViewsPage } from './BrowseViewsPage.js'
 import './SettingsPage.css'
 
 const AUDIO_QUALITY_OPTIONS: AudioQuality[] = ['original', '320', '192', '128']
+const FLOATING_LYRIC_FONT_SIZE_OPTIONS: FloatingLyricFontSize[] = ['small', 'medium', 'large']
+const FLOATING_LYRIC_OPACITY_OPTIONS: FloatingLyricOpacity[] = [0.2, 0.4, 0.6, 0.8]
 
 /**
  * Settings page (batch 8), rendered inside the shell at `/settings`. Replaces
@@ -169,6 +171,11 @@ export function SettingsPage() {
   const [audioQuality, setAudioQuality] = useState<AudioQuality>('original')
   const [autoResume, setAutoResume] = useState(false)
   const [normalize, setNormalize] = useState(false)
+  const [autoEnterLyrics, setAutoEnterLyrics] = useState(false)
+  const [notificationLyricInTitle, setNotificationLyricInTitle] = useState(true)
+  const [floatingLyricFontSize, setFloatingLyricFontSize] = useState<FloatingLyricFontSize>('medium')
+  const [floatingLyricLocked, setFloatingLyricLocked] = useState(false)
+  const [floatingLyricOpacity, setFloatingLyricOpacity] = useState<FloatingLyricOpacity>(0.4)
   const [backendVersion, setBackendVersion] = useState('')
 
   useEffect(() => {
@@ -209,6 +216,21 @@ export function SettingsPage() {
       .catch(() => {})
     void readNormalize()
       .then((v) => { if (!cancelled) setNormalize(v) })
+      .catch(() => {})
+    void readAutoEnterLyrics()
+      .then((v) => { if (!cancelled) setAutoEnterLyrics(v) })
+      .catch(() => {})
+    void readNotificationLyricInTitle()
+      .then((v) => { if (!cancelled) setNotificationLyricInTitle(v) })
+      .catch(() => {})
+    void readFloatingLyricFontSize()
+      .then((v) => { if (!cancelled) setFloatingLyricFontSize(v) })
+      .catch(() => {})
+    void readFloatingLyricLocked()
+      .then((v) => { if (!cancelled) setFloatingLyricLocked(v) })
+      .catch(() => {})
+    void readFloatingLyricOpacity()
+      .then((v) => { if (!cancelled) setFloatingLyricOpacity(v) })
       .catch(() => {})
     void getSettingsApi().getVersion()
       .then((v) => { if (!cancelled) setBackendVersion(v) })
@@ -390,19 +412,67 @@ export function SettingsPage() {
               onTap={() => goToSubPage('eq', '/settings/eq')}
               testId='settings-eq'
             />
+          </SettingsSection>
+
+          <SettingsSection title={t('settings.lyricsSection')} icon='music'>
+            <SwitchRow
+              icon='music'
+              title={t('settings.autoEnterLyrics')}
+              subtitle={t('settings.autoEnterLyricsSubtitle')}
+              checked={autoEnterLyrics}
+              onChange={(next) => { setAutoEnterLyrics(next); void writeAutoEnterLyrics(next) }}
+              testId='settings-auto-enter-lyrics'
+            />
+            <SwitchRow
+              icon='music'
+              title={t('settings.notificationLyricInTitle')}
+              subtitle={t('settings.notificationLyricInTitleSubtitle')}
+              checked={notificationLyricInTitle}
+              onChange={(next) => { setNotificationLyricInTitle(next); void writeNotificationLyricInTitle(next) }}
+              testId='settings-notification-lyric-title'
+            />
             {getPlatformCapabilities().floatingLyric
               ? (
-                <SettingsRow
-                  icon='music'
-                  title={t('settings.floatingLyrics')}
-                  subtitle={t('settings.floatingLyricsSubtitle')}
-                  trailingIcon='chevron-right'
-                  onTap={() => {
-                    const m = getFloatingLyricModule()
-                    void m.requestPermission().then(granted => { if (granted) void m.show() })
-                  }}
-                  testId='settings-floating-lyrics'
-                />
+                <>
+                  <SettingsRow
+                    icon='music'
+                    title={t('settings.floatingLyrics')}
+                    subtitle={t('settings.floatingLyricsSubtitle')}
+                    trailingIcon='chevron-right'
+                    onTap={() => {
+                      const m = getFloatingLyricModule()
+                      void m.requestPermission().then(granted => { if (granted) void m.show() })
+                    }}
+                    testId='settings-floating-lyrics'
+                  />
+                  {FLOATING_LYRIC_FONT_SIZE_OPTIONS.map((option) => (
+                    <SettingsRow
+                      key={option}
+                      title={t(`settings.floatingLyricFont${option.charAt(0).toUpperCase()}${option.slice(1)}`)}
+                      selected={option === floatingLyricFontSize}
+                      trailingIcon={option === floatingLyricFontSize ? 'check' : undefined}
+                      onTap={() => { setFloatingLyricFontSize(option); void writeFloatingLyricFontSize(option); void getFloatingLyricModule().setFontSize(option).catch(() => {}) }}
+                      testId={`floating-lyric-font-${option}`}
+                    />
+                  ))}
+                  <SwitchRow
+                    icon='music'
+                    title={t('settings.floatingLyricLock')}
+                    checked={floatingLyricLocked}
+                    onChange={(next) => { setFloatingLyricLocked(next); void writeFloatingLyricLocked(next); void getFloatingLyricModule().setLocked(next).catch(() => {}) }}
+                    testId='settings-floating-lyric-lock'
+                  />
+                  {FLOATING_LYRIC_OPACITY_OPTIONS.map((option) => (
+                    <SettingsRow
+                      key={option}
+                      title={`${Math.round(option * 100)}%`}
+                      selected={option === floatingLyricOpacity}
+                      trailingIcon={option === floatingLyricOpacity ? 'check' : undefined}
+                      onTap={() => { setFloatingLyricOpacity(option); void writeFloatingLyricOpacity(option); void getFloatingLyricModule().setOpacity(option).catch(() => {}) }}
+                      testId={`floating-lyric-opacity-${String(option)}`}
+                    />
+                  ))}
+                </>
               )
               : null}
           </SettingsSection>

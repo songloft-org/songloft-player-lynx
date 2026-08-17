@@ -27,6 +27,7 @@ vi.mock('../../settings/data/settings-prefs.js', () => ({
   readNormalize: vi.fn(async () => false),
   readPlaybackSpeed: vi.fn(async () => 1),
   writePlaybackSpeed: vi.fn(async () => {}),
+  readAutoEnterLyrics: vi.fn(async () => false),
 }))
 vi.mock('@lynx-js/lynx-ui-slider', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSlider(),

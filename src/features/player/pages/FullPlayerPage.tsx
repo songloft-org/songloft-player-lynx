@@ -1,8 +1,8 @@
-import { useEffect, useState } from '@lynx-js/react'
+import { useEffect, useRef, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-import { Swiper, SwiperItem } from '@lynx-js/lynx-ui-swiper'
+import { Swiper, SwiperItem, type SwiperRef } from '@lynx-js/lynx-ui-swiper'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
@@ -12,6 +12,7 @@ import { getLastLibrarySearch } from '../../library/data/last-library-search.js'
 import { getLastShellLocation } from '../../../shared/nav/shell-navigation.js'
 import { resolveVideoSourceKind } from '../../../core/network/video-source.js'
 import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
+import { readAutoEnterLyrics } from '../../settings/data/settings-prefs.js'
 import { getPlatformTarget } from '../../../native/platform-target.js'
 import { getVideoModule } from '../../../native/video.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
@@ -109,6 +110,14 @@ export function FullPlayerPage() {
   const speed = usePlayerStore((s) => s.speed)
   const { width, isWide, onLayoutChange } = useBreakpoint()
   const [showSleepTimer, setShowSleepTimer] = useState(false)
+  const swiperRef = useRef<SwiperRef>(null)
+
+  // Auto-enter full-screen lyrics when the preference is enabled.
+  useEffect(() => {
+    void readAutoEnterLyrics().then((enabled) => {
+      if (enabled) swiperRef.current?.swipeTo(1)
+    })
+  }, [])
 
   useEffect(() => {
     return () => { usePlayerStore.getState().closePlaylistDrawer() }
@@ -230,6 +239,7 @@ export function FullPlayerPage() {
           : width > 0
             ? (
               <Swiper
+                ref={swiperRef}
                 data={[0, 1]}
                 itemWidth={width}
                 containerWidth={width}
