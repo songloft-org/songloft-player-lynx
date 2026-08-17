@@ -168,15 +168,25 @@ const IDLE_VIEW: ScanView = {
  * but its `isError` getter tests `status == 'failed'` — so `'error'` matched no
  * branch and the whole scan area rendered blank. Keeping the local failure out
  * of the server-owned status makes that class of mismatch impossible.
+ *
+ * `dismissed` is the local "I have read this result" flag behind the *Scan again*
+ * button, and it exists because the server has no notion of acknowledgement: the
+ * progress endpoint keeps reporting the **last** run's terminal status forever, so
+ * without an override the scan area is stuck on that summary — even across a
+ * remount — and the idle state, which is where the skip/reimport choice and the
+ * directory picker live, is unreachable. It masks only a *terminal* status, never a
+ * live one, so a scan started from elsewhere still surfaces.
  */
 export function deriveScanView(
   progress: ScanProgress | undefined,
   startError: boolean,
+  dismissed = false,
 ): ScanView {
   if (startError) {
     return { kind: 'failed', percent: 0, indeterminate: false, canCancel: false }
   }
   if (!progress) return IDLE_VIEW
+  if (dismissed && progress.isTerminal) return IDLE_VIEW
   if (progress.isFailed) {
     return { kind: 'failed', percent: 0, indeterminate: false, canCancel: false }
   }

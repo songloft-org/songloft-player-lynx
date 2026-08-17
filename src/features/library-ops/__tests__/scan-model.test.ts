@@ -95,6 +95,30 @@ describe('deriveScanView', () => {
     }
     expect(deriveScanView(undefined, true).kind).toBe('failed')
   })
+
+  /**
+   * The progress endpoint reports the *last* run's terminal status forever, so
+   * without a local acknowledgement the scan area is pinned to that summary — even
+   * across a remount — and the idle controls (skip/reimport, target directories)
+   * cannot be reached at all. "Scan again" sets this flag.
+   */
+  test('a dismissed terminal result yields idle, so the controls come back', () => {
+    for (const status of ['completed', 'cancelled', 'failed'] as const) {
+      expect(deriveScanView(progress(status), false, true).kind).toBe('idle')
+    }
+  })
+
+  test('dismissal never masks a live scan', () => {
+    // Someone else (another client, the auto-scanner) can start a run while the
+    // flag is set; hiding that would leave the page silently lying.
+    for (const status of ['scanning', 'importing', 'creating_playlists'] as const) {
+      expect(deriveScanView(progress(status), false, true).kind).toBe('running')
+    }
+  })
+
+  test('dismissal does not swallow a fresh start failure', () => {
+    expect(deriveScanView(progress('completed'), true, true).kind).toBe('failed')
+  })
 })
 
 describe('scanLines', () => {

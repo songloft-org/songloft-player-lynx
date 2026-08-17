@@ -52,6 +52,7 @@ const h = vi.hoisted(() => ({
   },
   dirNames: [] as string[],
   updateExcludeConfig: vi.fn(),
+  cleanInvalid: vi.fn(async () => ({ cleaned: 3 })),
 }))
 
 vi.mock('react-i18next', async () =>
@@ -67,6 +68,12 @@ vi.mock('@lynx-js/lynx-ui-input', async () =>
 )
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => h.navigateSpy }))
+
+// The maintenance rows call this directly; without the mock, tapping "clean
+// invalid songs" would issue a real request from the test run.
+vi.mock('../../library/api/index.js', () => ({
+  getSongsApi: () => ({ cleanInvalidSongs: h.cleanInvalid }),
+}))
 
 const wrap = (value: unknown) => ({ data: { value, readFailed: h.settings.readFailed } })
 const mutation = (fn: ReturnType<typeof vi.fn>) => ({ mutate: fn, isPending: false })
@@ -576,4 +583,79 @@ test('a write failure raises a dismissible banner', async () => {
     fireEvent.tap(queryByTestId('libops-write-error-dismiss')!)
   })
   expect(queryByTestId('libops-write-error')).not.toBeInTheDocument()
+})
+
+/* ----------------------------------------------------------------- maintenance */
+
+test('the maintenance entries render as rows inside a section', async () => {
+  // They used to be hand-rolled bare cards: no horizontal margin (so 32px wider
+  // than every section above), 12px of vertical padding instead of 16px, and a
+  // border each so the pair showed a doubled hairline. Going through
+  // SettingsSection/SettingsRow is what keeps them aligned with the page.
+  const { queryByTestId, queryByText } = await renderPage()
+  expect(queryByText('Maintenance')).toBeInTheDocument()
+  expect(queryByTestId('libops-duplicates')).toBeInTheDocument()
+  expect(queryByTestId('libops-clean-invalid')).toBeInTheDocument()
+})
+
+test('the duplicate-detection row opens the duplicates page', async () => {
+  const { queryByTestId } = await renderPage()
+  await act(async () => {
+    fireEvent.tap(queryByTestId('libops-duplicates')!)
+  })
+  expect(h.navigateSpy).toHaveBeenCalledWith({ to: '/settings/duplicates' })
+})
+
+test('cleaning invalid songs reports the count on the row itself', async () => {
+  // The count used to land in a loose line of text under the card; as the row's
+  // subtitle it reads as belonging to the action that produced it.
+  const { queryByTestId, queryByText } = await renderPage()
+  await act(async () => {
+    fireEvent.tap(queryByTestId('libops-clean-invalid')!)
+    // `.then().finally()` on the API promise needs a few microtask turns before
+    // the result state is committed.
+    for (let i = 0; i < 5; i++) await Promise.resolve()
+  })
+  expect(h.cleanInvalid).toHaveBeenCalledTimes(1)
+  expect(queryByText('Cleaned 3 invalid songs')).toBeInTheDocument()
+})
+
+test('"scan again" restores the controls instead of silently re-scanning', async () => {
+  // It used to fire a scan on the spot, which skipped the skip/reimport choice and
+  // the directory picker entirely — and since the server keeps reporting the last
+  // run as completed, those controls were unreachable by any other route, so
+  // "reimport" could not be selected at all.
+  h.scanData = parseScanProgress({ status: 'completed', local_song_count: 3, skipped_files: 3 })
+  const { queryByTestId } = await renderPage()
+  expect(queryByTestId('scan-mode-reimport')).not.toBeInTheDocument()
+
+  await act(async () => {
+    fireEvent.tap(queryByTestId('scan-reset')!)
+  })
+
+  expect(h.startScan).not.toHaveBeenCalled()
+  expect(queryByTestId('scan-mode-skip')).toBeInTheDocument()
+  expect(queryByTestId('scan-mode-reimport')).toBeInTheDocument()
+  expect(queryByTestId('scan-target-dirs')).toBeInTheDocument()
+  expect(queryByTestId('scan-start')).toBeInTheDocument()
+})
+
+test('the restored controls can start a reimport', async () => {
+  h.scanData = parseScanProgress({ status: 'completed', local_song_count: 3 })
+  const { queryByTestId } = await renderPage()
+
+  await act(async () => {
+    fireEvent.tap(queryByTestId('scan-reset')!)
+  })
+  await act(async () => {
+    fireEvent.tap(queryByTestId('scan-mode-reimport')!)
+  })
+  await act(async () => {
+    fireEvent.tap(queryByTestId('scan-start')!)
+  })
+
+  expect(h.startScan).toHaveBeenCalledWith(
+    { reimport: true, paths: [] },
+    expect.anything(),
+  )
 })

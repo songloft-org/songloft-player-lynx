@@ -181,23 +181,6 @@
   color: var(--content);
 }
 
-.libops__dup-entry {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
-  background-color: var(--paper);
-  border: 1px solid var(--line);
-}
-
-.libops__dup-entry-text {
-  flex: 1;
-  color: var(--content);
-  font-size: var(--font-md);
-  margin-left: var(--space-2);
-}
-
 /* ── Directory picker ───────────────────────────────────────────────────── */
 
 .libops__dirs {
@@ -533,8 +516,3 @@
   font-size: var(--font-md);
 }
 
-.libops__clean-result {
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--font-xs);
-  color: var(--content-muted);
-}

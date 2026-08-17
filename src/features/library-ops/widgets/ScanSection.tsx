@@ -26,6 +26,8 @@ export interface ScanSectionProps {
   cancelling: boolean
   mode: ScanMode
   onModeChange: (mode: ScanMode) => void
+  /** Local "I have read this result" flag — see {@link deriveScanView}. */
+  dismissed: boolean
   selectedPaths: readonly string[]
   onTogglePath: (path: string) => void
   onClearPaths: () => void
@@ -47,7 +49,7 @@ export interface ScanSectionProps {
  */
 export function ScanSection(props: ScanSectionProps) {
   const { t } = useTranslation()
-  const view = deriveScanView(props.progress, props.startError)
+  const view = deriveScanView(props.progress, props.startError, props.dismissed)
 
   return (
     <SettingsSection title={t('libops.scanSection')} icon='search'>
