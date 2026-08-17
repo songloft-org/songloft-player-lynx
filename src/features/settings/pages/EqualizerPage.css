@@ -82,7 +82,7 @@
   flex-direction: row;
   justify-content: space-between;
   align-items: stretch;
-  padding: 16px 8px;
+  padding: 16px 8px 8px;
   background-color: var(--paper);
   border-radius: 12px;
   gap: 2px;
@@ -93,7 +93,7 @@
   flex-direction: column;
   align-items: center;
   flex: 1;
-  gap: 8px;
+  gap: 6px;
 }
 
 .eq-page__band-gain {
@@ -104,16 +104,16 @@
 }
 
 .eq-page__band-slider-wrap {
-  height: 140px;
-  width: 24px;
+  height: 260px;
+  width: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .eq-page__band-slider {
-  width: 140px;
-  height: 24px;
+  width: 260px;
+  height: 36px;
   transform: rotate(-90deg);
 }
 
