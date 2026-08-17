@@ -1,176 +1,61 @@
-# 上游 Issue 草稿
+# 上游 Issue 跟踪
 
-> 待提交到 Lynx 官方仓库，复制到另一台有 gh 权限的机器上执行。
+> 已提交到 Lynx 官方仓库。修复合入后需移除对应的本地 patch。
 
 ---
 
 ## Issue 1: `nativeModulesMap` 类字段覆盖预升级值
 
-**仓库**: `lynx-family/lynx-stack`
-**类型**: Bug Report
-**标题**: `[Bug]: LynxViewElement.nativeModulesMap class field overwrites pre-upgrade value`
+- **链接**: https://github.com/lynx-family/lynx-stack/issues/3559
+- **仓库**: `lynx-family/lynx-stack`
+- **标签**: `pending triage`
+- **状态**: 已提交，等待 triage
 
-### 提交流程
+### 当前 workaround
 
-```bash
-# 1. 获取 System Info
-npx envinfo --system --npmPackages '@lynx-js/*' --binaries --npmGlobalPackages 'pnpm'
+`patches/@lynx-js__web-core@0.23.1.patch` — 对 `dist/client/mainthread/LynxView.js` 应用了与建议修复完全相同的 diff（private field + getter/setter）。
 
-# 2. 创建 issue
-gh issue create \
-  --repo lynx-family/lynx-stack \
-  --title "[Bug]: LynxViewElement.nativeModulesMap class field overwrites pre-upgrade value" \
-  --label "pending triage" \
-  --body-file /path/to/issue-1-body.md
-```
+### 上游修复后需执行
 
-### issue-1-body.md
+1. 升级 `@lynx-js/web-core` 到包含修复的版本
+2. 删除 `patches/@lynx-js__web-core@0.23.1.patch`
+3. 运行 `pnpm install` 重新应用 patch 列表
+4. 验证 `nativeModulesMap` 在 `<lynx-view>` upgrade 前设置后不丢失
 
-```markdown
-### System Info
+### 提交内容摘要
 
-```
-<!-- 粘贴 npx envinfo --system --npmPackages '@lynx-js/*' --binaries 的输出 -->
-```
+`LynxViewElement` 将 `nativeModulesMap` 声明为裸 TS 类字段（无初始值，等价于 `this.nativeModulesMap = undefined`），覆盖了用户在 `<lynx-view>` upgrade 前设置的值。同类的 `onNativeModulesCall` 已用 private field + getter/setter 模式正确处理了此问题。
 
-### Details
-
-`@lynx-js/web-core` 的 `LynxViewElement` 将 `nativeModulesMap` 声明为裸类字段（无初始值）：
-
-```ts
-// packages/web-platform/web-core/src/client/mainthread/LynxView.ts line 74
-nativeModulesMap;
-```
-
-这等价于构造函数中 `this.nativeModulesMap = undefined`。当用户在 `<lynx-view>` 升级前通过脚本设置 `nativeModulesMap` 时，构造函数会将其静默覆盖为 `undefined`。
-
-**同类中 `onNativeModulesCall` 已经正确处理了这个问题**（lines 270–278），它使用 getter/setter 模式：
-
-```ts
-#onNativeModulesCall;
-get onNativeModulesCall() { return this.#onNativeModulesCall; }
-set onNativeModulesCall(handler) {
-  this.#onNativeModulesCall = handler;
-  // drain cached calls ...
-}
-```
-
-`nativeModulesMap` 应使用相同的模式。
-
-**影响**：所有通过 `nativeModulesMap` 注册的自定义原生模块全部丢失。Worker 端 `NativeModules` 只剩 web-core 自带的 `bridge` 和 `LynxExposureModule`。用户看不到任何错误——`Promise.all` 对空 map 成功返回。这导致剪贴板写入、文件选择器、自定义音频模块全部静默失效。
-
-**建议修复**（10 行改动）：
-
-```diff
--    nativeModulesMap;
-+    #nativeModulesMap;
-+    get nativeModulesMap() {
-+        return this.#nativeModulesMap;
-+    }
-+    set nativeModulesMap(val) {
-+        this.#nativeModulesMap = val;
-+    }
-```
-
-该 bug 在 0.23.1 和 0.24.1（latest）中均存在。
-
-### Reproduce Steps
-
-1. 创建 host 页面，在 `<lynx-view>` 升级前设置 `nativeModulesMap`：
-
-```html
-<lynx-view id="app"></lynx-view>
-<script>
-  document.getElementById('app').nativeModulesMap = {
-    MyModule: '/my-module.js',
-  };
-</script>
-<script type="module" src="/web-core/static/js/client.js"></script>
-```
-
-2. 在 worker 中打印 `NativeModules`
-3. 观察：`MyModule` 不存在，`nativeModulesMap` 为 `undefined`
-```
+- 源码位置: `packages/web-platform/web-core/ts/client/mainthread/LynxView.ts` line 99
+- `onNativeModulesCall` 参考实现: lines 309–325
+- 影响版本: 0.23.1, 0.24.1
 
 ---
 
 ## Issue 2: `clearTimeout(undefined)` 抛异常
 
-**仓库**: `lynx-family/lynx`
-**类型**: Bug Report
-**标题**: `[Bug]: clearTimeout(undefined) throws TypeError instead of being a no-op`
+- **链接**: https://github.com/lynx-family/lynx/issues/8641
+- **仓库**: `lynx-family/lynx`
+- **标签**: `type:bug`, `status:need triage`
+- **状态**: 已提交，等待 triage
 
-### 提交流程
+### 当前 workaround
 
-```bash
-# 1. 获取 System Info
-npx envinfo --system --npmPackages '@lynx-js/*' --binaries --npmGlobalPackages 'pnpm'
+Lynx 引擎层的 bug，无法直接 patch Lynx 本身。目前通过两个途径规避：
 
-# 2. 创建 issue
-gh issue create \
-  --repo lynx-family/lynx \
-  --title "[Bug]: clearTimeout(undefined) throws TypeError instead of being a no-op" \
-  --label "pending triage" \
-  --body-file /path/to/issue-2-body.md
-```
+1. `patches/@tanstack__router-core@1.171.18.patch` — 对 TanStack Router 的 `clearTimeout` 调用点加 `typeof id === 'number'` 守卫（同时修复了 `self` 引用问题）
+2. 其他第三方库如遇同样问题，需类似 patch
 
-### issue-2-body.md
+### 上游修复后需执行
 
-```markdown
-### System Info
+1. 升级 Lynx 到包含修复的版本
+2. 检查 `patches/@tanstack__router-core@1.171.18.patch` 中 `self` 修复是否仍需保留（与 clearTimeout 无关的部分）
+3. 移除 patch 中 `__safeClearTimeout` 相关代码，或整体删除 patch（如果 TanStack Router 升级后不再需要）
+4. 运行 `pnpm install` 重新应用 patch 列表
 
-```
-<!-- 粘贴 npx envinfo --system --npmPackages '@lynx-js/*' --binaries 的输出 -->
-```
+### 提交内容摘要
 
-### Details
-
-Lynx 4.0 中 `clearTimeout(undefined)` 抛出异常：
-
-```
-TypeError: param 0 should be Number
-```
-
-根据 [WHATWG HTML Standard](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)：
-
-> If handle is not provided, the clearTimeout() method call does nothing.
-
-所有其他 JavaScript 运行时行为一致：
-
-| 运行时 | `clearTimeout(undefined)` 行为 |
-|--------|-------------------------------|
-| Chrome | no-op |
-| Firefox | no-op |
-| Safari | no-op |
-| Node.js | no-op |
-| Deno | no-op |
-| Bun | no-op |
-| **Lynx 4.0** | **TypeError** |
-
-**影响**：破坏所有传递可选 timer ID 的第三方库。例如 TanStack Router 的 `offerPending` 函数：
-
-```ts
-clearTimeout(session?.[3]); // undefined when session is null
-```
-
-目前需要 patch 每个受影响的库来包裹 `clearTimeout` 调用。
-
-**建议修复**：在 `clearTimeout` 入口加类型守卫：
-
-```cpp
-// pseudo-code
-if (!handle || typeof handle !== 'number') return;
-```
-
-### Reproduce Steps
-
-1. 在 Lynx 4.0 环境中执行：
-```js
-clearTimeout(undefined);
-```
-2. 观察：抛出 `TypeError: param 0 should be Number`
-3. 期望：无操作（no-op）
-```
+Lynx 4.0 中 `clearTimeout(undefined)` 抛出 `TypeError: param 0 should be Number`，而 WHATWG 标准及所有主流运行时（Chrome/Firefox/Safari/Node.js/Deno/Bun）均将其视为 no-op。这破坏了所有传递可选 timer ID 的第三方库。
 
 ---
 
