@@ -112,32 +112,32 @@
 }
 
 .eq-page__band-slider {
-  width: 100%;
-  height: 100%;
+  width: 140px;
+  height: 24px;
+  transform: rotate(-90deg);
 }
 
 .eq-page__band-track {
   position: relative;
-  width: 4px;
-  height: 100%;
+  height: 4px;
+  width: 100%;
   background-color: var(--neutral-faint);
   border-radius: 2px;
-  margin: 0 auto;
 }
 
 .eq-page__band-indicator {
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
-  right: 0;
+  bottom: 0;
   background-color: var(--primary);
   border-radius: 2px;
 }
 
 .eq-page__band-thumb-wrap {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .eq-page__band-thumb {
