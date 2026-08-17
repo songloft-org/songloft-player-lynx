@@ -104,16 +104,16 @@
 }
 
 .eq-page__band-slider-wrap {
-  height: 180px;
-  width: 36px;
+  height: 300px;
+  width: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .eq-page__band-slider {
-  width: 180px;
-  height: 36px;
+  width: 300px;
+  height: 40px;
   transform: rotate(-90deg);
 }
 
