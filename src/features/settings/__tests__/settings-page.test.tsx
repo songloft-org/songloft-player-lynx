@@ -2,7 +2,7 @@ import '../../../shims/router-env.js'
 
 import '@testing-library/jest-dom'
 import type { ReactNode } from '@lynx-js/react'
-import { afterEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import {
   act,
   fireEvent,
@@ -110,16 +110,36 @@ vi.mock('@lynx-js/lynx-ui', () => ({
   DialogClose: ({ children }: { children: ReactNode }) => <view>{children}</view>,
 }))
 
+// Real module (not mocked): the scroll offset it holds is the thing under test in
+// the round-trip case below. Module state outlives a `render()`, so it is reset
+// per test.
+const { clearScrollMemory } = await import('../../../shared/nav/scroll-memory.js')
+
 const { SettingsPage } = await import('../pages/SettingsPage.js')
 
+beforeEach(() => clearScrollMemory())
 afterEach(() => vi.clearAllMocks())
 
 async function renderPage() {
-  render(<SettingsPage />)
+  const { unmount } = render(<SettingsPage />)
   await act(async () => {
     await Promise.resolve()
   })
-  return getQueriesForElement(elementTree.root!)
+  return { ...getQueriesForElement(elementTree.root!), unmount }
+}
+
+/**
+ * Fires `bindscroll` on the settings list.
+ *
+ * The event has to be addressed through a selector query: jsdom makes the
+ * hyphenated `<scroll-view>` an `HTMLElement`, and the testing library's
+ * `getElement` only accepts an `HTMLUnknownElement` (what non-hyphenated tags like
+ * `<view>` become) — so passing the element straight in throws. Its `.d.ts` types
+ * the target as `Element`, hence the cast.
+ */
+function scrollListTo(scrollTop: number) {
+  const target = lynx.createSelectorQuery().select('[data-testid="settings-scroll"]')
+  fireEvent.scroll(target as unknown as Element, { detail: { scrollTop } })
 }
 
 test('renders every section, version, server and log-out rows', async () => {
@@ -216,6 +236,39 @@ test('the server row navigates to the server sub-page', async () => {
   })
 
   expect(navigateSpy).toHaveBeenCalledWith({ to: '/settings/servers' })
+})
+
+test('the list starts at the top on the first visit of a session', async () => {
+  const { getByTestId } = await renderPage()
+  expect(getByTestId('settings-scroll').getAttribute('initial-scroll-offset')).toBe('0')
+})
+
+test('returning from a sub-page restores where the list was scrolled to', async () => {
+  // Sub-pages are *sibling* routes (`/settings/cache` is not nested under
+  // `/settings`), so opening one unmounts this page — which is why the offset
+  // cannot live in a `useRef`.
+  const first = await renderPage()
+  scrollListTo(428)
+  first.unmount()
+
+  const second = await renderPage()
+  // `initial-scroll-offset` rather than `scroll-top` — see `scroll-memory.ts` for
+  // why that is the only prop wired on all five scroller implementations.
+  expect(second.getByTestId('settings-scroll').getAttribute('initial-scroll-offset')).toBe('428')
+})
+
+test('the restore offset is frozen for the lifetime of the mount', async () => {
+  // Re-applying a *changed* offset would re-issue a programmatic scroll on every
+  // unrelated re-render and fight the user's finger, so scrolling must not feed
+  // back into the rendered attribute.
+  const { getByTestId } = await renderPage()
+
+  scrollListTo(428)
+  await act(async () => {
+    fireEvent.tap(getByTestId('theme-light')!) // any state change → re-render
+  })
+
+  expect(getByTestId('settings-scroll').getAttribute('initial-scroll-offset')).toBe('0')
 })
 
 test('log out shows dialog, confirm calls auth logout then routes to /login', async () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from '@lynx-js/react'
+import { useCallback, useEffect, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -43,6 +43,7 @@ import { canExport, exportPlaylists, importPlaylists } from '../domain/data-tran
 import { LOG_LEVELS, coerceLogLevel, logLevelLabelKey, type LogLevel } from '../domain/log-level.js'
 import { serverDisplay } from '../domain/settings-model.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
+import { useScrollMemory } from '../../../shared/nav/scroll-memory.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import { LibraryOpsPage } from '../../library-ops/pages/LibraryOpsPage.js'
@@ -134,11 +135,18 @@ type SettingsSubPage =
 /** Sub-page shown in the right pane before the user picks one. */
 const DEFAULT_SUB_PAGE: SettingsSubPage = 'library'
 
+/** Scroll-memory key for the settings list; see {@link useScrollMemory}. */
+const SCROLL_KEY = 'settings'
+
 export function SettingsPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
-  const scrollRef = useRef(0)
+  // The list is long and every row leads to a sub-page, so losing the offset on
+  // the way back means re-scrolling past everything each time. In single-column
+  // mode a sub-page is a sibling route, which unmounts this page — hence the
+  // module-level memory rather than a `useRef`.
+  const { initialOffset, onScroll } = useScrollMemory(SCROLL_KEY)
   const { width: layoutWidth, onLayoutChange } = useBreakpoint()
   const isDualColumn = layoutWidth >= DUAL_COLUMN_MIN_WIDTH
 
@@ -293,8 +301,9 @@ export function SettingsPage() {
       <scroll-view
         className={isDualColumn ? 'settings__scroll settings__scroll--dual' : 'settings__scroll'}
         scroll-y
-        scroll-top={scrollRef.current}
-        bindscroll={(e: { detail: { scrollTop: number } }) => { scrollRef.current = e.detail.scrollTop }}
+        initial-scroll-offset={initialOffset}
+        bindscroll={onScroll}
+        data-testid='settings-scroll'
       >
         <view className='settings__content'>
           <SettingsSection title={t('settings.musicLibraryScan')} icon='library'>
