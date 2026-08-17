@@ -338,6 +338,8 @@ export function SettingsPage() {
                 testId={`theme-${option}`}
               />
             ))}
+          </SettingsSection>
+          <SettingsSection title={t('settings.languageSection')} icon='settings'>
             {APP_LANGUAGE_OPTIONS.map((option) => (
               <SettingsRow
                 key={option}
@@ -348,6 +350,8 @@ export function SettingsPage() {
                 testId={`language-${option}`}
               />
             ))}
+          </SettingsSection>
+          <SettingsSection>
             <SettingsRow
               icon='palette'
               title={t('themePacks.title')}
@@ -375,6 +379,8 @@ export function SettingsPage() {
                 testId={`audio-quality-${option}`}
               />
             ))}
+          </SettingsSection>
+          <SettingsSection>
             <SwitchRow
               icon='music'
               title={t('settings.autoResume')}
@@ -400,6 +406,8 @@ export function SettingsPage() {
               onTap={() => goToSubPage('eq', '/settings/eq')}
               testId='settings-eq'
             />
+          </SettingsSection>
+          <SettingsSection title={t('settings.lyricsSection')} icon='music'>
             <SwitchRow
               icon='music'
               title={t('settings.autoEnterLyrics')}
@@ -605,6 +613,8 @@ export function SettingsPage() {
               onTap={() => goToSubPage('upgrade', '/settings/upgrade')}
               testId='settings-upgrade'
             />
+          </SettingsSection>
+          <SettingsSection title={t('settings.diagnostics')} icon='settings'>
             {LOG_LEVELS.map((option) => (
               <SettingsRow
                 key={option}

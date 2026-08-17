@@ -5,7 +5,7 @@ import type { IconName } from '../../../shared/ui/icons.js'
 import './Settings.css'
 
 export interface SettingsSectionProps {
-  title: string
+  title?: string
   subtitle?: string
   icon?: IconName
   children?: ReactNode
@@ -19,21 +19,25 @@ export interface SettingsSectionProps {
 export function SettingsSection({ title, subtitle, icon, children }: SettingsSectionProps) {
   return (
     <view className='settings-section'>
-      <view className='settings-section__header'>
-        {icon
-          ? (
-            <view className='settings-section__icon'>
-              <Icon name={icon} size={16} color={ICON_COLORS.contentMuted} />
+      {title
+        ? (
+          <view className='settings-section__header'>
+            {icon
+              ? (
+                <view className='settings-section__icon'>
+                  <Icon name={icon} size={16} color={ICON_COLORS.contentMuted} />
+                </view>
+              )
+              : null}
+            <view className='settings-section__header-text'>
+              <text className='settings-section__title'>{title}</text>
+              {subtitle
+                ? <text className='settings-section__subtitle'>{subtitle}</text>
+                : null}
             </view>
-          )
-          : null}
-        <view className='settings-section__header-text'>
-          <text className='settings-section__title'>{title}</text>
-          {subtitle
-            ? <text className='settings-section__subtitle'>{subtitle}</text>
-            : null}
-        </view>
-      </view>
+          </view>
+        )
+        : null}
       <view className='settings-section__card'>{children}</view>
     </view>
   )
