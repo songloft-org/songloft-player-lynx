@@ -1,12 +1,6 @@
-import { useEffect } from '@lynx-js/react'
+import { useCallback, useEffect, useRef } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import {
-  SliderIndicator,
-  SliderRoot,
-  SliderThumb,
-  SliderTrack,
-} from '@lynx-js/lynx-ui-slider'
 
 import { EQ_CENTER_FREQS } from '../../../native/audio-types.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
@@ -33,6 +27,61 @@ function sliderToGain(v: number): number {
 
 function presetLabel(name: EqPresetName, t: (k: string) => string): string {
   return t(`eq.preset_${name}`)
+}
+
+/**
+ * Custom vertical slider for EQ bands. Lynx Slider is horizontal-only and
+ * CSS transform rotation doesn't work for touch interaction, so we use
+ * bindtouchstart/bindtouchmove to track vertical finger position.
+ */
+function BandSlider({ hz, gainDb, onChange }: {
+  hz: number
+  gainDb: number
+  onChange: (ratio: number) => void
+}) {
+  const wrapperRef = useRef<{ getBoundingClientRect: () => { top: number; height: number } } | null>(null)
+  const value = gainToSlider(gainDb)
+
+  const resolveRatio = useCallback((clientY: number) => {
+    const el = wrapperRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const ratio = 1 - Math.max(0, Math.min(1, (clientY - rect.top) / rect.height))
+    onChange(ratio)
+  }, [onChange])
+
+  const handleTouch = useCallback((e: { touches: Array<{ clientY: number }> }) => {
+    if (e.touches?.[0]) resolveRatio(e.touches[0].clientY)
+  }, [resolveRatio])
+
+  return (
+    <view className='eq-page__band'>
+      <text className='eq-page__band-gain'>
+        {gainDb > 0 ? `+${gainDb}` : String(gainDb)}
+      </text>
+      <view
+        className='eq-page__band-slider-wrap'
+        bindtouchstart={handleTouch}
+        bindtouchmove={handleTouch}
+      >
+        <view
+          // @ts-expect-error Lynx ref type
+          ref={wrapperRef}
+          className='eq-page__band-track'
+        >
+          <view
+            className='eq-page__band-indicator'
+            style={{ height: `${value * 100}%` }}
+          />
+          <view
+            className='eq-page__band-thumb'
+            style={{ bottom: `${value * 100}%` }}
+          />
+        </view>
+      </view>
+      <text className='eq-page__band-freq'>{formatFreq(hz)}</text>
+    </view>
+  )
 }
 
 export function EqualizerPage() {
@@ -90,31 +139,15 @@ export function EqualizerPage() {
             ))}
           </view>
 
-          {/* 10-band sliders */}
+          {/* 10-band vertical sliders */}
           <view className='eq-page__bands'>
             {EQ_CENTER_FREQS.map((hz, i) => (
-              <view key={hz} className='eq-page__band'>
-                <text className='eq-page__band-gain'>
-                  {bands[i] > 0 ? `+${bands[i]}` : String(bands[i])}
-                </text>
-                <view className='eq-page__band-slider-wrap'>
-                  <SliderRoot
-                    className='eq-page__band-slider'
-                    value={gainToSlider(bands[i])}
-                    onValueCommit={(v: number) => {
-                      useEqStore.getState().adjustBand(i, Math.round(sliderToGain(v)))
-                    }}
-                  >
-                    <SliderTrack className='eq-page__band-track'>
-                      <SliderIndicator className='eq-page__band-indicator' />
-                      <SliderThumb className='eq-page__band-thumb-wrap'>
-                        <view className='eq-page__band-thumb' />
-                      </SliderThumb>
-                    </SliderTrack>
-                  </SliderRoot>
-                </view>
-                <text className='eq-page__band-freq'>{formatFreq(hz)}</text>
-              </view>
+              <BandSlider
+                key={hz}
+                hz={hz}
+                gainDb={bands[i]}
+                onChange={(v) => useEqStore.getState().adjustBand(i, Math.round(sliderToGain(v)))}
+              />
             ))}
           </view>
 
