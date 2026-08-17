@@ -205,7 +205,7 @@ export function CacheManagePage() {
             </view>
 
             {/* Transcode format selector */}
-            <view className='cache-manage__field'>
+            <view className='cache-manage__field cache-manage__field--rows'>
               <text className='cache-manage__label'>
                 {t('cacheManage.transcodeFormat')}
               </text>
@@ -222,7 +222,7 @@ export function CacheManagePage() {
             </view>
 
             {/* Transcode quality selector */}
-            <view className='cache-manage__field'>
+            <view className='cache-manage__field cache-manage__field--rows'>
               <text className='cache-manage__label'>
                 {t('cacheManage.transcodeQuality')}
               </text>

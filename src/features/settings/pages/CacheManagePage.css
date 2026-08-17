@@ -47,16 +47,46 @@
   gap: var(--space-4);
 }
 
+/*
+ * Editable fields sit inside a `settings-section__card`, which is built for
+ * `settings-row`s — those carry their own padding, a field does not. Without an
+ * inset of its own the field's content touched the card edge and the card's
+ * `overflow: hidden` clipped the label; consecutive fields also ran together
+ * with nothing but a margin between them.
+ */
 .cache-manage__field {
   display: flex;
   flex-direction: column;
-  margin-bottom: var(--space-4);
-  overflow: hidden;
+  padding: var(--space-4);
+}
+
+/*
+ * A field that only wraps a list of rows keeps the horizontal inset on its
+ * label alone: the rows already inset themselves, and padding here would
+ * double-indent them and stop their dividers short of the card edge.
+ */
+.cache-manage__field--rows {
+  padding: var(--space-4) 0 0;
+}
+
+.cache-manage__field--rows .cache-manage__label {
+  padding: 0 var(--space-4);
+}
+
+/* Same divider the rows use, so the card reads as one list. */
+.cache-manage__field + .cache-manage__field {
+  border-top: 1px solid var(--line);
 }
 
 .cache-manage__label {
   color: var(--content-2);
   font-size: var(--font-sm);
+  /*
+   * Explicit line box. The default is tight enough that CJK ascenders overflow
+   * it, and the label is its block's first child — so the overflow landed
+   * outside the card and got clipped, leaving the text looking shaved off.
+   */
+  line-height: var(--font-lg);
   margin-bottom: var(--space-2);
 }
 
@@ -120,7 +150,8 @@
   align-items: center;
   justify-content: center;
   height: 48px;
-  margin-top: var(--space-4);
+  /* Inside the card, so it needs the same inset the fields have. */
+  margin: var(--space-4);
   border-radius: var(--radius-pill);
   background-color: var(--primary);
 }
@@ -142,7 +173,8 @@
   border-radius: var(--radius-md);
   background-color: var(--neutral-faint);
   border: 1px solid var(--line);
-  margin-top: var(--space-2);
+  /* Also a card child — inset it rather than letting it touch the card edge. */
+  margin: var(--space-3) var(--space-4);
 }
 
 .cache-manage__validate-ok {
