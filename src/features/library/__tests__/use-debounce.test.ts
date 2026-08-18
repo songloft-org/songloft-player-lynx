@@ -127,7 +127,7 @@ describe('debounce integration: search keyword passes through buildSongsQuery', 
    */
   test('debounce delay constant is between 300-500ms', () => {
     const source = readFileSync(
-      resolve(__dirname, '../pages/LibraryPage.tsx'),
+      resolve(__dirname, '../widgets/FlatSongsView.tsx'),
       'utf-8',
     )
     const match = source.match(/DEBOUNCE_MS\s*=\s*(\d+)/)

@@ -159,11 +159,28 @@ test('shows the play-history button for a facet dimension', async () => {
   expect(queryByTestId('category-songs-history')).toBeInTheDocument()
 })
 
-test('hides it for source fields, which are not history contexts', async () => {
+test('an unrecognized field falls back to artist (source pseudo-fields are gone)', async () => {
+  // Pre-refactor this page also served "source" pseudo-fields (favorites /
+  // random / folder / …); they were removed with the 14-view refactor, so an
+  // unknown $field now normalizes to a real facet dimension instead of
+  // building a broken filter.
   paramsHook.mockReturnValue({ field: 'favorites' })
-  searchHook.mockReturnValue({ value: 'whatever' })
+  searchHook.mockReturnValue({ value: 'Miles Davis' })
+  await renderPage()
+  expect(songsHook).toHaveBeenCalledWith(
+    expect.objectContaining({ artist: 'Miles Davis' }),
+  )
   const { queryByTestId } = await renderPage()
-  expect(queryByTestId('category-songs-history')).not.toBeInTheDocument()
+  expect(queryByTestId('category-songs-history')).toBeInTheDocument()
+})
+
+test('year value is coerced to a number in the filters', async () => {
+  paramsHook.mockReturnValue({ field: 'year' })
+  searchHook.mockReturnValue({ value: '1999' })
+  await renderPage()
+  expect(songsHook).toHaveBeenCalledWith(
+    expect.objectContaining({ year: 1999 }),
+  )
 })
 
 test('hides it for the empty "unknown" bucket, which the backend would reject', async () => {

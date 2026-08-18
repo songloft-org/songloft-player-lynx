@@ -1,7 +1,9 @@
 /*
  * Library page styling — LUNA tokens only (no hardcoded colors / sizes beyond
  * layout geometry). The `<list>` needs a resolved height to be scrollable, so
- * the page is a flex column and the list flexes to fill it.
+ * content views are flex columns and their lists flex to fill. The view
+ * switcher/rail chrome lives next to LibraryShell; this file keeps the shared
+ * content-view classes (search bar, chips, grid, states, selection).
  */
 
 .library {
@@ -13,45 +15,23 @@
   background-color: var(--canvas);
 }
 
-/* View switcher (Songs / Categories / Playlists) — Muse tab style:
-   hairline container border + ink underline on the active tab (no pill fill). */
-.library__switcher {
+/* Topbar: section title + the "customize views" (tune) entry. */
+.library__topbar {
   display: flex;
   flex-direction: row;
-  padding: 0 var(--space-4);
-  border-bottom: 1px solid var(--line);
-}
-
-.library__tab {
-  display: flex;
   align-items: center;
-  justify-content: center;
-  padding: var(--space-3) var(--space-3);
-  margin-right: var(--space-4);
-  border-bottom: 2px solid transparent;
+  padding: var(--space-3) var(--space-4);
 }
 
-.library__tab--active {
-  border-bottom-color: var(--primary);
-}
-
-.library__tab-text {
-  color: var(--content-muted);
-  font-size: var(--font-sm);
-  font-weight: 500;
-}
-
-.library__tab--active .library__tab-text {
+.library__topbar-title {
+  flex: 1;
   color: var(--content);
+  font-size: var(--font-lg);
   font-weight: 600;
 }
 
-.library__body {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  width: 100%;
-  min-height: 0;
+.library__topbar-customize {
+  padding: var(--space-1);
 }
 
 /* Songs view wrapper */
@@ -196,12 +176,6 @@
   flex: 1;
   width: 100%;
   min-height: 0;
-}
-
-.library__facet-fields {
-  display: flex;
-  flex-direction: row;
-  padding: var(--space-3) var(--space-4);
 }
 
 .library__chip {
@@ -394,26 +368,6 @@
 .library__playlist-picker-item-text {
   font-size: var(--font-sm);
   color: var(--content);
-}
-
-.library__filter-bar {
-  display: flex;
-  flex-direction: row;
-  padding: 0 var(--space-4) var(--space-2);
-  gap: var(--space-2);
-}
-
-/* Search-bar form: `--neutral-faint` fill, no hairline — matching
-   `.library__search-input` above. The old `--paper` was the *card* token, on a
-   transparent bar over canvas: #fafafa on #ffffff, about 1.04:1, no visible field. */
-.library__filter-input {
-  flex: 1;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background-color: var(--neutral-faint);
-  font-size: var(--font-xs);
-  color: var(--content);
-  -x-placeholder-color: var(--content-muted);
 }
 
 .library__suggestions {

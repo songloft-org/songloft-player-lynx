@@ -94,7 +94,7 @@ describe('曲库：歌曲列表', () => {
 
   test('导航到分类浏览', async () => {
     await driver.evaluateJS(`
-      globalThis.__E2E_ROUTER__?.navigate({ to: '/library', search: { view: 'facets' } })
+      globalThis.__E2E_ROUTER__?.navigate({ to: '/library', search: { view: 'artist' } })
     `)
     await driver.sleep(500)
 

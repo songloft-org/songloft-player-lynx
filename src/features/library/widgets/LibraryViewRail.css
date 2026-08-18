@@ -1,0 +1,63 @@
+/*
+ * Wide-layout view rail — a fixed-width left navigation column. LUNA tokens.
+ */
+
+.library-rail {
+  width: 220px;
+  height: 100%;
+  border-right: 1px solid var(--line);
+}
+
+.library-rail__col {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: var(--space-3) var(--space-2);
+}
+
+.library-rail__group {
+  display: flex;
+  flex-direction: column;
+}
+
+.library-rail__divider {
+  height: 1px;
+  margin: var(--space-2) var(--space-2);
+  background-color: var(--rule);
+}
+
+.library-rail__row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.library-rail__row--active {
+  background-color: var(--neutral-faint);
+}
+
+.library-rail__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+}
+
+.library-rail__icon--active {
+  background-color: var(--paper);
+}
+
+.library-rail__label {
+  color: var(--content-2);
+  font-size: var(--font-sm);
+  margin-left: var(--space-2);
+}
+
+.library-rail__row--active .library-rail__label {
+  color: var(--content);
+  font-weight: 600;
+}

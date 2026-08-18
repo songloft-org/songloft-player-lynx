@@ -1,0 +1,88 @@
+import { useState } from '@lynx-js/react'
+import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
+
+import { Input } from '@lynx-js/lynx-ui-input'
+
+import type { SongFacet } from '../../../models/song.js'
+import { flattenFacets } from '../data/pagination.js'
+import { useDebounce } from '../data/use-debounce.js'
+import { useFacetsInfiniteQuery } from '../data/songs-query.js'
+import type { LibraryViewKey } from '../domain/library-views.js'
+import { FacetCard } from './FacetCard.js'
+import { LibraryStateMessage } from './LibraryStateMessage.js'
+
+const DEBOUNCE_MS = 350
+
+export interface FacetGridViewProps {
+  /** The facet dimension to aggregate (`artist` / `album` / `genre` / …). */
+  field: LibraryViewKey
+}
+
+/**
+ * The category grid — one of the three content kinds in the 14-view library
+ * (the `facets` group). Shows every aggregated value of `field` as a card,
+ * with a server-side search box (the `/songs/facets` endpoint takes `keyword`;
+ * the pre-refactor view wired the param but never exposed it). Dimension
+ * selection lives in the view switcher now, so this renders a single field.
+ */
+export function FacetGridView({ field }: FacetGridViewProps) {
+  const navigate = useNavigate()
+  const { t } = useTranslation()
+  const [searchText, setSearchText] = useState('')
+  const keyword = useDebounce(searchText, DEBOUNCE_MS).trim()
+
+  const query = useFacetsInfiniteQuery(field, keyword)
+  const facets = flattenFacets(query.data?.pages)
+
+  return (
+    <view className='library__facets'>
+      <view className='library__search-bar'>
+        <Input
+          className='library__search-input'
+          placeholder={t('library.categorySearchPlaceholder')}
+          value={searchText}
+          onInput={(value: string) => setSearchText(value)}
+        />
+      </view>
+
+      {query.isLoading
+        ? <LibraryStateMessage text={t('library.loadingCategories')} />
+        : query.isError && facets.length === 0
+          ? <LibraryStateMessage text={t('library.categoriesError')} tone='error' />
+          : facets.length === 0
+            ? (
+              <LibraryStateMessage
+                text={keyword ? t('library.noCategoryMatch') : t('library.noCategories')}
+              />
+            )
+            : (
+              <scroll-view
+                className='library__grid-scroll'
+                scroll-y
+                lower-threshold={200}
+                bindscrolltolower={() => {
+                  if (query.hasNextPage && !query.isFetchingNextPage) {
+                    void query.fetchNextPage()
+                  }
+                }}
+              >
+                <view className='library__grid'>
+                  {facets.map((facet: SongFacet) => (
+                    <FacetCard
+                      key={`${field}:${facet.value}`}
+                      facet={facet}
+                      onTap={(f) =>
+                        navigate({
+                          to: '/library/category/$field',
+                          params: { field },
+                          search: { value: f.value, cover: f.coverUrl },
+                        })}
+                    />
+                  ))}
+                </view>
+              </scroll-view>
+            )}
+    </view>
+  )
+}

@@ -144,7 +144,7 @@ export function PlaylistDetailPage() {
     }
     deleteMutation.mutate(id, {
       onSuccess: () => {
-        void navigate({ to: '/library', search: { view: 'playlists' } })
+        void navigate({ to: '/library', search: { view: 'playlist_normal' } })
       },
     })
   }

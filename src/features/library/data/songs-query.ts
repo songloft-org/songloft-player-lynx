@@ -25,9 +25,10 @@ export const libraryQueryKeys = {
   facets: (field: string, keyword: string) =>
     ['library', 'facets', field, keyword] as const,
   /**
-   * Library totals. Deliberately under the same `['library']` prefix as the lists:
-   * the scan-completion effect (batch 19) invalidates that prefix, so finishing an
-   * import refreshes the home stats along with the song list.
+   * Library totals. Deliberately under the same `['library']` prefix as the
+   * lists: the scan-completion effect (batch 19) invalidates `['library',
+   * 'stats']` along with songs/facets, so finishing an import refreshes the
+   * home stats too.
    */
   stats: () => ['library', 'stats'] as const,
 }
@@ -43,7 +44,9 @@ export function useSongsInfiniteQuery(filters: SongsFilters) {
   })
 }
 
-/** Infinite facet grid for a single dimension (`genre` / `artist` / `album`…). */
+/** Infinite facet grid for a single dimension (`genre` / `artist` / `album`…).
+ * `field === ''` means "no facet view is selected" — the query stays disabled
+ * rather than firing a guaranteed-400 request at `/songs/facets?field=`. */
 export function useFacetsInfiniteQuery(field: string, keyword = '') {
   return useInfiniteQuery({
     queryKey: libraryQueryKeys.facets(field, keyword),
@@ -55,5 +58,6 @@ export function useFacetsInfiniteQuery(field: string, keyword = '') {
         offset: pageParam,
       }),
     getNextPageParam: facetsNextPageParam,
+    enabled: field !== '',
   })
 }

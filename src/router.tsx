@@ -13,9 +13,10 @@ import { ThemeProvider } from './shared/theme/ThemeProvider.js'
 import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { AddSongsPage, CategorySongsPage, LibraryPage, SongDetailPage } from './features/library/index.js'
+import { migrateLibrarySearch, type LibraryViewKey } from './features/library/domain/library-views.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
-import { AboutPage, AppearancePage, CacheManagePage, DataPage, DiagnosticsPage, EqualizerPage, LicensesPage, LyricsPage, PlaybackPage, ProxySettingsPage, ServerEditPage, ServerListPage, SettingsPage, ThemePacksPage, UpgradePage, BrowseViewsPage } from './features/settings/index.js'
+import { AboutPage, AppearancePage, CacheManagePage, DataPage, DiagnosticsPage, EqualizerPage, LicensesPage, LyricsPage, PlaybackPage, ProxySettingsPage, ServerEditPage, ServerListPage, SettingsPage, ThemePacksPage, UpgradePage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
@@ -95,23 +96,15 @@ const listRoute = createRoute({
 const libraryRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/library',
-  // `?view=` drives the active tab (songs/facets/playlists) so it survives
-  // remounts and is restored when returning from the playlist detail page.
-  // `view` / `field` are OPTIONAL so plain `navigate({ to: '/library' })` (shell
-  // nav tab) stays valid and defaults to songs. `view` = active tab; `field` =
-  // active facet dimension in the Categories tab — both URL-driven so returning
-  // from a drill-in (category songs / playlist detail) restores the exact tab
-  // AND facet field the user was on.
-  validateSearch: (
-    search: Record<string, unknown>,
-  ): { view?: 'songs' | 'facets' | 'playlists' | 'radio'; field?: string } => {
-    const v = search.view
-    const f = search.field
-    return {
-      ...(v === 'songs' || v === 'facets' || v === 'playlists' || v === 'radio' ? { view: v } : {}),
-      ...(typeof f === 'string' && f ? { field: f } : {}),
-    }
-  },
+  // `?view=<LibraryViewKey>` drives the active view (14-view model) so it
+  // survives remounts and is restored when returning from a drill-in. `view`
+  // is OPTIONAL so plain `navigate({ to: '/library' })` (shell nav) stays
+  // valid and defaults to the first visible view. Old four-tab values
+  // (`songs`/`facets`/`playlists` + `field`) are migrated, not rejected —
+  // deep links and the shell's `getLastLibrarySearch()` restoration both pass
+  // through here.
+  validateSearch: (search: Record<string, unknown>): { view?: LibraryViewKey } =>
+    migrateLibrarySearch(search),
   component: LibraryPage,
 })
 
@@ -269,13 +262,6 @@ const tabConfigRoute = createRoute({
   component: TabConfigPage,
 })
 
-/** `/settings/browse-views` — library browse views configuration, inside the shell. */
-const browseViewsRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/settings/browse-views',
-  component: BrowseViewsPage,
-})
-
 /** `/playlists/$id` — playlist detail, inside the shell (batch 6). */
 const playlistDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -347,7 +333,6 @@ const routeTree = rootRoute.addChildren([
     pluginRegistryRoute,
     pluginWebViewRoute,
     tabConfigRoute,
-    browseViewsRoute,
     playlistDetailRoute,
     categorySongsRoute,
     songDetailRoute,

@@ -1,4 +1,6 @@
-type LibrarySearch = { view?: 'songs' | 'facets' | 'playlists' | 'radio'; field?: string }
+import type { LibraryViewKey } from '../domain/library-views.js'
+
+type LibrarySearch = { view?: LibraryViewKey }
 
 let last: LibrarySearch = {}
 

@@ -1,0 +1,59 @@
+/*
+ * Narrow-layout view switcher — a horizontal pill strip. LUNA tokens only.
+ * The inner row MUST be `width: max-content` or the horizontal scroll-view
+ * has nothing to scroll (AGENTS §4).
+ */
+
+.library-switcher {
+  width: 100%;
+  height: 48px;
+  border-bottom: 1px solid var(--line);
+}
+
+.library-switcher__row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: max-content;
+  height: 48px;
+  padding: 0 var(--space-4);
+}
+
+.library-switcher__group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.library-switcher__divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 var(--space-3);
+  background-color: var(--rule);
+}
+
+.library-switcher__pill {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  margin-right: var(--space-2);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--rule);
+  background-color: transparent;
+}
+
+.library-switcher__pill--active {
+  border-color: var(--primary);
+}
+
+.library-switcher__pill-text {
+  color: var(--content-2);
+  font-size: var(--font-xs);
+  margin-left: var(--space-1);
+}
+
+.library-switcher__pill--active .library-switcher__pill-text {
+  color: var(--primary);
+  font-weight: 600;
+}

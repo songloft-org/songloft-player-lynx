@@ -1,0 +1,46 @@
+/*
+ * Flat-songs toolbar — a row of trigger chips. LUNA tokens only.
+ */
+
+.library-toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+}
+
+.library-toolbar__btn {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  margin-right: var(--space-2);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--rule);
+  background-color: transparent;
+}
+
+.library-toolbar__btn--active {
+  border-color: var(--primary);
+}
+
+.library-toolbar__btn--disabled {
+  border-color: var(--rule);
+}
+
+.library-toolbar__btn-text {
+  color: var(--content-2);
+  font-size: var(--font-xs);
+}
+
+.library-toolbar__btn--active .library-toolbar__btn-text {
+  color: var(--primary);
+}
+
+.library-toolbar__btn--disabled .library-toolbar__btn-text {
+  color: var(--content-muted);
+}
+
+.library-toolbar__spacer {
+  flex: 1;
+}

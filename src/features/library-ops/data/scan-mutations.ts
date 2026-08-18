@@ -16,13 +16,16 @@ import { libopsQueryKeys } from './scan-query.js'
  * The Flutter reference only invalidated the playlist list, so freshly imported
  * songs did **not** appear in the library until something else refetched — you
  * scanned, went to Library, and saw the old list. We additionally drop the song
- * and facet caches. Literal key prefixes are used (not the key factories) so
- * every filter/field variant is matched, same technique as
+ * and facet caches, plus the library totals (the home stats panel reads them;
+ * they used to stay stale after every import because this list missed them).
+ * Literal key prefixes are used (not the key factories) so every filter/field
+ * variant is matched, same technique as
  * `features/playlist/data/playlist-mutations.ts`.
  */
 export function invalidateAfterScan(queryClient: QueryClient): void {
   void queryClient.invalidateQueries({ queryKey: ['library', 'songs'] })
   void queryClient.invalidateQueries({ queryKey: ['library', 'facets'] })
+  void queryClient.invalidateQueries({ queryKey: ['library', 'stats'] })
   void queryClient.invalidateQueries({ queryKey: ['playlist', 'list'] })
 }
 

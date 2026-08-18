@@ -23,7 +23,6 @@ import { PluginRegistryPage } from '../../jsplugin/pages/PluginRegistryPage.js'
 import { TabConfigPage } from '../../jsplugin/pages/TabConfigPage.js'
 import { AboutPage } from './AboutPage.js'
 import { AppearancePage } from './AppearancePage.js'
-import { BrowseViewsPage } from './BrowseViewsPage.js'
 import { CacheManagePage } from './CacheManagePage.js'
 import { DataPage } from './DataPage.js'
 import { DiagnosticsPage } from './DiagnosticsPage.js'
@@ -56,7 +55,6 @@ type SettingsSubPage =
   | 'lyrics'
   | 'library'
   | 'duplicates'
-  | 'browse-views'
   | 'plugins'
   | 'registry'
   | 'tab-config'
@@ -237,15 +235,6 @@ export function SettingsPage() {
                 testId='settings-library-ops'
               />
               <SettingsRow
-                icon='music'
-                title={t('library.browseViews')}
-                subtitle={t('library.browseViewsSubtitle')}
-                trailingIcon='chevron-right'
-                selected={isActive('browse-views')}
-                onTap={() => goToSubPage('browse-views', '/settings/browse-views')}
-                testId='settings-browse-views'
-              />
-              <SettingsRow
                 icon='menu'
                 title={t('settings.plugins')}
                 subtitle={t('jsplugin.managerSubtitle')}
@@ -419,8 +408,6 @@ function SettingsDetailPane({
       return <LibraryOpsPage onOpenDuplicates={() => onOpenSubPage('duplicates')} />
     case 'duplicates':
       return <DuplicateCheckPage onBack={() => onOpenSubPage('library')} />
-    case 'browse-views':
-      return <BrowseViewsPage />
     case 'plugins':
       return <PluginManagerPage onOpenStore={() => onOpenSubPage('registry')} />
     case 'registry':

@@ -52,6 +52,16 @@ export type IconName =
   | 'warning'
   | 'check-circle'
   | 'fingerprint'
+  | 'cloud'
+  | 'radio'
+  | 'person'
+  | 'album'
+  | 'tag'
+  | 'calendar'
+  | 'globe'
+  | 'brush'
+  | 'queue'
+  | 'tune'
 
 /** Shared stroke attributes for line icons — Muse §4.5 stroke-width 1.6. */
 function stroke(color: string): string {
@@ -242,6 +252,63 @@ const ICONS: Record<IconName, (color: string) => string> = {
     `<path d="M12 13v6" ${stroke(c)}/>` +
     `<path d="M8 17v2" ${stroke(c)}/>` +
     `<path d="M16 19v1" ${stroke(c)}/>`,
+
+  // ── Library browse views (batch 51) ───────────────────────────────────────
+
+  // Cloud: remote songs.
+  cloud: (c) =>
+    `<path d="M7 18.5h10a4 4 0 0 0 .6-7.95 5.5 5.5 0 0 0-10.8 1.2A3.4 3.4 0 0 0 7 18.5Z" ${stroke(c)}/>`,
+
+  // Radio waves: radio stations / radio playlists.
+  radio: (c) =>
+    `<circle cx="12" cy="12" r="2" ${stroke(c)}/>` +
+    `<path d="M8.1 8.1a5.5 5.5 0 0 0 0 7.8M15.9 8.1a5.5 5.5 0 0 1 0 7.8" ${stroke(c)}/>` +
+    `<path d="M5.3 5.3a9.5 9.5 0 0 0 0 13.4M18.7 5.3a9.5 9.5 0 0 1 0 13.4" ${stroke(c)}/>`,
+
+  // Person: artist dimension.
+  person: (c) =>
+    `<circle cx="12" cy="8" r="3.5" ${stroke(c)}/>` +
+    `<path d="M5 20c.8-3.4 3.6-5 7-5s6.2 1.6 7 5" ${stroke(c)}/>`,
+
+  // Album: disc with center hole.
+  album: (c) =>
+    `<circle cx="12" cy="12" r="8.5" ${stroke(c)}/>` +
+    `<circle cx="12" cy="12" r="2.5" ${stroke(c)}/>`,
+
+  // Tag: genre dimension.
+  tag: (c) =>
+    `<path d="M4 4h8l8 8-8 8-8-8V4Z" ${stroke(c)}/>` +
+    `<circle cx="8.5" cy="8.5" r="1.3" ${stroke(c)}/>`,
+
+  // Calendar: year / decade dimensions.
+  calendar: (c) =>
+    `<rect x="4" y="5.5" width="16" height="15" rx="2" ${stroke(c)}/>` +
+    `<path d="M4 10.5h16M8.5 3.5v4M15.5 3.5v4" ${stroke(c)}/>`,
+
+  // Globe: language dimension.
+  globe: (c) =>
+    `<circle cx="12" cy="12" r="8.5" ${stroke(c)}/>` +
+    `<path d="M3.5 12h17" ${stroke(c)}/>` +
+    `<path d="M12 3.5c2.6 2.3 3.9 5.1 3.9 8.5s-1.3 6.2-3.9 8.5c-2.6-2.3-3.9-5.1-3.9-8.5s1.3-6.2 3.9-8.5Z" ${stroke(c)}/>`,
+
+  // Brush: style dimension.
+  brush: (c) =>
+    `<path d="m14.5 3.5 6 6L10 20H4v-6l10.5-10.5Z" ${stroke(c)}/>` +
+    `<path d="m12.5 5.5 6 6" ${stroke(c)}/>`,
+
+  // Queue: playlist lines + beamed notes.
+  queue: (c) =>
+    `<path d="M4 6h16M4 10h16M4 14h8" ${stroke(c)}/>` +
+    `<path d="M15 18.5v-7l5-1.2v7" ${stroke(c)}/>` +
+    `<circle cx="13.4" cy="18.5" r="1.8" ${stroke(c)}/>` +
+    `<circle cx="18.4" cy="17.3" r="1.8" ${stroke(c)}/>`,
+
+  // Tune: three slider lines with knobs — "customize views" entry.
+  tune: (c) =>
+    `<path d="M3 6h18M3 12h18M3 18h18" ${stroke(c)}/>` +
+    `<circle cx="15" cy="6" r="2.2" ${stroke(c)}/>` +
+    `<circle cx="8" cy="12" r="2.2" ${stroke(c)}/>` +
+    `<circle cx="17" cy="18" r="2.2" ${stroke(c)}/>`,
 }
 
 /** Build a complete inline SVG document string for `name`, colored with `color`. */

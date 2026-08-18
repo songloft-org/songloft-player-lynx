@@ -151,7 +151,6 @@ const ENTRY_ROWS: Array<[string, string]> = [
   ['settings-eq', '/settings/eq'],
   ['settings-lyrics', '/settings/lyrics'],
   ['settings-library-ops', '/settings/library'],
-  ['settings-browse-views', '/settings/browse-views'],
   ['settings-plugins', '/settings/plugins'],
   ['settings-tab-config', '/settings/tab-config'],
   ['settings-cache', '/settings/cache'],

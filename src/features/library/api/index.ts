@@ -1,4 +1,5 @@
 import { getSharedApiBundle } from '../../../core/network/api-client.js'
+import { LibraryBrowseApi } from './library-browse-api.js'
 import { SongsApi } from './songs-api.js'
 
 export {
@@ -14,6 +15,7 @@ export type {
   SongIdsResponse,
   LyricPayload,
 } from './songs-api.js'
+export { LibraryBrowseApi } from './library-browse-api.js'
 
 /**
  * Process-wide authenticated API client bundle (P2-1 singleton consolidation).
@@ -24,4 +26,8 @@ export type {
 
 export function getSongsApi(): SongsApi {
   return new SongsApi(getSharedApiBundle().client)
+}
+
+export function getLibraryBrowseApi(): LibraryBrowseApi {
+  return new LibraryBrowseApi(getSharedApiBundle().client)
 }

@@ -70,10 +70,10 @@ export function HomePage() {
     void navigate({ to: '/playlists/$id', params: { id: String(playlist.id) } })
   }
   const viewAllPlaylists = () => {
-    void navigate({ to: '/library', search: { view: 'playlists' } })
+    void navigate({ to: '/library', search: { view: 'playlist_normal' } })
   }
   const viewAllRadios = () => {
-    void navigate({ to: '/library', search: { view: 'radio' } })
+    void navigate({ to: '/library', search: { view: 'playlist_radio' } })
   }
   const refreshRef = useRef<NodesRef>(null)
   // Platform, not realm: this render runs on the background thread, which on Web

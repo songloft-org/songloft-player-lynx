@@ -1,0 +1,243 @@
+import '../../../shims/router-env.js'
+
+import '@testing-library/jest-dom'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
+
+import type { Song } from '../../../models/song.js'
+import type { LibrarySortId } from '../domain/library-sort.js'
+
+/**
+ * FlatSongsView render tests — the flat song list content view. Carries the
+ * search / sort wiring, the sort bottom-sheet, and the P1-12 multi-select
+ * regression that used to live in the old monolithic library-page test.
+ */
+const { songsHook, playlistsHook, navigateSpy, filterInputs } = vi.hoisted(() => ({
+  songsHook: vi.fn(),
+  playlistsHook: vi.fn(),
+  navigateSpy: vi.fn(),
+  filterInputs: [] as Array<{ placeholder: string; onInput: (v: string) => void }>,
+}))
+
+vi.mock('react-i18next', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
+)
+
+vi.mock('../data/songs-query.js', () => ({
+  useSongsInfiniteQuery: songsHook,
+  libraryQueryKeys: { songs: () => [] },
+}))
+
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => navigateSpy,
+}))
+
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+  useInfiniteQuery: playlistsHook,
+}))
+
+vi.mock('../../playlist/api/index.js', () => ({
+  getPlaylistApi: () => ({ addSongsToPlaylist: vi.fn(async () => {}) }),
+}))
+
+vi.mock('../../playlist/data/playlist-query.js', () => ({
+  usePlaylistsInfiniteQuery: playlistsHook,
+  playlistQueryKeys: { list: () => [] },
+}))
+
+vi.mock('../widgets/VirtualList.js', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockVirtualList(),
+)
+
+vi.mock('../widgets/FavoriteSongRow.js', async () => {
+  const { SongRow } = await import('../widgets/SongRow.js')
+  return { FavoriteSongRow: SongRow }
+})
+
+vi.mock('@lynx-js/lynx-ui-input', () => ({
+  Input: (props: Record<string, unknown>) => {
+    if (typeof props.onInput === 'function') {
+      filterInputs.push({
+        placeholder: props.placeholder as string,
+        onInput: props.onInput as (v: string) => void,
+      })
+    }
+    return (
+      <view className={props.className as string}>
+        <text>{(props.value || props.placeholder) as string}</text>
+      </view>
+    )
+  },
+}))
+
+vi.mock('../data/use-debounce.js', () => ({
+  useDebounce: <T,>(value: T, _delay: number): T => value,
+}))
+
+const { FlatSongsView } = await import('../widgets/FlatSongsView.js')
+
+function makeSong(id: number, over: Partial<Song> = {}): Song {
+  return {
+    id,
+    type: 'local',
+    title: `Song ${id}`,
+    artist: `Artist ${id}`,
+    album: `Album ${id}`,
+    year: 0,
+    genre: undefined,
+    language: undefined,
+    style: undefined,
+    duration: 0,
+    filePath: undefined,
+    url: undefined,
+    coverUrl: undefined,
+    lyricUrl: undefined,
+    lyricRemoteUrl: undefined,
+    fileSize: 0,
+    format: undefined,
+    bitRate: 0,
+    sampleRate: 0,
+    sourceUrl: undefined,
+    sourceCoverUrl: undefined,
+    isLive: false,
+    isVideo: false,
+    addedAt: '',
+    updatedAt: '',
+    ...over,
+  }
+}
+
+function songsResult(pages: { songs: Song[]; total: number }[], over = {}) {
+  return {
+    data: { pages },
+    isLoading: false,
+    isError: false,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
+    ...over,
+  }
+}
+
+beforeEach(() => {
+  songsHook.mockReturnValue(songsResult([{ songs: [], total: 0 }]))
+  playlistsHook.mockReturnValue({
+    data: { pages: [{ playlists: [], total: 0 }] },
+    isLoading: false,
+    isError: false,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
+  })
+  filterInputs.length = 0
+})
+
+afterEach(() => vi.clearAllMocks())
+
+async function renderView(
+  type?: 'local' | 'remote' | 'radio',
+  sortId: LibrarySortId = 'added_at',
+  onSortChange: (id: LibrarySortId) => void = () => {},
+) {
+  render(<FlatSongsView type={type} sortId={sortId} onSortChange={onSortChange} />)
+  await act(async () => {
+    await Promise.resolve()
+  })
+  return getQueriesForElement(elementTree.root!)
+}
+
+test('renders a row per song (title, subtitle, duration)', async () => {
+  songsHook.mockReturnValue(
+    songsResult([
+      {
+        songs: [
+          makeSong(1, { title: 'Blue in Green', artist: 'Miles', album: 'KOB', duration: 327 }),
+          makeSong(2, { title: 'So What', artist: 'Miles', album: 'KOB', duration: 545 }),
+        ],
+        total: 2,
+      },
+    ]),
+  )
+  const { queryByText, queryAllByText } = await renderView()
+
+  expect(queryByText('Blue in Green')).toBeInTheDocument()
+  expect(queryByText('So What')).toBeInTheDocument()
+  expect(queryAllByText('Miles · KOB')).toHaveLength(2)
+  expect(queryByText('05:27')).toBeInTheDocument()
+  expect(queryByText('09:05')).toBeInTheDocument()
+})
+
+test('renders the search input and the toolbar (play all / sort / add / select)', async () => {
+  const { queryByText, queryByTestId } = await renderView()
+  expect(queryByText('Search songs...')).toBeInTheDocument()
+  expect(queryByTestId('library-toolbar-play-all')).toBeInTheDocument()
+  expect(queryByTestId('library-toolbar-sort')).toBeInTheDocument()
+  expect(queryByTestId('library-toolbar-add')).toBeInTheDocument()
+  expect(queryByTestId('library-toolbar-select')).toBeInTheDocument()
+  // The sort chip shows the CURRENT sort label (default: recently added).
+  expect(queryByText('Recent')).toBeInTheDocument()
+})
+
+test('defaults to added_at/desc with no type for the all view', async () => {
+  await renderView()
+  expect(songsHook).toHaveBeenCalledWith({ sort: 'added_at', order: 'desc' })
+})
+
+test('passes the source type into the filters', async () => {
+  await renderView('remote')
+  expect(songsHook).toHaveBeenCalledWith({ sort: 'added_at', order: 'desc', type: 'remote' })
+})
+
+test('a lifted sort id drives the filters (title → asc)', async () => {
+  await renderView(undefined, 'title')
+  expect(songsHook).toHaveBeenCalledWith({ sort: 'title', order: 'asc' })
+})
+
+test('opening the sort sheet lists all 7 options and picking one reports upward', async () => {
+  const onSortChange = vi.fn()
+  const { getByTestId, getByText } = await renderView(undefined, 'added_at', onSortChange)
+
+  await act(async () => {
+    fireEvent.tap(getByTestId('library-toolbar-sort'))
+  })
+  // All seven options are visible in the sheet.
+  expect(getByText('File time')).toBeInTheDocument()
+  expect(getByText('Duration')).toBeInTheDocument()
+
+  await act(async () => {
+    fireEvent.tap(getByText('Duration'))
+  })
+  expect(onSortChange).toHaveBeenCalledWith('duration')
+})
+
+// P1-12 regression: multi-select must clear when the visible song list changes
+// (search or sort). Without the useEffect, selected IDs from the previous
+// result set linger and get added to playlists even though they are no longer
+// visible. To verify "remove fix → turns red": comment out the useEffect in
+// FlatSongsView.tsx and this test will fail.
+test('multi-select is cleared when the search changes', async () => {
+  songsHook.mockReturnValue(
+    songsResult([
+      { songs: [makeSong(1, { title: 'Track A' }), makeSong(2, { title: 'Track B' })], total: 2 },
+    ]),
+  )
+  const { getByText, queryByText } = await renderView()
+
+  // Enter select mode and select a row.
+  await act(async () => {
+    fireEvent.tap(getByText('Select'))
+  })
+  await act(async () => {
+    fireEvent.tap(getByText('Track A'))
+  })
+  expect(queryByText('1 selected')).toBeInTheDocument()
+
+  // Type into the search box — the selection must be cleared.
+  const searchInput = filterInputs.find((i) => i.placeholder === 'Search songs...')
+  expect(searchInput).toBeDefined()
+  await act(async () => {
+    searchInput!.onInput('Track B')
+  })
+  expect(queryByText('1 selected')).not.toBeInTheDocument()
+})

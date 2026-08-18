@@ -17,47 +17,33 @@ import { PlayHistoryPanel } from '../../player/widgets/PlayHistoryPanel.js'
 import type { SongsFilters } from '../api/index.js'
 import { flattenSongs } from '../data/pagination.js'
 import { useSongsInfiniteQuery } from '../data/songs-query.js'
+import {
+  LIBRARY_VIEW_LABEL_KEY,
+} from '../domain/library-views.js'
 import { SongRow } from '../widgets/SongRow.js'
 import { VirtualList } from '../widgets/VirtualList.js'
 import './CategorySongsPage.css'
 
 /**
- * Category songs page (Categories → facet/source drill-in), rendered inside the
- * shell at `/library/category/$field`.
+ * Category songs page (facet drill-in), rendered inside the shell at
+ * `/library/category/$field`.
  *
- * Supports both facet fields (artist/album/genre/year/decade/language/style) and
- * source fields (local/remote/radio/folder/recent/favorites/random). The filter
- * applied to the songs query is determined by the field type.
+ * `field` is one of the 7 facet dimensions (artist/album/genre/year/decade/
+ * language/style); the songs are filtered by that dimension's value. The
+ * pre-refactor "source" pseudo-fields (local/remote/radio/folder/recent/
+ * favorites/random) are gone: the first four are proper flat views in the
+ * 14-view library page now, and the last three never worked (folder matched a
+ * localized label against `path_prefix`, favorites showed the whole library,
+ * random sent a sort value the backend whitelist rejects).
  */
 
-/** All recognized category field IDs. */
+/** All recognized category field IDs (= the facet-group view keys). */
 type CategoryField =
   | 'artist' | 'album' | 'genre' | 'year' | 'decade' | 'language' | 'style'
-  | 'local' | 'remote' | 'radio' | 'folder' | 'recent' | 'favorites' | 'random'
-
-const FIELD_LABEL_KEYS: Record<CategoryField, string> = {
-  artist: 'library.facetArtist',
-  album: 'library.facetAlbum',
-  genre: 'library.facetGenre',
-  year: 'library.browseYear',
-  decade: 'library.browseDecade',
-  language: 'library.browseLanguage',
-  style: 'library.browseStyle',
-  local: 'library.browseLocal',
-  remote: 'library.browseRemote',
-  radio: 'library.browseRadio',
-  folder: 'library.browseFolder',
-  recent: 'library.browseRecent',
-  favorites: 'library.browseFavorites',
-  random: 'library.browseRandom',
-}
 
 /** Set of valid field IDs for runtime validation. */
-const VALID_FIELDS: ReadonlySet<string> = new Set(Object.keys(FIELD_LABEL_KEYS))
-
-/** Source view IDs that filter by song type or special sort. */
-const SOURCE_FIELDS: ReadonlySet<string> = new Set([
-  'local', 'remote', 'radio', 'folder', 'recent', 'favorites', 'random',
+const VALID_FIELDS: ReadonlySet<string> = new Set([
+  'artist', 'album', 'genre', 'year', 'decade', 'language', 'style',
 ])
 
 function normalizeField(field: string | undefined): CategoryField {
@@ -65,24 +51,9 @@ function normalizeField(field: string | undefined): CategoryField {
   return 'artist'
 }
 
-/** Build the SongsFilters for the given field and optional value. */
+/** Build the SongsFilters for the given facet field and value. */
 function buildFiltersForField(field: CategoryField, value: string): SongsFilters {
   const base: SongsFilters = { sort: 'added_at', order: 'desc' }
-
-  if (SOURCE_FIELDS.has(field)) {
-    switch (field) {
-      case 'local': return { ...base, type: 'local' }
-      case 'remote': return { ...base, type: 'remote' }
-      case 'radio': return { ...base, type: 'radio' }
-      case 'folder': return { ...base, pathPrefix: value || undefined }
-      case 'recent': return { sort: 'added_at', order: 'desc' }
-      case 'favorites': return { ...base, excludePlaylistLabels: 'none' }
-      case 'random': return { ...base, sort: 'random' }
-      default: return base
-    }
-  }
-
-  // Facet fields: filter by dimension value
   switch (field) {
     case 'artist': return { ...base, artist: value }
     case 'album': return { ...base, album: value }
@@ -120,9 +91,9 @@ export function CategorySongsPage() {
   }
 
   /**
-   * Playback context for this drill-in. `undefined` for source fields
-   * (favorites/random/…) and for the empty "unknown <dimension>" bucket —
-   * neither is a history context, so playback there is not recorded.
+   * Playback context for this drill-in. `undefined` for the empty
+   * "unknown <dimension>" bucket — that is not a history context, so playback
+   * there is not recorded.
    */
   const playbackCtx = useMemo(() => facetContext(field, value), [field, value])
   const [showHistory, setShowHistory] = useState(false)
@@ -141,7 +112,7 @@ export function CategorySongsPage() {
       <view className='category-songs__topbar'>
         <view
           className='category-songs__back'
-          bindtap={() => navigate({ to: '/library', search: { view: 'facets', field } })}
+          bindtap={() => navigate({ to: '/library', search: { view: field } })}
         >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
@@ -154,9 +125,8 @@ export function CategorySongsPage() {
             )
             : null}
           {/*
-            One entry point covers all seven facet dimensions. Absent for source
-            fields (favorites/random/…) and the empty "unknown" bucket, which are
-            not history contexts — `playbackCtx` is what decides that.
+            One entry point covers all seven facet dimensions — every facet
+            field is a history context (`playbackCtx` is what decides that).
           */}
           {playbackCtx
             ? (
@@ -180,7 +150,7 @@ export function CategorySongsPage() {
             </view>
           )}
         <view className='category-songs__meta'>
-          <text className='category-songs__label'>{t(FIELD_LABEL_KEYS[field])}</text>
+          <text className='category-songs__label'>{t(LIBRARY_VIEW_LABEL_KEY[field])}</text>
           <text className='category-songs__name'>{value || t('common.unknown')}</text>
         </view>
       </view>
