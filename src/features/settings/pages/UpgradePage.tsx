@@ -1,11 +1,11 @@
 import { useEffect, useState } from '@lynx-js/react'
-import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { apiPrefix, appConfig } from '../../../core/config/app-config.js'
 import type { HttpClient } from '../../../core/network/http-client.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { getSettingsApi } from '../api/index.js'
+import { SubPageShell } from '../widgets/SubPageShell.js'
 import './UpgradePage.css'
 
 interface CheckResult {
@@ -58,7 +58,6 @@ const POLL_INTERVAL_MS = 2000
 const MAX_POLL_FAILURES = 15
 
 export function UpgradePage() {
-  const navigate = useNavigate()
   const { t } = useTranslation()
 
   const [checking, setChecking] = useState(true)
@@ -131,93 +130,88 @@ export function UpgradePage() {
   }
 
   return (
-    <view className='upgrade-page'>
-      <view className='upgrade-page__topbar'>
-        <view className='upgrade-page__back' bindtap={() => navigate({ to: '/settings' })}>
-          <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
-        </view>
-        <text className='upgrade-page__title'>{t('upgrade.title')}</text>
-      </view>
-
-      <scroll-view className='upgrade-page__content' scroll-y>
-        {checking
-          ? <text className='upgrade-page__state'>{t('upgrade.checking')}</text>
-          : error && !checkResult
-            ? <text className='upgrade-page__state upgrade-page__state--error'>{error}</text>
-            : checkResult && !checkResult.hasUpdate && !upgrading
+    <SubPageShell
+      title={t('upgrade.title')}
+      backTestId='upgrade-back'
+      contentClassName='upgrade-page__content'
+    >
+      {checking
+        ? <text className='upgrade-page__state'>{t('upgrade.checking')}</text>
+        : error && !checkResult
+          ? <text className='upgrade-page__state upgrade-page__state--error'>{error}</text>
+          : checkResult && !checkResult.hasUpdate && !upgrading
+            ? (
+              <view className='upgrade-page__section'>
+                <Icon name='check-circle' size={40} color={ICON_COLORS.primary} />
+                <text className='upgrade-page__up-to-date'>{t('upgrade.upToDate')}</text>
+                <text className='upgrade-page__version'>{checkResult.currentVersion}</text>
+              </view>
+            )
+            : checkResult && checkResult.hasUpdate && !upgrading
               ? (
                 <view className='upgrade-page__section'>
-                  <Icon name='check-circle' size={40} color={ICON_COLORS.primary} />
-                  <text className='upgrade-page__up-to-date'>{t('upgrade.upToDate')}</text>
-                  <text className='upgrade-page__version'>{checkResult.currentVersion}</text>
+                  <text className='upgrade-page__new-version'>
+                    {t('upgrade.newVersion', { version: checkResult.latestVersion })}
+                  </text>
+                  <text className='upgrade-page__current'>
+                    {t('upgrade.current', { version: checkResult.currentVersion })}
+                  </text>
+                  {checkResult.changelog
+                    ? <text className='upgrade-page__changelog'>{checkResult.changelog}</text>
+                    : null}
+                  <view
+                    className='upgrade-page__btn'
+                    bindtap={onStartUpgrade}
+                    data-testid='upgrade-start'
+                  >
+                    <text className='upgrade-page__btn-text'>{t('upgrade.start')}</text>
+                  </view>
                 </view>
               )
-              : checkResult && checkResult.hasUpdate && !upgrading
-                ? (
-                  <view className='upgrade-page__section'>
-                    <text className='upgrade-page__new-version'>
-                      {t('upgrade.newVersion', { version: checkResult.latestVersion })}
-                    </text>
-                    <text className='upgrade-page__current'>
-                      {t('upgrade.current', { version: checkResult.currentVersion })}
-                    </text>
-                    {checkResult.changelog
-                      ? <text className='upgrade-page__changelog'>{checkResult.changelog}</text>
-                      : null}
-                    <view
-                      className='upgrade-page__btn'
-                      bindtap={onStartUpgrade}
-                      data-testid='upgrade-start'
-                    >
-                      <text className='upgrade-page__btn-text'>{t('upgrade.start')}</text>
-                    </view>
-                  </view>
-                )
-                : null}
+              : null}
 
-        {upgrading && progress
-          ? (
-            <view className='upgrade-page__progress'>
-              <text className='upgrade-page__progress-status'>{statusLabel(progress.status)}</text>
-              <view className='upgrade-page__progress-bar'>
-                <view className='upgrade-page__progress-fill' style={`width: ${progress.progress}%`} />
-              </view>
-              <text className='upgrade-page__progress-step'>{progress.currentStep}</text>
-              <text className='upgrade-page__progress-pct'>{progress.progress}%</text>
+      {upgrading && progress
+        ? (
+          <view className='upgrade-page__progress'>
+            <text className='upgrade-page__progress-status'>{statusLabel(progress.status)}</text>
+            <view className='upgrade-page__progress-bar'>
+              <view className='upgrade-page__progress-fill' style={`width: ${progress.progress}%`} />
             </view>
-          )
-          : null}
+            <text className='upgrade-page__progress-step'>{progress.currentStep}</text>
+            <text className='upgrade-page__progress-pct'>{progress.progress}%</text>
+          </view>
+        )
+        : null}
 
-        {/*
-          Errors raised *after* a successful version check need their own slot:
-          the branch above only renders `error` when `!checkResult`, so both the
-          "start upgrade failed" and "lost contact while polling" messages were
-          set into state and then never shown to anyone.
-        */}
-        {error && checkResult
-          ? <text className='upgrade-page__state upgrade-page__state--error'>{error}</text>
-          : null}
+      {/*
+        Errors raised *after* a successful version check need their own slot:
+        the branch above only renders `error` when `!checkResult`, so both the
+        "start upgrade failed" and "lost contact while polling" messages were
+        set into state and then never shown to anyone.
+      */}
+      {error && checkResult
+        ? <text className='upgrade-page__state upgrade-page__state--error'>{error}</text>
+        : null}
 
-        {progress?.status === 'completed'
-          ? (
-            <view className='upgrade-page__section'>
-              <Icon name='check-circle' size={40} color={ICON_COLORS.primary} />
-              <text className='upgrade-page__up-to-date'>{t('upgrade.completed')}</text>
-            </view>
-          )
-          : null}
+      {progress?.status === 'completed'
+        ? (
+          <view className='upgrade-page__section'>
+            <Icon name='check-circle' size={40} color={ICON_COLORS.primary} />
+            <text className='upgrade-page__up-to-date'>{t('upgrade.completed')}</text>
+          </view>
+        )
+        : null}
 
-        {progress?.status === 'failed'
-          ? (
-            <view className='upgrade-page__section'>
-              <Icon name='warning' size={40} color={ICON_COLORS.danger} />
-              <text className='upgrade-page__state upgrade-page__state--error'>
-                {progress.error || t('upgrade.failed')}
-              </text>
-            </view>
-          )
-          : null}
-      </scroll-view>
-    </view>
+      {progress?.status === 'failed'
+        ? (
+          <view className='upgrade-page__section'>
+            <Icon name='warning' size={40} color={ICON_COLORS.danger} />
+            <text className='upgrade-page__state upgrade-page__state--error'>
+              {progress.error || t('upgrade.failed')}
+            </text>
+          </view>
+        )
+        : null}
+    </SubPageShell>
   )
 }

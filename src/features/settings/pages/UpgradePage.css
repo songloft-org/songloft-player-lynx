@@ -1,28 +1,7 @@
-.upgrade-page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.upgrade-page__topbar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: var(--space-3) var(--space-4);
-  gap: var(--space-3);
-}
-
-.upgrade-page__back {
-  padding: var(--space-1);
-}
-
-.upgrade-page__title {
-  flex: 1;
-  font-size: var(--font-lg);
-  font-weight: bold;
-  color: var(--content);
-}
-
+/*
+ * Upgrade check / progress. The page chrome (topbar / back / title / scroll) comes
+ * from `SubPageShell.css`; `__content` is passed as its contentClassName.
+ */
 .upgrade-page__content {
   flex: 1;
   padding: var(--space-4);

@@ -1,28 +1,8 @@
-.theme-packs {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.theme-packs__topbar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: var(--space-3) var(--space-4);
-  gap: var(--space-3);
-}
-
-.theme-packs__back {
-  padding: var(--space-1);
-}
-
-.theme-packs__title {
-  flex: 1;
-  font-size: var(--font-lg);
-  font-weight: bold;
-  color: var(--content);
-}
-
+/*
+ * Theme-pack list + catalog. The page chrome (topbar / back / title) comes from
+ * `SubPageShell.css`; the catalog button is passed to its `actions` slot and both
+ * list branches own their own scrolling.
+ */
 .theme-packs__action {
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);

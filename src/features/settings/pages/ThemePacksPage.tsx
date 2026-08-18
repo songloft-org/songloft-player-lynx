@@ -1,14 +1,13 @@
 import { useEffect, useState } from '@lynx-js/react'
-import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { getThemePacksApi, type ThemePacksApi } from '../api/index.js'
 import type { ThemePackItem } from '../api/theme-packs-api.js'
+import { SubPageShell } from '../widgets/SubPageShell.js'
 import './ThemePacksPage.css'
 
 export function ThemePacksPage() {
-  const navigate = useNavigate()
   const { t } = useTranslation()
 
   const [installed, setInstalled] = useState<ThemePackItem[]>([])
@@ -61,17 +60,18 @@ export function ThemePacksPage() {
   }
 
   return (
-    <view className='theme-packs'>
-      <view className='theme-packs__topbar'>
-        <view className='theme-packs__back' bindtap={() => navigate({ to: '/settings' })}>
-          <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
-        </view>
-        <text className='theme-packs__title'>{t('themePacks.title')}</text>
+    <SubPageShell
+      title={t('themePacks.title')}
+      backTestId='theme-packs-back'
+      actions={(
         <view className='theme-packs__action' bindtap={onOpenCatalog}>
           <text className='theme-packs__action-text'>{t('themePacks.catalog')}</text>
         </view>
-      </view>
-
+      )}
+      // Both branches below are their own `scroll-view`, so the shell must not add
+      // one around them.
+      scrollable={false}
+    >
       {showCatalog
         ? (
           <view className='theme-packs__catalog'>
@@ -138,6 +138,6 @@ export function ThemePacksPage() {
                 )}
           </scroll-view>
         )}
-    </view>
+    </SubPageShell>
   )
 }
