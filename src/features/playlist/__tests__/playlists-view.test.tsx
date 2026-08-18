@@ -169,7 +169,7 @@ test('shows create playlist button even in empty state', async () => {
   expect(queryByText('Create playlist')).toBeInTheDocument()
 })
 
-test('entering sort mode shows both playlist names and a done button', async () => {
+test('entering sort mode via the sort menu shows playlist names and a done button', async () => {
   listHook.mockReturnValue(
     listResult([
       {
@@ -183,7 +183,11 @@ test('entering sort mode shows both playlist names and a done button', async () 
   )
   const { queryByTestId, queryByText } = await renderView()
   await act(async () => {
-    fireEvent.tap(queryByTestId('playlists-sort-toggle')!)
+    fireEvent.tap(queryByTestId('playlists-sort-menu')!)
+    await Promise.resolve()
+  })
+  await act(async () => {
+    fireEvent.tap(queryByText('Manual sort')!)
     await Promise.resolve()
   })
   expect(queryByText('Favorites')).toBeInTheDocument()
@@ -203,11 +207,92 @@ test('sort mode renders drag handles for each playlist', async () => {
       },
     ]),
   )
-  const { queryByTestId } = await renderView()
+  const { queryByTestId, queryByText } = await renderView()
   await act(async () => {
-    fireEvent.tap(queryByTestId('playlists-sort-toggle')!)
+    fireEvent.tap(queryByTestId('playlists-sort-menu')!)
+    await Promise.resolve()
+  })
+  await act(async () => {
+    fireEvent.tap(queryByText('Manual sort')!)
     await Promise.resolve()
   })
   expect(queryByTestId('playlists-drag-1')).toBeInTheDocument()
   expect(queryByTestId('playlists-drag-2')).toBeInTheDocument()
+})
+
+test('sort menu opens when the sort button is tapped', async () => {
+  listHook.mockReturnValue(
+    listResult([
+      {
+        playlists: [
+          makePlaylist(1, { name: 'A' }),
+          makePlaylist(2, { name: 'B' }),
+        ],
+        total: 2,
+      },
+    ]),
+  )
+  const { queryByTestId, queryByText } = await renderView()
+  await act(async () => {
+    fireEvent.tap(queryByTestId('playlists-sort-menu')!)
+    await Promise.resolve()
+  })
+  expect(queryByText('Sort by name A→Z')).toBeInTheDocument()
+  expect(queryByText('Sort by name Z→A')).toBeInTheDocument()
+  expect(queryByText('Sort by number prefix')).toBeInTheDocument()
+  expect(queryByText('Manual sort')).toBeInTheDocument()
+})
+
+test('name ascending sort calls reorder with sorted ids (case-insensitive)', async () => {
+  const mutate = vi.fn()
+  reorderMutationHook.mockReturnValue({ mutate, isPending: false })
+  listHook.mockReturnValue(
+    listResult([
+      {
+        playlists: [
+          makePlaylist(1, { name: 'banana' }),
+          makePlaylist(2, { name: 'Apple' }),
+          makePlaylist(3, { name: 'cherry' }),
+        ],
+        total: 3,
+      },
+    ], { fetchNextPage: vi.fn().mockResolvedValue({ hasNextPage: false, data: { pages: [{ playlists: [makePlaylist(1, { name: 'banana' }), makePlaylist(2, { name: 'Apple' }), makePlaylist(3, { name: 'cherry' })], total: 3 }] } }) }),
+  )
+  const { queryByTestId, queryByText } = await renderView()
+  await act(async () => {
+    fireEvent.tap(queryByTestId('playlists-sort-menu')!)
+    await Promise.resolve()
+  })
+  await act(async () => {
+    fireEvent.tap(queryByText('Sort by name A→Z')!)
+    await Promise.resolve()
+  })
+  expect(mutate).toHaveBeenCalledWith([2, 1, 3], expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }))
+})
+
+test('already-sorted playlists shows the already-sorted banner', async () => {
+  const mutate = vi.fn()
+  reorderMutationHook.mockReturnValue({ mutate, isPending: false })
+  listHook.mockReturnValue(
+    listResult([
+      {
+        playlists: [
+          makePlaylist(1, { name: 'Apple' }),
+          makePlaylist(2, { name: 'Banana' }),
+        ],
+        total: 2,
+      },
+    ], { fetchNextPage: vi.fn().mockResolvedValue({ hasNextPage: false, data: { pages: [{ playlists: [makePlaylist(1, { name: 'Apple' }), makePlaylist(2, { name: 'Banana' })], total: 2 }] } }) }),
+  )
+  const { queryByTestId, queryByText } = await renderView()
+  await act(async () => {
+    fireEvent.tap(queryByTestId('playlists-sort-menu')!)
+    await Promise.resolve()
+  })
+  await act(async () => {
+    fireEvent.tap(queryByText('Sort by name A→Z')!)
+    await Promise.resolve()
+  })
+  expect(mutate).not.toHaveBeenCalled()
+  expect(queryByText('Playlists already in this order')).toBeInTheDocument()
 })

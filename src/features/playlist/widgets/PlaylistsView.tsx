@@ -7,7 +7,8 @@ import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-s
 import type { Playlist } from '../../../models/playlist.js'
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
-import { pinyinCompare } from '../../../shared/sort/pinyin-compare.js'
+import { ActionSheet, ActionSheetItem } from '../../../shared/ui/ActionSheet.js'
+import { sortPlaylistsByName, sortPlaylistsByNumberPrefix } from '../domain/playlist-sort.js'
 import { flattenPlaylists } from '../data/pagination.js'
 import { usePlaylistsInfiniteQuery } from '../data/playlist-query.js'
 import { useCreatePlaylistMutation, useDeletePlaylistMutation, useReorderPlaylistsMutation } from '../data/playlist-mutations.js'
@@ -33,6 +34,9 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
+  const [sortOpen, setSortOpen] = useState(false)
+  type SortFeedback = { tone: 'success' | 'error'; text: string } | null
+  const [sortFeedback, setSortFeedback] = useState<SortFeedback>(null)
 
   const onCreateSubmit = () => {
     const trimmed = newName.trim()
@@ -89,6 +93,63 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
     if (!confirmBatchDelete) { setConfirmBatchDelete(true); return }
     const ids = Array.from(selected).filter((id) => !playlists.find((p) => p.id === id)?.isBuiltIn)
     void Promise.all(ids.map((id) => deleteMutation.mutateAsync(id))).then(exitSelectMode)
+  }
+
+  /**
+   * Load all remaining pages so we sort the full playlist set, mirroring
+   * Flutter `PlaylistBrowseView.autoSortByName` → `loadAll()`.
+   */
+  async function loadAllPlaylists() {
+    let result = await query.fetchNextPage()
+    while (result.hasNextPage) {
+      result = await query.fetchNextPage()
+    }
+    // Re-flatten after all pages are loaded — use the latest result's full
+    // page set. The pages from the last fetchNextPage result include all
+    // previously loaded pages.
+    return flattenPlaylists(result.data?.pages)
+  }
+
+  const onSortNameAsc = async () => {
+    setSortOpen(false)
+    const all = await loadAllPlaylists()
+    const ids = sortPlaylistsByName(all, true)
+    if (!ids) {
+      setSortFeedback({ tone: 'success', text: t('playlist.alreadySortedPlaylists') })
+      return
+    }
+    reorderMutation.mutate(ids, {
+      onSuccess: () => setSortFeedback({ tone: 'success', text: t('playlist.sortedByNameAsc') }),
+      onError: () => setSortFeedback({ tone: 'error', text: t('playlist.sortFailed') }),
+    })
+  }
+
+  const onSortNameDesc = async () => {
+    setSortOpen(false)
+    const all = await loadAllPlaylists()
+    const ids = sortPlaylistsByName(all, false)
+    if (!ids) {
+      setSortFeedback({ tone: 'success', text: t('playlist.alreadySortedPlaylists') })
+      return
+    }
+    reorderMutation.mutate(ids, {
+      onSuccess: () => setSortFeedback({ tone: 'success', text: t('playlist.sortedByNameDesc') }),
+      onError: () => setSortFeedback({ tone: 'error', text: t('playlist.sortFailed') }),
+    })
+  }
+
+  const onSortNumber = async () => {
+    setSortOpen(false)
+    const all = await loadAllPlaylists()
+    const ids = sortPlaylistsByNumberPrefix(all)
+    if (!ids) {
+      setSortFeedback({ tone: 'success', text: t('playlist.alreadySortedPlaylists') })
+      return
+    }
+    reorderMutation.mutate(ids, {
+      onSuccess: () => setSortFeedback({ tone: 'success', text: t('playlist.sortedByNumber') }),
+      onError: () => setSortFeedback({ tone: 'error', text: t('playlist.sortFailed') }),
+    })
   }
 
   const createForm = showForm
@@ -207,17 +268,11 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
               <view className='playlists__sort-actions'>
                 <view
                   className='playlists__create-trigger'
-                  bindtap={() => {
-                    const sorted = [...playlists].sort((a, b) => pinyinCompare(a.name, b.name))
-                    const sortedIds = sorted.map((p) => p.id)
-                    const originalIds = playlists.map((p) => p.id)
-                    if (sortedIds.every((id, i) => id === originalIds[i])) return
-                    reorderMutation.mutate(sortedIds)
-                  }}
-                  data-testid='playlists-sort-az'
+                  bindtap={() => setSortOpen(true)}
+                  data-testid='playlists-sort-menu'
                 >
                   <Icon name='sort' size={18} color={ICON_COLORS.content} />
-                  <text className='playlists__create-trigger-text'>{t('playlist.sortAZ')}</text>
+                  <text className='playlists__create-trigger-text'>{t('playlist.sort')}</text>
                 </view>
                 <view
                   className='playlists__create-trigger'
@@ -226,18 +281,29 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
                 >
                   <Icon name='check' size={18} color={ICON_COLORS.content} />
                 </view>
-                <view
-                  className='playlists__create-trigger'
-                  bindtap={() => setSortMode(true)}
-                  data-testid='playlists-sort-toggle'
-                >
-                  <Icon name='menu' size={18} color={ICON_COLORS.content} />
-                </view>
               </view>
             )
           : null}
       </view>
       {createForm}
+      {sortFeedback
+        ? (
+          <view className='playlists__banner'>
+            <Icon
+              name={sortFeedback.tone === 'error' ? 'warning' : 'check'}
+              size={18}
+              color={sortFeedback.tone === 'error' ? ICON_COLORS.danger : ICON_COLORS.primary}
+            />
+            <text className='playlists__banner-text'>{sortFeedback.text}</text>
+            <view
+              className='playlists__banner-close'
+              bindtap={() => setSortFeedback(null)}
+            >
+              <Icon name='x' size={16} color={ICON_COLORS.content2} />
+            </view>
+          </view>
+        )
+        : null}
       <scroll-view
         className='playlists__scroll'
         scroll-y
@@ -284,6 +350,24 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
           </view>
         )
         : null}
+      <ActionSheet open={sortOpen} onClose={() => setSortOpen(false)} title={t('playlist.sort')}>
+        <ActionSheetItem
+          label={t('playlist.sortNameAsc')}
+          onTap={onSortNameAsc}
+        />
+        <ActionSheetItem
+          label={t('playlist.sortNameDesc')}
+          onTap={onSortNameDesc}
+        />
+        <ActionSheetItem
+          label={t('playlist.sortNumberPrefix')}
+          onTap={onSortNumber}
+        />
+        <ActionSheetItem
+          label={t('playlist.sortManual')}
+          onTap={() => { setSortOpen(false); setSortMode(true) }}
+        />
+      </ActionSheet>
     </view>
   )
 }
