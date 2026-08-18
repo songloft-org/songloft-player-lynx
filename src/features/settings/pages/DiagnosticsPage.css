@@ -1,0 +1,41 @@
+/*
+ * Inline log-export notice — LUNA tokens only. Lynx has no toast primitive, so
+ * the result of an export is reported as a banner between the two cards (same
+ * pattern as LibraryOpsPage).
+ *
+ * Moved here from SettingsPage.css with the export row itself. Lynx CSS is
+ * build-time global, so the old `.settings__banner*` rules would have kept
+ * working from the other file — which is exactly the trap: renaming the classes
+ * in the TSX without moving the CSS leaves tests and the build green while the
+ * banner renders as unstyled bare text on device. Both moved together.
+ */
+
+.diagnostics__banner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: var(--space-3) var(--space-4) 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background-color: var(--paper);
+  border: 1px solid var(--primary);
+}
+
+.diagnostics__banner--error {
+  border-color: var(--danger);
+}
+
+.diagnostics__banner-text {
+  flex: 1;
+  color: var(--content);
+  font-size: var(--font-sm);
+  margin-left: var(--space-2);
+}
+
+.diagnostics__banner-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}

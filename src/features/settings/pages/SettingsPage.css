@@ -57,37 +57,10 @@
   padding-bottom: var(--space-6);
 }
 
-/* ─── Inline log-export notice (Lynx has no toast primitive) ─────────────── */
-
-.settings__banner {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  margin: var(--space-3) var(--space-4) 0;
-  padding: var(--space-3);
-  border-radius: var(--radius-lg);
-  background-color: var(--paper);
-  border: 1px solid var(--primary);
-}
-
-.settings__banner--error {
-  border-color: var(--danger);
-}
-
-.settings__banner-text {
-  flex: 1;
-  color: var(--content);
-  font-size: var(--font-sm);
-  margin-left: var(--space-2);
-}
-
-.settings__banner-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-}
+/* The log-export notice moved to `DiagnosticsPage.css` along with the row that
+   raises it. Both had to move together: Lynx CSS is build-time global, so leaving
+   these rules here would have kept styling the renamed classes' predecessor and
+   the mismatch would only show up on device. */
 
 /* ─── Detail pane (right column in dual-column mode) ─────────────────────── */
 .settings__detail {

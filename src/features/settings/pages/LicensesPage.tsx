@@ -1,7 +1,6 @@
-import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { SubPageShell } from '../widgets/SubPageShell.js'
 import './LicensesPage.css'
 
 interface LicenseEntry {
@@ -22,29 +21,34 @@ const LICENSES: LicenseEntry[] = [
   { name: 'url-search-params-polyfill', license: 'MIT', url: 'https://github.com/nicklhw/nicklhw-url-search-params-polyfill' },
 ]
 
-export function LicensesPage() {
-  const navigate = useNavigate()
+export interface LicensesPageProps {
+  /**
+   * Go back without a route navigation. The settings detail pane passes this so
+   * Licenses → About is a swap *inside* the pane (53fb045).
+   */
+  onBack?: () => void
+}
+
+export function LicensesPage({ onBack }: LicensesPageProps = {}) {
   const { t } = useTranslation()
 
   return (
-    <view className='licenses'>
-      <view className='licenses__topbar'>
-        <view className='licenses__back' bindtap={() => void navigate({ to: '/settings' })}>
-          <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
+    <SubPageShell
+      title={t('settings.licenses')}
+      onBack={onBack}
+      // Reached from the About page, not from the settings root — returning to
+      // `/settings` would skip a level on the way back out.
+      backTo='/settings/about'
+      backTestId='licenses-back'
+      contentClassName='licenses__content'
+    >
+      <text className='licenses__intro'>{t('settings.licensesIntro')}</text>
+      {LICENSES.map((entry) => (
+        <view key={entry.name} className='licenses__row'>
+          <text className='licenses__name'>{entry.name}</text>
+          <text className='licenses__license'>{entry.license}</text>
         </view>
-        <text className='licenses__title'>{t('settings.licenses')}</text>
-      </view>
-      <scroll-view className='licenses__scroll' scroll-y>
-        <view className='licenses__content'>
-          <text className='licenses__intro'>{t('settings.licensesIntro')}</text>
-          {LICENSES.map((entry) => (
-            <view key={entry.name} className='licenses__row'>
-              <text className='licenses__name'>{entry.name}</text>
-              <text className='licenses__license'>{entry.license}</text>
-            </view>
-          ))}
-        </view>
-      </scroll-view>
-    </view>
+      ))}
+    </SubPageShell>
   )
 }

@@ -1,0 +1,67 @@
+/*
+ * Shared settings sub-page chrome — LUNA tokens only, no hard-coded sizes.
+ *
+ * Mirrors `.settings` so a sub-page and the main list line up. Three things this
+ * deliberately does NOT do, each one a bug that was shipped before:
+ *   1. no `background-color` — `.shell` is already `--canvas`;
+ *   2. no `env(safe-area-inset-top)` — `.shell__body` already applies it, and a
+ *      second one insets the topbar twice;
+ *   3. no horizontal padding on `__content` — `.settings-section` already carries
+ *      `margin: var(--space-4) var(--space-4) 0`, so page padding on top of it
+ *      double-insets every card (which is why `.cache-manage__content` reads
+ *      narrower than the main settings list today).
+ */
+
+.subpage {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.subpage__topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-2);
+}
+
+/* 40x40 rather than the 4px padding three pages used: at a 22px glyph that gave a
+   30px touch target, under every platform's minimum. */
+.subpage__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+}
+
+.subpage__title {
+  flex: 1;
+  color: var(--content);
+  font-size: var(--font-lg);
+  font-weight: bold;
+}
+
+.subpage__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.subpage__scroll {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.subpage__content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: var(--space-6);
+}

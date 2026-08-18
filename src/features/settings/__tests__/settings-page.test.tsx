@@ -13,38 +13,21 @@ import {
 /**
  * SettingsPage render smoke.
  *
- * The page reads two zustand stores via `getState()` (non-subscribing) and the
- * settings prefs (async I/O). To keep the render hermetic + deterministic:
- * - `@tanstack/react-router` `useNavigate` → a spy (assert navigation targets);
- * - `../../auth/store/index.js` → a minimal `useAuthStore.getState().logout`
- *   spy (the real logout does storage/network work);
- * - `../../player/store/player-store.js` → `makePlayerStoreMock` with a
- *   `setPlayMode` spy so selecting a mode is observable;
- * - `../data/settings-prefs.js` → `readDefaultPlayMode` resolving a known mode +
- *   a `writeDefaultPlayMode` spy.
+ * The page is an **entry list**: one row per sub-page, no controls of its own. So
+ * the assertions here are about the rows and where they lead; what each sub-page
+ * then does is covered by its own test file (`appearance-page`, `playback-page`,
+ * `lyrics-page`, `data-page`, `about-page`, `diagnostics-page`).
  *
- * The real domain helpers (labels/icons), `SettingsSection`, `SettingsRow` and
- * `Icon` all run; assertions check the rendered structure + that interactions
- * call the correct store/config, not fixtures echoed back.
+ * To keep the render hermetic: `useNavigate` → a spy (assert navigation targets),
+ * the auth store → a `logout` spy. The remaining mocks are for the **sub-page
+ * modules** this page imports (all 18 of them are imported for the dual-column
+ * pane, so their module bodies get evaluated even though they never mount here).
  */
-const { navigateSpy, logoutSpy, setPlayModeSpy, writePrefSpy, readPref, changeLangSpy, changeThemeSpy, getLogLevelSpy, setLogLevelSpy, openURLSpy, exportLogsActionSpy } =
-  vi.hoisted(() => ({
-    navigateSpy: vi.fn(),
-    logoutSpy: vi.fn(),
-    setPlayModeSpy: vi.fn(),
-    writePrefSpy: vi.fn(),
-    readPref: vi.fn(async () => 'random' as const),
-    changeLangSpy: vi.fn(async () => 'en' as const),
-    changeThemeSpy: vi.fn(async () => 'dark' as const),
-    getLogLevelSpy: vi.fn(async () => 'warn' as const),
-    setLogLevelSpy: vi.fn(async () => {}),
-    openURLSpy: vi.fn(),
-    exportLogsActionSpy: vi.fn(async () => ({ hasBackend: true, hasFrontend: true })),
-  }))
+const { navigateSpy, logoutSpy } = vi.hoisted(() => ({
+  navigateSpy: vi.fn(),
+  logoutSpy: vi.fn(),
+}))
 
-// react-i18next → deterministic English `t` (real English resource values); the
-// i18n module → real option list/coerce + a `changeAppLanguage` spy so the
-// language-switch wiring is observable without driving i18next/storage.
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
@@ -52,19 +35,15 @@ vi.mock('../../../i18n/index.js', () => ({
   APP_LANGUAGE_OPTIONS: ['system', 'en', 'zh'],
   PREF_LANGUAGE: 'app_language',
   coerceAppLanguage: (raw: unknown) => (raw === 'en' || raw === 'zh' ? raw : 'system'),
-  changeAppLanguage: changeLangSpy,
+  changeAppLanguage: vi.fn(async () => {}),
 }))
-
-// theme model → real option list/coerce + a `changeAppTheme` spy, same shape as
-// the language mock above (the settings-switch wiring is observable without
-// driving the actual storage/ThemeProvider subscription).
 vi.mock('../../../shared/theme/theme-model.js', () => ({
   APP_THEME_OPTIONS: ['system', 'light', 'dark'],
   PREF_THEME: 'app_theme',
   coerceAppTheme: (raw: unknown) => (raw === 'light' || raw === 'dark' ? raw : 'system'),
   getAppTheme: () => 'dark',
   resolveTheme: (app: string) => (app === 'system' ? 'dark' : app),
-  changeAppTheme: changeThemeSpy,
+  changeAppTheme: vi.fn(async () => {}),
 }))
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigateSpy }))
@@ -74,7 +53,7 @@ vi.mock('../../../core/network/token-cache.js', () => ({
 }))
 
 vi.mock('../../../native/native-platform.js', () => ({
-  openURL: openURLSpy,
+  openURL: vi.fn(),
   isNativePlatformAvailable: () => true,
 }))
 
@@ -84,12 +63,10 @@ vi.mock('../../auth/store/index.js', () => ({
 
 vi.mock('../../player/store/player-store.js', async () => {
   const { makePlayerStoreMock } = await import('../../../__tests__/_render-mocks.js')
-  return { ...makePlayerStoreMock({}, { playMode: 'order', setPlayMode: setPlayModeSpy }), setAudioQualityCache: vi.fn(), setNormalizeEnabled: vi.fn() }
+  return { ...makePlayerStoreMock({}), setAudioQualityCache: vi.fn(), setNormalizeEnabled: vi.fn() }
 })
 
 vi.mock('../data/settings-prefs.js', () => ({
-  readDefaultPlayMode: readPref,
-  writeDefaultPlayMode: writePrefSpy,
   readAudioQuality: vi.fn(async () => 'original'),
   writeAudioQuality: vi.fn(async () => {}),
   readAutoResume: vi.fn(async () => false),
@@ -108,18 +85,19 @@ vi.mock('../data/settings-prefs.js', () => ({
   writeFloatingLyricLocked: vi.fn(async () => {}),
   readFloatingLyricOpacity: vi.fn(async () => 0.4),
   writeFloatingLyricOpacity: vi.fn(async () => {}),
-  coerceAudioQuality: (raw: unknown) => (raw === '320' || raw === '192' || raw === '128' ? raw : 'original'),
 }))
 
 vi.mock('../api/index.js', () => ({
-  getSettingsApi: () => ({ getLogLevel: getLogLevelSpy, setLogLevel: setLogLevelSpy, getVersion: vi.fn(async () => '1.0.0') }),
+  getSettingsApi: () => ({
+    getLogLevel: vi.fn(async () => 'warn'),
+    setLogLevel: vi.fn(async () => {}),
+    getVersion: vi.fn(async () => '1.0.0'),
+    updateVolumeNormalize: vi.fn(async () => {}),
+  }),
 }))
 
-// The export orchestrator is covered by log-export.test.ts; here it is a spy so
-// the row's capability-based dispatch (share sheet vs. openURL fallback) is
-// observable without zipping anything.
 vi.mock('../data/log-export.js', () => ({
-  exportAndShareLogs: exportLogsActionSpy,
+  exportAndShareLogs: vi.fn(async () => ({ hasBackend: true, hasFrontend: true })),
 }))
 
 vi.mock('@lynx-js/lynx-ui', () => ({
@@ -165,123 +143,91 @@ function scrollListTo(scrollTop: number) {
   fireEvent.scroll(target as unknown as Element, { detail: { scrollTop } })
 }
 
-test('renders every section, version, server and log-out rows', async () => {
-  const { queryByText, queryByTestId, queryAllByTestId } = await renderPage()
+/** Entry rows always present, paired with where each one leads. */
+const ENTRY_ROWS: Array<[string, string]> = [
+  ['settings-appearance', '/settings/appearance'],
+  ['settings-theme-packs', '/settings/theme-packs'],
+  ['settings-playback', '/settings/playback'],
+  ['settings-eq', '/settings/eq'],
+  ['settings-lyrics', '/settings/lyrics'],
+  ['settings-library-ops', '/settings/library'],
+  ['settings-browse-views', '/settings/browse-views'],
+  ['settings-plugins', '/settings/plugins'],
+  ['settings-tab-config', '/settings/tab-config'],
+  ['settings-cache', '/settings/cache'],
+  ['settings-server', '/settings/servers'],
+  ['settings-proxy', '/settings/proxy'],
+  ['settings-diagnostics', '/settings/diagnostics'],
+  ['settings-about', '/settings/about'],
+  ['settings-upgrade', '/settings/upgrade'],
+]
 
-  // Section headers.
-  expect(queryByText('Appearance')).toBeInTheDocument()
-  expect(queryByText('Playback')).toBeInTheDocument()
-  expect(queryByText('Library')).toBeInTheDocument()
-  expect(queryByText('Extensions')).toBeInTheDocument()
-  expect(queryByText('Cache')).toBeInTheDocument()
-  expect(queryByText('Network')).toBeInTheDocument()
-  expect(queryByText('About & Updates')).toBeInTheDocument()
-  expect(queryByText('Account')).toBeInTheDocument()
+/**
+ * Controls that used to be expanded inline on this page. Every one of them now
+ * belongs to a sub-page, so finding any of them here means a group was not moved
+ * — the single assertion that keeps this page an entry list.
+ */
+const IN_PLACE_CONTROLS = [
+  'theme-system', 'theme-light', 'theme-dark',
+  'language-system', 'language-en', 'language-zh',
+  'audio-quality-original', 'audio-quality-320', 'audio-quality-192', 'audio-quality-128',
+  'settings-auto-resume', 'settings-normalize',
+  'settings-auto-enter-lyrics', 'settings-notification-lyric-title',
+  'settings-floating-lyric-toggle',
+  'log-level-debug', 'log-level-info', 'log-level-warn', 'log-level-error',
+  'settings-export-logs',
+  'settings-version',
+  'settings-licenses',
+  'settings-export', 'settings-import',
+]
 
-  expect(queryByTestId('play-mode-order')).not.toBeInTheDocument()
-  expect(queryByTestId('play-mode-random')).not.toBeInTheDocument()
+test('renders one entry row per sub-page, plus log out', async () => {
+  const { queryByTestId } = await renderPage()
 
-  // The three language option rows.
-  expect(queryByTestId('language-system')).toBeInTheDocument()
-  expect(queryByTestId('language-en')).toBeInTheDocument()
-  expect(queryByTestId('language-zh')).toBeInTheDocument()
-
-  // The three theme option rows.
-  expect(queryByTestId('theme-system')).toBeInTheDocument()
-  expect(queryByTestId('theme-light')).toBeInTheDocument()
-  expect(queryByTestId('theme-dark')).toBeInTheDocument()
-
-  // The four log-level option rows + the export-logs row, with the log-level
-  // group carrying its own title (Flutter has a dedicated 日志等级 tile).
-  expect(queryByText('Log level')).toBeInTheDocument()
-  expect(queryByTestId('log-level-debug')).toBeInTheDocument()
-  expect(queryByTestId('log-level-info')).toBeInTheDocument()
-  expect(queryByTestId('log-level-warn')).toBeInTheDocument()
-  expect(queryByTestId('log-level-error')).toBeInTheDocument()
-  expect(queryByTestId('settings-export-logs')).toBeInTheDocument()
-
-  // Persisted defaults (system language + system theme + warn log level + audio
-  // quality original) → four check glyphs.
-  expect(queryAllByTestId('icon-check')).toHaveLength(4)
-
-  // About shows the client version, and the log-out row is present.
-  expect(queryByTestId('settings-version')).toBeInTheDocument()
-  expect(queryByTestId('settings-server')).toBeInTheDocument()
-  expect(queryByText('Log out')).toBeInTheDocument()
+  for (const [testId] of ENTRY_ROWS) {
+    expect(queryByTestId(testId), testId).toBeInTheDocument()
+  }
+  expect(queryByTestId('settings-logout')).toBeInTheDocument()
 })
 
-test('selecting a language applies + persists it via changeAppLanguage', async () => {
+test('holds no in-place control of its own', async () => {
+  const { queryByTestId, queryAllByTestId } = await renderPage()
+
+  for (const testId of IN_PLACE_CONTROLS) {
+    expect(queryByTestId(testId), testId).not.toBeInTheDocument()
+  }
+  // No option groups left, so not a single tick either (this used to be 4).
+  expect(queryAllByTestId('icon-check')).toHaveLength(0)
+})
+
+test.each(ENTRY_ROWS)('%s navigates to %s', async (testId, route) => {
   const { queryByTestId } = await renderPage()
 
   await act(async () => {
-    fireEvent.tap(queryByTestId('language-zh')!)
+    fireEvent.tap(queryByTestId(testId)!)
   })
 
-  expect(changeLangSpy).toHaveBeenCalledWith('zh')
+  expect(navigateSpy).toHaveBeenCalledWith({ to: route })
 })
 
-test('selecting a theme applies + persists it via changeAppTheme', async () => {
+test('the data row is hidden where the platform has no file picker', async () => {
+  // Tapping it would open a page whose only two actions cannot work — on Web the
+  // picker does not exist in the render realm at all.
   const { queryByTestId } = await renderPage()
-
-  await act(async () => {
-    fireEvent.tap(queryByTestId('theme-light')!)
-  })
-
-  expect(changeThemeSpy).toHaveBeenCalledWith('light')
+  expect(queryByTestId('settings-data')).not.toBeInTheDocument()
 })
 
-test('selecting a log level persists it via SettingsApi.setLogLevel', async () => {
-  const { queryByTestId } = await renderPage()
-
-  await act(async () => {
-    fireEvent.tap(queryByTestId('log-level-error')!)
-  })
-
-  expect(setLogLevelSpy).toHaveBeenCalledWith('error')
-})
-
-test('the export-logs row falls back to openURL when file export is unavailable', async () => {
-  // No NativeModules in the unit-test realm → `fileExport` capability is off,
-  // so the degraded path applies: open the backend log URL directly (no client
-  // logs in that one).
-  const { queryByTestId } = await renderPage()
-
-  await act(async () => {
-    fireEvent.tap(queryByTestId('settings-export-logs')!)
-  })
-
-  expect(openURLSpy).toHaveBeenCalledWith(expect.stringContaining('/logs/export'))
-  expect(exportLogsActionSpy).not.toHaveBeenCalled()
-})
-
-test('the export-logs row uses the zip flow when shareFile is available', async () => {
-  // A host exposing SongloftPlatform.shareFile (native share sheet or web
-  // download) turns the capability on, so the row must go through the
-  // Flutter-parity export — which includes the client logs — instead of openURL.
+test('the data row appears, and navigates, on a host with a file picker', async () => {
   ;(globalThis as Record<string, unknown>).NativeModules = {
-    SongloftPlatform: { shareFile: () => {} },
+    SongloftPlatform: { pickFile: () => {} },
   }
   const { queryByTestId } = await renderPage()
 
+  expect(queryByTestId('settings-data')).toBeInTheDocument()
   await act(async () => {
-    fireEvent.tap(queryByTestId('settings-export-logs')!)
+    fireEvent.tap(queryByTestId('settings-data')!)
   })
-
-  expect(exportLogsActionSpy).toHaveBeenCalledTimes(1)
-  expect(openURLSpy).not.toHaveBeenCalled()
-})
-
-// Choosing a play mode moved to the player's own toggle, along with persisting it
-// — covered by `player/__tests__/full-player.test.tsx`.
-
-test('the server row navigates to the server sub-page', async () => {
-  const { queryByTestId } = await renderPage()
-
-  await act(async () => {
-    fireEvent.tap(queryByTestId('settings-server')!)
-  })
-
-  expect(navigateSpy).toHaveBeenCalledWith({ to: '/settings/servers' })
+  expect(navigateSpy).toHaveBeenCalledWith({ to: '/settings/data' })
 })
 
 test('the list starts at the top on the first visit of a session', async () => {
@@ -311,7 +257,9 @@ test('the restore offset is frozen for the lifetime of the mount', async () => {
 
   scrollListTo(428)
   await act(async () => {
-    fireEvent.tap(getByTestId('theme-light')!) // any state change → re-render
+    // Opening the log-out dialog is the only state this page still owns, so it is
+    // now how a re-render gets provoked (it used to tap a theme option row).
+    fireEvent.tap(getByTestId('settings-logout')!)
   })
 
   expect(getByTestId('settings-scroll').getAttribute('initial-scroll-offset')).toBe('0')

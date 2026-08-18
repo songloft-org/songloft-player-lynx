@@ -3,7 +3,16 @@ export { LicensesPage } from './pages/LicensesPage.js'
 export { ThemePacksPage } from './pages/ThemePacksPage.js'
 export { UpgradePage } from './pages/UpgradePage.js'
 export { ProxySettingsPage } from './pages/ProxySettingsPage.js'
-export { ServerSettingsPage } from './pages/ServerSettingsPage.js'
+
+// Sub-pages split out of the settings list. `SubPageShell` is deliberately NOT
+// re-exported: this barrel also exports `SettingsPage`, which imports every
+// sub-page, so a sub-page importing the barrel back would be a real cycle.
+export { AppearancePage } from './pages/AppearancePage.js'
+export { PlaybackPage } from './pages/PlaybackPage.js'
+export { LyricsPage } from './pages/LyricsPage.js'
+export { DataPage } from './pages/DataPage.js'
+export { AboutPage } from './pages/AboutPage.js'
+export { DiagnosticsPage } from './pages/DiagnosticsPage.js'
 
 export { CacheManagePage } from './pages/CacheManagePage.js'
 export { EqualizerPage } from './pages/EqualizerPage.js'

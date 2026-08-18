@@ -1,30 +1,7 @@
-.licenses {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.licenses__topbar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: var(--space-3) var(--space-4);
-  gap: var(--space-3);
-}
-
-.licenses__back {
-  padding: var(--space-2);
-}
-
-.licenses__title {
-  color: var(--content);
-  font-size: var(--font-lg);
-  font-weight: bold;
-}
-
-.licenses__scroll {
-  flex: 1;
-}
+/*
+ * Licenses list. The page chrome (topbar / back / title / scroll) comes from
+ * `SubPageShell.css`; only the list's own rules live here.
+ */
 
 .licenses__content {
   padding: var(--space-3) var(--space-4);

@@ -15,7 +15,7 @@ import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { AddSongsPage, CategorySongsPage, LibraryPage, SongDetailPage } from './features/library/index.js'
 import { PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
-import { CacheManagePage, EqualizerPage, LicensesPage, ProxySettingsPage, ServerEditPage, ServerListPage, ServerSettingsPage, SettingsPage, ThemePacksPage, UpgradePage, BrowseViewsPage } from './features/settings/index.js'
+import { AboutPage, AppearancePage, CacheManagePage, DataPage, DiagnosticsPage, EqualizerPage, LicensesPage, LyricsPage, PlaybackPage, ProxySettingsPage, ServerEditPage, ServerListPage, SettingsPage, ThemePacksPage, UpgradePage, BrowseViewsPage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
@@ -121,11 +121,50 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 })
 
-/** `/settings/server` — standalone server-address sub-page, inside the shell. */
-const serverSettingsRoute = createRoute({
+/** `/settings/appearance` — theme + language sub-page, inside the shell. */
+const appearanceRoute = createRoute({
   getParentRoute: () => shellRoute,
-  path: '/settings/server',
-  component: ServerSettingsPage,
+  path: '/settings/appearance',
+  component: AppearancePage,
+})
+
+/** `/settings/playback` — quality / auto-resume / normalization, inside the shell. */
+const playbackRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/playback',
+  component: PlaybackPage,
+})
+
+/**
+ * `/settings/lyrics` — lyrics display + floating overlay, inside the shell.
+ * Distinct from `/player/lyrics/edit` and `/player/lyrics/calibrate`, which hang
+ * off the root route under `/player`.
+ */
+const lyricsSettingsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/lyrics',
+  component: LyricsPage,
+})
+
+/** `/settings/data` — playlist export / import, inside the shell. */
+const dataRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/data',
+  component: DataPage,
+})
+
+/** `/settings/about` — versions, server, project and licenses, inside the shell. */
+const aboutRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/about',
+  component: AboutPage,
+})
+
+/** `/settings/diagnostics` — log level + log export, inside the shell. */
+const diagnosticsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/diagnostics',
+  component: DiagnosticsPage,
 })
 
 /** `/settings/servers` — multi-server list page, inside the shell. */
@@ -287,7 +326,12 @@ const routeTree = rootRoute.addChildren([
     listRoute,
     libraryRoute,
     settingsRoute,
-    serverSettingsRoute,
+    appearanceRoute,
+    playbackRoute,
+    lyricsSettingsRoute,
+    dataRoute,
+    aboutRoute,
+    diagnosticsRoute,
     serverListRoute,
     serverAddRoute,
     serverEditRoute,
