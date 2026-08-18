@@ -850,9 +850,13 @@ Phase B3 第一步。方法论照批B1 对 Android 的做法（照抄官方 demo
 
 **闸门**：新增 7 个测试文件（含 `sub-page-shell.test.tsx` 的「pane 内不渲染返回键」）；`settings-page.test.tsx` 改写为「16 个入口 + 24 个就地控件反向断言 + `icon-check` 长度 0」；`shell-navigation.test.ts` 补 `showsMiniPlayer` 双向断言（该文件此前**一条都没有**）。**三条核心断言都反向验证过会红**：pane 隐藏返回键（临时让 `showBack` 恒真）、主页无就地控件（临时加回一行）、`{{error}}` 插值（临时改回单括号）。
 
-自动验收：`tsc -b` / `vitest` 1200 测试 / `build` 两产物均绿，`Unsupported property` 警告仍为 0。
+自动验收：`tsc -b` / `vitest` 1202 测试 / `build` 两产物均绿，`Unsupported property` 警告仍为 0。
 
-> ⚠️ **待真机**：① **EQ 滑条拖动**——`9d8e993` 刚修完，坐标虽是 viewport 相对（不受新增 wrapper 影响）且每次 pointer-down 重测，但原生手势没有任何测试能驱动；② 宽屏 ≥768px 右栏无返回箭头 + 高亮跟随（含 about→licenses、library→duplicates 时父行保持高亮）；③ 新页卡片左右内缩与主列表一致（截图比对——状态断言对布局永远全绿）。
+**iOS 模拟器验收**（iPhone 16 Pro，后端 58091）：`settings-general` 13 例全绿含 6 条新路由；截图确认主页为入口清单、「外观设置」页正确渲染主题/语言两组、**卡片左右内缩与主列表对齐**（`.subpage__content` 不加横向 padding 那条约束成立）。全量 30 场景 117 例亦绿。
+
+> ⚠️ **验证方法上的坑，值得记**：第一次跑时 6 条新路由**全部「通过」而截图是空白页**——模拟器里的 App 还是旧 bundle，旧代码没这些路由、Router 匹配不到就渲染空，而场景只断言 `pathname`，Router 照样记下了 URL。**「路由断言绿」不等于「页面渲染出来了」**；发现依据是主页截图仍显示旧版就地控件。替换 `.app/main.lynx.bundle` 后必须 `simctl terminate` 再 `launch`——热启动不重读 bundle。
+>
+> ⚠️ **仍待人工**：**EQ 滑条拖动**。`9d8e993` 刚修完这块，坐标虽是 viewport 相对（不受新增 wrapper 影响）且每次 pointer-down 都重测，但原生手势没有任何测试能驱动，`simctl` 也没有 swipe 能力。宽屏 ≥768px 的右栏行为（无返回箭头 + about→licenses / library→duplicates 时父行保持高亮）同理需要 iPad 或桌面尺寸窗口。
 
 ## 未完成 / 遗留事项（TODO & 风险）
 
