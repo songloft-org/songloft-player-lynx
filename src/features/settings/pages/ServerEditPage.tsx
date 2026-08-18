@@ -44,7 +44,9 @@ export function ServerEditPage() {
   return (
     <SubPageShell
       title={title}
-      onBack={goBack}
+      // `backTo` rather than `onBack`: this is a plain route-back (to the server
+      // list), and only an in-pane sibling swap should survive inside the pane.
+      backTo='/settings/servers'
       backTestId='server-edit-back'
       contentClassName='server-edit__content'
     >

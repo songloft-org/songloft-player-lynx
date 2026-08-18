@@ -1,5 +1,4 @@
 import { useState } from '@lynx-js/react'
-import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { Input } from '@lynx-js/lynx-ui-input'
@@ -24,7 +23,6 @@ import './CacheManagePage.css'
  * sections: stats overview, editable config, directory validation result.
  */
 export function CacheManagePage() {
-  const navigate = useNavigate()
   const { t } = useTranslation()
 
   // ── Data queries ───────────────────────────────────────────────────────────
@@ -84,18 +82,15 @@ export function CacheManagePage() {
     })
   }
 
-  // ── Navigation ─────────────────────────────────────────────────────────────
-  const goBack = () => {
-    void navigate({ to: '/settings' })
-  }
-
   // ── Render ─────────────────────────────────────────────────────────────────
   const stats = statsQuery.data
 
   return (
     <SubPageShell
       title={t('cacheManage.title')}
-      onBack={goBack}
+      // Deliberately no `onBack`: an explicit onBack tells the shell "this back is
+      // meaningful even inside the settings pane", which only holds for an in-pane
+      // sibling swap. Routing to /settings is a dead key there.
       backTestId='cache-back'
       contentClassName='cache-manage__content'
     >

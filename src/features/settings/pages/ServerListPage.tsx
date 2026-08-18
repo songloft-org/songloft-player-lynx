@@ -20,9 +20,6 @@ export function ServerListPage() {
     void useServerStore.getState().hydrate()
   }, [])
 
-  const goBack = () => {
-    void navigate({ to: '/settings' })
-  }
 
   const onAdd = () => {
     void navigate({ to: '/settings/servers/add' })
@@ -50,7 +47,8 @@ export function ServerListPage() {
   return (
     <SubPageShell
       title={t('servers.title')}
-      onBack={goBack}
+      // Deliberately no `onBack` — see CacheManagePage. Routing to /settings is a
+      // dead key inside the settings pane, so the shell must be free to hide it.
       backTestId='servers-back'
       contentClassName='server-list__content'
       actions={(

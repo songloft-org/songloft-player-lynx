@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef } from '@lynx-js/react'
-import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import type { NodesRef } from '@lynx-js/types'
 
@@ -204,7 +203,6 @@ function BandSlider({ hz, gainDb, isWeb, onChange }: {
 }
 
 export function EqualizerPage() {
-  const navigate = useNavigate()
   const { t } = useTranslation()
   const enabled = useEqStore((s) => s.enabled)
   const bands = useEqStore((s) => s.bands)
@@ -217,14 +215,12 @@ export function EqualizerPage() {
     void useEqStore.getState().hydrate()
   }, [])
 
-  const goBack = () => {
-    void navigate({ to: '/settings' })
-  }
-
   return (
     <SubPageShell
       title={t('eq.title')}
-      onBack={goBack}
+      // `backTo`, not `onBack`: an explicit onBack tells the shell "this back is
+      // meaningful even inside the settings pane", which is only true for an
+      // in-pane sibling swap. Routing to /settings is a dead key there.
       backTestId='eq-back'
       contentClassName='eq-page__content'
     >
