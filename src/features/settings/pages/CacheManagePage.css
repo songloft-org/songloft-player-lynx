@@ -1,49 +1,17 @@
 /*
- * Cache management sub-page — LUNA tokens only. Same layout pattern as
- * ServerSettingsPage: fixed topbar + scrollable card content.
+ * Cache management sub-page — LUNA tokens only. The page chrome (topbar / back /
+ * title / scroll) comes from `SubPageShell.css`.
  */
 
-.cache-manage {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  width: 100%;
-  min-height: 0;
-}
-
-.cache-manage__topbar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: var(--space-3) var(--space-3);
-}
-
-.cache-manage__back {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-pill);
-}
-
-.cache-manage__title {
-  color: var(--content);
-  font-size: var(--font-lg);
-  font-weight: bold;
-  margin-left: var(--space-2);
-}
-
-.cache-manage__scroll {
-  flex: 1;
-  width: 100%;
-  height: 100%;
-}
-
+/*
+ * Vertical padding only. The horizontal `var(--space-4)` this used to carry was
+ * applied on top of `.settings-section`'s own `margin: var(--space-4)`, so every
+ * card here sat visibly narrower than the same cards on the settings list.
+ */
 .cache-manage__content {
   display: flex;
   flex-direction: column;
-  padding: var(--space-2) var(--space-4) var(--space-6);
+  padding: var(--space-2) 0 var(--space-6);
   gap: var(--space-4);
 }
 
@@ -122,13 +90,7 @@
   background-color: var(--primary);
 }
 
-.cache-manage__btn--danger {
-  background-color: var(--danger);
-}
 
-.cache-manage__btn--disabled {
-  opacity: 0.5;
-}
 
 .cache-manage__btn--secondary {
   background-color: var(--neutral-faint);
@@ -156,9 +118,6 @@
   background-color: var(--primary);
 }
 
-.cache-manage__save--disabled {
-  opacity: 0.5;
-}
 
 .cache-manage__save-text {
   color: var(--primary-content);

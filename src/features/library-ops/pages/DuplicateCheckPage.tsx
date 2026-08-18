@@ -25,6 +25,7 @@ import { DuplicateGroupCard } from '../widgets/DuplicateGroupCard.js'
 import { DuplicateResultsSection } from '../widgets/DuplicateResultsSection.js'
 import { FingerprintComputingSection } from '../widgets/FingerprintComputingSection.js'
 import { FingerprintStatusCard } from '../widgets/FingerprintStatusCard.js'
+import { SubPageShell } from '../../settings/widgets/SubPageShell.js'
 import './DuplicateCheckPage.css'
 
 /**
@@ -35,7 +36,15 @@ import './DuplicateCheckPage.css'
  *
  * Ported from Flutter's `DuplicateCheckPage` (`duplicate_check_page.dart`).
  */
-export function DuplicateCheckPage() {
+export interface DuplicateCheckPageProps {
+  /**
+   * Go back without a route navigation, for the in-pane swap back to the library
+   * page this was opened from (53fb045).
+   */
+  onBack?: () => void
+}
+
+export function DuplicateCheckPage({ onBack }: DuplicateCheckPageProps = {}) {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
@@ -245,122 +254,112 @@ export function DuplicateCheckPage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <view className='dup-check'>
-      <view className='dup-check__topbar'>
-        <view
-          className='dup-check__back'
-          bindtap={() => void navigate({ to: '/settings' })}
-          data-testid='dup-check-back'
-        >
-          <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
-        </view>
-        <text className='dup-check__title'>
-          {t('libops.duplicateDetection')}
-        </text>
-      </view>
-
-      <scroll-view className='dup-check__scroll' scroll-y>
-        <view className='dup-check__content'>
-          {/* Error banner */}
-          {error
-            ? (
-              <view className='dup-check__error' data-testid='dup-check-error'>
-                <Icon name='warning' size={18} color={ICON_COLORS.danger} />
-                <text className='dup-check__error-text'>{error}</text>
-                <view
-                  className='dup-check__error-close'
-                  bindtap={() => setError(null)}
-                  data-testid='dup-check-error-dismiss'
-                >
-                  <Icon name='x' size={16} color={ICON_COLORS.content2} />
-                </view>
+    <>
+      <SubPageShell
+        title={t('libops.duplicateDetection')}
+        onBack={onBack ?? (() => void navigate({ to: '/settings/library' }))}
+        backTestId='dup-check-back'
+        contentClassName='dup-check__content'
+      >
+        {/* Error banner */}
+        {error
+          ? (
+            <view className='dup-check__error' data-testid='dup-check-error'>
+              <Icon name='warning' size={18} color={ICON_COLORS.danger} />
+              <text className='dup-check__error-text'>{error}</text>
+              <view
+                className='dup-check__error-close'
+                bindtap={() => setError(null)}
+                data-testid='dup-check-error-dismiss'
+              >
+                <Icon name='x' size={16} color={ICON_COLORS.content2} />
               </view>
-            )
-            : null}
+            </view>
+          )
+          : null}
 
-          {/* Status phase */}
-          {phase === 'status' && status
-            ? (
-              <FingerprintStatusCard
-                status={status}
-                onStartCompute={() => onStartCompute()}
-                onRetryFailed={() => onStartCompute({ retryFailed: true })}
-                onRecomputeAll={() => onStartCompute({ recomputeAll: true })}
-                onCheckDuplicates={onCheckDuplicates}
-                starting={startFingerprint.isPending}
-              />
-            )
-            : null}
+        {/* Status phase */}
+        {phase === 'status' && status
+          ? (
+            <FingerprintStatusCard
+              status={status}
+              onStartCompute={() => onStartCompute()}
+              onRetryFailed={() => onStartCompute({ retryFailed: true })}
+              onRecomputeAll={() => onStartCompute({ recomputeAll: true })}
+              onCheckDuplicates={onCheckDuplicates}
+              starting={startFingerprint.isPending}
+            />
+          )
+          : null}
 
-          {/* Loading spinner when status is not yet available */}
-          {phase === 'status' && !status && statusQuery.isLoading
-            ? (
-              <view className='dup-check__loading' data-testid='dup-check-loading'>
-                <text className='dup-check__loading-text'>
-                  {t('libops.dupLoading')}
-                </text>
-              </view>
-            )
-            : null}
+        {/* Loading spinner when status is not yet available */}
+        {phase === 'status' && !status && statusQuery.isLoading
+          ? (
+            <view className='dup-check__loading' data-testid='dup-check-loading'>
+              <text className='dup-check__loading-text'>
+                {t('libops.dupLoading')}
+              </text>
+            </view>
+          )
+          : null}
 
-          {/* Computing phase */}
-          {phase === 'computing'
-            ? (
-              <FingerprintComputingSection
-                progress={progress}
-                totalFallback={status?.missing ?? 0}
-                onCancel={onCancel}
-                cancelling={cancelFingerprint.isPending}
-              />
-            )
-            : null}
+        {/* Computing phase */}
+        {phase === 'computing'
+          ? (
+            <FingerprintComputingSection
+              progress={progress}
+              totalFallback={status?.missing ?? 0}
+              onCancel={onCancel}
+              cancelling={cancelFingerprint.isPending}
+            />
+          )
+          : null}
 
-          {/* Results phase */}
-          {phase === 'results'
-            ? (
-              <view data-testid='fp-results-phase'>
-                {duplicatesQuery.isLoading
-                  ? (
-                    <view className='dup-check__loading' data-testid='fp-results-loading'>
-                      <text className='dup-check__loading-text'>
-                        {t('libops.dupLoadingResults')}
-                      </text>
-                    </view>
-                  )
-                  : null}
+        {/* Results phase */}
+        {phase === 'results'
+          ? (
+            <view data-testid='fp-results-phase'>
+              {duplicatesQuery.isLoading
+                ? (
+                  <view className='dup-check__loading' data-testid='fp-results-loading'>
+                    <text className='dup-check__loading-text'>
+                      {t('libops.dupLoadingResults')}
+                    </text>
+                  </view>
+                )
+                : null}
 
-                {duplicatesQuery.data
-                  ? (
-                    <view>
-                      <DuplicateResultsSection
-                        duplicates={duplicatesQuery.data}
-                        totalToDelete={totalToDelete}
-                        ignoredCount={ignoredGroups.size}
-                        onCleanAll={onCleanAll}
-                        onRecheck={onRecheck}
+              {duplicatesQuery.data
+                ? (
+                  <view>
+                    <DuplicateResultsSection
+                      duplicates={duplicatesQuery.data}
+                      totalToDelete={totalToDelete}
+                      ignoredCount={ignoredGroups.size}
+                      onCleanAll={onCleanAll}
+                      onRecheck={onRecheck}
+                    />
+
+                    {groups.map((group, i) => (
+                      <DuplicateGroupCard
+                        key={group.fingerprint || i}
+                        groupIndex={i}
+                        group={group}
+                        keepId={selectedKeep.get(i) ?? recommendedKeepId(group)}
+                        recommendedId={recommendedKeepId(group)}
+                        ignored={ignoredGroups.has(i)}
+                        onKeepChange={(songId) => onKeepChange(i, songId)}
+                        onToggleIgnore={() => onToggleIgnore(i)}
+                        onDeleteUnselected={() => onDeleteGroup(i)}
                       />
-
-                      {groups.map((group, i) => (
-                        <DuplicateGroupCard
-                          key={group.fingerprint || i}
-                          groupIndex={i}
-                          group={group}
-                          keepId={selectedKeep.get(i) ?? recommendedKeepId(group)}
-                          recommendedId={recommendedKeepId(group)}
-                          ignored={ignoredGroups.has(i)}
-                          onKeepChange={(songId) => onKeepChange(i, songId)}
-                          onToggleIgnore={() => onToggleIgnore(i)}
-                          onDeleteUnselected={() => onDeleteGroup(i)}
-                        />
-                      ))}
-                    </view>
-                  )
-                  : null}
-              </view>
-            )
-            : null}
-        </view>
-      </scroll-view>
+                    ))}
+                  </view>
+                )
+                : null}
+            </view>
+          )
+          : null}
+      </SubPageShell>
 
       {/* Delete confirmation dialog */}
       <DeleteConfirmDialog
@@ -369,6 +368,6 @@ export function DuplicateCheckPage() {
         onConfirm={onConfirmDelete}
         onCancel={() => setDeleteDialogShow(false)}
       />
-    </view>
+    </>
   )
 }

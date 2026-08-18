@@ -1,36 +1,7 @@
-.server-list {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background-color: var(--canvas);
-}
 
-.server-list__topbar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: 12px 16px;
-  gap: 12px;
-  border-bottom: 1px solid var(--line);
-}
-
-.server-list__back {
-  padding: 4px;
-}
-
-.server-list__title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--content);
-  flex: 1;
-}
 
 .server-list__add {
   padding: 4px;
-}
-
-.server-list__scroll {
-  flex: 1;
 }
 
 .server-list__content {

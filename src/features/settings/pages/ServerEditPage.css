@@ -1,32 +1,4 @@
-.server-edit {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background-color: var(--canvas);
-}
 
-.server-edit__topbar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: 12px 16px;
-  gap: 12px;
-  border-bottom: 1px solid var(--line);
-}
-
-.server-edit__back {
-  padding: 4px;
-}
-
-.server-edit__title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--content);
-}
-
-.server-edit__scroll {
-  flex: 1;
-}
 
 .server-edit__content {
   padding: 16px;

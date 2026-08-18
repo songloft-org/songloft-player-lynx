@@ -16,6 +16,7 @@ import { TRANSCODE_FORMATS, TRANSCODE_QUALITIES } from '../domain/cache-model.js
 import type { DirValidateResponse } from '../domain/cache-model.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
+import { SubPageShell } from '../widgets/SubPageShell.js'
 import './CacheManagePage.css'
 
 /**
@@ -92,201 +93,193 @@ export function CacheManagePage() {
   const stats = statsQuery.data
 
   return (
-    <view className='cache-manage'>
-      <view className='cache-manage__topbar'>
-        <view className='cache-manage__back' bindtap={goBack} data-testid='cache-back'>
-          <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
-        </view>
-        <text className='cache-manage__title'>
-          {t('cacheManage.title')}
-        </text>
-      </view>
+    <SubPageShell
+      title={t('cacheManage.title')}
+      onBack={goBack}
+      backTestId='cache-back'
+      contentClassName='cache-manage__content'
+    >
+      {/* ─── Section 1: Cache Stats (read-only) ─────────────────────── */}
+      <SettingsSection
+        title={t('cacheManage.overviewSection')}
+        icon='info'
+      >
+        <SettingsRow
+          icon='music'
+          title={t('cacheManage.fileCount')}
+          trailingText={stats ? String(stats.fileCount) : '-'}
+          testId='cache-file-count'
+        />
+        <SettingsRow
+          icon='menu'
+          title={t('cacheManage.totalSize')}
+          trailingText={stats ? formatBytes(stats.totalSize) : '-'}
+          testId='cache-total-size'
+        />
+        <SettingsRow
+          icon='settings'
+          title={t('cacheManage.maxSizeLimit')}
+          trailingText={
+            stats
+              ? stats.maxSize === 0
+                ? t('cacheManage.unlimited')
+                : formatBytes(stats.maxSize)
+              : '-'
+          }
+          testId='cache-max-size'
+        />
+        <SettingsRow
+          icon='logout'
+          title={
+            confirmClean
+              ? t('cacheManage.confirmClean')
+              : t('cacheManage.cleanAll')
+          }
+          subtitle={
+            confirmClean
+              ? t('cacheManage.cleanConfirmHint')
+              : undefined
+          }
+          danger
+          onTap={onCleanTap}
+          testId='cache-clean'
+        />
+      </SettingsSection>
 
-      <scroll-view className='cache-manage__scroll' scroll-y>
-        <view className='cache-manage__content'>
-          {/* ─── Section 1: Cache Stats (read-only) ─────────────────────── */}
-          <SettingsSection
-            title={t('cacheManage.overviewSection')}
-            icon='info'
-          >
-            <SettingsRow
-              icon='music'
-              title={t('cacheManage.fileCount')}
-              trailingText={stats ? String(stats.fileCount) : '-'}
-              testId='cache-file-count'
-            />
-            <SettingsRow
-              icon='menu'
-              title={t('cacheManage.totalSize')}
-              trailingText={stats ? formatBytes(stats.totalSize) : '-'}
-              testId='cache-total-size'
-            />
-            <SettingsRow
-              icon='settings'
-              title={t('cacheManage.maxSizeLimit')}
-              trailingText={
-                stats
-                  ? stats.maxSize === 0
-                    ? t('cacheManage.unlimited')
-                    : formatBytes(stats.maxSize)
-                  : '-'
-              }
-              testId='cache-max-size'
-            />
-            <SettingsRow
-              icon='logout'
-              title={
-                confirmClean
-                  ? t('cacheManage.confirmClean')
-                  : t('cacheManage.cleanAll')
-              }
-              subtitle={
-                confirmClean
-                  ? t('cacheManage.cleanConfirmHint')
-                  : undefined
-              }
-              danger
-              onTap={onCleanTap}
-              testId='cache-clean'
-            />
-          </SettingsSection>
-
-          {/* ─── Section 2: Cache Config (editable) ─────────────────────── */}
-          <SettingsSection
-            title={t('cacheManage.configSection')}
-            icon='settings'
-          >
-            {/* Cache directory */}
-            <view className='cache-manage__field'>
-              <text className='cache-manage__label'>
-                {t('cacheManage.cacheDir')}
-              </text>
-              <Input
-                className='cache-manage__input'
-                type='text'
-                placeholder={config?.defaultCacheDir || '/tmp/cache'}
-                value={effectiveCacheDir}
-                onInput={(value) => setCacheDir(value)}
-                data-testid='cache-dir-input'
-              />
-              {config?.defaultCacheDir
-                ? (
-                  <text className='cache-manage__validate-info'>
-                    {t('cacheManage.defaultPrefix')}{config.defaultCacheDir}
-                  </text>
-                )
-                : null}
-              <view className='cache-manage__row-actions'>
-                <view
-                  className='cache-manage__btn cache-manage__btn--secondary'
-                  bindtap={onValidateDir}
-                  data-testid='cache-validate-btn'
-                >
-                  <text className='cache-manage__btn-text cache-manage__btn-text--secondary'>
-                    {t('cacheManage.validate')}
-                  </text>
-                </view>
-              </view>
-            </view>
-
-            {/* Max cache size */}
-            <view className='cache-manage__field'>
-              <text className='cache-manage__label'>
-                {t('cacheManage.maxSizeLabel')}
-              </text>
-              <Input
-                className='cache-manage__input'
-                type='text'
-                placeholder='0'
-                value={effectiveMaxSize}
-                onInput={(value) => setMaxSize(value)}
-                data-testid='cache-max-size-input'
-              />
-            </view>
-
-            {/* Transcode format selector */}
-            <view className='cache-manage__field cache-manage__field--rows'>
-              <text className='cache-manage__label'>
-                {t('cacheManage.transcodeFormat')}
-              </text>
-              {TRANSCODE_FORMATS.map((fmt) => (
-                <SettingsRow
-                  key={fmt || '__none'}
-                  title={fmt === '' ? t('cacheManage.noTranscode') : fmt.toUpperCase()}
-                  selected={effectiveFormat === fmt}
-                  trailingIcon={effectiveFormat === fmt ? 'check' : undefined}
-                  onTap={() => setTranscodeFormat(fmt)}
-                  testId={`format-${fmt || 'none'}`}
-                />
-              ))}
-            </view>
-
-            {/* Transcode quality selector */}
-            <view className='cache-manage__field cache-manage__field--rows'>
-              <text className='cache-manage__label'>
-                {t('cacheManage.transcodeQuality')}
-              </text>
-              {TRANSCODE_QUALITIES.map((q) => (
-                <SettingsRow
-                  key={q}
-                  title={`${q} kbps`}
-                  selected={effectiveQuality === q}
-                  trailingIcon={effectiveQuality === q ? 'check' : undefined}
-                  onTap={() => setTranscodeQuality(q)}
-                  testId={`quality-${q}`}
-                />
-              ))}
-            </view>
-
-            {/* Save button */}
-            <view
-              className='cache-manage__save'
-              bindtap={onSave}
-              data-testid='cache-save'
-            >
-              <text className='cache-manage__save-text'>
-                {t('cacheManage.saveConfig')}
-              </text>
-            </view>
-          </SettingsSection>
-
-          {/* ─── Section 3: Directory Validation Result ──────────────────── */}
-          {validateResult
+      {/* ─── Section 2: Cache Config (editable) ─────────────────────── */}
+      <SettingsSection
+        title={t('cacheManage.configSection')}
+        icon='settings'
+      >
+        {/* Cache directory */}
+        <view className='cache-manage__field'>
+          <text className='cache-manage__label'>
+            {t('cacheManage.cacheDir')}
+          </text>
+          <Input
+            className='cache-manage__input'
+            type='text'
+            placeholder={config?.defaultCacheDir || '/tmp/cache'}
+            value={effectiveCacheDir}
+            onInput={(value) => setCacheDir(value)}
+            data-testid='cache-dir-input'
+          />
+          {config?.defaultCacheDir
             ? (
-              <SettingsSection
-                title={t('cacheManage.validationSection')}
-                icon='info'
-              >
-                <view className='cache-manage__validate-result' data-testid='validate-result'>
-                  {validateResult.valid
-                    ? (
-                      <text className='cache-manage__validate-ok'>
-                        {t('cacheManage.dirValid')}
-                        {validateResult.created
-                          ? ` (${t('cacheManage.dirCreated')})`
-                          : ''}
-                      </text>
-                    )
-                    : (
-                      <text className='cache-manage__validate-err'>
-                        {t('cacheManage.dirInvalid')}
-                        {validateResult.error
-                          ? `: ${validateResult.error}`
-                          : ''}
-                      </text>
-                    )}
-                  <text className='cache-manage__validate-info'>
-                    {t('cacheManage.totalSpacePrefix')}{formatBytes(validateResult.totalSize)}
-                  </text>
-                  <text className='cache-manage__validate-info'>
-                    {t('cacheManage.freeSpacePrefix')}{formatBytes(validateResult.freeSize)}
-                  </text>
-                </view>
-              </SettingsSection>
+              <text className='cache-manage__validate-info'>
+                {t('cacheManage.defaultPrefix')}{config.defaultCacheDir}
+              </text>
             )
             : null}
+          <view className='cache-manage__row-actions'>
+            <view
+              className='cache-manage__btn cache-manage__btn--secondary'
+              bindtap={onValidateDir}
+              data-testid='cache-validate-btn'
+            >
+              <text className='cache-manage__btn-text cache-manage__btn-text--secondary'>
+                {t('cacheManage.validate')}
+              </text>
+            </view>
+          </view>
         </view>
-      </scroll-view>
-    </view>
+
+        {/* Max cache size */}
+        <view className='cache-manage__field'>
+          <text className='cache-manage__label'>
+            {t('cacheManage.maxSizeLabel')}
+          </text>
+          <Input
+            className='cache-manage__input'
+            type='text'
+            placeholder='0'
+            value={effectiveMaxSize}
+            onInput={(value) => setMaxSize(value)}
+            data-testid='cache-max-size-input'
+          />
+        </view>
+
+        {/* Transcode format selector */}
+        <view className='cache-manage__field cache-manage__field--rows'>
+          <text className='cache-manage__label'>
+            {t('cacheManage.transcodeFormat')}
+          </text>
+          {TRANSCODE_FORMATS.map((fmt) => (
+            <SettingsRow
+              key={fmt || '__none'}
+              title={fmt === '' ? t('cacheManage.noTranscode') : fmt.toUpperCase()}
+              selected={effectiveFormat === fmt}
+              trailingIcon={effectiveFormat === fmt ? 'check' : undefined}
+              onTap={() => setTranscodeFormat(fmt)}
+              testId={`format-${fmt || 'none'}`}
+            />
+          ))}
+        </view>
+
+        {/* Transcode quality selector */}
+        <view className='cache-manage__field cache-manage__field--rows'>
+          <text className='cache-manage__label'>
+            {t('cacheManage.transcodeQuality')}
+          </text>
+          {TRANSCODE_QUALITIES.map((q) => (
+            <SettingsRow
+              key={q}
+              title={`${q} kbps`}
+              selected={effectiveQuality === q}
+              trailingIcon={effectiveQuality === q ? 'check' : undefined}
+              onTap={() => setTranscodeQuality(q)}
+              testId={`quality-${q}`}
+            />
+          ))}
+        </view>
+
+        {/* Save button */}
+        <view
+          className='cache-manage__save'
+          bindtap={onSave}
+          data-testid='cache-save'
+        >
+          <text className='cache-manage__save-text'>
+            {t('cacheManage.saveConfig')}
+          </text>
+        </view>
+      </SettingsSection>
+
+      {/* ─── Section 3: Directory Validation Result ──────────────────── */}
+      {validateResult
+        ? (
+          <SettingsSection
+            title={t('cacheManage.validationSection')}
+            icon='info'
+          >
+            <view className='cache-manage__validate-result' data-testid='validate-result'>
+              {validateResult.valid
+                ? (
+                  <text className='cache-manage__validate-ok'>
+                    {t('cacheManage.dirValid')}
+                    {validateResult.created
+                      ? ` (${t('cacheManage.dirCreated')})`
+                      : ''}
+                  </text>
+                )
+                : (
+                  <text className='cache-manage__validate-err'>
+                    {t('cacheManage.dirInvalid')}
+                    {validateResult.error
+                      ? `: ${validateResult.error}`
+                      : ''}
+                  </text>
+                )}
+              <text className='cache-manage__validate-info'>
+                {t('cacheManage.totalSpacePrefix')}{formatBytes(validateResult.totalSize)}
+              </text>
+              <text className='cache-manage__validate-info'>
+                {t('cacheManage.freeSpacePrefix')}{formatBytes(validateResult.freeSize)}
+              </text>
+            </view>
+          </SettingsSection>
+        )
+        : null}
+    </SubPageShell>
   )
 }

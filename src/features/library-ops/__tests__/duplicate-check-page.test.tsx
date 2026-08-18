@@ -92,8 +92,8 @@ beforeEach(() => {
 
 afterEach(() => vi.clearAllMocks())
 
-async function renderPage() {
-  render(<DuplicateCheckPage />)
+async function renderPage(props: { onBack?: () => void } = {}) {
+  render(<DuplicateCheckPage {...props} />)
   await act(async () => {
     await Promise.resolve()
   })
@@ -226,12 +226,24 @@ test('results phase shows groups', async () => {
 
 /* ─── Navigation ──────────────────────────────────────────────────────────── */
 
-test('back button navigates to /settings', async () => {
+test('back button returns to the library page it was opened from', async () => {
+  // Not `/settings`: this page is only reachable through Music Library, so going
+  // straight to the settings root skipped a level on the way back out.
   const { queryByTestId } = await renderPage()
   await act(async () => {
     fireEvent.tap(queryByTestId('dup-check-back')!)
   })
-  expect(h.navigateSpy).toHaveBeenCalledWith({ to: '/settings' })
+  expect(h.navigateSpy).toHaveBeenCalledWith({ to: '/settings/library' })
+})
+
+test('back defers to onBack inside the settings pane', async () => {
+  const onBack = vi.fn()
+  const { queryByTestId } = await renderPage({ onBack })
+  await act(async () => {
+    fireEvent.tap(queryByTestId('dup-check-back')!)
+  })
+  expect(onBack).toHaveBeenCalledTimes(1)
+  expect(h.navigateSpy).not.toHaveBeenCalled()
 })
 
 /* ─── Error handling ──────────────────────────────────────────────────────── */

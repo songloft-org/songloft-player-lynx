@@ -23,6 +23,7 @@ import { ExcludeDirSection } from '../widgets/ExcludeDirSection.js'
 import { MetadataSection } from '../widgets/MetadataSection.js'
 import { ScanSection } from '../widgets/ScanSection.js'
 import { ScanSettingsSection } from '../widgets/ScanSettingsSection.js'
+import { SubPageShell } from '../../settings/widgets/SubPageShell.js'
 import './LibraryOpsPage.css'
 
 /**
@@ -31,15 +32,23 @@ import './LibraryOpsPage.css'
  * long-standing disabled "Music library scan" placeholder in Settings.
  *
  * Ported from the Flutter `ScanManager` + `MetadataRefreshManager` +
- * `ExcludeDirManager` (`features/settings/presentation/widgets/`). Deliberately
- * **not** ported: duplicate detection and cache management (see PROGRESS for
- * their batch assignment).
+ * `ExcludeDirManager` (`features/settings/presentation/widgets/`).
  *
  * All ephemeral state lives here rather than in a store: it is page-scoped, and
  * a module-level store would leak the previous visit's selection (or a previous
  * server's directory listing) into the next one.
  */
-export function LibraryOpsPage() {
+export interface LibraryOpsPageProps {
+  /**
+   * Open duplicate detection without a route navigation. The settings detail pane
+   * passes this so the drill-in stays *inside* the pane — routing to
+   * `/settings/duplicates` would unmount the whole master–detail page and drop the
+   * settings list, which is the same bug 53fb045 fixed for the plugin store.
+   */
+  onOpenDuplicates?: () => void
+}
+
+export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
@@ -206,107 +215,99 @@ export function LibraryOpsPage() {
   }
 
   return (
-    <view className='libops'>
-      <view className='libops__topbar'>
-        <view
-          className='libops__back'
-          bindtap={() => void navigate({ to: '/settings' })}
-          data-testid='libops-back'
-        >
-          <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
-        </view>
-        <text className='libops__title'>{t('libops.pageTitle')}</text>
-      </view>
+    <SubPageShell
+      title={t('libops.pageTitle')}
+      backTestId='libops-back'
+      contentClassName='libops__content'
+    >
+      {/* Lynx has no toast/snackbar primitive, so write failures surface as
+          a dismissible inline banner (the Flutter version used a snackbar). */}
+      {writeError
+        ? (
+          <view className='libops__banner' data-testid='libops-write-error'>
+            <Icon name='warning' size={18} color={ICON_COLORS.danger} />
+            <text className='libops__banner-text'>{t('libops.saveFailed', { error: '' })}</text>
+            <view
+              className='libops__banner-close'
+              bindtap={() => setWriteError(false)}
+              data-testid='libops-write-error-dismiss'
+            >
+              <Icon name='x' size={16} color={ICON_COLORS.content2} />
+            </view>
+          </view>
+        )
+        : null}
 
-      <scroll-view className='libops__scroll' scroll-y>
-        <view className='libops__content'>
-          {/* Lynx has no toast/snackbar primitive, so write failures surface as
-              a dismissible inline banner (the Flutter version used a snackbar). */}
-          {writeError
-            ? (
-              <view className='libops__banner' data-testid='libops-write-error'>
-                <Icon name='warning' size={18} color={ICON_COLORS.danger} />
-                <text className='libops__banner-text'>{t('libops.saveFailed', { error: '' })}</text>
-                <view
-                  className='libops__banner-close'
-                  bindtap={() => setWriteError(false)}
-                  data-testid='libops-write-error-dismiss'
-                >
-                  <Icon name='x' size={16} color={ICON_COLORS.content2} />
-                </view>
-              </view>
-            )
-            : null}
+      <ScanSection
+        progress={progress}
+        startError={startError}
+        starting={startScan.isPending}
+        cancelling={cancelScan.isPending}
+        mode={mode}
+        onModeChange={setMode}
+        dismissed={scanDismissed}
+        selectedPaths={selectedPaths}
+        onTogglePath={(path) => setSelectedPaths((prev) => toggleSelected(prev, path))}
+        onClearPaths={() => setSelectedPaths([])}
+        onStart={onStartScan}
+        onCancel={onCancelScan}
+        onReset={onResetScan}
+        tree={tree}
+        treeActions={treeActions}
+      />
 
-          <ScanSection
-            progress={progress}
-            startError={startError}
-            starting={startScan.isPending}
-            cancelling={cancelScan.isPending}
-            mode={mode}
-            onModeChange={setMode}
-            dismissed={scanDismissed}
-            selectedPaths={selectedPaths}
-            onTogglePath={(path) => setSelectedPaths((prev) => toggleSelected(prev, path))}
-            onClearPaths={() => setSelectedPaths([])}
-            onStart={onStartScan}
-            onCancel={onCancelScan}
-            onReset={onResetScan}
-            tree={tree}
-            treeActions={treeActions}
-          />
+      <ScanSettingsSection onWriteError={() => setWriteError(true)} />
 
-          <ScanSettingsSection onWriteError={() => setWriteError(true)} />
+      <ExcludeDirSection onWriteError={() => setWriteError(true)} />
 
-          <ExcludeDirSection onWriteError={() => setWriteError(true)} />
+      <MetadataSection
+        progress={metaProgress}
+        starting={startMeta.isPending}
+        cancelling={cancelMeta.isPending}
+        onStart={onStartMeta}
+        onCancel={onCancelMeta}
+        onWriteError={() => setWriteError(true)}
+      />
 
-          <MetadataSection
-            progress={metaProgress}
-            starting={startMeta.isPending}
-            cancelling={cancelMeta.isPending}
-            onStart={onStartMeta}
-            onCancel={onCancelMeta}
-            onWriteError={() => setWriteError(true)}
-          />
-
-          {/*
-            These two were hand-rolled bare cards (`.libops__dup-entry`): no
-            horizontal margin, so they sat 32px wider than every `SettingsSection`
-            card above them; 12px of vertical padding against the 16px a
-            `.settings-row` uses; their own border each, so the pair showed a
-            doubled hairline where they met; and no section header. Rendering them
-            through the same section/row widgets as the rest of the page is what
-            makes them line up.
-          */}
-          <SettingsSection title={t('libops.maintenanceSection')} icon='settings'>
-            <SettingsRow
-              icon='fingerprint'
-              title={t('libops.duplicateDetection')}
-              trailingIcon='chevron-right'
-              onTap={() => void navigate({ to: '/settings/duplicates' })}
-              testId='libops-duplicates'
-            />
-            <SettingsRow
-              icon='stop'
-              title={t('libops.cleanInvalid')}
-              // The result used to be a loose line of text under the card; as the
-              // row's own subtitle it reads as belonging to the action.
-              subtitle={cleaning ? t('common.loading') : cleanResult ?? undefined}
-              danger
-              disabled={cleaning}
-              onTap={() => {
-                setCleaning(true)
-                setCleanResult(null)
-                void getSongsApi().cleanInvalidSongs()
-                  .then(r => setCleanResult(t('libops.cleanResult', { count: r.cleaned })))
-                  .catch(() => setCleanResult(t('libops.cleanFailed')))
-                  .finally(() => setCleaning(false))
-              }}
-              testId='libops-clean-invalid'
-            />
-          </SettingsSection>
-        </view>
-      </scroll-view>
-    </view>
+      {/*
+        These two were hand-rolled bare cards (`.libops__dup-entry`): no
+        horizontal margin, so they sat 32px wider than every `SettingsSection`
+        card above them; 12px of vertical padding against the 16px a
+        `.settings-row` uses; their own border each, so the pair showed a
+        doubled hairline where they met; and no section header. Rendering them
+        through the same section/row widgets as the rest of the page is what
+        makes them line up.
+      */}
+      <SettingsSection title={t('libops.maintenanceSection')} icon='settings'>
+        <SettingsRow
+          icon='fingerprint'
+          title={t('libops.duplicateDetection')}
+          trailingIcon='chevron-right'
+          onTap={() => {
+            if (onOpenDuplicates) onOpenDuplicates()
+            else void navigate({ to: '/settings/duplicates' })
+          }}
+          testId='libops-duplicates'
+        />
+        <SettingsRow
+          icon='stop'
+          title={t('libops.cleanInvalid')}
+          // The result used to be a loose line of text under the card; as the
+          // row's own subtitle it reads as belonging to the action.
+          subtitle={cleaning ? t('common.loading') : cleanResult ?? undefined}
+          danger
+          disabled={cleaning}
+          onTap={() => {
+            setCleaning(true)
+            setCleanResult(null)
+            void getSongsApi().cleanInvalidSongs()
+              .then(r => setCleanResult(t('libops.cleanResult', { count: r.cleaned })))
+              .catch(() => setCleanResult(t('libops.cleanFailed')))
+              .finally(() => setCleaning(false))
+          }}
+          testId='libops-clean-invalid'
+        />
+      </SettingsSection>
+    </SubPageShell>
   )
 }

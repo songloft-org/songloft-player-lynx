@@ -15,6 +15,7 @@ import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import { SubPageEmbedContext } from '../widgets/SubPageShell.js'
+import { DuplicateCheckPage } from '../../library-ops/pages/DuplicateCheckPage.js'
 import { LibraryOpsPage } from '../../library-ops/pages/LibraryOpsPage.js'
 import { PluginManagerPage } from '../../jsplugin/pages/PluginManagerPage.js'
 import { PluginRegistryPage } from '../../jsplugin/pages/PluginRegistryPage.js'
@@ -53,6 +54,7 @@ type SettingsSubPage =
   | 'eq'
   | 'lyrics'
   | 'library'
+  | 'duplicates'
   | 'browse-views'
   | 'plugins'
   | 'registry'
@@ -220,7 +222,9 @@ export function SettingsPage() {
                 title={t('libops.pageTitle')}
                 subtitle={t('libops.entrySubtitle')}
                 trailingIcon='chevron-right'
-                selected={isActive('library')}
+                // Duplicate detection is reached *through* this page, so keep the
+                // row lit while the pane shows it.
+                selected={isActive('library') || (isDualColumn && activeSubPage === 'duplicates')}
                 onTap={() => goToSubPage('library', '/settings/library')}
                 testId='settings-library-ops'
               />
@@ -404,7 +408,9 @@ function SettingsDetailPane({
     case 'lyrics':
       return <LyricsPage />
     case 'library':
-      return <LibraryOpsPage />
+      return <LibraryOpsPage onOpenDuplicates={() => onOpenSubPage('duplicates')} />
+    case 'duplicates':
+      return <DuplicateCheckPage onBack={() => onOpenSubPage('library')} />
     case 'browse-views':
       return <BrowseViewsPage />
     case 'plugins':
