@@ -11,6 +11,7 @@ import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
+import { SubPageShell } from '../widgets/SubPageShell.js'
 import './ProxySettingsPage.css'
 
 /**
@@ -117,101 +118,95 @@ export function ProxySettingsPage() {
   }, [state])
 
   return (
-    <view className='proxy-settings'>
-      <view className='proxy-settings__topbar'>
-        <view className='proxy-settings__back' bindtap={() => void navigate({ to: '/settings' })}>
-          <Icon name='chevron-down' size={20} />
+    <SubPageShell
+      title={t('proxy.title')}
+      backTestId='proxy-back'
+    >
+      {loading ? (
+        <view className='proxy-settings__status'>
+          <text className='proxy-settings__status-text'>{t('common.loading')}</text>
         </view>
-        <text className='proxy-settings__title'>{t('proxy.title')}</text>
-      </view>
+      ) : (
+        <view className='proxy-settings__content'>
+          <SettingsSection title={t('proxy.httpSection')} icon='link'>
+            <view className='proxy-settings__field'>
+              <Input
+                className='proxy-settings__input'
+                value={state.httpProxy}
+                placeholder='http://proxy:8080'
+                onInput={(value: string) => setState(s => ({ ...s, httpProxy: value }))}
+              />
+            </view>
+          </SettingsSection>
 
-      <scroll-view className='proxy-settings__scroll' scroll-y>
-        {loading ? (
-          <view className='proxy-settings__status'>
-            <text className='proxy-settings__status-text'>{t('common.loading')}</text>
-          </view>
-        ) : (
-          <view className='proxy-settings__content'>
-            <SettingsSection title={t('proxy.httpSection')} icon='link'>
-              <view className='proxy-settings__field'>
-                <Input
-                  className='proxy-settings__input'
-                  value={state.httpProxy}
-                  placeholder='http://proxy:8080'
-                  onInput={(value: string) => setState(s => ({ ...s, httpProxy: value }))}
-                />
-              </view>
-            </SettingsSection>
-
-            <SettingsSection title={t('proxy.githubSection')} icon='link'>
-              <view className='proxy-settings__field'>
-                <Input
-                  className='proxy-settings__input'
-                  value={state.githubProxy}
-                  placeholder='http://proxy:8080'
-                  onInput={(value: string) => setState(s => ({ ...s, githubProxy: value }))}
-                />
-                {/*
-                  Finding a working mirror is the hard part of this field — they
-                  come and go — so the reference offers the prompt rather than a
-                  preset list that would rot. Same affordance here.
-                */}
-                <view
-                  className='proxy-settings__prompt-btn'
-                  bindtap={() => {
-                    copyToClipboard(AI_PROMPT)
-                    setPromptCopied(true)
-                    setTimeout(() => setPromptCopied(false), 2000)
-                  }}
-                  data-testid='github-copy-prompt'
-                >
-                  <Icon name='info' size={14} color={ICON_COLORS.primary} />
-                  <text className='proxy-settings__prompt-text'>
-                    {promptCopied ? t('proxy.githubPromptCopied') : t('proxy.githubCopyPrompt')}
-                  </text>
-                </view>
-              </view>
-            </SettingsSection>
-
-            <SettingsSection title={t('proxy.hlsSection')} icon='link'>
-              <view className='proxy-settings__switch-row'>
-                <text className='proxy-settings__switch-label'>{t('proxy.hlsEnable')}</text>
-                <AppSwitch
-                  checked={state.hlsEnabled}
-                  onChange={(checked) => setState(s => ({ ...s, hlsEnabled: checked }))}
-                />
-              </view>
-            </SettingsSection>
-
-            <SettingsSection title={t('proxy.allowlistSection')} icon='link'>
-              <view className='proxy-settings__field'>
-                {/*
-                  A `TextArea`, not an `Input`: `save` splits this value on `\n`
-                  and the placeholder asks for one entry per line, but a
-                  single-line `<input>` cannot hold a newline — so only ever one
-                  entry could be entered. `maxLength` too, because the shared
-                  default of 140 caps the list at roughly eight CIDRs.
-                */}
-                <TextArea
-                  className='proxy-settings__input proxy-settings__input--tall'
-                  value={state.allowlist}
-                  placeholder={t('proxy.allowlistPlaceholder')}
-                  maxLength={2000}
-                  onInput={(value: string) => setState(s => ({ ...s, allowlist: value }))}
-                />
-              </view>
-            </SettingsSection>
-
-            <view className='proxy-settings__save-area'>
-              <view className='proxy-settings__save-btn' bindtap={save}>
-                <text className='proxy-settings__save-text'>
-                  {saved ? t('proxy.saved') : t('proxy.save')}
+          <SettingsSection title={t('proxy.githubSection')} icon='link'>
+            <view className='proxy-settings__field'>
+              <Input
+                className='proxy-settings__input'
+                value={state.githubProxy}
+                placeholder='http://proxy:8080'
+                onInput={(value: string) => setState(s => ({ ...s, githubProxy: value }))}
+              />
+              {/*
+                Finding a working mirror is the hard part of this field — they
+                come and go — so the reference offers the prompt rather than a
+                preset list that would rot. Same affordance here.
+              */}
+              <view
+                className='proxy-settings__prompt-btn'
+                bindtap={() => {
+                  copyToClipboard(AI_PROMPT)
+                  setPromptCopied(true)
+                  setTimeout(() => setPromptCopied(false), 2000)
+                }}
+                data-testid='github-copy-prompt'
+              >
+                <Icon name='info' size={14} color={ICON_COLORS.primary} />
+                <text className='proxy-settings__prompt-text'>
+                  {promptCopied ? t('proxy.githubPromptCopied') : t('proxy.githubCopyPrompt')}
                 </text>
               </view>
             </view>
+          </SettingsSection>
+
+          <SettingsSection title={t('proxy.hlsSection')} icon='link'>
+            <view className='proxy-settings__switch-row'>
+              <text className='proxy-settings__switch-label'>{t('proxy.hlsEnable')}</text>
+              <AppSwitch
+                checked={state.hlsEnabled}
+                onChange={(checked) => setState(s => ({ ...s, hlsEnabled: checked }))}
+              />
+            </view>
+          </SettingsSection>
+
+          <SettingsSection title={t('proxy.allowlistSection')} icon='link'>
+            <view className='proxy-settings__field'>
+              {/*
+                A `TextArea`, not an `Input`: `save` splits this value on `\n`
+                and the placeholder asks for one entry per line, but a
+                single-line `<input>` cannot hold a newline — so only ever one
+                entry could be entered. `maxLength` too, because the shared
+                default of 140 caps the list at roughly eight CIDRs.
+              */}
+              <TextArea
+                className='proxy-settings__input proxy-settings__input--tall'
+                value={state.allowlist}
+                placeholder={t('proxy.allowlistPlaceholder')}
+                maxLength={2000}
+                onInput={(value: string) => setState(s => ({ ...s, allowlist: value }))}
+              />
+            </view>
+          </SettingsSection>
+
+          <view className='proxy-settings__save-area'>
+            <view className='proxy-settings__save-btn' bindtap={save}>
+              <text className='proxy-settings__save-text'>
+                {saved ? t('proxy.saved') : t('proxy.save')}
+              </text>
+            </view>
           </view>
-        )}
-      </scroll-view>
-    </view>
+        </view>
+      )}
+    </SubPageShell>
   )
 }

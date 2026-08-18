@@ -1,32 +1,4 @@
-.eq-page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background-color: var(--canvas);
-}
 
-.eq-page__topbar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: 12px 16px;
-  gap: 12px;
-  border-bottom: 1px solid var(--line);
-}
-
-.eq-page__back {
-  padding: 4px;
-}
-
-.eq-page__title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--content);
-}
-
-.eq-page__scroll {
-  flex: 1;
-}
 
 .eq-page__content {
   padding: 16px;

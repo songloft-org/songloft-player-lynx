@@ -7,6 +7,7 @@ import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { RegistryPluginEntry } from '../../../models/jsplugin.js'
 import { getJSPluginApi } from '../api/index.js'
 import { useInstallFromRegistryMutation } from '../data/jsplugin-mutations.js'
+import { SubPageShell } from '../../settings/widgets/SubPageShell.js'
 import './PluginRegistryPage.css'
 
 export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
@@ -88,18 +89,14 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
   const hasPrev = page > 1
 
   return (
-    <view className='plugin-registry'>
-      <view className='plugin-registry__topbar'>
-        <view
-          className='plugin-registry__back'
-          bindtap={goBack}
-          data-testid='registry-back'
-        >
-          <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
-        </view>
-        <text className='plugin-registry__title'>{t('jsplugin.registryTitle')}</text>
-      </view>
-
+    <SubPageShell
+      title={t('jsplugin.registryTitle')}
+      onBack={goBack}
+      backTestId='registry-back'
+      // The search bar stays pinned above the results, so this page keeps its own
+      // scroll container rather than letting the shell wrap everything.
+      scrollable={false}
+    >
       <view className='plugin-registry__search'>
         <Input
           className='plugin-registry__search-input'
@@ -196,7 +193,7 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
           </view>
         )
         : null}
-    </view>
+    </SubPageShell>
   )
 }
 

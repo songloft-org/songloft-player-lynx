@@ -1,29 +1,4 @@
-.plugin-registry {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  background-color: var(--canvas);
-}
 
-.plugin-registry__topbar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: var(--space-3) var(--space-4);
-  gap: var(--space-3);
-}
-
-.plugin-registry__back {
-  padding: var(--space-1);
-}
-
-.plugin-registry__title {
-  flex: 1;
-  font-size: var(--font-lg);
-  font-weight: 600;
-  color: var(--content);
-}
 
 .plugin-registry__search {
   display: flex;

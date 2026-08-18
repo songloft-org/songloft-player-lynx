@@ -19,6 +19,7 @@ import {
 } from '../domain/eq-slider.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
 import { useEqStore } from '../store/eq-store.js'
+import { SubPageShell } from '../widgets/SubPageShell.js'
 import './EqualizerPage.css'
 
 /**
@@ -221,68 +222,69 @@ export function EqualizerPage() {
   }
 
   return (
-    <view className='eq-page'>
-      <view className='eq-page__topbar'>
-        <view className='eq-page__back' bindtap={goBack} data-testid='eq-back'>
-          <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
-        </view>
-        <text className='eq-page__title'>{t('eq.title')}</text>
+    <SubPageShell
+      title={t('eq.title')}
+      onBack={goBack}
+      backTestId='eq-back'
+      contentClassName='eq-page__content'
+    >
+      {/* Enable toggle */}
+      <view className='eq-page__toggle-row'>
+        <text className='eq-page__toggle-label'>{t('eq.enabled')}</text>
+        <AppSwitch
+          checked={enabled}
+          onChange={() => useEqStore.getState().toggle()}
+        />
       </view>
 
-      <scroll-view className='eq-page__scroll' scroll-y>
-        <view className='eq-page__content'>
-          {/* Enable toggle */}
-          <view className='eq-page__toggle-row'>
-            <text className='eq-page__toggle-label'>{t('eq.enabled')}</text>
-            <AppSwitch
-              checked={enabled}
-              onChange={() => useEqStore.getState().toggle()}
-            />
-          </view>
-
-          {/* Preset chips */}
-          <view className='eq-page__presets'>
-            {EQ_PRESET_NAMES.map((name) => (
-              <view
-                key={name}
-                className={
-                  activePreset === name
-                    ? 'eq-page__chip eq-page__chip--active'
-                    : 'eq-page__chip'
-                }
-                bindtap={() => useEqStore.getState().selectPreset(name)}
-                data-testid={`eq-preset-${name}`}
-              >
-                <text className='eq-page__chip-text'>
-                  {presetLabel(name, t)}
-                </text>
-              </view>
-            ))}
-          </view>
-
-          {/* 10-band vertical sliders */}
-          <view className='eq-page__bands'>
-            {EQ_CENTER_FREQS.map((hz, i) => (
-              <BandSlider
-                key={hz}
-                hz={hz}
-                gainDb={bands[i]}
-                isWeb={isWeb}
-                onChange={(v) => useEqStore.getState().adjustBand(i, Math.round(sliderToGain(v)))}
-              />
-            ))}
-          </view>
-
-          {/* Reset button */}
+      {/* Preset chips */}
+      <view className='eq-page__presets'>
+        {EQ_PRESET_NAMES.map((name) => (
           <view
-            className='eq-page__reset'
-            bindtap={() => useEqStore.getState().reset()}
-            data-testid='eq-reset'
+            key={name}
+            className={
+              activePreset === name
+                ? 'eq-page__chip eq-page__chip--active'
+                : 'eq-page__chip'
+            }
+            bindtap={() => useEqStore.getState().selectPreset(name)}
+            data-testid={`eq-preset-${name}`}
           >
-            <text className='eq-page__reset-text'>{t('eq.reset')}</text>
+            <text className='eq-page__chip-text'>
+              {presetLabel(name, t)}
+            </text>
           </view>
-        </view>
-      </scroll-view>
-    </view>
+        ))}
+      </view>
+
+      {/*
+        10-band vertical sliders. The shell adds one wrapper around this content,
+        which is safe for the drag maths: `invokeBoundingRect` measures the track
+        itself and both it and the pointer Y are **viewport**-relative, so no
+        ancestor's position enters the calculation — and the track is re-measured
+        on every pointer-down anyway (scrolling moves it). Still worth a real
+        device pass, since no test can drive a native gesture.
+      */}
+      <view className='eq-page__bands'>
+        {EQ_CENTER_FREQS.map((hz, i) => (
+          <BandSlider
+            key={hz}
+            hz={hz}
+            gainDb={bands[i]}
+            isWeb={isWeb}
+            onChange={(v) => useEqStore.getState().adjustBand(i, Math.round(sliderToGain(v)))}
+          />
+        ))}
+      </view>
+
+      {/* Reset button */}
+      <view
+        className='eq-page__reset'
+        bindtap={() => useEqStore.getState().reset()}
+        data-testid='eq-reset'
+      >
+        <text className='eq-page__reset-text'>{t('eq.reset')}</text>
+      </view>
+    </SubPageShell>
   )
 }

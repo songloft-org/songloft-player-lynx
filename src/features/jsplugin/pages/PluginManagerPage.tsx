@@ -13,6 +13,7 @@ import {
   useDeletePluginMutation,
   useUpdateAllPluginsMutation,
 } from '../data/jsplugin-mutations.js'
+import { SubPageShell } from '../../settings/widgets/SubPageShell.js'
 import './PluginManagerPage.css'
 
 export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void }) {
@@ -98,50 +99,44 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
   }
 
   return (
-    <view className='plugin-manager'>
-      <view className='plugin-manager__topbar'>
-        <view
-          className='plugin-manager__back'
-          bindtap={() => navigate({ to: '/settings' })}
-          data-testid='plugins-back'
-        >
-          <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
-        </view>
-        <text className='plugin-manager__title'>{t('jsplugin.managerTitle')}</text>
-        <view className='plugin-manager__topbar-actions'>
-          <view className='plugin-manager__action-btn' bindtap={onInstallFromFile} data-testid='plugins-upload'>
-            <text className='plugin-manager__action-text'>
-              {installing ? t('common.loading') : t('jsplugin.installFromFile')}
-            </text>
+    <>
+      <SubPageShell
+        title={t('jsplugin.managerTitle')}
+        backTestId='plugins-back'
+        actions={(
+          <view className='plugin-manager__topbar-actions'>
+            <view className='plugin-manager__action-btn' bindtap={onInstallFromFile} data-testid='plugins-upload'>
+              <text className='plugin-manager__action-text'>
+                {installing ? t('common.loading') : t('jsplugin.installFromFile')}
+              </text>
+            </view>
+            <view className='plugin-manager__action-btn' bindtap={onStore} data-testid='plugins-store'>
+              <text className='plugin-manager__action-text'>{t('jsplugin.store')}</text>
+            </view>
+            <view
+              className={updateAllMutation.isPending
+                ? 'plugin-manager__action-btn plugin-manager__action-btn--disabled'
+                : 'plugin-manager__action-btn'}
+              bindtap={onUpdateAll}
+              data-testid='plugins-update-all'
+            >
+              <text className='plugin-manager__action-text'>
+                {updateAllMutation.isPending ? t('common.loading') : t('jsplugin.updateAll')}
+              </text>
+            </view>
           </view>
-          <view className='plugin-manager__action-btn' bindtap={onStore} data-testid='plugins-store'>
-            <text className='plugin-manager__action-text'>{t('jsplugin.store')}</text>
-          </view>
-          <view
-            className={updateAllMutation.isPending
-              ? 'plugin-manager__action-btn plugin-manager__action-btn--disabled'
-              : 'plugin-manager__action-btn'}
-            bindtap={onUpdateAll}
-            data-testid='plugins-update-all'
-          >
-            <text className='plugin-manager__action-text'>
-              {updateAllMutation.isPending ? t('common.loading') : t('jsplugin.updateAll')}
-            </text>
-          </view>
-        </view>
-      </view>
+        )}
+      >
+        {installError
+          ? (
+            <view className='plugin-manager__error' data-testid='plugins-install-error'>
+              <text className='plugin-manager__error-text'>
+                {t('jsplugin.installFailed')}: {installError}
+              </text>
+            </view>
+          )
+          : null}
 
-      {installError
-        ? (
-          <view className='plugin-manager__error' data-testid='plugins-install-error'>
-            <text className='plugin-manager__error-text'>
-              {t('jsplugin.installFailed')}: {installError}
-            </text>
-          </view>
-        )
-        : null}
-
-      <scroll-view className='plugin-manager__scroll' scroll-y>
         {isLoading
           ? <PluginState text={t('common.loading')} testId='plugins-loading' />
           : isError
@@ -182,7 +177,7 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
                   ))}
                 </view>
               )}
-      </scroll-view>
+      </SubPageShell>
 
       <ConfirmDialog
         show={deleteOpen}
@@ -195,7 +190,7 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
         confirmTestId='plugin-delete-confirm'
         cancelTestId='plugin-delete-cancel'
       />
-    </view>
+    </>
   )
 }
 
