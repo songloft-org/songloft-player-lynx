@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { toast } from '../../../shared/ui/toast-store.js'
 import { getSongsApi } from '../../library/api/index.js'
 import {
   useCancelMetadataRefreshMutation,
@@ -55,7 +55,12 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
   const [mode, setMode] = useState<ScanMode>('skip')
   const [selectedPaths, setSelectedPaths] = useState<string[]>([])
   const [startError, setStartError] = useState(false)
-  const [writeError, setWriteError] = useState(false)
+  /**
+   * Shared write-failure notice. Scan-settings / exclude-dir / metadata writes
+   * all report through here; the message is the same generic "save failed" the
+   * old inline banner showed (the Flutter version used a snackbar). Now a toast.
+   */
+  const showWriteError = () => toast.error(t('libops.saveFailed', { error: '' }))
   /**
    * Sticky "we just asked for a scan" flag. The backend may still answer `idle`
    * on the first poll after accepting the job, and a purely data-derived
@@ -199,7 +204,7 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
         metaStartedAtRef.current = Date.now()
         setMetaForced(true)
       },
-      onError: () => setWriteError(true),
+      onError: () => showWriteError(),
     })
   }
 
@@ -209,7 +214,7 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
       onSuccess: () => setMetaPaused(false),
       onError: () => {
         setMetaPaused(false)
-        setWriteError(true)
+        showWriteError()
       },
     })
   }
@@ -220,24 +225,6 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
       backTestId='libops-back'
       contentClassName='libops__content'
     >
-      {/* Lynx has no toast/snackbar primitive, so write failures surface as
-          a dismissible inline banner (the Flutter version used a snackbar). */}
-      {writeError
-        ? (
-          <view className='libops__banner' data-testid='libops-write-error'>
-            <Icon name='warning' size={18} color={ICON_COLORS.danger} />
-            <text className='libops__banner-text'>{t('libops.saveFailed', { error: '' })}</text>
-            <view
-              className='libops__banner-close'
-              bindtap={() => setWriteError(false)}
-              data-testid='libops-write-error-dismiss'
-            >
-              <Icon name='x' size={16} color={ICON_COLORS.content2} />
-            </view>
-          </view>
-        )
-        : null}
-
       <ScanSection
         progress={progress}
         startError={startError}
@@ -256,9 +243,9 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
         treeActions={treeActions}
       />
 
-      <ScanSettingsSection onWriteError={() => setWriteError(true)} />
+      <ScanSettingsSection onWriteError={showWriteError} />
 
-      <ExcludeDirSection onWriteError={() => setWriteError(true)} />
+      <ExcludeDirSection onWriteError={showWriteError} />
 
       <MetadataSection
         progress={metaProgress}
@@ -266,7 +253,7 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
         cancelling={cancelMeta.isPending}
         onStart={onStartMeta}
         onCancel={onCancelMeta}
-        onWriteError={() => setWriteError(true)}
+        onWriteError={showWriteError}
       />
 
       {/*

@@ -110,6 +110,24 @@ export function mockLynxUiInput() {
 }
 
 /**
+ * Mock module for the global `ToastHost`.
+ *
+ * `ToastHost` subscribes to the zustand toast store (`useToastStore((s) => …)`),
+ * and zustand subscribes through `useSyncExternalStore` — the same facility whose
+ * post-mount consistency pass crashes the ReactLynx Vitest snapshot tree (see the
+ * module header and `makeAuthStoreMock`). The host is mounted in the root route,
+ * so every render test that goes through the router evaluates it; standing it in
+ * with a no-op keeps those trees clean. Toast *behaviour* is covered by the store
+ * unit test (`toast-store.test.ts`) and by asserting on `useToastStore.getState()`
+ * in the page tests; the real host ships in build/dev/on-device.
+ */
+export function mockToastHost() {
+  return {
+    ToastHost: () => null,
+  }
+}
+
+/**
  * Mock module for `@lynx-js/lynx-ui-switch` (a native gesture leaf, unmountable
  * in this env).
  *

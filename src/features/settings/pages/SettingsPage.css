@@ -57,10 +57,8 @@
   padding-bottom: var(--space-6);
 }
 
-/* The log-export notice moved to `DiagnosticsPage.css` along with the row that
-   raises it. Both had to move together: Lynx CSS is build-time global, so leaving
-   these rules here would have kept styling the renamed classes' predecessor and
-   the mismatch would only show up on device. */
+/* The log-export notice is now the global toast (shared/ui/ToastHost); the
+   inline banner that used to live here was removed with the row that raised it. */
 
 /* ─── Detail pane (right column in dual-column mode) ─────────────────────── */
 .settings__detail {

@@ -32,9 +32,11 @@ vi.mock('../data/log-export.js', () => ({
 }))
 
 const { DiagnosticsPage } = await import('../pages/DiagnosticsPage.js')
+const { useToastStore, toast } = await import('../../../shared/ui/toast-store.js')
 
 afterEach(() => {
   vi.clearAllMocks()
+  toast.clear()
   delete (globalThis as Record<string, unknown>).NativeModules
 })
 
@@ -89,19 +91,22 @@ test('the export-logs row uses the zip flow when shareFile is available', async 
  * Pins the `{{error}}` interpolation fix. The key used to be written `{error}`
  * (single braces), which i18next emits verbatim — so an export failure showed the
  * literal text "{error}" and the actual reason was lost. With single braces this
- * assertion fails.
+ * assertion fails. The message now lands in the global toast store (rendered by
+ * `ToastHost`, which is covered separately), so we assert on the stored toast.
  */
 test('a failed export reports the reason, not a literal placeholder', async () => {
   ;(globalThis as Record<string, unknown>).NativeModules = {
     SongloftPlatform: { shareFile: () => {} },
   }
   exportLogsActionSpy.mockRejectedValueOnce(new Error('disk full'))
-  const { queryByTestId, queryByText } = await renderPage()
+  const { queryByTestId } = await renderPage()
 
   await act(async () => { fireEvent.tap(queryByTestId('settings-export-logs')!) })
   await act(async () => { await Promise.resolve() })
 
-  expect(queryByTestId('export-logs-notice')).toBeInTheDocument()
-  expect(queryByText(/disk full/)).toBeInTheDocument()
-  expect(queryByText(/\{error\}/)).not.toBeInTheDocument()
+  const shown = useToastStore.getState().toast
+  expect(shown).not.toBeNull()
+  expect(shown?.tone).toBe('error')
+  expect(shown?.text).toContain('disk full')
+  expect(shown?.text).not.toContain('{error}')
 })

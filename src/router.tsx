@@ -10,6 +10,7 @@ import {
 import { ensureRouterEnv } from './shims/router-env.js'
 import { ShellLayout } from './shared/layouts/ShellLayout.js'
 import { ThemeProvider } from './shared/theme/ThemeProvider.js'
+import { ToastHost } from './shared/ui/ToastHost.js'
 import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { AddSongsPage, CategorySongsPage, LibraryPage, SongDetailPage } from './features/library/index.js'
@@ -44,6 +45,13 @@ const rootRoute = createRootRoute({
   component: () => (
     <ThemeProvider>
       <Outlet />
+      {/*
+        Global toast renderer. Mounted here (inside ThemeProvider so CSS vars
+        resolve, and after <Outlet/> so DOM order paints it above every page —
+        Lynx has no z-index) rather than in the shell, so chrome-less routes
+        (/player, /login, lyrics edit/calibrate, dlna) get toasts too.
+      */}
+      <ToastHost />
     </ThemeProvider>
   ),
 })

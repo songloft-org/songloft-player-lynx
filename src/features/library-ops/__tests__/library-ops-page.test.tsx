@@ -105,6 +105,7 @@ vi.mock('../data/index.js', () => ({
 }))
 
 const { LibraryOpsPage } = await import('../pages/LibraryOpsPage.js')
+const { useToastStore, toast } = await import('../../../shared/ui/toast-store.js')
 
 beforeEach(() => {
   h.scanData = parseScanProgress({ status: 'idle' })
@@ -126,6 +127,7 @@ afterEach(() => {
   // The polling tests below install fake timers; restore for everyone else.
   vi.useRealTimers()
   vi.clearAllMocks()
+  toast.clear()
 })
 
 async function renderPage() {
@@ -572,17 +574,19 @@ test('the back affordance routes to /settings', async () => {
   expect(h.navigateSpy).toHaveBeenCalledWith({ to: '/settings' })
 })
 
-test('a write failure raises a dismissible banner', async () => {
+test('a write failure raises a toast', async () => {
+  // Was a dismissible inline banner; now the global toast (rendered by
+  // `ToastHost`), so assert on the stored toast. Auto-dismiss is covered by
+  // toast-store.test.ts.
   h.startMeta.mockImplementation((_v, opts) => opts?.onError?.(new Error('nope')))
   const { queryByTestId } = await renderPage()
   await act(async () => {
     fireEvent.tap(queryByTestId('meta-start')!)
   })
-  expect(queryByTestId('libops-write-error')).toBeInTheDocument()
-  await act(async () => {
-    fireEvent.tap(queryByTestId('libops-write-error-dismiss')!)
-  })
-  expect(queryByTestId('libops-write-error')).not.toBeInTheDocument()
+  const shown = useToastStore.getState().toast
+  expect(shown).not.toBeNull()
+  expect(shown?.tone).toBe('error')
+  expect(shown?.text).toContain('Save failed')
 })
 
 /* ----------------------------------------------------------------- maintenance */

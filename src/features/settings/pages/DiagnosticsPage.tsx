@@ -5,14 +5,13 @@ import { apiPrefix, appConfig } from '../../../core/config/app-config.js'
 import { getCachedAccessToken } from '../../../core/network/token-cache.js'
 import { openURL } from '../../../native/native-platform.js'
 import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
-import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { toast } from '../../../shared/ui/toast-store.js'
 import { getSettingsApi } from '../api/index.js'
 import { exportAndShareLogs } from '../data/log-export.js'
 import { LOG_LEVELS, coerceLogLevel, logLevelLabelKey, type LogLevel } from '../domain/log-level.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import { SubPageShell } from '../widgets/SubPageShell.js'
-import './DiagnosticsPage.css'
 
 /**
  * `/settings/diagnostics` — backend log level and the log-export flow used for
@@ -27,10 +26,8 @@ export function DiagnosticsPage() {
   // overridden once the read resolves — an unreachable backend just leaves the
   // fallback, same degrade-gracefully pattern as the rest of settings.
   const [logLevel, setLogLevel] = useState<LogLevel>('info')
-  // Log export: busy flag + inline notice (Lynx has no toast primitive; same
-  // banner pattern as LibraryOpsPage).
+  // Log export: busy flag; the outcome surfaces as a global toast (ToastHost).
   const [exportingLogs, setExportingLogs] = useState(false)
-  const [exportNotice, setExportNotice] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -71,16 +68,15 @@ export function DiagnosticsPage() {
     }
     if (exportingLogs) return
     setExportingLogs(true)
-    setExportNotice(null)
     void exportAndShareLogs()
       .then((result) => {
-        setExportNotice(result.hasBackend
-          ? { kind: 'success', text: t('settings.exportLogsSuccess') }
-          : { kind: 'success', text: t('settings.exportLogsSuccessNoBackend') })
+        toast.success(result.hasBackend
+          ? t('settings.exportLogsSuccess')
+          : t('settings.exportLogsSuccessNoBackend'))
       })
       .catch((e: unknown) => {
         const message = e instanceof Error ? e.message : String(e)
-        setExportNotice({ kind: 'error', text: t('settings.exportLogsFailed', { error: message }) })
+        toast.error(t('settings.exportLogsFailed', { error: message }))
       })
       .finally(() => {
         setExportingLogs(false)
@@ -101,31 +97,6 @@ export function DiagnosticsPage() {
           />
         ))}
       </SettingsSection>
-
-      {exportNotice
-        ? (
-          <view
-            className={exportNotice.kind === 'error'
-              ? 'diagnostics__banner diagnostics__banner--error'
-              : 'diagnostics__banner'}
-            data-testid='export-logs-notice'
-          >
-            <Icon
-              name={exportNotice.kind === 'error' ? 'warning' : 'check-circle'}
-              size={18}
-              color={exportNotice.kind === 'error' ? ICON_COLORS.danger : ICON_COLORS.primary}
-            />
-            <text className='diagnostics__banner-text'>{exportNotice.text}</text>
-            <view
-              className='diagnostics__banner-close'
-              bindtap={() => setExportNotice(null)}
-              data-testid='export-logs-notice-dismiss'
-            >
-              <Icon name='x' size={16} color={ICON_COLORS.content2} />
-            </view>
-          </view>
-        )
-        : null}
 
       <SettingsSection>
         <SettingsRow

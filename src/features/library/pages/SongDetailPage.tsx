@@ -5,6 +5,7 @@ import { Input } from '@lynx-js/lynx-ui-input'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { toast } from '../../../shared/ui/toast-store.js'
 import type { Song } from '../../../models/song.js'
 import { getSongsApi } from '../api/index.js'
 import './SongDetailPage.css'
@@ -22,7 +23,6 @@ export function SongDetailPage() {
   const [title, setTitle] = useState('')
   const [artist, setArtist] = useState('')
   const [album, setAlbum] = useState('')
-  const [tagStatus, setTagStatus] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -132,14 +132,12 @@ export function SongDetailPage() {
                     {song.type === 'local' ? (
                       <view className='song-detail__tags-section'>
                         <view className='song-detail__save-btn' bindtap={() => {
-                          setTagStatus(null)
                           void getSongsApi().writeTags(song.id)
-                            .then(() => setTagStatus(t('songDetail.tagsWritten')))
-                            .catch(() => setTagStatus(t('songDetail.tagsFailed')))
+                            .then(() => toast.success(t('songDetail.tagsWritten')))
+                            .catch(() => toast.error(t('songDetail.tagsFailed')))
                         }}>
                           <text className='song-detail__save-btn-text'>{t('songDetail.writeTags')}</text>
                         </view>
-                        {tagStatus ? <text className='song-detail__tag-result'>{tagStatus}</text> : null}
                       </view>
                     ) : null}
                   </view>

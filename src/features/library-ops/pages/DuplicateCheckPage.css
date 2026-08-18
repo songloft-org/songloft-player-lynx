@@ -16,29 +16,6 @@
   color: var(--content-muted);
 }
 
-/* ─── Error banner ────────────────────────────────────────────────────────── */
-.dup-check__error {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: var(--space-3);
-  margin-bottom: var(--space-4);
-  background-color: var(--neutral-faint);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-}
-
-.dup-check__error-text {
-  flex: 1;
-  font-size: 13px;
-  color: var(--danger);
-  margin-left: var(--space-2);
-}
-
-.dup-check__error-close {
-  padding: var(--space-1);
-}
-
 /* ─── Fingerprint status phase ────────────────────────────────────────────── */
 .fp-status__intro {
   font-size: var(--font-sm);

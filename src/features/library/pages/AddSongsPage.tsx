@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { toast } from '../../../shared/ui/toast-store.js'
 import { getSongsApi } from '../api/index.js'
 import './AddSongsPage.css'
 
@@ -19,13 +20,11 @@ export function AddSongsPage() {
   const [artist, setArtist] = useState('')
   const [album, setAlbum] = useState('')
   const [saving, setSaving] = useState(false)
-  const [result, setResult] = useState<string | null>(null)
 
   const onAdd = () => {
     const trimUrl = url.trim()
     if (!trimUrl || saving) return
     setSaving(true)
-    setResult(null)
 
     const promise = mode === 'remote'
       ? getSongsApi().addRemoteSongs([{
@@ -41,13 +40,13 @@ export function AddSongsPage() {
 
     void promise
       .then(() => {
-        setResult(t('addSongs.success'))
+        toast.success(t('addSongs.success'))
         setUrl('')
         setTitle('')
         setArtist('')
         setAlbum('')
       })
-      .catch(e => setResult(String(e instanceof Error ? e.message : e)))
+      .catch(e => toast.error(String(e instanceof Error ? e.message : e)))
       .finally(() => setSaving(false))
   }
 
@@ -88,8 +87,6 @@ export function AddSongsPage() {
         <view className='add-songs__btn' bindtap={onAdd}>
           <text className='add-songs__btn-text'>{saving ? t('common.loading') : t('addSongs.add')}</text>
         </view>
-
-        {result ? <text className='add-songs__result'>{result}</text> : null}
       </scroll-view>
     </view>
   )

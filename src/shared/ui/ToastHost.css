@@ -1,0 +1,76 @@
+/*
+ * Global toast — Muse floating pill (see DESIGN.md).
+ *
+ * `toast-wrap` is a fixed, full-width flex row that centres the pill, the same
+ * centre-a-max-width-child pattern `ConfirmDialog` uses. Positioning it from the
+ * viewport bottom with a large enough offset keeps the pill clear of the shell's
+ * bottom chrome (never covering the mini-player). Only tokens — no hardcoded
+ * colors. Entrance is a slide-up + fade-in via @keyframes (Lynx-supported);
+ * dismissal is an abrupt unmount driven by the store timer (see ToastHost.tsx).
+ */
+
+.toast-wrap {
+  position: fixed;
+  /* Sits above all bottom chrome so it never covers the mini-player. Narrow:
+     bottom bar (64px + home indicator) with the mini-player docked over it
+     (65px tall + 8px gap → top edge ~137px up). Wide has no bottom bar — the
+     mini-player (~77px up) is the only bottom chrome. 150px clears both. */
+  bottom: calc(env(safe-area-inset-bottom) + 150px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  /* Keep the pill off the viewport edges on narrow screens. */
+  padding: 0 var(--space-4);
+  animation-name: toast-enter;
+  animation-duration: 300ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+
+.toast {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-pill);
+  /* Muse single-accent channel: success = the ink/white primary fill. */
+  background-color: var(--primary);
+  box-shadow: var(--shadow-md);
+  /* Fill the padded wrap on narrow, cap + centre on wide/desktop so a long
+     message doesn't span the whole viewport (and never overlaps the side rail). */
+  width: 100%;
+  max-width: 480px;
+}
+
+/* Danger is text/border only, never a colored fill (DESIGN.md §3.1). */
+.toast--error {
+  background-color: var(--paper);
+  border: 1px solid var(--danger);
+}
+
+.toast__text {
+  flex: 1;
+  margin-left: var(--space-2);
+  font-size: var(--font-sm);
+  color: var(--primary-content);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toast--error .toast__text {
+  color: var(--danger);
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

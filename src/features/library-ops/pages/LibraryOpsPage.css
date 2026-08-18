@@ -16,34 +16,6 @@
   padding-bottom: var(--space-6);
 }
 
-/* ── Inline error banner (Lynx has no toast primitive) ───────────────────── */
-
-.libops__banner {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  margin: var(--space-4) var(--space-4) 0;
-  padding: var(--space-3);
-  border-radius: var(--radius-lg);
-  background-color: var(--paper);
-  border: 1px solid var(--danger);
-}
-
-.libops__banner-text {
-  flex: 1;
-  color: var(--content);
-  font-size: var(--font-sm);
-  margin-left: var(--space-2);
-}
-
-.libops__banner-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-}
-
 /* ── Progress ───────────────────────────────────────────────────────────── */
 
 .libops-progress {

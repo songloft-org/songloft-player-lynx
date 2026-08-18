@@ -52,6 +52,12 @@ vi.mock('../store/index.js', async () => {
   const { makeAuthStoreMock } = await import('../../../__tests__/_render-mocks.js')
   return makeAuthStoreMock(actual)
 })
+// The root route mounts the global `<ToastHost/>`, which subscribes to a zustand
+// store (`useSyncExternalStore`) — the same crash class as the auth store above.
+// Stand it in with a no-op; toast behaviour is covered by toast-store.test.ts.
+vi.mock('../../../shared/ui/ToastHost.js', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockToastHost(),
+)
 
 /**
  * Login-page render smoke, reusing the batch-1 ReactLynx testing-library setup.

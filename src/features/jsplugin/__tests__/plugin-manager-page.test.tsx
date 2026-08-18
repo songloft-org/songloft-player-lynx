@@ -65,6 +65,7 @@ vi.mock('@lynx-js/lynx-ui', () => ({
 }))
 
 const { PluginManagerPage } = await import('../pages/PluginManagerPage.js')
+const { useToastStore, toast } = await import('../../../shared/ui/toast-store.js')
 
 function makePlugin(over: Partial<JSPlugin> = {}): JSPlugin {
   return {
@@ -83,7 +84,10 @@ beforeEach(() => {
   h.plugins = [makePlugin()]
 })
 
-afterEach(() => vi.clearAllMocks())
+afterEach(() => {
+  vi.clearAllMocks()
+  toast.clear()
+})
 
 async function renderPage() {
   render(<PluginManagerPage />)
@@ -170,30 +174,32 @@ test('confirming deletes, cancelling does not', async () => {
 
 test('a failed install surfaces the reason instead of doing nothing', async () => {
   // The empty `catch` this replaces is why a guaranteed 401 looked like a dead
-  // button.
+  // button. The message now lands in the global toast store (rendered by
+  // `ToastHost`), so we assert on the stored toast.
   h.pickAndUpload.mockRejectedValueOnce(new Error('HTTP 401'))
-  const { getByTestId, queryByTestId } = await renderPage()
+  const { getByTestId } = await renderPage()
 
   await act(async () => {
     fireEvent.tap(getByTestId('plugins-upload'))
     for (let i = 0; i < 5; i++) await Promise.resolve()
   })
 
-  const banner = queryByTestId('plugins-install-error')
-  expect(banner).toBeInTheDocument()
-  expect(banner?.textContent).toContain('HTTP 401')
+  const shown = useToastStore.getState().toast
+  expect(shown).not.toBeNull()
+  expect(shown?.tone).toBe('error')
+  expect(shown?.text).toContain('HTTP 401')
 })
 
 test('cancelling the file picker is not an error', async () => {
   h.pickAndUpload.mockRejectedValueOnce(new Error('cancelled'))
-  const { getByTestId, queryByTestId } = await renderPage()
+  const { getByTestId } = await renderPage()
 
   await act(async () => {
     fireEvent.tap(getByTestId('plugins-upload'))
     for (let i = 0; i < 5; i++) await Promise.resolve()
   })
 
-  expect(queryByTestId('plugins-install-error')).not.toBeInTheDocument()
+  expect(useToastStore.getState().toast).toBeNull()
 })
 
 test('the store button routes when the page is standalone', async () => {

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { toast } from '../../../shared/ui/toast-store.js'
 import type { DuplicateGroup } from '../../../models/duplicate.js'
 import {
   useFingerprintStatusQuery,
@@ -50,7 +50,6 @@ export function DuplicateCheckPage({ onBack }: DuplicateCheckPageProps = {}) {
 
   // ── Phase state machine ────────────────────────────────────────────────────
   const [phase, setPhase] = useState<DuplicatePagePhase>('status')
-  const [error, setError] = useState<string | null>(null)
 
   // ── Polling flags ──────────────────────────────────────────────────────────
   // Cancel handshake: pause the poll before sending the cancel request so a poll
@@ -158,10 +157,9 @@ export function DuplicateCheckPage({ onBack }: DuplicateCheckPageProps = {}) {
   // ── Handlers ───────────────────────────────────────────────────────────────
 
   const onStartCompute = (params?: { recomputeAll?: boolean; retryFailed?: boolean }) => {
-    setError(null)
     startFingerprint.mutate(params, {
       onSuccess: () => setPhase('computing'),
-      onError: (e) => setError(String(e)),
+      onError: (e) => toast.error(String(e)),
     })
   }
 
@@ -176,7 +174,7 @@ export function DuplicateCheckPage({ onBack }: DuplicateCheckPageProps = {}) {
       onError: (e) => {
         // Resume polling — the job may still be running.
         setProgressPaused(false)
-        setError(String(e))
+        toast.error(String(e))
       },
     })
   }
@@ -243,7 +241,7 @@ export function DuplicateCheckPage({ onBack }: DuplicateCheckPageProps = {}) {
           setFetchDuplicates(true)
           void duplicatesQuery.refetch()
         },
-        onError: (e) => setError(String(e)),
+        onError: (e) => toast.error(String(e)),
       },
     )
   }
@@ -268,23 +266,6 @@ export function DuplicateCheckPage({ onBack }: DuplicateCheckPageProps = {}) {
           />
         )}
       >
-        {/* Error banner */}
-        {error
-          ? (
-            <view className='dup-check__error' data-testid='dup-check-error'>
-              <Icon name='warning' size={18} color={ICON_COLORS.danger} />
-              <text className='dup-check__error-text'>{error}</text>
-              <view
-                className='dup-check__error-close'
-                bindtap={() => setError(null)}
-                data-testid='dup-check-error-dismiss'
-              >
-                <Icon name='x' size={16} color={ICON_COLORS.content2} />
-              </view>
-            </view>
-          )
-          : null}
-
         {/* Status phase */}
         {phase === 'status' && status
           ? (

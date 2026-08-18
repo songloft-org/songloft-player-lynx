@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { toast } from '../../../shared/ui/toast-store.js'
 import { pickAndUploadFile } from '../../../native/native-platform.js'
 import type { JSPlugin } from '../../../models/jsplugin.js'
 import { usePluginsQuery } from '../data/jsplugin-query.js'
@@ -38,7 +39,6 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
   const [pendingDelete, setPendingDelete] = useState<JSPlugin | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [installing, setInstalling] = useState(false)
-  const [installError, setInstallError] = useState<string | null>(null)
 
   const onToggle = (plugin: JSPlugin) => {
     toggleMutation.mutate({ id: plugin.id, enable: !plugin.isActive })
@@ -79,7 +79,6 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
   const onInstallFromFile = async () => {
     if (installing) return
     setInstalling(true)
-    setInstallError(null)
     try {
       const uploadUrl = getJSPluginApi().getUploadUrl()
       await pickAndUploadFile(uploadUrl, 'plugin', 'application/zip')
@@ -92,7 +91,7 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
        * nothing, which is exactly how it was reported. Cancelling is not an error.
        */
       const msg = e instanceof Error ? e.message : String(e)
-      if (msg !== 'cancelled') setInstallError(msg || t('jsplugin.installFailed'))
+      if (msg !== 'cancelled') toast.error(msg || t('jsplugin.installFailed'))
     } finally {
       setInstalling(false)
     }
@@ -139,16 +138,6 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
         />
       )}
     >
-      {installError
-        ? (
-          <view className='plugin-manager__error' data-testid='plugins-install-error'>
-            <text className='plugin-manager__error-text'>
-              {t('jsplugin.installFailed')}: {installError}
-            </text>
-          </view>
-        )
-        : null}
-
       {isLoading
         ? <PluginState text={t('common.loading')} testId='plugins-loading' />
         : isError

@@ -38,6 +38,7 @@ vi.mock('../data/playlist-mutations.js', () => ({
 }))
 
 const { PlaylistsView } = await import('../widgets/PlaylistsView.js')
+const { useToastStore, toast } = await import('../../../shared/ui/toast-store.js')
 
 function makePlaylist(id: number, over: Partial<Playlist> = {}): Playlist {
   return {
@@ -85,7 +86,10 @@ beforeEach(() => {
   reorderMutationHook.mockReturnValue(mutationResult())
 })
 
-afterEach(() => vi.clearAllMocks())
+afterEach(() => {
+  vi.clearAllMocks()
+  toast.clear()
+})
 
 async function renderView() {
   render(<PlaylistsView />)
@@ -294,5 +298,10 @@ test('already-sorted playlists shows the already-sorted banner', async () => {
     await Promise.resolve()
   })
   expect(mutate).not.toHaveBeenCalled()
-  expect(queryByText('Playlists already in this order')).toBeInTheDocument()
+  // The already-sorted notice is now the global toast (rendered by `ToastHost`),
+  // so assert on the stored toast rather than an inline banner.
+  const shown = useToastStore.getState().toast
+  expect(shown).not.toBeNull()
+  expect(shown?.tone).toBe('success')
+  expect(shown?.text).toBe('Playlists already in this order')
 })

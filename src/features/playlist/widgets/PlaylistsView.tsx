@@ -8,6 +8,7 @@ import type { Playlist } from '../../../models/playlist.js'
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { ActionSheet, ActionSheetItem } from '../../../shared/ui/ActionSheet.js'
+import { toast } from '../../../shared/ui/toast-store.js'
 import { sortPlaylistsByName, sortPlaylistsByNumberPrefix } from '../domain/playlist-sort.js'
 import { flattenPlaylists } from '../data/pagination.js'
 import { usePlaylistsInfiniteQuery } from '../data/playlist-query.js'
@@ -35,8 +36,6 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
-  type SortFeedback = { tone: 'success' | 'error'; text: string } | null
-  const [sortFeedback, setSortFeedback] = useState<SortFeedback>(null)
 
   const onCreateSubmit = () => {
     const trimmed = newName.trim()
@@ -115,12 +114,12 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
     const all = await loadAllPlaylists()
     const ids = sortPlaylistsByName(all, true)
     if (!ids) {
-      setSortFeedback({ tone: 'success', text: t('playlist.alreadySortedPlaylists') })
+      toast.success(t('playlist.alreadySortedPlaylists'))
       return
     }
     reorderMutation.mutate(ids, {
-      onSuccess: () => setSortFeedback({ tone: 'success', text: t('playlist.sortedByNameAsc') }),
-      onError: () => setSortFeedback({ tone: 'error', text: t('playlist.sortFailed') }),
+      onSuccess: () => toast.success(t('playlist.sortedByNameAsc')),
+      onError: () => toast.error(t('playlist.sortFailed')),
     })
   }
 
@@ -129,12 +128,12 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
     const all = await loadAllPlaylists()
     const ids = sortPlaylistsByName(all, false)
     if (!ids) {
-      setSortFeedback({ tone: 'success', text: t('playlist.alreadySortedPlaylists') })
+      toast.success(t('playlist.alreadySortedPlaylists'))
       return
     }
     reorderMutation.mutate(ids, {
-      onSuccess: () => setSortFeedback({ tone: 'success', text: t('playlist.sortedByNameDesc') }),
-      onError: () => setSortFeedback({ tone: 'error', text: t('playlist.sortFailed') }),
+      onSuccess: () => toast.success(t('playlist.sortedByNameDesc')),
+      onError: () => toast.error(t('playlist.sortFailed')),
     })
   }
 
@@ -143,12 +142,12 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
     const all = await loadAllPlaylists()
     const ids = sortPlaylistsByNumberPrefix(all)
     if (!ids) {
-      setSortFeedback({ tone: 'success', text: t('playlist.alreadySortedPlaylists') })
+      toast.success(t('playlist.alreadySortedPlaylists'))
       return
     }
     reorderMutation.mutate(ids, {
-      onSuccess: () => setSortFeedback({ tone: 'success', text: t('playlist.sortedByNumber') }),
-      onError: () => setSortFeedback({ tone: 'error', text: t('playlist.sortFailed') }),
+      onSuccess: () => toast.success(t('playlist.sortedByNumber')),
+      onError: () => toast.error(t('playlist.sortFailed')),
     })
   }
 
@@ -286,24 +285,6 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
           : null}
       </view>
       {createForm}
-      {sortFeedback
-        ? (
-          <view className='playlists__banner'>
-            <Icon
-              name={sortFeedback.tone === 'error' ? 'warning' : 'check'}
-              size={18}
-              color={sortFeedback.tone === 'error' ? ICON_COLORS.danger : ICON_COLORS.primary}
-            />
-            <text className='playlists__banner-text'>{sortFeedback.text}</text>
-            <view
-              className='playlists__banner-close'
-              bindtap={() => setSortFeedback(null)}
-            >
-              <Icon name='x' size={16} color={ICON_COLORS.content2} />
-            </view>
-          </view>
-        )
-        : null}
       <scroll-view
         className='playlists__scroll'
         scroll-y

@@ -154,8 +154,3 @@
   align-items: flex-start;
   gap: var(--space-2);
 }
-
-.song-detail__tag-result {
-  font-size: var(--font-xs);
-  color: var(--content-muted);
-}

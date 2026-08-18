@@ -285,32 +285,6 @@
   color: var(--primary-content);
 }
 
-.playlists__banner {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  margin: 0 var(--space-4);
-  padding: var(--space-3);
-  border-radius: var(--radius-lg);
-  background-color: var(--paper);
-  border: 1px solid var(--line);
-}
-
-.playlists__banner-text {
-  flex: 1;
-  color: var(--content);
-  font-size: var(--font-sm);
-  margin-left: var(--space-2);
-}
-
-.playlists__banner-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-}
-
 .playlists__grid-item {
   position: relative;
 }
