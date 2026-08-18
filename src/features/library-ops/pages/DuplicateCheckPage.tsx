@@ -254,12 +254,19 @@ export function DuplicateCheckPage({ onBack }: DuplicateCheckPageProps = {}) {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <>
       <SubPageShell
         title={t('libops.duplicateDetection')}
         onBack={onBack ?? (() => void navigate({ to: '/settings/library' }))}
         backTestId='dup-check-back'
         contentClassName='dup-check__content'
+        overlay={(
+          <DeleteConfirmDialog
+            show={deleteDialogShow}
+            count={deleteCount}
+            onConfirm={onConfirmDelete}
+            onCancel={() => setDeleteDialogShow(false)}
+          />
+        )}
       >
         {/* Error banner */}
         {error
@@ -360,14 +367,5 @@ export function DuplicateCheckPage({ onBack }: DuplicateCheckPageProps = {}) {
           )
           : null}
       </SubPageShell>
-
-      {/* Delete confirmation dialog */}
-      <DeleteConfirmDialog
-        show={deleteDialogShow}
-        count={deleteCount}
-        onConfirm={onConfirmDelete}
-        onCancel={() => setDeleteDialogShow(false)}
-      />
-    </>
   )
 }

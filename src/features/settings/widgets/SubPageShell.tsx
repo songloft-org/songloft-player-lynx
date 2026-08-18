@@ -44,6 +44,14 @@ export interface SubPageShellProps {
   scrollable?: boolean
   /** Extra class on the content wrapper, for page-specific layout rules. */
   contentClassName?: string
+  /**
+   * Rendered after the scroll area but still inside the single root `<view>` —
+   * the place for overlays such as confirm dialogs. Keeping them here (rather
+   * than returning a Fragment root of `[shell, dialog]`) matters: a multi-root
+   * return makes web-core insert/remove several root nodes per mount, which is
+   * where the wasm "recursive use of an object" aliasing crash was reproduced.
+   */
+  overlay?: ReactNode
   children: ReactNode
 }
 
@@ -65,6 +73,7 @@ export function SubPageShell({
   actions,
   scrollable = true,
   contentClassName,
+  overlay,
   children,
 }: SubPageShellProps) {
   const navigate = useNavigate()
@@ -100,6 +109,8 @@ export function SubPageShell({
       {scrollable
         ? <scroll-view className='subpage__scroll' scroll-y>{content}</scroll-view>
         : content}
+
+      {overlay ?? null}
     </view>
   )
 }

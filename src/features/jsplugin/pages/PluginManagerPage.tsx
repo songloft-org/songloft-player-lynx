@@ -99,98 +99,97 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
   }
 
   return (
-    <>
-      <SubPageShell
-        title={t('jsplugin.managerTitle')}
-        backTestId='plugins-back'
-        actions={(
-          <view className='plugin-manager__topbar-actions'>
-            <view className='plugin-manager__action-btn' bindtap={onInstallFromFile} data-testid='plugins-upload'>
-              <text className='plugin-manager__action-text'>
-                {installing ? t('common.loading') : t('jsplugin.installFromFile')}
-              </text>
-            </view>
-            <view className='plugin-manager__action-btn' bindtap={onStore} data-testid='plugins-store'>
-              <text className='plugin-manager__action-text'>{t('jsplugin.store')}</text>
-            </view>
-            <view
-              className={updateAllMutation.isPending
-                ? 'plugin-manager__action-btn plugin-manager__action-btn--disabled'
-                : 'plugin-manager__action-btn'}
-              bindtap={onUpdateAll}
-              data-testid='plugins-update-all'
-            >
-              <text className='plugin-manager__action-text'>
-                {updateAllMutation.isPending ? t('common.loading') : t('jsplugin.updateAll')}
-              </text>
-            </view>
+    <SubPageShell
+      title={t('jsplugin.managerTitle')}
+      backTestId='plugins-back'
+      actions={(
+        <view className='plugin-manager__topbar-actions'>
+          <view className='plugin-manager__action-btn' bindtap={onInstallFromFile} data-testid='plugins-upload'>
+            <text className='plugin-manager__action-text'>
+              {installing ? t('common.loading') : t('jsplugin.installFromFile')}
+            </text>
           </view>
-        )}
-      >
-        {installError
-          ? (
-            <view className='plugin-manager__error' data-testid='plugins-install-error'>
-              <text className='plugin-manager__error-text'>
-                {t('jsplugin.installFailed')}: {installError}
-              </text>
-            </view>
-          )
-          : null}
+          <view className='plugin-manager__action-btn' bindtap={onStore} data-testid='plugins-store'>
+            <text className='plugin-manager__action-text'>{t('jsplugin.store')}</text>
+          </view>
+          <view
+            className={updateAllMutation.isPending
+              ? 'plugin-manager__action-btn plugin-manager__action-btn--disabled'
+              : 'plugin-manager__action-btn'}
+            bindtap={onUpdateAll}
+            data-testid='plugins-update-all'
+          >
+            <text className='plugin-manager__action-text'>
+              {updateAllMutation.isPending ? t('common.loading') : t('jsplugin.updateAll')}
+            </text>
+          </view>
+        </view>
+      )}
+      overlay={(
+        <ConfirmDialog
+          show={deleteOpen}
+          title={t('jsplugin.uninstallTitle')}
+          message={t('jsplugin.uninstallMessage', { name: pendingDelete?.displayName ?? '' })}
+          confirmLabel={t('jsplugin.uninstallConfirm')}
+          onConfirm={onConfirmDelete}
+          onCancel={() => setDeleteOpen(false)}
+          testId='plugin-delete-dialog'
+          confirmTestId='plugin-delete-confirm'
+          cancelTestId='plugin-delete-cancel'
+        />
+      )}
+    >
+      {installError
+        ? (
+          <view className='plugin-manager__error' data-testid='plugins-install-error'>
+            <text className='plugin-manager__error-text'>
+              {t('jsplugin.installFailed')}: {installError}
+            </text>
+          </view>
+        )
+        : null}
 
-        {isLoading
-          ? <PluginState text={t('common.loading')} testId='plugins-loading' />
-          : isError
-            ? <PluginState text={t('jsplugin.loadError')} testId='plugins-error' tone='error' />
-            : plugins.length === 0
-              ? <PluginState text={t('jsplugin.noPlugins')} testId='plugins-empty' />
-              : (
-                <view className='plugin-manager__list'>
-                  {plugins.map((plugin) => (
-                    <view key={String(plugin.id)} className='plugin-manager__item' data-testid={`plugin-item-${plugin.id}`}>
-                      <view className='plugin-manager__item-info'>
-                        <text className='plugin-manager__item-name'>{plugin.displayName}</text>
-                        <text className='plugin-manager__item-meta'>
-                          {[plugin.version, plugin.author].filter(Boolean).join(' · ') || plugin.entryPath || ''}
+      {isLoading
+        ? <PluginState text={t('common.loading')} testId='plugins-loading' />
+        : isError
+          ? <PluginState text={t('jsplugin.loadError')} testId='plugins-error' tone='error' />
+          : plugins.length === 0
+            ? <PluginState text={t('jsplugin.noPlugins')} testId='plugins-empty' />
+            : (
+              <view className='plugin-manager__list'>
+                {plugins.map((plugin) => (
+                  <view key={String(plugin.id)} className='plugin-manager__item' data-testid={`plugin-item-${plugin.id}`}>
+                    <view className='plugin-manager__item-info'>
+                      <text className='plugin-manager__item-name'>{plugin.displayName}</text>
+                      <text className='plugin-manager__item-meta'>
+                        {[plugin.version, plugin.author].filter(Boolean).join(' · ') || plugin.entryPath || ''}
+                      </text>
+                    </view>
+                    <view className='plugin-manager__item-actions'>
+                      <view
+                        className={plugin.isActive
+                          ? 'plugin-manager__toggle plugin-manager__toggle--active'
+                          : 'plugin-manager__toggle'}
+                        bindtap={() => onToggle(plugin)}
+                        data-testid={`plugin-toggle-${plugin.id}`}
+                      >
+                        <text className='plugin-manager__toggle-text'>
+                          {plugin.isActive ? t('jsplugin.disable') : t('jsplugin.enable')}
                         </text>
                       </view>
-                      <view className='plugin-manager__item-actions'>
-                        <view
-                          className={plugin.isActive
-                            ? 'plugin-manager__toggle plugin-manager__toggle--active'
-                            : 'plugin-manager__toggle'}
-                          bindtap={() => onToggle(plugin)}
-                          data-testid={`plugin-toggle-${plugin.id}`}
-                        >
-                          <text className='plugin-manager__toggle-text'>
-                            {plugin.isActive ? t('jsplugin.disable') : t('jsplugin.enable')}
-                          </text>
-                        </view>
-                        <view
-                          className='plugin-manager__delete'
-                          bindtap={() => { setPendingDelete(plugin); setDeleteOpen(true) }}
-                          data-testid={`plugin-delete-${plugin.id}`}
-                        >
-                          <Icon name='x' size={16} color={ICON_COLORS.contentMuted} />
-                        </view>
+                      <view
+                        className='plugin-manager__delete'
+                        bindtap={() => { setPendingDelete(plugin); setDeleteOpen(true) }}
+                        data-testid={`plugin-delete-${plugin.id}`}
+                      >
+                        <Icon name='x' size={16} color={ICON_COLORS.contentMuted} />
                       </view>
                     </view>
-                  ))}
-                </view>
-              )}
-      </SubPageShell>
-
-      <ConfirmDialog
-        show={deleteOpen}
-        title={t('jsplugin.uninstallTitle')}
-        message={t('jsplugin.uninstallMessage', { name: pendingDelete?.displayName ?? '' })}
-        confirmLabel={t('jsplugin.uninstallConfirm')}
-        onConfirm={onConfirmDelete}
-        onCancel={() => setDeleteOpen(false)}
-        testId='plugin-delete-dialog'
-        confirmTestId='plugin-delete-confirm'
-        cancelTestId='plugin-delete-cancel'
-      />
-    </>
+                  </view>
+                ))}
+              </view>
+            )}
+    </SubPageShell>
   )
 }
 
