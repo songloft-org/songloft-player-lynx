@@ -30,6 +30,41 @@ describe('设置页', () => {
     await stepScreenshot(driver, 'settings-loaded')
   })
 
+  // 主页现在只有入口行，原先就地展开的分组各自成页——逐条确认路由真的可达。
+  test.each([
+    '/settings/appearance',
+    '/settings/playback',
+    '/settings/lyrics',
+    '/settings/data',
+    '/settings/about',
+    '/settings/diagnostics',
+  ])('导航到 %s', async (route) => {
+    await driver.evaluateJS(`
+      globalThis.__E2E_ROUTER__?.navigate({ to: '${route}' })
+    `)
+    await driver.sleep(500)
+
+    const currentPath = await driver.evaluateJS<string>(`
+      globalThis.__E2E_ROUTER__?.state?.location?.pathname ?? 'unknown'
+    `)
+    expect(currentPath).toBe(route)
+  })
+
+  // 截图是唯一能发现「卡片内缩与主列表不一致」的手段——状态断言对布局永远全绿。
+  test('二级页渲染留档（卡片内缩需目视比对主列表）', async () => {
+    await driver.evaluateJS(`
+      globalThis.__E2E_ROUTER__?.navigate({ to: '/settings/appearance' })
+    `)
+    await driver.sleep(500)
+    await stepScreenshot(driver, 'settings-appearance')
+
+    await driver.evaluateJS(`
+      globalThis.__E2E_ROUTER__?.navigate({ to: '/settings/lyrics' })
+    `)
+    await driver.sleep(500)
+    await stepScreenshot(driver, 'settings-lyrics')
+  })
+
   test('导航到均衡器子页', async () => {
     await driver.evaluateJS(`
       globalThis.__E2E_ROUTER__?.navigate({ to: '/settings/eq' })

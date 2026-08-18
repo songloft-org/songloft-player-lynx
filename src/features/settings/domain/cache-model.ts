@@ -56,7 +56,6 @@ export type CacheConfig = z.output<typeof cacheConfigSchema>
 
 const cacheConfigParsers = makeParsers(cacheConfigSchema)
 export const parseCacheConfig = cacheConfigParsers.parse
-export const safeParseCacheConfig = cacheConfigParsers.safeParse
 
 // ---------------------------------------------------------------------------
 // Update Cache Config — PUT /api/v1/cache-manage/config (request body)
@@ -114,14 +113,11 @@ export type DirValidateResponse = z.output<typeof dirValidateResponseSchema>
 
 const dirValidateResponseParsers = makeParsers(dirValidateResponseSchema)
 export const parseDirValidateResponse = dirValidateResponseParsers.parse
-export const safeParseDirValidateResponse = dirValidateResponseParsers.safeParse
 
 // ---------------------------------------------------------------------------
 // Transcode format options
 // ---------------------------------------------------------------------------
 
 export const TRANSCODE_FORMATS = ['', 'mp3', 'm4a', 'ogg', 'flac', 'wav'] as const
-export type TranscodeFormat = (typeof TRANSCODE_FORMATS)[number]
 
 export const TRANSCODE_QUALITIES = ['128', '192', '320'] as const
-export type TranscodeQuality = (typeof TRANSCODE_QUALITIES)[number]

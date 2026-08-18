@@ -831,6 +831,29 @@ Phase B3 第一步。方法论照批B1 对 Android 的做法（照抄官方 demo
 
 **批28 重复检测功能至此全路径真机验完**（Status 两分支 + Computing 推进 + Results 空态与有重复组 + 单组/批量删除 Dialog + batchDelete 真删 + 列表刷新）。
 
+### 批50 · 设置页二级化（主页变纯入口清单）+ 共享子页骨架 + 死代码清理
+
+**动因**：`SettingsPage.tsx` 已 867 行，把 40 多行**就地控件**（主题/语言/音质/日志等级共 14 个单选行、6 个开关、悬浮歌词嵌套三组、导出日志 banner、版本只读行、数据导入导出）和 **11 个入口行**混排，于是要滚过一屏半才能到「关于」，而已经二级化的「音乐库管理」只占一行。
+
+**主页改为纯入口清单**：5 张无标题卡片、16 个入口行 + 退出登录，点击深度统一为 1 层。867 → 447 行（其中约 200 行是 18 个入口行的 JSX 与 pane 分发），只剩 `activeSubPage` / `showLogoutDialog` 两个 state，**挂载时的 pref/请求从 11 次降到 0 次**（各页自己读自己的）。
+
+**新增 6 个二级页**：`/settings/{appearance,playback,lyrics,data,about,diagnostics}`。搬迁时保住四处易丢的细节，各有测试钉住：`theme` 的 `useState(getAppTheme)` 初值（否则闪一帧错选中项）、`normalize` 的四写（state + player store + pref + 后端）、`audioQuality` 的 `'original' → null` 映射、`DataPage` 在无文件选择器时渲染 `dataUnavailable` 而不是 `return null`（那会是「有标题栏、下面全空」的假加载失败）。
+
+**新增 `SubPageShell`，14 个现有二级页全部迁移**。此前它们各自手写 topbar，已漂移成 **5 种变体**：3 页硬编码 `12px 16px` / `18px` 违反 token 铁律、1 页标题 28px、1 页返回箭头 `rotate(90deg)`（全库唯一朝左）、2 页多余 `border-bottom`、返回键触摸区 30px 与 40px 两种。收敛为多数派那一种。不含 `PluginWebViewPage`（路由 `/plugin/$entryPath`，不属设置）。
+
+- **「宽屏右栏内隐藏返回键」用 context**（`SubPageEmbedContext`），页面组件零改动。**刻意不用宽度判断**——宽屏也可能真路由停在 `/settings/eq`（深链 / e2e / 旋转），那里的箭头是活的，宽度分不清这两种情形。这修掉了 `LibraryOpsPage` 里只留注释没修的死键。
+- **两处三级页补上 in-pane 回调**（53fb045 模式）：About → Licenses、LibraryOps → DuplicateCheck。后者此前在宽屏右栏点下去会真路由、卸载整个 `SettingsPage`、左侧菜单整体消失——与 53fb045 修掉的插件商店是**同一个 bug 的未修实例**。
+- 两处返回目标随之修正：Licenses → `/settings/about`、DuplicateCheck → `/settings/library`（它们只能从那里进入，回设置根页会跳过一层）。
+- `CacheManage` 的 `__content` 去掉横向 padding —— 它叠在 `.settings-section` 自带的 `margin: var(--space-4)` 上，使这一页卡片明显比设置列表窄。`SubPageShell.css` 里写明了这条约束。
+
+**死代码清理**：死页面 `ServerSettingsPage` + `/settings/server`（零 UI 入口，唯一引用是路由注册与 barrel）及其 5 个专用 i18n key；12 个分组标题 key（扁平化后无处可用）+ 7 个更早的死 key；4 个 CSS 死类；`cache-model.ts` 4 个真死 export。修 `settings.exportLogsFailed` 的单括号 `{error}`（i18next 用双括号，此前导出失败时用户看到字面量、失败原因完全丢失）。顺带订正 `AGENTS.md` §6 关于 i18n 闸门的过期陈述（它确实验字面量 key 存在性，盲区是模板字面量）。
+
+**闸门**：新增 7 个测试文件（含 `sub-page-shell.test.tsx` 的「pane 内不渲染返回键」）；`settings-page.test.tsx` 改写为「16 个入口 + 24 个就地控件反向断言 + `icon-check` 长度 0」；`shell-navigation.test.ts` 补 `showsMiniPlayer` 双向断言（该文件此前**一条都没有**）。**三条核心断言都反向验证过会红**：pane 隐藏返回键（临时让 `showBack` 恒真）、主页无就地控件（临时加回一行）、`{{error}}` 插值（临时改回单括号）。
+
+自动验收：`tsc -b` / `vitest` 1200 测试 / `build` 两产物均绿，`Unsupported property` 警告仍为 0。
+
+> ⚠️ **待真机**：① **EQ 滑条拖动**——`9d8e993` 刚修完，坐标虽是 viewport 相对（不受新增 wrapper 影响）且每次 pointer-down 重测，但原生手势没有任何测试能驱动；② 宽屏 ≥768px 右栏无返回箭头 + 高亮跟随（含 about→licenses、library→duplicates 时父行保持高亮）；③ 新页卡片左右内缩与主列表一致（截图比对——状态断言对布局永远全绿）。
+
 ## 未完成 / 遗留事项（TODO & 风险）
 
 - [x] **批28 Computing 阶段进度恒 `0/0` 且完成后不转 Results**（批29b 发现 → **批29c 已修**）：双层根因（陈旧终态跳过 computing + `refetchInterval` 在 Lynx 首次 fetch 后不再 fire），修法见上方「批29c」小结与下方「批29c」详节。18091 真机逐张截图验过 Computing 推进 + 自动转 Results。

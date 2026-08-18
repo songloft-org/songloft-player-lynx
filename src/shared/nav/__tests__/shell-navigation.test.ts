@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 
-import { activeNavPath, navPathOwns } from '../shell-navigation.js'
+import { activeNavPath, navPathOwns, showsMiniPlayer } from '../shell-navigation.js'
 
 /**
  * Regression for the reported device bug: on every sub-page the whole nav bar went
@@ -24,6 +24,11 @@ test('settings sub-pages keep the settings tab lit', () => {
   expect(activeNavPath('/settings/plugins', NAV)).toBe('/settings')
   expect(activeNavPath('/settings/plugins/registry', NAV)).toBe('/settings')
   expect(activeNavPath('/settings/servers/edit/7', NAV)).toBe('/settings')
+  // The groups split out of the settings list — each is its own route now.
+  for (const p of ['/settings/appearance', '/settings/playback', '/settings/lyrics',
+                   '/settings/data', '/settings/about', '/settings/diagnostics']) {
+    expect(activeNavPath(p, NAV), p).toBe('/settings')
+  }
 })
 
 test('library sub-pages and playlists keep the library tab lit', () => {
@@ -59,4 +64,23 @@ test('the longest matching destination wins', () => {
 test('a tab that is not rendered cannot be lit', () => {
   // Plugin tabs come from config, so the shell may not render one at all.
   expect(activeNavPath('/plugin/miot', ['/', '/library', '/settings'])).toBe('/')
+})
+
+/**
+ * `showsMiniPlayer` had no assertions at all until now. It is a whitelist, so a new
+ * route is excluded by default — which is the wanted behaviour for settings, but
+ * only by omission. These pin both directions so neither can drift silently.
+ */
+test('settings and its sub-pages never show the mini player', () => {
+  for (const p of ['/settings', '/settings/appearance', '/settings/playback',
+                   '/settings/lyrics', '/settings/data', '/settings/about',
+                   '/settings/diagnostics', '/settings/eq', '/settings/library']) {
+    expect(showsMiniPlayer(p), p).toBe(false)
+  }
+})
+
+test('the browsing surfaces still show the mini player', () => {
+  for (const p of ['/', '/library', '/library/category/artist', '/playlists/7']) {
+    expect(showsMiniPlayer(p), p).toBe(true)
+  }
 })

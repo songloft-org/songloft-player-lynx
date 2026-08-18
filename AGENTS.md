@@ -303,7 +303,7 @@ cached = nm.SongloftDlna as DlnaModule
 - **mock 必须保留真实实现的前置条件**。`mock-audio.ts` 的 `play()` 不需要先 `load()` 就能 tick，于是「冷启动播放键无效」在测试里永远不可见。同族前例：Switch mock 丢掉 `checked` 映射。**批46 又一例**：mock 被 `load` **直接告知**时长并同步回显，而真实宿主必须先解析容器、在此之前一律上报 `durationMs: 0`（`C.TIME_UNSET` / `indefinite` 都归一成 0），于是「store 用这个 0 抹掉已知时长」在测试里无法复现——补了 `simulateUnknownDurationProgress()` 才测得到。**判断标准：mock 能不能表达真实宿主的「我还不知道」状态。**
 - **写断言时先反向验证它会红**。`scan-model.test.ts` 有一条断言把「元数据再次刷新点了不轮询」这个 bug 当成契约固化了。
 - **能力探测器与消费点同批落地**。`platform-capabilities.ts` 写好了却全库无调用点（`tsconfig` 未开 `noUnusedLocals`），导致 Web 上一批入口点了没反应。
-- **i18n 闸门只防 en/zh 漂移，不防未定义 key** —— 这就是登出弹窗的取消按钮字面显示 `common.cancel` 的原因。加 key 时记得两侧同形。
+- **i18n 闸门的盲区是模板字面量 key**。它验两件事：en/zh 键集完全一致，以及 `src/` 里每个**字面量** `t('…')` 的 key 都存在（`i18n.test.ts:72`，正则只匹配单引号）。所以 `` t(`settings.quality_${o}`) `` 这类拼接不在覆盖内，只有 `DYNAMIC_KEY_PREFIXES` 白名单里的 `settings.quality_` / `eq.preset_` 两个前缀被豁免记账——`settings.floatingLyricFont*` 至今靠人工。搬迁含模板 key 的代码时逐字复制那行表达式，不要「顺手简化」。另：闸门**不查反向**（定义了但无人引用的 key 不会报），删代码时要自己带走它的 key。
 
 ## 7. 可用 Skills
 
