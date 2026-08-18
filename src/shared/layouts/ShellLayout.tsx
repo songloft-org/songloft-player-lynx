@@ -57,7 +57,7 @@ function PluginTabIcon({ tab, active }: { tab: PluginTabEntry; active: boolean }
 export function ShellLayout() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { breakpoint, isWide, onLayoutChange } = useBreakpoint()
+  const { breakpoint, isWide, onLayoutChange } = useBreakpoint(0, '.shell')
   const pathname = useRouterState({ select: s => s.location.pathname })
   const pluginTabsQuery = usePluginTabsWithIcons()
   const pluginTabs = pluginTabsQuery.data ?? []
@@ -124,6 +124,7 @@ export function ShellLayout() {
   return (
     <view
       className={isWide ? 'shell shell--wide' : 'shell shell--narrow'}
+      data-testid='shell-root'
       bindlayoutchange={onLayoutChange}
       data-breakpoint={breakpoint}
     >

@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { appConfig } from '../../../core/config/app-config.js'
+import { logInfo } from '../../../core/logging/client-logger.js'
 import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 // Vanilla (non-subscribing) store reads only — same pattern as HomePage /
 // LibraryPage — so the settings graph never mounts a zustand subscription
@@ -101,7 +102,9 @@ export function SettingsPage() {
   // is a sibling route, which unmounts this page — hence the module-level memory
   // rather than a `useRef`.
   const { initialOffset, onScroll } = useScrollMemory(SCROLL_KEY)
-  const { width: layoutWidth, onLayoutChange } = useBreakpoint()
+  // The selector is how the width gets measured on mount: this page is not in the
+  // first paint, so on Web `bindlayoutchange` never fires for it at all.
+  const { width: layoutWidth, onLayoutChange } = useBreakpoint(0, '.settings')
   const isDualColumn = layoutWidth >= DUAL_COLUMN_MIN_WIDTH
 
   /**
@@ -134,8 +137,13 @@ export function SettingsPage() {
    */
   const goToSubPage = (page: SettingsSubPage, route: string) => {
     if (isDualColumn) {
+      // Logged because a pane swap unmounts a whole page and mounts another
+      // inside one commit; when something goes wrong mid-swap the exported log
+      // is the only record of which pair it was.
+      logInfo('settings', `pane ${activeSubPage} → ${page}`)
       setActiveSubPage(page)
     } else {
+      logInfo('settings', `route → ${route}`)
       void navigate({ to: route })
     }
   }
@@ -149,7 +157,7 @@ export function SettingsPage() {
   const isActive = (page: SettingsSubPage) => isDualColumn && activeSubPage === page
 
   return (
-    <view className='settings' bindlayoutchange={onLayoutChange}>
+    <view className='settings' data-testid='settings-root' bindlayoutchange={onLayoutChange}>
       <view className='settings__topbar'>
         <text className='settings__title'>{t('settings.title')}</text>
       </view>

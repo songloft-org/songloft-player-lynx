@@ -15,6 +15,116 @@
     A vitest gate now asserts every local ref here exists in the output.
   -->
   <link href="/web-core/static/css/client.css" rel="stylesheet">
+  <!--
+    Main-thread crash/console capture, inline and FIRST so it is installed before
+    web-core's client module runs.
+
+    Why this has to live here rather than in the app: on Web the app's own code
+    runs inside web-core's Worker, so `client-logger.ts` only ever sees the
+    worker realm. Everything web-core does to the DOM — `rLynxChange`,
+    `__FlushElementTree`, the wasm element bridge — happens on the *main* thread,
+    and a throw there (e.g. "recursive use of an object … in rust") is invisible
+    to the worker's logger. Those were reported from a browser console and could
+    not be reproduced from an exported log, because the export had no main-thread
+    side at all.
+
+    The bridge is the same IndexedDB the app uses for storage (`idb-storage.ts`):
+    both realms can open it with no host wiring, so the worker can fold these
+    lines into `frontend.log` at export time. Kept to plain ES5 with no imports —
+    it must not depend on anything that could itself fail to load.
+  -->
+  <script>
+    (function () {
+      var DB = 'songloft', VER = 1, STORE = 'kv', KEY = 'prefs.__mainlog', MAX = 400
+      var lines = [], timer = null, dbp = null
+
+      function open() {
+        if (dbp) return dbp
+        dbp = new Promise(function (resolve) {
+          try {
+            var req = indexedDB.open(DB, VER)
+            // Same store name/version as idb-storage.ts. Creating it here too
+            // matters: whichever realm opens first must leave a usable store.
+            req.onupgradeneeded = function () {
+              var db = req.result
+              if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE)
+            }
+            req.onsuccess = function () { resolve(req.result) }
+            req.onerror = function () { resolve(null) }
+            req.onblocked = function () { resolve(null) }
+          } catch (e) { resolve(null) }
+        })
+        return dbp
+      }
+
+      function pad(n, w) { return String(n).padStart(w, '0') }
+      function stamp() {
+        var d = new Date()
+        return pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2) + ':'
+          + pad(d.getSeconds(), 2) + '.' + pad(d.getMilliseconds(), 3)
+      }
+      // Same redaction as the TS logger: an exported log must never carry a
+      // usable credential.
+      function redact(s) {
+        return String(s).replace(/((?:access_token|token)=)[^&\s]+/gi, '$1***')
+      }
+
+      function flush() {
+        timer = null
+        var snapshot = lines.slice(-MAX)
+        open().then(function (db) {
+          if (!db) return
+          try {
+            var tx = db.transaction(STORE, 'readwrite')
+            tx.objectStore(STORE).put(JSON.stringify(snapshot), KEY)
+          } catch (e) { /* a lost log line must never break the page */ }
+        })
+      }
+
+      function push(level, msg) {
+        lines.push('[' + stamp() + '] ' + level + '/main ' + redact(msg))
+        if (lines.length > MAX) lines = lines.slice(-MAX)
+        // Batched: a burst of identical wasm errors would otherwise open one
+        // transaction each.
+        if (timer === null) timer = setTimeout(flush, 400)
+      }
+
+      function describe(v) {
+        if (v && v.stack) return (v.name || 'Error') + ': ' + v.message + ' | '
+          + String(v.stack).split('\n').slice(0, 4).join(' ⏎ ')
+        return String(v)
+      }
+
+      window.addEventListener('error', function (e) {
+        push('E', 'uncaught ' + (e.error ? describe(e.error) : e.message)
+          + (e.filename ? ' @' + e.filename + ':' + (e.lineno || 0) : ''))
+      })
+      window.addEventListener('unhandledrejection', function (e) {
+        push('E', 'unhandled rejection ' + describe(e.reason))
+      })
+      // console.error is wrapped as well: web-core reports the wasm failure
+      // through it (that is why the reported stack was attributed to React
+      // DevTools' installHook), so window.onerror alone would miss it.
+      var methods = ['warn', 'error']
+      for (var i = 0; i < methods.length; i++) {
+        (function (m) {
+          var orig = console[m].bind(console)
+          console[m] = function () {
+            orig.apply(null, arguments)
+            try {
+              var parts = []
+              for (var j = 0; j < arguments.length; j++) {
+                var a = arguments[j]
+                parts.push(a && a.stack ? describe(a) : String(a))
+              }
+              push(m === 'error' ? 'E' : 'W', parts.join(' '))
+            } catch (err) { /* never recurse into console */ }
+          }
+        })(methods[i])
+      }
+      push('I', 'main-thread capture installed')
+    })()
+  </script>
   <style>
     html, body {
       margin: 0;
