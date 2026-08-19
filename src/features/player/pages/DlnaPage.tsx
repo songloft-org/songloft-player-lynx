@@ -104,7 +104,7 @@ export function DlnaPage() {
             ? <text className='dlna-page__state'>{t('dlna.noDevices')}</text>
             : devices.map(d => (
               <view key={d.id} className='dlna-page__device' bindtap={() => onCast(d)}>
-                <Icon name='volume' size={20} color={ICON_COLORS.content2} />
+                <Icon name='cast' size={20} color={ICON_COLORS.content2} />
                 <text className='dlna-page__device-name'>{d.name}</text>
                 {casting === d.id
                   ? <Icon name='check' size={16} color={ICON_COLORS.primary} />

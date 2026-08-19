@@ -244,7 +244,7 @@ export function FullPlayerPage() {
                 bindtap={() => void navigate({ to: '/player/dlna' })}
                 data-testid='full-player-dlna'
               >
-                <Icon name='volume' size={20} color={ICON_COLORS.content} />
+                <Icon name='cast' size={20} color={ICON_COLORS.content} />
               </view>
             )
             : null}

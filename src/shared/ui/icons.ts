@@ -62,6 +62,7 @@ export type IconName =
   | 'brush'
   | 'queue'
   | 'tune'
+  | 'cast'
 
 /** Shared stroke attributes for line icons — Muse §4.5 stroke-width 1.6. */
 function stroke(color: string): string {
@@ -309,6 +310,13 @@ const ICONS: Record<IconName, (color: string) => string> = {
     `<circle cx="15" cy="6" r="2.2" ${stroke(c)}/>` +
     `<circle cx="8" cy="12" r="2.2" ${stroke(c)}/>` +
     `<circle cx="17" cy="18" r="2.2" ${stroke(c)}/>`,
+
+  // Cast: screen with signal arcs — DLNA / screen casting.
+  cast: (c) =>
+    `<path d="M2 16.1A5 5 0 0 1 5.9 20" ${stroke(c)}/>` +
+    `<path d="M2 12.05A9 9 0 0 1 9.95 20" ${stroke(c)}/>` +
+    `<path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" ${stroke(c)}/>` +
+    `<path d="M2 20h.01" ${stroke(c)}/>`,
 }
 
 /** Build a complete inline SVG document string for `name`, colored with `color`. */
