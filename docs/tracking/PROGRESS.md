@@ -862,6 +862,27 @@ Phase B3 第一步。方法论照批B1 对 Android 的做法（照抄官方 demo
 >
 > ⚠️ **仍待人工**：**EQ 滑条拖动**。`9d8e993` 刚修完这块，坐标虽是 viewport 相对（不受新增 wrapper 影响）且每次 pointer-down 都重测，但原生手势没有任何测试能驱动，`simctl` 也没有 swipe 能力。宽屏 ≥768px 的右栏行为（无返回箭头 + about→licenses / library→duplicates 时父行保持高亮）同理需要 iPad 或桌面尺寸窗口。
 
+### 批51 · 播放器两个弹出层修复（3 个 bug 串联）+ 桶入口清零 + 署名订正
+
+**起点**：速度与播放模式从「点一下循环切换」改成弹出菜单（`shared/ui/PopoverMenu.tsx` 封装 lynx-ui popover 原语）。这次改动引入并暴露了**三个依次显形的 bug**，每个都是静默失败，全部配了反向验证过的闸门。整批的教训写进 `AGENTS.md` §4 新增的「Popover / Presence」小节。
+
+- **① 菜单根本打不开（我引入的回归，原来的循环切换是好的）**。传了 `show` 即受控模式，此时 `PopoverTrigger` 的点击**只**走 `onVisibleChange`（`if (isControlled) onVisibleChange?.(!show)`），而封装只传了 `onClose`。`onClose` 是 `Presence` 的生命周期回调（「已经关完了」）而非关闭请求，于是死锁：没人置 `show` 为 true → 永不 leaving → `onClose` 永不触发。**两个按钮当时是完全失效的。**
+- **② 两个弹出层能同时打开**（用户截图报的）。`PopoverBackdrop` 的库样式是 `100vw × 100vh` 但**没有 `top`/`left`**，fixed 元素偏移为 auto 时落在**静态位置**（定位容器内、紧贴触发器），所以遮罩铺的是「从弹出层量起」的一屏——速度菜单（右上）打开时播放模式键（左下）在遮罩之外。补 `top: 0; left: 0` 钉到视口原点。顺带删掉前一版自写的同名遮罩：类名 `popover-backdrop` 是库里硬编码的，自写会撞车，且它那个 `z-index: 99` 会把遮罩压在菜单**上面**（点菜单项只会关闭、选不中）。现遮罩 100 / 面板 101，与 ActionSheet 等同层。
+- **③ 关闭要慢约一秒**（用户手感报的，**不是卡顿**）。`PopoverContent` 是承载 `bindtransitionend` 的元素，`Presence` 只有等到该事件才离开 `Leaving`；我的 CSS 一个 transition 都没声明，于是退化成空转 `MAX_WAIT_FRAMES = 24` 次单帧 `lynx.requestAnimationFrame`，而 `delayFrames` 就是 `lynx.requestAnimationFrame`，在 BTS 上每帧一次线程往返——纯帧数 60fps 下也已 400ms 起。修法是 `transition: opacity 140ms` + `.ui-closed { opacity: 0 }`，**两半缺一不可**（只有 transition 而值不变照样不触发）。这也顺带修掉一个未被报告的问题：定位在 `DelayedEntering` 才算（比 `Entering` 晚 16 帧），此前那 16 帧里菜单是以未定位的位置**可见**的，会先显形再跳走。
+- 打开方向仍有约 16 帧固定延迟（`enableDelay={true}` 在 `PopoverPositioner` 里硬编码，定位需要触发器 rect），**改不了、非 bug**，已在 AGENTS 记录。
+
+**桶入口清零**：`AGENTS.md` 早有「禁用桶入口」铁律，但 `@lynx-js/lynx-ui` 一直在 `package.json` 里、3 个文件绕过了它。本批移除该依赖，显式加 `-dialog` / `-popover` / `-radio-group`（均 `^3.135.4`，与既有子包同版本），改 3 处源码 import + 4 处测试 mock（`duplicate-check-page` 那个原来一个 mock 覆盖 Dialog + RadioGroup，拆成两个）。**体积实测只差 4 字节**（1932213 → 1932217）——各子包都声明 `sideEffects: false`，tree-shaking 本来就摇掉了未用到的转发；用「未使用的 `feed-list` 的 CSS 类名在产物中出现 0 次」验证过（标识符会被压缩混淆，grep 标识符测不出东西）。**这条规则买的是一致性与 Lynx 副作用暴露面，不是字节**，AGENTS 已就地订正措辞。
+
+**开源许可页订正**：`LicensesPage.tsx` 有 3 条 URL 指向与包毫无关系的 `github.com/nicklhw/nicklhw-…`（`@lynx-js/react`、lynx-ui、`url-search-params-polyfill`），像是一次全局替换事故——这是**用户可见的署名信息**。以已安装包 `package.json` 的 `repository` 字段为权威源逐条核对并修正；license 列全部相符（`@lynx-js/react` 是唯一无 `license` 字段的，其源码版权头写明 Apache-2.0）。新增 `licenses-accurate.test.ts` 逐条比对 manifest，它同时覆盖本批另一类腐化：**署名一个已不是依赖的包**（`@lynx-js/lynx-ui` 正是如此）。
+
+**闸门**（4 个新断言，全部反向验证过会红）：`full-player.test.tsx` 的开→选测试（摘掉 `onVisibleChange` 即红）；`popover-menu-css.test.ts` 三条（遮罩 `top/left` 钉死、面板 z-index 高于遮罩、transition 覆盖 opacity 且 `.ui-closed` 真的改值）；`licenses-accurate.test.ts` 三条。**`_render-mocks.tsx` 的 popover mock 刻意保留真实前置条件**：只在 `show` 时挂载、点击只走 `onVisibleChange`。前一版 mock 无条件渲染 children 并注释「items 总是可见」，正好把 bug ① 固化成契约——§6 那条「mock 必须保留真实实现的前置条件」的又一例。
+
+自动验收：`tsc -b` / `vitest` **1288 测试（136 文件）** / `build` 双产物 / `build:web` 均绿。用户手动验收：② 与 ③ 均已确认修复。
+
+> ⚠️ **本批未做视觉自动化验证**。遮罩几何与关闭时序都是从库源码推出来的，测试只能证明状态接线与 CSS 契约——两条都靠用户手动确认。曾起过无头 Chrome + CDP 想真机观测，因需要先登录+起播、成本过高而中止（已清理进程）。
+>
+> ⚠️ **顺带发现、本批未改**：`pnpm install` 会触发全量重装警告，与本批改动无关——`node_modules/.modules.yaml` 记录的 store 是父仓库的 `/Users/hanxi/toy/songloft/.pnpm-store`，而当前 `pnpm store path` 解析到 `~/Library/pnpm/store/v10`，仓库里已无任何 `.npmrc` 声明它。**刻意不加 `.npmrc` 固定**：CI 用 `pnpm/action-setup@v4` + 无 store 配置（即默认 store），而 `.npmrc` 会入库、`../.pnpm-store` 在只 checkout 本仓库的 CI 里根本不存在。本机已迁到默认 store（`--frozen-lockfile`，lockfile 哈希前后一致，`postinstall` 与两个 `patches/` 均确认重新生效），`.modules.yaml` 现与 CI 一致，不会再复现。父仓库那个 378 MB 旧 store 目前看已无人使用（`plugin-toolchain` 用的是 `store/v3`），是否回收留给人工决定。
+
 ## 未完成 / 遗留事项（TODO & 风险）
 
 - [x] **批28 Computing 阶段进度恒 `0/0` 且完成后不转 Results**（批29b 发现 → **批29c 已修**）：双层根因（陈旧终态跳过 computing + `refetchInterval` 在 Lynx 首次 fetch 后不再 fire），修法见上方「批29c」小结与下方「批29c」详节。18091 真机逐张截图验过 Computing 推进 + 自动转 Results。
@@ -962,10 +983,10 @@ Phase B3 第一步。方法论照批B1 对 Android 的做法（照抄官方 demo
   - [x] `placeholder-color` ×5 文件 → 批19 改为 `-x-placeholder-color`，警告消失、修复真正生效。
   - [x] `text-transform: uppercase`（`jsplugin/pages/TabConfigPage.css`）→ **批19b 已删声明**（Lynx 无此属性且无 `-x-` 变体）。此条目为过期未更新，批29 核实订正：源码现存的是一条「Lynx 无此属性」的解释性注释。
   - [x] `object-fit: cover`（`jsplugin/widgets/PluginGrid.css`）→ **批19b 已改用元素属性 `mode='aspectFit'`**。同上属过期未更新，批29 核实订正。**构建警告自批19b 起已归零**，批29 的 clean build 复核仍为零。
-- [ ] **订正 3 条过期结论**（批19 调研发现 `@lynx-js/lynx-ui` 桶入口已把这些子包带进 `node_modules`，v3.135.4，Radix 风格 compound API；按组件包导入只需在 `package.json` 显式声明）：
+- [x] **订正 3 条过期结论**（批19 调研发现 `@lynx-js/lynx-ui` 桶入口已把这些子包带进 `node_modules`，v3.135.4，Radix 风格 compound API；按组件包导入只需在 `package.json` 显式声明）——**三条已全部解决**，且批51 把桶入口本身从依赖里移除了：
   - [x] ~~「Lynx 无现成 dialog 原语」故登出用两步 tap~~ → **有 `lynx-ui-dialog`**，**批28 已采用**（重复检测删除确认真机验过），**批31 登出也改为 Dialog**。此条完全解决。
   - ~~「lynx-ui 无 sortable」故排序用 chevron 上移/下移按钮~~ → **有 `lynx-ui-sortable`**（还有 `lynx-ui-draggable`/`lynx-ui-swipe-action`）。**批30 已完成迁移**：歌单/歌曲/队列三处排序 UI 全部从按钮式换成 `SortableRoot` 拖拽手柄，chevron 代码已删除。
-  - 另有 `lynx-ui-checkbox` / `lynx-ui-radio-group`（多选一与勾选框的现成原语）、`lynx-ui-dialog`、`lynx-ui-popover`、`lynx-ui-form`、`lynx-ui-list`/`feed-list`/`scroll-view`、`lynx-ui-lazy-component`、`lynx-ui-presence`、`lynx-ui-overlay`、`lynx-ui-common`。批19 刻意**未引入任何新包**（目录树勾选自绘 = 两个 view + 一个 `check` Icon，比引入新原生手势叶子 + 写测试 mock 更省），但后续批可按需选用。
+  - ~~第三条「另有一批可选原语，批19 刻意未引入」~~ → **批51 起 `lynx-ui-popover` 已在用**（播放器速度 / 播放模式两个弹出菜单，封装为 `shared/ui/PopoverMenu.tsx`），`lynx-ui-radio-group`（重复检测选主）与 `lynx-ui-dialog` 也已是显式依赖。仍未用到的：`checkbox`（勾选框继续自绘，批19 的理由仍成立）、`form`、`list`/`feed-list`/`scroll-view`、`lazy-component`、`swipe-action`；`presence`/`overlay`/`common` 由 popover 间接带入，不直接 import。
 - [x] **验收命令修正：`tsc --noEmit` 一直是空跑**（批19 发现，已改 `AGENTS.md` §5）。根 `tsconfig.json` 是 solution-style（`"files": []` + `references`），`tsc --noEmit` 对它的输入文件集为空——**什么都不检查、永远 exit 0**。自批1 起验收清单里的那一行是安慰剂；真正拦类型错误的一直是 `pnpm run build` 内的 rspeedy type checker。**正确命令是 `pnpm exec tsc -b`**（写 `*.tsbuildinfo`，已 gitignore；必要时 `--force`）。用 `tsc -b --force` 对全库跑过一次：**无历史遗留类型错误**（因为 build 一直在真检查）。
   - 发现过程：批19 收尾加 dev 登录凭据时，`devCredentials` 用了 `as const` → `useState(devCredentials.password)` 推成 `useState<'admin'>` → `setPassword(string)` 类型不符。`tsc --noEmit` 静默通过，`pnpm run build` 报 `TS2345`。**教训**：用 grep 过滤 build 输出时会连错误一起滤掉——我第一次就这么漏看了一次失败的构建。
 - [ ] **风险登记**（详见 roadmap）：R2 桌面 clay 元素实测、R11 Query 无 DOM（本批已验证，真机待确认）、R13 lynx-ui Web/Desktop 覆盖、R5 音频后台播放各端差异。

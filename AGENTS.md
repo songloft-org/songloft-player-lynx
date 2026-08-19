@@ -166,9 +166,19 @@ pnpm run build:web-embedded   # 产物给后端嵌入（songloft-player-build/we
 
 ### lynx-ui
 
-- **按组件包导入**（`@lynx-js/lynx-ui-button`），禁用桶入口 `@lynx-js/lynx-ui`
+- **按组件包导入**（`@lynx-js/lynx-ui-button`），禁用桶入口 `@lynx-js/lynx-ui`。批51 起桶入口**已不是依赖**，import 它会直接解析失败（此前它在 `package.json` 里，3 个文件绕过了这条规则）。体积上两者实测**只差 4 字节**（各子包都声明 `sideEffects: false`，tree-shaking 本来就摇掉了未用到的转发）——这条规则买的是一致性和 Lynx 副作用暴露面，不是字节
 - compound 组件（Switch 等）不带样式，`ui-checked`/`ui-active` 须使用方样式表提供——统一用 `src/shared/ui/AppSwitch.tsx`
 - 测试 mock 原生组件时必须保留「状态→className」映射
+
+#### Popover / Presence（三条都是静默失败，批51 各踩一次）
+
+统一封装在 `src/shared/ui/PopoverMenu.tsx`，新增弹出菜单请复用它而不是直接拼原语。
+
+- **传了 `show` 就是受控模式，此时 `PopoverTrigger`/`PopoverBackdrop` 的点击只走 `onVisibleChange`**（`if (isControlled) onVisibleChange?.(!show)`），绝不碰内部状态。漏传 = 触发器接到空气、菜单永远打不开。**`PopoverRoot` 的 `onClose` 不是替代品**——那是 `Presence` 的生命周期回调（「已经关完了」），拿它当关闭请求会死锁：没人把 `show` 置 true，就永远不会 leaving，`onClose` 也就永远不触发
+- **`PopoverBackdrop` 的库样式是 `position: fixed; width: 100vw; height: 100vh` 但没有 `top`/`left`**。fixed 元素在偏移为 auto 时落在**静态位置**（定位容器内、紧贴触发器），于是遮罩铺的是「从弹出层量起」的一屏，弹出层左侧与上方全是可点的——表现为两个弹出层能同时打开。必须自己补 `top: 0; left: 0`。它的类名 `popover-backdrop` 是库里**硬编码**的，所以补样式就是在扩展库的规则，别再自写一个同名遮罩
+- **`PopoverContent` 必须声明 transition/animation，否则关闭要慢约一秒**。它是承载 `bindtransitionend`/`bindanimationend` 的元素，而 `Presence` 只有等这些事件才离开 `Leaving`；没有动画就退化成空转 `MAX_WAIT_FRAMES = 24` 次单帧 `lynx.requestAnimationFrame`，在 BTS 上每帧一次线程往返。配套要让 Presence 切换的类真的改变被 transition 的属性（`.ui-closed { opacity: 0 }`），只有 transition 而值不变照样什么都不触发。`ui-entering`/`ui-leaving` 仅在给 `PopoverContent` 传 `transition` prop 时才产生，不传时用 `ui-open`/`ui-closed` 即可（`Leaving` 也算 `closed`）
+- **打开方向有约 16 帧固定延迟**，`PopoverPositioner` 里 `enableDelay={true}` 是硬编码的，定位（`computeFloating`）要等 `DelayedEntering` 才算。这不是 bug 也改不了；`.ui-closed { opacity: 0 }` 顺带保证这 16 帧里菜单是隐身的，否则会先在未定位处显形再跳走
+- **不要给 `PopoverPositioner` 传 `container`**：那会让它渲染 Lynx `<overlay>`，而该标签不在 web-core 的 `LYNX_TAG_TO_HTML_TAG_MAP` 里，Web 上会退化成 `HTMLUnknownElement` 并丢失定位
 
 ### 事件与布局
 

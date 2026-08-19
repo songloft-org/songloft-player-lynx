@@ -76,6 +76,9 @@
 - [x] web 平台刷新页面就掉登录（根因就写在控制台那行 warn 里：`no NativeModules.SongloftStorage and no localStorage; using in-memory storage`。web-core 把 app 跑在真 `Worker` 里，而 Web Storage 是 window-only，所以 worker realm 的 `localStorage`/`sessionStorage` 都是 undefined，能力探测一路落到 `createMemoryStorage()`，token 随页面一起没了。新增 `idb-storage.ts`：worker realm 里 `indexedDB` 原生可用（实测 put/get 往返成功），插在 localStorage 与 memory 之间。刻意不走「桥到主线程 localStorage」——那要给 `web/index.html` 与嵌入产物各塞一个宿主文件，而 IDB 零宿主配合。`open` 带 3s 超时兜底：auth bootstrap 等着第一次读，另一个 tab 触发 version-change blocked 时浏览器既不 fire `onsuccess` 也不 fire `onerror`，不设超时就是白屏挂死）
 - [x] 导出日志功能缺少导出客户端日志功能，需要和flutter版本功能对齐。
 - [x] 日志等级设置是不是缺少了一个标题？
+- [x] 播放器速度/播放模式弹出层能同时打开两个，点其他区域应该让上一个消失（批51，**用户截图报的**）—— `PopoverBackdrop` 是负责吞掉外部点击的遮罩，库样式给了 `100vw × 100vh` 却**没有 `top`/`left`**；fixed 元素在偏移为 auto 时落在**静态位置**（定位容器内、紧贴触发器），于是它铺的是「从弹出层量起」的一屏，弹出层左侧与上方全没盖住——速度菜单在右上时，左下的播放模式键就在遮罩之外。补 `top: 0; left: 0` 钉到视口原点。同时删掉前一版自写的同名遮罩（`popover-backdrop` 这个类名是库里硬编码的，自写必然撞车；且它那个 `z-index: 99` 会把遮罩压在菜单**上面**，导致点菜单项只关闭、选不中）。闸门 `popover-menu-css.test.ts` 钉住这两条，摘掉 `top/left` 即红
+- [x] 弹出层点击后要一秒左右才消失，是卡顿吗（批51，**不是卡顿**）—— `PopoverContent` 是承载 `bindtransitionend`/`bindanimationend` 的元素，而 `Presence` 只有等到这些事件才离开 `Leaving` 状态；我们的 CSS 一个 transition 都没声明，于是它退化成空转 `MAX_WAIT_FRAMES = 24` 次单帧 `lynx.requestAnimationFrame`（`delayFrames` 的实现就是 `lynx.requestAnimationFrame`），而业务代码在 BTS 背景线程上、每帧都是一次线程往返——纯帧数按 60fps 算也已 400ms 起。修法 `transition: opacity 140ms` + `.ui-closed { opacity: 0 }`，**两半缺一不可**（只有 transition 而值不变则什么都不触发）；`transitionend` 一到就立刻卸载。若某宿主不派发该事件则退回原来的 24 帧超时，慢但不坏。顺带修掉一个未被报告的问题：定位在 `DelayedEntering` 才计算（比 `Entering` 晚 16 帧），此前那 16 帧里菜单是以**未定位的位置可见**的，会先显形再跳走
+  - 同一批还修了个我自己引入的回归：这两个弹出层**一开始根本打不开**（受控模式下 `PopoverTrigger` 只走 `onVisibleChange`，封装漏传了它；`onClose` 是 Presence 的「已关完」生命周期回调，拿它当关闭请求会死锁）。三条的机制与铁律见 `AGENTS.md` §4「Popover / Presence」
 
 ## 代码审计发现（2026-08-14，均未修）
 
