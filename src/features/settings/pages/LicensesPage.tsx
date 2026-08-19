@@ -9,16 +9,25 @@ interface LicenseEntry {
   url: string
 }
 
+/*
+ * Attribution shown to users, so each `url` must be the dependency's real
+ * upstream. Three of these used to point at `github.com/nicklhw/nicklhw-…`
+ * repositories that have nothing to do with the packages (apparently a
+ * find-replace accident); `licenses-accurate.test.ts` now checks every entry
+ * against the installed package's own `repository` field.
+ */
 const LICENSES: LicenseEntry[] = [
-  { name: '@lynx-js/react', license: 'Apache-2.0', url: 'https://github.com/nicklhw/nicklhw-lynx-js' },
+  { name: '@lynx-js/react', license: 'Apache-2.0', url: 'https://github.com/lynx-family/lynx-stack' },
   { name: '@tanstack/react-query', license: 'MIT', url: 'https://github.com/TanStack/query' },
   { name: '@tanstack/react-router', license: 'MIT', url: 'https://github.com/TanStack/router' },
   { name: 'i18next', license: 'MIT', url: 'https://github.com/i18next/i18next' },
   { name: 'react-i18next', license: 'MIT', url: 'https://github.com/i18next/react-i18next' },
   { name: 'zod', license: 'MIT', url: 'https://github.com/colinhacks/zod' },
   { name: 'zustand', license: 'MIT', url: 'https://github.com/pmndrs/zustand' },
-  { name: '@lynx-js/lynx-ui', license: 'Apache-2.0', url: 'https://github.com/nicklhw/nicklhw-lynx-js' },
-  { name: 'url-search-params-polyfill', license: 'MIT', url: 'https://github.com/nicklhw/nicklhw-url-search-params-polyfill' },
+  // Consumed as individual component packages (button / dialog / popover / …),
+  // not the aggregate `@lynx-js/lynx-ui` entry point — one line for the family.
+  { name: '@lynx-js/lynx-ui-*', license: 'Apache-2.0', url: 'https://github.com/lynx-family/lynx-ui' },
+  { name: 'url-search-params-polyfill', license: 'MIT', url: 'https://github.com/jerrybendy/url-search-params-polyfill' },
 ]
 
 export interface LicensesPageProps {

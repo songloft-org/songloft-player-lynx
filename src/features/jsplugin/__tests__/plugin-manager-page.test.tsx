@@ -55,7 +55,7 @@ vi.mock('../../../native/native-platform.js', () => ({
 // the hidden state instead of unmounting), because unmounting would hide exactly
 // the regression these tests pin: a dialog whose subject is cleared while it is
 // still visible on screen.
-vi.mock('@lynx-js/lynx-ui', () => ({
+vi.mock('@lynx-js/lynx-ui-dialog', () => ({
   DialogRoot: ({ children, show }: { children: ReactNode; show: boolean }) =>
     <view data-testid='stub-dialogroot' data-dialoghidden={show ? 'false' : 'true'}>{children}</view>,
   DialogView: ({ children }: { children: ReactNode }) => <view>{children}</view>,

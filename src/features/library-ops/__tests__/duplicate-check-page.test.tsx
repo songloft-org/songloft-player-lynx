@@ -33,12 +33,15 @@ vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
 
-vi.mock('@lynx-js/lynx-ui', () => ({
+vi.mock('@lynx-js/lynx-ui-dialog', () => ({
   DialogRoot: ({ children }: { children: ReactNode }) => <view>{children}</view>,
   DialogView: ({ children }: { children: ReactNode }) => <view>{children}</view>,
   DialogBackdrop: ({ children }: { children: ReactNode }) => <view>{children}</view>,
   DialogContent: ({ children }: { children: ReactNode }) => <view>{children}</view>,
   DialogClose: ({ children }: { children: ReactNode }) => <view>{children}</view>,
+}))
+
+vi.mock('@lynx-js/lynx-ui-radio-group', () => ({
   RadioGroupRoot: ({ children }: { children: ReactNode }) => <view>{children}</view>,
   Radio: ({ children, value }: { children: ReactNode; value: string }) => (
     <view data-value={value}>{children}</view>

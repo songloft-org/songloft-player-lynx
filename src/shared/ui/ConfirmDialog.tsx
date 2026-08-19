@@ -6,7 +6,7 @@ import {
   DialogBackdrop,
   DialogContent,
   DialogClose,
-} from '@lynx-js/lynx-ui'
+} from '@lynx-js/lynx-ui-dialog'
 
 import './ConfirmDialog.css'
 

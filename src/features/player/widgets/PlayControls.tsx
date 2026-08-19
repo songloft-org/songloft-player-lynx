@@ -1,6 +1,9 @@
+import { useState } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
+import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
 import type { IconName } from '../../../shared/ui/icons.js'
 import { writeDefaultPlayMode } from '../../settings/data/settings-prefs.js'
 import { hasNext, hasPrev, usePlayerStore } from '../store/index.js'
@@ -34,25 +37,39 @@ export function PlayControls() {
   const playMode = usePlayerStore((s) => s.playMode)
   const canNext = usePlayerStore(hasNext)
   const canPrev = usePlayerStore(hasPrev)
+  const [showModePopover, setShowModePopover] = useState(false)
+
+  const modeItems: PopoverMenuItem[] = [
+    { key: 'order',  label: t('player.modeOrder'),  icon: 'order',      selected: playMode === 'order' },
+    { key: 'loop',   label: t('player.modeLoop'),   icon: 'repeat',     selected: playMode === 'loop' },
+    { key: 'single', label: t('player.modeSingle'), icon: 'repeat-one', selected: playMode === 'single' },
+    { key: 'random', label: t('player.modeRandom'), icon: 'shuffle',    selected: playMode === 'random' },
+  ]
 
   return (
     <view className='player-controls'>
-      <view
-        className='player-controls__btn player-controls__btn--mode'
-        // Persist the new mode as the default. This toggle used to only change the
-        // in-memory store, with persistence owned by a Settings row that has since
-        // been removed — without this the pref `src/index.tsx` restores at startup
-        // would never be written and the mode would reset every launch.
-        bindtap={() => {
-          usePlayerStore.getState().cyclePlayMode()
-          void writeDefaultPlayMode(usePlayerStore.getState().playMode)
+      <PopoverMenu
+        show={showModePopover}
+        onShowChange={setShowModePopover}
+        placement='top-start'
+        triggerClassName='player-controls__btn player-controls__btn--mode'
+        trigger={
+          <>
+            <view className='player-controls__mode-glyph'>
+              <Icon name={MODE_ICON[playMode]} size={20} color={playMode !== 'order' ? ICON_COLORS.primary : ICON_COLORS.content2} />
+            </view>
+            <text className='player-controls__mode-label'>{t(MODE_LABEL_KEY[playMode])}</text>
+          </>
+        }
+        items={modeItems}
+        // Persist the picked mode as the default. Without this the pref
+        // `src/index.tsx` restores at startup would never be written and the
+        // mode would reset every launch.
+        onSelect={(key) => {
+          usePlayerStore.getState().setPlayMode(key as PlayMode)
+          void writeDefaultPlayMode(key as PlayMode)
         }}
-      >
-        <view className='player-controls__mode-glyph'>
-          <Icon name={MODE_ICON[playMode]} size={20} color={ICON_COLORS.content2} />
-        </view>
-        <text className='player-controls__mode-label'>{t(MODE_LABEL_KEY[playMode])}</text>
-      </view>
+      />
 
       <view
         className={canPrev

@@ -1,0 +1,114 @@
+/* ── Outside-tap backdrop ── */
+
+/*
+ * `PopoverBackdrop` hardcodes the class name `popover-backdrop`, so this rule
+ * extends lynx-ui-popover's own. That stylesheet gives it
+ * `position: fixed; width: 100vw; height: 100vh` but **no `top`/`left`** — and a
+ * fixed box with auto offsets sits at its *static* position, which here is deep
+ * inside the positioner next to the trigger. So it spanned a viewport-sized area
+ * measured from the popover instead of from the screen, leaving everything above
+ * and left of the popover uncovered: with the speed menu (top-right) open, the
+ * play-mode button (bottom-left) was outside the backdrop, so tapping it opened
+ * a second menu instead of dismissing the first. Pin it to the viewport origin.
+ *
+ * `z-index: 100` matches the app's other overlay backdrops (ActionSheet,
+ * SongContextMenu, PlayHistoryPanel) so the backdrop covers page content; the
+ * menu panel below must stay above it.
+ */
+.popover-backdrop {
+  top: 0;
+  left: 0;
+  z-index: 100;
+}
+
+/* ── Popover menu panel (Muse tokens) ── */
+
+.popover-menu {
+  display: flex;
+  flex-direction: column;
+  /* Above the backdrop, or item taps would land on it and just close the menu. */
+  position: relative;
+  z-index: 101;
+  min-width: 140px;
+  padding: var(--space-2) 0;
+  background-color: var(--paper);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--line);
+  /*
+   * Not decoration — this is what makes the menu close promptly.
+   *
+   * `PopoverContent` (this element) carries the Presence
+   * `bindtransitionend`/`bindanimationend` handlers, and Presence only leaves the
+   * `Leaving` state when one of them fires. With no transition declared there is
+   * nothing to fire, so it falls back to spinning `MAX_WAIT_FRAMES` (24) single-
+   * frame `lynx.requestAnimationFrame` hops before it will unmount — on the
+   * background thread each hop is a thread round-trip, which is why dismissing
+   * the menu visibly lagged about a second behind the tap.
+   *
+   * Keep the duration in sync with the comment on `.ui-closed` below: the pair is
+   * the whole mechanism.
+   */
+  transition: opacity 140ms ease-out;
+}
+
+/*
+ * Presence toggles `ui-open` / `ui-closed` on this element (the `ui-entering` /
+ * `ui-leaving` variants only exist when `PopoverContent` is given a `transition`
+ * prop, which it is not here — `ui-closed` already covers both `Leaving` and the
+ * pre-reveal `Entering` tick, so it is the simpler hook).
+ *
+ * Opening: mounts `ui-closed` at opacity 0, flips to `ui-open` → fades in.
+ * Closing: `ui-open` → `ui-closed` changes opacity, so the transition actually
+ * runs and its `transitionend` releases Presence immediately.
+ *
+ * If a host ever fails to deliver `transitionend`, this degrades to the old
+ * 24-frame timeout — slow, but not broken.
+ */
+.popover-menu.ui-closed {
+  opacity: 0;
+}
+
+.popover-menu.ui-open {
+  opacity: 1;
+}
+
+.popover-menu__item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 44px;
+  padding: 0 var(--space-3);
+  gap: var(--space-2);
+}
+
+.popover-menu__item--selected {
+  background-color: var(--neutral-faint);
+}
+
+.popover-menu__item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.popover-menu__item-label {
+  flex: 1;
+  font-size: var(--font-sm);
+  color: var(--content);
+}
+
+.popover-menu__item-label--selected {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.popover-menu__item-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}

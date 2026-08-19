@@ -41,6 +41,12 @@ vi.mock('@lynx-js/lynx-ui-sortable', async () =>
 vi.mock('@lynx-js/lynx-ui-swiper', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSwiper(),
 )
+vi.mock('@lynx-js/lynx-ui-popover', async () => ({
+  ...(await vi.importActual<typeof import('@lynx-js/lynx-ui-popover')>(
+    '@lynx-js/lynx-ui-popover',
+  )),
+  ...(await import('../../../__tests__/_render-mocks.js')).mockLynxUiPopover(),
+}))
 vi.mock('../store/player-store.js', async () => {
   const actual = await vi.importActual<typeof import('../store/player-store.js')>(
     '../store/player-store.js',
@@ -83,8 +89,10 @@ test('renders the now-playing header, song meta and transport', async () => {
   expect(queryByTestId('icon-pause')).not.toBeInTheDocument()
   expect(queryByTestId('icon-skip-prev')).toBeInTheDocument()
   expect(queryByTestId('icon-skip-next')).toBeInTheDocument()
+  // Exactly once: the popover starts closed, so the menu's own copy of the
+  // order icon/label is not mounted.
   expect(queryByTestId('icon-order')).toBeInTheDocument()
-  expect(queryByText('Order')).toBeInTheDocument()
+  expect(queryAllByText('Order')).toHaveLength(1)
   // Topbar collapse + playlist icons (menu also appears on drag handles).
   expect(queryByTestId('icon-chevron-down')).toBeInTheDocument()
   expect(queryAllByTestId('icon-menu').length).toBeGreaterThanOrEqual(1)
@@ -96,17 +104,49 @@ test('renders formatted current + total time from the store (30s / 200s)', async
   expect(queryByText('03:20')).toBeInTheDocument()
 })
 
-test('cycling the play mode also persists it as the default', async () => {
-  const { queryByTestId } = await renderPage()
+test('the play mode popover opens on tap and selecting a mode persists it', async () => {
+  const { getByText, queryAllByText } = await renderPage()
+
+  // Closed: only the trigger's own label for the current mode is rendered. The
+  // other three modes exist solely as menu items, so their absence is what
+  // proves the menu is shut — and their presence below is what proves the
+  // trigger really opened it (it used to be wired to nothing at all).
+  expect(queryAllByText('Repeat all')).toHaveLength(0)
+  const trigger = getByText('Order').parentElement!
 
   await act(async () => {
-    fireEvent.tap(queryByTestId('icon-order')!.parentElement!.parentElement!)
+    fireEvent.tap(trigger)
   })
 
-  // The store mock leaves `playMode` at 'order', so that is what gets written —
-  // the point is that a write happens at all. Before this moved out of Settings,
-  // cycling the mode only touched memory and the pref never changed.
-  expect(writePrefSpy).toHaveBeenCalledWith('order')
+  expect(queryAllByText('Repeat all')).toHaveLength(1)
+
+  await act(async () => {
+    fireEvent.tap(getByText('Repeat all').parentElement!)
+  })
+
+  // Persisted as the new default, and the menu closed itself again.
+  expect(writePrefSpy).toHaveBeenCalledWith('loop')
+  expect(queryAllByText('Repeat all')).toHaveLength(0)
+})
+
+test('the speed popover opens on tap and closes on select', async () => {
+  const { getByText, getByTestId, queryAllByText } = await renderPage()
+
+  // The trigger shows the current speed ('1x'); the choices only exist in the menu.
+  expect(queryAllByText('1.5x')).toHaveLength(0)
+
+  await act(async () => {
+    fireEvent.tap(getByTestId('speed-btn').parentElement!)
+  })
+
+  expect(queryAllByText('1.5x')).toHaveLength(1)
+  expect(queryAllByText('Normal')).toHaveLength(1)
+
+  await act(async () => {
+    fireEvent.tap(getByText('1.5x').parentElement!)
+  })
+
+  expect(queryAllByText('1.5x')).toHaveLength(0)
 })
 
 test('closing returns to the last shell tab rather than always home', async () => {

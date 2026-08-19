@@ -100,7 +100,7 @@ vi.mock('../data/log-export.js', () => ({
   exportAndShareLogs: vi.fn(async () => ({ hasBackend: true, hasFrontend: true })),
 }))
 
-vi.mock('@lynx-js/lynx-ui', () => ({
+vi.mock('@lynx-js/lynx-ui-dialog', () => ({
   DialogRoot: ({ children, show }: { children: ReactNode; show: boolean }) => show ? <view>{children}</view> : null,
   DialogView: ({ children }: { children: ReactNode }) => <view>{children}</view>,
   DialogBackdrop: ({ children }: { children: ReactNode }) => <view>{children}</view>,

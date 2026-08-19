@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 
-import { RadioGroupRoot, Radio, RadioIndicator } from '@lynx-js/lynx-ui'
+import { RadioGroupRoot, Radio, RadioIndicator } from '@lynx-js/lynx-ui-radio-group'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { DuplicateGroup, DuplicateSong } from '../../../models/duplicate.js'

@@ -17,6 +17,8 @@ import { getPlatformTarget } from '../../../native/platform-target.js'
 import { getVideoModule } from '../../../native/video.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
+import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
 import { usePlayerStore } from '../store/index.js'
 import { LyricsView } from '../widgets/LyricsView.js'
 import { PlayControls } from '../widgets/PlayControls.js'
@@ -123,12 +125,13 @@ export function FullPlayerPage() {
     return () => { usePlayerStore.getState().closePlaylistDrawer() }
   }, [])
 
+  const [showSpeedPopover, setShowSpeedPopover] = useState(false)
   const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
-  const cycleSpeed = () => {
-    const idx = SPEEDS.indexOf(speed)
-    const next = SPEEDS[(idx + 1) % SPEEDS.length]
-    void usePlayerStore.getState().setSpeed(next)
-  }
+  const speedItems: PopoverMenuItem[] = SPEEDS.map((s) => ({
+    key: String(s),
+    label: s === 1 ? t('player.speedNormal') : `${s}x`,
+    selected: speed === s,
+  }))
 
   /**
    * Return to the tab the player was opened from, not always Home.
@@ -184,13 +187,24 @@ export function FullPlayerPage() {
         </view>
         <text className='full-player__eyebrow'>{t('player.nowPlaying')}</text>
         <view className='full-player__timer-wrap'>
-          {speed !== 1
-            ? <view className='full-player__speed-btn' bindtap={cycleSpeed} data-testid='speed-btn'>
-                <text className='full-player__speed-text'>{speed}x</text>
-              </view>
-            : <view className='full-player__icon-btn' bindtap={cycleSpeed} data-testid='speed-btn'>
-                <text className='full-player__speed-text-idle'>1x</text>
-              </view>}
+          <PopoverMenu
+            show={showSpeedPopover}
+            onShowChange={setShowSpeedPopover}
+            placement='bottom'
+            triggerClassName={speed !== 1 ? 'full-player__speed-btn' : 'full-player__icon-btn'}
+            trigger={
+              <text
+                className={speed !== 1
+                  ? 'full-player__speed-text'
+                  : 'full-player__speed-text-idle'}
+                data-testid='speed-btn'
+              >
+                {speed}x
+              </text>
+            }
+            items={speedItems}
+            onSelect={(key) => { void usePlayerStore.getState().setSpeed(Number(key)) }}
+          />
           {timerLabel
             ? <text className='full-player__timer-remaining'>{timerLabel}</text>
             : null}
