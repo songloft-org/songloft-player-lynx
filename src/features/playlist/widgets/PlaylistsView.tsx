@@ -9,6 +9,9 @@ import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
+import { usePlayerStore } from '../../player/store/index.js'
+import { playlistContext } from '../../player/domain/playback-context.js'
+import { getPlaylistApi } from '../api/index.js'
 import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
 import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
 import { toast } from '../../../shared/ui/toast-store.js'
@@ -52,8 +55,21 @@ export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; view
     { key: 'manual',   label: t('playlist.sortManual'),  icon: 'sort', selected: sortType === 'manual' },
   ]
 
-  const onPlayAll = (playlist: Playlist) => {
-    void navigate({ to: '/playlists/$id', params: { id: String(playlist.id) } })
+  const onPlayAll = async (playlist: Playlist) => {
+    try {
+      const res = await getPlaylistApi().getPlaylistSongs(playlist.id, {}, { limit: 9999, offset: 0 })
+      if (res.songs.length === 0) {
+        toast.show(t('playlist.emptyPlaylist'))
+        return
+      }
+      await usePlayerStore.getState().playPlaylist(
+        res.songs,
+        0,
+        playlistContext(playlist.id),
+      )
+    } catch {
+      toast.error(t('playlist.playFailed'))
+    }
   }
 
   const onCreateSubmit = () => {
