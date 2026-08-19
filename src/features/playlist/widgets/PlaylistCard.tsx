@@ -13,10 +13,11 @@ import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 export interface PlaylistCardProps {
   playlist: Playlist
   onTap?: (playlist: Playlist) => void
+  onPlayAll?: (playlist: Playlist) => void
   isPlaying?: boolean
 }
 
-export function PlaylistCard({ playlist, onTap, isPlaying }: PlaylistCardProps) {
+export function PlaylistCard({ playlist, onTap, onPlayAll, isPlaying }: PlaylistCardProps) {
   const { t } = useTranslation()
   const cover = playlist.coverUrl ? buildCoverUrl(playlist.coverUrl, playlist.updatedAt) : ''
   const count = t(
@@ -55,6 +56,16 @@ export function PlaylistCard({ playlist, onTap, isPlaying }: PlaylistCardProps) 
               <view className='playlist-card__eq-bar playlist-card__eq-bar--2' />
               <view className='playlist-card__eq-bar playlist-card__eq-bar--3' />
               <view className='playlist-card__eq-bar playlist-card__eq-bar--4' />
+            </view>
+          )
+          : null}
+        {onPlayAll
+          ? (
+            <view
+              className='playlist-card__play-btn'
+              bindtap={(e: any) => { e.stopPropagation?.(); onPlayAll(playlist) }}
+            >
+              <Icon name='play' size={14} color={ICON_COLORS.primaryContent} />
             </view>
           )
           : null}

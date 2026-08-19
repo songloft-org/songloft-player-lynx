@@ -112,3 +112,8 @@
   width: 20px;
   height: 20px;
 }
+
+/* Wider variant for sort menus with longer labels */
+.popover-menu--wide {
+  min-width: 180px;
+}

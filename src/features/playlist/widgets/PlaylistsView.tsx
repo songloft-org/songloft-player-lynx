@@ -5,22 +5,29 @@ import { Input } from '@lynx-js/lynx-ui-input'
 import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-sortable'
 
 import type { Playlist } from '../../../models/playlist.js'
+import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
-import { ActionSheet, ActionSheetItem } from '../../../shared/ui/ActionSheet.js'
+import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
+import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { sortPlaylistsByName, sortPlaylistsByNumberPrefix } from '../domain/playlist-sort.js'
 import { flattenPlaylists } from '../data/pagination.js'
 import { usePlaylistsInfiniteQuery } from '../data/playlist-query.js'
 import { useCreatePlaylistMutation, useDeletePlaylistMutation, useReorderPlaylistsMutation } from '../data/playlist-mutations.js'
+import { useDebounce } from '../../library/data/use-debounce.js'
 import { PlaylistCard } from './PlaylistCard.js'
 import './PlaylistsView.css'
 
-export function PlaylistsView({ type }: { type?: string } = {}) {
+export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; viewMode?: 'grid' | 'list' } = {}) {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const query = usePlaylistsInfiniteQuery(type ? { type } : {})
+  const [searchText, setSearchText] = useState('')
+  const debouncedSearch = useDebounce(searchText, 350)
+  const query = usePlaylistsInfiniteQuery(
+    type ? { type, keyword: debouncedSearch || undefined } : { keyword: debouncedSearch || undefined },
+  )
   const allPlaylists = flattenPlaylists(query.data?.pages)
   const [showHidden, setShowHidden] = useState(false)
   const playlists = showHidden ? allPlaylists : allPlaylists.filter((p) => !p.isHidden)
@@ -37,6 +44,17 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
+  const [sortType, setSortType] = useState<string | null>(null)
+  const sortItems: PopoverMenuItem[] = [
+    { key: 'nameAsc',  label: t('playlist.sortNameAsc'),  icon: 'sort', selected: sortType === 'nameAsc' },
+    { key: 'nameDesc', label: t('playlist.sortNameDesc'), icon: 'sort', selected: sortType === 'nameDesc' },
+    { key: 'number',   label: t('playlist.sortNumberPrefix'), icon: 'sort', selected: sortType === 'number' },
+    { key: 'manual',   label: t('playlist.sortManual'),  icon: 'sort', selected: sortType === 'manual' },
+  ]
+
+  const onPlayAll = (playlist: Playlist) => {
+    void navigate({ to: '/playlists/$id', params: { id: String(playlist.id) } })
+  }
 
   const onCreateSubmit = () => {
     const trimmed = newName.trim()
@@ -210,9 +228,17 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
   if (playlists.length === 0 && !showForm) {
     return (
       <view className='playlists'>
+      <view className='playlists__search-bar'>
+        <Input
+          className='playlists__search-input'
+          placeholder={t('playlist.searchPlaceholder')}
+          value={searchText}
+          onInput={(value: string) => setSearchText(value)}
+        />
+      </view>
         <view className='playlists__create-bar'>
           <view className='playlists__create-trigger' bindtap={() => setShowForm(true)}>
-            <Icon name='plus' size={18} color={ICON_COLORS.content} />
+            <Icon name='plus' size={14} color={ICON_COLORS.content} />
             <text className='playlists__create-trigger-text'>{t('playlist.createPlaylist')}</text>
           </view>
         </view>
@@ -264,49 +290,77 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
 
   return (
     <view className='playlists'>
+      <view className='playlists__search-bar'>
+        <Input
+          className='playlists__search-input'
+          placeholder={t('playlist.searchPlaceholder')}
+          value={searchText}
+          onInput={(value: string) => setSearchText(value)}
+        />
+      </view>
       <view className='playlists__create-bar'>
-        <view className='playlists__create-trigger' bindtap={() => setShowForm(true)}>
-          <Icon name='plus' size={18} color={ICON_COLORS.content} />
-          <text className='playlists__create-trigger-text'>{t('playlist.createPlaylist')}</text>
-        </view>
-        {hiddenCount > 0
-          ? (
-            <view className='playlists__create-trigger' bindtap={() => setShowHidden(!showHidden)}>
-              <text className='playlists__create-trigger-text'>
-                {showHidden ? t('playlist.hideHidden') : t('playlist.showHidden', { count: hiddenCount })}
-              </text>
-            </view>
-          )
-          : null}
-        {playlists.length > 1 && !showForm
-          ? selectMode
+        <view className='playlists__create-bar-left'>
+          <view className='playlists__create-trigger' bindtap={() => setShowForm(true)}>
+            <Icon name='plus' size={14} color={ICON_COLORS.content} />
+            <text className='playlists__create-trigger-text'>{t('playlist.createPlaylist')}</text>
+          </view>
+          {playlists.length > 1 && !showForm && !selectMode
             ? (
-              <view className='playlists__sort-actions'>
-                <view className='playlists__create-trigger' bindtap={exitSelectMode}>
-                  <text className='playlists__create-trigger-text'>{t('library.cancelSelect')}</text>
-                </view>
+              <PopoverMenu
+                show={sortOpen}
+                onShowChange={setSortOpen}
+                placement='bottom-start'
+                contentClassName='popover-menu--wide'
+                triggerClassName='playlists__create-trigger'
+                trigger={
+                  <>
+                    <Icon name='sort' size={14} color={ICON_COLORS.content} />
+                    <text className='playlists__create-trigger-text'>{t('playlist.sort')}</text>
+                  </>
+                }
+                items={sortItems}
+                onSelect={(key) => {
+                  setSortOpen(false)
+                  setSortType(key)
+                  if (key === 'nameAsc') onSortNameAsc()
+                  else if (key === 'nameDesc') onSortNameDesc()
+                  else if (key === 'number') onSortNumber()
+                  else if (key === 'manual') setSortMode(true)
+                }}
+              />
+            )
+            : null}
+          {hiddenCount > 0
+            ? (
+              <view className='playlists__create-trigger' bindtap={() => setShowHidden(!showHidden)}>
+                <text className='playlists__create-trigger-text'>
+                  {showHidden ? t('playlist.hideHidden') : t('playlist.showHidden', { count: hiddenCount })}
+                </text>
               </view>
             )
-            : (
-              <view className='playlists__sort-actions'>
-                <view
-                  className='playlists__create-trigger'
-                  bindtap={() => setSortOpen(true)}
-                  data-testid='playlists-sort-menu'
-                >
-                  <Icon name='sort' size={18} color={ICON_COLORS.content} />
-                  <text className='playlists__create-trigger-text'>{t('playlist.sort')}</text>
+            : null}
+        </view>
+        <view className='playlists__create-bar-right'>
+          {playlists.length > 1 && !showForm
+            ? selectMode
+              ? (
+                <view className='playlists__create-trigger' bindtap={exitSelectMode}>
+                  <Icon name='x' size={14} color={ICON_COLORS.content} />
+                  <text className='playlists__create-trigger-text'>{t('library.cancelSelect')}</text>
                 </view>
+              )
+              : (
                 <view
                   className='playlists__create-trigger'
                   bindtap={enterSelectMode}
                   data-testid='playlists-select-toggle'
                 >
+                  <Icon name='check' size={14} color={ICON_COLORS.content} />
                   <text className='playlists__create-trigger-text'>{t('library.select')}</text>
                 </view>
-              </view>
-            )
-          : null}
+              )
+            : null}
+        </view>
       </view>
       {createForm}
       <scroll-view
@@ -319,19 +373,38 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
           }
         }}
       >
-        <view className='playlists__grid'>
-          {playlists.map((playlist) => (
-            <view key={String(playlist.id)} className='playlists__grid-item'>
-              <PlaylistCard playlist={playlist} onTap={onTap} />
-              {selectMode
-                ? (
-                  <view className='playlists__select-badge'>
-                    <AppCheckbox checked={selected.has(playlist.id)} />
-                  </view>
-                )
-                : null}
-            </view>
-          ))}
+        <view className={viewMode === 'list' ? 'playlists__list' : 'playlists__grid'}>
+          {playlists.length === 0 && !query.isLoading
+            ? (
+              <PlaylistState
+                text={debouncedSearch ? t('library.noSearchResults') : t('playlist.noPlaylistsTitle')}
+                subtext={debouncedSearch ? undefined : t('playlist.noPlaylistsSubtitle')}
+              />
+            )
+            : viewMode === 'grid'
+              ? playlists.map((playlist) => (
+                <view key={String(playlist.id)} className='playlists__grid-item'>
+                  <PlaylistCard playlist={playlist} onTap={onTap} onPlayAll={onPlayAll} />
+                  {selectMode
+                    ? (
+                      <view className='playlists__select-badge'>
+                        <AppCheckbox checked={selected.has(playlist.id)} />
+                      </view>
+                    )
+                    : null}
+                </view>
+              ))
+              : playlists.map((playlist) => (
+                <PlaylistListItem
+                  key={String(playlist.id)}
+                  playlist={playlist}
+                  onTap={onTap}
+                  onPlayAll={onPlayAll}
+                  isPlaying={false}
+                  selectMode={selectMode}
+                  isSelected={selected.has(playlist.id)}
+                />
+              ))}
         </view>
         {query.isFetchingNextPage
           ? (
@@ -355,24 +428,7 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
           </view>
         )
         : null}
-      <ActionSheet open={sortOpen} onClose={() => setSortOpen(false)} title={t('playlist.sort')}>
-        <ActionSheetItem
-          label={t('playlist.sortNameAsc')}
-          onTap={onSortNameAsc}
-        />
-        <ActionSheetItem
-          label={t('playlist.sortNameDesc')}
-          onTap={onSortNameDesc}
-        />
-        <ActionSheetItem
-          label={t('playlist.sortNumberPrefix')}
-          onTap={onSortNumber}
-        />
-        <ActionSheetItem
-          label={t('playlist.sortManual')}
-          onTap={() => { setSortOpen(false); setSortMode(true) }}
-        />
-      </ActionSheet>
+
     </view>
   )
 }
@@ -396,6 +452,67 @@ function PlaylistState({
         {text}
       </text>
       {subtext ? <text className='playlists__state-subtext'>{subtext}</text> : null}
+    </view>
+  )
+}
+
+function PlaylistListItem({
+  playlist,
+  onTap,
+  onPlayAll,
+  isPlaying,
+  selectMode,
+  isSelected,
+}: {
+  playlist: Playlist
+  onTap?: (playlist: Playlist) => void
+  onPlayAll?: (playlist: Playlist) => void
+  isPlaying?: boolean
+  selectMode?: boolean
+  isSelected?: boolean
+}) {
+  const { t } = useTranslation()
+  const cover = playlist.coverUrl ? buildCoverUrl(playlist.coverUrl, playlist.updatedAt) : ''
+  const count = t(
+    playlist.songCount === 1 ? 'common.songCountOne' : 'common.songCountOther',
+    { count: playlist.songCount },
+  )
+
+  return (
+    <view
+      className={'playlist-list-item' + (isPlaying ? ' playlist-list-item--playing' : '')}
+      bindtap={() => onTap?.(playlist)}
+    >
+      {selectMode
+        ? (
+          <view className='playlist-list-item__check'>
+            <AppCheckbox checked={isSelected ?? false} />
+          </view>
+        )
+        : null}
+      <view className='playlist-list-item__cover-wrap'>
+        {cover
+          ? <image className='playlist-list-item__cover' src={cover} mode='aspectFill' />
+          : (
+            <view className='playlist-list-item__cover playlist-list-item__cover--empty'>
+              <Icon name='music' size={20} color={ICON_COLORS.contentMuted} />
+            </view>
+          )}
+      </view>
+      <view className='playlist-list-item__info'>
+        <text className='playlist-list-item__name'>{playlist.name || t('common.untitled')}</text>
+        <text className='playlist-list-item__count'>{count}</text>
+      </view>
+      {onPlayAll && !selectMode
+        ? (
+          <view
+            className='playlist-list-item__play-btn'
+            bindtap={(e: any) => { e.stopPropagation?.(); onPlayAll(playlist) }}
+          >
+            <Icon name='play' size={16} color={ICON_COLORS.content} />
+          </view>
+        )
+        : null}
     </view>
   )
 }

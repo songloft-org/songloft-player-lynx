@@ -41,6 +41,7 @@ export interface PopoverMenuProps {
   items: PopoverMenuItem[]
   onSelect: (key: string) => void
   placement?: 'bottom' | 'top' | 'bottom-start' | 'bottom-end' | 'top-start' | 'top-end'
+  contentClassName?: string
 }
 
 /**
@@ -60,6 +61,7 @@ export function PopoverMenu({
   items,
   onSelect,
   placement = 'bottom',
+  contentClassName,
 }: PopoverMenuProps) {
   /*
    * Back closes the menu. It has to go through `onShowChange` like every other
@@ -79,7 +81,7 @@ export function PopoverMenu({
       </PopoverTrigger>
       <PopoverPositioner placement={placement} placementOffset={6}>
         <PopoverBackdrop />
-        <PopoverContent className='popover-menu'>
+        <PopoverContent className={contentClassName ? `popover-menu ${contentClassName}` : 'popover-menu'}>
           {items.map((item) => (
             <view
               key={item.key}

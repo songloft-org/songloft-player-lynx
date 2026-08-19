@@ -58,6 +58,8 @@ export type IconName =
   | 'album'
   | 'tag'
   | 'calendar'
+  | 'grid'
+  | 'list'
   | 'globe'
   | 'brush'
   | 'queue'
@@ -282,6 +284,19 @@ const ICONS: Record<IconName, (color: string) => string> = {
     `<circle cx="8.5" cy="8.5" r="1.3" ${stroke(c)}/>`,
 
   // Calendar: year / decade dimensions.
+  // Grid: 2×2 arrangement of squares (view toggle).
+  grid: (c) =>
+    `<rect x="3" y="3" width="8" height="8" rx="1.5" ${stroke(c)}/>` +
+    `<rect x="13" y="3" width="8" height="8" rx="1.5" ${stroke(c)}/>` +
+    `<rect x="3" y="13" width="8" height="8" rx="1.5" ${stroke(c)}/>` +
+    `<rect x="13" y="13" width="8" height="8" rx="1.5" ${stroke(c)}/>`,
+
+  // List: 3 horizontal bars (view toggle).
+  list: (c) =>
+    `<rect x="3" y="4" width="18" height="4" rx="1.5" ${stroke(c)}/>` +
+    `<rect x="3" y="10" width="18" height="4" rx="1.5" ${stroke(c)}/>` +
+    `<rect x="3" y="16" width="18" height="4" rx="1.5" ${stroke(c)}/>`,
+
   calendar: (c) =>
     `<rect x="4" y="5.5" width="16" height="15" rx="2" ${stroke(c)}/>` +
     `<path d="M4 10.5h16M8.5 3.5v4M15.5 3.5v4" ${stroke(c)}/>`,

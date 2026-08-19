@@ -1,7 +1,9 @@
 import { useState } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 
-import { ActionSheet, ActionSheetItem } from '../../../shared/ui/ActionSheet.js'
+import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
+import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
 import {
   LIBRARY_SORT_OPTIONS,
   type LibrarySortId,
@@ -47,21 +49,38 @@ export function LibraryToolbar({
         bindtap={() => { if (hasSongs) onPlayAll() }}
         data-testid='library-toolbar-play-all'
       >
+        <Icon name='play' size={14} color={ICON_COLORS.content} />
         <text className='library-toolbar__btn-text'>{t('playlist.playAll')}</text>
       </view>
 
-      <view
-        className='library-toolbar__btn'
-        bindtap={() => setSortOpen(true)}
-        data-testid='library-toolbar-sort'
-      >
-        <text className='library-toolbar__btn-text'>{t(current!.labelKey)}</text>
-      </view>
+      <PopoverMenu
+        show={sortOpen}
+        onShowChange={setSortOpen}
+        placement='bottom-start'
+        contentClassName='popover-menu--wide'
+        triggerClassName='library-toolbar__btn'
+        trigger={
+          <>
+            <Icon name='sort' size={14} color={ICON_COLORS.content} />
+            <text className='library-toolbar__btn-text'>{t(current!.labelKey)}</text>
+          </>
+        }
+        items={LIBRARY_SORT_OPTIONS.map((o): PopoverMenuItem => ({
+          key: o.id,
+          label: t(o.labelKey),
+          selected: o.id === sortId,
+        }))}
+        onSelect={(key) => {
+          onSortChange(key as LibrarySortId)
+          setSortOpen(false)
+        }}
+      />
 
       <view className='library-toolbar__spacer' />
 
       <view className='library-toolbar__btn' bindtap={onAdd} data-testid='library-toolbar-add'>
-        <text className='library-toolbar__btn-text'>+</text>
+        <Icon name='plus' size={14} color={ICON_COLORS.content} />
+        <text className='library-toolbar__btn-text'>{t('addSongs.add')}</text>
       </view>
 
       <view
@@ -69,24 +88,12 @@ export function LibraryToolbar({
         bindtap={onToggleSelect}
         data-testid='library-toolbar-select'
       >
+        <Icon name={selectMode ? 'x' : 'check'} size={14} color={selectMode ? ICON_COLORS.primaryContent : ICON_COLORS.content} />
         <text className='library-toolbar__btn-text'>
           {selectMode ? t('library.cancelSelect') : t('library.select')}
         </text>
       </view>
 
-      <ActionSheet open={sortOpen} onClose={() => setSortOpen(false)} title={t('library.sort')}>
-        {LIBRARY_SORT_OPTIONS.map((option) => (
-          <ActionSheetItem
-            key={option.id}
-            label={t(option.labelKey)}
-            active={option.id === sortId}
-            onTap={() => {
-              onSortChange(option.id)
-              setSortOpen(false)
-            }}
-          />
-        ))}
-      </ActionSheet>
     </view>
   )
 }

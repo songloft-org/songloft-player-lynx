@@ -4,6 +4,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { readPlaylistViewMode, writePlaylistViewMode, type PlaylistViewMode } from '../../playlist/data/playlist-view-prefs.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { setLastLibrarySearch } from '../data/last-library-search.js'
 import {
@@ -68,6 +69,16 @@ export function LibraryPage() {
     void writeLibrarySort(id)
   }
 
+  const [viewMode, setViewMode] = useState<PlaylistViewMode>('grid')
+  useEffect(() => {
+    void readPlaylistViewMode().then(setViewMode)
+  }, [])
+  const onToggleViewMode = () => {
+    const next = viewMode === 'grid' ? 'list' : 'grid'
+    setViewMode(next)
+    void writePlaylistViewMode(next)
+  }
+
   const [editMode, setEditMode] = useState(false)
 
   // Edit mode replaces the entire page body with `LibraryViewEditor`, so back has to
@@ -106,9 +117,24 @@ export function LibraryPage() {
     navigate({ to: '/library', search: { view: key } })
   }
 
+
+  // Compute showViewToggle from selected (available before group).
+  const selectedGroup = selected ? LIBRARY_VIEW_GROUP[selected] : 'songs'
+  const showViewToggle = selectedGroup === 'facets' || selectedGroup === 'playlists'
   const topbar = (
     <view className='library__topbar'>
       <text className='library__topbar-title'>{t('nav.library')}</text>
+      {showViewToggle
+        ? (
+          <view
+            className='library__topbar-toggle'
+            bindtap={onToggleViewMode}
+            data-testid='library-view-toggle'
+          >
+            <Icon name={viewMode === 'grid' ? 'list' : 'grid'} size={20} color={ICON_COLORS.content2} />
+          </view>
+        )
+        : null}
       <view
         className='library__topbar-customize'
         bindtap={() => setEditMode(true)}
@@ -131,6 +157,7 @@ export function LibraryPage() {
   }
 
   const group = LIBRARY_VIEW_GROUP[selected]
+
   const content = group === 'songs'
     ? (
       <FlatSongsView
@@ -141,8 +168,8 @@ export function LibraryPage() {
       />
     )
     : group === 'facets'
-      ? <FacetGridView key={selected} field={selected} />
-      : <PlaylistsView key={selected} type={playlistViewType(selected)} />
+      ? <FacetGridView key={selected} field={selected} viewMode={viewMode} />
+      : <PlaylistsView key={selected} type={playlistViewType(selected)} viewMode={viewMode} />
 
   return (
     <view className='library'>

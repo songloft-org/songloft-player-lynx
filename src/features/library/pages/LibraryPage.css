@@ -30,6 +30,11 @@
   font-weight: 600;
 }
 
+.library__topbar-toggle {
+  padding: var(--space-1);
+  margin-right: var(--space-1);
+}
+
 .library__topbar-customize {
   padding: var(--space-1);
 }
@@ -52,12 +57,13 @@
 
 .library__search-input {
   flex: 1;
-  height: 36px;
-  border-radius: var(--radius-sm);
+  height: 40px;
+  border-radius: var(--radius-pill);
   background-color: var(--neutral-faint);
+  border: 1px solid var(--line);
   color: var(--content);
   font-size: var(--font-sm);
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-4);
   -x-placeholder-color: var(--content-muted);
 }
 

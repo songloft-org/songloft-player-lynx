@@ -17,6 +17,7 @@ const DEBOUNCE_MS = 350
 export interface FacetGridViewProps {
   /** The facet dimension to aggregate (`artist` / `album` / `genre` / …). */
   field: LibraryViewKey
+  viewMode?: 'grid' | 'list'
 }
 
 /**
@@ -26,7 +27,7 @@ export interface FacetGridViewProps {
  * the pre-refactor view wired the param but never exposed it). Dimension
  * selection lives in the view switcher now, so this renders a single field.
  */
-export function FacetGridView({ field }: FacetGridViewProps) {
+export function FacetGridView({ field, viewMode = 'grid' }: FacetGridViewProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [searchText, setSearchText] = useState('')
@@ -67,7 +68,7 @@ export function FacetGridView({ field }: FacetGridViewProps) {
                   }
                 }}
               >
-                <view className='library__grid'>
+                <view className={viewMode === 'list' ? 'library__list' : 'library__grid'}>
                   {facets.map((facet: SongFacet) => (
                     <FacetCard
                       key={`${field}:${facet.value}`}
