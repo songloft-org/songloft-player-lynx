@@ -1,4 +1,5 @@
 import { useEffect, useState } from '@lynx-js/react'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { useTranslation } from 'react-i18next'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
@@ -16,6 +17,16 @@ export function ThemePacksPage() {
   const [loading, setLoading] = useState(true)
   const [showCatalog, setShowCatalog] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+
+  // The catalog replaces the page body; the armed delete is a per-row two-tap state.
+  useBackHandler(showCatalog || confirmDeleteId !== null, () => {
+    if (showCatalog) {
+      setShowCatalog(false)
+      return true
+    }
+    setConfirmDeleteId(null)
+    return true
+  })
 
   const api: ThemePacksApi = getThemePacksApi()
 

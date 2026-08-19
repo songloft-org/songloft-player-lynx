@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { useLyricStore } from '../store/index.js'
 import './LyricCalibratePage.css'
+import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 
 export function LyricCalibratePage() {
   const navigate = useNavigate()
@@ -18,7 +19,7 @@ export function LyricCalibratePage() {
   return (
     <view className='lyric-calibrate'>
       <view className='lyric-calibrate__topbar'>
-        <view className='lyric-calibrate__back' bindtap={() => navigate({ to: '/player' })}>
+        <view className='lyric-calibrate__back' bindtap={() => performRouteBack()}>
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='lyric-calibrate__title'>{t('lyricCalibrate.title')}</text>

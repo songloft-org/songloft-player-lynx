@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import type { Song } from '../../models/song.js'
+import { useBackHandler } from '../nav/use-back-handler.js'
 import { usePlayerStore } from '../../features/player/store/index.js'
 import { getPlaylistApi } from '../../features/playlist/api/index.js'
 import { getSongsApi } from '../../features/library/api/index.js'
@@ -25,23 +26,55 @@ export function SongContextMenu({ song, onClose }: SongContextMenuProps) {
   const playlistsQuery = usePlaylistsInfiniteQuery()
   const playlists = playlistsQuery.data?.pages.flatMap(p => p.playlists) ?? []
 
+  /*
+   * Closing resets the two sub-views.
+   *
+   * The component is not unmounted when it closes — the call sites keep rendering it
+   * with `song = null` — so `showPlaylists` / `confirmDelete` survived a close and the
+   * *next* song's menu opened straight into the playlist picker, or with delete
+   * already armed. Latent before, but the back key makes it reachable in one press.
+   */
+  const close = () => {
+    setShowPlaylists(false)
+    setConfirmDelete(false)
+    onClose()
+  }
+
+  /*
+   * One handler peels one layer per press: armed delete → playlist picker → the menu
+   * itself. Written as an explicit order rather than three registrations so it does
+   * not depend on which sub-view happened to be activated last.
+   */
+  useBackHandler(song != null, () => {
+    if (confirmDelete) {
+      setConfirmDelete(false)
+      return true
+    }
+    if (showPlaylists) {
+      setShowPlaylists(false)
+      return true
+    }
+    close()
+    return true
+  })
+
   if (!song) return null
 
   const onPlayNext = () => {
     usePlayerStore.getState().insertNextInQueue([song])
-    onClose()
+    close()
   }
 
   const onAddToQueue = () => {
     usePlayerStore.getState().addToPlaylist([song])
-    onClose()
+    close()
   }
 
   const onPickPlaylist = (playlistId: number) => {
     void getPlaylistApi().addSongsToPlaylist(playlistId, [song.id]).then(() => {
       void queryClient.invalidateQueries({ queryKey: ['playlist'] })
     })
-    onClose()
+    close()
   }
 
   const onDelete = () => {
@@ -51,12 +84,12 @@ export function SongContextMenu({ song, onClose }: SongContextMenuProps) {
     }
     void getSongsApi().deleteSong(song.id).then(() => {
       void queryClient.invalidateQueries({ queryKey: ['songs'] })
-      onClose()
+      close()
     })
   }
 
   return (
-    <view className='song-ctx' bindtap={onClose}>
+    <view className='song-ctx' bindtap={close}>
       <view className='song-ctx__backdrop' />
       <view className='song-ctx__panel' catchtap={() => {}}>
         <view className='song-ctx__header'>
@@ -89,7 +122,7 @@ export function SongContextMenu({ song, onClose }: SongContextMenuProps) {
                 <Icon name='music' size={18} color={ICON_COLORS.content2} />
                 <text className='song-ctx__item-text'>{t('songMenu.addToPlaylist')}</text>
               </view>
-              <view className='song-ctx__item' bindtap={() => { onClose(); void navigate({ to: '/library/song/$songId', params: { songId: String(song.id) } }) }}>
+              <view className='song-ctx__item' bindtap={() => { close(); void navigate({ to: '/library/song/$songId', params: { songId: String(song.id) } }) }}>
                 <Icon name='info' size={18} color={ICON_COLORS.content2} />
                 <text className='song-ctx__item-text'>{t('songMenu.viewDetail')}</text>
               </view>

@@ -38,6 +38,7 @@ docs/
 | 文件 | 说明 |
 |------|------|
 | [api-design-conventions.md](./reference/api-design-conventions.md) | API/Store 设计规范（参数风格、数值范围、命名、E2E 约定） |
+| [back-navigation.md](./reference/back-navigation.md) | 返回导航规范（三层模型、`consumable` 契约、Web sentinel、新增页面/弹出层清单） |
 
 后端 API 契约（OpenAPI）**不在本仓库**：见后端仓库的 `docs/swagger.json`，或开发模式下的 `http://localhost:58091/swagger/index.html`。刻意不复制副本以免漂移。
 

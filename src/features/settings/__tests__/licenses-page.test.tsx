@@ -3,6 +3,7 @@ import '@testing-library/jest-dom'
 
 import { afterEach, expect, test, vi } from 'vitest'
 import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
+import { installBackRouter } from '../../../__tests__/_render-mocks.js'
 
 const { navigateSpy } = vi.hoisted(() => ({ navigateSpy: vi.fn() }))
 
@@ -29,13 +30,16 @@ test('LicensesPage renders dependency list', () => {
 
 test('back routes to the About page, the only way in', async () => {
   // Not `/settings`: the licenses row lives on About now, so returning to the
-  // settings root would skip a level on the way back out.
+  // settings root would skip a level on the way back out. Asserted through the real
+  // route-back policy (see `installBackRouter`), so a wrong parent declaration in
+  // `shared/nav/route-back.ts` fails here as well as in its own gate.
+  const navigate = installBackRouter('/settings/licenses')
   render(<LicensesPage />)
   const { getByTestId } = getQueriesForElement(elementTree.root!)
 
   await act(async () => { fireEvent.tap(getByTestId('licenses-back')) })
 
-  expect(navigateSpy).toHaveBeenCalledWith({ to: '/settings/about' })
+  expect(navigate).toHaveBeenCalledWith({ to: '/settings/about' })
 })
 
 test('back defers to onBack inside the settings pane', async () => {

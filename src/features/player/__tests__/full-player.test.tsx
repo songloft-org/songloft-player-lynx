@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
+import { installBackRouter } from '../../../__tests__/_render-mocks.js'
 
 /**
  * FullPlayerPage render smoke. Same pattern as the library/login tests: the
@@ -152,6 +153,7 @@ test('the speed popover opens on tap and closes on select', async () => {
 test('closing returns to the last shell tab rather than always home', async () => {
   const { setLastShellLocation } = await import('../../../shared/nav/shell-navigation.js')
   setLastShellLocation('/library')
+  const navigate = installBackRouter('/player')
   const { queryByTestId } = await renderPage()
 
   await act(async () => {
@@ -159,5 +161,5 @@ test('closing returns to the last shell tab rather than always home', async () =
   })
 
   // `/library` also restores its remembered sub-tab, hence the `search` argument.
-  expect(navigateSpy).toHaveBeenCalledWith({ to: '/library', search: {} })
+  expect(navigate).toHaveBeenCalledWith({ to: '/library', search: {} })
 })

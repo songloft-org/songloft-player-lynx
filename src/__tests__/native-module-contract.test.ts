@@ -9,6 +9,7 @@ import {
   SYSTEM_APPEARANCE_EVENT,
 } from '../native/system-appearance.js'
 import { NATIVE_EVENT } from '../native/native-audio.js'
+import { BACK_PRESSED_EVENT } from '../native/navigation.js'
 
 /**
  * Gates for the host↔page contract that **only breaks on a device**.
@@ -38,6 +39,7 @@ const ANDROID_PLATFORM = 'android/app/src/main/java/org/songloft/lynx/platform'
 const ANDROID_DLNA = 'android/app/src/main/java/org/songloft/lynx/dlna'
 const ANDROID_LYRIC = 'android/app/src/main/java/org/songloft/lynx/lyric'
 const ANDROID_VIDEO = 'android/app/src/main/java/org/songloft/lynx/video'
+const ANDROID_NAV = 'android/app/src/main/java/org/songloft/lynx/navigation'
 const IOS_DIR = 'ios/SongloftLynx'
 
 /** Both hosts' sources concatenated, per subsystem. */
@@ -81,6 +83,18 @@ const hosts = {
   },
   liveActivity: {
     ios: read(`${IOS_DIR}/LiveActivityModule.swift`),
+  },
+  /*
+   * Back key. Split like `system` above: the module writes the flag, but the press
+   * is emitted from MainActivity, which is where the LynxView lives. No iOS half —
+   * that host has no back key to intercept (no UINavigationController, so not even
+   * an edge-swipe), and the TS facade degrades to an inert stub there.
+   */
+  navigation: {
+    android:
+      read(`${ANDROID_NAV}/SongloftNavigationModule.kt`) +
+      read(`${ANDROID_NAV}/BackKeyState.kt`) +
+      read('android/app/src/main/java/org/songloft/lynx/MainActivity.kt'),
   },
   // Android module registration (SongloftApplication.kt)
   androidApp: read('android/app/src/main/java/org/songloft/lynx/SongloftApplication.kt'),
@@ -168,6 +182,56 @@ describe('system appearance keys reach both hosts verbatim', () => {
   })
 })
 
+/**
+ * The back key is the one contract with a **third** host: Android (Kotlin), Web
+ * (`web/audio-host.js` + the worker-side module) and a no-op on iOS. Every part is a
+ * silent failure — a mismatched event name means the host forwards presses nobody
+ * listens for, and since the host also stops calling `super.onBackPressed()` when it
+ * believes JS is handling them, the back key simply stops working.
+ */
+describe('the back-press event name reaches every host verbatim', () => {
+  const webHost = read('web/audio-host.js')
+
+  test('Android emits it', () => {
+    expect(hosts.navigation.android).toContain(BACK_PRESSED_EVENT)
+  })
+
+  test('the Web host emits it', () => {
+    expect(webHost).toContain(BACK_PRESSED_EVENT)
+  })
+
+  /**
+   * `sendGlobalEvent(name, params)` takes an **array**. web-core relays `params` to
+   * the worker and ends in `listener.apply(ctx, params)`, so a plain object — which
+   * has no `length` — passes zero arguments and every payload arrives as
+   * `undefined`. That shipped for the audio events and the appearance event; both
+   * are fixed, and this keeps them fixed.
+   */
+  test('every Web sendGlobalEvent passes its payload as an array', () => {
+    const offenders: string[] = []
+    for (const file of ['web/audio-host.js', 'web/index.html']) {
+      read(file).split('\n').forEach((line, i) => {
+        const code = line.trim()
+        // Skip comments — the fix sites document the array contract in prose, and
+        // `web/index.html` explains it at length right above the call it applies to.
+        if (code.startsWith('//') || code.startsWith('*') || code.startsWith('/*')) return
+        const call = /sendGlobalEvent\(([^)]*)$|sendGlobalEvent\((.*)\)/.exec(line)
+        if (!call) return
+        const args = (call[1] ?? call[2] ?? '').trim()
+        const second = args.slice(args.indexOf(',') + 1).trim()
+        if (args.includes(',') && !second.startsWith('[')) {
+          offenders.push(`${file}:${i + 1}: ${line.trim()}`)
+        }
+      })
+    }
+    expect(
+      offenders,
+      'sendGlobalEvent\'s second argument must be an array of params — a bare object '
+      + `delivers nothing to the listener:\n${offenders.join('\n')}`,
+    ).toEqual([])
+  })
+})
+
 describe('native module method names exist on both hosts', () => {
   const audioMethods = interfaceMethods(
     read('src/native/native-audio.ts'),
@@ -192,6 +256,35 @@ describe('native module method names exist on both hosts', () => {
   test.each(storageMethods)('SongloftStorage.%s', (method) => {
     expectLynxMethod(hosts.storage.android, method)
     expectSwiftMethod(hosts.storage.ios, method)
+  })
+
+  /**
+   * Android and the Web worker module both have to expose all three, and the Web
+   * side is checked by name because it is a plain object literal with no interface
+   * to typecheck against. `notifyBackHandled` is legitimately a no-op there (the
+   * watchdog is Android-only) but must still exist, or the TS facade's
+   * completeness probe rejects the whole module and the back key falls back to the
+   * inert stub — i.e. browser back stops being intercepted at all.
+   */
+  const navigationMethods = interfaceMethods(
+    read('src/native/navigation.ts'),
+    'SongloftNavigationNativeModule',
+  )
+
+  test('the navigation interface was parsed', () => {
+    expect(navigationMethods).toEqual(['setBackConsumable', 'notifyBackHandled', 'exitApp'])
+  })
+
+  test.each(navigationMethods)('SongloftNavigation.%s', (method) => {
+    expectLynxMethod(hosts.navigation.android, method)
+    expect(
+      read('web/songloft-navigation-module.js'),
+      `the Web worker module has no ${method}`,
+    ).toMatch(new RegExp(`\\b${method}\\(`))
+    expect(
+      read('web/audio-host.js'),
+      `the Web main thread has no ${method} handler`,
+    ).toMatch(new RegExp(`${method}:\\s*function`))
   })
 
   /**
@@ -539,6 +632,7 @@ describe('every native module is registered in the host bootstrap', () => {
     { name: 'SongloftFloatingLyric', android: 'FloatingLyricModule', ios: null },
     { name: 'SongloftLiveActivity', android: null, ios: 'LiveActivityModule' },
     { name: 'SongloftVideo', android: 'SongloftVideoModule', ios: 'SongloftVideoModule' },
+    { name: 'SongloftNavigation', android: 'SongloftNavigationModule', ios: null },
   ]
 
   test.each(modules.filter((m) => m.android))('%s is registered on Android', (mod) => {

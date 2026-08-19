@@ -7,6 +7,7 @@ import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-s
 import type { Playlist } from '../../../models/playlist.js'
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { ActionSheet, ActionSheetItem } from '../../../shared/ui/ActionSheet.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { sortPlaylistsByName, sortPlaylistsByNumberPrefix } from '../domain/playlist-sort.js'
@@ -88,6 +89,29 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
     setSelected(new Set())
     setConfirmBatchDelete(false)
   }
+
+  /*
+   * Peels the armed batch delete before leaving multi-select, so back undoes exactly
+   * the last thing the user did rather than throwing away the whole selection.
+   *
+   * The sort ActionSheet is absent on purpose: `ActionSheet` registers its own layer.
+   */
+  useBackHandler(showForm || sortMode || selectMode, () => {
+    if (showForm) {
+      setShowForm(false)
+      return true
+    }
+    if (sortMode) {
+      setSortMode(false)
+      return true
+    }
+    if (confirmBatchDelete) {
+      setConfirmBatchDelete(false)
+      return true
+    }
+    exitSelectMode()
+    return true
+  })
   const batchDelete = () => {
     if (!confirmBatchDelete) { setConfirmBatchDelete(true); return }
     const ids = Array.from(selected).filter((id) => !playlists.find((p) => p.id === id)?.isBuiltIn)

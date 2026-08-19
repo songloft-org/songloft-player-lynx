@@ -13,6 +13,7 @@ import com.lynx.tasm.service.LynxServiceCenter
 import org.songloft.lynx.audio.SongloftAudioModule
 import org.songloft.lynx.dlna.SongloftDlnaModule
 import org.songloft.lynx.lyric.FloatingLyricModule
+import org.songloft.lynx.navigation.SongloftNavigationModule
 import org.songloft.lynx.video.SongloftVideoModule
 import org.songloft.lynx.net.SongloftHttpService
 import org.songloft.lynx.platform.SongloftPlatformModule
@@ -85,6 +86,7 @@ class SongloftApplication : Application() {
         LynxEnv.inst().registerModule("SongloftFloatingLyric", FloatingLyricModule::class.java)
         LynxEnv.inst().registerModule("SongloftVideo", SongloftVideoModule::class.java)
         LynxEnv.inst().registerModule("SongloftSongCache", SongloftSongCacheModule::class.java)
+        LynxEnv.inst().registerModule("SongloftNavigation", SongloftNavigationModule::class.java)
         LynxEnv.inst().registerModule("SongloftTestBridge", SongloftTestBridgeModule::class.java)
 
         // Start the TCP test bridge server for e2e driver communication

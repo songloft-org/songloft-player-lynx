@@ -9,8 +9,8 @@ import type { Song } from '../../../models/song.js'
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { canUploadCover, uploadPlaylistCover } from '../domain/cover-upload.js'
-import { getLastShellLocation } from '../../../shared/nav/shell-navigation.js'
-import { getLastLibrarySearch } from '../../library/data/last-library-search.js'
+import { performRouteBack } from '../../../core/navigation/route-back-action.js'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { useDebounce } from '../../library/data/use-debounce.js'
 import { flattenSongs } from '../../library/data/pagination.js'
 import { SongRow } from '../../library/widgets/SongRow.js'
@@ -116,6 +116,28 @@ export function PlaylistDetailPage() {
     setSelectMode(false)
     setSelected(new Set())
   }
+
+  /*
+   * Explicit peel order for this page's four modes. Neither the context menu nor the
+   * history panel appears here: both are components that register their own layers and
+   * are only mounted while open.
+   */
+  useBackHandler(confirmDelete || editing || sortMode || selectMode, () => {
+    if (confirmDelete) {
+      setConfirmDelete(false)
+      return true
+    }
+    if (editing) {
+      setEditing(false)
+      return true
+    }
+    if (sortMode) {
+      exitSortMode()
+      return true
+    }
+    exitSelectMode()
+    return true
+  })
   const batchRemove = () => {
     const ids = Array.from(selected)
     if (ids.length === 0) return
@@ -201,16 +223,10 @@ export function PlaylistDetailPage() {
       <view className='playlist-detail__topbar'>
         <view
           className='playlist-detail__back'
-          bindtap={() => {
-            // Return to the shell tab the user was on before entering this
-            // detail page — Home or Library — rather than always Library.
-            const last = getLastShellLocation()
-            if (last === '/') {
-              navigate({ to: last })
-            } else {
-              navigate({ to: '/library', search: getLastLibrarySearch() })
-            }
-          }}
+          // Returns to the shell tab the user was on before entering this detail
+          // page — Home or Library — rather than always Library. The rule lives in
+          // `shared/nav/route-back.ts` so the hardware back key matches.
+          bindtap={() => performRouteBack()}
         >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>

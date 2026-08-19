@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
+import { useBackHandler } from '../nav/use-back-handler.js'
+
 import {
   DialogRoot,
   DialogView,
@@ -51,6 +53,19 @@ export function ConfirmDialog({
   cancelTestId,
 }: ConfirmDialogProps) {
   const { t } = useTranslation()
+
+  /*
+   * Back cancels the dialog. Registered here rather than at each call site so every
+   * present and future user gets it — the same leverage `SubPageShell` gives the
+   * settings sub-pages.
+   *
+   * `show` starts false at every call site, which is what the stack's
+   * activation-order priority requires (see `back-stack.ts`).
+   */
+  useBackHandler(show, () => {
+    onCancel()
+    return true
+  })
 
   return (
     <DialogRoot show={show} onShowChange={(open) => { if (!open) onCancel() }}>

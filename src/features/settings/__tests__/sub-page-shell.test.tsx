@@ -7,9 +7,16 @@ vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
 
-const navigateSpy = vi.fn()
-vi.mock('@tanstack/react-router', () => ({
-  useNavigate: () => navigateSpy,
+/**
+ * The shell no longer knows *where* back goes — it delegates to the one route-back
+ * policy the hardware back key also uses (`shared/nav/route-back.ts`, applied by
+ * `performRouteBack`). Which target each route resolves to is pinned by
+ * `shared/nav/__tests__/route-back.test.ts`, over every leaf route; what is left to
+ * assert here is only that the arrow reaches that policy at all.
+ */
+const routeBackSpy = vi.fn()
+vi.mock('../../../core/navigation/route-back-action.js', () => ({
+  performRouteBack: () => routeBackSpy(),
 }))
 
 const { SubPageShell, SubPageEmbedContext } = await import('../widgets/SubPageShell.js')
@@ -26,8 +33,8 @@ test('renders the title and children', () => {
   expect(queryByText('body')).toBeInTheDocument()
 })
 
-test('the back affordance routes to the settings root by default', () => {
-  navigateSpy.mockClear()
+test('the back affordance delegates to the shared route-back policy', () => {
+  routeBackSpy.mockClear()
   render(
     <SubPageShell title='Lyrics' backTestId='lyrics-back'>
       <text>body</text>
@@ -36,24 +43,11 @@ test('the back affordance routes to the settings root by default', () => {
   const { getByTestId } = getQueriesForElement(elementTree.root!)
 
   fireEvent.tap(getByTestId('lyrics-back'))
-  expect(navigateSpy).toHaveBeenCalledWith({ to: '/settings' })
-})
-
-test('backTo overrides where the back affordance routes to', () => {
-  navigateSpy.mockClear()
-  render(
-    <SubPageShell title='Licenses' backTo='/settings/about' backTestId='licenses-back'>
-      <text>body</text>
-    </SubPageShell>,
-  )
-  const { getByTestId } = getQueriesForElement(elementTree.root!)
-
-  fireEvent.tap(getByTestId('licenses-back'))
-  expect(navigateSpy).toHaveBeenCalledWith({ to: '/settings/about' })
+  expect(routeBackSpy).toHaveBeenCalled()
 })
 
 test('onBack takes over from the router', () => {
-  navigateSpy.mockClear()
+  routeBackSpy.mockClear()
   const onBack = vi.fn()
   render(
     <SubPageShell title='Licenses' onBack={onBack} backTestId='licenses-back'>
@@ -64,7 +58,7 @@ test('onBack takes over from the router', () => {
 
   fireEvent.tap(getByTestId('licenses-back'))
   expect(onBack).toHaveBeenCalled()
-  expect(navigateSpy).not.toHaveBeenCalled()
+  expect(routeBackSpy).not.toHaveBeenCalled()
 })
 
 /**

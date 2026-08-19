@@ -1,4 +1,5 @@
 import { useEffect, useState } from '@lynx-js/react'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -15,6 +16,12 @@ export function ServerListPage() {
   const profiles = useServerStore((s) => s.profiles)
   const activeProfileId = useServerStore((s) => s.activeProfileId)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+
+  // Back disarms the two-tap delete instead of leaving the page with it still armed.
+  useBackHandler(confirmDeleteId !== null, () => {
+    setConfirmDeleteId(null)
+    return true
+  })
 
   useEffect(() => {
     void useServerStore.getState().hydrate()

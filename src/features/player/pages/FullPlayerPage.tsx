@@ -8,8 +8,8 @@ import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
 // Direct module import, not the library barrel: that would pull the whole library
 // feature (API client included) into the player's graph for one getter.
-import { getLastLibrarySearch } from '../../library/data/last-library-search.js'
-import { getLastShellLocation } from '../../../shared/nav/shell-navigation.js'
+import { performRouteBack } from '../../../core/navigation/route-back-action.js'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { resolveVideoSourceKind } from '../../../core/network/video-source.js'
 import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 import { readAutoEnterLyrics } from '../../settings/data/settings-prefs.js'
@@ -113,6 +113,24 @@ export function FullPlayerPage() {
   const { width, isWide, onLayoutChange } = useBreakpoint()
   const [showSleepTimer, setShowSleepTimer] = useState(false)
   const swiperRef = useRef<SwiperRef>(null)
+  /**
+   * Which Swiper screen is showing (0 = cover, 1 = lyrics). Tracked so the back key
+   * can slide back to the cover instead of leaving the player. `swipeTo` fires
+   * `onChange`, so the auto-enter effect below keeps this in sync without a second
+   * write.
+   */
+  const [swiperIndex, setSwiperIndex] = useState(0)
+
+  /*
+   * On the lyrics screen, back returns to the cover first. Only on the narrow
+   * layout: wide shows cover and lyrics side by side, so there is no second screen
+   * to leave. Registered below the sleep-timer sheet / speed popover (they activate
+   * later), so an open overlay still closes before the swiper slides.
+   */
+  useBackHandler(!isWide && swiperIndex === 1, () => {
+    swiperRef.current?.swipeTo(0)
+    return true
+  })
 
   // Auto-enter full-screen lyrics when the preference is enabled.
   useEffect(() => {
@@ -139,13 +157,12 @@ export function FullPlayerPage() {
    * Not `history.back()`: the memory history's first entry is `/login`, and any
    * navigation the user did before opening the player would make "back" land
    * somewhere arbitrary. The shell records its own last tab instead, which is also
-   * how the library remembers its sub-tab — restored here so returning to the
-   * library does not reset it.
+   * how the library remembers its sub-tab — restored so returning to the library
+   * does not reset it. That rule now lives in `shared/nav/route-back.ts`, where the
+   * hardware back key reads it too.
    */
   const closePlayer = () => {
-    const target = getLastShellLocation()
-    if (target === '/library') navigate({ to: '/library', search: getLastLibrarySearch() })
-    else navigate({ to: target })
+    performRouteBack()
   }
 
   if (!song) {
@@ -258,6 +275,7 @@ export function FullPlayerPage() {
                 itemWidth={width}
                 containerWidth={width}
                 itemHeight='auto'
+                onChange={setSwiperIndex}
               >
                 {({ index }: { index: number }) => (
                   <SwiperItem>

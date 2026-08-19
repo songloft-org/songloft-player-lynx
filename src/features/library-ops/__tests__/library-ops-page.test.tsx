@@ -7,6 +7,7 @@ import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/tes
 import { parseMetadataProgress, parseScanProgress } from '../../../models/library-ops.js'
 import { initialTreeState, withRootLoaded } from '../domain/directory-tree.js'
 import { POLL_MS } from '../domain/scan-model.js'
+import { installBackRouter } from '../../../__tests__/_render-mocks.js'
 
 /**
  * LibraryOpsPage render smoke (batch 19).
@@ -567,11 +568,12 @@ test('the metadata refresh polls on its own interval', async () => {
 /* ------------------------------------------------------------------- chrome */
 
 test('the back affordance routes to /settings', async () => {
+  const navigate = installBackRouter('/settings/library')
   const { queryByTestId } = await renderPage()
   await act(async () => {
     fireEvent.tap(queryByTestId('libops-back')!)
   })
-  expect(h.navigateSpy).toHaveBeenCalledWith({ to: '/settings' })
+  expect(navigate).toHaveBeenCalledWith({ to: '/settings' })
 })
 
 test('a write failure raises a toast', async () => {

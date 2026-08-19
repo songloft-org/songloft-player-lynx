@@ -23,6 +23,7 @@ import {
 import { SongRow } from '../widgets/SongRow.js'
 import { VirtualList } from '../widgets/VirtualList.js'
 import './CategorySongsPage.css'
+import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 
 /**
  * Category songs page (facet drill-in), rendered inside the shell at
@@ -112,7 +113,7 @@ export function CategorySongsPage() {
       <view className='category-songs__topbar'>
         <view
           className='category-songs__back'
-          bindtap={() => navigate({ to: '/library', search: { view: field } })}
+          bindtap={() => performRouteBack()}
         >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>

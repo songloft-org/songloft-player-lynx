@@ -13,6 +13,7 @@ import { useDebounce } from '../data/use-debounce.js'
 import { useSongsInfiniteQuery } from '../data/songs-query.js'
 import { librarySortFilters, type LibrarySortId } from '../domain/library-sort.js'
 import { usePlayerStore } from '../../player/store/index.js'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
 import { usePlaylistsInfiniteQuery } from '../../playlist/data/playlist-query.js'
 import { SongContextMenu } from '../../../shared/ui/SongContextMenu.js'
@@ -115,6 +116,22 @@ export function FlatSongsView({ type, sortId, onSortChange }: FlatSongsViewProps
     setSelected(new Set())
     setShowPlaylistPicker(false)
   }
+
+  /*
+   * One handler, explicit peel order: the picker sits *inside* multi-select, so
+   * closing it must not also drop the selection the user just built up.
+   *
+   * `contextSong`'s menu is not listed — `SongContextMenu` registers its own layers
+   * (including its two sub-views), and it is only mounted while open.
+   */
+  useBackHandler(showPlaylistPicker || selectMode, () => {
+    if (showPlaylistPicker) {
+      setShowPlaylistPicker(false)
+      return true
+    }
+    exitSelectMode()
+    return true
+  })
 
   const onAddToPlaylist = (playlistId: number) => {
     const ids = Array.from(selected)

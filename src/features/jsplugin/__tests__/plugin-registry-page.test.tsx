@@ -3,6 +3,7 @@ import '../../../shims/router-env.js'
 import '@testing-library/jest-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
+import { installBackRouter } from '../../../__tests__/_render-mocks.js'
 
 /**
  * The registry (plugin store) is a drill-in reached from the plugin manager.
@@ -58,13 +59,14 @@ test('renders the store header and fetches on mount', async () => {
 })
 
 test('the back button routes when the page is standalone', async () => {
+  const navigate = installBackRouter('/settings/plugins/registry')
   const { getByTestId } = await renderPage()
 
   await act(async () => {
     fireEvent.tap(getByTestId('registry-back')!)
   })
 
-  expect(h.navigate).toHaveBeenCalledWith({ to: '/settings/plugins' })
+  expect(navigate).toHaveBeenCalledWith({ to: '/settings/plugins' })
 })
 
 test('the back button defers to onBack inside the settings pane', async () => {

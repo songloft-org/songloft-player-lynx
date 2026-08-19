@@ -3,6 +3,8 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
 
+import { performRouteBack } from '../../../core/navigation/route-back-action.js'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { RegistryPluginEntry } from '../../../models/jsplugin.js'
 import { getJSPluginApi } from '../api/index.js'
@@ -59,7 +61,7 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
     if (onBack) {
       onBack()
     } else {
-      navigate({ to: '/settings/plugins' })
+      performRouteBack()
     }
   }
 
@@ -79,6 +81,13 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
   // Auto-fetch on first render
   const [didInit, setDidInit] = useState(false)
   const [confirmConflict, setConfirmConflict] = useState<string | null>(null)
+
+  // Back disarms the "overwrite the conflicting plugin" confirmation. Leaving it armed
+  // would be the dangerous direction: the next tap replaces another author's plugin.
+  useBackHandler(confirmConflict !== null, () => {
+    setConfirmConflict(null)
+    return true
+  })
 
   if (!didInit) {
     setDidInit(true)

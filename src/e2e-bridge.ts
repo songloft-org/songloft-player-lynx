@@ -23,6 +23,12 @@ import { getPlatformTarget } from './native/platform-target.js'
 import { resolveVideoSourceKind } from './core/network/video-source.js'
 import { getSystemAppearance } from './native/system-appearance.js'
 import { changeAppTheme, getAppTheme, resolveTheme } from './shared/theme/theme-model.js'
+import { dispatchBack, getBackStackDepth, pushBackHandler } from './shared/nav/back-stack.js'
+import { resolveRouteBack } from './shared/nav/route-back.js'
+import { getLastShellLocation, getNavPaths } from './shared/nav/shell-navigation.js'
+import { isExitArmed } from './shared/nav/exit-prompt.js'
+import { getLastLibrarySearch } from './features/library/data/last-library-search.js'
+import { currentBackAction, performRouteBack } from './core/navigation/route-back-action.js'
 
 // Expose stores and config globally for direct access in eval expressions
 ;(globalThis as Record<string, unknown>).__E2E_PLAYER_STORE__ = usePlayerStore
@@ -76,6 +82,34 @@ import { changeAppTheme, getAppTheme, resolveTheme } from './shared/theme/theme-
       getPlatformTarget(),
     ),
   enterVideoSource: () => usePlayerStore.getState().enterVideoSource(),
+}
+
+// Back key. The interesting failures are decisions, not renders: "back closed the
+// wrong thing" and "back exited the app" look identical in a screenshot, so a test
+// has to read the depth and the resolved action rather than look at the screen.
+// `dispatch` is the same entry point the host event uses, so a test can exercise
+// the whole chain without an `adb keyevent`.
+;(globalThis as Record<string, unknown>).__E2E_BACK__ = {
+  depth: () => getBackStackDepth(),
+  dispatch: () => dispatchBack(),
+  routeBack: () => performRouteBack(),
+  currentAction: () => currentBackAction(),
+  resolveRouteBack: (pathname: string) =>
+    resolveRouteBack(pathname, {
+      navPaths: getNavPaths(),
+      lastShellLocation: getLastShellLocation(),
+      lastLibrarySearch: getLastLibrarySearch(),
+    }),
+  navPaths: () => getNavPaths(),
+  exitArmed: () => isExitArmed(Date.now()),
+  /**
+   * Register a handler on the LIFO stack from a test.
+   *
+   * Lets a scenario prove the overlay layer is really wired to the hardware key —
+   * that a press is consumed there and does *not* fall through to the router —
+   * without depending on any particular overlay's UI being reachable first.
+   */
+  push: (handler: () => boolean) => pushBackHandler(handler),
 }
 
 // Register the TestBridge eval listener

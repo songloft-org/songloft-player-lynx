@@ -12,6 +12,7 @@ import { useAuthStore } from '../../auth/store/index.js'
 import { serverDisplay } from '../domain/settings-model.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { useScrollMemory } from '../../../shared/nav/scroll-memory.js'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
@@ -153,6 +154,22 @@ export function SettingsPage() {
    * selection.
    */
   const isActive = (page: SettingsSubPage) => isDualColumn && activeSubPage === page
+
+  /*
+   * In the dual-column layout the right pane swaps sub-pages in place — the router
+   * stays on `/settings`, so there is no route for the back key to pop. Back returns
+   * the pane to its default page instead. Only while a non-default page is showing:
+   * at the default, back falls through to the route level, which (this being a tab
+   * root) offers "press again to exit".
+   *
+   * The sub-pages themselves register nothing here — `SubPageShell` hides its back
+   * affordance inside the pane (this is the "dead key" its comment names), and any
+   * overlay they open registers above this handler and so closes first.
+   */
+  useBackHandler(isDualColumn && activeSubPage !== DEFAULT_SUB_PAGE, () => {
+    setActiveSubPage(DEFAULT_SUB_PAGE)
+    return true
+  })
 
   return (
     <view className='settings' data-testid='settings-root' bindlayoutchange={onLayoutChange}>

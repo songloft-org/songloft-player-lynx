@@ -1,4 +1,5 @@
 import { useEffect, useState } from '@lynx-js/react'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -68,6 +69,13 @@ export function LibraryPage() {
   }
 
   const [editMode, setEditMode] = useState(false)
+
+  // Edit mode replaces the entire page body with `LibraryViewEditor`, so back has to
+  // leave the mode before it can mean "leave the page".
+  useBackHandler(editMode, () => {
+    setEditMode(false)
+    return true
+  })
 
   setLastLibrarySearch(search)
 

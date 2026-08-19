@@ -284,10 +284,26 @@
         };
       });
 
+      /*
+        Two things this call used to get wrong, both silent:
+
+        - `sendGlobalEvent`'s second argument is an **array** of params, not the
+          payload. web-core ends up doing `listener.apply(ctx, params)`, and a plain
+          object has no `length`, so the listener was invoked with no arguments at
+          all and `parseSystemAppearance(undefined)` reported "host said nothing".
+        - the keys must be `systemTheme` / `systemLocale` — the same names as the
+          globalProps above, because `src/native/system-appearance.ts` reads one
+          parser over both channels. `theme` matched nothing.
+
+        `systemLocale` is resent unchanged: the parser treats a missing key as "host
+        said nothing", and the appearance is applied as a whole, so sending only the
+        theme would have reset the language to the default on the first switch.
+      */
       window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-        lynxView.sendGlobalEvent('SongloftSystem.appearanceChanged', {
-          theme: e.matches ? 'dark' : 'light'
-        });
+        lynxView.sendGlobalEvent('SongloftSystem.appearanceChanged', [{
+          systemTheme: e.matches ? 'dark' : 'light',
+          systemLocale: navigator.language.startsWith('zh') ? 'zh' : 'en'
+        }]);
       });
     })();
   </script>

@@ -7,6 +7,7 @@ import type { ReactNode } from '@lynx-js/react'
 
 import { parseFingerprintStatus, parseFingerprintProgress } from '../../../models/fingerprint.js'
 import { parseDuplicatesResult } from '../../../models/duplicate.js'
+import { installBackRouter } from '../../../__tests__/_render-mocks.js'
 
 /**
  * DuplicateCheckPage render smoke tests.
@@ -232,11 +233,12 @@ test('results phase shows groups', async () => {
 test('back button returns to the library page it was opened from', async () => {
   // Not `/settings`: this page is only reachable through Music Library, so going
   // straight to the settings root skipped a level on the way back out.
+  const navigate = installBackRouter('/settings/duplicates')
   const { queryByTestId } = await renderPage()
   await act(async () => {
     fireEvent.tap(queryByTestId('dup-check-back')!)
   })
-  expect(h.navigateSpy).toHaveBeenCalledWith({ to: '/settings/library' })
+  expect(navigate).toHaveBeenCalledWith({ to: '/settings/library' })
 })
 
 test('back defers to onBack inside the settings pane', async () => {

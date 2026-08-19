@@ -179,9 +179,19 @@
 
   // ── event forwarding ──
 
+  /*
+   * `sendGlobalEvent(name, params)` takes an **array**, not the payload.
+   *
+   * web-core relays `params` to the worker and the emitter there ends in
+   * `listener.apply(context, params)`. A plain object has no `length`, so `apply`
+   * passes *zero* arguments and every listener sees `undefined` — the audio
+   * facade's state / progress / error handlers all silently received nothing.
+   * The array wrapper is what makes `[payload]` arrive as the first argument, which
+   * is the contract `src/native/*.ts` is written against on device too.
+   */
   function sendEvent(name, data) {
     try {
-      lynxView.sendGlobalEvent(name, data)
+      lynxView.sendGlobalEvent(name, [data])
     } catch (_) {}
   }
 
@@ -490,6 +500,107 @@
     },
   }
 
+  /* ── browser back button (SongloftNavigation) ──────────────────────────────
+   *
+   * The app runs in a Web Worker, which has no `history` and no `popstate`, so
+   * intercepting browser back has to happen here. The mechanism is one sentinel
+   * history entry whose presence is kept **exactly equal** to the `consumable` flag
+   * JS mirrors down:
+   *
+   *   consumable  → one sentinel sits above our real entry. Browser back consumes
+   *                 it, we immediately re-push (re-arming the guard) and forward the
+   *                 press to JS.
+   *   !consumable → no sentinel. Browser back leaves the page, with no JS involved.
+   *
+   * That second line is the whole reason for mirroring a flag rather than asking JS
+   * per press: at a tab root the browser does what a web user expects, and it keeps
+   * working if the worker is wedged. It is also why there is no "press again to
+   * exit" prompt on Web — leaving on the first press *is* the platform behaviour.
+   *
+   * Known limitation: if the page was opened directly in a fresh tab there is no
+   * earlier entry, so back cannot leave. That is browser behaviour, not something
+   * this can paper over.
+   */
+  var BACK_SENTINEL = { songloftBackGuard: 1 }
+  var backConsumable = false
+  var sentinelPresent = false
+  /* popstate events we caused ourselves, which must not be read as a user press. */
+  var suppressedPops = 0
+  /* `history.back()` is async, so only one removal may be outstanding. */
+  var sentinelOpInFlight = false
+  var backSeq = 0
+
+  function pushSentinel() {
+    history.pushState(BACK_SENTINEL, '', location.href)
+    sentinelPresent = true
+  }
+
+  /*
+   * Drive `sentinelPresent` towards `backConsumable`.
+   *
+   * Re-entrant on purpose: adding is synchronous, removing is not, so after an
+   * async removal completes the flag may already have flipped back again. Looping
+   * through this one function keeps the two in sync without a queue.
+   */
+  function syncSentinel() {
+    if (sentinelOpInFlight) return
+    if (backConsumable === sentinelPresent) return
+    if (backConsumable) {
+      pushSentinel()
+      syncSentinel()
+      return
+    }
+    sentinelOpInFlight = true
+    suppressedPops++
+    sentinelPresent = false
+    history.back()
+  }
+
+  window.addEventListener('popstate', function () {
+    if (suppressedPops > 0) {
+      suppressedPops--
+      sentinelOpInFlight = false
+      syncSentinel()
+      return
+    }
+    // A real user press consumed the sentinel.
+    sentinelPresent = false
+    if (!backConsumable) return
+    pushSentinel()
+    backSeq++
+    sendEvent('SongloftNavigation.backPressed', { seq: backSeq })
+  })
+
+  var navigationHandlers = {
+    setBackConsumable: function (args) {
+      backConsumable = !!args[0]
+      syncSentinel()
+    },
+    notifyBackHandled: function () {
+      // Watchdog is Android-only; see songloft-navigation-module.js.
+    },
+    /*
+     * Best-effort "leave the page".
+     *
+     * Not reachable from the back button on Web: at a tab root `consumable` is
+     * false, so the browser leaves on its own and JS never sees the press. This
+     * exists so the three hosts expose one interface, and for any future explicit
+     * "quit" affordance.
+     *
+     * Steps over the sentinel as well as our own entry when one is up. If there is
+     * no earlier entry to reach, the browser clamps and we stay put — same
+     * limitation as plain browser back in a fresh tab.
+     */
+    exitApp: function () {
+      var steps = sentinelPresent ? 2 : 1
+      if (sentinelPresent) {
+        suppressedPops++
+        sentinelPresent = false
+      }
+      history.go(-steps)
+    },
+  }
+
   /*
    * Registration, in the shape web-core actually consumes.
    *
@@ -516,6 +627,7 @@
     {
       SongloftAudio: '/songloft-audio-module.js',
       SongloftPlatform: '/songloft-platform-module.js',
+      SongloftNavigation: '/songloft-navigation-module.js',
     },
   )
 
@@ -545,6 +657,11 @@
 
   var previousCall = lynxView.onNativeModulesCall
   lynxView.onNativeModulesCall = function (name, data, moduleName) {
+    if (moduleName === 'SongloftNavigation') {
+      var navHandler = navigationHandlers[name]
+      if (navHandler) return navHandler(data || [])
+      return undefined
+    }
     if (moduleName === 'SongloftPlatform') {
       var handler = platformHandlers[name]
       if (handler) return handler(data || [])

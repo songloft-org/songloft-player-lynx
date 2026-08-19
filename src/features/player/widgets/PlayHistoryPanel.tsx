@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import type { Song } from '../../../models/song.js'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { getSongsApi } from '../../library/api/index.js'
 import { SongRow } from '../../library/widgets/SongRow.js'
@@ -59,6 +60,20 @@ export function PlayHistoryPanel({
 
   const historyQuery = usePlayHistoryQuery(context)
   const entries = historyQuery.data?.items ?? []
+
+  /*
+   * Peels the armed "clear history" state first, then closes the panel. Registered
+   * unconditionally because the call sites only render this component while it is
+   * open — the mount *is* the open state.
+   */
+  useBackHandler(true, () => {
+    if (confirmClear) {
+      setConfirmClear(false)
+      return true
+    }
+    onClose()
+    return true
+  })
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: playHistoryQueryKeys.forContext(context) })

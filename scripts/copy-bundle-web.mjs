@@ -122,7 +122,14 @@ if (existsSync(htmlSrc)) {
  * module. A `web:sync` that forgets them looks fine and breaks the file picker,
  * the clipboard, audio — anything on those modules.
  */
-for (const name of ['audio-host.js', 'hls.min.js', 'songloft-platform-module.js', 'songloft-audio-module.js']) {
+const HOST_SCRIPTS = [
+  'audio-host.js',
+  'hls.min.js',
+  'songloft-platform-module.js',
+  'songloft-audio-module.js',
+  'songloft-navigation-module.js',
+]
+for (const name of HOST_SCRIPTS) {
   const src = resolve(repoRoot, 'web', name)
   if (!existsSync(src)) throw new Error(`[copy-bundle-web] missing host script: ${name}`)
   copyFileSync(src, resolve(DEST_BASE, name))

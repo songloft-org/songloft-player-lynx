@@ -883,6 +883,112 @@ Phase B3 第一步。方法论照批B1 对 Android 的做法（照抄官方 demo
 >
 > ⚠️ **顺带发现、本批未改**：`pnpm install` 会触发全量重装警告，与本批改动无关——`node_modules/.modules.yaml` 记录的 store 是父仓库的 `/Users/hanxi/toy/songloft/.pnpm-store`，而当前 `pnpm store path` 解析到 `~/Library/pnpm/store/v10`，仓库里已无任何 `.npmrc` 声明它。**刻意不加 `.npmrc` 固定**：CI 用 `pnpm/action-setup@v4` + 无 store 配置（即默认 store），而 `.npmrc` 会入库、`../.pnpm-store` 在只 checkout 本仓库的 CI 里根本不存在。本机已迁到默认 store（`--frozen-lockfile`，lockfile 哈希前后一致，`postinstall` 与两个 `patches/` 均确认重新生效），`.modules.yaml` 现与 CI 一致，不会再复现。父仓库那个 378 MB 旧 store 目前看已无人使用（`plugin-toolchain` 用的是 `store/v3`），是否回收留给人工决定。
 
+### 批52A · 返回导航骨架（Android 返回键 + Web 浏览器返回 + 规范落地）
+
+**起点**：全仓对返回键**零处理**——`MainActivity` 没有 `onBackPressed`，任何页面、任何弹出层打开时按返回都直接退出应用；Web 用 memory history，浏览器返回直接离开页面（连弹出层都关不掉）。`lynx_capability_matrix.md:133` 早把「硬件/手势返回」列为待自研缺口。本批只做**骨架 + 三侧宿主 + tab 首页双击退出 + 规范文档**；约 26 处覆盖层/模式态接入是批52B，伪路由与插件 WebView 内部历史是批52C。
+
+**三层模型**（完整规范见 `docs/reference/back-navigation.md`，铁律摘要进了 `AGENTS.md` §4）：覆盖层/模式态 LIFO 栈（`shared/nav/back-stack.ts`）→ 路由父级（纯函数 `resolveRouteBack`）→ 退出提示。装配在 `core/navigation/back-controller.ts`，`index.tsx` 在**首帧渲染前**调用（页面可以在 await 完成前就上屏并打开弹层）。
+
+- **原生侧是「JS 镜像 `consumable` 标志、宿主本地决策」，不是「总是转发」**。`onBackPressed()` 必须同步答复，而 Lynx 不能同步调 JS。这个反向让**双击退出的第二次按键根本不进 JS**（武装提示时把标志降为 false，宿主自己 `moveTaskToBack(true)`）：快速连击无可竞争的往返，且 **JS 卡死在 tab 首页时退出照常可用**。剩下那一种情况（标志为 true 时卡死，即有覆盖层或在二级页）由「连续 3 次无 ack」看门狗兜底——**刻意不用定时器**，超时会把「仅仅是慢」误判成死亡并退出应用。
+- **`exitApp` 用 `moveTaskToBack(true)` 而非 `finish()`**：音乐播放器 `finish()` 会销毁 LynxView、下次冷启动重建整个 UI 状态；也与 Android 12+ 根 Activity 的系统默认一致。非 task root 时回落 `finish()`。
+- **平台差异只在 tab 首页，且是刻意的**：Android 首次按键出 toast；**Web 恒 `consumable=false`**，浏览器返回直接离开页面——这是 web 用户的预期，也让 worker 卡死时仍能离开（没有 sentinel 就没有要拦的东西）。
+- **Web 靠主线程一个 sentinel history entry**，不变量是 `sentinelPresent === consumable`。业务代码跑在真 Worker（没有 `history`/`popstate`），所以拦截只能在 `web/audio-host.js`。移除 sentinel 用的 `history.back()` 是异步的，故串行化（`sentinelOpInFlight`）并在完成后重新驱动一次（期间标志可能已翻回来）。**已知降级**：新标签页直接打开、没有更早 entry 时返回无法离开，属浏览器行为。
+- **`backTo` prop 被移除**（原在 `SubPageShell`，默认 `/settings`）。硬件按键需要同一个答案，两张表必然漂移；现在每条路由的父级只存在于 `route-back.ts` 一处，返回箭头与按键读同一份。13 处页面 `goBack` 全部改为调 `performRouteBack()`。`onBack` 保留，语义仍是宽屏 pane 内兄弟页切换。
+- **顺带修掉两个 sidecar 缺陷**：① `SongDetailPage` / `AddSongsPage` 返回丢 library search（把 14-view 选择器重置回第一项）；② `PluginWebViewPage` 返回硬编码 `/` （从曲库进插件也被丢到首页）。
+
+**前置修复：`sendGlobalEvent` 第二参必须是数组**（本特性依赖该契约，核实自 web-core 源码）。`params` 最终走 `listener.apply(ctx, params)`，普通对象没有 `length` ⇒ **传零个参数、listener 收到 `undefined`**。存量两处都传的是对象：`web/audio-host.js` 的 `sendEvent`（影响 Web 端**所有**音频 state/progress/error 事件）与 `web/index.html` 的外观变更（键名还写成 `theme` 而非 `systemTheme`，后半已记录在 `docs/plans/archive/web-support.md:14`）。两处已修，并加闸门。
+
+**闸门**（6 处，全部反向验证过会红）：
+- **`route-back.test.ts`（核心）**：走 `router.routesById` 枚举**每一条叶子路由**，断言都不落到 `fallback` 分支——「所有页面都处理好了」从评审问题变成可执行断言，新增路由未声明父级会直接红。含反向用例（未声明路径确实落 `fallback`）。59 例。
+- `back-stack.test.ts` 14 例：LIFO 顺序、注销幂等、dispatch 过程中改栈（**被上层移除的下层不得再被调用**——否则它的 UI 已消失却仍吞掉按键）、抛异常不吞按键。
+- `exit-prompt.test.ts` 8 例：窗口边界（到期是排他的，宁可多一次 toast 也不误退出）、时间戳自愈。
+- `native-module-contract.test.ts`：新增 `navigation` host 项（同 `system` 那样把 module + `MainActivity` 拼起来读）、事件名 Android/Web 两侧逐字一致、三方法在 Kotlin + Web worker 模块 + Web 主线程 handler 三处齐备、**每个 `sendGlobalEvent` 第二参是数组字面量**。
+- `android-manifest-contract.test.ts`：回调选择必须**显式声明**、且 MainActivity 实现的正是被选中的那种。**Kotlin 源先剥注释**——第一次写这条时它假绿了，因为 `onBackPressed` 的文档注释里提到 `OnBackInvokedDispatcher`（正是 §6「验语义不验子串」的又一例）。**刻意不以 targetSdk 为条件**：opt-out 在 34 以上仍有效，拿 targetSdk 触发失败是误报。
+- 6 处页面测试的返回目标断言**保留了原有强度**：没有降级成「调用了 performRouteBack」，而是经新增的 `installBackRouter(pathname)` 注入假 router 跑**真实策略**，所以父级声明写错这些也会红。
+
+**验收**：`tsc -b` / `vitest` **1384 测试（139 文件）** / `build` 双产物 / `build:web` / `gradlew assembleDebug`（manifest merge 通过）均绿。
+
+**Web 端真产物端到端验证**（browserless 容器 + 真实 `build:web` 产物，非 `web:dev`）：`nativeModulesMap` 注册成立 → `setBackConsumable(true)` 后 `history.length` 2→3 且 `history.state === {songloftBackGuard:1}` → 重复置 true **不叠加**（仍 3）→ **真按浏览器返回：页面未离开、守卫已重新武装** → `setBackConsumable(false)` 后 sentinel 被撤掉（`history.state` 回 `null`）。再单独验完整往返：主线程 `history.back()` → worker 收到事件 → 三层链走完 → **toast「再按一次返回退出应用」渲染出来**（截图确认），这同时证明了数组 payload 修复真的生效。
+
+**Android 真机验证**（SM-G998B / API 33，全程用真 `adb shell input keyevent 4`，断言落在 `dumpsys` + `pidof` + TestBridge 读到的 store 状态上，不看截图判定）：
+
+| # | 验的什么 | 结果 |
+|---|---|---|
+| 1 | 4 条声明的父级：`/settings/cache`→`/settings`、`/settings/licenses`→`/settings/about`、`/settings/duplicates`→`/settings/library`、`/settings/plugins/registry`→`/settings/plugins` | 全部 ✓ |
+| 2 | 覆盖层层 ① 真接线：注册 handler 后按返回 → handler 命中 1 次、**路由不动**；注销后再按 → 穿透到路由层 | ✓ |
+| 3 | handler 返回 `false` 时按键穿透（被调用过，但路由照样回父级） | ✓ |
+| 4 | **tab 首页双击退出**：第一次按键仍在 `/`、`exitArmed=true`、Activity 仍 resumed；第二次按键 → launcher resumed，**`pidof` 前后同为 7185** | ✓ 是 `moveTaskToBack` 不是 `finish` |
+| 5 | 武装窗口过期（等 2.6s）后再按返回 → **重新提示而不是误退出**，Activity 仍 resumed | ✓ |
+| 6 | 离开 tab 首页自动解除武装（`exitArmed` 回 false，`currentAction` 变 `navigate`） | ✓ |
+| 7 | **运行时插件 tab** `/plugin/miot` 也走退出提示（`navPaths` 实测含它），按返回后仍在插件页且已武装 | ✓ |
+| 8 | 同一路径**不是** tab 时则是导航（`resolveRouteBack('/plugin/other')` → `navigate /`） | ✓ |
+| 9 | **看门狗**：注册一个把 JS 线程堵死 9 秒的 handler，连按 4 次 —— 前 3 次转发给卡死的 JS（应用不动），**第 4 次放行系统默认**退到后台，`pidof` 前后同为 7468 | ✓ |
+| 10 | 从歌曲详情返回**不再丢** library 的 `view`（`{"view":"album"}` 原样保留） | ✓ 修复生效 |
+| 11 | 分面下钻返回**自己那个维度**（`/library/category/genre` → `view=genre`，而非上一次的 `album`） | ✓ |
+
+toast「再按一次返回退出应用」在首页真机截图确认（`/tmp/back-android-toast.png`，与 mini player、底部导航同屏）。
+>
+> 为验证第 2/3/9 条给 `__E2E_BACK__` 加了 `push(handler)` —— 批52B 之前没有任何 UI 用到 LIFO 栈，否则层 ① 的接线根本无法在真机上验。
+>
+> ⚠️ **`consumable` 推送有一帧竞态**：tab 首页 → 二级页之间若在标志送达前按下返回，会退出应用。窗口小于一帧且需在点击后立即按返回，判定为实际不可达；若真出现，改为「进入二级页时同步推送」。
+
+### 批52B · 返回导航接入全部覆盖层与模式态
+
+**做法上的关键选择：能在共享组件内部注册的，就不去改调用点。** `ConfirmDialog` / `ActionSheet` / `PopoverMenu` / `SongContextMenu` / `PlayHistoryPanel` / `SleepTimerSheet` / `PlaylistDrawer` 七处自注册 `useBackHandler`，一次覆盖 **14 个调用点**，且未来新增的调用点自动获得 —— 与批52A 里 `SubPageShell` 一次覆盖 15 个设置子页同一杠杆。剩下的才逐页处理（模式态与内联武装态共 9 页）。
+
+**多层页面用「一个 handler + 显式剥离顺序」，而不是每层各注册一个**。`back-stack` 的优先级是激活时刻，对同级兄弟正确，但同一页面内的层是**语义嵌套**的（歌单选择器在多选*里面*、武装删除在菜单*里面*），顺序应当由代码写明而不是取决于用户先点了哪个。所以：
+
+- `SongContextMenu`：武装删除 → 歌单子视图 → 菜单本身
+- `PlaylistsView`：新建表单 → 拖拽排序 → 武装批删 → 退出多选
+- `PlaylistDetailPage`：武装删除 → 内联编辑 → 拖拽排序 → 退出多选
+- `FlatSongsView`：歌单选择器 → 退出多选（选择器在多选**内部**，关它不能顺手丢掉用户已勾的选择）
+
+**顺带修一个既有缺陷**：`SongContextMenu` 关闭时不重置 `showPlaylists` / `confirmDelete`。它不是被卸载的（调用点一直渲染它、只把 `song` 置 null），于是**下一首歌的菜单会直接开在歌单选择器里，或者删除已经处于武装态**。此前潜伏着，加了返回键后一按就能到。修法是把组件内所有关闭路径（含遮罩点击）都走新的 `close()`。
+
+**闸门 `overlay-back-contract.test.tsx`（9 例，反向验证过会红）**，两种不同性质的断言：
+- **从源码推导的需求**：扫 `src/shared/ui/*.tsx`，凡 props 同时有可见性开关（`show`/`open`）与关闭回调（`onClose`/`onCancel`/`onShowChange`）即判定为覆盖层，**必须**调用 `useBackHandler`。这样新增一个覆盖层组件忘了接返回会直接红，不需要谁记得来扩这个文件（同 `android-manifest-contract` 从 Kotlin 推导组件清单的做法）。配一条「检测确实找到了那三个」的哨兵，防止 props 改名后闸门静默空转。
+- **行为断言**：真的 `dispatchBack()`，检查关掉的是覆盖层。另外**反向也验**——「关闭态不得占用返回键」：这些组件关闭时仍挂载，一个忽略可见性开关的注册会永久吃掉该页所有返回键。
+
+`_render-mocks.tsx` 新增 `mockLynxUiDialog()`（三个既有测试各自手写了同形状的 stub，抽出来避免第四份漂移）+ `installBackRouter()`（批52A 加的）。
+
+**验收**：`tsc -b` / `vitest` **1393 测试（140 文件）** / `build` 双产物均绿。
+
+**Android 真机验证**（同一台 SM-G998B，真 `keyevent 4` + `input tap`，断言读 `__E2E_BACK__.depth()` 与 store）：
+
+| 验的什么 | 结果 |
+|---|---|
+| 队列抽屉（唯一全局 store 层）：打开 → `depth=1`，返回关抽屉且**仍在 `/player`**，再返回才离开播放器 | ✓ |
+| 多选模式：点「选择」→ `depth=1`，返回退出多选且**仍在 `/library`**，再返回才走 tab 首页退出提示 | ✓ |
+| 排序 ActionSheet（共享组件自注册）：打开 `depth=1`，返回关表不退页 | ✓ |
+| 上下文菜单两级剥离：长按 → 进「添加到歌单」子视图 → 返回**回到菜单首屏**（截图与打开时逐字节相同）→ 再返回才关菜单 | ✓ |
+| 子状态残留修复：进子视图 → 点遮罩关闭 → 重开，回到菜单首屏而非上次的子视图 | ✓ |
+| 武装删除剥离：点「删除歌曲」武装 → 返回只撤销武装、菜单仍开着（文案回到「删除歌曲」） | ✓ |
+
+> ⚠️ **截图哈希不能用来判定这类状态**：武装删除那条一开始判为 ✗，实际是状态栏时钟从 02:36 走到 02:38（两张图只差 83 字节）。最终按图目视判定。要自动化就得先裁掉状态栏，或者干脆断言在 store/DOM 状态上——这也正是 AGENTS「断言要落在可观测状态上」的原意。
+>
+> ⚠️ **本批范围内刻意不接的两类状态**（批准的计划里也不在清单内）：① **搜索框文本**——搜索框全库都是常显的、不存在展开/收起，清空过滤器不是「返回」，会让返回键变得不可预期；② 手风琴展开、`showHidden` 过滤开关、Tab 切换——它们不遮挡也不改变页面语义。
+
+### 批52C · 返回导航收尾：四处伪路由/子视图层 + 插件 WebView 内部历史
+
+至此返回键三层模型里「覆盖层/模式态」之上的**伪路由层**全部接入，规范见 `docs/reference/back-navigation.md` §3b。
+
+| 层 | 返回行为 | 真机验证 |
+|---|---|---|
+| **歌词页**（`FullPlayerPage` Swiper 第 2 屏） | 滑回封面；宽屏并排时此层不存在 | ✓ 封面屏 depth 0 返回离开 → 滑到歌词屏 depth 1 → 返回滑回封面仍在 `/player` → 再返回才离开 |
+| **Settings 双栏 pane**（`activeSubPage`） | 复位到默认子页；仅宽屏且非默认时是一层 | ✓ 临时把模拟器调宽到 1280×800：切到非默认 pane → depth 1 → 返回复位仍在 `/settings` → 再返回出退出提示。默认态 depth 0 直接走退出提示 |
+| **DuplicateCheck phase** | 仅从 `results` 退回 `status`（保留已选保留项）；`computing`/`status` 交给路由层 | ✓ `status` 相位返回直接离开页面 |
+| **插件 WebView 内部历史** | 逐层 `history.back()`，耗尽后交给路由层 | 见下方说明 |
+
+**歌词页**补了此前缺失的 index state：`Swiper.onChange` 记录当前屏（`swipeTo` 也触发 `onChange`，故自动进入歌词与手动滑动共用）。**Settings 双栏**补上的正是 `SubPageShell` 注释里那个 "dead key"。**DuplicateCheck** 刻意不在 `computing` 时把 phase 设回 `status`（自动恢复 effect 会立刻弹回，纯空转），退回 `status` 时也不清空选择（返回≠重来）。
+
+**插件 WebView 是最脆弱的一处，按「优雅降级」设计**：Lynx `<webview>` 无 `canGoBack`/`goBack`，用 `bindlocationchange` 维护深度计数 + `eval('history.back()')` 驱动。两个关键点：① `locationchange` 对前进和我们自己的 back 都触发，用 `selfBackPending` 标志区分回声；② **handler 只在 `webDepth > 0` 时激活** —— 类型里 `bindlocationchange` 标着 `@since Lynx 3.5 @PC`，Android 是否触发**无法静态确认**，若不触发则 `webDepth` 恒 0、返回键落回路由层（接入前行为），降级为 no-op 而非误动作。主动 back 后挂 400ms 看门狗，无 `locationchange` 确认且计数归零时改走路由返回，避免「按了没反应」。
+
+> ⚠️ **真机探测结论（lxmusic / music-feed / songloft-now-playing 三个插件）**：按返回都直接离开插件页。这要么说明 Android 上 `locationchange` 不触发，要么这些插件加载时不做内部导航 —— **两种情况行为都正确（无回归）**，但无法据此确认该功能在 Android 上对「有内部导航的插件」是否真生效。顶栏返回箭头刻意保持离开插件（显式关闭动作），与系统返回键分工不同。
+
+**验收**：`tsc -b` / `vitest` **1393 测试（140 文件）** / `build` 双产物 / `build:web` 均绿。
+
+> 说明：批52C 未新增单测 —— 这四处都是页面内联的 `useBackHandler`，需渲染整页才能驱动，而共享覆盖层的等价契约已由批52B 的 `overlay-back-contract.test.tsx` 覆盖。行为正确性由上表真机验证背书。
+
 ## 未完成 / 遗留事项（TODO & 风险）
 
 - [x] **批28 Computing 阶段进度恒 `0/0` 且完成后不转 Results**（批29b 发现 → **批29c 已修**）：双层根因（陈旧终态跳过 computing + `refetchInterval` 在 Lynx 首次 fetch 后不再 fire），修法见上方「批29c」小结与下方「批29c」详节。18091 真机逐张截图验过 Computing 推进 + 自动转 Results。

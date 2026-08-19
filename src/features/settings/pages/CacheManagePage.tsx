@@ -1,4 +1,5 @@
 import { useState } from '@lynx-js/react'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { useTranslation } from 'react-i18next'
 
 import { Input } from '@lynx-js/lynx-ui-input'
@@ -49,6 +50,12 @@ export function CacheManagePage() {
 
   // ── Two-tap clean confirm ──────────────────────────────────────────────────
   const [confirmClean, setConfirmClean] = useState(false)
+
+  // Back disarms the two-tap clean instead of leaving the page with it still armed.
+  useBackHandler(confirmClean, () => {
+    setConfirmClean(false)
+    return true
+  })
 
   const onCleanTap = () => {
     if (!confirmClean) {

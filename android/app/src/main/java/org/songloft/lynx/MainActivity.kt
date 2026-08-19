@@ -13,6 +13,8 @@ import com.lynx.tasm.LynxView
 import com.lynx.tasm.LynxViewBuilder
 import com.lynx.tasm.TemplateData
 import com.lynx.xelement.XElementBehaviors
+import org.songloft.lynx.navigation.BackKeyState
+import org.songloft.lynx.navigation.SongloftNavigationModule
 import org.songloft.lynx.system.SystemAppearance
 
 /**
@@ -72,6 +74,37 @@ class MainActivity : Activity() {
     }
 
     /**
+     * Hardware / gesture back.
+     *
+     * Whether a press belongs to the page is decided by [BackKeyState], a flag JS
+     * mirrors into the host — `onBackPressed` must answer synchronously and Lynx
+     * cannot be called synchronously, so the answer has to be cached ahead of time.
+     * When the flag says yes we forward the press as a global event and **do not**
+     * call `super`; when it says no the system default runs, which for this
+     * (task-root) Activity means leaving the app.
+     *
+     * The `super` path is also the watchdog's exit: [BackKeyState.shouldForward]
+     * stops trusting the flag after [BackKeyState.MAX_UNANSWERED] unanswered
+     * presses, so a wedged JS thread cannot hold the key hostage.
+     *
+     * Still the legacy callback rather than `OnBackInvokedDispatcher`: `targetSdk`
+     * is 34 and the manifest sets `android:enableOnBackInvokedCallback="false"`, so
+     * this is what the framework dispatches. `android-manifest-contract.test.ts`
+     * fails the build if `targetSdk` moves to 35+ without that migration.
+     */
+    @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+    override fun onBackPressed() {
+        val view = lynxView
+        if (view == null || !BackKeyState.shouldForward()) {
+            super.onBackPressed()
+            return
+        }
+        val params = JavaOnlyArray()
+        params.pushMap(JavaOnlyMap.from(mapOf<String, Any>("seq" to BackKeyState.noteForwarded())))
+        view.sendGlobalEvent(SongloftNavigationModule.EVENT_BACK_PRESSED, params)
+    }
+
+    /**
      * Android 13+ (API 33) requires a **runtime** grant for `POST_NOTIFICATIONS`
      * — the manifest declaration alone is not enough for the media playback
      * notification to appear. Older versions are granted at install time, so we
@@ -89,6 +122,10 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         lynxView = null
+        // `BackKeyState` is process-level and outlives this Activity, so a relaunch
+        // would otherwise start out believing the previous page's JS still owns the
+        // back key.
+        BackKeyState.reset()
         super.onDestroy()
     }
 

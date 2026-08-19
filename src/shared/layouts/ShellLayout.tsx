@@ -11,7 +11,7 @@ import { buildCoverUrl } from '../../core/network/url-helper.js'
 import type { PluginTabEntry } from '../../features/jsplugin/data/tab-config.js'
 import { getLastLibrarySearch } from '../../features/library/index.js'
 import { NAV_DESTINATIONS } from '../nav/destinations.js'
-import { activeNavPath, setLastShellLocation, showsMiniPlayer } from '../nav/shell-navigation.js'
+import { activeNavPath, setLastShellLocation, setNavPaths, showsMiniPlayer } from '../nav/shell-navigation.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import { Icon, ICON_COLORS } from '../ui/Icon.js'
 import './ShellLayout.css'
@@ -62,18 +62,25 @@ export function ShellLayout() {
   const pluginTabsQuery = usePluginTabsWithIcons()
   const pluginTabs = pluginTabsQuery.data ?? []
 
+  // The live destination list: built-ins plus one per enabled plugin tab. Two
+  // consumers — the lit-tab calculation below, and the back key, which needs to
+  // know whether the current path is a tab root (there, back offers to exit
+  // rather than navigating).
+  const navPaths = [
+    ...NAV_DESTINATIONS.map(d => d.path),
+    ...pluginTabs.map(tab => `/plugin/${tab.entryPath}`),
+  ]
+
   // Written during render, matching how `LibraryPage` records its search — the
   // shell re-renders on every navigation, so there is nothing an effect would add.
   setLastShellLocation(pathname)
+  setNavPaths(navPaths)
 
   const renderNavItems = () => {
     // Which tab is lit. Matched by ownership, not equality — otherwise every
     // sub-page (Settings → Plugins, a library category, a playlist) leaves the
     // whole bar dark. See `navPathOwns`.
-    const litPath = activeNavPath(pathname, [
-      ...NAV_DESTINATIONS.map(d => d.path),
-      ...pluginTabs.map(tab => `/plugin/${tab.entryPath}`),
-    ])
+    const litPath = activeNavPath(pathname, navPaths)
 
     const items = NAV_DESTINATIONS.map(dest => {
       const active = litPath === dest.path

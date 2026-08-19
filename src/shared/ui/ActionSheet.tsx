@@ -1,5 +1,6 @@
 import type { ReactNode } from '@lynx-js/react'
 
+import { useBackHandler } from '../nav/use-back-handler.js'
 import { Icon, ICON_COLORS } from './Icon.js'
 import type { IconName } from './icons.js'
 import './ActionSheet.css'
@@ -23,6 +24,13 @@ export interface ActionSheetProps {
 }
 
 export function ActionSheet({ open, onClose, title, children }: ActionSheetProps) {
+  // Before the early return: hooks cannot be skipped, and the component stays
+  // mounted while closed (call sites render it unconditionally).
+  useBackHandler(open, () => {
+    onClose()
+    return true
+  })
+
   if (!open) return null
   return (
     <view className='action-sheet' bindtap={onClose}>

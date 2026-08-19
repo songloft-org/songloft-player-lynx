@@ -37,7 +37,10 @@
  *   })
  */
 import { createContext, forwardRef, useContext } from '@lynx-js/react'
+import type { ReactNode } from '@lynx-js/react'
+import { vi } from 'vitest'
 
+import { setBackRouter } from '../core/navigation/route-back-action.js'
 import { en } from '../i18n/resources.js'
 import type { AuthState } from '../features/auth/store/index.js'
 import type { Song } from '../models/song.js'
@@ -525,6 +528,51 @@ function mockLyricState(over: Partial<LyricState> = {}): LyricState {
     clear: noop,
     ...over,
   }
+}
+
+/**
+ * lynx-ui Dialog stand-in.
+ *
+ * Keeps `DialogRoot` rendering its children in the hidden state rather than
+ * unmounting them, and reports visibility as `data-dialoghidden` — the shape the
+ * three settings/plugin/duplicate page tests already hand-roll, because unmounting
+ * would hide the regression they pin (a dialog whose subject is cleared while it is
+ * still on screen). Extracted so new tests do not invent a fifth shape.
+ */
+export function mockLynxUiDialog() {
+  const Pass = ({ children }: { children: ReactNode }) => <view>{children}</view>
+  return {
+    DialogRoot: ({ children, show }: { children: ReactNode; show: boolean }) => (
+      <view data-testid='stub-dialogroot' data-dialoghidden={show ? 'false' : 'true'}>
+        {children}
+      </view>
+    ),
+    DialogView: Pass,
+    DialogBackdrop: Pass,
+    DialogContent: Pass,
+    DialogClose: Pass,
+  }
+}
+
+/**
+ * Point the shared back-navigation policy at a fake router sitting on `pathname`.
+ *
+ * Back arrows no longer call `useNavigate()` — they go through `performRouteBack()`,
+ * which reads the route's declared parent from `shared/nav/route-back.ts` and drives
+ * the injected router. So a page test asserting *where* back goes has to inject one;
+ * mocking `useNavigate` alone now observes nothing.
+ *
+ * Deliberately injects a fake router rather than stubbing `performRouteBack`: these
+ * assertions are worth keeping at full strength, and going through the real policy
+ * is what makes them fail if a route's parent is wrong.
+ *
+ * Returns the `navigate` spy. Call `resetBackRouterForTests()` in `afterEach` when a
+ * file installs more than one.
+ */
+export function installBackRouter(pathname: string): ReturnType<typeof vi.fn> {
+  const navigate = vi.fn()
+  setBackRouter({ state: { location: { pathname } }, navigate } as never)
+  return navigate
 }
 
 /** Non-subscribing stand-in for the `useLyricStore` hook + store api. */

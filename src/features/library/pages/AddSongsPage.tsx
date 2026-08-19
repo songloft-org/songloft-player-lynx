@@ -7,6 +7,7 @@ import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { getSongsApi } from '../api/index.js'
 import './AddSongsPage.css'
+import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 
 type Mode = 'remote' | 'radio'
 
@@ -53,7 +54,7 @@ export function AddSongsPage() {
   return (
     <view className='add-songs'>
       <view className='add-songs__topbar'>
-        <view className='add-songs__back' bindtap={() => navigate({ to: '/library' })}>
+        <view className='add-songs__back' bindtap={() => performRouteBack()}>
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='add-songs__title'>{t('addSongs.title')}</text>

@@ -8,6 +8,7 @@ import {
   PopoverContent,
 } from '@lynx-js/lynx-ui-popover'
 
+import { useBackHandler } from '../nav/use-back-handler.js'
 import { Icon, ICON_COLORS } from './Icon.js'
 import type { IconName } from './icons.js'
 import './PopoverMenu.css'
@@ -60,6 +61,17 @@ export function PopoverMenu({
   onSelect,
   placement = 'bottom',
 }: PopoverMenuProps) {
+  /*
+   * Back closes the menu. It has to go through `onShowChange` like every other
+   * close path: this popover is controlled, and lynx-ui offers no imperative close —
+   * `PopoverRoot.onClose` is a Presence lifecycle callback ("finished leaving"), so
+   * driving it from here would deadlock (see the prop docs above).
+   */
+  useBackHandler(show, () => {
+    onShowChange(false)
+    return true
+  })
+
   return (
     <PopoverRoot show={show} onVisibleChange={onShowChange}>
       <PopoverTrigger className={triggerClassName}>

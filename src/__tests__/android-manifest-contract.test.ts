@@ -187,6 +187,64 @@ test('MainActivity survives uiMode / locale / layoutDirection changes', () => {
 })
 
 /**
+ * The back-key dispatch the manifest asks for must be the one MainActivity implements.
+ *
+ * Android has two, and the manifest chooses: with `enableOnBackInvokedCallback`
+ * false the framework calls the legacy `onBackPressed()`, with it true it routes
+ * presses to `OnBackInvokedDispatcher` and stops calling `onBackPressed()` entirely.
+ *
+ * Getting that pairing wrong is silent in the worst way. The host deliberately does
+ * **not** call `super.onBackPressed()` whenever it believes JS is handling the press,
+ * so losing the callback does not degrade to "back exits the app" — back does nothing
+ * at all, everywhere, with no log line. Hence a gate rather than a comment.
+ *
+ * Deliberately *not* keyed on targetSdk: the opt-out still works above 34, so failing
+ * a targetSdk bump would be a false alarm. What matters is that the two sides agree.
+ */
+describe('the back-key dispatch the host implements is the one the manifest asks for', () => {
+  const application = /<application\b([\s\S]*?)>/.exec(manifest)?.[1] ?? ''
+
+  /**
+   * Comments stripped, because the *reason* for the choice is documented in prose in
+   * this very file — `onBackPressed`'s doc comment names `OnBackInvokedDispatcher`
+   * while explaining why it is not used. A substring check reads that as an
+   * implementation and passes; reverse-verifying this test is what surfaced it, and
+   * it is the same trap batch 39's pbxproj gate fell into.
+   */
+  const mainActivityCode = read(
+    `${ANDROID_MAIN}/java/${namespace.replace(/\./g, '/')}/MainActivity.kt`,
+  )
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '')
+
+  test('the choice is declared, not inherited from targetSdk', () => {
+    expect(
+      application,
+      'declare android:enableOnBackInvokedCallback on <application> so which dispatch '
+      + 'is in use is stated rather than silently following the platform default',
+    ).toMatch(/android:enableOnBackInvokedCallback="(true|false)"/)
+  })
+
+  test('MainActivity implements the callback the manifest selected', () => {
+    const predictive = /android:enableOnBackInvokedCallback="true"/.test(application)
+    if (predictive) {
+      expect(
+        mainActivityCode,
+        'the manifest opts into predictive back, so onBackPressed() is never called — '
+        + 'MainActivity must register an OnBackInvokedCallback. '
+        + 'See docs/reference/back-navigation.md.',
+      ).toContain('OnBackInvokedDispatcher')
+      return
+    }
+    expect(
+      mainActivityCode,
+      'the manifest opts out of predictive back, so the legacy callback is what the '
+      + 'framework dispatches — MainActivity must override onBackPressed().',
+    ).toMatch(/override fun onBackPressed\(\)/)
+  })
+})
+
+/**
  * Structural check, for the same reason the pbxproj and Info.plist have one:
  * every other assertion here is a substring or regex match, and none of them can
  * tell a well-formed manifest from one that merely contains the right

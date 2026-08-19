@@ -7,6 +7,7 @@ import { getSongsApi } from '../../library/api/index.js'
 import { usePlayerStore } from '../store/index.js'
 import { useLyricStore } from '../store/index.js'
 import './LyricEditPage.css'
+import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 
 export function LyricEditPage() {
   const navigate = useNavigate()
@@ -36,7 +37,7 @@ export function LyricEditPage() {
   return (
     <view className='lyric-edit'>
       <view className='lyric-edit__topbar'>
-        <view className='lyric-edit__back' bindtap={() => navigate({ to: '/player' })}>
+        <view className='lyric-edit__back' bindtap={() => performRouteBack()}>
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='lyric-edit__title'>{t('lyricEdit.title')}</text>

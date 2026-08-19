@@ -4,6 +4,8 @@ import { useNavigate, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { appConfig } from '../../../core/config/app-config.js'
+import { performRouteBack } from '../../../core/navigation/route-back-action.js'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { getAppTheme, resolveTheme } from '../../../shared/theme/theme-model.js'
@@ -63,6 +65,85 @@ export function PluginWebViewPage() {
   const [error, setError] = useState<string | null>(null)
   const webviewRef = useRef<NodesRef>(null)
 
+  /*
+   * Internal-history tracking for the plugin page.
+   *
+   * A plugin can navigate inside its own page (client-side routing), and the system
+   * back key should walk that history before leaving the plugin. Lynx's `<webview>`
+   * exposes no `canGoBack`/`goBack`, so we approximate it: `bindlocationchange` tells
+   * us the page navigated, and we drive `history.back()` through `eval`.
+   *
+   * Two subtleties shape the design:
+   *  - `locationchange` fires for forward navigation AND as the echo of our own
+   *    `history.back()`. {@link selfBackPending} distinguishes them: when we trigger a
+   *    back we set the flag, and the next `locationchange` is consumed as the echo
+   *    rather than counted as a new level.
+   *  - The handler only activates while {@link webDepth} > 0. On a host where
+   *    `locationchange` never fires (the type marks it `@PC`-only, so Android is
+   *    unverified), `webDepth` stays 0 and the back key falls straight through to the
+   *    route level — the pre-existing behaviour. The feature degrades to a no-op rather
+   *    than misbehaving.
+   */
+  const webDepthRef = useRef(0)
+  const [webDepth, setWebDepth] = useState(0)
+  const selfBackPendingRef = useRef(false)
+  const backConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const setDepth = (n: number) => {
+    webDepthRef.current = n
+    setWebDepth(n)
+  }
+
+  /** A (re)load resets the page to its entry point, so there is no internal history. */
+  const onWebViewLoad = () => {
+    setDepth(0)
+    selfBackPendingRef.current = false
+  }
+
+  const onLocationChange = () => {
+    // A confirmed navigation cancels the "did our back() do anything?" watchdog.
+    if (backConfirmTimerRef.current) {
+      clearTimeout(backConfirmTimerRef.current)
+      backConfirmTimerRef.current = null
+    }
+    if (selfBackPendingRef.current) {
+      // Echo of the history.back() we just triggered — already accounted for.
+      selfBackPendingRef.current = false
+      return
+    }
+    // The plugin navigated deeper on its own.
+    setDepth(webDepthRef.current + 1)
+  }
+
+  useEffect(() => () => {
+    if (backConfirmTimerRef.current) clearTimeout(backConfirmTimerRef.current)
+  }, [])
+
+  /*
+   * Back walks the plugin's internal history first, then leaves the page.
+   *
+   * After triggering `history.back()` we arm a short watchdog: if no `locationchange`
+   * confirms it, the webview had no history to give. When that exhausts our count we
+   * route-back rather than dead-ending the key. (We only force the route-back once the
+   * count reaches zero — with levels still counted, a slow event should not yank the
+   * user out of the plugin.)
+   */
+  useBackHandler(webDepth > 0, () => {
+    const next = webDepthRef.current - 1
+    setDepth(next)
+    selfBackPendingRef.current = true
+    webviewRef.current?.invoke({
+      method: 'eval',
+      params: { func: 'history.back()' },
+    }).exec()
+    backConfirmTimerRef.current = setTimeout(() => {
+      backConfirmTimerRef.current = null
+      selfBackPendingRef.current = false
+      if (next <= 0) performRouteBack()
+    }, 400)
+    return true
+  })
+
   useEffect(() => {
     void (async () => {
       try {
@@ -112,8 +193,14 @@ export function PluginWebViewPage() {
     } catch { /* ignore malformed messages */ }
   }
 
+  /**
+   * Used to be hardcoded to `/`, so leaving a plugin always dumped you on Home even
+   * when you arrived from the library. `route-back.ts` returns to the tab the shell
+   * recorded instead, and answers "exit prompt" when this plugin *is* a tab — which
+   * is also what the hardware back key needs.
+   */
   const goBack = () => {
-    navigate({ to: '/' })
+    performRouteBack()
   }
 
   // Platform, not realm — on Web this component renders in a worker with no
@@ -185,6 +272,8 @@ export function PluginWebViewPage() {
         ref={webviewRef}
         className='plugin-webview__frame'
         src={src}
+        bindload={onWebViewLoad}
+        bindlocationchange={onLocationChange}
         bindmessage={onMessage}
         data-testid='plugin-webview-frame'
       />

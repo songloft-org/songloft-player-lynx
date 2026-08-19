@@ -6,6 +6,7 @@
  * `/` so it always dumped you on Home, and the mini player's only condition was
  * "is a song loaded", so it sat at the foot of Settings and plugin pages too.
  */
+import { NAV_DESTINATIONS } from './destinations.js'
 
 /**
  * Shell tabs the full-screen player can return to.
@@ -35,6 +36,29 @@ export function getLastShellLocation(): ShellReturnPath {
 export function setLastShellLocation(pathname: string): void {
   const match = RETURNABLE_PATHS.find((p) => p === pathname)
   if (match) lastShellLocation = match
+}
+
+/**
+ * The nav destinations currently rendered — the built-ins plus one per enabled
+ * plugin tab. Written by `ShellLayout` during render, the same way
+ * {@link setLastShellLocation} is, because the shell re-renders on every
+ * navigation and on every plugin-tab config change.
+ *
+ * Exists so non-React callers can answer "is this pathname a tab root?" — which
+ * is what decides whether the back key navigates or offers to exit the app. The
+ * list cannot be a constant: plugin tabs come from the backend.
+ *
+ * Seeded with the built-ins so a chrome-less route (`/player`, `/login`) that
+ * renders before the shell ever mounted still gets a sane answer.
+ */
+let navPaths: readonly string[] = NAV_DESTINATIONS.map((d) => d.path)
+
+export function getNavPaths(): readonly string[] {
+  return navPaths
+}
+
+export function setNavPaths(paths: readonly string[]): void {
+  navPaths = paths
 }
 
 /**

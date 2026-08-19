@@ -12,6 +12,7 @@ import {
 import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-sortable'
 
 import { usePlayerStore } from '../store/index.js'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 
 /** Vertical drag-claim ranges for a bottom sheet (per lynx-ui Sheet docs). */
@@ -32,6 +33,13 @@ export function PlaylistDrawer() {
     if (show) ref.current?.open()
     else ref.current?.close()
   }, [show])
+
+  // The only back layer whose state is global rather than a call site's `useState`,
+  // so it already had a close action to reuse.
+  useBackHandler(show, () => {
+    usePlayerStore.getState().closePlaylistDrawer()
+    return true
+  })
 
   return (
     <SheetRoot

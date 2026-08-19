@@ -10,6 +10,7 @@ export const en = {
     home: 'Home',
     library: 'Library',
     settings: 'Settings',
+    pressBackAgainToExit: 'Press back again to exit',
   },
   common: {
     loading: 'Loading…',
@@ -612,6 +613,7 @@ export const zh: TranslationTree = {
     home: '首页',
     library: '曲库',
     settings: '设置',
+    pressBackAgainToExit: '再按一次返回退出应用',
   },
   common: {
     loading: '加载中…',

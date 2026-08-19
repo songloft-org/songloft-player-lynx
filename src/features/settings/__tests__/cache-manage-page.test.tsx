@@ -8,6 +8,7 @@ import {
   getQueriesForElement,
   render,
 } from '@lynx-js/react/testing-library'
+import { installBackRouter } from '../../../__tests__/_render-mocks.js'
 
 /**
  * CacheManagePage render smoke test.
@@ -122,9 +123,10 @@ test('the validate button calls validateDir mutation', async () => {
 })
 
 test('the back affordance routes to /settings', async () => {
+  const backNavigate = installBackRouter('/settings/cache')
   const { queryByTestId } = await renderPage()
   await act(async () => {
     fireEvent.tap(queryByTestId('cache-back')!)
   })
-  expect(navigateSpy).toHaveBeenCalledWith({ to: '/settings' })
+  expect(backNavigate).toHaveBeenCalledWith({ to: '/settings' })
 })

@@ -45,9 +45,9 @@ export function LicensesPage({ onBack }: LicensesPageProps = {}) {
     <SubPageShell
       title={t('settings.licenses')}
       onBack={onBack}
-      // Reached from the About page, not from the settings root — returning to
-      // `/settings` would skip a level on the way back out.
-      backTo='/settings/about'
+      // Reached from the About page, not from the settings root. That is declared
+      // in `shared/nav/route-back.ts` so the hardware back key agrees; there is no
+      // per-page `backTo` any more.
       backTestId='licenses-back'
       contentClassName='licenses__content'
     >

@@ -9,6 +9,7 @@ import { root } from '@lynx-js/react'
 import { App } from './App.js'
 import { useAuthStore } from './features/auth/store/index.js'
 import { initClientLogger } from './core/logging/client-logger.js'
+import { initBackController } from './core/navigation/back-controller.js'
 // Static, NOT `await import()`: dynamic imports compile to lazy bundles that are
 // separate files under `dist/lazy-bundle/`, and only `main.lynx.bundle` ships in
 // the app's assets — so on a device the lazy fetch fails with
@@ -26,6 +27,12 @@ import { router } from './router.js'
 // captured (Lynx port of Flutter's `FileLogger.init` in `main.dart`). Module
 // imports are hoisted above, so this is as early as the app's own code gets.
 initClientLogger()
+
+// Before the first render, not in the async block below: the host boots with the
+// back key going straight to "exit the app", and `initBackController` is what
+// tells it otherwise. A page can be on screen (and its overlays openable) well
+// before an awaited startup step finishes.
+initBackController(router)
 
 root.render(<App />)
 

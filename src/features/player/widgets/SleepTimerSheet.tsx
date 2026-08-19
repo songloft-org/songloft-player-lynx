@@ -10,6 +10,7 @@ import {
   type SheetRootRef,
 } from '@lynx-js/lynx-ui-sheet'
 
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { usePlayerStore } from '../store/index.js'
 import type { SleepTimerStatus } from '../domain/sleep-timer.js'
@@ -55,6 +56,13 @@ export function SleepTimerSheet({
     if (show) ref.current?.open()
     else ref.current?.close()
   }, [show])
+
+  // Back closes the sheet through the same `show` prop the drag-to-dismiss gesture
+  // reports to, so the imperative ref stays in sync via the effect above.
+  useBackHandler(show, () => {
+    onClose()
+    return true
+  })
 
   function selectDuration(ms: number) {
     usePlayerStore.getState().setSleepTimerByDuration(ms)

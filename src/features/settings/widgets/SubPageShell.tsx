@@ -1,7 +1,6 @@
 import { createContext, useContext } from '@lynx-js/react'
 import type { ReactNode } from '@lynx-js/react'
-import { useNavigate } from '@tanstack/react-router'
-
+import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import './SubPageShell.css'
 
@@ -30,8 +29,6 @@ export interface SubPageShellProps {
    * Same optional-callback shape as `PluginRegistryPage.onBack` (53fb045).
    */
   onBack?: () => void
-  /** Route to return to when `onBack` is absent. Defaults to the settings root. */
-  backTo?: string
   /** Keeps each page's existing id (`libops-back`, `cache-back`, …). */
   backTestId?: string
   /** Right-aligned topbar slot (PluginManagerPage's refresh / store buttons). */
@@ -68,7 +65,6 @@ export interface SubPageShellProps {
 export function SubPageShell({
   title,
   onBack,
-  backTo = '/settings',
   backTestId,
   actions,
   scrollable = true,
@@ -76,12 +72,18 @@ export function SubPageShell({
   overlay,
   children,
 }: SubPageShellProps) {
-  const navigate = useNavigate()
   const embedded = useContext(SubPageEmbedContext)
 
+  /**
+   * There used to be a `backTo` prop here, defaulting to `/settings`. It is gone
+   * because the hardware back key needs the same answer, and two tables drift: the
+   * parent of every route now lives once, in `shared/nav/route-back.ts`, and both
+   * this arrow and the back key read it. Pages that returned somewhere other than
+   * `/settings` (Licenses → About, Server edit → Servers) are declared there.
+   */
   const goBack = () => {
     if (onBack) onBack()
-    else void navigate({ to: backTo })
+    else performRouteBack()
   }
 
   // An explicit `onBack` is an in-pane sibling swap, which stays meaningful in the

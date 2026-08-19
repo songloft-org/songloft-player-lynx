@@ -9,6 +9,8 @@ import { toast } from '../../../shared/ui/toast-store.js'
 import type { Song } from '../../../models/song.js'
 import { getSongsApi } from '../api/index.js'
 import './SongDetailPage.css'
+import { performRouteBack } from '../../../core/navigation/route-back-action.js'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 
 export function SongDetailPage() {
   const navigate = useNavigate()
@@ -19,6 +21,12 @@ export function SongDetailPage() {
   const [song, setSong] = useState<Song | null>(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
+
+  // Inline edit form: back cancels editing rather than leaving the page.
+  useBackHandler(editing, () => {
+    setEditing(false)
+    return true
+  })
   const [saving, setSaving] = useState(false)
   const [title, setTitle] = useState('')
   const [artist, setArtist] = useState('')
@@ -55,7 +63,7 @@ export function SongDetailPage() {
   return (
     <view className='song-detail'>
       <view className='song-detail__topbar'>
-        <view className='song-detail__back' bindtap={() => navigate({ to: '/library' })}>
+        <view className='song-detail__back' bindtap={() => performRouteBack()}>
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='song-detail__topbar-title'>{t('songDetail.title')}</text>

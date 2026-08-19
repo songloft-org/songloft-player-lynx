@@ -8,6 +8,7 @@ import { safeClearTimeout } from '../../../native/safe-timers.js'
 import { usePlayerStore } from '../store/index.js'
 import { buildSongUrl } from '../../../core/network/url-helper.js'
 import './DlnaPage.css'
+import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 
 /** SSDP replies trickle in; give them this long before reading the device list. */
 const DISCOVERY_SETTLE_MS = 3000
@@ -83,7 +84,7 @@ export function DlnaPage() {
   return (
     <view className='dlna-page'>
       <view className='dlna-page__topbar'>
-        <view className='dlna-page__back' bindtap={() => navigate({ to: '/player' })}>
+        <view className='dlna-page__back' bindtap={() => performRouteBack()}>
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='dlna-page__title'>{t('dlna.title')}</text>

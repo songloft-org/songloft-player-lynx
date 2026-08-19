@@ -193,6 +193,21 @@ pnpm run build:web-embedded   # 产物给后端嵌入（songloft-player-build/we
 - `android:configChanges` 须含 `uiMode|locale|layoutDirection`，否则切换时 Activity 重建
 - `'system'` 选择须存解析后的派生值到 state，否则同值写入被 React 跳过
 
+### 返回导航（铁律摘要 —— 完整规范见 [docs/reference/back-navigation.md](docs/reference/back-navigation.md)）
+
+一次返回按键走三层，命中即停：**覆盖层/模式态 LIFO 栈**（`src/shared/nav/back-stack.ts`）→ **路由父级**（纯函数 `resolveRouteBack`）→ **退出提示**（仅 tab 首页）。装配在 `src/core/navigation/back-controller.ts`，由 `src/index.tsx` 在首帧前调用。
+
+- **新增覆盖层/模式态**：`useBackHandler(active, handler)`，handler 返回 `true` 表示已消费。**`active` 挂载时必须为 `false`** —— 优先级是「激活时刻」而非 z-index（全库覆盖层都是 `z-index: 100`，没有可排序的东西），父子在同一 commit 内同时激活会让父反而在栈顶
+- **新增路由**：在 `src/shared/nav/route-back.ts` 声明父级。不声明 `route-back.test.ts` 会红（它枚举 `router.routesById` 的每条叶子路由）
+- **`SubPageShell` 已无 `backTo` prop**：父级只存在于 `route-back.ts` 一处，返回箭头与硬件按键读同一份。`onBack` 语义仍是宽屏 pane 内的兄弟页切换，**不是**路由返回
+- **绝不用 `router.history.back()`**：栈底是 `/login`，所有返回按钮与 tab 切换都是 push，`canGoBack()` 几乎恒为 `true`
+- **`consumable` 标志**：`onBackPressed()` 必须同步决定，所以 JS 把「下一次返回是否归我」镜像给宿主。**双击退出的第二次按键由宿主本地 `moveTaskToBack(true)` 执行**（武装提示时把标志降为 false），故快速连击无竞态、JS 卡死在 tab 首页也能退出。剩余情况由「连续 3 次无 ack」看门狗兜底（**不用定时器** —— 会把慢 JS 误判成死亡）
+- **平台差异只在 tab 首页**：Android 首次按键出 toast；Web 恒 `consumable=false`，浏览器返回直接离开页面
+- **Web 靠主线程一个 sentinel history entry**，其存在性严格等于 `consumable`（worker 没有 `history`/`popstate`）
+- **`sendGlobalEvent(name, params)` 第二参必须是数组**：worker 侧最终走 `listener.apply(ctx, params)`，普通对象没有 `length` ⇒ 传零个参数、listener 收到 `undefined`。此前 Web 音频事件与深浅色事件都踩了，已修 + 加闸门
+- **iOS 刻意不注册该模块**：没有返回键可拦（无 `UINavigationController`，连边缘滑动都没有），TS facade 降级为惰性桩
+- **全屏视频 / 文件选择器无需处理**：独立 Activity，栈顶时 `MainActivity.onBackPressed()` 不会被调用，系统默认已正确
+
 ### 其他
 
 - `<svg src={url}>` 远程加载在本宿主不可用（无 `GenericResourceFetcher`），须取文本后用 `<svg content>`

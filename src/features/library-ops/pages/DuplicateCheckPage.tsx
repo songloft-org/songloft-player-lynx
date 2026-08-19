@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { toast } from '../../../shared/ui/toast-store.js'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import type { DuplicateGroup } from '../../../models/duplicate.js'
 import {
   useFingerprintStatusQuery,
@@ -192,6 +193,25 @@ export function DuplicateCheckPage({ onBack }: DuplicateCheckPageProps = {}) {
     void statusQuery.refetch()
   }
 
+  /*
+   * Back steps the state machine down one phase, but only from `results`.
+   *
+   * - From `results` it returns to `status` — the page's root view. Unlike
+   *   {@link onRecheck} it deliberately keeps `selectedKeep` / `ignoredGroups` and
+   *   the fetched duplicates: back is "step back", not "start over", so the keepers
+   *   the user already picked survive a round trip. (The delete dialog, if open, sits
+   *   above this handler and closes first.)
+   * - From `computing` there is no useful step back: setting `status` would bounce
+   *   straight back to `computing` (the auto-resume effect re-asserts it while the job
+   *   runs), so back is left to the route level and simply leaves the page. The job
+   *   keeps running on the backend and auto-resumes on the next visit.
+   * - From `status` the page is at its root, so back leaves it.
+   */
+  useBackHandler(phase === 'results', () => {
+    setPhase('status')
+    return true
+  })
+
   const onKeepChange = (groupIndex: number, songId: number) => {
     setSelectedKeep((prev) => {
       const next = new Map(prev)
@@ -254,7 +274,10 @@ export function DuplicateCheckPage({ onBack }: DuplicateCheckPageProps = {}) {
   return (
       <SubPageShell
         title={t('libops.duplicateDetection')}
-        onBack={onBack ?? (() => void navigate({ to: '/settings/library' }))}
+        // Only the in-pane swap needs an override. The standalone route-back target
+        // (`/settings/library`, a level below the settings root) is declared in
+        // `shared/nav/route-back.ts`, which is what the back key reads too.
+        onBack={onBack}
         backTestId='dup-check-back'
         contentClassName='dup-check__content'
         overlay={(
