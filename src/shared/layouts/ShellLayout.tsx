@@ -138,7 +138,14 @@ export function ShellLayout() {
       {isWide
         ? (
           <view className='shell__rail'>
-            <text className='shell__brand'>Songloft</text>
+            <view className='shell__brand'>
+              <image
+                className='shell__brand-icon'
+                src='/app_icon.png'
+                mode='aspectFit'
+              />
+              <text className='shell__brand-text'>Songloft</text>
+            </view>
             {renderNavItems()}
           </view>
         )

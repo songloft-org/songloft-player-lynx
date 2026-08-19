@@ -17,16 +17,26 @@
   border: 1px solid var(--line);
 }
 
+.login__logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  align-self: center;
+  margin-bottom: var(--space-4);
+}
+
 .login__title {
   color: var(--content);
   font-size: var(--font-xl);
   font-weight: bold;
+  text-align: center;
   margin-bottom: var(--space-1);
 }
 
 .login__subtitle {
   color: var(--content-muted);
   font-size: var(--font-md);
+  text-align: center;
   margin-bottom: var(--space-5);
 }
 

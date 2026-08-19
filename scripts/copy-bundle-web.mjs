@@ -123,6 +123,7 @@ if (existsSync(htmlSrc)) {
  * the clipboard, audio — anything on those modules.
  */
 const HOST_SCRIPTS = [
+  'app_icon.png',
   'audio-host.js',
   'hls.min.js',
   'songloft-platform-module.js',

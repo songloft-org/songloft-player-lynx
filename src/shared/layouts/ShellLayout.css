@@ -55,10 +55,23 @@
 }
 
 .shell__brand {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: var(--space-5);
+}
+
+.shell__brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  margin-right: var(--space-3);
+}
+
+.shell__brand-text {
   color: var(--accent);
   font-size: var(--font-lg);
   font-weight: bold;
-  margin-bottom: var(--space-5);
 }
 
 /* Bottom bar (narrow) */

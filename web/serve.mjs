@@ -125,7 +125,11 @@ function serveFile(res, filePath, mime) {
       return
     }
 
-    const isBinary = mime === 'application/wasm' || mime.startsWith('application/octet-stream')
+    // Binary files must be read as raw buffers; reading them as utf-8
+    // corrupts the bytes (e.g. PNG images, WASM, ICO, .bundle).
+    const isBinary = mime === 'application/wasm'
+      || mime.startsWith('application/octet-stream')
+      || mime.startsWith('image/')
     let content
     const cacheKey = filePath + (isBinary ? ':binary' : ':text')
     if (cache.has(cacheKey)) {
