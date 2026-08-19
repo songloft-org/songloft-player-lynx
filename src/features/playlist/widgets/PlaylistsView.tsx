@@ -302,7 +302,7 @@ export function PlaylistsView({ type }: { type?: string } = {}) {
                   bindtap={enterSelectMode}
                   data-testid='playlists-select-toggle'
                 >
-                  <Icon name='check' size={18} color={ICON_COLORS.content} />
+                  <text className='playlists__create-trigger-text'>{t('library.select')}</text>
                 </view>
               </view>
             )
