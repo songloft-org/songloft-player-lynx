@@ -80,12 +80,79 @@ describe('web/index.html references files the build actually ships', () => {
   })
 
   test('the bundle ref matches the filename the copy script writes', () => {
+    // Exactly one ref, not one *distinct* ref: the only legitimate mention of the
+    // bundle is `<lynx-view url=…>`. A second one would be a preload hint, which
+    // the next test explains can never be served from cache.
     const bundleRefs = refs.filter((r) => r.endsWith('.bundle'))
     expect(bundleRefs, 'index.html must load exactly one bundle').toHaveLength(1)
     // copy-bundle-web.mjs renames dist/web/main.web.bundle → <dest>/main.lynx.bundle
     expect(read('scripts/copy-bundle-web.mjs')).toContain(
       `'${bundleRefs[0]!.replace(/^\//, '')}'`,
     )
+  })
+
+  /**
+   * Preload hints on this page are a trap, and both halves of it were shipped
+   * once before being measured.
+   *
+   * `crossorigin` makes the hint's credentials mode `omit` while web-core fetches
+   * with a bare `fetch()` (`same-origin`); mismatched, the entry is never reused
+   * and each asset downloads twice. Preloading `/main.lynx.bundle` is worse — it
+   * cannot be reused *at all*, because web-core fetches it from a Worker
+   * (`web-core-template-loader-thread.js`) and the preload cache is per-realm.
+   * Measured page weight was 5270 KB with that hint vs 3346 KB without, first
+   * content unchanged (~0.2 s).
+   *
+   * Both mistakes are silent apart from a console warning that reads like a
+   * tuning suggestion ("preloaded … but not used within a few seconds"), so they
+   * need a gate rather than a comment.
+   */
+  test('preload hints cannot be the self-defeating kind', () => {
+    const preloads = [...html.matchAll(/<link\s+rel="preload"[^>]*>/g)].map((m) => m[0])
+    for (const tag of preloads) {
+      expect(
+        tag,
+        'a preload with crossorigin cannot match web-core\'s same-origin fetch, so the asset downloads twice',
+      ).not.toContain('crossorigin')
+      expect(
+        tag,
+        'the bundle is fetched from a Worker; the document preload cache is per-realm, so this only ever double-downloads 1.9 MB',
+      ).not.toContain('.bundle')
+    }
+  })
+
+  /**
+   * Both writers of the deployed/served HTML rewrite the hashed wasm filenames
+   * from the installed web-core. Their regexes have to still match the tags in
+   * index.html — when the tags lost `crossorigin="anonymous"`, a pattern that
+   * required it silently stopped matching, leaving stale hashes (a 404'd preload)
+   * in the output with no error anywhere.
+   */
+  test('the wasm-preload rewriters still match the tags in index.html', () => {
+    const wasmTags = [...html.matchAll(/<link\s+rel="preload"[^>]*\.module\.wasm"[^>]*>/g)]
+      .map((m) => m[0])
+    expect(wasmTags.length, 'expected wasm preload tags to rewrite').toBeGreaterThan(0)
+
+    for (const [name, source] of [
+      ['web/serve.mjs', read('web/serve.mjs')],
+      ['scripts/copy-bundle-web.mjs', read('scripts/copy-bundle-web.mjs')],
+    ] as const) {
+      const literal = source.match(
+        /\/<link rel="preload" as="fetch" href="\\\/web-core\\\/static\\\/wasm\\\/[^/]*\/g/,
+      )
+      expect(literal, `${name} must contain the wasm-preload rewrite regex`).toBeTruthy()
+      // Rebuild the pattern from the source and check it actually matches.
+      const pattern = new RegExp(
+        literal![0].replace(/^\//, '').replace(/\/g$/, ''),
+        'g',
+      )
+      for (const tag of wasmTags) {
+        expect(
+          tag.match(pattern),
+          `${name}'s rewrite regex does not match ${tag} — it would leave stale hashes`,
+        ).toBeTruthy()
+      }
+    }
   })
 
   test('audio-host.js is referenced and exists in web/', () => {

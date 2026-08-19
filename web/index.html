@@ -16,6 +16,39 @@
   -->
   <link href="/web-core/static/css/client.css" rel="stylesheet">
   <!--
+    Preload hints for web-core's WASM engine. client.js only discovers these once
+    it executes, so the hint overlaps their download with script parsing.
+
+    Two rules here, both established by counting requests in a CDP network log
+    rather than by reasoning about what ought to help:
+
+    1. NO `crossorigin` attribute. A preload only satisfies a later request when
+       the two agree on credentials mode; web-core uses a bare `fetch(url)`
+       (`same-origin`), so `crossorigin="anonymous"` (`omit`) makes every entry
+       unusable. With it, these two wasm files downloaded TWICE (403 KB wasted)
+       and the console showed "was preloaded using link preload but not used
+       within a few seconds". Without it, the preload is reused and the net cost
+       is zero. That warning always means the hint is pure bandwidth — never that
+       it needs a different `as`.
+
+    2. There is deliberately NO hint for `/main.lynx.bundle`, even though at
+       1.9 MB it is by far the largest asset and therefore the tempting one. It
+       CANNOT be hit: web-core fetches it from inside
+       `web-core-template-loader-thread.js` — a Worker — and the preload cache is
+       per-realm, so a worker fetch never consults the document's. (It also sends
+       `Accept: application/octet-stream, application/json`, which would not match
+       a preload's `*/*`.) Adding it measured as a straight 1.9 MB of duplicate
+       download: total page weight 5270 KB with the hint vs 3346 KB without, with
+       first content unchanged at ~0.2 s. The levers that do work on the bundle
+       are its size and HTTP caching. A vitest gate keeps this hint out.
+
+    The WASM filenames are hashed per @lynx-js/web-core version; serve.mjs and
+    copy-bundle-web.mjs both rewrite them from the actual wasm/ directory, so the
+    hashes below are only a template.
+  -->
+  <link rel="preload" as="fetch" href="/web-core/static/wasm/e5defb6b3b.module.wasm">
+  <link rel="preload" as="fetch" href="/web-core/static/wasm/4c5aa2efc5.module.wasm">
+  <!--
     Main-thread crash/console capture, inline and FIRST so it is installed before
     web-core's client module runs.
 
@@ -95,6 +128,72 @@
         return String(v)
       }
 
+      /*
+        Startup stage marks, in ms since navigation start.
+
+        Why the host page and not the app: a blank screen means the app never got
+        to paint, so anything measured from inside it cannot report on the gap.
+        Every boundary below is observable ONLY from the main thread — web-core's
+        MTS iframe handshake, the <lynx-view> upgrade, and the moment content
+        first lands in the shadow root (the app renders into the shadow root, so
+        the light DOM stays empty and is not a usable signal — measuring it is how
+        a fast page can look like a dead one).
+
+        These ride the same IndexedDB channel as the crash capture above, so they
+        come out in Settings → Diagnostics → export log with no extra wiring.
+        A blank-screen report is then a matter of reading which gap is large,
+        instead of guessing: `mts-ready` covers web-core booting its engine,
+        `first-content` closes when the app's first frame is actually on screen.
+      */
+      function mark(name) {
+        push('I', 'boot ' + name + ' +' + Math.round(performance.now()) + 'ms')
+      }
+      mark('host-script')
+      window.addEventListener('load', function () { mark('window-load') })
+      // web-core signals its main-thread realm is up by postMessage-ing from the
+      // sandboxed srcdoc iframe it puts in the shadow root.
+      window.addEventListener('message', function (e) {
+        if (e.data === 'lynx:mtsready') mark('mts-ready')
+      })
+      // First paint of app content. The shadow root is created during the
+      // <lynx-view> upgrade, so poll briefly for it, then observe.
+      ;(function () {
+        var started = performance.now()
+        var seen = false
+        function watch() {
+          var v = document.getElementById('app')
+          var sr = v && v.shadowRoot
+          if (!sr) {
+            // Give up after 30s rather than poll forever; that itself is a datum.
+            if (performance.now() - started > 30000) mark('no-shadow-root-30s')
+            else setTimeout(watch, 50)
+            return
+          }
+          var check = function () {
+            if (seen) return
+            if ((sr.textContent || '').trim().length === 0) return
+            seen = true
+            mark('first-content')
+            if (obs) obs.disconnect()
+          }
+          var obs = null
+          try {
+            obs = new MutationObserver(check)
+            obs.observe(sr, { childList: true, subtree: true, characterData: true })
+          } catch (e) { /* fall back to the poll below */ }
+          check()
+          // MutationObserver misses text committed inside nested shadow roots,
+          // so keep a slow poll as the backstop until content is seen.
+          ;(function poll() {
+            if (seen) return
+            if (performance.now() - started > 30000) { mark('no-content-30s'); return }
+            check()
+            setTimeout(poll, 100)
+          })()
+        }
+        watch()
+      })()
+
       window.addEventListener('error', function (e) {
         push('E', 'uncaught ' + (e.error ? describe(e.error) : e.message)
           + (e.filename ? ' @' + e.filename + ':' + (e.lineno || 0) : ''))
@@ -156,9 +255,13 @@
     It is placed AFTER the <lynx-view> element (so document.getElementById('app')
     finds it) but BEFORE the web-core client module (so nativeModulesMap is set
     before the custom element upgrades and reads it).
+
+    Both scripts use `defer` so they do not block HTML parsing. Execution order
+    is preserved (deferred scripts run in order, before module scripts), so
+    hls.min.js → audio-host.js → client.js still holds.
   -->
-  <script src="/hls.min.js"></script>
-  <script src="/audio-host.js"></script>
+  <script defer src="/hls.min.js"></script>
+  <script defer src="/audio-host.js"></script>
 
   <!--
     `type="module"` is REQUIRED, not stylistic: web-core's production client

@@ -12,7 +12,7 @@
  *   node scripts/copy-bundle-web.mjs           # standalone web deployment
  *   node scripts/copy-bundle-web.mjs --embedded # embedded Go backend
  */
-import { copyFileSync, mkdirSync, existsSync, readdirSync, rmSync, statSync, cpSync } from 'node:fs'
+import { copyFileSync, mkdirSync, existsSync, readdirSync, rmSync, statSync, cpSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -75,6 +75,42 @@ const htmlDest = resolve(DEST_BASE, 'index.html')
 if (existsSync(htmlSrc)) {
   mkdirSync(dirname(htmlDest), { recursive: true })
   copyFileSync(htmlSrc, htmlDest)
+
+  // Rewrite WASM preload hints to match the actual hashed filenames in the
+  // web-core build. The hashes in the source HTML are a template — they go stale
+  // on every web-core upgrade, and a preload pointing at a 404 costs a request
+  // while still leaving the real fetch cold. `web/serve.mjs` does the same for
+  // dev, so both paths reference files that exist.
+  //
+  // No `crossorigin` attribute is emitted, on purpose: see the comment on those
+  // <link> tags in web/index.html. It would set the preload's credentials mode to
+  // `omit` while web-core fetches with a bare `fetch()` (`same-origin`), so the
+  // entry is never reused and every asset downloads twice.
+  const wasmDir = resolve(webCoreStatic, 'wasm')
+  const wasmFiles = existsSync(wasmDir)
+    ? readdirSync(wasmDir).filter(f => f.endsWith('.module.wasm'))
+    : []
+  if (wasmFiles.length > 0) {
+    const tag = (f) => `<link rel="preload" as="fetch" href="/web-core/static/wasm/${f}">`
+    const remaining = [...wasmFiles]
+    let html = readFileSync(htmlDest, 'utf-8')
+    html = html.replace(
+      /<link rel="preload" as="fetch" href="\/web-core\/static\/wasm\/[^"]+\.module\.wasm"[^>]*>/g,
+      () => {
+        const f = remaining.shift()
+        return f ? tag(f) : '' // fewer files than slots → drop the surplus tag
+      },
+    )
+    // More files than slots (an upgrade added one): give each its own tag.
+    for (const f of remaining) {
+      html = html.replace(
+        /(<link href="\/web-core\/static\/css\/client\.css" rel="stylesheet">)/,
+        `$1\n  ${tag(f)}`,
+      )
+    }
+    writeFileSync(htmlDest, html, 'utf-8')
+    console.log(`  ├── WASM preload hints updated (${wasmFiles.join(', ')})`)
+  }
 }
 
 /*

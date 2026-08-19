@@ -60,6 +60,47 @@ if (!WEB_CORE_PATH) {
 
 console.log(`[serve] Using web-core bundle at ${WEB_CORE_PATH}`)
 
+/**
+ * Rewrite the WASM preload hints to the filenames that actually exist.
+ *
+ * The hashes in `index.html` are a template — they go stale on every web-core
+ * upgrade, and a preload pointing at a 404 is worse than none (it costs a
+ * request and still leaves the real fetch cold). Discovering them from the
+ * shipped `wasm/` directory keeps dev and `build:web` agreeing without anyone
+ * having to remember. `copy-bundle-web.mjs` does the same for the deployed copy.
+ *
+ * Deliberately emits NO `crossorigin` attribute — see the comment on those
+ * `<link>` tags in index.html: it would flip the preload's credentials mode to
+ * `omit` and stop web-core's bare `fetch()` from ever reusing the entry.
+ */
+const wasmPreload = (f) => `<link rel="preload" as="fetch" href="/web-core/static/wasm/${f}">`
+
+function buildIndexHtml() {
+  const raw = readFileSync(resolve(__dirname, 'index.html'), 'utf-8')
+  const wasmDir = resolve(WEB_CORE_PATH, 'wasm')
+  const wasmFiles = existsSync(wasmDir)
+    ? readdirSync(wasmDir).filter(f => f.endsWith('.module.wasm'))
+    : []
+
+  let wasmIdx = 0
+  let result = raw.replace(
+    /<link rel="preload" as="fetch" href="\/web-core\/static\/wasm\/[^"]+\.module\.wasm"[^>]*>/g,
+    () => {
+      const f = wasmFiles[wasmIdx++]
+      // Fewer files than slots: drop the surplus tag rather than leave a 404.
+      return f ? wasmPreload(f) : ''
+    }
+  )
+  // More files than slots (a web-core upgrade added one): give each a tag.
+  for (let i = wasmIdx; i < wasmFiles.length; i++) {
+    result = result.replace(
+      /(<link href="\/web-core\/static\/css\/client\.css" rel="stylesheet">)/,
+      `$1\n  ${wasmPreload(wasmFiles[i])}`
+    )
+  }
+  return result
+}
+
 // MIME type map
 const MIME = {
   '.js': 'application/javascript; charset=utf-8',
@@ -118,9 +159,23 @@ function serveFile(res, filePath, mime) {
 const server = createServer((req, res) => {
   const url = req.url ?? '/'
 
-  // Route: / → index.html
+  // Route: / → index.html (with dynamically injected WASM preloads)
   if (url === '/') {
-    return serveFile(res, resolve(__dirname, 'index.html'), 'text/html; charset=utf-8')
+    try {
+      const html = buildIndexHtml()
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Length': Buffer.byteLength(html),
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'require-corp',
+        'Cache-Control': 'no-cache',
+      })
+      res.end(html)
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'text/plain' })
+      res.end('Internal server error: ' + err.message)
+    }
+    return
   }
 
   // Route: /main.lynx.bundle → the Lynx web bundle
