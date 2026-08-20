@@ -267,10 +267,15 @@ export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; view
                 hideCheckmark
                 triggerClassName='playlists__create-trigger'
                 trigger={
-                  <view data-testid='playlists-sort-menu'>
+                  /* Fragment, not a `<view>` — see the note on `LibraryToolbar`'s
+                   * sort trigger: an unstyled wrapper view is column linear layout
+                   * and stacks the icon above the label. */
+                  <>
                     <Icon name='sort' size={14} color={ICON_COLORS.content} />
-                    <text className='playlists__create-trigger-text'>{t('playlist.sort')}</text>
-                  </view>
+                    <text className='playlists__create-trigger-text' data-testid='playlists-sort-menu'>
+                      {t('playlist.sort')}
+                    </text>
+                  </>
                 }
                 items={sortItems}
                 onSelect={(key) => {

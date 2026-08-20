@@ -35,7 +35,17 @@ export interface PopoverMenuProps {
    * ever sets `show` false, so nothing ever leaves).
    */
   onShowChange: (show: boolean) => void
-  /** Tappable content. `triggerClassName` styles the tappable box itself. */
+  /**
+   * Tappable content. `triggerClassName` styles the tappable box itself.
+   *
+   * Pass a fragment for multi-element triggers, **never** a wrapping `<view>`:
+   * lynx-ui puts `triggerClassName` on the trigger's own view, so a wrapper
+   * becomes an unstyled child — and an unstyled view is Lynx *linear* layout,
+   * default direction `column`. That is how both sort chips ended up with the
+   * icon stacked above the label. `PopoverTrigger` forwards no unknown props, so
+   * a `data-testid` belongs on a real child element (a `<text>`), not on a
+   * wrapper added for it; taps bubble from there to the trigger.
+   */
   trigger: ReactNode
   triggerClassName?: string
   items: PopoverMenuItem[]

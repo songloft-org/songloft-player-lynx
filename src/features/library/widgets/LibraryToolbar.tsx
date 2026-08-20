@@ -60,10 +60,21 @@ export function LibraryToolbar({
         contentClassName='popover-menu--wide'
         triggerClassName='library-toolbar__btn'
         trigger={
-          <view data-testid='library-toolbar-sort'>
+          /*
+           * A fragment, NOT a wrapping `<view>`: the row layout lives on
+           * `triggerClassName` (which lynx-ui puts on the trigger's own view), so an
+           * extra `<view>` here becomes an unstyled child — and an unstyled view is
+           * Lynx *linear* layout, whose default direction is `column`. That stacked
+           * the icon above the label and overflowed the pill. The testid therefore
+           * rides on the label `<text>` (same as `speed-btn` in `FullPlayerPage`);
+           * taps on it bubble to the trigger.
+           */
+          <>
             <Icon name='sort' size={14} color={ICON_COLORS.content} />
-            <text className='library-toolbar__btn-text'>{t(current!.labelKey)}</text>
-          </view>
+            <text className='library-toolbar__btn-text' data-testid='library-toolbar-sort'>
+              {t(current!.labelKey)}
+            </text>
+          </>
         }
         items={LIBRARY_SORT_OPTIONS.map((o): PopoverMenuItem => ({
           key: o.id,
