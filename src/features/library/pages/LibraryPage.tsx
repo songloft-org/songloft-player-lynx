@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { readPlaylistViewMode, writePlaylistViewMode, type PlaylistViewMode } from '../../playlist/data/playlist-view-prefs.js'
-import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { setLastLibrarySearch } from '../data/last-library-search.js'
 import {
   libraryBrowseConfigOrFallback,
@@ -25,9 +24,10 @@ import {
 } from '../domain/library-views.js'
 import { FlatSongsView } from '../widgets/FlatSongsView.js'
 import { FacetGridView } from '../widgets/FacetGridView.js'
-import { LibraryShell } from '../widgets/LibraryShell.js'
 import { LibraryStateMessage } from '../widgets/LibraryStateMessage.js'
 import { LibraryViewEditor } from '../widgets/LibraryViewEditor.js'
+import { LibraryViewSwitcher } from '../widgets/LibraryViewSwitcher.js'
+import { useLibraryViewport } from './library-viewport.js'
 import { PlaylistsView } from '../../playlist/widgets/PlaylistsView.js'
 import './LibraryPage.css'
 
@@ -52,11 +52,10 @@ export function LibraryPage() {
   const search = useSearch({ strict: false }) as { view?: LibraryViewKey }
   const browseQuery = useLibraryBrowseConfigQuery()
   const config = libraryBrowseConfigOrFallback(browseQuery)
-  // Measure `.library` (present from the loading state onward), not
-  // `.library-shell` — the shell only mounts once the config resolves, so a
-  // mount-time measurement of it would miss on Web, where `bindlayoutchange`
-  // doesn't fire for elements mounted after first paint (the SettingsPage bug).
-  const { isWide, onLayoutChange } = useBreakpoint(0, '.library')
+  // Measured once by `LibraryLayout` for the whole section, not here: this page
+  // and the rail must never disagree about the breakpoint, and a second
+  // measurement of a slightly different box could.
+  const { isWide } = useLibraryViewport()
 
   // Song-list sort: owned here (not by the flat view) so it persists to prefs
   // and survives switching between the 14 views. Seeded from prefs once.
@@ -174,15 +173,15 @@ export function LibraryPage() {
   return (
     <view className='library'>
       {topbar}
-      <LibraryShell
-        isWide={isWide}
-        onLayoutChange={onLayoutChange}
-        displayKeys={displayKeys}
-        selected={selected}
-        onSelect={onSelect}
-      >
-        {content}
-      </LibraryShell>
+      {/*
+        Narrow only — on wide screens the same choice is offered by the rail that
+        `LibraryLayout` renders beside this page. The strip lives here rather than
+        in the layout so edit mode above can replace the whole body.
+      */}
+      {isWide
+        ? null
+        : <LibraryViewSwitcher displayKeys={displayKeys} selected={selected} onSelect={onSelect} />}
+      <view className='library__content'>{content}</view>
     </view>
   )
 }

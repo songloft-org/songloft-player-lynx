@@ -13,7 +13,7 @@ import { ThemeProvider } from './shared/theme/ThemeProvider.js'
 import { ToastHost } from './shared/ui/ToastHost.js'
 import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
-import { AddSongsPage, CategorySongsPage, LibraryPage, SongDetailPage } from './features/library/index.js'
+import { AddSongsPage, CategorySongsPage, LibraryLayout, LibraryPage, SongDetailPage } from './features/library/index.js'
 import { migrateLibrarySearch, type LibraryViewKey } from './features/library/domain/library-views.js'
 import { CreatePlaylistPage, PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
@@ -101,8 +101,25 @@ const listRoute = createRoute({
   component: HomePage,
 })
 
-const libraryRoute = createRoute({
+/**
+ * Pathless layout route for the library section: it owns the wide-screen view
+ * rail, so the rail is created once and survives navigation between the library
+ * and its form pages instead of being re-created (and re-measured) by each of
+ * them — that re-creation is what flashed on open. Adding no path segment keeps
+ * every URL below unchanged, so `route-back.ts` needs no entry for it.
+ *
+ * `/library/category/$field`, `/library/song/$songId` and `/playlists/$id` stay
+ * outside on purpose: they are full-bleed detail pages with their own headers and
+ * have never shown the rail. Moving one under here later is a one-line change.
+ */
+const libraryLayoutRoute = createRoute({
   getParentRoute: () => shellRoute,
+  id: 'library-layout',
+  component: LibraryLayout,
+})
+
+const libraryRoute = createRoute({
+  getParentRoute: () => libraryLayoutRoute,
   path: '/library',
   // `?view=<LibraryViewKey>` drives the active view (14-view model) so it
   // survives remounts and is restored when returning from a drill-in. `view`
@@ -305,14 +322,13 @@ const songDetailRoute = createRoute({
 })
 
 const addSongsRoute = createRoute({
-  getParentRoute: () => shellRoute,
+  getParentRoute: () => libraryLayoutRoute,
   path: '/library/add',
   component: AddSongsPage,
 })
 
-
 const createPlaylistRoute = createRoute({
-  getParentRoute: () => shellRoute,
+  getParentRoute: () => libraryLayoutRoute,
   path: '/playlists/create',
   component: CreatePlaylistPage,
 })
@@ -325,7 +341,11 @@ const routeTree = rootRoute.addChildren([
   dlnaRoute,
   shellRoute.addChildren([
     listRoute,
-    libraryRoute,
+    libraryLayoutRoute.addChildren([
+      libraryRoute,
+      addSongsRoute,
+      createPlaylistRoute,
+    ]),
     settingsRoute,
     appearanceRoute,
     playbackRoute,
@@ -349,11 +369,8 @@ const routeTree = rootRoute.addChildren([
     pluginWebViewRoute,
     tabConfigRoute,
     playlistDetailRoute,
-    createPlaylistRoute,
-
     categorySongsRoute,
     songDetailRoute,
-    addSongsRoute,
   ]),
 ])
 

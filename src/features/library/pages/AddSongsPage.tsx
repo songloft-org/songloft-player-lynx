@@ -1,23 +1,24 @@
-import { useState, useSyncExternalStore } from '@lynx-js/react'
-import { useNavigate } from '@tanstack/react-router'
+import { useState } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { getSongsApi } from '../api/index.js'
-import { getShellWidth, subscribeShellWidth } from '../../../shared/nav/shell-navigation.js'
-import { BREAKPOINTS } from '../../../shared/responsive/useBreakpoint.js'
-import { useLibraryBrowseConfigQuery, libraryBrowseConfigOrFallback } from '../data/library-browse-query.js'
-import { resolveLibraryView } from '../domain/library-views.js'
-import { LibraryViewRail } from '../widgets/LibraryViewRail.js'
 import './AddSongsPage.css'
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 
 type Mode = 'remote' | 'radio'
 
+/**
+ * `/library/add` — the remote-song / radio-station form.
+ *
+ * Renders only its own content: the wide-screen view rail beside it belongs to
+ * `LibraryLayout`, which this route sits under. It used to render a second copy
+ * of that rail itself, gated on an async width store and on the browse-config
+ * query, and that is what flashed on open.
+ */
 export function AddSongsPage() {
-  const navigate = useNavigate()
   const { t } = useTranslation()
 
   const [mode, setMode] = useState<Mode>('remote')
@@ -26,12 +27,6 @@ export function AddSongsPage() {
   const [artist, setArtist] = useState('')
   const [album, setAlbum] = useState('')
   const [saving, setSaving] = useState(false)
-
-  const browseQuery = useLibraryBrowseConfigQuery()
-  const config = libraryBrowseConfigOrFallback(browseQuery)
-  const shellWidth = useSyncExternalStore(subscribeShellWidth, getShellWidth)
-  const isWide = shellWidth >= BREAKPOINTS.tablet
-  const resolved = config ? resolveLibraryView(undefined, config) : undefined
 
   const onAdd = () => {
     const trimUrl = url.trim()
@@ -62,8 +57,8 @@ export function AddSongsPage() {
       .finally(() => setSaving(false))
   }
 
-  const formContent = (
-    <view>
+  return (
+    <view className='add-songs'>
       <view className='add-songs__topbar'>
         <view className='add-songs__back' bindtap={() => performRouteBack()}>
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
@@ -100,31 +95,6 @@ export function AddSongsPage() {
           <text className='add-songs__btn-text'>{saving ? t('common.loading') : t('addSongs.add')}</text>
         </view>
       </scroll-view>
-    </view>
-  )
-
-  // selectedView tracks the last-clicked rail item so the highlight
-  // doesn't snap back to the first visible view on every render.
-  const [selectedView, setSelectedView] = useState(resolved?.selected)
-
-  return (
-    <view className={`add-songs${isWide ? ' add-songs--wide' : ''}`}>
-      {resolved ? (
-        <view className={isWide ? undefined : 'add-songs__rail-hidden'}>
-          <LibraryViewRail
-            showTitle
-            displayKeys={resolved.displayKeys}
-            selected={selectedView ?? resolved.selected}
-            onSelect={(key) => {
-              setSelectedView(key)
-              navigate({ to: '/library', search: { view: key } })
-            }}
-          />
-        </view>
-      ) : null}
-      <view className='add-songs__content'>
-        {formContent}
-      </view>
     </view>
   )
 }

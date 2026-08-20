@@ -1,18 +1,5 @@
+/* Content only; the wide-screen rail belongs to the route layout (see AddSongsPage.css). */
 .create-playlist {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.create-playlist--wide {
-  flex-direction: row;
-}
-
-.create-playlist__rail-hidden {
-  display: none;
-}
-
-.create-playlist__content {
   display: flex;
   flex-direction: column;
   flex: 1;

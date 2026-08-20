@@ -16,11 +16,11 @@ import {
  *
  * The page resolves `?view=` against the browse config and dispatches one of
  * three content kinds. The heavy children's hooks are all mocked (songs /
- * facets / playlists queries, router, breakpoint), so these tests assert the
+ * facets / playlists queries, router), so these tests assert the
  * SHELL: which pills render (and in how many groups), which content hook is
  * driven by which `?view=`, and the loading / all-hidden edge states.
  */
-const { songsHook, facetsHook, playlistsHook, navigateSpy, searchHook, browseConfigHook, breakpointHook } = vi.hoisted(
+const { songsHook, facetsHook, playlistsHook, navigateSpy, searchHook, browseConfigHook } = vi.hoisted(
   () => ({
     songsHook: vi.fn(),
     facetsHook: vi.fn(),
@@ -28,7 +28,6 @@ const { songsHook, facetsHook, playlistsHook, navigateSpy, searchHook, browseCon
     navigateSpy: vi.fn(),
     searchHook: vi.fn(),
     browseConfigHook: vi.fn(),
-    breakpointHook: vi.fn(),
   }),
 )
 
@@ -90,11 +89,9 @@ vi.mock('../data/use-debounce.js', () => ({
   useDebounce: <T,>(value: T, _delay: number): T => value,
 }))
 
-vi.mock('../../../shared/responsive/useBreakpoint.js', () => ({
-  useBreakpoint: breakpointHook,
-}))
-
 const { LibraryPage } = await import('../pages/LibraryPage.js')
+const { LibraryViewportProvider } = await import('../pages/library-viewport.js')
+type LibraryViewport = { isWide: boolean }
 
 /** Build a config from an ordered key list, optionally hiding some keys. */
 function configOf(keys: LibraryViewKey[] = [...LIBRARY_VIEW_KEYS], hidden: LibraryViewKey[] = []): LibraryBrowseConfig {
@@ -118,13 +115,22 @@ beforeEach(() => {
   playlistsHook.mockReturnValue(emptyPages())
   searchHook.mockReturnValue({})
   browseConfigHook.mockReturnValue({ data: DEFAULT_LIBRARY_BROWSE_CONFIG, isError: false })
-  breakpointHook.mockReturnValue({ isWide: false, onLayoutChange: vi.fn() })
 })
 
 afterEach(() => vi.clearAllMocks())
 
-async function renderPage() {
-  render(<LibraryPage />)
+/**
+ * The breakpoint reaches the page through the real context that `LibraryLayout`
+ * provides, not a mock — the page's only job with it is choosing whether to show
+ * the pill strip, and going through the context keeps that wired to the same
+ * default (narrow) the layout hands it before its first measurement.
+ */
+async function renderPage(viewport: LibraryViewport = { isWide: false }) {
+  render(
+    <LibraryViewportProvider value={viewport}>
+      <LibraryPage />
+    </LibraryViewportProvider>,
+  )
   await act(async () => {
     await Promise.resolve()
   })
@@ -215,9 +221,14 @@ test('tapping a pill navigates to /library with that view', async () => {
   expect(navigateSpy).toHaveBeenCalledWith({ to: '/library', search: { view: 'album' } })
 })
 
-test('wide breakpoint renders the rail (rows) instead of the pill strip', async () => {
-  breakpointHook.mockReturnValue({ isWide: true, onLayoutChange: vi.fn() })
-  const { queryAllByTestId } = await renderPage()
+/*
+ * On wide screens the choice is offered by the rail, which belongs to
+ * `LibraryLayout` (see `library-layout.test.tsx`) — so this page must render
+ * *neither* chrome, not "the rail instead". Asserting the absence of the rows here
+ * is what would catch the page growing its own second copy again.
+ */
+test('wide viewport drops the pill strip and does not render a rail of its own', async () => {
+  const { queryAllByTestId } = await renderPage({ isWide: true })
   expect(queryAllByTestId(/^library-view-pill-/)).toHaveLength(0)
-  expect(queryAllByTestId(/^library-view-row-/)).toHaveLength(14)
+  expect(queryAllByTestId(/^library-view-row-/)).toHaveLength(0)
 })

@@ -1,3 +1,4 @@
+export { LibraryLayout } from './pages/LibraryLayout.js'
 export { LibraryPage } from './pages/LibraryPage.js'
 export { CategorySongsPage } from './pages/CategorySongsPage.js'
 export { SongDetailPage } from './pages/SongDetailPage.js'

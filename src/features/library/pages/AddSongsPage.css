@@ -1,18 +1,9 @@
+/*
+ * The page is content only — the wide-screen rail beside it lives in
+ * `LibraryShell`, owned by the route layout. Hence no `--wide` row variant here:
+ * this box is always a column, at whatever width the layout gives it.
+ */
 .add-songs {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.add-songs--wide {
-  flex-direction: row;
-}
-
-.add-songs__rail-hidden {
-  display: none;
-}
-
-.add-songs__content {
   display: flex;
   flex-direction: column;
   flex: 1;

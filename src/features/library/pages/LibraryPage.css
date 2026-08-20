@@ -1,9 +1,10 @@
 /*
  * Library page styling — LUNA tokens only (no hardcoded colors / sizes beyond
  * layout geometry). The `<list>` needs a resolved height to be scrollable, so
- * content views are flex columns and their lists flex to fill. The view
- * switcher/rail chrome lives next to LibraryShell; this file keeps the shared
- * content-view classes (search bar, chips, grid, states, selection).
+ * content views are flex columns and their lists flex to fill. The wide-screen
+ * rail lives in `LibraryShell` (owned by the route layout); this file keeps the
+ * page's own chrome plus the shared content-view classes (search bar, chips,
+ * grid, states, selection).
  */
 
 .library {
@@ -13,6 +14,19 @@
   width: 100%;
   height: 100%;
   background-color: var(--canvas);
+}
+
+/*
+ * The dispatched view (flat songs / facet grid / playlists). Needs
+ * `min-height/min-width: 0` for the same reason `.library-shell__content` does:
+ * inner `<list>` / `<scroll-view>` containers only scroll once they resolve a size.
+ */
+.library__content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
 }
 
 /* Topbar: section title + the "customize views" (tune) entry. */
