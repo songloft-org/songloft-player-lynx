@@ -523,7 +523,7 @@ function PlaylistListItem({
         ? (
           <view
             className='playlist-list-item__play-btn'
-            bindtap={(e: any) => { e.stopPropagation?.(); onPlayAll(playlist) }}
+            catchtap={() => { onPlayAll(playlist) }}
           >
             <Icon name='play' size={16} color={ICON_COLORS.content} />
           </view>

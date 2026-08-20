@@ -63,7 +63,7 @@ export function PlaylistCard({ playlist, onTap, onPlayAll, isPlaying }: Playlist
           ? (
             <view
               className='playlist-card__play-btn'
-              bindtap={(e: any) => { e.stopPropagation?.(); onPlayAll(playlist) }}
+              catchtap={() => { onPlayAll(playlist) }}
             >
               <Icon name='play' size={14} color={ICON_COLORS.primaryContent} />
             </view>
