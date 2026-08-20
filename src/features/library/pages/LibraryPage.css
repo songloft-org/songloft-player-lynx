@@ -233,6 +233,24 @@
   background-color: var(--neutral-faint);
 }
 
+.facet-card__cover-wrap {
+  position: relative;
+}
+
+.facet-card__play-btn {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.9;
+}
+
 .facet-card__cover--empty {
   background-color: var(--neutral-faint);
 }

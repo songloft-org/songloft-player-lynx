@@ -9,6 +9,10 @@ import { flattenFacets } from '../data/pagination.js'
 import { useDebounce } from '../data/use-debounce.js'
 import { useFacetsInfiniteQuery } from '../data/songs-query.js'
 import type { LibraryViewKey } from '../domain/library-views.js'
+import { getSongsApi } from '../api/index.js'
+import { usePlayerStore } from '../../player/store/index.js'
+import { facetContext } from '../../player/domain/playback-context.js'
+import { toast } from '../../../shared/ui/toast-store.js'
 import { FacetCard } from './FacetCard.js'
 import { LibraryStateMessage } from './LibraryStateMessage.js'
 
@@ -34,6 +38,24 @@ export function FacetGridView({ field, viewMode = 'grid' }: FacetGridViewProps) 
   const keyword = useDebounce(searchText, DEBOUNCE_MS).trim()
 
   const query = useFacetsInfiniteQuery(field, keyword)
+
+  const onPlayAll = async (facet: SongFacet) => {
+    try {
+      const filters: Record<string, string> = { [field]: facet.value }
+      const res = await getSongsApi().getSongs(filters, { limit: 9999, offset: 0 })
+      if (res.songs.length === 0) {
+        toast.show(t('playlist.emptyPlaylist'))
+        return
+      }
+      await usePlayerStore.getState().playPlaylist(
+        res.songs,
+        0,
+        facetContext(field, facet.value),
+      )
+    } catch {
+      toast.error(t('playlist.playFailed'))
+    }
+  }
   const facets = flattenFacets(query.data?.pages)
 
   return (
@@ -73,6 +95,7 @@ export function FacetGridView({ field, viewMode = 'grid' }: FacetGridViewProps) 
                     <FacetCard
                       key={`${field}:${facet.value}`}
                       facet={facet}
+                      onPlayAll={onPlayAll}
                       onTap={(f) =>
                         navigate({
                           to: '/library/category/$field',
