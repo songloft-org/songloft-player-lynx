@@ -13,6 +13,8 @@ import { getSongsApi } from '../api/index.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import { facetContext } from '../../player/domain/playback-context.js'
 import { toast } from '../../../shared/ui/toast-store.js'
+import { MediaListItem } from '../../../shared/ui/MediaListItem.js'
+import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { FacetCard } from './FacetCard.js'
 import { LibraryStateMessage } from './LibraryStateMessage.js'
 
@@ -90,21 +92,40 @@ export function FacetGridView({ field, viewMode = 'grid' }: FacetGridViewProps) 
                   }
                 }}
               >
-                <view className={viewMode === 'list' ? 'library__list' : 'library__grid'}>
-                  {facets.map((facet: SongFacet) => (
-                    <FacetCard
-                      key={`${field}:${facet.value}`}
-                      facet={facet}
-                      onPlayAll={onPlayAll}
-                      layout={viewMode}
-                      onTap={(f) =>
-                        navigate({
-                          to: '/library/category/$field',
-                          params: { field },
-                          search: { value: f.value, cover: f.coverUrl },
-                        })}
-                    />
-                  ))}
+                <view className={viewMode === 'list' ? 'library__facet-list' : 'library__grid'}>
+                  {facets.map((facet: SongFacet) =>
+                    viewMode === 'list'
+                      ? (
+                        <MediaListItem
+                          key={`${field}:${facet.value}`}
+                          name={facet.value || t('common.unknown')}
+                          subtitle={t(
+                            facet.count === 1 ? 'common.songCountOne' : 'common.songCountOther',
+                            { count: facet.count },
+                          )}
+                          coverUrl={facet.coverUrl ? buildCoverUrl(facet.coverUrl) : undefined}
+                          onTap={() =>
+                            navigate({
+                              to: '/library/category/$field',
+                              params: { field },
+                              search: { value: facet.value, cover: facet.coverUrl },
+                            })}
+                          onPlayAll={() => { void onPlayAll(facet) }}
+                        />
+                      )
+                      : (
+                        <FacetCard
+                          key={`${field}:${facet.value}`}
+                          facet={facet}
+                          onPlayAll={onPlayAll}
+                          onTap={(f) =>
+                            navigate({
+                              to: '/library/category/$field',
+                              params: { field },
+                              search: { value: f.value, cover: f.coverUrl },
+                            })}
+                        />
+                      ))}
                 </view>
               </scroll-view>
             )}

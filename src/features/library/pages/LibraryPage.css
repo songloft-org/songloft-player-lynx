@@ -264,62 +264,13 @@
   white-space: nowrap;
 }
 
-/* Facet list item */
-.facet-list-item {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: var(--space-2) var(--space-4);
-  gap: var(--space-3);
-}
-
-.facet-list-item__cover-wrap {
-  position: relative;
-  width: 48px;
-  height: 48px;
-  flex-shrink: 0;
-}
-
-.facet-list-item__cover {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-sm);
-  background-color: var(--neutral-faint);
-}
-
-.facet-list-item__cover--empty {
-  background-color: var(--neutral-faint);
-}
-
-.facet-list-item__info {
-  flex: 1;
+/* Facet list mode — same container as `.playlists__list` (a plain flex column;
+   NOT `.library__list`, whose `height: 100%` belongs to the songs `<list>` and
+   would clamp this `<view>` inside the scroll-view to one viewport). Rows are
+   the shared `MediaListItem` (see MediaListItem.css). */
+.library__facet-list {
   display: flex;
   flex-direction: column;
-  min-width: 0;
-}
-
-.facet-list-item__value {
-  color: var(--content);
-  font-size: var(--font-sm);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.facet-list-item__count {
-  color: var(--content-muted);
-  font-size: var(--font-xs);
-}
-
-.facet-list-item__play-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: var(--neutral-faint);
-  flex-shrink: 0;
 }
 
 .facet-card__count {

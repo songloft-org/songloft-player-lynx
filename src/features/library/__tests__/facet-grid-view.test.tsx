@@ -71,12 +71,19 @@ beforeEach(() => {
 
 afterEach(() => vi.clearAllMocks())
 
-async function renderView() {
-  render(<FacetGridView field='artist' />)
+async function renderView(viewMode?: 'grid' | 'list') {
+  render(<FacetGridView field='artist' viewMode={viewMode} />)
   await act(async () => {
     await Promise.resolve()
   })
   return getQueriesForElement(elementTree.root!)
+}
+
+function oneArtistPage() {
+  return [{
+    facets: [{ value: 'Miles Davis', count: 12, coverUrl: 'covers/miles.jpg' }],
+    total: 1,
+  }]
 }
 
 test('queries the given field with an empty keyword by default', async () => {
@@ -126,4 +133,36 @@ test('empty with a keyword shows the no-match state', async () => {
 test('empty without a keyword shows the plain empty state', async () => {
   const { queryByText } = await renderView()
   expect(queryByText('No categories')).toBeInTheDocument()
+})
+
+/**
+ * Layout gate. This view once grew a private `.facet-list-item` row that was a
+ * near-verbatim clone of `MediaListItem` (minus the empty-cover icon and the
+ * `--playing` state), and reused `.library__list` as its container — a class
+ * written for the songs virtual `<list>`, whose `height: 100%` clamps a plain
+ * `<view>` inside the scroll-view to one viewport. Nothing asserted either, so
+ * the fix was lost in a stash for days. These two tests are that missing gate.
+ */
+test('list mode renders the shared MediaListItem row in its own flex column', async () => {
+  facetsHook.mockReturnValue(facetsResult(oneArtistPage()))
+  await renderView('list')
+  const root = elementTree.root!
+
+  expect(root.querySelectorAll('.media-list-item')).toHaveLength(1)
+  expect(root.querySelectorAll('.facet-list-item')).toHaveLength(0)
+  // Play-all stays reachable in list mode (it lives inside the shared row now).
+  expect(root.querySelectorAll('.media-list-item__play-btn')).toHaveLength(1)
+
+  expect(root.querySelectorAll('.library__facet-list')).toHaveLength(1)
+  expect(root.querySelectorAll('.library__list')).toHaveLength(0)
+})
+
+test('grid mode still renders facet cards', async () => {
+  facetsHook.mockReturnValue(facetsResult(oneArtistPage()))
+  await renderView('grid')
+  const root = elementTree.root!
+
+  expect(root.querySelectorAll('.facet-card')).toHaveLength(1)
+  expect(root.querySelectorAll('.media-list-item')).toHaveLength(0)
+  expect(root.querySelectorAll('.library__grid')).toHaveLength(1)
 })
