@@ -13,6 +13,8 @@ export interface LibraryViewRailProps {
   displayKeys: LibraryViewKey[]
   selected?: LibraryViewKey
   onSelect: (key: LibraryViewKey) => void
+  /** Show the "曲库" / "Library" title header above the view rows. */
+  showTitle?: boolean
 }
 
 /**
@@ -20,13 +22,14 @@ export interface LibraryViewRailProps {
  * view, with a divider between groups. Wide screens (>= tablet breakpoint)
  * use this instead of the horizontal pill strip.
  */
-export function LibraryViewRail({ displayKeys, selected, onSelect }: LibraryViewRailProps) {
+export function LibraryViewRail({ displayKeys, selected, onSelect, showTitle }: LibraryViewRailProps) {
   const { t } = useTranslation()
   const buckets = groupLibraryViewKeys(displayKeys)
 
   return (
     <scroll-view className='library-rail' scroll-y>
       <view className='library-rail__col'>
+        {showTitle ? <text className='library-rail__title'>{t('nav.library')}</text> : null}
         {buckets.map((bucket, i) => (
           <view key={bucket.group} className='library-rail__group'>
             {i > 0 ? <view className='library-rail__divider' /> : null}

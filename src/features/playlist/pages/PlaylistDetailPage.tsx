@@ -503,7 +503,7 @@ export function PlaylistDetailPage() {
                     <view className={selectMode && selected.has(song.id) ? 'playlist-detail__song-row-wrapper playlist-detail__song-row-wrapper--selected' : 'playlist-detail__song-row-wrapper'}>
                       {selectMode
                         ? (
-                          <view className='playlist-detail__select-box'>
+                          <view className='playlist-detail__select-box' bindtap={() => onTapSong(song, index)}>
                             <AppCheckbox checked={selected.has(song.id)} />
                           </view>
                         )

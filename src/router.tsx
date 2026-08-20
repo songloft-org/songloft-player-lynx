@@ -15,7 +15,7 @@ import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { AddSongsPage, CategorySongsPage, LibraryPage, SongDetailPage } from './features/library/index.js'
 import { migrateLibrarySearch, type LibraryViewKey } from './features/library/domain/library-views.js'
-import { PlaylistDetailPage } from './features/playlist/index.js'
+import { CreatePlaylistPage, PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
 import { AboutPage, AppearancePage, CacheManagePage, DataPage, DiagnosticsPage, EqualizerPage, LicensesPage, LyricsPage, PlaybackPage, ProxySettingsPage, ServerEditPage, ServerListPage, SettingsPage, ThemePacksPage, UpgradePage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
@@ -310,6 +310,13 @@ const addSongsRoute = createRoute({
   component: AddSongsPage,
 })
 
+
+const createPlaylistRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/playlists/create',
+  component: CreatePlaylistPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   playerRoute,
@@ -342,6 +349,8 @@ const routeTree = rootRoute.addChildren([
     pluginWebViewRoute,
     tabConfigRoute,
     playlistDetailRoute,
+    createPlaylistRoute,
+
     categorySongsRoute,
     songDetailRoute,
     addSongsRoute,

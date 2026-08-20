@@ -60,10 +60,10 @@ export function LibraryToolbar({
         contentClassName='popover-menu--wide'
         triggerClassName='library-toolbar__btn'
         trigger={
-          <>
+          <view data-testid='library-toolbar-sort'>
             <Icon name='sort' size={14} color={ICON_COLORS.content} />
             <text className='library-toolbar__btn-text'>{t(current!.labelKey)}</text>
-          </>
+          </view>
         }
         items={LIBRARY_SORT_OPTIONS.map((o): PopoverMenuItem => ({
           key: o.id,

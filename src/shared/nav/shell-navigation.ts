@@ -62,6 +62,31 @@ export function setNavPaths(paths: readonly string[]): void {
 }
 
 /**
+ * Shell width store — kept so drill-in pages (AddSongs, CreatePlaylist, …)
+ * can read the shell's measured width synchronously instead of running their
+ * own async `measureWidth` (which fires after paint and causes a flash).
+ *
+ * Written by `ShellLayout` on every render; read by `useSyncExternalStore`.
+ */
+let shellWidth = 0
+const shellWidthListeners = new Set<() => void>()
+
+export function getShellWidth(): number {
+  return shellWidth
+}
+
+export function setShellWidth(w: number): void {
+  if (!Number.isFinite(w) || w <= 0 || shellWidth === w) return
+  shellWidth = w
+  for (const l of shellWidthListeners) l()
+}
+
+export function subscribeShellWidth(listener: () => void): () => void {
+  shellWidthListeners.add(listener)
+  return () => { shellWidthListeners.delete(listener) }
+}
+
+/**
  * Whether the mini player belongs on `pathname` — content browsing only.
  *
  * Settings, plugin, and the settings sub-pages are excluded by omission rather

@@ -194,7 +194,7 @@ export function FlatSongsView({ type, sortId, onSortChange }: FlatSongsViewProps
                   <view className={selectMode && selected.has(song.id) ? 'library__select-row library__select-row--selected' : 'library__select-row'}>
                     {selectMode
                       ? (
-                        <view className='library__select-box'>
+                        <view className='library__select-box' bindtap={() => onTapSong(song, index)}>
                           <AppCheckbox checked={selected.has(song.id)} />
                         </view>
                       )

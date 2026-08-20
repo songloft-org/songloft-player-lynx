@@ -137,7 +137,7 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   background-color: var(--primary);
 }
 
@@ -201,7 +201,7 @@
 .playlists__search-input {
   height: 40px;
   padding: 0 var(--space-4);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   background-color: var(--neutral-faint);
   border: 1px solid var(--line);
   color: var(--content);
@@ -236,7 +236,7 @@
   flex-direction: row;
   align-items: center;
   padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   background-color: var(--neutral-faint);
   gap: var(--space-1);
 }
@@ -356,7 +356,7 @@
 
 .playlists__select-toolbar-btn {
   padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   background-color: var(--danger);
 }
 

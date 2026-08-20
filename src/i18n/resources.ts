@@ -127,6 +127,7 @@ export const en = {
     noPlaylistsTitle: 'No playlists yet',
     noPlaylistsSubtitle: 'Playlists you create will appear here.',
     createPlaylist: 'Create playlist',
+
     namePlaceholder: 'Playlist name',
     descriptionPlaceholder: 'Description (optional)',
     create: 'Create',
@@ -360,6 +361,15 @@ export const en = {
     add: 'Add',
     success: 'Added successfully',
   },
+
+
+  createPlaylist: {
+    title: 'Create Playlist',
+    normal: 'Playlist',
+    radio: 'Radio Playlist',
+    success: 'Playlist created',
+  },
+
   lyricEdit: {
     title: 'Edit Lyrics',
     placeholder: 'Paste LRC lyrics here…',
@@ -963,6 +973,14 @@ export const zh: TranslationTree = {
     add: '添加',
     success: '添加成功',
   },
+
+  createPlaylist: {
+    title: '创建歌单',
+    normal: '普通歌单',
+    radio: '电台歌单',
+    success: '创建成功',
+  },
+
   lyricEdit: {
     title: '编辑歌词',
     placeholder: '在此粘贴 LRC 歌词…',

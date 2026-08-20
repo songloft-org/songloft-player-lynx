@@ -42,6 +42,7 @@ export interface PopoverMenuProps {
   onSelect: (key: string) => void
   placement?: 'bottom' | 'top' | 'bottom-start' | 'bottom-end' | 'top-start' | 'top-end'
   contentClassName?: string
+  hideCheckmark?: boolean
 }
 
 /**
@@ -62,6 +63,7 @@ export function PopoverMenu({
   onSelect,
   placement = 'bottom',
   contentClassName,
+  hideCheckmark,
 }: PopoverMenuProps) {
   /*
    * Back closes the menu. It has to go through `onShowChange` like every other
@@ -107,7 +109,7 @@ export function PopoverMenu({
                 : 'popover-menu__item-label'}>
                 {item.label}
               </text>
-              {item.selected && (
+              {item.selected && !hideCheckmark && (
                 <view className='popover-menu__item-check'>
                   <Icon name='check' size={16} color={ICON_COLORS.primary} />
                 </view>

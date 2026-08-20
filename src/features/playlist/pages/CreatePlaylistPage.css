@@ -1,18 +1,18 @@
-.add-songs {
+.create-playlist {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-.add-songs--wide {
+.create-playlist--wide {
   flex-direction: row;
 }
 
-.add-songs__rail-hidden {
+.create-playlist__rail-hidden {
   display: none;
 }
 
-.add-songs__content {
+.create-playlist__content {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -20,7 +20,7 @@
   min-height: 0;
 }
 
-.add-songs__topbar {
+.create-playlist__topbar {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -28,17 +28,16 @@
   gap: var(--space-3);
 }
 
-.add-songs__back { padding: var(--space-1); }
+.create-playlist__back { padding: var(--space-1); }
 
-.add-songs__title {
+.create-playlist__title {
   flex: 1;
   font-size: var(--font-lg);
   font-weight: bold;
   color: var(--content);
 }
 
-/* Tabs — Muse underline style, matching the Library view switcher. */
-.add-songs__tabs {
+.create-playlist__tabs {
   display: flex;
   flex-direction: row;
   padding: 0 var(--space-4);
@@ -46,39 +45,38 @@
   border-bottom: 1px solid var(--line);
 }
 
-.add-songs__tab {
+.create-playlist__tab {
   padding: var(--space-2) 0;
   border-bottom: 2px solid transparent;
 }
 
-.add-songs__tab--active {
+.create-playlist__tab--active {
   border-bottom-color: var(--primary);
 }
 
-.add-songs__tab-text {
+.create-playlist__tab-text {
   font-size: var(--font-sm);
   color: var(--content-muted);
 }
 
-.add-songs__tab--active .add-songs__tab-text {
+.create-playlist__tab--active .create-playlist__tab-text {
   color: var(--content);
   font-weight: 600;
 }
 
-.add-songs__form {
+.create-playlist__form {
   flex: 1;
   padding: 0 var(--space-4);
 }
 
-.add-songs__label {
+.create-playlist__label {
   font-size: var(--font-xs);
   color: var(--content-muted);
   margin-top: var(--space-3);
   margin-bottom: var(--space-1);
 }
 
-/* Form field — see the note on `.song-detail__input` for why `--paper` was wrong. */
-.add-songs__input {
+.create-playlist__input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
@@ -89,7 +87,7 @@
   -x-placeholder-color: var(--content-muted);
 }
 
-.add-songs__btn {
+.create-playlist__btn {
   margin-top: var(--space-4);
   padding: var(--space-3);
   border-radius: var(--radius-pill);
@@ -97,7 +95,7 @@
   align-items: center;
 }
 
-.add-songs__btn-text {
+.create-playlist__btn-text {
   font-size: var(--font-sm);
   color: var(--primary-content);
   font-weight: bold;

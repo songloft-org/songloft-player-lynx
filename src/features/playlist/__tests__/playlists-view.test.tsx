@@ -22,6 +22,11 @@ vi.mock('@lynx-js/lynx-ui-input', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
 )
 
+vi.mock('@lynx-js/lynx-ui-popover', async () => ({
+  ...(await vi.importActual('@lynx-js/lynx-ui-popover')),
+  ...(await import('../../../__tests__/_render-mocks.js')).mockLynxUiPopover(),
+}))
+
 vi.mock('@lynx-js/lynx-ui-sortable', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSortable(),
 )

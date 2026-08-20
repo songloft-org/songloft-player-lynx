@@ -11,7 +11,7 @@ import { buildCoverUrl } from '../../core/network/url-helper.js'
 import type { PluginTabEntry } from '../../features/jsplugin/data/tab-config.js'
 import { getLastLibrarySearch } from '../../features/library/index.js'
 import { NAV_DESTINATIONS } from '../nav/destinations.js'
-import { activeNavPath, setLastShellLocation, setNavPaths, showsMiniPlayer } from '../nav/shell-navigation.js'
+import { activeNavPath, setLastShellLocation, setNavPaths, setShellWidth, showsMiniPlayer } from '../nav/shell-navigation.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import { Icon, ICON_COLORS } from '../ui/Icon.js'
 import './ShellLayout.css'
@@ -57,7 +57,7 @@ function PluginTabIcon({ tab, active }: { tab: PluginTabEntry; active: boolean }
 export function ShellLayout() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { breakpoint, isWide, onLayoutChange } = useBreakpoint(0, '.shell')
+  const { width, breakpoint, isWide, onLayoutChange } = useBreakpoint(0, '.shell')
   const pathname = useRouterState({ select: s => s.location.pathname })
   const pluginTabsQuery = usePluginTabsWithIcons()
   const pluginTabs = pluginTabsQuery.data ?? []
@@ -75,6 +75,7 @@ export function ShellLayout() {
   // shell re-renders on every navigation, so there is nothing an effect would add.
   setLastShellLocation(pathname)
   setNavPaths(navPaths)
+  setShellWidth(width)
 
   const renderNavItems = () => {
     // Which tab is lit. Matched by ownership, not equality — otherwise every
