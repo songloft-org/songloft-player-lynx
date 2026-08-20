@@ -7,6 +7,7 @@ import {
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { isMuted, usePlayerStore } from '../store/index.js'
+import './VolumeControl.css'
 
 /**
  * Volume control: a mute toggle + a lynx-ui `Slider` over the `0..100` volume.

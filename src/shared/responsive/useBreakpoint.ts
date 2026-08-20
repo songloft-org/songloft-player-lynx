@@ -31,6 +31,14 @@ export function isWide(breakpoint: Breakpoint): boolean {
 
 export interface UseBreakpointResult {
   width: number
+  /**
+   * Container height in px, `0` until measured.
+   *
+   * Only needed by callers that have to fit a fixed-aspect block into the space
+   * that is left over — the player sizes its cover art off it (see
+   * `features/player/domain/player-layout.ts`). Breakpoints themselves are width-only.
+   */
+  height: number
   breakpoint: Breakpoint
   isWide: boolean
   /** Attach to a root `<view>`'s `bindlayoutchange` to drive the breakpoint. */
@@ -45,8 +53,12 @@ export interface UseBreakpointResult {
  * ReactLynx Vitest render tree outright (`Cannot use 'in' operator to search for
  * 'refAttr' in null`), and the whole point here is a measurement that is safe to
  * take on every mount.
+ *
+ * Width and height come from the **same** invoke rather than two: they describe one
+ * box at one instant, and a caller fitting a square into the leftover space would
+ * otherwise get to see a half-updated pair.
  */
-function measureWidth(selector: string, apply: (w: number) => void): void {
+function measureRect(selector: string, apply: (w: number, h: number) => void): void {
   try {
     // `lynx` is a **bare** host global, not a property of `globalThis` — reading
     // it as `globalThis.lynx` yields undefined in the background realm, which is
@@ -58,7 +70,10 @@ function measureWidth(selector: string, apply: (w: number) => void): void {
       .select(selector)
       .invoke({
         method: 'boundingClientRect',
-        success: (res: unknown) => apply(Number((res as { width?: number })?.width)),
+        success: (res: unknown) => {
+          const rect = res as { width?: number, height?: number }
+          apply(Number(rect?.width), Number(rect?.height))
+        },
         fail: () => {
           /* no measurement here; layout events stay the only source */
         },
@@ -91,26 +106,36 @@ function measureWidth(selector: string, apply: (w: number) => void): void {
  * `settings__body--dual` never appeared once.
  */
 export function useBreakpoint(initialWidth = 0, measureSelector?: string): UseBreakpointResult {
-  const [width, setWidth] = useState(initialWidth)
+  const [rect, setRect] = useState({ width: initialWidth, height: 0 })
 
-  const apply = useCallback((next: number) => {
-    if (!Number.isFinite(next) || next <= 0) return
-    setWidth(prev => (prev === next ? prev : next))
+  /**
+   * Width and height are validated independently, and each keeps its last good
+   * value. `bindlayoutchange` on Web has been seen reporting one of the two as 0
+   * while the other is real; zeroing a dimension that was already known would make
+   * a dependent size (the player's cover) collapse for a frame and then jump back.
+   */
+  const apply = useCallback((nextW: number, nextH: number) => {
+    setRect(prev => {
+      const width = Number.isFinite(nextW) && nextW > 0 ? nextW : prev.width
+      const height = Number.isFinite(nextH) && nextH > 0 ? nextH : prev.height
+      return width === prev.width && height === prev.height ? prev : { width, height }
+    })
   }, [])
 
   const onLayoutChange = useCallback((event: LayoutChangeEvent) => {
-    apply(event.detail?.width ?? 0)
+    apply(event.detail?.width ?? 0, event.detail?.height ?? 0)
   }, [apply])
 
   useEffect(() => {
     if (!measureSelector) return
-    measureWidth(measureSelector, apply)
+    measureRect(measureSelector, apply)
   }, [measureSelector, apply])
 
-  const breakpoint = breakpointFromWidth(width)
+  const breakpoint = breakpointFromWidth(rect.width)
 
   return {
-    width,
+    width: rect.width,
+    height: rect.height,
     breakpoint,
     isWide: isWide(breakpoint),
     onLayoutChange,

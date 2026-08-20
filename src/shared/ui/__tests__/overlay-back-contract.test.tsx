@@ -61,7 +61,12 @@ describe('every shared overlay claims the back key', () => {
     // Guards the derivation: if the props are renamed, this must not silently start
     // asserting over an empty list.
     const files = overlays.map((o) => o.file).sort()
-    expect(files).toEqual(['ActionSheet.tsx', 'ConfirmDialog.tsx', 'PopoverMenu.tsx'])
+    expect(files).toEqual([
+      'ActionSheet.tsx',
+      'ConfirmDialog.tsx',
+      'PopoverMenu.tsx',
+      'PopoverPanel.tsx',
+    ])
   })
 
   test.each(overlays.map((o) => o.file))('%s calls useBackHandler', (file) => {

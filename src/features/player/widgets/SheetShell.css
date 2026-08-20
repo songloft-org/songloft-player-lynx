@@ -1,0 +1,136 @@
+/*
+ * Shared shell for the player's bottom sheets, imported by **both**
+ * `PlaylistDrawer` and `SleepTimerSheet`.
+ *
+ * It has no component of its own — hence a stylesheet without a matching `.tsx`,
+ * the only one in the tree. The alternative was worse in both directions: leaving
+ * these rules in `FullPlayerPage.css` (where they were) means either sheet loses its
+ * styling wherever it is mounted outside that page, and putting them in
+ * `PlaylistDrawer.css` would make the sleep timer import the queue's stylesheet for
+ * the chrome they happen to share.
+ *
+ * The `drawer__` prefix is historical: the queue drawer got here first. The `__row*`
+ * rules below are only used by the queue, but they belong with the rest of the
+ * prefix so that "one selector, one file" (enforced by
+ * `__tests__/player-css-no-duplicate-selectors.test.ts`) stays mechanically checkable.
+ */
+
+.drawer__viewport {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+
+.drawer__backdrop {
+  background-color: var(--backdrop);
+}
+
+.drawer__content {
+  background-color: var(--paper);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+}
+
+.drawer__inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: var(--space-3) var(--space-4);
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+}
+
+.drawer__handle {
+  width: 40px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background-color: var(--rule);
+  margin: 0 auto var(--space-3) auto;
+}
+
+.drawer__header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.drawer__title {
+  color: var(--content);
+  font-size: var(--font-lg);
+  font-weight: bold;
+}
+
+.drawer__count {
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+}
+
+.drawer__list {
+  flex: 1;
+}
+
+.drawer__row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+}
+
+.drawer__row--active {
+  background-color: var(--neutral-faint);
+}
+
+.drawer__row-meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.drawer__row-title {
+  color: var(--content);
+  font-size: var(--font-sm);
+}
+
+.drawer__row--active .drawer__row-title {
+  color: var(--accent);
+}
+
+.drawer__row-artist {
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+  margin-top: 2px;
+}
+
+.drawer__row-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.drawer__row-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.drawer__row-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 32px;
+  margin-right: 4px;
+}
+
+.drawer__row-remove-glyph {
+  color: var(--content-muted);
+  font-size: var(--font-md);
+}

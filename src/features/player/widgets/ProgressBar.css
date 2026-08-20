@@ -1,0 +1,84 @@
+/* Seek bar. All colors/sizes via Muse tokens (no hardcode). */
+
+.player-progress {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--space-3);
+}
+
+.player-progress__preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-1);
+}
+
+.player-progress__preview-text {
+  font-size: var(--font-lg);
+  font-weight: bold;
+  color: var(--accent);
+}
+
+/* Elapsed · rail · total, on one line (Flutter's `progress_bar.dart` layout). */
+.player-progress__row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.player-progress__slider {
+  flex: 1;
+  /* `min-width: 0` so the rail yields to the two fixed time columns instead of
+     overflowing the row. */
+  min-width: 0;
+  height: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.player-progress__track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background-color: var(--rule);
+}
+
+.player-progress__indicator {
+  /* Overlay the rail (track is position:relative). lynx-ui controls the width
+     from the slider value. Without absolute positioning it flows as a SECOND
+     line instead of overlaying the track → the "two lines" artifact. */
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.player-progress__thumb-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-progress__thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-pill);
+  background-color: var(--primary-content);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Fixed width (Flutter uses 45px) so the rail does not shift as `9:59` → `10:00`. */
+.player-progress__time {
+  width: 45px;
+  flex-shrink: 0;
+  color: var(--content-2);
+  font-size: var(--font-xs);
+}
+
+.player-progress__time--total {
+  text-align: right;
+}

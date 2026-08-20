@@ -312,21 +312,43 @@ export function mockLynxUiSheet() {
 }
 
 /** Mock `@lynx-js/lynx-ui-swiper` — render each page via the child function. */
+/**
+ * Stand-in for the swiper, which forwards a ref exposing `swipeTo`.
+ *
+ * The ref is the point. The previous version ignored it, so `swiperRef.current` was
+ * always null in tests and any `swipeTo` call vanished — which is exactly how "open
+ * straight to the lyrics" managed to be broken from the day it shipped without a
+ * single test noticing: on device the ref was null too (the swiper was never mounted,
+ * because the page had no width), and the call was dropped just as silently.
+ *
+ * `swipeTo` records into `spy` so a test can assert the page asked for a screen; it
+ * does not actually move anything, since there is nothing to scroll here.
+ */
 export function mockLynxUiSwiper() {
+  const swipeTo = vi.fn()
   return {
-    Swiper: ({
-      data,
-      children,
-    }: {
-      data: unknown[]
-      children: (p: { item: unknown; index: number }) => unknown
-    }) => (
-      <view>
-        {data.map((item, index) => (
-          <view key={index}>{children({ item, index }) as never}</view>
-        ))}
-      </view>
-    ),
+    swipeTo,
+    Swiper: forwardRef((
+      {
+        data,
+        children,
+      }: {
+        data: unknown[]
+        children: (p: { item: unknown; index: number }) => unknown
+      },
+      ref: unknown,
+    ) => {
+      const handle = { swipeTo }
+      if (typeof ref === 'function') (ref as (r: unknown) => void)(handle)
+      else if (ref && typeof ref === 'object') (ref as { current: unknown }).current = handle
+      return (
+        <view>
+          {data.map((item, index) => (
+            <view key={index}>{children({ item, index }) as never}</view>
+          ))}
+        </view>
+      )
+    }),
     SwiperItem: Pass,
   }
 }
@@ -415,7 +437,7 @@ export function mockLynxUiPopover() {
 }
 
 /** A minimal `Song` for the mocked player state. */
-function mockSong(): Song {
+export function mockSong(): Song {
   return {
     id: 1,
     type: 'local',
@@ -573,6 +595,36 @@ export function installBackRouter(pathname: string): ReturnType<typeof vi.fn> {
   const navigate = vi.fn()
   setBackRouter({ state: { location: { pathname } }, navigate } as never)
   return navigate
+}
+
+/**
+ * Stand-in for the favorites module, whose hooks are react-query based.
+ *
+ * `useFavoriteToggle` calls `useQuery`/`useMutation`, so any tree containing the
+ * player's favorite button throws `No QueryClient set` unless the test wraps it in a
+ * `QueryClientProvider` — and the render tests here mount components directly.
+ *
+ * A factory rather than a per-file object literal: four files need it, and the shape
+ * has to match `favorites.ts`. A mock that quietly returns a different shape is worse
+ * than no mock, because the component keeps rendering and the assertion still passes.
+ *
+ * `toggle` is the returned spy, so a test can assert the tap reached it.
+ */
+export function mockFavorites(over: { isFavorite?: boolean } = {}) {
+  const toggle = vi.fn()
+  const isFavorite = over.isFavorite ?? false
+  return {
+    toggle,
+    module: {
+      useIsFavorite: () => isFavorite,
+      useFavoriteToggle: () => ({ isFavorite, toggle, isPending: false }),
+      // Non-React paths the player store imports at module scope. Left as inert
+      // resolved promises: the store wires them to native remote-command events,
+      // which no render test dispatches.
+      getFavoriteState: async () => isFavorite,
+      toggleFavoriteNonReact: async () => {},
+    },
+  }
 }
 
 /** Non-subscribing stand-in for the `useLyricStore` hook + store api. */

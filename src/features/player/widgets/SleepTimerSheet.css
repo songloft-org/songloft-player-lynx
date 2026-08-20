@@ -1,0 +1,39 @@
+/* Sleep timer options. The surrounding sheet chrome lives in `SheetShell.css`.
+   All colors/sizes via Muse tokens (no hardcode). */
+
+.sleep-timer__list {
+  flex: 1;
+}
+
+.sleep-timer__option {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+.sleep-timer__option--active {
+  background-color: var(--neutral-faint);
+}
+
+.sleep-timer__option-text {
+  color: var(--content);
+  font-size: var(--font-md);
+}
+
+.sleep-timer__option-text--active {
+  color: var(--accent);
+  font-weight: bold;
+}
+
+.sleep-timer__option-text--off {
+  color: var(--danger);
+}
+
+.sleep-timer__divider {
+  height: 1px;
+  background-color: var(--rule);
+  margin: var(--space-2) var(--space-4);
+}

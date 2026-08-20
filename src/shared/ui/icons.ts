@@ -65,6 +65,7 @@ export type IconName =
   | 'queue'
   | 'tune'
   | 'cast'
+  | 'more'
 
 /** Shared stroke attributes for line icons — Muse §4.5 stroke-width 1.6. */
 function stroke(color: string): string {
@@ -332,6 +333,13 @@ const ICONS: Record<IconName, (color: string) => string> = {
     `<path d="M2 12.05A9 9 0 0 1 9.95 20" ${stroke(c)}/>` +
     `<path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" ${stroke(c)}/>` +
     `<path d="M2 20h.01" ${stroke(c)}/>`,
+
+  // Overflow menu: three dots in a row. Filled rather than stroked — at 20px a
+  // stroked 1.8px ring reads as a smudge instead of a dot.
+  more: (c) =>
+    `<circle cx="5" cy="12" r="1.9" ${fill(c)}/>` +
+    `<circle cx="12" cy="12" r="1.9" ${fill(c)}/>` +
+    `<circle cx="19" cy="12" r="1.9" ${fill(c)}/>`,
 }
 
 /** Build a complete inline SVG document string for `name`, colored with `color`. */

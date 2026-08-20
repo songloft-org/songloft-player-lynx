@@ -9,6 +9,7 @@ import {
 
 import { formatDuration } from '../../library/data/format.js'
 import { usePlayerStore } from '../store/index.js'
+import './ProgressBar.css'
 
 /** Format a millisecond position as `mm:ss` (reuses the library formatter). */
 function formatMs(ms: number): string {
@@ -31,6 +32,14 @@ export function ProgressBar() {
   const value = dragging ? dragValue : liveValue
   const shownMs = dragging ? dragValue * duration : currentTime
 
+  /*
+   * `[elapsed | slider | total]` on one line, matching Flutter's `progress_bar.dart`.
+   *
+   * They used to sit on a second line below the rail, which cost a whole row of
+   * vertical space — the scarcest thing on this screen, and the reason the cover has
+   * to shrink on short viewports at all (see `player-layout.ts`). Fixed-width time
+   * columns keep the rail from twitching sideways as `9:59` becomes `10:00`.
+   */
   return (
     <view className='player-progress'>
       {dragging
@@ -40,28 +49,30 @@ export function ProgressBar() {
           </view>
         )
         : null}
-      <SliderRoot
-        className='player-progress__slider'
-        value={value}
-        onDragging={() => setDragging(true)}
-        onValueChange={(v: number) => {
-          if (dragging) setDragValue(v)
-        }}
-        onValueCommit={(v: number) => {
-          setDragging(false)
-          void usePlayerStore.getState().seek(v * duration)
-        }}
-      >
-        <SliderTrack className='player-progress__track'>
-          <SliderIndicator className='player-progress__indicator' />
-          <SliderThumb className='player-progress__thumb-wrap'>
-            <view className='player-progress__thumb' />
-          </SliderThumb>
-        </SliderTrack>
-      </SliderRoot>
-      <view className='player-progress__times'>
+      <view className='player-progress__row'>
         <text className='player-progress__time'>{formatMs(shownMs)}</text>
-        <text className='player-progress__time'>{formatMs(duration)}</text>
+        <SliderRoot
+          className='player-progress__slider'
+          value={value}
+          onDragging={() => setDragging(true)}
+          onValueChange={(v: number) => {
+            if (dragging) setDragValue(v)
+          }}
+          onValueCommit={(v: number) => {
+            setDragging(false)
+            void usePlayerStore.getState().seek(v * duration)
+          }}
+        >
+          <SliderTrack className='player-progress__track'>
+            <SliderIndicator className='player-progress__indicator' />
+            <SliderThumb className='player-progress__thumb-wrap'>
+              <view className='player-progress__thumb' />
+            </SliderThumb>
+          </SliderTrack>
+        </SliderRoot>
+        <text className='player-progress__time player-progress__time--total'>
+          {formatMs(duration)}
+        </text>
       </view>
     </view>
   )

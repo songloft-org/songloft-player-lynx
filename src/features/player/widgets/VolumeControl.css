@@ -1,0 +1,62 @@
+/* Volume: mute toggle + slider. All colors/sizes via Muse tokens (no hardcode). */
+
+.player-volume {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.player-volume__mute {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-right: var(--space-2);
+}
+
+.player-volume__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-volume__slider {
+  flex: 1;
+  height: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.player-volume__track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background-color: var(--rule);
+}
+
+.player-volume__indicator {
+  /* Same overlay fix as the progress indicator (see ProgressBar.css). One accent
+     channel — volume rides the same ink indicator as progress (Muse §2.2). */
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.player-volume__thumb-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-volume__thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-pill);
+  background-color: var(--primary-content);
+  box-shadow: var(--shadow-sm);
+}

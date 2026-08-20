@@ -11,9 +11,10 @@ import { installBackRouter } from '../../../__tests__/_render-mocks.js'
  * render without a RouterProvider. Assertions check the real rendered structure
  * (title, artist, "Now Playing", play glyph, formatted times), not fixtures.
  */
-const { navigateSpy, writePrefSpy } = vi.hoisted(() => ({
+const { navigateSpy, writePrefSpy, favoriteToggleSpy } = vi.hoisted(() => ({
   navigateSpy: vi.fn(),
   writePrefSpy: vi.fn(),
+  favoriteToggleSpy: vi.fn(),
 }))
 
 vi.mock('react-i18next', async () =>
@@ -29,6 +30,25 @@ vi.mock('../../settings/data/settings-prefs.js', () => ({
   readPlaybackSpeed: vi.fn(async () => 1),
   writePlaybackSpeed: vi.fn(async () => {}),
   readAutoEnterLyrics: vi.fn(async () => false),
+}))
+/*
+ * Two react-query consumers now sit inside the player and would each throw
+ * `No QueryClient set` here: the transport row's favorite button, and the
+ * `SongContextMenu` the overflow menu opens (its hooks run even while it is closed).
+ * Favorites gets a typed stand-in; the rest goes through the same minimal
+ * `@tanstack/react-query` stub `playlist-detail.test.tsx` uses.
+ */
+vi.mock('../../library/data/favorites.js', () => ({
+  useIsFavorite: () => false,
+  useFavoriteToggle: () => ({ isFavorite: false, toggle: favoriteToggleSpy, isPending: false }),
+  getFavoriteState: async () => false,
+  toggleFavoriteNonReact: async () => {},
+}))
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+  useInfiniteQuery: () => ({ data: undefined, isLoading: false }),
+  useQuery: () => ({ data: undefined, isLoading: false, isError: false, refetch: vi.fn() }),
+  useMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }))
 vi.mock('@lynx-js/lynx-ui-slider', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSlider(),
@@ -78,7 +98,11 @@ async function renderPage() {
 test('renders the now-playing header, song meta and transport', async () => {
   const { queryByText, queryAllByText, queryByTestId, queryAllByTestId } = await renderPage()
 
-  expect(queryByText('Now Playing')).toBeInTheDocument()
+  // Narrow (the env reports no width, so `mobile`): the header shows the **album**,
+  // because the song title is already right below the cover. "Now Playing" is the
+  // wide-layout header instead — asserted in `full-player-responsive.test.tsx`.
+  expect(queryByText('Mock Album')).toBeInTheDocument()
+  expect(queryByText('Now Playing')).not.toBeInTheDocument()
   // The mocked Sheet renders the drawer's queue too, so the title/artist also
   // appear in the (open, in-test) drawer row — assert at least one occurrence.
   expect(queryAllByText('Mock Song').length).toBeGreaterThan(0)
@@ -97,6 +121,28 @@ test('renders the now-playing header, song meta and transport', async () => {
   // Topbar collapse + playlist icons (menu also appears on drag handles).
   expect(queryByTestId('icon-chevron-down')).toBeInTheDocument()
   expect(queryAllByTestId('icon-menu').length).toBeGreaterThanOrEqual(1)
+
+  // The tool row: volume, speed and queue moved here out of the top bar, so their
+  // absence would mean the controls went missing rather than merely moved.
+  expect(queryByTestId('volume-btn')).toBeInTheDocument()
+  expect(queryByTestId('speed-btn')).toBeInTheDocument()
+  expect(queryByTestId('queue-btn')).toBeInTheDocument()
+  // Favorite is new to the player — nothing else on this screen could favorite the
+  // song that is actually playing.
+  expect(queryByTestId('favorite-btn')).toBeInTheDocument()
+  expect(queryByTestId('icon-heart')).toBeInTheDocument()
+})
+
+test('the favorite button toggles the song through the shared favorites hook', async () => {
+  const { getByTestId } = await renderPage()
+
+  await act(async () => {
+    fireEvent.tap(getByTestId('favorite-btn'))
+  })
+
+  // Goes through `useFavoriteToggle`, so the player shares the query cache with the
+  // library rather than keeping its own idea of what is favorited.
+  expect(favoriteToggleSpy).toHaveBeenCalledTimes(1)
 })
 
 test('renders formatted current + total time from the store (30s / 200s)', async () => {

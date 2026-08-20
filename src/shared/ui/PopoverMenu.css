@@ -117,3 +117,13 @@
 .popover-menu--wide {
   min-width: 180px;
 }
+
+/*
+ * `PopoverPanel` bodies hold arbitrary content rather than a row list, so the row
+ * list's vertical padding just adds slack around e.g. a slider. Everything else about
+ * the panel — surface, radius, shadow, and the two load-bearing rules above — is
+ * shared with `.popover-menu` deliberately; see `PopoverPanel.tsx`.
+ */
+.popover-panel {
+  padding: var(--space-3);
+}

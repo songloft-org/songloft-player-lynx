@@ -1,0 +1,56 @@
+/*
+ * Blurred-cover backdrop for the full player.
+ *
+ * Two layers under everything else: the cover art blurred to a wash, and a veil in
+ * the canvas colour so the page's ordinary text tokens stay readable on top. The
+ * veil's alphas live in `tokens.css` and are derived, not tuned — see the comment
+ * there before changing them.
+ *
+ * `filter: blur()` is supported on every Lynx backend (android/ios since 1.0,
+ * harmony 3.4, web_lynx). If it ever silently no-ops on some host, this degrades to
+ * "a sharp cover under a 94–99% veil" — ugly, not broken, and still readable. That is
+ * why the veil does not depend on the blur working.
+ */
+
+.player-backdrop {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  /* Clips the scaled-up image below. Also keeps the backdrop out of the layout: it
+     must not contribute to the size the flex column negotiates. */
+  overflow: hidden;
+  /* Below `.full-player__layer` (z-index 1), above `.full-player`'s own background.
+     Must stay an explicit 0 rather than `auto`: see the note on `__layer`. */
+  z-index: 0;
+}
+
+.player-backdrop__img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  filter: blur(40px);
+  /*
+   * Blur feathers the edges into transparency, so an unscaled image leaves a visible
+   * halo of bare canvas around all four sides. Scaling past the clip pushes those
+   * edges out of view — the same job Flutter's `ClipRect` does around its
+   * `ImageFiltered`.
+   */
+  transform: scale(1.2);
+}
+
+.player-backdrop__scrim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background-image: linear-gradient(
+    to bottom,
+    var(--player-scrim-from),
+    var(--player-scrim-to)
+  );
+}

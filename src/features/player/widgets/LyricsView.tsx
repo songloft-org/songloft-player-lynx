@@ -5,6 +5,7 @@ import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { findCurrentWord, type LyricLine } from '../domain/lyric-parser.js'
 import { useLyricStore } from '../store/index.js'
 import { usePlayerStore } from '../store/index.js'
+import './LyricsView.css'
 
 function WordHighlightLine({
   line,

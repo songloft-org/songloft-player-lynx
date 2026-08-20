@@ -204,3 +204,102 @@ describe('light theme contrast (WCAG AA; dark is the audited scope, light is a p
     expectAA(LIGHT['danger'], LIGHT['paper'], 'danger on paper', 3)
   })
 })
+
+/**
+ * The full player's veil over its blurred cover.
+ *
+ * This is the one surface in the app whose background is not a token: it is the veil
+ * composited over *whatever colour the current album art happens to be*. So the pair
+ * that has to clear AA is `--content*` over `veil ⊕ cover`, and the only honest
+ * cover to test against is the worst case — pure black and pure white, since album
+ * art can be either.
+ *
+ * The bound this produces is tight, and it decided the design rather than confirming
+ * it: light `--content-2` reaches only 4.23:1 at α=0.90 and 4.43:1 at α=0.92, so the
+ * first workable value is 0.93. That is why the cover shows through so little (see
+ * the derivation comment in `tokens.css`). Loosening the alphas to make the artwork
+ * more visible turns this red — which is the intended outcome, not an obstacle.
+ */
+describe('player scrim over worst-case cover art', () => {
+  const BACKDROP_CSS = readFileSync(
+    resolve(process.cwd(), 'src/features/player/widgets/PlayerBackdrop.css'),
+    'utf8',
+  )
+
+  const BLACK: Color = { r: 0, g: 0, b: 0 }
+
+  /** Alpha of one scrim token, read from `tokens.css`. */
+  function scrimAlpha(theme: 'dark' | 'light', which: 'from' | 'to'): number {
+    const block = TOKENS_CSS.match(
+      new RegExp(`\\.theme-root\\.theme-${theme}\\s*\\{([\\s\\S]*?)\\n\\s*\\}`),
+    )
+    const decl = block![1]!.match(
+      new RegExp(`--player-scrim-${which}:\\s*rgba?\\([^)]*?([\\d.]+)\\s*\\)`),
+    )
+    expect(decl, `--player-scrim-${which} missing from theme-${theme}`).not.toBeNull()
+    return parseFloat(decl![1]!)
+  }
+
+  /** Solid colour of one scrim token (its rgb, ignoring alpha). */
+  function scrimColor(tokens: Record<string, Color>): Color {
+    // The veil is the canvas colour — asserted below, so reading `canvas` here is
+    // not an assumption but the same fact stated once.
+    return tokens['canvas']!
+  }
+
+  function composite(veil: Color, cover: Color, alpha: number): Color {
+    return {
+      r: Math.round(veil.r * alpha + cover.r * (1 - alpha)),
+      g: Math.round(veil.g * alpha + cover.g * (1 - alpha)),
+      b: Math.round(veil.b * alpha + cover.b * (1 - alpha)),
+    }
+  }
+
+  test('the scrim is applied as a gradient of the two tokens', () => {
+    // If the stylesheet stops using them, the alphas asserted below stop describing
+    // anything that ships.
+    const css = BACKDROP_CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+    expect(css).toContain('var(--player-scrim-from)')
+    expect(css).toContain('var(--player-scrim-to)')
+  })
+
+  test.each(['dark', 'light'] as const)('%s: the veil is the canvas colour', (theme) => {
+    // Any other hue would need its own foreground palette; using canvas is what lets
+    // the player keep the ordinary `--content*` tokens.
+    const block = TOKENS_CSS.match(
+      new RegExp(`\\.theme-root\\.theme-${theme}\\s*\\{([\\s\\S]*?)\\n\\s*\\}`),
+    )![1]!
+    const canvas = (theme === 'dark' ? DARK : LIGHT)['canvas']!
+    for (const which of ['from', 'to'] as const) {
+      const rgb = block.match(
+        new RegExp(`--player-scrim-${which}:\\s*rgba?\\(\\s*(\\d+)[,\\s]+(\\d+)[,\\s]+(\\d+)`),
+      )!
+      expect(
+        { r: +rgb[1]!, g: +rgb[2]!, b: +rgb[3]! },
+        `--player-scrim-${which} must be the canvas colour`,
+      ).toEqual(canvas)
+    }
+  })
+
+  // The most transparent end of the gradient is the worst case for every token.
+  test.each([
+    ['dark', DARK] as const,
+    ['light', LIGHT] as const,
+  ])('%s: text clears AA over the veil on any cover', (theme, tokens) => {
+    const alpha = Math.min(scrimAlpha(theme, 'from'), scrimAlpha(theme, 'to'))
+    const veil = scrimColor(tokens)
+
+    for (const cover of [BLACK, WHITE]) {
+      const bg = composite(veil, cover, alpha)
+      const on = `${theme} scrim α${alpha} over ${hexColor(cover)} cover`
+      // Body copy, the artist line, and lyric highlights — full 4.5.
+      expectAA(tokens['content'], bg, `content on ${on}`)
+      expectAA(tokens['content-2'], bg, `content-2 on ${on}`)
+      expectAA(tokens['accent'], bg, `accent on ${on}`)
+      // `--content-muted` is held to 3:1, matching the pre-existing light-theme
+      // exemption above — it already only clears 3 on the flat `--paper`, so
+      // demanding 4.5 here would be a stricter bar than the rest of the app meets.
+      expectAA(tokens['content-muted'], bg, `content-muted on ${on}`, 3)
+    }
+  })
+})

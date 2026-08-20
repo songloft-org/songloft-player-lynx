@@ -91,6 +91,12 @@
   --backdrop: rgba(0, 0, 0, 0.55);
   --backdrop-heavy: rgba(0, 0, 0, 0.78);
 
+  /* Veil over the full player's blurred cover — see the light block for the
+     derivation of these alphas. Same canvas colour, so the page's normal text
+     tokens keep working on top of it. */
+  --player-scrim-from: rgba(15, 15, 17, 0.94);
+  --player-scrim-to: rgba(15, 15, 17, 0.99);
+
   /* shadows — tinted off the ink, never pure black, never colored (Muse §3.5) */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.5);
@@ -130,6 +136,29 @@
   /* overlays */
   --backdrop: rgba(0, 0, 0, 0.35);
   --backdrop-heavy: rgba(0, 0, 0, 0.5);
+
+  /*
+   * Veil over the full player's blurred cover.
+   *
+   * Same colour as `--canvas`, so everything drawn on top keeps using the ordinary
+   * `--content*` tokens — no parallel "text on scrim" palette to keep in sync.
+   *
+   * The alphas are **computed, not tuned**. A translucent veil lets the cover shift
+   * the effective background anywhere between `--canvas` and the cover's own colour,
+   * and Muse's secondary tokens have very little contrast headroom to give up:
+   * light `--content-2` on a veiled black cover only reaches 4.23:1 at 0.90 and
+   * 4.43:1 at 0.92. 0.93 is the first value where every token the player draws on
+   * this surface clears the bar; 0.94 is that with a margin.
+   *
+   * The consequence is deliberate and worth stating: the cover shows through by
+   * ~6%, so it reads as a tint rather than the vivid wash the Flutter build has.
+   * Flutter can afford more because it recolours its foreground from the extracted
+   * palette; Lynx has no pixel access, so the palette does not exist here and the
+   * foreground is fixed. `player-backdrop-css.test.ts` and `contrast.test.ts`
+   * together hold the line — lowering these alphas turns them red.
+   */
+  --player-scrim-from: rgba(255, 255, 255, 0.94);
+  --player-scrim-to: rgba(255, 255, 255, 0.99);
 
   /* shadows — tinted off #111, not pure black (would be too heavy) */
   --shadow-sm: 0 1px 2px rgba(17, 17, 17, 0.04);

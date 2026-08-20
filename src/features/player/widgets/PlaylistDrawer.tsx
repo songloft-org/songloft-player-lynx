@@ -14,6 +14,7 @@ import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-s
 import { usePlayerStore } from '../store/index.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import './SheetShell.css'
 
 /** Vertical drag-claim ranges for a bottom sheet (per lynx-ui Sheet docs). */
 const CLAIMED_ANGLES: [number, number][] = [

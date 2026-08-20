@@ -1,0 +1,55 @@
+/* Secondary controls row: cast · volume · speed · queue.
+   Slot sizes come inline from `player-layout.ts`; Lynx has no `@media`. */
+
+.player-tools {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  /* `space-around` rather than `space-between`: the row has 3 or 4 members depending
+     on whether casting exists here, and the ends should not jam against the padding
+     when it is 3. */
+  justify-content: space-around;
+}
+
+/*
+ * The `PopoverTrigger` box for the popover-backed controls, and the tappable box for
+ * the plain ones. Kept identical so a control does not visibly change size when it
+ * gains a menu.
+ */
+.player-tools__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  background-color: transparent;
+}
+
+/* Inner box carrying the inline slot size. The trigger wrapper cannot take it: its
+   className is handed to lynx-ui, which owns that element's style attribute. */
+.player-tools__hit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-tools__speed {
+  font-size: var(--font-sm);
+  color: var(--content-2);
+}
+
+.player-tools__speed--active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── Volume popover body ── */
+
+.player-volume-panel {
+  min-width: 200px;
+}
+
+.player-volume-panel__label {
+  font-size: var(--font-xs);
+  color: var(--content-2);
+  margin-bottom: var(--space-2);
+}

@@ -1,4 +1,11 @@
-/* Full player + its widgets. All colors/sizes via LUNA tokens (no hardcode). */
+/*
+ * Full-player page chrome only: the shell, top bar, stage, meta and empty state.
+ * Each widget owns its own stylesheet (`widgets/*.css`) so it keeps its styling
+ * wherever it is mounted — they all used to live here, which meant `LyricsView`,
+ * `PlaylistDrawer` and `SleepTimerSheet` were silently unstyled anywhere else.
+ *
+ * All colors/sizes via Muse tokens (no hardcode).
+ */
 
 @keyframes fullPlayerEnter {
   from {
@@ -17,10 +24,33 @@
   flex: 1;
   width: 100%;
   height: 100%;
-  padding: var(--space-4);
+  /* Horizontal padding comes inline from `player-layout.ts` — it scales with the
+     screen class (16 → 64), which needs a media query Lynx does not have. */
   padding-top: calc(var(--space-4) + env(safe-area-inset-top));
   padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
   background-color: var(--canvas);
+  /* Containing block for `.player-backdrop`, which insets to 0 on the **border** box
+     and so bleeds under the padding above. */
+  position: relative;
+}
+
+/*
+ * Everything except the backdrop.
+ *
+ * Exists solely to own one `z-index` instead of six. An absolutely positioned sibling
+ * paints above in-flow siblings at the same z-index, so without this the backdrop
+ * would cover the whole player; and a negative z-index on the backdrop is not an
+ * option either — `.full-player` is not a stacking context, so it would escape upward
+ * and end up behind `.theme-root`'s opaque canvas instead.
+ */
+.full-player__layer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  /* So the stage's inner scroll containers can resolve a height. */
+  min-height: 0;
+  z-index: 1;
 }
 
 .full-player--enter {
@@ -78,32 +108,31 @@
   background-color: transparent;
 }
 
-.full-player__speed-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-  padding-left: 8px;
-  padding-right: 8px;
-  border-radius: var(--radius-pill);
-  background-color: var(--primary);
-}
-
-.full-player__speed-text {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--primary-content);
-}
-
-.full-player__speed-text-idle {
-  font-size: 12px;
-  color: var(--content-muted);
-}
-
+/* Wide-layout header. Narrow layouts show `__album` instead — the song title is
+   already directly under the cover there, so a second copy earns nothing. */
 .full-player__eyebrow {
+  flex: 1;
   color: var(--content-muted);
   font-size: var(--font-xs);
   font-weight: bold;
+  text-align: center;
+}
+
+.full-player__album {
+  flex: 1;
+  color: var(--content-2);
+  font-size: var(--font-sm);
+  text-align: center;
+  /* One line: album names run long, and this row must not grow. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.full-player__topbar-end {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 }
 
 /* Stage (cover / lyrics) */
@@ -122,6 +151,16 @@
   align-items: center;
 }
 
+/* Cover column of the split layout. Its flex weight is set inline (4, against the
+   lyrics pane's 5 — Flutter's ratio) so the two live in one place. */
+.full-player__cover-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 100%;
+}
+
 .full-player__cover-wrap {
   display: flex;
   flex: 1;
@@ -130,17 +169,51 @@
   padding: var(--space-4);
 }
 
+/*
+ * The cover's frame. Width/height are set inline from `player-layout.ts` — they scale
+ * with the screen class and the leftover height, and Lynx has no `@media`.
+ *
+ * The shadow lives here rather than on the `<image>` it wraps: on Android a
+ * `box-shadow` on an `<image>` stops the bitmap being drawn at all (see the note in
+ * `FullPlayerPage.tsx`). `overflow: hidden` is what makes the child honour the radius.
+ */
 .full-player__cover {
-  width: 260px;
-  height: 260px;
+  display: flex;
+  overflow: hidden;
   border-radius: var(--radius-xl);
   background-color: var(--paper);
   /* Muse: the cover is the one place a large shadow is earned (§3.5). */
   box-shadow: var(--shadow-lg);
 }
 
-.full-player__cover--empty {
+/*
+ * Deliberately NOT centred by the frame above.
+ *
+ * With `align-items: center` on the frame, the `<image>` resolved its cross size from
+ * the bitmap's own ratio rather than the frame's, so a 16:9 cover sat letterboxed in
+ * the middle of the square. Default `stretch` is what lets `mode="aspectFill"` crop to
+ * fill. The placeholder gets its own centred box instead.
+ */
+/*
+ * Sized inline to the same px box as its frame; only the radius lives here.
+ *
+ * Known residual: on Android this element lays out shorter than the box it is given (a
+ * 405px square frame yields a ~215px-tall image), so a square cover renders as a centred
+ * band with the frame's paper above and below it. Ruled out over eight device builds:
+ * `height: 100%`, an explicit inline px height, `position: absolute` + insets,
+ * `aspect-ratio: 1`, `auto-size`, every `mode` value, and removing the frame's flex
+ * centring. The same URL fills correctly in `MiniPlayer` and `PlaylistCard`, both of
+ * which size the `<image>` from a **class** rather than inline — the most promising lead
+ * if this is picked up again (a class cannot carry the size here without one class per
+ * breakpoint, since Lynx has no `@media`).
+ */
+.full-player__cover-img {
+  border-radius: var(--radius-xl);
+}
+
+.full-player__cover-empty {
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
 }
@@ -174,8 +247,9 @@
   text-align: center;
 }
 
+/* Lyrics column of the split layout; flex weight (5) is set inline beside the cover's. */
 .full-player__lyrics-pane {
-  flex: 1;
+  min-width: 0;
   height: 100%;
   padding: var(--space-4);
 }
@@ -208,473 +282,10 @@
   text-align: center;
 }
 
-/* ── Progress bar ── */
-.player-progress {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: var(--space-3);
-}
-
-.player-progress__preview {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: var(--space-1);
-}
-
-.player-progress__preview-text {
-  font-size: var(--font-lg);
-  font-weight: bold;
-  color: var(--accent);
-}
-
-.player-progress__slider {
-  width: 100%;
-  height: 24px;
-  display: flex;
-  align-items: center;
-}
-
-.player-progress__track {
-  position: relative;
-  width: 100%;
-  height: 4px;
-  border-radius: var(--radius-pill);
-  background-color: var(--rule);
-}
-
-.player-progress__indicator {
-  /* Overlay the rail (track is position:relative). lynx-ui controls the width
-     from the slider value. Without absolute positioning it flows as a SECOND
-     line instead of overlaying the track → the "two lines" artifact. */
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 4px;
-  border-radius: var(--radius-pill);
-  background-color: var(--primary);
-}
-
-.player-progress__thumb-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.player-progress__thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: var(--radius-pill);
-  background-color: var(--primary-content);
-  box-shadow: var(--shadow-sm);
-}
-
-.player-progress__times {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  margin-top: var(--space-1);
-}
-
-.player-progress__time {
-  color: var(--content-muted);
-  font-size: var(--font-xs);
-}
-
-/* ── Transport controls ── */
-.player-controls {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-4);
-}
-
-.player-controls__btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-pill);
-}
-
-.player-controls__btn--disabled {
-  opacity: 0.35;
-}
-
-.player-controls__btn--primary {
-  width: 68px;
-  height: 68px;
-  background-color: var(--primary);
-  /* Muse §3.5: the primary play button earns a floating shadow. */
-  box-shadow: var(--shadow-md);
-}
-
-.player-controls__glyph {
-  color: var(--content);
-  font-size: var(--font-lg);
-}
-
-.player-controls__glyph--primary {
-  color: var(--primary-content);
-  font-size: var(--font-xl);
-}
-
-.player-controls__mode-glyph {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.player-controls__mode-label {
-  color: var(--content-muted);
-  font-size: 10px;
-  margin-top: 2px;
-}
-
-/* ── Volume ── */
-.player-volume {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-}
-
-.player-volume__mute {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  margin-right: var(--space-2);
-}
-
-.player-volume__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.player-volume__slider {
-  flex: 1;
-  height: 24px;
-  display: flex;
-  align-items: center;
-}
-
-.player-volume__track {
-  position: relative;
-  width: 100%;
-  height: 4px;
-  border-radius: var(--radius-pill);
-  background-color: var(--rule);
-}
-
-.player-volume__indicator {
-  /* Same overlay fix as the progress indicator (see above). One accent
-     channel — volume rides the same ink indicator as progress (Muse §2.2). */
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 4px;
-  border-radius: var(--radius-pill);
-  background-color: var(--primary);
-}
-
-.player-volume__thumb-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.player-volume__thumb {
-  width: 12px;
-  height: 12px;
-  border-radius: var(--radius-pill);
-  background-color: var(--primary-content);
-  box-shadow: var(--shadow-sm);
-}
-
-/* ── Lyrics ── */
-.player-lyrics__container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-}
-
-.player-lyrics__edit-bar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-end;
-  padding: var(--space-1) var(--space-4);
-  gap: var(--space-1);
-}
-
-.player-lyrics__edit-text {
-  font-size: var(--font-xs);
-  color: var(--content-muted);
-}
-
-.player-lyrics {
-  flex: 1;
-  width: 100%;
-  height: 100%;
-}
-
-.player-lyrics--state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.player-lyrics__state-text {
-  color: var(--content-muted);
-  font-size: var(--font-sm);
-}
-
-.player-lyrics__inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: var(--space-4) 0;
-}
-
-.player-lyrics__line {
-  color: var(--content-muted);
-  font-size: var(--font-md);
-  text-align: center;
-  padding: var(--space-2) 0;
-}
-
-.player-lyrics__line--active {
-  color: var(--accent);
-  font-size: var(--font-lg);
-  font-weight: bold;
-}
-
-/* Empty-line note glyph: center the icon within the line's row. */
-.player-lyrics__line--note {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* ── Playlist drawer (Sheet) ── */
-.drawer__viewport {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-}
-
-.drawer__backdrop {
-  background-color: var(--backdrop);
-}
-
-.drawer__content {
-  background-color: var(--paper);
-  border-top-left-radius: var(--radius-xl);
-  border-top-right-radius: var(--radius-xl);
-}
-
-.drawer__inner {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  padding: var(--space-3) var(--space-4);
-  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
-}
-
-.drawer__handle {
-  width: 40px;
-  height: 4px;
-  border-radius: var(--radius-pill);
-  background-color: var(--rule);
-  margin: 0 auto var(--space-3) auto;
-}
-
-.drawer__header {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-3);
-}
-
-.drawer__title {
-  color: var(--content);
-  font-size: var(--font-lg);
-  font-weight: bold;
-}
-
-.drawer__count {
-  color: var(--content-muted);
-  font-size: var(--font-xs);
-}
-
-.drawer__list {
-  flex: 1;
-}
-
-.drawer__row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-}
-
-.drawer__row--active {
-  background-color: var(--neutral-faint);
-}
-
-.drawer__row-meta {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-
-.drawer__row-title {
-  color: var(--content);
-  font-size: var(--font-sm);
-}
-
-.drawer__row--active .drawer__row-title {
-  color: var(--accent);
-}
-
-.drawer__row-artist {
-  color: var(--content-muted);
-  font-size: var(--font-xs);
-  margin-top: 2px;
-}
-
-.drawer__row-remove {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-}
-
-.drawer__row-actions {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-}
-
-.drawer__row-handle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 32px;
-  margin-right: 4px;
-}
-
-.drawer__row-remove-glyph {
-  color: var(--content-muted);
-  font-size: var(--font-md);
-}
-
-/* ── Sleep timer sheet ── */
-.sleep-timer__list {
-  flex: 1;
-}
-
-.sleep-timer__option {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-}
-
-.sleep-timer__option--active {
-  background-color: var(--neutral-faint);
-}
-
-.sleep-timer__option-text {
-  color: var(--content);
-  font-size: var(--font-md);
-}
-
-.sleep-timer__option-text--active {
-  color: var(--accent);
-  font-weight: bold;
-}
-
-.sleep-timer__option-text--off {
-  color: var(--danger);
-}
-
-.sleep-timer__divider {
-  height: 1px;
-  background-color: var(--rule);
-  margin: var(--space-2) var(--space-4);
-}
-
-/* ── Sleep timer button / indicator in topbar ── */
-.full-player__timer-wrap {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-}
-
+/* Sleep-timer countdown, beside the overflow button that sets it. */
 .full-player__timer-remaining {
   color: var(--accent);
   font-size: var(--font-xs);
   margin-right: var(--space-1);
 }
 
-/* ── Lyrics: word-level highlight + translation/romanization ── */
-.player-lyrics__line-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: var(--space-2) 0;
-}
-
-.player-lyrics__words-row {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: center;
-  padding: var(--space-2) 0;
-}
-
-.player-lyrics__word {
-  color: var(--content-muted);
-  font-size: var(--font-md);
-}
-
-.player-lyrics__word--active {
-  color: var(--accent);
-  font-weight: bold;
-}
-
-.player-lyrics__word--past {
-  color: var(--content);
-}
-
-.player-lyrics__translation {
-  color: var(--content-2);
-  font-size: var(--font-sm);
-  text-align: center;
-  margin-top: var(--space-1);
-}
-
-.player-lyrics__romanization {
-  color: var(--content-muted);
-  font-size: var(--font-xs);
-  text-align: center;
-  margin-bottom: var(--space-1);
-}

@@ -16,16 +16,18 @@ import { readAutoEnterLyrics } from '../../settings/data/settings-prefs.js'
 import { getPlatformTarget } from '../../../native/platform-target.js'
 import { getVideoModule } from '../../../native/video.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
+import { resolvePlayerLayout } from '../domain/player-layout.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
-import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
-import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
 import { usePlayerStore } from '../store/index.js'
 import { LyricsView } from '../widgets/LyricsView.js'
+import { PageDots } from '../widgets/PageDots.js'
 import { PlayControls } from '../widgets/PlayControls.js'
+import { PlayerBackdrop } from '../widgets/PlayerBackdrop.js'
+import { PlayerToolBar } from '../widgets/PlayerToolBar.js'
+import { PlayerTopBar } from '../widgets/PlayerTopBar.js'
 import { PlaylistDrawer } from '../widgets/PlaylistDrawer.js'
 import { ProgressBar } from '../widgets/ProgressBar.js'
 import { SleepTimerSheet } from '../widgets/SleepTimerSheet.js'
-import { VolumeControl } from '../widgets/VolumeControl.js'
 import './FullPlayerPage.css'
 
 function formatRemaining(ms: number): string {
@@ -49,7 +51,7 @@ function formatRemaining(ms: number): string {
  * pending state and switches the source first; `'direct'` opens straight away,
  * because the picture is already in the stream being played.
  */
-function CoverArt({ song }: { song: Song }) {
+function CoverArt({ song, size }: { song: Song, size: number }) {
   const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
   const { t } = useTranslation()
   const [pending, setPending] = useState(false)
@@ -79,13 +81,36 @@ function CoverArt({ song }: { song: Song }) {
     }
   }
 
+  // Inline rather than in CSS: the edge length comes from the screen class and the
+  // leftover height (see `domain/player-layout.ts`), and this repo has no `@media`.
+  const box = { width: `${size}px`, height: `${size}px` }
+
   return (
     <view className='full-player__cover-wrap'>
-      {cover
-        ? <image className='full-player__cover' src={cover} />
-        : <view className='full-player__cover full-player__cover--empty'>
-            <Icon name='music' size={56} color={ICON_COLORS.contentMuted} />
-          </view>}
+      {/*
+        * The artwork is an `<image>` **inside** a shadowed `<view>`, not an `<image>`
+        * carrying the shadow itself.
+        *
+        * On Android a `box-shadow` on an `<image>` suppresses the bitmap outright: the
+        * element lays out at the right size, paints its background colour, and simply
+        * never draws the picture. No warning, and the placeholder never shows either —
+        * so the full-screen cover was a blank rounded rectangle, while the same URL in
+        * the mini player (no shadow) rendered fine. Found on device; a screenshot is
+        * the only thing that can see it.
+        *
+        * `aspectFill` matches Flutter's `BoxFit.cover`: fill the square and crop,
+        * rather than letterbox a non-square cover inside it.
+        */}
+      <view className='full-player__cover' style={box}>
+        {cover
+          ? <image className='full-player__cover-img' style={box} src={cover} mode='aspectFill' />
+          : (
+            <view className='full-player__cover-empty'>
+              {/* Flutter scales the placeholder glyph with the cover (`size * 0.4`). */}
+              <Icon name='music' size={Math.round(size * 0.4)} color={ICON_COLORS.contentMuted} />
+            </view>
+          )}
+      </view>
       {song.isVideo
         ? (
           <view
@@ -109,8 +134,26 @@ export function FullPlayerPage() {
   const { t } = useTranslation()
   const song = usePlayerStore((s) => s.currentSong)
   const sleepTimer = usePlayerStore((s) => s.sleepTimer)
-  const speed = usePlayerStore((s) => s.speed)
-  const { width, isWide, onLayoutChange } = useBreakpoint()
+  /*
+   * The `'.full-player'` selector is load-bearing. `/player` mounts on navigation,
+   * and on Web `bindlayoutchange` only ever fires for elements present at first
+   * paint — so without the one-shot measurement `width` stays 0 forever, the Swiper
+   * branch below is never taken, and the lyrics screen is unreachable.
+   */
+  const { width, breakpoint, isWide, onLayoutChange } = useBreakpoint(0, '.full-player')
+  /*
+   * The stage measures itself, separately from the page.
+   *
+   * The cover has to fit what is left after the top bar, title, progress and both
+   * control rows, and only the stage knows that. Feeding the *page* height to the
+   * budget asked for a 220px cover in a 186px column and the frame overflowed upwards
+   * under the top bar — visible only on a device in landscape, where the stage is
+   * shortest. The stage is `overflow: hidden` and `flex: 1`, so its height is settled by
+   * its siblings and does not move when the cover inside it resizes.
+   */
+  const { height: stageHeight, onLayoutChange: onStageLayout } =
+    useBreakpoint(0, '.full-player__stage')
+  const layout = resolvePlayerLayout({ width, height: stageHeight, breakpoint })
   const [showSleepTimer, setShowSleepTimer] = useState(false)
   const swiperRef = useRef<SwiperRef>(null)
   /**
@@ -124,32 +167,58 @@ export function FullPlayerPage() {
   /*
    * On the lyrics screen, back returns to the cover first. Only on the narrow
    * layout: wide shows cover and lyrics side by side, so there is no second screen
-   * to leave. Registered below the sleep-timer sheet / speed popover (they activate
-   * later), so an open overlay still closes before the swiper slides.
+   * to leave. Registered before any overlay the user can open (they activate later,
+   * and the stack is ordered by activation), so an open menu or sheet still closes
+   * before the swiper slides.
    */
   useBackHandler(!isWide && swiperIndex === 1, () => {
     swiperRef.current?.swipeTo(0)
     return true
   })
 
-  // Auto-enter full-screen lyrics when the preference is enabled.
+  /*
+   * "Open straight to the lyrics", when the preference is on.
+   *
+   * This has never actually worked. The old version read the pref on mount and called
+   * `swipeTo(1)` in the `.then`, but the Swiper only renders once a width is known —
+   * and the width was permanently 0, because the page never passed a
+   * `measureSelector`. So `swiperRef.current` was null and `swipeTo` was dropped on the
+   * floor, silently, every time.
+   *
+   * Fixing the measurement turns that into a race rather than a certainty: on Web the
+   * first frame still has no width, so the pref can resolve before the Swiper exists.
+   * Hence two pieces of state and an effect that waits for both — the pref, and the
+   * Swiper actually being mounted.
+   */
+  const [autoEnterLyrics, setAutoEnterLyrics] = useState(false)
   useEffect(() => {
-    void readAutoEnterLyrics().then((enabled) => {
-      if (enabled) swiperRef.current?.swipeTo(1)
-    })
+    void readAutoEnterLyrics().then(setAutoEnterLyrics)
   }, [])
+
+  const swiperMounted = !isWide && layout.measured
+  const [autoEntered, setAutoEntered] = useState(false)
+  useEffect(() => {
+    if (!autoEnterLyrics || !swiperMounted || autoEntered) return
+    // Once only: re-running on a later layout change would yank the user back to the
+    // lyrics after they had swiped to the cover (a rotate is enough to trigger it).
+    setAutoEntered(true)
+    swiperRef.current?.swipeTo(1)
+  }, [autoEnterLyrics, swiperMounted, autoEntered])
+
+  /*
+   * Forget which screen we were on when the Swiper goes away or comes back.
+   *
+   * `swiperIndex` outlives the Swiper — it is page state. Without this, a rotate from
+   * wide back to narrow would leave it at 1 while the fresh Swiper starts at 0, so the
+   * back key would try to "return to the cover" from the cover and swallow the press.
+   */
+  useEffect(() => {
+    if (!swiperMounted) setSwiperIndex(0)
+  }, [swiperMounted])
 
   useEffect(() => {
     return () => { usePlayerStore.getState().closePlaylistDrawer() }
   }, [])
-
-  const [showSpeedPopover, setShowSpeedPopover] = useState(false)
-  const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
-  const speedItems: PopoverMenuItem[] = SPEEDS.map((s) => ({
-    key: String(s),
-    label: s === 1 ? t('player.speedNormal') : `${s}x`,
-    selected: speed === s,
-  }))
 
   /**
    * Return to the tab the player was opened from, not always Home.
@@ -179,6 +248,11 @@ export function FullPlayerPage() {
     )
   }
 
+  // Same URL the cover art uses, so the backdrop is an image-cache hit (see
+  // `PlayerBackdrop`). Computed here rather than inside it to keep that guarantee
+  // visible at the one place both consumers are in view.
+  const coverUrl = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
+
   const timerActive = sleepTimer != null
   const timerLabel = sleepTimer
     ? sleepTimer.mode === 'duration'
@@ -193,114 +267,90 @@ export function FullPlayerPage() {
     <view
       className='full-player full-player--enter'
       bindlayoutchange={onLayoutChange}
+      // Scales with the screen class (16 → 64), which CSS cannot express here.
+      style={{ paddingLeft: `${layout.padH}px`, paddingRight: `${layout.padH}px` }}
     >
-      <view className='full-player__topbar'>
-        <view
-          className='full-player__icon-btn'
-          bindtap={closePlayer}
-          data-testid='full-player-close'
-        >
-          <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
-        </view>
-        <text className='full-player__eyebrow'>{t('player.nowPlaying')}</text>
-        <view className='full-player__timer-wrap'>
-          <PopoverMenu
-            show={showSpeedPopover}
-            onShowChange={setShowSpeedPopover}
-            placement='bottom'
-            triggerClassName={speed !== 1 ? 'full-player__speed-btn' : 'full-player__icon-btn'}
-            trigger={
-              <text
-                className={speed !== 1
-                  ? 'full-player__speed-text'
-                  : 'full-player__speed-text-idle'}
-                data-testid='speed-btn'
-              >
-                {speed}x
-              </text>
-            }
-            items={speedItems}
-            onSelect={(key) => { void usePlayerStore.getState().setSpeed(Number(key)) }}
-          />
-          {timerLabel
-            ? <text className='full-player__timer-remaining'>{timerLabel}</text>
-            : null}
-          <view
-            className='full-player__icon-btn'
-            bindtap={() => setShowSleepTimer(true)}
-          >
-            <Icon
-              name='timer'
-              size={20}
-              color={timerActive ? ICON_COLORS.primary : ICON_COLORS.content}
-            />
-          </view>
-          {/* No DLNA module (Web, or a build without it) ⇒ the cast screen could
-              only ever scan forever, so do not offer the entry at all. */}
-          {getPlatformCapabilities().dlna
+      <PlayerBackdrop coverUrl={coverUrl} />
+
+      <view className='full-player__layer'>
+        <PlayerTopBar
+          song={song}
+          isWide={isWide}
+          onClose={closePlayer}
+          onOpenSleepTimer={() => setShowSleepTimer(true)}
+          timerActive={timerActive}
+          timerLabel={timerLabel}
+        />
+
+        <view className='full-player__stage' bindlayoutchange={onStageLayout}>
+          {/*
+            * Split (cover beside lyrics) from tablet up; two swiped screens below it.
+            * Both branches are gated on `layout.measured`, and the third one is what
+            * renders until then — the Swiper caches the `itemWidth` it is first handed,
+            * so feeding it a guessed width leaves the page permanently misaligned.
+            */}
+          {layout.isSplit
             ? (
-              <view
-                className='full-player__icon-btn'
-                bindtap={() => void navigate({ to: '/player/dlna' })}
-                data-testid='full-player-dlna'
-              >
-                <Icon name='cast' size={20} color={ICON_COLORS.content} />
+              <view className='full-player__stage-row'>
+                <view
+                  className='full-player__cover-col'
+                  style={{ flexGrow: layout.coverFlex, flexShrink: 1, flexBasis: '0%' }}
+                >
+                  <CoverArt song={song} size={layout.coverSize} />
+                </view>
+                <view
+                  className='full-player__lyrics-pane'
+                  style={{ flexGrow: layout.lyricsFlex, flexShrink: 1, flexBasis: '0%' }}
+                >
+                  <LyricsView />
+                </view>
               </view>
             )
-            : null}
-          <view
-            className='full-player__icon-btn'
-            bindtap={() => usePlayerStore.getState().togglePlaylistDrawer()}
-          >
-            <Icon name='menu' size={22} color={ICON_COLORS.content} />
-          </view>
+            : layout.measured
+              ? (
+                <>
+                  <Swiper
+                    ref={swiperRef}
+                    data={[0, 1]}
+                    itemWidth={width}
+                    containerWidth={width}
+                    itemHeight='auto'
+                    onChange={setSwiperIndex}
+                  >
+                    {({ index }: { index: number }) => (
+                      <SwiperItem>
+                        {index === 0
+                          ? <CoverArt song={song} size={layout.coverSize} />
+                          : (
+                            <view className='full-player__lyrics-page'>
+                              <LyricsView />
+                            </view>
+                          )}
+                      </SwiperItem>
+                    )}
+                  </Swiper>
+                  {/* Only meaningful next to a real swiper — the fallback below has
+                      one screen, and the wide layout shows both at once. */}
+                  <PageDots count={2} index={swiperIndex} />
+                </>
+              )
+              : <CoverArt song={song} size={layout.coverSize} />}
         </view>
-      </view>
 
-      <view className='full-player__stage'>
-        {isWide
-          ? (
-            <view className='full-player__stage-row'>
-              <CoverArt song={song} />
-              <view className='full-player__lyrics-pane'>
-                <LyricsView />
-              </view>
-            </view>
-          )
-          : width > 0
-            ? (
-              <Swiper
-                ref={swiperRef}
-                data={[0, 1]}
-                itemWidth={width}
-                containerWidth={width}
-                itemHeight='auto'
-                onChange={setSwiperIndex}
-              >
-                {({ index }: { index: number }) => (
-                  <SwiperItem>
-                    {index === 0
-                      ? <CoverArt song={song} />
-                      : (
-                        <view className='full-player__lyrics-page'>
-                          <LyricsView />
-                        </view>
-                      )}
-                  </SwiperItem>
-                )}
-              </Swiper>
-            )
-            : <CoverArt song={song} />}
-      </view>
+        <view className='full-player__meta'>
+          <text className='full-player__title'>{song.title}</text>
+          {song.artist ? <text className='full-player__artist'>{song.artist}</text> : null}
+        </view>
 
-      <view className='full-player__meta'>
-        <text className='full-player__title'>{song.title}</text>
-        {song.artist ? <text className='full-player__artist'>{song.artist}</text> : null}
+        <ProgressBar />
+        <PlayControls
+          playBtn={layout.playBtn}
+          playRadius={layout.playRadius}
+          slot={layout.toolSlot}
+          songId={song.id}
+        />
+        <PlayerToolBar slot={layout.toolSlot} />
       </view>
-
-      <ProgressBar />
-      <PlayControls />
-      <VolumeControl />
 
       <PlaylistDrawer />
       <SleepTimerSheet show={showSleepTimer} onClose={() => setShowSleepTimer(false)} />

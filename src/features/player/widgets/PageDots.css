@@ -1,0 +1,24 @@
+/* Page indicator for the cover ↔ lyrics swiper. Sizes match Flutter's 8/6px dots. */
+
+.page-dots {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  /* Fixed height so the row does not shift by 2px as the active dot moves. */
+  height: 8px;
+}
+
+.page-dots__dot {
+  width: 6px;
+  height: 6px;
+  margin: 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  background-color: var(--rule);
+}
+
+.page-dots__dot--active {
+  width: 8px;
+  height: 8px;
+  background-color: var(--primary);
+}

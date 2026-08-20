@@ -43,6 +43,16 @@ vi.mock('../features/auth/store/index.js', async () => {
 // Batch 5: the shell mini-player + the /player screen add lynx-ui native leaves
 // (Slider/Sheet/Swiper) and the zustand player store — same crash class as the
 // login screen. Mock them to static stand-ins (real ones ship on-device).
+// The player's transport row favorites the current song through react-query. In this
+// env a fresh store subscription forces the second synchronous commit that trips the
+// ReactLynx snapshot bug (see `_render-mocks.tsx`), so it is stubbed like the stores are.
+vi.mock('../features/library/data/favorites.js', () => ({
+  useIsFavorite: () => false,
+  useFavoriteToggle: () => ({ isFavorite: false, toggle: vi.fn(), isPending: false }),
+  getFavoriteState: async () => false,
+  toggleFavoriteNonReact: async () => {},
+}))
+
 vi.mock('@lynx-js/lynx-ui-slider', async () =>
   (await import('./_render-mocks.js')).mockLynxUiSlider(),
 )
@@ -201,6 +211,8 @@ test('renders the home screen inside the shell', async () => {
 })
 
 test('renders the chrome-less player screen', async () => {
-  const { queryByText } = await renderRoute('/player')
-  expect(queryByText('Now Playing')).toBeInTheDocument()
+  const { queryByTestId } = await renderRoute('/player')
+  // The collapse button rather than the header text: the header is the album on narrow
+  // layouts and "Now Playing" only on wide ones, and this env reports no width.
+  expect(queryByTestId('full-player-close')).toBeInTheDocument()
 })

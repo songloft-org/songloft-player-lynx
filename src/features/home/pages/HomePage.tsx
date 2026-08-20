@@ -45,7 +45,7 @@ export function HomePage() {
   const statsQuery = useLibraryStatsQuery()
   const playingPlaylistId = usePlayerStore((s) => s.sourcePlaylistId)
 
-  const { isWide: homeIsWide, onLayoutChange: homeLayoutChange } = useBreakpoint()
+  const { isWide: homeIsWide, onLayoutChange: homeLayoutChange } = useBreakpoint(0, '.home')
   const sectionLimit = homeIsWide ? 9 : 6
   const normalItems = homeSectionItems(normal.data?.pages, sectionLimit)
   const radioItems = homeSectionItems(radio.data?.pages, sectionLimit)
