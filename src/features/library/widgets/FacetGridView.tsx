@@ -96,6 +96,7 @@ export function FacetGridView({ field, viewMode = 'grid' }: FacetGridViewProps) 
                       key={`${field}:${facet.value}`}
                       facet={facet}
                       onPlayAll={onPlayAll}
+                      layout={viewMode}
                       onTap={(f) =>
                         navigate({
                           to: '/library/category/$field',
