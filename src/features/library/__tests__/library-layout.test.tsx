@@ -17,12 +17,13 @@ import { DEFAULT_LIBRARY_BROWSE_CONFIG } from '../../../models/library-browse.js
  * carries: the rail is present exactly when wide, and its width decision is
  * seeded from the shell's already-measured width rather than from 0.
  */
-const { navigateSpy, searchHook, browseConfigHook, breakpointHook, lastSearch } = vi.hoisted(() => ({
+const { navigateSpy, searchHook, browseConfigHook, breakpointHook, lastSearch, location } = vi.hoisted(() => ({
   navigateSpy: vi.fn(),
   searchHook: vi.fn(),
   browseConfigHook: vi.fn(),
   breakpointHook: vi.fn(),
   lastSearch: { current: {} as { view?: string } },
+  location: { pathname: '/library' },
 }))
 
 vi.mock('react-i18next', async () =>
@@ -32,6 +33,8 @@ vi.mock('react-i18next', async () =>
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateSpy,
   useSearch: searchHook,
+  // The rail highlight is per-route, so the layout reads the pathname.
+  useRouterState: ({ select }: { select: (s: unknown) => unknown }) => select({ location }),
   Outlet: () => <text>OUTLET</text>,
 }))
 
@@ -61,7 +64,19 @@ beforeEach(() => {
   browseConfigHook.mockReturnValue({ data: DEFAULT_LIBRARY_BROWSE_CONFIG, isError: false })
   breakpointHook.mockReturnValue({ isWide: false, onLayoutChange: vi.fn() })
   lastSearch.current = {}
+  location.pathname = '/library'
 })
+
+/** Render at `pathname`, wide, so the rail is up and its highlight is assertable. */
+async function renderWideAt(pathname: string) {
+  location.pathname = pathname
+  breakpointHook.mockReturnValue({ isWide: true, onLayoutChange: vi.fn() })
+  return renderLayout()
+}
+
+const activeRow = (q: ReturnType<typeof getQueriesForElement>) =>
+  [...'artist album genre year decade language style all local remote radio playlist playlist_normal playlist_radio'.split(' ')]
+    .find(k => q.queryByTestId(`library-view-row-${k}`)?.className.includes('library-rail__row--active'))
 
 afterEach(() => vi.clearAllMocks())
 
@@ -135,4 +150,32 @@ test('below the tablet breakpoint the shell has no nav rail, so the seed is the 
   setShellWidth(420)
   await renderLayout()
   expect(breakpointHook).toHaveBeenCalledWith(420, '.library-shell')
+})
+
+/*
+ * The detail pages sit under this layout too, so the rail stays put while drilling
+ * in — which makes the highlight the only cue for where you are.
+ */
+test('a facet drill-in lights its own dimension, not the view visited last', async () => {
+  lastSearch.current = { view: 'all' }
+  const q = await renderWideAt('/library/category/artist')
+  expect(activeRow(q)).toBe('artist')
+})
+
+test('playlist detail anchors to the playlists group even when arriving from a songs view', async () => {
+  lastSearch.current = { view: 'all' }
+  const q = await renderWideAt('/playlists/7')
+  expect(activeRow(q)).toBe('playlist')
+})
+
+test('playlist detail keeps the playlist view it was reached from', async () => {
+  lastSearch.current = { view: 'playlist_radio' }
+  const q = await renderWideAt('/playlists/7')
+  expect(activeRow(q)).toBe('playlist_radio')
+})
+
+test('song detail keeps the list it was opened from', async () => {
+  lastSearch.current = { view: 'local' }
+  const q = await renderWideAt('/library/song/42')
+  expect(activeRow(q)).toBe('local')
 })

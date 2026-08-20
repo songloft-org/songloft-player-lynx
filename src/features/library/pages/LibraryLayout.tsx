@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from '@lynx-js/react'
-import { Outlet, useNavigate, useSearch } from '@tanstack/react-router'
+import { Outlet, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 
 import { getShellWidth, subscribeShellWidth } from '../../../shared/nav/shell-navigation.js'
 import { breakpointFromWidth, isWide as isWideBreakpoint, useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
@@ -8,6 +8,7 @@ import {
   libraryBrowseConfigOrFallback,
   useLibraryBrowseConfigQuery,
 } from '../data/library-browse-query.js'
+import { railSelection, requestedRailView } from '../domain/library-rail-view.js'
 import { resolveLibraryView, type LibraryViewKey } from '../domain/library-views.js'
 import { LibraryShell } from '../widgets/LibraryShell.js'
 import { LibraryViewportProvider } from './library-viewport.js'
@@ -16,8 +17,9 @@ import { LibraryViewportProvider } from './library-viewport.js'
 const SHELL_RAIL_WIDTH = 220
 
 /**
- * Route layout for the library section (`/library`, `/library/add`,
- * `/playlists/create`).
+ * Route layout for the whole library section: the library itself, its two forms
+ * (`/library/add`, `/playlists/create`) and its three detail pages (facet
+ * drill-in, song detail, playlist detail).
  *
  * It owns the view rail so that drilling into a sub-page does not remount it.
  * Before this existed, `AddSongsPage` and `CreatePlaylistPage` each rendered
@@ -59,12 +61,17 @@ export function LibraryLayout() {
   const { isWide, onLayoutChange } = useBreakpoint(seedWidth, '.library-shell')
 
   /*
-   * Sub-pages carry no `?view=`, so the highlight follows the view the user came
-   * from — which `LibraryPage` records on every render. This replaces the local
-   * `selectedView` state both drill-ins used to keep in sync by hand.
+   * Which row is lit. Sub-pages carry no `?view=`, so the policy (per route, and
+   * pure) lives in `library-rail-view.ts`: a facet drill-in names its own
+   * dimension, playlist routes anchor to the playlists group, and the rest fall
+   * back to the view the user came from — which `LibraryPage` records on every
+   * render. This replaces the local `selectedView` state the drill-ins used to
+   * keep in sync by hand.
    */
-  const viewKey = search.view ?? getLastLibrarySearch().view
-  const resolved = config ? resolveLibraryView(viewKey, config) : undefined
+  const pathname = useRouterState({ select: s => s.location.pathname })
+  const resolved = config
+    ? resolveLibraryView(requestedRailView(pathname, search.view, getLastLibrarySearch().view), config)
+    : undefined
 
   return (
     <LibraryViewportProvider value={{ isWide }}>
@@ -72,7 +79,7 @@ export function LibraryLayout() {
         isWide={isWide}
         onLayoutChange={onLayoutChange}
         displayKeys={resolved?.displayKeys ?? []}
-        selected={resolved?.selected}
+        selected={resolved ? railSelection(pathname, resolved.selected, resolved.displayKeys) : undefined}
         // Same target from every route under this layout: picking a view means
         // "show me the library at that view", leaving the sub-page if we are on one.
         onSelect={(key) => navigate({ to: '/library', search: { view: key } })}

@@ -108,9 +108,10 @@ const listRoute = createRoute({
  * them — that re-creation is what flashed on open. Adding no path segment keeps
  * every URL below unchanged, so `route-back.ts` needs no entry for it.
  *
- * `/library/category/$field`, `/library/song/$songId` and `/playlists/$id` stay
- * outside on purpose: they are full-bleed detail pages with their own headers and
- * have never shown the rail. Moving one under here later is a one-line change.
+ * Its children are every route the library owns — the two forms and the three
+ * detail pages included, so the rail stays put while you drill from a facet grid
+ * into an artist and on into a song. Their own headers (back arrow + title) live
+ * inside the pane and are unaffected.
  */
 const libraryLayoutRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -289,7 +290,7 @@ const tabConfigRoute = createRoute({
 
 /** `/playlists/$id` — playlist detail, inside the shell (batch 6). */
 const playlistDetailRoute = createRoute({
-  getParentRoute: () => shellRoute,
+  getParentRoute: () => libraryLayoutRoute,
   path: '/playlists/$id',
   component: PlaylistDetailPage,
 })
@@ -303,7 +304,7 @@ const playlistDetailRoute = createRoute({
  * (same pattern as `libraryRoute`).
  */
 const categorySongsRoute = createRoute({
-  getParentRoute: () => shellRoute,
+  getParentRoute: () => libraryLayoutRoute,
   path: '/library/category/$field',
   validateSearch: (
     search: Record<string, unknown>,
@@ -316,7 +317,7 @@ const categorySongsRoute = createRoute({
 })
 
 const songDetailRoute = createRoute({
-  getParentRoute: () => shellRoute,
+  getParentRoute: () => libraryLayoutRoute,
   path: '/library/song/$songId',
   component: SongDetailPage,
 })
@@ -345,6 +346,9 @@ const routeTree = rootRoute.addChildren([
       libraryRoute,
       addSongsRoute,
       createPlaylistRoute,
+      categorySongsRoute,
+      songDetailRoute,
+      playlistDetailRoute,
     ]),
     settingsRoute,
     appearanceRoute,
@@ -368,9 +372,6 @@ const routeTree = rootRoute.addChildren([
     pluginRegistryRoute,
     pluginWebViewRoute,
     tabConfigRoute,
-    playlistDetailRoute,
-    categorySongsRoute,
-    songDetailRoute,
   ]),
 ])
 
