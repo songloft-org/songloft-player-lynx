@@ -62,7 +62,7 @@ export function LibraryToolbar({
         trigger={
           /*
            * A fragment, NOT a wrapping `<view>`: the row layout lives on
-           * `triggerClassName` (which lynx-ui puts on the trigger's own view), so an
+           * `triggerClassName` (which `PopoverSurface` puts on the trigger's own view), so an
            * extra `<view>` here becomes an unstyled child — and an unstyled view is
            * Lynx *linear* layout, whose default direction is `column`. That stacked
            * the icon above the label and overflowed the pill. The testid therefore

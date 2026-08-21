@@ -375,67 +375,6 @@ export function mockLynxUiSortable() {
   }
 }
 
-/**
- * Mock the `@lynx-js/lynx-ui-popover` primitives.
- *
- * The real `PopoverPositioner` drives a `Presence` lifecycle off native
- * animation/layout events the Vitest env does not deliver, so the menu would
- * never mount. What this mock must NOT do is render the content
- * unconditionally: the two preconditions that actually break in production are
- * (a) content is mounted only while shown and (b) in controlled mode — which is
- * what passing `show` selects — `PopoverTrigger`/`PopoverBackdrop` route
- * *solely* through `onVisibleChange`, never through internal state. A mock that
- * always renders children makes "the trigger is wired to nothing, so the menu
- * can never open" invisible, which is exactly how that bug shipped.
- *
- * Spread over `vi.importActual` so the package's other exports stay real:
- *
- *   vi.mock('@lynx-js/lynx-ui-popover', async () => ({
- *     ...(await vi.importActual('@lynx-js/lynx-ui-popover')),
- *     ...(await import('<path>/_render-mocks.js')).mockLynxUiPopover(),
- *   }))
- */
-export function mockLynxUiPopover() {
-  const Ctx = createContext<{ show: boolean; onVisibleChange?: (v: boolean) => void }>({
-    show: false,
-  })
-  return {
-    PopoverRoot: ({
-      show = false,
-      onVisibleChange,
-      children,
-    }: {
-      show?: boolean
-      onVisibleChange?: (v: boolean) => void
-      children?: unknown
-    }) => (
-      <Ctx.Provider value={{ show, onVisibleChange }}>
-        <view>{children as never}</view>
-      </Ctx.Provider>
-    ),
-    PopoverTrigger: ({ className, children }: { className?: string; children?: unknown }) => {
-      const { show, onVisibleChange } = useContext(Ctx)
-      return (
-        <view className={className} bindtap={() => onVisibleChange?.(!show)}>
-          {children as never}
-        </view>
-      )
-    },
-    // Mounts children only while shown, like the real Presence-gated positioner.
-    PopoverPositioner: ({ children }: { children?: unknown }) => {
-      const { show } = useContext(Ctx)
-      return show ? <view>{children as never}</view> : null
-    },
-    PopoverBackdrop: ({ className }: { className?: string }) => {
-      const { onVisibleChange } = useContext(Ctx)
-      return <view className={className} bindtap={() => onVisibleChange?.(false)} />
-    },
-    PopoverContent: ({ className, children }: { className?: string; children?: unknown }) => (
-      <view className={className}>{children as never}</view>
-    ),
-  }
-}
-
 /** A minimal `Song` for the mocked player state. */
 export function mockSong(): Song {
   return {

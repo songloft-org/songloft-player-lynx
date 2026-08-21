@@ -43,12 +43,6 @@ vi.mock('@tanstack/react-query', () => ({
 vi.mock('@lynx-js/lynx-ui-slider', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSlider(),
 )
-vi.mock('@lynx-js/lynx-ui-popover', async () => ({
-  ...(await vi.importActual<typeof import('@lynx-js/lynx-ui-popover')>(
-    '@lynx-js/lynx-ui-popover',
-  )),
-  ...(await import('../../../__tests__/_render-mocks.js')).mockLynxUiPopover(),
-}))
 vi.mock('../store/player-store.js', async () => {
   const actual = await vi.importActual<typeof import('../store/player-store.js')>(
     '../store/player-store.js',

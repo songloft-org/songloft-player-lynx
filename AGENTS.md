@@ -170,20 +170,24 @@ pnpm run build:web-embedded   # 产物给后端嵌入（songloft-player-build/we
 - compound 组件（Switch 等）不带样式，`ui-checked`/`ui-active` 须使用方样式表提供——统一用 `src/shared/ui/AppSwitch.tsx`
 - 测试 mock 原生组件时必须保留「状态→className」映射
 
-#### Popover / Presence（三条都是静默失败，批51 各踩一次）
+#### 锚定弹出层（自研，批53 起不再用 lynx-ui-popover）
 
-统一封装在 `src/shared/ui/PopoverMenu.tsx`，新增弹出菜单请复用它而不是直接拼原语。
+弹出菜单/面板统一走 `src/shared/ui/PopoverMenu.tsx` 与 `PopoverPanel.tsx`，两者共用 `PopoverSurface`（触发器 + 遮罩 + 面板）与 `anchored-overlay.ts`（测量 + 定位）。新增弹出层复用它们，不要直接拼原语，也不要把 `@lynx-js/lynx-ui-popover` 装回来。
 
-- **传了 `show` 就是受控模式，此时 `PopoverTrigger`/`PopoverBackdrop` 的点击只走 `onVisibleChange`**（`if (isControlled) onVisibleChange?.(!show)`），绝不碰内部状态。漏传 = 触发器接到空气、菜单永远打不开。**`PopoverRoot` 的 `onClose` 不是替代品**——那是 `Presence` 的生命周期回调（「已经关完了」），拿它当关闭请求会死锁：没人把 `show` 置 true，就永远不会 leaving，`onClose` 也就永远不触发
-- **`PopoverBackdrop` 的库样式是 `position: fixed; width: 100vw; height: 100vh` 但没有 `top`/`left`**。fixed 元素在偏移为 auto 时落在**静态位置**（定位容器内、紧贴触发器），于是遮罩铺的是「从弹出层量起」的一屏，弹出层左侧与上方全是可点的——表现为两个弹出层能同时打开。必须自己补 `top: 0; left: 0`。它的类名 `popover-backdrop` 是库里**硬编码**的，所以补样式就是在扩展库的规则，别再自写一个同名遮罩
-- **`PopoverContent` 必须声明 transition/animation，否则关闭要慢约一秒**。它是承载 `bindtransitionend`/`bindanimationend` 的元素，而 `Presence` 只有等这些事件才离开 `Leaving`；没有动画就退化成空转 `MAX_WAIT_FRAMES = 24` 次单帧 `lynx.requestAnimationFrame`，在 BTS 上每帧一次线程往返。配套要让 Presence 切换的类真的改变被 transition 的属性（`.ui-closed { opacity: 0 }`），只有 transition 而值不变照样什么都不触发。`ui-entering`/`ui-leaving` 仅在给 `PopoverContent` 传 `transition` prop 时才产生，不传时用 `ui-open`/`ui-closed` 即可（`Leaving` 也算 `closed`）
-- **打开方向有约 16 帧固定延迟**，`PopoverPositioner` 里 `enableDelay={true}` 是硬编码的，定位（`computeFloating`）要等 `DelayedEntering` 才算。这不是 bug 也改不了；`.ui-closed { opacity: 0 }` 顺带保证这 16 帧里菜单是隐身的，否则会先在未定位处显形再跳走
-- **不要给 `PopoverPositioner` 传 `container`**：那会让它渲染 Lynx `<overlay>`，而该标签不在 web-core 的 `LYNX_TAG_TO_HTML_TAG_MAP` 里，Web 上会退化成 `HTMLUnknownElement` 并丢失定位
+- **为什么不用库的 positioner**：`computeCoordsFromPlacement` 返回的坐标是**相对触发器**的（库自己的注释写明了这个取舍），而 `OverlayView` 用 `position: absolute` 施加它 —— 后者的包含块是**最近的定位祖先**。两者只在「触发器正好位于该祖先原点」时等价，而本仓库 8 个调用点里 6 个把弹出层放在多子元素的工具栏行内。浏览器实测：歌单详情排序菜单落在 `x = -122`（整块在屏外，功能等于不存在）、音量面板 `-60`、倍速菜单 `-30`、曲库排序 `0`（应为 106）；播放器 ⋯ 菜单只是**恰好**对，因为它的触发器是容器唯一的子元素
+- **库自带的溢出收敛也救不了**：`detectOverflow` 拿 `SystemInfo.pixelWidth / pixelRatio` 当屏幕，Web 上报的是浏览器**屏幕**尺寸（实测 800×600，而 lynx-view 是 420×900）
+- **测量走 `boundingClientRect` invoke**（同 `useBreakpoint` 的 `measureRect`）。它在两端都有定义，Web 上按 web-core 的 `createInvokeUIMethod` 返回 **lynx-view 相对**坐标，与 native 的页面坐标同义。触发器与 `.theme-root` 视口在**同一次 `exec`** 里量，两次量会拿到「变化前的触发器 + 变化后的视口」
+- **invoke 的回调是异步的**，所以「点了才量、量到再开」会让菜单卡在一次往返之后，而「先开后量」会先在兜底位置画一帧再跳。`useAnchoredOverlay` 因此**挂载时就量一次**（工具栏远早于用户伸手就绪，首次打开就是对的），**每次打开再量一次**（表头收起、列表滚动、窗口变宽都会让锚点移动）。别把 `exec()` 之后同步读结果当成「失败了」—— 初版就是这么写的，于是永远判定「没量到」、永远兜底
+- **面板只用边缘定位**（`left`/`right` + `top`/`bottom` 各一个，配 `max-width`/`max-height` 上限），刻意不算角点：这样计算完全不需要面板自身尺寸，也就没有「量—画—再量」那一趟，不会有一帧画在错的地方，且「留在屏内」是构造保证而不是靠一个可能被喂错视口的 clamp
+- **每个轴只能给一个偏移**：`position: fixed` 同时拿到 `top` 和 `bottom` 会被**拉伸**而不是按内容定尺寸。所以 `PopoverMenu.css` 里一个偏移都不写，兜底位置由 `DOCKED_POSITION` 内联给出 —— 样式表里留一个 `bottom` 不会被内联的 `top` 覆盖，而是与它叠加
+- **`max-width` 不能用来收窄面板**：CSS 在它**之后**解析 `min-width`，所以 `.popover-menu--wide` 的 `min-width: 180px` 赢。靠边的触发器要靠偏移本身预留 `RESERVED_PANEL_WIDTH`（200 = 全库最宽的音量面板）才真的收得住
+- **「点外部关闭」挂在遮罩上**（面板的兄弟），不要挂在共同根上靠面板 `catchtap` 拦冒泡：后者在真机成立，但让「这一行有没有误关面板」无法测试
+- 顺带没了：Presence 的 16 帧固定开启延迟、靠 `transition` 才能及时卸载（否则空转 24 帧单帧 rAF ≈ 1 秒）、`PopoverBackdrop` 缺 `top`/`left` 导致两个弹出层能同开、以及「不要给 `PopoverPositioner` 传 `container`」（`<overlay>` 不在 web-core 的标签表里）
 
 #### 全局覆盖层的挂载点与 Dialog（批52，浏览器实测抓出）
 
 - **全局覆盖层必须挂在 root route 的 `ThemeProvider` 内**（`src/router.tsx`，与 `ToastHost` 同处），不能作为 `<RouterProvider>` 的兄弟挂在 `App.tsx`。后者在 native 上看不出问题，在 Web 上却同时踩两条：① 落在 `.theme-root` 子树之外，而 Muse 的 CSS 变量全部声明在那个类上 ⇒ 每个 `var(--*)` 解析为空字符串，卡片背景透明、无圆角内边距、遮罩不可见（**文字还在，所以像「样式崩了」而不像「没渲染」**）；② 拿不到 Router context ⇒ `SongContextMenu` 因 `useNavigateToSongDetail()` 渲染中断，**`.song-ctx` 从未进 DOM、零报错**，点 ⋯ 按钮像没接线。闸门：`src/__tests__/root-overlay-mount.test.ts`
-- **`DialogBackdrop` 的 `position` 只能由 `style` prop 给**：它内联硬编码 `position: absolute; width: 100%; height: 100%`，内联胜过样式表，所以类里写 `position: fixed` 是死代码；而它的父 `DialogView` 是个没有尺寸的 fixed 包装 ⇒ 遮罩实测 0×0（既不可见，`clickToClose` 也永远点不到）。这就是上面 `PopoverBackdrop` 那条的下一层版本
+- **`DialogBackdrop` 的 `position` 只能由 `style` prop 给**：它内联硬编码 `position: absolute; width: 100%; height: 100%`，内联胜过样式表，所以类里写 `position: fixed` 是死代码；而它的父 `DialogView` 是个没有尺寸的 fixed 包装 ⇒ 遮罩实测 0×0（既不可见，`clickToClose` 也永远点不到）。**遮罩的四个偏移必须写全**，与 `.popover-backdrop` 同理（见 `popover-menu-css.test.ts`）：偏移为 auto 的 fixed 元素落在静态位置，弹出层的遮罩就是这么漏出「两个同时打开」的
 - **「点弹窗外部取消」要挂在 `DialogContent` 上**（`dialogContentProps={{ bindtap }}`），因为该层是 `fixed; inset: 0` + `event-through={false}`，把遮罩整个盖住；同时卡片本身必须 `catchtap`，否则确认按钮的点击会冒泡上去，`onConfirm` 之后紧跟一次 `onCancel`。三条都无法用渲染测试覆盖（无布局引擎 + Dialog stand-in 丢弃 `style`/`dialogContentProps`），闸门在 `src/shared/ui/__tests__/confirm-dialog-overlay.test.ts`
 - **Web 上没有 longpress**：web-core 不合成该手势，所以任何「长按打开菜单」的功能在 Web 上必须另有按钮入口（歌曲行的 ⋯ 就是）
 

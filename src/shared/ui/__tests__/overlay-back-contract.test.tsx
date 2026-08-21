@@ -25,9 +25,6 @@ vi.mock('react-i18next', async () =>
 vi.mock('@lynx-js/lynx-ui-dialog', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiDialog(),
 )
-vi.mock('@lynx-js/lynx-ui-popover', async () =>
-  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiPopover(),
-)
 vi.mock('@lynx-js/lynx-ui-input', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
 )
@@ -57,33 +54,72 @@ describe('every shared overlay claims the back key', () => {
   const VISIBILITY = /^\s{2}(show|open)\??:\s*boolean/m
   const CLOSE = /^\s{2}(onClose|onCancel|onShowChange)\??:/m
 
-  const overlays = readdirSync(uiDir)
+  const candidates = readdirSync(uiDir)
     .filter((f) => f.endsWith('.tsx'))
     .map((f) => ({ file: f, src: readFileSync(path.join(uiDir, f), 'utf8') }))
     .filter((e) => VISIBILITY.test(e.src) && CLOSE.test(e.src))
 
+  const registers = (src: string) => src.includes('useBackHandler(')
+  const byFile = new Map(candidates.map((e) => [e.file, e.src]))
+
+  /**
+   * What the contract actually requires is *reachability*, not a call in this exact
+   * file: somewhere in the overlay's own subtree, one component registers.
+   *
+   * So a candidate passes if it calls `useBackHandler` **or** it renders a shared/ui
+   * component that does. `PopoverMenu` and `PopoverPanel` take the second route —
+   * both delegate their whole body to `PopoverSurface`, which registers once. Adding
+   * a registration in the wrapper *as well* would be the bug, not the fix: two
+   * handlers for one visible panel means the second press gets eaten by whichever
+   * sibling has not unregistered yet.
+   *
+   * Location is deliberately not part of this. `GlobalMenu` is imported only from
+   * inside `shared/ui` (by `SongRowOverlays`, which registers nothing) and still has
+   * to claim the key itself.
+   *
+   * One level of delegation is enough for every overlay here, and going deeper would
+   * start counting an unrelated nested overlay's registration as this one's.
+   */
+  const delegatesTo = (src: string) =>
+    [...byFile.entries()]
+      .filter(([file]) => src.includes(`/${file.replace(/\.tsx$/, '.js')}`))
+      .filter(([, childSrc]) => registers(childSrc))
+      .map(([file]) => file)
+
   test('the detection found the overlays it should have', () => {
     // Guards the derivation: if the props are renamed, this must not silently start
     // asserting over an empty list.
-    const files = overlays.map((o) => o.file).sort()
-    expect(files).toEqual([
+    expect(candidates.map((o) => o.file).sort()).toEqual([
       'ActionSheet.tsx',
       'ConfirmDialog.tsx',
       'GlobalMenu.tsx',
       'PopoverMenu.tsx',
       'PopoverPanel.tsx',
+      'PopoverSurface.tsx',
       'PromptDialog.tsx',
     ])
+    // And that the delegating route is genuinely in use — otherwise the `or` branch
+    // below could rot into dead code and nobody would notice.
+    expect(
+      candidates.filter((o) => !registers(o.src)).map((o) => o.file).sort(),
+    ).toEqual(['PopoverMenu.tsx', 'PopoverPanel.tsx'])
   })
 
-  test.each(overlays.map((o) => o.file))('%s calls useBackHandler', (file) => {
-    const entry = overlays.find((o) => o.file === file)!
+  test.each(candidates.map((o) => o.file))('%s claims the back key', (file) => {
+    const src = byFile.get(file)!
+    const delegates = delegatesTo(src)
     expect(
-      entry.src,
-      `${file} looks like an overlay (visibility prop + close callback) but never calls `
-      + 'useBackHandler, so the back key will navigate the page instead of closing it. '
-      + 'See docs/reference/back-navigation.md.',
-    ).toContain('useBackHandler(')
+      registers(src) || delegates.length > 0,
+      `${file} looks like an overlay (visibility prop + close callback) but neither calls `
+      + 'useBackHandler nor delegates to a shared/ui component that does, so the back key '
+      + 'will navigate the page instead of closing it. See docs/reference/back-navigation.md.',
+    ).toBe(true)
+    // Both at once is the double-registration bug described above.
+    expect(
+      registers(src) && delegates.length > 0,
+      `${file} registers a back handler *and* renders ${delegates.join(', ')}, which `
+      + 'registers too. One visible overlay must put exactly one handler on the stack.',
+    ).toBe(false)
   })
 })
 
@@ -115,9 +151,14 @@ describe('a back press closes the overlay instead of falling through', () => {
   })
 
   /**
-   * The popover must close through `onShowChange(false)`, not some other channel:
-   * it is controlled, and lynx-ui has no imperative close — `PopoverRoot.onClose` is
-   * a "finished leaving" lifecycle callback, so driving that would deadlock.
+   * The popover must close through `onShowChange(false)`, not some other channel: it
+   * is controlled, so its visibility only ever changes by the owner writing state —
+   * anything that hid the panel without telling the owner would leave `show` true and
+   * the trigger unable to reopen it.
+   *
+   * This also covers the delegation the source gate above only reads statically:
+   * `PopoverMenu` itself calls nothing, so a press arriving here proves
+   * `PopoverSurface`'s registration is really wired to the wrapper's props.
    */
   test('PopoverMenu closes through onShowChange', () => {
     const onShowChange = vi.fn()

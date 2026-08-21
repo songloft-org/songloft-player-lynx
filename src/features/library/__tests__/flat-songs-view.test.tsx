@@ -77,10 +77,6 @@ vi.mock('@lynx-js/lynx-ui-input', () => ({
   },
 }))
 
-vi.mock('@lynx-js/lynx-ui-popover', async () => ({
-  ...(await vi.importActual('@lynx-js/lynx-ui-popover')),
-  ...(await import('../../../__tests__/_render-mocks.js')).mockLynxUiPopover(),
-}))
 
 vi.mock('../data/use-debounce.js', () => ({
   useDebounce: <T,>(value: T, _delay: number): T => value,

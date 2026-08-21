@@ -1,76 +1,65 @@
 /* ── Outside-tap backdrop ── */
 
 /*
- * `PopoverBackdrop` hardcodes the class name `popover-backdrop`, so this rule
- * extends lynx-ui-popover's own. That stylesheet gives it
- * `position: fixed; width: 100vw; height: 100vh` but **no `top`/`left`** — and a
- * fixed box with auto offsets sits at its *static* position, which here is deep
- * inside the positioner next to the trigger. So it spanned a viewport-sized area
- * measured from the popover instead of from the screen, leaving everything above
- * and left of the popover uncovered: with the speed menu (top-right) open, the
- * play-mode button (bottom-left) was outside the backdrop, so tapping it opened
- * a second menu instead of dismissing the first. Pin it to the viewport origin.
+ * Ours now, not a patch over lynx-ui-popover's. Its version was
+ * `position: fixed; width: 100vw; height: 100vh` with **no `top`/`left`**, and a
+ * fixed box with auto offsets sits at its *static* position — deep inside the
+ * positioner next to the trigger. So it spanned a viewport-sized area measured
+ * from the popover instead of from the screen, leaving everything above and left
+ * of it uncovered: with the speed menu (top-right) open, the play-mode button
+ * (bottom-left) was outside the backdrop, so tapping it opened a second menu
+ * instead of dismissing the first.
  *
- * `z-index: 100` matches the app's other overlay backdrops (ActionSheet,
- * SongContextMenu, PlayHistoryPanel) so the backdrop covers page content; the
- * menu panel below must stay above it.
+ * All four offsets rather than `100vw`/`100vh`: same result without depending on
+ * viewport units, which this app avoids elsewhere too (see the note in
+ * `web/index.html` about `transform-vh/vw`).
+ *
+ * `z-index: 100` matches the app's other overlay backdrops (GlobalMenu,
+ * ConfirmDialog, PlayHistoryPanel) so the backdrop covers page content; the panel
+ * below must stay above it.
  */
 .popover-backdrop {
+  position: fixed;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 100;
 }
 
-/* ── Popover menu panel (Muse tokens) ── */
+/* ── Popover panel (Muse tokens) ── */
 
+/*
+ * `position: fixed`, with **every** offset supplied inline by
+ * `anchored-overlay.ts` from a measured trigger rect — deliberately none here.
+ *
+ * Fixed rather than absolute because the panel is a sibling of the trigger inside
+ * a toolbar row, and an absolute box resolves against whichever ancestor happens
+ * to be positioned. That is precisely the mistake that put five of this app's
+ * popovers off their button and two of them off-screen entirely (see the module
+ * header in `anchored-overlay.ts`).
+ *
+ * No fallback offsets in this rule either, and that is load-bearing: the inline
+ * style names exactly one horizontal and one vertical edge, so a leftover `bottom`
+ * here would combine with an inline `top` and stretch the panel down the whole
+ * screen instead of being overridden. `useAnchoredOverlay` therefore returns a
+ * docked position of its own until the first measurement lands.
+ *
+ * `overflow-y: auto` pairs with the inline `max-height`: a menu taller than the
+ * room beside its trigger scrolls rather than running off the screen.
+ */
 .popover-menu {
+  position: fixed;
+  z-index: 101;
   display: flex;
   flex-direction: column;
-  /* Above the backdrop, or item taps would land on it and just close the menu. */
-  position: relative;
-  z-index: 101;
   min-width: 140px;
   padding: var(--space-2) 0;
   background-color: var(--paper);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--line);
-  /*
-   * Not decoration — this is what makes the menu close promptly.
-   *
-   * `PopoverContent` (this element) carries the Presence
-   * `bindtransitionend`/`bindanimationend` handlers, and Presence only leaves the
-   * `Leaving` state when one of them fires. With no transition declared there is
-   * nothing to fire, so it falls back to spinning `MAX_WAIT_FRAMES` (24) single-
-   * frame `lynx.requestAnimationFrame` hops before it will unmount — on the
-   * background thread each hop is a thread round-trip, which is why dismissing
-   * the menu visibly lagged about a second behind the tap.
-   *
-   * Keep the duration in sync with the comment on `.ui-closed` below: the pair is
-   * the whole mechanism.
-   */
-  transition: opacity 140ms ease-out;
-}
-
-/*
- * Presence toggles `ui-open` / `ui-closed` on this element (the `ui-entering` /
- * `ui-leaving` variants only exist when `PopoverContent` is given a `transition`
- * prop, which it is not here — `ui-closed` already covers both `Leaving` and the
- * pre-reveal `Entering` tick, so it is the simpler hook).
- *
- * Opening: mounts `ui-closed` at opacity 0, flips to `ui-open` → fades in.
- * Closing: `ui-open` → `ui-closed` changes opacity, so the transition actually
- * runs and its `transitionend` releases Presence immediately.
- *
- * If a host ever fails to deliver `transitionend`, this degrades to the old
- * 24-frame timeout — slow, but not broken.
- */
-.popover-menu.ui-closed {
-  opacity: 0;
-}
-
-.popover-menu.ui-open {
-  opacity: 1;
+  overflow-y: auto;
 }
 
 .popover-menu__item {
@@ -125,8 +114,8 @@
 /*
  * `PopoverPanel` bodies hold arbitrary content rather than a row list, so the row
  * list's vertical padding just adds slack around e.g. a slider. Everything else about
- * the panel — surface, radius, shadow, and the two load-bearing rules above — is
- * shared with `.popover-menu` deliberately; see `PopoverPanel.tsx`.
+ * the panel — surface, radius, shadow, positioning — is shared with `.popover-menu`
+ * deliberately; see `PopoverPanel.tsx`.
  */
 .popover-panel {
   padding: var(--space-3);

@@ -18,7 +18,7 @@ export interface MenuItemProps {
 }
 
 /**
- * One row of a menu — shared by `PopoverMenu` (anchored, lynx-ui-popover) and
+ * One row of a menu — shared by `PopoverMenu` (anchored to its trigger) and
  * `GlobalMenu` (top-level, mounted in the root route).
  *
  * Extracted so the two menus cannot drift: the song menu used to be a
