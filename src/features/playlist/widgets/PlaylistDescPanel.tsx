@@ -21,7 +21,7 @@ export interface PlaylistDescPanelProps {
  * header — a ~35px touch target nobody can reliably scroll, competing with the
  * song list for gestures.
  *
- * Built on the `PlayHistoryPanel` / `SongContextMenu` pattern (fixed root +
+ * Built on the `PlayHistoryPanel` / `GlobalMenu` pattern (fixed root +
  * backdrop + bottom panel): the call site renders it **only while open**, so
  * mounting is the open state and there is no request or state to leak between
  * visits. The trade-off is no drag-to-dismiss, same as the history panel.

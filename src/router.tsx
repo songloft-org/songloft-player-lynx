@@ -55,7 +55,7 @@ const rootRoute = createRootRoute({
       <ToastHost />
       {/*
         The song-row context menu / delete confirm. Same two reasons as
-        ToastHost, plus one more: `SongContextMenu` calls
+        ToastHost, plus one more: `SongRowOverlays` calls
         `useNavigateToSongDetail()` and needs the Router context. It used to
         be a sibling of <RouterProvider> in App.tsx — fine on native, but on
         Web that left it outside `.theme-root` (every `var(--*)` resolved to

@@ -34,6 +34,8 @@ export interface PopoverMenuProps {
   items: PopoverMenuItem[]
   onSelect: (key: string) => void
   placement?: Placement
+  /** See `PopoverSurface`: overrides the generated anchor id. */
+  anchorId?: string
   contentClassName?: string
   hideCheckmark?: boolean
 }
@@ -54,6 +56,7 @@ export function PopoverMenu({
   items,
   onSelect,
   placement = 'bottom',
+  anchorId,
   contentClassName,
   hideCheckmark,
 }: PopoverMenuProps) {
@@ -64,6 +67,7 @@ export function PopoverMenu({
       trigger={trigger}
       triggerClassName={triggerClassName}
       placement={placement}
+      anchorId={anchorId}
       panelClassName={contentClassName ? `popover-menu ${contentClassName}` : 'popover-menu'}
     >
       {items.map((item) => (

@@ -35,7 +35,7 @@ export interface PlayHistoryPanelProps {
  * only means something relative to where playback started, so it opens from the
  * playlist / facet page that supplies the context.
  *
- * Built on the hand-rolled `SongContextMenu` pattern (fixed root + backdrop +
+ * Built on the hand-rolled `GlobalMenu` pattern (fixed root + backdrop +
  * bottom panel) instead of `lynx-ui-sheet`. That component keeps its children
  * mounted and is driven by an imperative ref, so a sheet living in those pages
  * would fire a history request on every visit; this one is only rendered while

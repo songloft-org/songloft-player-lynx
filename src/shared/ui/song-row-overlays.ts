@@ -1,15 +1,21 @@
 import { create } from 'zustand'
 
+import type { AnchorMeasurement } from './anchored-overlay.js'
 import type { Song } from '../../models/song.js'
 
 interface SongRowOverlayState {
   /** The song whose context menu is open; null while closed. */
   menuSong: Song | null
+  /**
+   * Where to put that menu — the trigger box measured by the row as it dispatched.
+   * Null when the host could not measure it, which docks the menu instead.
+   */
+  menuAnchor: AnchorMeasurement | null
   /** The song being added to a playlist; null while that sheet is closed. */
   addToPlaylistSong: Song | null
   /** The song awaiting delete confirmation; null while the dialog is closed. */
   deleteSong: Song | null
-  openMenu: (song: Song) => void
+  openMenu: (song: Song, anchor?: AnchorMeasurement | null) => void
   closeMenu: () => void
   openAddToPlaylist: (song: Song) => void
   closeAddToPlaylist: () => void
@@ -31,26 +37,33 @@ interface SongRowOverlayState {
  * can dispatch from inside any list while the overlay stays outside all of
  * them.
  *
+ * Which is also why the *anchor* travels with the song: the menu is a popover on
+ * the row's `⋯`, but only the row can measure that button, and by the time the
+ * menu renders it is in a different subtree entirely.
+ *
  * The three overlays are mutually exclusive: opening one closes the others, so
  * the back-stack never has to order them against each other.
  */
 export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
   menuSong: null,
+  menuAnchor: null,
   addToPlaylistSong: null,
   deleteSong: null,
-  openMenu: (song) => set({ menuSong: song, addToPlaylistSong: null, deleteSong: null }),
-  closeMenu: () => set({ menuSong: null }),
+  openMenu: (song, anchor) =>
+    set({ menuSong: song, menuAnchor: anchor ?? null, addToPlaylistSong: null, deleteSong: null }),
+  closeMenu: () => set({ menuSong: null, menuAnchor: null }),
   openAddToPlaylist: (song) =>
-    set({ addToPlaylistSong: song, menuSong: null, deleteSong: null }),
+    set({ addToPlaylistSong: song, menuSong: null, menuAnchor: null, deleteSong: null }),
   closeAddToPlaylist: () => set({ addToPlaylistSong: null }),
   requestDelete: (song) =>
-    set({ deleteSong: song, menuSong: null, addToPlaylistSong: null }),
+    set({ deleteSong: song, menuSong: null, menuAnchor: null, addToPlaylistSong: null }),
   cancelDelete: () => set({ deleteSong: null }),
 }))
 
 /** Imperative access for non-hook callers (none yet — rows are all hooks). */
 export const songRowOverlays = {
-  openMenu: (song: Song) => useSongRowOverlays.getState().openMenu(song),
+  openMenu: (song: Song, anchor?: AnchorMeasurement | null) =>
+    useSongRowOverlays.getState().openMenu(song, anchor),
   openAddToPlaylist: (song: Song) =>
     useSongRowOverlays.getState().openAddToPlaylist(song),
 }

@@ -6,6 +6,7 @@ import type { Song } from '../../../models/song.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
 import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
+import { useTapAnchor } from '../../../shared/ui/anchored-overlay.js'
 import { useSongRowOverlays } from '../../../shared/ui/song-row-overlays.js'
 
 export interface PlayerMoreMenuProps {
@@ -19,14 +20,19 @@ export interface PlayerMoreMenuProps {
  *
  * Groups the player's secondary functions the way Flutter's `PopupMenuButton` does,
  * which is what frees the top bar. The song actions are not re-implemented here —
- * selecting that row opens the shared `SongContextMenu`, so "play next", "add to
- * playlist", "delete" and its confirm step behave identically to a long-press in the
- * library.
+ * selecting that row opens the shared song menu (`GlobalMenu`, via
+ * `song-row-overlays.ts`), so "play next", "add to playlist", "delete" and its
+ * confirm step behave identically to a long-press in the library.
+ *
+ * That hand-off owns the anchor id rather than letting `PopoverMenu` generate one:
+ * the song menu renders at the app root and has to be placed against *this* `⋯`
+ * button, which by then is the trigger of a popover that has already closed.
  */
 export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMoreMenuProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const openMenu = useSongRowOverlays((s) => s.openMenu)
+  const { anchorId, measure } = useTapAnchor()
   const [show, setShow] = useState(false)
 
   const items: PopoverMenuItem[] = [
@@ -54,6 +60,7 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
         show={show}
         onShowChange={setShow}
         placement='bottom-end'
+        anchorId={anchorId}
         triggerClassName='full-player__icon-btn'
         trigger={
           <Icon
@@ -66,7 +73,7 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
         onSelect={(key) => {
           if (key === 'equalizer') void navigate({ to: '/settings/eq' })
           else if (key === 'sleepTimer') onOpenSleepTimer()
-          else openMenu(song)
+          else measure((rect) => openMenu(song, rect))
         }}
       />
     </>

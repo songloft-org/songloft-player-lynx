@@ -34,7 +34,7 @@ vi.mock('../../settings/data/settings-prefs.js', () => ({
 /*
  * Two react-query consumers now sit inside the player and would each throw
  * `No QueryClient set` here: the transport row's favorite button, and the
- * `SongContextMenu` the overflow menu opens (its hooks run even while it is closed).
+ * `SongRowOverlays` the overflow menu opens (its hooks run even while it is closed).
  * Favorites gets a typed stand-in; the rest goes through the same minimal
  * `@tanstack/react-query` stub `playlist-detail.test.tsx` uses.
  */

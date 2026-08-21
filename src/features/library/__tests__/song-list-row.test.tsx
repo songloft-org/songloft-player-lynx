@@ -186,3 +186,88 @@ test('selection mode hides the favorite heart too', async () => {
   const { queryByTestId } = await renderRow(false, { selectionMode: true })
   expect(queryByTestId('song-row-fav')).not.toBeInTheDocument()
 })
+
+/**
+ * The `⋯` button is the song menu's anchor.
+ *
+ * The menu itself renders at the app root — it cannot live in the row, whose
+ * virtualized `<list-item>` clips overlays — so the *row* has to measure the button
+ * and send the rect along with the song. Two halves, and the second one is the
+ * regression that matters: an anchor that fails to measure must still open the menu.
+ *
+ * Driven through **long-press** rather than the `⋯` button: that button is `catchtap`,
+ * and this env dispatches `bindtap` only (measured — same limitation the favorite
+ * heart's test notes). Both entry points call the same opener with the same anchor, so
+ * what is under test is unaffected; only the trigger differs.
+ */
+test('the more button carries an anchor id for the menu to be measured against', async () => {
+  const { getByTestId } = await renderRow(false)
+  // Without the id the selector resolves to nothing on device and the menu silently
+  // falls back to the docked sheet on every row.
+  expect(getByTestId('song-row-more').getAttribute('id')).toMatch(/^popover-anchor-\d+$/)
+})
+
+test('opening the menu anchors it to the measured button', async () => {
+  const globals = globalThis as { lynx: { createSelectorQuery: unknown } }
+  const saved = globals.lynx.createSelectorQuery
+  // Stands in for the host's invoke bridge: both rects answer, on `exec`, from one
+  // query — the shape `measureAnchor` builds (see its doc). Mutating the method rather
+  // than replacing `lynx`: it is a bare host global that this env injects as a
+  // module-scope binding, so assigning `globalThis.lynx` is invisible to the code under
+  // test (measured), while this is not.
+  globals.lynx.createSelectorQuery = () => {
+    const pending: Array<() => void> = []
+    let selector = ''
+    const query = {
+      select(sel: string) {
+        selector = sel
+        return query
+      },
+      invoke(
+        { method, success, fail }: {
+          method: string
+          success: (res: unknown) => void
+          fail: (res: unknown) => void
+        },
+      ) {
+        const target = selector
+        pending.push(() => {
+          if (method !== 'boundingClientRect') return fail({})
+          success(target === '.theme-root'
+            ? { left: 0, top: 0, width: 420, height: 900 }
+            : { left: 368, top: 120, width: 36, height: 36 })
+        })
+        return query
+      },
+      exec() {
+        pending.splice(0).forEach((answer) => answer())
+      },
+    }
+    return query
+  }
+  try {
+    const { getByText } = await renderRow(false)
+    fireEvent.longpress(getByText('Blue in Green'), {})
+    await act(async () => { await Promise.resolve() })
+    expect(openMenuMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 1 }),
+      {
+        anchor: { left: 368, top: 120, width: 36, height: 36 },
+        viewport: { width: 420, height: 900 },
+      },
+    )
+  } finally {
+    globals.lynx.createSelectorQuery = saved
+  }
+})
+
+test('the menu opens even when nothing can be measured', async () => {
+  // This env's `SelectorQuery.select` throws when nothing matches, which stands in for
+  // every host that cannot answer `boundingClientRect`. The menu then docks to the
+  // bottom (`GlobalMenu`), but it *opens* — a menu that waits for a measurement that
+  // never comes is a dead button.
+  const { getByText } = await renderRow(false)
+  fireEvent.longpress(getByText('Blue in Green'), {})
+  await act(async () => { await Promise.resolve() })
+  expect(openMenuMock).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }), null)
+})

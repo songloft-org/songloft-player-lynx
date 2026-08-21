@@ -21,7 +21,8 @@ import { useSongRowOverlays } from './song-row-overlays.js'
  * Router context (`useNavigateToSongDetail` needs it).
  *
  * Rows dispatch through the store (`song-row-overlays.ts`) — see the store docs
- * for why these overlays cannot live inside the virtualized lists.
+ * for why these overlays cannot live inside the virtualized lists, and why the
+ * menu's anchor rect has to travel with the song.
  *
  * The menu and the sheet mount only while open; the confirm dialog stays
  * mounted with `show` toggling, which is what the back-stack's
@@ -33,6 +34,7 @@ export function SongRowOverlays() {
   const goToSongDetail = useNavigateToSongDetail()
 
   const menuSong = useSongRowOverlays((s) => s.menuSong)
+  const menuAnchor = useSongRowOverlays((s) => s.menuAnchor)
   const addToPlaylistSong = useSongRowOverlays((s) => s.addToPlaylistSong)
   const deleteSong = useSongRowOverlays((s) => s.deleteSong)
   const closeMenu = useSongRowOverlays((s) => s.closeMenu)
@@ -98,8 +100,7 @@ export function SongRowOverlays() {
         onClose={closeMenu}
         items={items}
         onSelect={onSelect}
-        title={menuSong?.title}
-        subtitle={menuSong?.artist || undefined}
+        anchor={menuAnchor ?? undefined}
         testId='song-menu'
       />
       <AddToPlaylistSheet song={addToPlaylistSong} onClose={closeAddToPlaylist} />

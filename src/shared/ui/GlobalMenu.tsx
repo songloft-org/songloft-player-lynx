@@ -1,37 +1,30 @@
 import { useBackHandler } from '../nav/use-back-handler.js'
+import { pickMenuPlacement, placePanel } from './anchored-overlay.js'
+import type { AnchorMeasurement } from './anchored-overlay.js'
 import { MenuItem } from './MenuItem.js'
 import type { MenuItemSpec } from './MenuItem.js'
 import './PopoverMenu.css'
 import './GlobalMenu.css'
-
-/** Screen-space box of the element the menu belongs to. */
-export interface MenuAnchor {
-  left: number
-  top: number
-  width: number
-  height: number
-}
 
 export interface GlobalMenuProps {
   show: boolean
   onClose: () => void
   items: MenuItemSpec[]
   onSelect: (key: string) => void
-  /** Optional heading (song title etc.) above the rows. */
-  title?: string
-  subtitle?: string
   /**
-   * Where the menu belongs on screen. Omitted (today) the panel docks to the
-   * bottom edge; supplied, it is placed against the anchor like a popover.
+   * Where the menu belongs on screen — the trigger's box and the viewport, as
+   * measured by `measureAnchor` when the row was tapped. Supplied, the panel is a
+   * popover beside the trigger; omitted, it falls back to docking at the bottom
+   * edge (no invoke bridge, or a selector that matched nothing).
    *
-   * This is the escape hatch for the constraint that made the song menu
-   * hand-rolled in the first place: `PopoverMenu` positions itself relative to a
-   * `PopoverTrigger` in its own subtree, and the song rows live inside a
-   * virtualized `<list-item>` whose paint containment re-anchors and clips any
-   * `position: fixed` descendant (see `song-row-overlays.ts`). Measuring the row
-   * and handing the rect to a menu mounted *outside* every list sidesteps it.
+   * Handing the rect in is the escape hatch for the constraint that made this menu
+   * hand-rolled in the first place: `PopoverMenu` measures a trigger in its own
+   * subtree, and the song rows live inside a virtualized `<list-item>` whose paint
+   * containment re-anchors and clips any `position: fixed` descendant (see
+   * `song-row-overlays.ts`). Measuring the row and placing a panel mounted
+   * *outside* every list sidesteps it.
    */
-  anchor?: MenuAnchor
+  anchor?: AnchorMeasurement
   testId?: string
 }
 
@@ -39,18 +32,16 @@ export interface GlobalMenuProps {
  * A menu that renders at the top level of the app rather than beside its
  * trigger — for rows inside virtualized lists, which cannot host an overlay.
  *
- * Rows come from the same `MenuItem` as `PopoverMenu`, so the two menus look
- * identical by construction. Mount this in the root route (inside
- * `ThemeProvider`, so `var(--*)` resolves and the Router context exists);
- * `src/__tests__/root-overlay-mount.test.ts` holds that line.
+ * Rows come from the same `MenuItem` as `PopoverMenu` and the panel is placed by the
+ * same `placePanel`, so the two menus look and land alike by construction. Mount
+ * this in the root route (inside `ThemeProvider`, so `var(--*)` resolves and the
+ * Router context exists); `src/__tests__/root-overlay-mount.test.ts` holds that line.
  */
 export function GlobalMenu({
   show,
   onClose,
   items,
   onSelect,
-  title,
-  subtitle,
   anchor,
   testId,
 }: GlobalMenuProps) {
@@ -66,7 +57,17 @@ export function GlobalMenu({
 
   if (!show) return null
 
-  const anchored = anchor != null
+  /*
+   * One offset per axis, from the measured rect — never a computed corner, so the
+   * panel's own size never enters the calculation. The docked fallback gets its
+   * offsets from the stylesheet instead, which is why the two forms are separate
+   * classes: an anchored `top` and a docked `bottom` on the same box would stretch
+   * it between them (see `anchored-overlay.ts`).
+   */
+  const position = anchor != null
+    ? placePanel(anchor.anchor, anchor.viewport, pickMenuPlacement(anchor))
+    : undefined
+
   return (
     <view className='global-menu' data-testid={testId}>
       {/*
@@ -78,21 +79,11 @@ export function GlobalMenu({
         */}
       <view className='global-menu__backdrop' bindtap={onClose} data-testid='global-menu-backdrop' />
       <view
-        className={anchored ? 'global-menu__panel global-menu__panel--anchored' : 'global-menu__panel'}
-        style={anchored
-          ? { left: `${anchor.left}px`, top: `${anchor.top + anchor.height}px` }
-          : undefined}
+        className={position != null
+          ? 'global-menu__panel global-menu__panel--anchored'
+          : 'global-menu__panel global-menu__panel--docked'}
+        style={position}
       >
-        {title != null
-          ? (
-            <view className='global-menu__header'>
-              <text className='global-menu__title'>{title}</text>
-              {subtitle
-                ? <text className='global-menu__subtitle'>{subtitle}</text>
-                : null}
-            </view>
-          )
-          : null}
         <view className='global-menu__items'>
           {items.map((item) => (
             <MenuItem

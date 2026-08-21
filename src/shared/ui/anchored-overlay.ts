@@ -167,6 +167,25 @@ export function placePanel(
 }
 
 /**
+ * Vertical side for an anchor that can be **anywhere** on screen, i.e. a row in a
+ * list rather than a button in a toolbar.
+ *
+ * The toolbar popovers pass a fixed placement on purpose (`placePanel` never flips
+ * one): a menu that jumps to the other side of its own button between two openings
+ * is worse than one that scrolls. A list row has no such expectation — the same
+ * `⋯` button is at the top of the screen for one song and at the bottom for the
+ * next, and a bottom-anchored menu on the last visible row would be capped to a
+ * few scrolling pixels. Picking the half with more room needs no knowledge of the
+ * panel's height, so it keeps the module's one rule intact.
+ *
+ * `-end` because the row's `⋯` sits at the row's trailing edge.
+ */
+export function pickMenuPlacement(m: AnchorMeasurement): Placement {
+  const belowMidpoint = m.anchor.top + m.anchor.height > m.viewport.height / 2
+  return belowMidpoint ? 'top-end' : 'bottom-end'
+}
+
+/**
  * The selector of the app root, whose box is the viewport for `position: fixed`
  * children. `.theme-root` wraps every route (see `router.tsx`) and is the same
  * box `boundingClientRect` reports coordinates against.
@@ -200,24 +219,35 @@ export interface AnchorMeasurement {
  * instant; measured separately, a panel opened while something is still settling
  * gets a trigger rect from before and a viewport from after.
  *
- * Returns whether a query was actually dispatched. That answer is the point of the
- * return value: `invoke`'s callbacks are **asynchronous**, so "did it fail?" cannot
+ * `done` is called **exactly once**, with `null` when there is no measurement to be
+ * had — no invoke bridge (unit tests, hosts without `boundingClientRect`) or a
+ * selector that matched nothing. Reporting the failure *through the callback* rather
+ * than as a return value is what lets a caller both open on the answer and still
+ * open without one: `invoke`'s callbacks are asynchronous, so "did it fail?" cannot
  * be read after `exec()` — an earlier draft did exactly that and therefore always
- * concluded "no measurement" and always docked the panel. Callers use the return
- * value to distinguish *no bridge at all* (unit tests, hosts without
- * `boundingClientRect`: decide now, nothing is coming) from *pending* (a callback
- * will arrive shortly). `done` is never called for the no-bridge case.
+ * concluded "no measurement" and always docked the panel. The no-bridge `null`
+ * arrives synchronously, so a menu that opens from this callback still opens in the
+ * same tick when there is no bridge at all.
  */
 export function measureAnchor(
   anchorSelector: string,
-  done: (result: AnchorMeasurement) => void,
-): boolean {
+  done: (result: AnchorMeasurement | null) => void,
+): void {
+  // Guards the "exactly once" promise against a throw from `exec()` after the
+  // invokes have been queued.
+  let delivered = false
+  const deliver = (result: AnchorMeasurement | null) => {
+    if (delivered) return
+    delivered = true
+    done(result)
+  }
   try {
     // `lynx` is a **bare** host global, not a property of `globalThis` — reading
     // it as `globalThis.lynx` yields undefined in the background realm. Same rule
     // as `fetch` (AGENTS §4) and `useBreakpoint`'s `measureRect`.
     if (typeof lynx === 'undefined' || typeof lynx.createSelectorQuery !== 'function') {
-      return false
+      deliver(null)
+      return
     }
     let anchor: RectResult | undefined
     let viewport: RectResult | undefined
@@ -227,12 +257,14 @@ export function measureAnchor(
     // one failing selector would leave the pair permanently half-filled.
     const settle = () => {
       if (++settled < 2) return
-      if (isUsableRect(anchor) && isUsableRect(viewport)) {
-        done({
-          anchor: { left: anchor.left, top: anchor.top, width: anchor.width, height: anchor.height },
-          viewport: { width: viewport.width, height: viewport.height },
-        })
-      }
+      deliver(
+        isUsableRect(anchor) && isUsableRect(viewport)
+          ? {
+            anchor: { left: anchor.left, top: anchor.top, width: anchor.width, height: anchor.height },
+            viewport: { width: viewport.width, height: viewport.height },
+          }
+          : null,
+      )
     }
     lynx
       .createSelectorQuery()
@@ -249,11 +281,10 @@ export function measureAnchor(
         fail: () => { settle() },
       })
       .exec()
-    return true
   } catch {
     // Hosts (and the Vitest env) without the invoke bridge throw rather than
     // report failure.
-    return false
+    deliver(null)
   }
 }
 
@@ -276,6 +307,40 @@ export const DOCKED_POSITION: PanelPosition = {
 }
 
 let nextAnchorId = 0
+
+export interface TapAnchor {
+  /** Put on the trigger `<view>` so the measurement can address it. */
+  anchorId: string
+  /** `#`-prefixed form of {@link anchorId}. */
+  anchorSelector: string
+  /** Measure now; `done(null)` when there is nothing to measure with. */
+  measure: (done: (result: AnchorMeasurement | null) => void) => void
+}
+
+/**
+ * An anchor id for a trigger that is only ever measured **at tap time**.
+ *
+ * That is the right shape for a trigger inside a virtualized list, where measuring
+ * on mount would be both wasteful and wrong: rows mount and recycle as the list
+ * scrolls, so a mount-time rect is one scroll away from pointing at a different
+ * song's row — and a few hundred rows would each dispatch a `SelectorQuery` nobody
+ * asked for. The round trip is affordable here because there is no panel on screen
+ * yet: nothing paints at the wrong place while the answer is in flight, unlike the
+ * toolbar popovers (see {@link useAnchoredOverlay}).
+ */
+export function useTapAnchor(): TapAnchor {
+  const idRef = useRef<string | null>(null)
+  if (idRef.current == null) idRef.current = `popover-anchor-${nextAnchorId++}`
+  const anchorId = idRef.current
+  const anchorSelector = `#${anchorId}`
+
+  const measure = useCallback(
+    (done: (result: AnchorMeasurement | null) => void) => measureAnchor(anchorSelector, done),
+    [anchorSelector],
+  )
+
+  return { anchorId, anchorSelector, measure }
+}
 
 export interface AnchoredOverlay {
   /** Put on the trigger `<view>` so the measurement can address it. */
@@ -305,24 +370,32 @@ export interface AnchoredOverlay {
  * One `SelectorQuery.exec` per open is cheap, and it replaces the library's
  * hardcoded 16-frame `DelayedEntering` wait before it would even *begin*
  * positioning.
+ *
+ * For a trigger that cannot be measured ahead of the tap — a row in a virtualized
+ * list — use {@link useTapAnchor} and place the panel from the answer.
+ *
+ * `id` overrides the generated anchor id, for the rare owner that has to address
+ * the same trigger itself (the player's overflow menu measures its own `⋯` again to
+ * anchor the song menu it hands off to).
  */
-export function useAnchoredOverlay(placement: Placement): AnchoredOverlay {
-  const idRef = useRef<string | null>(null)
-  if (idRef.current == null) idRef.current = `popover-anchor-${nextAnchorId++}`
-  const anchorId = idRef.current
+export function useAnchoredOverlay(placement: Placement, id?: string): AnchoredOverlay {
+  const generated = useTapAnchor()
+  const anchorId = id ?? generated.anchorId
+  const anchorSelector = id != null ? `#${id}` : generated.anchorSelector
 
   const [position, setPosition] = useState<PanelPosition>(DOCKED_POSITION)
 
   const refresh = useCallback(() => {
-    measureAnchor(`#${anchorId}`, (res) => {
+    measureAnchor(anchorSelector, (res) => {
+      // A failed or absent measurement deliberately leaves the current position
+      // alone: a slightly stale anchor beats a panel that jumps to the corner, and on
+      // the very first open there is nothing to keep anyway (it is already docked).
+      if (res == null) return
       setPosition(placePanel(res.anchor, res.viewport, placement))
     })
-    // A failed or absent measurement deliberately leaves the current position
-    // alone: a slightly stale anchor beats a panel that jumps to the corner, and on
-    // the very first open there is nothing to keep anyway (it is already docked).
-  }, [anchorId, placement])
+  }, [anchorSelector, placement])
 
   useEffect(refresh, [refresh])
 
-  return { anchorId, anchorSelector: `#${anchorId}`, position, refresh }
+  return { anchorId, anchorSelector, position, refresh }
 }

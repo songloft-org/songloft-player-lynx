@@ -36,10 +36,6 @@ vi.mock('@tanstack/react-query', () => ({
   useQuery: () => ({ data: { items: [], total: 0 }, isLoading: false, isError: false, refetch: vi.fn() }),
 }))
 
-vi.mock('../../../shared/ui/SongContextMenu.js', () => ({
-  SongContextMenu: () => null,
-}))
-
 vi.mock('@lynx-js/lynx-ui-input', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
 )

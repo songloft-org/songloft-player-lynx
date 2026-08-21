@@ -70,32 +70,53 @@ test('tapping the backdrop closes without selecting anything', () => {
   expect(onSelect).not.toHaveBeenCalled()
 })
 
-test('the header shows the song it belongs to', () => {
-  const { queryByText } = renderMenu({ title: 'Blue in Green', subtitle: 'Miles Davis' })
-  expect(queryByText('Blue in Green')).toBeInTheDocument()
-  expect(queryByText('Miles Davis')).toBeInTheDocument()
-})
+const VIEWPORT = { width: 420, height: 900 }
 
 /**
- * Docked vs anchored. Without an `anchor` the panel is a bottom sheet; with one
- * it becomes a popover placed under the measured trigger box — the form the
- * anchoring step turns on, and the reason the class is a separate modifier
- * (`GlobalMenu.css` has to release the docked `bottom`/`right`).
+ * Docked vs anchored. Without a measurement the panel is a bottom sheet; with one it
+ * becomes a popover placed by the same `placePanel` the toolbar popovers use — which
+ * is why each form owns its offsets in a separate modifier: an inline `top` landing on
+ * top of the docked `bottom` would stretch the panel between them instead of being
+ * overridden (`GlobalMenu.css`, `anchored-overlay.ts`).
  */
-test('the panel docks to the bottom when no anchor is given', () => {
+test('the panel docks to the bottom when the row could not be measured', () => {
   const { getByTestId } = renderMenu()
   const panel = getByTestId('menu-item-play').parentElement!.parentElement!
-  expect(panel.className).toContain('global-menu__panel')
+  expect(panel.className).toContain('global-menu__panel--docked')
   expect(panel.className).not.toContain('global-menu__panel--anchored')
+  // Offsets come from the stylesheet in this form, so nothing may be inlined — a
+  // stray inline `top` here is exactly what would stretch the sheet.
+  expect(panel.style.top).toBe('')
+  expect(panel.style.bottom).toBe('')
 })
 
-test('an anchor switches the panel to the anchored variant below the trigger', () => {
+test('a measured row anchors the panel to the trigger, opening downwards', () => {
+  // A row in the upper half: `⋯` at x 280–316, y 100–136.
   const { getByTestId } = renderMenu({
-    anchor: { left: 120, top: 40, width: 24, height: 24 },
+    anchor: { anchor: { left: 280, top: 100, width: 36, height: 36 }, viewport: VIEWPORT },
   })
   const panel = getByTestId('menu-item-play').parentElement!.parentElement!
   expect(panel.className).toContain('global-menu__panel--anchored')
-  // Under the trigger: top + height.
-  expect(panel.style.top).toBe('64px')
-  expect(panel.style.left).toBe('120px')
+  expect(panel.className).not.toContain('global-menu__panel--docked')
+  // Right edge of the trigger (420 - 316), and the gap below it (136 + 6).
+  expect(panel.style.right).toBe('104px')
+  expect(panel.style.top).toBe('142px')
+  // One offset per axis, or the panel is stretched rather than sized.
+  expect(panel.style.left).toBe('')
+  expect(panel.style.bottom).toBe('')
+})
+
+/**
+ * The rows are the reason this menu picks its vertical side per opening, unlike the
+ * toolbar popovers, which always open the way they were told: the same `⋯` button is
+ * near the top of the screen for one song and near the bottom for the next, and a
+ * downward menu on the last visible row would be capped to a few scrolling pixels.
+ */
+test('a row in the lower half opens upwards instead', () => {
+  const { getByTestId } = renderMenu({
+    anchor: { anchor: { left: 280, top: 700, width: 36, height: 36 }, viewport: VIEWPORT },
+  })
+  const panel = getByTestId('menu-item-play').parentElement!.parentElement!
+  expect(panel.style.bottom).toBe('206px') // 900 - 700 + 6, so it grows upwards
+  expect(panel.style.top).toBe('')
 })

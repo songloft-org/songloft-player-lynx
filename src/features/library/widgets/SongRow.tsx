@@ -20,9 +20,15 @@ export interface SongRowProps {
   trailing?: ReactNode
   /** Renders a trailing "more" button (overflow menu entry point). */
   onMore?: (song: Song) => void
+  /**
+   * `id` for that button, so the menu it opens can be anchored to it. The menu
+   * itself renders outside every list (see `song-row-overlays.ts`), so the id is
+   * how it addresses the button it belongs to.
+   */
+  moreAnchorId?: string
 }
 
-export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleFavorite, isCurrentSong, trailing, onMore }: SongRowProps) {
+export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleFavorite, isCurrentSong, trailing, onMore, moreAnchorId }: SongRowProps) {
   const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
   const subtitle = [song.artist, song.album].filter(Boolean).join(' · ')
 
@@ -53,7 +59,7 @@ export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleF
       {trailing}
       {onMore != null
         ? (
-          <view className='song-row__more' catchtap={() => onMore(song)} data-testid='song-row-more'>
+          <view id={moreAnchorId} className='song-row__more' catchtap={() => onMore(song)} data-testid='song-row-more'>
             <Icon name='more' size={18} color={ICON_COLORS.contentMuted} />
           </view>
         )

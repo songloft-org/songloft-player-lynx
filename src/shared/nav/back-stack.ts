@@ -3,11 +3,11 @@
  * the router.
  *
  * **Why a stack rather than z-index.** Every hand-rolled overlay in this app is
- * `position: fixed; z-index: 100` (see `ActionSheet.css`, `SongContextMenu.css`,
- * `PlayHistoryPanel.css`, `PopoverMenu.css`) — they are all on the same layer and
- * paint by DOM order, so there is nothing to sort by. What the back key actually
- * needs is "close the thing the user opened last", and that is exactly
- * registration order, because an overlay only registers when it opens.
+ * `position: fixed; z-index: 100` (see `GlobalMenu.css`, `PlayHistoryPanel.css`,
+ * `PopoverMenu.css`) — they are all on the same layer and paint by DOM order, so there
+ * is nothing to sort by. What the back key actually needs is "close the thing the user
+ * opened last", and that is exactly registration order, because an overlay only
+ * registers when it opens.
  *
  * **Why priority is activation time and not render order.** Both orderings have
  * one failure mode; this one's cannot happen in practice.

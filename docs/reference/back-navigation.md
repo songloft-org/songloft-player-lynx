@@ -71,8 +71,8 @@ useBackHandler(open, () => { setOpen(false); return true })
 
 - 返回 `true` = 已消费；返回 `false` = 让下一层处理
 - **`active` 挂载时必须为 `false`**（见 §1）
-- 嵌套子状态各注册一层，由激活顺序自然形成正确的退出顺序（如 `SongContextMenu` 的 `showPlaylists` → `confirmDelete`）
-- lynx-ui Popover / Dialog **没有命令式关闭**，只能改外部 `show` state。`PopoverRoot.onClose` 是 Presence 离场生命周期回调，当「请求关闭」用会死锁（详见 `src/shared/ui/PopoverMenu.tsx` 与 AGENTS.md §4）
+- 嵌套子状态各注册一层，由激活顺序自然形成正确的退出顺序（如歌曲菜单 → 添加到歌单 → 删除确认，三者由 `song-row-overlays.ts` 互斥驱动）
+- lynx-ui Dialog **没有命令式关闭**，只能改外部 `show` state（自研的 `PopoverSurface` 同样是受控的，只经 `onShowChange` 关）
 
 ---
 

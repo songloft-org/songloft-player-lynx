@@ -1,5 +1,6 @@
 import { useNavigateToSongDetail } from '../../../shared/nav/navigate-to-song-detail.js'
 import type { Song } from '../../../models/song.js'
+import { useTapAnchor } from '../../../shared/ui/anchored-overlay.js'
 import { useSongRowOverlays } from '../../../shared/ui/song-row-overlays.js'
 import { useLibraryViewport } from '../pages/library-viewport.js'
 import { useFavoriteToggle } from '../data/favorites.js'
@@ -37,6 +38,13 @@ export interface SongListRowProps {
  * containment clips and re-anchors any `position: fixed` child — see
  * `song-row-overlays.ts`.
  *
+ * Because of that, anchoring the menu to the `⋯` button is this row's job: it
+ * measures the button on tap and sends the rect along with the song, since the menu
+ * renders in a subtree that cannot see the row. Measured **on tap** rather than on
+ * mount — rows recycle and lists scroll, so a mount-time rect would be stale (see
+ * `useTapAnchor`). If the host cannot measure, the menu docks to the bottom instead
+ * of not opening.
+ *
  * Responsive: narrow rows end with a single `more` button (plus the favorite
  * heart and long-press as the other entry points); wide rows (>= tablet, per
  * `useLibraryViewport`) additionally flatten the high-frequency actions —
@@ -54,9 +62,15 @@ export function SongListRow({
   const openMenu = useSongRowOverlays((s) => s.openMenu)
   const openAddToPlaylist = useSongRowOverlays((s) => s.openAddToPlaylist)
   const requestDelete = useSongRowOverlays((s) => s.requestDelete)
+  const { anchorId, measure } = useTapAnchor()
   const { isWide } = useLibraryViewport()
   const { isFavorite, toggle } = useFavoriteToggle(song.id)
   const currentSongId = usePlayerStore((s) => s.currentSong?.id)
+
+  // Both entry points (the `⋯` button and long-press) anchor on the `⋯` button:
+  // it is the only box in the row the menu can be measured against, and on Web the
+  // button is the *only* entry point anyway (web-core synthesizes no longpress).
+  const openMenuAnchored = (target: Song) => measure((rect) => openMenu(target, rect))
 
   const wideActions = !selectionMode && isWide
     ? (
@@ -95,12 +109,13 @@ export function SongListRow({
       song={song}
       index={index}
       onTap={onTap}
-      onLongPress={selectionMode ? undefined : (target) => openMenu(target)}
+      onLongPress={selectionMode ? undefined : openMenuAnchored}
       isFavorite={isFavorite}
       onToggleFavorite={selectionMode ? undefined : toggle}
       isCurrentSong={currentSongId === song.id}
       trailing={wideActions}
-      onMore={selectionMode ? undefined : (target) => openMenu(target)}
+      onMore={selectionMode ? undefined : openMenuAnchored}
+      moreAnchorId={anchorId}
     />
   )
 }

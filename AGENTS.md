@@ -186,7 +186,7 @@ pnpm run build:web-embedded   # 产物给后端嵌入（songloft-player-build/we
 
 #### 全局覆盖层的挂载点与 Dialog（批52，浏览器实测抓出）
 
-- **全局覆盖层必须挂在 root route 的 `ThemeProvider` 内**（`src/router.tsx`，与 `ToastHost` 同处），不能作为 `<RouterProvider>` 的兄弟挂在 `App.tsx`。后者在 native 上看不出问题，在 Web 上却同时踩两条：① 落在 `.theme-root` 子树之外，而 Muse 的 CSS 变量全部声明在那个类上 ⇒ 每个 `var(--*)` 解析为空字符串，卡片背景透明、无圆角内边距、遮罩不可见（**文字还在，所以像「样式崩了」而不像「没渲染」**）；② 拿不到 Router context ⇒ `SongContextMenu` 因 `useNavigateToSongDetail()` 渲染中断，**`.song-ctx` 从未进 DOM、零报错**，点 ⋯ 按钮像没接线。闸门：`src/__tests__/root-overlay-mount.test.ts`
+- **全局覆盖层必须挂在 root route 的 `ThemeProvider` 内**（`src/router.tsx`，与 `ToastHost` 同处），不能作为 `<RouterProvider>` 的兄弟挂在 `App.tsx`。后者在 native 上看不出问题，在 Web 上却同时踩两条：① 落在 `.theme-root` 子树之外，而 Muse 的 CSS 变量全部声明在那个类上 ⇒ 每个 `var(--*)` 解析为空字符串，卡片背景透明、无圆角内边距、遮罩不可见（**文字还在，所以像「样式崩了」而不像「没渲染」**）；② 拿不到 Router context ⇒ `SongRowOverlays` 因 `useNavigateToSongDetail()` 渲染中断，**歌曲菜单从未进 DOM、零报错**，点 ⋯ 按钮像没接线。闸门：`src/__tests__/root-overlay-mount.test.ts`
 - **`DialogBackdrop` 的 `position` 只能由 `style` prop 给**：它内联硬编码 `position: absolute; width: 100%; height: 100%`，内联胜过样式表，所以类里写 `position: fixed` 是死代码；而它的父 `DialogView` 是个没有尺寸的 fixed 包装 ⇒ 遮罩实测 0×0（既不可见，`clickToClose` 也永远点不到）。**遮罩的四个偏移必须写全**，与 `.popover-backdrop` 同理（见 `popover-menu-css.test.ts`）：偏移为 auto 的 fixed 元素落在静态位置，弹出层的遮罩就是这么漏出「两个同时打开」的
 - **「点弹窗外部取消」要挂在 `DialogContent` 上**（`dialogContentProps={{ bindtap }}`），因为该层是 `fixed; inset: 0` + `event-through={false}`，把遮罩整个盖住；同时卡片本身必须 `catchtap`，否则确认按钮的点击会冒泡上去，`onConfirm` 之后紧跟一次 `onCancel`。三条都无法用渲染测试覆盖（无布局引擎 + Dialog stand-in 丢弃 `style`/`dialogContentProps`），闸门在 `src/shared/ui/__tests__/confirm-dialog-overlay.test.ts`
 - **Web 上没有 longpress**：web-core 不合成该手势，所以任何「长按打开菜单」的功能在 Web 上必须另有按钮入口（歌曲行的 ⋯ 就是）

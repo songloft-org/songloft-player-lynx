@@ -12,12 +12,12 @@ import {
  * One back press peels exactly one of the player's overlay layers.
  *
  * The player now stacks three of them — the speed menu, the volume popover, and the
- * overflow menu that hands off to `SongContextMenu` — on top of a page-level handler
- * that slides the swiper back from the lyrics screen. Back-stack priority is
+ * overflow menu that hands off to the song menu (`GlobalMenu`) — on top of a page-level
+ * handler that slides the swiper back from the lyrics screen. Back-stack priority is
  * *activation order*, so the risk is not "does back work" but "does it peel the layer
  * the user is actually looking at".
  *
- * The overflow menu's handoff to `SongContextMenu` was the suspected sharp edge:
+ * The overflow menu's handoff to the song menu was the suspected sharp edge:
  * `PopoverMenu` invokes `onSelect` and then immediately `onShowChange(false)`, so
  * opening another overlay from that callback puts both state writes in one commit —
  * one layer unregistering while a *sibling* registers. That looked like it should
@@ -166,6 +166,8 @@ test('the overflow menu hands off to the global song menu without stacking two l
   // depth of 1 here would mean the menu never let go while the song menu took
   // over — two backdrops and a back press that leaves one of them on screen.
   expect(getBackStackDepth()).toBe(0)
-  // And the song menu was asked for, with the player's current song.
-  expect(openMenuMock).toHaveBeenCalledWith(mockSong())
+  // And the song menu was asked for, with the player's current song and the rect of
+  // this `⋯` button — null here, since the env cannot measure (see
+  // `anchored-overlay.test.ts`), which docks the menu rather than dropping the handoff.
+  expect(openMenuMock).toHaveBeenCalledWith(mockSong(), null)
 })

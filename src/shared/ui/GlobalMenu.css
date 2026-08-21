@@ -24,57 +24,55 @@
   background-color: var(--backdrop);
 }
 
-/* Undocked default: bottom sheet. Reachable by thumb, and the form the song
-   menu has always had — the anchored variant below is the opt-in. */
+/*
+ * Shared panel surface. **No offsets here**, deliberately: the anchored form gets
+ * exactly one per axis inline from `placePanel`, and a leftover `bottom` in this rule
+ * would combine with an inline `top` and stretch the panel down the screen rather than
+ * be overridden (same reason `.popover-menu` declares none — see `anchored-overlay.ts`).
+ * Each form therefore brings its own offsets, in its own modifier.
+ *
+ * `overflow-y: auto` pairs with the `max-height` both forms set: a menu taller than the
+ * room it was given scrolls instead of running off the screen.
+ */
 .global-menu__panel {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
   z-index: 101;
   display: flex;
   flex-direction: column;
+  background-color: var(--paper);
+  overflow-y: auto;
+}
+
+/*
+ * Fallback form: a bottom sheet, used when the row could not be measured (no invoke
+ * bridge — unit tests, or a host without `boundingClientRect`). Reachable by thumb,
+ * and the form this menu had before it was anchored, so the degraded path is a
+ * familiar one rather than a broken-looking popover in a corner.
+ */
+.global-menu__panel--docked {
+  bottom: 0;
+  left: 0;
+  right: 0;
   max-height: 60%;
   padding-bottom: var(--space-6);
-  background-color: var(--paper);
   border-top-left-radius: var(--radius-xl);
   border-top-right-radius: var(--radius-xl);
 }
 
 /*
- * Anchored variant: a popover beside the trigger. `left`/`top` arrive as inline
- * style from the measured rect, so the offsets here must be released — `bottom`
- * and `right` from the docked rule would otherwise stretch the panel across the
- * screen and fight the inline `top`.
+ * Anchored form: a popover beside the row's `⋯`. Surface matches `.popover-menu` so
+ * the song menu and the toolbar menus are the same object visually; `min-width` is
+ * `.popover-menu--wide`'s, and `placePanel` reserves `RESERVED_PANEL_WIDTH` for it on
+ * the anchored edge (a `max-width` cannot shrink a panel — CSS resolves `min-width`
+ * after it).
  */
 .global-menu__panel--anchored {
-  bottom: auto;
-  right: auto;
   min-width: 180px;
-  max-width: 260px;
-  padding-bottom: var(--space-2);
   padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--line);
-}
-
-.global-menu__header {
-  padding: var(--space-4);
-  border-bottom-width: 1px;
-  border-bottom-color: var(--line);
-}
-
-.global-menu__title {
-  font-size: var(--font-md);
-  font-weight: bold;
-  color: var(--content);
-}
-
-.global-menu__subtitle {
-  margin-top: var(--space-1);
-  font-size: var(--font-sm);
-  color: var(--content-muted);
 }
 
 .global-menu__items {

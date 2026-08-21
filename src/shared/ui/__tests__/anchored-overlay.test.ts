@@ -1,6 +1,6 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
-import { DOCKED_POSITION, placePanel } from '../anchored-overlay.js'
+import { DOCKED_POSITION, measureAnchor, pickMenuPlacement, placePanel } from '../anchored-overlay.js'
 import type { AnchorRect } from '../anchored-overlay.js'
 
 /**
@@ -119,4 +119,76 @@ describe('vertical anchoring', () => {
 test('the docked fallback names exactly one offset per axis', () => {
   expect(DOCKED_POSITION.left != null).not.toBe(DOCKED_POSITION.right != null)
   expect(DOCKED_POSITION.top != null).not.toBe(DOCKED_POSITION.bottom != null)
+})
+
+/**
+ * The song menu picks its vertical side per opening; the toolbar popovers never do.
+ * The asymmetry is the point: a toolbar button is where the user last saw it, while
+ * the row's `⋯` is at a different height for every song, and a downward menu on the
+ * last visible row would be capped to a few scrolling pixels of `max-height`.
+ */
+describe('pickMenuPlacement', () => {
+  const viewport = VIEWPORT
+
+  test('a row in the upper half opens downwards', () => {
+    expect(pickMenuPlacement({ anchor: { left: 280, top: 100, width: 36, height: 36 }, viewport }))
+      .toBe('bottom-end')
+  })
+
+  test('a row in the lower half opens upwards', () => {
+    expect(pickMenuPlacement({ anchor: { left: 280, top: 700, width: 36, height: 36 }, viewport }))
+      .toBe('top-end')
+  })
+
+  test('the side is decided by the trigger\'s bottom edge, not its top', () => {
+    // A row straddling the midpoint: its top is above 450, its bottom below. Using
+    // the top would open downwards into the half with less room.
+    expect(pickMenuPlacement({ anchor: { left: 280, top: 440, width: 36, height: 36 }, viewport }))
+      .toBe('top-end')
+  })
+
+  test('always `-end`, because the row\'s trigger is at its trailing edge', () => {
+    for (const top of [0, 200, 449, 451, 880]) {
+      expect(pickMenuPlacement({ anchor: { left: 8, top, width: 36, height: 36 }, viewport }))
+        .toMatch(/-end$/)
+    }
+  })
+})
+
+/**
+ * `measureAnchor` calls back **exactly once, `null` included** — the contract the song
+ * menu depends on, since it opens *from* that callback. A version that only reported
+ * successes (an earlier one did) would leave the menu unopened wherever the rect cannot
+ * be had: a tap with no visible result and nothing in the log.
+ *
+ * The Vitest env is one of those hosts, and not by stubbing: its `SelectorQuery.select`
+ * throws when the selector matches nothing, and the object it returns has no `invoke`
+ * at all. So the fallback path below is the real one, which is also why every render
+ * test in this suite sees `DOCKED_POSITION`.
+ */
+describe('measureAnchor with no usable bridge', () => {
+  test('reports null, synchronously, so the caller can still open', () => {
+    const done = vi.fn()
+    measureAnchor('#nothing-matches-this', done)
+    // Synchronous: an opener that had to await a frame would flash nothing on tap.
+    expect(done).toHaveBeenCalledTimes(1)
+    expect(done).toHaveBeenCalledWith(null)
+  })
+
+  test('a host without `createSelectorQuery` is reported the same way', () => {
+    // Mutating the property rather than replacing the `lynx` object: `lynx` is a bare
+    // host global that this env injects as a module-scope binding, so assigning
+    // `globalThis.lynx` is invisible to the code under test (measured).
+    const host = (globalThis as { lynx: { createSelectorQuery?: unknown } }).lynx
+    const saved = host.createSelectorQuery
+    host.createSelectorQuery = undefined
+    try {
+      const done = vi.fn()
+      measureAnchor('#x', done)
+      expect(done).toHaveBeenCalledTimes(1)
+      expect(done).toHaveBeenCalledWith(null)
+    } finally {
+      host.createSelectorQuery = saved
+    }
+  })
 })

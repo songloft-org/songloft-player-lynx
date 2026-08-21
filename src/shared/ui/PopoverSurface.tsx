@@ -12,6 +12,12 @@ export interface PopoverSurfaceProps {
   trigger: ReactNode
   triggerClassName?: string
   placement: Placement
+  /**
+   * Overrides the generated anchor id. For an owner that has to address the same
+   * trigger itself — the player's overflow menu re-measures its `⋯` to anchor the
+   * song menu it hands off to.
+   */
+  anchorId?: string
   /** Classes for the floating panel. Always includes a `.popover-menu`-family class. */
   panelClassName: string
   children: ReactNode
@@ -53,10 +59,11 @@ export function PopoverSurface({
   trigger,
   triggerClassName,
   placement,
+  anchorId: anchorIdProp,
   panelClassName,
   children,
 }: PopoverSurfaceProps) {
-  const { anchorId, position, refresh } = useAnchoredOverlay(placement)
+  const { anchorId, position, refresh } = useAnchoredOverlay(placement, anchorIdProp)
 
   // Through `onShowChange` like every other close path — these popovers are
   // controlled, so their visibility only ever changes by the owner writing state.

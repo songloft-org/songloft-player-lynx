@@ -10,9 +10,10 @@ import { clearBackHandlersForTests, dispatchBack, getBackStackDepth } from '../.
  * Overlays must consume the back key themselves.
  *
  * Registering inside each shared overlay — rather than at its call sites — is what
- * makes the back key work for all 14 of them (and every future one) from 7 edits.
- * The failure mode if one forgets is silent and unpleasant: back skips the dialog on
- * screen and navigates the page out from under it.
+ * makes the back key work for every overlay in the app (and every future one) from the
+ * four files in `shared/ui` that call `useBackHandler`. The failure mode if one forgets
+ * is silent and unpleasant: back skips the dialog on screen and navigates the page out
+ * from under it.
  *
  * Two gates here, deliberately different in kind:
  *  1. a **derived** source gate, so a *new* overlay component cannot quietly opt out;
@@ -29,7 +30,6 @@ vi.mock('@lynx-js/lynx-ui-input', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
 )
 
-const { ActionSheet } = await import('../ActionSheet.js')
 const { ConfirmDialog } = await import('../ConfirmDialog.js')
 const { GlobalMenu } = await import('../GlobalMenu.js')
 const { PopoverMenu } = await import('../PopoverMenu.js')
@@ -90,7 +90,6 @@ describe('every shared overlay claims the back key', () => {
     // Guards the derivation: if the props are renamed, this must not silently start
     // asserting over an empty list.
     expect(candidates.map((o) => o.file).sort()).toEqual([
-      'ActionSheet.tsx',
       'ConfirmDialog.tsx',
       'GlobalMenu.tsx',
       'PopoverMenu.tsx',
@@ -140,14 +139,6 @@ describe('a back press closes the overlay instead of falling through', () => {
     expect(getBackStackDepth()).toBe(1)
     expect(dispatchBack()).toBe(true)
     expect(onCancel).toHaveBeenCalledTimes(1)
-  })
-
-  test('ActionSheet closes', () => {
-    const onClose = vi.fn()
-    render(<ActionSheet open onClose={onClose}><text>body</text></ActionSheet>)
-
-    expect(dispatchBack()).toBe(true)
-    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   /**
@@ -232,14 +223,6 @@ describe('a closed overlay does not hold the back key', () => {
     expect(getBackStackDepth()).toBe(0)
     expect(dispatchBack()).toBe(false)
     expect(onCancel).not.toHaveBeenCalled()
-  })
-
-  test('ActionSheet registers nothing while hidden', () => {
-    const onClose = vi.fn()
-    render(<ActionSheet open={false} onClose={onClose}><text>body</text></ActionSheet>)
-
-    expect(getBackStackDepth()).toBe(0)
-    expect(dispatchBack()).toBe(false)
   })
 
   test('GlobalMenu registers nothing while hidden', () => {
