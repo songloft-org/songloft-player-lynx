@@ -62,8 +62,10 @@ mkdirSync(webCoreDest, { recursive: true })
 cpSync(webCoreStatic, webCoreDest, { recursive: true })
 
 // Copy HTML host page. The same index.html serves both standalone and embedded
-// modes — the app auto-detects the Web platform via `self.location.origin` and
-// hides the server-address UI accordingly.
+// modes, differing in the `deployMode` globalProp: the source page carries
+// `deployMode: 'standalone'` (right for the static server this script's default
+// mode deploys to), and the embedded pass below strips it — there the backend
+// IS the page origin, so the app's same-origin probe is correct.
 //
 // For embedded, wipe the target directory first so stale files from a previous
 // build (e.g. canvaskit/ from the old Flutter app) don't linger in the Go binary.
@@ -75,6 +77,26 @@ const htmlDest = resolve(DEST_BASE, 'index.html')
 if (existsSync(htmlSrc)) {
   mkdirSync(dirname(htmlDest), { recursive: true })
   copyFileSync(htmlSrc, htmlDest)
+
+  if (isEmbedded) {
+    // Strip the standalone deploy-mode attribute so the worker falls back to
+    // its same-origin probe. Left in, an embedded page would show the
+    // API-address field and default the base URL to the dev backend instead of
+    // the very server serving it. The documenting comment above the element
+    // stays — it explains the mechanism for both builds.
+    const TAG = `global-props='{"deployMode":"standalone"}'`
+    let html = readFileSync(htmlDest, 'utf-8')
+    const tagIdx = html.indexOf(TAG)
+    if (tagIdx === -1) {
+      throw new Error(
+        '[copy-bundle-web] the standalone global-props tag is missing from index.html '
+          + '— check the <lynx-view> element in web/index.html.',
+      )
+    }
+    html = html.slice(0, tagIdx) + html.slice(tagIdx + TAG.length)
+    writeFileSync(htmlDest, html, 'utf-8')
+    console.log('  ├── deployMode tag stripped (embedded build)')
+  }
 
   // Rewrite WASM preload hints to match the actual hashed filenames in the
   // web-core build. The hashes in the source HTML are a template — they go stale

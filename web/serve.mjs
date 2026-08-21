@@ -114,7 +114,16 @@ const MIME = {
   '.bundle': 'application/octet-stream',
 }
 
-// File cache (for development, simple in-memory cache)
+/*
+ * File cache, keyed by path and invalidated by mtime+size.
+ *
+ * The mtime check is not an optimisation detail — without it this server holds
+ * the first bytes it ever read until the process exits, while cheerfully sending
+ * `Cache-Control: no-cache`. A `web:sync` after a code change then leaves the
+ * browser on the previous bundle, and a Web verification session silently
+ * validates stale code: the symptom is a fix that "did not work" plus a
+ * Content-Length that disagrees with the file on disk.
+ */
 const cache = new Map()
 
 function serveFile(res, filePath, mime) {
@@ -131,9 +140,11 @@ function serveFile(res, filePath, mime) {
       || mime.startsWith('application/octet-stream')
       || mime.startsWith('image/')
     let content
-    const cacheKey = filePath + (isBinary ? ':binary' : ':text')
-    if (cache.has(cacheKey)) {
-      content = cache.get(cacheKey)
+    const { mtimeMs, size } = statSync(filePath)
+    const stamp = `${isBinary ? 'binary' : 'text'}:${mtimeMs}:${size}`
+    const hit = cache.get(filePath)
+    if (hit && hit.stamp === stamp) {
+      content = hit.content
     } else {
       content = isBinary ? readFileSync(filePath) : readFileSync(filePath, 'utf-8')
       // In production, replace the mocked localhost URL with the actual path
@@ -141,7 +152,7 @@ function serveFile(res, filePath, mime) {
       if (typeof content === 'string') {
         content = content.replaceAll('http://lynx-web-core-mocked.localhost/', '/web-core/')
       }
-      cache.set(cacheKey, content)
+      cache.set(filePath, { stamp, content })
     }
 
     res.writeHead(200, {

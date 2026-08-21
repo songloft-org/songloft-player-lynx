@@ -11,6 +11,8 @@
  * client state (current server identity, etc.) lives in the Zustand store.
  */
 
+import { readLynxGlobal } from '../../native/native-modules.js'
+
 /** API path prefix, e.g. `/api/v1`. */
 export const apiPrefix = '/api/v1'
 
@@ -26,23 +28,56 @@ export const defaultJsonHeaders: Readonly<Record<string, string>> = {
   Accept: 'application/json',
 }
 
+/** DEV default: the local test backend (see the rationale below). */
+const DEV_BACKEND_URL = 'http://localhost:58091'
+
 /**
- * Resolve the default base URL for the current runtime.
+ * The page origin as seen from the worker realm, or null off-web.
  *
- * In a web worker, `self.location.origin` still reports the page origin
- * (e.g. `http://192.168.1.5:58091`), so the login form is pre-filled with
- * the correct server address instead of `localhost`. On Lynx native, `self`
- * has no `location` — fall back to the emulator/simulator default.
+ * In a web worker, `self.location.origin` still reports the page origin, which
+ * IS the backend's own origin in an embedded deploy — so that deploy gets the
+ * right default base URL with zero configuration. On Lynx native, `self` has
+ * no `location` at all.
  */
-function resolveDefaultBaseUrl(): string {
+function readWorkerOrigin(): string | null {
   try {
     const origin = (self as unknown as { location?: { origin?: string } }).location?.origin
     if (origin && origin !== 'null' && origin.startsWith('http')) return origin
   } catch {
     // self.location not available (Lynx native runtime)
   }
-  return 'http://localhost:58091'
+  return null
 }
+
+/**
+ * `lynx.__globalProps` key the **web host page** populates with the deploy mode.
+ * See `web/index.html` and `scripts/copy-bundle-web.mjs` — one bundle serves
+ * both web deploys, so the page is the only party that knows which one it is.
+ */
+export const GLOBAL_PROP_DEPLOY_MODE = 'deployMode'
+
+/** Read the host-tagged deploy mode; null when the host said nothing. */
+function readHostDeployMode(): 'standalone' | 'embedded' | null {
+  try {
+    const raw = readLynxGlobal()?.__globalProps?.[GLOBAL_PROP_DEPLOY_MODE]
+    if (raw === 'standalone' || raw === 'embedded') return raw
+  } catch {
+    // no Lynx global (unit tests) — callers fall through to probing
+  }
+  return null
+}
+
+/*
+ * Standalone web deploys are tagged by the host page precisely because probing
+ * cannot tell them from embedded ones: the worker realm has `self.location` in
+ * BOTH, so "is this a browser?" says nothing about whether the API lives behind
+ * the page origin. An untagged standalone (serve.mjs: a static server with no
+ * backend and no /api proxy) therefore probes as embedded — which hides the
+ * API-address field AND defaults the base URL to the static server's own
+ * origin, leaving a fresh browser unable to log in at all.
+ */
+const HOST_DEPLOY_MODE = readHostDeployMode()
+const ORIGIN_BASE_URL = readWorkerOrigin()
 
 // DEV default: the local test backend. `localhost` is the right default for
 // BOTH emulator/simulator targets, so this must not be a LAN IP:
@@ -57,10 +92,13 @@ function resolveDefaultBaseUrl(): string {
 // the host's LAN IP — enter it on the login page, which persists it to prefs
 // and overrides this default.
 //
-// On the Web platform the default is resolved from `self.location.origin` at
-// module load time, so it automatically matches the serving origin whether
-// standalone (same-origin backend) or embedded (Go reverse-proxy).
-const DEFAULT_BASE_URL = resolveDefaultBaseUrl()
+// On the Web platform the default is the page origin (the backend is
+// same-origin there) for embedded deploys, and this dev backend for
+// host-tagged standalone deploys — the static server's origin has no API
+// behind it.
+const DEFAULT_BASE_URL = HOST_DEPLOY_MODE === 'standalone'
+  ? DEV_BACKEND_URL
+  : (ORIGIN_BASE_URL ?? DEV_BACKEND_URL)
 
 /**
  * DEV convenience: credentials prefilled into the login form so device testing
@@ -103,20 +141,40 @@ export type DeployMode = 'standalone' | 'embedded'
 /**
  * Resolve the default deploy mode for the current runtime.
  *
- * On the Web platform (detected via `self.location.origin`, which is available
- * in the worker realm and reports the page origin), the backend is always at
- * the same origin — the API-address field and insecure-TLS toggle are hidden.
- * On Lynx native, the user may need to point at a different host, so the
- * default is `standalone` (server-address UI visible).
+ * The host page's explicit tag (standalone web deploys) wins. Otherwise, on the
+ * Web platform (detected via `self.location.origin`, which is available in the
+ * worker realm and reports the page origin) the backend is presumed same-origin
+ * — the API-address field and insecure-TLS toggle are hidden. On Lynx native,
+ * the user may need to point at a different host, so the default is
+ * `standalone` (server-address UI visible).
  */
 function resolveDeployMode(): DeployMode {
-  try {
-    const origin = (self as unknown as { location?: { origin?: string } }).location?.origin
-    if (origin && origin !== 'null' && origin.startsWith('http')) return 'embedded'
-  } catch {
-    // self.location not available (Lynx native runtime)
+  if (HOST_DEPLOY_MODE) return HOST_DEPLOY_MODE
+  return ORIGIN_BASE_URL != null ? 'embedded' : 'standalone'
+}
+
+/**
+ * Re-read the host's deploy-mode tag and apply it if it arrived late.
+ *
+ * The tag rides `lynx.__globalProps`, which the web host page sets on
+ * `lynxviewready`; whether that lands before or after this module evaluates is
+ * web-core's business, so `src/index.tsx` calls this once more before the first
+ * render. Idempotent, and a no-op when the host said nothing (native hosts
+ * never set the key).
+ */
+export function applyHostDeployMode(): void {
+  const tagged = readHostDeployMode()
+  if (tagged == null || tagged === appConfig.deployMode) return
+  appConfig.deployMode = tagged
+  // `readWorkerOrigin()` live rather than the module constant: same value by
+  // definition (the page origin never changes), but it keeps the branch testable
+  // — the constant is fixed at module load, before any test can stage a `self`.
+  if (tagged === 'standalone' && appConfig.baseUrl === readWorkerOrigin()) {
+    // The origin default here is the static server's own origin — no backend
+    // lives behind it. Swap to the dev backend default; a persisted server URL
+    // (applied later by the auth hydrate) still wins.
+    appConfig.baseUrl = DEV_BACKEND_URL
   }
-  return 'standalone'
 }
 
 class AppConfigState {

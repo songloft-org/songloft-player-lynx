@@ -232,6 +232,28 @@ describe('nativeModulesMap points at real, shipped ESM modules', () => {
 })
 
 /**
+ * The dev server must not serve bytes it read before the last build.
+ *
+ * `serve.mjs` keeps an in-memory file cache and sends `Cache-Control: no-cache`
+ * — but the cache itself had no invalidation, so it held whatever it read first
+ * until the process exited. After a `web:sync` the browser kept getting the
+ * previous bundle, and a whole round of Web verification "failed" against code
+ * that was never loaded (the tell was a Content-Length disagreeing with the file
+ * on disk). Keyed by mtime+size, the cache refreshes itself.
+ */
+test('serve.mjs invalidates its file cache when a file changes on disk', () => {
+  const serve = read('web/serve.mjs').replace(/\/\*[\s\S]*?\*\//g, '')
+  expect(
+    serve,
+    'serveFile must stat the file (mtime/size) so a rebuilt bundle is re-read',
+  ).toMatch(/statSync\(filePath\)/)
+  expect(
+    serve,
+    'the cache entry must carry the mtime stamp it was read at',
+  ).toMatch(/mtimeMs/)
+})
+
+/**
  * The divergence that hid the bug: two copies of the same web-core, differing
  * only in entry filename. Keep the dev server and the deployable on one set.
  */
@@ -248,4 +270,43 @@ test('serve.mjs and copy-bundle-web.mjs resolve the same web-core assets', () =>
       `${name} must not fall back to the dev middleware — its entry file is named differently`,
     ).not.toContain('web-rsbuild-server-middleware')
   }
+})
+
+/**
+ * The standalone deploy-mode tag: three parties must agree, byte for byte.
+ *
+ * `web/index.html` tags the page as a standalone deploy (static server, no
+ * backend behind the origin) via the `global-props` attribute — read
+ * synchronously when web-core upgrades the element, so the tag reaches the
+ * worker before the bundle runs (a `lynxviewready`-style assignment cannot:
+ * that event does not exist in web-core 0.23.1). The worker reads it under
+ * `GLOBAL_PROP_DEPLOY_MODE` in `app-config.ts`, and `copy-bundle-web.mjs
+ * --embedded` strips the attribute for same-origin builds. If any one drifts,
+ * an embedded page shows the API-address field and defaults to the dev
+ * backend, or a standalone one hides the field and defaults to a server with
+ * no API. Both fail only in a fresh browser (a stale persisted server URL
+ * masks them), which is exactly why this needs a gate.
+ */
+describe('the deployMode host tag is consistent across its three parties', () => {
+  const html = read('web/index.html')
+  const copy = read('scripts/copy-bundle-web.mjs')
+  const appConfig = read('src/core/config/app-config.ts')
+
+  /** The exact attribute string — identical on both sides of the strip. */
+  const TAG = `global-props='{"deployMode":"standalone"}'`
+
+  test('the host page tags the standalone deploy as a lynx-view attribute', () => {
+    expect(html).toContain(TAG)
+  })
+
+  test('the embedded copy pass strips exactly what the page writes', () => {
+    // Same literal both sides — a rewording on one side leaves embedded builds
+    // shipping the tag (the script throws at build time when the strip misses).
+    expect(copy).toContain(TAG)
+    expect(copy).toContain('--embedded')
+  })
+
+  test('the worker reads the same key the page writes', () => {
+    expect(appConfig).toContain("export const GLOBAL_PROP_DEPLOY_MODE = 'deployMode'")
+  })
 })

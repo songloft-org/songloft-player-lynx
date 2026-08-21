@@ -19,6 +19,7 @@ import { initBackController } from './core/navigation/back-controller.js'
 import { readDefaultPlayMode } from './features/settings/data/settings-prefs.js'
 import { usePlayerStore, restorePlaybackState } from './features/player/store/index.js'
 import { applySavedLanguage } from './i18n/index.js'
+import { applyHostDeployMode } from './core/config/app-config.js'
 import { initSystemAppearance } from './native/system-appearance.js'
 import { applySavedTheme } from './shared/theme/theme-model.js'
 import { router } from './router.js'
@@ -28,11 +29,17 @@ import { router } from './router.js'
 // imports are hoisted above, so this is as early as the app's own code gets.
 initClientLogger()
 
-// Before the first render, not in the async block below: the host boots with the
-// back key going straight to "exit the app", and `initBackController` is what
-// tells it otherwise. A page can be on screen (and its overlays openable) well
-// before an awaited startup step finishes.
+// Before the first render, not in the async block below: the back key boots
+// going straight to "exit the app", and `initBackController` is what tells it
+// otherwise. A page can be on screen (and its overlays openable) well before
+// an awaited startup step finishes.
 initBackController(router)
+
+// Before the first render too: the standalone web host tags the deploy mode in
+// `lynx.__globalProps`, which may land after `app-config` evaluates — before
+// this runs, the login page would hide the API-address field and default to
+// the static server's own origin, where no backend lives.
+applyHostDeployMode()
 
 root.render(<App />)
 

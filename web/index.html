@@ -243,9 +243,23 @@
 </head>
 <body>
   <!-- Remove transform-vh/vw: they cause content height mismatch and pull-to-refresh -->
+  <!--
+    `global-props` is read synchronously when web-core upgrades this element
+    (attributeChangedCallback → JSON.parse → globalProps), so the tag reaches the
+    worker BEFORE the bundle runs. The app cannot probe this on its own: the
+    worker realm has `self.location` in both deploys, so "is this a browser?"
+    cannot tell a standalone page (this static server — no backend, no /api
+    proxy) from an embedded one (same-origin backend). Without the tag, a fresh
+    browser gets the API-address field hidden AND the base URL defaulted to this
+    server's own origin, and cannot log in at all.
+    `copy-bundle-web.mjs --embedded` STRIPS this attribute for the embedded
+    build, where the same-origin probe is correct. Key must match
+    GLOBAL_PROP_DEPLOY_MODE in src/core/config/app-config.ts.
+  -->
   <lynx-view
     id="app"
     url="/main.lynx.bundle"
+    global-props='{"deployMode":"standalone"}'
   ></lynx-view>
 
   <!--
@@ -279,13 +293,15 @@
     (function() {
       var lynxView = document.getElementById('app');
 
-      lynxView.addEventListener('lynxviewready', function() {
-        lynxView.globalProps = {
-          systemTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
-          systemLocale: navigator.language.startsWith('zh') ? 'zh' : 'en',
-        };
-      });
-
+      /*
+        Initial theme/locale: there is deliberately NO globalProps assignment
+        here. The block this replaces listened for a `lynxviewready` event that
+        @lynx-js/web-core 0.23.1 never dispatches (verified against the shipped
+        client.js — only a post-first-frame `load` event exists), so the
+        assignment never ran; it was dead code, removed rather than "fixed".
+        Initial values that must precede the bundle belong in the
+        `global-props` attribute above, which IS read synchronously on upgrade.
+      */
       /*
         Two things this call used to get wrong, both silent:
 
