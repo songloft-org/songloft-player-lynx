@@ -109,6 +109,16 @@ export function PlaylistDetailPage() {
   const [pendingConfirm, setPendingConfirm] = useState<
     { kind: 'delete-playlist' } | { kind: 'remove-song'; song: Song } | { kind: 'remove-batch' } | null
   >(null)
+  /*
+   * The dialog stays mounted through its close animation, so `pendingConfirm`
+   * going null must not re-derive its text — otherwise cancelling flashes the
+   * fall-through branch (the multi-select "移除所选歌曲" copy) for a frame before
+   * unmounting. Render from the last non-null payload so the content is frozen
+   * while it fades out.
+   */
+  const lastConfirmRef = useRef(pendingConfirm)
+  if (pendingConfirm != null) lastConfirmRef.current = pendingConfirm
+  const confirmContent = pendingConfirm ?? lastConfirmRef.current
 
   const enterSortMode = () => {
     setSortMode(true)
@@ -493,15 +503,15 @@ export function PlaylistDetailPage() {
       */}
       <ConfirmDialog
         show={pendingConfirm != null}
-        title={pendingConfirm?.kind === 'delete-playlist'
+        title={confirmContent?.kind === 'delete-playlist'
           ? t('playlist.deleteTitle')
           : t('playlist.removeSongTitle')}
-        message={pendingConfirm?.kind === 'delete-playlist'
+        message={confirmContent?.kind === 'delete-playlist'
           ? t('playlist.deleteMessage')
-          : pendingConfirm?.kind === 'remove-song'
+          : confirmContent?.kind === 'remove-song'
             ? t('playlist.removeSongMessage')
             : t('playlist.removeSongsMessage')}
-        confirmLabel={pendingConfirm?.kind === 'delete-playlist'
+        confirmLabel={confirmContent?.kind === 'delete-playlist'
           ? t('playlist.deletePlaylist')
           : t('playlist.removeSong')}
         onConfirm={() => {
