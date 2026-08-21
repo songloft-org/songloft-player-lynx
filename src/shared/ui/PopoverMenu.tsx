@@ -9,16 +9,15 @@ import {
 } from '@lynx-js/lynx-ui-popover'
 
 import { useBackHandler } from '../nav/use-back-handler.js'
-import { Icon, ICON_COLORS } from './Icon.js'
-import type { IconName } from './icons.js'
+import { MenuItem } from './MenuItem.js'
+import type { MenuItemSpec } from './MenuItem.js'
 import './PopoverMenu.css'
 
-export interface PopoverMenuItem {
-  key: string
-  label: string
-  icon?: IconName
-  selected?: boolean
-}
+/**
+ * Kept as an alias so the many call sites that import `PopoverMenuItem` stay
+ * valid; the shape itself now lives with the shared row (`MenuItem.tsx`).
+ */
+export type PopoverMenuItem = MenuItemSpec
 
 export interface PopoverMenuProps {
   show: boolean
@@ -95,36 +94,15 @@ export function PopoverMenu({
         <PopoverBackdrop />
         <PopoverContent className={contentClassName ? `popover-menu ${contentClassName}` : 'popover-menu'}>
           {items.map((item) => (
-            <view
+            <MenuItem
               key={item.key}
-              className={item.selected
-                ? 'popover-menu__item popover-menu__item--selected'
-                : 'popover-menu__item'}
-              bindtap={() => {
+              item={item}
+              hideCheckmark={hideCheckmark}
+              onTap={() => {
                 onSelect(item.key)
                 onShowChange(false)
               }}
-            >
-              {item.icon != null && (
-                <view className='popover-menu__item-icon'>
-                  <Icon
-                    name={item.icon}
-                    size={20}
-                    color={item.selected ? ICON_COLORS.primary : ICON_COLORS.content}
-                  />
-                </view>
-              )}
-              <text className={item.selected
-                ? 'popover-menu__item-label popover-menu__item-label--selected'
-                : 'popover-menu__item-label'}>
-                {item.label}
-              </text>
-              {item.selected && !hideCheckmark && (
-                <view className='popover-menu__item-check'>
-                  <Icon name='check' size={16} color={ICON_COLORS.primary} />
-                </view>
-              )}
-            </view>
+            />
           ))}
         </PopoverContent>
       </PopoverPositioner>

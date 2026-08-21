@@ -79,6 +79,24 @@ vi.mock('../store/player-store.js', async () => {
   const { makePlayerStoreMock } = await import('../../../__tests__/_render-mocks.js')
   return makePlayerStoreMock(actual)
 })
+
+/*
+ * The player's overflow menu dispatches the song actions to the global
+ * overlays store (app-root mount). The zustand hook cannot run in this env,
+ * same crash class as the player store above.
+ */
+vi.mock('../../../shared/ui/song-row-overlays.js', () => ({
+  useSongRowOverlays: (selector: (s: Record<string, unknown>) => unknown) =>
+    selector({
+      menuSong: null,
+      menuView: 'menu',
+      deleteSong: null,
+      openMenu: vi.fn(),
+      closeMenu: vi.fn(),
+      requestDelete: vi.fn(),
+      cancelDelete: vi.fn(),
+    }),
+}))
 vi.mock('../store/lyric-store.js', async () => {
   const actual = await vi.importActual<typeof import('../store/lyric-store.js')>(
     '../store/lyric-store.js',

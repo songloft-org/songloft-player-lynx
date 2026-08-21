@@ -1,0 +1,145 @@
+/*
+ * Add-to-playlist sheet — bottom panel, same overlay layer as the other
+ * root-mounted surfaces (z-index: 100, see back-stack.ts).
+ */
+
+.atp {
+  position: fixed;
+  /* Explicit offsets: a fixed box with auto offsets falls back to its static
+     position, which for a root-route overlay is below the page. */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.atp__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--backdrop);
+}
+
+.atp__panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  /* Roughly the Flutter sheet's initial 50% with room to grow as it does. */
+  height: 62%;
+  background-color: var(--paper);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  padding-bottom: var(--space-4);
+}
+
+.atp__handle-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) 0;
+}
+
+.atp__handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--rule);
+}
+
+.atp__header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  border-bottom-width: 1px;
+  border-bottom-color: var(--line);
+}
+
+.atp__title {
+  font-size: var(--font-lg);
+  font-weight: bold;
+  color: var(--content);
+}
+
+.atp__count {
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+}
+
+.atp__create {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom-width: 1px;
+  border-bottom-color: var(--line);
+}
+
+.atp__create-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background-color: var(--neutral-faint);
+}
+
+.atp__create-text {
+  font-size: var(--font-md);
+  color: var(--content);
+}
+
+/* `flex: 1` + a scroll-view is what keeps the list inside the panel instead of
+   pushing past its bottom edge. */
+.atp__list {
+  flex: 1;
+}
+
+.atp__state {
+  padding: var(--space-6) var(--space-4);
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+  text-align: center;
+}
+
+.atp__state-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-6) var(--space-4);
+  gap: var(--space-3);
+}
+
+.atp__retry {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--primary);
+}
+
+.atp__retry-text {
+  font-size: var(--font-sm);
+  color: var(--primary);
+}
+
+.atp__footer {
+  padding: var(--space-3) 0;
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+  text-align: center;
+}
+
+.atp__footer-retry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

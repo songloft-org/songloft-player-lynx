@@ -14,6 +14,7 @@ import { playlistContext } from '../../player/domain/playback-context.js'
 import { getPlaylistApi } from '../api/index.js'
 import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
 import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
+import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
 import { MediaListItem } from '../../../shared/ui/MediaListItem.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { sortPlaylistsByName, sortPlaylistsByNumberPrefix } from '../domain/playlist-sort.js'
@@ -42,7 +43,7 @@ export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; view
   const [sortMode, setSortMode] = useState(false)
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
-  const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
   const [sortType, setSortType] = useState<string | null>(null)
   const sortItems: PopoverMenuItem[] = [
@@ -92,34 +93,35 @@ export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; view
   const enterSelectMode = () => {
     setSelectMode(true)
     setSelected(new Set())
-    setConfirmBatchDelete(false)
   }
   const exitSelectMode = () => {
     setSelectMode(false)
     setSelected(new Set())
-    setConfirmBatchDelete(false)
   }
 
   /*
-   * Peels the armed batch delete before leaving multi-select, so back undoes exactly
-   * the last thing the user did rather than throwing away the whole selection.
-   *
-   * The sort ActionSheet is absent on purpose: `ActionSheet` registers its own layer.
+   * Multi-select peels back with the back key; the delete dialog registers its
+   * own layer (see `ConfirmDialog`), so it is absent here on purpose.
    */
   useBackHandler(sortMode || selectMode, () => {
     if (sortMode) {
       setSortMode(false)
       return true
     }
-    if (confirmBatchDelete) {
-      setConfirmBatchDelete(false)
-      return true
-    }
     exitSelectMode()
     return true
   })
+
+  /*
+   * The delete button arms a full-screen dialog rather than relabelling itself
+   * (the old two-tap pattern): the armed label changed text on a bottom toolbar
+   * chip, which read as a glitch and reported as a misplaced confirm.
+   */
   const batchDelete = () => {
-    if (!confirmBatchDelete) { setConfirmBatchDelete(true); return }
+    setConfirmDelete(true)
+  }
+  const performBatchDelete = () => {
+    setConfirmDelete(false)
     const ids = Array.from(selected).filter((id) => !playlists.find((p) => p.id === id)?.isBuiltIn)
     void Promise.all(ids.map((id) => deleteMutation.mutateAsync(id))).then(exitSelectMode)
   }
@@ -384,12 +386,28 @@ export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; view
             </text>
             <view className='playlists__select-toolbar-btn' bindtap={batchDelete}>
               <text className='playlists__select-toolbar-btn-text'>
-                {confirmBatchDelete ? t('playlist.deleteConfirm') : t('playlist.deletePlaylist')}
+                {t('playlist.deletePlaylist')}
               </text>
             </view>
           </view>
         )
         : null}
+      {/*
+        * Full-screen delete confirm for the multi-selection — mounted at the
+        * page root, outside the scroll-view, so the dialog centres on the
+        * viewport instead of being laid out inside the scrolling column.
+        */}
+      <ConfirmDialog
+        show={confirmDelete}
+        title={t('playlist.deleteTitle')}
+        message={t('playlist.deletePlaylistsMessage')}
+        confirmLabel={t('playlist.deletePlaylist')}
+        onConfirm={performBatchDelete}
+        onCancel={() => setConfirmDelete(false)}
+        testId='playlists-delete-dialog'
+        confirmTestId='playlists-delete-confirm'
+        cancelTestId='playlists-delete-cancel'
+      />
 
     </view>
   )

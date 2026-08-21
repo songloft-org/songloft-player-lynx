@@ -57,6 +57,25 @@ vi.mock('../store/player-store.js', async () => {
   return makePlayerStoreMock(actual)
 })
 
+/*
+ * The overflow menu hands the song's actions to the global overlays store
+ * (mounted in the root route, outside this tree) — the zustand hook itself
+ * cannot run in this env, so the module is mocked with a spy for the dispatch.
+ */
+const { openMenuMock } = vi.hoisted(() => ({ openMenuMock: vi.fn() }))
+vi.mock('../../../shared/ui/song-row-overlays.js', () => ({
+  useSongRowOverlays: (selector: (s: Record<string, unknown>) => unknown) =>
+    selector({
+      menuSong: null,
+      menuView: 'menu',
+      deleteSong: null,
+      openMenu: openMenuMock,
+      closeMenu: vi.fn(),
+      requestDelete: vi.fn(),
+      cancelDelete: vi.fn(),
+    }),
+}))
+
 const { PlayerToolBar } = await import('../widgets/PlayerToolBar.js')
 const { PlayerMoreMenu } = await import('../widgets/PlayerMoreMenu.js')
 const { mockSong } = await import('../../../__tests__/_render-mocks.js')
@@ -129,8 +148,8 @@ test('opening the volume popover then the speed menu leaves one layer each', asy
   expect(getBackStackDepth()).toBe(1)
 })
 
-test('the overflow menu hands off to the song menu without stacking two layers', async () => {
-  const { getByTestId, getByText, queryByText } = await renderAndQuery(
+test('the overflow menu hands off to the global song menu without stacking two layers', async () => {
+  const { getByTestId, getByText } = await renderAndQuery(
     <PlayerMoreMenu song={mockSong()} onOpenSleepTimer={vi.fn()} timerActive={false} />,
   )
 
@@ -139,7 +158,9 @@ test('the overflow menu hands off to the song menu without stacking two layers',
   })
   expect(getBackStackDepth()).toBe(1)
 
-  // Selecting the row closes this menu and opens `SongContextMenu` one render later.
+  // Selecting the row closes this menu — the song menu itself now lives in the
+  // root route (`SongRowOverlays`), dispatched through the store, so the handoff
+  // is observed as "this layer let go + the store was asked to open".
   await act(async () => {
     fireEvent.tap(getByText('Song actions…'))
   })
@@ -147,19 +168,10 @@ test('the overflow menu hands off to the song menu without stacking two layers',
     await Promise.resolve()
   })
 
-  // The song menu is open…
-  expect(queryByText('Play next')).toBeInTheDocument()
-  // …and it is the *only* layer holding the back key. A depth of 2 here would mean
-  // the overflow menu never let go, i.e. two backdrops and a back press that leaves
-  // one of them on screen.
-  expect(getBackStackDepth()).toBe(1)
-
-  await act(async () => {
-    expect(dispatchBack()).toBe(true)
-  })
-  await act(async () => {
-    await Promise.resolve()
-  })
-  expect(queryByText('Play next')).not.toBeInTheDocument()
+  // The popover itself is gone: nothing in this tree holds the back key. A
+  // depth of 1 here would mean the menu never let go while the song menu took
+  // over — two backdrops and a back press that leaves one of them on screen.
   expect(getBackStackDepth()).toBe(0)
+  // And the song menu was asked for, with the player's current song.
+  expect(openMenuMock).toHaveBeenCalledWith(mockSong())
 })

@@ -1,12 +1,12 @@
 import { useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Input } from '@lynx-js/lynx-ui-input'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { useCreatePlaylistMutation } from '../data/playlist-mutations.js'
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
+import { PlaylistFormFields } from '../widgets/PlaylistFormFields.js'
 import './CreatePlaylistPage.css'
 
 type PlaylistType = 'normal' | 'radio'
@@ -68,20 +68,11 @@ export function CreatePlaylistPage() {
       </view>
 
       <scroll-view className='create-playlist__form' scroll-y>
-        <text className='create-playlist__label'>{t('playlist.namePlaceholder')}</text>
-        <Input
-          className='create-playlist__input'
-          value={name}
-          onInput={(v: string) => setName(v)}
-          placeholder={t('playlist.namePlaceholder')}
-        />
-
-        <text className='create-playlist__label'>{t('playlist.descriptionPlaceholder')}</text>
-        <Input
-          className='create-playlist__input'
-          value={desc}
-          onInput={(v: string) => setDesc(v)}
-          placeholder={t('playlist.descriptionPlaceholder')}
+        <PlaylistFormFields
+          name={name}
+          onNameChange={setName}
+          description={desc}
+          onDescriptionChange={setDesc}
         />
 
         <view className='create-playlist__btn' bindtap={onSubmit}>

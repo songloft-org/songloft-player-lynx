@@ -58,6 +58,13 @@ vi.mock('../store/index.js', async () => {
 vi.mock('../../../shared/ui/ToastHost.js', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockToastHost(),
 )
+// The root route also mounts `SongRowOverlays` (context menu + delete confirm):
+// its zustand subscription is the same crash class, and the lynx-ui Dialog
+// inside `ConfirmDialog` corrupts the reconciler like Input/Switch do.
+// No-op here; behaviour is covered by song-list-row / song-row-overlays tests.
+vi.mock('../../../shared/ui/SongRowOverlays.js', () => ({
+  SongRowOverlays: () => null,
+}))
 
 /**
  * Login-page render smoke, reusing the batch-1 ReactLynx testing-library setup.

@@ -1,0 +1,78 @@
+/*
+ * Playlist description panel — LUNA tokens only. Same shape as
+ * `PlayHistoryPanel.css`: a fixed root, an absolute backdrop, and a bottom
+ * sheet-like panel. The description is plain text, so the body is a single
+ * scroll-view with generous line-height for readability.
+ */
+
+.playlist-desc {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.playlist-desc__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--backdrop);
+}
+
+.playlist-desc__panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 60%;
+  padding-bottom: var(--space-4);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  background-color: var(--paper);
+}
+
+.playlist-desc__header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-4);
+  border-bottom-width: 1px;
+  border-bottom-color: var(--line);
+}
+
+.playlist-desc__title {
+  flex: 1;
+  color: var(--content);
+  font-size: var(--font-md);
+  font-weight: bold;
+  /* Explicit line box so CJK ascenders are not clipped by the header padding. */
+  line-height: var(--font-lg);
+}
+
+.playlist-desc__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+}
+
+.playlist-desc__scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.playlist-desc__text {
+  padding: var(--space-4);
+  color: var(--content-2);
+  font-size: var(--font-sm);
+  line-height: var(--font-xl);
+  white-space: normal;
+}

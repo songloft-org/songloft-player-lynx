@@ -66,6 +66,7 @@ export type IconName =
   | 'tune'
   | 'cast'
   | 'more'
+  | 'eye'
 
 /** Shared stroke attributes for line icons — Muse §4.5 stroke-width 1.6. */
 function stroke(color: string): string {
@@ -340,6 +341,11 @@ const ICONS: Record<IconName, (color: string) => string> = {
     `<circle cx="5" cy="12" r="1.9" ${fill(c)}/>` +
     `<circle cx="12" cy="12" r="1.9" ${fill(c)}/>` +
     `<circle cx="19" cy="12" r="1.9" ${fill(c)}/>`,
+
+  // Eye: playlist visibility toggle (hide / show).
+  eye: (c) =>
+    `<path d="M2.5 12s3.2-6.5 9.5-6.5S21.5 12 21.5 12s-3.2 6.5-9.5 6.5S2.5 12 2.5 12Z" ${stroke(c)}/>` +
+    `<circle cx="12" cy="12" r="2.8" ${stroke(c)}/>`,
 }
 
 /** Build a complete inline SVG document string for `name`, colored with `color`. */

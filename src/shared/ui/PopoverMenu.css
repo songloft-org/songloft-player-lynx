@@ -105,6 +105,10 @@
   font-weight: 500;
 }
 
+.popover-menu__item-label--danger {
+  color: var(--danger);
+}
+
 .popover-menu__item-check {
   display: flex;
   align-items: center;

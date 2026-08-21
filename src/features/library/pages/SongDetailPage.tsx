@@ -1,5 +1,5 @@
 import { useEffect, useState } from '@lynx-js/react'
-import { useNavigate, useParams } from '@tanstack/react-router'
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
 
@@ -17,10 +17,12 @@ export function SongDetailPage() {
   const { t } = useTranslation()
   const params = useParams({ strict: false }) as { songId?: string }
   const id = Number(params.songId ?? 0) || 0
+  // `?edit=1` opens the form directly — the song menu's "edit" entry point.
+  const search = useSearch({ strict: false }) as { edit?: boolean }
 
   const [song, setSong] = useState<Song | null>(null)
   const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(search.edit === true)
 
   // Inline edit form: back cancels editing rather than leaving the page.
   useBackHandler(editing, () => {

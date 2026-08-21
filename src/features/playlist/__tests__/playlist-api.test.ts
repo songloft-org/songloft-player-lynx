@@ -285,6 +285,24 @@ describe('PlaylistApi endpoints', () => {
     expect(sentBody).toEqual({ song_ids: [1, 2, 3] })
   })
 
+  /*
+   * The counts drive which message the add-to-playlist sheet shows ("added 3"
+   * vs "added 1, skipped 2"), so they have to survive parsing. Swagger types the
+   * body as an open object, hence the defaults below rather than a schema.
+   */
+  test('addSongsToPlaylist reports the added / skipped counts', async () => {
+    const cap = capture({ added: 2, skipped: 1 })
+    const result = await new PlaylistApi(client(cap.transport)).addSongsToPlaylist(7, [1, 2, 3])
+    expect(result).toEqual({ added: 2, skipped: 1 })
+  })
+
+  test('addSongsToPlaylist defaults missing counts to zero', async () => {
+    // A leaner response must degrade to a plain success, not to NaN in the toast.
+    const cap = capture({ message: 'ok' })
+    const result = await new PlaylistApi(client(cap.transport)).addSongsToPlaylist(7, [1])
+    expect(result).toEqual({ added: 0, skipped: 0 })
+  })
+
   test('removeSongFromPlaylist sends DELETE /playlists/{id}/songs/{songId}', async () => {
     const cap = capture({})
     await new PlaylistApi(client(cap.transport)).removeSongFromPlaylist(7, 42)

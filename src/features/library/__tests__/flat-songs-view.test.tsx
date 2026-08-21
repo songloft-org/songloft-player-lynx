@@ -50,9 +50,15 @@ vi.mock('../widgets/VirtualList.js', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockVirtualList(),
 )
 
-vi.mock('../widgets/FavoriteSongRow.js', async () => {
+/*
+ * The row is mocked down to the plain `SongRow`: this file tests the view's
+ * search / sort / multi-select wiring, while `SongListRow`'s own menu /
+ * favorite / responsive behaviour has its dedicated test file (which mocks
+ * the hooks this stand-in skips: favorites, player store, dialog).
+ */
+vi.mock('../widgets/SongListRow.js', async () => {
   const { SongRow } = await import('../widgets/SongRow.js')
-  return { FavoriteSongRow: SongRow }
+  return { SongListRow: SongRow }
 })
 
 vi.mock('@lynx-js/lynx-ui-input', () => ({

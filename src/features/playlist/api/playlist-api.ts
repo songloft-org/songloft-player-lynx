@@ -29,6 +29,12 @@ export interface PageParams {
   offset?: number
 }
 
+/** Outcome of an add-songs call: the server skips duplicates and mismatched types. */
+export interface AddSongsResult {
+  added: number
+  skipped: number
+}
+
 export interface CreatePlaylistParams {
   name: string
   description?: string
@@ -157,11 +163,26 @@ export class PlaylistApi {
     await this.client.delete(`${apiPrefix}/playlists/${id}`)
   }
 
-  async addSongsToPlaylist(id: number, songIds: number[]): Promise<void> {
-    await this.client.post(
+  /**
+   * Adds songs and reports what the server actually did.
+   *
+   * The counts matter to the caller: the backend skips songs already in the
+   * playlist (and type-incompatible ones), so "added 3" and "added 1, skipped 2"
+   * are different outcomes and the add-to-playlist sheet says which. Swagger
+   * types the 200 body as an open object; the two fields are the ones the
+   * Flutter client reads (`playlist_api.dart`), and both default to 0 so an
+   * older/leaner response degrades to a plain success rather than `NaN`.
+   */
+  async addSongsToPlaylist(id: number, songIds: number[]): Promise<AddSongsResult> {
+    const res = await this.client.post<Record<string, unknown>>(
       `${apiPrefix}/playlists/${id}/songs`,
       buildAddSongsBody(songIds),
     )
+    const data = res.data ?? {}
+    return {
+      added: Number(data.added ?? 0) || 0,
+      skipped: Number(data.skipped ?? 0) || 0,
+    }
   }
 
   async removeSongFromPlaylist(playlistId: number, songId: number): Promise<void> {

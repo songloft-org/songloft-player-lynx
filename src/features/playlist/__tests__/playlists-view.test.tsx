@@ -6,10 +6,11 @@ import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/tes
 
 import type { Playlist } from '../../../models/playlist.js'
 
-const { listHook, createMutationHook, reorderMutationHook } = vi.hoisted(() => ({
+const { listHook, createMutationHook, reorderMutationHook, deleteMutationHook } = vi.hoisted(() => ({
   listHook: vi.fn(),
   createMutationHook: vi.fn(),
   reorderMutationHook: vi.fn(),
+  deleteMutationHook: vi.fn(),
 }))
 
 vi.mock('react-i18next', async () =>
@@ -31,6 +32,16 @@ vi.mock('@lynx-js/lynx-ui-sortable', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSortable(),
 )
 
+// The batch-delete confirm dialog (`ConfirmDialog`) — same stand-in shape as
+// `playlist-detail.test.tsx`.
+vi.mock('@lynx-js/lynx-ui-dialog', () => ({
+  DialogRoot: ({ children, show }: { children: unknown; show: boolean }) => (show ? <view>{children as never}</view> : null),
+  DialogView: ({ children }: { children: unknown }) => <view>{children as never}</view>,
+  DialogBackdrop: ({ children }: { children: unknown }) => <view>{children as never}</view>,
+  DialogContent: ({ children }: { children: unknown }) => <view>{children as never}</view>,
+  DialogClose: ({ children }: { children: unknown }) => <view>{children as never}</view>,
+}))
+
 vi.mock('../data/playlist-query.js', () => ({
   usePlaylistsInfiniteQuery: listHook,
   playlistQueryKeys: { list: () => [] },
@@ -39,7 +50,7 @@ vi.mock('../data/playlist-query.js', () => ({
 vi.mock('../data/playlist-mutations.js', () => ({
   useCreatePlaylistMutation: createMutationHook,
   useReorderPlaylistsMutation: reorderMutationHook,
-  useDeletePlaylistMutation: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(async () => {}) }),
+  useDeletePlaylistMutation: deleteMutationHook,
 }))
 
 const { PlaylistsView } = await import('../widgets/PlaylistsView.js')
@@ -89,6 +100,7 @@ beforeEach(() => {
   listHook.mockReturnValue(listResult([{ playlists: [], total: 0 }]))
   createMutationHook.mockReturnValue(mutationResult())
   reorderMutationHook.mockReturnValue(mutationResult())
+  deleteMutationHook.mockReturnValue({ mutate: vi.fn(), mutateAsync: vi.fn(async () => {}), isPending: false })
 })
 
 afterEach(() => {
@@ -309,4 +321,42 @@ test('already-sorted playlists shows the already-sorted banner', async () => {
   expect(shown).not.toBeNull()
   expect(shown?.tone).toBe('success')
   expect(shown?.text).toBe('Playlists already in this order')
+})
+
+test('multi-select delete goes through a full-screen dialog before deleting', async () => {
+  const mutateAsync = vi.fn(async () => {})
+  deleteMutationHook.mockReturnValue({ mutate: vi.fn(), mutateAsync, isPending: false })
+  listHook.mockReturnValue(
+    listResult([{ playlists: [makePlaylist(1), makePlaylist(2, { isBuiltIn: true })], total: 2 }]),
+  )
+  const { queryByTestId, getByTestId, queryByText, getByText } = await renderView()
+
+  // Enter multi-select and pick the (non-built-in) first playlist.
+  await act(async () => {
+    fireEvent.tap(getByTestId('playlists-select-toggle')!)
+    await Promise.resolve()
+  })
+  await act(async () => {
+    fireEvent.tap(getByText('Playlist 1')!)
+    await Promise.resolve()
+  })
+
+  // The old behaviour armed the button itself (a relabelled chip on the bottom
+  // toolbar); it must now open the centred dialog instead.
+  expect(queryByTestId('playlists-delete-dialog')).not.toBeInTheDocument()
+  expect(queryByText('Tap again to delete')).not.toBeInTheDocument()
+  await act(async () => {
+    fireEvent.tap(getByText('Delete')!)
+    await Promise.resolve()
+  })
+  expect(queryByTestId('playlists-delete-dialog')).toBeInTheDocument()
+
+  await act(async () => {
+    fireEvent.tap(getByTestId('playlists-delete-confirm')!)
+    await Promise.resolve()
+  })
+  // Only the selected, non-built-in playlist is deleted.
+  expect(mutateAsync).toHaveBeenCalledTimes(1)
+  expect(mutateAsync).toHaveBeenCalledWith(1)
+  expect(queryByTestId('playlists-delete-dialog')).not.toBeInTheDocument()
 })

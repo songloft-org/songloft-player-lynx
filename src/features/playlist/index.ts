@@ -1,4 +1,5 @@
 export { CreatePlaylistPage } from './pages/CreatePlaylistPage.js'
+export { EditPlaylistPage } from './pages/EditPlaylistPage.js'
 export { PlaylistDetailPage } from './pages/PlaylistDetailPage.js'
 export { PlaylistsView } from './widgets/PlaylistsView.js'
 export { PlaylistCard } from './widgets/PlaylistCard.js'

@@ -6,7 +6,7 @@ import type { Song } from '../../../models/song.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
 import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
-import { SongContextMenu } from '../../../shared/ui/SongContextMenu.js'
+import { useSongRowOverlays } from '../../../shared/ui/song-row-overlays.js'
 
 export interface PlayerMoreMenuProps {
   song: Song
@@ -26,8 +26,8 @@ export interface PlayerMoreMenuProps {
 export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMoreMenuProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const openMenu = useSongRowOverlays((s) => s.openMenu)
   const [show, setShow] = useState(false)
-  const [showSongActions, setShowSongActions] = useState(false)
 
   const items: PopoverMenuItem[] = [
     /*
@@ -66,28 +66,9 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
         onSelect={(key) => {
           if (key === 'equalizer') void navigate({ to: '/settings/eq' })
           else if (key === 'sleepTimer') onOpenSleepTimer()
-          else setShowSongActions(true)
+          else openMenu(song)
         }}
       />
-      {/*
-        * Mounted only while open, unlike the library's call sites which keep it mounted
-        * with `song = null`.
-        *
-        * Its `usePlaylistsInfiniteQuery` has no `staleTime`, so merely being mounted
-        * refetches the playlist list — and this component lives in the player, which the
-        * user opens constantly. Keeping it mounted here bought a network request per
-        * player open, for a menu that is mostly not used. Unmounting also resets the
-        * sub-view state its own docs otherwise reset by hand on close.
-        *
-        * This does leave its `useBackHandler` active at mount, which the back-navigation
-        * rules warn against. That warning is about layers registering during *page*
-        * mount and outranking a parent; this one mounts on a tap, long afterwards, so it
-        * lands on top exactly as intended — verified in `player-overlay-back.test.tsx`,
-        * not assumed.
-        */}
-      {showSongActions
-        ? <SongContextMenu song={song} onClose={() => setShowSongActions(false)} />
-        : null}
     </>
   )
 }

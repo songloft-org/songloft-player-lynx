@@ -1,0 +1,47 @@
+/*
+ * Playlist-detail toolbar — a row of compact trigger chips, mirroring
+ * `LibraryToolbar.css` (the flat-songs toolbar). LUNA tokens only.
+ */
+
+.playlist-toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  gap: var(--space-2);
+}
+
+.playlist-toolbar__btn {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  background-color: var(--neutral-faint);
+  gap: var(--space-1);
+}
+
+.playlist-toolbar__btn--active {
+  background-color: var(--primary);
+}
+
+.playlist-toolbar__btn--disabled {
+  opacity: 0.5;
+}
+
+.playlist-toolbar__btn-text {
+  color: var(--content);
+  font-size: var(--font-xs);
+}
+
+.playlist-toolbar__btn--active .playlist-toolbar__btn-text {
+  color: var(--primary-content);
+}
+
+.playlist-toolbar__btn--disabled .playlist-toolbar__btn-text {
+  color: var(--content-muted);
+}
+
+.playlist-toolbar__spacer {
+  flex: 1;
+}

@@ -10,12 +10,13 @@ import {
 import { ensureRouterEnv } from './shims/router-env.js'
 import { ShellLayout } from './shared/layouts/ShellLayout.js'
 import { ThemeProvider } from './shared/theme/ThemeProvider.js'
+import { SongRowOverlays } from './shared/ui/SongRowOverlays.js'
 import { ToastHost } from './shared/ui/ToastHost.js'
 import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { AddSongsPage, CategorySongsPage, LibraryLayout, LibraryPage, SongDetailPage } from './features/library/index.js'
 import { migrateLibrarySearch, type LibraryViewKey } from './features/library/domain/library-views.js'
-import { CreatePlaylistPage, PlaylistDetailPage } from './features/playlist/index.js'
+import { CreatePlaylistPage, EditPlaylistPage, PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
 import { AboutPage, AppearancePage, CacheManagePage, DataPage, DiagnosticsPage, EqualizerPage, LicensesPage, LyricsPage, PlaybackPage, ProxySettingsPage, ServerEditPage, ServerListPage, SettingsPage, ThemePacksPage, UpgradePage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
@@ -52,6 +53,16 @@ const rootRoute = createRootRoute({
         (/player, /login, lyrics edit/calibrate, dlna) get toasts too.
       */}
       <ToastHost />
+      {/*
+        The song-row context menu / delete confirm. Same two reasons as
+        ToastHost, plus one more: `SongContextMenu` calls
+        `useNavigateToSongDetail()` and needs the Router context. It used to
+        be a sibling of <RouterProvider> in App.tsx — fine on native, but on
+        Web that left it outside `.theme-root` (every `var(--*)` resolved to
+        empty: the dialog rendered unstyled and unclickable) and outside the
+        Router context (the context menu never mounted at all).
+      */}
+      <SongRowOverlays />
     </ThemeProvider>
   ),
 })
@@ -316,9 +327,19 @@ const categorySongsRoute = createRoute({
   component: CategorySongsPage,
 })
 
+/**
+ * `/library/song/$songId` — song detail, inside the library layout.
+ *
+ * `edit` opens straight into the inline edit form, which is what the song menu's
+ * "edit" item needs: this app has no separate song-edit page, the form lives on
+ * the detail page. Declared optional so unrelated navigations to this route stay
+ * type-valid (same pattern as `libraryRoute` / `categorySongsRoute`).
+ */
 const songDetailRoute = createRoute({
   getParentRoute: () => libraryLayoutRoute,
   path: '/library/song/$songId',
+  validateSearch: (search: Record<string, unknown>): { edit?: boolean } =>
+    search.edit === true || search.edit === 'true' ? { edit: true } : {},
   component: SongDetailPage,
 })
 
@@ -334,6 +355,13 @@ const createPlaylistRoute = createRoute({
   component: CreatePlaylistPage,
 })
 
+/** `/playlists/$id/edit` — playlist edit form (batch 6+): back goes to the detail page. */
+const editPlaylistRoute = createRoute({
+  getParentRoute: () => libraryLayoutRoute,
+  path: '/playlists/$id/edit',
+  component: EditPlaylistPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   playerRoute,
@@ -346,6 +374,7 @@ const routeTree = rootRoute.addChildren([
       libraryRoute,
       addSongsRoute,
       createPlaylistRoute,
+      editPlaylistRoute,
       categorySongsRoute,
       songDetailRoute,
       playlistDetailRoute,

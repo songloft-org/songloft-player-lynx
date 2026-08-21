@@ -20,7 +20,7 @@ import { useSongsInfiniteQuery } from '../data/songs-query.js'
 import {
   LIBRARY_VIEW_LABEL_KEY,
 } from '../domain/library-views.js'
-import { SongRow } from '../widgets/SongRow.js'
+import { SongListRow } from '../widgets/SongListRow.js'
 import { VirtualList } from '../widgets/VirtualList.js'
 import './CategorySongsPage.css'
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
@@ -174,7 +174,7 @@ export function CategorySongsPage() {
                   items={songs}
                   itemKey={(song) => String(song.id)}
                   renderItem={(song, index) => (
-                    <SongRow song={song} index={index} onTap={onTapSong} />
+                    <SongListRow song={song} index={index} onTap={onTapSong} />
                   )}
                   onEndReached={onEndReached}
                   footer={songsQuery.isFetchingNextPage

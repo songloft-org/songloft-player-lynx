@@ -72,6 +72,8 @@
 .playlist-detail__action-text {
   color: var(--content-2);
   font-size: var(--font-sm);
+  /* A squeezed flex row breaks the label mid-word ("排/序") — never wrap it. */
+  white-space: nowrap;
 }
 
 .playlist-detail__action-text--danger {
@@ -103,26 +105,12 @@
   position: relative;
 }
 
-.playlist-detail__cover-upload {
-  position: absolute;
-  right: 4px;
-  bottom: 4px;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 14px;
-  background-color: var(--neutral-faint);
-  opacity: 0.9;
-}
-
 /*
  * Cap the meta column at the cover height (96px). The title and song count are
- * stable, always-visible lines at the top; only the description scrolls, in the
- * space left below them. This keeps the count from being pushed off-screen by a
- * long description (it is a summary, not prose) while still letting overlong
- * descriptions overflow without growing the header past the cover.
+ * stable, always-visible lines at the top; the description is clamped to two
+ * lines below them (tapping it opens the full text in a bottom panel). This
+ * keeps the count from being pushed off-screen by a long description (it is a
+ * summary, not prose) while the header never grows past the cover.
  */
 .playlist-detail__meta {
   display: flex;
@@ -131,13 +119,6 @@
   height: 96px;
   margin-left: var(--space-4);
   min-width: 0;
-}
-
-.playlist-detail__desc-scroll {
-  flex: 1;
-  width: 100%;
-  min-height: 0;
-  margin-top: var(--space-2);
 }
 
 .playlist-detail__name {
@@ -150,8 +131,24 @@
 }
 
 .playlist-detail__desc {
+  margin-top: var(--space-2);
   color: var(--content-2);
   font-size: var(--font-sm);
+  line-height: var(--font-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  /*
+   * Two-line clamp on Web (the standard properties survive the web encode);
+   * on the native Lynx template encoder `-webkit-box-orient` /
+   * `-webkit-line-clamp` are STRIPPED with a build warning, so the clamp is
+   * backed by a hard two-line `max-height` (2 × --font-md = 32px). Without it
+   * the un-clamped text would be cut mid-glyph by the 96px meta column.
+   */
+  max-height: 32px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .playlist-detail__count {
@@ -208,52 +205,10 @@
   color: var(--danger);
 }
 
-.playlist-detail__edit-form {
-  display: flex;
-  flex-direction: column;
-  padding: var(--space-2) var(--space-4) var(--space-4) var(--space-4);
-}
-
-.playlist-detail__edit-input {
-  height: 44px;
-  padding: 0 var(--space-4);
-  border-radius: var(--radius-sm);
-  background-color: var(--neutral-faint);
-  border: 1px solid var(--line);
-  color: var(--content);
-  font-size: var(--font-md);
-  margin-bottom: var(--space-2);
-  -x-placeholder-color: var(--content-muted);
-}
-
-.playlist-detail__edit-actions {
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
-  margin-top: var(--space-2);
-}
-
-.playlist-detail__edit-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  margin-left: var(--space-2);
-}
-
-.playlist-detail__edit-btn--primary {
-  background-color: var(--primary);
-}
-
-.playlist-detail__edit-btn-text {
-  color: var(--content-2);
-  font-size: var(--font-sm);
-}
-
-.playlist-detail__edit-btn-text--primary {
-  color: var(--primary-content);
-}
+/*
+ * The inline edit form moved to `/playlists/$id/edit`; the `__edit-*` rules
+ * went with it. Cover upload moved there too (`__cover-upload`).
+ */
 
 .playlist-detail__song-row-wrapper {
   display: flex;
@@ -327,31 +282,10 @@
   -x-placeholder-color: var(--content-muted);
 }
 
-.playlist-detail__sort-bar {
-  display: flex;
-  flex-direction: row;
-  padding: var(--space-2) var(--space-4);
-  gap: var(--space-2);
-}
-
-.playlist-detail__sort-chip {
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-pill);
-  background-color: var(--paper);
-}
-
-.playlist-detail__sort-chip--active {
-  background-color: var(--primary);
-}
-
-.playlist-detail__sort-chip-text {
-  font-size: var(--font-sm);
-  color: var(--content-muted);
-}
-
-.playlist-detail__sort-chip-text--active {
-  color: var(--primary-content);
-}
+/*
+ * Sort-bar chips retired in favour of `PlaylistToolbar` (popover-driven);
+ * `.playlist-detail__sort-bar` / `__sort-chip*` rules removed with the JSX.
+ */
 
 .playlist-detail__sort-scroll {
   width: 100%;

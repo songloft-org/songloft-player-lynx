@@ -53,6 +53,13 @@ export interface RouteBackContext {
   lastShellLocation: string
   /** The library's last sub-view, so returning to it does not reset the view. */
   lastLibrarySearch: LibrarySearchLike
+  /**
+   * Where the song detail page was entered from, recorded by the navigation
+   * helper (`navigate-to-song-detail.ts`). The song page is reachable from the
+   * library, a playlist detail, a facet drill-in and the player, and back must
+   * return to that origin — the library default is only for direct entry.
+   */
+  songDetailFrom?: string | null
 }
 
 /**
@@ -106,10 +113,28 @@ export function resolveRouteBack(
     return { kind: 'navigate', to: '/library', librarySearch: { view: field } }
   }
 
-  // Song detail and "add songs" used to drop the search and reset the library to
-  // its first view. Restoring it here fixes that as a side effect of unifying.
-  if (pathname.startsWith('/library/song/') || pathname === '/library/add') {
+  // Song detail returns to the page it was opened from (playlist detail, facet
+  // drill-in, the player…), which only the recorded origin can name — the
+  // history stack cannot (every navigation is a push). Falls back to the
+  // library when nothing was recorded (e.g. direct URL entry).
+  //
+  // "Add songs" resets the library to its last view, as before.
+  if (pathname.startsWith('/library/song/')) {
+    const from = ctx.songDetailFrom
+    if (from && from !== pathname) return { kind: 'navigate', to: from }
     return { kind: 'navigate', to: '/library', librarySearch: ctx.lastLibrarySearch }
+  }
+  if (pathname === '/library/add') {
+    return { kind: 'navigate', to: '/library', librarySearch: ctx.lastLibrarySearch }
+  }
+
+  // Editing a playlist returns to that playlist's detail page — NOT to the shell
+  // tab like every other `/playlists/…` path below. Must be matched before the
+  // prefix rule, or the edit form's back arrow would kick the user out of the
+  // playlist entirely.
+  const editMatch = /^\/playlists\/(\d+)\/edit$/.exec(pathname)
+  if (editMatch) {
+    return { kind: 'navigate', to: `/playlists/${editMatch[1]}` }
   }
 
   // Every remaining settings sub-page returns to the settings root — the

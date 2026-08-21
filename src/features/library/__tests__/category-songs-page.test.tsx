@@ -43,6 +43,12 @@ vi.mock('../widgets/VirtualList.js', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockVirtualList(),
 )
 
+/* Row mocked down to the plain `SongRow` — see flat-songs-view.test.tsx. */
+vi.mock('../widgets/SongListRow.js', async () => {
+  const { SongRow } = await import('../widgets/SongRow.js')
+  return { SongListRow: SongRow }
+})
+
 const { CategorySongsPage } = await import('../pages/CategorySongsPage.js')
 
 function makeSong(id: number, over: Partial<Song> = {}): Song {

@@ -1,0 +1,26 @@
+/*
+ * Input-dialog extras. The surface, title, actions row and buttons all come from
+ * `ConfirmDialog.css` (imported alongside this file) — including the affirmative
+ * button variant, which lives there so the confirmation-dialog family stays in
+ * one stylesheet (`app-switch-css.test.ts` enforces that). Only the field itself
+ * is here.
+ */
+
+.prompt-dialog__field {
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+/* Same treatment as every other text field in the app — the shape
+   `input-css.test.ts` requires: neutral-faint fill, radius-sm, muted
+   placeholder. */
+.prompt-dialog__input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--neutral-faint);
+  border: 1px solid var(--line);
+  font-size: var(--font-sm);
+  color: var(--content);
+  -x-placeholder-color: var(--content-muted);
+}

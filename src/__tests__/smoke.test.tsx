@@ -148,6 +148,29 @@ vi.mock('../shared/ui/ToastHost.js', async () =>
   (await import('./_render-mocks.js')).mockToastHost(),
 )
 
+// The root route also mounts the song-row overlays (`SongRowOverlays`), whose
+// zustand subscription is that same crash class. No-op here; the overlays'
+// own behaviour is covered by song-list-row.test.tsx against the real store.
+vi.mock('../shared/ui/SongRowOverlays.js', () => ({
+  SongRowOverlays: () => null,
+}))
+
+// The player's overflow menu (and the song rows inside the history panel)
+// dispatch through the overlays store — the zustand hook is the same crash
+// class, so it is mocked to a static state no component will act on.
+vi.mock('../shared/ui/song-row-overlays.js', () => ({
+  useSongRowOverlays: (selector: (s: Record<string, unknown>) => unknown) =>
+    selector({
+      menuSong: null,
+      menuView: 'menu',
+      deleteSong: null,
+      openMenu: vi.fn(),
+      closeMenu: vi.fn(),
+      requestDelete: vi.fn(),
+      cancelDelete: vi.fn(),
+    }),
+}))
+
 /**
  * Renders a fresh app router seeded at `entry` (memory history) and returns the
  * queries bound to the rendered tree.

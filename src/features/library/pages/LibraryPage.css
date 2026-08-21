@@ -184,6 +184,28 @@
   padding: var(--space-1);
 }
 
+/* Row-tail overflow button + wide-screen shortcut buttons (see `SongListRow`). */
+.song-row__more {
+  margin-left: var(--space-2);
+  padding: var(--space-1);
+}
+
+.song-row__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-left: var(--space-2);
+}
+
+.song-row__action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+}
+
 /* Current song highlight */
 .song-row--current .song-row__title {
   color: var(--accent);

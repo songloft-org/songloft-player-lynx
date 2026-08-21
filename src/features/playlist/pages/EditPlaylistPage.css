@@ -1,0 +1,90 @@
+/* Content only; the wide-screen rail belongs to the route layout (see CreatePlaylistPage.css). */
+.edit-playlist {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.edit-playlist__topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+}
+
+.edit-playlist__back { padding: var(--space-1); }
+
+.edit-playlist__title {
+  flex: 1;
+  font-size: var(--font-lg);
+  font-weight: bold;
+  color: var(--content);
+}
+
+.edit-playlist__form {
+  flex: 1;
+  padding: 0 var(--space-4);
+}
+
+.edit-playlist__state {
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+  margin-top: var(--space-4);
+}
+
+.edit-playlist__state--error {
+  color: var(--danger);
+}
+
+.edit-playlist__cover-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.edit-playlist__cover {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-md);
+  background-color: var(--neutral-faint);
+}
+
+.edit-playlist__cover--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-playlist__upload-btn {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--neutral-faint);
+  gap: var(--space-1);
+}
+
+.edit-playlist__upload-btn-text {
+  font-size: var(--font-sm);
+  color: var(--content);
+}
+
+.edit-playlist__btn {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+  align-items: center;
+}
+
+.edit-playlist__btn-text {
+  font-size: var(--font-sm);
+  color: var(--primary-content);
+  font-weight: bold;
+  text-align: center;
+}

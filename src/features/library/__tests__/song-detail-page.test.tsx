@@ -9,6 +9,8 @@ vi.mock('react-i18next', async () =>
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
   useParams: () => ({ songId: '42' }),
+  // The page reads `?edit` to decide whether it opens straight into the form.
+  useSearch: () => ({}),
 }))
 vi.mock('@lynx-js/lynx-ui-input', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),

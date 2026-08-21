@@ -1,0 +1,82 @@
+/*
+ * Top-level menu surface. Shares the row styles with the anchored popover menu
+ * (`PopoverMenu.css`, imported alongside this file) — only the container differs.
+ */
+
+.global-menu {
+  position: fixed;
+  /* Both offsets are load-bearing: a fixed box with auto offsets resolves to its
+     static position, which for a root-route overlay is below the page content.
+     The popover backdrop shipped exactly that bug (see PopoverMenu.css). */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.global-menu__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--backdrop);
+}
+
+/* Undocked default: bottom sheet. Reachable by thumb, and the form the song
+   menu has always had — the anchored variant below is the opt-in. */
+.global-menu__panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  max-height: 60%;
+  padding-bottom: var(--space-6);
+  background-color: var(--paper);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+}
+
+/*
+ * Anchored variant: a popover beside the trigger. `left`/`top` arrive as inline
+ * style from the measured rect, so the offsets here must be released — `bottom`
+ * and `right` from the docked rule would otherwise stretch the panel across the
+ * screen and fight the inline `top`.
+ */
+.global-menu__panel--anchored {
+  bottom: auto;
+  right: auto;
+  min-width: 180px;
+  max-width: 260px;
+  padding-bottom: var(--space-2);
+  padding-top: var(--space-2);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--line);
+}
+
+.global-menu__header {
+  padding: var(--space-4);
+  border-bottom-width: 1px;
+  border-bottom-color: var(--line);
+}
+
+.global-menu__title {
+  font-size: var(--font-md);
+  font-weight: bold;
+  color: var(--content);
+}
+
+.global-menu__subtitle {
+  margin-top: var(--space-1);
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+}
+
+.global-menu__items {
+  padding: var(--space-2) 0;
+}

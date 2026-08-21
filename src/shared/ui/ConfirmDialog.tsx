@@ -70,11 +70,40 @@ export function ConfirmDialog({
   return (
     <DialogRoot show={show} onShowChange={(open) => { if (!open) onCancel() }}>
       <DialogView>
-        <DialogBackdrop className='confirm-dialog__backdrop' clickToClose>
+        <DialogBackdrop
+          className='confirm-dialog__backdrop'
+          /*
+           * `position: fixed` has to arrive through `style`, not the class:
+           * `DialogBackdrop` hard-codes `position: absolute; width: 100%;
+           * height: 100%` inline, and inline wins over the stylesheet. So the
+           * class's `fixed` was dead and the scrim sized itself against
+           * `DialogView`'s box — a `fixed` wrapper with no dimensions, i.e.
+           * 0×0. The scrim measured 0×0: invisible, and its outside-tap
+           * catcher unreachable. Exactly lynx-ui-popover's backdrop bug one
+           * layer down (see `popover-menu-css.test.ts`).
+           */
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+          clickToClose
+        >
           <view className='confirm-dialog__backdrop-inner' />
         </DialogBackdrop>
-        <DialogContent className='confirm-dialog__content'>
-          <view className='confirm-dialog' data-testid={testId}>
+        <DialogContent
+          className='confirm-dialog__content'
+          /*
+           * Outside-tap cancel lives on the content layer rather than the
+           * backdrop: this layer is `fixed; inset: 0` with
+           * `event-through={false}`, so it covers the scrim completely and
+           * `clickToClose` can never be reached on either platform (Lynx paints
+           * in DOM order). `clickToClose` above stays as harmless redundancy.
+           */
+          dialogContentProps={{ bindtap: onCancel }}
+        >
+          {/*
+            * The card swallows taps (`catchtap`): without it every tap inside —
+            * including the confirm button — would bubble to the layer above and
+            * fire `onCancel` alongside `onConfirm`.
+            */}
+          <view className='confirm-dialog' data-testid={testId} catchtap={() => {}}>
             <text className='confirm-dialog__title'>{title}</text>
             <text className='confirm-dialog__message'>{message}</text>
             <view className='confirm-dialog__actions'>

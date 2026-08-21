@@ -8,14 +8,16 @@ import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
-import { canUploadCover, uploadPlaylistCover } from '../domain/cover-upload.js'
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
+import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
+import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
 import { useDebounce } from '../../library/data/use-debounce.js'
 import { flattenSongs } from '../../library/data/pagination.js'
-import { SongRow } from '../../library/widgets/SongRow.js'
-import { SongContextMenu } from '../../../shared/ui/SongContextMenu.js'
+import { SongListRow } from '../../library/widgets/SongListRow.js'
 import { VirtualList } from '../../library/widgets/VirtualList.js'
+import { PlaylistDescPanel } from '../widgets/PlaylistDescPanel.js'
+import { PlaylistToolbar } from '../widgets/PlaylistToolbar.js'
 import { playlistContext } from '../../player/domain/playback-context.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import { PlayHistoryPanel } from '../../player/widgets/PlayHistoryPanel.js'
@@ -26,7 +28,6 @@ import {
 import {
   useDeletePlaylistMutation,
   useMoveSongMutation,
-  useUpdatePlaylistMutation,
   useRemoveSongMutation,
   useSetVisibilityMutation,
   useUpdateSortMutation,
@@ -85,22 +86,29 @@ export function PlaylistDetailPage() {
   const isHidden = playlist?.isHidden ?? false
 
   const deleteMutation = useDeletePlaylistMutation()
-  const updateMutation = useUpdatePlaylistMutation(id)
   const removeSongMutation = useRemoveSongMutation(id)
   const moveSongMutation = useMoveSongMutation(id)
   const visibilityMutation = useSetVisibilityMutation(id)
   const sortMutation = useUpdateSortMutation(id)
 
-  const [contextSong, setContextSong] = useState<Song | null>(null)
   const [showHistory, setShowHistory] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [editName, setEditName] = useState('')
-  const [editDesc, setEditDesc] = useState('')
+  const [showDesc, setShowDesc] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [sortMode, setSortMode] = useState(false)
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const canSort = songs.length > 1
+
+  /*
+   * One dialog for every destructive action on this page — deleting the
+   * playlist (from the overflow menu), removing one song (the row-tail ×) or
+   * removing the multi-selection. A single `show` flag is what the back-stack's
+   * activation-order priority expects, and one state cannot get out of sync
+   * with itself the way three booleans could.
+   */
+  const [pendingConfirm, setPendingConfirm] = useState<
+    { kind: 'delete-playlist' } | { kind: 'remove-song'; song: Song } | { kind: 'remove-batch' } | null
+  >(null)
 
   const enterSortMode = () => {
     setSortMode(true)
@@ -118,17 +126,14 @@ export function PlaylistDetailPage() {
   }
 
   /*
-   * Explicit peel order for this page's four modes. Neither the context menu nor the
-   * history panel appears here: both are components that register their own layers and
-   * are only mounted while open.
+   * Explicit peel order for this page's modes. Neither the context menu nor the
+   * history / description panels nor the more menu / delete dialog appear here:
+   * all of those are components that register their own layers and are only
+   * mounted (or active) while open.
    */
-  useBackHandler(confirmDelete || editing || sortMode || selectMode, () => {
-    if (confirmDelete) {
-      setConfirmDelete(false)
-      return true
-    }
-    if (editing) {
-      setEditing(false)
+  useBackHandler(showDesc || sortMode || selectMode, () => {
+    if (showDesc) {
+      setShowDesc(false)
       return true
     }
     if (sortMode) {
@@ -143,7 +148,6 @@ export function PlaylistDetailPage() {
     if (ids.length === 0) return
     void Promise.all(ids.map((songId) => removeSongMutation.mutateAsync(songId))).then(exitSelectMode)
   }
-
   const toggleVisibility = () => {
     visibilityMutation.mutate(!isHidden)
   }
@@ -155,15 +159,13 @@ export function PlaylistDetailPage() {
     { key: 'added_at', order: 'desc', label: t('playlist.sortRecent') },
   ] as const
 
-  const onSelectSort = (sortBy: string, sortOrder: string) => {
-    sortMutation.mutate({ sortBy, sortOrder })
+  const onSelectSort = (key: string) => {
+    const opt = sortOptions.find((o) => o.key === key)
+    if (!opt) return
+    sortMutation.mutate({ sortBy: opt.key, sortOrder: opt.order })
   }
 
   const onDelete = () => {
-    if (!confirmDelete) {
-      setConfirmDelete(true)
-      return
-    }
     deleteMutation.mutate(id, {
       onSuccess: () => {
         void navigate({ to: '/library', search: { view: 'playlist_normal' } })
@@ -171,27 +173,14 @@ export function PlaylistDetailPage() {
     })
   }
 
+  /* Editing lives on its own route now — the detail page is render-mode-free
+   * apart from sort / select. */
   const onStartEdit = () => {
-    setEditName(playlist?.name ?? '')
-    setEditDesc(playlist?.description ?? '')
-    setEditing(true)
-  }
-
-  const onCancelEdit = () => {
-    setEditing(false)
-  }
-
-  const onSaveEdit = () => {
-    const trimmedName = editName.trim()
-    if (!trimmedName || updateMutation.isPending) return
-    updateMutation.mutate(
-      { name: trimmedName, description: editDesc.trim() },
-      { onSuccess: () => setEditing(false) },
-    )
+    void navigate({ to: '/playlists/$id/edit', params: { id: String(id) } })
   }
 
   const onRemoveSong = (song: Song) => {
-    removeSongMutation.mutate(song.id)
+    setPendingConfirm({ kind: 'remove-song', song })
   }
 
   const onEndReached = () => {
@@ -240,10 +229,10 @@ export function PlaylistDetailPage() {
         {/*
           Play history is available for **every** playlist, built-in ones
           included (the Flutter menu item is unconditional), so this sits outside
-          the `!isBuiltIn` block below. Hidden while sorting or editing, where the
-          topbar belongs to that mode.
+          the `!isBuiltIn` block below. Hidden while sorting, where the topbar
+          belongs to that mode.
         */}
-        {playlistCtx && !sortMode && !editing
+        {playlistCtx && !sortMode
           ? (
             <view
               className='playlist-detail__icon-btn'
@@ -259,72 +248,53 @@ export function PlaylistDetailPage() {
             <view className='playlist-detail__topbar-actions'>
               {sortMode
                 ? (
+                  /* In sort mode the whole group collapses to the single Done button. */
                   <view className='playlist-detail__action-btn' bindtap={exitSortMode}>
                     <text className='playlist-detail__action-text'>{t('playlist.doneSorting')}</text>
                   </view>
                 )
                 : null}
-              {!sortMode && !editing && canSort
-                ? (
-                  <view className='playlist-detail__action-btn' bindtap={enterSortMode}>
-                    <text className='playlist-detail__action-text'>{t('playlist.sortSongs')}</text>
-                  </view>
-                )
-                : null}
-              {!sortMode && !editing
-                ? (
-                  <view className='playlist-detail__action-btn' bindtap={onStartEdit}>
-                    <text className='playlist-detail__action-text'>{t('playlist.editPlaylist')}</text>
-                  </view>
-                )
-                : null}
+              {/*
+                The overflow menu replaces the old six-text-button row, which at
+                390px had its labels broken mid-word ("排/序"). Play-all and sort
+                moved to the `PlaylistToolbar` under the search bar; select moved
+                there too. What is left here is the low-frequency, page-level
+                stuff: manual reorder, edit, visibility, delete.
+              */}
               {!sortMode
                 ? (
-                  <view
-                    className={confirmDelete
-                      ? 'playlist-detail__action-btn playlist-detail__action-btn--danger'
-                      : 'playlist-detail__action-btn'}
-                    bindtap={onDelete}
-                  >
-                    <text
-                      className={confirmDelete
-                        ? 'playlist-detail__action-text playlist-detail__action-text--danger'
-                        : 'playlist-detail__action-text'}
-                    >
-                      {confirmDelete ? t('playlist.deleteConfirm') : t('playlist.deletePlaylist')}
-                    </text>
-                  </view>
-                )
-                : null}
-              {!sortMode && !editing
-                ? (
-                  <view className='playlist-detail__action-btn' bindtap={toggleVisibility} data-testid='playlist-toggle-visibility'>
-                    <text className='playlist-detail__action-text'>
-                      {isHidden ? t('playlist.showPlaylist') : t('playlist.hidePlaylist')}
-                    </text>
-                  </view>
-                )
-                : null}
-              {!sortMode && !editing && songs.length > 0
-                ? (
-                  selectMode
-                    ? (
-                      <view className='playlist-detail__action-btn' bindtap={exitSelectMode}>
-                        <text className='playlist-detail__action-text'>{t('library.cancelSelect')}</text>
-                      </view>
-                    )
-                    : (
-                      <view className='playlist-detail__action-btn' bindtap={enterSelectMode} data-testid='playlist-select-toggle'>
-                        <text className='playlist-detail__action-text'>{t('library.select')}</text>
-                      </view>
-                    )
-                )
-                : null}
-              {!sortMode && !editing && !selectMode && songs.length > 0
-                ? (
-                  <view className='playlist-detail__action-btn' bindtap={playAll}>
-                    <text className='playlist-detail__action-text'>{t('playlist.playAll')}</text>
-                  </view>
+                  <PopoverMenu
+                    show={menuOpen}
+                    onShowChange={setMenuOpen}
+                    placement='bottom-end'
+                    triggerClassName='playlist-detail__icon-btn'
+                    trigger={
+                      <Icon name='more' size={20} color={ICON_COLORS.content2} />
+                    }
+                    items={[
+                      ...(canSort
+                        ? [{ key: 'sort', label: t('playlist.sortSongs'), icon: 'sort' as const }] 
+                        : []),
+                      { key: 'edit', label: t('playlist.editPlaylist'), icon: 'brush' as const },
+                      {
+                        key: 'visibility',
+                        label: isHidden ? t('playlist.showPlaylist') : t('playlist.hidePlaylist'),
+                        icon: 'eye' as const,
+                      },
+                      {
+                        key: 'delete',
+                        label: t('playlist.deletePlaylist'),
+                        icon: 'x' as const,
+                        danger: true,
+                      },
+                    ]}
+                    onSelect={(key) => {
+                      if (key === 'sort') enterSortMode()
+                      else if (key === 'edit') onStartEdit()
+                      else if (key === 'visibility') toggleVisibility()
+                      else if (key === 'delete') setPendingConfirm({ kind: 'delete-playlist' })
+                    }}
+                  />
                 )
                 : null}
             </view>
@@ -332,79 +302,48 @@ export function PlaylistDetailPage() {
           : null}
         </view>
       </view>
-      {editing
-        ? (
-          <view className='playlist-detail__edit-form'>
-            <Input
-              className='playlist-detail__edit-input'
-              placeholder={t('playlist.namePlaceholder')}
-              value={editName}
-              onInput={(value: string) => setEditName(value)}
-            />
-            <Input
-              className='playlist-detail__edit-input'
-              placeholder={t('playlist.descriptionPlaceholder')}
-              value={editDesc}
-              onInput={(value: string) => setEditDesc(value)}
-            />
-            <view className='playlist-detail__edit-actions'>
-              <view className='playlist-detail__edit-btn' bindtap={onCancelEdit}>
-                <text className='playlist-detail__edit-btn-text'>{t('playlist.cancel')}</text>
+      {/*
+        Hero — cover + name / count / clamped description. Cover management
+        moved to the edit page; this is display only.
+      */}
+      <view className='playlist-detail__hero'>
+        <view className='playlist-detail__cover-wrapper'>
+          {cover
+            ? <image className='playlist-detail__cover' src={cover} />
+            : (
+              <view className='playlist-detail__cover playlist-detail__cover--empty'>
+                <Icon name='music' size={40} color={ICON_COLORS.contentMuted} />
               </view>
-              <view className='playlist-detail__edit-btn playlist-detail__edit-btn--primary' bindtap={onSaveEdit}>
-                <text className='playlist-detail__edit-btn-text playlist-detail__edit-btn-text--primary'>
-                  {updateMutation.isPending ? t('playlist.saving') : t('playlist.save')}
-                </text>
-              </view>
-            </view>
-          </view>
-        )
-        : (
-          <view className='playlist-detail__hero'>
-            <view className='playlist-detail__cover-wrapper'>
-              {cover
-                ? <image className='playlist-detail__cover' src={cover} />
-                : (
-                  <view className='playlist-detail__cover playlist-detail__cover--empty'>
-                    <Icon name='music' size={40} color={ICON_COLORS.contentMuted} />
-                  </view>
-                )}
-              {!isBuiltIn && canUploadCover()
-                ? (
-                  <view
-                    className='playlist-detail__cover-upload'
-                    bindtap={() => {
-                      void uploadPlaylistCover(id).then(() => void detail.refetch())
-                    }}
-                    data-testid='playlist-cover-upload'
-                  >
-                    <Icon name='plus' size={16} color={ICON_COLORS.content} />
-                  </view>
-                )
-                : null}
-            </view>
-            <view className='playlist-detail__meta'>
-              <text className='playlist-detail__name'>
-                {playlist?.name ?? (detail.isLoading ? t('common.loading') : t('playlist.fallbackName'))}
+            )}
+        </view>
+        <view className='playlist-detail__meta'>
+          <text className='playlist-detail__name'>
+            {playlist?.name ?? (detail.isLoading ? t('common.loading') : t('playlist.fallbackName'))}
+          </text>
+          <text className='playlist-detail__count'>{countLabel}</text>
+          {playlist?.description
+            ? (
+              /* Clamped to two lines in CSS; tapping opens the full text in a
+               * bottom panel (a ~35px nested scroll area is not a usable touch
+               * target and competes with the song list for gestures). */
+              <text
+                className='playlist-detail__desc'
+                bindtap={() => setShowDesc(true)}
+                data-testid='playlist-detail-desc'
+              >
+                {playlist.description}
               </text>
-              <text className='playlist-detail__count'>{countLabel}</text>
-              {playlist?.description
-                ? (
-                  <scroll-view scroll-y className='playlist-detail__desc-scroll'>
-                    <text className='playlist-detail__desc'>{playlist.description}</text>
-                  </scroll-view>
-                )
-                : null}
-            </view>
-          </view>
-        )}
+            )
+            : null}
+        </view>
+      </view>
     </view>
   )
 
   return (
     <view className='playlist-detail'>
       {header}
-      {!sortMode && !editing
+      {!sortMode
         ? (
           <view className='playlist-detail__search-bar'>
             <Input
@@ -416,28 +355,21 @@ export function PlaylistDetailPage() {
           </view>
         )
         : null}
-      {!sortMode && !editing && songs.length > 0
+      {/*
+        Toolbar row (play-all | sort popover | multi-select) — the counterpart of
+        the flat-songs `LibraryToolbar`, replacing the old chip-row sort bar.
+      */}
+      {!sortMode && songs.length > 0
         ? (
-          <view className='playlist-detail__sort-bar' data-testid='playlist-sort-bar'>
-            {sortOptions.map((opt) => (
-              <view
-                key={opt.key}
-                className={currentSort === opt.key
-                  ? 'playlist-detail__sort-chip playlist-detail__sort-chip--active'
-                  : 'playlist-detail__sort-chip'}
-                bindtap={() => onSelectSort(opt.key, opt.order)}
-                data-testid={`playlist-sort-${opt.key}`}
-              >
-                <text
-                  className={currentSort === opt.key
-                    ? 'playlist-detail__sort-chip-text playlist-detail__sort-chip-text--active'
-                    : 'playlist-detail__sort-chip-text'}
-                >
-                  {opt.label}
-                </text>
-              </view>
-            ))}
-          </view>
+          <PlaylistToolbar
+            currentSort={currentSort}
+            sortOptions={sortOptions}
+            onSelectSort={onSelectSort}
+            onPlayAll={playAll}
+            selectMode={selectMode}
+            onToggleSelect={selectMode ? exitSelectMode : enterSelectMode}
+            hasSongs={songs.length > 0}
+          />
         )
         : null}
       <view className='playlist-detail__body'>
@@ -509,13 +441,20 @@ export function PlaylistDetailPage() {
                         )
                         : null}
                       <view className='playlist-detail__song-row-content'>
-                        <SongRow song={song} index={index} onTap={onTapSong} onLongPress={selectMode ? undefined : setContextSong} />
+                        <SongListRow
+                          song={song}
+                          index={index}
+                          onTap={onTapSong}
+                          selectionMode={selectMode}
+                          showDeleteAction={false}
+                        />
                       </view>
                       {!isBuiltIn && !selectMode
                         ? (
                           <view
                             className='playlist-detail__remove-btn'
                             bindtap={() => onRemoveSong(song)}
+                            data-testid='playlist-detail-remove'
                           >
                             <Icon name='x' size={16} color={ICON_COLORS.contentMuted} />
                           </view>
@@ -540,13 +479,43 @@ export function PlaylistDetailPage() {
             <text className='playlist-detail__select-toolbar-count'>
               {t('library.selectedCount', { count: selected.size })}
             </text>
-            <view className='playlist-detail__select-toolbar-btn' bindtap={batchRemove}>
+            <view className='playlist-detail__select-toolbar-btn' bindtap={() => setPendingConfirm({ kind: 'remove-batch' })}>
               <text className='playlist-detail__select-toolbar-btn-text'>{t('playlist.removeSong')}</text>
             </view>
           </view>
         )
         : null}
-      <SongContextMenu song={contextSong} onClose={() => setContextSong(null)} />
+      {/*
+        Destructive confirm for the whole page — one dialog, three payloads
+        (delete playlist / remove one song / remove the selection). The old
+        row-tail × removed immediately; removing from a playlist is not as final
+        as deleting a song but it still deserves a stated consequence.
+      */}
+      <ConfirmDialog
+        show={pendingConfirm != null}
+        title={pendingConfirm?.kind === 'delete-playlist'
+          ? t('playlist.deleteTitle')
+          : t('playlist.removeSongTitle')}
+        message={pendingConfirm?.kind === 'delete-playlist'
+          ? t('playlist.deleteMessage')
+          : pendingConfirm?.kind === 'remove-song'
+            ? t('playlist.removeSongMessage')
+            : t('playlist.removeSongsMessage')}
+        confirmLabel={pendingConfirm?.kind === 'delete-playlist'
+          ? t('playlist.deletePlaylist')
+          : t('playlist.removeSong')}
+        onConfirm={() => {
+          const pending = pendingConfirm
+          setPendingConfirm(null)
+          if (pending?.kind === 'delete-playlist') onDelete()
+          else if (pending?.kind === 'remove-song') removeSongMutation.mutate(pending.song.id)
+          else if (pending?.kind === 'remove-batch') batchRemove()
+        }}
+        onCancel={() => setPendingConfirm(null)}
+        testId='playlist-delete-dialog'
+        confirmTestId='playlist-delete-confirm'
+        cancelTestId='playlist-delete-cancel'
+      />
       {/* Mounted only while open, so entering the page costs no history request. */}
       {showHistory && playlistCtx
         ? (
@@ -555,6 +524,16 @@ export function PlaylistDetailPage() {
             title={t('history.titleFor', { name: playlist?.name ?? '' })}
             queue={songs}
             onClose={() => setShowHistory(false)}
+          />
+        )
+        : null}
+      {/* Same mount-only-while-open pattern as the history panel above. */}
+      {showDesc && playlist?.description
+        ? (
+          <PlaylistDescPanel
+            title={t('playlist.descriptionTitle')}
+            description={playlist.description}
+            onClose={() => setShowDesc(false)}
           />
         )
         : null}

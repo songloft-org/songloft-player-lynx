@@ -72,9 +72,10 @@ vi.mock('../widgets/VirtualList.js', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockVirtualList(),
 )
 
-vi.mock('../widgets/FavoriteSongRow.js', async () => {
+/* Row mocked down to the plain `SongRow` — see flat-songs-view.test.tsx. */
+vi.mock('../widgets/SongListRow.js', async () => {
   const { SongRow } = await import('../widgets/SongRow.js')
-  return { FavoriteSongRow: SongRow }
+  return { SongListRow: SongRow }
 })
 
 vi.mock('@lynx-js/lynx-ui-input', () => ({

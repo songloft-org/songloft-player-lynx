@@ -181,6 +181,44 @@ describe('returning to the library restores the sub-view', () => {
   })
 })
 
+describe('the song page returns to where it was opened from', () => {
+  /**
+   * The song page is reachable from the library, a playlist detail, a facet
+   * drill-in and the player, and the memory history cannot say which (every
+   * navigation is a push). So the navigation helper records the origin, and back
+   * follows it. Before this existed, opening a song from a playlist and closing
+   * it landed on the playlist *list*, not the playlist you were reading.
+   */
+  test.each([
+    ['/playlists/7', 'playlist detail'],
+    ['/library/category/artist', 'facet drill-in'],
+    ['/player', 'the full player'],
+  ])('opened from %s returns there', (from, label) => {
+    const action = resolveRouteBack(
+      '/library/song/42',
+      ctx({ songDetailFrom: from, lastLibrarySearch: { view: 'album' } }),
+    )
+    expect(action.kind === 'navigate' && action.to, label).toBe(from)
+  })
+
+  test('no recorded origin falls back to the library tab', () => {
+    const action = resolveRouteBack(
+      '/library/song/42',
+      ctx({ songDetailFrom: null, lastLibrarySearch: { view: 'album' } }),
+    )
+    expect(action.kind === 'navigate' && action.to).toBe('/library')
+    expect(action.kind === 'navigate' && action.librarySearch?.view).toBe('album')
+  })
+
+  test('an origin equal to the current path is ignored (song→song hop)', () => {
+    const action = resolveRouteBack(
+      '/library/song/42',
+      ctx({ songDetailFrom: '/library/song/42' }),
+    )
+    expect(action.kind === 'navigate' && action.to).toBe('/library')
+  })
+})
+
 describe('chrome-less pages return to the tab the shell recorded', () => {
   test.each(['/player', '/playlists/7'])('%s follows the last shell tab', (pathname) => {
     const onHome = resolveRouteBack(pathname, ctx({ lastShellLocation: '/' }))

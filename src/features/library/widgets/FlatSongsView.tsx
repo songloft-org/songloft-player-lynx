@@ -16,9 +16,8 @@ import { usePlayerStore } from '../../player/store/index.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
 import { usePlaylistsInfiniteQuery } from '../../playlist/data/playlist-query.js'
-import { SongContextMenu } from '../../../shared/ui/SongContextMenu.js'
 import { SongRow } from './SongRow.js'
-import { FavoriteSongRow } from './FavoriteSongRow.js'
+import { SongListRow } from './SongListRow.js'
 import { VirtualList } from './VirtualList.js'
 import { LibraryToolbar } from './LibraryToolbar.js'
 import { LibraryStateMessage } from './LibraryStateMessage.js'
@@ -47,7 +46,6 @@ export function FlatSongsView({ type, sortId, onSortChange }: FlatSongsViewProps
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [showPlaylistPicker, setShowPlaylistPicker] = useState(false)
-  const [contextSong, setContextSong] = useState<Song | null>(null)
 
   const debouncedSearch = useDebounce(searchText, DEBOUNCE_MS)
 
@@ -121,8 +119,8 @@ export function FlatSongsView({ type, sortId, onSortChange }: FlatSongsViewProps
    * One handler, explicit peel order: the picker sits *inside* multi-select, so
    * closing it must not also drop the selection the user just built up.
    *
-   * `contextSong`'s menu is not listed — `SongContextMenu` registers its own layers
-   * (including its two sub-views), and it is only mounted while open.
+   * The per-song context menu is not listed — `SongListRow` mounts it only while
+   * open and registers its own layer (including its two sub-views).
    */
   useBackHandler(showPlaylistPicker || selectMode, () => {
     if (showPlaylistPicker) {
@@ -200,7 +198,7 @@ export function FlatSongsView({ type, sortId, onSortChange }: FlatSongsViewProps
                       )
                       : null}
                     <view className='library__select-row-content'>
-                      <FavoriteSongRow song={song} index={index} onTap={onTapSong} onLongPress={selectMode ? undefined : setContextSong} />
+                      <SongListRow song={song} index={index} onTap={onTapSong} selectionMode={selectMode} />
                     </view>
                   </view>
                 )}
@@ -247,8 +245,6 @@ export function FlatSongsView({ type, sortId, onSortChange }: FlatSongsViewProps
           </view>
         )
         : null}
-
-      <SongContextMenu song={contextSong} onClose={() => setContextSong(null)} />
     </view>
   )
 }

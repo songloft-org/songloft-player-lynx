@@ -33,6 +33,16 @@ vi.mock('../../library/api/index.js', () => ({
   getSongsApi: () => ({ clearPlayHistory, deletePlayHistoryEntry }),
 }))
 
+/*
+ * The entry rows are mocked down to the plain `SongRow`: the menu / favorite /
+ * responsive wiring lives in `SongListRow`'s own test file (it would need the
+ * favorites query and player store mocked here as well).
+ */
+vi.mock('../../library/widgets/SongListRow.js', async () => {
+  const { SongRow } = await import('../../library/widgets/SongRow.js')
+  return { SongListRow: SongRow }
+})
+
 const playPlaylist = vi.fn(async () => {})
 vi.mock('../store/index.js', () => ({
   usePlayerStore: { getState: () => ({ playPlaylist }) },

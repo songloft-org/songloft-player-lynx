@@ -28,10 +28,15 @@ vi.mock('@lynx-js/lynx-ui-dialog', async () =>
 vi.mock('@lynx-js/lynx-ui-popover', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiPopover(),
 )
+vi.mock('@lynx-js/lynx-ui-input', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
+)
 
 const { ActionSheet } = await import('../ActionSheet.js')
 const { ConfirmDialog } = await import('../ConfirmDialog.js')
+const { GlobalMenu } = await import('../GlobalMenu.js')
 const { PopoverMenu } = await import('../PopoverMenu.js')
+const { PromptDialog } = await import('../PromptDialog.js')
 
 beforeEach(() => clearBackHandlersForTests())
 afterEach(() => {
@@ -64,8 +69,10 @@ describe('every shared overlay claims the back key', () => {
     expect(files).toEqual([
       'ActionSheet.tsx',
       'ConfirmDialog.tsx',
+      'GlobalMenu.tsx',
       'PopoverMenu.tsx',
       'PopoverPanel.tsx',
+      'PromptDialog.tsx',
     ])
   })
 
@@ -127,6 +134,38 @@ describe('a back press closes the overlay instead of falling through', () => {
     expect(dispatchBack()).toBe(true)
     expect(onShowChange).toHaveBeenCalledWith(false)
   })
+
+  test('GlobalMenu closes', () => {
+    const onClose = vi.fn()
+    render(
+      <GlobalMenu
+        show
+        onClose={onClose}
+        items={[{ key: 'a', label: 'A' }]}
+        onSelect={() => {}}
+      />,
+    )
+
+    expect(dispatchBack()).toBe(true)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  test('PromptDialog cancels', () => {
+    const onCancel = vi.fn()
+    render(
+      <PromptDialog
+        show
+        title='t'
+        label='name'
+        confirmLabel='create'
+        onConfirm={() => {}}
+        onCancel={onCancel}
+      />,
+    )
+
+    expect(dispatchBack()).toBe(true)
+    expect(onCancel).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('a closed overlay does not hold the back key', () => {
@@ -160,5 +199,39 @@ describe('a closed overlay does not hold the back key', () => {
 
     expect(getBackStackDepth()).toBe(0)
     expect(dispatchBack()).toBe(false)
+  })
+
+  test('GlobalMenu registers nothing while hidden', () => {
+    const onClose = vi.fn()
+    render(
+      <GlobalMenu
+        show={false}
+        onClose={onClose}
+        items={[{ key: 'a', label: 'A' }]}
+        onSelect={() => {}}
+      />,
+    )
+
+    expect(getBackStackDepth()).toBe(0)
+    expect(dispatchBack()).toBe(false)
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  test('PromptDialog registers nothing while hidden', () => {
+    const onCancel = vi.fn()
+    render(
+      <PromptDialog
+        show={false}
+        title='t'
+        label='name'
+        confirmLabel='create'
+        onConfirm={() => {}}
+        onCancel={onCancel}
+      />,
+    )
+
+    expect(getBackStackDepth()).toBe(0)
+    expect(dispatchBack()).toBe(false)
+    expect(onCancel).not.toHaveBeenCalled()
   })
 })

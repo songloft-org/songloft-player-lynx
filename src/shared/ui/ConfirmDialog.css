@@ -8,6 +8,13 @@
  * other did not (a solid red fill). This set keeps the compliant treatment.
  */
 
+/*
+ * The scrim's `position` and inset come from the component's inline `style`,
+ * NOT from here: `DialogBackdrop` hard-codes `position: absolute` inline, which
+ * beats any class. These declarations are kept as documentation of the intended
+ * box (and as the fallback if lynx-ui ever drops its inline positioning) —
+ * `ConfirmDialog.tsx` is where the effective value lives.
+ */
 .confirm-dialog__backdrop {
   position: fixed;
   top: 0;
@@ -90,4 +97,22 @@
 
 .confirm-dialog__btn-text--confirm {
   color: var(--danger);
+}
+
+/* Constructive affirmative (PromptDialog's "create"): accent hairline instead of
+   the danger one. Lives here rather than in PromptDialog.css so the dialog
+   button family stays in a single stylesheet. */
+.confirm-dialog__btn--submit {
+  background-color: transparent;
+  border: 1px solid var(--primary);
+}
+
+.confirm-dialog__btn-text--submit {
+  color: var(--primary);
+}
+
+/* Nothing typed yet: the button holds its place but reads as unavailable. The
+   tap handler returns early too — this is presentation, not the guard. */
+.confirm-dialog__btn--disabled {
+  opacity: 0.4;
 }

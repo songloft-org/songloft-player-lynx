@@ -6,7 +6,7 @@ import type { Song } from '../../../models/song.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { getSongsApi } from '../../library/api/index.js'
-import { SongRow } from '../../library/widgets/SongRow.js'
+import { SongListRow } from '../../library/widgets/SongListRow.js'
 import type { PlaybackContext } from '../domain/playback-context.js'
 import { playedAtLabel } from '../domain/play-history-time.js'
 import { playHistoryQueryKeys, usePlayHistoryQuery } from '../data/play-history-query.js'
@@ -163,7 +163,7 @@ export function PlayHistoryPanel({
                   {entries.map((entry, index) => (
                     <view key={String(entry.song.id)} className='play-history__entry'>
                       <view className='play-history__entry-row'>
-                        <SongRow song={entry.song} index={index} onTap={() => play(index)} />
+                        <SongListRow song={entry.song} index={index} onTap={() => play(index)} />
                       </view>
                       <view className='play-history__entry-meta'>
                         <text className='play-history__entry-time'>
