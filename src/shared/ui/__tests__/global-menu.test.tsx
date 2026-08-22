@@ -120,3 +120,23 @@ test('a row in the lower half opens upwards instead', () => {
   expect(panel.style.bottom).toBe('206px') // 900 - 700 + 6, so it grows upwards
   expect(panel.style.top).toBe('')
 })
+
+/**
+ * The catcher is always there; only the docked form paints it. An anchored menu is a
+ * popover, and a scrim behind it is what made the song menu look like a different
+ * mechanism from the sort / speed / play-mode menus. The fill itself lives in
+ * `GlobalMenu.css` (asserted in `global-menu-css.test.ts`); this is the class switch.
+ */
+test('the anchored form leaves its tap catcher unpainted', () => {
+  const anchored = renderMenu({
+    anchor: { anchor: { left: 280, top: 100, width: 36, height: 36 }, viewport: VIEWPORT },
+  })
+  expect(anchored.getByTestId('global-menu-backdrop').className)
+    .not.toContain('global-menu__backdrop--docked')
+})
+
+test('the docked fallback dims what is behind it', () => {
+  const docked = renderMenu()
+  expect(docked.getByTestId('global-menu-backdrop').className)
+    .toContain('global-menu__backdrop--docked')
+})

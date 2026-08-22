@@ -15,12 +15,25 @@
   z-index: 100;
 }
 
+/*
+ * Outside-tap catcher. **Unfilled in the anchored form**, exactly like
+ * `.popover-backdrop`: an anchored menu is a popover, not a modal, and a scrim behind
+ * one is what made the song menu look like a different mechanism from the sort /
+ * speed / play-mode menus. The four offsets are still load-bearing (see the note on
+ * `.global-menu` above) — the catcher covers the screen either way, it just does not
+ * paint.
+ */
 .global-menu__backdrop {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
+}
+
+/* The docked fallback *is* modal — a bottom sheet with nothing dimmed behind it
+   reads as a panel that failed to open properly. */
+.global-menu__backdrop--docked {
   background-color: var(--backdrop);
 }
 

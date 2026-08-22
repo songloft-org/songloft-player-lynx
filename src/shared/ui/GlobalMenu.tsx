@@ -67,6 +67,7 @@ export function GlobalMenu({
   const position = anchor != null
     ? placePanel(anchor.anchor, anchor.viewport, pickMenuPlacement(anchor))
     : undefined
+  const anchored = position != null
 
   return (
     <view className='global-menu' data-testid={testId}>
@@ -76,10 +77,20 @@ export function GlobalMenu({
         * instead and relying on a `catchtap` in the panel to stop the bubble
         * works on device but is untestable, since the test env does not implement
         * that interception.
+        *
+        * It only *paints* in the docked form: anchored, this menu is a popover, and a
+        * scrim behind it would be the one thing setting it apart from every other
+        * popover menu in the app.
         */}
-      <view className='global-menu__backdrop' bindtap={onClose} data-testid='global-menu-backdrop' />
       <view
-        className={position != null
+        className={anchored
+          ? 'global-menu__backdrop'
+          : 'global-menu__backdrop global-menu__backdrop--docked'}
+        bindtap={onClose}
+        data-testid='global-menu-backdrop'
+      />
+      <view
+        className={anchored
           ? 'global-menu__panel global-menu__panel--anchored'
           : 'global-menu__panel global-menu__panel--docked'}
         style={position}
