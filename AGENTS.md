@@ -184,6 +184,16 @@ pnpm run build:web-embedded   # 产物给后端嵌入（songloft-player-build/we
 - **「点外部关闭」挂在遮罩上**（面板的兄弟），不要挂在共同根上靠面板 `catchtap` 拦冒泡：后者在真机成立，但让「这一行有没有误关面板」无法测试
 - 顺带没了：Presence 的 16 帧固定开启延迟、靠 `transition` 才能及时卸载（否则空转 24 帧单帧 rAF ≈ 1 秒）、`PopoverBackdrop` 缺 `top`/`left` 导致两个弹出层能同开、以及「不要给 `PopoverPositioner` 传 `container`」（`<overlay>` 不在 web-core 的标签表里）
 
+#### 列表行的菜单只能挂在全局（批54，浏览器探针实测）
+
+**虚拟列表 `<list>` 内部放不了弹出层**，所以歌曲行的菜单是 `GlobalMenu` + `song-row-overlays.ts` 这一套（行在点击时量 `⋯` 的 rect，随歌曲送进 store，面板在 root route 上用 `placePanel` 落位）。这条以前只是批50 的口述结论，现在有数：
+
+- `x-list` 实测 `contain: layout` + `container-type: size` —— layout containment 使它成为**fixed 后代的包含块**。在 `list-item` 里插一个 `position: fixed; left:0; top:0` 的探针，实际落在 **(440, 273.5)**，即列表自身原点而非视口原点。`anchored-overlay.ts` 量的是 lynx-view 坐标，直接用会整体偏掉列表的偏移 ⇒ 得引入第二套坐标系
+- `x-list::part(content)` 是 **`overflow: hidden scroll`**（另有 `content-visibility: auto`）。放在该框上方与下方的两个探针 `checkVisibility()` 都是 true，但 `document.elementFromPoint` **都打不中** —— 是裁掉了而不是只是看不见。**滚动容器必然裁剪，这一条没有任何样式表能解**
+- Web 上每个 Lynx 元素都映射为 `position: relative; overflow: clip`（web-elements `common-css/linear.css`），`list-item` 也在其中 ⇒ 面板先被切到行自己那 ~73px 的框里，要逐层给祖先加 `overflow: visible` 才露得出来（歌单详情页还多两层包装）
+
+行内版**真写过一遍**（净 ~95 行）：菜单只能在列表视口内可见（实测那个窗口下列表高 **371.5px**，而 4 行菜单约 190px，靠底部的行被切）；**不能有遮罩**（全屏点击捕获层同样被裁）⇒ 点外部关不掉；两行可以各开一个菜单，除非再加一个「谁开着」的共享信号 —— 那就是 store 本身。native 侧连验都没走到（原生列表同样裁到自己的视口）。**换掉全局方案省不了 store**：添加到歌单与删除确认是模态的，无论如何都在根上。
+
 #### 全局覆盖层的挂载点与 Dialog（批52，浏览器实测抓出）
 
 - **全局覆盖层必须挂在 root route 的 `ThemeProvider` 内**（`src/router.tsx`，与 `ToastHost` 同处），不能作为 `<RouterProvider>` 的兄弟挂在 `App.tsx`。后者在 native 上看不出问题，在 Web 上却同时踩两条：① 落在 `.theme-root` 子树之外，而 Muse 的 CSS 变量全部声明在那个类上 ⇒ 每个 `var(--*)` 解析为空字符串，卡片背景透明、无圆角内边距、遮罩不可见（**文字还在，所以像「样式崩了」而不像「没渲染」**）；② 拿不到 Router context ⇒ `SongRowOverlays` 因 `useNavigateToSongDetail()` 渲染中断，**歌曲菜单从未进 DOM、零报错**，点 ⋯ 按钮像没接线。闸门：`src/__tests__/root-overlay-mount.test.ts`
