@@ -1,0 +1,164 @@
+/* Content only; the wide-screen rail belongs to the route layout (see EditPlaylistPage.css). */
+.song-edit {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.song-edit__topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+}
+
+.song-edit__back { padding: var(--space-1); }
+
+.song-edit__topbar-title {
+  flex: 1;
+  font-size: var(--font-lg);
+  font-weight: bold;
+  color: var(--content);
+}
+
+/* Save lives in the top bar (the Flutter AppBar action): a form this long
+ * scrolls, and a bottom button would sit under the keyboard. */
+.song-edit__save-btn {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.song-edit__save-btn-text {
+  font-size: var(--font-sm);
+  color: var(--primary-content);
+}
+
+.song-edit__content {
+  flex: 1;
+}
+
+.song-edit__state {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+}
+
+.song-edit__form {
+  padding: 0 var(--space-4) var(--space-6);
+}
+
+/* Read-only card: file path (local) or server endpoints (remote/radio). */
+.song-edit__ro-card {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--paper);
+  margin-bottom: var(--space-4);
+}
+
+.song-edit__ro-card-title {
+  font-size: var(--font-sm);
+  font-weight: bold;
+  color: var(--content);
+}
+
+.song-edit__ro-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: var(--space-2);
+  gap: var(--space-2);
+}
+
+.song-edit__ro-label {
+  width: 40px;
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+}
+
+.song-edit__ro-value {
+  flex: 1;
+  font-size: var(--font-xs);
+  color: var(--content);
+  /* Long endpoints must not push the copy button off the row. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.song-edit__ro-copy {
+  padding: var(--space-1);
+}
+
+.song-edit__label {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-1);
+}
+
+/* Form field: `--neutral-faint` fill + `--line` hairline, same as every other
+ * form field (login / server / proxy / cache / playlist).
+ *
+ * Not `--paper`: DESIGN.md assigns that to cards floating *on* canvas — with no
+ * border on a transparent page it puts #fafafa on #ffffff (~1.04:1 contrast),
+ * leaving the field with no perceivable edge at all. */
+.song-edit__input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--neutral-faint);
+  border: 1px solid var(--line);
+  font-size: var(--font-sm);
+  color: var(--content);
+  -x-placeholder-color: var(--content-muted);
+}
+
+.song-edit__error {
+  font-size: var(--font-xs);
+  color: var(--danger);
+  margin-top: var(--space-1);
+}
+
+/* Switch rows — the Flutter form's SwitchListTile: title + subtitle + toggle. */
+.song-edit__switch-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) 0;
+  gap: var(--space-3);
+}
+
+.song-edit__switch-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.song-edit__switch-title {
+  font-size: var(--font-sm);
+  color: var(--content);
+}
+
+.song-edit__switch-subtitle {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+}
+
+.song-edit__preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.song-edit__preview-img {
+  width: 150px;
+  height: 150px;
+  border-radius: var(--radius-md);
+  background-color: var(--neutral-faint);
+}

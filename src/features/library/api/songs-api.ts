@@ -204,13 +204,32 @@ export class SongsApi {
     return parseSong(res.data)
   }
 
-  async updateSong(id: number, data: { title?: string; artist?: string; album?: string; url?: string; coverUrl?: string }): Promise<void> {
+  /**
+   * `PUT /songs/{id}` — update a song (remote / radio; local songs keep their
+   * tags in sync via {@link writeTags}). Undefined fields are omitted; the
+   * backend decodes artist/album/cover_url as plain strings, so "omitted" and
+   * "empty" both mean "cleared" there, while url is only replaced when non-empty.
+   */
+  async updateSong(
+    id: number,
+    data: {
+      title?: string
+      artist?: string
+      album?: string
+      url?: string
+      coverUrl?: string
+      duration?: number
+      isVideo?: boolean
+    },
+  ): Promise<void> {
     const body: Record<string, unknown> = {}
     if (data.title !== undefined) body.title = data.title
     if (data.artist !== undefined) body.artist = data.artist
     if (data.album !== undefined) body.album = data.album
     if (data.url !== undefined) body.url = data.url
     if (data.coverUrl !== undefined) body.cover_url = data.coverUrl
+    if (data.duration !== undefined) body.duration = data.duration
+    if (data.isVideo !== undefined) body.is_video = data.isVideo
     await this.client.put(`${apiPrefix}/songs/${id}`, body)
   }
 
@@ -229,8 +248,33 @@ export class SongsApi {
     await this.client.delete(`${apiPrefix}/songs/${id}`)
   }
 
-  async updateLyrics(id: number, data: { lyric?: string; tlyric?: string; rlyric?: string; lxlyric?: string }): Promise<void> {
-    await this.client.put(`${apiPrefix}/songs/${id}/lyrics`, data)
+  /**
+   * `PUT /songs/{id}/lyrics` — update a song's lyric content and source.
+   *
+   * Two payload shapes, picked by `lyricSource`: `'url'` writes
+   * `lyric_remote_url` (fetched at play time); any other source writes the
+   * lyric/tlyric/rlyric/lxlyric payload. An empty source with an empty lyric is
+   * the "clear the lyric" form the song edit page uses.
+   */
+  async updateLyrics(
+    id: number,
+    data: {
+      lyricSource?: string
+      lyric?: string
+      tlyric?: string
+      rlyric?: string
+      lxlyric?: string
+      lyricRemoteUrl?: string
+    },
+  ): Promise<void> {
+    const body: Record<string, unknown> = {}
+    if (data.lyricSource !== undefined) body.lyric_source = data.lyricSource
+    if (data.lyric !== undefined) body.lyric = data.lyric
+    if (data.tlyric !== undefined) body.tlyric = data.tlyric
+    if (data.rlyric !== undefined) body.rlyric = data.rlyric
+    if (data.lxlyric !== undefined) body.lxlyric = data.lxlyric
+    if (data.lyricRemoteUrl !== undefined) body.lyric_remote_url = data.lyricRemoteUrl
+    await this.client.put(`${apiPrefix}/songs/${id}/lyrics`, body)
   }
 
   async cleanInvalidSongs(): Promise<{ cleaned: number }> {
@@ -247,8 +291,23 @@ export class SongsApi {
     await this.client.post(`${apiPrefix}/songs/radio`, stations)
   }
 
-  async writeTags(id: number): Promise<void> {
-    await this.client.put(`${apiPrefix}/songs/${id}/tags`, {})
+  /**
+   * `PUT /songs/{id}/tags` — write metadata into the DB **and** the local audio
+   * file's tags (local songs only). Non-empty fields override, empty values keep
+   * the original, so the edit form passes trimmed strings verbatim; `renameFile`
+   * renames the file to the (new) title. Without `data` the song's current DB
+   * values are written back into the file — the detail page's button.
+   */
+  async writeTags(
+    id: number,
+    data: { title?: string; artist?: string; album?: string; renameFile?: boolean } = {},
+  ): Promise<void> {
+    const body: Record<string, unknown> = {}
+    if (data.title !== undefined) body.title = data.title
+    if (data.artist !== undefined) body.artist = data.artist
+    if (data.album !== undefined) body.album = data.album
+    if (data.renameFile !== undefined) body.rename_file = data.renameFile
+    await this.client.put(`${apiPrefix}/songs/${id}/tags`, body)
   }
 
   async getSongNames(field: 'title' | 'artist' = 'title'): Promise<string[]> {

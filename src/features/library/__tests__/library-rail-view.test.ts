@@ -93,6 +93,25 @@ test('a song→song origin is no anchor — it would only defer the same questio
   expect(railAnchorPath('/library/song/42', '/library/song/7')).toBe('/library/song/42')
 })
 
+/*
+ * The edit page has its own origin recording: a song menu opens it straight
+ * from any list, and the rail must answer for that list — not for the song
+ * detail page it never went through.
+ */
+test('song edit opened from a playlist anchors to that playlist', () => {
+  expect(railAnchorPath('/library/song/42/edit', '/library/song/42', '/playlists/7')).toBe('/playlists/7')
+})
+
+test('song edit opened from the detail page anchors like the detail page', () => {
+  expect(railAnchorPath('/library/song/42/edit', '/playlists/7', '/library/song/42')).toBe('/playlists/7')
+  // No detail origin recorded either (direct entry): answer as the detail page.
+  expect(railAnchorPath('/library/song/42/edit', null, '/library/song/42')).toBe('/library/song/42')
+})
+
+test('nothing recorded → song edit answers like a directly-entered detail page', () => {
+  expect(railAnchorPath('/library/song/42/edit', null, null)).toBe('/library/song/42')
+})
+
 test('every other route answers for itself, whatever was recorded earlier', () => {
   for (const p of ['/library', '/library/category/genre', '/playlists/7', '/library/add']) {
     expect(railAnchorPath(p, '/playlists/99')).toBe(p)

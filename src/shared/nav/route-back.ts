@@ -60,6 +60,13 @@ export interface RouteBackContext {
    * return to that origin — the library default is only for direct entry.
    */
   songDetailFrom?: string | null
+  /**
+   * Where the song **edit** page was entered from, same recording scheme. The
+   * edit page is reachable both from the detail page and straight from a song
+   * menu, and back must return to whichever it was — not always the detail
+   * page.
+   */
+  songEditFrom?: string | null
 }
 
 /**
@@ -112,6 +119,26 @@ export function resolveRouteBack(
   if (pathname.startsWith(CATEGORY_PREFIX)) {
     const field = pathname.slice(CATEGORY_PREFIX.length)
     return { kind: 'navigate', to: '/library', librarySearch: { view: field } }
+  }
+
+  /*
+   * Song edit returns to the page it was opened from — a playlist detail when
+   * the song menu's "edit" was tapped there, the song detail page when the edit
+   * button was tapped there. Nothing recorded (direct URL entry) falls back to
+   * the detail page, the natural parent. Must be matched before the song-detail
+   * prefix rule below, which the edit path also starts with.
+   */
+  const songEditMatch = /^\/library\/song\/(\d+)\/edit$/.exec(pathname)
+  if (songEditMatch) {
+    const from = ctx.songEditFrom
+    if (from && from !== pathname) {
+      // Same library-subview restoration as the detail rule below.
+      if (from === '/library') {
+        return { kind: 'navigate', to: '/library', librarySearch: ctx.lastLibrarySearch }
+      }
+      return { kind: 'navigate', to: from }
+    }
+    return { kind: 'navigate', to: `/library/song/${songEditMatch[1]}` }
   }
 
   // Song detail returns to the page it was opened from (playlist detail, facet

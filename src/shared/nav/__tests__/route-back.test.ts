@@ -219,6 +219,43 @@ describe('the song page returns to where it was opened from', () => {
   })
 })
 
+describe('the song edit page returns to where it was opened from', () => {
+  /**
+   * The edit form used to be an inline mode of the detail page, so closing it
+   * always stranded the user on the detail page — even when the song menu had
+   * opened it straight from a list. As a page with its own recorded origin,
+   * back returns to wherever the user actually was.
+   */
+  test.each([
+    ['/playlists/7', 'a playlist detail (song menu)'],
+    ['/library/category/artist', 'a facet drill-in (song menu)'],
+    ['/library/song/42', 'the song detail page (its edit button)'],
+  ])('opened from %s returns there', (from, label) => {
+    const action = resolveRouteBack(
+      '/library/song/42/edit',
+      ctx({ songEditFrom: from, lastLibrarySearch: { view: 'album' } }),
+    )
+    expect(action.kind === 'navigate' && action.to, label).toBe(from)
+  })
+
+  test('opened from the library restores the last view', () => {
+    const action = resolveRouteBack(
+      '/library/song/42/edit',
+      ctx({ songEditFrom: '/library', lastLibrarySearch: { view: 'radio' } }),
+    )
+    expect(action.kind === 'navigate' && action.to).toBe('/library')
+    expect(action.kind === 'navigate' && action.librarySearch?.view).toBe('radio')
+  })
+
+  test('no recorded origin falls back to the song detail page', () => {
+    const action = resolveRouteBack(
+      '/library/song/42/edit',
+      ctx({ songEditFrom: null, songDetailFrom: '/playlists/7' }),
+    )
+    expect(action.kind === 'navigate' && action.to).toBe('/library/song/42')
+  })
+})
+
 describe('chrome-less pages return to the tab the shell recorded', () => {
   test.each(['/player', '/playlists/7'])('%s follows the last shell tab', (pathname) => {
     const onHome = resolveRouteBack(pathname, ctx({ lastShellLocation: '/' }))

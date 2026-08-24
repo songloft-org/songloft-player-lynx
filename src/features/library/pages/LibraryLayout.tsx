@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from '@lynx-js/react'
 import { Outlet, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 
-import { getSongDetailOrigin } from '../../../shared/nav/navigate-to-song-detail.js'
+import { getSongDetailOrigin, getSongEditOrigin } from '../../../shared/nav/navigate-to-song-detail.js'
 import { getShellWidth, subscribeShellWidth } from '../../../shared/nav/shell-navigation.js'
 import { breakpointFromWidth, isWide as isWideBreakpoint, useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { getLastLibrarySearch } from '../data/last-library-search.js'
@@ -71,10 +71,12 @@ export function LibraryLayout() {
    *
    * Song detail answers for the page it was opened from instead of for itself
    * (`railAnchorPath`), so reaching it from a playlist keeps the playlists group
-   * lit rather than dropping to the last library view.
+   * lit rather than dropping to the last library view. The song edit page does
+   * the same with its own origin (the song menu opens it straight from any
+   * list).
    */
   const pathname = useRouterState({ select: s => s.location.pathname })
-  const anchorPath = railAnchorPath(pathname, getSongDetailOrigin())
+  const anchorPath = railAnchorPath(pathname, getSongDetailOrigin(), getSongEditOrigin())
   const resolved = config
     ? resolveLibraryView(requestedRailView(anchorPath, search.view, getLastLibrarySearch().view), config)
     : undefined

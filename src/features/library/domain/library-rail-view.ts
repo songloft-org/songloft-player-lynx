@@ -7,6 +7,9 @@ const CATEGORY_PREFIX = '/library/category/'
 /** `/library/song/<id>` — song detail. Mirrors `route-back.ts`. */
 const SONG_PREFIX = '/library/song/'
 
+/** `/library/song/<id>/edit` — the song edit form. Mirrors `route-back.ts`. */
+const SONG_EDIT_RE = /^\/library\/song\/\d+\/edit$/
+
 function asViewKey(value: string): LibraryViewKey | undefined {
   return (LIBRARY_VIEW_KEYS as readonly string[]).includes(value)
     ? value as LibraryViewKey
@@ -85,12 +88,25 @@ export function railSelection(
  * agree by construction, because they read one recording. A song→song hop keeps
  * the first origin (the helper's rule), so the highlight does not drift either.
  *
+ * The edit page plays the same game with its own origin: opened from a song
+ * menu on a playlist it anchors to that playlist, and opened from the song
+ * detail page it anchors like the detail page does (its origin is a song path,
+ * so it unwraps one level further to the detail page's own origin).
+ *
  * Every other route answers for itself.
  */
 export function railAnchorPath(
   pathname: string,
   songDetailFrom: string | null | undefined,
+  songEditFrom?: string | null,
 ): string {
+  if (SONG_EDIT_RE.test(pathname)) {
+    if (songEditFrom && !songEditFrom.startsWith(SONG_PREFIX)) return songEditFrom
+    // Opened from the song detail page (or nothing recorded): anchor like the
+    // detail page would.
+    const detailPath = pathname.slice(0, pathname.lastIndexOf('/edit'))
+    return railAnchorPath(detailPath, songDetailFrom)
+  }
   if (!pathname.startsWith(SONG_PREFIX)) return pathname
   // Nothing recorded (direct entry) or a stale song path: no better anchor.
   if (!songDetailFrom || songDetailFrom.startsWith(SONG_PREFIX)) return pathname

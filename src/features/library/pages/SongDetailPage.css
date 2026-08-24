@@ -86,56 +86,10 @@
   color: var(--content);
 }
 
-.song-detail__form {
-  padding: 0 var(--space-4);
-}
-
-.song-detail__label {
-  font-size: var(--font-xs);
-  color: var(--content-muted);
-  margin-top: var(--space-3);
-  margin-bottom: var(--space-1);
-}
-
 /*
- * Form field: `--neutral-faint` fill + `--line` hairline, same as every other
- * form field (login / server / proxy / cache / playlist).
- *
- * It used to be filled with `--paper`, which DESIGN.md assigns to cards floating
- * *on* canvas — and with no border on a transparent page that put #fafafa on
- * #ffffff, a contrast ratio of about 1.04:1. The field had no perceivable edge at
- * all; only the placeholder text showed where to tap.
+ * The "write tags to file" pill. The edit form used to share it; now only this
+ * button and the form live apart (see SongEditPage.css).
  */
-.song-detail__input {
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  background-color: var(--neutral-faint);
-  border: 1px solid var(--line);
-  font-size: var(--font-sm);
-  color: var(--content);
-  -x-placeholder-color: var(--content-muted);
-}
-
-.song-detail__form-actions {
-  display: flex;
-  flex-direction: row;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
-  justify-content: flex-end;
-}
-
-.song-detail__cancel-btn {
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-pill);
-  background-color: var(--paper);
-}
-
-.song-detail__cancel-btn-text {
-  font-size: var(--font-sm);
-  color: var(--content);
-}
-
 .song-detail__save-btn {
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-pill);

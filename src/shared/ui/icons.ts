@@ -35,6 +35,7 @@ export type IconName =
   | 'info'
   | 'logout'
   | 'link'
+  | 'copy'
   | 'palette'
   | 'check'
   | 'timer'
@@ -176,6 +177,11 @@ const ICONS: Record<IconName, (color: string) => string> = {
     `<path d="M9 15 15 9" ${stroke(c)}/>` +
     `<path d="M11.5 6.5 13 5a4 4 0 0 1 6 6l-1.5 1.5" ${stroke(c)}/>` +
     `<path d="M12.5 17.5 11 19a4 4 0 0 1-6-6l1.5-1.5" ${stroke(c)}/>`,
+
+  // Copy: two overlapping sheets — the clipboard affordance on read-only URLs.
+  copy: (c) =>
+    `<rect x="9" y="9" width="11" height="11" rx="2" ${stroke(c)}/>` +
+    `<path d="M5 15V5a2 2 0 0 1 2-2h10" ${stroke(c)}/>`,
 
   // Palette: appearance / theme.
   palette: (c) =>

@@ -14,7 +14,7 @@ import { SongRowOverlays } from './shared/ui/SongRowOverlays.js'
 import { ToastHost } from './shared/ui/ToastHost.js'
 import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
-import { AddSongsPage, CategorySongsPage, LibraryLayout, LibraryPage, SongDetailPage } from './features/library/index.js'
+import { AddSongsPage, CategorySongsPage, LibraryLayout, LibraryPage, SongDetailPage, SongEditPage } from './features/library/index.js'
 import { migrateLibrarySearch, type LibraryViewKey } from './features/library/domain/library-views.js'
 import { CreatePlaylistPage, EditPlaylistPage, PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
@@ -331,17 +331,23 @@ const categorySongsRoute = createRoute({
 /**
  * `/library/song/$songId` — song detail, inside the library layout.
  *
- * `edit` opens straight into the inline edit form, which is what the song menu's
- * "edit" item needs: this app has no separate song-edit page, the form lives on
- * the detail page. Declared optional so unrelated navigations to this route stay
- * type-valid (same pattern as `libraryRoute` / `categorySongsRoute`).
+ * Editing lives one level deeper (`/library/song/$songId/edit`, the Flutter
+ * build's `SongEditPage`) so the edit form is not a render mode of this page,
+ * and closing it can return to wherever it was opened from — the song menu
+ * opens the edit page straight from the library / playlist lists.
  */
 const songDetailRoute = createRoute({
   getParentRoute: () => libraryLayoutRoute,
   path: '/library/song/$songId',
-  validateSearch: (search: Record<string, unknown>): { edit?: boolean } =>
-    search.edit === true || search.edit === 'true' ? { edit: true } : {},
   component: SongDetailPage,
+})
+
+/** `/library/song/$songId/edit` — the song edit form, mirroring the Flutter
+ * `SongEditPage`; back follows its recorded origin (see route-back.ts). */
+const songEditRoute = createRoute({
+  getParentRoute: () => libraryLayoutRoute,
+  path: '/library/song/$songId/edit',
+  component: SongEditPage,
 })
 
 const addSongsRoute = createRoute({
@@ -379,6 +385,7 @@ const routeTree = rootRoute.addChildren([
       editPlaylistRoute,
       categorySongsRoute,
       songDetailRoute,
+      songEditRoute,
       playlistDetailRoute,
     ]),
     settingsRoute,

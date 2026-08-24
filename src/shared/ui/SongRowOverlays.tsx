@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { getSongsApi } from '../../features/library/api/index.js'
 import { AddToPlaylistSheet } from '../../features/playlist/widgets/AddToPlaylistSheet.js'
 import { usePlayerStore } from '../../features/player/store/index.js'
-import { useNavigateToSongDetail } from '../nav/navigate-to-song-detail.js'
+import { useNavigateToSongDetail, useNavigateToSongEdit } from '../nav/navigate-to-song-detail.js'
 import { ConfirmDialog } from './ConfirmDialog.js'
 import { GlobalMenu } from './GlobalMenu.js'
 import type { MenuItemSpec } from './MenuItem.js'
@@ -32,6 +32,7 @@ export function SongRowOverlays() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const goToSongDetail = useNavigateToSongDetail()
+  const goToSongEdit = useNavigateToSongEdit()
 
   const menuSong = useSongRowOverlays((s) => s.menuSong)
   const menuAnchor = useSongRowOverlays((s) => s.menuAnchor)
@@ -64,9 +65,10 @@ export function SongRowOverlays() {
         void usePlayerStore.getState().playSong(song)
         return
       case 'edit':
-        // No standalone song-edit page: the form is on the detail page, and
-        // `edit` opens it directly (see `songDetailRoute`).
-        goToSongDetail(song.id, { edit: true })
+        // The edit form is its own page (the Flutter `SongEditPage`); opening it
+        // records this page as the back target, so closing the form returns
+        // here — not to the song detail page.
+        goToSongEdit(song.id)
         return
       case 'add':
         openAddToPlaylist({ songIds: [song.id] })

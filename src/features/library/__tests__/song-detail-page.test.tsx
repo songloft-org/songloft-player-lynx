@@ -1,7 +1,11 @@
 import '../../../shims/router-env.js'
 import '@testing-library/jest-dom'
 import { expect, test, vi } from 'vitest'
-import { act, getQueriesForElement, render } from '@lynx-js/react/testing-library'
+import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
+
+const { navigateToSongEditMock } = vi.hoisted(() => ({
+  navigateToSongEditMock: vi.fn(),
+}))
 
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
@@ -9,12 +13,10 @@ vi.mock('react-i18next', async () =>
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
   useParams: () => ({ songId: '42' }),
-  // The page reads `?edit` to decide whether it opens straight into the form.
-  useSearch: () => ({}),
 }))
-vi.mock('@lynx-js/lynx-ui-input', async () =>
-  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
-)
+vi.mock('../../../shared/nav/navigate-to-song-detail.js', () => ({
+  useNavigateToSongEdit: () => navigateToSongEditMock,
+}))
 
 const getSongSpy = vi.fn(async () => ({
   id: 42, type: 'local', title: 'Test Song', artist: 'Test Artist', album: 'Test Album',
@@ -26,7 +28,7 @@ const getSongSpy = vi.fn(async () => ({
 }))
 
 vi.mock('../api/index.js', () => ({
-  getSongsApi: () => ({ getSong: getSongSpy, updateSong: vi.fn(async () => {}), writeTags: vi.fn(async () => {}) }),
+  getSongsApi: () => ({ getSong: getSongSpy, writeTags: vi.fn(async () => {}) }),
 }))
 
 const { SongDetailPage } = await import('../pages/SongDetailPage.js')
@@ -41,4 +43,18 @@ test('renders song detail with metadata', async () => {
   expect(queryByText('Test Album')).toBeInTheDocument()
   expect(queryByText('Pop')).toBeInTheDocument()
   expect(queryByText('2024')).toBeInTheDocument()
+})
+
+/*
+ * The edit button used to swap the page into an inline form; it now opens the
+ * standalone edit page (the Flutter build's `SongEditPage`), where closing the
+ * form can return to wherever it was opened from.
+ */
+test('the edit button opens the song edit page', async () => {
+  render(<SongDetailPage />)
+  await act(async () => { await new Promise(r => setTimeout(r, 10)) })
+  const { getByTestId } = getQueriesForElement(elementTree.root!)
+
+  fireEvent.tap(getByTestId('song-detail-edit'), {})
+  expect(navigateToSongEditMock).toHaveBeenCalledWith(42)
 })
