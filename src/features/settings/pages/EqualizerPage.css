@@ -78,21 +78,15 @@
   flex-shrink: 0;
 }
 
+/* Sizes only; the flex centring and the track/fill/thumb positioning come from
+   `.vslider*` (VerticalSlider.css). */
 .eq-page__band-slider-wrap {
   flex: 1;
   width: 100%;
   min-height: 0;
-  display: flex;
-  justify-content: center;
-  /*
-   * Gesture ownership is handled by `consume-slide-event` on this element (see
-   * EqualizerPage.tsx) — not `touch-action`, which Lynx does not support and
-   * strips during template encode.
-   */
 }
 
 .eq-page__band-track {
-  position: relative;
   width: 6px;
   height: 100%;
   background-color: var(--neutral-faint);
@@ -100,18 +94,11 @@
 }
 
 .eq-page__band-indicator {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
   background-color: var(--primary);
   border-radius: 3px;
 }
 
 .eq-page__band-thumb {
-  position: absolute;
-  left: 50%;
-  transform: translate(-50%, 50%);
   width: 16px;
   height: 16px;
   border-radius: 8px;

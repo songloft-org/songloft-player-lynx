@@ -78,14 +78,17 @@ const GAP = 6
 /** Smallest allowed distance from the panel to the edge of the viewport. */
 const MARGIN = 8
 /**
- * Width the anchored edge always leaves room for — the widest panel in the app
- * (`.player-volume-panel`, 200px; the menus are 140–180).
+ * Width the anchored edge always leaves room for — a fixed bound at or above every
+ * panel in the app. The widest is `.popover-menu--wide` at 180px (the volume panel
+ * used to be the 200px one, until its slider went vertical and it shrank to 84);
+ * the extra 20px is slack so a new panel does not silently outgrow this.
  *
- * Needed because `max-width` cannot be trusted to shrink a panel: CSS resolves
- * `min-width` *after* it, so `.popover-menu--wide`'s `min-width: 180px` wins over
- * any smaller cap this module computes. Reserving the room on the offset instead is
- * the only version that holds. It only ever bites for a trigger within 200px of the
- * edge it opens away from, where there is nowhere better for the panel to be.
+ * A bound rather than the real width because `max-width` cannot be trusted to
+ * shrink a panel: CSS resolves `min-width` *after* it, so `.popover-menu--wide`'s
+ * `min-width: 180px` wins over any smaller cap this module computes. Reserving the
+ * room on the offset instead is the only version that holds. It only ever bites for
+ * a trigger within 200px of the edge it opens away from, where there is nowhere
+ * better for the panel to be.
  */
 const RESERVED_PANEL_WIDTH = 200
 

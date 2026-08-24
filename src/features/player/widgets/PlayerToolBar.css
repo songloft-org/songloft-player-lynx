@@ -44,8 +44,19 @@
 
 /* ── Volume popover body ── */
 
+/*
+ * A narrow column now that the slider inside is vertical, so the panel is the
+ * shape of the control rather than of the row it replaced.
+ *
+ * `min-width: 0` is what makes that possible: `.popover-menu`'s `min-width: 140px`
+ * would otherwise hold the floor (both rules are one class deep, and this
+ * stylesheet is emitted after `PopoverMenu.css`, so this one wins — the previous
+ * `min-width: 200px` here was overriding that 140 the same way).
+ */
 .player-volume-panel {
-  min-width: 200px;
+  min-width: 0;
+  width: 84px;
+  align-items: center;
 }
 
 .player-volume-panel__label {

@@ -1,9 +1,43 @@
-/* Volume: mute toggle + slider. All colors/sizes via Muse tokens (no hardcode). */
+/* Volume: vertical slider + mute toggle. All colors/sizes via Muse tokens (no
+   hardcode) except the slider's own geometry, which is pixel work.
+   Positioning of the track/fill/thumb comes from `.vslider*`
+   (shared/ui/VerticalSlider.css); these rules only give them size and colour. */
 
 .player-volume {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
+}
+
+/* A definite height, because the drag surface measures itself and maps the
+   pointer onto that height — a flex-derived one would be 0 in a panel that sizes
+   to its content. 132px is a comfortable thumb travel that still lets the whole
+   popover sit above the tool row on a short screen. */
+.player-volume__slider {
+  height: 132px;
+  width: 32px;
+}
+
+.player-volume__track {
+  width: 4px;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background-color: var(--rule);
+}
+
+/* One accent channel — volume rides the same ink indicator as progress
+   (Muse §2.2). Its height is inline (0..100%). */
+.player-volume__indicator {
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.player-volume__thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-pill);
+  background-color: var(--primary-content);
+  box-shadow: var(--shadow-sm);
 }
 
 .player-volume__mute {
@@ -12,51 +46,5 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  margin-right: var(--space-2);
-}
-
-.player-volume__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.player-volume__slider {
-  flex: 1;
-  height: 24px;
-  display: flex;
-  align-items: center;
-}
-
-.player-volume__track {
-  position: relative;
-  width: 100%;
-  height: 4px;
-  border-radius: var(--radius-pill);
-  background-color: var(--rule);
-}
-
-.player-volume__indicator {
-  /* Same overlay fix as the progress indicator (see ProgressBar.css). One accent
-     channel — volume rides the same ink indicator as progress (Muse §2.2). */
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 4px;
-  border-radius: var(--radius-pill);
-  background-color: var(--primary);
-}
-
-.player-volume__thumb-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.player-volume__thumb {
-  width: 12px;
-  height: 12px;
-  border-radius: var(--radius-pill);
-  background-color: var(--primary-content);
-  box-shadow: var(--shadow-sm);
+  margin-top: var(--space-2);
 }

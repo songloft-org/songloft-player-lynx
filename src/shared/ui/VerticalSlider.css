@@ -1,0 +1,38 @@
+/*
+ * Geometry only — the part that makes a vertical slider vertical. Sizes and
+ * colours belong to the call site's own classes (see `VerticalSliderProps`): a
+ * base rule that set them too would fight the caller's by stylesheet order, and
+ * the winner would depend on import order rather than on intent.
+ */
+
+.vslider {
+  display: flex;
+  justify-content: center;
+  /*
+   * Gesture ownership is handled by `consume-slide-event` on this element (see
+   * VerticalSlider.tsx) — not `touch-action`, which Lynx does not support and
+   * strips during template encode.
+   */
+}
+
+.vslider__track {
+  position: relative;
+}
+
+/* The fill grows upwards from the bottom edge; its height is inline (0..100%). */
+.vslider__indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+/*
+ * `bottom` is inline (0..100% of the track) and `translate(-50%, 50%)` re-centres
+ * the thumb on that point instead of hanging it above the line.
+ */
+.vslider__thumb {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, 50%);
+}
