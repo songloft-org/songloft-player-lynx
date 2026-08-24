@@ -6,15 +6,15 @@ import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/tes
 
 import type { Song } from '../../../models/song.js'
 import type { LibrarySortId } from '../domain/library-sort.js'
+import { useSongRowOverlays } from '../../../shared/ui/song-row-overlays.js'
 
 /**
  * FlatSongsView render tests — the flat song list content view. Carries the
  * search / sort wiring, the sort bottom-sheet, and the P1-12 multi-select
  * regression that used to live in the old monolithic library-page test.
  */
-const { songsHook, playlistsHook, navigateSpy, filterInputs } = vi.hoisted(() => ({
+const { songsHook, navigateSpy, filterInputs } = vi.hoisted(() => ({
   songsHook: vi.fn(),
-  playlistsHook: vi.fn(),
   navigateSpy: vi.fn(),
   filterInputs: [] as Array<{ placeholder: string; onInput: (v: string) => void }>,
 }))
@@ -30,20 +30,6 @@ vi.mock('../data/songs-query.js', () => ({
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateSpy,
-}))
-
-vi.mock('@tanstack/react-query', () => ({
-  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
-  useInfiniteQuery: playlistsHook,
-}))
-
-vi.mock('../../playlist/api/index.js', () => ({
-  getPlaylistApi: () => ({ addSongsToPlaylist: vi.fn(async () => {}) }),
-}))
-
-vi.mock('../../playlist/data/playlist-query.js', () => ({
-  usePlaylistsInfiniteQuery: playlistsHook,
-  playlistQueryKeys: { list: () => [] },
 }))
 
 vi.mock('../widgets/VirtualList.js', async () =>
@@ -129,14 +115,7 @@ function songsResult(pages: { songs: Song[]; total: number }[], over = {}) {
 
 beforeEach(() => {
   songsHook.mockReturnValue(songsResult([{ songs: [], total: 0 }]))
-  playlistsHook.mockReturnValue({
-    data: { pages: [{ playlists: [], total: 0 }] },
-    isLoading: false,
-    isError: false,
-    hasNextPage: false,
-    isFetchingNextPage: false,
-    fetchNextPage: vi.fn(),
-  })
+  useSongRowOverlays.getState().closeAddToPlaylist()
   filterInputs.length = 0
 })
 
@@ -247,4 +226,64 @@ test('multi-select is cleared when the search changes', async () => {
     searchInput!.onInput('Track B')
   })
   expect(queryByText('1 selected')).not.toBeInTheDocument()
+})
+
+/*
+ * The selection is handed to the root-mounted add-to-playlist sheet — the same
+ * one a single row opens. This view used to inline a second, flatter picker
+ * (names only, no covers, no "new playlist"); it no longer exists.
+ */
+test('the selection is added through the shared add-to-playlist sheet', async () => {
+  songsHook.mockReturnValue(
+    songsResult([
+      { songs: [makeSong(1, { title: 'Track A' }), makeSong(2, { title: 'Track B' })], total: 2 },
+    ]),
+  )
+  const { getByText, getByTestId } = await renderView()
+
+  await act(async () => {
+    fireEvent.tap(getByText('Select'))
+  })
+  await act(async () => {
+    fireEvent.tap(getByText('Track A'))
+  })
+  await act(async () => {
+    fireEvent.tap(getByText('Track B'))
+  })
+  await act(async () => {
+    fireEvent.tap(getByTestId('library-select-add-to-playlist'))
+  })
+
+  expect(useSongRowOverlays.getState().addToPlaylistSongIds).toEqual([1, 2])
+})
+
+/*
+ * Leaving select mode is the sheet's success callback, not its close: a
+ * dismissed sheet has to leave the selection the user built up alone.
+ */
+test('select mode is left only once the sheet reports a successful add', async () => {
+  songsHook.mockReturnValue(
+    songsResult([{ songs: [makeSong(1, { title: 'Track A' })], total: 1 }]),
+  )
+  const { getByText, getByTestId, queryByText } = await renderView()
+
+  await act(async () => {
+    fireEvent.tap(getByText('Select'))
+  })
+  await act(async () => {
+    fireEvent.tap(getByText('Track A'))
+  })
+  await act(async () => {
+    fireEvent.tap(getByTestId('library-select-add-to-playlist'))
+  })
+  // Sheet open, nothing added yet: the selection stands.
+  expect(queryByText('1 selected')).toBeInTheDocument()
+
+  const onAdded = useSongRowOverlays.getState().addToPlaylistOnAdded
+  expect(onAdded).toBeTypeOf('function')
+  await act(async () => {
+    onAdded!()
+  })
+  expect(queryByText('1 selected')).not.toBeInTheDocument()
+  expect(queryByText('Cancel')).not.toBeInTheDocument()
 })

@@ -35,7 +35,8 @@ export function SongRowOverlays() {
 
   const menuSong = useSongRowOverlays((s) => s.menuSong)
   const menuAnchor = useSongRowOverlays((s) => s.menuAnchor)
-  const addToPlaylistSong = useSongRowOverlays((s) => s.addToPlaylistSong)
+  const addToPlaylistSongIds = useSongRowOverlays((s) => s.addToPlaylistSongIds)
+  const addToPlaylistOnAdded = useSongRowOverlays((s) => s.addToPlaylistOnAdded)
   const deleteSong = useSongRowOverlays((s) => s.deleteSong)
   const closeMenu = useSongRowOverlays((s) => s.closeMenu)
   const openAddToPlaylist = useSongRowOverlays((s) => s.openAddToPlaylist)
@@ -68,7 +69,7 @@ export function SongRowOverlays() {
         goToSongDetail(song.id, { edit: true })
         return
       case 'add':
-        openAddToPlaylist(song)
+        openAddToPlaylist({ songIds: [song.id] })
         return
       case 'delete':
         requestDelete(song)
@@ -103,7 +104,11 @@ export function SongRowOverlays() {
         anchor={menuAnchor ?? undefined}
         testId='song-menu'
       />
-      <AddToPlaylistSheet song={addToPlaylistSong} onClose={closeAddToPlaylist} />
+      <AddToPlaylistSheet
+        songIds={addToPlaylistSongIds}
+        onAdded={addToPlaylistOnAdded ?? undefined}
+        onClose={closeAddToPlaylist}
+      />
       <ConfirmDialog
         show={deleteSong != null}
         title={t('songMenu.deleteSong')}

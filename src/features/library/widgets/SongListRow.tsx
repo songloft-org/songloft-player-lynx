@@ -84,7 +84,7 @@ export function SongListRow({
         </view>
         <view
           className='song-row__action'
-          bindtap={() => openAddToPlaylist(song)}
+          bindtap={() => openAddToPlaylist({ songIds: [song.id] })}
           data-testid='song-row-add'
         >
           <Icon name='music' size={16} color={ICON_COLORS.contentMuted} />

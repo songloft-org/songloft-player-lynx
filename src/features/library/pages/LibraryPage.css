@@ -390,55 +390,6 @@
   color: var(--primary-content);
 }
 
-.library__playlist-picker {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-  background-color: var(--paper);
-  border-top-left-radius: var(--radius-xl);
-  border-top-right-radius: var(--radius-xl);
-  display: flex;
-  flex-direction: column;
-}
-
-.library__playlist-picker-header {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: var(--space-4);
-}
-
-.library__playlist-picker-title {
-  flex: 1;
-  font-size: var(--font-md);
-  font-weight: bold;
-  color: var(--content);
-}
-
-.library__playlist-picker-close {
-  padding: var(--space-2);
-}
-
-.library__playlist-picker-close-text {
-  color: var(--content-muted);
-  font-size: var(--font-md);
-}
-
-.library__playlist-picker-list {
-  flex: 1;
-}
-
-.library__playlist-picker-item {
-  padding: var(--space-3) var(--space-4);
-}
-
-.library__playlist-picker-item-text {
-  font-size: var(--font-sm);
-  color: var(--content);
-}
-
 .library__suggestions {
   margin-top: var(--space-1);
   background-color: var(--paper);

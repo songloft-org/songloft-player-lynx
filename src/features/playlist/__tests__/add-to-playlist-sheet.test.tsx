@@ -3,7 +3,6 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 
 import type { Playlist } from '../../../models/playlist.js'
-import type { Song } from '../../../models/song.js'
 import { useToastStore } from '../../../shared/ui/toast-store.js'
 
 /**
@@ -46,10 +45,6 @@ vi.mock('../api/index.js', () => ({
 
 const { AddToPlaylistSheet } = await import('../widgets/AddToPlaylistSheet.js')
 
-function makeSong(): Song {
-  return { id: 7, title: 'Blue in Green', artist: 'Miles Davis' } as Song
-}
-
 function makePlaylist(id: number, over: Partial<Playlist> = {}): Playlist {
   return {
     id,
@@ -75,9 +70,9 @@ function loaded(playlists: Playlist[], over: Record<string, unknown> = {}) {
   }
 }
 
-function renderSheet(song: Song | null = makeSong()) {
+function renderSheet(songIds: number[] = [7], onAdded?: () => void) {
   const onClose = vi.fn()
-  render(<AddToPlaylistSheet song={song} onClose={onClose} />)
+  render(<AddToPlaylistSheet songIds={songIds} onClose={onClose} onAdded={onAdded} />)
   return { onClose, ...getQueriesForElement(elementTree.root!) }
 }
 
@@ -92,8 +87,8 @@ afterEach(() => {
   useToastStore.getState().clearToast()
 })
 
-test('renders nothing without a song', () => {
-  const { queryByTestId } = renderSheet(null)
+test('renders nothing without any songs', () => {
+  const { queryByTestId } = renderSheet([])
   expect(queryByTestId('add-to-playlist-sheet')).toBeNull()
 })
 
@@ -115,6 +110,15 @@ test('an empty library says so instead of showing a bare list', () => {
   holder.query = loaded([])
   const { queryByTestId } = renderSheet()
   expect(queryByTestId('atp-empty')).toBeInTheDocument()
+})
+
+/*
+ * The header count is what tells a batch open apart from a row's: the library's
+ * multi-select hands over its whole selection.
+ */
+test('the header counts every song it was opened with', () => {
+  const { queryByText } = renderSheet([7, 8, 9])
+  expect(queryByText('3 songs')).toBeInTheDocument()
 })
 
 test('a first-page failure offers a retry', () => {
@@ -157,6 +161,27 @@ test('picking a playlist adds the song, reports it and closes', async () => {
   expect(useToastStore.getState().toast?.tone).toBe('success')
   expect(useToastStore.getState().toast?.text).toContain('Added 1')
   expect(onClose).toHaveBeenCalledTimes(1)
+})
+
+test('a batch open sends every id in one request', async () => {
+  addSpy.mockResolvedValue({ added: 3, skipped: 0 })
+  const onAdded = vi.fn()
+  const { getByText } = renderSheet([7, 8, 9], onAdded)
+  fireEvent.tap(getByText('List 1'), {})
+  await act(async () => { await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
+
+  expect(addSpy).toHaveBeenCalledWith(1, [7, 8, 9])
+  // Only a success reports back — that is what lets the caller keep its
+  // selection when the sheet is merely dismissed.
+  expect(onAdded).toHaveBeenCalledTimes(1)
+})
+
+test('a dismissed sheet never reports an add', () => {
+  const onAdded = vi.fn()
+  const { getByTestId } = renderSheet([7, 8], onAdded)
+  fireEvent.tap(getByTestId('atp-backdrop'), {})
+  expect(onAdded).not.toHaveBeenCalled()
 })
 
 test('skipped songs get their own message', async () => {

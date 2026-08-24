@@ -34,7 +34,7 @@ vi.mock('../../../shared/nav/navigate-to-song-detail.js', () => ({
 vi.mock('../../../shared/ui/song-row-overlays.js', () => ({
   useSongRowOverlays: (selector: (s: {
     menuSong: Song | null
-    addToPlaylistSong: Song | null
+    addToPlaylistSongIds: number[]
     deleteSong: Song | null
     openMenu: typeof openMenuMock
     closeMenu: () => void
@@ -45,7 +45,7 @@ vi.mock('../../../shared/ui/song-row-overlays.js', () => ({
   }) => unknown) =>
     selector({
       menuSong: null,
-      addToPlaylistSong: null,
+      addToPlaylistSongIds: [],
       deleteSong: null,
       openMenu: openMenuMock,
       closeMenu: vi.fn(),
@@ -156,7 +156,7 @@ test('the wide add shortcut opens the add-to-playlist sheet directly', async () 
   await act(async () => { await Promise.resolve() })
   // Straight to the sheet rather than through the menu: the shortcut has
   // already decided what the user wants.
-  expect(openAddToPlaylistMock).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
+  expect(openAddToPlaylistMock).toHaveBeenCalledWith({ songIds: [1] })
   expect(openMenuMock).not.toHaveBeenCalled()
 })
 

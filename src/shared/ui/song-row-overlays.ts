@@ -3,6 +3,17 @@ import { create } from 'zustand'
 import type { AnchorMeasurement } from './anchored-overlay.js'
 import type { Song } from '../../models/song.js'
 
+export interface OpenAddToPlaylistParams {
+  /** The songs to offer a destination for — one row, or a whole selection. */
+  songIds: number[]
+  /**
+   * Called once the add succeeded. The library's multi-select passes its
+   * "leave select mode" here so a cancelled sheet keeps the selection intact,
+   * which closing alone cannot distinguish.
+   */
+  onAdded?: () => void
+}
+
 interface SongRowOverlayState {
   /** The song whose context menu is open; null while closed. */
   menuSong: Song | null
@@ -11,13 +22,15 @@ interface SongRowOverlayState {
    * Null when the host could not measure it, which docks the menu instead.
    */
   menuAnchor: AnchorMeasurement | null
-  /** The song being added to a playlist; null while that sheet is closed. */
-  addToPlaylistSong: Song | null
+  /** The songs being added to a playlist; empty while that sheet is closed. */
+  addToPlaylistSongIds: number[]
+  /** Success callback for the open sheet; null when the caller wants none. */
+  addToPlaylistOnAdded: (() => void) | null
   /** The song awaiting delete confirmation; null while the dialog is closed. */
   deleteSong: Song | null
   openMenu: (song: Song, anchor?: AnchorMeasurement | null) => void
   closeMenu: () => void
-  openAddToPlaylist: (song: Song) => void
+  openAddToPlaylist: (params: OpenAddToPlaylistParams) => void
   closeAddToPlaylist: () => void
   requestDelete: (song: Song) => void
   cancelDelete: () => void
@@ -67,29 +80,52 @@ interface SongRowOverlayState {
  * the row's `⋯`, but only the row can measure that button, and by the time the
  * menu renders it is in a different subtree entirely.
  *
+ * The sheet is keyed by song *ids*, not a song object, because the library's
+ * multi-select dispatches through here too — it is the same sheet, not a second
+ * flatter one inlined into the page.
+ *
  * The three overlays are mutually exclusive: opening one closes the others, so
  * the back-stack never has to order them against each other.
  */
 export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
   menuSong: null,
   menuAnchor: null,
-  addToPlaylistSong: null,
+  addToPlaylistSongIds: [],
+  addToPlaylistOnAdded: null,
   deleteSong: null,
   openMenu: (song, anchor) =>
-    set({ menuSong: song, menuAnchor: anchor ?? null, addToPlaylistSong: null, deleteSong: null }),
+    set({
+      menuSong: song,
+      menuAnchor: anchor ?? null,
+      addToPlaylistSongIds: [],
+      addToPlaylistOnAdded: null,
+      deleteSong: null,
+    }),
   closeMenu: () => set({ menuSong: null, menuAnchor: null }),
-  openAddToPlaylist: (song) =>
-    set({ addToPlaylistSong: song, menuSong: null, menuAnchor: null, deleteSong: null }),
-  closeAddToPlaylist: () => set({ addToPlaylistSong: null }),
+  openAddToPlaylist: ({ songIds, onAdded }) =>
+    set({
+      addToPlaylistSongIds: songIds,
+      addToPlaylistOnAdded: onAdded ?? null,
+      menuSong: null,
+      menuAnchor: null,
+      deleteSong: null,
+    }),
+  closeAddToPlaylist: () => set({ addToPlaylistSongIds: [], addToPlaylistOnAdded: null }),
   requestDelete: (song) =>
-    set({ deleteSong: song, menuSong: null, menuAnchor: null, addToPlaylistSong: null }),
+    set({
+      deleteSong: song,
+      menuSong: null,
+      menuAnchor: null,
+      addToPlaylistSongIds: [],
+      addToPlaylistOnAdded: null,
+    }),
   cancelDelete: () => set({ deleteSong: null }),
 }))
 
-/** Imperative access for non-hook callers (none yet — rows are all hooks). */
+/** Imperative access for non-hook callers (the library's multi-select toolbar). */
 export const songRowOverlays = {
   openMenu: (song: Song, anchor?: AnchorMeasurement | null) =>
     useSongRowOverlays.getState().openMenu(song, anchor),
-  openAddToPlaylist: (song: Song) =>
-    useSongRowOverlays.getState().openAddToPlaylist(song),
+  openAddToPlaylist: (params: OpenAddToPlaylistParams) =>
+    useSongRowOverlays.getState().openAddToPlaylist(params),
 }

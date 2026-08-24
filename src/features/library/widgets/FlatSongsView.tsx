@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import { Input } from '@lynx-js/lynx-ui-input'
@@ -14,8 +13,7 @@ import { useSongsInfiniteQuery } from '../data/songs-query.js'
 import { librarySortFilters, type LibrarySortId } from '../domain/library-sort.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
-import { getPlaylistApi } from '../../playlist/api/index.js'
-import { usePlaylistsInfiniteQuery } from '../../playlist/data/playlist-query.js'
+import { songRowOverlays } from '../../../shared/ui/song-row-overlays.js'
 import { SongRow } from './SongRow.js'
 import { SongListRow } from './SongListRow.js'
 import { VirtualList } from './VirtualList.js'
@@ -41,11 +39,9 @@ export interface FlatSongsViewProps {
 export function FlatSongsView({ type, sortId, onSortChange }: FlatSongsViewProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const [searchText, setSearchText] = useState('')
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
-  const [showPlaylistPicker, setShowPlaylistPicker] = useState(false)
 
   const debouncedSearch = useDebounce(searchText, DEBOUNCE_MS)
 
@@ -76,9 +72,6 @@ export function FlatSongsView({ type, sortId, onSortChange }: FlatSongsViewProps
 
   const query = useSongsInfiniteQuery(filters)
   const songs = flattenSongs(query.data?.pages)
-
-  const playlistsQuery = usePlaylistsInfiniteQuery()
-  const playlists = playlistsQuery.data?.pages.flatMap(p => p.playlists) ?? []
 
   const onEndReached = () => {
     if (query.hasNextPage && !query.isFetchingNextPage) {
@@ -112,32 +105,30 @@ export function FlatSongsView({ type, sortId, onSortChange }: FlatSongsViewProps
   const exitSelectMode = () => {
     setSelectMode(false)
     setSelected(new Set())
-    setShowPlaylistPicker(false)
   }
 
   /*
-   * One handler, explicit peel order: the picker sits *inside* multi-select, so
-   * closing it must not also drop the selection the user just built up.
-   *
    * The per-song context menu is not listed — `SongListRow` mounts it only while
-   * open and registers its own layer (including its two sub-views).
+   * open and registers its own layer (including its two sub-views). Neither is
+   * the add-to-playlist sheet: it lives in the root route and arms its own layer
+   * when it opens, which is after this one — so back peels the sheet first and
+   * the selection survives it.
    */
-  useBackHandler(showPlaylistPicker || selectMode, () => {
-    if (showPlaylistPicker) {
-      setShowPlaylistPicker(false)
-      return true
-    }
+  useBackHandler(selectMode, () => {
     exitSelectMode()
     return true
   })
 
-  const onAddToPlaylist = (playlistId: number) => {
-    const ids = Array.from(selected)
-    if (ids.length === 0) return
-    void getPlaylistApi().addSongsToPlaylist(playlistId, ids).then(() => {
-      void queryClient.invalidateQueries({ queryKey: ['playlist'] })
-      exitSelectMode()
-    })
+  /*
+   * The selection goes to the same sheet a single row opens (covers, playlist
+   * type, "new playlist", paging) rather than the bare name list this view used
+   * to inline. `onAdded` is what makes cancelling non-destructive: only a
+   * successful add drops the selection.
+   */
+  const addSelectedToPlaylist = () => {
+    const songIds = Array.from(selected)
+    if (songIds.length === 0) return
+    songRowOverlays.openAddToPlaylist({ songIds, onAdded: exitSelectMode })
   }
 
   return (
@@ -213,35 +204,19 @@ export function FlatSongsView({ type, sortId, onSortChange }: FlatSongsViewProps
               />
             )}
 
-      {selectMode && selected.size > 0 && !showPlaylistPicker
+      {selectMode && selected.size > 0
         ? (
           <view className='library__select-toolbar'>
             <text className='library__select-toolbar-count'>
               {t('library.selectedCount', { count: selected.size })}
             </text>
-            <view className='library__select-toolbar-btn' bindtap={() => setShowPlaylistPicker(true)}>
+            <view
+              className='library__select-toolbar-btn'
+              bindtap={addSelectedToPlaylist}
+              data-testid='library-select-add-to-playlist'
+            >
               <text className='library__select-toolbar-btn-text'>{t('library.addToPlaylist')}</text>
             </view>
-          </view>
-        )
-        : null}
-
-      {showPlaylistPicker
-        ? (
-          <view className='library__playlist-picker'>
-            <view className='library__playlist-picker-header'>
-              <text className='library__playlist-picker-title'>{t('library.addToPlaylist')}</text>
-              <view className='library__playlist-picker-close' bindtap={() => setShowPlaylistPicker(false)}>
-                <text className='library__playlist-picker-close-text'>✕</text>
-              </view>
-            </view>
-            <scroll-view className='library__playlist-picker-list' scroll-y>
-              {playlists.filter(p => !p.isBuiltIn).map(p => (
-                <view key={String(p.id)} className='library__playlist-picker-item' bindtap={() => onAddToPlaylist(p.id)}>
-                  <text className='library__playlist-picker-item-text'>{p.name}</text>
-                </view>
-              ))}
-            </scroll-view>
           </view>
         )
         : null}

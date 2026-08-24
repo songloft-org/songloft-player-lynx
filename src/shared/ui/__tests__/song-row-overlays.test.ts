@@ -50,24 +50,47 @@ beforeEach(() => {
 test('openMenu records the song, clearing the other two overlays', () => {
   const song = makeSong(1)
   useSongRowOverlays.getState().requestDelete(song)
-  useSongRowOverlays.getState().openAddToPlaylist(song)
+  useSongRowOverlays.getState().openAddToPlaylist({ songIds: [song.id] })
   useSongRowOverlays.getState().openMenu(song)
 
   const s = useSongRowOverlays.getState()
   expect(s.menuSong).toBe(song)
-  expect(s.addToPlaylistSong).toBeNull()
+  expect(s.addToPlaylistSongIds).toEqual([])
   expect(s.deleteSong).toBeNull()
 })
 
-test('openAddToPlaylist records the song, closing the menu it was chosen from', () => {
+test('openAddToPlaylist records the ids, closing the menu it was chosen from', () => {
   const song = makeSong(2)
   useSongRowOverlays.getState().openMenu(song)
-  useSongRowOverlays.getState().openAddToPlaylist(song)
+  useSongRowOverlays.getState().openAddToPlaylist({ songIds: [song.id] })
 
   const s = useSongRowOverlays.getState()
-  expect(s.addToPlaylistSong).toBe(song)
+  expect(s.addToPlaylistSongIds).toEqual([2])
   expect(s.menuSong).toBeNull()
   expect(s.deleteSong).toBeNull()
+})
+
+/*
+ * A whole selection is the library multi-select's case: the same sheet, opened
+ * with every selected id plus the callback that lets it leave select mode only
+ * once the add actually succeeded.
+ */
+test('openAddToPlaylist takes a whole selection and its success callback', () => {
+  const onAdded = () => {}
+  useSongRowOverlays.getState().openAddToPlaylist({ songIds: [4, 5, 6], onAdded })
+
+  const s = useSongRowOverlays.getState()
+  expect(s.addToPlaylistSongIds).toEqual([4, 5, 6])
+  expect(s.addToPlaylistOnAdded).toBe(onAdded)
+})
+
+test('closeAddToPlaylist drops the callback with the ids', () => {
+  useSongRowOverlays.getState().openAddToPlaylist({ songIds: [7], onAdded: () => {} })
+  useSongRowOverlays.getState().closeAddToPlaylist()
+
+  const s = useSongRowOverlays.getState()
+  expect(s.addToPlaylistSongIds).toEqual([])
+  expect(s.addToPlaylistOnAdded).toBeNull()
 })
 
 test('requestDelete records the song, closing an open menu', () => {
@@ -78,7 +101,7 @@ test('requestDelete records the song, closing an open menu', () => {
   const s = useSongRowOverlays.getState()
   expect(s.deleteSong).toBe(song)
   expect(s.menuSong).toBeNull()
-  expect(s.addToPlaylistSong).toBeNull()
+  expect(s.addToPlaylistSongIds).toEqual([])
 })
 
 test('each close action clears only its own overlay', () => {
@@ -95,9 +118,9 @@ test('each close action clears only its own overlay', () => {
   useSongRowOverlays.getState().cancelDelete()
   expect(useSongRowOverlays.getState().deleteSong).toBeNull()
 
-  useSongRowOverlays.getState().openAddToPlaylist(song)
+  useSongRowOverlays.getState().openAddToPlaylist({ songIds: [song.id] })
   useSongRowOverlays.getState().closeMenu()
-  expect(useSongRowOverlays.getState().addToPlaylistSong).toBe(song)
+  expect(useSongRowOverlays.getState().addToPlaylistSongIds).toEqual([4])
   useSongRowOverlays.getState().closeAddToPlaylist()
-  expect(useSongRowOverlays.getState().addToPlaylistSong).toBeNull()
+  expect(useSongRowOverlays.getState().addToPlaylistSongIds).toEqual([])
 })
