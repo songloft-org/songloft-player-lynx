@@ -67,6 +67,7 @@ export type IconName =
   | 'cast'
   | 'more'
   | 'eye'
+  | 'edit'
 
 /** Shared stroke attributes for line icons — Muse §4.5 stroke-width 1.6. */
 function stroke(color: string): string {
@@ -346,6 +347,12 @@ const ICONS: Record<IconName, (color: string) => string> = {
   eye: (c) =>
     `<path d="M2.5 12s3.2-6.5 9.5-6.5S21.5 12 21.5 12s-3.2 6.5-9.5 6.5S2.5 12 2.5 12Z" ${stroke(c)}/>` +
     `<circle cx="12" cy="12" r="2.8" ${stroke(c)}/>`,
+
+  // Pencil — marks the "custom value" chips in the sleep-timer sheet, as
+  // `Icons.edit_outlined` does in the Flutter build.
+  edit: (c) =>
+    `<path d="M4 20h4l10-10-4-4L4 16v4Z" ${stroke(c)}/>` +
+    `<path d="M14.5 5.5 18.5 9.5" ${stroke(c)}/>`,
 }
 
 /** Build a complete inline SVG document string for `name`, colored with `color`. */

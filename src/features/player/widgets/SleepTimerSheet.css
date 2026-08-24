@@ -1,39 +1,85 @@
-/* Sleep timer options. The surrounding sheet chrome lives in `SheetShell.css`.
-   All colors/sizes via Muse tokens (no hardcode). */
+/* Sleep timer: status row + two chip sections. The surrounding sheet chrome lives
+   in `SheetShell.css`. All colors/sizes via Muse tokens (no hardcode). */
 
-.sleep-timer__list {
+.sleep-timer__body {
   flex: 1;
 }
 
-.sleep-timer__option {
+/* ── Running-timer status row ── */
+
+.sleep-timer__status {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
   border-radius: var(--radius-md);
-}
-
-.sleep-timer__option--active {
   background-color: var(--neutral-faint);
 }
 
-.sleep-timer__option-text {
-  color: var(--content);
-  font-size: var(--font-md);
+.sleep-timer__status-text {
+  flex: 1;
+  color: var(--primary);
+  font-size: var(--font-sm);
+  font-weight: 500;
 }
 
-.sleep-timer__option-text--active {
-  color: var(--accent);
-  font-weight: bold;
+.sleep-timer__cancel {
+  padding: var(--space-1) var(--space-3);
 }
 
-.sleep-timer__option-text--off {
+.sleep-timer__cancel-text {
   color: var(--danger);
+  font-size: var(--font-sm);
 }
 
-.sleep-timer__divider {
-  height: 1px;
-  background-color: var(--rule);
-  margin: var(--space-2) var(--space-4);
+/* ── Sections of chips ── */
+
+.sleep-timer__section {
+  color: var(--content-2);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+/* `flex-wrap` so a section keeps its chips on screen at any width instead of
+   overflowing the sheet (same shape as the EQ preset row). */
+.sleep-timer__chips {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.sleep-timer__chip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--neutral-faint);
+}
+
+/* Only the song-count chips ever carry this: a duration preset stops matching the
+   countdown it started a second later (see the component header). */
+.sleep-timer__chip--active {
+  background-color: var(--primary);
+}
+
+.sleep-timer__chip--custom {
+  border: 1px solid var(--line);
+  background-color: transparent;
+}
+
+.sleep-timer__chip-text {
+  color: var(--content);
+  font-size: var(--font-sm);
+}
+
+.sleep-timer__chip-text--active {
+  color: var(--primary-content);
+  font-weight: 500;
 }

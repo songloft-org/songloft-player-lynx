@@ -10,6 +10,8 @@
  * `sleepTimerOnSongCompleted`, applying the returned action.
  */
 
+import type { Song } from '../../../models/song.js'
+
 export type SleepTimerMode = 'duration' | 'afterSongs'
 
 export interface SleepTimerStatus {
@@ -63,4 +65,63 @@ export function sleepTimerOnSongCompleted(
   const next = (status.remainingSongs ?? 1) - 1
   if (next <= 0) return { status: undefined, expired: true }
   return { status: { mode: 'afterSongs', remainingSongs: next }, expired: false }
+}
+
+/** `m:ss` for a remaining countdown, as both the top bar and the sheet show it. */
+export function formatSleepRemaining(ms: number): string {
+  const totalSec = Math.max(0, Math.ceil(ms / 1_000))
+  const m = Math.floor(totalSec / 60)
+  const s = totalSec % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+/**
+ * Whether "after N songs" can work for what is playing.
+ *
+ * A live stream never raises a song-completion, so an `afterSongs` timer set
+ * against one would sit there forever and never pause anything — the Flutter build
+ * hides the whole section for the same reason. Same test as `video-source.ts`:
+ * `type === 'radio'` is the catalogue entry, `isLive` the stream itself.
+ */
+export function supportsAfterSongs(
+  song: Pick<Song, 'isLive' | 'type'> | undefined,
+): boolean {
+  if (!song) return true
+  return !(song.isLive || song.type === 'radio')
+}
+
+/** Inclusive bounds for a custom value, as the input dialog validates them. */
+export interface IntegerRange {
+  min: number
+  max: number
+}
+
+/** Custom duration, in minutes — the Flutter build's range. */
+export const SLEEP_TIMER_MINUTES_RANGE: IntegerRange = { min: 1, max: 999 }
+/** Custom track count — the Flutter build's range. */
+export const SLEEP_TIMER_SONGS_RANGE: IntegerRange = { min: 1, max: 99 }
+
+export type ParsedInteger =
+  | { ok: true, value: number }
+  | { ok: false, reason: 'empty' | 'notInteger' | 'outOfRange' }
+
+/**
+ * Parse a typed custom value. Kept pure and reason-tagged rather than returning a
+ * message, so the three failures stay testable without a locale and the caller
+ * owns the wording (`player.enterNumber` / `enterValidInteger` /
+ * `enterIntegerInRange`, matching Flutter's three).
+ *
+ * Only whole numbers: `'12.5'` is `notInteger`, as it is in Dart's `int.tryParse`.
+ * A sign is accepted by the shape and then rejected by the range, so `'-5'`
+ * reports "out of range" instead of "not a number" — which is the true reason.
+ */
+export function parseIntegerInRange(raw: string, range: IntegerRange): ParsedInteger {
+  const text = raw.trim()
+  if (text.length === 0) return { ok: false, reason: 'empty' }
+  if (!/^[+-]?\d+$/.test(text)) return { ok: false, reason: 'notInteger' }
+  const value = Number(text)
+  if (!Number.isFinite(value) || value < range.min || value > range.max) {
+    return { ok: false, reason: 'outOfRange' }
+  }
+  return { ok: true, value }
 }

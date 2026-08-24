@@ -17,6 +17,7 @@ import { getPlatformTarget } from '../../../native/platform-target.js'
 import { getVideoModule } from '../../../native/video.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { resolvePlayerLayout } from '../domain/player-layout.js'
+import { formatSleepRemaining } from '../domain/sleep-timer.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { usePlayerStore } from '../store/index.js'
 import { LyricsView } from '../widgets/LyricsView.js'
@@ -29,13 +30,6 @@ import { PlaylistDrawer } from '../widgets/PlaylistDrawer.js'
 import { ProgressBar } from '../widgets/ProgressBar.js'
 import { SleepTimerSheet } from '../widgets/SleepTimerSheet.js'
 import './FullPlayerPage.css'
-
-function formatRemaining(ms: number): string {
-  const totalSec = Math.ceil(ms / 1_000)
-  const m = Math.floor(totalSec / 60)
-  const s = totalSec % 60
-  return `${m}:${s.toString().padStart(2, '0')}`
-}
 
 /**
  * Cover, with the ▶ badge doubling as the entry point to fullscreen video.
@@ -256,7 +250,7 @@ export function FullPlayerPage() {
   const timerActive = sleepTimer != null
   const timerLabel = sleepTimer
     ? sleepTimer.mode === 'duration'
-      ? t('player.sleepTimerActive', { time: formatRemaining(sleepTimer.remainingMs ?? 0) })
+      ? t('player.sleepTimerActive', { time: formatSleepRemaining(sleepTimer.remainingMs ?? 0) })
       : t(sleepTimer.remainingSongs === 1
           ? 'player.sleepTimerSongsLeftOne'
           : 'player.sleepTimerSongsLeft',
