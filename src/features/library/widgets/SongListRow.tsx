@@ -1,6 +1,7 @@
 import { useNavigateToSongDetail } from '../../../shared/nav/navigate-to-song-detail.js'
 import type { Song } from '../../../models/song.js'
 import { useTapAnchor } from '../../../shared/ui/anchored-overlay.js'
+import type { AnchorMeasurement } from '../../../shared/ui/anchored-overlay.js'
 import { useSongRowOverlays } from '../../../shared/ui/song-row-overlays.js'
 import { useLibraryViewport } from '../pages/library-viewport.js'
 import { useFavoriteToggle } from '../data/favorites.js'
@@ -25,6 +26,20 @@ export interface SongListRowProps {
    * both deletes would be ambiguous.
    */
   showDeleteAction?: boolean
+  /**
+   * Forwarded to the row's subtitle tail — see `SongRowProps.subtitleSuffix`.
+   * The play-history panel uses it for the entry's played-at time.
+   */
+  subtitleSuffix?: string
+  /**
+   * Takes over the row's `⋯` button and long-press instead of the global song
+   * menu — for lists whose menu is context-specific rather than the shared
+   * song actions. The play-history panel passes "remove this entry" this way:
+   * the global menu's "delete song" (which removes it from the library) must
+   * not sit one tap away there. Receives the measured `⋯` rect so the caller
+   * can anchor its own menu the same way the global one does.
+   */
+  onOpenMenu?: (song: Song, anchor: AnchorMeasurement | null) => void
 }
 
 /**
@@ -57,6 +72,8 @@ export function SongListRow({
   onTap,
   selectionMode = false,
   showDeleteAction = true,
+  subtitleSuffix,
+  onOpenMenu,
 }: SongListRowProps) {
   const goToSongDetail = useNavigateToSongDetail()
   const openMenu = useSongRowOverlays((s) => s.openMenu)
@@ -70,7 +87,11 @@ export function SongListRow({
   // Both entry points (the `⋯` button and long-press) anchor on the `⋯` button:
   // it is the only box in the row the menu can be measured against, and on Web the
   // button is the *only* entry point anyway (web-core synthesizes no longpress).
-  const openMenuAnchored = (target: Song) => measure((rect) => openMenu(target, rect))
+  // `onOpenMenu` redirects both to the caller's own menu when provided.
+  const openMenuAnchored = (target: Song) => measure((rect) => {
+    if (onOpenMenu) onOpenMenu(target, rect)
+    else openMenu(target, rect)
+  })
 
   const wideActions = !selectionMode && isWide
     ? (
@@ -114,6 +135,7 @@ export function SongListRow({
       onToggleFavorite={selectionMode ? undefined : toggle}
       isCurrentSong={currentSongId === song.id}
       trailing={wideActions}
+      subtitleSuffix={subtitleSuffix}
       onMore={selectionMode ? undefined : openMenuAnchored}
       moreAnchorId={anchorId}
     />

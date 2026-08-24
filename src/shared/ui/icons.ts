@@ -69,6 +69,7 @@ export type IconName =
   | 'more'
   | 'eye'
   | 'edit'
+  | 'trash'
 
 /** Shared stroke attributes for line icons — Muse §4.5 stroke-width 1.6. */
 function stroke(color: string): string {
@@ -359,6 +360,14 @@ const ICONS: Record<IconName, (color: string) => string> = {
   edit: (c) =>
     `<path d="M4 20h4l10-10-4-4L4 16v4Z" ${stroke(c)}/>` +
     `<path d="M14.5 5.5 18.5 9.5" ${stroke(c)}/>`,
+
+  // Trash can — the header's "clear history" button, as `Icons
+  // .delete_outline_rounded` in the Flutter play-history sheet.
+  trash: (c) =>
+    `<path d="M4 7h16" ${stroke(c)}/>` +
+    `<path d="M9.5 7V5.2A1.2 1.2 0 0 1 10.7 4h2.6a1.2 1.2 0 0 1 1.2 1.2V7" ${stroke(c)}/>` +
+    `<path d="M6.5 7l.8 12a2 2 0 0 0 2 1.9h5.4a2 2 0 0 0 2-1.9L17.5 7" ${stroke(c)}/>` +
+    `<path d="M10 11v6M14 11v6" ${stroke(c)}/>`,
 }
 
 /** Build a complete inline SVG document string for `name`, colored with `color`. */

@@ -18,6 +18,13 @@ export interface SongRowProps {
    * `SongListRow`). Rendered between the favorite heart and the more button.
    */
   trailing?: ReactNode
+  /**
+   * Extra info appended to the subtitle (artist · album) after another ` · `,
+   * e.g. a play-history entry's played-at time — mirrors the Flutter
+   * `SongTile.subtitleSuffix` ("Artist · 07-29 21:30"). Empty leaves the
+   * subtitle as-is.
+   */
+  subtitleSuffix?: string
   /** Renders a trailing "more" button (overflow menu entry point). */
   onMore?: (song: Song) => void
   /**
@@ -28,9 +35,9 @@ export interface SongRowProps {
   moreAnchorId?: string
 }
 
-export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleFavorite, isCurrentSong, trailing, onMore, moreAnchorId }: SongRowProps) {
+export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleFavorite, isCurrentSong, trailing, subtitleSuffix, onMore, moreAnchorId }: SongRowProps) {
   const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
-  const subtitle = [song.artist, song.album].filter(Boolean).join(' · ')
+  const subtitle = [song.artist, song.album, subtitleSuffix].filter(Boolean).join(' · ')
 
   return (
     <view className={`song-row${isCurrentSong ? ' song-row--current' : ''}`} bindtap={() => onTap?.(song, index)} bindlongpress={() => onLongPress?.(song)}>

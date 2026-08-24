@@ -4,11 +4,16 @@ import { useTranslation } from 'react-i18next'
 
 import type { Song } from '../../../models/song.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
+import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
+import { GlobalMenu } from '../../../shared/ui/GlobalMenu.js'
+import type { MenuItemSpec } from '../../../shared/ui/MenuItem.js'
+import type { AnchorMeasurement } from '../../../shared/ui/anchored-overlay.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { toast } from '../../../shared/ui/toast-store.js'
 import { getSongsApi } from '../../library/api/index.js'
 import { SongListRow } from '../../library/widgets/SongListRow.js'
 import type { PlaybackContext } from '../domain/playback-context.js'
-import { playedAtLabel } from '../domain/play-history-time.js'
+import { formatPlayedAt } from '../domain/play-history-time.js'
 import { playHistoryQueryKeys, usePlayHistoryQuery } from '../data/play-history-query.js'
 import { usePlayerStore } from '../store/index.js'
 import './PlayHistoryPanel.css'
@@ -42,6 +47,20 @@ export interface PlayHistoryPanelProps {
  * open. It also keeps `CategorySongsPage` free of lynx-ui gesture leaves, which
  * that file explicitly avoids. The trade-off is no drag-to-dismiss.
  *
+ * Entry rows mirror the Flutter sheet too: the played-at time rides in the row
+ * subtitle (`SongRow`'s `subtitleSuffix` → "Artist · Album · 08-17 09:30") and
+ * **no play count is shown** — the Flutter client has neither a count column
+ * nor a relative-time chip on the right. Clearing mirrors it as well: a trash
+ * button in the header opening a `ConfirmDialog` (plus success/error toasts),
+ * not a two-tap button at the bottom — the shared dialog is the mandated shape
+ * for anything that destroys data.
+ *
+ * Removing one entry lives in the row's `⋯` menu (the Flutter sheet's lone
+ * `menuActions` item), which `SongListRow.onOpenMenu` redirects away from the
+ * *global* song menu — its "delete song" removes the song from the library,
+ * one tap away from what a user trying to prune history expects. The menu is
+ * this panel's own `GlobalMenu`, carrying the row's measured `⋯` rect.
+ *
  * Styling note: this file's CSS deliberately does **not** redefine `.song-row`.
  * Those rules already exist three times over (LibraryPage / CategorySongsPage /
  * PlaylistDetailPage) and every page is eagerly imported by the router, so they
@@ -57,20 +76,23 @@ export function PlayHistoryPanel({
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [confirmClear, setConfirmClear] = useState(false)
+  /* The entry whose ⋯ menu is open; null while closed. */
+  const [menuEntry, setMenuEntry] = useState<{
+    song: Song
+    anchor: AnchorMeasurement | null
+  } | null>(null)
 
   const historyQuery = usePlayHistoryQuery(context)
   const entries = historyQuery.data?.items ?? []
 
   /*
-   * Peels the armed "clear history" state first, then closes the panel. Registered
-   * unconditionally because the call sites only render this component while it is
-   * open — the mount *is* the open state.
+   * Back closes the panel. Registered unconditionally because the call sites
+   * only render this component while it is open — the mount *is* the open
+   * state. The clear dialog registers its own handler above this one while it
+   * is shown (the stack is activation-ordered), so back cancels the dialog
+   * first and only a second back reaches here.
    */
   useBackHandler(true, () => {
-    if (confirmClear) {
-      setConfirmClear(false)
-      return true
-    }
     onClose()
     return true
   })
@@ -102,103 +124,143 @@ export function PlayHistoryPanel({
   }
 
   const clearAll = () => {
-    if (!confirmClear) {
-      setConfirmClear(true)
-      return
-    }
     setConfirmClear(false)
-    void getSongsApi().clearPlayHistory(context).then(invalidate).catch(() => {})
+    void getSongsApi().clearPlayHistory(context)
+      .then(() => {
+        invalidate()
+        toast.success(t('history.cleared'))
+      })
+      .catch(() => toast.error(t('history.operationFailed')))
   }
 
   const removeEntry = (songId: number) => {
-    void getSongsApi().deletePlayHistoryEntry(context, songId).then(invalidate).catch(() => {})
+    void getSongsApi().deletePlayHistoryEntry(context, songId)
+      .then(invalidate)
+      .catch(() => toast.error(t('history.operationFailed')))
   }
 
-  const now = new Date()
-  const timeLabels = {
-    today: t('history.today'),
-    yesterday: t('history.yesterday'),
-    daysAgo: (days: number) => t('history.daysAgo', { count: days }),
+  /* The row menu — same single destructive item as the Flutter sheet's
+   * `menuActions`, and the only removal entry point now that the row's inline
+   * `×` button is gone. */
+  const menuItems: MenuItemSpec[] = [
+    { key: 'delete-entry', label: t('history.deleteEntry'), icon: 'trash', danger: true },
+  ]
+
+  const onMenuSelect = (key: string) => {
+    if (key !== 'delete-entry' || !menuEntry) return
+    removeEntry(menuEntry.song.id)
   }
 
   return (
-    <view className='play-history' bindtap={onClose} data-testid='play-history-panel'>
-      <view className='play-history__backdrop' />
-      <view className='play-history__panel' catchtap={() => {}}>
-        <view className='play-history__header'>
-          <text className='play-history__title'>{title}</text>
-          <view className='play-history__close' bindtap={onClose} data-testid='play-history-close'>
-            <Icon name='x' size={18} color={ICON_COLORS.content2} />
-          </view>
-        </view>
-
-        {historyQuery.isLoading
-          ? (
-            <view className='play-history__state'>
-              <text className='play-history__state-text'>{t('common.loading')}</text>
-            </view>
-          )
-          : historyQuery.isError
-            ? (
-              <view className='play-history__state'>
-                <text className='play-history__state-text'>{t('history.loadFailed')}</text>
-                <view
-                  className='play-history__retry'
-                  bindtap={() => void historyQuery.refetch()}
-                  data-testid='play-history-retry'
-                >
-                  <text className='play-history__retry-text'>{t('common.retry')}</text>
-                </view>
-              </view>
-            )
-            : entries.length === 0
+    <>
+      <view className='play-history' data-testid='play-history-panel'>
+        {/*
+         * Outside-tap close lives on the backdrop (the panel's sibling), not on
+         * this root: with it on the root, every tap inside the panel rides up
+         * through the DOM and only the panel's `catchtap` keeps it from closing
+         * the panel — true on device, but invisible to render tests (the DOM
+         * event bubbles regardless). Same rule as `PopoverMenu`'s backdrop.
+         */}
+        <view className='play-history__backdrop' bindtap={onClose} data-testid='play-history-backdrop' />
+        <view className='play-history__panel'>
+          <view className='play-history__header'>
+            <text className='play-history__title'>{title}</text>
+            {/*
+             * Shown only with entries, like the Flutter header's conditional
+             * delete icon. `history.clear` doubles as the dialog's title and
+             * confirm label.
+             */}
+            {entries.length > 0
               ? (
-                <view className='play-history__state'>
-                  <text className='play-history__state-text'>{t('history.empty')}</text>
-                  <text className='play-history__state-hint'>{t('history.emptyHint')}</text>
+                <view
+                  className='play-history__header-btn'
+                  bindtap={() => setConfirmClear(true)}
+                  data-testid='play-history-clear'
+                >
+                  <Icon name='trash' size={18} color={ICON_COLORS.content2} />
                 </view>
               )
-              : (
-                <scroll-view className='play-history__list' scroll-y>
-                  {entries.map((entry, index) => (
-                    <view key={String(entry.song.id)} className='play-history__entry'>
-                      <view className='play-history__entry-row'>
-                        <SongListRow song={entry.song} index={index} onTap={() => play(index)} />
-                      </view>
-                      <view className='play-history__entry-meta'>
-                        <text className='play-history__entry-time'>
-                          {playedAtLabel(entry.playedAt, timeLabels, now)}
-                        </text>
-                        <text className='play-history__entry-count'>{`×${entry.playCount}`}</text>
-                        <view
-                          className='play-history__entry-remove'
-                          bindtap={() => removeEntry(entry.song.id)}
-                          data-testid={`play-history-remove-${entry.song.id}`}
-                        >
-                          <Icon name='x' size={14} color={ICON_COLORS.contentMuted} />
-                        </view>
-                      </view>
-                    </view>
-                  ))}
-                </scroll-view>
-              )}
-
-        {entries.length > 0
-          ? (
-            <view
-              className={confirmClear
-                ? 'play-history__clear play-history__clear--confirm'
-                : 'play-history__clear'}
-              bindtap={clearAll}
-              data-testid='play-history-clear'
-            >
-              <text className='play-history__clear-text'>
-                {confirmClear ? t('history.clearConfirm') : t('history.clear')}
-              </text>
+              : null}
+            <view className='play-history__header-btn' bindtap={onClose} data-testid='play-history-close'>
+              <Icon name='x' size={18} color={ICON_COLORS.content2} />
             </view>
-          )
-          : null}
+          </view>
+
+          {historyQuery.isLoading
+            ? (
+              <view className='play-history__state'>
+                <text className='play-history__state-text'>{t('common.loading')}</text>
+              </view>
+            )
+            : historyQuery.isError
+              ? (
+                <view className='play-history__state'>
+                  <text className='play-history__state-text'>{t('history.loadFailed')}</text>
+                  <view
+                    className='play-history__retry'
+                    bindtap={() => void historyQuery.refetch()}
+                    data-testid='play-history-retry'
+                  >
+                    <text className='play-history__retry-text'>{t('common.retry')}</text>
+                  </view>
+                </view>
+              )
+              : entries.length === 0
+                ? (
+                  <view className='play-history__state'>
+                    <text className='play-history__state-text'>{t('history.empty')}</text>
+                    <text className='play-history__state-hint'>{t('history.emptyHint')}</text>
+                  </view>
+                )
+                : (
+                  <scroll-view className='play-history__list' scroll-y>
+                    {entries.map((entry, index) => (
+                      <SongListRow
+                        key={String(entry.song.id)}
+                        song={entry.song}
+                        index={index}
+                        subtitleSuffix={formatPlayedAt(entry.playedAt)}
+                        onOpenMenu={(song, anchor) => setMenuEntry({ song, anchor })}
+                        onTap={() => play(index)}
+                      />
+                    ))}
+                  </scroll-view>
+                )}
+        </view>
       </view>
-    </view>
+      {/*
+       * Sibling of the panel root, not a descendant: the backdrop's `bindtap`
+       * closes the panel on outside taps, and a tap inside the dialog (its
+       * scrim's outside-tap cancel included) would bubble into it otherwise —
+       * canceling the dialog would close the panel underneath. The dialog's own
+       * fixed layers carry z-index 200/201 (see `ConfirmDialog.css`), above this
+       * panel's z-index 100.
+       */}
+      <ConfirmDialog
+        show={confirmClear}
+        title={t('history.clear')}
+        message={t('history.clearConfirm')}
+        confirmLabel={t('history.clear')}
+        onConfirm={clearAll}
+        onCancel={() => setConfirmClear(false)}
+        testId='play-history-clear-dialog'
+        confirmTestId='play-history-clear-confirm'
+        cancelTestId='play-history-clear-cancel'
+      />
+      {/*
+       * The row menu, same sibling spot: its own backdrop catches outside taps
+       * and it registers its own back handler while shown, so both close it
+       * before either reaches the panel below. Being a root-level `z-index: 100`
+       * sibling rendered after the panel, it paints above it.
+       */}
+      <GlobalMenu
+        show={menuEntry != null}
+        onClose={() => setMenuEntry(null)}
+        items={menuItems}
+        onSelect={onMenuSelect}
+        anchor={menuEntry?.anchor ?? undefined}
+        testId='play-history-menu'
+      />
+    </>
   )
 }
