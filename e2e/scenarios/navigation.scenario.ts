@@ -69,17 +69,17 @@ describe('导航：路由切换与守卫', () => {
     await stepScreenshot(driver, 'nav-player')
   })
 
-  test('导航到设置子页面 /settings/eq', async () => {
+  test('导航到设置子页面 /settings/cache', async () => {
     await driver.evaluateJS(`
-      globalThis.__E2E_ROUTER__?.navigate({ to: '/settings/eq' })
+      globalThis.__E2E_ROUTER__?.navigate({ to: '/settings/cache' })
     `)
     await driver.sleep(500)
 
     const currentPath = await driver.evaluateJS<string>(`
       globalThis.__E2E_ROUTER__?.state?.location?.pathname ?? 'unknown'
     `)
-    expect(currentPath).toBe('/settings/eq')
-    await stepScreenshot(driver, 'nav-settings-eq')
+    expect(currentPath).toBe('/settings/cache')
+    await stepScreenshot(driver, 'nav-settings-cache')
   })
 
   test('导航到播放列表详情 /playlists/1', async () => {

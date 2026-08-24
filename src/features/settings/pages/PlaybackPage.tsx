@@ -21,8 +21,8 @@ const AUDIO_QUALITY_OPTIONS: AudioQuality[] = ['original', '320', '192', '128']
 
 /**
  * `/settings/playback` — streaming quality, resume-on-launch and loudness
- * normalization. The equalizer is its own sub-page (`/settings/eq`), reached from
- * the settings list rather than nested here.
+ * normalization. The equalizer is deliberately **not** here and has no settings
+ * entry at all: it lives at `/player/eq`, reached from the player's `⋯` menu.
  */
 export function PlaybackPage() {
   const { t } = useTranslation()

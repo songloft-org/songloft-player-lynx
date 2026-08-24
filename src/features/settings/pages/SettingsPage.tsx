@@ -27,7 +27,6 @@ import { AppearancePage } from './AppearancePage.js'
 import { CacheManagePage } from './CacheManagePage.js'
 import { DataPage } from './DataPage.js'
 import { DiagnosticsPage } from './DiagnosticsPage.js'
-import { EqualizerPage } from './EqualizerPage.js'
 import { LicensesPage } from './LicensesPage.js'
 import { LyricsPage } from './LyricsPage.js'
 import { PlaybackPage } from './PlaybackPage.js'
@@ -52,7 +51,6 @@ type SettingsSubPage =
   | 'appearance'
   | 'theme-packs'
   | 'playback'
-  | 'eq'
   | 'lyrics'
   | 'library'
   | 'duplicates'
@@ -217,15 +215,6 @@ export function SettingsPage() {
                 selected={isActive('playback')}
                 onTap={() => goToSubPage('playback', '/settings/playback')}
                 testId='settings-playback'
-              />
-              <SettingsRow
-                icon='music'
-                title={t('eq.title')}
-                subtitle={t('eq.subtitle')}
-                trailingIcon='chevron-right'
-                selected={isActive('eq')}
-                onTap={() => goToSubPage('eq', '/settings/eq')}
-                testId='settings-eq'
               />
               <SettingsRow
                 icon='music'
@@ -417,8 +406,6 @@ function SettingsDetailPane({
       return <ThemePacksPage />
     case 'playback':
       return <PlaybackPage />
-    case 'eq':
-      return <EqualizerPage />
     case 'lyrics':
       return <LyricsPage />
     case 'library':

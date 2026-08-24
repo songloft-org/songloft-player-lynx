@@ -1,6 +1,29 @@
+.eq-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--canvas);
+}
 
+.eq-page__topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+}
+
+.eq-page__back { padding: var(--space-1); }
+
+.eq-page__title {
+  flex: 1;
+  font-size: var(--font-lg);
+  font-weight: bold;
+  color: var(--content);
+}
 
 .eq-page__content {
+  flex: 1;
   padding: 16px;
   gap: 20px;
   display: flex;

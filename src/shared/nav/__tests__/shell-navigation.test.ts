@@ -74,7 +74,7 @@ test('a tab that is not rendered cannot be lit', () => {
 test('settings and its sub-pages never show the mini player', () => {
   for (const p of ['/settings', '/settings/appearance', '/settings/playback',
                    '/settings/lyrics', '/settings/data', '/settings/about',
-                   '/settings/diagnostics', '/settings/eq', '/settings/library']) {
+                   '/settings/diagnostics', '/settings/cache', '/settings/library']) {
     expect(showsMiniPlayer(p), p).toBe(false)
   }
 })

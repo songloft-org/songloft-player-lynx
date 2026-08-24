@@ -12,7 +12,7 @@
 import { usePlayerStore } from './features/player/store/player-store.js'
 import { useAuthStore } from './features/auth/store/auth-store.js'
 import { useLyricStore } from './features/player/store/lyric-store.js'
-import { useEqStore } from './features/settings/store/eq-store.js'
+import { useEqStore } from './features/player/store/eq-store.js'
 import { useServerStore } from './features/settings/store/server-store.js'
 import { appConfig } from './core/config/app-config.js'
 import { router } from './router.js'

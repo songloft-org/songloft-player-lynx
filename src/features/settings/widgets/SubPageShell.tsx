@@ -14,7 +14,7 @@ import './SubPageShell.css'
  * about rather than fix).
  *
  * Deliberately **not** derived from the viewport width inside the shell: a wide
- * screen can legitimately sit on `/settings/eq` as a real route — a deep link, an
+ * screen can legitimately sit on `/settings/cache` as a real route — a deep link, an
  * e2e `__E2E_ROUTER__.navigate`, or a rotate after drilling in on a narrow screen
  * — and there the arrow is live. Width cannot tell the two apart.
  */
@@ -34,9 +34,9 @@ export interface SubPageShellProps {
   /** Right-aligned topbar slot (PluginManagerPage's refresh / store buttons). */
   actions?: ReactNode
   /**
-   * Set false when the page owns its own scrolling — the equalizer's slider area
-   * and the plugin registry's `<list>` both need to be the scroll container
-   * themselves, and nesting them in a `scroll-view` breaks their gestures.
+   * Set false when the page owns its own scrolling — the plugin registry's
+   * `<list>` needs to be the scroll container itself, and nesting it in a
+   * `scroll-view` breaks its gestures.
    */
   scrollable?: boolean
   /** Extra class on the content wrapper, for page-specific layout rules. */

@@ -18,10 +18,11 @@ import { AddSongsPage, CategorySongsPage, LibraryLayout, LibraryPage, SongDetail
 import { migrateLibrarySearch, type LibraryViewKey } from './features/library/domain/library-views.js'
 import { CreatePlaylistPage, EditPlaylistPage, PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
-import { AboutPage, AppearancePage, CacheManagePage, DataPage, DiagnosticsPage, EqualizerPage, LicensesPage, LyricsPage, PlaybackPage, ProxySettingsPage, ServerEditPage, ServerListPage, SettingsPage, ThemePacksPage, UpgradePage } from './features/settings/index.js'
+import { AboutPage, AppearancePage, CacheManagePage, DataPage, DiagnosticsPage, LicensesPage, LyricsPage, PlaybackPage, ProxySettingsPage, ServerEditPage, ServerListPage, SettingsPage, ThemePacksPage, UpgradePage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
+import { EqualizerPage } from './features/player/pages/EqualizerPage.js'
 import { LyricEditPage } from './features/player/pages/LyricEditPage.js'
 import { LyricCalibratePage } from './features/player/pages/LyricCalibratePage.js'
 import { DlnaPage } from './features/player/pages/DlnaPage.js'
@@ -97,6 +98,13 @@ const dlnaRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/player/dlna',
   component: DlnaPage,
+})
+
+/** `/player/eq` — chrome-less equalizer full-screen page, sibling to /player. */
+const equalizerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/player/eq',
+  component: EqualizerPage,
 })
 
 /** Pathless layout route: everything under it renders inside the shell. */
@@ -232,13 +240,6 @@ const cacheManageRoute = createRoute({
   component: CacheManagePage,
 })
 
-/** `/settings/eq` — equalizer sub-page, inside the shell. */
-const equalizerRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/settings/eq',
-  component: EqualizerPage,
-})
-
 /** `/settings/proxy` — proxy configuration sub-page, inside the shell. */
 const proxySettingsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -368,6 +369,7 @@ const routeTree = rootRoute.addChildren([
   lyricEditRoute,
   lyricCalibrateRoute,
   dlnaRoute,
+  equalizerRoute,
   shellRoute.addChildren([
     listRoute,
     libraryLayoutRoute.addChildren([
@@ -391,7 +393,6 @@ const routeTree = rootRoute.addChildren([
     serverEditRoute,
     libraryOpsRoute,
     cacheManageRoute,
-    equalizerRoute,
     proxySettingsRoute,
     themePacksRoute,
     upgradeRoute,

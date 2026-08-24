@@ -148,7 +148,6 @@ const ENTRY_ROWS: Array<[string, string]> = [
   ['settings-appearance', '/settings/appearance'],
   ['settings-theme-packs', '/settings/theme-packs'],
   ['settings-playback', '/settings/playback'],
-  ['settings-eq', '/settings/eq'],
   ['settings-lyrics', '/settings/lyrics'],
   ['settings-library-ops', '/settings/library'],
   ['settings-plugins', '/settings/plugins'],

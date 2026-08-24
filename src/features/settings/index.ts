@@ -15,7 +15,6 @@ export { AboutPage } from './pages/AboutPage.js'
 export { DiagnosticsPage } from './pages/DiagnosticsPage.js'
 
 export { CacheManagePage } from './pages/CacheManagePage.js'
-export { EqualizerPage } from './pages/EqualizerPage.js'
 export { ServerListPage } from './pages/ServerListPage.js'
 export { ServerEditPage } from './pages/ServerEditPage.js'
 export { coercePlayMode, serverDisplay } from './domain/settings-model.js'

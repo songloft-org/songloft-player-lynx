@@ -11,8 +11,9 @@
  * from pointer to value comes out wrong rather than merely sideways.
  *
  * This module started life as `settings/domain/eq-slider.ts` for the EQ bands and
- * moved here when the player's volume popover needed the same thing; the tests that
- * came with it moved too.
+ * moved here when the player's volume popover needed the same thing; the EQ half
+ * itself later followed the equalizer page over to `player/domain/eq-slider.ts`,
+ * where it still lives, and the tests that came with it moved too.
  */
 
 /** Clamp to [0, 1]; anything non-finite collapses to 0 (a safe default). */

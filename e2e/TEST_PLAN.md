@@ -226,9 +226,9 @@
 
 ---
 
-### 14. 均衡器 (`settings-equalizer.scenario.ts`)
+### 14. 均衡器 (`player-equalizer.scenario.ts`)
 
-**路由：** `/settings/eq`
+**路由：** `/player/eq`（入口只在播放器 `⋯` 菜单）
 
 | # | 测试用例 | 验证点 |
 |---|---------|--------|
@@ -388,7 +388,7 @@
 11. `library-facets.scenario.ts`
 12. `library-category-songs.scenario.ts`
 13. `library-playlists.scenario.ts`
-14. `settings-equalizer.scenario.ts`
+14. `player-equalizer.scenario.ts`
 15. `settings-servers.scenario.ts`
 16. `playlist-drawer.scenario.ts`
 

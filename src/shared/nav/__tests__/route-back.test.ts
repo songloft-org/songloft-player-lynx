@@ -78,7 +78,7 @@ describe('every route the app can be on has a declared back target', () => {
     // Guards the walk itself: if `routesById` / `fullPath` ever change shape, this
     // file must not quietly start asserting over an empty list.
     expect(paths.length).toBeGreaterThanOrEqual(30)
-    expect(paths).toContain('/settings/eq')
+    expect(paths).toContain('/player/eq')
     expect(paths).toContain('/player')
     expect(paths).toContain('/library/category/artist')
   })
@@ -132,7 +132,7 @@ describe('tab roots offer to exit rather than navigating', () => {
 describe('the targets each page used to hardcode', () => {
   /** Lifted from the pages' own back arrows before they were unified. */
   const CASES: Array<[pathname: string, to: string]> = [
-    ['/settings/eq', '/settings'],
+    ['/player/eq', '/player'],
     ['/settings/cache', '/settings'],
     ['/settings/library', '/settings'],
     ['/settings/plugins', '/settings'],

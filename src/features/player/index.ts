@@ -1,4 +1,5 @@
 export { FullPlayerPage } from './pages/FullPlayerPage.js'
+export { EqualizerPage } from './pages/EqualizerPage.js'
 export { MiniPlayer } from './widgets/MiniPlayer.js'
 export {
   usePlayerStore,

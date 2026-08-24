@@ -13,7 +13,7 @@ describe('均衡器', () => {
     await driver.login('admin', 'admin')
 
     await driver.evaluateJS(`
-      globalThis.__E2E_ROUTER__?.navigate({ to: '/settings/eq' })
+      globalThis.__E2E_ROUTER__?.navigate({ to: '/player/eq' })
     `)
     await driver.sleep(500)
   })
@@ -24,6 +24,21 @@ describe('均衡器', () => {
       globalThis.__E2E_EQ_STORE__.getState().reset()
     `)
     await driver.teardown()
+  })
+
+  test('均衡器页在 /player/eq 可达', async () => {
+    const currentPath = await driver.evaluateJS<string>(`
+      globalThis.__E2E_ROUTER__?.state?.location?.pathname ?? 'unknown'
+    `)
+    expect(currentPath).toBe('/player/eq')
+  })
+
+  test('返回回到播放器，不是设置页', async () => {
+    const action = await driver.evaluateJS<{ kind: string; to?: string }>(`
+      globalThis.__E2E_BACK__.resolveRouteBack('/player/eq')
+    `)
+    expect(action.kind).toBe('navigate')
+    expect(action.to).toBe('/player')
   })
 
   test('均衡器默认关闭', async () => {

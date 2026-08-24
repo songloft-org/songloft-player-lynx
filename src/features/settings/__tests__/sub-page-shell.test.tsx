@@ -104,13 +104,13 @@ test('an explicit onBack survives inside the detail pane', () => {
 
 test('scrollable=false hands scrolling to the page', () => {
   const { container } = render(
-    <SubPageShell title='Equalizer' scrollable={false}>
+    <SubPageShell title='Plugin store' scrollable={false}>
       <text>sliders</text>
     </SubPageShell>,
   )
 
-  // The gesture-owning pages (equalizer sliders, registry `<list>`) must not be
-  // nested in a scroll-view or their own scrolling stops working.
+  // The gesture-owning page (the registry's `<list>`) must not be
+  // nested in a scroll-view or its own scrolling stops working.
   expect(container.querySelectorAll('scroll-view')).toHaveLength(0)
 })
 

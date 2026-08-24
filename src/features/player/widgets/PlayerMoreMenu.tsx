@@ -29,11 +29,12 @@ export function PlayerMoreMenu({ onOpenSleepTimer, timerActive }: PlayerMoreMenu
 
   const items: PopoverMenuItem[] = [
     /*
-     * Not gated by platform. Flutter hides this on Web (no libmpv there), but here it
-     * is a shortcut to `/settings/eq`, which Settings itself offers unconditionally —
-     * hiding it in one place and not the other would just make the shortcut look
-     * broken. If the EQ should be hidden where it cannot work, that belongs in
-     * `platform-capabilities.ts` and applies to both entry points.
+     * The equalizer's only entry point. Its page lives at `/player/eq` (a
+     * chrome-less sibling of `/player`, not a settings sub-page) so returning
+     * from it goes back to the player rather than the settings list — which is
+     * where a playback control belongs. If it should be hidden where it cannot
+     * work (e.g. a host without native EQ), that belongs in
+     * `platform-capabilities.ts`, not here.
      */
     { key: 'equalizer', label: t('player.equalizer'), icon: 'tune' },
     {
@@ -61,7 +62,7 @@ export function PlayerMoreMenu({ onOpenSleepTimer, timerActive }: PlayerMoreMenu
         }
         items={items}
         onSelect={(key) => {
-          if (key === 'equalizer') void navigate({ to: '/settings/eq' })
+          if (key === 'equalizer') void navigate({ to: '/player/eq' })
           else onOpenSleepTimer()
         }}
       />
