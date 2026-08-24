@@ -15,12 +15,32 @@
  * `__tests__/player-css-no-duplicate-selectors.test.ts`) stays mechanically checkable.
  */
 
+/*
+ * The sheet's own viewport: full-screen, and **above the player**.
+ *
+ * `position: fixed` mirrors what `SheetView` inlines (`OverlayView` hardcodes it
+ * whenever no native `container` is given, and inline beats a stylesheet) — written
+ * out so this rule and the element agree instead of the `absolute` that used to sit
+ * here being dead code. The four offsets are load-bearing either way: a fixed box
+ * with auto offsets sits at its *static* position, which is the trap documented on
+ * `.popover-backdrop`.
+ *
+ * `z-index: 100` is the app's overlay level, and without it **both sheets rendered
+ * underneath the player**: `.full-player__layer` is a flex item carrying `z-index: 1`
+ * (it exists to keep `.player-backdrop` below the content), and this viewport is its
+ * sibling. At `z-index: auto` the sheet therefore painted at level 0 — so the queue
+ * and the sleep timer were *visible* wherever the player happened to be transparent,
+ * with the cover, title, progress bar and transport buttons drawn straight over the
+ * top of them, and the rows underneath those unclickable. Both were introduced in the
+ * same commit, which is why this never worked rather than regressing.
+ */
 .drawer__viewport {
-  position: absolute;
+  position: fixed;
   left: 0;
   right: 0;
   top: 0;
   bottom: 0;
+  z-index: 100;
 }
 
 .drawer__backdrop {
