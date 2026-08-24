@@ -16,7 +16,7 @@
  */
 
 import { createServer } from 'node:http'
-import { readFileSync, statSync, existsSync, readdirSync } from 'node:fs'
+import { readFileSync, statSync, existsSync, readdirSync, realpathSync } from 'node:fs'
 import { extname, resolve, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -39,16 +39,16 @@ const BUNDLE_PATH = resolve(repoRoot, 'dist', 'web', 'main.web.bundle')
 // names, which `build:web` never copies) stayed invisible through every local
 // check. Serving exactly what we ship makes that divergence impossible.
 function findWebCorePath() {
-  const pnpmDir = resolve(repoRoot, 'node_modules', '.pnpm')
-  if (!existsSync(pnpmDir)) return null
+  // Resolve through the symlink pnpm maintains at node_modules/@lynx-js/web-core.
+  // Scanning .pnpm for the first `@lynx-js+web-core@…` match instead grabs
+  // whichever patch-hash directory happens to be listed first — after a patch
+  // update several coexist, and the scan silently serves a stale (unpatched)
+  // copy while the symlink points elsewhere.
+  const link = resolve(repoRoot, 'node_modules', '@lynx-js', 'web-core')
+  if (!existsSync(link)) return null
 
-  const prodMatch = readdirSync(pnpmDir).find(e => e.startsWith('@lynx-js+web-core@'))
-  if (prodMatch) {
-    const p = resolve(pnpmDir, prodMatch, 'node_modules', '@lynx-js', 'web-core', 'dist', 'client_prod', 'static')
-    if (existsSync(p)) return p
-  }
-
-  return null
+  const staticDir = resolve(realpathSync(link), 'dist', 'client_prod', 'static')
+  return existsSync(staticDir) ? staticDir : null
 }
 
 const WEB_CORE_PATH = findWebCorePath()

@@ -1,61 +1,112 @@
 /**
- * Patch @lynx-js/web-core's bundled client.js to fix nativeModulesMap.
+ * Patch @lynx-js/web-core's bundled production files (client_prod) in place.
  *
- * web-core's LynxViewElement declares `nativeModulesMap` as a plain class field
- * (no initializer), which overwrites any value set on the DOM element before the
- * custom element is upgraded. This script replaces the class field with a
- * getter/setter, matching the `onNativeModulesCall` pattern that already works.
+ * Two fixes, both applied the same way — a literal string replacement on the
+ * minified bundle — because a unified diff over a single-line 100 KB file would
+ * embed two whole lines in the patch. The non-minified twin of each fix lives
+ * in `patches/@lynx-js__web-core@0.23.1.patch` (applied by pnpm), which covers
+ * the dev-middleware path; this script covers what serve.mjs and
+ * copy-bundle-web.mjs actually ship.
  *
- * Without this patch, `NativeModules` on the Web platform is always empty,
- * because `audio-host.js` sets `nativeModulesMap` on the element before upgrade,
- * but the constructor then overwrites it to `undefined`.
+ * 1. `client.js` — `nativeModulesMap` is a plain class field on LynxViewElement
+ *    (no initializer), overwriting any value set on the element before the
+ *    custom element is upgraded. Replaced with a getter/setter, matching the
+ *    `onNativeModulesCall` pattern that already works. Without it,
+ *    `NativeModules` on the Web platform is always empty (see upstream issue
+ *    lynx-stack#3559).
  *
- * Invoked by the `postinstall` script in package.json.
+ * 2. `web-core-main-chunk.js` — `runWorklet` / `publishEvent` guard only
+ *    `target ?? currentTarget`, then generate `eventObject.currentTarget` from
+ *    `currentTarget` unguarded. When the element that registered the handler
+ *    was unmounted (its wasm DOM-registry entry is dropped at flush, while the
+ *    stale global-bind EventInfo only dies at the next flush's gc()), a DOM
+ *    event landing on any surviving element dispatches with a dead
+ *    `currentTarget` and `generateTargetObject(undefined)` throws
+ *    `Cannot read properties of undefined (reading 'Symbol(uniqueId)')`. That
+ *    TypeError crosses the wasm boundary and poisons wasm-bindgen's externref
+ *    borrows: every later flush throws "recursive use of an object detected
+ *    which would lead to unsafe aliasing in rust" until the whole element tree
+ *    is destroyed. The patch makes a missing `currentTarget` drop the event
+ *    instead — there is no handler left to deliver to.
+ *
+ * Invoked by the `postinstall` script in package.json. Idempotent: each
+ * replacement is skipped when its output marker is already present.
  */
 
-import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, realpathSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = fileURLToPath(import.meta.url)
 const repoRoot = resolve(here, '..', '..')
 
-const pnpmDir = resolve(repoRoot, 'node_modules', '.pnpm')
-if (!existsSync(pnpmDir)) {
-  console.log('[patch-web-core-client] No .pnpm directory, skipping')
+// Resolve through the symlink pnpm maintains at node_modules/@lynx-js/web-core.
+// Scanning .pnpm for the first `@lynx-js+web-core@…` match instead grabs
+// whichever patch-hash directory happens to be listed first — after a patch
+// update several coexist, and this script silently patched a stale copy the
+// installed tree never read (the tell: serve.mjs kept shipping the bug).
+const webCoreLink = resolve(repoRoot, 'node_modules', '@lynx-js', 'web-core')
+if (!existsSync(webCoreLink)) {
+  console.log('[patch-web-core-client] @lynx-js/web-core not installed, skipping')
   process.exit(0)
 }
 
-const entries = readdirSync(pnpmDir)
-const match = entries.find(e => e.startsWith('@lynx-js+web-core@'))
-if (!match) {
-  console.log('[patch-web-core-client] @lynx-js/web-core not found, skipping')
+// The symlink resolves straight to the installed package root.
+const webCoreDir = realpathSync(webCoreLink)
+if (!existsSync(join(webCoreDir, 'dist', 'client_prod'))) {
+  console.log('[patch-web-core-client] Unexpected layout at', webCoreDir, '— skipping')
   process.exit(0)
 }
 
-const clientJsPath = join(pnpmDir, match, 'node_modules', '@lynx-js', 'web-core', 'dist', 'client_prod', 'static', 'js', 'client.js')
-if (!existsSync(clientJsPath)) {
-  console.log('[patch-web-core-client] client.js not found at', clientJsPath)
-  process.exit(0)
+/** A single minified-bundle replacement. `marker` is the patched form. */
+const REPLACEMENTS = [
+  {
+    // Fix 1, on client.js (wasm-bindgen glue):
+    // `nativeModulesMap;` class field → getter/setter (lynx-stack#3559).
+    file: join('dist', 'client_prod', 'static', 'js', 'client.js'),
+    marker: '#nm;get nativeModulesMap',
+    oldText: 'nativeModulesMap;',
+    newText: '#nm;get nativeModulesMap(){return this.#nm}set nativeModulesMap(e){this.#nm=e};',
+  },
+  {
+    // Fix 2a, on web-core-main-chunk.js: runWorklet — guard currentTarget (minified `o`).
+    // Unminified twin: WASMJSBinding.js runWorklet `if (!resolvedTarget || !currentTarget)`.
+    file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
+    marker: 'A=a??o;A&&o&&(',
+    oldText: 'A=a??o;A&&(',
+    newText: 'A=a??o;A&&o&&(',
+  },
+  {
+    // Fix 2b, on web-core-main-chunk.js: publishEvent — guard currentTarget (minified `A`).
+    // Unminified twin: WASMJSBinding.js publishEvent `if (!resolvedTarget || !currentTarget)`.
+    file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
+    marker: 's=o??A;s&&A&&(',
+    oldText: 's=o??A;s&&(',
+    newText: 's=o??A;s&&A&&(',
+  },
+]
+
+let failures = 0
+for (const { file, marker, oldText, newText } of REPLACEMENTS) {
+  const filePath = join(webCoreDir, file)
+  if (!existsSync(filePath)) {
+    console.log(`[patch-web-core-client] ${file} not found, skipping`)
+    continue
+  }
+  const content = readFileSync(filePath, 'utf-8')
+  if (content.includes(marker)) {
+    console.log(`[patch-web-core-client] ${file}: already patched`)
+    continue
+  }
+  if (!content.includes(oldText)) {
+    // A web-core upgrade renamed the minified identifiers: fail loudly rather
+    // than ship the unpatched bundle and let the bug resurface at runtime.
+    console.error(`[patch-web-core-client] Unexpected: pattern not found in ${file}`)
+    failures++
+    continue
+  }
+  writeFileSync(filePath, content.replace(oldText, newText))
+  console.log(`[patch-web-core-client] ${file}: patched`)
 }
 
-const content = readFileSync(clientJsPath, 'utf-8')
-
-// Check if already patched
-if (content.includes('#nm;get nativeModulesMap')) {
-  console.log('[patch-web-core-client] Already patched')
-  process.exit(0)
-}
-
-// Replace the class field `nativeModulesMap;` with a getter/setter
-const OLD = 'nativeModulesMap;'
-const NEW = '#nm;get nativeModulesMap(){return this.#nm}set nativeModulesMap(e){this.#nm=e};'
-
-if (!content.includes(OLD)) {
-  console.log('[patch-web-core-client] Unexpected: pattern not found in client.js')
-  process.exit(1)
-}
-
-const patched = content.replace(OLD, NEW)
-writeFileSync(clientJsPath, patched)
-console.log('[patch-web-core-client] Patched client.js successfully')
+process.exit(failures > 0 ? 1 : 0)

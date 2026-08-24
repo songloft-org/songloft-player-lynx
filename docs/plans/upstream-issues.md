@@ -59,6 +59,44 @@ Lynx 4.0 中 `clearTimeout(undefined)` 抛出 `TypeError: param 0 should be Numb
 
 ---
 
+## Issue 3: web-core 事件分发对已卸载的 `currentTarget` 无守卫，TypeError 穿透 wasm 摧毁整棵元素树
+
+- **仓库**: `lynx-family/lynx-stack`
+- **组件**: `@lynx-js/web-core`（主线程 WASM 事件分发）
+- **影响版本**: 0.23.1（上游 main 分支同未修，含后来新增的 `runElementClosure` 同样无守卫）
+- **状态**: 本地已修复（双层 patch），待提 issue
+
+### 现象与根因
+
+Web 上任意带 `global-bind*` 的元素（如 `VerticalSlider` 的 `global-bindmouseup`）卸载后，元素在 flush 时离开 wasm DOM 注册表，但它的 EventInfo 要到**下一次** flush 的 `gc()` 才被清理。这个窗口期里落在任何存活元素上的同型事件，会让 Rust 分发器回调 `publishEvent(target=存活元素, currentTarget=已卸载元素)`——而 `generateTargetObject(currentTarget)` 没有 undefined 守卫（只守卫了 `target ?? currentTarget`）：
+
+```
+TypeError: Cannot read properties of undefined (reading 'Symbol(uniqueId)')
+    at o.generateTargetObject  ← eventObject.currentTarget = this.generateTargetObject(currentTarget, …)
+    at o.publishEvent
+```
+
+这个 TypeError 穿越 wasm 边界，污染 wasm-bindgen 的 externref 借用状态：之后每次 `__FlushElementTree` 的 `gc()` / `take_timing_flags()` 全部抛 `recursive use of an object detected which would lead to unsafe aliasing in rust`，最终一次 flush 彻底失败把整棵元素树清空（页面全白、零后续报错）。浏览器实测可稳定复现（音量弹层开→拖→关→微任务时序 mouseup）。
+
+### 当前 workaround
+
+双层修复（两层都要在，闸门 `src/__tests__/web-host-page.test.ts` 锁住）：
+
+1. `patches/@lynx-js__web-core@0.23.1.patch` — `dist/client/mainthread/elementAPIs/WASMJSBinding.js` 的 `runWorklet` / `publishEvent` 改为 `if (!resolvedTarget || !currentTarget) return;`（没有注册者就没有 handler，丢弃事件；dev-middleware 路径）
+2. `scripts/patch-web-core-client.mjs`（postinstall）— 对 `client_prod` 的 `web-core-main-chunk.js` 做同语义的压缩态字符串替换 `A=a??o;A&&(` → `A=a??o;A&&o&&(`、`s=o??A;s&&(` → `s=o??A;s&&A&&(`（serve.mjs / build:web 路径）
+
+### 上游修复后需执行
+
+1. 升级 `@lynx-js/web-core` 到含守卫的版本
+2. 从 patch 文件与 postinstall 脚本中移除对应替换（注意保留 `nativeModulesMap` 部分，直到 Issue 1 也合入）
+3. `pnpm install` 后确认闸门测试对旧形态不再断言失败（守卫改为上游提供后，删除两个闸门 test）
+
+### 附带发现（本地已修）
+
+排查中发现 `serve.mjs` / `copy-bundle-web.mjs` / `patch-web-core-client.mjs` 用 `readdirSync(.pnpm).find(startsWith)` 选 web-core 目录——patch 更新后多个 `patch_hash` 目录共存，`find` 拿到的第一个不一定是 symlink 实际指向的，导致 postinstall 把替换打进了无效目录（本次实际发生过）。三处已统一改为 `realpathSync(node_modules/@lynx-js/web-core)` 解析。
+
+---
+
 ## 备注
 
 - Issue 1 的修复最简单（10 行），且与已有的 `onNativeModulesCall` 模式一致，最可能被快速合入

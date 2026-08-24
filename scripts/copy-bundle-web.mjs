@@ -12,7 +12,7 @@
  *   node scripts/copy-bundle-web.mjs           # standalone web deployment
  *   node scripts/copy-bundle-web.mjs --embedded # embedded Go backend
  */
-import { copyFileSync, mkdirSync, existsSync, readdirSync, rmSync, statSync, cpSync, readFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, existsSync, readdirSync, rmSync, statSync, cpSync, readFileSync, writeFileSync, realpathSync } from 'node:fs'
 import { dirname, resolve, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -28,12 +28,14 @@ const SRC_BUNDLE = resolve(repoRoot, 'dist', 'web', 'main.web.bundle')
 
 // Resolve @lynx-js/web-core production assets
 function findWebCoreStatic() {
-  const pnpmDir = resolve(repoRoot, 'node_modules', '.pnpm')
-  if (!existsSync(pnpmDir)) return null
-  const entries = readdirSync(pnpmDir)
-  const match = entries.find(e => e.startsWith('@lynx-js+web-core@'))
-  if (!match) return null
-  const p = resolve(pnpmDir, match, 'node_modules', '@lynx-js', 'web-core', 'dist', 'client_prod', 'static')
+  // Resolve through the symlink pnpm maintains at node_modules/@lynx-js/web-core.
+  // Scanning .pnpm for the first `@lynx-js+web-core@…` match instead grabs
+  // whichever patch-hash directory happens to be listed first — after a patch
+  // update several coexist, and the scan silently copies a stale (unpatched)
+  // copy while the symlink points elsewhere.
+  const link = resolve(repoRoot, 'node_modules', '@lynx-js', 'web-core')
+  if (!existsSync(link)) return null
+  const p = resolve(realpathSync(link), 'dist', 'client_prod', 'static')
   return existsSync(p) ? p : null
 }
 

@@ -17,3 +17,34 @@ index 037109820dc709e61424b6f5c4d02d6e8acbd807..8e0178e913452193ffb194ca9a276032
      /**
       * @param
       * @property napiModulesMap
+diff --git a/dist/client/mainthread/elementAPIs/WASMJSBinding.js b/dist/client/mainthread/elementAPIs/WASMJSBinding.js
+index 2eca24df32b3449041d25b31d787a5987e9b014d..04d7ecb6b916a6cc5ff98bfa0e902dd39e1b5872 100644
+--- a/dist/client/mainthread/elementAPIs/WASMJSBinding.js
++++ b/dist/client/mainthread/elementAPIs/WASMJSBinding.js
+@@ -54,7 +54,13 @@ export class WASMJSBinding {
+         const target = this.getElementByUniqueId(targetUniqueId);
+         const currentTarget = this.getElementByUniqueId(currentTargetUniqueId);
+         const resolvedTarget = (target ?? currentTarget);
+-        if (!resolvedTarget)
++        // `currentTarget` owns the handler. A missing one means the element was
++        // unmounted while its EventInfo is still reachable (a stale global-bind
++        // entry is only collected by the next flush's gc()). Generating its
++        // target object would throw, and that TypeError crosses the wasm
++        // boundary and poisons wasm-bindgen's borrows for every later flush
++        // ("recursive use of an object ... unsafe aliasing in rust").
++        if (!resolvedTarget || !currentTarget)
+             return;
+         const resolvedTargetDataset = target ? targetDataset : currentTargetDataset;
+         eventObject.target = this.generateTargetObject(resolvedTarget, resolvedTargetDataset);
+@@ -76,7 +82,10 @@ export class WASMJSBinding {
+         // originated outside the Lynx element tree, so fall back to currentTarget
+         // (the element that registered the global handler).
+         const resolvedTarget = (target ?? currentTarget);
+-        if (!resolvedTarget)
++        // Same guard as `runWorklet`: without `currentTarget` there is no
++        // handler to deliver to — the registration is stale, so drop the event
++        // instead of crashing (and poisoning the wasm borrows).
++        if (!resolvedTarget || !currentTarget)
+             return;
+         const resolvedTargetDataset = target ? targetDataset : currentTargetDataset;
+         eventObject.target = this.generateTargetObject(resolvedTarget, resolvedTargetDataset);

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, realpathSync } from 'node:fs'
 import path from 'node:path'
 
 import { describe, expect, test } from 'vitest'
@@ -23,21 +23,20 @@ import { describe, expect, test } from 'vitest'
 const repoRoot = path.resolve(__dirname, '..', '..')
 const read = (relative: string): string => readFileSync(path.join(repoRoot, relative), 'utf8')
 
-/** The web-core asset directory both serve.mjs and copy-bundle-web.mjs use. */
+/**
+ * The web-core asset directory both serve.mjs and copy-bundle-web.mjs use.
+ *
+ * Resolved through the symlink pnpm maintains — after a patch update several
+ * `@lynx-js+web-core@…patch_hash=…` directories coexist under .pnpm, and
+ * scanning for the first match reads a stale copy the installed tree never
+ * references. All three consumers (serve.mjs, copy-bundle-web.mjs,
+ * patch-web-core-client.mjs) resolve the same way; a regression here desyncs
+ * what is served from what is patched.
+ */
 function webCoreStatic(): string {
-  const pnpmDir = path.join(repoRoot, 'node_modules', '.pnpm')
-  const match = readdirSync(pnpmDir).find((e) => e.startsWith('@lynx-js+web-core@'))
-  expect(match, '@lynx-js/web-core is not installed').toBeTruthy()
-  return path.join(
-    pnpmDir,
-    match!,
-    'node_modules',
-    '@lynx-js',
-    'web-core',
-    'dist',
-    'client_prod',
-    'static',
-  )
+  const link = path.join(repoRoot, 'node_modules', '@lynx-js', 'web-core')
+  expect(existsSync(link), '@lynx-js/web-core is not installed').toBe(true)
+  return path.join(realpathSync(link), 'dist', 'client_prod', 'static')
 }
 
 describe('web/index.html references files the build actually ships', () => {
@@ -166,6 +165,56 @@ describe('web/index.html references files the build actually ships', () => {
       read('scripts/copy-bundle-web.mjs'),
       'copy-bundle-web.mjs must copy audio-host.js',
     ).toContain("'audio-host.js'")
+  })
+})
+
+/**
+ * Gate for the event-dispatch crash chain fixed in two layers:
+ *
+ * 1. `patches/@lynx-js__web-core@0.23.1.patch` (applied by pnpm) — the
+ *    unminified `WASMJSBinding.js` guards `currentTarget` in `runWorklet` /
+ *    `publishEvent`.
+ * 2. `scripts/patch-web-core-client.mjs` (postinstall) — the same guard
+ *    hand-minified into `client_prod`'s `web-core-main-chunk.js`.
+ *
+ * **Why.** `VerticalSlider` binds `global-bindmouseup`; when its popover is
+ * unmounted, the element leaves the wasm DOM registry at flush, while the
+ * stale global-bind EventInfo survives until the *next* flush's gc(). A
+ * mouseup in that window dispatches with a dead `currentTarget`, and the
+ * unguarded `generateTargetObject(undefined)` throws
+ * `Cannot read properties of undefined (reading 'Symbol(uniqueId)')`. That
+ * TypeError crosses the wasm boundary and poisons wasm-bindgen's externref
+ * borrows — every later flush throws "recursive use of an object … unsafe
+ * aliasing in rust" until the whole element tree is destroyed (blank page,
+ * zero further errors). A guard-less reinstall (a botched `pnpm install`, an
+ * upgrade renaming the minified identifiers) resurfaces it only as the
+ * original crash, so both layers get asserted here.
+ */
+describe('web-core event-dispatch guards are applied on both code paths', () => {
+  const link = realpathSync(path.join(repoRoot, 'node_modules', '@lynx-js', 'web-core'))
+
+  test('WASMJSBinding drops events whose currentTarget is gone (pnpm patch)', () => {
+    const src = readFileSync(
+      path.join(link, 'dist', 'client', 'mainthread', 'elementAPIs', 'WASMJSBinding.js'),
+      'utf8',
+    )
+    expect(
+      (src.match(/!resolvedTarget \|\| !currentTarget/g) ?? []).length,
+      'both runWorklet and publishEvent must early-return on a missing currentTarget '
+        + '— see patches/@lynx-js__web-core@0.23.1.patch',
+    ).toBe(2)
+  })
+
+  test('the minified main-thread chunk carries the same guard (postinstall patch)', () => {
+    const src = readFileSync(
+      path.join(link, 'dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
+      'utf8',
+    )
+    expect(
+      src.includes('A=a??o;A&&o&&(') && src.includes('s=o??A;s&&A&&('),
+      'runWorklet / publishEvent guard missing from web-core-main-chunk.js — '
+        + 'run `node scripts/patch-web-core-client.mjs` and check for identifier renames',
+    ).toBe(true)
   })
 })
 
