@@ -59,11 +59,7 @@ export function PlayerTopBar({
         {timerLabel
           ? <text className='full-player__timer-remaining'>{timerLabel}</text>
           : null}
-        <PlayerMoreMenu
-          song={song}
-          onOpenSleepTimer={onOpenSleepTimer}
-          timerActive={timerActive}
-        />
+        <PlayerMoreMenu onOpenSleepTimer={onOpenSleepTimer} timerActive={timerActive} />
       </view>
     </view>
   )

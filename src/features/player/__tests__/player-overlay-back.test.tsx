@@ -11,23 +11,13 @@ import {
 /**
  * One back press peels exactly one of the player's overlay layers.
  *
- * The player now stacks three of them — the speed menu, the volume popover, and the
- * overflow menu that hands off to the song menu (`GlobalMenu`) — on top of a page-level
- * handler that slides the swiper back from the lyrics screen. Back-stack priority is
- * *activation order*, so the risk is not "does back work" but "does it peel the layer
- * the user is actually looking at".
+ * The player stacks three of them — the speed menu, the volume popover, and the `⋯`
+ * overflow menu — on top of a page-level handler that slides the swiper back from the
+ * lyrics screen. Back-stack priority is *activation order*, so the risk is not "does
+ * back work" but "does it peel the layer the user is actually looking at".
  *
- * The overflow menu's handoff to the song menu was the suspected sharp edge:
- * `PopoverMenu` invokes `onSelect` and then immediately `onShowChange(false)`, so
- * opening another overlay from that callback puts both state writes in one commit —
- * one layer unregistering while a *sibling* registers. That looked like it should
- * reduce to render order rather than to what the user did. It was measured instead of
- * assumed, and it does not: depth stays 1 and the right layer is peeled whether the
- * handoff is inline or deferred by a render.
- *
- * So these tests pin the **invariant**, not the mechanism — one layer at a time, and
- * back peels the one on screen. Rewriting `PlayerMoreMenu` to defer again would keep
- * them green, which is correct: both mechanisms are fine, and the file says so.
+ * These tests pin that **invariant**: one layer at a time, and back peels the one on
+ * screen — regardless of how any single overlay is implemented.
  */
 
 vi.mock('react-i18next', async () =>
@@ -51,28 +41,8 @@ vi.mock('../store/player-store.js', async () => {
   return makePlayerStoreMock(actual)
 })
 
-/*
- * The overflow menu hands the song's actions to the global overlays store
- * (mounted in the root route, outside this tree) — the zustand hook itself
- * cannot run in this env, so the module is mocked with a spy for the dispatch.
- */
-const { openMenuMock } = vi.hoisted(() => ({ openMenuMock: vi.fn() }))
-vi.mock('../../../shared/ui/song-row-overlays.js', () => ({
-  useSongRowOverlays: (selector: (s: Record<string, unknown>) => unknown) =>
-    selector({
-      menuSong: null,
-      menuView: 'menu',
-      deleteSong: null,
-      openMenu: openMenuMock,
-      closeMenu: vi.fn(),
-      requestDelete: vi.fn(),
-      cancelDelete: vi.fn(),
-    }),
-}))
-
 const { PlayerToolBar } = await import('../widgets/PlayerToolBar.js')
 const { PlayerMoreMenu } = await import('../widgets/PlayerMoreMenu.js')
-const { mockSong } = await import('../../../__tests__/_render-mocks.js')
 
 beforeEach(() => clearBackHandlersForTests())
 afterEach(() => {
@@ -142,9 +112,9 @@ test('opening the volume popover then the speed menu leaves one layer each', asy
   expect(getBackStackDepth()).toBe(1)
 })
 
-test('the overflow menu hands off to the global song menu without stacking two layers', async () => {
-  const { getByTestId, getByText } = await renderAndQuery(
-    <PlayerMoreMenu song={mockSong()} onOpenSleepTimer={vi.fn()} timerActive={false} />,
+test('back closes the overflow menu rather than leaving the player', async () => {
+  const { getByTestId } = await renderAndQuery(
+    <PlayerMoreMenu onOpenSleepTimer={vi.fn()} timerActive={false} />,
   )
 
   await act(async () => {
@@ -152,22 +122,27 @@ test('the overflow menu hands off to the global song menu without stacking two l
   })
   expect(getBackStackDepth()).toBe(1)
 
-  // Selecting the row closes this menu — the song menu itself now lives in the
-  // root route (`SongRowOverlays`), dispatched through the store, so the handoff
-  // is observed as "this layer let go + the store was asked to open".
   await act(async () => {
-    fireEvent.tap(getByText('Song actions…'))
+    expect(dispatchBack()).toBe(true)
+  })
+  expect(getBackStackDepth()).toBe(0)
+})
+
+test('picking a row closes the overflow menu, leaving no layer behind', async () => {
+  const onOpenSleepTimer = vi.fn()
+  const { getByTestId, getByText } = await renderAndQuery(
+    <PlayerMoreMenu onOpenSleepTimer={onOpenSleepTimer} timerActive={false} />,
+  )
+
+  await act(async () => {
+    fireEvent.tap(getByTestId('icon-more'))
   })
   await act(async () => {
-    await Promise.resolve()
+    fireEvent.tap(getByText('Sleep timer'))
   })
 
-  // The popover itself is gone: nothing in this tree holds the back key. A
-  // depth of 1 here would mean the menu never let go while the song menu took
-  // over — two backdrops and a back press that leaves one of them on screen.
+  // The sheet the row opens is the page's, not this component's: a depth of 1 here
+  // would mean the menu still holds the back key underneath it.
+  expect(onOpenSleepTimer).toHaveBeenCalledTimes(1)
   expect(getBackStackDepth()).toBe(0)
-  // And the song menu was asked for, with the player's current song and the rect of
-  // this `⋯` button — null here, since the env cannot measure (see
-  // `anchored-overlay.test.ts`), which docks the menu rather than dropping the handoff.
-  expect(openMenuMock).toHaveBeenCalledWith(mockSong(), null)
 })
