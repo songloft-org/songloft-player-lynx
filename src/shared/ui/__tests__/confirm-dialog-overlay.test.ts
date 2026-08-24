@@ -149,15 +149,26 @@ describe('dialogs paint above the overlays that open them', () => {
   })
 
   /*
-   * The z-index has to be on the two *fixed* children, not on `DialogView`. On
-   * Lynx a `position: fixed` box re-stacks at the page root by its own z-index
-   * (auto = 0), so the fixed scrim and content escape the wrapper's stacking
-   * context — a z-index on `.confirm-dialog__view` orders nothing. With the level
-   * left on the wrapper the dialog sank behind the sheet (z-index 100) / player
-   * (z-index 1) that opened it on Android; it only "worked" on Web (fixed escapes
-   * to a top layer there) and over the bare page (level-0 content, DOM order).
-   * Content sits one above its own scrim so the card and its outside-tap layer
-   * cover the dim.
+   * The z-index has to be on the two *fixed* children AND on the `DialogView`
+   * wrapper — the two platforms order fixed descendants differently, so either
+   * half alone fixes exactly one platform:
+   *
+   * Android re-stacks a `position: fixed` box at the page root by its own
+   * z-index (auto = 0), so the fixed scrim and content escape the wrapper's
+   * stacking context — a z-index on `.confirm-dialog__view` orders nothing
+   * there. With the level left off the children the dialog sank behind the
+   * sheet (z-index 100) / player (z-index 1) that opened it on Android; it only
+   * "worked" on Web (fixed escapes to a top layer there) and over the bare page
+   * (level-0 content, DOM order).
+   *
+   * Web (web-elements) is the mirror image: every Lynx element is an isolated
+   * stacking context, so the children's 200/201 do NOT pierce an `auto` wrapper
+   * — the wrapper itself ranks at 0 and sinks below any z-index: 100 overlay it
+   * was opened beside. That is how the play-history panel's clear-confirm
+   * dialog stayed fully hidden under the panel on Web while the same markup
+   * worked on Android (browser-verified: a level on the wrapper alone brought
+   * it back). Content sits one above its own scrim so the card and its
+   * outside-tap layer cover the dim.
    */
   test('the fixed scrim and content carry the modal z-index, above the overlays', () => {
     const css = readFileSync(DIALOG_CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
@@ -181,6 +192,25 @@ describe('dialogs paint above the overlays that open them', () => {
     // the card and outside-tap layer are not dimmed by it.
     expect(backdrop, 'the scrim must clear the app overlay layer (101)').toBeGreaterThan(101)
     expect(content, 'the content/card layer must sit above its own scrim').toBeGreaterThan(backdrop)
+  })
+
+  /* The other half of the pair — see the block above for why a level on the
+   * wrapper is what makes Web order the dialog above the overlay that opened
+   * it. Without it the children's 200/201 are trapped inside an `auto` wrapper
+   * ranked at 0. */
+  test('the DialogView wrapper carries the modal z-index too (Web ordering)', () => {
+    const css = readFileSync(DIALOG_CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const rule = css.match(/\.confirm-dialog__view\s*\{([^}]*)\}/)
+    expect(rule, '.confirm-dialog__view rule not found in ConfirmDialog.css').not.toBeNull()
+    const z = rule![1].match(/z-index:\s*(-?\d+)/)
+    expect(
+      z,
+      '.confirm-dialog__view must declare a z-index: on Web every Lynx element is an '
+        + 'isolated stacking context, so the fixed children cannot pierce an `auto` '
+        + 'wrapper — it ranks at 0 and sinks below the z-index: 100 overlay the '
+        + 'dialog was opened beside.',
+    ).not.toBeNull()
+    expect(Number(z![1]), 'the wrapper must clear the app overlay layer (101)').toBeGreaterThan(101)
   })
 })
 

@@ -69,12 +69,15 @@ export function ConfirmDialog({
 
   return (
     <DialogRoot show={show} onShowChange={(open) => { if (!open) onCancel() }}>
-      {/*
-        * The class carries the modal z-index, and it belongs on this wrapper
-        * rather than on the scrim or the card: `DialogView` is `position: fixed`
-        * and therefore a stacking context, so a z-index further in only orders
-        * the dialog against itself. Left at `auto` it lands *below* every overlay
-        * in this app (all z-index 100) — see the stylesheet for the measurement.
+      {/**
+        * The modal z-index travels on this wrapper AND on the scrim / content
+        * views (see the stylesheet): the two platforms order fixed descendants
+        * differently — Android re-stacks the fixed children at the page root by
+        * their own z-index (the wrapper's level orders nothing there), while
+        * Web (web-elements) keeps each Lynx element an isolated stacking context,
+        * so an `auto` wrapper sinks below every z-index: 100 overlay it was opened
+        * beside and the children's 200/201 cannot pierce it. Both layers carry
+        * the level; either one alone fixes exactly one platform.
         */}
       <DialogView className='confirm-dialog__view'>
         <DialogBackdrop

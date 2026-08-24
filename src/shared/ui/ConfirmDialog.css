@@ -19,23 +19,29 @@
  * sheets rely on exactly this: `.drawer__viewport` is a fixed box at z-index 100
  * so it paints over the player.
  *
- * So the z-index cannot live on `DialogView` (`.confirm-dialog__view`) alone:
- * `DialogBackdrop` and `DialogContent` are THEMSELVES `position: fixed`, so they
- * escape the view's stacking context and re-stack at root with their own auto = 0
- * level — below every overlay in the app. Left that way the dialog painted at
- * level 0: opened over the add-to-playlist sheet the whole dialog sat invisible
- * under the sheet's own backdrop; opened over the full player only the buttons
- * that spilled past the cover art showed, the card itself behind it (both
- * measured on an Android device). It "worked" over the bare page only because
- * page content is level 0 too, so DOM order alone put the dialog on top — which
- * is why raising just `.confirm-dialog__view` (verified in Chrome) fixed Web but
- * not Android.
+ * The two platforms disagree about the fixed CHILDREN, so the level has to
+ * travel on BOTH the wrapper and the children:
  *
- * The sheets dodge this because THEIR scrim and content are `position: absolute`
- * (contained by the fixed `.drawer__viewport`), so one z-index governs the whole
- * subtree. The dialog's two children are fixed, so each carries the level itself
- * (content above its own scrim). `.confirm-dialog__view` keeps `position: fixed`
- * only to match OverlayView's inline style; it is not the load-bearing layer.
+ *  - Android: `DialogBackdrop` and `DialogContent` are themselves `position:
+ *    fixed`, so they escape the view's stacking context and re-stack at root by
+ *    their OWN z-index — a level on `DialogView` alone orders nothing there.
+ *    Left at auto the dialog painted at level 0: opened over the add-to-playlist
+ *    sheet the whole dialog sat invisible under the sheet's own backdrop (both
+ *    measured on an Android device).
+ *  - Web (web-elements): every Lynx element is its own stacking context, so the
+ *    children's 200/201 do NOT pierce an `auto` wrapper — the wrapper itself
+ *    ranks at 0 and sinks below any z-index: 100 overlay it was opened beside.
+ *    Measured: the play-history panel's clear-confirm dialog was fully hidden
+ *    under the panel on Web while the very same markup worked on Android; adding
+ *    a level to this rule alone brought it back.
+ *
+ * Raising only ONE of the two layers therefore fixes exactly one platform:
+ * wrapper-only fixed Web but not Android, children-only fixed Android but not
+ * Web. Both carry the level; the children keep content one above its own scrim.
+ *
+ * The sheets dodge all of this because THEIR scrim and content are `position:
+ * absolute` (contained by the fixed `.drawer__viewport`), so one z-index governs
+ * the whole subtree.
  */
 .confirm-dialog__view {
   position: fixed;
@@ -43,6 +49,9 @@
   left: 0;
   right: 0;
   bottom: 0;
+  /* Same level as the scrim it contains — Web orders the children inside this
+   * wrapper (they carry 200/201 within it), Android re-stacks them at root. */
+  z-index: 200;
 }
 
 /*
