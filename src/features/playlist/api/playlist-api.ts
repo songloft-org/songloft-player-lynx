@@ -38,8 +38,12 @@ export interface AddSongsResult {
 export interface CreatePlaylistParams {
   name: string
   description?: string
-  /** Playlist type: `normal` (default) or `radio`. */
-  type?: string
+  /**
+   * Playlist type. Optional here and defaulted to `normal` by
+   * `buildCreatePlaylistBody` — see it for why the field cannot be omitted from
+   * the wire body.
+   */
+  type?: Playlist['type']
 }
 
 export interface UpdatePlaylistParams {
@@ -83,13 +87,26 @@ export function buildPlaylistSongsQuery(
   return query
 }
 
+/**
+ * `type` is **always** sent, defaulting to `normal`.
+ *
+ * The backend has no default for it: `POST /playlists` with the field absent or
+ * empty answers **500** `{"detail":"invalid playlist data: invalid type"}` (verified
+ * against the dev server; `normal` and `radio` are the accepted values, and
+ * `playlist` is not one of them). Only `PUT` tolerates its absence.
+ *
+ * So omitting an "optional" type is not a smaller request, it is a failed one.
+ * `CreatePlaylistPage` always passes a type because its form makes the user pick
+ * one, which is why the whole-page flow worked while the add-to-playlist sheet's
+ * quick-create — name only — failed with the backend's own "创建歌单失败".
+ */
 export function buildCreatePlaylistBody(params: CreatePlaylistParams): Record<string, string> {
-  const body: Record<string, string> = { name: params.name }
+  const body: Record<string, string> = {
+    name: params.name,
+    type: params.type ?? 'normal',
+  }
   if (params.description != null && params.description !== '') {
     body.description = params.description
-  }
-  if (params.type != null && params.type !== '') {
-    body.type = params.type
   }
   return body
 }

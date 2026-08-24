@@ -19,7 +19,6 @@ import {
   songEquals,
   songToJson,
 } from '../models/index.js'
-import { buildCreatePlaylistBody } from '../features/playlist/api/playlist-api.js'
 import { parseRegistryRefreshResponse } from '../models/jsplugin.js'
 
 describe('Song', () => {
@@ -222,24 +221,14 @@ describe('ApiResponse', () => {
   })
 })
 
-describe('buildCreatePlaylistBody', () => {
-  test('includes type when provided', () => {
-    expect(buildCreatePlaylistBody({ name: 'Test', type: 'radio' })).toEqual({
-      name: 'Test',
-      type: 'radio',
-    })
-  })
-
-  test('omits type when not provided', () => {
-    expect(buildCreatePlaylistBody({ name: 'Test' })).toEqual({ name: 'Test' })
-  })
-
-  test('omits empty type', () => {
-    expect(buildCreatePlaylistBody({ name: 'Test', type: '' })).toEqual({
-      name: 'Test',
-    })
-  })
-})
+/*
+ * `buildCreatePlaylistBody` used to be asserted here as well as in
+ * `features/playlist/__tests__/playlist-api.test.ts`. The two forks then drifted
+ * into contradicting each other — this one pinned "omit the type when the caller
+ * gave none", which is the very thing that made the add-to-playlist sheet's
+ * quick-create fail (the backend 500s without a type). It is a playlist-API
+ * function, not a model, so its contract now lives only in that file.
+ */
 
 describe('registry plugin entry', () => {
   test('parses conflict field', () => {

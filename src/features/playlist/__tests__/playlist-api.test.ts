@@ -76,20 +76,40 @@ describe('buildPlaylistSongsQuery (pure)', () => {
   })
 })
 
+/**
+ * `type` is the load-bearing case here: the backend 500s on a create body without
+ * it (`invalid playlist data: invalid type`), so "omit what the caller did not
+ * provide" — right for every other field — silently broke the add-to-playlist
+ * sheet's quick-create. See `buildCreatePlaylistBody`.
+ */
 describe('buildCreatePlaylistBody (pure)', () => {
-  test('includes name only when no description', () => {
-    expect(buildCreatePlaylistBody({ name: 'My Playlist' })).toEqual({ name: 'My Playlist' })
+  test('defaults the type to normal so the backend accepts the body', () => {
+    expect(buildCreatePlaylistBody({ name: 'My Playlist' })).toEqual({
+      name: 'My Playlist',
+      type: 'normal',
+    })
+  })
+
+  test('keeps an explicit type', () => {
+    expect(buildCreatePlaylistBody({ name: 'Jazz FM', type: 'radio' })).toEqual({
+      name: 'Jazz FM',
+      type: 'radio',
+    })
   })
 
   test('includes both name and description', () => {
     expect(buildCreatePlaylistBody({ name: 'Chill', description: 'Relaxing' })).toEqual({
       name: 'Chill',
+      type: 'normal',
       description: 'Relaxing',
     })
   })
 
   test('drops empty description', () => {
-    expect(buildCreatePlaylistBody({ name: 'A', description: '' })).toEqual({ name: 'A' })
+    expect(buildCreatePlaylistBody({ name: 'A', description: '' })).toEqual({
+      name: 'A',
+      type: 'normal',
+    })
   })
 })
 
@@ -239,16 +259,17 @@ describe('PlaylistApi endpoints', () => {
     expect(cap.method()).toBe('POST')
     expect(cap.url()).toContain(`${apiPrefix}/playlists`)
     const sentBody = JSON.parse(cap.body()!)
-    expect(sentBody).toEqual({ name: 'New PL', description: 'desc' })
+    expect(sentBody).toEqual({ name: 'New PL', type: 'normal', description: 'desc' })
     expect(pl.id).toBe(10)
     expect(pl.name).toBe('New PL')
   })
 
-  test('createPlaylist omits description when not provided', async () => {
+  test('createPlaylist omits description but never the type', async () => {
     const cap = capture({ id: 11, type: 'normal', name: 'Solo', song_count: 0 })
     await new PlaylistApi(client(cap.transport)).createPlaylist({ name: 'Solo' })
     const sentBody = JSON.parse(cap.body()!)
-    expect(sentBody).toEqual({ name: 'Solo' })
+    // A body without `type` is answered with 500 by the real backend.
+    expect(sentBody).toEqual({ name: 'Solo', type: 'normal' })
     expect(sentBody.description).toBeUndefined()
   })
 
