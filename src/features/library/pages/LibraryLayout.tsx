@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from '@lynx-js/react'
 import { Outlet, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 
+import { getSongDetailOrigin } from '../../../shared/nav/navigate-to-song-detail.js'
 import { getShellWidth, subscribeShellWidth } from '../../../shared/nav/shell-navigation.js'
 import { breakpointFromWidth, isWide as isWideBreakpoint, useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { getLastLibrarySearch } from '../data/last-library-search.js'
@@ -8,7 +9,7 @@ import {
   libraryBrowseConfigOrFallback,
   useLibraryBrowseConfigQuery,
 } from '../data/library-browse-query.js'
-import { railSelection, requestedRailView } from '../domain/library-rail-view.js'
+import { railAnchorPath, railSelection, requestedRailView } from '../domain/library-rail-view.js'
 import { resolveLibraryView, type LibraryViewKey } from '../domain/library-views.js'
 import { LibraryShell } from '../widgets/LibraryShell.js'
 import { LibraryViewportProvider } from './library-viewport.js'
@@ -67,10 +68,15 @@ export function LibraryLayout() {
    * back to the view the user came from — which `LibraryPage` records on every
    * render. This replaces the local `selectedView` state the drill-ins used to
    * keep in sync by hand.
+   *
+   * Song detail answers for the page it was opened from instead of for itself
+   * (`railAnchorPath`), so reaching it from a playlist keeps the playlists group
+   * lit rather than dropping to the last library view.
    */
   const pathname = useRouterState({ select: s => s.location.pathname })
+  const anchorPath = railAnchorPath(pathname, getSongDetailOrigin())
   const resolved = config
-    ? resolveLibraryView(requestedRailView(pathname, search.view, getLastLibrarySearch().view), config)
+    ? resolveLibraryView(requestedRailView(anchorPath, search.view, getLastLibrarySearch().view), config)
     : undefined
 
   return (
@@ -79,7 +85,7 @@ export function LibraryLayout() {
         isWide={isWide}
         onLayoutChange={onLayoutChange}
         displayKeys={resolved?.displayKeys ?? []}
-        selected={resolved ? railSelection(pathname, resolved.selected, resolved.displayKeys) : undefined}
+        selected={resolved ? railSelection(anchorPath, resolved.selected, resolved.displayKeys) : undefined}
         // Same target from every route under this layout: picking a view means
         // "show me the library at that view", leaving the sub-page if we are on one.
         onSelect={(key) => navigate({ to: '/library', search: { view: key } })}
