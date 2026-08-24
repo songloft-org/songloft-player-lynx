@@ -87,6 +87,15 @@
   flex: 1;
   font-size: var(--font-sm);
   color: var(--content);
+  /* Never wrap a menu label. Shared by PopoverMenu and GlobalMenu (see
+     MenuItem.tsx), so this covers both. Without it a label whose intrinsic width
+     is a single CJK glyph (every character is a break opportunity) lets the flex
+     row shrink to the panel's `min-width` and wraps the text instead of widening
+     the panel — that is how "睡眠定时" broke onto two lines in the player's
+     overflow menu (140px min) once its trailing checkmark ate the last glyph's
+     room. `nowrap` makes the label's max-content width push the panel wider
+     instead (capped by placePanel's max-width). */
+  white-space: nowrap;
 }
 
 .popover-menu__item-label--selected {

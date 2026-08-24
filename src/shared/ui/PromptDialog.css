@@ -24,3 +24,11 @@
   color: var(--content);
   -x-placeholder-color: var(--content-muted);
 }
+
+/* Rejection message, shown under the input on a failed submit (see `validate`).
+   `--danger` is the app's one error colour, as on the sleep timer's cancel row. */
+.prompt-dialog__error {
+  margin-top: var(--space-2);
+  font-size: var(--font-xs);
+  color: var(--danger);
+}

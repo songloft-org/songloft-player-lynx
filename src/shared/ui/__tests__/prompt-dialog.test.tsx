@@ -46,6 +46,29 @@ function renderDialog() {
   return { onConfirm, onCancel, ...getQueriesForElement(elementTree.root!) }
 }
 
+/**
+ * With a `validate`. `accept: false` refuses everything, which is what the
+ * rejection paths need; `true` refuses nothing.
+ */
+function renderValidating(accept: boolean) {
+  const onConfirm = vi.fn()
+  render(
+    <PromptDialog
+      show
+      title='Custom duration'
+      label='1 - 999'
+      confirmLabel='Confirm'
+      inputType='number'
+      validate={() => (accept ? undefined : 'Not a number')}
+      onConfirm={onConfirm}
+      onCancel={vi.fn()}
+      confirmTestId='prompt-confirm'
+      errorTestId='prompt-error'
+    />,
+  )
+  return { onConfirm, ...getQueriesForElement(elementTree.root!) }
+}
+
 test('renders the title and the field label', () => {
   const { queryByText } = renderDialog()
   expect(queryByText('New playlist')).toBeInTheDocument()
@@ -73,4 +96,43 @@ test('cancel reports without a value', () => {
   fireEvent.tap(getByTestId('prompt-cancel'), {})
   expect(onCancel).toHaveBeenCalled()
   expect(onConfirm).not.toHaveBeenCalled()
+})
+
+/*
+ * `validate` exists for the sleep timer's custom minutes / song count, where a
+ * value can be non-empty and still wrong. Two things matter: the submit is
+ * *blocked* (not clamped, not swallowed), and the reason is shown — on submit
+ * rather than per keystroke, since every prefix of "120" is out of range.
+ */
+test('a rejected value shows the reason and does not confirm', () => {
+  const { onConfirm, getByTestId, queryByTestId } = renderValidating(false)
+  expect(queryByTestId('prompt-error')).not.toBeInTheDocument()
+
+  fireEvent.tap(getByTestId('stub-input'), {})
+  // Nothing yet: the value has only been typed, not submitted.
+  expect(queryByTestId('prompt-error')).not.toBeInTheDocument()
+
+  fireEvent.tap(getByTestId('prompt-confirm'), {})
+  expect(onConfirm).not.toHaveBeenCalled()
+  expect(queryByTestId('prompt-error')).toHaveTextContent('Not a number')
+})
+
+test('editing the field clears a previous rejection', () => {
+  const { getByTestId, queryByTestId } = renderValidating(false)
+  fireEvent.tap(getByTestId('stub-input'), {})
+  fireEvent.tap(getByTestId('prompt-confirm'), {})
+  expect(queryByTestId('prompt-error')).toBeInTheDocument()
+
+  // Typing again is the user fixing it; leaving the old complaint under the field
+  // would read as "still wrong".
+  fireEvent.tap(getByTestId('stub-input'), {})
+  expect(queryByTestId('prompt-error')).not.toBeInTheDocument()
+})
+
+test('an accepted value still reaches onConfirm through validate', () => {
+  const { onConfirm, getByTestId, queryByTestId } = renderValidating(true)
+  fireEvent.tap(getByTestId('stub-input'), {})
+  fireEvent.tap(getByTestId('prompt-confirm'), {})
+  expect(onConfirm).toHaveBeenCalledWith('Road Trip')
+  expect(queryByTestId('prompt-error')).not.toBeInTheDocument()
 })

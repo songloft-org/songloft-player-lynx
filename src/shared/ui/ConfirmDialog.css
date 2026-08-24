@@ -9,11 +9,50 @@
  */
 
 /*
+ * The modal layer sits above every app overlay (100/101 — `GlobalMenu.css`,
+ * `PopoverMenu.css`, `PlayHistoryPanel.css`, `AddToPlaylistSheet.css`) and the
+ * full player (`.full-player__layer`, z-index 1).
+ *
+ * On Lynx a `position: fixed` element does NOT escape to a viewport top layer the
+ * way it does on the web — it re-stacks at the page root ordered by its *own*
+ * z-index (auto = 0), regardless of the ancestor it was authored under. The
+ * sheets rely on exactly this: `.drawer__viewport` is a fixed box at z-index 100
+ * so it paints over the player.
+ *
+ * So the z-index cannot live on `DialogView` (`.confirm-dialog__view`) alone:
+ * `DialogBackdrop` and `DialogContent` are THEMSELVES `position: fixed`, so they
+ * escape the view's stacking context and re-stack at root with their own auto = 0
+ * level — below every overlay in the app. Left that way the dialog painted at
+ * level 0: opened over the add-to-playlist sheet the whole dialog sat invisible
+ * under the sheet's own backdrop; opened over the full player only the buttons
+ * that spilled past the cover art showed, the card itself behind it (both
+ * measured on an Android device). It "worked" over the bare page only because
+ * page content is level 0 too, so DOM order alone put the dialog on top — which
+ * is why raising just `.confirm-dialog__view` (verified in Chrome) fixed Web but
+ * not Android.
+ *
+ * The sheets dodge this because THEIR scrim and content are `position: absolute`
+ * (contained by the fixed `.drawer__viewport`), so one z-index governs the whole
+ * subtree. The dialog's two children are fixed, so each carries the level itself
+ * (content above its own scrim). `.confirm-dialog__view` keeps `position: fixed`
+ * only to match OverlayView's inline style; it is not the load-bearing layer.
+ */
+.confirm-dialog__view {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/*
  * The scrim's `position` and inset come from the component's inline `style`,
  * NOT from here: `DialogBackdrop` hard-codes `position: absolute` inline, which
  * beats any class. These declarations are kept as documentation of the intended
  * box (and as the fallback if lynx-ui ever drops its inline positioning) —
- * `ConfirmDialog.tsx` is where the effective value lives.
+ * `ConfirmDialog.tsx` is where the effective value lives. The `z-index` is
+ * load-bearing though (see the block above): this fixed scrim re-stacks at the
+ * page root, so without it the dim would fall behind the overlay that opened it.
  */
 .confirm-dialog__backdrop {
   position: fixed;
@@ -21,6 +60,9 @@
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: 200;
+  /* Exit fade — see `.confirm-dialog__content` for why this transition exists. */
+  transition: opacity 0.16s ease;
 }
 
 .confirm-dialog__backdrop-inner {
@@ -41,6 +83,30 @@
   left: 0;
   right: 0;
   bottom: 0;
+  /* One above the scrim: this fixed layer holds the card and catches the
+     outside-tap, and (see the block on `.confirm-dialog__view`) re-stacks at the
+     page root on its own — so it must sit above both its own backdrop and every
+     app overlay, or the card renders behind the sheet / player that opened it. */
+  z-index: 201;
+  /* Exit fade, load-bearing (not decoration). lynx-ui-presence keeps the dialog
+     mounted while it "leaves"; with no animation to end it, its fallback spins
+     MAX_WAIT_FRAMES (24) — the dialog froze on screen ~a second after
+     cancel/confirm before disappearing. This transition, paired with `ui-leaving`
+     below and the `transition` prop on `DialogBackdrop`/`DialogContent`, fires
+     `transitionend` so presence tears the dialog down the moment the fade ends.
+     Only the leave is styled (`ui-leaving`), so opening stays instant — no
+     fade-in and none of presence's 8-frame enter gap made visible. */
+  transition: opacity 0.16s ease;
+}
+
+/*
+ * The one styled presence state: `ui-leaving` is added (because `transition` is
+ * set on the two views) only while the dialog animates out. Opening never sets
+ * opacity, so it appears at full strength immediately.
+ */
+.confirm-dialog__backdrop.ui-leaving,
+.confirm-dialog__content.ui-leaving {
+  opacity: 0;
 }
 
 .confirm-dialog {

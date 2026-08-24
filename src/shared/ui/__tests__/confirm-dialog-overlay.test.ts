@@ -1,10 +1,10 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
 import { describe, expect, test } from 'vitest'
 
 /**
- * The three overlay properties of `ConfirmDialog` that no render test can see.
+ * The four overlay properties of `ConfirmDialog` that no render test can see.
  *
  * The Vitest env has no layout engine and the shared lynx-ui Dialog stand-in
  * (`mockLynxUiDialog`) passes `DialogBackdrop` / `DialogContent` straight
@@ -12,17 +12,27 @@ import { describe, expect, test } from 'vitest'
  * the outside-tap wiring are invisible to rendering. Same reason
  * `popover-menu-css.test.ts` is a static assertion.
  *
- * What these pin, all three found by browser verification:
+ * What these pin, all four found by browser verification:
  *
- *  1. The scrim needs `position: fixed` from the **inline style**. lynx-ui
+ *  1. The dialog needs its modal z-index on the **fixed children** — the scrim
+ *     (`.confirm-dialog__backdrop`) and the content layer
+ *     (`.confirm-dialog__content`) — not on `DialogView`. On Lynx a
+ *     `position: fixed` box re-stacks at the page root by its own z-index, and
+ *     both children are fixed, so they escape `DialogView`'s stacking context;
+ *     a z-index on the wrapper orders nothing. Left at auto the dialog paints at
+ *     level 0, below every overlay (z-index 100) — opening "new playlist" over
+ *     the add-to-playlist sheet showed nothing, the card laid out behind the
+ *     sheet's own backdrop. (Raising only `DialogView` fixed this on Web, where
+ *     fixed does escape to a top layer, but not on Android.)
+ *  2. The scrim needs `position: fixed` from the **inline style**. lynx-ui
  *     hard-codes `position: absolute; width: 100%; height: 100%` inline, which
  *     beats the stylesheet, and its parent (`DialogView`) is a dimensionless
  *     fixed wrapper — so the class's `fixed` was dead and the scrim resolved to
  *     0×0: no visible dim, and `clickToClose` unreachable.
- *  2. Outside-tap cancel must sit on the **content** layer. That layer is
+ *  3. Outside-tap cancel must sit on the **content** layer. That layer is
  *     `fixed; inset: 0` with `event-through={false}`, so it covers the scrim
  *     entirely; a tap outside the card can only ever reach the content view.
- *  3. The card must `catchtap`. Otherwise a tap on the confirm button bubbles to
+ *  4. The card must `catchtap`. Otherwise a tap on the confirm button bubbles to
  *     the content layer and fires `onCancel` right after `onConfirm`.
  */
 
@@ -73,5 +83,152 @@ describe('ConfirmDialog overlay wiring', () => {
       'the .confirm-dialog card must catchtap, or button taps bubble into the '
         + 'outside-tap cancel above it',
     ).toMatch(/catchtap=/)
+  })
+})
+
+/**
+ * The modal layer sits above every overlay layer.
+ *
+ * Asserted against the *actual* z-index values in the app's stylesheets rather
+ * than a copy of them: the failure this guards is someone raising an overlay
+ * (or adding one at a higher level) and sinking every dialog opened from it,
+ * which a hard-coded expectation here would not notice.
+ */
+describe('dialogs paint above the overlays that open them', () => {
+  const DIALOG_CSS = path.resolve(__dirname, '../ConfirmDialog.css')
+
+  /** Every `z-index: <n>` declared in `src`, per stylesheet, comments stripped. */
+  function zIndexesByFile(): { file: string, levels: number[] }[] {
+    const found: { file: string, levels: number[] }[] = []
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name)
+        if (entry.isDirectory()) {
+          walk(full)
+        } else if (entry.name.endsWith('.css')) {
+          const css = readFileSync(full, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+          const levels: number[] = []
+          const pattern = /z-index:\s*(-?\d+)/g
+          let match: RegExpExecArray | null
+          while ((match = pattern.exec(css)) !== null) levels.push(Number(match[1]))
+          if (levels.length > 0) found.push({ file: full, levels })
+        }
+      }
+    }
+    walk(path.resolve(__dirname, '../../..'))
+    return found
+  }
+
+  test('DialogView carries the shared overlay class, in both dialogs', () => {
+    for (const file of ['../ConfirmDialog.tsx', '../PromptDialog.tsx']) {
+      const src = readFileSync(path.resolve(__dirname, file), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+      expect(
+        src,
+        `${file}: <DialogView> must carry className='confirm-dialog__view' so the `
+          + 'scrim and content it wraps get the modal stylesheet.',
+      ).toMatch(/<DialogView\s+className='confirm-dialog__view'/)
+    }
+  })
+
+  test('the modal level beats every other declared level', () => {
+    const byFile = zIndexesByFile()
+    const dialogEntry = byFile.find((e) => e.file === DIALOG_CSS)
+    expect(dialogEntry, 'ConfirmDialog.css must declare a modal z-index').toBeDefined()
+    const modal = Math.max(...dialogEntry!.levels)
+
+    for (const { file, levels } of byFile) {
+      if (file === DIALOG_CSS) continue
+      expect(
+        Math.max(...levels),
+        `${path.basename(file)} declares a z-index at or above the modal layer (${modal}). `
+          + 'A dialog opened from that surface would render behind it — raise '
+          + 'the dialog scrim/content instead of leaving them tied.',
+      ).toBeLessThan(modal)
+    }
+  })
+
+  /*
+   * The z-index has to be on the two *fixed* children, not on `DialogView`. On
+   * Lynx a `position: fixed` box re-stacks at the page root by its own z-index
+   * (auto = 0), so the fixed scrim and content escape the wrapper's stacking
+   * context — a z-index on `.confirm-dialog__view` orders nothing. With the level
+   * left on the wrapper the dialog sank behind the sheet (z-index 100) / player
+   * (z-index 1) that opened it on Android; it only "worked" on Web (fixed escapes
+   * to a top layer there) and over the bare page (level-0 content, DOM order).
+   * Content sits one above its own scrim so the card and its outside-tap layer
+   * cover the dim.
+   */
+  test('the fixed scrim and content carry the modal z-index, above the overlays', () => {
+    const css = readFileSync(DIALOG_CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const zOf = (selector: string): number => {
+      const rule = css.match(new RegExp(`\\${selector}\\s*\\{([^}]*)\\}`))
+      expect(rule, `${selector} rule not found in ConfirmDialog.css`).not.toBeNull()
+      const z = rule![1].match(/z-index:\s*(-?\d+)/)
+      expect(
+        z,
+        `${selector} must declare a z-index: it is position: fixed, so on Android it `
+          + 're-stacks at the page root and would otherwise sink behind any overlay '
+          + 'it is opened over. A z-index on the DialogView wrapper does not help — '
+          + 'these fixed children escape it.',
+      ).not.toBeNull()
+      return Number(z![1])
+    }
+
+    const backdrop = zOf('.confirm-dialog__backdrop')
+    const content = zOf('.confirm-dialog__content')
+    // Above the app's overlay layer (100/101), and content above its own scrim so
+    // the card and outside-tap layer are not dimmed by it.
+    expect(backdrop, 'the scrim must clear the app overlay layer (101)').toBeGreaterThan(101)
+    expect(content, 'the content/card layer must sit above its own scrim').toBeGreaterThan(backdrop)
+  })
+})
+
+/**
+ * The dialog closes as soon as its fade ends, not after a fixed stall.
+ *
+ * lynx-ui-presence keeps a dialog mounted while it "leaves" and, with no
+ * animation to end that state, spins its fallback for MAX_WAIT_FRAMES (24) — the
+ * dialog froze on screen ~a second after cancel/confirm before disappearing.
+ * Opting the scrim and content into the presence `transition` classes and fading
+ * `opacity` on `ui-leaving` fires `transitionend`, which lets presence tear the
+ * dialog down the moment the fade completes. None of this is observable in the
+ * render env (no layout, the Dialog stand-in drops these props), so it is pinned
+ * statically — the same reason as the block above.
+ */
+describe('dialogs close on the fade, not on the presence fallback stall', () => {
+  const DIALOG_CSS = path.resolve(__dirname, '../ConfirmDialog.css')
+
+  test('both dialog views opt their scrim and content into the transition classes', () => {
+    for (const file of ['../ConfirmDialog.tsx', '../PromptDialog.tsx']) {
+      const src = readFileSync(path.resolve(__dirname, file), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+      for (const tag of ['DialogBackdrop', 'DialogContent']) {
+        expect(
+          openTag(src, tag),
+          `${file}: <${tag}> must set \`transition\` so presence adds \`ui-leaving\` and `
+            + 'the exit fade can fire transitionend — without it the dialog lingers '
+            + 'for presence\'s 24-frame fallback after cancel/confirm.',
+        ).toMatch(/\btransition\b/)
+      }
+    }
+  })
+
+  test('the scrim and content fade out on ui-leaving', () => {
+    const css = readFileSync(DIALOG_CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    for (const base of ['.confirm-dialog__backdrop', '.confirm-dialog__content']) {
+      const rule = css.match(new RegExp(`\\${base}\\s*\\{([^}]*)\\}`))
+      expect(rule, `${base} rule not found`).not.toBeNull()
+      expect(
+        rule![1],
+        `${base} must declare a \`transition\` on opacity so the leave animates and `
+          + 'presence unmounts on transitionend.',
+      ).toMatch(/transition:[^;]*opacity/)
+    }
+    // The leave is what animates; opening stays instant because nothing else
+    // touches opacity.
+    const leaving = css.match(/\.ui-leaving[^{]*\{([^}]*)\}/)
+    expect(leaving, 'a .ui-leaving rule must fade the dialog out').not.toBeNull()
+    expect(leaving![1]).toMatch(/opacity:\s*0/)
   })
 })

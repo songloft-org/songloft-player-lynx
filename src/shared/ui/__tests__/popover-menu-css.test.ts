@@ -95,3 +95,22 @@ test('the popover panel is fixed and declares no offsets of its own', () => {
 test('the popover panel scrolls when the anchor leaves it little room', () => {
   expect(block(rules(), '.popover-menu')).toMatch(/overflow-y:\s*auto/)
 })
+
+/**
+ * Menu labels never wrap. Shared by `PopoverMenu` and `GlobalMenu` (see
+ * `MenuItem.tsx`), so this one rule keeps both honest.
+ *
+ * A CJK label offers a break opportunity at every glyph, so its intrinsic width
+ * is one character; a `flex: 1` label with default `white-space` will then let
+ * the row shrink to the panel's `min-width` and wrap the text rather than widen
+ * the panel. That is how "睡眠定时" broke onto two lines in the player's overflow
+ * menu (140px min) once a trailing checkmark took the last glyph's room.
+ * `nowrap` makes the label push the panel wider instead (capped by placePanel).
+ */
+test('menu labels do not wrap', () => {
+  expect(
+    block(rules(), '.popover-menu__item-label'),
+    '.popover-menu__item-label must set white-space: nowrap, or long/CJK labels '
+      + 'wrap to a second line inside a narrow panel',
+  ).toMatch(/white-space:\s*nowrap/)
+})

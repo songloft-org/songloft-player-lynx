@@ -69,9 +69,25 @@ export function ConfirmDialog({
 
   return (
     <DialogRoot show={show} onShowChange={(open) => { if (!open) onCancel() }}>
-      <DialogView>
+      {/*
+        * The class carries the modal z-index, and it belongs on this wrapper
+        * rather than on the scrim or the card: `DialogView` is `position: fixed`
+        * and therefore a stacking context, so a z-index further in only orders
+        * the dialog against itself. Left at `auto` it lands *below* every overlay
+        * in this app (all z-index 100) — see the stylesheet for the measurement.
+        */}
+      <DialogView className='confirm-dialog__view'>
         <DialogBackdrop
           className='confirm-dialog__backdrop'
+          /*
+           * `transition` opts this scrim into the presence *transition* classes
+           * (`ui-leaving`). Without a real animation lynx-ui-presence spins its
+           * fallback for MAX_WAIT_FRAMES (24) before unmounting, so the dialog
+           * sat on screen ~a second after cancel/confirm before vanishing. The
+           * stylesheet fades opacity on `ui-leaving`, which fires `transitionend`
+           * and lets presence tear down as soon as the fade completes.
+           */
+          transition
           /*
            * `position: fixed` has to arrive through `style`, not the class:
            * `DialogBackdrop` hard-codes `position: absolute; width: 100%;
@@ -89,6 +105,7 @@ export function ConfirmDialog({
         </DialogBackdrop>
         <DialogContent
           className='confirm-dialog__content'
+          transition
           /*
            * Outside-tap cancel lives on the content layer rather than the
            * backdrop: this layer is `fixed; inset: 0` with
