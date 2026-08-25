@@ -239,6 +239,24 @@ export class PlaylistApi {
     return parsePlaylist(res.data)
   }
 
+  /**
+   * Pin or unpin a playlist.
+   *
+   * The ordering it produces is entirely the backend's: pinned playlists come
+   * first, most recently pinned before the rest, with the manual `position` as
+   * the tiebreaker. `getPlaylists` sends no sort parameters, so re-reading the
+   * list after this call is what surfaces the new order — there is nothing to
+   * sort client-side. Built-in playlists (Favorites, Radio favorites) are
+   * pinnable too; the backend deliberately skips its usual built-in guard here.
+   */
+  async setPlaylistPinned(id: number, pinned: boolean): Promise<Playlist> {
+    const res = await this.client.put<unknown>(
+      `${apiPrefix}/playlists/${id}/pin`,
+      { pinned },
+    )
+    return parsePlaylist(res.data)
+  }
+
   async updatePlaylistSort(id: number, sortBy: string, sortOrder: string): Promise<void> {
     await this.client.put(`${apiPrefix}/playlists/${id}/sort`, {
       sort_by: sortBy,

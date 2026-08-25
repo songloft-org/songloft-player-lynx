@@ -7,7 +7,7 @@ import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/tes
 import type { Playlist } from '../../../models/playlist.js'
 import type { Song } from '../../../models/song.js'
 
-const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSongMutationHook, moveSongMutationHook, visibilityMutationHook, sortMutationHook } = vi.hoisted(() => ({
+const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSongMutationHook, moveSongMutationHook, visibilityMutationHook, pinnedMutationHook, sortMutationHook } = vi.hoisted(() => ({
   detailHook: vi.fn(),
   songsHook: vi.fn(),
   deleteMutationHook: vi.fn(),
@@ -15,6 +15,7 @@ const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSon
   removeSongMutationHook: vi.fn(),
   moveSongMutationHook: vi.fn(),
   visibilityMutationHook: vi.fn(),
+  pinnedMutationHook: vi.fn(),
   sortMutationHook: vi.fn(),
 }))
 
@@ -93,6 +94,7 @@ vi.mock('../data/playlist-mutations.js', () => ({
   useRemoveSongMutation: removeSongMutationHook,
   useMoveSongMutation: moveSongMutationHook,
   useSetVisibilityMutation: visibilityMutationHook,
+  useSetPinnedMutation: pinnedMutationHook,
   useUpdateSortMutation: sortMutationHook,
 }))
 
@@ -159,6 +161,8 @@ function makePlaylist(over: Partial<Playlist> = {}): Playlist {
     isBuiltIn: false,
     isAutoCreated: false,
     isHidden: false,
+    pinnedAt: undefined,
+    isPinned: false,
     ...over,
   }
 }
@@ -191,6 +195,7 @@ beforeEach(() => {
   removeSongMutationHook.mockReturnValue(mutationResult())
   moveSongMutationHook.mockReturnValue(mutationResult())
   visibilityMutationHook.mockReturnValue(mutationResult())
+  pinnedMutationHook.mockReturnValue(mutationResult())
   sortMutationHook.mockReturnValue(mutationResult())
 })
 
@@ -268,22 +273,30 @@ test('opens the description panel on tap and closes via the panel button', async
   expect(queryByTestId('playlist-desc-panel')).not.toBeInTheDocument()
 })
 
-test('more menu offers edit and delete for non-built-in playlists', async () => {
+test('more menu offers pin, edit and delete for non-built-in playlists', async () => {
   detailHook.mockReturnValue(detailResult(makePlaylist({ isBuiltIn: false })))
   const queries = await renderPage()
   await openMoreMenu(queries)
 
+  expect(queries.queryByTestId('popover-item-pin')).toBeInTheDocument()
   expect(queries.queryByTestId('popover-item-edit')).toBeInTheDocument()
   expect(queries.queryByTestId('popover-item-visibility')).toBeInTheDocument()
   expect(queries.queryByTestId('popover-item-delete')).toBeInTheDocument()
 })
 
-test('more menu is absent for built-in playlists', async () => {
+test('more menu offers only pin for built-in playlists', async () => {
+  // Pinning used to be impossible here: the whole menu was inside the
+  // `!isBuiltIn` block. The backend deliberately skips its built-in guard for
+  // the pin endpoint, so Favorites/Radio favorites get a menu holding just
+  // that one item — edit/visibility/delete stay owner-playlists-only.
   detailHook.mockReturnValue(detailResult(makePlaylist({ isBuiltIn: true })))
-  const { queryByTestId } = await renderPage()
-  // The toolbar renders a sort popover only with songs; with none there is no
-  // popover trigger at all.
-  expect(queryByTestId('popover-trigger')).not.toBeInTheDocument()
+  const queries = await renderPage()
+  await openMoreMenu(queries)
+
+  expect(queries.queryByTestId('popover-item-pin')).toBeInTheDocument()
+  expect(queries.queryByTestId('popover-item-edit')).not.toBeInTheDocument()
+  expect(queries.queryByTestId('popover-item-visibility')).not.toBeInTheDocument()
+  expect(queries.queryByTestId('popover-item-delete')).not.toBeInTheDocument()
 })
 
 test('shows the play-history button for built-in playlists too', async () => {
@@ -358,7 +371,20 @@ test('visibility menu item fires the visibility mutation', async () => {
   fireEvent.tap(queries.getByTestId('popover-item-visibility')!, {})
   await act(async () => { await Promise.resolve() })
 
-  expect(visibilityMutationHook.mock.results[0]!.value.mutate).toHaveBeenCalledWith(true)
+  expect(visibilityMutationHook.mock.results[0]!.value.mutate).toHaveBeenCalledWith({ id: 7, hidden: true })
+})
+
+test('pin menu item fires the pin mutation with the toggled value', async () => {
+  const queries = await renderPage()
+  await openMoreMenu(queries)
+
+  fireEvent.tap(queries.getByTestId('popover-item-pin')!, {})
+  await act(async () => { await Promise.resolve() })
+
+  expect(pinnedMutationHook.mock.results[0]!.value.mutate).toHaveBeenCalledWith(
+    { id: 7, pinned: true },
+    expect.anything(),
+  )
 })
 
 test('toolbar sort dropdown commits the chosen sort', async () => {

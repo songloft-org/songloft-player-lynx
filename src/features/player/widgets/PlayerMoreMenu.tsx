@@ -1,33 +1,127 @@
-import { useState } from '@lynx-js/react'
+import { useEffect, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
+import type { Song } from '../../../models/song.js'
+import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { useNavigateToSongDetail } from '../../../shared/nav/navigate-to-song-detail.js'
+import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
+import { toast } from '../../../shared/ui/toast-store.js'
 import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
 import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
+import { getCacheInfo } from '../data/song-cache.js'
+import { cacheSongToDevice, removeSongCache } from '../domain/song-cache-actions.js'
 
 export interface PlayerMoreMenuProps {
+  /** The song being played; its per-song entries are omitted when nothing is loaded. */
+  song: Song | null
   onOpenSleepTimer: () => void
   timerActive: boolean
 }
 
 /**
- * The `⋯` overflow menu: equalizer and sleep timer.
+ * The `⋯` overflow menu: song info, cache-on-device, equalizer and sleep timer.
  *
  * Groups the player's secondary functions the way Flutter's `PopupMenuButton` does,
  * which is what frees the top bar.
  *
- * The song's own actions are deliberately *not* here: the player already shows the
- * song it is playing, and every action on it is reachable from the row in the
- * library/playlist that queued it (`GlobalMenu`, via `song-row-overlays.ts`). A
+ * Most of the song's own actions are deliberately *not* here: the player already
+ * shows the song it is playing, and every action on it is reachable from the row in
+ * the library/playlist that queued it (`GlobalMenu`, via `song-row-overlays.ts`). A
  * second entry point only duplicates them.
+ *
+ * The two per-song entries that ARE here are the ones that only make sense
+ * mid-playback:
+ *
+ *  - **Song info** — "what am I listening to, exactly". The library row that queued
+ *    the song may be far away (another tab, a radio, a search), so this reuses the
+ *    read-only detail page (`/library/song/$songId`), whose navigation helper already
+ *    records the player as a valid origin and returns here on back.
+ *  - **Cache on device / remove from cache** — caching is something you do to the
+ *    song that is playing, and its state (cached or not) drives the label. Gated on
+ *    the `songCache` capability, so hosts without the native module (Web) never see
+ *    it. The decision logic lives in `song-cache-actions.ts`; this component owns the
+ *    video confirm dialog and the toasts.
  */
-export function PlayerMoreMenu({ onOpenSleepTimer, timerActive }: PlayerMoreMenuProps) {
+export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMoreMenuProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const goToSongDetail = useNavigateToSongDetail()
   const [show, setShow] = useState(false)
+  const [cached, setCached] = useState(false)
+  const [videoConfirm, setVideoConfirm] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const songCacheCapable = getPlatformCapabilities().songCache
+
+  // Track whether the current song is already on device so the entry reads as
+  // "remove" vs "cache". Re-runs when the song changes.
+  useEffect(() => {
+    if (!song || !songCacheCapable) {
+      setCached(false)
+      return
+    }
+    let alive = true
+    getCacheInfo(song.id)
+      .then((info) => { if (alive) setCached(info.cached) })
+      .catch(() => { if (alive) setCached(false) })
+    return () => { alive = false }
+  }, [song?.id, songCacheCapable])
+
+  const cacheCurrent = async () => {
+    if (!song || busy) return
+    setBusy(true)
+    toast.show(t('player.cacheStarted', { title: song.title }))
+    const outcome = await cacheSongToDevice(song)
+    setBusy(false)
+    if (outcome === 'cached') {
+      setCached(true)
+      toast.success(t('player.cacheDone'))
+    } else if (outcome === 'limit') {
+      toast.error(t('player.cacheLimitExceeded'))
+    } else {
+      toast.error(t('player.cacheFailed'))
+    }
+  }
+
+  const removeCurrent = async () => {
+    if (!song || busy) return
+    setBusy(true)
+    const outcome = await removeSongCache(song)
+    setBusy(false)
+    if (outcome === 'removed') {
+      setCached(false)
+      toast.success(t('player.cacheRemoved'))
+    } else {
+      toast.error(t('player.cacheFailed'))
+    }
+  }
+
+  const onCacheEntry = () => {
+    if (!song) return
+    if (cached) {
+      void removeCurrent()
+      return
+    }
+    // Video files are large — confirm before pulling one onto the device.
+    if (song.isVideo) {
+      setVideoConfirm(true)
+      return
+    }
+    void cacheCurrent()
+  }
 
   const items: PopoverMenuItem[] = [
+    ...(song != null
+      ? [{ key: 'songInfo', label: t('player.songInfo'), icon: 'info' as const }]
+      : []),
+    ...(song != null && songCacheCapable
+      ? [{
+        key: 'cache',
+        label: cached ? t('player.removeFromCache') : t('player.cacheToDevice'),
+        icon: (cached ? 'trash' : 'download') as 'trash' | 'download',
+      }]
+      : []),
     /*
      * The equalizer's only entry point. Its page lives at `/player/eq` (a
      * chrome-less sibling of `/player`, not a settings sub-page) so returning
@@ -62,9 +156,25 @@ export function PlayerMoreMenu({ onOpenSleepTimer, timerActive }: PlayerMoreMenu
         }
         items={items}
         onSelect={(key) => {
-          if (key === 'equalizer') void navigate({ to: '/player/eq' })
+          if (key === 'songInfo' && song != null) goToSongDetail(song.id)
+          else if (key === 'cache') onCacheEntry()
+          else if (key === 'equalizer') void navigate({ to: '/player/eq' })
           else onOpenSleepTimer()
         }}
+      />
+      <ConfirmDialog
+        show={videoConfirm}
+        title={t('player.cacheVideoWarnTitle')}
+        message={t('player.cacheVideoWarnContent')}
+        confirmLabel={t('player.cacheToDevice')}
+        onConfirm={() => {
+          setVideoConfirm(false)
+          void cacheCurrent()
+        }}
+        onCancel={() => setVideoConfirm(false)}
+        testId='player-cache-video-dialog'
+        confirmTestId='player-cache-video-confirm'
+        cancelTestId='player-cache-video-cancel'
       />
     </>
   )

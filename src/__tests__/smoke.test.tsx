@@ -96,6 +96,8 @@ vi.mock('../features/home/data/home-query.js', () => ({
               isBuiltIn: false,
               isAutoCreated: false,
               isHidden: false,
+              pinnedAt: undefined,
+              isPinned: false,
             },
           ],
           total: 1,

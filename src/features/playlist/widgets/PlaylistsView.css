@@ -155,6 +155,38 @@
   font-size: var(--font-xs);
 }
 
+/* Pinned chip + song count share one line; only rendered when pinned, so the
+   unpinned card keeps its original single `<text>` and layout. */
+.playlist-card__meta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.playlist-card__chip {
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-sm);
+  background-color: var(--primary-faint);
+  color: var(--content-muted);
+  font-size: var(--font-2xs);
+}
+
+/* Bottom-left of the cover — the only free corner (see PlaylistCard.tsx). */
+.playlist-card__more-btn {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.9;
+}
+
 .playlists__footer {
   display: flex;
   align-items: center;

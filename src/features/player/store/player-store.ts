@@ -6,6 +6,7 @@ import {
   buildVideoHlsUrl,
   buildVideoUrl,
 } from '../../../core/network/url-helper.js'
+import { getTranscodeFormat, normalizeFormat } from '../../../core/network/audio-format.js'
 import { resolveVideoSourceKind } from '../../../core/network/video-source.js'
 import { readAudioQuality, readAutoResume, readNormalize, readPlaybackSpeed, writePlaybackSpeed } from '../../settings/data/settings-prefs.js'
 import { loadPlaybackState, savePlaybackState } from '../data/playback-persistence.js'
@@ -182,7 +183,7 @@ export function isNormalizeEnabled(): boolean {
  */
 let _audioTrack: number | null = null
 
-function songUrl(song: Song): string {
+export function songUrl(song: Song): string {
   if (!song.url) return ''
   return buildSongUrl(song.url, {
     songFormat: song.format,
@@ -191,6 +192,28 @@ function songUrl(song: Song): string {
     platform: getPlatformTarget(),
     audioTrack: _audioTrack,
   })
+}
+
+/**
+ * The file extension a cached copy of `song` will actually have on disk.
+ *
+ * It MUST stay in lockstep with {@link songUrl}'s effective container, because the
+ * cache downloads exactly what `songUrl` serves and the player relies on the
+ * extension to pick a decoder. Mirror `buildSongUrl`'s decision:
+ *
+ *  - an explicit `?format=<transcode>` wins;
+ *  - otherwise, a non-original `quality` still makes the backend transcode to mp3
+ *    (a `quality=` without `format=` is documented to default to mp3);
+ *  - otherwise the song plays natively, so the file keeps its own container.
+ *
+ * Video songs and audio-track extraction are not cached (the cache action refuses
+ * them / they are edge cases), so they are not modelled here.
+ */
+export function songCacheExtOf(song: Song): string {
+  const transcode = getTranscodeFormat(song.format ?? null, getPlatformTarget())
+  if (transcode != null) return transcode
+  if (_audioQuality != null) return 'mp3'
+  return normalizeFormat((song.format ?? '').toLowerCase()) ?? 'mp3'
 }
 
 /**
@@ -235,6 +258,24 @@ function playbackSourceFor(song: Song): PlaybackSource {
 }
 
 /**
+ * The stream the engine should open, preferring a locally cached copy.
+ *
+ * This is the single place that decides a song's *actual* playback URL, and it is
+ * async because the cache lookup is a native round-trip. Both the queue metadata
+ * ({@link syncQueueWindow}) and the load paths ({@link playAtIndex}, retry,
+ * restore) must go through it: the native engines key their media-notification
+ * metadata by the exact URL they are asked to load, so if the metadata were built
+ * from the remote URL while a cached song loaded a `file://` URL, the lookup would
+ * miss and the lock screen would show no title/artist/artwork. Routing everything
+ * through one resolver is what keeps the two in agreement.
+ */
+async function resolvePlaybackSource(song: Song): Promise<PlaybackSource> {
+  const cached = await getCachedPath(song.id).catch(() => null)
+  if (cached) return { url: cached, hls: false }
+  return playbackSourceFor(song)
+}
+
+/**
  * Cover URL for the native media notification, or `undefined` when there is
  * nothing to show. Must be the same fully-resolved form the UI uses
  * (`buildCoverUrl` adds the base URL and the `access_token` the cover endpoint
@@ -245,10 +286,12 @@ function artworkUrlOf(song: Song): string | undefined {
   return buildCoverUrl(song.coverUrl, song.updatedAt) || undefined
 }
 
-function toAudioItem(song: Song): AudioItem {
+function toAudioItem(song: Song, url?: string): AudioItem {
   return {
     id: song.id,
-    url: songUrl(song),
+    // Defaults to the remote URL; callers that resolved a cached copy pass it so
+    // the metadata key matches what the engine will actually load.
+    url: url ?? songUrl(song),
     durationMs: durationMsOf(song),
     title: song.title,
     artist: song.artist,
@@ -258,11 +301,22 @@ function toAudioItem(song: Song): AudioItem {
 
 const QUEUE_WINDOW = 5
 
-function syncQueueWindow(playlist: Song[], index: number): void {
+/**
+ * Push the media-notification metadata for the window around `index`.
+ *
+ * Async because each song's URL is resolved cache-aware ({@link resolvePlaybackSource});
+ * see that function for why the metadata URL must match the loaded URL. Callers that
+ * immediately load a song afterwards should `await` this so the metadata is registered
+ * before the engine looks it up.
+ */
+async function syncQueueWindow(playlist: Song[], index: number): Promise<void> {
   const start = Math.max(0, index - QUEUE_WINDOW)
   const end = Math.min(playlist.length, index + QUEUE_WINDOW + 1)
   const window = playlist.slice(start, end)
-  void audio.setQueue(window.map(toAudioItem), index - start)
+  const items = await Promise.all(
+    window.map(async (s) => toAudioItem(s, (await resolvePlaybackSource(s)).url)),
+  )
+  void audio.setQueue(items, index - start)
 }
 
 /**
@@ -366,13 +420,14 @@ function scheduleRetry(song: Song, positionMs: number): void {
     // reloading here would yank playback back to a track they left behind.
     if (usePlayerStore.getState().currentSong?.id !== song.id) return
     usePlayerStore.setState({ errorMessage: undefined, isBuffering: true })
-    const retrySource = playbackSourceFor(song)
-    void audio.load(retrySource.url, { durationMs: durationMsOf(song), hls: retrySource.hls })
-      .then(() => (positionMs > 0 ? audio.seek(positionMs) : undefined))
-      .then(() => audio.play())
-      // A failure here re-emits `error`, which schedules the next attempt; there
-      // is nothing to do with the rejection itself.
-      .catch(() => {})
+    void resolvePlaybackSource(song).then((retrySource) =>
+      audio.load(retrySource.url, { durationMs: durationMsOf(song), hls: retrySource.hls })
+        .then(() => (positionMs > 0 ? audio.seek(positionMs) : undefined))
+        .then(() => audio.play())
+        // A failure here re-emits `error`, which schedules the next attempt; there
+        // is nothing to do with the rejection itself.
+        .catch(() => {}),
+    )
   }, delay)
 }
 
@@ -391,10 +446,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     })
     // Lyrics are loaded by the currentSong subscription below, not here: every
     // path that swaps the song flows through it (see the subscription's notes).
-    const cached = await getCachedPath(song.id).catch(() => null)
-    const source = cached
-      ? { url: cached, hls: false }
-      : playbackSourceFor(song)
+    const source = await resolvePlaybackSource(song)
     await audio.load(source.url, {
       durationMs: durationMsOf(song),
       hls: source.hls,
@@ -476,7 +528,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         playbackContext: undefined,
         sourcePlaylistId: undefined,
       })
-      syncQueueWindow(list, index)
+      await syncQueueWindow(list, index)
       await playAtIndex(index)
     },
 
@@ -493,10 +545,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         // the `source_playlist_id` plugin contract working unchanged.
         sourcePlaylistId: playlistId,
       })
-      syncQueueWindow(songs, index)
       if (playlistId != null) {
         void getPlaylistApi().touchPlaylist(playlistId).catch(() => {})
       }
+      await syncQueueWindow(songs, index)
       await playAtIndex(index)
     },
 
@@ -590,7 +642,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       if (songs.length === 0) return
       const list = [...get().playlist, ...songs]
       set({ playlist: list })
-      syncQueueWindow(list, get().currentIndex)
+      void syncQueueWindow(list, get().currentIndex)
     },
 
     insertNextInQueue: (songs) => {
@@ -599,7 +651,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       const insertAt = s.currentIndex + 1
       const list = [...s.playlist.slice(0, insertAt), ...songs, ...s.playlist.slice(insertAt)]
       set({ playlist: list })
-      syncQueueWindow(list, s.currentIndex)
+      void syncQueueWindow(list, s.currentIndex)
     },
 
     removeFromPlaylist: async (index) => {
@@ -617,7 +669,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         // above, and the currentSong subscription resets the lyric store.
         return
       }
-      syncQueueWindow(result.playlist, result.currentIndex)
+      await syncQueueWindow(result.playlist, result.currentIndex)
       if (result.removedCurrent) await playAtIndex(result.currentIndex)
     },
 
@@ -625,7 +677,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       const s = get()
       const result = moveItem(s.playlist, s.currentIndex, oldIndex, newIndex)
       set({ playlist: result.playlist, currentIndex: result.currentIndex })
-      syncQueueWindow(result.playlist, result.currentIndex)
+      void syncQueueWindow(result.playlist, result.currentIndex)
     },
 
     clearPlaylist: () => {
@@ -948,16 +1000,14 @@ export async function restorePlaybackState(): Promise<void> {
     // Use the shared `toAudioItem`/`durationMsOf` rather than re-inlining the
     // mapping: this path used to carry its own copy, which silently omitted any
     // field added to the queue item (it missed `artworkUrl` on arrival).
-    syncQueueWindow(saved.playlist, saved.currentIndex)
-    const restored = playbackSourceFor(song)
-    void audio.load(restored.url, { durationMs: durationMsOf(song), hls: restored.hls })
-      .then(() => {
-        // Record what the engine now holds: without this the first `togglePlay`
-        // took the `playAtIndex` path and reloaded a media item the engine
-        // already had (see the `_loadedSongId` note at `togglePlay`).
-        _loadedSongId = song.id
-        return audio.seek(saved.positionMs)
-      })
-      .then(() => audio.play())
+    await syncQueueWindow(saved.playlist, saved.currentIndex)
+    const restored = await resolvePlaybackSource(song)
+    await audio.load(restored.url, { durationMs: durationMsOf(song), hls: restored.hls })
+    // Record what the engine now holds: without this the first `togglePlay`
+    // took the `playAtIndex` path and reloaded a media item the engine
+    // already had (see the `_loadedSongId` note at `togglePlay`).
+    _loadedSongId = song.id
+    await audio.seek(saved.positionMs)
+    await audio.play()
   }
 }

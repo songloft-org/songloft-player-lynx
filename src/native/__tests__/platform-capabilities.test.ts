@@ -103,6 +103,29 @@ describe('on a device host', () => {
   })
 })
 
+describe('on-device song cache', () => {
+  test('off when the module is absent', () => {
+    withModules('SongloftPlatform')
+    expect(getPlatformCapabilities().songCache).toBe(false)
+  })
+
+  test('off for a stale shell that has the module but not getCacheInfo', () => {
+    // `download` changed arity this batch; keying the capability off it would let
+    // an old shell (which still exposes the 3-arg `download`) advertise caching and
+    // then be fed arguments it cannot bind. `getCacheInfo` only exists on the new
+    // module, so its absence must read as "no cache support".
+    g.SystemInfo = { platform: 'Android' }
+    g.NativeModules = { SongloftSongCache: { download: () => {} } }
+    expect(getPlatformCapabilities().songCache).toBe(false)
+  })
+
+  test('on once getCacheInfo is present', () => {
+    g.SystemInfo = { platform: 'Android' }
+    g.NativeModules = { SongloftSongCache: { getCacheInfo: () => {} } }
+    expect(getPlatformCapabilities().songCache).toBe(true)
+  })
+})
+
 describe('with no host at all (unit-test realm)', () => {
   test('everything degrades to off rather than throwing', () => {
     const caps = getPlatformCapabilities()

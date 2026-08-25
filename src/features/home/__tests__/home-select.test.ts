@@ -20,6 +20,8 @@ function pl(id: number): Playlist {
     isBuiltIn: false,
     isAutoCreated: false,
     isHidden: false,
+    pinnedAt: undefined,
+    isPinned: false,
   }
 }
 

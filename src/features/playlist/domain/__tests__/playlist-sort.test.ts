@@ -23,6 +23,8 @@ function makePlaylist(id: number, name: string): Playlist {
     isBuiltIn: false,
     isAutoCreated: false,
     isHidden: false,
+    pinnedAt: undefined,
+    isPinned: false,
   }
 }
 

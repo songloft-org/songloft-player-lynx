@@ -66,6 +66,8 @@ function makePlaylist(id: number, over: Partial<Playlist> = {}): Playlist {
     isBuiltIn: false,
     isAutoCreated: false,
     isHidden: false,
+    pinnedAt: undefined,
+    isPinned: false,
     ...over,
   }
 }

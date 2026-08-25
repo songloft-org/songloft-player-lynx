@@ -71,6 +71,8 @@ export type IconName =
   | 'eye'
   | 'edit'
   | 'trash'
+  | 'pin'
+  | 'download'
 
 /** Shared stroke attributes for line icons — Muse §4.5 stroke-width 1.6. */
 function stroke(color: string): string {
@@ -376,6 +378,19 @@ const ICONS: Record<IconName, (color: string) => string> = {
     `<path d="M9.5 7V5.2A1.2 1.2 0 0 1 10.7 4h2.6a1.2 1.2 0 0 1 1.2 1.2V7" ${stroke(c)}/>` +
     `<path d="M6.5 7l.8 12a2 2 0 0 0 2 1.9h5.4a2 2 0 0 0 2-1.9L17.5 7" ${stroke(c)}/>` +
     `<path d="M10 11v6M14 11v6" ${stroke(c)}/>`,
+
+  // Push pin, upright: round head, tapered shaft, cross-bar under the head.
+  // Marks (and toggles) a pinned playlist.
+  pin: (c) =>
+    `<circle cx="12" cy="7" r="3.4" ${stroke(c)}/>` +
+    `<path d="M7.5 10.6h9" ${stroke(c)}/>` +
+    `<path d="M12 14v7" ${stroke(c)}/>`,
+
+  // Down-arrow into a tray — "cache on this device".
+  download: (c) =>
+    `<path d="M12 3.5v10.5" ${stroke(c)}/>` +
+    `<path d="M8 10.5 12 14.5l4-4" ${stroke(c)}/>` +
+    `<path d="M4.5 16.5v2A2 2 0 0 0 6.5 20.5h11a2 2 0 0 0 2-2v-2" ${stroke(c)}/>`,
 }
 
 /** Build a complete inline SVG document string for `name`, colored with `color`. */

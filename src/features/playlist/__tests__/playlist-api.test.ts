@@ -297,6 +297,30 @@ describe('PlaylistApi endpoints', () => {
     expect(cap.url()).toContain(`${apiPrefix}/playlists/7`)
   })
 
+  test('setPlaylistPinned sends PUT /playlists/{id}/pin with {pinned} and parses pinned_at', async () => {
+    const cap = capture({
+      id: 7,
+      type: 'normal',
+      name: 'Road Trip',
+      song_count: 5,
+      pinned_at: '2026-08-25T10:00:00.000Z',
+    })
+    const pl = await new PlaylistApi(client(cap.transport)).setPlaylistPinned(7, true)
+    expect(cap.method()).toBe('PUT')
+    expect(cap.url()).toContain(`${apiPrefix}/playlists/7/pin`)
+    expect(JSON.parse(cap.body()!)).toEqual({ pinned: true })
+    expect(pl.isPinned).toBe(true)
+    expect(pl.pinnedAt).toBe('2026-08-25T10:00:00.000Z')
+  })
+
+  test('setPlaylistPinned(false) round-trips an unpinned playlist', async () => {
+    const cap = capture({ id: 7, type: 'normal', name: 'Road Trip', song_count: 5 })
+    const pl = await new PlaylistApi(client(cap.transport)).setPlaylistPinned(7, false)
+    expect(JSON.parse(cap.body()!)).toEqual({ pinned: false })
+    expect(pl.isPinned).toBe(false)
+    expect(pl.pinnedAt).toBeUndefined()
+  })
+
   test('addSongsToPlaylist sends POST /playlists/{id}/songs with song_ids', async () => {
     const cap = capture({})
     await new PlaylistApi(client(cap.transport)).addSongsToPlaylist(7, [1, 2, 3])

@@ -52,6 +52,16 @@ export interface PlatformCapabilities {
    * `shareFile`, so it reports true like the devices do.
    */
   fileExport: boolean
+  /**
+   * Can cache a song on the device for offline replay.
+   *
+   * Needs the `SongloftSongCache` module's **`getCacheInfo`** — a method added with
+   * the reworked cache contract. Keying off it (not `download`, whose arity changed
+   * the same batch) means a stale shell that still has the old `download` reports
+   * false instead of being fed arguments it cannot bind. Web has no such module, so
+   * the cache entry hides there.
+   */
+  songCache: boolean
 }
 
 /** True when a native module of this name is present in the host bag. */
@@ -103,5 +113,8 @@ export function getPlatformCapabilities(): PlatformCapabilities {
     // itself, so an older shell may register `SongloftPlatform` without it. Not
     // gated on `isWeb` — Web implements `shareFile` as a browser download.
     fileExport: hasNativeMethod('SongloftPlatform', 'shareFile'),
+    // Method-level for the reason in the interface note: `getCacheInfo` stands in
+    // for the whole reworked cache contract.
+    songCache: hasNativeMethod('SongloftSongCache', 'getCacheInfo'),
   }
 }

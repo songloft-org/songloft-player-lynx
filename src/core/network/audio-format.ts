@@ -17,7 +17,7 @@ const VIDEO_CONTAINERS = new Set([
   'mpg', 'flv', 'wmv', 'rmvb', 'rm', '3gp', 'm4v', 'mkv', 'matroska', 'webm', 'avi', 'ts',
 ])
 
-function normalizeFormat(fmt: string): string | null {
+export function normalizeFormat(fmt: string): string | null {
   if (fmt.startsWith('id3v')) return 'mp3'
   switch (fmt) {
     case 'mpeg':

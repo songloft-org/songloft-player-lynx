@@ -121,15 +121,42 @@ export function useMoveSongMutation(playlistId: number) {
   })
 }
 
-export function useSetVisibilityMutation(playlistId: number) {
+/**
+ * Hide / show, by id per call — see the note on {@link useSetPinnedMutation}
+ * for why these two take the id as an argument rather than closing over it.
+ */
+export function useSetVisibilityMutation() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (hidden: boolean) =>
-      getPlaylistApi().setPlaylistVisibility(playlistId, hidden),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: playlistQueryKeys.detail(playlistId),
-      })
+    mutationFn: ({ id, hidden }: { id: number; hidden: boolean }) =>
+      getPlaylistApi().setPlaylistVisibility(id, hidden),
+    onSuccess: (_result, { id }) => {
+      void queryClient.invalidateQueries({ queryKey: playlistQueryKeys.detail(id) })
+      void queryClient.invalidateQueries({ queryKey: ['playlist', 'list'] })
+    },
+  })
+}
+
+/**
+ * Pin / unpin, by id per call.
+ *
+ * The id is an argument rather than closed over the way the song mutations
+ * above are: the playlist *list* serves every row from one hook instance, and
+ * the detail page can just as well pass its own id. `mutationFn` takes a single
+ * value, hence the object.
+ *
+ * No optimistic reordering — the pinned-first order is computed by the backend
+ * (`ORDER BY pinned_at IS NULL, pinned_at DESC, position`), so only a re-read
+ * shows it. The list key is the literal prefix so every filter variant of the
+ * list is refetched, not just the one this row happened to come from.
+ */
+export function useSetPinnedMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, pinned }: { id: number; pinned: boolean }) =>
+      getPlaylistApi().setPlaylistPinned(id, pinned),
+    onSuccess: (_result, { id }) => {
+      void queryClient.invalidateQueries({ queryKey: playlistQueryKeys.detail(id) })
       void queryClient.invalidateQueries({ queryKey: ['playlist', 'list'] })
     },
   })

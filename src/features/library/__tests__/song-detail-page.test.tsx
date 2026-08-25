@@ -46,6 +46,24 @@ test('renders song detail with metadata', async () => {
 })
 
 /*
+ * The technical read-outs the player's "song info" entry exists to surface. The
+ * fixture song is `bitRate: 320` (already kbps), `sampleRate: 44100`, `format:
+ * mp3`, `fileSize: 5000000`, `duration: 180` — so the expected strings exercise
+ * the formatters' happy paths.
+ */
+test('renders the technical fields (duration / format / bit rate / sample rate / size)', async () => {
+  render(<SongDetailPage />)
+  await act(async () => { await new Promise(r => setTimeout(r, 10)) })
+  const { queryByText } = getQueriesForElement(elementTree.root!)
+
+  expect(queryByText('03:00')).toBeInTheDocument()
+  expect(queryByText('MP3')).toBeInTheDocument()
+  expect(queryByText('320 kbps')).toBeInTheDocument()
+  expect(queryByText('44.1 kHz')).toBeInTheDocument()
+  expect(queryByText('4.8 MB')).toBeInTheDocument()
+})
+
+/*
  * The edit button used to swap the page into an inline form; it now opens the
  * standalone edit page (the Flutter build's `SongEditPage`), where closing the
  * form can return to wherever it was opened from.

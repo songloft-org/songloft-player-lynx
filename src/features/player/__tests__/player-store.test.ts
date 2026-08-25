@@ -41,6 +41,18 @@ vi.mock('../../settings/data/settings-prefs.js', async (importOriginal) => ({
   readPlaybackSpeed: () => Promise.resolve(1),
 }))
 
+/**
+ * Device-cache lookup, controllable per test. `null` = not cached (the default, so
+ * the rest of this file behaves as before); set it to a `file://` URL to simulate a
+ * song already saved on device. Only `getCachedPath` is overridden — the source of
+ * truth the store resolves playback through.
+ */
+const songCache = vi.hoisted(() => ({ cachedPath: null as string | null }))
+vi.mock('../data/song-cache.js', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  getCachedPath: () => Promise.resolve(songCache.cachedPath),
+}))
+
 function song(id: number, durationSec = 1): Song {
   return {
     id,
@@ -58,10 +70,16 @@ function song(id: number, durationSec = 1): Song {
   } as Song
 }
 
-/** Flush pending microtasks (async load/play chain in `playAtIndex`). */
+/**
+ * Flush pending microtasks (async load/play chain in `playAtIndex`).
+ *
+ * Several ticks, not one: the playback paths resolve the source cache-aware
+ * (`resolvePlaybackSource` → `getCachedPath`) before loading, and the retry path
+ * chains a `.then` on top, so the load settles a few microtasks after the timer
+ * that triggered it.
+ */
 async function flush(): Promise<void> {
-  await Promise.resolve()
-  await Promise.resolve()
+  for (let i = 0; i < 8; i++) await Promise.resolve()
 }
 
 beforeEach(() => {
@@ -70,6 +88,7 @@ beforeEach(() => {
   resetLoadedSongForTests()
   playback.saved = null
   prefs.autoResume = false
+  songCache.cachedPath = null
   lyricStore.loadForSong.mockClear()
 })
 
@@ -204,6 +223,55 @@ describe('volume + mute', () => {
     expect(usePlayerStore.getState().previousVolume).toBe(40)
     await usePlayerStore.getState().toggleMute()
     expect(usePlayerStore.getState().volume).toBe(40)
+  })
+})
+
+/**
+ * The native engines key their media-notification / lock-screen metadata by the
+ * exact URL they are asked to load (`metadataByUrl`). If the queue metadata were
+ * built from the remote URL while a cached song loaded a `file://` URL, the lookup
+ * would miss and the lock screen would show no title/artist/artwork. This pins the
+ * invariant that prevents that: whatever URL `load` receives must be one of the
+ * URLs `setQueue` registered.
+ */
+describe('queue metadata matches the loaded URL', () => {
+  test('a cached song loads the same file:// URL the queue metadata carries', async () => {
+    songCache.cachedPath = 'file:///cache/1.mp3'
+    const loadSpy = vi.spyOn(getAudio(), 'load')
+    const setQueueSpy = vi.spyOn(getAudio(), 'setQueue')
+
+    await usePlayerStore.getState().playPlaylist([song(1, 300)], 0)
+    await flush()
+
+    const loadedUrl = loadSpy.mock.calls[0]?.[0]
+    const queueUrls = setQueueSpy.mock.calls.flatMap(
+      (call) => (call[0] as { url: string }[]).map((item) => item.url),
+    )
+    expect(loadedUrl).toBe('file:///cache/1.mp3')
+    expect(queueUrls).toContain(loadedUrl)
+
+    loadSpy.mockRestore()
+    setQueueSpy.mockRestore()
+  })
+
+  test('an uncached song loads the remote URL the queue metadata carries', async () => {
+    const loadSpy = vi.spyOn(getAudio(), 'load')
+    const setQueueSpy = vi.spyOn(getAudio(), 'setQueue')
+
+    // A playable URL so `songUrl` resolves to something non-empty.
+    const withUrl = { ...song(1, 300), url: '/api/v1/songs/1/play' } as Song
+    await usePlayerStore.getState().playPlaylist([withUrl], 0)
+    await flush()
+
+    const loadedUrl = loadSpy.mock.calls[0]?.[0]
+    const queueUrls = setQueueSpy.mock.calls.flatMap(
+      (call) => (call[0] as { url: string }[]).map((item) => item.url),
+    )
+    expect(loadedUrl).toBeTruthy()
+    expect(queueUrls).toContain(loadedUrl)
+
+    loadSpy.mockRestore()
+    setQueueSpy.mockRestore()
   })
 })
 

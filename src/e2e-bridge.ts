@@ -29,6 +29,14 @@ import { getLastShellLocation, getNavPaths } from './shared/nav/shell-navigation
 import { isExitArmed } from './shared/nav/exit-prompt.js'
 import { getLastLibrarySearch } from './features/library/data/last-library-search.js'
 import { currentBackAction, performRouteBack } from './core/navigation/route-back-action.js'
+import {
+  clearSongCache,
+  getCacheInfo,
+  getSongCacheSize,
+} from './features/player/data/song-cache.js'
+import { cacheSongToDevice, removeSongCache } from './features/player/domain/song-cache-actions.js'
+import { songCacheExtOf } from './features/player/store/player-store.js'
+import { getPlatformCapabilities } from './native/platform-capabilities.js'
 
 // Expose stores and config globally for direct access in eval expressions
 ;(globalThis as Record<string, unknown>).__E2E_PLAYER_STORE__ = usePlayerStore
@@ -82,6 +90,20 @@ import { currentBackAction, performRouteBack } from './core/navigation/route-bac
       getPlatformTarget(),
     ),
   enterVideoSource: () => usePlayerStore.getState().enterVideoSource(),
+}
+
+// On-device song cache. `capable` reports the platform capability (false on Web,
+// where there is no native cache module), so a scenario can skip cleanly instead
+// of asserting against a feature the host cannot provide. `cache`/`remove` take a
+// JSON song because the facade's actions consume the camelCase `Song` shape.
+;(globalThis as Record<string, unknown>).__E2E_SONG_CACHE__ = {
+  capable: () => getPlatformCapabilities().songCache,
+  info: (songId: number) => getCacheInfo(songId),
+  size: () => getSongCacheSize(),
+  cache: (songJson: string) => cacheSongToDevice(JSON.parse(songJson)),
+  remove: (songJson: string) => removeSongCache(JSON.parse(songJson)),
+  clear: () => clearSongCache(),
+  ext: (songJson: string) => songCacheExtOf(JSON.parse(songJson)),
 }
 
 // Back key. The interesting failures are decisions, not renders: "back closed the

@@ -1,4 +1,4 @@
-import { useState } from '@lynx-js/react'
+import { useEffect, useState } from '@lynx-js/react'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { useTranslation } from 'react-i18next'
 
@@ -6,6 +6,9 @@ import { Input } from '@lynx-js/lynx-ui-input'
 
 import { formatBytes } from '../../home/domain/stats-format.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
+import { getSongCacheSize, clearSongCache } from '../../player/data/song-cache.js'
+import { readLocalCacheMaxSize, writeLocalCacheMaxSize } from '../../player/data/song-cache-prefs.js'
 import { useCacheConfigQuery, useCacheStatsQuery } from '../data/cache-query.js'
 import {
   useCleanCacheMutation,
@@ -18,6 +21,15 @@ import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import { SubPageShell } from '../widgets/SubPageShell.js'
 import './CacheManagePage.css'
+
+/** Preset caps for the on-device song cache (bytes). */
+const DEVICE_CACHE_SIZE_OPTIONS = [
+  268435456, // 256 MB
+  536870912, // 512 MB
+  1073741824, // 1 GB
+  2147483648, // 2 GB
+  4294967296, // 4 GB
+]
 
 /**
  * Cache management sub-page (`/settings/cache`, inside the shell). Three
@@ -50,11 +62,19 @@ export function CacheManagePage() {
 
   // ── Two-tap clean confirm ──────────────────────────────────────────────────
   const [confirmClean, setConfirmClean] = useState(false)
+  const [confirmClearDevice, setConfirmClearDevice] = useState(false)
 
-  // Back disarms the two-tap clean instead of leaving the page with it still armed.
-  useBackHandler(confirmClean, () => {
-    setConfirmClean(false)
-    return true
+  // Back disarms whichever two-tap confirm is armed instead of leaving the page.
+  useBackHandler(confirmClean || confirmClearDevice, () => {
+    if (confirmClean) {
+      setConfirmClean(false)
+      return true
+    }
+    if (confirmClearDevice) {
+      setConfirmClearDevice(false)
+      return true
+    }
+    return false
   })
 
   const onCleanTap = () => {
@@ -65,6 +85,37 @@ export function CacheManagePage() {
     cleanMutation.mutate(undefined, {
       onSettled: () => setConfirmClean(false),
     })
+  }
+
+  // ── On-device song cache (native `SongloftSongCache`) ─────────────────────
+  // A separate cache from the server-side one above: songs the user saved onto
+  // this device for offline replay. Only shown where the native module exists.
+  const songCacheCapable = getPlatformCapabilities().songCache
+  const [deviceCacheSize, setDeviceCacheSize] = useState<number | null>(null)
+  const [deviceMaxSize, setDeviceMaxSize] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!songCacheCapable) return
+    let alive = true
+    void getSongCacheSize().then((s) => { if (alive) setDeviceCacheSize(s) })
+    void readLocalCacheMaxSize().then((m) => { if (alive) setDeviceMaxSize(m) })
+    return () => { alive = false }
+  }, [songCacheCapable])
+
+  const onClearDeviceTap = () => {
+    if (!confirmClearDevice) {
+      setConfirmClearDevice(true)
+      return
+    }
+    void clearSongCache().then(() => {
+      setConfirmClearDevice(false)
+      setDeviceCacheSize(0)
+    })
+  }
+
+  const onSelectDeviceMaxSize = (bytes: number) => {
+    setDeviceMaxSize(bytes)
+    void writeLocalCacheMaxSize(bytes)
   }
 
   // ── Directory validation result ────────────────────────────────────────────
@@ -147,6 +198,56 @@ export function CacheManagePage() {
           testId='cache-clean'
         />
       </SettingsSection>
+
+      {/* ─── Section: On-Device Song Cache (native) ─────────────────────
+          Distinct from the server cache above; only rendered where the native
+          song-cache module exists (never on Web). */}
+      {songCacheCapable
+        ? (
+          <SettingsSection
+            title={t('cacheManage.deviceSection')}
+            icon='download'
+          >
+            <SettingsRow
+              icon='music'
+              title={t('cacheManage.deviceSize')}
+              trailingText={deviceCacheSize != null ? formatBytes(deviceCacheSize) : '-'}
+              testId='device-cache-size'
+            />
+            <view className='cache-manage__field cache-manage__field--rows'>
+              <text className='cache-manage__label'>
+                {t('cacheManage.deviceMaxSize')}
+              </text>
+              {DEVICE_CACHE_SIZE_OPTIONS.map((bytes) => (
+                <SettingsRow
+                  key={bytes}
+                  title={formatBytes(bytes)}
+                  selected={deviceMaxSize === bytes}
+                  trailingIcon={deviceMaxSize === bytes ? 'check' : undefined}
+                  onTap={() => onSelectDeviceMaxSize(bytes)}
+                  testId={`device-max-${bytes}`}
+                />
+              ))}
+            </view>
+            <SettingsRow
+              icon='logout'
+              title={
+                confirmClearDevice
+                  ? t('cacheManage.deviceConfirmClear')
+                  : t('cacheManage.deviceClear')
+              }
+              subtitle={
+                confirmClearDevice
+                  ? t('cacheManage.cleanConfirmHint')
+                  : undefined
+              }
+              danger
+              onTap={onClearDeviceTap}
+              testId='device-cache-clear'
+            />
+          </SettingsSection>
+        )
+        : null}
 
       {/* ─── Section 2: Cache Config (editable) ─────────────────────── */}
       <SettingsSection

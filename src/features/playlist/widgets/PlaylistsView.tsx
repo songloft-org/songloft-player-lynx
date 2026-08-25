@@ -15,12 +15,20 @@ import { getPlaylistApi } from '../api/index.js'
 import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
 import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
+import { GlobalMenu } from '../../../shared/ui/GlobalMenu.js'
 import { MediaListItem } from '../../../shared/ui/MediaListItem.js'
+import type { AnchorMeasurement } from '../../../shared/ui/anchored-overlay.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { sortPlaylistsByName, sortPlaylistsByNumberPrefix } from '../domain/playlist-sort.js'
+import { playlistRowMenuKeys } from '../domain/playlist-row-menu.js'
 import { flattenPlaylists } from '../data/pagination.js'
 import { usePlaylistsInfiniteQuery } from '../data/playlist-query.js'
-import { useDeletePlaylistMutation, useReorderPlaylistsMutation } from '../data/playlist-mutations.js'
+import {
+  useDeletePlaylistMutation,
+  useReorderPlaylistsMutation,
+  useSetPinnedMutation,
+  useSetVisibilityMutation,
+} from '../data/playlist-mutations.js'
 import { useDebounce } from '../../library/data/use-debounce.js'
 import { PlaylistCard } from './PlaylistCard.js'
 import './PlaylistsView.css'
@@ -39,11 +47,26 @@ export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; view
   const hiddenCount = allPlaylists.filter((p) => p.isHidden).length
   const reorderMutation = useReorderPlaylistsMutation()
   const deleteMutation = useDeletePlaylistMutation()
+  const pinnedMutation = useSetPinnedMutation()
+  const visibilityMutation = useSetVisibilityMutation()
 
   const [sortMode, setSortMode] = useState(false)
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [confirmDelete, setConfirmDelete] = useState(false)
+  /*
+   * The row menu's state lives here rather than in a store, and the menu renders
+   * at *this page's* root — a sibling of the scroll-view, not inside it. Both
+   * choices are forced: a scroll container clips `position: fixed` descendants
+   * (measured; see `song-row-overlays.ts`) and the grid cell adds its own
+   * `overflow: clip` on top, so a `PopoverMenu` inside a card would be sliced.
+   * `PlayHistoryPanel` already mounts a `GlobalMenu` at page level this way, so
+   * no store is needed — and `root-overlay-mount.test.ts` is about the *app*
+   * root, which this is not.
+   */
+  const [menuPlaylist, setMenuPlaylist] = useState<Playlist | null>(null)
+  const [menuAnchor, setMenuAnchor] = useState<AnchorMeasurement | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<Playlist | null>(null)
   const [sortOpen, setSortOpen] = useState(false)
   const [sortType, setSortType] = useState<string | null>(null)
   const sortItems: PopoverMenuItem[] = [
@@ -124,6 +147,64 @@ export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; view
     setConfirmDelete(false)
     const ids = Array.from(selected).filter((id) => !playlists.find((p) => p.id === id)?.isBuiltIn)
     void Promise.all(ids.map((id) => deleteMutation.mutateAsync(id))).then(exitSelectMode)
+  }
+
+  const openRowMenu = (playlist: Playlist, anchor: AnchorMeasurement | null) => {
+    setMenuPlaylist(playlist)
+    setMenuAnchor(anchor)
+  }
+  const closeRowMenu = () => {
+    setMenuPlaylist(null)
+    setMenuAnchor(null)
+  }
+
+  /*
+   * Pinning is the one item built-in playlists keep: the backend deliberately
+   * skips its built-in guard for it, and Flutter's card menu has no guard on the
+   * pin entry either. Edit / hide / delete stay owner-playlists-only. The
+   * built-in-vs-normal split lives in `playlistRowMenuKeys` so it is unit
+   * testable without rendering (the `⋯` that opens this menu is `catchtap`,
+   * which the test env does not fire — see the note on the tests).
+   */
+  const rowMenuKeys = menuPlaylist == null ? [] : playlistRowMenuKeys(menuPlaylist)
+  const rowMenuItems: PopoverMenuItem[] = rowMenuKeys.map((key) => {
+    switch (key) {
+      case 'pin':
+        return {
+          key,
+          label: menuPlaylist!.isPinned ? t('playlist.unpinPlaylist') : t('playlist.pinPlaylist'),
+          icon: 'pin' as const,
+        }
+      case 'edit':
+        return { key, label: t('playlist.editPlaylist'), icon: 'brush' as const }
+      case 'visibility':
+        return {
+          key,
+          label: menuPlaylist!.isHidden ? t('playlist.showPlaylist') : t('playlist.hidePlaylist'),
+          icon: 'eye' as const,
+        }
+      default:
+        return { key, label: t('playlist.deletePlaylist'), icon: 'x' as const, danger: true }
+    }
+  })
+
+  const onRowMenuSelect = (key: string) => {
+    const playlist = menuPlaylist
+    if (!playlist) return
+    if (key === 'pin') {
+      const pinned = !playlist.isPinned
+      pinnedMutation.mutate({ id: playlist.id, pinned }, {
+        onSuccess: () =>
+          toast.success(pinned ? t('playlist.pinnedToast') : t('playlist.unpinnedToast')),
+        onError: () => toast.error(t('playlist.pinFailed')),
+      })
+    } else if (key === 'edit') {
+      void navigate({ to: '/playlists/$id/edit', params: { id: String(playlist.id) } })
+    } else if (key === 'visibility') {
+      visibilityMutation.mutate({ id: playlist.id, hidden: !playlist.isHidden })
+    } else if (key === 'delete') {
+      setPendingDelete(playlist)
+    }
   }
 
   /**
@@ -344,7 +425,12 @@ export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; view
             : viewMode === 'grid'
               ? playlists.map((playlist) => (
                 <view key={String(playlist.id)} className='playlists__grid-item'>
-                  <PlaylistCard playlist={playlist} onTap={onTap} onPlayAll={onPlayAll} />
+                  <PlaylistCard
+                    playlist={playlist}
+                    onTap={onTap}
+                    onPlayAll={onPlayAll}
+                    onMore={openRowMenu}
+                  />
                   {selectMode
                     ? (
                       <view className='playlists__select-badge' bindtap={() => onTap(playlist)}>
@@ -362,9 +448,12 @@ export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; view
                     playlist.songCount === 1 ? 'common.songCountOne' : 'common.songCountOther',
                     { count: playlist.songCount },
                   )}
+                  badge={playlist.isPinned ? t('playlist.labelPinned') : undefined}
                   coverUrl={playlist.coverUrl ? buildCoverUrl(playlist.coverUrl, playlist.updatedAt) : undefined}
                   onTap={() => onTap(playlist)}
                   onPlayAll={() => onPlayAll(playlist)}
+                  onMore={(anchor) => openRowMenu(playlist, anchor)}
+                  testIdSuffix={String(playlist.id)}
                   selectMode={selectMode}
                   isSelected={selected.has(playlist.id)}
                 />
@@ -407,6 +496,37 @@ export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; view
         testId='playlists-delete-dialog'
         confirmTestId='playlists-delete-confirm'
         cancelTestId='playlists-delete-cancel'
+      />
+      {/*
+        * Single-row delete confirm, armed by the row menu — the batch dialog
+        * above is for select mode only.
+        */}
+      <ConfirmDialog
+        show={pendingDelete != null}
+        title={t('playlist.deleteTitle')}
+        message={t('playlist.deleteMessage')}
+        confirmLabel={t('playlist.deletePlaylist')}
+        onConfirm={() => {
+          const target = pendingDelete
+          setPendingDelete(null)
+          if (target) void deleteMutation.mutateAsync(target.id)
+        }}
+        onCancel={() => setPendingDelete(null)}
+        testId='playlists-row-delete-dialog'
+        confirmTestId='playlists-row-delete-confirm'
+        cancelTestId='playlists-row-delete-cancel'
+      />
+      {/*
+        * The row menu itself — page-level, outside the scroll-view (see the
+        * state declaration above for why).
+        */}
+      <GlobalMenu
+        show={menuPlaylist != null}
+        onClose={closeRowMenu}
+        items={rowMenuItems}
+        onSelect={onRowMenuSelect}
+        anchor={menuAnchor ?? undefined}
+        testId='playlists-row-menu'
       />
 
     </view>

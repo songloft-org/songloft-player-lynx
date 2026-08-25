@@ -28,7 +28,11 @@ const { breakpointHook, navigateSpy, autoEnterHook } = vi.hoisted(() => ({
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
-vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigateSpy }))
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => navigateSpy,
+  // See full-player.test.tsx — the song-info entry reads the pathname here.
+  useRouterState: () => '/player',
+}))
 vi.mock('../../../shared/responsive/useBreakpoint.js', async () => {
   const actual = await vi.importActual<typeof import('../../../shared/responsive/useBreakpoint.js')>(
     '../../../shared/responsive/useBreakpoint.js',

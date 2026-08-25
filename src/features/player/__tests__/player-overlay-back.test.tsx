@@ -23,7 +23,11 @@ import {
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
-vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn() }))
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => vi.fn(),
+  // `useNavigateToSongDetail` (the song-info menu entry) reads the pathname here.
+  useRouterState: () => '/player',
+}))
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useInfiniteQuery: () => ({ data: undefined, isLoading: false }),
@@ -114,7 +118,7 @@ test('opening the volume popover then the speed menu leaves one layer each', asy
 
 test('back closes the overflow menu rather than leaving the player', async () => {
   const { getByTestId } = await renderAndQuery(
-    <PlayerMoreMenu onOpenSleepTimer={vi.fn()} timerActive={false} />,
+    <PlayerMoreMenu song={null} onOpenSleepTimer={vi.fn()} timerActive={false} />,
   )
 
   await act(async () => {
@@ -131,7 +135,7 @@ test('back closes the overflow menu rather than leaving the player', async () =>
 test('picking a row closes the overflow menu, leaving no layer behind', async () => {
   const onOpenSleepTimer = vi.fn()
   const { getByTestId, getByText } = await renderAndQuery(
-    <PlayerMoreMenu onOpenSleepTimer={onOpenSleepTimer} timerActive={false} />,
+    <PlayerMoreMenu song={null} onOpenSleepTimer={onOpenSleepTimer} timerActive={false} />,
   )
 
   await act(async () => {

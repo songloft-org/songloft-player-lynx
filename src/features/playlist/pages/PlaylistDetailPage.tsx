@@ -12,6 +12,7 @@ import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
 import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
+import { toast } from '../../../shared/ui/toast-store.js'
 import { useDebounce } from '../../library/data/use-debounce.js'
 import { flattenSongs } from '../../library/data/pagination.js'
 import { SongListRow } from '../../library/widgets/SongListRow.js'
@@ -29,6 +30,7 @@ import {
   useDeletePlaylistMutation,
   useMoveSongMutation,
   useRemoveSongMutation,
+  useSetPinnedMutation,
   useSetVisibilityMutation,
   useUpdateSortMutation,
 } from '../data/playlist-mutations.js'
@@ -84,11 +86,13 @@ export function PlaylistDetailPage() {
 
   const isBuiltIn = playlist?.isBuiltIn ?? false
   const isHidden = playlist?.isHidden ?? false
+  const isPinned = playlist?.isPinned ?? false
 
   const deleteMutation = useDeletePlaylistMutation()
   const removeSongMutation = useRemoveSongMutation(id)
   const moveSongMutation = useMoveSongMutation(id)
-  const visibilityMutation = useSetVisibilityMutation(id)
+  const visibilityMutation = useSetVisibilityMutation()
+  const pinnedMutation = useSetPinnedMutation()
   const sortMutation = useUpdateSortMutation(id)
 
   const [showHistory, setShowHistory] = useState(false)
@@ -159,7 +163,15 @@ export function PlaylistDetailPage() {
     void Promise.all(ids.map((songId) => removeSongMutation.mutateAsync(songId))).then(exitSelectMode)
   }
   const toggleVisibility = () => {
-    visibilityMutation.mutate(!isHidden)
+    visibilityMutation.mutate({ id, hidden: !isHidden })
+  }
+  const togglePin = () => {
+    const pinned = !isPinned
+    pinnedMutation.mutate({ id, pinned }, {
+      onSuccess: () =>
+        toast.success(pinned ? t('playlist.pinnedToast') : t('playlist.unpinnedToast')),
+      onError: () => toast.error(t('playlist.pinFailed')),
+    })
   }
 
   const sortOptions = [
@@ -253,9 +265,13 @@ export function PlaylistDetailPage() {
             </view>
           )
           : null}
-        {!isBuiltIn
-          ? (
-            <view className='playlist-detail__topbar-actions'>
+        {/*
+          The actions group is no longer built-in-only: pinning applies to the
+          built-in playlists too (the backend deliberately skips its usual
+          built-in guard for it), so Favorites and Radio favorites now get a menu
+          holding just that one item. Everything else stays `!isBuiltIn`.
+        */}
+        <view className='playlist-detail__topbar-actions'>
               {sortMode
                 ? (
                   /* In sort mode the whole group collapses to the single Done button. */
@@ -269,7 +285,7 @@ export function PlaylistDetailPage() {
                 390px had its labels broken mid-word ("排/序"). Play-all and sort
                 moved to the `PlaylistToolbar` under the search bar; select moved
                 there too. What is left here is the low-frequency, page-level
-                stuff: manual reorder, edit, visibility, delete.
+                stuff: pin, manual reorder, edit, visibility, delete.
               */}
               {!sortMode
                 ? (
@@ -282,24 +298,34 @@ export function PlaylistDetailPage() {
                       <Icon name='more' size={20} color={ICON_COLORS.content2} />
                     }
                     items={[
-                      ...(canSort
-                        ? [{ key: 'sort', label: t('playlist.sortSongs'), icon: 'sort' as const }] 
+                      {
+                        key: 'pin',
+                        label: isPinned ? t('playlist.unpinPlaylist') : t('playlist.pinPlaylist'),
+                        icon: 'pin' as const,
+                      },
+                      ...(!isBuiltIn && canSort
+                        ? [{ key: 'sort', label: t('playlist.sortSongs'), icon: 'sort' as const }]
                         : []),
-                      { key: 'edit', label: t('playlist.editPlaylist'), icon: 'brush' as const },
-                      {
-                        key: 'visibility',
-                        label: isHidden ? t('playlist.showPlaylist') : t('playlist.hidePlaylist'),
-                        icon: 'eye' as const,
-                      },
-                      {
-                        key: 'delete',
-                        label: t('playlist.deletePlaylist'),
-                        icon: 'x' as const,
-                        danger: true,
-                      },
+                      ...(!isBuiltIn
+                        ? [
+                          { key: 'edit', label: t('playlist.editPlaylist'), icon: 'brush' as const },
+                          {
+                            key: 'visibility',
+                            label: isHidden ? t('playlist.showPlaylist') : t('playlist.hidePlaylist'),
+                            icon: 'eye' as const,
+                          },
+                          {
+                            key: 'delete',
+                            label: t('playlist.deletePlaylist'),
+                            icon: 'x' as const,
+                            danger: true,
+                          },
+                        ]
+                        : []),
                     ]}
                     onSelect={(key) => {
-                      if (key === 'sort') enterSortMode()
+                      if (key === 'pin') togglePin()
+                      else if (key === 'sort') enterSortMode()
                       else if (key === 'edit') onStartEdit()
                       else if (key === 'visibility') toggleVisibility()
                       else if (key === 'delete') setPendingConfirm({ kind: 'delete-playlist' })
@@ -307,9 +333,7 @@ export function PlaylistDetailPage() {
                   />
                 )
                 : null}
-            </view>
-          )
-          : null}
+        </view>
         </view>
       </view>
       {/*

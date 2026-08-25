@@ -10,6 +10,7 @@ import {
 } from '../native/system-appearance.js'
 import { NATIVE_EVENT } from '../native/native-audio.js'
 import { BACK_PRESSED_EVENT } from '../native/navigation.js'
+import { SONG_CACHE_LIMIT_ERROR } from '../features/player/data/song-cache.js'
 
 /**
  * Gates for the host↔page contract that **only breaks on a device**.
@@ -40,6 +41,7 @@ const ANDROID_DLNA = 'android/app/src/main/java/org/songloft/lynx/dlna'
 const ANDROID_LYRIC = 'android/app/src/main/java/org/songloft/lynx/lyric'
 const ANDROID_VIDEO = 'android/app/src/main/java/org/songloft/lynx/video'
 const ANDROID_NAV = 'android/app/src/main/java/org/songloft/lynx/navigation'
+const ANDROID_CACHE = 'android/app/src/main/java/org/songloft/lynx/cache'
 const IOS_DIR = 'ios/SongloftLynx'
 
 /** Both hosts' sources concatenated, per subsystem. */
@@ -83,6 +85,10 @@ const hosts = {
   },
   liveActivity: {
     ios: read(`${IOS_DIR}/LiveActivityModule.swift`),
+  },
+  songCache: {
+    android: read(`${ANDROID_CACHE}/SongloftSongCacheModule.kt`),
+    ios: read(`${IOS_DIR}/SongloftSongCacheModule.swift`),
   },
   /*
    * Back key. Split like `system` above: the module writes the flag, but the press
@@ -720,6 +726,74 @@ describe('SongloftLiveActivity is a proper Lynx module on iOS', () => {
   })
 })
 
+/**
+ * On-device song cache. The method surface plus the invariants that are invisible
+ * from JS and only bite on a device:
+ *
+ *  - storage must not live in the OS cache dir (the OS evicts it, dropping files
+ *    the user explicitly saved);
+ *  - downloads must honour the insecure-TLS switch (a self-signed server is the
+ *    common LAN case);
+ *  - callbacks must hand back a playable `file://` URL, never a bare path the audio
+ *    engine cannot load, and never a hand-concatenated one (breaks on spaces/CJK);
+ *  - downloads must commit atomically, so a crash never leaves a half-written file
+ *    reported as playable;
+ *  - the byte-cap sentinel must be the exact string the TS facade matches on.
+ */
+describe('SongloftSongCache module methods exist on both hosts', () => {
+  const methods = interfaceMethods(
+    read('src/features/player/data/song-cache.ts'),
+    'NativeSongCacheModule',
+  )
+
+  test('the interface was parsed (guard against a silent empty list)', () => {
+    expect(methods).toContain('getCacheInfo')
+    expect(methods.length).toBeGreaterThanOrEqual(5)
+  })
+
+  test.each(methods)('SongloftSongCache.%s', (method) => {
+    expectLynxMethod(hosts.songCache.android, method)
+    expectSwiftMethod(hosts.songCache.ios, method)
+  })
+
+  test.each(methods)('%s takes a bridge Callback, not a Kotlin lambda', (method) => {
+    expect(hosts.songCache.android).toMatch(
+      new RegExp(`fun ${method}\\([^)]*callback:\\s*Callback`),
+    )
+  })
+})
+
+describe('SongloftSongCache keeps its on-device invariants', () => {
+  test('downloads honour the insecure-TLS switch on both hosts', () => {
+    expect(hosts.songCache.android).toContain('clientFor(InsecureTls.enabled)')
+    expect(hosts.songCache.ios).toContain('InsecureTls.shared.session')
+  })
+
+  test('cache lives in non-evictable storage, not the OS cache dir', () => {
+    expect(hosts.songCache.android).toContain('.filesDir')
+    expect(hosts.songCache.android).not.toContain('ctx.cacheDir')
+    expect(hosts.songCache.ios).toContain('.documentDirectory')
+    expect(hosts.songCache.ios).not.toContain('.cachesDirectory')
+  })
+
+  test('callbacks hand back a playable file:// URL, never a hand-built one', () => {
+    expect(hosts.songCache.android).toContain('Uri.fromFile')
+    expect(hosts.songCache.ios).toContain('absoluteString')
+    expect(hosts.songCache.android).not.toContain('"file://')
+    expect(hosts.songCache.ios).not.toContain('"file://')
+  })
+
+  test('downloads commit atomically (no half-written playable file)', () => {
+    expect(hosts.songCache.android).toContain('renameTo')
+    expect(hosts.songCache.ios).toContain('moveItem')
+  })
+
+  test('the byte-cap sentinel is shared verbatim with the TS facade', () => {
+    expect(hosts.songCache.android).toContain(SONG_CACHE_LIMIT_ERROR)
+    expect(hosts.songCache.ios).toContain(SONG_CACHE_LIMIT_ERROR)
+  })
+})
+
 describe('every native module is registered in the host bootstrap', () => {
   const modules = [
     { name: 'SongloftAudio', android: 'SongloftAudioModule', ios: 'SongloftAudioModule' },
@@ -730,6 +804,7 @@ describe('every native module is registered in the host bootstrap', () => {
     { name: 'SongloftLiveActivity', android: null, ios: 'LiveActivityModule' },
     { name: 'SongloftVideo', android: 'SongloftVideoModule', ios: 'SongloftVideoModule' },
     { name: 'SongloftNavigation', android: 'SongloftNavigationModule', ios: null },
+    { name: 'SongloftSongCache', android: 'SongloftSongCacheModule', ios: 'SongloftSongCacheModule' },
   ]
 
   test.each(modules.filter((m) => m.android))('%s is registered on Android', (mod) => {

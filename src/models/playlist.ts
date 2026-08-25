@@ -7,6 +7,10 @@ import { makeParsers, nowIso } from './_shared.js'
  * carries `built_in` / `auto_created` / `hidden` markers; the derived booleans
  * `isBuiltIn` / `isAutoCreated` / `isHidden` (Flutter getters) are computed at
  * parse time. Equality is by `id` (`playlistEquals`).
+ *
+ * Pinning is **not** a label — it is its own `pinned_at` timestamp, because the
+ * backend orders by it (pinned first, most recently pinned before the rest) and
+ * a label carries no order. `isPinned` is derived from its presence.
  */
 export const playlistSchema = z
   .object({
@@ -25,6 +29,11 @@ export const playlistSchema = z
     sort_order: z.string().catch('asc'),
     created_at: z.string().nullish().catch(undefined),
     updated_at: z.string().nullish().catch(undefined),
+    // NOT given the `?? nowIso()` fallback the two timestamps above get: absent
+    // `pinned_at` means "not pinned", and defaulting it to now would read as
+    // "pinned a moment ago" — every playlist would claim to be pinned, and the
+    // backend's pinned-first ordering would silently disagree with the UI.
+    pinned_at: z.string().nullish().catch(undefined),
   })
   .transform((p) => ({
     id: p.id,
@@ -38,6 +47,8 @@ export const playlistSchema = z
     sortOrder: p.sort_order,
     createdAt: p.created_at ?? nowIso(),
     updatedAt: p.updated_at ?? nowIso(),
+    pinnedAt: p.pinned_at ?? undefined,
+    isPinned: p.pinned_at != null,
     isBuiltIn: p.labels.includes('built_in'),
     isAutoCreated: p.labels.includes('auto_created'),
     isHidden: p.labels.includes('hidden'),
@@ -57,6 +68,7 @@ export interface PlaylistJson {
   sort_order: string
   created_at: string
   updated_at: string
+  pinned_at: string | null
 }
 
 export function playlistToJson(playlist: Playlist): PlaylistJson {
@@ -72,6 +84,7 @@ export function playlistToJson(playlist: Playlist): PlaylistJson {
     sort_order: playlist.sortOrder,
     created_at: playlist.createdAt,
     updated_at: playlist.updatedAt,
+    pinned_at: playlist.pinnedAt ?? null,
   }
 }
 

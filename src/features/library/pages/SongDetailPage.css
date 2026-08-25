@@ -86,6 +86,16 @@
   color: var(--content);
 }
 
+/* Small note under the cache row explaining how the cached quality is chosen. */
+.song-detail__cache-note {
+  padding: var(--space-2) 0;
+}
+
+.song-detail__cache-note-text {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+}
+
 /*
  * The "write tags to file" pill. The edit form used to share it; now only this
  * button and the form live apart (see SongEditPage.css).

@@ -6,11 +6,20 @@ import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/tes
 
 import type { Playlist } from '../../../models/playlist.js'
 
-const { listHook, createMutationHook, reorderMutationHook, deleteMutationHook } = vi.hoisted(() => ({
+const {
+  listHook,
+  createMutationHook,
+  reorderMutationHook,
+  deleteMutationHook,
+  pinnedMutationHook,
+  visibilityMutationHook,
+} = vi.hoisted(() => ({
   listHook: vi.fn(),
   createMutationHook: vi.fn(),
   reorderMutationHook: vi.fn(),
   deleteMutationHook: vi.fn(),
+  pinnedMutationHook: vi.fn(),
+  visibilityMutationHook: vi.fn(),
 }))
 
 vi.mock('react-i18next', async () =>
@@ -47,6 +56,8 @@ vi.mock('../data/playlist-mutations.js', () => ({
   useCreatePlaylistMutation: createMutationHook,
   useReorderPlaylistsMutation: reorderMutationHook,
   useDeletePlaylistMutation: deleteMutationHook,
+  useSetPinnedMutation: pinnedMutationHook,
+  useSetVisibilityMutation: visibilityMutationHook,
 }))
 
 const { PlaylistsView } = await import('../widgets/PlaylistsView.js')
@@ -68,6 +79,8 @@ function makePlaylist(id: number, over: Partial<Playlist> = {}): Playlist {
     isBuiltIn: false,
     isAutoCreated: false,
     isHidden: false,
+    pinnedAt: undefined,
+    isPinned: false,
     ...over,
   }
 }
@@ -97,6 +110,8 @@ beforeEach(() => {
   createMutationHook.mockReturnValue(mutationResult())
   reorderMutationHook.mockReturnValue(mutationResult())
   deleteMutationHook.mockReturnValue({ mutate: vi.fn(), mutateAsync: vi.fn(async () => {}), isPending: false })
+  pinnedMutationHook.mockReturnValue({ mutate: vi.fn(), mutateAsync: vi.fn(async () => {}), isPending: false })
+  visibilityMutationHook.mockReturnValue({ mutate: vi.fn(), mutateAsync: vi.fn(async () => {}), isPending: false })
 })
 
 afterEach(() => {
@@ -355,4 +370,51 @@ test('multi-select delete goes through a full-screen dialog before deleting', as
   expect(mutateAsync).toHaveBeenCalledTimes(1)
   expect(mutateAsync).toHaveBeenCalledWith(1)
   expect(queryByTestId('playlists-delete-dialog')).not.toBeInTheDocument()
+})
+
+test('shows a pinned chip only on pinned playlists', async () => {
+  listHook.mockReturnValue(
+    listResult([
+      {
+        playlists: [
+          makePlaylist(1, { name: 'Favorites', isPinned: true }),
+          makePlaylist(2, { name: 'Chill', isPinned: false }),
+        ],
+        total: 2,
+      },
+    ]),
+  )
+  const { queryByTestId } = await renderView()
+
+  expect(queryByTestId('playlist-card-pinned-1')).toBeInTheDocument()
+  expect(queryByTestId('playlist-card-pinned-2')).not.toBeInTheDocument()
+})
+
+/*
+ * The `⋯` that opens the row menu is `catchtap` (so tapping it does not also
+ * navigate into the playlist), and `fireEvent.tap` from the testing library does
+ * not invoke `catchtap` handlers — only `bindtap` (confirmed empirically; same
+ * gap as `playlist-drawer.test.tsx` documents). So opening the menu and acting
+ * on its items is real-device/browser verified; here we assert the renderable
+ * structure instead — that every card exposes a `⋯`, and that the menu's
+ * built-in-vs-normal item split is exactly `playlistRowMenuKeys` (tested
+ * directly in `playlist-row-menu.test.ts`). The pin / delete mutations
+ * themselves are covered through the detail page's `bindtap` menu.
+ */
+test('every playlist card exposes a row-menu trigger', async () => {
+  listHook.mockReturnValue(
+    listResult([
+      {
+        playlists: [
+          makePlaylist(1, { name: 'Favorites', isBuiltIn: true }),
+          makePlaylist(2, { name: 'Chill' }),
+        ],
+        total: 2,
+      },
+    ]),
+  )
+  const { queryByTestId } = await renderView()
+
+  expect(queryByTestId('playlist-card-more-1')).toBeInTheDocument()
+  expect(queryByTestId('playlist-card-more-2')).toBeInTheDocument()
 })

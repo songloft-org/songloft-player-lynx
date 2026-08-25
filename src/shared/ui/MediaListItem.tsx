@@ -1,5 +1,7 @@
 import { Icon, ICON_COLORS } from './Icon.js'
 import { AppCheckbox } from './AppCheckbox.js'
+import { useTapAnchor } from './anchored-overlay.js'
+import type { AnchorMeasurement } from './anchored-overlay.js'
 import './MediaListItem.css'
 
 export interface MediaListItemProps {
@@ -7,6 +9,8 @@ export interface MediaListItemProps {
   name: string
   /** Secondary line under the name (usually a song count). */
   subtitle?: string
+  /** Small chip shown beside the subtitle (e.g. "Pinned"). */
+  badge?: string
   /** Fully resolved cover URL (caller runs `buildCoverUrl`). */
   coverUrl?: string
   isPlaying?: boolean
@@ -14,6 +18,16 @@ export interface MediaListItemProps {
   isSelected?: boolean
   onTap?: () => void
   onPlayAll?: () => void
+  /**
+   * Open this row's action menu. The rect is the `⋯` box, measured here because
+   * only the row can address it; the menu itself is mounted outside the
+   * scrolling list by the caller. Null when the host could not measure.
+   *
+   * Optional so the rows that have no menu (artists, albums) are unaffected.
+   */
+  onMore?: (anchor: AnchorMeasurement | null) => void
+  /** Suffix for this row's `data-testid`s, so a list of rows stays addressable. */
+  testIdSuffix?: string
 }
 
 /**
@@ -24,13 +38,17 @@ export interface MediaListItemProps {
 export function MediaListItem({
   name,
   subtitle,
+  badge,
   coverUrl,
   isPlaying,
   selectMode,
   isSelected,
   onTap,
   onPlayAll,
+  onMore,
+  testIdSuffix,
 }: MediaListItemProps) {
+  const { anchorId, measure } = useTapAnchor()
   return (
     <view
       className={'media-list-item' + (isPlaying ? ' media-list-item--playing' : '')}
@@ -54,7 +72,26 @@ export function MediaListItem({
       </view>
       <view className='media-list-item__info'>
         <text className='media-list-item__name'>{name}</text>
-        {subtitle ? <text className='media-list-item__subtitle'>{subtitle}</text> : null}
+        {/*
+          * The badge wraps the subtitle into a row; without a badge the subtitle
+          * stays exactly where it was, so the rows that never pass one (artists,
+          * albums) keep their original markup and layout.
+          */}
+        {badge
+          ? (
+            <view className='media-list-item__meta'>
+              <text
+                className='media-list-item__badge'
+                data-testid={testIdSuffix ? `media-list-item-badge-${testIdSuffix}` : undefined}
+              >
+                {badge}
+              </text>
+              {subtitle ? <text className='media-list-item__subtitle'>{subtitle}</text> : null}
+            </view>
+          )
+          : subtitle
+            ? <text className='media-list-item__subtitle'>{subtitle}</text>
+            : null}
       </view>
       {onPlayAll && !selectMode
         ? (
@@ -63,6 +100,23 @@ export function MediaListItem({
             catchtap={() => { onPlayAll() }}
           >
             <Icon name='play' size={16} color={ICON_COLORS.content} />
+          </view>
+        )
+        : null}
+      {/*
+        * `catchtap`, not `bindtap` — the whole row is tappable, and a bubbling tap
+        * would open the menu *and* navigate. The test env does not implement that
+        * interception, so it is device/browser-verified only.
+        */}
+      {onMore && !selectMode
+        ? (
+          <view
+            id={anchorId}
+            className='media-list-item__more-btn'
+            catchtap={() => { measure((rect) => onMore(rect)) }}
+            data-testid={testIdSuffix ? `media-list-item-more-${testIdSuffix}` : undefined}
+          >
+            <Icon name='more' size={16} color={ICON_COLORS.content} />
           </view>
         )
         : null}

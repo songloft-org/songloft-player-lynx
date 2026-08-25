@@ -125,6 +125,7 @@ describe('Playlist', () => {
     song_count: 12,
     created_at: '2020-01-01T00:00:00.000Z',
     updated_at: '2020-02-01T00:00:00.000Z',
+    pinned_at: '2020-03-01T00:00:00.000Z',
   }
 
   test('parses snake_case and derives label getters', () => {
@@ -135,6 +136,8 @@ describe('Playlist', () => {
     expect(p.isBuiltIn).toBe(true)
     expect(p.isHidden).toBe(true)
     expect(p.isAutoCreated).toBe(false)
+    expect(p.pinnedAt).toBe('2020-03-01T00:00:00.000Z')
+    expect(p.isPinned).toBe(true)
   })
 
   test('round-trips and defaults labels/songCount', () => {
@@ -147,7 +150,23 @@ describe('Playlist', () => {
       cover_url: '/api/v1/playlists/1/cover',
       song_count: 12,
       labels: ['built_in', 'hidden'],
+      pinned_at: '2020-03-01T00:00:00.000Z',
     })
+  })
+
+  /*
+   * The reverse of the pin parse — deliberately asserted on its own. Absent
+   * `pinned_at` means "not pinned"; the schema must NOT fall back the way
+   * `created_at`/`updated_at` do (`?? nowIso()`), or every playlist would read
+   * as "pinned a moment ago" and the backend's pinned-first ordering would
+   * silently disagree with the UI. If this test ever goes red after "simplifying"
+   * the transform, that simplification is the bug.
+   */
+  test('absent pinned_at stays unpinned (no nowIso fallback)', () => {
+    const p = parsePlaylist({ id: 2, name: 'P2' })
+    expect(p.pinnedAt).toBeUndefined()
+    expect(p.isPinned).toBe(false)
+    expect(playlistToJson(p).pinned_at).toBeNull()
   })
 
   test('PlaylistListResponse maps + totals', () => {

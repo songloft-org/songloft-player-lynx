@@ -59,6 +59,22 @@
   font-size: var(--font-xs);
 }
 
+/* Only rendered when a `badge` is passed — see MediaListItem.tsx. */
+.media-list-item__meta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.media-list-item__badge {
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-sm);
+  background-color: var(--primary-faint);
+  color: var(--content-muted);
+  font-size: var(--font-2xs);
+}
+
 .media-list-item__play-btn {
   display: flex;
   align-items: center;
@@ -67,5 +83,15 @@
   height: 36px;
   border-radius: 50%;
   background-color: var(--neutral-faint);
+  flex-shrink: 0;
+}
+
+.media-list-item__more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   flex-shrink: 0;
 }

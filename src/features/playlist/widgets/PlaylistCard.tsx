@@ -3,22 +3,38 @@ import { useTranslation } from 'react-i18next'
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Playlist } from '../../../models/playlist.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { useTapAnchor } from '../../../shared/ui/anchored-overlay.js'
+import type { AnchorMeasurement } from '../../../shared/ui/anchored-overlay.js'
 
 /**
  * A single playlist grid card, ported (trimmed) from the Flutter `PlaylistCard`
- * (grid `BrowseCard`): cover (or a music-note placeholder) + name + song count.
- * Edit / delete / play-all / visibility menus from the Flutter card are deferred
- * (see PROGRESS). Styled entirely via LUNA tokens.
+ * (grid `BrowseCard`): cover (or a music-note placeholder) + name + song count,
+ * plus a `⋯` that dispatches the card's actions upward. Styled entirely via
+ * LUNA tokens.
  */
 export interface PlaylistCardProps {
   playlist: Playlist
   onTap?: (playlist: Playlist) => void
   onPlayAll?: (playlist: Playlist) => void
+  /**
+   * Open the card's action menu. The rect is this card's `⋯` box, measured here
+   * because only the card can address it — the menu itself is mounted at the
+   * page level, outside the scrolling grid (see `PlaylistsView`). Null when the
+   * host could not measure, which docks the menu instead.
+   */
+  onMore?: (playlist: Playlist, anchor: AnchorMeasurement | null) => void
   isPlaying?: boolean
 }
 
-export function PlaylistCard({ playlist, onTap, onPlayAll, isPlaying }: PlaylistCardProps) {
+export function PlaylistCard({
+  playlist,
+  onTap,
+  onPlayAll,
+  onMore,
+  isPlaying,
+}: PlaylistCardProps) {
   const { t } = useTranslation()
+  const { anchorId, measure } = useTapAnchor()
   const cover = playlist.coverUrl ? buildCoverUrl(playlist.coverUrl, playlist.updatedAt) : ''
   const count = t(
     playlist.songCount === 1 ? 'common.songCountOne' : 'common.songCountOther',
@@ -69,9 +85,39 @@ export function PlaylistCard({ playlist, onTap, onPlayAll, isPlaying }: Playlist
             </view>
           )
           : null}
+        {/*
+          * Bottom-left: the other three corners are taken (built-in badge and the
+          * select checkbox top-right, play-all bottom-right).
+          *
+          * `catchtap`, not `bindtap` — the whole card is tappable, and a bubbling
+          * tap here would open the menu *and* navigate into the playlist. The test
+          * env does not implement that interception, so this is browser/device-only
+          * behaviour; see the note in `playlists-view.test.tsx`.
+          */}
+        {onMore
+          ? (
+            <view
+              id={anchorId}
+              className='playlist-card__more-btn'
+              catchtap={() => { measure((rect) => onMore(playlist, rect)) }}
+              data-testid={`playlist-card-more-${playlist.id}`}
+            >
+              <Icon name='more' size={16} color={ICON_COLORS.content} />
+            </view>
+          )
+          : null}
       </view>
       <text className='playlist-card__name'>{playlist.name || t('common.untitled')}</text>
-      <text className='playlist-card__count'>{count}</text>
+      {playlist.isPinned
+        ? (
+          <view className='playlist-card__meta'>
+            <text className='playlist-card__chip' data-testid={`playlist-card-pinned-${playlist.id}`}>
+              {t('playlist.labelPinned')}
+            </text>
+            <text className='playlist-card__count'>{count}</text>
+          </view>
+        )
+        : <text className='playlist-card__count'>{count}</text>}
     </view>
   )
 }
