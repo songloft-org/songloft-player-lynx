@@ -11,6 +11,17 @@
 
 .toast-wrap {
   position: fixed;
+  /*
+     * Explicit z-index, the fixed-layer rule (AGENTS.md): the pill lands
+     * inside the plugin iframe's rect on plugin tabs, and on Web that frame is
+     * a sibling in the same stacking context at z-index 50 (webview-host.js) —
+     * at auto the pill paints under the plugin. 150 clears it and stays below
+     * the sheet layer (100 is used by sheets; the toast being transient and
+     * bottom-anchored, going above the dialog layer would let a toast cover a
+     * modal's confirm button — the sheets at 100 already win over the frame,
+     * and a toast during a sheet is fine under it).
+     */
+  z-index: 150;
   /* Sits above all bottom chrome so it never covers the mini-player. Narrow:
      bottom bar (64px + home indicator) with the mini-player docked over it
      (65px tall + 8px gap → top edge ~137px up). Wide has no bottom bar — the

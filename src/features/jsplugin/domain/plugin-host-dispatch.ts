@@ -21,7 +21,12 @@ export interface PluginHostContext {
   resolveSongs: (ids: number[]) => Promise<Song[]>
 }
 
-function playerStateToJson() {
+/**
+ * The player state as pushed to plugins (`songloft-player-state`) and returned
+ * from `player.getState` — the port of the Flutter dispatcher's `stateToJson`.
+ * Exported for the Web iframe path, which posts it straight through postMessage.
+ */
+export function playerStateToJson() {
   const s = usePlayerStore.getState()
   return {
     queue: s.playlist.map((song) => ({

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from '@lynx-js/react'
 import type { NodesRef } from '@lynx-js/types'
-import { useNavigate, useParams } from '@tanstack/react-router'
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { appConfig } from '../../../core/config/app-config.js'
@@ -8,9 +8,19 @@ import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
-import { getAppTheme, resolveTheme } from '../../../shared/theme/theme-model.js'
+import { getAppTheme, resolveTheme, subscribeAppTheme } from '../../../shared/theme/theme-model.js'
+import { openURL } from '../../../native/native-platform.js'
+import {
+  getWebviewModule,
+  setWebviewBridgeHandlers,
+} from '../../../native/web-webview.js'
 import { usePlayerStore } from '../../player/store/index.js'
-import { handlePluginHostCall, type PluginHostContext } from '../domain/plugin-host-dispatch.js'
+import {
+  handlePluginHostCall,
+  playerStateToJson,
+  type HostCallRequest,
+  type PluginHostContext,
+} from '../domain/plugin-host-dispatch.js'
 import { getJSPluginApi } from '../api/index.js'
 import { usePluginsQuery } from '../data/jsplugin-query.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
@@ -45,11 +55,45 @@ const hostContext: PluginHostContext = {
   resolveSongs,
 }
 
+/**
+ * Build the plugin page URL. `embed` hides the plugin's own toolbar — right for
+ * a chromeless tab entry, wrong for a pushed page, where the plugin keeps its
+ * own header under our topbar (both Flutter pages make exactly this
+ * distinction: tab_page embeds, webview_page does not).
+ */
+function buildPluginUrl(entryPath: string, theme: string, token: string, embed: boolean): string {
+  const base = `${appConfig.baseUrl}${appConfig.basePath}`
+  const params = [embed ? 'embed' : '', `theme=${theme}`]
+  if (token) params.push(`access_token=${token}`)
+  return `${base}/api/v1/jsplugin/${entryPath}/?${params.filter(Boolean).join('&')}`
+}
+
+/** The plugin SDK's host-call envelope, with its reply-correlation id. */
+type IncomingHostCall = HostCallRequest & { id?: unknown }
+
+function decodeHostCall(payload: unknown): IncomingHostCall | null {
+  if (typeof payload !== 'object' || payload === null) return null
+  const req = payload as Record<string, unknown>
+  if (req['type'] !== 'songloft-host-call') return null
+  return req as unknown as IncomingHostCall
+}
+
 export function PluginWebViewPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const params = useParams({ strict: false }) as { entryPath?: string }
   const entryPath = params.entryPath ?? ''
+
+  /*
+   * `?tab=true` — this navigation came through the nav tab (bar / rail / More
+   * sheet), set by those entry points. A tab entry renders chromeless with an
+   * `embed` URL (Flutter's `plugin_tab_page`); anything else is a pushed page
+   * with the topbar + open-in-browser action (Flutter's `plugin_webview_page`).
+   * Derived from the search string, NOT the tab config: opening a tabbed
+   * plugin from the grid must still get the pushed treatment.
+   */
+  const search = useSearch({ strict: false }) as { tab?: boolean }
+  const isTabEntry = search.tab === true
 
   // The route only carries `entryPath`, which is a *routing prefix* ("myplugin") —
   // showing it as the title was a porting slip (the Flutter page titled itself with
@@ -61,6 +105,8 @@ export function PluginWebViewPage() {
   const title = pluginList?.plugins.find((p) => p.entryPath === entryPath)?.displayName || entryPath
 
   const [src, setSrc] = useState('')
+  /** The plain (non-embed) URL for "open in browser" — pushed pages only. */
+  const [browserUrl, setBrowserUrl] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const webviewRef = useRef<NodesRef>(null)
@@ -152,16 +198,15 @@ export function PluginWebViewPage() {
         // for `theme-light`, and Lynx has no DOM — the guard kept it from crashing but
         // pinned every plugin to `theme=dark`, even with light mode selected.
         const theme = resolveTheme(getAppTheme())
-        const base = `${appConfig.baseUrl}${appConfig.basePath}`
-        const url = `${base}/api/v1/jsplugin/${entryPath}/?embed&theme=${theme}&access_token=${token}`
-        setSrc(url)
+        setSrc(buildPluginUrl(entryPath, theme, token, isTabEntry))
+        setBrowserUrl(buildPluginUrl(entryPath, theme, token, false))
         setLoading(false)
       } catch (e) {
         setError(String(e instanceof Error ? e.message : e))
         setLoading(false)
       }
     })()
-  }, [entryPath])
+  }, [entryPath, isTabEntry])
 
   useEffect(() => {
     if (!src) return
@@ -203,6 +248,28 @@ export function PluginWebViewPage() {
     performRouteBack()
   }
 
+  /** The pushed page's escape hatch — Flutter's `Icons.open_in_browser` action. */
+  const openInBrowser = () => {
+    if (browserUrl) openURL(browserUrl)
+  }
+
+  /*
+   * The pushed page's topbar: back + title + open-in-browser. A tab entry
+   * renders none of it — the plugin IS the page there (Flutter's plugin_tab_page
+   * has no Scaffold/AppBar at all).
+   */
+  const topbar = isTabEntry ? null : (
+    <view className='plugin-webview__topbar'>
+      <view className='plugin-webview__back' bindtap={goBack} data-testid='plugin-webview-back'>
+        <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
+      </view>
+      <text className='plugin-webview__title' data-testid='plugin-webview-title'>{title}</text>
+      <view className='plugin-webview__open' bindtap={openInBrowser} data-testid='plugin-webview-open'>
+        <Icon name='open-external' size={20} color={ICON_COLORS.content} />
+      </view>
+    </view>
+  )
+
   // Platform, not realm — on Web this component renders in a worker with no
   // `window`/`document`, so `isWebEnvironment()` would answer `false` here and
   // the fallback below would be skipped in favour of a `<webview>` that Web has
@@ -212,14 +279,7 @@ export function PluginWebViewPage() {
   if (loading) {
     return (
       <view className='plugin-webview'>
-        <view className='plugin-webview__topbar'>
-          <view className='plugin-webview__back' bindtap={goBack}>
-            <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
-          </view>
-          <text className='plugin-webview__title' data-testid='plugin-webview-title'>
-            {title || t('jsplugin.loading')}
-          </text>
-        </view>
+        {topbar}
         <view className='plugin-webview__state'>
           <text className='plugin-webview__state-text'>{t('common.loading')}</text>
         </view>
@@ -230,12 +290,7 @@ export function PluginWebViewPage() {
   if (error) {
     return (
       <view className='plugin-webview'>
-        <view className='plugin-webview__topbar'>
-          <view className='plugin-webview__back' bindtap={goBack}>
-            <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
-          </view>
-          <text className='plugin-webview__title' data-testid='plugin-webview-title'>{title}</text>
-        </view>
+        {topbar}
         <view className='plugin-webview__state'>
           <text className='plugin-webview__state-text plugin-webview__state-text--error'>{error}</text>
         </view>
@@ -243,31 +298,25 @@ export function PluginWebViewPage() {
     )
   }
 
-  // Web platform: webview is not available, show a fallback
+  /*
+   * Web platform: `<webview>` has no implementation there (absent from
+   * web-core's tag map — see `isWebPlatform`'s doc comment), so the plugin runs
+   * in a main-thread iframe positioned over a placeholder. Everything below
+   * the (optional) topbar is owned by `WebPluginFrame` at the bottom of this
+   * file.
+   */
   if (isWeb) {
     return (
       <view className='plugin-webview'>
-        <view className='plugin-webview__topbar'>
-          <view className='plugin-webview__back' bindtap={goBack} data-testid='plugin-webview-back'>
-            <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
-          </view>
-          <text className='plugin-webview__title' data-testid='plugin-webview-title'>{title}</text>
-        </view>
-        <view className='plugin-webview__state'>
-          <text className='plugin-webview__state-text'>{t('jsplugin.webview_unavailable')}</text>
-        </view>
+        {topbar}
+        <WebPluginFrame src={src} />
       </view>
     )
   }
 
   return (
     <view className='plugin-webview'>
-      <view className='plugin-webview__topbar'>
-        <view className='plugin-webview__back' bindtap={goBack} data-testid='plugin-webview-back'>
-          <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
-        </view>
-        <text className='plugin-webview__title' data-testid='plugin-webview-title'>{title}</text>
-      </view>
+      {topbar}
       <webview
         ref={webviewRef}
         className='plugin-webview__frame'
@@ -278,5 +327,104 @@ export function PluginWebViewPage() {
         data-testid='plugin-webview-frame'
       />
     </view>
+  )
+}
+
+/**
+ * The Web stand-in for the native `<webview>`: a placeholder view plus a
+ * main-thread iframe positioned over it.
+ *
+ * The placeholder carries the real layout (the `--nav-inset` capsule avoidance
+ * comes from the same `.plugin-webview__frame` class), and its measured rect is
+ * what the iframe is placed on — so the plugin page never covers the nav
+ * capsule or mini-player. The iframe itself is created and moved by
+ * `web/webview-host.js` through `NativeModules.SongloftWebview`.
+ *
+ * Message protocol — the one the plugin SDK's `common.js` already speaks, and
+ * the same as the Flutter Web build (`plugin_tab_page_stub.dart`):
+ *
+ *  - host → plugin: `songloft-theme` (runtime dark/light flips; the initial
+ *    value travels in the URL's `?theme=`) and `songloft-player-state`
+ *    (throttled to real changes, same signature as the native branch below).
+ *  - plugin → host: `songloft-host-call` `{id, ns, method, params}`, replied to
+ *    with `songloft-host-reply` `{id, ok, data|error}`.
+ */
+function WebPluginFrame({ src }: { src: string }) {
+  const { t } = useTranslation()
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    const webview = getWebviewModule()
+    if (!webview.available) {
+      // Stale host page (no SongloftWebview module) or a non-Web host: fall
+      // back to the old message rather than a silent blank area.
+      setFailed(true)
+      return
+    }
+
+    let closed = false
+    let unsubTheme: (() => void) | undefined
+    let unsubPlayer: (() => void) | undefined
+
+    const send = (msg: unknown) => webview.postMessage(JSON.stringify(msg))
+
+    /*
+     * Placement is entirely the main thread's job now: it resolves the
+     * selector below inside lynx-view's shadow root and keeps the iframe glued
+     * to that element's live box (ResizeObserver + resize — see
+     * `web/webview-host.js`). No rect crosses the bridge, so none can go stale
+     * when the nav inset tier or the shell breakpoint flips; if the element
+     * never appears, the main thread reports `openFailed` and we degrade.
+     */
+    webview.open(src, '#plugin-webview-frame')
+
+    unsubTheme = subscribeAppTheme(() => {
+      send({ type: 'songloft-theme', theme: resolveTheme(getAppTheme()) })
+    })
+
+    unsubPlayer = usePlayerStore.subscribe((state, prev) => {
+      // Same change-signature throttle as the native branch's push.
+      const sig = `${state.currentIndex}|${state.isPlaying}|${state.currentSong?.id}|${state.playMode}|${state.playlist.length}`
+      const prevSig = `${prev.currentIndex}|${prev.isPlaying}|${prev.currentSong?.id}|${prev.playMode}|${prev.playlist.length}`
+      if (sig === prevSig) return
+      send({ type: 'songloft-player-state', state: playerStateToJson() })
+    })
+
+    setWebviewBridgeHandlers({
+      onMessage: (payload) => {
+        const req = decodeHostCall(payload)
+        if (!req) return
+        void handlePluginHostCall(req, hostContext).then((result) => {
+          if (closed) return
+          send({ type: 'songloft-host-reply', id: req.id, ...result })
+        })
+      },
+      onOpenFailed: () => {
+        setFailed(true)
+      },
+    })
+
+    return () => {
+      closed = true
+      unsubTheme?.()
+      unsubPlayer?.()
+      setWebviewBridgeHandlers(null)
+      webview.close()
+    }
+  }, [src])
+
+  if (failed) {
+    return (
+      <view className='plugin-webview__state'>
+        <text className='plugin-webview__state-text'>{t('jsplugin.webview_unavailable')}</text>
+      </view>
+    )
+  }
+  return (
+    <view
+      id='plugin-webview-frame'
+      className='plugin-webview__frame'
+      data-testid='plugin-webview-frame'
+    />
   )
 }

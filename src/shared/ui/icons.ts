@@ -35,6 +35,7 @@ export type IconName =
   | 'info'
   | 'logout'
   | 'link'
+  | 'open-external'
   | 'copy'
   | 'palette'
   | 'check'
@@ -177,7 +178,14 @@ const ICONS: Record<IconName, (color: string) => string> = {
   link: (c) =>
     `<path d="M9 15 15 9" ${stroke(c)}/>` +
     `<path d="M11.5 6.5 13 5a4 4 0 0 1 6 6l-1.5 1.5" ${stroke(c)}/>` +
-    `<path d="M12.5 17.5 11 19a4 4 0 0 1-6-6l1.5-1.5" ${stroke(c)}/>`,
+    `<path d="M12.5 17.5 11 19a4 4 0 0 1-6-6l1.5-1.5" ${stroke(c)}/>` ,
+
+  // Open in an external app/browser: the standard box + outward arrow. The
+  // plugin page's "open in browser" affordance (Flutter's Icons.open_in_new).
+  'open-external': (c) =>
+    `<path d="M14 4h6v6" ${stroke(c)}/>` +
+    `<path d="M20 4l-8.5 8.5" ${stroke(c)}/>` +
+    `<path d="M18.5 13.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5.5" ${stroke(c)}/>` ,
 
   // Copy: two overlapping sheets — the clipboard affordance on read-only URLs.
   copy: (c) =>

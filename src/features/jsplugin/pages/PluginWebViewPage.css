@@ -18,6 +18,12 @@
   padding: var(--space-1);
 }
 
+/* The pushed page's "open in browser" action — the back button's mirror on
+   the trailing edge. Same hit-slop padding so the two flanks feel symmetric. */
+.plugin-webview__open {
+  padding: var(--space-1);
+}
+
 .plugin-webview__title {
   flex: 1;
   font-size: var(--font-lg);

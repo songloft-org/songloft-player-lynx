@@ -215,7 +215,7 @@ const server = createServer((req, res) => {
   }
 
   // Route: root-level static files from the web/ source directory
-  // (audio-host.js, songloft-platform-module.js, songloft-audio-module.js)
+  // (audio-host.js, webview-host.js, songloft-*-module.js, …)
   {
     const requested = url.slice(1) // strip leading /
     // Only serve top-level files; reject paths that would escape the directory.

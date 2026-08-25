@@ -153,6 +153,8 @@ const HOST_SCRIPTS = [
   'songloft-platform-module.js',
   'songloft-audio-module.js',
   'songloft-navigation-module.js',
+  'songloft-webview-module.js',
+  'webview-host.js',
 ]
 for (const name of HOST_SCRIPTS) {
   const src = resolve(repoRoot, 'web', name)

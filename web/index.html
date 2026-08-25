@@ -274,10 +274,18 @@
 
     Both scripts use `defer` so they do not block HTML parsing. Execution order
     is preserved (deferred scripts run in order, before module scripts), so
-    hls.min.js → audio-host.js → client.js still holds.
+    hls.min.js → audio-host.js → webview-host.js → client.js still holds.
   -->
   <script defer src="/hls.min.js"></script>
   <script defer src="/audio-host.js"></script>
+  <!--
+    The plugin iframe host, registering NativeModules.SongloftWebview the same
+    way audio-host.js registers its three modules. Order constraints are the
+    same: after audio-host.js (it merges into the nativeModulesMap that file
+    creates) and before the web-core client module (the map must be complete
+    when <lynx-view> upgrades). See web/webview-host.js.
+  -->
+  <script defer src="/webview-host.js"></script>
 
   <!--
     `type="module"` is REQUIRED, not stylistic: web-core's production client
