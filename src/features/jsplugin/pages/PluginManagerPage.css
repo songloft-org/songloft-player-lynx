@@ -1,39 +1,44 @@
+/*
+ * The plugin manager page — the list rows, the delete dialog's keep-data row,
+ * and the topbar overflow trigger. Row structure mirrors the Flutter manager's
+ * `_JSPluginItem`: avatar + (name / status·version·author / description) +
+ * switch + overflow menu. LUNA/Muse tokens only, no hard-coded colours.
+ */
 
-
-.plugin-manager__topbar-actions {
+.plugin-manager__more-btn {
   display: flex;
-  flex-direction: row;
-  gap: var(--space-2);
-}
-
-.plugin-manager__action-btn {
-  padding: var(--space-1) var(--space-3);
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-pill);
-  background-color: var(--paper);
-}
-
-.plugin-manager__action-btn--disabled {
-  opacity: 0.5;
-}
-
-.plugin-manager__action-text {
-  font-size: var(--font-sm);
-  color: var(--accent);
 }
 
 .plugin-manager__list {
   padding: 0 var(--space-4);
 }
 
+/* The auto-update switch reuses the settings row, which carries its own card
+   chrome — so it gets the page's horizontal padding like the list does. */
+.plugin-manager__auto-update {
+  padding: 0 var(--space-4) var(--space-3);
+}
+
 .plugin-manager__item {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
   padding: var(--space-3) 0;
   border-bottom-width: 1px;
   border-bottom-color: var(--line);
 }
 
+.plugin-manager__row-main {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* The middle column owns the leftover width; `min-width: 0` lets the name
+   ellipsize instead of forcing the row wider than the screen. */
 .plugin-manager__item-info {
   flex: 1;
   min-width: 0;
@@ -48,41 +53,162 @@
 }
 
 .plugin-manager__item-meta {
-  font-size: var(--font-sm);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+/* Status pill: dot + label, tinted by the tone class (no tinted background —
+   CSS variables cannot take an alpha channel in Lynx, and a borderless dot+text
+   reads just as clearly). */
+.plugin-manager__status {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+.plugin-manager__status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background-color: var(--content-muted);
+}
+
+.plugin-manager__status-text {
+  font-size: var(--font-xs);
   color: var(--content-muted);
-  margin-top: 2px;
+}
+
+.plugin-manager__status--active .plugin-manager__status-dot {
+  background-color: var(--primary);
+}
+
+.plugin-manager__status--active .plugin-manager__status-text {
+  color: var(--primary);
+}
+
+.plugin-manager__status--error .plugin-manager__status-dot {
+  background-color: var(--danger);
+}
+
+.plugin-manager__status--error .plugin-manager__status-text {
+  color: var(--danger);
+}
+
+.plugin-manager__version {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+  background-color: var(--paper);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.plugin-manager__author {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+}
+
+/* Two-line clamp on Web (the standard properties survive the web encode); the
+   native template encoder strips `-webkit-box-orient` / `-webkit-line-clamp`, so
+   the hard `max-height` (2 × --font-md = 32px) backs it there. Same pattern as
+   `.playlist-detail__desc`. */
+.plugin-manager__desc {
+  margin-top: var(--space-1);
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+  line-height: var(--font-md);
+  overflow: hidden;
+  max-height: 32px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .plugin-manager__item-actions {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: var(--space-2);
-  margin-left: var(--space-3);
+  gap: var(--space-1);
 }
 
-.plugin-manager__toggle {
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
+/* The row's ⋯ trigger — 40px touch target like every other one in the app. */
+.plugin-manager__row-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+}
+
+/* Avatar: the plugin icon (or initial) inside a status-coloured ring.
+   Declaration order matters: `app-switch-css.test.ts`'s fork detector reads a
+   `border-radius` *followed by* a `border-width` in one block as "drawing a
+   little ticked square"; the ring is not that, so the width comes first. */
+.plugin-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-width: 2px;
+  border-color: var(--line);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.plugin-avatar__icon {
+  width: 28px;
+  height: 28px;
+}
+
+.plugin-avatar__initial {
+  font-size: var(--font-md);
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.plugin-avatar--active {
+  border-color: var(--primary);
+}
+
+.plugin-avatar--error {
+  border-color: var(--danger);
+}
+
+/* The delete dialog's "keep plugin data" row: the shared tick control from
+   shared/ui (presentational — the tap lands on this row, which owns the state)
+   plus a label and a hint. */
+.plugin-manager__keep-data {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
   background-color: var(--paper);
 }
 
-.plugin-manager__toggle--active {
-  background-color: var(--primary);
+.plugin-manager__keep-data-texts {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 2px;
 }
 
-.plugin-manager__toggle-text {
+.plugin-manager__keep-data-label {
+  font-size: var(--font-sm);
+  color: var(--content);
+}
+
+.plugin-manager__keep-data-hint {
   font-size: var(--font-xs);
   color: var(--content-muted);
-}
-
-.plugin-manager__toggle--active .plugin-manager__toggle-text {
-  color: var(--primary-content);
-}
-
-.plugin-manager__delete {
-  padding: var(--space-1);
-  border-radius: var(--radius-sm);
 }
 
 .plugin-manager__state {

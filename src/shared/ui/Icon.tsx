@@ -62,6 +62,8 @@ export interface IconProps {
   size?: number
   /** Concrete color injected into the SVG's fill/stroke. Defaults to `content`. */
   color?: string
+  /** Overrides the generated `icon-<name>` testid — for screens with several `more` glyphs. */
+  testId?: string
 }
 
 /**
@@ -72,11 +74,11 @@ export interface IconProps {
  * the icon name and `data-testid="icon-<name>"` makes the glyph queryable in
  * render tests without leaning on emoji text.
  */
-export function Icon({ name, size = 24, color = ICON_COLORS.content }: IconProps) {
+export function Icon({ name, size = 24, color = ICON_COLORS.content, testId }: IconProps) {
   return (
     <svg
       data-icon={name}
-      data-testid={`icon-${name}`}
+      data-testid={testId ?? `icon-${name}`}
       content={buildSvg(name, color)}
       style={{ width: `${size}px`, height: `${size}px` }}
     />

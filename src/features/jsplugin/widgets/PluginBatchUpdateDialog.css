@@ -1,0 +1,121 @@
+/*
+ * Body of the batch update dialog. The chrome — card, scrim, buttons, and the
+ * z-index levels the overlay contract pins — is ConfirmDialog's stylesheet
+ * (imported by the component); only the stats block and per-plugin rows live
+ * here.
+ */
+
+.batch-update__text {
+  margin-top: var(--space-3);
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+}
+
+.batch-update__updating {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.batch-update__hint {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+}
+
+.batch-update__error {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--paper);
+}
+
+.batch-update__error-text {
+  font-size: var(--font-sm);
+  color: var(--danger);
+}
+
+.batch-update__stats {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--paper);
+}
+
+.batch-update__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.batch-update__stat-num {
+  font-size: var(--font-lg);
+  font-weight: bold;
+}
+
+.batch-update__stat-num--ok {
+  color: var(--primary);
+}
+
+.batch-update__stat-num--bad {
+  color: var(--danger);
+}
+
+.batch-update__stat-num--muted {
+  color: var(--content-muted);
+}
+
+.batch-update__stat-label {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+}
+
+.batch-update__rows {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-3);
+  gap: var(--space-2);
+}
+
+.batch-update__row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.batch-update__row-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-update__row-name--ok {
+  color: var(--content);
+}
+
+.batch-update__row-name--bad {
+  color: var(--danger);
+}
+
+.batch-update__row-name--warn {
+  color: var(--danger);
+}
+
+.batch-update__row-name--muted {
+  color: var(--content-muted);
+}
+
+.batch-update__row-note {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+}

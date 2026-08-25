@@ -231,7 +231,10 @@ describe('ApiResponse', () => {
  */
 
 describe('registry plugin entry', () => {
-  test('parses conflict field', () => {
+  test('parses conflict as a boolean with its description', () => {
+    // The backend sends `conflict: true` + `conflict_with: "…"`. The old model
+    // parsed conflict as a string, so `true` fell into the `.catch()` and the
+    // store's whole conflict flow was dead — this pins the corrected shape.
     const res = parseRegistryRefreshResponse({
       plugins: [
         {
@@ -240,19 +243,21 @@ describe('registry plugin entry', () => {
           version: '1.0',
           download_url: 'http://x/p.zip',
           installed: false,
-          conflict: 'Plugin "p" already installed by another source',
+          conflict: true,
+          conflict_with: 'Plugin "p" already installed by another source',
         },
       ],
       total: 1,
       page: 1,
       page_size: 20,
     })
-    expect(res.plugins[0]!.conflict).toBe(
+    expect(res.plugins[0]!.conflict).toBe(true)
+    expect(res.plugins[0]!.conflictWith).toBe(
       'Plugin "p" already installed by another source',
     )
   })
 
-  test('conflict is undefined when absent', () => {
+  test('conflict is false when absent', () => {
     const res = parseRegistryRefreshResponse({
       plugins: [
         {
@@ -267,6 +272,6 @@ describe('registry plugin entry', () => {
       page: 1,
       page_size: 20,
     })
-    expect(res.plugins[0]!.conflict).toBeUndefined()
+    expect(res.plugins[0]!.conflict).toBe(false)
   })
 })

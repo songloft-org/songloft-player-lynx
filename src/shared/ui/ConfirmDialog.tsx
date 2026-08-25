@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import type { ReactNode } from '@lynx-js/react'
 
 import { useBackHandler } from '../nav/use-back-handler.js'
 
@@ -25,6 +26,12 @@ export interface ConfirmDialogProps {
   testId?: string
   confirmTestId?: string
   cancelTestId?: string
+  /**
+   * Extra content between the message and the actions — e.g. the delete dialog's
+   * "keep plugin data" checkbox row. Taps inside are already swallowed by the
+   * card's `catchtap`, so interactive children work without extra plumbing.
+   */
+  children?: ReactNode
 }
 
 /**
@@ -51,6 +58,7 @@ export function ConfirmDialog({
   testId,
   confirmTestId,
   cancelTestId,
+  children,
 }: ConfirmDialogProps) {
   const { t } = useTranslation()
 
@@ -126,6 +134,7 @@ export function ConfirmDialog({
           <view className='confirm-dialog' data-testid={testId} catchtap={() => {}}>
             <text className='confirm-dialog__title'>{title}</text>
             <text className='confirm-dialog__message'>{message}</text>
+            {children}
             <view className='confirm-dialog__actions'>
               <DialogClose>
                 <view

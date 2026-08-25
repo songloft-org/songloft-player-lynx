@@ -1,7 +1,17 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { getJSPluginApi, type InstallFromRegistryParams } from '../api/index.js'
+import { getJSPluginApi, type GithubProxyParams, type InstallFromRegistryParams } from '../api/index.js'
 import { pluginQueryKeys } from './jsplugin-query.js'
+
+/*
+ * Toggling, deleting, or installing a plugin can change which plugin tabs the
+ * nav bar may show (a tab renders only while its plugin is installed AND
+ * enabled — see `filterActivePluginTabs`), so every one of these mutations
+ * invalidates the shell-nav query alongside the plugin list. Without it the
+ * bar kept a disabled plugin's tab and icon until its 60s staleTime lapsed
+ * or a restart.
+ */
+const tabConfigKeys = ['settings', 'tab-config'] as const
 
 export function useTogglePluginMutation() {
   const queryClient = useQueryClient()
@@ -10,6 +20,7 @@ export function useTogglePluginMutation() {
       enable ? getJSPluginApi().enablePlugin(id) : getJSPluginApi().disablePlugin(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: pluginQueryKeys.list() })
+      void queryClient.invalidateQueries({ queryKey: tabConfigKeys })
     },
   })
 }
@@ -17,9 +28,11 @@ export function useTogglePluginMutation() {
 export function useDeletePluginMutation() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => getJSPluginApi().deletePlugin(id),
+    mutationFn: ({ id, keepData }: { id: number; keepData?: boolean }) =>
+      getJSPluginApi().deletePlugin(id, keepData === true),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: pluginQueryKeys.list() })
+      void queryClient.invalidateQueries({ queryKey: tabConfigKeys })
     },
   })
 }
@@ -27,9 +40,41 @@ export function useDeletePluginMutation() {
 export function useUpdateAllPluginsMutation() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => getJSPluginApi().updateAllPlugins(),
+    mutationFn: (params: GithubProxyParams & { force?: boolean } = {}) =>
+      getJSPluginApi().updateAllPlugins(params),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: pluginQueryKeys.list() })
+    },
+  })
+}
+
+export function useUpdatePluginMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...params }: { id: number } & GithubProxyParams & { force?: boolean }) =>
+      getJSPluginApi().updatePlugin(id, params),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: pluginQueryKeys.list() })
+    },
+  })
+}
+
+export function useSetPluginKeepAliveMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (plugins: string[]) => getJSPluginApi().setPluginKeepAlive(plugins),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: pluginQueryKeys.keepAlive() })
+    },
+  })
+}
+
+export function useSetPluginAutoUpdateMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (enabled: boolean) => getJSPluginApi().setPluginAutoUpdate(enabled),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: pluginQueryKeys.autoUpdate() })
     },
   })
 }
@@ -41,6 +86,8 @@ export function useInstallFromRegistryMutation() {
       getJSPluginApi().installFromRegistry(params),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: pluginQueryKeys.list() })
+      // Installing (or replacing) a plugin can bring a configured tab back.
+      void queryClient.invalidateQueries({ queryKey: tabConfigKeys })
     },
   })
 }

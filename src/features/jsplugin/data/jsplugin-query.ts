@@ -6,6 +6,9 @@ export const pluginQueryKeys = {
   list: () => ['jsplugin', 'list'] as const,
   detail: (id: number) => ['jsplugin', 'detail', id] as const,
   icon: (entryPath: string, icon: string) => ['jsplugin', 'icon', entryPath, icon] as const,
+  keepAlive: () => ['jsplugin', 'keep-alive'] as const,
+  autoUpdate: () => ['jsplugin', 'auto-update'] as const,
+  githubProxy: () => ['jsplugin', 'github-proxy'] as const,
 }
 
 export function usePluginsQuery() {
@@ -42,6 +45,58 @@ export function usePluginIconQuery(entryPath: string, icon: string, enabled: boo
     retry: false,
     queryFn: async () => {
       const text = await getJSPluginApi().getStaticText(entryPath, icon)
+      return isSvgMarkup(text) ? text : ''
+    },
+  })
+}
+
+/*
+ * Manager settings, read through the same api client the plugin list uses
+ * (not ProxySettingsPage's raw fetch). staleTime is long because these change
+ * rarely and every flip is followed by an invalidate from the mutation anyway.
+ */
+
+export function usePluginKeepAliveQuery() {
+  return useQuery({
+    queryKey: pluginQueryKeys.keepAlive(),
+    staleTime: 5 * 60 * 1000,
+    queryFn: () => getJSPluginApi().getPluginKeepAlive(),
+  })
+}
+
+export function usePluginAutoUpdateQuery() {
+  return useQuery({
+    queryKey: pluginQueryKeys.autoUpdate(),
+    staleTime: 5 * 60 * 1000,
+    queryFn: () => getJSPluginApi().getPluginAutoUpdate(),
+  })
+}
+
+export function useGithubProxyQuery() {
+  return useQuery({
+    queryKey: pluginQueryKeys.githubProxy(),
+    staleTime: 5 * 60 * 1000,
+    queryFn: () => getJSPluginApi().getGithubProxy(),
+  })
+}
+
+/**
+ * SVG markup for a **store entry's** icon URL — an external link in the common
+ * case (GitHub raw), so it cannot go through `getStaticText`'s API path.
+ *
+ * Same validation and caching policy as `usePluginIconQuery`: the response must
+ * look like an SVG document (registry URLs can SPA-fall-back to HTML), a miss
+ * just falls back to the initial glyph, and content-hashed URLs never go stale.
+ */
+export function useRegistryIconQuery(resolvedUrl: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['jsplugin', 'registry-icon', resolvedUrl] as const,
+    enabled: enabled && resolvedUrl.length > 0,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
+    retry: false,
+    queryFn: async () => {
+      const text = await getJSPluginApi().getRemoteText(resolvedUrl)
       return isSvgMarkup(text) ? text : ''
     },
   })

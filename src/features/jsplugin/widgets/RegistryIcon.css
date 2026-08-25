@@ -1,0 +1,24 @@
+/* The store row's 40×40 icon tile. A rounded square (not the manager's ringed
+   circle): these are uninstalled candidates, not running plugins. */
+
+.registry-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background-color: var(--paper);
+  overflow: hidden;
+}
+
+.registry-icon__img {
+  width: 32px;
+  height: 32px;
+}
+
+.registry-icon__initial {
+  font-size: var(--font-md);
+  font-weight: bold;
+  color: var(--primary);
+}

@@ -1,0 +1,113 @@
+/*
+ * Body of the registry-source management dialog. The chrome — card, scrim,
+ * buttons, and the z-index levels the overlay contract pins — is
+ * ConfirmDialog's stylesheet (imported by the component); only the source rows
+ * and the edit form live here.
+ */
+
+.registry-manage__empty {
+  padding: var(--space-6) 0;
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+  text-align: center;
+}
+
+.registry-manage__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.registry-manage__row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.registry-manage__row-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.registry-manage__row-title {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.registry-manage__row-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-sm);
+  color: var(--content);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.registry-manage__official {
+  font-size: var(--font-xs);
+  color: var(--primary);
+  background-color: var(--paper);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.registry-manage__row-url {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.registry-manage__row-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+}
+
+.registry-manage__add-btn {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background-color: var(--paper);
+}
+
+.registry-manage__add-text {
+  font-size: var(--font-sm);
+  color: var(--content);
+}
+
+.registry-manage__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* Same field recipe as the store's search input. */
+.registry-manage__input {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--neutral-faint);
+  font-size: var(--font-sm);
+  color: var(--content);
+  -x-placeholder-color: var(--content-muted);
+}
+
+.registry-manage__save--disabled {
+  opacity: 0.5;
+}

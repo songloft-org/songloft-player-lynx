@@ -1,5 +1,29 @@
 
 
+.plugin-registry__topbar-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* 40px touch targets, same as the shell's other topbar glyphs. */
+.plugin-registry__topbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+}
+
+.plugin-registry__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .plugin-registry__search {
   display: flex;
   flex-direction: row;
@@ -29,6 +53,57 @@
   background-color: var(--neutral-faint);
 }
 
+/* Partial-fetch failures: one tappable line, details in a dialog — matching
+   Flutter's warning banner (danger text on paper, not a full danger fill). */
+.plugin-registry__warnings {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 var(--space-4) var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--paper);
+}
+
+.plugin-registry__warnings-text {
+  flex: 1;
+  font-size: var(--font-xs);
+  color: var(--danger);
+}
+
+/* No sources configured yet. */
+.plugin-registry__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-6) var(--space-4);
+  gap: var(--space-2);
+}
+
+.plugin-registry__empty-title {
+  font-size: var(--font-md);
+  color: var(--content);
+}
+
+.plugin-registry__empty-hint {
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+  margin-bottom: var(--space-3);
+}
+
+.plugin-registry__retry-btn {
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--paper);
+}
+
+.plugin-registry__retry-text {
+  font-size: var(--font-sm);
+  color: var(--accent);
+}
+
 .plugin-registry__scroll {
   flex: 1;
   width: 100%;
@@ -45,6 +120,7 @@
   padding: var(--space-3) 0;
   border-bottom-width: 1px;
   border-bottom-color: var(--line);
+  gap: var(--space-3);
 }
 
 .plugin-registry__item-info {
@@ -73,6 +149,22 @@
   white-space: nowrap;
 }
 
+/* Inline warning for an entry whose entry_path is owned by a *different*
+   author's local plugin — installing replaces that plugin. */
+.plugin-registry__conflict-line {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.plugin-registry__conflict-line-text {
+  flex: 1;
+  font-size: var(--font-xs);
+  color: var(--danger);
+}
+
 .plugin-registry__item-action {
   margin-left: var(--space-3);
 }
@@ -97,6 +189,50 @@
 .plugin-registry__installed-text {
   font-size: var(--font-sm);
   color: var(--content-muted);
+}
+
+/* Installed & current: the version chip that RE-INSTALLS on tap — the entry
+   the user asked for. Refresh glyph + version, muted like the installed badge,
+   tappable like the install pill. */
+.plugin-registry__reinstall {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--paper);
+}
+
+.plugin-registry__reinstall-text {
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+}
+
+/* Installed with a newer remote version: tonal button (paper fill, accent
+   text) — an action, but quieter than a fresh install. */
+.plugin-registry__update-btn {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--paper);
+}
+
+.plugin-registry__update-text {
+  font-size: var(--font-sm);
+  color: var(--accent);
+}
+
+/* Replaces another author's local plugin — danger-styled so the destructive
+   direction is on the button itself, not only in the confirm dialog. */
+.plugin-registry__overwrite-btn {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--danger);
+}
+
+.plugin-registry__overwrite-text {
+  font-size: var(--font-sm);
+  color: var(--danger-content);
 }
 
 .plugin-registry__pager {
@@ -139,16 +275,5 @@
   color: var(--danger);
 }
 
-.plugin-registry__conflict {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-2);
-}
-
-.plugin-registry__conflict-text {
-  font-size: var(--font-xs);
-  color: var(--content-2);
-  text-align: right;
-  max-width: 200px;
-}
+/* Legacy conflict expand block — the confirmation moved to a dialog (matching
+   Flutter), only the inline warning line remains. */

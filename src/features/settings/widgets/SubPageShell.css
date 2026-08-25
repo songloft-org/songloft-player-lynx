@@ -44,6 +44,10 @@
   color: var(--content);
   font-size: var(--font-lg);
   font-weight: bold;
+  /* Titles are short phrases. A wrapped one only ever happens when the topbar
+     row is overfull (something beside the title is taking the width), and a
+     two-line title is never the outcome anyone wanted. */
+  white-space: nowrap;
 }
 
 .subpage__actions {
