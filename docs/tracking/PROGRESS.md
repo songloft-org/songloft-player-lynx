@@ -1052,6 +1052,22 @@ toast「再按一次返回退出应用」在首页真机截图确认（`/tmp/bac
 
 **真机待验**：内联 CSS 变量在 Android/iOS/Web 三端真机的实际渲染；GitHub 不可达时目录错误态文案 + 重试。
 
+### 批57 · 歌词触发链改数据驱动（修「有歌词却显示暂无歌词」）
+
+**用户报告**：播放器歌词页对一首有歌词的本地歌显示「暂无歌词」+「重新抓取歌词」，而 Flutter 版同一首歌正常。
+
+**根因（结构性，非数据问题）**：歌词加载是**动作驱动**——生产代码里 `loadForSong` 唯一触发点是 `playAtIndex`（点播/切歌/togglePlay 兑底），而 `restorePlaybackState` 恢复队列直接 `setState({currentSong})`（autoResume 开启时更是直接 `audio.load→play` 绕过 `playAtIndex`），**歌词永远不加载**：引擎在放歌、lyric store 却保持 EMPTY → 「播放中 + 暂无歌词」。Flutter 的 `LyricNotifier.build()` 是 `ref.watch(currentSong?.lyricUrl)` **数据驱动**，恢复队列同样触发，无此问题。判别实验：复现时暂停再按播放（togglePlay 兑底走 playAtIndex）歌词立刻出现。
+
+**修复**（`player-store.ts`）：
+- 新增模块级 `usePlayerStore.subscribe`：`currentSong` **引用变化**即 `loadForSong(currentSong)`（对齐 Flutter watch 语义）；删掉 `playAtIndex` 里的手动调用与三处手动 `clear()`（`loadForSong(undefined)` 本身就是清空，单一数据流）。
+- 顺带修 autoResume 分支：`audio.load` 成功后补设 `_loadedSongId`，恢复后首次 `togglePlay` 不再把已加载的媒体项重载一遍。
+
+**测试**（`player-store.test.ts` +6，lyric store mock 成 spy 包）：订阅触发×4（任意路径 set、同引用不重载、清空经同一订阅、playPlaylist 走订阅）+ restorePlaybackState×2（autoResume 加载一次且 togglePlay 不重载 / 关闭时状态与歌词仍恢复）。**判别力均反向验证**：撤 `_loadedSongId` 赋值 → 1 红；撤订阅体 → 6 红。
+
+**验收**：`tsc -b --force` 绿；**1803 vitest（173 文件）全绿**；`build` 双产物，警告仅既有 line-clamp/box-orient 同模式两条。
+
+**真机待验**：开启「启动时自动恢复播放」后冷启动续播，歌词页应直接出歌词（不再需要点一次暂停/播放）。
+
 ## 未完成 / 遗留事项（TODO & 风险）
 
 - [x] **批28 Computing 阶段进度恒 `0/0` 且完成后不转 Results**（批29b 发现 → **批29c 已修**）：双层根因（陈旧终态跳过 computing + `refetchInterval` 在 Lynx 首次 fetch 后不再 fire），修法见上方「批29c」小结与下方「批29c」详节。18091 真机逐张截图验过 Computing 推进 + 自动转 Results。

@@ -389,7 +389,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       duration: stateDurationMsOf(song),
       errorMessage: undefined,
     })
-    void useLyricStore.getState().loadForSong(song)
+    // Lyrics are loaded by the currentSong subscription below, not here: every
+    // path that swaps the song flows through it (see the subscription's notes).
     const cached = await getCachedPath(song.id).catch(() => null)
     const source = cached
       ? { url: cached, hls: false }
@@ -612,7 +613,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       if (result.shouldStop) {
         await audio.stop()
         set({ isPlaying: false, currentTime: 0, duration: 0 })
-        useLyricStore.getState().clear()
+        // No lyric clear here: `currentSong` just became undefined in the set
+        // above, and the currentSong subscription resets the lyric store.
         return
       }
       syncQueueWindow(result.playlist, result.currentIndex)
@@ -636,7 +638,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         currentTime: 0,
         duration: 0,
       })
-      useLyricStore.getState().clear()
     },
 
     toggleFullPlayer: () => set((s) => ({ showFullPlayer: !s.showFullPlayer })),
@@ -707,7 +708,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       void audio.stop()
       _videoSourceSongId = null
       set({ ...INITIAL })
-      useLyricStore.getState().clear()
     },
 
     _onCompleted: onCompleted,
@@ -905,7 +905,24 @@ export function resetLiveActivityForTests(): void {
   _liveActivityUnavailable = false
 }
 
-
+/**
+ * Lyrics follow the current song, however it changed — the Lynx analogue of
+ * Flutter's `lyricStateProvider`, which watches `currentSong?.lyricUrl`.
+ *
+ * The load used to live only inside `playAtIndex`, so any path that set
+ * `currentSong` without playing through it skipped lyrics entirely. The one
+ * that mattered: `restorePlaybackState`, which restores the queue (and with
+ * auto-resume hands the track straight to the engine, bypassing
+ * `playAtIndex`) — a resumed song kept playing over an EMPTY lyric store,
+ * i.e. "playing but no lyrics". Loading on the reference change makes every
+ * setter — play, restore, queue edits, reset — flow through this one place,
+ * and `loadForSong(undefined)` (no song / no lyric URL) is the store's own
+ * reset, so the old manual `clear()` calls are subsumed too.
+ */
+usePlayerStore.subscribe((state, prev) => {
+  if (state.currentSong === prev.currentSong) return
+  void useLyricStore.getState().loadForSong(state.currentSong)
+})
 
 export async function restorePlaybackState(): Promise<void> {
   const [saved, speed, autoResume] = await Promise.all([
@@ -934,7 +951,13 @@ export async function restorePlaybackState(): Promise<void> {
     syncQueueWindow(saved.playlist, saved.currentIndex)
     const restored = playbackSourceFor(song)
     void audio.load(restored.url, { durationMs: durationMsOf(song), hls: restored.hls })
-      .then(() => audio.seek(saved.positionMs))
+      .then(() => {
+        // Record what the engine now holds: without this the first `togglePlay`
+        // took the `playAtIndex` path and reloaded a media item the engine
+        // already had (see the `_loadedSongId` note at `togglePlay`).
+        _loadedSongId = song.id
+        return audio.seek(saved.positionMs)
+      })
       .then(() => audio.play())
   }
 }

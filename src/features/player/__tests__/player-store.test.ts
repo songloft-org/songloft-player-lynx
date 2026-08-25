@@ -3,14 +3,43 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import type { Song } from '../../../models/song.js'
 import { getAudio } from '../../../native/index.js'
 import type { MockSongloftAudio } from '../../../native/mock-audio.js'
-import { resetLoadedSongForTests, usePlayerStore } from '../store/player-store.js'
+import { resetLoadedSongForTests, restorePlaybackState, usePlayerStore } from '../store/player-store.js'
 
 /**
  * Player-store ↔ mock-audio bridge. Uses the real singleton store + mock audio
  * with fake timers: the mock's `setInterval` progress drives `currentTime`, and
- * `completed` routes through the store's play-mode logic. Songs carry no
- * `lyricUrl`, so the lyric loader short-circuits (no network).
+ * `completed` routes through the store's play-mode logic.
+ *
+ * The lyric store is mocked to a spy bag because these tests assert *whether*
+ * lyrics were asked for — how a payload parses is lyric-store.test.ts's job.
+ * `player-store` only ever touches `useLyricStore.getState()`, so that is the
+ * whole mock.
  */
+const lyricStore = vi.hoisted(() => ({
+  loadForSong: vi.fn(async () => {}),
+  clear: vi.fn(),
+  syncPosition: vi.fn(),
+}))
+vi.mock('../store/lyric-store.js', () => ({
+  useLyricStore: { getState: () => lyricStore },
+}))
+
+/** What `loadPlaybackState` answers in this file (null = nothing persisted). */
+const playback = vi.hoisted(() => ({
+  saved: null as null | { playlist: Song[]; currentIndex: number; positionMs: number },
+}))
+vi.mock('../data/playback-persistence.js', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  loadPlaybackState: () => Promise.resolve(playback.saved),
+}))
+
+/** Auto-resume pref, switchable per test (off by default, like the real pref). */
+const prefs = vi.hoisted(() => ({ autoResume: false }))
+vi.mock('../../settings/data/settings-prefs.js', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  readAutoResume: () => Promise.resolve(prefs.autoResume),
+  readPlaybackSpeed: () => Promise.resolve(1),
+}))
 
 function song(id: number, durationSec = 1): Song {
   return {
@@ -38,6 +67,10 @@ async function flush(): Promise<void> {
 beforeEach(() => {
   vi.useFakeTimers()
   usePlayerStore.getState().reset()
+  resetLoadedSongForTests()
+  playback.saved = null
+  prefs.autoResume = false
+  lyricStore.loadForSong.mockClear()
 })
 
 afterEach(() => {
@@ -351,6 +384,86 @@ describe('togglePlay when the engine holds nothing (cold start, auto-resume off)
     expect(loadSpy).not.toHaveBeenCalled()
     expect(usePlayerStore.getState().isPlaying).toBe(true)
     loadSpy.mockRestore()
+  })
+})
+
+/**
+ * Lyrics follow `currentSong` via a store subscription — the Lynx analogue of
+ * Flutter's reactive `lyricStateProvider`. The load used to live only inside
+ * `playAtIndex`, so a song restored from the persisted queue played over an
+ * EMPTY lyric store: "playing but no lyrics". These tests pin the subscription
+ * itself (any setter triggers it) plus the restore path end to end.
+ */
+describe('lyrics follow the current song', () => {
+  test('a song set by any path loads lyrics — the restore path included', () => {
+    const restored = song(9, 300)
+    // Exactly what restorePlaybackState leaves behind with autoResume=false.
+    usePlayerStore.setState({ currentSong: restored })
+
+    expect(lyricStore.loadForSong).toHaveBeenCalledWith(restored)
+  })
+
+  test('the same reference does not re-load; a different song does', () => {
+    const a = song(1, 300)
+    usePlayerStore.setState({ currentSong: a })
+    usePlayerStore.setState({ currentSong: a })
+    expect(lyricStore.loadForSong).toHaveBeenCalledTimes(1)
+
+    usePlayerStore.setState({ currentSong: song(2, 300) })
+    expect(lyricStore.loadForSong).toHaveBeenCalledTimes(2)
+  })
+
+  test('clearing the song resets lyrics through the same subscription', () => {
+    usePlayerStore.setState({ currentSong: song(1, 300) })
+
+    usePlayerStore.setState({ currentSong: undefined })
+
+    expect(lyricStore.loadForSong).toHaveBeenCalledWith(undefined)
+  })
+
+  test('playPlaylist loads lyrics via the subscription', async () => {
+    await usePlayerStore.getState().playPlaylist([song(1, 300)], 0)
+    await flush()
+
+    expect(lyricStore.loadForSong).toHaveBeenCalledWith(usePlayerStore.getState().currentSong)
+  })
+})
+
+describe('restorePlaybackState', () => {
+  test('auto-resume loads the restored song once; togglePlay resumes without reloading', async () => {
+    playback.saved = {
+      playlist: [{ ...song(7, 300), url: '/api/v1/songs/7/play' }],
+      currentIndex: 0,
+      positionMs: 42_000,
+    }
+    prefs.autoResume = true
+
+    const loadSpy = vi.spyOn(getAudio(), 'load')
+    await restorePlaybackState()
+    await flush()
+
+    // Lyrics follow the restored song — the bug this whole describe pins.
+    expect(lyricStore.loadForSong).toHaveBeenCalledWith(playback.saved.playlist[0])
+    expect(loadSpy).toHaveBeenCalledTimes(1)
+
+    // Pause then resume: the engine already holds the song, so no reload.
+    // Without `_loadedSongId` being set after the resume load, this togglePlay
+    // re-ran the full playAtIndex load.
+    await usePlayerStore.getState().togglePlay()
+    await usePlayerStore.getState().togglePlay()
+    await flush()
+    expect(loadSpy).toHaveBeenCalledTimes(1)
+    loadSpy.mockRestore()
+  })
+
+  test('with auto-resume off the state is restored and lyrics still load', async () => {
+    playback.saved = { playlist: [song(8, 300)], currentIndex: 0, positionMs: 0 }
+    prefs.autoResume = false
+
+    await restorePlaybackState()
+
+    expect(usePlayerStore.getState().currentSong?.id).toBe(8)
+    expect(lyricStore.loadForSong).toHaveBeenCalledWith(usePlayerStore.getState().currentSong)
   })
 })
 
