@@ -81,8 +81,7 @@ const EXPLICIT_PARENTS: Record<string, string> = {
   '/settings/servers/add': '/settings/servers',
   '/settings/duplicates': '/settings/library',
   '/settings/plugins/registry': '/settings/plugins',
-  '/player/lyrics/edit': '/player',
-  '/player/lyrics/calibrate': '/player',
+  '/player/lyrics/adjust': '/player',
   '/player/dlna': '/player',
   '/player/eq': '/player',
 }

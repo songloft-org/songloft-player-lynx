@@ -48,6 +48,28 @@ export function parsePlain(content: string): LyricLine[] {
   return out
 }
 
+/**
+ * Re-assemble parsed lines into LRC text (`[mm:ss.mmm]text`, one per line) —
+ * the inverse of `parseLrc` used by the lyric timing adjust page. Lines are
+ * sorted by time and negative timestamps clamp to 0 (matches the Flutter
+ * build's `LyricParser.stringify`, which the saved lyric must stay compatible
+ * with). Word-level timing is dropped on purpose: the adjust page edits plain
+ * line timestamps only.
+ */
+export function stringifyLyric(lines: readonly LyricLine[]): string {
+  if (lines.length === 0) return ''
+  const sorted = [...lines].sort((a, b) => a.timeMs - b.timeMs)
+  let out = ''
+  for (const line of sorted) {
+    const totalMs = Math.max(0, line.timeMs)
+    const minutes = String(Math.floor(totalMs / 60_000)).padStart(2, '0')
+    const seconds = String(Math.floor(totalMs / 1_000) % 60).padStart(2, '0')
+    const ms = String(totalMs % 1_000).padStart(3, '0')
+    out += `[${minutes}:${seconds}.${ms}]${line.text}\n`
+  }
+  return out
+}
+
 export function findCurrentLine(lines: readonly LyricLine[], positionMs: number): number {
   if (lines.length === 0) return -1
   if (positionMs < lines[0].timeMs) return -1

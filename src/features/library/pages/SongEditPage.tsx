@@ -146,9 +146,11 @@ export function SongEditPage() {
       const next = lyricUrl.trim()
       const prev = target.lyricRemoteUrl ?? ''
       if (next === prev) return
+      // The endpoint's `file_write_status` result is irrelevant here (the song
+      // edit form never writes lyric *content*), so the payload is discarded.
       return next
-        ? api.updateLyrics(target.id, { lyricSource: 'url', lyricRemoteUrl: next })
-        : api.updateLyrics(target.id, { lyricSource: '', lyric: '' })
+        ? api.updateLyrics(target.id, { lyricSource: 'url', lyricRemoteUrl: next }).then(() => {})
+        : api.updateLyrics(target.id, { lyricSource: '', lyric: '' }).then(() => {})
     })
   }
 

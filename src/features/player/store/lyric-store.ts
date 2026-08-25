@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 
+import { apiPrefix } from '../../../core/config/app-config.js'
 import type { Song } from '../../../models/song.js'
 import { getFloatingLyricModule } from '../../../native/floating-lyric.js'
 import {
@@ -12,7 +13,7 @@ import {
   type LyricLine,
 } from '../domain/lyric-parser.js'
 import { defaultLyricFetcher, type LyricFetcher } from '../data/lyric-source.js'
-import { cacheLyric, getCachedLyric } from '../data/lyric-cache.js'
+import { cacheLyric, getCachedLyric, removeCachedLyric } from '../data/lyric-cache.js'
 
 export interface LyricState {
   lyrics: LyricLine[]
@@ -25,14 +26,16 @@ export interface LyricState {
   hasTranslation: boolean
   hasRomanization: boolean
   rawLyric: string | null
-  offsetMs: number
 
-  loadForSong: (song: Song | undefined, fetcher?: LyricFetcher) => Promise<void>
+  loadForSong: (
+    song: Song | undefined,
+    fetcher?: LyricFetcher,
+    opts?: { forceRefresh?: boolean },
+  ) => Promise<void>
+  refetch: (song: Song | undefined) => Promise<void>
   setLyricsFromText: (text: string) => void
   setRawLyric: (text: string) => void
   syncPosition: (positionMs: number) => void
-  setOffset: (ms: number) => void
-  adjustOffset: (deltaMs: number) => void
   clear: () => void
 }
 
@@ -49,7 +52,6 @@ const EMPTY = {
   hasTranslation: false,
   hasRomanization: false,
   rawLyric: null as string | null,
-  offsetMs: 0,
 }
 
 function parseLyricText(text: string, enhanced?: string): { lyrics: LyricLine[]; synced: boolean } {
@@ -72,7 +74,7 @@ export const useLyricStore = create<LyricState>((set, get) => {
   return {
     ...EMPTY,
 
-    loadForSong: async (song, fetcher = defaultLyricFetcher) => {
+    loadForSong: async (song, fetcher = defaultLyricFetcher, opts) => {
       const token = ++loadToken
       if (!song || !song.lyricUrl) {
         set({ ...EMPTY })
@@ -80,7 +82,9 @@ export const useLyricStore = create<LyricState>((set, get) => {
       }
       set({ ...EMPTY, isLoading: true })
       try {
-        const cached = await getCachedLyric(song.id)
+        // forceRefresh skips the local cache and tells the backend to re-run its
+        // lyric search plugins (see `LyricFetchOptions.refresh`).
+        const cached = opts?.forceRefresh ? null : await getCachedLyric(song.id)
         if (token !== loadToken) return
 
         let payload: { lyric?: string; tlyric?: string; rlyric?: string; lxlyric?: string }
@@ -88,7 +92,7 @@ export const useLyricStore = create<LyricState>((set, get) => {
         if (cached) {
           payload = cached
         } else {
-          payload = await fetcher(song)
+          payload = await fetcher(song, { refresh: opts?.forceRefresh })
           if (token !== loadToken) return
           cacheLyric(song.id, {
             lyric: payload.lyric,
@@ -161,10 +165,28 @@ export const useLyricStore = create<LyricState>((set, get) => {
       set({ rawLyric: text, lyrics, synced, currentIndex: -1 })
     },
 
+    /**
+     * User-triggered forced re-fetch of the current song's lyrics: evict the
+     * local cache, then reload straight from the backend with the refresh flag
+     * set (it re-runs the lyric search plugins and replies `no-store`). A local
+     * song without a lyric URL gets the endpoint assembled from its id —
+     * refreshing is how a local song with no lyrics yet gets its first ones.
+     */
+    refetch: async (song) => {
+      if (!song) return
+      let lyricUrl = song.lyricUrl
+      if (!lyricUrl && song.type === 'local') {
+        lyricUrl = `${apiPrefix}/songs/${song.id}/lyric`
+      }
+      if (!lyricUrl) return
+      await removeCachedLyric(song.id)
+      await get().loadForSong({ ...song, lyricUrl }, undefined, { forceRefresh: true })
+    },
+
     syncPosition: (positionMs) => {
-      const { lyrics, synced, currentIndex, offsetMs } = get()
+      const { lyrics, synced, currentIndex } = get()
       if (!synced || lyrics.length === 0) return
-      const next = findCurrentLine(lyrics, positionMs + offsetMs)
+      const next = findCurrentLine(lyrics, positionMs)
       if (next !== currentIndex) {
         set({ currentIndex: next })
         const line = lyrics[next]
@@ -172,14 +194,6 @@ export const useLyricStore = create<LyricState>((set, get) => {
           void getFloatingLyricModule().updateLyric(line.text)
         }
       }
-    },
-
-    setOffset: (ms) => {
-      set({ offsetMs: ms })
-    },
-
-    adjustOffset: (deltaMs) => {
-      set({ offsetMs: get().offsetMs + deltaMs })
     },
 
     clear: () => {

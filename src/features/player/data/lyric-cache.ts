@@ -39,3 +39,20 @@ export async function cacheLyric(
     // best-effort
   }
 }
+
+/**
+ * Drop the cached payload so the next `loadForSong` goes back to the backend —
+ * used both after saving adjusted lyrics and before a forced re-fetch. Best-
+ * effort like the other cache ops: a failed eviction only means a stale read.
+ */
+export async function removeCachedLyric(
+  songId: number,
+  storage?: SongloftStorage,
+): Promise<void> {
+  try {
+    const s = storage ?? getSongloftStorage()
+    await s.prefs.remove(cacheKey(songId))
+  } catch {
+    // best-effort
+  }
+}

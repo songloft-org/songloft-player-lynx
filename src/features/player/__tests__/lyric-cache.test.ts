@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
 import { createMemoryStorage } from '../../../core/storage/index.js'
-import { cacheLyric, getCachedLyric, type CachedLyric } from '../data/lyric-cache.js'
+import { cacheLyric, getCachedLyric, removeCachedLyric, type CachedLyric } from '../data/lyric-cache.js'
 
 describe('lyric-cache', () => {
   describe('getCachedLyric', () => {
@@ -74,6 +74,28 @@ describe('lyric-cache', () => {
       await expect(
         cacheLyric(1, { lyric: 'x', cachedAt: 1 }, storage),
       ).resolves.toBeUndefined()
+    })
+  })
+
+  describe('removeCachedLyric', () => {
+    test('drops the cached payload for that song only', async () => {
+      const storage = createMemoryStorage()
+      await cacheLyric(1, { lyric: 'a', cachedAt: 1 }, storage)
+      await cacheLyric(2, { lyric: 'b', cachedAt: 2 }, storage)
+      await removeCachedLyric(1, storage)
+      expect(await getCachedLyric(1, storage)).toBeNull()
+      expect((await getCachedLyric(2, storage))!.lyric).toBe('b')
+    })
+
+    test('is a no-op when nothing was cached', async () => {
+      const storage = createMemoryStorage()
+      await expect(removeCachedLyric(42, storage)).resolves.toBeUndefined()
+    })
+
+    test('does not throw when storage.prefs.remove throws', async () => {
+      const storage = createMemoryStorage()
+      storage.prefs.remove = () => { throw new Error('disk error') }
+      await expect(removeCachedLyric(1, storage)).resolves.toBeUndefined()
     })
   })
 })

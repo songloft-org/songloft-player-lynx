@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { findCurrentLine, parseLrc, parsePlain } from '../domain/lyric-parser.js'
+import { findCurrentLine, parseLrc, parsePlain, stringifyLyric } from '../domain/lyric-parser.js'
 
 describe('parseLrc', () => {
   test('parses mm:ss.xx timestamps into ms, sorted', () => {
@@ -64,5 +64,40 @@ describe('findCurrentLine', () => {
 
   test('returns -1 for empty lyrics', () => {
     expect(findCurrentLine([], 1_000)).toBe(-1)
+  })
+})
+
+describe('stringifyLyric', () => {
+  test('formats lines as [mm:ss.mmm]text, zero-padded, trailing newline', () => {
+    expect(stringifyLyric([
+      { timeMs: 1_000, text: 'First' },
+      { timeMs: 12_345, text: 'Hello' },
+      { timeMs: 601_234, text: 'Minute' },
+    ])).toBe('[00:01.000]First\n[00:12.345]Hello\n[10:01.234]Minute\n')
+  })
+
+  test('sorts lines by time before writing', () => {
+    const out = stringifyLyric([
+      { timeMs: 2_000, text: 'second' },
+      { timeMs: 1_000, text: 'first' },
+    ])
+    expect(out).toBe('[00:01.000]first\n[00:02.000]second\n')
+  })
+
+  test('clamps negative timestamps to zero', () => {
+    expect(stringifyLyric([{ timeMs: -300, text: 'x' }])).toBe('[00:00.000]x\n')
+  })
+
+  test('empty text lines serialize as bare timestamps', () => {
+    expect(stringifyLyric([{ timeMs: 5_000, text: '' }])).toBe('[00:05.000]\n')
+  })
+
+  test('round-trips parseLrc output unchanged (word timing dropped)', () => {
+    const lrc = '[00:01.000]first\n[00:02.500]second line\n[01:03.250]third\n'
+    expect(stringifyLyric(parseLrc(lrc))).toBe(lrc)
+  })
+
+  test('returns empty string for no lines', () => {
+    expect(stringifyLyric([])).toBe('')
   })
 })

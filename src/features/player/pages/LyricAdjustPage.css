@@ -1,0 +1,237 @@
+/* Lyric timing adjust page. All colors/sizes via Muse tokens (no hardcode). */
+
+.lyric-adjust {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--canvas);
+}
+
+.lyric-adjust__topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  gap: var(--space-2);
+}
+
+.lyric-adjust__back {
+  padding: var(--space-1);
+}
+
+.lyric-adjust__title {
+  flex: 1;
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--content);
+  margin-left: var(--space-2);
+}
+
+.lyric-adjust__reset {
+  padding: var(--space-2) var(--space-2);
+}
+
+.lyric-adjust__reset--disabled {
+  opacity: 0.4;
+}
+
+.lyric-adjust__reset-text {
+  color: var(--accent);
+  font-size: var(--font-sm);
+}
+
+.lyric-adjust__save {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.lyric-adjust__save--disabled {
+  opacity: 0.4;
+}
+
+.lyric-adjust__save-text {
+  font-size: var(--font-sm);
+  color: var(--primary-content);
+}
+
+.lyric-adjust__body {
+  flex: 1;
+}
+
+/* ── Global offset card ─────────────────────────────────────────────────── */
+
+.lyric-adjust__card {
+  margin: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--paper);
+  border-radius: var(--radius-md);
+}
+
+.lyric-adjust__card-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lyric-adjust__card-title {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--content);
+}
+
+.lyric-adjust__card-value {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--accent);
+  /* Fixed width so the card title does not shuffle as the digits change. */
+  min-width: 72px;
+  text-align: right;
+}
+
+.lyric-adjust__slider {
+  width: 100%;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  margin-top: var(--space-2);
+}
+
+.lyric-adjust__track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background-color: var(--rule);
+}
+
+.lyric-adjust__indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.lyric-adjust__thumb-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lyric-adjust__thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-pill);
+  background-color: var(--primary-content);
+  box-shadow: var(--shadow-sm);
+}
+
+.lyric-adjust__nudges {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.lyric-adjust__nudge {
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--neutral-faint);
+  border-radius: var(--radius-md);
+}
+
+.lyric-adjust__nudge-text {
+  color: var(--content);
+  font-size: var(--font-sm);
+  font-weight: 500;
+}
+
+.lyric-adjust__hint {
+  margin-top: var(--space-2);
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+}
+
+/* ── Per-line list ──────────────────────────────────────────────────────── */
+
+.lyric-adjust__lines {
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.lyric-adjust__line {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-2) 0;
+  gap: var(--space-2);
+}
+
+.lyric-adjust__line-time {
+  /* Fixed column: `mm:ss.mmm` never changes width, so the text below stays
+     aligned across rows. */
+  width: 92px;
+  flex-shrink: 0;
+  font-size: var(--font-xs);
+  color: var(--accent);
+}
+
+.lyric-adjust__line-main {
+  flex: 1;
+  /* `min-width: 0` so the column yields to the two fixed-width buttons. */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.lyric-adjust__line-text {
+  font-size: var(--font-sm);
+  color: var(--content);
+  overflow: hidden;
+  /* `text-maxline` truncates; the height cap is the native-encoder fallback
+     (the `-webkit-line-clamp` family is stripped there — see
+     PlaylistDetailPage.css for the full story). */
+  max-height: 32px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.lyric-adjust__line-delta {
+  font-size: var(--font-xs);
+  color: var(--content-2);
+}
+
+.lyric-adjust__line-btn {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--neutral-faint);
+  border-radius: var(--radius-md);
+}
+
+.lyric-adjust__line-btn-text {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--content);
+}
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+
+.lyric-adjust__empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lyric-adjust__empty-text {
+  color: var(--content-muted);
+  font-size: var(--font-md);
+}

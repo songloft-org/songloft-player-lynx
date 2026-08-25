@@ -9,16 +9,28 @@
   height: 100%;
 }
 
-.player-lyrics__edit-bar {
+/* Tools row (re-fetch / adjust entries) — right-aligned, mirrors the Flutter
+   overlay buttons that sit on top of the lyric scroll area. */
+
+.player-lyrics__tools {
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: flex-end;
   padding: var(--space-1) var(--space-4);
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
-.player-lyrics__edit-text {
+.player-lyrics__tool {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+  /* Enlarge the tap target beyond the visual glyph/text pair. */
+  padding: var(--space-2) var(--space-1);
+}
+
+.player-lyrics__tool-text {
   font-size: var(--font-xs);
   color: var(--content-muted);
 }
@@ -31,8 +43,27 @@
 
 .player-lyrics--state {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: var(--space-4);
+}
+
+/* Tonal pill under the failed/empty state text (the loading state renders it
+   alone). Mirrors the Flutter `FilledButton.tonalIcon`. */
+.player-lyrics__refetch {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--neutral-faint);
+  border-radius: var(--radius-pill);
+}
+
+.player-lyrics__refetch-text {
+  font-size: var(--font-sm);
+  color: var(--accent);
 }
 
 .player-lyrics__state-text {

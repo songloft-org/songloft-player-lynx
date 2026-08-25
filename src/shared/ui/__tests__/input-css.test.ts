@@ -52,9 +52,10 @@ function allCss(): string {
  * single-line and quietly excluded it from the multi-line gate below — caught only
  * because the reverse-verification of that gate refused to go red.
  *
- * The lowercase `input` / `textarea` alternatives are not redundant either:
- * `LyricEditPage` renders a **raw** `<textarea>` rather than the lynx-ui component,
- * and a gate that only knew the component names would have skipped it silently.
+ * The lowercase `input` / `textarea` alternatives are a deliberate safety net:
+ * the lyric editor used to render a **raw** `<textarea>` instead of the lynx-ui
+ * component (a gate that only knew the component names skipped it silently),
+ * and a raw element can reappear at any time.
  *
  * Only static string literals are matched. That is all the tree currently uses, and
  * a dynamic className would slip past — so if one ever appears, give it a static
@@ -179,12 +180,4 @@ test('multi-line fields are sized by flex, not by a percentage width', () => {
     .map((f) => [f.classes.join(' '), effectiveSize(f.classes, css)] as const)
     .filter(([, size]) => /%/.test(size.width) || /%/.test(size.height))
   expect(offenders).toEqual([])
-})
-
-test('the raw <textarea> on the lyric editor is in scope', () => {
-  // It is the one text field not built from the lynx-ui component, and the only
-  // reason the pattern above matches lowercase tag names. If this page ever moves
-  // to `<TextArea>`, delete this case rather than the lowercase alternatives —
-  // a raw element can reappear at any time.
-  expect(inputClassNames()).toContain('lyric-edit__textarea')
 })

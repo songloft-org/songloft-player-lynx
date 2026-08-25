@@ -33,29 +33,101 @@ function WordHighlightLine({
   )
 }
 
+/**
+ * Placeholder for the loading / failed / empty states. Mirrors the Flutter
+ * `_buildStatusPlaceholder`: the failed and empty states offer a "re-fetch
+ * lyrics" button whenever the current song allows one.
+ */
+function StatusPlaceholder({
+  message,
+  canRefetch,
+  onRefetch,
+  refetchLabel,
+}: {
+  message: string
+  canRefetch: boolean
+  onRefetch: () => void
+  refetchLabel: string
+}) {
+  return (
+    <view className='player-lyrics player-lyrics--state'>
+      <text className='player-lyrics__state-text'>{message}</text>
+      {canRefetch
+        ? (
+          <view className='player-lyrics__refetch' bindtap={onRefetch}>
+            <Icon name='refresh' size={14} color={ICON_COLORS.primary} />
+            <text className='player-lyrics__refetch-text'>{refetchLabel}</text>
+          </view>
+        )
+        : null}
+    </view>
+  )
+}
+
 export function LyricsView() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const lyrics = useLyricStore((s) => s.lyrics)
   const currentIndex = useLyricStore((s) => s.currentIndex)
   const isLoading = useLyricStore((s) => s.isLoading)
+  const loadFailed = useLyricStore((s) => s.loadFailed)
+  const synced = useLyricStore((s) => s.synced)
   const translationMap = useLyricStore((s) => s.translationMap)
   const romanizationMap = useLyricStore((s) => s.romanizationMap)
+  const refetch = useLyricStore((s) => s.refetch)
+  const currentSong = usePlayerStore((s) => s.currentSong)
   const currentTime = usePlayerStore((s) => s.currentTime)
+
+  // Local songs always allow a re-fetch (the endpoint can be assembled from the
+  // id); remote/radio songs need an explicit lyric URL. Same gate as the
+  // Flutter `_canRefetch`.
+  const canRefetch =
+    currentSong != null && (currentSong.type === 'local' || !!currentSong.lyricUrl)
+
+  // Timing adjustment only makes sense for time-stamped lyrics of a local song
+  // (the save writes `lyric_source: 'manual'`). Same gate as the Flutter
+  // `_shouldShowEditButton`.
+  const canAdjust =
+    currentSong?.type === 'local' &&
+    lyrics.length > 0 &&
+    synced &&
+    !isLoading &&
+    !loadFailed
+
+  const onRefetch = () => {
+    void refetch(currentSong)
+  }
 
   if (isLoading) {
     return (
-      <view className='player-lyrics player-lyrics--state'>
-        <text className='player-lyrics__state-text'>{t('player.loadingLyrics')}</text>
-      </view>
+      <StatusPlaceholder
+        message={t('player.loadingLyrics')}
+        canRefetch={false}
+        onRefetch={onRefetch}
+        refetchLabel={t('lyricAdjust.refetch')}
+      />
+    )
+  }
+
+  if (loadFailed) {
+    return (
+      <StatusPlaceholder
+        message={t('lyricAdjust.loadFailed')}
+        canRefetch={canRefetch}
+        onRefetch={onRefetch}
+        refetchLabel={t('lyricAdjust.refetch')}
+      />
     )
   }
 
   if (lyrics.length === 0) {
     return (
-      <view className='player-lyrics player-lyrics--state'>
-        <text className='player-lyrics__state-text'>{t('player.noLyrics')}</text>
-      </view>
+      <StatusPlaceholder
+        message={t('player.noLyrics')}
+        canRefetch={canRefetch}
+        onRefetch={onRefetch}
+        refetchLabel={t('lyricAdjust.refetch')}
+      />
     )
   }
 
@@ -63,10 +135,31 @@ export function LyricsView() {
 
   return (
     <view className='player-lyrics__container'>
-      <view className='player-lyrics__edit-bar' bindtap={() => void navigate({ to: '/player/lyrics/edit' })}>
-        <Icon name='settings' size={14} color={ICON_COLORS.contentMuted} />
-        <text className='player-lyrics__edit-text'>{t('lyricEdit.title')}</text>
-      </view>
+      {canAdjust || canRefetch
+        ? (
+          <view className='player-lyrics__tools'>
+            {canRefetch
+              ? (
+                <view className='player-lyrics__tool' bindtap={onRefetch}>
+                  <Icon name='refresh' size={14} color={ICON_COLORS.contentMuted} />
+                  <text className='player-lyrics__tool-text'>{t('lyricAdjust.refetch')}</text>
+                </view>
+              )
+              : null}
+            {canAdjust
+              ? (
+                <view
+                  className='player-lyrics__tool'
+                  bindtap={() => void navigate({ to: '/player/lyrics/adjust' })}
+                >
+                  <Icon name='tune' size={14} color={ICON_COLORS.contentMuted} />
+                  <text className='player-lyrics__tool-text'>{t('lyricAdjust.title')}</text>
+                </view>
+              )
+              : null}
+          </view>
+        )
+        : null}
     <scroll-view className='player-lyrics' scroll-y scroll-into-view={scrollTarget} scroll-with-animation>
       <view className='player-lyrics__inner'>
         {lyrics.map((line, index) => {

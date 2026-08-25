@@ -255,6 +255,10 @@ export class SongsApi {
    * `lyric_remote_url` (fetched at play time); any other source writes the
    * lyric/tlyric/rlyric/lxlyric payload. An empty source with an empty lyric is
    * the "clear the lyric" form the song edit page uses.
+   *
+   * Returns `file_write_status` (`written` / `failed` / absent) so the caller can
+   * tell the user whether the audio file's USLT tag was touched — the backend
+   * falls back to DB-only when the tag write fails.
    */
   async updateLyrics(
     id: number,
@@ -266,7 +270,7 @@ export class SongsApi {
       lxlyric?: string
       lyricRemoteUrl?: string
     },
-  ): Promise<void> {
+  ): Promise<{ fileWriteStatus?: string }> {
     const body: Record<string, unknown> = {}
     if (data.lyricSource !== undefined) body.lyric_source = data.lyricSource
     if (data.lyric !== undefined) body.lyric = data.lyric
@@ -274,7 +278,12 @@ export class SongsApi {
     if (data.rlyric !== undefined) body.rlyric = data.rlyric
     if (data.lxlyric !== undefined) body.lxlyric = data.lxlyric
     if (data.lyricRemoteUrl !== undefined) body.lyric_remote_url = data.lyricRemoteUrl
-    await this.client.put(`${apiPrefix}/songs/${id}/lyrics`, body)
+    const res = await this.client.put<unknown>(`${apiPrefix}/songs/${id}/lyrics`, body)
+    const payload = (res.data ?? {}) as Record<string, unknown>
+    return {
+      fileWriteStatus:
+        typeof payload.file_write_status === 'string' ? payload.file_write_status : undefined,
+    }
   }
 
   async cleanInvalidSongs(): Promise<{ cleaned: number }> {
@@ -324,9 +333,20 @@ export class SongsApi {
    * path the authenticated client resolves against the base URL + injects the
    * Bearer token). Only the plain `lyric` (LRC) field is consumed by the
    * batch-5 player; word-by-word / translations are deferred.
+   *
+   * `refresh` appends `?refresh=1` — the backend then re-runs its lyric search
+   * plugins instead of returning the stored (empty/scraped/cached) lyric and
+   * sends `Cache-Control: no-store`. Authoritative sources (file/embedded/
+   * manual) still win over the search result, so a refresh can never clobber
+   * user-entered lyrics.
    */
-  async getLyric(lyricUrl: string): Promise<LyricPayload> {
-    const res = await this.client.get<unknown>(lyricUrl)
+  async getLyric(
+    lyricUrl: string,
+    opts?: { refresh?: boolean },
+  ): Promise<LyricPayload> {
+    const res = await this.client.get<unknown>(lyricUrl, {
+      query: opts?.refresh ? { refresh: '1' } : undefined,
+    })
     const body = (res.data ?? {}) as Record<string, unknown>
     const str = (k: string): string | undefined =>
       typeof body[k] === 'string' ? (body[k] as string) : undefined

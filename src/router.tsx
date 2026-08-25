@@ -23,8 +23,7 @@ import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
 import { EqualizerPage } from './features/player/pages/EqualizerPage.js'
-import { LyricEditPage } from './features/player/pages/LyricEditPage.js'
-import { LyricCalibratePage } from './features/player/pages/LyricCalibratePage.js'
+import { LyricAdjustPage } from './features/player/pages/LyricAdjustPage.js'
 import { DlnaPage } from './features/player/pages/DlnaPage.js'
 
 /**
@@ -51,7 +50,7 @@ const rootRoute = createRootRoute({
         Global toast renderer. Mounted here (inside ThemeProvider so CSS vars
         resolve, and after <Outlet/> so DOM order paints it above every page —
         Lynx has no z-index) rather than in the shell, so chrome-less routes
-        (/player, /login, lyrics edit/calibrate, dlna) get toasts too.
+        (/player, /login, lyrics adjust, dlna) get toasts too.
       */}
       <ToastHost />
       {/*
@@ -82,16 +81,14 @@ const playerRoute = createRoute({
   component: PlayerPage,
 })
 
-const lyricEditRoute = createRoute({
+/**
+ * `/player/lyrics/adjust` — lyric timing adjustment (global offset + per-line
+ * nudge), chrome-less like its sibling player pages.
+ */
+const lyricAdjustRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/player/lyrics/edit',
-  component: LyricEditPage,
-})
-
-const lyricCalibrateRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/player/lyrics/calibrate',
-  component: LyricCalibratePage,
+  path: '/player/lyrics/adjust',
+  component: LyricAdjustPage,
 })
 
 const dlnaRoute = createRoute({
@@ -175,8 +172,8 @@ const playbackRoute = createRoute({
 
 /**
  * `/settings/lyrics` — lyrics display + floating overlay, inside the shell.
- * Distinct from `/player/lyrics/edit` and `/player/lyrics/calibrate`, which hang
- * off the root route under `/player`.
+ * Distinct from `/player/lyrics/adjust`, which hangs off the root route under
+ * `/player`.
  */
 const lyricsSettingsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -372,8 +369,7 @@ const editPlaylistRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   loginRoute,
   playerRoute,
-  lyricEditRoute,
-  lyricCalibrateRoute,
+  lyricAdjustRoute,
   dlnaRoute,
   equalizerRoute,
   shellRoute.addChildren([
