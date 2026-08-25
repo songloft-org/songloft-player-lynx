@@ -58,15 +58,22 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  /* Compact single-line height (the iOS-26 attached-player look): 36px cover
-     + 6px vertical padding ≈ 48px of row — no literal token for 6, it is the
-     only off-scale spacing here. */
-  padding: 6px var(--space-3);
+  /* Fixed 48px row (the iOS-26 attached-player look): the 36px cover and the
+     two one-line meta rows centre in it, and NOTHING can grow the capsule —
+     the shell's --nav-inset: 148px tier is sized against a constant ~53px
+     player, so a wrapping title wouldn't just look wrong, it would re-hide
+     list tails under the capsule. Height stays content-independent with or
+     without a subtitle, whatever the font metrics. No vertical padding:
+     centre via align-items, so the number needs no box-sizing reasoning
+     (Web views default to content-box; see `.proxy-settings__input`). */
+  height: 48px;
+  padding: 0 var(--space-3);
 }
 
 .mini-player__cover {
   width: 36px;
   height: 36px;
+  flex-shrink: 0;
   border-radius: var(--radius-sm);
   background-color: var(--neutral-faint);
 }
@@ -79,19 +86,32 @@
   display: flex;
   flex-direction: column;
   flex: 1;
+  /* `min-width: 0` lets the column shrink below its content so the one-line
+     rules below can ellipsize — a flex item's automatic minimum size would
+     keep the row at content width and push the play button out instead
+     (same trap as `.play-history__title`). */
+  min-width: 0;
   margin-left: var(--space-3);
 }
 
+/* Both meta lines are one line, ellipsized on overflow — the standard trio
+ * (survives both the native and the web encode), matching `.song-row__*`. */
 .mini-player__title {
   color: var(--content);
   font-size: var(--font-sm);
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mini-player__subtitle {
   color: var(--content-muted);
   font-size: var(--font-xs);
   margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Play button — Muse primary: ink fill + accent-contrast glyph. */
@@ -101,6 +121,8 @@
   justify-content: center;
   width: 36px;
   height: 36px;
+  flex-shrink: 0;
+  margin-left: var(--space-2);
   border-radius: var(--radius-pill);
   background-color: var(--primary);
 }
