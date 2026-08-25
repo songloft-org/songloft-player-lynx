@@ -1,7 +1,14 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test } from 'vitest'
+
+import {
+  SONG_DIALOG_WIDTH_PX,
+  dialogBodyMaxHeight,
+  dialogCardMaxHeight,
+  dialogCardWidth,
+} from '../dialog-viewport.js'
 
 /**
  * The four overlay properties of `ConfirmDialog` that no render test can see.
@@ -273,5 +280,287 @@ describe('dialogs close on the fade, not on the presence fallback stall', () => 
     const leaving = css.match(/\.ui-leaving[^{]*\{([^}]*)\}/)
     expect(leaving, 'a .ui-leaving rule must fade the dialog out').not.toBeNull()
     expect(leaving![1]).toMatch(/opacity:\s*0/)
+  })
+})
+
+/*
+ * The constructive affirmative is a SOLID primary fill — the app's
+ * primary-action language (login, the info dialog's write-tags pill).
+ *
+ * Found on device with no theme pack: --primary falls back to the ink colour,
+ * so the old ghost hairline rendered "save" as a black-on-white outline nearly
+ * identical to cancel's grey one — the primary action carried no emphasis and
+ * was reported as broken. --primary-content (never a literal white) is the
+ * paired foreground that keeps the label legible in both themes.
+ */
+describe('the affirmative dialog button reads as the primary action', () => {
+  const DIALOG_CSS = path.resolve(__dirname, '../ConfirmDialog.css')
+
+  test('submit is a solid primary fill with the paired foreground', () => {
+    const css = readFileSync(DIALOG_CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const btn = css.match(/\.confirm-dialog__btn--submit\s*\{([^}]*)\}/)
+    expect(btn, '.confirm-dialog__btn--submit rule not found').not.toBeNull()
+    expect(btn![1], 'the submit body must be a solid primary fill, not a ghost')
+      .toMatch(/background-color:\s*var\(--primary\)/)
+    const text = css.match(/\.confirm-dialog__btn-text--submit\s*\{([^}]*)\}/)
+    expect(text, '.confirm-dialog__btn-text--submit rule not found').not.toBeNull()
+    expect(text![1], 'the label must use --primary-content (legible in both themes)')
+      .toMatch(/color:\s*var\(--primary-content\)/)
+  })
+})
+
+/*
+ * The tall song dialogs keep their title/header row on screen — and the
+ * clamp that does it is the one on the scrolling BODY, not the card.
+ *
+ * Three rounds of device reports proved the card-level max-height (% → vh →
+ * measured px) cannot do it alone: the card clamps, but the body's flex
+ * shrink (`flex-shrink: 1` + `min-height: 0` on a scroll-view flex child)
+ * does not propagate on the native engines, so the body kept its content
+ * height (~850px on the remote form), re-stretched the card past the clamp
+ * and off the top of the screen — the pinned title row sat cropped under
+ * the status bar every time. Constraining the scroll-view DIRECTLY removes
+ * the whole flex-propagation chain (a max-height on the scroll-view itself
+ * is its core sizing semantics — every list page relies on it).
+ *
+ * Both levels are asserted: the body clamp is load-bearing, the card-level
+ * one (stylesheet vh + inline px) stays as a belt-and-braces cap.
+ */
+describe('the tall song dialogs clamp their scrolling body directly', () => {
+  const TALL_DIALOGS = [
+    { tsx: '../../../features/library/widgets/SongInfoDialog.tsx', css: '../../../features/library/widgets/SongInfoDialog.css' },
+    { tsx: '../../../features/library/widgets/SongEditDialog.tsx', css: '../../../features/library/widgets/SongEditDialog.css' },
+  ]
+
+  test('the scrolling body carries the inline px clamp (load-bearing)', () => {
+    for (const { tsx } of TALL_DIALOGS) {
+      const src = readFileSync(path.resolve(__dirname, tsx), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+      expect(
+        src,
+        `${tsx}: the scroll-view body must set style={{ maxHeight: dialogBodyMaxHeight() }} `
+          + '— the card-level clamp alone leaves the body at content height on the '
+          + 'native engines and the title row off the screen',
+      ).toMatch(/<scroll-view[\s\S]*?style=\{\{\s*maxHeight:\s*dialogBodyMaxHeight\(\)\s*\}\}/)
+    }
+  })
+
+  test('the stylesheet card clamp reads the viewport (vh), never a percentage', () => {
+    for (const { css } of TALL_DIALOGS) {
+      const text = readFileSync(path.resolve(__dirname, css), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+      const cap = text.match(/max-height:\s*([^;]+);/)
+      expect(cap, `${css}: the card must declare a max-height clamp`).not.toBeNull()
+      expect(
+        cap![1].trim(),
+        `${css}: the stylesheet clamp is the Web half — vh, not a percentage`,
+      ).toMatch(/^85vh$/)
+    }
+  })
+
+  test('the card-level inline px clamp is still there (belt and braces)', () => {
+    for (const { tsx } of TALL_DIALOGS) {
+      const src = readFileSync(path.resolve(__dirname, tsx), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+      expect(
+        src,
+        `${tsx}: the card view keeps its inline maxHeight as the outer cap`,
+      ).toMatch(/maxHeight:\s*dialogCardMaxHeight\(\)/)
+    }
+  })
+})
+
+/*
+ * Every song dialog renders at the SAME fixed width.
+ *
+ * The cards used to be content-driven up to a max-width, so long-metadata
+ * songs got wide cards and short ones narrow cards — and the info→edit
+ * single-slot swap jumped the card's width (reported from device). The width
+ * is now fixed per platform with the same two-halves split as the height
+ * clamp above: the stylesheet (`width: calc(100vw - 64px)` capped at
+ * SONG_DIALOG_WIDTH_PX) on Web, an inline measured px on the native engines.
+ */
+describe('every song dialog renders at the same fixed width', () => {
+  const SONG_DIALOGS = [
+    { tsx: '../../../features/library/widgets/SongInfoDialog.tsx', css: '../../../features/library/widgets/SongInfoDialog.css' },
+    { tsx: '../../../features/library/widgets/SongEditDialog.tsx', css: '../../../features/library/widgets/SongEditDialog.css' },
+  ]
+
+  test('the stylesheet pins the width — one calc, one cap, in both files', () => {
+    for (const { css } of SONG_DIALOGS) {
+      const text = readFileSync(path.resolve(__dirname, css), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+      expect(
+        text,
+        `${css}: the card must be width: calc(100vw - 64px) (64 = the two --space-6 `
+          + 'margins) so narrow screens shrink it instead of clipping',
+      ).toMatch(/width:\s*calc\(100vw - 64px\)/)
+      expect(
+        text,
+        `${css}: the cap must equal SONG_DIALOG_WIDTH_PX (${SONG_DIALOG_WIDTH_PX}px)`,
+      ).toMatch(new RegExp(`max-width:\\s*${SONG_DIALOG_WIDTH_PX}px`))
+    }
+  })
+
+  test('the components pass the one shared preferred width', () => {
+    for (const { tsx } of SONG_DIALOGS) {
+      const src = readFileSync(path.resolve(__dirname, tsx), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+      expect(
+        src,
+        `${tsx}: both song dialogs must pass SONG_DIALOG_WIDTH_PX — a literal per `
+          + 'file is how the two cards drift apart again',
+      ).toMatch(new RegExp(`width:\\s*dialogCardWidth\\(SONG_DIALOG_WIDTH_PX\\)`))
+    }
+  })
+})
+
+/*
+ * `dialogCardMaxHeight` — the native half of the clamp above.
+ *
+ * Web MUST be excluded: SystemInfo reports the browser *screen* there, not
+ * the lynx-view (measured 800×600 against a 420×900 view), so a computed
+ * value would be wrong in either direction — Web keeps the stylesheet vh.
+ * On device the px value is viewport-height × 0.85 (matching the 85vh),
+ * divided through pixelRatio because SystemInfo reports physical pixels.
+ */
+describe('dialogCardMaxHeight', () => {
+  const setSystemInfo = (info: Record<string, unknown> | undefined) => {
+    ;(globalThis as Record<string, unknown>).SystemInfo = info
+  }
+
+  afterEach(() => {
+    delete (globalThis as Record<string, unknown>).SystemInfo
+  })
+
+  test('device: 85% of the CSS-pixel viewport height', () => {
+    setSystemInfo({ platform: 'Android', pixelHeight: 2400, pixelRatio: 3 })
+    expect(dialogCardMaxHeight()).toBe(`${Math.round((2400 / 3) * 0.85)}px`)
+  })
+
+  test('web: undefined — the stylesheet vh owns the clamp there', () => {
+    setSystemInfo({ platform: 'web', pixelHeight: 600, pixelRatio: 1 })
+    expect(dialogCardMaxHeight()).toBeUndefined()
+  })
+
+  test('no host SystemInfo: undefined, never a crash', () => {
+    setSystemInfo(undefined)
+    expect(dialogCardMaxHeight()).toBeUndefined()
+  })
+})
+
+/*
+ * `dialogCardWidth` — the native half of the width fix. Wide screens get the
+ * preferred width verbatim; narrow ones shrink to viewport minus the card
+ * margins (2 × --space-6 = 64), never wider than the screen. Web is excluded
+ * for the same reason as the height (SystemInfo reports the browser screen
+ * there, not the lynx-view).
+ */
+describe('dialogCardWidth', () => {
+  const setSystemInfo = (info: Record<string, unknown> | undefined) => {
+    ;(globalThis as Record<string, unknown>).SystemInfo = info
+  }
+
+  afterEach(() => {
+    delete (globalThis as Record<string, unknown>).SystemInfo
+  })
+
+  test('wide device: the preferred width verbatim', () => {
+    setSystemInfo({ platform: 'iOS', pixelWidth: 2048, pixelRatio: 2 })
+    expect(dialogCardWidth(440)).toBe('440px')
+  })
+
+  test('narrow device: viewport minus the two card margins', () => {
+    setSystemInfo({ platform: 'Android', pixelWidth: 1080, pixelRatio: 3 })
+    // 1080/3 = 360dp viewport − 64px margins = 296px
+    expect(dialogCardWidth(440)).toBe('296px')
+  })
+
+  test('web: undefined — the stylesheet calc owns the width there', () => {
+    setSystemInfo({ platform: 'web', pixelWidth: 800, pixelRatio: 1 })
+    expect(dialogCardWidth(440)).toBeUndefined()
+  })
+
+  test('no host SystemInfo: undefined, never a crash', () => {
+    setSystemInfo(undefined)
+    expect(dialogCardWidth(440)).toBeUndefined()
+  })
+})
+
+/*
+ * `dialogBodyMaxHeight` — the load-bearing clamp's value. 0.75 of the
+ * CSS-pixel viewport height: the body plus the card's fixed chrome
+ * (title/header + action row + paddings ≈ 130–155px) lands the card ≤ ~90%
+ * of the viewport, so the centred top edge — where the title sits — stays
+ * on screen. Web is excluded (the flex chain works there and SystemInfo
+ * reports the browser screen); absurdly small results (< 200px) are treated
+ * as no constraint rather than a degenerate card.
+ */
+describe('dialogBodyMaxHeight', () => {
+  const setSystemInfo = (info: Record<string, unknown> | undefined) => {
+    ;(globalThis as Record<string, unknown>).SystemInfo = info
+  }
+
+  afterEach(() => {
+    delete (globalThis as Record<string, unknown>).SystemInfo
+  })
+
+  test('device: 75% of the CSS-pixel viewport height', () => {
+    setSystemInfo({ platform: 'Android', pixelHeight: 2400, pixelRatio: 3 })
+    // 2400/3 = 800dp × 0.75 = 600px body → card ≤ 600 + ~155 chrome < 800dp
+    expect(dialogBodyMaxHeight()).toBe('600px')
+  })
+
+  test('web: undefined — the stylesheet chain owns the body size there', () => {
+    setSystemInfo({ platform: 'web', pixelHeight: 600, pixelRatio: 1 })
+    expect(dialogBodyMaxHeight()).toBeUndefined()
+  })
+
+  test('no host SystemInfo: undefined, never a crash', () => {
+    setSystemInfo(undefined)
+    expect(dialogBodyMaxHeight()).toBeUndefined()
+  })
+
+  test('a degenerate viewport yields no clamp rather than a broken one', () => {
+    // 200/1 × 0.75 = 150px < 200 → refuse the constraint entirely
+    setSystemInfo({ platform: 'Android', pixelHeight: 200, pixelRatio: 1 })
+    expect(dialogBodyMaxHeight()).toBeUndefined()
+  })
+})
+
+/*
+ * The two action buttons of every dialog are structurally identical views.
+ *
+ * The cancel button used to sit inside lynx-ui's DialogClose, which renders a
+ * full lynx-ui Button — its own default padding/min-height wrapped our view,
+ * and the pair was NEVER the same height (reported from device, visible on
+ * Web too: cancel 38px vs save 32px). The wrapper also fired a redundant
+ * second close on every cancel tap. The fix removed the wrapper everywhere
+ * and gave `.confirm-dialog__btn` an explicit height; these two assertions
+ * keep both halves from regressing.
+ */
+describe('the dialog action buttons are one structural pair', () => {
+  test('no dialog wraps a button in DialogClose any more', () => {
+    for (const file of DIALOG_COMPONENTS) {
+      const src = readFileSync(path.resolve(__dirname, file), 'utf8')
+      expect(
+        src,
+        `${file}: DialogClose renders a lynx-ui Button around its child, which `
+          + 'made the cancel/confirm buttons unequal in height — use the bare '
+          + 'view (its bindtap already closes the dialog)',
+      ).not.toContain('<DialogClose')
+    }
+  })
+
+  test('the shared button rule pins an explicit height', () => {
+    const css = readFileSync(path.resolve(__dirname, '../ConfirmDialog.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+    const rule = css.match(/\.confirm-dialog__btn\s*\{([^}]*)\}/)
+    expect(rule, '.confirm-dialog__btn rule not found').not.toBeNull()
+    expect(
+      rule![1],
+      'the explicit height is what makes the pair equal on both platforms — '
+        + 'without it the heights are content-driven and drift',
+    ).toMatch(/height:\s*36px/)
   })
 })

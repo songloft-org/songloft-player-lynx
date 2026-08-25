@@ -9,7 +9,6 @@ import {
   DialogView,
   DialogBackdrop,
   DialogContent,
-  DialogClose,
 } from '@lynx-js/lynx-ui-dialog'
 
 import './ConfirmDialog.css'
@@ -154,15 +153,15 @@ export function PromptDialog({
                 : null}
             </view>
             <view className='confirm-dialog__actions'>
-              <DialogClose>
-                <view
-                  className='confirm-dialog__btn confirm-dialog__btn--cancel'
-                  bindtap={cancel}
-                  data-testid={cancelTestId}
-                >
-                  <text className='confirm-dialog__btn-text'>{t('common.cancel')}</text>
-                </view>
-              </DialogClose>
+              {/* No DialogClose — it wraps the child in a lynx-ui Button whose
+               * defaults made the buttons unequal in height; see ConfirmDialog. */}
+              <view
+                className='confirm-dialog__btn confirm-dialog__btn--cancel'
+                bindtap={cancel}
+                data-testid={cancelTestId}
+              >
+                <text className='confirm-dialog__btn-text'>{t('common.cancel')}</text>
+              </view>
               <view
                 className={canSubmit
                   ? 'confirm-dialog__btn confirm-dialog__btn--submit'

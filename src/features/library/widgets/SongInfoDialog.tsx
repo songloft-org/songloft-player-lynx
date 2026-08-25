@@ -6,13 +6,18 @@ import {
   DialogView,
   DialogBackdrop,
   DialogContent,
-  DialogClose,
 } from '@lynx-js/lynx-ui-dialog'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
 import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
+import {
+  SONG_DIALOG_WIDTH_PX,
+  dialogBodyMaxHeight,
+  dialogCardMaxHeight,
+  dialogCardWidth,
+} from '../../../shared/ui/dialog-viewport.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { formatBytes } from '../../home/domain/stats-format.js'
@@ -130,7 +135,22 @@ export function SongInfoDialog({ show, song, onClose, onEdit }: SongInfoDialogPr
           dialogContentProps={{ bindtap: onClose }}
         >
           {data == null ? null : (
-            <view className='song-info-dialog' data-testid='song-info-dialog' catchtap={() => {}}>
+            <view
+              className='song-info-dialog'
+              data-testid='song-info-dialog'
+              /*
+               * Inline clamps (device): the stylesheet's calc/vh is the Web
+               * half — on the native engines the viewport-relative units
+               * proved unreliable under the fixed dialog layer, so the measured
+               * px values come in here instead (fixed width, capped height).
+               * See `dialog-viewport.ts`.
+               */
+              style={{
+                maxHeight: dialogCardMaxHeight(),
+                width: dialogCardWidth(SONG_DIALOG_WIDTH_PX),
+              }}
+              catchtap={() => {}}
+            >
               <view className='song-info-dialog__header'>
                 {cover
                   ? <image className='song-info-dialog__cover' src={cover} />
@@ -142,7 +162,17 @@ export function SongInfoDialog({ show, song, onClose, onEdit }: SongInfoDialogPr
                 <text className='song-info-dialog__name'>{data.title}</text>
               </view>
 
-              <scroll-view className='song-info-dialog__body' scroll-y>
+              {/*
+               * The DIRECT body clamp is what keeps the header on screen —
+               * the card-level max-height alone proved insufficient on device
+               * (the body's flex-shrink does not propagate on the native
+               * engines). See `dialog-viewport.ts`.
+               */}
+              <scroll-view
+                className='song-info-dialog__body'
+                scroll-y
+                style={{ maxHeight: dialogBodyMaxHeight() }}
+              >
                 <view className='song-detail__row'>
                   <text className='song-detail__row-label'>{t('songDetail.artistField')}</text>
                   <text className='song-detail__row-value'>{data.artist || '—'}</text>
@@ -238,15 +268,15 @@ export function SongInfoDialog({ show, song, onClose, onEdit }: SongInfoDialogPr
               </scroll-view>
 
               <view className='confirm-dialog__actions'>
-                <DialogClose>
-                  <view
-                    className='confirm-dialog__btn confirm-dialog__btn--cancel'
-                    bindtap={onClose}
-                    data-testid='song-info-close'
-                  >
-                    <text className='confirm-dialog__btn-text'>{t('common.close')}</text>
-                  </view>
-                </DialogClose>
+                {/* No DialogClose — it wraps the child in a lynx-ui Button whose
+                 * defaults made the buttons unequal in height; see ConfirmDialog. */}
+                <view
+                  className='confirm-dialog__btn confirm-dialog__btn--cancel'
+                  bindtap={onClose}
+                  data-testid='song-info-close'
+                >
+                  <text className='confirm-dialog__btn-text'>{t('common.close')}</text>
+                </view>
                 <view
                   className='confirm-dialog__btn confirm-dialog__btn--submit'
                   bindtap={() => onEdit(data)}

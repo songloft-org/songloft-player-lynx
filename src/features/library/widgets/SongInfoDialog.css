@@ -21,9 +21,20 @@
   border: 1px solid var(--line);
   padding: var(--space-5);
   margin: var(--space-6);
-  max-width: 400px;
-  /* Keeps the [close]/[edit] row reachable on short screens; the body scrolls. */
-  max-height: 85%;
+  /*
+   * FIXED width — the SAME one SongEditDialog uses (SONG_DIALOG_WIDTH_PX):
+   * content-driven width made long-metadata songs wide and short ones narrow,
+   * and the info→edit single-slot swap visibly jumped the card. Web half of
+   * the clamp (native engines get a measured inline px width — see
+   * `dialog-viewport.ts`); 64 = the two --space-6 margins.
+   */
+  width: calc(100vw - 64px);
+  max-width: 440px;
+  /* Keeps the [close]/[edit] row reachable on short screens; the body scrolls.
+   * Web half of the height clamp (85vh); the native engines get an inline px
+   * maxHeight from SystemInfo instead — see `dialog-viewport.ts` and
+   * SongEditDialog.css for the full story. */
+  max-height: 85vh;
 }
 
 /* Title row: small cover + two-line song name (the Flutter dialog clamps its
@@ -72,9 +83,13 @@
 
 /*
  * Basis auto, not the usual `flex: 1` (basis 0): the card's height is
- * content-driven until its max-height clamps, and a zero basis would collapse
- * this view to nothing whenever the card is un-clamped. `min-height: 0` lets
- * it actually shrink — and scroll — once the clamp kicks in.
+ * content-driven until a clamp bites, and a zero basis would collapse this
+ * view to nothing whenever the card is un-clamped.
+ *
+ * The LOAD-BEARING clamp is the inline px maxHeight the component sets on
+ * this scroll-view (`dialogBodyMaxHeight`) — the card-level max-height alone
+ * proved insufficient on device (the body's flex-shrink does not propagate
+ * on the native engines). See SongEditDialog.css for the full story.
  */
 .song-info-dialog__body {
   flex-grow: 1;

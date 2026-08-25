@@ -8,13 +8,18 @@ import {
   DialogView,
   DialogBackdrop,
   DialogContent,
-  DialogClose,
 } from '@lynx-js/lynx-ui-dialog'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { copyToClipboard } from '../../../native/native-platform.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
+import {
+  SONG_DIALOG_WIDTH_PX,
+  dialogBodyMaxHeight,
+  dialogCardMaxHeight,
+  dialogCardWidth,
+} from '../../../shared/ui/dialog-viewport.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import type { Song } from '../../../models/song.js'
@@ -236,10 +241,38 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
           dialogContentProps={{ bindtap: onClose }}
         >
           {song == null ? null : (
-            <view className='song-edit-dialog' data-testid='song-edit-dialog' catchtap={() => {}}>
+            <view
+              className='song-edit-dialog'
+              data-testid='song-edit-dialog'
+              /*
+               * Inline clamps (device): the stylesheet's calc/vh is the Web
+               * half, but on the native engines the viewport-relative units
+               * proved unreliable under the fixed dialog layer — the long
+               * remote form overflowed the screen top and cropped the pinned
+               * title, and content-driven width made the card vary per song.
+               * The measured px values cannot be reinterpreted; see
+               * `dialog-viewport.ts`.
+               */
+              style={{
+                maxHeight: dialogCardMaxHeight(),
+                width: dialogCardWidth(SONG_DIALOG_WIDTH_PX),
+              }}
+              catchtap={() => {}}
+            >
               <text className='song-edit-dialog__title'>{pageTitle}</text>
 
-              <scroll-view className='song-edit-dialog__body' scroll-y>
+              {/*
+               * The DIRECT body clamp is the one that keeps the title on
+               * screen: the card-level max-height proved insufficient on
+               * device because the body's flex-shrink does not propagate on
+               * the native engines (the scroll-view kept its content height
+               * and re-stretched the card). See `dialog-viewport.ts`.
+               */}
+              <scroll-view
+                className='song-edit-dialog__body'
+                scroll-y
+                style={{ maxHeight: dialogBodyMaxHeight() }}
+              >
                 <view className='song-edit__form'>
                   <view className='song-edit__ro-card'>
                     <text className='song-edit__ro-card-title'>
@@ -381,15 +414,15 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
               </scroll-view>
 
               <view className='confirm-dialog__actions'>
-                <DialogClose>
-                  <view
-                    className='confirm-dialog__btn confirm-dialog__btn--cancel'
-                    bindtap={onClose}
-                    data-testid='song-edit-cancel'
-                  >
-                    <text className='confirm-dialog__btn-text'>{t('common.cancel')}</text>
-                  </view>
-                </DialogClose>
+                {/* No DialogClose — it wraps the child in a lynx-ui Button whose
+                 * defaults made the buttons unequal in height; see ConfirmDialog. */}
+                <view
+                  className='confirm-dialog__btn confirm-dialog__btn--cancel'
+                  bindtap={onClose}
+                  data-testid='song-edit-cancel'
+                >
+                  <text className='confirm-dialog__btn-text'>{t('common.cancel')}</text>
+                </view>
                 <view
                   className='confirm-dialog__btn confirm-dialog__btn--submit'
                   bindtap={onSave}

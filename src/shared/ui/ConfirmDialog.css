@@ -147,8 +147,21 @@
   justify-content: flex-end;
 }
 
+/*
+ * Fixed height, explicitly: the cancel button used to sit inside lynx-ui's
+ * DialogClose, which renders a full lynx-ui Button — its own default
+ * padding/min-height wrapped our view, so the two action buttons were NEVER
+ * the same height (the wrapper was also why cancel could not adopt any height
+ * we set here). The DialogClose wrapper is gone from every dialog; this rule
+ * is now the single source of the row's button height on both platforms —
+ * the two buttons are structurally identical views.
+ */
 .confirm-dialog__btn {
-  padding: var(--space-2) var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 var(--space-4);
   border-radius: var(--radius-md);
   margin-left: var(--space-2);
 }
@@ -174,16 +187,22 @@
   color: var(--danger);
 }
 
-/* Constructive affirmative (PromptDialog's "create"): accent hairline instead of
-   the danger one. Lives here rather than in PromptDialog.css so the dialog
-   button family stays in a single stylesheet. */
+/* Constructive affirmative (the edit dialog's "save", PromptDialog's "create"):
+   a SOLID primary fill — the app's primary-action language (the login button's).
+   The ghost-hairline version failed on device: with no theme pack --primary is
+   the ink fallback (#111), so save rendered as a black-on-white outline button
+   nearly identical to cancel's grey hairline — the primary action carried no
+   emphasis at all. --primary-content is the paired foreground (white on ink in
+   light, ink on white in dark), never a literal white. Lives here rather than
+   in the callers so the dialog button family stays in a single stylesheet. */
 .confirm-dialog__btn--submit {
-  background-color: transparent;
+  background-color: var(--primary);
   border: 1px solid var(--primary);
 }
 
 .confirm-dialog__btn-text--submit {
-  color: var(--primary);
+  color: var(--primary-content);
+  font-weight: bold;
 }
 
 /* Nothing typed yet: the button holds its place but reads as unavailable. The

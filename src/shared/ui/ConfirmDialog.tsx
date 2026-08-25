@@ -8,7 +8,6 @@ import {
   DialogView,
   DialogBackdrop,
   DialogContent,
-  DialogClose,
 } from '@lynx-js/lynx-ui-dialog'
 
 import './ConfirmDialog.css'
@@ -136,17 +135,24 @@ export function ConfirmDialog({
             <text className='confirm-dialog__message'>{message}</text>
             {children}
             <view className='confirm-dialog__actions'>
-              <DialogClose>
-                <view
-                  className='confirm-dialog__btn confirm-dialog__btn--cancel'
-                  bindtap={onCancel}
-                  data-testid={cancelTestId}
-                >
-                  <text className='confirm-dialog__btn-text'>
-                    {cancelLabel ?? t('common.cancel')}
-                  </text>
-                </view>
-              </DialogClose>
+              {/*
+               * No DialogClose wrapper: it renders a full lynx-ui Button
+               * (its own padding/min-height) around the child, so the two
+               * action buttons were never the same height — the wrapper also
+               * fired a redundant second close on every cancel tap. The bare
+               * view's bindtap is the close path; both platforms render the
+               * row from the structurally identical pair in
+               * `.confirm-dialog__btn`.
+               */}
+              <view
+                className='confirm-dialog__btn confirm-dialog__btn--cancel'
+                bindtap={onCancel}
+                data-testid={cancelTestId}
+              >
+                <text className='confirm-dialog__btn-text'>
+                  {cancelLabel ?? t('common.cancel')}
+                </text>
+              </view>
               <view
                 className='confirm-dialog__btn confirm-dialog__btn--confirm'
                 bindtap={onConfirm}
