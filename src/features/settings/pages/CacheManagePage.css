@@ -46,6 +46,34 @@
   border-top: 1px solid var(--line);
 }
 
+/*
+ * Used-of-limit capacity bar under the stats rows (Flutter's
+ * LinearProgressIndicator). Same inset as the rows so it spans the card's
+ * content width; the fill width is an inline percentage from the page.
+ */
+.cache-manage__usage {
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.cache-manage__usage-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--neutral-faint);
+  overflow: hidden;
+}
+
+.cache-manage__usage-fill {
+  height: 100%;
+  border-radius: 3px;
+  background-color: var(--primary);
+}
+
+/* Same >90% threshold as the Flutter build: full-ish caches go red. */
+.cache-manage__usage-fill--danger {
+  background-color: var(--danger);
+}
+
 .cache-manage__label {
   color: var(--content-2);
   font-size: var(--font-sm);

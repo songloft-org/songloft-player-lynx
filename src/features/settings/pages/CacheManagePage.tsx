@@ -20,20 +20,60 @@ import type { DirValidateResponse } from '../domain/cache-model.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import { SubPageShell } from '../widgets/SubPageShell.js'
+import {
+  resolveExactIndex,
+  resolveNearestIndex,
+  SizeLimitSlider,
+} from '../widgets/SizeLimitSlider.js'
+import type { SizeLimitOption } from '../widgets/SizeLimitSlider.js'
 import './CacheManagePage.css'
 
-/** Preset caps for the on-device song cache (bytes). */
-const DEVICE_CACHE_SIZE_OPTIONS = [
-  268435456, // 256 MB
-  536870912, // 512 MB
-  1073741824, // 1 GB
-  2147483648, // 2 GB
-  4294967296, // 4 GB
-]
+const MB = 1024 * 1024
 
 /**
- * Cache management sub-page (`/settings/cache`, inside the shell). Three
- * sections: stats overview, editable config, directory validation result.
+ * Server cache caps — the Flutter `_serverCacheSizeOptions`: server disk, so the
+ * range runs up to 100 GB. Deliberately no "unlimited" notch: a stored `0` (or
+ * any custom value) displays on the 1 GB default, mirroring Flutter's
+ * `_findSizeIndex` fallback.
+ */
+const SERVER_CACHE_SIZE_OPTIONS: SizeLimitOption[] = [
+  { bytes: 100 * MB, label: '100 MB' },
+  { bytes: 500 * MB, label: '500 MB' },
+  { bytes: 1024 * MB, label: '1 GB' },
+  { bytes: 2 * 1024 * MB, label: '2 GB' },
+  { bytes: 5 * 1024 * MB, label: '5 GB' },
+  { bytes: 10 * 1024 * MB, label: '10 GB' },
+  { bytes: 20 * 1024 * MB, label: '20 GB' },
+  { bytes: 50 * 1024 * MB, label: '50 GB' },
+  { bytes: 100 * 1024 * MB, label: '100 GB' },
+]
+
+/** Index of the 1 GB notch — the fallback for off-notch server values. */
+const SERVER_MAX_SIZE_FALLBACK_INDEX = 2
+
+/**
+ * Preset caps for the on-device song cache (client disk, kept modest) — the
+ * Flutter `_localCacheSizeOptions`. Legacy values between notches (256 MB /
+ * 512 MB from the pre-slider UI) display on the nearest notch.
+ */
+const DEVICE_CACHE_SIZE_OPTIONS: SizeLimitOption[] = [
+  { bytes: 100 * MB, label: '100 MB' },
+  { bytes: 500 * MB, label: '500 MB' },
+  { bytes: 1024 * MB, label: '1 GB' },
+  { bytes: 2 * 1024 * MB, label: '2 GB' },
+  { bytes: 5 * 1024 * MB, label: '5 GB' },
+  { bytes: 10 * 1024 * MB, label: '10 GB' },
+]
+
+/** Index of the 1 GB notch — `DEFAULT_LOCAL_CACHE_MAX_SIZE`'s slot. */
+const DEVICE_MAX_SIZE_FALLBACK_INDEX = 2
+
+/**
+ * Cache management sub-page (`/settings/cache`, inside the shell). Sections:
+ * stats overview (with used/limit capacity bar), on-device song cache (native
+ * only), editable config — where both size caps are notched sliders that
+ * commit on drag release rather than riding the Save button — and directory
+ * validation result.
  */
 export function CacheManagePage() {
   const { t } = useTranslation()
@@ -50,15 +90,53 @@ export function CacheManagePage() {
   // ── Local form state (seeded from query data) ──────────────────────────────
   const config = configQuery.data
   const [cacheDir, setCacheDir] = useState<string | null>(null)
-  const [maxSize, setMaxSize] = useState<string | null>(null)
   const [transcodeFormat, setTranscodeFormat] = useState<string | null>(null)
   const [transcodeQuality, setTranscodeQuality] = useState<string | null>(null)
 
   // Effective values: local edit overrides server data.
   const effectiveCacheDir = cacheDir ?? config?.cacheDir ?? ''
-  const effectiveMaxSize = maxSize ?? (config ? String(config.maxSize) : '0')
   const effectiveFormat = transcodeFormat ?? config?.transcodeFormat ?? ''
   const effectiveQuality = transcodeQuality ?? config?.transcodeQuality ?? '192'
+
+  // ── Server max-size slider ─────────────────────────────────────────────────
+  // The slider commits immediately (drag release → PUT), so it sits outside the
+  // form's Save button. `pendingServerMaxSize` is a local echo of the committed
+  // cap: the config refetch triggered by the mutation takes a round trip, and
+  // without the echo the thumb would snap back to the old notch for that whole
+  // window. Cleared once the refetched config catches up, or on error so the
+  // display stays truthful.
+  const [pendingServerMaxSize, setPendingServerMaxSize] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (pendingServerMaxSize != null && config?.maxSize === pendingServerMaxSize) {
+      setPendingServerMaxSize(null)
+    }
+  }, [pendingServerMaxSize, config?.maxSize])
+
+  const serverMaxSizeBytes = pendingServerMaxSize ?? config?.maxSize
+  const serverMaxSizeIndex = serverMaxSizeBytes != null
+    ? resolveExactIndex(
+      serverMaxSizeBytes,
+      SERVER_CACHE_SIZE_OPTIONS,
+      SERVER_MAX_SIZE_FALLBACK_INDEX,
+    )
+    : SERVER_MAX_SIZE_FALLBACK_INDEX
+
+  const onServerMaxSizeCommit = (bytes: number) => {
+    setPendingServerMaxSize(bytes)
+    updateConfigMutation.mutate(
+      {
+        // Everything except the cap comes from the SERVER config, not the local
+        // form: a drag must not smuggle un-saved dir/transcode edits into the
+        // PUT (the Flutter build's `_updateServerCacheConfig` does the same).
+        cache_dir: config?.cacheDir ?? '',
+        max_size: bytes,
+        transcode_format: config?.transcodeFormat ?? '',
+        transcode_quality: config?.transcodeQuality ?? '192',
+      },
+      { onError: () => setPendingServerMaxSize(null) },
+    )
+  }
 
   // ── Two-tap clean confirm ──────────────────────────────────────────────────
   const [confirmClean, setConfirmClean] = useState(false)
@@ -129,12 +207,14 @@ export function CacheManagePage() {
     )
   }
 
-  // ── Save config ────────────────────────────────────────────────────────────
+  // ── Save config (dir + transcode; the size caps commit via their sliders) ──
   const onSave = () => {
-    const parsedMaxSize = parseInt(effectiveMaxSize, 10)
     updateConfigMutation.mutate({
       cache_dir: effectiveCacheDir,
-      max_size: Number.isFinite(parsedMaxSize) && parsedMaxSize >= 0 ? parsedMaxSize : 0,
+      // The slider owns the cap now; keep whatever it last committed (the
+      // pending echo also covers a commit whose refetch has not landed yet, so
+      // saving the form cannot race the slider's PUT back to the old value).
+      max_size: pendingServerMaxSize ?? config?.maxSize ?? 0,
       transcode_format: effectiveFormat,
       transcode_quality: effectiveQuality,
     })
@@ -169,6 +249,27 @@ export function CacheManagePage() {
           trailingText={stats ? formatBytes(stats.totalSize) : '-'}
           testId='cache-total-size'
         />
+        {/* Used-of-limit capacity bar (Flutter's LinearProgressIndicator).
+            Hidden while unlimited — there is no "of" to show. */}
+        {stats && stats.maxSize > 0
+          ? (
+            <view className='cache-manage__usage' data-testid='cache-usage'>
+              <view className='cache-manage__usage-track'>
+                <view
+                  className={
+                    stats.totalSize / stats.maxSize > 0.9
+                      ? 'cache-manage__usage-fill cache-manage__usage-fill--danger'
+                      : 'cache-manage__usage-fill'
+                  }
+                  style={{
+                    width: `${Math.min(100, Math.max(0, (stats.totalSize / stats.maxSize) * 100))}%`,
+                  }}
+                  data-testid='cache-usage-fill'
+                />
+              </view>
+            </view>
+          )
+          : null}
         <SettingsRow
           icon='settings'
           title={t('cacheManage.maxSizeLimit')}
@@ -214,20 +315,16 @@ export function CacheManagePage() {
               trailingText={deviceCacheSize != null ? formatBytes(deviceCacheSize) : '-'}
               testId='device-cache-size'
             />
-            <view className='cache-manage__field cache-manage__field--rows'>
-              <text className='cache-manage__label'>
-                {t('cacheManage.deviceMaxSize')}
-              </text>
-              {DEVICE_CACHE_SIZE_OPTIONS.map((bytes) => (
-                <SettingsRow
-                  key={bytes}
-                  title={formatBytes(bytes)}
-                  selected={deviceMaxSize === bytes}
-                  trailingIcon={deviceMaxSize === bytes ? 'check' : undefined}
-                  onTap={() => onSelectDeviceMaxSize(bytes)}
-                  testId={`device-max-${bytes}`}
-                />
-              ))}
+            <view className='cache-manage__field'>
+              <SizeLimitSlider
+                label={t('cacheManage.deviceMaxSize')}
+                options={DEVICE_CACHE_SIZE_OPTIONS}
+                selectedIndex={deviceMaxSize != null
+                  ? resolveNearestIndex(deviceMaxSize, DEVICE_CACHE_SIZE_OPTIONS)
+                  : DEVICE_MAX_SIZE_FALLBACK_INDEX}
+                onCommit={onSelectDeviceMaxSize}
+                testId='device-max-size'
+              />
             </view>
             <SettingsRow
               icon='logout'
@@ -287,18 +384,14 @@ export function CacheManagePage() {
           </view>
         </view>
 
-        {/* Max cache size */}
+        {/* Max cache size — commits on drag release, not via Save */}
         <view className='cache-manage__field'>
-          <text className='cache-manage__label'>
-            {t('cacheManage.maxSizeLabel')}
-          </text>
-          <Input
-            className='cache-manage__input'
-            type='text'
-            placeholder='0'
-            value={effectiveMaxSize}
-            onInput={(value) => setMaxSize(value)}
-            data-testid='cache-max-size-input'
+          <SizeLimitSlider
+            label={t('cacheManage.maxSizeLabel')}
+            options={SERVER_CACHE_SIZE_OPTIONS}
+            selectedIndex={serverMaxSizeIndex}
+            onCommit={onServerMaxSizeCommit}
+            testId='server-max-size'
           />
         </view>
 

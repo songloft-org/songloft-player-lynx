@@ -330,7 +330,7 @@ export const en = {
     // Trailing space is intentional: concatenated with the path in JSX.
     defaultPrefix: 'Default: ',
     validate: 'Validate',
-    maxSizeLabel: 'Max Cache Size (bytes, 0=unlimited)',
+    maxSizeLabel: 'Max Cache Size',
     transcodeFormat: 'Transcode Format',
     noTranscode: 'No transcode',
     transcodeQuality: 'Transcode Quality',
@@ -1177,7 +1177,7 @@ export const zh: TranslationTree = {
     cacheDir: '缓存目录',
     defaultPrefix: '默认: ',
     validate: '验证',
-    maxSizeLabel: '最大缓存大小（字节，0=无限制）',
+    maxSizeLabel: '最大缓存大小',
     transcodeFormat: '转码格式',
     noTranscode: '不转码',
     transcodeQuality: '转码质量',
