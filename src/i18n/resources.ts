@@ -483,16 +483,29 @@ export const en = {
     success: 'Playlist created',
   },
 
-  lyricEdit: {
-    title: 'Edit Lyrics',
-    placeholder: 'Paste LRC lyrics here…',
-    saved: 'Saved',
-  },
-  lyricCalibrate: {
-    title: 'Lyric Timing',
+  /* Lyric timing adjust page + re-fetch entry. Wording mirrors the Flutter
+     build's playerAdjustLyrics / playerLyricSaved / playerDiscard / player-
+     GlobalOffset / playerOffsetHint / playerEmptyLine / playerLineOffset /
+     playerNoLyricsToAdjust / playerLyricsRefetch / playerLyricsLoadFailed
+     arb entries. */
+  lyricAdjust: {
+    title: 'Adjust lyrics',
     reset: 'Reset',
-    hint: 'Adjust lyric offset',
-    explain: 'Positive = lyrics appear earlier; Negative = lyrics appear later',
+    globalOffset: 'Global offset',
+    offsetHint:
+      'Tip: if lyrics appear too early overall, use a negative offset (-); if too late, use a positive offset (+)',
+    emptyLine: '(empty line)',
+    lineOffset: 'Line offset {{offset}}',
+    noLines: 'No lyrics to adjust',
+    savedWritten: 'Saved and written to audio file',
+    savedWriteFailed: 'Saved to database, but writing to the audio file failed',
+    savedDbOnly: 'Saved to database (file not updated)',
+    discardTitle: 'Discard changes?',
+    discardContent: 'Your changes haven\'t been saved. Leave anyway?',
+    continueEditing: 'Keep editing',
+    discard: 'Discard',
+    refetch: 'Re-fetch lyrics',
+    loadFailed: 'Failed to load lyrics',
   },
   songDetail: {
     title: 'Song Detail',
@@ -608,8 +621,14 @@ export const en = {
     default: 'Default',
     builtIn: 'Built-in theme',
     install: 'Install',
+    installed: 'Installed',
+    hasUpdate: 'Update',
     delete: 'Delete',
     confirmDelete: 'Tap again to delete',
+    catalogLoadFailed: 'Failed to load the catalog: {{error}}',
+    installFailed: 'Install failed: {{error}}',
+    activateFailed: 'Operation failed: {{error}}',
+    deleteFailed: 'Delete failed: {{error}}',
   },
   eq: {
     title: 'Equalizer',
@@ -1270,16 +1289,24 @@ export const zh: TranslationTree = {
     success: '创建成功',
   },
 
-  lyricEdit: {
-    title: '编辑歌词',
-    placeholder: '在此粘贴 LRC 歌词…',
-    saved: '已保存',
-  },
-  lyricCalibrate: {
-    title: '歌词时间轴',
+  /* 歌词时间轴调整页 + 重新抓取入口。文案对齐 Flutter 版 arb 词条。 */
+  lyricAdjust: {
+    title: '调整歌词',
     reset: '重置',
-    hint: '调整歌词偏移',
-    explain: '正值 = 歌词提前显示；负值 = 歌词延后显示',
+    globalOffset: '全局偏移',
+    offsetHint: '提示：歌词整体早出现，用负偏移（-）；整体晚出现，用正偏移（+）',
+    emptyLine: '(空行)',
+    lineOffset: '行偏移 {{offset}}',
+    noLines: '暂无可调整的歌词',
+    savedWritten: '已保存，已写入音频文件',
+    savedWriteFailed: '已保存到数据库，但写入音频文件失败',
+    savedDbOnly: '已保存到数据库（文件未更新）',
+    discardTitle: '放弃修改？',
+    discardContent: '当前调整尚未保存，确定要离开吗？',
+    continueEditing: '继续编辑',
+    discard: '放弃',
+    refetch: '重新抓取歌词',
+    loadFailed: '歌词加载失败',
   },
   songDetail: {
     title: '歌曲详情',
@@ -1392,8 +1419,14 @@ export const zh: TranslationTree = {
     default: '默认',
     builtIn: '内置主题',
     install: '安装',
+    installed: '已安装',
+    hasUpdate: '更新',
     delete: '删除',
     confirmDelete: '再次点按确认删除',
+    catalogLoadFailed: '加载主题目录失败：{{error}}',
+    installFailed: '安装失败：{{error}}',
+    activateFailed: '操作失败：{{error}}',
+    deleteFailed: '删除失败：{{error}}',
   },
   eq: {
     title: '均衡器',

@@ -27,12 +27,17 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  /* radii — Muse hierarchy: small 8 / medium 12 / large 20 / xl 28 / pill 999 */
+  /* radii — Muse hierarchy: small 8 / medium 12 / large 20 / xl 28 / pill 999.
+     --radius-nav is the bottom-nav tab pill: separate from --radius-md because a
+     theme pack's `navigationRadius` maps 1:1 onto it, and packs set control and
+     navigation radii independently (e.g. sakura ships 16/14). Baseline equals
+     --radius-md's 12px so the no-pack look is unchanged. */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 20px;
   --radius-xl: 28px;
   --radius-pill: 999px;
+  --radius-nav: 12px;
 
   /* type scale (px) */
   --font-xs: 12px;

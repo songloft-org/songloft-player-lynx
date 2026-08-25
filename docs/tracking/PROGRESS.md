@@ -1032,6 +1032,26 @@ toast「再按一次返回退出应用」在首页真机截图确认（`/tmp/bac
 
 > 说明：批52C 未新增单测 —— 这四处都是页面内联的 `useBackHandler`，需渲染整页才能驱动，而共享覆盖层的等价契约已由批52B 的 `overlay-back-contract.test.tsx` 覆盖。行为正确性由上表真机验证背书。
 
+### 批56 · 主题商店修复 + 主题包应用链路（从零到可用）
+
+**用户报告**：主题商店打开提示「暂无可用主题」；已安装的 2 个内置主题（sakura / neon-night）激活后无任何反应。诊断结论：**不是「不支持 Flutter 主题」**——主题包是平台无关 JSON（后端 `theme_pack.go` 校验 `#RRGGBB` + 圆角 0-100），问题在 Lynx 端是半成品迁移，三处硬 bug：
+
+1. **目录解析错字段**：`theme-packs-api.ts` 读 `data.items`，后端（`theme_pack_catalog.go`）返回 `{themes, total}` → 恒空；且 `.catch(()=>{})` 把拉取失败（GitHub 不可达→502）也吞成「空列表」，请求还没带 `github_proxy`（Flutter 端会传）。
+2. **安装请求体错**：发 `{theme_id}`，后端要 `{url, sha256?}`（缺 url 直接 400）。
+3. **应用链路缺失**：激活只是 PUT + 本地打勾，从未把 ThemePackData 应用到 UI；启动也不拉 active pack（Flutter 端是 watch provider 重建 MaterialApp.theme）。
+
+**修复与设计**：
+- **目录/安装契约**：`refreshCatalog` 解析 `themes` + 内部读 `/settings/github-proxy` 传给后端；`installFromCatalog(entry)` 发 url+sha256+proxy；失败上抛，页面三态（loading/error+重试/ready），行按 `install_state` 显示安装/已安装/更新。
+- **主题包→Muse token 映射**（`theme-pack-mapping.ts`，纯函数）：seedColor→`--primary/--primary-2/--accent`，派生 `--primary-content`（YIQ 黑白）；backgroundColor→`--canvas`；surfaceColor→`--paper`+`--paper-clear`(90% alpha)；card/control/navigationRadius→`--radius-lg/md/nav`。**刻意不移植 `ColorScheme.fromSeed`**（Muse 单 accent 体系）、**刻意忽略 `playerGradient`**（scrim alpha 是算出来的，有 contrast 闸门）。深浅色正交：按 resolvedTheme 选 pack.light/dark。
+- **激活状态模型**（`theme-pack-model.ts`）：仿 theme-model 的模块级 state+listener（不用 useSyncExternalStore，ReactLynx 测试坑）；active 的 GET/PUT/DELETE 从 api 层移入；装配在 `index.tsx`（checkAuth 后拉取、auth 订阅登录拉/登出回落，对齐 Flutter「未登录不发请求」）。
+- **ThemeProvider**：根 view 加内联 CSS 变量（Lynx 官方支持 style 声明 `--*`，内联胜类声明 = 级联即覆盖）。
+
+**关键发现（真探针测出，已写进模块头注释 + 测试）**：**ReactLynx 的 style 对象更新只 merge 不 remove** —— 从 `{--primary: pink}` 更新到 `{}` 或 `undefined`，旧声明原地残留。因此「清除主题」不能靠丢弃属性，必须**写回基线值**：映射恒定输出全部可覆盖 token（pack 值或 Muse 基线），无 pack 时 inline == 类声明（视觉零变化）。`PACK_OVERRIDABLE_BASELINE` 从 tokens.css 镜像，有闸门测试解析 CSS 双向比对防漂移。
+
+**验收**：新增/更新 4 个测试文件（mapping 24 + model 12 + provider 9 + page 5）；隔离 worktree（干净 main + 本批改动）跑 `tsc -b` / `pnpm test` **1766 测试（170 文件）** / `build` 双产物 / `build:web` 全绿。主工作区 `tsc`/`build` 另报 `SongEditPage.tsx` 类型错——那是工作区里**另一批进行中的未提交改动**（`songs-api.ts` 的 `updateLyrics` 返回类型变更）所致，与本批无关。
+
+**真机待验**：内联 CSS 变量在 Android/iOS/Web 三端真机的实际渲染；GitHub 不可达时目录错误态文案 + 重试。
+
 ## 未完成 / 遗留事项（TODO & 风险）
 
 - [x] **批28 Computing 阶段进度恒 `0/0` 且完成后不转 Results**（批29b 发现 → **批29c 已修**）：双层根因（陈旧终态跳过 computing + `refetchInterval` 在 Lynx 首次 fetch 后不再 fire），修法见上方「批29c」小结与下方「批29c」详节。18091 真机逐张截图验过 Computing 推进 + 自动转 Results。

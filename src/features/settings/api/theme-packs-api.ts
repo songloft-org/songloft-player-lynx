@@ -1,5 +1,8 @@
 import { apiPrefix } from '../../../core/config/app-config.js'
 import type { HttpClient } from '../../../core/network/http-client.js'
+import type { ThemePackData } from '../../../shared/theme/theme-pack-mapping.js'
+
+export type { ThemePackData, ThemePackColors } from '../../../shared/theme/theme-pack-mapping.js'
 
 export interface ThemePackItem {
   id: number
@@ -13,29 +16,20 @@ export interface ThemePackItem {
   updatedAt: string
 }
 
-export interface ThemePack extends ThemePackItem {
-  data: ThemePackData
-}
-
-export interface ThemePackData {
+/**
+ * One entry of the online catalog (`POST /theme-packs/catalog/refresh`). The
+ * backend resolves `install_state` against the installed list, so a row knows
+ * whether it is a fresh install, a reinstall at the same version, or an update.
+ */
+export interface ThemeCatalogEntry {
   id: string
   name: string
+  version: string
   author: string
   description: string
-  version: string
-  schemaVersion: number
-  dark?: ThemePackColors
-  light?: ThemePackColors
-  cardRadius?: number
-  controlRadius?: number
-  navigationRadius?: number
-  playerGradient?: string[]
-}
-
-export interface ThemePackColors {
-  seedColor?: string
-  backgroundColor?: string
-  surfaceColor?: string
+  url: string
+  sha256: string
+  installState: 'not_installed' | 'installed' | 'has_update'
 }
 
 function parseItem(raw: Record<string, unknown>): ThemePackItem {
@@ -52,6 +46,28 @@ function parseItem(raw: Record<string, unknown>): ThemePackItem {
   }
 }
 
+function parseCatalogEntry(raw: Record<string, unknown>): ThemeCatalogEntry {
+  const installState = raw.install_state
+  return {
+    id: String(raw.id ?? ''),
+    name: String(raw.name ?? ''),
+    version: String(raw.version ?? ''),
+    author: String(raw.author ?? ''),
+    description: String(raw.description ?? ''),
+    url: String(raw.url ?? ''),
+    sha256: String(raw.sha256 ?? ''),
+    installState:
+      installState === 'installed' || installState === 'has_update'
+        ? installState
+        : 'not_installed',
+  }
+}
+
+/**
+ * Catalog fetch/install endpoints. The **active** pack's GET/PUT/DELETE live in
+ * `src/shared/theme/theme-pack-model.ts` instead — they are app-global theme
+ * state, not settings-page API surface.
+ */
 export class ThemePacksApi {
   constructor(private readonly client: HttpClient) {}
 
@@ -61,36 +77,52 @@ export class ThemePacksApi {
     return arr.map(r => parseItem(r as Record<string, unknown>))
   }
 
-  async getActive(): Promise<ThemePack | null> {
-    try {
-      const res = await this.client.get<Record<string, unknown>>(`${apiPrefix}/theme-packs/active`)
-      if (!res.data || !res.data.theme_id) return null
-      return { ...parseItem(res.data), data: res.data.data as ThemePackData ?? {} as ThemePackData }
-    } catch {
-      return null
-    }
-  }
-
-  async activate(themeId: string): Promise<void> {
-    await this.client.put(`${apiPrefix}/theme-packs/active`, { theme_id: themeId })
-  }
-
-  async resetToDefault(): Promise<void> {
-    await this.client.delete(`${apiPrefix}/theme-packs/active`)
-  }
-
   async deletePack(themeId: string): Promise<void> {
     await this.client.delete(`${apiPrefix}/theme-packs/${encodeURIComponent(themeId)}`)
   }
 
-  async refreshCatalog(): Promise<ThemePackItem[]> {
-    const res = await this.client.post<unknown>(`${apiPrefix}/theme-packs/catalog/refresh`, {})
-    const data = res.data as Record<string, unknown> | undefined
-    const items = Array.isArray(data?.items) ? data!.items : []
-    return items.map((r: unknown) => parseItem(r as Record<string, unknown>))
+  /**
+   * Server-side GitHub proxy setting, read fresh each call: the backend fetches
+   * raw.githubusercontent.com when refreshing/installing, which is unreachable
+   * from CN networks without it (the Flutter client passes the same setting
+   * through — see `themePackApiProvider`/`githubProxyProvider`).
+   */
+  private async githubProxy(): Promise<string> {
+    try {
+      const res = await this.client.get<{ proxy?: string }>(`${apiPrefix}/settings/github-proxy`)
+      return res.data?.proxy ?? ''
+    } catch {
+      return ''
+    }
   }
 
-  async installFromCatalog(themeId: string): Promise<void> {
-    await this.client.post(`${apiPrefix}/theme-packs/catalog/install`, { theme_id: themeId })
+  /**
+   * Fetch the online catalog. The backend answers `{ themes: [...], total }`
+   * (Go `RefreshCatalog` handler) — this used to read `.items`, which matched
+   * nothing and always rendered "no themes available". Errors propagate so the
+   * page can distinguish "fetch failed, retry" from a genuinely empty catalog.
+   */
+  async refreshCatalog(force = false): Promise<ThemeCatalogEntry[]> {
+    const githubProxy = await this.githubProxy()
+    const res = await this.client.post<Record<string, unknown>>(
+      `${apiPrefix}/theme-packs/catalog/refresh`,
+      { ...(githubProxy ? { github_proxy: githubProxy } : {}), force },
+    )
+    const themes = Array.isArray(res.data?.themes) ? res.data!.themes : []
+    return themes.map((r: unknown) => parseCatalogEntry(r as Record<string, unknown>))
+  }
+
+  /**
+   * Install a catalog entry by its URL. The backend downloads and SHA-256
+   * verifies the pack itself — the old `{ theme_id }` body was rejected with
+   * 400 "missing theme pack URL" every time.
+   */
+  async installFromCatalog(entry: ThemeCatalogEntry): Promise<void> {
+    const githubProxy = await this.githubProxy()
+    await this.client.post(`${apiPrefix}/theme-packs/catalog/install`, {
+      url: entry.url,
+      ...(entry.sha256 ? { sha256: entry.sha256 } : {}),
+      ...(githubProxy ? { github_proxy: githubProxy } : {}),
+    })
   }
 }

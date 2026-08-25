@@ -8,6 +8,8 @@ import {
 } from '../../../native/system-appearance.js'
 import { createMemoryStorage } from '../../../core/storage/index.js'
 import { changeAppTheme, DEFAULT_RESOLVED_THEME } from '../theme-model.js'
+import { PACK_OVERRIDABLE_BASELINE } from '../theme-pack-mapping.js'
+import { setActiveThemePack } from '../theme-pack-model.js'
 import { ThemeProvider } from '../ThemeProvider.js'
 
 /**
@@ -20,6 +22,10 @@ import { ThemeProvider } from '../ThemeProvider.js'
  * under `'system'` calls `setTheme('system')` with an unchanged value, React
  * bails out, and the class never updates — the model would be perfectly correct
  * and the UI would still never follow the system.
+ *
+ * Theme packs add the same class of trap one level up: the pack arrives from a
+ * server round-trip *after* mount, so the provider must subscribe to it — a
+ * render-time read would freeze the first (pack-less) frame forever.
  */
 function themeClass(container: { children?: unknown }): string {
   const root = (container as unknown as { firstElementChild?: { className?: string } })
@@ -27,8 +33,16 @@ function themeClass(container: { children?: unknown }): string {
   return root?.className ?? ''
 }
 
+function rootStyle(container: { children?: unknown }): Record<string, string> {
+  const root = (container as unknown as {
+    firstElementChild?: { style?: Record<string, string> }
+  }).firstElementChild
+  return root?.style ?? {}
+}
+
 afterEach(() => {
   setSystemAppearanceForTests(null)
+  setActiveThemePack(null)
 })
 
 test('renders the host theme when the choice is system', async () => {
@@ -71,4 +85,102 @@ test('falls back when the host reports no theme at all', async () => {
   const { container } = render(<ThemeProvider />)
 
   expect(themeClass(container)).toContain(`theme-${DEFAULT_RESOLVED_THEME}`)
+})
+
+/* ── Theme-pack delivery ────────────────────────────────────────────────────── */
+
+const SAKURA = {
+  themeId: 'songloft.sakura',
+  data: {
+    id: 'songloft.sakura',
+    name: 'Sakura',
+    author: 'Songloft',
+    description: '',
+    version: '1.0.0',
+    schemaVersion: 1,
+    light: { seedColor: '#D81B60', backgroundColor: '#FFF0F5', surfaceColor: '#FFFFFF' },
+    dark: { seedColor: '#F48FB1', backgroundColor: '#1A0A10', surfaceColor: '#261418' },
+    cardRadius: 14,
+    controlRadius: 16,
+    navigationRadius: 14,
+  },
+}
+
+test('without a pack the root inline tokens equal the Muse baseline', async () => {
+  setSystemAppearanceForTests({ theme: 'light', locale: null })
+  await changeAppTheme('system', createMemoryStorage())
+
+  const { container } = render(<ThemeProvider />)
+
+  // The runtime merges style objects and never removes keys, so the provider
+  // cannot drop the attribute on "no pack" — it writes the baseline instead.
+  // Inline equals the class declarations, so the rendered look is unchanged.
+  expect(rootStyle(container)).toEqual(PACK_OVERRIDABLE_BASELINE.light)
+})
+
+test('an active pack lands as inline custom properties on the root', async () => {
+  setSystemAppearanceForTests({ theme: 'light', locale: null })
+  await changeAppTheme('system', createMemoryStorage())
+  setActiveThemePack(SAKURA)
+
+  const { container } = render(<ThemeProvider />)
+
+  const style = rootStyle(container)
+  expect(themeClass(container)).toContain('theme-light')
+  expect(style['--primary']).toBe('#D81B60')
+  expect(style['--canvas']).toBe('#FFF0F5')
+  expect(style['--paper']).toBe('#FFFFFF')
+  expect(style['--radius-nav']).toBe('14px')
+})
+
+test('a pack arriving after mount recolors the tree in place', async () => {
+  // The real sequence: mount (still fetching) → server answers → subscribe
+  // fires. A provider that only read the model at render time would stay
+  // pack-less forever.
+  setSystemAppearanceForTests({ theme: 'light', locale: null })
+  await changeAppTheme('system', createMemoryStorage())
+
+  const { container } = render(<ThemeProvider />)
+  expect(rootStyle(container)).toEqual(PACK_OVERRIDABLE_BASELINE.light)
+
+  await act(async () => {
+    setActiveThemePack(SAKURA)
+  })
+
+  expect(rootStyle(container)['--primary']).toBe('#D81B60')
+})
+
+test('the pack follows the resolved theme when it flips', async () => {
+  setSystemAppearanceForTests({ theme: 'light', locale: null })
+  await changeAppTheme('system', createMemoryStorage())
+  setActiveThemePack(SAKURA)
+
+  const { container } = render(<ThemeProvider />)
+  expect(rootStyle(container)['--primary']).toBe('#D81B60')
+
+  await act(async () => {
+    applySystemAppearance({ theme: 'dark', locale: null })
+  })
+
+  expect(themeClass(container)).toContain('theme-dark')
+  expect(rootStyle(container)['--primary']).toBe('#F48FB1')
+  expect(rootStyle(container)['--canvas']).toBe('#1A0A10')
+})
+
+test('clearing the pack writes the baseline back over the pack colours', async () => {
+  setSystemAppearanceForTests({ theme: 'light', locale: null })
+  await changeAppTheme('system', createMemoryStorage())
+  setActiveThemePack(SAKURA)
+
+  const { container } = render(<ThemeProvider />)
+  expect(rootStyle(container)['--primary']).toBe('#D81B60')
+
+  await act(async () => {
+    setActiveThemePack(null)
+  })
+
+  // Regression shape: the runtime does NOT remove style-object keys, so a
+  // dropped attribute would leave the sakura pink on screen forever.
+  expect(rootStyle(container)).toEqual(PACK_OVERRIDABLE_BASELINE.light)
+  expect(rootStyle(container)['--primary']).toBe('#111111')
 })

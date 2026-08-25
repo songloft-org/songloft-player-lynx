@@ -59,6 +59,35 @@
   color: var(--primary-content);
 }
 
+/* Catalog rows already installed at the same version: a label, not a button —
+   there is nothing to do until the pack publishes a newer version. */
+.theme-packs__installed-label {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+  padding: var(--space-1) var(--space-2);
+}
+
+/* Fetch-failure block: reason + retry. A failed catalog load is almost always
+   network/proxy (GitHub raw unreachable), so retry is the primary action. */
+.theme-packs__catalog-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.theme-packs__retry {
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.theme-packs__retry-text {
+  font-size: var(--font-xs);
+  color: var(--primary-content);
+}
+
 .theme-packs__item-delete {
   padding: var(--space-1) var(--space-2);
 }

@@ -22,6 +22,7 @@ import { applySavedLanguage } from './i18n/index.js'
 import { applyHostDeployMode } from './core/config/app-config.js'
 import { initSystemAppearance } from './native/system-appearance.js'
 import { applySavedTheme } from './shared/theme/theme-model.js'
+import { applyActiveThemePack, setActiveThemePack } from './shared/theme/theme-pack-model.js'
 import { router } from './router.js'
 
 // Start client logging before the first render so startup/render issues are
@@ -45,8 +46,17 @@ root.render(<App />)
 
 // Re-run the route guards whenever auth status changes (TanStack Router has no
 // GoRouter-style `refreshListenable`; `invalidate()` re-evaluates `beforeLoad`).
+// The active theme pack rides the same transitions: it is per-server state, so
+// a fresh login refetches it and a logout drops back to the Muse baseline —
+// otherwise the login screen would keep wearing the logged-out account's pack.
 useAuthStore.subscribe((state, prev) => {
-  if (state.status !== prev.status) void router.invalidate()
+  if (state.status === prev.status) return
+  void router.invalidate()
+  if (state.status === 'authenticated') {
+    void applyActiveThemePack()
+  } else if (state.status === 'unauthenticated') {
+    setActiveThemePack(null)
+  }
 })
 
 // One-time startup: apply the persisted UI language + theme, hydrate persisted
@@ -66,6 +76,11 @@ void (async () => {
   const auth = useAuthStore.getState()
   await auth.hydrate()
   await auth.checkAuth()
+  // Only once auth resolved: the pack lives behind the API's auth, and a
+  // tokenless GET would 401 (the Flutter provider guards the same way).
+  if (useAuthStore.getState().status === 'authenticated') {
+    await applyActiveThemePack()
+  }
 })()
 
 if (import.meta.webpackHot) {

@@ -5,7 +5,12 @@ import { ThemePacksApi } from './theme-packs-api.js'
 
 export { CacheApi } from './cache-api.js'
 export { SettingsApi } from './settings-api.js'
-export { ThemePacksApi } from './theme-packs-api.js'
+export {
+  ThemePacksApi,
+  type ThemeCatalogEntry,
+  type ThemePackData,
+  type ThemePackItem,
+} from './theme-packs-api.js'
 
 export function getSettingsApi(): SettingsApi {
   return new SettingsApi(getSharedApiBundle().client)
