@@ -37,10 +37,10 @@ import { DlnaPage } from './features/player/pages/DlnaPage.js'
  * Root view: the launch splash while auth is unresolved or a guard redirect is
  * in flight, the real tree otherwise (`isAuthTransitionPending`). Holding the
  * splash during those gaps is what stops the Web-refresh "login page flashes
- * and jumps to home" bug at the render layer: memory history boots at `/login`
- * (it cannot read the browser URL), the route guard lets `unknown` through by
- * design, and `router.invalidate()` lands a redirect only through a promise
- * chain — without this gate both gaps paint the login card.
+ * and jumps to home" bug at the render layer: the route guard lets `unknown`
+ * through by design, and `router.invalidate()` lands a redirect only through a
+ * promise chain — without this gate both gaps paint the soon-to-be-abandoned
+ * route.
  *
  * The route guard (`beforeLoad` below) stays the single source of *where* to
  * go; this view only decides *whether to show the trip at all*.
@@ -431,7 +431,14 @@ const routeTree = rootRoute.addChildren([
   ]),
 ])
 
-export function createAppRouter(initialEntries: string[] = ['/login']) {
+export function createAppRouter(initialEntries: string[] = ['/']) {
+  // Boot at `/` rather than `/login`: on an authenticated refresh the login
+  // subtree then never enters the element tree, so the Web main thread's
+  // insert-new-before-remove-old element swap has no login nodes left to
+  // flash for a frame or two while the `/login → /` redirect lands. An
+  // unauthenticated boot still ends up on `/login` — the guard redirects
+  // once `checkAuth()` settles. Memory history cannot read the browser URL,
+  // so this default is the only place the launch route is chosen.
   // The Lynx background realm has no `self`/`window`. router-core's client branch
   // writes `self.__TSR_ROUTER__ = this` during construction (router-core@1.171
   // router.ts:1152) whenever its *module-level* `isServer` constant is `false` —

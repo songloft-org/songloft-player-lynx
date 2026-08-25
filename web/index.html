@@ -190,6 +190,55 @@
             obs.observe(sr, { childList: true, subtree: true, characterData: true })
           } catch (e) { /* fall back to the poll below */ }
           check()
+          /*
+            Flash timeline: WHICH screen painted WHEN (login / splash / home /
+            other), so a reported "the login page flashes on refresh" is a
+            matter of reading the log instead of eyeballing a 200ms frame.
+            Samples on mutation + a 100ms poll for 8s, then folds the state
+            transitions into one `boot flash …` line on the same mainlog
+            channel (Settings → Diagnostics → export, or the IDB value
+            directly). Deliberately permanent: this file's whole reason is
+            post-hoc diagnosis of paint gaps.
+          */
+          var states = []
+          var lastState = null
+          var recObs = null
+          function stateOf() {
+            var text = sr.textContent || ''
+            if (text.indexOf('登录以继续') !== -1) return 'login'
+            if (sr.querySelector('[data-testid="splash"]')) return 'splash'
+            if (sr.querySelector('[data-testid="home-greeting"]')) return 'home'
+            return text.trim() ? 'other' : 'empty'
+          }
+          function sample() {
+            var s = stateOf()
+            if (s !== lastState) {
+              lastState = s
+              var ids = []
+              var all = sr.querySelectorAll('[data-testid]')
+              for (var i2 = 0; i2 < all.length && ids.length < 6; i2++) ids.push(all[i2].getAttribute('data-testid'))
+              var line = s + '@' + Math.round(performance.now() - started) + ' [' + ids.join(',') + ']'
+              states.push(line)
+              // Log each transition immediately (mutation-driven, so it does
+              // not depend on the summary timer chain completing — background
+              // tabs throttle setTimeout hard).
+              push('I', 'boot paint ' + line)
+            }
+          }
+          try {
+            recObs = new MutationObserver(sample)
+            recObs.observe(sr, { childList: true, subtree: true, characterData: true })
+          } catch (e) { /* poll below is the backstop */ }
+          var samples = 0
+          ;(function recPoll() {
+            sample()
+            if (++samples > 80) {
+              if (recObs) recObs.disconnect()
+              push('I', 'boot flash ' + states.join(' '))
+              return
+            }
+            setTimeout(recPoll, 100)
+          })()
           // MutationObserver misses text committed inside nested shadow roots,
           // so keep a slow poll as the backstop until content is seen.
           ;(function poll() {
