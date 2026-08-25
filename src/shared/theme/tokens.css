@@ -28,10 +28,10 @@
   --space-6: 32px;
 
   /* radii — Muse hierarchy: small 8 / medium 12 / large 20 / xl 28 / pill 999.
-     --radius-nav is the bottom-nav tab pill: separate from --radius-md because a
-     theme pack's `navigationRadius` maps 1:1 onto it, and packs set control and
-     navigation radii independently (e.g. sakura ships 16/14). Baseline equals
-     --radius-md's 12px so the no-pack look is unchanged. */
+     --radius-nav is legacy: the bottom nav is a fixed capsule (always
+     --radius-pill, see ShellLayout.css) since the iOS-26 restyle, so nothing
+     consumes this token anymore. Packs' `navigationRadius` still maps onto it
+     (see theme-pack-mapping.ts) purely for schema compatibility. */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 20px;
@@ -39,7 +39,11 @@
   --radius-pill: 999px;
   --radius-nav: 12px;
 
-  /* type scale (px) */
+  /* type scale (px) — --font-2xs is the bottom-nav tab label: Apple's tab
+     bars use 10pt labels, and the smaller size is also what lets a 4-char
+     CJK plugin name fit the fixed-width selection capsule (see
+     ShellLayout.css). */
+  --font-2xs: 10px;
   --font-xs: 12px;
   --font-sm: 14px;
   --font-md: 16px;
@@ -74,11 +78,16 @@
 
   /* actions — Muse has ONE accent channel; dark inverts it to white.
      --primary is the accent for fills/borders/icons (dark surface under it);
-     --accent is the same shade for accent TEXT on dark surfaces. */
+     --accent is the same shade for accent TEXT on dark surfaces.
+     --primary-faint is the selected-nav-pill wash: the accent at low alpha over
+     paper, decorative only (no text sits on it alone — the glyph/label carry
+     their own --accent tint). Brighter than light's 8% because a white wash on
+     dark surfaces needs more to stay visible. */
   --primary: #ffffff;
   --primary-2: #ffffff;
   --primary-content: #0f0f11;
   --accent: #ffffff;
+  --primary-faint: rgba(255, 255, 255, 0.12);
 
   /* feedback — danger is a single red for TEXT only (Muse §3.1). On dark
      surfaces Muse's #d64545 misses AA 4.5 (4.37 on canvas), so the dark theme
@@ -122,11 +131,15 @@
      (2.49). Deepened to the AA-passing mid-grey. */
   --content-muted: #7b7b88;
 
-  /* actions — ink-black accent (#111, near-black not pure). One channel. */
+  /* actions — ink-black accent (#111, near-black not pure). One channel.
+     --primary-faint is the selected-nav-pill wash — see the dark block's note.
+     (No `token:` colons in comments: the mapping gate's declaration regex
+     would swallow the next real declaration.) */
   --primary: #111111;
   --primary-2: #111111;
   --primary-content: #ffffff;
   --accent: #111111;
+  --primary-faint: rgba(17, 17, 17, 0.08);
 
   /* feedback — danger red, TEXT only */
   --danger: #d64545;

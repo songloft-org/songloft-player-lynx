@@ -228,3 +228,10 @@
 .library__list-item {
   width: 100%;
 }
+
+/* VirtualList (<list>) footer spacer — the floating-nav capsule inset. The
+   native list's own CSS padding is unreliable, so the inset rides the footer
+   slot instead. Unconditional: a blank tail in wide layouts costs nothing. */
+.category-songs__nav-inset {
+  height: var(--nav-inset, 80px);
+}

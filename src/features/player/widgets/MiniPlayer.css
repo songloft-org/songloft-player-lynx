@@ -1,10 +1,17 @@
 /*
- * Mini-player — Muse floating rounded bar.
+ * Mini-player — the floating capsule above the nav.
  *
- * In-flow inside the shell content column (sits above the bottom bar on narrow,
- * at the column foot on wide); side + bottom margins give it the floating gap,
- * --radius-lg + --shadow-md make it the one floating element that earns a shadow
- * (Muse §3.5). LUNA tokens only.
+ * Narrow: a fixed overlay stacked above the bottom-bar capsule with a gap —
+ * the iOS-26 two-layer look (player capsule over nav capsule, content
+ * scrolling under both). Own z-index (91) per the Lynx fixed rule: fixed
+ * elements re-stack at the page root by their own value, so it must sit above
+ * the nav capsule (90) and below the app's overlay level (100). The fixed
+ * positioning brings its own insets, so the in-flow margins are zeroed.
+ *
+ * Wide: in-flow at the foot of the content column (iPadOS-style — the control
+ * bar lives in the content area, never spanning the sidebar); side + bottom
+ * margins give it the floating gap. --radius-pill + --shadow-md make it the
+ * one floating element that earns a shadow (Muse §3.5). LUNA tokens only.
  */
 
 .mini-player {
@@ -13,9 +20,21 @@
   margin: 0 var(--space-2) var(--space-2);
   background-color: var(--paper);
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-pill);
   box-shadow: var(--shadow-md);
   overflow: hidden;
+}
+
+/* Narrow: fixed floating layer — 80px = nav capsule (64) + bottom offset (8)
+   + gap between the two capsules (8). Translucent like the nav capsule. */
+.shell--narrow .mini-player {
+  position: fixed;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: calc(80px + env(safe-area-inset-bottom));
+  margin: 0;
+  background-color: var(--paper-clear);
+  z-index: 91;
 }
 
 /* Wide: a touch more side gap and clear the bottom safe-area inset via margin
@@ -39,12 +58,15 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: var(--space-2) var(--space-3);
+  /* Compact single-line height (the iOS-26 attached-player look): 36px cover
+     + 6px vertical padding ≈ 48px of row — no literal token for 6, it is the
+     only off-scale spacing here. */
+  padding: 6px var(--space-3);
 }
 
 .mini-player__cover {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-sm);
   background-color: var(--neutral-faint);
 }
@@ -77,8 +99,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-pill);
   background-color: var(--primary);
 }

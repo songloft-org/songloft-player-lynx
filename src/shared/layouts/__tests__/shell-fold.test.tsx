@@ -25,6 +25,13 @@ vi.mock('../../../features/player/widgets/MiniPlayer.js', () => ({
   MiniPlayer: () => null,
 }))
 
+// The shell reads the store for the `shell--with-mini` inset tier; the real
+// store pulls native audio leaves, so serve the selector a song-less state.
+vi.mock('../../../features/player/store/index.js', () => ({
+  usePlayerStore: (selector: (s: { currentSong: null }) => unknown) =>
+    selector({ currentSong: null }),
+}))
+
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )

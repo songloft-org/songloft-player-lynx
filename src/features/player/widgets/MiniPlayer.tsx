@@ -41,7 +41,7 @@ export function MiniPlayer() {
           className='mini-player__play'
           catchtap={() => usePlayerStore.getState().togglePlay()}
         >
-          <Icon name={isPlaying ? 'pause' : 'play'} size={22} color={ICON_COLORS.primaryContent} />
+          <Icon name={isPlaying ? 'pause' : 'play'} size={18} color={ICON_COLORS.primaryContent} />
         </view>
       </view>
     </view>

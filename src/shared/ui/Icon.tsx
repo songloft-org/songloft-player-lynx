@@ -1,4 +1,6 @@
 import { getAppTheme, resolveTheme, type ResolvedTheme } from '../theme/theme-model.js'
+import { getActiveThemePack } from '../theme/theme-pack-model.js'
+import { isHexColor } from '../theme/theme-pack-mapping.js'
 import { buildSvg, type IconName } from './icons.js'
 
 /**
@@ -55,6 +57,24 @@ export const ICON_COLORS: (typeof PALETTES)['dark'] = new Proxy(
     },
   },
 )
+
+/**
+ * The tint color for ACTIVE nav glyphs — the accent the nav's tint style needs.
+ *
+ * A pack's seedColor arrives as inline CSS custom properties (`--accent` etc.),
+ * which `<svg content>` markup cannot read (it sits outside the cascade), so
+ * the hex must be resolved at render time instead. Falls back to the Muse ink
+ * accent — exactly what `--accent` holds without a pack.
+ *
+ * Read per call like the ICON_COLORS proxy above: ThemeProvider's pack
+ * subscription re-renders the tree top-to-bottom on activation, so every
+ * caller picks up a pack switch without subscribing itself.
+ */
+export function activeAccentIconColor(): string {
+  const theme = resolveTheme(getAppTheme())
+  const seed = getActiveThemePack()?.data?.[theme]?.seedColor
+  return isHexColor(seed) ? seed : PALETTES[theme].primary
+}
 
 export interface IconProps {
   name: IconName

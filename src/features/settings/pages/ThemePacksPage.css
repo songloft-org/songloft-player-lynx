@@ -124,3 +124,11 @@
 .theme-packs__catalog-list {
   flex: 1;
 }
+
+/* Floating-nav capsule inset (see ShellLayout.css): the fixed bottom bar lets
+   content scroll under it, so this tail reserves the capsule stack
+   (64 bar + 8 offset + 8 gap). Narrow only — the wide rail is in-flow. */
+.shell--narrow .theme-packs__list,
+.shell--narrow .theme-packs__catalog-list {
+  padding-bottom: var(--nav-inset, 80px);
+}

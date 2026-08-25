@@ -11,6 +11,7 @@ export const en = {
     library: 'Library',
     settings: 'Settings',
     more: 'More',
+    plugins: 'Plugins',
     pressBackAgainToExit: 'Press back again to exit',
   },
   common: {
@@ -826,6 +827,7 @@ export const zh: TranslationTree = {
     library: '曲库',
     settings: '设置',
     more: '更多',
+    plugins: '插件',
     pressBackAgainToExit: '再按一次返回退出应用',
   },
   common: {

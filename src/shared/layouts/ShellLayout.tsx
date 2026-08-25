@@ -5,6 +5,11 @@ import { useTranslation } from 'react-i18next'
 // Import MiniPlayer directly (not the player feature barrel) so the shell graph
 // does not eagerly pull in the full player + its lynx-ui gesture leaves.
 import { MiniPlayer } from '../../features/player/widgets/MiniPlayer.js'
+// The store behind MiniPlayer — already in the shell graph via the widget
+// itself, so this import adds no new leaves. Read here only for the
+// `shell--with-mini` class (the pages' `--nav-inset` tier), never for render
+// output.
+import { usePlayerStore } from '../../features/player/store/index.js'
 import { PluginTabIcon, useShellNavTabs } from '../../features/jsplugin/index.js'
 import { getLastLibrarySearch } from '../../features/library/index.js'
 import {
@@ -16,7 +21,7 @@ import {
 import { MoreTabsSheet } from '../nav/MoreTabsSheet.js'
 import { activeNavPath, setLastShellLocation, setNavPaths, setShellWidth, showsMiniPlayer } from '../nav/shell-navigation.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
-import { Icon, ICON_COLORS } from '../ui/Icon.js'
+import { Icon, activeAccentIconColor, ICON_COLORS } from '../ui/Icon.js'
 import './ShellLayout.css'
 
 /**
@@ -35,6 +40,10 @@ export function ShellLayout() {
   const { width, breakpoint, isWide, onLayoutChange } = useBreakpoint(0, '.shell')
   const pathname = useRouterState({ select: s => s.location.pathname })
   const shellTabs = useShellNavTabs()
+  // Song presence for the mini-player inset tier — same condition MiniPlayer
+  // itself renders under (`showsMiniPlayer(pathname)` + a loaded song), kept
+  // in sync here so the class and the widget never disagree.
+  const hasSong = usePlayerStore((s) => s.currentSong != null)
   // Until the config query lands, the built-ins render (Flutter's
   // `TabConfig.defaultConfig()` fallback): all three, no plugins.
   const destinations = buildNavDestinations(
@@ -42,6 +51,10 @@ export function ShellLayout() {
     shellTabs.data?.pluginTabs ?? [],
   )
   const [showMoreTabs, setShowMoreTabs] = useState(false)
+  // The `shell--with-mini` class: while the floating mini-player is up, the
+  // pages' `--nav-inset` grows to clear it (see ShellLayout.css) — without
+  // this, list tails scroll to a stop half-hidden behind the player.
+  const withMini = showsMiniPlayer(pathname) && hasSong
 
   // The live destination list: built-ins plus one per enabled plugin tab. Two
   // consumers — the lit-tab calculation below, and the back key, which needs to
@@ -78,25 +91,62 @@ export function ShellLayout() {
       bindtap={() => go(dest)}
       data-testid={`nav-item-${dest.plugin?.entryPath ?? (dest.path === '/' ? 'home' : dest.path.slice(1))}`}
     >
-      <view className='nav-item__icon'>
-        {dest.plugin
-          ? <PluginTabIcon tab={dest.plugin} active={active} />
-          : (
-            <Icon
-              name={dest.icon}
-              size={24}
-              color={active ? ICON_COLORS.primaryContent : ICON_COLORS.contentMuted}
-            />
-          )}
+      {/* The tint pill: glyph + label wrapped together, so the active item's
+          faint accent capsule (`--primary-faint`) covers both — the iOS-26
+          selection style shared by the bottom bar and the wide rail. */}
+      <view className='nav-item__pill'>
+        <view className='nav-item__icon'>
+          {dest.plugin
+            ? <PluginTabIcon tab={dest.plugin} active={active} />
+            : (
+              <Icon
+                name={dest.icon}
+                size={24}
+                color={active ? activeAccentIconColor() : ICON_COLORS.contentMuted}
+              />
+            )}
+        </view>
+        <text className='nav-item__label'>
+          {dest.plugin ? dest.plugin.name : t(dest.labelKey)}
+        </text>
       </view>
-      <text className='nav-item__label'>
-        {dest.plugin ? dest.plugin.name : t(dest.labelKey)}
-      </text>
     </view>
   )
 
-  /** Wide rail: every destination, in a scrollable column (Flutter desktop rail). */
-  const renderRailItems = () => destinations.map(dest => renderTab(dest, litPath === dest.path))
+  /**
+   * Wide rail: every destination in iPadOS-style sections — main items first,
+   * plugin tabs under a "插件" header (omitted when there are none), Settings
+   * anchored at the foot group. Same destination order as the narrow bar
+   * (home → library → plugins → settings), only visually grouped.
+   */
+  const renderRailItems = () => {
+    const main = destinations.filter(d => !d.plugin && d.path !== '/settings')
+    const plugins = destinations.filter(d => d.plugin)
+    const settings = destinations.filter(d => d.path === '/settings')
+
+    const items = main.map(dest => renderTab(dest, litPath === dest.path))
+    if (plugins.length > 0) {
+      items.push(
+        <text
+          key='rail-plugins-header'
+          className='shell__rail-group-header'
+          data-testid='rail-plugins-header'
+        >
+          {t('nav.plugins')}
+        </text>,
+      )
+      items.push(...plugins.map(dest => renderTab(dest, litPath === dest.path)))
+    }
+    if (settings.length > 0) {
+      // The gap separates the plugin group from the foot group — with no
+      // plugins, Settings just follows the main items directly.
+      if (plugins.length > 0) {
+        items.push(<view key='rail-settings-gap' className='shell__rail-gap' data-testid='rail-settings-gap' />)
+      }
+      items.push(...settings.map(dest => renderTab(dest, litPath === dest.path)))
+    }
+    return items
+  }
 
   /**
    * Narrow bottom bar: the first {@link NAV_REAL_SLOTS} destinations, plus a
@@ -117,14 +167,16 @@ export function ShellLayout() {
         bindtap={() => setShowMoreTabs(true)}
         data-testid='nav-item-more'
       >
-        <view className='nav-item__icon'>
-          <Icon
-            name='more'
-            size={24}
-            color={moreActive ? ICON_COLORS.primaryContent : ICON_COLORS.contentMuted}
-          />
+        <view className='nav-item__pill'>
+          <view className='nav-item__icon'>
+            <Icon
+              name='more'
+              size={24}
+              color={moreActive ? activeAccentIconColor() : ICON_COLORS.contentMuted}
+            />
+          </view>
+          <text className='nav-item__label'>{t('nav.more')}</text>
         </view>
-        <text className='nav-item__label'>{t('nav.more')}</text>
       </view>,
     )
     return items
@@ -132,7 +184,9 @@ export function ShellLayout() {
 
   return (
     <view
-      className={isWide ? 'shell shell--wide' : 'shell shell--narrow'}
+      className={isWide
+        ? 'shell shell--wide'
+        : `shell shell--narrow${withMini ? ' shell--with-mini' : ''}`}
       data-testid='shell-root'
       bindlayoutchange={onLayoutChange}
       data-breakpoint={breakpoint}

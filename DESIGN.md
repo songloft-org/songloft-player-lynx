@@ -37,6 +37,7 @@
 | `--primary-2` | `#111111` | `#ffffff` | 主色变体（与 primary 同值，Muse 单色） |
 | `--primary-content` | `#ffffff` | `#0f0f11` | 主色上的文字（MDC 按钮文本） |
 | `--accent` | `#111111` | `#ffffff` | 链接/强调文字（与 primary 同值） |
+| `--primary-faint` | `rgba(17,17,17,.08)` | `rgba(255,255,255,.12)` | 导航选中胶囊的淡色底（装饰性，不承载文字）；主题包由 seedColor 派生 light 10% / dark 14% |
 | `--danger` | `#d64545` | `#ff6b6b` | 危险色（仅文字，不做彩色背景块） |
 | `--danger-2` | `#cf444f` | _deprecated_ | 仅用于历史兼容 |
 
@@ -101,6 +102,7 @@
 
 | Token | 值 | 用途 |
 |---|---|---|
+| `--font-2xs` | 10px | 底部导航标签（对标 iOS tab 栏 10pt；也是 4 字中文名在固定宽胶囊内的拟合需要） |
 | `--font-xs` | 11px | 辅助信息 |
 | `--font-sm` | 13px | 副标题、标签 |
 | `--font-md` | 15px | 正文、行 |
@@ -134,6 +136,14 @@
 - 下划线风格（非药丸填充）。
 - 选中态：`--primary` 下划线 + `--primary` 文字。
 - 示例：Library 页（歌曲/艺术家/专辑/播放列表）。
+
+### 导航栏（底部 Tab / 宽屏侧栏，批58 起 iOS-26 风格）
+- **胶囊 = 导航**：窄屏底栏是一个 fixed 悬浮长条胶囊（左右留边不贴屏、`--paper-clear` 玻璃感 + `--line` hairline + `--shadow-md`），页面内容从胶囊下方穿过；mini-player 是同语言的上层悬浮胶囊（两者间 8px 间隙）。
+- **选中态**：固定尺寸横向胶囊（宽 = tab 槽、高 52px，所有 tab 同规格、不随文字长度变化）+ `--primary-faint` 淡色底，图标与文字同着 tint 色（主题包 seedColor）。未选中项无形状，直接坐在胶囊玻璃面上。
+- **标签**：底栏用 `--font-2xs`（10px）单行；4 字中文名必须完整显示（水平 padding ≤8px），省略号仅兑底极端长名。宽屏 rail 用 `--font-sm` 横排。
+- **宽屏侧栏**：iPadOS 式分组（主导航 →「插件」组头 → 插件 tabs → 设置），行内胶囊选中态与窄屏同语言。
+- 阴影规则例外：导航胶囊与 mini-player 是常驻浮层，与弹出层同享阴影资格。
+
 
 ### Chip（筛选标签）
 - Ghost 风格：透明 + `--line` hairline 描边 + `--radius-pill`。

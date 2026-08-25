@@ -183,7 +183,7 @@ export function CategorySongsPage() {
                         <text className='category-songs__footer-text'>{t('common.loadingMore')}</text>
                       </view>
                     )
-                    : undefined}
+                    : <view className='category-songs__nav-inset' />}
                 />
               )}
       </view>

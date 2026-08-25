@@ -48,3 +48,12 @@
 .plugin-webview__state-text--error {
   color: var(--danger);
 }
+
+/* Floating-nav capsule inset (see ShellLayout.css): the fixed bottom bar lets
+   content scroll under it, so this tail reserves the capsule stack
+   (64 bar + 8 offset + 8 gap). Narrow only — the wide rail is in-flow. */
+/* Margin rather than padding: the frame is the flex:1 webview host, so the
+   inset must shorten its box rather than pad inside it. */
+.shell--narrow .plugin-webview__frame {
+  margin-bottom: var(--nav-inset, 80px);
+}

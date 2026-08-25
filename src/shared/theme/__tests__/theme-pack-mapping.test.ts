@@ -87,6 +87,8 @@ describe('themePackToStyleVars', () => {
     expect(vars['--primary-2']).toBe('#D81B60')
     expect(vars['--accent']).toBe('#D81B60')
     expect(vars['--primary-content']).toBe('#ffffff')
+    // The selected-nav-pill wash derives from the seed: 10% in light mode.
+    expect(vars['--primary-faint']).toBe('rgba(216, 27, 96, 0.1)')
     expect(vars['--canvas']).toBe('#FFF0F5')
     expect(vars['--paper']).toBe('#FFFFFF')
     expect(vars['--paper-clear']).toBe('rgba(255, 255, 255, 0.9)')
@@ -99,6 +101,9 @@ describe('themePackToStyleVars', () => {
     const vars = themePackToStyleVars(SAKURA, 'dark')
 
     expect(vars['--primary']).toBe('#F48FB1')
+    // The wash brightens to 14% in dark mode — a low-alpha tint over dark
+    // surfaces needs more to stay visible (mirrors the baseline 8%/12% split).
+    expect(vars['--primary-faint']).toBe('rgba(244, 143, 177, 0.14)')
     expect(vars['--canvas']).toBe('#1A0A10')
     expect(vars['--paper']).toBe('#261418')
     expect(vars['--paper-clear']).toBe('rgba(38, 20, 24, 0.9)')
@@ -123,8 +128,19 @@ describe('themePackToStyleVars', () => {
     // the token still needs a value (style diffs never remove keys).
     expect(vars['--canvas']).toBe(PACK_OVERRIDABLE_BASELINE.light['--canvas'])
     expect(vars['--paper']).toBe(PACK_OVERRIDABLE_BASELINE.light['--paper'])
+    // The wash rides with the seed: valid seed keeps the derived wash even
+    // when other colour fields are invalid.
+    expect(vars['--primary-faint']).toBe('rgba(216, 27, 96, 0.1)')
     // Radii survive a partially-invalid colors block.
     expect(vars['--radius-lg']).toBe('14px')
+  })
+
+  test('an invalid seed drops the wash to the baseline', () => {
+    const vars = themePackToStyleVars({
+      ...SAKURA,
+      light: { seedColor: 'not-a-color' },
+    }, 'light')
+    expect(vars['--primary-faint']).toBe(PACK_OVERRIDABLE_BASELINE.light['--primary-faint'])
   })
 
   test('radii outside the backend 0-100 range fall back to the baseline', () => {

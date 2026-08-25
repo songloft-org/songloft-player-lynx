@@ -207,6 +207,19 @@ pnpm run build:web-embedded   # 产物给后端嵌入（songloft-player-build/we
 - 横向 `scroll-view` 内容行须 `width: max-content`，否则视觉不滚动
 - 带连字符的 JSX 属性无类型检查（`scroll-x` 等拼错不报错），须配产物 grep 测试
 
+### 底部导航胶囊（批58 起，iOS-26 悬浮样式）
+
+底部 Tab 栏是 **fixed 悬浮胶囊覆盖层**，不是贴底通栏。改导航/新增滚动页前先记这几条：
+
+- **层级**：胶囊 `z-index: 90`、mini-player `91`、浮层（sheet/popover）`100`、dialog `200/201`。fixed 层自带 z-index（本仓铁律，见「全局覆盖层」节）；新固定层不得插进 90–91 之间。
+- **内容穿过**：胶囊脱流后页面滚动到屏幕底，靠各页尾部 inset 避让——统一写 `padding/margin/height: var(--nav-inset, 80px)`（两档：无歌 80 / 有 mini-player 148，由 shell 根的 `shell--with-mini` 类切换，定义在 `ShellLayout.css`）。**新增可滚动页面必须消费该变量**，否则列表尾部永久被胶囊/mini player 挡住（已踩：首页/曲库滚不到底）。
+- **VirtualList（原生 `<list>`）页不用 CSS padding**——不可靠，走 `footer` 插尾 spacer（见 `PlaylistDetailPage` / `CategorySongsPage` 的 `__nav-inset` 类）。
+- **选中态**：固定尺寸横向胶囊（宽 = tab 槽 `calc(100% - 8px)`、高 52px，不随文字长短变化）+ `--primary-faint` 淡色填充 + 图标/文字 tint 色。**禁止**回到整块 `--primary` 填充 + 反白（批58 前的旧样式，已淘汰）。
+- **图标 tint**：SVG 不在 CSS 级联，选中色必须用 `activeAccentIconColor()`（运行时读主题包 seedColor，无包回退墨色），不能写 `ICON_COLORS.primaryContent`。
+- **底栏标签**：`--font-2xs`（10px）+ `nowrap` + ellipsis，水平 padding ≤8px——**4 字中文名（洛雪音源）必须在 360dp 最窄主流屏完整显示**，省略号只兑底 5+ 字 pathological 名。宽屏 rail 标签不受此限。
+- **宽屏侧栏**：iPadOS 分组（主导航 →「插件」组头+插件 tabs → 设置），行内胶囊选中态与窄屏同款 tint 语言。
+- **`--radius-nav` 已冻结**：导航形状固定 `--radius-pill`，包的 `navigationRadius` 映射保留但无消费点（schema 兼容）；`--primary-faint` 由 seedColor 派生（light 10% / dark 14%），派生逻辑在 `theme-pack-mapping.ts`，闸门测试锁 tokens.css 与 baseline 表同步。
+
 ### 系统跟随（深浅色/语言）
 
 - Lynx 无 `prefers-color-scheme`/`matchMedia`/locale API

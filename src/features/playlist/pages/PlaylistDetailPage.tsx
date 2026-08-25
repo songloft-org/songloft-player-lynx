@@ -479,7 +479,7 @@ export function PlaylistDetailPage() {
                         <text className='playlist-detail__footer-text'>{t('common.loadingMore')}</text>
                       </view>
                     )
-                    : undefined}
+                    : <view className='playlist-detail__nav-inset' />}
                 />
               )}
       </view>

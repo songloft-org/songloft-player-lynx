@@ -8,6 +8,18 @@
 
 .shell--narrow {
   flex-direction: column;
+  /* The bottom-inset scale the pages' scrolling tails consume (each page's
+     CSS reads `var(--nav-inset, 80px)` — see the feature styles). Two tiers:
+     the capsule alone, and capsule + mini-player stack. 148 = 80 (capsule +
+     gap) + ~57 (compact mini-player: 36px row content + 6px padding ×2 +
+     progress + border) + breathing room; the mini tier rides the
+     `shell--with-mini` class the shell toggles with song presence, so the
+     list tail never hides under the floating player. */
+  --nav-inset: 80px;
+}
+
+.shell--narrow.shell--with-mini {
+  --nav-inset: 148px;
 }
 
 .shell--wide {
@@ -42,11 +54,11 @@
   padding-top: 0;
 }
 
-/* Side rail (wide) */
+/* Side rail (wide) — iPadOS-style sidebar. */
 .shell__rail {
   display: flex;
   flex-direction: column;
-  width: 220px;
+  width: 256px;
   padding: var(--space-4);
   /* Add the top safe-area inset on top of the base padding (0 on desktop). */
   padding-top: calc(var(--space-4) + env(safe-area-inset-top));
@@ -82,53 +94,133 @@
   flex: 1;
 }
 
-/* Bottom bar (narrow) */
+/* Bottom bar (narrow) — the floating iOS-26-style capsule.
+   A fixed overlay, not a dock: page content scrolls under the translucent
+   pill (each scrolling page owns its bottom inset — see the pages' CSS).
+   The z-index lives on this fixed element itself: Lynx re-stacks fixed
+   elements at the page root by their OWN z-index (a value on an ancestor
+   orders nothing), and 90 keeps the capsule above content but below the app's
+   overlay level (100) and dialogs (200/201). The safe-area inset moves the
+   whole capsule up via `bottom` — the 64px height is pure content height. */
 .shell__bottombar {
+  position: fixed;
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
+  height: 64px;
   display: flex;
   flex-direction: row;
   justify-content: space-around;
   align-items: center;
-  background-color: var(--paper);
-  border-top: 1px solid var(--line);
-  /* Lynx default box-sizing is border-box: a plain `height: 64px` would let the
-     home-indicator `padding-bottom` eat INTO the 64px, shrinking the content
-     area until the 24px icon + label overlap. Reserve 64px of content ABOVE the
-     inset instead. */
-  height: calc(64px + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom);
+  background-color: var(--paper-clear);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+  z-index: 90;
 }
 
+/* Tab slot: a pure hit area. All visuals moved onto the pill inside — narrow
+   slots stretch to the capsule's full height, rail rows stack naturally. */
 .nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  align-self: stretch;
+}
+
+.shell--wide .nav-item {
+  flex: none;
+  align-self: auto;
+  margin-bottom: var(--space-2);
+}
+
+/* The tint pill: glyph + label wrapped together. Inactive items sit
+   transparent on the bar's glass (no shape of their own — Apple's reference
+   keeps every resting glyph bare); the ACTIVE item wears the fixed-size
+   horizontal capsule: width locked to the tab slot (same for every tab,
+   never sized by its label), vertically centred with a compact height.
+   Identical capsules across tabs — 首页's and 洛雪音源's look exactly alike. */
+.nav-item__pill {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-2) var(--space-3);
-  /* --radius-nav, not --radius-md: theme packs map their `navigationRadius`
-     onto this pill (see tokens.css / theme-pack-mapping.ts). */
-  border-radius: var(--radius-nav);
+  align-self: center;
+  max-width: 100%;
+  /* 8px sides (not --space-3's 12): a 4-char CJK label (48px at --font-xs)
+     + 16px padding must fit the ~67px slot of the narrowest mainstream
+     phone (360dp) — 12px sides would clamp it to three characters
+     (“洛雪音…”). Ellipsis stays as the safety net for pathological 5+ char
+     plugin names only. */
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
 }
 
-.shell--wide .nav-item {
+/* The selection: a slot-wide horizontal capsule — `align-self: stretch` is
+   vertical-only in a row flex, so the width comes from the slot's own
+   `flex: 1` distribution (uniform across tabs), while the pill itself keeps
+   its content height and centres. Result: same width whichever tab is
+   selected, regardless of its label length. */
+.nav-item--active .nav-item__pill {
+  align-self: center;
+  background-color: var(--primary-faint);
+  /* Fill the slot's width (minus a hair of margin so the capsule reads as a
+     capsule inside the bar, not a glued segment). */
+  width: calc(100% - var(--space-2));
+  /* Compact fixed height — a horizontal capsule, not a full-cell block:
+     glyph 24 + label 16 + 8 padding ≈ 48px on the 64px bar. */
+  height: 52px;
+}
+
+/* Plugin names are user strings (洛雪音源…) that can outrun the tab slot.
+   One line, clamped: a wrapped 4-char label breaks the capsule's height and
+   the two-line pill collides with the bar's top/bottom. */
+.nav-item__label {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+/* Bottom-bar labels run one step smaller than --font-xs: Apple's tab bars
+   use 10pt, and the fit math needs it — the fixed-width selection capsule
+   leaves ~46px of label room on a 390dp phone, where 4 CJK chars at 12px
+   (48px) clip to "智能…" but at 10px (40px) sit comfortably. The wide rail
+   keeps its own size below. */
+.shell__bottombar .nav-item__label {
+  font-size: var(--font-2xs);
+}
+
+.shell--wide .nav-item__pill {
   flex-direction: row;
   justify-content: flex-start;
-  margin-bottom: var(--space-2);
+  /* Stretch across the rail row — the iPadOS sidebar selection capsule runs
+     edge to edge of the rail's content width. */
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
 }
 
-.nav-item--active {
-  background-color: var(--primary);
-}
-
-/* Active nav: ink fill inverts the glyph + label to the accent-contrast
-   colour. The glyph SVG colour is injected at render time via ICON_COLORS, so
-   the shell passes ICON_COLORS.primaryContent when active — see ShellLayout.tsx.
-   This rule only handles the text, which can't be injected. */
+/* Active label carries the accent tint (CSS side; the glyph's tint is
+   injected at render time via activeAccentIconColor — see ShellLayout.tsx). */
 .nav-item--active .nav-item__label {
-  color: var(--primary-content);
+  color: var(--accent);
+}
+
+/* iPadOS-style rail section header (插件 group above the plugin tabs). */
+.shell__rail-group-header {
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+  margin: var(--space-4) var(--space-3) var(--space-2);
+}
+
+/* Breathing room between the plugin group and the Settings foot group. */
+.shell__rail-gap {
+  height: var(--space-4);
 }
 
 /* Icon wrapper: the glyph color is injected into the SVG markup at render time
-   (active -> --primary, inactive -> --content-muted); this box just centers it. */
+   (active -> accent tint, inactive -> --content-muted); this box just centers it. */
 .nav-item__icon {
   display: flex;
   align-items: center;

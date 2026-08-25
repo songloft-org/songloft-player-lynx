@@ -277,3 +277,10 @@
 
 /* Legacy conflict expand block — the confirmation moved to a dialog (matching
    Flutter), only the inline warning line remains. */
+
+/* Floating-nav capsule inset (see ShellLayout.css): the fixed bottom bar lets
+   content scroll under it, so this tail reserves the capsule stack
+   (64 bar + 8 offset + 8 gap). Narrow only — the wide rail is in-flow. */
+.shell--narrow .plugin-registry__scroll {
+  padding-bottom: var(--nav-inset, 80px);
+}

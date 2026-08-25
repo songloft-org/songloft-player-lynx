@@ -382,3 +382,24 @@
 .library__list-item {
   width: 100%;
 }
+
+/* Floating-nav capsule inset (see ShellLayout.css): the fixed bottom bar lets
+   content scroll under it, so this tail reserves the capsule stack
+   (64 bar + 8 offset + 8 gap). Narrow only — the wide rail is in-flow. */
+.shell--narrow .playlist-detail__sort-scroll {
+  padding-bottom: var(--nav-inset, 80px);
+}
+
+/* In-flow bottom toolbar: the flex:1 scroller above absorbs the margin, so the
+   whole bar rides above the capsule. */
+.shell--narrow .playlist-detail__select-toolbar {
+  margin-bottom: var(--nav-inset, 80px);
+}
+
+/* VirtualList (<list>) footer spacer — the floating-nav capsule inset. The
+   native list's own CSS padding is unreliable, so the inset rides the footer
+   slot instead (see the sort-scroll rule above). Unconditional: a blank tail
+   in wide layouts costs nothing. */
+.playlist-detail__nav-inset {
+  height: var(--nav-inset, 80px);
+}

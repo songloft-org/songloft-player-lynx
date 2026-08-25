@@ -11,11 +11,15 @@
  * |---------------------------|-----------------------------------|
  * | light/dark.seedColor      | --primary --primary-2 --accent    |
  * | (derived from seedColor)  | --primary-content (YIQ black/white) |
+ * | (derived from seedColor)  | --primary-faint (10%/14% alpha wash) |
  * | light/dark.backgroundColor| --canvas                         |
  * | light/dark.surfaceColor   | --paper --paper-clear (90% alpha) |
  * | cardRadius                | --radius-lg                      |
  * | controlRadius             | --radius-md                      |
- * | navigationRadius          | --radius-nav                     |
+ * | navigationRadius          | --radius-nav (legacy: the nav bar |
+ * |                           | is a fixed capsule now; the token |
+ * |                           | is kept for schema compat but has |
+ * |                           | no consumer)                     |
  *
  * `--content*` / `--danger*` / `--line*` / `--player-scrim-*` stay at their
  * Muse baseline: the pack schema has no field for them, and the baseline is the
@@ -116,6 +120,7 @@ export const PACK_OVERRIDABLE_BASELINE: Record<'light' | 'dark', Record<string, 
     '--primary-2': '#111111',
     '--accent': '#111111',
     '--primary-content': '#ffffff',
+    '--primary-faint': 'rgba(17, 17, 17, 0.08)',
     '--canvas': '#ffffff',
     '--paper': '#fafafa',
     '--paper-clear': 'rgba(255, 255, 255, 0.9)',
@@ -128,6 +133,7 @@ export const PACK_OVERRIDABLE_BASELINE: Record<'light' | 'dark', Record<string, 
     '--primary-2': '#ffffff',
     '--accent': '#ffffff',
     '--primary-content': '#0f0f11',
+    '--primary-faint': 'rgba(255, 255, 255, 0.12)',
     '--canvas': '#0f0f11',
     '--paper': '#17171b',
     '--paper-clear': 'rgba(23, 23, 27, 0.9)',
@@ -162,6 +168,10 @@ export function themePackToStyleVars(
       vars['--primary-2'] = colors.seedColor
       vars['--accent'] = colors.seedColor
       vars['--primary-content'] = readableTextColorOn(colors.seedColor)
+      // Selected-nav-pill wash: brighter in dark mode, where a low-alpha tint
+      // over dark surfaces needs more to stay visible (matches the baseline's
+      // 8% light / 12% dark split).
+      vars['--primary-faint'] = hexToRgba(colors.seedColor, resolved === 'light' ? 0.1 : 0.14)
     }
     if (isHexColor(colors.backgroundColor)) {
       vars['--canvas'] = colors.backgroundColor
