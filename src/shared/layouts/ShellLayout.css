@@ -157,14 +157,21 @@
   border-radius: var(--radius-pill);
 }
 
-/* The selection: a slot-wide horizontal capsule — `align-self: stretch` is
-   vertical-only in a row flex, so the width comes from the slot's own
-   `flex: 1` distribution (uniform across tabs), while the pill itself keeps
-   its content height and centres. Result: same width whichever tab is
-   selected, regardless of its label length. */
+/* The selection tint — background only, shared by both bars. Sizing stays
+   untouched here on purpose: the rail's rows are content-height, so a
+   height change on selection would shift every row below (the reported
+   jitter) — the rail's active state is colour-only. */
 .nav-item--active .nav-item__pill {
-  align-self: center;
   background-color: var(--primary-faint);
+}
+
+/* Bottom bar only: the fixed-size horizontal capsule. Safe there because
+   the 64px bar cell absorbs the size — the slot never grows, so no layout
+   shift. `align-self: stretch` is vertical-only in a row flex, so the width
+   comes from the slot's own `flex: 1` distribution (uniform across tabs),
+   while the pill keeps a compact fixed height. Result: same size whichever
+   tab is selected, regardless of its label length. */
+.shell__bottombar .nav-item--active .nav-item__pill {
   /* Fill the slot's width (minus a hair of margin so the capsule reads as a
      capsule inside the bar, not a glued segment). */
   width: calc(100% - var(--space-2));
