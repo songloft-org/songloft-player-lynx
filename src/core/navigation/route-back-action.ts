@@ -39,8 +39,15 @@ export function getBackRouter(): AppRouter | null {
 export function currentBackAction(): BackAction | null {
   const router = appRouter
   if (!router) return null
-  return resolveRouteBack(router.state.location.pathname, {
+  const location = router.state.location
+  return resolveRouteBack(location.pathname, {
     navPaths: getNavPaths(),
+    // A plugin page entered through its nav tab (`?tab=true`) is a tab root;
+    // the same pathname pushed from the grid / manager is a sub-page. See
+    // `RouteBackContext.pluginTabEntry`.
+    pluginTabEntry:
+      location.pathname.startsWith('/plugin/')
+      && (location.search as { tab?: unknown }).tab === true,
     lastShellLocation: getLastShellLocation(),
     lastLibrarySearch: getLastLibrarySearch(),
     songDetailFrom: getSongDetailOrigin(),

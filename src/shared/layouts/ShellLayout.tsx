@@ -76,7 +76,9 @@ export function ShellLayout() {
 
   const go = (dest: NavDestination) => {
     if (dest.plugin) {
-      navigate({ to: '/plugin/$entryPath', params: { entryPath: dest.plugin.entryPath } })
+      // `tab: true` — the plugin opens chromeless (no topbar), like Flutter's
+      // plugin_tab_page; see the route's validateSearch in router.tsx.
+      navigate({ to: '/plugin/$entryPath', params: { entryPath: dest.plugin.entryPath }, search: { tab: true } })
     } else if (dest.path === '/library') {
       navigate({ to: '/library', search: getLastLibrarySearch() })
     } else {

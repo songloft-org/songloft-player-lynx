@@ -283,10 +283,25 @@ const pluginRegistryRoute = createRoute({
   component: PluginRegistryPage,
 })
 
-/** `/plugin/$entryPath` — plugin webview page, inside the shell (batch 18). */
+/**
+ * `/plugin/$entryPath` — plugin webview page, inside the shell (batch 18).
+ *
+ * `?tab=true` marks an entry **through the nav tab** (bar, rail, or the More
+ * sheet): a plugin that *is* a tab renders chromeless — no topbar, `embed` in
+ * the URL — exactly like Flutter's `plugin_tab_page`. Every other entry
+ * (plugin grid, manager, links) is a pushed page with the topbar +
+ * open-in-browser action of Flutter's `plugin_webview_page`. The flag travels
+ * in the search string rather than being derived from the tab config, because
+ * "this navigation came from a tab" and "this plugin is configured as a tab"
+ * are different questions — opening a tabbed plugin from the grid must keep
+ * its topbar. Same optional-return pattern as `categorySongsRoute` above, so
+ * only the tab entries have to supply it.
+ */
 const pluginWebViewRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/plugin/$entryPath',
+  validateSearch: (search: Record<string, unknown>): { tab?: boolean } =>
+    search.tab === true ? { tab: true } : {},
   component: PluginWebViewPage,
 })
 

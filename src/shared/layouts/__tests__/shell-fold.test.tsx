@@ -127,6 +127,13 @@ describe('the narrow bar with overflow folds into 4 + More', () => {
     expect(q.queryByTestId('more-tabs-sheet')).toBeNull()
   })
 
+  /*
+   * Layering note (no assertion — pinned in native-module-contract instead):
+   * the plugin iframe mounts INSIDE lynx-view's shadow root on Web, so the
+   * sheet (z-index 100) simply out-z-indexes the frame (z-index 50); no hide/
+   * show wiring lives in the shell anymore.
+   */
+
   test('back closes the open sheet', async () => {
     const q = renderShell()
     fireEvent.tap(q.getByTestId('nav-item-more'), {})
@@ -143,6 +150,7 @@ describe('the narrow bar with overflow folds into 4 + More', () => {
     expect(navigate).toHaveBeenCalledWith({
       to: '/plugin/$entryPath',
       params: { entryPath: 'b' },
+      search: { tab: true },
     })
     expect(q.queryByTestId('more-tabs-sheet')).toBeNull()
   })
@@ -153,6 +161,7 @@ describe('the narrow bar with overflow folds into 4 + More', () => {
     expect(navigate).toHaveBeenCalledWith({
       to: '/plugin/$entryPath',
       params: { entryPath: 'miot' },
+      search: { tab: true },
     })
   })
 })

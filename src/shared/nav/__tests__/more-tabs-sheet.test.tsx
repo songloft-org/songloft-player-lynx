@@ -99,6 +99,8 @@ describe('MoreTabsSheet actions', () => {
     expect(navigate).toHaveBeenCalledWith({
       to: '/plugin/$entryPath',
       params: { entryPath: 'b' },
+      // Tab entries navigate with `tab: true` — the plugin opens chromeless.
+      search: { tab: true },
     })
   })
 

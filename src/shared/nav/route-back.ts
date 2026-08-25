@@ -49,6 +49,14 @@ export interface RouteBackContext {
    * `/plugin/foo` is a tab root decides between "exit prompt" and "go back".
    */
   navPaths: readonly string[]
+  /**
+   * Whether the current plugin page was entered **through its nav tab**
+   * (`?tab=true`, set by the bar / rail / More sheet). A plugin configured as a
+   * tab can still be *pushed* from the plugin grid or manager — there the page
+   * has a topbar whose back arrow must return to the tab the user came from,
+   * not offer to exit. `navPaths` alone cannot tell the two apart.
+   */
+  pluginTabEntry?: boolean
   /** Which tab the shell was last on, for the chrome-less pages that return to it. */
   lastShellLocation: string
   /** The library's last sub-view, so returning to it does not reset the view. */
@@ -98,10 +106,21 @@ export function resolveRouteBack(
   pathname: string,
   ctx: RouteBackContext,
 ): BackAction {
-  // A tab root is where back stops being navigation and starts being "leave".
-  // Checked first so a plugin tab at `/plugin/foo` prompts to exit while the same
-  // page reached from the plugin manager (not a tab) goes back.
-  if (ctx.navPaths.includes(pathname)) return { kind: 'exit-prompt' }
+  /*
+   * A tab root is where back stops being navigation and starts being "leave".
+   * Checked first so a plugin tab at `/plugin/foo` prompts to exit while the same
+   * page reached from the plugin manager (not a tab) goes back.
+   *
+   * A plugin page is only a tab ROOT when it was entered through the tab
+   * (`?tab=true` → ctx.pluginTabEntry). The same pathname pushed from the grid
+   * or manager has a topbar with a back arrow, and that arrow must navigate to
+   * the tab the user came from — without this, a tabbed plugin's pushed page
+   * swallowed the arrow entirely (exit-prompt is a back-KEY concern there).
+   */
+  if (ctx.navPaths.includes(pathname)) {
+    const isPushedPlugin = pathname.startsWith('/plugin/') && !ctx.pluginTabEntry
+    if (!isPushedPlugin) return { kind: 'exit-prompt' }
+  }
 
   // Not authenticated: there is nothing behind login.
   if (pathname === '/login') return { kind: 'exit-prompt' }

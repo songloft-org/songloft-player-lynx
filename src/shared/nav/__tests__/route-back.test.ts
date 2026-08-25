@@ -118,14 +118,29 @@ describe('tab roots offer to exit rather than navigating', () => {
    * sub-page depending on configuration. Both directions are pinned because getting
    * this wrong is invisible: too eager and back exits the app from a page the user
    * drilled into; too lazy and a tab behaves like a sub-page.
+   *
+   * A third state exists since the tab/pushed split: a plugin CONFIGURED as a tab
+   * can still be pushed from the grid / manager (`?tab=true` absent). There the
+   * back arrow must navigate to the last shell tab — the exit-prompt is a back-KEY
+   * concern, and the pushed page's arrow used to be swallowed entirely by it.
    */
   test('a plugin page exits when it is a tab, and navigates when it is not', () => {
-    const asTab = ctx({ navPaths: [...BUILT_IN_TABS, '/plugin/miot'] })
+    const asTab = ctx({ navPaths: [...BUILT_IN_TABS, '/plugin/miot'], pluginTabEntry: true })
     expect(resolveRouteBack('/plugin/miot', asTab).kind).toBe('exit-prompt')
 
     const notATab = resolveRouteBack('/plugin/miot', ctx())
     expect(notATab.kind).toBe('navigate')
     expect(notATab.kind === 'navigate' && notATab.to).toBe('/')
+  })
+
+  test('a tab-configured plugin PUSHED from the grid navigates back, not exit-prompts', () => {
+    const pushed = ctx({
+      navPaths: [...BUILT_IN_TABS, '/plugin/miot'],
+      lastShellLocation: '/',
+    })
+    const action = resolveRouteBack('/plugin/miot', pushed)
+    expect(action.kind).toBe('navigate')
+    expect(action.kind === 'navigate' && action.to).toBe('/')
   })
 })
 

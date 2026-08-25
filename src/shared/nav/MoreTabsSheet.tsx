@@ -47,7 +47,9 @@ export function MoreTabsSheet({ items, activePath, show, onShowChange }: MoreTab
   const select = (dest: NavDestination) => {
     close()
     if (dest.plugin) {
-      navigate({ to: '/plugin/$entryPath', params: { entryPath: dest.plugin.entryPath } })
+      // Same `tab: true` as the bar's own tab — a sheet row IS a tab entry, so
+      // the plugin opens chromeless too.
+      navigate({ to: '/plugin/$entryPath', params: { entryPath: dest.plugin.entryPath }, search: { tab: true } })
     } else if (dest.path === '/library') {
       navigate({ to: '/library', search: getLastLibrarySearch() })
     } else {
