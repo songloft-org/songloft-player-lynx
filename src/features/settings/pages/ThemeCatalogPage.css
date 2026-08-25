@@ -1,0 +1,75 @@
+/*
+ * Theme catalog page — the online theme store. The page chrome (topbar /
+ * back / title / scrolling) comes from `SubPageShell`; rows mirror the old
+ * ThemePacksPage catalog list.
+ */
+
+.theme-catalog__empty {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+}
+
+.theme-catalog__item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+}
+
+.theme-catalog__item-info {
+  flex: 1;
+}
+
+.theme-catalog__item-name {
+  font-size: var(--font-sm);
+  color: var(--content);
+}
+
+.theme-catalog__item-meta {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+  margin-top: 2px;
+}
+
+.theme-catalog__item-btn {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.theme-catalog__item-btn-text {
+  font-size: var(--font-xs);
+  color: var(--primary-content);
+}
+
+/* Catalog rows already installed at the same version: a label, not a button —
+   there is nothing to do until the pack publishes a newer version. */
+.theme-catalog__installed-label {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+  padding: var(--space-1) var(--space-2);
+}
+
+/* Fetch-failure block: reason + retry. A failed catalog load is almost always
+   network/proxy (GitHub raw unreachable), so retry is the primary action. */
+.theme-catalog__failed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.theme-catalog__retry {
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.theme-catalog__retry-text {
+  font-size: var(--font-xs);
+  color: var(--primary-content);
+}

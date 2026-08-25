@@ -18,7 +18,7 @@ import { AddSongsPage, CategorySongsPage, LibraryLayout, LibraryPage, SongDetail
 import { migrateLibrarySearch, type LibraryViewKey } from './features/library/domain/library-views.js'
 import { CreatePlaylistPage, EditPlaylistPage, PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
-import { AboutPage, AppearancePage, CacheManagePage, DataPage, DiagnosticsPage, LicensesPage, LyricsPage, PlaybackPage, ProxySettingsPage, ServerEditPage, ServerListPage, SettingsPage, ThemePacksPage, UpgradePage } from './features/settings/index.js'
+import { AboutPage, AppearancePage, CacheManagePage, DataPage, DiagnosticsPage, LicensesPage, LyricsPage, PlaybackPage, ProxySettingsPage, ServerEditPage, ServerListPage, SettingsPage, ThemeCatalogPage, UpgradePage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { PlayerPage } from './routes/PlayerPage.js'
@@ -156,11 +156,21 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 })
 
-/** `/settings/appearance` — theme + language sub-page, inside the shell. */
+/** `/settings/appearance` — theme + theme packs + language sub-page, inside the shell. */
 const appearanceRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings/appearance',
   component: AppearancePage,
+})
+
+/**
+ * `/settings/theme-catalog` — the online theme store, entered from the
+ * theme-pack card on `/settings/appearance`, inside the shell.
+ */
+const themeCatalogRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/theme-catalog',
+  component: ThemeCatalogPage,
 })
 
 /** `/settings/playback` — quality / auto-resume / normalization, inside the shell. */
@@ -242,12 +252,6 @@ const proxySettingsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings/proxy',
   component: ProxySettingsPage,
-})
-
-const themePacksRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/settings/theme-packs',
-  component: ThemePacksPage,
 })
 
 const upgradeRoute = createRoute({
@@ -412,7 +416,7 @@ const routeTree = rootRoute.addChildren([
     libraryOpsRoute,
     cacheManageRoute,
     proxySettingsRoute,
-    themePacksRoute,
+    themeCatalogRoute,
     upgradeRoute,
     licensesRoute,
     duplicatesRoute,

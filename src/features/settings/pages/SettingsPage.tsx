@@ -32,7 +32,7 @@ import { LyricsPage } from './LyricsPage.js'
 import { PlaybackPage } from './PlaybackPage.js'
 import { ProxySettingsPage } from './ProxySettingsPage.js'
 import { ServerListPage } from './ServerListPage.js'
-import { ThemePacksPage } from './ThemePacksPage.js'
+import { ThemeCatalogPage } from './ThemeCatalogPage.js'
 import { UpgradePage } from './UpgradePage.js'
 import './SettingsPage.css'
 
@@ -49,7 +49,7 @@ const DUAL_COLUMN_MIN_WIDTH = 768
  */
 type SettingsSubPage =
   | 'appearance'
-  | 'theme-packs'
+  | 'theme-catalog'
   | 'playback'
   | 'lyrics'
   | 'library'
@@ -197,15 +197,6 @@ export function SettingsPage() {
                 selected={isActive('appearance')}
                 onTap={() => goToSubPage('appearance', '/settings/appearance')}
                 testId='settings-appearance'
-              />
-              <SettingsRow
-                icon='palette'
-                title={t('themePacks.title')}
-                subtitle={t('themePacks.subtitle')}
-                trailingIcon='chevron-right'
-                selected={isActive('theme-packs')}
-                onTap={() => goToSubPage('theme-packs', '/settings/theme-packs')}
-                testId='settings-theme-packs'
               />
               <SettingsRow
                 icon='music'
@@ -401,9 +392,13 @@ function SettingsDetailPane({
 }) {
   switch (activeSubPage) {
     case 'appearance':
-      return <AppearancePage />
-    case 'theme-packs':
-      return <ThemePacksPage />
+      return (
+        <AppearancePage
+          onOpenCatalog={() => onOpenSubPage('theme-catalog')}
+        />
+      )
+    case 'theme-catalog':
+      return <ThemeCatalogPage onBack={() => onOpenSubPage('appearance')} />
     case 'playback':
       return <PlaybackPage />
     case 'lyrics':

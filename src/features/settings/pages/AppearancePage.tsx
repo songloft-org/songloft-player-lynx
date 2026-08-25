@@ -1,4 +1,5 @@
 import { useEffect, useState } from '@lynx-js/react'
+import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -20,6 +21,7 @@ import {
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import { SubPageShell } from '../widgets/SubPageShell.js'
+import { ThemePacksSection } from '../widgets/ThemePacksSection.js'
 
 /** i18n key for a language option's label. */
 function languageLabelKey(lang: AppLanguage): string {
@@ -46,10 +48,19 @@ function themeLabelKey(theme: AppTheme): string {
 }
 
 /**
- * `/settings/appearance` — theme + language, the two choices that restyle the
- * whole app. Both apply live (they re-render the entire tree) and persist.
+ * `/settings/appearance` — theme + theme packs + language, the choices that
+ * restyle the whole app. All apply live (they re-render the entire tree) and
+ * persist. The theme-pack card used to be its own route
+ * (`/settings/theme-packs`); it merged in here because light/dark and a color
+ * pack are two halves of the same question — one is the base palette, the
+ * other overrides its seed color.
+ *
+ * The store itself stays a page (`/settings/theme-catalog`, entered from the
+ * card's tail row): browsing what can be installed is a different activity
+ * than picking the active pack.
  */
-export function AppearancePage() {
+export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }) {
+  const navigate = useNavigate()
   const { t } = useTranslation()
 
   // Seeded from the live module state, which `applySavedTheme` already set at
@@ -92,6 +103,21 @@ export function AppearancePage() {
     void changeAppLanguage(next)
   }
 
+  /**
+   * Open the theme store. In the wide settings master–detail this page sits in
+   * the right pane and `onOpenCatalog` swaps the pane in place — a route
+   * navigation would unmount SettingsPage and drop the settings list. As a
+   * standalone route (single-column) there is no pane, so fall back to
+   * routing. (Same shape as `PluginManagerPage.onOpenStore`.)
+   */
+  const openCatalog = () => {
+    if (onOpenCatalog) {
+      onOpenCatalog()
+    } else {
+      void navigate({ to: '/settings/theme-catalog' })
+    }
+  }
+
   return (
     <SubPageShell title={t('settings.categoryAppearance')} backTestId='appearance-back'>
       <SettingsSection title={t('settings.themeSection')} icon='palette'>
@@ -106,6 +132,8 @@ export function AppearancePage() {
           />
         ))}
       </SettingsSection>
+
+      <ThemePacksSection onOpenCatalog={openCatalog} />
 
       <SettingsSection title={t('settings.languageSection')} icon='settings'>
         {APP_LANGUAGE_OPTIONS.map((option) => (

@@ -1,0 +1,56 @@
+/*
+ * Theme-pack card rows inside the appearance page. The section chrome (title /
+ * card) comes from `SettingsSection`; no scroll container lives here — the
+ * page's `SubPageShell` owns scrolling and the nav-inset avoidance that goes
+ * with it.
+ */
+
+.theme-packs__empty {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+}
+
+.theme-packs__item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+}
+
+.theme-packs__item-info {
+  flex: 1;
+}
+
+.theme-packs__item-name {
+  font-size: var(--font-sm);
+  color: var(--content);
+}
+
+.theme-packs__item-meta {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+  margin-top: 2px;
+}
+
+/* Catalog install-button / installed-label styles live on the theme-catalog
+   page now (`ThemeCatalogPage.css`); kept styles below cover the installed-list
+   rows and the store entry row only. */
+
+.theme-packs__item-delete {
+  padding: var(--space-1) var(--space-2);
+}
+
+.theme-packs__item-delete-text {
+  font-size: var(--font-xs);
+  color: var(--danger);
+}
+
+/* The store entry row sits below the pack rows; the border keeps it reading
+   as navigation away from the list rather than a row of it (the same divider
+   `.settings-row + .settings-row` draws between plain rows). */
+.theme-packs__entry {
+  border-top: 1px solid var(--line);
+}

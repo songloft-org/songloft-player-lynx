@@ -157,6 +157,7 @@ describe('the targets each page used to hardcode', () => {
     ['/settings/servers/edit/7', '/settings/servers'],
     ['/settings/duplicates', '/settings/library'],
     ['/settings/plugins/registry', '/settings/plugins'],
+    ['/settings/theme-catalog', '/settings/appearance'],
     ['/player/lyrics/adjust', '/player'],
     ['/player/dlna', '/player'],
   ]

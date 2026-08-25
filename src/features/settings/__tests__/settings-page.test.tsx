@@ -94,6 +94,15 @@ vi.mock('../api/index.js', () => ({
     getVersion: vi.fn(async () => '1.0.0'),
     updateVolumeNormalize: vi.fn(async () => {}),
   }),
+  // Imported via AppearancePage's theme-pack card; only called at render, which
+  // never happens here — standing it in keeps the mock a complete barrel
+  // stand-in for every sub-page module this page pulls in.
+  getThemePacksApi: () => ({
+    list: vi.fn(async () => []),
+    deletePack: vi.fn(async () => {}),
+    refreshCatalog: vi.fn(async () => []),
+    installFromCatalog: vi.fn(async () => {}),
+  }),
 }))
 
 vi.mock('../data/log-export.js', () => ({
@@ -146,7 +155,6 @@ function scrollListTo(scrollTop: number) {
 /** Entry rows always present, paired with where each one leads. */
 const ENTRY_ROWS: Array<[string, string]> = [
   ['settings-appearance', '/settings/appearance'],
-  ['settings-theme-packs', '/settings/theme-packs'],
   ['settings-playback', '/settings/playback'],
   ['settings-lyrics', '/settings/lyrics'],
   ['settings-library-ops', '/settings/library'],

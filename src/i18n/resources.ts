@@ -238,7 +238,7 @@ export const en = {
     // The list is entry rows only, so a row's label IS its target page's title:
     // one key each, and the two can never drift apart.
     categoryAppearance: 'Appearance',
-    categoryAppearanceSubtitle: 'Theme and language',
+    categoryAppearanceSubtitle: 'Theme, theme packs & language',
     categoryPlayback: 'Playback',
     categoryPlaybackSubtitle: 'Quality, auto-resume, normalization',
     categoryData: 'Data',
@@ -645,7 +645,6 @@ export const en = {
   },
   themePacks: {
     title: 'Theme Packs',
-    subtitle: 'Custom color themes',
     catalog: 'Catalog',
     catalogTitle: 'Theme Catalog',
     noCatalog: 'No themes available.',
@@ -1083,7 +1082,7 @@ export const zh: TranslationTree = {
     // ── 二级页标题，主列表的入口行原样复用 ────────────────────────────────
     // 主列表只有入口行，所以行标题就是目标页标题：一个 key 两处用，永不漂移。
     categoryAppearance: '外观设置',
-    categoryAppearanceSubtitle: '主题与语言',
+    categoryAppearanceSubtitle: '主题、主题包与语言',
     categoryPlayback: '播放设置',
     categoryPlaybackSubtitle: '音质、自动恢复、音量均衡',
     categoryData: '数据管理',
@@ -1475,7 +1474,6 @@ export const zh: TranslationTree = {
   },
   themePacks: {
     title: '主题包',
-    subtitle: '自定义颜色主题',
     catalog: '商店',
     catalogTitle: '主题商店',
     noCatalog: '暂无可用主题。',
