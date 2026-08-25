@@ -71,25 +71,28 @@
   <script>
     (function () {
       var DB = 'songloft', VER = 1, STORE = 'kv', KEY = 'prefs.__mainlog', MAX = 400
-      var lines = [], timer = null, dbp = null
+      var lines = [], timer = null
 
-      function open() {
-        if (dbp) return dbp
-        dbp = new Promise(function (resolve) {
+      // Open the DB, run the supplied callback, then close the connection.
+      // Keeping the connection open (the previous implementation cached dbp)
+      // could block the app's Worker from opening the same database in some
+      // browsers, causing secure tokens to fall back to the in-memory mirror
+      // and disappear after a page reload.
+      function withDB(fn) {
+        return new Promise(function (resolve) {
           try {
             var req = indexedDB.open(DB, VER)
-            // Same store name/version as idb-storage.ts. Creating it here too
-            // matters: whichever realm opens first must leave a usable store.
             req.onupgradeneeded = function () {
               var db = req.result
               if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE)
             }
-            req.onsuccess = function () { resolve(req.result) }
+            req.onsuccess = function () {
+              try { fn(req.result, resolve) } catch (e) { resolve(null) }
+            }
             req.onerror = function () { resolve(null) }
             req.onblocked = function () { resolve(null) }
           } catch (e) { resolve(null) }
         })
-        return dbp
       }
 
       function pad(n, w) { return String(n).padStart(w, '0') }
@@ -107,12 +110,15 @@
       function flush() {
         timer = null
         var snapshot = lines.slice(-MAX)
-        open().then(function (db) {
-          if (!db) return
+        withDB(function (db, done) {
+          if (!db) return done(null)
           try {
             var tx = db.transaction(STORE, 'readwrite')
             tx.objectStore(STORE).put(JSON.stringify(snapshot), KEY)
-          } catch (e) { /* a lost log line must never break the page */ }
+            tx.oncomplete = function () { db.close(); done(null) }
+            tx.onerror = function () { db.close(); done(null) }
+            tx.onabort = function () { db.close(); done(null) }
+          } catch (e) { db.close(); done(null) }
         })
       }
 
