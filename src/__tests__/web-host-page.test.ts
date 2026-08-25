@@ -166,6 +166,39 @@ describe('web/index.html references files the build actually ships', () => {
       'copy-bundle-web.mjs must copy audio-host.js',
     ).toContain("'audio-host.js'")
   })
+
+  /**
+   * The plugin iframe host registers `NativeModules.SongloftWebview`; it must
+   * load after audio-host.js (it merges into the nativeModulesMap that file
+   * creates) and before the web-core client module (the map must be complete
+   * when <lynx-view> upgrades). A script that loads out of order registers
+   * nothing — silently: the module probe in `web-webview.ts` just reports
+   * `available: false` and the plugin tab degrades to a message.
+   */
+  test('webview-host.js is referenced once, in the right slot, and exists', () => {
+    const webviewRefs = refs.filter((r) => r.endsWith('/webview-host.js'))
+    expect(webviewRefs, 'index.html must load webview-host.js').toHaveLength(1)
+    expect(
+      existsSync(path.join(repoRoot, 'web', 'webview-host.js')),
+      'web/webview-host.js does not exist',
+    ).toBe(true)
+    expect(
+      read('scripts/copy-bundle-web.mjs'),
+      'copy-bundle-web.mjs must copy webview-host.js',
+    ).toContain("'webview-host.js'")
+
+    const audioIdx = html.indexOf('/audio-host.js')
+    const webviewIdx = html.indexOf('/webview-host.js')
+    const clientIdx = html.indexOf('/web-core/static/js/client.js')
+    expect(
+      audioIdx,
+      'webview-host.js must load after audio-host.js — its nativeModulesMap merge assumes the map exists',
+    ).toBeLessThan(webviewIdx)
+    expect(
+      webviewIdx,
+      'webview-host.js must load before the web-core client module — the map must be complete when <lynx-view> upgrades',
+    ).toBeLessThan(clientIdx)
+  })
 })
 
 /**
@@ -228,18 +261,22 @@ describe('web-core event-dispatch guards are applied on both code paths', () => 
  * real file that the copy script ships.
  */
 describe('nativeModulesMap points at real, shipped ESM modules', () => {
-  const host = read('web/audio-host.js')
+  // webview-host.js registers its module the same way audio-host.js does, from
+  // its own script tag — both files' registrations are gated here.
+  const hostScripts = ['web/audio-host.js', 'web/webview-host.js']
   const copyScript = read('scripts/copy-bundle-web.mjs')
 
   // Registration lines look like `SongloftAudio: '/songloft-audio-module.js',`.
-  // Matching the whole file is safe: the dispatch site uses `=== 'SongloftAudio'`
+  // Matching the whole files is safe: the dispatch sites use `=== 'SongloftAudio'`
   // (no colon) and the adapter variables are lowercase `songloftAudio`.
-  const entries = [...host.matchAll(/Songloft\w+\s*:\s*([^,\n]+)/g)]
-    .map((m) => m[1]!.trim())
+  const entries = hostScripts.flatMap((f) =>
+    Array.from(read(f).matchAll(/Songloft\w+\s*:\s*([^,\n]+)/g)).map((m) => m[1]!.trim()),
+  )
 
-  test('the map registers at least the platform and audio modules', () => {
+  test('the map registers at least the platform, audio and webview modules', () => {
     expect(entries).toContain("'/songloft-platform-module.js'")
     expect(entries).toContain("'/songloft-audio-module.js'")
+    expect(entries).toContain("'/songloft-webview-module.js'")
   })
 
   test('every registered value is a URL string, not a plain object', () => {

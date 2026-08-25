@@ -209,7 +209,7 @@ describe('the back-press event name reaches every host verbatim', () => {
    */
   test('every Web sendGlobalEvent passes its payload as an array', () => {
     const offenders: string[] = []
-    for (const file of ['web/audio-host.js', 'web/index.html']) {
+    for (const file of ['web/audio-host.js', 'web/webview-host.js', 'web/index.html']) {
       read(file).split('\n').forEach((line, i) => {
         const code = line.trim()
         // Skip comments — the fix sites document the array contract in prose, and
@@ -439,6 +439,103 @@ describe('the iOS Info.plist is structurally well-formed', () => {
 })
 
 // ── Batch 35+ modules (P2-3 contract gate expansion) ─────────────────────────
+
+/**
+ * The plugin iframe is **Web-only**: the native builds render a real `<webview>`
+ * element and never see this module. The contract therefore runs between three
+ * files in the Web deployable — the TS facade (`src/native/web-webview.ts`),
+ * the worker-side ESM module (`web/songloft-webview-module.js`) and the
+ * main-thread handler (`web/webview-host.js`). Every name is matched by
+ * identity at runtime and by nothing at build time, the same failure class as
+ * the rest of this file: a renamed method or event silently degrades the
+ * plugin tab to the "webview unavailable" message.
+ */
+describe('SongloftWebview module surface (Web only)', () => {
+  const methods = interfaceMethods(
+    read('src/native/web-webview.ts'),
+    'SongloftWebviewNativeModule',
+  )
+
+  test('the interface was parsed (guard against a silent empty list)', () => {
+    expect(methods).toEqual(['open', 'postMessage', 'close'])
+  })
+
+  test.each(methods)('SongloftWebview.%s reaches both Web halves', (method) => {
+    expect(
+      read('web/songloft-webview-module.js'),
+      `the Web worker module has no ${method}`,
+    ).toMatch(new RegExp(`\\b${method}\\(`))
+    expect(
+      read('web/webview-host.js'),
+      `the Web main thread has no ${method} handler`,
+    ).toMatch(new RegExp(`${method}:\\s*function`))
+  })
+
+  /**
+   * The event names have three hard-coded spellings: the facade's constants,
+   * the main thread's `sendGlobalEvent` calls, and nothing in between. `load`
+   * is deliberately absent — the main thread emits it but no worker code
+   * listens yet (diagnostics / future internal-history support).
+   */
+  test('the webview event names match between the facade and the main thread', () => {
+    for (const name of ['SongloftWebview.message', 'SongloftWebview.openFailed']) {
+      expect(
+        read('src/native/web-webview.ts'),
+        `the facade does not declare ${name}`,
+      ).toContain(name)
+      expect(
+        read('web/webview-host.js'),
+        `the main thread does not emit ${name}`,
+      ).toContain(name)
+    }
+  })
+
+  /**
+   * The iframe follows a placeholder element the main thread resolves by
+   * selector inside lynx-view's shadow root (ResizeObserver + resize). That
+   * only works if the id the page renders and the selector the page sends are
+   * the same string — a rename on one side strands the iframe in the 3-second
+   * placeholder poll and the tab degrades to the "unavailable" message.
+   */
+  test('the placeholder id matches between the page and the open call', () => {
+    const page = read('src/features/jsplugin/pages/PluginWebViewPage.tsx')
+    expect(page, 'the page must render the placeholder with that id').toContain(
+      "id='plugin-webview-frame'",
+    )
+    expect(page, 'the page must open the iframe with the same selector').toContain(
+      "'#plugin-webview-frame'",
+    )
+  })
+
+  /**
+   * THE layering contract, browser-probe-verified (see webview-host.js's
+   * `ensureIframe` comment): `contain: strict` makes lynx-view a stacking
+   * context, so a body-level frame outranks EVERY app overlay and can only be
+   * fought by hiding it (which reads as the plugin vanishing). Mounted inside
+   * the shadow root instead, the frame joins the app's own stacking context
+   * and z-index works: page content (auto) under the frame (50) under the nav
+   * capsule (90) / mini-player (91) / sheets (100) / dialogs (200/201). Both
+   * halves of that arrangement live in main-thread JS that no typechecker
+   * sees, so pin them here: the mount point AND the z-index value.
+   */
+  test('the iframe mounts into the shadow root at the content layer', () => {
+    const host = read('web/webview-host.js')
+    expect(
+      host,
+      'the iframe must append into lynxView.shadowRoot — a body-level frame outranks every app overlay',
+    ).toMatch(/lynxView\.shadowRoot[^;]*appendChild/)
+    expect(
+      host,
+      "the frame's z-index must sit between page content and the nav capsule (90)",
+    ).toMatch(/el\.style\.zIndex = '50'/)
+    // And the toast pill must clear the frame — it lands inside its rect on
+    // plugin tabs (fixed layers carry their own z-index, AGENTS.md).
+    expect(
+      read('src/shared/ui/ToastHost.css'),
+      'the toast pill needs a z-index above the plugin frame (50)',
+    ).toMatch(/\.toast-wrap[\s\S]{0,1200}?z-index:\s*1\d\d/)
+  })
+})
 
 describe('SongloftPlatform module methods exist on both hosts', () => {
   const methods = interfaceMethods(
