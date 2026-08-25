@@ -1,0 +1,98 @@
+/*
+ * SizeLimitSlider — notched horizontal slider for cache size caps.
+ * LUNA tokens only (no hard-coded colors). The rail/thumb anatomy mirrors
+ * `ProgressBar.css` (track relative + indicator absolute overlay + library-
+ * positioned thumb); the value/scale chrome is this widget's own.
+ */
+
+.size-limit-slider {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Label left, selected notch right — same head layout as LyricAdjustPage's card. */
+.size-limit-slider__head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.size-limit-slider__label {
+  color: var(--content-2);
+  font-size: var(--font-sm);
+  line-height: var(--font-lg);
+}
+
+.size-limit-slider__value {
+  color: var(--accent);
+  font-size: var(--font-md);
+  font-weight: bold;
+}
+
+.size-limit-slider__root {
+  height: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.size-limit-slider__track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background-color: var(--rule);
+}
+
+.size-limit-slider__indicator {
+  /* Overlay the rail (track is position:relative) — lynx-ui controls the width
+     from the slider value; in flow it would render as a second line instead. */
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.size-limit-slider__thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  background-color: var(--primary-content);
+  box-shadow: var(--shadow-sm);
+}
+
+/*
+ * Notch tick marks (Flutter's Slider `divisions` dots). Geometry (position /
+ * top / transform) is inline in the component — copied from the library's thumb
+ * wrapper so each dot centers on the rail — while this class carries the
+ * visuals: 4px dot, same size as the rail is tall, like Flutter's 4dp ticks.
+ */
+.size-limit-slider__tick {
+  width: 4px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  /* Inactive dots: Flutter's onSurfaceVariant — visible over the --rule rail. */
+  background-color: var(--content-2);
+}
+
+/* Notches at or before the current one sit on the --primary fill, so they take
+ * its contrast color (Flutter's onPrimary active ticks). */
+.size-limit-slider__tick--active {
+  background-color: var(--primary-content);
+}
+
+/* First/last notch labels, flush with the rail's ends. */
+.size-limit-slider__scale {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-top: var(--space-1);
+}
+
+.size-limit-slider__scale-text {
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+}
