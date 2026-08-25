@@ -1,4 +1,3 @@
-import { useNavigateToSongDetail } from '../../../shared/nav/navigate-to-song-detail.js'
 import type { Song } from '../../../models/song.js'
 import { useTapAnchor } from '../../../shared/ui/anchored-overlay.js'
 import type { AnchorMeasurement } from '../../../shared/ui/anchored-overlay.js'
@@ -75,8 +74,8 @@ export function SongListRow({
   subtitleSuffix,
   onOpenMenu,
 }: SongListRowProps) {
-  const goToSongDetail = useNavigateToSongDetail()
   const openMenu = useSongRowOverlays((s) => s.openMenu)
+  const openInfo = useSongRowOverlays((s) => s.openInfo)
   const openAddToPlaylist = useSongRowOverlays((s) => s.openAddToPlaylist)
   const requestDelete = useSongRowOverlays((s) => s.requestDelete)
   const { anchorId, measure } = useTapAnchor()
@@ -98,7 +97,7 @@ export function SongListRow({
       <view className='song-row__actions'>
         <view
           className='song-row__action'
-          bindtap={() => goToSongDetail(song.id)}
+          bindtap={() => openInfo(song)}
           data-testid='song-row-detail'
         >
           <Icon name='info' size={16} color={ICON_COLORS.contentMuted} />

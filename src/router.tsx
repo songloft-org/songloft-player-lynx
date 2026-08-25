@@ -14,7 +14,7 @@ import { SongRowOverlays } from './shared/ui/SongRowOverlays.js'
 import { ToastHost } from './shared/ui/ToastHost.js'
 import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
-import { AddSongsPage, CategorySongsPage, LibraryLayout, LibraryPage, SongDetailPage, SongEditPage } from './features/library/index.js'
+import { AddSongsPage, CategorySongsPage, LibraryLayout, LibraryPage } from './features/library/index.js'
 import { migrateLibrarySearch, type LibraryViewKey } from './features/library/domain/library-views.js'
 import { CreatePlaylistPage, EditPlaylistPage, PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
@@ -53,15 +53,14 @@ const rootRoute = createRootRoute({
         (/player, /login, lyrics adjust, dlna) get toasts too.
       */}
       <ToastHost />
-      {/*
-        The song-row context menu / delete confirm. Same two reasons as
-        ToastHost, plus one more: `SongRowOverlays` calls
-        `useNavigateToSongDetail()` and needs the Router context. It used to
-        be a sibling of <RouterProvider> in App.tsx — fine on native, but on
-        Web that left it outside `.theme-root` (every `var(--*)` resolved to
-        empty: the dialog rendered unstyled and unclickable) and outside the
-        Router context (the context menu never mounted at all).
-      */}
+      {/**
+        * The song-row overlays: context menu, add-to-playlist sheet, delete
+        * confirm and the info/edit dialogs. Same two reasons as ToastHost,
+        * plus one more: it used to be a sibling of <RouterProvider> in
+        * App.tsx — fine on native, but on Web that left it outside
+        * `.theme-root` (every `var(--*)` resolved to empty: the dialog
+        * rendered unstyled and unclickable).
+        */}
       <SongRowOverlays />
     </ThemeProvider>
   ),
@@ -124,8 +123,8 @@ const listRoute = createRoute({
  * them — that re-creation is what flashed on open. Adding no path segment keeps
  * every URL below unchanged, so `route-back.ts` needs no entry for it.
  *
- * Its children are every route the library owns — the two forms and the three
- * detail pages included, so the rail stays put while you drill from a facet grid
+ * Its children are every route the library owns — the forms and detail
+ * pages included, so the rail stays put while you drill from a facet grid
  * into an artist and on into a song. Their own headers (back arrow + title) live
  * inside the pane and are unaffected.
  */
@@ -344,28 +343,6 @@ const categorySongsRoute = createRoute({
   component: CategorySongsPage,
 })
 
-/**
- * `/library/song/$songId` — song detail, inside the library layout.
- *
- * Editing lives one level deeper (`/library/song/$songId/edit`, the Flutter
- * build's `SongEditPage`) so the edit form is not a render mode of this page,
- * and closing it can return to wherever it was opened from — the song menu
- * opens the edit page straight from the library / playlist lists.
- */
-const songDetailRoute = createRoute({
-  getParentRoute: () => libraryLayoutRoute,
-  path: '/library/song/$songId',
-  component: SongDetailPage,
-})
-
-/** `/library/song/$songId/edit` — the song edit form, mirroring the Flutter
- * `SongEditPage`; back follows its recorded origin (see route-back.ts). */
-const songEditRoute = createRoute({
-  getParentRoute: () => libraryLayoutRoute,
-  path: '/library/song/$songId/edit',
-  component: SongEditPage,
-})
-
 const addSongsRoute = createRoute({
   getParentRoute: () => libraryLayoutRoute,
   path: '/library/add',
@@ -399,8 +376,6 @@ const routeTree = rootRoute.addChildren([
       createPlaylistRoute,
       editPlaylistRoute,
       categorySongsRoute,
-      songDetailRoute,
-      songEditRoute,
       playlistDetailRoute,
     ]),
     settingsRoute,

@@ -25,7 +25,6 @@ const BUILT_IN_TABS = ['/', '/library', '/settings']
 /** A stand-in value for each dynamic segment, so paths become concrete. */
 const PARAM_SAMPLES: Record<string, string> = {
   $field: 'artist',
-  $songId: '42',
   $id: '7',
   $entryPath: 'some-plugin',
 }
@@ -172,13 +171,13 @@ describe('the targets each page used to hardcode', () => {
 
 describe('returning to the library restores the sub-view', () => {
   /**
-   * Song detail and "add songs" used to route to a bare `/library`, which reset the
-   * 14-view picker to its first entry. Drilling in and coming straight back out
-   * losing your place was reported from the device for the category page; these two
-   * had the same bug and no test.
+   * "Add songs" used to route to a bare `/library`, which reset the 14-view
+   * picker to its first entry. Drilling in and coming straight back out losing
+   * your place was reported from the device for the category page; this one had
+   * the same bug and no test.
    */
-  test.each(['/library/song/42', '/library/add'])('%s keeps the last view', (pathname) => {
-    const action = resolveRouteBack(pathname, ctx({ lastLibrarySearch: { view: 'album' } }))
+  test('"/library/add" keeps the last view', () => {
+    const action = resolveRouteBack('/library/add', ctx({ lastLibrarySearch: { view: 'album' } }))
     expect(action.kind === 'navigate' && action.to).toBe('/library')
     expect(action.kind === 'navigate' && action.librarySearch?.view).toBe('album')
   })
@@ -193,81 +192,6 @@ describe('returning to the library restores the sub-view', () => {
       ctx({ lastLibrarySearch: { view: 'album' } }),
     )
     expect(action.kind === 'navigate' && action.librarySearch?.view).toBe('genre')
-  })
-})
-
-describe('the song page returns to where it was opened from', () => {
-  /**
-   * The song page is reachable from the library, a playlist detail, a facet
-   * drill-in and the player, and the memory history cannot say which (every
-   * navigation is a push). So the navigation helper records the origin, and back
-   * follows it. Before this existed, opening a song from a playlist and closing
-   * it landed on the playlist *list*, not the playlist you were reading.
-   */
-  test.each([
-    ['/playlists/7', 'playlist detail'],
-    ['/library/category/artist', 'facet drill-in'],
-    ['/player', 'the full player'],
-  ])('opened from %s returns there', (from, label) => {
-    const action = resolveRouteBack(
-      '/library/song/42',
-      ctx({ songDetailFrom: from, lastLibrarySearch: { view: 'album' } }),
-    )
-    expect(action.kind === 'navigate' && action.to, label).toBe(from)
-  })
-
-  test('no recorded origin falls back to the library tab', () => {
-    const action = resolveRouteBack(
-      '/library/song/42',
-      ctx({ songDetailFrom: null, lastLibrarySearch: { view: 'album' } }),
-    )
-    expect(action.kind === 'navigate' && action.to).toBe('/library')
-    expect(action.kind === 'navigate' && action.librarySearch?.view).toBe('album')
-  })
-
-  test('an origin equal to the current path is ignored (song→song hop)', () => {
-    const action = resolveRouteBack(
-      '/library/song/42',
-      ctx({ songDetailFrom: '/library/song/42' }),
-    )
-    expect(action.kind === 'navigate' && action.to).toBe('/library')
-  })
-})
-
-describe('the song edit page returns to where it was opened from', () => {
-  /**
-   * The edit form used to be an inline mode of the detail page, so closing it
-   * always stranded the user on the detail page — even when the song menu had
-   * opened it straight from a list. As a page with its own recorded origin,
-   * back returns to wherever the user actually was.
-   */
-  test.each([
-    ['/playlists/7', 'a playlist detail (song menu)'],
-    ['/library/category/artist', 'a facet drill-in (song menu)'],
-    ['/library/song/42', 'the song detail page (its edit button)'],
-  ])('opened from %s returns there', (from, label) => {
-    const action = resolveRouteBack(
-      '/library/song/42/edit',
-      ctx({ songEditFrom: from, lastLibrarySearch: { view: 'album' } }),
-    )
-    expect(action.kind === 'navigate' && action.to, label).toBe(from)
-  })
-
-  test('opened from the library restores the last view', () => {
-    const action = resolveRouteBack(
-      '/library/song/42/edit',
-      ctx({ songEditFrom: '/library', lastLibrarySearch: { view: 'radio' } }),
-    )
-    expect(action.kind === 'navigate' && action.to).toBe('/library')
-    expect(action.kind === 'navigate' && action.librarySearch?.view).toBe('radio')
-  })
-
-  test('no recorded origin falls back to the song detail page', () => {
-    const action = resolveRouteBack(
-      '/library/song/42/edit',
-      ctx({ songEditFrom: null, songDetailFrom: '/playlists/7' }),
-    )
-    expect(action.kind === 'navigate' && action.to).toBe('/library/song/42')
   })
 })
 

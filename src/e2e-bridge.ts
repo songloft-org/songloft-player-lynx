@@ -28,6 +28,7 @@ import { resolveRouteBack } from './shared/nav/route-back.js'
 import { getLastShellLocation, getNavPaths } from './shared/nav/shell-navigation.js'
 import { isExitArmed } from './shared/nav/exit-prompt.js'
 import { getLastLibrarySearch } from './features/library/data/last-library-search.js'
+import { useSongRowOverlays } from './shared/ui/song-row-overlays.js'
 import { currentBackAction, performRouteBack } from './core/navigation/route-back-action.js'
 import {
   clearSongCache,
@@ -46,6 +47,10 @@ import { getPlatformCapabilities } from './native/platform-capabilities.js'
 ;(globalThis as Record<string, unknown>).__E2E_SERVER_STORE__ = useServerStore
 ;(globalThis as Record<string, unknown>).__E2E_APP_CONFIG__ = appConfig
 ;(globalThis as Record<string, unknown>).__E2E_ROUTER__ = router
+// Song-row overlays store. The song info/edit dialogs are store-driven (no
+// routes anymore), so a scenario opens them the same way the rows do — through
+// the actions — and asserts the mutual exclusion directly on state.
+;(globalThis as Record<string, unknown>).__E2E_SONG_OVERLAYS__ = useSongRowOverlays
 // Theme / system-appearance accessors. The e2e eval runs in the BTS global scope
 // where the bare `lynx` global (and thus `lynx.__globalProps`) is NOT visible —
 // it lives in the bundle's module wrapper scope — so tests must read the theme

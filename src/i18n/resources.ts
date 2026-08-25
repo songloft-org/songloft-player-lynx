@@ -552,6 +552,12 @@ export const en = {
     writeTags: 'Write tags to file',
     tagsWritten: 'Tags written',
     tagsFailed: 'Write failed',
+    /* Playback-source row wording mirrors the Flutter arb (songInfoPlaybackSource /
+       songInfoSource*). */
+    playbackSource: 'Playback source',
+    sourceLocal: 'Local cache',
+    sourceRemote: 'Streaming',
+    sourceUnknown: 'Not playing',
   },
   /* Song edit form. Wording mirrors the Flutter build's `SongEditPage` arb
      entries (libraryEdit* / libraryRenameFile* / libraryVideoToggle* / …). */
@@ -596,6 +602,7 @@ export const en = {
   },
   songMenu: {
     play: 'Play',
+    info: 'Song info',
     edit: 'Edit',
     playNext: 'Play next',
     addToQueue: 'Add to queue',
@@ -1384,6 +1391,10 @@ export const zh: TranslationTree = {
     writeTags: '写入标签到文件',
     tagsWritten: '标签已写入',
     tagsFailed: '写入失败',
+    playbackSource: '播放来源',
+    sourceLocal: '本地缓存',
+    sourceRemote: '在线播放',
+    sourceUnknown: '未播放',
   },
   /* 歌曲编辑表单，文案对齐 Flutter 版 SongEditPage 的 arb 词条。 */
   songEdit: {
@@ -1427,6 +1438,7 @@ export const zh: TranslationTree = {
   },
   songMenu: {
     play: '播放',
+    info: '歌曲信息',
     edit: '编辑',
     playNext: '下一首播放',
     addToQueue: '添加到队列',

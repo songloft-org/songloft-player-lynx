@@ -1,62 +1,68 @@
-/* Content only; the wide-screen rail belongs to the route layout (see EditPlaylistPage.css). */
-.song-edit {
+/*
+ * Song edit dialog — the edit form as a centered large card, replacing the
+ * edit page. Wider and taller than the confirm card (the form is long), with
+ * the title pinned above and the [cancel]/[save] row pinned below a scrolling
+ * body.
+ *
+ * The modal chrome (scrim / content / wrapper levels 200/201) comes from the
+ * shared `.confirm-dialog__*` classes in ConfirmDialog.css; THIS file declares
+ * no z-index — confirm-dialog-overlay.test.ts caps every other stylesheet
+ * below the modal layer.
+ *
+ * The `song-edit__*` rules migrated verbatim from the retired SongEditPage.css
+ * (only the page-level topbar / container / nav-inset rules were dropped).
+ */
+
+.song-edit-dialog {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
+  background-color: var(--paper);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  padding: var(--space-5);
+  margin: var(--space-6);
+  /* Wider than the confirm card (max-width 360): the form has label + input
+     columns and read-only endpoint rows that benefit from the room. */
+  max-width: 440px;
+  /* Keeps the pinned action row reachable; the body scrolls inside. */
+  max-height: 85%;
 }
 
-.song-edit__topbar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: var(--space-3) var(--space-4);
-  gap: var(--space-3);
-}
-
-.song-edit__back { padding: var(--space-1); }
-
-.song-edit__topbar-title {
-  flex: 1;
-  font-size: var(--font-lg);
-  font-weight: bold;
+.song-edit-dialog__title {
+  font-size: var(--font-md);
+  font-weight: 600;
   color: var(--content);
+  margin-bottom: var(--space-2);
 }
 
-/* Save lives in the top bar (the Flutter AppBar action): a form this long
- * scrolls, and a bottom button would sit under the keyboard. */
-.song-edit__save-btn {
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-pill);
-  background-color: var(--primary);
+/*
+ * Basis auto, not the usual `flex: 1` (basis 0): the card's height is
+ * content-driven until its max-height clamps, and a zero basis would collapse
+ * this view to nothing whenever the card is un-clamped. `min-height: 0` lets
+ * it actually shrink — and scroll — once the clamp kicks in.
+ */
+.song-edit-dialog__body {
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: auto;
+  min-height: 0;
+  /* Spacing to the action row lives here, not on the row: the row reuses the
+     shared `.confirm-dialog__actions` class, whose family must keep a single
+     home (app-switch-css.test.ts forbids forking it). */
+  margin-bottom: var(--space-4);
 }
 
-.song-edit__save-btn-text {
-  font-size: var(--font-sm);
-  color: var(--primary-content);
-}
-
-.song-edit__content {
-  flex: 1;
-}
-
-.song-edit__state {
-  padding: var(--space-6);
-  text-align: center;
-  color: var(--content-muted);
-  font-size: var(--font-sm);
-}
+/* ——— form rules migrated from SongEditPage.css ——— */
 
 .song-edit__form {
-  padding: 0 var(--space-4) var(--space-6);
+  padding: var(--space-2) var(--space-1) var(--space-4);
 }
 
 /* Read-only card: file path (local) or server endpoints (remote/radio). */
 .song-edit__ro-card {
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background-color: var(--paper);
+  background-color: var(--neutral-faint);
   margin-bottom: var(--space-4);
 }
 
@@ -104,9 +110,9 @@
 /* Form field: `--neutral-faint` fill + `--line` hairline, same as every other
  * form field (login / server / proxy / cache / playlist).
  *
- * Not `--paper`: DESIGN.md assigns that to cards floating *on* canvas — with no
- * border on a transparent page it puts #fafafa on #ffffff (~1.04:1 contrast),
- * leaving the field with no perceivable edge at all. */
+ * The page used `--paper` for the read-only card on a transparent page; on
+ * THIS card the fill had to become `--neutral-faint` (see `.song-edit__ro-card`)
+ * — `--paper` on `--paper` (~1.04:1 contrast) leaves no perceivable edge. */
 .song-edit__input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
@@ -161,11 +167,4 @@
   height: 150px;
   border-radius: var(--radius-md);
   background-color: var(--neutral-faint);
-}
-
-/* Floating-nav capsule inset (see ShellLayout.css): the fixed bottom bar lets
-   content scroll under it, so this tail reserves the capsule stack
-   (64 bar + 8 offset + 8 gap). Narrow only — the wide rail is in-flow. */
-.shell--narrow .song-edit {
-  padding-bottom: var(--nav-inset, 80px);
 }

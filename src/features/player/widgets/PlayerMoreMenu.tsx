@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import type { Song } from '../../../models/song.js'
 import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
-import { useNavigateToSongDetail } from '../../../shared/nav/navigate-to-song-detail.js'
+import { songRowOverlays } from '../../../shared/ui/song-row-overlays.js'
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
@@ -35,9 +35,10 @@ export interface PlayerMoreMenuProps {
  * mid-playback:
  *
  *  - **Song info** — "what am I listening to, exactly". The library row that queued
- *    the song may be far away (another tab, a radio, a search), so this reuses the
- *    read-only detail page (`/library/song/$songId`), whose navigation helper already
- *    records the player as a valid origin and returns here on back.
+ *    the song may be far away (another tab, a radio, a search), so this opens
+ *    the global info dialog (`SongInfoDialog` via `song-row-overlays.ts`)
+ *    right here over the player, instead of routing into the library's
+ *    browsing context.
  *  - **Cache on device / remove from cache** — caching is something you do to the
  *    song that is playing, and its state (cached or not) drives the label. Gated on
  *    the `songCache` capability, so hosts without the native module (Web) never see
@@ -47,7 +48,6 @@ export interface PlayerMoreMenuProps {
 export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMoreMenuProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const goToSongDetail = useNavigateToSongDetail()
   const [show, setShow] = useState(false)
   const [cached, setCached] = useState(false)
   const [videoConfirm, setVideoConfirm] = useState(false)
@@ -156,7 +156,7 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
         }
         items={items}
         onSelect={(key) => {
-          if (key === 'songInfo' && song != null) goToSongDetail(song.id)
+          if (key === 'songInfo' && song != null) songRowOverlays.openInfo(song)
           else if (key === 'cache') onCacheEntry()
           else if (key === 'equalizer') void navigate({ to: '/player/eq' })
           else onOpenSleepTimer()

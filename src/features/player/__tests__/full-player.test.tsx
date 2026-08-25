@@ -22,9 +22,6 @@ vi.mock('react-i18next', async () =>
 )
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateSpy,
-  // `useNavigateToSongDetail` (the song-info menu entry) reads the current
-  // pathname through this hook to record where the detail page was opened from.
-  useRouterState: () => '/player',
 }))
 // Persisting the default play mode moved here from the (now removed) Settings →
 // Playback section, so this is where the round-trip is asserted.

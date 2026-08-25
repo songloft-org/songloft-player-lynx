@@ -1,5 +1,5 @@
-export { usePlayerStore, restorePlaybackState } from './player-store.js'
-export type { PlayerState } from './player-store.js'
+export { usePlayerStore, restorePlaybackState, playbackSourceKindOf } from './player-store.js'
+export type { PlayerState, PlaybackSourceKind } from './player-store.js'
 export { useLyricStore } from './lyric-store.js'
 export type { LyricState } from './lyric-store.js'
 export {

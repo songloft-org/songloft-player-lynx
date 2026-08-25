@@ -10,7 +10,6 @@
  */
 import { getLastLibrarySearch } from '../../features/library/data/last-library-search.js'
 import { isLibraryViewKey } from '../../features/library/domain/library-views.js'
-import { getSongDetailOrigin, getSongEditOrigin } from '../../shared/nav/navigate-to-song-detail.js'
 import {
   getLastShellLocation,
   getNavPaths,
@@ -50,8 +49,6 @@ export function currentBackAction(): BackAction | null {
       && (location.search as { tab?: unknown }).tab === true,
     lastShellLocation: getLastShellLocation(),
     lastLibrarySearch: getLastLibrarySearch(),
-    songDetailFrom: getSongDetailOrigin(),
-    songEditFrom: getSongEditOrigin(),
   })
 }
 

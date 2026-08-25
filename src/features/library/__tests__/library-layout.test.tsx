@@ -58,9 +58,6 @@ vi.mock('../../../shared/responsive/useBreakpoint.js', async (importOriginal) =>
 
 const { LibraryLayout } = await import('../pages/LibraryLayout.js')
 const { setShellWidth } = await import('../../../shared/nav/shell-navigation.js')
-const { recordSongDetailOrigin, resetSongDetailOriginForTests } = await import(
-  '../../../shared/nav/navigate-to-song-detail.js'
-)
 
 beforeEach(() => {
   searchHook.mockReturnValue({})
@@ -68,7 +65,6 @@ beforeEach(() => {
   breakpointHook.mockReturnValue({ isWide: false, onLayoutChange: vi.fn() })
   lastSearch.current = {}
   location.pathname = '/library'
-  resetSongDetailOriginForTests()
 })
 
 /** Render at `pathname`, wide, so the rail is up and its highlight is assertable. */
@@ -176,31 +172,4 @@ test('playlist detail keeps the playlist view it was reached from', async () => 
   lastSearch.current = { view: 'playlist_radio' }
   const q = await renderWideAt('/playlists/7')
   expect(activeRow(q)).toBe('playlist_radio')
-})
-
-test('song detail keeps the list it was opened from', async () => {
-  lastSearch.current = { view: 'local' }
-  recordSongDetailOrigin('/library')
-  const q = await renderWideAt('/library/song/42')
-  expect(activeRow(q)).toBe('local')
-})
-
-/*
- * The reported bug: 全部歌单 → a playlist → a song lit 全部, because song detail
- * asked the rail about *itself* and the last library view was a songs view (the
- * playlist was reached without passing through the playlists list). Both screens
- * before it said "playlists", so the rail must too.
- */
-test('song detail opened from a playlist stays on the playlists group', async () => {
-  lastSearch.current = { view: 'all' }
-  recordSongDetailOrigin('/playlists/7')
-  const q = await renderWideAt('/library/song/42')
-  expect(activeRow(q)).toBe('playlist')
-})
-
-test('song detail opened from a facet drill-in keeps that dimension lit', async () => {
-  lastSearch.current = { view: 'all' }
-  recordSongDetailOrigin('/library/category/artist')
-  const q = await renderWideAt('/library/song/42')
-  expect(activeRow(q)).toBe('artist')
 })

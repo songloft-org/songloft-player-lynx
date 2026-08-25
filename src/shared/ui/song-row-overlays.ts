@@ -28,12 +28,20 @@ interface SongRowOverlayState {
   addToPlaylistOnAdded: (() => void) | null
   /** The song awaiting delete confirmation; null while the dialog is closed. */
   deleteSong: Song | null
+  /** The song whose read-only info dialog is open; null while closed. */
+  infoSong: Song | null
+  /** The song whose edit dialog is open; null while closed. */
+  editSong: Song | null
   openMenu: (song: Song, anchor?: AnchorMeasurement | null) => void
   closeMenu: () => void
   openAddToPlaylist: (params: OpenAddToPlaylistParams) => void
   closeAddToPlaylist: () => void
   requestDelete: (song: Song) => void
   cancelDelete: () => void
+  openInfo: (song: Song) => void
+  closeInfo: () => void
+  openEdit: (song: Song) => void
+  closeEdit: () => void
 }
 
 /**
@@ -84,8 +92,11 @@ interface SongRowOverlayState {
  * multi-select dispatches through here too — it is the same sheet, not a second
  * flatter one inlined into the page.
  *
- * The three overlays are mutually exclusive: opening one closes the others, so
- * the back-stack never has to order them against each other.
+ * The overlays are mutually exclusive: opening one closes the others, so
+ * the back-stack never has to order them against each other. The info and
+ * edit dialogs follow the same rule — the info dialog's edit button opens the
+ * edit dialog by switching the one slot (info closes, edit opens), so the
+ * back-stack never sees both at once either.
  */
 export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
   menuSong: null,
@@ -93,6 +104,8 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
   addToPlaylistSongIds: [],
   addToPlaylistOnAdded: null,
   deleteSong: null,
+  infoSong: null,
+  editSong: null,
   openMenu: (song, anchor) =>
     set({
       menuSong: song,
@@ -100,6 +113,8 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       addToPlaylistSongIds: [],
       addToPlaylistOnAdded: null,
       deleteSong: null,
+      infoSong: null,
+      editSong: null,
     }),
   closeMenu: () => set({ menuSong: null, menuAnchor: null }),
   openAddToPlaylist: ({ songIds, onAdded }) =>
@@ -109,6 +124,8 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       menuSong: null,
       menuAnchor: null,
       deleteSong: null,
+      infoSong: null,
+      editSong: null,
     }),
   closeAddToPlaylist: () => set({ addToPlaylistSongIds: [], addToPlaylistOnAdded: null }),
   requestDelete: (song) =>
@@ -118,14 +135,43 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       menuAnchor: null,
       addToPlaylistSongIds: [],
       addToPlaylistOnAdded: null,
+      infoSong: null,
+      editSong: null,
     }),
   cancelDelete: () => set({ deleteSong: null }),
+  openInfo: (song) =>
+    set({
+      infoSong: song,
+      menuSong: null,
+      menuAnchor: null,
+      addToPlaylistSongIds: [],
+      addToPlaylistOnAdded: null,
+      deleteSong: null,
+      editSong: null,
+    }),
+  closeInfo: () => set({ infoSong: null }),
+  openEdit: (song) =>
+    set({
+      editSong: song,
+      menuSong: null,
+      menuAnchor: null,
+      addToPlaylistSongIds: [],
+      addToPlaylistOnAdded: null,
+      deleteSong: null,
+      infoSong: null,
+    }),
+  closeEdit: () => set({ editSong: null }),
 }))
 
-/** Imperative access for non-hook callers (the library's multi-select toolbar). */
+/**
+ * Imperative access for non-hook callers (the library's multi-select toolbar,
+ * the player's overflow menu).
+ */
 export const songRowOverlays = {
   openMenu: (song: Song, anchor?: AnchorMeasurement | null) =>
     useSongRowOverlays.getState().openMenu(song, anchor),
   openAddToPlaylist: (params: OpenAddToPlaylistParams) =>
     useSongRowOverlays.getState().openAddToPlaylist(params),
+  openInfo: (song: Song) => useSongRowOverlays.getState().openInfo(song),
+  openEdit: (song: Song) => useSongRowOverlays.getState().openEdit(song),
 }

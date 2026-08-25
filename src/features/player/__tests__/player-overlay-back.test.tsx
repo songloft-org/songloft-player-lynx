@@ -25,8 +25,6 @@ vi.mock('react-i18next', async () =>
 )
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
-  // `useNavigateToSongDetail` (the song-info menu entry) reads the pathname here.
-  useRouterState: () => '/player',
 }))
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),

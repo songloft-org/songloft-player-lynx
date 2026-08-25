@@ -6,8 +6,8 @@ import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/tes
 
 import type { Song } from '../../../models/song.js'
 
-const { navigateToSongDetailMock, favoriteToggleMock, playerStoreHook, openMenuMock, openAddToPlaylistMock, requestDeleteMock } = vi.hoisted(() => ({
-  navigateToSongDetailMock: vi.fn(),
+const { openInfoMock, favoriteToggleMock, playerStoreHook, openMenuMock, openAddToPlaylistMock, requestDeleteMock } = vi.hoisted(() => ({
+  openInfoMock: vi.fn(),
   favoriteToggleMock: vi.fn(),
   playerStoreHook: vi.fn(),
   openMenuMock: vi.fn(),
@@ -18,10 +18,6 @@ const { navigateToSongDetailMock, favoriteToggleMock, playerStoreHook, openMenuM
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
-
-vi.mock('../../../shared/nav/navigate-to-song-detail.js', () => ({
-  useNavigateToSongDetail: () => navigateToSongDetailMock,
-}))
 
 /*
  * The row dispatches its overlay intents to the global store (the overlays
@@ -38,6 +34,8 @@ vi.mock('../../../shared/ui/song-row-overlays.js', () => ({
     deleteSong: Song | null
     openMenu: typeof openMenuMock
     closeMenu: () => void
+    openInfo: typeof openInfoMock
+    closeInfo: () => void
     openAddToPlaylist: typeof openAddToPlaylistMock
     closeAddToPlaylist: () => void
     requestDelete: typeof requestDeleteMock
@@ -49,6 +47,8 @@ vi.mock('../../../shared/ui/song-row-overlays.js', () => ({
       deleteSong: null,
       openMenu: openMenuMock,
       closeMenu: vi.fn(),
+      openInfo: openInfoMock,
+      closeInfo: vi.fn(),
       openAddToPlaylist: openAddToPlaylistMock,
       closeAddToPlaylist: vi.fn(),
       requestDelete: requestDeleteMock,
@@ -167,11 +167,11 @@ test('the wide delete shortcut dispatches to the global delete confirm', async (
   expect(requestDeleteMock).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
 })
 
-test('the wide detail shortcut navigates to the song page through the origin-recording helper', async () => {
+test('the wide detail shortcut opens the global info dialog for the song', async () => {
   const { getByTestId } = await renderRow(true)
   fireEvent.tap(getByTestId('song-row-detail'), {})
   await act(async () => { await Promise.resolve() })
-  expect(navigateToSongDetailMock).toHaveBeenCalledWith(1)
+  expect(openInfoMock).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
 })
 
 test('the favorite heart renders when the hook is wired (tap is catchtap: real-device)', async () => {

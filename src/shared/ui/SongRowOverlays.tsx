@@ -2,9 +2,10 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import { getSongsApi } from '../../features/library/api/index.js'
+import { SongEditDialog } from '../../features/library/widgets/SongEditDialog.js'
+import { SongInfoDialog } from '../../features/library/widgets/SongInfoDialog.js'
 import { AddToPlaylistSheet } from '../../features/playlist/widgets/AddToPlaylistSheet.js'
 import { usePlayerStore } from '../../features/player/store/index.js'
-import { useNavigateToSongDetail, useNavigateToSongEdit } from '../nav/navigate-to-song-detail.js'
 import { ConfirmDialog } from './ConfirmDialog.js'
 import { GlobalMenu } from './GlobalMenu.js'
 import type { MenuItemSpec } from './MenuItem.js'
@@ -17,41 +18,49 @@ import { useSongRowOverlays } from './song-row-overlays.js'
  * page content and other z-index: 100 panels paint below them.
  *
  * They must not hang off the app root as a `<RouterProvider>` sibling: on Web
- * that sits outside `.theme-root` (no `var(--*)` resolves) and outside the
- * Router context (`useNavigateToSongDetail` needs it).
+ * that sits outside `.theme-root`, so no `var(--*)` resolves (see
+ * `root-overlay-mount.test.ts`).
  *
  * Rows dispatch through the store (`song-row-overlays.ts`) — see the store docs
  * for why these overlays cannot live inside the virtualized lists, and why the
  * menu's anchor rect has to travel with the song.
  *
- * The menu and the sheet mount only while open; the confirm dialog stays
- * mounted with `show` toggling, which is what the back-stack's
- * activation-order priority expects (`show` starts false).
+ * The menu and the sheet mount only while open; the dialogs stay mounted with
+ * `show` toggling, which is what the back-stack's activation-order priority
+ * expects (`show` starts false).
  */
 export function SongRowOverlays() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const goToSongDetail = useNavigateToSongDetail()
-  const goToSongEdit = useNavigateToSongEdit()
 
   const menuSong = useSongRowOverlays((s) => s.menuSong)
   const menuAnchor = useSongRowOverlays((s) => s.menuAnchor)
   const addToPlaylistSongIds = useSongRowOverlays((s) => s.addToPlaylistSongIds)
   const addToPlaylistOnAdded = useSongRowOverlays((s) => s.addToPlaylistOnAdded)
   const deleteSong = useSongRowOverlays((s) => s.deleteSong)
+  const infoSong = useSongRowOverlays((s) => s.infoSong)
+  const editSong = useSongRowOverlays((s) => s.editSong)
   const closeMenu = useSongRowOverlays((s) => s.closeMenu)
+  const openInfo = useSongRowOverlays((s) => s.openInfo)
   const openAddToPlaylist = useSongRowOverlays((s) => s.openAddToPlaylist)
   const closeAddToPlaylist = useSongRowOverlays((s) => s.closeAddToPlaylist)
   const requestDelete = useSongRowOverlays((s) => s.requestDelete)
   const cancelDelete = useSongRowOverlays((s) => s.cancelDelete)
+  const closeInfo = useSongRowOverlays((s) => s.closeInfo)
+  const openEdit = useSongRowOverlays((s) => s.openEdit)
+  const closeEdit = useSongRowOverlays((s) => s.closeEdit)
 
   /*
-   * The four actions the Flutter build's song menu offers, in its order. The
-   * per-row buttons cover the rest: favorite and detail are already on the row,
-   * and the queue actions belong to the player's own overflow menu.
+   * Five actions, the Flutter build's song-menu set plus "song info": the
+   * per-row buttons cover favorite and the queue actions, and until the info
+   * dialog existed a narrow-screen row had no info entry at all (the detail
+   * page was reachable only from the player menu and the wide-screen row
+   * icon). Info sits between play and edit — read-only peek before any
+   * destructive "edit" muscle memory lands.
    */
   const items: MenuItemSpec[] = [
     { key: 'play', label: t('songMenu.play'), icon: 'play' },
+    { key: 'info', label: t('songMenu.info'), icon: 'info' },
     { key: 'edit', label: t('songMenu.edit'), icon: 'brush' },
     { key: 'add', label: t('songMenu.addToPlaylist'), icon: 'music' },
     { key: 'delete', label: t('songMenu.deleteSong'), icon: 'x', danger: true },
@@ -64,11 +73,11 @@ export function SongRowOverlays() {
       case 'play':
         void usePlayerStore.getState().playSong(song)
         return
+      case 'info':
+        openInfo(song)
+        return
       case 'edit':
-        // The edit form is its own page (the Flutter `SongEditPage`); opening it
-        // records this page as the back target, so closing the form returns
-        // here — not to the song detail page.
-        goToSongEdit(song.id)
+        openEdit(song)
         return
       case 'add':
         openAddToPlaylist({ songIds: [song.id] })
@@ -121,6 +130,23 @@ export function SongRowOverlays() {
         testId='song-delete-dialog'
         confirmTestId='song-delete-confirm'
         cancelTestId='song-delete-cancel'
+      />
+      {/**
+        * The info dialog's edit action switches this same store's slot (info
+        * closes, edit opens — mutually exclusive by construction), so the
+        * back-stack never sees both dialogs at once and back from edit closes
+        * just the edit dialog.
+        */}
+      <SongInfoDialog
+        show={infoSong != null}
+        song={infoSong}
+        onClose={closeInfo}
+        onEdit={openEdit}
+      />
+      <SongEditDialog
+        show={editSong != null}
+        song={editSong}
+        onClose={closeEdit}
       />
     </>
   )

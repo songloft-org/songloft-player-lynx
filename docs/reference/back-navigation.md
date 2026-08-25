@@ -71,7 +71,7 @@ useBackHandler(open, () => { setOpen(false); return true })
 
 - 返回 `true` = 已消费；返回 `false` = 让下一层处理
 - **`active` 挂载时必须为 `false`**（见 §1）
-- 嵌套子状态各注册一层，由激活顺序自然形成正确的退出顺序（如歌曲菜单 → 添加到歌单 → 删除确认，三者由 `song-row-overlays.ts` 互斥驱动）
+- 嵌套子状态各注册一层，由激活顺序自然形成正确的退出顺序（如歌曲菜单 → 添加到歌单 → 删除确认，五者 —— 连同歌曲信息/编辑弹窗 —— 由 `song-row-overlays.ts` 互斥驱动；信息弹窗的编辑按钮经 `openEdit` 单槽切换，返回键永远不会同时见到两个弹窗）
 - lynx-ui Dialog **没有命令式关闭**，只能改外部 `show` state（自研的 `PopoverSurface` 同样是受控的，只经 `onShowChange` 关）
 
 ---

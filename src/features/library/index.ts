@@ -1,8 +1,6 @@
 export { LibraryLayout } from './pages/LibraryLayout.js'
 export { LibraryPage } from './pages/LibraryPage.js'
 export { CategorySongsPage } from './pages/CategorySongsPage.js'
-export { SongDetailPage } from './pages/SongDetailPage.js'
-export { SongEditPage } from './pages/SongEditPage.js'
 export { AddSongsPage } from './pages/AddSongsPage.js'
 export { getLastLibrarySearch } from './data/last-library-search.js'
 export {

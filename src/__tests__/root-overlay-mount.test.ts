@@ -12,10 +12,12 @@ import { describe, expect, test } from 'vitest'
  * tolerated it, but on Web that position is outside `.theme-root` — the
  * subtree that defines every Muse CSS variable — so the delete-confirm dialog
  * rendered with every `var(--*)` resolved to empty (transparent body, 0×0
- * backdrop, unclickable feel), and the song menu never mounted at all:
- * `SongRowOverlays`' `useNavigateToSongDetail()` needs the Router context that
- * position lacks. Browser verification found both. The same rule already keeps
- * `ToastHost` in the root route (see its comment in `router.tsx`).
+ * backdrop, unclickable feel), and the song menu never mounted at all (its
+ * `useNavigateToSongDetail()` needed the Router context that position lacks —
+ * the helper has since been retired with the song-detail routes, but the song
+ * info/edit dialogs now mount here too and need those vars just as badly).
+ * Browser verification found both. The same rule already keeps `ToastHost` in
+ * the root route (see its comment in `router.tsx`).
  */
 
 const repoRoot = path.resolve(__dirname, '..', '..')

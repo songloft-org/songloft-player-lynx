@@ -38,6 +38,19 @@ import { describe, expect, test } from 'vitest'
 
 const SRC = path.resolve(__dirname, '../ConfirmDialog.tsx')
 
+/*
+ * Every dialog that shares the ConfirmDialog chrome: the two shared ones
+ * here, plus the two song dialogs under features/library (they import the
+ * same `.confirm-dialog__*` classes, so the modal z-index rule applies to
+ * them unchanged — see their component docs).
+ */
+const DIALOG_COMPONENTS = [
+  '../ConfirmDialog.tsx',
+  '../PromptDialog.tsx',
+  '../../../features/library/widgets/SongInfoDialog.tsx',
+  '../../../features/library/widgets/SongEditDialog.tsx',
+]
+
 /** Source with comments stripped — the prose above each fix explains it and
  *  must not be what satisfies these assertions. */
 function source(): string {
@@ -119,8 +132,8 @@ describe('dialogs paint above the overlays that open them', () => {
     return found
   }
 
-  test('DialogView carries the shared overlay class, in both dialogs', () => {
-    for (const file of ['../ConfirmDialog.tsx', '../PromptDialog.tsx']) {
+  test('DialogView carries the shared overlay class, in every dialog', () => {
+    for (const file of DIALOG_COMPONENTS) {
       const src = readFileSync(path.resolve(__dirname, file), 'utf8')
         .replace(/\/\*[\s\S]*?\*\//g, '')
       expect(
@@ -230,7 +243,7 @@ describe('dialogs close on the fade, not on the presence fallback stall', () => 
   const DIALOG_CSS = path.resolve(__dirname, '../ConfirmDialog.css')
 
   test('both dialog views opt their scrim and content into the transition classes', () => {
-    for (const file of ['../ConfirmDialog.tsx', '../PromptDialog.tsx']) {
+    for (const file of DIALOG_COMPONENTS) {
       const src = readFileSync(path.resolve(__dirname, file), 'utf8')
         .replace(/\/\*[\s\S]*?\*\//g, '')
       for (const tag of ['DialogBackdrop', 'DialogContent']) {

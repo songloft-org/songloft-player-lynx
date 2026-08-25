@@ -6,7 +6,7 @@ import { useSongRowOverlays } from '../song-row-overlays.js'
 /*
  * The song-row overlay store, at the getState() level — no React involved, so
  * the ReactLynx-vs-zustand hook conflict never comes up. What is pinned here:
- * the three overlays are mutually exclusive (so the back-stack never has to
+ * the five overlays are mutually exclusive (so the back-stack never has to
  * order them against each other) and each close action clears only its own.
  */
 
@@ -45,9 +45,11 @@ beforeEach(() => {
   s.closeMenu()
   s.closeAddToPlaylist()
   s.cancelDelete()
+  s.closeInfo()
+  s.closeEdit()
 })
 
-test('openMenu records the song, clearing the other two overlays', () => {
+test('openMenu records the song, clearing the other overlays', () => {
   const song = makeSong(1)
   useSongRowOverlays.getState().requestDelete(song)
   useSongRowOverlays.getState().openAddToPlaylist({ songIds: [song.id] })
@@ -57,6 +59,8 @@ test('openMenu records the song, clearing the other two overlays', () => {
   expect(s.menuSong).toBe(song)
   expect(s.addToPlaylistSongIds).toEqual([])
   expect(s.deleteSong).toBeNull()
+  expect(s.infoSong).toBeNull()
+  expect(s.editSong).toBeNull()
 })
 
 test('openAddToPlaylist records the ids, closing the menu it was chosen from', () => {
@@ -102,6 +106,51 @@ test('requestDelete records the song, closing an open menu', () => {
   expect(s.deleteSong).toBe(song)
   expect(s.menuSong).toBeNull()
   expect(s.addToPlaylistSongIds).toEqual([])
+})
+
+/*
+ * The info dialog's edit button switches to the edit dialog through this store
+ * (openEdit from inside SongInfoDialog's onEdit), so "info closes, edit opens"
+ * must hold exactly — the back-stack would otherwise see both dialogs at once.
+ */
+test('openInfo records the song, clearing every other overlay', () => {
+  const song = makeSong(5)
+  const other = makeSong(6)
+  useSongRowOverlays.getState().openMenu(song)
+  useSongRowOverlays.getState().openAddToPlaylist({ songIds: [song.id] })
+  useSongRowOverlays.getState().requestDelete(song)
+  useSongRowOverlays.getState().openEdit(other)
+  useSongRowOverlays.getState().openInfo(song)
+
+  const s = useSongRowOverlays.getState()
+  expect(s.infoSong).toBe(song)
+  expect(s.menuSong).toBeNull()
+  expect(s.addToPlaylistSongIds).toEqual([])
+  expect(s.deleteSong).toBeNull()
+  expect(s.editSong).toBeNull()
+})
+
+test('openEdit records the song, switching the info slot rather than stacking', () => {
+  const song = makeSong(7)
+  useSongRowOverlays.getState().openInfo(song)
+  useSongRowOverlays.getState().openEdit(song)
+
+  const s = useSongRowOverlays.getState()
+  expect(s.editSong).toBe(song)
+  expect(s.infoSong).toBeNull()
+  expect(s.menuSong).toBeNull()
+  expect(s.deleteSong).toBeNull()
+})
+
+test('closing the info dialog leaves an open edit dialog alone (and vice versa)', () => {
+  const song = makeSong(8)
+  useSongRowOverlays.getState().openEdit(song)
+  useSongRowOverlays.getState().closeInfo()
+  expect(useSongRowOverlays.getState().editSong).toBe(song)
+
+  useSongRowOverlays.getState().openInfo(song)
+  useSongRowOverlays.getState().closeEdit()
+  expect(useSongRowOverlays.getState().infoSong).toBe(song)
 })
 
 test('each close action clears only its own overlay', () => {

@@ -230,6 +230,8 @@ let _videoSourceSongId: number | null = null
 interface PlaybackSource {
   url: string
   hls: boolean
+  /** A device-cache `file://` copy rather than the remote stream. */
+  cached: boolean
 }
 
 /**
@@ -248,13 +250,13 @@ interface PlaybackSource {
  * ({@link enterVideoSource}), never by default.
  */
 function playbackSourceFor(song: Song): PlaybackSource {
-  if (!song.url) return { url: '', hls: false }
+  if (!song.url) return { url: '', hls: false, cached: false }
   const kind = resolveVideoSourceKind(song, getPlatformTarget())
-  if (kind === 'direct') return { url: buildVideoUrl(song.url), hls: false }
+  if (kind === 'direct') return { url: buildVideoUrl(song.url), hls: false, cached: false }
   if (kind === 'hls' && _videoSourceSongId === song.id) {
-    return { url: buildVideoHlsUrl(song.id), hls: true }
+    return { url: buildVideoHlsUrl(song.id), hls: true, cached: false }
   }
-  return { url: songUrl(song), hls: false }
+  return { url: songUrl(song), hls: false, cached: false }
 }
 
 /**
@@ -271,7 +273,7 @@ function playbackSourceFor(song: Song): PlaybackSource {
  */
 async function resolvePlaybackSource(song: Song): Promise<PlaybackSource> {
   const cached = await getCachedPath(song.id).catch(() => null)
-  if (cached) return { url: cached, hls: false }
+  if (cached) return { url: cached, hls: false, cached: true }
   return playbackSourceFor(song)
 }
 
@@ -371,9 +373,32 @@ const MAX_CONSECUTIVE_SKIPS = 3
  */
 let _loadedSongId: number | null = null
 
+/** How the loaded song reached the engine — see `playbackSourceKindOf`. */
+export type PlaybackSourceKind = 'cache' | 'stream'
+
+/**
+ * Whether the song in the engine came from the device cache or the remote
+ * stream, or null while the engine holds nothing. Engine state like
+ * `_loadedSongId`, and kept beside it: the store's `currentSong` cannot record
+ * this (playback of the same song can start from either side), and the info
+ * dialog needs the truth for the track the user is actually listening to.
+ */
+let _loadedSourceKind: PlaybackSourceKind | null = null
+
+/**
+ * How `songId` was actually loaded — `'cache'` / `'stream'` — or null when it
+ * is not the track the engine holds. Read once where needed (the song-info
+ * dialog's playback-source row); deliberately non-reactive, because playback
+ * starting elsewhere must not re-render an open dialog.
+ */
+export function playbackSourceKindOf(songId: number): PlaybackSourceKind | null {
+  return _loadedSongId === songId ? _loadedSourceKind : null
+}
+
 /** Test hook: forget what the engine holds (each scenario starts cold). */
 export function resetLoadedSongForTests(): void {
   _loadedSongId = null
+  _loadedSourceKind = null
   _videoSourceSongId = null
 }
 
@@ -422,7 +447,13 @@ function scheduleRetry(song: Song, positionMs: number): void {
     usePlayerStore.setState({ errorMessage: undefined, isBuffering: true })
     void resolvePlaybackSource(song).then((retrySource) =>
       audio.load(retrySource.url, { durationMs: durationMsOf(song), hls: retrySource.hls })
-        .then(() => (positionMs > 0 ? audio.seek(positionMs) : undefined))
+        .then(() => {
+          // The reloaded track may resolve differently than the attempt that
+          // failed (a cache fill finishing mid-playback), so record it too.
+          _loadedSongId = song.id
+          _loadedSourceKind = retrySource.cached ? 'cache' : 'stream'
+          return positionMs > 0 ? audio.seek(positionMs) : undefined
+        })
         .then(() => audio.play())
         // A failure here re-emits `error`, which schedules the next attempt; there
         // is nothing to do with the rejection itself.
@@ -452,6 +483,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       hls: source.hls,
     })
     _loadedSongId = song.id
+    _loadedSourceKind = source.cached ? 'cache' : 'stream'
     await audio.play()
     syncFavoriteToNative(song.id)
     // Report the play event (fire-and-forget). The context decides whether it
@@ -705,6 +737,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         const pos = get().currentTime
         const source = playbackSourceFor(song)
         await audio.load(source.url, { hls: source.hls })
+        _loadedSongId = song.id
+        // Track switching resolves through `playbackSourceFor`, which never
+        // consults the device cache — the engine is on the remote stream.
+        _loadedSourceKind = 'stream'
         await audio.seek(pos)
         await audio.play()
       }
@@ -744,6 +780,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         // reports nothing until it is done.
         await audio.load(source.url, { durationMs: durationMsOf(song), hls: source.hls })
         _loadedSongId = song.id
+        // The HLS transcode (or direct video URL) is always the remote stream.
+        _loadedSourceKind = 'stream'
         if (positionMs > 0) await audio.seek(positionMs)
         await audio.play()
       } catch (e) {
@@ -1007,6 +1045,7 @@ export async function restorePlaybackState(): Promise<void> {
     // took the `playAtIndex` path and reloaded a media item the engine
     // already had (see the `_loadedSongId` note at `togglePlay`).
     _loadedSongId = song.id
+    _loadedSourceKind = restored.cached ? 'cache' : 'stream'
     await audio.seek(saved.positionMs)
     await audio.play()
   }

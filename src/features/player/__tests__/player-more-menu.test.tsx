@@ -2,9 +2,9 @@ import '@testing-library/jest-dom'
 import { expect, test, vi } from 'vitest'
 import { render, getQueriesForElement, fireEvent, act } from '@lynx-js/react/testing-library'
 
-const { navigateSpy, goToSongDetailSpy, popoverProps } = vi.hoisted(() => ({
+const { navigateSpy, openInfoSpy, popoverProps } = vi.hoisted(() => ({
   navigateSpy: vi.fn(),
-  goToSongDetailSpy: vi.fn(),
+  openInfoSpy: vi.fn(),
   popoverProps: { current: null as unknown as Record<string, unknown> },
 }))
 
@@ -12,8 +12,13 @@ vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigateSpy }))
-vi.mock('../../../shared/nav/navigate-to-song-detail.js', () => ({
-  useNavigateToSongDetail: () => goToSongDetailSpy,
+/*
+ * Song info is no longer a route: the entry dispatches through the global
+ * overlay store, which mounts `SongInfoDialog` in the root route. Only the
+ * imperative object is mocked — that is all this component touches.
+ */
+vi.mock('../../../shared/ui/song-row-overlays.js', () => ({
+  songRowOverlays: { openInfo: openInfoSpy },
 }))
 /*
  * Stand the popover up as a flat list of its items so the test can tap them
@@ -69,12 +74,12 @@ test('omits song info when nothing is loaded', () => {
   expect(keys).toEqual(['equalizer', 'sleepTimer'])
 })
 
-test('selecting song info opens the song detail page for the current song', async () => {
+test('selecting song info opens the global info dialog for the current song', async () => {
   render(<PlayerMoreMenu song={song} onOpenSleepTimer={() => {}} timerActive={false} />)
   const { getByTestId } = getQueriesForElement(elementTree.root!)
   await act(async () => {
     fireEvent.tap(getByTestId('more-menu-item-songInfo')!)
     await Promise.resolve()
   })
-  expect(goToSongDetailSpy).toHaveBeenCalledWith(7)
+  expect(openInfoSpy).toHaveBeenCalledWith(song)
 })

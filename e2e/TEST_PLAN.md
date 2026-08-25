@@ -135,15 +135,17 @@
 
 ---
 
-### 8. 歌曲详情 (`song-detail.scenario.ts`)
+### 8. 歌曲信息与编辑弹窗 (`song-detail.scenario.ts`)
 
-**路由：** `/library/song/$songId`
+**入口：** song-row-overlays store（`__E2E_SONG_OVERLAYS__`）——歌曲详情/编辑**没有路由**了，弹窗挂在 root route 上，与行内 `⋯` 菜单同一条打开路径
 
 | # | 测试用例 | 验证点 |
 |---|---------|--------|
-| 1 | 加载歌曲元信息（标题/艺术家/专辑/时长） | 数据字段非空 |
-| 2 | 播放当前歌曲 | player currentSong.id = songId |
-| 3 | 收藏/取消收藏 | favorite state 切换 |
+| 1 | 打开信息弹窗（openInfo） | infoSong 记录歌曲，menu/edit 互斥清空 |
+| 2 | 信息弹窗 → 编辑弹窗（openEdit 单槽切换） | editSong 记录歌曲，infoSong 归 null |
+| 3 | 返回键关闭弹窗 | depth 归零，info/edit 均 null |
+| 4 | 歌曲元信息 API | 字段非空（Node 侧直连后端） |
+| 5 | 播放当前歌曲 | player currentSong.id = songId |
 
 ---
 

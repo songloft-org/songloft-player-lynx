@@ -1,35 +1,38 @@
-import '../../../shims/router-env.js'
 import '@testing-library/jest-dom'
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 
 import type { Song } from '../../../models/song.js'
+import { clearBackHandlersForTests } from '../../../shared/nav/back-stack.js'
 
 /*
- * The song edit page, ported from the Flutter `SongEditPage`: a type-driven
- * form (local → tags + rename; remote/radio → update + lyric endpoint), a
- * read-only endpoint card, and per-field validation. The lynx-ui `Input` is
- * mocked with a placeholder-keyed testid plus a tap script, so tests can drive
- * `onInput` without a keyboard.
+ * `SongEditDialog` — the edit form half of the retired song edit page, now a
+ * centered card (ConfirmDialog's chrome; see the component doc).
+ *
+ * The form logic is unchanged from the page: a type-driven form (local → tags +
+ * rename; remote/radio → update + lyric endpoint), a read-only endpoint card,
+ * and per-field validation. What the dialog adds is the store-seeded form (no
+ * getSong fetch) and closing on save. The lynx-ui `Input` is mocked with a
+ * placeholder-keyed testid plus a tap script, so tests can drive `onInput`
+ * without a keyboard.
  */
-const { getSongSpy, writeTagsSpy, updateSongSpy, updateLyricsSpy, copyToClipboardMock, inputTaps } = vi.hoisted(() => ({
-  getSongSpy: vi.fn(),
+const { writeTagsSpy, updateSongSpy, updateLyricsSpy, copyToClipboardMock, invalidateSpy, inputTaps } = vi.hoisted(() => ({
   writeTagsSpy: vi.fn(async () => {}),
   updateSongSpy: vi.fn(async () => {}),
   updateLyricsSpy: vi.fn(async () => {}),
   copyToClipboardMock: vi.fn(),
+  invalidateSpy: vi.fn(),
   inputTaps: { script: [] as Array<{ match: RegExp; value: string }> },
 }))
 
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
-vi.mock('@tanstack/react-router', () => ({
-  useNavigate: () => vi.fn(),
-  useParams: () => ({ songId: '42' }),
-}))
+vi.mock('@lynx-js/lynx-ui-dialog', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiDialog(),
+)
 vi.mock('@tanstack/react-query', () => ({
-  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+  useQueryClient: () => ({ invalidateQueries: invalidateSpy }),
 }))
 vi.mock('@lynx-js/lynx-ui-input', () => ({
   Input: ({
@@ -64,14 +67,13 @@ vi.mock('../../../native/native-platform.js', () => ({
 }))
 vi.mock('../api/index.js', () => ({
   getSongsApi: () => ({
-    getSong: getSongSpy,
     writeTags: writeTagsSpy,
     updateSong: updateSongSpy,
     updateLyrics: updateLyricsSpy,
   }),
 }))
 
-const { SongEditPage } = await import('../pages/SongEditPage.js')
+const { SongEditDialog } = await import('../widgets/SongEditDialog.js')
 
 function makeSong(overrides: Partial<Song> = {}): Song {
   return {
@@ -144,24 +146,29 @@ const pluginRemoteSong = makeSong({
 })
 
 beforeEach(() => {
-  getSongSpy.mockReset()
   writeTagsSpy.mockClear()
   updateSongSpy.mockClear()
   updateLyricsSpy.mockClear()
   copyToClipboardMock.mockClear()
+  invalidateSpy.mockClear()
   inputTaps.script.length = 0
+  clearBackHandlersForTests()
 })
 
-async function renderPage(song: Song) {
-  getSongSpy.mockResolvedValue(song)
-  render(<SongEditPage />)
-  await act(async () => { await new Promise(r => setTimeout(r, 10)) })
-  return getQueriesForElement(elementTree.root!)
+afterEach(() => clearBackHandlersForTests())
+
+async function renderDialog(song: Song) {
+  const onClose = vi.fn()
+  render(<SongEditDialog show song={song} onClose={onClose} />)
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 10))
+  })
+  return { onClose, ...getQueriesForElement(elementTree.root!) }
 }
 
 describe('local songs', () => {
   test('shows the file info card and the rename switch, no network fields', async () => {
-    const { queryByText } = await renderPage(localSong)
+    const { queryByText } = await renderDialog(localSong)
 
     expect(queryByText('Edit local song')).toBeInTheDocument()
     expect(queryByText('File info (read-only)')).toBeInTheDocument()
@@ -174,10 +181,12 @@ describe('local songs', () => {
   })
 
   test('save writes tags with the rename switch on by default', async () => {
-    const { getByTestId } = await renderPage(localSong)
+    const { getByTestId, onClose } = await renderDialog(localSong)
 
     fireEvent.tap(getByTestId('song-edit-save'), {})
-    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10))
+    })
 
     expect(writeTagsSpy).toHaveBeenCalledWith(42, {
       title: 'Test Song',
@@ -186,15 +195,22 @@ describe('local songs', () => {
       renameFile: true,
     })
     expect(updateSongSpy).not.toHaveBeenCalled()
+    // A save ages every library/playlist cache and closes the dialog — the
+    // page's route-back became a plain close.
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['library'] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['playlist'] })
+    expect(onClose).toHaveBeenCalled()
   })
 
   test('toggling the switch sends renameFile: false', async () => {
-    const { getByTestId } = await renderPage(localSong)
+    const { getByTestId } = await renderDialog(localSong)
 
     const row = getByTestId('song-edit-rename-row')
     fireEvent.tap(row.querySelector('.app-switch') as unknown as Element, {})
     fireEvent.tap(getByTestId('song-edit-save'), {})
-    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10))
+    })
 
     expect(writeTagsSpy).toHaveBeenCalledWith(42, {
       title: 'Test Song',
@@ -207,7 +223,7 @@ describe('local songs', () => {
 
 describe('remote songs', () => {
   test('shows the endpoint card and every network field', async () => {
-    const { queryByText } = await renderPage(remoteSong)
+    const { queryByText } = await renderDialog(remoteSong)
 
     expect(queryByText('Edit remote song')).toBeInTheDocument()
     expect(queryByText('Server endpoint (read-only)')).toBeInTheDocument()
@@ -221,12 +237,14 @@ describe('remote songs', () => {
   })
 
   test('a changed lyric URL goes through the lyrics endpoint', async () => {
-    const { getByTestId } = await renderPage(remoteSong)
+    const { getByTestId } = await renderDialog(remoteSong)
 
     inputTaps.script.push({ match: /lyrics API/, value: 'https://lyric.example.com/new.lrc' })
     fireEvent.tap(getByTestId('song-edit-field-Please enter a lyrics API link'), {})
     fireEvent.tap(getByTestId('song-edit-save'), {})
-    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10))
+    })
 
     expect(updateSongSpy).toHaveBeenCalledWith(42, {
       title: 'Remote Song',
@@ -245,23 +263,27 @@ describe('remote songs', () => {
   })
 
   test('an unchanged lyric URL does not touch the lyrics endpoint', async () => {
-    const { getByTestId } = await renderPage(remoteSong)
+    const { getByTestId } = await renderDialog(remoteSong)
 
     fireEvent.tap(getByTestId('song-edit-save'), {})
-    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10))
+    })
 
     expect(updateSongSpy).toHaveBeenCalled()
     expect(updateLyricsSpy).not.toHaveBeenCalled()
   })
 
   test('plugin-sourced songs hide the URL field (nothing editable to send back)', async () => {
-    const { queryByText, getByTestId } = await renderPage(pluginRemoteSong)
+    const { queryByText, getByTestId } = await renderDialog(pluginRemoteSong)
 
     expect(queryByText('Source audio URL *')).not.toBeInTheDocument()
     expect(queryByText('Source cover URL')).toBeInTheDocument()
 
     fireEvent.tap(getByTestId('song-edit-save'), {})
-    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10))
+    })
 
     expect(updateSongSpy).toHaveBeenCalledWith(42, expect.objectContaining({ url: undefined }))
   })
@@ -269,7 +291,7 @@ describe('remote songs', () => {
 
 describe('radio songs', () => {
   test('hides album, duration and lyric fields', async () => {
-    const { queryByText } = await renderPage(radioSong)
+    const { queryByText } = await renderDialog(radioSong)
 
     expect(queryByText('Edit radio')).toBeInTheDocument()
     expect(queryByText('Album')).not.toBeInTheDocument()
@@ -279,10 +301,12 @@ describe('radio songs', () => {
   })
 
   test('save updates the song and never the lyrics endpoint', async () => {
-    const { getByTestId } = await renderPage(radioSong)
+    const { getByTestId } = await renderDialog(radioSong)
 
     fireEvent.tap(getByTestId('song-edit-save'), {})
-    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10))
+    })
 
     expect(updateSongSpy).toHaveBeenCalledWith(42, {
       title: 'Radio X',
@@ -299,12 +323,14 @@ describe('radio songs', () => {
 
 describe('validation', () => {
   test('an empty title blocks the submit with an inline error', async () => {
-    const { getByTestId, queryByText } = await renderPage(
+    const { getByTestId, queryByText } = await renderDialog(
       makeSong({ title: '', artist: '', album: '' }),
     )
 
     fireEvent.tap(getByTestId('song-edit-save'), {})
-    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10))
+    })
 
     expect(queryByText('Please enter a title')).toBeInTheDocument()
     expect(writeTagsSpy).not.toHaveBeenCalled()
@@ -312,12 +338,14 @@ describe('validation', () => {
   })
 
   test('a URL without a scheme blocks the submit', async () => {
-    const { getByTestId, queryByText } = await renderPage(
+    const { getByTestId, queryByText } = await renderDialog(
       makeSong({ type: 'remote', title: 'X', sourceUrl: 'not-a-url', duration: 0 }),
     )
 
     fireEvent.tap(getByTestId('song-edit-save'), {})
-    await act(async () => { await new Promise(r => setTimeout(r, 10)) })
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10))
+    })
 
     expect(queryByText('Please enter a valid URL')).toBeInTheDocument()
     expect(updateSongSpy).not.toHaveBeenCalled()
@@ -326,18 +354,38 @@ describe('validation', () => {
 
 describe('the read-only endpoint card', () => {
   test('copy hands the shown value to the platform clipboard', async () => {
-    const { getAllByTestId } = await renderPage(remoteSong)
+    const { getAllByTestId } = await renderDialog(remoteSong)
 
     fireEvent.tap(getAllByTestId('song-edit-copy')[0]!, {})
     expect(copyToClipboardMock).toHaveBeenCalledWith('/api/v1/songs/42/play')
   })
 })
 
-test('a failed load shows the not-found state', async () => {
-  getSongSpy.mockRejectedValue(new Error('boom'))
-  render(<SongEditPage />)
-  await act(async () => { await new Promise(r => setTimeout(r, 10)) })
-  const { queryByText } = getQueriesForElement(elementTree.root!)
+/*
+ * The dialog's one new failure mode: the page could not "fail to close" (it had
+ * no close to do), but the dialog must stay open with the values intact when
+ * the save rejects — otherwise the user's edits are gone behind a toast.
+ */
+test('a rejected save keeps the dialog open', async () => {
+  updateSongSpy.mockRejectedValue(new Error('boom'))
+  const { getByTestId, onClose } = await renderDialog(remoteSong)
 
-  expect(queryByText('Song not found.')).toBeInTheDocument()
+  fireEvent.tap(getByTestId('song-edit-save'), {})
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 10))
+  })
+
+  expect(updateSongSpy).toHaveBeenCalled()
+  expect(onClose).not.toHaveBeenCalled()
+})
+
+test('no card renders without a song (the mount point stays inert while closed)', async () => {
+  const onClose = vi.fn()
+  render(<SongEditDialog show={false} song={null} onClose={onClose} />)
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 10))
+  })
+  const { queryByTestId } = getQueriesForElement(elementTree.root!)
+
+  expect(queryByTestId('song-edit-dialog')).not.toBeInTheDocument()
 })

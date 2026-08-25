@@ -1,0 +1,140 @@
+/*
+ * Song info dialog — the read-only detail card that replaced the song detail
+ * page.
+ *
+ * The modal chrome (scrim / content / wrapper levels 200/201) comes from the
+ * shared `.confirm-dialog__*` classes in ConfirmDialog.css; THIS file declares
+ * no z-index at all — confirm-dialog-overlay.test.ts caps every other
+ * stylesheet below the modal layer, and the fixed-layer rule must keep a
+ * single home.
+ *
+ * The `song-detail__row` family below migrated verbatim from the retired
+ * SongDetailPage.css (only the page-level topbar / hero / nav-inset rules were
+ * dropped).
+ */
+
+.song-info-dialog {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--paper);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  padding: var(--space-5);
+  margin: var(--space-6);
+  max-width: 400px;
+  /* Keeps the [close]/[edit] row reachable on short screens; the body scrolls. */
+  max-height: 85%;
+}
+
+/* Title row: small cover + two-line song name (the Flutter dialog clamps its
+   title at two lines the same way). */
+.song-info-dialog__header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.song-info-dialog__cover {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background-color: var(--neutral-faint);
+}
+
+.song-info-dialog__cover--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/*
+ * Two-line clamp on Web; the native template encoder strips
+ * `-webkit-box-orient` / `-webkit-line-clamp` (build warning), so the hard
+ * 2 × --font-md max-height is the actual clamp there — the pattern from
+ * `.playlist-detail__desc`.
+ */
+.song-info-dialog__name {
+  flex: 1;
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--content);
+  line-height: var(--font-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 32px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/*
+ * Basis auto, not the usual `flex: 1` (basis 0): the card's height is
+ * content-driven until its max-height clamps, and a zero basis would collapse
+ * this view to nothing whenever the card is un-clamped. `min-height: 0` lets
+ * it actually shrink — and scroll — once the clamp kicks in.
+ */
+.song-info-dialog__body {
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: auto;
+  min-height: 0;
+  /* Spacing to the action row lives here, not on the row: the row reuses the
+     shared `.confirm-dialog__actions` class, whose family must keep a single
+     home (app-switch-css.test.ts forbids forking it). */
+  margin-bottom: var(--space-4);
+}
+
+/* ——— rows migrated from SongDetailPage.css ——— */
+
+.song-detail__row {
+  display: flex;
+  flex-direction: row;
+  padding: var(--space-3) 0;
+  border-bottom-width: 1px;
+  border-bottom-color: var(--line);
+}
+
+.song-detail__row-label {
+  width: 80px;
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+}
+
+.song-detail__row-value {
+  flex: 1;
+  font-size: var(--font-sm);
+  color: var(--content);
+}
+
+/* Small note under the cache row explaining how the cached quality is chosen. */
+.song-detail__cache-note {
+  padding: var(--space-2) 0;
+}
+
+.song-detail__cache-note-text {
+  font-size: var(--font-xs);
+  color: var(--content-muted);
+}
+
+/* The "write tags to file" pill — local songs only. */
+.song-detail__save-btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background-color: var(--primary);
+}
+
+.song-detail__save-btn-text {
+  font-size: var(--font-sm);
+  color: var(--primary-content);
+}
+
+.song-detail__tags-section {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
