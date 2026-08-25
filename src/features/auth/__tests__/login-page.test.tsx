@@ -11,6 +11,7 @@ import { RouterProvider } from '@tanstack/react-router'
 
 import { appConfig } from '../../../core/config/app-config.js'
 import { createAppRouter } from '../../../router.js'
+import { setMockAuthStatus } from '../../../__tests__/_render-mocks.js'
 
 // The login screen depends on three facilities the ReactLynx Vitest env cannot
 // run; all three are mocked to plain stand-ins here (shapes shared via
@@ -68,10 +69,13 @@ vi.mock('../../../shared/ui/SongRowOverlays.js', () => ({
 
 /**
  * Login-page render smoke, reusing the batch-1 ReactLynx testing-library setup.
- * Rendered through the router at `/login`: the production auth store is still
- * `unknown` (no `checkAuth` runs here), so the guard allows the route.
+ * Rendered through the router at `/login` with auth pinned to
+ * `unauthenticated`: since the splash gate, the root view holds the splash
+ * while the status is `unknown` (the mock's default), so the login card only
+ * mounts once auth has resolved to "no session".
  */
 async function renderLogin() {
+  setMockAuthStatus('unauthenticated')
   const appRouter = createAppRouter(['/login'])
   await act(async () => {
     await appRouter.load()
@@ -85,6 +89,7 @@ async function renderLogin() {
 
 afterEach(() => {
   appConfig.reset()
+  setMockAuthStatus('unknown')
 })
 
 test('renders the login page with title, labels and login button', async () => {

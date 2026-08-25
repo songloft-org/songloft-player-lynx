@@ -10,6 +10,7 @@ export {
 export type { AuthState, AuthStoreDeps, LoginArgs } from './auth-store.js'
 export {
   evaluateAuthGuard,
+  isAuthTransitionPending,
   LOGIN_PATH,
   HOME_PATH,
 } from './guard.js'

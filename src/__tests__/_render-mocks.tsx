@@ -21,8 +21,8 @@
  *     undefined (reading 'isListHolder' / 'parentNode')` crash. On device the
  *     real runtime sequences these commits correctly. `makeAuthStoreMock`
  *     replaces only `useAuthStore` with a static, non-subscribing reader
- *     (`status: 'unknown'` so the route guard never redirects); every other
- *     store export is preserved via the caller's `vi.importActual`.
+ *     (`status: 'unknown'` by default; flip it with `setMockAuthStatus()`);
+ *     every other store export is preserved via the caller's `vi.importActual`.
  *
  * Usage keeps the `vi.mock` calls in each test file (they must be hoisted) but
  * shares the factory bodies so the mock shapes cannot drift:
@@ -232,8 +232,11 @@ export function mockVirtualList() {
 
 /**
  * Static auth state used by the mocked store. `status: 'unknown'` mirrors the
- * production store before `checkAuth()` runs, so `evaluateAuthGuard` allows both
- * `/login` and `/` — matching the render tests' existing assumptions.
+ * production store before `checkAuth()` runs — which since the splash gate
+ * means the root view renders the splash, not a route (see
+ * `RootRouteView`). Render tests that need an actual page on screen set the
+ * status with `setMockAuthStatus()` before `render()`; the mock is a static
+ * non-subscribing reader, so a change only affects subsequent renders.
  */
 const authState: AuthState = {
   status: 'unknown',
@@ -244,6 +247,15 @@ const authState: AuthState = {
   login: async () => {},
   logout: async () => {},
   reset: () => {},
+}
+
+/**
+ * Point the mocked auth store at `status` — call it BEFORE `render()` (the
+ * stand-in does not subscribe, so live changes never re-render). Pair with an
+ * `afterEach` reset back to `'unknown'` when a file mixes scenarios.
+ */
+export function setMockAuthStatus(status: AuthState['status']): void {
+  authState.status = status
 }
 
 /** Non-subscribing stand-in for the zustand `useAuthStore` hook + store api. */

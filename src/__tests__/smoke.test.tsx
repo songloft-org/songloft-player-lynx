@@ -1,7 +1,7 @@
 import '../shims/router-env.js'
 
 import '@testing-library/jest-dom'
-import { expect, test, vi } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 import {
   act,
   fireEvent,
@@ -12,6 +12,7 @@ import { RouterProvider } from '@tanstack/react-router'
 
 import { App } from '../App.js'
 import { createAppRouter, router } from '../router.js'
+import { setMockAuthStatus } from './_render-mocks.js'
 
 // Rendering `/login` (via <App/> or the router) pulls in facilities the
 // ReactLynx Vitest env cannot run — the lynx-ui native leaves `Input`/`Switch`
@@ -183,8 +184,13 @@ vi.mock('../shared/ui/song-row-overlays.js', () => ({
  * re-resolve matches (it works in the real Lynx build and dev server). Route
  * *config* and navigation *wiring* are still exercised — see the wiring test
  * below, which drives a real `bindtap` and asserts the router transitions.
+ *
+ * Every entry here is a protected route, so auth is pinned to `authenticated`:
+ * with the splash gate, `unknown` (the mock's default) renders the splash and
+ * never mounts the route component.
  */
 async function renderRoute(entry: string) {
+  setMockAuthStatus('authenticated')
   const appRouter = createAppRouter([entry])
   await act(async () => {
     await appRouter.load()
@@ -197,6 +203,9 @@ async function renderRoute(entry: string) {
 }
 
 test('renders the App at the initial /login route', async () => {
+  // Unauthenticated, so the splash gate lets /login render (with the mock's
+  // default `unknown` the app would sit on the splash — see splash-gate.test).
+  setMockAuthStatus('unauthenticated')
   await act(async () => {
     await router.load()
   })
@@ -206,9 +215,11 @@ test('renders the App at the initial /login route', async () => {
 })
 
 test('drives a real bindtap on the home screen into the library route', async () => {
-  // The auth store is still `unknown` here (no `checkAuth`), so the guard lets
-  // `/` render. The home "View all" affordance is a plain `bindtap` → navigate,
-  // so it proves the tap -> navigate -> router transition end to end.
+  // Auth pinned to `authenticated` — the splash gate would otherwise hold the
+  // splash and never mount the home screen. The home "View all" affordance is
+  // a plain `bindtap` → navigate, so it proves the tap -> navigate -> router
+  // transition end to end.
+  setMockAuthStatus('authenticated')
   const appRouter = createAppRouter(['/'])
   await act(async () => {
     await appRouter.load()
@@ -240,4 +251,9 @@ test('renders the chrome-less player screen', async () => {
   // The collapse button rather than the header text: the header is the album on narrow
   // layouts and "Now Playing" only on wide ones, and this env reports no width.
   expect(queryByTestId('full-player-close')).toBeInTheDocument()
+})
+
+afterEach(() => {
+  // Back to the production boot state for the next file/test.
+  setMockAuthStatus('unknown')
 })

@@ -62,24 +62,40 @@ useAuthStore.subscribe((state, prev) => {
 // One-time startup: apply the persisted UI language + theme, hydrate persisted
 // server URL / insecure-TLS into config, then probe stored tokens to resolve
 // `unknown` → authenticated/unauthenticated.
+//
+// The whole chain sits in a try/catch whose fallback re-runs `checkAuth`:
+// the root view now holds the splash screen while the status is `unknown`
+// (see RootRouteView), so a thrown error anywhere above would otherwise leave
+// the app on the splash forever. `checkAuth` maps its own failures to
+// `unauthenticated`, so the fallback always resolves auth one way or the
+// other — the `.catch` setState is belt-and-braces against that changing.
 void (async () => {
-  // Before language/theme: both resolve `'system'` through the host appearance,
-  // and this installs the listener that keeps them following it. (The first
-  // render above already reads `lynx.__globalProps` lazily, so the launch frame
-  // is painted in the right theme without waiting for this.)
-  initSystemAppearance()
-  await applySavedLanguage()
-  await applySavedTheme()
-  const savedMode = await readDefaultPlayMode()
-  usePlayerStore.getState().setPlayMode(savedMode)
-  await restorePlaybackState()
-  const auth = useAuthStore.getState()
-  await auth.hydrate()
-  await auth.checkAuth()
-  // Only once auth resolved: the pack lives behind the API's auth, and a
-  // tokenless GET would 401 (the Flutter provider guards the same way).
-  if (useAuthStore.getState().status === 'authenticated') {
-    await applyActiveThemePack()
+  try {
+    // Before language/theme: both resolve `'system'` through the host appearance,
+    // and this installs the listener that keeps them following it. (The first
+    // render above already reads `lynx.__globalProps` lazily, so the launch frame
+    // is painted in the right theme without waiting for this.)
+    initSystemAppearance()
+    await applySavedLanguage()
+    await applySavedTheme()
+    const savedMode = await readDefaultPlayMode()
+    usePlayerStore.getState().setPlayMode(savedMode)
+    await restorePlaybackState()
+    const auth = useAuthStore.getState()
+    await auth.hydrate()
+    await auth.checkAuth()
+    // Only once auth resolved: the pack lives behind the API's auth, and a
+    // tokenless GET would 401 (the Flutter provider guards the same way).
+    if (useAuthStore.getState().status === 'authenticated') {
+      await applyActiveThemePack()
+    }
+  } catch {
+    await useAuthStore
+      .getState()
+      .checkAuth()
+      .catch(() => {
+        useAuthStore.setState({ status: 'unauthenticated', isLoading: false })
+      })
   }
 })()
 

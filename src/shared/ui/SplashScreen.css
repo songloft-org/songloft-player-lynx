@@ -1,0 +1,16 @@
+/* Full-height centered logo over the theme canvas. `.theme-root` is a
+ * column flex container at 100% height with `background-color: var(--canvas)`,
+ * so `flex: 1` stretches this to the whole screen and no background is needed
+ * here. */
+.splash {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+.splash__logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 18px;
+}

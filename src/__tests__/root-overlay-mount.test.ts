@@ -28,17 +28,25 @@ describe('SongRowOverlays mounts in the root route, not the app root', () => {
   const appSrc = read('src/App.tsx')
 
   test('the root route renders it inside ThemeProvider', () => {
-    // Slice the root route's component body so a stray import or a mount
-    // outside ThemeProvider cannot satisfy the assertion.
-    const start = routerSrc.indexOf('component: () => (')
-    expect(start, 'root route component not found').toBeGreaterThan(-1)
-    const end = routerSrc.indexOf('</ThemeProvider>', start)
-    expect(end, 'ThemeProvider closing tag not found after the component').toBeGreaterThan(start)
+    // The root route's component is the named `RootRouteView` (splash gate +
+    // the real tree). Slice that function body — from its definition to the
+    // `rootRoute` declaration that follows — so a stray import or a mount
+    // outside ThemeProvider cannot satisfy the assertion. `RootRouteView` has
+    // TWO return branches (splash / real tree) and hence two ThemeProviders;
+    // the overlays live in the last one, so anchor on its opening tag.
+    expect(routerSrc, 'root route must use RootRouteView as its component')
+      .toContain('component: RootRouteView')
+    const start = routerSrc.indexOf('export function RootRouteView()')
+    expect(start, 'RootRouteView component not found').toBeGreaterThan(-1)
+    const end = routerSrc.indexOf('const rootRoute = createRootRoute({', start)
+    expect(end, 'rootRoute declaration not found after RootRouteView').toBeGreaterThan(start)
     const body = routerSrc.slice(start, end)
+    const lastThemeProviderOpen = body.lastIndexOf('<ThemeProvider')
+    expect(lastThemeProviderOpen, 'no ThemeProvider in RootRouteView').toBeGreaterThan(-1)
     expect(
-      body,
+      body.indexOf('<SongRowOverlays />'),
       '<SongRowOverlays /> must render inside ThemeProvider (needs .theme-root vars + Router context)',
-    ).toContain('<SongRowOverlays />')
+    ).toBeGreaterThan(lastThemeProviderOpen)
   })
 
   test('the app root does not mount it', () => {

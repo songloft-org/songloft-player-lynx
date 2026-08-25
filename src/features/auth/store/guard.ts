@@ -31,3 +31,28 @@ export function evaluateAuthGuard(
 
   return null
 }
+
+/**
+ * Whether the root view should hold the splash screen for this (status ×
+ * pathname) pair — i.e. the route the user will actually land on is not yet
+ * decided:
+ *
+ *  - `unknown`: `checkAuth()` has not resolved, so any route rendered now is a
+ *    guess. This is the Web-refresh "login page flashes" bug: memory history
+ *    boots at `/login` (it cannot read the browser URL) and the route guard
+ *    deliberately lets `unknown` through, so the login card painted first and
+ *    was swapped for home once auth resolved.
+ *  - the guard has *decided* to redirect away from `pathname`: `router
+ *    .invalidate()` lands through a promise chain, so a synchronous re-render
+ *    between the status flip and the redirect would otherwise paint the
+ *    soon-to-be-abandoned route (the login card again) for a frame or two.
+ *
+ * Everything else is settled and renders normally.
+ */
+export function isAuthTransitionPending(
+  status: AuthStatus,
+  pathname: string,
+): boolean {
+  if (status === 'unknown') return true
+  return evaluateAuthGuard(status, pathname) !== null
+}

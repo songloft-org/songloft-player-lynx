@@ -5,14 +5,16 @@ import {
   createRouter,
   Outlet,
   redirect,
+  useRouterState,
 } from '@tanstack/react-router'
 
 import { ensureRouterEnv } from './shims/router-env.js'
 import { ShellLayout } from './shared/layouts/ShellLayout.js'
 import { ThemeProvider } from './shared/theme/ThemeProvider.js'
 import { SongRowOverlays } from './shared/ui/SongRowOverlays.js'
+import { SplashScreen } from './shared/ui/SplashScreen.js'
 import { ToastHost } from './shared/ui/ToastHost.js'
-import { evaluateAuthGuard, useAuthStore } from './features/auth/store/index.js'
+import { evaluateAuthGuard, isAuthTransitionPending, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { AddSongsPage, CategorySongsPage, LibraryLayout, LibraryPage } from './features/library/index.js'
 import { migrateLibrarySearch, type LibraryViewKey } from './features/library/domain/library-views.js'
@@ -31,19 +33,31 @@ import { DlnaPage } from './features/player/pages/DlnaPage.js'
  * keep the walking skeleton low-risk. The directory is still `src/routes/` so a
  * later migration to file-based routing stays mechanical.
  */
-const rootRoute = createRootRoute({
-  // Auth guard: runs on every navigation before the matched route loads. The
-  // decision is a pure function (`evaluateAuthGuard`) reading the *vanilla*
-  // auth store (no React) — `unknown` never redirects, so the pre-`checkAuth`
-  // mount is not wrongly kicked. Mirrors the Flutter GoRouter `redirect`.
-  beforeLoad: ({ location }) => {
-    const target = evaluateAuthGuard(
-      useAuthStore.getState().status,
-      location.pathname,
+/**
+ * Root view: the launch splash while auth is unresolved or a guard redirect is
+ * in flight, the real tree otherwise (`isAuthTransitionPending`). Holding the
+ * splash during those gaps is what stops the Web-refresh "login page flashes
+ * and jumps to home" bug at the render layer: memory history boots at `/login`
+ * (it cannot read the browser URL), the route guard lets `unknown` through by
+ * design, and `router.invalidate()` lands a redirect only through a promise
+ * chain — without this gate both gaps paint the login card.
+ *
+ * The route guard (`beforeLoad` below) stays the single source of *where* to
+ * go; this view only decides *whether to show the trip at all*.
+ */
+export function RootRouteView() {
+  const status = useAuthStore((s) => s.status)
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+
+  if (isAuthTransitionPending(status, pathname)) {
+    return (
+      <ThemeProvider>
+        <SplashScreen />
+      </ThemeProvider>
     )
-    if (target) throw redirect({ to: target })
-  },
-  component: () => (
+  }
+
+  return (
     <ThemeProvider>
       <Outlet />
       {/*
@@ -63,7 +77,22 @@ const rootRoute = createRootRoute({
         */}
       <SongRowOverlays />
     </ThemeProvider>
-  ),
+  )
+}
+
+const rootRoute = createRootRoute({
+  // Auth guard: runs on every navigation before the matched route loads. The
+  // decision is a pure function (`evaluateAuthGuard`) reading the *vanilla*
+  // auth store (no React) — `unknown` never redirects, so the pre-`checkAuth`
+  // mount is not wrongly kicked. Mirrors the Flutter GoRouter `redirect`.
+  beforeLoad: ({ location }) => {
+    const target = evaluateAuthGuard(
+      useAuthStore.getState().status,
+      location.pathname,
+    )
+    if (target) throw redirect({ to: target })
+  },
+  component: RootRouteView,
 })
 
 /** `/login` — chrome-less, not wrapped by the shell. */
