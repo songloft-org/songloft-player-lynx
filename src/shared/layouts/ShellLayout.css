@@ -74,6 +74,14 @@
   font-weight: bold;
 }
 
+/* Rail destinations scroll when they overflow the rail's height — plugin tabs
+   can add up to nine rows to the three built-ins (TabConfigPage's MAX_TABS is
+   12). The brand stays above the scroll area, the Flutter desktop rail's
+   ListView behaviour. */
+.shell__rail-scroll {
+  flex: 1;
+}
+
 /* Bottom bar (narrow) */
 .shell__bottombar {
   display: flex;

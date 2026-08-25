@@ -31,40 +31,40 @@ export function parseTabConfig(data: unknown): TabConfig {
   }
 }
 
-export function usePluginTabs() {
-  return useQuery({
-    queryKey: ['settings', 'tab-config'],
-    queryFn: async () => {
-      const config = await getSettingsApi().getTabConfig()
-      return config.pluginTabs
-    },
-    staleTime: 60_000,
-  })
+/** The shell's live tab configuration — everything it needs to build the nav bar. */
+export interface ShellNavTabs {
+  showLibrary: boolean
+  pluginTabs: PluginTabEntry[]
 }
 
 /**
- * Like `usePluginTabs`, but also merges the `icon` field from the plugin list
- * cache. This ensures icons are populated even when the backend tab config was
- * saved before the `icon` field was added to the schema.
+ * Tab config for the navigation shell: `showLibrary` plus the plugin tabs, in
+ * one query — the shell needs both together to build the bar/rail/More sheet.
+ *
+ * The `icon` field is merged from the plugin list cache: backend configs saved
+ * before the field was added to the schema carry no icon, and the plugin list
+ * does (same back-fill the old `usePluginTabsWithIcons` existed for).
+ *
+ * Shares the `['settings', 'tab-config']` key prefix with the config page, so
+ * its save-triggered invalidation refetches this too and the bar follows a
+ * config change without a restart.
  */
-export function usePluginTabsWithIcons() {
+export function useShellNavTabs() {
   return useQuery({
-    queryKey: ['settings', 'tab-config', 'with-icons'],
-    queryFn: async () => {
+    queryKey: ['settings', 'tab-config', 'shell-nav'],
+    queryFn: async (): Promise<ShellNavTabs> => {
       const [config, pluginRes] = await Promise.all([
         getSettingsApi().getTabConfig(),
         getJSPluginApi().getPlugins(),
       ])
-      const pluginMap = new Map(
-        pluginRes.plugins.map((p) => [p.entryPath, p]),
-      )
-      return config.pluginTabs.map((tab) => {
-        const plugin = pluginMap.get(tab.entryPath)
-        return {
+      const pluginMap = new Map(pluginRes.plugins.map((p) => [p.entryPath, p]))
+      return {
+        showLibrary: config.showLibrary,
+        pluginTabs: config.pluginTabs.map((tab) => ({
           ...tab,
-          icon: tab.icon || plugin?.icon || undefined,
-        }
-      })
+          icon: tab.icon || pluginMap.get(tab.entryPath)?.icon || undefined,
+        })),
+      }
     },
     staleTime: 60_000,
   })

@@ -10,6 +10,7 @@ export const en = {
     home: 'Home',
     library: 'Library',
     settings: 'Settings',
+    more: 'More',
     pressBackAgainToExit: 'Press back again to exit',
   },
   common: {
@@ -367,6 +368,8 @@ export const en = {
     tabPlugins: 'Plugins',
     tabFixed: 'Always',
     tabLimitReached: 'Maximum {{max}} tabs reached.',
+    // Wording mirrors the Flutter `settingsTabConfigCollapseHint` arb entry.
+    tabCollapseHint: 'On mobile, tabs beyond 5 will collapse into the “More” menu',
   },
   dlna: {
     title: 'Cast to Device',
@@ -720,6 +723,7 @@ export const zh: TranslationTree = {
     home: '首页',
     library: '曲库',
     settings: '设置',
+    more: '更多',
     pressBackAgainToExit: '再按一次返回退出应用',
   },
   common: {
@@ -1071,6 +1075,7 @@ export const zh: TranslationTree = {
     tabPlugins: '插件',
     tabFixed: '固定',
     tabLimitReached: '最多 {{max}} 个标签页。',
+    tabCollapseHint: '移动端超出 5 个时将折叠到「更多」菜单',
   },
   dlna: {
     title: '投屏播放',

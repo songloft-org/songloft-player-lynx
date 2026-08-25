@@ -1,0 +1,109 @@
+/*
+ * "More" sheet — same fixed-root pattern as `AddToPlaylistSheet.css` and
+ * `PlayHistoryPanel.css` (one of the four overlay files named in
+ * `back-stack.ts`'s z-index contract).
+ */
+
+.more-tabs {
+  position: fixed;
+  /* Explicit offsets: a fixed box with auto offsets falls back to its static
+     position, which for a shell-mounted overlay is below the page. */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.more-tabs__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--backdrop);
+}
+
+.more-tabs__panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  /* Twelve tabs max (TabConfigPage's MAX_TABS) minus the four the bar still
+     shows: at most eight rows. The cap keeps the sheet from swallowing the
+     screen; anything past it scrolls. */
+  max-height: 70%;
+  padding-bottom: var(--space-4);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  background-color: var(--paper);
+}
+
+.more-tabs__handle-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) 0;
+}
+
+.more-tabs__handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--rule);
+}
+
+.more-tabs__header {
+  padding: 0 var(--space-4) var(--space-2);
+}
+
+.more-tabs__title {
+  color: var(--content);
+  font-size: var(--font-md);
+  font-weight: bold;
+  line-height: var(--font-lg);
+}
+
+.more-tabs__list {
+  flex: 1;
+}
+
+.more-tabs__item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 var(--space-2);
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-md);
+}
+
+.more-tabs__item--active {
+  background-color: var(--primary);
+}
+
+.more-tabs__item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.more-tabs__item-label {
+  flex: 1;
+  color: var(--content);
+  font-size: var(--font-md);
+  line-height: var(--font-lg);
+  /* One line, ellipsis on overflow — plugin names come from the backend and
+     can be arbitrarily long. Same standard trio as `.play-history__title`. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more-tabs__item-label--active {
+  color: var(--primary-content);
+}

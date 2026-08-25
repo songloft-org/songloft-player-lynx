@@ -130,6 +130,10 @@ export function TabConfigPage() {
             {atLimit
               ? <text className='tab-config__limit-hint'>{t('jsplugin.tabLimitReached', { max: MAX_TABS })}</text>
               : null}
+            {/* Same slot as the limit hint: one ever-present line of context
+                about what a large tab count does on phones. Mirrors the Flutter
+                config page's `settingsTabConfigCollapseHint`. */}
+            <text className='tab-config__limit-hint'>{t('jsplugin.tabCollapseHint')}</text>
           </view>
         )
         : null}
