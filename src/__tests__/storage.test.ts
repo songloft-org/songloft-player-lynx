@@ -308,7 +308,7 @@ describe('IndexedDB storage', () => {
   })
 })
 
-describe('createSongloftStorage selection (native → web → indexedDB → memory)', () => {
+describe('createSongloftStorage selection (native → indexedDB → web → memory)', () => {
   afterEach(() => {
     delete (globalThis as { NativeModules?: unknown }).NativeModules
     delete (globalThis as { localStorage?: unknown }).localStorage
@@ -352,15 +352,22 @@ describe('createSongloftStorage selection (native → web → indexedDB → memo
     expect(idb.dump()).toEqual({ 'secure.access_token': 'tok' })
   })
 
-  test('prefers localStorage over indexedDB when a realm has both', async () => {
+  /**
+   * The regression this ordering exists for: web-core surfaces a
+   * `localStorage` inside its background realm that is NOT the browser's
+   * persistent one — tokens written there died on every reload (the
+   * "refresh bounces to /login with a flash" bug). IndexedDB in the same
+   * realm is shared with the page origin and persists, so it must win.
+   */
+  test('prefers indexedDB over localStorage when a realm has both', async () => {
     const local = fakeLocalStorage()
     const idb = fakeIndexedDB()
     ;(globalThis as { localStorage?: unknown }).localStorage = local
     ;(globalThis as { indexedDB?: unknown }).indexedDB = idb.factory
     const s = createSongloftStorage()
     await s.prefs.set('k', 'v')
-    expect(local.getItem('songloft.prefs.k')).toBe('v')
-    expect(idb.dump()).toEqual({})
+    expect(idb.dump()).toEqual({ 'prefs.k': 'v' })
+    expect(local.getItem('songloft.prefs.k')).toBeNull()
   })
 
   test('falls back to in-memory storage when none is available', async () => {

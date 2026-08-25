@@ -30,16 +30,23 @@ let warnedInterimStorage = false
  * Pick a `SongloftStorage` implementation by capability probe:
  * - a native `NativeModules.SongloftStorage` (methods complete) → **native,
  *   persistent** storage (SharedPreferences on Android) — survives app restart;
- * - else a realm with `localStorage` → web storage, **persistent**;
  * - else a realm with `indexedDB` → IndexedDB storage, **persistent**. This is
  *   the one the Web platform actually lands on: web-core runs the app in a
- *   `Worker`, and Web Storage is window-only, so `localStorage` is `undefined`
- *   there while `indexedDB` is not (see `idb-storage.ts`);
+ *   `Worker`, and Web Storage is window-only (see `idb-storage.ts`);
+ * - else a realm with `localStorage` → web storage, persistent only if that
+ *   `localStorage` is the browser's real one (see the ordering note below);
  * - else (Lynx runtime with no native module) → **in-memory** storage as an
  *   INTERIM (in-session, NON-persistent) so the app stays usable.
  *
- * Order matters only between the two web backends: where both exist,
- * `localStorage` is synchronous underneath and needs no `open`, so it wins.
+ * Ordering matters between the two web backends, and it is the REVERSE of what
+ * it used to be. web-core injects a list of browser globals — `window`,
+ * `document`, `localStorage`, … — into the background realm as scope bindings
+ * (see its worker chunk's global list), and whatever `localStorage` that
+ * surfaces is **not** the browser's persistent one: tokens written there were
+ * gone after every reload (and invisible to the page's own DevTools storage
+ * view), which is the "logged in, refresh, bounced to /login — with a flash of
+ * the login card" bug. `indexedDB` in the same realm IS shared with the page
+ * origin and persists, so it must win whenever both are present.
  *
  * On device the native module is now present (batch B2 follow-up), so tokens /
  * server address / language persist and the user is no longer bounced to /login
@@ -59,16 +66,16 @@ export function createSongloftStorage(impl?: SongloftStorage): SongloftStorage {
       // fall through to web / memory
     }
   }
+  if (isIndexedDBAvailable()) return createIndexedDBStorage()
   const hasLocalStorage =
     typeof (globalThis as { localStorage?: unknown }).localStorage !== 'undefined'
   if (hasLocalStorage) return createWebStorage()
-  if (isIndexedDBAvailable()) return createIndexedDBStorage()
   if (!warnedInterimStorage) {
     warnedInterimStorage = true
     console.warn(
-      '[SongloftStorage] no NativeModules.SongloftStorage, no localStorage and no ' +
-        'indexedDB; using in-memory storage (non-persistent) — sessions do not ' +
-        'survive app restart',
+      '[SongloftStorage] no NativeModules.SongloftStorage, no indexedDB and no ' +
+        'localStorage; using in-memory storage (non-persistent) — sessions do ' +
+        'not survive app restart',
     )
   }
   return createMemoryStorage()
