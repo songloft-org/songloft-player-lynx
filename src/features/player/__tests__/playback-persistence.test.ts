@@ -81,7 +81,7 @@ describe('playback-persistence', () => {
   })
 
   test('round-trips save and load', async () => {
-    await savePlaybackState([SONG], 0, 15000, playlistContext(42))
+    await savePlaybackState({ playlist: [SONG], currentIndex: 0, positionMs: 15000, context: playlistContext(42) })
 
     const restored = await loadPlaybackState()
     expect(restored).not.toBeNull()
@@ -94,7 +94,7 @@ describe('playback-persistence', () => {
   })
 
   test('round-trips a facet context, including a key needing URL encoding', async () => {
-    await savePlaybackState([SONG], 0, 0, { type: 'artist', key: 'AC/DC & 周杰伦' })
+    await savePlaybackState({ playlist: [SONG], currentIndex: 0, positionMs: 0, context: { type: 'artist', key: 'AC/DC & 周杰伦' } })
 
     const restored = await loadPlaybackState()
     expect(restored!.context).toEqual({ type: 'artist', key: 'AC/DC & 周杰伦' })
@@ -125,7 +125,7 @@ describe('playback-persistence', () => {
     mockStorage.set('playback_queue', JSON.stringify([SONG_JSON]))
     mockStorage.set('playback_index', '0')
 
-    await savePlaybackState([], 0, 0)
+    await savePlaybackState({ playlist: [], currentIndex: 0, positionMs: 0 })
 
     expect(await loadPlaybackState()).toBeNull()
   })

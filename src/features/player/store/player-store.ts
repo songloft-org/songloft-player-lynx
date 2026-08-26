@@ -930,7 +930,12 @@ usePlayerStore.subscribe((state, prev) => {
     // (a debounced write would otherwise persist a position 2s behind reality,
     // or a queue the user has since changed).
     const s = usePlayerStore.getState()
-    void savePlaybackState(s.playlist, s.currentIndex, s.currentTime, s.playbackContext)
+    void savePlaybackState({
+      playlist: s.playlist,
+      currentIndex: s.currentIndex,
+      positionMs: s.currentTime,
+      context: s.playbackContext,
+    })
   }, SAVE_DEBOUNCE_MS)
 })
 

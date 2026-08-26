@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import type { Song } from '../../../models/song.js'
-import type { PlaybackContext } from '../domain/playback-context.js'
+import type { SavePlaybackStateParams } from '../data/playback-persistence.js'
 
 /**
  * Behaviour tests for the two module-level `usePlayerStore.subscribe` side
@@ -10,15 +10,8 @@ import type { PlaybackContext } from '../domain/playback-context.js'
  * subscriptions, hence a dedicated file.
  */
 
-// Typed to the real signature so `mock.calls` destructures (positionMs is [2]).
-const savePlaybackState = vi.fn(
-  async (
-    _playlist: Song[],
-    _currentIndex: number,
-    _positionMs: number,
-    _context?: PlaybackContext,
-  ) => {},
-)
+// Typed to the real signature so `mock.calls` destructures (the params object is [0]).
+const savePlaybackState = vi.fn(async (_params: SavePlaybackStateParams) => {})
 vi.mock('../data/playback-persistence.js', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   savePlaybackState,
@@ -88,7 +81,7 @@ describe('playback position persistence', () => {
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
     expect(savePlaybackState).toHaveBeenCalled()
-    const [, , positionMs] = savePlaybackState.mock.calls.at(-1)!
+    const [{ positionMs }] = savePlaybackState.mock.calls.at(-1)!
     expect(positionMs).toBe(10_000)
   })
 
@@ -103,7 +96,7 @@ describe('playback position persistence', () => {
     usePlayerStore.setState({ currentTime: 11_500 })
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
-    const [, , positionMs] = savePlaybackState.mock.calls.at(-1)!
+    const [{ positionMs }] = savePlaybackState.mock.calls.at(-1)!
     expect(positionMs).toBe(11_500)
   })
 

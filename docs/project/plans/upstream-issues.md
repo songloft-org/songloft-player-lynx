@@ -97,7 +97,7 @@ TypeError: Cannot read properties of undefined (reading 'Symbol(uniqueId)')
 
 ---
 
-## Issue 3（待提交）：`lynx-ui-swiper` 的 `SwiperItem` 用 camelCase 调 `setStyleProperties`
+## Issue 4（待提交）：`lynx-ui-swiper` 的 `SwiperItem` 用 camelCase 调 `setStyleProperties`
 
 **包**：`@lynx-js/lynx-ui-swiper@3.135.4` · **位置**：`src/SwiperItem/index.tsx:138-141`
 
@@ -132,9 +132,29 @@ E lynx: [UnitHandler] illegal css key:237
 
 ---
 
+## Issue 5（待提交）：`lynx-ui-swiper` 把自己的默认值 `itemHeight='auto'` 插值成非法的 `autopx`
+
+**包**：`@lynx-js/lynx-ui-swiper@3.135.4` · **位置**：`src/Swiper/index.tsx`（root view 的 `height: \`${itemHeight}px\`` 与 `updateSwiperInnerContainerSizeMT` 里的同款插值）
+
+`itemHeight` 的类型是 `number | 'auto'`，且**默认值就是 `'auto'`**。但组件只是把它直接插值进
+`height: \`${itemHeight}px\``，于是 `'auto'` → `height: autopx`，一个非法值。
+
+**为什么目前没炸**：非法值被 CSS 引擎整条丢弃 ⇒ `height` 落回未设置 ⇒ 等同 `auto`（按内容定高），
+恰好是 `'auto'` 想要的行为。所以它「靠非法值被丢弃」意外地正确。但这意味着：
+
+- 任何依赖这个隐式丢弃的实现都是脆弱的——哪天引擎对非法值改成「报 warning」或「回退到 0」，行为就变了；
+- 类型声明承诺了 `'auto'` 是一等公民，实现却没有特判它，属于类型与实现不符。
+
+**修法**：插值前特判 `itemHeight === 'auto'`，此时写 `height: 'auto'`（或不设 height），而不是 `\`${itemHeight}px\``。
+
+**本地不改**：FullPlayerPage 传 `'auto'` 语义正确（按内容定高），且 `'auto'` 就是默认值，删掉也不改变行为。
+
+---
+
 ## 备注
 
 - Issue 1 的修复最简单（10 行），且与已有的 `onNativeModulesCall` 模式一致，最可能被快速合入
 - Issue 2 附带 WHATWG spec 引用，合规性 bug 不容争辩
-- Issue 3 是单词替换，且有精确的表索引证据，应当好合
+- Issue 4 是单词替换，且有精确的表索引证据，应当好合
+- Issue 5 是类型与实现不符，`'auto'` 是库自己的默认值，应当好合
 - `AbortController` 缺失和 `lynx.queueMicrotask` 崩溃暂不提，前者是 feature request 优先级低，后者需先确认最新版是否已修复

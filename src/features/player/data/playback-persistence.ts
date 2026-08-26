@@ -83,12 +83,20 @@ export async function loadPlaybackState(): Promise<SavedPlaybackState | null> {
   }
 }
 
-export async function savePlaybackState(
-  playlist: Song[],
-  currentIndex: number,
-  positionMs: number,
-  context?: PlaybackContext,
-): Promise<void> {
+/**
+ * Params for {@link savePlaybackState}. Object-shaped per the API conventions
+ * (`docs/reference/api-conventions.md`): four arguments, one of them optional,
+ * is past the positional-argument threshold.
+ */
+export interface SavePlaybackStateParams {
+  playlist: Song[]
+  currentIndex: number
+  positionMs: number
+  context?: PlaybackContext
+}
+
+export async function savePlaybackState(params: SavePlaybackStateParams): Promise<void> {
+  const { playlist, currentIndex, positionMs, context } = params
   try {
     const storage = getSongloftStorage()
     if (playlist.length === 0) {

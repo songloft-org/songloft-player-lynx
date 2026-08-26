@@ -255,11 +255,14 @@
   - **教训**：subagent 报回来的是一个准确的*观察*，而我顺手补的*因果*没有证据。观察与解释要分开记，
     否则下一个人会拿着错误的因果去查一个不存在的问题。
 
-- [ ] **`FullPlayerPage` 给 Swiper 传 `itemHeight='auto'`，被插值成字面量 `"autopx"`** ——
-  `@lynx-js/lynx-ui-swiper` 内部做 `height: \`${itemHeight}px\``，于是多处内联样式里出现无效值
-  `height: autopx`。与上面 `illegal css key:237` 是两件事（那条是键名、这条是值）。**未评估影响**：
-  无效声明会被丢弃，实际高度大概是靠别处的规则兜住的，所以表面看不出问题。要么别传 `'auto'`，
-  要么确认库支持这个哨兵值
+- [x] **`FullPlayerPage` 给 Swiper 传 `itemHeight='auto'`，被插值成字面量 `"autopx"`**（2026-08-26 查清：**良性上游怪癖，本地无可修**）——
+  读了 `@lynx-js/lynx-ui-swiper` 源码：`itemHeight` 的**默认值本来就是 `'auto'`**，而 Swiper 渲染
+  `height: ${itemHeight}px`、`updateSwiperInnerContainerSizeMT` 也做同样的插值，所以 `'auto'` 必然变成
+  非法的 `height: autopx`。但**非法值会被 CSS 引擎整条丢弃** ⇒ height 落回未设置 ⇒ 等同 `auto`（按内容
+  定高），恰是期望行为。所以它「靠非法值被丢弃」意外地得到了正确结果，表面无任何异常（与 `illegal css
+  key:237` 是两件事：那条是键名、这条是值）。FullPlayerPage 传 `'auto'`（=按内容定高）语义正确，**不该改**；
+  且 `'auto'` 就是默认值，删掉这行也不改变行为。已作为上游问题记入
+  [`plans/upstream-issues.md`](plans/upstream-issues.md) Issue 4（Swiper 应特判自己的 `'auto'` 默认值）
 
 ### 批51 途中发现，未修
 
@@ -295,10 +298,11 @@
   **靠源码顺序决定谁赢**。正解是提取成 `SongRow.css` 由组件自己 import，但那必须在冲突规则里
   挑一个赢家，而仓库**没有任何视觉闸门**能抓到回归——只能靠真机截图逐页对比。批50 因此刻意
   没做，新增的 `PlayHistoryPanel.css` 也刻意**不放**第四份副本
-- [ ] **`savePlaybackState` 是 4 个位置参数** —— 违反 `docs/reference/api-conventions.md`
-  的「≥3 个或含可选参数用对象参数」。改成对象参数会让 `position-persistence.test.ts` 里
-  `mock.calls[..][2]` 那种按位取值的断言失效，收益不抵 churn，批50 只把第 4 参从
-  `sourcePlaylistId?: number` 换成了 `context?: PlaybackContext`
+- [x] **`savePlaybackState` 是 4 个位置参数**（2026-08-26 已修）—— 违反 `docs/reference/api-conventions.md`
+  的「≥3 个或含可选参数用对象参数」。此前拖着没改的理由是「按位断言的 churn 收益不抵」，实际动手后发现
+  churn 很小：`position-persistence.test.ts` 只有两处 `[, , positionMs]` 解构改成 `[{ positionMs }]`，
+  加 3 个测试调用点与 1 个生产调用点改对象字面量，共 6 处。**教训：把「churn 大」当理由拖着，往往是因为
+  没真去数过到底有几处**——约定违规留着，下一个读代码的人会拿它当「这里可以不守约定」的先例
 
 ### 仍未定位
 
