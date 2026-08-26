@@ -2,12 +2,15 @@ import { beforeEach, expect, test } from 'vitest'
 
 import type { Song } from '../../../models/song.js'
 import { useSongRowOverlays } from '../song-row-overlays.js'
+import { buildSongMenuItems } from '../song-menu-items.js'
 
 /*
  * The song-row overlay store, at the getState() level — no React involved, so
  * the ReactLynx-vs-zustand hook conflict never comes up. What is pinned here:
  * the five overlays are mutually exclusive (so the back-stack never has to
  * order them against each other) and each close action clears only its own.
+ * The menu's item pruning (`buildSongMenuItems`) is gated below too: it is
+ * what keeps the wide-screen `⋯` menu from duplicating the row's own buttons.
  */
 
 function makeSong(id: number): Song {
@@ -49,28 +52,48 @@ beforeEach(() => {
   s.closeEdit()
 })
 
-test('openMenu records the song, clearing the other overlays', () => {
+test('openMenu records the song and row context, clearing the other overlays', () => {
   const song = makeSong(1)
   useSongRowOverlays.getState().requestDelete(song)
   useSongRowOverlays.getState().openAddToPlaylist({ songIds: [song.id] })
-  useSongRowOverlays.getState().openMenu(song)
+  useSongRowOverlays.getState().openMenu({
+    song,
+    row: { isWide: true, deleteShortcut: true },
+  })
 
   const s = useSongRowOverlays.getState()
   expect(s.menuSong).toBe(song)
+  expect(s.menuRow).toEqual({ isWide: true, deleteShortcut: true })
   expect(s.addToPlaylistSongIds).toEqual([])
   expect(s.deleteSong).toBeNull()
   expect(s.infoSong).toBeNull()
   expect(s.editSong).toBeNull()
 })
 
+test('openMenu without a row context stores null (the full narrow-screen set)', () => {
+  useSongRowOverlays.getState().openMenu({ song: makeSong(2) })
+  expect(useSongRowOverlays.getState().menuRow).toBeNull()
+})
+
+test('closeMenu drops the row context with the song', () => {
+  useSongRowOverlays.getState().openMenu({
+    song: makeSong(2),
+    row: { isWide: true, deleteShortcut: false },
+  })
+  useSongRowOverlays.getState().closeMenu()
+  expect(useSongRowOverlays.getState().menuSong).toBeNull()
+  expect(useSongRowOverlays.getState().menuRow).toBeNull()
+})
+
 test('openAddToPlaylist records the ids, closing the menu it was chosen from', () => {
   const song = makeSong(2)
-  useSongRowOverlays.getState().openMenu(song)
+  useSongRowOverlays.getState().openMenu({ song, row: { isWide: false, deleteShortcut: true } })
   useSongRowOverlays.getState().openAddToPlaylist({ songIds: [song.id] })
 
   const s = useSongRowOverlays.getState()
   expect(s.addToPlaylistSongIds).toEqual([2])
   expect(s.menuSong).toBeNull()
+  expect(s.menuRow).toBeNull()
   expect(s.deleteSong).toBeNull()
 })
 
@@ -99,12 +122,13 @@ test('closeAddToPlaylist drops the callback with the ids', () => {
 
 test('requestDelete records the song, closing an open menu', () => {
   const song = makeSong(3)
-  useSongRowOverlays.getState().openMenu(song)
+  useSongRowOverlays.getState().openMenu({ song })
   useSongRowOverlays.getState().requestDelete(song)
 
   const s = useSongRowOverlays.getState()
   expect(s.deleteSong).toBe(song)
   expect(s.menuSong).toBeNull()
+  expect(s.menuRow).toBeNull()
   expect(s.addToPlaylistSongIds).toEqual([])
 })
 
@@ -116,7 +140,7 @@ test('requestDelete records the song, closing an open menu', () => {
 test('openInfo records the song, clearing every other overlay', () => {
   const song = makeSong(5)
   const other = makeSong(6)
-  useSongRowOverlays.getState().openMenu(song)
+  useSongRowOverlays.getState().openMenu({ song })
   useSongRowOverlays.getState().openAddToPlaylist({ songIds: [song.id] })
   useSongRowOverlays.getState().requestDelete(song)
   useSongRowOverlays.getState().openEdit(other)
@@ -125,6 +149,7 @@ test('openInfo records the song, clearing every other overlay', () => {
   const s = useSongRowOverlays.getState()
   expect(s.infoSong).toBe(song)
   expect(s.menuSong).toBeNull()
+  expect(s.menuRow).toBeNull()
   expect(s.addToPlaylistSongIds).toEqual([])
   expect(s.deleteSong).toBeNull()
   expect(s.editSong).toBeNull()
@@ -172,4 +197,34 @@ test('each close action clears only its own overlay', () => {
   expect(useSongRowOverlays.getState().addToPlaylistSongIds).toEqual([4])
   useSongRowOverlays.getState().closeAddToPlaylist()
   expect(useSongRowOverlays.getState().addToPlaylistSongIds).toEqual([])
+})
+
+/*
+ * The menu's item set, pruned by the opening row's viewport snapshot. The keys
+ * are what matters — order included, since info keeps its read-only-peek slot
+ * between play and the destructive tail on a narrow row.
+ */
+const keysOf = (row: Parameters<typeof buildSongMenuItems>[1] | undefined) =>
+  buildSongMenuItems((key) => key, row ?? null).map((item) => item.key)
+
+test('a narrow row (or no row context) keeps all five menu items', () => {
+  expect(keysOf(null)).toEqual(['play', 'info', 'edit', 'add', 'delete'])
+  expect(keysOf({ isWide: false, deleteShortcut: true })).toEqual(['play', 'info', 'edit', 'add', 'delete'])
+})
+
+test('a wide row prunes the actions its own buttons already expose', () => {
+  // The library/category rows: info/add/delete all sit in the row tail, so the
+  // menu keeps only what no button covers — play and edit.
+  expect(keysOf({ isWide: true, deleteShortcut: true })).toEqual(['play', 'edit'])
+})
+
+test('a wide row without the delete shortcut keeps the menu delete (playlist detail)', () => {
+  // Its tail × removes the song *from the playlist* — a different action — so
+  // the library delete stays reachable from the menu.
+  expect(keysOf({ isWide: true, deleteShortcut: false })).toEqual(['play', 'edit', 'delete'])
+})
+
+test('only the delete item is danger-flagged', () => {
+  const items = buildSongMenuItems((key) => key, null)
+  expect(items.filter((item) => item.danger).map((item) => item.key)).toEqual(['delete'])
 })

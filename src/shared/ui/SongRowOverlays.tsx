@@ -8,7 +8,7 @@ import { AddToPlaylistSheet } from '../../features/playlist/widgets/AddToPlaylis
 import { usePlayerStore } from '../../features/player/store/index.js'
 import { ConfirmDialog } from './ConfirmDialog.js'
 import { GlobalMenu } from './GlobalMenu.js'
-import type { MenuItemSpec } from './MenuItem.js'
+import { buildSongMenuItems } from './song-menu-items.js'
 import { toast } from './toast-store.js'
 import { useSongRowOverlays } from './song-row-overlays.js'
 
@@ -35,6 +35,7 @@ export function SongRowOverlays() {
 
   const menuSong = useSongRowOverlays((s) => s.menuSong)
   const menuAnchor = useSongRowOverlays((s) => s.menuAnchor)
+  const menuRow = useSongRowOverlays((s) => s.menuRow)
   const addToPlaylistSongIds = useSongRowOverlays((s) => s.addToPlaylistSongIds)
   const addToPlaylistOnAdded = useSongRowOverlays((s) => s.addToPlaylistOnAdded)
   const deleteSong = useSongRowOverlays((s) => s.deleteSong)
@@ -51,20 +52,15 @@ export function SongRowOverlays() {
   const closeEdit = useSongRowOverlays((s) => s.closeEdit)
 
   /*
-   * Five actions, the Flutter build's song-menu set plus "song info": the
-   * per-row buttons cover favorite and the queue actions, and until the info
-   * dialog existed a narrow-screen row had no info entry at all (the detail
-   * page was reachable only from the player menu and the wide-screen row
-   * icon). Info sits between play and edit — read-only peek before any
-   * destructive "edit" muscle memory lands.
+   * Five actions on a narrow row (the Flutter build's song-menu set plus "song
+   * info"), pruned on a wide one — see `buildSongMenuItems` above. Play and edit
+   * always stay: neither has a row-tail button, and on a narrow row the menu is
+   * the info dialog's only entry (the detail page is otherwise reachable only
+   * from the player menu and the wide-screen row icon). Info sits between play
+   * and edit — read-only peek before any destructive "edit" muscle memory
+   * lands.
    */
-  const items: MenuItemSpec[] = [
-    { key: 'play', label: t('songMenu.play'), icon: 'play' },
-    { key: 'info', label: t('songMenu.info'), icon: 'info' },
-    { key: 'edit', label: t('songMenu.edit'), icon: 'brush' },
-    { key: 'add', label: t('songMenu.addToPlaylist'), icon: 'music' },
-    { key: 'delete', label: t('songMenu.deleteSong'), icon: 'x', danger: true },
-  ]
+  const items = buildSongMenuItems(t, menuRow)
 
   const onSelect = (key: string) => {
     const song = menuSong

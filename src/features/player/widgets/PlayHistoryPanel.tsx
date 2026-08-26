@@ -222,6 +222,11 @@ export function PlayHistoryPanel({
                         subtitleSuffix={formatPlayedAt(entry.playedAt)}
                         onOpenMenu={(song, anchor) => setMenuEntry({ song, anchor })}
                         onTap={() => play(index)}
+                        /* No library-delete shortcut: the tail × would remove
+                         * the *song from the library* — one tap away from what
+                         * a user pruning history expects. Removing this
+                         * *entry* lives in the row's `⋯` menu below. */
+                        showDeleteAction={false}
                       />
                     ))}
                   </scroll-view>

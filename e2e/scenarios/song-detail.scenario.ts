@@ -31,7 +31,9 @@ describe('歌曲信息与编辑弹窗', () => {
     const overlays = await driver.evaluateJS<any>(`
       (() => {
         const store = globalThis.__E2E_SONG_OVERLAYS__
-        store.getState().openMenu(${JSON.stringify(songs[0])}, null)
+        // No row context: the e2e store-level path is the narrow-screen menu
+        // (all five items) — pruning is the row's job, gated in unit tests.
+        store.getState().openMenu({ song: ${JSON.stringify(songs[0])} })
         store.getState().openInfo(${JSON.stringify(songs[0])})
         const s = store.getState()
         return { infoSongId: s.infoSong?.id ?? null, menuSong: s.menuSong, editSong: s.editSong }

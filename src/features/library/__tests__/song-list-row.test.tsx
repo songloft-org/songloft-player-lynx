@@ -30,6 +30,7 @@ vi.mock('react-i18next', async () =>
 vi.mock('../../../shared/ui/song-row-overlays.js', () => ({
   useSongRowOverlays: (selector: (s: {
     menuSong: Song | null
+    menuRow: { isWide: boolean; deleteShortcut: boolean } | null
     addToPlaylistSongIds: number[]
     deleteSong: Song | null
     openMenu: typeof openMenuMock
@@ -43,6 +44,7 @@ vi.mock('../../../shared/ui/song-row-overlays.js', () => ({
   }) => unknown) =>
     selector({
       menuSong: null,
+      menuRow: null,
       addToPlaylistSongIds: [],
       deleteSong: null,
       openMenu: openMenuMock,
@@ -249,13 +251,17 @@ test('opening the menu anchors it to the measured button', async () => {
     const { getByText } = await renderRow(false)
     fireEvent.longpress(getByText('Blue in Green'), {})
     await act(async () => { await Promise.resolve() })
-    expect(openMenuMock).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 1 }),
-      {
+    // The row context rides along (here: a narrow row whose tail renders no
+    // shortcuts) so the global menu — outside LibraryViewportProvider — can
+    // prune items the row's own buttons already expose.
+    expect(openMenuMock).toHaveBeenCalledWith({
+      song: expect.objectContaining({ id: 1 }),
+      anchor: {
         anchor: { left: 368, top: 120, width: 36, height: 36 },
         viewport: { width: 420, height: 900 },
       },
-    )
+      row: { isWide: false, deleteShortcut: true },
+    })
   } finally {
     globals.lynx.createSelectorQuery = saved
   }
@@ -269,5 +275,38 @@ test('the menu opens even when nothing can be measured', async () => {
   const { getByText } = await renderRow(false)
   fireEvent.longpress(getByText('Blue in Green'), {})
   await act(async () => { await Promise.resolve() })
-  expect(openMenuMock).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }), null)
+  expect(openMenuMock).toHaveBeenCalledWith({
+    song: expect.objectContaining({ id: 1 }),
+    anchor: null,
+    row: { isWide: false, deleteShortcut: true },
+  })
+})
+
+test('a wide row opens the menu with its shortcut set as the row context', async () => {
+  // Driven through long-press: the `⋯` button is `catchtap` and this env
+  // dispatches `bindtap` only (see the anchor test above) — both entry points
+  // call the same opener, so what is under test is unaffected.
+  const { getByText } = await renderRow(true)
+  fireEvent.longpress(getByText('Blue in Green'), {})
+  await act(async () => { await Promise.resolve() })
+  // deleteShortcut mirrors showDeleteAction, which defaults to true. Anchor is
+  // null because this env cannot measure (see the dead-anchor test below).
+  expect(openMenuMock).toHaveBeenCalledWith({
+    song: expect.objectContaining({ id: 1 }),
+    anchor: null,
+    row: { isWide: true, deleteShortcut: true },
+  })
+})
+
+test("a row with showDeleteAction=false reports no delete shortcut to the menu", async () => {
+  const { getByText } = await renderRow(true, { showDeleteAction: false })
+  fireEvent.longpress(getByText('Blue in Green'), {})
+  await act(async () => { await Promise.resolve() })
+  // The playlist detail rows: the menu keeps its library-delete item because
+  // the row tail's × is the "remove from playlist" action, not this one.
+  expect(openMenuMock).toHaveBeenCalledWith({
+    song: expect.objectContaining({ id: 1 }),
+    anchor: null,
+    row: { isWide: true, deleteShortcut: false },
+  })
 })

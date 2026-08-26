@@ -62,8 +62,11 @@ export interface SongListRowProps {
  * Responsive: narrow rows end with a single `more` button (plus the favorite
  * heart and long-press as the other entry points); wide rows (>= tablet, per
  * `useLibraryViewport`) additionally flatten the high-frequency actions —
- * detail, add-to-playlist, delete — into icon buttons in the row tail, leaving
- * play-next / add-to-queue behind the `more` button.
+ * detail, add-to-playlist, delete — into icon buttons in the row tail, and the
+ * `⋯` menu prunes those same actions (see `buildSongMenuItems`): on a wide row
+ * it carries only play/edit — plus delete where this row renders no delete
+ * shortcut (`showDeleteAction=false`, e.g. the playlist detail page whose
+ * row-tail × removes from the playlist, not the library).
  */
 export function SongListRow({
   song,
@@ -86,10 +89,13 @@ export function SongListRow({
   // Both entry points (the `⋯` button and long-press) anchor on the `⋯` button:
   // it is the only box in the row the menu can be measured against, and on Web the
   // button is the *only* entry point anyway (web-core synthesizes no longpress).
-  // `onOpenMenu` redirects both to the caller's own menu when provided.
+  // `onOpenMenu` redirects both to the caller's own menu when provided. The row
+  // context rides along so the global menu can prune the actions this row's own
+  // tail already exposes — the menu mounts outside `LibraryViewportProvider` and
+  // cannot read `isWide` itself.
   const openMenuAnchored = (target: Song) => measure((rect) => {
     if (onOpenMenu) onOpenMenu(target, rect)
-    else openMenu(target, rect)
+    else openMenu({ song: target, anchor: rect, row: { isWide, deleteShortcut: showDeleteAction } })
   })
 
   const wideActions = !selectionMode && isWide

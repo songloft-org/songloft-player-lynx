@@ -14,7 +14,27 @@ export interface OpenAddToPlaylistParams {
   onAdded?: () => void
 }
 
-interface SongRowOverlayState {
+/**
+ * The opening row's viewport/shortcut state, snapshotted at openMenu time —
+ * drives which menu items get pruned as duplicates of the row's own buttons.
+ * See `buildSongMenuItems` in `SongRowOverlays.tsx`.
+ */
+export interface SongMenuRowContext {
+  /** Wide viewport: the row tail already renders info/add (maybe delete) shortcut buttons. */
+  isWide: boolean
+  /** Whether that tail includes the library-delete shortcut (`SongListRow.showDeleteAction`). */
+  deleteShortcut: boolean
+}
+
+export interface OpenMenuParams {
+  song: Song
+  /** Measured `⋯` box; null when the host could not measure (menu docks instead). */
+  anchor?: AnchorMeasurement | null
+  /** Omitted by non-row callers (e2e) — the menu then shows every item (the narrow-screen set). */
+  row?: SongMenuRowContext
+}
+
+export interface SongRowOverlayState {
   /** The song whose context menu is open; null while closed. */
   menuSong: Song | null
   /**
@@ -22,6 +42,12 @@ interface SongRowOverlayState {
    * Null when the host could not measure it, which docks the menu instead.
    */
   menuAnchor: AnchorMeasurement | null
+  /**
+   * The opening row's viewport snapshot, deciding which items the menu prunes
+   * because the row tail already exposes them as buttons. Null for non-row
+   * callers (e2e), meaning "show everything" — the narrow-screen set.
+   */
+  menuRow: SongMenuRowContext | null
   /** The songs being added to a playlist; empty while that sheet is closed. */
   addToPlaylistSongIds: number[]
   /** Success callback for the open sheet; null when the caller wants none. */
@@ -32,7 +58,7 @@ interface SongRowOverlayState {
   infoSong: Song | null
   /** The song whose edit dialog is open; null while closed. */
   editSong: Song | null
-  openMenu: (song: Song, anchor?: AnchorMeasurement | null) => void
+  openMenu: (params: OpenMenuParams) => void
   closeMenu: () => void
   openAddToPlaylist: (params: OpenAddToPlaylistParams) => void
   closeAddToPlaylist: () => void
@@ -101,28 +127,31 @@ interface SongRowOverlayState {
 export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
   menuSong: null,
   menuAnchor: null,
+  menuRow: null,
   addToPlaylistSongIds: [],
   addToPlaylistOnAdded: null,
   deleteSong: null,
   infoSong: null,
   editSong: null,
-  openMenu: (song, anchor) =>
+  openMenu: ({ song, anchor, row }) =>
     set({
       menuSong: song,
       menuAnchor: anchor ?? null,
+      menuRow: row ?? null,
       addToPlaylistSongIds: [],
       addToPlaylistOnAdded: null,
       deleteSong: null,
       infoSong: null,
       editSong: null,
     }),
-  closeMenu: () => set({ menuSong: null, menuAnchor: null }),
+  closeMenu: () => set({ menuSong: null, menuAnchor: null, menuRow: null }),
   openAddToPlaylist: ({ songIds, onAdded }) =>
     set({
       addToPlaylistSongIds: songIds,
       addToPlaylistOnAdded: onAdded ?? null,
       menuSong: null,
       menuAnchor: null,
+      menuRow: null,
       deleteSong: null,
       infoSong: null,
       editSong: null,
@@ -133,6 +162,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       deleteSong: song,
       menuSong: null,
       menuAnchor: null,
+      menuRow: null,
       addToPlaylistSongIds: [],
       addToPlaylistOnAdded: null,
       infoSong: null,
@@ -144,6 +174,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       infoSong: song,
       menuSong: null,
       menuAnchor: null,
+      menuRow: null,
       addToPlaylistSongIds: [],
       addToPlaylistOnAdded: null,
       deleteSong: null,
@@ -155,6 +186,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       editSong: song,
       menuSong: null,
       menuAnchor: null,
+      menuRow: null,
       addToPlaylistSongIds: [],
       addToPlaylistOnAdded: null,
       deleteSong: null,
@@ -168,8 +200,8 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
  * the player's overflow menu).
  */
 export const songRowOverlays = {
-  openMenu: (song: Song, anchor?: AnchorMeasurement | null) =>
-    useSongRowOverlays.getState().openMenu(song, anchor),
+  openMenu: (params: OpenMenuParams) =>
+    useSongRowOverlays.getState().openMenu(params),
   openAddToPlaylist: (params: OpenAddToPlaylistParams) =>
     useSongRowOverlays.getState().openAddToPlaylist(params),
   openInfo: (song: Song) => useSongRowOverlays.getState().openInfo(song),

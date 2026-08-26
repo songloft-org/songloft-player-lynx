@@ -195,6 +195,8 @@ pnpm run build:web-embedded   # 产物给后端嵌入（songloft-player-build/we
 
 行内版**真写过一遍**（净 ~95 行）：菜单只能在列表视口内可见（实测那个窗口下列表高 **371.5px**，而 4 行菜单约 190px，靠底部的行被切）；**不能有遮罩**（全屏点击捕获层同样被裁）⇒ 点外部关不掉；两行可以各开一个菜单，除非再加一个「谁开着」的共享信号 —— 那就是 store 本身。native 侧连验都没走到（原生列表同样裁到自己的视口）。**换掉全局方案省不了 store**：添加到歌单与删除确认是模态的，无论如何都在根上。
 
+**菜单项按视口裁剪（批62 起）**：宽屏行内已有 信息/加歌单/删除 按钮时，⋯ 菜单裁掉这三项——它们与行内按钮调的是同一个 store action，纯重复（Flutter 桌面布局甚至无菜单）。**窄屏行内按钮不渲染，菜单是这三项唯一入口**，所以裁剪依据是 `openMenu({ song, anchor, row })` 携带的行上下文快照（`menuRow`：`isWide` + `deleteShortcut`）——菜单挂在 root route、`LibraryViewportProvider` 之外读不到视口。歌单详情行的 × 是「从歌单移除」**另一动作**，其菜单保留「删除歌曲」。新增歌曲菜单项必须进 `song-menu-items.ts` 的 `buildSongMenuItems`（闸门在 `song-row-overlays.test.ts`），不要在组件里内联。
+
 #### 全局覆盖层的挂载点与 Dialog（批52，浏览器实测抓出）
 
 - **全局覆盖层必须挂在 root route 的 `ThemeProvider` 内**（`src/router.tsx`，与 `ToastHost` 同处），不能作为 `<RouterProvider>` 的兄弟挂在 `App.tsx`。后者在 native 上看不出问题，在 Web 上却同时踩两条：① 落在 `.theme-root` 子树之外，而 Muse 的 CSS 变量全部声明在那个类上 ⇒ 每个 `var(--*)` 解析为空字符串，卡片背景透明、无圆角内边距、遮罩不可见（**文字还在，所以像「样式崩了」而不像「没渲染」**）；② 拿不到 Router context ⇒ `SongRowOverlays` 因 `useNavigateToSongDetail()` 渲染中断，**歌曲菜单从未进 DOM、零报错**，点 ⋯ 按钮像没接线。闸门：`src/__tests__/root-overlay-mount.test.ts`
