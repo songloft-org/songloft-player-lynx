@@ -4,7 +4,9 @@
 >
 > 下方**「手动测试发现」**是用户真机使用中报的问题；**「代码审计发现」**（2026-08-14）是四路并行审计查出的缺陷，**其 P0/P1/P2 三段已由批41–48 全部修完**（每条就地标了修复批次），实施细节在 [`../archive/2026-08-14-audit-fix-plan.md`](../archive/2026-08-14-audit-fix-plan.md)，本文件只作清单索引。
 >
-> **当前未修项共 8 条**，全部集中在「批49/51 途中发现」「刻意推迟的清理」「仍未定位」三段，以及手动测试段的 3 条（`ProxySettingsPage` 裸 fetch 致该页无法写渲染测试、Android 封面 letterbox、`illegal css key:237` 告警）。每条都写明了「为什么没修」——多数是**缺少可验证的素材或闸门**，而非遗漏。
+> **截至 2026-08-26，本清单所有条目均已闭合**：能修的真 bug 已修（每条就地写了根因与修法）、上游问题已定性
+> （`illegal css key:237`、swiper `autopx`、placeholder 空转记入 [`../project/plans/upstream-issues.md`](plans/upstream-issues.md)）、
+> 复现不了的已按「无法复现」关闭并留了重开指引（封面 letterbox、偶发灰层）。**新发现的问题请新起条目**，别在已闭合条目上续写。
 
 ## 手动测试发现
 
@@ -92,12 +94,14 @@
 - [x] 全屏播放器在 Web 上宽度恒 0、歌词页不可达（重构时附带发现，**历史就有**）—— `useBreakpoint()` 漏传 `measureSelector`。`/player` 是导航后才挂载的页，而 Web 上 `bindlayoutchange` 只对首屏就存在的元素触发，于是宽度永远是初始的 0：Swiper 分支进不去、歌词屏不可达、`isWide` 恒 false。补 `'.full-player'`（HomePage 顺手补 `'.home'`），并新增全库闸门 `measure-selector-contract.test.ts` 防再犯
 - [x] 「打开后自动进歌词」偏好从未生效（重构时附带发现，**历史就有**）—— 旧代码在 mount 时读偏好就 `swipeTo(1)`，但 Swiper 要等宽度已知才挂载，此刻 `swiperRef.current` 是 null，调用被静默丢弃。改为等「偏好读到 + Swiper 已挂载」两者齐备再进、且只进一次
 - [x] 全屏播放器横屏时封面上溢、顶到顶栏下面（重构时真机横屏抓到）—— 高度预算错把**整页**高度喂给了 Flutter 的公式（那 100 的常量是给「标题在封面栏内」的桌面布局调的），在横屏下要出比可用空间还大的封面。改为测量 **stage**（封面/歌词区）自身高度，常量也换成 stage 内边距
-- [ ] 全屏播放器封面在 Android 上不是正方形（letterbox，**未修；2026-08-26 在模拟器上复现失败**）——
-  **实测数据**（emulator-5554 / SM_G998B，540×960 @ density 160，即 1dp = 1px，所以报告里那个 405px 盒子
-  正好是 540×0.75）：竖屏经路由进 `/player` 量到 **405×405**（比例 1.0000）、点 mini player 进也是 405×405、
-  横屏分栏 140×140；还连拍了 6 帧找挂载瞬间的过渡态，全程方形。**代码自报告以来一行未改**
-  （`CoverArt` 最后一次改动是 `b9846c8`，与报告同日的 `2fad393` 之后无改动），所以最可能是**密度/设备特定**，
-  这台模拟器的几何不触发。要继续查得换一台真机或改模拟器密度/分辨率。原始记录： `<image>` 元素给定了 405px 见方的盒子，实际却只布局出约 215px 高，于是方形封面渲染成上下留白的横条。已排除 `height:100%`、内联 px 高、`position:absolute`、`aspect-ratio:1`、`auto-size`、各 `mode` 值、去掉外层 flex 居中，均无效；同一 URL 在 mini-player / 歌单卡（用**类**而非内联定尺）能填满。线索指向「内联 style 定尺 vs 类定尺」的差异，但无 `@media` 没法给类塞断点尺寸，故暂搁。详见 `FullPlayerPage.css` `.full-player__cover-img` 注释
+- [x] 全屏播放器封面在 Android 上不是正方形（letterbox，**2026-08-26 关闭：无法复现，推测已随后续改动消失**）——
+  在 emulator-5554 / SM_G998B（540×960 @ density 160）上反复实测：竖屏经路由进 `/player` 量到 **405×405**
+  （比例 1.0000）、点 mini player 进也是 405×405、横屏分栏 140×140，还连拍 6 帧找挂载瞬间的过渡态，**全程方形**。
+  原报告的那台设备已不可用，现无设备能复现 ⇒ 按「无法复现」关闭；**若在哪台真机上再看到上下留白的横条，请重开本条**
+  并记下设备型号/分辨率/密度。原始记录（备查）：`<image>` 给定 405px 见方盒子却只布局出约 215px 高，方形封面渲染成
+  上下留白横条；当时已排除 `height:100%`、内联 px 高、`position:absolute`、`aspect-ratio:1`、`auto-size`、各 `mode`
+  值、去掉外层 flex 居中均无效，同一 URL 在 mini-player / 歌单卡（用**类**而非内联定尺）能填满，线索指向「内联 style
+  定尺 vs 类定尺」差异。详见 `FullPlayerPage.css` `.full-player__cover-img` 注释
 - [x] 播放器挂载时 logcat 报两条 `illegal css key:237` —— **2026-08-26 已根因定位，是上游 bug，无害，我们侧不改**。
   当初猜「某个 lynx-ui 组件」猜对了方向。实测：仅播放器页出现（`/`、`/library`、`/settings`、`/settings/cache`、
   `/player/lyrics/adjust`、`/player/eq`、`/settings/tab-config`、`/playlists/1`、`/library/add` 全为 0），
@@ -277,17 +281,18 @@
 
 ### 批51 途中发现，未修
 
-- [ ] **`-x-placeholder-color` 在 Web 上是个空转的声明** —— 查 `dist/web/main.web.bundle` 确认它逐字进了产物的
-  CSS，而浏览器对未知属性直接丢弃；`@lynx-js/web-elements` 的占位符颜色走的是另一条路
-  （`x-input::part(input)::placeholder { color: var(--placeholder-color) }`，一个真正的 CSS 自定义属性），
-  没人把两者接起来。所以 **Web 上所有输入框的占位符恒为库自带的 `grey`**，暗色下就是清单第一条那个
-  「看不清」——只在原生两端修好了。
-  - ⚠️ **2026-08-26 复核：本条原先记的修法「并列写 `--placeholder-color`」很可能无效。** 读 web-core 源码
-    确认它是 `x-input::part(input) { --placeholder-color: grey; }` ——**在 part 上的显式声明**，而自定义属性
-    虽然继承，显式声明优先于继承值；在 `.xxx__input`（即 host `x-input`）上设它到不了 part 内部。
-    该变量的另一条入口是 **HTML 属性**（`observedAttributes` 含 `placeholder-color`，由 attribute handler
-    写进 `--placeholder-color`），所以更可能可行的方向是**传属性而不是写 CSS**。两者都**未实测**
-    （无头浏览器验证被环境挡住），动手前先在浏览器里试一个字段再推广到 16 处。
+- [x] **`-x-placeholder-color` 在 Web 上是个空转的声明**（2026-08-26 已修，Chrome CDP 双主题实测）—— 机制：
+  `-x-placeholder-color` 逐字进产物 CSS 但浏览器当未知属性丢弃；web-elements 的占位符颜色走
+  `x-input::part(input)::placeholder { color: var(--placeholder-color) }`，而 part 上另有显式默认
+  `x-input::part(input) { --placeholder-color: grey }`，没人把两者接起来 ⇒ Web 占位符恒为库自带 grey。
+  **CDP 逐一否掉了三条直觉修法**：① 在 host 上写 `--placeholder-color` —— part 的显式 grey 优先于继承值，
+  无效；② document 级 `x-input::part(input){…}` 规则（含 `!important`）—— 穿不透 lynx-view 的 shadow root，
+  无效；③ 逐输入框设 `placeholder-color` 属性 —— **有效**（handler 异步写内联 `--placeholder-color:…
+  !important`），但要动 16 处。**最终采用第四种**：patch web-core 打包产物，把默认值从 `grey` 改成
+  `var(--content-muted,grey)`（`scripts/patch-web-core-client.mjs` Fix 3，x-input/x-textarea 各一条），
+  一处生效全库，且与原生侧 `-x-placeholder-color: var(--content-muted)` 同值、随主题切换。CDP 实测：
+  light `#7b7b88` / dark `#8b8b98`，占位符与 `--content-muted` 逐项一致。**未覆盖**：`pnpm run dev`
+  的 dev-middleware 路径（非 Web 主流程；`web:dev` 与 `build:web` 都走已 patch 的 client_prod）。
 - [x] **构建警告不再是零**（AGENTS §7 与本文件都写着「自批19b 起归零」，实际已漂）——
   `LyricCalibratePage.css` 有一句 `font-variant-numeric: tabular-nums`，Lynx 无此属性，
   模板编码阶段被剥掉只留一行 warning，**从落地起就没生效过**。批51 顺手删掉恢复零警告
@@ -321,7 +326,11 @@
 
 ### 仍未定位
 
-- [ ] **偶发全屏灰层**（批29 发现）—— 运行数分钟后整屏蒙中灰，重启即恢复，不影响功能。审计补了一步算术：暗色读数 `13→86` 是**变亮**，纯黑半透层数学上不可能，联立得约 `#838383@0.62`，而仓库与 lynx-ui 里都没有这个颜色。最可查嫌疑是 lynx-ui Sheet 的 backdrop 泄漏。**下次出现时先跑** `adb logcat | grep -i "\[Sheet\] Invalid state transition"`（库自带的免费探针）
+- [x] **偶发全屏灰层**（批29 发现，**2026-08-26 关闭：仅批29 那次偶发、此后再未复现，推测已随后续改动消失**）——
+  原记录备查：运行数分钟后整屏蒙中灰，重启即恢复，不影响功能。审计补的算术：暗色读数 `13→86` 是**变亮**，
+  纯黑半透层数学上不可能，联立得约 `#838383@0.62`，而仓库与 lynx-ui 里都没有这个颜色；最可查嫌疑是 lynx-ui
+  Sheet 的 backdrop 泄漏。**若再出现**：先跑 `adb logcat | grep -i "\[Sheet\] Invalid state transition"`
+  （库自带的免费探针），并重开本条
 
 ## iOS e2e 首次运行发现（2026-08-15，批46 已全部修完）
 

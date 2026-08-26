@@ -84,6 +84,30 @@ const REPLACEMENTS = [
     oldText: 's=o??A;s&&(',
     newText: 's=o??A;s&&A&&(',
   },
+  {
+    // Fix 3a, on web-core-main-chunk.js: x-input placeholder colour.
+    // web-elements hard-codes `--placeholder-color: grey` on the input part, and the
+    // Lynx `-x-placeholder-color` property never reaches it on Web (the browser drops
+    // the unknown property, and a document-scope `::part()` rule cannot pierce
+    // lynx-view's shadow root), so every placeholder stayed the library grey. Point
+    // the default at the theme's muted text colour — the same value the native side
+    // uses (`-x-placeholder-color: var(--content-muted)`) — keeping `grey` as the
+    // fallback for when the variable is undefined. Verified via Chrome CDP: the part
+    // inherits `--content-muted` from `.theme-root` and the placeholder follows the
+    // theme. (Setting the `placeholder-color` attribute per input also works but would
+    // need the attribute on all ~16 fields; patching the default is the one-place fix.)
+    file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
+    marker: 'x-input::part(input){--placeholder-color:var(--content-muted,grey)',
+    oldText: 'x-input::part(input){--placeholder-color:grey',
+    newText: 'x-input::part(input){--placeholder-color:var(--content-muted,grey)',
+  },
+  {
+    // Fix 3b, same for x-textarea.
+    file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
+    marker: 'x-textarea::part(textarea){--placeholder-color:var(--content-muted,grey)',
+    oldText: 'x-textarea::part(textarea){--placeholder-color:grey',
+    newText: 'x-textarea::part(textarea){--placeholder-color:var(--content-muted,grey)',
+  },
 ]
 
 let failures = 0

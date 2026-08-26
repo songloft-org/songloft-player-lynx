@@ -21,9 +21,12 @@ import { expect, test } from 'vitest'
  *
  * Note this only holds on the native hosts. On Web the property reaches the DOM
  * verbatim and the browser drops it — `@lynx-js/web-elements` drives the colour
- * from a `--placeholder-color` custom property instead, so Web placeholders are
- * still the library's `grey`. Tracked in `docs/project/bugs.md`; fixing it means
- * adding the second property everywhere, not changing this gate.
+ * from a `--placeholder-color` custom property on the input part instead, and that
+ * part hard-codes `grey`. Fixed by patching web-core's bundled default from `grey`
+ * to `var(--content-muted,grey)` (scripts/patch-web-core-client.mjs, Fix 3), so the
+ * Web placeholder follows the same `--content-muted` the native side uses — verified
+ * via Chrome CDP in both themes. This gate still only checks the native channel; the
+ * Web channel is the patch, not a per-field declaration.
  */
 
 const SRC = path.resolve(__dirname, '../../..')
