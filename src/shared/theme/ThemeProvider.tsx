@@ -50,9 +50,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   )
 
   const vars = themePackToStyleVars(pack?.data, theme)
-  // Lynx supports `--*` keys in the style attribute (its docs show exactly
-  // this), but the bundled `CSSProperties` type predates custom-property keys,
-  // hence the widening cast.
   const style = vars as (Record<string, string> & CSSProperties) | undefined
 
   return <view className={`theme-root theme-${theme}`} style={style}>{children}</view>

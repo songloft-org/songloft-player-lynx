@@ -84,6 +84,44 @@ const GLOBAL_QUEUE_MICROTASK_FIX =
 const GLOBAL_BOOTSTRAP_BANNER =
   GLOBAL_SELF_BANNER + GLOBAL_ABORT_POLYFILL + GLOBAL_QUEUE_MICROTASK_FIX
 
+/**
+ * Lynx's native CSS engine supports CSS custom properties in class-based
+ * selectors but not in inline styles — the `__SetInlineStyles` path ignores
+ * `--`-prefixed keys. However, the tasm binary contains an
+ * `enable_css_inline_variables` flag that makes the compiled template emit the
+ * right opcodes for runtime CSS variable resolution from inline declarations.
+ * This flag isn't exposed through the standard plugin options, so we inject it
+ * directly into the encode options via the `beforeEncode` hook.
+ */
+const LYNX_TEMPLATE_HOOKS_KEY = Symbol.for(
+  '@lynx-js/template-webpack-plugin/hooks',
+)
+
+class EnableCSSInlineVariablesPlugin {
+  apply(compiler: any) {
+    compiler.hooks.compilation.tap(
+      'EnableCSSInlineVariablesPlugin',
+      (compilation: any) => {
+        const hooks = (compilation as any)[LYNX_TEMPLATE_HOOKS_KEY]
+        if (!hooks) return
+        hooks.beforeEncode.tap(
+          'EnableCSSInlineVariablesPlugin',
+          (args: any) => {
+            if (args.encodeData?.sourceContent?.config) {
+              args.encodeData.sourceContent.config.enableCSSInlineVariables =
+                true
+            }
+            if (args.encodeData?.compilerOptions) {
+              args.encodeData.compilerOptions.enableCSSInlineVariables = true
+            }
+            return args
+          },
+        )
+      },
+    )
+  }
+}
+
 export default defineConfig({
   source: {
     alias: {
@@ -111,6 +149,7 @@ export default defineConfig({
           entryOnly: false,
         }),
       )
+      appendPlugins(new EnableCSSInlineVariablesPlugin())
     },
   },
   plugins: [
@@ -125,6 +164,9 @@ export default defineConfig({
       enableNewGesture: true,
       // Minimal Lynx Engine version this bundle targets.
       engineVersion: '2.14',
+      // Enable CSS custom property inheritance so inline-declared variables
+      // propagate to descendants on native.
+      enableCSSInheritance: true,
     }),
     pluginTypeCheck(),
   ],
