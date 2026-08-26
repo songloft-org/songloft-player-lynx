@@ -30,7 +30,7 @@ pnpm run web:sync && pnpm run web:dev   # 最快看到界面的路径
 ```bash
 pnpm run build        # 必须列出两个产物：File (lynx) 与 File (web)
 pnpm run typecheck    # = tsc -b（必须 -b，--noEmit 是空跑）
-pnpm test             # 1947 用例 / 186 文件
+pnpm test             # 1981 用例 / 189 文件
 ```
 
 > ⚠️ 以上**只覆盖 JS 产物** —— 不读 Xcode 工程、不编译 Kotlin、不验 Web 产物自洽性。改了 `ios/`、`android/`、`web/` 必须另跑对应平台那条。

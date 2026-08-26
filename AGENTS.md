@@ -29,7 +29,7 @@ docs/                   项目文档，按 Diátaxis 组织（索引见 docs/REA
   guides/              操作指南（构建/测试/原生开发/Web 部署/调试）
   reference/           规范速查（api-conventions / native-modules / back-navigation）
   architecture/        背景与解释（overview / lynx-constraints / platform-differences / e2e-testing-design）
-  project/             进展 progress.md · 交接 handoff.md · 缺陷 bugs.md · plans/
+  project/             进展 progress.md · 交接 handoff.md · 踩坑 pitfalls.md · 缺陷 bugs.md · plans/
   archive/             归档：已闭合计划 + migration/ 迁移调研（含订正表）
 patches/                依赖补丁（必须提交）
 songloft-player/        Flutter 版只读参考（.gitignore 排除，禁止修改）

@@ -28,7 +28,7 @@ pnpm run build:web-embedded   # embedded → songloft-player-build/web-embedded
 | **无 secure enclave** | `SongloftStorage` 的 `secure` 命名空间在 Web 上只是命名空间，安全性等同任何同源脚本 |
 | **会话持久化走 IndexedDB** | worker realm 没有 `localStorage`（那是 window-only），存储探测顺序是 native → localStorage → **IndexedDB** → 内存 |
 | **无 longpress** | web-core 不合成该手势，任何「长按打开菜单」的功能必须另有按钮入口 |
-| **占位符颜色恒为库自带 grey** | `-x-placeholder-color` 在 Web 上是空转声明，web-elements 走的是另一条路（`::part(input)::placeholder`），没人把两者接起来 |
+| ~~占位符颜色恒为库自带 grey~~ | **已修（2026-08-26）**：`-x-placeholder-color` 在 Web 上是空转声明、web-elements 走 `::part(input)::placeholder` 且 part 上有显式默认 —— 这三者接不起来，所以改为 patch web-core 产物的默认值（`grey` → `var(--content-muted,grey)`，`scripts/patch-web-core-client.mjs`），CDP 实测随主题切换（light `#7b7b88` / dark `#8b8b98`）。**同类问题（web-elements 部件样式改不动）先想 part 显式默认 + shadow root 穿透，修法走 patch 脚本**，见 AGENTS.md §4 |
 | **文件选择器可能不弹** | `pickAndUploadFile` 的调用从 worker 经桥过来，user activation 可能已丢。无头环境不可观测，需真浏览器确认 |
 | **无「清空浏览器缓存」入口（刻意不做）** | Flutter 版有（清 Cache Storage + 注销 SW + 强刷 HTTP 缓存，解决 PWA 更新后旧资源问题）。本仓库 Web 端不注册 Service Worker、不用 Cache Storage，standalone（`serve.mjs`）与 embedded（后端 embed.go）的响应一律 `Cache-Control: no-cache` + ETag 304 —— 更新后普通刷新即最新，无需用户手动清 |
 | **部分 Lynx 元素无实现** | `<refresh>` / `<webview>` 等未映射标签走恒等回落，成为 `HTMLUnknownElement`——属性开关完全无效。写跨平台页面前先查 web-core 的 `LYNX_TAG_TO_HTML_TAG_MAP` |

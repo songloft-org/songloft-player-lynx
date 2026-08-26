@@ -40,7 +40,15 @@ pnpm run ios:build                                     # Swift 真编译（需 m
 ### iOS 特有的三个坑
 
 - **callback 类型必须是 `@escaping (String) -> Void`**，不能用 `LynxCallbackBlock`（NSArray error-first 风格）。用错后 selector **仍能匹配且能被调用**，但 Lynx 桥传入闭包的参数路径不同，导致拿不到 scene、**静默返回 false**。
-- **Swift 怎么看 ObjC 声明**：importer 会剥掉与参数类型名重复的 label 词。拿不准就写个探针文件（刻意写错类型标注）让编译器报出真实签名 —— 猜三次不如探一次。
+- **Swift 怎么看 ObjC 声明**：importer 会剥掉与参数类型名重复的 label 词。拿不准就写个探针文件（刻意写错类型标注）让编译器报出真实签名 —— 猜三次不如探一次。批45 实测对照：
+
+  | ObjC selector | Swift 导入名（编译器认的） |
+  |---|---|
+  | `invokeWithRequest:callback:` | `invoke(with:callback:)`（剥 `Request` ≈ `LynxHttpRequest`） |
+  | `invokeStreamingWithRequest:callback:withDelegate:` | `invokeStreaming(with:callback:with:)`（剥 `Request`/`Delegate`） |
+  | `processChunkedData:withData:` | `processChunkedData(_:with:)`（剥 `Data` ≈ `NSData`） |
+  | `+registerServiceWithProtocol:protocol:` | `registerService(withProtocol:protocol:)`（原样） |
+  | `+getInstanceWithProtocol:` | `getInstanceWith(_:)`（保基础词、剥 `Protocol`；**不是** `getInstance(with:)` 也不是 `instance(withProtocol:)`） |
 - **`@available` 守卫**：`LiveActivityModule` 是 `@available(iOS 16.2, *)` 而部署目标 16.0，`config.register(...)` 不包 `if #available` 就是硬编译错。
 
 ### 线程

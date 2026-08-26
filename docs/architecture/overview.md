@@ -85,7 +85,7 @@ TanStack Router，**memory history**（没有 URL 栏）。三件事各有归属
 
 | 层 | 数量 | 作用 |
 |---|---|---|
-| vitest | 1947 / 186 文件 | 单元 + 契约闸门（原生模块、manifest、pbxproj、CSS 不变量、i18n key、web 宿主页） |
+| vitest | 1981 / 189 文件 | 单元 + 契约闸门（原生模块、manifest、pbxproj、CSS 不变量、i18n key、web 宿主页） |
 | E2E | 33 scenario | TestBridge（TCP 9230）驱动设备上的 App，断言落在**进程外**状态 |
 
 **闸门只证明它真正读过的东西** —— vitest 读不到 Xcode 工程、Gradle 或真机行为。这条与「闸门要验语义不验子串」「mock 要保留真实前置条件」「断言先反向验证会红」一起构成 [AGENTS.md §6](../../AGENTS.md)，那是三次教训的沉淀。

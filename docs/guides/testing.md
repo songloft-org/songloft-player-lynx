@@ -12,7 +12,7 @@ pnpm test              # vitest run
 pnpm exec tsc -b       # 类型检查（必须 -b）
 ```
 
-当前：**1947 用例 / 186 文件**（2026-08-26 实测，约 25–35 秒）。
+当前：**1981 用例 / 189 文件**（2026-08-26 复核，约 20–35 秒）。
 
 - 技术栈：Vitest + @testing-library
 - 测试文件与源码同目录下的 `__tests__/`
@@ -54,7 +54,7 @@ skip 的构成：Android = 3 例 `ios-appearance` + 5 例 `android-video-fullscr
 
 `NativeModules` 在 eval scope 里**完全不可达**（裸的和 `globalThis` 上都没有，实测过），所以原生能力只能经 `src/e2e-bridge.ts` 暴露的把手驱动：
 
-`__E2E_PLAYER_STORE__` · `__E2E_AUTH_STORE__` · `__E2E_LYRIC_STORE__` · `__E2E_EQ_STORE__` · `__E2E_SERVER_STORE__` · `__E2E_APP_CONFIG__` · `__E2E_ROUTER__` · `__E2E_APPEARANCE__` · `__E2E_FLOATING_LYRIC__` · `__E2E_VIDEO__` · `__E2E_SONG_OVERLAYS__`
+`__E2E_PLAYER_STORE__` · `__E2E_AUTH_STORE__` · `__E2E_LYRIC_STORE__` · `__E2E_EQ_STORE__` · `__E2E_SERVER_STORE__` · `__E2E_APP_CONFIG__` · `__E2E_ROUTER__` · `__E2E_APPEARANCE__` · `__E2E_FLOATING_LYRIC__` · `__E2E_VIDEO__` · `__E2E_SONG_OVERLAYS__` · `__E2E_SONG_CACHE__` · `__E2E_BACK__`（权威清单以 `src/e2e-bridge.ts` 为准）
 
 新增 store 时的暴露约定见 [API 与 Store 设计规范](../reference/api-conventions.md)。
 
