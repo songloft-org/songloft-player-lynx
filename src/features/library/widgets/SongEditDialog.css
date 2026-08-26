@@ -41,7 +41,19 @@
   max-height: 85vh;
 }
 
+/*
+ * `flex-shrink: 0` is load-bearing, not tidiness. The card is a column flex
+ * box with a height clamp, and flex spreads the overflow across EVERY child
+ * whose shrink factor is non-zero — weighted by basis, but the title's small
+ * basis does not make its share zero. Measured on Web with the remote form
+ * (body content 848px, card clamped to 624px): the title resolved to 13.4px
+ * against a 22px content height and, since every Lynx element carries
+ * `overflow: clip`, the text was rendered with its top half cut off — read as
+ * "the title is covered by something". The body is the only child that may
+ * absorb the overflow; it scrolls, they do not.
+ */
 .song-edit-dialog__title {
+  flex-shrink: 0;
   font-size: var(--font-md);
   font-weight: 600;
   color: var(--content);

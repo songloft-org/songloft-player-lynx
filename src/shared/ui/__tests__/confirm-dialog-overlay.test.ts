@@ -368,6 +368,58 @@ describe('the tall song dialogs clamp their scrolling body directly', () => {
       ).toMatch(/maxHeight:\s*dialogCardMaxHeight\(\)/)
     }
   })
+
+  /*
+   * The pinned chrome must not shrink. Flex spreads a clamped container's
+   * overflow across EVERY child with a non-zero shrink factor, weighted by
+   * basis — and these bodies use `flex-basis: auto` (a zero basis would
+   * collapse them while the card is un-clamped), so the weighting does not
+   * spare the small rows. Measured on Web with the remote edit form (body
+   * content 848px, card clamped to 624px): the title resolved to 13.4px
+   * against a 22px content height and, since every Lynx element carries
+   * `overflow: clip`, rendered with its top half cut off — reported as "the
+   * dialog title is covered". The action row went to 21.8px of its 36px while
+   * `.confirm-dialog__btn` kept its fixed 36px, so the buttons spilled past
+   * the card's content box.
+   *
+   * The three sheets that also pair a column flex box with a percentage
+   * max-height (`play-history` / `more-tabs` / `playlist-desc`) are immune
+   * without this: their scroll areas use `flex: 1`, i.e. basis 0, so the
+   * weighted shrink of the list is 0 and the grow factor absorbs the slack
+   * instead. Only these two cards use basis auto.
+   */
+  test('the pinned title/header and action rows never shrink', () => {
+    const CHROME = [
+      { css: '../../../features/library/widgets/SongInfoDialog.css', rule: 'song-info-dialog__header' },
+      { css: '../../../features/library/widgets/SongEditDialog.css', rule: 'song-edit-dialog__title' },
+      { css: '../ConfirmDialog.css', rule: 'confirm-dialog__actions' },
+    ]
+    for (const { css, rule } of CHROME) {
+      const text = readFileSync(path.resolve(__dirname, css), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+      const block = text.match(new RegExp(`\\.${rule}\\s*\\{([^}]*)\\}`))
+      expect(block, `${css}: .${rule} rule not found`).not.toBeNull()
+      expect(
+        block![1],
+        `${css}: .${rule} must declare flex-shrink: 0 — the card's height clamp `
+          + 'otherwise squeezes this row and Lynx\'s overflow: clip crops it',
+      ).toMatch(/flex-shrink:\s*0\b/)
+    }
+  })
+
+  test('the scrolling body is the one child allowed to shrink', () => {
+    for (const { css } of TALL_DIALOGS) {
+      const text = readFileSync(path.resolve(__dirname, css), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+      const block = text.match(/\.song-(?:info|edit)-dialog__body\s*\{([^}]*)\}/)
+      expect(block, `${css}: the body rule not found`).not.toBeNull()
+      expect(
+        block![1],
+        `${css}: the body must keep flex-shrink: 1 — with the chrome pinned it is `
+          + 'the only child that can absorb the overflow',
+      ).toMatch(/flex-shrink:\s*1\b/)
+    }
+  })
 })
 
 /*
@@ -488,13 +540,19 @@ describe('dialogCardWidth', () => {
 })
 
 /*
- * `dialogBodyMaxHeight` — the load-bearing clamp's value. 0.75 of the
- * CSS-pixel viewport height: the body plus the card's fixed chrome
- * (title/header + action row + paddings ≈ 130–155px) lands the card ≤ ~90%
- * of the viewport, so the centred top edge — where the title sits — stays
- * on screen. Web is excluded (the flex chain works there and SystemInfo
- * reports the browser screen); absurdly small results (< 200px) are treated
- * as no constraint rather than a degenerate card.
+ * `dialogBodyMaxHeight` — the load-bearing clamp's value: the CARD clamp
+ * (0.85 of the CSS-pixel viewport height) minus the card's fixed chrome, so
+ * `chrome + body` can never exceed the cap the card itself carries.
+ *
+ * It was a flat 0.75 share, which cannot co-exist with the 0.85 cap:
+ * `0.75H + chrome > 0.85H` for every viewport below ~1240dp, so on any phone a
+ * long form made the card want 0.9H, get capped at 0.85H, and lose the
+ * difference off the BOTTOM — cropping the action row. Deriving the value keeps
+ * the two clamps consistent by construction.
+ *
+ * Web is excluded (the flex chain works there and SystemInfo reports the
+ * browser screen); absurdly small results (< 200px) are treated as no
+ * constraint rather than a degenerate card.
  */
 describe('dialogBodyMaxHeight', () => {
   const setSystemInfo = (info: Record<string, unknown> | undefined) => {
@@ -505,10 +563,25 @@ describe('dialogBodyMaxHeight', () => {
     delete (globalThis as Record<string, unknown>).SystemInfo
   })
 
-  test('device: 75% of the CSS-pixel viewport height', () => {
+  test('device: the card clamp minus the card chrome', () => {
     setSystemInfo({ platform: 'Android', pixelHeight: 2400, pixelRatio: 3 })
-    // 2400/3 = 800dp × 0.75 = 600px body → card ≤ 600 + ~155 chrome < 800dp
-    expect(dialogBodyMaxHeight()).toBe('600px')
+    // 2400/3 = 800dp × 0.85 = 680px card − 160px chrome = 520px body
+    expect(dialogBodyMaxHeight()).toBe('520px')
+  })
+
+  test('body + chrome never exceeds the card clamp on any plausible viewport', () => {
+    for (const dp of [560, 640, 720, 800, 900, 1024, 1366]) {
+      setSystemInfo({ platform: 'Android', pixelHeight: dp * 2, pixelRatio: 2 })
+      const body = dialogBodyMaxHeight()
+      const card = dialogCardMaxHeight()
+      expect(body, `${dp}dp: expected a body clamp`).toBeDefined()
+      expect(card, `${dp}dp: expected a card clamp`).toBeDefined()
+      expect(
+        Number.parseInt(body!, 10) + 160,
+        `${dp}dp: body + chrome must fit inside the card clamp, or the overflow `
+          + 'comes off the bottom and crops the action row',
+      ).toBeLessThanOrEqual(Number.parseInt(card!, 10))
+    }
   })
 
   test('web: undefined — the stylesheet chain owns the body size there', () => {
@@ -522,8 +595,8 @@ describe('dialogBodyMaxHeight', () => {
   })
 
   test('a degenerate viewport yields no clamp rather than a broken one', () => {
-    // 200/1 × 0.75 = 150px < 200 → refuse the constraint entirely
-    setSystemInfo({ platform: 'Android', pixelHeight: 200, pixelRatio: 1 })
+    // 400/1 × 0.85 − 160 = 180px < 200 → refuse the constraint entirely
+    setSystemInfo({ platform: 'Android', pixelHeight: 400, pixelRatio: 1 })
     expect(dialogBodyMaxHeight()).toBeUndefined()
   })
 })

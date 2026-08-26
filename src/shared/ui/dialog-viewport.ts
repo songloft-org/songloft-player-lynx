@@ -17,6 +17,20 @@ export const SONG_DIALOG_WIDTH_PX = 440
 const CARD_MARGIN_PX = 32
 
 /**
+ * The tall song cards' fixed chrome, in px — everything the scrolling body has
+ * to leave room for: the card's two `--space-5` paddings + hairlines, the
+ * pinned title/header row and its margin, the body's own bottom margin, and the
+ * 36px action row.
+ *
+ * Measured on Web (`card.height − body.height`): 132 for the edit dialog's
+ * one-line title, 154 for the info dialog's 44px cover header. The constant is
+ * the larger case rounded up, so the body clamp under-shoots rather than
+ * over-shoots — an unused sliver at the bottom of a short card is invisible,
+ * whereas over-shooting crops the action row.
+ */
+const CARD_CHROME_PX = 160
+
+/**
  * The viewport-based `max-height` for a tall dialog card, in px — or undefined
  * when the stylesheet should own it.
  *
@@ -65,10 +79,15 @@ export function dialogCardMaxHeight(): string | undefined {
  *
  * Constraining the scroll-view DIRECTLY removes the whole chain: a max-height
  * on the scroll-view itself is its core sizing semantics (every list page
- * relies on it), so no flex propagation is involved. The 0.75 share leaves
- * room for the card's fixed chrome on every device (title/header + action
- * row + paddings ≈ 130–155px, so the card lands ≤ ~90% of the viewport and
- * the centred top edge — where the title sits — stays on screen).
+ * relies on it), so no flex propagation is involved.
+ *
+ * The value is the CARD's clamp minus the card's fixed chrome, NOT an
+ * independent share of the viewport. It used to be a flat 0.75, which cannot
+ * co-exist with the 0.85 card cap: `0.75H + chrome > 0.85H` holds for every
+ * viewport below ~1240dp, i.e. every phone. Whenever the form was long enough
+ * to use the whole body clamp, the card wanted 0.9H, got capped at 0.85H, and
+ * the overflow came off the BOTTOM — cropping the action row. Deriving the body
+ * clamp from the card clamp makes the two agree by construction.
  *
  * Web is excluded as in {@link dialogCardMaxHeight}: the whole chain works
  * there, and SystemInfo reports the browser screen rather than the lynx-view.
@@ -83,7 +102,7 @@ export function dialogBodyMaxHeight(): string | undefined {
     || pixelRatio <= 0) {
     return undefined
   }
-  const px = Math.round((pixelHeight / pixelRatio) * 0.75)
+  const px = Math.round((pixelHeight / pixelRatio) * 0.85) - CARD_CHROME_PX
   return px < 200 ? undefined : `${px}px`
 }
 

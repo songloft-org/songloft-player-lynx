@@ -38,8 +38,14 @@
 }
 
 /* Title row: small cover + two-line song name (the Flutter dialog clamps its
-   title at two lines the same way). */
+   title at two lines the same way).
+
+   `flex-shrink: 0` for the same reason as `.song-edit-dialog__title` (see that
+   file): the card's height clamp otherwise spreads its overflow over this row
+   too, and a 44px header squeezed under a clipped box loses its cover and text
+   to the crop. Only the scrolling body may absorb the overflow. */
 .song-info-dialog__header {
+  flex-shrink: 0;
   display: flex;
   flex-direction: row;
   align-items: center;
