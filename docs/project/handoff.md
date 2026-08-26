@@ -34,23 +34,26 @@
 | **导航** | `1b59ebf`、`215c4a2`（批55）、`afaa010`+`d8f534d`（批58）、`fbfe464` | 返回键三层模型（覆盖层 LIFO → 路由父级 → 双击退出）· tab 超 5 个折叠为「更多」· 底部导航改 iOS-26 悬浮胶囊 + iPadOS 侧栏 + `--nav-inset` 两档避让 |
 | **插件与主题** | `ce853c8`（批56/57）、`ba8764b`、`28b2f11`、`899bded` | 插件管理页/商店页对齐 Flutter（含**修 `conflict` 建模为 string 致冲突流程一直是死的**）· 主题商店契约修复 + 主题包真正应用到 UI · Web 插件 tab 以 iframe 挂进 shadow root |
 | **歌曲弹窗化（批60/60b/60c）** | `31726c6`、`ac9c292`、`c833f32` | 详情/编辑两路由退役为全局挂载弹窗 + 五路互斥；两轮修弹窗被 flex 压扁（标题裁半、按钮溢出） |
+| **歌曲菜单按视口裁剪（批62）** | `92e5863` | 宽屏 ⋯ 菜单裁掉与行内按钮重复的 信息/加歌单/删除（歌单详情保留删除——其行内 × 是「从歌单移除」另一动作）；`openMenu` 转对象参数携带 `menuRow` 行上下文快照；顺带修播放历史行内删除快捷键隐患 |
 | **Web 登录态与启动闪现** | `e230e95`、`9f91c9e`、`3fd4b8f`、`e350033` | 存储选择改 IndexedDB 优先 · 主线程日志写完关连接避免阻塞 worker 持久化 token · 初始路由改 `/` · 渲染层 splash 守卫 |
 
-> ⚠️ 是否 `git push` 由用户决定，**不要自行推送**。（当前已同步：`git rev-list --left-right --count origin/main...main` = `0 0`）
+> ⚠️ 是否 `git push` 由用户决定，**不要自行推送**。（`git rev-list --left-right --count origin/main...main` = `0 6`：批62 两个 + 此前会话四个，均待推送）
 >
 > 分支 `feat/song-dialogs` 已经由 `16aefb6` 合回 `main`，可以删。
 
 ### 工作树状态
 
-**干净**（`git status --short` 只有未跟踪的 `.codegraph/`，那是 CodeGraph 索引目录，不入库）。
+**批62 已提交（`92e5863`，见 §1 表）；在途只剩另一条并发工作流的改动**（`git status --short`）：
+
+- **Android/iOS 系统媒体音量同步**（另一条工作流，非批62，文件集仍在增长）：Android `SongloftAudioEngine.kt`（`AudioManager` 音量读取 + `volumeChanged` 事件）/ `SongloftAudioModule.kt`、iOS `SongloftAudioEngine.swift` / `SongloftAudioModule.swift`、TS facade（`native-audio.ts` / `audio-types.ts` / `mock-audio.ts` / `web-audio.ts`）、`player-store.ts` / `lyric-store.ts`，另有 `scripts/patch-web-core-client.mjs`（Web 输入框占位符颜色改走 web-core 补丁，对应 bugs.md「-x-placeholder-color 空转」那条）。批62 验收跑闸门时其中 TS 侧已在树中且全绿，但 Kotlin/Swift 不进任何 JS 闸门——原生构建/真机未验，由该工作流自行收口。
 
 闸门快照——**分清哪些是刚实测的、哪些是上次记录的**，这个区分本身就是本项目的教训之一：
 
 | 闸门 | 结果 | 何时验的 |
 |---|---|---|
-| `pnpm test` | **1947 passed / 186 文件**（34.9s） | ✅ **2026-08-26 本次实测** |
-| `pnpm exec tsc -b` | 绿 | 批60c 收口时（`c833f32`） |
-| `pnpm run build` | 双产物 lynx **2194.4 kB** / web **2261.4 kB** | 批60c 收口时 |
+| `pnpm test` | **1978 passed / 189 文件**（24.5s） | ✅ **2026-08-26 本次实测（批62 + 当时在途的音量同步 TS 改动）** |
+| `pnpm exec tsc -b` | 绿 | 批62 收口时（`92e5863`） |
+| `pnpm run build` | 双产物 lynx **2197.1 kB** / web **2264.2 kB** | 批62 收口时（`92e5863`） |
 | `pnpm run build:web` | 绿 | 批60c 收口时 |
 | `gradlew assembleDebug` | 绿 | **批49 时代**，此后 129 个提交未复跑（本机现为 macOS，见 §3 环境） |
 | `ios:build` | `BUILD SUCCEEDED` | **批49 时代**，同上 |
