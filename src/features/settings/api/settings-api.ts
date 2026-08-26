@@ -1,6 +1,7 @@
 import { apiPrefix } from '../../../core/config/app-config.js'
 import type { HttpClient } from '../../../core/network/http-client.js'
 import { coerceLogLevel, type LogLevel } from '../domain/log-level.js'
+import type { ProxySettings } from '../domain/proxy-model.js'
 import { parseTabConfig, type TabConfig } from '../../jsplugin/data/tab-config.js'
 
 /**
@@ -90,5 +91,35 @@ export class SettingsApi {
 
   async updateVolumeNormalize(enabled: boolean): Promise<void> {
     await this.client.put(`${apiPrefix}/settings/volume-normalize`, { enabled })
+  }
+
+  // ── Proxy settings (http / github / hls / private-network allowlist) ─────
+  // Four independent backend keys the ProxySettingsPage edits together. Loaded
+  // and saved in parallel; each is a small `{proxy}` / `{enabled}` / `{allowlist}`
+  // body (see the backend `/settings/<name>` convention).
+
+  async getProxySettings(): Promise<ProxySettings> {
+    const [http, github, hls, allow] = await Promise.all([
+      this.client.get<{ proxy?: string }>(`${apiPrefix}/settings/http-proxy`),
+      this.client.get<{ proxy?: string }>(`${apiPrefix}/settings/github-proxy`),
+      this.client.get<{ enabled?: boolean }>(`${apiPrefix}/settings/hls-proxy`),
+      this.client.get<{ allowlist?: string[] }>(`${apiPrefix}/settings/proxy-private-allowlist`),
+    ])
+    const allowlist = allow.data?.allowlist
+    return {
+      httpProxy: http.data?.proxy ?? '',
+      githubProxy: github.data?.proxy ?? '',
+      hlsEnabled: hls.data?.enabled ?? false,
+      allowlist: Array.isArray(allowlist) ? allowlist : [],
+    }
+  }
+
+  async updateProxySettings(settings: ProxySettings): Promise<void> {
+    await Promise.all([
+      this.client.put(`${apiPrefix}/settings/http-proxy`, { proxy: settings.httpProxy }),
+      this.client.put(`${apiPrefix}/settings/github-proxy`, { proxy: settings.githubProxy }),
+      this.client.put(`${apiPrefix}/settings/hls-proxy`, { enabled: settings.hlsEnabled }),
+      this.client.put(`${apiPrefix}/settings/proxy-private-allowlist`, { allowlist: settings.allowlist }),
+    ])
   }
 }

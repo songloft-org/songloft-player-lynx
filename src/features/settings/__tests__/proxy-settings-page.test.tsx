@@ -1,22 +1,87 @@
-import { expect, test, vi } from 'vitest'
+import '../../../shims/router-env.js'
 
-import { AI_PROMPT } from '../pages/ProxySettingsPage.js'
+import '@testing-library/jest-dom'
+import { afterEach, expect, test, vi } from 'vitest'
+import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 
 /**
- * The "copy prompt to ask AI" affordance under the GitHub proxy field.
+ * ProxySettingsPage tests.
  *
- * Working GitHub mirrors come and go, which is why the Flutter reference offers a
- * prompt rather than a preset list that would rot. Two things have to hold: the
- * prompt must still ask for what makes an answer usable, and the copy must reach a
- * real clipboard — Lynx has none of its own, so this is the first consumer of the
- * platform module's `setClipboard` (whose presence on both native hosts is
- * enforced by `native-module-contract.test.ts`).
- *
- * There is no render test for the button: this page loads its four settings with
- * raw `fetch` inside an effect, and that loading gate never flushes in the
- * ReactLynx harness. Every other settings page goes through the api + query layer,
- * which mocks cleanly — see `docs/project/bugs.md`.
+ * The page used to load its four settings with raw `fetch` inside an effect, and
+ * that loading gate never flushed in the ReactLynx harness — so it had NO render
+ * test (only the `AI_PROMPT` content assertions below). It now goes through the
+ * api + query layer, which mocks cleanly, so the render tests at the bottom assert
+ * the very thing that was previously untestable: the loading gate flushes and the
+ * save flow fires the mutation.
  */
+
+const mockProxyData = {
+  httpProxy: 'http://proxy.example:8080',
+  githubProxy: 'https://gh.example/',
+  hlsEnabled: true,
+  allowlist: ['192.168.1.0/24', '10.0.0.1'],
+}
+const saveMutateSpy = vi.fn()
+
+vi.mock('react-i18next', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
+)
+// The shared `mockLynxUiInput` only stands in `Input`; this page also uses
+// `TextArea` (the allowlist field), so provide both here.
+vi.mock('@lynx-js/lynx-ui-input', () => ({
+  Input: ({ className, placeholder }: { className?: string; placeholder?: string }) => (
+    <view className={className}><text>{placeholder}</text></view>
+  ),
+  TextArea: ({ className, placeholder }: { className?: string; placeholder?: string }) => (
+    <view className={className}><text>{placeholder}</text></view>
+  ),
+}))
+vi.mock('../data/proxy-query.js', () => ({
+  proxyQueryKeys: { all: () => ['settings', 'proxy'] as const },
+  useProxySettingsQuery: () => ({ data: mockProxyData, isLoading: false }),
+}))
+vi.mock('../data/proxy-mutations.js', () => ({
+  useSaveProxySettingsMutation: () => ({ mutate: saveMutateSpy, isPending: false }),
+}))
+
+const { AI_PROMPT, ProxySettingsPage } = await import('../pages/ProxySettingsPage.js')
+
+afterEach(() => vi.clearAllMocks())
+
+async function renderPage() {
+  render(<ProxySettingsPage />)
+  // Flush the draft-seeding effect so the form (not the loading gate) is showing.
+  await act(async () => { await Promise.resolve() })
+  return getQueriesForElement(elementTree.root!)
+}
+
+// ── Render tests (previously impossible — see file header) ───────────────────
+
+test('the loading gate flushes and the form renders', async () => {
+  const { queryByTestId } = await renderPage()
+  // The save button only exists in the form branch, past the loading gate.
+  expect(queryByTestId('proxy-save')).toBeInTheDocument()
+  // The GitHub-proxy AI-prompt affordance is part of the form.
+  expect(queryByTestId('github-copy-prompt')).toBeInTheDocument()
+})
+
+test('save PUTs all four settings, splitting the allowlist text into entries', async () => {
+  const { queryByTestId } = await renderPage()
+
+  await act(async () => { fireEvent.tap(queryByTestId('proxy-save')!) })
+
+  expect(saveMutateSpy).toHaveBeenCalledTimes(1)
+  // The draft was seeded from the query data; the multi-line allowlist text is
+  // split back into entries before it reaches the API.
+  expect(saveMutateSpy.mock.calls[0][0]).toEqual({
+    httpProxy: mockProxyData.httpProxy,
+    githubProxy: mockProxyData.githubProxy,
+    hlsEnabled: mockProxyData.hlsEnabled,
+    allowlist: ['192.168.1.0/24', '10.0.0.1'],
+  })
+})
+
+// ── AI prompt affordance ─────────────────────────────────────────────────────
 
 test('the prompt asks for the things that make an answer usable', () => {
   // Ported verbatim from `github_proxy_dialog.dart`; these are the constraints

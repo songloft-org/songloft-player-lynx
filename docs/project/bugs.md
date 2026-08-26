@@ -44,7 +44,14 @@
   - Swift `UIPasteboard` 同样主线程；Web 宿主先试 `navigator.clipboard.writeText`，**回退**到 textarea + `execCommand`（前者要安全上下文、而这次调用是从 worker 经桥过来的，user activation 可能已丢）
   - **契约闸门自动逼出了两侧实现**：`native-module-contract.test.ts` 是从 TS 接口**反推**方法清单的，往 `SongloftPlatformNative` 加一行之后它立刻红「Kotlin has no @LynxMethod setClipboard」。两侧都编译验证过（`compileDebugKotlin` 通过、iOS `BUILD SUCCEEDED`）
   - 提示词文本**刻意不做 i18n**：它不是界面文案而是用户粘给 AI 的内容，翻两份就要维护两份语义一致的 prompt，参考实现同样是单个中文常量
-- [ ] **`ProxySettingsPage` 用裸 `fetch` + `useEffect` 加载四个设置**，而其余设置页都走 api + query 层。后果是它的 loading 闸在 ReactLynx 测试环境里**永远不放行**（fetch 确实调了 4 次，但 promise 续体里的 `setLoading(false)` 不落进渲染树，连续 6 个 `act` + 10ms 也不行），所以这一页**无法写渲染测试**。批51 因此把 AI 提示词那条改成断言导出的常量 + 剪贴板管道，而不是点按钮。真要补渲染覆盖，得先把这页迁到 query 层
+- [x] **`ProxySettingsPage` 用裸 `fetch` + `useEffect` 加载四个设置**（2026-08-26 已迁到 query 层）—— 原症状是
+  loading 闸在 ReactLynx 测试环境里**永远不放行**（fetch 确实调了 4 次，但 promise 续体里的 `setLoading(false)`
+  不落进渲染树），所以这一页**无法写渲染测试**。已迁到 api + query 层：`SettingsApi.getProxySettings/
+  updateProxySettings`（四端点并行读写）+ `useProxySettingsQuery` / `useSaveProxySettingsMutation`，页面改为
+  query 数据种子出本地草稿、保存走 mutation。**补上了它一直缺的两个渲染测试**（loading 闸放行 + 保存把
+  allowlist 文本切回数组后传给 mutation）。**Android 模拟器实测**：进 `/settings/proxy` 表单正常渲染
+  （内容纵向跨度 750px、约 9 个 section 簇，非单行 loading）。顺带清掉两个未使用的 import（`useNavigate`、
+  `SettingsRow`）
 - [x] 删除插件没有二次确认 / 从文件安装点击没反应 —— 两处都修：
   - **删除**：其实有两段式确认（`confirmDeleteId`），但全部反馈只是那个 16px `×` 从 `--content-muted` 变成 `--danger`，跟 hover 着色无从区分，所以读起来就是「点一下就删」。两段式适合**带文字的按钮**（文字会跟着变，如「再次点按确认删除」），不适合一个纯图标。改用对话框（点名要删的插件，说明会连同其存储数据一起删）。顺带把**两份**手写对话框（设置页登出的 `logout-dialog__*`、重复检测页的 `fp-dialog__*`）收敛成 `shared/ui/ConfirmDialog`——两份已经在 `DESIGN.md` 明文规定的那点上漂了：`--danger` 是「危险色（**仅文字，不做彩色背景块**）」，设置页那份守住了（ghost 底 + 红描边 + 红字），重复检测那份用的是**实心红填充**。统一到合规的那份，并加「无人重新手写对话框 CSS」闸门
     - **后续真机复现「点取消多闪一帧『将删除「」…』」**：`show` 直接由 `pendingDelete !== null` 驱动，点取消把 subject 清掉的同时 lynx-ui 还在播**退出动画**，于是动画那几百毫秒面板留在屏幕上、名字已经没了。改为 `deleteOpen` 与 `pendingDelete` 分离：subject 只在「下一次打开」时被替换、绝不因关闭而清空。单测的 Dialog stub 也改成真 lynx-ui 行为（`show=false` 时子树仍挂载、只标记隐藏）——之前「show=false 就卸载」的 stub 恰好把这个 bug 藏住了。反向验证过
