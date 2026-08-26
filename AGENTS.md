@@ -164,6 +164,7 @@ pnpm run build:web-embedded   # 产物给后端嵌入（songloft-player-build/we
 - 会话持久化走 `core/storage/idb-storage.ts`（IndexedDB）——worker realm 没有 `localStorage`，探测顺序是 native → localStorage → **IndexedDB** → 内存。
 - **web-core 的宿主脚本必须用 `<script type="module">`**：`client_prod` 的入口用了 `import.meta`，当作传统脚本加载会抛 `Cannot use 'import.meta' outside a module` —— 这是个**不进 `console.error` 的未捕获异常**，`<lynx-view>` 不 upgrade、整页纯黑、零诊断信息。dev-middleware 那份是 IIFE 没这个约束，这正是「`web:dev` 能跑」长期掩盖问题的原因。`serve.mjs` 与 `copy-bundle-web.mjs` 现已统一用 `client_prod`（两套资源除入口文件名外完全相同），并有 vitest 闸门锁住「index.html 的每个本地引用都存在」+「入口以 module 加载」。
 - **验证 Web 改动时至少跑一次 `build:web` 并真的打开产物**。只跑 `web:dev` 证明不了产物可用——这一条已经吃过两次亏。
+- **web-elements 用 `::part()` 驱动样式的地方（如输入框 placeholder 色），既不能从 host CSS 设、也不能用 document 级 `::part()` 规则覆盖，只能 patch 它的默认值。** 实例：输入框 placeholder 恒为库自带 `grey`。web-elements 是 `x-input::part(input)::placeholder { color: var(--placeholder-color) }` + part 上显式默认 `x-input::part(input){ --placeholder-color: grey }`。CDP 逐一否掉两条直觉修法：① 在 host（`.xxx__input`）上写 `--placeholder-color` —— **part 的显式声明优先于继承值**，到不了 part 内部；② document 级 `x-input::part(input){…}` 规则（含 `!important`）—— **`::part()` 穿不透 lynx-view 的 shadow root**（它不暴露内部 part）。有效的是 patch `scripts/patch-web-core-client.mjs` 里 web-core 打包产物的默认值（`grey` → `var(--content-muted,grey)`），一处生效全库、随主题切换。**凡「Web 上某个 web-elements 部件样式改不动」，先想 part 显式默认 + shadow root 穿透这两条，别在 host CSS 上反复试**；修法走 patch 脚本（pattern 缺失时响亮失败），不是逐元素加属性。
 
 ### lynx-ui
 
