@@ -51,7 +51,16 @@ export function LyricsPage() {
       .then((v) => { if (!cancelled) setNotificationLyricInTitle(v) })
       .catch(() => {})
     void readFloatingLyricEnabled()
-      .then((v) => { if (!cancelled) setFloatingLyricEnabled(v) })
+      .then((v) => {
+        if (cancelled) return
+        setFloatingLyricEnabled(v)
+        if (v && getPlatformCapabilities().floatingLyric) {
+          const m = getFloatingLyricModule()
+          void m.isShowing().then((showing) => {
+            if (!showing) void m.requestPermission().then((granted) => { if (granted) void m.show() })
+          })
+        }
+      })
       .catch(() => {})
     void readFloatingLyricFontSize()
       .then((v) => { if (!cancelled) setFloatingLyricFontSize(v) })

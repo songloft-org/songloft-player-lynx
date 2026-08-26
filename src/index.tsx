@@ -16,8 +16,10 @@ import { initBackController } from './core/navigation/back-controller.js'
 // `cannot read property 'getNativeLynx' of undefined` and, because these two
 // awaits sit in the startup chain, it took `auth.hydrate()`/`auth.checkAuth()`
 // down with it (auth status stuck at `unknown` forever).
-import { readDefaultPlayMode } from './features/settings/data/settings-prefs.js'
+import { readDefaultPlayMode, readFloatingLyricEnabled } from './features/settings/data/settings-prefs.js'
 import { usePlayerStore, restorePlaybackState } from './features/player/store/index.js'
+import { getFloatingLyricModule } from './native/floating-lyric.js'
+import { getPlatformCapabilities } from './native/platform-capabilities.js'
 import { applySavedLanguage } from './i18n/index.js'
 import { applyHostDeployMode } from './core/config/app-config.js'
 import { initSystemAppearance } from './native/system-appearance.js'
@@ -81,6 +83,14 @@ void (async () => {
     const savedMode = await readDefaultPlayMode()
     usePlayerStore.getState().setPlayMode(savedMode)
     await restorePlaybackState()
+    if (getPlatformCapabilities().floatingLyric) {
+      const enabled = await readFloatingLyricEnabled()
+      if (enabled) {
+        const m = getFloatingLyricModule()
+        const granted = await m.requestPermission()
+        if (granted) void m.show()
+      }
+    }
     const auth = useAuthStore.getState()
     await auth.hydrate()
     await auth.checkAuth()
