@@ -2,7 +2,9 @@
 
 > 真机测试与代码审计发现的问题清单。已修复项标 `[x]`，待修项标 `[ ]`。
 >
-> 下方**「手动测试发现」**是用户真机使用中报的问题；**「代码审计发现」**（2026-08-14）是四路并行审计查出的、尚未被任何测试或真机验证覆盖的缺陷——它们的修复排期与实施细节在 [`../plans/2026-08-14-audit-fix-plan.md`](../plans/2026-08-14-audit-fix-plan.md)，本文件只作清单索引。
+> 下方**「手动测试发现」**是用户真机使用中报的问题；**「代码审计发现」**（2026-08-14）是四路并行审计查出的缺陷，**其 P0/P1/P2 三段已由批41–48 全部修完**（每条就地标了修复批次），实施细节在 [`../archive/2026-08-14-audit-fix-plan.md`](../archive/2026-08-14-audit-fix-plan.md)，本文件只作清单索引。
+>
+> **当前未修项共 8 条**，全部集中在「批49/51 途中发现」「刻意推迟的清理」「仍未定位」三段，以及手动测试段的 3 条（`ProxySettingsPage` 裸 fetch 致该页无法写渲染测试、Android 封面 letterbox、`illegal css key:237` 告警）。每条都写明了「为什么没修」——多数是**缺少可验证的素材或闸门**，而非遗漏。
 
 ## 手动测试发现
 
@@ -85,10 +87,21 @@
 - [x] 全屏播放器横屏时封面上溢、顶到顶栏下面（重构时真机横屏抓到）—— 高度预算错把**整页**高度喂给了 Flutter 的公式（那 100 的常量是给「标题在封面栏内」的桌面布局调的），在横屏下要出比可用空间还大的封面。改为测量 **stage**（封面/歌词区）自身高度，常量也换成 stage 内边距
 - [ ] 全屏播放器封面在 Android 上不是正方形（letterbox，**遗留，未修**）—— `<image>` 元素给定了 405px 见方的盒子，实际却只布局出约 215px 高，于是方形封面渲染成上下留白的横条。已排除 `height:100%`、内联 px 高、`position:absolute`、`aspect-ratio:1`、`auto-size`、各 `mode` 值、去掉外层 flex 居中，均无效；同一 URL 在 mini-player / 歌单卡（用**类**而非内联定尺）能填满。线索指向「内联 style 定尺 vs 类定尺」的差异，但无 `@media` 没法给类塞断点尺寸，故暂搁。详见 `FullPlayerPage.css` `.full-player__cover-img` 注释
 - [ ] 播放器挂载时 logcat 报两条 `illegal css key:237`（**遗留，未查清**）—— 与本次新增 CSS 无关（把 PlayerBackdrop 整个移除后依旧出现），而曲库/设置页挂载时没有；237 超出当前 css-defines 表的范围（表止于 236），疑似只有播放器才挂载的某个 lynx-ui 组件（Swiper/Slider/Sheet）的内部样式键。表现为告警、未见功能损坏，待有空对照宿主版本查
+- [x] 播放历史页面有报错（批50）—— 页面上那行 `不支持的 context_type` 只是最外层症状，往下是**三处独立的错**，其中**写入从来没成功过**比读更严重：后端 `SongPlayed` 从 query 读 `type`/`context_type`/`context_key` 且只有 `type=play` 才落库，而前端把 context 放在 **JSON body** 且从不发 `type` → 每次 204、一条都没记。加上「设置→高级→播放历史」这个入口拿不到任何上下文（后端历史是**按播放上下文分桶**的，没有全局「最近播放」端点），所以它不是坏了而是**不可能修好**。改前先用真实后端按新旧两种形状各 POST 一次做反向验证。详见 `progress.md` 批50
+- [x] 曲库的设计有问题，自定义曲库显示分类也有问题（批51-A~D）—— 探查证实**「自定义显示分类」整个功能从未生效过**：后端 `PUT /settings/library-browse` 契约是 `{views:[{key,visible}]}`（14 个合法 key），而旧实现发 `{id,visible,order}` → GET 恒回落全默认、PUT 恒 **400** 并被 `.catch(()=>{})` 静默吞掉。且 `KNOWN_VIEWS` 自创了 4 个后端不认的 id、丢了 4 个真实的。曲库随之从「硬编码 4 tab」重写为对齐 Flutter 的**单页 14 视图**（四批）。详见 `progress.md` 批51-A/B/C/D
+- [x] 播放器速度/播放模式弹出层位置错乱（批53，**Docker 无头 Chrome 实测抓出 6 处**）—— 上面批51 那两条只治了遮罩与延迟，位置本身仍是错的：`lynx-ui-popover` 的 `computeCoordsFromPlacement` 返回**相对触发器**的坐标，而 `OverlayView` 用 `position: absolute` 施加它（包含块是最近的定位祖先），两者只在「触发器正好位于该祖先原点」时等价。实测歌单详情排序菜单落在 `x = -122`——**整块在屏外，功能等于不存在**；音量面板 `-60`、倍速 `-30`、曲库排序 `0`（应为 106）。库自带的溢出收敛也救不了（`detectOverflow` 拿 `SystemInfo.pixelWidth` 当屏幕，Web 上报的是浏览器**屏幕**尺寸 800×600 而非 lynx-view 的 420×900）。改为自研 `PopoverMenu`/`PopoverPanel` + `anchored-overlay.ts`，退役该库。铁律见 `AGENTS.md` §4「锚定弹出层」
+- [x] 插件商店缺「重新安装最新版本」功能（批57）—— 顺着这条对照 Flutter 全量盘点，另外挖出一个**模型级 bug**：`registryPluginEntrySchema` 把 `conflict` 建模为 string，而后端实际发 **boolean**，`true` 落进 `.catch()` 变 undefined ⇒ **整个撞名冲突流程一直是死的**（songloft/songloft#339 那套防护从未生效）。行动作补齐四态（重装 chip / 更新至 vX / 冲突覆盖安装 / 安装）。详见 `progress.md` 批57
+- [x] 禁用插件后 tab 上图标还显示（批57b）—— 双处根因：① `useShellNavTabs` 把 tab-config 的 pluginTabs 原样返回，不过滤 `isActive`/是否已卸载；② toggle/delete/install mutation 只 invalidate `['jsplugin','list']`，而 shell-nav query 的 key 是 `['settings','tab-config','shell-nav']`（staleTime 60s）压根不会被刷新。Web 真后端实测：禁用洛雪音源 → 导航栏 7→6 即时消失，无需刷新
+- [x] 底部导航选中态是整块紫色填充+反白，观感差（批58，设计问题）—— 按 iOS 26 Liquid Glass 重做：fixed 悬浮胶囊 + `--primary-faint` 淡色底 tint。**顺带踩了一条**：首版内容避让只留 80px，用户随即报**首页/曲库滚不到底被 mini player 挡住** → 升级为 `--nav-inset` 两档变量（无歌 80 / 有 mini-player 148）。新增可滚动页面必须消费该变量，见 `AGENTS.md` §4「底部导航胶囊」
+- [x] 宽屏左侧 tab 选中会高度变化导致抖动（批58b）—— 批58 的选中态固定尺寸规则（`height: 52px`）没限作用域：底栏 64px 槽吸收了它所以无影响，但 rail 行是内容高度（~40px），选中被强制 52px、行高跳 12px、**下方所有行位移**。修法是把 `width/height` 收进 `.shell__bottombar` 作用域，rail 选中仅变色。铁律：**rail 选中只变色、严禁改尺寸**
+- [x] 编辑弹窗标题和保存按钮有问题（批60b，真机报障）—— 两个独立缺陷：**保存按钮**无主题包时 `--primary` 回退墨色（#111），描边版 submit 渲染成黑边黑字、与取消按钮几乎无差别、主操作零强调 → 改实心主色填充；**标题**是 `max-height: 85%` 在 fixed 弹层下按 containing block 解析、原生引擎不可靠（Web 钳制生效 614px 而原生失效后长表单被 flex 居中溢出顶部）→ 改 `85vh` 直接读 viewport
+- [x] 编辑弹窗标题被挡住（批60c，**实为被 flex 压扁而非遮挡**）—— 卡片是 column flex + 高度钳制，flex 把溢出量按 basis **加权摊给所有** shrink 非零的子项，小 basis 只是分得少、不是不分；而这两个弹窗的滚动 body 刻意用 `flex-basis: auto`（basis 0 会在卡片未被钳制时塌陷），于是标题行与 action 行也各摊一份。Web 实测标题 `height: 13.4px` / 内容 22px，而 Lynx 每个元素都带 `overflow: clip` ⇒ **文字上半被裁**；action 行 21.8/36 而按钮固定 36px ⇒ 溢出卡片 content box。修法给固定 chrome 加 `flex-shrink: 0`。**这类问题截图会误读成「样式没生效」或「被遮挡」**，判据是 `getComputedStyle(el).height` 与 `el.scrollHeight` 的差值。见 `AGENTS.md` §4 同名条目
 
-## 代码审计发现（2026-08-14，均未修）
+## 代码审计发现（2026-08-14 · P0/P1/P2 已全部修完）
 
 按严重度排序。`✅复核` = 已亲自运行命令/读源码确认；`🔍待复核` = 有 `file:line` 证据但未二次独立验证。
+
+> **标题此前写的是「均未修」，那是审计当天的状态，已过期八个批次。** 三段共 27 条现已全部 `[x]`：P0 由批41/43 修完，P1 由批42 修完，P2 由批43/45/47/48 修完。**这个标题本身就是「没有闸门读的东西不会自己保持为真」的又一个实例**（同批48 的 manifest、批51 的构建警告归零）——文档里的状态断言没有对账机制，只能靠改代码的人顺手带走。
 
 ### P0 — 让某个平台整体不可用
 
@@ -112,7 +125,7 @@
 - [x] **HTTP 请求没有任何超时**（批42 已修）—— `TransportRequest` 加 `timeoutMs`，AbortController + `Promise.race`，新增 `HttpTimeoutError`
 - [x] **收藏歌单 ID 拉取可能死循环刷请求**（批42 已修）—— 空页即停 + 200 页兜底
 - [x] **升级进度轮询在后端重启后永不停止**（批42 已修）—— 容忍 15 次失败后落终态；顺带修 error 只在 `!checkResult` 时渲染的第二处问题
-- [x] **多选状态跨搜索/筛选残留** 🔍待复核 —— `LibraryPage.tsx:104` 的 `selected` 与 `filters` 无联动，会把屏幕上不存在的歌加进歌单（**批42 唯一未修项**）
+- [x] **多选状态跨搜索/筛选残留**（批42 已修，`3e1c342`）—— `selected` 与 `filters` 无联动，会把屏幕上不存在的歌加进歌单。该条一度被记为「批42 唯一未修项」，实际是同批最后一个提交修的；回归测试在批51-B 随曲库重构从 `song-view` 迁到了 `flat-songs-view.test.tsx`
 - [x] **队列有重复歌曲时拖动排序把「当前播放」钉错**（批42 已修）—— `indexOf` 按对象身份改纯下标算术
 - [x] **iOS Live Activity 重复 start 泄漏锁屏卡片**（批42 已修 JS 侧）—— 补 in-flight 标记 + 空 id 闭锁；⚠️ iOS 原生模块本身还没注册为 Lynx 模块（见 P2），接通后才能真机验
 
@@ -206,7 +219,7 @@
   **靠源码顺序决定谁赢**。正解是提取成 `SongRow.css` 由组件自己 import，但那必须在冲突规则里
   挑一个赢家，而仓库**没有任何视觉闸门**能抓到回归——只能靠真机截图逐页对比。批50 因此刻意
   没做，新增的 `PlayHistoryPanel.css` 也刻意**不放**第四份副本
-- [ ] **`savePlaybackState` 是 4 个位置参数** —— 违反 `docs/reference/api-design-conventions.md`
+- [ ] **`savePlaybackState` 是 4 个位置参数** —— 违反 `docs/reference/api-conventions.md`
   的「≥3 个或含可选参数用对象参数」。改成对象参数会让 `position-persistence.test.ts` 里
   `mock.calls[..][2]` 那种按位取值的断言失效，收益不抵 churn，批50 只把第 4 参从
   `sourcePlaylistId?: number` 换成了 `context?: PlaybackContext`

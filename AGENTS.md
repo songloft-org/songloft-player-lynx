@@ -24,12 +24,13 @@ src/                    Lynx 客户端源码（所有业务代码）
 android/                Android 宿主 + 原生模块（Kotlin）
 ios/                    iOS 宿主 + 原生模块（Swift）
 web/                    Web 宿主页（index.html）+ 本地静态服务（serve.mjs）
-docs/                   项目文档（见 docs/README.md）
-  reference/           规范与参考（api-design-conventions.md）
-  migration/           迁移调研历史
-  plans/               待执行的开发/修复计划（含 archive/ 已归档的历史计划）
-  testing/             E2E 测试架构设计
-  tracking/            开发进展（PROGRESS.md）与 bug 跟踪
+docs/                   项目文档，按 Diátaxis 组织（索引见 docs/README.md）
+  getting-started.md   从零跑起来
+  guides/              操作指南（构建/测试/原生开发/Web 部署/调试）
+  reference/           规范速查（api-conventions / native-modules / back-navigation）
+  architecture/        背景与解释（overview / lynx-constraints / platform-differences / e2e-testing-design）
+  project/             进展 progress.md · 交接 handoff.md · 缺陷 bugs.md · plans/
+  archive/             归档：已闭合计划 + migration/ 迁移调研（含订正表）
 patches/                依赖补丁（必须提交）
 songloft-player/        Flutter 版只读参考（.gitignore 排除，禁止修改）
 ```
@@ -58,7 +59,7 @@ songloft-player/        Flutter 版只读参考（.gitignore 排除，禁止修�
 
 ### Store / API 设计
 
-- 新增 store 方法、修改签名前先查 `docs/reference/api-design-conventions.md`（参数风格、数值范围、命名、E2E store 暴露约定）
+- 新增 store 方法、修改签名前先查 `docs/reference/api-conventions.md`（参数风格、数值范围、命名、E2E store 暴露约定）
 - 参数风格：1–2 个标量用位置参数；≥3 个或含可选参数用对象参数
 - 数值范围：音量 store 层 0-100 整数、native 层 0-1 浮点，转换由 store action 完成
 
@@ -109,19 +110,19 @@ pnpm run e2e:ios:setup
 测试通过 TestBridge（native TCP 9230 → JS eval）驱动设备上的 App，store 经 `src/e2e-bridge.ts` 暴露到 `globalThis.__E2E_*__`。
 场景跨平台复用（`e2e/scenarios/`），iOS 额外有系统外观测试。
 测试报告输出到 `e2e/reports/`，截图在 `e2e/screenshots/`（均已 gitignore）。
-详见 `docs/testing/behavior-testing-design.md` 和 `e2e/` 目录。
+详见 `docs/architecture/e2e-testing-design.md` 和 `e2e/` 目录。
 
 ### Git
 
 - 分支：`main`，远程：`origin`（`git@github.com:songloft-org/songloft-player-lynx.git`）
 - Conventional Commits：`type(scope): 简体中文描述`
 - 禁止 `Co-Authored-By`；issue 引用用 `songloft-org/songloft#NNN`
-- `patches/` / `pnpm-lock.yaml` 必须提交；`node_modules/` / `dist/` / `songloft-player/` 禁止提交
+- `patches/` / `pnpm-lock.yaml` 必须提交；`node_modules/` / `dist/` / `songloft-player/` / `.codegraph/` 禁止提交（末者是 CodeGraph 的机器本地索引，约 46 MB、可由索引器重建；它一度未被忽略，一次 `git add -A` 就会把它写进历史）
 
 ### 工作流
 
-- 按 `docs/migration/plan.md` 顺序分批实现，一批一个聚焦范围
-- 每批验收后更新 `docs/tracking/PROGRESS.md`
+- 按 `docs/archive/migration/plan.md` 顺序分批实现，一批一个聚焦范围
+- 每批验收后更新 `docs/project/progress.md`
 - 每批验收后暂停等确认，再进下一批
 
 ## 4. Lynx 关键约束
@@ -281,6 +282,9 @@ cached = nm.SongloftDlna as DlnaModule
 | SystemAppearance | `system/` | 深浅色/语言注入 + 变更事件 |
 | SongloftFloatingLyric | `lyric/` | 悬浮歌词覆盖层（`SYSTEM_ALERT_WINDOW` + `FloatingLyricService`；两者都必须在 manifest 里声明，见下方闸门一节） |
 | SongloftVideo | `video/` | 全屏视频画面。**不持有播放器**：`SongloftVideoActivity` 只把 SurfaceView 借给引擎（`attachVideoOutput`），退出时必须 `detachVideoOutput`，否则 ExoPlayer 继续往已销毁的窗口画、下一首纯音频歌在 video renderer 里静默死掉 |
+| SongloftDlna | `SongloftDlnaModule.kt` | SSDP M-SEARCH 发现 + SOAP AVTransport 控制。**TS 侧禁止 `as DlnaModule` 强转**（见本节开头的调用约定，DLNA 页就是这么崩的） |
+| SongloftNavigation | `navigation/` | 返回键。三个方法全是 fire-and-forget 无 `Callback`（宿主是跟随方）；反向的「一次返回按键」由 `MainActivity` 经 `sendGlobalEvent` 发出（`LynxView` 在那里）。`BackKeyState` 持有 JS 镜像过来的 `consumable` 标志 + 看门狗。**iOS 刻意不实现**——没有返回键可拦 |
+| SongloftSongCache | `cache/` | 单曲离线缓存（download/getCacheInfo/remove/getCacheSize/clearAll）。四条设计约束写在类的 KDoc 里、**每条都是它曾经出过的 bug**：存 `filesDir` 而非 `cacheDir`（用户指定的缓存不能被 OS 回收）、下载走 `InsecureTls`（否则自签名服务器下缓存失败而播放正常）、原子写 `.part` 再 rename、超限报机器可读的 `limit_exceeded` 哨兵而非人话 |
 | （非 Lynx 模块）| `net/` | `SongloftHttpService` = 宿主 `fetch` 服务；`InsecureTls` = TLS 开关 |
 
 ### iOS（Swift）
@@ -292,11 +296,15 @@ cached = nm.SongloftDlna as DlnaModule
 | SongloftStorageModule | `SongloftStorageModule.swift` | UserDefaults + Keychain |
 | SongloftPlatformModule | `SongloftPlatformModule.swift` | 文件选择、URL 打开、insecureTls 开关 |
 | SystemAppearance | `SystemAppearance.swift` | 深浅色/语言注入 |
+| SongloftDlna | `SongloftDlnaModule.swift` | NWConnection UDP 多播发现 + SOAP 控制。callback 类型必须是 `@escaping (String) -> Void`，**不能**用 `LynxCallbackBlock`（见 SongloftVideo 那条） |
+| SongloftVideo | `SongloftVideoModule.swift` | 全屏视频：`AVPlayerViewController` 接引擎的 `AVPlayer`。三条必须写：`updatesNowPlayingInfoCenter = false`（否则覆盖锁屏元数据）、`videoGravity = .resizeAspect`（否则拉伸）、close 时**先 `vc.player = nil` 再 dismiss**（否则暂停共享播放器）。⚠️ 模块 callback 用错类型（`LynxCallbackBlock`）时 selector 仍能匹配并被调用，但拿不到 scene、**静默返回 false** |
+| SongloftLiveActivity | `LiveActivityModule.swift` | 锁屏 Live Activity（`NowPlayingAttributes`）。类是 `@available(iOS 16.2, *)` 而部署目标 16.0 ⇒ `buildConfig()` 里的注册**必须包 `if #available`**，否则硬编译错（批45 踩过）。16.0/16.1 上不注册，TS 侧降级为 no-op |
+| SongloftSongCache | `SongloftSongCacheModule.swift` | 单曲离线缓存，与 Android 同契约（含 `limit_exceeded` 哨兵逐字一致，由闸门锁住） |
 | （非 Lynx 模块）| `SongloftHttpService.swift` / `InsecureTls.swift` / `InsecureMediaLoader.swift` | 宿主 `fetch` 服务 / TLS 开关 + 共享 `URLSession` / 自签名下的媒体字节流加载器 |
 
 ### 契约闸门的覆盖范围
 
-`src/__tests__/native-module-contract.test.ts` 逐字校验 iOS⇔Android 的方法名/事件名/键名。**批41–45 后已无模块级盲区**：Audio / Storage / Platform / Dlna / FloatingLyric / LiveActivity 全在闸门内，注册也验（Android 的 `registerModule(...)` 与 iOS `buildConfig()` 里的 `config.register(...)`），每个 `ios/SongloftLynx/*.swift` 还会被逐一核对 pbxproj 四处登记。
+`src/__tests__/native-module-contract.test.ts` 逐字校验 iOS⇔Android 的方法名/事件名/键名。**已无模块级盲区**：**9 个**模块全在闸门内 —— Audio / Storage / Platform / Dlna / Video / SongCache / Navigation / FloatingLyric（Android 独有）/ LiveActivity（iOS 独有）。注册也验（Android 的 `registerModule(...)` 与 iOS `buildConfig()` 里的 `config.register(...)`），每个 `ios/SongloftLynx/*.swift` 还会被逐一核对 pbxproj 四处登记。
 
 闸门现在验的是**语义而非子串**，三处刻意如此（都是踩过才补上的）：
 
@@ -304,7 +312,9 @@ cached = nm.SongloftDlna as DlnaModule
 - iOS 注册断言限定在 `buildConfig()` **切片内**且**先剥注释** —— 只查类名会被 import / 文档注释骗过，不剥注释会被「整行注释掉的 `config.register(...)`」骗过（批45 实测过这一条）
 - `project.pbxproj` 与 `Info.plist` 都另有**结构可解析性**闸门（括号配对、标签嵌套、`<key>` 必须有兄弟值），因为子串断言分不清「格式正确」与「恰好含这几个字符」——批39 的教训
 
-新增模块时按 `hosts` 表 + modules 表 + 一段 `describe` 三处扩闸门。详见 `docs/plans/2026-08-14-audit-fix-plan.md`。
+新增模块时按 `hosts` 表 + modules 表 + 一段 `describe` 三处扩闸门，**并更新上面那两张平台模块表**。详见 `docs/archive/2026-08-14-audit-fix-plan.md`。
+
+> ⚠️ **最后那一步以前不在清单上，于是漂了**：闸门早已覆盖 9 个模块，而上面两张表只列了 6 个 Android + 5 个 iOS 条目 —— `SongloftDlna` / `SongloftNavigation` / `SongloftSongCache` / `SongloftVideo`(iOS) / `SongloftLiveActivity` 五处缺失，2026-08-26 才补上。**闸门保护的是代码，保护不了描述代码的表格**；而「新增方法要三侧同步」这条铁律的执行者是人，人读的是这张表。同类实例见 §6 与 `docs/project/handoff.md` 文首那条警示。
 
 ### 视频画面借用同一个播放器（批49）
 

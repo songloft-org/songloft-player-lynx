@@ -1,0 +1,99 @@
+# 构建与运行
+
+四个目标平台的构建命令，以及每个平台上真实踩过的环境坑。命令与 `package.json` 的 `scripts` 一一对应。
+
+> 只想快速跑起来看一眼 → 先读 [快速上手](../getting-started.md)。
+> 想知道各平台**能力差异**（而不是怎么构建）→ 读 [平台差异](../architecture/platform-differences.md)。
+
+## 环境要求
+
+| 项 | 要求 |
+|---|---|
+| Node | `^20.19.0 \|\| >=22.12.0`（`package.json` 的 `engines`） |
+| 包管理 | pnpm（`pnpm-lock.yaml` 必须提交） |
+| 后端 | `http://localhost:58091`，账号 `admin/admin`，接口前缀 `/api/v1` |
+| Android | `ANDROID_HOME` + **JDK**（见下方 Android 一节，本机可能没有） |
+| iOS | macOS + Xcode + CocoaPods |
+
+```bash
+pnpm install
+```
+
+`postinstall` 会跑 `scripts/patch-web-core-client.mjs`，别跳过 —— Web 宿主依赖那个补丁。
+
+## 通用（JS 产物）
+
+```bash
+pnpm run dev        # 开发模式
+pnpm run build      # 生产构建（含类型检查）
+pnpm exec tsc -b    # 独立类型检查
+pnpm test           # vitest
+```
+
+两条铁律：
+
+- **`pnpm run build` 必须列出两个产物** —— `File (lynx)` 与 `File (web)`。只有 web 那一行，说明 `lynx.config.ts` 的 `environments` 少了 `lynx: {}`：该字段是**替换**隐式默认环境而非扩展它，漏掉不会让构建失败，只会静默停止产出 `dist/main.lynx.bundle`，而 copy-bundle 脚本照拷 `dist/` 里的陈旧文件。`scripts/assert-bundle-fresh.mjs` 现在会拦住这种情况（判据是产物**年龄**，因为 `existsSync` 抓不到「文件在但是旧的」）。
+- **类型检查必须带 `-b`**。`tsc --noEmit` 对本仓库是空跑。改动没被检测到时用 `--force`（`-b` 会写 `.tsbuildinfo`，已 gitignore）。
+
+> ⚠️ **以上命令只覆盖 JS 产物**，不读 Xcode 工程、不验 Web 产物自洽性、不编译 Kotlin。「build 全绿」不等于「能出包」——这个仓库为此付过三次代价，见 [闸门原则](../../AGENTS.md#6-测试与闸门原则来自三次教训)。改了 `ios/`、`android/`、`web/` 就必须跑对应平台那一条。
+
+## Android
+
+```bash
+export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools   # macOS
+pnpm run android:install    # build + copy bundle + gradlew installDebug
+adb reverse tcp:58091 tcp:58091
+adb logcat -s lynx:V LynxUISVG:E AndroidRuntime:E
+```
+
+- **`adb reverse` 不能省**：设备上的 `localhost:58091` 得转回开发机的后端。
+- **本机（macOS）当前没有可用 JDK** —— `/usr/libexec/java_home -V` 报 `Unable to locate a Java Runtime`，`gradlew` 会直接失败。先装并导出 `JAVA_HOME`：`mise use -g java@temurin-17`，或 `brew install --cask temurin@17`。
+- 只验编译（不装设备）：`cd android && ./gradlew --no-daemon assembleDebug`。
+
+Linux 环境（另一台开发机）的路径：
+
+```bash
+export JAVA_HOME=/home/ejoydev/.local/share/mise/installs/java/temurin-17
+export ANDROID_HOME=/home/ejoydev/.local/share/mise/installs/android-sdk/22.0
+export PATH="$JAVA_HOME/bin:$PATH"
+```
+
+## iOS
+
+```bash
+pnpm run ios:pods    # 首次 / 依赖变更时
+pnpm run ios:build   # 双 JS 产物 + Pods + app
+pnpm run ios:run     # build + 装进已启动的模拟器 + 启动
+```
+
+三个坑都已经写进 `package.json` 的 `//ios:*` 注释键里，这里复述要点：
+
+- **`ios:pods` 带 `GIT_CONFIG_GLOBAL=/dev/null`**，因为本机 `~/.gitconfig` 有 `url.git@github.com:.insteadOf https://github.com/`，会把 CocoaPods 的每个 https clone 重写成 ssh —— 而这台机器 **22 端口不通**，于是 MJRefresh / SDWebImage / PrimJS / ServalSVG 全部以 `ssh: connect to host github.com port 22` 失败。报错完全不指向真因，值得记住。
+  - 若 `pod install` 改为死在 `JSON::ParserError - Failed to parse JSON at file: ~/.cocoapods/repos/trunk/...podspec.json`，是 CDN spec 缓存里有一份截断的下载：删掉那个文件，或用 `CP_HOME_DIR=/tmp/songloft-cp-home` 换一个一次性 spec 缓存。
+- **`ios:build` 是两次 `xcodebuild -project/-target` 而不是一次 `-workspace/-scheme/-destination`**：这台 Xcode（26.6 / SDK iphoneos26.5）报告**没有**可用运行目标（`iOS 26.5 is not installed`，缺 iOS 平台组件，只有独立的 18.3 / 26.0 模拟器运行时），所以任何 `-destination` 形式都会失败。legacy 的 `-target + -sdk` 路径不需要 destination。因为 app target 在 CocoaPods workspace 之外构建，必须先构建 Pods aggregate，且两次构建**共享 `SYMROOT`**，app 才能在它的 xcconfig 指定的 `PODS_CONFIGURATION_BUILD_DIR` 找到 `libPods-*.a`。装上 iOS 平台组件后，优先改回 `-workspace ... -destination 'generic/platform=iOS Simulator'`。
+- **`ios:run` 需要已 boot 的模拟器**（`xcrun simctl boot <udid>; open -a Simulator`）。模拟器的 localhost **就是**开发机，所以没有 `adb reverse` 的对应步骤。
+
+**改了 bundle 或原生代码后，`simctl install` 不会替换已在运行的进程** —— 必须先 `xcrun simctl terminate <udid> org.songloft.lynx`。`e2e:ios:setup` 也是「已装就不重装」（`scripts/e2e-ios-setup.mjs`），所以 `ios:build` 之后要自己 terminate + install，否则测的是旧包。这条曾导致「修了也没用」的错误结论。
+
+## Web
+
+```bash
+pnpm run web:sync            # build --environment web + 拷贝产物到 web/dist
+pnpm run web:dev             # 本地静态服务（先跑一次 web:sync）
+pnpm run build:web           # standalone 部署产物
+pnpm run build:web-embedded  # 供后端嵌入（songloft-player-build/web-embedded）
+```
+
+- **验证 Web 改动至少跑一次 `build:web` 并真的在浏览器里打开产物**。`web:dev` 能跑证明不了产物可用 —— 两者取的静态资源目录不同，这一条吃过两次亏。
+- 宿主脚本必须用 `<script type="module">`：`client_prod` 入口用了 `import.meta`，当作传统脚本加载会抛 `Cannot use 'import.meta' outside a module`，而这个异常**不进 `console.error`**（只走 `pageerror`），表现是「资源全 200、零 console 错误、`<lynx-view>` 就是不 upgrade、整页纯黑」。现有 vitest 闸门锁住了「index.html 每个本地引用都存在」+「入口以 module 加载」。
+
+## 子路径部署
+
+后端启动时用 `-base-path /xxx` 或 `BASE_PATH=/xxx`；前端嵌入模式从 `Uri.base.path` 自动检测子路径。
+
+## 相关
+
+- [测试](./testing.md) —— 单元与 E2E 怎么跑
+- [调试](./debugging.md) —— 真机 logcat、无头浏览器实测
+- [Web 部署](./web-deployment.md) —— standalone 与 embedded 两种产物
+- [AGENTS.md §3](../../AGENTS.md) —— 验收闸门的完整清单与边界

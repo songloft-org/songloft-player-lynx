@@ -2,7 +2,7 @@
 
 本文档定义 songloft-player-lynx 的返回处理契约，供新增页面、弹出层和原生模块时对齐。
 
-**背景**：此前全仓对返回键**零处理** —— `MainActivity` 没有 `onBackPressed`，用户在任何页面、任何弹出层打开时按返回都直接退出应用；Web 端用 memory history，浏览器返回直接离开页面。`docs/migration/lynx_capability_matrix.md` 早已把「硬件/手势返回」列为需自研的能力缺口。
+**背景**：此前全仓对返回键**零处理** —— `MainActivity` 没有 `onBackPressed`，用户在任何页面、任何弹出层打开时按返回都直接退出应用；Web 端用 memory history，浏览器返回直接离开页面。`docs/archive/migration/lynx_capability_matrix.md` 早已把「硬件/手势返回」列为需自研的能力缺口。
 
 ---
 

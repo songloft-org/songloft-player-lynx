@@ -1,107 +1,108 @@
 # 文档索引
 
-Songloft Player Lynx 客户端项目文档。
+Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr/) 组织 —— **按你此刻的意图找，而不是按主题猜**。
 
-> **数据截至 2026-08-14**。下方「项目状态」含具体数字，改动后请一并更新——本文件此前的数字停留在批32 时代（测试数、产物体积、批次范围全部过期），是审计时发现的问题之一。
+| 目录 | 象限 | 什么时候来这里 |
+|---|---|---|
+| [getting-started.md](./getting-started.md) | tutorial | 第一次跑这个项目 |
+| [guides/](./guides/) | how-to | 我要完成一件具体的事（构建、测试、加原生能力、部署、调试） |
+| [reference/](./reference/) | reference | 我要查一个规范或契约的准确形状 |
+| [architecture/](./architecture/) | explanation | 我想搞明白**为什么**是这样 |
+| [project/](./project/) | —— | 项目管理：进展、交接、缺陷、活跃计划 |
+| [archive/](./archive/) | —— | 归档：已闭合的计划、项目启动前的迁移调研 |
 
-文档按类别分目录组织：
+根目录另有两份项目级入口文档：**[AGENTS.md](../AGENTS.md)**（开发规范与铁律）· **[DESIGN.md](../DESIGN.md)**（Muse 设计语言）。
 
-```
-docs/
-├── reference/     规范与参考资料（API/Store 设计规范）
-├── migration/     迁移调研历史（项目启动前的可行性研究）
-├── plans/         待执行的开发/修复计划（archive/ 存已归档的历史计划）
-├── testing/       测试设计（E2E 行为测试架构）
-└── tracking/      进度与缺陷跟踪（开发进展、bug 清单）
-```
+---
 
 ## 项目状态
 
+> **数据截至 2026-08-26（批60c）**，改动后请一并更新。
+>
+> ⚠️ 这份数字腐烂过两次（先停在批32，订正后又停在批42 整 18 个批次）。**根因是没有闸门读它** —— `AGENTS.md` §6 的原则同样适用于文档本身。
+
 | 指标 | 值 |
 |------|-----|
-| 源码规模 | 342 文件 / ~41.8K 行（ts + tsx + css） |
+| 源码规模 | 560 文件 / ~78.5K 行（ts + tsx + css） |
 | 特性模块 | auth · home · library · library-ops · player · playlist · settings · jsplugin |
-| 测试 | **900** vitest（97 文件）+ 27 个 E2E 场景 |
-| 构建产物 | ~1.8 MB（未压缩） |
+| 测试 | **1947** vitest（186 文件）+ 33 个 E2E 场景 |
+| 构建产物 | lynx 2194.4 kB / web 2261.4 kB（未压缩，双产物） |
+| 原生模块 | 9 个跨平台模块在契约闸门的 `modules` 表内，另有 Web 独有 `SongloftWebview`（独立 describe 覆盖） |
 | 目标平台 | Android · iOS · Web（桌面 Lynxtron 未开始） |
 
-### 平台可用性（2026-08-14 审计后的真实状态）
+### 平台可用性
 
 | 平台 | 状态 |
 |------|------|
-| Android | ✅ 真机验证通过（播放 / 通知栏 / 扫描 / 重复检测全链路） |
-| iOS | ✅ 可构建（批41 修复了批39 引入的 `project.pbxproj` 损坏，`BUILD SUCCEEDED`）。原生模块中 Live Activity 仍未注册，见下方 P3 分解 |
-| Web | ⚠️ 产物可正常加载并渲染（批41 修复黑屏），但**没有音频** —— `web-audio.ts` 实际是 dead code，见 `plans/2026-08-14-audit-fix-plan.md` P0-2 |
+| Android | ✅ 真机验证通过（播放 / 通知栏 / 扫描 / 重复检测 / 悬浮歌词 / 全屏视频全链路） |
+| iOS | ✅ 可构建可运行（`ios:build BUILD SUCCEEDED`，e2e 110/110）。7 个原生模块全部注册（`SongloftNavigation` 刻意不做——没有返回键可拦） |
+| Web | ✅ 可加载渲染、**有音频**。几条已知限制（无 longpress、占位符色、文件选择器 user activation）见 [Web 部署](./guides/web-deployment.md) |
+| 桌面 | ⛔ 未开始（P3 唯一未开始项，剩余最大单块能力） |
 
-## reference/ — 规范与参考
-
-| 文件 | 说明 |
-|------|------|
-| [api-design-conventions.md](./reference/api-design-conventions.md) | API/Store 设计规范（参数风格、数值范围、命名、E2E 约定） |
-| [back-navigation.md](./reference/back-navigation.md) | 返回导航规范（三层模型、`consumable` 契约、Web sentinel、新增页面/弹出层清单） |
-
-后端 API 契约（OpenAPI）**不在本仓库**：见后端仓库的 `docs/swagger.json`，或开发模式下的 `http://localhost:58091/swagger/index.html`。刻意不复制副本以免漂移。
-
-另有两份文档在**仓库根目录**（不在 `docs/` 下，因为它们是项目级入口文档）：
-
-| 文件 | 说明 |
-|------|------|
-| [AGENTS.md](../AGENTS.md) | 开发规范：目录边界、Lynx 约束与铁律、验收闸门、原生模块调用约定、测试闸门原则 |
-| [DESIGN.md](../DESIGN.md) | Muse 设计语言：色彩/间距/圆角 token、图标规范、WCAG AA 对比度要求 |
-
-## plans/ — 开发与修复计划
-
-| 文件 | 说明 |
-|------|------|
-| [2026-08-14-audit-fix-plan.md](./plans/2026-08-14-audit-fix-plan.md) | **当前主计划**：四路审计的修复与开发排期（批41–44+），含三类系统性根因、验收闸门、明确不做清单 |
-| [archive/web-support.md](./plans/archive/web-support.md) | Web 平台支持的原始计划（已执行完毕）+ 订正表：记录了 7 处「未经验证就写进设计的假设」及其后果 |
-
-## migration/ — 迁移调研历史
-
-以下文档产出于项目启动前，用于论证迁移可行性与规划路线。项目启动后已按实际推进，部分结论已被实践验证或超越。当前作为历史参考。
-
-| 文件 | 说明 | 当前状态 |
-|------|------|----------|
-| [lynx_migration_overview.md](./migration/lynx_migration_overview.md) | 迁移动机、平台矩阵、技术栈决策 | P0/P1/P2 已完成验证并落地 |
-| [lynx_capability_matrix.md](./migration/lynx_capability_matrix.md) | Flutter vs Lynx 逐项能力对照 | 核心能力已实现，剩桌面/视频播放 |
-| [lynx_native_modules_spec.md](./migration/lynx_native_modules_spec.md) | 自研原生模块接口草案 | Audio/Storage/Platform 已实现（A/I） |
-| [lynx_migration_roadmap.md](./migration/lynx_migration_roadmap.md) | P0–P4 分阶段路线与风险登记 | P0✅ P1✅ P2✅ P3部分 P4未开始 |
-| [plan.md](./migration/plan.md) | 原始迁移调研母本（4 篇子文档的母本） | 历史参考 |
-
-## testing/ — 测试设计
-
-| 文件 | 说明 |
-|------|------|
-| [behavior-testing-design.md](./testing/behavior-testing-design.md) | E2E 行为测试架构设计（Driver 接口、场景分类、TestBridge 协议） |
-
-## tracking/ — 进度与缺陷跟踪
-
-| 文件 | 说明 |
-|------|------|
-| [HANDOFF.md](./tracking/HANDOFF.md) | **工作交接**（2026-08-14）：现状、三条铁律、剩余工作优先级、文档地图 —— 接手先读这篇 |
-| [PROGRESS.md](./tracking/PROGRESS.md) | 分批开发进展记录（批1–42 + 批40 后修），每批交付内容与遗留事项 |
-| [bug.md](./tracking/bug.md) | 手动测试与代码审计发现的 bug 跟踪清单 |
-
-## 迁移路线完成度
+### 迁移路线
 
 ```
-P0 技术验证     ████████████████████ 100%  — 音频/路由/Query/UI 全部验证通过
-P1 基础设施     ████████████████████ 100%  — 网络/鉴权/存储/i18n/主题/路由
-P2 核心业务     ████████████████████ 100%  — auth/library/player/playlist/home/settings
-P3 平台特性     ███████████░░░░░░░░░  55%  — 见下方分解
+P0 技术验证     ████████████████████ 100%  — 移动端 + Web 部分；桌面判据未执行
+P1 基础设施     ████████████████████ 100%
+P2 核心业务     ████████████████████ 100%
+P3 平台特性     ██████████████████░░  90%  — 仅剩 Lynxtron 桌面
 P4 双轨发布     ░░░░░░░░░░░░░░░░░░░░   0%  — 未开始
 ```
 
-**P3 分解**（2026-08-14 审计订正——此前记为 60% 并把三项已「完成」的能力算了进去，实际它们从未跑通）：
+**P3 已完成**：EQ 双端 DSP · 数据导入导出 · 主题包 · 歌词编辑 · 服务端自升级 · 音量归一化 · 播放历史（批50）· DLNA（批42）· 悬浮歌词（批48）· Live Activity（批43+45）· 全屏视频（批49）· 单曲离线缓存 · Web 平台。
+**P3 未开始**：桌面 Lynxtron。
 
-| 能力 | 状态 |
-|---|---|
-| EQ（Android DSP + iOS DSP） | ✅ 已完成 |
-| 数据导入导出 · 主题包 · 歌词编辑 · 服务端自升级 · 音量归一化 | ✅ 已完成 |
-| 播放历史 | ⚠️ 页面能读能删，但客户端**从不上报播放**（`POST /songs/{id}/played` 未接），列表永远是空的 |
-| DLNA 投屏 | ❌ 原生 SSDP/SOAP 已就绪，但 TS 侧调用约定错（把 callback 式模块当 Promise 用），**页面一进去就崩** |
-| 悬浮歌词（Android） | ❌ 模块未注册 + 方法无 `@LynxMethod` + 清单缺权限/service，走 stub 静默失败 |
-| Live Activity（iOS） | ❌ 不是 Lynx 模块（无 `@objc`/`methodLookup`，未进 `buildConfig()`），走 stub |
-| Web 平台 | ⚠️ 见上方平台可用性表 |
-| 视频播放（`is_video`） | ⛔ 未开始（剩余最大单块能力） |
-| 桌面（Lynxtron） | ⛔ 未开始 |
+> 上一版这张表有 5 项与事实不符（把已完成的能力标成 ❌/⛔）。逐项修复批次见 [progress.md](./project/progress.md)。
+
+---
+
+## guides/ — 操作指南
+
+| 文件 | 说明 |
+|------|------|
+| [build-and-run.md](./guides/build-and-run.md) | 四平台构建命令 + 每个平台真实踩过的环境坑（JDK 缺失、CocoaPods 被 gitconfig 打断、两次 xcodebuild 的原因） |
+| [testing.md](./guides/testing.md) | 单元与 E2E 怎么跑、跑前四件环境检查、skip 数为什么要盯 |
+| [native-development.md](./guides/native-development.md) | 加方法/加模块的四处（八处）同步清单，漏哪一处会怎样 |
+| [web-deployment.md](./guides/web-deployment.md) | standalone 与 embedded 两种产物、Web 已知限制、宿主模块 |
+| [debugging.md](./guides/debugging.md) | Android dumpsys、Web 无头浏览器实测、一次性探针 scenario |
+
+## reference/ — 规范速查
+
+| 文件 | 说明 |
+|------|------|
+| [api-conventions.md](./reference/api-conventions.md) | API/Store 设计规范（参数风格、数值范围、命名、E2E 暴露约定） |
+| [native-modules.md](./reference/native-modules.md) | 全部原生模块的方法/事件/平台矩阵与闸门锁住的不变量 |
+| [back-navigation.md](./reference/back-navigation.md) | 返回导航三层模型、`consumable` 契约、Web sentinel、新增页面/弹出层清单 |
+
+设计 token 的权威表在根目录 **[DESIGN.md](../DESIGN.md)**（刻意不在 docs 里复制一份——副本必然漂移）。
+
+后端 API 契约（OpenAPI）**不在本仓库**：见后端仓库 `docs/swagger.json`，或 `http://localhost:58091/swagger/index.html`。同样是刻意不复制。
+
+## architecture/ — 背景与解释
+
+| 文件 | 说明 |
+|------|------|
+| [overview.md](./architecture/overview.md) | 分层、状态边界、一次播放请求的数据流、覆盖层为何都挂根上 |
+| [lynx-constraints.md](./architecture/lynx-constraints.md) | 双线程与 realm 隔离、Web 的 Worker realm、无 DOM 的后果、布局反直觉处 —— **「为什么」的总入口** |
+| [platform-differences.md](./architecture/platform-differences.md) | 三端能力与行为矩阵（34 条），含音频引擎两条实测差异与视频源判定 |
+| [e2e-testing-design.md](./architecture/e2e-testing-design.md) | E2E 架构：Driver 接口、TestBridge 协议、场景分类 |
+
+## project/ — 项目管理
+
+| 文件 | 说明 |
+|------|------|
+| [handoff.md](./project/handoff.md) | **工作交接（批60c）** —— 接手先读这篇：现状、铁律、剩余工作、验证欠账 |
+| [progress.md](./project/progress.md) | 分批开发进展（批1–60c）。**每批验收后必须更新**（`AGENTS.md` §3 工作流） |
+| [bugs.md](./project/bugs.md) | 缺陷清单。当前 **8 条未修**，每条写明「为什么没修」 |
+| [plans/upstream-issues.md](./project/plans/upstream-issues.md) | 已提交给 Lynx 官方的 issue；修复合入后移除 `patches/` 下对应 patch（当前 2 个） |
+
+## archive/ — 归档
+
+已执行完或已闭合，保留作历史索引与根因查阅。**不要照抄里面的接口签名与状态判断** —— 见 [archive/migration/README.md](./archive/migration/README.md) 的订正表。
+
+| 文件 | 说明 |
+|------|------|
+| [2026-08-14-audit-fix-plan.md](./archive/2026-08-14-audit-fix-plan.md) | 四路审计的修复排期（批41–48），含三类系统性根因与明确不做清单。**已闭合** |
+| [migration/](./archive/migration/) | 项目启动前的 5 份迁移可行性调研 + **订正说明** |
+| [web-support.md](./archive/web-support.md) | Web 支持原始计划 + 7 处「未经验证就写进设计的假设」及其后果 |
+| [lyrics-settings-plan.md](./archive/lyrics-settings-plan.md) · [settings-category-refactor-plan.md](./archive/settings-category-refactor-plan.md) · [settings-refactor-plan.md](./archive/settings-refactor-plan.md) | 已执行的歌词/设置页重构计划 |

@@ -6,7 +6,7 @@
  * `@media (prefers-color-scheme)`, no `matchMedia`, and no locale API. Before
  * this module `'system'` was a label with nothing behind it — `resolveTheme`
  * returned a hardcoded `'dark'` and `resolveLanguage` a hardcoded `'en'`
- * (`docs/tracking/bug.md`: "外观跟随系统没效果" / "语言跟随系统没效果"). `SystemInfo`
+ * (`docs/project/bugs.md`: "外观跟随系统没效果" / "语言跟随系统没效果"). `SystemInfo`
  * exposes only `theme?: object`, whose contents come from a host
  * `LynxView.setTheme(LynxTheme)` call — i.e. still host-supplied, just via a
  * shape nobody documents. So the host has to tell us either way.

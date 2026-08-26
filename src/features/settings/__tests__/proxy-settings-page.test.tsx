@@ -15,7 +15,7 @@ import { AI_PROMPT } from '../pages/ProxySettingsPage.js'
  * There is no render test for the button: this page loads its four settings with
  * raw `fetch` inside an effect, and that loading gate never flushes in the
  * ReactLynx harness. Every other settings page goes through the api + query layer,
- * which mocks cleanly — see `docs/tracking/bug.md`.
+ * which mocks cleanly — see `docs/project/bugs.md`.
  */
 
 test('the prompt asks for the things that make an answer usable', () => {

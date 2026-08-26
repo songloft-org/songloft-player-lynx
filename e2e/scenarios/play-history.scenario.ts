@@ -11,7 +11,7 @@ const API_BASE = process.env.E2E_API_BASE ?? 'http://localhost:58091'
  * assertion here names a context.
  *
  * The reads go out from the Node side rather than through `evaluateJS`: the Lynx
- * background thread has no `fetch` (see `docs/reference/api-design-conventions.md`).
+ * background thread has no `fetch` (see `docs/reference/api-conventions.md`).
  * That is also what makes this scenario worth having — it observes the server
  * state, which is exactly what the previous version did not do. It asserted only
  * that a song was playing, with a comment noting history recording is an async

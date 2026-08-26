@@ -66,7 +66,7 @@ export function assertBundleFresh(bundlePath, label) {
         `Run \`pnpm run build\` and check that its output actually lists\n` +
         `\`dist/main.lynx.bundle\` under "File (lynx)". If it only lists the web\n` +
         `bundle, the lynx environment is missing from \`environments\` in\n` +
-        `lynx.config.ts — see docs/plans/2026-08-14-audit-fix-plan.md (P0-0).`,
+        `lynx.config.ts — see docs/archive/2026-08-14-audit-fix-plan.md (P0-0).`,
     )
     process.exit(1)
   }

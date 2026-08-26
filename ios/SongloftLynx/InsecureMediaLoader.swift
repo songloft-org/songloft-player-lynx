@@ -32,7 +32,7 @@ import UniformTypeIdentifiers
  * relative URLs for exactly its own reasons, so that path lines up by construction.
  * **Absolute** `https://` URIs inside a playlist do not: AVFoundation would load those
  * natively and hit the same certificate wall. Rewriting playlist bodies to fix that is
- * not done here — see `docs/tracking/bug.md`.
+ * not done here — see `docs/project/bugs.md`.
  *
  * Only used while `InsecureTls.enabled`; with the switch off the asset keeps its
  * original URL and AVFoundation loads it natively, exactly as before.

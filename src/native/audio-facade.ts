@@ -14,7 +14,7 @@ import type { SongloftAudio } from './audio-types.js'
  *
  * On device the real native module is exposed as the bare global
  * `NativeModules.SongloftAudio` (ExoPlayer on Android, AVPlayer on iOS — see
- * `docs/migration/lynx_native_modules_spec.md#1-songloftaudio`); its state/progress/error
+ * `docs/archive/migration/lynx_native_modules_spec.md#1-songloftaudio`); its state/progress/error
  * events arrive as Lynx global events over the BTS `GlobalEventEmitter`. When a
  * complete native module is present we use {@link NativeSongloftAudio}; anywhere
  * it is missing (dev in a plain host, tests, unsupported platform) we fall back

@@ -6,7 +6,7 @@
  * typed `SongloftAudio` member so `NativeModules.SongloftAudio` is checked at
  * the facade boundary (`src/native/audio-facade.ts`). The canonical shape lives
  * in `src/native/native-audio.ts` (`SongloftAudioNativeModule`); the method +
- * event contract mirrors `docs/migration/lynx_native_modules_spec.md#1-songloftaudio` and
+ * event contract mirrors `docs/archive/migration/lynx_native_modules_spec.md#1-songloftaudio` and
  * the Android implementation `android/.../audio/SongloftAudioModule.kt`.
  *
  * See the official "Native Modules" guide: interfaces are declared on the global

@@ -2,9 +2,9 @@
 
 > **时效说明（2026-08-14 复核）**：本文件是 **2026-08-13 那一次** E2E 全量执行的现场记录，**不是**持续维护的缺陷清单——下方各条没有状态标记，读时不要当成「仍然存在」。
 >
-> 已核实转化为正式约定的两条：**问题 1**（音量 store 层 0-100 整数 / native 层 0-1 浮点）已写入 [`../docs/reference/api-design-conventions.md`](../docs/reference/api-design-conventions.md)；**问题 4**（`addProfile` 参数风格）已改为对象参数（`server-store.ts:25`），同规范也已固化「≥3 个或含可选参数用对象参数」。
+> 已核实转化为正式约定的两条：**问题 1**（音量 store 层 0-100 整数 / native 层 0-1 浮点）已写入 [`../docs/reference/api-conventions.md`](../docs/reference/api-conventions.md)；**问题 4**（`addProfile` 参数风格）已改为对象参数（`server-store.ts:25`），同规范也已固化「≥3 个或含可选参数用对象参数」。
 >
-> 当前**仍未修复**的缺陷清单见 [`../docs/tracking/bug.md`](../docs/tracking/bug.md)，修复排期见 [`../docs/plans/2026-08-14-audit-fix-plan.md`](../docs/plans/2026-08-14-audit-fix-plan.md)。
+> 当前**仍未修复**的缺陷清单见 [`../docs/project/bugs.md`](../docs/project/bugs.md)，修复排期见 [`../docs/archive/2026-08-14-audit-fix-plan.md`](../docs/archive/2026-08-14-audit-fix-plan.md)。
 
 ## 执行概要
 

@@ -2,7 +2,7 @@
  * Native SongloftAudio binding.
  *
  * Adapts the Android/iOS native module (`NativeModules.SongloftAudio`, backed by
- * ExoPlayer / AVPlayer — see `docs/migration/lynx_native_modules_spec.md#1-songloftaudio`)
+ * ExoPlayer / AVPlayer — see `docs/archive/migration/lynx_native_modules_spec.md#1-songloftaudio`)
  * to the {@link SongloftAudio} facade the player store consumes. Native methods
  * are fire-and-forget (`void`); native → JS events arrive as Lynx **global
  * events** (`LynxContext.sendGlobalEvent`) which we subscribe to via the BTS

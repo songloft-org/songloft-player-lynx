@@ -2,8 +2,14 @@
 
 > 本文件记录应用当前采用的 **Muse** 设计规范。Muse 是围绕「单色强调 + 极致留白 + 线性图标」构建的套壳式设计语言，脱胎于对 LUNA 紫色体系的全面重构（2026-08，commit `65aacf5`）。
 >
-> 落地位置：`src/shared/theme/tokens.css`（token 定义）+ `ThemeProvider`（`theme-root theme-dark` / `theme-light` 两套色值）。
-> ⚠️ **源码注释里仍有 18 个文件写着「LUNA tokens only」**，那是重构前的旧称，指的就是本文档的 Muse token 体系——术语待统一，不影响行为。
+> 落地位置**三层**：
+> 1. `src/shared/theme/tokens.css` —— token 定义
+> 2. `ThemeProvider` —— `theme-root theme-dark` / `theme-light` 两套色值
+> 3. `src/shared/theme/theme-pack-mapping.ts` —— **主题包在运行时以内联 custom properties 覆盖 11 个 token**（`PACK_OVERRIDABLE_BASELINE`：`--primary` `--primary-2` `--accent` `--primary-content` `--primary-faint` `--canvas` `--paper` `--paper-clear` `--radius-lg` `--radius-md` `--radius-nav`）。映射规则：seedColor → primary 家族、surfaceColor → paper + paper-clear(0.9 alpha)、cardRadius → radius-lg、controlRadius → radius-md。有闸门解析 `tokens.css` 反查这张表。
+>
+> **所以 token 值不是编译期常量** —— 上表列的是基线值，装了主题包的用户看到的可能不同。不在那 11 个里的 token 则任何主题包都改不了。
+>
+> ⚠️ **源码注释里仍有 17 个文件写着「LUNA tokens only」**，那是重构前的旧称，指的就是本文档的 Muse token 体系——术语待统一，不影响行为。
 
 ---
 
@@ -39,7 +45,14 @@
 | `--accent` | `#111111` | `#ffffff` | 链接/强调文字（与 primary 同值） |
 | `--primary-faint` | `rgba(17,17,17,.08)` | `rgba(255,255,255,.12)` | 导航选中胶囊的淡色底（装饰性，不承载文字）；主题包由 seedColor 派生 light 10% / dark 14% |
 | `--danger` | `#d64545` | `#ff6b6b` | 危险色（仅文字，不做彩色背景块） |
-| `--danger-2` | `#cf444f` | _deprecated_ | 仅用于历史兼容 |
+| `--danger-2` | `#cf444f` | `#cf444f` | 两主题同值。**无业务消费者**，仅 `contrast.test.ts` 守着按钮态的历史契约（白字在它上面 ≥4.5） |
+| `--danger-content` | `#ffffff` | `#ffffff` | danger 填充上的文字 |
+| `--backdrop` | `rgba(0,0,0,.35)` | `rgba(0,0,0,.55)` | 弹出层遮罩 |
+| `--backdrop-heavy` | `rgba(0,0,0,.5)` | `rgba(0,0,0,.78)` | 模态遮罩 |
+| `--player-scrim-from` | `rgba(255,255,255,.94)` | `rgba(15,15,17,.94)` | 全屏播放器封面遮罩（起） |
+| `--player-scrim-to` | `rgba(255,255,255,.99)` | `rgba(15,15,17,.99)` | 同上（止） |
+
+> ⚠️ **`--player-scrim-*` 的 alpha 是算出来的，不是调出来的** —— 0.93 是第一个让全部前景 token 在「最差封面」上都过 AA 的值，`player-backdrop-css.test.ts` 与 `contrast.test.ts` 双向锁死。**下调会红两个测试**，别当装饰参数改。
 
 ### 暗色安全说明
 
@@ -58,19 +71,22 @@
 |---|---|---|
 | `--radius-sm` | 8px | 按钮、输入框、小卡片 |
 | `--radius-md` | 12px | 普通卡片（playlist cover） |
-| `--radius-lg` | 20px | 面板、大卡片、mini-player |
+| `--radius-lg` | 20px | 面板、大卡片、对话框卡片 |
 | `--radius-xl` | 28px | 全屏播放器封面、台账 |
-| `--radius-pill` | 999px | 药丸标签、chip、搜索条 |
+| `--radius-pill` | 999px | 药丸标签、搜索条、**mini-player 与底部导航胶囊**、视图切换条 |
+| `--radius-nav` | 12px | ⚠️ **已冻结**：批58 起导航形状恒为 `--radius-pill`，本 token 无 CSS 消费者，仅为主题包 `navigationRadius` 的 schema 兼容保留 |
 
 ---
 
 ## 阴影
 
-| Token | 值 | 用途 |
-|---|---|---|
-| `--shadow-sm` | `0 1px 3px 0 rgba(0,0,0,.08)` | 滑块 thumb、小型浮层 |
-| `--shadow-md` | `0 4px 12px 0 rgba(0,0,0,.12)` | mini-player、弹出菜单 |
-| `--shadow-lg` | `0 8px 24px 0 rgba(0,0,0,.16)` | 全屏封面、大模态 |
+**分主题两套值**（深色用纯黑高 alpha，浅色用 `#111` 低 alpha）：
+
+| Token | 浅色 | 深色 | 用途 |
+|---|---|---|---|
+| `--shadow-sm` | `0 1px 2px rgba(17,17,17,.04)` | `0 1px 2px rgba(0,0,0,.4)` | 滑块 thumb、小型浮层 |
+| `--shadow-md` | `0 4px 20px rgba(17,17,17,.08)` | `0 4px 20px rgba(0,0,0,.5)` | mini-player、导航胶囊、弹出层 |
+| `--shadow-lg` | `0 12px 40px rgba(17,17,17,.14)` | `0 12px 40px rgba(0,0,0,.6)` | 全屏封面、大模态 |
 
 **原则**：不装饰性使用阴影，只让浮层脱离纸面时使用。
 
@@ -79,9 +95,10 @@
 ## 图标
 
 - **风格**：全线性，stroke-width 1.6（transport glyph 如播放/暂停为实心，§4.5 允许）。
-- **颜色**：`<svg content>` 在 Lynx 中不在 CSS 级联中，图标色必须在 `icons.ts` 的 `PALETTES` 中硬编码 hex，通过 `ICON_COLORS` 获取。
+- **颜色**：`<svg content>` 在 Lynx 中**不在 CSS 级联内**，所以图标色必须硬编码 hex —— 色板 `PALETTES` 与取值代理 `ICON_COLORS` 都在 **`src/shared/ui/Icon.tsx`**（glyph 数据与 `buildSvg` 在 `icons.ts`）。
 - `ICON_COLORS` 是一个 Proxy，自动根据当前 `.theme-dark` 返回对应色板。
-- 默认颜色为 `ICON_COLORS.content`，可选的显式色：`primary`、`primaryContent`、`content2`、`contentMuted`。
+- 六个键：`content`（默认，也可显式传）、`primary`、`primaryContent`、`content2`、`contentMuted`、`danger`（警示图标必须用它）。
+- **导航选中态的 glyph 色走第二条通道** —— `activeAccentIconColor()`（同在 `Icon.tsx`）：运行时读主题包的 `seedColor`，无包时回落 `PALETTES[theme].primary`。**不能写 `ICON_COLORS.primaryContent`**，也不能指望内联 CSS 变量——那对 `<svg content>` 不可见。
 
 ---
 
@@ -103,25 +120,27 @@
 | Token | 值 | 用途 |
 |---|---|---|
 | `--font-2xs` | 10px | 底部导航标签（对标 iOS tab 栏 10pt；也是 4 字中文名在固定宽胶囊内的拟合需要） |
-| `--font-xs` | 11px | 辅助信息 |
-| `--font-sm` | 13px | 副标题、标签 |
-| `--font-md` | 15px | 正文、行 |
-| `--font-lg` | 17px | 卡片标题、节标题 |
-| `--font-xl` | 20px | 页面标题、统计数值 |
+| `--font-xs` | 12px | 辅助信息 |
+| `--font-sm` | 14px | 副标题、标签、宽屏 rail 标签 |
+| `--font-md` | 16px | 正文、行 |
+| `--font-lg` | 20px | 卡片标题、节标题 |
+| `--font-xl` | 28px | 页面标题、统计数值 |
+| `--font-2xl` | 36px | 最大号数值 |
 
 ---
 
 ## 间距
 
-| Token | 值 |
-|---|---|
-| `--space-1` | 4px |
-| `--space-2` | 8px |
-| `--space-3` | 12px |
-| `--space-4` | 16px |
-| `--space-5` | 20px |
-| `--space-6` | 24px |
-| `--mobile-nav-height` | 60px |
+| Token | 值 | 备注 |
+|---|---|---|
+| `--space-1` | 4px | |
+| `--space-2` | 8px | |
+| `--space-3` | 12px | |
+| `--space-4` | 16px | |
+| `--space-5` | 24px | |
+| `--space-6` | 32px | |
+| `--nav-inset` | 80px / 148px | **底部导航避让**，两档：无歌 80、有 mini-player 148。由 shell 根的 `shell--with-mini` 类切换（定义在 `ShellLayout.css`）。**新增可滚动页面必须消费它**，否则列表尾部永久被胶囊挡住 |
+| `--mobile-nav-height` | 60px | ⚠️ **legacy**：批58 改悬浮胶囊后全库零消费者，避让改由 `--nav-inset` 承担 |
 
 ---
 
@@ -134,8 +153,14 @@
 
 ### Tab（标签页）
 - 下划线风格（非药丸填充）。
-- 选中态：`--primary` 下划线 + `--primary` 文字。
-- 示例：Library 页（歌曲/艺术家/专辑/播放列表）。
+- 选中态：`--primary` 下划线（2px）+ `--content` 文字 + `font-weight: 600`；未选中 `--content-muted`。
+- 示例：新建歌单页（本地/远程）、添加歌曲页、库运维排除页。
+- ⚠️ **Library 页已不是 Tab** —— 批51 重构后是 14 个 view 分三组，见下方 View Switcher。
+
+### View Switcher（药丸横条，Library 页）
+- 窄屏横向可滚 pill 条，组间 hairline 分隔；宽屏为左侧 rail。
+- 选中态：`--primary` **描边** + `--primary` 文字 + `font-weight: 600`（**不填充**）。
+- 横向内容行须 `width: max-content`，否则视觉上不滚动；用 `scroll-orientation='horizontal'`（`scroll-x` 已弃用）。
 
 ### 导航栏（底部 Tab / 宽屏侧栏，批58 起 iOS-26 风格）
 - **胶囊 = 导航**：窄屏底栏是一个 fixed 悬浮长条胶囊（左右留边不贴屏、`--paper-clear` 玻璃感 + `--line` hairline + `--shadow-md`），页面内容从胶囊下方穿过；mini-player 是同语言的上层悬浮胶囊（两者间 8px 间隙）。
@@ -146,9 +171,16 @@
 
 
 ### Chip（筛选标签）
-- Ghost 风格：透明 + `--line` hairline 描边 + `--radius-pill`。
-- 选中态：`--primary` 填充 + `--primary-content` 文字。
-- 示例：Library 排序选项、歌单详情排序条。
+- Ghost 风格：透明 + `--rule` 描边 + `--radius-sm`。
+- 选中态：`--primary` **描边** + `--primary` 文字，底色保持透明（**不填充**）。
+- 示例：Library 分面筛选（`.library__chip`）。
+- ⚠️ 原先列的两个示例都没了：Library 排序改成了弹出菜单（`LibraryToolbar`），歌单详情排序条随 JSX 一起删除。
+
+### 弹出层（PopoverMenu / PopoverPanel，批53 起自研）
+- `--paper` 面 + `--radius-md` + `--shadow-md`；两者共享同一套 surface 与定位逻辑。
+- 定位由 `src/shared/ui/anchored-overlay.ts` 计算（`boundingClientRect` invoke 测量），**只用边缘定位**（每轴一个偏移 + max-width/height 上限）。
+- 遮罩四个偏移必须写全（`top/left/right/bottom: 0`），不能只给宽高——fixed 元素偏移为 auto 时落在静态位置，会漏出「两个弹出层同时打开」。
+- ⚠️ **不要装回 `@lynx-js/lynx-ui-popover`**：它的坐标是相对触发器的，而施加方式是 `position: absolute`（包含块为最近定位祖先），实测 6 处错位、最差的一个 `x = -122` 整块在屏外。理由详见 `AGENTS.md` §4「锚定弹出层」。
 
 ### 状态控件：三种角色，各一种控件（铁律）
 
@@ -190,7 +222,14 @@
 - ❌ `color-mix()` → 不会在 CSS 中使用
 - ❌ `:hover` / `:focus-within` → Lynx 无悬停状态
 - ❌ `text-transform` → 直接写目标大小写
-- ❌ `viewport` 单位（`vw`/`vh`/`dvh`） → 用百分比
 - ❌ `appearance: none` 滑块 → 用 Lynx 的 SliderRoot
+
+### ⚠️ 平台分叉：viewport 单位与百分比都不能单用
+
+这一条**曾被写成「❌ viewport 单位 → 用百分比」，两半都不对**：
+
+- **原生 fixed 弹层下，百分比 max-height 不可靠** —— 按 containing block 解析，原生引擎的结果不可预期。remote 歌的长表单曾因此把卡片顶出屏幕、标题行被裁（批60b）。
+- **Web 侧 vh/vw 正常工作**，所以对话框尺寸是**刻意的双轨**：CSS 里给 `calc(100vw - 64px)` / `max-height: 85vh`（Web 半边），原生走 `src/shared/ui/dialog-viewport.ts` 从 `SystemInfo` 量出的**内联 px**。**两边必须同步**，`confirm-dialog-overlay.test.ts` 断言这件事。
+- **全屏遮罩例外**：用四边 offset 而不是 `100vw/100vh`（见 `PopoverMenu.css` 的注释）。
 
 ✅ 可用：CSS 变量、flex（含 `gap`）、`border-radius`、`box-shadow`、`@keyframes`、`transform`、`position: fixed`、`env(safe-area-inset-*)`、`calc()`、`overflow: hidden`/`scroll`、`white-space`/`text-overflow`。

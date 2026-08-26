@@ -22,7 +22,7 @@ import { expect, test } from 'vitest'
  * Note this only holds on the native hosts. On Web the property reaches the DOM
  * verbatim and the browser drops it — `@lynx-js/web-elements` drives the colour
  * from a `--placeholder-color` custom property instead, so Web placeholders are
- * still the library's `grey`. Tracked in `docs/tracking/bug.md`; fixing it means
+ * still the library's `grey`. Tracked in `docs/project/bugs.md`; fixing it means
  * adding the second property everywhere, not changing this gate.
  */
 

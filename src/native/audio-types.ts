@@ -2,7 +2,7 @@
  * SongloftAudio facade types.
  *
  * Interface + event contract ported from the native-module spec
- * (`docs/migration/lynx_native_modules_spec.md#1-songloftaudio`). Batch 5 ships a
+ * (`docs/archive/migration/lynx_native_modules_spec.md#1-songloftaudio`). Batch 5 ships a
  * timer-driven **TS mock** implementation (`mock-audio.ts`); the real
  * per-platform native modules (ExoPlayer / AVPlayer / HTMLAudioElement / libmpv)
  * land in later on-device batches behind the same facade (`createNativeAudio`).

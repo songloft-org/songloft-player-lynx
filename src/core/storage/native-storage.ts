@@ -4,7 +4,7 @@ import type { SongloftStorage } from './types.js'
  * Native `SongloftStorage` binding.
  *
  * Bridges the facade to the Android/iOS `NativeModules.SongloftStorage` module
- * (Android: SharedPreferences — see `docs/migration/lynx_native_modules_spec.md#2`). This
+ * (Android: SharedPreferences — see `docs/archive/migration/lynx_native_modules_spec.md#2`). This
  * is what makes tokens / server address / language **persist across Activity &
  * process restart**: batch-3's on-device fallback was in-memory, so backgrounding
  * the app (JS reload) dropped the token and bounced the user to /login. With a

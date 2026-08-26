@@ -4,7 +4,7 @@
  * Mirrors `theme-model.ts`'s shape on purpose: module-scoped current value +
  * plain listener `Set`, consumed via `useState`/`useEffect` in `ThemeProvider`.
  * No `useSyncExternalStore` — documented (`theme-model.ts` header,
- * `docs/tracking/PROGRESS.md`) to crash ReactLynx's Vitest render tree with
+ * `docs/project/progress.md`) to crash ReactLynx's Vitest render tree with
  * `isListHolder`, and this module feeds the tree root exactly like that one.
  *
  * The activation lives **on the server** (`PUT /theme-packs/active`) — that is

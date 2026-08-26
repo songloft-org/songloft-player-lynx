@@ -1,6 +1,6 @@
 # Songloft Player (Lynx)
 
-Songloft Player 的 Lynx 客户端，从 Flutter 版整体重写为 ReactLynx + TypeScript。
+Songloft Player 的 Lynx 客户端，从 Flutter 版整体重写为 ReactLynx + TypeScript。支持 Android / iOS / Web 三端。
 
 ## 技术栈
 
@@ -13,98 +13,82 @@ Songloft Player 的 Lynx 客户端，从 Flutter 版整体重写为 ReactLynx + 
 | 数据模型 | zod（snake→camelCase transform） |
 | i18n | i18next + react-i18next（en / zh） |
 | 测试 | Vitest + @testing-library（单元）· TestBridge + Vitest（E2E） |
-| 原生 | Android Kotlin（ExoPlayer）/ iOS Swift（AVPlayer） |
+| 原生 | 9 个自研模块在契约闸门内（Audio/Storage/Platform/Dlna/Video/SongCache/Navigation + Android FloatingLyric + iOS LiveActivity） |
 | Web | `@lynx-js/web-core`（`<lynx-view>` 在浏览器渲染 Lynx bundle） |
 
 ## 快速开始
 
-### 环境要求
-
-- Node.js、pnpm
-- Android：`ANDROID_HOME` 指向 commandlinetools
-- 后端服务运行在 `http://localhost:58091`（账号 `admin/admin`，接口 `/api/v1`）
-
-### 安装与运行
+需要 Node `^20.19 || >=22.12`、pnpm，以及跑在 `http://localhost:58091` 的 Songloft 后端（账号 `admin/admin`）。
 
 ```bash
-pnpm install              # 安装依赖
-pnpm run dev              # 开发模式（热重载）
-pnpm run build            # 生产构建（含类型检查）
+pnpm install
+pnpm run web:sync && pnpm run web:dev   # 最快看到界面的路径
 ```
 
-### 真机调试（Android）
+验收三条：
 
 ```bash
-export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
-pnpm run android:install  # 构建 bundle + 安装 debug APK
-adb reverse tcp:58091 tcp:58091
-adb logcat -s lynx:V LynxUISVG:E AndroidRuntime:E
+pnpm run build        # 必须列出两个产物：File (lynx) 与 File (web)
+pnpm run typecheck    # = tsc -b（必须 -b，--noEmit 是空跑）
+pnpm test             # 1947 用例 / 186 文件
 ```
 
-### iOS
+> ⚠️ 以上**只覆盖 JS 产物** —— 不读 Xcode 工程、不编译 Kotlin、不验 Web 产物自洽性。改了 `ios/`、`android/`、`web/` 必须另跑对应平台那条。
 
-```bash
-pnpm run ios:pods         # 首次 / 依赖变更时
-pnpm run ios:run          # 构建 + 装进已启动的模拟器 + 启动
-```
-
-### Web
-
-```bash
-pnpm run web:sync         # 构建 web 环境 bundle + 拷贝产物到 web/dist
-pnpm run web:dev          # 本地静态服务
-pnpm run build:web        # standalone 部署产物
-pnpm run build:web-embedded   # 供后端嵌入的产物
-```
-
-## 测试
-
-```bash
-pnpm test                 # 单元测试（900 用例 / 97 文件）
-pnpm exec tsc -b          # 类型检查（必须带 -b；--noEmit 对本仓库是空跑）
-pnpm run test:e2e:android # E2E 行为测试（Android，需 adb + debug APK）
-pnpm run e2e:ios:full     # E2E 全流程（iOS，含构建）
-```
-
-- 单元测试：Vitest + @testing-library
-- E2E 测试：TestBridge（TCP 9230）驱动真机 App，跨平台复用场景文件，27 个场景
-- 测试报告 → `e2e/reports/`，截图 → `e2e/screenshots/`（均已 gitignore）
-
-> ⚠️ 以上命令**只覆盖 JS 产物**，不读 Xcode 工程也不检查 Web 产物自洽性。改 `ios/` 或 `web/` 时另见 [AGENTS.md](./AGENTS.md) §3 的补充闸门。
+**完整步骤 → [docs/getting-started.md](./docs/getting-started.md)** · **四平台构建与环境坑 → [docs/guides/build-and-run.md](./docs/guides/build-and-run.md)**
 
 ## 项目结构
 
 ```
 src/              Lynx 客户端源码
   core/           网络、存储、配置
-  features/       功能模块（auth/home/library/player/playlist/settings/...）
+  features/       8 个功能模块（auth/home/library/library-ops/player/playlist/settings/jsplugin）
   models/         zod 数据模型
   native/         原生模块 TS 层
-  shared/         共享组件、主题、布局
+  shared/         共享组件、主题、布局、导航策略
+  store/          Zustand 状态
+  i18n/           多语言（en/zh）
 android/          Android 宿主 + 原生模块（Kotlin）
 ios/              iOS 宿主 + 原生模块（Swift）
-web/              Web 宿主页 + 本地静态服务
-e2e/              E2E 测试（driver + scenarios + fixtures）
-docs/             项目文档（见下）
+web/              Web 宿主页 + 宿主模块 + 本地静态服务
+e2e/              E2E 测试（driver + 33 个 scenario）
+scripts/          构建脚本（bundle 拷贝、闸门、i18n 转换）
+patches/          上游本地补丁（必须提交）
+docs/             项目文档
 ```
 
 ## 文档
 
-完整文档索引见 [docs/README.md](./docs/README.md)，按类别组织：
+**入口：[docs/README.md](./docs/README.md)** —— 按 Diátaxis 组织（上手 / 操作指南 / 规范速查 / 背景解释 / 项目管理 / 归档）。
 
-- [docs/reference/](./docs/reference/) — [API 设计规范](./docs/reference/api-design-conventions.md)（后端 OpenAPI 契约在后端仓库，不在此）
-- [docs/plans/](./docs/plans/) — [当前修复与开发计划](./docs/plans/2026-08-14-audit-fix-plan.md)
-- [docs/migration/](./docs/migration/) — 迁移调研历史
-- [docs/testing/](./docs/testing/) — [E2E 测试架构设计](./docs/testing/behavior-testing-design.md)
-- [docs/tracking/](./docs/tracking/) — 开发进展与 bug 跟踪
+常用直达：
 
-另外两份根目录文档：
+| 我想… | 去 |
+|---|---|
+| 从零跑起来 | [快速上手](./docs/getting-started.md) |
+| 构建某个平台 | [构建与运行](./docs/guides/build-and-run.md) |
+| 写/跑测试 | [测试](./docs/guides/testing.md) |
+| 加原生能力 | [原生模块开发](./docs/guides/native-development.md) · [模块契约](./docs/reference/native-modules.md) |
+| 查规范 | [API 与 Store](./docs/reference/api-conventions.md) · [返回导航](./docs/reference/back-navigation.md) |
+| 理解某个诡异行为 | [Lynx 约束](./docs/architecture/lynx-constraints.md) · [调试](./docs/guides/debugging.md) |
+| **接手项目** | [交接文档](./docs/project/handoff.md) |
 
-- [AGENTS.md](./AGENTS.md) — 开发规范（给 AI agent 与贡献者）：目录边界、Lynx 约束与铁律、验收闸门、原生模块调用约定
-- [DESIGN.md](./DESIGN.md) — Muse 设计语言：色彩/间距/圆角 token、图标规范、对比度要求
+根目录另有两份项目级文档：
+
+- **[AGENTS.md](./AGENTS.md)** —— 开发规范与铁律（给 AI agent 与贡献者）：目录边界、Lynx 约束、验收闸门、原生模块调用约定、测试闸门原则
+- **[DESIGN.md](./DESIGN.md)** —— Muse 设计语言：色彩/间距/圆角/阴影 token、图标规范、组件模式、WCAG AA 要求
+
+后端 API 契约（OpenAPI）**不在本仓库**：见后端仓库的 `docs/swagger.json`，或 `http://localhost:58091/swagger/index.html`。
 
 ## 状态
 
-迁移路线 P0–P2 已完成，P3 平台特性约 55%，P4 双轨发布未开始。
+迁移路线 **P0–P2 已完成，P3 平台特性 90%（仅剩 Lynxtron 桌面），P4 双轨发布未开始**。
 
-**当前各平台可用性**（批41 后）：Android ✅ 真机验证通过；iOS ✅ 可构建；Web ⚠️ 可加载渲染但**无音频**。逐项状态见 [docs/README.md](./docs/README.md#平台可用性2026-08-14-审计后的真实状态)，剩余修复排期见 [修复计划](./docs/plans/2026-08-14-audit-fix-plan.md)，历史进展见 [PROGRESS.md](./docs/tracking/PROGRESS.md)。
+| 平台 | 状态 |
+|---|---|
+| Android | ✅ 真机验证通过（播放/通知栏/扫描/悬浮歌词/全屏视频全链路） |
+| iOS | ✅ 可构建可运行（e2e 110/110），7 个原生模块全部注册 |
+| Web | ✅ 可渲染且有音频；几条已知限制见 [Web 部署](./docs/guides/web-deployment.md) |
+| 桌面 | ⛔ 未开始（剩余最大单块能力） |
+
+逐项状态见 [docs/README.md](./docs/README.md)，历史进展见 [progress.md](./docs/project/progress.md)。
