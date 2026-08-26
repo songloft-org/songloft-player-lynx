@@ -1,10 +1,9 @@
 /*
  * Category songs styling — LUNA tokens only. Mirrors PlaylistDetailPage.css:
  * a fixed header over a flexing song list (the `<list>` needs a resolved height
- * to scroll). The `.song-row` rules are redeclared here (identical to
- * LibraryPage.css) so this route renders correctly even when the library page
- * was never mounted; Lynx CSS is global-scoped, so the duplicate identical
- * rules are harmless.
+ * to scroll). The `.song-row*` rules live in the shared
+ * `features/library/widgets/SongRow.css` (imported by `SongRow.tsx`), so this
+ * route picks them up automatically.
  */
 
 .category-songs {
@@ -165,64 +164,6 @@
 
 .category-songs__state-text--error {
   color: var(--danger);
-}
-
-/* Song row (identical to LibraryPage.css — see header note). */
-.song-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  width: 100%;
-  padding: var(--space-3) var(--space-4);
-  background-color: var(--canvas);
-  border-bottom: 1px solid var(--line);
-}
-
-.song-row__cover {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-sm);
-  background-color: var(--neutral-faint);
-}
-
-.song-row__cover--empty {
-  background-color: var(--neutral-faint);
-}
-
-.song-row__meta {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  margin-left: var(--space-3);
-  min-width: 0;
-}
-
-.song-row__title {
-  color: var(--content);
-  font-size: var(--font-md);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.song-row__subtitle {
-  color: var(--content-muted);
-  font-size: var(--font-sm);
-  margin-top: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.song-row__duration {
-  color: var(--content-muted);
-  font-size: var(--font-sm);
-  margin-left: var(--space-3);
-}
-
-/* Current song highlight */
-.song-row--current .song-row__title {
-  color: var(--accent);
 }
 
 .library__list-item {

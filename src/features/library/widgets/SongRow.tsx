@@ -4,6 +4,7 @@ import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { formatDuration } from '../data/format.js'
+import './SongRow.css'
 
 export interface SongRowProps {
   song: Song

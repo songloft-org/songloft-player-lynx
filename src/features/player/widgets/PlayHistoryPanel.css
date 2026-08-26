@@ -2,10 +2,10 @@
  * Play-history panel — LUNA tokens only. Same shape as `GlobalMenu.css`:
  * a fixed root, an absolute backdrop, and a bottom sheet-like panel.
  *
- * Deliberately does not declare `.song-row`: the router eagerly imports every
- * page, so the three existing copies of those rules are already in the bundle
- * and effectively global. A fourth copy would compete with them at equal
- * specificity, decided by source order.
+ * Deliberately does not declare `.song-row`: those rules live in the shared
+ * `features/library/widgets/SongRow.css` (imported by `SongRow.tsx`), which the
+ * rows this panel renders already pull in. A local copy would compete with the
+ * shared one at equal specificity.
  */
 
 .play-history {

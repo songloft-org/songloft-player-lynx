@@ -1,0 +1,116 @@
+/*
+ * Song row — the single source of truth for the `.song-row*` classes rendered by
+ * `SongRow.tsx` / `SongListRow.tsx`.
+ *
+ * These rules used to be copy-pasted into `LibraryPage.css`, `CategorySongsPage.css`
+ * and `PlaylistDetailPage.css`. Because the router eagerly imports every page, all
+ * three copies landed in the bundle at equal specificity, so the winner was decided
+ * by source order — and the copies were NOT equivalent (two used `width: 100%`, the
+ * playlist one used `flex: 1; min-width: 0`). This file collapses them.
+ *
+ * Root sizing: `width: 100%` + `min-width: 0`. Every usage puts the row in a box it
+ * should fill (a virtual-list item, or `.playlist-detail__song-row-content`), and the
+ * row is a block-level flex container, so `width: 100%` fills it. `min-width: 0`
+ * lets it shrink below its content's intrinsic width so the `__meta` ellipsis can do
+ * its job instead of the row overflowing.
+ *
+ * Do NOT redefine `.song-row*` in a page CSS file — a duplicate at equal specificity
+ * silently re-opens the source-order race. The gate in
+ * `src/shared/ui/__tests__/song-row-css.test.ts` fails if another file defines these
+ * selectors.
+ */
+
+.song-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--canvas);
+  border-bottom: 1px solid var(--line);
+}
+
+.song-row__cover {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  background-color: var(--neutral-faint);
+}
+
+.song-row__cover--empty {
+  background-color: var(--neutral-faint);
+}
+
+.song-row__meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin-left: var(--space-3);
+  min-width: 0;
+}
+
+.song-row__title {
+  color: var(--content);
+  font-size: var(--font-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.song-row__title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.song-row__video-badge {
+  color: var(--accent);
+  font-size: var(--font-xs);
+  margin-left: var(--space-1);
+}
+
+.song-row__subtitle {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.song-row__duration {
+  color: var(--content-muted);
+  font-size: var(--font-sm);
+  margin-left: var(--space-3);
+}
+
+.song-row__fav {
+  margin-left: var(--space-2);
+  padding: var(--space-1);
+}
+
+.song-row__more {
+  margin-left: var(--space-2);
+  padding: var(--space-1);
+}
+
+.song-row__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-left: var(--space-2);
+}
+
+.song-row__action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+}
+
+.song-row--current .song-row__title {
+  color: var(--accent);
+}

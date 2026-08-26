@@ -291,13 +291,17 @@
 
 ### 刻意推迟的清理（批50 记录）
 
-- [ ] **`.song-row` 有三份互相冲突的副本** —— 同一套规则分别写在 `LibraryPage.css:118`、
-  `CategorySongsPage.css:152`、`PlaylistDetailPage.css:390`，且**不等价**：一份是 `width: 100%`，
-  另一份是 `flex: 1; min-width: 0`（`PlaylistDetailPage` 把 `SongRow` 放在 `SortableItem` 里，
-  需要后者）。因为 `router.tsx` eager import 每个页面，三份从启动起全在 bundle 里、同特异性，
-  **靠源码顺序决定谁赢**。正解是提取成 `SongRow.css` 由组件自己 import，但那必须在冲突规则里
-  挑一个赢家，而仓库**没有任何视觉闸门**能抓到回归——只能靠真机截图逐页对比。批50 因此刻意
-  没做，新增的 `PlayHistoryPanel.css` 也刻意**不放**第四份副本
+- [x] **`.song-row` 有三份互相冲突的副本**（2026-08-26 已收敛）—— 同一套规则分别写在 `LibraryPage.css`、
+  `CategorySongsPage.css`、`PlaylistDetailPage.css`，且**不等价**：两份是 `width: 100%`，歌单详情那份是
+  `flex: 1; min-width: 0`。因为 `router.tsx` eager import 每个页面，三份从启动起全在 bundle 里、同特异性，
+  **靠源码顺序决定谁赢**。已提取成 `features/library/widgets/SongRow.css` 由 `SongRow.tsx` import，三个页面
+  副本删除。根规则取 `width: 100%; min-width: 0`（两页的 `width:100%` + 歌单页的 `min-width:0` 的并集）。
+  **订正原记录的一处误判**：歌单详情那份 `flex:1` 并非因为「SongRow 放在 SortableItem 里」——SortableItem
+  是**排序模式**的拖拽行（用的是 `.playlist-detail__sort-row`，不是 `.song-row`）；正常模式的 `.song-row`
+  在 `.song-row-content`（`flex:1` 但非 flex 容器）里，`display:flex` 的块级盒子本就撑满宽度，`flex:1`
+  在那里是 no-op，故改成 `width:100%` 行为不变。防再犯：新闸门 `song-row-css.test.ts` 断言「除 SongRow.css
+  外任何 CSS 不得定义 `.song-row*`」（反向验证过）。**Android 模拟器实测**：曲库/分类/歌单详情三处行内容
+  均从左缘 x=16 撑到近右缘（x≈511–517），无塌陷
 - [x] **`savePlaybackState` 是 4 个位置参数**（2026-08-26 已修）—— 违反 `docs/reference/api-conventions.md`
   的「≥3 个或含可选参数用对象参数」。此前拖着没改的理由是「按位断言的 churn 收益不抵」，实际动手后发现
   churn 很小：`position-persistence.test.ts` 只有两处 `[, , positionMs]` 解构改成 `[{ positionMs }]`，
