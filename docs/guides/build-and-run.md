@@ -12,7 +12,7 @@
 | Node | `^20.19.0 \|\| >=22.12.0`（`package.json` 的 `engines`） |
 | 包管理 | pnpm（`pnpm-lock.yaml` 必须提交） |
 | 后端 | `http://localhost:58091`，账号 `admin/admin`，接口前缀 `/api/v1` |
-| Android | `ANDROID_HOME` + **JDK**（见下方 Android 一节，本机可能没有） |
+| Android | `ANDROID_HOME` + `JAVA_HOME`（本机已有 openjdk 17，见下方 Android 一节） |
 | iOS | macOS + Xcode + CocoaPods |
 
 ```bash
@@ -47,7 +47,8 @@ adb logcat -s lynx:V LynxUISVG:E AndroidRuntime:E
 ```
 
 - **`adb reverse` 不能省**：设备上的 `localhost:58091` 得转回开发机的后端。
-- **本机（macOS）当前没有可用 JDK** —— `/usr/libexec/java_home -V` 报 `Unable to locate a Java Runtime`，`gradlew` 会直接失败。先装并导出 `JAVA_HOME`：`mise use -g java@temurin-17`，或 `brew install --cask temurin@17`。
+- **`JAVA_HOME` 必须显式导出**：`export JAVA_HOME=/opt/homebrew/opt/openjdk@17`。本机 JDK 是 Homebrew 的 **openjdk 17.0.18**（`/opt/homebrew/bin/java`）。
+  > ⚠️ **别用 `/usr/libexec/java_home` 判断有没有 JDK。** 它只查**系统注册**的 JDK，对 Homebrew 那份报 `Unable to locate a Java Runtime`。这份文档一度据此断言「本机没有 JDK」——是错的，`java -version` 才是判据。实测 `compileDebugKotlin` 与 `android:install` 都能跑通。
 - 只验编译（不装设备）：`cd android && ./gradlew --no-daemon assembleDebug`。
 
 Linux 环境（另一台开发机）的路径：

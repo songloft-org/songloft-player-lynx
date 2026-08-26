@@ -97,8 +97,44 @@ TypeError: Cannot read properties of undefined (reading 'Symbol(uniqueId)')
 
 ---
 
+## Issue 3（待提交）：`lynx-ui-swiper` 的 `SwiperItem` 用 camelCase 调 `setStyleProperties`
+
+**包**：`@lynx-js/lynx-ui-swiper@3.135.4` · **位置**：`src/SwiperItem/index.tsx:138-141`
+
+```js
+itemRef.current.setStyleProperties({
+  width: `${propsFromJS.itemWidth}px`,
+  height: `${propsFromJS.itemHeight}px`,
+  marginInlineEnd: `${propsFromJS.spaceBetween}px`,   // ← camelCase
+})
+```
+
+`setStyleProperties` 解析的是 **kebab-case** —— 同包 `src/Swiper/index.tsx:184` 的兄弟调用就老实写了字符串
+`'inset-inline-start'`。`margin-inline-end` 在运行时名称表里是 id 151，而 `marginInlineEnd` 不在表里，
+查找落到 **237 = 表尾（236）+ 1**，宿主每个 `SwiperItem` 打一条：
+
+```
+E lynx: [UnitHandler] illegal css key:237
+```
+
+`width`/`height` 是单词故正常解析，只有这个复合名受影响。
+
+**复现**：渲染带 2 个 `SwiperItem` 的 Swiper → logcat 恰好 2 条。
+**影响**：声明被静默丢弃。未传 `spaceBetween` 时丢的是 `margin-inline-end: 0px`（本就是默认值）⇒ 纯告警；
+**传了 `spaceBetween` 的项目会发现间距完全不生效**，而唯一线索是一行不指向真因的日志。
+**修法**：`marginInlineEnd` → `'margin-inline-end'`。
+
+> 名称表边界核实过：tasm 编码器与 `liblynx.so` 两侧都止于 236（`-x-text-decoration-gap`），与
+> `@lynx-js/css-defines` 0.0.16 一致（`pointer-events` = 225 三处对得上）。所以 237 确定是「查不到」，
+> 不是「某个我们不认识的属性」。
+
+**本地不打 patch**：告警无害，且改 UI 库要连带处理 `propsFromJS` 的类型。等上游。
+
+---
+
 ## 备注
 
 - Issue 1 的修复最简单（10 行），且与已有的 `onNativeModulesCall` 模式一致，最可能被快速合入
 - Issue 2 附带 WHATWG spec 引用，合规性 bug 不容争辩
+- Issue 3 是单词替换，且有精确的表索引证据，应当好合
 - `AbortController` 缺失和 `lynx.queueMicrotask` 崩溃暂不提，前者是 feature request 优先级低，后者需先确认最新版是否已修复

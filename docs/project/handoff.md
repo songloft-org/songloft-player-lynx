@@ -244,14 +244,17 @@ pod 的 podspec 也能直接读，用来定位头文件路径：`https://cdn.coc
 
 ### Android 本机真编译（环境按平台不同）
 
-**开发机现在是 macOS**（上一版这里只写了 Linux 路径）。macOS 上 Android SDK 在位：
+**开发机现在是 macOS，Android 链路完整可用**（实测 `compileDebugKotlin` 与 `pnpm run android:install` 都通，模拟器 `emulator-5554` / SM_G998B 在线）：
 
 ```bash
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17
 export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
-cd android && ./gradlew --no-daemon assembleDebug
+export PATH="$JAVA_HOME/bin:$PATH"
+pnpm run android:install                              # build + copy bundle + installDebug
+cd android && ./gradlew --no-daemon compileDebugKotlin  # 只验编译，更快
 ```
 
-⚠️ **但本机当前没有可用的 JDK** —— `/usr/libexec/java_home -V` 报 `Unable to locate a Java Runtime`，所以上面那条会直接失败。跑之前先装并导出 `JAVA_HOME`（本机有 `mise`，`mise use -g java@temurin-17` 即可；`brew install --cask temurin@17` 同样可行）。**这是 §1 闸门快照里 `assembleDebug` 自批49 后没再跑过的直接原因之一。**
+> ⚠️ **别用 `/usr/libexec/java_home` 判断有没有 JDK。** 本机 JDK 是 Homebrew 的 **openjdk 17.0.18**，而 `java_home` 只查系统注册的那些，对它报 `Unable to locate a Java Runtime`。**这份文档一度据此断言「本机没有 JDK、所以原生构建跑不了」——那是错的**，`java -version` 才是判据。同一个教训的第 N 次：探测手段选错，结论就整个反过来。
 
 Linux 环境（批45 自举时用的那台）对应的路径：
 

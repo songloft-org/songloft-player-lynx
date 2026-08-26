@@ -85,8 +85,24 @@
 - [x] 全屏播放器在 Web 上宽度恒 0、歌词页不可达（重构时附带发现，**历史就有**）—— `useBreakpoint()` 漏传 `measureSelector`。`/player` 是导航后才挂载的页，而 Web 上 `bindlayoutchange` 只对首屏就存在的元素触发，于是宽度永远是初始的 0：Swiper 分支进不去、歌词屏不可达、`isWide` 恒 false。补 `'.full-player'`（HomePage 顺手补 `'.home'`），并新增全库闸门 `measure-selector-contract.test.ts` 防再犯
 - [x] 「打开后自动进歌词」偏好从未生效（重构时附带发现，**历史就有**）—— 旧代码在 mount 时读偏好就 `swipeTo(1)`，但 Swiper 要等宽度已知才挂载，此刻 `swiperRef.current` 是 null，调用被静默丢弃。改为等「偏好读到 + Swiper 已挂载」两者齐备再进、且只进一次
 - [x] 全屏播放器横屏时封面上溢、顶到顶栏下面（重构时真机横屏抓到）—— 高度预算错把**整页**高度喂给了 Flutter 的公式（那 100 的常量是给「标题在封面栏内」的桌面布局调的），在横屏下要出比可用空间还大的封面。改为测量 **stage**（封面/歌词区）自身高度，常量也换成 stage 内边距
-- [ ] 全屏播放器封面在 Android 上不是正方形（letterbox，**遗留，未修**）—— `<image>` 元素给定了 405px 见方的盒子，实际却只布局出约 215px 高，于是方形封面渲染成上下留白的横条。已排除 `height:100%`、内联 px 高、`position:absolute`、`aspect-ratio:1`、`auto-size`、各 `mode` 值、去掉外层 flex 居中，均无效；同一 URL 在 mini-player / 歌单卡（用**类**而非内联定尺）能填满。线索指向「内联 style 定尺 vs 类定尺」的差异，但无 `@media` 没法给类塞断点尺寸，故暂搁。详见 `FullPlayerPage.css` `.full-player__cover-img` 注释
-- [ ] 播放器挂载时 logcat 报两条 `illegal css key:237`（**遗留，未查清**）—— 与本次新增 CSS 无关（把 PlayerBackdrop 整个移除后依旧出现），而曲库/设置页挂载时没有；237 超出当前 css-defines 表的范围（表止于 236），疑似只有播放器才挂载的某个 lynx-ui 组件（Swiper/Slider/Sheet）的内部样式键。表现为告警、未见功能损坏，待有空对照宿主版本查
+- [ ] 全屏播放器封面在 Android 上不是正方形（letterbox，**未修；2026-08-26 在模拟器上复现失败**）——
+  **实测数据**（emulator-5554 / SM_G998B，540×960 @ density 160，即 1dp = 1px，所以报告里那个 405px 盒子
+  正好是 540×0.75）：竖屏经路由进 `/player` 量到 **405×405**（比例 1.0000）、点 mini player 进也是 405×405、
+  横屏分栏 140×140；还连拍了 6 帧找挂载瞬间的过渡态，全程方形。**代码自报告以来一行未改**
+  （`CoverArt` 最后一次改动是 `b9846c8`，与报告同日的 `2fad393` 之后无改动），所以最可能是**密度/设备特定**，
+  这台模拟器的几何不触发。要继续查得换一台真机或改模拟器密度/分辨率。原始记录： `<image>` 元素给定了 405px 见方的盒子，实际却只布局出约 215px 高，于是方形封面渲染成上下留白的横条。已排除 `height:100%`、内联 px 高、`position:absolute`、`aspect-ratio:1`、`auto-size`、各 `mode` 值、去掉外层 flex 居中，均无效；同一 URL 在 mini-player / 歌单卡（用**类**而非内联定尺）能填满。线索指向「内联 style 定尺 vs 类定尺」的差异，但无 `@media` 没法给类塞断点尺寸，故暂搁。详见 `FullPlayerPage.css` `.full-player__cover-img` 注释
+- [x] 播放器挂载时 logcat 报两条 `illegal css key:237` —— **2026-08-26 已根因定位，是上游 bug，无害，我们侧不改**。
+  当初猜「某个 lynx-ui 组件」猜对了方向。实测：仅播放器页出现（`/`、`/library`、`/settings`、`/settings/cache`、
+  `/player/lyrics/adjust`、`/player/eq`、`/settings/tab-config`、`/playlists/1`、`/library/add` 全为 0），
+  且**竖屏 2 条、横屏 0 条** —— 横屏走 `layout.isSplit` 分支、不渲染 `<Swiper>`，这一步就把范围二分到了 Swiper。
+  - **根因**：`@lynx-js/lynx-ui-swiper@3.135.4` 的 `src/SwiperItem/index.tsx:138-141` 用 **camelCase**
+    `marginInlineEnd` 调 `setStyleProperties`，而该 API 解析的是 **kebab-case**（同文件 `Swiper/index.tsx:184`
+    的兄弟调用就老实写了字符串 `'inset-inline-start'`）。`margin-inline-end` 是 id 151、运行时认识；
+    `marginInlineEnd` 不在表里 ⇒ 落到 **237 = 表尾（236）+1**，即一次名称查找未命中。
+    核实过 tasm 编码器的名称表与 `liblynx.so` 的都止于 236（`-x-text-decoration-gap`），与
+    `@lynx-js/css-defines` 0.0.16 一致。**条数吻合**：`data={[0, 1]}` → 2 个 `SwiperItem` → 各一次调用 → 2 条。
+  - **为什么无害**：`FullPlayerPage` 不传 `spaceBetween`，所以被丢弃的声明是 `margin-inline-end: 0px`
+    ——本就是默认值。纯告警，无功能损失。已记入 [`plans/upstream-issues.md`](plans/upstream-issues.md)。
 - [x] 播放历史页面有报错（批50）—— 页面上那行 `不支持的 context_type` 只是最外层症状，往下是**三处独立的错**，其中**写入从来没成功过**比读更严重：后端 `SongPlayed` 从 query 读 `type`/`context_type`/`context_key` 且只有 `type=play` 才落库，而前端把 context 放在 **JSON body** 且从不发 `type` → 每次 204、一条都没记。加上「设置→高级→播放历史」这个入口拿不到任何上下文（后端历史是**按播放上下文分桶**的，没有全局「最近播放」端点），所以它不是坏了而是**不可能修好**。改前先用真实后端按新旧两种形状各 POST 一次做反向验证。详见 `progress.md` 批50
 - [x] 曲库的设计有问题，自定义曲库显示分类也有问题（批51-A~D）—— 探查证实**「自定义显示分类」整个功能从未生效过**：后端 `PUT /settings/library-browse` 契约是 `{views:[{key,visible}]}`（14 个合法 key），而旧实现发 `{id,visible,order}` → GET 恒回落全默认、PUT 恒 **400** 并被 `.catch(()=>{})` 静默吞掉。且 `KNOWN_VIEWS` 自创了 4 个后端不认的 id、丢了 4 个真实的。曲库随之从「硬编码 4 tab」重写为对齐 Flutter 的**单页 14 视图**（四批）。详见 `progress.md` 批51-A/B/C/D
 - [x] 播放器速度/播放模式弹出层位置错乱（批53，**Docker 无头 Chrome 实测抓出 6 处**）—— 上面批51 那两条只治了遮罩与延迟，位置本身仍是错的：`lynx-ui-popover` 的 `computeCoordsFromPlacement` 返回**相对触发器**的坐标，而 `OverlayView` 用 `position: absolute` 施加它（包含块是最近的定位祖先），两者只在「触发器正好位于该祖先原点」时等价。实测歌单详情排序菜单落在 `x = -122`——**整块在屏外，功能等于不存在**；音量面板 `-60`、倍速 `-30`、曲库排序 `0`（应为 106）。库自带的溢出收敛也救不了（`detectOverflow` 拿 `SystemInfo.pixelWidth` 当屏幕，Web 上报的是浏览器**屏幕**尺寸 800×600 而非 lynx-view 的 420×900）。改为自研 `PopoverMenu`/`PopoverPanel` + `anchored-overlay.ts`，退役该库。铁律见 `AGENTS.md` §4「锚定弹出层」
@@ -184,16 +200,55 @@
     而 `createDriver()` 把未设该变量视为 Android。第一次全量跑就是这么「通过」的（107 passed / 8 skipped，
     比预期多 5 个 skip）。正确写法是 `(process.env.E2E_PLATFORM ?? 'android') === 'android'`
 
-### 批49 途中发现，**未修（无法验证）**
+### 批49 途中发现 —— 2026-08-26 已证实并修复
 
-- [ ] **疑似：Android 上 HLS 电台会落到 `ProgressiveMediaSource`** —— `SongloftAudioEngine.load` 的判定是
-  `hls || url.endsWith(".m3u8")`，而我们的 `buildSongUrl` 会追加 `?access_token=…`，于是**后缀判断恒不成立**；
-  同时全库没有任何调用方给电台传 `hls: true`（批49 只给 `/video-hls/` 传）。按父仓库 AGENTS.md 的说法
-  「无后缀会落到 ProgressiveMediaSource 导致直播无法播」，那么 Android 上的 HLS 电台应当是坏的。
-  **刻意不改**：手上没有可用的电台源，改了就是一处无法证伪、也没有回归测试的推测性修改（批46 回退
-  `intendedPlaying` 就是这个教训）。**验证方式**：`POST /songs/radio` 建一个真 HLS 电台，
-  Android 上播，`adb logcat` 看用的是 `HlsMediaSource` 还是 `ProgressiveMediaSource`；确认后修法有两种
-  ——调用方传 `hls: true`（更符合现有约定），或把后缀判定改成只看 `?` 之前的路径
+- [x] **HLS 电台落到 `ProgressiveMediaSource`（已修）** —— 当初记为「疑似 · 无法验证」，因为库里没有电台源。
+  但**核心断言压根不需要设备**：`SongloftAudioEngine.load` 判 `hls || url.endsWith(".m3u8")`，而 `songUrl()`
+  追加 `?access_token=…`，后缀判断注定失效；电台又走 `playbackSourceFor` 的 fallback 分支拿 `hls: false`
+  （`resolveVideoSourceKind` 对 `isVideo: false` 返回 `'none'`）。两个半边都 false ⇒ 直播播放列表被当成
+  progressive 流打开。Web 侧同病（`web-audio.ts` 也只看 `opts?.hls`）。
+  - **实测定性了一个关键前提**：后端**只对真正是播放列表的源**加后缀（建三个探针电台实测）——
+    `…/stream.m3u8` → `song.url = /api/v1/songs/73/play.m3u8`；而 `…/stream.mp3` 与无扩展名的 icecast
+    → `/api/v1/songs/74/play`（无后缀）。**所以修法不能是「radio 一律传 true」**：把 HlsMediaSource
+    喂给 mp3/icecast 流会弄坏现在能播的电台。
+  - **修法**：新增纯函数 `isHlsPlaylistPath(url)`（`url-helper.ts`），剥掉 query/fragment 后看路径扩展名，
+    `playbackSourceFor` 用它当 `hls` 标志。**一处改动同时修好 Android 与 Web。**
+  - **Android 模拟器实测确认**（对照实验）：id 73（`.m3u8`）的失败栈在 `ParsingLoadable.load`
+    ——HLS 播放列表加载器；id 74（无后缀）在 `ProgressiveMediaPeriod$ExtractingLoadable.load`。
+    更强的一组：同一份字节挂两个扩展名 + 带访问日志的本地服务器，`.m3u8` 那份**解析播放列表后真的去
+    `GET /seg0.aac`**（只有 HlsMediaSource 会这么做），`.mp3` 那份报
+    `UnrecognizedInputFormatException: None of the available extractors … could read the stream`。
+  - **闸门**：`hls-playlist-path.test.ts`（5 例，含「不被 query 里的 .m3u8 骗到」）+ `player-store.test.ts`
+    的 `HLS radio source flag`（3 例，断言起播时 `audio.load` 收到的标志）。后者**反向验证过**：把修复改回
+    `hls: false` 立刻红（`expected false to be true`）。为此给 `mock-audio` 加了 `lastLoad` 记录——
+    它以前把 `load` 的 url 与 opts 全丢掉，**这正是这个缺陷能藏住的前置条件缺口**（AGENTS.md §6 同族）。
+
+- [x] **HLS 电台仍放不出声的第二个原因：跨协议重定向被拒（已修）** —— 上面那条修完后，Android 实测暴露出
+  一个**独立的**故障：`hls_proxy` 关闭时后端对电台是 `302 → https://<上游>`，而 `DefaultHttpDataSource`
+  **默认拒绝跨协议重定向**（http→https），于是请求死在 302，报一个完全不指向真因的
+  `InvalidResponseCodeException: Response code: 302`。设备上验证过这确实是「跨协议」规则：一个
+  **同协议** 302 被正常跟随、一路走到分段请求。修法是 `setAllowCrossProtocolRedirects(true)`。
+  该标志也允许反向（https→http）降级——接受，因为这些是公开广播流、字节本身不是秘密，而不开它这个功能
+  根本不可用。
+  - **连带修掉我自己引入的一个副作用**：`load` 里那句把读超时提到 300 s 的 `setReadTimeoutMs`
+    原本注释着「唯一传 `hls` 的调用方是视频转码，等待本就是预期状态」——而现在电台也传 `hls: true` 了。
+    直播流继承 5 分钟超时意味着「流已经死了却要等五分钟才报错」。改为按 URL 判定
+    （`VIDEO_HLS_PATH_MARKER = "/video-hls/"`），只有转码端点才放宽。
+  - ⚠️ **iOS 侧未验**：AVPlayer 一般自行跟随重定向（含跨协议），但没有实测过。
+
+### 2026-08-26 Android 实测途中新发现，未修
+
+- [ ] **本地歌曲的封面拿不到（404）** —— songs 62、63 在 DB 里都有 `cover_url`，但 `GET` 那个地址返回
+  `404 {"error":"封面不存在"}`。实测时因此只能改用远程歌（id 5，833×833 PNG）验证封面渲染。
+  **未查**：不知道是扫描时没落盘、路径解析不对，还是文件被清理过。可能与父仓库 AGENTS.md 记的
+  「Bundle 模式 Android：covers 目录路径必须相对 `DBPath` 而非 CWD 解析」是同族问题，但那条已修，
+  且这里是常规服务端模式。先查后端 `covers` 目录里到底有没有那两个文件
+
+- [ ] **`FullPlayerPage` 给 Swiper 传 `itemHeight='auto'`，被插值成字面量 `"autopx"`** ——
+  `@lynx-js/lynx-ui-swiper` 内部做 `height: \`${itemHeight}px\``，于是多处内联样式里出现无效值
+  `height: autopx`。与上面 `illegal css key:237` 是两件事（那条是键名、这条是值）。**未评估影响**：
+  无效声明会被丢弃，实际高度大概是靠别处的规则兜住的，所以表面看不出问题。要么别传 `'auto'`，
+  要么确认库支持这个哨兵值
 
 ### 批51 途中发现，未修
 
@@ -201,14 +256,24 @@
   CSS，而浏览器对未知属性直接丢弃；`@lynx-js/web-elements` 的占位符颜色走的是另一条路
   （`x-input::part(input)::placeholder { color: var(--placeholder-color) }`，一个真正的 CSS 自定义属性），
   没人把两者接起来。所以 **Web 上所有输入框的占位符恒为库自带的 `grey`**，暗色下就是清单第一条那个
-  「看不清」——只在原生两端修好了。修法是在同一条规则里**并列写上 `--placeholder-color: var(--content-muted)`**
-  （自定义属性 Lynx 原生会照常解析、无用即无害），要动 15 个字段全部一起改才有意义，故未随批51 顺手做。
-  `input-css.test.ts` 的注释里记了这件事，将来改的是那 15 条规则、不是那道闸门
+  「看不清」——只在原生两端修好了。
+  - ⚠️ **2026-08-26 复核：本条原先记的修法「并列写 `--placeholder-color`」很可能无效。** 读 web-core 源码
+    确认它是 `x-input::part(input) { --placeholder-color: grey; }` ——**在 part 上的显式声明**，而自定义属性
+    虽然继承，显式声明优先于继承值；在 `.xxx__input`（即 host `x-input`）上设它到不了 part 内部。
+    该变量的另一条入口是 **HTML 属性**（`observedAttributes` 含 `placeholder-color`，由 attribute handler
+    写进 `--placeholder-color`），所以更可能可行的方向是**传属性而不是写 CSS**。两者都**未实测**
+    （无头浏览器验证被环境挡住），动手前先在浏览器里试一个字段再推广到 16 处。
 - [x] **构建警告不再是零**（AGENTS §7 与本文件都写着「自批19b 起归零」，实际已漂）——
   `LyricCalibratePage.css` 有一句 `font-variant-numeric: tabular-nums`，Lynx 无此属性，
   模板编码阶段被剥掉只留一行 warning，**从落地起就没生效过**。批51 顺手删掉恢复零警告
   （删它对渲染是纯 no-op）。真要数字不跳动得改 `font-family` 用等宽字体。
   教训同 `AndroidManifest.xml` 那条：**没有闸门读的东西，写在文档里的「已归零」不会自己保持为真**
+  - ⚠️ **2026-08-26 复核：又不是零了，但这次是刻意的。** 现有 3 类警告全部来自
+    `-webkit-box-orient` / `-webkit-line-clamp`（`PlaylistDetailPage.css`、`SongInfoDialog.css`、
+    `PluginManagerPage.css` 的两行截断），三处都写了注释说明这是**跨平台双写**：标准属性在 Web 上生效，
+    native encoder 剥掉它们并告警，所以另配 `max-height: 32px` 硬兜。**「归零」这个说法应当退役**——
+    正确的表述是「警告应当只剩这 3 类已知项，多出别的就要查」。这条本身就是第三次证明：
+    可被检验的断言写进文档而没有闸门读它，它就会周期性地变成假话
 
 ### 刻意推迟的清理（批50 记录）
 
