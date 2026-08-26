@@ -310,6 +310,8 @@ export function FullPlayerPage() {
                     containerWidth={width}
                     itemHeight='auto'
                     onChange={setSwiperIndex}
+                    experimentalHorizontalSwipeOnly
+                    consumeSlideEvent={[[-180, -150], [-30, 30], [150, 180]]}
                   >
                     {({ index }: { index: number }) => (
                       <SwiperItem>
