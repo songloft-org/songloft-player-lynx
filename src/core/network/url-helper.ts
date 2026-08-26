@@ -67,6 +67,33 @@ export function buildSongUrl(
   return result
 }
 
+/**
+ * Does this backend-supplied path point at an HLS playlist?
+ *
+ * The backend marks HLS by **extension**, and only for sources that really are
+ * playlists (verified against a live backend):
+ *
+ * | upstream                     | `song.url`                      |
+ * |------------------------------|---------------------------------|
+ * | `…/stream.m3u8`              | `/api/v1/songs/73/play.m3u8`    |
+ * | `…/stream.mp3`               | `/api/v1/songs/74/play`         |
+ * | `…/listen` (icecast, no ext) | `/api/v1/songs/75/play`         |
+ *
+ * So the extension is the signal — but it must be read off the **path**, not the
+ * finished playback URL: {@link buildSongUrl} appends `?access_token=…`, which is
+ * exactly why the engines' own `url.endsWith(".m3u8")` check never fires (it made
+ * every HLS radio fall through to a progressive source, which cannot play a live
+ * playlist). Callers pass the result as the `hls` flag instead.
+ *
+ * Note this must NOT be "true for every radio": handing HlsMediaSource an mp3 or
+ * icecast stream breaks playback that currently works.
+ */
+export function isHlsPlaylistPath(url: string): boolean {
+  if (!url) return false
+  const path = url.split('?')[0].split('#')[0]
+  return path.toLowerCase().endsWith('.m3u8')
+}
+
 /** Append `media=video` (native player uses this to detect a video source). */
 export function appendMediaVideoParam(url: string): string {
   if (!url) return url

@@ -5,6 +5,7 @@ import {
   buildSongUrl,
   buildVideoHlsUrl,
   buildVideoUrl,
+  isHlsPlaylistPath,
 } from '../../../core/network/url-helper.js'
 import { getTranscodeFormat, normalizeFormat } from '../../../core/network/audio-format.js'
 import { resolveVideoSourceKind } from '../../../core/network/video-source.js'
@@ -256,7 +257,11 @@ function playbackSourceFor(song: Song): PlaybackSource {
   if (kind === 'hls' && _videoSourceSongId === song.id) {
     return { url: buildVideoHlsUrl(song.id), hls: true, cached: false }
   }
-  return { url: songUrl(song), hls: false, cached: false }
+  // HLS radios must be flagged explicitly. The engines also sniff for a `.m3u8`
+  // suffix, but `songUrl()` appends `?access_token=…` so that check can never
+  // fire — every HLS radio was silently loaded as a progressive source, which
+  // cannot play a live playlist. Read the flag off the backend path instead.
+  return { url: songUrl(song), hls: isHlsPlaylistPath(song.url), cached: false }
 }
 
 /**

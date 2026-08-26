@@ -47,9 +47,23 @@ export class MockSongloftAudio implements SongloftAudio {
 
   private readonly listeners = new Map<AudioEventType, Set<AudioEventListener>>()
 
+  /**
+   * What the last {@link load} was asked to open. Test-only.
+   *
+   * The mock used to discard both arguments (`_url`, and `opts` beyond its
+   * duration), which meant no test could see *how* a song was handed to the
+   * engine — and that blind spot hid a real defect: every HLS radio was loaded
+   * with `hls: false`, so the native engines picked a progressive source and
+   * live playlists could not play. Keeping the call visible is what lets a store
+   * test assert the flag (AGENTS.md §6: a mock must be able to express what the
+   * real host is told).
+   */
+  lastLoad: { url: string; opts?: AudioLoadOptions } | null = null
+
   // ── source & transport ──
 
-  async load(_url: string, opts?: AudioLoadOptions): Promise<void> {
+  async load(url: string, opts?: AudioLoadOptions): Promise<void> {
+    this.lastLoad = { url, opts }
     this.stopTick()
     this.positionMs = 0
     this.durationMs =

@@ -692,3 +692,40 @@ describe('video songs open the video stream', () => {
     delete g.SystemInfo
   })
 })
+
+describe('HLS radio source flag', () => {
+  /**
+   * The native engines choose HlsMediaSource on `hls || url.endsWith(".m3u8")`.
+   * The suffix half can never fire because `songUrl()` appends `?access_token=…`,
+   * so the store has to set the flag — otherwise a live playlist is opened as a
+   * progressive stream and does not play at all.
+   *
+   * URL shapes below are what a live backend returned: an `.m3u8` upstream keeps
+   * the extension, an mp3 / icecast upstream does not.
+   */
+  function radio(id: number, url: string): Song {
+    return { ...song(id, 0), type: 'radio', isLive: true, url, format: '' } as Song
+  }
+
+  test('an HLS radio is loaded with hls: true', async () => {
+    await usePlayerStore.getState().playPlaylist([radio(73, '/api/v1/songs/73/play.m3u8')], 0)
+    await flush()
+    const mock = getAudio() as MockSongloftAudio
+    expect(mock.lastLoad?.opts?.hls).toBe(true)
+    // The suffix check the engines do on their own is genuinely useless here.
+    expect(mock.lastLoad?.url.endsWith('.m3u8')).toBe(false)
+  })
+
+  test('a progressive radio is NOT flagged as HLS', async () => {
+    // Handing HlsMediaSource an mp3/icecast stream would break playback that works.
+    await usePlayerStore.getState().playPlaylist([radio(74, '/api/v1/songs/74/play')], 0)
+    await flush()
+    expect((getAudio() as MockSongloftAudio).lastLoad?.opts?.hls).toBe(false)
+  })
+
+  test('a normal local song is NOT flagged as HLS', async () => {
+    await usePlayerStore.getState().playPlaylist([{ ...song(1, 30), url: '/api/v1/songs/1/play' } as Song], 0)
+    await flush()
+    expect((getAudio() as MockSongloftAudio).lastLoad?.opts?.hls).toBe(false)
+  })
+})

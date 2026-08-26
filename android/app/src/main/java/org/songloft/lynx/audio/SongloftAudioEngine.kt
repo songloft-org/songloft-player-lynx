@@ -87,6 +87,14 @@ object SongloftAudioEngine {
      */
     private const val HLS_READ_TIMEOUT_MS = 300_000
 
+    /**
+     * Marks the server-side video transcode endpoint
+     * (`/api/v1/songs/{id}/video-hls/playlist.m3u8`) — the only HLS source that is
+     * expected to block for minutes, and therefore the only one that may raise the
+     * read timeout. See [load].
+     */
+    private const val VIDEO_HLS_PATH_MARKER = "/video-hls/"
+
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private var player: ExoPlayer? = null
@@ -406,6 +414,17 @@ object SongloftAudioEngine {
         // with the rest of media3. Not worth it for one TLS flag.
         val httpFactory = DefaultHttpDataSource.Factory().apply {
             if (!headers.isNullOrEmpty()) setDefaultRequestProperties(headers)
+            // Radio playback is: our **http** backend -> 302 -> the upstream stream,
+            // which is virtually always **https**. `DefaultHttpDataSource` refuses
+            // cross-protocol redirects by default, so every such radio died at that
+            // 302 with an opaque `InvalidResponseCodeException: Response code: 302`
+            // — verified on-device, where a *same*-protocol 302 was followed through
+            // to segment requests just fine.
+            //
+            // The flag also permits the reverse (https -> http) downgrade. Accepted:
+            // these are public broadcast streams whose bytes are not secret, and the
+            // alternative is that the feature does not work at all.
+            setAllowCrossProtocolRedirects(true)
         }
         // Attach media metadata (if the JS store pre-registered it via setQueue)
         // so the foreground notification / lock screen shows title + artist.
@@ -420,10 +439,15 @@ object SongloftAudioEngine {
             // indistinguishable from the 503 the same endpoint returns when ffmpeg is
             // missing, which is the wrong thing to go looking at.
             //
-            // The cost: a genuinely stalled HLS stream now takes this long to fail
-            // instead of 8 s. Acceptable while the only caller passing `hls` is the
-            // video transcode, where waiting *is* the expected state.
-            httpFactory.setReadTimeoutMs(HLS_READ_TIMEOUT_MS)
+            // Scoped to that endpoint **by URL**, because `hls` is no longer unique to
+            // it: HLS radios now pass the flag too (their `.m3u8` extension cannot be
+            // sniffed off the built URL, which carries `?access_token=…`). A live
+            // stream must NOT inherit this timeout — waiting is the expected state for
+            // a transcode, but for a broadcast it would make a dead stream take five
+            // minutes to report instead of eight seconds.
+            if (url.contains(VIDEO_HLS_PATH_MARKER)) {
+                httpFactory.setReadTimeoutMs(HLS_READ_TIMEOUT_MS)
+            }
             HlsMediaSource.Factory(httpFactory).createMediaSource(item)
         } else {
             ProgressiveMediaSource.Factory(httpFactory).createMediaSource(item)
