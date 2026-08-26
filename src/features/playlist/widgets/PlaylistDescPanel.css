@@ -37,8 +37,12 @@
   background-color: var(--paper);
 }
 
+/* `flex-shrink: 0` — see `.playlist-desc__scroll`: once the body keeps
+ * `flex-basis: auto`, an over-cap panel would squeeze this row too (overflow is
+ * shared by basis weight, and every Lynx element clips). */
 .playlist-desc__header {
   display: flex;
+  flex-shrink: 0;
   flex-direction: row;
   align-items: center;
   padding: var(--space-4);
@@ -64,8 +68,19 @@
   border-radius: var(--radius-pill);
 }
 
+/*
+ * NOT `flex: 1`. That is `flex-basis: 0`, which made the sibling sheets render on
+ * Android as **nothing but their header** (user-reported): `.playlist-desc__panel`
+ * is absolutely positioned with no `top` and no `height`, so it is sized
+ * shrink-to-fit by its content, and a zero-basis child contributes nothing to that
+ * content height — the 60% ceiling was never approached.
+ *
+ * `auto` basis makes the panel hug the description, which is right for this sheet
+ * (most descriptions are a few lines). `min-height: 0` keeps the scroll-view able
+ * to shrink below its content when a long description does hit the cap.
+ */
 .playlist-desc__scroll {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
 }
 

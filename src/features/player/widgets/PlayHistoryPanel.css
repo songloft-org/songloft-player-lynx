@@ -33,7 +33,28 @@
   right: 0;
   display: flex;
   flex-direction: column;
-  max-height: 70%;
+  /*
+   * `height`, NOT `max-height`. This was `max-height: 70%`, and on Android the panel
+   * rendered as **nothing but its header row** (user-reported with screenshots).
+   *
+   * The mechanism is plain CSS, not a Lynx quirk: with `left`/`right`/`bottom` set
+   * but no `top` and no `height`, an absolutely positioned box is sized
+   * shrink-to-fit — by its content. The content is the header plus
+   * `.play-history__list`, and that list is `flex: 1`, i.e. `flex-basis: 0`, so it
+   * contributes **zero** to the content height. Panel height therefore collapsed to
+   * the header, and the 70% ceiling never came into play because nothing reached it.
+   * Web survived only because web-elements resolves `x-view` heights differently.
+   *
+   * The panel needs its height from the outside, and `height: X%` is the shape
+   * already proven on-device by `.atp__panel` (add-to-playlist) — the one bottom
+   * sheet that always worked. Trade-off: a fixed footprint, so a short history
+   * leaves space below instead of hugging its content. Making it hug would mean
+   * giving the list `flex-basis: auto` and letting the panel's `max-height` clamp
+   * it — but percentage clamping on a fixed/absolute overlay is precisely what
+   * proved unreliable on the native engines in the song dialogs (AGENTS.md §4, the
+   * `85%` → `85vh` fix), so that is not a trade to make blind.
+   */
+  height: 70%;
   padding-bottom: var(--space-4);
   border-top-left-radius: var(--radius-xl);
   border-top-right-radius: var(--radius-xl);

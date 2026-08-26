@@ -112,6 +112,7 @@
 - [x] 宽屏左侧 tab 选中会高度变化导致抖动（批58b）—— 批58 的选中态固定尺寸规则（`height: 52px`）没限作用域：底栏 64px 槽吸收了它所以无影响，但 rail 行是内容高度（~40px），选中被强制 52px、行高跳 12px、**下方所有行位移**。修法是把 `width/height` 收进 `.shell__bottombar` 作用域，rail 选中仅变色。铁律：**rail 选中只变色、严禁改尺寸**
 - [x] 编辑弹窗标题和保存按钮有问题（批60b，真机报障）—— 两个独立缺陷：**保存按钮**无主题包时 `--primary` 回退墨色（#111），描边版 submit 渲染成黑边黑字、与取消按钮几乎无差别、主操作零强调 → 改实心主色填充；**标题**是 `max-height: 85%` 在 fixed 弹层下按 containing block 解析、原生引擎不可靠（Web 钳制生效 614px 而原生失效后长表单被 flex 居中溢出顶部）→ 改 `85vh` 直接读 viewport
 - [x] 编辑弹窗标题被挡住（批60c，**实为被 flex 压扁而非遮挡**）—— 卡片是 column flex + 高度钳制，flex 把溢出量按 basis **加权摊给所有** shrink 非零的子项，小 basis 只是分得少、不是不分；而这两个弹窗的滚动 body 刻意用 `flex-basis: auto`（basis 0 会在卡片未被钳制时塌陷），于是标题行与 action 行也各摊一份。Web 实测标题 `height: 13.4px` / 内容 22px，而 Lynx 每个元素都带 `overflow: clip` ⇒ **文字上半被裁**；action 行 21.8/36 而按钮固定 36px ⇒ 溢出卡片 content box。修法给固定 chrome 加 `flex-shrink: 0`。**这类问题截图会误读成「样式没生效」或「被遮挡」**，判据是 `getComputedStyle(el).height` 与 `el.scrollHeight` 的差值。见 `AGENTS.md` §4 同名条目
+- [x] 底部滑入面板在 Android 只剩标题行（2026-08-26，真机截图报障）—— 播放历史与「更多」tab 面板**只渲染出标题行、body 完全没高度**，而「添加到歌单」正常。根因是纯 CSS、不是 Lynx 怪癖：panel 是 `position: absolute` + `left/right/bottom`（**无 `top`、无 `height`**）⇒ 按内容 shrink-to-fit；而滚动 body 是 `flex: 1`（`flex-basis: 0`）⇒ 对内容高度贡献 0 ⇒ panel 塌成 chrome 高度，`max-height` 上限从未被触及。Web 侥幸没事只因 web-elements 对 `x-view` 高度解析不同。三个面板两种修法：**播放历史**改 `height: 70%`（固定高度，与一直正常的 `.atp__panel height:62%` 同形）；**更多 tab / 歌单描述**保留「贴合内容」意图，body 改 `flex: 0 1 auto; min-height: 0` 并给固定 chrome 加 `flex-shrink: 0`。**Android 模拟器实测确证**：viewport 高 936px（960 屏 − 24 状态栏），面板顶边 5 列一致落在 y≈305 ⇒ 高 655px = 70%×936，与 `height:70%` 逐项精确吻合（修复前是 ~60px 标题条）。闸门 `bottom-sheet-height.test.ts`（8 例）锁「panel 无 height 且 body 零 basis」这一组合，反向验证过（还原 bug 形态即红）。**教训**：`max-height` 只给上限不给高度，配 zero-basis flex 子项必然塌陷——底部面板要么给 panel `height`，要么让 body 保留 `auto` basis
 
 ## 代码审计发现（2026-08-14 · P0/P1/P2 已全部修完）
 
@@ -238,11 +239,21 @@
 
 ### 2026-08-26 Android 实测途中新发现，未修
 
-- [ ] **本地歌曲的封面拿不到（404）** —— songs 62、63 在 DB 里都有 `cover_url`，但 `GET` 那个地址返回
-  `404 {"error":"封面不存在"}`。实测时因此只能改用远程歌（id 5，833×833 PNG）验证封面渲染。
-  **未查**：不知道是扫描时没落盘、路径解析不对，还是文件被清理过。可能与父仓库 AGENTS.md 记的
-  「Bundle 模式 Android：covers 目录路径必须相对 `DBPath` 而非 CWD 解析」是同族问题，但那条已修，
-  且这里是常规服务端模式。先查后端 `covers` 目录里到底有没有那两个文件
+- [x] ~~**本地歌曲的封面拿不到（404）**~~ —— **查明是预期行为，不是缺陷。本条曾被我误记为 bug，特此留档。**
+  当初的观察是准确的（songs 62/63 的 `cover_url` 端点确实返回 `404 {"error":"封面不存在"}`），
+  **错的是我给这个观察加的解释** —— 我没查后端就写下「不知道是扫描时没落盘还是路径解析不对」，
+  暗示 DB 里有封面而文件丢了。实际查了 DB 与后端代码后：
+  - `sqlite3 data/songloft.db` 显示这两首的 `cover_path` 与 `cover_url` **都是空字符串** ——
+    它们真的没有封面（是 ffmpeg 生成的测试音频与一首无内嵌封面的 mp3），后端返回 404 完全正确。
+  - API 之所以仍给出 `cover_url` 端点，是 `Song.CoverURLPath()`（`internal/models/models.go:183`）
+    的**第二个放行分支**：`Type == local && HasCoverProvider()` 时即使无封面也放行。注释写明了意图
+    ——「有封面插件时才放行，避免没装插件的用户对全库无封面歌发出注定 404 的请求」。
+  - 这是**按需刮削**：客户端请求 → 后端 `coverSearcher.SearchCover()` 问插件 → 搜到就落库并返图，
+    搜不到就 404、客户端显示占位图。对一首名为 `test-track-2` 的合成音频搜不到是正常结果。
+  - 反证可确认前提成立：DB 两字段皆空 + 歌是 local + API 确实给了端点 ⇒ `HasCoverProvider()` 必为 true
+    （库里装了「歌词搜索」等插件）。
+  - **教训**：subagent 报回来的是一个准确的*观察*，而我顺手补的*因果*没有证据。观察与解释要分开记，
+    否则下一个人会拿着错误的因果去查一个不存在的问题。
 
 - [ ] **`FullPlayerPage` 给 Swiper 传 `itemHeight='auto'`，被插值成字面量 `"autopx"`** ——
   `@lynx-js/lynx-ui-swiper` 内部做 `height: \`${itemHeight}px\``，于是多处内联样式里出现无效值

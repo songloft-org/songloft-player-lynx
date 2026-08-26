@@ -41,8 +41,17 @@
   background-color: var(--paper);
 }
 
+/*
+ * `flex-shrink: 0` on both pieces of fixed chrome (this and `__header`): once the
+ * list keeps `flex-basis: auto`, an over-cap panel distributes its overflow across
+ * every shrinkable child weighted by basis — a small basis just gets a smaller
+ * share, not no share. The handle and title would be squeezed and then clipped
+ * (every Lynx element carries `overflow: clip`), which is exactly the failure the
+ * song dialogs hit. The scrolling list must be the only child that absorbs it.
+ */
 .more-tabs__handle-wrap {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   padding: var(--space-3) 0;
@@ -56,6 +65,7 @@
 }
 
 .more-tabs__header {
+  flex-shrink: 0;
   padding: 0 var(--space-4) var(--space-2);
 }
 
@@ -66,8 +76,25 @@
   line-height: var(--font-lg);
 }
 
+/*
+ * NOT `flex: 1`. That is `flex-basis: 0`, and it made this sheet render on Android
+ * as **nothing but its header** (user-reported with screenshots).
+ *
+ * `.more-tabs__panel` is absolutely positioned with `left`/`right`/`bottom` but no
+ * `top` and no `height`, so it is sized shrink-to-fit — by its content. A
+ * `flex-basis: 0` child contributes **zero** to that content height, so the panel
+ * collapsed to the handle + header and the 70% ceiling was never approached.
+ *
+ * Keeping the basis at `auto` (the default) is what makes the panel hug its rows,
+ * which is this sheet's intent — at most eight rows, well under the cap, so the
+ * common case never depends on percentage clamping working on a native overlay
+ * (the thing that proved unreliable in the song dialogs). `min-height: 0` lets the
+ * list shrink below its content when the cap *does* bite, so the scroll-view
+ * scrolls instead of pushing the panel past its limit.
+ */
 .more-tabs__list {
-  flex: 1;
+  flex: 0 1 auto;
+  min-height: 0;
 }
 
 .more-tabs__item {
