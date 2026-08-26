@@ -14,6 +14,11 @@ songloft-player/
 .claude/settings.local.json
 .claude/projects/
 
+# CodeGraph index (machine-local, ~46 MB, rebuilt from source by the indexer).
+# Committing it would put a per-machine binary artifact in history and conflict on
+# every pull. The tooling only needs the directory to exist locally.
+.codegraph/
+
 # Logs / OS / editor
 *.log
 .DS_Store
@@ -50,7 +55,7 @@ ios/DerivedData/
 ios/SongloftLynx/main.lynx.bundle
 .pnpm-store/
 bun.lock
--e 
+
 # Android signing (local only)
 android/key.properties
 *.jks
