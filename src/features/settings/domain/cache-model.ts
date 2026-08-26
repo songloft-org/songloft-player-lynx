@@ -120,4 +120,17 @@ export const parseDirValidateResponse = dirValidateResponseParsers.parse
 
 export const TRANSCODE_FORMATS = ['', 'mp3', 'm4a', 'ogg', 'flac', 'wav'] as const
 
-export const TRANSCODE_QUALITIES = ['128', '192', '320'] as const
+// '' = the backend's top quality (VBR `-q:a 0` for mp3/ogg, 256k for m4a) —
+// mirrors the Flutter build's settingsCacheTranscodeQualityHighest entry. The
+// backend's ParseBitrate normalizes any other value back to '' (highest).
+export const TRANSCODE_QUALITIES = ['', '128', '192', '320'] as const
+
+/**
+ * Formats where the transcode quality (bitrate) actually applies. The backend's
+ * ffmpegArgs ignores the bitrate for the lossless targets (flac/wav), and ''
+ * means "no transcode at all" — so a quality selector is only meaningful for
+ * the lossy trio.
+ */
+export function isLossyTranscodeFormat(format: string): boolean {
+  return format === 'mp3' || format === 'm4a' || format === 'ogg'
+}

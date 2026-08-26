@@ -15,7 +15,11 @@ import {
   useUpdateCacheConfigMutation,
   useValidateCacheDirMutation,
 } from '../data/cache-mutations.js'
-import { TRANSCODE_FORMATS, TRANSCODE_QUALITIES } from '../domain/cache-model.js'
+import {
+  isLossyTranscodeFormat,
+  TRANSCODE_FORMATS,
+  TRANSCODE_QUALITIES,
+} from '../domain/cache-model.js'
 import type { DirValidateResponse } from '../domain/cache-model.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
@@ -395,7 +399,9 @@ export function CacheManagePage() {
           />
         </view>
 
-        {/* Transcode format selector */}
+        {/* Transcode format selector. The '' row is "disable transcoding",
+            not a format — its subtitle says so; flac/wav carry a lossless note
+            because their quality selector disappears below. */}
         <view className='cache-manage__field cache-manage__field--rows'>
           <text className='cache-manage__label'>
             {t('cacheManage.transcodeFormat')}
@@ -404,6 +410,11 @@ export function CacheManagePage() {
             <SettingsRow
               key={fmt || '__none'}
               title={fmt === '' ? t('cacheManage.noTranscode') : fmt.toUpperCase()}
+              subtitle={
+                fmt === ''
+                  ? t('cacheManage.noTranscodeHint')
+                  : !isLossyTranscodeFormat(fmt) ? t('cacheManage.losslessHint') : undefined
+              }
               selected={effectiveFormat === fmt}
               trailingIcon={effectiveFormat === fmt ? 'check' : undefined}
               onTap={() => setTranscodeFormat(fmt)}
@@ -412,22 +423,30 @@ export function CacheManagePage() {
           ))}
         </view>
 
-        {/* Transcode quality selector */}
-        <view className='cache-manage__field cache-manage__field--rows'>
-          <text className='cache-manage__label'>
-            {t('cacheManage.transcodeQuality')}
-          </text>
-          {TRANSCODE_QUALITIES.map((q) => (
-            <SettingsRow
-              key={q}
-              title={`${q} kbps`}
-              selected={effectiveQuality === q}
-              trailingIcon={effectiveQuality === q ? 'check' : undefined}
-              onTap={() => setTranscodeQuality(q)}
-              testId={`quality-${q}`}
-            />
-          ))}
-        </view>
+        {/* Transcode quality selector — only for lossy formats: the backend's
+            ffmpegArgs ignores the bitrate for flac/wav, and with '' (no
+            transcode) there is nothing to rate. The stored quality is kept
+            as-is while hidden, so switching back to a lossy format restores
+            the user's earlier pick. */}
+        {isLossyTranscodeFormat(effectiveFormat)
+          ? (
+            <view className='cache-manage__field cache-manage__field--rows'>
+              <text className='cache-manage__label'>
+                {t('cacheManage.transcodeQuality')}
+              </text>
+              {TRANSCODE_QUALITIES.map((q) => (
+                <SettingsRow
+                  key={q || '__highest'}
+                  title={q === '' ? t('cacheManage.transcodeQualityHighest') : `${q} kbps`}
+                  selected={effectiveQuality === q}
+                  trailingIcon={effectiveQuality === q ? 'check' : undefined}
+                  onTap={() => setTranscodeQuality(q)}
+                  testId={`quality-${q || 'highest'}`}
+                />
+              ))}
+            </view>
+          )
+          : null}
 
         {/* Save button */}
         <view

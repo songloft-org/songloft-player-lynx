@@ -333,7 +333,12 @@ export const en = {
     maxSizeLabel: 'Max Cache Size',
     transcodeFormat: 'Transcode Format',
     noTranscode: 'No transcode',
+    // '' is "disable transcoding", not a format; '' quality = backend VBR top.
+    noTranscodeHint: 'Cache files in their original format',
     transcodeQuality: 'Transcode Quality',
+    transcodeQualityHighest: 'Highest',
+    // flac/wav: the backend's transcode ignores the bitrate.
+    losslessHint: 'Lossless; bitrate does not apply',
     saveConfig: 'Save Configuration',
     validationSection: 'Validation Result',
     dirValid: 'Directory is valid',
@@ -1180,7 +1185,12 @@ export const zh: TranslationTree = {
     maxSizeLabel: '最大缓存大小',
     transcodeFormat: '转码格式',
     noTranscode: '不转码',
+    // 空串是「关闭转码」而非一种格式；空码率 = 后端 VBR 最高质量。
+    noTranscodeHint: '按原格式缓存，不做转换',
     transcodeQuality: '转码质量',
+    transcodeQualityHighest: '最高',
+    // flac/wav 无损：后端转码忽略码率。
+    losslessHint: '无损，码率不适用',
     saveConfig: '保存配置',
     validationSection: '验证结果',
     dirValid: '目录有效',

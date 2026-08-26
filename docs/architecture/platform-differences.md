@@ -150,6 +150,7 @@ duration: e.durationMs > 0 ? e.durationMs : s.duration,
 | **`scroll-into-view` 是 no-op** | web-elements 只认命令式 `__scrollIntoView`，故歌词自动滚动在 Web 上不工作 |
 | **`<list>` 的 px 形式 `lower-threshold` 无效** | `x-list` 只注册了 `lower-threshold-item-count`；`scroll-view` 上的 px 形式**是**有效的（`x-scroll-view` 注册了 `lower-threshold`） |
 | **无 secure enclave** | 见「存储差异」 |
+| **无「清空浏览器缓存」入口（刻意不做）** | Flutter 版 Web 端有该功能（清 Cache Storage + 注销 Service Worker + 对入口 `fetch(cache:'reload')` 强刷 HTTP 缓存），动机是 Flutter Web 默认 PWA 化后旧 `main.dart.js` 撞满 max-age。本仓库三个前提全不成立：宿主零 `caches.` 调用、无 SW 注册（后端 embed.go 注释明说）、两种部署的 app shell 一律 `Cache-Control: no-cache` + ETag 304（仅 canvaskit/fonts 长缓存）——「更新后页面异常」在部署层已根治，普通刷新即最新，该按钮能解决的问题集合为空。2026-08-26 评估，记录见 [Web 部署指南](../guides/web-deployment.md) |
 | **虚拟列表内放不了弹出层** | `x-list` 带 `contain: layout`（成为 fixed 后代的包含块）+ `::part(content)` 是 `overflow: hidden scroll`（必然裁剪）。所以歌曲行的菜单只能挂在全局，见 [AGENTS.md §4](../../AGENTS.md) |
 
 ---

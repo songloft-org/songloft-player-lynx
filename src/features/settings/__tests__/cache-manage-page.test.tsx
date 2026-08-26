@@ -180,6 +180,33 @@ test('renders transcode quality selector', async () => {
   expect(queryByTestId('quality-320')).toBeInTheDocument()
 })
 
+test('quality selector offers the "highest" (empty) notch alongside the bitrates', async () => {
+  const { queryByTestId } = await renderPage()
+  // '' is the backend's VBR top quality — without this notch a stored '' config
+  // would leave every row unchecked.
+  expect(queryByTestId('quality-highest')).toBeInTheDocument()
+})
+
+test('hides the quality selector when no transcode is selected', async () => {
+  const { queryByTestId } = await renderPage()
+  // mockConfigData.transcodeFormat = 'mp3' → the quality rows render initially.
+  expect(queryByTestId('quality-192')).toBeInTheDocument()
+  await act(async () => {
+    fireEvent.tap(queryByTestId('format-none')!)
+  })
+  expect(queryByTestId('quality-192')).not.toBeInTheDocument()
+  expect(queryByTestId('quality-highest')).not.toBeInTheDocument()
+})
+
+test('hides the quality selector for lossless formats (backend ignores bitrate)', async () => {
+  const { queryByTestId } = await renderPage()
+  await act(async () => {
+    fireEvent.tap(queryByTestId('format-flac')!)
+  })
+  expect(queryByTestId('quality-192')).not.toBeInTheDocument()
+  expect(queryByTestId('quality-highest')).not.toBeInTheDocument()
+})
+
 test('the save button calls updateConfig mutation keeping the slider-owned cap', async () => {
   const { queryByTestId } = await renderPage()
   await act(async () => {
