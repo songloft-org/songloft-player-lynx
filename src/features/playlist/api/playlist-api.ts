@@ -49,6 +49,7 @@ export interface CreatePlaylistParams {
 export interface UpdatePlaylistParams {
   name?: string
   description?: string
+  coverSongId?: number
 }
 
 function putStr(
@@ -111,8 +112,11 @@ export function buildCreatePlaylistBody(params: CreatePlaylistParams): Record<st
   return body
 }
 
-export function buildUpdatePlaylistBody(params: UpdatePlaylistParams): Record<string, string> {
-  const body: Record<string, string> = {}
+export function buildUpdatePlaylistBody(params: UpdatePlaylistParams): Record<string, string | number> {
+  const body: Record<string, string | number> = {}
+  if (params.coverSongId != null) {
+    body.cover_song_id = params.coverSongId
+  }
   if (params.name != null && params.name !== '') body.name = params.name
   if (params.description != null) body.description = params.description
   return body

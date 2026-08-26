@@ -303,6 +303,9 @@ export function PlaylistDetailPage() {
                         label: isPinned ? t('playlist.unpinPlaylist') : t('playlist.pinPlaylist'),
                         icon: 'pin' as const,
                       },
+                      ...(isBuiltIn
+                        ? [{ key: 'editCover', label: t('playlist.editCoverPageTitle'), icon: 'brush' as const }]
+                        : []),
                       ...(!isBuiltIn && canSort
                         ? [{ key: 'sort', label: t('playlist.sortSongs'), icon: 'sort' as const }]
                         : []),
@@ -325,6 +328,7 @@ export function PlaylistDetailPage() {
                     ]}
                     onSelect={(key) => {
                       if (key === 'pin') togglePin()
+                      else if (key === 'editCover') void navigate({ to: '/playlists/$id/edit', params: { id: String(id) }, search: { coverOnly: true } })
                       else if (key === 'sort') enterSortMode()
                       else if (key === 'edit') onStartEdit()
                       else if (key === 'visibility') toggleVisibility()
@@ -343,7 +347,7 @@ export function PlaylistDetailPage() {
       <view className='playlist-detail__hero'>
         <view className='playlist-detail__cover-wrapper'>
           {cover
-            ? <image className='playlist-detail__cover' src={cover} />
+            ? <image className='playlist-detail__cover' src={cover} mode='aspectFill' />
             : (
               <view className='playlist-detail__cover playlist-detail__cover--empty'>
                 <Icon name='music' size={40} color={ICON_COLORS.contentMuted} />

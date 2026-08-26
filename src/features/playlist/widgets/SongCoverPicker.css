@@ -1,0 +1,119 @@
+.song-cover-picker {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.song-cover-picker__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--backdrop);
+}
+
+.song-cover-picker__panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 70%;
+  display: flex;
+  flex-direction: column;
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  background-color: var(--paper);
+}
+
+.song-cover-picker__header {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-4);
+  border-bottom-width: 1px;
+  border-bottom-color: var(--line);
+}
+
+.song-cover-picker__title {
+  flex: 1;
+  color: var(--content);
+  font-size: var(--font-md);
+  font-weight: bold;
+  line-height: var(--font-lg);
+}
+
+.song-cover-picker__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+}
+
+.song-cover-picker__scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.song-cover-picker__grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  gap: var(--space-3);
+}
+
+.song-cover-picker__item {
+  width: 30%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.song-cover-picker__cover {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  background-color: var(--neutral-faint);
+}
+
+.song-cover-picker__song-title {
+  font-size: var(--font-2xs);
+  color: var(--content-2);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 100%;
+  text-align: center;
+}
+
+.song-cover-picker__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.song-cover-picker__empty-text {
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+}
+
+.song-cover-picker__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.song-cover-picker__loading-text {
+  font-size: var(--font-sm);
+  color: var(--content-muted);
+}

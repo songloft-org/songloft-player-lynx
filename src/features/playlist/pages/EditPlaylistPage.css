@@ -46,6 +46,12 @@
   gap: var(--space-3);
 }
 
+.edit-playlist__cover-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 .edit-playlist__cover {
   width: 96px;
   height: 96px;

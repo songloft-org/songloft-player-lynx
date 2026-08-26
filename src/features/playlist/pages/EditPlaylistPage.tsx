@@ -1,6 +1,6 @@
 import { useEffect, useState } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
-import { useParams } from '@tanstack/react-router'
+import { useParams, useSearch } from '@tanstack/react-router'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
@@ -10,36 +10,30 @@ import { canUploadCover, uploadPlaylistCover } from '../domain/cover-upload.js'
 import { usePlaylistQuery } from '../data/playlist-query.js'
 import { useUpdatePlaylistMutation } from '../data/playlist-mutations.js'
 import { PlaylistFormFields } from '../widgets/PlaylistFormFields.js'
+import { SongCoverPicker } from '../widgets/SongCoverPicker.js'
 import './EditPlaylistPage.css'
 
 /**
  * `/playlists/$id/edit` — the edit form for one playlist.
  *
- * A page, not the inline form the detail page used to swap into its header:
- * the header swap put two inputs at the very top of the screen (keyboard cover
- * territory) and cost the detail page a fourth render mode. Here the form gets
- * a scroll-view of its own, and cover management moved in with it from the
- * detail hero's `+` corner badge — matching the Flutter edit dialog's scope
- * (cover + name + description).
- *
- * Content only: the wide-screen view rail beside it is rendered by
- * `LibraryLayout`, this route's parent — same as `CreatePlaylistPage`.
+ * Supports `?coverOnly=true` search param for built-in playlists (Favorites)
+ * that only allow cover editing — name and description fields are hidden.
  */
 export function EditPlaylistPage() {
   const { t } = useTranslation()
   const params = useParams({ strict: false }) as { id?: string }
+  const search = useSearch({ strict: false }) as { coverOnly?: boolean }
   const id = Number(params.id ?? 0) || 0
+  const coverOnly = search.coverOnly === true
 
   const detail = usePlaylistQuery(id)
   const playlist = detail.data
 
   const [name, setName] = useState('')
   const [desc, setDesc] = useState('')
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [selectedCover, setSelectedCover] = useState<{ songId: number; url: string } | null>(null)
 
-  /*
-   * Seed the inputs once the playlist arrives (and only from `undefined` data,
-   * not from a refetch — otherwise typing would be overwritten mid-flight).
-   */
   useEffect(() => {
     if (!playlist) return
     setName((prev) => (prev === '' ? playlist.name : prev))
@@ -49,21 +43,46 @@ export function EditPlaylistPage() {
   const updateMutation = useUpdatePlaylistMutation(id)
 
   const onSave = () => {
-    const trimmed = name.trim()
-    if (!trimmed || updateMutation.isPending) return
-    updateMutation.mutate(
-      { name: trimmed, description: desc.trim() },
-      {
-        onSuccess: () => {
-          toast.success(t('playlist.save'))
-          performRouteBack()
+    if (updateMutation.isPending) return
+    if (selectedCover) {
+      updateMutation.mutate(
+        { coverSongId: selectedCover.songId, ...(!coverOnly && { name: name.trim(), description: desc.trim() }) },
+        {
+          onSuccess: () => {
+            toast.success(t('playlist.save'))
+            performRouteBack()
+          },
+          onError: (e) => toast.error(String(e instanceof Error ? e.message : e)),
         },
-        onError: (e) => toast.error(String(e instanceof Error ? e.message : e)),
-      },
-    )
+      )
+    } else if (!coverOnly) {
+      const trimmed = name.trim()
+      if (!trimmed) return
+      updateMutation.mutate(
+        { name: trimmed, description: desc.trim() },
+        {
+          onSuccess: () => {
+            toast.success(t('playlist.save'))
+            performRouteBack()
+          },
+          onError: (e) => toast.error(String(e instanceof Error ? e.message : e)),
+        },
+      )
+    }
   }
 
-  const cover = playlist?.coverUrl ? buildCoverUrl(playlist.coverUrl, playlist.updatedAt) : ''
+  const onPickFromSongs = (songId: number, coverUrl: string) => {
+    setSelectedCover({ songId, url: coverUrl })
+    setPickerOpen(false)
+  }
+
+  const displayCover = selectedCover
+    ? buildCoverUrl(selectedCover.url)
+    : playlist?.coverUrl
+      ? buildCoverUrl(playlist.coverUrl, playlist.updatedAt)
+      : ''
+
+  const pageTitle = coverOnly ? t('playlist.editCoverPageTitle') : t('playlist.editPageTitle')
 
   return (
     <view className='edit-playlist'>
@@ -71,7 +90,7 @@ export function EditPlaylistPage() {
         <view className='edit-playlist__back' bindtap={() => performRouteBack()}>
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
-        <text className='edit-playlist__title'>{t('playlist.editPageTitle')}</text>
+        <text className='edit-playlist__title'>{pageTitle}</text>
       </view>
 
       <scroll-view className='edit-playlist__form' scroll-y>
@@ -84,35 +103,49 @@ export function EditPlaylistPage() {
                 <view>
                   <text className='playlist-form__label'>{t('playlist.coverLabel')}</text>
                   <view className='edit-playlist__cover-row'>
-                    {cover
-                      ? <image className='edit-playlist__cover' src={cover} />
+                    {displayCover
+                      ? <image className='edit-playlist__cover' src={displayCover} mode='aspectFill' />
                       : (
                         <view className='edit-playlist__cover edit-playlist__cover--empty'>
                           <Icon name='music' size={32} color={ICON_COLORS.contentMuted} />
                         </view>
                       )}
-                    {canUploadCover()
-                      ? (
-                        <view
-                          className='edit-playlist__upload-btn'
-                          bindtap={() => {
-                            void uploadPlaylistCover(id).then(() => void detail.refetch())
-                          }}
-                          data-testid='edit-playlist-upload-cover'
-                        >
-                          <Icon name='plus' size={16} color={ICON_COLORS.content} />
-                          <text className='edit-playlist__upload-btn-text'>{t('playlist.uploadCover')}</text>
-                        </view>
-                      )
-                      : null}
+                    <view className='edit-playlist__cover-actions'>
+                      {canUploadCover()
+                        ? (
+                          <view
+                            className='edit-playlist__upload-btn'
+                            bindtap={() => {
+                              void uploadPlaylistCover(id).then(() => void detail.refetch())
+                            }}
+                            data-testid='edit-playlist-upload-cover'
+                          >
+                            <Icon name='plus' size={16} color={ICON_COLORS.content} />
+                            <text className='edit-playlist__upload-btn-text'>{t('playlist.uploadCover')}</text>
+                          </view>
+                        )
+                        : null}
+                      <view
+                        className='edit-playlist__upload-btn'
+                        bindtap={() => setPickerOpen(true)}
+                        data-testid='edit-playlist-pick-from-songs'
+                      >
+                        <Icon name='music' size={16} color={ICON_COLORS.content} />
+                        <text className='edit-playlist__upload-btn-text'>{t('playlist.pickFromSongs')}</text>
+                      </view>
+                    </view>
                   </view>
 
-                  <PlaylistFormFields
-                    name={name}
-                    onNameChange={setName}
-                    description={desc}
-                    onDescriptionChange={setDesc}
-                  />
+                  {!coverOnly
+                    ? (
+                      <PlaylistFormFields
+                        name={name}
+                        onNameChange={setName}
+                        description={desc}
+                        onDescriptionChange={setDesc}
+                      />
+                    )
+                    : null}
 
                   <view className='edit-playlist__btn' bindtap={onSave} data-testid='edit-playlist-save'>
                     <text className='edit-playlist__btn-text'>
@@ -123,6 +156,16 @@ export function EditPlaylistPage() {
               )
               : null}
       </scroll-view>
+
+      {pickerOpen
+        ? (
+          <SongCoverPicker
+            playlistId={id}
+            onSelect={onPickFromSongs}
+            onClose={() => setPickerOpen(false)}
+          />
+        )
+        : null}
     </view>
   )
 }

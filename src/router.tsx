@@ -388,6 +388,8 @@ const createPlaylistRoute = createRoute({
 const editPlaylistRoute = createRoute({
   getParentRoute: () => libraryLayoutRoute,
   path: '/playlists/$id/edit',
+  validateSearch: (search: Record<string, unknown>): { coverOnly?: boolean } =>
+    search.coverOnly === true ? { coverOnly: true } : {},
   component: EditPlaylistPage,
 })
 
