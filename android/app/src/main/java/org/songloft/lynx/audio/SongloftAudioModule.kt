@@ -87,7 +87,19 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
 
     @LynxMethod
     fun setVolume(volume: Double) {
-        SongloftAudioEngine.runOnMain { SongloftAudioEngine.setVolume(volume.toFloat()) }
+        val ctx = androidContext()
+        SongloftAudioEngine.runOnMain { SongloftAudioEngine.setVolume(volume.toFloat(), ctx) }
+    }
+
+    @LynxMethod
+    fun getVolume() {
+        val ctx = androidContext()
+        SongloftAudioEngine.runOnMain {
+            val vol = SongloftAudioEngine.getVolume(ctx)
+            val params = com.lynx.react.bridge.JavaOnlyArray()
+            params.pushMap(toJavaMap(mapOf("volume" to vol.toDouble())))
+            lynxContext().sendGlobalEvent(SongloftAudioEngine.EVENT_VOLUME_CHANGED, params)
+        }
     }
 
     @LynxMethod
@@ -124,11 +136,16 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
     fun setShuffle(on: Boolean) {
     }
 
-    // -- media notification favorite button --
+    // -- media notification --
 
     @LynxMethod
     fun setFavorite(isFavorite: Boolean) {
         SongloftAudioEngine.runOnMain { SongloftAudioEngine.setFavorite(isFavorite) }
+    }
+
+    @LynxMethod
+    fun updateNotificationLyric(lyric: String?) {
+        SongloftAudioEngine.runOnMain { SongloftAudioEngine.updateNotificationLyric(lyric) }
     }
 
     // -- equalizer --

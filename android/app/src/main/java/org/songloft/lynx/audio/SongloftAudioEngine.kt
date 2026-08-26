@@ -1,11 +1,15 @@
 package org.songloft.lynx.audio
 
 import android.content.Context
+import android.media.AudioManager
 import android.media.audiofx.Equalizer
+import android.database.ContentObserver
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.net.Uri
+import android.provider.Settings
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -309,6 +313,80 @@ object SongloftAudioEngine {
         return groups.any { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
     }
 
+    // -- volume (system media stream) ------------------------------------------
+
+    private var appContext: Context? = null
+    private var audioManager: AudioManager? = null
+    private var volumeObserver: ContentObserver? = null
+
+    /**
+     * Emit a `volumeChanged` event to JS with the current system media volume
+     * (normalized 0–100 to match the store's scale).
+     */
+    const val EVENT_VOLUME_CHANGED = "SongloftAudio.volumeChanged"
+
+    private fun getSystemVolume(): Int {
+        val am = audioManager ?: return 50
+        val current = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        if (max <= 0) return 50
+        return (current * 100f / max).toInt().coerceIn(0, 100)
+    }
+
+    fun setSystemVolume(volume: Int, context: Context) {
+        val am = audioManager ?: (context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager) ?: return
+        val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val target = (volume * max / 100f).toInt().coerceIn(0, max)
+        am.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
+    }
+
+    fun getVolume(context: Context): Int {
+        if (audioManager == null) {
+            audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        }
+        return getSystemVolume()
+    }
+
+    private fun startVolumeObserver(context: Context) {
+        val ctx = context.applicationContext
+        appContext = ctx
+        if (audioManager == null) {
+            audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        }
+        if (volumeObserver != null) return
+        val observer = object : ContentObserver(mainHandler) {
+            override fun onChange(selfChange: Boolean) {
+                val vol = getSystemVolume()
+                sink?.emit(EVENT_VOLUME_CHANGED, mapOf("volume" to vol.toDouble()))
+            }
+        }
+        ctx.contentResolver.registerContentObserver(
+            Settings.System.CONTENT_URI, true, observer,
+        )
+        volumeObserver = observer
+    }
+
+    private fun stopVolumeObserver() {
+        val observer = volumeObserver ?: return
+        appContext?.contentResolver?.unregisterContentObserver(observer)
+        volumeObserver = null
+    }
+
+    // -- audio attributes for audio focus + becoming-noisy ---------------------
+
+    private val musicAudioAttributes = AudioAttributes.Builder()
+        .setUsage(C.USAGE_MEDIA)
+        .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+        .build()
+
+    private fun buildPlayer(context: Context): ExoPlayer {
+        return ExoPlayer.Builder(context.applicationContext)
+            .setAudioAttributes(musicAudioAttributes, /* handleAudioFocus= */ true)
+            .setHandleAudioBecomingNoisy(true)
+            .setWakeMode(C.WAKE_MODE_LOCAL)
+            .build()
+    }
+
     /** Run [block] on the main looper (immediately if already there). */
     fun runOnMain(block: () -> Unit) {
         if (Looper.myLooper() == Looper.getMainLooper()) block()
@@ -333,7 +411,7 @@ object SongloftAudioEngine {
             mediaSessionInternal?.release()
             mediaSessionInternal = buildMediaSession(service, existingPlayer)
         } else {
-            val created = ExoPlayer.Builder(service.applicationContext).build()
+            val created = buildPlayer(service)
             created.addListener(playerListener)
             player = created
             // A video screen may already be up (it can open before the service
@@ -342,6 +420,7 @@ object SongloftAudioEngine {
             mediaSessionInternal = buildMediaSession(service, created)
             attachEqualizer(created.audioSessionId)
         }
+        startVolumeObserver(service)
         sessionBoundToService = true
     }
 
@@ -356,13 +435,13 @@ object SongloftAudioEngine {
      */
     fun ensurePlayer(context: Context): ExoPlayer {
         player?.let { return it }
-        val appContext = context.applicationContext
-        val created = ExoPlayer.Builder(appContext).build()
+        val created = buildPlayer(context)
         created.addListener(playerListener)
         player = created
         videoOutput?.let { created.setVideoSurfaceView(it) }
-        mediaSessionInternal = buildMediaSession(appContext, created)
+        mediaSessionInternal = buildMediaSession(context.applicationContext, created)
         attachEqualizer(created.audioSessionId)
+        startVolumeObserver(context)
         return created
     }
 
@@ -400,6 +479,44 @@ object SongloftAudioEngine {
             }
             metadataByUrl[item.url] = builder.build()
         }
+        refreshCurrentItemMetadata()
+    }
+
+    /**
+     * If the player already has a loaded item whose URL matches the metadata
+     * map, update its metadata in-place so the notification refreshes without
+     * waiting for the next load().
+     */
+    private fun refreshCurrentItemMetadata() {
+        val p = player ?: return
+        val currentItem = p.currentMediaItem ?: return
+        val url = currentItem.localConfiguration?.uri?.toString() ?: return
+        val meta = metadataByUrl[url] ?: return
+        val merged = meta.buildUpon()
+            .setSubtitle(currentLyricLine)
+            .build()
+        val newItem = currentItem.buildUpon().setMediaMetadata(merged).build()
+        p.replaceMediaItem(p.currentMediaItemIndex, newItem)
+    }
+
+    /** Current lyric line shown in the notification subtitle. */
+    @Volatile
+    private var currentLyricLine: String? = null
+
+    /**
+     * Update the notification to show the current lyric line as the subtitle.
+     * Called from JS whenever the active lyric line changes.
+     */
+    fun updateNotificationLyric(lyric: String?) {
+        currentLyricLine = lyric
+        val p = player ?: return
+        val currentItem = p.currentMediaItem ?: return
+        val existingMeta = currentItem.mediaMetadata
+        val newMeta = existingMeta.buildUpon()
+            .setSubtitle(lyric)
+            .build()
+        val newItem = currentItem.buildUpon().setMediaMetadata(newMeta).build()
+        p.replaceMediaItem(p.currentMediaItemIndex, newItem)
     }
 
     fun load(context: Context, url: String, hls: Boolean, headers: Map<String, String>?) {
@@ -480,8 +597,12 @@ object SongloftAudioEngine {
         emitProgress()
     }
 
-    fun setVolume(volume: Float) {
-        player?.volume = volume.coerceIn(0f, 1f)
+    fun setVolume(volume: Float, context: Context) {
+        val am = audioManager ?: (context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager) ?: return
+        audioManager = am
+        val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val target = (volume * max).toInt().coerceIn(0, max)
+        am.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
     }
 
     fun setSpeed(rate: Float) {
@@ -492,11 +613,14 @@ object SongloftAudioEngine {
     fun release() {
         stopProgress()
         releaseEqualizer()
+        stopVolumeObserver()
         mediaSessionInternal?.release()
         mediaSessionInternal = null
         player?.removeListener(playerListener)
         player?.release()
         player = null
+        audioManager = null
+        appContext = null
         sessionBoundToService = false
     }
 

@@ -245,6 +245,10 @@ export class WebSongloftAudio implements SongloftAudio {
     // No real media notification in Web — the favorite icon is handled by the UI.
   }
 
+  async updateNotificationLyric(_lyric: string | null): Promise<void> {}
+
+  async getVolume(): Promise<void> {}
+
   // ── equalizer (Web Audio API BiquadFilterNode chain) ──
 
   async setEqualizerEnabled(on: boolean): Promise<void> {

@@ -62,6 +62,7 @@ export type AudioEvent =
   | { type: 'queueIndexChanged'; index: number }
   | { type: 'error'; code: string; message: string }
   | { type: 'remoteCommand'; command: RemoteCommand }
+  | { type: 'volumeChanged'; volume: number }
 
 export type AudioEventType = AudioEvent['type']
 
@@ -94,9 +95,13 @@ export interface SongloftAudio {
   setRepeatMode(mode: RepeatMode): Promise<void>
   setShuffle(on: boolean): Promise<void>
 
-  // ── media notification favorite button (native-only; mock is a no-op) ──
+  // ── media notification (native-only; mock is a no-op) ──
   /** Push the current track's favorite state so the notification icon matches. */
   setFavorite(isFavorite: boolean): Promise<void>
+  /** Push current lyric line to show in the media notification subtitle. */
+  updateNotificationLyric(lyric: string | null): Promise<void>
+  /** Request the native side to emit a volumeChanged event with current system volume. */
+  getVolume(): Promise<void>
 
   // ── equalizer (placeholder; real DSP lands with native audio) ──
   setEqualizerEnabled(on: boolean): Promise<void>

@@ -45,6 +45,7 @@ final class SongloftAudioEngine {
   static let eventProgress = "SongloftAudio.progress"
   static let eventError = "SongloftAudio.error"
   static let eventRemoteCommand = "SongloftAudio.remoteCommand"
+  static let eventVolumeChanged = "SongloftAudio.volumeChanged"
 
   /// `remoteCommand` payload values — byte-for-byte the TS `RemoteCommand` union.
   static let remoteCommandNext = "next"
@@ -83,6 +84,8 @@ final class SongloftAudioEngine {
   private var speed: Float = 1.0
   private var isFavorite = false
   private var remoteCommandsInstalled = false
+  private var volumeObservation: NSKeyValueObservation?
+  private var currentLyricLine: String?
 
   /// 10-band parametric EQ, attached to each AVPlayerItem via MTAudioProcessingTap.
   let equalizer = AudioEqualizer()
@@ -231,6 +234,27 @@ final class SongloftAudioEngine {
     like.localizedTitle = value ? "取消收藏" : "收藏"
   }
 
+  func updateNotificationLyric(_ lyric: String?) {
+    currentLyricLine = lyric
+    updateNowPlaying()
+  }
+
+  func getVolume() {
+    let vol = AVAudioSession.sharedInstance().outputVolume
+    let volume = Int(round(Double(vol) * 100))
+    emit(Self.eventVolumeChanged, ["volume": Double(volume)])
+  }
+
+  func startVolumeObserver() {
+    guard volumeObservation == nil else { return }
+    let session = AVAudioSession.sharedInstance()
+    volumeObservation = session.observe(\.outputVolume, options: [.new]) { [weak self] _, change in
+      guard let self, let newValue = change.newValue else { return }
+      let volume = Int(round(Double(newValue) * 100))
+      self.emit(Self.eventVolumeChanged, ["volume": Double(volume)])
+    }
+  }
+
   /// Full teardown — called by the module's `dispose()`.
   func release() {
     if let player, let timeObserver {
@@ -239,6 +263,7 @@ final class SongloftAudioEngine {
     timeObserver = nil
     itemStatusObservation = nil
     timeControlObservation = nil
+    volumeObservation = nil
     if let endObserver {
       NotificationCenter.default.removeObserver(endObserver)
     }
@@ -321,6 +346,7 @@ final class SongloftAudioEngine {
     let session = AVAudioSession.sharedInstance()
     try? session.setCategory(.playback, mode: .default)
     try? session.setActive(true)
+    startVolumeObserver()
   }
 
   private func observe(item: AVPlayerItem) {
@@ -443,6 +469,9 @@ final class SongloftAudioEngine {
     ]
     if let title = metadata?.title { info[MPMediaItemPropertyTitle] = title }
     if let artist = metadata?.artist { info[MPMediaItemPropertyArtist] = artist }
+    if let lyric = currentLyricLine, !lyric.isEmpty {
+      info[MPMediaItemPropertyComments] = lyric
+    }
     let duration = Self.milliseconds(item.duration) / 1000
     if duration > 0 { info[MPMediaItemPropertyPlaybackDuration] = duration }
     if let artworkUrl = metadata?.artworkUrl, !artworkUrl.isEmpty {

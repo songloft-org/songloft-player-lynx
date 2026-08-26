@@ -50,6 +50,9 @@ final class SongloftAudioModule: NSObject, LynxContextModule {
         NSStringFromSelector(#selector(SongloftAudioModule.setEqualizerEnabled(_:))),
       "setEqualizerBand":
         NSStringFromSelector(#selector(SongloftAudioModule.setEqualizerBand(_:gainDb:))),
+      "updateNotificationLyric":
+        NSStringFromSelector(#selector(SongloftAudioModule.updateNotificationLyric(_:))),
+      "getVolume": NSStringFromSelector(#selector(SongloftAudioModule.getVolume)),
       "dispose": NSStringFromSelector(#selector(SongloftAudioModule.dispose)),
     ]
   }
@@ -173,6 +176,18 @@ final class SongloftAudioModule: NSObject, LynxContextModule {
   @objc func setFavorite(_ isFavorite: Bool) {
     let engine = SongloftAudioEngine.shared
     engine.runOnMain { engine.setFavorite(isFavorite) }
+  }
+
+  // MARK: - Notification lyric & volume
+
+  @objc func updateNotificationLyric(_ lyric: String?) {
+    let engine = SongloftAudioEngine.shared
+    engine.runOnMain { engine.updateNotificationLyric(lyric) }
+  }
+
+  @objc func getVolume() {
+    let engine = SongloftAudioEngine.shared
+    engine.runOnMain { engine.getVolume() }
   }
 
   // MARK: - Equalizer (10-band via MTAudioProcessingTap + kAudioUnitSubType_NBandEQ)

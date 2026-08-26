@@ -2,6 +2,7 @@ import { create } from 'zustand'
 
 import { apiPrefix } from '../../../core/config/app-config.js'
 import type { Song } from '../../../models/song.js'
+import { getAudio } from '../../../native/audio-facade.js'
 import { getFloatingLyricModule } from '../../../native/floating-lyric.js'
 import {
   findCurrentLine,
@@ -190,9 +191,11 @@ export const useLyricStore = create<LyricState>((set, get) => {
       if (next !== currentIndex) {
         set({ currentIndex: next })
         const line = lyrics[next]
-        if (line?.text) {
-          void getFloatingLyricModule().updateLyric(line.text)
+        const text = line?.text ?? null
+        if (text) {
+          void getFloatingLyricModule().updateLyric(text)
         }
+        void getAudio().updateNotificationLyric(text)
       }
     },
 

@@ -898,6 +898,18 @@ audio.on('remoteCommand', (e) => {
   }
 })
 
+/**
+ * System volume sync: when the hardware volume buttons change the media stream,
+ * the native side emits `volumeChanged` with the new 0–100 value. Update the
+ * store so the UI slider stays in sync.
+ */
+audio.on('volumeChanged', (e) => {
+  usePlayerStore.setState({ volume: Math.round(e.volume) })
+})
+
+// Request initial system volume on startup so the store reflects reality.
+void audio.getVolume()
+
 // ── playback state persistence ───────────────────────────────────────────────
 let _saveTimer: ReturnType<typeof setTimeout> | null = null
 const SAVE_DEBOUNCE_MS = 2_000

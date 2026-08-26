@@ -136,6 +136,8 @@ export class MockSongloftAudio implements SongloftAudio {
 
   // No real media notification in the mock — nothing to push the icon to.
   async setFavorite(_isFavorite: boolean): Promise<void> {}
+  async updateNotificationLyric(_lyric: string | null): Promise<void> {}
+  async getVolume(): Promise<void> {}
 
   // ── equalizer (placeholder) ──
 

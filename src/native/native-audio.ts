@@ -50,6 +50,7 @@ export const NATIVE_EVENT = {
   progress: 'SongloftAudio.progress',
   error: 'SongloftAudio.error',
   remoteCommand: 'SongloftAudio.remoteCommand',
+  volumeChanged: 'SongloftAudio.volumeChanged',
 } as const
 
 /** Native module method names required for the native binding to be usable. */
@@ -83,6 +84,8 @@ export interface SongloftAudioNativeModule {
   setFavorite(isFavorite: boolean): void
   setEqualizerEnabled(on: boolean): void
   setEqualizerBand(index: number, gainDb: number): void
+  updateNotificationLyric(lyric: string | null): void
+  getVolume(): void
   dispose(): void
 }
 
@@ -140,6 +143,8 @@ export function mapGlobalEvent(name: string, payload: unknown): AudioEvent | nul
       }
       return { type: 'remoteCommand', command }
     }
+    case NATIVE_EVENT.volumeChanged:
+      return { type: 'volumeChanged', volume: num(data.volume) }
     default:
       return null
   }
@@ -241,6 +246,14 @@ export class NativeSongloftAudio implements SongloftAudio {
 
   async setFavorite(isFavorite: boolean): Promise<void> {
     this.native.setFavorite(isFavorite)
+  }
+
+  async updateNotificationLyric(lyric: string | null): Promise<void> {
+    this.native.updateNotificationLyric(lyric)
+  }
+
+  async getVolume(): Promise<void> {
+    this.native.getVolume()
   }
 
   // ── equalizer (native stub; bands mirror the standard 10-band layout) ──
