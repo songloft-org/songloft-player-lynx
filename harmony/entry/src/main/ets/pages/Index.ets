@@ -27,7 +27,7 @@ struct Index {
     this.modules.set('SongloftNavigation', { moduleClass: SongloftNavigationModule, param: this.context })
 
     const globalProps = SystemAppearance.getInitialProps(this.context)
-    this.metaData = new MetaData(undefined, new TemplateData(globalProps))
+    this.metaData = new MetaData(undefined, new TemplateData(JSON.stringify(globalProps)))
 
     const resourceMgr = this.context.resourceManager
     const bundleBuffer = resourceMgr.getRawFileContentSync('main.lynx.bundle').buffer as ArrayBuffer

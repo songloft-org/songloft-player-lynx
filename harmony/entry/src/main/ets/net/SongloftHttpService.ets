@@ -1,4 +1,5 @@
 import { http } from '@kit.NetworkKit'
+import { util } from '@kit.ArkTS'
 import { ILynxHttpService, LynxHttpRequest, LynxHttpResponse } from '@lynx/lynx'
 import { HttpStreamingDelegate } from '@lynx/lynx'
 import { InsecureTls } from './InsecureTls'
@@ -32,11 +33,13 @@ export class SongloftHttpService implements ILynxHttpService {
       resp.statusCode = response.responseCode as number
       resp.statusText = 'OK'
       resp.httpHeaders = response.header as Record<string, string>
-      if (typeof response.result === 'string') {
-        const encoder = new TextEncoder()
-        resp.httpBody = encoder.encode(response.result).buffer as ArrayBuffer
-      } else if (response.result instanceof ArrayBuffer) {
-        resp.httpBody = response.result
+      const result = response.result
+      if (typeof result === 'string') {
+        const encoder = new util.TextEncoder()
+        const encoded = encoder.encodeInto(result)
+        resp.httpBody = encoded.buffer as ArrayBuffer
+      } else if (result instanceof ArrayBuffer) {
+        resp.httpBody = result
       }
       callback(resp)
     }).catch((err: Error) => {

@@ -2,7 +2,7 @@ import { ConfigurationConstant, common, EnvironmentCallback, Configuration } fro
 import { i18n } from '@kit.LocalizationKit'
 import { LynxContext } from '@lynx/lynx'
 
-interface AppearanceEvent {
+interface AppearanceProps {
   colorScheme: string
   locale: string
 }
@@ -12,7 +12,7 @@ export class SystemAppearance {
   private static currentColorMode: string = 'light'
   private static currentLocale: string = 'en'
 
-  static getInitialProps(context: common.UIAbilityContext): Record<string, string> {
+  static getInitialProps(context: common.UIAbilityContext): AppearanceProps {
     const colorMode = context.config?.colorMode
     SystemAppearance.currentColorMode =
       colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'dark' : 'light'
@@ -20,7 +20,7 @@ export class SystemAppearance {
     const locale = i18n.System.getSystemLanguage()
     SystemAppearance.currentLocale = locale.startsWith('zh') ? 'zh' : 'en'
 
-    const props: Record<string, string> = {
+    const props: AppearanceProps = {
       colorScheme: SystemAppearance.currentColorMode,
       locale: SystemAppearance.currentLocale,
     }
@@ -49,7 +49,7 @@ export class SystemAppearance {
         }
 
         if (changed && SystemAppearance.lynxContext) {
-          const eventParam: AppearanceEvent = {
+          const eventParam: AppearanceProps = {
             colorScheme: SystemAppearance.currentColorMode,
             locale: SystemAppearance.currentLocale,
           }
