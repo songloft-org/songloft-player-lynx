@@ -9,7 +9,9 @@ name: Dev Build (HarmonyOS HAP)
 #   gh secret set HARMONY_SIGNING_KEY_BASE64 < <(base64 -i path/to/signing-key.p12)
 #   gh secret set HARMONY_SIGNING_KEY_PASSWORD --body "your-key-password"
 #   gh secret set HARMONY_SIGNING_PROFILE_BASE64 < <(base64 -i path/to/signing-profile.p7b)
+#   gh secret set HARMONY_SIGNING_CERT_BASE64 < <(base64 -i path/to/signing-cert.cer)
 #   gh secret set HARMONY_KEYSTORE_PASSWORD --body "your-keystore-password"
+#   gh secret set HARMONY_KEY_ALIAS --body "your-key-alias"
 # ───────────────────────────────────────────────────────────────────────────────
 on:
   workflow_dispatch:
@@ -65,81 +67,88 @@ jobs:
         working-directory: harmony
         run: ohpm install
 
-      # ---- Signing ----
-      - name: Setup HarmonyOS signing
+      # ---- Prepare for unsigned build ----
+      - name: Remove signingConfig from build-profile
+        working-directory: harmony
+        run: |
+          node -e "
+            const fs = require('fs');
+            let profile = fs.readFileSync('build-profile.json5', 'utf8');
+            profile = profile.replace(/\"signingConfig\":\s*\"default\",?\s*/g, '');
+            fs.writeFileSync('build-profile.json5', profile);
+          "
+
+      # ---- Build unsigned HAP ----
+      - name: Build HAP
+        working-directory: harmony
+        run: hvigorw assembleHap --mode module -p product=default -p buildMode=release --no-daemon
+
+      # ---- Post-build signing with hap-sign-tool.jar ----
+      - name: Sign HAP
         env:
           HARMONY_SIGNING_KEY_BASE64: ${{ secrets.HARMONY_SIGNING_KEY_BASE64 }}
           HARMONY_SIGNING_PROFILE_BASE64: ${{ secrets.HARMONY_SIGNING_PROFILE_BASE64 }}
-        run: |
-          if [ -n "$HARMONY_SIGNING_KEY_BASE64" ]; then
-            echo "$HARMONY_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-key.p12"
-            echo "$HARMONY_SIGNING_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-profile.p7b"
-            echo "HARMONY_SIGNING_KEY_PATH=$RUNNER_TEMP/signing-key.p12" >> "$GITHUB_ENV"
-            echo "HARMONY_SIGNING_PROFILE_PATH=$RUNNER_TEMP/signing-profile.p7b" >> "$GITHUB_ENV"
-          else
-            echo "::warning::No signing secrets set — building unsigned HAP (debug)"
-          fi
-
-      - name: Generate signing config
-        working-directory: harmony
-        env:
+          HARMONY_SIGNING_CERT_BASE64: ${{ secrets.HARMONY_SIGNING_CERT_BASE64 }}
           HARMONY_KEYSTORE_PASSWORD: ${{ secrets.HARMONY_KEYSTORE_PASSWORD }}
           HARMONY_SIGNING_KEY_PASSWORD: ${{ secrets.HARMONY_SIGNING_KEY_PASSWORD }}
+          HARMONY_KEY_ALIAS: ${{ secrets.HARMONY_KEY_ALIAS }}
         run: |
-          # HarmonyOS hvigor requires passwords to be DevEco-encrypted (>= 32 chars).
-          # If secrets are raw/short passwords, fall back to unsigned debug build.
-          STORE_PW="${HARMONY_KEYSTORE_PASSWORD:-}"
-          KEY_PW="${HARMONY_SIGNING_KEY_PASSWORD:-}"
-          if [ -n "$HARMONY_SIGNING_KEY_PATH" ] && [ "${#STORE_PW}" -ge 32 ] && [ "${#KEY_PW}" -ge 32 ]; then
-            node -e "
-              const fs = require('fs');
-              const profile = fs.readFileSync('build-profile.json5', 'utf8');
-              const signingConfig = {
-                name: 'default',
-                type: 'HarmonyOS',
-                material: {
-                  certpath: '',
-                  storePassword: process.env.HARMONY_KEYSTORE_PASSWORD,
-                  keyAlias: 'songloft',
-                  keyPassword: process.env.HARMONY_SIGNING_KEY_PASSWORD,
-                  profile: process.env.HARMONY_SIGNING_PROFILE_PATH,
-                  signAlg: 'SHA256withECDSA',
-                  storeFile: process.env.HARMONY_SIGNING_KEY_PATH
-                }
-              };
-              const updated = profile.replace(
-                '\"signingConfigs\": []',
-                '\"signingConfigs\": [' + JSON.stringify(signingConfig) + ']'
-              );
-              fs.writeFileSync('build-profile.json5', updated);
-            "
-            echo "Signing config injected (encrypted passwords)"
-            echo "SIGNING_READY=true" >> "$GITHUB_ENV"
-          else
-            if [ -n "$HARMONY_SIGNING_KEY_PATH" ]; then
-              echo "::warning::Signing passwords are too short (<32 chars). HarmonyOS requires DevEco-encrypted passwords. Building unsigned debug HAP instead."
-              echo "::warning::To fix: in DevEco Studio, set up signing, then copy the encrypted storePassword/keyPassword from build-profile.json5 into GitHub secrets."
-            fi
-            # Remove signingConfig reference from product so hvigor doesn't look for it
-            node -e "
-              const fs = require('fs');
-              let profile = fs.readFileSync('build-profile.json5', 'utf8');
-              profile = profile.replace(/\"signingConfig\":\s*\"default\",?\s*/g, '');
-              fs.writeFileSync('build-profile.json5', profile);
-            "
-            echo "Building unsigned (no signing config)"
-            echo "SIGNING_READY=false" >> "$GITHUB_ENV"
+          if [ -z "$HARMONY_SIGNING_KEY_BASE64" ] || [ -z "$HARMONY_SIGNING_CERT_BASE64" ]; then
+            echo "::warning::Signing secrets incomplete — producing unsigned HAP."
+            echo "::warning::Required secrets: HARMONY_SIGNING_KEY_BASE64, HARMONY_SIGNING_PROFILE_BASE64, HARMONY_SIGNING_CERT_BASE64, HARMONY_KEYSTORE_PASSWORD, HARMONY_SIGNING_KEY_PASSWORD, HARMONY_KEY_ALIAS"
+            echo "HAP_SIGNED=false" >> "$GITHUB_ENV"
+            exit 0
           fi
 
-      # ---- Build the HAP ----
-      - name: Build HAP
-        working-directory: harmony
-        run: |
-          if [ "$SIGNING_READY" = "true" ]; then
-            hvigorw assembleHap --mode module -p product=default -p buildMode=release --no-daemon
-          else
-            hvigorw assembleHap --mode module -p product=default -p buildMode=debug --no-daemon
+          # Decode signing materials
+          echo "$HARMONY_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-key.p12"
+          echo "$HARMONY_SIGNING_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-profile.p7b"
+          echo "$HARMONY_SIGNING_CERT_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-cert.cer"
+
+          # Locate hap-sign-tool.jar in the SDK
+          SIGN_TOOL=$(find /home/runner/ohos-sdk -name "hap-sign-tool.jar" -print -quit 2>/dev/null)
+          if [ -z "$SIGN_TOOL" ]; then
+            echo "::warning::hap-sign-tool.jar not found in SDK, trying npm package"
+            npm install -g @aspect/hap-sign-tool 2>/dev/null || true
+            SIGN_TOOL=$(find /home/runner/ohos-sdk -name "hap-sign-tool.jar" -print -quit 2>/dev/null)
           fi
+
+          if [ -z "$SIGN_TOOL" ]; then
+            echo "::warning::hap-sign-tool.jar not available — producing unsigned HAP."
+            echo "HAP_SIGNED=false" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          echo "Using sign tool: $SIGN_TOOL"
+
+          # Find the unsigned HAP
+          UNSIGNED_HAP=$(find harmony/entry/build -name '*.hap' -print -quit)
+          if [ -z "$UNSIGNED_HAP" ]; then
+            echo "::error::No HAP file found to sign"
+            exit 1
+          fi
+
+          SIGNED_HAP="${UNSIGNED_HAP%.hap}-signed.hap"
+          KEY_ALIAS="${HARMONY_KEY_ALIAS:-songloft}"
+
+          # Sign using hap-sign-tool.jar (accepts raw passwords)
+          java -jar "$SIGN_TOOL" sign-app \
+            -keyAlias "$KEY_ALIAS" \
+            -signAlg "SHA256withECDSA" \
+            -mode "localSign" \
+            -appCertFile "$RUNNER_TEMP/signing-cert.cer" \
+            -profileFile "$RUNNER_TEMP/signing-profile.p7b" \
+            -keystoreFile "$RUNNER_TEMP/signing-key.p12" \
+            -keystorePwd "$HARMONY_KEYSTORE_PASSWORD" \
+            -keyPwd "$HARMONY_SIGNING_KEY_PASSWORD" \
+            -inFile "$UNSIGNED_HAP" \
+            -outFile "$SIGNED_HAP" \
+            -signCode "1"
+
+          # Replace unsigned with signed
+          mv "$SIGNED_HAP" "$UNSIGNED_HAP"
+          echo "HAP signed successfully"
+          echo "HAP_SIGNED=true" >> "$GITHUB_ENV"
 
       - name: Locate HAP
         id: hap
@@ -172,6 +181,7 @@ jobs:
           body: |
             Rolling development build of the Songloft Lynx HarmonyOS host.
             Commit: ${{ github.sha }}
+            Signed: ${{ env.HAP_SIGNED }}
 
             Install: use DevEco Studio or `hdc install songloft-lynx-dev.hap`
             on a connected HarmonyOS device/emulator.
