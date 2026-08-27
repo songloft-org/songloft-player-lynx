@@ -28,8 +28,6 @@ jobs:
   harmony-dev-hap:
     name: HarmonyOS dev HAP
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/lynx-family/ubuntu24.04-harmony@sha256:bf493c3710de3c44bfa84caf402c0727b9310c42497f6e52580ad441ea640ef1
     steps:
       - uses: actions/checkout@v4
 
@@ -54,7 +52,15 @@ jobs:
       - name: Embed bundle into HarmonyOS rawfile
         run: node scripts/copy-bundle-harmony.mjs
 
-      # ---- HarmonyOS: install ohpm dependencies ----
+      # ---- HarmonyOS toolchain ----
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev
+
+      - name: Setup HarmonyOS CLI tools
+        uses: ErBWs/setup-ohos@v2
+        with:
+          cache: true
+
       - name: Install ohpm dependencies
         working-directory: harmony
         run: ohpm install
