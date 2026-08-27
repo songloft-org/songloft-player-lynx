@@ -87,31 +87,22 @@ jobs:
         env:
           HARMONY_SIGNING_KEY_BASE64: ${{ secrets.HARMONY_SIGNING_KEY_BASE64 }}
           HARMONY_SIGNING_PROFILE_BASE64: ${{ secrets.HARMONY_SIGNING_PROFILE_BASE64 }}
+          HARMONY_SIGNING_CERT_BASE64: ${{ secrets.HARMONY_SIGNING_CERT_BASE64 }}
           HARMONY_KEYSTORE_PASSWORD: ${{ secrets.HARMONY_KEYSTORE_PASSWORD }}
           HARMONY_SIGNING_KEY_PASSWORD: ${{ secrets.HARMONY_SIGNING_KEY_PASSWORD }}
           HARMONY_KEY_ALIAS: ${{ secrets.HARMONY_KEY_ALIAS }}
         run: |
-          if [ -z "$HARMONY_SIGNING_KEY_BASE64" ] || [ -z "$HARMONY_SIGNING_PROFILE_BASE64" ]; then
+          if [ -z "$HARMONY_SIGNING_KEY_BASE64" ] || [ -z "$HARMONY_SIGNING_CERT_BASE64" ]; then
             echo "::warning::Signing secrets not set — producing unsigned HAP."
             echo "HAP_SIGNED=false" >> "$GITHUB_ENV"
             exit 0
           fi
 
-          # Decode signing materials
+          # Decode signing materials from secrets
           echo "$HARMONY_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-key.p12"
           echo "$HARMONY_SIGNING_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-profile.p7b"
-
-          # Extract full certificate chain from the .p12 keystore
-          openssl pkcs12 -in "$RUNNER_TEMP/signing-key.p12" \
-            -nokeys -passin "pass:${HARMONY_KEYSTORE_PASSWORD}" \
-            -out "$RUNNER_TEMP/signing-cert.cer" 2>/dev/null
-
-          if [ ! -s "$RUNNER_TEMP/signing-cert.cer" ]; then
-            echo "::warning::Failed to extract certificate chain from .p12 — producing unsigned HAP."
-            echo "HAP_SIGNED=false" >> "$GITHUB_ENV"
-            exit 0
-          fi
-          echo "Certificate chain extracted ($(grep -c 'BEGIN CERTIFICATE' "$RUNNER_TEMP/signing-cert.cer") certs)"
+          echo "$HARMONY_SIGNING_CERT_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-cert.cer"
+          echo "Certificate chain: $(grep -c 'BEGIN CERTIFICATE' "$RUNNER_TEMP/signing-cert.cer") certs"
 
           # Locate hap-sign-tool.jar in the SDK
           SIGN_TOOL=$(find /home/runner/ohos-sdk -name "hap-sign-tool.jar" -print -quit 2>/dev/null)
