@@ -1,9 +1,13 @@
 source 'https://cdn.cocoapods.org/'
 
 # Deployment floor. Pods themselves declare ios 10.0 (Lynx/LynxService/XElement)
-# and 9.0 (PrimJS); 16.0 is picked as a sane modern floor for the dev host —
-# roughly the iOS analogue of the Android host's `minSdk 24`.
-platform :ios, '16.0'
+# and 9.0 (PrimJS); 15.0 is our floor — the SDKs support far older, but Xcode 26
+# links against the modern Swift runtime and there is no practical benefit to
+# pretending to support iOS 14. The one host-code caller of a >15 API is
+# `LiveActivityModule` (ActivityKit, iOS 16.2+), which is guarded with
+# `@available` and only registered inside `if #available(iOS 16.2, *)` in
+# `ViewController.buildConfig()` — safe to leave in place at a lower floor.
+platform :ios, '15.0'
 
 target 'SongloftLynx' do
   # ---- Lynx SDK ----------------------------------------------------------
