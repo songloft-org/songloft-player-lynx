@@ -101,16 +101,17 @@ jobs:
           echo "$HARMONY_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-key.p12"
           echo "$HARMONY_SIGNING_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-profile.p7b"
 
-          # Extract certificate from the .p12 keystore (no separate .cer secret needed)
+          # Extract full certificate chain from the .p12 keystore
           openssl pkcs12 -in "$RUNNER_TEMP/signing-key.p12" \
-            -clcerts -nokeys -passin "pass:${HARMONY_KEYSTORE_PASSWORD}" \
+            -nokeys -passin "pass:${HARMONY_KEYSTORE_PASSWORD}" \
             -out "$RUNNER_TEMP/signing-cert.cer" 2>/dev/null
 
           if [ ! -s "$RUNNER_TEMP/signing-cert.cer" ]; then
-            echo "::warning::Failed to extract certificate from .p12 — producing unsigned HAP."
+            echo "::warning::Failed to extract certificate chain from .p12 — producing unsigned HAP."
             echo "HAP_SIGNED=false" >> "$GITHUB_ENV"
             exit 0
           fi
+          echo "Certificate chain extracted ($(grep -c 'BEGIN CERTIFICATE' "$RUNNER_TEMP/signing-cert.cer") certs)"
 
           # Locate hap-sign-tool.jar in the SDK
           SIGN_TOOL=$(find /home/runner/ohos-sdk -name "hap-sign-tool.jar" -print -quit 2>/dev/null)
