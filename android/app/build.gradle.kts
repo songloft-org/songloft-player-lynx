@@ -65,6 +65,12 @@ android {
         jvmTarget = "1.8"
     }
     packaging {
+        jniLibs {
+            // Android 5/6 need native libraries extracted before loading them.
+            // Keep the legacy mode explicit while minSdk remains below 23 so an
+            // AGP upgrade cannot silently change the APK's native layout.
+            useLegacyPackaging = true
+        }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }

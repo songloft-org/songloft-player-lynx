@@ -41,6 +41,29 @@ test('Android host declares androidx.viewpager2 (required by <refresh>)', () => 
 })
 
 /**
+ * GATE 1b — minSdk 21 requires extracted native libraries.
+ *
+ * AGP changes the default native layout at API 23: with our API 21 floor it
+ * must compress libraries in the APK and extract them at install time. Keep
+ * both sides explicit so a future minSdk or AGP change cannot make a valid
+ * installable APK turn into a native-loader crash on Android 5/6 silently.
+ */
+test('Android native libraries use explicit extract-on-install packaging', () => {
+  const gradle = readFileSync(path.join(repoRoot, 'android/app/build.gradle.kts'), 'utf8')
+  expect(gradle, 'useLegacyPackaging must stay enabled for minSdk 21').toMatch(
+    /jniLibs\s*\{[^}]*useLegacyPackaging\s*=\s*true/,
+  )
+
+  const manifest = readFileSync(
+    path.join(repoRoot, 'android/app/src/main/AndroidManifest.xml'),
+    'utf8',
+  )
+  expect(manifest, 'native libraries must be extracted before loading on API < 23').toMatch(
+    /<application\b[\s\S]*android:extractNativeLibs="true"/,
+  )
+})
+
+/**
  * GATE 2 — no dynamic `import()` in app source.
  *
  * A dynamic import makes rspeedy emit a separate lazy bundle under

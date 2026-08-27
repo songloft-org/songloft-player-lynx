@@ -93,6 +93,7 @@ jobs:
       - name: Locate APK
         id: apk
         run: |
+          set -euo pipefail
           APK=$(find android/app/build/outputs/apk/release -name '*.apk' -print -quit)
           if [ -z "$APK" ]; then
             echo "No APK produced" >&2
@@ -100,6 +101,41 @@ jobs:
           fi
           cp "$APK" songloft-lynx-dev.apk
           echo "path=songloft-lynx-dev.apk" >> "$GITHUB_OUTPUT"
+
+      - name: Inspect APK packaging
+        run: |
+          set -euo pipefail
+          APK=songloft-lynx-dev.apk
+          stat --format='APK size: %s bytes' "$APK"
+
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          AAPT2=""
+          if [ -n "$SDK_ROOT" ] && [ -d "$SDK_ROOT/build-tools" ]; then
+            AAPT2=$(find "$SDK_ROOT/build-tools" -type f -name aapt2 -print | sort -V | tail -1 || true)
+          fi
+          if [ -n "$AAPT2" ]; then
+            "$AAPT2" dump badging "$APK" | grep -E 'package:|sdkVersion|targetSdkVersion' || true
+            "$AAPT2" dump xmltree --file AndroidManifest.xml "$APK" |
+              grep -E 'minSdkVersion|targetSdkVersion|extractNativeLibs' || true
+          else
+            echo "aapt2 not found; skipping Manifest inspection"
+          fi
+
+          unzip -lv "$APK" | awk '
+            $8 ~ /^lib\// {
+              if ($2 == "Stored") {
+                stored_raw += $1
+                stored_zip += $3
+              } else if ($2 == "Defl:N") {
+                deflated_raw += $1
+                deflated_zip += $3
+              }
+            }
+            END {
+              printf "Native libs: Stored %d raw / %d in APK; Deflated %d raw / %d in APK\n",
+                stored_raw, stored_zip, deflated_raw, deflated_zip
+            }
+          '
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

@@ -189,11 +189,14 @@ final class SongloftDlnaModule: NSObject, LynxModule {
               let data = try? Data(contentsOf: url),
               let xml = String(data: data, encoding: .utf8) else { return nil }
 
-        let name = xml.firstMatch(of: /<friendlyName>(.+?)<\/friendlyName>/)
-            .map { String($0.output.1) } ?? "Unknown"
+        // Swift Regex literals and `Regex` matching are iOS 16-only. Keep the
+        // host's iOS 15 deployment floor by using Foundation's older regex API.
+        let name = firstCapture(in: xml, pattern: "<friendlyName>(.+?)</friendlyName>") ?? "Unknown"
 
-        let controlPath = xml.firstMatch(of: /AVTransport:1<\/serviceType>[\s\S]*?<controlURL>(.+?)<\/controlURL>/)
-            .map { String($0.output.1) } ?? "/MediaRenderer/AVTransport/Control"
+        let controlPath = firstCapture(
+            in: xml,
+            pattern: "AVTransport:1</serviceType>.*?<controlURL>(.+?)</controlURL>"
+        ) ?? "/MediaRenderer/AVTransport/Control"
 
         let controlUrl: String
         if controlPath.hasPrefix("http") {
@@ -203,6 +206,23 @@ final class SongloftDlnaModule: NSObject, LynxModule {
             controlUrl = "\(url.scheme ?? "http")://\(url.host ?? "")\(url.port.map { ":\($0)" } ?? "")\(controlPath)"
         }
         return (name, controlUrl)
+    }
+
+    private func firstCapture(
+        in text: String,
+        pattern: String,
+        options: NSRegularExpression.Options = [.dotMatchesLineSeparators]
+    ) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else {
+            return nil
+        }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        guard let match = regex.firstMatch(in: text, options: [], range: range),
+              match.numberOfRanges > 1,
+              let captureRange = Range(match.range(at: 1), in: text) else {
+            return nil
+        }
+        return String(text[captureRange])
     }
 
     // MARK: - SOAP Control
