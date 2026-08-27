@@ -8,6 +8,7 @@
   "dependencies": {
     "@lynx/lynx": "4.0.1",
     "@lynx/lynx_http_service": "4.0.1",
-    "@lynx/lynx_image_service": "4.0.1"
+    "@lynx/lynx_image_service": "4.0.1",
+    "@lynx/lynx_log_service": "4.0.1"
   }
 }

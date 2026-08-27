@@ -1,5 +1,6 @@
 import { UIAbility, AbilityConstant, Want } from '@kit.AbilityKit'
 import { window } from '@kit.ArkUI'
+import { LynxLogService } from '@lynx/lynx_log_service'
 import { LynxEnv, LynxServiceCenter, LynxServiceType } from '@lynx/lynx'
 import { LynxImageService } from '@lynx/lynx_image_service'
 import { SongloftHttpService } from '../net/SongloftHttpService'
@@ -9,6 +10,7 @@ export default class EntryAbility extends UIAbility {
     LynxEnv.initialize(this.context)
     LynxServiceCenter.registerService(LynxServiceType.Image, LynxImageService.instance)
     LynxServiceCenter.registerService(LynxServiceType.Http, SongloftHttpService.instance)
+    void(LynxLogService.instance)
   }
 
   onDestroy(): void {}
