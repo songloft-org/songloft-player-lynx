@@ -66,6 +66,9 @@ jobs:
         working-directory: harmony
         run: ohpm install
 
+      - name: Patch Lynx SDK (LynxEventReporter crash guard)
+        run: bash harmony/scripts/patch-lynx-event-reporter.sh harmony
+
       # ---- Prepare for unsigned build ----
       - name: Remove signingConfig from build-profile
         working-directory: harmony
