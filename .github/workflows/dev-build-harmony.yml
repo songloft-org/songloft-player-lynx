@@ -1,12 +1,7 @@
 name: Dev Build (HarmonyOS HAP)
 
 # Build the HarmonyOS host that embeds our Lynx bundle and produce an installable,
-# signed HAP package.
-#
-# NOTE: Lynx SDK for HarmonyOS has no prebuilt HAR packages on public registries.
-# The SDK must be compiled from source (requires GN/Ninja + OHOS NDK). This workflow
-# expects the prebuilt Lynx HAR libs to exist in harmony/libs/ (committed to repo
-# after local compilation). If libs are missing, the build will fail at ohpm install.
+# signed HAP package. Mirrors the Android dev-build.yml pattern.
 #
 # Manual-only: run from the Actions tab ("Run workflow"). No auto-run on push.
 #
@@ -33,6 +28,8 @@ jobs:
   harmony-dev-hap:
     name: HarmonyOS dev HAP
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/lynx-family/ubuntu24.04-harmony@sha256:bf493c3710de3c44bfa84caf402c0727b9310c42497f6e52580ad441ea640ef1
     steps:
       - uses: actions/checkout@v4
 
@@ -57,23 +54,7 @@ jobs:
       - name: Embed bundle into HarmonyOS rawfile
         run: node scripts/copy-bundle-harmony.mjs
 
-      # ---- HarmonyOS toolchain (via ErBWs/setup-ohos) ----
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev
-
-      - name: Setup HarmonyOS CLI tools
-        uses: ErBWs/setup-ohos@v2
-        with:
-          cache: true
-
-      # ---- Verify Lynx libs exist ----
-      - name: Check Lynx HAR libs
-        run: |
-          if [ ! -d harmony/libs/lynx ]; then
-            echo "::error::harmony/libs/lynx not found. Lynx SDK HAR packages must be compiled locally and committed. See docs/project/plans/harmony-integration-plan.md."
-            exit 1
-          fi
-
+      # ---- HarmonyOS: install ohpm dependencies ----
       - name: Install ohpm dependencies
         working-directory: harmony
         run: ohpm install
