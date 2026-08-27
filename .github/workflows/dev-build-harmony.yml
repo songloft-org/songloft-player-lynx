@@ -11,11 +11,6 @@ name: Dev Build (HarmonyOS HAP)
 #   gh secret set HARMONY_SIGNING_PROFILE_BASE64 < <(base64 -i path/to/signing-profile.p7b)
 #   gh secret set HARMONY_KEYSTORE_PASSWORD --body "your-keystore-password"
 # ───────────────────────────────────────────────────────────────────────────────
-#
-# ── Environment variables (optional): ──────────────────────────────────────────
-#   HARMONYOS_SDK_VERSION: SDK version to install (default: 5.0.0)
-#   DEVECO_CLI_VERSION: DevEco command-line-tools version (default: 5.0.3)
-# ───────────────────────────────────────────────────────────────────────────────
 on:
   workflow_dispatch:
 
@@ -27,8 +22,6 @@ permissions:
   contents: write
 
 env:
-  HARMONYOS_SDK_HOME: ${{ github.workspace }}/harmony-sdk
-  DEVECO_CLI_VERSION: "5.0.3"
   NODE_VERSION: "22"
 
 jobs:
@@ -59,39 +52,18 @@ jobs:
       - name: Embed bundle into HarmonyOS rawfile
         run: node scripts/copy-bundle-harmony.mjs
 
-      # ---- HarmonyOS toolchain ----
-      - name: Cache HarmonyOS SDK
-        id: cache-sdk
-        uses: actions/cache@v4
+      # ---- HarmonyOS toolchain (via ErBWs/setup-ohos) ----
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev
+
+      - name: Setup HarmonyOS CLI tools
+        uses: ErBWs/setup-ohos@v2
         with:
-          path: ${{ env.HARMONYOS_SDK_HOME }}
-          key: harmonyos-sdk-${{ env.DEVECO_CLI_VERSION }}-linux
-
-      - name: Install HarmonyOS command-line-tools
-        if: steps.cache-sdk.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p "$HARMONYOS_SDK_HOME"
-          # Download DevEco command-line-tools (Linux)
-          curl -fsSL "https://contentcenter-vali-drcn.dbankcdn.cn/pvt_2/DeveloperAlliance_package_901_9/f3/v3/uJyuq3syQ2ak4hE1QZmAug/command-line-tools-linux-x64-${DEVECO_CLI_VERSION}.zip?HardwareType=PC" \
-            -o /tmp/deveco-cli.zip || {
-            echo "::warning::Download failed — trying alternative mirror"
-            curl -fsSL "https://repo.huaweicloud.com/harmonyos/develop-tools/command-line-tools-linux-x64-${DEVECO_CLI_VERSION}.zip" \
-              -o /tmp/deveco-cli.zip
-          }
-          unzip -q /tmp/deveco-cli.zip -d "$HARMONYOS_SDK_HOME"
-          rm /tmp/deveco-cli.zip
-
-      - name: Configure SDK environment
-        run: |
-          echo "$HARMONYOS_SDK_HOME/command-line-tools/bin" >> "$GITHUB_PATH"
-          echo "$HARMONYOS_SDK_HOME/command-line-tools/ohpm/bin" >> "$GITHUB_PATH"
-          echo "$HARMONYOS_SDK_HOME/command-line-tools/hvigor/bin" >> "$GITHUB_PATH"
-          echo "OHOS_BASE_SDK_HOME=$HARMONYOS_SDK_HOME/command-line-tools/sdk" >> "$GITHUB_ENV"
+          cache: true
 
       - name: Install ohpm dependencies
         working-directory: harmony
-        run: |
-          ohpm install
+        run: ohpm install
 
       # ---- Signing ----
       - name: Setup HarmonyOS signing
@@ -115,7 +87,6 @@ jobs:
           HARMONY_SIGNING_KEY_PASSWORD: ${{ secrets.HARMONY_SIGNING_KEY_PASSWORD }}
         run: |
           if [ -n "$HARMONY_SIGNING_KEY_PATH" ]; then
-            # Inject signing config into build-profile.json5 for release build
             node -e "
               const fs = require('fs');
               const profile = fs.readFileSync('build-profile.json5', 'utf8');
@@ -144,7 +115,7 @@ jobs:
           fi
 
       # ---- Build the HAP ----
-      - name: Build HAP (release)
+      - name: Build HAP
         working-directory: harmony
         run: |
           if [ -n "$HARMONY_SIGNING_KEY_PATH" ]; then
