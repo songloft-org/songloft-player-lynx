@@ -86,7 +86,11 @@ jobs:
           HARMONY_KEYSTORE_PASSWORD: ${{ secrets.HARMONY_KEYSTORE_PASSWORD }}
           HARMONY_SIGNING_KEY_PASSWORD: ${{ secrets.HARMONY_SIGNING_KEY_PASSWORD }}
         run: |
-          if [ -n "$HARMONY_SIGNING_KEY_PATH" ]; then
+          # HarmonyOS hvigor requires passwords to be DevEco-encrypted (>= 32 chars).
+          # If secrets are raw/short passwords, fall back to unsigned debug build.
+          STORE_PW="${HARMONY_KEYSTORE_PASSWORD:-}"
+          KEY_PW="${HARMONY_SIGNING_KEY_PASSWORD:-}"
+          if [ -n "$HARMONY_SIGNING_KEY_PATH" ] && [ "${#STORE_PW}" -ge 32 ] && [ "${#KEY_PW}" -ge 32 ]; then
             node -e "
               const fs = require('fs');
               const profile = fs.readFileSync('build-profile.json5', 'utf8');
@@ -95,9 +99,9 @@ jobs:
                 type: 'HarmonyOS',
                 material: {
                   certpath: '',
-                  storePassword: process.env.HARMONY_KEYSTORE_PASSWORD || '',
+                  storePassword: process.env.HARMONY_KEYSTORE_PASSWORD,
                   keyAlias: 'songloft',
-                  keyPassword: process.env.HARMONY_SIGNING_KEY_PASSWORD || '',
+                  keyPassword: process.env.HARMONY_SIGNING_KEY_PASSWORD,
                   profile: process.env.HARMONY_SIGNING_PROFILE_PATH,
                   signAlg: 'SHA256withECDSA',
                   storeFile: process.env.HARMONY_SIGNING_KEY_PATH
@@ -109,16 +113,29 @@ jobs:
               );
               fs.writeFileSync('build-profile.json5', updated);
             "
-            echo "Signing config injected"
+            echo "Signing config injected (encrypted passwords)"
+            echo "SIGNING_READY=true" >> "$GITHUB_ENV"
           else
-            echo "Skipping signing config (unsigned build)"
+            if [ -n "$HARMONY_SIGNING_KEY_PATH" ]; then
+              echo "::warning::Signing passwords are too short (<32 chars). HarmonyOS requires DevEco-encrypted passwords. Building unsigned debug HAP instead."
+              echo "::warning::To fix: in DevEco Studio, set up signing, then copy the encrypted storePassword/keyPassword from build-profile.json5 into GitHub secrets."
+            fi
+            # Remove signingConfig reference from product so hvigor doesn't look for it
+            node -e "
+              const fs = require('fs');
+              let profile = fs.readFileSync('build-profile.json5', 'utf8');
+              profile = profile.replace(/\"signingConfig\":\s*\"default\",?\s*/g, '');
+              fs.writeFileSync('build-profile.json5', profile);
+            "
+            echo "Building unsigned (no signing config)"
+            echo "SIGNING_READY=false" >> "$GITHUB_ENV"
           fi
 
       # ---- Build the HAP ----
       - name: Build HAP
         working-directory: harmony
         run: |
-          if [ -n "$HARMONY_SIGNING_KEY_PATH" ]; then
+          if [ "$SIGNING_READY" = "true" ]; then
             hvigorw assembleHap --mode module -p product=default -p buildMode=release --no-daemon
           else
             hvigorw assembleHap --mode module -p product=default -p buildMode=debug --no-daemon
