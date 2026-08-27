@@ -28,14 +28,14 @@ export class SongloftPlatformModule extends LynxModule {
   }
 
   public pickAndUploadFile(uploadUrl: string, fieldName: string, mimeType: string,
-    callback: (result: string) => void): void {
+    callback: (error: string | null, responseBody: string | null) => void): void {
     const documentPicker = new picker.DocumentViewPicker(this.abilityContext)
     const options = new picker.DocumentSelectOptions()
     options.maxSelectNumber = 1
 
     documentPicker.select(options).then(async (result: Array<string>) => {
       if (!result || result.length === 0) {
-        callback(JSON.stringify({ error: 'cancelled' }))
+        callback('cancelled', null)
         return
       }
       try {
@@ -61,26 +61,26 @@ export class SongloftPlatformModule extends LynxModule {
           const body = typeof response.result === 'string'
             ? response.result
             : JSON.stringify(response.result)
-          callback(JSON.stringify({ error: null, body: body }))
+          callback(null, body)
         } else {
-          callback(JSON.stringify({ error: `HTTP ${response.responseCode}` }))
+          callback(`HTTP ${response.responseCode}`, null)
         }
       } catch (err) {
-        callback(JSON.stringify({ error: String(err) }))
+        callback(String(err), null)
       }
     }).catch((err: Error) => {
-      callback(JSON.stringify({ error: err.message }))
+      callback(err.message, null)
     })
   }
 
   public logWrite(line: string): void {}
 
-  public logRead(callback: (result: string) => void): void {
-    callback(JSON.stringify({ error: null, content: '' }))
+  public logRead(callback: (error: string | null, content: string | null) => void): void {
+    callback(null, '')
   }
 
   public shareFile(base64: string, fileName: string, mimeType: string,
-    callback: (result: string) => void): void {
-    callback(JSON.stringify({ error: 'not_supported' }))
+    callback: (error: string | null) => void): void {
+    callback('not_supported')
   }
 }

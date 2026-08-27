@@ -29,13 +29,13 @@ export class SongloftStorageModule extends LynxModule {
     this.prefs?.flush()
   }
 
-  public getItem(area: string, key: string, callback: (result: string) => void): void {
+  public getItem(area: string, key: string, callback: (value: string | null) => void): void {
     const actualKey = area === 'secure' ? SECURE_PREFIX + key : key
     try {
       const value = this.prefs?.getSync(actualKey, '') as string
-      callback(JSON.stringify({ value: value || null }))
+      callback(value || null)
     } catch (e) {
-      callback(JSON.stringify({ value: null }))
+      callback(null)
     }
   }
 
@@ -45,11 +45,33 @@ export class SongloftStorageModule extends LynxModule {
     this.prefs?.flush()
   }
 
-  public getKeys(area: string, callback: (result: string) => void): void {
-    callback(JSON.stringify({ keys: [] }))
+  public getKeys(area: string, callback: (keys: string[]) => void): void {
+    try {
+      const allKeys = this.prefs?.getAllSync() as Record<string, preferences.ValueType> | undefined
+      if (!allKeys) {
+        callback([])
+        return
+      }
+      const prefix = area === 'secure' ? SECURE_PREFIX : ''
+      const result: string[] = []
+      for (const key of Object.keys(allKeys)) {
+        if (area === 'secure') {
+          if (key.startsWith(SECURE_PREFIX)) {
+            result.push(key.substring(SECURE_PREFIX.length))
+          }
+        } else {
+          if (!key.startsWith(SECURE_PREFIX)) {
+            result.push(key)
+          }
+        }
+      }
+      callback(result)
+    } catch (e) {
+      callback([])
+    }
   }
 
-  public getPath(name: string, callback: (result: string) => void): void {
+  public getPath(name: string, callback: (path: string) => void): void {
     let path: string
     switch (name) {
       case 'cache':
@@ -61,6 +83,6 @@ export class SongloftStorageModule extends LynxModule {
       default:
         path = this.abilityContext.filesDir
     }
-    callback(JSON.stringify({ path: path }))
+    callback(path)
   }
 }

@@ -3,8 +3,8 @@ import { i18n } from '@kit.LocalizationKit'
 import { LynxContext } from '@lynx/lynx'
 
 interface AppearanceProps {
-  colorScheme: string
-  locale: string
+  systemTheme: string
+  systemLocale: string
 }
 
 export class SystemAppearance {
@@ -21,8 +21,8 @@ export class SystemAppearance {
     SystemAppearance.currentLocale = locale.startsWith('zh') ? 'zh' : 'en'
 
     const props: AppearanceProps = {
-      colorScheme: SystemAppearance.currentColorMode,
-      locale: SystemAppearance.currentLocale,
+      systemTheme: SystemAppearance.currentColorMode,
+      systemLocale: SystemAppearance.currentLocale,
     }
     return props
   }
@@ -50,10 +50,10 @@ export class SystemAppearance {
 
         if (changed && SystemAppearance.lynxContext) {
           const eventParam: AppearanceProps = {
-            colorScheme: SystemAppearance.currentColorMode,
-            locale: SystemAppearance.currentLocale,
+            systemTheme: SystemAppearance.currentColorMode,
+            systemLocale: SystemAppearance.currentLocale,
           }
-          SystemAppearance.lynxContext.sendGlobalEvent('appearanceChanged', [eventParam])
+          SystemAppearance.lynxContext.sendGlobalEvent('SongloftSystem.appearanceChanged', [eventParam])
         }
       },
       onMemoryLevel(): void {},

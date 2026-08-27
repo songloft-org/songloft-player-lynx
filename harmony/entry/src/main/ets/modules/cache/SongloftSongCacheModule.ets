@@ -2,6 +2,7 @@ import { fileIo } from '@kit.CoreFileKit'
 import { http } from '@kit.NetworkKit'
 import { LynxModule, LynxContext } from '@lynx/lynx'
 import { common } from '@kit.AbilityKit'
+import { InsecureTls } from '../../net/InsecureTls'
 
 export class SongloftSongCacheModule extends LynxModule {
   private abilityContext: common.UIAbilityContext
@@ -22,31 +23,37 @@ export class SongloftSongCacheModule extends LynxModule {
     }
   }
 
-  public download(songId: string, url: string, maxSizeBytes: number,
+  public download(songId: string, url: string, ext: string, maxBytes: number,
     callback: (result: string) => void): void {
-    this.doDownload(songId, url, maxSizeBytes, callback)
+    this.doDownload(songId, url, ext, maxBytes, callback)
   }
 
   public getCacheInfo(songId: string, callback: (result: string) => void): void {
-    const filePath = `${this.cacheDir}/${songId}`
-    try {
-      const stat = fileIo.statSync(filePath)
-      callback(JSON.stringify({
-        cached: true,
-        path: filePath,
-        sizeBytes: stat.size,
-      }))
-    } catch (e) {
+    const files = this.findCacheFile(songId)
+    if (files) {
+      try {
+        const stat = fileIo.statSync(files)
+        callback(JSON.stringify({
+          cached: true,
+          url: `file://${files}`,
+          sizeBytes: stat.size,
+        }))
+      } catch (e) {
+        callback(JSON.stringify({ cached: false }))
+      }
+    } else {
       callback(JSON.stringify({ cached: false }))
     }
   }
 
   public remove(songId: string, callback: (result: string) => void): void {
-    const filePath = `${this.cacheDir}/${songId}`
-    try {
-      fileIo.unlinkSync(filePath)
-    } catch (e) {
-      // ignore
+    const file = this.findCacheFile(songId)
+    if (file) {
+      try {
+        fileIo.unlinkSync(file)
+      } catch (e) {
+        // ignore
+      }
     }
     callback(JSON.stringify({ success: true }))
   }
@@ -63,9 +70,9 @@ export class SongloftSongCacheModule extends LynxModule {
           // skip
         }
       }
-      callback(JSON.stringify({ sizeBytes: totalSize }))
+      callback(JSON.stringify({ bytes: totalSize }))
     } catch (e) {
-      callback(JSON.stringify({ sizeBytes: 0 }))
+      callback(JSON.stringify({ bytes: 0 }))
     }
   }
 
@@ -85,10 +92,25 @@ export class SongloftSongCacheModule extends LynxModule {
     }
   }
 
-  private async doDownload(songId: string, url: string, maxSizeBytes: number,
+  private findCacheFile(songId: string): string | null {
+    try {
+      const files = fileIo.listFileSync(this.cacheDir)
+      for (const file of files) {
+        if (file === songId || file.startsWith(songId + '.')) {
+          return `${this.cacheDir}/${file}`
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return null
+  }
+
+  private async doDownload(songId: string, url: string, ext: string, maxBytes: number,
     callback: (result: string) => void): Promise<void> {
-    const partPath = `${this.cacheDir}/${songId}.part`
-    const finalPath = `${this.cacheDir}/${songId}`
+    const fileName = ext ? `${songId}.${ext}` : songId
+    const partPath = `${this.cacheDir}/${fileName}.part`
+    const finalPath = `${this.cacheDir}/${fileName}`
 
     try {
       const httpRequest = http.createHttp()
@@ -107,7 +129,7 @@ export class SongloftSongCacheModule extends LynxModule {
       }
 
       const data = response.result as ArrayBuffer
-      if (data.byteLength > maxSizeBytes) {
+      if (data.byteLength > maxBytes) {
         callback(JSON.stringify({ success: false, error: 'limit_exceeded' }))
         return
       }
@@ -119,7 +141,7 @@ export class SongloftSongCacheModule extends LynxModule {
 
       fileIo.renameSync(partPath, finalPath)
 
-      callback(JSON.stringify({ success: true, path: finalPath, sizeBytes: data.byteLength }))
+      callback(JSON.stringify({ success: true, url: `file://${finalPath}`, sizeBytes: data.byteLength }))
     } catch (err) {
       try { fileIo.unlinkSync(partPath) } catch (e) { /* ignore */ }
       callback(JSON.stringify({ success: false, error: String(err) }))

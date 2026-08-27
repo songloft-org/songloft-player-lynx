@@ -57,7 +57,7 @@ export class SongloftAudioEngine {
           break
         case 'prepared':
           this.prepared = true
-          this.onStateChange('prepared')
+          this.onStateChange('ready')
           break
         case 'playing':
           this.startProgressTimer()
@@ -69,7 +69,6 @@ export class SongloftAudioEngine {
           break
         case 'stopped':
           this.stopProgressTimer()
-          this.onStateChange('stopped')
           break
         case 'completed':
           this.stopProgressTimer()
@@ -77,7 +76,6 @@ export class SongloftAudioEngine {
           this.onTrackEnd()
           break
         case 'released':
-          this.onStateChange('released')
           break
         case 'error':
           this.onStateChange('error')
@@ -102,8 +100,8 @@ export class SongloftAudioEngine {
     if (!this.avPlayer) return
     this.prepared = false
     this.currentUrl = url
+    this.onStateChange('loading')
 
-    // Reset if previously playing
     await this.avPlayer.reset()
     this.avPlayer.url = url
 
@@ -113,7 +111,7 @@ export class SongloftAudioEngine {
         const originalCallback = this.onStateChange
         this.onStateChange = (state: string) => {
           originalCallback(state)
-          if (state === 'prepared') {
+          if (state === 'ready') {
             this.onStateChange = originalCallback
             resolve()
           }
