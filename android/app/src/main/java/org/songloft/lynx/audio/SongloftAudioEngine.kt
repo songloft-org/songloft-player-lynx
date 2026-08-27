@@ -491,11 +491,10 @@ object SongloftAudioEngine {
         val p = player ?: return
         val currentItem = p.currentMediaItem ?: return
         val url = currentItem.localConfiguration?.uri?.toString() ?: return
-        val meta = metadataByUrl[url] ?: return
-        val merged = meta.buildUpon()
-            .setSubtitle(currentLyricLine)
+        val base = metadataByUrl[url] ?: return
+        val newItem = currentItem.buildUpon()
+            .setMediaMetadata(applyLyricLine(base, currentLyricLine))
             .build()
-        val newItem = currentItem.buildUpon().setMediaMetadata(merged).build()
         p.replaceMediaItem(p.currentMediaItemIndex, newItem)
     }
 
@@ -504,19 +503,41 @@ object SongloftAudioEngine {
     private var currentLyricLine: String? = null
 
     /**
-     * Update the notification to show the current lyric line as the subtitle.
-     * Called from JS whenever the active lyric line changes.
+     * Update the notification's second line to the current lyric.
+     *
+     * `MediaMetadata.subtitle` is **not** rendered by media3's
+     * `DefaultMediaNotificationProvider` — its `getNotificationContentText`
+     * returns `metadata.artist` when it is set, and only falls back to
+     * `subtitle` when artist is null. That is why the earlier `setSubtitle`
+     * flow appeared to do nothing: every queue entry has an artist. We stamp
+     * the lyric into the `artist` slot instead (the real artist is preserved
+     * in [metadataByUrl] and restored when the lyric is null). This is the
+     * same trick NetEase / QQ Music use for their notification-lyric feature.
+     *
+     * Called at most once per lyric line (see `lyric-store.syncPosition`) so
+     * `replaceMediaItem` fires on line boundaries — not every progress tick.
      */
     fun updateNotificationLyric(lyric: String?) {
-        currentLyricLine = lyric
+        currentLyricLine = lyric?.takeIf { it.isNotBlank() }
         val p = player ?: return
         val currentItem = p.currentMediaItem ?: return
-        val existingMeta = currentItem.mediaMetadata
-        val newMeta = existingMeta.buildUpon()
-            .setSubtitle(lyric)
+        val url = currentItem.localConfiguration?.uri?.toString()
+        val base = url?.let { metadataByUrl[it] } ?: currentItem.mediaMetadata
+        val newItem = currentItem.buildUpon()
+            .setMediaMetadata(applyLyricLine(base, currentLyricLine))
             .build()
-        val newItem = currentItem.buildUpon().setMediaMetadata(newMeta).build()
         p.replaceMediaItem(p.currentMediaItemIndex, newItem)
+    }
+
+    /**
+     * Overlay the current lyric onto [base] for notification display. When
+     * lyric is null (no lyrics loaded, or the current position is before the
+     * first line), the notification shows the original artist unchanged.
+     */
+    private fun applyLyricLine(base: MediaMetadata, lyric: String?): MediaMetadata {
+        val builder = base.buildUpon()
+        if (lyric != null) builder.setArtist(lyric)
+        return builder.build()
     }
 
     fun load(context: Context, url: String, hls: Boolean, headers: Map<String, String>?) {

@@ -483,6 +483,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     // Lyrics are loaded by the currentSong subscription below, not here: every
     // path that swaps the song flows through it (see the subscription's notes).
     const source = await resolvePlaybackSource(song)
+    // Refresh the native media-notification window BEFORE loading so the new
+    // song's metadata is guaranteed present in the engine's `metadataByUrl`
+    // map by the time it looks it up. Otherwise remote next/previous outside
+    // the last-pushed window (five songs on either side of the previous
+    // current index) leaves the notification stuck on the outgoing song's
+    // title/artwork — the "点下一曲偶尔不及时更新" symptom.
+    await syncQueueWindow(get().playlist, index)
     await audio.load(source.url, {
       durationMs: durationMsOf(song),
       hls: source.hls,

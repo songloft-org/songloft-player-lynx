@@ -1,6 +1,13 @@
 package org.songloft.lynx.audio
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
+import androidx.core.app.NotificationCompat
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
@@ -35,6 +42,23 @@ import org.songloft.lynx.R
  * the session is created with the right context before ExoPlayer transitions
  * to `STATE_READY -> isPlaying = true`.
  *
+ * ## Foreground-service start deadline
+ *
+ * Whoever calls `startForegroundService()` (see [SongloftAudioModule.play])
+ * has **5 seconds** on Android O+ to call `startForeground()` or the OS kills
+ * the process with `ForegroundServiceDidNotStartInTimeException`. That is the
+ * "playback stopped like the app crashed" symptom: playback silently dies,
+ * often mid-song, whenever media3's own notification is late to appear
+ * (network stall on `load`, transcode HLS, MediaSession still connecting).
+ *
+ * `DefaultMediaNotificationProvider` only posts a real notification once the
+ * player transitions to playing, which can easily be more than 5 seconds
+ * after the service starts on a bad connection. So [onStartCommand] posts a
+ * lightweight placeholder foreground notification **immediately** — media3
+ * then replaces it with its own MediaStyle notification as soon as playback
+ * begins. This costs one extra notification-manager call per service start
+ * and buys unconditional compliance with the deadline.
+ *
  * Registered in the manifest with `foregroundServiceType="mediaPlayback"` and
  * the required `<intent-filter>` for `MediaSessionService`.
  */
@@ -59,6 +83,66 @@ class SongloftPlaybackService : MediaSessionService() {
         // foreground notification lifecycle automatically. Without this call the
         // service is unaware of the session and never posts the notification.
         SongloftAudioEngine.mediaSession?.let { addSession(it) }
+        ensureNotificationChannel()
+    }
+
+    /**
+     * Post a placeholder foreground notification before delegating to the base
+     * class. See the class-level docstring: the 5-second deadline is why. The
+     * base class's own logic will call `startForeground` again once media3's
+     * MediaStyle notification is ready, replacing the placeholder.
+     */
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        startForegroundPlaceholder()
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    private fun startForegroundPlaceholder() {
+        val notification = NotificationCompat.Builder(this, PLACEHOLDER_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_monochrome)
+            .setContentTitle(getString(R.string.app_name))
+            // Silent + minimum priority so it never actually shows to the user
+            // — it exists only to fulfill the FGS start deadline. Media3
+            // overwrites this the moment the real MediaStyle notification is
+            // built, which happens as soon as playback starts.
+            .setSilent(true)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setOngoing(true)
+            .build()
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    PLACEHOLDER_NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                startForeground(PLACEHOLDER_NOTIFICATION_ID, notification)
+            }
+        } catch (_: Throwable) {
+            // Some background-start restrictions (Android 12+) can throw here.
+            // We tried; the media notification path will still work if the app
+            // is foreground, and the OS will terminate us if we were required
+            // to be foreground and could not become so.
+        }
+    }
+
+    private fun ensureNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+        if (nm.getNotificationChannel(PLACEHOLDER_CHANNEL_ID) != null) return
+        val channel = NotificationChannel(
+            PLACEHOLDER_CHANNEL_ID,
+            getString(R.string.app_name),
+            NotificationManager.IMPORTANCE_LOW,
+        ).apply {
+            setShowBadge(false)
+            enableLights(false)
+            enableVibration(false)
+            setSound(null, null)
+        }
+        nm.createNotificationChannel(channel)
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
@@ -84,5 +168,11 @@ class SongloftPlaybackService : MediaSessionService() {
         // up its notification manager.
         SongloftAudioEngine.releaseFromService()
         super.onDestroy()
+    }
+
+    companion object {
+        /** Placeholder channel used only to satisfy the FGS start deadline. */
+        private const val PLACEHOLDER_CHANNEL_ID = "songloft.playback.placeholder"
+        private const val PLACEHOLDER_NOTIFICATION_ID = 1001
     }
 }
