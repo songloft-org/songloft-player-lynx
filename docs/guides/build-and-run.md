@@ -1,6 +1,6 @@
 # 构建与运行
 
-四个目标平台的构建命令，以及每个平台上真实踩过的环境坑。命令与 `package.json` 的 `scripts` 一一对应。
+五个目标平台的构建命令，以及每个平台上真实踩过的环境坑。命令与 `package.json` 的 `scripts` 一一对应。
 
 > 只想快速跑起来看一眼 → 先读 [快速上手](../getting-started.md)。
 > 想知道各平台**能力差异**（而不是怎么构建）→ 读 [平台差异](../architecture/platform-differences.md)。
@@ -14,6 +14,7 @@
 | 后端 | `http://localhost:58091`，账号 `admin/admin`，接口前缀 `/api/v1` |
 | Android | `ANDROID_HOME` + `JAVA_HOME`（本机已有 openjdk 17，见下方 Android 一节） |
 | iOS | macOS + Xcode + CocoaPods |
+| HarmonyOS | DevEco Studio 5.0+（含 hvigor 构建工具链） |
 
 ```bash
 pnpm install
@@ -35,7 +36,7 @@ pnpm test           # vitest
 - **`pnpm run build` 必须列出两个产物** —— `File (lynx)` 与 `File (web)`。只有 web 那一行，说明 `lynx.config.ts` 的 `environments` 少了 `lynx: {}`：该字段是**替换**隐式默认环境而非扩展它，漏掉不会让构建失败，只会静默停止产出 `dist/main.lynx.bundle`，而 copy-bundle 脚本照拷 `dist/` 里的陈旧文件。`scripts/assert-bundle-fresh.mjs` 现在会拦住这种情况（判据是产物**年龄**，因为 `existsSync` 抓不到「文件在但是旧的」）。
 - **类型检查必须带 `-b`**。`tsc --noEmit` 对本仓库是空跑。改动没被检测到时用 `--force`（`-b` 会写 `.tsbuildinfo`，已 gitignore）。
 
-> ⚠️ **以上命令只覆盖 JS 产物**，不读 Xcode 工程、不验 Web 产物自洽性、不编译 Kotlin。「build 全绿」不等于「能出包」——这个仓库为此付过三次代价，见 [闸门原则](../../AGENTS.md#6-测试与闸门原则来自三次教训)。改了 `ios/`、`android/`、`web/` 就必须跑对应平台那一条。
+> ⚠️ **以上命令只覆盖 JS 产物**，不读 Xcode 工程、不验 Web 产物自洽性、不编译 Kotlin、不编译 ArkTS。「build 全绿」不等于「能出包」——这个仓库为此付过三次代价，见 [闸门原则](../../AGENTS.md#6-测试与闸门原则来自三次教训)。改了 `ios/`、`android/`、`harmony/`、`web/` 就必须跑对应平台那一条。
 
 ## Android
 
@@ -75,6 +76,20 @@ pnpm run ios:run     # build + 装进已启动的模拟器 + 启动
 - **`ios:run` 需要已 boot 的模拟器**（`xcrun simctl boot <udid>; open -a Simulator`）。模拟器的 localhost **就是**开发机，所以没有 `adb reverse` 的对应步骤。
 
 **改了 bundle 或原生代码后，`simctl install` 不会替换已在运行的进程** —— 必须先 `xcrun simctl terminate <udid> org.songloft.lynx`。`e2e:ios:setup` 也是「已装就不重装」（`scripts/e2e-ios-setup.mjs`），所以 `ios:build` 之后要自己 terminate + install，否则测的是旧包。这条曾导致「修了也没用」的错误结论。
+
+## HarmonyOS
+
+构建需要 DevEco Studio（含 hvigor 构建工具链），CI 环境没有 hvigor，只能在本地 IDE 中验证。
+
+```bash
+pnpm run build               # 先产出 JS bundle
+# 在 DevEco Studio 中打开 harmony/ 目录，Build > Build Hap(s)/APP(s)
+```
+
+- **bundle 拷贝**：JS bundle 需拷贝到 `harmony/entry/src/main/resources/rawfile/`，与 Android 的 `assets/` 同理。
+- **模块注册**：HarmonyOS 侧的模块注册在 `EntryAbility.ets`，HTTP service 替换在此处完成（`SongloftHttpService` 替代 SDK 默认实现，与 Android/iOS 同策略）。
+- **无等价 API 的模块**：FloatingLyric、LiveActivity 在鸿蒙上无对应能力，TS 侧由 `NativeModules` 探测降级为 no-op。
+- **验证方式**：DevEco Studio 内 Build > Build Hap(s)/APP(s)。真机调试需 HarmonyOS NEXT 设备或模拟器 + `hdc`（类似 `adb`）。
 
 ## Web
 

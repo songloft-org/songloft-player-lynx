@@ -33,7 +33,7 @@ pnpm run web:dev     # 起本地静态服务
 
 > 若页面**纯黑、控制台却没有任何错误** —— 那是宿主脚本没以 module 加载（`import.meta` 的异常只走 `pageerror`，不进 `console.error`）。现有 vitest 闸门锁住了这件事，正常构建不该出现；真遇到就查 `web/index.html` 的 `<script type="module">`。
 
-设备上跑：见 [构建与运行](./guides/build-and-run.md) 的 Android / iOS 两节（Android 需要 `ANDROID_HOME` 与 JDK，iOS 需要 Xcode + CocoaPods，各有几个必踩的环境坑写在那里）。
+设备上跑：见 [构建与运行](./guides/build-and-run.md) 的 Android / iOS / HarmonyOS 三节（Android 需要 `ANDROID_HOME` 与 JDK，iOS 需要 Xcode + CocoaPods，HarmonyOS 需要 DevEco Studio，各有几个必踩的环境坑写在那里）。
 
 ## 4. 验收命令
 
@@ -45,7 +45,7 @@ pnpm run typecheck    # = tsc -b（必须 -b，--noEmit 是空跑）
 pnpm test             # 1981 用例 / 189 文件
 ```
 
-**「build 全绿」不等于「能出包」** —— 这三条只读 JS 产物，不碰 Xcode 工程、不编译 Kotlin、不验 Web 产物自洽性。改了 `ios/`、`android/`、`web/` 必须另跑对应平台那条，见 [构建与运行](./guides/build-and-run.md)。这个仓库为此付过三次代价。
+**「build 全绿」不等于「能出包」** —— 这三条只读 JS 产物，不碰 Xcode 工程、不编译 Kotlin、不编译 ArkTS、不验 Web 产物自洽性。改了 `ios/`、`android/`、`harmony/`、`web/` 必须另跑对应平台那条，见 [构建与运行](./guides/build-and-run.md)。这个仓库为此付过三次代价。
 
 ## 5. 接着读什么
 

@@ -1,5 +1,7 @@
 # 鸿蒙（HarmonyOS NEXT）接入计划
 
+> **状态：✅ 已完成**（2026-08-27）。`harmony/` 宿主工程已就位，8 个原生模块（Audio / Storage / Platform / SystemAppearance / Navigation / Video / Dlna / SongCache）全部实现，契约闸门已覆盖。FloatingLyric / LiveActivity 无等价 API，TS 侧降级为 no-op。构建需 DevEco Studio（CI 无 hvigor 环境），真机验证待补。
+
 ## 背景
 
 Songloft Player Lynx 当前支持 Android（Kotlin）和 iOS（Swift）两个原生宿主。Lynx SDK 4.0.0 已将 `'Harmony'` 作为一等平台写入类型系统（`SystemInfo.platform === 'Harmony'`），CSS 兼容数据也包含 harmony 列，UI 组件均有 `@Harmony` 标注。JS bundle 跨平台共用，只需新增 ArkTS 原生宿主即可在鸿蒙上运行。

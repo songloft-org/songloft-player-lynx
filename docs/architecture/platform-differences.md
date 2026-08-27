@@ -1,6 +1,6 @@
 # 平台差异
 
-Songloft Player 一套 ReactLynx 代码跑三个宿主：Android（Kotlin + ExoPlayer）、iOS（Swift + AVPlayer）、Web（`@lynx-js/web-core`，业务代码在真 Worker 里）。三端**不是**同一套能力的三份实现，差异有三个不同来源：
+Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoPlayer）、iOS（Swift + AVPlayer）、HarmonyOS（ArkTS + AVPlayer）、Web（`@lynx-js/web-core`，业务代码在真 Worker 里）。四端**不是**同一套能力的四份实现，差异有三个不同来源：
 
 1. **宿主根本没有那个东西** —— iOS 没有返回键（无 `UINavigationController`，连边缘滑动都没有），Web 没有原生视频画面（Lynx 4.0.x 无 video 元素，web-core 的标签表里也没有条目）。这类差异不可能靠写代码消除。
 2. **同一个 OS 概念的实现语义不同** —— iOS 的 `addPeriodicTimeObserver(forInterval:)` 按**媒体时间**计间隔，Android 的 `postDelayed` 按**墙钟**计。两者都"每 500ms 上报一次进度"，变速时行为分叉。
@@ -16,18 +16,18 @@ Songloft Player 一套 ReactLynx 代码跑三个宿主：Android（Kotlin + ExoP
 
 每一位都键在**自己的**模块（或方法）上，不是「有没有任何原生模块」的总开关 —— 因为它们真的会分叉。
 
-| 能力（能力位） | Android | iOS | Web | 探测什么 |
-|---|---|---|---|---|
-| 悬浮歌词 `floatingLyric` | ✅ overlay 窗口 | ⛔ 无模块 | ⛔ 无模块 | `SongloftFloatingLyric` 模块存在 |
-| Live Activity `liveActivity` | ⛔ 无模块 | ✅ 灵动岛/锁屏 | ⛔ 无模块 | `SongloftLiveActivity` 模块存在 |
-| DLNA 投屏 `dlna` | ✅ | ✅ | ⛔ 无模块 | `SongloftDlna` 模块存在 |
-| 全屏视频 `video` | ✅ 借用同一播放器 | ✅ 借用同一播放器 | ⛔ **无视频表面** | `SongloftVideo` 模块存在 |
-| 单曲离线缓存 `songCache` | ✅ | ✅ | ⛔ 无模块 | `SongloftSongCache.getCacheInfo` **方法**存在 |
-| 数据导入/导出 `dataTransfer` | ✅ | ✅ | ⛔ 显式 `isWeb` 关闭 | `isWeb ? false : SongloftPlatform` |
-| 文件交付 `fileExport` | ✅ 系统分享面板 | ✅ 系统分享面板 | ✅ **浏览器下载** | `SongloftPlatform.shareFile` **方法**存在 |
-| 原生文件选择 `nativeFilePicker` | ✅ | ✅ | ✅ 但可能不弹框（见下） | `SongloftPlatform` 模块存在 |
-| Bundle 本地模式 `bundleMode` | ✅ | ✅ | ✅（同上探测） | 同 `nativeFilePicker`，**全库暂无消费点** |
-| 系统托盘 `systemTray` | ✅（同探测） | ✅（同探测） | ⛔ 显式 `isWeb` 关闭 | `!isWeb && SongloftPlatform`，**全库暂无消费点** |
+| 能力（能力位） | Android | iOS | HarmonyOS | Web | 探测什么 |
+|---|---|---|---|---|---|
+| 悬浮歌词 `floatingLyric` | ✅ overlay 窗口 | ⛔ 无模块 | ⛔ 无等价 API | ⛔ 无模块 | `SongloftFloatingLyric` 模块存在 |
+| Live Activity `liveActivity` | ⛔ 无模块 | ✅ 灵动岛/锁屏 | ⛔ 无等价 API | ⛔ 无模块 | `SongloftLiveActivity` 模块存在 |
+| DLNA 投屏 `dlna` | ✅ | ✅ | ✅ | ⛔ 无模块 | `SongloftDlna` 模块存在 |
+| 全屏视频 `video` | ✅ 借用同一播放器 | ✅ 借用同一播放器 | ✅ 共享 AVPlayer | ⛔ **无视频表面** | `SongloftVideo` 模块存在 |
+| 单曲离线缓存 `songCache` | ✅ | ✅ | ✅ | ⛔ 无模块 | `SongloftSongCache.getCacheInfo` **方法**存在 |
+| 数据导入/导出 `dataTransfer` | ✅ | ✅ | ✅ | ⛔ 显式 `isWeb` 关闭 | `isWeb ? false : SongloftPlatform` |
+| 文件交付 `fileExport` | ✅ 系统分享面板 | ✅ 系统分享面板 | ✅ 系统分享面板 | ✅ **浏览器下载** | `SongloftPlatform.shareFile` **方法**存在 |
+| 原生文件选择 `nativeFilePicker` | ✅ | ✅ | ✅ | ✅ 但可能不弹框（见下） | `SongloftPlatform` 模块存在 |
+| Bundle 本地模式 `bundleMode` | ✅ | ✅ | ✅ | ✅（同上探测） | 同 `nativeFilePicker`，**全库暂无消费点** |
+| 系统托盘 `systemTray` | ✅（同探测） | ✅（同探测） | ✅（同探测） | ⛔ 显式 `isWeb` 关闭 | `!isWeb && SongloftPlatform`，**全库暂无消费点** |
 
 两处刻意用**方法级**而非模块级探测（`fileExport` / `songCache`）：JS bundle 可以热更到旧原生壳上，那时模块在、方法不在，而「点了才报错的死按钮」正是这个模块存在的理由。`songCache` 键在 `getCacheInfo` 而非 `download` 上，因为后者改过 arity —— 旧壳仍有 `download`，会声称支持缓存然后被喂进绑不上的参数。
 
@@ -35,30 +35,30 @@ Songloft Player 一套 ReactLynx 代码跑三个宿主：Android（Kotlin + ExoP
 
 ### B. 由原生模块存在性定义的能力（契约闸门 `modules` 表）
 
-| 模块 / 能力 | Android | iOS | Web | 备注 |
-|---|---|---|---|---|
-| `SongloftAudio` 音频播放 | ✅ ExoPlayer | ✅ AVPlayer | ✅ 主线程 `HTMLAudioElement` | Web 经 `nativeModulesMap` 复用 `NativeSongloftAudio` 路径 |
-| `SongloftStorage` 安全存储 | ✅ Keystore | ✅ Keychain | ⛔ **刻意不注册** | Web 走 worker 内的 IndexedDB，见「存储」节 |
-| `SongloftPlatform` 打开 URL / 剪贴板 | ✅ | ✅ | ✅ | Web 侧全部转发到主线程 |
-| `SongloftNavigation` 返回键拦截 | ✅ 真拦截 + 双击退出 | ⛔ **无返回键可拦** | ✅ 主线程 sentinel history | iOS 侧 TS facade 降级为惰性桩 |
-| `SongloftWebview` 插件页 | ⛔ 用原生 `<webview>` | ⛔ 用原生 `<webview>` | ✅ **Web 独有**（iframe） | iframe 必须挂进 `lynxView.shadowRoot`，z-index 50 |
-| `SongloftVideo` 全屏视频 | ✅ | ✅ | ⛔ | 同 A 表 `video` |
-| `SongloftSongCache` 离线缓存 | ✅ | ✅ | ⛔ | 同 A 表 `songCache` |
-| `SongloftDlna` 投屏 | ✅ | ✅ | ⛔ | 同 A 表 `dlna` |
+| 模块 / 能力 | Android | iOS | HarmonyOS | Web | 备注 |
+|---|---|---|---|---|---|
+| `SongloftAudio` 音频播放 | ✅ ExoPlayer | ✅ AVPlayer | ✅ AVPlayer | ✅ 主线程 `HTMLAudioElement` | Web 经 `nativeModulesMap` 复用 `NativeSongloftAudio` 路径 |
+| `SongloftStorage` 安全存储 | ✅ Keystore | ✅ Keychain | ✅ dataPreferences（secure 占位） | ⛔ **刻意不注册** | Web 走 worker 内的 IndexedDB，见「存储」节 |
+| `SongloftPlatform` 打开 URL / 剪贴板 | ✅ | ✅ | ✅ | ✅ | Web 侧全部转发到主线程 |
+| `SongloftNavigation` 返回键拦截 | ✅ 真拦截 + 双击退出 | ⛔ **无返回键可拦** | ✅ 手势返回拦截 | ✅ 主线程 sentinel history | iOS 侧 TS facade 降级为惰性桩 |
+| `SongloftWebview` 插件页 | ⛔ 用原生 `<webview>` | ⛔ 用原生 `<webview>` | ⛔ 用原生 `<webview>` | ✅ **Web 独有**（iframe） | iframe 必须挂进 `lynxView.shadowRoot`，z-index 50 |
+| `SongloftVideo` 全屏视频 | ✅ | ✅ | ✅ | ⛔ | 同 A 表 `video` |
+| `SongloftSongCache` 离线缓存 | ✅ | ✅ | ✅ | ⛔ | 同 A 表 `songCache` |
+| `SongloftDlna` 投屏 | ✅ | ✅ | ✅ | ⛔ | 同 A 表 `dlna` |
 
 ### C. 行为层面的差异（同一功能，三种实现）
 
-| 行为 | Android | iOS | Web |
-|---|---|---|---|
-| 后台播放 | ✅ 前台服务 + `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | ✅ `UIBackgroundModes: audio` + `.playback` 会话 | ⚠️ 由浏览器标签页策略决定，应用无法保证 |
-| 锁屏 / 通知栏元数据 | ✅ media3 `MediaSession` | ✅ `MPNowPlayingInfoCenter` | ⚠️ `navigator.mediaSession`，依浏览器支持与安全上下文 |
-| 10 段 EQ | ⚠️ `audiofx.Equalizer`，**部分设备不支持**（静默降级） | ✅ `MTAudioProcessingTap` + `NBandEQ`，固定 10 段 | ✅ `BiquadFilterNode` 链（lowshelf + 8 peaking + highshelf） |
-| HLS | ✅ ExoPlayer 原生 | ✅ AVPlayer 原生 | ✅ hls.js（Safari 回落原生 HLS） |
-| 不安全 TLS（自签名） | ✅ 重建 OkHttpClient 即时生效 | ✅ `invalidateAndCancel()` 重建 session + `InsecureMediaLoader` | ⛔ **no-op**，证书信任归浏览器 |
-| 系统深浅色跟随 | ✅ `setGlobalProps` + `sendGlobalEvent` | ✅ 同左 | ✅ `global-props` 属性 + 主线程 `matchMedia` |
-| 系统语言跟随 | ✅ 同上两通道 | ✅ 同左 | ⚠️ 只在深浅色变化时随 `navigator.language` 一并重发 |
-| 客户端日志落盘 | ✅ `logWrite` / `logRead` | ✅ 同左 | ⛔ 无该方法 → 恒回落内存缓冲 |
-| 长按手势 `bindlongpress` | ✅ | ✅ | ⛔ **web-core 不合成该手势** |
+| 行为 | Android | iOS | HarmonyOS | Web |
+|---|---|---|---|---|
+| 后台播放 | ✅ 前台服务 + `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | ✅ `UIBackgroundModes: audio` + `.playback` 会话 | ✅ 后台长时任务（`BackgroundTaskManager`） | ⚠️ 由浏览器标签页策略决定，应用无法保证 |
+| 锁屏 / 通知栏元数据 | ✅ media3 `MediaSession` | ✅ `MPNowPlayingInfoCenter` | ✅ AVSession | ⚠️ `navigator.mediaSession`，依浏览器支持与安全上下文 |
+| 10 段 EQ | ⚠️ `audiofx.Equalizer`，**部分设备不支持**（静默降级） | ✅ `MTAudioProcessingTap` + `NBandEQ`，固定 10 段 | ⚠️ 占位（EQ API 待评估） | ✅ `BiquadFilterNode` 链（lowshelf + 8 peaking + highshelf） |
+| HLS | ✅ ExoPlayer 原生 | ✅ AVPlayer 原生 | ✅ AVPlayer 原生 | ✅ hls.js（Safari 回落原生 HLS） |
+| 不安全 TLS（自签名） | ✅ 重建 OkHttpClient 即时生效 | ✅ `invalidateAndCancel()` 重建 session + `InsecureMediaLoader` | ✅ 销毁旧 http 实例重建 | ⛔ **no-op**，证书信任归浏览器 |
+| 系统深浅色跟随 | ✅ `setGlobalProps` + `sendGlobalEvent` | ✅ 同左 | ✅ `setGlobalProps` + `sendGlobalEvent` | ✅ `global-props` 属性 + 主线程 `matchMedia` |
+| 系统语言跟随 | ✅ 同上两通道 | ✅ 同左 | ✅ 同左 | ⚠️ 只在深浅色变化时随 `navigator.language` 一并重发 |
+| 客户端日志落盘 | ✅ `logWrite` / `logRead` | ✅ 同左 | ✅ 同左 | ⛔ 无该方法 → 恒回落内存缓冲 |
+| 长按手势 `bindlongpress` | ✅ | ✅ | ✅ | ⛔ **web-core 不合成该手势** |
 
 ---
 
@@ -89,6 +89,7 @@ Songloft Player 一套 ReactLynx 代码跑三个宿主：Android（Kotlin + ExoP
 |---|---|---|
 | Android | `SharedPreferences`（`prefs`）+ Keystore（`secure`） | 跨重启持久 |
 | iOS | `UserDefaults`（`prefs`）+ Keychain（`secure`） | 跨重启持久 |
+| HarmonyOS | `dataPreferences`（`prefs`）+ 带前缀 key（`secure` 占位） | 跨重启持久 |
 | Web | IndexedDB（DB 名 `songloft`） | 跨刷新持久，但**无 secure enclave** |
 
 **Web 上 `secure` 命名空间只是一个命名空间**，安全性等同任何同源脚本。
@@ -104,7 +105,7 @@ Songloft Player 一套 ReactLynx 代码跑三个宿主：Android（Kotlin + ExoP
 
 ## 音频差异
 
-三种实现（ExoPlayer / AVPlayer / 主线程 `HTMLAudioElement` 宿主模块）共享同一个 facade 契约（方法名、事件名、`stateChanged` 状态词表），所以 store 层看不出区别。**但有两条实测结论会漏到 JS 侧**，改播放器代码前必须知道。
+四种实现（ExoPlayer / AVPlayer(iOS) / AVPlayer(HarmonyOS) / 主线程 `HTMLAudioElement` 宿主模块）共享同一个 facade 契约（方法名、事件名、`stateChanged` 状态词表），所以 store 层看不出区别。**但有两条实测结论会漏到 JS 侧**，改播放器代码前必须知道。
 
 ### ① iOS 的进度 tick 间隔按媒体时间计，变速时必须按 rate 重装 observer
 
@@ -180,7 +181,7 @@ duration: e.durationMs > 0 ? e.durationMs : s.duration,
 
 ## 相关
 
-- [构建与运行](../guides/build-and-run.md) —— 三平台的构建与启动命令
+- [构建与运行](../guides/build-and-run.md) —— 四平台的构建与启动命令
 - [Web 部署](../guides/web-deployment.md) —— standalone / embedded 产物与 Web 限制清单
 - [原生模块参考](../reference/native-modules.md) —— 各模块的方法表与调用约定
 - [Lynx 平台约束](./lynx-constraints.md) —— 无 DOM、双线程、元素与事件层面的约束

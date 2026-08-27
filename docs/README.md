@@ -28,7 +28,7 @@ Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr
 | 测试 | **1981** vitest（189 文件）+ 33 个 E2E 场景 |
 | 构建产物 | lynx 2194.4 kB / web 2261.4 kB（未压缩，双产物） |
 | 原生模块 | 9 个跨平台模块在契约闸门的 `modules` 表内，另有 Web 独有 `SongloftWebview`（独立 describe 覆盖） |
-| 目标平台 | Android · iOS · Web（桌面 Lynxtron 未开始） |
+| 目标平台 | Android · iOS · HarmonyOS · Web（桌面 Lynxtron 未开始） |
 
 ### 平台可用性
 
@@ -36,6 +36,7 @@ Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr
 |------|------|
 | Android | ✅ 真机验证通过（播放 / 通知栏 / 扫描 / 重复检测 / 悬浮歌词 / 全屏视频全链路） |
 | iOS | ✅ 可构建可运行（`ios:build BUILD SUCCEEDED`，e2e 110/110）。7 个原生模块全部注册（`SongloftNavigation` 刻意不做——没有返回键可拦） |
+| HarmonyOS | ✅ 宿主工程已就位，8 个原生模块实现（Audio / Storage / Platform / SystemAppearance / Navigation / Video / Dlna / SongCache）。构建需 DevEco Studio（CI 无 hvigor 环境）。FloatingLyric / LiveActivity 无等价 API，TS 侧降级为 no-op |
 | Web | ✅ 可加载渲染、**有音频**。几条已知限制（无 longpress、文件选择器 user activation；占位符色已修，随主题切换）见 [Web 部署](./guides/web-deployment.md) |
 | 桌面 | ⛔ 未开始（P3 唯一未开始项，剩余最大单块能力） |
 

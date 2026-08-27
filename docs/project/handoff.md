@@ -48,10 +48,11 @@
 | `pnpm run build:web` | 绿 | 批60c 收口时 |
 | `gradlew assembleDebug` | 绿 | **批49 时代**，此后 144 个提交未复跑 |
 | `ios:build` | `BUILD SUCCEEDED` | **批49 时代**，同上 |
+| HarmonyOS Build Hap | 未跑过 | 宿主工程已就位（8 模块），需 DevEco Studio 验证 |
 | Android e2e | 112 passed / 8 skipped (120) | **批49 时代（2026-08-16）** |
 | iOS e2e | 110 passed / 10 skipped (120) | **批49 时代（2026-08-16）** |
 
-> ⚠️ **e2e 与两个原生构建自批49 之后没有再全量跑过**，而这期间有 144 个提交、e2e 场景从 29 个涨到 **33 个**（新增 `library-views` / `play-history` / `playlist-pin` / `song-cache` / `theme-packs` 等，并重写了 `song-detail`）。**接手后若要改原生或发包，先把这四条补跑一遍**——vitest 读不到 Xcode 工程、Gradle 或真机行为。
+> ⚠️ **e2e 与两个原生构建自批49 之后没有再全量跑过**，HarmonyOS 构建从未在 CI 验证过（需 DevEco Studio），而这期间有 144 个提交、e2e 场景从 29 个涨到 **33 个**（新增 `library-views` / `play-history` / `playlist-pin` / `song-cache` / `theme-packs` 等，并重写了 `song-detail`）。**接手后若要改原生或发包，先把这几条补跑一遍**——vitest 读不到 Xcode 工程、Gradle、hvigor 或真机行为。
 >
 > **两侧 skip 的构成**（skip 数变了就说明有东西被静默关掉了，值得查）：Android = 3 例 `ios-appearance` + 5 例 `android-video-fullscreen`（缺视频素材）；iOS = 5 例 `android-floating-lyric` + 5 例 `android-video-fullscreen`（都是平台门控）。
 
@@ -110,9 +111,10 @@ pnpm run ios:build    # 改 ios/ 后验工程真能编译（需 macOS）
 pnpm run build:web    # 改 web/ 后验产物，且要真的用浏览器打开
 
 cd android && ./gradlew --no-daemon assembleDebug   # 改 android/ 后真编译（环境见 build-and-run.md）
+# HarmonyOS: DevEco Studio 中 Build > Build Hap(s)/APP(s)   # 改 harmony/ 后真编译
 ```
 
-**「build 绿」不等于「能出包 / 能跑」**——批41 三条 P0 全是「闸门全绿而产物是坏的」（pitfalls §4）。改 `ios/`/`web/`/`android/` 务必跑对应那条。
+**「build 绿」不等于「能出包 / 能跑」**——批41 三条 P0 全是「闸门全绿而产物是坏的」（pitfalls §4）。改 `ios/`/`web/`/`android/`/`harmony/` 务必跑对应那条。
 
 E2E 运行方式、跑前四件环境检查、store 把手清单 → [测试指南](../guides/testing.md)；真机 logcat / 无头浏览器实测方法 → [调试指南](../guides/debugging.md)。
 
