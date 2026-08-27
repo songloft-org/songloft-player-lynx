@@ -6,9 +6,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@aspect/lynx": "4.0.0",
-    "@aspect/lynx-service-image": "4.0.0",
-    "@aspect/lynx-service-log": "4.0.0",
-    "@aspect/xelement": "4.0.0"
+    "@lynx/lynx": "file:../libs/lynx",
+    "@lynx/lynx_http_service": "file:../libs/lynx_http_service",
+    "@lynx/lynx_image_service": "file:../libs/lynx_image_service",
+    "@lynx/lynx_log_service": "file:../libs/lynx_log_service"
   }
 }
