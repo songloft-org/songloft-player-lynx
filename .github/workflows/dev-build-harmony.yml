@@ -6,12 +6,11 @@ name: Dev Build (HarmonyOS HAP)
 # Manual-only: run from the Actions tab ("Run workflow"). No auto-run on push.
 #
 # ── Secrets setup (one-time, via gh CLI): ──────────────────────────────────────
-#   gh secret set HARMONY_SIGNING_KEY_BASE64 < <(base64 -i path/to/signing-key.p12)
+#   gh secret set HARMONY_SIGNING_KEY_BASE64 < <(base64 -i harmony/signing/songloft-release.p12)
 #   gh secret set HARMONY_SIGNING_KEY_PASSWORD --body "your-key-password"
-#   gh secret set HARMONY_SIGNING_PROFILE_BASE64 < <(base64 -i path/to/signing-profile.p7b)
-#   gh secret set HARMONY_SIGNING_CERT_BASE64 < <(base64 -i path/to/signing-cert.cer)
+#   gh secret set HARMONY_SIGNING_PROFILE_BASE64 < <(base64 -i harmony/signing/Songloft-githubRelease.p7b)
 #   gh secret set HARMONY_KEYSTORE_PASSWORD --body "your-keystore-password"
-#   gh secret set HARMONY_KEY_ALIAS --body "your-key-alias"
+#   gh secret set HARMONY_KEY_ALIAS --body "songloft"  (optional, defaults to songloft)
 # ───────────────────────────────────────────────────────────────────────────────
 on:
   workflow_dispatch:
@@ -88,14 +87,12 @@ jobs:
         env:
           HARMONY_SIGNING_KEY_BASE64: ${{ secrets.HARMONY_SIGNING_KEY_BASE64 }}
           HARMONY_SIGNING_PROFILE_BASE64: ${{ secrets.HARMONY_SIGNING_PROFILE_BASE64 }}
-          HARMONY_SIGNING_CERT_BASE64: ${{ secrets.HARMONY_SIGNING_CERT_BASE64 }}
           HARMONY_KEYSTORE_PASSWORD: ${{ secrets.HARMONY_KEYSTORE_PASSWORD }}
           HARMONY_SIGNING_KEY_PASSWORD: ${{ secrets.HARMONY_SIGNING_KEY_PASSWORD }}
           HARMONY_KEY_ALIAS: ${{ secrets.HARMONY_KEY_ALIAS }}
         run: |
-          if [ -z "$HARMONY_SIGNING_KEY_BASE64" ] || [ -z "$HARMONY_SIGNING_CERT_BASE64" ]; then
-            echo "::warning::Signing secrets incomplete — producing unsigned HAP."
-            echo "::warning::Required secrets: HARMONY_SIGNING_KEY_BASE64, HARMONY_SIGNING_PROFILE_BASE64, HARMONY_SIGNING_CERT_BASE64, HARMONY_KEYSTORE_PASSWORD, HARMONY_SIGNING_KEY_PASSWORD, HARMONY_KEY_ALIAS"
+          if [ -z "$HARMONY_SIGNING_KEY_BASE64" ] || [ -z "$HARMONY_SIGNING_PROFILE_BASE64" ]; then
+            echo "::warning::Signing secrets not set — producing unsigned HAP."
             echo "HAP_SIGNED=false" >> "$GITHUB_ENV"
             exit 0
           fi
@@ -103,18 +100,36 @@ jobs:
           # Decode signing materials
           echo "$HARMONY_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-key.p12"
           echo "$HARMONY_SIGNING_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-profile.p7b"
-          echo "$HARMONY_SIGNING_CERT_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-cert.cer"
+
+          # Extract certificate from the .p12 keystore (no separate .cer secret needed)
+          openssl pkcs12 -in "$RUNNER_TEMP/signing-key.p12" \
+            -clcerts -nokeys -passin "pass:${HARMONY_KEYSTORE_PASSWORD}" \
+            -out "$RUNNER_TEMP/signing-cert.cer" 2>/dev/null
+
+          if [ ! -s "$RUNNER_TEMP/signing-cert.cer" ]; then
+            echo "::warning::Failed to extract certificate from .p12 — producing unsigned HAP."
+            echo "HAP_SIGNED=false" >> "$GITHUB_ENV"
+            exit 0
+          fi
 
           # Locate hap-sign-tool.jar in the SDK
           SIGN_TOOL=$(find /home/runner/ohos-sdk -name "hap-sign-tool.jar" -print -quit 2>/dev/null)
           if [ -z "$SIGN_TOOL" ]; then
-            echo "::warning::hap-sign-tool.jar not found in SDK, trying npm package"
-            npm install -g @aspect/hap-sign-tool 2>/dev/null || true
-            SIGN_TOOL=$(find /home/runner/ohos-sdk -name "hap-sign-tool.jar" -print -quit 2>/dev/null)
+            # Fallback: check common SDK paths
+            for dir in /home/runner/ohos-sdk/command-line-tools/sdk/*/openharmony/toolchains/lib \
+                       /home/runner/ohos-sdk/command-line-tools/tool \
+                       /home/runner/ohos-sdk/toolchains; do
+              if [ -f "$dir/hap-sign-tool.jar" ]; then
+                SIGN_TOOL="$dir/hap-sign-tool.jar"
+                break
+              fi
+            done
           fi
 
           if [ -z "$SIGN_TOOL" ]; then
-            echo "::warning::hap-sign-tool.jar not available — producing unsigned HAP."
+            echo "::warning::hap-sign-tool.jar not found in SDK — producing unsigned HAP."
+            echo "::warning::SDK contents:"
+            find /home/runner/ohos-sdk -name "*.jar" 2>/dev/null | head -20
             echo "HAP_SIGNED=false" >> "$GITHUB_ENV"
             exit 0
           fi
