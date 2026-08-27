@@ -118,6 +118,10 @@ const hosts = {
   iosViewController: read(`${IOS_DIR}/ViewController.swift`),
   // HarmonyOS module registration (EntryAbility.ets)
   harmonyEntry: read('harmony/entry/src/main/ets/entryability/EntryAbility.ets'),
+  // HarmonyOS registers per-view LynxModule classes on Index.ets (map into
+  // LynxView()); EntryAbility only wires services. Registration site is not
+  // the same as Android/iOS.
+  harmonyIndex: read('harmony/entry/src/main/ets/pages/Index.ets'),
   // HarmonyOS module.json5 (permissions, backgroundModes)
   harmonyModuleJson: read('harmony/entry/src/main/module.json5'),
 }
@@ -856,9 +860,10 @@ describe('every native module is registered in the host bootstrap', () => {
 
   test.each(modules.filter((m) => m.harmony))('%s is registered on HarmonyOS', (mod) => {
     expect(
-      hosts.harmonyEntry,
-      `${mod.name} not registered in EntryAbility.ets`,
-    ).toContain(`registerModule('${mod.name}', ${mod.harmony!})`)
+      hosts.harmonyIndex,
+      `${mod.name} not registered in Index.ets (Harmony wires modules per-LynxView, ` +
+      `not through a global LynxEnv.registerModule the way Android/iOS do)`,
+    ).toContain(`.set('${mod.name}', { moduleClass: ${mod.harmony!}`)
   })
 })
 

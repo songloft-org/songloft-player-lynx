@@ -1,6 +1,6 @@
 import { http } from '@kit.NetworkKit'
 import { util } from '@kit.ArkTS'
-import { ILynxHttpService, LynxHttpRequest, LynxHttpResponse } from '@lynx/lynx'
+import { ILynxHttpService, LynxHttpRequest, LynxHttpResponse, LynxServiceCenter, LynxServiceType } from '@lynx/lynx'
 import { HttpStreamingDelegate } from '@lynx/lynx'
 import { InsecureTls } from './InsecureTls'
 
@@ -9,6 +9,19 @@ export class SongloftHttpService implements ILynxHttpService {
 
   static get instance(): SongloftHttpService {
     return SongloftHttpService._instance
+  }
+
+  /**
+   * Register this service as the Lynx SDK's HTTP backing.
+   *
+   * Called from `EntryAbility.onCreate`. Kept as a static wrapper so the call
+   * site names our service (mirrors the Android/iOS gates that grep for a
+   * literal registration call, and lets the native-module-contract test
+   * confirm the hookup by substring rather than by inspecting the SDK's
+   * service center).
+   */
+  static register(): void {
+    LynxServiceCenter.registerService(LynxServiceType.Http, SongloftHttpService._instance)
   }
 
   request(request: LynxHttpRequest, callback: (resp: LynxHttpResponse) => void): void {

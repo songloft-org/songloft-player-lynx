@@ -9,7 +9,7 @@ export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     LynxEnv.initialize(this.context)
     LynxServiceCenter.registerService(LynxServiceType.Image, LynxImageService.instance)
-    LynxServiceCenter.registerService(LynxServiceType.Http, SongloftHttpService.instance)
+    SongloftHttpService.register()
     void(LynxLogService.instance)
   }
 
