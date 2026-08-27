@@ -1,5 +1,6 @@
 import { common } from '@kit.AbilityKit'
-import { LynxView, MetaData, ModuleClassWrapper, TemplateBundle, TemplateData, LynxContext } from '@lynx/lynx'
+import { LynxView, MetaData, ModuleClassWrapper, TemplateBundle, TemplateData, LynxContext, LynxMediaResourceFetcher } from '@lynx/lynx'
+import { SongloftMediaResourceFetcher } from '../net/SongloftMediaResourceFetcher'
 import { SongloftAudioModule } from '../modules/audio/SongloftAudioModule'
 import { SongloftStorageModule } from '../modules/storage/SongloftStorageModule'
 import { SongloftPlatformModule } from '../modules/platform/SongloftPlatformModule'
@@ -16,6 +17,7 @@ struct Index {
   private modules: Map<string, ModuleClassWrapper> = new Map()
   private templateBundle?: TemplateBundle = undefined
   private metaData: MetaData = new MetaData()
+  private mediaResourceFetcher: LynxMediaResourceFetcher = new SongloftMediaResourceFetcher()
 
   aboutToAppear(): void {
     this.modules.set('SongloftAudio', { moduleClass: SongloftAudioModule, param: this.context })
@@ -40,6 +42,7 @@ struct Index {
         templateBundle: this.templateBundle,
         modules: this.modules,
         metaData: this.metaData,
+        mediaResourceFetcher: this.mediaResourceFetcher,
         onCreate: (context: LynxContext) => {
           SystemAppearance.attach(context, this.context)
         }
