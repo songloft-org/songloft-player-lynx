@@ -80,10 +80,33 @@ jobs:
             fs.writeFileSync('build-profile.json5', profile);
           "
 
+      # ---- Verify native libs are present in oh_modules ----
+      - name: Verify native libraries
+        working-directory: harmony
+        run: |
+          echo "=== Native .so files in oh_modules ==="
+          find oh_modules -name "*.so" -type f 2>/dev/null
+          echo "=== liblynx.so specifically ==="
+          find oh_modules -name "liblynx.so" -type f 2>/dev/null
+
       # ---- Build unsigned HAP ----
       - name: Build HAP
         working-directory: harmony
         run: hvigorw assembleHap --mode module -p product=default -p buildMode=release --no-daemon
+
+      - name: Inspect HAP contents
+        working-directory: harmony
+        run: |
+          HAP=$(find entry/build -name '*.hap' -print -quit)
+          if [ -n "$HAP" ]; then
+            echo "=== HAP file: $HAP ==="
+            echo "=== Native libs in HAP ==="
+            unzip -l "$HAP" | grep -i "\.so\|libs/"
+            echo "=== All top-level entries ==="
+            unzip -l "$HAP" | head -40
+          else
+            echo "No HAP found after build"
+          fi
 
       # ---- Post-build signing with hap-sign-tool.jar ----
       - name: Sign HAP
