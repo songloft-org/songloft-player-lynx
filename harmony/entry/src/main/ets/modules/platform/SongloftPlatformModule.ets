@@ -1,14 +1,10 @@
 import { picker } from '@kit.CoreFileKit'
 import { Want, common } from '@kit.AbilityKit'
 import { fileIo } from '@kit.CoreFileKit'
-import { LynxModule, LynxMethod, LynxCallback } from '@aspect/lynx'
+import { http } from '@kit.NetworkKit'
+import { LynxModule, LynxMethod, LynxCallback } from '@lynx/lynx'
 import { InsecureTls } from '../../net/InsecureTls'
 
-/**
- * SongloftPlatform — file picker, URL open, insecureTls toggle, shareFile.
- *
- * Method names match Android/iOS byte-for-byte (gate-verified).
- */
 @LynxModule('SongloftPlatform')
 export class SongloftPlatformModule {
   private context: common.UIAbilityContext
@@ -19,7 +15,6 @@ export class SongloftPlatformModule {
 
   @LynxMethod
   getServerMode(callback: LynxCallback): void {
-    // standalone mode — harmony build is always standalone
     callback(JSON.stringify({ mode: 'standalone' }))
   }
 
@@ -48,7 +43,7 @@ export class SongloftPlatformModule {
     const options = new picker.DocumentSelectOptions()
     options.maxSelectNumber = 1
 
-    documentPicker.select(options).then((result) => {
+    documentPicker.select(options).then((result: Array<string>) => {
       if (result && result.length > 0) {
         callback(JSON.stringify({ uri: result[0] }))
       } else {
@@ -65,7 +60,7 @@ export class SongloftPlatformModule {
     const options = new picker.DocumentSelectOptions()
     options.maxSelectNumber = 1
 
-    documentPicker.select(options).then(async (result) => {
+    documentPicker.select(options).then(async (result: Array<string>) => {
       if (!result || result.length === 0) {
         callback(JSON.stringify({ success: false, error: 'cancelled' }))
         return
@@ -78,18 +73,24 @@ export class SongloftPlatformModule {
         fileIo.readSync(file.fd, buffer)
         fileIo.closeSync(file.fd)
 
-        // Upload via fetch (uses our custom HTTP service with InsecureTls)
-        const response = await fetch(serverUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/octet-stream' },
-          body: buffer,
-        })
+        const httpRequest = http.createHttp()
+        const httpOptions: http.HttpRequestOptions = {
+          method: http.RequestMethod.POST,
+          header: { 'Content-Type': 'application/octet-stream' },
+          extraData: buffer,
+          readTimeout: 60000,
+          connectTimeout: 15000,
+        }
+        const response = await httpRequest.request(serverUrl, httpOptions)
+        httpRequest.destroy()
 
-        if (response.ok) {
-          const text = await response.text()
-          callback(JSON.stringify({ success: true, body: text }))
+        if (response.responseCode >= 200 && response.responseCode < 300) {
+          const body = typeof response.result === 'string'
+            ? response.result
+            : JSON.stringify(response.result)
+          callback(JSON.stringify({ success: true, body: body }))
         } else {
-          callback(JSON.stringify({ success: false, error: `HTTP ${response.status}` }))
+          callback(JSON.stringify({ success: false, error: `HTTP ${response.responseCode}` }))
         }
       } catch (err) {
         callback(JSON.stringify({ success: false, error: String(err) }))
@@ -101,7 +102,6 @@ export class SongloftPlatformModule {
 
   @LynxMethod
   shareFile(filePath: string, mimeType: string): void {
-    // On HarmonyOS, use the system share panel
     const want: Want = {
       action: 'ohos.want.action.sendData',
       uri: filePath,

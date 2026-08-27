@@ -1,4 +1,4 @@
-import { LynxModule, LynxMethod, LynxContext } from '@aspect/lynx'
+import { LynxModule, LynxMethod, LynxContext } from '@lynx/lynx'
 import { common } from '@kit.AbilityKit'
 
 /**
@@ -56,7 +56,8 @@ export class SongloftNavigationModule {
 
     // Notify JS about the back press
     if (SongloftNavigationModule.lynxContext) {
-      SongloftNavigationModule.lynxContext.sendGlobalEvent('backPressed', [{}])
+      const param: Record<string, string> = {}
+      SongloftNavigationModule.lynxContext.sendGlobalEvent('backPressed', [param])
     }
     return true
   }

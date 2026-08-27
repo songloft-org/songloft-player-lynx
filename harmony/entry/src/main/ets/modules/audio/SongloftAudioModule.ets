@@ -1,18 +1,28 @@
-import { LynxModule, LynxMethod, LynxCallback, LynxContext } from '@aspect/lynx'
+import { LynxModule, LynxMethod, LynxCallback, LynxContext } from '@lynx/lynx'
 import { common } from '@kit.AbilityKit'
 import { SongloftAudioEngine } from './SongloftAudioEngine'
 import { AVSessionController } from './AVSessionController'
 import { BackgroundTaskManager } from './BackgroundTaskManager'
 
-/**
- * SongloftAudio — full audio playback module.
- *
- * Method/event names match Android/iOS byte-for-byte (gate-verified):
- * - play(url, startMs) / pause() / resume() / stop() / seek(ms)
- * - setVolume(0-100) / setSpeed(float) / getPosition(cb) / getDuration(cb)
- * - setMetadata(json) / setEqEnabled(bool) / setEqBands(json)
- * - Events: audio:progress / audio:state / audio:duration / audio:error / audio:trackEnd
- */
+interface AudioStateParam {
+  state: string
+}
+
+interface AudioProgressParam {
+  positionMs: number
+  durationMs: number
+}
+
+interface AudioErrorParam {
+  code: number
+  message: string
+}
+
+interface AudioRemoteCommandParam {
+  command: string
+  args: string
+}
+
 @LynxModule('SongloftAudio')
 export class SongloftAudioModule {
   private context: common.UIAbilityContext
@@ -35,24 +45,32 @@ export class SongloftAudioModule {
     await this.sessionController.create()
 
     this.engine.onStateChange = (state: string) => {
-      this.sendEvent('audio:state', [{ state }])
+      const param: AudioStateParam = { state: state }
+      this.lynxContext.sendGlobalEvent('audio:state', [param])
       this.updateSessionState(state)
     }
 
     this.engine.onProgress = (positionMs: number, durationMs: number) => {
-      this.sendEvent('audio:progress', [{ positionMs, durationMs }])
+      const param: AudioProgressParam = { positionMs: positionMs, durationMs: durationMs }
+      this.lynxContext.sendGlobalEvent('audio:progress', [param])
     }
 
     this.engine.onError = (code: number, message: string) => {
-      this.sendEvent('audio:error', [{ code, message }])
+      const param: AudioErrorParam = { code: code, message: message }
+      this.lynxContext.sendGlobalEvent('audio:error', [param])
     }
 
     this.engine.onTrackEnd = () => {
-      this.sendEvent('audio:trackEnd', [{}])
+      const param: Record<string, string> = {}
+      this.lynxContext.sendGlobalEvent('audio:trackEnd', [param])
     }
 
-    this.sessionController.onCommand = (command: string, args?: Record<string, Object>) => {
-      this.sendEvent('audio:remoteCommand', [{ command, ...args }])
+    this.sessionController.onCommand = (command: string, args?: Record<string, string | number>) => {
+      const param: AudioRemoteCommandParam = {
+        command: command,
+        args: args ? JSON.stringify(args) : ''
+      }
+      this.lynxContext.sendGlobalEvent('audio:remoteCommand', [param])
     }
   }
 
@@ -85,7 +103,6 @@ export class SongloftAudioModule {
 
   @LynxMethod
   setVolume(volume: number): void {
-    // Store layer sends 0-100 integer; native layer uses 0-1 float
     this.engine?.setVolume(volume / 100)
   }
 
@@ -110,7 +127,7 @@ export class SongloftAudioModule {
   @LynxMethod
   setMetadata(jsonStr: string): void {
     try {
-      const meta = JSON.parse(jsonStr) as Record<string, string | number>
+      const meta: Record<string, string | number> = JSON.parse(jsonStr)
       this.sessionController.updateMetadata(
         String(meta.title ?? ''),
         String(meta.artist ?? ''),
@@ -118,22 +135,21 @@ export class SongloftAudioModule {
         Number(meta.durationMs ?? 0),
         String(meta.coverUrl ?? ''),
       )
-    } catch {}
+    } catch (e) {
+      // ignore malformed metadata
+    }
   }
 
   @LynxMethod
   setEqEnabled(enabled: boolean): void {
-    // TODO: Implement EQ via AudioRenderer when API is available
   }
 
   @LynxMethod
   setEqBands(bandsJson: string): void {
-    // TODO: Implement EQ band adjustment
   }
 
   @LynxMethod
   getEqBands(callback: LynxCallback): void {
-    // Return empty bands until EQ is implemented
     callback(JSON.stringify({ bands: [] }))
   }
 
@@ -151,10 +167,6 @@ export class SongloftAudioModule {
     }
     const pos = this.engine?.getPosition() ?? 0
     this.sessionController.updatePlaybackState(sessionState, pos, this.currentSpeed)
-  }
-
-  private sendEvent(name: string, params: Object[]): void {
-    this.lynxContext.sendGlobalEvent(name, params)
   }
 
   static release(): void {

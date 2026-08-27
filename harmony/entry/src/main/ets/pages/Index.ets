@@ -1,4 +1,4 @@
-import { LynxView, LynxViewConfig } from '@aspect/lynx'
+import { LynxView, LynxViewConfig } from '@lynx/lynx'
 import { common } from '@kit.AbilityKit'
 import { SystemAppearance } from '../modules/system/SystemAppearance'
 import { SongloftNavigationModule } from '../modules/navigation/SongloftNavigationModule'
@@ -6,7 +6,7 @@ import { SongloftNavigationModule } from '../modules/navigation/SongloftNavigati
 @Entry
 @Component
 struct Index {
-  private context = getContext(this) as common.UIAbilityContext
+  private context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext
   private lynxViewConfig: LynxViewConfig = new LynxViewConfig()
 
   aboutToAppear(): void {

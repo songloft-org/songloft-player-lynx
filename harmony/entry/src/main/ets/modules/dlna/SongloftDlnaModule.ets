@@ -1,6 +1,6 @@
 import { socket } from '@kit.NetworkKit'
 import { http } from '@kit.NetworkKit'
-import { LynxModule, LynxMethod, LynxCallback } from '@aspect/lynx'
+import { LynxModule, LynxMethod, LynxCallback } from '@lynx/lynx'
 import { common } from '@kit.AbilityKit'
 import { util } from '@kit.ArkTS'
 
@@ -15,19 +15,6 @@ interface DlnaDevice {
   usn: string
 }
 
-/**
- * SongloftDlna — SSDP M-SEARCH discovery + SOAP AVTransport control.
- *
- * Method names match Android/iOS byte-for-byte:
- * - discover(callback) — UDP multicast SSDP search, returns JSON array of devices
- * - play(location, url, callback) — SOAP SetAVTransportURI + Play
- * - pause(location, callback) — SOAP Pause
- * - stop(location, callback) — SOAP Stop
- * - seek(location, position, callback) — SOAP Seek
- * - getPosition(location, callback) — SOAP GetPositionInfo
- *
- * TS facade (dlna.ts) expects JSON-string callback style.
- */
 @LynxModule('SongloftDlna')
 export class SongloftDlnaModule {
   private context: common.UIAbilityContext
@@ -83,14 +70,13 @@ export class SongloftDlnaModule {
 
   @LynxMethod
   getPosition(location: string, callback: LynxCallback): void {
-    this.soapAction(location, 'GetPositionInfo', this.buildSimpleBody('GetPositionInfo')).then((response) => {
-      // Parse position from SOAP response XML
+    this.soapAction(location, 'GetPositionInfo', this.buildSimpleBody('GetPositionInfo')).then((response: string) => {
       const trackDuration = this.extractXmlValue(response, 'TrackDuration') ?? '00:00:00'
       const relTime = this.extractXmlValue(response, 'RelTime') ?? '00:00:00'
       callback(JSON.stringify({
         success: true,
-        trackDuration,
-        relTime,
+        trackDuration: trackDuration,
+        relTime: relTime,
       }))
     }).catch((err: Error) => {
       callback(JSON.stringify({ success: false, error: err.message }))
@@ -99,25 +85,21 @@ export class SongloftDlnaModule {
 
   private async doDiscover(callback: LynxCallback): Promise<void> {
     const devices: DlnaDevice[] = []
-    const udpSocket = socket.constructUDPSocketInstance()
+    const multicastSocket = socket.constructMulticastSocketInstance()
 
     try {
-      await udpSocket.bind({ address: '0.0.0.0', port: 0 })
+      await multicastSocket.bind({ address: '0.0.0.0', port: 0 })
+      await multicastSocket.addMembership(SSDP_ADDRESS)
 
-      // Join multicast group
-      await udpSocket.addMembership(SSDP_ADDRESS)
-
-      // Listen for responses
-      udpSocket.on('message', (value) => {
+      multicastSocket.on('message', (value: socket.SocketMessageInfo) => {
         const textDecoder = util.TextDecoder.create('utf-8')
         const message = textDecoder.decodeToString(new Uint8Array(value.message))
         const device = this.parseSsdpResponse(message)
-        if (device && !devices.find(d => d.usn === device.usn)) {
+        if (device && !devices.find((d: DlnaDevice) => d.usn === device.usn)) {
           devices.push(device)
         }
       })
 
-      // Send M-SEARCH
       const searchMessage =
         `M-SEARCH * HTTP/1.1\r\n` +
         `HOST: ${SSDP_ADDRESS}:${SSDP_PORT}\r\n` +
@@ -129,20 +111,20 @@ export class SongloftDlnaModule {
       const encoder = new util.TextEncoder()
       const sendData = encoder.encodeInto(searchMessage)
 
-      await udpSocket.send({
+      const sendOptions: socket.UDPSendOptions = {
         data: sendData.buffer,
         address: { address: SSDP_ADDRESS, port: SSDP_PORT, family: 1 },
-      })
+      }
+      await multicastSocket.send(sendOptions)
 
-      // Wait for responses
       await new Promise<void>((resolve) => setTimeout(resolve, SEARCH_TIMEOUT_MS))
 
-      udpSocket.off('message')
-      udpSocket.close()
+      multicastSocket.off('message')
+      multicastSocket.close()
 
-      callback(JSON.stringify({ devices }))
+      callback(JSON.stringify({ devices: devices }))
     } catch (err) {
-      udpSocket.close()
+      multicastSocket.close()
       callback(JSON.stringify({ devices: [], error: String(err) }))
     }
   }
@@ -153,7 +135,8 @@ export class SongloftDlnaModule {
     const usn = this.extractHeader(message, 'USN')
     const server = this.extractHeader(message, 'SERVER') ?? 'Unknown'
     if (!location || !usn) return null
-    return { name: server, location, usn }
+    const device: DlnaDevice = { name: server, location: location, usn: usn }
+    return device
   }
 
   private extractHeader(message: string, header: string): string | null {
@@ -164,14 +147,16 @@ export class SongloftDlnaModule {
 
   private async soapAction(controlUrl: string, action: string, body: string): Promise<string> {
     const httpRequest = http.createHttp()
-    const response = await httpRequest.request(controlUrl, {
+    const headerMap: Record<string, string> = {
+      'Content-Type': 'text/xml; charset="utf-8"',
+      'SOAPAction': `"urn:schemas-upnp-org:service:AVTransport:1#${action}"`,
+    }
+    const options: http.HttpRequestOptions = {
       method: http.RequestMethod.POST,
-      header: {
-        'Content-Type': 'text/xml; charset="utf-8"',
-        'SOAPAction': `"urn:schemas-upnp-org:service:AVTransport:1#${action}"`,
-      },
+      header: headerMap,
       extraData: body,
-    })
+    }
+    const response = await httpRequest.request(controlUrl, options)
     httpRequest.destroy()
 
     if (response.responseCode !== 200) {

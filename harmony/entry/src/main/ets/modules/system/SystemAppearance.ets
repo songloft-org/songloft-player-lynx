@@ -1,17 +1,12 @@
 import { ConfigurationConstant, common, EnvironmentCallback, Configuration } from '@kit.AbilityKit'
 import { i18n } from '@kit.LocalizationKit'
-import { LynxView } from '@aspect/lynx'
+import { LynxView } from '@lynx/lynx'
 
-/**
- * SystemAppearance — injects dark/light mode and locale via LynxView globalProps.
- *
- * Two channels (mirroring Android/iOS):
- * 1. LynxLoadMeta.setGlobalProps — initial values (first frame correct)
- * 2. sendGlobalEvent — push changes when system settings change
- *
- * HarmonyOS delivers appearance/locale changes via Configuration callbacks
- * (unlike Android's configChanges, no Activity restart needed).
- */
+interface AppearanceProps {
+  colorScheme: string
+  locale: string
+}
+
 export class SystemAppearance {
   private static lynxView: LynxView | null = null
   private static currentColorMode: string = 'light'
@@ -25,10 +20,11 @@ export class SystemAppearance {
     const locale = i18n.System.getSystemLanguage()
     SystemAppearance.currentLocale = locale.startsWith('zh') ? 'zh' : 'en'
 
-    return {
+    const props: Record<string, string> = {
       colorScheme: SystemAppearance.currentColorMode,
       locale: SystemAppearance.currentLocale,
     }
+    return props
   }
 
   static attach(lynxView: LynxView, context: common.UIAbilityContext): void {
@@ -53,15 +49,16 @@ export class SystemAppearance {
         }
 
         if (changed && SystemAppearance.lynxView) {
-          SystemAppearance.lynxView.updateGlobalProps({
+          const updatedProps: Record<string, string> = {
             colorScheme: SystemAppearance.currentColorMode,
             locale: SystemAppearance.currentLocale,
-          })
-          // sendGlobalEvent second param must be an array (iron rule from AGENTS.md)
-          SystemAppearance.lynxView.sendGlobalEvent('appearanceChanged', [{
+          }
+          SystemAppearance.lynxView.updateGlobalProps(updatedProps)
+          const eventParam: AppearanceProps = {
             colorScheme: SystemAppearance.currentColorMode,
             locale: SystemAppearance.currentLocale,
-          }])
+          }
+          SystemAppearance.lynxView.sendGlobalEvent('appearanceChanged', [eventParam])
         }
       },
       onMemoryLevel(): void {},

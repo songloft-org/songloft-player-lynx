@@ -1,6 +1,6 @@
 import { fileIo } from '@kit.CoreFileKit'
 import { http } from '@kit.NetworkKit'
-import { LynxModule, LynxMethod, LynxCallback } from '@aspect/lynx'
+import { LynxModule, LynxMethod, LynxCallback } from '@lynx/lynx'
 import { common } from '@kit.AbilityKit'
 import { InsecureTls } from '../../net/InsecureTls'
 

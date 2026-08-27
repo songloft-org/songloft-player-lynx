@@ -1,4 +1,4 @@
-import { LynxModule, LynxMethod, LynxCallback, LynxContext } from '@aspect/lynx'
+import { LynxModule, LynxMethod, LynxCallback, LynxContext } from '@lynx/lynx'
 import { common, Want } from '@kit.AbilityKit'
 import { SongloftAudioEngine } from '../audio/SongloftAudioEngine'
 
@@ -44,9 +44,8 @@ export class SongloftVideoModule {
 
   @LynxMethod
   closeFullscreen(): void {
-    // Send event to VideoAbility to close itself
-    // In practice this is handled by the video ability's own back press
-    this.lynxContext.sendGlobalEvent('video:closeFullscreen', [{}])
+    const param: Record<string, string> = {}
+    this.lynxContext.sendGlobalEvent('video:closeFullscreen', [param])
   }
 
   @LynxMethod

@@ -1,6 +1,6 @@
 import { UIAbility, AbilityConstant, Want } from '@kit.AbilityKit'
 import { window } from '@kit.ArkUI'
-import { LynxEnv } from '@aspect/lynx'
+import { LynxEnv } from '@lynx/lynx'
 import { SongloftAudioModule } from '../modules/audio/SongloftAudioModule'
 import { SongloftStorageModule } from '../modules/storage/SongloftStorageModule'
 import { SongloftPlatformModule } from '../modules/platform/SongloftPlatformModule'
@@ -12,13 +12,11 @@ import { SongloftHttpService } from '../net/SongloftHttpService'
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
-    const lynxEnv = LynxEnv.getInstance()
+    const lynxEnv: LynxEnv = LynxEnv.getInstance()
     lynxEnv.init(this.context)
 
-    // Register custom HTTP service (replaces SDK default, enables InsecureTls)
     SongloftHttpService.register(lynxEnv)
 
-    // Register native modules — JS names must match TS facade expectations byte-for-byte
     lynxEnv.registerModule('SongloftAudio', SongloftAudioModule)
     lynxEnv.registerModule('SongloftStorage', SongloftStorageModule)
     lynxEnv.registerModule('SongloftPlatform', SongloftPlatformModule)

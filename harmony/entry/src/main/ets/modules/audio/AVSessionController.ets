@@ -1,17 +1,8 @@
 import { avSession } from '@kit.AVSessionKit'
 import { common } from '@kit.AbilityKit'
-import { SongloftAudioEngine } from './SongloftAudioEngine'
 
-export type SessionCommandCallback = (command: string, args?: Record<string, Object>) => void
+export type SessionCommandCallback = (command: string, args?: Record<string, string | number>) => void
 
-/**
- * AVSession integration — media session for lock screen / control center.
- *
- * HarmonyOS requires AVSession for:
- * 1. Showing playback in the system control center
- * 2. Receiving remote commands (play/pause/next/prev/seek)
- * 3. Keeping audio alive in background (paired with long-running task)
- */
 export class AVSessionController {
   private session: avSession.AVSession | null = null
   private context: common.UIAbilityContext
@@ -63,12 +54,13 @@ export class AVSessionController {
         avState = avSession.PlaybackState.PLAYBACK_STATE_STOP
     }
 
+    const position: avSession.PlaybackPosition = {
+      elapsedTime: positionMs,
+      updateTime: Date.now(),
+    }
     const playbackState: avSession.AVPlaybackState = {
       state: avState,
-      position: {
-        elapsedTime: positionMs,
-        updateTime: Date.now(),
-      },
+      position: position,
       speed: speed,
     }
     await this.session.setAVPlaybackState(playbackState)
@@ -93,10 +85,12 @@ export class AVSessionController {
       this.onCommand('previous')
     })
     this.session.on('seek', (time: number) => {
-      this.onCommand('seek', { position: time })
+      const args: Record<string, string | number> = { position: time }
+      this.onCommand('seek', args)
     })
     this.session.on('setSpeed', (speed: number) => {
-      this.onCommand('setSpeed', { speed: speed })
+      const args: Record<string, string | number> = { speed: speed }
+      this.onCommand('setSpeed', args)
     })
   }
 }
