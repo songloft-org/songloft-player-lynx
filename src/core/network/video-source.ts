@@ -61,7 +61,7 @@ const ANDROID_DIRECT = new Set([
  */
 export function resolveVideoSourceKind(
   song: Pick<Song, 'isVideo' | 'isLive' | 'type' | 'format'>,
-  platform: 'web' | 'ios' | 'android',
+  platform: 'web' | 'ios' | 'android' | 'harmony',
 ): VideoSourceKind {
   if (!song.isVideo) return 'none'
   if (platform === 'web') return 'none'

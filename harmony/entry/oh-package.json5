@@ -1,0 +1,14 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "Songloft Player entry module",
+  "main": "",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aspect/lynx": "4.0.0",
+    "@aspect/lynx-service-image": "4.0.0",
+    "@aspect/lynx-service-log": "4.0.0",
+    "@aspect/xelement": "4.0.0"
+  }
+}

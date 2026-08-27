@@ -1,0 +1,9 @@
+{
+  "modelVersion": "5.0.0",
+  "description": "Songloft Player - HarmonyOS host",
+  "dependencies": {},
+  "devDependencies": {
+    "@aspect/hvigor-ohos-plugin": "4.2.0",
+    "@aspect/hvigor": "4.2.0"
+  }
+}

@@ -7,11 +7,12 @@
  * is an explicit `platform` argument (defaults to `'web'`, the most restrictive
  * / deterministic set — the real per-device capability set is a later concern).
  */
-export type AudioPlatform = 'web' | 'ios' | 'android' | 'native'
+export type AudioPlatform = 'web' | 'ios' | 'android' | 'harmony' | 'native'
 
 const WEB_FORMATS = new Set(['mp3', 'flac', 'ogg', 'm4a', 'aac', 'wav', 'opus'])
 const IOS_FORMATS = new Set(['mp3', 'flac', 'm4a', 'aac', 'wav', 'alac', 'aiff'])
 const ANDROID_FORMATS = new Set(['mp3', 'flac', 'ogg', 'm4a', 'aac', 'wav', 'opus'])
+const HARMONY_FORMATS = new Set(['mp3', 'flac', 'ogg', 'm4a', 'aac', 'wav', 'opus', 'amr'])
 
 const VIDEO_CONTAINERS = new Set([
   'mpg', 'flv', 'wmv', 'rmvb', 'rm', '3gp', 'm4v', 'mkv', 'matroska', 'webm', 'avi', 'ts',
@@ -76,6 +77,8 @@ function platformFormats(platform: AudioPlatform): Set<string> {
       return IOS_FORMATS
     case 'android':
       return ANDROID_FORMATS
+    case 'harmony':
+      return HARMONY_FORMATS
     case 'native':
       return new Set()
   }

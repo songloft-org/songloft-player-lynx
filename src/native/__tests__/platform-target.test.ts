@@ -47,7 +47,7 @@ test('an unknown or malformed platform falls back to the most restrictive set', 
   g.SystemInfo = { platform: 42 }
   expect(getPlatformTarget()).toBe('web')
   g.SystemInfo = { platform: 'Harmony' }
-  expect(getPlatformTarget()).toBe('web')
+  expect(getPlatformTarget()).toBe('harmony')
 })
 
 /**

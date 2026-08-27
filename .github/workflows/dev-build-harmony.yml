@@ -1,0 +1,190 @@
+name: Dev Build (HarmonyOS HAP)
+
+# Build the HarmonyOS host that embeds our Lynx bundle and produce an installable,
+# signed HAP package. Mirrors the Android dev-build.yml pattern.
+#
+# Manual-only: run from the Actions tab ("Run workflow"). No auto-run on push.
+#
+# ── Secrets setup (one-time, via gh CLI): ──────────────────────────────────────
+#   gh secret set HARMONY_SIGNING_KEY_BASE64 < <(base64 -i path/to/signing-key.p12)
+#   gh secret set HARMONY_SIGNING_KEY_PASSWORD --body "your-key-password"
+#   gh secret set HARMONY_SIGNING_PROFILE_BASE64 < <(base64 -i path/to/signing-profile.p7b)
+#   gh secret set HARMONY_KEYSTORE_PASSWORD --body "your-keystore-password"
+# ───────────────────────────────────────────────────────────────────────────────
+#
+# ── Environment variables (optional): ──────────────────────────────────────────
+#   HARMONYOS_SDK_VERSION: SDK version to install (default: 5.0.0)
+#   DEVECO_CLI_VERSION: DevEco command-line-tools version (default: 5.0.3)
+# ───────────────────────────────────────────────────────────────────────────────
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: dev-build-harmony-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  HARMONYOS_SDK_HOME: ${{ github.workspace }}/harmony-sdk
+  DEVECO_CLI_VERSION: "5.0.3"
+  NODE_VERSION: "22"
+
+jobs:
+  harmony-dev-hap:
+    name: HarmonyOS dev HAP
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---- Front end: build the Lynx bundle, then embed it into the host ----
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Lynx bundle
+        run: pnpm run build
+
+      - name: Embed bundle into HarmonyOS rawfile
+        run: node scripts/copy-bundle-harmony.mjs
+
+      # ---- HarmonyOS toolchain ----
+      - name: Cache HarmonyOS SDK
+        id: cache-sdk
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.HARMONYOS_SDK_HOME }}
+          key: harmonyos-sdk-${{ env.DEVECO_CLI_VERSION }}-linux
+
+      - name: Install HarmonyOS command-line-tools
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$HARMONYOS_SDK_HOME"
+          # Download DevEco command-line-tools (Linux)
+          curl -fsSL "https://contentcenter-vali-drcn.dbankcdn.cn/pvt_2/DeveloperAlliance_package_901_9/f3/v3/uJyuq3syQ2ak4hE1QZmAug/command-line-tools-linux-x64-${DEVECO_CLI_VERSION}.zip?HardwareType=PC" \
+            -o /tmp/deveco-cli.zip || {
+            echo "::warning::Download failed — trying alternative mirror"
+            curl -fsSL "https://repo.huaweicloud.com/harmonyos/develop-tools/command-line-tools-linux-x64-${DEVECO_CLI_VERSION}.zip" \
+              -o /tmp/deveco-cli.zip
+          }
+          unzip -q /tmp/deveco-cli.zip -d "$HARMONYOS_SDK_HOME"
+          rm /tmp/deveco-cli.zip
+
+      - name: Configure SDK environment
+        run: |
+          echo "$HARMONYOS_SDK_HOME/command-line-tools/bin" >> "$GITHUB_PATH"
+          echo "$HARMONYOS_SDK_HOME/command-line-tools/ohpm/bin" >> "$GITHUB_PATH"
+          echo "$HARMONYOS_SDK_HOME/command-line-tools/hvigor/bin" >> "$GITHUB_PATH"
+          echo "OHOS_BASE_SDK_HOME=$HARMONYOS_SDK_HOME/command-line-tools/sdk" >> "$GITHUB_ENV"
+
+      - name: Install ohpm dependencies
+        working-directory: harmony
+        run: |
+          ohpm install
+
+      # ---- Signing ----
+      - name: Setup HarmonyOS signing
+        env:
+          HARMONY_SIGNING_KEY_BASE64: ${{ secrets.HARMONY_SIGNING_KEY_BASE64 }}
+          HARMONY_SIGNING_PROFILE_BASE64: ${{ secrets.HARMONY_SIGNING_PROFILE_BASE64 }}
+        run: |
+          if [ -n "$HARMONY_SIGNING_KEY_BASE64" ]; then
+            echo "$HARMONY_SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-key.p12"
+            echo "$HARMONY_SIGNING_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/signing-profile.p7b"
+            echo "HARMONY_SIGNING_KEY_PATH=$RUNNER_TEMP/signing-key.p12" >> "$GITHUB_ENV"
+            echo "HARMONY_SIGNING_PROFILE_PATH=$RUNNER_TEMP/signing-profile.p7b" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No signing secrets set — building unsigned HAP (debug)"
+          fi
+
+      - name: Generate signing config
+        working-directory: harmony
+        env:
+          HARMONY_KEYSTORE_PASSWORD: ${{ secrets.HARMONY_KEYSTORE_PASSWORD }}
+          HARMONY_SIGNING_KEY_PASSWORD: ${{ secrets.HARMONY_SIGNING_KEY_PASSWORD }}
+        run: |
+          if [ -n "$HARMONY_SIGNING_KEY_PATH" ]; then
+            # Inject signing config into build-profile.json5 for release build
+            node -e "
+              const fs = require('fs');
+              const profile = fs.readFileSync('build-profile.json5', 'utf8');
+              const signingConfig = {
+                name: 'default',
+                type: 'HarmonyOS',
+                material: {
+                  certpath: '',
+                  storePassword: process.env.HARMONY_KEYSTORE_PASSWORD || '',
+                  keyAlias: 'songloft',
+                  keyPassword: process.env.HARMONY_SIGNING_KEY_PASSWORD || '',
+                  profile: process.env.HARMONY_SIGNING_PROFILE_PATH,
+                  signAlg: 'SHA256withECDSA',
+                  storeFile: process.env.HARMONY_SIGNING_KEY_PATH
+                }
+              };
+              const updated = profile.replace(
+                '\"signingConfigs\": []',
+                '\"signingConfigs\": [' + JSON.stringify(signingConfig) + ']'
+              );
+              fs.writeFileSync('build-profile.json5', updated);
+            "
+            echo "Signing config injected"
+          else
+            echo "Skipping signing config (unsigned build)"
+          fi
+
+      # ---- Build the HAP ----
+      - name: Build HAP (release)
+        working-directory: harmony
+        run: |
+          if [ -n "$HARMONY_SIGNING_KEY_PATH" ]; then
+            hvigorw assembleHap --mode module -p product=default -p buildMode=release --no-daemon
+          else
+            hvigorw assembleHap --mode module -p product=default -p buildMode=debug --no-daemon
+          fi
+
+      - name: Locate HAP
+        id: hap
+        run: |
+          HAP=$(find harmony/entry/build -name '*.hap' -print -quit)
+          if [ -z "$HAP" ]; then
+            echo "No HAP produced" >&2
+            exit 1
+          fi
+          cp "$HAP" songloft-lynx-dev.hap
+          echo "path=songloft-lynx-dev.hap" >> "$GITHUB_OUTPUT"
+
+      - name: Upload HAP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: songloft-lynx-dev-hap
+          path: songloft-lynx-dev.hap
+          if-no-files-found: error
+
+      # ---- Rolling `dev-harmony` prerelease ----
+      - name: Update dev-harmony prerelease
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-harmony
+          name: Dev build (HarmonyOS)
+          prerelease: true
+          make_latest: false
+          target_commitish: ${{ github.sha }}
+          body: |
+            Rolling development build of the Songloft Lynx HarmonyOS host.
+            Commit: ${{ github.sha }}
+
+            Install: use DevEco Studio or `hdc install songloft-lynx-dev.hap`
+            on a connected HarmonyOS device/emulator.
+          files: songloft-lynx-dev.hap

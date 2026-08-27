@@ -40,5 +40,6 @@ export function getPlatformTarget(): Exclude<AudioPlatform, 'native'> {
   // 'iOS' today; tolerate the older UIKit spellings rather than silently falling
   // back to 'web' (which would ask the server to transcode everything).
   if (platform === 'ios' || platform === 'ipados' || platform.startsWith('iphone')) return 'ios'
+  if (platform === 'harmony') return 'harmony'
   return 'web'
 }

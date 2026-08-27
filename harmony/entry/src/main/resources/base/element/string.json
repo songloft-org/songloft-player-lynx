@@ -1,0 +1,7 @@
+{
+  "string": [
+    { "name": "module_desc", "value": "Songloft Player" },
+    { "name": "ability_desc", "value": "Music Player" },
+    { "name": "ability_label", "value": "Songloft" }
+  ]
+}

@@ -23,6 +23,7 @@ src/                    Lynx 客户端源码（所有业务代码）
   shims/                环境兼容 polyfill
 android/                Android 宿主 + 原生模块（Kotlin）
 ios/                    iOS 宿主 + 原生模块（Swift）
+harmony/                HarmonyOS 宿主 + 原生模块（ArkTS）
 web/                    Web 宿主页（index.html）+ 本地静态服务（serve.mjs）
 docs/                   项目文档，按 Diátaxis 组织（索引见 docs/README.md）
   getting-started.md   从零跑起来
@@ -73,11 +74,12 @@ pnpm test               # vitest
 
 `pnpm run build` 必须列出**两个**产物 —— `File (lynx)` 与 `File (web)`。只有 web 那一行说明 `lynx.config.ts` 的 `environments` 里少了 `lynx: {}`：`environments` 是**替换**隐式默认环境而非扩展它，漏掉不会让构建失败，只会静默停止产出 `dist/main.lynx.bundle`，而 copy-bundle 脚本照拷 `dist/` 里的陈旧文件（`scripts/assert-bundle-fresh.mjs` 现在会拦住这种情况）。
 
-**上面几条都只覆盖 JS 产物**，不覆盖两个宿主。改动 `ios/` 或 `web/` 时必须另加：
+**上面几条都只覆盖 JS 产物**，不覆盖三个宿主。改动 `ios/` / `harmony/` 或 `web/` 时必须另加：
 
 ```bash
 xcodebuild -list -project ios/SongloftLynx.xcodeproj   # iOS 工程可解析（见下方铁律）
 pnpm run build:web                                      # Web 产物（产出后确认 index.html 引用的资源都在）
+# HarmonyOS: 需在 DevEco Studio 中 Build > Build Hap(s)/APP(s) 验证，CI 无 hvigor 环境
 ```
 
 > ⚠️ **「build 全绿」不等于「能出包」**。三个实例：① 批39 写坏了 `project.pbxproj`（数组内多一行赋值语句），此后 iOS 整整两批完全无法构建，而 `pnpm run build` / `tsc -b` / `pnpm test` 全程绿灯——它们根本不读 Xcode 工程；② `web:dev` 能跑不代表 `build:web` 能跑（两者取的静态资源目录不同）；③ 上面那条——`build` 绿了，但它压根没构建原生 bundle。**闸门只证明它真正读过的东西。**
@@ -306,9 +308,25 @@ cached = nm.SongloftDlna as DlnaModule
 | SongloftSongCache | `SongloftSongCacheModule.swift` | 单曲离线缓存，与 Android 同契约（含 `limit_exceeded` 哨兵逐字一致，由闸门锁住） |
 | （非 Lynx 模块）| `SongloftHttpService.swift` / `InsecureTls.swift` / `InsecureMediaLoader.swift` | 宿主 `fetch` 服务 / TLS 开关 + 共享 `URLSession` / 自签名下的媒体字节流加载器 |
 
+### HarmonyOS（ArkTS）
+
+| 模块 | 文件 | 职责 |
+|------|------|------|
+| SongloftAudioModule | `SongloftAudioModule.ets` + `SongloftAudioEngine.ets` + `AVSessionController.ets` + `BackgroundTaskManager.ets` | AVPlayer + AVSession + 后台长时任务 + EQ（占位） |
+| SongloftStorageModule | `SongloftStorageModule.ets` | dataPreferences（prefs） + 带前缀 key（secure 占位） |
+| SongloftPlatformModule | `SongloftPlatformModule.ets` | 文件选择、URL 打开、insecureTls 开关 |
+| SystemAppearance | `SystemAppearance.ets` | 深浅色/语言注入 globalProps + sendGlobalEvent |
+| SongloftNavigationModule | `SongloftNavigationModule.ets` | 返回拦截（setConsumable / armExitToast / disarmExitToast） |
+| SongloftSongCacheModule | `SongloftSongCacheModule.ets` | 单曲离线缓存，filesDir 存储，与 Android/iOS 同契约 |
+| SongloftVideoModule | `SongloftVideoModule.ets` | 全屏视频（共享 AVPlayer） |
+| SongloftDlnaModule | `SongloftDlnaModule.ets` | UDP 多播 SSDP 发现 + SOAP AVTransport 控制 |
+| （非 Lynx 模块）| `SongloftHttpService.ets` / `InsecureTls.ets` | 宿主 HTTP 服务替换 SDK 默认 / TLS 开关 |
+
+> HarmonyOS 无等价 API 的模块：FloatingLyric、LiveActivity —— 这两个在 TS 侧由 `NativeModules` 探测降级为 no-op。
+
 ### 契约闸门的覆盖范围
 
-`src/__tests__/native-module-contract.test.ts` 逐字校验 iOS⇔Android 的方法名/事件名/键名。**已无模块级盲区**：**9 个**模块全在闸门内 —— Audio / Storage / Platform / Dlna / Video / SongCache / Navigation / FloatingLyric（Android 独有）/ LiveActivity（iOS 独有）。注册也验（Android 的 `registerModule(...)` 与 iOS `buildConfig()` 里的 `config.register(...)`），每个 `ios/SongloftLynx/*.swift` 还会被逐一核对 pbxproj 四处登记。
+`src/__tests__/native-module-contract.test.ts` 逐字校验 iOS⇔Android⇔HarmonyOS 的方法名/事件名/键名。**已无模块级盲区**：**9 个**模块全在闸门内 —— Audio / Storage / Platform / Dlna / Video / SongCache / Navigation / FloatingLyric（Android 独有）/ LiveActivity（iOS 独有）。HarmonyOS 另有注册验证（EntryAbility.ets 的 `registerModule` 调用）和 module.json5 权限/backgroundModes 结构验证。
 
 闸门现在验的是**语义而非子串**，三处刻意如此（都是踩过才补上的）：
 

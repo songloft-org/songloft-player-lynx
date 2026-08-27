@@ -53,6 +53,17 @@ ios/**/*.xcuserstate
 ios/DerivedData/
 # Embedded Lynx bundle: copied from dist/ by scripts/copy-bundle-ios.mjs.
 ios/SongloftLynx/main.lynx.bundle
+
+# HarmonyOS host build artifacts (hvigor source IS tracked)
+harmony/build/
+harmony/entry/build/
+harmony/.hvigor/
+harmony/local.properties
+# Embedded Lynx bundle: copied from dist/ by scripts/copy-bundle-harmony.mjs.
+harmony/entry/src/main/resources/rawfile/main.lynx.bundle
+# Signing material (never commit keys)
+harmony/signing/
+
 .pnpm-store/
 bun.lock
 

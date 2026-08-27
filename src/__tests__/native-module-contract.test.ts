@@ -43,20 +43,25 @@ const ANDROID_VIDEO = 'android/app/src/main/java/org/songloft/lynx/video'
 const ANDROID_NAV = 'android/app/src/main/java/org/songloft/lynx/navigation'
 const ANDROID_CACHE = 'android/app/src/main/java/org/songloft/lynx/cache'
 const IOS_DIR = 'ios/SongloftLynx'
+const HARMONY_MODULES = 'harmony/entry/src/main/ets/modules'
+const HARMONY_NET = 'harmony/entry/src/main/ets/net'
 
 /** Both hosts' sources concatenated, per subsystem. */
 const hosts = {
   audio: {
     android: read(`${ANDROID_AUDIO}/SongloftAudioEngine.kt`),
     ios: read(`${IOS_DIR}/SongloftAudioEngine.swift`),
+    harmony: read(`${HARMONY_MODULES}/audio/SongloftAudioEngine.ets`),
   },
   audioModule: {
     android: read(`${ANDROID_AUDIO}/SongloftAudioModule.kt`),
     ios: read(`${IOS_DIR}/SongloftAudioModule.swift`),
+    harmony: read(`${HARMONY_MODULES}/audio/SongloftAudioModule.ets`),
   },
   storage: {
     android: read(`${ANDROID_STORAGE}/SongloftStorageModule.kt`),
     ios: read(`${IOS_DIR}/SongloftStorageModule.swift`),
+    harmony: read(`${HARMONY_MODULES}/storage/SongloftStorageModule.ets`),
   },
   system: {
     // The Android half is split: constants in SystemAppearance.kt, the two
@@ -70,10 +75,12 @@ const hosts = {
   platform: {
     android: read(`${ANDROID_PLATFORM}/SongloftPlatformModule.kt`),
     ios: read(`${IOS_DIR}/SongloftPlatformModule.swift`),
+    harmony: read(`${HARMONY_MODULES}/platform/SongloftPlatformModule.ets`),
   },
   dlna: {
     android: read(`${ANDROID_DLNA}/SongloftDlnaModule.kt`),
     ios: read(`${IOS_DIR}/SongloftDlnaModule.swift`),
+    harmony: read(`${HARMONY_MODULES}/dlna/SongloftDlnaModule.ets`),
   },
   floatingLyric: {
     android: read(`${ANDROID_LYRIC}/FloatingLyricModule.kt`),
@@ -82,6 +89,7 @@ const hosts = {
     android: read(`${ANDROID_VIDEO}/SongloftVideoModule.kt`),
     androidActivity: read(`${ANDROID_VIDEO}/SongloftVideoActivity.kt`),
     ios: read(`${IOS_DIR}/SongloftVideoModule.swift`),
+    harmony: read(`${HARMONY_MODULES}/video/SongloftVideoModule.ets`),
   },
   liveActivity: {
     ios: read(`${IOS_DIR}/LiveActivityModule.swift`),
@@ -89,6 +97,7 @@ const hosts = {
   songCache: {
     android: read(`${ANDROID_CACHE}/SongloftSongCacheModule.kt`),
     ios: read(`${IOS_DIR}/SongloftSongCacheModule.swift`),
+    harmony: read(`${HARMONY_MODULES}/cache/SongloftSongCacheModule.ets`),
   },
   /*
    * Back key. Split like `system` above: the module writes the flag, but the press
@@ -101,11 +110,16 @@ const hosts = {
       read(`${ANDROID_NAV}/SongloftNavigationModule.kt`) +
       read(`${ANDROID_NAV}/BackKeyState.kt`) +
       read('android/app/src/main/java/org/songloft/lynx/MainActivity.kt'),
+    harmony: read(`${HARMONY_MODULES}/navigation/SongloftNavigationModule.ets`),
   },
   // Android module registration (SongloftApplication.kt)
   androidApp: read('android/app/src/main/java/org/songloft/lynx/SongloftApplication.kt'),
   // iOS module registration (ViewController.swift buildConfig)
   iosViewController: read(`${IOS_DIR}/ViewController.swift`),
+  // HarmonyOS module registration (EntryAbility.ets)
+  harmonyEntry: read('harmony/entry/src/main/ets/entryability/EntryAbility.ets'),
+  // HarmonyOS module.json5 (permissions, backgroundModes)
+  harmonyModuleJson: read('harmony/entry/src/main/module.json5'),
 }
 
 /** Method names declared on a TS native-module interface, in source order. */
@@ -796,15 +810,15 @@ describe('SongloftSongCache keeps its on-device invariants', () => {
 
 describe('every native module is registered in the host bootstrap', () => {
   const modules = [
-    { name: 'SongloftAudio', android: 'SongloftAudioModule', ios: 'SongloftAudioModule' },
-    { name: 'SongloftStorage', android: 'SongloftStorageModule', ios: 'SongloftStorageModule' },
-    { name: 'SongloftPlatform', android: 'SongloftPlatformModule', ios: 'SongloftPlatformModule' },
-    { name: 'SongloftDlna', android: 'SongloftDlnaModule', ios: 'SongloftDlnaModule' },
-    { name: 'SongloftFloatingLyric', android: 'FloatingLyricModule', ios: null },
-    { name: 'SongloftLiveActivity', android: null, ios: 'LiveActivityModule' },
-    { name: 'SongloftVideo', android: 'SongloftVideoModule', ios: 'SongloftVideoModule' },
-    { name: 'SongloftNavigation', android: 'SongloftNavigationModule', ios: null },
-    { name: 'SongloftSongCache', android: 'SongloftSongCacheModule', ios: 'SongloftSongCacheModule' },
+    { name: 'SongloftAudio', android: 'SongloftAudioModule', ios: 'SongloftAudioModule', harmony: 'SongloftAudioModule' },
+    { name: 'SongloftStorage', android: 'SongloftStorageModule', ios: 'SongloftStorageModule', harmony: 'SongloftStorageModule' },
+    { name: 'SongloftPlatform', android: 'SongloftPlatformModule', ios: 'SongloftPlatformModule', harmony: 'SongloftPlatformModule' },
+    { name: 'SongloftDlna', android: 'SongloftDlnaModule', ios: 'SongloftDlnaModule', harmony: 'SongloftDlnaModule' },
+    { name: 'SongloftFloatingLyric', android: 'FloatingLyricModule', ios: null, harmony: null },
+    { name: 'SongloftLiveActivity', android: null, ios: 'LiveActivityModule', harmony: null },
+    { name: 'SongloftVideo', android: 'SongloftVideoModule', ios: 'SongloftVideoModule', harmony: 'SongloftVideoModule' },
+    { name: 'SongloftNavigation', android: 'SongloftNavigationModule', ios: null, harmony: 'SongloftNavigationModule' },
+    { name: 'SongloftSongCache', android: 'SongloftSongCacheModule', ios: 'SongloftSongCacheModule', harmony: 'SongloftSongCacheModule' },
   ]
 
   test.each(modules.filter((m) => m.android))('%s is registered on Android', (mod) => {
@@ -838,6 +852,13 @@ describe('every native module is registered in the host bootstrap', () => {
       buildConfigBody,
       `${mod.name} not registered in ViewController.swift buildConfig`,
     ).toContain(`config.register(${mod.ios!}.self)`)
+  })
+
+  test.each(modules.filter((m) => m.harmony))('%s is registered on HarmonyOS', (mod) => {
+    expect(
+      hosts.harmonyEntry,
+      `${mod.name} not registered in EntryAbility.ets`,
+    ).toContain(`registerModule('${mod.name}', ${mod.harmony!})`)
   })
 })
 
@@ -878,5 +899,41 @@ describe('the host HTTP service is ours, on both hosts', () => {
       podfile.indexOf(']', podfile.indexOf("pod 'LynxService'")),
     )
     expect(lynxService, 'Podfile still pulls LynxService/Http').not.toContain("'Http'")
+  })
+
+  test('HarmonyOS registers SongloftHttpService in EntryAbility', () => {
+    expect(hosts.harmonyEntry).toContain('SongloftHttpService.register')
+  })
+})
+
+describe('HarmonyOS module.json5 declares required permissions and background modes', () => {
+  const moduleJson = JSON.parse(hosts.harmonyModuleJson)
+  const permissions = (moduleJson.module.requestPermissions ?? []).map(
+    (p: { name: string }) => p.name,
+  )
+  const abilities = moduleJson.module.abilities ?? []
+  const mainAbility = abilities.find((a: { name: string }) => a.name === 'EntryAbility')
+
+  test('INTERNET permission is declared', () => {
+    expect(permissions).toContain('ohos.permission.INTERNET')
+  })
+
+  test('KEEP_BACKGROUND_RUNNING permission is declared (required for long-running task)', () => {
+    expect(permissions).toContain('ohos.permission.KEEP_BACKGROUND_RUNNING')
+  })
+
+  test('MULTICAST permission is declared (required for DLNA SSDP discovery)', () => {
+    expect(permissions).toContain('ohos.permission.MULTICAST')
+  })
+
+  test('audioPlayback backgroundMode is declared on the main ability', () => {
+    expect(mainAbility).toBeDefined()
+    expect(mainAbility.backgroundModes).toContain('audioPlayback')
+  })
+
+  test('module.json5 is structurally valid JSON5', () => {
+    expect(moduleJson.module.name).toBe('entry')
+    expect(moduleJson.module.type).toBe('entry')
+    expect(moduleJson.module.mainElement).toBe('EntryAbility')
   })
 })
