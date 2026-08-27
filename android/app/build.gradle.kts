@@ -19,7 +19,7 @@ android {
 
     defaultConfig {
         applicationId = "org.songloft.lynx"
-        minSdk = 24
+        minSdk = 21
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0-dev"
@@ -127,8 +127,9 @@ dependencies {
 
     // ---- Native audio (SongloftAudio native module, batch B2) ----
     // androidx.media3 (ExoPlayer). 1.3.1 is a proven stable release compatible
-    // with compileSdk 34 / minSdk 24. HLS support via media3-exoplayer-hls;
-    // system media session / notification via media3-session.
+    // with compileSdk 34 / minSdk 21 (its own AAR min is 19). HLS support via
+    // media3-exoplayer-hls; system media session / notification via
+    // media3-session.
     implementation("androidx.media3:media3-exoplayer:1.3.1")
     implementation("androidx.media3:media3-exoplayer-hls:1.3.1")
     implementation("androidx.media3:media3-session:1.3.1")
