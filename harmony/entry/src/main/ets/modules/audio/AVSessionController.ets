@@ -1,7 +1,7 @@
 import { avSession } from '@kit.AVSessionKit'
 import { common } from '@kit.AbilityKit'
 
-export type SessionCommandCallback = (command: string, args?: Record<string, string | number>) => void
+export type SessionCommandCallback = (command: string) => void
 
 export class AVSessionController {
   private session: avSession.AVSession | null = null
@@ -69,28 +69,12 @@ export class AVSessionController {
   private registerCommands(): void {
     if (!this.session) return
 
-    this.session.on('play', () => {
-      this.onCommand('play')
-    })
-    this.session.on('pause', () => {
-      this.onCommand('pause')
-    })
-    this.session.on('stop', () => {
-      this.onCommand('stop')
-    })
-    this.session.on('playNext', () => {
-      this.onCommand('next')
-    })
-    this.session.on('playPrevious', () => {
-      this.onCommand('previous')
-    })
-    this.session.on('seek', (time: number) => {
-      const args: Record<string, string | number> = { position: time }
-      this.onCommand('seek', args)
-    })
-    this.session.on('setSpeed', (speed: number) => {
-      const args: Record<string, string | number> = { speed: speed }
-      this.onCommand('setSpeed', args)
-    })
+    this.session.on('play', () => { this.onCommand('play') })
+    this.session.on('pause', () => { this.onCommand('pause') })
+    this.session.on('stop', () => { this.onCommand('stop') })
+    this.session.on('playNext', () => { this.onCommand('next') })
+    this.session.on('playPrevious', () => { this.onCommand('previous') })
+    this.session.on('seek', (time: number) => { this.onCommand('seek') })
+    this.session.on('setSpeed', (speed: number) => { this.onCommand('setSpeed') })
   }
 }

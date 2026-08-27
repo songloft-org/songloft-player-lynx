@@ -1,102 +1,66 @@
 import { preferences } from '@kit.ArkData'
-import { huks } from '@kit.UniversalKeystoreKit'
-import { util } from '@kit.ArkTS'
-import { LynxModule, LynxMethod, LynxCallback } from '@lynx/lynx'
+import { LynxModule, LynxContext } from '@lynx/lynx'
 import { common } from '@kit.AbilityKit'
 
 const PREFS_NAME = 'songloft_prefs'
 const SECURE_PREFIX = 'secure_'
 
-@LynxModule('SongloftStorage')
-export class SongloftStorageModule {
-  private context: common.UIAbilityContext | null = null
+export class SongloftStorageModule extends LynxModule {
+  private abilityContext: common.UIAbilityContext
   private prefs: preferences.Preferences | null = null
 
-  constructor(context: common.UIAbilityContext) {
-    this.context = context
+  constructor(context: LynxContext, param?: Object) {
+    super(context, param)
+    this.abilityContext = param as common.UIAbilityContext
     this.initPrefs()
   }
 
   private async initPrefs(): Promise<void> {
-    if (this.context) {
-      this.prefs = await preferences.getPreferences(this.context, PREFS_NAME)
-    }
+    this.prefs = await preferences.getPreferences(this.abilityContext, PREFS_NAME)
   }
 
-  @LynxMethod
-  getString(namespace: string, key: string, callback: LynxCallback): void {
-    if (namespace === 'secure') {
-      this.getSecure(key, callback)
-      return
-    }
-    this.getPrefsValue(key, callback)
-  }
-
-  @LynxMethod
-  setString(namespace: string, key: string, value: string): void {
-    if (namespace === 'secure') {
-      this.setSecure(key, value)
-      return
-    }
-    this.setPrefsValue(key, value)
-  }
-
-  @LynxMethod
-  remove(namespace: string, key: string): void {
-    if (namespace === 'secure') {
-      this.removeSecure(key)
-      return
-    }
-    this.removePrefsValue(key)
-  }
-
-  @LynxMethod
-  clear(namespace: string): void {
-    if (namespace === 'secure') {
-      return
-    }
-    this.prefs?.clearSync()
-    this.prefs?.flush()
-  }
-
-  private async getPrefsValue(key: string, callback: LynxCallback): Promise<void> {
-    try {
-      const value = await this.prefs?.get(key, '') as string
-      callback(JSON.stringify({ value: value || null }))
-    } catch {
-      callback(JSON.stringify({ value: null }))
-    }
-  }
-
-  private setPrefsValue(key: string, value: string): void {
-    this.prefs?.putSync(key, value)
-    this.prefs?.flush()
-  }
-
-  private removePrefsValue(key: string): void {
-    this.prefs?.deleteSync(key)
-    this.prefs?.flush()
-  }
-
-  private async getSecure(key: string, callback: LynxCallback): Promise<void> {
-    try {
+  public setItem(area: string, key: string, value: string): void {
+    if (area === 'secure') {
       const alias = SECURE_PREFIX + key
-      const value = await this.prefs?.get(alias, '') as string
+      this.prefs?.putSync(alias, value)
+    } else {
+      this.prefs?.putSync(key, value)
+    }
+    this.prefs?.flush()
+  }
+
+  public getItem(area: string, key: string, callback: (result: string) => void): void {
+    const actualKey = area === 'secure' ? SECURE_PREFIX + key : key
+    try {
+      const value = this.prefs?.getSync(actualKey, '') as string
       callback(JSON.stringify({ value: value || null }))
-    } catch {
+    } catch (e) {
       callback(JSON.stringify({ value: null }))
     }
   }
 
-  private setSecure(key: string, value: string): void {
-    const alias = SECURE_PREFIX + key
-    this.prefs?.putSync(alias, value)
+  public removeItem(area: string, key: string): void {
+    const actualKey = area === 'secure' ? SECURE_PREFIX + key : key
+    this.prefs?.deleteSync(actualKey)
     this.prefs?.flush()
   }
 
-  private removeSecure(key: string): void {
-    const alias = SECURE_PREFIX + key
-    this.prefs?.deleteSync(alias)
-    this.prefs?.flush()
+  public getKeys(area: string, callback: (result: string) => void): void {
+    callback(JSON.stringify({ keys: [] }))
+  }
+
+  public getPath(name: string, callback: (result: string) => void): void {
+    let path: string
+    switch (name) {
+      case 'cache':
+        path = this.abilityContext.cacheDir
+        break
+      case 'documents':
+        path = this.abilityContext.filesDir
+        break
+      default:
+        path = this.abilityContext.filesDir
+    }
+    callback(JSON.stringify({ path: path }))
   }
 }

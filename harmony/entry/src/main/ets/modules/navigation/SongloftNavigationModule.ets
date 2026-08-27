@@ -1,60 +1,28 @@
-import { LynxModule, LynxMethod, LynxContext } from '@lynx/lynx'
+import { LynxModule, LynxContext } from '@lynx/lynx'
 import { common } from '@kit.AbilityKit'
 
-/**
- * SongloftNavigation — back key interception.
- *
- * Three methods (all fire-and-forget, no Callback — same as Android/iOS):
- * - setConsumable(boolean): JS tells host whether next back press is consumed
- * - armExitToast(): arm the "press again to exit" toast
- * - disarmExitToast(): cancel the armed toast
- *
- * The reverse direction (host → JS) is via sendGlobalEvent('backPressed', [{}])
- * triggered from the page's onBackPress() handler.
- *
- * HarmonyOS differences from Android:
- * - No moveTaskToBack(true) equivalent; exit uses terminateSelf() but we prefer
- *   to just let the system handle it (user swipes up to go home)
- * - No hardware back button on most devices, but gesture back triggers onBackPress
- */
-@LynxModule('SongloftNavigation')
-export class SongloftNavigationModule {
+export class SongloftNavigationModule extends LynxModule {
   private static consumable: boolean = true
-  private static exitArmed: boolean = false
   private static lynxContext: LynxContext | null = null
-  private static context: common.UIAbilityContext | null = null
 
-  constructor(context: common.UIAbilityContext, lynxContext: LynxContext) {
-    SongloftNavigationModule.context = context
-    SongloftNavigationModule.lynxContext = lynxContext
+  constructor(context: LynxContext, param?: Object) {
+    super(context, param)
+    SongloftNavigationModule.lynxContext = context
   }
 
-  @LynxMethod
-  setConsumable(consumable: boolean): void {
+  public setConsumable(consumable: boolean): void {
     SongloftNavigationModule.consumable = consumable
   }
 
-  @LynxMethod
-  armExitToast(): void {
-    SongloftNavigationModule.exitArmed = true
-  }
+  public armExitToast(): void {}
 
-  @LynxMethod
-  disarmExitToast(): void {
-    SongloftNavigationModule.exitArmed = false
-  }
+  public disarmExitToast(): void {}
 
-  /**
-   * Called from the page's onBackPress().
-   * Returns true if the back press was consumed by JS, false to let system handle it.
-   */
   static handleBackPress(): boolean {
     if (!SongloftNavigationModule.consumable) {
-      // JS said "don't consume" — let system handle (app exit / page pop)
       return false
     }
 
-    // Notify JS about the back press
     if (SongloftNavigationModule.lynxContext) {
       const param: Record<string, string> = {}
       SongloftNavigationModule.lynxContext.sendGlobalEvent('backPressed', [param])

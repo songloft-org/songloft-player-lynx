@@ -1,53 +1,57 @@
 import { http } from '@kit.NetworkKit'
-import { LynxEnv, LynxHttpService, LynxHttpRequest, LynxHttpResponse } from '@lynx/lynx'
+import { ILynxHttpService, LynxHttpRequest, LynxHttpResponse } from '@lynx/lynx'
+import { HttpStreamingDelegate } from '@lynx/lynx'
 import { InsecureTls } from './InsecureTls'
 
-export class SongloftHttpService implements LynxHttpService {
-  private static instance: SongloftHttpService | null = null
+export class SongloftHttpService implements ILynxHttpService {
+  private static _instance: SongloftHttpService = new SongloftHttpService()
 
-  static register(lynxEnv: LynxEnv): void {
-    SongloftHttpService.instance = new SongloftHttpService()
-    lynxEnv.registerHttpService(SongloftHttpService.instance)
+  static get instance(): SongloftHttpService {
+    return SongloftHttpService._instance
   }
 
-  async fetch(request: LynxHttpRequest): Promise<LynxHttpResponse> {
+  request(request: LynxHttpRequest, callback: (resp: LynxHttpResponse) => void): void {
     const httpRequest = http.createHttp()
 
-    try {
-      const options: http.HttpRequestOptions = {
-        method: this.mapMethod(request.method),
-        header: request.headers,
-        extraData: request.body,
-        readTimeout: 30000,
-        connectTimeout: 15000,
-      }
-
-      if (InsecureTls.isEnabled()) {
-        options.usingProtocol = http.HttpProtocol.HTTP1_1
-      }
-
-      const response = await httpRequest.request(request.url, options)
-
-      const responseBody = typeof response.result === 'string'
-        ? response.result
-        : JSON.stringify(response.result)
-
-      const result: LynxHttpResponse = {
-        statusCode: response.responseCode,
-        headers: response.header as Record<string, string>,
-        body: responseBody,
-      }
-      return result
-    } catch (err) {
-      const errorResult: LynxHttpResponse = {
-        statusCode: 499,
-        headers: {},
-        body: String(err),
-      }
-      return errorResult
-    } finally {
-      httpRequest.destroy()
+    const options: http.HttpRequestOptions = {
+      method: this.mapMethod(request.httpMethod),
+      header: request.httpHeaders,
+      extraData: request.httpBody,
+      readTimeout: 30000,
+      connectTimeout: 15000,
     }
+
+    if (InsecureTls.isEnabled()) {
+      options.usingProtocol = http.HttpProtocol.HTTP1_1
+    }
+
+    httpRequest.request(request.url, options).then((response) => {
+      httpRequest.destroy()
+      const resp = new LynxHttpResponse()
+      resp.url = request.url
+      resp.statusCode = response.responseCode as number
+      resp.statusText = 'OK'
+      resp.httpHeaders = response.header as Record<string, string>
+      if (typeof response.result === 'string') {
+        const encoder = new TextEncoder()
+        resp.httpBody = encoder.encode(response.result).buffer as ArrayBuffer
+      } else if (response.result instanceof ArrayBuffer) {
+        resp.httpBody = response.result
+      }
+      callback(resp)
+    }).catch((err: Error) => {
+      httpRequest.destroy()
+      const resp = new LynxHttpResponse()
+      resp.url = request.url
+      resp.statusCode = 499
+      resp.statusText = err.message
+      callback(resp)
+    })
+  }
+
+  requestStreaming(request: LynxHttpRequest, callback: (resp: LynxHttpResponse) => void,
+    delegate: HttpStreamingDelegate): void {
+    this.request(request, callback)
   }
 
   private mapMethod(method: string): http.RequestMethod {

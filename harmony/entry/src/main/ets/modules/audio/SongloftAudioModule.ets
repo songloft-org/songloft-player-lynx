@@ -1,42 +1,40 @@
-import { LynxModule, LynxMethod, LynxCallback, LynxContext } from '@lynx/lynx'
+import { LynxModule, LynxContext } from '@lynx/lynx'
 import { common } from '@kit.AbilityKit'
 import { SongloftAudioEngine } from './SongloftAudioEngine'
 import { AVSessionController } from './AVSessionController'
 import { BackgroundTaskManager } from './BackgroundTaskManager'
 
-interface AudioStateParam {
+interface AudioStateEvent {
   state: string
 }
 
-interface AudioProgressParam {
+interface AudioProgressEvent {
   positionMs: number
+  bufferedMs: number
   durationMs: number
 }
 
-interface AudioErrorParam {
+interface AudioErrorEvent {
   code: number
   message: string
 }
 
-interface AudioRemoteCommandParam {
+interface AudioRemoteCommandEvent {
   command: string
-  args: string
 }
 
-@LynxModule('SongloftAudio')
-export class SongloftAudioModule {
-  private context: common.UIAbilityContext
-  private lynxContext: LynxContext
+export class SongloftAudioModule extends LynxModule {
+  private abilityContext: common.UIAbilityContext
   private engine: SongloftAudioEngine | null = null
   private sessionController: AVSessionController
   private backgroundTask: BackgroundTaskManager
   private currentSpeed: number = 1.0
 
-  constructor(context: common.UIAbilityContext, lynxContext: LynxContext) {
-    this.context = context
-    this.lynxContext = lynxContext
-    this.sessionController = new AVSessionController(context)
-    this.backgroundTask = new BackgroundTaskManager(context)
+  constructor(context: LynxContext, param?: Object) {
+    super(context, param)
+    this.abilityContext = param as common.UIAbilityContext
+    this.sessionController = new AVSessionController(this.abilityContext)
+    this.backgroundTask = new BackgroundTaskManager(this.abilityContext)
     this.initEngine()
   }
 
@@ -45,112 +43,83 @@ export class SongloftAudioModule {
     await this.sessionController.create()
 
     this.engine.onStateChange = (state: string) => {
-      const param: AudioStateParam = { state: state }
-      this.lynxContext.sendGlobalEvent('audio:state', [param])
+      const event: AudioStateEvent = { state: state }
+      this.context.sendGlobalEvent('SongloftAudio.stateChanged', [event])
       this.updateSessionState(state)
     }
 
     this.engine.onProgress = (positionMs: number, durationMs: number) => {
-      const param: AudioProgressParam = { positionMs: positionMs, durationMs: durationMs }
-      this.lynxContext.sendGlobalEvent('audio:progress', [param])
+      const event: AudioProgressEvent = { positionMs: positionMs, bufferedMs: positionMs, durationMs: durationMs }
+      this.context.sendGlobalEvent('SongloftAudio.progress', [event])
     }
 
     this.engine.onError = (code: number, message: string) => {
-      const param: AudioErrorParam = { code: code, message: message }
-      this.lynxContext.sendGlobalEvent('audio:error', [param])
+      const event: AudioErrorEvent = { code: code, message: message }
+      this.context.sendGlobalEvent('SongloftAudio.error', [event])
     }
 
     this.engine.onTrackEnd = () => {
-      const param: Record<string, string> = {}
-      this.lynxContext.sendGlobalEvent('audio:trackEnd', [param])
+      const event: AudioStateEvent = { state: 'completed' }
+      this.context.sendGlobalEvent('SongloftAudio.stateChanged', [event])
     }
 
-    this.sessionController.onCommand = (command: string, args?: Record<string, string | number>) => {
-      const param: AudioRemoteCommandParam = {
-        command: command,
-        args: args ? JSON.stringify(args) : ''
-      }
-      this.lynxContext.sendGlobalEvent('audio:remoteCommand', [param])
+    this.sessionController.onCommand = (command: string) => {
+      const event: AudioRemoteCommandEvent = { command: command }
+      this.context.sendGlobalEvent('SongloftAudio.remoteCommand', [event])
     }
   }
 
-  @LynxMethod
-  play(url: string, startMs: number): void {
+  public load(url: string, opts?: Record<string, Object>): void {
+    const startMs = opts?.startMs as number ?? 0
     this.backgroundTask.startBackgroundTask()
     this.engine?.play(url, startMs)
   }
 
-  @LynxMethod
-  pause(): void {
-    this.engine?.pause()
-  }
-
-  @LynxMethod
-  resume(): void {
+  public play(): void {
     this.engine?.resume()
   }
 
-  @LynxMethod
-  stop(): void {
+  public pause(): void {
+    this.engine?.pause()
+  }
+
+  public stop(): void {
     this.engine?.stop()
     this.backgroundTask.stopBackgroundTask()
   }
 
-  @LynxMethod
-  seek(positionMs: number): void {
+  public seek(positionMs: number): void {
     this.engine?.seek(positionMs)
   }
 
-  @LynxMethod
-  setVolume(volume: number): void {
+  public setVolume(volume: number): void {
     this.engine?.setVolume(volume / 100)
   }
 
-  @LynxMethod
-  setSpeed(speed: number): void {
-    this.currentSpeed = speed
-    this.engine?.setSpeed(speed)
+  public setSpeed(rate: number): void {
+    this.currentSpeed = rate
+    this.engine?.setSpeed(rate)
   }
 
-  @LynxMethod
-  getPosition(callback: LynxCallback): void {
-    const pos = this.engine?.getPosition() ?? 0
-    callback(JSON.stringify({ positionMs: pos }))
-  }
+  public setQueue(items: Object[], startIndex: number): void {}
 
-  @LynxMethod
-  getDuration(callback: LynxCallback): void {
-    const dur = this.engine?.getDuration() ?? 0
-    callback(JSON.stringify({ durationMs: dur }))
-  }
+  public next(): void {}
 
-  @LynxMethod
-  setMetadata(jsonStr: string): void {
-    try {
-      const meta: Record<string, string | number> = JSON.parse(jsonStr)
-      this.sessionController.updateMetadata(
-        String(meta.title ?? ''),
-        String(meta.artist ?? ''),
-        String(meta.album ?? ''),
-        Number(meta.durationMs ?? 0),
-        String(meta.coverUrl ?? ''),
-      )
-    } catch (e) {
-      // ignore malformed metadata
-    }
-  }
+  public previous(): void {}
 
-  @LynxMethod
-  setEqEnabled(enabled: boolean): void {
-  }
+  public setRepeatMode(mode: string): void {}
 
-  @LynxMethod
-  setEqBands(bandsJson: string): void {
-  }
+  public setShuffle(on: boolean): void {}
 
-  @LynxMethod
-  getEqBands(callback: LynxCallback): void {
-    callback(JSON.stringify({ bands: [] }))
+  public setFavorite(isFavorite: boolean): void {}
+
+  public setEqualizerEnabled(on: boolean): void {}
+
+  public setEqualizerBand(index: number, gainDb: number): void {}
+
+  public dispose(): void {
+    this.engine?.stop()
+    this.backgroundTask.stopBackgroundTask()
   }
 
   private updateSessionState(state: string): void {

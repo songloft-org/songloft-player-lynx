@@ -2,67 +2,40 @@ import { picker } from '@kit.CoreFileKit'
 import { Want, common } from '@kit.AbilityKit'
 import { fileIo } from '@kit.CoreFileKit'
 import { http } from '@kit.NetworkKit'
-import { LynxModule, LynxMethod, LynxCallback } from '@lynx/lynx'
+import { LynxModule, LynxContext } from '@lynx/lynx'
 import { InsecureTls } from '../../net/InsecureTls'
 
-@LynxModule('SongloftPlatform')
-export class SongloftPlatformModule {
-  private context: common.UIAbilityContext
+export class SongloftPlatformModule extends LynxModule {
+  private abilityContext: common.UIAbilityContext
 
-  constructor(context: common.UIAbilityContext) {
-    this.context = context
+  constructor(context: LynxContext, param?: Object) {
+    super(context, param)
+    this.abilityContext = param as common.UIAbilityContext
   }
 
-  @LynxMethod
-  getServerMode(callback: LynxCallback): void {
-    callback(JSON.stringify({ mode: 'standalone' }))
-  }
-
-  @LynxMethod
-  setInsecureTls(enabled: boolean): void {
-    InsecureTls.setEnabled(enabled)
-  }
-
-  @LynxMethod
-  getInsecureTls(callback: LynxCallback): void {
-    callback(JSON.stringify({ enabled: InsecureTls.isEnabled() }))
-  }
-
-  @LynxMethod
-  openURL(url: string): void {
+  public openURL(url: string): void {
     const want: Want = {
       action: 'ohos.want.action.viewData',
       uri: url,
     }
-    this.context.startAbility(want).catch(() => {})
+    this.abilityContext.startAbility(want).catch(() => {})
   }
 
-  @LynxMethod
-  pickFile(mimeTypes: string, callback: LynxCallback): void {
-    const documentPicker = new picker.DocumentViewPicker(this.context)
-    const options = new picker.DocumentSelectOptions()
-    options.maxSelectNumber = 1
+  public setClipboard(text: string): void {}
 
-    documentPicker.select(options).then((result: Array<string>) => {
-      if (result && result.length > 0) {
-        callback(JSON.stringify({ uri: result[0] }))
-      } else {
-        callback(JSON.stringify({ uri: null }))
-      }
-    }).catch(() => {
-      callback(JSON.stringify({ uri: null }))
-    })
+  public setInsecureTls(enabled: boolean): void {
+    InsecureTls.setEnabled(enabled)
   }
 
-  @LynxMethod
-  pickAndUploadFile(serverUrl: string, mimeTypes: string, callback: LynxCallback): void {
-    const documentPicker = new picker.DocumentViewPicker(this.context)
+  public pickAndUploadFile(uploadUrl: string, fieldName: string, mimeType: string,
+    callback: (result: string) => void): void {
+    const documentPicker = new picker.DocumentViewPicker(this.abilityContext)
     const options = new picker.DocumentSelectOptions()
     options.maxSelectNumber = 1
 
     documentPicker.select(options).then(async (result: Array<string>) => {
       if (!result || result.length === 0) {
-        callback(JSON.stringify({ success: false, error: 'cancelled' }))
+        callback(JSON.stringify({ error: 'cancelled' }))
         return
       }
       try {
@@ -81,32 +54,33 @@ export class SongloftPlatformModule {
           readTimeout: 60000,
           connectTimeout: 15000,
         }
-        const response = await httpRequest.request(serverUrl, httpOptions)
+        const response = await httpRequest.request(uploadUrl, httpOptions)
         httpRequest.destroy()
 
         if (response.responseCode >= 200 && response.responseCode < 300) {
           const body = typeof response.result === 'string'
             ? response.result
             : JSON.stringify(response.result)
-          callback(JSON.stringify({ success: true, body: body }))
+          callback(JSON.stringify({ error: null, body: body }))
         } else {
-          callback(JSON.stringify({ success: false, error: `HTTP ${response.responseCode}` }))
+          callback(JSON.stringify({ error: `HTTP ${response.responseCode}` }))
         }
       } catch (err) {
-        callback(JSON.stringify({ success: false, error: String(err) }))
+        callback(JSON.stringify({ error: String(err) }))
       }
     }).catch((err: Error) => {
-      callback(JSON.stringify({ success: false, error: err.message }))
+      callback(JSON.stringify({ error: err.message }))
     })
   }
 
-  @LynxMethod
-  shareFile(filePath: string, mimeType: string): void {
-    const want: Want = {
-      action: 'ohos.want.action.sendData',
-      uri: filePath,
-      type: mimeType,
-    }
-    this.context.startAbility(want).catch(() => {})
+  public logWrite(line: string): void {}
+
+  public logRead(callback: (result: string) => void): void {
+    callback(JSON.stringify({ error: null, content: '' }))
+  }
+
+  public shareFile(base64: string, fileName: string, mimeType: string,
+    callback: (result: string) => void): void {
+    callback(JSON.stringify({ error: 'not_supported' }))
   }
 }

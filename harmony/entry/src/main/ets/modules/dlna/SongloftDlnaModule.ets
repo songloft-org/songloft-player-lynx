@@ -1,6 +1,6 @@
 import { socket } from '@kit.NetworkKit'
 import { http } from '@kit.NetworkKit'
-import { LynxModule, LynxMethod, LynxCallback } from '@lynx/lynx'
+import { LynxModule, LynxContext } from '@lynx/lynx'
 import { common } from '@kit.AbilityKit'
 import { util } from '@kit.ArkTS'
 
@@ -10,92 +10,101 @@ const SEARCH_TARGET = 'urn:schemas-upnp-org:service:AVTransport:1'
 const SEARCH_TIMEOUT_MS = 5000
 
 interface DlnaDevice {
+  id: string
   name: string
   location: string
-  usn: string
 }
 
-@LynxModule('SongloftDlna')
-export class SongloftDlnaModule {
-  private context: common.UIAbilityContext
+export class SongloftDlnaModule extends LynxModule {
+  private abilityContext: common.UIAbilityContext
 
-  constructor(context: common.UIAbilityContext) {
-    this.context = context
+  constructor(context: LynxContext, param?: Object) {
+    super(context, param)
+    this.abilityContext = param as common.UIAbilityContext
   }
 
-  @LynxMethod
-  discover(callback: LynxCallback): void {
+  public startDiscovery(callback: (result: string) => void): void {
     this.doDiscover(callback)
   }
 
-  @LynxMethod
-  play(location: string, mediaUrl: string, title: string, callback: LynxCallback): void {
-    const body = this.buildSetTransportURIBody(mediaUrl, title)
-    this.soapAction(location, 'SetAVTransportURI', body).then(() => {
-      return this.soapAction(location, 'Play', this.buildPlayBody())
-    }).then(() => {
-      callback(JSON.stringify({ success: true }))
-    }).catch((err: Error) => {
-      callback(JSON.stringify({ success: false, error: err.message }))
-    })
+  public stopDiscovery(callback: (result: string) => void): void {
+    callback(JSON.stringify({ success: true }))
   }
 
-  @LynxMethod
-  pause(location: string, callback: LynxCallback): void {
-    this.soapAction(location, 'Pause', this.buildSimpleBody('Pause')).then(() => {
-      callback(JSON.stringify({ success: true }))
-    }).catch((err: Error) => {
-      callback(JSON.stringify({ success: false, error: err.message }))
-    })
+  public getDevices(callback: (result: string) => void): void {
+    callback(JSON.stringify({ devices: [] }))
   }
 
-  @LynxMethod
-  stop(location: string, callback: LynxCallback): void {
-    this.soapAction(location, 'Stop', this.buildSimpleBody('Stop')).then(() => {
-      callback(JSON.stringify({ success: true }))
-    }).catch((err: Error) => {
-      callback(JSON.stringify({ success: false, error: err.message }))
-    })
+  public cast(args: string, callback: (result: string) => void): void {
+    try {
+      const parsed: Record<string, string> = JSON.parse(args)
+      const location = parsed.deviceId ?? ''
+      const mediaUrl = parsed.url ?? ''
+      const title = parsed.title ?? ''
+      const body = this.buildSetTransportURIBody(mediaUrl, title)
+      this.soapAction(location, 'SetAVTransportURI', body).then(() => {
+        return this.soapAction(location, 'Play', this.buildPlayBody())
+      }).then(() => {
+        callback(JSON.stringify({ success: true }))
+      }).catch((err: Error) => {
+        callback(JSON.stringify({ error: err.message }))
+      })
+    } catch (err) {
+      callback(JSON.stringify({ error: String(err) }))
+    }
   }
 
-  @LynxMethod
-  seek(location: string, position: string, callback: LynxCallback): void {
-    const body = this.buildSeekBody(position)
-    this.soapAction(location, 'Seek', body).then(() => {
-      callback(JSON.stringify({ success: true }))
-    }).catch((err: Error) => {
-      callback(JSON.stringify({ success: false, error: err.message }))
-    })
+  public control(args: string, callback: (result: string) => void): void {
+    try {
+      const parsed: Record<string, string> = JSON.parse(args)
+      const action = parsed.action ?? ''
+      const deviceId = parsed.deviceId ?? ''
+      const value = parsed.value ?? ''
+
+      let soapAction: string
+      let soapBody: string
+      switch (action) {
+        case 'pause':
+          soapAction = 'Pause'
+          soapBody = this.buildSimpleBody('Pause')
+          break
+        case 'stop':
+          soapAction = 'Stop'
+          soapBody = this.buildSimpleBody('Stop')
+          break
+        case 'seek':
+          soapAction = 'Seek'
+          soapBody = this.buildSeekBody(value)
+          break
+        default:
+          soapAction = 'Play'
+          soapBody = this.buildPlayBody()
+      }
+
+      this.soapAction(deviceId, soapAction, soapBody).then(() => {
+        callback(JSON.stringify({ success: true }))
+      }).catch((err: Error) => {
+        callback(JSON.stringify({ error: err.message }))
+      })
+    } catch (err) {
+      callback(JSON.stringify({ error: String(err) }))
+    }
   }
 
-  @LynxMethod
-  getPosition(location: string, callback: LynxCallback): void {
-    this.soapAction(location, 'GetPositionInfo', this.buildSimpleBody('GetPositionInfo')).then((response: string) => {
-      const trackDuration = this.extractXmlValue(response, 'TrackDuration') ?? '00:00:00'
-      const relTime = this.extractXmlValue(response, 'RelTime') ?? '00:00:00'
-      callback(JSON.stringify({
-        success: true,
-        trackDuration: trackDuration,
-        relTime: relTime,
-      }))
-    }).catch((err: Error) => {
-      callback(JSON.stringify({ success: false, error: err.message }))
-    })
-  }
-
-  private async doDiscover(callback: LynxCallback): Promise<void> {
+  private async doDiscover(callback: (result: string) => void): Promise<void> {
     const devices: DlnaDevice[] = []
     const multicastSocket = socket.constructMulticastSocketInstance()
 
     try {
       await multicastSocket.bind({ address: '0.0.0.0', port: 0 })
-      await multicastSocket.addMembership(SSDP_ADDRESS)
+      const groupAddr: socket.NetAddress = { address: SSDP_ADDRESS, port: SSDP_PORT }
+      await multicastSocket.addMembership(groupAddr)
 
       multicastSocket.on('message', (value: socket.SocketMessageInfo) => {
         const textDecoder = util.TextDecoder.create('utf-8')
         const message = textDecoder.decodeToString(new Uint8Array(value.message))
         const device = this.parseSsdpResponse(message)
-        if (device && !devices.find((d: DlnaDevice) => d.usn === device.usn)) {
+        if (device && !devices.find((d: DlnaDevice) => d.id === device.id)) {
           devices.push(device)
         }
       })
@@ -135,7 +144,7 @@ export class SongloftDlnaModule {
     const usn = this.extractHeader(message, 'USN')
     const server = this.extractHeader(message, 'SERVER') ?? 'Unknown'
     if (!location || !usn) return null
-    const device: DlnaDevice = { name: server, location: location, usn: usn }
+    const device: DlnaDevice = { id: usn, name: server, location: location }
     return device
   }
 
@@ -172,7 +181,7 @@ export class SongloftDlnaModule {
     <u:SetAVTransportURI xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
       <InstanceID>0</InstanceID>
       <CurrentURI>${this.escapeXml(url)}</CurrentURI>
-      <CurrentURIMetaData>&lt;DIDL-Lite&gt;&lt;item&gt;&lt;dc:title&gt;${this.escapeXml(title)}&lt;/dc:title&gt;&lt;/item&gt;&lt;/DIDL-Lite&gt;</CurrentURIMetaData>
+      <CurrentURIMetaData></CurrentURIMetaData>
     </u:SetAVTransportURI>
   </s:Body>
 </s:Envelope>`
@@ -216,12 +225,5 @@ export class SongloftDlnaModule {
 
   private escapeXml(str: string): string {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&apos;')
-  }
-
-  private extractXmlValue(xml: string, tag: string): string | null {
-    const regex = new RegExp(`<${tag}>([^<]*)</${tag}>`)
-    const match = xml.match(regex)
-    return match ? match[1] : null
   }
 }

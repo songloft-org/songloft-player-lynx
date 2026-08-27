@@ -1,34 +1,17 @@
 import { UIAbility, AbilityConstant, Want } from '@kit.AbilityKit'
 import { window } from '@kit.ArkUI'
-import { LynxEnv } from '@lynx/lynx'
-import { SongloftAudioModule } from '../modules/audio/SongloftAudioModule'
-import { SongloftStorageModule } from '../modules/storage/SongloftStorageModule'
-import { SongloftPlatformModule } from '../modules/platform/SongloftPlatformModule'
-import { SongloftDlnaModule } from '../modules/dlna/SongloftDlnaModule'
-import { SongloftVideoModule } from '../modules/video/SongloftVideoModule'
-import { SongloftSongCacheModule } from '../modules/cache/SongloftSongCacheModule'
-import { SongloftNavigationModule } from '../modules/navigation/SongloftNavigationModule'
+import { LynxEnv, LynxServiceCenter, LynxServiceType } from '@lynx/lynx'
+import { LynxImageService } from '@lynx/lynx_image_service'
 import { SongloftHttpService } from '../net/SongloftHttpService'
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
-    const lynxEnv: LynxEnv = LynxEnv.getInstance()
-    lynxEnv.init(this.context)
-
-    SongloftHttpService.register(lynxEnv)
-
-    lynxEnv.registerModule('SongloftAudio', SongloftAudioModule)
-    lynxEnv.registerModule('SongloftStorage', SongloftStorageModule)
-    lynxEnv.registerModule('SongloftPlatform', SongloftPlatformModule)
-    lynxEnv.registerModule('SongloftDlna', SongloftDlnaModule)
-    lynxEnv.registerModule('SongloftVideo', SongloftVideoModule)
-    lynxEnv.registerModule('SongloftSongCache', SongloftSongCacheModule)
-    lynxEnv.registerModule('SongloftNavigation', SongloftNavigationModule)
+    LynxServiceCenter.registerService(LynxServiceType.Image, LynxImageService.instance)
+    LynxServiceCenter.registerService(LynxServiceType.Http, SongloftHttpService.instance)
+    LynxEnv.initialize(this.context)
   }
 
-  onDestroy(): void {
-    SongloftAudioModule.release()
-  }
+  onDestroy(): void {}
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
     windowStage.loadContent('pages/Index', (err) => {

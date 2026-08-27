@@ -1,14 +1,14 @@
 import { ConfigurationConstant, common, EnvironmentCallback, Configuration } from '@kit.AbilityKit'
 import { i18n } from '@kit.LocalizationKit'
-import { LynxView } from '@lynx/lynx'
+import { LynxContext } from '@lynx/lynx'
 
-interface AppearanceProps {
+interface AppearanceEvent {
   colorScheme: string
   locale: string
 }
 
 export class SystemAppearance {
-  private static lynxView: LynxView | null = null
+  private static lynxContext: LynxContext | null = null
   private static currentColorMode: string = 'light'
   private static currentLocale: string = 'en'
 
@@ -27,8 +27,8 @@ export class SystemAppearance {
     return props
   }
 
-  static attach(lynxView: LynxView, context: common.UIAbilityContext): void {
-    SystemAppearance.lynxView = lynxView
+  static attach(lynxContext: LynxContext, context: common.UIAbilityContext): void {
+    SystemAppearance.lynxContext = lynxContext
 
     const envCallback: EnvironmentCallback = {
       onConfigurationUpdated(config: Configuration): void {
@@ -48,17 +48,12 @@ export class SystemAppearance {
           changed = true
         }
 
-        if (changed && SystemAppearance.lynxView) {
-          const updatedProps: Record<string, string> = {
+        if (changed && SystemAppearance.lynxContext) {
+          const eventParam: AppearanceEvent = {
             colorScheme: SystemAppearance.currentColorMode,
             locale: SystemAppearance.currentLocale,
           }
-          SystemAppearance.lynxView.updateGlobalProps(updatedProps)
-          const eventParam: AppearanceProps = {
-            colorScheme: SystemAppearance.currentColorMode,
-            locale: SystemAppearance.currentLocale,
-          }
-          SystemAppearance.lynxView.sendGlobalEvent('appearanceChanged', [eventParam])
+          SystemAppearance.lynxContext.sendGlobalEvent('appearanceChanged', [eventParam])
         }
       },
       onMemoryLevel(): void {},
@@ -69,6 +64,6 @@ export class SystemAppearance {
   }
 
   static detach(): void {
-    SystemAppearance.lynxView = null
+    SystemAppearance.lynxContext = null
   }
 }
