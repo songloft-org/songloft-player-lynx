@@ -32,13 +32,15 @@ Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr
 
 ### 平台可用性
 
-| 平台 | 状态 |
-|------|------|
-| Android | ✅ 真机验证通过（播放 / 通知栏 / 扫描 / 重复检测 / 悬浮歌词 / 全屏视频全链路） |
-| iOS | ✅ 可构建可运行（`ios:build BUILD SUCCEEDED`，e2e 110/110）。7 个原生模块全部注册（`SongloftNavigation` 刻意不做——没有返回键可拦） |
-| HarmonyOS | ✅ 宿主工程已就位，8 个原生模块实现（Audio / Storage / Platform / SystemAppearance / Navigation / Video / Dlna / SongCache）。构建需 DevEco Studio（CI 无 hvigor 环境）。FloatingLyric / LiveActivity 无等价 API，TS 侧降级为 no-op |
-| Web | ✅ 可加载渲染、**有音频**。几条已知限制（无 longpress、文件选择器 user activation；占位符色已修，随主题切换）见 [Web 部署](./guides/web-deployment.md) |
-| 桌面 | ⛔ 未开始（P3 唯一未开始项，剩余最大单块能力） |
+| 平台 | 最低版本 | 状态 |
+|------|------|------|
+| Android | API 21（Android 5.0） / target 34 | ✅ 真机验证通过（播放 / 通知栏 / 扫描 / 重复检测 / 悬浮歌词 / 全屏视频全链路） |
+| iOS | iOS 15.0 | ✅ 可构建可运行（`ios:build BUILD SUCCEEDED`，e2e 110/110）。7 个原生模块全部注册（`SongloftNavigation` 刻意不做——没有返回键可拦）；Live Activity 在 <16.2 上静默降级 no-op |
+| HarmonyOS | HarmonyOS NEXT / API 12 | ✅ 宿主工程已就位，8 个原生模块实现（Audio / Storage / Platform / SystemAppearance / Navigation / Video / Dlna / SongCache）。构建需 DevEco Studio（CI 无 hvigor 环境）。FloatingLyric / LiveActivity 无等价 API，TS 侧降级为 no-op |
+| Web | 常青浏览器 | ✅ 可加载渲染、**有音频**。几条已知限制（无 longpress、文件选择器 user activation；占位符色已修，随主题切换）见 [Web 部署](./guides/web-deployment.md) |
+| 桌面 | —— | ⛔ 未开始（P3 唯一未开始项，剩余最大单块能力） |
+
+> 权威版本表与降级路径见 [reference/platforms.md](./reference/platforms.md)。
 
 ### 迁移路线
 
@@ -74,6 +76,7 @@ P4 双轨发布     ░░░░░░░░░░░░░░░░░░░░
 | [api-conventions.md](./reference/api-conventions.md) | API/Store 设计规范（参数风格、数值范围、命名、E2E 暴露约定） |
 | [native-modules.md](./reference/native-modules.md) | 全部原生模块的方法/事件/平台矩阵与闸门锁住的不变量 |
 | [back-navigation.md](./reference/back-navigation.md) | 返回导航三层模型、`consumable` 契约、Web sentinel、新增页面/弹出层清单 |
+| [platforms.md](./reference/platforms.md) | 支持平台矩阵与最低系统版本（Android minSdk 21 / iOS 15.0 / HarmonyOS NEXT / Web 常青浏览器），含 API 分级守卫清单 |
 
 设计 token 的权威表在根目录 **[DESIGN.md](../DESIGN.md)**（刻意不在 docs 里复制一份——副本必然漂移）。
 
