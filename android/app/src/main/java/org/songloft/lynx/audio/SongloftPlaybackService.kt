@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
@@ -60,6 +61,33 @@ import org.songloft.lynx.platform.ClientFileLog
  * begins. This costs one extra notification-manager call per service start
  * and buys unconditional compliance with the deadline.
  *
+ * ## Why the placeholder is conditional ([mediaNotificationOwnsSlot])
+ *
+ * The placeholder and media3's own notification share **notification id 1001**
+ * (`DefaultMediaNotificationProvider.DEFAULT_NOTIFICATION_ID`), which is what
+ * makes "media3 replaces it" work at all. The same sharing makes the reverse
+ * true: whoever posts last wins the slot.
+ *
+ * And media3 posts *through this service*. `MediaNotificationManager`'s
+ * foreground path is `ContextCompat.startForegroundService(service, selfIntent)`
+ * followed by `setForegroundServiceNotification(...)` — so every notification
+ * update while playing re-enters [onStartCommand], **after** the MediaStyle
+ * notification was set (AMS delivers the start command through the main looper).
+ * An unconditional placeholder therefore overwrote the media notification
+ * within milliseconds of media3 posting it, every single time: measured on
+ * device, the shade showed the blank silent "Songloft" placeholder for the
+ * whole song and the real player card only appeared while **paused** (the
+ * paused path is `notify()`, which does not self-start the service).
+ *
+ * So the placeholder is posted only while media3 does *not* hold the slot.
+ * [mediaNotificationOwnsSlot] mirrors media3's own `startedInForeground`: it is
+ * set from the `startInForegroundRequired` flag of the most recent
+ * [onUpdateNotification], **before** delegating, because delegating is what
+ * triggers the re-entrant start command. Any state in which media3 has given
+ * the foreground up (paused, stopped, session gone) sets it back to false, so
+ * the next `startForegroundService` from [SongloftAudioModule] still gets its
+ * deadline covered.
+ *
  * Registered in the manifest with `foregroundServiceType="mediaPlayback"` and
  * the required `<intent-filter>` for `MediaSessionService`.
  */
@@ -98,14 +126,75 @@ class SongloftPlaybackService : MediaSessionService() {
     }
 
     /**
+     * Whether media3 currently holds notification id 1001 as this service's
+     * foreground notification. See the class-level docstring — posting the
+     * placeholder while this is true throws the media player card away.
+     */
+    private var mediaNotificationOwnsSlot = false
+
+    /** Whether the notification currently in the shade is our placeholder. */
+    private var placeholderPosted = false
+
+    /**
      * Post a placeholder foreground notification before delegating to the base
-     * class. See the class-level docstring: the 5-second deadline is why. The
-     * base class's own logic will call `startForeground` again once media3's
-     * MediaStyle notification is ready, replacing the placeholder.
+     * class. See the class-level docstring: the 5-second deadline is why, and
+     * [mediaNotificationOwnsSlot] is why it is conditional. The base class's own
+     * logic calls `startForeground` with the MediaStyle notification as soon as
+     * media3 has one, replacing the placeholder.
      */
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForegroundPlaceholder()
+        if (!mediaNotificationOwnsSlot) startForegroundPlaceholder()
         return super.onStartCommand(intent, flags, startId)
+    }
+
+    /**
+     * media3's single funnel for showing / updating / dropping the media
+     * notification. Recording the ownership flag here — and before `super`,
+     * whose foreground path re-enters [onStartCommand] — is what keeps the
+     * placeholder from clobbering the notification it exists to bridge to.
+     */
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        if (startInForegroundRequired != mediaNotificationOwnsSlot) {
+            // Transitions only: while playing this runs on every metadata change
+            // (each lyric line), and the whole point of the exported log is to
+            // stay readable.
+            ClientFileLog.write(
+                'I', "audio-svc",
+                "media notification " + (if (startInForegroundRequired) "owns" else "released")
+                    + " the foreground slot",
+            )
+        }
+        mediaNotificationOwnsSlot = startInForegroundRequired
+        super.onUpdateNotification(session, startInForegroundRequired)
+        if (mediaNotificationWillShow(session)) {
+            // media3 is posting into id 1001, so whatever is in the shade is
+            // (about to be) its notification, not ours.
+            placeholderPosted = false
+        } else if (placeholderPosted) {
+            // Nothing will replace the placeholder: media3 shows no notification
+            // for an idle or empty player, and `maybeStopForegroundService` only
+            // cancels id 1001 when media3 itself had posted there. A placeholder
+            // put up for a `load()` that then failed would otherwise sit in the
+            // shade forever — blank, silent and (ONGOING | NO_CLEAR) undismissable.
+            clearPlaceholder()
+        }
+    }
+
+    /**
+     * Whether media3 will have a notification to show for [session], mirroring
+     * `MediaNotificationManager.shouldShowNotification`. Read from the session's
+     * player rather than tracked, so it cannot drift from what media3 decides.
+     */
+    private fun mediaNotificationWillShow(session: MediaSession): Boolean {
+        val player = session.player
+        return player.playbackState != Player.STATE_IDLE && !player.currentTimeline.isEmpty()
+    }
+
+    private fun clearPlaceholder() {
+        placeholderPosted = false
+        ClientFileLog.write('I', "audio-svc", "placeholder cleared (nothing to show)")
+        @Suppress("DEPRECATION")
+        stopForeground(/* removeNotification= */ true)
     }
 
     private fun startForegroundPlaceholder() {
@@ -131,6 +220,7 @@ class SongloftPlaybackService : MediaSessionService() {
                 @Suppress("DEPRECATION")
                 startForeground(PLACEHOLDER_NOTIFICATION_ID, notification)
             }
+            placeholderPosted = true
         } catch (_: Throwable) {
             // Some background-start restrictions (Android 12+) can throw here.
             // We tried; the media notification path will still work if the app
@@ -184,6 +274,8 @@ class SongloftPlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         ClientFileLog.write('I', "audio-svc", "destroyed")
+        mediaNotificationOwnsSlot = false
+        placeholderPosted = false
         // Let the engine release player + session; the base class then cleans
         // up its notification manager.
         SongloftAudioEngine.releaseFromService()

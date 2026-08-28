@@ -56,6 +56,17 @@ TS facade / Kotlin `@LynxMethod` / iOS `func` + `methodLookup` / 契约闸门—
 
 worker 侧最终走 `listener.apply(ctx, params)`，普通对象没有 `length` ⇒ 传零个参数、listener 收到 `undefined`。音频事件与深浅色事件都栽过，修后加了闸门（对 `web/` 三文件做行级检查）。
 
+### media3 的通知位只有一个主人：占位通知会顶掉播放器卡片（Android）
+
+`SongloftPlaybackService` 为满足 Android 8+ 的 5 秒 FGS 死线，在 `onStartCommand` 里先发一份占位通知，它与 media3 `DefaultMediaNotificationProvider` 共用 **notification id 1001**（`DEFAULT_NOTIFICATION_ID`）。共用是故意的——真通知靠这个「顶掉」占位；但反向同样成立：**后发者赢**。
+
+而 media3 的通知是**经由本 service 发的**：`MediaNotificationManager.startForeground()` 先 `ContextCompat.startForegroundService(service, selfIntent)`、再 `setForegroundServiceNotification(...)`。于是播放中每一次通知更新（含每句歌词引起的 metadata 变化）都会**重新进一次 `onStartCommand`**，且发生在 MediaStyle 通知已就位之后（AMS 经主 looper 投递）。无条件的占位通知因此在毫秒级把播放器卡片盖掉，整首歌只剩一条空白静音的「Songloft」——只有**暂停**时才看得见真卡片（暂停走 `notify()`，不自启动 service）。
+
+- **唯一判据在进程外**：`adb shell dumpsys notification --noredact | grep "pkg=org.songloft.lynx "` 读 `channel=`（`default_channel_id` = 播放器卡片，`songloft.playback.placeholder` = 占位）。播放、导出日志、`dumpsys media_session`（session active、controllers 2、state=3）全部正常，JS 侧完全看不出来。实测轨迹：播放 30 s 恒为占位 → 暂停 1 s 内变 `default_channel_id` → 再播放又变回占位。
+- **修法**：占位只在 media3 未持有该位时发。`mediaNotificationOwnsSlot` 镜像 media3 自己的 `startedInForeground`，在覆写的 `onUpdateNotification(session, startInForegroundRequired)` 里**先赋值再 `super`**——`super` 才是触发那次重入的东西，赋值放在后面就输掉这场竞争。闸门：`src/__tests__/android-media-notification.test.ts`（两条断言均已反向验证会红）。
+- **另一半**：`load()` 失败时 media3 什么都不发，而它的 `maybeStopForegroundService` 只 cancel「它自己发过的」1001 ⇒ 占位会永久留在通知栏，且 `ONGOING | NO_CLEAR` 连划都划不掉。所以 `onUpdateNotification` 里用与 media3 `shouldShowNotification` 同款的条件（player 非 `STATE_IDLE` 且 timeline 非空）判断「没人会来接手」，此时 `stopForeground(true)` 自己收尾。
+- **与 minSdk 21 无关**：机制在任何 API 级别都成立（实测机 Android 13）。时间上撞在一起纯属巧合——占位通知是降 minSdk 那批之前一个提交引入的，两者都在同一天。
+
 ## 4. 构建与闸门
 
 ### 「闸门全绿而产物是坏的」
