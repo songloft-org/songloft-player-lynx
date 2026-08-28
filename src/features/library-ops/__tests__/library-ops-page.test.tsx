@@ -76,6 +76,11 @@ vi.mock('../../library/api/index.js', () => ({
   getSongsApi: () => ({ cleanInvalidSongs: h.cleanInvalid }),
 }))
 
+vi.mock('../../library/data/song-tags-query.js', () => ({
+  useTagSyncToFile: () => ({ data: { value: false, readFailed: false } }),
+  useSetTagSyncToFile: () => ({ mutate: vi.fn(), isPending: false }),
+}))
+
 const wrap = (value: unknown) => ({ data: { value, readFailed: h.settings.readFailed } })
 const mutation = (fn: ReturnType<typeof vi.fn>) => ({ mutate: fn, isPending: false })
 

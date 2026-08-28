@@ -29,6 +29,7 @@ import {
   useSetPinnedMutation,
   useSetVisibilityMutation,
 } from '../data/playlist-mutations.js'
+import { useFromPlaylistMutation } from '../../library/data/song-tags-query.js'
 import { useDebounce } from '../../library/data/use-debounce.js'
 import { PlaylistCard } from './PlaylistCard.js'
 import './PlaylistsView.css'
@@ -49,6 +50,7 @@ export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; view
   const deleteMutation = useDeletePlaylistMutation()
   const pinnedMutation = useSetPinnedMutation()
   const visibilityMutation = useSetVisibilityMutation()
+  const fromPlaylistMutation = useFromPlaylistMutation()
 
   const [sortMode, setSortMode] = useState(false)
   const [selectMode, setSelectMode] = useState(false)
@@ -175,6 +177,8 @@ export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; view
           label: menuPlaylist!.isPinned ? t('playlist.unpinPlaylist') : t('playlist.pinPlaylist'),
           icon: 'pin' as const,
         }
+      case 'convertToTag':
+        return { key, label: t('songTag.convertFromPlaylist'), icon: 'label' as const }
       case 'edit':
         return { key, label: t('playlist.editPlaylist'), icon: 'brush' as const }
       case 'visibility':
@@ -197,6 +201,16 @@ export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; view
         onSuccess: () =>
           toast.success(pinned ? t('playlist.pinnedToast') : t('playlist.unpinnedToast')),
         onError: () => toast.error(t('playlist.pinFailed')),
+      })
+    } else if (key === 'convertToTag') {
+      fromPlaylistMutation.mutate(playlist.id, {
+        onSuccess: (result) => {
+          toast.success(t('songTag.convertSuccess', {
+            name: result?.tag?.name ?? playlist.name,
+            count: result?.bound ?? 0,
+          }))
+        },
+        onError: () => toast.error(t('songTag.convertFailed')),
       })
     } else if (key === 'edit') {
       void navigate({ to: '/playlists/$id/edit', params: { id: String(playlist.id) } })

@@ -140,10 +140,10 @@ async function renderPage(viewport: LibraryViewport = { isWide: false }) {
   return getQueriesForElement(elementTree.root!)
 }
 
-test('all 14 views visible → 14 pills in 3 groups (2 dividers), defaulting to the flat "all" list', async () => {
+test('all 15 views visible → 15 pills in 3 groups (2 dividers), defaulting to the flat "all" list', async () => {
   const { queryAllByTestId } = await renderPage()
 
-  expect(queryAllByTestId(/^library-view-pill-/)).toHaveLength(14)
+  expect(queryAllByTestId(/^library-view-pill-/)).toHaveLength(15)
   expect(queryAllByTestId('library-view-divider')).toHaveLength(2)
   // Default selection is the first visible view (`all`) → flat songs query
   // driven WITHOUT a `type` filter.
@@ -157,7 +157,7 @@ test('hiding 3 views removes exactly their pills', async () => {
   })
   const { queryAllByTestId, queryByTestId } = await renderPage()
 
-  expect(queryAllByTestId(/^library-view-pill-/)).toHaveLength(11)
+  expect(queryAllByTestId(/^library-view-pill-/)).toHaveLength(12)
   expect(queryByTestId('library-view-pill-decade')).not.toBeInTheDocument()
   expect(queryByTestId('library-view-pill-style')).not.toBeInTheDocument()
   expect(queryByTestId('library-view-pill-playlist_radio')).not.toBeInTheDocument()

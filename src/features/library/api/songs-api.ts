@@ -59,6 +59,8 @@ export interface SongsFilters {
   style?: string
   year?: number
   decade?: number
+  /** Filter by custom tag ID. */
+  tagId?: number
   /** Sort field, e.g. `added_at` / `title` / `file_modified_at`. */
   sort?: string
   /** Sort direction: `asc` / `desc`. */
@@ -90,7 +92,7 @@ function putStr(
   if (value != null && value !== '') query[key] = value
 }
 
-/** Append the shared tag filters (genre/artist/album/…/year/decade). */
+/** Append the shared tag filters (genre/artist/album/…/year/decade/tagId). */
 function applyTagFilters(
   query: Record<string, string | number>,
   filters: SongsFilters,
@@ -103,6 +105,7 @@ function applyTagFilters(
   // year/decade are only meaningful when > 0 (mirrors the Flutter guard).
   if (filters.year != null && filters.year > 0) query.year = filters.year
   if (filters.decade != null && filters.decade > 0) query.decade = filters.decade
+  if (filters.tagId != null && filters.tagId > 0) query.tag_id = filters.tagId
 }
 
 /** Build the `/songs` query object (paginated). Pure + exported for testing. */

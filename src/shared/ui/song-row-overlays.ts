@@ -52,6 +52,8 @@ export interface SongRowOverlayState {
   addToPlaylistSongIds: number[]
   /** Success callback for the open sheet; null when the caller wants none. */
   addToPlaylistOnAdded: (() => void) | null
+  /** The song IDs whose tags are being managed; empty while the sheet is closed. */
+  manageTagsSongIds: number[]
   /** The song awaiting delete confirmation; null while the dialog is closed. */
   deleteSong: Song | null
   /** The song whose read-only info dialog is open; null while closed. */
@@ -62,6 +64,8 @@ export interface SongRowOverlayState {
   closeMenu: () => void
   openAddToPlaylist: (params: OpenAddToPlaylistParams) => void
   closeAddToPlaylist: () => void
+  openManageTags: (songIds: number[]) => void
+  closeManageTags: () => void
   requestDelete: (song: Song) => void
   cancelDelete: () => void
   openInfo: (song: Song) => void
@@ -130,6 +134,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
   menuRow: null,
   addToPlaylistSongIds: [],
   addToPlaylistOnAdded: null,
+  manageTagsSongIds: [],
   deleteSong: null,
   infoSong: null,
   editSong: null,
@@ -140,6 +145,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       menuRow: row ?? null,
       addToPlaylistSongIds: [],
       addToPlaylistOnAdded: null,
+      manageTagsSongIds: [],
       deleteSong: null,
       infoSong: null,
       editSong: null,
@@ -152,11 +158,25 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       menuSong: null,
       menuAnchor: null,
       menuRow: null,
+      manageTagsSongIds: [],
       deleteSong: null,
       infoSong: null,
       editSong: null,
     }),
   closeAddToPlaylist: () => set({ addToPlaylistSongIds: [], addToPlaylistOnAdded: null }),
+  openManageTags: (songIds) =>
+    set({
+      manageTagsSongIds: songIds,
+      menuSong: null,
+      menuAnchor: null,
+      menuRow: null,
+      addToPlaylistSongIds: [],
+      addToPlaylistOnAdded: null,
+      deleteSong: null,
+      infoSong: null,
+      editSong: null,
+    }),
+  closeManageTags: () => set({ manageTagsSongIds: [] }),
   requestDelete: (song) =>
     set({
       deleteSong: song,
@@ -165,6 +185,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       menuRow: null,
       addToPlaylistSongIds: [],
       addToPlaylistOnAdded: null,
+      manageTagsSongIds: [],
       infoSong: null,
       editSong: null,
     }),
@@ -177,6 +198,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       menuRow: null,
       addToPlaylistSongIds: [],
       addToPlaylistOnAdded: null,
+      manageTagsSongIds: [],
       deleteSong: null,
       editSong: null,
     }),
@@ -189,6 +211,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       menuRow: null,
       addToPlaylistSongIds: [],
       addToPlaylistOnAdded: null,
+      manageTagsSongIds: [],
       deleteSong: null,
       infoSong: null,
     }),
@@ -204,6 +227,8 @@ export const songRowOverlays = {
     useSongRowOverlays.getState().openMenu(params),
   openAddToPlaylist: (params: OpenAddToPlaylistParams) =>
     useSongRowOverlays.getState().openAddToPlaylist(params),
+  openManageTags: (songIds: number[]) =>
+    useSongRowOverlays.getState().openManageTags(songIds),
   openInfo: (song: Song) => useSongRowOverlays.getState().openInfo(song),
   openEdit: (song: Song) => useSongRowOverlays.getState().openEdit(song),
 }

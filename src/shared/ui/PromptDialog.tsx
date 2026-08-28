@@ -41,6 +41,8 @@ export interface PromptDialogProps {
   confirmTestId?: string
   cancelTestId?: string
   errorTestId?: string
+  /** Pre-fill the input with this value when the dialog opens. */
+  initialValue?: string
 }
 
 /**
@@ -70,9 +72,10 @@ export function PromptDialog({
   confirmTestId,
   cancelTestId,
   errorTestId,
+  initialValue = '',
 }: PromptDialogProps) {
   const { t } = useTranslation()
-  const [value, setValue] = useState('')
+  const [value, setValue] = useState(initialValue)
   const [error, setError] = useState<string | undefined>(undefined)
 
   const cancel = () => {

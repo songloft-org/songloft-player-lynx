@@ -1,0 +1,11 @@
+.tag-card__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tag-card__dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}

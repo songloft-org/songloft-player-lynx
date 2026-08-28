@@ -4,6 +4,7 @@ import type { MetadataProgress } from '../../../models/library-ops.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { SettingsSection } from '../../settings/widgets/SettingsSection.js'
 import { useRemoteTitleSource, useSetRemoteTitleSource } from '../data/index.js'
+import { useTagSyncToFile, useSetTagSyncToFile } from '../../library/data/song-tags-query.js'
 import {
   metadataBarValue,
   metadataResultStatusKey,
@@ -40,6 +41,8 @@ export function MetadataSection({
   const { t } = useTranslation()
   const remoteTitleSource = useRemoteTitleSource()
   const setRemoteTitleSource = useSetRemoteTitleSource()
+  const tagSyncToFile = useTagSyncToFile()
+  const setTagSyncToFile = useSetTagSyncToFile()
 
   const useTags = (remoteTitleSource.data?.value ?? 'filename') === 'tag'
   const kind = metadataViewKind(progress)
@@ -58,6 +61,14 @@ export function MetadataSection({
         onChange={(next) =>
           setRemoteTitleSource.mutate(next ? 'tag' : 'filename', { onError: onWriteError })}
         testId='switch-remote-title-source'
+      />
+      <SwitchRow
+        icon='label'
+        title={t('songTag.syncToFile')}
+        subtitle={t('songTag.syncToFileHint')}
+        checked={tagSyncToFile.data?.value ?? false}
+        onChange={(next) => setTagSyncToFile.mutate(next, { onError: onWriteError })}
+        testId='switch-tag-sync-to-file'
       />
 
       {kind === 'running'

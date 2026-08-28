@@ -23,7 +23,7 @@ import {
   setGroupOrder,
 } from '../domain/library-views.js'
 
-/** Build a full 14-view config from an ordered key list (all visible). */
+/** Build a full 15-view config from an ordered key list (all visible). */
 function configOf(keys: LibraryViewKey[], hidden: LibraryViewKey[] = []) {
   return {
     views: keys.map((key): LibraryBrowseView => ({ key, visible: !hidden.includes(key) })),
@@ -35,7 +35,7 @@ function keysOf(result: { displayKeys: LibraryViewKey[] }): LibraryViewKey[] {
 }
 
 describe('view tables', () => {
-  test('every table covers exactly the 14 backend keys', () => {
+  test('every table covers exactly the 15 backend keys', () => {
     const expected = [...LIBRARY_VIEW_KEYS].sort()
     expect(Object.keys(LIBRARY_VIEW_GROUP).sort()).toEqual(expected)
     expect(Object.keys(LIBRARY_VIEW_LABEL_KEY).sort()).toEqual(expected)
@@ -78,7 +78,7 @@ describe('groupLibraryViewKeys', () => {
     const buckets = groupLibraryViewKeys([...LIBRARY_VIEW_KEYS])
     expect(buckets.map((b) => b.group)).toEqual(['songs', 'facets', 'playlists'])
     expect(buckets[0]!.keys).toEqual(['all', 'local', 'remote', 'radio'])
-    expect(buckets[1]!.keys).toEqual(['artist', 'album', 'genre', 'year', 'decade', 'language', 'style'])
+    expect(buckets[1]!.keys).toEqual(['artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag'])
     expect(buckets[2]!.keys).toEqual(['playlist', 'playlist_normal', 'playlist_radio'])
   })
 
@@ -124,7 +124,7 @@ describe('moveGroup', () => {
     const moved = moveGroup(views, 'facets', 1)
     const groups = groupLibraryViewKeys(moved.map((v) => v.key))
     expect(groups.map((g) => g.group)).toEqual(['songs', 'playlists', 'facets'])
-    expect(groups[2]!.keys).toEqual(['artist', 'album', 'genre', 'year', 'decade', 'language', 'style'])
+    expect(groups[2]!.keys).toEqual(['artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag'])
   })
 
   test('first group up / last group down are no-ops', () => {
@@ -136,12 +136,12 @@ describe('moveGroup', () => {
 describe('setGroupOrder', () => {
   test('reorders only the target group; other groups stay byte-identical', () => {
     const views = DEFAULT_LIBRARY_BROWSE_CONFIG.views
-    const next = setGroupOrder(views, 'facets', ['genre', 'artist', 'album', 'year', 'decade', 'language', 'style'])
+    const next = setGroupOrder(views, 'facets', ['genre', 'artist', 'album', 'year', 'decade', 'language', 'style', 'tag'])
     const buckets = groupLibraryViewKeys(next.map((v) => v.key))
     expect(buckets.find((b) => b.group === 'facets')!.keys[0]).toBe('genre')
     expect(buckets.find((b) => b.group === 'songs')!.keys).toEqual(['all', 'local', 'remote', 'radio'])
     expect(buckets.find((b) => b.group === 'playlists')!.keys).toEqual(['playlist', 'playlist_normal', 'playlist_radio'])
-    expect(next).toHaveLength(14)
+    expect(next).toHaveLength(15)
   })
 
   test('ignores keys from other groups and keeps any omitted member', () => {
@@ -199,7 +199,7 @@ describe('resolveLibraryView', () => {
     // Not pushed to the end: `year` sits between `genre` and `decade` again.
     expect(keysOf(resolved)).toEqual([
       'all', 'local', 'remote', 'radio',
-      'artist', 'album', 'genre', 'year', 'decade', 'language', 'style',
+      'artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag',
       'playlist', 'playlist_normal', 'playlist_radio',
     ])
   })

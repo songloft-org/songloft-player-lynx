@@ -24,6 +24,7 @@ import {
 } from '../domain/library-views.js'
 import { FlatSongsView } from '../widgets/FlatSongsView.js'
 import { FacetGridView } from '../widgets/FacetGridView.js'
+import { TagGridView } from '../widgets/TagGridView.js'
 import { LibraryStateMessage } from '../widgets/LibraryStateMessage.js'
 import { LibraryViewEditor } from '../widgets/LibraryViewEditor.js'
 import { LibraryViewSwitcher } from '../widgets/LibraryViewSwitcher.js'
@@ -167,7 +168,9 @@ export function LibraryPage() {
       />
     )
     : group === 'facets'
-      ? <FacetGridView key={selected} field={selected} viewMode={viewMode} />
+      ? selected === 'tag'
+        ? <TagGridView key='tag' viewMode={viewMode} />
+        : <FacetGridView key={selected} field={selected} viewMode={viewMode} />
       : <PlaylistsView key={selected} type={playlistViewType(selected)} viewMode={viewMode} />
 
   return (

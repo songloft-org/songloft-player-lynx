@@ -93,6 +93,18 @@ export class SettingsApi {
     await this.client.put(`${apiPrefix}/settings/volume-normalize`, { enabled })
   }
 
+  // ── Tag sync to file ────────────────────────────────────────────────────
+
+  async getTagSyncToFile(): Promise<boolean> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/settings/tag-sync-to-file`)
+    const data = (res.data ?? {}) as Record<string, unknown>
+    return data.enabled === true
+  }
+
+  async updateTagSyncToFile(enabled: boolean): Promise<void> {
+    await this.client.put(`${apiPrefix}/settings/tag-sync-to-file`, { enabled })
+  }
+
   // ── Proxy settings (http / github / hls / private-network allowlist) ─────
   // Four independent backend keys the ProxySettingsPage edits together. Loaded
   // and saved in parallel; each is a small `{proxy}` / `{enabled}` / `{allowlist}`

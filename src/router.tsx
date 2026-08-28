@@ -16,7 +16,7 @@ import { SplashScreen } from './shared/ui/SplashScreen.js'
 import { ToastHost } from './shared/ui/ToastHost.js'
 import { evaluateAuthGuard, isAuthTransitionPending, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
-import { AddSongsPage, CategorySongsPage, LibraryLayout, LibraryPage } from './features/library/index.js'
+import { AddSongsPage, CategorySongsPage, LibraryLayout, LibraryPage, TagSongsPage } from './features/library/index.js'
 import { migrateLibrarySearch, type LibraryViewKey } from './features/library/domain/library-views.js'
 import { CreatePlaylistPage, EditPlaylistPage, PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
@@ -372,6 +372,20 @@ const categorySongsRoute = createRoute({
   component: CategorySongsPage,
 })
 
+/** `/library/tags/$tagId` — tag songs drill-in (songs under a custom tag). */
+const tagSongsRoute = createRoute({
+  getParentRoute: () => libraryLayoutRoute,
+  path: '/library/tags/$tagId',
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { name?: string; cover?: string } => {
+    const name = typeof search.name === 'string' ? search.name : ''
+    const cover = typeof search.cover === 'string' ? search.cover : undefined
+    return cover ? { name, cover } : { name }
+  },
+  component: TagSongsPage,
+})
+
 const addSongsRoute = createRoute({
   getParentRoute: () => libraryLayoutRoute,
   path: '/library/add',
@@ -407,6 +421,7 @@ const routeTree = rootRoute.addChildren([
       createPlaylistRoute,
       editPlaylistRoute,
       categorySongsRoute,
+      tagSongsRoute,
       playlistDetailRoute,
     ]),
     settingsRoute,

@@ -67,16 +67,16 @@ async function renderEditor(config: LibraryBrowseConfig = DEFAULT_LIBRARY_BROWSE
   return getQueriesForElement(elementTree.root!)
 }
 
-test('renders the three group headers and all 14 view rows', async () => {
+test('renders the three group headers and all 15 view rows', async () => {
   const { queryByText, queryAllByText, queryAllByTestId } = await renderEditor()
 
   expect(queryByText('Songs')).toBeInTheDocument()
   expect(queryByText('Categories')).toBeInTheDocument()
   // "Playlists" is both a group header and the `playlist_normal` view label.
   expect(queryAllByText('Playlists').length).toBeGreaterThanOrEqual(1)
-  // 14 rows → 14 drag handles + 14 switches.
-  expect(queryAllByTestId(/^library-editor-drag-/)).toHaveLength(14)
-  expect(queryAllByTestId(/^library-editor-switch-/)).toHaveLength(14)
+  // 15 rows → 15 drag handles + 15 switches.
+  expect(queryAllByTestId(/^library-editor-drag-/)).toHaveLength(15)
+  expect(queryAllByTestId(/^library-editor-switch-/)).toHaveLength(15)
 })
 
 test('a hidden view renders its switch unchecked; visible views are checked', async () => {
@@ -119,10 +119,10 @@ test('moving a whole group reorders the saved config group-contiguously', async 
 
   const saved = mutateSpy.mock.calls[0]![0] as LibraryBrowseConfig
   expect(saved.views[0]!.key).toBe('artist')
-  // Still all 14, still contiguous by group.
-  expect(saved.views).toHaveLength(14)
+  // Still all 15, still contiguous by group.
+  expect(saved.views).toHaveLength(15)
   expect(saved.views.map((v) => v.key)).toEqual([
-    'artist', 'album', 'genre', 'year', 'decade', 'language', 'style',
+    'artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag',
     'all', 'local', 'remote', 'radio',
     'playlist', 'playlist_normal', 'playlist_radio',
   ])

@@ -36,8 +36,9 @@ export const PLAYBACK_FACET_TYPES = [
 export type PlaybackFacetType = (typeof PLAYBACK_FACET_TYPES)[number]
 
 export const PLAYBACK_CONTEXT_PLAYLIST = 'playlist'
+export const PLAYBACK_CONTEXT_TAG = 'tag'
 
-export type PlaybackContextType = typeof PLAYBACK_CONTEXT_PLAYLIST | PlaybackFacetType
+export type PlaybackContextType = typeof PLAYBACK_CONTEXT_PLAYLIST | typeof PLAYBACK_CONTEXT_TAG | PlaybackFacetType
 
 export interface PlaybackContext {
   type: PlaybackContextType

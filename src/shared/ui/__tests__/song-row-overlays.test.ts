@@ -207,21 +207,21 @@ test('each close action clears only its own overlay', () => {
 const keysOf = (row: Parameters<typeof buildSongMenuItems>[1] | undefined) =>
   buildSongMenuItems((key) => key, row ?? null).map((item) => item.key)
 
-test('a narrow row (or no row context) keeps all five menu items', () => {
-  expect(keysOf(null)).toEqual(['play', 'info', 'edit', 'add', 'delete'])
-  expect(keysOf({ isWide: false, deleteShortcut: true })).toEqual(['play', 'info', 'edit', 'add', 'delete'])
+test('a narrow row (or no row context) keeps all six menu items', () => {
+  expect(keysOf(null)).toEqual(['play', 'info', 'edit', 'add', 'manageTags', 'delete'])
+  expect(keysOf({ isWide: false, deleteShortcut: true })).toEqual(['play', 'info', 'edit', 'add', 'manageTags', 'delete'])
 })
 
 test('a wide row prunes the actions its own buttons already expose', () => {
   // The library/category rows: info/add/delete all sit in the row tail, so the
-  // menu keeps only what no button covers — play and edit.
-  expect(keysOf({ isWide: true, deleteShortcut: true })).toEqual(['play', 'edit'])
+  // menu keeps only what no button covers — play, edit, and manageTags.
+  expect(keysOf({ isWide: true, deleteShortcut: true })).toEqual(['play', 'edit', 'manageTags'])
 })
 
 test('a wide row without the delete shortcut keeps the menu delete (playlist detail)', () => {
   // Its tail × removes the song *from the playlist* — a different action — so
   // the library delete stays reachable from the menu.
-  expect(keysOf({ isWide: true, deleteShortcut: false })).toEqual(['play', 'edit', 'delete'])
+  expect(keysOf({ isWide: true, deleteShortcut: false })).toEqual(['play', 'edit', 'manageTags', 'delete'])
 })
 
 test('only the delete item is danger-flagged', () => {

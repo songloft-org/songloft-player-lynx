@@ -73,6 +73,7 @@ export type IconName =
   | 'trash'
   | 'pin'
   | 'download'
+  | 'label'
 
 /** Shared stroke attributes for line icons — Muse §4.5 stroke-width 1.6. */
 function stroke(color: string): string {
@@ -391,6 +392,11 @@ const ICONS: Record<IconName, (color: string) => string> = {
     `<path d="M12 3.5v10.5" ${stroke(c)}/>` +
     `<path d="M8 10.5 12 14.5l4-4" ${stroke(c)}/>` +
     `<path d="M4.5 16.5v2A2 2 0 0 0 6.5 20.5h11a2 2 0 0 0 2-2v-2" ${stroke(c)}/>`,
+
+  // Label: custom song tag (distinct from genre `tag`).
+  label: (c) =>
+    `<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h7.586a1 1 0 0 1 .707.293l6.914 6.914a1 1 0 0 1 0 1.414l-7.5 7.5a1 1 0 0 1-1.414 0L4.879 14.207A2.5 2.5 0 0 1 4 12.378V7.5Z" ${stroke(c)}/>` +
+    `<circle cx="8" cy="9" r="1.2" fill="${c}" stroke="none"/>`,
 }
 
 /** Build a complete inline SVG document string for `name`, colored with `color`. */

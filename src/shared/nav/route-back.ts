@@ -126,6 +126,11 @@ export function resolveRouteBack(
     return { kind: 'navigate', to: '/library', librarySearch: { view: field } }
   }
 
+  // Tag songs page returns to the tag view.
+  if (pathname.startsWith('/library/tags/')) {
+    return { kind: 'navigate', to: '/library', librarySearch: { view: 'tag' } }
+  }
+
   // "Add songs" resets the library to its last view, as before.
   if (pathname === '/library/add') {
     return { kind: 'navigate', to: '/library', librarySearch: ctx.lastLibrarySearch }

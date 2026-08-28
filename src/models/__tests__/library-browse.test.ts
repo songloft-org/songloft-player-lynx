@@ -16,6 +16,7 @@ import {
 const BACKEND_VIEW_KEYS = [
   'all', 'local', 'remote', 'radio',
   'artist', 'album', 'genre', 'year', 'decade', 'language', 'style',
+  'tag',
   'playlist', 'playlist_normal', 'playlist_radio',
 ]
 
@@ -28,7 +29,7 @@ describe('LIBRARY_VIEW_KEYS', () => {
     expect([...LIBRARY_VIEW_KEYS]).toEqual(BACKEND_VIEW_KEYS)
   })
 
-  test('isLibraryViewKey accepts exactly the 14 keys', () => {
+  test('isLibraryViewKey accepts exactly the 15 keys', () => {
     for (const key of BACKEND_VIEW_KEYS) expect(isLibraryViewKey(key)).toBe(true)
     // The pre-refactor client invented these four; the backend 400s on them.
     for (const key of ['folder', 'recent', 'favorites', 'random', '', 'ALL']) {
@@ -38,7 +39,7 @@ describe('LIBRARY_VIEW_KEYS', () => {
 })
 
 describe('DEFAULT_LIBRARY_BROWSE_CONFIG', () => {
-  test('is all 14 views visible in backend default order', () => {
+  test('is all 15 views visible in backend default order', () => {
     expect(keysOf(DEFAULT_LIBRARY_BROWSE_CONFIG)).toEqual(BACKEND_VIEW_KEYS)
     expect(DEFAULT_LIBRARY_BROWSE_CONFIG.views.every((v) => v.visible)).toBe(true)
   })
@@ -62,6 +63,7 @@ describe('parseLibraryBrowseConfig', () => {
       { key: 'decade', visible: true },
       { key: 'language', visible: true },
       { key: 'style', visible: true },
+      { key: 'tag', visible: true },
     ]
     const parsed = parseLibraryBrowseConfig({ views })
     expect(keysOf(parsed)).toEqual(views.map((v) => v.key))
@@ -80,7 +82,7 @@ describe('parseLibraryBrowseConfig', () => {
     expect(keysOf(parsed)).not.toContain('folder')
     expect(keysOf(parsed)).not.toContain('random')
     // Missing keys are appended visible, in backend default order.
-    expect(keysOf(parsed)).toHaveLength(14)
+    expect(keysOf(parsed)).toHaveLength(15)
     expect(keysOf(parsed).slice(1)).toEqual(BACKEND_VIEW_KEYS.filter((k) => k !== 'all'))
   })
 
@@ -115,6 +117,6 @@ describe('parseLibraryBrowseConfig', () => {
     })
     expect(parsed.views.find((v) => v.key === 'artist')?.visible).toBe(false)
     expect(parsed.views.find((v) => v.key === 'album')?.visible).toBe(true)
-    expect(keysOf(parsed)).toHaveLength(14)
+    expect(keysOf(parsed)).toHaveLength(15)
   })
 })

@@ -253,7 +253,9 @@ export class NativeSongloftAudio implements SongloftAudio {
   }
 
   async getVolume(): Promise<void> {
-    this.native.getVolume()
+    if (typeof this.native.getVolume === 'function') {
+      this.native.getVolume()
+    }
   }
 
   // ── equalizer (native stub; bands mirror the standard 10-band layout) ──

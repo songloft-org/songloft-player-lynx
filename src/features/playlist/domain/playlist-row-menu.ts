@@ -14,5 +14,5 @@ import type { Playlist } from '../../../models/playlist.js'
 export function playlistRowMenuKeys(playlist: Playlist): string[] {
   return playlist.isBuiltIn
     ? ['pin']
-    : ['pin', 'edit', 'visibility', 'delete']
+    : ['pin', 'convertToTag', 'edit', 'visibility', 'delete']
 }

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { getSongsApi } from '../../features/library/api/index.js'
 import { SongEditDialog } from '../../features/library/widgets/SongEditDialog.js'
 import { SongInfoDialog } from '../../features/library/widgets/SongInfoDialog.js'
+import { ManageTagsSheet } from '../../features/library/widgets/ManageTagsSheet.js'
 import { AddToPlaylistSheet } from '../../features/playlist/widgets/AddToPlaylistSheet.js'
 import { usePlayerStore } from '../../features/player/store/index.js'
 import { ConfirmDialog } from './ConfirmDialog.js'
@@ -38,6 +39,7 @@ export function SongRowOverlays() {
   const menuRow = useSongRowOverlays((s) => s.menuRow)
   const addToPlaylistSongIds = useSongRowOverlays((s) => s.addToPlaylistSongIds)
   const addToPlaylistOnAdded = useSongRowOverlays((s) => s.addToPlaylistOnAdded)
+  const manageTagsSongIds = useSongRowOverlays((s) => s.manageTagsSongIds)
   const deleteSong = useSongRowOverlays((s) => s.deleteSong)
   const infoSong = useSongRowOverlays((s) => s.infoSong)
   const editSong = useSongRowOverlays((s) => s.editSong)
@@ -45,6 +47,8 @@ export function SongRowOverlays() {
   const openInfo = useSongRowOverlays((s) => s.openInfo)
   const openAddToPlaylist = useSongRowOverlays((s) => s.openAddToPlaylist)
   const closeAddToPlaylist = useSongRowOverlays((s) => s.closeAddToPlaylist)
+  const openManageTags = useSongRowOverlays((s) => s.openManageTags)
+  const closeManageTags = useSongRowOverlays((s) => s.closeManageTags)
   const requestDelete = useSongRowOverlays((s) => s.requestDelete)
   const cancelDelete = useSongRowOverlays((s) => s.cancelDelete)
   const closeInfo = useSongRowOverlays((s) => s.closeInfo)
@@ -77,6 +81,9 @@ export function SongRowOverlays() {
         return
       case 'add':
         openAddToPlaylist({ songIds: [song.id] })
+        return
+      case 'manageTags':
+        openManageTags([song.id])
         return
       case 'delete':
         requestDelete(song)
@@ -115,6 +122,10 @@ export function SongRowOverlays() {
         songIds={addToPlaylistSongIds}
         onAdded={addToPlaylistOnAdded ?? undefined}
         onClose={closeAddToPlaylist}
+      />
+      <ManageTagsSheet
+        songIds={manageTagsSongIds}
+        onClose={closeManageTags}
       />
       <ConfirmDialog
         show={deleteSong != null}
