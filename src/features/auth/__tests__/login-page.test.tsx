@@ -17,7 +17,7 @@ import {
 } from '../../../core/storage/index.js'
 import { createAppRouter } from '../../../router.js'
 import { setMockAuthStatus } from '../../../__tests__/_render-mocks.js'
-import { SECURE_LAST_PASSWORD } from '../store/index.js'
+import { PREF_LAST_USERNAME, SECURE_LAST_PASSWORD } from '../store/index.js'
 
 // The login screen depends on three facilities the ReactLynx Vitest env cannot
 // run; all three are mocked to plain stand-ins here (shapes shared via
@@ -35,21 +35,26 @@ vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
 // Local stand-in for the shared `mockLynxUiInput`: this file additionally
-// renders the controlled `value` as text, so the remembered-password prefill
-// (secure store → field) is observable — the shared stand-in drops `value`.
+// renders the controlled `value` as text tagged with the field `type`, so the
+// remembered-password prefill (secure store → field) is observable and
+// distinguishable from the username field — the shared stand-in drops `value`.
+// (The username placeholder happens to also be "admin", so asserting on bare
+// text cannot tell a prefilled password from that placeholder.)
 vi.mock('@lynx-js/lynx-ui-input', () => ({
   Input: ({
     className,
     placeholder,
     value,
+    type,
   }: {
     className?: string
     placeholder?: string
     value?: string
+    type?: string
   }) => (
     <view className={className}>
       {placeholder ? <text>{placeholder}</text> : null}
-      {value ? <text>{value}</text> : null}
+      {value ? <text data-testid={`input-value-${type ?? 'text'}`}>{value}</text> : null}
     </view>
   ),
 }))
@@ -117,9 +122,11 @@ async function renderLogin() {
 afterEach(async () => {
   appConfig.reset()
   setMockAuthStatus('unknown')
-  // Drop the remembered password so tests stay order-independent.
+  // Drop the remembered credentials so tests stay order-independent.
+  const storage = getSongloftStorage()
   try {
-    await getSongloftStorage().secure.remove(SECURE_LAST_PASSWORD)
+    await storage.secure.remove(SECURE_LAST_PASSWORD)
+    await storage.prefs.remove(PREF_LAST_USERNAME)
   } catch {
     /* ignore */
   }
@@ -137,16 +144,16 @@ test('renders the login page with title, labels and login button', async () => {
 
 /**
  * The dev credentials (`devCredentials` in app-config) are meant to make device
- * testing typing-free, so the form must be submittable straight after mount.
- * `canSubmit` requires a non-empty username *and* password, so an enabled login
- * button proves both prefills landed — the mocked `Input` does not render its
- * value, so this is the observable proxy for it.
+ * testing typing-free, so a **fresh install** must be submittable straight after
+ * mount. `canSubmit` requires a non-empty username *and* password, so an enabled
+ * login button proves both prefills landed — the mocked `Input` does not render
+ * its value, so this is the observable proxy for it.
  *
  * This also guards the flicker fix indirectly: the username prefill has to
  * arrive through the async chain, and if someone removes that tail the button
  * stays disabled here.
  */
-test('dev credentials prefill both fields so the form is submittable on mount', async () => {
+test('dev credentials prefill both fields so a fresh install is submittable on mount', async () => {
   const { queryByTestId } = await renderLogin()
   const button = queryByTestId('login-button')
   expect(button).toBeInTheDocument()
@@ -172,4 +179,28 @@ test('prefills the remembered password from secure storage over the dev default'
   expect(queryByText('saved-secret')).toBeInTheDocument()
   const button = queryByTestId('login-button')
   expect(button?.className).not.toContain('login__button--disabled')
+})
+
+/**
+ * A returning user with **no** remembered password (the upgrade case: the
+ * password is only recorded from the first login after that feature shipped)
+ * must get an EMPTY password field, not the dev default.
+ *
+ * Prefilling `admin` there is a wrong password that looks exactly like "my
+ * password got reset", and submitting it spends a failed login on a misleading
+ * "invalid credentials". The remembered username is what distinguishes this
+ * state from a fresh install, where the dev default still applies (test above).
+ */
+test('a returning user with no remembered password gets an empty field, not the dev default', async () => {
+  await getSongloftStorage().prefs.set(PREF_LAST_USERNAME, 'alice')
+  const { queryByText, queryByTestId } = await renderLogin()
+  expect(queryByText('alice')).toBeInTheDocument()
+  // the password field (type='password') must be empty — no dev default sitting
+  // in it. Its value text is tagged by field type so the username placeholder
+  // (also "admin") cannot be mistaken for a prefilled password.
+  expect(queryByTestId('input-value-password')).not.toBeInTheDocument()
+  // and with an empty password `canSubmit` is false
+  expect(queryByTestId('login-button')?.className).toContain(
+    'login__button--disabled',
+  )
 })
