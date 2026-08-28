@@ -48,11 +48,15 @@ export function LoginPage() {
   // the password field and login button visibly flicker (batch 11 in PROGRESS).
   // So do NOT "simplify" this to `useState(devCredentials.username)`.
   const [username, setUsername] = useState('')
-  // The password starts at the dev default so a *fresh* dev install is
-  // submittable without typing; the async prefill below replaces it with the
-  // remembered password, or clears it for a returning user we have no password
-  // for (see the prefill tail for why an empty field beats a wrong one).
-  const [password, setPassword] = useState(devCredentials.password)
+  // The password field starts EMPTY and is only ever filled with a genuinely
+  // remembered password (secure store, written on a successful login). It is
+  // deliberately NOT seeded with `devCredentials.password`: doing so put the
+  // literal string "admin" in the field on every fresh install / upgraded
+  // install that had not yet re-logged-in under this build, which read to the
+  // user as "my password got reset to admin" and, if submitted, spent a failed
+  // login on a misleading "invalid credentials". A secret must never be
+  // prefilled with a value the user did not actually save.
+  const [password, setPassword] = useState('')
   const [apiUrl, setApiUrl] = useState(showServerFields ? appConfig.baseUrl : '')
   const [insecureTls, setInsecureTls] = useState(appConfig.insecureTls)
 
@@ -83,20 +87,11 @@ export function LoginPage() {
       // One write per field, whichever source wins — see the useState comments.
       const nextName = savedName || devCredentials.username
       if (nextName) setUsername(nextName)
-      // The dev default password applies to a **fresh install only**. Once a
-      // real account has logged in here (a remembered username proves it) but
-      // we have no password for it — the upgrade case, since the password is
-      // only recorded from the first login *after* this feature shipped —
-      // prefilling `admin` is worse than prefilling nothing: it is a wrong
-      // password that looks exactly like "my password got reset", and
-      // submitting it costs a failed login with a misleading "invalid
-      // credentials". An empty field says "type it once" instead, and the next
-      // sign-out prefills it correctly.
-      const nextPassword = savedPassword ?? (savedName ? '' : devCredentials.password)
-      // The field shows `devCredentials.password` at mount, so comparing against
-      // it (rather than the `password` state, which would be a stale closure
-      // read) is what keeps this at zero round-trips on a fresh install.
-      if (nextPassword !== devCredentials.password) setPassword(nextPassword)
+      // Only ever fill the password from a genuinely remembered one. Never fall
+      // back to a dev default here (see the useState comment) — an empty field
+      // is the correct state when we have no saved password, on both a fresh
+      // install and an upgraded one that has not re-logged-in yet.
+      if (savedPassword) setPassword(savedPassword)
       if (savedUrl) setApiUrl(savedUrl)
     })()
     return () => {

@@ -143,21 +143,27 @@ test('renders the login page with title, labels and login button', async () => {
 })
 
 /**
- * The dev credentials (`devCredentials` in app-config) are meant to make device
- * testing typing-free, so a **fresh install** must be submittable straight after
- * mount. `canSubmit` requires a non-empty username *and* password, so an enabled
- * login button proves both prefills landed — the mocked `Input` does not render
- * its value, so this is the observable proxy for it.
+ * The username dev default (`devCredentials.username`) still prefills to keep
+ * device testing typing-free, but the PASSWORD is never seeded with a dev
+ * default (that was the "password reset to admin" bug). So a fresh install
+ * shows the username but leaves the password empty, and the login button stays
+ * disabled until a password is typed.
  *
  * This also guards the flicker fix indirectly: the username prefill has to
  * arrive through the async chain, and if someone removes that tail the button
- * stays disabled here.
+ * would be disabled for the wrong reason.
  */
-test('dev credentials prefill both fields so a fresh install is submittable on mount', async () => {
-  const { queryByTestId } = await renderLogin()
-  const button = queryByTestId('login-button')
-  expect(button).toBeInTheDocument()
-  expect(button?.className).not.toContain('login__button--disabled')
+test('fresh install prefills the username but leaves the password empty', async () => {
+  const { queryAllByTestId, queryByTestId } = await renderLogin()
+  // username prefilled (dev default) → a text-typed input carries "admin" as its
+  // value. apiUrl is also a text input, hence queryAll + a value check.
+  const textValues = queryAllByTestId('input-value-text')
+  expect(textValues.some((el) => el.textContent === 'admin')).toBe(true)
+  // password never seeded with a dev default → empty, so submit is disabled
+  expect(queryByTestId('input-value-password')).not.toBeInTheDocument()
+  expect(queryByTestId('login-button')?.className).toContain(
+    'login__button--disabled',
+  )
 })
 
 test('standalone mode shows the API URL field + insecure-TLS toggle', async () => {
@@ -169,11 +175,11 @@ test('standalone mode shows the API URL field + insecure-TLS toggle', async () =
 
 /**
  * A successful login remembers the password (secure store, `auth-store`); the
- * login form must prefill it, so after sign-out the prefilled password is the
- * real one instead of the dev default — the "password got reset after logout"
- * complaint. Dev credentials remain the fallback (previous test).
+ * login form prefills it, so after sign-out the field holds the real password
+ * — the "password got reset after logout" complaint. This is the ONLY source
+ * that ever fills the password field.
  */
-test('prefills the remembered password from secure storage over the dev default', async () => {
+test('prefills the remembered password from secure storage', async () => {
   await getSongloftStorage().secure.set(SECURE_LAST_PASSWORD, 'saved-secret')
   const { queryByText, queryByTestId } = await renderLogin()
   expect(queryByText('saved-secret')).toBeInTheDocument()
@@ -184,14 +190,11 @@ test('prefills the remembered password from secure storage over the dev default'
 /**
  * A returning user with **no** remembered password (the upgrade case: the
  * password is only recorded from the first login after that feature shipped)
- * must get an EMPTY password field, not the dev default.
- *
- * Prefilling `admin` there is a wrong password that looks exactly like "my
- * password got reset", and submitting it spends a failed login on a misleading
- * "invalid credentials". The remembered username is what distinguishes this
- * state from a fresh install, where the dev default still applies (test above).
+ * must get an EMPTY password field. Prefilling `admin` there is a wrong
+ * password that looks exactly like "my password got reset", and submitting it
+ * spends a failed login on a misleading "invalid credentials".
  */
-test('a returning user with no remembered password gets an empty field, not the dev default', async () => {
+test('a returning user with no remembered password gets an empty password field', async () => {
   await getSongloftStorage().prefs.set(PREF_LAST_USERNAME, 'alice')
   const { queryByText, queryByTestId } = await renderLogin()
   expect(queryByText('alice')).toBeInTheDocument()
