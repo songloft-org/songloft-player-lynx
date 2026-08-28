@@ -41,9 +41,6 @@ vi.mock('@lynx-js/lynx-ui-switch', async () =>
 vi.mock('@lynx-js/lynx-ui-slider', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSlider(),
 )
-vi.mock('@lynx-js/lynx-ui-sheet', async () =>
-  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSheet(),
-)
 vi.mock('@lynx-js/lynx-ui-swiper', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSwiper(),
 )

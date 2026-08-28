@@ -5,9 +5,9 @@ import { act, getQueriesForElement, render } from '@lynx-js/react/testing-librar
 import type { Song } from '../../../models/song.js'
 
 /**
- * PlaylistDrawer render smoke — the queue reorder chevrons. `Sheet` is mocked
- * to a plain view (per the shared `_render-mocks` factory) so the sheet's
- * content renders unconditionally, regardless of the store's `show` flag.
+ * PlaylistDrawer render smoke — the queue reorder chevrons. The drawer now
+ * uses a plain hand-rolled panel (no sheet library), so it renders
+ * conditionally based on the store's `show` flag.
  *
  * The move buttons use `catchtap` (so tapping them doesn't also trigger the
  * row's own "play this song" `bindtap`) — same pattern as `MiniPlayer`'s play
@@ -20,12 +20,6 @@ import type { Song } from '../../../models/song.js'
  */
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
-)
-vi.mock('@lynx-js/lynx-ui-sheet', async () =>
-  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSheet(),
-)
-vi.mock('@lynx-js/lynx-ui-sortable', async () =>
-  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSortable(),
 )
 vi.mock('@lynx-js/lynx-ui-sortable', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSortable(),

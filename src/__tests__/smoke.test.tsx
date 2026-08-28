@@ -57,9 +57,6 @@ vi.mock('../features/library/data/favorites.js', () => ({
 vi.mock('@lynx-js/lynx-ui-slider', async () =>
   (await import('./_render-mocks.js')).mockLynxUiSlider(),
 )
-vi.mock('@lynx-js/lynx-ui-sheet', async () =>
-  (await import('./_render-mocks.js')).mockLynxUiSheet(),
-)
 vi.mock('@lynx-js/lynx-ui-swiper', async () =>
   (await import('./_render-mocks.js')).mockLynxUiSwiper(),
 )

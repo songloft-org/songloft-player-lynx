@@ -16,7 +16,7 @@
  * On Lynx a `position: fixed` element does NOT escape to a viewport top layer the
  * way it does on the web — it re-stacks at the page root ordered by its *own*
  * z-index (auto = 0), regardless of the ancestor it was authored under. The
- * sheets rely on exactly this: `.drawer__viewport` is a fixed box at z-index 100
+ * sheets rely on exactly this: `.drawer__root` is a fixed box at z-index 100
  * so it paints over the player.
  *
  * The two platforms disagree about the fixed CHILDREN, so the level has to
@@ -40,7 +40,7 @@
  * Web. Both carry the level; the children keep content one above its own scrim.
  *
  * The sheets dodge all of this because THEIR scrim and content are `position:
- * absolute` (contained by the fixed `.drawer__viewport`), so one z-index governs
+ * absolute` (contained by the fixed `.drawer__root`), so one z-index governs
  * the whole subtree.
  */
 .confirm-dialog__view {

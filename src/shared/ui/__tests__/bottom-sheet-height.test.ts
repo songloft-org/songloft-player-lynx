@@ -61,6 +61,18 @@ const SHEETS: Sheet[] = [
     panel: '.atp__panel',
     body: '.atp__list',
   },
+  {
+    name: 'playlist drawer (queue)',
+    css: 'features/player/widgets/SheetShell.css',
+    panel: '.drawer__panel--queue',
+    body: '.drawer__list',
+  },
+  {
+    name: 'sleep timer',
+    css: 'features/player/widgets/SheetShell.css',
+    panel: '.drawer__panel--sleep',
+    body: '.drawer__list',
+  },
 ]
 
 /** Body of a top-level rule, comments stripped. */

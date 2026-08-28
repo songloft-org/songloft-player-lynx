@@ -21,9 +21,6 @@ import type { Song } from '../../../models/song.js'
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
-vi.mock('@lynx-js/lynx-ui-sheet', async () =>
-  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSheet(),
-)
 vi.mock('@lynx-js/lynx-ui-dialog', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiDialog(),
 )

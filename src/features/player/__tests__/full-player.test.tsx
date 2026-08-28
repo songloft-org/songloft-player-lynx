@@ -55,9 +55,6 @@ vi.mock('@tanstack/react-query', () => ({
 vi.mock('@lynx-js/lynx-ui-slider', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSlider(),
 )
-vi.mock('@lynx-js/lynx-ui-sheet', async () =>
-  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSheet(),
-)
 vi.mock('@lynx-js/lynx-ui-sortable', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSortable(),
 )
@@ -132,9 +129,8 @@ test('renders the now-playing header, song meta and transport', async () => {
   // order icon/label is not mounted.
   expect(queryByTestId('icon-order')).toBeInTheDocument()
   expect(queryAllByText('Order')).toHaveLength(1)
-  // Topbar collapse + playlist icons (menu also appears on drag handles).
+  // Topbar collapse button.
   expect(queryByTestId('icon-chevron-down')).toBeInTheDocument()
-  expect(queryAllByTestId('icon-menu').length).toBeGreaterThanOrEqual(1)
 
   // The tool row: volume, speed and queue moved here out of the top bar, so their
   // absence would mean the controls went missing rather than merely moved.

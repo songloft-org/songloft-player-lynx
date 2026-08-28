@@ -62,9 +62,6 @@ vi.mock('@tanstack/react-query', () => ({
 vi.mock('@lynx-js/lynx-ui-slider', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSlider(),
 )
-vi.mock('@lynx-js/lynx-ui-sheet', async () =>
-  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSheet(),
-)
 vi.mock('@lynx-js/lynx-ui-sortable', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSortable(),
 )

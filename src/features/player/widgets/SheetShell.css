@@ -2,12 +2,10 @@
  * Shared shell for the player's bottom sheets, imported by **both**
  * `PlaylistDrawer` and `SleepTimerSheet`.
  *
- * It has no component of its own — hence a stylesheet without a matching `.tsx`,
- * the only one in the tree. The alternative was worse in both directions: leaving
- * these rules in `FullPlayerPage.css` (where they were) means either sheet loses its
- * styling wherever it is mounted outside that page, and putting them in
- * `PlaylistDrawer.css` would make the sleep timer import the queue's stylesheet for
- * the chrome they happen to share.
+ * Same hand-rolled pattern as `AddToPlaylistSheet.css` and `PlayHistoryPanel.css`:
+ * a fixed root, an absolute backdrop, and a bottom panel with explicit height.
+ * This replaced `@lynx-js/lynx-ui-sheet` whose snap-point sizing proved unstable
+ * (the scroll list height would change after opening).
  *
  * The `drawer__` prefix is historical: the queue drawer got here first. The `__row*`
  * rules below are only used by the queue, but they belong with the rest of the
@@ -15,51 +13,50 @@
  * `__tests__/player-css-no-duplicate-selectors.test.ts`) stays mechanically checkable.
  */
 
-/*
- * The sheet's own viewport: full-screen, and **above the player**.
- *
- * `position: fixed` mirrors what `SheetView` inlines (`OverlayView` hardcodes it
- * whenever no native `container` is given, and inline beats a stylesheet) — written
- * out so this rule and the element agree instead of the `absolute` that used to sit
- * here being dead code. The four offsets are load-bearing either way: a fixed box
- * with auto offsets sits at its *static* position, which is the trap documented on
- * `.popover-backdrop`.
- *
- * `z-index: 100` is the app's overlay level, and without it **both sheets rendered
- * underneath the player**: `.full-player__layer` is a flex item carrying `z-index: 1`
- * (it exists to keep `.player-backdrop` below the content), and this viewport is its
- * sibling. At `z-index: auto` the sheet therefore painted at level 0 — so the queue
- * and the sleep timer were *visible* wherever the player happened to be transparent,
- * with the cover, title, progress bar and transport buttons drawn straight over the
- * top of them, and the rows underneath those unclickable. Both were introduced in the
- * same commit, which is why this never worked rather than regressing.
- */
-.drawer__viewport {
+.drawer__root {
   position: fixed;
+  top: 0;
   left: 0;
   right: 0;
-  top: 0;
   bottom: 0;
   z-index: 100;
 }
 
 .drawer__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background-color: var(--backdrop);
 }
 
-.drawer__content {
-  background-color: var(--paper);
-  border-top-left-radius: var(--radius-xl);
-  border-top-right-radius: var(--radius-xl);
-}
-
-.drawer__inner {
+.drawer__panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   display: flex;
   flex-direction: column;
-  width: 100%;
-  height: 100%;
-  padding: var(--space-3) var(--space-4);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  background-color: var(--paper);
   padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+}
+
+.drawer__panel--queue {
+  height: 70%;
+}
+
+.drawer__panel--sleep {
+  height: 60%;
+}
+
+.drawer__handle-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) 0;
 }
 
 .drawer__handle {
@@ -67,7 +64,6 @@
   height: 4px;
   border-radius: var(--radius-pill);
   background-color: var(--rule);
-  margin: 0 auto var(--space-3) auto;
 }
 
 .drawer__header {
@@ -75,7 +71,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-3);
+  padding: 0 var(--space-4) var(--space-3);
 }
 
 .drawer__title {
