@@ -1,3 +1,5 @@
+import { useEffect, useRef } from '@lynx-js/react'
+import type { NodesRef } from '@lynx-js/types'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 
@@ -131,7 +133,25 @@ export function LyricsView() {
     )
   }
 
-  const scrollTarget = currentIndex >= 0 ? `lyric-line-${currentIndex}` : undefined
+  const activeLineRef = useRef<NodesRef>(null)
+
+  useEffect(() => {
+    if (currentIndex >= 0 && activeLineRef.current) {
+      try {
+        activeLineRef.current
+          .invoke({
+            method: 'scrollIntoView',
+            params: {
+              scrollIntoViewOptions: {
+                block: 'center',
+                behavior: 'smooth',
+              },
+            },
+          })
+          .exec()
+      } catch (_) { /* no-op in test env */ }
+    }
+  }, [currentIndex])
 
   return (
     <view className='player-lyrics__container'>
@@ -160,7 +180,7 @@ export function LyricsView() {
           </view>
         )
         : null}
-    <scroll-view className='player-lyrics' scroll-y scroll-into-view={scrollTarget} scroll-with-animation>
+    <scroll-view className='player-lyrics' scroll-y>
       <view className='player-lyrics__inner'>
         {lyrics.map((line, index) => {
           const active = index === currentIndex
@@ -173,7 +193,7 @@ export function LyricsView() {
               ? 'player-lyrics__line player-lyrics__line--active player-lyrics__line--note'
               : 'player-lyrics__line player-lyrics__line--note'
             return (
-              <view key={`${index}:${line.timeMs}`} id={`lyric-line-${index}`} className={cls}>
+              <view key={`${index}:${line.timeMs}`} ref={active ? activeLineRef : null} className={cls}>
                 <Icon
                   name='music'
                   size={16}
@@ -189,14 +209,14 @@ export function LyricsView() {
               ? 'player-lyrics__line player-lyrics__line--active'
               : 'player-lyrics__line'
             return (
-              <view key={`${index}:${line.timeMs}`} id={`lyric-line-${index}`} className={cls}>
+              <view key={`${index}:${line.timeMs}`} ref={active ? activeLineRef : null} className={cls}>
                 <text className={cls}>{line.text}</text>
               </view>
             )
           }
 
           return (
-            <view key={`${index}:${line.timeMs}`} id={`lyric-line-${index}`} className='player-lyrics__line-group'>
+            <view key={`${index}:${line.timeMs}`} ref={active ? activeLineRef : null} className='player-lyrics__line-group'>
               {romanization
                 ? <text className='player-lyrics__romanization'>{romanization}</text>
                 : null}
