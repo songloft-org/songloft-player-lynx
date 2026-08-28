@@ -187,26 +187,31 @@ Callback 形状，Callback 收到 JSON 字符串。
 | 字节上限哨兵与 TS facade 逐字共享 | 含 `limit_exceeded` | 含 `limit_exceeded` |
 | 5 个方法都收 bridge `Callback`（不是 Kotlin lambda） | 闸门单独验 | — |
 
-### 2.7 `SongloftFloatingLyric`（8 方法，仅 Android）
+### 2.7 `SongloftFloatingLyric`（10 方法，仅 Android）
 
 统一签名 `fun <name>(args: String, callback: Callback)`，`args` 是 JSON 字符串。
 
 | 方法 | `args` | 返回 |
 |---|---|---|
+| `hasPermission` | `{}` | `{result: boolean}` |
 | `requestPermission` | `{}` | `{result: boolean}` |
 | `show` | `{}` | — |
-| `updateLyric` | `{line}` | — |
+| `updateLyric` | `{line, nextLine}` | — |
 | `hide` | `{}` | — |
 | `isShowing` | `{}` | `{result: boolean}` |
 | `setFontSize` | `{size}`，`size ∈ small \| medium \| large` | — |
 | `setLocked` | `{locked}` | — |
 | `setOpacity` | `{opacity}` | — |
+| `setTwoLine` | `{twoLine}` | — |
 
-- 无事件。iOS / Web 上 facade 返回全惰性桩（`requestPermission`/`isShowing` 恒 `false`）。
-- 窗口实现在 `lyric/FloatingLyricService.kt`。`updateText` 必须经 `Handler(Looper.getMainLooper())` post —— 原生模块方法跑在 Lynx JS 线程，碰主线程创建的 View 会抛 `CalledFromWrongThreadException`，而模块里的 `catch (_: Exception) {}` 会把它整个吞掉（表现：窗口浮出来了、一行歌词也不显示、logcat 干净）。
+- 无事件。iOS / Web 上 facade 返回全惰性桩（`hasPermission`/`requestPermission`/`isShowing` 恒 `false`）。
+- **`requestPermission` 只答一次，且答在「用户从系统页回来」之后**（`lyric/OverlayPermission.kt`）。`Settings.ACTION_MANAGE_OVERLAY_PERMISSION` 不能 `startActivityForResult`、不回传任何结果，授权唯一可观测的时机是 App 重回前台（`MainActivity.onResume` → `OverlayPermission.onAppForegrounded`）。旧实现在 `startActivity` 之后立刻答 `false`，等于对每一次「用户正要去授权」都回答「拒绝」：开关拨上去了、pref 写成 true、`show()` 永不发生，只有「再关再开」才碰上「已授权」的早返回分支（2026-08-28 真机报障）。**因此「只想恢复上次状态」的调用点必须用 `hasPermission`**（只读、不开界面）—— 尤其启动链：`requestPermission` 会等到前台恢复才 resolve，留在 `await` 链上会把 `auth.hydrate()` 一起卡死。
+- **pref 与系统授权是两个真相源**，协调逻辑只有一处：`src/features/settings/domain/floating-lyric-overlay.ts`（`syncFloatingLyricOverlay` 用于启动与进页，`enableFloatingLyricOverlay` / `disableFloatingLyricOverlay` 用于开关）。授权没了就把 pref 落回 false，否则开关显示「开」而屏幕上什么都没有。
+- 窗口实现在 `lyric/FloatingLyricService.kt`。**`showOverlay()` 必须自己再查一遍授权**：未授权时 `WindowManager.addView` 抛 `BadTokenException: permission denied for window type 2038`，而它抛在 `onStartCommand` 里 ⇒ 未捕获就是**杀进程**（实测到过 `FATAL EXCEPTION: main`）。调用方查过不代表此刻仍成立：用户可以随时在系统设置里收回授权，`START_STICKY` 还会在那之后重发 SHOW。
+- `updateText` 必须经 `Handler(Looper.getMainLooper())` post —— 原生模块方法跑在 Lynx JS 线程，碰主线程创建的 View 会抛 `CalledFromWrongThreadException`，而模块里的 `catch (_: Exception) {}` 会把它整个吞掉（表现：窗口浮出来了、一行歌词也不显示、logcat 干净）。
 - **悬浮窗生命周期跟随服务**：窗口要熬过的是退后台（双击返回走 `moveTaskToBack`，不移除任务 → 不停服务，歌词常驻，设计如此）；但**移除任务**（最近任务划卡片杀后台）时，推 `updateLyric` 的 JS 已随任务死亡，而进程被前台媒体服务钉住不灭，幸存的窗口只是一块冻结残影 —— `android:stopWithTask="true"` 让系统在该时刻停掉服务，`onDestroy` 摘窗。此属性缺失导致过真机报障：杀后台后歌词冻在最后一行，无任何入口能关掉。
 
-**闸门锁住的不变量**：8 个方法各自有 `@LynxMethod`，且签名里的回调参数是 `callback: Callback`（Kotlin lambda 不是注册类型，会静默失败）。另由 `src/__tests__/android-manifest-contract.test.ts` 锁住 `AndroidManifest.xml` 必须声明 `SYSTEM_ALERT_WINDOW` 权限与 `FloatingLyricService`，且该 `<service>` 元素必须声明 `android:stopWithTask="true"`、服务 `onDestroy` 必须摘窗 —— **都是静默失败**，缺了要么整个功能死掉、要么杀后台后残留冻结窗口，而无任何报错。
+**闸门锁住的不变量**：10 个方法各自有 `@LynxMethod`，且签名里的回调参数是 `callback: Callback`（Kotlin lambda 不是注册类型，会静默失败）；授权链的形状另有 5 例（模块不得自己开系统页、`onResume` 必须接 `onAppForegrounded`、开不了系统页要答复而非停等、等待者被清空、`src/index.tsx` 不得出现 `requestPermission`）。另由 `src/__tests__/android-manifest-contract.test.ts` 锁住 `AndroidManifest.xml` 必须声明 `SYSTEM_ALERT_WINDOW` 权限与 `FloatingLyricService`，且该 `<service>` 元素必须声明 `android:stopWithTask="true"`、服务 `onDestroy` 必须摘窗 —— **都是静默失败**，缺了要么整个功能死掉、要么杀后台后残留冻结窗口，而无任何报错。
 
 ### 2.8 `SongloftLiveActivity`（3 方法，仅 iOS）
 

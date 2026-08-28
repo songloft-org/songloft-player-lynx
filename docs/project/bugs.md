@@ -212,6 +212,48 @@
     而 `createDriver()` 把未设该变量视为 Android。第一次全量跑就是这么「通过」的（107 passed / 8 skipped，
     比预期多 5 个 skip）。正确写法是 `(process.env.E2E_PLATFORM ?? 'android') === 'android'`
 
+### 悬浮歌词第六重死 —— 2026-08-28 真机报障（已修）
+
+- [x] **首次打开开关去授权、授权返回后开关是开的但没有歌词窗口，必须再关一次开一次才正常** ——
+  根因是 `FloatingLyricModule.requestPermission` 把一个**异步且无结果回传**的授权当同步的用：
+  `Settings.ACTION_MANAGE_OVERLAY_PERMISSION` 不能 `startActivityForResult`，而旧实现
+  `startActivity` 之后**紧接着**就 `callback.invoke({result: false})` —— 对每一次用户
+  「正要去授权」的动作都回答「拒绝」。于是 JS 侧 `if (granted) show()` 永不成立，而 pref 已经写成
+  `true`、开关也已经拨上去了：开关说「开」，窗口从未创建。用户的「再关再开」之所以有效，是因为第二次
+  `canDrawOverlays()` 已为 true，走的是「已授权」那条早返回分支。
+  修法：新增 `lyric/OverlayPermission.kt` 把待答请求**停在授权返回那一刻**——`MainActivity.onResume`
+  （唯一可观测的返回时机）重读授权并答复，重读带少量重试（部分 ROM 在 resume 之后才翻转
+  `canDrawOverlays`）；打不开系统页时立即答 `false`，不留无人应答的等待者。
+  - **顺带修掉同源的两条**：① 启动链（`src/index.tsx`）与进入歌词设置页都在调 `requestPermission`，
+    也就是「恢复上次状态」这种非用户动作会**把用户弹去系统设置页**；改用新增的 `hasPermission`（只读、
+    不开任何界面）。启动链尤其危险——`requestPermission` 现在要等到 App 重回前台才答复，留在
+    `await` 链上会把 `auth.hydrate()` 一起卡死。② pref 与系统授权是两个真相源，授权被撤销后 pref 仍为
+    `true`，开关继续显示「开」却什么都没有；现在进入页面会以授权为准把 pref 落回 `false`，用户被拒绝
+    授权时开关也会自己拨回去，而不是留在骗人的位置。三条策略收敛在
+    `src/features/settings/domain/floating-lyric-overlay.ts` 一处（startup / 进页 / 用户开 / 用户关）
+  - **闸门**：`native-module-contract.test.ts` 锁「模块自己不得出现 `ACTION_MANAGE_OVERLAY_PERMISSION`」
+    「`MainActivity.onResume` 必须调 `OverlayPermission.onAppForegrounded`」「打不开系统页要答复而非停等」
+    「等待者被清空（Lynx Callback 调两次会抛）」「`src/index.tsx` 不得出现 `requestPermission`」；
+    `lyrics-page.test.tsx` 加 6 例，覆盖「授权在往返之后才到」「被拒绝则开关拨回」「进页重开窗口且不
+    弹系统页」「已在展示则不重开」「授权被撤销则关 pref」。两条核心用例都反向验证过
+  - **模拟器实测（e2e 新增 5 例，共 15/15 绿）**：授权页在前台时答复必须仍为 pending（旧实现在
+    这一刻已经是 `false`）、按返回回到 App 后翻为 `true`；开关整条链（`enableOverlay`）在授权返回后
+    **自己就出窗**；重启后启动路径自行恢复窗口（反向作证 pref 真写下了）。为此给 e2e bridge 加了
+    `enableOverlay` / `disableOverlay` / `syncOverlay` —— bug 住在「页面 promise 链 × 原生答复」的
+    接缝上，只打模块的测试看不到它
+- [x] **未授权时的 `show()` 直接杀进程**（同批修，排障途中实测撞到）——
+  `FATAL EXCEPTION: main / Unable to start service FloatingLyricService …
+  BadTokenException: permission denied for window type 2038`。`addView` 抛在 `onStartCommand`
+  里，那里的未捕获异常等于进程死。「调用方检查过授权」不足以兑底：用户可以随时在系统设置里
+  收回授权，而 `START_STICKY` 还会在那之后重发 SHOW。`showOverlay()` 现在先查
+  `OverlayPermission.isGranted` （不满足则 `stopSelf`），`addView` 另包 try/catch 兑 ROM 说谎；
+  e2e 加了「未授权 show() 不出窗也不杀进程」（比 pid）
+- [x] **e2e 的 `serviceRunning()` 一直把尸体读成活服务** —— 它 grep 整份
+  `dumpsys activity services`，而 dumpsys 还有一个 `Destroying services` 段：进程在拆除中途死掉时
+  会留下 `app=null destroying=true crashCount=1` 的记录，**它能在 AMS 里挂到重启为止**。于是一台
+  带着 7 分钟前尸体的模拟器上，`hide()` 与 stopWithTask 两条永久假红，而 App 行为完全正常（本次
+  就先被它骗了一轮）。现在只读 `active services` 那一段
+
 ### 批49 途中发现 —— 2026-08-26 已证实并修复
 
 - [x] **HLS 电台落到 `ProgressiveMediaSource`（已修）** —— 当初记为「疑似 · 无法验证」，因为库里没有电台源。

@@ -602,8 +602,7 @@ describe('SongloftDlna module methods exist on both hosts', () => {
 
 describe('SongloftFloatingLyric module methods exist on Android', () => {
   // The TS interface is in floating-lyric.ts (Promise-shaped, no native interface).
-  // The native methods are: requestPermission, show, updateLyric, hide, isShowing.
-  const methods = ['requestPermission', 'show', 'updateLyric', 'hide', 'isShowing', 'setFontSize', 'setLocked', 'setOpacity', 'setTwoLine']
+  const methods = ['hasPermission', 'requestPermission', 'show', 'updateLyric', 'hide', 'isShowing', 'setFontSize', 'setLocked', 'setOpacity', 'setTwoLine']
 
   test.each(methods)('FloatingLyricModule.%s has @LynxMethod and uses Callback', (method) => {
     const src = hosts.floatingLyric.android
@@ -618,6 +617,70 @@ describe('SongloftFloatingLyric module methods exist on Android', () => {
       src,
       `FloatingLyricModule.${method} must use Callback, not a plain lambda`,
     ).toMatch(new RegExp(`fun ${method}\\([^)]*callback:\\s*Callback`))
+  })
+})
+
+/**
+ * The overlay grant is **asynchronous and result-less**: `ACTION_MANAGE_OVERLAY_PERMISSION`
+ * cannot be started for result, so the only observable moment is the app coming
+ * back to the foreground. The first implementation answered `false` immediately
+ * after `startActivity` — i.e. "denied" for every grant the user was about to
+ * make — so the settings switch stayed on with no overlay behind it and only a
+ * second off/on round-trip ever showed the lyrics (real-device report).
+ *
+ * Nothing else in the repo can see this: every call on the path resolves fine,
+ * and a rendering test has no system screen to come back from. So the shape is
+ * gated on the sources.
+ */
+describe('the overlay grant is answered after the return trip, not before it', () => {
+  const module = hosts.floatingLyric.android
+  const gate = read(`${ANDROID_LYRIC}/OverlayPermission.kt`)
+  const activity = read('android/app/src/main/java/org/songloft/lynx/MainActivity.kt')
+
+  test('requestPermission hands the wait to OverlayPermission', () => {
+    expect(
+      module,
+      'requestPermission must delegate to OverlayPermission.request — inline handling ' +
+        'cannot wait for the user to come back',
+    ).toMatch(/OverlayPermission\.request\(/)
+    expect(
+      module,
+      'the module must not open the system screen itself: that is the shape that ' +
+        'answered `false` in the same breath',
+    ).not.toMatch(/ACTION_MANAGE_OVERLAY_PERMISSION/)
+  })
+
+  test('MainActivity.onResume is what answers a pending request', () => {
+    expect(
+      activity,
+      'without this wire a parked grant request is never answered and the overlay ' +
+        'never appears after the first grant',
+    ).toMatch(/override fun onResume\(\)[\s\S]{0,240}OverlayPermission\.onAppForegrounded\(/)
+  })
+
+  test('a request that cannot open the system screen is answered instead of parked', () => {
+    // A waiter nobody resumes leaves the JS promise pending forever, and with it
+    // whatever the caller was going to do about the switch.
+    expect(gate).toMatch(/catch[\s\S]{0,80}answer\(false\)/)
+  })
+
+  test('waiters are drained, so each bridge Callback is invoked exactly once', () => {
+    // Invoking a Lynx Callback twice throws; the re-check runs several times.
+    expect(gate).toMatch(/waiters\.clear\(\)/)
+  })
+
+  test('hasPermission exists as the silent read used by startup / page entry', () => {
+    expect(gate).toMatch(/fun isGranted\(/)
+    // Comments stripped: the startup file *explains* why it avoids the call, and
+    // the prose would otherwise satisfy the match it is warning about.
+    const startup = read('src/index.tsx')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '')
+    expect(
+      startup,
+      'startup must not call requestPermission: it opens a system screen and only ' +
+        'answers once the app is foregrounded again, stalling the startup chain',
+    ).not.toMatch(/requestPermission/)
   })
 })
 

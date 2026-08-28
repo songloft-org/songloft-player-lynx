@@ -3,8 +3,10 @@ import '@testing-library/jest-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 
-const { requestPermissionSpy, showSpy, hideSpy, writeEnabledSpy, readEnabled, writeTwoLineSpy, setTwoLineSpy } = vi.hoisted(() => ({
+const { requestPermissionSpy, hasPermissionSpy, isShowingSpy, showSpy, hideSpy, writeEnabledSpy, readEnabled, writeTwoLineSpy, setTwoLineSpy } = vi.hoisted(() => ({
   requestPermissionSpy: vi.fn(async () => true),
+  hasPermissionSpy: vi.fn(async () => true),
+  isShowingSpy: vi.fn(async () => false),
   showSpy: vi.fn(async () => {}),
   hideSpy: vi.fn(async () => {}),
   writeEnabledSpy: vi.fn(async () => {}),
@@ -39,7 +41,9 @@ vi.mock('../data/settings-prefs.js', () => ({
 }))
 vi.mock('../../../native/floating-lyric.js', () => ({
   getFloatingLyricModule: () => ({
+    hasPermission: hasPermissionSpy,
     requestPermission: requestPermissionSpy,
+    isShowing: isShowingSpy,
     show: showSpy,
     hide: hideSpy,
     setFontSize: vi.fn(async () => {}),
@@ -61,14 +65,41 @@ function withFloatingLyricHost() {
 afterEach(() => {
   vi.clearAllMocks()
   readEnabled.mockResolvedValue(false)
+  requestPermissionSpy.mockResolvedValue(true)
+  hasPermissionSpy.mockResolvedValue(true)
+  isShowingSpy.mockResolvedValue(false)
   delete (globalThis as Record<string, unknown>).NativeModules
 })
 
 async function renderPage() {
   render(<LyricsPage />)
-  await act(async () => { await Promise.resolve() })
+  await settle()
   return getQueriesForElement(elementTree.root!)
 }
+
+/**
+ * Lets the mount effect's promise chains finish. Two macrotask turns rather than
+ * one microtask flush because the overlay reconciliation is several awaits deep
+ * (pref → grant → isShowing → show), and a single flush leaves the switch showing
+ * the pre-reconciliation value.
+ */
+async function settle() {
+  for (let i = 0; i < 2; i++) {
+    await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 0) }) })
+  }
+}
+
+/** Taps the switch inside a `SwitchRow` and lets the resulting chain settle. */
+async function tapSwitch(row: Element) {
+  await act(async () => {
+    fireEvent.tap(row.querySelector('.app-switch') as unknown as Element)
+  })
+  await settle()
+}
+
+/** The compound Switch mock appends `ui-checked` to every part when checked. */
+const isOn = (row: Element): boolean =>
+  row.querySelector('.app-switch')!.className.includes('ui-checked')
 
 test('the two always-available toggles render', async () => {
   const { queryByTestId } = await renderPage()
@@ -124,11 +155,7 @@ test('toggling two-line mode writes the pref and pushes it to the module', async
   const { queryByTestId } = await renderPage()
 
   // The pref default is ON, so tapping the switch turns it off.
-  const row = queryByTestId('settings-floating-lyric-two-line')!
-  await act(async () => {
-    fireEvent.tap(row.querySelector('.app-switch') as unknown as Element)
-  })
-  await act(async () => { await Promise.resolve() })
+  await tapSwitch(queryByTestId('settings-floating-lyric-two-line')!)
 
   expect(writeTwoLineSpy).toHaveBeenCalledWith(false)
   expect(setTwoLineSpy).toHaveBeenCalledWith(false)
@@ -138,14 +165,94 @@ test('enabling the overlay asks for permission before showing it', async () => {
   withFloatingLyricHost()
   const { queryByTestId } = await renderPage()
 
-  const row = queryByTestId('settings-floating-lyric-toggle')!
-  await act(async () => {
-    fireEvent.tap(row.querySelector('.app-switch') as unknown as Element)
-  })
-  await act(async () => { await Promise.resolve() })
+  await tapSwitch(queryByTestId('settings-floating-lyric-toggle')!)
 
   expect(writeEnabledSpy).toHaveBeenCalledWith(true)
   expect(requestPermissionSpy).toHaveBeenCalled()
   expect(showSpy).toHaveBeenCalled()
   expect(hideSpy).not.toHaveBeenCalled()
+})
+
+/*
+ * The grant is not observable until the user comes back from the system screen,
+ * so `requestPermission` resolves *late* (see `OverlayPermission.kt`). The bug
+ * this covers: the page treated the pre-return answer as final, left the switch
+ * on and never called `show()` — the reported "toggle is on but no lyrics until I
+ * switch it off and on again".
+ */
+test('a grant that lands after the round trip still shows the overlay', async () => {
+  withFloatingLyricHost()
+  let grant: (granted: boolean) => void = () => {}
+  requestPermissionSpy.mockReturnValueOnce(new Promise<boolean>((r) => { grant = r }))
+  const { queryByTestId } = await renderPage()
+
+  await tapSwitch(queryByTestId('settings-floating-lyric-toggle')!)
+  // Still on the system screen: nothing to show yet, but the switch already
+  // reads on so the tap does not look ignored.
+  expect(showSpy).not.toHaveBeenCalled()
+  expect(isOn(queryByTestId('settings-floating-lyric-toggle')!)).toBe(true)
+
+  await act(async () => { grant(true) })
+  await settle()
+
+  expect(showSpy).toHaveBeenCalled()
+  expect(isOn(queryByTestId('settings-floating-lyric-toggle')!)).toBe(true)
+})
+
+test('a refused grant puts the switch back down instead of lying', async () => {
+  withFloatingLyricHost()
+  requestPermissionSpy.mockResolvedValue(false)
+  const { queryByTestId } = await renderPage()
+
+  await tapSwitch(queryByTestId('settings-floating-lyric-toggle')!)
+
+  expect(showSpy).not.toHaveBeenCalled()
+  expect(writeEnabledSpy).toHaveBeenLastCalledWith(false)
+  expect(isOn(queryByTestId('settings-floating-lyric-toggle')!)).toBe(false)
+})
+
+test('entering the page re-shows an overlay the pref says is on', async () => {
+  // A fresh process has the pref but no window: the service died with the last one.
+  withFloatingLyricHost()
+  readEnabled.mockResolvedValue(true)
+  await renderPage()
+
+  expect(showSpy).toHaveBeenCalled()
+  // Entering a page must never send the user to system settings.
+  expect(requestPermissionSpy).not.toHaveBeenCalled()
+})
+
+test('entering the page leaves an already-visible overlay alone', async () => {
+  withFloatingLyricHost()
+  readEnabled.mockResolvedValue(true)
+  isShowingSpy.mockResolvedValue(true)
+  await renderPage()
+
+  expect(showSpy).not.toHaveBeenCalled()
+})
+
+test('a grant revoked in system settings turns the pref and the switch off', async () => {
+  withFloatingLyricHost()
+  readEnabled.mockResolvedValue(true)
+  hasPermissionSpy.mockResolvedValue(false)
+  const { queryByTestId } = await renderPage()
+
+  expect(showSpy).not.toHaveBeenCalled()
+  expect(writeEnabledSpy).toHaveBeenCalledWith(false)
+  expect(isOn(queryByTestId('settings-floating-lyric-toggle')!)).toBe(false)
+  // …and with it the appearance controls, which only mean something for a
+  // visible overlay.
+  expect(queryByTestId('floating-lyric-font-medium')).not.toBeInTheDocument()
+})
+
+test('disabling the overlay hides it and clears the pref', async () => {
+  withFloatingLyricHost()
+  readEnabled.mockResolvedValue(true)
+  isShowingSpy.mockResolvedValue(true)
+  const { queryByTestId } = await renderPage()
+
+  await tapSwitch(queryByTestId('settings-floating-lyric-toggle')!)
+
+  expect(writeEnabledSpy).toHaveBeenLastCalledWith(false)
+  expect(hideSpy).toHaveBeenCalled()
 })

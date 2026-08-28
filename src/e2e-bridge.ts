@@ -18,6 +18,11 @@ import { appConfig } from './core/config/app-config.js'
 import { router } from './router.js'
 import { readNativeModules, readLynxGlobal } from './native/native-modules.js'
 import { getFloatingLyricModule } from './native/floating-lyric.js'
+import {
+  disableFloatingLyricOverlay,
+  enableFloatingLyricOverlay,
+  syncFloatingLyricOverlay,
+} from './features/settings/domain/floating-lyric-overlay.js'
 import { getVideoModule } from './native/video.js'
 import { getPlatformTarget } from './native/platform-target.js'
 import { resolveVideoSourceKind } from './core/network/video-source.js'
@@ -73,12 +78,19 @@ import { getPlatformCapabilities } from './native/platform-capabilities.js'
 // facade rather than a cached instance, because `getFloatingLyricModule()` latches
 // its no-op fallback on first call and bundle init is too early to resolve it.
 ;(globalThis as Record<string, unknown>).__E2E_FLOATING_LYRIC__ = {
+  hasPermission: () => getFloatingLyricModule().hasPermission(),
   requestPermission: () => getFloatingLyricModule().requestPermission(),
   show: () => getFloatingLyricModule().show(),
   updateLyric: (line: string, nextLine?: string) => getFloatingLyricModule().updateLyric(line, nextLine),
   hide: () => getFloatingLyricModule().hide(),
   isShowing: () => getFloatingLyricModule().isShowing(),
   setTwoLine: (twoLine: boolean) => getFloatingLyricModule().setTwoLine(twoLine),
+  // The settings switch's whole chain (grant → pref → show), not just one module
+  // call: the 2026-08-28 bug lived exactly in the seam between the page's promise
+  // chain and the native answer, so a module-only test cannot see it.
+  enableOverlay: () => enableFloatingLyricOverlay(),
+  disableOverlay: () => disableFloatingLyricOverlay(),
+  syncOverlay: () => syncFloatingLyricOverlay(),
 }
 // Fullscreen video. `platformTarget` / `sourceKind` are exposed alongside the module
 // calls because the interesting failures are decisions, not calls: a wrong platform

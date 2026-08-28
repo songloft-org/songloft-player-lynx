@@ -168,6 +168,18 @@ class FloatingLyricService : Service() {
     private fun showOverlay() {
         if (showing) return
 
+        // No grant → do not touch the WindowManager. `addView` throws
+        // `BadTokenException: permission denied for window type 2038`, and it throws
+        // inside `onStartCommand` — an uncaught exception there **kills the process**
+        // (measured: `FATAL EXCEPTION: main / Unable to start service
+        // FloatingLyricService … BadTokenException`). "The caller checked first" is not
+        // enough: the user can revoke the grant in system settings at any moment, and
+        // `START_STICKY` can also re-deliver a SHOW long after that.
+        if (!OverlayPermission.isGranted(this)) {
+            stopSelf()
+            return
+        }
+
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         else
@@ -227,7 +239,17 @@ class FloatingLyricService : Service() {
         container = view
         currentView = currentLine
         nextView = nextLine
-        windowManager?.addView(view, params)
+        try {
+            windowManager?.addView(view, params)
+        } catch (_: Throwable) {
+            // Belt for a ROM whose grant check disagrees with its window policy: leave
+            // no half-shown state behind, and above all do not take the process down.
+            container = null
+            currentView = null
+            nextView = null
+            stopSelf()
+            return
+        }
         showing = true
     }
 

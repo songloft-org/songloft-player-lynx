@@ -16,10 +16,9 @@ import { initBackController } from './core/navigation/back-controller.js'
 // `cannot read property 'getNativeLynx' of undefined` and, because these two
 // awaits sit in the startup chain, it took `auth.hydrate()`/`auth.checkAuth()`
 // down with it (auth status stuck at `unknown` forever).
-import { readDefaultPlayMode, readFloatingLyricEnabled, readFloatingLyricTwoLine } from './features/settings/data/settings-prefs.js'
+import { readDefaultPlayMode } from './features/settings/data/settings-prefs.js'
 import { usePlayerStore, restorePlaybackState } from './features/player/store/index.js'
-import { getFloatingLyricModule } from './native/floating-lyric.js'
-import { getPlatformCapabilities } from './native/platform-capabilities.js'
+import { syncFloatingLyricOverlay } from './features/settings/domain/floating-lyric-overlay.js'
 import { applySavedLanguage } from './i18n/index.js'
 import { applyHostDeployMode } from './core/config/app-config.js'
 import { initSystemAppearance } from './native/system-appearance.js'
@@ -83,21 +82,13 @@ void (async () => {
     const savedMode = await readDefaultPlayMode()
     usePlayerStore.getState().setPlayMode(savedMode)
     await restorePlaybackState()
-    if (getPlatformCapabilities().floatingLyric) {
-      const enabled = await readFloatingLyricEnabled()
-      if (enabled) {
-        const m = getFloatingLyricModule()
-        const granted = await m.requestPermission()
-        if (granted) {
-          void m.show()
-          // Native also defaults to two lines, so only the OFF state needs
-          // pushing — otherwise a restart would silently bring the second line
-          // back for a user who switched it off.
-          const twoLine = await readFloatingLyricTwoLine()
-          if (!twoLine) void m.setTwoLine(false).catch(() => {})
-        }
-      }
-    }
+    // Restores the overlay the user left switched on. Deliberately grant-checking
+    // only (never `requestPermission`): that opens a system screen, and one that
+    // answers only once the app is foregrounded again — at this point in the
+    // startup chain that would both hijack the launch and stall everything below.
+    // Off the chain (`void`) for the same reason nothing below it may wait on an
+    // overlay: auth must resolve even if the host's lyric module misbehaves.
+    void syncFloatingLyricOverlay().catch(() => {})
     const auth = useAuthStore.getState()
     await auth.hydrate()
     await auth.checkAuth()

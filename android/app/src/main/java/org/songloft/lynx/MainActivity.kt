@@ -13,6 +13,7 @@ import com.lynx.tasm.LynxView
 import com.lynx.tasm.LynxViewBuilder
 import com.lynx.tasm.TemplateData
 import com.lynx.xelement.XElementBehaviors
+import org.songloft.lynx.lyric.OverlayPermission
 import org.songloft.lynx.navigation.BackKeyState
 import org.songloft.lynx.navigation.SongloftNavigationModule
 import org.songloft.lynx.system.SystemAppearance
@@ -51,6 +52,18 @@ class MainActivity : Activity() {
         meta.setUrl(BUNDLE_URI)
         meta.setGlobalProps(TemplateData.fromMap(SystemAppearance.from(resources.configuration)))
         view.loadTemplate(meta.build())
+    }
+
+    /**
+     * The overlay-permission screen (`SYSTEM_ALERT_WINDOW`) is a system Activity
+     * that reports nothing back, so this resume — the app coming back from it —
+     * is the only moment a pending grant request can be answered. See
+     * [OverlayPermission]; without this wire the floating-lyrics toggle believes
+     * every first grant was refused.
+     */
+    override fun onResume() {
+        super.onResume()
+        OverlayPermission.onAppForegrounded(this)
     }
 
     /**

@@ -1,6 +1,14 @@
 import { readNativeModules } from './native-modules.js'
 
 export interface FloatingLyricModule {
+  /** Is the overlay grant in place? Never opens a system screen. */
+  hasPermission(): Promise<boolean>
+  /**
+   * Ask for the overlay grant. Resolves `true` immediately when it is already
+   * held; otherwise the host opens the system screen and this resolves **after
+   * the user comes back** with whatever the grant is then. Only call it from a
+   * user-initiated enable — see `OverlayPermission.kt`.
+   */
   requestPermission(): Promise<boolean>
   show(): Promise<void>
   updateLyric(line: string, nextLine?: string): Promise<void>
@@ -17,6 +25,7 @@ export interface FloatingLyricModule {
  * (argsJson: String, callback: Callback). This adapter promisifies them.
  */
 interface NativeFloatingLyric {
+  hasPermission(args: string, callback: (result: string) => void): void
   requestPermission(args: string, callback: (result: string) => void): void
   show(args: string, callback: (result: string) => void): void
   updateLyric(args: string, callback: (result: string) => void): void
@@ -30,20 +39,20 @@ interface NativeFloatingLyric {
 
 function createNativeAdapter(native: NativeFloatingLyric): FloatingLyricModule {
   return {
+    hasPermission() {
+      return new Promise((resolve) => {
+        // Hosts that predate this method would leave the promise pending
+        // forever, and the caller sits in the startup chain.
+        if (typeof native.hasPermission !== 'function') {
+          resolve(false)
+          return
+        }
+        native.hasPermission('{}', (result) => { resolve(readBooleanResult(result)) })
+      })
+    },
     requestPermission() {
       return new Promise((resolve) => {
-        native.requestPermission('{}', (result) => {
-          try {
-            const obj: unknown = JSON.parse(result)
-            resolve(
-              (obj && typeof obj === 'object' && (obj as Record<string, unknown>).result === true)
-                ? true
-                : false,
-            )
-          } catch {
-            resolve(false)
-          }
-        })
+        native.requestPermission('{}', (result) => { resolve(readBooleanResult(result)) })
       })
     },
     show() {
@@ -63,18 +72,7 @@ function createNativeAdapter(native: NativeFloatingLyric): FloatingLyricModule {
     },
     isShowing() {
       return new Promise((resolve) => {
-        native.isShowing('{}', (result) => {
-          try {
-            const obj: unknown = JSON.parse(result)
-            resolve(
-              (obj && typeof obj === 'object' && (obj as Record<string, unknown>).result === true)
-                ? true
-                : false,
-            )
-          } catch {
-            resolve(false)
-          }
-        })
+        native.isShowing('{}', (result) => { resolve(readBooleanResult(result)) })
       })
     },
     setFontSize(size: 'small' | 'medium' | 'large') {
@@ -100,6 +98,16 @@ function createNativeAdapter(native: NativeFloatingLyric): FloatingLyricModule {
   }
 }
 
+/** `{result: boolean}` → boolean; anything unparseable counts as `false`. */
+function readBooleanResult(result: string): boolean {
+  try {
+    const obj: unknown = JSON.parse(result)
+    return !!obj && typeof obj === 'object' && (obj as Record<string, unknown>).result === true
+  } catch {
+    return false
+  }
+}
+
 let cached: FloatingLyricModule | null = null
 
 export function getFloatingLyricModule(): FloatingLyricModule {
@@ -110,6 +118,7 @@ export function getFloatingLyricModule(): FloatingLyricModule {
     return cached
   }
   cached = {
+    hasPermission: async () => false,
     requestPermission: async () => false,
     show: async () => {},
     updateLyric: async () => {},

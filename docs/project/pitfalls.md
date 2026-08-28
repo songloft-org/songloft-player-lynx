@@ -67,6 +67,15 @@ worker 侧最终走 `listener.apply(ctx, params)`，普通对象没有 `length` 
 - **另一半**：`load()` 失败时 media3 什么都不发，而它的 `maybeStopForegroundService` 只 cancel「它自己发过的」1001 ⇒ 占位会永久留在通知栏，且 `ONGOING | NO_CLEAR` 连划都划不掉。所以 `onUpdateNotification` 里用与 media3 `shouldShowNotification` 同款的条件（player 非 `STATE_IDLE` 且 timeline 非空）判断「没人会来接手」，此时 `stopForeground(true)` 自己收尾。
 - **与 minSdk 21 无关**：机制在任何 API 级别都成立（实测机 Android 13）。时间上撞在一起纯属巧合——占位通知是降 minSdk 那批之前一个提交引入的，两者都在同一天。
 
+### 无结果回传的系统授权页：答复只能等到 App 重回前台（Android）
+
+`SYSTEM_ALERT_WINDOW`（`Settings.ACTION_MANAGE_OVERLAY_PERMISSION`）**不能 `startActivityForResult`、什么都不回传**，唯一可观测的时刻是 App 重回前台。`startActivity` 之后顺手答 `false` 等于对每一次「用户正要去授权」都回答「拒绝」——悬浮歌词开关因此拨上去了、pref 写了、`show()` 永不发生，用户只能「再关一次再开一次」（那时走的是「已授权」早返回分支）。
+
+- 修法：把待答请求停在 `MainActivity.onResume`（`lyric/OverlayPermission.kt`），重读带少量重试（部分 ROM 在 resume 之后才翻转 `canDrawOverlays`）；打不开系统页要立刻答复，别留无人应答的等待者。
+- 推论：**「只想恢复上次状态」的调用点必须另有一个只读探测**（本仓是 `hasPermission`）。启动链上调「会等前台恢复才 resolve」的那个方法，会把它后面的 `auth.hydrate()` 一起卡死；顺带它还会在冷启动时把用户弹去系统设置页。
+- 同族：**pref 与系统授权是两个真相源**。授权被撤销后 pref 仍为 true ⇒ 开关显示「开」而屏幕上什么都没有。进页/启动时以授权为准回写 pref，协调逻辑收在一处。
+- 未授权时碰 `WindowManager.addView` 抛 `BadTokenException: permission denied for window type 2038`，而它抛在 `onStartCommand` 里 ⇒ **未捕获 = 杀进程**。服务自己也要查一遍授权：调用方查过不代表此刻仍成立（用户可随时撤销，`START_STICKY` 还会重发 SHOW）。
+
 ## 4. 构建与闸门
 
 ### 「闸门全绿而产物是坏的」
@@ -119,7 +128,7 @@ flex 把溢出量按 basis **加权摊给所有** shrink 非零的子项，小 b
 
 ### 断言落在进程外或与故障机制无关的量上
 
-TS facade 无论成败一律返回 resolved promise——只问 `isShowing()` 等于让嫌疑人自证清白。可用判据：`dumpsys activity services` / `dumpsys window windows`（悬浮歌词靠写入前后 `Requested h` / `mLayoutSeq` 逐字节相同定位「压根没重排」）；`pgrep -x <名>`（别用 `ps -ef | grep X | wc -l`，当前 shell 的命令行含关键字会稳定多算 1–2 个）；`getComputedStyle(el).height` vs `el.scrollHeight`。
+TS facade 无论成败一律返回 resolved promise——只问 `isShowing()` 等于让嫌疑人自证清白。可用判据：`dumpsys activity services`（**只能读 `active services` 那一段** —— `Destroying services` 里的 `app=null destroying=true` 尸体能挂到重启为止，整份 grep 会把它读成「服务还在跑」、让 `hide()` 与 stopWithTask 两条永久假红）/ `dumpsys window windows`（悬浮歌词靠写入前后 `Requested h` / `mLayoutSeq` 逐字节相同定位「压根没重排」）；`pgrep -x <名>`（别用 `ps -ef | grep X | wc -l`，当前 shell 的命令行含关键字会稳定多算 1–2 个）；`getComputedStyle(el).height` vs `el.scrollHeight`。
 
 ### skip 数变了要查
 

@@ -2,9 +2,6 @@ package org.songloft.lynx.lyric
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import android.os.Build
-import android.provider.Settings
 import com.lynx.jsbridge.LynxModule
 import com.lynx.jsbridge.LynxMethod
 import com.lynx.react.bridge.Callback
@@ -26,23 +23,28 @@ class FloatingLyricModule(context: Context) : LynxModule(context) {
         }
     }
 
+    /**
+     * Read the grant **without** sending the user anywhere. Callers that only
+     * want to restore a previously enabled overlay (app startup, opening the
+     * lyrics settings page) must use this: [requestPermission] opens a system
+     * screen, which at those moments hijacks the app unprompted.
+     */
+    @LynxMethod
+    fun hasPermission(args: String, callback: Callback) {
+        val ctx = (mContext as LynxContext).getContext()
+        callback.invoke(JSONObject().put("result", OverlayPermission.isGranted(ctx)).toString())
+    }
+
+    /**
+     * Ask for the overlay grant, answering **after the user returns** from the
+     * system screen — see [OverlayPermission] for why answering earlier is the
+     * same as answering "denied". Only user-initiated enabling belongs here.
+     */
     @LynxMethod
     fun requestPermission(args: String, callback: Callback) {
         val ctx = (mContext as LynxContext).getContext()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (Settings.canDrawOverlays(ctx)) {
-                callback.invoke(JSONObject().put("result", true).toString())
-            } else {
-                val intent = Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:${ctx.packageName}")
-                )
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                ctx.startActivity(intent)
-                callback.invoke(JSONObject().put("result", false).toString())
-            }
-        } else {
-            callback.invoke(JSONObject().put("result", true).toString())
+        OverlayPermission.request(ctx) { granted ->
+            callback.invoke(JSONObject().put("result", granted).toString())
         }
     }
 

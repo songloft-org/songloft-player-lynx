@@ -14,13 +14,17 @@ import {
   readFloatingLyricTwoLine,
   readNotificationLyricInTitle,
   writeAutoEnterLyrics,
-  writeFloatingLyricEnabled,
   writeFloatingLyricFontSize,
   writeFloatingLyricLocked,
   writeFloatingLyricOpacity,
   writeFloatingLyricTwoLine,
   writeNotificationLyricInTitle,
 } from '../data/settings-prefs.js'
+import {
+  disableFloatingLyricOverlay,
+  enableFloatingLyricOverlay,
+  syncFloatingLyricOverlay,
+} from '../domain/floating-lyric-overlay.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import { SubPageShell } from '../widgets/SubPageShell.js'
@@ -54,16 +58,15 @@ export function LyricsPage() {
       .then((v) => { if (!cancelled) setNotificationLyricInTitle(v) })
       .catch(() => {})
     void readFloatingLyricEnabled()
-      .then((v) => {
-        if (cancelled) return
-        setFloatingLyricEnabled(v)
-        if (v && getPlatformCapabilities().floatingLyric) {
-          const m = getFloatingLyricModule()
-          void m.isShowing().then((showing) => {
-            if (!showing) void m.requestPermission().then((granted) => { if (granted) void m.show() })
-          })
-        }
-      })
+      .then((v) => { if (!cancelled) setFloatingLyricEnabled(v) })
+      .catch(() => {})
+    // …then reconcile pref against grant, which is what the switch actually
+    // reflects: this re-shows an overlay the user left on (a fresh process has
+    // none) and, when the grant was revoked meanwhile, turns the pref off so the
+    // switch stops reading "on" over nothing. No `requestPermission` here —
+    // opening the page must not throw the user into system settings.
+    void syncFloatingLyricOverlay()
+      .then((on) => { if (!cancelled && getPlatformCapabilities().floatingLyric) setFloatingLyricEnabled(on) })
       .catch(() => {})
     void readFloatingLyricFontSize()
       .then((v) => { if (!cancelled) setFloatingLyricFontSize(v) })
@@ -110,12 +113,16 @@ export function LyricsPage() {
               checked={floatingLyricEnabled}
               onChange={(next) => {
                 setFloatingLyricEnabled(next)
-                void writeFloatingLyricEnabled(next)
-                const m = getFloatingLyricModule()
                 if (next) {
-                  void m.requestPermission().then(granted => { if (granted) void m.show() })
+                  // `enableFloatingLyricOverlay` owns the pref: it resolves only
+                  // after the grant screen (if any) is done, and answers `false`
+                  // when the user came back without granting — at which point the
+                  // switch has to go back down rather than lie about an overlay.
+                  void enableFloatingLyricOverlay()
+                    .then((on) => { if (!on) setFloatingLyricEnabled(false) })
+                    .catch(() => { setFloatingLyricEnabled(false) })
                 } else {
-                  void m.hide()
+                  void disableFloatingLyricOverlay().catch(() => {})
                 }
               }}
               testId='settings-floating-lyric-toggle'

@@ -41,8 +41,26 @@ const packageWindows = (): string[] =>
     .filter((l) => l.includes(`Window{`) && l.includes(PKG))
     .map((l) => l.trim())
 
-const serviceRunning = (): boolean =>
-  sh(`adb shell dumpsys activity services ${PKG}`).includes('FloatingLyricService')
+/**
+ * Is the overlay service actually alive?
+ *
+ * **Only the `active services` section counts.** `dumpsys` also keeps a
+ * `Destroying services` list, and a record can sit there until the next reboot
+ * (`app=null destroying=true crashCount=1`) once the process died mid-teardown.
+ * Grepping the whole dump reads that corpse as a live service — measured: `hide()`
+ * and the task-removal case both went permanently red on an emulator carrying a
+ * 7-minute-old zombie, with the app behaving perfectly.
+ */
+const serviceRunning = (): boolean => {
+  const dump = sh(`adb shell dumpsys activity services ${PKG}`)
+  const start = dump.search(/active services:/)
+  if (start === -1) return false
+  const fromActive = dump.slice(start)
+  // Next section header (`  Destroying services:` …); entries start with `* `, and
+  // no entry line contains `services:`.
+  const end = fromActive.search(/\n {2}(?!\*)\S[^\n]*services:/)
+  return (end === -1 ? fromActive : fromActive.slice(0, end)).includes('FloatingLyricService')
+}
 
 /** Height the window manager was asked for — grows with the text the view holds. */
 const overlayRequestedHeight = (): number => {
@@ -252,5 +270,150 @@ describe('悬浮歌词：移除任务（杀后台）必须摘掉覆盖窗', () =
     await driver.sleep(1200)
     expect(await call(driver, 'isShowing')).toBe(true)
     expect(overlayRequestedHeight(), '重开后覆盖窗没重建').toBeGreaterThan(0)
+  })
+})
+
+/**
+ * 授权往返 —— 2026-08-28 真机报障（悬浮歌词第六重死）。
+ *
+ * 「首次打开开关去授权，返回后开关是开的，但没有歌词窗口；再关一次开一次才正常。」
+ * 根因在 `requestPermission` 的时序：`Settings.ACTION_MANAGE_OVERLAY_PERMISSION`
+ * **不能 `startActivityForResult`、不回传任何结果**，而旧实现 `startActivity` 之后
+ * 紧接着就答 `false` —— 对每一次「用户正要去授权」的动作都回答「拒绝」，于是 JS 侧
+ * `if (granted) show()` 永不成立。
+ *
+ * 这条链**只在未授权时存在**：授权已在手时模块走的是早返回分支，上面几个 describe
+ * 全程 `appops allow`，所以它们无论修没修都是绿的。判据也不能是 `isShowing()` ——
+ * 那时窗口确实不在，问题在于「谁都没打算开它」。所以这里量的是**答复本身何时到达**：
+ * 把 promise 挂在 `globalThis` 上，在系统页仍在前台时读一次（必须还是 pending，
+ * 旧实现在这一刻已经是 `'false'`），按返回键回到 App 之后再读一次。
+ */
+describe('悬浮歌词：授权答复必须等到从系统页返回之后', () => {
+  let driver: E2EDriver
+
+  /**
+   * 前台 Activity —— 用来证明系统授权页真的开了 / 真的关了。
+   *
+   * 这台 Android 14 模拟器打印的是 `topResumedActivity=` 与 `ResumedActivity:`，**没有**
+   * `mResumedActivity`（旧版格式）。首版正则只认后者，于是恒返回空串：授权页那条 waitFor
+   * 一直等到超时，而「hasPermission 不弹界面」那条拿 `'' === ''` 空转通过。故下方各用例
+   * 都先断言这个值里有包名/`Settings`，别让格式漂移再变成假绿。
+   */
+  const topActivity = (): string =>
+    /ResumedActivity[=:]\s*ActivityRecord\{\S+ u\d+ (\S+)/.exec(
+      sh('adb shell dumpsys activity activities'),
+    )?.[1] ?? ''
+
+  const grantAnswer = async (): Promise<string> =>
+    driver.evaluateJS<string>('String(globalThis.__grantAnswer)')
+
+  const pid = (): string => sh(`adb shell pidof ${PKG}`).trim()
+
+  beforeAll(async () => {
+    if (!onAndroid) return
+    try { sh(`adb shell am force-stop ${PKG}`) } catch { /* noop */ }
+    // 起点必须是「未授权」：这一整条链在已授权下压根不会发生。
+    sh(`adb shell appops set ${PKG} SYSTEM_ALERT_WINDOW deny`)
+    driver = await createDriver()
+    await driver.sleep(500)
+    await driver.launch()
+  })
+
+  afterAll(async () => {
+    if (!onAndroid) return
+    // 其余场景都假定已授权，别把 deny 留给它们。
+    sh(`adb shell appops set ${PKG} SYSTEM_ALERT_WINDOW allow`)
+    try { await call(driver, 'hide') } catch { /* noop */ }
+    await driver.teardown()
+  })
+
+  test.skipIf(!onAndroid)('未授权时 hasPermission 为 false，且不把用户弹去系统页', async () => {
+    const before = topActivity()
+    expect(before, '读不到前台 Activity —— 下面的比较会空转通过').toContain(PKG)
+    expect(await call(driver, 'hasPermission')).toBe(false)
+    await driver.sleep(1000)
+    // 启动链与进入歌词设置页都用它，弹界面就等于劫持启动 / 劫持进页。
+    expect(topActivity(), 'hasPermission 打开了界面').toBe(before)
+  })
+
+  /*
+   * 未授权时的 `show()` 是一个**杀进程**的地雷，实测撞到过：
+   * `FATAL EXCEPTION: main / Unable to start service FloatingLyricService …
+   * BadTokenException: permission denied for window type 2038` —— `addView` 抛在
+   * `onStartCommand` 里，未捕获就是整个进程死。「调用方检查过」不够：授权能被随时撤销，
+   * 而 `START_STICKY` 还会在那之后重发 SHOW。
+   */
+  test.skipIf(!onAndroid)('未授权时 show() 不出窗，也不能杀进程', async () => {
+    const before = pid()
+    expect(before, '拿不到进程 pid').not.toBe('')
+    await call(driver, 'show')
+    await driver.sleep(1500)
+    expect(pid(), 'show() 在无授权时把进程撞掉了').toBe(before)
+    expect(overlayRequestedHeight(), '无授权居然出窗了').toBe(-1)
+  })
+
+  test.skipIf(!onAndroid)('requestPermission 在系统页期间不作答，授权并返回后才答 true', async () => {
+    // 故意 fire-and-forget：这个 promise 就是要挂着，直到 App 重回前台。
+    await driver.evaluateJS(`
+      globalThis.__grantAnswer = 'pending';
+      globalThis.__E2E_FLOATING_LYRIC__.requestPermission()
+        .then((r) => { globalThis.__grantAnswer = String(r) });
+      'ok'
+    `)
+    await driver.waitFor(async () => topActivity().includes('Settings'), { timeout: 8000 })
+
+    expect(
+      await grantAnswer(),
+      '系统页还在前台就已经答复了 —— 这正是那个 bug：答案必然是「拒绝」，而用户才刚要去授权',
+    ).toBe('pending')
+
+    // 用户在那个页面上打开开关（e2e 用 appops 等效替代），然后按返回回到 App。
+    sh(`adb shell appops set ${PKG} SYSTEM_ALERT_WINDOW allow`)
+    sh('adb shell input keyevent KEYCODE_BACK')
+    await driver.waitFor(async () => topActivity().includes(PKG), { timeout: 8000 })
+    await driver.waitFor(async () => (await grantAnswer()) !== 'pending', { timeout: 8000 })
+
+    expect(await grantAnswer(), '返回后答复不是 true —— onResume 的重读没接上').toBe('true')
+  })
+
+  test.skipIf(!onAndroid)('设置页开关的完整链路：授权返回后自己就出窗（无需再关再开）', async () => {
+    // 回到报障时的起点：未授权 + 无窗。
+    sh(`adb shell appops set ${PKG} SYSTEM_ALERT_WINDOW deny`)
+    await call(driver, 'hide')
+    await driver.sleep(800)
+
+    // 这一句就是开关 onChange 跑的那条链（授权 → pref → show）。
+    await driver.evaluateJS(`
+      globalThis.__enableResult = 'pending';
+      globalThis.__E2E_FLOATING_LYRIC__.enableOverlay()
+        .then((on) => { globalThis.__enableResult = String(on) });
+      'ok'
+    `)
+    await driver.waitFor(async () => topActivity().includes('Settings'), { timeout: 8000 })
+    expect(overlayRequestedHeight(), '还在系统页上就出窗了？').toBe(-1)
+
+    sh(`adb shell appops set ${PKG} SYSTEM_ALERT_WINDOW allow`)
+    sh('adb shell input keyevent KEYCODE_BACK')
+
+    // 旧实现到这里就完了：enableOverlay 早已以 false 结束，永远等不到窗口。
+    await driver.waitFor(async () => overlayRequestedHeight() > 0, { timeout: 10000 })
+    expect(serviceRunning(), 'FloatingLyricService 没起来').toBe(true)
+    expect(
+      await driver.evaluateJS<string>('String(globalThis.__enableResult)'),
+      'enableOverlay 没报 true —— 页面会把开关拨回去',
+    ).toBe('true')
+    // pref 写没写下去由下一例（重启后自行恢复）作证，**不要**拿
+    // `driver.getStorageItem` 去读：它读的是 `globalThis.NativeModules`，而 eval 作用域
+    // 里拿不到该对象（同 `__E2E_FLOATING_LYRIC__` 存在的原因），它在 Android 上恒返回 null。
+  })
+
+  test.skipIf(!onAndroid)('重启：pref 与授权都在，启动路径自己把窗口恢复出来', async () => {
+    // 上一例留下的状态（pref true + 已授权）就是真实用户的常态。
+    await driver.teardown()
+    try { sh(`adb shell am force-stop ${PKG}`) } catch { /* noop */ }
+    await driver.sleep(800)
+    await driver.launch()
+    await driver.waitFor(async () => overlayRequestedHeight() > 0, { timeout: 15000 })
+    expect(serviceRunning()).toBe(true)
   })
 })
