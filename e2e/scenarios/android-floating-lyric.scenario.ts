@@ -3,6 +3,7 @@ import { execSync } from 'node:child_process'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import { createDriver, type E2EDriver } from '../driver/index.js'
+import { fetchRealSongs } from '../fixtures/songs.js'
 
 /**
  * Floating-lyrics overlay (Android only — iOS has no equivalent surface).
@@ -63,12 +64,21 @@ describe('悬浮歌词（Android）', () => {
 
   beforeAll(async () => {
     if (!onAndroid) return
+    // 干净起点：launch() 会复用已运行的实例，而本功能的缺陷残留物（冻结的悬浮窗）
+    // 恰好就在那个实例里 —— show() 因 service 已在展示而不加新窗，下方断言全部失真。
+    try { sh(`adb shell am force-stop ${PKG}`) } catch { /* noop */ }
     driver = await createDriver()
+    await driver.sleep(500)
     await driver.launch()
     await driver.login('admin', 'admin')
     // The user grants this in system settings; e2e grants it via appops. Only
     // possible at all because the manifest declares the permission.
     sh(`adb shell appops set ${PKG} SYSTEM_ALERT_WINDOW allow`)
+    // 该功能若在设备上被开启过（pref 随数据保留），启动路径会自动 show 出一个空
+    // 文本悬浮窗 —— 下方「show() 新增窗口」的增量断言全部失真（showOverlay 对
+    // 已在展示的窗是 no-op）。先摘掉，从已知基线开始。
+    await call(driver, 'hide')
+    await driver.sleep(1000)
   })
 
   afterAll(async () => {
@@ -102,14 +112,23 @@ describe('悬浮歌词（Android）', () => {
   test.skipIf(!onAndroid)('updateLyric 真的改变了覆盖层布局', async () => {
     const empty = overlayRequestedHeight()
     expect(empty, '找不到覆盖窗口').toBeGreaterThan(0)
-    // Two lines (current + next), so the height difference is unmistakable rather
-    // than the couple of pixels a single short line moves.
-    await call(driver, 'updateLyric', `${JSON.stringify('第一行')},${JSON.stringify('第二行')}`)
+    // The freshly-shown window already reserves TWO line boxes: both TextViews
+    // start VISIBLE, and an empty TextView still takes its font-metrics height —
+    // measured h=67 empty vs h=70 with two short CJK lines (the +3 is just the
+    // glyphs). So "empty -> two short lines" only moves a few pixels, the exact
+    // couple-of-pixels trap the original assertion tried to avoid. The stable
+    // layout signal is wrapping: a line that cannot fit on one row forces the
+    // WRAP_CONTENT window to grow by whole line boxes, on any density.
+    const longLine = '长'.repeat(60)
+    await call(driver, 'updateLyric', `${JSON.stringify(longLine)},${JSON.stringify('第二行')}`)
     await driver.sleep(1200)
     expect(
       overlayRequestedHeight(),
       '窗口高度没变 —— 文本没写进去（异常被模块的 catch 吞掉时就是这样）',
     ).toBeGreaterThan(empty + 20)
+    // Restore short text so the next test measures a regular two-line window.
+    await call(driver, 'updateLyric', `${JSON.stringify('第一行')},${JSON.stringify('第二行')}`)
+    await driver.sleep(1200)
   })
 
   test.skipIf(!onAndroid)('setTwoLine(false) 真的收掉了第二行', async () => {
@@ -131,5 +150,107 @@ describe('悬浮歌词（Android）', () => {
     await driver.sleep(1200)
     expect(serviceRunning(), 'hide 之后 service 仍在运行').toBe(false)
     expect(overlayRequestedHeight(), '覆盖窗口没被撤掉').toBe(-1)
+  })
+})
+
+/**
+ * 杀后台（移除任务）必须摘掉悬浮窗。
+ *
+ * 划掉最近任务卡片移除的是**任务**，不是进程 —— 前台媒体播放服务把进程钉住 ——
+ * 而 LynxView 和推 `updateLyric` 的 JS 随任务死亡。若 FloatingLyricService 在
+ * 任务移除后继续运行，覆盖窗就成了一块无人更新、无处可关的冻结残影（真机报障）。
+ * manifest 里的 `android:stopWithTask="true"` 让系统在该时刻停掉服务、`onDestroy`
+ * 摘窗。断言全部落在 App 进程之外的 dumpsys/pidof 上 —— 事后向 isShowing() 求证
+ * 等于让嫌疑人自证清白，何况此刻 JS 已死、无人应答。
+ */
+describe('悬浮歌词：移除任务（杀后台）必须摘掉覆盖窗', () => {
+  let driver: E2EDriver
+  /** 移除任务前的进程 pid —— 事后必须不变，窗口消失必须是摘窗而非进程死亡。 */
+  let baselinePid = ''
+
+  /** 任务移除的清理是异步的：轮询等窗口与 service 都落地。 */
+  const overlayGone = async (): Promise<boolean> => {
+    for (let i = 0; i < 10; i++) {
+      if (overlayRequestedHeight() === -1 && !serviceRunning()) return true
+      await driver.sleep(500)
+    }
+    return false
+  }
+
+  const pid = (): string => sh(`adb shell pidof ${PKG}`).trim()
+
+  const lyricTaskId = (): number | null => {
+    const m = /taskId=(\d+):[^\n]*org\.songloft\.lynx/.exec(sh('adb shell am stack list'))
+    return m ? Number(m[1]) : null
+  }
+
+  beforeAll(async () => {
+    if (!onAndroid) return
+    driver = await createDriver()
+    await driver.launch()
+    await driver.login('admin', 'admin')
+    sh(`adb shell appops set ${PKG} SYSTEM_ALERT_WINDOW allow`)
+    // 播放流走设备侧 localhost:58091（resolvedBaseUrl 由 driver 指向它）。
+    sh('adb reverse tcp:58091 tcp:58091')
+  })
+
+  afterAll(async () => {
+    if (!onAndroid) return
+    // 移除任务已杀死 JS，hide() 无人应答；force-stop 收掉残留的播放服务。
+    try { sh(`adb shell am force-stop ${PKG}`) } catch { /* noop */ }
+    await driver.teardown()
+  })
+
+  test.skipIf(!onAndroid)('播放中 show()：窗口、service、进程俱在', async () => {
+    const [song] = await fetchRealSongs(1)
+    await driver.evaluateJS(`
+      (async () => {
+        const store = globalThis.__E2E_PLAYER_STORE__;
+        await store.getState().playSong(${JSON.stringify(song)});
+      })()
+    `)
+    await driver.waitFor(
+      async () => (await driver.getPlayerState()).state === 'playing',
+      { timeout: 10000 },
+    )
+    await call(driver, 'show')
+    await driver.sleep(1200)
+    expect(serviceRunning(), 'FloatingLyricService 没起来').toBe(true)
+    expect(overlayRequestedHeight(), '覆盖窗口不在').toBeGreaterThan(0)
+    baselinePid = pid()
+    expect(baselinePid, '拿不到进程 pid').not.toBe('')
+  })
+
+  test.skipIf(!onAndroid)('退后台（不移除任务）：窗口仍在 —— 常驻设计不回归', async () => {
+    sh('adb shell input keyevent KEYCODE_HOME')
+    await driver.sleep(1000)
+    expect(serviceRunning()).toBe(true)
+    expect(overlayRequestedHeight(), '退后台不该摘窗（双击返回退后台依赖常驻）').toBeGreaterThan(0)
+    sh(`adb shell am start -n ${PKG}/.MainActivity`)
+    await driver.sleep(1000)
+  })
+
+  test.skipIf(!onAndroid)('移除任务：窗口摘掉、service 停掉、进程被播放钉住不死', async () => {
+    const taskId = lyricTaskId()
+    expect(taskId, 'am stack list 里找不到本包任务').not.toBeNull()
+    sh(`adb shell am stack remove ${taskId}`)
+    expect(
+      await overlayGone(),
+      '任务移除后覆盖窗/service 未被清掉（stopWithTask 没生效？）',
+    ).toBe(true)
+    expect(pid(), '进程应被前台播放服务钉住 —— 窗口消失必须是摘窗而不是进程死亡').toBe(baselinePid)
+    // 音乐继续是有意设计：播放服务还在前台。
+    expect(sh(`adb shell dumpsys activity services ${PKG}`)).toContain('SongloftPlaybackService')
+  })
+
+  test.skipIf(!onAndroid)('重启后 service 可重建、覆盖窗可重开', async () => {
+    await driver.teardown()
+    try { sh(`adb shell am force-stop ${PKG}`) } catch { /* noop */ }
+    await driver.sleep(800)
+    await driver.launch()
+    await call(driver, 'show')
+    await driver.sleep(1200)
+    expect(await call(driver, 'isShowing')).toBe(true)
+    expect(overlayRequestedHeight(), '重开后覆盖窗没重建').toBeGreaterThan(0)
   })
 })

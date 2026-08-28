@@ -203,8 +203,9 @@ Callback 形状，Callback 收到 JSON 字符串。
 
 - 无事件。iOS / Web 上 facade 返回全惰性桩（`requestPermission`/`isShowing` 恒 `false`）。
 - 窗口实现在 `lyric/FloatingLyricService.kt`。`updateText` 必须经 `Handler(Looper.getMainLooper())` post —— 原生模块方法跑在 Lynx JS 线程，碰主线程创建的 View 会抛 `CalledFromWrongThreadException`，而模块里的 `catch (_: Exception) {}` 会把它整个吞掉（表现：窗口浮出来了、一行歌词也不显示、logcat 干净）。
+- **悬浮窗生命周期跟随服务**：窗口要熬过的是退后台（双击返回走 `moveTaskToBack`，不移除任务 → 不停服务，歌词常驻，设计如此）；但**移除任务**（最近任务划卡片杀后台）时，推 `updateLyric` 的 JS 已随任务死亡，而进程被前台媒体服务钉住不灭，幸存的窗口只是一块冻结残影 —— `android:stopWithTask="true"` 让系统在该时刻停掉服务，`onDestroy` 摘窗。此属性缺失导致过真机报障：杀后台后歌词冻在最后一行，无任何入口能关掉。
 
-**闸门锁住的不变量**：8 个方法各自有 `@LynxMethod`，且签名里的回调参数是 `callback: Callback`（Kotlin lambda 不是注册类型，会静默失败）。另由 `src/__tests__/android-manifest-contract.test.ts` 锁住 `AndroidManifest.xml` 必须声明 `SYSTEM_ALERT_WINDOW` 权限与 `FloatingLyricService` —— **两处都是静默失败**，缺了会让整个功能死掉而无任何报错。
+**闸门锁住的不变量**：8 个方法各自有 `@LynxMethod`，且签名里的回调参数是 `callback: Callback`（Kotlin lambda 不是注册类型，会静默失败）。另由 `src/__tests__/android-manifest-contract.test.ts` 锁住 `AndroidManifest.xml` 必须声明 `SYSTEM_ALERT_WINDOW` 权限与 `FloatingLyricService`，且该 `<service>` 元素必须声明 `android:stopWithTask="true"`、服务 `onDestroy` 必须摘窗 —— **都是静默失败**，缺了要么整个功能死掉、要么杀后台后残留冻结窗口，而无任何报错。
 
 ### 2.8 `SongloftLiveActivity`（3 方法，仅 iOS）
 

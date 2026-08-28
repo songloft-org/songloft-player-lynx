@@ -172,6 +172,64 @@ describe('permissions the code actually needs are declared', () => {
 })
 
 /**
+ * A removed task must take the lyric overlay with it.
+ *
+ * Swiping the recents card removes the **task**, not the process — the media
+ * playback foreground service pins the process — while the LynxView and the JS
+ * that pushes `updateLyric` die with the task. A `FloatingLyricService` that
+ * survives task removal therefore outlives the app as a frozen overlay no one
+ * can dismiss (observed on device: the last lyric line stuck on screen, music
+ * playing on, no UI anywhere to turn it off).
+ *
+ * `android:stopWithTask="true"` is the platform's hook for exactly this: the
+ * system stops the service on task removal, and the service's own `onDestroy`
+ * takes the window down. Backgrounding (`moveTaskToBack`, the double-back exit)
+ * removes no task, so the overlay still survives it — that half of the design
+ * must not regress.
+ *
+ * Assertions are scoped to the `<service>` element with XML comments stripped
+ * first: the comment above the declaration documents this very attribute, and a
+ * whole-file substring check reads that prose as the declaration — the same
+ * false-green the back-key gate hit (and batch 39's pbxproj gate before it).
+ */
+describe('the lyric overlay dies with the task that spawned it', () => {
+  const manifestWithoutComments = manifest.replace(/<!--[\s\S]*?-->/g, '')
+  const lyricServiceElement = [
+    ...manifestWithoutComments.matchAll(/<service\b([\s\S]*?)>/g),
+  ].map(([, attributes]) => attributes as string).find((attributes) =>
+    attributes.includes('.lyric.FloatingLyricService'),
+  )
+
+  test('FloatingLyricService was found (guard against a silent empty match)', () => {
+    expect(
+      lyricServiceElement,
+      'no <service> naming FloatingLyricService — the overlay moved or died; relocate this gate',
+    ).toBeTruthy()
+  })
+
+  test('removing the task stops the service (android:stopWithTask)', () => {
+    expect(
+      lyricServiceElement,
+      'declare android:stopWithTask="true" on FloatingLyricService: task removal must take the '
+        + 'overlay down, or it freezes on screen with its JS updater gone',
+    ).toMatch(/android:stopWithTask="true"/)
+  })
+
+  test('stopping the service takes the window down (onDestroy cleanup)', () => {
+    // stopWithTask only stops the service; removing the window is onDestroy's
+    // job. hideOverlay is the remover, and FloatingLyricModule.setService(null)
+    // drops the static handle so isShowing() cannot report a ghost service.
+    const source = read(
+      `${ANDROID_MAIN}/java/${namespace.replace(/\./g, '/')}/lyric/FloatingLyricService.kt`,
+    )
+    expect(source, 'onDestroy must call hideOverlay() to remove the overlay window').toMatch(
+      /override fun onDestroy\(\)[\s\S]*?hideOverlay\(\)/,
+    )
+    expect(source, 'onDestroy must drop the static module handle').toMatch(/setService\(null\)/)
+  })
+})
+
+/**
  * `AGENTS.md` §4 requires these three, and nothing checked them: without them
  * the Activity is **recreated** on a dark-mode or locale switch instead of
  * receiving the change, so the host's `sendGlobalEvent` channel never fires and

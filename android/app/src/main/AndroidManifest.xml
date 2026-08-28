@@ -91,10 +91,21 @@
              system logs one "Unable to start service … not found" line and the
              call returns, so the overlay simply never appeared. Deliberately not
              a foreground service: it owns no playback, and the window itself is
-             what has to survive (see FloatingLyricService). -->
+             what has to survive *backgrounding* (double-back exit is
+             `moveTaskToBack`, which removes no task, so the overlay stays — by
+             design).
+
+             `stopWithTask` is the other half of that contract. Removing the task
+             (swiping the recents card) leaves the process alive — the media
+             playback foreground service pins it — while the LynxView and the JS
+             that pushes `updateLyric` die with it. Without this flag the overlay
+             outlives the app as a frozen artifact no one can dismiss; with it the
+             system stops this service on task removal and `onDestroy` takes the
+             window down. -->
         <service
             android:name=".lyric.FloatingLyricService"
-            android:exported="false" />
+            android:exported="false"
+            android:stopWithTask="true" />
 
         <!-- Shares files (the log-export zip) with other apps:
              SongloftPlatformModule.shareFile stages the file under
