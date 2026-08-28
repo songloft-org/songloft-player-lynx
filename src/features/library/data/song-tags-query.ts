@@ -135,15 +135,6 @@ export function useBindSongsMutation() {
   })
 }
 
-export function useFromPlaylistMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (playlistId: number) => getSongTagsApi().fromPlaylist(playlistId),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: songTagQueryKeys.all })
-    },
-  })
-}
 
 const tagSyncKey = ['song-tags', 'sync-to-file'] as const
 

@@ -60,9 +60,6 @@ vi.mock('../data/playlist-mutations.js', () => ({
   useSetVisibilityMutation: visibilityMutationHook,
 }))
 
-vi.mock('../../library/data/song-tags-query.js', () => ({
-  useFromPlaylistMutation: () => ({ mutate: vi.fn(), isPending: false }),
-}))
 
 const { PlaylistsView } = await import('../widgets/PlaylistsView.js')
 const { useToastStore, toast } = await import('../../../shared/ui/toast-store.js')

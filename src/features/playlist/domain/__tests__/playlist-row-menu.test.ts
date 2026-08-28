@@ -26,10 +26,9 @@ function makePlaylist(over: Partial<Playlist> = {}): Playlist {
 }
 
 describe('playlistRowMenuKeys', () => {
-  test('a normal playlist gets pin, convertToTag, edit, visibility, delete', () => {
+  test('a normal playlist gets pin, edit, visibility, delete', () => {
     expect(playlistRowMenuKeys(makePlaylist())).toEqual([
       'pin',
-      'convertToTag',
       'edit',
       'visibility',
       'delete',

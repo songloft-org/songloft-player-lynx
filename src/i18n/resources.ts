@@ -659,9 +659,7 @@ export const en = {
     deleteConfirm: 'Delete tag "{{name}}"? Songs under this tag will not be deleted.',
     deleteAction: 'Delete',
     subtitle: 'Tag · {{count}} songs',
-    convertFromPlaylist: 'Convert to tag',
-    convertSuccess: 'Created tag "{{name}}", linked {{count}} songs',
-    convertFailed: 'Failed to convert playlist to tag',
+
     syncToFile: 'Sync tags to file',
     syncToFileHint: 'Write custom tags to audio file SONGLOFT_TAGS field on change',
     save: 'Save',
@@ -1527,9 +1525,7 @@ export const zh: TranslationTree = {
     deleteConfirm: '确定删除标签「{{name}}」？该标签下的歌曲不会被删除。',
     deleteAction: '删除',
     subtitle: '标签 · {{count}} 首',
-    convertFromPlaylist: '转为标签',
-    convertSuccess: '已创建标签「{{name}}」，关联 {{count}} 首歌曲',
-    convertFailed: '转换标签失败',
+
     syncToFile: '标签同步写入文件',
     syncToFileHint: '修改标签时自动写入音频文件的 SONGLOFT_TAGS 字段',
     save: '保存',

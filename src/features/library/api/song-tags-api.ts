@@ -1,11 +1,9 @@
 import { apiPrefix } from '../../../core/config/app-config.js'
 import type { HttpClient } from '../../../core/network/http-client.js'
 import {
-  parseFromPlaylistResult,
   parseSongTag,
   parseSongTagArray,
   parseSongTagListResponse,
-  type FromPlaylistResult,
   type SongTag,
   type SongTagListResponse,
 } from '../../../models/song-tag.js'
@@ -107,11 +105,5 @@ export class SongTagsApi {
     await this.client.put(`${apiPrefix}/songs/${songId}/song-tags`, { tag_ids: tagIds })
   }
 
-  async fromPlaylist(playlistId: number): Promise<FromPlaylistResult> {
-    const res = await this.client.post<unknown>(
-      `${apiPrefix}/song-tags/from-playlist/${playlistId}`,
-      {},
-    )
-    return parseFromPlaylistResult(res.data)
-  }
+
 }

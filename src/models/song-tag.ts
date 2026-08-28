@@ -36,25 +36,11 @@ export const songTagListResponseSchema = z
 
 export type SongTagListResponse = z.output<typeof songTagListResponseSchema>
 
-export const fromPlaylistResultSchema = z
-  .preprocess(
-    (v) => (v !== null && typeof v === 'object' ? v : {}),
-    z.object({
-      tag: songTagSchema,
-      bound: z.number().catch(0),
-    }),
-  )
-
-export type FromPlaylistResult = z.output<typeof fromPlaylistResultSchema>
-
 const songTagParsers = makeParsers(songTagSchema)
 export const parseSongTag = songTagParsers.parse
 
 const songTagListParsers = makeParsers(songTagListResponseSchema)
 export const parseSongTagListResponse = songTagListParsers.parse
-
-const fromPlaylistParsers = makeParsers(fromPlaylistResultSchema)
-export const parseFromPlaylistResult = fromPlaylistParsers.parse
 
 export function parseSongTagArray(data: unknown): SongTag[] {
   if (!Array.isArray(data)) return []
