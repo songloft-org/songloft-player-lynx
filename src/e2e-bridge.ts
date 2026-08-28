@@ -75,9 +75,10 @@ import { getPlatformCapabilities } from './native/platform-capabilities.js'
 ;(globalThis as Record<string, unknown>).__E2E_FLOATING_LYRIC__ = {
   requestPermission: () => getFloatingLyricModule().requestPermission(),
   show: () => getFloatingLyricModule().show(),
-  updateLyric: (line: string) => getFloatingLyricModule().updateLyric(line),
+  updateLyric: (line: string, nextLine?: string) => getFloatingLyricModule().updateLyric(line, nextLine),
   hide: () => getFloatingLyricModule().hide(),
   isShowing: () => getFloatingLyricModule().isShowing(),
+  setTwoLine: (twoLine: boolean) => getFloatingLyricModule().setTwoLine(twoLine),
 }
 // Fullscreen video. `platformTarget` / `sourceKind` are exposed alongside the module
 // calls because the interesting failures are decisions, not calls: a wrong platform

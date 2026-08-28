@@ -3,12 +3,13 @@ import { readNativeModules } from './native-modules.js'
 export interface FloatingLyricModule {
   requestPermission(): Promise<boolean>
   show(): Promise<void>
-  updateLyric(line: string): Promise<void>
+  updateLyric(line: string, nextLine?: string): Promise<void>
   hide(): Promise<void>
   isShowing(): Promise<boolean>
   setFontSize(size: 'small' | 'medium' | 'large'): Promise<void>
   setLocked(locked: boolean): Promise<void>
   setOpacity(opacity: number): Promise<void>
+  setTwoLine(twoLine: boolean): Promise<void>
 }
 
 /**
@@ -24,6 +25,7 @@ interface NativeFloatingLyric {
   setFontSize(args: string, callback: (result: string) => void): void
   setLocked(args: string, callback: (result: string) => void): void
   setOpacity(args: string, callback: (result: string) => void): void
+  setTwoLine(args: string, callback: (result: string) => void): void
 }
 
 function createNativeAdapter(native: NativeFloatingLyric): FloatingLyricModule {
@@ -49,9 +51,9 @@ function createNativeAdapter(native: NativeFloatingLyric): FloatingLyricModule {
         native.show('{}', () => resolve())
       })
     },
-    updateLyric(line: string) {
+    updateLyric(line: string, nextLine?: string) {
       return new Promise((resolve) => {
-        native.updateLyric(JSON.stringify({ line }), () => resolve())
+        native.updateLyric(JSON.stringify({ line, nextLine: nextLine ?? '' }), () => resolve())
       })
     },
     hide() {
@@ -90,6 +92,11 @@ function createNativeAdapter(native: NativeFloatingLyric): FloatingLyricModule {
         native.setOpacity(JSON.stringify({ opacity }), () => resolve())
       })
     },
+    setTwoLine(twoLine: boolean) {
+      return new Promise((resolve) => {
+        native.setTwoLine(JSON.stringify({ twoLine }), () => resolve())
+      })
+    },
   }
 }
 
@@ -111,6 +118,7 @@ export function getFloatingLyricModule(): FloatingLyricModule {
     setFontSize: async () => {},
     setLocked: async () => {},
     setOpacity: async () => {},
+    setTwoLine: async () => {},
   }
   return cached
 }

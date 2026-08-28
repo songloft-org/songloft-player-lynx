@@ -15,11 +15,15 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.LinearLayout
 import android.widget.TextView
 
 /**
  * A foreground-less service that manages a floating overlay window showing the
- * current lyric line. The overlay uses SYSTEM_ALERT_WINDOW (TYPE_APPLICATION_OVERLAY).
+ * current lyric line and — two-line mode, the default — the next one beneath
+ * it, the shape every desktop-style lyric overlay uses (current line prominent,
+ * next line smaller and dimmer). The overlay uses SYSTEM_ALERT_WINDOW
+ * (TYPE_APPLICATION_OVERLAY).
  *
  * The lyric window is draggable when unlocked: touch events set the
  * WindowManager LayoutParams x/y as the user drags. Position is persisted to
@@ -31,9 +35,16 @@ import android.widget.TextView
 class FloatingLyricService : Service() {
 
     private var windowManager: WindowManager? = null
-    private var textView: TextView? = null
+    private var container: LinearLayout? = null
+    private var currentView: TextView? = null
+    private var nextView: TextView? = null
     private var showing = false
     private var locked = false
+    private var twoLine = true
+
+    /** Last pushed text, kept so [setTwoLine] can re-render immediately. */
+    private var lastLine: String = ""
+    private var lastNextLine: String = ""
 
     /** `show`/`hide` arrive via `onStartCommand` (already main), `updateText` does not. */
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -81,27 +92,49 @@ class FloatingLyricService : Service() {
      * empty-text height (`Requested h=46`, `mLayoutSeq` unchanged) no matter what
      * was sent.
      */
-    fun updateText(line: String) {
-        mainHandler.post { textView?.text = line }
+    fun updateText(line: String, nextLine: String) {
+        lastLine = line
+        lastNextLine = nextLine
+        mainHandler.post { render() }
+    }
+
+    /** Applies the cached text; must run on the main thread (view mutation). */
+    private fun render() {
+        currentView?.text = lastLine
+        nextView?.let { view ->
+            view.text = lastNextLine
+            // GONE (not INVISIBLE) so the WRAP_CONTENT window shrinks back to the
+            // single-line height when there is no next line or two-line mode is off.
+            view.visibility =
+                if (twoLine && lastNextLine.isNotEmpty()) View.VISIBLE else View.GONE
+        }
+    }
+
+    /** Two-line mode (current + next line) on/off; re-renders from the cache. */
+    fun setTwoLine(two: Boolean) {
+        twoLine = two
+        mainHandler.post { render() }
     }
 
     fun isShowing(): Boolean = showing
 
     fun setFontSize(size: String) {
         mainHandler.post {
-            val textSize = when (size) {
-                "small" -> 14f
-                "large" -> 20f
-                else -> 16f
+            // The next-line preview runs ~0.75x the primary size (11/12/15 for 14/16/20).
+            val sizes = when (size) {
+                "small" -> 14f to 11f
+                "large" -> 20f to 15f
+                else -> 16f to 12f
             }
-            textView?.textSize = textSize
+            currentView?.textSize = sizes.first
+            nextView?.textSize = sizes.second
         }
     }
 
     fun setLocked(locked: Boolean) {
         mainHandler.post {
             this.locked = locked
-            textView?.let { view ->
+            container?.let { view ->
                 val wm = windowManager ?: return@post
                 val params = view.layoutParams as WindowManager.LayoutParams
                 if (locked) {
@@ -127,7 +160,7 @@ class FloatingLyricService : Service() {
     fun setOpacity(opacity: Float) {
         mainHandler.post {
             val alpha = (opacity * 255).toInt().coerceIn(0, 255)
-            textView?.setBackgroundColor(Color.argb(alpha, 0, 0, 0))
+            container?.setBackgroundColor(Color.argb(alpha, 0, 0, 0))
         }
     }
 
@@ -156,11 +189,23 @@ class FloatingLyricService : Service() {
             y = savedY
         }
 
-        val view = TextView(this).apply {
+        val currentLine = TextView(this).apply {
             text = ""
             textSize = 16f
             setTextColor(Color.WHITE)
             setShadowLayer(4f, 0f, 0f, Color.BLACK)
+            gravity = Gravity.CENTER
+        }
+        val nextLine = TextView(this).apply {
+            text = ""
+            textSize = 12f
+            // Dimmer than the current line: it is a preview, not the active lyric.
+            setTextColor(Color.argb(179, 255, 255, 255))
+            setShadowLayer(3f, 0f, 0f, Color.BLACK)
+            gravity = Gravity.CENTER
+        }
+        val view = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(24, 12, 24, 12)
             // The overlay floats over whatever app is in front, so the text has no
@@ -168,10 +213,20 @@ class FloatingLyricService : Service() {
             // a light one — measured on Songloft's own (white) home page, where the
             // line was technically drawn and practically invisible.
             setBackgroundColor(Color.argb(140, 0, 0, 0))
+            addView(currentLine)
+            addView(
+                nextLine,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { topMargin = (resources.displayMetrics.density * 4).toInt() },
+            )
         }
         attachDragHandler(view, params)
 
-        textView = view
+        container = view
+        currentView = currentLine
+        nextView = nextLine
         windowManager?.addView(view, params)
         showing = true
     }
@@ -242,13 +297,15 @@ class FloatingLyricService : Service() {
 
     private fun hideOverlay() {
         if (!showing) return
-        textView?.let {
+        container?.let {
             try {
                 windowManager?.removeView(it)
             } catch (_: Throwable) {
             }
         }
-        textView = null
+        container = null
+        currentView = null
+        nextView = null
         showing = false
         stopSelf()
     }

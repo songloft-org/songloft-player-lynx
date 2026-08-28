@@ -11,12 +11,14 @@ import {
   readFloatingLyricFontSize,
   readFloatingLyricLocked,
   readFloatingLyricOpacity,
+  readFloatingLyricTwoLine,
   readNotificationLyricInTitle,
   writeAutoEnterLyrics,
   writeFloatingLyricEnabled,
   writeFloatingLyricFontSize,
   writeFloatingLyricLocked,
   writeFloatingLyricOpacity,
+  writeFloatingLyricTwoLine,
   writeNotificationLyricInTitle,
 } from '../data/settings-prefs.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
@@ -41,6 +43,7 @@ export function LyricsPage() {
   const [floatingLyricFontSize, setFloatingLyricFontSize] = useState<FloatingLyricFontSize>('medium')
   const [floatingLyricLocked, setFloatingLyricLocked] = useState(false)
   const [floatingLyricOpacity, setFloatingLyricOpacity] = useState<FloatingLyricOpacity>(0.4)
+  const [floatingLyricTwoLine, setFloatingLyricTwoLine] = useState(true)
 
   useEffect(() => {
     let cancelled = false
@@ -70,6 +73,9 @@ export function LyricsPage() {
       .catch(() => {})
     void readFloatingLyricOpacity()
       .then((v) => { if (!cancelled) setFloatingLyricOpacity(v) })
+      .catch(() => {})
+    void readFloatingLyricTwoLine()
+      .then((v) => { if (!cancelled) setFloatingLyricTwoLine(v) })
       .catch(() => {})
     return () => {
       cancelled = true
@@ -133,6 +139,16 @@ export function LyricsPage() {
                   testId={`floating-lyric-font-${option}`}
                 />
               ))}
+            </SettingsSection>
+            <SettingsSection>
+              <SwitchRow
+                icon='music'
+                title={t('settings.floatingLyricTwoLine')}
+                subtitle={t('settings.floatingLyricTwoLineSubtitle')}
+                checked={floatingLyricTwoLine}
+                onChange={(next) => { setFloatingLyricTwoLine(next); void writeFloatingLyricTwoLine(next); void getFloatingLyricModule().setTwoLine(next).catch(() => {}) }}
+                testId='settings-floating-lyric-two-line'
+              />
             </SettingsSection>
             <SettingsSection>
               <SwitchRow

@@ -3,12 +3,14 @@ import '@testing-library/jest-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 
-const { requestPermissionSpy, showSpy, hideSpy, writeEnabledSpy, readEnabled } = vi.hoisted(() => ({
+const { requestPermissionSpy, showSpy, hideSpy, writeEnabledSpy, readEnabled, writeTwoLineSpy, setTwoLineSpy } = vi.hoisted(() => ({
   requestPermissionSpy: vi.fn(async () => true),
   showSpy: vi.fn(async () => {}),
   hideSpy: vi.fn(async () => {}),
   writeEnabledSpy: vi.fn(async () => {}),
   readEnabled: vi.fn(async () => false),
+  writeTwoLineSpy: vi.fn(async () => {}),
+  setTwoLineSpy: vi.fn(async () => {}),
 }))
 
 vi.mock('react-i18next', async () =>
@@ -32,6 +34,8 @@ vi.mock('../data/settings-prefs.js', () => ({
   writeFloatingLyricLocked: vi.fn(async () => {}),
   readFloatingLyricOpacity: vi.fn(async () => 0.4),
   writeFloatingLyricOpacity: vi.fn(async () => {}),
+  readFloatingLyricTwoLine: vi.fn(async () => true),
+  writeFloatingLyricTwoLine: writeTwoLineSpy,
 }))
 vi.mock('../../../native/floating-lyric.js', () => ({
   getFloatingLyricModule: () => ({
@@ -41,6 +45,7 @@ vi.mock('../../../native/floating-lyric.js', () => ({
     setFontSize: vi.fn(async () => {}),
     setLocked: vi.fn(async () => {}),
     setOpacity: vi.fn(async () => {}),
+    setTwoLine: setTwoLineSpy,
   }),
 }))
 
@@ -106,10 +111,27 @@ test('the appearance controls render when the overlay is already on', async () =
   expect(queryByTestId('floating-lyric-font-small')).toBeInTheDocument()
   expect(queryByTestId('floating-lyric-font-medium')).toBeInTheDocument()
   expect(queryByTestId('floating-lyric-font-large')).toBeInTheDocument()
+  expect(queryByTestId('settings-floating-lyric-two-line')).toBeInTheDocument()
   expect(queryByTestId('settings-floating-lyric-lock')).toBeInTheDocument()
   for (const o of ['0.2', '0.4', '0.6', '0.8']) {
     expect(queryByTestId(`floating-lyric-opacity-${o}`), o).toBeInTheDocument()
   }
+})
+
+test('toggling two-line mode writes the pref and pushes it to the module', async () => {
+  withFloatingLyricHost()
+  readEnabled.mockResolvedValue(true)
+  const { queryByTestId } = await renderPage()
+
+  // The pref default is ON, so tapping the switch turns it off.
+  const row = queryByTestId('settings-floating-lyric-two-line')!
+  await act(async () => {
+    fireEvent.tap(row.querySelector('.app-switch') as unknown as Element)
+  })
+  await act(async () => { await Promise.resolve() })
+
+  expect(writeTwoLineSpy).toHaveBeenCalledWith(false)
+  expect(setTwoLineSpy).toHaveBeenCalledWith(false)
 })
 
 test('enabling the overlay asks for permission before showing it', async () => {

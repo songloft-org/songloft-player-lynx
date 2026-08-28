@@ -603,7 +603,7 @@ describe('SongloftDlna module methods exist on both hosts', () => {
 describe('SongloftFloatingLyric module methods exist on Android', () => {
   // The TS interface is in floating-lyric.ts (Promise-shaped, no native interface).
   // The native methods are: requestPermission, show, updateLyric, hide, isShowing.
-  const methods = ['requestPermission', 'show', 'updateLyric', 'hide', 'isShowing', 'setFontSize', 'setLocked', 'setOpacity']
+  const methods = ['requestPermission', 'show', 'updateLyric', 'hide', 'isShowing', 'setFontSize', 'setLocked', 'setOpacity', 'setTwoLine']
 
   test.each(methods)('FloatingLyricModule.%s has @LynxMethod and uses Callback', (method) => {
     const src = hosts.floatingLyric.android

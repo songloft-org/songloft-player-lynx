@@ -61,7 +61,18 @@ class FloatingLyricModule(context: Context) : LynxModule(context) {
         try {
             val json = JSONObject(args)
             val line = json.optString("line", "")
-            service?.updateText(line)
+            val nextLine = json.optString("nextLine", "")
+            service?.updateText(line, nextLine)
+        } catch (_: Exception) {}
+        callback.invoke("{}")
+    }
+
+    @LynxMethod
+    fun setTwoLine(args: String, callback: Callback) {
+        try {
+            val json = JSONObject(args)
+            val twoLine = json.optBoolean("twoLine", true)
+            service?.setTwoLine(twoLine)
         } catch (_: Exception) {}
         callback.invoke("{}")
     }

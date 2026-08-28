@@ -102,14 +102,28 @@ describe('悬浮歌词（Android）', () => {
   test.skipIf(!onAndroid)('updateLyric 真的改变了覆盖层布局', async () => {
     const empty = overlayRequestedHeight()
     expect(empty, '找不到覆盖窗口').toBeGreaterThan(0)
-    // Three lines, so the height difference is unmistakable rather than the couple
-    // of pixels a single short line moves.
-    await call(driver, 'updateLyric', JSON.stringify('第一行\n第二行\n第三行'))
+    // Two lines (current + next), so the height difference is unmistakable rather
+    // than the couple of pixels a single short line moves.
+    await call(driver, 'updateLyric', `${JSON.stringify('第一行')},${JSON.stringify('第二行')}`)
     await driver.sleep(1200)
     expect(
       overlayRequestedHeight(),
       '窗口高度没变 —— 文本没写进去（异常被模块的 catch 吞掉时就是这样）',
     ).toBeGreaterThan(empty + 20)
+  })
+
+  test.skipIf(!onAndroid)('setTwoLine(false) 真的收掉了第二行', async () => {
+    // Previous test left both lines showing, so this window is two lines tall.
+    const two = overlayRequestedHeight()
+    expect(two, '找不到覆盖窗口').toBeGreaterThan(0)
+    await call(driver, 'setTwoLine', 'false')
+    await driver.sleep(1200)
+    expect(
+      overlayRequestedHeight(),
+      '关闭双行后窗口高度没有收缩 —— 第二行没有被 GONE 掉',
+    ).toBeLessThan(two)
+    // Restore the default so later tests / teardown see the reference look.
+    await call(driver, 'setTwoLine', 'true')
   })
 
   test.skipIf(!onAndroid)('hide() 撤掉窗口并停掉 service', async () => {

@@ -243,6 +243,23 @@ export async function writeFloatingLyricLocked(
   await tryWritePref(storage, PREF_FLOATING_LYRIC_LOCKED, String(locked))
 }
 
+const PREF_FLOATING_LYRIC_TWO_LINE = 'floating_lyric_two_line'
+
+/** Default ON: the two-line overlay (current + next line) is the reference look. */
+export async function readFloatingLyricTwoLine(
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<boolean> {
+  const raw = await tryReadPref(storage, PREF_FLOATING_LYRIC_TWO_LINE)
+  return raw !== 'false'
+}
+
+export async function writeFloatingLyricTwoLine(
+  twoLine: boolean,
+  storage: SongloftStorage = getSongloftStorage(),
+): Promise<void> {
+  await tryWritePref(storage, PREF_FLOATING_LYRIC_TWO_LINE, String(twoLine))
+}
+
 export type FloatingLyricOpacity = 0.2 | 0.4 | 0.6 | 0.8
 const OPACITIES = new Set(['0.2', '0.4', '0.6', '0.8'])
 

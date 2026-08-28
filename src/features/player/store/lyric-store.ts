@@ -193,7 +193,9 @@ export const useLyricStore = create<LyricState>((set, get) => {
         const line = lyrics[next]
         const text = line?.text ?? null
         if (text) {
-          void getFloatingLyricModule().updateLyric(text)
+          // The Android overlay's second line is the next lyric line; an empty
+          // string hides it (end of song, or the user turned two-line mode off).
+          void getFloatingLyricModule().updateLyric(text, lyrics[next + 1]?.text ?? '')
         }
         void getAudio().updateNotificationLyric(text)
       }

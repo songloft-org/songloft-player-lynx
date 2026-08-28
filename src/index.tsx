@@ -16,7 +16,7 @@ import { initBackController } from './core/navigation/back-controller.js'
 // `cannot read property 'getNativeLynx' of undefined` and, because these two
 // awaits sit in the startup chain, it took `auth.hydrate()`/`auth.checkAuth()`
 // down with it (auth status stuck at `unknown` forever).
-import { readDefaultPlayMode, readFloatingLyricEnabled } from './features/settings/data/settings-prefs.js'
+import { readDefaultPlayMode, readFloatingLyricEnabled, readFloatingLyricTwoLine } from './features/settings/data/settings-prefs.js'
 import { usePlayerStore, restorePlaybackState } from './features/player/store/index.js'
 import { getFloatingLyricModule } from './native/floating-lyric.js'
 import { getPlatformCapabilities } from './native/platform-capabilities.js'
@@ -88,7 +88,14 @@ void (async () => {
       if (enabled) {
         const m = getFloatingLyricModule()
         const granted = await m.requestPermission()
-        if (granted) void m.show()
+        if (granted) {
+          void m.show()
+          // Native also defaults to two lines, so only the OFF state needs
+          // pushing — otherwise a restart would silently bring the second line
+          // back for a user who switched it off.
+          const twoLine = await readFloatingLyricTwoLine()
+          if (!twoLine) void m.setTwoLine(false).catch(() => {})
+        }
       }
     }
     const auth = useAuthStore.getState()
