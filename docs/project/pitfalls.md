@@ -68,6 +68,22 @@ worker 侧最终走 `listener.apply(ctx, params)`，普通对象没有 `length` 
 - `mock-audio` 的 `play()` 不需先 `load()`，掩盖了冷启动播放键无效；mock 被 `load` 直接告知时长，表达不出真实宿主的「我还不知道」（`durationMs: 0`）——**问一句「mock 能表达宿主的未知态吗」就能提前发现**。
 - **断言先反向验证会红**：批46 有一例是反向验证救回来的——第一版测试摘掉修复后依然绿，它测的是 mock 的同步回显而不是修复本身。闸门写完必须让它红一次，否则你验的是自己的想象。
 
+### 降 minSdk 到 24 以下会让 AAR 的默认接口方法凭空消失
+
+`minSdk` 24→21 后 Android 每次启动即 `AbstractMethodError: abstract method "...ILynxDevToolService.getServiceClass()"`（`SongloftApplication.initLynxService`），而 `./gradlew assembleDebug` 一路绿灯。
+
+- **机制**：minSdk < 24 时 D8 必须脱糖 Java 8 默认接口方法——接口的方法体搬到 `Interface$-CC`、接口方法本身变 abstract，同时给每个实现类注入转发方法。AGP 默认**逐个 library 单独 dex**，脱糖 classpath 取自该 library **POM 里声明的**依赖。POM 少声明了持有接口的模块，D8 就看不见那个默认方法：接口照样被剥空，实现类却拿不到转发方法 ⇒ 运行期必死，且**与设备 API 级别无关**（33 的机器一样崩）。
+- **为什么只崩 devtool**：`ILynxLogService` / `ILynxImageService` 在 `service-api` 里，而 `lynx-service-log` / `-image` 的 POM 恰好声明了它 ⇒ 转发方法在。`ILynxDevToolService` 与 `ILynxHttpService` 在 **`lynx`** artifact 里，`lynx-service-devtool` 的 POM 只声明 `service-api` + `debug-router` ⇒ 转发方法缺失。app module 自己的代码（`SongloftHttpService`）不受影响，它是用全量 classpath dex 的。
+- **修法**：`android/gradle.properties` 加 `android.useFullClasspathForDexingTransform=true`（AGP 8.5 有此 flag），让脱糖按完整运行时 classpath 做。不必回退 minSdk。
+- **顺带修好了另外 3 个还没崩到的类**：前后 dex 对比显示 `xelement/input/LynxEditText`、`xelement/refresh/LynxUIRefresh$createView$1`、`xelement/viewpager/Pager` 各缺 13 个 renderer-host 方法 —— 即 `<input>` / `<refresh>` / viewpager 都埋着同一颗雷。**这类缺失只有 dex 层面看得见**：
+
+```bash
+unzip -o app-debug.apk '*.dex' && dexdump -d classes12.dex \
+  | grep -A400 "Lcom/lynx/service/devtool/LynxDevToolService;"   # 必须列出 getServiceClass
+```
+
+推论：**「Gradle build 成功」对 minSdk 变更零证明力**，唯一判据是真机启动一次 + dex 里数方法。
+
 ## 5. 布局与弹层
 
 ### `position: fixed` 的包含块陷阱
