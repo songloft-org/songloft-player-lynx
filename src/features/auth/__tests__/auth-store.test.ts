@@ -10,10 +10,12 @@ import {
   type SongloftStorage,
 } from '../../../core/storage/index.js'
 import { useAppSessionStore } from '../../../store/index.js'
+import { usePlayerStore } from '../../player/store/index.js'
 import {
   createAuthStore,
   PREF_LAST_USERNAME,
   PREF_SERVER_URL,
+  SECURE_LAST_PASSWORD,
   type AuthStoreDeps,
 } from '../store/auth-store.js'
 
@@ -100,8 +102,9 @@ describe('auth store', () => {
     expect(appConfig.baseUrl).toBe('http://server:1234')
     expect(appConfig.resolvedBaseUrl).toBe('http://server:1234')
     expect(await storage.prefs.get(PREF_SERVER_URL)).toBe('http://server:1234')
-    // last username remembered (prefs); password never persisted
+    // last username remembered (prefs); password remembered (secure store)
     expect(await storage.prefs.get(PREF_LAST_USERNAME)).toBe('admin')
+    expect(await storage.secure.get(SECURE_LAST_PASSWORD)).toBe('admin')
     expect(useAppSessionStore.getState().username).toBe('admin')
   })
 
@@ -131,6 +134,44 @@ describe('auth store', () => {
     expect(store.getState().error).toBe('invalid credentials')
     expect(store.getState().isLoading).toBe(false)
     expect(await deps.tokenStore.hasTokens()).toBe(false)
+    // a failed login must not remember the password
+    expect(await storage.secure.get(SECURE_LAST_PASSWORD)).toBeNull()
+  })
+
+  test('logout stops playback and clears the player state', async () => {
+    const { transport } = makeTransport()
+    const deps = makeDeps(storage, transport)
+    const store = createAuthStore(deps)
+
+    // seed a playing session (song + running player chrome)
+    usePlayerStore.setState({
+      currentSong: { id: 'song-1' } as never,
+      isPlaying: true,
+      showFullPlayer: true,
+    })
+
+    await store.getState().logout()
+
+    // the queue belongs to the signed-out account; an untouched player would
+    // auto-advance into the next track with the just-revoked token
+    expect(usePlayerStore.getState().currentSong).toBeUndefined()
+    expect(usePlayerStore.getState().isPlaying).toBe(false)
+    expect(usePlayerStore.getState().showFullPlayer).toBe(false)
+  })
+
+  test('logout keeps the remembered password for the next login prefill', async () => {
+    const { transport } = makeTransport()
+    const deps = makeDeps(storage, transport)
+    const store = createAuthStore(deps)
+
+    await store.getState().login({ username: 'admin', password: 'real-secret' })
+    await store.getState().logout()
+
+    // sign-out clears the session (tokens, username) but deliberately keeps
+    // the remembered password so the login form prefills the real one — the
+    // Flutter reference behaves the same.
+    expect(await deps.tokenStore.hasTokens()).toBe(false)
+    expect(await storage.secure.get(SECURE_LAST_PASSWORD)).toBe('real-secret')
   })
 
   test('logout clears local first; server revoke failure is ignored', async () => {

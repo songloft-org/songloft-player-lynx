@@ -10,8 +10,14 @@ import {
 import { RouterProvider } from '@tanstack/react-router'
 
 import { appConfig } from '../../../core/config/app-config.js'
+import {
+  createMemoryStorage,
+  getSongloftStorage,
+  setSongloftStorage,
+} from '../../../core/storage/index.js'
 import { createAppRouter } from '../../../router.js'
 import { setMockAuthStatus } from '../../../__tests__/_render-mocks.js'
+import { SECURE_LAST_PASSWORD } from '../store/index.js'
 
 // The login screen depends on three facilities the ReactLynx Vitest env cannot
 // run; all three are mocked to plain stand-ins here (shapes shared via
@@ -28,9 +34,25 @@ import { setMockAuthStatus } from '../../../__tests__/_render-mocks.js'
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
-vi.mock('@lynx-js/lynx-ui-input', async () =>
-  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
-)
+// Local stand-in for the shared `mockLynxUiInput`: this file additionally
+// renders the controlled `value` as text, so the remembered-password prefill
+// (secure store → field) is observable — the shared stand-in drops `value`.
+vi.mock('@lynx-js/lynx-ui-input', () => ({
+  Input: ({
+    className,
+    placeholder,
+    value,
+  }: {
+    className?: string
+    placeholder?: string
+    value?: string
+  }) => (
+    <view className={className}>
+      {placeholder ? <text>{placeholder}</text> : null}
+      {value ? <text>{value}</text> : null}
+    </view>
+  ),
+}))
 vi.mock('@lynx-js/lynx-ui-switch', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSwitch(),
 )
@@ -71,6 +93,14 @@ vi.mock('../../../shared/ui/SongRowOverlays.js', () => ({
  * while the status is `unknown` (the mock's default), so the login card only
  * mounts once auth has resolved to "no session".
  */
+
+// Pin the storage singleton to the in-memory implementation: the ReactLynx
+// vitest env exposes a partial `localStorage` stub (no `setItem`) that the
+// capability probe would otherwise pick, and the remembered-password prefill
+// below needs a real set/get round-trip (tests / DI contract of
+// `setSongloftStorage`).
+setSongloftStorage(createMemoryStorage())
+
 async function renderLogin() {
   setMockAuthStatus('unauthenticated')
   const appRouter = createAppRouter(['/login'])
@@ -84,9 +114,15 @@ async function renderLogin() {
   return { appRouter, ...getQueriesForElement(elementTree.root!) }
 }
 
-afterEach(() => {
+afterEach(async () => {
   appConfig.reset()
   setMockAuthStatus('unknown')
+  // Drop the remembered password so tests stay order-independent.
+  try {
+    await getSongloftStorage().secure.remove(SECURE_LAST_PASSWORD)
+  } catch {
+    /* ignore */
+  }
 })
 
 test('renders the login page with title, labels and login button', async () => {
@@ -122,4 +158,18 @@ test('standalone mode shows the API URL field + insecure-TLS toggle', async () =
   const { queryByText } = await renderLogin()
   expect(queryByText('API base URL')).toBeInTheDocument()
   expect(queryByText('Allow insecure TLS')).toBeInTheDocument()
+})
+
+/**
+ * A successful login remembers the password (secure store, `auth-store`); the
+ * login form must prefill it, so after sign-out the prefilled password is the
+ * real one instead of the dev default — the "password got reset after logout"
+ * complaint. Dev credentials remain the fallback (previous test).
+ */
+test('prefills the remembered password from secure storage over the dev default', async () => {
+  await getSongloftStorage().secure.set(SECURE_LAST_PASSWORD, 'saved-secret')
+  const { queryByText, queryByTestId } = await renderLogin()
+  expect(queryByText('saved-secret')).toBeInTheDocument()
+  const button = queryByTestId('login-button')
+  expect(button?.className).not.toContain('login__button--disabled')
 })

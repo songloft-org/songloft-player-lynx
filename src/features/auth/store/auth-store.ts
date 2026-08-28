@@ -14,6 +14,7 @@ import type { SongloftStorage } from '../../../core/storage/types.js'
 // it here is cycle-free.
 import { getQueryClient } from '../../../lib/query/index.js'
 import { applyInsecureTls } from '../../../native/native-platform.js'
+import { usePlayerStore } from '../../player/store/index.js'
 import { useAppSessionStore } from '../../../store/index.js'
 import { AuthApi } from '../api/auth-api.js'
 import type { AuthStatus } from './guard.js'
@@ -24,6 +25,15 @@ export const PREF_SERVER_URL = 'server_url'
 export const PREF_LAST_USERNAME = 'last_username'
 /** prefs key for the insecure-TLS opt-in. */
 export const PREF_INSECURE_TLS = 'insecure_tls'
+/**
+ * secure-store key for the last password, written on every successful login so
+ * the login form can prefill it again after sign-out — the Flutter reference
+ * does exactly this (`AppPreferences.setLastPassword`). Stored in the `secure`
+ * namespace (Keystore / Keychain; plain same-origin storage on web), the same
+ * tier as the tokens. `logout` deliberately keeps it: the remembered password
+ * is device-local convenience, not session state.
+ */
+export const SECURE_LAST_PASSWORD = 'last_password'
 
 export interface LoginArgs {
   username: string
@@ -171,9 +181,15 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
         // Persist tokens to secure storage (also feeds the in-memory + sync
         // token cache via TokenStore.saveTokens).
         await tokenStore.saveTokens(tokens)
-        // Remember the last username (not a secret → prefs). Passwords are
-        // deliberately never persisted.
+        // Remember the last username (not a secret → prefs) and password
+        // (secret → secure store) so the login form prefills the real
+        // credentials after sign-out, mirroring the Flutter auth provider.
         await tryPref(storage, PREF_LAST_USERNAME, username)
+        try {
+          await storage.secure.set(SECURE_LAST_PASSWORD, password)
+        } catch {
+          // ignore — forgetting the password only costs one retype next time.
+        }
         useAppSessionStore.getState().setUsername(username)
 
         set({ status: 'authenticated', isLoading: false, error: undefined })
@@ -200,6 +216,16 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
         await tokenStore.clearTokens()
       } catch {
         // ignore — even if persistence clear fails, we still sign out locally.
+      }
+      // Stop playback and clear the player: the queue belongs to the
+      // signed-out account, and an untouched player would keep streaming the
+      // next track with the just-revoked token (auto-advance runs outside any
+      // route guard). The reset also tears down the sleep timer and the
+      // play-retry timer.
+      try {
+        usePlayerStore.getState().reset()
+      } catch {
+        // player store not initialized yet (early startup) — nothing to stop
       }
       useAppSessionStore.getState().setUsername(null)
       set({ status: 'unauthenticated', isLoading: false, error: undefined })

@@ -13,6 +13,7 @@ import { getSongloftStorage } from '../../../core/storage/index.js'
 import {
   PREF_LAST_USERNAME,
   PREF_SERVER_URL,
+  SECURE_LAST_PASSWORD,
   useAuthStore,
 } from '../store/index.js'
 
@@ -47,35 +48,49 @@ export function LoginPage() {
   // the password field and login button visibly flicker (batch 11 in PROGRESS).
   // So do NOT "simplify" this to `useState(devCredentials.username)`.
   const [username, setUsername] = useState('')
-  // The password is never persisted, so it has no async write to collide with —
-  // a synchronous initial value here is the same single round-trip that `''`
-  // would have cost.
+  // The password starts at the dev default so a dev device is submittable
+  // without typing; the async prefill below overwrites it with the remembered
+  // password when one exists (written on every successful login, secure
+  // store). Same one-write discipline as the username: on a fresh install
+  // (nothing remembered) the field already shows the dev default, so there is
+  // no async write at all.
   const [password, setPassword] = useState(devCredentials.password)
   const [apiUrl, setApiUrl] = useState(showServerFields ? appConfig.baseUrl : '')
   const [insecureTls, setInsecureTls] = useState(appConfig.insecureTls)
 
-  // Best-effort prefill of the last username / server URL. Reads reject on the
-  // native storage stub (until the JSB binding lands) — swallow and skip.
+  // Best-effort prefill of the last username / remembered password / server
+  // URL. Reads reject on the native storage stub (until the JSB binding
+  // lands) — swallow and skip. All reads run in parallel and all writes happen
+  // in the same synchronous tail, so the controlled Inputs still cost a
+  // single commit (the one-write discipline from the useState comments).
   useEffect(() => {
     let cancelled = false
     const storage = getSongloftStorage()
     void (async () => {
-      let savedName = ''
-      try {
-        savedName = (await storage.prefs.get(PREF_LAST_USERNAME)) ?? ''
-      } catch {
-        /* ignore */
+      const read = async (ns: 'prefs' | 'secure', key: string) => {
+        try {
+          return await storage[ns].get(key)
+        } catch {
+          return null
+        }
       }
-      // One write, whichever source wins — see the useState comment above.
+      const [savedName, savedPassword, savedUrl] = await Promise.all([
+        read('prefs', PREF_LAST_USERNAME),
+        read('secure', SECURE_LAST_PASSWORD),
+        showServerFields
+          ? read('prefs', PREF_SERVER_URL)
+          : Promise.resolve(null),
+      ])
+      if (cancelled) return
+      // One write per field, whichever source wins — see the useState comments.
       const nextName = savedName || devCredentials.username
-      if (!cancelled && nextName) setUsername(nextName)
-      if (!showServerFields) return
-      try {
-        const savedUrl = await storage.prefs.get(PREF_SERVER_URL)
-        if (!cancelled && savedUrl) setApiUrl(savedUrl)
-      } catch {
-        /* ignore */
+      if (nextName) setUsername(nextName)
+      // Skip the round-trip when the remembered password is already what the
+      // field shows (the dev default) — write only when the source differs.
+      if (savedPassword && savedPassword !== devCredentials.password) {
+        setPassword(savedPassword)
       }
+      if (savedUrl) setApiUrl(savedUrl)
     })()
     return () => {
       cancelled = true

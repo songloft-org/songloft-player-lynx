@@ -6,6 +6,7 @@ export {
   PREF_SERVER_URL,
   PREF_LAST_USERNAME,
   PREF_INSECURE_TLS,
+  SECURE_LAST_PASSWORD,
 } from './auth-store.js'
 export type { AuthState, AuthStoreDeps, LoginArgs } from './auth-store.js'
 export {
