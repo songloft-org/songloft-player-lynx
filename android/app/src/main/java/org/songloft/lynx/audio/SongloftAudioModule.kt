@@ -12,6 +12,7 @@ import com.lynx.react.bridge.ReadableArray
 import com.lynx.react.bridge.ReadableMap
 import com.lynx.react.bridge.ReadableType
 import com.lynx.tasm.behavior.LynxContext
+import org.songloft.lynx.platform.ClientFileLog
 
 /**
  * Lynx native module `NativeModules.SongloftAudio` — the real Android audio
@@ -37,6 +38,12 @@ import com.lynx.tasm.behavior.LynxContext
  */
 @UnstableApi
 class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSink {
+
+    init {
+        // Same shared log file the platform module and playback service write;
+        // idempotent, whoever gets constructed first wins the context.
+        ClientFileLog.init(context)
+    }
 
     private fun androidContext(): Context = (mContext as LynxContext).getContext()
 

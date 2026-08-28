@@ -28,6 +28,7 @@ import androidx.media3.session.SessionResult
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import org.songloft.lynx.R
+import org.songloft.lynx.platform.ClientFileLog
 
 /**
  * Process-wide audio engine backing [SongloftAudioModule] and
@@ -405,6 +406,10 @@ object SongloftAudioEngine {
         if (sessionBoundToService) return          // already done
 
         val existingPlayer = player
+        ClientFileLog.write(
+            'I', "audio",
+            "service session bound (pre-existing player=" + (existingPlayer != null) + ")",
+        )
         if (existingPlayer != null) {
             // Player exists but was created before the service. Re-create the
             // MediaSession with the service context so notifications work.
@@ -435,6 +440,7 @@ object SongloftAudioEngine {
      */
     fun ensurePlayer(context: Context): ExoPlayer {
         player?.let { return it }
+        ClientFileLog.write('I', "audio", "player created before service start (race path)")
         val created = buildPlayer(context)
         created.addListener(playerListener)
         player = created
@@ -479,6 +485,7 @@ object SongloftAudioEngine {
             }
             metadataByUrl[item.url] = builder.build()
         }
+        ClientFileLog.write('I', "audio", "queue metadata registered: n=${metadataByUrl.size}")
         refreshCurrentItemMetadata()
     }
 
@@ -491,9 +498,13 @@ object SongloftAudioEngine {
         val p = player ?: return
         val currentItem = p.currentMediaItem ?: return
         val url = currentItem.localConfiguration?.uri?.toString() ?: return
-        val base = metadataByUrl[url] ?: return
+        val queued = metadataByUrl[url]
+        if (queued == null) {
+            ClientFileLog.write('W', "audio", "queue refresh: no metadata for ${truncUrl(url)}")
+            return
+        }
         val newItem = currentItem.buildUpon()
-            .setMediaMetadata(applyLyricLine(base, currentLyricLine))
+            .setMediaMetadata(applyLyricLine(queued, queued, currentLyricLine))
             .build()
         p.replaceMediaItem(p.currentMediaItemIndex, newItem)
     }
@@ -501,6 +512,20 @@ object SongloftAudioEngine {
     /** Current lyric line shown in the notification subtitle. */
     @Volatile
     private var currentLyricLine: String? = null
+
+    /** Log-safe text: null-aware, capped at 60 chars (lyric lines, titles). */
+    private fun truncText(value: Any?): String {
+        val s = value?.toString() ?: "null"
+        return if (s.length <= 60) s else s.take(60) + "..."
+    }
+
+    /** Log-safe URL: host + last path segment (no query, no token risk). */
+    private fun truncUrl(url: String?): String {
+        if (url == null) return "null"
+        val host = try { java.net.URI(url).host } catch (_: Throwable) { null }
+        val last = url.substringBefore('?').substringAfterLast('/')
+        return truncText(if (host != null) "$host/$last" else last)
+    }
 
     /**
      * Update the notification's second line to the current lyric.
@@ -519,29 +544,47 @@ object SongloftAudioEngine {
      */
     fun updateNotificationLyric(lyric: String?) {
         currentLyricLine = lyric?.takeIf { it.isNotBlank() }
-        val p = player ?: return
-        val currentItem = p.currentMediaItem ?: return
+        ClientFileLog.write('I', "audio", "notif lyric: ${truncText(currentLyricLine)}")
+        val p = player ?: run {
+            ClientFileLog.write('W', "audio", "notif lyric dropped: no player")
+            return
+        }
+        val currentItem = p.currentMediaItem ?: run {
+            ClientFileLog.write('W', "audio", "notif lyric dropped: no current item")
+            return
+        }
         val url = currentItem.localConfiguration?.uri?.toString()
-        val base = url?.let { metadataByUrl[it] } ?: currentItem.mediaMetadata
+        val queued = url?.let { metadataByUrl[it] }
+        if (queued == null) {
+            ClientFileLog.write(
+                'W', "audio",
+                "notif lyric: no queue metadata for ${truncUrl(url)}; basing on item metadata",
+            )
+        }
         val newItem = currentItem.buildUpon()
-            .setMediaMetadata(applyLyricLine(base, currentLyricLine))
+            .setMediaMetadata(applyLyricLine(queued ?: currentItem.mediaMetadata, queued, currentLyricLine))
             .build()
         p.replaceMediaItem(p.currentMediaItemIndex, newItem)
     }
 
     /**
      * Overlay the current lyric onto [base] for notification display. When
-     * lyric is null (no lyrics loaded, or the current position is before the
-     * first line), the notification shows the original artist unchanged.
+     * lyric is null the **original** artist is actively restored: [base] can
+     * be the item's own metadata, whose artist slot still holds the previous
+     * line when the queue metadata missed — leaving it untouched pinned that
+     * stale line to the notification across instrumental gaps and track
+     * changes. `setArtist(null)` clears the slot when there is no original to
+     * restore (empty second line beats a wrong one).
      */
-    private fun applyLyricLine(base: MediaMetadata, lyric: String?): MediaMetadata {
+    private fun applyLyricLine(base: MediaMetadata, queued: MediaMetadata?, lyric: String?): MediaMetadata {
         val builder = base.buildUpon()
-        if (lyric != null) builder.setArtist(lyric)
+        builder.setArtist(lyric ?: queued?.artist)
         return builder.build()
     }
 
     fun load(context: Context, url: String, hls: Boolean, headers: Map<String, String>?) {
         val p = ensurePlayer(context)
+        ClientFileLog.write('I', "audio", "load ${truncUrl(url)} hls=$hls queuedMetadata=${metadataByUrl.containsKey(url)}")
         emitState("loading")
         // `DefaultHttpDataSource` is HttpURLConnection-backed and exposes no SSL
         // hook, so self-signed servers work here only because
@@ -690,6 +733,19 @@ object SongloftAudioEngine {
     // -- ExoPlayer listener -> facade events -----------------------------------
 
     private val playerListener = object : Player.Listener {
+        /**
+         * The media notification renders exactly this metadata, so logging it
+         * closes the loop between "we replaced the item" and "the session
+         * actually carries the lyric" — the end of the notif-lyric chain that
+         * an export can verify without logcat.
+         */
+        override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+            ClientFileLog.write(
+                'I', "audio",
+                "session metadata: title=${truncText(mediaMetadata.title)} artist=${truncText(mediaMetadata.artist)}",
+            )
+        }
+
         /**
          * Forward the decoded video dimensions to whoever is displaying them.
          *

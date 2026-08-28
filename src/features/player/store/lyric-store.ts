@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 
+import { logInfo, logWarn } from '../../../core/logging/client-logger.js'
 import { apiPrefix } from '../../../core/config/app-config.js'
 import type { Song } from '../../../models/song.js'
 import { getAudio } from '../../../native/audio-facade.js'
@@ -42,6 +43,12 @@ export interface LyricState {
 
 const EMPTY_MAP = new Map<number, string>()
 
+/** Keep per-line log entries one line long. */
+function truncLog(text: string): string {
+  const flat = text.replace(/\s+/g, ' ').trim()
+  return flat.length <= 40 ? flat : `${flat.slice(0, 40)}...`
+}
+
 const EMPTY = {
   lyrics: [] as LyricLine[],
   currentIndex: -1,
@@ -78,9 +85,14 @@ export const useLyricStore = create<LyricState>((set, get) => {
     loadForSong: async (song, fetcher = defaultLyricFetcher, opts) => {
       const token = ++loadToken
       if (!song || !song.lyricUrl) {
+        // Distinguishing "never had a url" from "load failed" is the first
+        // fork in the notification-lyric chain: no url here means the store
+        // clears and nothing downstream (syncPosition → notif) ever fires.
+        logInfo('lyric', `no lyric url (song=${song?.id ?? 'none'}); lyrics cleared`)
         set({ ...EMPTY })
         return
       }
+      logInfo('lyric', `loading song=${song.id}${opts?.forceRefresh ? ' (refresh)' : ''}`)
       set({ ...EMPTY, isLoading: true })
       try {
         // forceRefresh skips the local cache and tells the backend to re-run its
@@ -92,9 +104,11 @@ export const useLyricStore = create<LyricState>((set, get) => {
 
         if (cached) {
           payload = cached
+          logInfo('lyric', `cache hit song=${song.id}`)
         } else {
           payload = await fetcher(song, { refresh: opts?.forceRefresh })
           if (token !== loadToken) return
+          logInfo('lyric', `fetched song=${song.id} bytes=${(payload.lyric ?? '').length}`)
           cacheLyric(song.id, {
             lyric: payload.lyric,
             tlyric: payload.tlyric,
@@ -138,8 +152,15 @@ export const useLyricStore = create<LyricState>((set, get) => {
           hasRomanization,
           rawLyric: payload.lyric ?? null,
         })
-      } catch {
+        logInfo(
+          'lyric',
+          `loaded song=${song.id} lines=${lyrics.length} synced=${synced} translation=${hasTranslation}`,
+        )
+      } catch (e) {
         if (token !== loadToken) return
+        // The failure was swallowed silently before: an exported log showed a
+        // healthy app while the lyric store sat in loadFailed forever.
+        logWarn('lyric', `load failed song=${song.id}: ${e instanceof Error ? e.message : String(e)}`)
         set({ ...EMPTY, loadFailed: true })
       }
     },
@@ -192,6 +213,10 @@ export const useLyricStore = create<LyricState>((set, get) => {
         set({ currentIndex: next })
         const line = lyrics[next]
         const text = line?.text ?? null
+        // One entry per lyric line (~dozens per song): ties each notification
+        // update to the exact text that was sent, so an export shows whether
+        // the JS side of the chain ever fired at all.
+        logInfo('lyric', `line ${next}/${lyrics.length}: ${text ? truncLog(text) : '(gap)'}`)
         if (text) {
           // The Android overlay's second line is the next lyric line; an empty
           // string hides it (end of song, or the user turned two-line mode off).

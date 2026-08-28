@@ -13,6 +13,7 @@ import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import org.songloft.lynx.R
+import org.songloft.lynx.platform.ClientFileLog
 
 /**
  * Foreground media service backing background playback + notification /
@@ -67,6 +68,8 @@ class SongloftPlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
+        ClientFileLog.init(this)
+        ClientFileLog.write('I', "audio-svc", "created")
         // Custom small icon so the media notification (and the badge over its
         // large icon/artwork) shows the Songloft logo instead of media3's
         // built-in music-note placeholder (`media3_notification_small_icon`).
@@ -82,7 +85,15 @@ class SongloftPlaybackService : MediaSessionService() {
         // Register the session with this MediaSessionService so it manages the
         // foreground notification lifecycle automatically. Without this call the
         // service is unaware of the session and never posts the notification.
-        SongloftAudioEngine.mediaSession?.let { addSession(it) }
+        val session = SongloftAudioEngine.mediaSession
+        if (session == null) {
+            // initFromService unconditionally builds one, so this should be
+            // unreachable — but if it ever happens the notification is exactly
+            // what breaks, so say so in the exported log.
+            ClientFileLog.write('W', "audio-svc", "no session after initFromService; notification will not appear")
+        } else {
+            addSession(session)
+        }
         ensureNotificationChannel()
     }
 
@@ -146,7 +157,14 @@ class SongloftPlaybackService : MediaSessionService() {
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
-        return SongloftAudioEngine.mediaSession
+        val session = SongloftAudioEngine.mediaSession
+        // A null here refuses the controller connection — the media notification
+        // never updates. Log the refusal; it is the one branch that produces the
+        // "notification never shows lyrics" symptom with no visible error.
+        if (session == null) {
+            ClientFileLog.write('W', "audio-svc", "onGetSession: session is null; controller refused")
+        }
+        return session
     }
 
     /**
@@ -156,6 +174,7 @@ class SongloftPlaybackService : MediaSessionService() {
     override fun onTaskRemoved(rootIntent: Intent?) {
         val session = SongloftAudioEngine.mediaSession
         val player = session?.player
+        ClientFileLog.write('I', "audio-svc", "task removed (playing=${player?.playWhenReady})")
         if (player == null || !player.playWhenReady) {
             // Nothing playing -- stop the service immediately.
             stopSelf()
@@ -164,6 +183,7 @@ class SongloftPlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        ClientFileLog.write('I', "audio-svc", "destroyed")
         // Let the engine release player + session; the base class then cleans
         // up its notification manager.
         SongloftAudioEngine.releaseFromService()
