@@ -1,5 +1,6 @@
 import { avSession } from '@kit.AVSessionKit'
 import { common } from '@kit.AbilityKit'
+import { ClientFileLog } from '../platform/ClientFileLog'
 
 export type SessionCommandCallback = (command: string) => void
 
@@ -13,9 +14,15 @@ export class AVSessionController {
   }
 
   async create(): Promise<void> {
-    this.session = await avSession.createAVSession(this.context, 'SongloftAudio', 'audio')
-    await this.session.activate()
-    this.registerCommands()
+    try {
+      this.session = await avSession.createAVSession(this.context, 'SongloftAudio', 'audio')
+      await this.session.activate()
+      this.registerCommands()
+      ClientFileLog.write('I', 'audio-svc', 'avsession created + activated')
+    } catch (err) {
+      ClientFileLog.write('E', 'audio-svc', `avsession create failed: ${String(err)}`)
+      throw err
+    }
   }
 
   async destroy(): Promise<void> {
@@ -27,6 +34,8 @@ export class AVSessionController {
   async updateMetadata(title: string, artist: string, album: string,
     durationMs: number, coverUrl: string): Promise<void> {
     if (!this.session) return
+    ClientFileLog.write('I', 'audio-svc',
+      `metadata title=${ClientFileLog.truncText(title)} artist=${ClientFileLog.truncText(artist)}`)
     const metadata: avSession.AVMetadata = {
       assetId: title,
       title: title,
@@ -63,6 +72,7 @@ export class AVSessionController {
       position: position,
       speed: speed,
     }
+    ClientFileLog.write('I', 'audio-svc', `playbackState=${sessionState} pos=${Math.round(positionMs)}`)
     await this.session.setAVPlaybackState(playbackState)
   }
 

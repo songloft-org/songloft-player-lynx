@@ -97,109 +97,21 @@ final class SongloftPlatformModule: NSObject, LynxModule {
   // The TS layer (`core/logging/client-logger.ts`) owns timestamps and token
   // redaction; this side is a dumb appender that owns the file lifecycle —
   // per-day file name, 3-day cleanup and the 20 MB per-session cap, mirroring
-  // `file_logger_native.dart`.
-
-  private static let logQueue = DispatchQueue(label: "org.songloft.lynx.clientlog")
-  private static var logFileUrl: URL?
-  private static var logSessionBytes = 0
-  private static var logCapReached = false
-  private static let logMaxSessionBytes = 20 * 1024 * 1024
-  private static let logMaxAgeDays = 3
-  // Same file-name shape as Flutter's `_logNamePattern`, so cleanup only ever
-  // touches files this feature wrote.
-  private static let logNamePattern = try! NSRegularExpression(
-    pattern: "^songloft_(\\d{4}-\\d{2}-\\d{2})(?:_[A-Za-z0-9]+)?\\.log$"
-  )
-  private static let logDateFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    return formatter
-  }()
-
-  private static func logDirectory() -> URL? {
-    guard let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-    else { return nil }
-    let dir = base.appendingPathComponent("logs", isDirectory: true)
-    do {
-      try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-      return dir
-    } catch {
-      return nil
-    }
-  }
-
-  /// Lazily create today's log file and sweep files older than 3 days.
-  private static func ensureLogFile() -> URL? {
-    if let existing = logFileUrl { return existing }
-    guard let dir = logDirectory() else { return nil }
-    cleanOldLogs(in: dir)
-    let url = dir.appendingPathComponent("songloft_\(logDateFormatter.string(from: Date())).log")
-    logFileUrl = url
-    return url
-  }
-
-  private static func cleanOldLogs(in dir: URL) {
-    let cutoff = Date().addingTimeInterval(-Double(logMaxAgeDays) * 24 * 60 * 60)
-    guard let entries = try? FileManager.default.contentsOfDirectory(
-      at: dir, includingPropertiesForKeys: nil
-    ) else { return }
-    for entry in entries {
-      let name = entry.lastPathComponent
-      let range = NSRange(name.startIndex..<name.endIndex, in: name)
-      guard let match = logNamePattern.firstMatch(in: name, range: range),
-        let dateRange = Range(match.range(at: 1), in: name),
-        let date = logDateFormatter.date(from: String(name[dateRange]))
-      else { continue }
-      if date < cutoff {
-        try? FileManager.default.removeItem(at: entry)
-      }
-    }
-  }
+  // `file_logger_native.dart`. The implementation lives in `ClientFileLog`
+  // (bottom of this file) so native subsystems (the audio engine) can log
+  // into the same file an export reads.
 
   /// Append one already-formatted line. Fire-and-forget: JS never waits.
   @objc func logWrite(_ line: String) {
-    Self.logQueue.async {
-      guard !Self.logCapReached, let url = Self.ensureLogFile() else { return }
-      guard let data = (line + "\n").data(using: .utf8) else { return }
-      if Self.logSessionBytes + data.count > Self.logMaxSessionBytes {
-        Self.logCapReached = true
-        let notice = "[FileLogger] session log cap reached "
-          + "(\(Self.logMaxSessionBytes / (1024 * 1024))MB); further lines go to console only\n"
-        if let noticeData = notice.data(using: .utf8) {
-          Self.append(noticeData, to: url)
-        }
-        return
-      }
-      Self.append(data, to: url)
-      Self.logSessionBytes += data.count
-    }
-  }
-
-  private static func append(_ data: Data, to url: URL) {
-    if FileManager.default.fileExists(atPath: url.path) {
-      if let handle = try? FileHandle(forWritingTo: url) {
-        defer { try? handle.close() }
-        _ = try? handle.seekToEnd()
-        try? handle.write(contentsOf: data)
-      }
-    } else {
-      try? data.write(to: url, options: .atomic)
-    }
+    ClientFileLog.writeRaw(line)
   }
 
   /// Read the current log file; callback receives (error, content-or-null).
   @objc func logRead(_ callback: @escaping LynxCallbackBlock) {
-    Self.logQueue.async {
-      guard let url = Self.ensureLogFile(),
-        FileManager.default.fileExists(atPath: url.path),
-        let data = try? Data(contentsOf: url),
-        let content = String(data: data, encoding: .utf8)
-      else {
-        DispatchQueue.main.async { callback([NSNull(), NSNull()] as NSArray) }
-        return
+    ClientFileLog.read { error, content in
+      DispatchQueue.main.async {
+        callback([error ?? NSNull(), content ?? NSNull()] as NSArray)
       }
-      DispatchQueue.main.async { callback([NSNull(), content] as NSArray) }
     }
   }
 
@@ -315,5 +227,152 @@ private class PickerDelegate: NSObject, UIDocumentPickerDelegate {
         self?.callback([NSNull(), resultBody] as NSArray)
       }
     }.resume()
+  }
+}
+
+/**
+ * Process-wide client log file — the native-side sibling of the TS
+ * `client-logger` (`src/core/logging/client-logger.ts`). Both write the same
+ * per-day file, so an exported log bundle carries native diagnostics (the
+ * audio engine's lock-screen metadata chain) next to the JS ones. Before this
+ * existed, native Swift code logged nowhere but the console — invisible to
+ * "export logs", exactly the blind spot that made notification-lyric reports
+ * undiagnosable.
+ *
+ * Lives in this file rather than its own because the Xcode project lists
+ * source files explicitly (`project.pbxproj`); sharing the module's file
+ * keeps the project untouched — and this module is already the log's host.
+ *
+ * Line shapes:
+ * - `writeRaw` appends verbatim — `SongloftPlatformModule.logWrite` (the TS
+ *   path) lands here with lines already formatted (timestamp + redaction).
+ * - `write` stamps `[HH:mm:ss.SSS] L/tag ` in the same shape the TS layer
+ *   uses (`formatLogEntry`), so the file reads as one continuous timeline.
+ *   All formatting happens on the log queue: `DateFormatter` is not
+ *   thread-safe and callers arrive from several threads.
+ */
+enum ClientFileLog {
+  private static let queue = DispatchQueue(label: "org.songloft.lynx.clientlog")
+  private static var fileUrl: URL?
+  private static var sessionBytes = 0
+  private static var capReached = false
+  private static let maxSessionBytes = 20 * 1024 * 1024
+  private static let maxAgeDays = 3
+  // Same file-name shape as Flutter's `_logNamePattern`, so cleanup only ever
+  // touches files this feature wrote.
+  private static let namePattern = try! NSRegularExpression(
+    pattern: "^songloft_(\\d{4}-\\d{2}-\\d{2})(?:_[A-Za-z0-9]+)?\\.log$"
+  )
+  private static let dayFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    return formatter
+  }()
+  private static let timeFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "HH:mm:ss.SSS"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    return formatter
+  }()
+
+  /// Append one line, stamped `[HH:mm:ss.SSS] L/tag ` to match the TS layer's
+  /// entry shape. Fire-and-forget, thread-safe, never throws into the caller.
+  static func write(_ level: String, tag: String, _ message: String) {
+    queue.async {
+      let line = "[\(timeFormatter.string(from: Date()))] \(level)/\(tag) \(message)"
+      appendLine(line)
+    }
+  }
+
+  /// Append one already-formatted line (the TS `logWrite` path).
+  static func writeRaw(_ line: String) {
+    queue.async {
+      appendLine(line)
+    }
+  }
+
+  /// Read the current log file on the log queue. `completion(error, content)`
+  /// carries a null error, or null content when no file exists yet.
+  static func read(_ completion: @escaping (String?, String?) -> Void) {
+    queue.async {
+      guard let url = ensureLogFile(),
+        FileManager.default.fileExists(atPath: url.path),
+        let data = try? Data(contentsOf: url),
+        let content = String(data: data, encoding: .utf8)
+      else {
+        completion(nil, nil)
+        return
+      }
+      completion(nil, content)
+    }
+  }
+
+  private static func appendLine(_ line: String) {
+    guard !capReached, let url = ensureLogFile() else { return }
+    guard let data = (line + "\n").data(using: .utf8) else { return }
+    if sessionBytes + data.count > maxSessionBytes {
+      capReached = true
+      let notice = "[ClientFileLog] session log cap reached "
+        + "(\(maxSessionBytes / (1024 * 1024))MB); further lines go to console only\n"
+      if let noticeData = notice.data(using: .utf8) {
+        append(noticeData, to: url)
+      }
+      return
+    }
+    append(data, to: url)
+    sessionBytes += data.count
+  }
+
+  private static func logDirectory() -> URL? {
+    guard let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+    else { return nil }
+    let dir = base.appendingPathComponent("logs", isDirectory: true)
+    do {
+      try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+      return dir
+    } catch {
+      return nil
+    }
+  }
+
+  /// Lazily create today's log file and sweep files older than 3 days.
+  private static func ensureLogFile() -> URL? {
+    if let existing = fileUrl { return existing }
+    guard let dir = logDirectory() else { return nil }
+    cleanOldLogs(in: dir)
+    let url = dir.appendingPathComponent("songloft_\(dayFormatter.string(from: Date())).log")
+    fileUrl = url
+    return url
+  }
+
+  private static func cleanOldLogs(in dir: URL) {
+    let cutoff = Date().addingTimeInterval(-Double(maxAgeDays) * 24 * 60 * 60)
+    guard let entries = try? FileManager.default.contentsOfDirectory(
+      at: dir, includingPropertiesForKeys: nil
+    ) else { return }
+    for entry in entries {
+      let name = entry.lastPathComponent
+      let range = NSRange(name.startIndex..<name.endIndex, in: name)
+      guard let match = namePattern.firstMatch(in: name, range: range),
+        let dateRange = Range(match.range(at: 1), in: name),
+        let date = dayFormatter.date(from: String(name[dateRange]))
+      else { continue }
+      if date < cutoff {
+        try? FileManager.default.removeItem(at: entry)
+      }
+    }
+  }
+
+  private static func append(_ data: Data, to url: URL) {
+    if FileManager.default.fileExists(atPath: url.path) {
+      if let handle = try? FileHandle(forWritingTo: url) {
+        defer { try? handle.close() }
+        _ = try? handle.seekToEnd()
+        try? handle.write(contentsOf: data)
+      }
+    } else {
+      try? data.write(to: url, options: .atomic)
+    }
   }
 }

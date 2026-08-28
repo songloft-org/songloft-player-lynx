@@ -3,6 +3,7 @@ import { common } from '@kit.AbilityKit'
 import { SongloftAudioEngine } from './SongloftAudioEngine'
 import { AVSessionController } from './AVSessionController'
 import { BackgroundTaskManager } from './BackgroundTaskManager'
+import { ClientFileLog } from '../platform/ClientFileLog'
 
 interface AudioStateEvent {
   state: string
@@ -33,6 +34,8 @@ export class SongloftAudioModule extends LynxModule {
   constructor(context: LynxContext, param?: Object) {
     super(context, param)
     this.abilityContext = param as common.UIAbilityContext
+    // Same shared log file the platform module writes; idempotent.
+    ClientFileLog.init(this.abilityContext)
     this.sessionController = new AVSessionController(this.abilityContext)
     this.backgroundTask = new BackgroundTaskManager(this.abilityContext)
     this.initEngine()
@@ -45,10 +48,12 @@ export class SongloftAudioModule extends LynxModule {
     this.engine.onStateChange = (state: string) => {
       const event: AudioStateEvent = { state: state }
       this.context.sendGlobalEvent('SongloftAudio.stateChanged', [event])
+      ClientFileLog.write('I', 'audio', `state=${state}`)
       this.updateSessionState(state)
     }
 
     this.engine.onProgress = (positionMs: number, durationMs: number) => {
+      // No log here: the tick fires every 500 ms and would bury the file.
       const event: AudioProgressEvent = { positionMs: positionMs, bufferedMs: positionMs, durationMs: durationMs }
       this.context.sendGlobalEvent('SongloftAudio.progress', [event])
     }
@@ -56,6 +61,7 @@ export class SongloftAudioModule extends LynxModule {
     this.engine.onError = (code: number, message: string) => {
       const event: AudioErrorEvent = { code: code, message: message }
       this.context.sendGlobalEvent('SongloftAudio.error', [event])
+      ClientFileLog.write('E', 'audio', `error code=${code} ${ClientFileLog.truncText(message)}`)
     }
 
     this.engine.onTrackEnd = () => {
@@ -71,6 +77,7 @@ export class SongloftAudioModule extends LynxModule {
 
   public load(url: string, opts?: Record<string, Object>): void {
     const startMs = opts?.startMs as number ?? 0
+    ClientFileLog.write('I', 'audio', `load ${ClientFileLog.truncUrl(url)} startMs=${startMs}`)
     this.backgroundTask.startBackgroundTask()
     this.engine?.play(url, startMs)
   }

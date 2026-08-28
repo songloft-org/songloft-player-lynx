@@ -125,6 +125,7 @@ final class SongloftAudioEngine {
     for item in items where !item.url.isEmpty {
       metadataByURL[item.url] = item
     }
+    ClientFileLog.write("I", tag: "audio", "queue metadata registered: n=\(metadataByURL.count)")
   }
 
   func load(url: String, hls: Bool, headers: [String: String]?) {
@@ -134,6 +135,7 @@ final class SongloftAudioEngine {
     reachedEnd = false
     itemFailed = false
     currentURL = url
+    ClientFileLog.write("I", tag: "audio", "load \(Self.truncUrl(url)) hls=\(hls) queuedMetadata=\(metadataByURL[url] != nil)")
     emitState("loading")
 
     guard let assetURL = URL(string: url) else {
@@ -236,6 +238,7 @@ final class SongloftAudioEngine {
 
   func updateNotificationLyric(_ lyric: String?) {
     currentLyricLine = lyric
+    ClientFileLog.write("I", tag: "audio", "notif lyric: \(Self.truncLog(currentLyricLine))")
     updateNowPlaying()
   }
 
@@ -454,6 +457,23 @@ final class SongloftAudioEngine {
     return seconds.isFinite && seconds > 0 ? seconds * 1000 : 0
   }
 
+  /// Log-safe text: nil-aware, capped at 60 chars (lyric lines, titles).
+  private static func truncLog(_ value: String?) -> String {
+    guard let value, !value.isEmpty else { return "null" }
+    return value.count <= 60 ? value : String(value.prefix(60)) + "..."
+  }
+
+  /// Log-safe URL: host + last path segment. Never the query — the playback
+  /// URL carries `?access_token=…`, and native `ClientFileLog.write` does not
+  /// run the TS layer's token redaction (that only covers the `logWrite` path).
+  private static func truncUrl(_ url: String?) -> String {
+    guard let url else { return "null" }
+    let host = URL(string: url)?.host
+    let last = url.split(separator: "?").first?
+      .split(separator: "/").last.map(String.init) ?? ""
+    return truncLog(host != nil ? "\(host!)/\(last)" : last)
+  }
+
   // MARK: - Lock screen / Control Center
 
   private func updateNowPlaying() {
@@ -482,6 +502,14 @@ final class SongloftAudioEngine {
       }
     }
     MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    // The lock screen renders exactly this dictionary — logging it closes the
+    // loop between "JS sent the line" and "Now Playing actually carries it",
+    // the end of the notif-lyric chain an export can verify.
+    ClientFileLog.write(
+      "I", tag: "audio",
+      "now playing: title=\(Self.truncLog(metadata?.title)) artist=\(Self.truncLog(metadata?.artist)) "
+        + "lyric=\(Self.truncLog(currentLyricLine))",
+    )
   }
 
   /**
