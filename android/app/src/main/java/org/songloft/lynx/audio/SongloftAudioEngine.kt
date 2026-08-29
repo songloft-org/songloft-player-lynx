@@ -639,6 +639,10 @@ object SongloftAudioEngine {
 
     fun play(context: Context) {
         val p = ensurePlayer(context)
+        // Force a false→true transition so ExoPlayer re-triggers audio focus
+        // acquisition and playback initiation. Without this, auto-advance after
+        // STATE_ENDED is a no-op because playWhenReady is already true.
+        if (p.playWhenReady) p.playWhenReady = false
         p.play()
     }
 

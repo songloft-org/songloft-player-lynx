@@ -540,7 +540,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       set({ isPlaying: false })
       return
     }
-    void playAtIndex(nextIdx)
+    void playAtIndex(nextIdx).catch((e) => {
+      console.error('[player] auto-advance failed:', e)
+    })
   }
 
   return {
