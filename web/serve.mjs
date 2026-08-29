@@ -198,6 +198,12 @@ const server = createServer((req, res) => {
     return serveFile(res, BUNDLE_PATH, 'application/octet-stream')
   }
 
+  // Route: /demo-plugin.web.bundle → child frame demo bundle (Phase 0 验证)
+  if (url === '/demo-plugin.web.bundle') {
+    const demoBundle = resolve(repoRoot, 'demo-frame-plugin', 'dist', 'web', 'main.web.bundle')
+    return serveFile(res, demoBundle, 'application/octet-stream')
+  }
+
   // Route: /web-core/static/* → @lynx-js/web-core production assets
   const WEB_CORE_PREFIX = '/web-core/static/'
   if (url.startsWith(WEB_CORE_PREFIX)) {

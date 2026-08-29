@@ -886,6 +886,7 @@ describe('every native module is registered in the host bootstrap', () => {
     { name: 'SongloftVideo', android: 'SongloftVideoModule', ios: 'SongloftVideoModule', harmony: 'SongloftVideoModule' },
     { name: 'SongloftNavigation', android: 'SongloftNavigationModule', ios: null, harmony: 'SongloftNavigationModule' },
     { name: 'SongloftSongCache', android: 'SongloftSongCacheModule', ios: 'SongloftSongCacheModule', harmony: 'SongloftSongCacheModule' },
+    { name: 'SongloftPluginBridge', android: 'SongloftPluginBridgeModule', ios: 'SongloftPluginBridgeModule', harmony: 'SongloftPluginBridgeModule' },
   ]
 
   test.each(modules.filter((m) => m.android))('%s is registered on Android', (mod) => {

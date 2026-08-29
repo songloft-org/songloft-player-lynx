@@ -291,6 +291,7 @@ cached = nm.SongloftDlna as DlnaModule
 | SongloftDlna | `SongloftDlnaModule.kt` | SSDP M-SEARCH 发现 + SOAP AVTransport 控制。**TS 侧禁止 `as DlnaModule` 强转**（见本节开头的调用约定，DLNA 页就是这么崩的） |
 | SongloftNavigation | `navigation/` | 返回键。三个方法全是 fire-and-forget 无 `Callback`（宿主是跟随方）；反向的「一次返回按键」由 `MainActivity` 经 `sendGlobalEvent` 发出（`LynxView` 在那里）。`BackKeyState` 持有 JS 镜像过来的 `consumable` 标志 + 看门狗。**iOS 刻意不实现**——没有返回键可拦 |
 | SongloftSongCache | `cache/` | 单曲离线缓存（download/getCacheInfo/remove/getCacheSize/clearAll）。四条设计约束写在类的 KDoc 里、**每条都是它曾经出过的 bug**：存 `filesDir` 而非 `cacheDir`（用户指定的缓存不能被 OS 回收）、下载走 `InsecureTls`（否则自签名服务器下缓存失败而播放正常）、原子写 `.part` 再 rename、超限报机器可读的 `limit_exceeded` 哨兵而非人话 |
+| SongloftPluginBridge | `plugin/SongloftPluginBridgeModule.kt` | 父子 `<frame>` 通信桥（registerHost/unregisterHost/registerChild/hostCall/hostReply/pushToChild）。静态 `ConcurrentHashMap` 按 `frameId` 注册宿主/子 `LynxContext`，`unregisterHost` 同时清理 `childRegistry`。仅 Lynx 原生渲染插件（`renderEngine: "lynx"`）使用 |
 | （非 Lynx 模块）| `net/` | `SongloftHttpService` = 宿主 `fetch` 服务；`InsecureTls` = TLS 开关 |
 
 ### iOS（Swift）
@@ -306,6 +307,7 @@ cached = nm.SongloftDlna as DlnaModule
 | SongloftVideo | `SongloftVideoModule.swift` | 全屏视频：`AVPlayerViewController` 接引擎的 `AVPlayer`。三条必须写：`updatesNowPlayingInfoCenter = false`（否则覆盖锁屏元数据）、`videoGravity = .resizeAspect`（否则拉伸）、close 时**先 `vc.player = nil` 再 dismiss**（否则暂停共享播放器）。⚠️ 模块 callback 用错类型（`LynxCallbackBlock`）时 selector 仍能匹配并被调用，但拿不到 scene、**静默返回 false** |
 | SongloftLiveActivity | `LiveActivityModule.swift` | 锁屏 Live Activity（`NowPlayingAttributes`）。类是 `@available(iOS 16.2, *)` 而部署目标 16.0 ⇒ `buildConfig()` 里的注册**必须包 `if #available`**，否则硬编译错（批45 踩过）。16.0/16.1 上不注册，TS 侧降级为 no-op |
 | SongloftSongCache | `SongloftSongCacheModule.swift` | 单曲离线缓存，与 Android 同契约（含 `limit_exceeded` 哨兵逐字一致，由闸门锁住） |
+| SongloftPluginBridge | `SongloftPluginBridgeModule.swift` | 父子 `<frame>` 通信桥，`LynxContextModule` 协议实现。`NSLock` 保护静态 `hostRegistry`/`childRegistry`，`unregisterHost` 同时清理两个注册表。与 Android 同契约 |
 | （非 Lynx 模块）| `SongloftHttpService.swift` / `InsecureTls.swift` / `InsecureMediaLoader.swift` | 宿主 `fetch` 服务 / TLS 开关 + 共享 `URLSession` / 自签名下的媒体字节流加载器 |
 
 ### HarmonyOS（ArkTS）
@@ -320,13 +322,14 @@ cached = nm.SongloftDlna as DlnaModule
 | SongloftSongCacheModule | `SongloftSongCacheModule.ets` | 单曲离线缓存，filesDir 存储，与 Android/iOS 同契约 |
 | SongloftVideoModule | `SongloftVideoModule.ets` | 全屏视频（共享 AVPlayer） |
 | SongloftDlnaModule | `SongloftDlnaModule.ets` | UDP 多播 SSDP 发现 + SOAP AVTransport 控制 |
+| SongloftPluginBridgeModule | `modules/plugin/SongloftPluginBridgeModule.ets` | 父子 `<frame>` 通信桥，继承 `LynxModule`。模块级 `Map` 注册表（HarmonyOS 单 JS VM 共享），与 Android/iOS 同契约 |
 | （非 Lynx 模块）| `SongloftHttpService.ets` / `InsecureTls.ets` | 宿主 HTTP 服务替换 SDK 默认 / TLS 开关 |
 
 > HarmonyOS 无等价 API 的模块：FloatingLyric、LiveActivity —— 这两个在 TS 侧由 `NativeModules` 探测降级为 no-op。
 
 ### 契约闸门的覆盖范围
 
-`src/__tests__/native-module-contract.test.ts` 逐字校验 iOS⇔Android⇔HarmonyOS 的方法名/事件名/键名。**已无模块级盲区**：**9 个**模块全在闸门内 —— Audio / Storage / Platform / Dlna / Video / SongCache / Navigation / FloatingLyric（Android 独有）/ LiveActivity（iOS 独有）。HarmonyOS 另有注册验证（EntryAbility.ets 的 `registerModule` 调用）和 module.json5 权限/backgroundModes 结构验证。
+`src/__tests__/native-module-contract.test.ts` 逐字校验 iOS⇔Android⇔HarmonyOS 的方法名/事件名/键名。**已无模块级盲区**：**10 个**模块全在闸门内 —— Audio / Storage / Platform / Dlna / Video / SongCache / Navigation / FloatingLyric（Android 独有）/ LiveActivity（iOS 独有）/ PluginBridge（Lynx 原生渲染插件通信桥）。HarmonyOS 另有注册验证（EntryAbility.ets 的 `registerModule` 调用）和 module.json5 权限/backgroundModes 结构验证。
 
 闸门现在验的是**语义而非子串**，三处刻意如此（都是踩过才补上的）：
 
@@ -336,7 +339,7 @@ cached = nm.SongloftDlna as DlnaModule
 
 新增模块时按 `hosts` 表 + modules 表 + 一段 `describe` 三处扩闸门，**并更新上面那两张平台模块表**。详见 `docs/archive/2026-08-14-audit-fix-plan.md`。
 
-> ⚠️ **最后那一步以前不在清单上，于是漂了**：闸门早已覆盖 9 个模块，而上面两张表只列了 6 个 Android + 5 个 iOS 条目 —— `SongloftDlna` / `SongloftNavigation` / `SongloftSongCache` / `SongloftVideo`(iOS) / `SongloftLiveActivity` 五处缺失，2026-08-26 才补上。**闸门保护的是代码，保护不了描述代码的表格**；而「新增方法要三侧同步」这条铁律的执行者是人，人读的是这张表。同类实例见 §6 与 `docs/project/handoff.md` 文首那条警示。
+> ⚠️ **最后那一步以前不在清单上，于是漂了**：闸门早已覆盖 9 个模块，而上面两张表只列了 6 个 Android + 5 个 iOS 条目 —— `SongloftDlna` / `SongloftNavigation` / `SongloftSongCache` / `SongloftVideo`(iOS) / `SongloftLiveActivity` 五处缺失，2026-08-26 才补上。2026-08-29 新增第 10 个模块 `SongloftPluginBridge`（Lynx 原生渲染父子 frame 通信桥），三表同步更新。**闸门保护的是代码，保护不了描述代码的表格**；而「新增方法要三侧同步」这条铁律的执行者是人，人读的是这张表。同类实例见 §6 与 `docs/project/handoff.md` 文首那条警示。
 
 ### 视频画面借用同一个播放器（批49）
 

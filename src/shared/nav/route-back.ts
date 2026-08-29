@@ -79,6 +79,7 @@ const EXPLICIT_PARENTS: Record<string, string> = {
   '/player/lyrics/adjust': '/player',
   '/player/dlna': '/player',
   '/player/eq': '/player',
+  '/demo-frame': '/',
 }
 
 /** Prefixes whose parent is the same for every child path under them. */

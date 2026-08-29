@@ -23,6 +23,7 @@ import { HomePage } from './features/home/index.js'
 import { AboutPage, AppearancePage, CacheManagePage, DataPage, DiagnosticsPage, LicensesPage, LyricsPage, PlaybackPage, ProxySettingsPage, ServerEditPage, ServerListPage, SettingsPage, ThemeCatalogPage, UpgradePage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
+import { DemoFramePage } from './features/jsplugin/pages/DemoFramePage.js'
 import { PlayerPage } from './routes/PlayerPage.js'
 import { EqualizerPage } from './features/player/pages/EqualizerPage.js'
 import { LyricAdjustPage } from './features/player/pages/LyricAdjustPage.js'
@@ -344,6 +345,13 @@ const tabConfigRoute = createRoute({
   component: TabConfigPage,
 })
 
+/** `/demo-frame` — Phase 0 验证：<frame> 加载子 bundle (临时路由，验证后删除). */
+const demoFrameRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/demo-frame',
+  component: DemoFramePage,
+})
+
 /** `/playlists/$id` — playlist detail, inside the shell (batch 6). */
 const playlistDetailRoute = createRoute({
   getParentRoute: () => libraryLayoutRoute,
@@ -445,6 +453,7 @@ const routeTree = rootRoute.addChildren([
     pluginRegistryRoute,
     pluginWebViewRoute,
     tabConfigRoute,
+    demoFrameRoute,
   ]),
 ])
 

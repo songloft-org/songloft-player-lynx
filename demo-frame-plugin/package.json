@@ -1,0 +1,17 @@
+{
+  "name": "demo-frame-plugin",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "rspeedy build"
+  },
+  "dependencies": {
+    "@lynx-js/react": "0.123.2"
+  },
+  "devDependencies": {
+    "@lynx-js/react-rsbuild-plugin": "0.18.2",
+    "@lynx-js/rspeedy": "0.16.2",
+    "@lynx-js/types": "4.0.0"
+  }
+}

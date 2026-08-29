@@ -8,6 +8,7 @@ import { SongloftDlnaModule } from '../modules/dlna/SongloftDlnaModule'
 import { SongloftVideoModule } from '../modules/video/SongloftVideoModule'
 import { SongloftSongCacheModule } from '../modules/cache/SongloftSongCacheModule'
 import { SongloftNavigationModule } from '../modules/navigation/SongloftNavigationModule'
+import { SongloftPluginBridgeModule } from '../modules/plugin/SongloftPluginBridgeModule'
 import { SystemAppearance } from '../modules/system/SystemAppearance'
 
 @Entry
@@ -27,6 +28,7 @@ struct Index {
     this.modules.set('SongloftVideo', { moduleClass: SongloftVideoModule, param: this.context })
     this.modules.set('SongloftSongCache', { moduleClass: SongloftSongCacheModule, param: this.context })
     this.modules.set('SongloftNavigation', { moduleClass: SongloftNavigationModule, param: this.context })
+    this.modules.set('SongloftPluginBridge', { moduleClass: SongloftPluginBridgeModule, param: this.context })
 
     const globalProps = SystemAppearance.getInitialProps(this.context)
     this.metaData = new MetaData(undefined, new TemplateData(JSON.stringify(globalProps)))

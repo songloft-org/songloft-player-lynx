@@ -25,6 +25,7 @@ import { getJSPluginApi } from '../api/index.js'
 import { usePluginsQuery } from '../data/jsplugin-query.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
 import type { Song } from '../../../models/song.js'
+import { LynxPluginFrame } from '../widgets/LynxPluginFrame.js'
 import './PluginWebViewPage.css'
 
 async function getAccessToken(): Promise<string> {
@@ -294,6 +295,21 @@ export function PluginWebViewPage() {
         <view className='plugin-webview__state'>
           <text className='plugin-webview__state-text plugin-webview__state-text--error'>{error}</text>
         </view>
+      </view>
+    )
+  }
+
+  /*
+   * Lynx native rendering: when renderEngine is "lynx", the plugin ships a
+   * .lynx.bundle and renders via <frame> (native) or nested <lynx-view> (Web).
+   * Both platforms use the same component since <frame> maps to <lynx-view> on Web.
+   */
+  const plugin = pluginList?.plugins.find((p) => p.entryPath === entryPath)
+  if (plugin?.renderEngine === 'lynx') {
+    return (
+      <view className='plugin-webview'>
+        {topbar}
+        <LynxPluginFrame entryPath={entryPath} isTabEntry={isTabEntry} />
       </view>
     )
   }
