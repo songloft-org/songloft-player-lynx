@@ -1,12 +1,11 @@
 import { useEffect, useState } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 
-import { apiPrefix, appConfig } from '../../../core/config/app-config.js'
+import { apiPrefix } from '../../../core/config/app-config.js'
 import type { HttpClient } from '../../../core/network/http-client.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { getSettingsApi } from '../api/index.js'
-import { SubPageShell } from '../widgets/SubPageShell.js'
-import './UpgradePage.css'
+import './UpgradeSection.css'
 
 interface CheckResult {
   hasUpdate: boolean
@@ -57,7 +56,14 @@ const POLL_INTERVAL_MS = 2000
 /** ~30s of consecutive failures — long enough for a real backend restart. */
 const MAX_POLL_FAILURES = 15
 
-export function UpgradePage() {
+/**
+ * Backend update check / start / progress, rendered as a section **inside** the
+ * About page rather than its own route. The page chrome (topbar / back / title /
+ * scroll) comes from `AboutPage`'s `SubPageShell`; this widget owns only the
+ * upgrade UI and the polling loop. Lifted verbatim from the former `UpgradePage`
+ * so behaviour is unchanged — the two used to be siblings under `/settings`.
+ */
+export function UpgradeSection() {
   const { t } = useTranslation()
 
   const [checking, setChecking] = useState(true)
@@ -130,11 +136,7 @@ export function UpgradePage() {
   }
 
   return (
-    <SubPageShell
-      title={t('upgrade.title')}
-      backTestId='upgrade-back'
-      contentClassName='upgrade-page__content'
-    >
+    <>
       {checking
         ? <text className='upgrade-page__state'>{t('upgrade.checking')}</text>
         : error && !checkResult
@@ -212,6 +214,6 @@ export function UpgradePage() {
           </view>
         )
         : null}
-    </SubPageShell>
+    </>
   )
 }

@@ -9,6 +9,7 @@ import { serverDisplay } from '../domain/settings-model.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import { SubPageShell } from '../widgets/SubPageShell.js'
+import { UpgradeSection } from '../widgets/UpgradeSection.js'
 
 export interface AboutPageProps {
   /**
@@ -22,7 +23,10 @@ export interface AboutPageProps {
 
 /**
  * `/settings/about` — client / backend versions, the server this build talks to,
- * the project link, and the open-source licenses.
+ * the project link, the open-source licenses **and** the backend update check.
+ * "后端更新" (backend update) used to be its own route (`/settings/upgrade`); it
+ * merged in here because the two are the same "what is this build, is it current"
+ * question — version rows and an update check sit naturally together.
  */
 export function AboutPage({ onOpenLicenses }: AboutPageProps = {}) {
   const navigate = useNavigate()
@@ -54,7 +58,7 @@ export function AboutPage({ onOpenLicenses }: AboutPageProps = {}) {
   }
 
   return (
-    <SubPageShell title={t('settings.about')} backTestId='about-back'>
+    <SubPageShell title={t('settings.aboutUpdates')} backTestId='about-back'>
       <SettingsSection title={t('settings.about')} icon='info'>
         <SettingsRow
           icon='info'
@@ -75,6 +79,13 @@ export function AboutPage({ onOpenLicenses }: AboutPageProps = {}) {
           title={t('settings.songloft')}
           subtitle={t('settings.songloftUrl')}
         />
+      </SettingsSection>
+
+      <SettingsSection title={t('upgrade.title')} icon='refresh'>
+        <UpgradeSection />
+      </SettingsSection>
+
+      <SettingsSection>
         <SettingsRow
           icon='info'
           title={t('settings.licenses')}

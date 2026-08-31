@@ -28,12 +28,10 @@ import { CacheManagePage } from './CacheManagePage.js'
 import { DataPage } from './DataPage.js'
 import { DiagnosticsPage } from './DiagnosticsPage.js'
 import { LicensesPage } from './LicensesPage.js'
-import { LyricsPage } from './LyricsPage.js'
 import { PlaybackPage } from './PlaybackPage.js'
 import { ProxySettingsPage } from './ProxySettingsPage.js'
 import { ServerListPage } from './ServerListPage.js'
 import { ThemeCatalogPage } from './ThemeCatalogPage.js'
-import { UpgradePage } from './UpgradePage.js'
 import './SettingsPage.css'
 
 /** Width threshold (px) for activating the dual-column layout. */
@@ -51,7 +49,6 @@ type SettingsSubPage =
   | 'appearance'
   | 'theme-catalog'
   | 'playback'
-  | 'lyrics'
   | 'library'
   | 'duplicates'
   | 'plugins'
@@ -64,7 +61,6 @@ type SettingsSubPage =
   | 'diagnostics'
   | 'about'
   | 'licenses'
-  | 'upgrade'
 
 /** Sub-page shown in the right pane before the user picks one. */
 const DEFAULT_SUB_PAGE: SettingsSubPage = 'appearance'
@@ -207,15 +203,6 @@ export function SettingsPage() {
                 onTap={() => goToSubPage('playback', '/settings/playback')}
                 testId='settings-playback'
               />
-              <SettingsRow
-                icon='music'
-                title={t('settings.lyricsSection')}
-                subtitle={t('settings.lyricsSectionSubtitle')}
-                trailingIcon='chevron-right'
-                selected={isActive('lyrics')}
-                onTap={() => goToSubPage('lyrics', '/settings/lyrics')}
-                testId='settings-lyrics'
-              />
             </SettingsSection>
 
             {/* ── Content & extensions ─────────────────────────────────── */}
@@ -312,7 +299,7 @@ export function SettingsPage() {
               />
               <SettingsRow
                 icon='info'
-                title={t('settings.about')}
+                title={t('settings.aboutUpdates')}
                 subtitle={t('settings.aboutSubtitle')}
                 trailingIcon='chevron-right'
                 // Licenses is reached *through* About, so keep this row lit while
@@ -320,15 +307,6 @@ export function SettingsPage() {
                 selected={isActive('about') || (isDualColumn && activeSubPage === 'licenses')}
                 onTap={() => goToSubPage('about', '/settings/about')}
                 testId='settings-about'
-              />
-              <SettingsRow
-                icon='refresh'
-                title={t('upgrade.title')}
-                subtitle={t('upgrade.subtitle')}
-                trailingIcon='chevron-right'
-                selected={isActive('upgrade')}
-                onTap={() => goToSubPage('upgrade', '/settings/upgrade')}
-                testId='settings-upgrade'
               />
             </SettingsSection>
 
@@ -401,8 +379,6 @@ function SettingsDetailPane({
       return <ThemeCatalogPage onBack={() => onOpenSubPage('appearance')} />
     case 'playback':
       return <PlaybackPage />
-    case 'lyrics':
-      return <LyricsPage />
     case 'library':
       return <LibraryOpsPage onOpenDuplicates={() => onOpenSubPage('duplicates')} />
     case 'duplicates':
@@ -427,12 +403,10 @@ function SettingsDetailPane({
       return <AboutPage onOpenLicenses={() => onOpenSubPage('licenses')} />
     case 'licenses':
       return <LicensesPage onBack={() => onOpenSubPage('about')} />
-    case 'upgrade':
-      return <UpgradePage />
     default: {
       // Every member is listed above, so adding one to `SettingsSubPage` without
       // a case here is a compile error rather than a silent fall-through to the
-      // wrong page (18 branches is well past the size where that goes unnoticed).
+      // wrong page (16 branches is well past the size where that goes unnoticed).
       const exhaustive: never = activeSubPage
       void exhaustive
       return <AppearancePage />

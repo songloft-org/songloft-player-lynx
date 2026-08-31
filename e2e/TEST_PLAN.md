@@ -372,7 +372,7 @@
 
 ### 25. 升级检查 (`upgrade.scenario.ts`)
 
-**路由：** `/settings/upgrade`
+**路由：** `/settings/about`（后端更新已并入「关于与更新」页，作为页内 section）
 
 | # | 测试用例 | 验证点 |
 |---|---------|--------|

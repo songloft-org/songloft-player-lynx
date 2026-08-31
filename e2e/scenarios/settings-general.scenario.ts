@@ -34,7 +34,6 @@ describe('设置页', () => {
   test.each([
     '/settings/appearance',
     '/settings/playback',
-    '/settings/lyrics',
     '/settings/data',
     '/settings/about',
     '/settings/diagnostics',
@@ -59,10 +58,10 @@ describe('设置页', () => {
     await stepScreenshot(driver, 'settings-appearance')
 
     await driver.evaluateJS(`
-      globalThis.__E2E_ROUTER__?.navigate({ to: '/settings/lyrics' })
+      globalThis.__E2E_ROUTER__?.navigate({ to: '/settings/playback' })
     `)
     await driver.sleep(500)
-    await stepScreenshot(driver, 'settings-lyrics')
+    await stepScreenshot(driver, 'settings-playback')
   })
 
   // 均衡器已不属于设置页——入口只在播放器 `⋯` 菜单，页面是 `/player/eq`。

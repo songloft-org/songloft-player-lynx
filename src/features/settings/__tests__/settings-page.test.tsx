@@ -16,11 +16,11 @@ import {
  * The page is an **entry list**: one row per sub-page, no controls of its own. So
  * the assertions here are about the rows and where they lead; what each sub-page
  * then does is covered by its own test file (`appearance-page`, `playback-page`,
- * `lyrics-page`, `data-page`, `about-page`, `diagnostics-page`).
+ * `data-page`, `about-page`, `diagnostics-page`).
  *
  * To keep the render hermetic: `useNavigate` → a spy (assert navigation targets),
  * the auth store → a `logout` spy. The remaining mocks are for the **sub-page
- * modules** this page imports (all 18 of them are imported for the dual-column
+ * modules** this page imports (all 16 of them are imported for the dual-column
  * pane, so their module bodies get evaluated even though they never mount here).
  */
 const { navigateSpy, logoutSpy } = vi.hoisted(() => ({
@@ -156,7 +156,6 @@ function scrollListTo(scrollTop: number) {
 const ENTRY_ROWS: Array<[string, string]> = [
   ['settings-appearance', '/settings/appearance'],
   ['settings-playback', '/settings/playback'],
-  ['settings-lyrics', '/settings/lyrics'],
   ['settings-library-ops', '/settings/library'],
   ['settings-plugins', '/settings/plugins'],
   ['settings-tab-config', '/settings/tab-config'],
@@ -165,7 +164,6 @@ const ENTRY_ROWS: Array<[string, string]> = [
   ['settings-proxy', '/settings/proxy'],
   ['settings-diagnostics', '/settings/diagnostics'],
   ['settings-about', '/settings/about'],
-  ['settings-upgrade', '/settings/upgrade'],
 ]
 
 /**

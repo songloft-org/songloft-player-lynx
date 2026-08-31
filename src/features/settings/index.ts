@@ -1,7 +1,6 @@
 export { SettingsPage } from './pages/SettingsPage.js'
 export { LicensesPage } from './pages/LicensesPage.js'
 export { ThemeCatalogPage } from './pages/ThemeCatalogPage.js'
-export { UpgradePage } from './pages/UpgradePage.js'
 export { ProxySettingsPage } from './pages/ProxySettingsPage.js'
 
 // Sub-pages split out of the settings list. `SubPageShell` is deliberately NOT
@@ -9,7 +8,6 @@ export { ProxySettingsPage } from './pages/ProxySettingsPage.js'
 // sub-page, so a sub-page importing the barrel back would be a real cycle.
 export { AppearancePage } from './pages/AppearancePage.js'
 export { PlaybackPage } from './pages/PlaybackPage.js'
-export { LyricsPage } from './pages/LyricsPage.js'
 export { DataPage } from './pages/DataPage.js'
 export { AboutPage } from './pages/AboutPage.js'
 export { DiagnosticsPage } from './pages/DiagnosticsPage.js'

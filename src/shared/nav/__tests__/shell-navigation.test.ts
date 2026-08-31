@@ -25,7 +25,7 @@ test('settings sub-pages keep the settings tab lit', () => {
   expect(activeNavPath('/settings/plugins/registry', NAV)).toBe('/settings')
   expect(activeNavPath('/settings/servers/edit/7', NAV)).toBe('/settings')
   // The groups split out of the settings list — each is its own route now.
-  for (const p of ['/settings/appearance', '/settings/playback', '/settings/lyrics',
+  for (const p of ['/settings/appearance', '/settings/playback', '/settings/proxy',
                    '/settings/data', '/settings/about', '/settings/diagnostics']) {
     expect(activeNavPath(p, NAV), p).toBe('/settings')
   }
@@ -73,7 +73,7 @@ test('a tab that is not rendered cannot be lit', () => {
  */
 test('settings and its sub-pages never show the mini player', () => {
   for (const p of ['/settings', '/settings/appearance', '/settings/playback',
-                   '/settings/lyrics', '/settings/data', '/settings/about',
+                   '/settings/proxy', '/settings/data', '/settings/about',
                    '/settings/diagnostics', '/settings/cache', '/settings/library']) {
     expect(showsMiniPlayer(p), p).toBe(false)
   }

@@ -15,16 +15,17 @@ describe('升级检查', () => {
     await driver.teardown()
   })
 
-  test('导航到升级检查页面', async () => {
+  test('导航到关于与更新页面', async () => {
+    // 后端更新已并入「关于与更新」页（升级检查作为页内 section），不再有独立路由。
     await driver.evaluateJS(`
-      globalThis.__E2E_ROUTER__?.navigate({ to: '/settings/upgrade' })
+      globalThis.__E2E_ROUTER__?.navigate({ to: '/settings/about' })
     `)
     await driver.sleep(500)
 
     const currentPath = await driver.evaluateJS<string>(`
       globalThis.__E2E_ROUTER__?.state?.location?.pathname ?? 'unknown'
     `)
-    expect(currentPath).toBe('/settings/upgrade')
+    expect(currentPath).toBe('/settings/about')
   })
 
   test('服务器健康检查', async () => {

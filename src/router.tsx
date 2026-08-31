@@ -20,7 +20,7 @@ import { AddSongsPage, CategorySongsPage, LibraryLayout, LibraryPage, TagSongsPa
 import { migrateLibrarySearch, type LibraryViewKey } from './features/library/domain/library-views.js'
 import { CreatePlaylistPage, EditPlaylistPage, PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
-import { AboutPage, AppearancePage, CacheManagePage, DataPage, DiagnosticsPage, LicensesPage, LyricsPage, PlaybackPage, ProxySettingsPage, ServerEditPage, ServerListPage, SettingsPage, ThemeCatalogPage, UpgradePage } from './features/settings/index.js'
+import { AboutPage, AppearancePage, CacheManagePage, DataPage, DiagnosticsPage, LicensesPage, PlaybackPage, ProxySettingsPage, ServerEditPage, ServerListPage, SettingsPage, ThemeCatalogPage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
 import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { DemoFramePage } from './features/jsplugin/pages/DemoFramePage.js'
@@ -209,17 +209,6 @@ const playbackRoute = createRoute({
   component: PlaybackPage,
 })
 
-/**
- * `/settings/lyrics` — lyrics display + floating overlay, inside the shell.
- * Distinct from `/player/lyrics/adjust`, which hangs off the root route under
- * `/player`.
- */
-const lyricsSettingsRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/settings/lyrics',
-  component: LyricsPage,
-})
-
 /** `/settings/data` — playlist export / import, inside the shell. */
 const dataRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -227,7 +216,7 @@ const dataRoute = createRoute({
   component: DataPage,
 })
 
-/** `/settings/about` — versions, server, project and licenses, inside the shell. */
+/** `/settings/about` — versions, server, project, backend update and licenses, inside the shell. */
 const aboutRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings/about',
@@ -281,12 +270,6 @@ const proxySettingsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings/proxy',
   component: ProxySettingsPage,
-})
-
-const upgradeRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/settings/upgrade',
-  component: UpgradePage,
 })
 
 const licensesRoute = createRoute({
@@ -435,7 +418,6 @@ const routeTree = rootRoute.addChildren([
     settingsRoute,
     appearanceRoute,
     playbackRoute,
-    lyricsSettingsRoute,
     dataRoute,
     aboutRoute,
     diagnosticsRoute,
@@ -446,7 +428,6 @@ const routeTree = rootRoute.addChildren([
     cacheManageRoute,
     proxySettingsRoute,
     themeCatalogRoute,
-    upgradeRoute,
     licensesRoute,
     duplicatesRoute,
     pluginsRoute,
