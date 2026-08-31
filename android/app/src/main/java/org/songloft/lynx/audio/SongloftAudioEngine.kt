@@ -698,10 +698,6 @@ object SongloftAudioEngine {
     fun play(context: Context) {
         val p = ensurePlayer(context)
         ClientFileLog.write('I', "audio", "play begin snapshot=${playerSnapshot(p)}")
-        if (p.playbackState == Player.STATE_ENDED) {
-            ClientFileLog.write('I', "audio", "play seekTo(0) to exit ENDED state")
-            p.seekTo(p.currentMediaItemIndex, 0)
-        }
         p.play()
         ClientFileLog.write('I', "audio", "play requested snapshot=${playerSnapshot(p)}")
     }

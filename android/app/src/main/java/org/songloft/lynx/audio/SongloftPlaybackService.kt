@@ -151,6 +151,24 @@ class SongloftPlaybackService : MediaSessionService() {
                 + "playerOngoing=${playerPlaybackOngoing()} "
                 + "snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
         )
+        // When a song ends, media3 releases the foreground notification. On
+        // Android 13+ the system sends a MEDIA_BUTTON stop intent ~500ms later
+        // to kill the "inactive" session. If the next song is already loading
+        // (BUFFERING + playWhenReady), letting media3 dispatch this intent
+        // would call player.stop() and reset to IDLE. Suppress it.
+        if (intent?.action == Intent.ACTION_MEDIA_BUTTON) {
+            val player = SongloftAudioEngine.mediaSession?.player
+            if (player != null && player.playWhenReady
+                && player.playbackState == Player.STATE_BUFFERING
+            ) {
+                ClientFileLog.write(
+                    'W', "audio-svc",
+                    "suppressed MEDIA_BUTTON during auto-advance "
+                        + "(BUFFERING + playWhenReady) snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
+                )
+                return START_STICKY
+            }
+        }
         if (!mediaNotificationOwnsSlot) startForegroundPlaceholder()
         val result = super.onStartCommand(intent, flags, startId)
         ClientFileLog.write(
