@@ -15,7 +15,7 @@ src/                    Lynx 客户端源码（所有业务代码）
     player/             播放器（全屏/mini、队列、歌词、睡眠、速度、持久化）
     playlist/           歌单（CRUD、排序、拖拽）
     settings/           设置（服务器、外观、语言、缓存、代理、EQ、数据）
-    jsplugin/           JS 插件（管理器、商店、WebView、Tab 配置）
+    jsplugin/           JS 插件（管理器、商店、WebView、Tab 配置、Lynx 原生渲染）
   i18n/                 国际化（en/zh，i18next）
   models/               zod 数据模型（Song/Playlist/Category 等）
   native/               原生模块 TS 层（audio-facade/storage/platform）
@@ -32,7 +32,10 @@ docs/                   项目文档，按 Diátaxis 组织（索引见 docs/REA
   architecture/        背景与解释（overview / lynx-constraints / platform-differences / e2e-testing-design）
   project/             进展 progress.md · 交接 handoff.md · 踩坑 pitfalls.md · 缺陷 bugs.md · plans/
   archive/             归档：已闭合计划 + migration/ 迁移调研（含订正表）
+demo-frame-plugin/      Lynx 原生渲染插件演示工程（独立 package.json）
+e2e/                    E2E 测试（driver + 33 个 scenario）
 patches/                依赖补丁（必须提交）
+scripts/                构建脚本（bundle 拷贝、闸门、i18n 转换）
 songloft-player/        Flutter 版只读参考（.gitignore 排除，禁止修改）
 ```
 
@@ -79,7 +82,7 @@ pnpm test               # vitest
 ```bash
 xcodebuild -list -project ios/SongloftLynx.xcodeproj   # iOS 工程可解析（见下方铁律）
 pnpm run build:web                                      # Web 产物（产出后确认 index.html 引用的资源都在）
-# HarmonyOS: 需在 DevEco Studio 中 Build > Build Hap(s)/APP(s) 验证，CI 无 hvigor 环境
+# HarmonyOS: 需在 DevEco Studio 中 Build > Build Hap(s)/APP(s) 验证（CI 有 GitHub Actions 流水线 dev-build-harmony.yml）
 ```
 
 > ⚠️ **「build 全绿」不等于「能出包」**。三个实例：① 批39 写坏了 `project.pbxproj`（数组内多一行赋值语句），此后 iOS 整整两批完全无法构建，而 `pnpm run build` / `tsc -b` / `pnpm test` 全程绿灯——它们根本不读 Xcode 工程；② `web:dev` 能跑不代表 `build:web` 能跑（两者取的静态资源目录不同）；③ 上面那条——`build` 绿了，但它压根没构建原生 bundle。**闸门只证明它真正读过的东西。**
@@ -305,7 +308,7 @@ cached = nm.SongloftDlna as DlnaModule
 | SystemAppearance | `SystemAppearance.swift` | 深浅色/语言注入 |
 | SongloftDlna | `SongloftDlnaModule.swift` | NWConnection UDP 多播发现 + SOAP 控制。callback 类型必须是 `@escaping (String) -> Void`，**不能**用 `LynxCallbackBlock`（见 SongloftVideo 那条） |
 | SongloftVideo | `SongloftVideoModule.swift` | 全屏视频：`AVPlayerViewController` 接引擎的 `AVPlayer`。三条必须写：`updatesNowPlayingInfoCenter = false`（否则覆盖锁屏元数据）、`videoGravity = .resizeAspect`（否则拉伸）、close 时**先 `vc.player = nil` 再 dismiss**（否则暂停共享播放器）。⚠️ 模块 callback 用错类型（`LynxCallbackBlock`）时 selector 仍能匹配并被调用，但拿不到 scene、**静默返回 false** |
-| SongloftLiveActivity | `LiveActivityModule.swift` | 锁屏 Live Activity（`NowPlayingAttributes`）。类是 `@available(iOS 16.2, *)` 而部署目标 16.0 ⇒ `buildConfig()` 里的注册**必须包 `if #available`**，否则硬编译错（批45 踩过）。16.0/16.1 上不注册，TS 侧降级为 no-op |
+| SongloftLiveActivity | `LiveActivityModule.swift` | 锁屏 Live Activity（`NowPlayingAttributes`）。类是 `@available(iOS 16.2, *)` 而部署目标 15.0 ⇒ `buildConfig()` 里的注册**必须包 `if #available`**，否则硬编译错（批45 踩过）。15.0–16.1 上不注册，TS 侧降级为 no-op |
 | SongloftSongCache | `SongloftSongCacheModule.swift` | 单曲离线缓存，与 Android 同契约（含 `limit_exceeded` 哨兵逐字一致，由闸门锁住） |
 | SongloftPluginBridge | `SongloftPluginBridgeModule.swift` | 父子 `<frame>` 通信桥，`LynxContextModule` 协议实现。`NSLock` 保护静态 `hostRegistry`/`childRegistry`，`unregisterHost` 同时清理两个注册表。与 Android 同契约 |
 | （非 Lynx 模块）| `SongloftHttpService.swift` / `InsecureTls.swift` / `InsecureMediaLoader.swift` | 宿主 `fetch` 服务 / TLS 开关 + 共享 `URLSession` / 自签名下的媒体字节流加载器 |

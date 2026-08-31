@@ -17,17 +17,17 @@ Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr
 
 ## 项目状态
 
-> **数据截至 2026-08-26（批62 后复核）**，改动后请一并更新。
+> **数据截至 2026-08-31（批63 后复核）**，改动后请一并更新。
 >
 > ⚠️ 这份数字腐烂过两次（先停在批32，订正后又停在批42 整 18 个批次）。**根因是没有闸门读它** —— `AGENTS.md` §6 的原则同样适用于文档本身。
 
 | 指标 | 值 |
 |------|-----|
-| 源码规模 | 570 文件 / ~79.4K 行（ts + tsx + css） |
+| 源码规模 | 588 文件 / ~81.8K 行（ts + tsx + css） |
 | 特性模块 | auth · home · library · library-ops · player · playlist · settings · jsplugin |
-| 测试 | **1981** vitest（189 文件）+ 33 个 E2E 场景 |
-| 构建产物 | lynx 2194.4 kB / web 2261.4 kB（未压缩，双产物） |
-| 原生模块 | 9 个跨平台模块在契约闸门的 `modules` 表内，另有 Web 独有 `SongloftWebview`（独立 describe 覆盖） |
+| 测试 | **2037** vitest（190 文件）+ 33 个 E2E 场景 |
+| 构建产物 | lynx 2169.3 kB / web 2249.1 kB（未压缩，双产物） |
+| 原生模块 | **10** 个跨平台模块在契约闸门的 `modules` 表内，另有 Web 独有 `SongloftWebview`（独立 describe 覆盖） |
 | 目标平台 | Android · iOS · HarmonyOS · Web（桌面 Lynxtron 未开始） |
 
 ### 平台可用性
@@ -35,8 +35,8 @@ Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr
 | 平台 | 最低版本 | 状态 |
 |------|------|------|
 | Android | API 21（Android 5.0） / target 34 | ✅ 真机验证通过（播放 / 通知栏 / 扫描 / 重复检测 / 悬浮歌词 / 全屏视频全链路） |
-| iOS | iOS 15.0 | ✅ 可构建可运行（`ios:build BUILD SUCCEEDED`，e2e 110/110）。7 个原生模块全部注册（`SongloftNavigation` 刻意不做——没有返回键可拦）；Live Activity 在 <16.2 上静默降级 no-op |
-| HarmonyOS | HarmonyOS NEXT / API 12 | ✅ 宿主工程已就位，8 个原生模块实现（Audio / Storage / Platform / SystemAppearance / Navigation / Video / Dlna / SongCache）。构建需 DevEco Studio（CI 无 hvigor 环境）。FloatingLyric / LiveActivity 无等价 API，TS 侧降级为 no-op |
+| iOS | iOS 15.0 | ✅ 可构建可运行（`ios:build BUILD SUCCEEDED`，e2e 110/110）。8 个原生模块全部注册（`SongloftNavigation` / `SongloftFloatingLyric` 刻意不做——没有返回键可拦 / 无悬浮窗 API）；Live Activity 在 <16.2 上静默降级 no-op |
+| HarmonyOS | HarmonyOS NEXT / API 12 | ✅ 宿主工程已就位，9 个原生模块实现（Audio / Storage / Platform / SystemAppearance / Navigation / Video / Dlna / SongCache / PluginBridge）。构建需 DevEco Studio（CI 有 GitHub Actions 流水线 `dev-build-harmony.yml`）。FloatingLyric / LiveActivity 无等价 API，TS 侧降级为 no-op |
 | Web | 常青浏览器 | ✅ 可加载渲染、**有音频**。几条已知限制（无 longpress、文件选择器 user activation；占位符色已修，随主题切换）见 [Web 部署](./guides/web-deployment.md) |
 | 桌面 | —— | ⛔ 未开始（P3 唯一未开始项，剩余最大单块能力） |
 
@@ -52,7 +52,7 @@ P3 平台特性     ██████████████████░░
 P4 双轨发布     ░░░░░░░░░░░░░░░░░░░░   0%  — 未开始
 ```
 
-**P3 已完成**：EQ 双端 DSP · 数据导入导出 · 主题包 · 歌词编辑 · 服务端自升级 · 音量归一化 · 播放历史（批50）· DLNA（批42）· 悬浮歌词（批48）· Live Activity（批43+45）· 全屏视频（批49）· 单曲离线缓存 · Web 平台。
+**P3 已完成**：EQ 双端 DSP · 数据导入导出 · 主题包 · 歌词编辑 · 服务端自升级 · 音量归一化 · 播放历史（批50）· DLNA（批42）· 悬浮歌词（批48）· Live Activity（批43+45）· 全屏视频（批49）· 单曲离线缓存 · Web 平台 · 自定义标签 · Lynx 原生渲染插件 · 记住密码。
 **P3 未开始**：桌面 Lynxtron。
 
 > 上一版这张表有 5 项与事实不符（把已完成的能力标成 ❌/⛔）。逐项修复批次见 [progress.md](./project/progress.md)。
@@ -95,9 +95,9 @@ P4 双轨发布     ░░░░░░░░░░░░░░░░░░░░
 
 | 文件 | 说明 |
 |------|------|
-| [handoff.md](./project/handoff.md) | **工作交接（批62）** —— 接手先读这篇：现状快照、闸门验证状态、剩余工作、明确不做 |
+| [handoff.md](./project/handoff.md) | **工作交接（批63+）** —— 接手先读这篇：现状快照、闸门验证状态、剩余工作、明确不做 |
 | [pitfalls.md](./project/pitfalls.md) | **踩坑实录** —— 按主题组织的根因案例（平台判断/Web 宿主/原生模块/闸门/布局/测试），附 SDK 源码、自签名环境、视频素材等操作性参考 |
-| [progress.md](./project/progress.md) | 分批开发进展（批1–62，含批号撞号说明）。**每批验收后必须更新**（`AGENTS.md` §3 工作流） |
+| [progress.md](./project/progress.md) | 分批开发进展（批1–63+，含批号撞号说明）。**每批验收后必须更新**（`AGENTS.md` §3 工作流） |
 | [bugs.md](./project/bugs.md) | 缺陷清单。**截至 2026-08-26 所有条目均已闭合**（每条写明根因与修法，或「为什么关闭」）；新问题另起条目，别在已闭合条目上续写 |
 | [plans/upstream-issues.md](./project/plans/upstream-issues.md) | 已提交给 Lynx 官方的 issue；修复合入后移除 `patches/` 下对应 patch（当前 2 个） |
 

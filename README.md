@@ -1,6 +1,6 @@
 # Songloft Player (Lynx)
 
-Songloft Player 的 Lynx 客户端，从 Flutter 版整体重写为 ReactLynx + TypeScript。支持 Android / iOS / Web 三端。
+Songloft Player 的 Lynx 客户端，从 Flutter 版整体重写为 ReactLynx + TypeScript。支持 Android / iOS / HarmonyOS / Web 四端。
 
 ## 技术栈
 
@@ -13,7 +13,7 @@ Songloft Player 的 Lynx 客户端，从 Flutter 版整体重写为 ReactLynx + 
 | 数据模型 | zod（snake→camelCase transform） |
 | i18n | i18next + react-i18next（en / zh） |
 | 测试 | Vitest + @testing-library（单元）· TestBridge + Vitest（E2E） |
-| 原生 | 9 个自研模块在契约闸门内（Audio/Storage/Platform/Dlna/Video/SongCache/Navigation + Android FloatingLyric + iOS LiveActivity） |
+| 原生 | 10 个自研模块在契约闸门内（Audio/Storage/Platform/Dlna/Video/SongCache/Navigation/PluginBridge + Android FloatingLyric + iOS LiveActivity） |
 | Web | `@lynx-js/web-core`（`<lynx-view>` 在浏览器渲染 Lynx bundle） |
 
 ## 快速开始
@@ -30,10 +30,10 @@ pnpm run web:sync && pnpm run web:dev   # 最快看到界面的路径
 ```bash
 pnpm run build        # 必须列出两个产物：File (lynx) 与 File (web)
 pnpm run typecheck    # = tsc -b（必须 -b，--noEmit 是空跑）
-pnpm test             # 1981 用例 / 189 文件
+pnpm test             # 2037 用例 / 190 文件
 ```
 
-> ⚠️ 以上**只覆盖 JS 产物** —— 不读 Xcode 工程、不编译 Kotlin、不验 Web 产物自洽性。改了 `ios/`、`android/`、`web/` 必须另跑对应平台那条。
+> ⚠️ 以上**只覆盖 JS 产物** —— 不读 Xcode 工程、不编译 Kotlin/ArkTS、不验 Web 产物自洽性。改了 `ios/`、`android/`、`harmony/`、`web/` 必须另跑对应平台那条。
 
 **完整步骤 → [docs/getting-started.md](./docs/getting-started.md)** · **四平台构建与环境坑 → [docs/guides/build-and-run.md](./docs/guides/build-and-run.md)**
 
@@ -50,7 +50,9 @@ src/              Lynx 客户端源码
   i18n/           多语言（en/zh）
 android/          Android 宿主 + 原生模块（Kotlin）
 ios/              iOS 宿主 + 原生模块（Swift）
+harmony/          HarmonyOS 宿主 + 原生模块（ArkTS）
 web/              Web 宿主页 + 宿主模块 + 本地静态服务
+demo-frame-plugin/ Lynx 原生渲染插件演示工程
 e2e/              E2E 测试（driver + 33 个 scenario）
 scripts/          构建脚本（bundle 拷贝、闸门、i18n 转换）
 patches/          上游本地补丁（必须提交）
@@ -87,7 +89,8 @@ docs/             项目文档
 | 平台 | 状态 |
 |---|---|
 | Android | ✅ 真机验证通过（播放/通知栏/扫描/悬浮歌词/全屏视频全链路） |
-| iOS | ✅ 可构建可运行（e2e 110/110），7 个原生模块全部注册 |
+| iOS | ✅ 可构建可运行（e2e 110/110），8 个原生模块全部注册 |
+| HarmonyOS | ✅ 宿主工程已就位，9 个原生模块实现；CI 有 GitHub Actions 流水线 |
 | Web | ✅ 可渲染且有音频；几条已知限制见 [Web 部署](./docs/guides/web-deployment.md) |
 | 桌面 | ⛔ 未开始（剩余最大单块能力） |
 
