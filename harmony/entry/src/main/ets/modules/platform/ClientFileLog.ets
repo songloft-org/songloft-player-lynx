@@ -1,5 +1,5 @@
 import { fileIo } from '@kit.CoreFileKit'
-import { util } from '@kit.ArkTS'
+import { util, url } from '@kit.ArkTS'
 import { common } from '@kit.AbilityKit'
 
 /**
@@ -93,15 +93,15 @@ export class ClientFileLog {
    * carries `?access_token=…`, and native `ClientFileLog.write` does not run
    * the TS layer's token redaction (that only covers the `logWrite` path).
    */
-  public static truncUrl(url: string | null | undefined): string {
-    if (url === null || url === undefined || url === '') {
+  public static truncUrl(rawUrl: string | null | undefined): string {
+    if (rawUrl === null || rawUrl === undefined || rawUrl === '') {
       return 'null'
     }
-    const noQuery = url.split('?')[0]
+    const noQuery = rawUrl.split('?')[0]
     const last = noQuery.split('/').pop() ?? ''
     let host = ''
     try {
-      const parsed = new URL(url)
+      const parsed: url.URL = url.URL.parseURL(rawUrl)
       host = parsed.host
     } catch (err) {
       // Not a parseable absolute URL — the last path segment alone is fine.
@@ -140,7 +140,7 @@ export class ClientFileLog {
     const f = fileIo.openSync(file,
       fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.APPEND)
     try {
-      f.writeSync(text)
+      fileIo.writeSync(f.fd, text)
     } finally {
       fileIo.closeSync(f.fd)
     }

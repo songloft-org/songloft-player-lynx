@@ -106,16 +106,19 @@ export class SongloftPlatformModule extends LynxModule {
       const file = fileIo.openSync(path,
         fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
       try {
-        file.writeSync(bytes.buffer)
+        fileIo.writeSync(file.fd, bytes.buffer)
       } finally {
         fileIo.closeSync(file.fd)
       }
       const data = new systemShare.SharedData({
-        utd: uniformTypeDescriptor.UTD.General.FILE,
+        utd: uniformTypeDescriptor.UniformDataType.FILE,
         uri: fileUri.getUriFromPath(path),
       })
       const controller = new systemShare.ShareController(data)
-      controller.show(this.abilityContext)
+      controller.show(this.abilityContext, {
+        selectionMode: systemShare.SelectionMode.SINGLE,
+        previewMode: systemShare.SharePreviewMode.DETAIL,
+      })
         .then(() => callback(null))
         .catch((err: Error) => callback(err.message))
     } catch (err) {

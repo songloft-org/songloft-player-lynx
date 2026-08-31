@@ -21,7 +21,7 @@ export class AVSessionController {
       ClientFileLog.write('I', 'audio-svc', 'avsession created + activated')
     } catch (err) {
       ClientFileLog.write('E', 'audio-svc', `avsession create failed: ${String(err)}`)
-      throw err
+      throw new Error(String(err))
     }
   }
 
@@ -72,7 +72,7 @@ export class AVSessionController {
       position: position,
       speed: speed,
     }
-    ClientFileLog.write('I', 'audio-svc', `playbackState=${sessionState} pos=${Math.round(positionMs)}`)
+    ClientFileLog.write('I', 'audio-svc', `playbackState=${state} pos=${Math.round(positionMs)}`)
     await this.session.setAVPlaybackState(playbackState)
   }
 
