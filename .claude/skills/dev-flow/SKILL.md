@@ -88,18 +88,25 @@ description: Songloft 的分阶段开发流程助手。用于处理 GitHub Issue
 
 1. 再次检查 `git status --short`，记录本次改动前的工作树状态。
 2. 按确认的文件和模块实施，保持改动最小；不要顺手重构无关代码。
-3. 按仓库规则执行必要的生成和格式化：
+3. 同步更新受影响的项目文档（写完代码即做，不要拖到提交前）：
+   - 进展、批次或交付状态 → `progress.md`（每批验收后必须更新）。
+   - 缺陷根因或新开放问题 → `bugs.md`（新起条目，别续写在已闭合条目上）。
+   - 现状快照、闸门状态、剩余工作 → `handoff.md`；改了闸门数字必须回填实测时间。
+   - 新铁律、新踩坑或 SDK 行为变更 → `AGENTS.md` / `pitfalls.md`。
+   - 接口、契约或模块行为变更 → 对应 reference 文档与 Swagger。
+   不确定改哪些时，按当前仓库的文档地图逐项判断；纯文档改动则跳过本步。
+4. 按仓库规则执行必要的生成和格式化：
    - Go：执行 `gofmt -w .`；必要时运行 `go vet`。
    - Dart：在 `songloft-player/` 执行 `dart format lib/ test/`。
    - 修改 `database/queries/*.sql`：执行 `make sqlc`，检查生成文件。
    - 修改 handler 的 swag 注释或新增 handler：执行 `make swagger`，检查 `docs/swagger.json`、`docs/swagger.yaml`、`docs/docs.go`。
    - 修改文档：同步对应的中英文版本；自动生成页改源文件，不直接改生成物。
-4. 根据变更范围验证：
+5. 根据变更范围验证：
    - 后端改动：至少运行相关测试；涉及公共后端行为时运行 `make check`。
    - Flutter 改动：运行 `flutter analyze` 和相关 `flutter test`；涉及共享行为时扩大测试范围。
    - UI 改动且用户要求界面验证：按 `AGENTS.md` 的 Docker 无头浏览器流程实际操作并截图。
    - API、配置或后台动作：除截图外，使用 HTTP、数据库或进程状态等后端可观测结果验证。
-5. 检查 `git diff --check`，并检查本次改动文件是否出现 UTF-8 替换字符 `�`。
+6. 检查 `git diff --check`，并检查本次改动文件是否出现 UTF-8 替换字符 `�`。
 
 如果命令失败，先判断是代码失败、环境缺失还是权限/网络问题；能修复就修复并重跑，不能修复就保留失败输出和影响范围。
 
@@ -119,6 +126,7 @@ description: Songloft 的分阶段开发流程助手。用于处理 GitHub Issue
 | 性能与资源 | 高频路径、I/O、子进程、连接和 goroutine 回收 |
 | 死代码与类型 | 未使用变量、不可达分支、字符串/数字比较、空值处理 |
 | 回归与测试 | 相关旧功能、错误路径和新增测试是否覆盖 |
+| 文档同步 | progress/bugs/handoff/pitfalls 是否按本次改动更新 |
 
 发现问题时立即修复并重新执行受影响的格式化和验证。输出审查结果：
 
