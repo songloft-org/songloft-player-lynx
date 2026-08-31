@@ -1,5 +1,7 @@
 import { common } from '@kit.AbilityKit'
-import { LynxView, MetaData, ModuleClassWrapper, TemplateBundle, TemplateData, LynxContext, LynxMediaResourceFetcher } from '@lynx/lynx'
+import { Behavior, BehaviorRegistryMap, LynxView, MetaData, ModuleClassWrapper, TemplateBundle, TemplateData, LynxContext, LynxGenericResourceFetcher, LynxMediaResourceFetcher } from '@lynx/lynx'
+import { UISVG } from '@lynx/xelement_svg'
+import { SongloftGenericResourceFetcher } from '../net/SongloftGenericResourceFetcher'
 import { SongloftMediaResourceFetcher } from '../net/SongloftMediaResourceFetcher'
 import { SongloftAudioModule } from '../modules/audio/SongloftAudioModule'
 import { SongloftStorageModule } from '../modules/storage/SongloftStorageModule'
@@ -16,8 +18,10 @@ import { SystemAppearance } from '../modules/system/SystemAppearance'
 struct Index {
   private context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext
   private modules: Map<string, ModuleClassWrapper> = new Map()
+  private behaviors: BehaviorRegistryMap = new Map([['svg', new Behavior(UISVG, undefined)]])
   private templateBundle?: TemplateBundle = undefined
   private metaData: MetaData = new MetaData()
+  private genericResourceFetcher: LynxGenericResourceFetcher = new SongloftGenericResourceFetcher()
   private mediaResourceFetcher: LynxMediaResourceFetcher = new SongloftMediaResourceFetcher()
 
   aboutToAppear(): void {
@@ -43,7 +47,9 @@ struct Index {
       LynxView({
         templateBundle: this.templateBundle,
         modules: this.modules,
+        behaviors: this.behaviors,
         metaData: this.metaData,
+        genericResourceFetcher: this.genericResourceFetcher,
         mediaResourceFetcher: this.mediaResourceFetcher,
         onCreate: (context: LynxContext) => {
           SystemAppearance.attach(context, this.context)

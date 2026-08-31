@@ -8,6 +8,7 @@
     "deliveryWithInstall": true,
     "installationFree": false,
     "pages": "$profile:main_pages",
+    "srcEntry": "./ets/entryability/LynxAbilityStage.ets",
     "abilities": [
       {
         "name": "EntryAbility",

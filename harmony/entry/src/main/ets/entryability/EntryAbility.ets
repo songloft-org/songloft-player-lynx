@@ -7,9 +7,9 @@ import { SongloftHttpService } from '../net/SongloftHttpService'
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
-    LynxEnv.initialize(this.context)
     LynxServiceCenter.registerService(LynxServiceType.Image, LynxImageService.instance)
     SongloftHttpService.register()
+    LynxEnv.initialize(this.context)
     void(LynxLogService.instance)
   }
 

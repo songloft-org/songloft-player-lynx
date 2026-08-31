@@ -2,6 +2,9 @@ import { LynxMediaResourceFetcher, LynxOptionalBool, LynxResourceRequest } from 
 
 export class SongloftMediaResourceFetcher extends LynxMediaResourceFetcher {
   shouldRedirectUrl(request: LynxResourceRequest): string {
+    if (request.url === '/app_icon.png') {
+      return 'resource://rawfile/app_icon.png'
+    }
     return request.url
   }
 

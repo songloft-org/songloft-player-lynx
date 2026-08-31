@@ -13,6 +13,8 @@ const root = resolve(__dirname, '..')
 
 const src = resolve(root, 'dist/main.lynx.bundle')
 const dest = resolve(root, 'harmony/entry/src/main/resources/rawfile/main.lynx.bundle')
+const iconSrc = resolve(root, 'web/app_icon.png')
+const iconDest = resolve(root, 'harmony/entry/src/main/resources/rawfile/app_icon.png')
 
 if (!existsSync(src)) {
   console.error('❌ dist/main.lynx.bundle not found. Run `pnpm run build` first.')
@@ -25,4 +27,6 @@ if (!existsSync(destDir)) {
 }
 
 copyFileSync(src, dest)
+copyFileSync(iconSrc, iconDest)
 console.log(`✅ Copied bundle to harmony/entry/src/main/resources/rawfile/main.lynx.bundle`)
+console.log(`✅ Copied app icon to harmony/entry/src/main/resources/rawfile/app_icon.png`)

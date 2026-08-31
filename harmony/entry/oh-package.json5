@@ -10,6 +10,8 @@
     "@lynx/primjs": "4.0.0",
     "@lynx/lynx_http_service": "4.0.1",
     "@lynx/lynx_image_service": "4.0.1",
-    "@lynx/lynx_log_service": "4.0.1"
+    "@lynx/lynx_log_service": "4.0.1",
+    "@lynx/xelement_svg": "4.0.1",
+    "@ohos/imageknifepro": "1.0.9"
   }
 }
