@@ -547,12 +547,12 @@ object SongloftAudioEngine {
         if (p == null) return "player=null"
         return try {
             val mediaUrl = p.currentMediaItem?.localConfiguration?.uri?.toString()
-            "player=present playWhenReady=${p.playWhenReady} isPlaying=${p.isPlaying} "
-                + "playbackState=${playbackStateName(p.playbackState)}(${p.playbackState}) "
-                + "suppression=${p.playbackSuppressionReason} position=${p.currentPosition} "
-                + "duration=${p.duration} timelineEmpty=${p.currentTimeline.isEmpty()} "
-                + "windows=${p.currentTimeline.windowCount} mediaIndex=${p.currentMediaItemIndex} "
-                + "media=${truncUrl(mediaUrl)}"
+            "player=present playWhenReady=${p.playWhenReady} isPlaying=${p.isPlaying} " +
+                "playbackState=${playbackStateName(p.playbackState)}(${p.playbackState}) " +
+                "suppression=${p.playbackSuppressionReason} position=${p.currentPosition} " +
+                "duration=${p.duration} timelineEmpty=${p.currentTimeline.isEmpty()} " +
+                "windows=${p.currentTimeline.windowCount} mediaIndex=${p.currentMediaItemIndex} " +
+                "media=${truncUrl(mediaUrl)}"
         } catch (error: Throwable) {
             "player=unavailable(${error.javaClass.simpleName}: ${error.message ?: "no message"})"
         }
