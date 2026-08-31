@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -148,27 +149,27 @@ class SongloftPlaybackService : MediaSessionService() {
         ClientFileLog.write(
             'I', "audio-svc",
             "onStartCommand startId=$startId flags=$flags action=${intent?.action ?: "null"} "
+                + "mediaButtonKey=${mediaButtonKeyCode(intent) ?: "none"} "
                 + "ownsSlot=$ownsSlotBefore media3Ongoing=${media3PlaybackOngoing()} "
                 + "playerOngoing=${playerPlaybackOngoing()} "
                 + "snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
         )
         // When a song ends, media3 releases the foreground notification. On
-        // Android 13+ the system sends a MEDIA_BUTTON stop intent ~500ms later
-        // to kill the "inactive" session. If the next song is already loading
-        // (BUFFERING + playWhenReady), letting media3 dispatch this intent
-        // would call player.stop() and reset to IDLE. Suppress it.
-        if (intent?.action == Intent.ACTION_MEDIA_BUTTON) {
-            val player = SongloftAudioEngine.mediaSession?.player
-            if (player != null && player.playWhenReady
-                && player.playbackState == Player.STATE_BUFFERING
-            ) {
-                ClientFileLog.write(
-                    'W', "audio-svc",
-                    "suppressed MEDIA_BUTTON during auto-advance "
-                        + "(BUFFERING + playWhenReady) snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
-                )
-                return START_STICKY
-            }
+        // Android 13+ the system sends a stale MEDIA_STOP intent ~500ms later
+        // to kill the inactive session. The next song can already be READY by
+        // then, so checking BUFFERING alone misses the exact failure window.
+        // The engine arms a short guard only across its ended -> load transition;
+        // require the notification STOP key + session data so user media buttons
+        // pass through.
+        if (isMediaNotificationStopIntent(intent)
+            && SongloftAudioEngine.consumeAutoAdvanceStopGuard()
+        ) {
+            ClientFileLog.write(
+                'W', "audio-svc",
+                "suppressed stale MEDIA_STOP during auto-advance "
+                    + "snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
+            )
+            return START_STICKY
         }
         if (!mediaNotificationOwnsSlot) startForegroundPlaceholder()
         val result = super.onStartCommand(intent, flags, startId)
@@ -236,6 +237,28 @@ class SongloftPlaybackService : MediaSessionService() {
     private fun mediaNotificationWillShow(session: MediaSession): Boolean {
         val player = session.player
         return player.playbackState != Player.STATE_IDLE && !player.currentTimeline.isEmpty()
+    }
+
+    /** Read the media-button key without using the API-33 overload on old devices. */
+    private fun mediaButtonKeyCode(intent: Intent?): Int? {
+        if (intent?.action != Intent.ACTION_MEDIA_BUTTON) return null
+        val event = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT, KeyEvent::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT)
+        }
+        return event?.keyCode
+    }
+
+    /**
+     * Media3's notification delete action carries the session URI as Intent data;
+     * hardware/media-router buttons do not. Keep the auto-advance guard scoped to
+     * that delete callback so a user's explicit STOP remains functional.
+     */
+    private fun isMediaNotificationStopIntent(intent: Intent?): Boolean {
+        return mediaButtonKeyCode(intent) == KeyEvent.KEYCODE_MEDIA_STOP
+            && intent?.data != null
     }
 
     private fun clearPlaceholder() {

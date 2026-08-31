@@ -429,6 +429,14 @@ toast「再按一次返回退出应用」在首页真机截图确认（`/tmp/bac
 
 **真机待验**：开启「启动时自动恢复播放」后冷启动续播，歌词页应直接出歌词（不再需要点一次暂停/播放）。
 
+### Issue #1 后续 · Android 后台自动连播 stop intent（2026-08-31）
+
+**最新日志证据**（Issue 附件 `songloft-logs-20260831-203401.zip`）确认旧修复仍会失败：歌曲在 `20:32:38.695` 进入 `ENDED`，`20:32:38.793` 已开始加载下一首，`20:32:39.272` 已进入 `READY + playWhenReady=true`，随后 `20:32:39.304` 收到 `ACTION_MEDIA_BUTTON`，`20:32:39.312` 播放器变为 `IDLE`。旧代码只拦截 `BUFFERING + playWhenReady`，而 stop 到达时已经是 `READY`。
+
+当前修复：`SongloftAudioEngine.load()` 仅在 `ENDED + playWhenReady` 的自然结束切歌过渡上武装 2 秒单次 guard；`SongloftPlaybackService` 解析 `EXTRA_KEY_EVENT`，只对 `KEYCODE_MEDIA_STOP` 且 guard 有效的 intent 做拦截，普通播放/暂停/上一首/下一首媒体按键继续交给 Media3。guard 在显式 `stop()`/`release()` 时清理，避免跨会话残留。新增 `src/__tests__/android-auto-advance-stop.test.ts` 锁定该调用链。
+
+**验收**：`compileDebugKotlin` 通过，定向回归 2/2 通过，`tsc -b --force` 通过；完整 Vitest 仍有既存 `full-player-responsive.test.tsx` 的 14 个失败。**待验**：安装新 APK 后在后台连续播放多首，日志应出现 `mediaButtonKey=86` 与 `suppressed stale MEDIA_STOP during auto-advance`，且之后不再出现 `playback state changed state=IDLE`。
+
 ## 未完成 / 遗留事项（TODO & 风险）
 
 - [x] **批28 Computing 阶段进度恒 `0/0` 且完成后不转 Results**（批29b 发现 → **批29c 已修**）：双层根因（陈旧终态跳过 computing + `refetchInterval` 在 Lynx 首次 fetch 后不再 fire），修法见上方「批29c」小结与下方「批29c」详节。18091 真机逐张截图验过 Computing 推进 + 自动转 Results。

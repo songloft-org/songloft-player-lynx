@@ -4,7 +4,7 @@
 >
 > **读文档顺序**：① [AGENTS.md](../../AGENTS.md) §4–§6（铁律，必读）→ ② 本文 §3「剩余工作」→ ③ [pitfalls.md](pitfalls.md)（踩坑实录：每条铁律背后的证据）。细节按需查 [progress.md](progress.md)（逐批交付）与 [bugs.md](bugs.md)（逐条缺陷根因）。
 >
-> **一句话现状**：批63 后续代码已完成；1 个 docs 提交（`92c67cb`）未推送。**JS 侧闸门**：**2037 vitest / 190 文件**（其中 14 failing 在 `full-player-responsive.test.tsx`）+ `tsc -b` + `build` 双产物（lynx 2169.3 kB / web 2249.1 kB）。近期重点：后台播放稳定性、Lynx 原生渲染插件、自定义标签、记住密码、HarmonyOS 宿主修复。
+> **一句话现状**：批63 后续代码已完成；Issue #1 的 Android 自动连播 stop 修复已写入工作树，待真机验证。**JS 侧闸门**：完整 Vitest 有 14 个 `full-player-responsive.test.tsx` 失败 + `tsc -b` + `build` 双产物（最近快照见下表）。近期重点：后台播放稳定性、Lynx 原生渲染插件、自定义标签、记住密码、HarmonyOS 宿主修复。
 
 ---
 
@@ -81,6 +81,16 @@
 
 - **Android 上 HLS 电台落到 `ProgressiveMediaSource`** — 已修：`isHlsPlaylistPath()` 剥 query 看扩展名，Android/Web 同修，另修跨协议重定向被拒。
 - **偶发全屏灰层** — 仅批29 那次偶发，此后再未复现，按「无法复现」关闭（重开指引在 [`bugs.md`](bugs.md)）。
+
+### Issue #1：后台自动连播 stop intent（2026-08-31）
+
+最新 Issue 附件 `songloft-logs-20260831-203401.zip` 的关键顺序：
+
+`20:32:38.695 ENDED` → `20:32:38.793 load next` → `20:32:39.272 READY + playWhenReady=true` → `20:32:39.304 ACTION_MEDIA_BUTTON` → `20:32:39.312 IDLE`。
+
+前一版 `1edd44b` 只在 `BUFFERING + playWhenReady` 时拦截，因此 stop intent 到达时已经漏掉。当前工作树的修复在 `ENDED -> load` 过渡上设置 2 秒单次 guard；服务解析 `EXTRA_KEY_EVENT`，只拦截 `KEYCODE_MEDIA_STOP` 且 guard 有效的 intent，其他媒体按键不受影响。guard 在显式 `stop()` / `release()` 清理。
+
+已验证：`./gradlew --no-daemon compileDebugKotlin`、定向 Vitest 2/2、`pnpm exec tsc -b --force`。尚未验证：新 APK 真机后台连续播放。验收日志应包含 `mediaButtonKey=86`、`suppressed stale MEDIA_STOP during auto-advance`，且该事件后不能有 `playback state changed state=IDLE`。
 
 ## 5. 明确不做（避免被当成缺陷重开）
 

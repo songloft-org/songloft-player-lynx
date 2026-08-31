@@ -9,6 +9,7 @@ import android.database.ContentObserver
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.net.Uri
 import android.provider.Settings
 import androidx.media3.common.AudioAttributes
@@ -96,6 +97,14 @@ object SongloftAudioEngine {
     private const val HLS_READ_TIMEOUT_MS = 300_000
 
     /**
+     * Android may deliver a stale MEDIA_STOP shortly after media3 drops the
+     * foreground notification at the end of a track. Keep the suppression
+     * window short and arm it only for the ended -> load transition used by
+     * JS-driven auto-advance.
+     */
+    private const val AUTO_ADVANCE_STOP_GUARD_MS = 2_000L
+
+    /**
      * Marks the server-side video transcode endpoint
      * (`/api/v1/songs/{id}/video-hls/playlist.m3u8`) — the only HLS source that is
      * expected to block for minutes, and therefore the only one that may raise the
@@ -107,6 +116,9 @@ object SongloftAudioEngine {
 
     private var player: ExoPlayer? = null
     private var mediaSessionInternal: MediaSession? = null
+
+    /** Monotonic deadline consumed by SongloftPlaybackService for one stale stop. */
+    private var autoAdvanceStopGuardUntilMs = 0L
 
     /**
      * Whether [initFromService] has been called (i.e. the `MediaSession` was
@@ -638,11 +650,23 @@ object SongloftAudioEngine {
 
     fun load(context: Context, url: String, hls: Boolean, headers: Map<String, String>?) {
         val p = ensurePlayer(context)
+        val wasNaturallyEnded = p.playbackState == Player.STATE_ENDED && p.playWhenReady
+        autoAdvanceStopGuardUntilMs = if (wasNaturallyEnded) {
+            SystemClock.elapsedRealtime() + AUTO_ADVANCE_STOP_GUARD_MS
+        } else {
+            0L
+        }
         ClientFileLog.write(
             'I', "audio",
             "load begin ${truncUrl(url)} hls=$hls headers=${headers?.size ?: 0} "
                 + "queuedMetadata=${metadataByUrl.containsKey(url)} snapshot=${playerSnapshot(p)}",
         )
+        if (wasNaturallyEnded) {
+            ClientFileLog.write(
+                'I', "audio",
+                "armed auto-advance MEDIA_STOP guard (${AUTO_ADVANCE_STOP_GUARD_MS}ms)",
+            )
+        }
         emitState("loading")
         // `DefaultHttpDataSource` is HttpURLConnection-backed and exposes no SSL
         // hook, so self-signed servers work here only because
@@ -721,6 +745,7 @@ object SongloftAudioEngine {
 
     fun stop() {
         val p = player
+        autoAdvanceStopGuardUntilMs = 0L
         ClientFileLog.write('W', "audio", "stop begin snapshot=${playerSnapshot(p)}")
         p?.let {
             it.stop()
@@ -752,6 +777,7 @@ object SongloftAudioEngine {
     /** Full release -- called by the module's `dispose()`. */
     fun release() {
         ClientFileLog.write('W', "audio", "release begin snapshot=${diagnosticSnapshot()}")
+        autoAdvanceStopGuardUntilMs = 0L
         stopProgress()
         releaseEqualizer()
         stopVolumeObserver()
@@ -773,6 +799,19 @@ object SongloftAudioEngine {
     fun releaseFromService() {
         ClientFileLog.write('W', "audio", "releaseFromService invoked snapshot=${diagnosticSnapshot()}")
         release()
+    }
+
+    /**
+     * Consume the one stale stop generated while auto-advance replaces an ended
+     * item. This is called by the service only after it has verified that the
+     * incoming intent is `KEYCODE_MEDIA_STOP`, never for play/pause/next keys.
+     */
+    fun consumeAutoAdvanceStopGuard(): Boolean {
+        val deadline = autoAdvanceStopGuardUntilMs
+        autoAdvanceStopGuardUntilMs = 0L
+        if (deadline <= SystemClock.elapsedRealtime()) return false
+        val p = player ?: return false
+        return p.playWhenReady && p.playbackState != Player.STATE_IDLE
     }
 
     // -- progress --------------------------------------------------------------
