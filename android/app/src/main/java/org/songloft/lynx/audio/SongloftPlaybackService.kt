@@ -3,6 +3,7 @@ package org.songloft.lynx.audio
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -245,9 +246,17 @@ class SongloftPlaybackService : MediaSessionService() {
     }
 
     private fun startForegroundPlaceholder() {
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+            ?: Intent(this, org.songloft.lynx.MainActivity::class.java)
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        val contentIntent = PendingIntent.getActivity(
+            this, 0, launchIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
         val notification = NotificationCompat.Builder(this, PLACEHOLDER_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentTitle(getString(R.string.app_name))
+            .setContentIntent(contentIntent)
             // Silent + minimum priority so it never actually shows to the user
             // — it exists only to fulfill the FGS start deadline. Media3
             // overwrites this the moment the real MediaStyle notification is

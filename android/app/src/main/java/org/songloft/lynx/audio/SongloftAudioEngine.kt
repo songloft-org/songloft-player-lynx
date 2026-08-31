@@ -1,6 +1,8 @@
 package org.songloft.lynx.audio
 
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.media.AudioManager
 import android.media.audiofx.Equalizer
 import android.database.ContentObserver
@@ -473,9 +475,17 @@ object SongloftAudioEngine {
         val forwardingPlayer = RemoteCommandForwardingPlayer(rawPlayer) { command ->
             sink?.emit(EVENT_REMOTE_COMMAND, mapOf("command" to command))
         }
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            ?: Intent(context, org.songloft.lynx.MainActivity::class.java)
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        val sessionActivity = PendingIntent.getActivity(
+            context, 0, launchIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
         return MediaSession.Builder(context, forwardingPlayer)
             .setCallback(sessionCallback)
             .setCustomLayout(listOf(buildFavoriteButton()))
+            .setSessionActivity(sessionActivity)
             .build()
     }
 
