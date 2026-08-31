@@ -1,427 +1,149 @@
 # Bug 跟踪
 
-> 真机测试与代码审计发现的问题清单。已修复项标 `[x]`，待修项标 `[ ]`。
+> 真机测试与代码审计发现的问题清单。**截至 2026-08-26 所有条目均已闭合**（已修 / 上游定性 / 无法复现）。
+> 新发现的问题请新起条目，别在已闭合条目上续写。
 >
-> 下方**「手动测试发现」**是用户真机使用中报的问题；**「代码审计发现」**（2026-08-14）是四路并行审计查出的缺陷，**其 P0/P1/P2 三段已由批41–48 全部修完**（每条就地标了修复批次），实施细节在 [`../archive/2026-08-14-audit-fix-plan.md`](../archive/2026-08-14-audit-fix-plan.md)，本文件只作清单索引。
+> - 上游问题（`illegal css key:237`、swiper `autopx`、placeholder 空转）见 [`plans/upstream-issues.md`](plans/upstream-issues.md)
+> - 审计修复实施细节见 [`../archive/2026-08-14-audit-fix-plan.md`](../archive/2026-08-14-audit-fix-plan.md)
+> - 各批次的完整修复过程见 [`progress.md`](progress.md) 对应批次
 >
-> **截至 2026-08-26，本清单所有条目均已闭合**：能修的真 bug 已修（每条就地写了根因与修法）、上游问题已定性
-> （`illegal css key:237`、swiper `autopx`、placeholder 空转记入 [`../project/plans/upstream-issues.md`](plans/upstream-issues.md)）、
-> 复现不了的已按「无法复现」关闭并留了重开指引（封面 letterbox、偶发灰层）。**新发现的问题请新起条目**，别在已闭合条目上续写。
+> 格式：`症状 — 根因/修法（修复批次）`。
 
 ## 手动测试发现
 
-- [x] 暗色很多地方看不清,比如输入框提示文字
-- [x] 切tab回曲库没有记住上次的子页签
-- [x] 安卓CI打包需要使用gh命令配置好密钥和证书，参考songloft-player工程
-- [x] 安卓通知栏已经出现，需要补充下一曲按钮和收藏按钮，通知栏封面右下角图标需要是正确的 songloft 图标
-- [x] 应用图标需要更新成正式的 songloft 图标，名字也需要是正式的 songloft
-- [x] 首页我的歌单和我的电台布局有问题，无法拖动，而且大小应该是矩形才对。
-- [x] 首页插件的图标没有正常显示出来
-- [x] 全屏播放器关闭的时候每次都回到首页了，需要回到上次的tab，而且底部小播放器条应该只在首页和曲库页显示，其他的设置和插件页不应显示底部小播放器。
-- [x] 设置页不需要有播放设置。
-- [x] 首页统计信息改为使用 /songs/stats 接口的数据显示，具体布局你自由发挥。接口可以看 swagger.json 。
-- [x] 外观跟随系统没效果，始终是深色了，正常应该跟随系统变化。
-- [x] 语言跟随系统没效果，始终是英语了，正常应该跟随系统变化。
-- [x] 插件顶部标题用插件的name字段显示
-- [x] 首页下拉刷新不触发（批20 在 Android 模拟器上新发现，**非本批引入**：把 `<refresh>` 恢复成改动前的配置后同样是 0 次 `bindstartrefresh`。首页数据本来靠 query 缓存 + 扫描完成自动失效，故未阻塞批20）
-- [x] 底部导航的插件 tab 图标统一是内置 settings 图标（`ShellLayout.tsx` 硬编码 `name='settings'`），应改用插件自己的图标（与「首页插件图标」同源但另一个渲染点）
-- [x] 插件 WebView 打开后内容空白（批20 在模拟器上观察到，标题栏正常、页面区全黑，未深查）
-- [x] 首页进入的歌单，关闭歌单详情后应该回到首页才对
-- [x] 歌单列表和曲库分类页封面改为正方形（与首页一致）
-- [x] 插件的禁用和启用搞反了？点击全部更新没反应？插件商店右上角的刷新按钮icon错了，应该用刷新icon而不是现在的菜单icon。插件搜索框没法输入？（批33：文案改为动作提示，Input 组件可输入，图标换 refresh，更新按钮加 loading 态）
-- [x] Tab 配置没有及时生效？（批33：变更后 invalidateQueries 即时刷新 ShellLayout）
-- [x] ios端主题/语言有没有正常同步？应用图标有没有正常打包？（批33：代码审计确认 SystemAppearance 正确，补充 AppIcon PNG）
-- [x] 日志导出功能需要完善，不需要展开看日志，直接导出zip包就行。（批33：改为 openURL 直接下载，移除内联查看页面）
-- [x] web 版本首页顶部仍显示「下拉刷新」几个字（批36 那次修复无效：`enable-refresh={!isWeb}` 里的 `isWebEnvironment()` 探测 `window`/`document`，而这段渲染跑在 web-core 的 background **Worker** 里，那里两者都不存在，所以 `isWeb` 恒为 false、属性恒为 `"true"`。更根本的是 Web 没有 `<refresh>` 实现（web-core 的 `LYNX_TAG_TO_HTML_TAG_MAP` 无此条目、web-elements 注册的是 `x-refresh-view`），两个标签作为未知元素落进 DOM，header 的文案就成了普通页面内容，属性开关无论如何都关不掉它。改为按 `SystemInfo.platform` 判定（两个 realm 都有）并在 Web 上整段不渲染 `<refresh>`；同一根因还让插件 WebView 页在 Web 上渲染无实现的 `<webview>` 而非 fallback 文案，一并修掉）
-- [x] 网络代理页的输入框与卡片边框位置不对（`.proxy-settings__field` 的 padding 是 `0 var(--space-4) var(--space-3)`——**顶部为 0**，于是输入框顶边贴死在卡片内边缘、白色留白只出现在下方；更糟的是左右缩进 16px 恰好落在卡片 `--radius-lg`（20px）圆角的弧线区内，而 `.settings-section__card` 带 `overflow: hidden`，输入框上面两个角**被卡片的圆弧削掉**。与缓存配置那次是同一个根因：字段塞进「为自带内边距的行设计」的卡片里却给了不对称 padding。改为对称 `var(--space-4)`，并把输入框样式对齐同为设置子页的 `.cache-manage__input` / `.server-settings__input`）
-  - 顺带查出**同一批修过的 `-x-placeholder-color` 漂了三处**：14 个 `<Input>`/`<TextArea>` 里 `proxy-settings__input`、`server-edit__input`、`libops-exclude__input` 都没写，而清单第一条「暗色输入框提示文字看不清」早已标记为批19 修完。`libops-exclude__input` 更彻底——只有一句 `flex: 1`，连背景、边框、文字色都没有。三处已补齐，并新增 `shared/ui/__tests__/input-css.test.ts`：**从 TSX 里扫出所有 `<Input>`/`<TextArea>` 的 className 反推需求**（而不是硬编码清单），少一个就报出类名。反向验证过：摘掉任一处立刻红
-  - **随后把全库 15 个文本字段逐个过了一遍**（不是 14 个：`LyricEditPage` 用的是**裸 `<textarea>`** 而非 lynx-ui 组件，只认组件名的闸门会静默漏掉它，已扩到匹配小写裸标签并加了一条专门钉住它在扫描范围内的用例）。结论：**贴边/削角那个几何问题别处没有**——全库 `overflow: hidden` + 圆角的容器里只有 `.settings-section__card` 装输入框，而只有网络代理与缓存配置往它里面塞字段。但查出另一族按 `DESIGN.md` 判定的 token 误用：
-    - **6 处用 `--paper`（`DESIGN.md:28`「浮于 canvas 上的卡片/面板」）或 `--canvas`（「最底层背景」）当输入框底**，而 `:30` 明写 `--neutral-faint` 是「极弱填充（**输入框底**、标签底）」。这不是审美问题：那 6 处都无边框且坐在透明页面上，浅色下是 `#fafafa` 压 `#ffffff`，**对比度约 1.04:1 —— 看不出哪里是输入框**，只能看见占位符（`song-detail` / `add-songs` / `library__filter` / `playlist-detail__search` / `plugin-registry__search` / `lyric-edit__textarea`，另有 `server-edit` 用 `--canvas` 与页面同色）
-    - **15 处全用 `--radius-md`**（`:59`「普通卡片」），而 `:58` 指定输入框用 `--radius-sm`
-  - 按形态收敛成两种：**表单字段** 10 个 = `--neutral-faint` + `--line` hairline；**搜索条与全页歌词编辑器** 5 个 = `--neutral-faint` 无描边（对齐本来就正确的 `library__search-input`）。半径 15 处统一 `--radius-sm`。`plugin-registry__search-btn` 跟着旁边的输入框一起改，否则它会变成这一对里更淡、更圆的那半边
-  - 三条不变量都进了 `input-css.test.ts`（占位符色 / 填充 token / 圆角 token），逐条反向验证过。**闸门从 TSX 反推字段清单**，所以新写的输入框一落地就自动受约束
-  - 私有域白名单那个字段是**单行 `<input>`**，而 `save()` 按 `\n` 切分、占位符写着「每行一个 IP 或 CIDR」——单行 input 装不进换行符，**多条白名单从来输入不了**。换成 `TextArea`（`<textarea>` 在 Android xelement 4.0.0 / iOS XElement 4.0.1 / web-core 三端都注册了，已逐一核实），`maxLength` 从共享默认 140 提到 2000（140 只够约八条 CIDR）
-- [x] GitHub 代理输入框下加「复制 Prompt 让 AI 帮你找」按钮（对齐 Flutter 的 `github_proxy_dialog.dart`）—— 可用的 GitHub 镜像来来去去，所以参考实现给的是**提示词**而不是会腐坏的预设列表。**前提是全库压根没有剪贴板能力**：Lynx 自身无剪贴板 API（查过 `@lynx-js/types` 与文档），渲染 realm 也没有 `navigator.clipboard`，而 TS / Kotlin / Swift / Web 宿主四处此前**全无**任何 clipboard 代码。于是先补 `SongloftPlatform.setClipboard` 三侧：
-  - Kotlin 走 `ClipboardManager` 且**必须 post 到主线程** —— 模块方法跑在 Lynx JS 线程上，这正是批48 悬浮歌词那个坑（裸 `catch` 吞掉 wrong-thread 异常，窗口浮出来却一行不显示）
-  - Swift `UIPasteboard` 同样主线程；Web 宿主先试 `navigator.clipboard.writeText`，**回退**到 textarea + `execCommand`（前者要安全上下文、而这次调用是从 worker 经桥过来的，user activation 可能已丢）
-  - **契约闸门自动逼出了两侧实现**：`native-module-contract.test.ts` 是从 TS 接口**反推**方法清单的，往 `SongloftPlatformNative` 加一行之后它立刻红「Kotlin has no @LynxMethod setClipboard」。两侧都编译验证过（`compileDebugKotlin` 通过、iOS `BUILD SUCCEEDED`）
-  - 提示词文本**刻意不做 i18n**：它不是界面文案而是用户粘给 AI 的内容，翻两份就要维护两份语义一致的 prompt，参考实现同样是单个中文常量
-- [x] **`ProxySettingsPage` 用裸 `fetch` + `useEffect` 加载四个设置**（2026-08-26 已迁到 query 层）—— 原症状是
-  loading 闸在 ReactLynx 测试环境里**永远不放行**（fetch 确实调了 4 次，但 promise 续体里的 `setLoading(false)`
-  不落进渲染树），所以这一页**无法写渲染测试**。已迁到 api + query 层：`SettingsApi.getProxySettings/
-  updateProxySettings`（四端点并行读写）+ `useProxySettingsQuery` / `useSaveProxySettingsMutation`，页面改为
-  query 数据种子出本地草稿、保存走 mutation。**补上了它一直缺的两个渲染测试**（loading 闸放行 + 保存把
-  allowlist 文本切回数组后传给 mutation）。**Android 模拟器实测**：进 `/settings/proxy` 表单正常渲染
-  （内容纵向跨度 750px、约 9 个 section 簇，非单行 loading）。顺带清掉两个未使用的 import（`useNavigate`、
-  `SettingsRow`）
-- [x] 删除插件没有二次确认 / 从文件安装点击没反应（后续真机又报：卸载对话框点「取消」多闪一帧「将删除「」…」，名字空了）—— 三个症状全部修完（对话框与 Web 失联的完整机制见下述第二、三点；原两条独立条目系同根重复，2026-08-26 合并）：
-  - **删除**：其实有两段式确认（`confirmDeleteId`），但全部反馈只是那个 16px `×` 从 `--content-muted` 变成 `--danger`，跟 hover 着色无从区分，所以读起来就是「点一下就删」。两段式适合**带文字的按钮**（文字会跟着变，如「再次点按确认删除」），不适合一个纯图标。改用对话框（点名要删的插件，说明会连同其存储数据一起删）。顺带把**两份**手写对话框（设置页登出的 `logout-dialog__*`、重复检测页的 `fp-dialog__*`）收敛成 `shared/ui/ConfirmDialog`——两份已经在 `DESIGN.md` 明文规定的那点上漂了：`--danger` 是「危险色（**仅文字，不做彩色背景块**）」，设置页那份守住了（ghost 底 + 红描边 + 红字），重复检测那份用的是**实心红填充**。统一到合规的那份，并加「无人重新手写对话框 CSS」闸门
-  - **对话框闪帧（真机复现后修）**：`show` 直接由 `pendingDelete !== null` 驱动，点取消把 subject 清掉的同时 lynx-ui 还在播**退出动画**，于是动画那几百毫秒面板留在屏幕上、名字已经没了。改为 `deleteOpen` 与 `pendingDelete` 分离：subject 只在「下一次打开」时被替换、绝不因关闭而清空。单测的 Dialog stub 也改成真 lynx-ui 行为（`show=false` 时子树仍挂载、只标记隐藏）——之前「show=false 就卸载」的 stub 恰好把这个 bug 藏住了，又是「mock 丢了真实实现的前置条件」。反向验证过
-  - **从文件安装**：根因是 `getUploadUrl()` 返回**裸相对路径且不带凭据**。这个 URL 交给 `pickAndUploadFile`，而它在**所有平台上都走 `HttpClient` 之外**的 multipart POST（原生是 OkHttp / URLSession，Web 是宿主里的裸 `fetch`），所以既没有拦截器给它挂 Bearer token，也没有谁去解析相对路径 → 端点是 `@Security BearerAuth`，**每次必 401**；原生侧那个 URL 连解析都过不去。而页面用的是 `catch {}` **空捕获**，于是 401 表现为「按钮没反应」。改为绝对地址 + `?access_token=`（与 `openLogs` 同一写法，后端 `middleware/auth.go:53` 明确支持这个 query 回退），并把失败改成页内红字显示（Lynx 无 toast），`cancelled` 不算失败。3 条单测钉住 URL 形状（含「token 只编码一次」），反向验证过
-  - **但 Web 上「native module not available」还有更深一层的真根因（本次才挖到）**：`audio-host.js` 把三个模块以**普通对象**塞进 `nativeModulesMap`，而 web-core 的 `createNativeModules` 对每个 value 做 `import(url)` —— 对象被强转成 `"[object Object]"`，import 拒绝，`Promise.all` 跟着拒绝，于是 **worker 的 `NativeModules` 里连一个自定义模块都没有**，只剩 web-core 自带的 `bridge`/`LynxExposureModule`。**用无头 Chrome 实证**：混入一个对象值 → `REJECTED: Failed to resolve module specifier '[object Object]'`。这一下让三件事同时静默死掉：文件选择器报「native module not available」、剪贴板写入无声 no-op、以及**批43 的 Web 音频修复从未生效**（facade 探不到 `SongloftAudio` 落回静音 mock）。修法：`nativeModulesMap` 的 value 改成 **ESM URL**（worker `import` 它、default export 是 `(nativeModules, call) => module` 工厂），方法经 `call` 转发到主线程的 `onNativeModulesCall`。新增 `web/songloft-platform-module.js`、`web/songloft-audio-module.js` 两个转发模块；**`SongloftStorage` 刻意不注册**——worker 已有可用的 `idb-storage`（DB `songloft`），而 audio-host 里那份用的是**另一个 DB 名**（`songloft_storage`），接上会把已持久化的登录 token 换库、刷新即掉登录，所以把那份死代码删了、让存储探测照旧落到 `idb-storage`。音频事件本来就走 `sendGlobalEvent`（不经此通道），转发模块只搬 worker→main 的方法调用。闸门：`web-host-page.test.ts` 加「每个 value 都是 URL 字符串、对应文件存在、被 copy 脚本拷贝、有 default-export 工厂」，反向验证过（把一个 value 换回对象立刻红）；copy 脚本对缺失的宿主脚本**直接 throw**。⚠️ **未竟**：`pickAndUploadFile` 在 Web 上仍可能因 user activation 丢失而不弹文件框（调用从 worker 经桥过来），无头环境不可观测，需真浏览器确认
-- [x] 设置页开关形式不统一：布尔值有时是开关、有时是尾部对勾，而「勾」又分带框和不带框 —— 确实是设计问题，**同一件事在全库有三种画法**。`DESIGN.md` 只定义了 Switch 一种状态控件，却没写「什么时候用什么」，于是漂成：
-  - **布尔值三种写法**：`AppSwitch`（HLS 代理 / EQ / insecureTls / 6 个扫描开关）、**尾部无框对勾**（设置→播放的自动续播、音量均衡）、**手写带框勾**（浏览视图、Tab 配置）
-  - **带框勾六份互不相同的副本**：`tab-config__check`(22px/无描边/`--paper` 底)、`browse-views__toggle`(22px/硬编码 4px 圆角/2px 描边/文本 `✓`)、`libops-tree__box`(18px/1px)、`library__select-check`(20px/**圆形**/文本 `✓`)、`playlist-detail__select-check`(24px/**圆形**/文本 `✓`)、`playlists__select-badge`(22px/**圆形**/文本 `✓`)。圆形本身就是错的语义——圆形读作单选
-  - 定为三种角色各一种控件并写进 `DESIGN.md`（新增「状态控件」铁律 + Checkbox 规格）：**开/关 → Switch；一组里选一个 → 尾部无框对勾；列表里勾选若干 → 新的 `AppCheckbox`（20px 方形）**。改动：两个布尔行 → `SwitchRow`；浏览视图与 Tab 配置的自绘行 → `SettingsSection` + `SwitchRow`；四处多选 → `AppCheckbox`；`SwitchRow` 从 `library-ops/widgets/` 移到 `settings/widgets/`（它复用 `.settings-row*`，本就该跟 `SettingsRow` 放一起）；删掉六份副本的 CSS。产物反而小了约 6 KB
-  - 闸门：`app-switch-css.test.ts` 加「无人重新手写 checkbox CSS」（判据是「画了框 + 用 `--primary` 填充」），反向验证过
-- [x] **`var(--on-primary)` 是个不存在的 token，5 处在用，其中两处让内容彻底看不见** —— 顺着上一条查配色时发现。正确的是 `--primary-content`（`DESIGN.md:38`）。未定义的自定义属性会让整条声明被**静默丢弃**、元素沿用继承值，没有任何警告：
-  - `playlists__select-badge-mark` 的对勾继承到 `--content`（近黑）压在 `--primary`（浅色主题是黑）填充上 → **多选歌单时根本看不出选了哪些**
-  - `home__state-action-text`（空态「浏览曲库」按钮文字）**两个主题下都不可见**（浅色是近黑压黑，暗色是近白压白）
-  - 另外 3 处是删除按钮文字压在 `--danger` 上，对比度差但还能读
-  - 新增闸门 `shared/theme/__tests__/tokens-defined.test.ts`：全库 CSS 里每个**无 fallback** 的 `var(--x)` 都必须有声明。它当场又查出 6 处**另一套设计系统遗留的命名**从未迁移：`--surface`×3、`--surface-raised`、`--border`、`--primary-faint`（Material 风格名，Muse 里根本没有）。按各自同类兄弟的取值逐一改正（页面根 → `--canvas`、分隔线 → `--line`、工具条/选中行 → `--paper`、填充按钮 → `--neutral-faint`）。反向验证过
-- [x] 音乐库管理页最后两项入口（重复歌曲检测 / 清理无效歌曲）跟上面的设置区不匹配 —— **是设计问题：这两项被手写成了裸卡片**（`.libops__dup-entry`），没走页面其余部分统一用的 `SettingsSection` + `SettingsRow`。四处偏差同时存在：① **无横向 margin**，而每个 `.settings-section` 卡片都有 `margin: 0 var(--space-4)`，于是这两项比上面所有卡片**宽 32px**（用户说的「边框比上面宽」）；② 纵向 padding 是 `var(--space-3)`（12px）而 `.settings-row` 是 16px（用户说的「太紧凑」）；③ 每项**各自带一圈 border**，两项相邻处出现双线；④ 没有区块标题，而同页其他四块都有。另外「已清理 N 首无效歌曲」是浮在卡片外的一行散字。改为一个 `SettingsSection`（新 key `libops.maintenanceSection`「维护」）+ 两个 `SettingsRow`，清理结果落进行的 subtitle，删掉三条已无引用的 CSS 规则。补 3 条单测（此前这两个入口**零覆盖**）
-- [x] 扫描完成后拿不回「跳过已存在 / 重新导入」的选择 —— `onResetScan` 在「重新扫描」里**立刻发起了一次扫描**（注释写着「rescan means do it now」），于是跳过了 idle 态提供的全部选择：扫描模式与目标目录。更糟的是那些控件**根本无法到达**：`/scan` 进度端点会一直汇报**上一次**运行的终态，所以即使重新挂载页面也直接落在总结态，唯一出路就是这个按钮，而它会用本地 state 里恰好存着的模式（新挂载时是默认 `skip`）去扫——**「重新导入」在 UI 上完全选不到**。Flutter 参考实现的按钮只调 `reset()`（清本地进度 → 回 idle 态 → 出现模式选择 + 指定目录 + 扫描按钮），已对齐：新增本地 `dismissed`「已读这次结果」标记传给 `deriveScanView`，只遮蔽**终态**、绝不遮蔽正在跑的扫描（别的客户端或自动扫描起的任务仍要显示）。5 条单测，摘掉那一行后 3 条立刻红
-- [x] 进了二级页面后底部/侧边导航的 tab 全都不亮（不是设计如此，是**移植时丢了前缀匹配**）—— `ShellLayout.tsx` 用 `pathname === dest.path` 做判定，于是 `/settings/plugins`、`/library/category/artist`、`/playlists/7`、`/plugin/x/*` 这些**没有一个**能点亮所属 tab，整条导航栏是暗的。Flutter 参考实现 `shell_layout.dart:_getCurrentIndex` 一直是按前缀匹配的，且**永远返回某个 index**（兜底 0=首页），从不出现「一个都不亮」。已按参考实现补 `navPathOwns` / `activeNavPath`（`shared/nav/shell-navigation.ts`，与 `showsMiniPlayer` 同一处策略模块）：
-  - `/settings/*` → 设置；`/library/*` → 曲库；`/plugin/<entry>/*` → 该插件 tab；最长匹配优先，未渲染的 tab 不会被点亮
-  - **`/playlists*` 归曲库**（照参考实现的「歌单已并入曲库」），尽管歌单也能从首页进——「返回哪个 tab」是另一个问题，`getLastShellLocation()` 早就按历史而不是按路径在回答它
-  - **首页不按前缀匹配**（`/` 是所有路径的前缀），它是 `activeNavPath` 的兜底，于是陌生路由也只会点亮一个而不是零个
-  - 8 条单测；摘掉前缀那一行后其中 3 条立刻红
-- [x] 私有域白名单输入框右边超出卡片边框（**Web 独有，两处**）—— `@lynx-js/web-elements` 是用 `::part()` 给影子树里的真控件套样式的，而 `x-textarea.css` 只转发 `width`/`padding`/`border` 等，**偏偏不转发 `box-sizing`**（`x-input.css` 两个都转发）。于是内层 `<textarea>` 保着 UA 的 `content-box` 却继承了 `width: 100%`，边框盒比容器内容宽出 `padding + border`，从卡片右侧捅出去。**用无头 Chrome 复现了机制并量到了数**：白名单字段右边缘 417px 对卡片的 383px（超 34px = 2×16 padding + 2×1 border）；`LyricEditPage` 那个裸 `<textarea>` 是同一个 bug 的第二处，409px 对 383px（超 26px）。原生不受影响（Lynx 默认 border-box），所以只在浏览器里看得见。改为交给 flex 定尺（白名单 `width: auto`、歌词编辑器 `flex: 1`）——stretch 与 `flex` 都作用在**外**盒，两种盒模型下都对，实测两处都回到 383px 齐平。闸门加了「多行字段的**有效** width/height 不得是百分比」一条（按同特异性「后声明者胜」解析 base 与 modifier，因为 `.proxy-settings__input` 的 `width: 100%` 是那两个单行 input 要用的、只有 `--tall` 该覆盖它）
-  - **这道闸门第一版是坏的，被它自己的反向验证抓出来**：字段表按「首个 class」做 map 且先到先得，而 `proxy-settings__input` 同时被两个 `<Input>` 和这个 `<TextArea>` 穿着，于是白名单被记成单行、直接被排除在多行断言之外——摘掉修复后闸门竟然是绿的。改为按**完整 className 串**建条目。教训：**闸门写完必须让它红一次**，否则你验的是自己的想象
-  - ⚠️ 同一个缺口还有一半没法从我们的样式表里补：`x-textarea.css` 也**不转发 `border-radius`**，所以 Web 上这两个多行字段是直角、跟其他 13 个圆角字段不一致。要修得给 textarea 套一层承载背景/边框/圆角的 `<view>`，那会让「15 个字段两种形态」的闸门口径变复杂，故未做
-- [x] 设置页从二级页面返回后落回顶部，没记住一级列表的滚动位置（滚动偏移存在页面自己的 `useRef` 里，而 `/settings/cache` 这类子页是**兄弟路由**不是嵌套路由——打开子页会把 `SettingsPage` 整个卸载，per-mount 的 ref 随之归零，所以 `scroll-top={scrollRef.current}` 自上线起**没有恢复过任何一次**：每次挂载读到的都是 0。改为 `shared/nav/scroll-memory.ts` 的模块级会话记忆（沿用 `last-library-search` / `shell-navigation` 的既有写法）+ `initial-scroll-offset`。**选 `initial-scroll-offset` 而不是 `scroll-top` 是查过三端 SDK 的**，因为文档对这两个属性都没给平台矩阵：前者在 Android `UIScrollView`/`LynxUIScrollView`、iOS `LynxUIScroller`/`LynxUIScrollView`、web-elements `ScrollAttributes` 五处全部有实现，且**都会等到内容布局完成**才应用（Android 在 `handleComputeScroll()` 里反复重试直到 `offset + height <= contentHeight`，iOS 排进 `scrollReadyBlock`，web 等一帧 `requestAnimationFrame`）——挂载那一刻内容还没测量，正需要这个延迟；`scroll-top` 则在**两条 new-arch 路径上压根不存在**，Android 默认路径上还是「立即」变体。另有一个单位坑：Android 的 `LynxScrollEvent.setScrollParams` 把 `scrollTop` 经 `pxToDip` 报出，`setInitialScrollOffset` 再经 `dipToPx` 收回，两头刚好对齐；把 px 值喂给这个属性会按屏幕密度成倍越界、直接落到页面底部）
-- [x] web 平台刷新页面就掉登录（根因就写在控制台那行 warn 里：`no NativeModules.SongloftStorage and no localStorage; using in-memory storage`。web-core 把 app 跑在真 `Worker` 里，而 Web Storage 是 window-only，所以 worker realm 的 `localStorage`/`sessionStorage` 都是 undefined，能力探测一路落到 `createMemoryStorage()`，token 随页面一起没了。新增 `idb-storage.ts`：worker realm 里 `indexedDB` 原生可用（实测 put/get 往返成功），插在 localStorage 与 memory 之间。刻意不走「桥到主线程 localStorage」——那要给 `web/index.html` 与嵌入产物各塞一个宿主文件，而 IDB 零宿主配合。`open` 带 3s 超时兜底：auth bootstrap 等着第一次读，另一个 tab 触发 version-change blocked 时浏览器既不 fire `onsuccess` 也不 fire `onerror`，不设超时就是白屏挂死）
-- [x] 导出日志功能缺少导出客户端日志功能，需要和flutter版本功能对齐。
-- [x] 日志等级设置是不是缺少了一个标题？
-- [x] 播放器速度/播放模式弹出层能同时打开两个，点其他区域应该让上一个消失（批51，**用户截图报的**）—— `PopoverBackdrop` 是负责吞掉外部点击的遮罩，库样式给了 `100vw × 100vh` 却**没有 `top`/`left`**；fixed 元素在偏移为 auto 时落在**静态位置**（定位容器内、紧贴触发器），于是它铺的是「从弹出层量起」的一屏，弹出层左侧与上方全没盖住——速度菜单在右上时，左下的播放模式键就在遮罩之外。补 `top: 0; left: 0` 钉到视口原点。同时删掉前一版自写的同名遮罩（`popover-backdrop` 这个类名是库里硬编码的，自写必然撞车；且它那个 `z-index: 99` 会把遮罩压在菜单**上面**，导致点菜单项只关闭、选不中）。闸门 `popover-menu-css.test.ts` 钉住这两条，摘掉 `top/left` 即红
-- [x] 弹出层点击后要一秒左右才消失，是卡顿吗（批51，**不是卡顿**）—— `PopoverContent` 是承载 `bindtransitionend`/`bindanimationend` 的元素，而 `Presence` 只有等到这些事件才离开 `Leaving` 状态；我们的 CSS 一个 transition 都没声明，于是它退化成空转 `MAX_WAIT_FRAMES = 24` 次单帧 `lynx.requestAnimationFrame`（`delayFrames` 的实现就是 `lynx.requestAnimationFrame`），而业务代码在 BTS 背景线程上、每帧都是一次线程往返——纯帧数按 60fps 算也已 400ms 起。修法 `transition: opacity 140ms` + `.ui-closed { opacity: 0 }`，**两半缺一不可**（只有 transition 而值不变则什么都不触发）；`transitionend` 一到就立刻卸载。若某宿主不派发该事件则退回原来的 24 帧超时，慢但不坏。顺带修掉一个未被报告的问题：定位在 `DelayedEntering` 才计算（比 `Entering` 晚 16 帧），此前那 16 帧里菜单是以**未定位的位置可见**的，会先显形再跳走
-  - 同一批还修了个我自己引入的回归：这两个弹出层**一开始根本打不开**（受控模式下 `PopoverTrigger` 只走 `onVisibleChange`，封装漏传了它；`onClose` 是 Presence 的「已关完」生命周期回调，拿它当关闭请求会死锁）。三条的机制与铁律见 `AGENTS.md` §4「Popover / Presence」
-- [x] 全屏播放器封面在 Android 上整块不显示（重构播放器时真机抓到，**非本批引入，是历史就有的**）—— 根因是 `box-shadow` 加在 `<image>` 元素上：Android 上位图会因此完全不渲染，元素照常占位、画背景色，但图片（连占位符）都不出来，表现为一个纯白圆角矩形。而 mini-player 的封面没有阴影所以正常。修法：阴影挪到包着图片的 `<view>` 上，`<image>` 用 `mode='aspectFill'` 填充。这类「元素在、位图没了」的失效截图之外没有任何信号，只有真机能看见
-- [x] 全屏播放器在 Web 上宽度恒 0、歌词页不可达（重构时附带发现，**历史就有**）—— `useBreakpoint()` 漏传 `measureSelector`。`/player` 是导航后才挂载的页，而 Web 上 `bindlayoutchange` 只对首屏就存在的元素触发，于是宽度永远是初始的 0：Swiper 分支进不去、歌词屏不可达、`isWide` 恒 false。补 `'.full-player'`（HomePage 顺手补 `'.home'`），并新增全库闸门 `measure-selector-contract.test.ts` 防再犯
-- [x] 「打开后自动进歌词」偏好从未生效（重构时附带发现，**历史就有**）—— 旧代码在 mount 时读偏好就 `swipeTo(1)`，但 Swiper 要等宽度已知才挂载，此刻 `swiperRef.current` 是 null，调用被静默丢弃。改为等「偏好读到 + Swiper 已挂载」两者齐备再进、且只进一次
-- [x] 全屏播放器横屏时封面上溢、顶到顶栏下面（重构时真机横屏抓到）—— 高度预算错把**整页**高度喂给了 Flutter 的公式（那 100 的常量是给「标题在封面栏内」的桌面布局调的），在横屏下要出比可用空间还大的封面。改为测量 **stage**（封面/歌词区）自身高度，常量也换成 stage 内边距
-- [x] 全屏播放器封面在 Android 上不是正方形（letterbox，**2026-08-26 关闭：无法复现，推测已随后续改动消失**）——
-  在 emulator-5554 / SM_G998B（540×960 @ density 160）上反复实测：竖屏经路由进 `/player` 量到 **405×405**
-  （比例 1.0000）、点 mini player 进也是 405×405、横屏分栏 140×140，还连拍 6 帧找挂载瞬间的过渡态，**全程方形**。
-  原报告的那台设备已不可用，现无设备能复现 ⇒ 按「无法复现」关闭；**若在哪台真机上再看到上下留白的横条，请重开本条**
-  并记下设备型号/分辨率/密度。原始记录（备查）：`<image>` 给定 405px 见方盒子却只布局出约 215px 高，方形封面渲染成
-  上下留白横条；当时已排除 `height:100%`、内联 px 高、`position:absolute`、`aspect-ratio:1`、`auto-size`、各 `mode`
-  值、去掉外层 flex 居中均无效，同一 URL 在 mini-player / 歌单卡（用**类**而非内联定尺）能填满，线索指向「内联 style
-  定尺 vs 类定尺」差异。详见 `FullPlayerPage.css` `.full-player__cover-img` 注释
-- [x] 播放器挂载时 logcat 报两条 `illegal css key:237` —— **2026-08-26 已根因定位，是上游 bug，无害，我们侧不改**。
-  当初猜「某个 lynx-ui 组件」猜对了方向。实测：仅播放器页出现（`/`、`/library`、`/settings`、`/settings/cache`、
-  `/player/lyrics/adjust`、`/player/eq`、`/settings/tab-config`、`/playlists/1`、`/library/add` 全为 0），
-  且**竖屏 2 条、横屏 0 条** —— 横屏走 `layout.isSplit` 分支、不渲染 `<Swiper>`，这一步就把范围二分到了 Swiper。
-  - **根因**：`@lynx-js/lynx-ui-swiper@3.135.4` 的 `src/SwiperItem/index.tsx:138-141` 用 **camelCase**
-    `marginInlineEnd` 调 `setStyleProperties`，而该 API 解析的是 **kebab-case**（同文件 `Swiper/index.tsx:184`
-    的兄弟调用就老实写了字符串 `'inset-inline-start'`）。`margin-inline-end` 是 id 151、运行时认识；
-    `marginInlineEnd` 不在表里 ⇒ 落到 **237 = 表尾（236）+1**，即一次名称查找未命中。
-    核实过 tasm 编码器的名称表与 `liblynx.so` 的都止于 236（`-x-text-decoration-gap`），与
-    `@lynx-js/css-defines` 0.0.16 一致。**条数吻合**：`data={[0, 1]}` → 2 个 `SwiperItem` → 各一次调用 → 2 条。
-  - **为什么无害**：`FullPlayerPage` 不传 `spaceBetween`，所以被丢弃的声明是 `margin-inline-end: 0px`
-    ——本就是默认值。纯告警，无功能损失。已记入 [`plans/upstream-issues.md`](plans/upstream-issues.md)。
-- [x] 播放历史页面有报错（批50）—— 页面上那行 `不支持的 context_type` 只是最外层症状，往下是**三处独立的错**，其中**写入从来没成功过**比读更严重：后端 `SongPlayed` 从 query 读 `type`/`context_type`/`context_key` 且只有 `type=play` 才落库，而前端把 context 放在 **JSON body** 且从不发 `type` → 每次 204、一条都没记。加上「设置→高级→播放历史」这个入口拿不到任何上下文（后端历史是**按播放上下文分桶**的，没有全局「最近播放」端点），所以它不是坏了而是**不可能修好**。改前先用真实后端按新旧两种形状各 POST 一次做反向验证。详见 `progress.md` 批50
-- [x] 曲库的设计有问题，自定义曲库显示分类也有问题（批51-A~D）—— 探查证实**「自定义显示分类」整个功能从未生效过**：后端 `PUT /settings/library-browse` 契约是 `{views:[{key,visible}]}`（14 个合法 key），而旧实现发 `{id,visible,order}` → GET 恒回落全默认、PUT 恒 **400** 并被 `.catch(()=>{})` 静默吞掉。且 `KNOWN_VIEWS` 自创了 4 个后端不认的 id、丢了 4 个真实的。曲库随之从「硬编码 4 tab」重写为对齐 Flutter 的**单页 14 视图**（四批）。详见 `progress.md` 批51-A/B/C/D
-- [x] 播放器速度/播放模式弹出层位置错乱（批53，**Docker 无头 Chrome 实测抓出 6 处**）—— 上面批51 那两条只治了遮罩与延迟，位置本身仍是错的：`lynx-ui-popover` 的 `computeCoordsFromPlacement` 返回**相对触发器**的坐标，而 `OverlayView` 用 `position: absolute` 施加它（包含块是最近的定位祖先），两者只在「触发器正好位于该祖先原点」时等价。实测歌单详情排序菜单落在 `x = -122`——**整块在屏外，功能等于不存在**；音量面板 `-60`、倍速 `-30`、曲库排序 `0`（应为 106）。库自带的溢出收敛也救不了（`detectOverflow` 拿 `SystemInfo.pixelWidth` 当屏幕，Web 上报的是浏览器**屏幕**尺寸 800×600 而非 lynx-view 的 420×900）。改为自研 `PopoverMenu`/`PopoverPanel` + `anchored-overlay.ts`，退役该库。铁律见 `AGENTS.md` §4「锚定弹出层」
-- [x] 插件商店缺「重新安装最新版本」功能（批57）—— 顺着这条对照 Flutter 全量盘点，另外挖出一个**模型级 bug**：`registryPluginEntrySchema` 把 `conflict` 建模为 string，而后端实际发 **boolean**，`true` 落进 `.catch()` 变 undefined ⇒ **整个撞名冲突流程一直是死的**（songloft/songloft#339 那套防护从未生效）。行动作补齐四态（重装 chip / 更新至 vX / 冲突覆盖安装 / 安装）。详见 `progress.md` 批57
-- [x] 禁用插件后 tab 上图标还显示（批57b）—— 双处根因：① `useShellNavTabs` 把 tab-config 的 pluginTabs 原样返回，不过滤 `isActive`/是否已卸载；② toggle/delete/install mutation 只 invalidate `['jsplugin','list']`，而 shell-nav query 的 key 是 `['settings','tab-config','shell-nav']`（staleTime 60s）压根不会被刷新。Web 真后端实测：禁用洛雪音源 → 导航栏 7→6 即时消失，无需刷新
-- [x] 底部导航选中态是整块紫色填充+反白，观感差（批58，设计问题）—— 按 iOS 26 Liquid Glass 重做：fixed 悬浮胶囊 + `--primary-faint` 淡色底 tint。**顺带踩了一条**：首版内容避让只留 80px，用户随即报**首页/曲库滚不到底被 mini player 挡住** → 升级为 `--nav-inset` 两档变量（无歌 80 / 有 mini-player 148）。新增可滚动页面必须消费该变量，见 `AGENTS.md` §4「底部导航胶囊」
-- [x] 宽屏左侧 tab 选中会高度变化导致抖动（批58b）—— 批58 的选中态固定尺寸规则（`height: 52px`）没限作用域：底栏 64px 槽吸收了它所以无影响，但 rail 行是内容高度（~40px），选中被强制 52px、行高跳 12px、**下方所有行位移**。修法是把 `width/height` 收进 `.shell__bottombar` 作用域，rail 选中仅变色。铁律：**rail 选中只变色、严禁改尺寸**
-- [x] 编辑弹窗标题和保存按钮有问题（批60b，真机报障）—— 两个独立缺陷：**保存按钮**无主题包时 `--primary` 回退墨色（#111），描边版 submit 渲染成黑边黑字、与取消按钮几乎无差别、主操作零强调 → 改实心主色填充；**标题**是 `max-height: 85%` 在 fixed 弹层下按 containing block 解析、原生引擎不可靠（Web 钳制生效 614px 而原生失效后长表单被 flex 居中溢出顶部）→ 改 `85vh` 直接读 viewport
-- [x] 编辑弹窗标题被挡住（批60c，**实为被 flex 压扁而非遮挡**）—— 卡片是 column flex + 高度钳制，flex 把溢出量按 basis **加权摊给所有** shrink 非零的子项，小 basis 只是分得少、不是不分；而这两个弹窗的滚动 body 刻意用 `flex-basis: auto`（basis 0 会在卡片未被钳制时塌陷），于是标题行与 action 行也各摊一份。Web 实测标题 `height: 13.4px` / 内容 22px，而 Lynx 每个元素都带 `overflow: clip` ⇒ **文字上半被裁**；action 行 21.8/36 而按钮固定 36px ⇒ 溢出卡片 content box。修法给固定 chrome 加 `flex-shrink: 0`。**这类问题截图会误读成「样式没生效」或「被遮挡」**，判据是 `getComputedStyle(el).height` 与 `el.scrollHeight` 的差值。见 `AGENTS.md` §4 同名条目
-- [x] 底部滑入面板在 Android 只剩标题行（2026-08-26，真机截图报障）—— 播放历史与「更多」tab 面板**只渲染出标题行、body 完全没高度**，而「添加到歌单」正常。根因是纯 CSS、不是 Lynx 怪癖：panel 是 `position: absolute` + `left/right/bottom`（**无 `top`、无 `height`**）⇒ 按内容 shrink-to-fit；而滚动 body 是 `flex: 1`（`flex-basis: 0`）⇒ 对内容高度贡献 0 ⇒ panel 塌成 chrome 高度，`max-height` 上限从未被触及。Web 侥幸没事只因 web-elements 对 `x-view` 高度解析不同。三个面板两种修法：**播放历史**改 `height: 70%`（固定高度，与一直正常的 `.atp__panel height:62%` 同形）；**更多 tab / 歌单描述**保留「贴合内容」意图，body 改 `flex: 0 1 auto; min-height: 0` 并给固定 chrome 加 `flex-shrink: 0`。**Android 模拟器实测确证**：viewport 高 936px（960 屏 − 24 状态栏），面板顶边 5 列一致落在 y≈305 ⇒ 高 655px = 70%×936，与 `height:70%` 逐项精确吻合（修复前是 ~60px 标题条）。闸门 `bottom-sheet-height.test.ts`（8 例）锁「panel 无 height 且 body 零 basis」这一组合，反向验证过（还原 bug 形态即红）。**教训**：`max-height` 只给上限不给高度，配 zero-basis flex 子项必然塌陷——底部面板要么给 panel `height`，要么让 body 保留 `auto` basis
+- [x] 暗色下输入框提示文字看不清 — 补 `-x-placeholder-color`（批19）；后续查出全库 15 个文本字段有 6 处用 `--paper`/`--canvas` 当输入框底（对比度 1.04:1）、15 处圆角用错 token，统一为 `--neutral-faint` + `--radius-sm`，新增 `input-css.test.ts` 闸门从 TSX 反推字段清单
+- [x] 切 tab 回曲库不记得子页签 — 会话记忆恢复
+- [x] 安卓 CI 打包需 gh 配置密钥证书（参考 songloft-player 工程）
+- [x] 通知栏缺下一曲/收藏按钮、封面角标图标错 — 补齐
+- [x] 应用图标与名称非正式 songloft — 更换
+- [x] 首页歌单/电台布局错、无法拖动 — 改为矩形卡片
+- [x] 首页插件图标不显示 — 修复渲染
+- [x] 全屏播放器关闭总回首页 — 改回上次 tab；mini player 条只在首页/曲库显示
+- [x] 设置页多余的播放设置 — 移除
+- [x] 首页统计改用 `/songs/stats` 接口数据
+- [x] 外观跟随系统无效（恒深色）— 修复 SystemAppearance 链路
+- [x] 语言跟随系统无效（恒英语）— 修复
+- [x] 插件顶部标题改用插件 name 字段
+- [x] 首页下拉刷新不触发（批20 发现，非本批引入；首页数据靠 query 缓存自动失效，未阻塞）
+- [x] 底部导航插件 tab 图标硬编码 settings — `ShellLayout.tsx` 改用插件自身图标
+- [x] 插件 WebView 内容空白（批20）— 修复
+- [x] 歌单详情关闭应回首页 — 修复返回目标
+- [x] 歌单/曲库封面改正方形（与首页一致）
+- [x] 插件启用/禁用文案反了、全部更新无反应、刷新图标错、搜索框不能输入 — 批33 逐一修复
+- [x] Tab 配置不及时生效 — 批33 变更后 invalidateQueries
+- [x] iOS 主题/语言/图标核查 — 批33 审计确认 SystemAppearance 正确，补 AppIcon PNG
+- [x] 日志导出改为直接下载 zip（批33），移除内联查看页
+- [x] Web 首页残留「下拉刷新」文字 — 根因：`isWebEnvironment()` 探 `window`/`document`，在 web-core background Worker 里恒 false；且 Web 没有 `<refresh>` 实现。改按 `SystemInfo.platform` 判定并在 Web 整段不渲染；同根因顺带修了 Web 上的 `<webview>`
+- [x] 代理设置输入框贴边、角被卡片圆角削掉 — padding 不对称 + `overflow: hidden` 圆角容器；改对称 padding。附带查出 3 处漏写 placeholder 色（补齐）、白名单单行 `<input>` 装不下多行改 `TextArea`（maxLength 140→2000）
+- [x] GitHub 代理加「复制 Prompt 让 AI 帮你找」按钮 — 全库此前无剪贴板能力，新增 `SongloftPlatform.setClipboard` 三端（Kotlin/Swift 必须主线程；契约闸门自动逼出双端实现）；提示词刻意不做 i18n
+- [x] `ProxySettingsPage` 裸 `fetch`+`useEffect` 导致 loading 闸在测试环境永不放行 — 迁到 api+query 层，补 2 条渲染测试
+- [x] 删除插件无二次确认 / 从文件安装点击无反应 — 三个症状同根：①两段式确认对纯图标无效，改 `ConfirmDialog`（顺带收敛两份手写对话框 CSS）；②闪帧：`show` 直接由 `pendingDelete` 驱动，退出动画期间名字已清空，改状态分离；③安装 401：`getUploadUrl()` 返回裸相对路径且无凭据，改绝对地址 + `?access_token=`；④更深根因：Web 的 `nativeModulesMap` 塞普通对象被 `import()` 强转 `"[object Object]"` 拒绝，**三个自定义模块全部静默失效**，改注册 ESM URL 转发模块
+- [x] 设置页开关形式不统一（布尔值三种画法、带框勾六份互不相同的副本）— 定为三角色各一控件写进 `DESIGN.md`：开/关→Switch、单选→无框对勾、多选→新 `AppCheckbox`；删六份副本，产物小 6 KB
+- [x] `var(--on-primary)` 不存在的 token 被 5 处使用，两处内容彻底不可见 — 正确是 `--primary-content`；新增 `tokens-defined.test.ts` 闸门（无 fallback 的 `var()` 必须有声明），当场又查出 6 处 Material 风格遗留命名
+- [x] 曲库管理页最后两项入口与设置区不匹配（宽 32px/更紧凑/双线边框/无标题）— 手写裸卡片改 `SettingsSection`+`SettingsRow`
+- [x] 扫描完成后拿不回「跳过/重新导入」选择 — `onResetScan` 直接发起扫描跳过 idle 态；对齐 Flutter：只 reset + 本地 `dismissed` 标记
+- [x] 二级页面导航 tab 全不亮 — 移植丢了前缀匹配（`pathname === dest.path`）；按 Flutter 参考实现补 `navPathOwns`/`activeNavPath`，最长匹配优先，首页兜底
+- [x] 白名单输入框 Web 上超出卡片（Web 独有）— `x-textarea.css` 的 `::part()` 不转发 `box-sizing`，内层 `content-box` 继承 `width:100%` 撑破；改 flex 定尺。⚠️ 同缺口 `border-radius` 也不转发，Web 多行字段是直角，未修
+- [x] 设置页从二级页返回落回顶部 — 子页是兄弟路由，卸载即丢 `useRef` 滚动偏移；改模块级 `scroll-memory.ts` + `initial-scroll-offset`（查过三端 SDK 才选的这个属性，`scroll-top` 在两条 new-arch 路径不存在）
+- [x] Web 刷新掉登录 — worker realm 无 `localStorage`，能力探测落到内存存储；新增 `idb-storage.ts`（worker 里 IndexedDB 原生可用，零宿主配合，`open` 带 3s 超时防 version-change 挂死）
+- [x] 日志导出缺客户端日志 / 日志等级设置缺标题 — 对齐 Flutter 补齐
+- [x] 速度/播放模式弹出层能同时开两个（批51）— `PopoverBackdrop` 有 `100vw×100vh` 却没 `top`/`left`，fixed 元素落在静态位置没盖住触发器外侧；补 `top:0;left:0`
+- [x] 弹出层点完约 1 秒才消失（批51，非卡顿）— CSS 没声明任何 transition，`Presence` 等不到 `transitionend`，退化成 24 帧空转（BTS 背景线程每帧一次往返）；补 `transition: opacity 140ms` + closed 态 `opacity:0`。同批修了自己引入的回归：受控模式漏传 `onVisibleChange` 导致弹层根本打不开。铁律见 `AGENTS.md` §4「Popover / Presence」
+- [x] 全屏播放器封面 Android 整块不显示 — `box-shadow` 加在 `<image>` 上导致位图不渲染（元素占位画背景色）；阴影挪到外层 `<view>`。这类失效只有真机可见
+- [x] 全屏播放器 Web 宽度恒 0、歌词页不可达 — `useBreakpoint()` 漏传 `measureSelector`（Web 的 `bindlayoutchange` 只对首屏元素触发）；新增全库闸门 `measure-selector-contract.test.ts`
+- [x] 「打开后自动进歌词」偏好从未生效 — mount 时 Swiper 还没挂载，`swipeTo` 静默丢弃；改等「偏好读到 + Swiper 挂载」两者齐备
+- [x] 全屏横屏封面上溢 — 高度预算错把整页高度喂给 Flutter 公式；改测 stage 自身高度
+- [x] 全屏封面 Android 非正方形（letterbox）— **无法复现关闭**：模拟器多路径实测全程 405×405，原设备不可用。若真机再现请重开并记录设备型号/分辨率/密度
+- [x] 播放器 logcat 两条 `illegal css key:237` — **上游 bug，无害**：`lynx-ui-swiper` SwiperItem 用 camelCase `marginInlineEnd` 调 kebab-case 解析器，名称未命中落到表尾+1=237；被丢的是默认值 `margin-inline-end: 0px`。已记 upstream-issues
+- [x] 播放历史页面报错（批50）— 三处独立错：前端把 context 放 JSON body 而后端从 query 读且必须 `type=play` 才落库 ⇒ **写入从来没成功过**；「设置→播放历史」入口拿不到上下文（后端按播放上下文分桶、无全局最近播放端点）⇒ 不可能修好，移除入口。详见 progress.md 批50
+- [x] 曲库设计问题、自定义显示分类无效（批51-A~D）— 探查证实该功能**从未生效过**：PUT 契约是 `{views:[{key,visible}]}` 而旧实现发 `{id,visible,order}` ⇒ 恒 400 被 `.catch(()=>{})` 吞掉；`KNOWN_VIEWS` 自创 4 个假 id、丢 4 个真的。曲库重写为对齐 Flutter 的单页 14 视图
+- [x] 弹出层位置错乱（批53）— `lynx-ui-popover` 返回**相对触发器**坐标而 `OverlayView` 用 `position:absolute` 施加（含块是最近定位祖先），实测排序菜单落在 `x=-122` 整块屏外；库的溢出检测还拿浏览器屏幕尺寸当视口。自研 `PopoverMenu`/`PopoverPanel` + `anchored-overlay.ts` 退役该库，铁律见 `AGENTS.md` §4
+- [x] 插件商店缺「重新安装最新版本」（批57）— 对照 Flutter 盘点挖出模型级 bug：schema 把 `conflict` 建模为 string 而后端发 boolean ⇒ 撞名冲突流程一直是死的。行动作补齐四态
+- [x] 禁用插件后 tab 图标还显示（批57b）— tab-config 不过滤 `isActive` + mutation invalidate 的 query key 与 shell-nav 的 key 对不上（staleTime 60s 永不刷新）
+- [x] 底部导航选中态整块紫底反白观感差（批58）— 按 Liquid Glass 重做为悬浮胶囊 + 淡色 tint；用户随即报内容被 mini player 挡住 ⇒ 新增 `--nav-inset` 两档变量（无歌 80/有歌 148），见 `AGENTS.md` §4
+- [x] 宽屏 rail 选中跳动（批58b）— 批58 的固定尺寸规则没限作用域，选中 52px 撑高 ~40px 的行；收进 `.shell__bottombar` 作用域，rail 选中只变色
+- [x] 编辑弹窗保存按钮无强调、标题溢出（批60b）— 无主题包时 `--primary` 回退墨色使描边按钮黑边黑字，改实心填充；`max-height:85%` 在 fixed 弹层下原生引擎不可靠，改 `85vh`
+- [x] 编辑弹窗标题被「挡住」（批60c，实为 flex 压扁）— 高度钳制下 flex 把溢出摊给所有 shrink 非零子项，标题行被压到 13.4px 且 Lynx 元素自带 `overflow:clip` 裁掉文字上半；固定 chrome 加 `flex-shrink:0`。判据：`getComputedStyle().height` vs `scrollHeight`，见 `AGENTS.md` §4
+- [x] 底部滑入面板 Android 只剩标题行 — `absolute` 无 `height` ⇒ shrink-to-fit，而 body `flex-basis:0` 对内容高度贡献 0 ⇒ 塌成 chrome 高；`max-height` 只给上限不给高度。播放历史改 `height:70%`，其余 body 改 `auto` basis；闸门 `bottom-sheet-height.test.ts`
+- [x] ⋯ 菜单与宽屏行内按钮重复（批62）— 按打开行的视口裁剪菜单（窄屏菜单是唯一入口不能无条件删）；顺带修 `PlayHistoryPanel` 行漏传 `showDeleteAction={false}`
 
-- [x] ⋯ 菜单里的 歌曲信息/添加到歌单/删除歌曲 与宽屏行内按钮重复（2026-08-26，用户截图报的，批62）—— 三项在宽屏与行内按钮调的是**同一个 store action**（`openInfo`/`openAddToPlaylist`/`requestDelete`），纯重复；但**不能从菜单无条件删**：窄屏行内按钮根本不渲染（`SongListRow.wideActions` 仅 `isWide`），菜单是这三项**唯一入口**（Flutter 参考版正是 mobile 菜单 / desktop 按钮的分工，桌面布局甚至无菜单）。修法按打开行的视口裁剪：`openMenu` 转对象参数并携带 `menuRow`（`isWide` + `deleteShortcut`）进 store，`buildSongMenuItems`（新 `song-menu-items.ts`，独立模块便于闸门测试）宽屏裁掉 信息/加歌单、删除仅在「宽屏且行内删除快捷键存在」时裁（歌单详情行的 × 是「从歌单移除」**另一动作**，其菜单保留「删除歌曲」）、窄屏/null 五项齐全。菜单挂在 root route（`LibraryViewportProvider` 之外）读不到 `isWide`，这是上下文必须随歌曲进 store 的原因
-  - **顺带修**：`PlayHistoryPanel` 的行没传 `showDeleteAction={false}`——宽屏播放历史条目旁会渲染「从音乐库删除」× 按钮，与该面板注释明言的设计意图（「删除歌曲不得离删除历史记录一键之遥」）直接矛盾；「删除此记录」本就在它自己的 ⋯ 菜单（`onOpenMenu` 重定向）
-  - 顺带订正 `SongListRow` 注释漂移（写着「play-next/add-to-queue 留在 ⋯ 里」，菜单从未有这两项）；i18n 的 `songMenu.playNext/addToQueue/viewDetail/favorite/unfavorite` 5 个死词条留档不删
+## 代码审计发现（2026-08-14 · 27 条已全部修完）
 
-## 代码审计发现（2026-08-14 · P0/P1/P2 已全部修完）
-
-按严重度排序。`✅复核` = 已亲自运行命令/读源码确认；`🔍待复核` = 有 `file:line` 证据但未二次独立验证。
-
-> **标题此前写的是「均未修」，那是审计当天的状态，已过期八个批次。** 三段共 27 条现已全部 `[x]`：P0 由批41/43 修完，P1 由批42 修完，P2 由批43/45/47/48 修完。**这个标题本身就是「没有闸门读的东西不会自己保持为真」的又一个实例**（同批48 的 manifest、批51 的构建警告归零）——文档里的状态断言没有对账机制，只能靠改代码的人顺手带走。
+> 四路并行审计产出。P0 批41/43 修完，P1 批42，P2 批43/45/47/48。
 
 ### P0 — 让某个平台整体不可用
 
-- [x] **`pnpm run build` 不再产出原生 bundle，Android/iOS 一直在打包陈旧产物**（批41 已修）—— `lynx.config.ts:133` 的 `environments: { web: … }` **替换**（而非追加）了 rspeedy 的隐式默认环境，`rspeedy build` 只输出 `dist/web/main.web.bundle`；实测 `dist/main.lynx.bundle` 的 mtime 前后不变，`--environment lynx` 也报「环境不存在」。而 `build:android-bundle`/`build:ios-bundle` 照旧从 `dist/main.lynx.bundle` 拷贝 → **嵌进包里的是上次遗留的任何东西**。`2330c22`（Web 支持，08-13 23:35）引入，发现时那个文件是 08-13 22:52 的一份 **6.5 MB dev bundle**（生产版约 1.76 MB）。**非审计产出，是改文档时顺手撞出来的**。修法：`environments` 补 `lynx: {}` + 新增 `scripts/assert-bundle-fresh.mjs`（产物比源文件旧就 fail，`existsSync` 抓不到这类问题）
-- [x] **iOS 自批39 起完全无法构建**（批41 已修）—— `project.pbxproj:255` 在 `PBXSourcesBuildPhase` 的 `files = ( … );` 数组内多了一行 `PBXBuildFile` 赋值语句（第 23 行已有正确那份）。契约闸门用 `.toContain('SongloftDlnaModule.swift in Sources')`，而畸形行恰好含该子串故全绿。修法：删该行 + 闸门加结构校验（元素列表体内不得有 `{isa = …}` 赋值；**注意括号配平那条在损坏文件上是绿的**，畸形行自身配平）。验收：`pnpm run ios:build` 完整 `BUILD SUCCEEDED`
-- [x] **`pnpm run build:web` 产物黑屏**（批41 已修，**根因两层**）—— ① `web/index.html` 请求 `index.css`/`index.js`，而 prod 产物是 `client.css`/`client.js`；② **改完文件名后依然全黑**，真实异常是 `Cannot use 'import.meta' outside a module` —— `client_prod` 入口是 ES module，必须 `<script type="module">`。该异常**不进 `console.error`**（只走 `pageerror`），表现是「资源全 200、零 console 错误、`<lynx-view>` 就是不 upgrade」。`serve.mjs` 因为读 dev-middleware 的 `www/static`（IIFE 入口、文件名 `index.js`）所以一直正常，两次 Web 修复的无头浏览器验证都从这条路绕过去了。修法：统一到 `client_prod` + `type="module"` + 新增 `web-host-page.test.ts`(6 例) 锁死引用可解析与 module 加载。验收：产物真的用无头 Chrome 打开，登录页完整渲染、零 pageerror
-- [x] **Web 完全没有声音，且表现得一切正常** ✅复核 —— `web-audio.ts:30` 用 `typeof HTMLAudioElement !== 'undefined'` 判定平台，在 web-core 的 background Worker 里恒 false，`audio-facade.ts:64`（`WebSongloftAudio` 的唯一构造点）永不命中，落到 mock。mock 拿到真实 `durationMs`，于是进度条走、时间跳、自动切下一首，唯独不出声。**改判断救不回来**（`new Audio()`/`AudioContext`/`mediaSession` 全是主线程 API），需主线程宿主桥接（批43 已修：`web/audio-host.js` 注册为 NativeModules.SongloftAudio，走 NativeSongloftAudio 路径）
-- [x] **`pnpm run build:web` 产物黑屏** ✅复核 —— `web/index.html:9,32` 请求 `index.css`/`index.js`，而 prod 产物是 `client.css`/`client.js`。`serve.mjs:41` 优先用 dev-middleware 的 `www/static`（那里叫 `index.js`），所以 `web:dev` 正常、`build:web` 坏（批41 已修两层根因）
-- [x] **embedded 模式 Web 产物没有宿主页** 🔍待复核 —— `copy-bundle-web.mjs:65` 的 `if (!isEmbedded)` 守着唯一一处 index.html 拷贝，嵌进 Go 二进制后 `/` 仍是旧 Flutter 应用，且 ~9 MB `canvaskit/` 一直烤在里面（批43 已修：移除守卫 + rmSync 清理）
-- [x] **Web 端无法得知后端地址** 🔍待复核 —— `app-config.ts:41` 硬编码 `localhost:58091`，`deployMode` 全库无写入点。手机上从 LAN 打开页面时 API 全部打到访问者自己的机器。worker realm 的 `location.origin` 可用但无人读（批43 已修：`self.location.origin` 自动检测 + deployMode 自动设为 embedded）
+- [x] `pnpm run build` 不再产出原生 bundle（批41）— `lynx.config.ts` 的 `environments: {web:…}` **替换**了 rspeedy 默认环境，Android/iOS 一直打陈旧产物；补 `lynx: {}` + 产物新鲜度断言脚本
+- [x] iOS 自批39 起无法构建（批41）— `project.pbxproj` Sources 数组内多了一行赋值语句；契约闸门的 `toContain` 恰好被子串满足而全绿，补结构校验
+- [x] `build:web` 产物黑屏（批41，两层根因）— ①引用文件名与产物不符；②入口是 ES module 却无 `type="module"`，`import.meta` 异常不进 `console.error` 只走 `pageerror`。补 `web-host-page.test.ts`
+- [x] Web 完全没声音且表现一切正常（批43）— `typeof HTMLAudioElement !== 'undefined'` 在 background Worker 里恒 false，落到会走完整进度的静音 mock；主线程 API 无法从 worker 直调，改宿主桥接注册 `NativeModules.SongloftAudio`
+- [x] embedded 模式 Web 无宿主页（批43）— 拷贝脚本的 `!isEmbedded` 守卫；移除并清掉烤进去的 9 MB canvaskit
+- [x] Web 硬编码 `localhost:58091`（批43）— 改 `self.location.origin` 自动检测 + deployMode 自动 embedded
 
-### P1 — 一眼可见 / 一改就好
+### P1 — 一眼可见（批42 全修）
 
-- [x] **登出确认框的取消按钮字面显示 `common.cancel`**（批42 已修）—— 补 en/zh `cancel` key + 新增「扫描全部字面量 `t('…')` 断言 key 存在」闸门
-- [x] **播放进度从不落盘，「续播」永远从 0 开始**（批42 已修）—— 阈值 `>5000ms` 在 250/500ms 步长下永不成立，改 10s 桶下标 + flush 时读最新 state
-- [x] **DLNA 页在 Android 真机上一进去就崩**（批42 已修）—— 按 Kotlin/Swift 真实契约重写适配层 promisify，禁止 `as DlnaModule` 强转
-- [x] **切换服务器立刻被踢回登录，并连带抹掉目标服务器的 token**（批42 已修）—— 新增 `invalidateTokenCaches()`，switchTo 写完 storage 后统一失效缓存
-- [x] **冷启动后 mini player 的播放键完全无效**（批42 已修）—— 新增 `_loadedSongId` 跟踪引擎持有的歌，togglePlay 不一致时补 load；此前被 mock 掩盖
-- [x] **元数据「再次刷新」点了不开始轮询**（批42 已修）—— forced 改为优先于终态 + 页面用 `dataUpdatedAt >= startedAt` 守卫；原测试把 bug 断言成契约已订正
-- [x] **`getPlatformCapabilities()` 是死代码**（批42 已修）—— 改 `isWebPlatform()` + 每能力看自己的模块，接上投屏按钮/悬浮歌词行/DataSection 三个消费点
-- [x] **HTTP 请求没有任何超时**（批42 已修）—— `TransportRequest` 加 `timeoutMs`，AbortController + `Promise.race`，新增 `HttpTimeoutError`
-- [x] **收藏歌单 ID 拉取可能死循环刷请求**（批42 已修）—— 空页即停 + 200 页兜底
-- [x] **升级进度轮询在后端重启后永不停止**（批42 已修）—— 容忍 15 次失败后落终态；顺带修 error 只在 `!checkResult` 时渲染的第二处问题
-- [x] **多选状态跨搜索/筛选残留**（批42 已修，`3e1c342`）—— `selected` 与 `filters` 无联动，会把屏幕上不存在的歌加进歌单。该条一度被记为「批42 唯一未修项」，实际是同批最后一个提交修的；回归测试在批51-B 随曲库重构从 `song-view` 迁到了 `flat-songs-view.test.tsx`
-- [x] **队列有重复歌曲时拖动排序把「当前播放」钉错**（批42 已修）—— `indexOf` 按对象身份改纯下标算术
-- [x] **iOS Live Activity 重复 start 泄漏锁屏卡片**（批42 已修 JS 侧）—— 补 in-flight 标记 + 空 id 闭锁；⚠️ iOS 原生模块本身还没注册为 Lynx 模块（见 P2），接通后才能真机验
+- [x] 登出确认框取消按钮字面显示 `common.cancel` — 补 key + 新增全库 `t('…')` key 存在性闸门
+- [x] 播放进度从不落盘、续播永远从 0 — 阈值 `>5000ms` 在 250/500ms 步长下永不成立；改 10s 桶
+- [x] DLNA 页 Android 真机进去就崩 — 按 Kotlin/Swift 真实契约重写 promisify，禁 `as DlnaModule` 强转
+- [x] 切服务器立刻被踢回登录并抹掉目标 token — 新增 `invalidateTokenCaches()`
+- [x] 冷启动后 mini player 播放键无效 — 补 `_loadedSongId` 跟踪，不一致时补 load
+- [x] 元数据「再次刷新」不开始轮询 — forced 优先于终态 + `dataUpdatedAt >= startedAt` 守卫
+- [x] `getPlatformCapabilities()` 死代码 — 改 `isWebPlatform()`，接上三个消费点
+- [x] HTTP 请求无任何超时 — `timeoutMs` + AbortController + `HttpTimeoutError`
+- [x] 收藏歌单 ID 拉取可能死循环刷请求 — 空页即停 + 200 页兜底
+- [x] 升级轮询后端重启后永不停止 — 容忍 15 次失败落终态
+- [x] 多选状态跨搜索/筛选残留（会把不存在的歌加进歌单）— selected 与 filters 联动
+- [x] 队列重复歌曲拖动排序钉错「当前播放」— `indexOf` 按对象身份改纯下标
+- [x] iOS Live Activity 重复 start 泄漏锁屏卡片 — in-flight 标记 + 空 id 闭锁（JS 侧）
 
 ### P2 — 结构性
 
-- [x] **每个 feature 各建一套 `TokenStore` + `AuthInterceptor`** 🔍待复核 —— `api-client.ts:54` 每次 `new`，共 6 份。后果：换账号后曲库仍带上一个账号的 token（后端会正常返数据，用户看到别人的库）；token 过期时多个 bundle 各刷一次 refresh 互相覆盖（批43 P2-1 已修：`getSharedApiBundle()` 进程级单例）
-- [x] **悬浮歌词（Android）五重死** 🔍待复核 —— `FloatingLyricModule.kt` 5 个方法全无 `@LynxMethod`（第 9 行却 import 了）+ `SongloftApplication.kt:67` 未注册 + 签名与 TS 不符 + 清单缺 `SYSTEM_ALERT_WINDOW` 与 service 声明。`lyric-store.ts:168` 每行歌词都在往 stub 里写（批43 修了前三重：加 @LynxMethod + Callback + 注册）
-  - ⚠️ **批43 那句「SYSTEM_ALERT_WINDOW 权限与 service 声明此前已有」是错的**，批48 对源 manifest 与**合并后**的 manifest 双向核实：两者都没有。所以审计原判的第四、第五重死一直活着，见下面批48 那两条。这条错误结论能活四个批次，直接原因就是「`AndroidManifest.xml` 完全无闸门」——没有任何东西会去读那个文件，于是一句未经核实的话与代码之间没有任何对账机制
-- [x] **Live Activity（iOS）不是 Lynx 模块** 🔍待复核 —— `LiveActivityModule.swift:12` 是普通 `enum`，无 `@objc`/`name`/`methodLookup`，也不在 `buildConfig()` 里（批43 已修：enum→class + @objc/name/methodLookup + 注册）
-- [x] **契约闸门不覆盖批35+ 的原生模块** 🔍待复核 —— `SongloftPlatform`/`SongloftDlna`/`SongloftFloatingLyric`/`SongloftLiveActivity` 都在闸门外，且闸门完全不验证「注册」这件事（批43 已修：+30 例闸门，覆盖 6 模块双端方法/注册/@LynxMethod/class 结构）
-- [x] **`setInsecureTls` / `setArtworkUri` 只有 Android**（批45 已修）—— 复核时发现描述本身有偏差，且缺口比记录的更深：
-  - **`setArtworkUri` 不是桥接方法**，它是 Android 引擎内部调用的 Media3 `MediaMetadata.setArtworkUri`；跨桥的是 `setQueue` 里的 `artworkUrl`。iOS 侧一路解析并存进 `metadataByURL`，但 `updateNowPlaying()` 从不读它 → 锁屏/控制中心/CarPlay 永远无封面。已补 `artworkCache` + 异步拉取 + 回主线程重走 `updateNowPlaying()`（该函数每次都重建整个 `nowPlayingInfo`，直接改字典会被下一个 tick 抹掉）
-  - **`setInsecureTls` 两个宿主都是半残的**，不只 iOS 缺失。Android 把 trust-all 装在 `HttpsURLConnection` 进程全局默认上，而 JS `fetch` 走 OkHttp、完全无视它 → **开了开关仍然登录不上自签名服务器**，也就是这个功能的唯一用途失效；且 `enabled=false` 被静默忽略，trust-all 留到进程被杀。iOS 则连方法都没有，闸门里那句「iOS uses ATS plist + custom URLSessionDelegate」只有前半句为真，而 ATS 只放开明文 HTTP、与证书校验无关
-  - 修法：两侧各自**替换宿主 HTTP service**（`net/SongloftHttpService.kt` / `SongloftHttpService.swift`）以拿到 TLS 钩子，`InsecureTls` 收口三条出站路径且**双向可逆**；TS 侧补上 `applyServerSettings` 与切服务器档案两处漏掉的 `applyInsecureTls`
-- [x] **iOS 自签名 + 媒体流不通 —— 批47 已修（实测通过）** —— 修法就是批45 判定的那条：`InsecureMediaLoader` 把 asset URL 的 scheme 换成 `songloft-insecure-https`，AVFoundation 因无法自行加载而把每个加载请求交给我们，由 `InsecureTls.session`（信任已放宽的那个）拉字节范围。**实测**（自签名 20 分钟本地曲）：播放推进 `pos=0→1500`、`dur=1200039`，seek 到 19 分钟落在 `1158000`，代理侧看到 `bytes=0-1`（content-info）→ `bytes=0-` → `bytes=20471-`（非零偏移）三种请求；关掉开关后走原生加载，全量 e2e 110/110 无回归。**过程里踩了两个坑，都写进了代码注释**：① 加载器回调队列一开始挂在 `.main`，而 `buildAudioMix` 会在主线程同步等 asset 轨道 → 送数据的线程正是被阻塞的那个，**自己锁死自己**，表现是每次尝试卡约 10 秒后 `-11800`、HTTP 请求在 AVFoundation 放弃之后才发出（设备日志 `curll_respondToHandleRequestCompletionOnQueue: … timed-out on handler`）；② 第一版用 completion-handler 一次性收，`requestsAllDataToEndOfResource` 会把整条剩余音轨读进内存（实测 19MB 文件来了一个 19MB buffer），且 AVFoundation 从此只从头消费、seek 不发新 range，改成流式 `respond(with:)` 后非零偏移的 range 才出现。**仍未做**：播放列表内的**绝对** `https://` URI（AVFoundation 会自己去加载，撞同一道墙）；相对 URI 因为继续带自定义 scheme 会回到加载器，而 Songloft 自己的 HLS 反代产出的正是相对 URL，所以那条按构造是通的，**但没有可测的自签名 HLS 源，未实测**
-- [x] **`setInsecureTls` 关闭后不影响已建立的连接 —— 批47 已修（iOS）** —— `InsecureTls.update()` 在值真变化时 `invalidateAndCancel()` 并重建 session，丢掉连接池。实测：同一 URL（不换 hostname、不重启 App）关掉开关后登录立刻 `HTTP 499`。**Android 侧已补测，本来就是立即生效的**，原因不是巧合：`SongloftHttpService.clientFor()` 在标志变化时重建 `OkHttpClient`（OkHttp 的 TLS 配置按 client 不可变），新 client 自带新连接池。两端语义现已对齐
+- [x] 每个 feature 各建一套 `TokenStore`+`AuthInterceptor`（6 份）（批43）— 换账号后曲库带别人 token、多 bundle 互刷 refresh；改 `getSharedApiBundle()` 进程级单例
+- [x] 悬浮歌词（Android）五重死（批43 修三：无 `@LynxMethod`、未注册、签名不符；批48 修二：见下）— ⚠️ 批43 误记「权限与 service 声明此前已有」活了四个批次，原因是 manifest 无闸门
+- [x] Live Activity（iOS）是普通 enum 不是 Lynx 模块（批43）— enum→class + @objc/name/methodLookup + 注册
+- [x] 契约闸门不覆盖批35+ 的 4 个模块、不验证「注册」（批43）— +30 例，覆盖 6 模块双端
+- [x] `setInsecureTls`/`setArtworkUri` 只有 Android、且 Android 侧半残（批45）— `setArtworkUri` iOS 存了从不读 ⇒ 锁屏永远无封面；Android trust-all 装在 `HttpsURLConnection` 而 fetch 走 OkHttp 完全无视 ⇒ 功能唯一用途失效。两侧替换宿主 HTTP service 收口，双向可逆
+- [x] iOS 自签名媒体流不通（批47 实测通过）— `InsecureMediaLoader` 自定义 scheme 拦截 + 放宽信任的 session 拉字节范围。两个坑：回调队列挂 `.main` 会自己锁死自己（卡 10s 后 -11800）；一次性收数据会把整条音轨读进内存且 seek 失效，改流式
+- [x] `setInsecureTls` 关闭不影响已建连接（批47）— 值变化时 `invalidateAndCancel()` 重建 session；Android 本来就是重建 OkHttpClient 即时生效，两端语义对齐
 
-### 批48 · 悬浮歌词的第四、第五重死（实测确认并修复）
+### 批48 · 悬浮歌词第四、第五重死
 
-> 起因是一次「还剩什么没做」的巡查：`AndroidManifest.xml` 无闸门这条 P3 一直挂在清单上，
-> 顺着它去读文件，发现批43 记为「此前已有」的两项**都不存在**。功能自始至终没工作过。
+- [x] manifest 缺 `SYSTEM_ALERT_WINDOW` 与 `FloatingLyricService` 声明 — 两者都是静默失败（`startService` 解析不到只打日志不抛异常；权限缺失使 app 不出现在授权列表），功能自始至终没工作过
+- [x] `updateText` 在 Lynx JS 线程碰 View，`CalledFromWrongThreadException` 被裸 `catch` 吞掉 — 窗口浮出但无歌词；定位靠 `mLayoutSeq` 逐字节比对。改 `Handler(Looper.getMainLooper())` post；顺带给覆盖层加深色底（白字无背景在浅色应用上不可见）
+- [x] `AndroidManifest.xml` 完全无闸门 — 新增 7 例，从 Kotlin 源码推导需求（Service 声明/覆盖窗权限/foregroundServiceType 配套权限/configChanges），六条反向验证过
+- [x] 悬浮歌词零 e2e 覆盖 — 新增 5 例，断言全落在进程外 `dumpsys` 上（三重死没有一次能让页面侧看到错误）。⚠️ 平台门控要写 `(process.env.E2E_PLATFORM ?? 'android')`，裸 `===` 会让整套被静默跳过
 
-- [x] **manifest 缺 `SYSTEM_ALERT_WINDOW` 与 `FloatingLyricService` 声明**（批48 已修）——
-  两处都是**静默**失败，这是它能活这么久的原因：`Context.startService()` 解析不到未声明的
-  Service **不抛异常**，系统只打一行 `Unable to start service … not found` 就返回；权限未声明
-  则让 app 根本不出现在「显示在其他应用上层」列表里，于是 `Settings.canDrawOverlays()` 只可能
-  返回 false，**用户没有任何途径授权**。设置页那个开关是真的（`getPlatformCapabilities().floatingLyric`
-  在 Android 上为 true，因为模块本身批43 已注册），点了就是没反应。修法：补两行声明；
-  实测（Android 13 模拟器）`requestPermission → true`、`dumpsys activity services` 里
-  `FloatingLyricService` 在跑、`dumpsys window windows` 多出 `Window{… u0 org.songloft.lynx}`
-  覆盖窗口，`hide()` 后两者都消失
-- [x] **`updateText` 在 Lynx JS 线程上碰 View，异常被模块的裸 `catch` 吞掉**（批48 已修）——
-  上面两行补完后覆盖窗口浮出来了，但**一行歌词也没显示**。截图看不出问题（白字白底），
-  改用与配色无关的量才定位：写入歌词前后窗口的 `Requested h=46`、`frame=[0,1354][1280,1400]`、
-  `mLayoutSeq=4724` **逐字节相同** —— 压根没重排。而 `isShowing()` 返回 true 说明静态 `service`
-  引用是好的，所以只能是 `textView?.text = line` 本身失败：它跑在 JS 线程，而只有创建 View 的
-  线程能碰它（`setText` → `requestLayout` → `CalledFromWrongThreadException`），
-  偏偏 `FloatingLyricModule.updateLyric` 用 `catch (_: Exception) {}` 把它整个吞了，
-  logcat 里连一行都没有。修法：`updateText` 经 `Handler(Looper.getMainLooper())` post。
-  修后同一量测 `h` 46→48、`mLayoutSeq` 4748→4749、frame 顶边 1354→1352，截图上歌词可见
-  - 顺带修了可读性：覆盖层原本是白字+黑投影、**无背景**，浮在浅色应用上几乎不可见
-    （就在 Songloft 自己的白色首页上实测到）。加了半透明深色底
-- [x] **`AndroidManifest.xml` 完全无闸门**（批48 已修）—— 新增 `src/__tests__/android-manifest-contract.test.ts`
-  7 例，**从 Kotlin 源码推导需求而非硬编码清单**：每个基类名以 `Service`/`Activity` 结尾的类都必须有
-  声明（反向亦然，防改名留下悬空声明）、用了 `TYPE_APPLICATION_OVERLAY`/`canDrawOverlays` 就必须声明
-  `SYSTEM_ALERT_WINDOW`、每个 `foregroundServiceType` 必须有配套权限（Android 14 起缺了是硬
-  `SecurityException`）、`MainActivity` 的 `configChanges` 必须含 `uiMode|locale|layoutDirection`
-  （AGENTS.md §4 的要求，此前同样无人验）、以及 XML 结构可解析。六条各自反向验证过：摘掉被守护的
-  东西只点亮对应那条
-- [x] **悬浮歌词此前零 e2e 覆盖**（批48 已补）—— 新增 `e2e/scenarios/android-floating-lyric.scenario.ts`
-  5 例，断言全部落在**进程外**的 `dumpsys` 上（service 在跑 / 覆盖窗口存在 / 收到歌词后窗口真的重排），
-  因为三重死没有一次能让页面侧看到错误——TS facade 无论如何都返回 resolved promise，
-  只问 `isShowing()` 等于让嫌疑人自证清白。反向验证：摘掉主线程 hop 后那条立刻红
-  （`expected 46 to be greater than 66`）
-  - **门控写法有个坑**：`E2E_PLATFORM === 'android'` 会让这 5 例在裸 `pnpm run test:e2e` 下**整体跳过**，
-    而 `createDriver()` 把未设该变量视为 Android。第一次全量跑就是这么「通过」的（107 passed / 8 skipped，
-    比预期多 5 个 skip）。正确写法是 `(process.env.E2E_PLATFORM ?? 'android') === 'android'`
+### 悬浮歌词第六重死（2026-08-28 真机报障）
 
-### 悬浮歌词第六重死 —— 2026-08-28 真机报障（已修）
+- [x] 首次授权返回后开关是开的但无窗口，需关再开 — `requestPermission` 把异步授权当同步用：`startActivity` 后紧接着就答 `false`。新增 `OverlayPermission.kt` 把待答请求停在授权返回时（`onResume` 重读 + 重试）。顺带修同源两条：启动链误调 `requestPermission` 会把用户弹去系统页（改只读 `hasPermission`）；pref 与系统授权两个真相源（进页以授权为准回写）
+- [x] 未授权 `show()` 直接杀进程 — `addView` 抛在 `onStartCommand` 等于 FATAL；用户可随时撤销授权且 `START_STICKY` 会重发。先查授权 + try/catch 兜 ROM 说谎
+- [x] e2e `serviceRunning()` 把尸体读成活服务 — `dumpsys` 的 `Destroying services` 段能挂到重启；只读 `active services` 段
 
-- [x] **首次打开开关去授权、授权返回后开关是开的但没有歌词窗口，必须再关一次开一次才正常** ——
-  根因是 `FloatingLyricModule.requestPermission` 把一个**异步且无结果回传**的授权当同步的用：
-  `Settings.ACTION_MANAGE_OVERLAY_PERMISSION` 不能 `startActivityForResult`，而旧实现
-  `startActivity` 之后**紧接着**就 `callback.invoke({result: false})` —— 对每一次用户
-  「正要去授权」的动作都回答「拒绝」。于是 JS 侧 `if (granted) show()` 永不成立，而 pref 已经写成
-  `true`、开关也已经拨上去了：开关说「开」，窗口从未创建。用户的「再关再开」之所以有效，是因为第二次
-  `canDrawOverlays()` 已为 true，走的是「已授权」那条早返回分支。
-  修法：新增 `lyric/OverlayPermission.kt` 把待答请求**停在授权返回那一刻**——`MainActivity.onResume`
-  （唯一可观测的返回时机）重读授权并答复，重读带少量重试（部分 ROM 在 resume 之后才翻转
-  `canDrawOverlays`）；打不开系统页时立即答 `false`，不留无人应答的等待者。
-  - **顺带修掉同源的两条**：① 启动链（`src/index.tsx`）与进入歌词设置页都在调 `requestPermission`，
-    也就是「恢复上次状态」这种非用户动作会**把用户弹去系统设置页**；改用新增的 `hasPermission`（只读、
-    不开任何界面）。启动链尤其危险——`requestPermission` 现在要等到 App 重回前台才答复，留在
-    `await` 链上会把 `auth.hydrate()` 一起卡死。② pref 与系统授权是两个真相源，授权被撤销后 pref 仍为
-    `true`，开关继续显示「开」却什么都没有；现在进入页面会以授权为准把 pref 落回 `false`，用户被拒绝
-    授权时开关也会自己拨回去，而不是留在骗人的位置。三条策略收敛在
-    `src/features/settings/domain/floating-lyric-overlay.ts` 一处（startup / 进页 / 用户开 / 用户关）
-  - **闸门**：`native-module-contract.test.ts` 锁「模块自己不得出现 `ACTION_MANAGE_OVERLAY_PERMISSION`」
-    「`MainActivity.onResume` 必须调 `OverlayPermission.onAppForegrounded`」「打不开系统页要答复而非停等」
-    「等待者被清空（Lynx Callback 调两次会抛）」「`src/index.tsx` 不得出现 `requestPermission`」；
-    `lyrics-page.test.tsx` 加 6 例，覆盖「授权在往返之后才到」「被拒绝则开关拨回」「进页重开窗口且不
-    弹系统页」「已在展示则不重开」「授权被撤销则关 pref」。两条核心用例都反向验证过
-  - **模拟器实测（e2e 新增 5 例，共 15/15 绿）**：授权页在前台时答复必须仍为 pending（旧实现在
-    这一刻已经是 `false`）、按返回回到 App 后翻为 `true`；开关整条链（`enableOverlay`）在授权返回后
-    **自己就出窗**；重启后启动路径自行恢复窗口（反向作证 pref 真写下了）。为此给 e2e bridge 加了
-    `enableOverlay` / `disableOverlay` / `syncOverlay` —— bug 住在「页面 promise 链 × 原生答复」的
-    接缝上，只打模块的测试看不到它
-- [x] **未授权时的 `show()` 直接杀进程**（同批修，排障途中实测撞到）——
-  `FATAL EXCEPTION: main / Unable to start service FloatingLyricService …
-  BadTokenException: permission denied for window type 2038`。`addView` 抛在 `onStartCommand`
-  里，那里的未捕获异常等于进程死。「调用方检查过授权」不足以兑底：用户可以随时在系统设置里
-  收回授权，而 `START_STICKY` 还会在那之后重发 SHOW。`showOverlay()` 现在先查
-  `OverlayPermission.isGranted` （不满足则 `stopSelf`），`addView` 另包 try/catch 兑 ROM 说谎；
-  e2e 加了「未授权 show() 不出窗也不杀进程」（比 pid）
-- [x] **e2e 的 `serviceRunning()` 一直把尸体读成活服务** —— 它 grep 整份
-  `dumpsys activity services`，而 dumpsys 还有一个 `Destroying services` 段：进程在拆除中途死掉时
-  会留下 `app=null destroying=true crashCount=1` 的记录，**它能在 AMS 里挂到重启为止**。于是一台
-  带着 7 分钟前尸体的模拟器上，`hide()` 与 stopWithTask 两条永久假红，而 App 行为完全正常（本次
-  就先被它骗了一轮）。现在只读 `active services` 那一段
+### 批49 途中发现
 
-### 批49 途中发现 —— 2026-08-26 已证实并修复
+- [x] HLS 电台落到 `ProgressiveMediaSource` — `songUrl()` 追加 `?access_token` 使 `endsWith(".m3u8")` 失效 + 电台走 `hls: false` 的 fallback 分支；新增 `isHlsPlaylistPath()`（剥 query 看扩展名）一处修好 Android 与 Web。⚠️ 不能对电台一律传 true：后端只对真播放列表加 `.m3u8` 后缀
+- [x] HLS 电台仍无声的第二个原因：跨协议重定向被拒 — `hls_proxy` 关闭时后端 302→https，`DefaultHttpDataSource` 默认拒绝 http→https，报完全不指向真因的 `Response code: 302`；`setAllowCrossProtocolRedirects(true)`。连带：300s 读超时改按 `/video-hls/` 路径判定，避免直播流死等五分钟。⚠️ iOS 侧未实测
 
-- [x] **HLS 电台落到 `ProgressiveMediaSource`（已修）** —— 当初记为「疑似 · 无法验证」，因为库里没有电台源。
-  但**核心断言压根不需要设备**：`SongloftAudioEngine.load` 判 `hls || url.endsWith(".m3u8")`，而 `songUrl()`
-  追加 `?access_token=…`，后缀判断注定失效；电台又走 `playbackSourceFor` 的 fallback 分支拿 `hls: false`
-  （`resolveVideoSourceKind` 对 `isVideo: false` 返回 `'none'`）。两个半边都 false ⇒ 直播播放列表被当成
-  progressive 流打开。Web 侧同病（`web-audio.ts` 也只看 `opts?.hls`）。
-  - **实测定性了一个关键前提**：后端**只对真正是播放列表的源**加后缀（建三个探针电台实测）——
-    `…/stream.m3u8` → `song.url = /api/v1/songs/73/play.m3u8`；而 `…/stream.mp3` 与无扩展名的 icecast
-    → `/api/v1/songs/74/play`（无后缀）。**所以修法不能是「radio 一律传 true」**：把 HlsMediaSource
-    喂给 mp3/icecast 流会弄坏现在能播的电台。
-  - **修法**：新增纯函数 `isHlsPlaylistPath(url)`（`url-helper.ts`），剥掉 query/fragment 后看路径扩展名，
-    `playbackSourceFor` 用它当 `hls` 标志。**一处改动同时修好 Android 与 Web。**
-  - **Android 模拟器实测确认**（对照实验）：id 73（`.m3u8`）的失败栈在 `ParsingLoadable.load`
-    ——HLS 播放列表加载器；id 74（无后缀）在 `ProgressiveMediaPeriod$ExtractingLoadable.load`。
-    更强的一组：同一份字节挂两个扩展名 + 带访问日志的本地服务器，`.m3u8` 那份**解析播放列表后真的去
-    `GET /seg0.aac`**（只有 HlsMediaSource 会这么做），`.mp3` 那份报
-    `UnrecognizedInputFormatException: None of the available extractors … could read the stream`。
-  - **闸门**：`hls-playlist-path.test.ts`（5 例，含「不被 query 里的 .m3u8 骗到」）+ `player-store.test.ts`
-    的 `HLS radio source flag`（3 例，断言起播时 `audio.load` 收到的标志）。后者**反向验证过**：把修复改回
-    `hls: false` 立刻红（`expected false to be true`）。为此给 `mock-audio` 加了 `lastLoad` 记录——
-    它以前把 `load` 的 url 与 opts 全丢掉，**这正是这个缺陷能藏住的前置条件缺口**（AGENTS.md §6 同族）。
+### 其他定性
 
-- [x] **HLS 电台仍放不出声的第二个原因：跨协议重定向被拒（已修）** —— 上面那条修完后，Android 实测暴露出
-  一个**独立的**故障：`hls_proxy` 关闭时后端对电台是 `302 → https://<上游>`，而 `DefaultHttpDataSource`
-  **默认拒绝跨协议重定向**（http→https），于是请求死在 302，报一个完全不指向真因的
-  `InvalidResponseCodeException: Response code: 302`。设备上验证过这确实是「跨协议」规则：一个
-  **同协议** 302 被正常跟随、一路走到分段请求。修法是 `setAllowCrossProtocolRedirects(true)`。
-  该标志也允许反向（https→http）降级——接受，因为这些是公开广播流、字节本身不是秘密，而不开它这个功能
-  根本不可用。
-  - **连带修掉我自己引入的一个副作用**：`load` 里那句把读超时提到 300 s 的 `setReadTimeoutMs`
-    原本注释着「唯一传 `hls` 的调用方是视频转码，等待本就是预期状态」——而现在电台也传 `hls: true` 了。
-    直播流继承 5 分钟超时意味着「流已经死了却要等五分钟才报错」。改为按 URL 判定
-    （`VIDEO_HLS_PATH_MARKER = "/video-hls/"`），只有转码端点才放宽。
-  - ⚠️ **iOS 侧未验**：AVPlayer 一般自行跟随重定向（含跨协议），但没有实测过。
+- [x] 本地歌曲封面 404 — **查明是预期行为，非缺陷**：DB 里 `cover_path`/`cover_url` 本就为空（合成音频无封面），按需刮削搜不到返 404 正常。留档教训：观察与因果要分开记
+- [x] Swiper `itemHeight='auto'` 被插值成 `"autopx"` — **上游良性怪癖**：`'auto'` 就是默认值，非法值被整条丢弃恰好落回 `auto` 行为，不该改。记 upstream-issues Issue 4
+- [x] `-x-placeholder-color` Web 空转 — 浏览器丢弃未知属性，web-elements 占位符走 `::part` 自带默认 `grey`；CDP 否掉三条直觉修法后 patch web-core 打包产物默认值改 `var(--content-muted,grey)`，一处生效全库
+- [x] 构建警告「归零」说法过期 — 现剩 3 类已知警告（`-webkit-box-orient`/`-webkit-line-clamp` 跨平台双写，有注释说明）；「归零」退役为「警告应只剩已知 3 类」。教训：没有闸门读的文档断言不会自己保持为真
+- [x] `.song-row` 三份互相冲突的副本 — 同特异性靠源码顺序决定谁赢；提取 `SongRow.css` 删三份，闸门断言他处不得定义 `.song-row*`
+- [x] `savePlaybackState` 4 个位置参数违反 API 约定 — 改对象参数，实际只有 6 处改动。教训：「churn 大」拖着不改，往往因为没真数过
+- [x] 偶发全屏灰层 — **无法复现关闭**（仅批29 一次偶发）。若再出现：先 `adb logcat | grep -i "\[Sheet\] Invalid state transition"` 再重开
 
-### 2026-08-26 Android 实测途中新发现，未修
+## iOS e2e 首次运行发现（2026-08-15 · 批46 全部修完）
 
-- [x] ~~**本地歌曲的封面拿不到（404）**~~ —— **查明是预期行为，不是缺陷。本条曾被我误记为 bug，特此留档。**
-  当初的观察是准确的（songs 62/63 的 `cover_url` 端点确实返回 `404 {"error":"封面不存在"}`），
-  **错的是我给这个观察加的解释** —— 我没查后端就写下「不知道是扫描时没落盘还是路径解析不对」，
-  暗示 DB 里有封面而文件丢了。实际查了 DB 与后端代码后：
-  - `sqlite3 data/songloft.db` 显示这两首的 `cover_path` 与 `cover_url` **都是空字符串** ——
-    它们真的没有封面（是 ffmpeg 生成的测试音频与一首无内嵌封面的 mp3），后端返回 404 完全正确。
-  - API 之所以仍给出 `cover_url` 端点，是 `Song.CoverURLPath()`（`internal/models/models.go:183`）
-    的**第二个放行分支**：`Type == local && HasCoverProvider()` 时即使无封面也放行。注释写明了意图
-    ——「有封面插件时才放行，避免没装插件的用户对全库无封面歌发出注定 404 的请求」。
-  - 这是**按需刮削**：客户端请求 → 后端 `coverSearcher.SearchCover()` 问插件 → 搜到就落库并返图，
-    搜不到就 404、客户端显示占位图。对一首名为 `test-track-2` 的合成音频搜不到是正常结果。
-  - 反证可确认前提成立：DB 两字段皆空 + 歌是 local + API 确实给了端点 ⇒ `HasCoverProvider()` 必为 true
-    （库里装了「歌词搜索」等插件）。
-  - **教训**：subagent 报回来的是一个准确的*观察*，而我顺手补的*因果*没有证据。观察与解释要分开记，
-    否则下一个人会拿着错误的因果去查一个不存在的问题。
+> iOS 首次真编译、e2e 首次跑模拟器。首跑 104/110，修完 iOS 110/110、Android 107/110（3 例平台门控跳过）。
 
-- [x] **`FullPlayerPage` 给 Swiper 传 `itemHeight='auto'`，被插值成字面量 `"autopx"`**（2026-08-26 查清：**良性上游怪癖，本地无可修**）——
-  读了 `@lynx-js/lynx-ui-swiper` 源码：`itemHeight` 的**默认值本来就是 `'auto'`**，而 Swiper 渲染
-  `height: ${itemHeight}px`、`updateSwiperInnerContainerSizeMT` 也做同样的插值，所以 `'auto'` 必然变成
-  非法的 `height: autopx`。但**非法值会被 CSS 引擎整条丢弃** ⇒ height 落回未设置 ⇒ 等同 `auto`（按内容
-  定高），恰是期望行为。所以它「靠非法值被丢弃」意外地得到了正确结果，表面无任何异常（与 `illegal css
-  key:237` 是两件事：那条是键名、这条是值）。FullPlayerPage 传 `'auto'`（=按内容定高）语义正确，**不该改**；
-  且 `'auto'` 就是默认值，删掉这行也不改变行为。已作为上游问题记入
-  [`plans/upstream-issues.md`](plans/upstream-issues.md) Issue 4（Swiper 应特判自己的 `'auto'` 默认值）
+### 音频引擎语义差异
 
-### 批51 途中发现，未修
-
-- [x] **`-x-placeholder-color` 在 Web 上是个空转的声明**（2026-08-26 已修，Chrome CDP 双主题实测）—— 机制：
-  `-x-placeholder-color` 逐字进产物 CSS 但浏览器当未知属性丢弃；web-elements 的占位符颜色走
-  `x-input::part(input)::placeholder { color: var(--placeholder-color) }`，而 part 上另有显式默认
-  `x-input::part(input) { --placeholder-color: grey }`，没人把两者接起来 ⇒ Web 占位符恒为库自带 grey。
-  **CDP 逐一否掉了三条直觉修法**：① 在 host 上写 `--placeholder-color` —— part 的显式 grey 优先于继承值，
-  无效；② document 级 `x-input::part(input){…}` 规则（含 `!important`）—— 穿不透 lynx-view 的 shadow root，
-  无效；③ 逐输入框设 `placeholder-color` 属性 —— **有效**（handler 异步写内联 `--placeholder-color:…
-  !important`），但要动 16 处。**最终采用第四种**：patch web-core 打包产物，把默认值从 `grey` 改成
-  `var(--content-muted,grey)`（`scripts/patch-web-core-client.mjs` Fix 3，x-input/x-textarea 各一条），
-  一处生效全库，且与原生侧 `-x-placeholder-color: var(--content-muted)` 同值、随主题切换。CDP 实测：
-  light `#7b7b88` / dark `#8b8b98`，占位符与 `--content-muted` 逐项一致。**未覆盖**：`pnpm run dev`
-  的 dev-middleware 路径（非 Web 主流程；`web:dev` 与 `build:web` 都走已 patch 的 client_prod）。
-- [x] **构建警告不再是零**（AGENTS §7 与本文件都写着「自批19b 起归零」，实际已漂）——
-  `LyricCalibratePage.css` 有一句 `font-variant-numeric: tabular-nums`，Lynx 无此属性，
-  模板编码阶段被剥掉只留一行 warning，**从落地起就没生效过**。批51 顺手删掉恢复零警告
-  （删它对渲染是纯 no-op）。真要数字不跳动得改 `font-family` 用等宽字体。
-  教训同 `AndroidManifest.xml` 那条：**没有闸门读的东西，写在文档里的「已归零」不会自己保持为真**
-  - ⚠️ **2026-08-26 复核：又不是零了，但这次是刻意的。** 现有 3 类警告全部来自
-    `-webkit-box-orient` / `-webkit-line-clamp`（`PlaylistDetailPage.css`、`SongInfoDialog.css`、
-    `PluginManagerPage.css` 的两行截断），三处都写了注释说明这是**跨平台双写**：标准属性在 Web 上生效，
-    native encoder 剥掉它们并告警，所以另配 `max-height: 32px` 硬兜。**「归零」这个说法应当退役**——
-    正确的表述是「警告应当只剩这 3 类已知项，多出别的就要查」。这条本身就是第三次证明：
-    可被检验的断言写进文档而没有闸门读它，它就会周期性地变成假话
-
-### 刻意推迟的清理（批50 记录）
-
-- [x] **`.song-row` 有三份互相冲突的副本**（2026-08-26 已收敛）—— 同一套规则分别写在 `LibraryPage.css`、
-  `CategorySongsPage.css`、`PlaylistDetailPage.css`，且**不等价**：两份是 `width: 100%`，歌单详情那份是
-  `flex: 1; min-width: 0`。因为 `router.tsx` eager import 每个页面，三份从启动起全在 bundle 里、同特异性，
-  **靠源码顺序决定谁赢**。已提取成 `features/library/widgets/SongRow.css` 由 `SongRow.tsx` import，三个页面
-  副本删除。根规则取 `width: 100%; min-width: 0`（两页的 `width:100%` + 歌单页的 `min-width:0` 的并集）。
-  **订正原记录的一处误判**：歌单详情那份 `flex:1` 并非因为「SongRow 放在 SortableItem 里」——SortableItem
-  是**排序模式**的拖拽行（用的是 `.playlist-detail__sort-row`，不是 `.song-row`）；正常模式的 `.song-row`
-  在 `.song-row-content`（`flex:1` 但非 flex 容器）里，`display:flex` 的块级盒子本就撑满宽度，`flex:1`
-  在那里是 no-op，故改成 `width:100%` 行为不变。防再犯：新闸门 `song-row-css.test.ts` 断言「除 SongRow.css
-  外任何 CSS 不得定义 `.song-row*`」（反向验证过）。**Android 模拟器实测**：曲库/分类/歌单详情三处行内容
-  均从左缘 x=16 撑到近右缘（x≈511–517），无塌陷
-- [x] **`savePlaybackState` 是 4 个位置参数**（2026-08-26 已修）—— 违反 `docs/reference/api-conventions.md`
-  的「≥3 个或含可选参数用对象参数」。此前拖着没改的理由是「按位断言的 churn 收益不抵」，实际动手后发现
-  churn 很小：`position-persistence.test.ts` 只有两处 `[, , positionMs]` 解构改成 `[{ positionMs }]`，
-  加 3 个测试调用点与 1 个生产调用点改对象字面量，共 6 处。**教训：把「churn 大」当理由拖着，往往是因为
-  没真去数过到底有几处**——约定违规留着，下一个读代码的人会拿它当「这里可以不守约定」的先例
-
-### 仍未定位
-
-- [x] **偶发全屏灰层**（批29 发现，**2026-08-26 关闭：仅批29 那次偶发、此后再未复现，推测已随后续改动消失**）——
-  原记录备查：运行数分钟后整屏蒙中灰，重启即恢复，不影响功能。审计补的算术：暗色读数 `13→86` 是**变亮**，
-  纯黑半透层数学上不可能，联立得约 `#838383@0.62`，而仓库与 lynx-ui 里都没有这个颜色；最可查嫌疑是 lynx-ui
-  Sheet 的 backdrop 泄漏。**若再出现**：先跑 `adb logcat | grep -i "\[Sheet\] Invalid state transition"`
-  （库自带的免费探针），并重开本条
-
-## iOS e2e 首次运行发现（2026-08-15，批46 已全部修完）
-
-> 背景：iOS 侧在批45 之后才第一次真正编译（Mac/Xcode 26.6），e2e 也是**首次**在 iOS
-> 模拟器（iPhone 16 Pro / iOS 18.3）上跑——此前 107 例只在 Android 上绿过。首跑
-> **104 passed / 6 failed**，批46 修完后 **iOS 110/110**、Android 107/110（3 例平台门控跳过）。
-> 6 条按根因分两类：音频三条是 iOS 引擎与 Android 参考行为的真实差异（Android 是测试的参考
-> 实现），appearance 三条是测试自身读错了对象。**首跑时对前两条的归因有偏差，实测推翻了它们**
-> ——原文保留在每条的「首跑记录」里，实测结论见「实测」。
-
-### 音频引擎语义差异（3 条，宿主侧为主）
-
-- [x] **`audio-playback`：`playing` 到达时 `durationMs` 仍为 0**（批46 已修）
-  - 首跑记录：以为「iOS 时长只随 0.5s tick 上报」，修法是在 `.readyToPlay` 补发一次 progress。
-  - **实测推翻**：`.readyToPlay` 时 AVPlayer 的 `item.duration` **本就还是 `indefinite`**（补发
-    了也是 0），真正解析出的 45035.10ms 对应整数采样数 1986048/44100，是**解码整段后**才得到的。
-    所以在宿主侧「提早发」无解。
-  - 真根因在 JS：`player-store.ts` 的 progress 处理 **无条件** `duration: e.durationMs`，而两个
-    宿主都把「未知」归一成 0（`C.TIME_UNSET` / `indefinite`），于是 0 反过来**抹掉**已知时长。
-    Android 只是因为 ExoPlayer 在 READY 就知道时长才没暴露。附带的真实缺陷：`playAtIndex`
-    从不写 `duration`，**切歌后总时长会沿用上一首**，直到宿主上报。
-  - 修法：`stateDurationMsOf()` 用服务端元数据播种 `duration`（`playAtIndex` + 恢复播放两处共用），
-    progress 处理改为 `e.durationMs > 0 ? e.durationMs : s.duration`。两条各配一个反向验证过的
-    单测；`mock-audio` 补 `simulateUnknownDurationProgress()`——mock 一直被 `load` **直接告知**
-    时长并同步回显，真实宿主做不到，这正是掩盖该 bug 的前置条件缺口。
-- [x] **`audio-speed`：0.5 倍速 1s 内进度推进为 0（2 倍速同场景通过）**（批46 已修）
-  - 首跑记录：以为「低速下每 tick 只推进 250ms，两次读取夹在同一 tick 区间内」。
-  - **实测推翻**：tick 数与位置探针显示，0.5x 下**每 tick 仍推进 500ms，但间隔是 1.0 秒墙钟**
-    ——`addPeriodicTimeObserver(forInterval:)` 的间隔按**媒体时间**计，实际墙钟间隔是
-    `interval / rate`。1 秒窗口于是只能抓到 0 或 1 个 tick（首跑抓到 0，`dbg.count=0`），
-    测试是**结构性 flaky**，播放本身完全正常。
-  - 修法：`installTimeObserver()` 按 `progressIntervalSeconds * speed` 安装并在 `setSpeed`
-    变更时重装，把墙钟节奏钉回 500ms（Android `PROGRESS_INTERVAL_MS` 就是 `postDelayed` 的
-    墙钟 500ms）。实测三速率均为 500ms/tick：1x +500、0.5x +250、2x +1000。
-  - 连带：每 tick 步长在 2x 变为 1000ms，旧的 1 秒窗口对 2x 也有约 10% 概率抓到 3 个 tick 而
-    误判，故两条速度断言统一改为 2 秒窗口 + 容得下一整个 tick 的容差带（`measureAdvancement`）。
-  - 同时**回退**了首跑时加的 seek 后 `playImmediately` 恢复（`intendedPlaying`）：那是基于
-    「seek 把播放停了」的猜测，根因既已查明，留着就是无法证伪也无回归测试的推测性改动。
-- [x] **`audio-error`：坏 URL 后 state 停在 `loading` 而非 `error`**（批46 已修）—— 归因成立：
-  AVPlayer 在 item 失败后**仍继续**发 `timeControlStatus` 转换（`waitingToPlay` → 我们发
-  `loading`），把 JS 刚落定的 error 态盖掉；ExoPlayer 失败后转 idle 并安静。修法：`itemFailed`
-  标记，失败后到下次 `load()` 之前不再由 `timeControlStatus` 发状态。
+- [x] `playing` 到达时 `durationMs` 仍为 0 — 首跑归因（「提早发 progress」）被实测推翻：`.readyToPlay` 时 AVPlayer 时长本就是 `indefinite`。真根因在 JS：progress 处理**无条件**用 0 覆盖已知时长（两宿主都把未知归一为 0）；`playAtIndex` 还从不写 duration ⇒ 切歌沿用上一首时长。改用服务端元数据播种 + `>0` 才覆盖
+- [x] 0.5 倍速 1s 内进度推进为 0 — 首跑归因被推翻：`addPeriodicTimeObserver` 间隔按**媒体时间**计，0.5x 下墙钟间隔 1s，测试窗口结构性 flaky、播放本身正常。改按 `interval × speed` 安装并在变速时重装。教训：推测性改动在根因查明后应回退
+- [x] 坏 URL 后 state 停在 `loading` — AVPlayer 失败后仍发 `timeControlStatus` 转换，把刚落定的 error 盖掉；`itemFailed` 标记阻断
 
 ### appearance 测试读错对象（3 条，测试侧）
 
-- [x] **`ios-appearance` 全部 3 例：theme 读到 `'unknown'`**（批46 已修）—— 测试 eval 读
-  `lynx.__globalProps.theme`，但 eval 跑在 **BTS realm**，那里 `lynx` 根本不存在
-  （实测 `typeof lynx === 'undefined'`）——`__globalProps` 是主线程 Lepus realm 的全局。
-  这是 AGENTS.md 反复警告的 realm 隔离，测试写出来从未跑过所以没暴露。宿主功能本身没问题。
-  修法：`e2e-bridge` 暴露 `__E2E_APPEARANCE__`（`getSystemAppearance` / `getAppTheme` /
-  `resolveTheme` / `changeAppTheme`），测试断言 `resolveTheme(getAppTheme())`。
-  - **照 bug.md 当时那条警告先验了宿主链路，结果真挖出一条**：只断言 `getSystemAppearance()`
-    是不够的——那台模拟器持久化的 app 主题是 `'light'`（用户覆盖），此时 app **本就不该**跟随
-    系统，而只读系统值的断言照样全绿，测的是空气。故测试改为自己用 `changeAppTheme('system')`
-    建立前提、结束后还原，并同时断言 `appTheme === 'system'` 与**解析后**的 `resolvedTheme`
-    ——后者才是 app 真正渲染的主题，对得上用例名。
+- [x] theme 读到 `'unknown'` — eval 跑在 BTS realm，`lynx.__globalProps` 是主线程 Lepus realm 的全局；改经 `e2e-bridge` 的 `__E2E_APPEARANCE__`。附带教训：只断言 `getSystemAppearance()` 会测空气（模拟器持久化了用户覆盖主题），测试须自建前提（`changeAppTheme('system')`）并断言**解析后**的主题

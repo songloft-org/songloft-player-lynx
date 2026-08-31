@@ -62,24 +62,14 @@ Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoP
 
 ---
 
-## 一条贯穿性的警告：判平台只能用 `isWebPlatform()`
+## 平台判断：`isWebPlatform()` 是唯一正确方式
 
-**`typeof <DOM 全局> !== 'undefined'` 不是平台判断。** web-core 把背景线程实现为**真正的 Web Worker**（`new Worker(…, { name: 'lynx-bg' })`），业务组件跑在那个 realm 里，那里没有 `document` / `localStorage` / `sessionStorage` / `HTMLAudioElement`（`window` 却是 `object`，所以它也不能用来判断）。**DOM 探测在 Web 平台上会回答「不是 Web」。**
+> 完整机制与三次事故案例见 [Lynx 约束 §二](./lynx-constraints.md)。此处只列结论。
 
-| 问题 | 用什么 |
-|---|---|
-| 当前**平台**是不是 Web？（选实现分支、选渲染分支） | `isWebPlatform()` —— 读 `SystemInfo.platform`，**两个 realm 都有** |
-| 当前 **realm** 有没有 DOM？（只守卫紧随其后的那几行 DOM 调用） | `isWebEnvironment()` |
-
-`isWebEnvironment()` **绝不可用来选择实现分支**。已踩三次，三次都是「测试全绿 + 真机部分功能静默死亡」：
-
-1. 首页永久显示「下拉刷新…」—— 探 `window` + `document`，于是 Web 分支从未生效，未映射的 `<refresh-header>` 子节点当普通内容渲染出来了。
-2. Web 刷新掉登录 —— 探 `localStorage`，落到内存存储。
-3. **Web 完全没声音** —— `web-audio.ts:30` 的 `isWebAudioEnvironment()` 探 `HTMLAudioElement`，永远为 false，`audio-facade.ts` 因此从不构造 `WebSongloftAudio`，落到静音 mock。而 mock 拿到了真实时长，**进度条照走、自动切歌照切，唯独不出声** —— 这是最难归因的那种失败。
-
-推论：**主线程 API 不能在业务代码里直接调**。`new Audio()` / `new AudioContext()` / `navigator.mediaSession` / `window.open` / `document.createElement` 在 worker realm 全部抛 `ReferenceError`。Web 上需要它们，只能经 web-core 的 `nativeModulesMap` 在主线程注册宿主模块（`web/audio-host.js` 等），让 worker 侧通过 `NativeModules.X` 拿到 —— 这也顺带复用了已有的 native 分支，这就是 Web 音频最终走 `NativeSongloftAudio` 而不是 `WebSongloftAudio` 的原因（后者已是死代码，保留仅供参考）。
-
-另一个同源陷阱：`getPlatformTarget()`（[`src/native/platform-target.ts`](../../src/native/platform-target.ts)）与 `isWebPlatform()` **刻意不互相实现**。两者无宿主时的兜底值相反 —— 前者返回 `'web'`（格式集最保守，未知宿主也一定播得出），后者返回 `false`（渲染上「不是 Web」保留 `<refresh>` / `<webview>`，这在设备上是对的，也是全部现有测试的预期）。把一个接到另一个上，会在改动那一刻翻转一批渲染决策。
+- **`typeof <DOM 全局> !== 'undefined'` 在 Web 上恒为 false**（业务代码跑在 Worker realm）。
+- 判平台一律 `isWebPlatform()`（读 `SystemInfo.platform`）；`isWebEnvironment()` 只守卫 DOM 调用行，不可选分支。
+- 主线程 API（`new Audio()` / `AudioContext` / `mediaSession`）不能在业务代码里直接调，只能经 `nativeModulesMap` 注册宿主模块。
+- `getPlatformTarget()` 与 `isWebPlatform()` **刻意不互相实现**（兜底值相反，混用会翻转渲染决策）。
 
 ---
 

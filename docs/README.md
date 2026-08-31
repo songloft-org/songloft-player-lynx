@@ -108,6 +108,8 @@ P4 双轨发布     ░░░░░░░░░░░░░░░░░░░░
 | 文件 | 说明 |
 |------|------|
 | [2026-08-14-audit-fix-plan.md](./archive/2026-08-14-audit-fix-plan.md) | 四路审计的修复排期（批41–48），含三类系统性根因与明确不做清单。**已闭合** |
+| [harmony-integration-plan.md](./archive/harmony-integration-plan.md) | HarmonyOS 宿主集成计划。**已完成**（9 个原生模块实现，DevEco 工程就位） |
+| [lynx-native-plugin-rendering.md](./archive/lynx-native-plugin-rendering.md) | Lynx 原生渲染插件设计（插件以 `<frame>` 子页渲染于原生容器）。**已落地**（`4f0060b`，批63 后续） |
 | [migration/](./archive/migration/) | 项目启动前的 5 份迁移可行性调研 + **订正说明** |
 | [web-support.md](./archive/web-support.md) | Web 支持原始计划 + 7 处「未经验证就写进设计的假设」及其后果 |
 
