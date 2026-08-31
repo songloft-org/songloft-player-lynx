@@ -15,6 +15,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -403,12 +404,16 @@ object SongloftAudioEngine {
      * context.
      */
     fun initFromService(service: SongloftPlaybackService) {
-        if (sessionBoundToService) return          // already done
+        if (sessionBoundToService) {
+            ClientFileLog.write('I', "audio", "service session already bound; snapshot=${diagnosticSnapshot()}")
+            return
+        }
 
         val existingPlayer = player
         ClientFileLog.write(
             'I', "audio",
-            "service session bound (pre-existing player=" + (existingPlayer != null) + ")",
+            "service session binding begin (pre-existing player=" + (existingPlayer != null) + ") "
+                + "snapshot=${diagnosticSnapshot()}",
         )
         if (existingPlayer != null) {
             // Player exists but was created before the service. Re-create the
@@ -427,6 +432,7 @@ object SongloftAudioEngine {
         }
         startVolumeObserver(service)
         sessionBoundToService = true
+        ClientFileLog.write('I', "audio", "service session binding complete snapshot=${diagnosticSnapshot()}")
     }
 
     /**
@@ -439,7 +445,13 @@ object SongloftAudioEngine {
      * session with the correct context.
      */
     fun ensurePlayer(context: Context): ExoPlayer {
-        player?.let { return it }
+        player?.let {
+            ClientFileLog.write(
+                'I', "audio",
+                "ensurePlayer reused (sessionBoundToService=$sessionBoundToService) snapshot=${playerSnapshot(it)}",
+            )
+            return it
+        }
         ClientFileLog.write('I', "audio", "player created before service start (race path)")
         val created = buildPlayer(context)
         created.addListener(playerListener)
@@ -448,6 +460,7 @@ object SongloftAudioEngine {
         mediaSessionInternal = buildMediaSession(context.applicationContext, created)
         attachEqualizer(created.audioSessionId)
         startVolumeObserver(context)
+        ClientFileLog.write('I', "audio", "ensurePlayer created snapshot=${playerSnapshot(created)}")
         return created
     }
 
@@ -527,6 +540,37 @@ object SongloftAudioEngine {
         return truncText(if (host != null) "$host/$last" else last)
     }
 
+    /** Compact ExoPlayer state used by lifecycle logs and exported diagnostics. */
+    fun diagnosticSnapshot(): String = playerSnapshot(player)
+
+    private fun playerSnapshot(p: Player?): String {
+        if (p == null) return "player=null"
+        return try {
+            val mediaUrl = p.currentMediaItem?.localConfiguration?.uri?.toString()
+            "player=present playWhenReady=${p.playWhenReady} isPlaying=${p.isPlaying} "
+                + "playbackState=${playbackStateName(p.playbackState)}(${p.playbackState}) "
+                + "suppression=${p.playbackSuppressionReason} position=${p.currentPosition} "
+                + "duration=${p.duration} timelineEmpty=${p.currentTimeline.isEmpty()} "
+                + "windows=${p.currentTimeline.windowCount} mediaIndex=${p.currentMediaItemIndex} "
+                + "media=${truncUrl(mediaUrl)}"
+        } catch (error: Throwable) {
+            "player=unavailable(${error.javaClass.simpleName}: ${error.message ?: "no message"})"
+        }
+    }
+
+    private fun playbackStateName(state: Int): String = when (state) {
+        Player.STATE_IDLE -> "IDLE"
+        Player.STATE_BUFFERING -> "BUFFERING"
+        Player.STATE_READY -> "READY"
+        Player.STATE_ENDED -> "ENDED"
+        else -> "UNKNOWN"
+    }
+
+    private fun safeErrorText(value: String?): String = truncText(value)
+        .replace(Regex("https?://[^\\s]+"), "<url>")
+        .replace(Regex("((?i:access_token|token)=)[^&\\s]+"), "\$1<redacted>")
+        .replace(Regex("[\\r\\n]+"), " ")
+
     /**
      * Update the notification's second line to the current lyric.
      *
@@ -584,7 +628,11 @@ object SongloftAudioEngine {
 
     fun load(context: Context, url: String, hls: Boolean, headers: Map<String, String>?) {
         val p = ensurePlayer(context)
-        ClientFileLog.write('I', "audio", "load ${truncUrl(url)} hls=$hls queuedMetadata=${metadataByUrl.containsKey(url)}")
+        ClientFileLog.write(
+            'I', "audio",
+            "load begin ${truncUrl(url)} hls=$hls headers=${headers?.size ?: 0} "
+                + "queuedMetadata=${metadataByUrl.containsKey(url)} snapshot=${playerSnapshot(p)}",
+        )
         emitState("loading")
         // `DefaultHttpDataSource` is HttpURLConnection-backed and exposes no SSL
         // hook, so self-signed servers work here only because
@@ -633,31 +681,52 @@ object SongloftAudioEngine {
         } else {
             ProgressiveMediaSource.Factory(httpFactory).createMediaSource(item)
         }
-        p.setMediaSource(source)
-        p.prepare()
+        try {
+            p.setMediaSource(source)
+            p.prepare()
+            ClientFileLog.write('I', "audio", "load prepared ${truncUrl(url)} snapshot=${playerSnapshot(p)}")
+        } catch (error: Throwable) {
+            ClientFileLog.write(
+                'E', "audio",
+                "load prepare failed ${truncUrl(url)} (${error.javaClass.simpleName}: "
+                    + "${safeErrorText(error.message)}) snapshot=${playerSnapshot(p)}",
+            )
+            throw error
+        }
     }
 
     fun play(context: Context) {
         val p = ensurePlayer(context)
+        ClientFileLog.write('I', "audio", "play begin snapshot=${playerSnapshot(p)}")
         // Force a false→true transition so ExoPlayer re-triggers audio focus
         // acquisition and playback initiation. Without this, auto-advance after
         // STATE_ENDED is a no-op because playWhenReady is already true.
-        if (p.playWhenReady) p.playWhenReady = false
+        if (p.playWhenReady) {
+            ClientFileLog.write('I', "audio", "play forcing playWhenReady false before play")
+            p.playWhenReady = false
+        }
         p.play()
+        ClientFileLog.write('I', "audio", "play requested snapshot=${playerSnapshot(p)}")
     }
 
     fun pause() {
-        player?.pause()
+        val p = player
+        ClientFileLog.write('I', "audio", "pause requested snapshot=${playerSnapshot(p)}")
+        p?.pause()
+        ClientFileLog.write('I', "audio", "pause applied snapshot=${playerSnapshot(p)}")
     }
 
     fun stop() {
-        player?.let {
+        val p = player
+        ClientFileLog.write('W', "audio", "stop begin snapshot=${playerSnapshot(p)}")
+        p?.let {
             it.stop()
             it.clearMediaItems()
         }
         stopProgress()
         emitState("idle")
         emitProgressValues(0, 0, 0)
+        ClientFileLog.write('I', "audio", "stop complete snapshot=${playerSnapshot(p)}")
     }
 
     fun seek(positionMs: Long) {
@@ -679,6 +748,7 @@ object SongloftAudioEngine {
 
     /** Full release -- called by the module's `dispose()`. */
     fun release() {
+        ClientFileLog.write('W', "audio", "release begin snapshot=${diagnosticSnapshot()}")
         stopProgress()
         releaseEqualizer()
         stopVolumeObserver()
@@ -690,6 +760,7 @@ object SongloftAudioEngine {
         audioManager = null
         appContext = null
         sessionBoundToService = false
+        ClientFileLog.write('I', "audio", "release complete snapshot=${diagnosticSnapshot()}")
     }
 
     /**
@@ -697,6 +768,7 @@ object SongloftAudioEngine {
      * [release] but split so the call-site is self-documenting.
      */
     fun releaseFromService() {
+        ClientFileLog.write('W', "audio", "releaseFromService invoked snapshot=${diagnosticSnapshot()}")
         release()
     }
 
@@ -765,6 +837,10 @@ object SongloftAudioEngine {
         }
 
         override fun onPlaybackStateChanged(state: Int) {
+            ClientFileLog.write(
+                'I', "audio",
+                "playback state changed state=${playbackStateName(state)}($state) snapshot=${diagnosticSnapshot()}",
+            )
             when (state) {
                 Player.STATE_BUFFERING -> emitState("loading")
                 Player.STATE_READY -> emitState("ready")
@@ -777,7 +853,25 @@ object SongloftAudioEngine {
             }
         }
 
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            ClientFileLog.write(
+                'I', "audio",
+                "playWhenReady changed value=$playWhenReady reason=$reason snapshot=${diagnosticSnapshot()}",
+            )
+        }
+
+        override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+            ClientFileLog.write(
+                'I', "audio",
+                "playback suppression changed reason=$playbackSuppressionReason snapshot=${diagnosticSnapshot()}",
+            )
+        }
+
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            ClientFileLog.write(
+                'I', "audio",
+                "isPlaying changed value=$isPlaying snapshot=${diagnosticSnapshot()}",
+            )
             if (isPlaying) {
                 emitState("playing")
                 startProgress()
@@ -789,7 +883,39 @@ object SongloftAudioEngine {
             }
         }
 
+        override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+            ClientFileLog.write(
+                'I', "audio",
+                "timeline changed reason=$reason empty=${timeline.isEmpty()} "
+                    + "windows=${timeline.windowCount} periods=${timeline.periodCount} "
+                    + "snapshot=${diagnosticSnapshot()}",
+            )
+        }
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            val mediaUrl = mediaItem?.localConfiguration?.uri?.toString()
+            ClientFileLog.write(
+                'I', "audio",
+                "media item transition reason=$reason media=${truncUrl(mediaUrl)} "
+                    + "snapshot=${diagnosticSnapshot()}",
+            )
+        }
+
+        override fun onAudioSessionIdChanged(audioSessionId: Int) {
+            ClientFileLog.write(
+                'I', "audio",
+                "audio session id changed id=$audioSessionId snapshot=${diagnosticSnapshot()}",
+            )
+        }
+
         override fun onPlayerError(error: PlaybackException) {
+            ClientFileLog.write(
+                'E', "audio",
+                "player error code=${error.errorCodeName} type=${error.javaClass.simpleName} "
+                    + "message=${safeErrorText(error.message)} "
+                    + "cause=${error.cause?.javaClass?.simpleName ?: "none"} "
+                    + "snapshot=${diagnosticSnapshot()}",
+            )
             stopProgress()
             sink?.emit(
                 EVENT_ERROR,

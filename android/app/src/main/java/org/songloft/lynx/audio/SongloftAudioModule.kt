@@ -83,6 +83,7 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
 
     @LynxMethod
     fun stop() {
+        ClientFileLog.write('I', "audio-module", "stop requested")
         SongloftAudioEngine.runOnMain { SongloftAudioEngine.stop() }
         stopPlaybackService(androidContext())
     }
@@ -171,6 +172,7 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
 
     @LynxMethod
     fun dispose() {
+        ClientFileLog.write('I', "audio-module", "dispose requested")
         SongloftAudioEngine.runOnMain { SongloftAudioEngine.release() }
         stopPlaybackService(androidContext())
     }
@@ -202,19 +204,36 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
             val intent = Intent(context, SongloftPlaybackService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
+                ClientFileLog.write(
+                    'I', "audio-module",
+                    "start playback service requested (foreground sdk=${Build.VERSION.SDK_INT})",
+                )
             } else {
                 context.startService(intent)
+                ClientFileLog.write(
+                    'I', "audio-module",
+                    "start playback service requested (legacy sdk=${Build.VERSION.SDK_INT})",
+                )
             }
-        } catch (_: Throwable) {
+        } catch (error: Throwable) {
             // e.g. background-start restrictions on newer Android — playback in
             // the module still works; only the notification is skipped.
+            ClientFileLog.write(
+                'E', "audio-module",
+                "start playback service failed (${error.javaClass.simpleName}: ${error.message ?: "no message"})",
+            )
         }
     }
 
     private fun stopPlaybackService(context: Context) {
         try {
-            context.stopService(Intent(context, SongloftPlaybackService::class.java))
-        } catch (_: Throwable) {
+            val stopped = context.stopService(Intent(context, SongloftPlaybackService::class.java))
+            ClientFileLog.write('I', "audio-module", "stop playback service requested (stopped=$stopped)")
+        } catch (error: Throwable) {
+            ClientFileLog.write(
+                'E', "audio-module",
+                "stop playback service failed (${error.javaClass.simpleName}: ${error.message ?: "no message"})",
+            )
         }
     }
 

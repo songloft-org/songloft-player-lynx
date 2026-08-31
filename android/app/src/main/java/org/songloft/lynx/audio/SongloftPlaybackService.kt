@@ -143,8 +143,23 @@ class SongloftPlaybackService : MediaSessionService() {
      * media3 has one, replacing the placeholder.
      */
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val ownsSlotBefore = mediaNotificationOwnsSlot
+        ClientFileLog.write(
+            'I', "audio-svc",
+            "onStartCommand startId=$startId flags=$flags action=${intent?.action ?: "null"} "
+                + "ownsSlot=$ownsSlotBefore media3Ongoing=${media3PlaybackOngoing()} "
+                + "playerOngoing=${playerPlaybackOngoing()} "
+                + "snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
+        )
         if (!mediaNotificationOwnsSlot) startForegroundPlaceholder()
-        return super.onStartCommand(intent, flags, startId)
+        val result = super.onStartCommand(intent, flags, startId)
+        ClientFileLog.write(
+            'I', "audio-svc",
+            "onStartCommand returned=$result ownsSlot=$mediaNotificationOwnsSlot "
+                + "placeholder=$placeholderPosted media3Ongoing=${media3PlaybackOngoing()} "
+                + "playerOngoing=${playerPlaybackOngoing()}",
+        )
+        return result
     }
 
     /**
@@ -154,6 +169,13 @@ class SongloftPlaybackService : MediaSessionService() {
      * placeholder from clobbering the notification it exists to bridge to.
      */
     override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        val ownsSlotBefore = mediaNotificationOwnsSlot
+        ClientFileLog.write(
+            'I', "audio-svc",
+            "notification update requested=$startInForegroundRequired mirrorBefore=$ownsSlotBefore "
+                + "media3Ongoing=${media3PlaybackOngoing()} playerOngoing=${playerPlaybackOngoing(session)} "
+                + "snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
+        )
         if (startInForegroundRequired != mediaNotificationOwnsSlot) {
             // Transitions only: while playing this runs on every metadata change
             // (each lyric line), and the whole point of the exported log is to
@@ -178,6 +200,13 @@ class SongloftPlaybackService : MediaSessionService() {
             // shade forever — blank, silent and (ONGOING | NO_CLEAR) undismissable.
             clearPlaceholder()
         }
+        ClientFileLog.write(
+            'I', "audio-svc",
+            "notification update applied mirrorAfter=$mediaNotificationOwnsSlot "
+                + "placeholder=$placeholderPosted media3Ongoing=${media3PlaybackOngoing()} "
+                + "playerOngoing=${playerPlaybackOngoing(session)} "
+                + "snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
+        )
     }
 
     /**
@@ -221,11 +250,19 @@ class SongloftPlaybackService : MediaSessionService() {
                 startForeground(PLACEHOLDER_NOTIFICATION_ID, notification)
             }
             placeholderPosted = true
-        } catch (_: Throwable) {
+            ClientFileLog.write(
+                'I', "audio-svc",
+                "placeholder foreground started (id=$PLACEHOLDER_NOTIFICATION_ID sdk=${Build.VERSION.SDK_INT})",
+            )
+        } catch (error: Throwable) {
             // Some background-start restrictions (Android 12+) can throw here.
             // We tried; the media notification path will still work if the app
             // is foreground, and the OS will terminate us if we were required
             // to be foreground and could not become so.
+            ClientFileLog.write(
+                'E', "audio-svc",
+                "placeholder foreground failed (${error.javaClass.simpleName}: ${error.message ?: "no message"})",
+            )
         }
     }
 
@@ -264,7 +301,13 @@ class SongloftPlaybackService : MediaSessionService() {
     override fun onTaskRemoved(rootIntent: Intent?) {
         val session = SongloftAudioEngine.mediaSession
         val player = session?.player
-        ClientFileLog.write('I', "audio-svc", "task removed (playing=${player?.playWhenReady})")
+        ClientFileLog.write(
+            'W', "audio-svc",
+            "task removed action=${rootIntent?.action ?: "null"} "
+                + "media3Ongoing=${media3PlaybackOngoing()} playerOngoing=${playerPlaybackOngoing()} "
+                + "ownsSlot=$mediaNotificationOwnsSlot "
+                + "placeholder=$placeholderPosted snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
+        )
         if (player == null || !player.playWhenReady) {
             // Nothing playing -- stop the service immediately.
             stopSelf()
@@ -273,13 +316,51 @@ class SongloftPlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
-        ClientFileLog.write('I', "audio-svc", "destroyed")
+        // Android does not provide a destruction reason here. The pre-release
+        // snapshot lets the exported log distinguish an explicit stop from a
+        // service that was reclaimed while a track was still playing.
+        ClientFileLog.write(
+            'W', "audio-svc",
+            "destroyed begin reason=unknown media3Ongoing=${media3PlaybackOngoing()} "
+                + "playerOngoing=${playerPlaybackOngoing()} "
+                + "ownsSlot=$mediaNotificationOwnsSlot placeholder=$placeholderPosted "
+                + "snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
+        )
         mediaNotificationOwnsSlot = false
         placeholderPosted = false
         // Let the engine release player + session; the base class then cleans
         // up its notification manager.
         SongloftAudioEngine.releaseFromService()
+        ClientFileLog.write('I', "audio-svc", "destroyed release complete")
         super.onDestroy()
+    }
+
+    /** The exact foreground decision exposed by Media3's service implementation. */
+    private fun media3PlaybackOngoing(): Boolean {
+        return try {
+            isPlaybackOngoing()
+        } catch (error: Throwable) {
+            ClientFileLog.write(
+                'W', "audio-svc",
+                "isPlaybackOngoing unavailable (${error.javaClass.simpleName}: ${error.message ?: "no message"})",
+            )
+            false
+        }
+    }
+
+    /** A player-only comparison value, useful when Media3 and the player diverge. */
+    private fun playerPlaybackOngoing(session: MediaSession? = SongloftAudioEngine.mediaSession): Boolean {
+        return try {
+            val player = session?.player ?: return false
+            player.isPlaying || (player.playWhenReady && player.playbackState != Player.STATE_ENDED)
+        } catch (error: Throwable) {
+            ClientFileLog.write(
+                'W', "audio-svc",
+                "player ongoing snapshot unavailable (${error.javaClass.simpleName}: "
+                    + "${error.message ?: "no message"})",
+            )
+            false
+        }
     }
 
     companion object {
