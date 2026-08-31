@@ -2,7 +2,9 @@
 
 ## Context
 
-给 Songloft Player (Lynx) 加 Liquid Glass 主题，参考 `Beans-Music/`（iOS 26 原生 `.glassEffect`）。Beans 玻璃 100% 建立在实时背景采样上，而 Lynx **无 `backdrop-filter`**，做不出真折射玻璃。但 `filter: blur()`（已在 `<image>` 上用）与 `linear-gradient`（已在 view 上用）可用，故做一套**诚实伪造玻璃**。
+给 Songloft Player (Lynx) 加 Liquid Glass 主题，参考 `Beans-Music/`（iOS 26 原生 `.glassEffect`）。
+
+> **参考仓库**：Beans-Music — https://github.com/XIaodou0416/Beans-Music （纯 SwiftUI，MIT）。本仓库内本地只读副本：`Beans-Music/`（未纳入 git，`?? Beans-Music/`）。关键源码：`Beans/Theme.swift`（主题/配色）、`Beans/Components.swift`（`BeansGlass`/`GlassCard`/`GlassBackdrop`）、`Beans/RootView.swift`（液态玻璃 TabBar）、`Beans/MiniPlayerView.swift`（三层玻璃胶囊）、`Beans/CoverBlurBackground.swift`（预模糊封面背景）。Beans 玻璃 100% 建立在实时背景采样上，而 Lynx **无 `backdrop-filter`**，做不出真折射玻璃。但 `filter: blur()`（已在 `<image>` 上用）与 `linear-gradient`（已在 view 上用）可用，故做一套**诚实伪造玻璃**。
 
 用户决定：**默认常开**（无开关，升级现有浮动表面）+ **全部浮动表面**（nav 胶囊/mini-player/popover/dialog/sheet；**toast 不玻璃化**，保留实心 `--primary` 主操作语义）+ **配彩色 seedColor**（玻璃装饰彩色，按钮保持 `--primary` 墨黑/包色——双通道，符合 Muse 单色按钮语言）。
 
