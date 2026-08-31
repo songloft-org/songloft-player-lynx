@@ -698,12 +698,9 @@ object SongloftAudioEngine {
     fun play(context: Context) {
         val p = ensurePlayer(context)
         ClientFileLog.write('I', "audio", "play begin snapshot=${playerSnapshot(p)}")
-        // Force a false→true transition so ExoPlayer re-triggers audio focus
-        // acquisition and playback initiation. Without this, auto-advance after
-        // STATE_ENDED is a no-op because playWhenReady is already true.
-        if (p.playWhenReady) {
-            ClientFileLog.write('I', "audio", "play forcing playWhenReady false before play")
-            p.playWhenReady = false
+        if (p.playbackState == Player.STATE_ENDED) {
+            ClientFileLog.write('I', "audio", "play seekTo(0) to exit ENDED state")
+            p.seekTo(p.currentMediaItemIndex, 0)
         }
         p.play()
         ClientFileLog.write('I', "audio", "play requested snapshot=${playerSnapshot(p)}")
