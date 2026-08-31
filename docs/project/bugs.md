@@ -9,6 +9,13 @@
 >
 > 格式：`症状 — 根因/修法（修复批次）`。
 
+## 待修复（开放）
+
+> 2026-08-31 从 handoff.md 迁入。尚未闭合，修复后改 `[x]` 并移主题归类，别在已闭合条目上续写。
+
+- [ ] 全屏播放器响应式测试 14 个失败（`src/features/player/__tests__/full-player-responsive.test.tsx`）— 近期 UI 改动后断言不匹配：封面高度 `252px`、宽屏 4:5 分栏 `flexGrow`、宽窄屏 header 文案 "Now Playing"/专辑名切换，多数失败为 `querySelector` 返回 null。闸门快照（2026-08-31 复跑确认）：**2023 passed / 14 failed / 190 文件**。修法待定：先核对 `.full-player__cover` 等类名与布局预算是否仍与测试假设一致
+- [ ] HLS 播放列表内的绝对 https URI（自签名下）不通 — P3。批47 修完 iOS 自签名媒体流后剩余缺口：播放列表里的**相对** URI 继续带自定义 scheme 回到 `InsecureMediaLoader`（Songloft 自有 HLS 反代产出相对 URL，按构造是通的），但**绝对** `https://` URI 由 AVFoundation 自行加载、撞同一道证书墙。**无可测自签名 HLS 源，未实测**。复现环境见 [pitfalls.md](pitfalls.md) 附录
+
 ## 手动测试发现
 
 - [x] 暗色下输入框提示文字看不清 — 补 `-x-placeholder-color`（批19）；后续查出全库 15 个文本字段有 6 处用 `--paper`/`--canvas` 当输入框底（对比度 1.04:1）、15 处圆角用错 token，统一为 `--neutral-faint` + `--radius-sm`，新增 `input-css.test.ts` 闸门从 TSX 反推字段清单

@@ -4,7 +4,7 @@
 >
 > **读文档顺序**：① [AGENTS.md](../../AGENTS.md) §4–§6（铁律，必读）→ ② 本文 §3「剩余工作」→ ③ [pitfalls.md](pitfalls.md)（踩坑实录：每条铁律背后的证据）。细节按需查 [progress.md](progress.md)（逐批交付）与 [bugs.md](bugs.md)（逐条缺陷根因）。
 >
-> **一句话现状**：批63 后续已完成并全部推送。**JS 侧闸门**：**2037 vitest / 190 文件**（其中 14 failing 在 `full-player-responsive.test.tsx`）+ `tsc -b` + `build` 双产物（lynx 2169.3 kB / web 2249.1 kB）。近期重点：后台播放稳定性、Lynx 原生渲染插件、自定义标签、记住密码、HarmonyOS 宿主修复。
+> **一句话现状**：批63 后续代码已完成；1 个 docs 提交（`92c67cb`）未推送。**JS 侧闸门**：**2037 vitest / 190 文件**（其中 14 failing 在 `full-player-responsive.test.tsx`）+ `tsc -b` + `build` 双产物（lynx 2169.3 kB / web 2249.1 kB）。近期重点：后台播放稳定性、Lynx 原生渲染插件、自定义标签、记住密码、HarmonyOS 宿主修复。
 
 ---
 
@@ -12,7 +12,7 @@
 
 ### 已提交
 
-**全部已推送**（`git rev-list --left-right --count origin/main...main` = `0 0`）。工作树干净。
+**1 个 docs 提交未推送**（`git rev-list --left-right --count origin/main...main` = `0 1`，`92c67cb` docs 整理）；工作树仅余 untracked 的 `Beans-Music/`。
 
 **批63 后 21 个提交**（`2bd9a6b..5cd5687`）按主题组织：
 
@@ -31,6 +31,8 @@
 | **HarmonyOS 修复** | `ddc6339`、`8fce004` | ArkTS 编译错误 + 图片/SVG 资源渲染 |
 | **Android 自动连播** | `06c9233` | 歌曲播完后 ExoPlayer 未推进到下一首 |
 
+> handoff 之后另有 2 个 docs 提交（`1f02383` 文档全量更新、`92c67cb` docs 目录整理），代码无变更。
+
 历史交付线（批41–63）见 [`progress.md`](progress.md)。
 
 ### 闸门快照
@@ -47,7 +49,7 @@
 | Android e2e | 112 passed / 8 skipped (120) | **批49 时代（2026-08-16）** |
 | iOS e2e | 110 passed / 10 skipped (120) | **批49 时代（2026-08-16）** |
 
-> ⚠️ **14 个 failing test** 全在 `src/features/player/__tests__/full-player-responsive.test.tsx`——近期 UI 改动导致，需修复。
+> ⚠️ **14 个 failing test** 全在 `full-player-responsive.test.tsx`——近期 UI 改动导致，详见 [bugs.md](bugs.md)「待修复」。
 >
 > ⚠️ **e2e 与原生构建自批49 之后没有全量跑过**。**接手后若要改原生或发包，先补跑一遍**——vitest 读不到 Xcode 工程、Gradle、hvigor 或真机行为。
 
@@ -66,7 +68,7 @@
 **A. 开发**
 
 1. **Lynxtron 桌面** —— P3 唯一未开始项，剩余最大单块能力（迁移调研里的桌面验收清单在 [`../archive/migration/lynx_migration_roadmap.md`](../archive/migration/lynx_migration_roadmap.md) L47–74，可直接拿来用）。
-2. **修复 14 个 failing test**（`full-player-responsive.test.tsx`）—— 近期 UI 改动导致断言不匹配。
+2. **修复 14 个 failing test**（`full-player-responsive.test.tsx`，2026-08-31 复跑确认仍 14 失败）—— 近期 UI 改动导致断言不匹配。详见 [bugs.md](bugs.md)「待修复」。
 
 **B. 验证欠账（不写代码，但欠着）**
 
@@ -75,11 +77,10 @@
 
 ## 4. 已知缺陷
 
-| 条目 | 严重度 | 状态 |
-|---|---|---|
-| **HLS 播放列表内的绝对 https URI（自签名下）** | P3 | 批47 修完 iOS 自签名媒体流后剩下的唯一缺口：播放列表里的**相对** URI 会继续带自定义 scheme 回到 `InsecureMediaLoader`（Songloft 自己的 HLS 反代产出的正是相对 URL，所以按构造是通的），但**绝对** `https://` URI 由 AVFoundation 自行加载、撞同一道证书墙。**没有可测的自签名 HLS 源，未实测**。复现环境见 [pitfalls.md](pitfalls.md) 附录 |
+开放缺陷（HLS 绝对 https URI 自签名缺口、14 个 failing test）已迁入 [`bugs.md`](bugs.md)「待修复」。下两条已于 2026-08-26 核实关闭，留此备查：
 
-已关闭的两条（原列于此表，2026-08-26 核实后移出）：「Android 上 HLS 电台落到 `ProgressiveMediaSource`」已证实并修复（`isHlsPlaylistPath()` 剥 query 后看扩展名，Android/Web 同修，另修跨协议重定向被拒）；「偶发全屏灰层」仅批29 那次偶发、此后再未复现，按「无法复现」关闭（重开指引在 [`bugs.md`](bugs.md)）。
+- **Android 上 HLS 电台落到 `ProgressiveMediaSource`** — 已修：`isHlsPlaylistPath()` 剥 query 看扩展名，Android/Web 同修，另修跨协议重定向被拒。
+- **偶发全屏灰层** — 仅批29 那次偶发，此后再未复现，按「无法复现」关闭（重开指引在 [`bugs.md`](bugs.md)）。
 
 ## 5. 明确不做（避免被当成缺陷重开）
 
