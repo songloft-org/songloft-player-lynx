@@ -155,7 +155,7 @@
 - 下划线风格（非药丸填充）。
 - 选中态：`--primary` 下划线（2px）+ `--content` 文字 + `font-weight: 600`；未选中 `--content-muted`。
 - 示例：新建歌单页（本地/远程）、添加歌曲页、库运维排除页。
-- ⚠️ **Library 页已不是 Tab** —— 批51 重构后是 14 个 view 分三组，见下方 View Switcher。
+- ⚠️ **Library 页已不是 Tab** —— 批51 重构后是 16 个 view 分三组，见下方 View Switcher。
 
 ### View Switcher（药丸横条，Library 页）
 - 窄屏横向可滚 pill 条，组间 hairline 分隔；宽屏为左侧 rail。

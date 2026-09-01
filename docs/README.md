@@ -24,8 +24,8 @@ Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr
 | 指标 | 值 |
 |------|-----|
 | 源码规模 | 588 文件 / ~81.8K 行（ts + tsx + css） |
-| 特性模块 | auth · home · library · library-ops · player · playlist · settings · jsplugin |
-| 测试 | **2037** vitest（190 文件）+ 33 个 E2E 场景 |
+| 特性模块 | auth · home · library · library-ops · player · playlist · settings · jsplugin（library 含文件夹浏览视图） |
+| 测试 | **2039** vitest（190 文件）+ 33 个 E2E 场景 |
 | 构建产物 | lynx 2169.3 kB / web 2249.1 kB（未压缩，双产物） |
 | 原生模块 | **10** 个跨平台模块在契约闸门的 `modules` 表内，另有 Web 独有 `SongloftWebview`（独立 describe 覆盖） |
 | 目标平台 | Android · iOS · HarmonyOS · Web（桌面 Lynxtron 未开始） |
@@ -52,7 +52,7 @@ P3 平台特性     ██████████████████░░
 P4 双轨发布     ░░░░░░░░░░░░░░░░░░░░   0%  — 未开始
 ```
 
-**P3 已完成**：EQ 双端 DSP · 数据导入导出 · 主题包 · 歌词编辑 · 服务端自升级 · 音量归一化 · 播放历史（批50）· DLNA（批42）· 悬浮歌词（批48）· Live Activity（批43+45）· 全屏视频（批49）· 单曲离线缓存 · Web 平台 · 自定义标签 · Lynx 原生渲染插件 · 记住密码。
+**P3 已完成**：EQ 双端 DSP · 数据导入导出 · 主题包 · 歌词编辑 · 服务端自升级 · 音量归一化 · 播放历史（批50）· DLNA（批42）· 悬浮歌词（批48）· Live Activity（批43+45）· 全屏视频（批49）· 单曲离线缓存 · Web 平台 · 自定义标签 · Lynx 原生渲染插件 · 记住密码 · 文件夹浏览视图。
 **P3 未开始**：桌面 Lynxtron。
 
 > 上一版这张表有 5 项与事实不符（把已完成的能力标成 ❌/⛔）。逐项修复批次见 [progress.md](./project/progress.md)。

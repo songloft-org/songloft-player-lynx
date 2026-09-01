@@ -1,10 +1,10 @@
-# 工作交接（2026-08-31 · 批63 后续）
+# 工作交接（2026-09-01 · 文件夹浏览视图）
 
 > 本文件是**给接手 AI 的交接说明**，只回答三件事：现在在哪、还剩什么、怎么验证。
 >
 > **读文档顺序**：① [AGENTS.md](../../AGENTS.md) §4–§6（铁律，必读）→ ② 本文 §3「剩余工作」→ ③ [pitfalls.md](pitfalls.md)（踩坑实录：每条铁律背后的证据）。细节按需查 [progress.md](progress.md)（逐批交付）与 [bugs.md](bugs.md)（逐条缺陷根因）。
 >
-> **一句话现状**：批63 后续代码已完成；Issue #1 的 Android 自动连播 stop 修复已写入工作树，待真机验证。**JS 侧闸门**：完整 Vitest 有 14 个 `full-player-responsive.test.tsx` 失败 + `tsc -b` + `build` 双产物（最近快照见下表）。近期重点：后台播放稳定性、Lynx 原生渲染插件、自定义标签、记住密码、HarmonyOS 宿主修复。
+> **一句话现状**：曲库文件夹浏览视图已实现并推送（songloft#430）；Issue #1 的 Android 自动连播 stop 修复已写入工作树，待真机验证。**JS 侧闸门**：**2039 vitest 全绿**（190 文件）+ `tsc -b` + `build` 双产物（最近快照见下表）。近期重点：后台播放稳定性、Lynx 原生渲染插件、自定义标签、记住密码、HarmonyOS 宿主修复、文件夹浏览视图。
 
 ---
 
@@ -12,12 +12,13 @@
 
 ### 已提交
 
-**1 个 docs 提交未推送**（`git rev-list --left-right --count origin/main...main` = `0 1`，`92c67cb` docs 整理）；工作树仅余 untracked 的 `Beans-Music/`。
+**文件夹浏览视图已推送**（`908448e` feat + `5c481c3` fix，2026-09-01）。
 
-**批63 后 21 个提交**（`2bd9a6b..5cd5687`）按主题组织：
+**批63 后提交**按主题组织（含文件夹浏览视图）：
 
 | 交付线 | 关键提交 | 说明 |
 |---|---|---|
+| **文件夹浏览视图** | `908448e`、`5c481c3` | 曲库新增文件夹浏览视图（songloft#430）：目录层级下钻、网格/列表切换、搜索、播放全部、根目录文件夹+歌曲混合显示 |
 | **后台播放稳定性** | `6e67cb9`、`1edd44b`、`5cd5687` | Android 后台切歌 AudioFocus 竞争修复 · 自动连播拦截系统 MEDIA_BUTTON stop intent · 通知栏点击打开播放器页面 |
 | **后台播放诊断** | `1089235`、`693ea24` | `ClientFileLog` 追踪 ExoPlayer/MediaSession/AudioFocus 事件；media3 升级 1.6.0 |
 | **Lynx 原生渲染插件** | `4f0060b` | JS 插件 `renderEngine: "lynx"` 选项，`<frame>` 子页面原生渲染。父子通信走 `SongloftPluginBridge`（三端）。`demo-frame-plugin/` 演示工程 |
@@ -39,7 +40,7 @@
 
 | 闸门 | 结果 | 何时验的 |
 |---|---|---|
-| `pnpm test` | **2023 passed / 14 failed / 190 文件** | ✅ **2026-08-31** |
+| `pnpm test` | **2039 passed / 190 文件** | ✅ **2026-09-01** |
 | `pnpm exec tsc -b` | 绿 | 2026-08-31 |
 | `pnpm run build` | 双产物 lynx 2169.3 kB / web 2249.1 kB | 2026-08-31 |
 | `pnpm run build:web` | 未复验 | 批60c 收口时 |
@@ -49,7 +50,7 @@
 | Android e2e | 112 passed / 8 skipped (120) | **批49 时代（2026-08-16）** |
 | iOS e2e | 110 passed / 10 skipped (120) | **批49 时代（2026-08-16）** |
 
-> ⚠️ **14 个 failing test** 全在 `full-player-responsive.test.tsx`——近期 UI 改动导致，详见 [bugs.md](bugs.md)「待修复」。
+> ⚠️ ~~14 个 failing test 全在 `full-player-responsive.test.tsx`~~ —— **已修复**（2026-09-01 复跑 2039/2039 全绿，含文件夹浏览视图新增测试）。详见 [bugs.md](bugs.md)。
 >
 > ⚠️ **e2e 与原生构建自批49 之后没有全量跑过**。**接手后若要改原生或发包，先补跑一遍**——vitest 读不到 Xcode 工程、Gradle、hvigor 或真机行为。
 
@@ -68,7 +69,7 @@
 **A. 开发**
 
 1. **Lynxtron 桌面** —— P3 唯一未开始项，剩余最大单块能力（迁移调研里的桌面验收清单在 [`../archive/migration/lynx_migration_roadmap.md`](../archive/migration/lynx_migration_roadmap.md) L47–74，可直接拿来用）。
-2. **修复 14 个 failing test**（`full-player-responsive.test.tsx`，2026-08-31 复跑确认仍 14 失败）—— 近期 UI 改动导致断言不匹配。详见 [bugs.md](bugs.md)「待修复」。
+2. ~~**修复 14 个 failing test**（`full-player-responsive.test.tsx`，2026-08-31 复跑确认仍 14 失败）—— 近期 UI 改动导致断言不匹配。详见 [bugs.md](bugs.md)「待修复」。~~ —— **已修复**（2026-09-01 复跑全绿）。
 
 **B. 验证欠账（不写代码，但欠着）**
 
@@ -77,7 +78,7 @@
 
 ## 4. 已知缺陷
 
-开放缺陷（HLS 绝对 https URI 自签名缺口、14 个 failing test）已迁入 [`bugs.md`](bugs.md)「待修复」。下两条已于 2026-08-26 核实关闭，留此备查：
+开放缺陷（HLS 绝对 https URI 自签名缺口）已迁入 [`bugs.md`](bugs.md)「待修复」。下两条已于 2026-08-26 核实关闭，留此备查：
 
 - **Android 上 HLS 电台落到 `ProgressiveMediaSource`** — 已修：`isHlsPlaylistPath()` 剥 query 看扩展名，Android/Web 同修，另修跨协议重定向被拒。
 - **偶发全屏灰层** — 仅批29 那次偶发，此后再未复现，按「无法复现」关闭（重开指引在 [`bugs.md`](bugs.md)）。
