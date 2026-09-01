@@ -2,6 +2,7 @@ package org.songloft.lynx
 
 import android.Manifest
 import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
@@ -48,10 +49,25 @@ class MainActivity : Activity() {
         // deprecated in both overloads, and this is its replacement.) The URL is
         // still resolved by DemoTemplateProvider from
         // app/src/main/assets/main.lynx.bundle.
+        val props = SystemAppearance.from(resources.configuration).toMutableMap()
+        if (intent?.getBooleanExtra(EXTRA_NAVIGATE_TO_PLAYER, false) == true) {
+            props[PROP_NAVIGATE_TO_PLAYER] = true
+        }
         val meta = LynxLoadMeta.Builder()
         meta.setUrl(BUNDLE_URI)
-        meta.setGlobalProps(TemplateData.fromMap(SystemAppearance.from(resources.configuration)))
+        meta.setGlobalProps(TemplateData.fromMap(props))
         view.loadTemplate(meta.build())
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent?.getBooleanExtra(EXTRA_NAVIGATE_TO_PLAYER, false) == true) {
+            val view = lynxView ?: return
+            val params = JavaOnlyArray()
+            params.pushMap(JavaOnlyMap.from(emptyMap<String, Any>()))
+            view.sendGlobalEvent(EVENT_NAVIGATE_TO_PLAYER, params)
+        }
     }
 
     /**
@@ -152,5 +168,9 @@ class MainActivity : Activity() {
     companion object {
         private const val BUNDLE_URI = "main.lynx.bundle"
         private const val REQ_POST_NOTIFICATIONS = 1001
+
+        const val EXTRA_NAVIGATE_TO_PLAYER = "navigate_to_player"
+        const val PROP_NAVIGATE_TO_PLAYER = "navigateToPlayer"
+        const val EVENT_NAVIGATE_TO_PLAYER = "SongloftNavigation.navigateToPlayer"
     }
 }

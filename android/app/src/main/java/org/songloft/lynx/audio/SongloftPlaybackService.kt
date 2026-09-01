@@ -291,7 +291,8 @@ class SongloftPlaybackService : MediaSessionService() {
     private fun startForegroundPlaceholder() {
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
             ?: Intent(this, org.songloft.lynx.MainActivity::class.java)
-        launchIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        launchIntent.putExtra(org.songloft.lynx.MainActivity.EXTRA_NAVIGATE_TO_PLAYER, true)
         val contentIntent = PendingIntent.getActivity(
             this, 0, launchIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,

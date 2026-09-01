@@ -22,6 +22,7 @@ import { syncFloatingLyricOverlay } from './features/settings/domain/floating-ly
 import { applySavedLanguage } from './i18n/index.js'
 import { applyHostDeployMode } from './core/config/app-config.js'
 import { initSystemAppearance } from './native/system-appearance.js'
+import { installNotificationNavigateListener, navigateFromNotificationIfNeeded } from './native/notification-navigate.js'
 import { applySavedTheme } from './shared/theme/theme-model.js'
 import { applyActiveThemePack, setActiveThemePack } from './shared/theme/theme-pack-model.js'
 import { router } from './router.js'
@@ -36,6 +37,11 @@ initClientLogger()
 // otherwise. A page can be on screen (and its overlays openable) well before
 // an awaited startup step finishes.
 initBackController(router)
+
+// Listen for notification-tap navigation events from the native host so a tap
+// on the media notification while the app is in the background navigates to
+// /player. Cold-start is handled separately after auth resolves.
+installNotificationNavigateListener()
 
 // Before the first render too: the standalone web host tags the deploy mode in
 // `lynx.__globalProps`, which may land after `app-config` evaluates — before
@@ -96,6 +102,10 @@ void (async () => {
     // tokenless GET would 401 (the Flutter provider guards the same way).
     if (useAuthStore.getState().status === 'authenticated') {
       await applyActiveThemePack()
+      // Cold start from notification tap: the host wrote navigateToPlayer into
+      // globalProps, so navigate now that auth has resolved and the player store
+      // has a restored queue.
+      navigateFromNotificationIfNeeded()
     }
   } catch {
     await useAuthStore
