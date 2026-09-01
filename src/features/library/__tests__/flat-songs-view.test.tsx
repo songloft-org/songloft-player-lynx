@@ -124,9 +124,10 @@ afterEach(() => vi.clearAllMocks())
 async function renderView(
   type?: 'local' | 'remote' | 'radio',
   sortId: LibrarySortId = 'added_at',
-  onSortChange: (id: LibrarySortId) => void = () => {},
+  onSortChange: (id: LibrarySortId, order: 'asc' | 'desc') => void = () => {},
+  sortOrder: 'asc' | 'desc' = 'desc',
 ) {
-  render(<FlatSongsView type={type} sortId={sortId} onSortChange={onSortChange} />)
+  render(<FlatSongsView type={type} sortId={sortId} sortOrder={sortOrder} onSortChange={onSortChange} />)
   await act(async () => {
     await Promise.resolve()
   })
@@ -176,7 +177,7 @@ test('passes the source type into the filters', async () => {
 })
 
 test('a lifted sort id drives the filters (title → asc)', async () => {
-  await renderView(undefined, 'title')
+  await renderView(undefined, 'title', () => {}, 'asc')
   expect(songsHook).toHaveBeenCalledWith({ sort: 'title', order: 'asc' })
 })
 
@@ -194,7 +195,7 @@ test('opening the sort sheet lists all 7 options and picking one reports upward'
   await act(async () => {
     fireEvent.tap(getByText('Duration'))
   })
-  expect(onSortChange).toHaveBeenCalledWith('duration')
+  expect(onSortChange).toHaveBeenCalledWith('duration', 'asc')
 })
 
 // P1-12 regression: multi-select must clear when the visible song list changes

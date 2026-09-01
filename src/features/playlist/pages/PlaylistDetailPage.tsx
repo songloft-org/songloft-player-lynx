@@ -175,16 +175,19 @@ export function PlaylistDetailPage() {
   }
 
   const sortOptions = [
-    { key: 'position', order: 'asc', label: t('playlist.sortPosition') },
-    { key: 'title', order: 'asc', label: t('playlist.sortTitle') },
-    { key: 'artist', order: 'asc', label: t('playlist.sortArtist') },
-    { key: 'added_at', order: 'desc', label: t('playlist.sortRecent') },
+    { key: 'position', defaultOrder: 'asc', label: t('playlist.sortPosition') },
+    { key: 'title', defaultOrder: 'asc', label: t('playlist.sortTitle') },
+    { key: 'artist', defaultOrder: 'asc', label: t('playlist.sortArtist') },
+    { key: 'added_at', defaultOrder: 'desc', label: t('playlist.sortRecent') },
   ] as const
 
   const onSelectSort = (key: string) => {
     const opt = sortOptions.find((o) => o.key === key)
     if (!opt) return
-    sortMutation.mutate({ sortBy: opt.key, sortOrder: opt.order })
+    const order = key === currentSort
+      ? (currentOrder === 'asc' ? 'desc' : 'asc')
+      : opt.defaultOrder
+    sortMutation.mutate({ sortBy: opt.key, sortOrder: order })
   }
 
   const onDelete = () => {
@@ -401,6 +404,7 @@ export function PlaylistDetailPage() {
         ? (
           <PlaylistToolbar
             currentSort={currentSort}
+            currentOrder={currentOrder}
             sortOptions={sortOptions}
             onSelectSort={onSelectSort}
             onPlayAll={playAll}

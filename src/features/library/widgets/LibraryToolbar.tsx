@@ -6,14 +6,18 @@ import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
 import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
 import {
   LIBRARY_SORT_OPTIONS,
+  defaultLibrarySortOrder,
   type LibrarySortId,
+  type SortOrder,
 } from '../domain/library-sort.js'
 import './LibraryToolbar.css'
 
 export interface LibraryToolbarProps {
   /** Current sort; lifted to the page so it persists + survives view switches. */
   sortId: LibrarySortId
-  onSortChange: (id: LibrarySortId) => void
+  /** Current sort direction. */
+  sortOrder: SortOrder
+  onSortChange: (id: LibrarySortId, order: SortOrder) => void
   onPlayAll: () => void
   onAdd: () => void
   selectMode: boolean
@@ -30,6 +34,7 @@ export interface LibraryToolbarProps {
  */
 export function LibraryToolbar({
   sortId,
+  sortOrder,
   onSortChange,
   onPlayAll,
   onAdd,
@@ -80,9 +85,14 @@ export function LibraryToolbar({
           key: o.id,
           label: t(o.labelKey),
           selected: o.id === sortId,
+          selectedIcon: sortOrder === 'asc' ? 'arrow-up' : 'arrow-down',
         }))}
         onSelect={(key) => {
-          onSortChange(key as LibrarySortId)
+          const id = key as LibrarySortId
+          const order: SortOrder = id === sortId
+            ? (sortOrder === 'asc' ? 'desc' : 'asc')
+            : defaultLibrarySortOrder(id)
+          onSortChange(id, order)
           setSortOpen(false)
         }}
       />

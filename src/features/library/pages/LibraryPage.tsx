@@ -13,7 +13,9 @@ import {
 import { readLibrarySort, writeLibrarySort } from '../data/library-sort-prefs.js'
 import {
   DEFAULT_LIBRARY_SORT_ID,
+  defaultLibrarySortOrder,
   type LibrarySortId,
+  type SortOrder,
 } from '../domain/library-sort.js'
 import {
   flatViewType,
@@ -61,12 +63,17 @@ export function LibraryPage() {
   // Song-list sort: owned here (not by the flat view) so it persists to prefs
   // and survives switching between the 14 views. Seeded from prefs once.
   const [sortId, setSortId] = useState<LibrarySortId>(DEFAULT_LIBRARY_SORT_ID)
+  const [sortOrder, setSortOrder] = useState<SortOrder>(defaultLibrarySortOrder(DEFAULT_LIBRARY_SORT_ID))
   useEffect(() => {
-    void readLibrarySort().then(setSortId)
+    void readLibrarySort().then(({ id, order }) => {
+      setSortId(id)
+      setSortOrder(order)
+    })
   }, [])
-  const onSortChange = (id: LibrarySortId) => {
+  const onSortChange = (id: LibrarySortId, order: SortOrder) => {
     setSortId(id)
-    void writeLibrarySort(id)
+    setSortOrder(order)
+    void writeLibrarySort(id, order)
   }
 
   const [viewMode, setViewMode] = useState<PlaylistViewMode>('grid')
@@ -164,6 +171,7 @@ export function LibraryPage() {
         key={selected}
         type={flatViewType(selected)}
         sortId={sortId}
+        sortOrder={sortOrder}
         onSortChange={onSortChange}
       />
     )

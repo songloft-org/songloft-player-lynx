@@ -74,6 +74,8 @@ export type IconName =
   | 'pin'
   | 'download'
   | 'label'
+  | 'arrow-up'
+  | 'arrow-down'
 
 /** Shared stroke attributes for line icons — Muse §4.5 stroke-width 1.6. */
 function stroke(color: string): string {
@@ -392,6 +394,16 @@ const ICONS: Record<IconName, (color: string) => string> = {
     `<path d="M12 3.5v10.5" ${stroke(c)}/>` +
     `<path d="M8 10.5 12 14.5l4-4" ${stroke(c)}/>` +
     `<path d="M4.5 16.5v2A2 2 0 0 0 6.5 20.5h11a2 2 0 0 0 2-2v-2" ${stroke(c)}/>`,
+
+  // Arrow up: sort ascending indicator.
+  'arrow-up': (c) =>
+    `<path d="M12 19V5" ${stroke(c)}/>` +
+    `<path d="M5 12l7-7 7 7" ${stroke(c)}/>`,
+
+  // Arrow down: sort descending indicator.
+  'arrow-down': (c) =>
+    `<path d="M12 5v14" ${stroke(c)}/>` +
+    `<path d="M19 12l-7 7-7-7" ${stroke(c)}/>`,
 
   // Label: custom song tag (distinct from genre `tag`).
   label: (c) =>

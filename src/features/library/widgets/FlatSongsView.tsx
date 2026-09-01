@@ -10,7 +10,7 @@ import { getSongsApi, type SongsFilters } from '../api/index.js'
 import { flattenSongs } from '../data/pagination.js'
 import { useDebounce } from '../data/use-debounce.js'
 import { useSongsInfiniteQuery } from '../data/songs-query.js'
-import { librarySortFilters, type LibrarySortId } from '../domain/library-sort.js'
+import { librarySortFilters, type LibrarySortId, type SortOrder } from '../domain/library-sort.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { songRowOverlays } from '../../../shared/ui/song-row-overlays.js'
@@ -27,7 +27,9 @@ export interface FlatSongsViewProps {
   type?: 'local' | 'remote' | 'radio'
   /** Sort choice, lifted to the page so it persists + survives view switches. */
   sortId: LibrarySortId
-  onSortChange: (id: LibrarySortId) => void
+  /** Current sort direction. */
+  sortOrder: SortOrder
+  onSortChange: (id: LibrarySortId, order: SortOrder) => void
 }
 
 /**
@@ -36,7 +38,7 @@ export interface FlatSongsViewProps {
  * choice is owned by the page (persisted to prefs, kept across view switches);
  * this view only reports changes upward.
  */
-export function FlatSongsView({ type, sortId, onSortChange }: FlatSongsViewProps) {
+export function FlatSongsView({ type, sortId, sortOrder, onSortChange }: FlatSongsViewProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [searchText, setSearchText] = useState('')
@@ -57,18 +59,18 @@ export function FlatSongsView({ type, sortId, onSortChange }: FlatSongsViewProps
     : []
 
   const filters = useMemo<SongsFilters>(() => {
-    const f: SongsFilters = { ...librarySortFilters(sortId) }
+    const f: SongsFilters = { ...librarySortFilters(sortId, sortOrder) }
     if (type) f.type = type
     if (debouncedSearch.trim()) f.keyword = debouncedSearch.trim()
     return f
-  }, [sortId, debouncedSearch, type])
+  }, [sortId, sortOrder, debouncedSearch, type])
 
   // Clear multi-select when the visible song list changes (search / sort /
   // source view). Otherwise selected IDs from the previous result set linger
   // and get added to playlists even though they are no longer visible.
   useEffect(() => {
     setSelected(new Set())
-  }, [debouncedSearch, sortId, type])
+  }, [debouncedSearch, sortId, sortOrder, type])
 
   const query = useSongsInfiniteQuery(filters)
   const songs = flattenSongs(query.data?.pages)
@@ -155,6 +157,7 @@ export function FlatSongsView({ type, sortId, onSortChange }: FlatSongsViewProps
 
       <LibraryToolbar
         sortId={sortId}
+        sortOrder={sortOrder}
         onSortChange={onSortChange}
         onPlayAll={playAll}
         onAdd={() => navigate({ to: '/library/add' })}

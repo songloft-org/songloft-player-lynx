@@ -16,6 +16,8 @@ export interface PlaylistSortOption {
 export interface PlaylistToolbarProps {
   /** Current sort key — drives the trigger label and the selected checkmark. */
   currentSort: string
+  /** Current sort direction — drives the arrow icon on the selected item. */
+  currentOrder: string
   sortOptions: ReadonlyArray<PlaylistSortOption>
   onSelectSort: (key: string) => void
   onPlayAll: () => void
@@ -37,6 +39,7 @@ export interface PlaylistToolbarProps {
  */
 export function PlaylistToolbar({
   currentSort,
+  currentOrder,
   sortOptions,
   onSelectSort,
   onPlayAll,
@@ -89,6 +92,7 @@ export function PlaylistToolbar({
           key: o.key,
           label: o.label,
           selected: o.key === currentSort,
+          selectedIcon: currentOrder === 'asc' ? 'arrow-up' : 'arrow-down',
         }))}
         onSelect={(key) => {
           onSelectSort(key)

@@ -7,22 +7,24 @@
  * `sort=random` "view" degenerated into a clone of "recent". The unit test
  * asserts membership so a future option can't reintroduce that bug.
  *
- * Directions are bound to the fields (Flutter parity): no separate asc/desc
- * toggle — `added_at`/`file_modified_at`/`year` read descending, text/duration
- * fields ascending.
+ * `defaultOrder` is the natural direction for each field. Clicking an
+ * already-selected sort item flips the direction (asc↔desc); clicking a
+ * different field uses its `defaultOrder`. Matches the Flutter behaviour
+ * introduced in `9263dca`.
  */
 
 export const LIBRARY_SORT_OPTIONS = [
-  { id: 'added_at', field: 'added_at', order: 'desc', labelKey: 'library.sortRecent' },
-  { id: 'file_modified_at', field: 'file_modified_at', order: 'desc', labelKey: 'library.sortFileTime' },
-  { id: 'title', field: 'title', order: 'asc', labelKey: 'library.sortTitle' },
-  { id: 'artist', field: 'artist', order: 'asc', labelKey: 'library.sortArtist' },
-  { id: 'album', field: 'album', order: 'asc', labelKey: 'library.sortAlbum' },
-  { id: 'year', field: 'year', order: 'desc', labelKey: 'library.sortYear' },
-  { id: 'duration', field: 'duration', order: 'asc', labelKey: 'library.sortDuration' },
+  { id: 'added_at', field: 'added_at', defaultOrder: 'desc', labelKey: 'library.sortRecent' },
+  { id: 'file_modified_at', field: 'file_modified_at', defaultOrder: 'desc', labelKey: 'library.sortFileTime' },
+  { id: 'title', field: 'title', defaultOrder: 'asc', labelKey: 'library.sortTitle' },
+  { id: 'artist', field: 'artist', defaultOrder: 'asc', labelKey: 'library.sortArtist' },
+  { id: 'album', field: 'album', defaultOrder: 'asc', labelKey: 'library.sortAlbum' },
+  { id: 'year', field: 'year', defaultOrder: 'desc', labelKey: 'library.sortYear' },
+  { id: 'duration', field: 'duration', defaultOrder: 'asc', labelKey: 'library.sortDuration' },
 ] as const
 
 export type LibrarySortId = (typeof LIBRARY_SORT_OPTIONS)[number]['id']
+export type SortOrder = 'asc' | 'desc'
 
 export const DEFAULT_LIBRARY_SORT_ID: LibrarySortId = 'added_at'
 
@@ -31,10 +33,15 @@ export function librarySortOption(id: LibrarySortId) {
   return LIBRARY_SORT_OPTIONS.find((o) => o.id === id) ?? LIBRARY_SORT_OPTIONS[0]!
 }
 
+/** The default sort direction for a given field. */
+export function defaultLibrarySortOrder(id: LibrarySortId): SortOrder {
+  return librarySortOption(id).defaultOrder as SortOrder
+}
+
 /** The `/songs` query params (`sort` + `order`) for a sort option. */
-export function librarySortFilters(id: LibrarySortId): { sort: string; order: string } {
+export function librarySortFilters(id: LibrarySortId, order?: SortOrder): { sort: string; order: string } {
   const option = librarySortOption(id)
-  return { sort: option.field, order: option.order }
+  return { sort: option.field, order: order ?? option.defaultOrder }
 }
 
 /** Coerce a persisted/URL value to a valid sort id; anything else → default. */
@@ -43,4 +50,10 @@ export function coerceLibrarySortId(raw: string | null | undefined): LibrarySort
     return raw as LibrarySortId
   }
   return DEFAULT_LIBRARY_SORT_ID
+}
+
+/** Coerce a persisted order value to 'asc' | 'desc'. */
+export function coerceSortOrder(raw: string | null | undefined): SortOrder | undefined {
+  if (raw === 'asc' || raw === 'desc') return raw
+  return undefined
 }

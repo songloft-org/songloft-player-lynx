@@ -6,6 +6,8 @@ export interface MenuItemSpec {
   label: string
   icon?: IconName
   selected?: boolean
+  /** When selected, show this icon instead of the default ✓ checkmark. */
+  selectedIcon?: IconName
   /** Destructive actions (delete): icon + label in the danger color. */
   danger?: boolean
 }
@@ -58,7 +60,7 @@ export function MenuItem({ item, onTap, hideCheckmark }: MenuItemProps) {
       </text>
       {item.selected && !hideCheckmark && (
         <view className='popover-menu__item-check'>
-          <Icon name='check' size={16} color={ICON_COLORS.primary} />
+          <Icon name={item.selectedIcon ?? 'check'} size={16} color={ICON_COLORS.primary} />
         </view>
       )}
     </view>
