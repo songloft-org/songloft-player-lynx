@@ -8,6 +8,7 @@ export {
   buildSongsQuery,
   buildSongIdsQuery,
   buildFacetsQuery,
+  buildFoldersQuery,
 } from './songs-api.js'
 export type {
   SongsFilters,

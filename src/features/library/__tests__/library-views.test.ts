@@ -78,7 +78,7 @@ describe('groupLibraryViewKeys', () => {
     const buckets = groupLibraryViewKeys([...LIBRARY_VIEW_KEYS])
     expect(buckets.map((b) => b.group)).toEqual(['songs', 'facets', 'playlists'])
     expect(buckets[0]!.keys).toEqual(['all', 'local', 'remote', 'radio'])
-    expect(buckets[1]!.keys).toEqual(['artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag'])
+    expect(buckets[1]!.keys).toEqual(['folder', 'artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag'])
     expect(buckets[2]!.keys).toEqual(['playlist', 'playlist_normal', 'playlist_radio'])
   })
 
@@ -124,7 +124,7 @@ describe('moveGroup', () => {
     const moved = moveGroup(views, 'facets', 1)
     const groups = groupLibraryViewKeys(moved.map((v) => v.key))
     expect(groups.map((g) => g.group)).toEqual(['songs', 'playlists', 'facets'])
-    expect(groups[2]!.keys).toEqual(['artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag'])
+    expect(groups[2]!.keys).toEqual(['folder', 'artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag'])
   })
 
   test('first group up / last group down are no-ops', () => {
@@ -136,12 +136,12 @@ describe('moveGroup', () => {
 describe('setGroupOrder', () => {
   test('reorders only the target group; other groups stay byte-identical', () => {
     const views = DEFAULT_LIBRARY_BROWSE_CONFIG.views
-    const next = setGroupOrder(views, 'facets', ['genre', 'artist', 'album', 'year', 'decade', 'language', 'style', 'tag'])
+    const next = setGroupOrder(views, 'facets', ['genre', 'folder', 'artist', 'album', 'year', 'decade', 'language', 'style', 'tag'])
     const buckets = groupLibraryViewKeys(next.map((v) => v.key))
     expect(buckets.find((b) => b.group === 'facets')!.keys[0]).toBe('genre')
     expect(buckets.find((b) => b.group === 'songs')!.keys).toEqual(['all', 'local', 'remote', 'radio'])
     expect(buckets.find((b) => b.group === 'playlists')!.keys).toEqual(['playlist', 'playlist_normal', 'playlist_radio'])
-    expect(next).toHaveLength(15)
+    expect(next).toHaveLength(16)
   })
 
   test('ignores keys from other groups and keeps any omitted member', () => {
@@ -199,7 +199,7 @@ describe('resolveLibraryView', () => {
     // Not pushed to the end: `year` sits between `genre` and `decade` again.
     expect(keysOf(resolved)).toEqual([
       'all', 'local', 'remote', 'radio',
-      'artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag',
+      'folder', 'artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag',
       'playlist', 'playlist_normal', 'playlist_radio',
     ])
   })
@@ -219,7 +219,7 @@ describe('resolveLibraryView', () => {
   })
 
   test('invalid request → first visible view', () => {
-    expect(resolveLibraryView('folder', DEFAULT_LIBRARY_BROWSE_CONFIG).selected).toBe('all')
+    expect(resolveLibraryView('recent', DEFAULT_LIBRARY_BROWSE_CONFIG).selected).toBe('all')
     expect(resolveLibraryView('', DEFAULT_LIBRARY_BROWSE_CONFIG).selected).toBe('all')
   })
 })
@@ -246,7 +246,7 @@ describe('migrateLibrarySearch', () => {
 
   test('unknown or missing values → no view', () => {
     expect(migrateLibrarySearch({})).toEqual({})
-    expect(migrateLibrarySearch({ view: 'folder' })).toEqual({})
+    expect(migrateLibrarySearch({ view: 'recent' })).toEqual({})
     expect(migrateLibrarySearch({ view: 42 })).toEqual({})
   })
 })

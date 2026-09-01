@@ -194,6 +194,12 @@
   background-color: var(--neutral-faint);
 }
 
+.folder-card__icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .facet-card__value {
   color: var(--content);
   font-size: var(--font-sm);

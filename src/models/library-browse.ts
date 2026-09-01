@@ -22,7 +22,7 @@ import { makeParsers } from './_shared.js'
  */
 export const LIBRARY_VIEW_KEYS = [
   'all', 'local', 'remote', 'radio',
-  'artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag',
+  'folder', 'artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag',
   'playlist', 'playlist_normal', 'playlist_radio',
 ] as const
 

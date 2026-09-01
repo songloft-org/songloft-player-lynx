@@ -43,7 +43,7 @@ describe('LibraryBrowseApi.getLibraryBrowse', () => {
     expect(cap.url()).toBe(`http://api.test${apiPrefix}/settings/library-browse`)
     expect(config.views.find((v) => v.key === 'artist')?.visible).toBe(false)
     // Partial responses are padded to the full 15.
-    expect(config.views).toHaveLength(15)
+    expect(config.views).toHaveLength(16)
   })
 })
 
@@ -77,6 +77,6 @@ describe('LibraryBrowseApi.updateLibraryBrowse', () => {
     const cap = capture(200, JSON.stringify(DEFAULT_LIBRARY_BROWSE_CONFIG))
     const api = new LibraryBrowseApi(client(cap.transport))
     const saved = await api.updateLibraryBrowse({ views: [{ key: 'all', visible: true }] })
-    expect(saved.views).toHaveLength(15)
+    expect(saved.views).toHaveLength(16)
   })
 })

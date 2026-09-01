@@ -8,8 +8,8 @@ import {
 import type { IconName } from '../../../shared/ui/icons.js'
 
 /**
- * The library's 14-view browse model — the single source of truth for what a
- * "view" is (Lynx counterpart of the Flutter `library_view_switcher.dart`).
+ * The library's browse model — the single source of truth for what a "view" is
+ * (Lynx counterpart of the Flutter `library_view_switcher.dart`).
  *
  * The wire contract (which keys exist, `{key, visible}` shape, order = array
  * position) lives in `models/library-browse.ts`; this module is the UI-side
@@ -26,6 +26,7 @@ export const LIBRARY_VIEW_GROUP: Record<LibraryViewKey, LibraryViewGroup> = {
   local: 'songs',
   remote: 'songs',
   radio: 'songs',
+  folder: 'facets',
   artist: 'facets',
   album: 'facets',
   genre: 'facets',
@@ -45,6 +46,7 @@ export const LIBRARY_VIEW_LABEL_KEY: Record<LibraryViewKey, string> = {
   local: 'library.viewLocal',
   remote: 'library.viewRemote',
   radio: 'library.viewRadio',
+  folder: 'library.viewFolder',
   artist: 'library.viewArtist',
   album: 'library.viewAlbum',
   genre: 'library.viewGenre',
@@ -63,6 +65,7 @@ export const LIBRARY_VIEW_ICON: Record<LibraryViewKey, IconName> = {
   local: 'folder',
   remote: 'cloud',
   radio: 'radio',
+  folder: 'folder-open',
   artist: 'person',
   album: 'album',
   genre: 'tag',
@@ -85,6 +88,11 @@ export const LIBRARY_VIEW_GROUP_LABEL_KEY: Record<LibraryViewGroup, string> = {
 /** Flat song lists (`all` / `local` / `remote` / `radio`). */
 export function isFlatLibraryView(key: LibraryViewKey): boolean {
   return LIBRARY_VIEW_GROUP[key] === 'songs'
+}
+
+/** The folder browse view. */
+export function isFolderLibraryView(key: LibraryViewKey): boolean {
+  return key === 'folder'
 }
 
 /** Playlist card lists (`playlist` / `playlist_normal` / `playlist_radio`). */

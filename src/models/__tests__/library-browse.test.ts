@@ -15,7 +15,7 @@ import {
  */
 const BACKEND_VIEW_KEYS = [
   'all', 'local', 'remote', 'radio',
-  'artist', 'album', 'genre', 'year', 'decade', 'language', 'style',
+  'folder', 'artist', 'album', 'genre', 'year', 'decade', 'language', 'style',
   'tag',
   'playlist', 'playlist_normal', 'playlist_radio',
 ]
@@ -29,17 +29,16 @@ describe('LIBRARY_VIEW_KEYS', () => {
     expect([...LIBRARY_VIEW_KEYS]).toEqual(BACKEND_VIEW_KEYS)
   })
 
-  test('isLibraryViewKey accepts exactly the 15 keys', () => {
+  test('isLibraryViewKey accepts exactly the 16 keys', () => {
     for (const key of BACKEND_VIEW_KEYS) expect(isLibraryViewKey(key)).toBe(true)
-    // The pre-refactor client invented these four; the backend 400s on them.
-    for (const key of ['folder', 'recent', 'favorites', 'random', '', 'ALL']) {
+    for (const key of ['recent', 'favorites', 'random', '', 'ALL']) {
       expect(isLibraryViewKey(key)).toBe(false)
     }
   })
 })
 
 describe('DEFAULT_LIBRARY_BROWSE_CONFIG', () => {
-  test('is all 15 views visible in backend default order', () => {
+  test('is all 16 views visible in backend default order', () => {
     expect(keysOf(DEFAULT_LIBRARY_BROWSE_CONFIG)).toEqual(BACKEND_VIEW_KEYS)
     expect(DEFAULT_LIBRARY_BROWSE_CONFIG.views.every((v) => v.visible)).toBe(true)
   })
@@ -56,6 +55,7 @@ describe('parseLibraryBrowseConfig', () => {
       { key: 'local', visible: true },
       { key: 'remote', visible: false },
       { key: 'radio', visible: true },
+      { key: 'folder', visible: true },
       { key: 'artist', visible: true },
       { key: 'album', visible: true },
       { key: 'genre', visible: true },
@@ -73,16 +73,16 @@ describe('parseLibraryBrowseConfig', () => {
   test('drops unknown keys (the old client sent id/order junk here)', () => {
     const parsed = parseLibraryBrowseConfig({
       views: [
-        { key: 'folder', visible: true },
+        { key: 'recent', visible: true },
         { key: 'all', visible: true },
         { key: 'random', visible: false },
       ],
     })
     expect(keysOf(parsed).slice(0, 1)).toEqual(['all'])
-    expect(keysOf(parsed)).not.toContain('folder')
+    expect(keysOf(parsed)).not.toContain('recent')
     expect(keysOf(parsed)).not.toContain('random')
     // Missing keys are appended visible, in backend default order.
-    expect(keysOf(parsed)).toHaveLength(15)
+    expect(keysOf(parsed)).toHaveLength(16)
     expect(keysOf(parsed).slice(1)).toEqual(BACKEND_VIEW_KEYS.filter((k) => k !== 'all'))
   })
 
@@ -117,6 +117,6 @@ describe('parseLibraryBrowseConfig', () => {
     })
     expect(parsed.views.find((v) => v.key === 'artist')?.visible).toBe(false)
     expect(parsed.views.find((v) => v.key === 'album')?.visible).toBe(true)
-    expect(keysOf(parsed)).toHaveLength(15)
+    expect(keysOf(parsed)).toHaveLength(16)
   })
 })

@@ -16,7 +16,7 @@ import { SplashScreen } from './shared/ui/SplashScreen.js'
 import { ToastHost } from './shared/ui/ToastHost.js'
 import { evaluateAuthGuard, isAuthTransitionPending, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
-import { AddSongsPage, CategorySongsPage, LibraryLayout, LibraryPage, TagSongsPage } from './features/library/index.js'
+import { AddSongsPage, CategorySongsPage, FolderContentPage, LibraryLayout, LibraryPage, TagSongsPage } from './features/library/index.js'
 import { migrateLibrarySearch, type LibraryViewKey } from './features/library/domain/library-views.js'
 import { CreatePlaylistPage, EditPlaylistPage, PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
@@ -377,6 +377,19 @@ const tagSongsRoute = createRoute({
   component: TagSongsPage,
 })
 
+/** `/library/folders` — folder browse drill-in (songs/subfolders under a path). */
+const folderContentRoute = createRoute({
+  getParentRoute: () => libraryLayoutRoute,
+  path: '/library/folders',
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { path?: string } => {
+    const path = typeof search.path === 'string' ? search.path : ''
+    return path ? { path } : {}
+  },
+  component: FolderContentPage,
+})
+
 const addSongsRoute = createRoute({
   getParentRoute: () => libraryLayoutRoute,
   path: '/library/add',
@@ -413,6 +426,7 @@ const routeTree = rootRoute.addChildren([
       editPlaylistRoute,
       categorySongsRoute,
       tagSongsRoute,
+      folderContentRoute,
       playlistDetailRoute,
     ]),
     settingsRoute,

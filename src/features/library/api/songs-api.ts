@@ -6,6 +6,7 @@ import {
 } from '../../../core/config/constants.js'
 import type { HttpClient } from '../../../core/network/http-client.js'
 import type { PlaybackContext } from '../../player/domain/playback-context.js'
+import { parseFolderListResponse, type FolderListResponse } from '../../../models/folder.js'
 import { parseLibraryStats, type LibraryStats } from '../../../models/library-stats.js'
 import {
   parsePlayHistoryResponse,
@@ -158,6 +159,16 @@ export function buildFacetsQuery(
   return query
 }
 
+/** Build the `/songs/folders` query object. Pure + exported for testing. */
+export function buildFoldersQuery(
+  path: string,
+  keyword?: string,
+): Record<string, string> {
+  const query: Record<string, string> = { path }
+  if (keyword != null && keyword !== '') query.keyword = keyword
+  return query
+}
+
 export class SongsApi {
   constructor(private readonly client: HttpClient) {}
 
@@ -170,6 +181,14 @@ export class SongsApi {
       query: buildSongsQuery(filters, page),
     })
     return parseSongListResponse(res.data)
+  }
+
+  /** `GET /songs/folders?path=…&keyword=…` → folder listing at the given path. */
+  async getFolders(path: string, keyword?: string): Promise<FolderListResponse> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/songs/folders`, {
+      query: buildFoldersQuery(path, keyword),
+    })
+    return parseFolderListResponse(res.data)
   }
 
   /** `GET /songs/facets?field=…` → `{ facets, total }` (paginated). */

@@ -75,8 +75,8 @@ test('renders the three group headers and all 15 view rows', async () => {
   // "Playlists" is both a group header and the `playlist_normal` view label.
   expect(queryAllByText('Playlists').length).toBeGreaterThanOrEqual(1)
   // 15 rows → 15 drag handles + 15 switches.
-  expect(queryAllByTestId(/^library-editor-drag-/)).toHaveLength(15)
-  expect(queryAllByTestId(/^library-editor-switch-/)).toHaveLength(15)
+  expect(queryAllByTestId(/^library-editor-drag-/)).toHaveLength(16)
+  expect(queryAllByTestId(/^library-editor-switch-/)).toHaveLength(16)
 })
 
 test('a hidden view renders its switch unchecked; visible views are checked', async () => {
@@ -118,11 +118,11 @@ test('moving a whole group reorders the saved config group-contiguously', async 
   })
 
   const saved = mutateSpy.mock.calls[0]![0] as LibraryBrowseConfig
-  expect(saved.views[0]!.key).toBe('artist')
-  // Still all 15, still contiguous by group.
-  expect(saved.views).toHaveLength(15)
+  expect(saved.views[0]!.key).toBe('folder')
+  // Still all 16, still contiguous by group.
+  expect(saved.views).toHaveLength(16)
   expect(saved.views.map((v) => v.key)).toEqual([
-    'artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag',
+    'folder', 'artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag',
     'all', 'local', 'remote', 'radio',
     'playlist', 'playlist_normal', 'playlist_radio',
   ])

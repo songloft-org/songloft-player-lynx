@@ -2,6 +2,7 @@ export { LibraryLayout } from './pages/LibraryLayout.js'
 export { LibraryPage } from './pages/LibraryPage.js'
 export { CategorySongsPage } from './pages/CategorySongsPage.js'
 export { TagSongsPage } from './pages/TagSongsPage.js'
+export { FolderContentPage } from './pages/FolderContentPage.js'
 export { AddSongsPage } from './pages/AddSongsPage.js'
 export { getLastLibrarySearch } from './data/last-library-search.js'
 export {

@@ -132,6 +132,11 @@ export function resolveRouteBack(
     return { kind: 'navigate', to: '/library', librarySearch: { view: 'tag' } }
   }
 
+  // Folder browse page returns to the folder view.
+  if (pathname === '/library/folders') {
+    return { kind: 'navigate', to: '/library', librarySearch: { view: 'folder' } }
+  }
+
   // "Add songs" resets the library to its last view, as before.
   if (pathname === '/library/add') {
     return { kind: 'navigate', to: '/library', librarySearch: ctx.lastLibrarySearch }
