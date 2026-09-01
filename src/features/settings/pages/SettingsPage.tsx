@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 import { appConfig } from '../../../core/config/app-config.js'
 import { logInfo } from '../../../core/logging/client-logger.js'
+import { readNativeModules } from '../../../native/native-modules.js'
 import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 // Vanilla (non-subscribing) store reads only — same pattern as HomePage /
 // LibraryPage — so the settings graph never mounts a zustand subscription
@@ -122,7 +123,9 @@ export function SettingsPage() {
   // Export/import both go through the platform module's file picker, which does not
   // exist in the render realm on Web. `DataPage` guards itself too (for deep
   // links); this keeps the row out of the list so the tap is never a dead end.
-  const showData = getPlatformCapabilities().dataTransfer
+  const caps = getPlatformCapabilities()
+  const showData = caps.dataTransfer
+  const showBackgroundKeepAlive = caps.backgroundKeepAlive
 
   /**
    * Navigate to a sub-page: in dual-column mode, show it in the right pane;
@@ -281,6 +284,21 @@ export function SettingsPage() {
                     selected={isActive('data')}
                     onTap={() => goToSubPage('data', '/settings/data')}
                     testId='settings-data'
+                  />
+                )
+                : null}
+              {showBackgroundKeepAlive
+                ? (
+                  <SettingsRow
+                    icon='settings'
+                    title={t('settings.backgroundKeepAlive')}
+                    subtitle={t('settings.backgroundKeepAliveSubtitle')}
+                    trailingIcon='open-external'
+                    onTap={() => {
+                      const mod = readNativeModules()?.SongloftAudio as Record<string, Function> | undefined
+                      mod?.openManufacturerWhitelist?.()
+                    }}
+                    testId='settings-background-keepalive'
                   />
                 )
                 : null}

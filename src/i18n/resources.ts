@@ -247,6 +247,8 @@ export const en = {
     categoryPlaybackSubtitle: 'Quality, auto-resume, lyrics',
     categoryData: 'Data',
     categoryDataSubtitle: 'Playlist export and import',
+    backgroundKeepAlive: 'Background playback',
+    backgroundKeepAliveSubtitle: 'Prevent system from stopping playback',
     // ── Section rows ──────────────────────────────────────────────────────
     server: 'Server',
     serverEmbedded: 'Songloft (embedded)',
@@ -1131,6 +1133,8 @@ export const zh: TranslationTree = {
     categoryPlaybackSubtitle: '音质、自动恢复与歌词显示',
     categoryData: '数据管理',
     categoryDataSubtitle: '歌单导出与导入',
+    backgroundKeepAlive: '后台运行权限',
+    backgroundKeepAliveSubtitle: '防止系统中断后台播放',
     // ── 区块行 ────────────────────────────────────────────────────────────
     server: '服务器',
     serverEmbedded: 'Songloft（内置）',

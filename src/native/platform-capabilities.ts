@@ -62,6 +62,13 @@ export interface PlatformCapabilities {
    * the cache entry hides there.
    */
   songCache: boolean
+  /**
+   * Android background keep-alive: battery optimization exemption request +
+   * manufacturer-specific autostart settings. Keyed off the method added for
+   * this feature — older shells that lack it get `false` instead of a dead
+   * button.
+   */
+  backgroundKeepAlive: boolean
 }
 
 /** True when a native module of this name is present in the host bag. */
@@ -116,5 +123,6 @@ export function getPlatformCapabilities(): PlatformCapabilities {
     // Method-level for the reason in the interface note: `getCacheInfo` stands in
     // for the whole reworked cache contract.
     songCache: hasNativeMethod('SongloftSongCache', 'getCacheInfo'),
+    backgroundKeepAlive: hasNativeMethod('SongloftAudio', 'openManufacturerWhitelist'),
   }
 }

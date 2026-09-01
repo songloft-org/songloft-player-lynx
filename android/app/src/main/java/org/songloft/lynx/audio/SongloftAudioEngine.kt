@@ -120,6 +120,18 @@ object SongloftAudioEngine {
     /** Monotonic deadline consumed by SongloftPlaybackService for one stale stop. */
     private var autoAdvanceStopGuardUntilMs = 0L
 
+    // -- playback state persistence (for recovery after system kill) -----------
+
+    /** Current track URL, cached for periodic position saves. */
+    @Volatile
+    private var currentUrl: String? = null
+    private var currentHls = false
+    private var currentHeaders: Map<String, String>? = null
+
+    /** Progress tick counter — save position to disk every N ticks (~3 s at 500 ms). */
+    private var progressSaveCounter = 0
+    private const val PROGRESS_SAVE_INTERVAL = 6
+
     /**
      * Whether [initFromService] has been called (i.e. the `MediaSession` was
      * created with the service context). Used to decide whether a late service
@@ -418,6 +430,8 @@ object SongloftAudioEngine {
      * context.
      */
     fun initFromService(service: SongloftPlaybackService) {
+        PlaybackStateStore.init(service)
+
         if (sessionBoundToService) {
             ClientFileLog.write('I', "audio", "service session already bound; snapshot=${diagnosticSnapshot()}")
             return
@@ -459,6 +473,7 @@ object SongloftAudioEngine {
      * session with the correct context.
      */
     fun ensurePlayer(context: Context): ExoPlayer {
+        PlaybackStateStore.init(context)
         player?.let {
             ClientFileLog.write(
                 'I', "audio",
@@ -656,6 +671,12 @@ object SongloftAudioEngine {
         } else {
             0L
         }
+
+        currentUrl = url
+        currentHls = hls
+        currentHeaders = headers
+        progressSaveCounter = 0
+
         ClientFileLog.write(
             'I', "audio",
             "load begin ${truncUrl(url)} hls=$hls headers=${headers?.size ?: 0} "
@@ -718,6 +739,7 @@ object SongloftAudioEngine {
         try {
             p.setMediaSource(source)
             p.prepare()
+            PlaybackStateStore.save(url, 0, 0, hls, headers, p.playWhenReady)
             ClientFileLog.write('I', "audio", "load prepared ${truncUrl(url)} snapshot=${playerSnapshot(p)}")
         } catch (error: Throwable) {
             ClientFileLog.write(
@@ -746,12 +768,15 @@ object SongloftAudioEngine {
     fun stop() {
         val p = player
         autoAdvanceStopGuardUntilMs = 0L
+        currentUrl = null
+        currentHeaders = null
         ClientFileLog.write('W', "audio", "stop begin snapshot=${playerSnapshot(p)}")
         p?.let {
             it.stop()
             it.clearMediaItems()
         }
         stopProgress()
+        PlaybackStateStore.clear()
         emitState("idle")
         emitProgressValues(0, 0, 0)
         ClientFileLog.write('I', "audio", "stop complete snapshot=${playerSnapshot(p)}")
@@ -778,6 +803,8 @@ object SongloftAudioEngine {
     fun release() {
         ClientFileLog.write('W', "audio", "release begin snapshot=${diagnosticSnapshot()}")
         autoAdvanceStopGuardUntilMs = 0L
+        currentUrl = null
+        currentHeaders = null
         stopProgress()
         releaseEqualizer()
         stopVolumeObserver()
@@ -800,6 +827,62 @@ object SongloftAudioEngine {
         ClientFileLog.write('W', "audio", "releaseFromService invoked snapshot=${diagnosticSnapshot()}")
         release()
     }
+
+    /**
+     * Attempt to resume playback from persisted state after a system kill.
+     *
+     * Called by [SongloftPlaybackService] when `onStartCommand` receives a null
+     * intent (the hallmark of a `START_STICKY` restart). If saved state exists
+     * and is recent enough (< 1 hour), re-loads the track, seeks to the saved
+     * position, and resumes playback.
+     *
+     * Returns `true` if recovery was attempted, `false` if no valid state was found.
+     */
+    fun recoverPlayback(service: SongloftPlaybackService): Boolean {
+        val saved = PlaybackStateStore.load()
+        if (saved == null) {
+            ClientFileLog.write('I', "audio", "recovery: no saved state")
+            return false
+        }
+        val ageMs = System.currentTimeMillis() - saved.savedAt
+        if (ageMs > MAX_RECOVERY_AGE_MS) {
+            ClientFileLog.write(
+                'W', "audio",
+                "recovery: saved state too old (${ageMs / 1000}s > ${MAX_RECOVERY_AGE_MS / 1000}s), discarding",
+            )
+            PlaybackStateStore.clear()
+            return false
+        }
+        ClientFileLog.write(
+            'I', "audio",
+            "recovery: resuming url=${truncUrl(saved.url)} position=${saved.positionMs} " +
+                "hls=${saved.hls} age=${ageMs / 1000}s",
+        )
+        try {
+            load(service, saved.url, saved.hls, saved.headers)
+            val p = player
+            if (p != null) {
+                if (saved.positionMs > 0) {
+                    p.seekTo(saved.positionMs)
+                }
+                if (saved.playWhenReady) {
+                    p.play()
+                }
+            }
+            ClientFileLog.write('I', "audio", "recovery: playback resumed snapshot=${diagnosticSnapshot()}")
+            return true
+        } catch (error: Throwable) {
+            ClientFileLog.write(
+                'E', "audio",
+                "recovery: failed (${error.javaClass.simpleName}: ${error.message})",
+            )
+            PlaybackStateStore.clear()
+            return false
+        }
+    }
+
+    /** Don't recover state older than 1 hour — the URL/token is likely stale. */
+    private const val MAX_RECOVERY_AGE_MS = 3_600_000L
 
     /**
      * Consume the one stale stop generated while auto-advance replaces an ended
@@ -831,6 +914,10 @@ object SongloftAudioEngine {
         val p = player ?: return
         val duration = if (p.duration == C.TIME_UNSET || p.duration < 0) 0L else p.duration
         emitProgressValues(p.currentPosition, p.bufferedPosition, duration)
+        if (currentUrl != null && ++progressSaveCounter >= PROGRESS_SAVE_INTERVAL) {
+            progressSaveCounter = 0
+            PlaybackStateStore.savePosition(p.currentPosition, duration)
+        }
     }
 
     private fun emitProgressValues(positionMs: Long, bufferedMs: Long, durationMs: Long) {

@@ -14,6 +14,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Background playback keep-alive: allows requesting the user to exempt
+         this app from battery optimization so the system does not kill the
+         foreground playback service on aggressively-managed ROMs (MIUI etc.). -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <!-- Floating lyrics overlay (SongloftFloatingLyric / FloatingLyricService).
          Without this declaration the app never appears in "Display over other
          apps", so `Settings.canDrawOverlays()` can only ever return false and the

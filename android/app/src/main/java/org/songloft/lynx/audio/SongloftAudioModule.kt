@@ -73,6 +73,7 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
         ensureSink()
         val ctx = androidContext()
         startPlaybackService(ctx)
+        BackgroundPlaybackHelper.maybeRequestBatteryOptimizationExemption(ctx)
         SongloftAudioEngine.runOnMain { SongloftAudioEngine.play(ctx) }
     }
 
@@ -166,6 +167,40 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
     @LynxMethod
     fun setEqualizerBand(index: Double, gainDb: Double) {
         SongloftAudioEngine.runOnMain { SongloftAudioEngine.setEqualizerBand(index.toInt(), gainDb.toFloat()) }
+    }
+
+    // -- background keep-alive --
+
+    @LynxMethod
+    fun requestBatteryOptimizationExemption() {
+        val ctx = androidContext()
+        val alreadyExempt = BackgroundPlaybackHelper.requestBatteryOptimizationExemption(ctx)
+        val params = JavaOnlyArray()
+        params.pushMap(toJavaMap(mapOf("alreadyExempt" to alreadyExempt)))
+        lynxContext().sendGlobalEvent("SongloftAudio.batteryOptimizationResult", params)
+    }
+
+    @LynxMethod
+    fun getBackgroundPermissionInfo() {
+        val ctx = androidContext()
+        val isExempt = BackgroundPlaybackHelper.isIgnoringBatteryOptimizations(ctx)
+        val info = BackgroundPlaybackHelper.getManufacturerWhitelistInfo()
+        val params = JavaOnlyArray()
+        params.pushMap(
+            toJavaMap(
+                mapOf(
+                    "isIgnoringBatteryOptimizations" to isExempt,
+                    "manufacturer" to (info?.manufacturer ?: "unknown"),
+                    "instructions" to (info?.instructions ?: ""),
+                ),
+            ),
+        )
+        lynxContext().sendGlobalEvent("SongloftAudio.backgroundPermissionInfo", params)
+    }
+
+    @LynxMethod
+    fun openManufacturerWhitelist() {
+        BackgroundPlaybackHelper.openManufacturerWhitelist(androidContext())
     }
 
     // -- lifecycle --

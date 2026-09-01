@@ -146,14 +146,34 @@ class SongloftPlaybackService : MediaSessionService() {
      */
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val ownsSlotBefore = mediaNotificationOwnsSlot
+        val isRestart = intent == null && (flags and START_FLAG_REDELIVERY == 0)
         ClientFileLog.write(
             'I', "audio-svc",
             "onStartCommand startId=$startId flags=$flags action=${intent?.action ?: "null"} "
+                + "isRestart=$isRestart "
                 + "mediaButtonKey=${mediaButtonKeyCode(intent) ?: "none"} "
                 + "ownsSlot=$ownsSlotBefore media3Ongoing=${media3PlaybackOngoing()} "
                 + "playerOngoing=${playerPlaybackOngoing()} "
                 + "snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
         )
+
+        // START_STICKY restart after system kill: intent is null, player is
+        // empty. Try to resume from persisted state.
+        if (isRestart) {
+            ClientFileLog.write('I', "audio-svc", "detected START_STICKY restart, attempting recovery")
+            if (!mediaNotificationOwnsSlot) startForegroundPlaceholder()
+            val recovered = SongloftAudioEngine.recoverPlayback(this)
+            ClientFileLog.write(
+                'I', "audio-svc",
+                "recovery result=$recovered snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
+            )
+            if (!recovered) {
+                stopSelf()
+                return START_STICKY
+            }
+            return START_STICKY
+        }
+
         // When a song ends, media3 releases the foreground notification. On
         // Android 13+ the system sends a stale MEDIA_STOP intent ~500ms later
         // to kill the inactive session. The next song can already be READY by
