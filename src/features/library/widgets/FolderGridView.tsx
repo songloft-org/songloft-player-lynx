@@ -5,12 +5,14 @@ import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
 
 import type { FolderInfo } from '../../../models/folder.js'
+import type { Song } from '../../../models/song.js'
 import { useDebounce } from '../data/use-debounce.js'
 import { useFoldersQuery } from '../data/folder-query.js'
 import { getSongsApi } from '../api/index.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { MediaListItem } from '../../../shared/ui/MediaListItem.js'
+import { SongListRow } from '../widgets/SongListRow.js'
 import { FolderCard } from './FolderCard.js'
 import { LibraryStateMessage } from './LibraryStateMessage.js'
 
@@ -29,6 +31,11 @@ export function FolderGridView({ viewMode = 'grid' }: FolderGridViewProps) {
   const query = useFoldersQuery('', keyword)
   const data = query.data
   const folders = data?.folders ?? []
+  const songs = data?.songs ?? []
+
+  const onTapSong = (_song: Song, index: number) => {
+    void usePlayerStore.getState().playPlaylist(songs, index)
+  }
 
   const onPlayAll = async (folder: FolderInfo) => {
     try {
@@ -68,7 +75,7 @@ export function FolderGridView({ viewMode = 'grid' }: FolderGridViewProps) {
         ? <LibraryStateMessage text={t('library.loadingFolders')} />
         : query.isError && folders.length === 0
           ? <LibraryStateMessage text={t('library.foldersError')} tone='error' />
-          : folders.length === 0
+          : folders.length === 0 && songs.length === 0
             ? (
               <LibraryStateMessage
                 text={
@@ -82,30 +89,46 @@ export function FolderGridView({ viewMode = 'grid' }: FolderGridViewProps) {
             )
             : (
               <scroll-view className='library__grid-scroll' scroll-y>
-                <view className={viewMode === 'list' ? 'library__facet-list' : 'library__grid'}>
-                  {folders.map((folder: FolderInfo) =>
-                    viewMode === 'list'
-                      ? (
-                        <MediaListItem
-                          key={folder.path}
-                          name={folder.name || t('common.unknown')}
-                          subtitle={t(
-                            folder.songCount === 1 ? 'common.songCountOne' : 'common.songCountOther',
-                            { count: folder.songCount },
-                          )}
-                          onTap={() => onTapFolder(folder)}
-                          onPlayAll={() => { void onPlayAll(folder) }}
-                        />
-                      )
-                      : (
-                        <FolderCard
-                          key={folder.path}
-                          folder={folder}
-                          onPlayAll={onPlayAll}
-                          onTap={onTapFolder}
-                        />
+                {folders.length > 0
+                  ? (
+                    <view className={viewMode === 'list' ? 'library__facet-list' : 'library__grid'}>
+                      {folders.map((folder: FolderInfo) =>
+                        viewMode === 'list'
+                          ? (
+                            <MediaListItem
+                              key={folder.path}
+                              name={folder.name || t('common.unknown')}
+                              subtitle={t(
+                                folder.songCount === 1 ? 'common.songCountOne' : 'common.songCountOther',
+                                { count: folder.songCount },
+                              )}
+                              onTap={() => onTapFolder(folder)}
+                              onPlayAll={() => { void onPlayAll(folder) }}
+                            />
+                          )
+                          : (
+                            <FolderCard
+                              key={folder.path}
+                              folder={folder}
+                              onPlayAll={onPlayAll}
+                              onTap={onTapFolder}
+                            />
+                          ))}
+                    </view>
+                  )
+                  : null}
+                {folders.length > 0 && songs.length > 0
+                  ? <view className='folder-content__divider' />
+                  : null}
+                {songs.length > 0
+                  ? (
+                    <view className='library__facet-list'>
+                      {songs.map((song, index) => (
+                        <SongListRow key={song.id} song={song} index={index} onTap={onTapSong} />
                       ))}
-                </view>
+                    </view>
+                  )
+                  : null}
               </scroll-view>
             )}
     </view>
