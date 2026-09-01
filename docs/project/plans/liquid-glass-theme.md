@@ -1,5 +1,17 @@
 # Liquid Glass 主题（Lynx）— 修订版
 
+> ## 修订（2026-09-01，需求对齐后）
+>
+> 原方案「`--glass-glow` 复用 seedColor」导致装包后玻璃色 = 按钮色（同色），「双通道」名不副实。用户决策改为**玻璃色独立字段**，并要求 **Flutter 端也做液态玻璃**（另起计划）。修订要点：
+>
+> - **后端 schema 加独立 `glassColor`**（per-brightness，`ThemePackColors.GlassColor`，可选、`#RRGGBB` 校验）。seedColor 仍驱动按钮 `--primary` 家族；glassColor 独立驱动 `--glass-glow`/`--glass-glow-faint`/`--glass-sheen`。现有包无 glassColor 仍校验通过。
+> - **Lynx 映射改读 `glassColor`**：`themePackToStyleVars()` 仅在 `colors.glassColor` 有效时派生三 token；**不再从 seedColor 派生**。无 glassColor 时回落基线星蓝（`PACK_OVERRIDABLE_BASELINE` 的 `--glass-glow` 等，即 tokens.css 默认）→ 真·双通道（玻璃恒独立于按钮）。
+> - **songloft-themes 新增配套包 `liquid-glass`**，带 `glassColor` 字段；更新 `index.json`（sha256）+ README。
+> - **Flutter 液态玻璃**：本次不做实现，另起计划（参考 Beans-Music 的 iOS 26 `.glassEffect` / SwiftUI）。本次 Lynx 工作不迁移到 Flutter——玻璃渲染各客户端各自实现，跨端共享的只有 `.songloft-theme` JSON 包。
+> - 闸门与文档随映射重做同步更新（sakura 无 glassColor → 玻璃回落星蓝，断言相应改）。
+>
+> 仓库映射：后端 `songloft-org/songloft`（`/home/ejoydev/work/mimusic`，Go）· Lynx 客户端 `songloft-org/songloft-player-lynx`（`.../songloft-player-lynx`）· 主题包 `songloft-org/songloft-themes`（`/home/ejoydev/work/songloft-themes`）。
+
 ## Context
 
 给 Songloft Player (Lynx) 加 Liquid Glass 主题，参考 `Beans-Music/`（iOS 26 原生 `.glassEffect`）。

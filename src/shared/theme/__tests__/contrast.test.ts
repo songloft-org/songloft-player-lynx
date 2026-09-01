@@ -102,9 +102,13 @@ function parseTheme(name: 'dark' | 'light'): Record<string, Color> {
     const [, key, val] = decl
     if (val.startsWith('#')) {
       out[key] = parseHex(val)
-    } else if (key === 'paper-clear') {
-      // blended over canvas at parse time
-      out['paper-clear'] = parseRgbaOver(val, out['canvas'])
+    } else if (key === 'paper-clear' || key.startsWith('glass-fill')) {
+      // blended over canvas at parse time. glass-fill/glass-fill-strong are
+      // translucent paper colours floating over the page (not solid scrims),
+      // so their effective background is fill ⊕ canvas — the same composite
+      // paper-clear uses. Blending them over black (the else branch) would
+      // darken a light glass surface and mis-state its contrast.
+      out[key] = parseRgbaOver(val, out['canvas'])
     } else {
       // rgba used as a solid (backdrop/overlay) — parse raw, alpha=1
       out[key] = parseRgbaOver(val, { r: 0, g: 0, b: 0 })
@@ -125,7 +129,7 @@ function expectAA(fg: Color, bg: Color, label: string, min = 4.5) {
 }
 
 describe('dark theme contrast (WCAG AA)', () => {
-  const surfaces = ['canvas', 'paper', 'paper-clear', 'neutral-faint'] as const
+  const surfaces = ['canvas', 'paper', 'paper-clear', 'neutral-faint', 'glass-fill', 'glass-fill-strong'] as const
 
   test.each(surfaces)('content reads on %s (≥4.5)', (s) => {
     expectAA(DARK['content'], DARK[s], `content on ${s}`)

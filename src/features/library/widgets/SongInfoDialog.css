@@ -16,9 +16,12 @@
 .song-info-dialog {
   display: flex;
   flex-direction: column;
-  background-color: var(--paper);
+  background-color: var(--glass-fill-strong);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg),
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 var(--line);
   padding: var(--space-5);
   margin: var(--space-6);
   /*

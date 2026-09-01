@@ -5,7 +5,7 @@
 > 落地位置**三层**：
 > 1. `src/shared/theme/tokens.css` —— token 定义
 > 2. `ThemeProvider` —— `theme-root theme-dark` / `theme-light` 两套色值
-> 3. `src/shared/theme/theme-pack-mapping.ts` —— **主题包在运行时以内联 custom properties 覆盖 11 个 token**（`PACK_OVERRIDABLE_BASELINE`：`--primary` `--primary-2` `--accent` `--primary-content` `--primary-faint` `--canvas` `--paper` `--paper-clear` `--radius-lg` `--radius-md` `--radius-nav`）。映射规则：seedColor → primary 家族、surfaceColor → paper + paper-clear(0.9 alpha)、cardRadius → radius-lg、controlRadius → radius-md。有闸门解析 `tokens.css` 反查这张表。
+> 3. `src/shared/theme/theme-pack-mapping.ts` —— **主题包在运行时以内联 custom properties 覆盖 18 个 token**（`PACK_OVERRIDABLE_BASELINE`：`--primary` `--primary-2` `--accent` `--primary-content` `--primary-faint` `--canvas` `--paper` `--paper-clear` `--glass-fill` `--glass-fill-strong` `--glass-border` `--glass-highlight` `--glass-glow` `--glass-glow-faint` `--glass-sheen` `--radius-lg` `--radius-md` `--radius-nav`）。映射规则：seedColor → primary 家族、surfaceColor → paper + paper-clear(0.9 alpha)、cardRadius → radius-lg、controlRadius → radius-md。**玻璃装饰色 `--glass-glow`/`--glass-glow-faint`/`--glass-sheen` 也随 seedColor 派生**（见「Liquid Glass 表面」）；四个玻璃质感 token（fill/fill-strong/border/highlight）恒为基线。有闸门解析 `tokens.css` 反查这张表。
 >
 > **所以 token 值不是编译期常量** —— 上表列的是基线值，装了主题包的用户看到的可能不同。不在那 11 个里的 token 则任何主题包都改不了。
 >
@@ -33,6 +33,13 @@
 | `--canvas` | `#ffffff` | `#0f0f11` | 最底层背景 |
 | `--paper` | `#fafafa` | `#17171b` | 浮于 canvas 上的卡片/面板 |
 | `--paper-clear` | `rgba(255,255,255,.9)` | `rgba(23,23,27,.9)` | 毛玻璃效果（no backdrop-filter） |
+| `--glass-fill` | `rgba(255,255,255,.85)` | `rgba(23,23,27,.85)` | 玻璃浮层（nav 胶囊/mini-player，浮于内容上，alpha 高保可读） |
+| `--glass-fill-strong` | `rgba(255,255,255,.72)` | `rgba(23,23,27,.72)` | 玻璃浮层（popover/dialog/sheet，盖在 scrim 上，可更透） |
+| `--glass-border` | `rgba(255,255,255,.45)` | `rgba(255,255,255,.16)` | 玻璃描边 |
+| `--glass-highlight` | `rgba(255,255,255,.22)` | `rgba(255,255,255,.08)` | sheen 的白色分量（顶边 inset 高光） |
+| `--glass-glow` | `#3BAEEF` | `#5BC0F5` | 玻璃个性色（星蓝），sheen 着色；主题包随 seedColor |
+| `--glass-glow-faint` | `rgba(59,174,239,.10)` | `rgba(91,192,245,.14)` | 选中胶囊淡底；主题包随 seedColor |
+| `--glass-sheen` | `rgba(59,174,239,.18)` | `rgba(91,192,245,.10)` | sheen 渐变的彩色分量；主题包随 seedColor |
 | `--neutral-faint` | `#f4f4f5` | `#1f1f25` | 极弱填充（输入框底、标签底） |
 | `--line` | `#ececee` | `#26262c` | 分隔线，细如无物 |
 | `--rule` | `#dcdce0` | `#38383f` | 更强的分隔线（如 Settings 列表项间） |
@@ -151,6 +158,17 @@
 - 无阴影（非浮层）。
 - 示例：播放列表详情统计面板、设置页分类卡片。
 
+### Liquid Glass 表面
+所有**浮动表面**升级为诚实伪玻璃（诚实：Lynx 无 `backdrop-filter`，做不出真折射；伪：用 `--glass-fill*` 半透 + `box-shadow: inset` sheen 伪造玻璃质感）。
+
+- **7 个 `--glass-*` token**：`--glass-fill`（0.85，浮于内容）、`--glass-fill-strong`（0.72，盖 scrim）、`--glass-border`、`--glass-highlight`（白分量）、`--glass-glow`（个性色，默认星蓝）、`--glass-glow-faint`（选中胶囊淡底）、`--glass-sheen`（彩色分量）。深浅色各一套。
+- **A 模式（纯 CSS）**：每个玻璃表面 `background-color: var(--glass-fill[-strong])` + `border: 1px solid var(--glass-border)` + 多值 `box-shadow: var(--shadow-md[-lg]), inset 0 1px 0 var(--glass-highlight), inset 0 -1px 0 var(--line)`。顶 inset 高光 + 底 inset 暗边 ≈ 渐变描边。**无 TSX 结构改动。** 该多值 inset shadow 在 Web 端经 Step 0 spike 实测渲染（`getComputedStyle` 三层齐全）；native 端未截图，若不渲染也只是静默无高光（不破坏布局）。
+- **彩色个性**：sheen 用 `--glass-sheen`（彩色）+ `--glass-highlight`（白），默认星蓝；装主题包时 `--glass-glow`/`--glass-glow-faint`/`--glass-sheen` 随 `seedColor` 派生（`theme-pack-mapping.ts`，复用既有 seedColor，后端 schema 不改）。
+- **双通道**：玻璃装饰用 `--glass-glow`（星蓝/包色），按钮仍用 `--primary`（墨黑/包色）——互不干扰，符合 Muse 单色按钮语言。
+- **覆盖范围**：nav 胶囊、mini-player、popover、confirm dialog、bottom sheet、song info/edit dialog。**toast 不玻璃化**（保留 `--primary` 实心主操作语义）。plugin dialog（RegistryManage/PluginUpdate/PluginBatchUpdate）与 PromptDialog 复用 `.confirm-dialog` 卡片，已随其玻璃化；其内部 error/stats 子表面保持实心 `--paper`（玻璃上叠玻璃反损可读性）。
+- **无全局色斑层**：曾有全局 z-89 色斑层给玻璃染色，但会盖在插件 iframe（z-50）与所有内容上染色，故取消；彩色改由每表面 sheen 承载。
+- **对比度闸门**：`contrast.test.ts` 把 `--glass-fill`/`--glass-fill-strong` 加入 `surfaces` 数组，`parseTheme` 让两者叠 canvas 合成（而非叠黑底），两主题都验 AA 通过。`glass-surface.test.ts` 锁住「玻璃表面用 glass-fill + inset sheen」这一易静默退化点。
+
 ### Tab（标签页）
 - 下划线风格（非药丸填充）。
 - 选中态：`--primary` 下划线（2px）+ `--content` 文字 + `font-weight: 600`；未选中 `--content-muted`。
@@ -163,8 +181,8 @@
 - 横向内容行须 `width: max-content`，否则视觉上不滚动；用 `scroll-orientation='horizontal'`（`scroll-x` 已弃用）。
 
 ### 导航栏（底部 Tab / 宽屏侧栏，批58 起 iOS-26 风格）
-- **胶囊 = 导航**：窄屏底栏是一个 fixed 悬浮长条胶囊（左右留边不贴屏、`--paper-clear` 玻璃感 + `--line` hairline + `--shadow-md`），页面内容从胶囊下方穿过；mini-player 是同语言的上层悬浮胶囊（两者间 8px 间隙）。
-- **选中态**：固定尺寸横向胶囊（宽 = tab 槽、高 52px，所有 tab 同规格、不随文字长度变化）+ `--primary-faint` 淡色底，图标与文字同着 tint 色（主题包 seedColor）。未选中项无形状，直接坐在胶囊玻璃面上。
+- **胶囊 = 导航**：窄屏底栏是一个 fixed 悬浮长条胶囊（左右留边不贴屏、`--glass-fill` 玻璃面 + `--glass-border` hairline + 多值 `box-shadow`：`--shadow-md` 外阴影叠加 `inset 0 1px 0 var(--glass-highlight)` 顶高光与 `inset 0 -1px 0 var(--line)` 底暗边），页面内容从胶囊下方穿过；mini-player 是同语言的上层悬浮胶囊（两者间 8px 间隙）。见「Liquid Glass 表面」。
+- **选中态**：固定尺寸横向胶囊（宽 = tab 槽、高 52px，所有 tab 同规格、不随文字长度变化）+ `--glass-glow-faint` 淡色底（玻璃个性色，默认星蓝、主题包随 seedColor），图标与文字同着 tint 色。未选中项无形状，直接坐在胶囊玻璃面上。
 - **标签**：底栏用 `--font-2xs`（10px）单行；4 字中文名必须完整显示（水平 padding ≤8px），省略号仅兑底极端长名。宽屏 rail 用 `--font-sm` 横排。
 - **宽屏侧栏**：iPadOS 式分组（主导航 →「插件」组头 → 插件 tabs → 设置），行内胶囊选中态与窄屏同语言。
 - 阴影规则例外：导航胶囊与 mini-player 是常驻浮层，与弹出层同享阴影资格。
@@ -177,7 +195,7 @@
 - ⚠️ 原先列的两个示例都没了：Library 排序改成了弹出菜单（`LibraryToolbar`），歌单详情排序条随 JSX 一起删除。
 
 ### 弹出层（PopoverMenu / PopoverPanel，批53 起自研）
-- `--paper` 面 + `--radius-md` + `--shadow-md`；两者共享同一套 surface 与定位逻辑。
+- `--glass-fill-strong` 玻璃面 + `--glass-border` hairline + `--radius-md` + 多值 `box-shadow`（`--shadow-md` + inset sheen）；两者共享同一套 surface 与定位逻辑。见「Liquid Glass 表面」。
 - 定位由 `src/shared/ui/anchored-overlay.ts` 计算（`boundingClientRect` invoke 测量），**只用边缘定位**（每轴一个偏移 + max-width/height 上限）。
 - 遮罩四个偏移必须写全（`top/left/right/bottom: 0`），不能只给宽高——fixed 元素偏移为 auto 时落在静态位置，会漏出「两个弹出层同时打开」。
 - ⚠️ **不要装回 `@lynx-js/lynx-ui-popover`**：它的坐标是相对触发器的，而施加方式是 `position: absolute`（包含块为最近定位祖先），实测 6 处错位、最差的一个 `x = -122` 整块在屏外。理由详见 `AGENTS.md` §4「锚定弹出层」。
@@ -218,7 +236,7 @@
 当前应用运行在 ReactLynx 运行时，以下 CSS 功能**不可用**：
 
 - ❌ CSS Grid → 用 flex + flex-wrap
-- ❌ `backdrop-filter` → 用 `--paper-clear` 模拟
+- ❌ `backdrop-filter` → 浮动表面用 `--glass-fill*` + inset sheen 诚实伪造（见「Liquid Glass 表面」）；`--paper-clear` 仍是 0.9 半透纸的基线 fallback
 - ❌ `color-mix()` → 不会在 CSS 中使用
 - ❌ `:hover` / `:focus-within` → Lynx 无悬停状态
 - ❌ `text-transform` → 直接写目标大小写
@@ -232,4 +250,4 @@
 - **Web 侧 vh/vw 正常工作**，所以对话框尺寸是**刻意的双轨**：CSS 里给 `calc(100vw - 64px)` / `max-height: 85vh`（Web 半边），原生走 `src/shared/ui/dialog-viewport.ts` 从 `SystemInfo` 量出的**内联 px**。**两边必须同步**，`confirm-dialog-overlay.test.ts` 断言这件事。
 - **全屏遮罩例外**：用四边 offset 而不是 `100vw/100vh`（见 `PopoverMenu.css` 的注释）。
 
-✅ 可用：CSS 变量、flex（含 `gap`）、`border-radius`、`box-shadow`、`@keyframes`、`transform`、`position: fixed`、`env(safe-area-inset-*)`、`calc()`、`overflow: hidden`/`scroll`、`white-space`/`text-overflow`。
+✅ 可用：CSS 变量、flex（含 `gap`）、`border-radius`、`box-shadow`（含**多值 + `inset`**，玻璃 sheen 即用此）、`@keyframes`、`transform`、`position: fixed`、`env(safe-area-inset-*)`、`calc()`、`overflow: hidden`/`scroll`、`white-space`/`text-overflow`。

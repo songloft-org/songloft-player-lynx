@@ -89,6 +89,16 @@ describe('themePackToStyleVars', () => {
     expect(vars['--primary-content']).toBe('#ffffff')
     // The selected-nav-pill wash derives from the seed: 10% in light mode.
     expect(vars['--primary-faint']).toBe('rgba(216, 27, 96, 0.1)')
+    // Glass is INDEPENDENT of seed: sakura ships no glassColor, so the glass
+    // glow falls back to the star-blue baseline — pink buttons + blue glass
+    // (true dual-channel), NOT pink glass. The texture tokens stay baseline too.
+    expect(vars['--glass-glow']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-glow'])
+    expect(vars['--glass-glow-faint']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-glow-faint'])
+    expect(vars['--glass-sheen']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-sheen'])
+    expect(vars['--glass-fill']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-fill'])
+    expect(vars['--glass-fill-strong']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-fill-strong'])
+    expect(vars['--glass-border']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-border'])
+    expect(vars['--glass-highlight']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-highlight'])
     expect(vars['--canvas']).toBe('#FFF0F5')
     expect(vars['--paper']).toBe('#FFFFFF')
     expect(vars['--paper-clear']).toBe('rgba(255, 255, 255, 0.9)')
@@ -104,9 +114,44 @@ describe('themePackToStyleVars', () => {
     // The wash brightens to 14% in dark mode — a low-alpha tint over dark
     // surfaces needs more to stay visible (mirrors the baseline 8%/12% split).
     expect(vars['--primary-faint']).toBe('rgba(244, 143, 177, 0.14)')
+    // Glass falls back to the dark star-blue baseline (sakura has no glassColor).
+    expect(vars['--glass-glow']).toBe(PACK_OVERRIDABLE_BASELINE.dark['--glass-glow'])
+    expect(vars['--glass-glow-faint']).toBe(PACK_OVERRIDABLE_BASELINE.dark['--glass-glow-faint'])
+    expect(vars['--glass-sheen']).toBe(PACK_OVERRIDABLE_BASELINE.dark['--glass-sheen'])
     expect(vars['--canvas']).toBe('#1A0A10')
     expect(vars['--paper']).toBe('#261418')
     expect(vars['--paper-clear']).toBe('rgba(38, 20, 24, 0.9)')
+  })
+
+  test('glassColor tints the glass independently of the seed (dual-channel)', () => {
+    // A pack whose glass colour differs from its button colour: the glass
+    // glow rides glassColor, the button/accent still rides seedColor — the
+    // two channels never bleed into each other.
+    const vars = themePackToStyleVars({
+      ...SAKURA,
+      light: {
+        seedColor: '#D81B60', // pink buttons
+        backgroundColor: '#FFF0F5',
+        surfaceColor: '#FFFFFF',
+        glassColor: '#3BAEEF', // blue glass
+      },
+    }, 'light')
+    expect(vars['--primary']).toBe('#D81B60') // button channel = seed
+    expect(vars['--accent']).toBe('#D81B60')
+    expect(vars['--glass-glow']).toBe('#3BAEEF') // glass channel = glassColor
+    expect(vars['--glass-glow-faint']).toBe('rgba(59, 174, 239, 0.1)')
+    expect(vars['--glass-sheen']).toBe('rgba(59, 174, 239, 0.18)')
+  })
+
+  test('an invalid glassColor is dropped, glass falls back to baseline', () => {
+    const vars = themePackToStyleVars({
+      ...SAKURA,
+      light: { seedColor: '#D81B60', glassColor: 'not-a-color' },
+    }, 'light')
+    expect(vars['--glass-glow']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-glow'])
+    // seedColor still applies to the button channel (invalid fields are
+    // dropped field-by-field, never whole-pack).
+    expect(vars['--primary']).toBe('#D81B60')
   })
 
   test('never emits playerGradient tokens', () => {

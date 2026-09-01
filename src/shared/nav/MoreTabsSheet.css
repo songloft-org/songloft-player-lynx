@@ -38,7 +38,11 @@
   padding-bottom: var(--space-4);
   border-top-left-radius: var(--radius-xl);
   border-top-right-radius: var(--radius-xl);
-  background-color: var(--paper);
+  background-color: var(--glass-fill-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-md),
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 var(--line);
 }
 
 /*

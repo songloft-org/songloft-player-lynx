@@ -14,6 +14,11 @@
  * | (derived from seedColor)  | --primary-faint (10%/14% alpha wash) |
  * | light/dark.backgroundColor| --canvas                         |
  * | light/dark.surfaceColor   | --paper --paper-clear (90% alpha) |
+ * | light/dark.glassColor     | --glass-glow (solid)              |
+ * | (derived from glassColor) | --glass-glow-faint (0.10/0.14)     |
+ * | (derived from glassColor) | --glass-sheen (0.18/0.10)         |
+ * | (baseline, not pack-driven)| --glass-fill/fill-strong/border/   |
+ * |                           |   highlight                        |
  * | cardRadius                | --radius-lg                      |
  * | controlRadius             | --radius-md                      |
  * | navigationRadius          | --radius-nav (legacy: the nav bar |
@@ -54,6 +59,15 @@ export interface ThemePackColors {
   seedColor?: string
   backgroundColor?: string
   surfaceColor?: string
+  /**
+   * Independent colour for the Liquid Glass decorative tint. Drives
+   * `--glass-glow` / `--glass-glow-faint` / `--glass-sheen` — SEPARATE from
+   * `seedColor` (which drives the button/accent channel), so a pack can tint
+   * its glass without recolouring its buttons (true dual-channel). Optional:
+   * absent → the client's star-blue glass baseline applies (glass stays a
+   * different colour from buttons even with no pack).
+   */
+  glassColor?: string
 }
 
 /** The `data` payload of a theme pack (schema v1, see the backend's ThemePackData). */
@@ -124,6 +138,18 @@ export const PACK_OVERRIDABLE_BASELINE: Record<'light' | 'dark', Record<string, 
     '--canvas': '#ffffff',
     '--paper': '#fafafa',
     '--paper-clear': 'rgba(255, 255, 255, 0.9)',
+    // Liquid Glass tokens. The four texture tokens (fill/fill-strong/border/
+    // highlight) are always baseline — glass质感 is fixed, not pack-driven.
+    // Only the decorative `--glass-glow*`/`--glass-sheen` re-point at seedColor
+    // (see themePackToStyleVars), so a pack tints the glass sheen without
+    // touching button ink (--primary stays its own channel).
+    '--glass-fill': 'rgba(255, 255, 255, 0.85)',
+    '--glass-fill-strong': 'rgba(255, 255, 255, 0.72)',
+    '--glass-border': 'rgba(255, 255, 255, 0.45)',
+    '--glass-highlight': 'rgba(255, 255, 255, 0.22)',
+    '--glass-glow': '#3BAEEF',
+    '--glass-glow-faint': 'rgba(59, 174, 239, 0.10)',
+    '--glass-sheen': 'rgba(59, 174, 239, 0.18)',
     '--radius-lg': '20px',
     '--radius-md': '12px',
     '--radius-nav': '12px',
@@ -137,6 +163,15 @@ export const PACK_OVERRIDABLE_BASELINE: Record<'light' | 'dark', Record<string, 
     '--canvas': '#0f0f11',
     '--paper': '#17171b',
     '--paper-clear': 'rgba(23, 23, 27, 0.9)',
+    // Liquid Glass tokens — see the light block. Same shape, dark-tuned:
+    // darker glass fills, dimmer highlight, and the dark star-blue glow.
+    '--glass-fill': 'rgba(23, 23, 27, 0.85)',
+    '--glass-fill-strong': 'rgba(23, 23, 27, 0.72)',
+    '--glass-border': 'rgba(255, 255, 255, 0.16)',
+    '--glass-highlight': 'rgba(255, 255, 255, 0.08)',
+    '--glass-glow': '#5BC0F5',
+    '--glass-glow-faint': 'rgba(91, 192, 245, 0.14)',
+    '--glass-sheen': 'rgba(91, 192, 245, 0.10)',
     '--radius-lg': '20px',
     '--radius-md': '12px',
     '--radius-nav': '12px',
@@ -172,6 +207,20 @@ export function themePackToStyleVars(
       // over dark surfaces needs more to stay visible (matches the baseline's
       // 8% light / 12% dark split).
       vars['--primary-faint'] = hexToRgba(colors.seedColor, resolved === 'light' ? 0.1 : 0.14)
+    }
+    if (isHexColor(colors.glassColor)) {
+      // Liquid Glass decorative tint — INDEPENDENT of seedColor (the button
+      // channel). A pack colours its glass without recolouring its buttons:
+      // true dual-channel. The three glass-glow tokens ride glassColor at the
+      // same alpha split as the star-blue baseline (0.10/0.14 faint, 0.18/0.10
+      // sheen). When glassColor is absent the baseline star-blue applies
+      // (PACK_OVERRIDABLE_BASELINE already mirrors tokens.css), so glass stays
+      // a different colour from buttons even with no pack. The four
+      // glass-texture tokens (fill/border/highlight) are always baseline —
+      // a pack colours the glass, it does not change its质感.
+      vars['--glass-glow'] = colors.glassColor
+      vars['--glass-glow-faint'] = hexToRgba(colors.glassColor, resolved === 'light' ? 0.1 : 0.14)
+      vars['--glass-sheen'] = hexToRgba(colors.glassColor, resolved === 'light' ? 0.18 : 0.1)
     }
     if (isHexColor(colors.backgroundColor)) {
       vars['--canvas'] = colors.backgroundColor

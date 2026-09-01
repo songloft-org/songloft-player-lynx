@@ -22,8 +22,12 @@
   right: 0;
   bottom: 0;
   max-height: 70%;
-  background-color: var(--paper);
+  background-color: var(--glass-fill-strong);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  box-shadow: var(--shadow-md),
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 var(--line);
   display: flex;
   flex-direction: column;
   padding-bottom: env(safe-area-inset-bottom, 0px);

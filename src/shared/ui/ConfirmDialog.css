@@ -119,12 +119,17 @@
 }
 
 .confirm-dialog {
-  background-color: var(--paper);
+  background-color: var(--glass-fill-strong);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-border);
   padding: var(--space-5);
   margin: var(--space-6);
   max-width: 360px;
+  /* Dialogs mount over a scrim, so they earn the larger shadow; the inset
+     sheen pair gives the glass its two-tone bevel (Step 0 spike-verified). */
+  box-shadow: var(--shadow-lg),
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 var(--line);
 }
 
 .confirm-dialog__title {

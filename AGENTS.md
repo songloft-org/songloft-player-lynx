@@ -226,11 +226,22 @@ pnpm run build:web-embedded   # 产物给后端嵌入（songloft-player-build/we
 - **层级**：胶囊 `z-index: 90`、mini-player `91`、浮层（sheet/popover）`100`、dialog `200/201`。fixed 层自带 z-index（本仓铁律，见「全局覆盖层」节）；新固定层不得插进 90–91 之间。
 - **内容穿过**：胶囊脱流后页面滚动到屏幕底，靠各页尾部 inset 避让——统一写 `padding/margin/height: var(--nav-inset, 80px)`（两档：无歌 80 / 有 mini-player 148，由 shell 根的 `shell--with-mini` 类切换，定义在 `ShellLayout.css`）。**新增可滚动页面必须消费该变量**，否则列表尾部永久被胶囊/mini player 挡住（已踩：首页/曲库滚不到底）。
 - **VirtualList（原生 `<list>`）页不用 CSS padding**——不可靠，走 `footer` 插尾 spacer（见 `PlaylistDetailPage` / `CategorySongsPage` 的 `__nav-inset` 类）。
-- **选中态**：底栏为固定尺寸横向胶囊（宽 = tab 槽 `calc(100% - 8px)`、高 52px，不随文字长短变化；安全因为 64px 槽吸收尺寸）；**rail 选中只变色、严禁改尺寸**——rail 行是内容高度，选中改高会跳动下方所有行（已踩：宽屏切 tab 抖动）。两处共用 `--primary-faint` 淡色底 + tint；**禁止**回到整块 `--primary` 填充 + 反白。
+- **选中态**：底栏为固定尺寸横向胶囊（宽 = tab 槽 `calc(100% - 8px)`、高 52px，不随文字长短变化；安全因为 64px 槽吸收尺寸）；**rail 选中只变色、严禁改尺寸**——rail 行是内容高度，选中改高会跳动下方所有行（已踩：宽屏切 tab 抖动）。两处共用 `--glass-glow-faint` 玻璃淡色底（默认星蓝、主题包随 seedColor）+ tint；**禁止**回到整块 `--primary` 填充 + 反白。（Liquid Glass 起把选中底从 `--primary-faint` 墨色 wash 改为玻璃个性色 wash——见下方「Liquid Glass 表面」。）
 - **图标 tint**：SVG 不在 CSS 级联，选中色必须用 `activeAccentIconColor()`（运行时读主题包 seedColor，无包回退墨色），不能写 `ICON_COLORS.primaryContent`。
 - **底栏标签**：`--font-2xs`（10px）+ `nowrap` + ellipsis，水平 padding ≤8px——**4 字中文名（洛雪音源）必须在 360dp 最窄主流屏完整显示**，省略号只兑底 5+ 字 pathological 名。宽屏 rail 标签不受此限。
 - **宽屏侧栏**：iPadOS 分组（主导航 →「插件」组头+插件 tabs → 设置），行内胶囊选中态与窄屏同款 tint 语言。
-- **`--radius-nav` 已冻结**：导航形状固定 `--radius-pill`，包的 `navigationRadius` 映射保留但无消费点（schema 兼容）；`--primary-faint` 由 seedColor 派生（light 10% / dark 14%），派生逻辑在 `theme-pack-mapping.ts`，闸门测试锁 tokens.css 与 baseline 表同步。
+- **`--radius-nav` 已冻结**：导航形状固定 `--radius-pill`，包的 `navigationRadius` 映射保留但无消费点（schema 兼容）；`--primary-faint` 由 seedColor 派生（light 10% / dark 14%），派生逻辑在 `theme-pack-mapping.ts`，闸门测试锁 tokens.css 与 baseline 表同步。玻璃装饰色 `--glass-glow`/`--glass-glow-faint`/`--glass-sheen` 同样随 seedColor 派生（同 0.10/0.14 与 0.18/0.10 alpha），四个玻璃质感 token（fill/fill-strong/border/highlight）恒为基线。
+
+### Liquid Glass 表面（诚实伪玻璃）
+
+所有浮动表面（nav 胶囊 / mini-player / popover / dialog / bottom sheet / song info-edit dialog）用一套诚实伪玻璃：`--glass-fill[-strong]` 半透底 + `--glass-border` hairline + 多值 `box-shadow: var(--shadow-*), inset 0 1px 0 var(--glass-highlight), inset 0 -1px 0 var(--line)`。**toast 不玻璃化**（保留 `--primary` 实心主操作语义）。详见 DESIGN.md「Liquid Glass 表面」。
+
+- **诚实**：Lynx 无 `backdrop-filter`，做不出真折射玻璃——半透 + inset sheen 是伪造，不是采样模糊。`--paper-clear` 仍是 0.9 半透纸的非玻璃 fallback。
+- **`box-shadow: inset` 与多值 shadow 在 Lynx 可用（已 spike 核实）**：Step 0 在 throwaway 表面上用无头 Chrome 实测 `getComputedStyle` —— 单值 `inset`、多值（外阴影 + inset）、`filter: blur()` 作用于 view 三者都经 lynx-css 编译进样式注册表并在 Web 端渲染。故走 **A 方案（纯 CSS，零 TSX 结构改动）**；inset 不可用才会退 B 方案（overlay sheen 子 view）。`glass-surface.test.ts` 锁住「玻璃表面含 glass-fill + inset sheen」这一易静默退化点。
+- **native 未截图**：spike 只在 Web 端验证；native 端若不渲染 inset，sheen 高光静默不显（不破坏布局），到时再退 B。
+- **双通道**：玻璃装饰用 `--glass-glow`（星蓝/包色），按钮仍用 `--primary`（墨黑/包色），互不干扰。
+- **复用而非各改**：plugin dialog（RegistryManage/PluginUpdate/PluginBatchUpdate）与 PromptDialog 的卡片复用 `.confirm-dialog`，随其玻璃化；其内部 error/stats 子表面刻意保持实心 `--paper`（玻璃上叠玻璃反损可读性）。SleepTimerSheet/PlaylistDrawer 复用 `.drawer__panel`。新增浮动表面优先复用既有玻璃壳，不要自带 `--paper` 表面。
+- **无全局色斑层**：曾有全局 z-89 色斑层给玻璃染色，会盖在插件 iframe（z-50）与所有内容上染色，故取消；彩色改由每表面 sheen 承载。
 
 ### 系统跟随（深浅色/语言）
 

@@ -69,6 +69,25 @@
   --paper: #17171b;
   --paper-clear: rgba(23, 23, 27, 0.9);
 
+  /* Liquid Glass surfaces — honest faux-glass (Lynx has no backdrop-filter, so
+     no real refraction; `--glass-fill`/`--glass-fill-strong` are translucent
+     paper colours over the canvas, and the sheen is carried by `box-shadow:
+     inset` highlights + a coloured `--glass-sheen` tint, not a sampled blur).
+     `--glass-fill` (0.85) is for surfaces floating over content (nav capsule,
+     mini-player) where readability needs the higher alpha; `--glass-fill-strong`
+     (0.72) is for surfaces mounted over a scrim (popover/dialog/sheet), which
+     can lean more transparent. `--glass-glow` is the decorative accent (star
+     blue by default; packs re-point it at their `seedColor` via
+     theme-pack-mapping.ts) — buttons keep `--primary`, so glass and actions
+     stay two independent channels (Muse's single-ink button language). */
+  --glass-fill: rgba(23, 23, 27, 0.85);
+  --glass-fill-strong: rgba(23, 23, 27, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --glass-highlight: rgba(255, 255, 255, 0.08);
+  --glass-glow: #5BC0F5;
+  --glass-glow-faint: rgba(91, 192, 245, 0.14);
+  --glass-sheen: rgba(91, 192, 245, 0.10);
+
   /* content (text) */
   --content: #f5f5f7;
   --content-2: #a1a1a8;
@@ -123,6 +142,19 @@
   --canvas: #ffffff;
   --paper: #fafafa;
   --paper-clear: rgba(255, 255, 255, 0.9);
+
+  /* Liquid Glass surfaces — see the dark block for the derivation. Light keeps
+     the same shape: `--glass-fill`/`--glass-fill-strong` are translucent white
+     over the white canvas, the highlight sheen is brighter (white-on-white
+     needs more to read), and the decorative `--glass-glow` is the star-blue
+     seed packs re-point at their own accent. */
+  --glass-fill: rgba(255, 255, 255, 0.85);
+  --glass-fill-strong: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.45);
+  --glass-highlight: rgba(255, 255, 255, 0.22);
+  --glass-glow: #3BAEEF;
+  --glass-glow-faint: rgba(59, 174, 239, 0.10);
+  --glass-sheen: rgba(59, 174, 239, 0.18);
 
   /* content (text) */
   --content: #111111;
