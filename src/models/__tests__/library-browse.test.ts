@@ -8,7 +8,7 @@ import {
 } from '../library-browse.js'
 
 /**
- * The backend's 14 legal keys, copied verbatim from
+ * The backend's 16 legal keys, copied verbatim from
  * `internal/handlers/library_browse_setting.go` (`libraryViewKeys`). The test
  * below pins our copy to this list; if the backend grows a key, update BOTH
  * sides of the comparison deliberately.

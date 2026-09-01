@@ -74,6 +74,7 @@
 - [x] 编辑弹窗标题被「挡住」（批60c，实为 flex 压扁）— 高度钳制下 flex 把溢出摊给所有 shrink 非零子项，标题行被压到 13.4px 且 Lynx 元素自带 `overflow:clip` 裁掉文字上半；固定 chrome 加 `flex-shrink:0`。判据：`getComputedStyle().height` vs `scrollHeight`，见 `AGENTS.md` §4
 - [x] 底部滑入面板 Android 只剩标题行 — `absolute` 无 `height` ⇒ shrink-to-fit，而 body `flex-basis:0` 对内容高度贡献 0 ⇒ 塌成 chrome 高；`max-height` 只给上限不给高度。播放历史改 `height:70%`，其余 body 改 `auto` basis；闸门 `bottom-sheet-height.test.ts`
 - [x] ⋯ 菜单与宽屏行内按钮重复（批62）— 按打开行的视口裁剪菜单（窄屏菜单是唯一入口不能无条件删）；顺带修 `PlayHistoryPanel` 行漏传 `showDeleteAction={false}`
+- [x] 曲库视图配置保存报 400 `非法的视图 key: tag`（2026-09-01）— 根因：前端 `LIBRARY_VIEW_KEYS`（Lynx）/`defaultOrder`（Flutter）含 `'tag'`，解析器/`ensureAllViews` 会把 tag 补齐随 PUT 发回后端；但后端 `libraryViewKeys` 白名单（`library_browse_setting.go`）**不含 tag** ⇒ `isValidLibraryViewKey("tag")==false` ⇒ 400，曲库视图配置保存即失败。Lynx 的 tag 视图还走通用 facet `GET /songs/facets?field=tag`，后端 `songFacetFields` 也不认 ⇒ 再吃一个 400；Flutter 的 tag 视图特化走 `/song-tags`（自定义标签 CRUD，本就可用），故 Flutter 仅中 PUT 400、视图本身不坏。修法（方案 B，后端实现 tag facet）：后端 `libraryViewKeys`/`songFacetFields` 加 tag、`IsSongFacetField` 认 tag、`ListFacet`/`CountFacet` 加 tag join 分支（song_tags↔song_tag_links↔songs、`COUNT(DISTINCT song_id)`）；Lynx/Flutter 仅订正过时注释（代码已含 tag）。真后端 live 验证 PUT 带 tag 200、`field=tag` 200、bogus 仍 400。详见 `progress.md` tag 对齐条目
 
 ## 代码审计发现（2026-08-14 · 27 条已全部修完）
 

@@ -9,12 +9,12 @@ import { makeParsers } from './_shared.js'
  * Wire contract, verified against the backend handler rather than the old
  * Lynx port (which spoke `{id, visible, order}` and got a silent 400 on every
  * PUT): each view is `{ key, visible }`; **order is the array position**, not
- * a field. The backend validates keys against its 14-key whitelist and echoes
- * a normalized, always-complete 14-entry config.
+ * a field. The backend validates keys against its 16-key whitelist and echoes
+ * a normalized, always-complete 16-entry config.
  */
 
 /**
- * The 14 legal view keys in the backend's default order
+ * The 16 legal view keys in the backend's default order
  * (`libraryViewKeys`, library_browse_setting.go:31) — three contiguous groups:
  *   - songs: flat song lists filtered by `type` (`all` sends no type);
  *   - facets: `/songs/facets` category dimensions, drilled into song lists;
@@ -45,7 +45,7 @@ export function isLibraryViewKey(value: string): value is LibraryViewKey {
   return libraryViewKeySet.has(value)
 }
 
-/** Default config: all 14 views visible, backend default order. */
+/** Default config: all 16 views visible, backend default order. */
 export const DEFAULT_LIBRARY_BROWSE_CONFIG: LibraryBrowseConfig = {
   views: LIBRARY_VIEW_KEYS.map((key) => ({ key, visible: true })),
 }

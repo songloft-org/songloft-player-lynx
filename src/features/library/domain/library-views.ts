@@ -301,7 +301,7 @@ export function resolveLibraryView(
 }
 
 /**
- * Old four-tab values → the 14-view keys they map onto.
+ * Old four-tab values → the 16-view keys they map onto.
  *
  * `radio` is deliberately ABSENT: it collides with the new songs-group `radio`
  * key (radio stations as a flat list). New keys win the passthrough below —
