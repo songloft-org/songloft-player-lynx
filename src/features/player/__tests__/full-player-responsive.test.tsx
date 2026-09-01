@@ -92,6 +92,9 @@ vi.mock('../../../shared/ui/song-row-overlays.js', () => ({
       cancelDelete: vi.fn(),
     }),
 }))
+vi.mock('../widgets/LyricsView.js', () => ({
+  LyricsView: () => null,
+}))
 vi.mock('../store/lyric-store.js', async () => {
   const actual = await vi.importActual<typeof import('../store/lyric-store.js')>(
     '../store/lyric-store.js',
