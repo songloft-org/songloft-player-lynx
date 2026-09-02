@@ -96,6 +96,24 @@
   margin-bottom: var(--space-3);
 }
 
+.login__agreement {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.login__agreement-text {
+  color: var(--content-muted);
+  font-size: var(--font-xs);
+  margin-left: var(--space-2);
+  flex: 1;
+}
+
+.login__agreement-link {
+  color: var(--primary);
+}
+
 .login__button {
   display: flex;
   align-items: center;

@@ -132,14 +132,16 @@ afterEach(async () => {
   }
 })
 
-test('renders the login page with title, labels and login button', async () => {
-  const { appRouter, queryByText } = await renderLogin()
+test('renders the login page with title, labels, agreement and login button', async () => {
+  const { appRouter, queryByText, queryByTestId } = await renderLogin()
   expect(appRouter.state.location.pathname).toBe('/login')
   expect(queryByText('Songloft')).toBeInTheDocument()
   expect(queryByText('Sign in to continue')).toBeInTheDocument()
   expect(queryByText('Username')).toBeInTheDocument()
   expect(queryByText('Password')).toBeInTheDocument()
   expect(queryByText('Log in')).toBeInTheDocument()
+  expect(queryByTestId('agreement-checkbox')).toBeInTheDocument()
+  expect(queryByText('Terms of Service & Privacy Policy')).toBeInTheDocument()
 })
 
 /**
@@ -178,13 +180,16 @@ test('standalone mode shows the API URL field + insecure-TLS toggle', async () =
  * login form prefills it, so after sign-out the field holds the real password
  * — the "password got reset after logout" complaint. This is the ONLY source
  * that ever fills the password field.
+ *
+ * The button remains disabled because the agreement checkbox defaults to
+ * unchecked — credentials alone are not sufficient.
  */
 test('prefills the remembered password from secure storage', async () => {
   await getSongloftStorage().secure.set(SECURE_LAST_PASSWORD, 'saved-secret')
   const { queryByText, queryByTestId } = await renderLogin()
   expect(queryByText('saved-secret')).toBeInTheDocument()
   const button = queryByTestId('login-button')
-  expect(button?.className).not.toContain('login__button--disabled')
+  expect(button?.className).toContain('login__button--disabled')
 })
 
 /**

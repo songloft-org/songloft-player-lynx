@@ -8,6 +8,7 @@ import { Button } from '@lynx-js/lynx-ui-button'
 import { Input } from '@lynx-js/lynx-ui-input'
 
 import { appConfig, devCredentials } from '../../../core/config/app-config.js'
+import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import {
@@ -59,6 +60,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [apiUrl, setApiUrl] = useState(showServerFields ? appConfig.baseUrl : '')
   const [insecureTls, setInsecureTls] = useState(appConfig.insecureTls)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
 
   // Best-effort prefill of the last username / remembered password / server
   // URL. Reads reject on the native storage stub (until the JSB binding
@@ -103,7 +105,8 @@ export function LoginPage() {
     !isLoading &&
     username.trim().length > 0 &&
     password.length > 0 &&
-    (!showServerFields || apiUrl.trim().length > 0)
+    (!showServerFields || apiUrl.trim().length > 0) &&
+    agreedToTerms
 
   const handleLogin = async () => {
     if (!canSubmit) return
@@ -181,6 +184,19 @@ export function LoginPage() {
         ) : null}
 
         {error ? <text className='login__error'>{error}</text> : null}
+
+        <view
+          className='login__agreement'
+          bindtap={() => setAgreedToTerms(!agreedToTerms)}
+        >
+          <AppCheckbox checked={agreedToTerms} testId='agreement-checkbox' />
+          <text className='login__agreement-text'>
+            {t('auth.agreePrefix')}
+            <text className='login__agreement-link'>
+              {t('auth.termsAndPrivacy')}
+            </text>
+          </text>
+        </view>
 
         <Button disabled={!canSubmit} onClick={() => void handleLogin()}>
           {({ active = false, disabled = false }) => (
