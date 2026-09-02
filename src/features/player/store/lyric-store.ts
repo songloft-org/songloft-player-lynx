@@ -28,6 +28,7 @@ export interface LyricState {
   hasTranslation: boolean
   hasRomanization: boolean
   rawLyric: string | null
+  notificationLyricInTitle: boolean
 
   loadForSong: (
     song: Song | undefined,
@@ -38,6 +39,7 @@ export interface LyricState {
   setLyricsFromText: (text: string) => void
   setRawLyric: (text: string) => void
   syncPosition: (positionMs: number) => void
+  setNotificationLyricInTitle: (inTitle: boolean) => void
   clear: () => void
 }
 
@@ -60,6 +62,7 @@ const EMPTY = {
   hasTranslation: false,
   hasRomanization: false,
   rawLyric: null as string | null,
+  notificationLyricInTitle: true,
 }
 
 function parseLyricText(text: string, enhanced?: string): { lyrics: LyricLine[]; synced: boolean } {
@@ -78,11 +81,19 @@ function parseLyricText(text: string, enhanced?: string): { lyrics: LyricLine[];
 
 export const useLyricStore = create<LyricState>((set, get) => {
   let loadToken = 0
+  let prefLoaded = false
 
   return {
     ...EMPTY,
 
     loadForSong: async (song, fetcher = defaultLyricFetcher, opts) => {
+      if (!prefLoaded) {
+        prefLoaded = true
+        void import('../../settings/data/settings-prefs.js')
+          .then((m) => m.readNotificationLyricInTitle())
+          .then((v) => set({ notificationLyricInTitle: v }))
+          .catch(() => {})
+      }
       const token = ++loadToken
       if (!song || !song.lyricUrl) {
         // Distinguishing "never had a url" from "load failed" is the first
@@ -206,23 +217,29 @@ export const useLyricStore = create<LyricState>((set, get) => {
     },
 
     syncPosition: (positionMs) => {
-      const { lyrics, synced, currentIndex } = get()
+      const { lyrics, synced, currentIndex, notificationLyricInTitle } = get()
       if (!synced || lyrics.length === 0) return
       const next = findCurrentLine(lyrics, positionMs)
       if (next !== currentIndex) {
         set({ currentIndex: next })
         const line = lyrics[next]
         const text = line?.text ?? null
-        // One entry per lyric line (~dozens per song): ties each notification
-        // update to the exact text that was sent, so an export shows whether
-        // the JS side of the chain ever fired at all.
         logInfo('lyric', `line ${next}/${lyrics.length}: ${text ? truncLog(text) : '(gap)'}`)
         if (text) {
-          // The Android overlay's second line is the next lyric line; an empty
-          // string hides it (end of song, or the user turned two-line mode off).
           void getFloatingLyricModule().updateLyric(text, lyrics[next + 1]?.text ?? '')
         }
-        void getAudio().updateNotificationLyric(text)
+        void getAudio().updateNotificationLyric(text, notificationLyricInTitle)
+      }
+    },
+
+    setNotificationLyricInTitle: (inTitle) => {
+      set({ notificationLyricInTitle: inTitle })
+      const { lyrics, currentIndex } = get()
+      const text = currentIndex >= 0 && currentIndex < lyrics.length
+        ? lyrics[currentIndex]?.text ?? null
+        : null
+      if (text) {
+        void getAudio().updateNotificationLyric(text, inTitle)
       }
     },
 

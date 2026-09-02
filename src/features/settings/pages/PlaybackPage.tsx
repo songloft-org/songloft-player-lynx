@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { getFloatingLyricModule } from '../../../native/floating-lyric.js'
 import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 import { setAudioQualityCache, setNormalizeEnabled } from '../../player/store/player-store.js'
+import { useLyricStore } from '../../player/store/lyric-store.js'
 import { getSettingsApi } from '../api/index.js'
 import {
   type AudioQuality,
@@ -183,7 +184,7 @@ export function PlaybackPage() {
           title={t('settings.notificationLyricInTitle')}
           subtitle={t('settings.notificationLyricInTitleSubtitle')}
           checked={notificationLyricInTitle}
-          onChange={(next) => { setNotificationLyricInTitle(next); void writeNotificationLyricInTitle(next) }}
+          onChange={(next) => { setNotificationLyricInTitle(next); void writeNotificationLyricInTitle(next); useLyricStore.getState().setNotificationLyricInTitle(next) }}
           testId='settings-notification-lyric-title'
         />
         {getPlatformCapabilities().floatingLyric

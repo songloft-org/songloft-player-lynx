@@ -84,7 +84,7 @@ export interface SongloftAudioNativeModule {
   setFavorite(isFavorite: boolean): void
   setEqualizerEnabled(on: boolean): void
   setEqualizerBand(index: number, gainDb: number): void
-  updateNotificationLyric(lyric: string | null): void
+  updateNotificationLyric(lyric: string | null, inTitle?: boolean): void
   getVolume(): void
   dispose(): void
 }
@@ -248,8 +248,8 @@ export class NativeSongloftAudio implements SongloftAudio {
     this.native.setFavorite(isFavorite)
   }
 
-  async updateNotificationLyric(lyric: string | null): Promise<void> {
-    this.native.updateNotificationLyric(lyric)
+  async updateNotificationLyric(lyric: string | null, inTitle?: boolean): Promise<void> {
+    this.native.updateNotificationLyric(lyric, inTitle)
   }
 
   async getVolume(): Promise<void> {

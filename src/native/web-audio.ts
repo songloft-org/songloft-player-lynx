@@ -245,7 +245,7 @@ export class WebSongloftAudio implements SongloftAudio {
     // No real media notification in Web — the favorite icon is handled by the UI.
   }
 
-  async updateNotificationLyric(_lyric: string | null): Promise<void> {}
+  async updateNotificationLyric(_lyric: string | null, _inTitle?: boolean): Promise<void> {}
 
   async getVolume(): Promise<void> {}
 

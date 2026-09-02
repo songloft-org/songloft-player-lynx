@@ -98,8 +98,14 @@ export interface SongloftAudio {
   // ── media notification (native-only; mock is a no-op) ──
   /** Push the current track's favorite state so the notification icon matches. */
   setFavorite(isFavorite: boolean): Promise<void>
-  /** Push current lyric line to show in the media notification subtitle. */
-  updateNotificationLyric(lyric: string | null): Promise<void>
+  /**
+   * Push current lyric line to the media notification.
+   * @param inTitle When true the notification title shows the lyric and the
+   *   song name moves to the subtitle; when false the title stays the song name
+   *   and the lyric goes to the subtitle. Mirrors Flutter's
+   *   `AudioService.updateNowPlayingLyric(inTitle:)`.
+   */
+  updateNotificationLyric(lyric: string | null, inTitle?: boolean): Promise<void>
   /** Request the native side to emit a volumeChanged event with current system volume. */
   getVolume(): Promise<void>
 
