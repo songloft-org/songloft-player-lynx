@@ -83,6 +83,9 @@ export interface ThemePackData {
   cardRadius?: number
   controlRadius?: number
   navigationRadius?: number
+  /** Navigation bar style: 'standard' | 'capsule'. Lynx only implements
+   *  capsule — the field is read for schema compat but has no consumer. */
+  navigationStyle?: string
   playerGradient?: string[]
 }
 
