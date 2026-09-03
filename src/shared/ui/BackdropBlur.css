@@ -1,8 +1,13 @@
 /**
- * Geometry for the modal blur layer. Declared once, because the layer is always
- * mounted as the sibling immediately *before* a scrim that is itself an inset-0
- * absolute (or fixed) fill — so "cover the same box as my next sibling" reduces
- * to a plain inset-0 absolute and never has to be restated per surface.
+ * Geometry for the blur layer, in the component's two mounting modes. See
+ * `BackdropBlur.tsx` for what each mode is for and why the mounting shape
+ * differs between them.
+ *
+ * ── Base: scrim mode ──
+ *
+ * The layer is mounted as the sibling immediately *before* a scrim that is itself
+ * an inset-0 absolute (or fixed) fill — so "cover the same box as my next sibling"
+ * reduces to a plain inset-0 absolute and never has to be restated per surface.
  *
  * No `background-color` on purpose: this element contributes no colour at all,
  * only the blur. The dim stays on the scrim so the paint order reads
@@ -14,4 +19,36 @@
   left: 0;
   right: 0;
   bottom: 0;
+}
+
+/**
+ * ── Panel mode ──
+ *
+ * Same inset-0 box, but the parent is now the translucent panel itself rather
+ * than a page-sized scrim, so the layer inherits the panel's bounds instead of
+ * the screen's. Two additions, both load-bearing:
+ *
+ * `z-index: -1` is what keeps the blur *behind* the panel's contents. An
+ * absolutely positioned child paints above its non-positioned in-flow siblings,
+ * and every one of these panels lays its contents out in flow (menu rows, nav
+ * items, the mini-player's stack) — so without this the blur layer would cover
+ * them. It cannot escape the panel while doing so: each of these panels sets a
+ * `z-index` of its own and is therefore a stacking context, which bounds the
+ * negative value to the panel's own paint.
+ *
+ * `border-radius` rather than the parent's `overflow: hidden`. Two of the three
+ * panels already clip (`.mini-player` hides overflow, `.popover-menu` scrolls it),
+ * but `.shell__bottombar` does not, and giving a nav capsule an overflow clip to
+ * round one child layer would change what its contents are allowed to do. Rounding
+ * the layer instead is local to the layer. The two modifiers exist because the
+ * panels disagree about the radius and there is no way to read the parent's.
+ */
+.ui-backdrop-blur--panel {
+  z-index: -1;
+  border-radius: var(--radius-md);
+}
+
+.ui-backdrop-blur--pill {
+  z-index: -1;
+  border-radius: var(--radius-pill);
 }

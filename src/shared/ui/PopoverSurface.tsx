@@ -1,6 +1,7 @@
 import type { ReactNode } from '@lynx-js/react'
 
 import { useBackHandler } from '../nav/use-back-handler.js'
+import { BackdropBlur } from './BackdropBlur.js'
 import { useAnchoredOverlay } from './anchored-overlay.js'
 import type { Placement } from './anchored-overlay.js'
 import './PopoverMenu.css'
@@ -36,6 +37,10 @@ export interface PopoverSurfaceProps {
  *    on a menu row cannot reach it. Putting the close handler on a shared root and
  *    relying on `catchtap` in the panel to stop the bubble works on device but is
  *    untestable, since the test env does not implement that interception.
+ *  - **The panel's blur is a child of the panel, not of the backdrop.** A popover
+ *    is not modal, so there is no scrim to dim and nothing page-sized to blur; the
+ *    material is the panel itself. That is the one place the modal mounting rule
+ *    inverts — see `BackdropBlur.tsx`.
  *  - **The panel mounts only while shown.** Not `visibility: hidden`: a mounted
  *    panel keeps its rows tappable on some hosts, and mounting on open is what
  *    makes the measurement fresh.
@@ -98,6 +103,15 @@ export function PopoverSurface({
               data-testid='popover-backdrop'
             />
             <view className={panelClassName} style={position}>
+              {/*
+               * Panel-mode blur: the material *is* the panel here, so the layer
+               * goes inside it rather than behind a scrim — a popover has no
+               * scrim, which is exactly why its 0.72 fill was reading as a
+               * see-through wash over sharp page content. First child and
+               * `z-index: -1`, so it sits under the rows without touching their
+               * taps; see `BackdropBlur.tsx`.
+               */}
+              <BackdropBlur className='ui-backdrop-blur--panel' />
               {children}
             </view>
           </>

@@ -4,7 +4,9 @@
 >
 > **本文第 1 节「Lynx 无 `backdrop-filter`，做不出真折射玻璃」这句只对了一半。** CSS 属性层面确实没有；但 `<blur-view>` 是一等**元素**（`@lynx-js/types` 的 `BlurViewProps`，`IntrinsicElements` 已注册），Web/iOS/Android 三平台的实现都已逐一查证（Harmony 存疑），Web 侧已在 Docker Chrome 实测到真 `backdrop-filter: blur(20px)`——但**Web 需要宿主页给标签做别名**才接得上（`blur-view` 不在 web-core 的标签映射表里，实现却注册在 `x-blur-view` 名下；批A 首次交付时漏了这步，Web 上整批静默无效）。证据表与那次教训见 `docs/architecture/lynx-constraints.md` §四。
 >
-> 这**不推翻本文的伪玻璃方案**：玻璃面板 alpha 0.72–0.85，真模糊只能透出 15–28%，看不出来。真正值得模糊的是 `--backdrop` 弹层 scrim（dark 0.55 / light 0.35，透出 45–65%），批A 就只做了那 10 个挂载点（`src/shared/ui/BackdropBlur.tsx`）。四档材质本身仍是伪玻璃。
+> 这**不推翻本文的伪玻璃方案**：玻璃面板 alpha 0.72–0.85，真模糊只能透出 15–28%，看不出来。真正值得模糊的是 `--backdrop` 弹层 scrim（dark 0.55 / light 0.35，透出 45–65%），批A 因此先做了 10 个 scrim 挂载点（`src/shared/ui/BackdropBlur.tsx`）。四档材质本身仍是伪玻璃。
+>
+> **批A-fix2 补正了这一段的两处**：(a) 那 10 个挂载点**并不覆盖全部 scrim**——有 6 个弹窗手写自己的 `DialogBackdrop` 只复用 `ConfirmDialog` 的样式表，批A 漏了，现已补齐（连带把闸门清单从「按 CSS 规则」改成「按用法」建，见 `progress.md`）。(b) 「面板透出 15–28% 看不出来」这个判断对**有 scrim 的**模态成立，对**没有 scrim 的** popover 不成立——0.72 直接压在清晰页面上，28% 是全应用最糟的表面。这类表面改走**面板模式**（模糊层作为面板首个子节点 + `z-index: -1`），另外两处同理：底部导航胶囊、mini-player 胶囊。
 >
 > 也**不给任何 alpha 松绑**：blur 是线性滤波，均匀背景是它的不动点，而所有对比度闸门的最坏情况都是从均匀极值推出来的——模糊换不到 alpha 余量，只抹掉 WCAG 不建模的高频细节。批A 因此没动一个令牌。
 >

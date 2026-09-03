@@ -1,30 +1,46 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join, relative } from 'node:path'
 
 import { describe, it, expect } from 'vitest'
 
 import { BACKDROP_BLUR_RADIUS } from '../BackdropBlur.js'
 
 /**
- * The real backdrop blur behind every modal scrim.
+ * The real backdrop blur behind every translucent surface in the app.
  *
  * Lynx has no CSS `backdrop-filter` (see `docs/architecture/lynx-constraints.md`),
  * so `<blur-view>` is the only route to one — and it is an *element*, which means
  * the whole contract is structural: which subtree it sits in, and in what order.
  * That is what this file holds, since none of it can be expressed in a stylesheet.
  *
- * Three properties, in the order they are worth breaking:
+ * ## The inventory is derived from both sides, and that is the point
  *
- *  1. **Every dimming scrim has one, and it comes first.** Lynx paints in tree
- *     order, so a blur *after* the scrim would blur nothing that the scrim had
- *     already covered. The inventory is derived from the CSS — every consumer of
- *     `var(--backdrop)` must be classified — so a scrim added later fails this
- *     file until it either gets a blur or is listed as an exemption with a reason.
- *  2. **It is a sibling, never a child.** The scrims carry `bindtap={onClose}`;
- *     a child would paint in front of that tap target and swallow tap-to-dismiss.
- *     A missing blur is cosmetic, a dead dismiss gesture is not — the same
- *     asymmetric-failure-mode rule that picked the mounting shape in batch B.
- *  3. **The props live in exactly one place.** `blur-effect` and
+ * The first version of this gate walked the **stylesheets** and required every
+ * `var(--backdrop)` rule to be classified. It passed while six dialogs shipped
+ * with no blur at all, because those dialogs reuse `ConfirmDialog`'s classes from
+ * their own markup: the rule had an owner, the owner had a blur, and the six
+ * other files rendering the same class were invisible to a CSS-keyed scan.
+ *
+ * So the scan is keyed on **usage**. The stylesheets say which classes are a dim
+ * or a translucent fill; the `.tsx` files say who renders them; every renderer
+ * must mount the blur. Reusing a surface's classes from a new file now fails here
+ * instead of silently shipping a see-through modal.
+ *
+ * ## The properties, in the order they are worth breaking
+ *
+ *  1. **Every dimming scrim has a blur, and it comes first.** Lynx paints in tree
+ *     order, so a blur *after* the scrim would blur nothing the scrim had already
+ *     covered.
+ *  2. **Every translucent glass panel is backed by a blur too** — either by the
+ *     scrim it sits over (modals) or by its own panel-mode layer (popovers, the
+ *     nav capsule, the mini-player). A 0.72–0.85 fill over *sharp* page content is
+ *     what "you can read the page through it" looks like, and it is what those
+ *     three surfaces did until this gate existed.
+ *  3. **Scrim mode is a sibling; panel mode is a first child.** The scrims carry
+ *     `bindtap={onClose}`, so a child there would swallow tap-to-dismiss. Panels
+ *     carry no gesture and must clip the blur to their own rounded box, so a child
+ *     is the only option there — with `z-index: -1`, or it covers the contents.
+ *  4. **The props live in exactly one place.** `blur-effect` and
  *     `ios-user-interface-style` are iOS-only and theme-dependent; hand-rolling a
  *     second `<blur-view>` somewhere would fork them silently on the one platform
  *     no test here can reach.
@@ -32,123 +48,172 @@ import { BACKDROP_BLUR_RADIUS } from '../BackdropBlur.js'
  * Note what is deliberately absent: any contrast assertion. Blur is a linear
  * filter, so a uniform backdrop is a fixed point of it, and every contrast gate
  * in this repo derives its worst case from uniform extremes. No amount of blur
- * can buy alpha headroom under those gates, so this batch moved no token and
+ * can buy alpha headroom under those gates, so this work moved no token and
  * `contrast.test.ts` needed no change.
  */
 
-const ROOT = join(import.meta.dirname, '../../..')
+const SRC = join(import.meta.dirname, '../../..')
 
 function read(rel: string): string {
-  return readFileSync(join(ROOT, rel), 'utf8')
+  return readFileSync(join(SRC, rel), 'utf8')
+}
+
+function walk(ext: string): string[] {
+  const out: string[] = []
+  const visit = (dir: string) => {
+    for (const entry of readdirSync(join(SRC, dir), { withFileTypes: true })) {
+      const rel = dir ? `${dir}/${entry.name}` : entry.name
+      if (entry.isDirectory()) {
+        if (entry.name !== '__tests__') visit(rel)
+      } else if (entry.name.endsWith(ext)) {
+        out.push(rel)
+      }
+    }
+  }
+  visit('')
+  return out.sort()
+}
+
+/** CSS comments in this repo quote selectors and declarations; strip them first. */
+const stripCssComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '')
+
+/**
+ * Rule-by-rule, so the selector credited with a declaration is the one that
+ * actually owns it. The *last* class in the selector is the owner: `.a .b` and
+ * `.a.b--x` both describe `b`.
+ */
+function ownersOf(declaration: RegExp): Map<string, Set<string>> {
+  const found = new Map<string, Set<string>>()
+  for (const rel of walk('.css')) {
+    for (const [, selector, body] of stripCssComments(read(rel)).matchAll(/([^{}]+)\{([^{}]+)\}/g)) {
+      if (!declaration.test(body!)) continue
+      const classes = [...selector!.matchAll(/\.([A-Za-z_][\w-]*)/g)].map((m) => m[1]!)
+      const owner = classes.at(-1)
+      if (!owner) continue
+      const at = found.get(owner) ?? new Set<string>()
+      at.add(rel)
+      found.set(owner, at)
+    }
+  }
+  return found
+}
+
+/**
+ * Class tokens a `.tsx` actually puts in the DOM. Only string literals count —
+ * comments in this repo name classes constantly, and a mention is not a render.
+ * Template holes are cut out so `` `popover-menu ${extra}` `` still yields
+ * `popover-menu`.
+ */
+const TSX = walk('.tsx')
+const CLASS_TOKENS = new Map<string, Set<string>>(
+  TSX.map((rel) => {
+    const body = read(rel).replace(/\/\*[\s\S]*?\*\//g, '')
+    const tokens = new Set<string>()
+    for (const [, single, double, backtick] of body.matchAll(/'([^'\n]*)'|"([^"\n]*)"|`([^`]*)`/g)) {
+      for (const chunk of (single ?? double ?? backtick ?? '').split(/\$\{[^}]*\}/)) {
+        for (const token of chunk.split(/\s+/)) if (token) tokens.add(token)
+      }
+    }
+    return [rel, tokens] as const
+  }),
+)
+
+const rendererOf = (cls: string) => TSX.filter((rel) => CLASS_TOKENS.get(rel)!.has(cls))
+
+/** The specifier a file must import the component by. Computed, never listed. */
+function importPath(tsx: string): string {
+  const spec = relative(tsx.replace(/\/[^/]+$/, ''), 'shared/ui/BackdropBlur.js')
+  return spec.startsWith('..') ? spec : `./${spec}`
 }
 
 const COMPONENT = read('shared/ui/BackdropBlur.tsx')
 const COMPONENT_CSS = read('shared/ui/BackdropBlur.css')
-
-interface Scrim {
-  name: string
-  /** The markup that mounts the blur and the scrim. */
-  tsx: string
-  /** Import specifier the file must use for the component. */
-  importPath: string
-  /** The stylesheet that paints `var(--backdrop)`. */
-  css: string
-  /** Class name of the dimming element, as it appears in both files. */
-  dim: string
-}
-
-/**
- * Every modal scrim in the app. `dim` is the class that carries
- * `background-color: var(--backdrop)`, which is also the element the blur must
- * precede — the two are the same element everywhere except `ConfirmDialog`,
- * where lynx-ui's `DialogBackdrop` is the positioned wrapper and the dim sits on
- * an inner view (see that component for why `position: fixed` has to be inline).
- */
-const SCRIMS: Scrim[] = [
-  {
-    name: 'playlist description',
-    tsx: 'features/playlist/widgets/PlaylistDescPanel.tsx',
-    importPath: '../../../shared/ui/BackdropBlur.js',
-    css: 'features/playlist/widgets/PlaylistDescPanel.css',
-    dim: 'playlist-desc__backdrop',
-  },
-  {
-    name: 'song cover picker',
-    tsx: 'features/playlist/widgets/SongCoverPicker.tsx',
-    importPath: '../../../shared/ui/BackdropBlur.js',
-    css: 'features/playlist/widgets/SongCoverPicker.css',
-    dim: 'song-cover-picker__backdrop',
-  },
-  {
-    name: 'add to playlist',
-    tsx: 'features/playlist/widgets/AddToPlaylistSheet.tsx',
-    importPath: '../../../shared/ui/BackdropBlur.js',
-    css: 'features/playlist/widgets/AddToPlaylistSheet.css',
-    dim: 'atp__backdrop',
-  },
-  {
-    name: 'manage tags',
-    tsx: 'features/library/widgets/ManageTagsSheet.tsx',
-    importPath: '../../../shared/ui/BackdropBlur.js',
-    css: 'features/library/widgets/ManageTagsSheet.css',
-    dim: 'manage-tags__backdrop',
-  },
-  {
-    name: 'play history',
-    tsx: 'features/player/widgets/PlayHistoryPanel.tsx',
-    importPath: '../../../shared/ui/BackdropBlur.js',
-    css: 'features/player/widgets/PlayHistoryPanel.css',
-    dim: 'play-history__backdrop',
-  },
-  // Two sheets share `SheetShell.css`, so `.drawer__backdrop` is asserted twice
-  // — once per mounting file, which is the thing that can actually regress.
-  {
-    name: 'playlist drawer',
-    tsx: 'features/player/widgets/PlaylistDrawer.tsx',
-    importPath: '../../../shared/ui/BackdropBlur.js',
-    css: 'features/player/widgets/SheetShell.css',
-    dim: 'drawer__backdrop',
-  },
-  {
-    name: 'sleep timer',
-    tsx: 'features/player/widgets/SleepTimerSheet.tsx',
-    importPath: '../../../shared/ui/BackdropBlur.js',
-    css: 'features/player/widgets/SheetShell.css',
-    dim: 'drawer__backdrop',
-  },
-  {
-    name: 'more tabs',
-    tsx: 'shared/nav/MoreTabsSheet.tsx',
-    importPath: '../ui/BackdropBlur.js',
-    css: 'shared/nav/MoreTabsSheet.css',
-    dim: 'more-tabs__backdrop',
-  },
-  {
-    name: 'confirm dialog',
-    tsx: 'shared/ui/ConfirmDialog.tsx',
-    importPath: './BackdropBlur.js',
-    css: 'shared/ui/ConfirmDialog.css',
-    dim: 'confirm-dialog__backdrop-inner',
-  },
-  {
-    name: 'global menu (docked)',
-    tsx: 'shared/ui/GlobalMenu.tsx',
-    importPath: './BackdropBlur.js',
-    css: 'shared/ui/GlobalMenu.css',
-    dim: 'global-menu__backdrop--docked',
-  },
-]
 
 /**
  * `var(--backdrop)` consumers that are **not** scrims, and so must not blur.
  * Listed rather than filtered out, so that adding a real scrim cannot pass by
  * looking like one of these.
  */
-const NOT_A_SCRIM: { css: string; selector: string; why: string }[] = [
+const NOT_A_SCRIM: Record<string, string> = {
+  'full-player__video-badge': 'a badge that borrows the token as its own fill; it covers nothing',
+}
+
+/**
+ * Surfaces whose blur is mounted by a *different* file than the one naming the
+ * class. One entry, and it is a real delegation rather than a loophole: both
+ * popovers hand their `panelClassName` to `PopoverSurface`, which is the only
+ * place the panel element exists.
+ */
+const BLUR_DELEGATED_TO: Record<string, string> = {
+  'popover-menu': 'shared/ui/PopoverSurface.tsx',
+}
+
+/** Every file that mounts a scrim-mode blur, as a roster a reviewer can read. */
+const EXPECTED_SCRIM_SITES = [
+  'features/jsplugin/widgets/PluginBatchUpdateDialog.tsx',
+  'features/jsplugin/widgets/PluginUpdateDialog.tsx',
+  'features/jsplugin/widgets/RegistryManageDialog.tsx',
+  'features/library/widgets/ManageTagsSheet.tsx',
+  'features/library/widgets/SongEditDialog.tsx',
+  'features/library/widgets/SongInfoDialog.tsx',
+  'features/player/widgets/PlayHistoryPanel.tsx',
+  'features/player/widgets/PlaylistDrawer.tsx',
+  'features/player/widgets/SleepTimerSheet.tsx',
+  'features/playlist/widgets/AddToPlaylistSheet.tsx',
+  'features/playlist/widgets/PlaylistDescPanel.tsx',
+  'features/playlist/widgets/SongCoverPicker.tsx',
+  'shared/nav/MoreTabsSheet.tsx',
+  'shared/ui/ConfirmDialog.tsx',
+  'shared/ui/GlobalMenu.tsx',
+  'shared/ui/PromptDialog.tsx',
+]
+
+interface PanelSite {
+  name: string
+  /** File that renders the panel element. */
+  tsx: string
+  /** The modifier class, which also picks the radius. */
+  modifier: 'ui-backdrop-blur--panel' | 'ui-backdrop-blur--pill'
+  /** The translucent panel's own class, and the stylesheet that positions it. */
+  panel: string
+  css: string
+  /**
+   * Markup that must come *after* the blur — the panel's first real child. Panel
+   * mode is a first child, so this pins the order the same way the scrim sites pin
+   * theirs against the dim.
+   */
+  firstChild: string
+}
+
+/**
+ * The three surfaces that are translucent with no scrim under them. Every one of
+ * them was a flat wash over sharp page content before panel mode existed; these
+ * are the entries that keep them from going back.
+ */
+const PANEL_SITES: PanelSite[] = [
   {
-    css: 'features/player/pages/FullPlayerPage.css',
-    selector: '.full-player__video-badge',
-    why: 'a badge that borrows the token as its own fill; it covers nothing',
+    name: 'popover menus and panels',
+    tsx: 'shared/ui/PopoverSurface.tsx',
+    modifier: 'ui-backdrop-blur--panel',
+    panel: 'popover-menu',
+    css: 'shared/ui/PopoverMenu.css',
+    firstChild: '{children}',
+  },
+  {
+    name: 'bottom nav capsule',
+    tsx: 'shared/layouts/ShellLayout.tsx',
+    modifier: 'ui-backdrop-blur--pill',
+    panel: 'shell__bottombar',
+    css: 'shared/layouts/ShellLayout.css',
+    firstChild: '{renderBottomBarItems()}',
+  },
+  {
+    name: 'mini-player capsule',
+    tsx: 'features/player/widgets/MiniPlayer.tsx',
+    modifier: 'ui-backdrop-blur--pill',
+    panel: 'mini-player',
+    css: 'features/player/widgets/MiniPlayer.css',
+    firstChild: "className='mini-player__progress'",
   },
 ]
 
@@ -157,12 +222,8 @@ describe('BackdropBlur component', () => {
     // Cheap, and it is the whole reason the component exists: `blur-effect` and
     // `ios-user-interface-style` are iOS-only, so a second call site would fork
     // them where nothing in CI can see the difference.
-    const sources = [
-      ...SCRIMS.map((s) => s.tsx),
-      'shared/ui/PopoverSurface.tsx',
-      'shared/ui/PopoverPanel.tsx',
-    ]
-    for (const rel of sources) {
+    for (const rel of TSX) {
+      if (rel === 'shared/ui/BackdropBlur.tsx') continue
       expect(read(rel), `${rel} must mount <BackdropBlur/>, not a raw blur-view`)
         .not.toMatch(/<blur-view/)
     }
@@ -185,7 +246,7 @@ describe('BackdropBlur component', () => {
     expect(COMPONENT).toMatch(/subscribeAppTheme\(/)
   })
 
-  it('covers its scrim exactly, and paints nothing itself', () => {
+  it('keeps the base class an inset-0 fill that paints nothing', () => {
     const rule = COMPONENT_CSS.match(/\.ui-backdrop-blur\s*\{([\s\S]*?)\n\}/)
     expect(rule, '.ui-backdrop-blur rule missing').not.toBeNull()
     const body = rule![1]!
@@ -196,78 +257,202 @@ describe('BackdropBlur component', () => {
     // No fill of its own: the dim is a separate layer painted after it, so that
     // the stack reads blur → dim → panel. A background here would double the dim.
     expect(body, 'the blur layer must not paint a fill').not.toMatch(/background/)
+    // Scrim mode orders by tree position alone. A z-index on the base would apply
+    // to panel mode too and fight the modifier that has to be negative.
+    expect(body, 'scrim mode must order by tree position, not z-index').not.toMatch(/z-index/)
+  })
+
+  it('gives every panel-mode modifier a negative z-index and a radius', () => {
+    for (const modifier of new Set(PANEL_SITES.map((s) => s.modifier))) {
+      const rule = COMPONENT_CSS.match(new RegExp(`\\.${modifier}\\s*\\{([^{}]*)\\}`))
+      expect(rule, `.${modifier} rule missing`).not.toBeNull()
+      const body = rule![1]!
+      // Without this the layer paints above the panel's in-flow contents, because
+      // a positioned child outranks its non-positioned siblings.
+      expect(body, `.${modifier} must sit under the panel contents`).toMatch(/z-index:\s*-1/)
+      // Its own rounding, rather than relying on the parent to clip: one of the
+      // three panels does not clip, and giving it an overflow clip for this would
+      // change what its contents may do.
+      expect(body, `.${modifier} must round itself`).toMatch(/border-radius:\s*var\(--radius-[\w-]+\)/)
+      expect(body, `.${modifier} must not paint a fill`).not.toMatch(/background/)
+    }
+  })
+
+  it('uses no modifier that the stylesheet does not define', () => {
+    // A typo'd modifier is a silent square blur over the panel contents.
+    const defined = new Set(
+      [...COMPONENT_CSS.matchAll(/\.(ui-backdrop-blur--[\w-]+)\s*\{/g)].map((m) => m[1]!),
+    )
+    const used = new Set<string>()
+    for (const rel of TSX) {
+      for (const token of CLASS_TOKENS.get(rel)!) {
+        if (token.startsWith('ui-backdrop-blur--')) used.add(token)
+      }
+    }
+    expect([...used].filter((m) => !defined.has(m))).toEqual([])
   })
 })
 
 describe('every dimming scrim is blurred', () => {
-  it('accounts for every var(--backdrop) consumer in the app', () => {
-    // Derived, not hand-listed: a new scrim shows up here as an unclassified
-    // selector rather than as a silently un-blurred modal.
-    const dims = new Set(SCRIMS.map((s) => s.dim))
-    const exempt = new Set(NOT_A_SCRIM.map((e) => e.selector.replace(/^\./, '')))
-    const unclassified: string[] = []
-    for (const rel of new Set([
-      ...SCRIMS.map((s) => s.css),
-      ...NOT_A_SCRIM.map((e) => e.css),
-    ])) {
-      const css = read(rel)
-      // Rule-by-rule, so the selector credited with a declaration is the one
-      // that actually owns it.
-      for (const match of css.matchAll(/\n(\.[\w-]+(?:\.[\w-]+|--[\w-]+)*)[^{}\n]*\{([^{}]*)\}/g)) {
-        if (!/background-color:\s*var\(--backdrop\)/.test(match[2]!)) continue
-        const cls = match[1]!.split('.').filter(Boolean).at(-1)!
-        if (!dims.has(cls) && !exempt.has(cls)) unclassified.push(`${rel} → ${match[1]}`)
-      }
-    }
+  const dimOwners = ownersOf(/background-color:\s*var\(--backdrop\)/)
+
+  it('classifies every var(--backdrop) consumer', () => {
+    const unclassified = [...dimOwners.keys()].filter(
+      (cls) => !(cls in NOT_A_SCRIM) && rendererOf(cls).length === 0,
+    )
     expect(
       unclassified,
-      'new var(--backdrop) consumers must be listed as a SCRIM (and get a blur) or as NOT_A_SCRIM',
+      'a var(--backdrop) rule nothing renders: name it in NOT_A_SCRIM or delete it',
     ).toEqual([])
   })
 
-  for (const scrim of SCRIMS) {
-    describe(scrim.name, () => {
-      it('paints the dim with the shared token', () => {
-        const css = read(scrim.css)
-        const rule = new RegExp(`\\.${scrim.dim}[^{}\\n]*\\{[^{}]*background-color:\\s*var\\(--backdrop\\)`)
-        expect(css, `.${scrim.dim} must dim with var(--backdrop)`).toMatch(rule)
-      })
+  it('holds the roster of files that mount a scrim blur', () => {
+    // Derived from the two sides, then compared to a written list — so a new
+    // modal shows up as a diff in review rather than as a silent addition.
+    const sites = new Set<string>()
+    for (const [cls] of dimOwners) {
+      if (cls in NOT_A_SCRIM) continue
+      for (const rel of rendererOf(cls)) sites.add(BLUR_DELEGATED_TO[cls] ?? rel)
+    }
+    expect([...sites].sort()).toEqual(EXPECTED_SCRIM_SITES)
+  })
 
-      it('mounts the blur before the dim, as a sibling', () => {
-        const tsx = read(scrim.tsx)
-        expect(tsx, 'must import the shared component').toContain(
-          `import { BackdropBlur } from '${scrim.importPath}'`,
-        )
-        const blur = tsx.indexOf('<BackdropBlur />')
-        const dim = tsx.indexOf(scrim.dim)
-        expect(blur, '<BackdropBlur /> is not mounted').toBeGreaterThan(-1)
-        expect(dim, `${scrim.dim} not found in the markup`).toBeGreaterThan(-1)
-        // Tree order is paint order: after the dim, the blur would sample a
-        // backdrop the dim had already covered.
-        expect(blur, 'the blur must precede the dim it sits behind').toBeLessThan(dim)
-        // Self-closing, so it can never acquire children — a child of the blur
-        // would be inside the tag that may not resolve on Harmony.
-        expect(tsx).not.toMatch(/<BackdropBlur\s*>/)
+  for (const [cls, cssFiles] of ownersOf(/background-color:\s*var\(--backdrop\)/)) {
+    if (cls in NOT_A_SCRIM) continue
+    for (const tsx of rendererOf(cls)) {
+      describe(`.${cls} in ${tsx}`, () => {
+        it('paints the dim with the shared token', () => {
+          for (const css of cssFiles) {
+            expect(
+              read(css),
+              `.${cls} must dim with var(--backdrop)`,
+            ).toMatch(new RegExp(`\\.${cls}[^{}\\n]*\\{[^{}]*background-color:\\s*var\\(--backdrop\\)`))
+          }
+        })
+
+        it('mounts the blur before the dim, as a sibling', () => {
+          const owner = BLUR_DELEGATED_TO[cls] ?? tsx
+          const text = read(owner)
+          expect(text, 'must import the shared component').toContain(
+            `import { BackdropBlur } from '${importPath(owner)}'`,
+          )
+          const blur = text.indexOf('<BackdropBlur />')
+          expect(blur, '<BackdropBlur /> is not mounted').toBeGreaterThan(-1)
+          const dim = read(tsx).indexOf(cls)
+          expect(dim, `${cls} not found in the markup`).toBeGreaterThan(-1)
+          if (owner === tsx) {
+            // Tree order is paint order: after the dim, the blur would sample a
+            // backdrop the dim had already covered.
+            expect(blur, 'the blur must precede the dim it sits behind').toBeLessThan(dim)
+          }
+          // Self-closing, so it can never acquire children — a child of the blur
+          // would be inside the tag that may not resolve on Harmony.
+          expect(text).not.toMatch(/<BackdropBlur[^/>]*>\s*[^<\s]/)
+        })
       })
-    })
+    }
   }
 })
 
-describe('overlays that must not blur the page', () => {
-  it('leaves popovers alone', () => {
-    // A popover is not modal — it is attached to its trigger, and the page
-    // behind it stays legible on purpose. `.popover-backdrop` is an invisible
-    // outside-tap catcher, not a scrim.
-    expect(read('shared/ui/PopoverSurface.tsx')).not.toContain('BackdropBlur')
+describe('every translucent glass panel is backed by a real blur', () => {
+  const glassOwners = ownersOf(/background-color:\s*var\(--glass-fill/)
+
+  it('leaves no glass surface over unblurred page content', () => {
+    // The gate that would have caught all of this in one shot. A `--glass-fill`
+    // rule means "you can see through me"; the file that renders it must mount a
+    // blur in one mode or the other, or the show-through is of sharp content.
+    const bare: string[] = []
+    for (const [cls] of glassOwners) {
+      for (const tsx of rendererOf(cls)) {
+        const owner = BLUR_DELEGATED_TO[cls] ?? tsx
+        // A *mount*, not the import: a leftover import satisfies `includes` while
+        // the element is gone, which is the precise shape of the bug this gate exists
+        // for.
+        if (!/<BackdropBlur[\s/]/.test(read(owner))) bare.push(`.${cls} → ${tsx}`)
+      }
+    }
+    expect(
+      bare,
+      'a translucent panel with no blur behind it: mount BackdropBlur, or make the fill opaque',
+    ).toEqual([])
   })
 
-  it('blurs the global menu only in its docked form', () => {
+  it('names every glass class that no file renders', () => {
+    // A dead surface is not a covered one; it should be deleted, not tolerated.
+    const dead = [...glassOwners.keys()].filter((cls) => rendererOf(cls).length === 0)
+    expect(dead, 'a var(--glass-fill*) rule nothing renders').toEqual([])
+  })
+})
+
+describe('panel mode', () => {
+  for (const site of PANEL_SITES) {
+    describe(site.name, () => {
+      it('mounts the blur as the panel’s first child, with its modifier', () => {
+        const tsx = read(site.tsx)
+        expect(tsx).toContain(`import { BackdropBlur } from '${importPath(site.tsx)}'`)
+        const mount = `<BackdropBlur className='${site.modifier}' />`
+        const blur = tsx.indexOf(mount)
+        expect(blur, `${mount} is not mounted`).toBeGreaterThan(-1)
+        const panel = tsx.indexOf(site.panel)
+        expect(panel, `${site.panel} not found in the markup`).toBeGreaterThan(-1)
+        // Between the panel's own class and its first real child: inside the
+        // panel, and ahead of everything the blur has to sit under.
+        expect(blur, 'the blur must be inside the panel it backs').toBeGreaterThan(panel)
+        const first = tsx.indexOf(site.firstChild)
+        expect(first, `${site.firstChild} not found`).toBeGreaterThan(-1)
+        expect(blur, 'the blur must come before the panel contents').toBeLessThan(first)
+      })
+
+      it('gives the panel a containing block for the layer', () => {
+        // An inset-0 absolute child of a *static* box resolves against whichever
+        // ancestor happens to be positioned, which is how a panel-sized blur
+        // becomes a page-sized one.
+        //
+        // The **base** rule, matched on an exact selector, not "any rule mentioning
+        // this class". `.mini-player` is only `position: fixed` under
+        // `.shell--narrow`; on wide it is in flow, so a scan that accepted the
+        // narrow variant would call it positioned while the wide layout stretched
+        // its blur across the whole content column. That looser version of this
+        // assertion is exactly what a mutation run caught.
+        const rule = [
+          ...stripCssComments(read(site.css)).matchAll(/([^{}]+)\{([^{}]*)\}/g),
+        ].find((m) => m[1]!.trim() === `.${site.panel}`)
+        expect(rule, `.${site.panel} has no base rule`).toBeDefined()
+        expect(
+          rule![2]!,
+          `.${site.panel}'s own rule must be positioned — a variant selector is not enough`,
+        ).toMatch(/position:\s*(relative|absolute|fixed|sticky)/)
+      })
+
+      it('is a translucent surface in the first place', () => {
+        // If a panel ever goes opaque the blur is dead weight behind it, and this
+        // entry should be dropped rather than left to mislead.
+        expect(
+          stripCssComments(read(site.css)),
+          `.${site.panel} no longer uses a glass fill — drop its PANEL_SITES entry`,
+        ).toMatch(new RegExp(`\\.${site.panel}[^{}]*\\{[^{}]*background-color:\\s*var\\(--glass-fill`))
+      })
+    })
+  }
+
+  it('keeps the popover backdrop an invisible catcher', () => {
+    // A popover is not modal. Panel mode is what made its material real; the page
+    // behind it must stay undimmed, or the menu reads as a modal sheet.
+    const rule = read('shared/ui/PopoverMenu.css').match(/\.popover-backdrop\s*\{([^{}]*)\}/)
+    expect(rule, '.popover-backdrop rule missing').not.toBeNull()
+    expect(rule![1]!, 'the outside-tap catcher must stay invisible').not.toMatch(/background/)
+    expect(read('shared/ui/PopoverSurface.tsx'), 'a popover must not blur the whole page')
+      .not.toContain('<BackdropBlur />')
+  })
+
+  it('blurs the global menu’s page only in its docked form', () => {
     const tsx = read('shared/ui/GlobalMenu.tsx')
-    // The same `anchored` flag gates the scrim's paint; anchored, this menu *is*
-    // a popover and falls under the rule above.
+    // Anchored, this menu is a popover: its panel is `--paper`, fully opaque, so
+    // it needs neither mode. Docked, it is a modal sheet with a real scrim.
     expect(tsx).toMatch(/\{!anchored && <BackdropBlur \/>\}/)
     expect(read('shared/ui/GlobalMenu.css')).toMatch(
       /\.global-menu__backdrop--docked\s*\{[^{}]*background-color:\s*var\(--backdrop\)/,
     )
+    expect(read('shared/ui/GlobalMenu.css')).toMatch(/\.global-menu__panel\s*\{[^{}]*background-color:\s*var\(--paper\)/)
   })
 })

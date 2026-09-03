@@ -17,6 +17,7 @@ import type { PluginRegistryConfig } from '../api/index.js'
 import { getJSPluginApi } from '../api/index.js'
 // Chrome (card/scrim/buttons + the z-index overlay contract) is ConfirmDialog's;
 // only the source rows and the edit form are specific to this dialog.
+import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
 import '../../../shared/ui/ConfirmDialog.css'
 import './RegistryManageDialog.css'
 
@@ -124,6 +125,10 @@ export function RegistryManageDialog({ show, onClose, registries, onSaved }: Reg
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
           clickToClose
         >
+          {/* Real backdrop blur, behind the dim so the page is blurred and then
+              darkened. Same five-piece chrome as `ConfirmDialog`, whose stylesheet
+              this dialog reuses — so it needs the blur for the same reason. */}
+          <BackdropBlur />
           <view className='confirm-dialog__backdrop-inner' />
         </DialogBackdrop>
         <DialogContent

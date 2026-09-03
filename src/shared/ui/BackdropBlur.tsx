@@ -5,8 +5,9 @@ import { getAppTheme, resolveTheme, subscribeAppTheme } from '../theme/theme-mod
 import './BackdropBlur.css'
 
 /**
- * Gaussian radius for every modal scrim. One value, because a modal that blurs
- * the page harder than the modal beside it reads as a bug, not as hierarchy.
+ * Gaussian radius for every blurred surface. One value, because a modal that
+ * blurs the page harder than the modal beside it reads as a bug, not as
+ * hierarchy — and a menu that blurs it differently again reads the same way.
  *
  * `blur-radius` is a **string with a unit** (`BlurViewProps` documents the
  * default as `"0px"`), not a number — the Web implementation happens to be
@@ -14,8 +15,17 @@ import './BackdropBlur.css'
  */
 export const BACKDROP_BLUR_RADIUS = '20px'
 
+export interface BackdropBlurProps {
+  /**
+   * Extra class, for the **panel** mounting mode only — one of the
+   * `.ui-backdrop-blur--*` modifiers in `BackdropBlur.css`. Scrim mode passes
+   * nothing; the base class already covers its sibling's box exactly.
+   */
+  className?: string
+}
+
 /**
- * Real backdrop blur behind a modal scrim.
+ * Real backdrop blur — the app's only route to one, in the app's only two shapes.
  *
  * Batch B established that Lynx has no `backdrop-filter` in CSS, which is true —
  * but `<blur-view>` is a first-class element (`BlurViewProps` in
@@ -37,25 +47,53 @@ export const BACKDROP_BLUR_RADIUS = '20px'
  *    `addBehaviors(XElementBehaviors().create())`.
  *  - **HarmonyOS** — `blur-radius` is documented for Harmony, but this host only
  *    installs `@lynx/xelement_svg`, so treat it as the platform where the tag
- *    may not resolve. That is what dictates the mounting rule below.
+ *    may not resolve. That is what dictates the mounting rules below.
  *
- * **Mounted as a sibling, never as a wrapper or a child.** The scrims it sits
- * behind are self-closing `<view>`s that carry `bindtap={onClose}`; a child
- * would sit in front of that tap target and swallow tap-to-dismiss, and a
- * wrapper would put the entire modal subtree inside an element that one platform
- * might not resolve. As a preceding sibling the worst case is losing the blur —
- * the same asymmetric-failure-mode rule batch B used to pick `saturate()` over
- * `brightness()`.
+ * ## Two mounting modes
  *
- * **No alpha anywhere gets to come down because of this.** Blur is a linear
- * filter, so a uniform backdrop is a fixed point of it: a blurred solid-white
+ * **Scrim mode** — `<BackdropBlur />`, mounted as the sibling immediately before
+ * a dimming scrim. For modals: the blur covers the page, the scrim dims it, the
+ * panel sits on top. A *sibling*, never a wrapper or a child, because the scrims
+ * are self-closing `<view>`s that carry `bindtap={onClose}`; a child would paint
+ * in front of that tap target and swallow tap-to-dismiss, and a wrapper would put
+ * the entire modal subtree inside an element one platform might not resolve.
+ *
+ * **Panel mode** — `<BackdropBlur className='ui-backdrop-blur--panel' />` (or
+ * `--pill`), mounted as the **first child of the translucent panel itself**. For
+ * the surfaces that are not modal and so have no scrim to hide behind: popover
+ * menus, the nav capsule, the mini-player. Those were the app's most transparent
+ * layers precisely because they have no dim — a 0.72/0.85 fill over *sharp* page
+ * content, which is what "you can read the page through it" actually looks like.
+ * Apple's own context menus and bars are a real material, not a flat wash, and
+ * this is that material.
+ *
+ * A child here rather than a sibling, and the sibling argument does not transfer:
+ *
+ *  - There is nothing to sit before. The blur has to be clipped to the panel's
+ *    own rounded box, and only a child of that box is.
+ *  - No tap gesture is at risk. `z-index: -1` puts the layer below the panel's
+ *    in-flow rows (see the stylesheet for why that is not optional), and events
+ *    on a child bubble to the panel exactly as they did before.
+ *  - The Harmony hazard was about a *wrapper*, not a child. This element is a
+ *    self-closing leaf in both modes, so an unresolved tag still costs only the
+ *    blur.
+ *
+ * Panel mode needs no per-platform branch even though the platforms disagree
+ * about paint order. On Web a negative-z child paints *after* its parent's own
+ * background, so the blur samples `page ⊕ fill`; on native the parent's fill is
+ * its layer's background and subviews always draw above it, so the sample is the
+ * same. Both land on the same picture regardless, because blur is linear and
+ * preserves constants: `blur(page ⊕ uniform) === blur(page) ⊕ uniform`.
+ *
+ * **No alpha anywhere gets to come down because of this.** Same reason, stated as
+ * a fixed point: a uniform backdrop is unchanged by blur, so a blurred solid-white
  * cover is still solid white. Every contrast gate in this repo derives its worst
  * case from *uniform* extremes, which means no amount of blur can ever buy alpha
- * headroom under those gates — it only removes the high-frequency detail that
- * WCAG does not model in the first place. So this batch changes no token, and
+ * headroom under those gates — it only removes the high-frequency detail that WCAG
+ * does not model in the first place. So this work changes no token, and
  * `contrast.test.ts` is untouched by design rather than by omission.
  */
-export function BackdropBlur() {
+export function BackdropBlur({ className }: BackdropBlurProps) {
   const [theme, setTheme] = useState(() => resolveTheme(getAppTheme()))
 
   // Same subscribe-the-model shape as `ThemeProvider` (this codebase has no
@@ -68,7 +106,7 @@ export function BackdropBlur() {
 
   return (
     <blur-view
-      className='ui-backdrop-blur'
+      className={className ? `ui-backdrop-blur ${className}` : 'ui-backdrop-blur'}
       blur-radius={BACKDROP_BLUR_RADIUS}
       /*
        * iOS-only, and it has to be set: the default is `'light'`, a vibrancy

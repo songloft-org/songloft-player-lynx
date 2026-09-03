@@ -11,6 +11,7 @@ import {
   DialogContent,
 } from '@lynx-js/lynx-ui-dialog'
 
+import { BackdropBlur } from './BackdropBlur.js'
 import './ConfirmDialog.css'
 import './PromptDialog.css'
 
@@ -123,6 +124,10 @@ export function PromptDialog({
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
           clickToClose
         >
+          {/* Real backdrop blur, behind the dim so the page is blurred and then
+              darkened. Same five-piece chrome as `ConfirmDialog`, whose stylesheet
+              this dialog reuses — so it needs the blur for the same reason. */}
+          <BackdropBlur />
           <view className='confirm-dialog__backdrop-inner' />
         </DialogBackdrop>
         <DialogContent

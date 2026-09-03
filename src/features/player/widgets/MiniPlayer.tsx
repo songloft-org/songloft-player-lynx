@@ -1,6 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
+import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { progressOf, usePlayerStore } from '../store/index.js'
 import './MiniPlayer.css'
@@ -26,6 +27,10 @@ export function MiniPlayer() {
 
   return (
     <view className='mini-player' bindtap={() => navigate({ to: '/player' })}>
+      {/* Panel-mode blur — same reason as the nav capsule below it: this bar
+          floats over scrolling content with no scrim of its own. The root's
+          `bindtap` still receives taps, since a child bubbles to it. */}
+      <BackdropBlur className='ui-backdrop-blur--pill' />
       <view className='mini-player__progress'>
         <view className='mini-player__progress-fill' style={{ width: pct }} />
       </view>

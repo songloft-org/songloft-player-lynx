@@ -15,6 +15,12 @@
  */
 
 .mini-player {
+  /* Containing block for the panel-mode blur layer. Load-bearing on **wide**,
+     where this capsule is in flow: an inset-0 absolute child of a static box
+     resolves against the nearest positioned ancestor instead, which would stretch
+     the blur across the whole content column. The narrow rule below replaces this
+     with `fixed`, which is a containing block too. */
+  position: relative;
   display: flex;
   flex-direction: column;
   margin: 0 var(--space-2) var(--space-2);

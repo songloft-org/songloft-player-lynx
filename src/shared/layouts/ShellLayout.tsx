@@ -21,6 +21,7 @@ import {
 import { MoreTabsSheet } from '../nav/MoreTabsSheet.js'
 import { activeNavPath, setLastShellLocation, setNavPaths, setShellWidth, showsMiniPlayer } from '../nav/shell-navigation.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
+import { BackdropBlur } from '../ui/BackdropBlur.js'
 import { Icon, activeAccentIconColor, ICON_COLORS } from '../ui/Icon.js'
 import './ShellLayout.css'
 
@@ -224,7 +225,15 @@ export function ShellLayout() {
 
         {isWide
           ? null
-          : <view className='shell__bottombar'>{renderBottomBarItems()}</view>}
+          : (
+            <view className='shell__bottombar'>
+              {/* Panel-mode blur, so the capsule is a real material over the
+                  scrolling content rather than an 0.85 wash. Apple's tab bar is
+                  the reference here. See `BackdropBlur.tsx`. */}
+              <BackdropBlur className='ui-backdrop-blur--pill' />
+              {renderBottomBarItems()}
+            </view>
+          )}
       </view>
 
       {/* The "More" overflow sheet, mounted beside the bottom bar whose fifth
