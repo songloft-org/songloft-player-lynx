@@ -1,8 +1,10 @@
 # 进展与交接（PROGRESS）
 
 > **用途**：实时记录当前进展、每批交付与遗留/未完成事项，供随时工作交接。**每批验收后必须更新本文件**（见 `AGENTS.md` §4）。
-> **最新批次：Liquid Glass 主题**（2026-09-01 · 浮动表面升级为诚实伪玻璃，详见下方「最近批次交付」）。验收基线：`tsc -b` / **2056 vitest（191 文件）** / build 双产物 / Web 无头浏览器实测玻璃渲染。
+> **最新批次：Apple HIG 重构 · 阶段1 设计令牌**（2026-09-02 · 纯新增 HIG 令牌，旧值冻结，详见下方「最近批次交付」）。验收基线：`tsc -b` 绿 / **2064 vitest 全绿（192 文件）** / 新增 `tokens-hig.test.ts` 6/6 / build:web 绿（main.lynx.bundle 2232.5 kB）/ **Docker Chrome 运行时验证 25/25 令牌全部通过**。
 ## 最近批次交付（摘要日志，倒序）
+
+> **Apple HIG 重构 · 阶段1 设计令牌对齐（2026-09-02）**：按 `docs/project/plans/apple-hig-redesign.md` 阶段1 实施（11 阶段之首，所有后续阶段前置）。**scope**：仅 `src/shared/theme/tokens.css` 的 `.theme-root` 块**新增**令牌 + 新建闸门测试，**旧令牌值/名一律不动**。**① 排版（HIG §4.7，1pt≈1px）**：新增 `--font-caption2:11px` / `--font-caption1:12px` / `--font-footnote:13px` / `--font-subhead:15px` / `--font-callout:16px` / `--font-body:17px` / `--font-headline:17px` / `--font-title3:20px` / `--font-title2:22px` / `--font-title1:28px` / `--font-largeTitle:34px`。**② 字重**：`--weight-regular/-medium/-semibold/-bold` = 400/500/600/700。**③ 间距（仅新增档位，旧 6 档冻结）**：`--space-half:2px`（Lynx 不支持小数 custom property 名）/ `--space-7:20px` / `--space-8:28px` / `--space-9:40px` / `--space-10:48px`。**④ 圆角**：`--radius-xs:6px`。**⑤ 阴影**：`--shadow-none:none` / `--shadow-focus:0 0 0 3px var(--primary-faint)`（无障碍焦点环，运行时解析主题）。**⑥ 控件尺寸（HIG §12.2）**：`--tap-target:44px` / `--tap-target-min:28px` / `--control-height:44px` / `--control-height-sm:36px`。**设计取舍**：旧 `--font-2xs`~`--font-2xl`（10/14/28/36px）无精确 HIG 对应，**保留原值不做别名映射**（别名会致字号漂移），新旧并存、旧消费点不强制迁移；`--shadow-sm/md/lg` 仍在两主题块内（per-theme），仅 `--shadow-none`/`--shadow-focus` 提到 `.theme-root`。**闸门**：新增 `src/shared/theme/__tests__/tokens-hig.test.ts`（6 测试）——读 `tokens.css` 源文件，断言新令牌存在且值正确、旧间距/字号/圆角**冻结值未被动**（防静默漂移）。**验证**：`tsc -b` 绿 / `pnpm test` **2064 全绿**（192 文件，含新闸门 6/6）/ `build:web` 绿（main.lynx.bundle 2232.5 kB）/ **Docker Chrome 运行时验证 25/25**（11 文本样式 + 4 字重 + 5 间距 + 4 控件尺寸 + radius-xs + shadow-none，全部 `getComputedStyle` 与期望值精确匹配）。注：构建曾受 `lyric-store.ts` dynamic import 引入的预存回归阻塞（`270f347` 已修），修复后全链路畅通。
 
 > ⚠️ **批号撞号说明**：「已交付明细」一节里的 批50/51/52/56/57 属于**另一条编号流**（设置页二级化 / 播放器弹出层修复 / 返回导航 / 主题商店 / 歌词触发链），与本节同名批次（播放历史 / 曲库深度重构 / 全屏播放器 / 插件列表页对齐 / 插件商店对齐）**不是同一批工作**——提交 `e4b2660`–`99e5d54` 自称「批50」与既有条目撞号，2026-08-26 补记为 49b 并沿用新流。查交付以 `git log` 为准。
 

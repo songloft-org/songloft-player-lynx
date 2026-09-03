@@ -26,6 +26,15 @@
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
+  /* HIG §4.7 additional tiers — the original 6 are frozen (consumed
+     everywhere, changing a value breaks layout); these fill the gaps for new
+     code. Old call sites are not migrated. --space-half is 2px: Lynx custom
+     properties cannot take a fractional name. */
+  --space-half: 2px;
+  --space-7: 20px;
+  --space-8: 28px;
+  --space-9: 40px;
+  --space-10: 48px;
 
   /* radii — Muse hierarchy: small 8 / medium 12 / large 20 / xl 28 / pill 999.
      --radius-nav is legacy: the bottom nav is a fixed capsule (always
@@ -37,6 +46,7 @@
   --radius-lg: 20px;
   --radius-xl: 28px;
   --radius-pill: 999px;
+  --radius-xs: 6px;
   --radius-nav: 12px;
 
   /* type scale (px) — --font-2xs is the bottom-nav tab label: Apple's tab
@@ -50,6 +60,42 @@
   --font-lg: 20px;
   --font-xl: 28px;
   --font-2xl: 36px;
+
+  /* HIG §4.7 iOS text styles — Lynx treats 1pt ≈ 1px, so these map pt→px
+     directly. The old --font-* tokens keep their original values (no alias
+     mapping: 10/14/28/36px have no exact HIG counterpart, aliasing them
+     would drift sizes); new code uses the HIG names. --font-headline is 17px
+     like --font-body, the weight differentiates (see --weight-semibold). */
+  --font-caption2: 11px;
+  --font-caption1: 12px;
+  --font-footnote: 13px;
+  --font-subhead: 15px;
+  --font-callout: 16px;
+  --font-body: 17px;
+  --font-headline: 17px;
+  --font-title3: 20px;
+  --font-title2: 22px;
+  --font-title1: 28px;
+  --font-largeTitle: 34px;
+
+  /* font weights — HIG Regular/Medium/Semibold/Bold */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* control sizes — HIG §12.2: 44×44 default tap target, 28×28 minimum */
+  --tap-target: 44px;
+  --tap-target-min: 28px;
+  --control-height: 44px;
+  --control-height-sm: 36px;
+
+  /* shadow extras — --shadow-sm/md/lg stay per-theme (see the theme blocks
+     below); --shadow-none is the semantic zero, --shadow-focus is the a11y
+     focus ring. --shadow-focus reads --primary-faint at use time, so it
+     tracks whichever theme is active (and never silently no-ops). */
+  --shadow-none: none;
+  --shadow-focus: 0 0 0 3px var(--primary-faint);
 
   /* layout sizes */
   --mobile-nav-height: 60px;
