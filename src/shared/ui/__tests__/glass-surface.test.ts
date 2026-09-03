@@ -180,11 +180,32 @@ test('the ten glass tokens are declared in both themes', () => {
  *   card: those sit ON the material and are how Apple's own sheets carry grouped
  *   content. An unbounded box with an opaque fill IS the material, replacing it.
  *
- * That distinction is exactly the difference between the six opaque things
- * currently inside panels (all rounded — the switch knob, the `⋯` chip over
- * artwork, four inset info blocks in the plugin dialogs) and the one that was
- * wrong (a full-bleed row). A new full-bleed opaque row in any panel fails here
- * with no list to update.
+ * That distinction is exactly the difference between the rounded objects inside
+ * panels (the switch knob, the `⋯` chip over artwork, cover art, text inputs,
+ * segmented chips — things Apple's own sheets do paint opaquely) and the one that
+ * was wrong (a full-bleed row). A new full-bleed opaque row in any panel fails
+ * here with no list to update.
+ *
+ * Two refinements, both paid for by an escape:
+ *
+ *   - WHICH tokens count as opaque is derived from tokens.css by value, not
+ *     listed here. The first version of this gate matched `--canvas|--paper` by
+ *     hand and so never looked at `--neutral-faint` — `#1f1f25`, just as opaque,
+ *     used in ~90 places. `.popover-menu__item--selected` painted it full-bleed
+ *     across a glass popover: the same bug as `.song-row`, green under the gate
+ *     written for `.song-row`.
+ *   - A modifier is shaped by its base class. `.chip--active` never repeats the
+ *     `border-radius` that `.chip` declares, so a self-only check reads every
+ *     bounded object's states as unbounded — which invites adding a radius to
+ *     silence it rather than fixing the fill.
+ *
+ * The second test below is the other half of the rule: even ON a bounded object,
+ * a STATE inside a panel may not reach for a surface or separator colour. Those
+ * are what the material is made of; a state is accent (`--primary-faint`) or
+ * neutral-on-material (`--fill-faint`). Three rules broke this at once — two
+ * multi-select highlights were `--paper` over `--canvas` (250 vs 255: an
+ * invisible selection) and the play-queue drawer's active row was opaque
+ * `--neutral-faint` over glass.
  *
  * Reach is derived: panels come from the CSS (any base rule filled with
  * `--glass-fill*`), their renderers from usage, and the component graph is walked
@@ -207,7 +228,83 @@ const NOT_INSIDE_A_PANEL: Record<string, string> = {
   shell__rail: 'the wide-screen side rail, a sibling of the nav capsule',
 }
 
-const OPAQUE_FILL = /background-color:\s*var\(--(?:canvas|paper)\)/
+/*
+ * Whether a token is opaque is a fact about tokens.css, so read it from there:
+ * `#rrggbb` / `rgb()` / `rgba(…, 1)` cover the material, `rgba(…, a<1)` tints it.
+ * A token counts as opaque if it is opaque in EITHER theme — a fill that hides
+ * the blur in light mode only is still a fill that hides the blur.
+ */
+function opaqueTokens(): Set<string> {
+  const css = readFileSync(path.join(SHARED, 'shared/theme/tokens.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+  const out = new Set<string>()
+  for (const m of css.matchAll(/--([\w-]+):\s*([^;]+);/g)) {
+    const [, name, raw] = m as unknown as [string, string, string]
+    const value = raw.trim()
+    const hex = /^#([0-9a-f]{3,8})$/i.exec(value)
+    if (hex != null) {
+      const digits = hex[1]!
+      const alpha = digits.length === 4
+        ? digits[3]!.repeat(2)
+        : digits.length === 8 ? digits.slice(6) : 'ff'
+      if (alpha.toLowerCase() === 'ff') out.add(name)
+      continue
+    }
+    const rgba = /^rgba?\(([^)]*)\)$/.exec(value)
+    if (rgba == null) continue
+    const parts = rgba[1]!.split(',')
+    if (parts.length < 4) { out.add(name); continue } // rgb(): no alpha channel
+    if (Number(parts[3]) >= 1) out.add(name)
+  }
+  return out
+}
+
+const OPAQUE = opaqueTokens()
+
+/** The first opaque token a rule paints as its background, if any. */
+function opaqueFill(body: string): string | null {
+  for (const m of body.matchAll(/background-color:\s*var\(--([\w-]+)\)/g)) {
+    if (OPAQUE.has(m[1]!)) return m[1]!
+  }
+  return null
+}
+
+/** A class is bounded if it — or the base class it modifies — has a radius. */
+function bounded(cls: string, rules: Map<string, { body: string, file: string }>): boolean {
+  if (/border-radius/.test(rules.get(cls)?.body ?? '')) return true
+  if (!cls.includes('--')) return false
+  return /border-radius/.test(rules.get(cls.slice(0, cls.indexOf('--')))?.body ?? '')
+}
+
+/*
+ * Tokens that ARE the surface or the lines drawn on it. A state may not paint
+ * these (DESIGN.md §3.3 says the same about separators: 不要把 separator 颜色当
+ * 背景色用). Accent and glass tokens are deliberately absent — a filled
+ * `--primary` chip or a `--glass-glow-faint` pill is how a state should read.
+ */
+const SURFACE_CHANNEL = ['canvas', 'paper', 'paper-clear', 'neutral-faint', 'line', 'rule']
+
+/*
+ * Modifier suffixes that mean "the user is interacting with this". Read off the
+ * codebase's own vocabulary and then widened: only `--active`, `--selected` and
+ * `--on` exist today, and the unused words cost nothing while catching the next
+ * `.foo--current`.
+ *
+ * The suffixes deliberately NOT here are the ones that describe what a thing IS
+ * rather than what is happening to it:
+ *
+ *   - `--empty` / `--placeholder`: an artwork slot with no artwork. Six of these
+ *     paint `--neutral-faint`, correctly — the slot is an opaque rounded box
+ *     whether or not an image loaded, which is exactly how iOS draws a missing
+ *     cover. Nothing is being replaced; the box IS the object.
+ *   - `--primary` / `--tinted` / `--filled` / `--prominent` / `--secondary` /
+ *     `--submit` / `--danger`: button emphasis levels, not states.
+ *   - `--error` / `--docked`: a toast's severity and a menu backdrop's position.
+ */
+const INTERACTION_STATES = [
+  'active', 'selected', 'on', 'current', 'playing', 'checked', 'pressed',
+  'highlighted', 'open', 'expanded',
+]
 
 function filesOf(dir: string, ext: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
@@ -279,11 +376,12 @@ test('no opaque unbounded fill is painted over a glass panel', () => {
     for (const renderer of renderers) {
       for (const cls of reachableClasses(renderer, components)) {
         const rule = rules.get(cls)
-        if (rule == null || !OPAQUE_FILL.test(rule.body)) continue
-        if (/border-radius/.test(rule.body)) continue // a bounded object, allowed
+        const token = rule == null ? null : opaqueFill(rule.body)
+        if (rule == null || token == null) continue
+        if (bounded(cls, rules)) continue // a bounded object, allowed
         if (cls in NOT_INSIDE_A_PANEL) continue
         violations.push(
-          `.${cls} (${path.relative(SHARED, rule.file)}) paints an opaque fill with no `
+          `.${cls} (${path.relative(SHARED, rule.file)}) paints opaque --${token} with no `
             + `border-radius inside .${panel} — rendered via `
             + `${path.basename(renderer, '.tsx')}. An unbounded opaque box replaces the `
             + 'glass instead of sitting on it: let the panel own the fill, and give a '
@@ -325,9 +423,85 @@ test('the shared row components leave their surface to whatever they sit on', ()
     const rule = rules.get(cls)
     expect(rule, `.${cls} has no base rule`).toBeDefined()
     expect(
-      rule!.body,
+      opaqueFill(rule!.body),
       `.${cls} is rendered on pages AND inside glass panels; an opaque fill here `
         + 'is invisible on the former and covers the material on the latter',
-    ).not.toMatch(OPAQUE_FILL)
+    ).toBeNull()
   }
+})
+
+test('the opaque-token set is derived from tokens.css, not remembered', () => {
+  // The escape this pins: `--neutral-faint` is `#1f1f25`, every bit as opaque as
+  // `--canvas`, and the first version of this gate simply did not know about it.
+  const opaque = [...opaqueTokens()]
+  // Both channels must come out populated: a parser that classified everything
+  // one way (every `rgba()` mis-read as opaque, say) would pass a one-sided floor
+  // and then either flag the whole app or nothing at all.
+  expect(opaque.length, 'the tokens.css parse found almost no opaque colours')
+    .toBeGreaterThanOrEqual(12)
+  const colours = [...readFileSync(path.join(SHARED, 'shared/theme/tokens.css'), 'utf8')
+    .matchAll(/--([\w-]+):\s*(#[0-9a-f]{3,8}|rgba?\()/gi)].map((m) => m[1]!)
+  expect(
+    new Set(colours.filter((name) => !OPAQUE.has(name))).size,
+    'no translucent colours found — every rgba() was read as opaque',
+  ).toBeGreaterThanOrEqual(12)
+  for (const name of ['canvas', 'paper', 'neutral-faint', 'line', 'rule', 'primary']) {
+    expect(opaque, `--${name} is a flat hex in tokens.css, so it is opaque`).toContain(name)
+  }
+  for (const name of [
+    'glass-fill', 'glass-fill-strong', 'paper-clear', 'fill-faint', 'primary-faint',
+  ]) {
+    expect(opaque, `--${name} is rgba() below alpha 1 — it tints, it does not cover`)
+      .not.toContain(name)
+  }
+  // Every surface-channel token must be classified, or the state test below is
+  // quietly narrower than it reads.
+  for (const name of SURFACE_CHANNEL) {
+    if (name === 'paper-clear') continue // translucent on purpose, still a surface
+    expect(opaque, `--${name} must be known-opaque for the state gate to bite`)
+      .toContain(name)
+  }
+})
+
+test('no surface or separator colour is used as a row-state wash inside a panel', () => {
+  const rules = baseRules()
+  const components = componentIndex()
+  const panels = glassPanels(rules)
+  const tsx = filesOf(SHARED, '.tsx')
+
+  const violations: string[] = []
+  const states: string[] = []
+  for (const panel of panels) {
+    const renderers = tsx.filter((file) => fileClasses(readFileSync(file, 'utf8')).has(panel))
+    for (const renderer of renderers) {
+      for (const cls of reachableClasses(renderer, components)) {
+        if (!cls.includes('--')) continue
+        if (!INTERACTION_STATES.includes(cls.slice(cls.indexOf('--') + 2))) continue
+        const rule = rules.get(cls)
+        const fill = rule == null
+          ? null
+          : /background-color:\s*var\(--([\w-]+)\)/.exec(rule.body)?.[1]
+        if (rule == null || fill == null) continue
+        states.push(cls)
+        if (!SURFACE_CHANNEL.includes(fill)) continue
+        violations.push(
+          `.${cls} (${path.relative(SHARED, rule.file)}) washes a state with --${fill} `
+            + `inside .${panel}. That token is the surface (or a line on it), not a `
+            + 'state: over glass it replaces the material, and over --canvas it is '
+            + 'nearly invisible (--paper vs --canvas is 250 vs 255). Use '
+            + '--primary-faint for a selection the theme pack should tint, or '
+            + '--fill-faint for a neutral on-material fill.',
+        )
+      }
+    }
+  }
+  expect([...new Set(violations)].sort()).toEqual([])
+  // Non-vacuity: the walk must actually be finding interaction states with
+  // fills, and both of the words that carry them today must still be in use —
+  // a rename to a suffix outside INTERACTION_STATES would silently empty this.
+  const reached = [...new Set(states)].sort()
+  expect(reached, 'the play-queue drawer\'s active row must be reached')
+    .toContain('drawer__row--active')
+  expect(reached, 'and the popover\'s selected item')
+    .toContain('popover-menu__item--selected')
 })

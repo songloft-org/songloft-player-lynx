@@ -18,6 +18,8 @@ export interface SongListRowProps {
    * Flutter `SongListTile` `isSelectionMode` behaviour).
    */
   selectionMode?: boolean
+  /** This row is one of the selected ones — see `SongRowProps.isSelected`. */
+  isSelected?: boolean
   /**
    * Wide screens only: show the destructive "delete from library" shortcut in
    * the row tail. The playlist detail page passes `false` because its rows
@@ -73,6 +75,7 @@ export function SongListRow({
   index,
   onTap,
   selectionMode = false,
+  isSelected = false,
   showDeleteAction = true,
   subtitleSuffix,
   onOpenMenu,
@@ -139,6 +142,7 @@ export function SongListRow({
       isFavorite={isFavorite}
       onToggleFavorite={selectionMode ? undefined : toggle}
       isCurrentSong={currentSongId === song.id}
+      isSelected={isSelected}
       trailing={wideActions}
       subtitleSuffix={subtitleSuffix}
       onMore={selectionMode ? undefined : openMenuAnchored}

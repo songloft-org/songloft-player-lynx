@@ -34,7 +34,7 @@ const PALETTES: Record<ResolvedTheme, {
     primary: '#111111', // --primary
     primaryContent: '#ffffff', // --primary-content
     content: '#111111', // --content
-    content2: '#6b6b74', // --content-2
+    content2: '#67676f', // --content-2
     contentMuted: '#7b7b88', // --content-muted (AA-deepened; see tokens.css)
     danger: '#d64545', // --danger (Muse brick red)
   },

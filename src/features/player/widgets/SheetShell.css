@@ -108,8 +108,14 @@
   border-radius: var(--radius-md);
 }
 
+/*
+ * The current track. `--primary-faint`, not an opaque fill: this row sits on
+ * the play-queue drawer's glass, and an opaque wash covers the material (the
+ * same mistake `.song-row` made — see `SongRow.css`). The accent wash is also
+ * what a theme pack tints, which is what you want for a state.
+ */
 .drawer__row--active {
-  background-color: var(--neutral-faint);
+  background-color: var(--primary-faint);
 }
 
 .drawer__row-meta {
@@ -125,6 +131,21 @@
 
 .drawer__row--active .drawer__row-title {
   color: var(--accent);
+}
+
+/*
+ * Tertiary text steps up a level on a washed row.
+ *
+ * `--primary-faint` is the accent at low alpha, and in dark the accent is white,
+ * so the wash LIFTS the surface: `--content-muted` on the play-queue drawer's
+ * glass measures 5.42:1 normally and 3.86:1 once the row is active — under AA on
+ * exactly the row the user is looking at. Rather than lower the bar for washed
+ * rows, the metadata moves to `--content-2` (5.05:1), which is also how iOS
+ * emphasises a selected row: the title already goes to `--accent` above.
+ * Derived and pinned in `contrast.test.ts`.
+ */
+.drawer__row--active .drawer__row-artist {
+  color: var(--content-2);
 }
 
 .drawer__row-artist {

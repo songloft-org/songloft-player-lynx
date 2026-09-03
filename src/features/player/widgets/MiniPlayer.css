@@ -53,14 +53,35 @@
   margin: 0 var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
 }
 
+/*
+ * The track. Two things were wrong with `background-color: var(--line)`:
+ *
+ *  - `--line` is a separator token ("structure — hairline separators, only
+ *    structural"), and DESIGN.md §3.3 names using a separator colour as a
+ *    background as its example of redefining a semantic colour;
+ *  - it is opaque and full-bleed across the mini-player's glass capsule, so a
+ *    3px strip of the material is replaced rather than tinted — the same defect
+ *    as the old `.song-row` fill, just 3px tall.
+ *
+ * `--fill-faint` is the on-material fill and lands at almost exactly the same
+ * visual weight (light: #f3f3f3 over the capsule vs `--line` #ececee; dark:
+ * ~#252529 vs #26262c), so this is a semantics + material fix, not a restyle.
+ *
+ * The pill radius is iOS's progress-view shape, and it also makes the accent
+ * fill below a bounded object rather than a full-bleed opaque bar (DESIGN.md
+ * §3.4: colour on glass is for status indicators and primary actions — the
+ * played portion qualifies, its track does not).
+ */
 .mini-player__progress {
   width: 100%;
   height: 3px;
-  background-color: var(--line);
+  border-radius: var(--radius-pill);
+  background-color: var(--fill-faint);
 }
 
 .mini-player__progress-fill {
   height: 3px;
+  border-radius: var(--radius-pill);
   background-color: var(--primary);
 }
 

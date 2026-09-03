@@ -238,10 +238,15 @@
   /* actions — Muse has ONE accent channel; dark inverts it to white.
      --primary is the accent for fills/borders/icons (dark surface under it);
      --accent is the same shade for accent TEXT on dark surfaces.
-     --primary-faint is the selected-nav-pill wash: the accent at low alpha over
-     paper, decorative only (no text sits on it alone — the glyph/label carry
-     their own --accent tint). Brighter than light's 8% because a white wash on
-     dark surfaces needs more to stay visible. */
+     --primary-faint is the accent WASH: the accent at low alpha, for tinted
+     buttons (.btn--tinted), badges/chips, and selected-or-current row states.
+     A theme pack re-points it at its seed colour, so anything neutral wants
+     --fill-faint instead. (It used to be described as the selected-nav-pill
+     wash; the pill has used --glass-glow-faint since the glass batches, and
+     nothing re-checked this sentence.) Text may sit on it only because the
+     alpha is low enough that the surface underneath is what contrast is judged
+     against — keep it that way. Brighter than light's 8% because a white wash
+     on dark surfaces needs more to stay visible. */
   --primary: #ffffff;
   --primary-2: #ffffff;
   --primary-content: #0f0f11;
@@ -259,6 +264,30 @@
   --neutral-faint: #1f1f25;
   --line: #26262c;
   --rule: #38383f;
+
+  /*
+   * on-material fill. HIG's system fill colours are translucent BY DESIGN so
+   * whatever is under them — a glass panel, and the blurred page under that —
+   * still reads through. `--canvas` / `--paper` / `--neutral-faint` are all
+   * opaque: on a panel they do not sit on the material, they REPLACE it. That
+   * is the bug the play-history list had (see the note in `SongRow.css`), and
+   * an inset block inside a glass dialog is the same mistake at card size.
+   *
+   * Use this for a filled shape / inset block that lands on glass and is NOT a
+   * state. A state wash (selected / current row) is `--primary-faint` instead:
+   * that one is the accent channel and a theme pack tints it, which is right
+   * for selection and wrong for an error box.
+   *
+   * Neutral on purpose, and deliberately absent from
+   * `PACK_OVERRIDABLE_BASELINE` — a pack recolouring the accent must not turn
+   * every stats block and error box into a tinted surface.
+   *
+   * Alpha: Apple's fills are a 120,120,128 grey at 0.08–0.18; Muse's wash
+   * channel is ink/white instead, which reads heavier per unit alpha, so the
+   * same visual weight lands lower. Dark needs more than light for the usual
+   * reason (a white wash over a dark surface loses contrast faster).
+   */
+  --fill-faint: rgba(255, 255, 255, 0.06);
 
   /* overlays */
   --backdrop: rgba(0, 0, 0, 0.55);
@@ -332,13 +361,18 @@
 
   /* content (text) */
   --content: #111111;
-  --content-2: #6b6b74;
+  /* Deepened from #6b6b74 (5.28 on white) because of the selection wash: on
+     `--primary-faint` over the canvas the old shade measured 4.47 — a 0.03 miss,
+     and the wash is exactly where a selected row's metadata lives. Every other
+     light pair only gains from this (paper 5.05 → 5.37, veiled cover 4.63 → 4.92),
+     so the fix is the token, not an exemption for one pair. */
+  --content-2: #67676f;
   /* tertiary text — Muse #a0a0a8 misses even the 3:1 large-text gate on #fafafa
      (2.49). Deepened to the AA-passing mid-grey. */
   --content-muted: #7b7b88;
 
   /* actions — ink-black accent (#111, near-black not pure). One channel.
-     --primary-faint is the selected-nav-pill wash — see the dark block's note.
+     --primary-faint is the accent wash — see the dark block's note.
      (No `token:` colons in comments: the mapping gate's declaration regex
      would swallow the next real declaration.) */
   --primary: #111111;
@@ -357,6 +391,9 @@
   --line: #ececee;
   --rule: #dcdce0;
 
+  /* on-material fill — see the dark block for the whole derivation. */
+  --fill-faint: rgba(17, 17, 17, 0.05);
+
   /* overlays */
   --backdrop: rgba(0, 0, 0, 0.35);
   --backdrop-heavy: rgba(0, 0, 0, 0.5);
@@ -370,9 +407,13 @@
    * The alphas are **computed, not tuned**. A translucent veil lets the cover shift
    * the effective background anywhere between `--canvas` and the cover's own colour,
    * and Muse's secondary tokens have very little contrast headroom to give up:
-   * light `--content-2` on a veiled black cover only reaches 4.23:1 at 0.90 and
-   * 4.43:1 at 0.92. 0.93 is the first value where every token the player draws on
-   * this surface clears the bar; 0.94 is that with a margin.
+   * light `--content-2` on a veiled black cover reached only 4.23:1 at 0.90 and
+   * 4.43:1 at 0.92 when this was derived, making 0.93 the first value where every
+   * token the player draws on this surface cleared the bar, and 0.94 that with a
+   * margin. Deepening `--content-2` to #67676f (see its note above) moved the bound
+   * down to 0.91 — 0.94 stays, now with three points of margin instead of one.
+   * Loosening it is a separate decision about how much artwork shows through, and
+   * `contrast.test.ts` derives the bar from whatever ships either way.
    *
    * This bound is **light-specific**. Dark's veil sits far lower (see its block) —
    * on a dark veil the danger is a bright cover, not a dark one, and that extreme is

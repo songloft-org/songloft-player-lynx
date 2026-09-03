@@ -92,6 +92,26 @@
   margin-left: var(--space-1);
 }
 
+/*
+ * Tertiary text steps up a level on a selected row.
+ *
+ * The selection wash (`--primary-faint`, painted by whatever wraps the row —
+ * `LibraryPage.css`, `PlaylistDetailPage.css`) is the accent at low alpha, and in
+ * dark the accent is white, so it LIFTS the surface: `--content-muted` reads 5.00:1
+ * on the page and 4.14:1 once the row is washed, i.e. under AA on exactly the row
+ * the user is acting on. Rather than lower the bar for washed rows, the metadata
+ * moves to `--content-2` (5.43:1). Emphasising a selected row's content is also the
+ * iOS pattern; the checkbox stays the primary signal. Pinned in `contrast.test.ts`.
+ *
+ * This lives here, with the row, rather than in the two page stylesheets that paint
+ * the wash: `.song-row*` rules exist in exactly one file (see `song-row-css.test.ts`
+ * for what re-forking them cost last time).
+ */
+.song-row--selected .song-row__subtitle,
+.song-row--selected .song-row__duration {
+  color: var(--content-2);
+}
+
 .song-row__subtitle {
   color: var(--content-muted);
   font-size: var(--font-sm);

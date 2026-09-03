@@ -102,12 +102,27 @@ function parseTheme(name: 'dark' | 'light'): Record<string, Color> {
     const [, key, val] = decl
     if (val.startsWith('#')) {
       out[key] = parseHex(val)
-    } else if (key === 'paper-clear' || key.startsWith('glass-fill')) {
+    } else if (
+      key === 'paper-clear' || key.startsWith('glass-fill')
+      || key === 'fill-faint' || key === 'primary-faint'
+    ) {
       // blended over canvas at parse time. glass-fill/glass-fill-strong are
       // translucent paper colours floating over the page (not solid scrims),
       // so their effective background is fill ⊕ canvas — the same composite
       // paper-clear uses. Blending them over black (the else branch) would
       // darken a light glass surface and mis-state its contrast.
+      //
+      // The two `*-faint` washes are the same shape one layer further in: they
+      // are what a selected/active row paints ON a surface, so text on such a row
+      // sees wash ⊕ surface. Over the page that surface is the canvas (below);
+      // over glass it is the glass composite, checked in its own describe.
+      if (out['canvas'] == null) {
+        throw new Error(
+          `--${key} is declared before --canvas in tokens.css, so it cannot be `
+            + 'composited. Move it after --canvas rather than deleting this check: '
+            + 'blending it over black instead would silently understate contrast.',
+        )
+      }
       out[key] = parseRgbaOver(val, out['canvas'])
     } else {
       // rgba used as a solid (backdrop/overlay) — parse raw, alpha=1
@@ -129,7 +144,13 @@ function expectAA(fg: Color, bg: Color, label: string, min = 4.5) {
 }
 
 describe('dark theme contrast (WCAG AA)', () => {
-  const surfaces = ['canvas', 'paper', 'paper-clear', 'neutral-faint', 'glass-fill', 'glass-fill-strong'] as const
+  // `fill-faint` is the neutral on-material fill (inset info blocks, progress
+  // tracks, the plugin dialogs' error/stats boxes) — text sits on it, so it is a
+  // surface for this gate's purposes even though it is not a surface token.
+  const surfaces = [
+    'canvas', 'paper', 'paper-clear', 'neutral-faint', 'fill-faint',
+    'glass-fill', 'glass-fill-strong',
+  ] as const
 
   test.each(surfaces)('content reads on %s (≥4.5)', (s) => {
     expectAA(DARK['content'], DARK[s], `content on ${s}`)
@@ -184,6 +205,10 @@ describe('light theme contrast (WCAG AA; dark is the audited scope, light is a p
     expectAA(LIGHT['content-2'], LIGHT['paper'], 'content-2 on paper')
     expectAA(LIGHT['content-2'], LIGHT['neutral-faint'], 'content-2 on neutral-faint')
   })
+  test('content/content-2 read on fill-faint ≥4.5', () => {
+    expectAA(LIGHT['content'], LIGHT['fill-faint'], 'content on fill-faint')
+    expectAA(LIGHT['content-2'], LIGHT['fill-faint'], 'content-2 on fill-faint')
+  })
   test('accent reads as text on paper/canvas ≥4.5', () => {
     expectAA(LIGHT['accent'], LIGHT['paper'], 'accent on paper')
     expectAA(LIGHT['accent'], LIGHT['canvas'], 'accent on canvas')
@@ -236,23 +261,23 @@ describe('light theme contrast (WCAG AA; dark is the audited scope, light is a p
  * 4.5, light holds `--content-muted`/`--danger` at 3 (the documented
  * large-text-only gap) and the rest at 4.5.
  */
+/** Light's muted/danger gaps are documented in the light-theme block above. */
+function floorFor(theme: 'dark' | 'light', token: string): number {
+  return theme === 'light' && (token === 'content-muted' || token === 'danger') ? 3 : 4.5
+}
+
+/** Raw declaration text for one rgba token, straight out of a theme block. */
+function rawDecl(theme: 'dark' | 'light', token: string): string {
+  const block = TOKENS_CSS.match(
+    new RegExp(`\\.theme-root\\.theme-${theme}\\s*\\{([\\s\\S]*?)\\n\\s*\\}`),
+  )
+  const decl = block![1]!.match(new RegExp(`--${token}:\\s*(rgba?\\([^)]*\\));`))
+  expect(decl, `--${token} missing from theme-${theme}`).not.toBeNull()
+  return decl![1]!
+}
+
 describe('glass overlay stack (ramp + sheen) over the glass fills', () => {
-  /** Raw declaration text for one token, straight out of a theme block. */
-  function rawDecl(theme: 'dark' | 'light', token: string): string {
-    const block = TOKENS_CSS.match(
-      new RegExp(`\\.theme-root\\.theme-${theme}\\s*\\{([\\s\\S]*?)\\n\\s*\\}`),
-    )
-    const decl = block![1]!.match(new RegExp(`--${token}:\\s*(rgba?\\([^)]*\\));`))
-    expect(decl, `--${token} missing from theme-${theme}`).not.toBeNull()
-    return decl![1]!
-  }
-
   const TEXT_TOKENS = ['content', 'content-2', 'content-muted', 'accent', 'danger'] as const
-
-  /** Light's muted/danger gaps are documented in the light block above. */
-  function floorFor(theme: 'dark' | 'light', token: string): number {
-    return theme === 'light' && (token === 'content-muted' || token === 'danger') ? 3 : 4.5
-  }
 
   for (const [theme, tokens] of [
     ['dark', DARK],
@@ -325,8 +350,10 @@ describe('glass overlay stack (ramp + sheen) over the glass fills', () => {
  * boost saturation without touching this derivation.
  *
  * The bound is tight in light and it decided the design rather than confirming it:
- * light `--content-2` reaches only 4.23:1 at α=0.90 and 4.43:1 at α=0.92, so the first
- * workable value is 0.93. Dark is a different problem — there the bright extreme is the
+ * light `--content-2` reached only 4.23:1 at α=0.90 and 4.43:1 at α=0.92 when this was
+ * derived, so the first workable value was 0.93. (Deepening `--content-2` to #67676f
+ * for the selection wash later moved that bound to 0.91; the shipped 0.94 did not
+ * change, so it now carries more margin than it was designed with.) Dark is a different problem — there the bright extreme is the
  * dangerous one, and it is far cheaper to survive: `--content-2` clears at 0.83. The
  * two themes therefore ship different alphas (0.94 light, 0.85 dark) and this test
  * derives each from the shipped value rather than assuming they agree. They were
@@ -416,5 +443,119 @@ describe('player scrim over worst-case cover art', () => {
       // demanding 4.5 here would be a stricter bar than the rest of the app meets.
       expectAA(tokens['content-muted'], bg, `content-muted on ${on}`, 3)
     }
+  })
+})
+
+/**
+ * A state wash has to be visible against what it sits on.
+ *
+ * This is the one relationship in the token set that WCAG says nothing about, and
+ * the gap is where a real bug lived: two multi-select highlights painted `--paper`
+ * over `--canvas` — 250 vs 255 in light, a ratio of 1.04 — so selecting a row
+ * changed nothing on screen. Nobody noticed because every *text* pair still
+ * passed; the wash was invisible, not illegible.
+ *
+ * The floor is 1.08. It is not a standard, it is a separation: the shipped washes
+ * land at 1.11–1.41, and the shape that shipped the bug sits at 1.04 (light) and
+ * 1.07 (dark). Asserting both ends means neither a weaker wash nor a re-run of the
+ * `--paper` mistake can pass, and the number is not pinned to today's alphas.
+ *
+ * Washes are checked over BOTH backdrops they actually get painted on: the page
+ * (`--canvas`) and glass (`--glass-fill-strong`, itself already composited over
+ * the canvas). A wash inside a sheet is the common case — the play-queue drawer,
+ * the popover's selected item.
+ */
+describe('state washes over the surfaces they sit on', () => {
+  const FLOOR = 1.08
+
+  /** `--primary-faint` (accent, pack-tintable) and `--fill-faint` (neutral). */
+  const WASHES = ['primary-faint', 'fill-faint'] as const
+
+  /*
+   * Text that actually sits on a washed row: titles (`--content`), the current
+   * row's title (`--accent`), destructive menu items (`--danger`), and metadata,
+   * which is `--content-2` *because* of the wash — `--content-muted` on a wash
+   * measures 3.86 in dark, so the three washed rows step their metadata up a
+   * level. Those step-ups are pinned below; without them this list would be
+   * understating what ships.
+   */
+  const WASH_TEXT = ['content', 'content-2', 'accent', 'danger'] as const
+
+  for (const [theme, tokens] of [
+    ['dark', DARK],
+    ['light', LIGHT],
+  ] as const) {
+    for (const wash of WASHES) {
+      test(`${theme}: --${wash} is visible over the page and over glass`, () => {
+        for (const under of ['canvas', 'glass-fill-strong'] as const) {
+          const bg = parseRgbaOver(rawDecl(theme, wash), tokens[under]!)
+          const r = ratio(bg, tokens[under]!)
+          expect(
+            r,
+            `--${wash} over --${under} = ${r.toFixed(3)} (${hexColor(bg)} on `
+              + `${hexColor(tokens[under]!)}). Below ${FLOOR} the state is not `
+              + 'visible — which is how a selection highlight painted --paper over '
+              + '--canvas shipped: every text pair passed, the highlight did not exist.',
+          ).toBeGreaterThanOrEqual(FLOOR)
+        }
+      })
+
+      test(`${theme}: text still reads on a row washed with --${wash}`, () => {
+        for (const under of ['canvas', 'glass-fill-strong'] as const) {
+          const bg = parseRgbaOver(rawDecl(theme, wash), tokens[under]!)
+          for (const token of WASH_TEXT) {
+            expectAA(
+              tokens[token]!,
+              bg,
+              `${token} on --${wash} ⊕ --${under}`,
+              floorFor(theme, token),
+            )
+          }
+        }
+      })
+    }
+
+    test(`${theme}: an opaque surface token would fail the visibility floor`, () => {
+      // The defect shape, kept red on purpose. If tokens.css ever drifts far
+      // enough that --paper clears the floor over --canvas, this floor has stopped
+      // rejecting the bug it was written for and the number needs re-deriving.
+      const r = ratio(tokens['paper']!, tokens['canvas']!)
+      expect(
+        r,
+        `--paper over --canvas = ${r.toFixed(3)}; the floor ${FLOOR} exists to `
+          + 'reject exactly this as a row wash',
+      ).toBeLessThan(FLOOR)
+    })
+  }
+
+  test('the washed rows step their metadata up from --content-muted', () => {
+    // WASH_TEXT above omits `--content-muted` because no washed row uses it any
+    // more. That is a fact about two stylesheets, so read them: if a step-up is
+    // deleted, tertiary text is back on a wash at 3.86 and the omission is a lie.
+    // Both washed row types are covered — the play-queue drawer's own row, and the
+    // shared `.song-row` that the two multi-select pages wrap in a wash.
+    const STEP_UPS: Array<[string, RegExp]> = [
+      [
+        'features/player/widgets/SheetShell.css',
+        /\.drawer__row--active \.drawer__row-artist \{\s*color: var\(--content-2\)/,
+      ],
+      [
+        'features/library/widgets/SongRow.css',
+        /\.song-row--selected \.song-row__subtitle,\s*\.song-row--selected \.song-row__duration \{\s*color: var\(--content-2\)/,
+      ],
+    ]
+    for (const [file, re] of STEP_UPS) {
+      const css = readFileSync(resolve(process.cwd(), 'src', file), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+      expect(css, `${file} must step washed-row metadata up to --content-2`).toMatch(re)
+    }
+  })
+
+  test('--content-muted on a wash is the pair the step-ups exist for', () => {
+    // Non-vacuity for the test above: it is only worth anything while the shade it
+    // avoids would actually fail. Dark, over glass, is the worst case.
+    const bg = parseRgbaOver(rawDecl('dark', 'primary-faint'), DARK['glass-fill-strong']!)
+    const r = ratio(DARK['content-muted']!, bg)
+    expect(r, `content-muted on the dark wash = ${r.toFixed(2)}`).toBeLessThan(4.5)
   })
 })

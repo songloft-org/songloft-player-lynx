@@ -210,9 +210,12 @@ export function themePackToStyleVars(
       vars['--primary-2'] = colors.seedColor
       vars['--accent'] = colors.seedColor
       vars['--primary-content'] = readableTextColorOn(colors.seedColor)
-      // Selected-nav-pill wash: brighter in dark mode, where a low-alpha tint
-      // over dark surfaces needs more to stay visible (matches the baseline's
-      // 8% light / 12% dark split).
+      // The accent wash: tinted buttons, badges, and the selected/current row
+      // states (the play-queue's active row, multi-select highlights). Brighter in
+      // dark mode, where a low-alpha tint over dark surfaces needs more to stay
+      // visible (matches the baseline's 8% light / 12% dark split). The nav pill
+      // is NOT this token — it uses --glass-glow-faint, and saying so here sent a
+      // batch looking in the wrong place.
       vars['--primary-faint'] = hexToRgba(colors.seedColor, resolved === 'light' ? 0.1 : 0.14)
     }
     if (isHexColor(colors.glassColor)) {

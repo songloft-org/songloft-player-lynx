@@ -270,8 +270,12 @@
   align-items: center;
 }
 
+/* Same wash as the playlist detail page's multi-select. It was `--paper` on a
+   `--canvas` page: 250 vs 255, a selection state you could not see. The row's own
+   tertiary text steps up a level under this wash; that rule lives with the row, in
+   `SongRow.css` (one file owns `.song-row*`). */
 .library__select-row--selected {
-  background-color: var(--paper);
+  background-color: var(--primary-faint);
 }
 
 .library__select-box {

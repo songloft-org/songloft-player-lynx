@@ -217,8 +217,18 @@
   width: 100%;
 }
 
+/*
+ * Multi-select highlight. It was `--paper` on a `--canvas` page: 250 vs 255 in
+ * light, i.e. a selection state you could not see (and #17171b vs #0f0f11 in
+ * dark, barely better). It was invisible for another reason too until
+ * 2026-09-03 — `.song-row` painted its own opaque fill on top, leaving only the
+ * checkbox gutter tinted. Same wash as every other row state now.
+ *
+ * The row's own tertiary text steps up a level under this wash; that rule lives
+ * with the row, in `SongRow.css` (one file owns `.song-row*`).
+ */
 .playlist-detail__song-row-wrapper--selected {
-  background-color: var(--paper);
+  background-color: var(--primary-faint);
 }
 
 .playlist-detail__song-row-content {

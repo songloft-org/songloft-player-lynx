@@ -54,3 +54,35 @@ test('no other file re-forks the .song-row rules', () => {
     .filter((f) => rules(f).includes('.song-row'))
   expect(forked).toEqual([])
 })
+
+test('a list that washes selected rows tells the row it is selected', () => {
+  /*
+   * The wash lives on the wrapper (it has to cover the checkbox column), the
+   * text step-up lives on the row (`SongRow.css`), and the only thing joining
+   * them is the `isSelected` prop. Forget it in a new list and nothing breaks
+   * loudly: the row is washed and its tertiary text quietly sits at 4.14:1.
+   */
+  const tsx = (function walk(dir: string): string[] {
+    return readdirSync(dir).flatMap((entry) => {
+      const full = path.join(dir, entry)
+      if (statSync(full).isDirectory()) return entry === 'node_modules' ? [] : walk(full)
+      return entry.endsWith('.tsx') ? [path.relative(SRC, full)] : []
+    })
+  })(SRC)
+
+  const washingLists = tsx.filter((f) => {
+    const src = readFileSync(path.join(SRC, f), 'utf8')
+    return /--selected/.test(src) && /<Song(?:ListRow|Row)\b/.test(src)
+  })
+  // Non-vacuity: the two multi-select lists must be what this finds.
+  expect(washingLists.sort()).toEqual([
+    'features/library/widgets/FlatSongsView.tsx',
+    'features/playlist/pages/PlaylistDetailPage.tsx',
+  ])
+  for (const f of washingLists) {
+    expect(
+      readFileSync(path.join(SRC, f), 'utf8'),
+      `${f} paints a selection wash but never passes isSelected — see SongRow.css`,
+    ).toMatch(/isSelected=\{/)
+  }
+})

@@ -488,6 +488,7 @@ export function PlaylistDetailPage() {
                           index={index}
                           onTap={onTapSong}
                           selectionMode={selectMode}
+                          isSelected={selected.has(song.id)}
                           showDeleteAction={false}
                         />
                       </view>

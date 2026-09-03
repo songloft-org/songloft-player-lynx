@@ -192,7 +192,7 @@ export function FlatSongsView({ type, sortId, sortOrder, onSortChange }: FlatSon
                       )
                       : null}
                     <view className='library__select-row-content'>
-                      <SongListRow song={song} index={index} onTap={onTapSong} selectionMode={selectMode} />
+                      <SongListRow song={song} index={index} onTap={onTapSong} selectionMode={selectMode} isSelected={selected.has(song.id)} />
                     </view>
                   </view>
                 )}

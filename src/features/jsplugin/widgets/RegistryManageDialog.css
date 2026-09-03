@@ -51,7 +51,7 @@
 .registry-manage__official {
   font-size: var(--font-caption1);
   color: var(--primary);
-  background-color: var(--paper);
+  background-color: var(--fill-faint);
   padding: 0 var(--space-2);
   border-radius: var(--radius-sm);
 }
@@ -83,7 +83,7 @@
   margin-top: var(--space-3);
   padding: var(--space-2);
   border-radius: var(--radius-sm);
-  background-color: var(--paper);
+  background-color: var(--fill-faint);
 }
 
 .registry-manage__add-text {

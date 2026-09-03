@@ -83,8 +83,14 @@
   gap: var(--space-2);
 }
 
+/*
+ * `.popover-menu__item` has no radius of its own, so this wash is full-bleed
+ * across a glass popover — it MUST be translucent or it replaces the material
+ * for the width of the menu. (It was opaque `--neutral-faint` until 2026-09-03;
+ * the checkmark is the primary signal, this is the secondary one.)
+ */
 .popover-menu__item--selected {
-  background-color: var(--neutral-faint);
+  background-color: var(--primary-faint);
 }
 
 .popover-menu__item-icon {

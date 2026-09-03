@@ -28,7 +28,7 @@
   margin-top: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background-color: var(--paper);
+  background-color: var(--fill-faint);
 }
 
 .batch-update__error-text {
@@ -43,7 +43,7 @@
   margin-top: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background-color: var(--paper);
+  background-color: var(--fill-faint);
 }
 
 .batch-update__stat {
