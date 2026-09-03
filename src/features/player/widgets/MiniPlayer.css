@@ -19,10 +19,12 @@
   flex-direction: column;
   margin: 0 var(--space-2) var(--space-2);
   background-color: var(--glass-fill);
+  background-image: var(--glass-sheen-layer), var(--glass-ramp);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-pill);
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
+    var(--glass-rim-sides),
     inset 0 -1px 0 var(--line);
   overflow: hidden;
 }

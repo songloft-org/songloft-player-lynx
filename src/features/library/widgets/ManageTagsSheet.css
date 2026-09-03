@@ -23,10 +23,12 @@
   bottom: 0;
   max-height: 70%;
   background-color: var(--glass-fill-strong);
+  background-image: var(--glass-sheen-layer), var(--glass-ramp);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
+    var(--glass-rim-sides),
     inset 0 -1px 0 var(--line);
   display: flex;
   flex-direction: column;

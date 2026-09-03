@@ -113,13 +113,17 @@
   justify-content: space-around;
   align-items: center;
   background-color: var(--glass-fill);
+  background-image: var(--glass-sheen-layer), var(--glass-ramp);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-pill);
-  /* Liquid-glass sheen (A path, Step 0 spike-verified): the outer drop shadow
-     stays, then a top inset highlight + a bottom inset hairline fake the
-     two-tone gradient edge a real glass bevel would have. */
+  /* Liquid-glass edge: the outer drop shadow, then a rim that varies around the
+     perimeter — bright at the top, dimmer down the sides, dark at the bottom.
+     A uniform border cannot read as thickness; a rim that changes with the light
+     direction can, and since every layer is a 1px `inset` no text sits on any of
+     them, so the whole effect is free against the contrast gate. */
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
+    var(--glass-rim-sides),
     inset 0 -1px 0 var(--line);
   z-index: 90;
 }

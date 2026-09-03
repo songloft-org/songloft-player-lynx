@@ -30,13 +30,13 @@ export const MATERIAL_TOKENS: Record<
       '--glass-fill': lightFill(0.55),
       '--glass-fill-strong': lightFill(0.45),
       '--glass-border': lightBorder(0.55),
-      '--glass-highlight': lightHighlight(0.28),
+      '--glass-highlight': lightHighlight(0.72),
     },
     dark: {
       '--glass-fill': darkFill(0.50),
       '--glass-fill-strong': darkFill(0.40),
       '--glass-border': darkBorder(0.20),
-      '--glass-highlight': darkHighlight(0.10),
+      '--glass-highlight': darkHighlight(0.38),
     },
   },
   thin: {
@@ -44,13 +44,13 @@ export const MATERIAL_TOKENS: Record<
       '--glass-fill': lightFill(0.70),
       '--glass-fill-strong': lightFill(0.58),
       '--glass-border': lightBorder(0.50),
-      '--glass-highlight': lightHighlight(0.25),
+      '--glass-highlight': lightHighlight(0.66),
     },
     dark: {
       '--glass-fill': darkFill(0.65),
       '--glass-fill-strong': darkFill(0.55),
       '--glass-border': darkBorder(0.18),
-      '--glass-highlight': darkHighlight(0.09),
+      '--glass-highlight': darkHighlight(0.34),
     },
   },
   regular: {
@@ -58,13 +58,13 @@ export const MATERIAL_TOKENS: Record<
       '--glass-fill': lightFill(0.85),
       '--glass-fill-strong': lightFill(0.72),
       '--glass-border': lightBorder(0.45),
-      '--glass-highlight': lightHighlight(0.22),
+      '--glass-highlight': lightHighlight(0.6),
     },
     dark: {
       '--glass-fill': darkFill(0.85),
       '--glass-fill-strong': darkFill(0.72),
       '--glass-border': darkBorder(0.16),
-      '--glass-highlight': darkHighlight(0.08),
+      '--glass-highlight': darkHighlight(0.3),
     },
   },
   thick: {
@@ -72,13 +72,13 @@ export const MATERIAL_TOKENS: Record<
       '--glass-fill': lightFill(0.92),
       '--glass-fill-strong': lightFill(0.85),
       '--glass-border': lightBorder(0.40),
-      '--glass-highlight': lightHighlight(0.18),
+      '--glass-highlight': lightHighlight(0.5),
     },
     dark: {
       '--glass-fill': darkFill(0.92),
       '--glass-fill-strong': darkFill(0.82),
       '--glass-border': darkBorder(0.14),
-      '--glass-highlight': darkHighlight(0.06),
+      '--glass-highlight': darkHighlight(0.24),
     },
   },
 }

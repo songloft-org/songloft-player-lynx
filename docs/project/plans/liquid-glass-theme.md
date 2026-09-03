@@ -1,5 +1,21 @@
 # Liquid Glass 主题（Lynx）— 修订版
 
+> ## 修订（2026-09-03，玻璃材质优化批C）
+>
+> 第 1 节的 7 token 表里两行的值已变，另加了 6 个 token：
+>
+> - `--glass-highlight` → light `0.60` / dark `0.30`（见 `standard-materials.md` 的同日修订，四档材质整列上调）。
+> - `--glass-sheen` → light `0.10` / dark `0.04`（**下调**）。原值 0.18/0.10 是按「没有消费者」定的——
+>   本计划第 3 节写的 sheen 渐变最终只落地了 `--glass-highlight` 那条 `inset`，彩色分量一直悬空。
+>   批C 给它接上真实消费者 `--glass-sheen-layer` 后，它开始躺在文字底下，alpha 就成了对比度预算的一部分。
+> - 新增 `--glass-rim-side` / `--glass-ramp-top` / `--glass-ramp-bottom`（按主题分叉，非包驱动），
+>   以及 `.theme-root` 里三个组合层 `--glass-rim-sides` / `--glass-ramp` / `--glass-sheen-layer`。
+>
+> 第 3 节「上下双色近似渐变描边」的近似不再需要：`background-image` 可以叠多层逗号分隔的
+> `linear-gradient`（与 `background-color` 共存），`box-shadow` 也接受 5 层含左右 `inset`——
+> 都在本批用无头 Chrome 走通 lynx-css 管线实测过（零 CSS 告警），所以边缘现在是真的四边分色
+> （亮顶 / 中侧 / 暗底）＋ 一条真的垂直明暗坡。
+
 > ## 修订（2026-09-01，需求对齐后）
 >
 > 原方案「`--glass-glow` 复用 seedColor」导致装包后玻璃色 = 按钮色（同色），「双通道」名不副实。用户决策改为**玻璃色独立字段**，并要求 **Flutter 端也做液态玻璃**（另起计划）。修订要点：

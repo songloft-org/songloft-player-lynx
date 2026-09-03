@@ -24,6 +24,14 @@ import { expect, test } from 'vitest'
  * So the gate locks the load-bearing facts per surface: a `--glass-fill*`
  * background AND an `inset` box-shadow. It does not pin the exact shadow
  * value — only that the sheen primitive is present.
+ *
+ * The same two surfaces later gained the depth stack — a `background-image`
+ * carrying the sheen and luminance ramp, and side rims in the shadow list —
+ * which fails the same way: drop either and the CSS stays valid, the surface
+ * just flattens back to a tinted rectangle. Those are asserted as *composite
+ * token references* rather than literal colours, because every alpha in them is
+ * derived from the contrast budget in `theme/__tests__/contrast.test.ts`; a
+ * surface that inlines its own gradient escapes that derivation silently.
  */
 
 const SHARED = path.resolve(__dirname, '../../..') // src/
@@ -87,6 +95,15 @@ test.each(SURFACES)(
     // The sheen primitive the spike verified — if `inset` is stripped, the
     // declaration stays valid but the highlight is gone.
     expect(body, `${selector} must carry an inset box-shadow sheen`).toMatch(/box-shadow:[\s\S]*inset/)
+    // Depth stack: both layers, in this order (sheen paints over the ramp).
+    expect(body, `${selector} must layer the sheen over the ramp`).toMatch(
+      /background-image:\s*var\(--glass-sheen-layer\),\s*var\(--glass-ramp\)/,
+    )
+    // Side rims complete the perimeter the top highlight starts; without them
+    // the bevel reads as a single bright line rather than a lit edge.
+    expect(body, `${selector} must carry the side rims`).toMatch(
+      /box-shadow:[\s\S]*var\(--glass-rim-sides\)/,
+    )
   },
 )
 
@@ -100,7 +117,7 @@ test('the nav capsule selection tint is the glass glow, not the ink wash', () =>
   expect(pill).not.toMatch(/var\(--primary-faint\)/)
 })
 
-test('the seven glass tokens are declared in both themes', () => {
+test('the ten glass tokens are declared in both themes', () => {
   const tokens = readFileSync(path.join(SHARED, 'shared/theme/tokens.css'), 'utf8')
   for (const which of ['dark', 'light'] as const) {
     const blockMatch = new RegExp(`\\.theme-root\\.theme-${which}\\s*\\{([\\s\\S]*?)\\n\\s*\\}`).exec(tokens)
@@ -114,6 +131,13 @@ test('the seven glass tokens are declared in both themes', () => {
       '--glass-glow',
       '--glass-glow-faint',
       '--glass-sheen',
+      // The depth stack's atomic inputs. The composites that combine them
+      // (`--glass-rim-sides`, `--glass-ramp`, `--glass-sheen-layer`) live once
+      // in `.theme-root` and resolve their nested var()s per theme, so they are
+      // asserted there instead — see contrast.test.ts.
+      '--glass-rim-side',
+      '--glass-ramp-top',
+      '--glass-ramp-bottom',
     ]) {
       expect(body, `${token} declared in theme-${which}`).toMatch(
         new RegExp(`${token.replace(/-/g, '\\-')}\\s*:`),

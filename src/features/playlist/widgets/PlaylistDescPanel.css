@@ -35,9 +35,11 @@
   border-top-left-radius: var(--radius-xl);
   border-top-right-radius: var(--radius-xl);
   background-color: var(--glass-fill-strong);
+  background-image: var(--glass-sheen-layer), var(--glass-ramp);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
+    var(--glass-rim-sides),
     inset 0 -1px 0 var(--line);
 }
 

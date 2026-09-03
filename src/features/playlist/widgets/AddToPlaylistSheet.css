@@ -34,11 +34,13 @@
   /* Roughly the Flutter sheet's initial 50% with room to grow as it does. */
   height: 62%;
   background-color: var(--glass-fill-strong);
+  background-image: var(--glass-sheen-layer), var(--glass-ramp);
   border: 1px solid var(--glass-border);
   border-top-left-radius: var(--radius-xl);
   border-top-right-radius: var(--radius-xl);
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
+    var(--glass-rim-sides),
     inset 0 -1px 0 var(--line);
   padding-bottom: var(--space-4);
 }

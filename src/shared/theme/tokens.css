@@ -117,6 +117,42 @@
   /* layout sizes */
   --mobile-nav-height: 60px;
 
+  /*
+   * Composite glass layers. These live here, declared once, rather than being
+   * duplicated per theme: a nested `var()` inside a custom property *does*
+   * resolve per-theme on the consuming element (headless-Chrome verified through
+   * the lynx-css pipeline — `--line` read through a composite token switches
+   * with the theme class), so the atomic per-theme tokens flow through. They
+   * also pick up the material system's runtime overrides for free, since those
+   * are injected as inline vars on this same element.
+   *
+   * The point of bundling them is that a glass surface stays four lines instead
+   * of nine, and there is exactly one place to retune.
+   *
+   * No leading bare `0` before a negative length in here: the minifier collapses
+   * `inset 0 -1px 0` to `inset 0-1px 0` *inside a custom property value* (it
+   * leaves direct declarations alone). Chrome re-tokenizes that correctly, but a
+   * stricter native parser might not, so the bottom hairline stays a direct
+   * declaration at each surface and only the sides are bundled here.
+   */
+  --glass-rim-sides: inset 1px 0 0 var(--glass-rim-side),
+    inset -1px 0 0 var(--glass-rim-side);
+  --glass-ramp: linear-gradient(
+    to bottom,
+    var(--glass-ramp-top),
+    var(--glass-ramp-bottom)
+  );
+  /* 160deg puts the streak's origin at the top-left and lets it die at 45% —
+     past that the surface is the plain fill, which is what keeps the bottom of a
+     tall sheet out of the contrast budget entirely. `rgba(0, 0, 0, 0)` rather
+     than `transparent`: an explicit premultiplied-safe stop, and one less
+     keyword to assume Lynx interpolates the way Chrome does. */
+  --glass-sheen-layer: linear-gradient(
+    160deg,
+    var(--glass-sheen),
+    rgba(0, 0, 0, 0) 45%
+  );
+
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -156,10 +192,41 @@
   --glass-fill: rgba(23, 23, 27, 0.85);
   --glass-fill-strong: rgba(23, 23, 27, 0.72);
   --glass-border: rgba(255, 255, 255, 0.16);
-  --glass-highlight: rgba(255, 255, 255, 0.08);
+  /* Top specular edge — a 1px `inset` line, so no text ever sits on it and its
+     brightness is free against the contrast gate. It used to be 0.08, which on
+     rgb(22,22,26) renders as rgb(41,41,44): technically a highlight, visually
+     nothing. 0.30 is the value that actually reads as a lit glass rim. Scaled
+     across the four material variants in `material-tokens.ts` (thinner glass →
+     brighter rim), which is the value that wins at runtime — tokens.css is only
+     the CSS fallback. */
+  --glass-highlight: rgba(255, 255, 255, 0.3);
   --glass-glow: #5BC0F5;
   --glass-glow-faint: rgba(91, 192, 245, 0.14);
-  --glass-sheen: rgba(91, 192, 245, 0.10);
+  /*
+   * Diagonal refraction streak, consumed via `--glass-sheen-layer`. Unlike the
+   * rim this one lies *under text*, so its alpha is derived, not chosen.
+   *
+   * It stacks with `--glass-ramp-top` in the top-left corner, and the binding
+   * constraint is the composite of the two — checked individually each of these
+   * passes, checked together 0.05+0.06 lands `--content-muted` at 4.25 and fails.
+   * At ramp 0.03 + sheen 0.04 the corner is 4.68 (+0.18). `contrast.test.ts`
+   * re-derives this stack; loosening either alone turns it red.
+   *
+   * Was 0.10 with no consumers at all, so nothing regressed by retuning it. */
+  --glass-sheen: rgba(91, 192, 245, 0.04);
+  /* Side rim — dimmer than the top edge because light comes from above. Also a
+     1px inset, also free. Deliberately outside the material system: rim
+     *brightness* is a thickness cue (so `--glass-highlight` scales), but having
+     sides at all is structural, and a material that dropped them would just look
+     unfinished. */
+  --glass-rim-side: rgba(255, 255, 255, 0.12);
+  /* Vertical luminance ramp (`--glass-ramp`). Dark's amplitude lives in the
+     *bottom*: darkening a dark surface raises every text ratio, so it is free at
+     any alpha, while brightening the top costs — 0.06 white alone already lands
+     muted at 4.61 and 0.08 fails. Hence a small lift up top and a large drop
+     below: rgb(29,29,32) → rgb(20,20,23) across the panel. */
+  --glass-ramp-top: rgba(255, 255, 255, 0.03);
+  --glass-ramp-bottom: rgba(0, 0, 0, 0.20);
 
   /* content (text) */
   --content: #f5f5f7;
@@ -235,10 +302,33 @@
   --glass-fill: rgba(255, 255, 255, 0.85);
   --glass-fill-strong: rgba(255, 255, 255, 0.72);
   --glass-border: rgba(255, 255, 255, 0.45);
-  --glass-highlight: rgba(255, 255, 255, 0.22);
+  /* See dark. Light's rim has to fight a fill that composites to pure white, so
+     it runs brighter still. */
+  --glass-highlight: rgba(255, 255, 255, 0.6);
   --glass-glow: #3BAEEF;
   --glass-glow-faint: rgba(59, 174, 239, 0.10);
-  --glass-sheen: rgba(59, 174, 239, 0.18);
+  /* 0.18 → 0.10: at 0.18 `--content-2` sat at 4.51, i.e. no margin. 0.10 gives
+     4.84. Packs derive this same alpha from their `glassColor`
+     (theme-pack-mapping.ts), so the two must be changed together. */
+  --glass-sheen: rgba(59, 174, 239, 0.1);
+  --glass-rim-side: rgba(255, 255, 255, 0.30);
+  /*
+   * Light's ramp is a pure *downward* darkening, and the transparent top is a
+   * deliberate value rather than an omission.
+   *
+   * `--glass-fill` is 0.85 white over a white canvas, so it composites to exactly
+   * rgb(255,255,255): adding white on top is the identity operation. That is also
+   * the real reason light glass reads as a painted rectangle, and it is why it
+   * cannot be fixed by adding a highlight — the only direction left is down.
+   *
+   * And under a theme pack whose `backgroundColor` is *not* white, a white top
+   * stop would stop being a no-op and start lightening a surface carrying dark
+   * text. Transparent is the value that is safe in both cases.
+   *
+   * The bottom is capped by `--content-2` ≥ 4.5: 0.08 lands 4.41 and fails, 0.05
+   * gives 4.72. */
+  --glass-ramp-top: rgba(255, 255, 255, 0);
+  --glass-ramp-bottom: rgba(0, 0, 0, 0.05);
 
   /* content (text) */
   --content: #111111;
@@ -304,3 +394,5 @@
   --shadow-md: 0 4px 20px rgba(17, 17, 17, 0.08);
   --shadow-lg: 0 12px 40px rgba(17, 17, 17, 0.14);
 }
+
+

@@ -210,6 +210,108 @@ describe('light theme contrast (WCAG AA; dark is the audited scope, light is a p
 })
 
 /**
+ * The glass overlay stack on the background-unknown surfaces (nav capsule,
+ * mini-player, sheets, dialogs, popovers).
+ *
+ * Those surfaces gained two translucent `background-image` layers on top of the
+ * `--glass-fill*` colour: a vertical luminance ramp and a diagonal sheen. Both
+ * lie **under text**, so neither alpha is a free decorative choice — and the
+ * constraint is the *stack*, not either layer alone. The sheen originates at the
+ * top-left and the ramp peaks along the top edge, so they overlap, and text in
+ * that corner sees both composited. Checked separately, dark ramp 0.05 + sheen
+ * 0.06 each pass; composited they put `--content-muted` at 4.25 and fail. The
+ * shipped pair (0.03 / 0.04) lands it at 4.68.
+ *
+ * The rim layers are deliberately absent from this gate: they are 1px `inset`
+ * box-shadows, no text ever sits on them, and that is exactly why the rim is
+ * where most of the visual work went — brightness there is free.
+ *
+ * Light's ramp top is `rgba(255, 255, 255, 0)` on purpose, asserted below. Its
+ * fill composites to pure white, so a white top stop is the identity operation
+ * anyway; the reason it is *zero* rather than merely small is theme packs, whose
+ * `backgroundColor` need not be white — there a white stop would stop being a
+ * no-op and start lightening a surface carrying dark text.
+ *
+ * Thresholds mirror the per-theme blocks above: dark holds every text token at
+ * 4.5, light holds `--content-muted`/`--danger` at 3 (the documented
+ * large-text-only gap) and the rest at 4.5.
+ */
+describe('glass overlay stack (ramp + sheen) over the glass fills', () => {
+  /** Raw declaration text for one token, straight out of a theme block. */
+  function rawDecl(theme: 'dark' | 'light', token: string): string {
+    const block = TOKENS_CSS.match(
+      new RegExp(`\\.theme-root\\.theme-${theme}\\s*\\{([\\s\\S]*?)\\n\\s*\\}`),
+    )
+    const decl = block![1]!.match(new RegExp(`--${token}:\\s*(rgba?\\([^)]*\\));`))
+    expect(decl, `--${token} missing from theme-${theme}`).not.toBeNull()
+    return decl![1]!
+  }
+
+  const TEXT_TOKENS = ['content', 'content-2', 'content-muted', 'accent', 'danger'] as const
+
+  /** Light's muted/danger gaps are documented in the light block above. */
+  function floorFor(theme: 'dark' | 'light', token: string): number {
+    return theme === 'light' && (token === 'content-muted' || token === 'danger') ? 3 : 4.5
+  }
+
+  for (const [theme, tokens] of [
+    ['dark', DARK],
+    ['light', LIGHT],
+  ] as const) {
+    for (const fill of ['glass-fill', 'glass-fill-strong'] as const) {
+      // DARK/LIGHT already hold the fill composited over the canvas.
+      const base = tokens[fill]!
+
+      test(`${theme}: top-left corner (ramp ⊕ sheen) reads on ${fill}`, () => {
+        const withRamp = parseRgbaOver(rawDecl(theme, 'glass-ramp-top'), base)
+        const corner = parseRgbaOver(rawDecl(theme, 'glass-sheen'), withRamp)
+        for (const token of TEXT_TOKENS) {
+          expectAA(tokens[token]!, corner, `${token} on ${fill} + ramp + sheen`, floorFor(theme, token))
+        }
+      })
+
+      test(`${theme}: bottom edge (ramp only, sheen has died) reads on ${fill}`, () => {
+        // The sheen stop is transparent past 45%, so the lower half is ramp-only.
+        const bottom = parseRgbaOver(rawDecl(theme, 'glass-ramp-bottom'), base)
+        for (const token of TEXT_TOKENS) {
+          expectAA(tokens[token]!, bottom, `${token} on ${fill} + ramp bottom`, floorFor(theme, token))
+        }
+      })
+    }
+  }
+
+  test("light's ramp top is fully transparent (pack-safe, and a no-op over white)", () => {
+    expect(rawDecl('light', 'glass-ramp-top')).toMatch(/,\s*0\s*\)$/)
+  })
+
+  test('the composite layers are wired to the atomic tokens, in one place', () => {
+    // Declared once in `.theme-root`; a nested var() inside a custom property
+    // does resolve per-theme on the consuming element (headless-Chrome verified
+    // through the lynx-css pipeline). Repointing one of these at a hardcoded
+    // colour would silently escape every derivation above.
+    const root = TOKENS_CSS.match(/\.theme-root \{([\s\S]*?)\n\}/)
+    expect(root, '.theme-root block exists').not.toBeNull()
+    const body = root![1]!
+    expect(body).toMatch(/--glass-ramp:\s*linear-gradient\([\s\S]*?var\(--glass-ramp-top\)[\s\S]*?var\(--glass-ramp-bottom\)/)
+    expect(body).toMatch(/--glass-sheen-layer:\s*linear-gradient\([\s\S]*?var\(--glass-sheen\)/)
+    expect(body).toMatch(/--glass-rim-sides:[\s\S]*?var\(--glass-rim-side\)/)
+  })
+
+  test('no bare 0 before a negative length inside a custom property', () => {
+    // The minifier collapses `inset 0 -1px 0` to `inset 0-1px 0` *inside custom
+    // property values* (it leaves direct declarations alone). Chrome
+    // re-tokenizes that correctly; a stricter native parser might not, so the
+    // bottom hairline stays a direct declaration at each surface.
+    const root = TOKENS_CSS.match(/\.theme-root \{([\s\S]*?)\n\}/)![1]!
+    const composites = root.match(/--glass-(?:rim-sides|ramp|sheen-layer):[\s\S]*?;/g) ?? []
+    expect(composites.length, 'the three composite layers are declared').toBe(3)
+    for (const decl of composites) {
+      expect(decl, `no \`0 -\` sequence in ${decl.slice(0, 40)}`).not.toMatch(/\s0\s+-/)
+    }
+  })
+})
+
+/**
  * The full player's veil over its blurred cover.
  *
  * This is the one surface in the app whose background is not a token: it is the veil

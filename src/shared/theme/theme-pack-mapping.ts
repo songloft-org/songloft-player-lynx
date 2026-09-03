@@ -20,7 +20,7 @@ import { MATERIAL_TOKENS } from './material-tokens.js'
  * | light/dark.surfaceColor   | --paper --paper-clear (90% alpha) |
  * | light/dark.glassColor     | --glass-glow (solid)              |
  * | (derived from glassColor) | --glass-glow-faint (0.10/0.14)     |
- * | (derived from glassColor) | --glass-sheen (0.18/0.10)         |
+ * | (derived from glassColor) | --glass-sheen (0.10/0.04)         |
  * | (baseline, not pack-driven)| --glass-fill/fill-strong/border/   |
  * |                           |   highlight                        |
  * | cardRadius                | --radius-lg                      |
@@ -153,10 +153,10 @@ export const PACK_OVERRIDABLE_BASELINE: Record<'light' | 'dark', Record<string, 
     '--glass-fill': 'rgba(255, 255, 255, 0.85)',
     '--glass-fill-strong': 'rgba(255, 255, 255, 0.72)',
     '--glass-border': 'rgba(255, 255, 255, 0.45)',
-    '--glass-highlight': 'rgba(255, 255, 255, 0.22)',
+    '--glass-highlight': 'rgba(255, 255, 255, 0.6)',
     '--glass-glow': '#3BAEEF',
     '--glass-glow-faint': 'rgba(59, 174, 239, 0.10)',
-    '--glass-sheen': 'rgba(59, 174, 239, 0.18)',
+    '--glass-sheen': 'rgba(59, 174, 239, 0.1)',
     '--radius-lg': '20px',
     '--radius-md': '12px',
     '--radius-nav': '12px',
@@ -175,10 +175,10 @@ export const PACK_OVERRIDABLE_BASELINE: Record<'light' | 'dark', Record<string, 
     '--glass-fill': 'rgba(23, 23, 27, 0.85)',
     '--glass-fill-strong': 'rgba(23, 23, 27, 0.72)',
     '--glass-border': 'rgba(255, 255, 255, 0.16)',
-    '--glass-highlight': 'rgba(255, 255, 255, 0.08)',
+    '--glass-highlight': 'rgba(255, 255, 255, 0.3)',
     '--glass-glow': '#5BC0F5',
     '--glass-glow-faint': 'rgba(91, 192, 245, 0.14)',
-    '--glass-sheen': 'rgba(91, 192, 245, 0.10)',
+    '--glass-sheen': 'rgba(91, 192, 245, 0.04)',
     '--radius-lg': '20px',
     '--radius-md': '12px',
     '--radius-nav': '12px',
@@ -219,15 +219,20 @@ export function themePackToStyleVars(
       // Liquid Glass decorative tint — INDEPENDENT of seedColor (the button
       // channel). A pack colours its glass without recolouring its buttons:
       // true dual-channel. The three glass-glow tokens ride glassColor at the
-      // same alpha split as the star-blue baseline (0.10/0.14 faint, 0.18/0.10
-      // sheen). When glassColor is absent the baseline star-blue applies
+      // same alpha split as the star-blue baseline (0.10/0.14 faint, 0.10/0.04
+      // sheen). The sheen split changed when `--glass-sheen` gained its first
+      // consumer: it now lies under text as a background layer, so its alpha is
+      // part of the contrast budget (see the derivation in tokens.css) rather
+      // than a free decorative number. It must stay in step with the baseline
+      // there — a pack tinting its glass must not be able to out-saturate what
+      // the gate verified. When glassColor is absent the baseline star-blue applies
       // (PACK_OVERRIDABLE_BASELINE already mirrors tokens.css), so glass stays
       // a different colour from buttons even with no pack. The four
       // glass-texture tokens (fill/border/highlight) are always baseline —
       // a pack colours the glass, it does not change its质感.
       vars['--glass-glow'] = colors.glassColor
       vars['--glass-glow-faint'] = hexToRgba(colors.glassColor, resolved === 'light' ? 0.1 : 0.14)
-      vars['--glass-sheen'] = hexToRgba(colors.glassColor, resolved === 'light' ? 0.18 : 0.1)
+      vars['--glass-sheen'] = hexToRgba(colors.glassColor, resolved === 'light' ? 0.1 : 0.04)
     }
     if (isHexColor(colors.backgroundColor)) {
       vars['--canvas'] = colors.backgroundColor

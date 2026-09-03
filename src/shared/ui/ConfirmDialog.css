@@ -120,6 +120,7 @@
 
 .confirm-dialog {
   background-color: var(--glass-fill-strong);
+  background-image: var(--glass-sheen-layer), var(--glass-ramp);
   border-radius: var(--radius-lg);
   border: 1px solid var(--glass-border);
   padding: var(--space-5);
@@ -129,10 +130,12 @@
   animation-duration: 200ms;
   animation-timing-function: ease-out;
   animation-fill-mode: forwards;
-  /* Dialogs mount over a scrim, so they earn the larger shadow; the inset
-     sheen pair gives the glass its two-tone bevel (Step 0 spike-verified). */
+  /* Dialogs mount over a scrim, so they earn the larger shadow; the three-part
+     inset rim (top highlight / sides / bottom hairline) gives the glass its
+     thickness. */
   box-shadow: var(--shadow-lg),
     inset 0 1px 0 var(--glass-highlight),
+    var(--glass-rim-sides),
     inset 0 -1px 0 var(--line);
 }
 

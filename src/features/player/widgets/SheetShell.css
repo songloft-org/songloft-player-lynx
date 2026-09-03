@@ -41,11 +41,15 @@
   border-top-left-radius: var(--radius-xl);
   border-top-right-radius: var(--radius-xl);
   background-color: var(--glass-fill-strong);
+  background-image: var(--glass-sheen-layer), var(--glass-ramp);
   border: 1px solid var(--glass-border);
-  /* Glass sheen — the top inset highlight rides the sheet's visible lid; the
-     bottom hairline is off-screen (sheet docks at the screen edge). */
+  /* Glass sheen — the top inset highlight rides the sheet's visible lid and the
+     side rims run down its visible flanks; the bottom hairline is off-screen
+     (the sheet docks at the screen edge), which is also why the luminance ramp
+     is the layer doing the work on the lower half here. */
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
+    var(--glass-rim-sides),
     inset 0 -1px 0 var(--line);
   padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
 }

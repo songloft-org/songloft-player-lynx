@@ -56,9 +56,11 @@
   min-width: 140px;
   padding: var(--space-2) 0;
   background-color: var(--glass-fill-strong);
+  background-image: var(--glass-sheen-layer), var(--glass-ramp);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
+    var(--glass-rim-sides),
     inset 0 -1px 0 var(--line);
   border: 1px solid var(--glass-border);
   overflow-y: auto;
