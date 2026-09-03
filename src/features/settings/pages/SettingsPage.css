@@ -21,8 +21,8 @@
 
 .settings__title {
   color: var(--content);
-  font-size: var(--font-xl);
-  font-weight: bold;
+  font-size: var(--font-title1);
+  font-weight: var(--weight-bold);
 }
 
 /* ─── Body wrapper (single / dual column) ────────────────────────────────── */

@@ -82,13 +82,13 @@
 
 .drawer__title {
   color: var(--content);
-  font-size: var(--font-lg);
-  font-weight: bold;
+  font-size: var(--font-title3);
+  font-weight: var(--weight-bold);
 }
 
 .drawer__count {
   color: var(--content-muted);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }
 
 .drawer__list {
@@ -125,7 +125,7 @@
 
 .drawer__row-artist {
   color: var(--content-muted);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   margin-top: 2px;
 }
 
@@ -154,5 +154,5 @@
 
 .drawer__row-remove-glyph {
   color: var(--content-muted);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
 }

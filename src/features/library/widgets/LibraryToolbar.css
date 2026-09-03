@@ -32,7 +32,7 @@
 
 .library-toolbar__btn-text {
   color: var(--content);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }
 
 .library-toolbar__btn--active .library-toolbar__btn-text {

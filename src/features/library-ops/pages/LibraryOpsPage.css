@@ -73,7 +73,7 @@
 
 .libops__state-title {
   color: var(--content);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   margin-left: var(--space-2);
   flex: 1;
 }
@@ -113,7 +113,7 @@
 
 .libops__action-text {
   color: var(--primary-content);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   margin-left: var(--space-2);
 }
 
@@ -177,7 +177,7 @@
 
 .libops-tree__hint {
   color: var(--content-muted);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }
 
 .libops-tree__expand-hit {
@@ -241,7 +241,7 @@
 
 .libops__chip-text {
   color: var(--content-2);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   margin-left: var(--space-1);
 }
 
@@ -319,7 +319,7 @@
   background-color: var(--neutral-faint);
   border: 1px solid var(--line);
   color: var(--content);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   -x-placeholder-color: var(--content-muted);
 }
 
@@ -376,7 +376,7 @@
 
 .libops-exclude__empty {
   color: var(--content-muted);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }
 
 .libops-exclude__chips-row {
@@ -398,7 +398,7 @@
 
 .libops-exclude__chip-text {
   color: var(--content-2);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }
 
 .libops-exclude__chip-remove {
@@ -438,6 +438,6 @@
 
 .libops-exclude__save-text {
   color: var(--primary-content);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
 }
 

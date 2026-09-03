@@ -18,7 +18,7 @@
 }
 
 .registry-icon__initial {
-  font-size: var(--font-md);
-  font-weight: bold;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
   color: var(--primary);
 }

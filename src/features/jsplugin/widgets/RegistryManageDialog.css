@@ -49,7 +49,7 @@
 }
 
 .registry-manage__official {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--primary);
   background-color: var(--paper);
   padding: 0 var(--space-2);
@@ -57,7 +57,7 @@
 }
 
 .registry-manage__row-url {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
   margin-top: 2px;
   overflow: hidden;

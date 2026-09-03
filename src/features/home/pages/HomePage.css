@@ -22,8 +22,8 @@
 
 .home__greeting {
   color: var(--content);
-  font-size: var(--font-xl);
-  font-weight: bold;
+  font-size: var(--font-title1);
+  font-weight: var(--weight-bold);
 }
 
 
@@ -93,8 +93,8 @@
 
 .home-section__title {
   color: var(--content);
-  font-size: var(--font-lg);
-  font-weight: bold;
+  font-size: var(--font-title3);
+  font-weight: var(--weight-bold);
 }
 
 .home-section__spacer {
@@ -251,8 +251,8 @@
 
 .home-stats__headline-value {
   color: var(--content);
-  font-size: var(--font-xl);
-  font-weight: bold;
+  font-size: var(--font-title1);
+  font-weight: var(--weight-bold);
 }
 
 .home-stats__headline-label {
@@ -289,13 +289,13 @@
 
 .home-stats__cell-value {
   color: var(--content);
-  font-size: var(--font-md);
-  font-weight: bold;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
 }
 
 .home-stats__cell-label {
   color: var(--content-2);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }
 
 .home-stats__footer {
@@ -307,7 +307,7 @@
 
 .home-stats__footer-text {
   color: var(--content-muted);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }
 
 /* ── States (loading / error / empty) ───────────────────────────────────── */
@@ -322,8 +322,8 @@
 
 .home__state-text {
   color: var(--content-2);
-  font-size: var(--font-md);
-  font-weight: bold;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
 }
 
 .home__state-text--error {
@@ -340,7 +340,7 @@
 .home__state-action-text {
   color: var(--primary-content);
   font-size: var(--font-sm);
-  font-weight: bold;
+  font-weight: var(--weight-bold);
 }
 .home__empty {
   display: flex;
@@ -352,8 +352,8 @@
 
 .home__empty-title {
   color: var(--content-2);
-  font-size: var(--font-md);
-  font-weight: bold;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
 }
 
 .home__empty-subtitle {
@@ -375,7 +375,7 @@
 .home__empty-action-text {
   color: var(--primary-content);
   font-size: var(--font-sm);
-  font-weight: bold;
+  font-weight: var(--weight-bold);
 }
 
 /* Floating-nav capsule inset (see ShellLayout.css): the fixed bottom bar lets

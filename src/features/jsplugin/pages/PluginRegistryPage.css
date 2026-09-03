@@ -68,7 +68,7 @@
 
 .plugin-registry__warnings-text {
   flex: 1;
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--danger);
 }
 
@@ -82,7 +82,7 @@
 }
 
 .plugin-registry__empty-title {
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   color: var(--content);
 }
 
@@ -129,9 +129,9 @@
 }
 
 .plugin-registry__item-name {
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   color: var(--content);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 
 .plugin-registry__item-meta {
@@ -141,7 +141,7 @@
 }
 
 .plugin-registry__item-desc {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
   margin-top: 2px;
   overflow: hidden;
@@ -161,7 +161,7 @@
 
 .plugin-registry__conflict-line-text {
   flex: 1;
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--danger);
 }
 
@@ -267,7 +267,7 @@
 }
 
 .plugin-registry__state-text {
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   color: var(--content-muted);
 }
 

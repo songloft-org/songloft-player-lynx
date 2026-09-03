@@ -19,8 +19,8 @@
 
 .edit-playlist__title {
   flex: 1;
-  font-size: var(--font-lg);
-  font-weight: bold;
+  font-size: var(--font-title3);
+  font-weight: var(--weight-bold);
   color: var(--content);
 }
 
@@ -91,7 +91,7 @@
 .edit-playlist__btn-text {
   font-size: var(--font-sm);
   color: var(--primary-content);
-  font-weight: bold;
+  font-weight: var(--weight-bold);
   text-align: center;
 }
 

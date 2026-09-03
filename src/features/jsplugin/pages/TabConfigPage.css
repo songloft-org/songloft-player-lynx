@@ -14,7 +14,7 @@
 
 .tab-config__section-title {
   font-size: var(--font-sm);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   color: var(--content-muted);
   margin-bottom: var(--space-2);
   /*
@@ -42,12 +42,12 @@
 
 .tab-config__row-name {
   flex: 1;
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   color: var(--content);
 }
 
 .tab-config__row-badge {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
@@ -55,7 +55,7 @@
 }
 
 .tab-config__limit-hint {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
   margin-top: var(--space-2);
 }
@@ -68,6 +68,6 @@
 }
 
 .tab-config__state-text {
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   color: var(--content-muted);
 }

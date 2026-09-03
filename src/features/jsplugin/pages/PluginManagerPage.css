@@ -45,7 +45,7 @@
 }
 
 .plugin-manager__item-name {
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   color: var(--content);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -79,7 +79,7 @@
 }
 
 .plugin-manager__status-text {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
 }
 
@@ -100,7 +100,7 @@
 }
 
 .plugin-manager__version {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
   background-color: var(--paper);
   padding: 1px var(--space-2);
@@ -108,7 +108,7 @@
 }
 
 .plugin-manager__author {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
 }
 
@@ -120,7 +120,7 @@
   margin-top: var(--space-1);
   color: var(--content-muted);
   font-size: var(--font-sm);
-  line-height: var(--font-md);
+  line-height: var(--font-callout);
   overflow: hidden;
   max-height: 32px;
   display: -webkit-box;
@@ -167,8 +167,8 @@
 }
 
 .plugin-avatar__initial {
-  font-size: var(--font-md);
-  font-weight: bold;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
   color: var(--primary);
 }
 
@@ -207,7 +207,7 @@
 }
 
 .plugin-manager__keep-data-hint {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
 }
 
@@ -219,7 +219,7 @@
 }
 
 .plugin-manager__state-text {
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   color: var(--content-muted);
 }
 

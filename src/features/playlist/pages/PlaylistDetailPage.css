@@ -123,8 +123,8 @@
 
 .playlist-detail__name {
   color: var(--content);
-  font-size: var(--font-lg);
-  font-weight: bold;
+  font-size: var(--font-title3);
+  font-weight: var(--weight-bold);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -134,7 +134,7 @@
   margin-top: var(--space-2);
   color: var(--content-2);
   font-size: var(--font-sm);
-  line-height: var(--font-md);
+  line-height: var(--font-callout);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: normal;
@@ -197,8 +197,8 @@
 
 .playlist-detail__state-text {
   color: var(--content-2);
-  font-size: var(--font-md);
-  font-weight: bold;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
 }
 
 .playlist-detail__state-text--error {
@@ -254,7 +254,7 @@
 .playlist-detail__select-toolbar-btn-text {
   color: var(--primary-content);
   font-size: var(--font-sm);
-  font-weight: bold;
+  font-weight: var(--weight-bold);
 }
 
 .playlist-detail__remove-btn {
@@ -309,7 +309,7 @@
 .playlist-detail__sort-row-name {
   flex: 1;
   color: var(--content);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
 }
 
 .playlist-detail__sort-handle {

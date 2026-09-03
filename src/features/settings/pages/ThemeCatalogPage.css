@@ -29,7 +29,7 @@
 }
 
 .theme-catalog__item-meta {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
   margin-top: 2px;
 }
@@ -41,14 +41,14 @@
 }
 
 .theme-catalog__item-btn-text {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--primary-content);
 }
 
 /* Catalog rows already installed at the same version: a label, not a button —
    there is nothing to do until the pack publishes a newer version. */
 .theme-catalog__installed-label {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
   padding: var(--space-1) var(--space-2);
 }
@@ -70,6 +70,6 @@
 }
 
 .theme-catalog__retry-text {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--primary-content);
 }

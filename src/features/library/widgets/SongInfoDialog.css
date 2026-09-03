@@ -78,10 +78,10 @@
  */
 .song-info-dialog__name {
   flex: 1;
-  font-size: var(--font-md);
-  font-weight: 600;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-semibold);
   color: var(--content);
-  line-height: var(--font-md);
+  line-height: var(--font-callout);
   overflow: hidden;
   text-overflow: ellipsis;
   max-height: 32px;
@@ -139,7 +139,7 @@
 }
 
 .song-detail__cache-note-text {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
 }
 

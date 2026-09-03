@@ -82,7 +82,7 @@
    * it, and the label is its block's first child — so the overflow landed
    * outside the card and got clipped, leaving the text looking shaved off.
    */
-  line-height: var(--font-lg);
+  line-height: var(--font-title3);
   margin-bottom: var(--space-2);
 }
 
@@ -96,7 +96,7 @@
   background-color: var(--neutral-faint);
   border: 1px solid var(--line);
   color: var(--content);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   -x-placeholder-color: var(--content-muted);
 }
 
@@ -128,7 +128,7 @@
 .cache-manage__btn-text {
   color: var(--primary-content);
   font-size: var(--font-sm);
-  font-weight: bold;
+  font-weight: var(--weight-bold);
 }
 
 .cache-manage__btn-text--secondary {
@@ -149,8 +149,8 @@
 
 .cache-manage__save-text {
   color: var(--primary-content);
-  font-size: var(--font-md);
-  font-weight: bold;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
 }
 
 .cache-manage__validate-result {
@@ -176,6 +176,6 @@
 
 .cache-manage__validate-info {
   color: var(--content-2);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   margin-top: var(--space-1);
 }

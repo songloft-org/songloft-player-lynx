@@ -22,13 +22,13 @@
 .size-limit-slider__label {
   color: var(--content-2);
   font-size: var(--font-sm);
-  line-height: var(--font-lg);
+  line-height: var(--font-title3);
 }
 
 .size-limit-slider__value {
   color: var(--accent);
-  font-size: var(--font-md);
-  font-weight: bold;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
 }
 
 .size-limit-slider__root {
@@ -94,5 +94,5 @@
 
 .size-limit-slider__scale-text {
   color: var(--content-muted);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }

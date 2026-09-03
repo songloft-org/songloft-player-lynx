@@ -65,8 +65,8 @@
 
 .full-player__empty-title {
   color: var(--content);
-  font-size: var(--font-lg);
-  font-weight: bold;
+  font-size: var(--font-title3);
+  font-weight: var(--weight-bold);
 }
 
 .full-player__empty-subtitle {
@@ -85,7 +85,7 @@
 .full-player__empty-btn-text {
   color: var(--primary-content);
   font-size: var(--font-sm);
-  font-weight: bold;
+  font-weight: var(--weight-bold);
 }
 
 /* Top bar */
@@ -113,8 +113,8 @@
 .full-player__eyebrow {
   flex: 1;
   color: var(--content-muted);
-  font-size: var(--font-xs);
-  font-weight: bold;
+  font-size: var(--font-caption1);
+  font-weight: var(--weight-bold);
   text-align: center;
 }
 
@@ -270,14 +270,14 @@
 
 .full-player__title {
   color: var(--content);
-  font-size: var(--font-xl);
-  font-weight: bold;
+  font-size: var(--font-title1);
+  font-weight: var(--weight-bold);
   text-align: center;
 }
 
 .full-player__artist {
   color: var(--content-2);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   margin-top: var(--space-1);
   text-align: center;
 }
@@ -285,7 +285,7 @@
 /* Sleep-timer countdown, beside the overflow button that sets it. */
 .full-player__timer-remaining {
   color: var(--accent);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   margin-right: var(--space-1);
 }
 

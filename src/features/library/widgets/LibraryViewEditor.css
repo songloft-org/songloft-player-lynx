@@ -27,8 +27,8 @@
   flex: 1;
   margin-left: var(--space-3);
   color: var(--content);
-  font-size: var(--font-md);
-  font-weight: 600;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-semibold);
 }
 
 .library-editor__save {
@@ -40,7 +40,7 @@
 .library-editor__save-text {
   color: var(--primary-content);
   font-size: var(--font-sm);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .library-editor__error {
@@ -79,7 +79,7 @@
   flex: 1;
   color: var(--primary);
   font-size: var(--font-sm);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .library-editor__group-btn {

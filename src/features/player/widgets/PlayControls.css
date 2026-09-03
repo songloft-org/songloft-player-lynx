@@ -45,12 +45,12 @@
 
 .player-controls__glyph {
   color: var(--content);
-  font-size: var(--font-lg);
+  font-size: var(--font-title3);
 }
 
 .player-controls__glyph--primary {
   color: var(--primary-content);
-  font-size: var(--font-xl);
+  font-size: var(--font-title1);
 }
 
 /* Inner box of the mode trigger, carrying the inline slot size: the trigger wrapper's

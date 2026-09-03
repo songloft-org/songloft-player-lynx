@@ -30,7 +30,7 @@
 }
 
 .theme-packs__item-meta {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
   margin-top: 2px;
 }
@@ -44,7 +44,7 @@
 }
 
 .theme-packs__item-delete-text {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--danger);
 }
 

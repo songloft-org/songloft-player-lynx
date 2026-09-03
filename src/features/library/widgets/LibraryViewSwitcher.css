@@ -49,11 +49,11 @@
 
 .library-switcher__pill-text {
   color: var(--content-2);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   margin-left: var(--space-1);
 }
 
 .library-switcher__pill--active .library-switcher__pill-text {
   color: var(--primary);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }

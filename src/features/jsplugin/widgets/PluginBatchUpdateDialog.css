@@ -20,7 +20,7 @@
 }
 
 .batch-update__hint {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
 }
 
@@ -54,8 +54,8 @@
 }
 
 .batch-update__stat-num {
-  font-size: var(--font-lg);
-  font-weight: bold;
+  font-size: var(--font-title3);
+  font-weight: var(--weight-bold);
 }
 
 .batch-update__stat-num--ok {
@@ -71,7 +71,7 @@
 }
 
 .batch-update__stat-label {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
 }
 
@@ -116,6 +116,6 @@
 }
 
 .batch-update__row-note {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
 }

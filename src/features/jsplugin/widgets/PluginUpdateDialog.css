@@ -19,7 +19,7 @@
 }
 
 .plugin-update__hint {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
 }
 
@@ -52,7 +52,7 @@
 }
 
 .plugin-update__versions {
-  font-size: var(--font-md);
-  font-weight: bold;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
   color: var(--primary);
 }

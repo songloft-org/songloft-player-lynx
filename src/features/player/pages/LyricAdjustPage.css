@@ -22,8 +22,8 @@
 
 .lyric-adjust__title {
   flex: 1;
-  font-size: var(--font-lg);
-  font-weight: 600;
+  font-size: var(--font-title3);
+  font-weight: var(--weight-semibold);
   color: var(--content);
   margin-left: var(--space-2);
 }
@@ -77,14 +77,14 @@
 }
 
 .lyric-adjust__card-title {
-  font-size: var(--font-md);
-  font-weight: 600;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-semibold);
   color: var(--content);
 }
 
 .lyric-adjust__card-value {
-  font-size: var(--font-md);
-  font-weight: 600;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-semibold);
   color: var(--accent);
   /* Fixed width so the card title does not shuffle as the digits change. */
   min-width: 72px;
@@ -146,13 +146,13 @@
 .lyric-adjust__nudge-text {
   color: var(--content);
   font-size: var(--font-sm);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 
 .lyric-adjust__hint {
   margin-top: var(--space-2);
   color: var(--content-muted);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }
 
 /* ── Per-line list ──────────────────────────────────────────────────────── */
@@ -174,7 +174,7 @@
      aligned across rows. */
   width: 92px;
   flex-shrink: 0;
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--accent);
 }
 
@@ -201,7 +201,7 @@
 }
 
 .lyric-adjust__line-delta {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-2);
 }
 
@@ -217,8 +217,8 @@
 }
 
 .lyric-adjust__line-btn-text {
-  font-size: var(--font-md);
-  font-weight: 600;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-semibold);
   color: var(--content);
 }
 
@@ -233,5 +233,5 @@
 
 .lyric-adjust__empty-text {
   color: var(--content-muted);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
 }

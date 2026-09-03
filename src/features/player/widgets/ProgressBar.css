@@ -14,8 +14,8 @@
 }
 
 .player-progress__preview-text {
-  font-size: var(--font-lg);
-  font-weight: bold;
+  font-size: var(--font-title3);
+  font-weight: var(--weight-bold);
   color: var(--accent);
 }
 
@@ -76,7 +76,7 @@
   width: 45px;
   flex-shrink: 0;
   color: var(--content-2);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }
 
 .player-progress__time--total {

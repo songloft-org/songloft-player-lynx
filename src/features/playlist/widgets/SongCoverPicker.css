@@ -46,9 +46,9 @@
 .song-cover-picker__title {
   flex: 1;
   color: var(--content);
-  font-size: var(--font-md);
-  font-weight: bold;
-  line-height: var(--font-lg);
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
+  line-height: var(--font-title3);
 }
 
 .song-cover-picker__close {

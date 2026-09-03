@@ -23,8 +23,8 @@
 
 .add-songs__title {
   flex: 1;
-  font-size: var(--font-lg);
-  font-weight: bold;
+  font-size: var(--font-title3);
+  font-weight: var(--weight-bold);
   color: var(--content);
 }
 
@@ -53,7 +53,7 @@
 
 .add-songs__tab--active .add-songs__tab-text {
   color: var(--content);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .add-songs__form {
@@ -62,7 +62,7 @@
 }
 
 .add-songs__label {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
   margin-top: var(--space-3);
   margin-bottom: var(--space-1);
@@ -91,7 +91,7 @@
 .add-songs__btn-text {
   font-size: var(--font-sm);
   color: var(--primary-content);
-  font-weight: bold;
+  font-weight: var(--weight-bold);
   text-align: center;
 }
 

@@ -57,8 +57,8 @@
  */
 .song-edit-dialog__title {
   flex-shrink: 0;
-  font-size: var(--font-md);
-  font-weight: 600;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-semibold);
   color: var(--content);
   margin-bottom: var(--space-2);
 }
@@ -102,7 +102,7 @@
 
 .song-edit__ro-card-title {
   font-size: var(--font-sm);
-  font-weight: bold;
+  font-weight: var(--weight-bold);
   color: var(--content);
 }
 
@@ -116,13 +116,13 @@
 
 .song-edit__ro-label {
   width: 40px;
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
 }
 
 .song-edit__ro-value {
   flex: 1;
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content);
   /* Long endpoints must not push the copy button off the row. */
   overflow: hidden;
@@ -135,7 +135,7 @@
 }
 
 .song-edit__label {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
   margin-top: var(--space-3);
   margin-bottom: var(--space-1);
@@ -159,7 +159,7 @@
 }
 
 .song-edit__error {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--danger);
   margin-top: var(--space-1);
 }
@@ -186,7 +186,7 @@
 }
 
 .song-edit__switch-subtitle {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
 }
 

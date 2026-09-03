@@ -22,7 +22,7 @@
   flex: 1;
   color: var(--primary);
   font-size: var(--font-sm);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 
 .sleep-timer__cancel {
@@ -38,8 +38,8 @@
 
 .sleep-timer__section {
   color: var(--content-2);
-  font-size: var(--font-xs);
-  font-weight: 600;
+  font-size: var(--font-caption1);
+  font-weight: var(--weight-semibold);
   margin-bottom: var(--space-2);
 }
 
@@ -81,5 +81,5 @@
 
 .sleep-timer__chip-text--active {
   color: var(--primary-content);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }

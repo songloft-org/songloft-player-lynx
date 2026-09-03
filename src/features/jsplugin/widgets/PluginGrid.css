@@ -11,8 +11,8 @@
 }
 
 .plugin-grid__title {
-  font-size: var(--font-md);
-  font-weight: 600;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-semibold);
   color: var(--content);
 }
 
@@ -56,7 +56,7 @@
 
 .plugin-grid__card-name {
   margin-top: var(--space-1);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content);
   text-align: center;
   overflow: hidden;

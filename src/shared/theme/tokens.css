@@ -97,6 +97,18 @@
   --shadow-none: none;
   --shadow-focus: 0 0 0 3px var(--primary-faint);
 
+  /* HIG Motion — duration and easing tokens (HIG §10 Motion).
+     Consumer CSS references these as var(--duration-*) / var(--ease-*).
+     The reduce-motion class below zeroes the durations so any transition
+     or animation using them becomes instant when the host signals it. */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 350ms;
+  --ease-default: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-in: cubic-bezier(0.42, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.58, 1);
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+
   /* layout sizes */
   --mobile-nav-height: 60px;
 
@@ -106,6 +118,16 @@
   height: 100%;
   background-color: var(--canvas);
   color: var(--content);
+}
+
+/* HIG §10 Motion: reduce-motion zeroes durations so transitions/animations
+   become instant when the host signals it. The host activation channel is
+   not wired here (needs a native SystemAppearance field) — this CSS is ready
+   so flipping the class is all that's needed once the host provides it. */
+.theme-root.reduce-motion {
+  --duration-fast: 0ms;
+  --duration-normal: 0ms;
+  --duration-slow: 0ms;
 }
 
 /* ── Dark — Muse dark is a re-tuned set, not a simple invert (#0f0f11 etc.) ─ */

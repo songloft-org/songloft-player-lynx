@@ -17,8 +17,8 @@
 
 .eq-page__title {
   flex: 1;
-  font-size: var(--font-lg);
-  font-weight: bold;
+  font-size: var(--font-title3);
+  font-weight: var(--weight-bold);
   color: var(--content);
 }
 
@@ -42,7 +42,7 @@
 
 .eq-page__toggle-label {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   color: var(--content);
 }
 

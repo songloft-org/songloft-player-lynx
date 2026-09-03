@@ -24,8 +24,8 @@
 .folder-content__title {
   flex: 1;
   color: var(--content);
-  font-size: var(--font-md);
-  font-weight: 600;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-semibold);
   margin-left: var(--space-3);
   overflow: hidden;
   text-overflow: ellipsis;

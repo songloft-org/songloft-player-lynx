@@ -68,8 +68,8 @@
 }
 
 .atp__title {
-  font-size: var(--font-lg);
-  font-weight: bold;
+  font-size: var(--font-title3);
+  font-weight: var(--weight-bold);
   color: var(--content);
 }
 
@@ -99,7 +99,7 @@
 }
 
 .atp__create-text {
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   color: var(--content);
 }
 
@@ -137,7 +137,7 @@
 
 .atp__footer {
   padding: var(--space-3) 0;
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
   text-align: center;
 }

@@ -40,8 +40,8 @@
 .library__topbar-title {
   flex: 1;
   color: var(--content);
-  font-size: var(--font-lg);
-  font-weight: 600;
+  font-size: var(--font-title3);
+  font-weight: var(--weight-semibold);
 }
 
 .library__topbar-toggle {
@@ -138,7 +138,7 @@
 
 .library__chip-text {
   color: var(--content-2);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }
 
 .library__chip--active .library__chip-text {
@@ -220,7 +220,7 @@
 
 .facet-card__count {
   color: var(--content-muted);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }
 
 /* Loading / empty / error state */
@@ -236,8 +236,8 @@
 
 .library__state-text {
   color: var(--content-2);
-  font-size: var(--font-md);
-  font-weight: bold;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
 }
 
 .library__state-text--error {

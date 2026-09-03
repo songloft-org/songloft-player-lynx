@@ -21,7 +21,7 @@
 
 .server-edit__label {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   color: var(--content);
 }
 
@@ -83,6 +83,6 @@
 
 .server-edit__save-text {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   color: var(--primary-content);
 }

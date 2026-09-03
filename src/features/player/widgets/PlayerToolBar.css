@@ -39,7 +39,7 @@
 
 .player-tools__speed--active {
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 /* ── Volume popover body ── */
@@ -60,7 +60,7 @@
 }
 
 .player-volume-panel__label {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-2);
   margin-bottom: var(--space-2);
 }

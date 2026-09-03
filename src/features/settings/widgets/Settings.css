@@ -37,12 +37,12 @@
 .settings-section__title {
   color: var(--content-2);
   font-size: var(--font-sm);
-  font-weight: bold;
+  font-weight: var(--weight-bold);
 }
 
 .settings-section__subtitle {
   color: var(--content-muted);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   margin-top: 1px;
 }
 
@@ -93,7 +93,7 @@
 
 .settings-row__title {
   color: var(--content);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
 }
 
 .settings-row__title--danger {

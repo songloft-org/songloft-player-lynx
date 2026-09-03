@@ -31,7 +31,7 @@
 
 .playlist-toolbar__btn-text {
   color: var(--content);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }
 
 .playlist-toolbar__btn--active .playlist-toolbar__btn-text {

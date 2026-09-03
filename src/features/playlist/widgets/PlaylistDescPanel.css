@@ -57,10 +57,10 @@
 .playlist-desc__title {
   flex: 1;
   color: var(--content);
-  font-size: var(--font-md);
-  font-weight: bold;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
   /* Explicit line box so CJK ascenders are not clipped by the header padding. */
-  line-height: var(--font-lg);
+  line-height: var(--font-title3);
 }
 
 .playlist-desc__close {
@@ -92,6 +92,6 @@
   padding: var(--space-4);
   color: var(--content-2);
   font-size: var(--font-sm);
-  line-height: var(--font-xl);
+  line-height: var(--font-title1);
   white-space: normal;
 }

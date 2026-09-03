@@ -27,15 +27,15 @@
 
 .login__title {
   color: var(--content);
-  font-size: var(--font-xl);
-  font-weight: bold;
+  font-size: var(--font-title1);
+  font-weight: var(--weight-bold);
   text-align: center;
   margin-bottom: var(--space-1);
 }
 
 .login__subtitle {
   color: var(--content-muted);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   text-align: center;
   margin-bottom: var(--space-5);
 }
@@ -59,7 +59,7 @@
   background-color: var(--neutral-faint);
   border: 1px solid var(--line);
   color: var(--content);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   -x-placeholder-color: var(--content-muted);
 }
 
@@ -87,7 +87,7 @@
 
 .login__toggle-subtitle {
   color: var(--content-muted);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }
 
 .login__error {
@@ -105,7 +105,7 @@
 
 .login__agreement-text {
   color: var(--content-muted);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   margin-left: var(--space-2);
   flex: 1;
 }
@@ -134,6 +134,6 @@
 
 .login__button-text {
   color: var(--primary-content);
-  font-size: var(--font-md);
-  font-weight: bold;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
 }

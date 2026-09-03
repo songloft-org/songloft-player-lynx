@@ -70,7 +70,7 @@
 .category-songs__play-all-text {
   color: var(--accent);
   font-size: var(--font-sm);
-  font-weight: bold;
+  font-weight: var(--weight-bold);
 }
 
 .category-songs__hero {
@@ -105,13 +105,13 @@
 .category-songs__label {
   color: var(--content-muted);
   font-size: var(--font-sm);
-  font-weight: bold;
+  font-weight: var(--weight-bold);
 }
 
 .category-songs__name {
   color: var(--content);
-  font-size: var(--font-lg);
-  font-weight: bold;
+  font-size: var(--font-title3);
+  font-weight: var(--weight-bold);
   margin-top: var(--space-2);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -158,8 +158,8 @@
 
 .category-songs__state-text {
   color: var(--content-2);
-  font-size: var(--font-md);
-  font-weight: bold;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
 }
 
 .category-songs__state-text--error {

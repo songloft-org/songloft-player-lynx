@@ -101,7 +101,7 @@
 .mini-player__title {
   color: var(--content);
   font-size: var(--font-sm);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -109,7 +109,7 @@
 
 .mini-player__subtitle {
   color: var(--content-muted);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;

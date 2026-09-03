@@ -46,7 +46,7 @@
   background-color: var(--neutral-faint);
   border: 1px solid var(--line);
   color: var(--content);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   -x-placeholder-color: var(--content-muted);
 }
 
@@ -62,7 +62,7 @@
 
 .proxy-settings__switch-label {
   color: var(--content);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
 }
 
 /*
@@ -104,7 +104,7 @@
 .proxy-settings__save-text {
   color: var(--primary-content);
   font-size: var(--font-sm);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 /* "Copy prompt to ask AI" — a text affordance under the GitHub proxy field, not a

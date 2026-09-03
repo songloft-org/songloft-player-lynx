@@ -17,8 +17,8 @@
 
 .dlna-page__title {
   flex: 1;
-  font-size: var(--font-lg);
-  font-weight: bold;
+  font-size: var(--font-title3);
+  font-weight: var(--weight-bold);
   color: var(--content);
 }
 
@@ -54,7 +54,7 @@
 }
 
 .dlna-page__now-label {
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   color: var(--content-muted);
 }
 
@@ -77,6 +77,6 @@
 
 .dlna-page__disconnect-text {
   color: var(--danger);
-  font-size: var(--font-xs);
-  font-weight: bold;
+  font-size: var(--font-caption1);
+  font-weight: var(--weight-bold);
 }

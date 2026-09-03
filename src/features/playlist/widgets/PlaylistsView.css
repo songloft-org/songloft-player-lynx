@@ -152,7 +152,7 @@
 
 .playlist-card__count {
   color: var(--content-muted);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }
 
 /* Pinned chip + song count share one line; only rendered when pinned, so the
@@ -211,8 +211,8 @@
 
 .playlists__state-text {
   color: var(--content-2);
-  font-size: var(--font-md);
-  font-weight: bold;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
 }
 
 .playlists__state-text--error {
@@ -275,13 +275,13 @@
 
 .playlists__create-trigger-text {
   color: var(--content);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
 }
 
 .playlists__sort-title {
   color: var(--content);
-  font-size: var(--font-md);
-  font-weight: bold;
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
 }
 
 .playlists__sort-list {
@@ -301,7 +301,7 @@
 .playlists__sort-row-name {
   flex: 1;
   color: var(--content);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
 }
 
 .playlists__sort-handle {
@@ -325,7 +325,7 @@
   background-color: var(--neutral-faint);
   border: 1px solid var(--line);
   color: var(--content);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   margin-bottom: var(--space-2);
   -x-placeholder-color: var(--content-muted);
 }
@@ -395,7 +395,7 @@
 .playlists__select-toolbar-btn-text {
   color: var(--primary-content);
   font-size: var(--font-sm);
-  font-weight: bold;
+  font-weight: var(--weight-bold);
 }
 
 /* Floating-nav capsule inset (see ShellLayout.css): the fixed bottom bar lets
