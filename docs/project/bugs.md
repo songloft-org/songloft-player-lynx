@@ -46,6 +46,7 @@
 - [x] GitHub 代理加「复制 Prompt 让 AI 帮你找」按钮 — 全库此前无剪贴板能力，新增 `SongloftPlatform.setClipboard` 三端（Kotlin/Swift 必须主线程；契约闸门自动逼出双端实现）；提示词刻意不做 i18n
 - [x] `ProxySettingsPage` 裸 `fetch`+`useEffect` 导致 loading 闸在测试环境永不放行 — 迁到 api+query 层，补 2 条渲染测试
 - [x] 删除插件无二次确认 / 从文件安装点击无反应 — 三个症状同根：①两段式确认对纯图标无效，改 `ConfirmDialog`（顺带收敛两份手写对话框 CSS）；②闪帧：`show` 直接由 `pendingDelete` 驱动，退出动画期间名字已清空，改状态分离；③安装 401：`getUploadUrl()` 返回裸相对路径且无凭据，改绝对地址 + `?access_token=`；④更深根因：Web 的 `nativeModulesMap` 塞普通对象被 `import()` 强转 `"[object Object]"` 拒绝，**三个自定义模块全部静默失效**，改注册 ESM URL 转发模块
+- [x] 播放历史面板的列表行是白色实心、加入歌单面板是透明（用户报「一个白色，一个透明色」）— 两个面板材质逐字相同，差别全在行组件：`.song-row` 带 `background-color: var(--canvas)`（三份页面副本合并时带进来的，在页面上是空操作，因为页面根本来就是 `--canvas`），进了 `--glass-fill-strong` 面板就是逐行满幅不透明板，盖掉玻璃填充/sheen/ramp 与面板底下的 `<blur-view>`；同一条填充还盖掉 `.playlist-detail__song-row-wrapper--selected` 的整行选中高亮（画在行的祖先上，只在勾选框槽里露出来，暗色 #0f0f11 vs #17171b 明显）。修法：删掉该填充（行不是 surface）；新增从用法反推的玻璃面板遍历闸门，规则是「不透明填充只允许在自带 `border-radius` 的有界对象上」。复查确认播放列表面板（`.drawer__row`）无此问题（本批）
 - [x] 设置页开关形式不统一（布尔值三种画法、带框勾六份互不相同的副本）— 定为三角色各一控件写进 `DESIGN.md`：开/关→Switch、单选→无框对勾、多选→新 `AppCheckbox`；删六份副本，产物小 6 KB
 - [x] `var(--on-primary)` 不存在的 token 被 5 处使用，两处内容彻底不可见 — 正确是 `--primary-content`；新增 `tokens-defined.test.ts` 闸门（无 fallback 的 `var()` 必须有声明），当场又查出 6 处 Material 风格遗留命名
 - [x] 曲库管理页最后两项入口与设置区不匹配（宽 32px/更紧凑/双线边框/无标题）— 手写裸卡片改 `SettingsSection`+`SettingsRow`

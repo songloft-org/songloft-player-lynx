@@ -3,6 +3,8 @@ import path from 'node:path'
 
 import { expect, test } from 'vitest'
 
+import { classTokens, openingTags } from '../../testing/jsx-classes.js'
+
 /**
  * HIG §8 Accessibility tap-target gate (plan §11.2).
  *
@@ -41,64 +43,13 @@ function filesOf(dir: string, ext: string): string[] {
   })
 }
 
-/**
- * Every JSX opening tag in a source file, as raw text.
- *
- * Brace- and quote-aware, because attribute values are arbitrary expressions:
- * a naive `/<[^>]*>/` stops at the first `>` inside `{() => cond > 0}` and
- * would split one tag into two, losing whichever attribute straddles the cut.
+/*
+ * The two JSX scanners live in `shared/testing/jsx-classes.ts` — shared with the
+ * glass-surface gate, which derives its own roster the same way. Keeping one copy
+ * is deliberate: the interpolation bug its comment records was in this file's
+ * copy, and a second copy would have kept it.
  */
-function openingTags(src: string): string[] {
-  const tags: string[] = []
-  for (let i = 0; i < src.length; i++) {
-    if (src[i] !== '<' || !/[a-zA-Z]/.test(src[i + 1] ?? '')) continue
-    let depth = 0
-    let quote: string | null = null
-    let j = i + 1
-    for (; j < src.length; j++) {
-      const c = src[j]!
-      if (quote !== null) {
-        if (c === quote && src[j - 1] !== '\\') quote = null
-      } else if (c === '"' || c === '\'' || c === '`') quote = c
-      else if (c === '{') depth++
-      else if (c === '}') depth--
-      else if (c === '>' && depth === 0) break
-    }
-    tags.push(src.slice(i, j + 1))
-    i = j
-  }
-  return tags
-}
 
-/**
- * Class names worn by one opening tag — from `className` and from every
- * `somethingClassName` prop, whether the value is a literal or an expression
- * (`{cond ? 'a' : 'b'}`, a template, a concatenation). Every string literal in
- * the expression is taken: a class applied only conditionally is still applied.
- */
-function classTokens(tag: string): string[] {
-  const out: string[] = []
-  for (const m of tag.matchAll(/\w*lassName\s*=/g)) {
-    let k = m.index + m[0].length
-    while (k < tag.length && /\s/.test(tag[k]!)) k++
-    const open = tag[k]
-    if (open === '\'' || open === '"') {
-      const end = tag.indexOf(open, k + 1)
-      if (end > 0) out.push(...tag.slice(k + 1, end).split(/\s+/))
-    } else if (open === '{') {
-      let depth = 0
-      let e = k
-      for (; e < tag.length; e++) {
-        if (tag[e] === '{') depth++
-        else if (tag[e] === '}' && --depth === 0) break
-      }
-      for (const s of tag.slice(k, e + 1).matchAll(/'([^']*)'|`([^`]*)`|"([^"]*)"/g)) {
-        out.push(...(s[1] ?? s[2] ?? s[3] ?? '').split(/\s+/))
-      }
-    }
-  }
-  return out.filter((token) => /^[a-z][\w-]*$/.test(token))
-}
 
 /**
  * The old hand-written roster, kept as a floor. These are styled as interactive
@@ -193,9 +144,9 @@ test('derives the tappable roster from usage instead of a hand-written list', ()
 
   // A parser regression (a changed JSX idiom, a bad brace walk) would empty the
   // roster and leave the gate below vacuously green. Pin the shape: the app has
-  // a couple of hundred tappables, and these five are reached by five different
-  // routes — bindtap, catchtap, triggerClassName, a class inside a conditional
-  // expression, and the hand-written floor.
+  // a couple of hundred tappables, and each of these is reached by a DIFFERENT
+  // route, so a regression in any one branch of the extractor shows up here
+  // rather than as a silently narrower roster.
   expect(tappable.size).toBeGreaterThan(150)
   for (const cls of [
     'song-row__action', // bindtap, plain literal
@@ -203,6 +154,11 @@ test('derives the tappable roster from usage instead of a hand-written list', ()
     'plugin-manager__row-more', // triggerClassName only — invisible to the old gate
     'confirm-dialog__btn', // literal with a modifier alongside it
     'nav-item', // the floor
+    // The literal head of an interpolated template — `{`song-row${…}`}`. This
+    // one was MISSING until the interpolation-aware pass was added: the naive
+    // fragment scanner returned `song-row${isCurrentSong` and the filter dropped
+    // it, so a `bindtap` row was outside the roster while the gate was green.
+    'song-row',
   ]) {
     expect(tappable, `${cls} missing from the derived roster`).toContain(cls)
   }

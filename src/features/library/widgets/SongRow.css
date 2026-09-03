@@ -27,7 +27,29 @@
   width: 100%;
   min-width: 0;
   padding: var(--space-3) var(--space-4);
-  background-color: var(--canvas);
+  /*
+   * NO background of its own — deliberately. The row is not a surface; whatever
+   * it sits on is. It used to carry `background-color: var(--canvas)`, inherited
+   * from the three page copies this file collapsed (on a page the fill is a
+   * no-op: every one of those page roots is `--canvas` already, with nothing
+   * painting in between). Two places it was not a no-op:
+   *
+   *  1. `PlayHistoryPanel` renders these rows inside a `--glass-fill-strong`
+   *     panel. An opaque full-bleed slab per row covered the glass, the sheen
+   *     and the ramp, and hid the `<blur-view>` under the panel entirely — the
+   *     list read as flat white while the add-to-playlist sheet next to it,
+   *     which uses the background-less `.media-list-item`, read as frosted
+   *     (user-reported: 「一个白色，一个透明色」).
+   *  2. `.playlist-detail__song-row-wrapper--selected` paints its selection
+   *     highlight on an ANCESTOR of this row, so the row's own fill covered it;
+   *     the highlight showed only in the checkbox gutter. Barely visible in
+   *     light (canvas #fff vs paper #fafafa) and plainly wrong in dark
+   *     (#0f0f11 vs #17171b), which is why it went unreported for so long.
+   *
+   * So: do not re-add a fill here. A row that needs to read as a surface should
+   * get it from its container, and a row STATE (current/selected) should use a
+   * translucent fill so a glass panel underneath still shows through.
+   */
   border-bottom: 1px solid var(--line);
 }
 

@@ -116,6 +116,12 @@ unzip -o app-debug.apk '*.dex' && dexdump -d classes12.dex \
 
 flex 把溢出量按 basis **加权摊给所有** shrink 非零的子项，小 basis 只是分得少、不是不分——标题行被摊到一份后实测 `height: 13.4px`，配上 Lynx 每个元素自带的 `overflow: clip` ⇒ 文字上半被裁，**看起来像「被什么挡住了」而不是「被压扁」**。判据：`getComputedStyle(el).height` 与 `el.scrollHeight` 的差值；截图容易误读。同类推论：卡片钳制与 body 钳制必须自洽（`dialogBodyMaxHeight` 由卡片钳制减 chrome 派生，不能独立取份额）。
 
+### 玻璃面板里的不透明填充：行不是 surface
+
+`.song-row` 带 `background-color: var(--canvas)` 在**页面上是空操作**（页面根就是 `--canvas`，中间没东西上色），放进 `--glass-fill-strong` 面板就变成逐行满幅不透明板，盖掉玻璃填充、sheen、ramp 和面板底下的 `<blur-view>`——用户看到的是「一个白色，一个透明色」（播放历史 vs 加入歌单，两个面板材质其实逐字相同）。同一条填充还盖掉画在**祖先**上的整行选中高亮（`.playlist-detail__song-row-wrapper--selected`），只在勾选框槽里露一条，浅色下 #fff 对 #fafafa 几乎看不出、暗色下 #0f0f11 对 #17171b 明显错。
+
+**规则**：行不是 surface，surface 由容器给；面板内的不透明填充只允许在**有界对象**上——自带 `border-radius` 的旋钮/芯片/徽标/内嵌卡片；无界盒子铺不透明色等于把材质**换掉**。行的**状态**（当前曲/选中）用半透明填充，好让底下玻璃继续透出。证据与闸门：`glass-surface.test.ts` 后 3 条（从每个玻璃面板 BFS 收集可达类）、`SongRow.css` 注释。
+
 ### 锚定弹出层用自研，不要装回 `lynx-ui-popover`
 
 库的 `computeCoordsFromPlacement` 返回**相对触发器**的坐标，而 `OverlayView` 用 `position: absolute` 施加（包含块是最近的定位祖先），两者只在「触发器正好位于该祖先原点」时等价——实测歌单详情排序菜单落在 `x = -122`（整块屏外，功能等于不存在）。统一走 `PopoverMenu` / `PopoverPanel` + `anchored-overlay.ts`；invoke 回调是异步的，「先开后量」会先画一帧兜底位置再跳，正确做法是**挂载时量一次 + 每次打开再量**。另：每个轴只能给一个偏移（`top` + `bottom` 同给会被拉伸）；`max-width` 收窄不了面板（CSS 在它之后解析 `min-width`）。
@@ -129,6 +135,10 @@ flex 把溢出量按 basis **加权摊给所有** shrink 非零的子项，小 b
 ### 断言落在进程外或与故障机制无关的量上
 
 TS facade 无论成败一律返回 resolved promise——只问 `isShowing()` 等于让嫌疑人自证清白。可用判据：`dumpsys activity services`（**只能读 `active services` 那一段** —— `Destroying services` 里的 `app=null destroying=true` 尸体能挂到重启为止，整份 grep 会把它读成「服务还在跑」、让 `hide()` 与 stopWithTask 两条永久假红）/ `dumpsys window windows`（悬浮歌词靠写入前后 `Requested h` / `mLayoutSeq` 逐字节相同定位「压根没重排」）；`pgrep -x <名>`（别用 `ps -ef | grep X | wc -l`，当前 shell 的命令行含关键字会稳定多算 1–2 个）；`getComputedStyle(el).height` vs `el.scrollHeight`。
+
+### 反推清单只有它的解析器那么宽
+
+把手写清单改成按用法反推只是**第一半**：`classTokens()` 起初丢掉插值模板的字面量头部——`` {`song-row${cond ? ' mod' : ''}`} `` 的第一个词出来是 `song-row${cond` 被过滤掉，于是凡按这种写法写的类名全部在清单外，`.song-row` 这个带 `bindtap` 的行就在其中，而闸门是绿的。**更宽的清单配更窄的解析器，绿得和手写清单一样。** 对策：清单规模与**成员多样性**都要断言（每个成员对应一种不同的到达途径，含「插值模板的头部」这一种），解析器辅助函数放共享模块（`src/shared/testing/jsx-classes.ts`）而不是每个闸门各抄一份。
 
 ### skip 数变了要查
 
