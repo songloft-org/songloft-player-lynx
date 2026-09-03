@@ -72,11 +72,12 @@ export function GlobalMenu({
 
   return (
     <view className='global-menu' data-testid={testId}>
-      {/* Real backdrop blur for the docked form only, behind the dim. Gated on
-          the same `anchored` flag as the scrim's paint: anchored, this menu is a
-          popover, and blurring the page behind a popover is not what any other
-          popover in the app does. A preceding sibling, not a child: the scrim
-          below owns tap-to-dismiss and a child would sit in front of it. */}
+      {/* Scrim-mode blur for the docked form only, behind the dim — gated on the
+          same `anchored` flag as the scrim's paint, because only the docked form is
+          modal. A preceding sibling, not a child: the scrim below owns
+          tap-to-dismiss and a child would sit in front of it. The anchored form
+          gets a panel-mode layer inside its panel instead; see `BackdropBlur.tsx`
+          for why the two modes mount differently. */}
       {!anchored && <BackdropBlur />}
       {/*
         * The outside-tap catcher is the backdrop, a sibling of the panel — so a
@@ -102,6 +103,13 @@ export function GlobalMenu({
           : 'global-menu__panel global-menu__panel--docked'}
         style={position}
       >
+        {/* Panel-mode blur for the anchored form: it is a popover, so there is no
+            scrim to dim and nothing page-sized to blur — the material is the panel
+            itself, exactly as in `PopoverSurface`. Docked, the panel already sits
+            over a blurred, dimmed page, so a second layer would only re-blur what
+            the scrim layer blurred. `overflow-y: auto` on the panel clips this to
+            the rounded corners. */}
+        {anchored && <BackdropBlur className='ui-backdrop-blur--panel' />}
         <view className='global-menu__items'>
           {items.map((item) => (
             <MenuItem

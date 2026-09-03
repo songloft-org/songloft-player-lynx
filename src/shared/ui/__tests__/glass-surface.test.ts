@@ -69,6 +69,16 @@ const SURFACES: Surface[] = [
     selector: '.drawer__panel',
     fill: /var\(--glass-fill-strong\)/,
   },
+  {
+    // Added late, and the reason it was late is the point: this panel kept
+    // `var(--paper)` through both glass batches and was the only floating surface
+    // in the app left opaque — a flat card beside the very popovers its own CSS
+    // comment claimed it matched. It is here so "the surface reverted to --paper"
+    // is a failure for the song menu too, not just for the five that were listed.
+    file: 'shared/ui/GlobalMenu.css',
+    selector: '.global-menu__panel',
+    fill: /var\(--glass-fill-strong\)/,
+  },
 ]
 
 function rules(file: string): string {

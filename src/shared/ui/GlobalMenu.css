@@ -52,7 +52,29 @@
   z-index: 101;
   display: flex;
   flex-direction: column;
-  background-color: var(--paper);
+  /*
+   * The same glass as every other overlay in the app — `.popover-menu` for the
+   * anchored form, `.more-tabs__panel` / `.drawer__panel` for the docked one.
+   *
+   * This said `var(--paper)` until 批A-fix3, which made it the **only** floating
+   * surface left opaque: batch C gave the others their depth stack and fix2 gave
+   * them a real blur, and this panel — the song row's `⋯` menu, the most-used menu
+   * in the app — was never brought along. So it read as a flat card beside glass
+   * ones, on every platform. The note on `--anchored` below asserted the two
+   * matched; it had quietly stopped being true.
+   *
+   * Declared on the shared rule because both forms want the same material: anchored
+   * it is a popover carrying its own blur layer (the panel-mode mount in
+   * `GlobalMenu.tsx`), docked it is a modal sheet over the already blurred and
+   * dimmed page.
+   */
+  background-color: var(--glass-fill-strong);
+  background-image: var(--glass-sheen-layer), var(--glass-ramp);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-md),
+    inset 0 1px 0 var(--glass-highlight),
+    var(--glass-rim-sides),
+    inset 0 -1px 0 var(--line);
   overflow-y: auto;
 }
 
@@ -83,9 +105,10 @@
   min-width: 180px;
   padding-top: var(--space-2);
   padding-bottom: var(--space-2);
+  /* `--radius-md` is also what `.ui-backdrop-blur--panel` rounds itself to, so the
+     blur layer's corners land on the panel's. Surface, border and shadow all come
+     from the shared rule above — this modifier is geometry only. */
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--line);
 }
 
 .global-menu__items {

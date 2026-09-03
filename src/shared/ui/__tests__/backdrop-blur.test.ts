@@ -78,6 +78,17 @@ function walk(ext: string): string[] {
 const stripCssComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '')
 
 /**
+ * One rule's body, matched on the **exact** selector — not "any rule mentioning
+ * this class", which is the looseness a mutation run already caught once in this
+ * file (see the containing-block assertion). Pass comment-stripped CSS.
+ */
+function block(css: string, selector: string): string {
+  const rule = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].find((m) => m[1]!.trim() === selector)
+  expect(rule, `no base rule for ${selector}`).toBeDefined()
+  return rule![2]!
+}
+
+/**
  * Rule-by-rule, so the selector credited with a declaration is the one that
  * actually owns it. The *last* class in the selector is the owner: `.a .b` and
  * `.a.b--x` both describe `b`.
@@ -186,9 +197,9 @@ interface PanelSite {
 }
 
 /**
- * The three surfaces that are translucent with no scrim under them. Every one of
- * them was a flat wash over sharp page content before panel mode existed; these
- * are the entries that keep them from going back.
+ * The surfaces that are translucent with no scrim under them. Every one of them was
+ * a flat wash over sharp page content before panel mode existed; these are the
+ * entries that keep them from going back.
  */
 const PANEL_SITES: PanelSite[] = [
   {
@@ -214,6 +225,16 @@ const PANEL_SITES: PanelSite[] = [
     panel: 'mini-player',
     css: 'features/player/widgets/MiniPlayer.css',
     firstChild: "className='mini-player__progress'",
+  },
+  {
+    // The anchored form. Its docked form is modal and takes the scrim mode instead,
+    // which is why this file is in *both* rosters — the only site that is.
+    name: 'global menu (anchored form)',
+    tsx: 'shared/ui/GlobalMenu.tsx',
+    modifier: 'ui-backdrop-blur--panel',
+    panel: 'global-menu__panel',
+    css: 'shared/ui/GlobalMenu.css',
+    firstChild: "className='global-menu__items'",
   },
 ]
 
@@ -445,14 +466,42 @@ describe('panel mode', () => {
       .not.toContain('<BackdropBlur />')
   })
 
-  it('blurs the global menu’s page only in its docked form', () => {
+  it('gives the global menu the mode each of its two forms calls for', () => {
+    /*
+     * This menu is the one surface with both forms, and the previous version of
+     * this assertion is why it shipped wrong: it read "anchored, its panel is
+     * `--paper`, fully opaque, so it needs neither mode" and pinned that
+     * `--paper` in place. The premise was stale — batch C had given every other
+     * overlay a glass fill and fix2 had given the popovers a real blur — so the
+     * gate was holding the app's most-used menu at a flat opaque card while
+     * asserting all was well. A gate that pins a surface's *fill* is asserting a
+     * design decision; this one now pins the *pairing* instead: whatever the fill
+     * is, each form gets the mode that matches its shape.
+     */
     const tsx = read('shared/ui/GlobalMenu.tsx')
-    // Anchored, this menu is a popover: its panel is `--paper`, fully opaque, so
-    // it needs neither mode. Docked, it is a modal sheet with a real scrim.
-    expect(tsx).toMatch(/\{!anchored && <BackdropBlur \/>\}/)
-    expect(read('shared/ui/GlobalMenu.css')).toMatch(
+    // Docked: modal, so scrim mode — page blurred, then dimmed.
+    expect(tsx, 'the docked form is modal and needs the scrim-mode blur')
+      .toMatch(/\{!anchored && <BackdropBlur \/>\}/)
+    // Anchored: a popover, so panel mode — no dim, the material is the panel.
+    expect(tsx, 'the anchored form is a popover and needs the panel-mode layer')
+      .toMatch(/\{anchored && <BackdropBlur className='ui-backdrop-blur--panel' \/>\}/)
+    const css = stripCssComments(read('shared/ui/GlobalMenu.css'))
+    expect(css, 'only the docked form dims the page behind it').toMatch(
       /\.global-menu__backdrop--docked\s*\{[^{}]*background-color:\s*var\(--backdrop\)/,
     )
-    expect(read('shared/ui/GlobalMenu.css')).toMatch(/\.global-menu__panel\s*\{[^{}]*background-color:\s*var\(--paper\)/)
+    expect(
+      block(css, '.global-menu__backdrop'),
+      'the anchored form\u2019s catcher must stay invisible, like .popover-backdrop',
+    ).not.toMatch(/background/)
+    // The surface itself matches the popovers it sits beside. Asserted against
+    // `.popover-menu`'s own rule rather than a literal, so the two cannot drift
+    // apart again the way they just did.
+    const surface = /background-color:\s*var\(--glass-fill-strong\)/
+    expect(block(stripCssComments(read('shared/ui/PopoverMenu.css')), '.popover-menu'))
+      .toMatch(surface)
+    expect(
+      block(css, '.global-menu__panel'),
+      'the song menu must use the same fill as the toolbar menus beside it',
+    ).toMatch(surface)
   })
 })
