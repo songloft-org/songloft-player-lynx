@@ -22,10 +22,14 @@ export const BACKDROP_BLUR_RADIUS = '20px'
  * `@lynx-js/types`) and it is the one way to reach a real backdrop blur, on
  * every platform this app ships to:
  *
- *  - **Web** — `web-core` registers `x-blur-view`, whose whole implementation is
- *    to write `:host { backdrop-filter: blur(Npx) }` into its own shadow root.
- *    Verified end-to-end in Docker Chrome, including that the attribute is live
- *    (changing it re-renders, removing it clears the rule).
+ *  - **Web** — the implementation exists (`web-core` registers `x-blur-view`,
+ *    which writes `:host { backdrop-filter: blur(Npx) }` into its own shadow
+ *    root) but the tag does NOT reach it on its own: `blur-view` is absent from
+ *    `LYNX_TAG_TO_HTML_TAG_MAP`, so the identity fallback puts a literal, inert
+ *    `<blur-view>` in the DOM. `web/index.html` aliases the name onto the real
+ *    class; see `src/__tests__/web-host-page.test.ts`. Without that alias this
+ *    whole component is a silent no-op on Web — which is how it first shipped,
+ *    because the runtime check had constructed an `x-blur-view` by hand.
  *  - **iOS** — `XElement/BlurView` 4.0.1 is in `ios/Podfile.lock`, and
  *    `XElement/Behavior` self-registers it.
  *  - **Android** — `xelement-blur-view:4.0.0` arrives transitively through the

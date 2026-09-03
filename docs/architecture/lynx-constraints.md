@@ -94,12 +94,21 @@ web-core 的 `LYNX_TAG_TO_HTML_TAG_MAP` 只映射 view/text/image/raw-text/scrol
 
 | 平台 | 证据 | 结论 |
 | --- | --- | --- |
-| Web | web-core 注册 `x-blur-view`，实现就是往自己 shadow root 写 `:host { backdrop-filter: blur(Npx) }`，`observedAttributes = ["blur-radius"]` | ✅ Docker Chrome 实测 `blur(20px)`，属性可实时驱动 |
+| Web | 实现存在（web-core 注册 `x-blur-view`，往自己 shadow root 写 `:host { backdrop-filter: blur(Npx) }`），**但标签名接不上**——见下方 | ⚠️ 需宿主页别名，已修 |
 | iOS | `ios/Podfile.lock` 有 `XElement/BlurView (4.0.1)`，由 `XElement/Behavior` 自注册 | ✅ |
 | Android | `xelement-blur-view:4.0.0` 经 `xelement` 伞包 POM 传递依赖进来，`MainActivity.kt` 调 `addBehaviors(XElementBehaviors().create())`；反编译 aar 得标签名 `blur-view` | ✅ |
 | HarmonyOS | `blur-radius` 文档标了 @Harmony，但本宿主只装了 `@lynx/xelement_svg` | ⚠️ 当作"可能解析不出"处理 |
 
 **属性有平台分支，别当通用**：`blur-radius`（三平台）、`blur-sampling` 仅 @Android、而 `blur-effect` / `spacing` / `glass-*` / `ios-user-interface-style` **仅 @iOS**。
+
+**Web 上这个元素恰好踩了本节开头那条回落**，值得单独记，因为它是「元素存在」与「元素可用」不等价的活样本：
+
+- `__CreateElement` 是 `document.createElement(LYNX_TAG_TO_HTML_TAG_MAP[tagName] ?? tagName)`。`blur-view` **不在**那张表里，于是走恒等回落，DOM 里落的是字面标签 `blur-view`。
+- 而 web-elements 把实现注册在 **`x-blur-view`** 这个名字下，且从不注册裸 `blur-view`（把它的注册助手调用点全列出来核过）。
+- 结论：**元素和标签各自都存在，但永远碰不上面**。`blur-view` 是 `HTMLUnknownElement`，属性完全无效，**没有任何报错或告警**。
+- 修法在宿主页做别名（`web/index.html`，`customElements.whenDefined('x-blur-view')` 后 `define('blur-view', class extends X {})`），因为那张表是 frozen 的模块常量。闸门在 `src/__tests__/web-host-page.test.ts`。
+
+**这条也是一次验证方法论的教训**：本节最初写的是「Web ✅ 已实测」，因为无头探针**手工 `createElement('x-blur-view')`** 测出了 `blur(20px)`——恰好跳过了唯一要紧的那一步（标签映射）。验证一个元素能不能用，必须**用业务代码实际发出的那个标签名**去创建它。
 
 Harmony 这一格决定了**挂载形状**：`<BackdropBlur />` 必须是 scrim 的**前置兄弟**，不能是 wrapper 也不能是 child。child 会盖在带 `bindtap={onClose}` 的 scrim 前面吞掉点击关闭，wrapper 会把整个弹层子树塞进一个某平台可能解析不出的标签里——而前置兄弟最坏只是"少了模糊"。又一次失败模式不对称。
 

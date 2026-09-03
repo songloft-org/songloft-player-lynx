@@ -373,6 +373,78 @@ test('serve.mjs and copy-bundle-web.mjs resolve the same web-core assets', () =>
  * no API. Both fail only in a fresh browser (a stale persisted server URL
  * masks them), which is exactly why this needs a gate.
  */
+/**
+ * `<blur-view>` only works on Web because the host page aliases the tag.
+ *
+ * **Why.** web-core creates every element with
+ * `document.createElement(LYNX_TAG_TO_HTML_TAG_MAP[tag] ?? tag)`, and that map
+ * holds only view/text/image/raw-text/scroll-view/wrapper/list/page/input/
+ * textarea/svg/frame. So the **identity fallback** applies to `blur-view` and it
+ * lands in the DOM as the literal tag — an inert `HTMLUnknownElement` whose
+ * attributes do nothing. web-elements ships the real implementation, but under
+ * the name `x-blur-view`, and registers a bare `blur-view` nowhere. The element
+ * and the tag both exist and never meet.
+ *
+ * Failure mode if this alias goes: every modal backdrop blur silently no-ops **on
+ * Web only** — no error, no warning, just an un-blurred page under a 0.35–0.55
+ * scrim, which is how it first shipped. The runtime check that "verified" Web had
+ * constructed an `x-blur-view` by hand and so bypassed the one mapping step that
+ * mattered.
+ *
+ * Both halves are asserted here because either one alone is worthless: the alias
+ * must exist in the page, and the framework must still be registering the
+ * implementation under the name the alias reads. If web-core ever adds
+ * `blur-view` to its own map, this gate is what makes that visible — the alias
+ * becomes a harmless no-op (it early-returns on an already-defined name) rather
+ * than a silent conflict.
+ */
+describe('blur-view is aliased onto web-core\'s x-blur-view', () => {
+  const html = read('web/index.html')
+
+  test('the host page defines the alias', () => {
+    expect(html).toMatch(/customElements\.whenDefined\('x-blur-view'\)/)
+    expect(html).toMatch(/customElements\.define\('blur-view',/)
+    // Idempotent: web-core adding the tag to its map later must not throw.
+    expect(html).toMatch(/if \(customElements\.get\('blur-view'\)\) return/)
+  })
+
+  test('web-elements still registers the implementation as x-blur-view, and not as blur-view', () => {
+    const elements = path.join(webCoreStatic(), 'js', 'async', 'web-elements.js')
+    expect(existsSync(elements), 'web-elements chunk not found').toBe(true)
+    const src = readFileSync(elements, 'utf8')
+    // The registration helper is called with the tag name as its first argument.
+    const registered = new Set(
+      [...src.matchAll(/\(\s*"([a-z][a-z0-9-]*)"\s*,\s*\[/g)].map((m) => m[1]!),
+    )
+    expect(registered.has('x-blur-view'), 'x-blur-view is no longer registered').toBe(true)
+    expect(
+      registered.has('blur-view'),
+      'web-core now registers blur-view itself — the host alias is redundant, drop it',
+    ).toBe(false)
+  })
+
+  test('blur-view is absent from the tag map, which is what makes the alias necessary', () => {
+    const constants = path.join(
+      realpathSync(path.join(repoRoot, 'node_modules', '@lynx-js', 'web-core')),
+      'dist',
+      'constants.js',
+    )
+    const src = readFileSync(constants, 'utf8')
+    const map = src.match(/LYNX_TAG_TO_HTML_TAG_MAP[\s\S]*?\{([\s\S]*?)\}/)
+    expect(map, 'LYNX_TAG_TO_HTML_TAG_MAP not found').not.toBeNull()
+    expect(map![1]).not.toMatch(/'blur-view'/)
+    // The identity fallback is the other half of the mechanism.
+    const createEl = readFileSync(
+      path.join(
+        realpathSync(path.join(repoRoot, 'node_modules', '@lynx-js', 'web-core')),
+        'dist', 'client', 'mainthread', 'elementAPIs', 'createElementAPI.js',
+      ),
+      'utf8',
+    )
+    expect(createEl).toMatch(/LYNX_TAG_TO_HTML_TAG_MAP\[tagName\] \?\? tagName/)
+  })
+})
+
 describe('the deployMode host tag is consistent across its three parties', () => {
   const html = read('web/index.html')
   const copy = read('scripts/copy-bundle-web.mjs')

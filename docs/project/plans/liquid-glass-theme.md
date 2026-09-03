@@ -2,7 +2,7 @@
 
 > ## 修订（2026-09-03，玻璃材质优化批A）
 >
-> **本文第 1 节「Lynx 无 `backdrop-filter`，做不出真折射玻璃」这句只对了一半。** CSS 属性层面确实没有；但 `<blur-view>` 是一等**元素**（`@lynx-js/types` 的 `BlurViewProps`，`IntrinsicElements` 已注册），Web/iOS/Android 三平台的实现都已逐一查证（Harmony 存疑），Web 侧已在 Docker Chrome 实测到真 `backdrop-filter: blur(20px)`。证据表见 `docs/architecture/lynx-constraints.md` §四。
+> **本文第 1 节「Lynx 无 `backdrop-filter`，做不出真折射玻璃」这句只对了一半。** CSS 属性层面确实没有；但 `<blur-view>` 是一等**元素**（`@lynx-js/types` 的 `BlurViewProps`，`IntrinsicElements` 已注册），Web/iOS/Android 三平台的实现都已逐一查证（Harmony 存疑），Web 侧已在 Docker Chrome 实测到真 `backdrop-filter: blur(20px)`——但**Web 需要宿主页给标签做别名**才接得上（`blur-view` 不在 web-core 的标签映射表里，实现却注册在 `x-blur-view` 名下；批A 首次交付时漏了这步，Web 上整批静默无效）。证据表与那次教训见 `docs/architecture/lynx-constraints.md` §四。
 >
 > 这**不推翻本文的伪玻璃方案**：玻璃面板 alpha 0.72–0.85，真模糊只能透出 15–28%，看不出来。真正值得模糊的是 `--backdrop` 弹层 scrim（dark 0.55 / light 0.35，透出 45–65%），批A 就只做了那 10 个挂载点（`src/shared/ui/BackdropBlur.tsx`）。四档材质本身仍是伪玻璃。
 >

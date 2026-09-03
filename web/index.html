@@ -344,6 +344,40 @@
   <script defer src="/lynx-frame-host.js"></script>
 
   <!--
+    Alias `blur-view` onto web-core's `x-blur-view`.
+
+    web-core creates elements with
+    `document.createElement(LYNX_TAG_TO_HTML_TAG_MAP[tag] ?? tag)`, and that map
+    holds only view/text/image/raw-text/scroll-view/wrapper/list/page/input/
+    textarea/svg/frame. `blur-view` is not in it, so the **identity fallback**
+    applies and `<blur-view>` lands in the DOM as the literal tag `blur-view` —
+    an inert `HTMLUnknownElement` whose attributes do nothing (the trap in
+    `docs/architecture/lynx-constraints.md` §四). Meanwhile web-elements DOES
+    ship the real implementation, registered under the name `x-blur-view`.
+
+    So the element and the tag both exist and simply never meet. Without this
+    alias every modal backdrop blur is a silent no-op **on Web only** — which is
+    exactly how it shipped: the runtime check that "verified" it had constructed
+    an `x-blur-view` by hand, bypassing the mapping it was supposed to exercise.
+
+    Registered by name rather than by adding to web-core's map because that map
+    is a frozen module constant. `whenDefined` because web-elements arrives in an
+    async chunk, so the class may not exist when this runs.
+  -->
+  <script>
+    (function () {
+      customElements.whenDefined('x-blur-view').then(function () {
+        if (customElements.get('blur-view')) return
+        var XBlurView = customElements.get('x-blur-view')
+        // A bare subclass: the implementation reads its own `blur-radius`
+        // attribute and writes `:host { backdrop-filter: blur(Npx) }` into its
+        // shadow root, so it carries nothing that is keyed to the tag name.
+        customElements.define('blur-view', class extends XBlurView {})
+      }).catch(function () { /* no blur on this host; scrims still dim */ })
+    })()
+  </script>
+
+  <!--
     `type="module"` is REQUIRED, not stylistic: web-core's production client
     (client_prod) uses `import.meta`, so loading it as a classic script dies with
     "Cannot use 'import.meta' outside a module" — an uncaught exception that never
