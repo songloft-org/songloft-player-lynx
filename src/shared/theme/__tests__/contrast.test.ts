@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { describe, expect, test } from 'vitest'
 
 /**
@@ -549,6 +549,57 @@ describe('state washes over the surfaces they sit on', () => {
         .replace(/\/\*[\s\S]*?\*\//g, '')
       expect(css, `${file} must step washed-row metadata up to --content-2`).toMatch(re)
     }
+  })
+
+  test('no stylesheet puts --content-muted text on a wash background', () => {
+    /*
+     * The two tests above cover the rows this batch touched. They do not cover a
+     * rule nobody thought of — and two shipped: `.media-list-item__badge` and
+     * `.playlist-card__chip` painted `--primary-faint` under `--content-muted` at
+     * `--font-2xs`, i.e. 4.14 over the page and 3.74 over glass in dark, the exact
+     * pair WASH_TEXT omits. Naming the known rows is a whitelist; this is the net.
+     *
+     * Shape, not token list: any rule whose background is a wash and whose own
+     * `color` is `--content-muted`. Matching `color:` needs the lookbehind, or
+     * `background-color:` answers first and every offender reads as clean.
+     */
+    const sheets: string[] = []
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name)
+        if (entry.isDirectory()) {
+          if (entry.name !== '__tests__') walk(full)
+        } else if (entry.name.endsWith('.css')) sheets.push(full)
+      }
+    }
+    walk(resolve(process.cwd(), 'src'))
+
+    const offenders = sheets.flatMap((file) => {
+      const css = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+      return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].flatMap((rule) => {
+        const [, selector = '', body = ''] = rule
+        const background = /background(?:-color)?:\s*([^;]+);/.exec(body)?.[1] ?? ''
+        const colour = /(?<![-\w])color:\s*([^;]+);/.exec(body)?.[1] ?? ''
+        const washed = WASHES.some((w) => background.includes(`--${w}`))
+        return washed && colour.includes('--content-muted')
+          ? [`${file.split('/src/')[1]}: ${selector.trim()}`]
+          : []
+      })
+    })
+
+    expect(sheets.length, 'no stylesheets scanned — the walk is broken').toBeGreaterThan(30)
+    expect(
+      offenders,
+      'tertiary ink on a wash is below AA in dark — step it up to --content-2',
+    ).toEqual([])
+  })
+
+  test('the wash/--content-muted detector matches the shape it is written for', () => {
+    // Defect-shape check, including the lookbehind: without it `background-color`
+    // satisfies the `color:` probe and the scan above silently passes everything.
+    const body = '  background-color: var(--primary-faint);\n  color: var(--content-muted);\n'
+    expect(/(?<![-\w])color:\s*([^;]+);/.exec(body)?.[1]).toBe('var(--content-muted)')
+    expect(/\bcolor:\s*([^;]+);/.exec(body)?.[1]).toBe('var(--primary-faint)')
   })
 
   test('--content-muted on a wash is the pair the step-ups exist for', () => {

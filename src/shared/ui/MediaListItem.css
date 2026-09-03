@@ -67,11 +67,17 @@
   gap: var(--space-1);
 }
 
+/*
+ * `--content-2`, not `--content-muted`: this text sits on the accent wash, and a
+ * wash lifts the dark surface — tertiary ink measures 4.14 over the page and 3.74
+ * over glass there, below AA at the smallest size in the app. Same step-up the
+ * washed rows take (see contrast.test.ts).
+ */
 .media-list-item__badge {
   padding: 1px var(--space-1);
   border-radius: var(--radius-sm);
   background-color: var(--primary-faint);
-  color: var(--content-muted);
+  color: var(--content-2);
   font-size: var(--font-2xs);
 }
 
