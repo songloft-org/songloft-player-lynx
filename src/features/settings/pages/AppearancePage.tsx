@@ -11,6 +11,14 @@ import {
 } from '../../../i18n/index.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import {
+  type FontScaleOption,
+  FONT_SCALE_OPTIONS,
+  changeFontScale,
+  coerceFontScale,
+  getFontScale,
+  PREF_FONT_SCALE,
+} from '../../../shared/theme/font-scale-model.js'
+import {
   type MaterialVariant,
   MATERIAL_VARIANT_OPTIONS,
   changeMaterialVariant,
@@ -40,6 +48,15 @@ function languageLabelKey(lang: AppLanguage): string {
       return 'settings.languageChinese'
     default:
       return 'settings.languageSystem'
+  }
+}
+
+function fontScaleLabelKey(option: FontScaleOption): string {
+  switch (option) {
+    case 'small': return 'settings.fontScaleSmall'
+    case 'large': return 'settings.fontScaleLarge'
+    case 'xlarge': return 'settings.fontScaleXLarge'
+    default: return 'settings.fontScaleDefault'
   }
 }
 
@@ -95,6 +112,7 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
   // wrong option ticked.
   const [theme, setTheme] = useState<AppTheme>(getAppTheme)
   const [material, setMaterial] = useState<MaterialVariant>(getMaterialVariant)
+  const [fontScale, setFontScale] = useState<FontScaleOption>(getFontScale)
   const [language, setLanguage] = useState<AppLanguage>('system')
 
   useEffect(() => {
@@ -108,6 +126,14 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
       }
     })()
     void (async () => {
+      void (async () => {
+        try {
+          const saved = coerceFontScale(await getSongloftStorage().prefs.get(PREF_FONT_SCALE))
+          if (!cancelled) setFontScale(saved)
+        } catch {
+          /* best-effort */
+        }
+      })()
       void (async () => {
         try {
           const saved = coerceMaterialVariant(await getSongloftStorage().prefs.get(PREF_MATERIAL))
@@ -131,6 +157,11 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
   const selectTheme = (next: AppTheme) => {
     setTheme(next)
     void changeAppTheme(next)
+  }
+
+  const selectFontScale = (next: FontScaleOption) => {
+    setFontScale(next)
+    void changeFontScale(next)
   }
 
   const selectMaterial = (next: MaterialVariant) => {
@@ -183,6 +214,19 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
             trailingIcon={option === material ? 'check' : undefined}
             onTap={() => selectMaterial(option)}
             testId={`material-${option}`}
+          />
+        ))}
+      </SettingsSection>
+
+      <SettingsSection title={t('settings.fontScaleSection')} icon='settings'>
+        {FONT_SCALE_OPTIONS.map((option) => (
+          <SettingsRow
+            key={option}
+            title={t(fontScaleLabelKey(option))}
+            selected={option === fontScale}
+            trailingIcon={option === fontScale ? 'check' : undefined}
+            onTap={() => selectFontScale(option)}
+            testId={`fontscale-${option}`}
           />
         ))}
       </SettingsSection>

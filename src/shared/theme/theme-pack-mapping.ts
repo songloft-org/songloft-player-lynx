@@ -1,3 +1,4 @@
+import { getFontScaleNumber } from './font-scale-model.js'
 import { getMaterialVariant } from './material-model.js'
 import { MATERIAL_TOKENS } from './material-tokens.js'
 
@@ -249,6 +250,8 @@ export function themePackToStyleVars(
   vars['--glass-fill-strong'] = mt['--glass-fill-strong']
   vars['--glass-border'] = mt['--glass-border']
   vars['--glass-highlight'] = mt['--glass-highlight']
+
+  vars['--font-scale'] = String(getFontScaleNumber())
 
   return vars
 }

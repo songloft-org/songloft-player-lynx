@@ -80,6 +80,16 @@ describe('hexToRgba', () => {
 })
 
 describe('themePackToStyleVars', () => {
+
+/** The full inline-style output themePackToStyleVars produces for a given theme
+ * when no pack is active: the baseline plus the material glass tokens (always
+ * injected, regular = baseline) and --font-scale (default 1). */
+function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
+  return {
+    ...PACK_OVERRIDABLE_BASELINE[resolved],
+    '--font-scale': '1',
+  }
+}
   test('maps the full sakura pack in light mode', () => {
     const vars = themePackToStyleVars(SAKURA, 'light')
 
@@ -210,7 +220,7 @@ describe('themePackToStyleVars', () => {
       controlRadius: undefined,
       navigationRadius: undefined,
     }
-    expect(themePackToStyleVars(darkOnly, 'light')).toEqual(PACK_OVERRIDABLE_BASELINE.light)
+    expect(themePackToStyleVars(darkOnly, 'light')).toEqual(expectBaseline('light'))
     // …but still maps in dark mode.
     expect(themePackToStyleVars(darkOnly, 'dark')['--primary']).toBe('#F48FB1')
   })
@@ -218,8 +228,8 @@ describe('themePackToStyleVars', () => {
   test('no pack at all is the full baseline, not undefined', () => {
     // The runtime merges style objects and never removes keys, so "clear the
     // pack" has to be a write-back-to-baseline rather than a dropped style.
-    expect(themePackToStyleVars(null, 'light')).toEqual(PACK_OVERRIDABLE_BASELINE.light)
-    expect(themePackToStyleVars(undefined, 'dark')).toEqual(PACK_OVERRIDABLE_BASELINE.dark)
+    expect(themePackToStyleVars(null, 'light')).toEqual(expectBaseline('light'))
+    expect(themePackToStyleVars(undefined, 'dark')).toEqual(expectBaseline('dark'))
   })
 
   test('the key set is constant across pack/no-pack and light/dark', () => {
@@ -238,7 +248,7 @@ describe('themePackToStyleVars', () => {
       controlRadius: undefined,
       navigationRadius: undefined,
     }, 'light')
-    expect(vars).toEqual(PACK_OVERRIDABLE_BASELINE.light)
+    expect(vars).toEqual(expectBaseline('light'))
   })
 })
 

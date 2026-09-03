@@ -49,34 +49,39 @@
   --radius-xs: 6px;
   --radius-nav: 12px;
 
+  /* HIG §8 Accessibility: text-scale token. All font-size tokens below
+     use calc(base * var(--font-scale)) so a single property change resizes
+     every text style. Default 1 = no scaling. */
+  --font-scale: 1;
+
   /* type scale (px) — --font-2xs is the bottom-nav tab label: Apple's tab
      bars use 10pt labels, and the smaller size is also what lets a 4-char
      CJK plugin name fit the fixed-width selection capsule (see
      ShellLayout.css). */
-  --font-2xs: 10px;
-  --font-xs: 12px;
-  --font-sm: 14px;
-  --font-md: 16px;
-  --font-lg: 20px;
-  --font-xl: 28px;
-  --font-2xl: 36px;
+  --font-2xs: calc(10px * var(--font-scale));
+  --font-xs: calc(12px * var(--font-scale));
+  --font-sm: calc(14px * var(--font-scale));
+  --font-md: calc(16px * var(--font-scale));
+  --font-lg: calc(20px * var(--font-scale));
+  --font-xl: calc(28px * var(--font-scale));
+  --font-2xl: calc(36px * var(--font-scale));
 
   /* HIG §4.7 iOS text styles — Lynx treats 1pt ≈ 1px, so these map pt→px
      directly. The old --font-* tokens keep their original values (no alias
      mapping: 10/14/28/36px have no exact HIG counterpart, aliasing them
      would drift sizes); new code uses the HIG names. --font-headline is 17px
      like --font-body, the weight differentiates (see --weight-semibold). */
-  --font-caption2: 11px;
-  --font-caption1: 12px;
-  --font-footnote: 13px;
-  --font-subhead: 15px;
-  --font-callout: 16px;
-  --font-body: 17px;
-  --font-headline: 17px;
-  --font-title3: 20px;
-  --font-title2: 22px;
-  --font-title1: 28px;
-  --font-largeTitle: 34px;
+  --font-caption2: calc(11px * var(--font-scale));
+  --font-caption1: calc(12px * var(--font-scale));
+  --font-footnote: calc(13px * var(--font-scale));
+  --font-subhead: calc(15px * var(--font-scale));
+  --font-callout: calc(16px * var(--font-scale));
+  --font-body: calc(17px * var(--font-scale));
+  --font-headline: calc(17px * var(--font-scale));
+  --font-title3: calc(20px * var(--font-scale));
+  --font-title2: calc(22px * var(--font-scale));
+  --font-title1: calc(28px * var(--font-scale));
+  --font-largeTitle: calc(34px * var(--font-scale));
 
   /* font weights — HIG Regular/Medium/Semibold/Bold */
   --weight-regular: 400;

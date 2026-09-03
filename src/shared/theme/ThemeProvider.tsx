@@ -3,6 +3,10 @@ import type { ReactNode } from '@lynx-js/react'
 import type { CSSProperties } from '@lynx-js/types/common'
 
 import {
+  getFontScaleNumber,
+  subscribeFontScale,
+} from './font-scale-model.js'
+import {
   getMaterialVariant,
   subscribeMaterialVariant,
 } from './material-model.js'
@@ -40,6 +44,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setTheme] = useState(() => resolveTheme(getAppTheme()))
   const [pack, setPack] = useState(() => getActiveThemePack())
   const [, setMaterial] = useState(() => getMaterialVariant())
+  const [, setFontScale] = useState(() => getFontScaleNumber())
 
   useEffect(
     () => subscribeAppTheme(() => setTheme(resolveTheme(getAppTheme()))),
@@ -56,6 +61,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   useEffect(
     () => subscribeMaterialVariant(() => setMaterial(getMaterialVariant())),
+    [],
+  )
+
+  useEffect(
+    () => subscribeFontScale(() => setFontScale(getFontScaleNumber())),
     [],
   )
 

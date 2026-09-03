@@ -39,17 +39,17 @@ const decl = parseDeclarations(THEME_ROOT)
 test('HIG iOS text-style tokens are present at the right px', () => {
   // HIG §4.7, 1pt ≈ 1px in Lynx.
   const expected = {
-    '--font-caption2': '11px',
-    '--font-caption1': '12px',
-    '--font-footnote': '13px',
-    '--font-subhead': '15px',
-    '--font-callout': '16px',
-    '--font-body': '17px',
-    '--font-headline': '17px',
-    '--font-title3': '20px',
-    '--font-title2': '22px',
-    '--font-title1': '28px',
-    '--font-largeTitle': '34px',
+    '--font-caption2': 'calc(11px * var(--font-scale))',
+    '--font-caption1': 'calc(12px * var(--font-scale))',
+    '--font-footnote': 'calc(13px * var(--font-scale))',
+    '--font-subhead': 'calc(15px * var(--font-scale))',
+    '--font-callout': 'calc(16px * var(--font-scale))',
+    '--font-body': 'calc(17px * var(--font-scale))',
+    '--font-headline': 'calc(17px * var(--font-scale))',
+    '--font-title3': 'calc(20px * var(--font-scale))',
+    '--font-title2': 'calc(22px * var(--font-scale))',
+    '--font-title1': 'calc(28px * var(--font-scale))',
+    '--font-largeTitle': 'calc(34px * var(--font-scale))',
   } as const
   for (const [name, value] of Object.entries(expected)) {
     expect(decl[name], `${name}`).toBe(value)
@@ -115,13 +115,13 @@ test('legacy --font-* tokens keep their original values (no alias drift)', () =>
   // These have no exact HIG counterpart (10/14/28/36px); the plan keeps them
   // verbatim rather than aliasing, so 14px does not silently become 13 or 15.
   const frozen = {
-    '--font-2xs': '10px',
-    '--font-xs': '12px',
-    '--font-sm': '14px',
-    '--font-md': '16px',
-    '--font-lg': '20px',
-    '--font-xl': '28px',
-    '--font-2xl': '36px',
+    '--font-2xs': 'calc(10px * var(--font-scale))',
+    '--font-xs': 'calc(12px * var(--font-scale))',
+    '--font-sm': 'calc(14px * var(--font-scale))',
+    '--font-md': 'calc(16px * var(--font-scale))',
+    '--font-lg': 'calc(20px * var(--font-scale))',
+    '--font-xl': 'calc(28px * var(--font-scale))',
+    '--font-2xl': 'calc(36px * var(--font-scale))',
   } as const
   for (const [name, value] of Object.entries(frozen)) {
     expect(decl[name], `${name} (legacy, frozen)`).toBe(value)

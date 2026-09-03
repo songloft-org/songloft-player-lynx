@@ -106,6 +106,15 @@ const SAKURA = {
   },
 }
 
+
+/** Expected inline style when no pack is active — baseline + --font-scale (default 1). */
+function expectBaselineStyle(resolved: 'light' | 'dark'): Record<string, string> {
+  return {
+    ...PACK_OVERRIDABLE_BASELINE[resolved],
+    '--font-scale': '1',
+  }
+}
+
 test('without a pack the root inline tokens equal the Muse baseline', async () => {
   setSystemAppearanceForTests({ theme: 'light', locale: null })
   await changeAppTheme('system', createMemoryStorage())
@@ -115,7 +124,7 @@ test('without a pack the root inline tokens equal the Muse baseline', async () =
   // The runtime merges style objects and never removes keys, so the provider
   // cannot drop the attribute on "no pack" — it writes the baseline instead.
   // Inline equals the class declarations, so the rendered look is unchanged.
-  expect(rootStyle(container)).toEqual(PACK_OVERRIDABLE_BASELINE.light)
+  expect(rootStyle(container)).toEqual(expectBaselineStyle('light'))
 })
 
 test('an active pack lands as inline custom properties on the root', async () => {
@@ -141,7 +150,7 @@ test('a pack arriving after mount recolors the tree in place', async () => {
   await changeAppTheme('system', createMemoryStorage())
 
   const { container } = render(<ThemeProvider />)
-  expect(rootStyle(container)).toEqual(PACK_OVERRIDABLE_BASELINE.light)
+  expect(rootStyle(container)).toEqual(expectBaselineStyle('light'))
 
   await act(async () => {
     setActiveThemePack(SAKURA)
@@ -181,6 +190,6 @@ test('clearing the pack writes the baseline back over the pack colours', async (
 
   // Regression shape: the runtime does NOT remove style-object keys, so a
   // dropped attribute would leave the sakura pink on screen forever.
-  expect(rootStyle(container)).toEqual(PACK_OVERRIDABLE_BASELINE.light)
+  expect(rootStyle(container)).toEqual(expectBaselineStyle('light'))
   expect(rootStyle(container)['--primary']).toBe('#111111')
 })
