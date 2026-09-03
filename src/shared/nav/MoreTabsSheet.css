@@ -127,7 +127,7 @@
 .more-tabs__item-label {
   flex: 1;
   color: var(--content);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   line-height: var(--font-lg);
   /* One line, ellipsis on overflow — plugin names come from the backend and
      can be arbitrarily long. Same standard trio as `.play-history__title`. */

@@ -82,8 +82,8 @@
 
 .shell__brand-text {
   color: var(--accent);
-  font-size: var(--font-lg);
-  font-weight: bold;
+  font-size: var(--font-title3);
+  font-weight: var(--weight-bold);
 }
 
 /* Rail destinations scroll when they overflow the rail's height — plugin tabs

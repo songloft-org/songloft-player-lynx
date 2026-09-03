@@ -4,7 +4,7 @@
 >
 > **读文档顺序**：① [AGENTS.md](../../AGENTS.md) §4–§6（铁律，必读）→ ② 本文 §3「剩余工作」→ ③ [pitfalls.md](pitfalls.md)（踩坑实录：每条铁律背后的证据）。细节按需查 [progress.md](progress.md)（逐批交付）与 [bugs.md](bugs.md)（逐条缺陷根因）。
 >
-> **一句话现状**：Apple HIG 重构阶段1（设计令牌）+阶段2（标准材质）已提交；阶段3–11 待续。**JS 侧闸门**：`tsc -b` 绿 / **2078 vitest 全绿（194 文件）** / build:web 绿 / Docker Chrome 运行时验证通过。近期重点：后台播放稳定性、Lynx 原生渲染插件、自定义标签、记住密码、HarmonyOS 宿主修复、文件夹浏览视图、**Apple HIG 重构（11 阶段）**。
+> **一句话现状**：Apple HIG 重构全部 11 阶段已提交。**JS 侧闸门**：`tsc -b` 绿 / **2097 vitest 全绿（197 文件）** / build:web 绿 / Docker Chrome 运行时验证通过。近期重点：后台播放稳定性、Lynx 原生渲染插件、自定义标签、记住密码、HarmonyOS 宿主修复、文件夹浏览视图、**Apple HIG 重构（11 阶段）**。
 
 ---
 
@@ -40,7 +40,7 @@
 
 | 闸门 | 结果 | 何时验的 |
 |---|---|---|
-| `pnpm test` | **2078 全绿 / 194 文件** | ✅ **2026-09-03**（HIG 阶段1–2 + build fix） |
+| `pnpm test` | **2097 全绿 / 197 文件** | ✅ **2026-09-03**（HIG 全部 11 阶段 + build fix） |
 | `pnpm exec tsc -b` | 绿 | 2026-09-03 |
 | `pnpm run build` | 绿（main.lynx.bundle 2232.5 kB） | 2026-09-03 |
 | `pnpm run build:web` | 绿（main.web.bundle 2286.1 kB）+ Docker Chrome 运行时 25/25 | 2026-09-03 |

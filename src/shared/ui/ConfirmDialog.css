@@ -221,7 +221,7 @@
 
 .confirm-dialog__btn-text--submit {
   color: var(--primary-content);
-  font-weight: bold;
+  font-weight: var(--weight-bold);
 }
 
 /* Nothing typed yet: the button holds its place but reads as unavailable. The

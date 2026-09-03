@@ -102,7 +102,7 @@
 
 .popover-menu__item-label--selected {
   color: var(--primary);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 
 .popover-menu__item-label--danger {
