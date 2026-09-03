@@ -6,6 +6,7 @@ import { getLastLibrarySearch } from '../../features/library/index.js'
 import { useBackHandler } from './use-back-handler.js'
 import { Icon, ICON_COLORS } from '../ui/Icon.js'
 import type { NavDestination } from './destinations.js'
+import { BackdropBlur } from '../ui/BackdropBlur.js'
 import './MoreTabsSheet.css'
 
 export interface MoreTabsSheetProps {
@@ -61,6 +62,10 @@ export function MoreTabsSheet({ items, activePath, show, onShowChange }: MoreTab
 
   return (
     <view className='more-tabs' data-testid='more-tabs-sheet'>
+      {/* Real backdrop blur, behind the dim so the page is blurred and then
+          darkened. A preceding sibling, not a child: the scrim below owns
+          tap-to-dismiss and a child would sit in front of it. */}
+      <BackdropBlur />
       {/* Outside-tap close on the backdrop (the panel's sibling), never on this
           root: a tap inside the panel must not be able to reach a close
           handler. Same rule as `PopoverMenu` and `PlayHistoryPanel`. */}

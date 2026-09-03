@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
+import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
 import './PlaylistDescPanel.css'
 
 export interface PlaylistDescPanelProps {
@@ -40,6 +41,10 @@ export function PlaylistDescPanel({ title, description, onClose }: PlaylistDescP
 
   return (
     <view className='playlist-desc' bindtap={onClose} data-testid='playlist-desc-panel'>
+      {/* Real backdrop blur, behind the dim so the page is blurred and then
+          darkened. A preceding sibling, not a child: the scrim below owns
+          tap-to-dismiss and a child would sit in front of it. */}
+      <BackdropBlur />
       <view className='playlist-desc__backdrop' />
       <view className='playlist-desc__panel' catchtap={() => {}}>
         <view className='playlist-desc__header'>

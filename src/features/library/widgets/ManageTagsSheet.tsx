@@ -10,6 +10,7 @@ import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { getSongTagsApi } from '../api/index.js'
 import { songTagQueryKeys } from '../data/song-tags-query.js'
+import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
 import './ManageTagsSheet.css'
 
 export interface ManageTagsSheetProps {
@@ -127,6 +128,10 @@ export function ManageTagsSheet({ songIds, onClose }: ManageTagsSheetProps) {
 
   return (
     <view className='manage-tags' data-testid='manage-tags-sheet'>
+      {/* Real backdrop blur, behind the dim so the page is blurred and then
+          darkened. A preceding sibling, not a child: the scrim below owns
+          tap-to-dismiss and a child would sit in front of it. */}
+      <BackdropBlur />
       <view className='manage-tags__backdrop' bindtap={onClose} />
       <view className='manage-tags__panel'>
         <view className='atp__handle-wrap'>

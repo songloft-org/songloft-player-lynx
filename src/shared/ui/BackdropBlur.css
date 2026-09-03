@@ -1,0 +1,17 @@
+/**
+ * Geometry for the modal blur layer. Declared once, because the layer is always
+ * mounted as the sibling immediately *before* a scrim that is itself an inset-0
+ * absolute (or fixed) fill — so "cover the same box as my next sibling" reduces
+ * to a plain inset-0 absolute and never has to be restated per surface.
+ *
+ * No `background-color` on purpose: this element contributes no colour at all,
+ * only the blur. The dim stays on the scrim so the paint order reads
+ * blur → dim → panel, i.e. the page is blurred and *then* darkened.
+ */
+.ui-backdrop-blur {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}

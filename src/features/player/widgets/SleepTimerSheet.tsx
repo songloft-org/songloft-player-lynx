@@ -14,6 +14,7 @@ import {
   type IntegerRange,
   type SleepTimerStatus,
 } from '../domain/sleep-timer.js'
+import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
 import './SheetShell.css'
 import './SleepTimerSheet.css'
 
@@ -100,6 +101,10 @@ export function SleepTimerSheet({
   return (
     <>
       <view className='drawer__root' data-testid='sleep-timer-sheet'>
+        {/* Real backdrop blur, behind the dim so the page is blurred and then
+            darkened. A preceding sibling, not a child: the scrim below owns
+            tap-to-dismiss and a child would sit in front of it. */}
+        <BackdropBlur />
         <view className='drawer__backdrop' bindtap={onClose} />
         <view className='drawer__panel drawer__panel--sleep' catchtap={() => {}}>
           <view className='drawer__handle-wrap'>

@@ -3,6 +3,7 @@ import { pickMenuPlacement, placePanel } from './anchored-overlay.js'
 import type { AnchorMeasurement } from './anchored-overlay.js'
 import { MenuItem } from './MenuItem.js'
 import type { MenuItemSpec } from './MenuItem.js'
+import { BackdropBlur } from './BackdropBlur.js'
 import './PopoverMenu.css'
 import './GlobalMenu.css'
 
@@ -71,6 +72,12 @@ export function GlobalMenu({
 
   return (
     <view className='global-menu' data-testid={testId}>
+      {/* Real backdrop blur for the docked form only, behind the dim. Gated on
+          the same `anchored` flag as the scrim's paint: anchored, this menu is a
+          popover, and blurring the page behind a popover is not what any other
+          popover in the app does. A preceding sibling, not a child: the scrim
+          below owns tap-to-dismiss and a child would sit in front of it. */}
+      {!anchored && <BackdropBlur />}
       {/*
         * The outside-tap catcher is the backdrop, a sibling of the panel — so a
         * tap on a menu row cannot reach it. Putting the close handler on the root

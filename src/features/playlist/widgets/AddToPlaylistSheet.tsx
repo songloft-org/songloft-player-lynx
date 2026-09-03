@@ -11,6 +11,7 @@ import { PromptDialog } from '../../../shared/ui/PromptDialog.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { getPlaylistApi } from '../api/index.js'
 import { usePlaylistsInfiniteQuery } from '../data/playlist-query.js'
+import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
 import './AddToPlaylistSheet.css'
 
 export interface AddToPlaylistSheetProps {
@@ -117,6 +118,10 @@ export function AddToPlaylistSheet({ songIds, onClose, onAdded }: AddToPlaylistS
   return (
     <>
       <view className='atp' data-testid='add-to-playlist-sheet'>
+        {/* Real backdrop blur, behind the dim so the page is blurred and then
+            darkened. A preceding sibling, not a child: the scrim below owns
+            tap-to-dismiss and a child would sit in front of it. */}
+        <BackdropBlur />
         {/*
           * Outside-tap close sits on the backdrop, not on this root with a
           * `catchtap` on the panel: the backdrop is a sibling of the panel, so a

@@ -88,6 +88,23 @@ web-core 的 `LYNX_TAG_TO_HTML_TAG_MAP` 只映射 view/text/image/raw-text/scrol
 
 **写跨平台页面时用了新标签，先查那张表** —— Web 分支应该整段不渲染，而不是靠属性关掉。
 
+### 反例：`<blur-view>` 是有实现的，而且是真 backdrop blur 的唯一路径
+
+`backdrop-filter` **不是 Lynx CSS 属性**（`@lynx-js/css-defines` 里没有），所以整套玻璃材质是伪造的（见 `tokens.css` 的 `--glass-*`）。但**元素**这一层不一样：`<blur-view>` 是一等元素（`@lynx-js/types` 里有 `BlurViewProps`，`IntrinsicElements` 已注册），四个平台都有实现，逐一查证过——
+
+| 平台 | 证据 | 结论 |
+| --- | --- | --- |
+| Web | web-core 注册 `x-blur-view`，实现就是往自己 shadow root 写 `:host { backdrop-filter: blur(Npx) }`，`observedAttributes = ["blur-radius"]` | ✅ Docker Chrome 实测 `blur(20px)`，属性可实时驱动 |
+| iOS | `ios/Podfile.lock` 有 `XElement/BlurView (4.0.1)`，由 `XElement/Behavior` 自注册 | ✅ |
+| Android | `xelement-blur-view:4.0.0` 经 `xelement` 伞包 POM 传递依赖进来，`MainActivity.kt` 调 `addBehaviors(XElementBehaviors().create())`；反编译 aar 得标签名 `blur-view` | ✅ |
+| HarmonyOS | `blur-radius` 文档标了 @Harmony，但本宿主只装了 `@lynx/xelement_svg` | ⚠️ 当作"可能解析不出"处理 |
+
+**属性有平台分支，别当通用**：`blur-radius`（三平台）、`blur-sampling` 仅 @Android、而 `blur-effect` / `spacing` / `glass-*` / `ios-user-interface-style` **仅 @iOS**。
+
+Harmony 这一格决定了**挂载形状**：`<BackdropBlur />` 必须是 scrim 的**前置兄弟**，不能是 wrapper 也不能是 child。child 会盖在带 `bindtap={onClose}` 的 scrim 前面吞掉点击关闭，wrapper 会把整个弹层子树塞进一个某平台可能解析不出的标签里——而前置兄弟最坏只是"少了模糊"。又一次失败模式不对称。
+
+**一条不会变的数学**：模糊买不到任何 alpha 余量。blur 是线性滤波，**均匀背景是它的不动点**（纯白盖层模糊后还是纯白），而本仓库所有对比度闸门的最坏情况都是从**均匀极值**推出来的。所以再好的模糊也压不低任何 alpha，它只是抹掉了 WCAG 本来就不建模的高频细节。
+
 ---
 
 ## 五、布局与事件的几处反直觉

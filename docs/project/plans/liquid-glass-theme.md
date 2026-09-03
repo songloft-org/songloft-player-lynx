@@ -1,5 +1,15 @@
 # Liquid Glass 主题（Lynx）— 修订版
 
+> ## 修订（2026-09-03，玻璃材质优化批A）
+>
+> **本文第 1 节「Lynx 无 `backdrop-filter`，做不出真折射玻璃」这句只对了一半。** CSS 属性层面确实没有；但 `<blur-view>` 是一等**元素**（`@lynx-js/types` 的 `BlurViewProps`，`IntrinsicElements` 已注册），Web/iOS/Android 三平台的实现都已逐一查证（Harmony 存疑），Web 侧已在 Docker Chrome 实测到真 `backdrop-filter: blur(20px)`。证据表见 `docs/architecture/lynx-constraints.md` §四。
+>
+> 这**不推翻本文的伪玻璃方案**：玻璃面板 alpha 0.72–0.85，真模糊只能透出 15–28%，看不出来。真正值得模糊的是 `--backdrop` 弹层 scrim（dark 0.55 / light 0.35，透出 45–65%），批A 就只做了那 10 个挂载点（`src/shared/ui/BackdropBlur.tsx`）。四档材质本身仍是伪玻璃。
+>
+> 也**不给任何 alpha 松绑**：blur 是线性滤波，均匀背景是它的不动点，而所有对比度闸门的最坏情况都是从均匀极值推出来的——模糊换不到 alpha 余量，只抹掉 WCAG 不建模的高频细节。批A 因此没动一个令牌。
+>
+> 另注：`blur-effect` / `glass-style` / `glass-tint-color` / `ios-user-interface-style` **仅 @iOS**，`blur-sampling` 仅 @Android，只有 `blur-radius` 是三平台的。iOS 26 的 `'glass'`/`'glass-container'` 材质刻意没用——它会替换掉本文这套材质，且发生在本仓库唯一无法验证的平台上。
+
 > ## 修订（2026-09-03，玻璃材质优化批C）
 >
 > 第 1 节的 7 token 表里两行的值已变，另加了 6 个 token：

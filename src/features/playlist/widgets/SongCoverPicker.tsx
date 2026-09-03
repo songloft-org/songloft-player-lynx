@@ -7,6 +7,7 @@ import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { flattenSongs } from '../../library/data/pagination.js'
 import { usePlaylistSongsInfiniteQuery } from '../data/playlist-query.js'
+import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
 import './SongCoverPicker.css'
 
 export interface SongCoverPickerProps {
@@ -38,6 +39,10 @@ export function SongCoverPicker({ playlistId, onSelect, onClose }: SongCoverPick
 
   return (
     <view className='song-cover-picker' bindtap={onClose} data-testid='song-cover-picker'>
+      {/* Real backdrop blur, behind the dim so the page is blurred and then
+          darkened. A preceding sibling, not a child: the scrim below owns
+          tap-to-dismiss and a child would sit in front of it. */}
+      <BackdropBlur />
       <view className='song-cover-picker__backdrop' />
       <view className='song-cover-picker__panel' catchtap={() => {}}>
         <view className='song-cover-picker__header'>

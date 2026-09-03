@@ -16,6 +16,7 @@ import type { PlaybackContext } from '../domain/playback-context.js'
 import { formatPlayedAt } from '../domain/play-history-time.js'
 import { playHistoryQueryKeys, usePlayHistoryQuery } from '../data/play-history-query.js'
 import { usePlayerStore } from '../store/index.js'
+import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
 import './PlayHistoryPanel.css'
 
 export interface PlayHistoryPanelProps {
@@ -154,6 +155,10 @@ export function PlayHistoryPanel({
   return (
     <>
       <view className='play-history' data-testid='play-history-panel'>
+        {/* Real backdrop blur, behind the dim so the page is blurred and then
+            darkened. A preceding sibling, not a child: the scrim below owns
+            tap-to-dismiss and a child would sit in front of it. */}
+        <BackdropBlur />
         {/*
          * Outside-tap close lives on the backdrop (the panel's sibling), not on
          * this root: with it on the root, every tap inside the panel rides up

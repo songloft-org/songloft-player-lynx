@@ -10,6 +10,7 @@ import {
   DialogContent,
 } from '@lynx-js/lynx-ui-dialog'
 
+import { BackdropBlur } from './BackdropBlur.js'
 import './ConfirmDialog.css'
 
 export interface ConfirmDialogProps {
@@ -111,6 +112,10 @@ export function ConfirmDialog({
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
           clickToClose
         >
+          {/* Real backdrop blur, behind the dim so the page is blurred and then
+              darkened. `DialogBackdrop` is the fixed inset-0 wrapper; the dim
+              lives on the inner view, so both layers cover the same box. */}
+          <BackdropBlur />
           <view className='confirm-dialog__backdrop-inner' />
         </DialogBackdrop>
         <DialogContent

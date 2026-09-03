@@ -5,6 +5,7 @@ import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-s
 import { usePlayerStore } from '../store/index.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
 import './SheetShell.css'
 
 export function PlaylistDrawer() {
@@ -24,6 +25,10 @@ export function PlaylistDrawer() {
 
   return (
     <view className='drawer__root' data-testid='playlist-drawer'>
+      {/* Real backdrop blur, behind the dim so the page is blurred and then
+          darkened. A preceding sibling, not a child: the scrim below owns
+          tap-to-dismiss and a child would sit in front of it. */}
+      <BackdropBlur />
       <view className='drawer__backdrop' bindtap={close} />
       <view className='drawer__panel drawer__panel--queue' catchtap={() => {}}>
         <view className='drawer__handle-wrap'>
