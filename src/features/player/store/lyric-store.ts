@@ -16,6 +16,7 @@ import {
 } from '../domain/lyric-parser.js'
 import { defaultLyricFetcher, type LyricFetcher } from '../data/lyric-source.js'
 import { cacheLyric, getCachedLyric, removeCachedLyric } from '../data/lyric-cache.js'
+import { readNotificationLyricInTitle } from '../../settings/data/settings-prefs.js'
 
 export interface LyricState {
   lyrics: LyricLine[]
@@ -89,8 +90,7 @@ export const useLyricStore = create<LyricState>((set, get) => {
     loadForSong: async (song, fetcher = defaultLyricFetcher, opts) => {
       if (!prefLoaded) {
         prefLoaded = true
-        void import('../../settings/data/settings-prefs.js')
-          .then((m) => m.readNotificationLyricInTitle())
+        readNotificationLyricInTitle()
           .then((v) => set({ notificationLyricInTitle: v }))
           .catch(() => {})
       }

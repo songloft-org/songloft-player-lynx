@@ -486,6 +486,7 @@ function mockLyricState(over: Partial<LyricState> = {}): LyricState {
     isLoading: false,
     loadFailed: false,
     synced: true,
+    notificationLyricInTitle: false,
     translationMap: new Map(),
     romanizationMap: new Map(),
     hasTranslation: false,
@@ -496,6 +497,7 @@ function mockLyricState(over: Partial<LyricState> = {}): LyricState {
     setLyricsFromText: noop,
     setRawLyric: noop,
     syncPosition: noop,
+    setNotificationLyricInTitle: noop,
     clear: noop,
     ...over,
   }
