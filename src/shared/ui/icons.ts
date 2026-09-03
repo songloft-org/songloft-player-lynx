@@ -29,6 +29,7 @@ export type IconName =
   | 'volume'
   | 'volume-mute'
   | 'chevron-down'
+  | 'chevron-left'
   | 'chevron-up'
   | 'chevron-right'
   | 'menu'
@@ -160,6 +161,8 @@ const ICONS: Record<IconName, (color: string) => string> = {
     `<path d="M16.5 9.5 21.5 14.5M21.5 9.5 16.5 14.5" ${stroke(c)}/>`,
 
   'chevron-down': (c) => `<path d="M6 9.5 12 15.5 18 9.5" ${stroke(c)}/>`,
+
+  'chevron-left': (c) => `<path d="M14.5 6 8.5 12 14.5 18" ${stroke(c)}/>`,
 
   'chevron-up': (c) => `<path d="M6 14.5 12 8.5 18 14.5" ${stroke(c)}/>`,
 

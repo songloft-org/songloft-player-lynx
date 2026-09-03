@@ -137,6 +137,7 @@
 .shell--wide .nav-item {
   flex: none;
   align-self: auto;
+  min-height: var(--tap-target);
   margin-bottom: var(--space-2);
 }
 
@@ -222,7 +223,7 @@
 /* iPadOS-style rail section header (插件 group above the plugin tabs). */
 .shell__rail-group-header {
   color: var(--content-muted);
-  font-size: var(--font-xs);
+  font-size: var(--font-footnote);
   margin: var(--space-4) var(--space-3) var(--space-2);
 }
 
@@ -257,5 +258,5 @@
 .shell--wide .nav-item__label {
   margin-left: var(--space-3);
   margin-top: 0;
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
 }

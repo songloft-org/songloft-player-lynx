@@ -24,6 +24,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
+  min-height: var(--tap-target);
   padding: var(--space-3) var(--space-4);
   gap: var(--space-2);
 }
@@ -34,16 +35,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: var(--tap-target);
+  height: var(--tap-target);
   border-radius: var(--radius-pill);
 }
 
 .subpage__title {
   flex: 1;
   color: var(--content);
-  font-size: var(--font-lg);
-  font-weight: bold;
+  font-size: var(--font-headline);
+  font-weight: var(--weight-semibold);
   /* Titles are short phrases. A wrapped one only ever happens when the topbar
      row is overfull (something beside the title is taking the width), and a
      two-line title is never the outcome anyone wanted. */

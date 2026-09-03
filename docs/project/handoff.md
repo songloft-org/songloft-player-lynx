@@ -69,7 +69,7 @@
 
 **A. 开发**
 
-1. **Apple HIG UI 重构（11 阶段）** —— 按 `docs/project/plans/apple-hig-redesign.md` 分批推进。**阶段1（设计令牌）+阶段2（标准材质）已提交**。阶段3–11 待续。
+1. **Apple HIG UI 重构（11 阶段）** —— 按 `docs/project/plans/apple-hig-redesign.md` 分批推进。**阶段1（设计令牌）+阶段2（标准材质）+阶段3（导航）已提交**。阶段4–11 待续。
 2. ~~**build 工具链修复**~~ —— **已修复**（`270f347`）。根因：`lyric-store.ts` 的 dynamic `import()` 改变 chunk 图导致 template-webpack-plugin 空 manifest 解构失败，改静态 import 解决。
 3. **Lynxtron 桌面** —— P3 唯一未开始项，剩余最大单块能力（迁移调研里的桌面验收清单在 [`../archive/migration/lynx_migration_roadmap.md`](../archive/migration/lynx_migration_roadmap.md) L47–74，可直接拿来用）。
 2. ~~**修复 14 个 failing test**（`full-player-responsive.test.tsx`，2026-08-31 复跑确认仍 14 失败）—— 近期 UI 改动导致断言不匹配。详见 [bugs.md](bugs.md)「待修复」。~~ —— **已修复**（2026-09-01 复跑全绿）。

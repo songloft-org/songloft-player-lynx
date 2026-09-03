@@ -100,7 +100,7 @@ export function SubPageShell({
         {showBack
           ? (
             <view className='subpage__back' bindtap={goBack} data-testid={backTestId}>
-              <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
+              <Icon name='chevron-left' size={22} color={ICON_COLORS.content} />
             </view>
           )
           : null}
