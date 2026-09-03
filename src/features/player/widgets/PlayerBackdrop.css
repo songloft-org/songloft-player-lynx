@@ -1,10 +1,11 @@
 /*
  * Blurred-cover backdrop for the full player.
  *
- * Two layers under everything else: the cover art blurred to a wash, and a veil in
- * the canvas colour so the page's ordinary text tokens stay readable on top. The
- * veil's alphas live in `tokens.css` and are derived, not tuned — see the comment
- * there before changing them.
+ * Three layers under everything else: the cover art blurred to a wash, a saturation
+ * boost over it, and a veil in the canvas colour so the page's ordinary text tokens
+ * stay readable on top. The veil's alphas live in `tokens.css` and are derived, not
+ * tuned — see the comment there before changing them. Dark's veil is deliberately far
+ * more transparent than light's; that asymmetry is derived too.
  *
  * `filter: blur()` is supported on every Lynx backend (android/ios since 1.0,
  * harmony 3.4, web_lynx). If it ever silently no-ops on some host, this degrades to
@@ -24,6 +25,29 @@
   /* Below `.full-player__layer` (z-index 1), above `.full-player`'s own background.
      Must stay an explicit 0 rather than `auto`: see the note on `__layer`. */
   z-index: 0;
+}
+
+.player-backdrop__vivid {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  /*
+   * Saturation lives in its own element because Lynx's `filter` takes exactly one
+   * function per declaration, and the image below already spends its one on blur.
+   * Nesting is how you compose them.
+   *
+   * Free against the contrast gate: `contrast.test.ts` derives the veil against a
+   * pure-black and pure-white cover, and saturation cannot push a channel outside
+   * [0, 255] — so it cannot widen the worst case the alphas are built on.
+   *
+   * If nested filters turn out not to compose on some Lynx host, this degrades to
+   * "less vivid". That asymmetry in failure modes is the whole reason this filter
+   * ships and the darkening filters (which would have bought a lower veil alpha, but
+   * whose failure mode is unreadable text) do not.
+   */
+  filter: saturate(1.6);
 }
 
 .player-backdrop__img {

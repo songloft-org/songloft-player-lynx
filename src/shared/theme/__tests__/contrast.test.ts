@@ -218,11 +218,20 @@ describe('light theme contrast (WCAG AA; dark is the audited scope, light is a p
  * cover to test against is the worst case — pure black and pure white, since album
  * art can be either.
  *
- * The bound this produces is tight, and it decided the design rather than confirming
- * it: light `--content-2` reaches only 4.23:1 at α=0.90 and 4.43:1 at α=0.92, so the
- * first workable value is 0.93. That is why the cover shows through so little (see
- * the derivation comment in `tokens.css`). Loosening the alphas to make the artwork
- * more visible turns this red — which is the intended outcome, not an obstacle.
+ * Because the extremes are the absolute ends of the range, anything the backdrop does
+ * to the cover *inside* [0, 255] is free here — that is what lets `PlayerBackdrop`
+ * boost saturation without touching this derivation.
+ *
+ * The bound is tight in light and it decided the design rather than confirming it:
+ * light `--content-2` reaches only 4.23:1 at α=0.90 and 4.43:1 at α=0.92, so the first
+ * workable value is 0.93. Dark is a different problem — there the bright extreme is the
+ * dangerous one, and it is far cheaper to survive: `--content-2` clears at 0.83. The
+ * two themes therefore ship different alphas (0.94 light, 0.85 dark) and this test
+ * derives each from the shipped value rather than assuming they agree. They were
+ * briefly equal, which quietly cost dark ~11 alpha points of artwork.
+ *
+ * Loosening either past its own bound turns this red — which is the intended outcome,
+ * not an obstacle.
  */
 describe('player scrim over worst-case cover art', () => {
   const BACKDROP_CSS = readFileSync(

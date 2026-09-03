@@ -197,11 +197,22 @@
   --backdrop: rgba(0, 0, 0, 0.55);
   --backdrop-heavy: rgba(0, 0, 0, 0.78);
 
-  /* Veil over the full player's blurred cover — see the light block for the
-     derivation of these alphas. Same canvas colour, so the page's normal text
-     tokens keep working on top of it. */
-  --player-scrim-from: rgba(15, 15, 17, 0.94);
-  --player-scrim-to: rgba(15, 15, 17, 0.99);
+  /*
+   * Veil over the full player's blurred cover. Same canvas colour, so the page's
+   * normal text tokens keep working on top of it.
+   *
+   * Dark has its **own** derivation, and it is much looser than light's — these two
+   * used to share light's 0.94/0.99, which cost dark ~11 alpha points for nothing.
+   * The binding pair here is `--content-2` over a veiled *white* cover (the bright
+   * extreme is the dangerous one on a dark veil): 4.42:1 at 0.82, 4.56:1 at 0.83.
+   * 0.85 is 0.83 with a margin (+0.41 on the binding pair).
+   *
+   * The gain is the point: the cover now contributes ~15% of the backdrop instead of
+   * ~6%, which is the difference between a tint and something that reads as glass.
+   * `contrast.test.ts` re-derives this from the shipped values — it does not assume
+   * the two themes agree. */
+  --player-scrim-from: rgba(15, 15, 17, 0.85);
+  --player-scrim-to: rgba(15, 15, 17, 0.92);
 
   /* shadows — tinted off the ink, never pure black, never colored (Muse §3.5) */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -273,8 +284,13 @@
    * 4.43:1 at 0.92. 0.93 is the first value where every token the player draws on
    * this surface clears the bar; 0.94 is that with a margin.
    *
-   * The consequence is deliberate and worth stating: the cover shows through by
-   * ~6%, so it reads as a tint rather than the vivid wash the Flutter build has.
+   * This bound is **light-specific**. Dark's veil sits far lower (see its block) —
+   * on a dark veil the danger is a bright cover, not a dark one, and that extreme is
+   * much cheaper to survive. The two alphas differing is the derivation working, not
+   * a mismatch to tidy up.
+   *
+   * The consequence is deliberate and worth stating: in light the cover shows through
+   * by ~6%, so it reads as a tint rather than the vivid wash the Flutter build has.
    * Flutter can afford more because it recolours its foreground from the extracted
    * palette; Lynx has no pixel access, so the palette does not exist here and the
    * foreground is fixed. `player-backdrop-css.test.ts` and `contrast.test.ts`

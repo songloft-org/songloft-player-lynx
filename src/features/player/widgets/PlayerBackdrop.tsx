@@ -32,7 +32,9 @@ export function PlayerBackdrop({ coverUrl }: PlayerBackdropProps) {
 
   return (
     <view className='player-backdrop' data-testid='player-backdrop'>
-      <image className='player-backdrop__img' src={coverUrl} mode='aspectFill' />
+      <view className='player-backdrop__vivid'>
+        <image className='player-backdrop__img' src={coverUrl} mode='aspectFill' />
+      </view>
       <view className='player-backdrop__scrim' />
     </view>
   )

@@ -66,6 +66,30 @@ describe('the blurred cover stays blurred', () => {
   })
 })
 
+describe('the cover keeps its colour', () => {
+  const vivid = rule(BACKDROP, '.player-backdrop__vivid')
+
+  test('saturation is boosted, in its own element', () => {
+    // Lynx takes exactly one filter function per declaration and the image spends its
+    // one on blur, so the boost has to nest. Collapsing both onto one element silently
+    // drops one of them — which looks like "the blur stopped working" on device.
+    const sat = /saturate\(\s*([\d.]+)\s*\)/.exec(vivid['filter'] ?? '')
+    expect(sat, `.player-backdrop__vivid needs filter: saturate(N), got ${vivid['filter']}`)
+      .not.toBeNull()
+    expect(Number(sat![1])).toBeGreaterThan(1)
+  })
+
+  test('the wrapper is full-bleed, or it crops the scaled image', () => {
+    // The image sizes itself at 100% of this box and scales past it. A wrapper smaller
+    // than the whole backdrop moves the crop inward and brings the feathered edges the
+    // scale exists to hide back into view.
+    expect(vivid['position']).toBe('absolute')
+    for (const side of ['left', 'right', 'top', 'bottom']) {
+      expect(vivid[side], `.player-backdrop__vivid needs ${side}: 0`).toBe('0')
+    }
+  })
+})
+
 describe('the veil is a gradient built from the theme tokens', () => {
   const scrim = rule(BACKDROP, '.player-backdrop__scrim')
 
