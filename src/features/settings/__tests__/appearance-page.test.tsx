@@ -20,6 +20,14 @@ vi.mock('../../../i18n/index.js', () => ({
   coerceAppLanguage: (raw: unknown) => (raw === 'en' || raw === 'zh' ? raw : 'system'),
   changeAppLanguage: changeLangSpy,
 }))
+vi.mock('../../../shared/theme/material-model.js', () => ({
+  MATERIAL_VARIANT_OPTIONS: ['ultra-thin', 'thin', 'regular', 'thick'],
+  PREF_MATERIAL: 'glass_material',
+  coerceMaterialVariant: (raw: unknown) =>
+    raw === 'ultra-thin' || raw === 'thin' || raw === 'regular' || raw === 'thick' ? raw : 'regular',
+  getMaterialVariant: () => 'regular',
+  changeMaterialVariant: vi.fn(async () => 'regular'),
+}))
 vi.mock('../../../shared/theme/theme-model.js', () => ({
   APP_THEME_OPTIONS: ['system', 'light', 'dark'],
   PREF_THEME: 'app_theme',
@@ -74,7 +82,7 @@ test('renders the theme and language option rows', async () => {
   // Exactly one tick per group — the persisted defaults (system / system). The
   // theme-pack card adds none: with no installed packs it renders its empty
   // state, and the catalog entry row carries a chevron, not a check.
-  expect(queryAllByTestId('icon-check')).toHaveLength(2)
+  expect(queryAllByTestId('icon-check')).toHaveLength(3)
 })
 
 test('hosts the theme-pack card with its catalog entry row', async () => {

@@ -2,6 +2,10 @@ import { useEffect, useState } from '@lynx-js/react'
 import type { ReactNode } from '@lynx-js/react'
 import type { CSSProperties } from '@lynx-js/types/common'
 
+import {
+  getMaterialVariant,
+  subscribeMaterialVariant,
+} from './material-model.js'
 import { getAppTheme, resolveTheme, subscribeAppTheme } from './theme-model.js'
 import { getActiveThemePack, subscribeActiveThemePack } from './theme-pack-model.js'
 import { themePackToStyleVars } from './theme-pack-mapping.js'
@@ -35,6 +39,7 @@ export interface ThemeProviderProps {
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setTheme] = useState(() => resolveTheme(getAppTheme()))
   const [pack, setPack] = useState(() => getActiveThemePack())
+  const [, setMaterial] = useState(() => getMaterialVariant())
 
   useEffect(
     () => subscribeAppTheme(() => setTheme(resolveTheme(getAppTheme()))),
@@ -46,6 +51,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   // activation recolor the whole tree in place.
   useEffect(
     () => subscribeActiveThemePack(() => setPack(getActiveThemePack())),
+    [],
+  )
+
+  useEffect(
+    () => subscribeMaterialVariant(() => setMaterial(getMaterialVariant())),
     [],
   )
 

@@ -4,7 +4,7 @@
 >
 > **读文档顺序**：① [AGENTS.md](../../AGENTS.md) §4–§6（铁律，必读）→ ② 本文 §3「剩余工作」→ ③ [pitfalls.md](pitfalls.md)（踩坑实录：每条铁律背后的证据）。细节按需查 [progress.md](progress.md)（逐批交付）与 [bugs.md](bugs.md)（逐条缺陷根因）。
 >
-> **一句话现状**：Apple HIG 重构阶段1（设计令牌）已验收完成，待提交；阶段2–11 待续。**JS 侧闸门**：`tsc -b` 绿 / **2064 vitest 全绿（192 文件）** / build:web 绿 / Docker Chrome 运行时验证 25/25 令牌通过。构建回归（`lyric-store.ts` dynamic import）已由 `270f347` 修复。近期重点：后台播放稳定性、Lynx 原生渲染插件、自定义标签、记住密码、HarmonyOS 宿主修复、文件夹浏览视图、**Apple HIG 重构（11 阶段）**。
+> **一句话现状**：Apple HIG 重构阶段1（设计令牌）+阶段2（标准材质）已提交；阶段3–11 待续。**JS 侧闸门**：`tsc -b` 绿 / **2078 vitest 全绿（194 文件）** / build:web 绿 / Docker Chrome 运行时验证通过。近期重点：后台播放稳定性、Lynx 原生渲染插件、自定义标签、记住密码、HarmonyOS 宿主修复、文件夹浏览视图、**Apple HIG 重构（11 阶段）**。
 
 ---
 
@@ -40,7 +40,7 @@
 
 | 闸门 | 结果 | 何时验的 |
 |---|---|---|
-| `pnpm test` | **2064 全绿 / 192 文件** | ✅ **2026-09-03**（HIG 阶段1 + build fix） |
+| `pnpm test` | **2078 全绿 / 194 文件** | ✅ **2026-09-03**（HIG 阶段1–2 + build fix） |
 | `pnpm exec tsc -b` | 绿 | 2026-09-03 |
 | `pnpm run build` | 绿（main.lynx.bundle 2232.5 kB） | 2026-09-03 |
 | `pnpm run build:web` | 绿（main.web.bundle 2286.1 kB）+ Docker Chrome 运行时 25/25 | 2026-09-03 |
@@ -69,7 +69,7 @@
 
 **A. 开发**
 
-1. **Apple HIG UI 重构（11 阶段）** —— 按 `docs/project/plans/apple-hig-redesign.md` 分批推进。**阶段1（设计令牌）已验收完成**（静态闸门 6/6 + Docker Chrome 运行时 25/25），待提交。阶段2–11 待续。
+1. **Apple HIG UI 重构（11 阶段）** —— 按 `docs/project/plans/apple-hig-redesign.md` 分批推进。**阶段1（设计令牌）+阶段2（标准材质）已提交**。阶段3–11 待续。
 2. ~~**build 工具链修复**~~ —— **已修复**（`270f347`）。根因：`lyric-store.ts` 的 dynamic `import()` 改变 chunk 图导致 template-webpack-plugin 空 manifest 解构失败，改静态 import 解决。
 3. **Lynxtron 桌面** —— P3 唯一未开始项，剩余最大单块能力（迁移调研里的桌面验收清单在 [`../archive/migration/lynx_migration_roadmap.md`](../archive/migration/lynx_migration_roadmap.md) L47–74，可直接拿来用）。
 2. ~~**修复 14 个 failing test**（`full-player-responsive.test.tsx`，2026-08-31 复跑确认仍 14 失败）—— 近期 UI 改动导致断言不匹配。详见 [bugs.md](bugs.md)「待修复」。~~ —— **已修复**（2026-09-01 复跑全绿）。

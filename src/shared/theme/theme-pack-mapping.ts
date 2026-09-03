@@ -1,3 +1,6 @@
+import { getMaterialVariant } from './material-model.js'
+import { MATERIAL_TOKENS } from './material-tokens.js'
+
 /**
  * Theme-pack → Muse token mapping (pure functions).
  *
@@ -240,6 +243,12 @@ export function themePackToStyleVars(
   if (controlRadius != null) vars['--radius-md'] = controlRadius
   const navigationRadius = radiusVar(pack?.navigationRadius)
   if (navigationRadius != null) vars['--radius-nav'] = navigationRadius
+
+  const mt = MATERIAL_TOKENS[getMaterialVariant()][resolved]
+  vars['--glass-fill'] = mt['--glass-fill']
+  vars['--glass-fill-strong'] = mt['--glass-fill-strong']
+  vars['--glass-border'] = mt['--glass-border']
+  vars['--glass-highlight'] = mt['--glass-highlight']
 
   return vars
 }

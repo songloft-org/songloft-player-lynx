@@ -23,6 +23,7 @@ import { applySavedLanguage } from './i18n/index.js'
 import { applyHostDeployMode } from './core/config/app-config.js'
 import { initSystemAppearance } from './native/system-appearance.js'
 import { installNotificationNavigateListener, navigateFromNotificationIfNeeded } from './native/notification-navigate.js'
+import { applySavedMaterial } from './shared/theme/material-model.js'
 import { applySavedTheme } from './shared/theme/theme-model.js'
 import { applyActiveThemePack, setActiveThemePack } from './shared/theme/theme-pack-model.js'
 import { router } from './router.js'
@@ -85,6 +86,7 @@ void (async () => {
     initSystemAppearance()
     await applySavedLanguage()
     await applySavedTheme()
+    await applySavedMaterial()
     const savedMode = await readDefaultPlayMode()
     usePlayerStore.getState().setPlayMode(savedMode)
     await restorePlaybackState()

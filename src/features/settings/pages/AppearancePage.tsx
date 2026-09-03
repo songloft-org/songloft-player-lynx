@@ -11,6 +11,14 @@ import {
 } from '../../../i18n/index.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import {
+  type MaterialVariant,
+  MATERIAL_VARIANT_OPTIONS,
+  changeMaterialVariant,
+  coerceMaterialVariant,
+  getMaterialVariant,
+  PREF_MATERIAL,
+} from '../../../shared/theme/material-model.js'
+import {
   APP_THEME_OPTIONS,
   type AppTheme,
   changeAppTheme,
@@ -32,6 +40,24 @@ function languageLabelKey(lang: AppLanguage): string {
       return 'settings.languageChinese'
     default:
       return 'settings.languageSystem'
+  }
+}
+
+function materialLabelKey(variant: MaterialVariant): string {
+  switch (variant) {
+    case 'ultra-thin': return 'settings.materialUltraThin'
+    case 'thin': return 'settings.materialThin'
+    case 'thick': return 'settings.materialThick'
+    default: return 'settings.materialRegular'
+  }
+}
+
+function materialDescKey(variant: MaterialVariant): string {
+  switch (variant) {
+    case 'ultra-thin': return 'settings.materialUltraThinDesc'
+    case 'thin': return 'settings.materialThinDesc'
+    case 'thick': return 'settings.materialThickDesc'
+    default: return 'settings.materialRegularDesc'
   }
 }
 
@@ -68,6 +94,7 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
   // is re-read. Starting from `'system'` instead would flash a frame with the
   // wrong option ticked.
   const [theme, setTheme] = useState<AppTheme>(getAppTheme)
+  const [material, setMaterial] = useState<MaterialVariant>(getMaterialVariant)
   const [language, setLanguage] = useState<AppLanguage>('system')
 
   useEffect(() => {
@@ -81,6 +108,14 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
       }
     })()
     void (async () => {
+      void (async () => {
+        try {
+          const saved = coerceMaterialVariant(await getSongloftStorage().prefs.get(PREF_MATERIAL))
+          if (!cancelled) setMaterial(saved)
+        } catch {
+          /* best-effort */
+        }
+      })()
       try {
         const saved = coerceAppLanguage(await getSongloftStorage().prefs.get(PREF_LANGUAGE))
         if (!cancelled) setLanguage(saved)
@@ -96,6 +131,11 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
   const selectTheme = (next: AppTheme) => {
     setTheme(next)
     void changeAppTheme(next)
+  }
+
+  const selectMaterial = (next: MaterialVariant) => {
+    setMaterial(next)
+    void changeMaterialVariant(next)
   }
 
   const selectLanguage = (next: AppLanguage) => {
@@ -129,6 +169,20 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
             trailingIcon={option === theme ? 'check' : undefined}
             onTap={() => selectTheme(option)}
             testId={`theme-${option}`}
+          />
+        ))}
+      </SettingsSection>
+
+      <SettingsSection title={t('settings.materialSection')} icon='grid'>
+        {MATERIAL_VARIANT_OPTIONS.map((option) => (
+          <SettingsRow
+            key={option}
+            title={t(materialLabelKey(option))}
+            subtitle={t(materialDescKey(option))}
+            selected={option === material}
+            trailingIcon={option === material ? 'check' : undefined}
+            onTap={() => selectMaterial(option)}
+            testId={`material-${option}`}
           />
         ))}
       </SettingsSection>
