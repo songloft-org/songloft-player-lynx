@@ -21,10 +21,12 @@ export function FolderCard({ folder, onTap, onPlayAll }: FolderCardProps) {
         {onPlayAll
           ? (
             <view
-              className='facet-card__play-btn'
+              className='facet-card__play-hit'
               catchtap={() => { onPlayAll(folder) }}
             >
-              <Icon name='play' size={14} color={ICON_COLORS.primaryContent} />
+              <view className='facet-card__play-btn'>
+                <Icon name='play' size={14} color={ICON_COLORS.primaryContent} />
+              </view>
             </view>
           )
           : null}

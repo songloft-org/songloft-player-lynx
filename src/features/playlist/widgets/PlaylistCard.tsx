@@ -78,10 +78,12 @@ export function PlaylistCard({
         {onPlayAll
           ? (
             <view
-              className='playlist-card__play-btn'
+              className='playlist-card__play-hit'
               catchtap={() => { onPlayAll(playlist) }}
             >
-              <Icon name='play' size={14} color={ICON_COLORS.primaryContent} />
+              <view className='playlist-card__play-btn'>
+                <Icon name='play' size={14} color={ICON_COLORS.primaryContent} />
+              </view>
             </view>
           )
           : null}
@@ -98,11 +100,13 @@ export function PlaylistCard({
           ? (
             <view
               id={anchorId}
-              className='playlist-card__more-btn'
+              className='playlist-card__more-hit'
               catchtap={() => { measure((rect) => onMore(playlist, rect)) }}
               data-testid={`playlist-card-more-${playlist.id}`}
             >
-              <Icon name='more' size={16} color={ICON_COLORS.content} />
+              <view className='playlist-card__more-btn'>
+                <Icon name='more' size={16} color={ICON_COLORS.content} />
+              </view>
             </view>
           )
           : null}

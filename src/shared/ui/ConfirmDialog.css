@@ -158,7 +158,7 @@
  * a height-clamped column flex card (the confirm card itself is not a flex
  * container, so the declaration is inert there). Measured on Web: the row
  * resolved to 21.8px against its 36px content height, and since
- * `.confirm-dialog__btn` keeps a fixed 36px the buttons spilled out of the
+ * `.confirm-dialog__btn` keeps a fixed height the buttons spilled out of the
  * card's content box into its padding. Same story as the pinned title — the
  * scrolling body is the only child allowed to absorb the overflow.
  */
@@ -182,7 +182,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 36px;
+  height: var(--tap-target);
   padding: 0 var(--space-4);
   border-radius: var(--radius-md);
   margin-left: var(--space-2);

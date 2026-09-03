@@ -9,8 +9,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: var(--tap-target);
+  height: var(--tap-target);
   border-radius: var(--radius-pill);
 }
 
@@ -135,13 +135,16 @@
   gap: var(--space-1);
 }
 
-/* The row's ⋯ trigger — 40px touch target like every other one in the app. */
+/* The row's ⋯ trigger — the HIG 44px touch target, like every other one in the
+   app. It said 40px, and so did every other one, until the tap-target pass;
+   these two were reached only through `triggerClassName`, which the old gate's
+   hand-written roster did not look at. */
 .plugin-manager__row-more {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: var(--tap-target);
+  height: var(--tap-target);
   border-radius: var(--radius-pill);
 }
 

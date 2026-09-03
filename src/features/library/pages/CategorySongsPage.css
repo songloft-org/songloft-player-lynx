@@ -33,8 +33,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: var(--tap-target);
+  height: var(--tap-target);
   border-radius: var(--radius-pill);
   background-color: var(--neutral-faint);
 }
@@ -61,8 +61,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: var(--tap-target);
+  height: var(--tap-target);
   border-radius: var(--radius-pill);
   background-color: var(--neutral-faint);
 }

@@ -269,7 +269,7 @@ auth(1) / home(1) / library(6) / library-ops(2) / playlist(3) / player(4) / sett
 - 标题 `--font-headline`，正文 `--font-subhead` + `--content-2`
 - 入场动画：`scale(0.95) → 1` + `opacity 0 → 1`，200ms ease-out
 - 出场动画：保持现有 `opacity 0.16s ease`（承载 `transitionend` 卸载）
-- 按钮高度：保持 36px 不变（不改为 44px）。AGENTS.md 明确警告：`dialogBodyMaxHeight` 由 `0.85H − CARD_CHROME_PX` 派生，`CARD_CHROME_PX` 包含按钮高度，改按钮高度必须同步更新 `dialog-viewport.ts` 中的常量，否则触发「卡片钳制与 body 钳制不自洽」已知 bug。36px 已满足触控目标（按钮宽度足够）
+- 按钮高度：**44px（`--tap-target`）**。本条 2026-09-03 由用户决定推翻——原文写「保持 36px 不变（不改为 44px），36px 已满足触控目标（按钮宽度足够）」，与 §11.2「所有可交互元素 ≥ 44×44px」且检查点明列「弹窗按钮」自相矛盾；HIG 的 44pt 是**两个方向**的最小值，宽度够不能替高度背书。**同步项已做**：AGENTS.md 的警告仍然成立且必须遵守——`dialogBodyMaxHeight` 由 `0.85H − CARD_CHROME_PX` 派生，`CARD_CHROME_PX` **包含按钮高度**，改了不同步就触发「卡片钳制与 body 钳制不自洽」（卡片照样钳在 0.85H，`chrome + body` 超出，差值从**底部**溢出，把操作行裁掉）。`dialog-viewport.ts` 里的常量已从写死的 `160` 拆成 `CARD_CHROME_ABOVE_ACTIONS_PX（124，实测部分）+ ACTION_ROW_PX（44，即按钮高度）= 168`，并在 `confirm-dialog-overlay.test.ts` 新增闸门把 `ACTION_ROW_PX` 拴到 `.confirm-dialog__btn` 的 CSS 高度上（token 经 tokens.css 解析，不写死 44），所以下一次改这个高度会**直接挂测试**而不是静默漂移——此前全套 2177 测试对这个耦合完全无感
 
 #### 4.3 弹出菜单（PopoverMenu / GlobalMenu）
 
@@ -575,6 +575,8 @@ auth(1) / home(1) / library(6) / library-ops(2) / playlist(3) / player(4) / sett
 - 所有可交互元素 ≥ 44×44px（`--tap-target`）
 - 间距：带边框元素周围 ≥ 12px，无边框 ≥ 24px
 - 检查点：歌曲行操作按钮、导航标签、弹窗按钮、滑块拇指
+- **44px 约束的是「触控目标」，不是「画出来的图形」**（HIG "Touch targets" 原文如此）。2026-09-03 落地时 31 个欠 44px 的可点类分成两类：29 个直接放大到 `--tap-target`（透明图标按钮长大不改变任何像素）；5 个画在封面/胶囊上的实心圆片**保持原尺寸**，改用 `__*-hit` 包裹层把命中盒撑到 44px（沿用目录树 `libops-tree__check-hit` 既有做法）——歌单卡封面只有 104px 宽，两个 44px 圆片会盖掉它 85% 的宽度
+- **滑块拇指是登记在案的豁免**：`player-volume__thumb`（14px）与 `eq-page__band-thumb`（16px）不带任何手势处理器，手势属于 132px 的滑轨本身；理由写在 `a11y-tap-target.test.ts` 的 `NOT_A_TAP_TARGET` 里，且豁免只对「经 `*ClassName` 传入」的类有效，带 `bindtap`/`catchtap` 的类**不可**豁免
 
 #### 11.3 焦点可见性
 
@@ -597,7 +599,7 @@ auth(1) / home(1) / library(6) / library-ops(2) / playlist(3) / player(4) / sett
 #### 闸门测试
 
 - `a11y-contrast.test.ts`：全语义色对对比度
-- `a11y-tap-target.test.ts`：关键控件尺寸 ≥ 44px
+- `a11y-tap-target.test.ts`：**按用法反推**可点类清单（扫描每个 JSX 开标签的 `bindtap`/`catchtap` 与全部 `*ClassName` 属性，190+ 个类），凡声明了显式高度的都必须 ≥ 44px。原先是 5 条**手写**模式 + docstring 自认「未列出的类不检查」——那正是它要抓的 bug 的形状，且确实漏了 31 个，其中两个 `⋯` 触发器只经 `triggerClassName` 到达，手写清单看不见
 
 ---
 

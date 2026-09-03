@@ -17,18 +17,45 @@ export const SONG_DIALOG_WIDTH_PX = 440
 const CARD_MARGIN_PX = 32
 
 /**
- * The tall song cards' fixed chrome, in px — everything the scrolling body has
- * to leave room for: the card's two `--space-5` paddings + hairlines, the
- * pinned title/header row and its margin, the body's own bottom margin, and the
- * 36px action row.
+ * The height of a dialog's action row, in px — `.confirm-dialog__btn`'s height,
+ * which is the whole row's height: `.confirm-dialog__actions` adds no padding of
+ * its own and the buttons carry no vertical margin.
  *
- * Measured on Web (`card.height − body.height`): 132 for the edit dialog's
- * one-line title, 154 for the info dialog's 44px cover header. The constant is
- * the larger case rounded up, so the body clamp under-shoots rather than
- * over-shoots — an unused sliver at the bottom of a short card is invisible,
- * whereas over-shooting crops the action row.
+ * Exported only so `confirm-dialog-overlay.test.ts` can assert it still equals
+ * the stylesheet's value. It has to be duplicated from CSS at all because the
+ * chrome below feeds a native-only inline style computed in JS, which cannot read
+ * a custom property — and the point of that gate is that the duplicate cannot
+ * drift. It read 36 until the HIG tap-target pass took the button to
+ * `--tap-target`, which is precisely the drift AGENTS.md warns about.
  */
-const CARD_CHROME_PX = 160
+export const ACTION_ROW_PX = 44
+
+/**
+ * The tall song cards' fixed chrome ABOVE the action row, in px: the card's two
+ * `--space-5` paddings + hairlines, the pinned title/header row and its margin,
+ * and the body's own bottom margin.
+ *
+ * Measured on Web (`card.height − body.height − action row`): 96 for the edit
+ * dialog's one-line title, 118 for the info dialog's 44px cover header. The
+ * constant is the larger case rounded up, so the body clamp under-shoots rather
+ * than over-shoots — an unused sliver at the bottom of a short card is
+ * invisible, whereas over-shooting crops the action row.
+ */
+const CARD_CHROME_ABOVE_ACTIONS_PX = 124
+
+/**
+ * The tall song cards' whole fixed chrome — everything the scrolling body has to
+ * leave room for.
+ *
+ * Derived rather than written as one literal because the action row's height is a
+ * design decision that has already changed once, and AGENTS.md warns what happens
+ * when it changes without this constant following: the card still clamps at 0.85H
+ * but `chrome + body` now exceeds it, the difference comes off the BOTTOM, and the
+ * action row is cropped — the known 「卡片钳制与 body 钳制不自洽」 bug. Splitting
+ * the measured part from the button height makes that sync a single number, and
+ * the gate in `confirm-dialog-overlay.test.ts` makes it fail loudly if skipped.
+ */
+export const CARD_CHROME_PX = CARD_CHROME_ABOVE_ACTIONS_PX + ACTION_ROW_PX
 
 /**
  * The viewport-based `max-height` for a tall dialog card, in px — or undefined

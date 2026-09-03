@@ -106,8 +106,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--tap-target);
+  height: var(--tap-target);
   border-radius: var(--radius-pill);
 }
 

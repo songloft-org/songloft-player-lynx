@@ -206,8 +206,8 @@
 }
 
 .lyric-adjust__line-btn {
-  width: 30px;
-  height: 30px;
+  width: var(--tap-target);
+  height: var(--tap-target);
   flex-shrink: 0;
   display: flex;
   align-items: center;

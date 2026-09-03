@@ -101,8 +101,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: var(--tap-target);
+  height: var(--tap-target);
   border-radius: var(--radius-pill);
   /* Muse icon buttons are transparent — shadow is only for floating elements. */
   background-color: transparent;
@@ -222,9 +222,9 @@
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 36px;
-  height: 36px;
-  border-radius: 18px;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  border-radius: var(--radius-pill);
   background-color: var(--backdrop);
   display: flex;
   align-items: center;

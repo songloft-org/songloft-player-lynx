@@ -176,10 +176,20 @@
   position: relative;
 }
 
-.facet-card__play-btn {
+/* 44px tap target around a 28px disc, exactly as `.playlist-card__play-hit`
+   (same 104px cover, same reasoning — see the long note there). */
+.facet-card__play-hit {
   position: absolute;
-  right: 4px;
-  bottom: 4px;
+  right: 0;
+  bottom: 0;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.facet-card__play-btn {
   width: 28px;
   height: 28px;
   border-radius: 50%;

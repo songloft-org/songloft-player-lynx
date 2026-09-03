@@ -4,6 +4,8 @@ import path from 'node:path'
 import { afterEach, describe, expect, test } from 'vitest'
 
 import {
+  ACTION_ROW_PX,
+  CARD_CHROME_PX,
   SONG_DIALOG_WIDTH_PX,
   dialogBodyMaxHeight,
   dialogCardMaxHeight,
@@ -565,8 +567,8 @@ describe('dialogBodyMaxHeight', () => {
 
   test('device: the card clamp minus the card chrome', () => {
     setSystemInfo({ platform: 'Android', pixelHeight: 2400, pixelRatio: 3 })
-    // 2400/3 = 800dp × 0.85 = 680px card − 160px chrome = 520px body
-    expect(dialogBodyMaxHeight()).toBe('520px')
+    // 2400/3 = 800dp × 0.85 = 680px card − 168px chrome = 512px body
+    expect(dialogBodyMaxHeight()).toBe('512px')
   })
 
   test('body + chrome never exceeds the card clamp on any plausible viewport', () => {
@@ -577,7 +579,7 @@ describe('dialogBodyMaxHeight', () => {
       expect(body, `${dp}dp: expected a body clamp`).toBeDefined()
       expect(card, `${dp}dp: expected a card clamp`).toBeDefined()
       expect(
-        Number.parseInt(body!, 10) + 160,
+        Number.parseInt(body!, 10) + CARD_CHROME_PX,
         `${dp}dp: body + chrome must fit inside the card clamp, or the overflow `
           + 'comes off the bottom and crops the action row',
       ).toBeLessThanOrEqual(Number.parseInt(card!, 10))
@@ -595,7 +597,7 @@ describe('dialogBodyMaxHeight', () => {
   })
 
   test('a degenerate viewport yields no clamp rather than a broken one', () => {
-    // 400/1 × 0.85 − 160 = 180px < 200 → refuse the constraint entirely
+    // 400/1 × 0.85 − 168 = 172px < 200 → refuse the constraint entirely
     setSystemInfo({ platform: 'Android', pixelHeight: 400, pixelRatio: 1 })
     expect(dialogBodyMaxHeight()).toBeUndefined()
   })
@@ -625,6 +627,14 @@ describe('the dialog action buttons are one structural pair', () => {
     }
   })
 
+  /*
+   * Pins that the height is *explicit*, not what it is. It read `36px` until the
+   * HIG tap-target pass took it to `--tap-target`, and pinning the literal made
+   * this test fail for a change that was strictly correct — the same stale-literal
+   * trap as the global menu's `--paper` gate. What has to hold is that some fixed
+   * height is declared here, since that is what makes the pair equal; the floor it
+   * has to clear belongs to `a11y-tap-target.test.ts`, which derives it.
+   */
   test('the shared button rule pins an explicit height', () => {
     const css = readFileSync(path.resolve(__dirname, '../ConfirmDialog.css'), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -634,6 +644,49 @@ describe('the dialog action buttons are one structural pair', () => {
       rule![1],
       'the explicit height is what makes the pair equal on both platforms — '
         + 'without it the heights are content-driven and drift',
-    ).toMatch(/height:\s*36px/)
+    ).toMatch(/height:\s*(\d+px|var\(--tap-target\)|var\(--control-height\))/)
+  })
+
+  /*
+   * The action row's height is duplicated in `dialog-viewport.ts`, because the
+   * body clamp it feeds is an inline px style computed in JS on the native
+   * engines and JS cannot read a custom property. AGENTS.md warns what a drift
+   * between the two costs: `CARD_CHROME_PX` includes this height, so a button
+   * that grows without the constant following makes `chrome + body` exceed the
+   * card's own 0.85H clamp, the overflow comes off the BOTTOM, and the action
+   * row is cropped — 「卡片钳制与 body 钳制不自洽」.
+   *
+   * That drift is not hypothetical: the HIG tap-target pass took this button
+   * from 36px to `--tap-target` and the whole suite stayed green, because
+   * nothing tied the two numbers together. This is that tie. It resolves the
+   * token through tokens.css rather than hard-coding 44, so the gate keeps
+   * holding if the token itself is ever retuned.
+   */
+  test('the action row height in dialog-viewport matches the stylesheet', () => {
+    const css = readFileSync(path.resolve(__dirname, '../ConfirmDialog.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+    const declared = css.match(/\.confirm-dialog__btn\s*\{[^}]*height:\s*([^;]+);/)
+    expect(declared, '.confirm-dialog__btn declares no height').not.toBeNull()
+
+    const raw = declared![1].trim()
+    let px: number
+    const token = raw.match(/^var\(\s*(--[\w-]+)\s*\)$/)
+    if (token != null) {
+      const tokens = readFileSync(path.resolve(__dirname, '../../theme/tokens.css'), 'utf8')
+      const value = tokens.match(new RegExp(`${token[1]}:\\s*(\\d+)px`))
+      expect(value, `${token[1]} is not defined in tokens.css`).not.toBeNull()
+      px = Number.parseInt(value![1], 10)
+    } else {
+      const literal = raw.match(/^(\d+)px$/)
+      expect(literal, `cannot resolve the button height \`${raw}\` to px`).not.toBeNull()
+      px = Number.parseInt(literal![1], 10)
+    }
+
+    expect(
+      ACTION_ROW_PX,
+      `.confirm-dialog__btn is ${px}px but ACTION_ROW_PX says ${ACTION_ROW_PX} — update `
+        + 'dialog-viewport.ts, or the song dialogs\' body clamp leaves the wrong room '
+        + 'for the action row and crops it (AGENTS.md: 卡片钳制与 body 钳制不自洽)',
+    ).toBe(px)
   })
 })

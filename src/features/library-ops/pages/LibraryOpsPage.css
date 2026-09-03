@@ -164,8 +164,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--tap-target);
+  height: var(--tap-target);
 }
 
 .libops-tree__name {
@@ -184,8 +184,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--tap-target);
+  height: var(--tap-target);
 }
 
 /* ── Selected-path chips ────────────────────────────────────────────────── */
@@ -327,8 +327,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: var(--tap-target);
+  height: var(--tap-target);
   margin-left: var(--space-2);
   border-radius: var(--radius-pill);
   background-color: var(--primary);
@@ -385,11 +385,18 @@
   flex-wrap: wrap;
 }
 
+/*
+ * The chip makes room for a 44px tappable rather than hosting one inside an 18px
+ * box: `__chip-remove` had no paint of its own, so giving it a HIG target costs
+ * only chip geometry — the chip is now 44px tall because that button is. The
+ * right pad goes to 0 because the 44px remove box centres a 12px glyph and so
+ * supplies its own 16px optical inset; the left pad grows to --space-3 to match.
+ */
 .libops-exclude__chip {
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: var(--space-1) var(--space-2);
+  padding: 0 0 0 var(--space-3);
   margin-right: var(--space-2);
   margin-bottom: var(--space-2);
   border-radius: var(--radius-pill);
@@ -405,9 +412,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  margin-left: var(--space-1);
+  width: var(--tap-target);
+  height: var(--tap-target);
 }
 
 .libops-exclude__save-row {

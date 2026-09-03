@@ -110,8 +110,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--tap-target);
+  height: var(--tap-target);
   border-radius: var(--radius-pill);
 }
 
@@ -144,7 +144,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 36px;
+  height: var(--tap-target);
   margin-top: var(--space-3);
   padding: 0 var(--space-4);
   border-radius: var(--radius-pill);

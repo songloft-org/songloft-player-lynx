@@ -112,7 +112,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 40px;
+  height: var(--tap-target);
   padding: 0 var(--space-4);
   border-radius: var(--radius-pill);
   background-color: var(--primary);

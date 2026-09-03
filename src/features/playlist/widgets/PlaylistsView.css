@@ -80,10 +80,31 @@
   animation-delay: 0.2s;
 }
 
-.playlist-card__play-btn {
+/*
+ * 44px tap target around a 28px disc (HIG "Touch targets" — the minimum applies
+ * to the *touch target*, not to the painted glyph). Growing the disc itself to
+ * 44px was the other option and is wrong here: the cover is 104px wide, so two
+ * 44px discs — play bottom-right, `⋯` bottom-left — would paint over 85% of its
+ * width and 42% of its height. So the box grows and the paint does not, using
+ * the same `__*-hit` wrapper the directory tree already uses for its checkbox
+ * and disclosure rows.
+ *
+ * The wrapper takes the corner inset the disc used to carry (`right/bottom: 4px`
+ * → 0), which keeps the whole 44px box inside the cover instead of overhanging
+ * into the neighbouring card, at the cost of moving the disc 4px inward.
+ */
+.playlist-card__play-hit {
   position: absolute;
-  right: 4px;
-  bottom: 4px;
+  right: 0;
+  bottom: 0;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playlist-card__play-btn {
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -172,11 +193,21 @@
   font-size: var(--font-2xs);
 }
 
-/* Bottom-left of the cover — the only free corner (see PlaylistCard.tsx). */
-.playlist-card__more-btn {
+/* Bottom-left of the cover — the only free corner (see PlaylistCard.tsx).
+   Hit-area wrapper for the same reason as `--play-hit` above; it also carries
+   the popover anchor id, so the menu now anchors off the 44px box. */
+.playlist-card__more-hit {
   position: absolute;
-  left: 4px;
-  bottom: 4px;
+  left: 0;
+  bottom: 0;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playlist-card__more-btn {
   width: 28px;
   height: 28px;
   border-radius: 50%;
