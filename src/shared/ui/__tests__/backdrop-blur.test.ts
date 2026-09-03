@@ -179,6 +179,17 @@ const EXPECTED_SCRIM_SITES = [
   'shared/ui/PromptDialog.tsx',
 ]
 
+/**
+ * Panel sites a per-file scan cannot derive, with the reason. The derivation is
+ * "a glass panel whose file renders no dim needs its own layer"; anything listed
+ * here is a panel that *looks* scrimmed to that scan and is not.
+ */
+const PANEL_NOT_DERIVED: Record<string, string> = {
+  'global-menu__panel':
+    'two forms in one file — the dim belongs to the docked form, so a per-file scan '
+    + 'reads the anchored popover as scrimmed. That is exactly how its missing layer hid.',
+}
+
 interface PanelSite {
   name: string
   /** File that renders the panel element. */
@@ -445,6 +456,33 @@ describe('panel mode', () => {
         ).toMatch(/position:\s*(relative|absolute|fixed|sticky)/)
       })
 
+      it('rounds the layer to the panel’s own radius', () => {
+        /*
+         * The modifier rounds *itself* rather than relying on the panel's clip
+         * (`.shell__bottombar` has none). That only lands on the panel's corners
+         * while the two radii agree — and nothing was holding them together, so a
+         * panel switching to `--radius-lg` would leave the blur's corners poking
+         * out or cut short, with every other assertion here still green.
+         */
+        const modifier = new RegExp(`\\.${site.modifier}\\s*\\{[^{}]*border-radius:\\s*var\\((--radius-[\\w-]+)\\)`)
+          .exec(stripCssComments(COMPONENT_CSS))
+        expect(modifier, `.${site.modifier} sets no radius`).not.toBeNull()
+        // The panel's radius may sit on a form modifier rather than its base rule
+        // (the global menu's does), so accept `.panel` and `.panel--*` — but not
+        // `.panel__child`, whose radius is its own business.
+        const own = new Set<string>()
+        for (const [, selector, body] of stripCssComments(read(site.css)).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+          const last = [...selector!.matchAll(/\.([A-Za-z_][\w-]*)/g)].map((m) => m[1]!).at(-1)
+          if (last !== site.panel && !last?.startsWith(`${site.panel}--`)) continue
+          const radius = /border-radius:\s*var\((--radius-[\w-]+)\)/.exec(body!)
+          if (radius) own.add(radius[1]!)
+        }
+        expect(
+          [...own],
+          `.${site.panel} and .${site.modifier} must round to the same token`,
+        ).toEqual([modifier![1]!])
+      })
+
       it('is a translucent surface in the first place', () => {
         // If a panel ever goes opaque the blur is dead weight behind it, and this
         // entry should be dropped rather than left to mislead.
@@ -455,6 +493,39 @@ describe('panel mode', () => {
       })
     })
   }
+
+  it('derives which panels need panel mode, instead of trusting the roster', () => {
+    /*
+     * `PANEL_SITES` was hand-written, and a hand-written roster is the shape of
+     * every miss in this feature: the six dialogs, then the global menu. So derive
+     * it. A `--glass-fill*` panel is see-through; if the file that renders it puts
+     * no `--backdrop` dim on screen, there is no scrim layer standing in for it and
+     * the panel needs its own. Both directions are checked, so a new scrimless
+     * panel *and* a stale entry both surface here.
+     *
+     * Without this, a scrimless panel added to a file that already mounts a blur
+     * passes every other gate in this file — which is precisely what happened to
+     * the global menu's anchored form.
+     */
+    const dims = [...ownersOf(/background-color:\s*var\(--backdrop\)/).keys()]
+      .filter((cls) => !(cls in NOT_A_SCRIM))
+    const scrimmed = (tsx: string) => dims.some((cls) => rendererOf(cls).includes(tsx))
+    const needed = new Set<string>()
+    for (const [cls] of ownersOf(/background-color:\s*var\(--glass-fill/)) {
+      for (const tsx of rendererOf(cls)) {
+        if (!scrimmed(BLUR_DELEGATED_TO[cls] ?? tsx)) needed.add(cls)
+      }
+    }
+    const listed = new Set(PANEL_SITES.map((site) => site.panel))
+    expect(
+      [...needed].filter((cls) => !listed.has(cls)).sort(),
+      'a glass panel with no scrim under it and no PANEL_SITES entry: it is a wash over sharp page content',
+    ).toEqual([])
+    expect(
+      [...listed].filter((cls) => !needed.has(cls) && !(cls in PANEL_NOT_DERIVED)).sort(),
+      'a PANEL_SITES entry the surfaces no longer justify: drop it, or explain it in PANEL_NOT_DERIVED',
+    ).toEqual([])
+  })
 
   it('keeps the popover backdrop an invisible catcher', () => {
     // A popover is not modal. Panel mode is what made its material real; the page

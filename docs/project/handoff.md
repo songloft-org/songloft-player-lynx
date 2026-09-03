@@ -4,7 +4,7 @@
 >
 > **读文档顺序**：① [AGENTS.md](../../AGENTS.md) §4–§6（铁律，必读）→ ② 本文 §3「剩余工作」→ ③ [pitfalls.md](pitfalls.md)（踩坑实录：每条铁律背后的证据）。细节按需查 [progress.md](progress.md)（逐批交付）与 [bugs.md](bugs.md)（逐条缺陷根因）。
 >
-> **一句话现状**：Apple HIG 重构全部 11 阶段已提交；玻璃材质优化三批（批B 播放器页背景层 / 批C 伪玻璃精致化 / 批A `<blur-view>` 真背景模糊）已全部完成并提交，另有批A-fix 修掉 Web 上 `blur-view` 标签映射缺失导致的静默无效、批A-fix2 补齐批A 漏掉的 6 个弹窗并给 popover / 底部导航胶囊 / mini-player 加上面板模式模糊、批A-fix3 修掉全应用最后一个仍是不透明 `--paper` 的浮层（全局菜单）。**JS 侧闸门**：`tsc -b` 绿 / **2170 vitest 全绿（198 文件）** / build:web 绿 / Docker Chrome 运行时验证通过。近期重点：后台播放稳定性、Lynx 原生渲染插件、自定义标签、记住密码、HarmonyOS 宿主修复、文件夹浏览视图、**Apple HIG 重构（11 阶段）**。
+> **一句话现状**：Apple HIG 重构全部 11 阶段已提交；玻璃材质优化三批（批B 播放器页背景层 / 批C 伪玻璃精致化 / 批A `<blur-view>` 真背景模糊）已全部完成并提交，另有批A-fix 修掉 Web 上 `blur-view` 标签映射缺失导致的静默无效、批A-fix2 补齐批A 漏掉的 6 个弹窗并给 popover / 底部导航胶囊 / mini-player 加上面板模式模糊、批A-fix3 修掉全应用最后一个仍是不透明 `--paper` 的浮层（全局菜单），并把面板模式清单改为从表面反推而非手写。**JS 侧闸门**：`tsc -b` 绿 / **2175 vitest 全绿（198 文件）** / build:web 绿 / Docker Chrome 运行时验证通过。近期重点：后台播放稳定性、Lynx 原生渲染插件、自定义标签、记住密码、HarmonyOS 宿主修复、文件夹浏览视图、**Apple HIG 重构（11 阶段）**。
 
 ---
 
@@ -40,7 +40,7 @@
 
 | 闸门 | 结果 | 何时验的 |
 |---|---|---|
-| `pnpm test` | **2170 全绿 / 198 文件** | ✅ **2026-09-03**（HIG 全部 11 阶段 + 玻璃优化批B/批C/批A + 批A-fix + 批A-fix2 + 批A-fix3） |
+| `pnpm test` | **2175 全绿 / 198 文件** | ✅ **2026-09-03**（HIG 全部 11 阶段 + 玻璃优化批B/批C/批A + 批A-fix + 批A-fix2 + 批A-fix3 + 全局复查） |
 | `pnpm exec tsc -b` | 绿 | 2026-09-03 |
 | `pnpm run build` | 绿（main.lynx.bundle 2232.5 kB） | 2026-09-03 |
 | `pnpm run build:web` | 绿（main.web.bundle 2286.1 kB）+ Docker Chrome 运行时 25/25 | 2026-09-03 |
@@ -69,7 +69,7 @@
 
 **A. 开发**
 
-1. **Apple HIG UI 重构（11 阶段）** —— 按 `docs/project/plans/apple-hig-redesign.md` 分批推进。**Apple HIG 11 阶段全部完成并提交**（设计令牌/标准材质/导航/共享组件/播放器/曲库/歌单/设置/首页+杂项/动效/无障碍）。其后按用户反馈「玻璃材质和 Apple 官方应用差很多」做了三批玻璃材质优化（批B/批C/批A + 批A-fix + 批A-fix2 + 批A-fix3，见 `progress.md`）。**JS 侧闸门**：`tsc -b` 绿 / **2170 vitest 全绿（198 文件）** / build:web 绿 / Docker Chrome 运行时验证通过。
+1. **Apple HIG UI 重构（11 阶段）** —— 按 `docs/project/plans/apple-hig-redesign.md` 分批推进。**Apple HIG 11 阶段全部完成并提交**（设计令牌/标准材质/导航/共享组件/播放器/曲库/歌单/设置/首页+杂项/动效/无障碍）。其后按用户反馈「玻璃材质和 Apple 官方应用差很多」做了三批玻璃材质优化（批B/批C/批A + 批A-fix + 批A-fix2 + 批A-fix3 + 全局复查，见 `progress.md`）。**JS 侧闸门**：`tsc -b` 绿 / **2175 vitest 全绿（198 文件）** / build:web 绿 / Docker Chrome 运行时验证通过。
 2. ~~**build 工具链修复**~~ —— **已修复**（`270f347`）。根因：`lyric-store.ts` 的 dynamic `import()` 改变 chunk 图导致 template-webpack-plugin 空 manifest 解构失败，改静态 import 解决。
 3. **Lynxtron 桌面** —— P3 唯一未开始项，剩余最大单块能力（迁移调研里的桌面验收清单在 [`../archive/migration/lynx_migration_roadmap.md`](../archive/migration/lynx_migration_roadmap.md) L47–74，可直接拿来用）。
 2. ~~**修复 14 个 failing test**（`full-player-responsive.test.tsx`，2026-08-31 复跑确认仍 14 失败）—— 近期 UI 改动导致断言不匹配。详见 [bugs.md](bugs.md)「待修复」。~~ —— **已修复**（2026-09-01 复跑全绿）。
