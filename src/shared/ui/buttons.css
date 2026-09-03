@@ -1,0 +1,48 @@
+/* HIG §11 unified button classes. Consumed by new code; existing callers
+   keep their class names until migrated per-file in stages 5–9. */
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--control-height);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-body);
+  font-weight: var(--weight-semibold);
+}
+
+.btn.ui-active {
+  opacity: 0.7;
+  transform: scale(0.97);
+}
+
+.btn--prominent {
+  background-color: var(--primary);
+  color: var(--primary-content);
+}
+
+.btn--filled {
+  background-color: var(--neutral-faint);
+  color: var(--content);
+}
+
+.btn--tinted {
+  background-color: var(--primary-faint);
+  color: var(--primary);
+}
+
+.btn--ghost {
+  background-color: transparent;
+  color: var(--primary);
+}
+
+.btn--destructive {
+  background-color: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.btn--disabled {
+  opacity: 0.4;
+}

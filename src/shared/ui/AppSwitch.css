@@ -29,12 +29,13 @@
    */
   flex-direction: row;
   align-items: center;
-  width: 44px;
-  height: 26px;
+  width: 51px;
+  height: 31px;
   padding: 3px;
   border-radius: var(--radius-pill);
   /* Muse Toggle: off = the strong-border grey, visible in both themes. */
   background-color: var(--rule);
+  transition: background-color 0.2s;
 }
 
 .app-switch__track.ui-checked {
@@ -43,8 +44,8 @@
 }
 
 .app-switch__thumb {
-  width: 20px;
-  height: 20px;
+  width: 25px;
+  height: 25px;
   border-radius: var(--radius-pill);
   /* Thumb = canvas colour (white in light, near-black in dark) so it reads on
      both the grey off-track and the accent on-track. Muse §4.4. */

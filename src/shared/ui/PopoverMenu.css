@@ -87,7 +87,7 @@
 
 .popover-menu__item-label {
   flex: 1;
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   color: var(--content);
   /* Never wrap a menu label. Shared by PopoverMenu and GlobalMenu (see
      MenuItem.tsx), so this covers both. Without it a label whose intrinsic width

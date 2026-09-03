@@ -125,6 +125,10 @@
   padding: var(--space-5);
   margin: var(--space-6);
   max-width: 360px;
+  animation-name: dialog-enter;
+  animation-duration: 200ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
   /* Dialogs mount over a scrim, so they earn the larger shadow; the inset
      sheen pair gives the glass its two-tone bevel (Step 0 spike-verified). */
   box-shadow: var(--shadow-lg),
@@ -133,15 +137,15 @@
 }
 
 .confirm-dialog__title {
-  font-size: var(--font-md);
-  font-weight: 600;
+  font-size: var(--font-headline);
+  font-weight: var(--weight-semibold);
   color: var(--content);
   margin-bottom: var(--space-2);
 }
 
 .confirm-dialog__message {
-  font-size: var(--font-sm);
-  color: var(--content-muted);
+  font-size: var(--font-subhead);
+  color: var(--content-2);
   line-height: var(--font-lg);
   margin-bottom: var(--space-5);
 }
@@ -194,7 +198,7 @@
 }
 
 .confirm-dialog__btn-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   color: var(--content);
 }
 
@@ -224,4 +228,15 @@
    tap handler returns early too — this is presentation, not the guard. */
 .confirm-dialog__btn--disabled {
   opacity: 0.4;
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
