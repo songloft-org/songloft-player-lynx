@@ -479,12 +479,16 @@
 
   /*
    * The rest of Apple's 12-tint palette. These are the long-stable iOS system
-   * colours (unchanged since iOS 13); the June-2025 revision moved only
-   * systemBlue and systemRed (both already carried above as the verified
-   * iOS-26 values), and Apple's own release notes do not list any of these six
-   * as changed. They are NOT re-verified against the iOS-26 swatches yet — the
-   * HIG colour article's DocC data could not be reached at write-time — so they
-   * carry the same "re-check on next OS release" flag as the grey ladder.
+   * colours (unchanged since iOS 13); the June-2025 "Updated system color
+   * values" revision moved only systemBlue and systemRed (both already carried
+   * above as the verified iOS-26 values), and Apple's iOS-26 release notes list
+   * no change to these six. Re-verified 2026-09 against the community-reported
+   * values Apple's UIColor resolves to: the six match exactly, and Apple does
+   * not publish exact hex for dynamic system colours at all (the UIColor is
+   * environment-resolved, not a constant). They STILL carry the "re-check on
+   * next OS release" flag — the only true verification is runtime
+   * resolvedColor(with:), which Lynx has no API to call, so the pinned values
+   * can go stale silently the way systemBlue/systemRed did.
    *
    * Used ONLY as the filled tile behind a settings-row icon (decorative: the
    * row's title label is always present, so the icon carries no meaning on its

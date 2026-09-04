@@ -153,10 +153,12 @@ test('--font-2xs is kept; the other legacy sizes are gone (font-role sweep)', ()
  *  - systemGreen is verified against the same swatches.
  *  - The remaining six tints (orange/yellow/pink/purple/indigo/teal) are the
  *    LONG-STABLE canonical iOS values (unchanged since iOS 13). Apple's June
- *    2025 release notes do not list any of them as changed, but they were NOT
- *    re-verified against the iOS-26 swatches at write-time — the HIG colour
- *    article's DocC data could not be reached. They carry the same "re-check on
- *    next OS release" flag as everything else here. These six are used ONLY as
+ *    2025 release notes do not list any of them as changed, and they were
+ *    re-verified 2026-09 against the community-reported values Apple's UIColor
+ *    resolves to (Apple does not publish exact hex for dynamic system colours
+ *    at all). They carry the same "re-check on next OS release" flag as
+ *    everything else here, because the only true verification is runtime
+ *    resolvedColor — which Lynx has no API to call. These six are used ONLY as
  *    decorative row-icon tile fills (white glyph + a title label that carries
  *    the meaning), so a small drift would have no legibility consequence.
  *  - The label, background, fill and separator tiers are NOT published numerically by
