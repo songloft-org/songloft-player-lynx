@@ -231,6 +231,16 @@
   border-radius: var(--radius-grouped);
 }
 
+/* iPadOS sidebar selection fill: a NEUTRAL grey rounded rect (Apple Music /
+   Settings / Files), not the accent-tinted wash of the narrow bottom bar.
+   system-gray5 is Apple's own grey (#e5e5ea light / #2c2c2e dark); the accent
+   is carried by the icon + label instead (`.nav-item--active .nav-item__label`
+   + activeAccentIconColor in the TS). Wide-only so the bottom-bar capsule keeps
+   its tint-fill. */
+.shell--wide .nav-item--active .nav-item__pill {
+  background-color: var(--system-gray5);
+}
+
 /* Active label carries the accent tint (CSS side; the glyph's tint is
    injected at render time via activeAccentIconColor — see ShellLayout.tsx). */
 .nav-item--active .nav-item__label {
