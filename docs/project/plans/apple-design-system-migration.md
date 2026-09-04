@@ -1236,3 +1236,47 @@ tokens.css 删 `--font-xs/sm/md/lg/xl/2xl` 声明（保留 `--font-2xs`，注释
 ## 诚实状态（整体收尾）
 
 颜色别名层 + legacy 字体（除 `--font-2xs`）已**全部从 tokens.css 删除、CSS 零消费、bundle 零引用**。Muse 遗产只剩 `--font-2xs`（AGENTS 冻结、有正当理由）。Apple 设计系统迁移主体完成。font-role 分类是按选择器角色**启发式**，107 处 `--font-sm` 的角色判断可能有少数边角误判（如某 `__name` 该 subhead 却 body），需真机视觉复核——但都是 ±2px 的小级差，不破功能。
+
+
+---
+
+# P11 — 实机前收尾五项 + Docker Chrome 截图审计（2026-09）
+
+P10 之后、真机体验之前的一轮收尾。目标：把「编码绿」尽量推进到「可发布」，并用 Docker Chrome（browserless/chrome + @lynx-js/web-core 加载 dist/web/main.web.bundle）做真机级截图/计算样式核验。
+
+## 五项收尾
+
+1. **motion 裸值收敛**：UI 一次性过渡（AppSwitch/ConfirmDialog/ToastHost/FullPlayer）裸 ms/ease 全改 `var(--duration-*)`/`var(--ease-*)`，reduce-motion 类才真正管得到。两个装饰循环（eq-bounce 错峰 / indeterminate 线性）刻意保留 bespoke 并注释。新增 `motion-tokens-consumer.test.ts` 消费侧 gate（扫裸值、白名单仅两个循环文件）。
+2. **DuplicateCheckPage 硬编码收尾**：最后 3 处裸 `font-size`（13→footnote、11→caption2）+ badge 4px/2px6px 收进 token，**全仓排版 100% token 化**；5 个全宽按钮补 `min-height: var(--tap-target)`。
+3. **44pt 触控审计**：`scripts/tap-gap-diag.mjs` 列出 203 个无 height 的 tappable，分类后补 11 个孤立居中主操作按钮的 `min-height: var(--tap-target)`；列表行/卡片（内容撑高）、密集 chip/行内图标/返回键（Apple Music 式刻意紧凑）不强撑。
+4. **6 tint iOS-26 复核**：联网确认现值即 Apple UIColor 运行时值、2025-06 修订只动 blue/red、iOS-26 未列这六者；Apple 不公布动态系统色精确 hex。provenance 注释改「已复核」，保留「下次 OS 发版复核」flag（runtime-only，Lynx 无 API）。
+5. **ConfirmDialog alert 几何**：title/message 居中、两按钮等宽配对（flex:1+gap，双按钮 alert 平衡感）；保留玻璃 pill 按钮语言（与 PromptDialog/sheet/popover 一致、iOS-26 本即玻璃 pill），刻意不改经典全幅 hairline。
+
+## 登录页白边修复
+
+`.login` 原把 `.page` padding 清零 → 灰卡满宽贴边 + content 高垂直居中 → 上下各 ~102px 露白（漂浮灰板）。按用户选择改**全屏白底无卡**：`.login` 恢复水平 padding，`.login__card` 去灰底/圆角/自身 padding 只留宽度约束列，字段（自带 tertiary-fill）直接落 system-background 白页。CDP 核验 card bg 现 transparent。
+
+## 宽屏侧栏 iPad 化（用户反馈「不像 iPad 风格」）
+
+- 选中态全圆角 **pill(999)→圆角矩形 `--radius-grouped`(10px)**（iPadOS 侧栏是圆角矩形，pill 是 iOS tab-bar 语言）。
+- 项间距 8px→4px（iPad 选中矩形近乎相接）。
+- 选中填充按用户选「灰底圆角矩形+accent 文字」：淡 accent wash→`--system-gray5`（#e5e5ea 浅/#2c2c2e 深），图标+文字走 accent。注：accent 在 gray5 上对比 2.8，与 Apple Music iPad 侧栏（红字/同款灰，亦 ~2.8）一致，属 Apple 值原样落地的既有取舍。品牌块（Songloft）按用户要求保留。
+
+## Docker Chrome 登录打通（可复现）
+
+web-core 登录表单输入是零尺寸 `X-INPUT` 外壳，其 shadow root 内才有真 `<input>`。绕过法：`Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(inp,'admin')` + 派发原生 `InputEvent('input')`（Lynx onInput 监听原生 input 事件）→ 勾协议 → 登录成功。注意：token 存 **worker 域 IndexedDB**，主线程 IDB 注入到不了（`/tmp` 下 `scripts/cdp-*.mjs` 为可复用驱动）。
+
+## 截图审计结论（计算样式核对）
+
+本环境无视觉判读能力，审计=DOM/计算样式对 HIG 数值。实测：
+- **Home（窄）**：greeting largeTitle 34/700、分区标题 title2、tab 标签 10、统计卡灰底圆角10/16 边距、文本色 label/secondaryLabel、页底 system-background —— **数值合规**。
+- **设置主页**：页底 #f2f2f7（grouped）、白卡圆角10/16 inset、行高 44、行标题 17/body、副标题 13/footnote、图标 12-tint tile 29×29 圆角6、大标题 34/700 —— **合规**。
+- **设置子页（外观）**：同一白卡/圆角10/16 inset 分组范式 + 返回键 —— **合规**。
+- **宽屏侧栏**：改后圆角矩形灰底选中 —— **已修**。
+
+截图存档：`/tmp/{home-narrow,home-wide,home-wide-v2,settings-main,sub-settings-appearance}.png`。
+
+## 需真机视觉复核（剩余）
+
+- 各屏「观感」级 Apple 符合度（数值已过，但像素级观感需人眼）。
+- font-role 启发式的 ±2px 边角、6 tint 下次 OS 发版复值、装饰循环 reduce-motion 隐藏（host 通道未接）。

@@ -4,9 +4,10 @@ import { resolve } from 'node:path'
 import { expect, test } from 'vitest'
 
 /**
- * P7 login/register migration, pinned where it silently regresses. The card
- * loses its border (defined by page/card contrast instead) and the inputs go
- * borderless-filled — both regress to a hairline with no layout break.
+ * P7 login/register migration + the later full-bleed white redesign, pinned
+ * where they silently regress. The card is now a transparent width-column on
+ * the white page (fields' tertiary-fill is the structure) and the inputs are
+ * borderless-filled — both regress to a hairline/grey card with no layout break.
  */
 const CSS = readFileSync(
   resolve(process.cwd(), 'src/features/auth/pages/LoginPage.css'),
@@ -27,12 +28,12 @@ test('the brand logo aligns with SplashScreen (80×80, 18px radius)', () => {
   expect(logo).toMatch(/border-radius:\s*18px/)
 })
 
-test('the card is contrast-defined and grouped-cornered, not bordered', () => {
+test('the card is a transparent width-column on the white page (Apple full-bleed login)', () => {
   const card = ruleFor('.login__card')
   expect(card).toMatch(/max-width:\s*var\(--login-card-width\)/)
-  expect(card).toMatch(/border-radius:\s*var\(--radius-grouped\)/)
-  expect(card).toMatch(/background-color:\s*var\(--secondary-system-background\)/)
-  expect(card, 'no hairline on a contrast-defined card').not.toMatch(/border(?!-radius)/)
+  expect(card, 'no chrome: no grey fill, no radius, no border — fields sit on white').not.toMatch(/background-color/)
+  expect(card).not.toMatch(/border-radius/)
+  expect(card).not.toMatch(/border(?!-radius)/)
 })
 
 test('the inputs are the Apple control height, filled and borderless', () => {
