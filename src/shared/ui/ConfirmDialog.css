@@ -136,19 +136,19 @@
   box-shadow: var(--shadow-lg),
     inset 0 1px 0 var(--glass-highlight),
     var(--glass-rim-sides),
-    inset 0 -1px 0 var(--line);
+    inset 0 -1px 0 var(--separator);
 }
 
 .confirm-dialog__title {
   font-size: var(--font-headline);
   font-weight: var(--weight-semibold);
-  color: var(--content);
+  color: var(--label);
   margin-bottom: var(--space-2);
 }
 
 .confirm-dialog__message {
   font-size: var(--font-subhead);
-  color: var(--content-2);
+  color: var(--secondary-label);
   line-height: var(--font-lg);
   margin-bottom: var(--space-5);
 }
@@ -192,21 +192,21 @@
    borders — danger is red TEXT only, never a red fill block (DESIGN.md). */
 .confirm-dialog__btn--cancel {
   background-color: transparent;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--opaque-separator);
 }
 
 .confirm-dialog__btn--confirm {
   background-color: transparent;
-  border: 1px solid var(--danger);
+  border: 1px solid var(--system-red);
 }
 
 .confirm-dialog__btn-text {
   font-size: var(--font-subhead);
-  color: var(--content);
+  color: var(--label);
 }
 
 .confirm-dialog__btn-text--confirm {
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 /* Constructive affirmative (the edit dialog's "save", PromptDialog's "create"):
@@ -218,12 +218,12 @@
    light, ink on white in dark), never a literal white. Lives here rather than
    in the callers so the dialog button family stays in a single stylesheet. */
 .confirm-dialog__btn--submit {
-  background-color: var(--primary);
-  border: 1px solid var(--primary);
+  background-color: var(--accent);
+  border: 1px solid var(--accent);
 }
 
 .confirm-dialog__btn-text--submit {
-  color: var(--primary-content);
+  color: var(--accent-content);
   font-weight: var(--weight-bold);
 }
 

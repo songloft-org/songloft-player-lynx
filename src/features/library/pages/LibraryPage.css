@@ -39,7 +39,7 @@
 
 .library__topbar-title {
   flex: 1;
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-title3);
   font-weight: var(--weight-semibold);
 }
@@ -73,12 +73,12 @@
   flex: 1;
   height: 40px;
   border-radius: var(--radius-sm);
-  background-color: var(--neutral-faint);
-  border: 1px solid var(--line);
-  color: var(--content);
+  background-color: var(--tertiary-system-fill);
+  border: 1px solid var(--separator);
+  color: var(--label);
   font-size: var(--font-sm);
   padding: 0 var(--space-4);
-  -x-placeholder-color: var(--content-muted);
+  -x-placeholder-color: var(--secondary-label);
 }
 
 /* Sort bar */
@@ -110,7 +110,7 @@
 }
 
 .library__footer-text {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-sm);
 }
 
@@ -127,22 +127,22 @@
   padding: var(--space-1) var(--space-3);
   margin-right: var(--space-2);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--opaque-separator);
   background-color: transparent;
 }
 
 .library__chip--active {
-  border-color: var(--primary);
+  border-color: var(--accent);
   background-color: transparent;
 }
 
 .library__chip-text {
-  color: var(--content-2);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
 }
 
 .library__chip--active .library__chip-text {
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .library__grid-scroll {
@@ -169,7 +169,7 @@
   width: 104px;
   height: 104px;
   border-radius: var(--radius-md);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
 }
 
 .facet-card__cover-wrap {
@@ -193,7 +193,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background-color: var(--primary);
+  background-color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -201,7 +201,7 @@
 }
 
 .facet-card__cover--empty {
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
 }
 
 .folder-card__icon-wrap {
@@ -211,7 +211,7 @@
 }
 
 .facet-card__value {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-sm);
   margin-top: var(--space-2);
   overflow: hidden;
@@ -229,7 +229,7 @@
 }
 
 .facet-card__count {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
 }
 
@@ -245,17 +245,17 @@
 }
 
 .library__state-text {
-  color: var(--content-2);
+  color: var(--secondary-label);
   font-size: var(--font-callout);
   font-weight: var(--weight-bold);
 }
 
 .library__state-text--error {
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 .library__state-subtext {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-sm);
   margin-top: var(--space-2);
 }
@@ -275,7 +275,7 @@
    tertiary text steps up a level under this wash; that rule lives with the row, in
    `SongRow.css` (one file owns `.song-row*`). */
 .library__select-row--selected {
-  background-color: var(--primary-faint);
+  background-color: var(--tint-fill);
 }
 
 .library__select-box {
@@ -291,31 +291,31 @@
   flex-direction: row;
   align-items: center;
   padding: var(--space-3) var(--space-4);
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
   border-top-width: 1px;
-  border-top-color: var(--line);
+  border-top-color: var(--separator);
 }
 
 .library__select-toolbar-count {
   flex: 1;
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--label);
 }
 
 .library__select-toolbar-btn {
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-sm);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .library__select-toolbar-btn-text {
   font-size: var(--font-sm);
-  color: var(--primary-content);
+  color: var(--accent-content);
 }
 
 .library__suggestions {
   margin-top: var(--space-1);
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
@@ -326,7 +326,7 @@
 
 .library__suggestion-text {
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--label);
 }
 
 /* Floating-nav capsule inset (see ShellLayout.css): the fixed bottom bar lets

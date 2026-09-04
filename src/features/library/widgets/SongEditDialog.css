@@ -23,7 +23,7 @@
   box-shadow: var(--shadow-lg),
     inset 0 1px 0 var(--glass-highlight),
     var(--glass-rim-sides),
-    inset 0 -1px 0 var(--line);
+    inset 0 -1px 0 var(--separator);
   padding: var(--space-5);
   margin: var(--space-6);
   /*
@@ -61,7 +61,7 @@
   flex-shrink: 0;
   font-size: var(--font-callout);
   font-weight: var(--weight-semibold);
-  color: var(--content);
+  color: var(--label);
   margin-bottom: var(--space-2);
 }
 
@@ -98,14 +98,14 @@
 .song-edit__ro-card {
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
   margin-bottom: var(--space-4);
 }
 
 .song-edit__ro-card-title {
   font-size: var(--font-sm);
   font-weight: var(--weight-bold);
-  color: var(--content);
+  color: var(--label);
 }
 
 .song-edit__ro-row {
@@ -119,13 +119,13 @@
 .song-edit__ro-label {
   width: 40px;
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .song-edit__ro-value {
   flex: 1;
   font-size: var(--font-caption1);
-  color: var(--content);
+  color: var(--label);
   /* Long endpoints must not push the copy button off the row. */
   overflow: hidden;
   text-overflow: ellipsis;
@@ -138,7 +138,7 @@
 
 .song-edit__label {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-top: var(--space-3);
   margin-bottom: var(--space-1);
 }
@@ -153,16 +153,16 @@
   width: 100%;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  background-color: var(--neutral-faint);
-  border: 1px solid var(--line);
+  background-color: var(--tertiary-system-fill);
+  border: 1px solid var(--separator);
   font-size: var(--font-sm);
-  color: var(--content);
-  -x-placeholder-color: var(--content-muted);
+  color: var(--label);
+  -x-placeholder-color: var(--secondary-label);
 }
 
 .song-edit__error {
   font-size: var(--font-caption1);
-  color: var(--danger);
+  color: var(--system-red);
   margin-top: var(--space-1);
 }
 
@@ -184,12 +184,12 @@
 
 .song-edit__switch-title {
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--label);
 }
 
 .song-edit__switch-subtitle {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .song-edit__preview {
@@ -202,5 +202,5 @@
   width: 150px;
   height: 150px;
   border-radius: var(--radius-md);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
 }

@@ -38,10 +38,10 @@
   flex: 1;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
   font-size: var(--font-sm);
-  color: var(--content);
-  -x-placeholder-color: var(--content-muted);
+  color: var(--label);
+  -x-placeholder-color: var(--secondary-label);
 }
 
 /* Follows the input beside it: the two shared a surface and a radius before, and
@@ -50,7 +50,7 @@
 .plugin-registry__search-btn {
   padding: var(--space-2);
   border-radius: var(--radius-sm);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
 }
 
 /* Partial-fetch failures: one tappable line, details in a dialog — matching
@@ -63,13 +63,13 @@
   margin: 0 var(--space-4) var(--space-2);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
 }
 
 .plugin-registry__warnings-text {
   flex: 1;
   font-size: var(--font-caption1);
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 /* No sources configured yet. */
@@ -83,12 +83,12 @@
 
 .plugin-registry__empty-title {
   font-size: var(--font-callout);
-  color: var(--content);
+  color: var(--label);
 }
 
 .plugin-registry__empty-hint {
   font-size: var(--font-sm);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-bottom: var(--space-3);
 }
 
@@ -96,7 +96,7 @@
   margin-top: var(--space-2);
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
 }
 
 .plugin-registry__retry-text {
@@ -119,7 +119,7 @@
   align-items: center;
   padding: var(--space-3) 0;
   border-bottom-width: 1px;
-  border-bottom-color: var(--line);
+  border-bottom-color: var(--separator);
   gap: var(--space-3);
 }
 
@@ -130,19 +130,19 @@
 
 .plugin-registry__item-name {
   font-size: var(--font-callout);
-  color: var(--content);
+  color: var(--label);
   font-weight: var(--weight-medium);
 }
 
 .plugin-registry__item-meta {
   font-size: var(--font-sm);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-top: 2px;
 }
 
 .plugin-registry__item-desc {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -162,7 +162,7 @@
 .plugin-registry__conflict-line-text {
   flex: 1;
   font-size: var(--font-caption1);
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 .plugin-registry__item-action {
@@ -172,23 +172,23 @@
 .plugin-registry__install-btn {
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .plugin-registry__install-text {
   font-size: var(--font-sm);
-  color: var(--primary-content);
+  color: var(--accent-content);
 }
 
 .plugin-registry__installed {
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
 }
 
 .plugin-registry__installed-text {
   font-size: var(--font-sm);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 /* Installed & current: the version chip that RE-INSTALLS on tap — the entry
@@ -201,12 +201,12 @@
   gap: var(--space-1);
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
 }
 
 .plugin-registry__reinstall-text {
   font-size: var(--font-sm);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 /* Installed with a newer remote version: tonal button (paper fill, accent
@@ -214,7 +214,7 @@
 .plugin-registry__update-btn {
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
 }
 
 .plugin-registry__update-text {
@@ -250,7 +250,7 @@
 .plugin-registry__page-btn {
   padding: var(--space-2);
   border-radius: var(--radius-sm);
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
 }
 
 .plugin-registry__page-btn--disabled {
@@ -259,7 +259,7 @@
 
 .plugin-registry__page-text {
   font-size: var(--font-sm);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .plugin-registry__state {
@@ -271,11 +271,11 @@
 
 .plugin-registry__state-text {
   font-size: var(--font-callout);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .plugin-registry__state-text--error {
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 /* Legacy conflict expand block — the confirmation moved to a dialog (matching

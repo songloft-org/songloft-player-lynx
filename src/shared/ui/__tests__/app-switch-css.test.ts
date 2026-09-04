@@ -63,7 +63,7 @@ test('no screen re-forks the switch CSS', () => {
 test('the shared checkbox styles the checked state', () => {
   const css = rules('shared/ui/AppCheckbox.css')
   expect(css).toMatch(/\.app-checkbox\s*\{/)
-  expect(css).toMatch(/\.app-checkbox--on\s*\{[^}]*background-color:\s*var\(--primary\)/)
+  expect(css).toMatch(/\.app-checkbox--on\s*\{[^}]*background-color:\s*var\(--accent\)/)
   // A square, not a circle: the circle is what made a multi-select look like a
   // radio group.
   expect(css).toMatch(/\.app-checkbox\s*\{[^}]*border-radius:\s*var\(--radius-sm\)/)
@@ -74,10 +74,10 @@ test('no screen re-forks the checkbox CSS', () => {
     .filter((f) => f !== 'shared/ui/AppCheckbox.css')
     .filter((f) => {
       const css = rules(f)
-      // A rule that both draws a box and fills it with the primary colour is a
-      // checkbox by any other name.
+      // A rule that both draws a box and fills it with the accent colour is a
+      // checkbox by any other name. (P8: --primary renamed to --accent.)
       return /border-radius[^;]*;[^}]*border-(width|:)/.test(css)
-        && /background-color:\s*var\(--primary\)[^}]*\}/.test(css)
+        && /background-color:\s*var\(--accent\)[^}]*\}/.test(css)
         && /(check|toggle|badge|box)/.test(css)
     })
   expect(forked).toEqual([])

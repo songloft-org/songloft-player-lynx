@@ -14,7 +14,7 @@
   height: 6px;
   margin: 0 var(--space-1);
   border-radius: var(--radius-pill);
-  background-color: var(--opaque-separator);
+  background-color: var(--tertiary-system-fill);
 }
 
 .page-dots__dot--active {

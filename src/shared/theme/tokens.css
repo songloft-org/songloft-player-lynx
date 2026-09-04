@@ -100,6 +100,11 @@
   --radius-pill: 999px;
   --radius-xs: 6px;
   --radius-grouped: 10px;
+  /* Bottom-sheet / drawer top corner. P8a shrank this from --radius-xl (28);
+     Apple's sheet corner is smaller than the old value but the exact figure
+     could not be verified from this repo (no device swatch), so 10 is a
+     best-effort choice flagged for真机视觉复核 — 28→10 is a visible change. */
+  --radius-sheet: 10px;
   --radius-nav: 12px;
 
   /* HIG §8 Accessibility: text-scale token. All font-size tokens below

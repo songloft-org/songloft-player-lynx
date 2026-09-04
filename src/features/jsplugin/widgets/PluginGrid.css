@@ -13,7 +13,7 @@
 .plugin-grid__title {
   font-size: var(--font-callout);
   font-weight: var(--weight-semibold);
-  color: var(--content);
+  color: var(--label);
 }
 
 .plugin-grid__items {
@@ -31,7 +31,7 @@
   width: 72px;
   padding: var(--space-2);
   border-radius: var(--radius-md);
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
 }
 
 .plugin-grid__card-icon {
@@ -57,7 +57,7 @@
 .plugin-grid__card-name {
   margin-top: var(--space-1);
   font-size: var(--font-caption1);
-  color: var(--content);
+  color: var(--label);
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;

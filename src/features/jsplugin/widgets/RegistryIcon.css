@@ -8,7 +8,7 @@
   width: 40px;
   height: 40px;
   border-radius: var(--radius-md);
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
   overflow: hidden;
 }
 
@@ -20,5 +20,5 @@
 .registry-icon__initial {
   font-size: var(--font-callout);
   font-weight: var(--weight-bold);
-  color: var(--primary);
+  color: var(--accent);
 }

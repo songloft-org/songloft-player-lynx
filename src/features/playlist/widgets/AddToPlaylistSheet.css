@@ -36,8 +36,8 @@
   background-color: var(--glass-fill-strong);
   background-image: var(--glass-sheen-layer), var(--glass-ramp);
   border: 1px solid var(--glass-border);
-  border-top-left-radius: var(--radius-xl);
-  border-top-right-radius: var(--radius-xl);
+  border-top-left-radius: var(--radius-sheet);
+  border-top-right-radius: var(--radius-sheet);
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
     var(--glass-rim-sides),
@@ -53,10 +53,11 @@
 }
 
 .atp__handle {
-  width: 40px;
-  height: 4px;
-  border-radius: 2px;
-  background-color: var(--rule);
+  /* 36×5, radius 2.5: unified with SheetShell / MoreTabsSheet (P8a). */
+  width: 36px;
+  height: 5px;
+  border-radius: 2.5px;
+  background-color: var(--opaque-separator);
 }
 
 .atp__header {

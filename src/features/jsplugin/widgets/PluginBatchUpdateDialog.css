@@ -8,7 +8,7 @@
 .batch-update__text {
   margin-top: var(--space-3);
   font-size: var(--font-sm);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .batch-update__updating {
@@ -21,19 +21,19 @@
 
 .batch-update__hint {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .batch-update__error {
   margin-top: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background-color: var(--fill-faint);
+  background-color: var(--quaternary-system-fill);
 }
 
 .batch-update__error-text {
   font-size: var(--font-sm);
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 .batch-update__stats {
@@ -43,7 +43,7 @@
   margin-top: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background-color: var(--fill-faint);
+  background-color: var(--quaternary-system-fill);
 }
 
 .batch-update__stat {
@@ -59,20 +59,20 @@
 }
 
 .batch-update__stat-num--ok {
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .batch-update__stat-num--bad {
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 .batch-update__stat-num--muted {
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .batch-update__stat-label {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .batch-update__rows {
@@ -100,22 +100,22 @@
 }
 
 .batch-update__row-name--ok {
-  color: var(--content);
+  color: var(--label);
 }
 
 .batch-update__row-name--bad {
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 .batch-update__row-name--warn {
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 .batch-update__row-name--muted {
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .batch-update__row-note {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }

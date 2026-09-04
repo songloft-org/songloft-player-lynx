@@ -25,7 +25,11 @@
   /* Sits above all bottom chrome so it never covers the mini-player. Narrow:
      bottom bar (64px + home indicator) with the mini-player docked over it
      (65px tall + 8px gap → top edge ~137px up). Wide has no bottom bar — the
-     mini-player (~77px up) is the only bottom chrome. 150px clears both. */
+     mini-player (~77px up) is the only bottom chrome. 150px clears both.
+     150 ≈ --nav-inset's 148 tier (ShellLayout.css) but is INDEPENDENTLY
+     derived — the toast clears bottom chrome, the nav inset reserves scroll
+     tail under the capsule; same number, two unrelated budgets, do not align
+     them by edit. */
   bottom: calc(env(safe-area-inset-bottom) + 150px);
   left: 0;
   right: 0;

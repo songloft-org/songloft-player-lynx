@@ -11,7 +11,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--separator);
 }
 
 .folder-content__topbar {
@@ -23,7 +23,7 @@
 
 .folder-content__title {
   flex: 1;
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-callout);
   font-weight: var(--weight-semibold);
   margin-left: var(--space-3);
@@ -56,6 +56,6 @@
 
 .folder-content__divider {
   height: 1px;
-  background-color: var(--line);
+  background-color: var(--separator);
   margin: var(--space-2) var(--space-4);
 }

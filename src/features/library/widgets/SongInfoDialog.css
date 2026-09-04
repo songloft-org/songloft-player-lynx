@@ -23,7 +23,7 @@
   box-shadow: var(--shadow-lg),
     inset 0 1px 0 var(--glass-highlight),
     var(--glass-rim-sides),
-    inset 0 -1px 0 var(--line);
+    inset 0 -1px 0 var(--separator);
   padding: var(--space-5);
   margin: var(--space-6);
   /*
@@ -63,7 +63,7 @@
   height: 44px;
   flex-shrink: 0;
   border-radius: var(--radius-md);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
 }
 
 .song-info-dialog__cover--empty {
@@ -82,7 +82,7 @@
   flex: 1;
   font-size: var(--font-callout);
   font-weight: var(--weight-semibold);
-  color: var(--content);
+  color: var(--label);
   line-height: var(--font-callout);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -120,19 +120,19 @@
   flex-direction: row;
   padding: var(--space-3) 0;
   border-bottom-width: 1px;
-  border-bottom-color: var(--line);
+  border-bottom-color: var(--separator);
 }
 
 .song-detail__row-label {
   width: 80px;
   font-size: var(--font-sm);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .song-detail__row-value {
   flex: 1;
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--label);
 }
 
 /* Small note under the cache row explaining how the cached quality is chosen. */
@@ -142,19 +142,19 @@
 
 .song-detail__cache-note-text {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 /* The "write tags to file" pill — local songs only. */
 .song-detail__save-btn {
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .song-detail__save-btn-text {
   font-size: var(--font-sm);
-  color: var(--primary-content);
+  color: var(--accent-content);
 }
 
 .song-detail__tags-section {

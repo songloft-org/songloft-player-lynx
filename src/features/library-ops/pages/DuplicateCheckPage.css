@@ -13,20 +13,20 @@
 
 .dup-check__loading-text {
   font-size: var(--font-sm);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 /* ─── Fingerprint status phase ────────────────────────────────────────────── */
 .fp-status__intro {
   font-size: var(--font-sm);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-bottom: var(--space-4);
   line-height: 20px;
 }
 
 .fp-status__card {
   padding: var(--space-4);
-  border: 1px solid var(--line);
+  border: 1px solid var(--separator);
   border-radius: var(--radius-sm);
   margin-bottom: var(--space-4);
 }
@@ -41,7 +41,7 @@
 .fp-status__card-title {
   font-size: var(--font-sm);
   font-weight: var(--weight-semibold);
-  color: var(--content);
+  color: var(--label);
   margin-left: var(--space-2);
 }
 
@@ -55,22 +55,22 @@
 
 .fp-status__label {
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--label);
 }
 
 .fp-status__value {
   font-size: var(--font-sm);
   font-weight: var(--weight-medium);
-  color: var(--content);
+  color: var(--label);
 }
 
 .fp-status__value--warn {
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 .fp-status__hint {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-bottom: var(--space-3);
   line-height: 16px;
 }
@@ -80,8 +80,8 @@
   flex-direction: row;
   align-items: flex-start;
   padding: var(--space-3);
-  background-color: var(--neutral-faint);
-  border: 1px solid var(--line);
+  background-color: var(--tertiary-system-fill);
+  border: 1px solid var(--separator);
   border-radius: var(--radius-sm);
   margin-bottom: var(--space-4);
 }
@@ -89,7 +89,7 @@
 .fp-status__warning-text {
   flex: 1;
   font-size: 13px;
-  color: var(--content);
+  color: var(--label);
   margin-left: var(--space-2);
   line-height: 18px;
 }
@@ -106,12 +106,12 @@
 }
 
 .fp-status__btn--primary {
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .fp-status__btn--secondary {
   background-color: transparent;
-  border: 1px solid var(--line);
+  border: 1px solid var(--separator);
 }
 
 .fp-status__btn--disabled {
@@ -125,11 +125,11 @@
 }
 
 .fp-status__btn-text--primary {
-  color: var(--primary-content);
+  color: var(--accent-content);
 }
 
 .fp-status__btn-text--secondary {
-  color: var(--primary);
+  color: var(--accent);
 }
 
 /* ─── Computing phase ─────────────────────────────────────────────────────── */
@@ -139,19 +139,19 @@
 
 .fp-computing__text {
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--label);
   margin-top: var(--space-3);
 }
 
 .fp-computing__failed {
   font-size: 13px;
-  color: var(--danger);
+  color: var(--system-red);
   margin-top: var(--space-1);
 }
 
 .fp-computing__hint {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-top: var(--space-2);
 }
 
@@ -161,7 +161,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--line);
+  border: 1px solid var(--separator);
   border-radius: var(--radius-sm);
   margin-top: var(--space-4);
 }
@@ -172,13 +172,13 @@
 
 .fp-computing__cancel-text {
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--label);
   margin-left: var(--space-2);
 }
 
 .fp-computing__cancel-hint {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-top: var(--space-2);
 }
 
@@ -197,19 +197,19 @@
 .fp-results__empty-title {
   font-size: var(--font-callout);
   font-weight: var(--weight-semibold);
-  color: var(--content);
+  color: var(--label);
   margin-top: var(--space-4);
 }
 
 .fp-results__empty-hint {
   font-size: var(--font-sm);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-top: var(--space-2);
 }
 
 .fp-results__summary {
   padding: var(--space-4);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
   border-radius: var(--radius-sm);
   margin-bottom: var(--space-3);
 }
@@ -217,12 +217,12 @@
 .fp-results__summary-text {
   font-size: var(--font-sm);
   font-weight: var(--weight-medium);
-  color: var(--content);
+  color: var(--label);
 }
 
 .fp-results__ignored {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-top: var(--space-1);
 }
 
@@ -253,19 +253,19 @@
   align-items: center;
   justify-content: center;
   padding: 10px var(--space-4);
-  border: 1px solid var(--line);
+  border: 1px solid var(--separator);
   border-radius: var(--radius-sm);
 }
 
 .fp-results__recheck-text {
   font-size: var(--font-sm);
-  color: var(--primary);
+  color: var(--accent);
   margin-left: var(--space-2);
 }
 
 /* ─── Group card ──────────────────────────────────────────────────────────── */
 .fp-group {
-  border: 1px solid var(--line);
+  border: 1px solid var(--separator);
   border-radius: var(--radius-sm);
   padding: var(--space-4);
   margin-bottom: var(--space-3);
@@ -286,7 +286,7 @@
 .fp-group__title {
   font-size: var(--font-sm);
   font-weight: var(--weight-semibold);
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .fp-group__ignore-btn {
@@ -295,7 +295,7 @@
 
 .fp-group__ignore-text {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .fp-group__songs {
@@ -330,7 +330,7 @@
 
 .fp-group__song-title {
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--label);
   flex: 1;
 }
 
@@ -340,25 +340,25 @@
 
 .fp-group__badge {
   padding: 2px 6px;
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
   border-radius: 4px;
   margin-left: var(--space-2);
 }
 
 .fp-group__badge-text {
   font-size: 11px;
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .fp-group__song-path {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-top: 2px;
 }
 
 .fp-group__song-meta {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-top: 2px;
 }
 
@@ -368,14 +368,14 @@
   align-items: center;
   justify-content: center;
   padding: 10px var(--space-4);
-  border: 1px solid var(--danger);
+  border: 1px solid var(--system-red);
   border-radius: var(--radius-sm);
   margin-top: var(--space-3);
 }
 
 .fp-group__delete-text {
   font-size: var(--font-sm);
-  color: var(--danger);
+  color: var(--system-red);
   margin-left: var(--space-2);
 }
 

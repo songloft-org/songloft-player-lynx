@@ -22,7 +22,7 @@
   width: 4px;
   height: 100%;
   border-radius: var(--radius-pill);
-  background-color: var(--opaque-separator);
+  background-color: var(--tertiary-system-fill);
 }
 
 /* One accent channel — volume rides the same ink indicator as progress

@@ -28,7 +28,7 @@
   flex: 1;
   font-size: var(--font-title3);
   font-weight: var(--weight-semibold);
-  color: var(--content);
+  color: var(--label);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -48,11 +48,11 @@
 
 .plugin-webview__state-text {
   font-size: var(--font-callout);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .plugin-webview__state-text--error {
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 /* Floating-nav capsule inset (see ShellLayout.css): the fixed bottom bar lets

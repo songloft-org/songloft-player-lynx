@@ -27,7 +27,7 @@
 .plugin-manager__item {
   padding: var(--space-3) 0;
   border-bottom-width: 1px;
-  border-bottom-color: var(--line);
+  border-bottom-color: var(--separator);
 }
 
 .plugin-manager__row-main {
@@ -46,7 +46,7 @@
 
 .plugin-manager__item-name {
   font-size: var(--font-callout);
-  color: var(--content);
+  color: var(--label);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -75,41 +75,41 @@
   width: 6px;
   height: 6px;
   border-radius: var(--radius-pill);
-  background-color: var(--content-muted);
+  background-color: var(--secondary-label);
 }
 
 .plugin-manager__status-text {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .plugin-manager__status--active .plugin-manager__status-dot {
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .plugin-manager__status--active .plugin-manager__status-text {
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .plugin-manager__status--error .plugin-manager__status-dot {
-  background-color: var(--danger);
+  background-color: var(--system-red);
 }
 
 .plugin-manager__status--error .plugin-manager__status-text {
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 .plugin-manager__version {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
-  background-color: var(--paper);
+  color: var(--secondary-label);
+  background-color: var(--secondary-system-background);
   padding: 1px var(--space-2);
   border-radius: var(--radius-sm);
 }
 
 .plugin-manager__author {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 /* Two-line clamp on Web (the standard properties survive the web encode); the
@@ -118,7 +118,7 @@
    `.playlist-detail__desc`. */
 .plugin-manager__desc {
   margin-top: var(--space-1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-sm);
   line-height: var(--font-callout);
   overflow: hidden;
@@ -159,7 +159,7 @@
   width: 36px;
   height: 36px;
   border-width: 2px;
-  border-color: var(--line);
+  border-color: var(--separator);
   border-radius: var(--radius-pill);
   overflow: hidden;
 }
@@ -172,15 +172,15 @@
 .plugin-avatar__initial {
   font-size: var(--font-callout);
   font-weight: var(--weight-bold);
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .plugin-avatar--active {
-  border-color: var(--primary);
+  border-color: var(--accent);
 }
 
 .plugin-avatar--error {
-  border-color: var(--danger);
+  border-color: var(--system-red);
 }
 
 /* The delete dialog's "keep plugin data" row: the shared tick control from
@@ -194,7 +194,7 @@
   margin-top: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
 }
 
 .plugin-manager__keep-data-texts {
@@ -206,12 +206,12 @@
 
 .plugin-manager__keep-data-label {
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--label);
 }
 
 .plugin-manager__keep-data-hint {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .plugin-manager__state {
@@ -223,9 +223,9 @@
 
 .plugin-manager__state-text {
   font-size: var(--font-callout);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .plugin-manager__state-text--error {
-  color: var(--danger);
+  color: var(--system-red);
 }

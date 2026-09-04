@@ -18,12 +18,12 @@
   align-items: center;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-pill);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
   gap: var(--space-1);
 }
 
 .library-toolbar__btn--active {
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .library-toolbar__btn--disabled {
@@ -31,16 +31,16 @@
 }
 
 .library-toolbar__btn-text {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-caption1);
 }
 
 .library-toolbar__btn--active .library-toolbar__btn-text {
-  color: var(--primary-content);
+  color: var(--accent-content);
 }
 
 .library-toolbar__btn--disabled .library-toolbar__btn-text {
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .library-toolbar__spacer {

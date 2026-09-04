@@ -19,11 +19,11 @@
   width: 20px;
   height: 20px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--content-muted);
+  border: 1px solid var(--secondary-label);
   background-color: transparent;
 }
 
 .app-checkbox--on {
-  background-color: var(--primary);
-  border: 1px solid var(--primary);
+  background-color: var(--accent);
+  border: 1px solid var(--accent);
 }

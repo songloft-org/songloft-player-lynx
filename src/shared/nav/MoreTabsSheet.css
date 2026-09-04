@@ -36,15 +36,15 @@
      screen; anything past it scrolls. */
   max-height: 70%;
   padding-bottom: var(--space-4);
-  border-top-left-radius: var(--radius-xl);
-  border-top-right-radius: var(--radius-xl);
+  border-top-left-radius: var(--radius-sheet);
+  border-top-right-radius: var(--radius-sheet);
   background-color: var(--glass-fill-strong);
   background-image: var(--glass-sheen-layer), var(--glass-ramp);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
     var(--glass-rim-sides),
-    inset 0 -1px 0 var(--line);
+    inset 0 -1px 0 var(--separator);
 }
 
 /*
@@ -67,7 +67,7 @@
   width: 36px;
   height: 5px;
   border-radius: 2.5px;
-  background-color: var(--rule);
+  background-color: var(--opaque-separator);
 }
 
 .more-tabs__header {
@@ -76,7 +76,7 @@
 }
 
 .more-tabs__title {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-headline);
   font-weight: var(--weight-semibold);
   line-height: var(--font-lg);
@@ -115,7 +115,7 @@
 }
 
 .more-tabs__item--active {
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .more-tabs__item-icon {
@@ -128,7 +128,7 @@
 
 .more-tabs__item-label {
   flex: 1;
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-callout);
   line-height: var(--font-lg);
   /* One line, ellipsis on overflow — plugin names come from the backend and
@@ -139,5 +139,5 @@
 }
 
 .more-tabs__item-label--active {
-  color: var(--primary-content);
+  color: var(--accent-content);
 }

@@ -24,8 +24,8 @@
   height: 70%;
   display: flex;
   flex-direction: column;
-  border-top-left-radius: var(--radius-xl);
-  border-top-right-radius: var(--radius-xl);
+  border-top-left-radius: var(--radius-sheet);
+  border-top-right-radius: var(--radius-sheet);
   background-color: var(--glass-fill-strong);
   background-image: var(--glass-sheen-layer), var(--glass-ramp);
   border: 1px solid var(--glass-border);

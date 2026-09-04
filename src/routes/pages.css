@@ -14,14 +14,14 @@
 }
 
 .page__title {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-2xl);
   font-weight: bold;
   margin-bottom: var(--space-2);
 }
 
 .page__subtitle {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-md);
   margin-bottom: var(--space-5);
 }
@@ -47,11 +47,11 @@
   margin-bottom: var(--space-3);
   border-radius: var(--radius-pill);
   background-color: transparent;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--opaque-separator);
 }
 
 .pill__text {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-md);
 }
 
@@ -63,16 +63,16 @@
   padding: var(--space-3) var(--space-5);
   margin-bottom: var(--space-3);
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .luna-button--active {
-  background-color: var(--primary);
+  background-color: var(--accent);
   opacity: 0.85;
 }
 
 .luna-button__text {
-  color: var(--primary-content);
+  color: var(--accent-content);
   font-size: var(--font-md);
   font-weight: bold;
 }
@@ -86,11 +86,11 @@
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   background-color: transparent;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--opaque-separator);
 }
 
 .btn--danger__text {
-  color: var(--danger);
+  color: var(--system-red);
   font-size: var(--font-md);
   font-weight: 500;
 }
@@ -98,7 +98,7 @@
 /* Muse card — soft surface + hairline border, radius-lg. Hover adds NO shadow
    (Muse §4.2: shadow is only for floating elements). */
 .muse-card {
-  background-color: var(--paper);
-  border: 1px solid var(--line);
+  background-color: var(--secondary-system-background);
+  border: 1px solid var(--separator);
   border-radius: var(--radius-lg);
 }

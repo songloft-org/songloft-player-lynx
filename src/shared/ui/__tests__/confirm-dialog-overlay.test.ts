@@ -286,28 +286,29 @@ describe('dialogs close on the fade, not on the presence fallback stall', () => 
 })
 
 /*
- * The constructive affirmative is a SOLID primary fill — the app's
+ * The constructive affirmative is a SOLID accent fill — the app's
  * primary-action language (login, the info dialog's write-tags pill).
  *
- * Found on device with no theme pack: --primary falls back to the ink colour,
+ * Found on device with no theme pack: --accent falls back to the ink colour,
  * so the old ghost hairline rendered "save" as a black-on-white outline nearly
  * identical to cancel's grey one — the primary action carried no emphasis and
- * was reported as broken. --primary-content (never a literal white) is the
- * paired foreground that keeps the label legible in both themes.
+ * was reported as broken. --accent-content (never a literal white) is the
+ * paired foreground that keeps the label legible in both themes. (P8 renamed
+ * the --primary/--primary-content aliases to --accent/--accent-content.)
  */
 describe('the affirmative dialog button reads as the primary action', () => {
   const DIALOG_CSS = path.resolve(__dirname, '../ConfirmDialog.css')
 
-  test('submit is a solid primary fill with the paired foreground', () => {
+  test('submit is a solid accent fill with the paired foreground', () => {
     const css = readFileSync(DIALOG_CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
     const btn = css.match(/\.confirm-dialog__btn--submit\s*\{([^}]*)\}/)
     expect(btn, '.confirm-dialog__btn--submit rule not found').not.toBeNull()
-    expect(btn![1], 'the submit body must be a solid primary fill, not a ghost')
-      .toMatch(/background-color:\s*var\(--primary\)/)
+    expect(btn![1], 'the submit body must be a solid accent fill, not a ghost')
+      .toMatch(/background-color:\s*var\(--accent\)/)
     const text = css.match(/\.confirm-dialog__btn-text--submit\s*\{([^}]*)\}/)
     expect(text, '.confirm-dialog__btn-text--submit rule not found').not.toBeNull()
-    expect(text![1], 'the label must use --primary-content (legible in both themes)')
-      .toMatch(/color:\s*var\(--primary-content\)/)
+    expect(text![1], 'the label must use --accent-content (legible in both themes)')
+      .toMatch(/color:\s*var\(--accent-content\)/)
   })
 })
 

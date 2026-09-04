@@ -8,7 +8,7 @@
 .registry-manage__empty {
   padding: var(--space-6) 0;
   font-size: var(--font-sm);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   text-align: center;
 }
 
@@ -42,7 +42,7 @@
   flex: 1;
   min-width: 0;
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--label);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -50,15 +50,15 @@
 
 .registry-manage__official {
   font-size: var(--font-caption1);
-  color: var(--primary);
-  background-color: var(--fill-faint);
+  color: var(--accent);
+  background-color: var(--quaternary-system-fill);
   padding: 0 var(--space-2);
   border-radius: var(--radius-sm);
 }
 
 .registry-manage__row-url {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -83,12 +83,12 @@
   margin-top: var(--space-3);
   padding: var(--space-2);
   border-radius: var(--radius-sm);
-  background-color: var(--fill-faint);
+  background-color: var(--quaternary-system-fill);
 }
 
 .registry-manage__add-text {
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--label);
 }
 
 .registry-manage__form {
@@ -102,10 +102,10 @@
 .registry-manage__input {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
   font-size: var(--font-sm);
-  color: var(--content);
-  -x-placeholder-color: var(--content-muted);
+  color: var(--label);
+  -x-placeholder-color: var(--secondary-label);
 }
 
 .registry-manage__save--disabled {

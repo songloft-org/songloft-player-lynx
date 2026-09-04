@@ -5,7 +5,7 @@
 .library-rail {
   width: 220px;
   height: 100%;
-  border-right: 1px solid var(--line);
+  border-right: 1px solid var(--separator);
 }
 
 .library-rail__col {
@@ -23,7 +23,7 @@
 .library-rail__divider {
   height: 1px;
   margin: var(--space-2) var(--space-2);
-  background-color: var(--rule);
+  background-color: var(--opaque-separator);
 }
 
 .library-rail__row {
@@ -35,7 +35,7 @@
 }
 
 .library-rail__row--active {
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
 }
 
 .library-rail__icon {
@@ -48,16 +48,16 @@
 }
 
 .library-rail__icon--active {
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
 }
 
 .library-rail__label {
-  color: var(--content-2);
+  color: var(--secondary-label);
   font-size: var(--font-sm);
   margin-left: var(--space-2);
 }
 
 .library-rail__row--active .library-rail__label {
-  color: var(--content);
+  color: var(--label);
   font-weight: var(--weight-semibold);
 }

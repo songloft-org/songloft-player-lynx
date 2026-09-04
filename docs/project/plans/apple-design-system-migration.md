@@ -525,7 +525,7 @@ Toast 按 §4.1 C 类改 `--toast-fill`；`ToastHost.css:22` 的 `bottom: calc(s
 | **构建告警当错误看** | `progress.md` 记载构建告警自批19b 起归零。本方案不得引入新的 `Unsupported property … was removed` 告警——尤其 `text-transform`（§P1 已避开）。 |
 | **回滚** | P0 回滚 = 还原 `tokens.css` + `theme-pack-mapping.ts` + 4 个测试文件。P1–P9 每阶段回滚 = 还原该屏 CSS/TSX。别名桥接的设计意图正是让每阶段回滚互不牵连。 |
 | **性能** | 别名层引入一层 `var()` 间接。`--glass-ramp`/`--shadow-focus` 已在生产用同样形态，无实测退化记录。P10 后间接层消失。 |
-| **未验���������** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
+| **未验����������** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
 
 ## 8. 验收
 
@@ -1050,3 +1050,47 @@ P2 把副标题基线迁到 `--secondary-label` 后，二级与主级 `--label` 
 新增 `login-css.test.ts` 5 条：logo 80/18（对齐 SplashScreen）；卡片 max-width 令牌 + 分组圆角 + 无 border + 灰卡面；输入框 control-height + 填充 + 无 border + body 字号；排版按角色（label footnote / toggle-title subhead / error footnote+system-red / title 保留 title1 / 按钮 control-height+body+semibold）；零 Muse 别名残留。`input-css.test.ts` 不动（已接受 `--tertiary-system-fill`）。
 
 编码实测：`dist/main.lynx.bundle` 双端产物齐备，LoginPage.css 零旧别名。
+
+---
+
+# P8 实施记录（对话框 / 抽屉 / 气泡菜单 / Toast + 全仓别名扫荡）
+
+验收：`pnpm test` 206 文件 / 2223 用例全绿；`tsc -b` 通过；`pnpm run build` 双端产物齐备。告警仍为既存那 4 组。
+
+## P8a（低风险）：配色 + 字号，几何不动；P8b 推迟
+
+按方案拆分，**只做 P8a**（配色/字号/把手几何，不碰对话框魔数 124/168/440）。**P8b**（Apple alert 几何：270px 宽、堆叠按钮、`--radius-alert`）推迟——它要重算 124 与 168、动 `dialog-viewport.ts` 三个常量 + 四个 CSS 同步点 + `confirm-dialog-overlay.test.ts`，风险高，且 P8a 已把配色对齐 Apple，几何差异是可接受存量。魔数同步由 `confirm-dialog-overlay.test.ts` 继续钉住（未动）。
+
+## 抽屉把手统一
+
+三处把手统一为 36×5 / radius 2.5px：`MoreTabsSheet.css` 本就是该值；`SheetShell.css` `.drawer__handle` 40×4/radius-pill → 36×5/2.5；`AddToPlaylistSheet.css` `.atp__handle` 40×4/2 → 36×5/2.5。
+
+## 抽屉圆角：新增 --radius-sheet: 10px
+
+新增 `--radius-sheet: 10px`（tokens.css），把所有底部 sheet/抽屉顶角从 `--radius-xl`(28) 改到 `--radius-sheet`(10)：SheetShell、PlaylistDescPanel、SongCoverPicker、AddToPlaylistSheet、ManageTagsSheet、PlayHistoryPanel、MoreTabsSheet、GlobalMenu。**标记需真机视觉复核**——28→10 是明显变化，本仓库无法验证 iOS 抽屉圆角准确值。`--radius-xl: 28px` 声明保留（`tokens-hig.test.ts` 钉住、未来可复用），只是零消费。
+
+## 确认按钮配色（sed 自然结果）
+
+`--cancel` 边框 `--rule`→`--opaque-separator`；`--confirm`（破坏性描边红）`--danger`→`--system-red`（文字优化红——confirm 是描边文字按钮，P8a 不动几何，故用 `--system-red` 而非 `--system-red-strong`；后者是**填充**破坏性控件的白字底红，confirm 保持「红字不红块」与 DESIGN.md 既有 rationale 一致，也合 Apple alert「红字非红块」）；`--submit`（肯定填充）`--primary`→`--accent`、`--primary-content`→`--accent-content`。这些都是 sed 的自然结果（值保持，仅换名），不改几何。
+
+**方案偏差记录**：方案写 confirm 用 `--system-red-strong`，但 confirm 是描边**文字**按钮（P8a 不动几何），`--system-red`（文字优化红）才语义正确；`--system-red-strong` 留给填充破坏性控件（白字底红，如选择工具栏的删除按钮）。若 P8b 改成填充按钮再换 `--system-red-strong`。
+
+## 跳过：--glass-fill-strong → --material-regular
+
+方案 P8a 列了这条，但 glass→material 重命名在 P0 已决定**推迟到单独阶段**（`--material-regular`/`--material-thick` 与既有 `MaterialVariant` 厚度轴撞名，见 tokens.css 注释）。`--material-regular` 当前不存在，故跳过此子项，glass 令牌保留原名。
+
+## Toast 底部 150px 注释
+
+`ToastHost.css` 的 `bottom: calc(safe-area + 150px)` 加注释说明它与 `--nav-inset` 的 148 档**同值但独立推导**（toast 避让底部 chrome，nav inset 预留滚动尾，两个预算不联动）。
+
+## 全仓颜色别名扫荡（本批主体）
+
+P1–P7 各迁了各自 feature，但 library / library-ops / jsplugin / routes / 共享 dialog-sheet-menu 仍有别名。本批对**全部 78 个 CSS 文件**（排除 `EqualizerPage`=P9、`PlayerBackdrop`=蒙版）一次性 sed 迁移颜色别名（`--content*`/`--paper`/`--line`/`--neutral-faint`/`--primary*`/`--danger`/`--rule`/`--fill-faint` → Apple 名），`var(--name)` 精确匹配。迁移后**全仓仅 `EqualizerPage` 与 `PlayerBackdrop` 残留别名**（前者 P9 整文件、后者蒙版保护）。
+
+**`--rule`→`--opaque-separator` 的副作用修复**：sed 值保持，但 `--rule` 曾被当**填充**用于滑轨/进度轨/分页点（应是 on-material 填充，不是分隔线）。手动把这些改回 `--tertiary-system-fill`（与 P6 的 ProgressBar 轨同 precedent）：`SizeLimitSlider` 轨、`VolumeControl` 轨、`LyricAdjustPage` 轨、`LibraryOpsPage` 进度轨、`PageDots` 点。分隔线（`library-rail__divider`、`library-switcher__divider`）与抽屉把手保留 `--opaque-separator`（结构条，语义正确）。
+
+## 闸门
+
+新增 `sheet-dialog-css.test.ts` 4 条：三处把手 36×5/2.5；无 sheet 残用 `--radius-xl`；滑轨/进度轨/分页点用 `--tertiary-system-fill`（非 `--opaque-separator`）；**全仓除 EqualizerPage/PlayerBackdrop 外零 Muse 颜色别名**（新文件滑入未迁移即红）。`confirm-dialog-overlay.test.ts` 的按钮断言更新 `--primary`→`--accent`/`--accent-content`（钉旧别名的那条）；`app-switch-css.test.ts` 的 checkbox 断言同批更新。`input-css.test.ts` 不动。
+
+编码实测：`dist/main.lynx.bundle` 双端产物齐备，全仓（除 Equalizer/Backdrop）零旧别名。

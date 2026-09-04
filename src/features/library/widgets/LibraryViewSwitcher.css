@@ -7,7 +7,7 @@
 .library-switcher {
   width: 100%;
   height: 48px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--separator);
 }
 
 .library-switcher__row {
@@ -29,7 +29,7 @@
   width: 1px;
   height: 20px;
   margin: 0 var(--space-3);
-  background-color: var(--rule);
+  background-color: var(--opaque-separator);
 }
 
 .library-switcher__pill {
@@ -39,21 +39,21 @@
   padding: var(--space-1) var(--space-3);
   margin-right: var(--space-2);
   border-radius: var(--radius-pill);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--opaque-separator);
   background-color: transparent;
 }
 
 .library-switcher__pill--active {
-  border-color: var(--primary);
+  border-color: var(--accent);
 }
 
 .library-switcher__pill-text {
-  color: var(--content-2);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
   margin-left: var(--space-1);
 }
 
 .library-switcher__pill--active .library-switcher__pill-text {
-  color: var(--primary);
+  color: var(--accent);
   font-weight: var(--weight-semibold);
 }

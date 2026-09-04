@@ -16,7 +16,7 @@
   flex-direction: row;
   align-items: center;
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--separator);
 }
 
 .library-editor__cancel {
@@ -26,7 +26,7 @@
 .library-editor__title {
   flex: 1;
   margin-left: var(--space-3);
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-callout);
   font-weight: var(--weight-semibold);
 }
@@ -34,20 +34,20 @@
 .library-editor__save {
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .library-editor__save-text {
-  color: var(--primary-content);
+  color: var(--accent-content);
   font-size: var(--font-sm);
   font-weight: var(--weight-semibold);
 }
 
 .library-editor__error {
   padding: var(--space-2) var(--space-4);
-  color: var(--danger);
+  color: var(--system-red);
   font-size: var(--font-sm);
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
 }
 
 .library-editor__scroll {
@@ -77,7 +77,7 @@
 
 .library-editor__group-label {
   flex: 1;
-  color: var(--primary);
+  color: var(--accent);
   font-size: var(--font-sm);
   font-weight: var(--weight-semibold);
 }
@@ -94,7 +94,7 @@
   padding: var(--space-2) var(--space-2);
   gap: var(--space-3);
   border-radius: var(--radius-sm);
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
   margin-bottom: var(--space-1);
 }
 
@@ -104,7 +104,7 @@
 
 .library-editor__row-label {
   flex: 1;
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-sm);
 }
 

@@ -7,7 +7,7 @@
 .plugin-update__phase {
   margin-top: var(--space-3);
   font-size: var(--font-sm);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .plugin-update__updating {
@@ -20,19 +20,19 @@
 
 .plugin-update__hint {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .plugin-update__error {
   margin-top: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background-color: var(--fill-faint);
+  background-color: var(--quaternary-system-fill);
 }
 
 .plugin-update__error-text {
   font-size: var(--font-sm);
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 .plugin-update__found {
@@ -43,16 +43,16 @@
   margin-top: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background-color: var(--fill-faint);
+  background-color: var(--quaternary-system-fill);
 }
 
 .plugin-update__found-label {
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--label);
 }
 
 .plugin-update__versions {
   font-size: var(--font-callout);
   font-weight: var(--weight-bold);
-  color: var(--primary);
+  color: var(--accent);
 }

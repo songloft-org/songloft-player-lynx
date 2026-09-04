@@ -56,7 +56,7 @@
    * The same glass as every other overlay in the app — `.popover-menu` for the
    * anchored form, `.more-tabs__panel` / `.drawer__panel` for the docked one.
    *
-   * This said `var(--paper)` until 批A-fix3, which made it the **only** floating
+   * This said `var(--secondary-system-background)` until 批A-fix3, which made it the **only** floating
    * surface left opaque: batch C gave the others their depth stack and fix2 gave
    * them a real blur, and this panel — the song row's `⋯` menu, the most-used menu
    * in the app — was never brought along. So it read as a flat card beside glass
@@ -74,7 +74,7 @@
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
     var(--glass-rim-sides),
-    inset 0 -1px 0 var(--line);
+    inset 0 -1px 0 var(--separator);
   overflow-y: auto;
 }
 
@@ -90,8 +90,8 @@
   right: 0;
   max-height: 60%;
   padding-bottom: var(--space-6);
-  border-top-left-radius: var(--radius-xl);
-  border-top-right-radius: var(--radius-xl);
+  border-top-left-radius: var(--radius-sheet);
+  border-top-right-radius: var(--radius-sheet);
 }
 
 /*
