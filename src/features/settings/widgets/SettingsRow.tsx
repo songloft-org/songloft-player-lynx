@@ -2,9 +2,32 @@ import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { IconName } from '../../../shared/ui/icons.js'
 import './Settings.css'
 
+/**
+ * The per-function tint of a settings-row icon tile, drawn from Apple's
+ * 12-tint palette (see `tokens.css`). The GLYPH is always white — the tile is
+ * decorative, the row's title label carries the meaning — so this selects only
+ * the tile's fill, not a glyph colour. `'red'` is implied by `danger` and does
+ * not need to be passed separately.
+ */
+export type RowIconTint =
+  | 'blue'
+  | 'green'
+  | 'orange'
+  | 'yellow'
+  | 'pink'
+  | 'purple'
+  | 'indigo'
+  | 'teal'
+  | 'gray'
+  | 'red'
+
 export interface SettingsRowProps {
   /** Leading icon name. */
   icon?: IconName
+  /** Per-function tile tint (Apple's 12-tint palette). Required when `icon` is
+   *  set and `danger` is not — an icon without a tint renders as a bare glyph,
+   *  the pre-P1b shape, which is kept only as a fallback. */
+  tint?: RowIconTint
   title: string
   subtitle?: string
   /** Right-aligned value text (e.g. current selection). */
@@ -15,7 +38,8 @@ export interface SettingsRowProps {
   onTap?: () => void
   /** Dim + ignore taps (deferred/coming-later rows). */
   disabled?: boolean
-  /** Render the title in the danger color (destructive actions like Log out). */
+  /** Render the title in the danger color AND the icon tile in the danger red
+   *  (destructive actions like Log out / Clean). Implies `tint: 'red'`. */
   danger?: boolean
   /** Highlight the row (e.g. the selected play-mode option). */
   selected?: boolean
@@ -31,6 +55,7 @@ export interface SettingsRowProps {
  */
 export function SettingsRow({
   icon,
+  tint,
   title,
   subtitle,
   trailingText,
@@ -45,11 +70,17 @@ export function SettingsRow({
     + (selected ? ' settings-row--active' : '')
     + (disabled ? ' settings-row--disabled' : '')
 
-  const iconColor = danger
-    ? ICON_COLORS.danger
-    : selected
-      ? ICON_COLORS.primary
-      : ICON_COLORS.content2
+  // A danger row's tile is always the fill-optimised red; otherwise the caller
+  // picks the tint by function. White glyph either way: the tile is decorative.
+  // When no tint is set the icon falls back to the pre-P1b bare coloured glyph
+  // (kept so a missed call site degrades rather than renders an untinted tile).
+  const tileTint = danger ? 'red' : tint
+  const iconColor = tileTint
+    ? '#ffffff'
+    : (danger ? ICON_COLORS.danger : selected ? ICON_COLORS.primary : ICON_COLORS.content2)
+  const iconClass = tileTint
+    ? `settings-row__icon settings-row__icon--${tileTint}`
+    : 'settings-row__icon'
 
   return (
     <view
@@ -59,7 +90,7 @@ export function SettingsRow({
     >
       {icon
         ? (
-          <view className='settings-row__icon'>
+          <view className={iconClass}>
             <Icon name={icon} size={20} color={iconColor} />
           </view>
         )

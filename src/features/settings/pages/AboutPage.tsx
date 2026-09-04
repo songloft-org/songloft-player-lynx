@@ -62,20 +62,23 @@ export function AboutPage({ onOpenLicenses }: AboutPageProps = {}) {
       <SettingsSection title={t('settings.about')} icon='info'>
         <SettingsRow
           icon='info'
+          tint='gray'
           title={t('settings.appVersion')}
           trailingText={clientVersion}
           testId='settings-version'
         />
         {backendVersion
-          ? <SettingsRow icon='info' title={t('settings.backendVersion')} trailingText={backendVersion} />
+          ? <SettingsRow icon='info' tint='gray' title={t('settings.backendVersion')} trailingText={backendVersion} />
           : null}
         <SettingsRow
           icon='link'
+          tint='blue'
           title={t('settings.server')}
           subtitle={serverText}
         />
         <SettingsRow
           icon='music'
+          tint='pink'
           title={t('settings.songloft')}
           subtitle={t('settings.songloftUrl')}
         />
@@ -88,6 +91,7 @@ export function AboutPage({ onOpenLicenses }: AboutPageProps = {}) {
       <SettingsSection>
         <SettingsRow
           icon='info'
+          tint='gray'
           title={t('settings.licenses')}
           trailingIcon='chevron-right'
           onTap={openLicenses}

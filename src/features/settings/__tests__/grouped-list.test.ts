@@ -54,6 +54,61 @@ function ruleFor(selector: string): string {
   return m![1]!
 }
 
+/** The text of one source file, comments + leading-`//` lines stripped. */
+function srcOf(rel: string): string {
+  return readFileSync(join(SRC, rel), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+}
+
+test('every tint has a tile rule, and the tile is decorative-only', () => {
+  // P1b: Apple's tinted row-icon is a saturated tile + a WHITE glyph. The tile
+  // class is what carries the colour; the glyph colour is a literal in the TS
+  // (the <svg content> is outside the cascade). This gate pins both halves of
+  // that contract, because a break is silent: a dropped tile rule leaves the
+  // icon invisible (white glyph on a transparent card), and a tint that stops
+  // passing '#ffffff' leaves a coloured glyph on a coloured tile.
+  const tints = ['blue', 'green', 'orange', 'yellow', 'pink', 'purple', 'indigo', 'teal', 'gray', 'red'] as const
+  for (const tint of tints) {
+    const body = ruleFor(`.settings-row__icon--${tint}`)
+    expect(
+      body,
+      `the --${tint} tile must set a background-colour (a tile with none is invisible)`,
+    ).toMatch(/background-color/)
+    expect(
+      body,
+      `the --${tint} tile must carry no text colour (it is decorative: white glyph + a title label carries the meaning; a \`color:\` here would put it in contrast.test.ts's text-on-fill scan by mistake)`,
+    ).not.toMatch(/(?<![-\w])color:/)
+  }
+  // --blue resolves to --accent (pack-driven), the rest are fixed system colours.
+  expect(ruleFor('.settings-row__icon--blue')).toMatch(/var\(--accent\)/)
+  expect(ruleFor('.settings-row__icon--red')).toMatch(/var\(--system-red-strong\)/)
+})
+
+test('a tinted icon renders the tile class and a white glyph', () => {
+  const row = srcOf('features/settings/widgets/SettingsRow.tsx')
+  // The class is built from the tint name; the glyph is the literal #ffffff. Both
+  // are load-bearing and both are silent if they drift.
+  expect(row, 'tile class must be derived from the tint name').toMatch(
+    /settings-row__icon--\$\{tileTint\}/,
+  )
+  expect(row, 'a tinted glyph must be white (the tile is decorative)').toMatch(/'#ffffff'/)
+  // danger implies red: a destructive row must not need a separate tint prop.
+  expect(row, 'danger must imply the red tile').toMatch(
+    /const tileTint = danger \? 'red' : tint/,
+  )
+  // The bare-glyph fallback (no tint) must remain, so a missed call site degrades
+  // rather than renders a white glyph on an untinted (transparent) tile.
+  expect(row, 'a row without a tint must fall back to a coloured glyph, not a white one')
+    .toMatch(/: \(danger \? ICON_COLORS\.danger : selected \? ICON_COLORS\.primary : ICON_COLORS\.content2\)/)
+
+  const sw = srcOf('features/settings/widgets/SwitchRow.tsx')
+  expect(sw, 'SwitchRow must share the tinted-tile model').toMatch(
+    /settings-row__icon--\$\{tint\}/,
+  )
+  expect(sw, 'a tinted switch-row glyph must be white').toMatch(/'#ffffff'/)
+})
+
 test('every component that renders a settings row also renders the content wrapper', () => {
   const renderers = sources().filter(([, src]) => /'settings-row'/.test(src))
   // Non-vacuity: the two row components must be found, or the probe has drifted

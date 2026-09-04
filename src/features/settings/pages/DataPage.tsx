@@ -53,6 +53,7 @@ export function DataPage() {
           <SettingsSection title={t('data.sectionTitle')} icon='folder'>
             <SettingsRow
               icon='link'
+              tint='blue'
               title={t('data.export')}
               subtitle={t('data.exportSubtitle')}
               trailingIcon='chevron-right'
@@ -61,6 +62,7 @@ export function DataPage() {
             />
             <SettingsRow
               icon='folder-open'
+              tint='green'
               title={t('data.import')}
               subtitle={importStatus ?? t('data.importSubtitle')}
               trailingIcon='chevron-right'
@@ -76,6 +78,7 @@ export function DataPage() {
           <SettingsSection icon='folder'>
             <SettingsRow
               icon='folder'
+              tint='gray'
               title={t('settings.dataUnavailable')}
               disabled
               testId='settings-data-unavailable'

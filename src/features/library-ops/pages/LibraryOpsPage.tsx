@@ -269,6 +269,7 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
       <SettingsSection title={t('libops.maintenanceSection')} icon='settings'>
         <SettingsRow
           icon='fingerprint'
+          tint='indigo'
           title={t('libops.duplicateDetection')}
           trailingIcon='chevron-right'
           onTap={() => {

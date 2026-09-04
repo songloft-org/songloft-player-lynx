@@ -244,12 +244,14 @@ export function CacheManagePage() {
       >
         <SettingsRow
           icon='music'
+          tint='blue'
           title={t('cacheManage.fileCount')}
           trailingText={stats ? String(stats.fileCount) : '-'}
           testId='cache-file-count'
         />
         <SettingsRow
           icon='menu'
+          tint='gray'
           title={t('cacheManage.totalSize')}
           trailingText={stats ? formatBytes(stats.totalSize) : '-'}
           testId='cache-total-size'
@@ -277,6 +279,7 @@ export function CacheManagePage() {
           : null}
         <SettingsRow
           icon='settings'
+          tint='gray'
           title={t('cacheManage.maxSizeLimit')}
           trailingText={
             stats
@@ -316,6 +319,7 @@ export function CacheManagePage() {
           >
             <SettingsRow
               icon='music'
+              tint='blue'
               title={t('cacheManage.deviceSize')}
               trailingText={deviceCacheSize != null ? formatBytes(deviceCacheSize) : '-'}
               testId='device-cache-size'

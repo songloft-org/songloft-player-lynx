@@ -1,10 +1,13 @@
 import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { IconName } from '../../../shared/ui/icons.js'
+import type { RowIconTint } from './SettingsRow.js'
 import './Settings.css'
 
 export interface SwitchRowProps {
   icon?: IconName
+  /** Per-function tile tint — see {@link SettingsRowProps.tint}. */
+  tint?: RowIconTint
   title: string
   subtitle?: string
   checked: boolean
@@ -30,6 +33,7 @@ export interface SwitchRowProps {
  */
 export function SwitchRow({
   icon,
+  tint,
   title,
   subtitle,
   checked,
@@ -39,12 +43,20 @@ export function SwitchRow({
 }: SwitchRowProps) {
   const className = 'settings-row' + (disabled ? ' settings-row--disabled' : '')
 
+  // Same tinted-tile model as SettingsRow: white glyph on a per-function tint.
+  // A bare coloured glyph (no tint) is the pre-P1b fallback, kept so a missed
+  // call site degrades rather than renders an untinted tile.
+  const iconColor = tint ? '#ffffff' : ICON_COLORS.content2
+  const iconClass = tint
+    ? `settings-row__icon settings-row__icon--${tint}`
+    : 'settings-row__icon'
+
   return (
     <view className={className} data-testid={testId}>
       {icon
         ? (
-          <view className='settings-row__icon'>
-            <Icon name={icon} size={20} color={ICON_COLORS.content2} />
+          <view className={iconClass}>
+            <Icon name={icon} size={20} color={iconColor} />
           </view>
         )
         : null}

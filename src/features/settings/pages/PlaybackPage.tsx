@@ -145,6 +145,7 @@ export function PlaybackPage() {
       <SettingsSection>
         <SwitchRow
           icon='music'
+          tint='pink'
           title={t('settings.autoResume')}
           subtitle={t('settings.autoResumeSubtitle')}
           checked={autoResume}
@@ -153,6 +154,7 @@ export function PlaybackPage() {
         />
         <SwitchRow
           icon='volume'
+          tint='teal'
           title={t('settings.normalize')}
           subtitle={t('settings.normalizeSubtitle')}
           checked={normalize}
@@ -173,6 +175,7 @@ export function PlaybackPage() {
       <SettingsSection title={t('settings.lyricsSection')} icon='music'>
         <SwitchRow
           icon='music'
+          tint='pink'
           title={t('settings.autoEnterLyrics')}
           subtitle={t('settings.autoEnterLyricsSubtitle')}
           checked={autoEnterLyrics}
@@ -181,6 +184,7 @@ export function PlaybackPage() {
         />
         <SwitchRow
           icon='music'
+          tint='indigo'
           title={t('settings.notificationLyricInTitle')}
           subtitle={t('settings.notificationLyricInTitleSubtitle')}
           checked={notificationLyricInTitle}
@@ -191,6 +195,7 @@ export function PlaybackPage() {
           ? (
             <SwitchRow
               icon='music'
+              tint='pink'
               title={t('settings.floatingLyrics')}
               subtitle={t('settings.floatingLyricsSubtitle')}
               checked={floatingLyricEnabled}
@@ -233,6 +238,7 @@ export function PlaybackPage() {
             <SettingsSection>
               <SwitchRow
                 icon='music'
+                tint='indigo'
                 title={t('settings.floatingLyricTwoLine')}
                 subtitle={t('settings.floatingLyricTwoLineSubtitle')}
                 checked={floatingLyricTwoLine}
@@ -243,6 +249,7 @@ export function PlaybackPage() {
             <SettingsSection>
               <SwitchRow
                 icon='music'
+                tint='orange'
                 title={t('settings.floatingLyricLock')}
                 checked={floatingLyricLocked}
                 onChange={(next) => { setFloatingLyricLocked(next); void writeFloatingLyricLocked(next); void getFloatingLyricModule().setLocked(next).catch(() => {}) }}

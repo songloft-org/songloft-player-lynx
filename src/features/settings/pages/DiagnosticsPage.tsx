@@ -101,6 +101,7 @@ export function DiagnosticsPage() {
       <SettingsSection>
         <SettingsRow
           icon='menu'
+          tint='orange'
           title={t('settings.exportLogs')}
           subtitle={exportingLogs ? t('settings.exportLogsBusy') : t('settings.exportLogsSubtitle')}
           trailingIcon='chevron-right'

@@ -124,6 +124,38 @@
   margin-right: var(--space-3);
 }
 
+/*
+ * Apple's tinted row-icon tile: a saturated system-colour square with a white
+ * glyph. The colour is per-row (by function), picked from the 12-tint palette
+ * in tokens.css; the GLYPH is always white because the tile is decorative — the
+ * row's title label carries the meaning, so the tile/glyph pair is exempt from
+ * WCAG 1.4.11's graphic-object 3:1 floor (same exemption Apple's own Settings
+ * relies on). That exemption is recorded next to the tint tokens in
+ * tokens.css; contrast.test.ts therefore has no tile/glyph assertion.
+ *
+ * `--red` uses --system-red-strong, the fill-optimised red where white clears AA
+ * (4.56), not the text-optimised --system-red — the same split the destructive
+ * button controls use. A danger row's TITLE still reads in the text-optimised
+ * --system-red via `.settings-row__title--danger`; only the tile uses the fill
+ * variant.
+ *
+ * `--blue` resolves to --accent so a theme pack's seed colour tints the
+ * "network / search / info" rows along with everything else, the way a pack is
+ * meant to shift the app's voice rather than leave half the icons on stock
+ * systemBlue. The other tints are fixed platform colours (not pack-driven),
+ * matching how --system-green already behaves.
+ */
+.settings-row__icon--blue { background-color: var(--accent); }
+.settings-row__icon--green { background-color: var(--system-green); }
+.settings-row__icon--orange { background-color: var(--system-orange); }
+.settings-row__icon--yellow { background-color: var(--system-yellow); }
+.settings-row__icon--pink { background-color: var(--system-pink); }
+.settings-row__icon--purple { background-color: var(--system-purple); }
+.settings-row__icon--indigo { background-color: var(--system-indigo); }
+.settings-row__icon--teal { background-color: var(--system-teal); }
+.settings-row__icon--gray { background-color: var(--system-gray); }
+.settings-row__icon--red { background-color: var(--system-red-strong); }
+
 .settings-row__content {
   display: flex;
   flex-direction: row;

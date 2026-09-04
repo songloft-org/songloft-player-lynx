@@ -525,7 +525,7 @@ Toast 按 §4.1 C 类改 `--toast-fill`；`ToastHost.css:22` 的 `bottom: calc(s
 | **构建告警当错误看** | `progress.md` 记载构建告警自批19b 起归零。本方案不得引入新的 `Unsupported property … was removed` 告警——尤其 `text-transform`（§P1 已避开）。 |
 | **回滚** | P0 回滚 = 还原 `tokens.css` + `theme-pack-mapping.ts` + 4 个测试文件。P1–P9 每阶段回滚 = 还原该屏 CSS/TSX。别名桥接的设计意图正是让每阶段回滚互不牵连。 |
 | **性能** | 别名层引入一层 `var()` 间接。`--glass-ramp`/`--shadow-focus` 已在生产用同样形态，无实测退化记录。P10 后间接层消失。 |
-| **未验证** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
+| **未验���** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
 
 ## 8. 验收
 
@@ -746,3 +746,70 @@ Apple 的分组分隔线内缩到**文字起点**——有图标时越过图标�
 - 卡片不得有 border；有卡片的子页必须 `grouped`、无卡片的必须没有（双向相等，两类页面都必须存在，否则相等是平凡满足）
 
 变异测试 3/3 全咬。另修 `input-css.test.ts`：它钉住「所有文本框填 `--neutral-faint`」，现在接受 Apple 名与别名两者，并新增一条反貌真性——别名必须仍然解析到 `--tertiary-system-fill`，否则两个不同的填充色都能过关（该条已单独红检）。
+
+---
+
+# P1b 实施记录（设置行图标：彩色色调方块 + 白色字形）
+
+验收：`pnpm test` 200 文件 / 2193 用例全绿；`pnpm exec tsc -b` 通过；`pnpm run build` 双端产物齐备。告警仍为既存那 4 组。
+
+## 为什么字形恒为白色、不需要 TS 色板
+
+P1a 拆分时定的方向是「新增图标 tint 色板」——以为字形颜色也要随色调变，要做 TS 侧的 `ICON_COLORS` 扩展。实施时推翻了它：Apple 的设置行图标是**饱和色调方块 + 白色字形**，字形恒为白，只有方块底色按行变化。方块在 `<view>` 上、走 CSS 级联，所以底色用 `background-color: var(--system-<tint>)` 即可；只有字形（`<svg content>`，级联之外）需要 hex，而它**永远是 `#ffffff`**——不需要读主题、不需要 Proxy、不需要 IC 翻转。
+
+这把 P1b 从「TS 色板 + 64 处赋色」简化成了「6 个 CSS token + 10 个修饰类 + 38 处 `tint=` prop」。字形 `#ffffff` 一行硬编码，没有主题分支。
+
+## 装饰性豁免：为什么色调方块不受 3:1 闸门
+
+Apple 自己的设置图标在浅色下 Green/Orange/Teal 配白字都过不了 WCAG 1.4.11 图形对象 3:1（实测 2.22 / 2.31 / 2.16），暗色 IC 下更是全部色调白字都失败（1.65–2.21）。但 Apple 照发不误——因为**行图标是装饰性的**：每行都有文字标题承载含义，图标本身不传递任何独有信息。1.4.11 对「装饰性图形对象」有明确豁免，所以色调方块/字形对比度不在 `contrast.test.ts` 的闸门里，IC 模式也不重新调这些方块（与 `--system-green` 一致：IC 只提升文字层 label/accent/red，不动装饰方块）。
+
+这条豁免在 `tokens.css` 的色调块注释和 `Settings.css` 的修饰类注释里都写明了，避免日后有人误以为「漏了对比度检查」而补一个会红的断言。
+
+## 色调来源：哪几个值是核验过的，哪几个不是
+
+- `--accent`(systemBlue)、`--system-red`、`--system-green` + 6 级灰阶：在 P0 已对 Apple 官方色板（图片 alt 文本 = RGB 三元组）curl 核验，含 2025-06-09 更新（blue #007aff→#0088ff，red #ff3b30→#ff383c）。
+- 本批新增的 6 个色调（orange/yellow/pink/purple/indigo/teal）：**未对 iOS-26 色板重新核验**——HIG 颜色文章的 DocC 数据在写入时取不到（`/tutorials/data/...` 全返回 SPA 壳）。取的是 iOS-13 起稳定的规范值（orange #ff9500/#ff9f0a、teal #30b0c7/#40c8e0 等，community catalog 与 `UIColor` 文档一致）。Apple 的 2025-06-09 发布说明**未**把这几个列为变更项。它们带「下次 OS 发布重核」旗标，与灰阶同等待遇；且只用于装饰性方块，即使有小漂移也无易读性后果。
+
+`tokens-hig.test.ts` 的 PROVENANCE 段已据实改写：把原来笼统的「12 个色调已核验」拆成「blue/red/green 已核验 / 其余 6 个为稳定规范值待 iOS-26 重核」。
+
+## 红色专用于破坏性（danger）
+
+`danger` 行（登出 / 清缓存 / 清无效曲）自动得 `--red` 方块——方块用 `--system-red-strong`（填充优化红，白字过 AA 4.56），不是 `--system-red`（文字优化红）。标题文字仍走 `--system-red`（`.settings-row__title--danger`）。这是 `tokens.css` 既有的「文字红 / 填充红」分裂在行图标上的延续，一处都不矛盾。`danger` 蕴含 `tint: 'red'`，调用点不必另传。
+
+## 色调分配（按功能语义）
+
+| 行 | 图标 | 色调 | 理由 |
+|---|---|---|---|
+| 外观 | palette | indigo | Apple Appearance 类=靛/紫 |
+| 播放 | music | pink | 音乐类=粉（systemRed 留给破坏性，故音乐不用红） |
+| 库操作 | search | blue | 搜索=蓝 |
+| 插件 | menu | purple | 扩展 |
+| 标签页配置 | menu | teal | 区别于插件 |
+| 缓存/存储 | settings | green | 存储/清理 |
+| 服务器 | link | blue | 网络/连接 |
+| 网络代理 | link | indigo | 区别于服务器（同卡不相邻冲突） |
+| 数据 | folder | blue | 文件传输 |
+| 后台保活 | settings | orange | 系统电源 |
+| 诊断 | settings | orange | 诊断=橙（经典 Apple） |
+| 关于 | info | gray | 信息/版本 |
+| 登出 | logout | red(danger) | 破坏性 |
+| 自动恢复 | music | pink | 播放组 |
+| 音量标准化 | volume | teal | 音频电平 |
+| 歌词组 | music | pink/indigo/orange | 组内粉为主，锁=橙（限制） |
+| 导出 | link | blue | 网络/连接 |
+| 导入 | folder-open | green | 写入/成功 |
+| 缓存统计 | music/menu/settings | blue/gray/gray | 只读统计 |
+| 清缓存 ×2 | logout | red(danger) | 破坏性 |
+| 导出日志 | menu | orange | 诊断 |
+| 服务器条目 | link | blue | 网络 |
+| 版本/服务器/Songloft/许可 | info/link/music/info | gray/blue/pink/gray | 信息+品牌 |
+| 重复检测 | fingerprint | indigo | 检索/身份 |
+| 清无效曲 | stop | red(danger) | 破坏性 |
+
+规则：systemRed 仅破坏性；音乐类=pink；网络/搜索/连接=blue；诊断/电源=orange；存储=green；外观=indigo；插件=purple；信息/版本=gray。同卡内避免相邻同色（服务器=blue 与代理=indigo 之间隔开；缓存统计三行 blue/gray/gray 只读不构成语义重复）。
+
+## 闸门
+
+`tokens-hig.test.ts` 的 `APPLE_COLORS` 表补入 6 个色调（浅/暗各 6 条），「每个 Apple 语义色都以 Apple 值声明」这一条现在也覆盖它们——写错色值或拼错 token 名会立即红。`contrast.test.ts` 不动：色调方块是装饰性背景（无 `color:` 声明），`extractTextColor` 的 `(?<![-\w])color:` lookbehind 不会把 `background-color:` 当文字色，FORBIDDEN 扫描天然跳过。`grouped-list.test.ts` 的结构性断言不受影响（修饰类挂在 `__icon` 上，不碰 `__content`/border/卡片结构）。
+
+编码实测：构建后 `dist/main.lynx.bundle` 里 10 个 `settings-row__icon--<tint>` 各出现 1 次（作为独立规则发出，未被编译器丢弃），6 个新 token 各出现 4 次。这只证明编码，运行时白字落位仍需真机确认。

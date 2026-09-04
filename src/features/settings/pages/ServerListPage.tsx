@@ -76,6 +76,7 @@ export function ServerListPage() {
             <view key={profile.id} className='server-list__row-wrap'>
               <SettingsRow
                 icon='link'
+                tint='blue'
                 title={profile.name}
                 subtitle={profile.url}
                 selected={profile.id === activeProfileId}

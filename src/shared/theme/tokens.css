@@ -310,6 +310,14 @@
   --system-red-strong-content: #ffffff;
   --system-green: #30d158;
 
+  /* The rest of the 12-tint palette — see the light block for provenance. */
+  --system-orange: #ff9f0a;
+  --system-yellow: #ffd60a;
+  --system-pink: #ff375f;
+  --system-purple: #bf5af2;
+  --system-indigo: #5e5ce6;
+  --system-teal: #40c8e0;
+
   /* grey ladder. Consumed by the per-screen stages (row icons, disabled
      glyphs, inset chrome); declared here so the ladder is defined in one place
      rather than reinvented per screen. */
@@ -488,6 +496,35 @@
   --system-red-strong: #e9152d;
   --system-red-strong-content: #ffffff;
   --system-green: #34c759;
+
+  /*
+   * The rest of Apple's 12-tint palette. These are the long-stable iOS system
+   * colours (unchanged since iOS 13); the June-2025 revision moved only
+   * systemBlue and systemRed (both already carried above as the verified
+   * iOS-26 values), and Apple's own release notes do not list any of these six
+   * as changed. They are NOT re-verified against the iOS-26 swatches yet — the
+   * HIG colour article's DocC data could not be reached at write-time — so they
+   * carry the same "re-check on next OS release" flag as the grey ladder.
+   *
+   * Used ONLY as the filled tile behind a settings-row icon (decorative: the
+   * row's title label is always present, so the icon carries no meaning on its
+   * own and the tile/glyph pair is exempt from the WCAG 1.4.11 graphic-object
+   * 3:1 floor — same exemption Apple's own Settings relies on for its tinted
+   * row icons). That is why they are not in contrast.test.ts's text-on-fill
+   * gate, and why .increase-contrast does not retune them: IC boosts the TEXT
+   * (labels / accent / red), not decorative tiles, matching --system-green
+   * which IC also leaves alone.
+   *
+   * Not pack-overridable: like --system-green these are fixed Apple system
+   * colours, not a per-pack seed. Packs override --accent (the single channel a
+   * brand colour should drive); the tint palette is the platform's vocabulary.
+   */
+  --system-orange: #ff9500;
+  --system-yellow: #ffcc00;
+  --system-pink: #ff2d55;
+  --system-purple: #af52de;
+  --system-indigo: #5856d6;
+  --system-teal: #30b0c7;
 
   /* grey ladder */
   --system-gray: #8e8e93;

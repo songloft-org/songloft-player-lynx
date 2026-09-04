@@ -147,13 +147,23 @@ test('legacy --font-* tokens keep their original values (no alias drift)', () =>
  *
  * PROVENANCE, because it decides how much these values can be trusted:
  *
- *  - The 12 tint colours and the six-step grey ladder (and their Increased-Contrast
- *    variants) are VERIFIED against Apple's own published swatches — the HIG's
- *    colour page carries them as images whose `alt` text is the literal RGB triple.
- *    They were fetched and diffed, and several of the values previously carried here
- *    were the PRE-2025 ones: Apple's "June 9, 2025 — Updated system color values"
- *    revision moved systemBlue from #007aff/#0a84ff to #0088ff/#0091ff and systemRed
- *    from #ff3b30/#ff453a to #ff383c/#ff4245, among others.
+ *  - systemBlue and systemRed (and the six-step grey ladder with its
+ *    Increased-Contrast variants) are VERIFIED against Apple's own published
+ *    swatches — the HIG's colour page carries them as images whose `alt` text
+ *    is the literal RGB triple. They were fetched and diffed, and several of the
+ *    values previously carried here were the PRE-2025 ones: Apple's "June 9,
+ *    2025 — Updated system color values" revision moved systemBlue from
+ *    #007aff/#0a84ff to #0088ff/#0091ff and systemRed from #ff3b30/#ff453a to
+ *    #ff383c/#ff4245.
+ *  - systemGreen is verified against the same swatches.
+ *  - The remaining six tints (orange/yellow/pink/purple/indigo/teal) are the
+ *    LONG-STABLE canonical iOS values (unchanged since iOS 13). Apple's June
+ *    2025 release notes do not list any of them as changed, but they were NOT
+ *    re-verified against the iOS-26 swatches at write-time — the HIG colour
+ *    article's DocC data could not be reached. They carry the same "re-check on
+ *    next OS release" flag as everything else here. These six are used ONLY as
+ *    decorative row-icon tile fills (white glyph + a title label that carries
+ *    the meaning), so a small drift would have no legibility consequence.
  *  - The label, background, fill and separator tiers are NOT published numerically by
  *    Apple anywhere; DESIGN.md §3.3 records why ("文档中的颜色值仅供设计参考"). Those
  *    values come from the design resources and are corroborated where possible: the
@@ -199,6 +209,12 @@ const APPLE_COLORS = {
     '--system-red-strong': '#e9152d',
     '--system-red-strong-content': '#ffffff',
     '--system-green': '#34c759',
+    '--system-orange': '#ff9500',
+    '--system-yellow': '#ffcc00',
+    '--system-pink': '#ff2d55',
+    '--system-purple': '#af52de',
+    '--system-indigo': '#5856d6',
+    '--system-teal': '#30b0c7',
     '--system-gray': '#8e8e93',
     '--system-gray2': '#aeaeb2',
     '--system-gray3': '#c7c7cc',
@@ -231,6 +247,12 @@ const APPLE_COLORS = {
     '--system-red-strong': '#e9152d',
     '--system-red-strong-content': '#ffffff',
     '--system-green': '#30d158',
+    '--system-orange': '#ff9f0a',
+    '--system-yellow': '#ffd60a',
+    '--system-pink': '#ff375f',
+    '--system-purple': '#bf5af2',
+    '--system-indigo': '#5e5ce6',
+    '--system-teal': '#40c8e0',
     '--system-gray': '#8e8e93',
     '--system-gray2': '#636366',
     '--system-gray3': '#48484a',
