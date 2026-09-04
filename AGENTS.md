@@ -12,6 +12,7 @@
 | Lynx 双线程、元素和 Web 限制 | [`docs/architecture/lynx-constraints.md`](docs/architecture/lynx-constraints.md) |
 | Store / API 设计 | [`docs/reference/api-conventions.md`](docs/reference/api-conventions.md) |
 | 原生模块方法、事件和注册矩阵 | [`docs/reference/native-modules.md`](docs/reference/native-modules.md) |
+| HarmonyOS / ArkTS 开发约束 | [`docs/reference/arkts/README.md`](docs/reference/arkts/README.md) · [`docs/reference/arkts/ArkTS约束速查.md`](docs/reference/arkts/ArkTS约束速查.md) |
 | 返回导航 | [`docs/reference/back-navigation.md`](docs/reference/back-navigation.md) |
 | 平台能力与最低版本 | [`docs/reference/platforms.md`](docs/reference/platforms.md) |
 | 设计 token 与组件语言 | [`DESIGN.md`](DESIGN.md) |

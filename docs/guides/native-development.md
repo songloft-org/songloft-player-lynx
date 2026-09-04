@@ -4,6 +4,7 @@
 
 > **调用约定的铁律在 [AGENTS.md §5](../../AGENTS.md)**（原生方法不返回 Promise、禁止强转、三侧同步、事件名逐字一致）。本篇是操作步骤，不重复那些论述。
 > 已有模块的契约清单 → [reference/native-modules.md](../reference/native-modules.md)。
+> 修改 HarmonyOS `.ets` 文件前先读 [ArkTS 约束速查](../reference/arkts/ArkTS约束速查.md)；完整迁移规则和编码规范由 [ArkTS 参考资料索引](../reference/arkts/) 继续导航。
 
 ## 给现有模块加一个方法
 
@@ -78,3 +79,4 @@ pnpm run ios:build                                     # Swift 真编译（需 m
 - [AGENTS.md §5](../../AGENTS.md) —— 调用约定铁律、宿主 HTTP service、视频画面借用
 - [平台差异](../architecture/platform-differences.md) —— 哪个能力在哪个平台上存在
 - [构建与运行](./build-and-run.md) —— Kotlin/Swift/ArkTS 真编译的命令与环境
+- [ArkTS 参考资料](../reference/arkts/) —— HarmonyOS 语言约束、编码规范与 TypeScript 迁移规则
