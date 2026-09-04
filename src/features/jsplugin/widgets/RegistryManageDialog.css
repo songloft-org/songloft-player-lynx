@@ -79,6 +79,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
+  min-height: var(--tap-target);
   gap: var(--space-2);
   margin-top: var(--space-3);
   padding: var(--space-2);

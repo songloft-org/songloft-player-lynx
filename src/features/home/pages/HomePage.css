@@ -116,6 +116,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: var(--tap-target);
   padding: var(--space-1) var(--space-2);
 }
 
@@ -217,6 +218,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: var(--tap-target);
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
   background-color: var(--tertiary-system-fill);
@@ -378,6 +380,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: var(--tap-target);
   padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-pill);
   background-color: var(--accent);
