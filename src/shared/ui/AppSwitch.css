@@ -37,7 +37,7 @@
      (#e5e5ea against Apple's #e9e9ea). The former `--rule` reads too heavy at
      #c6c6c8 once the palette moved to Apple's values. */
   background-color: var(--system-gray5);
-  transition: background-color 0.2s;
+  transition: background-color var(--duration-fast) var(--ease-default);
 }
 
 .app-switch__track.ui-checked {

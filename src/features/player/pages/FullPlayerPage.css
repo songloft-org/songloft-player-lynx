@@ -54,7 +54,7 @@
 }
 
 .full-player--enter {
-  animation: fullPlayerEnter 240ms ease-out;
+  animation: fullPlayerEnter var(--duration-normal) var(--ease-out);
 }
 
 /* Empty state */

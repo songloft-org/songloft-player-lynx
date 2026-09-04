@@ -40,6 +40,10 @@
  */
 .libops-progress__fill--indeterminate {
   width: 30%;
+  /* `linear` is deliberate (constant-speed sweep), so this stays OUTSIDE
+     the --ease token system; 1400ms is bespoke loop geometry, not a UI
+     transition, so it is not a --duration token either. See the eq-bounce
+     note in PlaylistsView.css for the reduce-motion caveat. */
   animation: libops-indeterminate 1400ms linear infinite;
 }
 

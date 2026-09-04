@@ -39,8 +39,8 @@
   /* Keep the pill off the viewport edges on narrow screens. */
   padding: 0 var(--space-4);
   animation-name: toast-enter;
-  animation-duration: 300ms;
-  animation-timing-function: ease-out;
+  animation-duration: var(--duration-normal);
+  animation-timing-function: var(--ease-out);
   animation-fill-mode: forwards;
 }
 

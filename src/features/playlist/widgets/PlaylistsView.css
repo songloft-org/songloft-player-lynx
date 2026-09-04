@@ -53,6 +53,13 @@
   background-color: rgba(0, 0, 0, 0.6);
 }
 
+/* Decorative equalizer bounce — deliberately OUTSIDE the --duration/--ease
+   token system: each bar runs a different bespoke duration (0.4/0.5/0.35/0.45s
+   + staggered delays) so they desynchronise, and a single token would
+   homogenise them. The reduce-motion host channel is not wired yet (see
+   tokens.css), so these keep animating regardless; wiring a `.reduce-motion
+   .playlist-card__eq-bar { animation: none }` guard is deferred to that host
+   hookup. */
 .playlist-card__eq-bar {
   width: 3px;
   background-color: var(--accent);
