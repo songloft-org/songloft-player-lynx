@@ -1280,3 +1280,17 @@ web-core 登录表单输入是零尺寸 `X-INPUT` 外壳，其 shadow root 内�
 
 - 各屏「观感」级 Apple 符合度（数值已过，但像素级观感需人眼）。
 - font-role 启发式的 ±2px 边角、6 tint 下次 OS 发版复值、装饰循环 reduce-motion 隐藏（host 通道未接）。
+
+
+## P12 — 用户截图反馈二轮:设置圆角 + 外观页全面 iOS 化（2026-09）
+
+用户真机截图反馈两处不合规,均对照 iOS 26 修复:
+
+1. **设置分组卡圆角**:用户指出不够 iOS。iOS 26 Liquid Glass 圆角统一 24pt(iPhone),分组卡较 iOS 13–17 的 ~10pt 明显更圆。`--radius-grouped` 10→16(朝 iOS-26 步进,不取玻璃胶囊满 24;精确 pt 仅真机可证)。侧栏选中态(~40px 高矩形)从 `--radius-grouped` 解耦为 `--radius-md`(12),避免跟随卡圆角上探回胶囊感。影响:设置卡、Home 统计卡、侧栏选中态。
+
+2. **外观页全面 iOS 化**(用户选"全面"):原 4 组清一色勾选文字行并非 iOS 范式,改为各自的 iOS 官方控件——
+   - **主题** → `ThemeAppearancePicker` 预览块(系统=半浅半深/浅色/深色 3 张迷你预览卡,选中 accent 描边+勾),仿「显示与亮度」。预览色为 Apple 明暗字面值硬编码(预览须固定呈现目标外观,不能用活动 token)。
+   - **材质** → `SegmentedControl` 分段控件(4 段,选中浅色胶囊浮起+阴影),下方显示所选描述。分段项 `min-height: var(--tap-target)`(HIG §12.2,a11y gate 强制 44)。
+   - **字号** → `FontScaleSlider` A—A 滑块(复用 `lynx-ui-slider`,4 档刻度,左小A右大A),仿「文字大小」。
+   - **语言** → 保留勾选列表(本就是 iOS 范式)。
+   i18n 复用既有 key;外观页测试改断言新控件(勾选 icon 从 4→1);a11y gate 复绿。
