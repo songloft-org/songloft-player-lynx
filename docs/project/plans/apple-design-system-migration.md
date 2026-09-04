@@ -525,7 +525,7 @@ Toast 按 §4.1 C 类改 `--toast-fill`；`ToastHost.css:22` 的 `bottom: calc(s
 | **构建告警当错误看** | `progress.md` 记载构建告警自批19b 起归零。本方案不得引入新的 `Unsupported property … was removed` 告警——尤其 `text-transform`（§P1 已避开）。 |
 | **回滚** | P0 回滚 = 还原 `tokens.css` + `theme-pack-mapping.ts` + 4 个测试文件。P1–P9 每阶段回滚 = 还原该屏 CSS/TSX。别名桥接的设计意图正是让每阶段回滚互不牵连。 |
 | **性能** | 别名层引入一层 `var()` 间接。`--glass-ramp`/`--shadow-focus` 已在生产用同样形态，无实测退化记录。P10 后间接层消失。 |
-| **未验��������������** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
+| **未验����������������** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
 
 ## 8. 验收
 
@@ -969,7 +969,7 @@ P2 把副标题基线迁到 `--secondary-label` 后，二级与主级 `--label` 
 
 新增 `playlist-css.test.ts` 4 条：详情封面 160×160+radius-sm、meta 160、name title2、desc/count footnote；两处搜索框 control-height-sm+填充+无描边；卡片名 subhead、卡片封面 104+radius-sm；整个 playlist 目录不得残留 Muse 颜色别名（新文件滑入未迁移即红）。`input-css.test.ts` 不动（已接受 `--tertiary-system-fill`）。
 
-编码实测：`dist/main.lynx.bundle` 双端产物齐备，playlist 目录 CSS 全部 Apple 名。��行��封面 160 落位仍需真机确认。
+编码实测：`dist/main.lynx.bundle` 双端产物齐备，playlist 目录 CSS 全部 Apple ��。��行��封面 160 落位仍需真机确认。
 
 ---
 
@@ -1146,3 +1146,56 @@ CacheManagePage 输入 `44px`/保存 `48px` → `var(--control-height)`（48→4
 ## 诚实状态
 
 颜色别名层已彻底移除（tokens.css 不声明、CSS 不消费、bundle 不含、pack 不发）。legacy `--font-*` 是唯一残留的 Muse 遗产——它们是字号令牌不是颜色别名，且仍被 113 处消费，删除会破。等 font-role 扫荡把它们迁到 Apple `--font-footnote/subhead/body` 后，再删 legacy 声明 + 钉「不得重现」。
+
+---
+
+# Docker Chrome 真机验证记录（2026-09-04）
+
+用 `browserless/chrome`（HeadlessChrome/121，host 网络，CDP 3002/3100）经 `@lynx-js/web-core` 加载 **真实 web bundle**（`dist/web/main.web.bundle`，`web/serve.mjs` 起在 3010），CDP `Target.createTarget`+`attachToTarget` 开页，`Runtime.evaluate` 读 `getComputedStyle`。**非 Vitest 模拟——是 Chrome 实际渲染的解析值。**
+
+## 1. 令牌解析（浅色，app 实加载）— 全部解析正确，无静默丢弃
+
+| 令牌 | 实测值 | 期 |
+|---|---|---|
+| `--system-orange` | `#ff9500` | P1b 浅 |
+| `--system-teal` | `#30b0c7` | P1b 浅 |
+| `--system-pink` | `#ff2d55` | P1b 浅 |
+| `--system-purple` | `#af52de` | P1b 浅 |
+| `--system-indigo` | `#5856d6` | P1b 浅 |
+| `--system-yellow` | `#ffcc00` | P1b 浅 |
+| `--radius-sheet` | `10px` | P8a |
+| `--bottombar-height` | `64px` | P3 |
+| `--nav-pill-height` | `52px` | P3 |
+| `--nav-icon-size` | `24px` | P3 |
+| `--control-height` | `44px` | — |
+| `--accent` | `#0088ff` | iOS-26 蓝 |
+| `--tint-fill` | `rgba(0,136,255,.1)` | 浅 |
+| `--label` / `--secondary-label` | `#000` / `rgba(60,60,67,.6)` | 浅 |
+
+**P10 删除的别名在运行时解析为空**（`--canvas`/`--content`/`--primary` getComputedStyle 全 `""`）——别名桥在 Chrome 实渲染层面也确实没了，非仅测试层面。
+
+## 2. 暗色令牌（class flip theme-dark）— 6 色调 + label 正确翻暗
+
+`--system-orange`→`#ff9f0a`、`--system-teal`→`#40c8e0`、`--system-pink`→`#ff375f`、`--system-purple`→`#bf5af2`、`--system-indigo`→`#5e5ce6`、`--system-yellow`→`#ffd60a`、`--label`→`#fff`、`--secondary-label`→`rgba(235,235,245,.6)`。**6 个新色调在暗色也解析正确**——P1b 的核心风险（新令牌被 Lynx 静默丢）在真机证实安全。
+
+`--accent`/`--system-background` 在 class flip 后仍显浅色值，**不是迁移 bug**：`ThemeProvider` 把基线包的这几个令牌作为 **inline style** 写在 `.theme-root` 上（实测 `style="--accent:#0088ff;--system-background:#ffffff;--secondary-system-background:#f2f2f7;--glass-*:…"`），inline 优先级高于 class。切 app 主题（设置开关）会重写 inline 为暗基线（`--accent:#0091ff`/`--system-background:#000`）；这些暗值由 `tokens-hig.test.ts` 钉住。6 色调**不**在 inline 基线集里（固定系统色、非包驱动），故 class flip 即正确翻暗——正好证明它们没被丢。
+
+## 3. IC 模式（class flip increase-contrast）— override 生效
+
+浅色 IC：`--secondary-label` alpha `.6`→`.73`（`.increase-contrast` 块 override 生效）✓。
+
+## 4. 登录页（P7）computed style — 全部正确
+
+| 元素 | 实测 | 期望 |
+|---|---|---|
+| `.login__card` | bg `rgb(242,242,247)`（= #f2f2f7）、radius `10px`、border `0`、width `400px` | secondary-system-background + radius-grouped + 无边框 + login-card-width |
+| `.login__logo` | radius `18px`、width `80px` | 80/18（对齐 SplashScreen）|
+| `.login__input` | bg `rgba(118,118,128,.12)`、height `44px`、border `0`、font `17px`、radius `8px` | tertiary-system-fill + control-height + 无边框 + body + radius-sm |
+| `.login__button` | bg `rgb(0,136,255)`、height `44px`、radius `999px` | accent + control-height + pill |
+| `.login__button-text` | color `#fff`、font `17px`、weight `600` | accent-content + body + semibold |
+
+截图：浅色登录页已存 `/tmp/lynx-login-light.png`（390×844 @2x，86KB）。
+
+## 5. 未在真机覆盖的（诚实）
+
+设置行色调方块（P1b）、SongRow 内缩分隔线（P2）、播放器歌手 accent（P6）在登录页之后，需后端/鉴权才能到达。它们共享**已验证的令牌系统**（6 色调 + accent + 半透明填充在 Chrome 实解析正确），其 CSS 规则由各阶段 CSS-scan 闸门钉、且编码进 bundle。要进一步真机覆盖这些屏，需起 songloft 后端 + 测试账号登录后导航——留作后续。
