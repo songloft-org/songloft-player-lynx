@@ -19,20 +19,21 @@ const PALETTES: Record<ResolvedTheme, {
   contentMuted: string
   danger: string
 }> = {
-  // Muse dark: ink-accent inverts to white. Keep in sync with tokens.css
-  // `.theme-dark` — `<svg content>` is outside the CSS cascade (see icons.ts).
+  // Keep in sync with tokens.css `.theme-dark` — `<svg content>` is outside the
+  // CSS cascade (see icons.ts). `primary` is the accent (systemBlue), the value
+  // `activeAccentIconColor()` falls back to without a theme pack.
   dark: {
-    primary: '#ffffff', // --primary
-    primaryContent: '#0f0f11', // --primary-content
+    primary: '#0091ff', // --accent
+    primaryContent: '#ffffff', // --accent-content
     content: '#f5f5f7', // --content
     content2: '#a1a1a8', // --content-2
     contentMuted: '#8b8b98', // --content-muted (AA-brightened; see tokens.css)
     danger: '#ff6b6b', // --danger (AA-brightened for dark)
   },
-  // Muse light: ink-black accent (#111).
+  // Light accent = systemBlue (see tokens.css `.theme-light`).
   light: {
-    primary: '#111111', // --primary
-    primaryContent: '#ffffff', // --primary-content
+    primary: '#0088ff', // --accent
+    primaryContent: '#ffffff', // --accent-content
     content: '#111111', // --content
     content2: '#67676f', // --content-2
     contentMuted: '#7b7b88', // --content-muted (AA-deepened; see tokens.css)

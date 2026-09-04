@@ -1,4 +1,4 @@
-import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { Icon, ICON_COLORS, activeAccentIconColor } from '../../../shared/ui/Icon.js'
 import type { IconName } from '../../../shared/ui/icons.js'
 import './Settings.css'
 
@@ -66,8 +66,14 @@ export function SettingsRow({
   selected = false,
   testId,
 }: SettingsRowProps) {
+  // iOS checkmark-list selection shows ONLY the trailing check — no row fill —
+  // so a `selected` row that carries a `check` is a picker option and must not
+  // take the `--active` highlight. The highlight stays for navigation selection
+  // (the settings master list, which uses a chevron), where iOS does paint the
+  // chosen row.
+  const checkPickerSelected = selected && trailingIcon === 'check'
   const className = 'settings-row'
-    + (selected ? ' settings-row--active' : '')
+    + (selected && !checkPickerSelected ? ' settings-row--active' : '')
     + (disabled ? ' settings-row--disabled' : '')
 
   // A danger row's tile is always the fill-optimised red; otherwise the caller
@@ -116,7 +122,17 @@ export function SettingsRow({
                 ? <text className='settings-row__trailing-text'>{trailingText}</text>
                 : null}
               {trailingIcon
-                ? <Icon name={trailingIcon} size={18} color={ICON_COLORS.contentMuted} />
+                ? (
+                  <Icon
+                    name={trailingIcon}
+                    size={18}
+                    /* The selection check takes the accent, as iOS paints its
+                       tick in the tint color; other trailing glyphs (chevron)
+                       stay muted. `<svg content>` is outside the CSS cascade,
+                       so the accent hex is resolved at render time. */
+                    color={trailingIcon === 'check' ? activeAccentIconColor() : ICON_COLORS.contentMuted}
+                  />
+                )
                 : null}
             </view>
           )
