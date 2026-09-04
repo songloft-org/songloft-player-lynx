@@ -1,26 +1,29 @@
 .login {
-  /* Page-local: the auth card's max content width. Tokenized so a retune (e.g.
-     a wider tablet form) hits one place, not a hardcoded 400. */
+  /* Page-local: the auth form's max width. Tokenized so a retune (e.g. a wider
+     tablet form) hits one place, not a hardcoded 400. */
   --login-card-width: 400px;
   display: flex;
   flex: 1;
   flex-direction: column;
   align-items: center;
-  padding: 0;
+  /* Full-bleed Apple login (no card): the form sits directly on the page
+     background and the fields' own tertiary-fill provides the visual structure.
+     Horizontal inset lives here. This used to be padding:0, which let the grey
+     card go full-bleed L/R while the white page showed through T/B — a floating
+     slab; restoring the inset makes the form read as centred content, not a
+     card with mismatched margins. */
+  padding: var(--space-6) var(--space-5);
 }
 
 .login__card {
+  /* No card chrome — transparent on the page background (Apple login: the form
+     sits on white, the fields' tertiary-fill is the structure). This is now just
+     the max-width column that holds the form; width + horizontal inset come from
+     .login above. */
   display: flex;
   flex-direction: column;
   width: 100%;
   max-width: var(--login-card-width);
-  padding: var(--space-6) var(--space-5);
-  border-radius: var(--radius-grouped);
-  background-color: var(--secondary-system-background);
-  /* No border: the card is defined by the contrast against the page (white on
-     white in light would be invisible — but the login page sits on
-     --system-background and the card on --secondary-system-background, the
-     plain-page card pair). A hairline on top reads as a double outline. */
 }
 
 .login__logo {
