@@ -112,21 +112,14 @@
      every text style. Default 1 = no scaling. */
   --font-scale: 1;
 
-  /* Legacy type scale (px) — being retired. These have no exact Apple text
-     style (10/14/28/36px), so they were never aliased onto the HIG ladder;
-     each is migrated per-screen by semantic role instead (see the plan's
-     §3.6), and the whole block is deleted in the final stage. --font-2xs is
-     the exception that stays under its own name until then: it is the bottom-nav
-     tab label, Apple's tab bars use 10pt, and the size is also what lets a
-     4-char CJK plugin name fit the fixed-width selection capsule (see
-     ShellLayout.css). */
+  /* --font-2xs (10px) is the ONE legacy size kept: it is the bottom-nav tab
+     label, Apple's tab bars use 10pt, and the size is also what lets a 4-char
+     CJK plugin name fit the fixed-width selection capsule (see ShellLayout.css
+     and the AGENTS freeze on the bottom-bar label). The rest of the legacy
+     scale (xs/sm/md/lg/xl/2xl) was deleted after the font-role sweep migrated
+     every consumer to an Apple HIG text style by semantic role. A gate in
+     `alias-elimination.test.ts` rejects their reappearance. */
   --font-2xs: calc(10px * var(--font-scale));
-  --font-xs: calc(12px * var(--font-scale));
-  --font-sm: calc(14px * var(--font-scale));
-  --font-md: calc(16px * var(--font-scale));
-  --font-lg: calc(20px * var(--font-scale));
-  --font-xl: calc(28px * var(--font-scale));
-  --font-2xl: calc(36px * var(--font-scale));
 
   /* HIG §4.7 iOS text styles — Lynx treats 1pt ≈ 1px, so these map pt→px
      directly. --font-headline is 17px like --font-body, the weight

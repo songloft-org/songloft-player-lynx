@@ -15,14 +15,14 @@
 
 .page__title {
   color: var(--label);
-  font-size: var(--font-2xl);
+  font-size: var(--font-largeTitle);
   font-weight: bold;
   margin-bottom: var(--space-2);
 }
 
 .page__subtitle {
   color: var(--secondary-label);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   margin-bottom: var(--space-5);
 }
 
@@ -52,7 +52,7 @@
 
 .pill__text {
   color: var(--label);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
 }
 
 /* lynx-ui Button skin (the component itself is unstyled) — Muse primary. */
@@ -73,7 +73,7 @@
 
 .luna-button__text {
   color: var(--accent-content);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   font-weight: bold;
 }
 
@@ -91,7 +91,7 @@
 
 .btn--danger__text {
   color: var(--system-red);
-  font-size: var(--font-md);
+  font-size: var(--font-callout);
   font-weight: 500;
 }
 

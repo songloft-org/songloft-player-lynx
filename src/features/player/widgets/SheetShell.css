@@ -128,7 +128,7 @@
 
 .drawer__row-title {
   color: var(--label);
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
 }
 
 .drawer__row--active .drawer__row-title {

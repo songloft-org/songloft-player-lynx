@@ -125,13 +125,13 @@
 
 .song-detail__row-label {
   width: 80px;
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--secondary-label);
 }
 
 .song-detail__row-value {
   flex: 1;
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--label);
 }
 
@@ -153,7 +153,7 @@
 }
 
 .song-detail__save-btn-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   color: var(--accent-content);
 }
 

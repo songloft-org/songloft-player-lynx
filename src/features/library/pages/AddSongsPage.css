@@ -47,7 +47,7 @@
 }
 
 .add-songs__tab-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   color: var(--secondary-label);
 }
 
@@ -75,7 +75,7 @@
   border-radius: var(--radius-sm);
   background-color: var(--tertiary-system-fill);
   border: 1px solid var(--separator);
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   color: var(--label);
   -x-placeholder-color: var(--secondary-label);
 }
@@ -89,7 +89,7 @@
 }
 
 .add-songs__btn-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   color: var(--accent-content);
   font-weight: var(--weight-bold);
   text-align: center;

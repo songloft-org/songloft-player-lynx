@@ -264,7 +264,7 @@
      secondary tier, never tertiary. (The glyph mirrors this in TS via
      ICON_COLORS.contentMuted, which aliases --secondary-label.) */
   color: var(--secondary-label);
-  font-size: var(--font-xs);
+  font-size: var(--font-caption1);
   margin-left: 0;
   /* Breathing room below the icon in the narrow (column) layout. */
   margin-top: var(--space-1);

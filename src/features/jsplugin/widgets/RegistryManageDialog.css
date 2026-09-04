@@ -7,7 +7,7 @@
 
 .registry-manage__empty {
   padding: var(--space-6) 0;
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--secondary-label);
   text-align: center;
 }
@@ -41,7 +41,7 @@
 .registry-manage__row-name {
   flex: 1;
   min-width: 0;
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   color: var(--label);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -87,7 +87,7 @@
 }
 
 .registry-manage__add-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   color: var(--label);
 }
 
@@ -103,7 +103,7 @@
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   background-color: var(--tertiary-system-fill);
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   color: var(--label);
   -x-placeholder-color: var(--secondary-label);
 }

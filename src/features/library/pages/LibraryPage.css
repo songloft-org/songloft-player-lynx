@@ -76,7 +76,7 @@
   background-color: var(--tertiary-system-fill);
   border: 1px solid var(--separator);
   color: var(--label);
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   padding: 0 var(--space-4);
   -x-placeholder-color: var(--secondary-label);
 }
@@ -111,7 +111,7 @@
 
 .library__footer-text {
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
 }
 
 /* Categories (facet grid) */
@@ -212,7 +212,7 @@
 
 .facet-card__value {
   color: var(--label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   margin-top: var(--space-2);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -256,7 +256,7 @@
 
 .library__state-subtext {
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   margin-top: var(--space-2);
 }
 
@@ -298,7 +298,7 @@
 
 .library__select-toolbar-count {
   flex: 1;
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--label);
 }
 
@@ -309,7 +309,7 @@
 }
 
 .library__select-toolbar-btn-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   color: var(--accent-content);
 }
 
@@ -325,7 +325,7 @@
 }
 
 .library__suggestion-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--label);
 }
 

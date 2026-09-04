@@ -233,7 +233,7 @@
 
 .full-player__video-badge-text {
   color: var(--label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
 }
 
 /* Why the picture could not be shown (no video track, or no host support). */

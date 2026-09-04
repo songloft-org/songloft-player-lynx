@@ -62,13 +62,13 @@
 }
 
 .player-lyrics__refetch-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--accent);
 }
 
 .player-lyrics__state-text {
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
 }
 
 .player-lyrics__inner {
@@ -130,7 +130,7 @@
 
 .player-lyrics__translation {
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   text-align: center;
   margin-top: var(--space-1);
 }

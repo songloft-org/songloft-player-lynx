@@ -30,7 +30,7 @@
   padding: var(--space-6) var(--space-4);
   text-align: center;
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
 }
 
 .dlna-page__device {
@@ -43,7 +43,7 @@
 
 .dlna-page__device-name {
   flex: 1;
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   color: var(--label);
 }
 
@@ -59,7 +59,7 @@
 }
 
 .dlna-page__now-song {
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   color: var(--label);
   margin-top: var(--space-half);
 }

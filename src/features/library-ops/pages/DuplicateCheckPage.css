@@ -12,13 +12,13 @@
 }
 
 .dup-check__loading-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--secondary-label);
 }
 
 /* ─── Fingerprint status phase ────────────────────────────────────────────── */
 .fp-status__intro {
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--secondary-label);
   margin-bottom: var(--space-4);
   line-height: 20px;
@@ -39,7 +39,7 @@
 }
 
 .fp-status__card-title {
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   font-weight: var(--weight-semibold);
   color: var(--label);
   margin-left: var(--space-2);
@@ -54,12 +54,12 @@
 }
 
 .fp-status__label {
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--label);
 }
 
 .fp-status__value {
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   font-weight: var(--weight-medium);
   color: var(--label);
 }
@@ -119,7 +119,7 @@
 }
 
 .fp-status__btn-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   font-weight: var(--weight-medium);
   margin-left: var(--space-2);
 }
@@ -138,7 +138,7 @@
 }
 
 .fp-computing__text {
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--label);
   margin-top: var(--space-3);
 }
@@ -171,7 +171,7 @@
 }
 
 .fp-computing__cancel-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   color: var(--label);
   margin-left: var(--space-2);
 }
@@ -202,7 +202,7 @@
 }
 
 .fp-results__empty-hint {
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--secondary-label);
   margin-top: var(--space-2);
 }
@@ -215,7 +215,7 @@
 }
 
 .fp-results__summary-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   font-weight: var(--weight-medium);
   color: var(--label);
 }
@@ -241,7 +241,7 @@
 }
 
 .fp-results__clean-all-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   font-weight: var(--weight-medium);
   color: var(--system-red-strong-content);
   margin-left: var(--space-2);
@@ -258,7 +258,7 @@
 }
 
 .fp-results__recheck-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   color: var(--accent);
   margin-left: var(--space-2);
 }
@@ -284,7 +284,7 @@
 }
 
 .fp-group__title {
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   font-weight: var(--weight-semibold);
   color: var(--accent);
 }
@@ -329,7 +329,7 @@
 }
 
 .fp-group__song-title {
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   color: var(--label);
   flex: 1;
 }
@@ -374,7 +374,7 @@
 }
 
 .fp-group__delete-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   color: var(--system-red);
   margin-left: var(--space-2);
 }

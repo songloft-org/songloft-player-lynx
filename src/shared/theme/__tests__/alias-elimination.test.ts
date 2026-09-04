@@ -44,6 +44,21 @@ test('no stylesheet references a deleted Muse colour alias', () => {
   ).toEqual([])
 })
 
+test('no stylesheet references a deleted legacy --font-* token', () => {
+  // The font-role sweep migrated every consumer to an Apple HIG text style;
+  // --font-xs/sm/md/lg/xl/2xl were then deleted. --font-2xs is KEPT (the
+  // bottom-nav label, AGENTS freeze). Lynx silently drops an unrecognised
+  // custom-property reference, so a reintroduced `var(--font-sm)` would inherit
+  // the parent size and no test would notice except this one.
+  const DELETED_FONTS = ['font-xs', 'font-sm', 'font-md', 'font-lg', 'font-xl', 'font-2xl']
+  const pattern = new RegExp(`var\\(--(?:${DELETED_FONTS.join('|')})\\b`)
+  const offenders = walkCss(SRC)
+    .map((f) => [f, readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')] as const)
+    .filter(([, css]) => pattern.test(css))
+    .map(([f]) => f.split('/src/')[1])
+  expect(offenders.sort(), 'a stylesheet still consumes a deleted legacy --font-*').toEqual([])
+})
+
 test('no stylesheet uses --primary-2 (deleted in P0, never aliased)', () => {
   // P0 deleted --primary-2 outright (zero consumers, identical to --primary).
   // It never had an alias, so a reference now resolves to nothing.

@@ -7,7 +7,7 @@
 
 .batch-update__text {
   margin-top: var(--space-3);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--secondary-label);
 }
 
@@ -32,7 +32,7 @@
 }
 
 .batch-update__error-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--system-red);
 }
 
@@ -93,7 +93,7 @@
 .batch-update__row-name {
   flex: 1;
   min-width: 0;
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

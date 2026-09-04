@@ -47,7 +47,7 @@ test('the video badge / note geometry is tokenized, not hardcoded', () => {
     expect(body, `${sel} no hardcoded 8px`).not.toMatch(/:\s*8px/)
   }
   expect(ruleFor(FULL, '.full-player__video-badge-text')).toMatch(
-    /font-size:\s*var\(--font-sm\)/,
+    /font-size:\s*var\(--font-footnote\)/,
   )
   expect(ruleFor(FULL, '.full-player__video-note')).toMatch(
     /font-size:\s*var\(--font-caption1\)/,

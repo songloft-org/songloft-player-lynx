@@ -79,7 +79,7 @@
   color: var(--label);
   font-size: var(--font-headline);
   font-weight: var(--weight-semibold);
-  line-height: var(--font-lg);
+  line-height: var(--font-title3);
 }
 
 /*
@@ -130,7 +130,7 @@
   flex: 1;
   color: var(--label);
   font-size: var(--font-callout);
-  line-height: var(--font-lg);
+  line-height: var(--font-title3);
   /* One line, ellipsis on overflow — plugin names come from the backend and
      can be arbitrarily long. Same standard trio as `.play-history__title`. */
   overflow: hidden;

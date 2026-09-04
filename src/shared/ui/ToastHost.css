@@ -76,7 +76,7 @@
 .toast__text {
   flex: 1;
   margin-left: var(--space-2);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--toast-content);
   overflow: hidden;
   text-overflow: ellipsis;

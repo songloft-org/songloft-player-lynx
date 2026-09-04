@@ -69,7 +69,7 @@
 
 .category-songs__play-all-text {
   color: var(--accent);
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   font-weight: var(--weight-bold);
 }
 
@@ -104,7 +104,7 @@
 
 .category-songs__label {
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   font-weight: var(--weight-bold);
 }
 
@@ -143,7 +143,7 @@
 
 .category-songs__footer-text {
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
 }
 
 .category-songs__state {

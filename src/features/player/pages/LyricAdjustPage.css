@@ -38,7 +38,7 @@
 
 .lyric-adjust__reset-text {
   color: var(--accent);
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
 }
 
 .lyric-adjust__save {
@@ -52,7 +52,7 @@
 }
 
 .lyric-adjust__save-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   color: var(--accent-content);
 }
 
@@ -145,7 +145,7 @@
 
 .lyric-adjust__nudge-text {
   color: var(--label);
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   font-weight: var(--weight-medium);
 }
 
@@ -188,7 +188,7 @@
 }
 
 .lyric-adjust__line-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   color: var(--label);
   overflow: hidden;
   /* `text-maxline` truncates; the height cap is the native-encoder fallback

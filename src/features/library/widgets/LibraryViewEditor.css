@@ -39,14 +39,14 @@
 
 .library-editor__save-text {
   color: var(--accent-content);
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   font-weight: var(--weight-semibold);
 }
 
 .library-editor__error {
   padding: var(--space-2) var(--space-4);
   color: var(--system-red);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   background-color: var(--secondary-system-background);
 }
 
@@ -78,7 +78,7 @@
 .library-editor__group-label {
   flex: 1;
   color: var(--accent);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   font-weight: var(--weight-semibold);
 }
 
@@ -105,7 +105,7 @@
 .library-editor__row-label {
   flex: 1;
   color: var(--label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
 }
 
 .library-editor__row-switch {

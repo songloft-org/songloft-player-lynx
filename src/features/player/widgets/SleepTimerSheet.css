@@ -21,7 +21,7 @@
 .sleep-timer__status-text {
   flex: 1;
   color: var(--accent);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   font-weight: var(--weight-medium);
 }
 
@@ -31,7 +31,7 @@
 
 .sleep-timer__cancel-text {
   color: var(--system-red);
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
 }
 
 /* ── Sections of chips ── */
@@ -76,7 +76,7 @@
 
 .sleep-timer__chip-text {
   color: var(--label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
 }
 
 .sleep-timer__chip-text--active {

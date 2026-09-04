@@ -56,7 +56,7 @@
 }
 
 .manage-tags__save-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   color: var(--accent-content);
 }
 
@@ -75,7 +75,7 @@
   background-color: var(--tertiary-system-fill);
   border: 1px solid var(--separator);
   color: var(--label);
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   padding: 0 var(--space-3);
   -x-placeholder-color: var(--secondary-label);
 }
@@ -87,7 +87,7 @@
 }
 
 .manage-tags__create-btn-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   color: var(--label);
 }
 
@@ -95,7 +95,7 @@
   padding: var(--space-6) var(--space-4);
   text-align: center;
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
 }
 
 .manage-tags__list {
@@ -134,7 +134,7 @@
 
 .manage-tags__name {
   flex: 1;
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   color: var(--label);
   overflow: hidden;
   text-overflow: ellipsis;

@@ -149,7 +149,7 @@
 .confirm-dialog__message {
   font-size: var(--font-subhead);
   color: var(--secondary-label);
-  line-height: var(--font-lg);
+  line-height: var(--font-title3);
   margin-bottom: var(--space-5);
 }
 

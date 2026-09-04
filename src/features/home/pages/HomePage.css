@@ -64,7 +64,7 @@
 
 .home__refresh-header-text {
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
 }
 
 .home__scroll {
@@ -209,7 +209,7 @@
 
 .home-section__error-text {
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   flex: 1;
 }
 
@@ -224,7 +224,7 @@
 
 .home-section__retry-text {
   color: var(--accent);
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
 }
 
 /* ── Library stats panel ─────────────────────────────────────────────────── */
@@ -350,7 +350,7 @@
 
 .home__state-action-text {
   color: var(--accent-content);
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   font-weight: var(--weight-bold);
 }
 .home__empty {
@@ -369,7 +369,7 @@
 
 .home__empty-subtitle {
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   margin-top: var(--space-2);
   margin-bottom: var(--space-4);
 }
@@ -385,7 +385,7 @@
 
 .home__empty-action-text {
   color: var(--accent-content);
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
   font-weight: var(--weight-bold);
 }
 

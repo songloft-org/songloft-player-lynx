@@ -128,7 +128,7 @@
 
 .play-history__state-text {
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   line-height: var(--font-title3);
 }
 
@@ -154,5 +154,5 @@
 
 .play-history__retry-text {
   color: var(--label);
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
 }

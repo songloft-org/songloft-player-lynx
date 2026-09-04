@@ -3,7 +3,7 @@
  * `SubPageShell.css`; the n/max counter is passed to its `actions` slot.
  */
 .tab-config__count {
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--secondary-label);
 }
 
@@ -13,7 +13,7 @@
 }
 
 .tab-config__section-title {
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   font-weight: var(--weight-semibold);
   color: var(--secondary-label);
   margin-bottom: var(--space-2);

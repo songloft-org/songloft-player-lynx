@@ -119,20 +119,15 @@ test('HIG §12.2 control / tap-target sizes are declared', () => {
   expect(decl['--control-height-sm']).toBe('36px')
 })
 
-test('legacy --font-* tokens keep their original values (no alias drift)', () => {
-  // These have no exact HIG counterpart (10/14/28/36px); the plan keeps them
-  // verbatim rather than aliasing, so 14px does not silently become 13 or 15.
-  const frozen = {
-    '--font-2xs': 'calc(10px * var(--font-scale))',
-    '--font-xs': 'calc(12px * var(--font-scale))',
-    '--font-sm': 'calc(14px * var(--font-scale))',
-    '--font-md': 'calc(16px * var(--font-scale))',
-    '--font-lg': 'calc(20px * var(--font-scale))',
-    '--font-xl': 'calc(28px * var(--font-scale))',
-    '--font-2xl': 'calc(36px * var(--font-scale))',
-  } as const
-  for (const [name, value] of Object.entries(frozen)) {
-    expect(decl[name], `${name} (legacy, frozen)`).toBe(value)
+test('--font-2xs is kept; the other legacy sizes are gone (font-role sweep)', () => {
+  // --font-2xs is the ONE legacy size kept (the bottom-nav tab label, AGENTS
+  // freeze). The rest (xs/sm/md/lg/xl/2xl) were deleted once the font-role
+  // sweep migrated every consumer to an Apple HIG text style by semantic role.
+  expect(decl['--font-2xs'], '--font-2xs (kept, frozen)').toBe(
+    'calc(10px * var(--font-scale))',
+  )
+  for (const name of ['--font-xs', '--font-sm', '--font-md', '--font-lg', '--font-xl', '--font-2xl']) {
+    expect(decl[name], `${name} must NOT be re-declared (font-role sweep deleted it)`).toBeUndefined()
   }
 })
 

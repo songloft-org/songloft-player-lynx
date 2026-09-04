@@ -1199,3 +1199,40 @@ CacheManagePage 输入 `44px`/保存 `48px` → `var(--control-height)`（48→4
 ## 5. 未在真机覆盖的（诚实）
 
 设置行色调方块（P1b）、SongRow 内缩分隔线（P2）、播放器歌手 accent（P6）在登录页之后，需后端/鉴权才能到达。它们共享**已验证的令牌系统**（6 色调 + accent + 半透明填充在 Chrome 实解析正确），其 CSS 规则由各阶段 CSS-scan 闸门钉、且编码进 bundle。要进一步真机覆盖这些屏，需起 songloft 后端 + 测试账号登录后导航——留作后续。
+
+---
+
+# Font-role 扫荡（删 legacy --font-*，只留 --font-2xs）
+
+验收：`pnpm test` 208 文件 / 2230 用例全绿；`tsc -b` 通过；`pnpm run build` 双端产物齐备，bundle 内 legacy 字体消费归零。
+
+## 迁移
+
+113 处 legacy `--font-*` 消费按角色迁到 Apple HIG 文本样式（§3.6）：
+
+- `--font-xs`(12) → `--font-caption1`(12)：1 处（nav-item__label 基础/rail）。
+- `--font-md`(16) → `--font-callout`(16)：4 处（routes/pages.css 的 page__subtitle/pill__text/luna-button__text/btn--danger__text）——值同、仅换名。
+- `--font-lg`(20，作 line-height) → `--font-title3`(20)：3 处（more-tabs__title/__item-label、confirm-dialog__message 的 line-height）——值同。
+- `--font-2xl`(36) → `--font-largeTitle`(34)：1 处（page__title，36→34 微缩）。
+- `--font-sm`(14) → 按角色 104 处：
+  - **subhead(15)**：按钮/动作标签（save/retry/cancel/btn/action/install/reinstall/update/overwrite/page/clean-all/recheck/delete/chips-clear/play-all/nudge/reset/tab/add/create-btn/save-btn-text、switch-title 等末段）。
+  - **body(17)**：文本输入（*__input）+ 主标题/名（*__title/__name/__card-title/__song-title/__section-title/__row-title/__row-name/__device-name/__now-song/__line-text 等）。
+  - **footnote(13)**：其余（state/hint/error/footer/label/value/count/meta/intro/empty/phase/speed/translation/toast/chip-text/video-badge-text 等）。
+  - 1 处误判修正：`home__empty-subtitle` 末段「subtitle」被 `/title$/` 命中成 body，实为副标题 → 改 footnote。
+
+`--font-2xs`(10) 按 AGENTS 冻结**保留**（底栏 tab 标签 + 4 字 CJK 插件名 capsule）。
+
+实现：Node 脚本按「最近选择器 + 末段 `__` 角色启发式」分类，逐行替换并打印每条改动供审阅；`var(--name)` 精确匹配不误伤 `--font-2xs`/`--font-caption1` 等。
+
+## 删声明 + 闸门
+
+tokens.css 删 `--font-xs/sm/md/lg/xl/2xl` 声明（保留 `--font-2xs`，注释改写说明它是唯一保留的 legacy 字号）。
+
+闸门：
+- `tokens-hig.test.ts`：原「legacy --font-* 保持原值」改为「`--font-2xs` 保留冻结 + 其余 6 个不得再声明」。
+- `alias-elimination.test.ts` 新增：**任何 CSS 不得 `var(--<deleted-font>)`**（`--font-xs/sm/md/lg/xl/2xl`）——Lynx 静默丢未知引用，故必须显式钉。
+- 连带修 `player-css.test.ts`：video-badge-text 断言 `--font-sm`→`--font-footnote`。
+
+## 诚实状态（整体收尾）
+
+颜色别名层 + legacy 字体（除 `--font-2xs`）已**全部从 tokens.css 删除、CSS 零消费、bundle 零引用**。Muse 遗产只剩 `--font-2xs`（AGENTS 冻结、有正当理由）。Apple 设计系统迁移主体完成。font-role 分类是按选择器角色**启发式**，107 处 `--font-sm` 的角色判断可能有少数边角误判（如某 `__name` 该 subhead 却 body），需真机视觉复核——但都是 ±2px 的小级差，不破功能。

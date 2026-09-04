@@ -80,7 +80,7 @@
 
 .libops__state-line {
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   margin-top: var(--space-2);
 }
 
@@ -142,7 +142,7 @@
 
 .libops-tree__state {
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   padding: var(--space-4);
 }
 
@@ -171,7 +171,7 @@
 .libops-tree__name {
   flex: 1;
   color: var(--label);
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   margin-left: var(--space-2);
 }
 
@@ -206,7 +206,7 @@
 .libops__chips-title {
   flex: 1;
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
 }
 
 .libops__chips-clear {
@@ -218,7 +218,7 @@
 
 .libops__chips-clear-text {
   color: var(--accent);
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
 }
 
 .libops__chips-row {
@@ -277,7 +277,7 @@
 
 .libops-exclude__tab-text {
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
 }
 
 .libops-exclude__tab--active .libops-exclude__tab-text {
@@ -286,7 +286,7 @@
 
 .libops-exclude__read-error {
   color: var(--system-red);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   padding: 0 var(--space-4);
   margin-top: var(--space-2);
 }
@@ -336,7 +336,7 @@
 
 .libops-exclude__music-dir {
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   margin-bottom: var(--space-2);
 }
 
@@ -359,7 +359,7 @@
 
 .libops-exclude__suggestion-text {
   color: var(--label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
 }
 
 .libops-exclude__chips {
@@ -370,7 +370,7 @@
 
 .libops-exclude__chips-label {
   color: var(--secondary-label);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   margin-bottom: var(--space-2);
 }
 
@@ -425,7 +425,7 @@
 
 .libops-exclude__saved-note {
   color: var(--accent);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   margin-bottom: var(--space-2);
 }
 

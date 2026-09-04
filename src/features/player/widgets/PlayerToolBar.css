@@ -33,7 +33,7 @@
 }
 
 .player-tools__speed {
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--secondary-label);
 }
 

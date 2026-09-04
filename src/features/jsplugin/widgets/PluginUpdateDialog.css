@@ -6,7 +6,7 @@
 
 .plugin-update__phase {
   margin-top: var(--space-3);
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--secondary-label);
 }
 
@@ -31,7 +31,7 @@
 }
 
 .plugin-update__error-text {
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--system-red);
 }
 
@@ -47,7 +47,7 @@
 }
 
 .plugin-update__found-label {
-  font-size: var(--font-sm);
+  font-size: var(--font-footnote);
   color: var(--label);
 }
 

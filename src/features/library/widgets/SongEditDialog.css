@@ -103,7 +103,7 @@
 }
 
 .song-edit__ro-card-title {
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   font-weight: var(--weight-bold);
   color: var(--label);
 }
@@ -155,7 +155,7 @@
   border-radius: var(--radius-sm);
   background-color: var(--tertiary-system-fill);
   border: 1px solid var(--separator);
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   color: var(--label);
   -x-placeholder-color: var(--secondary-label);
 }
@@ -183,7 +183,7 @@
 }
 
 .song-edit__switch-title {
-  font-size: var(--font-sm);
+  font-size: var(--font-body);
   color: var(--label);
 }
 
