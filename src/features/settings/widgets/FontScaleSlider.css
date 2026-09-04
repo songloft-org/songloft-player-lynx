@@ -1,0 +1,87 @@
+/*
+ * FontScaleSlider — iOS "Text Size" (A — A) control. Apple tokens only.
+ * Rail/thumb anatomy mirrors SizeLimitSlider (track relative + indicator
+ * absolute overlay + library-positioned thumb); the A anchors + value chrome
+ * are this widget's own.
+ */
+
+.font-scale-slider {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The committed notch's label, centred above the rail — Apple shows the live
+   size name while you drag. */
+.font-scale-slider__value {
+  align-self: center;
+  color: var(--accent);
+  font-size: var(--font-subhead);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-2);
+}
+
+.font-scale-slider__row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+/* The A anchors. Deliberately NOT sized with --font-scale: they are the fixed
+   reference ends of the control, so scaling them with the very value being
+   adjusted would move the goalposts under the user. */
+.font-scale-slider__a {
+  color: var(--label);
+  font-weight: var(--weight-medium);
+}
+
+.font-scale-slider__a--min {
+  font-size: var(--font-caption1);
+}
+
+.font-scale-slider__a--max {
+  font-size: var(--font-title2);
+}
+
+.font-scale-slider__root {
+  flex: 1;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  margin: 0 var(--space-3);
+}
+
+.font-scale-slider__track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background-color: var(--tertiary-system-fill);
+}
+
+.font-scale-slider__indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background-color: var(--accent);
+}
+
+.font-scale-slider__thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background-color: var(--accent-content);
+  box-shadow: var(--shadow-md);
+}
+
+.font-scale-slider__tick {
+  width: 4px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background-color: var(--secondary-label);
+}
+
+.font-scale-slider__tick--active {
+  background-color: var(--accent-content);
+}

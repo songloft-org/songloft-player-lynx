@@ -1,0 +1,48 @@
+/*
+ * SegmentedControl — iOS `UISegmentedControl` analogue. Apple tokens only.
+ *
+ * Anatomy: a rounded track filled with `--secondary-system-fill`; the selected
+ * segment is a lighter capsule raised with a hair of shadow. Apple uses
+ * secondarySystemFill for the track and an elevated (light: white, dark: a
+ * raised grey) thumb; `--tertiary-system-background` is exactly that pair
+ * (white in light, #2c2c2e in dark), so one token covers both themes.
+ */
+
+.segmented {
+  display: flex;
+  flex-direction: row;
+  background-color: var(--secondary-system-fill);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.segmented__item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* HIG §12.2 tap target: each segment is its own tappable, so it carries the
+     full 44px (the gate enforces it). iOS renders slimmer (~32pt) segments, but
+     it wraps them in a taller cell; here each segment IS the target. */
+  min-height: var(--tap-target);
+  padding: var(--space-1) var(--space-2);
+  border-radius: calc(var(--radius-sm) - 2px);
+}
+
+/* The raised selected thumb: tertiary-system-background (white / #2c2c2e) on the
+   fill track, lifted by a small shadow — the iOS selected-segment treatment. */
+.segmented__item--selected {
+  background-color: var(--tertiary-system-background);
+  box-shadow: var(--shadow-sm);
+}
+
+.segmented__label {
+  font-size: var(--font-footnote);
+  color: var(--label);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.segmented__label--selected {
+  font-weight: var(--weight-semibold);
+}

@@ -222,3 +222,18 @@
   font-size: var(--font-subhead);
   margin-right: var(--space-2);
 }
+
+/* Padded body for a settings card that hosts a control (appearance picker /
+   segmented / slider) rather than full-bleed rows — the control gets breathing
+   room inside the grouped card instead of touching its edges. */
+.settings-section__padded {
+  padding: var(--space-4);
+}
+
+/* The selected material variant's description, under the segmented control. */
+.appearance-material-desc {
+  color: var(--secondary-label);
+  font-size: var(--font-footnote);
+  margin-top: var(--space-3);
+  text-align: center;
+}

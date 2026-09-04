@@ -77,20 +77,25 @@ async function renderPage() {
   return getQueriesForElement(elementTree.root!)
 }
 
-test('renders the theme and language option rows', async () => {
+test('renders the theme picker, material segmented, font slider, and language rows', async () => {
   const { queryByTestId, queryAllByTestId } = await renderPage()
 
+  // Theme = iOS preview tiles (one per option).
   for (const id of ['theme-system', 'theme-light', 'theme-dark']) {
     expect(queryByTestId(id), id).toBeInTheDocument()
   }
+  // Material = iOS segmented control; font scale = A—A slider.
+  expect(queryByTestId('material')).toBeInTheDocument()
+  expect(queryByTestId('fontscale')).toBeInTheDocument()
+  // Language stays the iOS checkmark list.
   for (const id of ['language-system', 'language-en', 'language-zh']) {
     expect(queryByTestId(id), id).toBeInTheDocument()
   }
 
-  // Exactly one tick per group — the persisted defaults (system / system). The
-  // theme-pack card adds none: with no installed packs it renders its empty
-  // state, and the catalog entry row carries a chevron, not a check.
-  expect(queryAllByTestId('icon-check')).toHaveLength(4)
+  // Only the selected language row keeps a trailing check icon now — the theme
+  // selection is a tile badge and material/font use a segmented/slider, so the
+  // old four-row check count collapses to one.
+  expect(queryAllByTestId('icon-check')).toHaveLength(1)
 })
 
 test('hosts the theme-pack card with its catalog entry row', async () => {

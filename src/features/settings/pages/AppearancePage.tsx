@@ -36,6 +36,9 @@ import {
 } from '../../../shared/theme/theme-model.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
+import { SegmentedControl } from '../widgets/SegmentedControl.js'
+import { FontScaleSlider } from '../widgets/FontScaleSlider.js'
+import { ThemeAppearancePicker } from '../widgets/ThemeAppearancePicker.js'
 import { SubPageShell } from '../widgets/SubPageShell.js'
 import { ThemePacksSection } from '../widgets/ThemePacksSection.js'
 
@@ -192,43 +195,40 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
   return (
     <SubPageShell title={t('settings.categoryAppearance')} backTestId='appearance-back' grouped>
       <SettingsSection title={t('settings.themeSection')} icon='palette'>
-        {APP_THEME_OPTIONS.map((option) => (
-          <SettingsRow
-            key={option}
-            title={t(themeLabelKey(option))}
-            selected={option === theme}
-            trailingIcon={option === theme ? 'check' : undefined}
-            onTap={() => selectTheme(option)}
-            testId={`theme-${option}`}
+        <view className='settings-section__padded'>
+          <ThemeAppearancePicker
+            options={APP_THEME_OPTIONS}
+            selected={theme}
+            onSelect={selectTheme}
+            labelFor={(option) => t(themeLabelKey(option))}
+            testId='theme'
           />
-        ))}
+        </view>
       </SettingsSection>
 
       <SettingsSection title={t('settings.materialSection')} icon='grid'>
-        {MATERIAL_VARIANT_OPTIONS.map((option) => (
-          <SettingsRow
-            key={option}
-            title={t(materialLabelKey(option))}
-            subtitle={t(materialDescKey(option))}
-            selected={option === material}
-            trailingIcon={option === material ? 'check' : undefined}
-            onTap={() => selectMaterial(option)}
-            testId={`material-${option}`}
+        <view className='settings-section__padded'>
+          <SegmentedControl
+            options={MATERIAL_VARIANT_OPTIONS}
+            selected={material}
+            onSelect={selectMaterial}
+            labelFor={(option) => t(materialLabelKey(option))}
+            testId='material'
           />
-        ))}
+          <text className='appearance-material-desc'>{t(materialDescKey(material))}</text>
+        </view>
       </SettingsSection>
 
       <SettingsSection title={t('settings.fontScaleSection')} icon='settings'>
-        {FONT_SCALE_OPTIONS.map((option) => (
-          <SettingsRow
-            key={option}
-            title={t(fontScaleLabelKey(option))}
-            selected={option === fontScale}
-            trailingIcon={option === fontScale ? 'check' : undefined}
-            onTap={() => selectFontScale(option)}
-            testId={`fontscale-${option}`}
+        <view className='settings-section__padded'>
+          <FontScaleSlider
+            options={FONT_SCALE_OPTIONS}
+            selectedIndex={FONT_SCALE_OPTIONS.indexOf(fontScale)}
+            labelFor={(option) => t(fontScaleLabelKey(option))}
+            onCommit={selectFontScale}
+            testId='fontscale'
           />
-        ))}
+        </view>
       </SettingsSection>
 
       <ThemePacksSection onOpenCatalog={openCatalog} />
