@@ -4,7 +4,7 @@ import { isHexColor } from '../theme/theme-pack-mapping.js'
 import { buildSvg, type IconName } from './icons.js'
 
 /**
- * Icon color palettes, mirroring the LUNA tokens in `src/shared/theme/tokens.css`.
+ * Icon color palettes, mirroring the Apple tokens in `src/shared/theme/tokens.css`.
  *
  * `<svg content>` markup is rendered natively and is not reached by the CSS
  * cascade, so these must be concrete values injected into the SVG (see
@@ -25,19 +25,19 @@ const PALETTES: Record<ResolvedTheme, {
   dark: {
     primary: '#0091ff', // --accent
     primaryContent: '#ffffff', // --accent-content
-    content: '#f5f5f7', // --content
-    content2: '#a1a1a8', // --content-2
-    contentMuted: '#8b8b98', // --content-muted (AA-brightened; see tokens.css)
-    danger: '#ff6b6b', // --danger (AA-brightened for dark)
+    content: '#ffffff', // --label
+    content2: '#8e8e93', // --system-gray (secondary icon grey)
+    contentMuted: '#636366', // --system-gray2 (muted: chevrons, inactive nav)
+    danger: '#ff4245', // --system-red
   },
   // Light accent = systemBlue (see tokens.css `.theme-light`).
   light: {
     primary: '#0088ff', // --accent
     primaryContent: '#ffffff', // --accent-content
-    content: '#111111', // --content
-    content2: '#67676f', // --content-2
-    contentMuted: '#7b7b88', // --content-muted (AA-deepened; see tokens.css)
-    danger: '#d64545', // --danger (Muse brick red)
+    content: '#000000', // --label
+    content2: '#8e8e93', // --system-gray (secondary icon grey)
+    contentMuted: '#aeaeb2', // --system-gray2 (muted: chevrons, inactive nav)
+    danger: '#ff383c', // --system-red
   },
 }
 
@@ -64,8 +64,8 @@ export const ICON_COLORS: (typeof PALETTES)['dark'] = new Proxy(
  *
  * A pack's seedColor arrives as inline CSS custom properties (`--accent` etc.),
  * which `<svg content>` markup cannot read (it sits outside the cascade), so
- * the hex must be resolved at render time instead. Falls back to the Muse ink
- * accent — exactly what `--accent` holds without a pack.
+ * the hex must be resolved at render time instead. Falls back to the Apple
+ * systemBlue accent — exactly what `--accent` holds without a pack.
  *
  * Read per call like the ICON_COLORS proxy above: ThemeProvider's pack
  * subscription re-renders the tree top-to-bottom on activation, so every
