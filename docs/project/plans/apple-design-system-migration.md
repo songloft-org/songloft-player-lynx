@@ -1,0 +1,678 @@
+# Apple 设计系统迁移方案（第二代）
+
+> 状态：**待审核**。本文档只是方案，未做任何代码改动。
+> 前置文档：[`apple-hig-redesign.md`](apple-hig-redesign.md)（第一代，11 阶段，已完成但只落到令牌重命名层）。
+
+## 1. 为什么需要第二代方案
+
+第一代计划 `apple-hig-redesign.md` 的 11 个阶段在 `progress.md` 里全部标记完成，但核实后结论是：
+
+- **阶段 1–4 真的落地了**：HIG 字号阶梯（caption2→largeTitle）、字重令牌、间距补档、`--tap-target: 44px`、动效令牌、`buttons.css` 6 个 HIG 按钮类、AppSwitch 51×31/25px。
+- **阶段 5–10 只落地了「批量迁移 57 个功能 CSS 文件的字号/字重令牌」**，即 `--font-md`→`--font-callout` 这类重命名。计划里写明的**结构与尺寸规格一条都没做**。
+
+抽样核实（不是推测）：
+
+| 计划要求 | 实际现状 | 位置 |
+|---|---|---|
+| SongRow 行高 64px | 无显式高度，实测 12+48+12+1 = **73px** | `features/library/widgets/SongRow.css:29,53` |
+| SongRow 分隔线内缩至封面右缘 | `border-bottom: 1px solid var(--line)`，**全宽通铺** | `SongRow.css:53` |
+| SongRow 标题 `--font-body`(17) | `--font-callout`(16) | `SongRow.css:78` |
+| 设置行图标 28×28 彩色圆形 | 只有 `width: 28px`，无高度、无彩色 | `features/settings/widgets/Settings.css:83` |
+| 设置分组标题 `--font-footnote` | `--font-sm`(14) + `--weight-bold` | `Settings.css:39-40` |
+| HomePage 问候语 `--font-largeTitle`(34) | `--font-title1`(28) | `features/home/pages/HomePage.css:18` |
+| LoginPage logo 80×80 | 72×72 硬编码 | `features/auth/pages/LoginPage.css:21-22` |
+
+**更重要的是**：用户明确指出 Muse 令牌体系本身就是旧设计，要完整替换为 Apple 设计。第一代计划是「在 Muse 令牌内做 HIG 化」，因此即使把阶段 5–10 补完，颜色语义仍然是自研的。第二代方案的核心因此是**令牌体系替换**，逐屏结构改造是它的下游。
+
+## 2. 已决策事项与代价登记
+
+四项决策已由用户确认。其中两项与我的建议相反，**代价在此如实登记，不做美化**。
+
+### 2.1 强调色 = systemBlue ✅ 与建议一致
+
+**`#0088FF`（浅）/ `#0091FF`（暗）** —— 这是 Apple 2025-06「unified」更新后的官方值，已用 curl 从 HIG 色板核实。本方案初稿写的 `#007AFF`/`#0A84FF` 是旧值（见文末「官方色值核对」）。开关开启态另用 systemGreen `#34C759` / `#30D158`（这两个官方值与旧值相同）。
+
+**实测代价**（本地计算，非引用）：
+
+| 配对 | 比值 | AA 4.5 | AA 3.0 |
+|---|---|---|---|
+| `#0088FF` 文字 on `#FFFFFF` | **3.52** | ✗ | ✓ |
+| `#0088FF` 文字 on `#F2F2F7` | **3.15** | ✗ | ✓ |
+| 白字 on `#0088FF`（填充按钮） | **3.52** | ✗ | ✓ |
+| `#0091FF` 文字 on `#000000` | 6.49 | ✓ | ✓ |
+| `#0091FF` 文字 on `#1C1C1E` | 5.26 | ✓ | ✓ |
+| `#34C759` 开关轨道 vs `#FFFFFF` | **2.22** | — | ✗ |
+
+即：**Apple 自己的 systemBlue 在浅色主题下作正文/按钮字色不过 WCAG AA**，systemGreen 的开关轨道边界也不过 1.4.11 的 3:1。这不是本仓库引入的缺陷，是 Apple 调色板的既有属性。
+
+缓解措施（写进 P0，不是「以后再说」）：
+- 新增 `.theme-root.increase-contrast` 变体，对应 Apple 的 **Increase Contrast** 无障碍开关，accent 换成官方 accessible blue `#1E6EF4`。**注意这只是部分缓解**：它在白底 4.57 ✓，但在分组灰底 `#F2F2F7` 上只有 **4.10 ✗**（详见文末）。
+- 填充式破坏性按钮不用 systemRed 原值（白字 on `#FF383C` = **3.57**），改用官方 accessible red `#E9152D`（白字 = **4.56 ✓**）。systemRed 原值仍用于文字与图标。
+- 开关的状态**不只由颜色承载**——滑块位置本身即状态，满足 WCAG 1.4.1「不以颜色为唯一手段」。轨道 2.22 的事实照实记录，不假装它过关。
+
+### 2.2 令牌重命名为 Apple 语义名 ✅ 与建议一致
+
+理由不只是「名副其实」：Muse 的 `--canvas`/`--paper` 二元结构**在结构上无法表达** Apple 的双背景组——
+
+- 普通背景组：`systemBackground` / `secondary` / `tertiary`
+- 分组背景组：`systemGroupedBackground` / `secondary` / `tertiary`
+
+且两组在明暗间互换角色（浅色下分组页背景是灰、卡片是白；暗色下分组页背景是纯黑、卡片是 `#1C1C1E`）。只有两个令牌名装不下六个语义位，设置类页面必然出现语义打架。
+
+### 2.3 照搬 Apple 原值、改写闸门 ⚠️ 与建议相反
+
+**这是一次真实的无障碍退步。** 具体数字：
+
+| Apple 原值 | 合成后比值 | 现有闸门要求 | 结果 |
+|---|---|---|---|
+| 浅 `secondaryLabel` `rgba(60,60,67,.60)` on `#FFF` | **3.44** | `--content-2` ≥ 4.5（明暗均要求） | ✗ 红 |
+| 浅 `secondaryLabel` on `#F2F2F7` | **3.30** | 同上 | ✗ 红 |
+| 浅 `tertiaryLabel` `rgba(60,60,67,.30)` on `#FFF` | **1.73** | `--content-muted` ≥ 3（浅色豁免） | ✗ 红 |
+| 浅 `quaternaryLabel` `rgba(60,60,67,.18)` on `#FFF` | **1.37** | — | ✗ |
+| 暗 `secondaryLabel` `rgba(235,235,245,.60)` on `#1C1C1E` | 5.95 | ≥ 4.5 | ✓ |
+| 暗 `tertiaryLabel` on `#1C1C1E` | **2.48** | ≥ 4.5 | ✗ 红 |
+| 暗 `quaternaryLabel` on `#1C1C1E` | **1.58** | ≥ 4.5 | ✗ |
+
+对照现状（Muse 值优于 Apple 值）：
+
+| 现状令牌 | 比值 |
+|---|---|
+| `--content-2` `#67676f` on `#FFF` | **5.61** |
+| `--content-muted` `#7b7b88` on `#FFF` | 4.17 |
+| `--content-2` `#a1a1a8` on `#0f0f11` | 7.46 |
+| `--content-muted` `#8b8b98` on `#0f0f11` | 5.69 |
+
+**结论**：二级文字从 5.61 降到 3.44，是 −2.17 的真实退步。若改为「Apple 色相 + 调深 alpha」，浅色 `#3C3C43` 只需 alpha **0.70**（而非 0.60）即可回到 4.5，视觉差异极小。用户已确认选择照搬原值，本方案照此执行，并在 §5 给出闸门改写的具体形态；该退步会写进 `progress.md` 的已知债务。
+
+**衍生的硬约束**：`--content-muted` 有 **138 处**使用，其中绝大多数是真正必要的二级文字（副标题、计数、提示）。若整体映射到 `tertiaryLabel`（1.73），是灾难性的。因此 P0 必须做**逐处判定**，把 138 处拆成「多数 → `--secondary-label`」与「少数真占位符/装饰 → `--tertiary-label`」，这不是一次重命名。
+
+### 2.4 主题包保留全量覆盖能力 ⚠️ 与建议相反
+
+`PACK_OVERRIDABLE_BASELINE` 现有 18 个可覆盖令牌/主题（primary 家族、canvas/paper/paper-clear、7 个 glass、radius-lg/md/nav）。保留全量覆盖意味着：
+
+**「任何主题下都是 Apple 版式与对比度」在架构上无法保证。** 第三方包可以把背景改成任意色，从而使 §2.3 里那些本已勉强的比值进一步崩塌，而闸门只能校验 tokens.css 的内置值与内置包，管不了未来下发的包。
+
+本方案能做到的上限，也是会做的：
+- 闸门覆盖内置 3 个包（`songloft.liquid-glass` / `neon-night` / `sakura`）的实际取值。
+- `PACK_OVERRIDABLE_BASELINE` 迁移到新令牌名，并保持与 tokens.css 的同步校验（现有闸门机制不降级）。
+- 对可覆盖清单**不做扩大**——尤其不把新增的 6 个背景语义位、4 级 label、4 级 fill、separator 全部开放，否则包能直接改掉文字色。清单维持「颜色种子 + 材质 + 圆角」的现有边界。
+
+## 3. 目标令牌体系
+
+现状：`.theme-root` 58 个标量令牌，`.theme-light`/`.theme-dark` 各 35 个颜色令牌。字号阶梯、间距、圆角、字重、动效已是 HIG 形态，**本方案不动它们**（`--font-sm` 除外，见 §3.6）。要替换的是 35 个颜色令牌。
+
+### 3.1 文字（Label）
+
+| 新令牌 | Apple 名 | 浅色 | 暗色 | 替代 |
+|---|---|---|---|---|
+| `--label` | label | `#000000` | `#FFFFFF` | `--content` (133) |
+| `--secondary-label` | secondaryLabel | `rgba(60,60,67,0.60)` | `rgba(235,235,245,0.60)` | `--content-2` (53) + `--content-muted` 的多数 |
+| `--tertiary-label` | tertiaryLabel | `rgba(60,60,67,0.30)` | `rgba(235,235,245,0.30)` | `--content-muted` 的少数 |
+| `--quaternary-label` | quaternaryLabel | `rgba(60,60,67,0.18)` | `rgba(235,235,245,0.16)` | 新增（禁用态） |
+| `--placeholder-text` | placeholderText | `rgba(60,60,67,0.30)` | `rgba(235,235,245,0.30)` | 输入框 `-x-placeholder-color` |
+
+注意 `--content` 现值是 `#111111`/`#f5f5f7`，Apple 是纯 `#000`/`#FFF`。这会让正文对比度**上升**（21.00 / 21.00），是本次替换里唯一变好的一项。
+
+### 3.2 背景（两组，明暗互换角色）
+
+| 新令牌 | Apple 名 | 浅色 | 暗色 |
+|---|---|---|---|
+| `--system-background` | systemBackground | `#FFFFFF` | `#000000` |
+| `--secondary-system-background` | secondarySystemBackground | `#F2F2F7` | `#1C1C1E` |
+| `--tertiary-system-background` | tertiarySystemBackground | `#FFFFFF` | `#2C2C2E` |
+| `--system-grouped-background` | systemGroupedBackground | `#F2F2F7` | `#000000` |
+| `--secondary-system-grouped-background` | secondarySystemGroupedBackground | `#FFFFFF` | `#1C1C1E` |
+| `--tertiary-system-grouped-background` | tertiarySystemGroupedBackground | `#F2F2F7` | `#2C2C2E` |
+
+替代 `--canvas` (19) / `--paper` (34)。**关键语义**：
+- 普通页（Home、播放器、列表页）→ 页面 `--system-background`，卡片 `--secondary-system-background`。浅色下仍是「白页 + 灰卡」，与现状同向。
+- 分组页（设置及其子页）→ 页面 `--system-grouped-background`（浅色 `#F2F2F7` 灰），卡片 `--secondary-system-grouped-background`（浅色 `#FFFFFF` 白）。**这是相对现状的反转**，也是本次视觉变化最明显的地方。
+
+### 3.3 填充（Fill，中性灰通道）
+
+Apple fill 用于「内容之上的小形状」：搜索框底、滑轨、分段控件、内嵌信息块。
+
+| 新令牌 | Apple 名 | 浅色 | 暗色 | 可见性(over 页底) |
+|---|---|---|---|---|
+| `--system-fill` | systemFill | `rgba(120,120,128,0.20)` | `rgba(120,120,128,0.36)` | 1.27 / 1.49 |
+| `--secondary-system-fill` | secondarySystemFill | `rgba(120,120,128,0.16)` | `rgba(120,120,128,0.32)` | 1.21 / 1.40 |
+| `--tertiary-system-fill` | tertiarySystemFill | `rgba(118,118,128,0.12)` | `rgba(118,118,128,0.24)` | 1.15 / 1.24 |
+| `--quaternary-system-fill` | quaternarySystemFill | `rgba(116,116,128,0.08)` | `rgba(118,118,128,0.18)` | 1.10 / 1.15 |
+
+替代 `--neutral-faint` (74) + `--fill-faint` (7)。四级全部 ≥ 现有状态高亮可见性下限 **1.08**，因此 `contrast.test.ts` 的 wash 可见性闸门不需要放宽——这是本次替换里少见的好消息。
+
+文字读在 fill 上的实测：`--label` on 浅色 systemFill = **16.53**；`--secondary-label` on 浅色 systemFill = **3.13**（不过 4.5，与 §2.3 同源）。
+
+### 3.4 分隔线
+
+| 新令牌 | Apple 名 | 浅色 | 暗色 |
+|---|---|---|---|
+| `--separator` | separator | `rgba(60,60,67,0.29)` | `rgba(84,84,88,0.65)` |
+| `--opaque-separator` | opaqueSeparator | `#C6C6C8` | `#38383A` |
+
+替代 `--line` (80) / `--rule` (17)。分隔线不承载文字，无 AA 要求（实测 1.70 / 1.66，仅供记录）。
+
+### 3.5 强调色、语义色与灰阶
+
+| 新令牌 | 浅色 | 暗色 | 替代 |
+|---|---|---|---|
+| `--accent` | `#0088FF` | `#0091FF` | `--primary` (87) / `--accent` (27) |
+| `--accent-content` | `#FFFFFF` | `#FFFFFF` | `--primary-content` (42) |
+| ~~`--accent-2`~~ | — | — | 不引入（见 P0 实施记录） |
+| `--tint-fill` | `rgba(0,136,255,0.10)` | `rgba(0,145,255,0.18)` | `--primary-faint` (11) |
+| `--system-red` | `#FF383C` | `#FF4245` | `--danger` (50) |
+| `--system-red-strong` | `#E9152D` | `#E9152D` | `--danger-2`（填充按钮） |
+| `--system-red-strong-content` | `#FFFFFF` | `#FFFFFF` | 新增 |
+| `--system-green` | `#34C759` | `#30D158` | 新增（开关开启态） |
+| `--system-gray` … `--system-gray6` | `#8E8E93`…`#F2F2F7` | `#8E8E93`…`#1C1C1E` | 新增 |
+
+`--tint-fill` **不是 Apple 语义色**——Apple 的做法是 `tintColor.opacity(0.15)`，没有对应命名令牌。它作为 Songloft 扩展保留，因为主题包需要一个可重指向的强调色 wash 通道。tokens.css 里会显式注明这一点，避免被误认为 Apple 原生语义。实测可见性：浅 1.22 / 暗 1.24，均过 1.08 下限。
+
+### 3.6 `--font-sm`（14px，167 处）的处置
+
+这是最大的一笔字号债务。14px 在 Apple 文本样式阶梯上**没有对应项**（相邻是 footnote 13、subheadline 15），第一代计划正因如此拒绝为它做别名。按语义角色分流：
+
+| 角色 | 目标 | 依据 |
+|---|---|---|
+| 主标题下的次级元数据（歌手/专辑/计数/时长） | `--font-footnote`(13) | Apple Music 曲目行副标题 |
+| 表单标签、独立次级正文、错误提示 | `--font-subhead`(15) | Apple 表单标签 |
+| 分组标题 | `--font-footnote`(13) | Apple 分组表头 |
+| 工具栏/按钮文字 | `--font-subhead`(15) | Apple 工具栏 |
+
+迁移完成后 `--font-sm`/`--font-md`/`--font-lg`/`--font-xl`/`--font-2xl`/`--font-xs`/`--font-2xs` 七个 legacy 令牌可从 tokens.css 删除，并由闸门禁止复现。`tokens-hig.test.ts` 里那条「legacy 令牌保持原值」的测试随之改为「legacy 令牌已不存在」。
+
+### 3.7 材质（Glass → Apple Material 词汇）
+
+现有 glass 体系是自研的 faux Liquid Glass：`--glass-fill`(0.85) / `--glass-fill-strong`(0.72) + ramp + sheen + rim，另有真实模糊 `<blur-view>`（`BackdropBlur.tsx`，Web/iOS/Android 可用）。
+
+**发现一个命名陷阱**：`--glass-fill-strong` 的 alpha（0.72）比 `--glass-fill`（0.85）**更低**，即"strong"指的是玻璃感更强、更透，而非填充更强。这个反直觉命名在重命名时一并修正：
+
+| 新令牌 | 现令牌 | alpha | 用途 |
+|---|---|---|---|
+| `--material-thick` | `--glass-fill` | 0.85 | 导航胶囊、mini player（bar 材质） |
+| `--material-regular` | `--glass-fill-strong` | 0.72 | 底部抽屉、对话框、气泡菜单 |
+
+ramp / sheen / rim / highlight / border / glow 六组保留现有推导值不动——它们的 alpha 是 `contrast.test.ts` 从 AA 约束反推出来的（注释里记录了 0.05+0.06 合成后失败、0.03+0.04 才过的过程），重新推导没有收益且风险高。仅重命名前缀 `--glass-*` → `--material-*`。
+
+`blur-effect: 'glass' | 'glass-container'`（iOS 26 原生 Liquid Glass）**继续不启用**，理由与 `BackdropBlur.tsx` 现有注释一致：本仓库无法验证 iOS 端表现，且在 0.72–0.85 的填充下只会露出 15–28%。列为需要真机的后续项，不进本方案。
+
+## 4. 迁移策略：别名桥接，让「逐屏推进」真的可行
+
+用户要求「可以逐步逐个界面分开来做」。若直接一次重命名 80 个 CSS 文件里的 67 个自定义属性，就变成一个不可拆的巨型提交，与要求相反。
+
+因此采用**两步走**：
+
+**第一步（P0）**：tokens.css 里新增全部 Apple 语义令牌作为**唯一真值来源**，旧 Muse 名保留为**薄别名**指向新名：
+
+```css
+.theme-root.theme-light {
+  /* Apple 语义色：真值 */
+  --label: #000000;
+  --secondary-label: rgba(60, 60, 67, 0.60);
+  --system-grouped-background: #f2f2f7;
+  --secondary-system-grouped-background: #ffffff;
+  /* … */
+
+  /* Muse 兼容别名：随各屏迁移逐步删除，P10 清零 */
+  --content: var(--label);
+  --content-2: var(--secondary-label);
+  --canvas: var(--system-background);
+  --paper: var(--secondary-system-background);
+  /* … */
+}
+```
+
+这样 P0 单独可交付：**零 CSS 文件改动、零结构改动，只有颜色取值变化**。视觉上立刻是 Apple 配色，回滚只需还原一个文件。
+
+**可行性已确认，不是假设**：`contrast.test.ts` 里已有结论——「嵌套在自定义属性里的 `var()` 确实会在消费元素上按主题解析（已通过 lynx-css 管线在 headless Chrome 验证）」，且 `--shadow-focus: 0 0 0 3px var(--primary-faint)` 与 `--glass-ramp` 等三个复合层本就是这个形态在生产中运行。
+
+**第二步（P1–P9）**：每屏一批，把该屏 CSS 里的旧名换成新名 + 做结构改造。**P10** 删除别名层并加闸门禁止旧名复现。
+
+### 4.1 `--primary` 的 87 处必须逐处三分类（最高风险项）
+
+`--primary` 现值是**墨色**（`#111111` 浅 / `#ffffff` 暗），改成 systemBlue 后，**每一处用它做填充的表面都会变蓝**。这不是重命名问题，是语义问题。已定位的用法分三类：
+
+**A 类 — 应该变蓝**（accent 语义，直接迁 `--accent`）：
+- `.btn--prominent` 背景（`shared/ui/buttons.css:18`）
+- `.mini-player__play` 背景（`features/player/widgets/MiniPlayer.css:173`）
+- `.mini-player__progress-fill` / `.player-progress__indicator`（进度条已播部分）
+- `.app-checkbox--on` 背景与边框（`shared/ui/AppCheckbox.css:23-24`）
+- `.confirm-dialog__btn--submit` 背景（`ConfirmDialog.css:213`）
+- `.library-editor__group-label` 文字色（`LibraryViewEditor.css:80`）
+- `.popover-menu__item-label--selected`、`.btn--tinted`、`.btn--ghost` 文字色
+
+**B 类 — 应该变绿**（开关开启态，Apple 用 systemGreen 而非 accent）：
+- `.app-switch__track.ui-checked` 背景（`shared/ui/AppSwitch.css:36`）→ `--system-green`
+
+**C 类 — 不能变蓝**（需要新的中性令牌）：
+- `.toast` 背景（`shared/ui/ToastHost.css:37`）。现在是墨色胶囊 + 白字，语义上是「中性通知」。变蓝会读成「信息提示/可点击」。Apple 没有 toast 组件，故新增 Songloft 扩展 `--toast-fill`（浅 `#1C1C1E` / 暗 `#F2F2F7`，即反相灰），文字用 `--toast-content`。**AGENTS.md 记载 toast 刻意不玻璃化**，此处沿用该决定。
+- `.home-stats` 填充（`--primary-2`，`HomePage.css`）。整条统计带填成 systemBlue 会过于抢眼且与 Apple「统计卡用 secondary 背景」的做法冲突。改为 `--secondary-system-background` + `--label` 文字，`--accent-2` 因此可能不再需要，待 P4 确认后决定删除。
+
+`--accent`（27 处）全部属 A 类，直接迁移；`--primary-content`（42 处）统一为 `#FFFFFF`——浅色本来就是白，暗色从 `#0f0f11` 变白，这是暗色主题下的正确变化（白字在蓝底上）。
+
+**这份三分类必须在 P0 落地，否则 P0 交付的就是一个满屏蓝色的错误状态。**
+
+## 5. 闸门改造方案
+
+`contrast.test.ts`（28KB）是本仓库质量最高的闸门之一：它从 tokens.css 实际取值反推 AA 最小 alpha，做玻璃层合成、播放器蒙版最坏封面、状态 wash 可见性，还包含**故意保持红的反貌真性检查**（`--paper` 作 wash 必须 < 1.08；`--content-muted` 在 wash 上必须 < 4.5）。改写它必须保住这些性质，不能降级成断言常量。
+
+### 5.1 现有策略（读代码得出，不是猜测）
+
+不是「全部文字 4.5」，已经是分级的：
+
+| 主题 | 令牌 | 下限 |
+|---|---|---|
+| 暗 | content / content-2 / content-muted / accent / danger | 4.5（7 个表面全覆盖） |
+| 浅 | content / content-2 / accent | 4.5 |
+| 浅 | content-muted / danger | **3.0**（`floorFor()` 明确豁免，注释记为已知缺口） |
+
+### 5.2 改写后的策略
+
+Apple 的四级 label 不是「同一种文字的深浅」，而是**重要性分级**，Apple 自己规定三级/四级只用于非必要内容。闸门因此从「数值下限」拆成**两个互补的闸门**：
+
+**闸门 A — 数值下限，按 Apple 分级重设**
+
+| 令牌 | 下限 | 依据 |
+|---|---|---|
+| `--label` | 4.5 | 正文必须过 AA（实测 21.00） |
+| `--secondary-label` | **3.0** | 浅色实测 3.30–3.44，暗色 5.27–6.36。**这是本次唯一放宽的一档**，也是 §2.3 登记的退步 |
+| `--tertiary-label` / `--quaternary-label` | **不设下限** | 数值上无法过 3.0（1.37–2.48）。改由闸门 B 约束用法 |
+| `--accent` 作文字 | **3.0** | 浅色实测 3.60–4.02 |
+| `--system-red` 作文字 | **3.0** | 浅色实测 3.18–3.55 |
+| `--system-red-strong` + 白字 | 4.5 | 实测 5.38，填充破坏性按钮 |
+| `--accent-content` on `--accent` | **3.0** | 白字 on `#007AFF` = 4.02 |
+| `--accent-contrast` + 白字 | 4.5 | 实测 7.56，Increase Contrast 档必须真的过 AA |
+
+**闸门 B — 用法白名单扫描（新增，替代被撤掉的数值约束）**
+
+对全部 80 个 CSS 文件做静态扫描，断言 `--tertiary-label` / `--quaternary-label` **只出现在**允许的角色里：占位符文字、禁用态（`--disabled`/`opacity` 同规则）、纯装饰字形、分隔性符号。任何承载信息的选择器用了三/四级 label 即为失败。
+
+这与现有闸门里那条「no stylesheet puts `--content-muted` text on a wash」的网状扫描同构——现成的实现形状可以直接沿用（`walk()` + 规则级正则 + 带 lookbehind 的 `color:` 探针 + 反貌真性自检）。**必须同时补一条反貌真性测试**：给一个违规样例，确认扫描能判红；否则这个闸门是安慰剂。
+
+**必须保留不动的部分**：玻璃层合成推导、播放器蒙版最坏封面（黑/白极值）、wash 可见性下限 1.08 及其两条缺陷形状检查。§3.3 已核实 Apple 四级 fill 全部 ≥ 1.08，因此这部分不需要放宽。
+
+### 5.3 其他受影响的闸门
+
+| 闸门 | 改动 |
+|---|---|
+| `tokens-hig.test.ts` (129 行) | 新增 Apple 语义色值断言（明暗两套、逐令牌）；「legacy `--font-*` 保持原值」改为 P10 后的「已不存在」 |
+| `tokens-defined.test.ts` (70 行) | 无策略改动，但会顺手暴露 `--on-primary`（1 处引用，tokens.css 里**不存在**该令牌，真值是 `--primary-content`）——这是现存 bug，P0 一并修 |
+| `theme-pack-mapping.test.ts` (305 行) | `PACK_OVERRIDABLE_BASELINE` 18×2 项迁移到新名；`themePackToStyleVars()` 的 seedColor 重指向目标改为 `--accent` 家族 |
+| `glass-surface.test.ts` | 不透明/半透明分类是从 tokens.css 取值推导的，`--glass-*` → `--material-*` 重命名后需同步 |
+| `a11y-tap-target.test.ts` (11.8KB) | 不受颜色影响；但 P1–P9 改行高时会被它约束，属正向 |
+| `material-tokens.test.ts` / `material-model.test.ts` | glass→material 重命名的直接相关方 |
+
+## 6. 分阶段实施计划
+
+每个阶段独立可交付、独立可回滚、独立过三条验收命令。**P0 不可再拆**（令牌与闸门必须同批，否则闸门红）；P1–P9 顺序可调。
+
+### P0 — 基础层：令牌体系替换（不可拆）
+
+| # | 任务 | 产出 |
+|---|---|---|
+| P0.1 | tokens.css 新增全部 Apple 语义令牌（§3.1–3.5），Muse 名降为别名（§4） | `tokens.css` |
+| P0.2 | `--primary` 87 处 + `--accent` 27 处三分类落地（§4.1），新增 `--toast-fill`/`--toast-content` | 约 10 个 CSS 文件的定点改动 |
+| P0.3 | `contrast.test.ts` 改写为闸门 A + 闸门 B（§5.2），含反貌真性自检 | 测试 |
+| P0.4 | `tokens-hig.test.ts` 新增 Apple 色值断言 | 测试 |
+| P0.5 | `theme-pack-mapping.ts` 的 `PACK_OVERRIDABLE_BASELINE` 与 `themePackToStyleVars()` 迁移 | 主题包映射 |
+| P0.6 | 新增 `.theme-root.increase-contrast` 变体（`--accent-contrast`），沿用 `reduce-motion` 的既有挂载模式 | `tokens.css` + `ThemeProvider` |
+| P0.7 | 修 `--on-primary` 悬空引用（§5.3） | 1 处 |
+| P0.8 | glass→material 重命名（§3.7），修正 `strong` 反直觉命名 | tokens.css + 14 处消费方 |
+
+**P0 交付后的可见效果**：全 App 变为 Apple 配色（蓝色强调、纯黑/纯白文字、Apple 灰阶背景），结构与尺寸完全不变。
+
+**P0 的验证盲区（如实登记）**：Apple 语义色的精确十六进制值来自我的知识，**本次未能通过工具核对**——`developer.apple.com` 的 WebFetch 被网络策略拦截，WebSearch 返回提供方错误。§3 表格里的值需要在 P0 实施时对照 Apple 官方「UI Element Colors」文档逐项 pin 一遍。这是残余风险，不是已验证事实。
+
+### P1 — 设置类页面（分组背景反转，视觉收益最大）
+
+现状与目标：
+
+| 项 | 现状 | 目标 | 位置 |
+|---|---|---|---|
+| 页面背景 | `--canvas` `#fff` | `--system-grouped-background` `#F2F2F7`/`#000` | `ShellLayout.css:6` 需按路由分流 |
+| 卡片背景 | `--paper` `#fafafa` | `--secondary-system-grouped-background` `#FFF`/`#1C1C1E` | `Settings.css:53` |
+| 卡片边框 | `1px solid var(--line)` | **删除**（Apple 分组卡靠背景反差，不描边） | `Settings.css:54` |
+| 卡片圆角 | `--radius-lg` 20px | 新增 `--radius-grouped: 10px` | `Settings.css:51` |
+| 行高 | 无显式高度，padding 16 上下 → 单行 ~48px | `min-height: var(--tap-target)` 44px + padding `--space-3`(12) 上下 → 单行 44px | `Settings.css:62` |
+| 行图标 | 仅 `width: 28px`，无高度、单色 | 29×29px 彩色圆角方块 + `--radius-xs`(6px) + 白色字形 | `Settings.css:83` |
+| 分组标题 | `--font-sm`(14) `--weight-bold` `--content-2` | `--font-footnote`(13) `--weight-regular` `--secondary-label` | `Settings.css:39-40` |
+| 行标题 | `--font-callout`(16) | `--font-body`(17) | `Settings.css:97` |
+| 行副标题 | `--font-sm`(14) | `--font-footnote`(13) | `Settings.css:105` |
+| 行尾文字 | `--font-sm`(14) `--content-2` | `--font-subhead`(15) `--secondary-label` | `Settings.css:118` |
+| 分隔线 | `border-top` **全宽通铺** | 内缩到文字起点（有图标 57px / 无图标 16px） | `Settings.css:68` |
+| 页面标题 | `--font-title1`(28) | `--font-largeTitle`(34) `--weight-bold` | `SettingsPage.css:20` |
+
+**分组标题不做大写**。Apple 经典分组表头是大写，但：`text-transform: uppercase` 在 Lynx **不支持**，`progress.md` 记载批19b 已因构建告警删除过该声明（`jsplugin/pages/TabConfigPage.css`），现存的只是一条解释性注释。靠 i18n 文案预大写对中文无意义。故采用句首大写 13px regular，这也是现代 iOS 多处的实际形态。
+
+**分隔线内缩是组件改动不只是 CSS**：`border-top` 挂在行元素上必然全宽。需改为独立的 1px 分隔视图 + `margin-left`，即 `Settings.tsx` 的结构调整。
+
+**受影响的其他设置子页**：`CacheManagePage`、`ProxySettingsPage`、`LicensesPage`、`ThemePacksSection`、`ThemeCatalogPage`、`SizeLimitSlider`、`UpgradeSection`（各含 1–8 处 `--font-sm`），以及 `LicensesPage.css:23` 用 `--neutral-faint` 当分隔线色（应为 `--separator`）。
+
+### P2 — SongRow 与列表分隔线（影响面最广的组件）
+
+`SongRow` 被 library / playlist-detail / play-history 三处共用，是全 App 出现次数最多的行。
+
+| 项 | 现状 | 目标 | 位置 |
+|---|---|---|---|
+| 行高 | 12+48+12+1 = **73px** | padding `--space-2`(8) 上下 → **64px**（Apple Music 曲目行形态） | `SongRow.css:29` |
+| 封面 | 48×48，`--radius-sm`(8px) | 48×48 保留，圆角改 `--radius-xs`(6px) | `SongRow.css:57-59` |
+| 标题 | `--font-callout`(16) | `--font-body`(17) `--weight-regular` | `SongRow.css:78` |
+| 副标题 | `--font-sm`(14) `--content-muted` | `--font-footnote`(13) `--secondary-label` | `SongRow.css:116-117` |
+| 时长 | `--font-sm`(14) | `--font-footnote`(13) `--secondary-label` | `SongRow.css:126` |
+| 分隔线 | 全宽通铺 | **内缩至封面右缘 76px**（16 padding + 48 封面 + 12 间距） | `SongRow.css:53` |
+| `margin-top: 2px` 硬编码 | 2px | `var(--space-half)` | `SongRow.css:118` |
+
+**64px 校验**：17px×1.3 ≈ 22 + 2 间距 + 13px×1.3 ≈ 17，合计 41px < 48px 封面高，文字块不会撑破行高。
+
+**与 `contrast.test.ts` 的耦合**：该闸门断言 `.song-row--selected` 必须把副标题/时长从 `--content-muted` 抬到 `--content-2`（`SongRow.css` 的 step-up 规则）。副标题基线本来就要迁到 `--secondary-label`，抬升目标随之变成……**没有更高一级可抬**（`--secondary-label` 已是二级）。因此这条 step-up 规则在新体系下应改为：选中行副标题抬到 `--label`。闸门 B 的白名单与这条 step-up 断言需同批更新。
+
+**同批处理** `MediaListItem`（`shared/ui/MediaListItem.css`）：`--font-sm`→`--font-footnote`、`--font-xs`→`--font-caption1`、封面圆角、且它**完全没有分隔线**（消费页各自加），需统一。
+
+### P3 — 导航（tab bar / rail）
+
+**先说一个反直觉的结论**：现有的悬浮胶囊导航（64px、`--radius-pill`、玻璃填充）**不需要改成 iOS 传统的 49pt 全宽栏**。iOS 26 的 Liquid Glass 导航本身就是悬浮的胶囊形玻璃 tab bar，现状与之同向。AGENTS.md 也已把 `--radius-nav` 与胶囊形状列为冻结项。
+
+因此 P3 只改度量与配色：
+
+| 项 | 现状 | 目标 | 位置 |
+|---|---|---|---|
+| 激活态文字色 | `--accent`（墨色） | `--accent`（systemBlue，随 P0 自动生效） | `ShellLayout.css:220` |
+| 激活态 pill 底 | `--glass-glow-faint` | `--tint-fill` | `ShellLayout.css:175` |
+| 未激活文字色 | `--content-muted` | `--secondary-label`（**不是** tertiary，tab 标签是必要信息） | `ShellLayout.css:231` |
+| 底栏标签字号 | `--font-2xs`(10px) | 保留 10px，字重补 `--weight-medium` | `ShellLayout.css:208` |
+| pill 高度 | `52px` 硬编码 | 令牌化 | `ShellLayout.css:190` |
+| 底栏高度 | `64px` 硬编码，而 `--mobile-nav-height: 60px` 存在却**未被消费** | 二者归一，删除死令牌或让底栏消费它 | `ShellLayout.css:110` vs `tokens.css` |
+| 侧栏背景 | `--paper` | `--secondary-system-background` | `ShellLayout.css:65` |
+| 侧栏分组头 | `--font-footnote`(13) `--content-muted` | `--font-footnote` + `--secondary-label` | `ShellLayout.css:223-224` |
+| brand 图标圆角 | `8px` 硬编码 | `--radius-sm` | `ShellLayout.css:79` |
+| plugin 图标 | `24px` 硬编码 | 令牌化 | `ShellLayout.css:250-251` |
+
+**约束遵守**：AGENTS.md 规定「rail 选中态只能改颜色不能改尺寸」、「底栏标签必须 `--font-2xs` + nowrap 且在 360dp 下容纳 4 个中文字」。本阶段不触碰这两条。`--nav-inset` 的 80/148 两档不动。
+
+### P4 — 首页
+
+| 项 | 现状 | 目标 | 位置 |
+|---|---|---|---|
+| 问候语 | `--font-title1`(28) `--weight-bold` | `--font-largeTitle`(34) `--weight-bold` | `HomePage.css:18-19` |
+| 区块标题 | `--font-title3`(20) `--weight-bold` | `--font-title2`(22) `--weight-bold` | `HomePage.css:80-81` |
+| 区块动作文字 | `--font-sm`(14) `--accent` | `--font-subhead`(15) `--accent` | `HomePage.css:112-113` |
+| 统计卡 | `--paper` + `1px solid --line` + `--radius-lg`(20) | `--secondary-system-background`，**删边框**，`--radius-grouped`(10) | `HomePage.css:233-236` |
+| 统计卡填充色 | `--primary-2`（将变蓝，属 §4.1 C 类） | `--secondary-system-background` + `--label` 文字 | `HomePage.css` |
+| 统计主数值 | `--font-title1`(28) | `--font-title1`(28) 保留 | `HomePage.css:248` |
+| 统计标签 | `--font-sm`(14) | `--font-footnote`(13) `--secondary-label` | `HomePage.css:255` |
+| 卡片宽/封面 | `120px` ×4 处硬编码 | 令牌化 | `HomePage.css:153-154,165-166` |
+| 横滚区高度 | `168px` 硬编码 | 令牌化（与 `CARD_CHROME_PX` 的 168 **同值但无关**，注释需说明避免误改） | `HomePage.css:126` |
+| 刷新头高度 | `60px` 硬编码 | 令牌化 | `HomePage.css:51` |
+| 重试按钮底 | `--neutral-faint` | `--tertiary-system-fill` | `HomePage.css:211` |
+
+**注意**：首页是**普通页**不是分组页，所以页面用 `--system-background`（浅色白），卡片用 `--secondary-system-background`（浅色 `#F2F2F7` 灰）。P1 的「反转」只适用于设置类分组页，此处保持白页灰卡，与现状同向。
+
+**Web 分支约束**：`HomePage.tsx` 的 Web 分支刻意不渲染 `<refresh>`（改渲染 `home__scroll-host`），因为该标签在 Web 落为未知元素、其头部文案会当正文渲染。本阶段不得改动这个分流。
+
+### P5 — 歌单列表与详情
+
+| 项 | 现状 | 目标 | 位置 |
+|---|---|---|---|
+| 详情页封面 | 96×96，`--radius-md`(12) | **160×160**，`--radius-sm`(8) | `PlaylistDetailPage.css:91-93` |
+| 详情页 meta 高度 | `96px`（跟封面锁死） | 随封面改 160px | `PlaylistDetailPage.css:119` |
+| 歌单名 | `--font-title3`(20) `--weight-bold` | `--font-title2`(22) `--weight-bold` | `PlaylistDetailPage.css:126-127` |
+| 描述 | `--font-sm`(14)，`max-height: 32px` | `--font-footnote`(13)，两行夹取随字号重算 | `PlaylistDetailPage.css:136,149` |
+| 计数 | `--font-sm`(14) | `--font-footnote`(13) `--secondary-label` | `PlaylistDetailPage.css:156` |
+| 卡片名 | `--font-sm`(14) | `--font-subhead`(15) | `PlaylistsView.css:167` |
+| 卡片封面 | 104×104，`--radius-md`(12) | 104 保留，圆角 `--radius-sm`(8) | `PlaylistsView.css:139-141` |
+| 搜索框 | 40px 高，`--neutral-faint` | `--control-height-sm`(36px)，`--tertiary-system-fill`，`--radius-sm` | `PlaylistsView.css:267`, `PlaylistDetailPage.css:289` |
+| 排序行分隔线 | 全宽通铺 | 内缩 16px | `PlaylistsView.css:331`, `PlaylistDetailPage.css:316` |
+| 圆形小按钮 | `28px` + 44px `__*-hit` 包裹 | 保留该模式（已符合 44px 规范） | `PlaylistsView.css:103-109,208-214` |
+| eq 动画几何 | 16/3/4/8/6/10/12px 硬编码 | **保留硬编码**（动画几何非设计令牌，令牌化无收益） | `PlaylistsView.css:50-129` |
+
+`--font-sm` 在本组共 16 处（6 个文件），按 §3.6 分流。
+
+**同批** `AddToPlaylistSheet`（面板高 62%）、`PlaylistDescPanel`、`PlaylistFormFields`、`CreatePlaylistPage`、`EditPlaylistPage`（封面 96→与详情页一致性待定）。
+
+### P6 — 播放器（全屏 + mini）
+
+| 项 | 现状 | 目标 | 位置 |
+|---|---|---|---|
+| 全屏封面圆角 | `--radius-xl`(28) | `--radius-md`(12) | `FullPlayerPage.css:174,212` |
+| 曲名 | `--font-title1`(28) `--weight-bold` | `--font-title2`(22) `--weight-bold` | `FullPlayerPage.css:273-274` |
+| 歌手 | `--font-callout`(16) `--content-2` | `--font-title2`(22) `--weight-regular` `--accent`（Apple Music 形态） | `FullPlayerPage.css:280` |
+| 专辑（顶栏） | `--font-sm`(14) | `--font-footnote`(13) `--secondary-label` | `FullPlayerPage.css:124` |
+| eyebrow | `--font-caption1`(12) `--weight-bold` | `--font-caption1` + `--weight-semibold` | `FullPlayerPage.css:116-117` |
+| 播放/暂停主按钮 | 仅字形 `--font-title1`(28) | 按钮 48×48 + 字形随之 | `PlayControls.css:53` |
+| 模式标签 | `10px` / `2px` 硬编码 | `--font-2xs` 迁 `--font-caption2`(11) / `--space-half` | `PlayControls.css:67-68` |
+| 视频徽标 | `8px`/`14px`/`12px` 硬编码 ×5 | 令牌化 | `FullPlayerPage.css:230-246` |
+| 进度轨 | 4px，`--rule` | 4px 保留，色改 `--tertiary-system-fill` | `ProgressBar.css:43-45` |
+| 进度滑块 | 14px 圆，`--primary-content` | 保留几何，色改 `#FFFFFF` + `--shadow-sm` | `ProgressBar.css:67-70` |
+| mini 标题 | `--font-sm`(14) `--weight-semibold` | `--font-subhead`(15) `--weight-regular` | `MiniPlayer.css:132-133` |
+| mini 副标题 | `--font-caption1`(12) `+ margin-top 2px` | 保留 12px，`--space-half`，色 `--secondary-label` | `MiniPlayer.css:141-142` |
+| mini 封面 | 36×36，`--radius-sm`(8) | 保留 36，圆角 `--radius-xs`(6) | `MiniPlayer.css:105-108` |
+| mini 进度轨 | `--fill-faint` | `--quaternary-system-fill` | `MiniPlayer.css:78` |
+
+**mini player 的胶囊玻璃形态保留**——与 iOS 26 悬浮 mini player 同向，且 `bottom: calc(80px + safe-area)` / `z-index: 91` 属 AGENTS.md 的层级阶梯，不得改。
+
+**播放器蒙版不得动**：`--player-scrim-from/to` 的 0.94（浅）/ 0.85（暗）是 `contrast.test.ts` 从「任意封面最坏情况（纯黑/纯白）」反推的，注释记录了 0.90 只到 4.23、0.92 到 4.43、0.93 才是第一个可行值的推导过程。P0 换了文字色之后**这条推导需要重跑**：`--label` 变纯黑/纯白会让约束变松，但 `--secondary-label` 的 alpha 合成会让它变紧。**P0 必须重新推导这两个 alpha，不能沿用。**
+
+`EqualizerPage.css` 属 P9（整文件零令牌）。
+
+### P7 — 登录 / 注册
+
+| 项 | 现状 | 目标 | 位置 |
+|---|---|---|---|
+| logo | 72×72，圆角 16px（硬编码） | **80×80，圆角 18px**（与 `SplashScreen.css:11-13` 的 80/18 对齐） | `LoginPage.css:21-23` |
+| 卡片 | `--paper` + `1px solid --line` + `--radius-lg`(20) | `--secondary-system-background`，**删边框**，`--radius-grouped`(10) | `LoginPage.css:15-17` |
+| 卡片宽 | `max-width: 400px` 硬编码 | 令牌化 | `LoginPage.css:13` |
+| 输入框 | `44px` 硬编码，底 `--neutral-faint` | `var(--control-height)`，底 `--tertiary-system-fill` | `LoginPage.css:56,59` |
+| 主按钮 | `48px` 硬编码，底 `--primary` | `var(--control-height)`(44)，改用 `.btn.btn--prominent` | `LoginPage.css:121,124` |
+| 标签 | `--font-sm`(14) | `--font-footnote`(13) `--secondary-label` | `LoginPage.css:51` |
+| 开关标题 | `--font-sm`(14) | `--font-subhead`(15) | `LoginPage.css:85` |
+| 错误 | `--font-sm`(14) | `--font-footnote`(13) `--system-red` | `LoginPage.css:95` |
+| 按钮文字 | `--font-callout`(16) `--weight-bold` | `--font-body`(17) `--weight-semibold`（随 `.btn` 基类） | `LoginPage.css:130-131` |
+
+标题 `--font-title1`(28) `--weight-bold` **保留不动**，已符合 Apple 引导页形态。
+
+### P8 — 对话框 / 抽屉 / 气泡菜单 / Toast
+
+**这一阶段风险最高，因为它触碰有文档记载的魔数。**
+
+`shared/ui/dialog-viewport.ts` 定义了一组必须互相同步的常量：
+
+| 常量 | 值 | 含义 |
+|---|---|---|
+| `SONG_DIALOG_WIDTH_PX` | 440 | 两个歌曲对话框固定宽 |
+| `CARD_MARGIN_PX` | 32 | 对话框外边距（= `--space-6`） |
+| `ACTION_ROW_PX` | 44 | 动作行高，**必须等于** `.confirm-dialog__btn` 的 `var(--tap-target)` |
+| `CARD_CHROME_ABOVE_ACTIONS_PX` | 124 | 动作行以上的固定装饰高度 |
+| `CARD_CHROME_PX` | 124 + 44 = 168 | 总固定装饰高 |
+
+同步点：`ConfirmDialog.css:181`、`tokens.css` 的 `--tap-target`、`SongInfoDialog.css:30`、`SongEditDialog.css:39`、`SongInfoDialog.tsx:155`、`SongEditDialog.tsx:263`、`dialog-viewport.ts:132`。`confirm-dialog-overlay.test.ts` 断言全部同步。
+
+**决策**：Apple 的原生 alert 形态（270pt 宽、14pt 圆角、全宽堆叠按钮 + 发丝分隔线、纯文字蓝色按钮）与现有「并排描边按钮」几何完全不同，改造会连带重算 124 与 168。因此拆成两步：
+
+- **P8a（低风险）**：只改配色与字号，几何完全不动。抽屉把手统一为 36×5/2.5px（`MoreTabsSheet.css:60-62` 已是该值，`SheetShell.css:73-74`、`AddToPlaylistSheet.css:56-57` 的 40×4 改过来）；`--glass-fill-strong`→`--material-regular`；`.confirm-dialog__btn--cancel` 的 `--rule`→`--opaque-separator`；`.confirm-dialog__btn--confirm/--submit` 改用 `--system-red-strong`/`--accent`。
+- **P8b（高风险，可选，建议单独排期）**：改为 Apple alert 几何（270px 宽、`--radius-alert: 14px`、堆叠按钮）。必须与 `dialog-viewport.ts` 的三个常量、四个 CSS 同步点、`confirm-dialog-overlay.test.ts` 同批改动。**若时间/风险预算不足，P8b 可以不做——P8a 已经把配色对齐 Apple，几何差异是可接受的存量。**
+
+Toast 按 §4.1 C 类改 `--toast-fill`；`ToastHost.css:22` 的 `bottom: calc(safe-area + 150px)` 与 `--nav-inset` 的 148 档接近但独立，需注释说明。抽屉圆角 `--radius-xl`(28) → 新增 `--radius-sheet: 10px`，**标记为需真机视觉复核**（28→10 是明显变化，我无法从本仓库验证 iOS 抽屉圆角的准确值）。
+
+### P9 — 硬编码 px 清零
+
+三个文件**完全没有使用设计令牌**，是最大的一致性漏洞：
+
+| 文件 | 规模 | 说明 |
+|---|---|---|
+| `features/player/pages/EqualizerPage.css` | 约 24 处硬编码 | 间距/圆角/字号全为字面量，仅顶栏标题用了 `--font-title3` |
+| `features/settings/pages/ServerEditPage.css` | 约 13 处 | 零令牌 |
+| `features/settings/pages/ServerListPage.css` | 约 12 处 | 零令牌 |
+
+另有零散硬编码：`margin-top: 2px` ×5 处（`SongRow`/`MiniPlayer`/`SheetShell`/`Settings`/`ThemePacksSection` 等）→ `--space-half`；`CacheManagePage.css:93,142` 的 44/48px → `--control-height`；`ProxySettingsPage.css:100` 的 `border-radius: 8px` → `--radius-sm`。
+
+**刻意保留硬编码的**：动画几何（`PlaylistsView.css` eq bars、`SizeLimitSlider` 的 4px 刻度点、`UpgradeSection`/`CacheManagePage` 的 6px 进度条）——这些是绘图参数不是设计令牌，令牌化只会增加间接层。
+
+### P10 — 删除 Muse 别名层
+
+删除 tokens.css 里全部 Muse 兼容别名与 7 个 legacy `--font-*`，新增闸门断言：任何 CSS 文件出现旧名即失败。`tokens-hig.test.ts` 的「legacy 令牌保持原值」测试改为「legacy 令牌不存在」。
+
+**P10 是硬校验点**：只有 P1–P9 全部完成、旧名消费量归零，P10 才能过。它同时是「迁移是否真的完成」的唯一可信证据——不靠人工确认。
+
+## 7. 风险、兼容性与回滚
+
+| 项 | 评估 |
+|---|---|
+| **无障碍退步** | 已在 §2.3 量化登记：二级文字 5.61 → 3.44。`--accent` 作文字 4.02、`--system-red` 3.55、开关轨道 2.22 均不过 AA。缓解手段是 `.theme-root.increase-contrast`（accent 7.56）。这是用户已知情的决策，会写入 `progress.md` 已知债务。 |
+| **主题包兼容** | 保留全量覆盖 ⇒ 无法保证第三方包下的 Apple 合规性（§2.4）。**待验证**：`clients/themes/index.json` 的 3 个包（sha256 锁定 bundle）是否在包体内直接引用令牌名。若是，重命名会破包，需在 P0 加兼容映射；若包只提供 `seedColor` + 少量语义字段，则重命名是内部改动、包不受影响。**这一项必须在 P0 动工前先查明**。 |
+| **播放器蒙版 alpha 失效** | §P6 已述：0.94/0.85 是从旧文字色反推的，P0 换色后必须重跑推导，不能沿用。 |
+| **对话框魔数** | §P8 已述，故拆 P8a/P8b。 |
+| **Lynx 静默丢弃未知属性** | `tokens-hig.test.ts` 的注释记录了这个坑：令牌名写错时 Lynx 静默丢声明、元素继承、无告警。因此每个新令牌都必须进闸门断言，否则拼写错误不可见。 |
+| **构建告警当错误看** | `progress.md` 记载构建告警自批19b 起归零。本方案不得引入新的 `Unsupported property … was removed` 告警——尤其 `text-transform`（§P1 已避开）。 |
+| **回滚** | P0 回滚 = 还原 `tokens.css` + `theme-pack-mapping.ts` + 4 个测试文件。P1–P9 每阶段回滚 = 还原该屏 CSS/TSX。别名桥接的设计意图正是让每阶段回滚互不牵连。 |
+| **性能** | 别名层引入一层 `var()` 间接。`--glass-ramp`/`--shadow-focus` 已在生产用同样形态，无实测退化记录。P10 后间接层消失。 |
+| **未验证** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
+
+## 8. 验收
+
+每阶段三条，缺一不可（依 `AGENTS.md` §5）：
+
+```
+pnpm run build      # 必须同时输出 File (lynx) 与 File (web)；告警当错误看
+pnpm exec tsc -b    # 注意：--noEmit 是空跑，不能用
+pnpm test           # 约 2208 用例 / 199 文件
+```
+
+「构建绿 ≠ 可发布」。P1–P9 每阶段还需在窄屏与宽屏两种布局下、明暗两主题下各看一遍，并至少覆盖 1 个内置主题包。
+
+## 9. 需要用户裁决的待决项
+
+以下不阻塞 P0，但在到达对应阶段前需要拍板：
+
+1. **P8b 是否做**（Apple alert 几何）。不做的代价是对话框按钮排布仍非 Apple 形态；做的代价是触碰 124/168 魔数与 `confirm-dialog-overlay.test.ts`。**建议：先不做**，P8a 已对齐配色。
+2. **抽屉圆角 28 → 10** 是否接受（视觉变化明显，且我无法验证 iOS 准确值）。**建议：先改到 `--radius-lg`(20) 作为中间值**，等真机确认后再决定是否继续降到 10。
+3. **全屏播放器歌手行改 22px + accent 蓝**（Apple Music 形态）是否接受——这是 P6 里视觉变化最大的一条。
+4. **`--accent-2` 是否保留**。P4 若把统计带改成 secondary 背景，它可能失去唯一消费方，届时应删除而非留成死令牌。
+5. **阶段顺序**。当前排序按「视觉收益 ÷ 风险」：P1 设置（收益最大）→ P2 列表行（影响面最广）→ P3 导航 → P4 首页 → P5 歌单 → P6 播放器 → P7 登录 → P8a 浮层 → P9 硬编码 → P10 收口。可按需调整，P0 必须最先、P10 必须最后。
+
+---
+
+# P0 实施记录
+
+验收：`pnpm test` 199 文件 / 2187 用例全绿；`pnpm exec tsc -b` 通过；`pnpm run build` 同时输出 `File (lynx)` 与 `File (web)`。
+
+改动 9 个文件（+1469 / −766）：`tokens.css`、`theme-pack-mapping.ts`、`AppSwitch.css`、`ToastHost.css`，以及 `contrast.test.ts`、`tokens-hig.test.ts`、`theme-pack-mapping.test.ts`、`theme-provider.test.tsx`、`glass-surface.test.ts`。
+
+## 与方案的偏差（据实登记）
+
+### 撤销的任务
+
+**P0.7「修 `--on-primary` 悬空引用」——撤销，不是活 bug。** 它在批51 已修；现在只存在于 `tokens-defined.test.ts` 的文档注释与一条回归守卫（`expect(tokens).not.toMatch(/--on-primary:/)`）。方案里这一条源自我误读审计输出（审计的 grep 把测试文件里的反例算成了消费方）。
+
+**P0.8「glass→material 重命名」——移出 P0，单独排期。** 两个理由：
+1. 方案 §3.7 提的 `--material-thick`/`--material-regular` **与既有命名轴撞名**——仓库已有 `MaterialVariant`（`ultra-thin`/`thin`/`regular`/`thick`，用户可选的玻璃厚度，见 `material-tokens.ts`）。正确的名字应是 `--material-bar`（导航/mini player）与 `--material-panel`（抽屉/对话框/气泡）。
+2. 它是纯重命名，涉及 14 处消费方 + `material-tokens.ts` + 3 个闸门，零视觉变化。混进颜色替换批会让 diff 难审、难二分定位。
+
+### 方案中的两处事实错误
+
+**`--primary-2` 在 CSS 里零消费。** 方案 §4.1 把「首页统计带用 `--primary-2` 填充」列为 C 类，实际 `.home-stats` 用的是 `--paper`，而 `--primary-2` 没有任何消费方且与 `--primary` 同值。处置：**删除**，不做别名，也不引入方案里那个我编造的 `--accent-2`（非 Apple 值）。`PACK_OVERRIDABLE_BASELINE` 同步移除。
+
+**C 类的真实构成比方案预计的少一项、多一项。** 少的是上面的统计带；多的是下面这条。
+
+### 新发现：AppSwitch 滑块会变成绿轨上的纯黑块
+
+`AppSwitch.css` 的滑块原本是 `var(--canvas)`，注释写明理由是「白在浅色、近黑在暗色，这样在灰轨和 accent 轨上都能读」——那是因为 Muse 暗色 accent 是**白色**。改 Apple 后暗色 accent 变 systemGreen、`--canvas` 变纯黑，就成了绿轨上一个纯黑滑块。Apple 的滑块两个主题都是白色，已改为硬编码 `#ffffff`。
+
+同文件另一处：关闭态轨道 `var(--rule)` → `--opaque-separator` 后是 `#c6c6c8`，比 Apple 的 `#e9e9ea` 明显偏重，改用 `--system-gray5`（浅色 `#e5e5ea`）。
+
+这是「`--primary` 原本是墨色通道」连带出的破坏形状，方案的三分类框架抓对了类别、漏了这个实例。
+
+## 两处真实的闸门减弱，已修复而非仅重命名
+
+### `glass-surface.test.ts` 会在整个迁移期失明
+
+`opaqueTokens()` 按 hex/rgba 字面量分类不透明度。别名 `--canvas: var(--system-background)` 两者都不匹配 → 每个别名都被归为「非不透明」→ `opaqueFill()` 认不出 `background-color: var(--canvas)`。而迁移期**绝大多数 CSS 仍在用别名**，等于这个闸门在最需要它的整段时间里完全不起作用。
+
+修复：解析一层别名间接。并且必须区分「有任何字面量声明」与「有不透明字面量声明」——因为 `.increase-contrast` 里有 `--separator: var(--opaque-separator)`，那是另一语境下的覆盖而非基值，天真的别名解析会把半透明的 separator 提升成不透明（实测已复现，会误判红）。
+
+红检：让 `.song-row` painted `var(--canvas)`（历史 bug 的别名形式），两条断言正确变红。
+
+**同时如实登记一处能力缩小**：`--neutral-faint`/`--line` 迁到 Apple 后是**半透明**的（`--tertiary-system-fill`/`--separator`），所以「不透明令牌覆盖材质」这个失败模式对它们不再存在，已从 `SURFACE_CHANNEL` 的不透明检查中豁免。separator 仍留在清单里，因为「用线色当填充」是语义错误，与覆盖无关。
+
+### `contrast.test.ts` 的反貌真性断言停止成立
+
+原有一条故意保持红的检查：`--paper` 铺在 `--canvas` 上必须 < 1.08（锁住当年「选中高亮 painted --paper 结果完全看不见」的缺陷形状，实测 1.04）。Apple 的 `#F2F2F7` on `#FFFFFF` 是 **1.116**，暗色 **1.234**——**该缺陷形状在 Apple 值下不再复现**，那条断言必然失败，而且它该失败。
+
+替换为推导式形状：对每个 wash 求出清过 1.08 的最小 alpha，断言已发值 ≥ 它、**且再低一档必须失败**。按构造非貌真。（先试过「alpha 减半必须跌破」，但暗色 tertiary-fill 减半是 1.090 仍在 1.08 之上，那条断言会是假的，遂弃用。）
+
+**另一条断言变成了空操作**：`--content-2` 与 `--content-muted` 现在都别名到 `--secondary-label`，所以 `.song-row--selected` 那条「把副标题从 muted 抬到 content-2」的 step-up 规则已无实际效果。照留就是在断言一个 no-op。改为钉住「两个别名当前解析到同一令牌」这个事实，等 P2 迁移 SongRow 时它会失败——那正是决定这条规则该保留还是随别名一起删除的时刻。
+
+## 新发现的对比度失败：systemRed 不能配重填充
+
+浅色 `--system-red` 在 `--system-fill`（α 0.20）上 **2.79**、在 `--secondary-system-fill`（α 0.16）上 **2.93**，均低于 3.0。我在写方案时的推导只验了 tertiary/quaternary 两档填充，漏了这两档更重的。暗色不受影响（4.13 / 4.41——半透明灰铺在黑上是提亮，对红色是有利方向）。
+
+两个令牌目前零消费方，但把这两个表面从扫描里删掉换绿是留洞。处置：登记为 `FORBIDDEN` 配对，并附两条强制义务——(1) 每条配对**必须确实失败**，否则说明豁免已过期该删除；(2) 全量 CSS 扫描禁止该配对出现（含 `--danger` 别名形式）。
+
+## 推导出的取值
+
+| 项 | 取值 | 推导 |
+|---|---|---|
+| 浅色 `--tint-fill` | `rgba(0,122,255,0.10)` | 可行窗口 **α ∈ [0.07, 0.12]**：上界受「systemRed 在 wash 上 ≥3.0」约束，下界受「wash 可见性 ≥1.08」约束。取中段，得可见性 1.138 / systemRed 3.12 |
+| 暗色 `--tint-fill` | `rgba(10,132,255,0.18)` | 可见性 1.170（页）/ 1.224（玻璃） |
+| 播放器蒙版（浅） | 保持 0.94 / 0.99 | 新下界 **0.930**（原 0.91），绑定于 systemRed 在**黑**封面。**余量从 3 点收窄到 1 点**（3.10 vs 3.0） |
+| 播放器蒙版（暗） | 保持 0.85 / 0.92 | 新下界 **0.765**（原 0.83），绑定于 accent 在**白**封面。蒙版底色随 `--system-background` 从 `#0f0f11` 变为纯黑 |
+| 玻璃 ramp / sheen | 全部保持原值 | 原推导绑定于「三级墨色 ≥4.5」；新体系下最紧的是 accent 对 3.0 下限（4.42），余量反而变大。已重新推导确认，不重开 |
+| `increase-contrast` 浅色 | secondary-label 0.73 / tertiary 0.57 | 分别为过 4.5 / 3.0 在白与 `#f2f2f7` 两个底上的最小 alpha |
+| `increase-contrast` 暗色 | 只抬 tertiary 到 0.38 | 暗色 secondary-label 在 0.60 已是 5.27–6.36，不需要动。**且 accent 换 `#409cff` 后白字只有 2.83，`--accent-content` 必须同时翻黑**（7.42） |
+
+## 主题包映射
+
+- 包体**零令牌名**（3 个 sha256 锁定 bundle 全部 grep 确认），只有语义字段。重命名是内部改动，包不受影响。风险已排除。
+- 包的两个颜色现在驱动**两组背景**。只映射普通组会让设置类页面在包主题下仍是 Apple 原生灰、与全 App 割裂。这不是扩大覆盖能力——同样两个颜色原本就通过 `--canvas`/`--paper` 到达这些表面。
+- 包的 wash alpha 从 0.1/0.14 改为 **0.10/0.18**，与基线一致。此前包比基线高两点，意味着包的 wash 一直比闸门验证过的那个更重。
+- `readableTextColorOn()` 返回 `#000000` 而非 `#111111`（Apple 的 `label` 是纯黑）。
+- **残余风险照登**：包的 seed 若比 systemBlue 更深，会收紧「systemRed 在 wash 上」的上界，从而**逸出基线验证过的包线**。闸门只覆盖 tokens.css 与内置包，这是 §2.4 那个决策的直接后果。
+
+## 官方色值核对（已完成，并推翻了一批值）
+
+WebFetch 被拦截，改用 `curl` 直取 HIG 的 DocC JSON（`https://developer.apple.com/tutorials/data/design/human-interface-guidelines/color.json`）。
+
+关键发现：**色值以色板 PNG 的形式发布，而每张图的 `alt` 属性就是字面 RGB 三元组**（如 `"alt": "R-30,G-110,B-244"`）。据此抽出 **72 个官方色板值**。同时页面的修订记录里有一条决定性的：**「June 9, 2025 — Updated system color values」**——Apple 改过系统色值，我凭知识写的是**旧值**。
+
+| 令牌 | 我原先写的 | 官方值 | |
+|---|---|---|---|
+| 浅色 `--accent` | `#007aff` | **`#0088ff`** | 错 |
+| 暗色 `--accent` | `#0a84ff` | **`#0091ff`** | 错 |
+| 浅色 `--system-red` | `#ff3b30` | **`#ff383c`** | 错 |
+| 暗色 `--system-red` | `#ff453a` | **`#ff4245`** | 错 |
+| IC 浅色 accent | `#0040dd`（我自己算的） | **`#1e6ef4`** | 错 |
+| IC 暗色 accent | `#409cff`（我自己算的） | **`#5cb8ff`** | 错 |
+| `--system-red-strong` | `#d70015`（我自己算的） | **`#e9152d`** | 错 |
+| `--system-green` 明/暗 | `#34c759` / `#30d158` | 同 | 对 |
+| `--system-gray`…`gray6` 明/暗 | 全部 | 全部相同 | 对 |
+
+全部已改为官方值，并补上了官方 **accessible 灰阶**（IC 用，浅色起点更深 `#6c6c70`、暗色起点更浅 `#aeaeb2`）。
+
+**核对边界要说清**：Apple **只**发布 12 个色调色与 6 级灰阶（含 accessible 变体）的数值。label / 背景 / 填充 / separator 四组**没有**官方数值——`DESIGN.md` §3.3 记录了原因（「文档中的颜色值仅供设计参考」）。这几组只能间接佐证：背景层级与已核实的灰阶重合（浅色 `secondarySystemBackground` = `systemGray6` = `#f2f2f7`，暗色 = `#1c1c1e`，暗色 tertiary = `systemGray5` = `#2c2c2e`），这已是它们能达到的最高验证程度。
+
+**一条不可避免的规范偏离**：`DESIGN.md` §3.3 明确「不要在代码中硬编码系统颜色值」，应通过 API 取色。Lynx 没有这样的 API，CSS 自定义属性是唯一通道，硬编码是被迫的。后果就是上面那次静默过期——已在 tokens.css 写明，需在每个大版本 OS 发布后复核。
+
+## 官方值代入后引出的三项修正
+
+**1. 官方蓝更亮，`--accent` 也在重填充上失败。** `#0088ff` 比 `#007aff` 亮，导致浅色 accent 在 `--system-fill` 上跌到 **2.77**、`--secondary-system-fill` 上 **2.91**。与 systemRed 合并为一条规则登记：**最重的两档 Apple 填充是给形状用的，不是给彩色文字当底的**（`--label` 16.5–19.1、`--secondary-label` 3.13–3.31 均不受影响，两档较轻的填充也都过关；暗色全程不受影响）。`FORBIDDEN` 扩到 4 条，CSS 扫描从「仅红色」放宽为「任何彩色文字」。
+
+**2. `--system-red-strong` 从「我造的需求」变成「必须的修正」。** 先查证仓库规则「danger 仅文字、不做彩色背景块」——发现**已被 6 处违反**，其中 4 处是真的白字压红底按钮（另 2 处是进度条填充与状态圆点，无文字，属 UI 图形，正确）。实测：
+
+| | 白字比值 |
+|---|---|
+| 浅色 既存 `#d64545` | 4.38 |
+| 浅色 若用官方 systemRed `#ff383c` | **3.57（比既存更差）** |
+| 浅色 用官方 accessible `#e9152d` | **4.56 ✓ AA** |
+| 暗色 既存站点 4/6 白字压 `#ff6b6b` | **2.78 ✗（既存的真实失败）** |
+| 暗色 用 `#e9152d` | **4.56 ✓ AA** |
+
+即：不做这件事我就是在让浅色从 4.38 退到 3.57。已把那 4 处迁到 `--system-red-strong` + 新增的 `--system-red-strong-content`，两个主题都过 AA。`--system-red-strong` 两主题同值是刻意的——Apple 的暗色 accessible red `#ff6165` **更亮**（它是给暗底当文字用的），白字压上去只有 2.94。
+
+**3. Increase Contrast 是部分缓解，不是完备的。** 官方 accessible 浅色蓝 `#1e6ef4` 在白底 4.57 ✓，但在分组灰底 `#f2f2f7` 上只有 **4.10 ✗**。即使开了这个设置，分组页上的 accent 文字仍不过 AA。label 层级则确实过（浅色 secondary 白底 4.88 / 灰底 4.59）。已在 tokens.css 写明，不美化。
+
+另外修正了两处我先前写反的注释：浅色玻璃角与浅色蒙版的最紧配对都是 **`--accent`**（3.23 / 3.08），不是 systemRed。浅色蒙版余量因此比我上一版记录的更薄——accent 在 3.08 对 3.0 下限，不足十分之一点。
+
+## 未验证事项
+
+- label / 背景 / 填充 / separator 四组无官方数值可核（见上），只能间接佐证。
+- 明暗两主题 × 窄宽两布局 × 至少 1 个内置包的真机/模拟器观感未看。
+- 构建告警现状：4 组 `-webkit-box-orient`/`-webkit-line-clamp` 告警**为既存**，来自 `PlaylistDetailPage.css`、`SongInfoDialog.css`、`PluginManagerPage.css`、`LyricAdjustPage.css`——均不在本批改动内，且各文件内都有注释说明该属性是刻意使用、会被剥离。`progress.md` 中「构建警告自批19b 起归零」一句已过期，它指的是另一类告警（`placeholder-color`/`text-transform`/`object-fit`）。

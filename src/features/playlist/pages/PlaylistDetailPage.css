@@ -258,11 +258,14 @@
 .playlist-detail__select-toolbar-btn {
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-pill);
-  background-color: var(--danger);
+  /* Filled destructive control: --system-red-strong (Apple's accessible red),
+     NOT --system-red. White on systemRed is 3.57 in light and 3.43 in dark;
+     on the accessible red it is 4.56, which clears AA in both themes. */
+  background-color: var(--system-red-strong);
 }
 
 .playlist-detail__select-toolbar-btn-text {
-  color: var(--primary-content);
+  color: var(--system-red-strong-content);
   font-size: var(--font-sm);
   font-weight: var(--weight-bold);
 }

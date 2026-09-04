@@ -33,13 +33,22 @@
   height: 31px;
   padding: 3px;
   border-radius: var(--radius-pill);
-  /* Muse Toggle: off = the strong-border grey, visible in both themes. */
-  background-color: var(--rule);
+  /* Off = the grey-5 step, which is what Apple's off-track measures in light
+     (#e5e5ea against Apple's #e9e9ea). The former `--rule` reads too heavy at
+     #c6c6c8 once the palette moved to Apple's values. */
+  background-color: var(--system-gray5);
   transition: background-color 0.2s;
 }
 
 .app-switch__track.ui-checked {
-  background-color: var(--primary);
+  /* systemGreen, NOT the accent. Apple's switches are green regardless of the
+     app's tint, and the former `--primary` was an ink channel that happened to
+     read as "on"; inheriting the new systemBlue accent here would make every
+     switch look like a selected control instead of an enabled one.
+     Honest note: the green track measures 2.22 against a light backdrop, so its
+     boundary does not clear WCAG 1.4.11's 3:1. The state is also carried by thumb
+     position, so colour is not the only channel (1.4.1 holds). */
+  background-color: var(--system-green);
   justify-content: flex-end;
 }
 
@@ -47,9 +56,11 @@
   width: 25px;
   height: 25px;
   border-radius: var(--radius-pill);
-  /* Thumb = canvas colour (white in light, near-black in dark) so it reads on
-     both the grey off-track and the accent on-track. Muse §4.4. */
-  background-color: var(--canvas);
+  /* Always white, in BOTH themes — Apple's thumb does not follow the page.
+     This used to be `--canvas`, which worked only because the dark accent was
+     itself white, so a near-black thumb read against it. With a green on-track
+     and a pure-black dark page, `--canvas` would paint a black thumb on green. */
+  background-color: #ffffff;
   box-shadow: var(--shadow-sm);
 }
 

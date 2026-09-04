@@ -98,10 +98,18 @@ test('radius and shadow additions land alongside the untouched originals', () =>
   // --shadow-sm/md/lg are per-theme (in .theme-dark/.theme-light), so they are
   // NOT in the theme-root block. Only the theme-agnostic shadow extras live here.
   expect(decl['--shadow-none']).toBe('none')
-  // --shadow-focus resolves --primary-faint at use time, so the literal is kept
+  // --shadow-focus resolves --tint-fill at use time, so the literal is kept
   // verbatim — the theme-layer resolution is covered by the Docker-Chrome
   // runtime check, not by static text matching.
-  expect(decl['--shadow-focus']).toBe('0 0 0 3px var(--primary-faint)')
+  expect(decl['--shadow-focus']).toBe('0 0 0 3px var(--tint-fill)')
+})
+
+test('the Apple grouped-list corner is its own token, not --radius-sm', () => {
+  // 10pt is Apple's inset-grouped cell radius. Keeping it separate from
+  // --radius-sm (8px) is what lets the two be retuned independently — the
+  // settings cards and a badge are not the same shape decision.
+  expect(decl['--radius-grouped']).toBe('10px')
+  expect(decl['--radius-sm']).not.toBe(decl['--radius-grouped'])
 })
 
 test('HIG §12.2 control / tap-target sizes are declared', () => {
@@ -126,4 +134,235 @@ test('legacy --font-* tokens keep their original values (no alias drift)', () =>
   for (const [name, value] of Object.entries(frozen)) {
     expect(decl[name], `${name} (legacy, frozen)`).toBe(value)
   }
+})
+
+/**
+ * Apple semantic colours, pinned per theme.
+ *
+ * This block exists for the reason stated at the top of the file: Lynx drops an
+ * unrecognised custom-property declaration SILENTLY. A token misspelled in
+ * `tokens.css` does not warn, does not fall back visibly, and does not fail any
+ * render test — the element simply inherits. Every semantic colour therefore has
+ * to be named here, or its existence is unverified.
+ *
+ * PROVENANCE, because it decides how much these values can be trusted:
+ *
+ *  - The 12 tint colours and the six-step grey ladder (and their Increased-Contrast
+ *    variants) are VERIFIED against Apple's own published swatches — the HIG's
+ *    colour page carries them as images whose `alt` text is the literal RGB triple.
+ *    They were fetched and diffed, and several of the values previously carried here
+ *    were the PRE-2025 ones: Apple's "June 9, 2025 — Updated system color values"
+ *    revision moved systemBlue from #007aff/#0a84ff to #0088ff/#0091ff and systemRed
+ *    from #ff3b30/#ff453a to #ff383c/#ff4245, among others.
+ *  - The label, background, fill and separator tiers are NOT published numerically by
+ *    Apple anywhere; DESIGN.md §3.3 records why ("文档中的颜色值仅供设计参考"). Those
+ *    values come from the design resources and are corroborated where possible: the
+ *    background tiers coincide with the verified grey ladder (light
+ *    secondarySystemBackground = systemGray6 = #f2f2f7, dark = #1c1c1e, dark tertiary
+ *    = systemGray5 = #2c2c2e), which is as close to verification as they get.
+ *
+ * Where an Apple value costs contrast the number is recorded in `tokens.css` next to
+ * the token and enforced (or deliberately not enforced) by `contrast.test.ts`; this
+ * gate is about identity, not legibility.
+ */
+function themeDeclarations(theme: 'light' | 'dark'): Record<string, string> {
+  const block = TOKENS.match(
+    new RegExp(`\\.theme-root\\.theme-${theme}\\s*\\{([\\s\\S]*?)\\n\\s*\\}`),
+  )
+  expect(block, `.theme-root.theme-${theme} block exists`).not.toBeNull()
+  return parseDeclarations(block![1]!)
+}
+
+const APPLE_COLORS = {
+  light: {
+    '--label': '#000000',
+    '--secondary-label': 'rgba(60, 60, 67, 0.6)',
+    '--tertiary-label': 'rgba(60, 60, 67, 0.3)',
+    '--quaternary-label': 'rgba(60, 60, 67, 0.18)',
+    '--placeholder-text': 'rgba(60, 60, 67, 0.3)',
+    '--system-background': '#ffffff',
+    '--secondary-system-background': '#f2f2f7',
+    '--tertiary-system-background': '#ffffff',
+    '--system-grouped-background': '#f2f2f7',
+    '--secondary-system-grouped-background': '#ffffff',
+    '--tertiary-system-grouped-background': '#f2f2f7',
+    '--system-fill': 'rgba(120, 120, 128, 0.2)',
+    '--secondary-system-fill': 'rgba(120, 120, 128, 0.16)',
+    '--tertiary-system-fill': 'rgba(118, 118, 128, 0.12)',
+    '--quaternary-system-fill': 'rgba(116, 116, 128, 0.08)',
+    '--separator': 'rgba(60, 60, 67, 0.29)',
+    '--opaque-separator': '#c6c6c8',
+    '--accent': '#0088ff',
+    '--accent-content': '#ffffff',
+    '--tint-fill': 'rgba(0, 136, 255, 0.1)',
+    '--system-red': '#ff383c',
+    '--system-red-strong': '#e9152d',
+    '--system-red-strong-content': '#ffffff',
+    '--system-green': '#34c759',
+    '--system-gray': '#8e8e93',
+    '--system-gray2': '#aeaeb2',
+    '--system-gray3': '#c7c7cc',
+    '--system-gray4': '#d1d1d6',
+    '--system-gray5': '#e5e5ea',
+    '--system-gray6': '#f2f2f7',
+  },
+  dark: {
+    '--label': '#ffffff',
+    '--secondary-label': 'rgba(235, 235, 245, 0.6)',
+    '--tertiary-label': 'rgba(235, 235, 245, 0.3)',
+    '--quaternary-label': 'rgba(235, 235, 245, 0.16)',
+    '--placeholder-text': 'rgba(235, 235, 245, 0.3)',
+    '--system-background': '#000000',
+    '--secondary-system-background': '#1c1c1e',
+    '--tertiary-system-background': '#2c2c2e',
+    '--system-grouped-background': '#000000',
+    '--secondary-system-grouped-background': '#1c1c1e',
+    '--tertiary-system-grouped-background': '#2c2c2e',
+    '--system-fill': 'rgba(120, 120, 128, 0.36)',
+    '--secondary-system-fill': 'rgba(120, 120, 128, 0.32)',
+    '--tertiary-system-fill': 'rgba(118, 118, 128, 0.24)',
+    '--quaternary-system-fill': 'rgba(118, 118, 128, 0.18)',
+    '--separator': 'rgba(84, 84, 88, 0.65)',
+    '--opaque-separator': '#38383a',
+    '--accent': '#0091ff',
+    '--accent-content': '#ffffff',
+    '--tint-fill': 'rgba(0, 145, 255, 0.18)',
+    '--system-red': '#ff4245',
+    '--system-red-strong': '#e9152d',
+    '--system-red-strong-content': '#ffffff',
+    '--system-green': '#30d158',
+    '--system-gray': '#8e8e93',
+    '--system-gray2': '#636366',
+    '--system-gray3': '#48484a',
+    '--system-gray4': '#3a3a3c',
+    '--system-gray5': '#2c2c2e',
+    '--system-gray6': '#1c1c1e',
+  },
+} as const
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`${theme}: every Apple semantic colour is declared with its Apple value`, () => {
+    const decl = themeDeclarations(theme)
+    for (const [name, value] of Object.entries(APPLE_COLORS[theme])) {
+      expect(decl[name], `${name} declared in .theme-${theme}`).toBeDefined()
+      expect(decl[name], `${name} in .theme-${theme}`).toBe(value)
+    }
+  })
+}
+
+test('the two background groups differ in light and collapse in dark', () => {
+  // This is the structural fact that made six background tokens necessary rather
+  // than three, and the single most visible change from the former palette. If a
+  // future edit flattens it, the grouped screens silently stop being grouped.
+  const light = themeDeclarations('light')
+  const dark = themeDeclarations('dark')
+
+  expect(light['--system-background'], 'light plain page is white')
+    .not.toBe(light['--system-grouped-background'])
+  expect(light['--secondary-system-background'], 'light plain card is grey')
+    .not.toBe(light['--secondary-system-grouped-background'])
+  // …and the relationship is INVERTED, not merely different: the grouped page
+  // wears the plain card's colour and vice versa.
+  expect(light['--system-grouped-background']).toBe(light['--secondary-system-background'])
+  expect(light['--secondary-system-grouped-background']).toBe(light['--system-background'])
+
+  expect(dark['--system-background'], 'dark collapses both page tiers to black')
+    .toBe(dark['--system-grouped-background'])
+  expect(dark['--secondary-system-background'])
+    .toBe(dark['--secondary-system-grouped-background'])
+})
+
+/**
+ * The former Muse names that survive only as aliases. This list is written out
+ * rather than derived, and the reason is the failure it has to catch: deriving
+ * "the aliases" as "whatever currently starts with `var(`" is circular — an alias
+ * that drifted back to a hardcoded colour simply drops out of the derived set and
+ * nothing is asserted about it. (Confirmed by perturbation: with a derived set,
+ * rewriting `--content` to `#111111` left the gate green.)
+ *
+ * A hand-written list is normally a liability, but here it is safe in the one
+ * direction that matters: the set only ever SHRINKS. Every migration stage
+ * deletes entries, the final stage empties it, and the equality check below fails
+ * if the stylesheet and this list disagree either way.
+ */
+const MUSE_ALIASES = [
+  '--canvas', '--paper',
+  '--content', '--content-2', '--content-muted',
+  '--primary', '--primary-content', '--primary-faint',
+  '--danger', '--danger-content', '--danger-2',
+  '--neutral-faint', '--line', '--rule', '--fill-faint',
+] as const
+
+test('Muse compatibility aliases resolve to Apple tokens, never to literals', () => {
+  /*
+   * The alias bridge is what lets the migration land screen by screen, and its
+   * whole value depends on the aliases being INDIRECTIONS. An alias pinned to a
+   * literal would keep passing every other gate while quietly freezing one screen
+   * on a stale palette — and theme packs, which override the Apple name inline,
+   * would stop reaching it entirely.
+   */
+  for (const theme of ['light', 'dark'] as const) {
+    const decl = themeDeclarations(theme)
+
+    // Set equality in BOTH directions: a → literal drift shows up as a missing
+    // entry, a newly-invented alias as an extra one.
+    const actual = Object.entries(decl)
+      .filter(([, value]) => value.startsWith('var('))
+      .map(([name]) => name)
+      .sort()
+    expect(actual, `.theme-${theme} alias set must match MUSE_ALIASES exactly`)
+      .toEqual([...MUSE_ALIASES].sort())
+
+    for (const name of MUSE_ALIASES) {
+      const value = decl[name]
+      expect(value, `${name} declared in .theme-${theme}`).toBeDefined()
+      expect(value, `${name} in .theme-${theme} must point at exactly one token`)
+        .toMatch(/^var\(--[\w-]+\)$/)
+      const target = value!.slice(4, -1)
+      expect(decl[target], `${name} points at ${target}, which must exist`).toBeDefined()
+      expect(decl[target], `${name} -> ${target} must not itself be an alias`)
+        .not.toMatch(/^var\(/)
+    }
+  }
+})
+
+test('increase-contrast raises what Apple leaves below AA, per theme', () => {
+  /*
+   * Shipping Apple's palette verbatim leaves systemBlue-as-text at 4.02 and light
+   * secondaryLabel at 3.44. This variant is the mitigation, so its existence is
+   * gated rather than assumed.
+   *
+   * The asymmetry is the point and is asserted: light must deepen its secondary
+   * label (0.60 clears only 3.0 there), dark must not bother (0.60 already
+   * measures 5.27–6.36). And the dark accent must flip --accent-content to black —
+   * white on #409cff is 2.83, so a brighter accent moves the label too.
+   */
+  function variant(theme: 'light' | 'dark'): Record<string, string> {
+    const block = TOKENS.match(
+      new RegExp(`\\.theme-root\\.theme-${theme}\\.increase-contrast\\s*\\{([\\s\\S]*?)\\n\\s*\\}`),
+    )
+    expect(block, `.theme-root.theme-${theme}.increase-contrast exists`).not.toBeNull()
+    return parseDeclarations(block![1]!)
+  }
+
+  const light = variant('light')
+  expect(light['--accent']).toBe('#1e6ef4')
+  expect(light['--secondary-label']).toBe('rgba(60, 60, 67, 0.73)')
+  expect(light['--tertiary-label']).toBe('rgba(60, 60, 67, 0.57)')
+  expect(light['--system-red']).toBe('#e9152d')
+  expect(light['--separator']).toBe('var(--opaque-separator)')
+  // Apple's accessible grey ladder, not a rescaling of the default one.
+  expect(light['--system-gray']).toBe('#6c6c70')
+  expect(light['--system-gray6']).toBe('#ebebf0')
+
+  const dark = variant('dark')
+  expect(dark['--accent']).toBe('#5cb8ff')
+  expect(dark['--accent-content'], 'white on #5cb8ff is 2.15 — the label must flip')
+    .toBe('#000000')
+  expect(dark['--system-gray']).toBe('#aeaeb2')
+  expect(dark['--system-gray6']).toBe('#242426')
+  expect(dark['--tertiary-label']).toBe('rgba(235, 235, 245, 0.38)')
+  expect(dark['--separator']).toBe('var(--opaque-separator)')
+  expect(dark['--secondary-label'], 'dark already clears AA at 0.60 — leave it alone')
+    .toBeUndefined()
 })

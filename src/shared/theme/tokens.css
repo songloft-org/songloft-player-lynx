@@ -1,21 +1,70 @@
 /*
- * Muse design tokens (see DESIGN.md at the repo root).
+ * Apple design-system tokens.
  *
- * "用最少的视觉语言,呈现最完整的产品结构" — one ink accent, white/#fafafa
- * surfaces, hairline #ececee separators, radius hierarchy, minimal shadow.
+ * This file replaces the former self-designed "Muse" palette. The colour layer
+ * is now Apple's semantic system — four label tiers, two background groups
+ * (plain and grouped, which swap roles between light and dark), four fill
+ * tiers, separator/opaqueSeparator, systemBlue accent, systemRed/Green.
+ * See `docs/project/plans/apple-design-system-migration.md` for the full
+ * mapping, the measured contrast figures, and the staged rollout.
  *
- * `.theme-root` carries the theme-agnostic scale (spacing/radii/font sizes/shadows)
- * and layout; the actual color values live in a sibling `.theme-<name>` class
+ * ── Structure ────────────────────────────────────────────────────────────────
+ * `.theme-root` carries the theme-agnostic scale (spacing/radii/font sizes/
+ * motion) and layout; colour values live in a sibling `.theme-<name>` class
  * applied alongside it by `ThemeProvider` (`theme-root theme-dark` /
  * `theme-root theme-light`), so switching themes is just swapping that second
- * class — no component styling changes, everything already reads `var(--…))`.
- * Compound class selectors (`.a.b`) already ship elsewhere in this codebase
- * (`LoginPage.css` `.login__switch-track.ui-checked`), so this is not a new
- * CSS-support risk.
+ * class. `.theme-root.theme-<name>.increase-contrast` (three classes, so it
+ * wins on specificity regardless of source order) carries Apple's
+ * Increase-Contrast accent.
  *
- * Token names are preserved vs. the old LUNA set so every consumer adopts the
- * new palette without a single edit. Only values change (plus a few new
- * additions: --radius-xl, --shadow-*, --mobile-nav-height).
+ * ── The alias bridge ─────────────────────────────────────────────────────────
+ * The Apple tokens are the single source of truth. The former Muse names are
+ * kept as THIN ALIASES pointing at them (`--content: var(--label)`), which is
+ * what lets the migration land screen by screen instead of as one 80-file
+ * rename: this file changes colour values app-wide today, and each later stage
+ * swaps one screen's CSS onto the real names. The aliases are deleted in the
+ * final stage, with a gate that rejects their reappearance.
+ *
+ * A nested `var()` inside a custom property DOES resolve per-theme on the
+ * consuming element (headless-Chrome verified through the lynx-css pipeline),
+ * and `--glass-ramp` / `--shadow-focus` already ship in exactly this shape, so
+ * the bridge is not a new mechanism.
+ *
+ * Alias direction matters: theme packs deliver their overrides as INLINE custom
+ * properties on the theme root (see `theme-pack-mapping.ts`), and inline beats
+ * a class declaration. So packs must set the NEW names — an alias then resolves
+ * through to the pack's value and un-migrated CSS keeps getting pack colours.
+ * Pointing the alias the other way would silently strand every pack override
+ * the moment a screen migrated.
+ *
+ * ── Where these values come from ─────────────────────────────────────────────
+ * DESIGN.md §3.3 records Apple's own instruction: 不要在代码中硬编码系统颜色值 —
+ * the published numbers are design reference, and apps are meant to reach the
+ * colours through an API. Lynx gives us no such API: CSS custom properties are the
+ * only channel, so hardcoding is forced. The consequence is that these values can
+ * go stale silently, and they HAVE: Apple's "June 9, 2025 — Updated system color
+ * values" revision moved systemBlue from #007aff/#0a84ff to #0088ff/#0091ff and
+ * systemRed from #ff3b30/#ff453a to #ff383c/#ff4245. They need re-checking against
+ * Apple's published swatches on each major OS release.
+ *
+ * The 12 tint colours and the six-step grey ladder (with their Increased-Contrast
+ * variants) are VERIFIED against those swatches. The label / background / fill /
+ * separator tiers are not published numerically by Apple at all; see the note in
+ * `tokens-hig.test.ts` for how far they can be corroborated.
+ *
+ * ── Honest note on contrast ──────────────────────────────────────────────────
+ * Apple's own values are shipped verbatim, which is a deliberate, user-approved
+ * trade: `secondaryLabel` measures 3.44:1 on white (the former `--content-2`
+ * measured 5.61:1), `systemBlue` as text is 3.52:1, `systemRed` 3.57:1, and the
+ * `systemGreen` switch track is 2.22:1 against white. None of those clear WCAG
+ * AA 4.5:1; the first three clear 3:1. `contrast.test.ts` therefore enforces a
+ * tiered floor (4.5 for `--label`, 3.0 for secondary/accent/red) plus a usage
+ * scan that keeps tertiary/quaternary label off anything load-bearing.
+ *
+ * `.increase-contrast` is the mitigation — and it is a PARTIAL one, which is worth
+ * stating plainly rather than discovering later: Apple's accessible blue reaches
+ * 4.57 on white but only 4.10 on the grouped grey background, so even with the
+ * setting on, accent text on a grouped page does not clear AA.
  */
 
 .theme-root {
@@ -36,7 +85,10 @@
   --space-9: 40px;
   --space-10: 48px;
 
-  /* radii — Muse hierarchy: small 8 / medium 12 / large 20 / xl 28 / pill 999.
+  /* radii — small 8 / medium 12 / large 20 / xl 28 / pill 999.
+     --radius-grouped is Apple's inset-grouped list corner (10pt): the settings
+     cards use it, and it is deliberately NOT --radius-sm so the two can be
+     retuned independently.
      --radius-nav is legacy: the bottom nav is a fixed capsule (always
      --radius-pill, see ShellLayout.css) since the iOS-26 restyle, so nothing
      consumes this token anymore. Packs' `navigationRadius` still maps onto it
@@ -47,6 +99,7 @@
   --radius-xl: 28px;
   --radius-pill: 999px;
   --radius-xs: 6px;
+  --radius-grouped: 10px;
   --radius-nav: 12px;
 
   /* HIG §8 Accessibility: text-scale token. All font-size tokens below
@@ -54,9 +107,13 @@
      every text style. Default 1 = no scaling. */
   --font-scale: 1;
 
-  /* type scale (px) — --font-2xs is the bottom-nav tab label: Apple's tab
-     bars use 10pt labels, and the smaller size is also what lets a 4-char
-     CJK plugin name fit the fixed-width selection capsule (see
+  /* Legacy type scale (px) — being retired. These have no exact Apple text
+     style (10/14/28/36px), so they were never aliased onto the HIG ladder;
+     each is migrated per-screen by semantic role instead (see the plan's
+     §3.6), and the whole block is deleted in the final stage. --font-2xs is
+     the exception that stays under its own name until then: it is the bottom-nav
+     tab label, Apple's tab bars use 10pt, and the size is also what lets a
+     4-char CJK plugin name fit the fixed-width selection capsule (see
      ShellLayout.css). */
   --font-2xs: calc(10px * var(--font-scale));
   --font-xs: calc(12px * var(--font-scale));
@@ -67,10 +124,8 @@
   --font-2xl: calc(36px * var(--font-scale));
 
   /* HIG §4.7 iOS text styles — Lynx treats 1pt ≈ 1px, so these map pt→px
-     directly. The old --font-* tokens keep their original values (no alias
-     mapping: 10/14/28/36px have no exact HIG counterpart, aliasing them
-     would drift sizes); new code uses the HIG names. --font-headline is 17px
-     like --font-body, the weight differentiates (see --weight-semibold). */
+     directly. --font-headline is 17px like --font-body, the weight
+     differentiates (see --weight-semibold). */
   --font-caption2: calc(11px * var(--font-scale));
   --font-caption1: calc(12px * var(--font-scale));
   --font-footnote: calc(13px * var(--font-scale));
@@ -97,10 +152,10 @@
 
   /* shadow extras — --shadow-sm/md/lg stay per-theme (see the theme blocks
      below); --shadow-none is the semantic zero, --shadow-focus is the a11y
-     focus ring. --shadow-focus reads --primary-faint at use time, so it
-     tracks whichever theme is active (and never silently no-ops). */
+     focus ring. --shadow-focus reads --tint-fill at use time, so it tracks
+     whichever theme is active (and never silently no-ops). */
   --shadow-none: none;
-  --shadow-focus: 0 0 0 3px var(--primary-faint);
+  --shadow-focus: 0 0 0 3px var(--tint-fill);
 
   /* HIG Motion — duration and easing tokens (HIG §10 Motion).
      Consumer CSS references these as var(--duration-*) / var(--ease-*).
@@ -121,13 +176,19 @@
    * Composite glass layers. These live here, declared once, rather than being
    * duplicated per theme: a nested `var()` inside a custom property *does*
    * resolve per-theme on the consuming element (headless-Chrome verified through
-   * the lynx-css pipeline — `--line` read through a composite token switches
-   * with the theme class), so the atomic per-theme tokens flow through. They
+   * the lynx-css pipeline), so the atomic per-theme tokens flow through. They
    * also pick up the material system's runtime overrides for free, since those
    * are injected as inline vars on this same element.
    *
    * The point of bundling them is that a glass surface stays four lines instead
    * of nine, and there is exactly one place to retune.
+   *
+   * The `--glass-*` names are unchanged in this stage on purpose. They are due
+   * for a rename onto Apple's material vocabulary, but that is a pure rename
+   * across 14 call sites plus three gates, and mixing it into a colour-value
+   * replacement would make this diff far harder to review and to bisect. It is
+   * sequenced as its own stage — see the plan's §3.7 note about the name clash
+   * with the existing `MaterialVariant` thickness axis.
    *
    * No leading bare `0` before a negative length in here: the minifier collapses
    * `inset 0 -1px 0` to `inset 0-1px 0` *inside a custom property value* (it
@@ -157,8 +218,8 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background-color: var(--canvas);
-  color: var(--content);
+  background-color: var(--system-background);
+  color: var(--label);
 }
 
 /* HIG §10 Motion: reduce-motion zeroes durations so transitions/animations
@@ -171,269 +232,400 @@
   --duration-slow: 0ms;
 }
 
-/* ── Dark — Muse dark is a re-tuned set, not a simple invert (#0f0f11 etc.) ─ */
+/* ── Dark ─────────────────────────────────────────────────────────────────────
+   Apple's dark system is not an inverted light: the plain and grouped
+   background groups COLLAPSE here (both start at pure black), which is the
+   opposite of light, where they differ. That is why six background tokens
+   exist rather than three. */
 .theme-root.theme-dark {
-  /* surfaces */
-  --canvas: #0f0f11;
-  --paper: #17171b;
-  --paper-clear: rgba(23, 23, 27, 0.9);
+  /* backgrounds — plain group (ordinary pages: home, player, lists) */
+  --system-background: #000000;
+  --secondary-system-background: #1c1c1e;
+  --tertiary-system-background: #2c2c2e;
 
-  /* Liquid Glass surfaces — honest faux-glass (Lynx has no backdrop-filter, so
-     no real refraction; `--glass-fill`/`--glass-fill-strong` are translucent
-     paper colours over the canvas, and the sheen is carried by `box-shadow:
-     inset` highlights + a coloured `--glass-sheen` tint, not a sampled blur).
-     `--glass-fill` (0.85) is for surfaces floating over content (nav capsule,
-     mini-player) where readability needs the higher alpha; `--glass-fill-strong`
-     (0.72) is for surfaces mounted over a scrim (popover/dialog/sheet), which
-     can lean more transparent. `--glass-glow` is the decorative accent (star
-     blue by default; packs re-point it at their `seedColor` via
-     theme-pack-mapping.ts) — buttons keep `--primary`, so glass and actions
-     stay two independent channels (Muse's single-ink button language). */
+  /* backgrounds — grouped group (settings-style inset lists). In dark the page
+     is pure black and the cards lift to #1c1c1e; in light it is the reverse
+     (grey page, white cards). Same token names, inverted relationship. */
+  --system-grouped-background: #000000;
+  --secondary-system-grouped-background: #1c1c1e;
+  --tertiary-system-grouped-background: #2c2c2e;
+
+  /* labels — four tiers. All but the first are TRANSLUCENT by design, so their
+     effective colour depends on what is under them; the contrast gate
+     composites them per surface rather than treating the rgba as a solid.
+     Measured on #1c1c1e: secondary 5.95, tertiary 2.48, quaternary 1.58.
+     Tertiary and quaternary therefore carry no contrast floor and are confined
+     by a usage scan to placeholders, disabled states and decoration. */
+  --label: #ffffff;
+  --secondary-label: rgba(235, 235, 245, 0.6);
+  --tertiary-label: rgba(235, 235, 245, 0.3);
+  --quaternary-label: rgba(235, 235, 245, 0.16);
+  --placeholder-text: rgba(235, 235, 245, 0.3);
+
+  /* fills — for small shapes ON content (search field backing, slider tracks,
+     segmented controls, inset blocks). Translucent on purpose so a glass panel
+     and the page under it still read through; an opaque token in these slots
+     REPLACES the material instead of sitting on it. */
+  --system-fill: rgba(120, 120, 128, 0.36);
+  --secondary-system-fill: rgba(120, 120, 128, 0.32);
+  --tertiary-system-fill: rgba(118, 118, 128, 0.24);
+  --quaternary-system-fill: rgba(118, 118, 128, 0.18);
+
+  /* separators. --separator is translucent and blends with what it crosses;
+     --opaque-separator is for the cases that must not show anything through
+     (control borders, switch track). Neither carries text, so neither has a
+     contrast floor. */
+  --separator: rgba(84, 84, 88, 0.65);
+  --opaque-separator: #38383a;
+
+  /* accent — systemBlue. Measured as text on #000 6.49, on #1c1c1e 5.26, on
+     #2c2c2e 4.31: clears 3.0 everywhere, clears 4.5 on the two darker
+     surfaces. --accent-content is the label on an accent fill (white on blue,
+     3.23 — below AA, which is why .increase-contrast exists).
+     --tint-fill is the accent wash for tinted buttons, badges, and
+     selected/current row states; a theme pack re-points it at its seed colour,
+     so anything neutral must use --quaternary-system-fill instead. Its alpha is
+     derived, not chosen: 0.18 puts wash visibility at 1.188 over the page and
+     1.249 over glass, both clear of the 1.08 floor, while keeping systemRed on
+     a washed row at 4.41. The feasible window here is wide ([0.10, 0.39]); light's
+     is not, which is why the two themes are documented separately. */
+  --accent: #0091ff;
+  --accent-content: #ffffff;
+  --tint-fill: rgba(0, 145, 255, 0.18);
+
+  /* semantic colours. --system-red is for TEXT and icons (6.12 on #000, 4.96 on
+     #1c1c1e). It is NOT usable as a filled button behind white text — white on
+     #ff4245 is 3.43 — so filled destructive controls use --system-red-strong,
+     Apple's ACCESSIBLE red, where white lands at 4.56 and clears AA.
+     --system-red-strong is the same value in both themes on purpose: Apple's dark
+     accessible red (#ff6165) is BRIGHTER, because it is meant as text on a dark
+     surface, and white on it drops to 2.94. Using the light variant as the fill in
+     both themes keeps one label colour and clears AA either way.
+     --system-green is the switch on-state. Its track measures 2.22 against a
+     light backdrop and 10.39 against black, i.e. the light theme's track
+     boundary does not clear 3:1; the state is also carried by thumb position,
+     so colour is not the only channel. */
+  --system-red: #ff4245;
+  --system-red-strong: #e9152d;
+  --system-red-strong-content: #ffffff;
+  --system-green: #30d158;
+
+  /* grey ladder. Consumed by the per-screen stages (row icons, disabled
+     glyphs, inset chrome); declared here so the ladder is defined in one place
+     rather than reinvented per screen. */
+  --system-gray: #8e8e93;
+  --system-gray2: #636366;
+  --system-gray3: #48484a;
+  --system-gray4: #3a3a3c;
+  --system-gray5: #2c2c2e;
+  --system-gray6: #1c1c1e;
+
+  /* Toast is a neutral high-contrast capsule, deliberately not glassified and
+     deliberately NOT the accent: it used to be filled with the ink --primary,
+     and letting it inherit systemBlue would make a passive notification read as
+     an interactive/informational control. Inverted against the theme, as it was
+     before. */
+  --toast-fill: #f2f2f7;
+  --toast-content: #000000;
+
+  /* Liquid Glass surfaces — honest faux-glass (real blur is available via
+     <blur-view>, see BackdropBlur.tsx, but these fills are what carries the
+     surface). `--glass-fill` (0.85) is for surfaces floating over content (nav
+     capsule, mini-player) where readability needs the higher alpha;
+     `--glass-fill-strong` (0.72) is for surfaces mounted over a scrim
+     (popover/dialog/sheet), which can lean more transparent — the name is
+     misleading and is fixed in the rename stage. `--glass-glow` is the
+     decorative accent (star blue by default; packs re-point it at their
+     `glassColor`), kept as an independent channel from the button accent. */
   --glass-fill: rgba(23, 23, 27, 0.85);
   --glass-fill-strong: rgba(23, 23, 27, 0.72);
   --glass-border: rgba(255, 255, 255, 0.16);
   /* Top specular edge — a 1px `inset` line, so no text ever sits on it and its
-     brightness is free against the contrast gate. It used to be 0.08, which on
-     rgb(22,22,26) renders as rgb(41,41,44): technically a highlight, visually
-     nothing. 0.30 is the value that actually reads as a lit glass rim. Scaled
-     across the four material variants in `material-tokens.ts` (thinner glass →
-     brighter rim), which is the value that wins at runtime — tokens.css is only
-     the CSS fallback. */
+     brightness is free against the contrast gate. Scaled across the four
+     material variants in `material-tokens.ts` (thinner glass → brighter rim),
+     which is the value that wins at runtime; tokens.css is the CSS fallback. */
   --glass-highlight: rgba(255, 255, 255, 0.3);
   --glass-glow: #5BC0F5;
   --glass-glow-faint: rgba(91, 192, 245, 0.14);
   /*
    * Diagonal refraction streak, consumed via `--glass-sheen-layer`. Unlike the
-   * rim this one lies *under text*, so its alpha is derived, not chosen.
+   * rim this one lies *under text*, so its alpha is derived, not chosen. It
+   * stacks with `--glass-ramp-top` in the top-left corner and the binding
+   * constraint is the composite of the two.
    *
-   * It stacks with `--glass-ramp-top` in the top-left corner, and the binding
-   * constraint is the composite of the two — checked individually each of these
-   * passes, checked together 0.05+0.06 lands `--content-muted` at 4.25 and fails.
-   * At ramp 0.03 + sheen 0.04 the corner is 4.68 (+0.18). `contrast.test.ts`
-   * re-derives this stack; loosening either alone turns it red.
-   *
-   * Was 0.10 with no consumers at all, so nothing regressed by retuning it. */
+   * These alphas were derived against the former palette, where the binding pair
+   * was tertiary ink at 4.5. Under the Apple labels the tightest pair on this
+   * stack is `--system-red` at 4.70 against a 3.0 floor, so the shipped values now
+   * carry considerably more margin than they were designed with. They are kept
+   * rather than re-opened: `contrast.test.ts` re-derives them either way, and
+   * loosening them is a separate visual decision. */
   --glass-sheen: rgba(91, 192, 245, 0.04);
   /* Side rim — dimmer than the top edge because light comes from above. Also a
      1px inset, also free. Deliberately outside the material system: rim
      *brightness* is a thickness cue (so `--glass-highlight` scales), but having
-     sides at all is structural, and a material that dropped them would just look
-     unfinished. */
+     sides at all is structural. */
   --glass-rim-side: rgba(255, 255, 255, 0.12);
   /* Vertical luminance ramp (`--glass-ramp`). Dark's amplitude lives in the
      *bottom*: darkening a dark surface raises every text ratio, so it is free at
-     any alpha, while brightening the top costs — 0.06 white alone already lands
-     muted at 4.61 and 0.08 fails. Hence a small lift up top and a large drop
-     below: rgb(29,29,32) → rgb(20,20,23) across the panel. */
+     any alpha, while brightening the top costs. */
   --glass-ramp-top: rgba(255, 255, 255, 0.03);
   --glass-ramp-bottom: rgba(0, 0, 0, 0.20);
-
-  /* content (text) */
-  --content: #f5f5f7;
-  --content-2: #a1a1a8;
-  /* tertiary text — Muse wants #6c6c74, but it misses AA 4.5 on dark surfaces
-     (3.15 on neutral-faint). Brightened to the AA-passing mid-grey. */
-  --content-muted: #8b8b98;
-
-  /* actions — Muse has ONE accent channel; dark inverts it to white.
-     --primary is the accent for fills/borders/icons (dark surface under it);
-     --accent is the same shade for accent TEXT on dark surfaces.
-     --primary-faint is the accent WASH: the accent at low alpha, for tinted
-     buttons (.btn--tinted), badges/chips, and selected-or-current row states.
-     A theme pack re-points it at its seed colour, so anything neutral wants
-     --fill-faint instead. (It used to be described as the selected-nav-pill
-     wash; the pill has used --glass-glow-faint since the glass batches, and
-     nothing re-checked this sentence.) Text may sit on it only because the
-     alpha is low enough that the surface underneath is what contrast is judged
-     against — keep it that way. Brighter than light's 8% because a white wash
-     on dark surfaces needs more to stay visible. */
-  --primary: #ffffff;
-  --primary-2: #ffffff;
-  --primary-content: #0f0f11;
-  --accent: #ffffff;
-  --primary-faint: rgba(255, 255, 255, 0.12);
-
-  /* feedback — danger is a single red for TEXT only (Muse §3.1). On dark
-     surfaces Muse's #d64545 misses AA 4.5 (4.37 on canvas), so the dark theme
-     keeps the brighter AA-passing red; light keeps the Muse brick red. */
-  --danger: #ff6b6b;
-  --danger-content: #ffffff;
-  --danger-2: #cf444f;
-
-  /* structure — hairline separators, only structural */
-  --neutral-faint: #1f1f25;
-  --line: #26262c;
-  --rule: #38383f;
-
-  /*
-   * on-material fill. HIG's system fill colours are translucent BY DESIGN so
-   * whatever is under them — a glass panel, and the blurred page under that —
-   * still reads through. `--canvas` / `--paper` / `--neutral-faint` are all
-   * opaque: on a panel they do not sit on the material, they REPLACE it. That
-   * is the bug the play-history list had (see the note in `SongRow.css`), and
-   * an inset block inside a glass dialog is the same mistake at card size.
-   *
-   * Use this for a filled shape / inset block that lands on glass and is NOT a
-   * state. A state wash (selected / current row) is `--primary-faint` instead:
-   * that one is the accent channel and a theme pack tints it, which is right
-   * for selection and wrong for an error box.
-   *
-   * Neutral on purpose, and deliberately absent from
-   * `PACK_OVERRIDABLE_BASELINE` — a pack recolouring the accent must not turn
-   * every stats block and error box into a tinted surface.
-   *
-   * Alpha: Apple's fills are a 120,120,128 grey at 0.08–0.18; Muse's wash
-   * channel is ink/white instead, which reads heavier per unit alpha, so the
-   * same visual weight lands lower. Dark needs more than light for the usual
-   * reason (a white wash over a dark surface loses contrast faster).
-   */
-  --fill-faint: rgba(255, 255, 255, 0.06);
 
   /* overlays */
   --backdrop: rgba(0, 0, 0, 0.55);
   --backdrop-heavy: rgba(0, 0, 0, 0.78);
 
   /*
-   * Veil over the full player's blurred cover. Same canvas colour, so the page's
-   * normal text tokens keep working on top of it.
+   * Veil over the full player's blurred cover. Same colour as
+   * --system-background, so everything drawn on top keeps using the ordinary
+   * label tokens — no parallel "text on scrim" palette to keep in sync.
    *
-   * Dark has its **own** derivation, and it is much looser than light's — these two
-   * used to share light's 0.94/0.99, which cost dark ~11 alpha points for nothing.
-   * The binding pair here is `--content-2` over a veiled *white* cover (the bright
-   * extreme is the dangerous one on a dark veil): 4.42:1 at 0.82, 4.56:1 at 0.83.
-   * 0.85 is 0.83 with a margin (+0.41 on the binding pair).
+   * RE-DERIVED for the Apple palette (the veil colour itself moved from #0f0f11
+   * to pure black, which changes the composite). The alphas are computed, not
+   * tuned: a translucent veil lets the cover shift the effective background
+   * anywhere between the veil and the cover's own colour, so the only honest
+   * test is the worst case — a pure black and a pure white cover.
    *
-   * The gain is the point: the cover now contributes ~15% of the backdrop instead of
-   * ~6%, which is the difference between a tint and something that reads as glass.
-   * `contrast.test.ts` re-derives this from the shipped values — it does not assume
-   * the two themes agree. */
-  --player-scrim-from: rgba(15, 15, 17, 0.85);
-  --player-scrim-to: rgba(15, 15, 17, 0.92);
+   * Dark's dangerous extreme is a BRIGHT cover, and the binding pair is
+   * `--system-red` over a veiled white cover against its 3.0 floor. The new lower
+   * bound is 0.75 (it was 0.83 under the former palette). The shipped 0.85 is
+   * kept: it clears the bound with `--system-red` at 4.39 and `--accent` at 4.66,
+   * and lowering it to show more artwork is a separate visual decision, not a
+   * consequence of this migration. */
+  --player-scrim-from: rgba(0, 0, 0, 0.85);
+  --player-scrim-to: rgba(0, 0, 0, 0.92);
 
-  /* shadows — tinted off the ink, never pure black, never colored (Muse §3.5) */
+  /* shadows — never colored */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.6);
+
+  /*
+   * ── Muse compatibility aliases ─────────────────────────────────────────────
+   * Deleted in the final stage; a gate then rejects their reappearance. Each
+   * points at the Apple token that owns the semantics, so un-migrated CSS and
+   * theme-pack overrides both keep working while screens migrate one at a time.
+   *
+   * One of these is a judgement call worth stating: `--content-muted` resolves to
+   * secondary-label, NOT tertiary. It has 138 call sites and almost all of them
+   * are load-bearing secondary text (subtitles, counts, hints); tertiary would put
+   * them at 2.48 in dark. Genuine placeholders are moved to --tertiary-label
+   * deliberately, per screen, not by a blanket alias.
+   *
+   * `--primary-2` is absent on purpose: it was declared and pack-overridable but
+   * had zero CSS consumers and was identical to `--primary`, so it is deleted
+   * rather than aliased. No second accent shade is invented.
+   */
+  --canvas: var(--system-background);
+  --paper: var(--secondary-system-background);
+  --paper-clear: rgba(28, 28, 30, 0.9);
+  --content: var(--label);
+  --content-2: var(--secondary-label);
+  --content-muted: var(--secondary-label);
+  --primary: var(--accent);
+  --primary-content: var(--accent-content);
+  --primary-faint: var(--tint-fill);
+  --danger: var(--system-red);
+  --danger-content: var(--accent-content);
+  --danger-2: var(--system-red-strong);
+  --neutral-faint: var(--tertiary-system-fill);
+  --line: var(--separator);
+  --rule: var(--opaque-separator);
+  --fill-faint: var(--quaternary-system-fill);
 }
 
-/* ── Light — Muse canonical: pure white canvas, #fafafa soft surface ─────── */
+/* ── Light ────────────────────────────────────────────────────────────────────
+   Here the two background groups genuinely differ: a plain page is white with
+   grey cards, a grouped page is grey with WHITE cards. That inversion is the
+   single most visible change from the former palette, where every page was
+   white and every card was #fafafa. */
 .theme-root.theme-light {
-  /* surfaces */
-  --canvas: #ffffff;
-  --paper: #fafafa;
-  --paper-clear: rgba(255, 255, 255, 0.9);
+  /* backgrounds — plain group (ordinary pages: home, player, lists) */
+  --system-background: #ffffff;
+  --secondary-system-background: #f2f2f7;
+  --tertiary-system-background: #ffffff;
+
+  /* backgrounds — grouped group (settings-style inset lists) */
+  --system-grouped-background: #f2f2f7;
+  --secondary-system-grouped-background: #ffffff;
+  --tertiary-system-grouped-background: #f2f2f7;
+
+  /* labels — see the dark block. Measured on white: secondary 3.44, tertiary
+     1.73, quaternary 1.37; on #f2f2f7: 3.30 / 1.71 / 1.36. Secondary therefore
+     clears 3.0 but not 4.5 — the documented, accepted regression from the
+     former #67676f (5.61). .increase-contrast below deepens it to clear AA. */
+  --label: #000000;
+  --secondary-label: rgba(60, 60, 67, 0.6);
+  --tertiary-label: rgba(60, 60, 67, 0.3);
+  --quaternary-label: rgba(60, 60, 67, 0.18);
+  --placeholder-text: rgba(60, 60, 67, 0.3);
+
+  /* fills — see the dark block. */
+  --system-fill: rgba(120, 120, 128, 0.2);
+  --secondary-system-fill: rgba(120, 120, 128, 0.16);
+  --tertiary-system-fill: rgba(118, 118, 128, 0.12);
+  --quaternary-system-fill: rgba(116, 116, 128, 0.08);
+
+  /* separators */
+  --separator: rgba(60, 60, 67, 0.29);
+  --opaque-separator: #c6c6c8;
+
+  /* accent — systemBlue. As text: 3.52 on white, 3.15 on #f2f2f7. White on it
+     is also 3.52, i.e. a filled accent button's label does not clear AA — that
+     is Apple's own value and .increase-contrast is the (partial) mitigation.
+     --tint-fill's alpha is derived rather than chosen, and the window is narrow:
+     [0.07, 0.13]. The upper bound is `--accent` ON the wash it tints (3.01 at
+     0.13), the lower is wash visibility (1.087 at 0.07). 0.10 sits mid-window
+     (visibility 1.128, accent 3.12, systemRed 3.17) and matches the alpha theme
+     packs derive from their seed colour, so baseline and pack agree instead of
+     differing by two points as they did before. */
+  --accent: #0088ff;
+  --accent-content: #ffffff;
+  --tint-fill: rgba(0, 136, 255, 0.1);
+
+  /* semantic colours — see the dark block for the text/fill split. */
+  --system-red: #ff383c;
+  --system-red-strong: #e9152d;
+  --system-red-strong-content: #ffffff;
+  --system-green: #34c759;
+
+  /* grey ladder */
+  --system-gray: #8e8e93;
+  --system-gray2: #aeaeb2;
+  --system-gray3: #c7c7cc;
+  --system-gray4: #d1d1d6;
+  --system-gray5: #e5e5ea;
+  --system-gray6: #f2f2f7;
+
+  /* Toast — neutral high-contrast capsule, inverted against the theme. */
+  --toast-fill: #1c1c1e;
+  --toast-content: #ffffff;
 
   /* Liquid Glass surfaces — see the dark block for the derivation. Light keeps
-     the same shape: `--glass-fill`/`--glass-fill-strong` are translucent white
-     over the white canvas, the highlight sheen is brighter (white-on-white
-     needs more to read), and the decorative `--glass-glow` is the star-blue
-     seed packs re-point at their own accent. */
+     the same shape: translucent white over the white page, a brighter highlight
+     (white-on-white needs more to read), and the star-blue decorative glow. */
   --glass-fill: rgba(255, 255, 255, 0.85);
   --glass-fill-strong: rgba(255, 255, 255, 0.72);
   --glass-border: rgba(255, 255, 255, 0.45);
-  /* See dark. Light's rim has to fight a fill that composites to pure white, so
-     it runs brighter still. */
+  /* Light's rim has to fight a fill that composites to pure white, so it runs
+     brighter still. */
   --glass-highlight: rgba(255, 255, 255, 0.6);
   --glass-glow: #3BAEEF;
   --glass-glow-faint: rgba(59, 174, 239, 0.10);
-  /* 0.18 → 0.10: at 0.18 `--content-2` sat at 4.51, i.e. no margin. 0.10 gives
-     4.84. Packs derive this same alpha from their `glassColor`
+  /* Packs derive this same alpha from their `glassColor`
      (theme-pack-mapping.ts), so the two must be changed together. */
   --glass-sheen: rgba(59, 174, 239, 0.1);
   --glass-rim-side: rgba(255, 255, 255, 0.30);
   /*
    * Light's ramp is a pure *downward* darkening, and the transparent top is a
-   * deliberate value rather than an omission.
-   *
-   * `--glass-fill` is 0.85 white over a white canvas, so it composites to exactly
-   * rgb(255,255,255): adding white on top is the identity operation. That is also
-   * the real reason light glass reads as a painted rectangle, and it is why it
-   * cannot be fixed by adding a highlight — the only direction left is down.
-   *
-   * And under a theme pack whose `backgroundColor` is *not* white, a white top
-   * stop would stop being a no-op and start lightening a surface carrying dark
-   * text. Transparent is the value that is safe in both cases.
-   *
-   * The bottom is capped by `--content-2` ≥ 4.5: 0.08 lands 4.41 and fails, 0.05
-   * gives 4.72. */
+   * deliberate value rather than an omission. `--glass-fill` is 0.85 white over
+   * a white page, so it composites to exactly rgb(255,255,255) and adding white
+   * on top is the identity operation. Under a theme pack whose background is not
+   * white, a white top stop would stop being a no-op and start lightening a
+   * surface carrying dark text; transparent is safe in both cases. */
   --glass-ramp-top: rgba(255, 255, 255, 0);
   --glass-ramp-bottom: rgba(0, 0, 0, 0.05);
-
-  /* content (text) */
-  --content: #111111;
-  /* Deepened from #6b6b74 (5.28 on white) because of the selection wash: on
-     `--primary-faint` over the canvas the old shade measured 4.47 — a 0.03 miss,
-     and the wash is exactly where a selected row's metadata lives. Every other
-     light pair only gains from this (paper 5.05 → 5.37, veiled cover 4.63 → 4.92),
-     so the fix is the token, not an exemption for one pair. */
-  --content-2: #67676f;
-  /* tertiary text — Muse #a0a0a8 misses even the 3:1 large-text gate on #fafafa
-     (2.49). Deepened to the AA-passing mid-grey. */
-  --content-muted: #7b7b88;
-
-  /* actions — ink-black accent (#111, near-black not pure). One channel.
-     --primary-faint is the accent wash — see the dark block's note.
-     (No `token:` colons in comments: the mapping gate's declaration regex
-     would swallow the next real declaration.) */
-  --primary: #111111;
-  --primary-2: #111111;
-  --primary-content: #ffffff;
-  --accent: #111111;
-  --primary-faint: rgba(17, 17, 17, 0.08);
-
-  /* feedback — danger red, TEXT only */
-  --danger: #d64545;
-  --danger-content: #ffffff;
-  --danger-2: #cf444f;
-
-  /* structure — #ececee is "细到几乎看不见,只提供结构感" */
-  --neutral-faint: #f4f4f5;
-  --line: #ececee;
-  --rule: #dcdce0;
-
-  /* on-material fill — see the dark block for the whole derivation. */
-  --fill-faint: rgba(17, 17, 17, 0.05);
 
   /* overlays */
   --backdrop: rgba(0, 0, 0, 0.35);
   --backdrop-heavy: rgba(0, 0, 0, 0.5);
 
   /*
-   * Veil over the full player's blurred cover.
+   * Veil over the full player's blurred cover — same colour as
+   * --system-background, so the ordinary label tokens keep working on top.
    *
-   * Same colour as `--canvas`, so everything drawn on top keeps using the ordinary
-   * `--content*` tokens — no parallel "text on scrim" palette to keep in sync.
+   * RE-DERIVED for the Apple palette. Light's dangerous extreme is a DARK cover,
+   * and the binding pair is now `--accent` over a veiled black cover against its
+   * 3.0 floor: the lower bound is 0.93 (it was 0.91 under the former palette,
+   * where the binding pair was secondary ink at 4.5).
    *
-   * The alphas are **computed, not tuned**. A translucent veil lets the cover shift
-   * the effective background anywhere between `--canvas` and the cover's own colour,
-   * and Muse's secondary tokens have very little contrast headroom to give up:
-   * light `--content-2` on a veiled black cover reached only 4.23:1 at 0.90 and
-   * 4.43:1 at 0.92 when this was derived, making 0.93 the first value where every
-   * token the player draws on this surface cleared the bar, and 0.94 that with a
-   * margin. Deepening `--content-2` to #67676f (see its note above) moved the bound
-   * down to 0.91 — 0.94 stays, now with three points of margin instead of one.
-   * Loosening it is a separate decision about how much artwork shows through, and
-   * `contrast.test.ts` derives the bar from whatever ships either way.
-   *
-   * This bound is **light-specific**. Dark's veil sits far lower (see its block) —
-   * on a dark veil the danger is a bright cover, not a dark one, and that extreme is
-   * much cheaper to survive. The two alphas differing is the derivation working, not
-   * a mismatch to tidy up.
-   *
-   * The consequence is deliberate and worth stating: in light the cover shows through
-   * by ~6%, so it reads as a tint rather than the vivid wash the Flutter build has.
-   * Flutter can afford more because it recolours its foreground from the extracted
-   * palette; Lynx has no pixel access, so the palette does not exist here and the
-   * foreground is fixed. `player-backdrop-css.test.ts` and `contrast.test.ts`
-   * together hold the line — lowering these alphas turns them red.
-   */
+   * The shipped 0.94 is kept, but note the margin is thinner than it was: accent
+   * lands at 3.08 against a 3.0 floor, i.e. under a tenth of a point, where the old
+   * derivation had three. Lowering these alphas to show more artwork is no longer
+   * nearly free — `contrast.test.ts` re-derives the bound from whatever ships and
+   * will turn red. */
   --player-scrim-from: rgba(255, 255, 255, 0.94);
   --player-scrim-to: rgba(255, 255, 255, 0.99);
 
-  /* shadows — tinted off #111, not pure black (would be too heavy) */
-  --shadow-sm: 0 1px 2px rgba(17, 17, 17, 0.04);
-  --shadow-md: 0 4px 20px rgba(17, 17, 17, 0.08);
-  --shadow-lg: 0 12px 40px rgba(17, 17, 17, 0.14);
+  /* shadows — plain black at low alpha, following the label colour to #000 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.14);
+
+  /* ── Muse compatibility aliases — see the dark block for the rationale ───── */
+  --canvas: var(--system-background);
+  --paper: var(--secondary-system-background);
+  --paper-clear: rgba(242, 242, 247, 0.9);
+  --content: var(--label);
+  --content-2: var(--secondary-label);
+  --content-muted: var(--secondary-label);
+  --primary: var(--accent);
+  --primary-content: var(--accent-content);
+  --primary-faint: var(--tint-fill);
+  --danger: var(--system-red);
+  --danger-content: var(--accent-content);
+  --danger-2: var(--system-red-strong);
+  --neutral-faint: var(--tertiary-system-fill);
+  --line: var(--separator);
+  --rule: var(--opaque-separator);
+  --fill-faint: var(--quaternary-system-fill);
 }
 
+/*
+ * ── Increase Contrast ────────────────────────────────────────────────────────
+ * Apple's accessibility setting, and this app's answer to the fact that shipping
+ * Apple's palette verbatim leaves systemBlue-as-text at 3.52 and light
+ * secondaryLabel at 3.44. Three classes deep, so it wins over the theme block on
+ * specificity and does not depend on source order.
+ *
+ * It is a PARTIAL answer, and the gap is measured rather than glossed: Apple's
+ * accessible blue reaches 4.57 on white but only 4.10 on `#f2f2f7`, so accent text
+ * on a grouped page still misses AA even with the setting on. The label tiers do
+ * clear it (light secondary 4.88 on white, 4.59 on the grey).
+ *
+ * The two themes need DIFFERENT work, which is the derivation being honest
+ * rather than a mismatch to tidy up:
+ *  - Light has to deepen `--secondary-label` (0.60 → 0.73) and `--tertiary-label`
+ *    (0.30 → 0.57) to clear 4.5 / 3.0 on both white and #f2f2f7, and swap
+ *    systemRed for Apple's accessible red.
+ *  - Dark's `--secondary-label` already measures 5.27–6.36 at 0.60, so it is left
+ *    alone; only tertiary needs lifting (0.30 → 0.38).
+ *
+ * The dark accent carries a consequence worth naming: #5cb8ff is bright enough
+ * that WHITE on it drops to 2.15, so `--accent-content` must flip to black
+ * (9.76). A brighter accent is not free — it moves the label, not just the fill.
+ *
+ * The greys are Apple's own accessible ladder, not a rescaling of the default one:
+ * light starts darker (#6c6c70 vs #8e8e93) and dark starts lighter (#aeaeb2).
+ *
+ * The host activation channel is not wired yet (it needs a native
+ * SystemAppearance field, same as reduce-motion above); this CSS is ready so
+ * flipping the class is all that is needed once the host provides it.
+ */
+.theme-root.theme-light.increase-contrast {
+  --accent: #1e6ef4;
+  --accent-content: #ffffff;
+  --secondary-label: rgba(60, 60, 67, 0.73);
+  --tertiary-label: rgba(60, 60, 67, 0.57);
+  --system-red: #e9152d;
+  --separator: var(--opaque-separator);
+  --system-gray: #6c6c70;
+  --system-gray2: #8e8e93;
+  --system-gray3: #aeaeb2;
+  --system-gray4: #bcbcc0;
+  --system-gray5: #d8d8dc;
+  --system-gray6: #ebebf0;
+}
 
+.theme-root.theme-dark.increase-contrast {
+  --accent: #5cb8ff;
+  --accent-content: #000000;
+  --tertiary-label: rgba(235, 235, 245, 0.38);
+  --separator: var(--opaque-separator);
+  --system-gray: #aeaeb2;
+  --system-gray2: #7c7c80;
+  --system-gray3: #545456;
+  --system-gray4: #444446;
+  --system-gray5: #363638;
+  --system-gray6: #242426;
+}

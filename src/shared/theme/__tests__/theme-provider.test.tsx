@@ -136,9 +136,9 @@ test('an active pack lands as inline custom properties on the root', async () =>
 
   const style = rootStyle(container)
   expect(themeClass(container)).toContain('theme-light')
-  expect(style['--primary']).toBe('#D81B60')
-  expect(style['--canvas']).toBe('#FFF0F5')
-  expect(style['--paper']).toBe('#FFFFFF')
+  expect(style['--accent']).toBe('#D81B60')
+  expect(style['--system-background']).toBe('#FFF0F5')
+  expect(style['--secondary-system-background']).toBe('#FFFFFF')
   expect(style['--radius-nav']).toBe('14px')
 })
 
@@ -156,7 +156,7 @@ test('a pack arriving after mount recolors the tree in place', async () => {
     setActiveThemePack(SAKURA)
   })
 
-  expect(rootStyle(container)['--primary']).toBe('#D81B60')
+  expect(rootStyle(container)['--accent']).toBe('#D81B60')
 })
 
 test('the pack follows the resolved theme when it flips', async () => {
@@ -165,15 +165,15 @@ test('the pack follows the resolved theme when it flips', async () => {
   setActiveThemePack(SAKURA)
 
   const { container } = render(<ThemeProvider />)
-  expect(rootStyle(container)['--primary']).toBe('#D81B60')
+  expect(rootStyle(container)['--accent']).toBe('#D81B60')
 
   await act(async () => {
     applySystemAppearance({ theme: 'dark', locale: null })
   })
 
   expect(themeClass(container)).toContain('theme-dark')
-  expect(rootStyle(container)['--primary']).toBe('#F48FB1')
-  expect(rootStyle(container)['--canvas']).toBe('#1A0A10')
+  expect(rootStyle(container)['--accent']).toBe('#F48FB1')
+  expect(rootStyle(container)['--system-background']).toBe('#1A0A10')
 })
 
 test('clearing the pack writes the baseline back over the pack colours', async () => {
@@ -182,7 +182,7 @@ test('clearing the pack writes the baseline back over the pack colours', async (
   setActiveThemePack(SAKURA)
 
   const { container } = render(<ThemeProvider />)
-  expect(rootStyle(container)['--primary']).toBe('#D81B60')
+  expect(rootStyle(container)['--accent']).toBe('#D81B60')
 
   await act(async () => {
     setActiveThemePack(null)
@@ -191,5 +191,5 @@ test('clearing the pack writes the baseline back over the pack colours', async (
   // Regression shape: the runtime does NOT remove style-object keys, so a
   // dropped attribute would leave the sakura pink on screen forever.
   expect(rootStyle(container)).toEqual(expectBaselineStyle('light'))
-  expect(rootStyle(container)['--primary']).toBe('#111111')
+  expect(rootStyle(container)['--accent']).toBe('#0088ff')
 })

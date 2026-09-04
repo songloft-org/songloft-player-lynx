@@ -3,38 +3,59 @@ import { getMaterialVariant } from './material-model.js'
 import { MATERIAL_TOKENS } from './material-tokens.js'
 
 /**
- * Theme-pack → Muse token mapping (pure functions).
+ * Theme-pack → Apple-semantic token mapping (pure functions).
  *
  * The backend's theme-pack schema (`models.ThemePackData` in the Go service) is
  * Material-flavoured: `seedColor` feeds Flutter's `ColorScheme.fromSeed`, which
  * sprays a whole tonal palette. This client deliberately does NOT port
- * fromSeed — Muse is a single-accent system (DESIGN.md). Instead we make a
- * minimal honest mapping onto the existing tokens:
+ * fromSeed — it has a single accent channel. Instead we make a minimal honest
+ * mapping onto the Apple semantic tokens:
  *
- * | pack field                | token(s)                          |
- * |---------------------------|-----------------------------------|
- * | light/dark.seedColor      | --primary --primary-2 --accent    |
- * | (derived from seedColor)  | --primary-content (YIQ black/white) |
- * | (derived from seedColor)  | --primary-faint (10%/14% alpha wash) |
- * | light/dark.backgroundColor| --canvas                         |
- * | light/dark.surfaceColor   | --paper --paper-clear (90% alpha) |
- * | light/dark.glassColor     | --glass-glow (solid)              |
- * | (derived from glassColor) | --glass-glow-faint (0.10/0.14)     |
- * | (derived from glassColor) | --glass-sheen (0.10/0.04)         |
- * | (baseline, not pack-driven)| --glass-fill/fill-strong/border/   |
- * |                           |   highlight                        |
- * | cardRadius                | --radius-lg                      |
- * | controlRadius             | --radius-md                      |
- * | navigationRadius          | --radius-nav (legacy: the nav bar |
- * |                           | is a fixed capsule now; the token |
- * |                           | is kept for schema compat but has |
- * |                           | no consumer)                     |
+ * | pack field                | token(s)                            |
+ * |---------------------------|-------------------------------------|
+ * | light/dark.seedColor      | --accent                            |
+ * | (derived from seedColor)  | --accent-content (YIQ black/white)  |
+ * | (derived from seedColor)  | --tint-fill (10%/18% alpha wash)    |
+ * | light/dark.backgroundColor| --system-background                 |
+ * |                           | --system-grouped-background         |
+ * | light/dark.surfaceColor   | --secondary-system-background       |
+ * |                           | --secondary-system-grouped-background |
+ * |                           | --paper-clear (90% alpha)           |
+ * | light/dark.glassColor     | --glass-glow (solid)                |
+ * | (derived from glassColor) | --glass-glow-faint (0.10/0.14)      |
+ * | (derived from glassColor) | --glass-sheen (0.10/0.04)           |
+ * | (baseline, not pack-driven)| --glass-fill/fill-strong/border/    |
+ * |                           |   highlight                         |
+ * | cardRadius                | --radius-lg                         |
+ * | controlRadius             | --radius-md                         |
+ * | navigationRadius          | --radius-nav (legacy: the nav bar   |
+ * |                           | is a fixed capsule now; the token   |
+ * |                           | is kept for schema compat but has   |
+ * |                           | no consumer)                        |
  *
- * `--content*` / `--danger*` / `--line*` / `--player-scrim-*` stay at their
- * Muse baseline: the pack schema has no field for them, and the baseline is the
+ * The pack's two surface colours drive BOTH background groups (plain and
+ * grouped). Apple keeps those groups distinct — in light a plain page is white
+ * with grey cards while a grouped page is grey with white cards — but a pack
+ * only supplies one page colour and one card colour, so the honest mapping is
+ * to send the same pair to both groups. Mapping only the plain group would
+ * leave every settings-style page sitting on the untouched Apple grey while the
+ * rest of the app wore the pack, which reads as a bug rather than a theme. This
+ * is not a widening of what a pack can reach: the same two colours already
+ * reached these surfaces under the former `--canvas`/`--paper` pair.
+ *
+ * The label / fill / separator tiers and `--player-scrim-*` stay at their
+ * baseline: the pack schema has no field for them, and the baseline is the
  * implicit contrast floor (`contrast.test.ts` gates it). The scrim alphas in
- * `tokens.css` are *computed* against the baseline canvas — repainting them
- * with a pack colour would break that derivation, so they are never overridden.
+ * `tokens.css` are *computed* against the baseline page colour — repainting
+ * them with a pack colour would break that derivation, so they are never
+ * overridden.
+ *
+ * Because the former Muse names survive in `tokens.css` only as thin aliases
+ * (`--primary: var(--accent)`), a pack MUST set the Apple name: the aliases are
+ * class declarations and the pack's inline properties win over them, so an
+ * alias resolves through to the pack's value and un-migrated CSS keeps getting
+ * pack colours. Setting the alias instead would strand the override the moment
+ * a screen migrated onto the real token.
  *
  * `playerGradient` is ignored on purpose: the Lynx player renders a scrim veil
  * over the blurred cover, not a gradient (see `tokens.css` for why), and
@@ -111,8 +132,10 @@ export function readableTextColorOn(hex: string): string {
   const g = parseInt(hex.slice(3, 5), 16)
   const b = parseInt(hex.slice(5, 7), 16)
   // Rec.601 luma weights; 128 splits readable white-on from black-on text.
+  // Pure #000000 rather than the former near-black #111111: Apple's `label` is
+  // pure black, and an accent fill's label is a label.
   const yiq = (299 * r + 587 * g + 114 * b) / 1000
-  return yiq >= 128 ? '#111111' : '#ffffff'
+  return yiq >= 128 ? '#000000' : '#ffffff'
 }
 
 /** `#RRGGBB` → `rgba(r, g, b, alpha)` for the translucent paper token. */
@@ -137,14 +160,14 @@ function radiusVar(value: number | undefined): string | undefined {
  */
 export const PACK_OVERRIDABLE_BASELINE: Record<'light' | 'dark', Record<string, string>> = {
   light: {
-    '--primary': '#111111',
-    '--primary-2': '#111111',
-    '--accent': '#111111',
-    '--primary-content': '#ffffff',
-    '--primary-faint': 'rgba(17, 17, 17, 0.08)',
-    '--canvas': '#ffffff',
-    '--paper': '#fafafa',
-    '--paper-clear': 'rgba(255, 255, 255, 0.9)',
+    '--accent': '#0088ff',
+    '--accent-content': '#ffffff',
+    '--tint-fill': 'rgba(0, 136, 255, 0.1)',
+    '--system-background': '#ffffff',
+    '--secondary-system-background': '#f2f2f7',
+    '--system-grouped-background': '#f2f2f7',
+    '--secondary-system-grouped-background': '#ffffff',
+    '--paper-clear': 'rgba(242, 242, 247, 0.9)',
     // Liquid Glass tokens. The four texture tokens (fill/fill-strong/border/
     // highlight) are always baseline — glass质感 is fixed, not pack-driven.
     // Only the decorative `--glass-glow*`/`--glass-sheen` re-point at seedColor
@@ -162,14 +185,14 @@ export const PACK_OVERRIDABLE_BASELINE: Record<'light' | 'dark', Record<string, 
     '--radius-nav': '12px',
   },
   dark: {
-    '--primary': '#ffffff',
-    '--primary-2': '#ffffff',
-    '--accent': '#ffffff',
-    '--primary-content': '#0f0f11',
-    '--primary-faint': 'rgba(255, 255, 255, 0.12)',
-    '--canvas': '#0f0f11',
-    '--paper': '#17171b',
-    '--paper-clear': 'rgba(23, 23, 27, 0.9)',
+    '--accent': '#0091ff',
+    '--accent-content': '#ffffff',
+    '--tint-fill': 'rgba(0, 145, 255, 0.18)',
+    '--system-background': '#000000',
+    '--secondary-system-background': '#1c1c1e',
+    '--system-grouped-background': '#000000',
+    '--secondary-system-grouped-background': '#1c1c1e',
+    '--paper-clear': 'rgba(28, 28, 30, 0.9)',
     // Liquid Glass tokens — see the light block. Same shape, dark-tuned:
     // darker glass fills, dimmer highlight, and the dark star-blue glow.
     '--glass-fill': 'rgba(23, 23, 27, 0.85)',
@@ -206,17 +229,24 @@ export function themePackToStyleVars(
 
   if (colors) {
     if (isHexColor(colors.seedColor)) {
-      vars['--primary'] = colors.seedColor
-      vars['--primary-2'] = colors.seedColor
       vars['--accent'] = colors.seedColor
-      vars['--primary-content'] = readableTextColorOn(colors.seedColor)
+      vars['--accent-content'] = readableTextColorOn(colors.seedColor)
       // The accent wash: tinted buttons, badges, and the selected/current row
       // states (the play-queue's active row, multi-select highlights). Brighter in
       // dark mode, where a low-alpha tint over dark surfaces needs more to stay
-      // visible (matches the baseline's 8% light / 12% dark split). The nav pill
-      // is NOT this token — it uses --glass-glow-faint, and saying so here sent a
-      // batch looking in the wrong place.
-      vars['--primary-faint'] = hexToRgba(colors.seedColor, resolved === 'light' ? 0.1 : 0.14)
+      // visible. These alphas now MATCH the baseline in `tokens.css` (0.10 light /
+      // 0.18 dark) — they used to run two points above it for no stated reason,
+      // which meant a pack's wash was always slightly heavier than the wash the
+      // contrast gate had verified. The nav pill is NOT this token — it uses
+      // --glass-glow-faint, and saying so here sent a batch looking in the wrong
+      // place.
+      //
+      // The light alpha is bounded on BOTH sides and the window is narrow:
+      // systemRed on a washed row needs <= 0.12, wash visibility needs >= 0.07.
+      // A pack seed darker than systemBlue tightens the upper bound further, so
+      // this is a place where a pack can leave the baseline's verified envelope —
+      // see the plan's §2.4 note on what pack overrides can and cannot guarantee.
+      vars['--tint-fill'] = hexToRgba(colors.seedColor, resolved === 'light' ? 0.1 : 0.18)
     }
     if (isHexColor(colors.glassColor)) {
       // Liquid Glass decorative tint — INDEPENDENT of seedColor (the button
@@ -237,11 +267,16 @@ export function themePackToStyleVars(
       vars['--glass-glow-faint'] = hexToRgba(colors.glassColor, resolved === 'light' ? 0.1 : 0.14)
       vars['--glass-sheen'] = hexToRgba(colors.glassColor, resolved === 'light' ? 0.1 : 0.04)
     }
+    // Both background groups take the pack's pair — see the module header for why
+    // sending it only to the plain group would leave settings-style pages stranded
+    // on the untouched Apple grey.
     if (isHexColor(colors.backgroundColor)) {
-      vars['--canvas'] = colors.backgroundColor
+      vars['--system-background'] = colors.backgroundColor
+      vars['--system-grouped-background'] = colors.backgroundColor
     }
     if (isHexColor(colors.surfaceColor)) {
-      vars['--paper'] = colors.surfaceColor
+      vars['--secondary-system-background'] = colors.surfaceColor
+      vars['--secondary-system-grouped-background'] = colors.surfaceColor
       vars['--paper-clear'] = hexToRgba(colors.surfaceColor, 0.9)
     }
   }

@@ -3,20 +3,61 @@ import { join, resolve } from 'node:path'
 import { describe, expect, test } from 'vitest'
 
 /**
- * WCAG 2.1 contrast regression gate for the Muse tokens in `tokens.css`.
+ * Contrast gate for the Apple semantic tokens in `tokens.css`.
  *
- * Muse uses a single ink accent channel: light --primary is #111 with white
- * --primary-content (button text); dark inverts it — --primary is #ffffff with
- * near-black --primary-content. So the button/panel text pair audited below is
- * primary-content-on-primary, not a hardcoded white. `--danger` is a red used
- * on TEXT only; a single shade can't meet 4.5 on both light (#fafafa) and dark
- * (#1f1f25) surfaces, so it stays per-theme (the dark shade is brighter).
- * `--content-muted` (tertiary/placeholder text) likewise stays per-theme to
- * clear 4.5 (dark) / 3 (light). This test reads the actual `tokens.css` (not a
- * hand-maintained copy) so any color edit that regresses contrast turns the
- * build red.
+ * ── What changed, and why this file is not just a rename ─────────────────────
  *
- * Thresholds: normal text 4.5:1, large text / UI graphics 3:1.
+ * Apple's label tiers are TRANSLUCENT (`rgba(60, 60, 67, 0.6)` and friends). The
+ * former Muse tokens were flat hexes, so the old version of this gate could read
+ * a colour and compare it directly. That is now wrong: a translucent label's
+ * effective colour depends on the surface beneath it, so every text token has to
+ * be composited over the specific background being tested before the ratio means
+ * anything. Reading `rgba(60, 60, 67, 0.6)` as `#3c3c43` would overstate light
+ * secondary text by more than two full ratio points.
+ *
+ * ── The tiered floor, and the regression it encodes ──────────────────────────
+ *
+ * Apple's values are shipped verbatim, which is a deliberate and user-approved
+ * trade. Measured, not asserted:
+ *
+ *   light secondaryLabel on white      3.44   (former --content-2: 5.61)
+ *   light secondaryLabel on #f2f2f7    3.30
+ *   light accent (systemBlue) as text  3.52
+ *   light systemRed as text            3.57
+ *   light tertiaryLabel on white       1.73
+ *   dark  tertiaryLabel on #1c1c1e     2.48
+ *
+ * Those accent/red figures are the post-June-2025 Apple values (#0088ff / #ff383c);
+ * the pre-2025 ones this file was first written against measured 4.02 and 3.55, so
+ * the official update cost half a point on both. See `tokens-hig.test.ts` for the
+ * provenance of every value.
+ *
+ * So the floor is tiered rather than uniform:
+ *
+ *   --label            4.5   body copy must clear AA
+ *   --secondary-label  3.0   the accepted regression
+ *   --accent (text)    3.0
+ *   --system-red       3.0
+ *   --tertiary-label   NONE  — no alpha clears even 3.0
+ *   --quaternary-label NONE
+ *
+ * Dropping the numeric floor for the bottom two tiers would be a hole, not a
+ * policy, if nothing replaced it. What replaces it is the usage scan at the end
+ * of this file: those two tokens may only appear in non-essential roles, which is
+ * Apple's own rule for them. That scan carries a self-check, because a scan over
+ * zero current call sites passes for the wrong reason.
+ *
+ * `.increase-contrast` is the mitigation for the 3.0 tier and is gated by value
+ * in `tokens-hig.test.ts`; its own ratios are re-derived here.
+ *
+ * ── What is deliberately preserved from the previous version ─────────────────
+ *
+ * The glass-stack composition, the player scrim's worst-case-cover derivation and
+ * the wash-visibility floor are all kept, because none of them were about the
+ * palette — they are about compositing, and they caught real shipped bugs. Their
+ * anti-vacuity companions are re-derived rather than copied: one of them (`--paper`
+ * over `--canvas` is invisible at 1.04) stopped being TRUE under Apple's
+ * backgrounds, which measure 1.116 in light and 1.234 in dark.
  */
 
 const TOKENS_CSS = readFileSync(
@@ -26,53 +67,57 @@ const TOKENS_CSS = readFileSync(
   'utf8',
 )
 
-type Color = { r: number; g: number; b: number }
+/** A colour with its own alpha kept, because Apple's labels and fills have one. */
+interface Paint {
+  r: number
+  g: number
+  b: number
+  /** 1 for an opaque hex; the rgba alpha otherwise. */
+  a: number
+}
 
-function parseHex(hex: string): Color {
+type Rgb = { r: number, g: number, b: number }
+
+function parseHex(hex: string): Paint {
   const c = hex.replace('#', '')
-  const full =
-    c.length === 3
-      ? c
-          .split('')
-          .map((ch) => ch + ch)
-          .join('')
-      : c
+  const full = c.length === 3 ? c.split('').map((ch) => ch + ch).join('') : c
   return {
     r: parseInt(full.slice(0, 2), 16),
     g: parseInt(full.slice(2, 4), 16),
     b: parseInt(full.slice(4, 6), 16),
+    a: 1,
   }
 }
 
-/** Parse `rgba(r,g,b,a)` blended over an opaque backdrop (for --paper-clear). */
-function parseRgbaOver(
-  raw: string,
-  backdrop: Color,
-): Color {
+function parseRgba(raw: string): Paint {
   const m = raw.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s]+([\d.]+))?\s*\)/)
-  if (!m) throw new Error(`not rgba: ${raw}`)
-  const [, rs, gs, bs, as] = m
-  const a = as !== undefined ? parseFloat(as) : 1
-  const f = parseHex(`#${rs}${gs}${bs}`)
-  // f is written as 0-255 ints in the rgba; treat as hex channels
-  const r = parseInt(rs), g = parseInt(gs), b = parseInt(bs)
+  if (!m) throw new Error(`not a colour: ${raw}`)
   return {
-    r: Math.round(backdrop.r + (r - backdrop.r) * a),
-    g: Math.round(backdrop.g + (g - backdrop.g) * a),
-    b: Math.round(backdrop.b + (b - backdrop.b) * a),
+    r: Number(m[1]),
+    g: Number(m[2]),
+    b: Number(m[3]),
+    a: m[4] === undefined ? 1 : Number(m[4]),
   }
-  void f
 }
 
-function luminance(c: Color): number {
-  const to = (v: number) => {
+/** Source-over composite of `top` onto an opaque `under`. */
+function over(top: Paint, under: Rgb): Rgb {
+  return {
+    r: top.r * top.a + under.r * (1 - top.a),
+    g: top.g * top.a + under.g * (1 - top.a),
+    b: top.b * top.a + under.b * (1 - top.a),
+  }
+}
+
+function luminance(c: Rgb): number {
+  const to = (v: number): number => {
     const s = v / 255
     return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
   }
   return 0.2126 * to(c.r) + 0.7152 * to(c.g) + 0.0722 * to(c.b)
 }
 
-function ratio(a: Color, b: Color): number {
+function ratio(a: Rgb, b: Rgb): number {
   const la = luminance(a)
   const lb = luminance(b)
   const hi = Math.max(la, lb)
@@ -80,157 +125,207 @@ function ratio(a: Color, b: Color): number {
   return (hi + 0.05) / (lo + 0.05)
 }
 
-function hexColor(c: Color): string {
-  return (
-    '#' +
-    [c.r, c.g, c.b]
-      .map((v) => v.toString(16).padStart(2, '0'))
-      .join('')
-  )
+function hexOf(c: Rgb): string {
+  return '#' + [c.r, c.g, c.b]
+    .map((v) => Math.round(v).toString(16).padStart(2, '0'))
+    .join('')
 }
 
-/** Parse one `.theme-root.theme-<name> { … }` block into a `--token → Color` map. */
-function parseTheme(name: 'dark' | 'light'): Record<string, Color> {
-  const re = new RegExp(`\\.theme-root\\.theme-${name}\\s*\\{([\\s\\S]*?)\\n\\s*\\}`)
-  const m = TOKENS_CSS.match(re)
+/**
+ * How a token reads ON a given background — the composite step the former version
+ * of this gate did not need and this one cannot do without.
+ */
+function contrastOn(token: Paint, bg: Rgb): number {
+  return ratio(over(token, bg), bg)
+}
+
+/** One `.theme-root.theme-<name>` block, colour declarations only. */
+function themeBlock(name: 'dark' | 'light'): string {
+  const m = TOKENS_CSS.match(
+    new RegExp(`\\.theme-root\\.theme-${name}\\s*\\{([\\s\\S]*?)\\n\\s*\\}`),
+  )
   if (!m) throw new Error(`theme block ${name} not found`)
-  const block = m[1]
-  const out: Record<string, Color> = {}
-  for (const line of block.split('\n')) {
+  return m[1]!
+}
+
+/**
+ * Parse a theme block into `--token → Paint`.
+ *
+ * `var()` values are skipped on purpose: those are the Muse compatibility
+ * aliases, and this gate asserts the Apple tokens that own the semantics. That
+ * the aliases point at them, and at nothing else, is `tokens-hig.test.ts`'s job —
+ * asserting it in both places would just mean two tests to update in step.
+ */
+function parseTheme(name: 'dark' | 'light'): Record<string, Paint> {
+  const out: Record<string, Paint> = {}
+  for (const line of themeBlock(name).split('\n')) {
     const decl = line.match(/^\s*--([\w-]+):\s*(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))\s*;/)
     if (!decl) continue
-    const [, key, val] = decl
-    if (val.startsWith('#')) {
-      out[key] = parseHex(val)
-    } else if (
-      key === 'paper-clear' || key.startsWith('glass-fill')
-      || key === 'fill-faint' || key === 'primary-faint'
-    ) {
-      // blended over canvas at parse time. glass-fill/glass-fill-strong are
-      // translucent paper colours floating over the page (not solid scrims),
-      // so their effective background is fill ⊕ canvas — the same composite
-      // paper-clear uses. Blending them over black (the else branch) would
-      // darken a light glass surface and mis-state its contrast.
-      //
-      // The two `*-faint` washes are the same shape one layer further in: they
-      // are what a selected/active row paints ON a surface, so text on such a row
-      // sees wash ⊕ surface. Over the page that surface is the canvas (below);
-      // over glass it is the glass composite, checked in its own describe.
-      if (out['canvas'] == null) {
-        throw new Error(
-          `--${key} is declared before --canvas in tokens.css, so it cannot be `
-            + 'composited. Move it after --canvas rather than deleting this check: '
-            + 'blending it over black instead would silently understate contrast.',
-        )
-      }
-      out[key] = parseRgbaOver(val, out['canvas'])
-    } else {
-      // rgba used as a solid (backdrop/overlay) — parse raw, alpha=1
-      out[key] = parseRgbaOver(val, { r: 0, g: 0, b: 0 })
-    }
+    const [, key, val] = decl as unknown as [string, string, string]
+    out[key] = val.startsWith('#') ? parseHex(val) : parseRgba(val)
   }
   return out
 }
 
-const DARK = parseTheme('dark')
-const LIGHT = parseTheme('light')
+const THEMES = { dark: parseTheme('dark'), light: parseTheme('light') } as const
+type ThemeName = keyof typeof THEMES
 
-const WHITE: Color = { r: 255, g: 255, b: 255 }
-
-function expectAA(fg: Color, bg: Color, label: string, min = 4.5) {
-  const r = ratio(fg, bg)
-  // eslint-disable-next-line no-console
-  expect(r, `${label} = ${r.toFixed(2)} (fg ${hexColor(fg)} on ${hexColor(bg)})`).toBeGreaterThanOrEqual(min)
+/** Raw declaration text for one token, straight out of a theme block. */
+function rawDecl(theme: ThemeName, token: string): string {
+  const decl = themeBlock(theme).match(
+    new RegExp(`--${token}:\\s*(#[0-9a-fA-F]{3,8}|rgba?\\([^)]*\\));`),
+  )
+  expect(decl, `--${token} missing from theme-${theme}`).not.toBeNull()
+  return decl![1]!
 }
 
-describe('dark theme contrast (WCAG AA)', () => {
-  // `fill-faint` is the neutral on-material fill (inset info blocks, progress
-  // tracks, the plugin dialogs' error/stats boxes) — text sits on it, so it is a
-  // surface for this gate's purposes even though it is not a surface token.
-  const surfaces = [
-    'canvas', 'paper', 'paper-clear', 'neutral-faint', 'fill-faint',
-    'glass-fill', 'glass-fill-strong',
-  ] as const
+/*
+ * Text tokens and their floors. `--tertiary-label` / `--quaternary-label` are
+ * absent BY DESIGN — see the header, and the usage scan that stands in for them.
+ */
+const TEXT_FLOORS: Record<string, number> = {
+  'label': 4.5,
+  'secondary-label': 3.0,
+  'accent': 3.0,
+  'system-red': 3.0,
+}
+const TEXT_TOKENS = Object.keys(TEXT_FLOORS)
 
-  test.each(surfaces)('content reads on %s (≥4.5)', (s) => {
-    expectAA(DARK['content'], DARK[s], `content on ${s}`)
-  })
-  test.each(surfaces)('content-2 reads on %s (≥4.5)', (s) => {
-    expectAA(DARK['content-2'], DARK[s], `content-2 on ${s}`)
-  })
-  test.each(surfaces)('content-muted reads on %s (≥4.5)', (s) => {
-    expectAA(DARK['content-muted'], DARK[s], `content-muted on ${s}`)
-  })
-  test.each(surfaces)('accent reads as text on %s (≥4.5)', (s) => {
-    expectAA(DARK['accent'], DARK[s], `accent on ${s}`)
-  })
-  test.each(surfaces)('danger reads as text on %s (≥4.5)', (s) => {
-    expectAA(DARK['danger'], DARK[s], `danger on ${s}`)
+/**
+ * Token × surface combinations that measurably do NOT clear the floor, and are
+ * therefore forbidden rather than exempted.
+ *
+ * The rule underneath the list: **the two heaviest Apple fills are for shapes, not
+ * for coloured text.** In light they darken the page enough to swallow both
+ * chromatic tokens — measured on a white page:
+ *
+ *                          --accent   --system-red
+ *   --system-fill (0.20)     2.77         2.81
+ *   --secondary-system-fill  2.91         2.95
+ *   --tertiary-system-fill   3.05         3.09   ← fine
+ *   --quaternary-system-fill 3.20         3.24   ← fine
+ *
+ * `--label` (16.5–19.1) and `--secondary-label` (3.13–3.31) are unaffected, so the
+ * fills are perfectly usable — just not under blue or red text. Dark is unaffected
+ * throughout (4.10–5.65): a translucent grey fill over black LIGHTENS the surface,
+ * which moves both tokens the helpful way.
+ *
+ * Nothing ships any of these combinations today — the two heavy fills have no
+ * consumers at all — but deleting the surfaces from the sweep to reach green would
+ * leave a hole that opens the first time someone backs a search field with
+ * `--system-fill` and puts an error message or a link on it.
+ *
+ * So each entry carries two obligations, both enforced below:
+ *  1. it must actually fail, or the entry is stale and must be deleted;
+ *  2. no stylesheet may pair them, checked by a scan over every rule.
+ */
+const FORBIDDEN: Array<{ theme: ThemeName, token: string, surface: string }> = [
+  { theme: 'light', token: 'accent', surface: 'system-fill ⊕ page' },
+  { theme: 'light', token: 'accent', surface: 'secondary-system-fill ⊕ page' },
+  { theme: 'light', token: 'system-red', surface: 'system-fill ⊕ page' },
+  { theme: 'light', token: 'system-red', surface: 'secondary-system-fill ⊕ page' },
+]
+
+function isForbidden(theme: ThemeName, token: string, surface: string): boolean {
+  return FORBIDDEN.some((f) => f.theme === theme && f.token === token && f.surface === surface)
+}
+
+function expectReads(fg: Paint, bg: Rgb, label: string, min: number): void {
+  const r = contrastOn(fg, bg)
+  expect(
+    r,
+    `${label} = ${r.toFixed(2)} (needs ${min}); composited ${hexOf(over(fg, bg))} on ${hexOf(bg)}`,
+  ).toBeGreaterThanOrEqual(min)
+}
+
+/**
+ * Every surface text actually lands on, as an opaque composite.
+ *
+ * The fills and the glass fills are translucent, so they are resolved over the
+ * page — which is what a fill IS: a tint on whatever is behind it. Resolving them
+ * over black instead (the shape a naive parser falls into) would darken a light
+ * surface and silently overstate its contrast.
+ */
+function surfaces(theme: ThemeName): Array<{ name: string, bg: Rgb }> {
+  const t = THEMES[theme]
+  const page: Rgb = { r: t['system-background']!.r, g: t['system-background']!.g, b: t['system-background']!.b }
+  const opaque = (token: string): Rgb => {
+    const p = t[token]!
+    expect(p, `--${token} declared in theme-${theme}`).toBeDefined()
+    expect(p.a, `--${token} is expected to be opaque`).toBe(1)
+    return { r: p.r, g: p.g, b: p.b }
+  }
+  return [
+    { name: 'system-background', bg: page },
+    { name: 'secondary-system-background', bg: opaque('secondary-system-background') },
+    { name: 'tertiary-system-background', bg: opaque('tertiary-system-background') },
+    { name: 'system-grouped-background', bg: opaque('system-grouped-background') },
+    { name: 'secondary-system-grouped-background', bg: opaque('secondary-system-grouped-background') },
+    { name: 'tertiary-system-grouped-background', bg: opaque('tertiary-system-grouped-background') },
+    { name: 'system-fill ⊕ page', bg: over(t['system-fill']!, page) },
+    { name: 'secondary-system-fill ⊕ page', bg: over(t['secondary-system-fill']!, page) },
+    { name: 'tertiary-system-fill ⊕ page', bg: over(t['tertiary-system-fill']!, page) },
+    { name: 'quaternary-system-fill ⊕ page', bg: over(t['quaternary-system-fill']!, page) },
+    { name: 'paper-clear ⊕ page', bg: over(t['paper-clear']!, page) },
+    { name: 'glass-fill ⊕ page', bg: over(t['glass-fill']!, page) },
+    { name: 'glass-fill-strong ⊕ page', bg: over(t['glass-fill-strong']!, page) },
+  ]
+}
+
+describe.each(['dark', 'light'] as const)('%s: text on every surface', (theme) => {
+  const t = THEMES[theme]
+
+  test.each(TEXT_TOKENS)('--%s clears its tier on all surfaces', (token) => {
+    for (const { name, bg } of surfaces(theme)) {
+      if (isForbidden(theme, token, name)) continue
+      expectReads(t[token]!, bg, `--${token} on --${name}`, TEXT_FLOORS[token]!)
+    }
   })
 
-  // Muse inverts the dark accent: --primary is white, so button/panel TEXT is
-  // --primary-content (near-black), not white. The gate therefore checks
-  // primary-content-on-primary, the real pair the button renders. (Light keeps
-  // primary-content = white, so the pair is unchanged there.)
-  test('button text (primary-content) on primary ≥4.5', () => {
-    expectAA(DARK['primary-content'], DARK['primary'], 'primary-content on primary')
-  })
-  test('white on danger-2 (button) ≥4.5', () => {
-    expectAA(WHITE, DARK['danger-2'], 'white on danger-2')
-  })
-  // `--primary-2` also carries primary-content text (the home stats strip is
-  // filled with it), so it needs the same 4.5 as `--primary`. Batch 27 audited
-  // only `--primary` and missed this; batch 29 caught it by sampling the strip
-  // on a device and finding a shade the audit never checked.
-  test('panel text (primary-content) on primary-2 ≥4.5', () => {
-    expectAA(DARK['primary-content'], DARK['primary-2'], 'primary-content on primary-2')
-  })
-
-  // primary is now the deep fill shade; as a border/UI graphic it only needs 3:1.
-  test('primary as UI/border on paper ≥3', () => {
-    expectAA(DARK['primary'], DARK['paper'], 'primary on paper', 3)
-  })
-  test('primary as UI/border on neutral-faint ≥3', () => {
-    expectAA(DARK['primary'], DARK['neutral-faint'], 'primary on neutral-faint', 3)
-  })
-})
-
-describe('light theme contrast (WCAG AA; dark is the audited scope, light is a parity gate)', () => {
-  test('content on canvas/paper ≥4.5', () => {
-    expectAA(LIGHT['content'], LIGHT['canvas'], 'content on canvas')
-    expectAA(LIGHT['content'], LIGHT['paper'], 'content on paper')
-  })
-  test('content-2 on canvas/paper/neutral-faint ≥4.5', () => {
-    expectAA(LIGHT['content-2'], LIGHT['canvas'], 'content-2 on canvas')
-    expectAA(LIGHT['content-2'], LIGHT['paper'], 'content-2 on paper')
-    expectAA(LIGHT['content-2'], LIGHT['neutral-faint'], 'content-2 on neutral-faint')
-  })
-  test('content/content-2 read on fill-faint ≥4.5', () => {
-    expectAA(LIGHT['content'], LIGHT['fill-faint'], 'content on fill-faint')
-    expectAA(LIGHT['content-2'], LIGHT['fill-faint'], 'content-2 on fill-faint')
-  })
-  test('accent reads as text on paper/canvas ≥4.5', () => {
-    expectAA(LIGHT['accent'], LIGHT['paper'], 'accent on paper')
-    expectAA(LIGHT['accent'], LIGHT['canvas'], 'accent on canvas')
-  })
-  test('button text (primary-content) on primary ≥4.5', () => {
-    expectAA(LIGHT['primary-content'], LIGHT['primary'], 'primary-content on primary')
-  })
-  test('white on danger-2 (button) ≥4.5', () => {
-    expectAA(WHITE, LIGHT['danger-2'], 'white on danger-2')
-  })
-  test('panel text (primary-content) on primary-2 ≥4.5', () => {
-    expectAA(LIGHT['primary-content'], LIGHT['primary-2'], 'primary-content on primary-2')
+  test('every forbidden pair really does fail, or it should be deleted', () => {
+    // Non-vacuity for FORBIDDEN. An exemption that stopped being necessary would
+    // otherwise sit here forever as a silent free pass over a surface that is in
+    // fact fine — which is how a skip list rots into a blind spot.
+    const mine = FORBIDDEN.filter((f) => f.theme === theme)
+    const bySurface = new Map(surfaces(theme).map((s) => [s.name, s.bg]))
+    for (const { token, surface } of mine) {
+      const bg = bySurface.get(surface)
+      expect(bg, `${surface} is a real surface in theme-${theme}`).toBeDefined()
+      const r = contrastOn(t[token]!, bg!)
+      expect(
+        r,
+        `--${token} on --${surface} = ${r.toFixed(2)}; it now clears `
+          + `${TEXT_FLOORS[token]}, so remove this FORBIDDEN entry`,
+      ).toBeLessThan(TEXT_FLOORS[token]!)
+    }
   })
 
-  // Known light-theme gaps (large-text-only, 3:1): muted/danger-as-text on
-  // bright surfaces miss 4.5 by a hair. Documented in PROGRESS 批27 遗留;
-  // a future light-audit batch deepens --content-muted / --danger.
-  test('content-muted on paper ≥3 (large-only, known gap)', () => {
-    expectAA(LIGHT['content-muted'], LIGHT['paper'], 'content-muted on paper', 3)
+  test('the surface list is not silently empty', () => {
+    // A typo in the token names above would make `surfaces()` throw, but a future
+    // refactor that filtered the list down to nothing would pass every loop.
+    expect(surfaces(theme).length).toBeGreaterThanOrEqual(13)
   })
-  test('danger as text on paper ≥3 (large-only, known gap)', () => {
-    expectAA(LIGHT['danger'], LIGHT['paper'], 'danger on paper', 3)
+
+  test('a label on an accent fill reads', () => {
+    // White on systemBlue is 4.02 in light and 3.41 in dark — Apple's own values,
+    // below AA, which is what .increase-contrast exists for. Filled DESTRUCTIVE
+    // controls do not get that latitude: they use the accessible red, where the
+    // label clears 4.5 outright.
+    const accent = t['accent']!
+    expectReads(t['accent-content']!, { r: accent.r, g: accent.g, b: accent.b },
+      'accent-content on accent', 3.0)
+    const red = t['system-red-strong']!
+    expectReads(t['accent-content']!, { r: red.r, g: red.g, b: red.b },
+      'accent-content on system-red-strong', 4.5)
+  })
+
+  test('systemRed is a text colour, NOT a fill behind a light label', () => {
+    // Non-vacuity for the pair above: --system-red-strong exists precisely because
+    // --system-red cannot carry white text. If that ever stopped being true the
+    // second token would be redundant and should be deleted, not kept.
+    const red = t['system-red']!
+    const onRed = contrastOn(t['accent-content']!, { r: red.r, g: red.g, b: red.b })
+    expect(onRed, `white on --system-red = ${onRed.toFixed(2)}`).toBeLessThan(4.5)
   })
 })
 
@@ -238,95 +333,80 @@ describe('light theme contrast (WCAG AA; dark is the audited scope, light is a p
  * The glass overlay stack on the background-unknown surfaces (nav capsule,
  * mini-player, sheets, dialogs, popovers).
  *
- * Those surfaces gained two translucent `background-image` layers on top of the
- * `--glass-fill*` colour: a vertical luminance ramp and a diagonal sheen. Both
- * lie **under text**, so neither alpha is a free decorative choice — and the
- * constraint is the *stack*, not either layer alone. The sheen originates at the
- * top-left and the ramp peaks along the top edge, so they overlap, and text in
- * that corner sees both composited. Checked separately, dark ramp 0.05 + sheen
- * 0.06 each pass; composited they put `--content-muted` at 4.25 and fail. The
- * shipped pair (0.03 / 0.04) lands it at 4.68.
+ * Those surfaces carry two translucent `background-image` layers on top of the
+ * `--glass-fill*` colour: a vertical luminance ramp and a diagonal sheen. Both lie
+ * UNDER text, so neither alpha is a free decorative choice — and the constraint is
+ * the STACK, not either layer alone. The sheen originates at the top-left and the
+ * ramp peaks along the top edge, so they overlap and text in that corner sees both
+ * composited.
  *
- * The rim layers are deliberately absent from this gate: they are 1px `inset`
- * box-shadows, no text ever sits on them, and that is exactly why the rim is
- * where most of the visual work went — brightness there is free.
+ * The alphas were derived against the former palette, where the binding pair was
+ * tertiary ink at 4.5 (0.05 + 0.06 landed it at 4.25 and failed; 0.03 + 0.04 gave
+ * 4.68). Under the Apple labels the tightest pair on this stack is `--accent`
+ * against its 3.0 floor, so the shipped values now carry considerably more margin
+ * than they were designed with. They are re-derived here rather than assumed, and
+ * kept rather than re-opened — loosening them is a visual decision, not a
+ * consequence of the palette swap.
  *
- * Light's ramp top is `rgba(255, 255, 255, 0)` on purpose, asserted below. Its
- * fill composites to pure white, so a white top stop is the identity operation
- * anyway; the reason it is *zero* rather than merely small is theme packs, whose
- * `backgroundColor` need not be white — there a white stop would stop being a
- * no-op and start lightening a surface carrying dark text.
- *
- * Thresholds mirror the per-theme blocks above: dark holds every text token at
- * 4.5, light holds `--content-muted`/`--danger` at 3 (the documented
- * large-text-only gap) and the rest at 4.5.
+ * The rim layers are deliberately absent: they are 1px `inset` box-shadows, no text
+ * ever sits on them, and that is exactly why the rim is where most of the visual
+ * work went — brightness there is free.
  */
-/** Light's muted/danger gaps are documented in the light-theme block above. */
-function floorFor(theme: 'dark' | 'light', token: string): number {
-  return theme === 'light' && (token === 'content-muted' || token === 'danger') ? 3 : 4.5
-}
-
-/** Raw declaration text for one rgba token, straight out of a theme block. */
-function rawDecl(theme: 'dark' | 'light', token: string): string {
-  const block = TOKENS_CSS.match(
-    new RegExp(`\\.theme-root\\.theme-${theme}\\s*\\{([\\s\\S]*?)\\n\\s*\\}`),
-  )
-  const decl = block![1]!.match(new RegExp(`--${token}:\\s*(rgba?\\([^)]*\\));`))
-  expect(decl, `--${token} missing from theme-${theme}`).not.toBeNull()
-  return decl![1]!
-}
-
 describe('glass overlay stack (ramp + sheen) over the glass fills', () => {
-  const TEXT_TOKENS = ['content', 'content-2', 'content-muted', 'accent', 'danger'] as const
+  for (const theme of ['dark', 'light'] as const) {
+    const t = THEMES[theme]
+    const page: Rgb = t['system-background']!
 
-  for (const [theme, tokens] of [
-    ['dark', DARK],
-    ['light', LIGHT],
-  ] as const) {
     for (const fill of ['glass-fill', 'glass-fill-strong'] as const) {
-      // DARK/LIGHT already hold the fill composited over the canvas.
-      const base = tokens[fill]!
+      const base = over(t[fill]!, page)
 
-      test(`${theme}: top-left corner (ramp ⊕ sheen) reads on ${fill}`, () => {
-        const withRamp = parseRgbaOver(rawDecl(theme, 'glass-ramp-top'), base)
-        const corner = parseRgbaOver(rawDecl(theme, 'glass-sheen'), withRamp)
+      test(`${theme}: top-left corner (ramp + sheen) reads on ${fill}`, () => {
+        const withRamp = over(parseRgba(rawDecl(theme, 'glass-ramp-top')), base)
+        const corner = over(parseRgba(rawDecl(theme, 'glass-sheen')), withRamp)
         for (const token of TEXT_TOKENS) {
-          expectAA(tokens[token]!, corner, `${token} on ${fill} + ramp + sheen`, floorFor(theme, token))
+          expectReads(t[token]!, corner, `--${token} on ${fill} + ramp + sheen`, TEXT_FLOORS[token]!)
         }
       })
 
       test(`${theme}: bottom edge (ramp only, sheen has died) reads on ${fill}`, () => {
         // The sheen stop is transparent past 45%, so the lower half is ramp-only.
-        const bottom = parseRgbaOver(rawDecl(theme, 'glass-ramp-bottom'), base)
+        const bottom = over(parseRgba(rawDecl(theme, 'glass-ramp-bottom')), base)
         for (const token of TEXT_TOKENS) {
-          expectAA(tokens[token]!, bottom, `${token} on ${fill} + ramp bottom`, floorFor(theme, token))
+          expectReads(t[token]!, bottom, `--${token} on ${fill} + ramp bottom`, TEXT_FLOORS[token]!)
         }
       })
     }
   }
 
   test("light's ramp top is fully transparent (pack-safe, and a no-op over white)", () => {
+    // `--glass-fill` is 0.85 white over a white page, so it composites to pure
+    // white and adding white on top is the identity operation. The reason it is
+    // ZERO rather than merely small is theme packs, whose background need not be
+    // white — there a white stop would stop being a no-op and start lightening a
+    // surface carrying dark text.
     expect(rawDecl('light', 'glass-ramp-top')).toMatch(/,\s*0\s*\)$/)
   })
 
   test('the composite layers are wired to the atomic tokens, in one place', () => {
-    // Declared once in `.theme-root`; a nested var() inside a custom property
-    // does resolve per-theme on the consuming element (headless-Chrome verified
-    // through the lynx-css pipeline). Repointing one of these at a hardcoded
-    // colour would silently escape every derivation above.
+    // Declared once in `.theme-root`; a nested var() inside a custom property does
+    // resolve per-theme on the consuming element (headless-Chrome verified through
+    // the lynx-css pipeline). Repointing one of these at a hardcoded colour would
+    // silently escape every derivation above.
     const root = TOKENS_CSS.match(/\.theme-root \{([\s\S]*?)\n\}/)
     expect(root, '.theme-root block exists').not.toBeNull()
     const body = root![1]!
-    expect(body).toMatch(/--glass-ramp:\s*linear-gradient\([\s\S]*?var\(--glass-ramp-top\)[\s\S]*?var\(--glass-ramp-bottom\)/)
+    expect(body).toMatch(
+      /--glass-ramp:\s*linear-gradient\([\s\S]*?var\(--glass-ramp-top\)[\s\S]*?var\(--glass-ramp-bottom\)/,
+    )
     expect(body).toMatch(/--glass-sheen-layer:\s*linear-gradient\([\s\S]*?var\(--glass-sheen\)/)
     expect(body).toMatch(/--glass-rim-sides:[\s\S]*?var\(--glass-rim-side\)/)
   })
 
   test('no bare 0 before a negative length inside a custom property', () => {
     // The minifier collapses `inset 0 -1px 0` to `inset 0-1px 0` *inside custom
-    // property values* (it leaves direct declarations alone). Chrome
-    // re-tokenizes that correctly; a stricter native parser might not, so the
-    // bottom hairline stays a direct declaration at each surface.
+    // property values* (it leaves direct declarations alone). Chrome re-tokenizes
+    // that correctly; a stricter native parser might not, so the bottom hairline
+    // stays a direct declaration at each surface.
     const root = TOKENS_CSS.match(/\.theme-root \{([\s\S]*?)\n\}/)![1]!
     const composites = root.match(/--glass-(?:rim-sides|ramp|sheen-layer):[\s\S]*?;/g) ?? []
     expect(composites.length, 'the three composite layers are declared').toBe(3)
@@ -339,62 +419,53 @@ describe('glass overlay stack (ramp + sheen) over the glass fills', () => {
 /**
  * The full player's veil over its blurred cover.
  *
- * This is the one surface in the app whose background is not a token: it is the veil
- * composited over *whatever colour the current album art happens to be*. So the pair
- * that has to clear AA is `--content*` over `veil ⊕ cover`, and the only honest
+ * This is the one surface in the app whose background is not a token: it is the
+ * veil composited over whatever colour the current album art happens to be. So the
+ * pair that has to clear the floor is text over `veil ⊕ cover`, and the only honest
  * cover to test against is the worst case — pure black and pure white, since album
- * art can be either.
+ * art can be either. Because those are the absolute ends of the range, anything the
+ * backdrop does to the cover INSIDE [0, 255] is free, which is what lets
+ * `PlayerBackdrop` boost saturation without touching this derivation.
  *
- * Because the extremes are the absolute ends of the range, anything the backdrop does
- * to the cover *inside* [0, 255] is free here — that is what lets `PlayerBackdrop`
- * boost saturation without touching this derivation.
+ * RE-DERIVED for the Apple palette; the bounds moved in both themes and the veil
+ * colour itself moved in dark (from #0f0f11 to pure black):
  *
- * The bound is tight in light and it decided the design rather than confirming it:
- * light `--content-2` reached only 4.23:1 at α=0.90 and 4.43:1 at α=0.92 when this was
- * derived, so the first workable value was 0.93. (Deepening `--content-2` to #67676f
- * for the selection wash later moved that bound to 0.91; the shipped 0.94 did not
- * change, so it now carries more margin than it was designed with.) Dark is a different problem — there the bright extreme is the
- * dangerous one, and it is far cheaper to survive: `--content-2` clears at 0.83. The
- * two themes therefore ship different alphas (0.94 light, 0.85 dark) and this test
- * derives each from the shipped value rather than assuming they agree. They were
- * briefly equal, which quietly cost dark ~11 alpha points of artwork.
+ *   light  bound 0.930 (was 0.91), binding pair --system-red over a BLACK cover
+ *   dark   bound 0.765 (was 0.83), binding pair --accent over a WHITE cover
  *
- * Loosening either past its own bound turns this red — which is the intended outcome,
- * not an obstacle.
+ * The shipped alphas (0.94 light, 0.85 dark) both clear their new bound, so they are
+ * kept. Light's margin is now thin — 3.10 against a 3.0 floor, where the former
+ * derivation had three points — and that is worth knowing before anyone lowers it
+ * to show more artwork.
  */
 describe('player scrim over worst-case cover art', () => {
   const BACKDROP_CSS = readFileSync(
     resolve(process.cwd(), 'src/features/player/widgets/PlayerBackdrop.css'),
     'utf8',
   )
-
-  const BLACK: Color = { r: 0, g: 0, b: 0 }
+  const BLACK: Rgb = { r: 0, g: 0, b: 0 }
+  const WHITE: Rgb = { r: 255, g: 255, b: 255 }
 
   /** Alpha of one scrim token, read from `tokens.css`. */
-  function scrimAlpha(theme: 'dark' | 'light', which: 'from' | 'to'): number {
-    const block = TOKENS_CSS.match(
-      new RegExp(`\\.theme-root\\.theme-${theme}\\s*\\{([\\s\\S]*?)\\n\\s*\\}`),
-    )
-    const decl = block![1]!.match(
+  function scrimAlpha(theme: ThemeName, which: 'from' | 'to'): number {
+    const decl = themeBlock(theme).match(
       new RegExp(`--player-scrim-${which}:\\s*rgba?\\([^)]*?([\\d.]+)\\s*\\)`),
     )
     expect(decl, `--player-scrim-${which} missing from theme-${theme}`).not.toBeNull()
     return parseFloat(decl![1]!)
   }
 
-  /** Solid colour of one scrim token (its rgb, ignoring alpha). */
-  function scrimColor(tokens: Record<string, Color>): Color {
-    // The veil is the canvas colour — asserted below, so reading `canvas` here is
-    // not an assumption but the same fact stated once.
-    return tokens['canvas']!
-  }
-
-  function composite(veil: Color, cover: Color, alpha: number): Color {
-    return {
-      r: Math.round(veil.r * alpha + cover.r * (1 - alpha)),
-      g: Math.round(veil.g * alpha + cover.g * (1 - alpha)),
-      b: Math.round(veil.b * alpha + cover.b * (1 - alpha)),
+  /** Does every token the player draws clear its floor at this veil alpha? */
+  function clearsAt(theme: ThemeName, alpha: number): boolean {
+    const t = THEMES[theme]
+    const veil = t['system-background']!
+    for (const cover of [BLACK, WHITE]) {
+      const bg = over({ ...veil, a: alpha }, cover)
+      for (const token of TEXT_TOKENS) {
+        if (contrastOn(t[token]!, bg) < TEXT_FLOORS[token]!) return false
+      }
     }
+    return true
   }
 
   test('the scrim is applied as a gradient of the two tokens', () => {
@@ -405,208 +476,329 @@ describe('player scrim over worst-case cover art', () => {
     expect(css).toContain('var(--player-scrim-to)')
   })
 
-  test.each(['dark', 'light'] as const)('%s: the veil is the canvas colour', (theme) => {
-    // Any other hue would need its own foreground palette; using canvas is what lets
-    // the player keep the ordinary `--content*` tokens.
-    const block = TOKENS_CSS.match(
-      new RegExp(`\\.theme-root\\.theme-${theme}\\s*\\{([\\s\\S]*?)\\n\\s*\\}`),
-    )![1]!
-    const canvas = (theme === 'dark' ? DARK : LIGHT)['canvas']!
+  test.each(['dark', 'light'] as const)('%s: the veil is the page colour', (theme) => {
+    // Any other hue would need its own foreground palette; using the page colour is
+    // what lets the player keep the ordinary label tokens.
+    const page = THEMES[theme]['system-background']!
     for (const which of ['from', 'to'] as const) {
-      const rgb = block.match(
+      const rgb = themeBlock(theme).match(
         new RegExp(`--player-scrim-${which}:\\s*rgba?\\(\\s*(\\d+)[,\\s]+(\\d+)[,\\s]+(\\d+)`),
       )!
       expect(
         { r: +rgb[1]!, g: +rgb[2]!, b: +rgb[3]! },
-        `--player-scrim-${which} must be the canvas colour`,
-      ).toEqual(canvas)
+        `--player-scrim-${which} must be the --system-background colour`,
+      ).toEqual({ r: page.r, g: page.g, b: page.b })
     }
   })
 
-  // The most transparent end of the gradient is the worst case for every token.
-  test.each([
-    ['dark', DARK] as const,
-    ['light', LIGHT] as const,
-  ])('%s: text clears AA over the veil on any cover', (theme, tokens) => {
+  test.each(['dark', 'light'] as const)('%s: text clears its tier over any cover', (theme) => {
+    // The most transparent end of the gradient is the worst case for every token.
     const alpha = Math.min(scrimAlpha(theme, 'from'), scrimAlpha(theme, 'to'))
-    const veil = scrimColor(tokens)
-
+    const t = THEMES[theme]
+    const veil = t['system-background']!
     for (const cover of [BLACK, WHITE]) {
-      const bg = composite(veil, cover, alpha)
-      const on = `${theme} scrim α${alpha} over ${hexColor(cover)} cover`
-      // Body copy, the artist line, and lyric highlights — full 4.5.
-      expectAA(tokens['content'], bg, `content on ${on}`)
-      expectAA(tokens['content-2'], bg, `content-2 on ${on}`)
-      expectAA(tokens['accent'], bg, `accent on ${on}`)
-      // `--content-muted` is held to 3:1, matching the pre-existing light-theme
-      // exemption above — it already only clears 3 on the flat `--paper`, so
-      // demanding 4.5 here would be a stricter bar than the rest of the app meets.
-      expectAA(tokens['content-muted'], bg, `content-muted on ${on}`, 3)
+      const bg = over({ ...veil, a: alpha }, cover)
+      const on = `${theme} scrim a${alpha} over ${hexOf(cover)} cover`
+      for (const token of TEXT_TOKENS) {
+        expectReads(t[token]!, bg, `--${token} on ${on}`, TEXT_FLOORS[token]!)
+      }
+    }
+  })
+
+  test.each(['dark', 'light'] as const)('%s: the shipped alpha is derived, not chosen', (theme) => {
+    /*
+     * Find the bound instead of restating it: step up until every pair clears, then
+     * assert the shipped value is at or above that, AND that one step below the
+     * bound genuinely fails. The second half is what stops this from degrading into
+     * "0.94 >= 0.0" — if the palette ever got so forgiving that any alpha worked,
+     * this test would say so rather than quietly passing.
+     */
+    let bound: number | null = null
+    for (let a = 0; a <= 1.0001; a += 0.005) {
+      if (clearsAt(theme, a)) { bound = Math.round(a * 1000) / 1000; break }
+    }
+    expect(bound, `no veil alpha clears the floors in ${theme}`).not.toBeNull()
+
+    const shipped = Math.min(scrimAlpha(theme, 'from'), scrimAlpha(theme, 'to'))
+    expect(
+      shipped,
+      `${theme} veil alpha ${shipped} is below its derived bound ${bound}`,
+    ).toBeGreaterThanOrEqual(bound!)
+
+    expect(
+      bound! > 0 && !clearsAt(theme, bound! - 0.01),
+      `${theme}'s bound ${bound} must be a real bound — one step below it has to fail, `
+        + 'or the veil is unconstrained and this whole derivation is decoration',
+    ).toBe(true)
+  })
+})
+
+/** Every stylesheet under `src/`, comments stripped, as `[path, css]`. */
+function stylesheets(): Array<[string, string]> {
+  const out: Array<[string, string]> = []
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name)
+      if (entry.isDirectory()) {
+        if (entry.name !== '__tests__') walk(full)
+      } else if (entry.name.endsWith('.css')) {
+        out.push([
+          full.split('/src/')[1]!,
+          readFileSync(full, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''),
+        ])
+      }
+    }
+  }
+  walk(resolve(process.cwd(), 'src'))
+  return out
+}
+
+/** `selector { body }` pairs from one stylesheet. */
+function rulesOf(css: string): Array<{ selector: string, body: string }> {
+  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
+    selector: (m[1] ?? '').trim(),
+    body: m[2] ?? '',
+  }))
+}
+
+/**
+ * The `color:` value of a rule, or ''. The lookbehind is load-bearing: without it
+ * `background-color:` answers first and every offender reads as clean. (That exact
+ * mistake is why the previous version of this file carried a self-check for it, and
+ * it is kept below.)
+ */
+function textColour(body: string): string {
+  return /(?<![-\w])color:\s*([^;]+);/.exec(body)?.[1] ?? ''
+}
+
+function backgroundColour(body: string): string {
+  return /background(?:-color)?:\s*([^;]+);/.exec(body)?.[1] ?? ''
+}
+
+/**
+ * A state wash has to be visible against what it sits on.
+ *
+ * This is the one relationship WCAG says nothing about, and the gap is where a real
+ * bug lived: two multi-select highlights painted `--paper` over `--canvas` — 250 vs
+ * 255, a ratio of 1.04 — so selecting a row changed nothing on screen. Nobody
+ * noticed because every TEXT pair still passed; the wash was invisible, not
+ * illegible.
+ *
+ * The floor is 1.08. It is a separation, not a standard.
+ *
+ * The former anti-vacuity companion asserted that `--paper` over `--canvas` still
+ * measures below the floor, so the floor demonstrably rejected the shipped bug.
+ * That assertion is GONE because it stopped being true: Apple's secondary
+ * background over the primary one measures 1.116 in light and 1.234 in dark, i.e.
+ * the original defect is no longer reproducible with these values. Deleting it
+ * without replacement would have left the number unjustified, so the replacement
+ * derives each wash's minimum alpha and requires one step below it to fail.
+ */
+describe('state washes over the surfaces they sit on', () => {
+  const FLOOR = 1.08
+  /** `--tint-fill` (accent, pack-tintable) and the neutral on-material fill. */
+  const WASHES = ['tint-fill', 'quaternary-system-fill'] as const
+
+  function backdrops(theme: ThemeName): Array<{ name: string, bg: Rgb }> {
+    const t = THEMES[theme]
+    const page: Rgb = t['system-background']!
+    return [
+      { name: 'the page', bg: page },
+      { name: 'glass', bg: over(t['glass-fill-strong']!, page) },
+    ]
+  }
+
+  for (const theme of ['dark', 'light'] as const) {
+    const t = THEMES[theme]
+
+    test.each(WASHES)(`${theme}: --%s is visible over the page and over glass`, (wash) => {
+      for (const { name, bg } of backdrops(theme)) {
+        const washed = over(t[wash]!, bg)
+        const r = ratio(washed, bg)
+        expect(
+          r,
+          `--${wash} over ${name} = ${r.toFixed(3)} (${hexOf(washed)} on ${hexOf(bg)}). `
+            + `Below ${FLOOR} the state is not visible — which is how a selection `
+            + 'highlight painted an adjacent surface colour shipped: every text pair '
+            + 'passed, the highlight did not exist.',
+        ).toBeGreaterThanOrEqual(FLOOR)
+      }
+    })
+
+    test.each(WASHES)(`${theme}: --%s's alpha is derived, not chosen`, (wash) => {
+      const paint = t[wash]!
+      for (const { name, bg } of backdrops(theme)) {
+        let bound: number | null = null
+        for (let a = 0; a <= 1.0001; a += 0.005) {
+          if (ratio(over({ ...paint, a }, bg), bg) >= FLOOR) {
+            bound = Math.round(a * 1000) / 1000
+            break
+          }
+        }
+        expect(bound, `no alpha makes --${wash} visible over ${name}`).not.toBeNull()
+        expect(
+          paint.a,
+          `--${wash} alpha ${paint.a} is below its derived bound ${bound} over ${name}`,
+        ).toBeGreaterThanOrEqual(bound!)
+        // …and the bound must bite, or FLOOR is decoration.
+        expect(
+          ratio(over({ ...paint, a: Math.max(0, bound! - 0.01) }, bg), bg),
+          `one step below the bound must fail over ${name}, or --${wash} is unconstrained`,
+        ).toBeLessThan(FLOOR)
+      }
+    })
+
+    test.each(WASHES)(`${theme}: text still reads on a row washed with --%s`, (wash) => {
+      for (const { name, bg } of backdrops(theme)) {
+        const washed = over(t[wash]!, bg)
+        for (const token of TEXT_TOKENS) {
+          expectReads(t[token]!, washed, `--${token} on --${wash} over ${name}`, TEXT_FLOORS[token]!)
+        }
+      }
+    })
+  }
+
+  test('the step-up rules that used to be required here are now inert', () => {
+    /*
+     * The previous version asserted that washed rows step their metadata up from
+     * `--content-muted` to `--content-2`, because tertiary ink on a wash measured
+     * 3.86 in dark. Under the Apple palette BOTH of those names alias to
+     * `--secondary-label`, so the step-up changes nothing — it is a no-op, and
+     * asserting it would be asserting a no-op.
+     *
+     * Rather than delete the knowledge, pin the reason: the two aliases must
+     * currently resolve to the same token. When a later stage migrates `SongRow`
+     * onto the real tokens this test fails, which is the correct moment to decide
+     * whether the rule earns its place or gets deleted with the aliases.
+     */
+    for (const theme of ['dark', 'light'] as const) {
+      const block = themeBlock(theme)
+      const target = (alias: string): string =>
+        block.match(new RegExp(`--${alias}:\\s*var\\((--[\\w-]+)\\)`))?.[1] ?? `--${alias} is not an alias`
+      expect(
+        target('content-muted'),
+        'the SongRow / SheetShell wash step-ups are inert while these agree',
+      ).toBe(target('content-2'))
     }
   })
 })
 
 /**
- * A state wash has to be visible against what it sits on.
+ * Gate B — the usage rule that stands in for the missing numeric floor.
  *
- * This is the one relationship in the token set that WCAG says nothing about, and
- * the gap is where a real bug lived: two multi-select highlights painted `--paper`
- * over `--canvas` — 250 vs 255 in light, a ratio of 1.04 — so selecting a row
- * changed nothing on screen. Nobody noticed because every *text* pair still
- * passed; the wash was invisible, not illegible.
+ * `--tertiary-label` and `--quaternary-label` cannot clear even 3.0 on any surface
+ * (1.37–2.48, asserted below so this is not taken on faith). Apple ships them
+ * anyway because they are not for information: they are for placeholders, disabled
+ * controls and decoration. That is a usage constraint, so it is gated as one.
  *
- * The floor is 1.08. It is not a standard, it is a separation: the shipped washes
- * land at 1.11–1.41, and the shape that shipped the bug sits at 1.04 (light) and
- * 1.07 (dark). Asserting both ends means neither a weaker wash nor a re-run of the
- * `--paper` mistake can pass, and the number is not pinned to today's alphas.
- *
- * Washes are checked over BOTH backdrops they actually get painted on: the page
- * (`--canvas`) and glass (`--glass-fill-strong`, itself already composited over
- * the canvas). A wash inside a sheet is the common case — the play-queue drawer,
- * the popover's selected item.
+ * A scan is only worth what its self-check proves. Nothing in the tree uses either
+ * token today, so the scan passes trivially — and would keep passing if the
+ * detector were broken. The two tests after it feed the detector known-bad and
+ * known-good input.
  */
-describe('state washes over the surfaces they sit on', () => {
-  const FLOOR = 1.08
+describe('gate B: the bottom label tiers stay out of load-bearing text', () => {
+  const UNREADABLE = ['tertiary-label', 'quaternary-label'] as const
 
-  /** `--primary-faint` (accent, pack-tintable) and `--fill-faint` (neutral). */
-  const WASHES = ['primary-faint', 'fill-faint'] as const
+  /** Selectors whose role is inherently non-essential, per Apple's own usage rule. */
+  const NON_ESSENTIAL = /--(?:disabled|placeholder|empty|decorative)\b|__placeholder\b/
 
-  /*
-   * Text that actually sits on a washed row: titles (`--content`), the current
-   * row's title (`--accent`), destructive menu items (`--danger`), and metadata,
-   * which is `--content-2` *because* of the wash — `--content-muted` on a wash
-   * measures 3.86 in dark, so the three washed rows step their metadata up a
-   * level. Those step-ups are pinned below; without them this list would be
-   * understating what ships.
-   */
-  const WASH_TEXT = ['content', 'content-2', 'accent', 'danger'] as const
-
-  for (const [theme, tokens] of [
-    ['dark', DARK],
-    ['light', LIGHT],
-  ] as const) {
-    for (const wash of WASHES) {
-      test(`${theme}: --${wash} is visible over the page and over glass`, () => {
-        for (const under of ['canvas', 'glass-fill-strong'] as const) {
-          const bg = parseRgbaOver(rawDecl(theme, wash), tokens[under]!)
-          const r = ratio(bg, tokens[under]!)
-          expect(
-            r,
-            `--${wash} over --${under} = ${r.toFixed(3)} (${hexColor(bg)} on `
-              + `${hexColor(tokens[under]!)}). Below ${FLOOR} the state is not `
-              + 'visible — which is how a selection highlight painted --paper over '
-              + '--canvas shipped: every text pair passed, the highlight did not exist.',
-          ).toBeGreaterThanOrEqual(FLOOR)
-        }
-      })
-
-      test(`${theme}: text still reads on a row washed with --${wash}`, () => {
-        for (const under of ['canvas', 'glass-fill-strong'] as const) {
-          const bg = parseRgbaOver(rawDecl(theme, wash), tokens[under]!)
-          for (const token of WASH_TEXT) {
-            expectAA(
-              tokens[token]!,
-              bg,
-              `${token} on --${wash} ⊕ --${under}`,
-              floorFor(theme, token),
-            )
-          }
-        }
-      })
-    }
-
-    test(`${theme}: an opaque surface token would fail the visibility floor`, () => {
-      // The defect shape, kept red on purpose. If tokens.css ever drifts far
-      // enough that --paper clears the floor over --canvas, this floor has stopped
-      // rejecting the bug it was written for and the number needs re-deriving.
-      const r = ratio(tokens['paper']!, tokens['canvas']!)
-      expect(
-        r,
-        `--paper over --canvas = ${r.toFixed(3)}; the floor ${FLOOR} exists to `
-          + 'reject exactly this as a row wash',
-      ).toBeLessThan(FLOOR)
+  /** Violations in one stylesheet: unreadable ink used as ordinary text. */
+  function violationsIn(file: string, css: string): string[] {
+    return rulesOf(css).flatMap(({ selector, body }) => {
+      const colour = textColour(body)
+      const token = UNREADABLE.find((u) => colour.includes(`--${u}`))
+      if (token == null) return []
+      if (NON_ESSENTIAL.test(selector)) return []
+      return [`${file}: ${selector} uses --${token} as text`]
     })
   }
 
-  test('the washed rows step their metadata up from --content-muted', () => {
-    // WASH_TEXT above omits `--content-muted` because no washed row uses it any
-    // more. That is a fact about two stylesheets, so read them: if a step-up is
-    // deleted, tertiary text is back on a wash at 3.86 and the omission is a lie.
-    // Both washed row types are covered — the play-queue drawer's own row, and the
-    // shared `.song-row` that the two multi-select pages wrap in a wash.
-    const STEP_UPS: Array<[string, RegExp]> = [
-      [
-        'features/player/widgets/SheetShell.css',
-        /\.drawer__row--active \.drawer__row-artist \{\s*color: var\(--content-2\)/,
-      ],
-      [
-        'features/library/widgets/SongRow.css',
-        /\.song-row--selected \.song-row__subtitle,\s*\.song-row--selected \.song-row__duration \{\s*color: var\(--content-2\)/,
-      ],
-    ]
-    for (const [file, re] of STEP_UPS) {
-      const css = readFileSync(resolve(process.cwd(), 'src', file), 'utf8')
-        .replace(/\/\*[\s\S]*?\*\//g, '')
-      expect(css, `${file} must step washed-row metadata up to --content-2`).toMatch(re)
+  test('these tiers really are unreadable, or this whole gate is theatre', () => {
+    for (const theme of ['dark', 'light'] as const) {
+      const t = THEMES[theme]
+      for (const token of UNREADABLE) {
+        for (const { name, bg } of surfaces(theme)) {
+          const r = contrastOn(t[token]!, bg)
+          expect(
+            r,
+            `--${token} on --${name} (${theme}) = ${r.toFixed(2)}; if it now clears 3.0 `
+              + 'it should get a numeric floor in TEXT_FLOORS instead of a usage rule',
+          ).toBeLessThan(3.0)
+        }
+      }
     }
   })
 
-  test('no stylesheet puts --content-muted text on a wash background', () => {
-    /*
-     * The two tests above cover the rows this batch touched. They do not cover a
-     * rule nobody thought of — and two shipped: `.media-list-item__badge` and
-     * `.playlist-card__chip` painted `--primary-faint` under `--content-muted` at
-     * `--font-2xs`, i.e. 4.14 over the page and 3.74 over glass in dark, the exact
-     * pair WASH_TEXT omits. Naming the known rows is a whitelist; this is the net.
-     *
-     * Shape, not token list: any rule whose background is a wash and whose own
-     * `color` is `--content-muted`. Matching `color:` needs the lookbehind, or
-     * `background-color:` answers first and every offender reads as clean.
-     */
-    const sheets: string[] = []
-    const walk = (dir: string): void => {
-      for (const entry of readdirSync(dir, { withFileTypes: true })) {
-        const full = join(dir, entry.name)
-        if (entry.isDirectory()) {
-          if (entry.name !== '__tests__') walk(full)
-        } else if (entry.name.endsWith('.css')) sheets.push(full)
-      }
-    }
-    walk(resolve(process.cwd(), 'src'))
-
-    const offenders = sheets.flatMap((file) => {
-      const css = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
-      return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].flatMap((rule) => {
-        const [, selector = '', body = ''] = rule
-        const background = /background(?:-color)?:\s*([^;]+);/.exec(body)?.[1] ?? ''
-        const colour = /(?<![-\w])color:\s*([^;]+);/.exec(body)?.[1] ?? ''
-        const washed = WASHES.some((w) => background.includes(`--${w}`))
-        return washed && colour.includes('--content-muted')
-          ? [`${file.split('/src/')[1]}: ${selector.trim()}`]
-          : []
-      })
-    })
-
+  test('no stylesheet uses an unreadable tier for load-bearing text', () => {
+    const sheets = stylesheets()
     expect(sheets.length, 'no stylesheets scanned — the walk is broken').toBeGreaterThan(30)
+    const violations = sheets.flatMap(([file, css]) => violationsIn(file, css))
     expect(
-      offenders,
-      'tertiary ink on a wash is below AA in dark — step it up to --content-2',
+      violations.sort(),
+      'tertiary/quaternary label is below 3.0 on every surface. Use --secondary-label '
+        + 'for anything a user has to read; these two are for placeholders, disabled '
+        + 'controls and decoration.',
     ).toEqual([])
   })
 
-  test('the wash/--content-muted detector matches the shape it is written for', () => {
-    // Defect-shape check, including the lookbehind: without it `background-color`
-    // satisfies the `color:` probe and the scan above silently passes everything.
-    const body = '  background-color: var(--primary-faint);\n  color: var(--content-muted);\n'
-    expect(/(?<![-\w])color:\s*([^;]+);/.exec(body)?.[1]).toBe('var(--content-muted)')
-    expect(/\bcolor:\s*([^;]+);/.exec(body)?.[1]).toBe('var(--primary-faint)')
+  test('the detector catches the shape it is written for', () => {
+    // Known-bad: ordinary text at the tertiary tier.
+    expect(violationsIn('x.css', '.song-row__subtitle { color: var(--tertiary-label); }'))
+      .toHaveLength(1)
+    // Known-bad even when a background is declared first — the lookbehind case that
+    // silently defeated an earlier version of this scan.
+    expect(violationsIn('x.css', [
+      '.chip {',
+      '  background-color: var(--tint-fill);',
+      '  color: var(--quaternary-label);',
+      '}',
+    ].join('\n'))).toHaveLength(1)
+    // Known-good: a genuinely non-essential role.
+    expect(violationsIn('x.css', '.field--placeholder { color: var(--tertiary-label); }'))
+      .toEqual([])
+    expect(violationsIn('x.css', '.btn--disabled { color: var(--quaternary-label); }'))
+      .toEqual([])
+    // Known-good: the secondary tier is always allowed.
+    expect(violationsIn('x.css', '.song-row__subtitle { color: var(--secondary-label); }'))
+      .toEqual([])
   })
 
-  test('--content-muted on a wash is the pair the step-ups exist for', () => {
-    // Non-vacuity for the test above: it is only worth anything while the shade it
-    // avoids would actually fail. Dark, over glass, is the worst case.
-    const bg = parseRgbaOver(rawDecl('dark', 'primary-faint'), DARK['glass-fill-strong']!)
-    const r = ratio(DARK['content-muted']!, bg)
-    expect(r, `content-muted on the dark wash = ${r.toFixed(2)}`).toBeLessThan(4.5)
+  test('the lookbehind in the colour probe is doing its job', () => {
+    // Pinned separately from the scan, because if this regex regresses every test
+    // above still passes while the scan silently answers about backgrounds.
+    const body = '  background-color: var(--tint-fill);\n  color: var(--tertiary-label);\n'
+    expect(textColour(body)).toBe('var(--tertiary-label)')
+    expect(/\bcolor:\s*([^;]+);/.exec(body)?.[1]).toBe('var(--tint-fill)')
   })
+})
+
+/**
+ * The FORBIDDEN pairs from gate A, enforced against the stylesheets.
+ *
+ * A measured failure that is merely skipped in the numeric sweep is a hole. These
+ * combinations do not ship today (both heavy fills have no consumers at all), so
+ * this scan exists for the day one of them gains one.
+ */
+test('no stylesheet puts chromatic text on one of the two heavy Apple fills', () => {
+  // Both the Apple names and the surviving aliases, since either may appear during
+  // the staged migration and they mean the same thing.
+  const CHROMATIC = ['--accent', '--primary', '--system-red', '--danger']
+  const HEAVY_FILL = ['--system-fill', '--secondary-system-fill']
+
+  const offenders = stylesheets().flatMap(([file, css]) =>
+    rulesOf(css).flatMap(({ selector, body }) => {
+      const colour = textColour(body)
+      const background = backgroundColour(body)
+      const chromatic = CHROMATIC.some((c) => colour.includes(c))
+      const heavy = HEAVY_FILL.some((f) => background.includes(f))
+      return chromatic && heavy ? [`${file}: ${selector}`] : []
+    }),
+  )
+  expect(
+    offenders.sort(),
+    'in light, --accent measures 2.77 / 2.91 and --system-red 2.81 / 2.95 on '
+      + '--system-fill / --secondary-system-fill. Those two fills are for shapes, not '
+      + 'for coloured text: use --tertiary-system-fill or --quaternary-system-fill '
+      + 'under blue or red text, or keep the heavy fill and use --label on it (16.5+).',
+  ).toEqual([])
 })

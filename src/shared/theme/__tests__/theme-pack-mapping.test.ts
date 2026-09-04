@@ -61,8 +61,8 @@ describe('isHexColor', () => {
 describe('readableTextColorOn', () => {
   test('light seeds get dark text', () => {
     // Sakura's dark-mode seed — a light pink (YIQ ≈ 177).
-    expect(readableTextColorOn('#F48FB1')).toBe('#111111')
-    expect(readableTextColorOn('#FFF0F5')).toBe('#111111')
+    expect(readableTextColorOn('#F48FB1')).toBe('#000000')
+    expect(readableTextColorOn('#FFF0F5')).toBe('#000000')
   })
 
   test('dark seeds get white text', () => {
@@ -93,12 +93,13 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
   test('maps the full sakura pack in light mode', () => {
     const vars = themePackToStyleVars(SAKURA, 'light')
 
-    expect(vars['--primary']).toBe('#D81B60')
-    expect(vars['--primary-2']).toBe('#D81B60')
+    // One accent channel now: the former --primary/--primary-2/--accent trio was
+    // three names for the same ink shade, and --primary-2 had no consumer at all.
     expect(vars['--accent']).toBe('#D81B60')
-    expect(vars['--primary-content']).toBe('#ffffff')
-    // The selected-nav-pill wash derives from the seed: 10% in light mode.
-    expect(vars['--primary-faint']).toBe('rgba(216, 27, 96, 0.1)')
+    expect(vars['--accent-content']).toBe('#ffffff')
+    // The accent wash derives from the seed: 10% in light mode, which now MATCHES
+    // the baseline alpha in tokens.css rather than running two points above it.
+    expect(vars['--tint-fill']).toBe('rgba(216, 27, 96, 0.1)')
     // Glass is INDEPENDENT of seed: sakura ships no glassColor, so the glass
     // glow falls back to the star-blue baseline — pink buttons + blue glass
     // (true dual-channel), NOT pink glass. The texture tokens stay baseline too.
@@ -109,8 +110,14 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
     expect(vars['--glass-fill-strong']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-fill-strong'])
     expect(vars['--glass-border']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-border'])
     expect(vars['--glass-highlight']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-highlight'])
-    expect(vars['--canvas']).toBe('#FFF0F5')
-    expect(vars['--paper']).toBe('#FFFFFF')
+    expect(vars['--system-background']).toBe('#FFF0F5')
+    expect(vars['--secondary-system-background']).toBe('#FFFFFF')
+    // The pack's single page/card pair drives BOTH Apple background groups. Apple
+    // keeps them distinct, but a pack only supplies two colours — mapping only the
+    // plain group would leave every settings-style page on the untouched Apple grey
+    // while the rest of the app wore the pack.
+    expect(vars['--system-grouped-background']).toBe('#FFF0F5')
+    expect(vars['--secondary-system-grouped-background']).toBe('#FFFFFF')
     expect(vars['--paper-clear']).toBe('rgba(255, 255, 255, 0.9)')
     expect(vars['--radius-lg']).toBe('14px')
     expect(vars['--radius-md']).toBe('16px')
@@ -120,16 +127,18 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
   test('selects the dark palette when resolved is dark', () => {
     const vars = themePackToStyleVars(SAKURA, 'dark')
 
-    expect(vars['--primary']).toBe('#F48FB1')
-    // The wash brightens to 14% in dark mode — a low-alpha tint over dark
-    // surfaces needs more to stay visible (mirrors the baseline 8%/12% split).
-    expect(vars['--primary-faint']).toBe('rgba(244, 143, 177, 0.14)')
+    expect(vars['--accent']).toBe('#F48FB1')
+    // The wash brightens to 18% in dark mode — a low-alpha tint over dark surfaces
+    // needs more to stay visible. Mirrors the baseline's 10%/18% split exactly.
+    expect(vars['--tint-fill']).toBe('rgba(244, 143, 177, 0.18)')
     // Glass falls back to the dark star-blue baseline (sakura has no glassColor).
     expect(vars['--glass-glow']).toBe(PACK_OVERRIDABLE_BASELINE.dark['--glass-glow'])
     expect(vars['--glass-glow-faint']).toBe(PACK_OVERRIDABLE_BASELINE.dark['--glass-glow-faint'])
     expect(vars['--glass-sheen']).toBe(PACK_OVERRIDABLE_BASELINE.dark['--glass-sheen'])
-    expect(vars['--canvas']).toBe('#1A0A10')
-    expect(vars['--paper']).toBe('#261418')
+    expect(vars['--system-background']).toBe('#1A0A10')
+    expect(vars['--secondary-system-background']).toBe('#261418')
+    expect(vars['--system-grouped-background']).toBe('#1A0A10')
+    expect(vars['--secondary-system-grouped-background']).toBe('#261418')
     expect(vars['--paper-clear']).toBe('rgba(38, 20, 24, 0.9)')
   })
 
@@ -146,7 +155,7 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
         glassColor: '#3BAEEF', // blue glass
       },
     }, 'light')
-    expect(vars['--primary']).toBe('#D81B60') // button channel = seed
+    expect(vars['--accent']).toBe('#D81B60') // button channel = seed
     expect(vars['--accent']).toBe('#D81B60')
     expect(vars['--glass-glow']).toBe('#3BAEEF') // glass channel = glassColor
     expect(vars['--glass-glow-faint']).toBe('rgba(59, 174, 239, 0.1)')
@@ -161,7 +170,7 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
     expect(vars['--glass-glow']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-glow'])
     // seedColor still applies to the button channel (invalid fields are
     // dropped field-by-field, never whole-pack).
-    expect(vars['--primary']).toBe('#D81B60')
+    expect(vars['--accent']).toBe('#D81B60')
   })
 
   test('never emits playerGradient tokens', () => {
@@ -178,14 +187,14 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
       light: { seedColor: '#D81B60', backgroundColor: 'not-a-color', surfaceColor: '#FFF' },
     }, 'light')
 
-    expect(vars['--primary']).toBe('#D81B60')
+    expect(vars['--accent']).toBe('#D81B60')
     // Not "absent" — the baseline. Invalid fields must not leak through, but
     // the token still needs a value (style diffs never remove keys).
-    expect(vars['--canvas']).toBe(PACK_OVERRIDABLE_BASELINE.light['--canvas'])
-    expect(vars['--paper']).toBe(PACK_OVERRIDABLE_BASELINE.light['--paper'])
+    expect(vars['--system-background']).toBe(PACK_OVERRIDABLE_BASELINE.light['--system-background'])
+    expect(vars['--secondary-system-background']).toBe(PACK_OVERRIDABLE_BASELINE.light['--secondary-system-background'])
     // The wash rides with the seed: valid seed keeps the derived wash even
     // when other colour fields are invalid.
-    expect(vars['--primary-faint']).toBe('rgba(216, 27, 96, 0.1)')
+    expect(vars['--tint-fill']).toBe('rgba(216, 27, 96, 0.1)')
     // Radii survive a partially-invalid colors block.
     expect(vars['--radius-lg']).toBe('14px')
   })
@@ -195,7 +204,7 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
       ...SAKURA,
       light: { seedColor: 'not-a-color' },
     }, 'light')
-    expect(vars['--primary-faint']).toBe(PACK_OVERRIDABLE_BASELINE.light['--primary-faint'])
+    expect(vars['--tint-fill']).toBe(PACK_OVERRIDABLE_BASELINE.light['--tint-fill'])
   })
 
   test('radii outside the backend 0-100 range fall back to the baseline', () => {
@@ -222,7 +231,7 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
     }
     expect(themePackToStyleVars(darkOnly, 'light')).toEqual(expectBaseline('light'))
     // …but still maps in dark mode.
-    expect(themePackToStyleVars(darkOnly, 'dark')['--primary']).toBe('#F48FB1')
+    expect(themePackToStyleVars(darkOnly, 'dark')['--accent']).toBe('#F48FB1')
   })
 
   test('no pack at all is the full baseline, not undefined', () => {

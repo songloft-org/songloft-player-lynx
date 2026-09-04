@@ -232,7 +232,10 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-3) var(--space-4);
-  background-color: var(--danger);
+  /* Filled destructive control: --system-red-strong (Apple's accessible red),
+     NOT --system-red. White on systemRed is 3.57 in light and 3.43 in dark;
+     on the accessible red it is 4.56, which clears AA in both themes. */
+  background-color: var(--system-red-strong);
   border-radius: var(--radius-sm);
   margin-bottom: var(--space-3);
 }
@@ -240,7 +243,7 @@
 .fp-results__clean-all-text {
   font-size: var(--font-sm);
   font-weight: var(--weight-medium);
-  color: var(--danger-content);
+  color: var(--system-red-strong-content);
   margin-left: var(--space-2);
 }
 

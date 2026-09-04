@@ -98,12 +98,19 @@ test.each(SURFACES)(
   ({ file, selector, fill }) => {
     const css = rules(file)
     const body = block(css, selector)
-    // A reverted surface (opaque --paper/--paper-clear) is the silent regression.
+    // A reverted surface (an opaque card colour instead of the glass fill) is the
+    // silent regression. Both the legacy alias and the Apple token it now points
+    // at are named: once a screen migrates off `--paper` the alias stops appearing,
+    // and a guard that only knew the old name would quietly stop biting.
     expect(body, `${selector} must use a --glass-fill* background`).toMatch(fill)
     expect(body, `${selector} must not fall back to --paper`).not.toMatch(/var\(--paper\)/)
     expect(body, `${selector} must not fall back to --paper-clear`).not.toMatch(
       /var\(--paper-clear\)/,
     )
+    expect(
+      body,
+      `${selector} must not fall back to --secondary-system-background`,
+    ).not.toMatch(/var\(--secondary-system-background\)/)
     // The sheen primitive the spike verified — if `inset` is stripped, the
     // declaration stays valid but the highlight is gone.
     expect(body, `${selector} must carry an inset box-shadow sheen`).toMatch(/box-shadow:[\s\S]*inset/)
@@ -237,24 +244,64 @@ const NOT_INSIDE_A_PANEL: Record<string, string> = {
 function opaqueTokens(): Set<string> {
   const css = readFileSync(path.join(SHARED, 'shared/theme/tokens.css'), 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, '')
-  const out = new Set<string>()
+
+  /**
+   * Three facts per token, because two are not enough:
+   *  - `opaqueLiteral` — it has a literal declaration that covers.
+   *  - `hasLiteral` — it has ANY literal declaration, opaque or not.
+   *  - `aliasOf` — it has a `var()` declaration.
+   *
+   * `hasLiteral` is what stops a variant block from rewriting a token's nature.
+   * `.increase-contrast` declares `--separator: var(--opaque-separator)`, which is
+   * a legitimate override in another context, not the token's base value; without
+   * this distinction that one line promoted a translucent separator to "opaque"
+   * and turned the assertion below red for the right reason.
+   */
+  const opaqueLiteral = new Set<string>()
+  const hasLiteral = new Set<string>()
+  const aliasOf = new Map<string, string>()
+
   for (const m of css.matchAll(/--([\w-]+):\s*([^;]+);/g)) {
     const [, name, raw] = m as unknown as [string, string, string]
     const value = raw.trim()
+
+    /*
+     * Resolve one level of indirection. The Muse names survive in `tokens.css`
+     * only as `--canvas: var(--system-background)` during the staged Apple
+     * migration, and most feature CSS still says the alias. A classifier that
+     * only understood literals would file every alias as "not opaque" and this
+     * whole gate would go blind for the duration of the migration — the opposite
+     * of what it is for. One level is enough by construction: `tokens-hig.test.ts`
+     * asserts no alias points at another alias.
+     */
+    const alias = /^var\(\s*--([\w-]+)\s*\)$/.exec(value)
+    if (alias != null) { aliasOf.set(name, alias[1]!); continue }
+
     const hex = /^#([0-9a-f]{3,8})$/i.exec(value)
     if (hex != null) {
+      hasLiteral.add(name)
       const digits = hex[1]!
       const alpha = digits.length === 4
         ? digits[3]!.repeat(2)
         : digits.length === 8 ? digits.slice(6) : 'ff'
-      if (alpha.toLowerCase() === 'ff') out.add(name)
+      if (alpha.toLowerCase() === 'ff') opaqueLiteral.add(name)
       continue
     }
     const rgba = /^rgba?\(([^)]*)\)$/.exec(value)
     if (rgba == null) continue
+    hasLiteral.add(name)
     const parts = rgba[1]!.split(',')
-    if (parts.length < 4) { out.add(name); continue } // rgb(): no alpha channel
-    if (Number(parts[3]) >= 1) out.add(name)
+    if (parts.length < 4) { opaqueLiteral.add(name); continue } // rgb(): no alpha
+    if (Number(parts[3]) >= 1) opaqueLiteral.add(name)
+  }
+
+  // A token with any literal is judged on its literals (opaque in EITHER theme
+  // counts, as before). Only a pure indirection — which is what every surviving
+  // Muse alias is — is resolved through its target.
+  const out = new Set(opaqueLiteral)
+  for (const [name, target] of aliasOf) {
+    if (hasLiteral.has(name)) continue
+    if (opaqueLiteral.has(target)) out.add(name)
   }
   return out
 }
@@ -280,9 +327,35 @@ function bounded(cls: string, rules: Map<string, { body: string, file: string }>
  * Tokens that ARE the surface or the lines drawn on it. A state may not paint
  * these (DESIGN.md §3.3 says the same about separators: 不要把 separator 颜色当
  * 背景色用). Accent and glass tokens are deliberately absent — a filled
- * `--primary` chip or a `--glass-glow-faint` pill is how a state should read.
+ * `--accent` chip or a `--glass-glow-faint` pill is how a state should read.
+ *
+ * Both the Apple names and the surviving Muse aliases are listed, because during
+ * the staged migration a rule may still say either and both mean the same thing.
+ *
+ * Two former members are deliberately GONE, and it is a narrowing worth naming:
+ * `--neutral-faint` and `--line` now resolve to `--tertiary-system-fill` and
+ * `--separator`, which are TRANSLUCENT. Apple's fills and separators are meant to
+ * sit on content, so painting a state with one no longer replaces the material
+ * underneath — the failure this list was written for stops existing for them. The
+ * separator tokens stay listed anyway: covering the material was only half the
+ * objection, and using a line colour as a fill is still a semantic error.
  */
-const SURFACE_CHANNEL = ['canvas', 'paper', 'paper-clear', 'neutral-faint', 'line', 'rule']
+const SURFACE_CHANNEL = [
+  // Apple background tiers — opaque, so painting a state with one covers glass.
+  'system-background', 'secondary-system-background', 'tertiary-system-background',
+  'system-grouped-background', 'secondary-system-grouped-background',
+  'tertiary-system-grouped-background',
+  // Lines. `separator` is translucent; it is here on semantic grounds, not
+  // coverage grounds.
+  'separator', 'opaque-separator',
+  // Translucent card colour with no consumer, kept for pack-schema compat.
+  'paper-clear',
+  // Surviving Muse aliases for the above.
+  'canvas', 'paper', 'rule', 'line',
+]
+
+/** SURFACE_CHANNEL members that are translucent, so exempt from the opacity check. */
+const TRANSLUCENT_SURFACE_CHANNEL = ['paper-clear', 'separator', 'line']
 
 /*
  * Modifier suffixes that mean "the user is interacting with this". Read off the
@@ -445,22 +518,49 @@ test('the opaque-token set is derived from tokens.css, not remembered', () => {
     new Set(colours.filter((name) => !OPAQUE.has(name))).size,
     'no translucent colours found — every rgba() was read as opaque',
   ).toBeGreaterThanOrEqual(12)
-  for (const name of ['canvas', 'paper', 'neutral-faint', 'line', 'rule', 'primary']) {
-    expect(opaque, `--${name} is a flat hex in tokens.css, so it is opaque`).toContain(name)
+  for (const name of [
+    // Apple background tiers and the opaque line colour — flat hexes.
+    'system-background', 'secondary-system-background', 'tertiary-system-background',
+    'system-grouped-background', 'secondary-system-grouped-background',
+    'tertiary-system-grouped-background', 'opaque-separator',
+    'label', 'accent', 'system-red', 'system-green', 'toast-fill',
+    // …and the surviving aliases, which must classify the same as their targets.
+    // These are the ones that prove the indirection is being resolved: before it
+    // was, every alias filed as translucent and this gate went blind.
+    'canvas', 'paper', 'rule', 'content', 'primary',
+  ]) {
+    expect(opaque, `--${name} resolves to a flat hex in tokens.css, so it is opaque`)
+      .toContain(name)
   }
   for (const name of [
-    'glass-fill', 'glass-fill-strong', 'paper-clear', 'fill-faint', 'primary-faint',
+    'glass-fill', 'glass-fill-strong', 'paper-clear',
+    // Apple's fills and separators are translucent BY DESIGN — they sit on
+    // content rather than replacing it.
+    'system-fill', 'secondary-system-fill', 'tertiary-system-fill',
+    'quaternary-system-fill', 'separator', 'tint-fill',
+    'secondary-label', 'tertiary-label', 'quaternary-label',
+    // …and the aliases that now point at those translucent tokens. `--line` and
+    // `--neutral-faint` used to be opaque hexes; under Apple they are not, which
+    // is a real change in what this gate can catch (see SURFACE_CHANNEL).
+    'line', 'neutral-faint', 'fill-faint', 'primary-faint', 'content-2', 'content-muted',
   ]) {
-    expect(opaque, `--${name} is rgba() below alpha 1 — it tints, it does not cover`)
+    expect(opaque, `--${name} resolves to rgba() below alpha 1 — it tints, it does not cover`)
       .not.toContain(name)
   }
   // Every surface-channel token must be classified, or the state test below is
-  // quietly narrower than it reads.
+  // quietly narrower than it reads. The two translucent members are exempt: they
+  // are listed there on semantic grounds, not coverage grounds.
   for (const name of SURFACE_CHANNEL) {
-    if (name === 'paper-clear') continue // translucent on purpose, still a surface
+    if (TRANSLUCENT_SURFACE_CHANNEL.includes(name)) continue
     expect(opaque, `--${name} must be known-opaque for the state gate to bite`)
       .toContain(name)
   }
+  // Non-vacuity for the exemption list: it must not silently grow to cover the
+  // whole channel, which would turn the loop above into a no-op.
+  expect(
+    SURFACE_CHANNEL.filter((n) => !TRANSLUCENT_SURFACE_CHANNEL.includes(n)).length,
+    'most of the surface channel must still be opaque',
+  ).toBeGreaterThanOrEqual(8)
 })
 
 test('no surface or separator colour is used as a row-state wash inside a panel', () => {
@@ -487,10 +587,15 @@ test('no surface or separator colour is used as a row-state wash inside a panel'
         violations.push(
           `.${cls} (${path.relative(SHARED, rule.file)}) washes a state with --${fill} `
             + `inside .${panel}. That token is the surface (or a line on it), not a `
-            + 'state: over glass it replaces the material, and over --canvas it is '
-            + 'nearly invisible (--paper vs --canvas is 250 vs 255). Use '
-            + '--primary-faint for a selection the theme pack should tint, or '
-            + '--fill-faint for a neutral on-material fill.',
+            + 'state: an opaque background tier replaces the material over glass, and '
+            + 'a line colour is not a fill at any opacity. Use --tint-fill for a '
+            + 'selection the theme pack should tint, or --quaternary-system-fill for '
+            + 'a neutral on-material fill.\n'
+            + 'Note the original invisibility argument no longer applies: under the '
+            + 'Muse palette --paper on --canvas was 250 vs 255 (ratio 1.04, i.e. the '
+            + 'wash did not exist), whereas Apple\'s secondary background on the '
+            + 'primary one measures 1.116 in light and 1.234 in dark. It is now '
+            + 'visible and still wrong — the objection is semantic.',
         )
       }
     }

@@ -46,8 +46,15 @@
   align-items: center;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-pill);
-  /* Muse single-accent channel: success = the ink/white primary fill. */
-  background-color: var(--primary);
+  /*
+   * A neutral high-contrast capsule, inverted against the theme — NOT the accent.
+   * This used to be `--primary`, which was an ink channel (near-black in light,
+   * white in dark); letting it inherit the new systemBlue would make a passive
+   * confirmation read as an interactive or informational control. Apple has no
+   * toast component to copy, so `--toast-fill` is an explicit extension rather
+   * than a borrowed semantic. Deliberately not glassified (see AGENTS.md).
+   */
+  background-color: var(--toast-fill);
   box-shadow: var(--shadow-md);
   /* Fill the padded wrap on narrow, cap + centre on wide/desktop so a long
      message doesn't span the whole viewport (and never overlaps the side rail). */
@@ -55,24 +62,25 @@
   max-width: 480px;
 }
 
-/* Danger is text/border only, never a colored fill (DESIGN.md §3.1). */
+/* Danger is text/border only, never a colored fill. systemRed measures 3.18 on
+   the light secondary background and 4.99 on the dark one. */
 .toast--error {
-  background-color: var(--paper);
-  border: 1px solid var(--danger);
+  background-color: var(--secondary-system-background);
+  border: 1px solid var(--system-red);
 }
 
 .toast__text {
   flex: 1;
   margin-left: var(--space-2);
   font-size: var(--font-sm);
-  color: var(--primary-content);
+  color: var(--toast-content);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .toast--error .toast__text {
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 @keyframes toast-enter {
