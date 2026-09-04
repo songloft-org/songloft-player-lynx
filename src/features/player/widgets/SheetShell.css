@@ -50,7 +50,7 @@
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
     var(--glass-rim-sides),
-    inset 0 -1px 0 var(--line);
+    inset 0 -1px 0 var(--separator);
   padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
 }
 
@@ -73,7 +73,7 @@
   width: 40px;
   height: 4px;
   border-radius: var(--radius-pill);
-  background-color: var(--rule);
+  background-color: var(--opaque-separator);
 }
 
 .drawer__header {
@@ -85,13 +85,13 @@
 }
 
 .drawer__title {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-title3);
   font-weight: var(--weight-bold);
 }
 
 .drawer__count {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
 }
 
@@ -115,7 +115,7 @@
  * what a theme pack tints, which is what you want for a state.
  */
 .drawer__row--active {
-  background-color: var(--primary-faint);
+  background-color: var(--tint-fill);
 }
 
 .drawer__row-meta {
@@ -125,7 +125,7 @@
 }
 
 .drawer__row-title {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-sm);
 }
 
@@ -145,11 +145,11 @@
  * Derived and pinned in `contrast.test.ts`.
  */
 .drawer__row--active .drawer__row-artist {
-  color: var(--content-2);
+  color: var(--secondary-label);
 }
 
 .drawer__row-artist {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
   margin-top: 2px;
 }
@@ -178,6 +178,6 @@
 }
 
 .drawer__row-remove-glyph {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-callout);
 }

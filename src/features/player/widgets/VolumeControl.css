@@ -22,21 +22,21 @@
   width: 4px;
   height: 100%;
   border-radius: var(--radius-pill);
-  background-color: var(--rule);
+  background-color: var(--opaque-separator);
 }
 
 /* One accent channel — volume rides the same ink indicator as progress
    (Muse §2.2). Its height is inline (0..100%). */
 .player-volume__indicator {
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .player-volume__thumb {
   width: 14px;
   height: 14px;
   border-radius: var(--radius-pill);
-  background-color: var(--primary-content);
+  background-color: var(--accent-content);
   box-shadow: var(--shadow-sm);
 }
 

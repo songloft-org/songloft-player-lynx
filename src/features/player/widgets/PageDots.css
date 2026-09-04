@@ -14,11 +14,11 @@
   height: 6px;
   margin: 0 var(--space-1);
   border-radius: var(--radius-pill);
-  background-color: var(--rule);
+  background-color: var(--opaque-separator);
 }
 
 .page-dots__dot--active {
   width: 8px;
   height: 8px;
-  background-color: var(--primary);
+  background-color: var(--accent);
 }

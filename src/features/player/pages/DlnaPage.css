@@ -19,7 +19,7 @@
   flex: 1;
   font-size: var(--font-title3);
   font-weight: var(--weight-bold);
-  color: var(--content);
+  color: var(--label);
 }
 
 .dlna-page__refresh { padding: var(--space-2); }
@@ -29,7 +29,7 @@
 .dlna-page__state {
   padding: var(--space-6) var(--space-4);
   text-align: center;
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-sm);
 }
 
@@ -44,23 +44,23 @@
 .dlna-page__device-name {
   flex: 1;
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--label);
 }
 
 .dlna-page__now {
   padding: var(--space-3) var(--space-4);
   border-top-width: 1px;
-  border-top-color: var(--line);
+  border-top-color: var(--separator);
 }
 
 .dlna-page__now-label {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .dlna-page__now-song {
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--label);
   margin-top: 2px;
 }
 
@@ -71,12 +71,12 @@
   margin-top: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-pill);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
   align-self: flex-start;
 }
 
 .dlna-page__disconnect-text {
-  color: var(--danger);
+  color: var(--system-red);
   font-size: var(--font-caption1);
   font-weight: var(--weight-bold);
 }

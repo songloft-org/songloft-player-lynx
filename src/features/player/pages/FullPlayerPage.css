@@ -64,14 +64,14 @@
 }
 
 .full-player__empty-title {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-title3);
   font-weight: var(--weight-bold);
 }
 
 .full-player__empty-subtitle {
-  color: var(--content-muted);
-  font-size: var(--font-sm);
+  color: var(--secondary-label);
+  font-size: var(--font-footnote);
   margin-top: var(--space-2);
 }
 
@@ -79,12 +79,12 @@
   margin-top: var(--space-5);
   padding: var(--space-3) var(--space-5);
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .full-player__empty-btn-text {
-  color: var(--primary-content);
-  font-size: var(--font-sm);
+  color: var(--accent-content);
+  font-size: var(--font-subhead);
   font-weight: var(--weight-bold);
 }
 
@@ -112,16 +112,16 @@
    already directly under the cover there, so a second copy earns nothing. */
 .full-player__eyebrow {
   flex: 1;
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   text-align: center;
 }
 
 .full-player__album {
   flex: 1;
-  color: var(--content-2);
-  font-size: var(--font-sm);
+  color: var(--secondary-label);
+  font-size: var(--font-footnote);
   text-align: center;
   /* One line: album names run long, and this row must not grow. */
   white-space: nowrap;
@@ -180,9 +180,9 @@
 .full-player__cover {
   display: flex;
   overflow: hidden;
-  border-radius: var(--radius-xl);
-  background-color: var(--paper);
-  /* Muse: the cover is the one place a large shadow is earned (§3.5). */
+  border-radius: var(--radius-md);
+  background-color: var(--secondary-system-background);
+  /* The cover is the one place a large shadow is earned (DESIGN.md §3.5). */
   box-shadow: var(--shadow-lg);
 }
 
@@ -208,7 +208,7 @@
  * breakpoint, since Lynx has no `@media`).
  */
 .full-player__cover-img {
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-md);
 }
 
 .full-player__cover-empty {
@@ -220,8 +220,8 @@
 
 .full-player__video-badge {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: var(--space-2);
+  right: var(--space-2);
   width: var(--tap-target);
   height: var(--tap-target);
   border-radius: var(--radius-pill);
@@ -232,18 +232,18 @@
 }
 
 .full-player__video-badge-text {
-  color: var(--content);
-  font-size: 14px;
+  color: var(--label);
+  font-size: var(--font-sm);
 }
 
 /* Why the picture could not be shown (no video track, or no host support). */
 .full-player__video-note {
   position: absolute;
-  bottom: 8px;
-  left: 8px;
-  right: 8px;
-  color: var(--content-muted);
-  font-size: 12px;
+  bottom: var(--space-2);
+  left: var(--space-2);
+  right: var(--space-2);
+  color: var(--secondary-label);
+  font-size: var(--font-caption1);
   text-align: center;
 }
 
@@ -269,15 +269,19 @@
 }
 
 .full-player__title {
-  color: var(--content);
-  font-size: var(--font-title1);
+  color: var(--label);
+  font-size: var(--font-title2);
   font-weight: var(--weight-bold);
   text-align: center;
 }
 
+/* Apple Music form: the artist reads in the accent (regular weight, one step
+ * below the title's size — title2 — rather than a smaller callout), so the
+ * artist is a tappable link to the artist page, not dim secondary text. */
 .full-player__artist {
-  color: var(--content-2);
-  font-size: var(--font-callout);
+  color: var(--accent);
+  font-size: var(--font-title2);
+  font-weight: var(--weight-regular);
   margin-top: var(--space-1);
   text-align: center;
 }

@@ -38,18 +38,18 @@
 }
 
 .player-controls__btn--primary {
-  background-color: var(--primary);
+  background-color: var(--accent);
   /* Muse §3.5: the primary play button earns a floating shadow. */
   box-shadow: var(--shadow-md);
 }
 
 .player-controls__glyph {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-title3);
 }
 
 .player-controls__glyph--primary {
-  color: var(--primary-content);
+  color: var(--accent-content);
   font-size: var(--font-title1);
 }
 
@@ -63,7 +63,7 @@
 }
 
 .player-controls__mode-label {
-  color: var(--content-muted);
-  font-size: 10px;
-  margin-top: 2px;
+  color: var(--secondary-label);
+  font-size: var(--font-caption2);
+  margin-top: var(--space-half);
 }

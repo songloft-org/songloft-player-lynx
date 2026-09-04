@@ -42,7 +42,7 @@
   width: 100%;
   height: 4px;
   border-radius: var(--radius-pill);
-  background-color: var(--rule);
+  background-color: var(--tertiary-system-fill);
 }
 
 .player-progress__indicator {
@@ -54,7 +54,7 @@
   top: 0;
   height: 4px;
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .player-progress__thumb-wrap {
@@ -67,7 +67,10 @@
   width: 14px;
   height: 14px;
   border-radius: var(--radius-pill);
-  background-color: var(--primary-content);
+  /* White, not the accent: the thumb sits on the accent indicator and reads as
+   * a knob on a filled rail. A white knob on accent clears 3:1; an accent knob
+   * would disappear into the indicator it rides. */
+  background-color: #ffffff;
   box-shadow: var(--shadow-sm);
 }
 
@@ -75,7 +78,7 @@
 .player-progress__time {
   width: 45px;
   flex-shrink: 0;
-  color: var(--content-2);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
 }
 

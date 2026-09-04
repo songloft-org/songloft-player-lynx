@@ -34,7 +34,7 @@
 
 .player-tools__speed {
   font-size: var(--font-sm);
-  color: var(--content-2);
+  color: var(--secondary-label);
 }
 
 .player-tools__speed--active {
@@ -61,6 +61,6 @@
 
 .player-volume-panel__label {
   font-size: var(--font-caption1);
-  color: var(--content-2);
+  color: var(--secondary-label);
   margin-bottom: var(--space-2);
 }

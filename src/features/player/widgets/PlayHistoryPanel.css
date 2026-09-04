@@ -64,7 +64,7 @@
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
     var(--glass-rim-sides),
-    inset 0 -1px 0 var(--line);
+    inset 0 -1px 0 var(--separator);
 }
 
 .play-history__header {
@@ -76,12 +76,12 @@
   gap: var(--space-2);
   padding: var(--space-4);
   border-bottom-width: 1px;
-  border-bottom-color: var(--line);
+  border-bottom-color: var(--separator);
 }
 
 .play-history__title {
   flex: 1;
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-callout);
   font-weight: var(--weight-bold);
   /* Explicit line box so CJK ascenders are not clipped by the header padding. */
@@ -127,14 +127,14 @@
 }
 
 .play-history__state-text {
-  color: var(--content-2);
+  color: var(--secondary-label);
   font-size: var(--font-sm);
   line-height: var(--font-title3);
 }
 
 .play-history__state-hint {
   margin-top: var(--space-2);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
   line-height: var(--font-callout);
   text-align: center;
@@ -148,11 +148,11 @@
   margin-top: var(--space-3);
   padding: 0 var(--space-4);
   border-radius: var(--radius-pill);
-  background-color: var(--neutral-faint);
-  border: 1px solid var(--line);
+  background-color: var(--tertiary-system-fill);
+  border: 1px solid var(--separator);
 }
 
 .play-history__retry-text {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-sm);
 }

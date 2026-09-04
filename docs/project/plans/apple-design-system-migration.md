@@ -525,7 +525,7 @@ Toast 按 §4.1 C 类改 `--toast-fill`；`ToastHost.css:22` 的 `bottom: calc(s
 | **构建告警当错误看** | `progress.md` 记载构建告警自批19b 起归零。本方案不得引入新的 `Unsupported property … was removed` 告警——尤其 `text-transform`（§P1 已避开）。 |
 | **回滚** | P0 回滚 = 还原 `tokens.css` + `theme-pack-mapping.ts` + 4 个测试文件。P1–P9 每阶段回滚 = 还原该屏 CSS/TSX。别名桥接的设计意图正是让每阶段回滚互不牵连。 |
 | **性能** | 别名层引入一层 `var()` 间接。`--glass-ramp`/`--shadow-focus` 已在生产用同样形态，无实测退化记录。P10 后间接层消失。 |
-| **未验�������** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
+| **未验��������** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
 
 ## 8. 验收
 
@@ -970,3 +970,47 @@ P2 把副标题基线迁到 `--secondary-label` 后，二级与主级 `--label` 
 新增 `playlist-css.test.ts` 4 条：详情封面 160×160+radius-sm、meta 160、name title2、desc/count footnote；两处搜索框 control-height-sm+填充+无描边；卡片名 subhead、卡片封面 104+radius-sm；整个 playlist 目录不得残留 Muse 颜色别名（新文件滑入未迁移即红）。`input-css.test.ts` 不动（已接受 `--tertiary-system-fill`）。
 
 编码实测：`dist/main.lynx.bundle` 双端产物齐备，playlist 目录 CSS 全部 Apple 名。运行时封面 160 落位仍需真机确认。
+
+---
+
+# P6 实施记录（播放器：全屏 + mini）
+
+验收：`pnpm test` 204 文件 / 2214 用例全绿；`tsc -b` 通过；`pnpm run build` 双端产物齐备。告警仍为既存那 4 组。
+
+## 不动的：蒙版、胶囊玻璃、z-index、内联按钮尺寸
+
+按方案**未触碰**：`--player-scrim-from/to`(0.94 浅 / 0.85 暗)——P0 已重新推导（任意封面最坏情况反推），`contrast.test.ts` 从实际值反推下限、改了就红；mini 胶囊玻璃形态（`--glass-fill`+sheen+ramp+rim）、`bottom: calc(80px + safe-area)`、`z-index: 91`——AGENTS 层级阶梯；`EqualizerPage.css`——P9（整文件零令牌）。
+
+**主播放按钮**：方案写「按钮 48×48 + 字形随之」，实测与代码不符——按钮尺寸由 `player-layout.ts` 按 breakpoint **内联**给（mobile 76 / tablet·desktop 52 / tv 64），字形已 `playBtn * 0.6` 随之（Flutter 的比例推导），「字形随之」已满足，「48×48」不适用于此响应式系统。故只迁字形色 `--primary-content`→`--accent-content`，尺寸仍交内联系统。诚实记录此偏差。
+
+## 全屏播放器
+
+- 封面圆角 `--radius-xl`(28) → `--radius-md`(12)（`.full-player__cover` + `__cover-img`）。
+- 曲名 `--font-title1`(28) → `--font-title2`(22) bold。
+- 歌手 `--font-callout`(16) `--content-2` → `--font-title2`(22) `--weight-regular` **`--accent`**：Apple Music 形态——歌手是可点链接（跳艺人页），不是暗淡次级文字，故用强调色 + 与曲名同字号、降字重。
+- 专辑（顶栏）`--font-sm`(14) → `--font-footnote`(13) `--secondary-label`；eyebrow 字重 `--weight-bold` → `--weight-semibold`。
+- 视频徽标/注释的 `8px`/`14px`/`12px` 硬编码令牌化：`8px`→`--space-2`、`14px`→`--font-sm`、`12px`→`--font-caption1`。
+- 空态副标题 `--font-sm`→`--font-footnote`，按钮文字 `--font-sm`→`--font-subhead`（按角色）。
+
+## 进度条
+
+- 轨 `--rule` → `--tertiary-system-fill`（4px 高保留）。注意：颜色别名 sed 把 `--rule`→`--opaque-separator`，但方案要 `--tertiary-system-fill`（轨是 on-material 填充，不是不透明分隔线），手动覆盖。
+- 滑块 14px 圆保留，色 `--primary-content` → `#FFFFFF`：滑块骑在强调色指示条上，白读作旋钮；强调色旋钮会溶进它骑的指示条。保留 `--shadow-sm`。
+- 指示条 `--primary`→`--accent`（sed）。
+
+## mini player
+
+- 标题 `--font-sm`(14) `--weight-semibold` → `--font-subhead`(15) `--weight-regular`。
+- 副标题保留 `--font-caption1`(12)，`margin-top 2px`→`--space-half`，色 `--secondary-label`。
+- 封面 36 保留，圆角 `--radius-sm`(8) → `--radius-xs`(6)。
+- 进度轨 `--fill-faint` → `--quaternary-system-fill`（更暗的 on-material 填充，与全屏轨分层一致）。
+
+## 颜色别名批量迁移（整个 player 目录）
+
+4 个目标文件 + 9 个其他 player widget/page（DlnaPage / LyricAdjustPage / LyricsView / PageDots / PlayerToolBar / PlayHistoryPanel / SheetShell / SleepTimerSheet / VolumeControl）一次性 sed 迁颜色别名。**跳过** PlayerBackdrop（蒙版，0 别名，本就只用 scrim/玻璃令牌）与 EqualizerPage（P9）。迁移后整个 player 目录仅 EqualizerPage 残留别名（P9 处理）。SheetShell 的 step-up 规则随之变真无效（`--content-muted`/`--content-2` 都别名 `--secondary-label`），与 `contrast.test.ts` 注释的「SheetShell step-up 留给后续阶段」一致——不另动。
+
+## 闸门
+
+新增 `player-css.test.ts` 6 条：全屏封面 radius-md、曲名 title2、歌手 title2+regular+accent、专辑 footnote、eyebrow semibold；视频徽标/注释不得残留硬编码 8/14/12px；mode-label caption2+space-half；进度轨 tertiary-system-fill + 滑块 #ffffff + 指示条 accent；mini 标题 subhead+regular + 副标题 space-half + 封面 radius-xs + 轨 quaternary-system-fill；4 文件不得残留 Muse 颜色别名。`contrast.test.ts` 不动（蒙版未碰）。
+
+编码实测：`dist/main.lynx.bundle` 双端产物齐备，player 目录（除 Equalizer/Backdrop）零旧别名。运行时封面圆角/歌手 accent 落位仍需真机确认。

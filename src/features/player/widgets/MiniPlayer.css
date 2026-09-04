@@ -31,7 +31,7 @@
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
     var(--glass-rim-sides),
-    inset 0 -1px 0 var(--line);
+    inset 0 -1px 0 var(--separator);
   overflow: hidden;
 }
 
@@ -54,7 +54,7 @@
 }
 
 /*
- * The track. Two things were wrong with `background-color: var(--line)`:
+ * The track. Two things were wrong with `background-color: var(--separator)`:
  *
  *  - `--line` is a separator token ("structure — hairline separators, only
  *    structural"), and DESIGN.md §3.3 names using a separator colour as a
@@ -63,9 +63,10 @@
  *    3px strip of the material is replaced rather than tinted — the same defect
  *    as the old `.song-row` fill, just 3px tall.
  *
- * `--fill-faint` is the on-material fill and lands at almost exactly the same
- * visual weight (light: #f3f3f3 over the capsule vs `--line` #ececee; dark:
- * ~#252529 vs #26262c), so this is a semantics + material fix, not a restyle.
+ * `--quaternary-system-fill` is the on-material fill and lands at almost exactly
+ * the same visual weight (light: #f3f3f3 over the capsule vs `--line` #ececee;
+ * dark: ~#252529 vs #26262c), so this is a semantics + material fix, not a
+ * restyle.
  *
  * The pill radius is iOS's progress-view shape, and it also makes the accent
  * fill below a bounded object rather than a full-bleed opaque bar (DESIGN.md
@@ -76,13 +77,13 @@
   width: 100%;
   height: 3px;
   border-radius: var(--radius-pill);
-  background-color: var(--fill-faint);
+  background-color: var(--quaternary-system-fill);
 }
 
 .mini-player__progress-fill {
   height: 3px;
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .mini-player__row {
@@ -105,12 +106,12 @@
   width: 36px;
   height: 36px;
   flex-shrink: 0;
-  border-radius: var(--radius-sm);
-  background-color: var(--neutral-faint);
+  border-radius: var(--radius-xs);
+  background-color: var(--tertiary-system-fill);
 }
 
 .mini-player__cover--empty {
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
 }
 
 .mini-player__meta {
@@ -128,18 +129,18 @@
 /* Both meta lines are one line, ellipsized on overflow — the standard trio
  * (survives both the native and the web encode), matching `.song-row__*`. */
 .mini-player__title {
-  color: var(--content);
-  font-size: var(--font-sm);
-  font-weight: var(--weight-semibold);
+  color: var(--label);
+  font-size: var(--font-subhead);
+  font-weight: var(--weight-regular);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .mini-player__subtitle {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
-  margin-top: 2px;
+  margin-top: var(--space-half);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -170,5 +171,5 @@
   width: 36px;
   height: 36px;
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }

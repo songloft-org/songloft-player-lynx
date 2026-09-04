@@ -15,12 +15,12 @@
   padding: var(--space-2) var(--space-3);
   margin-bottom: var(--space-3);
   border-radius: var(--radius-md);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
 }
 
 .sleep-timer__status-text {
   flex: 1;
-  color: var(--primary);
+  color: var(--accent);
   font-size: var(--font-sm);
   font-weight: var(--weight-medium);
 }
@@ -30,14 +30,14 @@
 }
 
 .sleep-timer__cancel-text {
-  color: var(--danger);
+  color: var(--system-red);
   font-size: var(--font-sm);
 }
 
 /* ── Sections of chips ── */
 
 .sleep-timer__section {
-  color: var(--content-2);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
   font-weight: var(--weight-semibold);
   margin-bottom: var(--space-2);
@@ -60,26 +60,26 @@
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-pill);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
 }
 
 /* Only the song-count chips ever carry this: a duration preset stops matching the
    countdown it started a second later (see the component header). */
 .sleep-timer__chip--active {
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .sleep-timer__chip--custom {
-  border: 1px solid var(--line);
+  border: 1px solid var(--separator);
   background-color: transparent;
 }
 
 .sleep-timer__chip-text {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-sm);
 }
 
 .sleep-timer__chip-text--active {
-  color: var(--primary-content);
+  color: var(--accent-content);
   font-weight: var(--weight-medium);
 }

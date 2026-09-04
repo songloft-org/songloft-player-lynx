@@ -12,7 +12,7 @@
   flex-direction: row;
   align-items: center;
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--separator);
   gap: var(--space-2);
 }
 
@@ -24,7 +24,7 @@
   flex: 1;
   font-size: var(--font-title3);
   font-weight: var(--weight-semibold);
-  color: var(--content);
+  color: var(--label);
   margin-left: var(--space-2);
 }
 
@@ -44,7 +44,7 @@
 .lyric-adjust__save {
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .lyric-adjust__save--disabled {
@@ -53,7 +53,7 @@
 
 .lyric-adjust__save-text {
   font-size: var(--font-sm);
-  color: var(--primary-content);
+  color: var(--accent-content);
 }
 
 .lyric-adjust__body {
@@ -65,7 +65,7 @@
 .lyric-adjust__card {
   margin: var(--space-3) var(--space-4);
   padding: var(--space-3) var(--space-4);
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
   border-radius: var(--radius-md);
 }
 
@@ -79,7 +79,7 @@
 .lyric-adjust__card-title {
   font-size: var(--font-callout);
   font-weight: var(--weight-semibold);
-  color: var(--content);
+  color: var(--label);
 }
 
 .lyric-adjust__card-value {
@@ -104,7 +104,7 @@
   width: 100%;
   height: 4px;
   border-radius: var(--radius-pill);
-  background-color: var(--rule);
+  background-color: var(--opaque-separator);
 }
 
 .lyric-adjust__indicator {
@@ -113,7 +113,7 @@
   top: 0;
   height: 4px;
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .lyric-adjust__thumb-wrap {
@@ -126,7 +126,7 @@
   width: 14px;
   height: 14px;
   border-radius: var(--radius-pill);
-  background-color: var(--primary-content);
+  background-color: var(--accent-content);
   box-shadow: var(--shadow-sm);
 }
 
@@ -139,19 +139,19 @@
 
 .lyric-adjust__nudge {
   padding: var(--space-2) var(--space-3);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
   border-radius: var(--radius-md);
 }
 
 .lyric-adjust__nudge-text {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-sm);
   font-weight: var(--weight-medium);
 }
 
 .lyric-adjust__hint {
   margin-top: var(--space-2);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
 }
 
@@ -189,7 +189,7 @@
 
 .lyric-adjust__line-text {
   font-size: var(--font-sm);
-  color: var(--content);
+  color: var(--label);
   overflow: hidden;
   /* `text-maxline` truncates; the height cap is the native-encoder fallback
      (the `-webkit-line-clamp` family is stripped there — see
@@ -202,7 +202,7 @@
 
 .lyric-adjust__line-delta {
   font-size: var(--font-caption1);
-  color: var(--content-2);
+  color: var(--secondary-label);
 }
 
 .lyric-adjust__line-btn {
@@ -212,14 +212,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
   border-radius: var(--radius-md);
 }
 
 .lyric-adjust__line-btn-text {
   font-size: var(--font-callout);
   font-weight: var(--weight-semibold);
-  color: var(--content);
+  color: var(--label);
 }
 
 /* ── Empty state ────────────────────────────────────────────────────────── */
@@ -232,6 +232,6 @@
 }
 
 .lyric-adjust__empty-text {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-callout);
 }
