@@ -1294,3 +1294,12 @@ web-core 登录表单输入是零尺寸 `X-INPUT` 外壳，其 shadow root 内�
    - **字号** → `FontScaleSlider` A—A 滑块(复用 `lynx-ui-slider`,4 档刻度,左小A右大A),仿「文字大小」。
    - **语言** → 保留勾选列表(本就是 iOS 范式)。
    i18n 复用既有 key;外观页测试改断言新控件(勾选 icon 从 4→1);a11y gate 复绿。
+
+
+## P13 — iOS 勾选列表选中态 + Icon accent 迁移遗漏修正（2026-09）
+
+用户真机发现:勾选列表选中项带背景色块,而 iOS 选中项**只有对勾**。
+- `SettingsRow`:`selected` 且 `trailingIcon='check'`(选项勾选)不再加 `--active` 背景;导航选中(设置主列表,`chevron`)保留高亮——iOS master-detail 选中行本就有背景。对勾色从灰(`contentMuted`)改 accent(`activeAccentIconColor()` 注入,`<svg content>` 在 CSS 级联外)。
+- **迁移遗漏修正**:`Icon.tsx` 的 `PALETTES.primary` 在 P0–P10 未被更新,仍是 Muse 墨色(#111/#fff,引用的 `--primary` 已于 P10 删除),导致 `activeAccentIconColor()` 回退墨色——激活导航图标是墨色而 label 是蓝色(本就不一致),~30 处用 `ICON_COLORS.primary` 的强调/选中图标(对勾/加号/收藏/刷新/选中态)全是墨色而非 accent。改 `primary`→Apple systemBlue(浅 #0088ff/深 #0091ff)、`primaryContent`→双白(对齐 `--accent-content`)。
+- **仍存的次要遗留**(低危,未动):`PALETTES.danger` 仍是 Muse 砖红 #d64545(应 Apple systemRed 浅#ff383c/深#ff4245);`content`/`content2`/`contentMuted` 为 Muse 墨阶(近 Apple 但非精确值)。
+- CDP 真机核验:语言选中行背景透明、对勾 #0088ff、宽屏设置导航行高亮保留。全量 2231 测试通过。
