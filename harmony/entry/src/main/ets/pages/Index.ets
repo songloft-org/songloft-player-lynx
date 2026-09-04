@@ -7,7 +7,6 @@ import { SongloftAudioModule } from '../modules/audio/SongloftAudioModule'
 import { SongloftStorageModule } from '../modules/storage/SongloftStorageModule'
 import { SongloftPlatformModule } from '../modules/platform/SongloftPlatformModule'
 import { SongloftDlnaModule } from '../modules/dlna/SongloftDlnaModule'
-import { SongloftVideoModule } from '../modules/video/SongloftVideoModule'
 import { SongloftSongCacheModule } from '../modules/cache/SongloftSongCacheModule'
 import { SongloftNavigationModule } from '../modules/navigation/SongloftNavigationModule'
 import { SongloftPluginBridgeModule } from '../modules/plugin/SongloftPluginBridgeModule'
@@ -29,7 +28,6 @@ struct Index {
     this.modules.set('SongloftStorage', { moduleClass: SongloftStorageModule, param: this.context })
     this.modules.set('SongloftPlatform', { moduleClass: SongloftPlatformModule, param: this.context })
     this.modules.set('SongloftDlna', { moduleClass: SongloftDlnaModule, param: this.context })
-    this.modules.set('SongloftVideo', { moduleClass: SongloftVideoModule, param: this.context })
     this.modules.set('SongloftSongCache', { moduleClass: SongloftSongCacheModule, param: this.context })
     this.modules.set('SongloftNavigation', { moduleClass: SongloftNavigationModule, param: this.context })
     this.modules.set('SongloftPluginBridge', { moduleClass: SongloftPluginBridgeModule, param: this.context })

@@ -89,7 +89,6 @@ const hosts = {
     android: read(`${ANDROID_VIDEO}/SongloftVideoModule.kt`),
     androidActivity: read(`${ANDROID_VIDEO}/SongloftVideoActivity.kt`),
     ios: read(`${IOS_DIR}/SongloftVideoModule.swift`),
-    harmony: read(`${HARMONY_MODULES}/video/SongloftVideoModule.ets`),
   },
   liveActivity: {
     ios: read(`${IOS_DIR}/LiveActivityModule.swift`),
@@ -911,7 +910,7 @@ describe('every native module is registered in the host bootstrap', () => {
     { name: 'SongloftDlna', android: 'SongloftDlnaModule', ios: 'SongloftDlnaModule', harmony: 'SongloftDlnaModule' },
     { name: 'SongloftFloatingLyric', android: 'FloatingLyricModule', ios: null, harmony: null },
     { name: 'SongloftLiveActivity', android: null, ios: 'LiveActivityModule', harmony: null },
-    { name: 'SongloftVideo', android: 'SongloftVideoModule', ios: 'SongloftVideoModule', harmony: 'SongloftVideoModule' },
+    { name: 'SongloftVideo', android: 'SongloftVideoModule', ios: 'SongloftVideoModule', harmony: null },
     { name: 'SongloftNavigation', android: 'SongloftNavigationModule', ios: null, harmony: 'SongloftNavigationModule' },
     { name: 'SongloftSongCache', android: 'SongloftSongCacheModule', ios: 'SongloftSongCacheModule', harmony: 'SongloftSongCacheModule' },
     { name: 'SongloftPluginBridge', android: 'SongloftPluginBridgeModule', ios: 'SongloftPluginBridgeModule', harmony: 'SongloftPluginBridgeModule' },
@@ -956,6 +955,10 @@ describe('every native module is registered in the host bootstrap', () => {
       `${mod.name} not registered in Index.ets (Harmony wires modules per-LynxView, ` +
       `not through a global LynxEnv.registerModule the way Android/iOS do)`,
     ).toContain(`.set('${mod.name}', { moduleClass: ${mod.harmony!}`)
+  })
+
+  test('HarmonyOS does not register the placeholder video module as a usable capability', () => {
+    expect(hosts.harmonyIndex).not.toContain("this.modules.set('SongloftVideo'")
   })
 })
 
