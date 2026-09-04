@@ -41,7 +41,7 @@
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
     var(--glass-rim-sides),
-    inset 0 -1px 0 var(--line);
+    inset 0 -1px 0 var(--separator);
   padding-bottom: var(--space-4);
 }
 
@@ -66,18 +66,18 @@
   justify-content: space-between;
   padding: var(--space-2) var(--space-4) var(--space-3);
   border-bottom-width: 1px;
-  border-bottom-color: var(--line);
+  border-bottom-color: var(--separator);
 }
 
 .atp__title {
   font-size: var(--font-title3);
   font-weight: var(--weight-bold);
-  color: var(--content);
+  color: var(--label);
 }
 
 .atp__count {
-  font-size: var(--font-sm);
-  color: var(--content-muted);
+  font-size: var(--font-footnote);
+  color: var(--secondary-label);
 }
 
 .atp__create {
@@ -87,7 +87,7 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-bottom-width: 1px;
-  border-bottom-color: var(--line);
+  border-bottom-color: var(--separator);
 }
 
 .atp__create-icon {
@@ -97,12 +97,12 @@
   width: 48px;
   height: 48px;
   border-radius: var(--radius-md);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
 }
 
 .atp__create-text {
   font-size: var(--font-callout);
-  color: var(--content);
+  color: var(--label);
 }
 
 /* `flex: 1` + a scroll-view is what keeps the list inside the panel instead of
@@ -113,8 +113,8 @@
 
 .atp__state {
   padding: var(--space-6) var(--space-4);
-  font-size: var(--font-sm);
-  color: var(--content-muted);
+  font-size: var(--font-footnote);
+  color: var(--secondary-label);
   text-align: center;
 }
 
@@ -129,18 +129,18 @@
 .atp__retry {
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
-  border: 1px solid var(--primary);
+  border: 1px solid var(--accent);
 }
 
 .atp__retry-text {
-  font-size: var(--font-sm);
-  color: var(--primary);
+  font-size: var(--font-subhead);
+  color: var(--accent);
 }
 
 .atp__footer {
   padding: var(--space-3) 0;
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   text-align: center;
 }
 

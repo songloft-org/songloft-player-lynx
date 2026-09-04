@@ -525,7 +525,7 @@ Toast 按 §4.1 C 类改 `--toast-fill`；`ToastHost.css:22` 的 `bottom: calc(s
 | **构建告警当错误看** | `progress.md` 记载构建告警自批19b 起归零。本方案不得引入新的 `Unsupported property … was removed` 告警——尤其 `text-transform`（§P1 已避开）。 |
 | **回滚** | P0 回滚 = 还原 `tokens.css` + `theme-pack-mapping.ts` + 4 个测试文件。P1–P9 每阶段回滚 = 还原该屏 CSS/TSX。别名桥接的设计意图正是让每阶段回滚互不牵连。 |
 | **性能** | 别名层引入一层 `var()` 间接。`--glass-ramp`/`--shadow-focus` 已在生产用同样形态，无实测退化记录。P10 后间接层消失。 |
-| **未验������** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
+| **未验�������** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
 
 ## 8. 验收
 
@@ -932,3 +932,41 @@ P2 把副标题基线迁到 `--secondary-label` 后，二级与主级 `--label` 
 - `contrast.test.ts` 不动：本页无新增文字-填充禁忌配对，统计卡灰底 + `--label` 文字远过 4.5。
 
 编码实测：`dist/main.lynx.bundle` 里 `--home-card-size` 9 次、`--home-strip-height` 3 次、`--home-refresh-header-height` 3 次，均编码发出。
+
+---
+
+# P5 实施记录（歌单列表与详情）
+
+验收：`pnpm test` 203 文件 / 2208 用例全绿；`tsc -b` 通过；`pnpm run build` 双端产物齐备。告警仍为既存那 4 组。
+
+## 详情页：封面 96→160
+
+`.playlist-detail__cover` 96×96 → 160×160，圆角 `--radius-md`(12) → `--radius-sm`(8)；`.playlist-detail__meta` 高 96→160（跟封面锁死，让两行夹取的描述不会把计数挤出屏）。歌单名 `--font-title3`(20) → `--font-title2`(22)。描述 `--font-sm`(14) → `--font-footnote`(13)，计数同。
+
+**描述两行夹取**：`max-height: 32px` **未变**——夹取盒高由 `line-height`(`--font-callout`=16) 决定，不由 font-size 决定，2×16=32 仍夹两行 13px 文本。方案说「随字号重算」，实测重算结果与原值相同（行高没变），故只改字号、保留 32，注释改写说明这一点。
+
+## 搜索框：Apple 填充、无描边、control-height-sm
+
+`.playlist-detail__search-input` 与 `.playlists__search-input`：高度 40px(后者)/无显式(前者) → `--control-height-sm`(36)；填充 `--neutral-faint` → `--tertiary-system-fill`；`--radius-sm` 保留；**删 hairline**（填充即字段，描边读作双轮廓，与 `.library__search-input` 一致）；字号 `--font-sm` → `--font-body`(17)（Apple 文本框字号）。placeholder `--secondary-label`。
+
+## 卡片与排序行
+
+卡片名 `--font-sm`(14) → `--font-subhead`(15)；卡片封面 104 保留，圆角 `--radius-md` → `--radius-sm`。
+
+**排序行分隔线**：方案写「全宽通铺 → 内缩 16px」，实测**已是 16 内缩**——分隔线挂在 `.playlist-detail__sort-row` / `.playlists__sort-row` 上，二者父级 `__sort-list` 有 `padding: 0 var(--space-4)`(16)，故 border 本就内缩 16 两侧，非全宽。方案的「全宽」描述与代码不符；本批只把色 `--line` → `--separator`，几何不动（对称 16 内缩对排序表是合理的 Apple 形态）。
+
+## 圆形小按钮与 eq 动画几何
+
+按方案**保留**：圆形小按钮 28px + 44px `__*-hit` 包裹（已符合 44px 触达规范）；eq 动画的 16/3/4/8/6/10/12px 硬编码**保留**（动画几何非设计令牌，令牌化无收益）。
+
+## 颜色别名批量迁移 + font-sm 按 §3.6 分流
+
+整个 `features/playlist/` 目录 9 个 CSS 文件一次性 sed 迁移颜色别名（`--content`/`--content-2`/`--content-muted`/`--paper`/`--line`/`--neutral-faint`/`--primary`/`--primary-content`/`--primary-faint`/`--danger` → Apple 名），`var(--name)` 精确匹配。`--primary-faint` 单独迁到 `--tint-fill`（选中行 wash）。
+
+`--font-sm` 共 22 处按角色分流：次要/状态/计数/页脚/空态/加载 → `--font-footnote`(13)；按钮/标签文字 → `--font-subhead`(15)；表单输入/描述正文 → `--font-body`(17)。用 selector-range sed（`/sel {/,/}/` 范围内替换）保证同文件内多角色不串。迁移后 `--font-sm` 在整个 playlist 目录归零。
+
+## 闸门
+
+新增 `playlist-css.test.ts` 4 条：详情封面 160×160+radius-sm、meta 160、name title2、desc/count footnote；两处搜索框 control-height-sm+填充+无描边；卡片名 subhead、卡片封面 104+radius-sm；整个 playlist 目录不得残留 Muse 颜色别名（新文件滑入未迁移即红）。`input-css.test.ts` 不动（已接受 `--tertiary-system-fill`）。
+
+编码实测：`dist/main.lynx.bundle` 双端产物齐备，playlist 目录 CSS 全部 Apple 名。运行时封面 160 落位仍需真机确认。

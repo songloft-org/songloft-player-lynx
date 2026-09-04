@@ -17,12 +17,12 @@
   align-items: center;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-pill);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
   gap: var(--space-1);
 }
 
 .playlist-toolbar__btn--active {
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .playlist-toolbar__btn--disabled {
@@ -30,16 +30,16 @@
 }
 
 .playlist-toolbar__btn-text {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-caption1);
 }
 
 .playlist-toolbar__btn--active .playlist-toolbar__btn-text {
-  color: var(--primary-content);
+  color: var(--accent-content);
 }
 
 .playlist-toolbar__btn--disabled .playlist-toolbar__btn-text {
-  color: var(--content-muted);
+  color: var(--secondary-label);
 }
 
 .playlist-toolbar__spacer {

@@ -2,7 +2,7 @@
 
 .playlist-form__label {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-top: var(--space-3);
   margin-bottom: var(--space-1);
   display: flex;
@@ -12,9 +12,9 @@
   width: 100%;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  background-color: var(--neutral-faint);
-  border: 1px solid var(--line);
-  font-size: var(--font-sm);
-  color: var(--content);
-  -x-placeholder-color: var(--content-muted);
+  background-color: var(--tertiary-system-fill);
+  border: 1px solid var(--separator);
+  font-size: var(--font-body);
+  color: var(--label);
+  -x-placeholder-color: var(--secondary-label);
 }

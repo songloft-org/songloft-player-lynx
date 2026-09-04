@@ -40,7 +40,7 @@
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
     var(--glass-rim-sides),
-    inset 0 -1px 0 var(--line);
+    inset 0 -1px 0 var(--separator);
 }
 
 /* `flex-shrink: 0` — see `.playlist-desc__scroll`: once the body keeps
@@ -53,12 +53,12 @@
   align-items: center;
   padding: var(--space-4);
   border-bottom-width: 1px;
-  border-bottom-color: var(--line);
+  border-bottom-color: var(--separator);
 }
 
 .playlist-desc__title {
   flex: 1;
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-callout);
   font-weight: var(--weight-bold);
   /* Explicit line box so CJK ascenders are not clipped by the header padding. */
@@ -92,8 +92,8 @@
 
 .playlist-desc__text {
   padding: var(--space-4);
-  color: var(--content-2);
-  font-size: var(--font-sm);
+  color: var(--secondary-label);
+  font-size: var(--font-body);
   line-height: var(--font-title1);
   white-space: normal;
 }

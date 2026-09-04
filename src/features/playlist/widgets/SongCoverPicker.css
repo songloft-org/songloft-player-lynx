@@ -32,7 +32,7 @@
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--glass-highlight),
     var(--glass-rim-sides),
-    inset 0 -1px 0 var(--line);
+    inset 0 -1px 0 var(--separator);
 }
 
 .song-cover-picker__header {
@@ -42,12 +42,12 @@
   align-items: center;
   padding: var(--space-4);
   border-bottom-width: 1px;
-  border-bottom-color: var(--line);
+  border-bottom-color: var(--separator);
 }
 
 .song-cover-picker__title {
   flex: 1;
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-callout);
   font-weight: var(--weight-bold);
   line-height: var(--font-title3);
@@ -87,12 +87,12 @@
   width: 100%;
   aspect-ratio: 1;
   border-radius: var(--radius-md);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
 }
 
 .song-cover-picker__song-title {
   font-size: var(--font-2xs);
-  color: var(--content-2);
+  color: var(--secondary-label);
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
@@ -108,8 +108,8 @@
 }
 
 .song-cover-picker__empty-text {
-  font-size: var(--font-sm);
-  color: var(--content-muted);
+  font-size: var(--font-footnote);
+  color: var(--secondary-label);
 }
 
 .song-cover-picker__loading {
@@ -120,6 +120,6 @@
 }
 
 .song-cover-picker__loading-text {
-  font-size: var(--font-sm);
-  color: var(--content-muted);
+  font-size: var(--font-footnote);
+  color: var(--secondary-label);
 }
