@@ -163,6 +163,13 @@ function expectSwiftMethod(source: string, method: string): void {
   expect(source, `methodLookup is missing "${method}"`).toContain(`"${method}":`)
 }
 
+/** Assert a HarmonyOS LynxModule exposes a public ArkTS method to JS. */
+function expectArkTsMethod(source: string, method: string): void {
+  expect(source, `HarmonyOS has no public ${method}`).toMatch(
+    new RegExp(`public\\s+${method}\\(`),
+  )
+}
+
 describe('audio global-event names reach both hosts verbatim', () => {
   const names = [...Object.values(NATIVE_EVENT)]
 
@@ -589,7 +596,7 @@ describe('SongloftPlatform module methods exist on both hosts', () => {
   })
 })
 
-describe('SongloftDlna module methods exist on both hosts', () => {
+describe('SongloftDlna module methods and state exist on every supported host', () => {
   const methods = interfaceMethods(
     read('src/native/dlna.ts'),
     'NativeDlnaModule',
@@ -603,6 +610,21 @@ describe('SongloftDlna module methods exist on both hosts', () => {
   test.each(methods)('SongloftDlna.%s', (method) => {
     expectLynxMethod(hosts.dlna.android, method)
     expectSwiftMethod(hosts.dlna.ios, method)
+    expectArkTsMethod(hosts.dlna.harmony, method)
+  })
+
+  test('HarmonyOS persists discovery results for getDevices', () => {
+    expect(hosts.dlna.harmony).toMatch(/private devices:\s*DlnaDevice\[\]\s*=\s*\[\]/)
+    expect(hosts.dlna.harmony).toMatch(
+      /public getDevices[\s\S]*?callback\(JSON\.stringify\(this\.devices\)\)/,
+    )
+    expect(hosts.dlna.harmony).not.toContain('JSON.stringify({ devices: [] })')
+  })
+
+  test('HarmonyOS resolves a device id to its AVTransport control URL', () => {
+    expect(hosts.dlna.harmony).toContain('controlUrl: string')
+    expect(hosts.dlna.harmony).toContain('this.findDevice(deviceId)')
+    expect(hosts.dlna.harmony).toContain('this.soapAction(device.controlUrl')
   })
 })
 

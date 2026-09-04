@@ -9,14 +9,20 @@ const SSDP_PORT = 1900
 const SEARCH_TARGET = 'urn:schemas-upnp-org:service:AVTransport:1'
 const SEARCH_TIMEOUT_MS = 5000
 
-interface DlnaDevice {
+interface SsdpDevice {
   id: string
   name: string
   location: string
 }
 
+interface DlnaDevice extends SsdpDevice {
+  controlUrl: string
+}
+
 export class SongloftDlnaModule extends LynxModule {
   private abilityContext: common.UIAbilityContext
+  private devices: DlnaDevice[] = []
+  private discoveryGeneration: number = 0
 
   constructor(context: LynxContext, param?: Object) {
     super(context, param)
@@ -24,26 +30,34 @@ export class SongloftDlnaModule extends LynxModule {
   }
 
   public startDiscovery(callback: (result: string) => void): void {
-    this.doDiscover(callback)
+    this.devices = []
+    this.discoveryGeneration += 1
+    this.doDiscover(this.discoveryGeneration, callback)
   }
 
   public stopDiscovery(callback: (result: string) => void): void {
+    this.discoveryGeneration += 1
     callback(JSON.stringify({ success: true }))
   }
 
   public getDevices(callback: (result: string) => void): void {
-    callback(JSON.stringify({ devices: [] }))
+    callback(JSON.stringify(this.devices))
   }
 
   public cast(args: string, callback: (result: string) => void): void {
     try {
       const parsed: Record<string, string> = JSON.parse(args)
-      const location = parsed.deviceId ?? ''
+      const deviceId = parsed.deviceId ?? ''
       const mediaUrl = parsed.url ?? ''
       const title = parsed.title ?? ''
+      const device = this.findDevice(deviceId)
+      if (!device) {
+        callback(JSON.stringify({ error: 'Device not found' }))
+        return
+      }
       const body = this.buildSetTransportURIBody(mediaUrl, title)
-      this.soapAction(location, 'SetAVTransportURI', body).then(() => {
-        return this.soapAction(location, 'Play', this.buildPlayBody())
+      this.soapAction(device.controlUrl, 'SetAVTransportURI', body).then(() => {
+        return this.soapAction(device.controlUrl, 'Play', this.buildPlayBody())
       }).then(() => {
         callback(JSON.stringify({ success: true }))
       }).catch((err: Error) => {
@@ -60,6 +74,13 @@ export class SongloftDlnaModule extends LynxModule {
       const action = parsed.action ?? ''
       const deviceId = parsed.deviceId ?? ''
       const value = parsed.value ?? ''
+      const device = deviceId.length > 0
+        ? this.findDevice(deviceId)
+        : (this.devices.length > 0 ? this.devices[0] : null)
+      if (!device) {
+        callback(JSON.stringify({ error: 'Device not found' }))
+        return
+      }
 
       let soapAction: string
       let soapBody: string
@@ -81,7 +102,7 @@ export class SongloftDlnaModule extends LynxModule {
           soapBody = this.buildPlayBody()
       }
 
-      this.soapAction(deviceId, soapAction, soapBody).then(() => {
+      this.soapAction(device.controlUrl, soapAction, soapBody).then(() => {
         callback(JSON.stringify({ success: true }))
       }).catch((err: Error) => {
         callback(JSON.stringify({ error: err.message }))
@@ -91,8 +112,11 @@ export class SongloftDlnaModule extends LynxModule {
     }
   }
 
-  private async doDiscover(callback: (result: string) => void): Promise<void> {
-    const devices: DlnaDevice[] = []
+  private async doDiscover(
+    generation: number,
+    callback: (result: string) => void,
+  ): Promise<void> {
+    const discoveredIds: string[] = []
     const multicastSocket = socket.constructMulticastSocketInstance()
 
     try {
@@ -104,8 +128,9 @@ export class SongloftDlnaModule extends LynxModule {
         const textDecoder = util.TextDecoder.create('utf-8')
         const message = textDecoder.decodeToString(new Uint8Array(value.message))
         const device = this.parseSsdpResponse(message)
-        if (device && !devices.find((d: DlnaDevice) => d.id === device.id)) {
-          devices.push(device)
+        if (device && !discoveredIds.includes(device.id)) {
+          discoveredIds.push(device.id)
+          this.resolveAndStoreDevice(device, generation).catch(() => {})
         }
       })
 
@@ -131,21 +156,90 @@ export class SongloftDlnaModule extends LynxModule {
       multicastSocket.off('message')
       multicastSocket.close()
 
-      callback(JSON.stringify({ devices: devices }))
+      callback(JSON.stringify({ success: true }))
     } catch (err) {
       multicastSocket.close()
-      callback(JSON.stringify({ devices: [], error: String(err) }))
+      callback(JSON.stringify({ error: String(err) }))
     }
   }
 
-  private parseSsdpResponse(message: string): DlnaDevice | null {
+  private parseSsdpResponse(message: string): SsdpDevice | null {
     if (!message.includes('HTTP/1.1 200 OK') && !message.includes('NOTIFY')) return null
     const location = this.extractHeader(message, 'LOCATION')
     const usn = this.extractHeader(message, 'USN')
     const server = this.extractHeader(message, 'SERVER') ?? 'Unknown'
     if (!location || !usn) return null
-    const device: DlnaDevice = { id: usn, name: server, location: location }
+    const device: SsdpDevice = { id: usn, name: server, location: location }
     return device
+  }
+
+  private async resolveAndStoreDevice(device: SsdpDevice, generation: number): Promise<void> {
+    const resolved = await this.fetchDeviceDescription(device)
+    if (!resolved || generation !== this.discoveryGeneration) return
+    if (!this.findDevice(resolved.id)) {
+      this.devices.push(resolved)
+    }
+  }
+
+  private async fetchDeviceDescription(device: SsdpDevice): Promise<DlnaDevice | null> {
+    const httpRequest = http.createHttp()
+    try {
+      const options: http.HttpRequestOptions = {
+        method: http.RequestMethod.GET,
+        connectTimeout: 3000,
+        readTimeout: 3000,
+      }
+      const response = await httpRequest.request(device.location, options)
+      if (response.responseCode < 200 || response.responseCode >= 300) return null
+      const xml = typeof response.result === 'string' ? response.result : ''
+      if (xml.length === 0) return null
+
+      const friendlyName = this.firstCapture(xml, '<friendlyName>(.+?)</friendlyName>') ?? device.name
+      const controlPath = this.firstCapture(
+        xml,
+        '<service>[\\s\\S]*?<serviceType>urn:schemas-upnp-org:service:AVTransport:1</serviceType>' +
+          '[\\s\\S]*?<controlURL>(.+?)</controlURL>[\\s\\S]*?</service>',
+      ) ?? '/MediaRenderer/AVTransport/Control'
+      const controlUrl = this.resolveUrl(device.location, controlPath)
+      if (controlUrl.length === 0) return null
+
+      const resolved: DlnaDevice = {
+        id: device.id,
+        name: friendlyName,
+        location: device.location,
+        controlUrl: controlUrl,
+      }
+      return resolved
+    } catch (err) {
+      return null
+    } finally {
+      httpRequest.destroy()
+    }
+  }
+
+  private firstCapture(text: string, pattern: string): string | null {
+    const match = text.match(new RegExp(pattern, 'i'))
+    if (!match || match.length < 2) return null
+    return match[1].trim()
+  }
+
+  private resolveUrl(location: string, target: string): string {
+    if (target.startsWith('http://') || target.startsWith('https://')) return target
+    const schemeEnd = location.indexOf('://')
+    if (schemeEnd < 0) return ''
+    const pathStart = location.indexOf('/', schemeEnd + 3)
+    const origin = pathStart >= 0 ? location.substring(0, pathStart) : location
+    if (target.startsWith('/')) return `${origin}${target}`
+    const directoryEnd = location.lastIndexOf('/')
+    if (directoryEnd <= schemeEnd + 2) return `${origin}/${target}`
+    return `${location.substring(0, directoryEnd + 1)}${target}`
+  }
+
+  private findDevice(deviceId: string): DlnaDevice | null {
+    for (let i = 0; i < this.devices.length; i += 1) {
+      if (this.devices[i].id === deviceId) return this.devices[i]
+    }
+    return null
   }
 
   private extractHeader(message: string, header: string): string | null {
