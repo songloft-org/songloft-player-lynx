@@ -525,7 +525,7 @@ Toast 按 §4.1 C 类改 `--toast-fill`；`ToastHost.css:22` 的 `bottom: calc(s
 | **构建告警当错误看** | `progress.md` 记载构建告警自批19b 起归零。本方案不得引入新的 `Unsupported property … was removed` 告警——尤其 `text-transform`（§P1 已避开）。 |
 | **回滚** | P0 回滚 = 还原 `tokens.css` + `theme-pack-mapping.ts` + 4 个测试文件。P1–P9 每阶段回滚 = 还原该屏 CSS/TSX。别名桥接的设计意图正是让每阶段回滚互不牵连。 |
 | **性能** | 别名层引入一层 `var()` 间接。`--glass-ramp`/`--shadow-focus` 已在生产用同样形态，无实测退化记录。P10 后间接层消失。 |
-| **未验������������** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
+| **未验��������������** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
 
 ## 8. 验收
 
@@ -969,7 +969,7 @@ P2 把副标题基线迁到 `--secondary-label` 后，二级与主级 `--label` 
 
 新增 `playlist-css.test.ts` 4 条：详情封面 160×160+radius-sm、meta 160、name title2、desc/count footnote；两处搜索框 control-height-sm+填充+无描边；卡片名 subhead、卡片封面 104+radius-sm；整个 playlist 目录不得残留 Muse 颜色别名（新文件滑入未迁移即红）。`input-css.test.ts` 不动（已接受 `--tertiary-system-fill`）。
 
-编码实测：`dist/main.lynx.bundle` 双端产物齐备，playlist 目录 CSS 全部 Apple 名。运行��封面 160 落位仍需真机确认。
+编码实测：`dist/main.lynx.bundle` 双端产物齐备，playlist 目录 CSS 全部 Apple 名。��行��封面 160 落位仍需真机确认。
 
 ---
 
@@ -1118,3 +1118,31 @@ CacheManagePage 输入 `44px`/保存 `48px` → `var(--control-height)`（48→4
 新增 `src/__tests__/px-cleanup.test.ts` 5 条：三文件 chrome 令牌化（抽查 toggle-row/card/label/empty）；EqualizerPage band 绘图几何**保留**硬编码（thumb 16px/track 6px/bands 200px，防误令牌化）；三文件零 Muse 颜色别名（含 `--canvas`）；**全仓无 `margin-top: 2px`**（margin-top 是布局间距、非绘图，2px 必是漏迁）；CacheManage 控件高 + ProxySettings radius 令牌化。
 
 编码实测：`dist/main.lynx.bundle` 双端产物齐备。EqualizerPage 现在用 Apple 令牌（不再「仅顶栏标题」）。
+
+---
+
+# P10 实施记录（删除 Muse 颜色别名层）
+
+验收：`pnpm test` 208 文件 / 2229 用例全绿；`tsc -b` 通过；`pnpm run build` 双端产物齐备，**bundle 内 `var(--<alias>)` 零消费**。告警仍为既存那 4 组。
+
+## 颜色别名层删除（完成）
+
+先补扫漏网的 `--canvas`（15 处，P8 扫荡未含 `--canvas`）→ `--system-background`。确认 `--paper-clear`/`--danger-content`/`--danger-2` 零消费后，从 tokens.css 的 `.theme-dark` 与 `.theme-light` 块删除全部 16 个 Muse 颜色别名声明（`--canvas`/`--paper`/`--paper-clear`/`--content`/`--content-2`/`--content-muted`/`--primary`/`--primary-content`/`--primary-faint`/`--danger`/`--danger-content`/`--danger-2`/`--neutral-faint`/`--line`/`--rule`/`--fill-faint`）。基础主题块现在全是字面量（hex/rgba），无 `var()` 间接。
+
+`theme-pack-mapping.ts`：`--paper-clear` 从 `PACK_OVERRIDABLE_BASELINE`（浅/暗）与运行时生成移除（0 消费，pack 也不再发出）。`hexToRgba` 保留（仍被 `--tint-fill`/`--glass-glow-faint`/`--glass-sheen` 用）。tokens.css 头注释的「alias bridge」段改写为「deleted in P10」。
+
+## 闸门（硬校验点）
+
+- `tokens-hig.test.ts`：原 `MUSE_ALIASES`（断言别名列存在且解析正确）**改写**为 `DELETED_MUSE_ALIASES`——断言 16 个旧名在任一主题块都**不**再声明，且基础主题块**无任何 `var()` 间接**（catch 新造别名，哪怕它指向正确 token）。
+- 新增 `alias-elimination.test.ts`：**任何 CSS 文件不得 `var(--<deleted-alias>)`**（Lynx 静默丢未知引用，故这层必须显式钉）；另钉 `--primary-2`（P0 删除、从未别名）不得重现。这是 P10 的硬校验点——只有 P1–P9 把消费量归零，它才过；它过 = 迁移真的完成。
+- 连带更新一批钉旧别名的既有测试：`contrast.test.ts`（移除 `--paper-clear` surface、`CHROMATIC` 去 `--primary`/`--danger`、surface 下限 13→12）、`glass-surface.test.ts`（`SURFACE_CHANNEL`/`TRANSLUCENT`/opaque-list/translucent-list 去别名、不透明下限 8→7）、`input-css.test.ts`（`FIELD_FILLS` 去别名、删「同色」反真测试）、`theme-pack-mapping.test.ts`（sakura/dark 测试去 `--paper-clear` 期望）、`tokens-defined.test.ts`（`--primary-content`→`--accent-content`）。
+
+## legacy --font-* 暂不删（推迟）
+
+方案 P10 说「删 7 个 legacy `--font-*`」，但实测 `--font-sm` 仍有 **104 处消费**（library / library-ops / jsplugin / routes 等屏从未被分到 P1–P9 任一阶段，它们的 `--font-sm` 未按 §3.6 分流），`--font-xs`(1)/`--font-md`(4)/`--font-lg`(3)/`--font-2xl`(1) 亦然。P10 的硬前提是「旧名消费量归零」——legacy 字体未归零，故**不能删**。`--font-2xs`(5 消费) 按 AGENTS 冻结保留。
+
+故 P10 删了**颜色别名**（完成、零消费），**legacy 字体保留声明**（仍 load-bearing）。legacy 字体的退休需要一个独立的「font-role 扫荡」（把 104 处 `--font-sm` 按角色迁 footnote/subhead/body），记于此作为后续工作。`tokens-hig.test.ts` 的「legacy --font-* 保持原值」测试**不动**（这些令牌仍在、仍需钉值）。
+
+## 诚实状态
+
+颜色别名层已彻底移除（tokens.css 不声明、CSS 不消费、bundle 不含、pack 不发）。legacy `--font-*` 是唯一残留的 Muse 遗产——它们是字号令牌不是颜色别名，且仍被 113 处消费，删除会破。等 font-role 扫荡把它们迁到 Apple `--font-footnote/subhead/body` 后，再删 legacy 声明 + 钉「不得重现」。

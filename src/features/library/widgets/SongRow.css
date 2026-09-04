@@ -34,7 +34,7 @@
   padding: var(--space-2) var(--space-4);
   /*
    * NO background of its own — deliberately. The row is not a surface; whatever
-   * it sits on is. It used to carry `background-color: var(--canvas)`, inherited
+   * it sits on is. It used to carry `background-color: var(--system-background)`, inherited
    * from the three page copies this file collapsed (on a page the fill is a
    * no-op: every one of those page roots is `--canvas` already, with nothing
    * painting in between). Two places it was not a no-op:

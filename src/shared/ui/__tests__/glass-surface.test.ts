@@ -353,14 +353,10 @@ const SURFACE_CHANNEL = [
   // Lines. `separator` is translucent; it is here on semantic grounds, not
   // coverage grounds.
   'separator', 'opaque-separator',
-  // Translucent card colour with no consumer, kept for pack-schema compat.
-  'paper-clear',
-  // Surviving Muse aliases for the above.
-  'canvas', 'paper', 'rule', 'line',
 ]
 
 /** SURFACE_CHANNEL members that are translucent, so exempt from the opacity check. */
-const TRANSLUCENT_SURFACE_CHANNEL = ['paper-clear', 'separator', 'line']
+const TRANSLUCENT_SURFACE_CHANNEL = ['separator']
 
 /*
  * Modifier suffixes that mean "the user is interacting with this". Read off the
@@ -529,25 +525,21 @@ test('the opaque-token set is derived from tokens.css, not remembered', () => {
     'system-grouped-background', 'secondary-system-grouped-background',
     'tertiary-system-grouped-background', 'opaque-separator',
     'label', 'accent', 'system-red', 'system-green', 'toast-fill',
-    // …and the surviving aliases, which must classify the same as their targets.
-    // These are the ones that prove the indirection is being resolved: before it
-    // was, every alias filed as translucent and this gate went blind.
-    'canvas', 'paper', 'rule', 'content', 'primary',
+    // (P10 deleted the Muse aliases that used to be checked here for resolving
+    // to an opaque target — the indirection is gone, so only real tokens remain.)
   ]) {
     expect(opaque, `--${name} resolves to a flat hex in tokens.css, so it is opaque`)
       .toContain(name)
   }
   for (const name of [
-    'glass-fill', 'glass-fill-strong', 'paper-clear',
+    'glass-fill', 'glass-fill-strong',
     // Apple's fills and separators are translucent BY DESIGN — they sit on
     // content rather than replacing it.
     'system-fill', 'secondary-system-fill', 'tertiary-system-fill',
     'quaternary-system-fill', 'separator', 'tint-fill',
     'secondary-label', 'tertiary-label', 'quaternary-label',
-    // …and the aliases that now point at those translucent tokens. `--line` and
-    // `--neutral-faint` used to be opaque hexes; under Apple they are not, which
-    // is a real change in what this gate can catch (see SURFACE_CHANNEL).
-    'line', 'neutral-faint', 'fill-faint', 'primary-faint', 'content-2', 'content-muted',
+    // (P10 deleted the Muse aliases --line/--neutral-faint/etc. that used to be
+    // checked here as translucent — only real Apple translucent tokens remain.)
   ]) {
     expect(opaque, `--${name} resolves to rgba() below alpha 1 — it tints, it does not cover`)
       .not.toContain(name)
@@ -561,11 +553,12 @@ test('the opaque-token set is derived from tokens.css, not remembered', () => {
       .toContain(name)
   }
   // Non-vacuity for the exemption list: it must not silently grow to cover the
-  // whole channel, which would turn the loop above into a no-op.
+  // whole channel, which would turn the loop above into a no-op. (P10 removed
+  // the Muse aliases from SURFACE_CHANNEL, so the opaque floor dropped with them.)
   expect(
     SURFACE_CHANNEL.filter((n) => !TRANSLUCENT_SURFACE_CHANNEL.includes(n)).length,
     'most of the surface channel must still be opaque',
-  ).toBeGreaterThanOrEqual(8)
+  ).toBeGreaterThanOrEqual(7)
 })
 
 test('no surface or separator colour is used as a row-state wash inside a panel', () => {

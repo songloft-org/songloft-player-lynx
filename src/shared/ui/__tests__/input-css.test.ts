@@ -136,46 +136,24 @@ test('every text field sets -x-placeholder-color', () => {
 })
 
 /**
- * The next two lock the two field tokens, both of which had drifted by batch 51 —
- * six fields were filled with `--paper` (the *card* token) or `--canvas` (the
- * bottom-layer background), and every field rounded itself with `--radius-md`
- * (the *card* radius).
+ * The field fill: Apple backs text fields with a translucent fill rather than an
+ * opaque surface, which is also why it reads correctly on a glass panel. Six
+ * fields had drifted by batch 51 (filled with `--paper`/`--canvas`, the card /
+ * bottom-layer tokens — light theme put #fafafa on #ffffff, ~1.04:1, no edge).
  *
- * The fill one is not cosmetic: those six sat borderless on a transparent page, so
- * light theme put #fafafa on #ffffff — about 1.04:1, no perceivable field edge.
- *
- * Two names are accepted, not one, because the Apple migration lands screen by
- * screen: `--tertiary-system-fill` is the real token (Apple backs text fields with
- * a translucent fill rather than an opaque surface, which is also why it reads
- * correctly on a glass panel), and `--neutral-faint` is the compatibility alias
- * pointing at it. Un-migrated screens still say the alias. When the final stage
- * deletes the aliases, drop the second entry here — `tokens-hig.test.ts` fails at
- * the same moment, so the two cannot drift apart silently.
+ * P10 deleted the `--neutral-faint` alias that pointed at this token, so the
+ * single accepted fill is the real Apple name. (While the alias bridge lived,
+ * both names were accepted and a second test checked the alias resolved to the
+ * same colour — that guard is gone with the alias.)
  */
-const FIELD_FILLS = ['var(--tertiary-system-fill)', 'var(--neutral-faint)']
+const FIELD_FILLS = ['var(--tertiary-system-fill)']
 
-test('every text field is filled with the Apple field fill (or its alias)', () => {
+test('every text field is filled with the Apple field fill', () => {
   const css = allCss()
   const wrong = inputClassNames()
     .map((cls) => [cls, /background-color:\s*([^;\n]+)/.exec(ruleFor(cls, css))?.[1]?.trim()])
     .filter(([, fill]) => !FIELD_FILLS.includes(fill as string))
   expect(wrong).toEqual([])
-})
-
-test('the accepted field fills are the same colour, so the pair is not a loophole', () => {
-  // Non-vacuity: the alias is only an acceptable answer while it still RESOLVES to
-  // the Apple token. If someone re-points `--neutral-faint` at anything else, this
-  // test says so rather than letting two different fills both pass above.
-  const tokens = readFileSync(
-    path.join(SRC, 'shared/theme/tokens.css'),
-    'utf8',
-  ).replace(/\/\*[\s\S]*?\*\//g, '')
-  const aliases = [...tokens.matchAll(/--neutral-faint:\s*([^;]+);/g)].map((m) => m[1]!.trim())
-  expect(aliases.length, '--neutral-faint must still be declared per theme').toBeGreaterThan(0)
-  for (const value of aliases) {
-    expect(value, '--neutral-faint must alias --tertiary-system-fill')
-      .toBe('var(--tertiary-system-fill)')
-  }
 })
 
 test('every text field uses the --radius-sm corner', () => {

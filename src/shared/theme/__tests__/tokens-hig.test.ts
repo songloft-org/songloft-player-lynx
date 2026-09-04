@@ -295,56 +295,42 @@ test('the two background groups differ in light and collapse in dark', () => {
 })
 
 /**
- * The former Muse names that survive only as aliases. This list is written out
- * rather than derived, and the reason is the failure it has to catch: deriving
- * "the aliases" as "whatever currently starts with `var(`" is circular — an alias
- * that drifted back to a hardcoded colour simply drops out of the derived set and
- * nothing is asserted about it. (Confirmed by perturbation: with a derived set,
- * rewriting `--content` to `#111111` left the gate green.)
- *
- * A hand-written list is normally a liability, but here it is safe in the one
- * direction that matters: the set only ever SHRINKS. Every migration stage
- * deletes entries, the final stage empties it, and the equality check below fails
- * if the stylesheet and this list disagree either way.
+ * The former Muse colour aliases, deleted in P10. The list is written out
+ * rather than derived so a reintroduced alias is caught even if it points at a
+ * real token (an alias that resolves correctly still fails the gate — the
+ * bridge is gone on purpose). This is the hard checkpoint the plan promised:
+ * it only passes once P1–P9 drove every consumer to zero.
  */
-const MUSE_ALIASES = [
-  '--canvas', '--paper',
+const DELETED_MUSE_ALIASES = [
+  '--canvas', '--paper', '--paper-clear',
   '--content', '--content-2', '--content-muted',
   '--primary', '--primary-content', '--primary-faint',
   '--danger', '--danger-content', '--danger-2',
   '--neutral-faint', '--line', '--rule', '--fill-faint',
 ] as const
 
-test('Muse compatibility aliases resolve to Apple tokens, never to literals', () => {
+test('the Muse colour-alias bridge is gone (P10)', () => {
   /*
-   * The alias bridge is what lets the migration land screen by screen, and its
-   * whole value depends on the aliases being INDIRECTIONS. An alias pinned to a
-   * literal would keep passing every other gate while quietly freezing one screen
-   * on a stale palette — and theme packs, which override the Apple name inline,
-   * would stop reaching it entirely.
+   * The aliases were indirections (`--content: var(--label)`) that let the
+   * migration land screen by screen. P10 deleted them once every CSS consumer
+   * was on the real token. A reintroduction — even one that points at the
+   * correct Apple token — re-opens a parallel naming layer the migration
+   * deliberately collapsed, so it fails here regardless of what it resolves to.
    */
   for (const theme of ['light', 'dark'] as const) {
     const decl = themeDeclarations(theme)
-
-    // Set equality in BOTH directions: a → literal drift shows up as a missing
-    // entry, a newly-invented alias as an extra one.
-    const actual = Object.entries(decl)
+    for (const name of DELETED_MUSE_ALIASES) {
+      expect(decl[name], `${name} must NOT be re-declared in .theme-${theme} (P10 deleted it)`)
+        .toBeUndefined()
+    }
+    // The base theme block is now all literals — no `var()` indirections. (The
+    // increase-contrast blocks still carry `--separator: var(--opaque-separator)`,
+    // but those are a different selector, parsed separately.) This catches any
+    // NEW alias invented under a name not in the list above.
+    const indirections = Object.entries(decl)
       .filter(([, value]) => value.startsWith('var('))
       .map(([name]) => name)
-      .sort()
-    expect(actual, `.theme-${theme} alias set must match MUSE_ALIASES exactly`)
-      .toEqual([...MUSE_ALIASES].sort())
-
-    for (const name of MUSE_ALIASES) {
-      const value = decl[name]
-      expect(value, `${name} declared in .theme-${theme}`).toBeDefined()
-      expect(value, `${name} in .theme-${theme} must point at exactly one token`)
-        .toMatch(/^var\(--[\w-]+\)$/)
-      const target = value!.slice(4, -1)
-      expect(decl[target], `${name} points at ${target}, which must exist`).toBeDefined()
-      expect(decl[target], `${name} -> ${target} must not itself be an alias`)
-        .not.toMatch(/^var\(/)
-    }
+    expect(indirections, `.theme-${theme} must carry no var() indirections`).toEqual([])
   }
 })
 

@@ -266,7 +266,6 @@ function surfaces(theme: ThemeName): Array<{ name: string, bg: Rgb }> {
     { name: 'secondary-system-fill ⊕ page', bg: over(t['secondary-system-fill']!, page) },
     { name: 'tertiary-system-fill ⊕ page', bg: over(t['tertiary-system-fill']!, page) },
     { name: 'quaternary-system-fill ⊕ page', bg: over(t['quaternary-system-fill']!, page) },
-    { name: 'paper-clear ⊕ page', bg: over(t['paper-clear']!, page) },
     { name: 'glass-fill ⊕ page', bg: over(t['glass-fill']!, page) },
     { name: 'glass-fill-strong ⊕ page', bg: over(t['glass-fill-strong']!, page) },
   ]
@@ -303,7 +302,7 @@ describe.each(['dark', 'light'] as const)('%s: text on every surface', (theme) =
   test('the surface list is not silently empty', () => {
     // A typo in the token names above would make `surfaces()` throw, but a future
     // refactor that filtered the list down to nothing would pass every loop.
-    expect(surfaces(theme).length).toBeGreaterThanOrEqual(13)
+    expect(surfaces(theme).length).toBeGreaterThanOrEqual(12)
   })
 
   test('a label on an accent fill reads', () => {
@@ -798,9 +797,10 @@ describe('gate B: the bottom label tiers stay out of load-bearing text', () => {
  * this scan exists for the day one of them gains one.
  */
 test('no stylesheet puts chromatic text on one of the two heavy Apple fills', () => {
-  // Both the Apple names and the surviving aliases, since either may appear during
-  // the staged migration and they mean the same thing.
-  const CHROMATIC = ['--accent', '--primary', '--system-red', '--danger']
+  // P10 deleted the --primary/--danger aliases and swept every consumer, so only
+  // the real Apple chromatic names can appear. (During the staged migration both
+  // the Apple names and the aliases were checked; the aliases are gone now.)
+  const CHROMATIC = ['--accent', '--system-red']
   const HEAVY_FILL = ['--system-fill', '--secondary-system-fill']
 
   const offenders = stylesheets().flatMap(([file, css]) =>

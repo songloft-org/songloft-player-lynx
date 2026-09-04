@@ -17,25 +17,25 @@
  * wins on specificity regardless of source order) carries Apple's
  * Increase-Contrast accent.
  *
- * ── The alias bridge ─────────────────────────────────────────────────────────
- * The Apple tokens are the single source of truth. The former Muse names are
- * kept as THIN ALIASES pointing at them (`--content: var(--label)`), which is
- * what lets the migration land screen by screen instead of as one 80-file
- * rename: this file changes colour values app-wide today, and each later stage
- * swaps one screen's CSS onto the real names. The aliases are deleted in the
- * final stage, with a gate that rejects their reappearance.
+ * ── The alias bridge (deleted in P10) ────────────────────────────────────────
+ * The Apple tokens are the single source of truth. The former Muse names were
+ * kept as THIN ALIASES pointing at them (`--content: var(--label)`), which let
+ * the migration land screen by screen instead of as one 80-file rename: this
+ * file changed colour values app-wide in P0, and each later stage swapped one
+ * screen's CSS onto the real names. P1–P9 drove consumer count to zero, and P10
+ * deleted the alias declarations; a gate in `tokens-hig.test.ts` rejects their
+ * reappearance and `alias-elimination.test.ts` rejects any `var(--<alias>)` in
+ * a stylesheet.
  *
  * A nested `var()` inside a custom property DOES resolve per-theme on the
  * consuming element (headless-Chrome verified through the lynx-css pipeline),
- * and `--glass-ramp` / `--shadow-focus` already ship in exactly this shape, so
- * the bridge is not a new mechanism.
+ * and `--glass-ramp` / `--shadow-focus` still ship in exactly this shape.
  *
- * Alias direction matters: theme packs deliver their overrides as INLINE custom
- * properties on the theme root (see `theme-pack-mapping.ts`), and inline beats
- * a class declaration. So packs must set the NEW names — an alias then resolves
- * through to the pack's value and un-migrated CSS keeps getting pack colours.
- * Pointing the alias the other way would silently strand every pack override
- * the moment a screen migrated.
+ * Alias direction mattered while the bridge lived: theme packs deliver their
+ * overrides as INLINE custom properties on the theme root (see
+ * `theme-pack-mapping.ts`), and inline beats a class declaration, so packs
+ * set the NEW names and an alias resolved through to the pack's value. With the
+ * aliases gone, packs must still set the real names — which they always did.
  *
  * ── Where these values come from ─────────────────────────────────────────────
  * DESIGN.md §3.3 records Apple's own instruction: 不要在代码中硬编码系统颜色值 —
@@ -421,38 +421,12 @@
   --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.6);
 
-  /*
-   * ── Muse compatibility aliases ─────────────────────────────────────────────
-   * Deleted in the final stage; a gate then rejects their reappearance. Each
-   * points at the Apple token that owns the semantics, so un-migrated CSS and
-   * theme-pack overrides both keep working while screens migrate one at a time.
-   *
-   * One of these is a judgement call worth stating: `--content-muted` resolves to
-   * secondary-label, NOT tertiary. It has 138 call sites and almost all of them
-   * are load-bearing secondary text (subtitles, counts, hints); tertiary would put
-   * them at 2.48 in dark. Genuine placeholders are moved to --tertiary-label
-   * deliberately, per screen, not by a blanket alias.
-   *
-   * `--primary-2` is absent on purpose: it was declared and pack-overridable but
-   * had zero CSS consumers and was identical to `--primary`, so it is deleted
-   * rather than aliased. No second accent shade is invented.
-   */
-  --canvas: var(--system-background);
-  --paper: var(--secondary-system-background);
-  --paper-clear: rgba(28, 28, 30, 0.9);
-  --content: var(--label);
-  --content-2: var(--secondary-label);
-  --content-muted: var(--secondary-label);
-  --primary: var(--accent);
-  --primary-content: var(--accent-content);
-  --primary-faint: var(--tint-fill);
-  --danger: var(--system-red);
-  --danger-content: var(--accent-content);
-  --danger-2: var(--system-red-strong);
-  --neutral-faint: var(--tertiary-system-fill);
-  --line: var(--separator);
-  --rule: var(--opaque-separator);
-  --fill-faint: var(--quaternary-system-fill);
+  /* P10 deleted the Muse compatibility aliases here (--canvas/--paper/--content/
+     --primary/--danger/…, 16 of them). Every CSS consumer was migrated onto the
+     real Apple token in P1–P9; a gate in `tokens-hig.test.ts` rejects their
+     reappearance, and `alias-elimination.test.ts` rejects any `var(--<alias>)`
+     in a stylesheet. The legacy --font-* scale (except --font-2xs) is the next
+     retirement — still consumed, see the theme-root block. */
 }
 
 /* ── Light ────────────────────────────────────────────────────────────────────
@@ -602,23 +576,7 @@
   --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.14);
 
-  /* ── Muse compatibility aliases — see the dark block for the rationale ───── */
-  --canvas: var(--system-background);
-  --paper: var(--secondary-system-background);
-  --paper-clear: rgba(242, 242, 247, 0.9);
-  --content: var(--label);
-  --content-2: var(--secondary-label);
-  --content-muted: var(--secondary-label);
-  --primary: var(--accent);
-  --primary-content: var(--accent-content);
-  --primary-faint: var(--tint-fill);
-  --danger: var(--system-red);
-  --danger-content: var(--accent-content);
-  --danger-2: var(--system-red-strong);
-  --neutral-faint: var(--tertiary-system-fill);
-  --line: var(--separator);
-  --rule: var(--opaque-separator);
-  --fill-faint: var(--quaternary-system-fill);
+  /* P10 deleted the Muse compatibility aliases (see the dark block). */
 }
 
 /*

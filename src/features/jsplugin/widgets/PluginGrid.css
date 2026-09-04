@@ -51,7 +51,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--canvas);
+  background-color: var(--system-background);
 }
 
 .plugin-grid__card-name {

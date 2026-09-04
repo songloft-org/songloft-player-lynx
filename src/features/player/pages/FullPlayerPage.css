@@ -28,7 +28,7 @@
      screen class (16 → 64), which needs a media query Lynx does not have. */
   padding-top: calc(var(--space-4) + env(safe-area-inset-top));
   padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
-  background-color: var(--canvas);
+  background-color: var(--system-background);
   /* Containing block for `.player-backdrop`, which insets to 0 on the **border** box
      and so bleeds under the padding above. */
   position: relative;

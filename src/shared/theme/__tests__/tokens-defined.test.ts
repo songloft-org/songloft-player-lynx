@@ -61,10 +61,11 @@ test('no stylesheet reads a custom property nobody declares', () => {
 })
 
 test('the theme really declares the token the invisible-tick bug should have used', () => {
-  // Guards the fix itself: if `--primary-content` were ever renamed, the gate
+  // Guards the fix itself: if `--accent-content` were ever renamed, the gate
   // above would still pass (the new name would be declared *and* used) while
-  // every call site silently moved to a different colour.
+  // every call site silently moved to a different colour. (P10 renamed the
+  // former --primary-content alias to --accent-content.)
   const tokens = readFileSync(path.join(SRC, 'shared/theme/tokens.css'), 'utf8')
-  expect(tokens).toMatch(/--primary-content:/)
+  expect(tokens).toMatch(/--accent-content:/)
   expect(tokens).not.toMatch(/--on-primary:/)
 })

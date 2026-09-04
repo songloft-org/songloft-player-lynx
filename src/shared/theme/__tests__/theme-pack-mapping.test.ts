@@ -118,7 +118,6 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
     // while the rest of the app wore the pack.
     expect(vars['--system-grouped-background']).toBe('#FFF0F5')
     expect(vars['--secondary-system-grouped-background']).toBe('#FFFFFF')
-    expect(vars['--paper-clear']).toBe('rgba(255, 255, 255, 0.9)')
     expect(vars['--radius-lg']).toBe('14px')
     expect(vars['--radius-md']).toBe('16px')
     expect(vars['--radius-nav']).toBe('14px')
@@ -139,7 +138,6 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
     expect(vars['--secondary-system-background']).toBe('#261418')
     expect(vars['--system-grouped-background']).toBe('#1A0A10')
     expect(vars['--secondary-system-grouped-background']).toBe('#261418')
-    expect(vars['--paper-clear']).toBe('rgba(38, 20, 24, 0.9)')
   })
 
   test('glassColor tints the glass independently of the seed (dual-channel)', () => {

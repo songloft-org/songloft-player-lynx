@@ -20,7 +20,6 @@ import { MATERIAL_TOKENS } from './material-tokens.js'
  * |                           | --system-grouped-background         |
  * | light/dark.surfaceColor   | --secondary-system-background       |
  * |                           | --secondary-system-grouped-background |
- * |                           | --paper-clear (90% alpha)           |
  * | light/dark.glassColor     | --glass-glow (solid)                |
  * | (derived from glassColor) | --glass-glow-faint (0.10/0.14)      |
  * | (derived from glassColor) | --glass-sheen (0.10/0.04)           |
@@ -167,7 +166,6 @@ export const PACK_OVERRIDABLE_BASELINE: Record<'light' | 'dark', Record<string, 
     '--secondary-system-background': '#f2f2f7',
     '--system-grouped-background': '#f2f2f7',
     '--secondary-system-grouped-background': '#ffffff',
-    '--paper-clear': 'rgba(242, 242, 247, 0.9)',
     // Liquid Glass tokens. The four texture tokens (fill/fill-strong/border/
     // highlight) are always baseline — glass质感 is fixed, not pack-driven.
     // Only the decorative `--glass-glow*`/`--glass-sheen` re-point at seedColor
@@ -192,7 +190,6 @@ export const PACK_OVERRIDABLE_BASELINE: Record<'light' | 'dark', Record<string, 
     '--secondary-system-background': '#1c1c1e',
     '--system-grouped-background': '#000000',
     '--secondary-system-grouped-background': '#1c1c1e',
-    '--paper-clear': 'rgba(28, 28, 30, 0.9)',
     // Liquid Glass tokens — see the light block. Same shape, dark-tuned:
     // darker glass fills, dimmer highlight, and the dark star-blue glow.
     '--glass-fill': 'rgba(23, 23, 27, 0.85)',
@@ -277,7 +274,6 @@ export function themePackToStyleVars(
     if (isHexColor(colors.surfaceColor)) {
       vars['--secondary-system-background'] = colors.surfaceColor
       vars['--secondary-system-grouped-background'] = colors.surfaceColor
-      vars['--paper-clear'] = hexToRgba(colors.surfaceColor, 0.9)
     }
   }
 
