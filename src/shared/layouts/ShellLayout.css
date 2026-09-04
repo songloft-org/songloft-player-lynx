@@ -142,7 +142,9 @@
   flex: none;
   align-self: auto;
   min-height: var(--tap-target);
-  margin-bottom: var(--space-2);
+  /* Tighter than the narrow bar: iPadOS sidebar rows sit close together, the
+     selection rounded-rects nearly touching (4px), not a spaced-out list. */
+  margin-bottom: var(--space-1);
 }
 
 /* The tint pill: glyph + label wrapped together. Inactive items sit
@@ -219,10 +221,14 @@
 .shell--wide .nav-item__pill {
   flex-direction: row;
   justify-content: flex-start;
-  /* Stretch across the rail row — the iPadOS sidebar selection capsule runs
-     edge to edge of the rail's content width. */
+  /* Stretch across the rail row — the iPadOS sidebar selection rect runs edge
+     to edge of the rail's content width. */
   flex: 1;
   padding: var(--space-2) var(--space-3);
+  /* iPadOS sidebar selection is a ROUNDED RECTANGLE (~10pt), not the full
+     pill the narrow bottom-bar capsule uses. The pill reads as an iOS tab-bar
+     affordance; the rect is the iPad sidebar language (Music/Settings/Files). */
+  border-radius: var(--radius-grouped);
 }
 
 /* Active label carries the accent tint (CSS side; the glyph's tint is
