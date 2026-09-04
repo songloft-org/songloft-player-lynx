@@ -42,6 +42,20 @@ export interface SubPageShellProps {
   /** Extra class on the content wrapper, for page-specific layout rules. */
   contentClassName?: string
   /**
+   * True when the page is an Apple **inset-grouped list** — i.e. its body is
+   * `SettingsSection` cards. Those pages invert the page background: the page goes
+   * to `--system-grouped-background` (grey in light, pure black in dark) so the
+   * cards' `--secondary-system-grouped-background` reads as a raised card.
+   *
+   * Deliberately opt-in rather than applied to every sub-page. Seven of the
+   * sixteen have no cards at all (Licenses, Theme catalog, Server edit, Duplicate
+   * check, Tab config, Plugin manager, Plugin registry); on those a grey page
+   * would put content straight onto the grouped background with nothing raised
+   * above it, which is not the grouped pattern — a plain page belongs on
+   * `--system-background`.
+   */
+  grouped?: boolean
+  /**
    * Rendered after the scroll area but still inside the single root `<view>` —
    * the place for overlays such as confirm dialogs. Keeping them here (rather
    * than returning a Fragment root of `[shell, dialog]`) matters: a multi-root
@@ -69,6 +83,7 @@ export function SubPageShell({
   actions,
   scrollable = true,
   contentClassName,
+  grouped = false,
   overlay,
   children,
 }: SubPageShellProps) {
@@ -95,7 +110,7 @@ export function SubPageShell({
     : <view className='subpage__content'>{children}</view>
 
   return (
-    <view className='subpage'>
+    <view className={grouped ? 'subpage subpage--grouped' : 'subpage'}>
       <view className='subpage__topbar'>
         {showBack
           ? (

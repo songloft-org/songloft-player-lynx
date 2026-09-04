@@ -20,8 +20,8 @@
 }
 
 .size-limit-slider__label {
-  color: var(--content-2);
-  font-size: var(--font-sm);
+  color: var(--secondary-label);
+  font-size: var(--font-subhead);
   line-height: var(--font-title3);
 }
 
@@ -42,7 +42,7 @@
   width: 100%;
   height: 4px;
   border-radius: var(--radius-pill);
-  background-color: var(--rule);
+  background-color: var(--opaque-separator);
 }
 
 .size-limit-slider__indicator {
@@ -53,14 +53,14 @@
   top: 0;
   height: 4px;
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .size-limit-slider__thumb {
   width: 16px;
   height: 16px;
   border-radius: var(--radius-pill);
-  background-color: var(--primary-content);
+  background-color: var(--accent-content);
   box-shadow: var(--shadow-sm);
 }
 
@@ -75,13 +75,13 @@
   height: 4px;
   border-radius: var(--radius-pill);
   /* Inactive dots: Flutter's onSurfaceVariant — visible over the --rule rail. */
-  background-color: var(--content-2);
+  background-color: var(--secondary-label);
 }
 
 /* Notches at or before the current one sit on the --primary fill, so they take
  * its contrast color (Flutter's onPrimary active ticks). */
 .size-limit-slider__tick--active {
-  background-color: var(--primary-content);
+  background-color: var(--accent-content);
 }
 
 /* First/last notch labels, flush with the rail's ends. */
@@ -93,6 +93,6 @@
 }
 
 .size-limit-slider__scale-text {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
 }

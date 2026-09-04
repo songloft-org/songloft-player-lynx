@@ -127,7 +127,7 @@ export function PlaybackPage() {
   }
 
   return (
-    <SubPageShell title={t('settings.categoryPlayback')} backTestId='playback-back'>
+    <SubPageShell title={t('settings.categoryPlayback')} backTestId='playback-back' grouped>
       {/* ── Playback ────────────────────────────────────────────────────── */}
       <SettingsSection title={t('settings.audioQuality')} icon='music'>
         {AUDIO_QUALITY_OPTIONS.map((option) => (

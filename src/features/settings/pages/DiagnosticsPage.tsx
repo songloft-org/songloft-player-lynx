@@ -84,7 +84,7 @@ export function DiagnosticsPage() {
   }
 
   return (
-    <SubPageShell title={t('settings.diagnostics')} backTestId='diagnostics-back'>
+    <SubPageShell title={t('settings.diagnostics')} backTestId='diagnostics-back' grouped>
       <SettingsSection title={t('settings.logLevelTitle')} icon='settings'>
         {LOG_LEVELS.map((option) => (
           <SettingsRow

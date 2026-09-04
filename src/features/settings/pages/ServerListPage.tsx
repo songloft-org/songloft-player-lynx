@@ -53,6 +53,7 @@ export function ServerListPage() {
 
   return (
     <SubPageShell
+      grouped
       title={t('servers.title')}
       // Deliberately no `onBack` — see CacheManagePage. Routing to /settings is a
       // dead key inside the settings pane, so the shell must be free to hide it.

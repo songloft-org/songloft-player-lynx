@@ -1,15 +1,21 @@
 /*
  * Shared settings sub-page chrome — LUNA tokens only, no hard-coded sizes.
  *
- * Mirrors `.settings` so a sub-page and the main list line up. Three things this
+ * Mirrors `.settings` so a sub-page and the main list line up. Two things this
  * deliberately does NOT do, each one a bug that was shipped before:
- *   1. no `background-color` — `.shell` is already `--canvas`;
- *   2. no `env(safe-area-inset-top)` — `.shell__body` already applies it, and a
+ *   1. no `env(safe-area-inset-top)` — `.shell__body` already applies it, and a
  *      second one insets the topbar twice;
- *   3. no horizontal padding on `__content` — `.settings-section` already carries
+ *   2. no horizontal padding on `__content` — `.settings-section` already carries
  *      `margin: var(--space-4) var(--space-4) 0`, so page padding on top of it
  *      double-insets every card (which is why `.cache-manage__content` reads
  *      narrower than the main settings list today).
+ *
+ * A third entry used to read "no `background-color` — `.shell` is already
+ * `--canvas`". The Apple migration overturns it: a grouped list needs a page
+ * colour DIFFERENT from the shell's, because the card is defined by the contrast
+ * against it. So `--grouped` sets one — but only on the pages that actually have
+ * cards, which is why it is an opt-in modifier and not a rule on `.subpage`. The
+ * original point still holds for every plain sub-page: those inherit the shell.
  */
 
 .subpage {
@@ -18,6 +24,14 @@
   flex: 1;
   width: 100%;
   min-height: 0;
+}
+
+/* Apple inset-grouped list: grey page in light, pure black in dark, so the cards'
+   `--secondary-system-grouped-background` (white / #1c1c1e) reads as raised. This
+   is the inverse of the former white-page/grey-card arrangement and is the most
+   visible change of the migration. */
+.subpage--grouped {
+  background-color: var(--system-grouped-background);
 }
 
 .subpage__topbar {
@@ -42,7 +56,7 @@
 
 .subpage__title {
   flex: 1;
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-headline);
   font-weight: var(--weight-semibold);
   /* Titles are short phrases. A wrapped one only ever happens when the topbar

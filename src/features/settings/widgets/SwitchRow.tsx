@@ -48,12 +48,16 @@ export function SwitchRow({
           </view>
         )
         : null}
-      <view className='settings-row__body'>
-        <text className='settings-row__title'>{title}</text>
-        {subtitle ? <text className='settings-row__subtitle'>{subtitle}</text> : null}
-      </view>
-      <view className='settings-row__trailing'>
-        <AppSwitch checked={checked} disabled={disabled} onChange={onChange} />
+      {/* Same `__content` wrapper as SettingsRow — it carries the inset separator,
+          so a row missing it would break the run of hairlines in a mixed card. */}
+      <view className='settings-row__content'>
+        <view className='settings-row__body'>
+          <text className='settings-row__title'>{title}</text>
+          {subtitle ? <text className='settings-row__subtitle'>{subtitle}</text> : null}
+        </view>
+        <view className='settings-row__trailing'>
+          <AppSwitch checked={checked} disabled={disabled} onChange={onChange} />
+        </view>
       </view>
     </view>
   )

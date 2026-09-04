@@ -85,6 +85,7 @@ export function ProxySettingsPage() {
 
   return (
     <SubPageShell
+      grouped
       title={t('proxy.title')}
       backTestId='proxy-back'
     >

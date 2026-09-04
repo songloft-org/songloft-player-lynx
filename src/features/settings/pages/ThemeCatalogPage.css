@@ -7,8 +7,8 @@
 .theme-catalog__empty {
   padding: var(--space-6) var(--space-4);
   text-align: center;
-  color: var(--content-muted);
-  font-size: var(--font-sm);
+  color: var(--secondary-label);
+  font-size: var(--font-subhead);
 }
 
 .theme-catalog__item {
@@ -24,32 +24,32 @@
 }
 
 .theme-catalog__item-name {
-  font-size: var(--font-sm);
-  color: var(--content);
+  font-size: var(--font-body);
+  color: var(--label);
 }
 
 .theme-catalog__item-meta {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-top: 2px;
 }
 
 .theme-catalog__item-btn {
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .theme-catalog__item-btn-text {
   font-size: var(--font-caption1);
-  color: var(--primary-content);
+  color: var(--accent-content);
 }
 
 /* Catalog rows already installed at the same version: a label, not a button —
    there is nothing to do until the pack publishes a newer version. */
 .theme-catalog__installed-label {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   padding: var(--space-1) var(--space-2);
 }
 
@@ -66,10 +66,10 @@
 .theme-catalog__retry {
   padding: var(--space-1) var(--space-4);
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .theme-catalog__retry-text {
   font-size: var(--font-caption1);
-  color: var(--primary-content);
+  color: var(--accent-content);
 }

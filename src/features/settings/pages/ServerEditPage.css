@@ -4,8 +4,10 @@
   padding: 16px;
 }
 
+/* A card on a PLAIN page (Server edit has no SettingsSection), so it takes the
+   plain secondary background, not the grouped one. */
 .server-edit__card {
-  background-color: var(--paper);
+  background-color: var(--secondary-system-background);
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -22,7 +24,7 @@
 .server-edit__label {
   font-size: 14px;
   font-weight: var(--weight-medium);
-  color: var(--content);
+  color: var(--label);
 }
 
 /*
@@ -32,15 +34,15 @@
  * input fills.
  */
 .server-edit__input {
-  background-color: var(--neutral-faint);
-  border: 1px solid var(--line);
+  background-color: var(--tertiary-system-fill);
+  border: 1px solid var(--separator);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   font-size: 15px;
-  color: var(--content);
+  color: var(--label);
   /* Without this the placeholder keeps the host's own default, which is
      unreadable on the dark theme — the batch-19 bug, missed here. */
-  -x-placeholder-color: var(--content-muted);
+  -x-placeholder-color: var(--secondary-label);
 }
 
 .server-edit__toggle {
@@ -59,19 +61,19 @@
 
 .server-edit__toggle-title {
   font-size: 15px;
-  color: var(--content);
+  color: var(--label);
 }
 
 .server-edit__toggle-subtitle {
   font-size: 13px;
-  color: var(--content-2);
+  color: var(--secondary-label);
 }
 
 .server-edit__save {
   align-self: stretch;
   padding: 12px;
   border-radius: 8px;
-  background-color: var(--primary);
+  background-color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -84,5 +86,5 @@
 .server-edit__save-text {
   font-size: 15px;
   font-weight: var(--weight-semibold);
-  color: var(--primary-content);
+  color: var(--accent-content);
 }

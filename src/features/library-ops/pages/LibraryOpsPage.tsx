@@ -221,6 +221,7 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
 
   return (
     <SubPageShell
+      grouped
       title={t('libops.pageTitle')}
       backTestId='libops-back'
       contentClassName='libops__content'

@@ -8,8 +8,8 @@
 }
 
 .licenses__intro {
-  color: var(--content-2);
-  font-size: var(--font-sm);
+  color: var(--secondary-label);
+  font-size: var(--font-subhead);
   margin-bottom: var(--space-4);
 }
 
@@ -20,15 +20,15 @@
   justify-content: space-between;
   padding: var(--space-3) 0;
   border-bottom-width: 1px;
-  border-bottom-color: var(--neutral-faint);
+  border-bottom-color: var(--separator);
 }
 
 .licenses__name {
-  color: var(--content);
-  font-size: var(--font-sm);
+  color: var(--label);
+  font-size: var(--font-body);
 }
 
 .licenses__license {
-  color: var(--content-2);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
 }

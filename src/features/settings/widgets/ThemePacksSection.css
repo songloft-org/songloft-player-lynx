@@ -8,8 +8,8 @@
 .theme-packs__empty {
   padding: var(--space-6) var(--space-4);
   text-align: center;
-  color: var(--content-muted);
-  font-size: var(--font-sm);
+  color: var(--secondary-label);
+  font-size: var(--font-subhead);
 }
 
 .theme-packs__item {
@@ -25,13 +25,13 @@
 }
 
 .theme-packs__item-name {
-  font-size: var(--font-sm);
-  color: var(--content);
+  font-size: var(--font-body);
+  color: var(--label);
 }
 
 .theme-packs__item-meta {
   font-size: var(--font-caption1);
-  color: var(--content-muted);
+  color: var(--secondary-label);
   margin-top: 2px;
 }
 
@@ -45,12 +45,12 @@
 
 .theme-packs__item-delete-text {
   font-size: var(--font-caption1);
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 /* The store entry row sits below the pack rows; the border keeps it reading
    as navigation away from the list rather than a row of it (the same divider
    `.settings-row + .settings-row` draws between plain rows). */
 .theme-packs__entry {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--separator);
 }

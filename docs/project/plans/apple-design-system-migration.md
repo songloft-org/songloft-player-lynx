@@ -676,3 +676,73 @@ WebFetch 被拦截，改用 `curl` 直取 HIG 的 DocC JSON（`https://developer
 - label / 背景 / 填充 / separator 四组无官方数值可核（见上），只能间接佐证。
 - 明暗两主题 × 窄宽两布局 × 至少 1 个内置包的真机/模拟器观感未看。
 - 构建告警现状：4 组 `-webkit-box-orient`/`-webkit-line-clamp` 告警**为既存**，来自 `PlaylistDetailPage.css`、`SongInfoDialog.css`、`PluginManagerPage.css`、`LyricAdjustPage.css`——均不在本批改动内，且各文件内都有注释说明该属性是刻意使用、会被剥离。`progress.md` 中「构建警告自批19b 起归零」一句已过期，它指的是另一类告警（`placeholder-color`/`text-transform`/`object-fit`）。
+
+---
+
+# P1a 实施记录（设置类页面：分组反转 + 行几何 + 排版）
+
+验收：`pnpm test` 200 文件 / 2193 用例全绿；`pnpm exec tsc -b` 通过；`pnpm run build` 双端产物齐备。告警仍为既存那 4 组。
+
+## P1 被拆成 P1a / P1b
+
+方案 P1 把「29×29 彩色圆角行图标」和背景反转放在同一批。实施时发现两件事使它必须拆开：
+
+1. **调用点是 64 个**（`<SettingsRow>` 48 + `<SwitchRow>` 16，分布在 15 个文件），每处都要判定一个语义色。
+2. **图标色不能用 CSS 令牌。** `Icon.tsx` 用 `<svg content>` 标记，注释明确写了它「sits outside the cascade」、读不到 CSS 自定义属性，所以颜色必须在渲染时以 hex 解析（现有 `ICON_COLORS` 就是为此而存在的 Proxy）。彩色图标因此是 TS 侧的色板工作，不是 CSS 改动。
+
+故 **P1b 单独排期**：新增图标 tint 色板 + 64 处赋色。
+
+## 分隔线内缩：为什么行结构要改
+
+Apple 的分组分隔线内缩到**文字起点**——有图标时越过图标，无图标时停在行自身的内缩处。行元素上的 `border-top` 做不到这件事，因为 border 永远是它自己盒子的整宽。
+
+所以行改成 `[icon][content]`，border 挂在 `__content` 上，它的左边缘恰好就是文字起点。**不需要任何 per-row 修饰类，也不需要插入分隔视图**，内缩由结构自然得出。垂直 padding 一并从行移到 `__content`（border 必须落在行边界而不是 padding 内部），行只保留水平内缩——这也正是 `--active` 能画满整行高亮的原因。
+
+### 组合选择器的实测
+
+`.settings-row + .settings-row .settings-row__content` 这个形状在本仓库**零先例**：相邻兄弟与后代选择器各自都在用，组合起来没有。`lynx-check-css-support` skill 只覆盖 CSS **属性**，对选择器无话可说。
+
+改用实测：**移除该规则重新构建，`dist/main.lynx.bundle` 里 `settings-row__content` 从 2 次降到 1 次**——说明编译器确实把它作为独立规则发出，没有丢弃。
+
+**这只证明编码，不证明原生匹配。** 运行时行为仍需真机确认；若 Android/iOS 上分隔线实际不出现，退路是让 `SettingsSection` 插入显式分隔视图，那不需要组合选择器。
+
+## 背景反转为何是 opt-in
+
+16 个渲染 `<SubPageShell>` 的页面里只有 **9 个**含 `SettingsSection` 卡片，另 7 个（Licenses / Theme catalog / Server edit / Duplicate check / Tab config / Plugin manager / Plugin registry）完全没有卡片。在它们上面铺灰底会让内容直接压在分组背景上、没有任何东西被抬起——那不是分组模式，普通页应当留在 `--system-background`。
+
+所以 `SubPageShell` 新增 `grouped` prop（默认 false），设在那 9 个页面上；`SettingsPage` 自有 `.settings` 容器，自己设。
+
+顺带推翻了 `SubPageShell.css` 头注释里的一条既有决定——它把「刻意不设 background-color，因为 .shell 已经是 --canvas」列为「曾经踩过的坑」之一。分组列表需要一个**与 shell 不同**的页面色（卡片正是靠这个反差定义的），所以这条对分组页不再成立。注释已连同新理由一起更新，原结论对 7 个普通页仍然有效。
+
+## 具体改动
+
+| 项 | 现状 → 目标 |
+|---|---|
+| 页面背景 | `--canvas` → `--system-grouped-background`（9 个子页 + 主页） |
+| 卡片背景 | `--paper` → `--secondary-system-grouped-background` |
+| 卡片边框 | `1px solid --line` → **删除**（叠在页/卡反差上读作双描边） |
+| 卡片圆角 | `--radius-lg` 20px → `--radius-grouped` 10px |
+| 行高 | padding 16 四边（单行 ~48px）→ `min-height: var(--tap-target)` + `padding: var(--space-2) 0`（单行 44px，带副标题 57px） |
+| 行图标槽 | 仅 `width: 28px` → 29×29 + `--radius-xs`（**着色留给 P1b**） |
+| 分隔线 | 行上 `border-top` 全宽通铺 → `__content` 上，自动内缩至文字起点 |
+| 选中态 | `--neutral-faint` 中性填充 → `--tint-fill` accent wash（选中本就是强调色语义） |
+| 分组标题 | `--font-sm`(14) bold `--content-2` → `--font-footnote`(13) regular `--secondary-label` |
+| 行标题 | `--font-callout`(16) → `--font-body`(17) |
+| 行副标题 | `--font-sm`(14) → `--font-footnote`(13) |
+| 行尾文字 | `--font-sm`(14) → `--font-subhead`(15) |
+| 分组头对齐 | `padding: 0 var(--space-1)`(4px) → `0 var(--space-4)`(16px)，与行文字列对齐 |
+| 页面标题 | `--font-title1`(28) → `--font-largeTitle`(34) |
+
+**分组标题不做大写**：Apple 经典分组表头是大写，但 Lynx 无 `text-transform`（批19b 因构建告警删过该声明），靠 i18n 文案预大写对中文无意义。13pt 句首大写也是现代 iOS 多处的实际形态。
+
+设置树的令牌迁移已**全量完成**：`--font-sm` 归零（20 处按语义分流到 footnote/subhead/body），颜色 76 处迁到 Apple 名，旧名零残留。另修两处语义错误：`LicensesPage` 用填充令牌 `--neutral-faint` 当分隔线色 → `--separator`；`UpgradeSection` 的 changelog 内嵌块与进度槽用 `--paper`（不透明表面）→ 改用半透明 fill（`--tertiary-system-fill` / `--quaternary-system-fill`），这样在页面、分组卡、玻璃面板上都成立。
+
+## 闸门
+
+新增 `features/settings/__tests__/grouped-list.test.ts`，钉住本批三条**结构性**主张（它们失效时都是静默的）：
+
+- 每个渲染 `.settings-row` 的组件都必须渲染 `__content`——缺了的行自己看起来没问题，却会打断它所在卡片的整串发丝线，而这只在混排卡片里可见，没有单元测试会渲染那种组合
+- 分隔线必须挂在 `__content` 上，且裸的相邻兄弟规则不得带 border（拒绝「简化回去」这个最可能的回归）
+- 卡片不得有 border；有卡片的子页必须 `grouped`、无卡片的必须没有（双向相等，两类页面都必须存在，否则相等是平凡满足）
+
+变异测试 3/3 全咬。另修 `input-css.test.ts`：它钉住「所有文本框填 `--neutral-faint`」，现在接受 Apple 名与别名两者，并新增一条反貌真性——别名必须仍然解析到 `--tertiary-system-fill`，否则两个不同的填充色都能过关（该条已单独红检）。

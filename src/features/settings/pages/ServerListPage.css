@@ -19,12 +19,12 @@
 .server-list__empty-title {
   font-size: 16px;
   font-weight: var(--weight-medium);
-  color: var(--content);
+  color: var(--label);
 }
 
 .server-list__empty-hint {
   font-size: 14px;
-  color: var(--content-2);
+  color: var(--secondary-label);
   text-align: center;
 }
 
@@ -48,7 +48,7 @@
 
 .server-list__edit-text {
   font-size: 13px;
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .server-list__delete {
@@ -57,5 +57,5 @@
 
 .server-list__delete-text {
   font-size: 13px;
-  color: var(--danger);
+  color: var(--system-red);
 }

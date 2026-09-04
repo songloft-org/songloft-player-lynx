@@ -8,14 +8,14 @@
 }
 
 .upgrade-page__state {
-  color: var(--content-muted);
-  font-size: var(--font-sm);
+  color: var(--secondary-label);
+  font-size: var(--font-subhead);
   text-align: center;
   padding: var(--space-6) 0;
 }
 
 .upgrade-page__state--error {
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 .upgrade-page__section {
@@ -29,12 +29,12 @@
 .upgrade-page__up-to-date {
   font-size: var(--font-callout);
   font-weight: var(--weight-bold);
-  color: var(--content);
+  color: var(--label);
 }
 
 .upgrade-page__version {
-  font-size: var(--font-sm);
-  color: var(--content-muted);
+  font-size: var(--font-body);
+  color: var(--secondary-label);
 }
 
 .upgrade-page__new-version {
@@ -44,15 +44,17 @@
 }
 
 .upgrade-page__current {
-  font-size: var(--font-sm);
-  color: var(--content-muted);
+  font-size: var(--font-footnote);
+  color: var(--secondary-label);
 }
 
 .upgrade-page__changelog {
-  font-size: var(--font-sm);
-  color: var(--content-2);
+  font-size: var(--font-footnote);
+  color: var(--secondary-label);
   padding: var(--space-3);
-  background-color: var(--paper);
+  /* An inset block ON content, so it is a FILL rather than a surface: translucent,
+     therefore correct whatever it lands on (page, grouped card, or glass). */
+  background-color: var(--tertiary-system-fill);
   border-radius: var(--radius-md);
   width: 100%;
 }
@@ -61,12 +63,12 @@
   margin-top: var(--space-3);
   padding: var(--space-3) var(--space-6);
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .upgrade-page__btn-text {
-  font-size: var(--font-sm);
-  color: var(--primary-content);
+  font-size: var(--font-subhead);
+  color: var(--accent-content);
   font-weight: var(--weight-bold);
 }
 
@@ -81,29 +83,29 @@
 .upgrade-page__progress-status {
   font-size: var(--font-callout);
   font-weight: var(--weight-bold);
-  color: var(--content);
+  color: var(--label);
 }
 
 .upgrade-page__progress-bar {
   width: 100%;
   height: 6px;
   border-radius: 3px;
-  background-color: var(--paper);
+  background-color: var(--quaternary-system-fill);
   overflow: hidden;
 }
 
 .upgrade-page__progress-fill {
   height: 100%;
-  background-color: var(--primary);
+  background-color: var(--accent);
   border-radius: 3px;
 }
 
 .upgrade-page__progress-step {
-  font-size: var(--font-sm);
-  color: var(--content-2);
+  font-size: var(--font-footnote);
+  color: var(--secondary-label);
 }
 
 .upgrade-page__progress-pct {
-  font-size: var(--font-sm);
-  color: var(--content-muted);
+  font-size: var(--font-footnote);
+  color: var(--secondary-label);
 }

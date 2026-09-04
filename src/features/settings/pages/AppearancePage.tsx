@@ -190,7 +190,7 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
   }
 
   return (
-    <SubPageShell title={t('settings.categoryAppearance')} backTestId='appearance-back'>
+    <SubPageShell title={t('settings.categoryAppearance')} backTestId='appearance-back' grouped>
       <SettingsSection title={t('settings.themeSection')} icon='palette'>
         {APP_THEME_OPTIONS.map((option) => (
           <SettingsRow

@@ -64,28 +64,33 @@ export function SettingsRow({
           </view>
         )
         : null}
-      <view className='settings-row__body'>
-        <text
-          className={danger
-            ? 'settings-row__title settings-row__title--danger'
-            : 'settings-row__title'}
-        >
-          {title}
-        </text>
-        {subtitle ? <text className='settings-row__subtitle'>{subtitle}</text> : null}
+      {/* `__content` is what carries the separator, so it must wrap everything to
+          the right of the icon — see the derivation in Settings.css. Keep this in
+          step with SwitchRow, which reuses the same rules. */}
+      <view className='settings-row__content'>
+        <view className='settings-row__body'>
+          <text
+            className={danger
+              ? 'settings-row__title settings-row__title--danger'
+              : 'settings-row__title'}
+          >
+            {title}
+          </text>
+          {subtitle ? <text className='settings-row__subtitle'>{subtitle}</text> : null}
+        </view>
+        {(trailingText || trailingIcon)
+          ? (
+            <view className='settings-row__trailing'>
+              {trailingText
+                ? <text className='settings-row__trailing-text'>{trailingText}</text>
+                : null}
+              {trailingIcon
+                ? <Icon name={trailingIcon} size={18} color={ICON_COLORS.contentMuted} />
+                : null}
+            </view>
+          )
+          : null}
       </view>
-      {(trailingText || trailingIcon)
-        ? (
-          <view className='settings-row__trailing'>
-            {trailingText
-              ? <text className='settings-row__trailing-text'>{trailingText}</text>
-              : null}
-            {trailingIcon
-              ? <Icon name={trailingIcon} size={18} color={ICON_COLORS.contentMuted} />
-              : null}
-          </view>
-        )
-        : null}
     </view>
   )
 }

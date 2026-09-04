@@ -1,9 +1,25 @@
 /*
- * Settings section + row styling — LUNA tokens only (no hard-coded colors).
- * Shared by SettingsSection / SettingsRow and imported by both the main and the
- * server sub-page (Lynx CSS is global scope, so the sub-page gets these rules
- * even when the main page never mounted — same approach as the batch-6 detail
- * page re-declaring .song-row).
+ * Settings section + row styling — Apple inset-grouped list.
+ *
+ * Shared by SettingsSection / SettingsRow / SwitchRow and imported by all of
+ * them (Lynx CSS is global scope, so a sub-page gets these rules even when the
+ * main page never mounted — same approach as the batch-6 detail page
+ * re-declaring `.song-row`).
+ *
+ * ── The separator inset, and why the row has a `__content` wrapper ───────────
+ *
+ * Apple insets a grouped-list separator to where the row's TEXT starts: past the
+ * leading icon when there is one, at the row's own inset when there is not. A
+ * `border-top` on `.settings-row` cannot do that — a border is always the full
+ * width of its box. So the row is `[icon][content]` and the border lives on
+ * `__content`, which begins exactly at the text either way. No per-row modifier
+ * and no interleaved divider elements are needed; the inset falls out of the
+ * structure.
+ *
+ * The vertical padding moved from the row onto `__content` for the same reason:
+ * the border has to sit at the row boundary, not inside the padding. The row
+ * keeps only its horizontal inset, which is what lets `--active` paint a
+ * full-bleed highlight.
  */
 
 .settings-section {
@@ -17,7 +33,9 @@
   flex-direction: row;
   align-items: flex-start;
   margin-bottom: var(--space-2);
-  padding: 0 var(--space-1);
+  /* Aligned with the row text (the card's own inset), not with the card edge —
+     Apple's grouped headers sit above the text column, not above the card. */
+  padding: 0 var(--space-4);
 }
 
 .settings-section__icon {
@@ -34,24 +52,41 @@
   flex: 1;
 }
 
+/*
+ * Footnote, regular weight, secondary label — Apple's grouped section header.
+ *
+ * Deliberately NOT uppercase. Apple's classic grouped header is, but
+ * `text-transform` does not exist in Lynx (batch 19b had to delete the one
+ * declaration that used it, see progress.md), and pre-uppercasing the i18n
+ * string is meaningless for Chinese. Sentence case at 13pt is also what modern
+ * iOS uses in many places, so this is a constraint that happens to land on a
+ * defensible answer rather than a compromise.
+ */
 .settings-section__title {
-  color: var(--content-2);
-  font-size: var(--font-sm);
-  font-weight: var(--weight-bold);
+  color: var(--secondary-label);
+  font-size: var(--font-footnote);
+  font-weight: var(--weight-regular);
 }
 
 .settings-section__subtitle {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
-  margin-top: 1px;
+  margin-top: var(--space-half);
 }
 
+/*
+ * The card. No border: an Apple grouped card is defined by the CONTRAST between
+ * `--secondary-system-grouped-background` and the page's
+ * `--system-grouped-background` (white on grey in light, #1c1c1e on black in
+ * dark), and a hairline on top of that reads as a double outline. That contrast
+ * is why the page background has to invert on these screens — see
+ * `SubPageShell.css`'s `--grouped` modifier.
+ */
 .settings-section__card {
   display: flex;
   flex-direction: column;
-  border-radius: var(--radius-lg);
-  background-color: var(--paper);
-  border: 1px solid var(--line);
+  border-radius: var(--radius-grouped);
+  background-color: var(--secondary-system-grouped-background);
   overflow: hidden;
 }
 
@@ -60,16 +95,18 @@
 .settings-row {
   display: flex;
   flex-direction: row;
-  align-items: center;
-  padding: var(--space-4);
+  /* `stretch`, not `center`: `__content` must fill the row's height for its
+     border-top to land on the row boundary. The icon re-centres itself. */
+  align-items: stretch;
+  padding: 0 var(--space-4);
 }
 
-.settings-row + .settings-row {
-  border-top: 1px solid var(--line);
-}
-
+/* Selection is an accent-tinted state, so it uses the accent wash rather than a
+   neutral fill — a picked option is the same kind of thing as a selected row
+   anywhere else in the app. `contrast.test.ts` holds --tint-fill's visibility
+   floor and the text that reads on it. */
 .settings-row--active {
-  background-color: var(--neutral-faint);
+  background-color: var(--tint-fill);
 }
 
 .settings-row--disabled {
@@ -80,8 +117,43 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
+  align-self: center;
+  width: 29px;
+  height: 29px;
+  border-radius: var(--radius-xs);
   margin-right: var(--space-3);
+}
+
+.settings-row__content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  /* 44 is the HIG tap target and also Apple's single-line grouped row height. A
+     row with a subtitle grows past it: 8 + 22 + 2 + 17 + 8 = 57. */
+  min-height: var(--tap-target);
+  padding: var(--space-2) 0;
+}
+
+/*
+ * Adjacent-sibling AND descendant in one selector. Neither half is new here
+ * (`.settings-row + .settings-row` and `.toast--error .toast__text` both ship),
+ * but the combination had no precedent in this codebase, and the
+ * `lynx-check-css-support` dataset covers properties only — it says nothing
+ * about selectors.
+ *
+ * Verified empirically instead: removing this rule and rebuilding drops
+ * `settings-row__content` from 2 occurrences to 1 in `dist/main.lynx.bundle`, so
+ * the compiler does emit it as its own rule rather than discarding it.
+ *
+ * That proves ENCODING, not native matching. The runtime behaviour still wants a
+ * device check — if the separators turn out to be missing on Android/iOS, the
+ * fallback is to interleave explicit divider views from `SettingsSection`, which
+ * needs no compound selector.
+ */
+.settings-row + .settings-row .settings-row__content {
+  border-top: 1px solid var(--separator);
 }
 
 .settings-row__body {
@@ -92,18 +164,18 @@
 }
 
 .settings-row__title {
-  color: var(--content);
-  font-size: var(--font-callout);
+  color: var(--label);
+  font-size: var(--font-body);
 }
 
 .settings-row__title--danger {
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 .settings-row__subtitle {
-  color: var(--content-muted);
-  font-size: var(--font-sm);
-  margin-top: 2px;
+  color: var(--secondary-label);
+  font-size: var(--font-footnote);
+  margin-top: var(--space-half);
 }
 
 .settings-row__trailing {
@@ -114,7 +186,7 @@
 }
 
 .settings-row__trailing-text {
-  color: var(--content-2);
-  font-size: var(--font-sm);
+  color: var(--secondary-label);
+  font-size: var(--font-subhead);
   margin-right: var(--space-2);
 }

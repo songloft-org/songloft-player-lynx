@@ -58,7 +58,7 @@ export function AboutPage({ onOpenLicenses }: AboutPageProps = {}) {
   }
 
   return (
-    <SubPageShell title={t('settings.aboutUpdates')} backTestId='about-back'>
+    <SubPageShell title={t('settings.aboutUpdates')} backTestId='about-back' grouped>
       <SettingsSection title={t('settings.about')} icon='info'>
         <SettingsRow
           icon='info'

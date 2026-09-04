@@ -47,7 +47,7 @@ export function DataPage() {
   }, [t])
 
   return (
-    <SubPageShell title={t('settings.categoryData')} backTestId='data-back'>
+    <SubPageShell title={t('settings.categoryData')} backTestId='data-back' grouped>
       {canTransfer
         ? (
           <SettingsSection title={t('data.sectionTitle')} icon='folder'>

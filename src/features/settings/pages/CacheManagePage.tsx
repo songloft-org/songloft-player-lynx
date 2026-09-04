@@ -229,6 +229,7 @@ export function CacheManagePage() {
 
   return (
     <SubPageShell
+      grouped
       title={t('cacheManage.title')}
       // Deliberately no `onBack`: an explicit onBack tells the shell "this back is
       // meaningful even inside the settings pane", which only holds for an in-pane
