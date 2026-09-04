@@ -6,6 +6,17 @@
  */
 
 .home {
+  /* Page-local layout constants, declared here (not in tokens.css) for the
+     same reason --nav-inset lives in ShellLayout.css: they are this page's
+     geometry, not design-system-wide. Tokenized so a retune touches one place
+     rather than four hardcoded 120s and a stray 168/60. Descendants inherit. */
+  --home-card-size: 120px;
+  /* Strip height = card (120) + ~44 for two nowrap text rows. Coincidentally
+     equal to CARD_CHROME_PX in HomeSection.tsx, which is the TS-side card
+     *chrome* budget for measurement — same number, unrelated derivation; do
+     not change one expecting the other to follow. */
+  --home-strip-height: 168px;
+  --home-refresh-header-height: 60px;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -21,8 +32,8 @@
 }
 
 .home__greeting {
-  color: var(--content);
-  font-size: var(--font-title1);
+  color: var(--label);
+  font-size: var(--font-largeTitle);
   font-weight: var(--weight-bold);
 }
 
@@ -48,11 +59,11 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 60px;
+  height: var(--home-refresh-header-height);
 }
 
 .home__refresh-header-text {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-sm);
 }
 
@@ -92,8 +103,8 @@
 }
 
 .home-section__title {
-  color: var(--content);
-  font-size: var(--font-title3);
+  color: var(--label);
+  font-size: var(--font-title2);
   font-weight: var(--weight-bold);
 }
 
@@ -110,7 +121,7 @@
 
 .home-section__action-text {
   color: var(--accent);
-  font-size: var(--font-sm);
+  font-size: var(--font-subhead);
 }
 
 /*
@@ -123,7 +134,7 @@
  */
 .home-section__scroll {
   width: 100%;
-  height: 168px;
+  height: var(--home-strip-height);
 }
 
 /*
@@ -150,8 +161,8 @@
  * viewport and — again — leave no scroll range.
  */
 .home-section__row .playlist-card {
-  width: 120px;
-  min-width: 120px;
+  width: var(--home-card-size);
+  min-width: var(--home-card-size);
   flex-shrink: 0;
   padding: 0;
 }
@@ -162,8 +173,8 @@
  * `PlaylistsView.css` so the library page keeps its own proportions.
  */
 .home-section__row .playlist-card__cover {
-  width: 120px;
-  height: 120px;
+  width: var(--home-card-size);
+  height: var(--home-card-size);
 }
 
 /*
@@ -197,7 +208,7 @@
 }
 
 .home-section__error-text {
-  color: var(--content-2);
+  color: var(--secondary-label);
   font-size: var(--font-sm);
   flex: 1;
 }
@@ -208,7 +219,7 @@
   justify-content: center;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
 }
 
 .home-section__retry-text {
@@ -219,21 +230,21 @@
 /* ── Library stats panel ─────────────────────────────────────────────────── */
 
 /*
- * Quiet paper card — not an inverted accent block. A library summary is
- * information, not a call to action, so it stays on `--paper` with a hairline
- * `--line` edge and ink (`--content`) numerals. Filling it with `--primary`
- * would make the whole panel pitch-black in light mode / stark white in dark
- * mode and steal focus from the real primary CTAs (Muse §3.1: one accent
- * channel).
+ * Quiet grouped card — not an inverted accent block. A library summary is
+ * information, not a call to action, so it stays on --secondary-system-background
+ * (the plain-page card colour: white page, grey card in light) with --label
+ * numerals. No border: the card is defined by the contrast against the page, and
+ * a hairline on top reads as a double outline (same call as the settings card).
+ * Filling it with --accent would make the whole panel pitch-blue and steal
+ * focus from the real primary CTAs (DESIGN.md §3.1: one accent channel).
  */
 .home-stats {
   display: flex;
   flex-direction: column;
   margin: var(--space-5) var(--space-4) 0;
   padding: var(--space-4);
-  border-radius: var(--radius-lg);
-  background-color: var(--paper);
-  border: 1px solid var(--line);
+  border-radius: var(--radius-grouped);
+  background-color: var(--secondary-system-background);
 }
 
 .home-stats__headline {
@@ -250,14 +261,14 @@
 }
 
 .home-stats__headline-value {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-title1);
   font-weight: var(--weight-bold);
 }
 
 .home-stats__headline-label {
-  color: var(--content-2);
-  font-size: var(--font-sm);
+  color: var(--secondary-label);
+  font-size: var(--font-footnote);
   margin-left: var(--space-2);
 }
 
@@ -268,8 +279,8 @@
 }
 
 .home-stats__headline-duration {
-  color: var(--content-2);
-  font-size: var(--font-sm);
+  color: var(--secondary-label);
+  font-size: var(--font-footnote);
   margin-left: var(--space-1);
 }
 
@@ -288,13 +299,13 @@
 }
 
 .home-stats__cell-value {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-callout);
   font-weight: var(--weight-bold);
 }
 
 .home-stats__cell-label {
-  color: var(--content-2);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
 }
 
@@ -306,7 +317,7 @@
 }
 
 .home-stats__footer-text {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
 }
 
@@ -321,24 +332,24 @@
 }
 
 .home__state-text {
-  color: var(--content-2);
+  color: var(--secondary-label);
   font-size: var(--font-callout);
   font-weight: var(--weight-bold);
 }
 
 .home__state-text--error {
-  color: var(--danger);
+  color: var(--system-red);
 }
 
 .home__state-action {
   margin-top: var(--space-3);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .home__state-action-text {
-  color: var(--primary-content);
+  color: var(--accent-content);
   font-size: var(--font-sm);
   font-weight: var(--weight-bold);
 }
@@ -351,13 +362,13 @@
 }
 
 .home__empty-title {
-  color: var(--content-2);
+  color: var(--secondary-label);
   font-size: var(--font-callout);
   font-weight: var(--weight-bold);
 }
 
 .home__empty-subtitle {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-sm);
   margin-top: var(--space-2);
   margin-bottom: var(--space-4);
@@ -369,11 +380,11 @@
   justify-content: center;
   padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .home__empty-action-text {
-  color: var(--primary-content);
+  color: var(--accent-content);
   font-size: var(--font-sm);
   font-weight: var(--weight-bold);
 }

@@ -99,8 +99,9 @@ test('the strip separates sizing (scroll-view) from layout (inner row)', () => {
 
   const scroll = /\.home-section__scroll\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
   expect(scroll).toMatch(/width:\s*100%/)
-  // A horizontal scroller needs a real height; without one it has no viewport.
-  expect(scroll).toMatch(/height:\s*\d/)
+  // A horizontal scroller needs a real height (not 100%/auto); P4 tokenized the
+  // hardcoded 168 → --home-strip-height, which resolves to that same fixed size.
+  expect(scroll).toMatch(/height:\s*var\(--home-strip-height\)/)
   // The whole point: no flex container on the scroll-view itself.
   expect(scroll).not.toMatch(/display:\s*flex/)
 
@@ -117,9 +118,10 @@ test('the strip separates sizing (scroll-view) from layout (inner row)', () => {
   expect(card).toMatch(/flex-shrink:\s*0/)
 
   // Square cover, overriding the library grid's 104px without touching that page.
+  // P4 tokenized the hardcoded 120 → --home-card-size (same fixed square).
   const cover = /\.home-section__row\s+\.playlist-card__cover\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
-  expect(cover).toMatch(/width:\s*120px/)
-  expect(cover).toMatch(/height:\s*120px/)
+  expect(cover).toMatch(/width:\s*var\(--home-card-size\)/)
+  expect(cover).toMatch(/height:\s*var\(--home-card-size\)/)
 })
 
 /**

@@ -525,7 +525,7 @@ Toast 按 §4.1 C 类改 `--toast-fill`；`ToastHost.css:22` 的 `bottom: calc(s
 | **构建告警当错误看** | `progress.md` 记载构建告警自批19b 起归零。本方案不得引入新的 `Unsupported property … was removed` 告警——尤其 `text-transform`（§P1 已避开）。 |
 | **回滚** | P0 回滚 = 还原 `tokens.css` + `theme-pack-mapping.ts` + 4 个测试文件。P1–P9 每阶段回滚 = 还原该屏 CSS/TSX。别名桥接的设计意图正是让每阶段回滚互不牵连。 |
 | **性能** | 别名层引入一层 `var()` 间接。`--glass-ramp`/`--shadow-focus` 已在生产用同样形态，无实测退化记录。P10 后间接层消失。 |
-| **未验�����** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
+| **未验������** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
 
 ## 8. 验收
 
@@ -886,3 +886,49 @@ P2 把副标题基线迁到 `--secondary-label` 后，二级与主级 `--label` 
 - `contrast.test.ts` 不动：`--tint-fill` 不在 FORBIDDEN 的重填充扫描名单（那是 `--system-fill`/`--secondary-system-fill`），`--accent` 在 `--tint-fill` 上的配对不在禁止之列。
 
 编码实测：`dist/main.lynx.bundle` 里 `--bottombar-height`/`--nav-pill-height` 各 3 次、`--nav-icon-size` 5 次，`mobile-nav-height` 0 次（死令牌已净除）。运行时 pill wash 落位仍需真机确认。
+
+---
+
+# P4 实施记录（首页：排版 + 统计卡 + 度量令牌化）
+
+验收：`pnpm test` 202 文件 / 2204 用例全绿；`tsc -b` 通过；`pnpm run build` 双端产物齐备。告警仍为既存那 4 组。
+
+## 普通页，不反转
+
+首页是**普通页**不是分组页：页面 `--system-background`（浅色白），卡片 `--secondary-system-background`（浅色 `#F2F2F7` 灰）。P1 的「反转」只适用于设置类分组页，此处保持白页灰卡，与现状同向。`.shell` 根已是 `--canvas`(=`--system-background`)，故 `.home` 无需自设底色。
+
+## 排版层级上移
+
+- 问候语 `--font-title1`(28) → `--font-largeTitle`(34)。
+- 区块标题 `--font-title3`(20) → `--font-title2`(22)。
+- 区块动作文字 `--font-sm`(14) → `--font-subhead`(15)。
+- 统计主数值 `--font-title1`(28) **保留**——问候语长大了，统计数值没长，页面视觉权重仍由问候语领头，数值读作数字而非标题。
+- 统计标签（headline-label / headline-duration）`--font-sm`(14) → `--font-footnote`(13)——它们是次级信息。
+
+## 统计卡：去边框、分组圆角
+
+`.home-stats`：`--paper` + `1px solid --line` + `--radius-lg`(20) → `--secondary-system-background`、**删边框**、`--radius-grouped`(10)。与设置卡同理由：卡靠与页面的反差定义，边框读作双描边。注释里旧文「paper card / hairline edge / --primary / Muse §3.1」一并改为 Apple 名与 DESIGN.md §3.1。统计卡文字 `--content`→`--label`。
+
+方案表里「统计卡填充色 --primary-2 → ...」的 `--primary-2` 是**陈旧引用**——P0 已因「零消费」删除该令牌，HomePage 实际用的是 `--paper`。本批按 `--paper`→`--secondary-system-background` 迁移，与表意图一致。
+
+## 度量令牌化（页内声明，不进全局 tokens.css）
+
+`120px`/`168px`/`60px` 三处硬编码令牌化。**不进 tokens.css**——遵循 `--nav-inset` 的先例（页内几何在页 CSS 声明，非设计系统级常量）：在 `.home` 根声明 `--home-card-size`(120)、`--home-strip-height`(168)、`--home-refresh-header-height`(60)，后代继承消费。`--home-strip-height` 注释特别说明它与 `HomeSection.tsx` 的 `CARD_CHROME_PX`(168) **同值但无关**（一个是 CSS 条带高度，一个是 TS 度量的卡片 chrome 预算），改一个别指望另一个跟。
+
+重试按钮底 `--neutral-faint` → `--tertiary-system-fill`。
+
+## 颜色别名批量迁移
+
+本页所有 `var(--content)`/`--content-2`/`--content-muted`/`--paper`/`--line`/`--neutral-faint`/`--primary`/`--primary-content`/`--danger` 别名一次性 sed 迁到 Apple 名（`--label`/`--secondary-label`/`--secondary-system-background`/`--separator`/`--tertiary-system-fill`/`--accent`/`--accent-content`/`--system-red`）。用 `var(--name)` 精确匹配避免误伤 `--primary` vs `--primary-content`。迁移后零旧别名残留。
+
+## Web 分支约束
+
+`HomePage.tsx` 的 Web 分支刻意不渲染 `<refresh>`（改渲染 `home__scroll-host`），因为该标签在 Web 落为未知元素、头部文案当正文渲染。本批**未触碰**该分流（纯 CSS 改动，`.home__refresh, .home__scroll-host` 共享规则照旧）。
+
+## 闸门
+
+- `home-section-scroll.test.ts`：原本钉「scroll height = `\d`」「cover = `120px`」硬编码值，P4 令牌化后改为断言消费 `--home-strip-height`/`--home-card-size`（同意图：固定高度、120 方封面，只是走了令牌）。
+- 新增 `home-css.test.ts` 3 条：Apple 排版层级（largeTitle/title2/subhead + 保留 title1 数值 + footnote 标签）；统计卡去边框 + 分组圆角 + 灰卡面；重试按钮 Apple 填充。
+- `contrast.test.ts` 不动：本页无新增文字-填充禁忌配对，统计卡灰底 + `--label` 文字远过 4.5。
+
+编码实测：`dist/main.lynx.bundle` 里 `--home-card-size` 9 次、`--home-strip-height` 3 次、`--home-refresh-header-height` 3 次，均编码发出。
