@@ -88,7 +88,7 @@
 
 .fp-status__warning-text {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--font-footnote);
   color: var(--label);
   margin-left: var(--space-2);
   line-height: 18px;
@@ -100,7 +100,8 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  padding: var(--space-3) var(--space-4);
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4);
   border-radius: var(--radius-sm);
   margin-bottom: var(--space-2);
 }
@@ -144,7 +145,7 @@
 }
 
 .fp-computing__failed {
-  font-size: 13px;
+  font-size: var(--font-footnote);
   color: var(--system-red);
   margin-top: var(--space-1);
 }
@@ -160,7 +161,8 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  padding: var(--space-3) var(--space-4);
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4);
   border: 1px solid var(--separator);
   border-radius: var(--radius-sm);
   margin-top: var(--space-4);
@@ -231,7 +233,8 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  padding: var(--space-3) var(--space-4);
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4);
   /* Filled destructive control: --system-red-strong (Apple's accessible red),
      NOT --system-red. White on systemRed is 3.57 in light and 3.43 in dark;
      on the accessible red it is 4.56, which clears AA in both themes. */
@@ -252,7 +255,8 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  padding: 10px var(--space-4);
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4);
   border: 1px solid var(--separator);
   border-radius: var(--radius-sm);
 }
@@ -339,14 +343,14 @@
 }
 
 .fp-group__badge {
-  padding: 2px 6px;
+  padding: var(--space-half) var(--space-2);
   background-color: var(--tertiary-system-fill);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   margin-left: var(--space-2);
 }
 
 .fp-group__badge-text {
-  font-size: 11px;
+  font-size: var(--font-caption2);
   color: var(--accent);
 }
 
@@ -367,7 +371,8 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  padding: 10px var(--space-4);
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4);
   border: 1px solid var(--system-red);
   border-radius: var(--radius-sm);
   margin-top: var(--space-3);
