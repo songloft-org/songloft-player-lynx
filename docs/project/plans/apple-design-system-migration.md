@@ -525,7 +525,7 @@ Toast 按 §4.1 C 类改 `--toast-fill`；`ToastHost.css:22` 的 `bottom: calc(s
 | **构建告警当错误看** | `progress.md` 记载构建告警自批19b 起归零。本方案不得引入新的 `Unsupported property … was removed` 告警——尤其 `text-transform`（§P1 已避开）。 |
 | **回滚** | P0 回滚 = 还原 `tokens.css` + `theme-pack-mapping.ts` + 4 个测试文件。P1–P9 每阶段回滚 = 还原该屏 CSS/TSX。别名桥接的设计意图正是让每阶段回滚互不牵连。 |
 | **性能** | 别名层引入一层 `var()` 间接。`--glass-ramp`/`--shadow-focus` 已在生产用同样形态，无实测退化记录。P10 后间接层消失。 |
-| **未验���** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
+| **未验����** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
 
 ## 8. 验收
 
@@ -813,3 +813,46 @@ Apple 自己的设置图标在浅色下 Green/Orange/Teal 配白字都过不了 
 `tokens-hig.test.ts` 的 `APPLE_COLORS` 表补入 6 个色调（浅/暗各 6 条），「每个 Apple 语义色都以 Apple 值声明」这一条现在也覆盖它们——写错色值或拼错 token 名会立即红。`contrast.test.ts` 不动：色调方块是装饰性背景（无 `color:` 声明），`extractTextColor` 的 `(?<![-\w])color:` lookbehind 不会把 `background-color:` 当文字色，FORBIDDEN 扫描天然跳过。`grouped-list.test.ts` 的结构性断言不受影响（修饰类挂在 `__icon` 上，不碰 `__content`/border/卡片结构）。
 
 编码实测：构建后 `dist/main.lynx.bundle` 里 10 个 `settings-row__icon--<tint>` 各出现 1 次（作为独立规则发出，未被编译器丢弃），6 个新 token 各出现 4 次。这只证明编码，运行时白字落位仍需真机确认。
+
+---
+
+# P2 实施记录（SongRow + 列表行）
+
+验收：`pnpm test` 200 文件 / 2197 用例全绿；`tsc -b` 通过；`pnpm run build` 双端产物齐备。告警仍为既存那 4 组。
+
+## 分隔线内缩：复用 P1a 的 `__content` 模式
+
+方案 P2 说「分隔线内缩至封面右缘 76px」。行元素上的 `border-bottom` 必然全宽，做不到内缩——和 P1a 设置行分隔线是同一个问题。故复用同一解法：行改成 `[cover][content]`，border 挂在 `__content` 上。`__content` 的左缘恰在 76px（16 padding + 48 封面 + 12 gap），行用 `align-items: stretch` 把 `__content` 拉到全行高，其底边 = 行底边，于是 border 落在行底、从 76px 起跑到右边距。封面靠 `align-self: center` 在 stretch 下保持居中（有确定 cross-size 的项不被拉伸，但会顶对齐，故需显式居中）。
+
+这是 P1a 模式的第二次应用。和 P1a 一样：内缩由结构自然得出，不需要独立分隔视图、不需要 absolute 定位（absolute 会落到 padding-box，与 16px padding 的算式纠缠），不需要 per-row 修饰类。`SongRow.tsx` 加一个 `<view className='song-row__content'>` 包住封面以右的所有子元素；`SongListRow` 传入的 `trailing`（`.song-row__actions`）也落在 `__content` 内，分隔线自然跑到操作区之下。
+
+## 64px 行高与排版
+
+- 行 padding `--space-3`(12) → `--space-2`(8)，8+48+8 = 64（Apple Music 曲目行）。分隔线移到 `__content` 后不再给行高加 1px。
+- 标题 `--font-callout`(16) → `--font-body`(17) `--weight-regular`，色 `--content`→`--label`。
+- 副标题/时长 `--font-sm`(14) → `--font-footnote`(13)，色 `--content-muted`→`--secondary-label`。
+- `margin-top: 2px` → `var(--space-half)`(2px)——值未变，但去掉硬编码像素。
+- 封面圆角 `--radius-sm`(8) → `--radius-xs`(6)。
+- 封面空态底色 `--neutral-faint` → `--tertiary-system-fill`。
+
+## 选中行 step-up：从「无效」变「真实抬升」
+
+P0 时 `--content-muted` 与 `--content-2` 都别名到 `--secondary-label`，所以 P1a 留下的 step-up 规则（选中行副标题 `--content-muted`→`--content-2`）是**无效**的——抬升前后是同一个 token。`contrast.test.ts` 的旧测试就钉着「这两别名必须相等，所以 step-up 是 no-op」。
+
+P2 把副标题基线迁到 `--secondary-label` 后，二级与主级 `--label` 之间**没有中间级**，所以选中行 step-up 改为抬到 `--label`（全 AA）。这是**真实抬升**（只可能提高对比度，永不降低），也符合 iOS「强调用户正在操作的行」的模式（wash 仍是首要选中信号）。`contrast.test.ts` 那条「step-up 是 no-op」的测试改写为：断言 SongRow 选中行 step-up 落在 `--label`、基线是 `--secondary-label`。`SheetShell.css` 的同名 step-up 仍走旧别名（仍无效），留给它自己的阶段，不动。
+
+## MediaListItem：令牌迁移（分隔线统一推迟）
+
+同批迁移 `MediaListItem.css` 的令牌到 Apple 名：封面圆角 `--radius-xs`、底色 `--tertiary-system-fill`、文字 `--label`/`--secondary-label`、徽标 `--tint-fill`+`--secondary-label`。**一处偏离方案**：方案机械地写「`--font-sm`→`--font-footnote`」，但 MediaListItem 的 `__name` 是**主文本**（歌单/艺人/专辑名），footnote(13) 不是 Apple 推荐的主行字号；改用 `--font-body`(17)，与 SongRow 标题一致，注释里写明了偏离理由。
+
+`PlaylistsView.css` 的 `.playlist-card__chip` 用的是和 `__badge` 同一个「accent wash 上的小字」模式，一并迁到 `--tint-fill`+`--secondary-label`，避免留下方案注释现在指向不明的旧别名。
+
+**分隔线统一推迟**：方案说 MediaListItem「完全没有分隔线（消费页各自加），需统一」。但 MediaListItem 被 6 个消费页用（PlaylistsView / AddToPlaylistSheet / TagGridView / FacetGridView / FolderGridView / FolderContentPage），各页分隔策略不一（有的靠 `list-main-axis-gap`，有的没有），统一需要单独过这 6 个消费页决定内缩策略，未在本批做。记于此，留给后续小批。
+
+## 闸门
+
+- `song-row-css.test.ts` 新增两条：「分隔线在 `__content` 上、不在 `.song-row` 上（拒绝把 border 搬回全宽）」+「行 64px / stretch / 封面 align-self center / 圆角 xs」；再加一条结构断言「SongRow.tsx 必须渲染 `__content` 且封面是其兄弟而非子元素」——缺了 `__content` 的行单看无碍，却会静默丢掉整串发丝线，而没有任何列表测试渲染那种混排卡片。
+- `contrast.test.ts`：旧「step-up 是 no-op」测试改写为「选中行 step-up 抬到 `--label`、基线 `--secondary-label`」。
+- `tokens-hig.test.ts` / `glass-surface.test.ts` 不动：SongRow 无玻璃、无新 token。
+
+编码实测：`dist/main.lynx.bundle` 里 `song-row__content` 出现 2 次（CSS 规则 + TSX 类名），分隔线落在 `__content` 的 `border-bottom` 上。运行时分隔线内缩落位仍需真机确认。

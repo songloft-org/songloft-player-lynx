@@ -185,13 +185,13 @@
   gap: var(--space-1);
 }
 
-/* `--content-2` for the same reason as `.media-list-item__badge`: tertiary ink on
-   the accent wash is 3.74 over glass in dark. */
+/* `--secondary-label` for the same reason as `.media-list-item__badge`: tertiary
+   ink on the accent wash is below AA over glass in dark. */
 .playlist-card__chip {
   padding: 1px var(--space-1);
   border-radius: var(--radius-sm);
-  background-color: var(--primary-faint);
-  color: var(--content-2);
+  background-color: var(--tint-fill);
+  color: var(--secondary-label);
   font-size: var(--font-2xs);
 }
 

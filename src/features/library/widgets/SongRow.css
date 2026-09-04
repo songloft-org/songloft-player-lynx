@@ -23,10 +23,15 @@
 .song-row {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  /* `stretch`, not `center`: `__content` must fill the row's height for its
+     bottom border (the inset separator) to land on the row boundary. The cover
+     keeps its 48×48 and re-centres itself via `align-self: center` below. */
+  align-items: stretch;
   width: 100%;
   min-width: 0;
-  padding: var(--space-3) var(--space-4);
+  /* 8 + 48 + 8 = 64: Apple Music's track-row height. The 1px separator lives
+     on `__content`, not here (see below), so it does not add to the height. */
+  padding: var(--space-2) var(--space-4);
   /*
    * NO background of its own — deliberately. The row is not a surface; whatever
    * it sits on is. It used to carry `background-color: var(--canvas)`, inherited
@@ -50,31 +55,59 @@
    * get it from its container, and a row STATE (current/selected) should use a
    * translucent fill so a glass panel underneath still shows through.
    */
-  border-bottom: 1px solid var(--line);
+  /*
+   * The separator moved OFF the row and onto `__content` (below). A `border-bottom`
+   * on `.song-row` is full-bleed; Apple insets a song-row separator to the cover's
+   * right edge (16 padding + 48 cover + 12 gap = 76px) so it aligns with the title
+   * column, not the artwork. `__content` begins exactly at that 76px and, with the
+   * row stretching it, its bottom edge is the row boundary — so the border rides
+   * the right place without a positioned divider element or per-page padding.
+   */
 }
 
 .song-row__cover {
+  /* `align-self: center` overrides the row's `stretch` so the 48×48 cover stays
+     put (a definite cross-size is not stretched, but it would otherwise
+     top-align); every other direct child is `__content`, which we WANT stretched. */
+  align-self: center;
   width: 48px;
   height: 48px;
-  border-radius: var(--radius-sm);
-  background-color: var(--neutral-faint);
+  border-radius: var(--radius-xs);
+  background-color: var(--tertiary-system-fill);
 }
 
 .song-row__cover--empty {
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
+}
+
+/*
+ * The content column + the inset separator. This wraps everything to the right
+ * of the cover so its bottom border runs from the cover's right edge (76px) to
+ * the row's right edge — Apple's inset song-row hairline. `align-items: center`
+ * re-centres the meta/duration/actions inside it, so the layout is unchanged
+ * from the old `align-items: center` row except for where the separator sits.
+ */
+.song-row__content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  margin-left: var(--space-3);
+  border-bottom: 1px solid var(--separator);
 }
 
 .song-row__meta {
   display: flex;
   flex-direction: column;
   flex: 1;
-  margin-left: var(--space-3);
   min-width: 0;
 }
 
 .song-row__title {
-  color: var(--content);
-  font-size: var(--font-callout);
+  color: var(--label);
+  font-size: var(--font-body);
+  font-weight: var(--weight-regular);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -93,37 +126,37 @@
 }
 
 /*
- * Tertiary text steps up a level on a selected row.
+ * Selected-row metadata steps up a tier.
  *
- * The selection wash (`--primary-faint`, painted by whatever wraps the row —
- * `LibraryPage.css`, `PlaylistDetailPage.css`) is the accent at low alpha, and in
- * dark the accent is white, so it LIFTS the surface: `--content-muted` reads 5.00:1
- * on the page and 4.14:1 once the row is washed, i.e. under AA on exactly the row
- * the user is acting on. Rather than lower the bar for washed rows, the metadata
- * moves to `--content-2` (5.43:1). Emphasising a selected row's content is also the
- * iOS pattern; the checkbox stays the primary signal. Pinned in `contrast.test.ts`.
+ * The subtitle/duration baseline is now `--secondary-label` (the accepted
+ * Apple secondary tier, 3.3:1 light / 5.95:1 dark). There is no tier BETWEEN
+ * secondary and the primary `--label`, so a selected row steps all the way to
+ * `--label` — full AA, the iOS pattern of emphasising the row the user is
+ * acting on (the wash is still the primary selection signal). Stepping UP to
+ * `--label` can only raise contrast, never lower it. Pinned in
+ * `contrast.test.ts`.
  *
- * This lives here, with the row, rather than in the two page stylesheets that paint
- * the wash: `.song-row*` rules exist in exactly one file (see `song-row-css.test.ts`
- * for what re-forking them cost last time).
+ * This lives here, with the row, rather than in the two page stylesheets that
+ * paint the wash: `.song-row*` rules exist in exactly one file (see
+ * `song-row-css.test.ts` for what re-forking them cost last time).
  */
 .song-row--selected .song-row__subtitle,
 .song-row--selected .song-row__duration {
-  color: var(--content-2);
+  color: var(--label);
 }
 
 .song-row__subtitle {
-  color: var(--content-muted);
-  font-size: var(--font-sm);
-  margin-top: 2px;
+  color: var(--secondary-label);
+  font-size: var(--font-footnote);
+  margin-top: var(--space-half);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .song-row__duration {
-  color: var(--content-muted);
-  font-size: var(--font-sm);
+  color: var(--secondary-label);
+  font-size: var(--font-footnote);
   margin-left: var(--space-3);
 }
 

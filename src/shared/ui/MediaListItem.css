@@ -29,8 +29,8 @@
 .media-list-item__cover {
   width: 48px;
   height: 48px;
-  border-radius: var(--radius-sm);
-  background-color: var(--neutral-faint);
+  border-radius: var(--radius-xs);
+  background-color: var(--tertiary-system-fill);
 }
 
 .media-list-item__cover--empty {
@@ -46,17 +46,21 @@
   min-width: 0;
 }
 
+/* Primary list-row name: --font-body (17), the same Apple text style the
+ * SongRow title uses, so a collection row and a track row read at the same
+ * weight. (The plan's blanket "--font-sm → --font-footnote" was mechanical; a
+ * primary name at footnote 13 is not Apple-recommended, so this deviates.) */
 .media-list-item__name {
-  color: var(--content);
-  font-size: var(--font-sm);
+  color: var(--label);
+  font-size: var(--font-body);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .media-list-item__subtitle {
-  color: var(--content-muted);
-  font-size: var(--font-xs);
+  color: var(--secondary-label);
+  font-size: var(--font-footnote);
 }
 
 /* Only rendered when a `badge` is passed — see MediaListItem.tsx. */
@@ -68,16 +72,15 @@
 }
 
 /*
- * `--content-2`, not `--content-muted`: this text sits on the accent wash, and a
- * wash lifts the dark surface — tertiary ink measures 4.14 over the page and 3.74
- * over glass there, below AA at the smallest size in the app. Same step-up the
- * washed rows take (see contrast.test.ts).
+ * `--secondary-label`, not the tertiary tier: this text sits on the accent wash,
+ * and a wash lifts the dark surface — tertiary ink would measure below AA at the
+ * smallest size in the app. Same step-up logic the washed song rows use.
  */
 .media-list-item__badge {
   padding: 1px var(--space-1);
   border-radius: var(--radius-sm);
-  background-color: var(--primary-faint);
-  color: var(--content-2);
+  background-color: var(--tint-fill);
+  color: var(--secondary-label);
   font-size: var(--font-2xs);
 }
 
@@ -88,7 +91,7 @@
   width: var(--tap-target);
   height: var(--tap-target);
   border-radius: 50%;
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
   flex-shrink: 0;
 }
 

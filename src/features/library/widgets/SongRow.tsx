@@ -51,33 +51,38 @@ export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleF
       {cover
         ? <image className='song-row__cover' src={cover} />
         : <view className='song-row__cover song-row__cover--empty' />}
-      <view className='song-row__meta'>
-        <view className='song-row__title-row'>
-          <text className='song-row__title'>{song.title}</text>
-          {song.isVideo ? <text className='song-row__video-badge'>▶</text> : null}
+      {/* `__content` carries the inset separator (border-bottom), so it must wrap
+          everything to the right of the cover — the cover stays a sibling so the
+          separator begins at its right edge. See SongRow.css. */}
+      <view className='song-row__content'>
+        <view className='song-row__meta'>
+          <view className='song-row__title-row'>
+            <text className='song-row__title'>{song.title}</text>
+            {song.isVideo ? <text className='song-row__video-badge'>▶</text> : null}
+          </view>
+          {subtitle
+            ? <text className='song-row__subtitle'>{subtitle}</text>
+            : null}
         </view>
-        {subtitle
-          ? <text className='song-row__subtitle'>{subtitle}</text>
+        <text className='song-row__duration'>{formatDuration(song.duration)}</text>
+        {onToggleFavorite != null
+          ? <view className='song-row__fav' catchtap={() => onToggleFavorite()} data-testid='song-row-fav'>
+              <Icon
+                name={isFavorite ? 'heart-filled' : 'heart'}
+                size={18}
+                color={isFavorite ? ICON_COLORS.danger : ICON_COLORS.contentMuted}
+              />
+            </view>
+          : null}
+        {trailing}
+        {onMore != null
+          ? (
+            <view id={moreAnchorId} className='song-row__more' catchtap={() => onMore(song)} data-testid='song-row-more'>
+              <Icon name='more' size={18} color={ICON_COLORS.contentMuted} />
+            </view>
+          )
           : null}
       </view>
-      <text className='song-row__duration'>{formatDuration(song.duration)}</text>
-      {onToggleFavorite != null
-        ? <view className='song-row__fav' catchtap={() => onToggleFavorite()} data-testid='song-row-fav'>
-            <Icon
-              name={isFavorite ? 'heart-filled' : 'heart'}
-              size={18}
-              color={isFavorite ? ICON_COLORS.danger : ICON_COLORS.contentMuted}
-            />
-          </view>
-        : null}
-      {trailing}
-      {onMore != null
-        ? (
-          <view id={moreAnchorId} className='song-row__more' catchtap={() => onMore(song)} data-testid='song-row-more'>
-            <Icon name='more' size={18} color={ICON_COLORS.contentMuted} />
-          </view>
-        )
-        : null}
     </view>
   )
 }

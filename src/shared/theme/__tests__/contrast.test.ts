@@ -658,28 +658,46 @@ describe('state washes over the surfaces they sit on', () => {
     })
   }
 
-  test('the step-up rules that used to be required here are now inert', () => {
+  test('the SongRow selected step-up lifts secondary-label to label', () => {
     /*
-     * The previous version asserted that washed rows step their metadata up from
-     * `--content-muted` to `--content-2`, because tertiary ink on a wash measured
-     * 3.86 in dark. Under the Apple palette BOTH of those names alias to
-     * `--secondary-label`, so the step-up changes nothing — it is a no-op, and
-     * asserting it would be asserting a no-op.
+     * P2 migrated SongRow onto the real Apple tokens. The subtitle/duration
+     * baseline is now `--secondary-label` (the accepted secondary tier), and a
+     * selected row steps them to `--label` — full AA — because there is no tier
+     * between secondary and primary. That is a REAL step (it raises contrast),
+     * not the inert alias-no-op this test used to assert. Stepping to `--label`
+     * can only raise contrast, never lower it; the wash remains the primary
+     * selection signal.
      *
-     * Rather than delete the knowledge, pin the reason: the two aliases must
-     * currently resolve to the same token. When a later stage migrates `SongRow`
-     * onto the real tokens this test fails, which is the correct moment to decide
-     * whether the rule earns its place or gets deleted with the aliases.
+     * `SheetShell.css` still carries the old `--content-muted → --content-2`
+     * step-up, which IS inert (both alias `--secondary-label`) until its own
+     * stage migrates it — left alone here on purpose.
      */
-    for (const theme of ['dark', 'light'] as const) {
-      const block = themeBlock(theme)
-      const target = (alias: string): string =>
-        block.match(new RegExp(`--${alias}:\\s*var\\((--[\\w-]+)\\)`))?.[1] ?? `--${alias} is not an alias`
-      expect(
-        target('content-muted'),
-        'the SongRow / SheetShell wash step-ups are inert while these agree',
-      ).toBe(target('content-2'))
-    }
+    const css = readFileSync(
+      resolve(process.cwd(), 'src/features/library/widgets/SongRow.css'),
+      'utf8',
+    ).replace(/\/\*[\s\S]*?\*\//g, '')
+    const rule = (sel: string): string =>
+      rulesOf(css).find((r) => r.selector === sel)?.body ?? ''
+    expect(
+      textColour(rule('.song-row__subtitle')),
+      'the subtitle baseline is the Apple secondary tier',
+    ).toBe('var(--secondary-label)')
+    expect(
+      textColour(rule('.song-row__duration')),
+      'the duration baseline is the Apple secondary tier',
+    ).toBe('var(--secondary-label)')
+    // The selected step-up is a single rule covering both; it must step to label.
+    const stepped = rulesOf(css).find((r) =>
+      r.selector.includes('.song-row--selected') && r.selector.includes('__subtitle'),
+    )
+    expect(
+      stepped,
+      'the selected-row step-up rule is missing',
+    ).toBeDefined()
+    expect(
+      textColour(stepped!.body),
+      'a selected row steps its metadata to --label (the only tier above secondary)',
+    ).toBe('var(--label)')
   })
 })
 
