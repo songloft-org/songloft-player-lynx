@@ -86,9 +86,13 @@
   --space-10: 48px;
 
   /* radii — small 8 / medium 12 / large 20 / xl 28 / pill 999.
-     --radius-grouped is Apple's inset-grouped list corner (10pt): the settings
-     cards use it, and it is deliberately NOT --radius-sm so the two can be
-     retuned independently.
+     --radius-grouped is Apple's inset-grouped list corner: the settings cards
+     use it, and it is deliberately NOT --radius-sm so the two can be retuned
+     independently. Bumped 10→16 for iOS 26: the Liquid Glass revision rounds the
+     grouped cards well past the iOS-13–17 ~10pt (Apple's iOS-26 corner scale is
+     24pt for glass shapes on iPhone); 16 is a grouped-card step toward that
+     without taking the full glass-capsule radius. Best-effort — the exact pt is
+     device-verified only, since Apple publishes no grouped-cell radius.
      --radius-nav is legacy: the bottom nav is a fixed capsule (always
      --radius-pill, see ShellLayout.css) since the iOS-26 restyle, so nothing
      consumes this token anymore. Packs' `navigationRadius` still maps onto it
@@ -99,7 +103,7 @@
   --radius-xl: 28px;
   --radius-pill: 999px;
   --radius-xs: 6px;
-  --radius-grouped: 10px;
+  --radius-grouped: 16px;
   /* Bottom-sheet / drawer top corner. P8a shrank this from --radius-xl (28);
      Apple's sheet corner is smaller than the old value but the exact figure
      could not be verified from this repo (no device swatch), so 10 is a

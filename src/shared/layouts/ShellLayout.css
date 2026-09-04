@@ -225,10 +225,13 @@
      to edge of the rail's content width. */
   flex: 1;
   padding: var(--space-2) var(--space-3);
-  /* iPadOS sidebar selection is a ROUNDED RECTANGLE (~10pt), not the full
-     pill the narrow bottom-bar capsule uses. The pill reads as an iOS tab-bar
-     affordance; the rect is the iPad sidebar language (Music/Settings/Files). */
-  border-radius: var(--radius-grouped);
+  /* iPadOS sidebar selection is a ROUNDED RECTANGLE, not the full pill the
+     narrow bottom-bar capsule uses. The pill reads as an iOS tab-bar affordance;
+     the rect is the iPad sidebar language (Music/Settings/Files). Decoupled from
+     --radius-grouped (the grouped-card corner, bumped for iOS 26): a selection
+     rect only ~40px tall must stay a modest rect, not follow the card radius up
+     toward capsule territory. */
+  border-radius: var(--radius-md);
 }
 
 /* iPadOS sidebar selection fill: a NEUTRAL grey rounded rect (Apple Music /

@@ -108,7 +108,7 @@ test('the Apple grouped-list corner is its own token, not --radius-sm', () => {
   // 10pt is Apple's inset-grouped cell radius. Keeping it separate from
   // --radius-sm (8px) is what lets the two be retuned independently — the
   // settings cards and a badge are not the same shape decision.
-  expect(decl['--radius-grouped']).toBe('10px')
+  expect(decl['--radius-grouped']).toBe('16px')
   expect(decl['--radius-sm']).not.toBe(decl['--radius-grouped'])
 })
 
