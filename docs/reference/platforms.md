@@ -48,7 +48,7 @@
 
 ## HarmonyOS
 
-参考 [harmony-integration-plan.md](../archive/harmony-integration-plan.md)：建议 API 12（HarmonyOS NEXT 起步）。`FloatingLyric` / `LiveActivity` 无等价系统 API，TS 侧降级 no-op。
+参考 [harmony-integration-plan.md](../archive/harmony-integration-plan.md)：建议 API 12（HarmonyOS NEXT 起步）。`FloatingLyric` / `LiveActivity` 无等价系统 API，TS 侧降级 no-op。全屏视频当前也不支持：宿主没有实现借用现有 `AVPlayer` 的视频表面，`SongloftVideo` 不注册，能力探测返回 `false`；不要用恒失败占位模块恢复注册。
 
 ## Web
 

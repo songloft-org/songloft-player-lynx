@@ -15,6 +15,9 @@
 
 - [ ] HLS 播放列表内的绝对 https URI（自签名下）不通 — P3。批47 修完 iOS 自签名媒体流后剩余缺口：播放列表里的**相对** URI 继续带自定义 scheme 回到 `InsecureMediaLoader`（Songloft 自有 HLS 反代产出相对 URL，按构造是通的），但**绝对** `https://` URI 由 AVFoundation 自行加载、撞同一道证书墙。**无可测自签名 HLS 源，未实测**。复现环境见 [pitfalls.md](pitfalls.md) 附录
 - [ ] Android 后台自动连播被陈旧 `MEDIA_BUTTON` stop 打断（Issue #1）— 最新附件 `songloft-logs-20260831-203401.zip` 的失败链路为：`20:32:38.695` 播放器进入 `ENDED` → `20:32:38.793` 加载下一首 → `20:32:39.272` 下一首已 `READY + playWhenReady=true` → `20:32:39.304` 收到 `ACTION_MEDIA_BUTTON` → `20:32:39.312` 被重置为 `IDLE`。提交 `1edd44b` 只判断 `BUFFERING`，因此在真正 stop 到达时漏拦。当前修复在 `ENDED -> load` 过渡上武装 2 秒 guard，并仅消费带 `KEYCODE_MEDIA_STOP` 的 intent；已通过 Kotlin 编译与静态回归测试，待新 APK 真机连续播放确认。证据与验证标准见 [handoff.md](handoff.md)「Issue #1」。
+- [ ] HarmonyOS 音量几乎静音 — store 已把 0–100 换算成 0–1，ArkTS module 又除以 100。代码已改为透传一次归一化后的值，并加契约闸门；待 HAP 编译与真机音量验证后闭合。
+- [ ] HarmonyOS 视频入口是假能力 — 宿主注册的 `SongloftVideo` 占位实现对 `open` / `isOpen` 恒返回 `false`，模块存在性却让能力探测报 `video=true`。代码已删除占位模块及注册，界面按能力位隐藏入口；完整 HarmonyOS 视频表面另作功能实现，待 HAP 编译确认后闭合本缺陷。
+- [ ] HarmonyOS DLNA 扫描后仍为空且无法控制设备 — 发现结果只存于局部数组，`getDevices` 恒返回空；投屏又把 `deviceId` 当 SOAP URL。代码已持久保存解析后的设备与 AVTransport `controlUrl`，控制前按 id 查表，并加三端契约闸门；待 HAP 编译与真实投屏设备验证后闭合。
 
 ## 手动测试发现
 

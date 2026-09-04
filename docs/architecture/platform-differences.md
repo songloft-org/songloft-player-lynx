@@ -21,7 +21,7 @@ Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoP
 | 悬浮歌词 `floatingLyric` | ✅ overlay 窗口 | ⛔ 无模块 | ⛔ 无等价 API | ⛔ 无模块 | `SongloftFloatingLyric` 模块存在 |
 | Live Activity `liveActivity` | ⛔ 无模块 | ✅ 灵动岛/锁屏 | ⛔ 无等价 API | ⛔ 无模块 | `SongloftLiveActivity` 模块存在 |
 | DLNA 投屏 `dlna` | ✅ | ✅ | ✅ | ⛔ 无模块 | `SongloftDlna` 模块存在 |
-| 全屏视频 `video` | ✅ 借用同一播放器 | ✅ 借用同一播放器 | ✅ 共享 AVPlayer | ⛔ **无视频表面** | `SongloftVideo` 模块存在 |
+| 全屏视频 `video` | ✅ 借用同一播放器 | ✅ 借用同一播放器 | ⛔ **未实现视频表面，模块不注册** | ⛔ **无视频表面** | `SongloftVideo` 模块存在 |
 | 单曲离线缓存 `songCache` | ✅ | ✅ | ✅ | ⛔ 无模块 | `SongloftSongCache.getCacheInfo` **方法**存在 |
 | 数据导入/导出 `dataTransfer` | ✅ | ✅ | ✅ | ⛔ 显式 `isWeb` 关闭 | `isWeb ? false : SongloftPlatform` |
 | 文件交付 `fileExport` | ✅ 系统分享面板 | ✅ 系统分享面板 | ✅ 系统分享面板 | ✅ **浏览器下载** | `SongloftPlatform.shareFile` **方法**存在 |
@@ -42,7 +42,7 @@ Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoP
 | `SongloftPlatform` 打开 URL / 剪贴板 | ✅ | ✅ | ✅ | ✅ | Web 侧全部转发到主线程 |
 | `SongloftNavigation` 返回键拦截 | ✅ 真拦截 + 双击退出 | ⛔ **无返回键可拦** | ✅ 手势返回拦截 | ✅ 主线程 sentinel history | iOS 侧 TS facade 降级为惰性桩 |
 | `SongloftWebview` 插件页 | ⛔ 用原生 `<webview>` | ⛔ 用原生 `<webview>` | ⛔ 用原生 `<webview>` | ✅ **Web 独有**（iframe） | iframe 必须挂进 `lynxView.shadowRoot`，z-index 50 |
-| `SongloftVideo` 全屏视频 | ✅ | ✅ | ✅ | ⛔ | 同 A 表 `video` |
+| `SongloftVideo` 全屏视频 | ✅ | ✅ | ⛔ **不注册** | ⛔ | 同 A 表 `video`；不能用恒失败占位模块冒充能力 |
 | `SongloftSongCache` 离线缓存 | ✅ | ✅ | ✅ | ⛔ | 同 A 表 `songCache` |
 | `SongloftDlna` 投屏 | ✅ | ✅ | ✅ | ⛔ | 同 A 表 `dlna` |
 
@@ -123,7 +123,7 @@ duration: e.durationMs > 0 ? e.durationMs : s.duration,
 ### 其他音频侧分叉
 
 - **EQ 的可靠性不同**：Android 用系统 `audiofx.Equalizer`，构造失败被 `catch (_: Throwable) {}` 吞掉（部分设备确实不支持），且 band 数由设备决定 —— `applyBandGain` 会按 `eq.numberOfBands` 与 `bandLevelRange` 双重钳制。iOS 的 `NBandEQ` 与 Web 的 BiquadFilter 链都是固定 10 段、必定存在。
-- **全屏视频复用同一个播放器**，不新建：Android 把 `SurfaceView` 借给正在放的 `ExoPlayer`（`attachVideoOutput`），iOS 把 `AVPlayer` 交给 `AVPlayerViewController`。因此 EQ / MediaSession / 锁屏 / 进度事件 / `InsecureTls` 全部零改动继承。退出必须 `detachVideoOutput()`，否则**下一首纯音频歌**会在 video renderer 里静默死掉。
+- **Android / iOS 全屏视频复用同一个播放器**，不新建：Android 把 `SurfaceView` 借给正在放的 `ExoPlayer`（`attachVideoOutput`），iOS 把 `AVPlayer` 交给 `AVPlayerViewController`。因此 EQ / MediaSession / 锁屏 / 进度事件 / `InsecureTls` 全部零改动继承。退出必须 `detachVideoOutput()`，否则**下一首纯音频歌**会在 video renderer 里静默死掉。HarmonyOS 尚无对应视频表面，因此不注册 `SongloftVideo`，能力位为 `false`。
 - **不安全 TLS 的「关掉」两端机制不同**：Android 重建 `OkHttpClient`（新连接池，天然即时生效）；iOS 必须 `invalidateAndCancel()` 重建 `URLSession`，因为已握手的连接复用时不再发起 server-trust 挑战。验证「关掉是否生效」时若不换 hostname，测到的可能只是热连接。
 
 ---

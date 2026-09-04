@@ -1,8 +1,10 @@
-# 工作交接（2026-09-03 · Apple HIG 与玻璃材质收口）
+# 工作交接（2026-09-04 · HarmonyOS 宿主 P1 修复）
 
 > 本文件是**给接手 AI 的交接说明**，只回答三件事：现在在哪、还剩什么、怎么验证。
 >
 > **读文档顺序**：① [AGENTS.md](../../AGENTS.md) §4–§6（铁律，必读）→ ② 本文 §3「剩余工作」→ ③ [pitfalls.md](pitfalls.md)（踩坑实录：每条铁律背后的证据）。细节按需查 [progress.md](progress.md)（逐批交付）与 [bugs.md](bugs.md)（逐条缺陷根因）。
+>
+> **最新代码批次（`b08ae1a`、`54233ac`、`40e7cf9`）**：HarmonyOS 三个 P1 已完成代码修复：音量删除二次 `/ 100`；删除恒失败的 `SongloftVideo` 占位注册，让能力位诚实返回 `false`；DLNA 持久保存发现结果、解析 AVTransport `controlUrl` 并按设备 id 控制。相关 209 项 Vitest、`tsc -b`、Lynx/Web 双环境 build 均通过。本机无 hvigor/DevEco，发包前必须补 HarmonyOS HAP 编译；音量与 DLNA 仍需真机验证。全套测试的剩余失败由既有 Android CRLF 工作树改动与 `/mnt/d` 默认超时造成，证据见 [progress.md](progress.md) 最新条目。
 >
 > **一句话现状**：Apple HIG 重构全部 11 阶段已提交；玻璃材质优化三批（批B 播放器页背景层 / 批C 伪玻璃精致化 / 批A `<blur-view>` 真背景模糊）已全部完成并提交，另有批A-fix 修掉 Web 上 `blur-view` 标签映射缺失导致的静默无效、批A-fix2 补齐批A 漏掉的 6 个弹窗并给 popover / 底部导航胶囊 / mini-player 加上面板模式模糊、批A-fix3 修掉全应用最后一个仍是不透明 `--paper` 的浮层（全局菜单），并把面板模式清单改为从表面反推而非手写。最新一批按用户决定把 **HIG 44px 触控目标全量落地**（24 个控件直接放大 + 5 个圆片用 `__*-hit` 包裹层只撑命中盒不改绘制），同步修掉 `CARD_CHROME_PX` 与弹窗按钮高度的耦合（AGENTS.md 警告的「卡片钳制与 body 钳制不自洽」），并把 `a11y-tap-target.test.ts` 从手写模式改为按用法反推。随后按用户报障修掉**玻璃面板里的列表行背景**（`.song-row` 的 `background-color: var(--canvas)` 在播放历史面板上盖掉整片玻璃，顺带盖掉歌单详情的整行选中高亮），并把「面板内可达元素不许有无界不透明填充」写成从用法反推的闸门（复查确认播放列表面板无此问题）。接着按用户决定（「符合 Apple HIG 设计规范就行」）修掉**玻璃上的行状态填充**：`.drawer__row--active` / `.popover-menu__item--selected` 的满幅不透明板改为 accent wash `--primary-faint`，两个看不见的多选高亮（`--paper` 叠 `--canvas`，比值 1.04/1.07）同改；新增中性通道 `--fill-faint` 收走插件弹窗 6 处内嵌块与 mini-player 进度槽（后者此前用分隔线令牌 `--line` 当背景）；并把 wash 在暗色下提亮表面带来的三级文字缺口一起付掉（被 wash 行的元数据抬到 `--content-2`，light `--content-2` 加深到 `#67676f`）。**JS 侧闸门**：`tsc -b` 绿 / **2201 vitest 全绿（198 文件）** / build:web 绿 / Docker Chrome 运行时验证通过。近期重点：后台播放稳定性、Lynx 原生渲染插件、自定义标签、记住密码、HarmonyOS 宿主修复、文件夹浏览视图、**Apple HIG 重构（11 阶段）**。
 
@@ -48,6 +50,7 @@
 | `gradlew assembleDebug` | 绿 | **批49 时代**，此后大量提交未复跑 |
 | `ios:build` | `BUILD SUCCEEDED` | **批49 时代** |
 | HarmonyOS CI | GitHub Actions `dev-build-harmony.yml` | 有流水线；本地需 DevEco Studio |
+| HarmonyOS 本批定向契约 | 相关 209 项 Vitest 全绿 | 2026-09-04；HAP / 真机待验 |
 | Android e2e | 112 passed / 8 skipped (120) | **批49 时代（2026-08-16）** |
 | iOS e2e | 110 passed / 10 skipped (120) | **批49 时代（2026-08-16）** |
 

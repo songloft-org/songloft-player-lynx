@@ -25,6 +25,8 @@
 
 Android 路径均省略前缀 `android/app/src/main/java/org/songloft/lynx/`；iOS 路径均省略前缀 `ios/SongloftLynx/`。
 
+HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatingLyric`、`SongloftLiveActivity` 和 `SongloftVideo` 外均按同名模块注册。`SongloftVideo` 当前没有可借用现有 `AVPlayer` 的视频表面，必须保持不注册；恒返回 `false` 的占位模块会让能力探测误报可用。
+
 ### 不是 NativeModules 模块
 
 | 名称 | 实现 | 通道 |
@@ -82,6 +84,7 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 4 个模块：`SongloftAu
 - 16 个方法在 Kotlin 有 `@LynxMethod`、在 Swift 同时有 `func` 与 `methodLookup` 条目。
 - iOS 后台播放两半必须都在：`Info.plist` 的 `UIBackgroundModes` 含 `<string>audio</string>`，且引擎调 `setCategory(.playback`。
 - `load` 的 `opts` **永远传对象、不传 `null`**：iOS 按方法签名构造 ObjC 调用，对象参数为 nil 会每次换歌打一条 `LynxError`。
+- 音量只在 store 层从 0–100 整数换算一次为 0–1 浮点；四端 facade / module / engine 均透传 0–1。HarmonyOS 不得再次 `/ 100`，契约闸门直接锁住该调用形状。
 - Android 的**通知位（notification id 1001）只能有一个主人**：`SongloftPlaybackService` 的 FGS 占位通知与 media3 `DefaultMediaNotificationProvider` 共用该 id，占位只允许在 media3 未持有时发（`mediaNotificationOwnsSlot`，在 `onUpdateNotification` 里先赋值再 `super`）。闸门 `src/__tests__/android-media-notification.test.ts`；机制与实测判据见 [pitfalls §3](../project/pitfalls.md)。
 
 ### 2.2 `SongloftStorage`（5 方法）
@@ -135,6 +138,7 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 4 个模块：`SongloftAu
 - `cast` 的 `args`：`{deviceId, url, title}`；`control` 的 `args`：`{action, deviceId?, value?}`，`action ∈ play | pause | stop | seek`。
 - 无事件。
 - Callback payload 带 `error` 字段时 facade reject；`getDevices` 返回 `{id, name, location}` 数组。
+- HarmonyOS 与 Android/iOS 一样，发现阶段先解析设备描述中的 AVTransport `controlURL`，按设备 `id` 持久保存；`getDevices` 直接返回设备数组，`cast` / `control` 必须先以 `deviceId` 查表再向 `controlUrl` 发 SOAP，不能把设备 id 或描述页 URL 当控制端点。
 - **反面教材**：`dlna.ts` 曾把原生 bag 直接 `as DlnaModule`（声称返回 Promise），`startDiscovery()` 实际返回 `undefined`，`DlnaPage` 的 `.then()` 在 effect 挂载瞬间抛 TypeError，投屏页对所有 Android 用户开屏即崩。
 
 ### 2.5 `SongloftVideo`（3 方法）
@@ -148,6 +152,8 @@ Callback 形状，参数为单个 JSON 字符串（facade 一律传 `'{}'`）。
 | `isOpen` | `isOpen(args: String, callback: Callback)` | `isOpen(_:callback:)` | `{result: boolean}` |
 
 **事件**：`SongloftVideo.closed`（无 payload 字段）。Android 常量 `SongloftVideoModule.EVENT_CLOSED`，iOS 常量 `SongloftVideoModule.eventClosed`（经 `SongloftAudioEngine.shared.sink?` 发出）。
+
+**平台边界**：本节契约当前只由 Android / iOS 实现。HarmonyOS 不注册 `SongloftVideo`，因此 `getPlatformCapabilities().video === false`，界面不会展示不可用入口。只有实现“借用现有播放器 + 真视频表面 + 关闭事件”完整闭环后，才能恢复注册。
 
 **闸门锁住的不变量**
 
