@@ -1,4 +1,7 @@
 .login {
+  /* Page-local: the auth card's max content width. Tokenized so a retune (e.g.
+     a wider tablet form) hits one place, not a hardcoded 400. */
+  --login-card-width: 400px;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -10,23 +13,29 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 400px;
+  max-width: var(--login-card-width);
   padding: var(--space-6) var(--space-5);
-  border-radius: var(--radius-lg);
-  background-color: var(--paper);
-  border: 1px solid var(--line);
+  border-radius: var(--radius-grouped);
+  background-color: var(--secondary-system-background);
+  /* No border: the card is defined by the contrast against the page (white on
+     white in light would be invisible — but the login page sits on
+     --system-background and the card on --secondary-system-background, the
+     plain-page card pair). A hairline on top reads as a double outline. */
 }
 
 .login__logo {
-  width: 72px;
-  height: 72px;
-  border-radius: 16px;
+  /* 80×80, radius 18: aligned with SplashScreen.css so the brand mark is the
+     same shape at boot and at login. 18px is a one-off brand radius (between
+     --radius-lg 20 and --radius-md 12) shared by exactly these two surfaces. */
+  width: 80px;
+  height: 80px;
+  border-radius: 18px;
   align-self: center;
   margin-bottom: var(--space-4);
 }
 
 .login__title {
-  color: var(--content);
+  color: var(--label);
   font-size: var(--font-title1);
   font-weight: var(--weight-bold);
   text-align: center;
@@ -34,7 +43,7 @@
 }
 
 .login__subtitle {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-callout);
   text-align: center;
   margin-bottom: var(--space-5);
@@ -47,20 +56,21 @@
 }
 
 .login__label {
-  color: var(--content-2);
-  font-size: var(--font-sm);
+  color: var(--secondary-label);
+  font-size: var(--font-footnote);
   margin-bottom: var(--space-2);
 }
 
 .login__input {
-  height: 44px;
+  height: var(--control-height);
   padding: 0 var(--space-4);
   border-radius: var(--radius-sm);
-  background-color: var(--neutral-faint);
-  border: 1px solid var(--line);
-  color: var(--content);
-  font-size: var(--font-callout);
-  -x-placeholder-color: var(--content-muted);
+  background-color: var(--tertiary-system-fill);
+  /* Borderless filled field — the fill IS the field (same call as the search
+     inputs in P5); a hairline on a filled field reads as a double outline. */
+  color: var(--label);
+  font-size: var(--font-body);
+  -x-placeholder-color: var(--secondary-label);
 }
 
 .login__toggle {
@@ -81,18 +91,18 @@
 }
 
 .login__toggle-title {
-  color: var(--content);
-  font-size: var(--font-sm);
+  color: var(--label);
+  font-size: var(--font-subhead);
 }
 
 .login__toggle-subtitle {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
 }
 
 .login__error {
-  color: var(--danger);
-  font-size: var(--font-sm);
+  color: var(--system-red);
+  font-size: var(--font-footnote);
   margin-bottom: var(--space-3);
 }
 
@@ -104,24 +114,24 @@
 }
 
 .login__agreement-text {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-caption1);
   margin-left: var(--space-2);
   flex: 1;
 }
 
 .login__agreement-link {
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .login__button {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 48px;
+  height: var(--control-height);
   margin-top: var(--space-2);
   border-radius: var(--radius-pill);
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .login__button--active {
@@ -133,7 +143,7 @@
 }
 
 .login__button-text {
-  color: var(--primary-content);
-  font-size: var(--font-callout);
-  font-weight: var(--weight-bold);
+  color: var(--accent-content);
+  font-size: var(--font-body);
+  font-weight: var(--weight-semibold);
 }

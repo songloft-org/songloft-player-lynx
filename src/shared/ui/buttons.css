@@ -18,29 +18,29 @@
 }
 
 .btn--prominent {
-  background-color: var(--primary);
-  color: var(--primary-content);
+  background-color: var(--accent);
+  color: var(--accent-content);
 }
 
 .btn--filled {
-  background-color: var(--neutral-faint);
-  color: var(--content);
+  background-color: var(--tertiary-system-fill);
+  color: var(--label);
 }
 
 .btn--tinted {
-  background-color: var(--primary-faint);
-  color: var(--primary);
+  background-color: var(--tint-fill);
+  color: var(--accent);
 }
 
 .btn--ghost {
   background-color: transparent;
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .btn--destructive {
   background-color: transparent;
-  color: var(--danger);
-  border: 1px solid var(--danger);
+  color: var(--system-red);
+  border: 1px solid var(--system-red);
 }
 
 .btn--disabled {

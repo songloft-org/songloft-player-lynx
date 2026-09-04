@@ -525,7 +525,7 @@ Toast 按 §4.1 C 类改 `--toast-fill`；`ToastHost.css:22` 的 `bottom: calc(s
 | **构建告警当错误看** | `progress.md` 记载构建告警自批19b 起归零。本方案不得引入新的 `Unsupported property … was removed` 告警——尤其 `text-transform`（§P1 已避开）。 |
 | **回滚** | P0 回滚 = 还原 `tokens.css` + `theme-pack-mapping.ts` + 4 个测试文件。P1–P9 每阶段回滚 = 还原该屏 CSS/TSX。别名桥接的设计意图正是让每阶段回滚互不牵连。 |
 | **性能** | 别名层引入一层 `var()` 间接。`--glass-ramp`/`--shadow-focus` 已在生产用同样形态，无实测退化记录。P10 后间接层消失。 |
-| **未验��������** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
+| **未验���������** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
 
 ## 8. 验收
 
@@ -1014,3 +1014,39 @@ P2 把副标题基线迁到 `--secondary-label` 后，二级与主级 `--label` 
 新增 `player-css.test.ts` 6 条：全屏封面 radius-md、曲名 title2、歌手 title2+regular+accent、专辑 footnote、eyebrow semibold；视频徽标/注释不得残留硬编码 8/14/12px；mode-label caption2+space-half；进度轨 tertiary-system-fill + 滑块 #ffffff + 指示条 accent；mini 标题 subhead+regular + 副标题 space-half + 封面 radius-xs + 轨 quaternary-system-fill；4 文件不得残留 Muse 颜色别名。`contrast.test.ts` 不动（蒙版未碰）。
 
 编码实测：`dist/main.lynx.bundle` 双端产物齐备，player 目录（除 Equalizer/Backdrop）零旧别名。运行时封面圆角/歌手 accent 落位仍需真机确认。
+
+---
+
+# P7 实施记录（登录 / 注册）
+
+验收：`pnpm test` 205 文件 / 2219 用例全绿；`tsc -b` 通过；`pnpm run build` 双端产物齐备。告警仍为既存那 4 组。
+
+## logo 与 SplashScreen 对齐
+
+`.login__logo` 72×72 / radius 16 → **80×80 / radius 18**，与 `SplashScreen.css` 的 80/18 对齐——品牌标在启动页和登录页同形。18px 是介于 `--radius-lg`(20) 与 `--radius-md`(12) 之间的一次性品牌圆角，仅这两处用，未令牌化（注明未来可提为 `--brand-logo-radius`）。
+
+## 卡片：去边框、分组圆角
+
+`.login__card` `--paper` + `1px solid --line` + `--radius-lg`(20) → `--secondary-system-background`、**删边框**、`--radius-grouped`(10)。与首页/设置卡同理由：卡靠与页面反差定义（登录页 `--system-background`，卡 `--secondary-system-background`，白页灰卡），边框读作双描边。`max-width: 400px` 硬编码 → 令牌 `--login-card-width`(400)，页内声明（遵 `--nav-inset`/`--home-card-size` 先例）。
+
+## 输入框：Apple 控件高、填充、无描边
+
+`.login__input` 44px → `--control-height`(44)；`--neutral-faint` → `--tertiary-system-fill`；**删 hairline**（填充即字段，与 P5 搜索框一致）；字号 `--font-callout`(16) → `--font-body`(17)（Apple 文本框字号，与搜索框一致）。
+
+## 排版按角色分流
+
+标签 `--font-sm`(14) → `--font-footnote`(13) `--secondary-label`；开关标题 `--font-sm` → `--font-subhead`(15)；错误 `--font-sm` → `--font-footnote`(13) `--system-red`；按钮文字 `--font-callout`(16) bold → `--font-body`(17) `--weight-semibold`。标题 `--font-title1`(28) bold **保留不动**（已符合 Apple 引导页形态）。
+
+## 主按钮：保留 .login__button，不切 .btn（方案偏差）
+
+方案说「改用 `.btn.btn--prominent`」。但 `buttons.css` 的 `.btn` 当前**零消费**（注释自述「Consumed by new code」），且 Lynx 中 `<view>` 上设的 `color` 能否被内层 `<text>` 继承未经真机验证——做首个消费点有「按钮文字错色/不可见」的设备风险。故**保留** `.login__button` + `__button-text`，直接套方案目标值（`--control-height`(44) / `--font-body` / `--weight-semibold` / `--accent` / `--accent-content`），结果与 `.btn` 基类一致。同批把 `buttons.css` 的颜色别名迁到 Apple 名（为未来首个真机验证过的 `.btn` 消费点做准备）。诚实记录此偏差——等 `.btn` 有真机验证的消费点再统一。
+
+## 颜色别名迁移
+
+`buttons.css` + `LoginPage.css` 一次性 sed 迁颜色别名（`--primary`→`--accent` 等），`var(--name)` 精确匹配。两文件零旧别名残留。
+
+## 闸门
+
+新增 `login-css.test.ts` 5 条：logo 80/18（对齐 SplashScreen）；卡片 max-width 令牌 + 分组圆角 + 无 border + 灰卡面；输入框 control-height + 填充 + 无 border + body 字号；排版按角色（label footnote / toggle-title subhead / error footnote+system-red / title 保留 title1 / 按钮 control-height+body+semibold）；零 Muse 别名残留。`input-css.test.ts` 不动（已接受 `--tertiary-system-fill`）。
+
+编码实测：`dist/main.lynx.bundle` 双端产物齐备，LoginPage.css 零旧别名。
