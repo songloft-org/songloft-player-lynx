@@ -126,14 +126,19 @@ test.each(SURFACES)(
   },
 )
 
-test('the nav capsule selection tint is the glass glow, not the ink wash', () => {
-  // The selected pill switched from --primary-faint (ink/seed) to
-  // --glass-glow-faint (the decorative personality tint). Reverting it would
-  // recolour selection silently.
+test('the nav capsule selection tint is the accent wash, not the glass glow', () => {
+  // A picked tab is a selection — the same semantic as a selected row, so it
+  // wears --tint-fill (the accent wash a theme pack re-points at its seed),
+  // NOT --glass-glow-faint (the decorative star-blue personality tint). P3
+  // reversed an earlier decision that used the glow here: the glow is a
+  // decorative channel and a selection is not decoration. Reverting to the
+  // glow would recolour selection silently. (The active glyph/label read in
+  // --accent over --tint-fill, which clears 3:1 — 3.12 light / 4.39 dark —
+  // per the --tint-fill derivation in tokens.css.)
   const css = rules('shared/layouts/ShellLayout.css')
   const pill = block(css, '.nav-item--active .nav-item__pill')
-  expect(pill).toMatch(/var\(--glass-glow-faint\)/)
-  expect(pill).not.toMatch(/var\(--primary-faint\)/)
+  expect(pill).toMatch(/var\(--tint-fill\)/)
+  expect(pill).not.toMatch(/var\(--glass-glow-faint\)/)
 })
 
 test('the ten glass tokens are declared in both themes', () => {

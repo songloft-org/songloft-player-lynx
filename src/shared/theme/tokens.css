@@ -169,8 +169,16 @@
   --ease-out: cubic-bezier(0, 0, 0.58, 1);
   --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
 
-  /* layout sizes */
-  --mobile-nav-height: 60px;
+  /* layout sizes — the floating bottom-bar capsule and its pieces.
+     `--mobile-nav-height` (60px) used to live here undeclared-consumed and at
+     the wrong value (the actual bar is 64); it is replaced by the three named
+     sizes below so there is one token per real dimension, all consumed.
+     `--radius-nav` is frozen/legacy (see the radii block) and stays. */
+  --bottombar-height: 64px;
+  /* The active horizontal selection capsule inside the bar. */
+  --nav-pill-height: 52px;
+  /* Built-in nav glyphs and plugin icons share Apple's default 24px box. */
+  --nav-icon-size: 24px;
 
   /*
    * Composite glass layers. These live here, declared once, rather than being

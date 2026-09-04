@@ -62,8 +62,8 @@
   padding: var(--space-4);
   /* Add the top safe-area inset on top of the base padding (0 on desktop). */
   padding-top: calc(var(--space-4) + env(safe-area-inset-top));
-  background-color: var(--paper);
-  border-right: 1px solid var(--line);
+  background-color: var(--secondary-system-background);
+  border-right: 1px solid var(--separator);
 }
 
 .shell__brand {
@@ -76,7 +76,7 @@
 .shell__brand-icon {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   margin-right: var(--space-3);
 }
 
@@ -107,7 +107,7 @@
   left: var(--space-3);
   right: var(--space-3);
   bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
-  height: 64px;
+  height: var(--bottombar-height);
   display: flex;
   flex-direction: row;
   justify-content: space-around;
@@ -167,12 +167,14 @@
   border-radius: var(--radius-pill);
 }
 
-/* The selection tint — background only, shared by both bars. Sizing stays
-   untouched here on purpose: the rail's rows are content-height, so a
-   height change on selection would shift every row below (the reported
+/* The selection tint — background only, shared by both bars. The active pill
+   wears the accent wash (a picked tab is the same kind of thing as a selected
+   row anywhere else), not the decorative star-blue glow it used to borrow.
+   Sizing stays untouched here on purpose: the rail's rows are content-height,
+   so a height change on selection would shift every row below (the reported
    jitter) — the rail's active state is colour-only. */
 .nav-item--active .nav-item__pill {
-  background-color: var(--glass-glow-faint);
+  background-color: var(--tint-fill);
 }
 
 /* Bottom bar only: the fixed-size horizontal capsule. Safe there because
@@ -187,7 +189,7 @@
   width: calc(100% - var(--space-2));
   /* Compact fixed height — a horizontal capsule, not a full-cell block:
      glyph 24 + label 16 + 8 padding ≈ 48px on the 64px bar. */
-  height: 52px;
+  height: var(--nav-pill-height);
 }
 
 /* Plugin names are user strings (洛雪音源…) that can outrun the tab slot.
@@ -207,6 +209,11 @@
    keeps its own size below. */
 .shell__bottombar .nav-item__label {
   font-size: var(--font-2xs);
+  /* Medium weight: the bottom-bar label is the smallest text in the app and
+     sits over glass, so the extra weight buys legibility Apple's own tab bars
+     also use there. The wide rail keeps regular (its labels are --font-subhead,
+     larger, and a heavier sidebar label reads as bold). */
+  font-weight: var(--weight-medium);
 }
 
 .shell--wide .nav-item__pill {
@@ -226,7 +233,7 @@
 
 /* iPadOS-style rail section header (插件 group above the plugin tabs). */
 .shell__rail-group-header {
-  color: var(--content-muted);
+  color: var(--secondary-label);
   font-size: var(--font-footnote);
   margin: var(--space-4) var(--space-3) var(--space-2);
 }
@@ -245,14 +252,18 @@
 }
 
 /* Plugin icon rendered via <svg content> or <image>. Same size as the built-in
-   Icon component default (24×24). */
+   Icon component default (24×24), tokenized so a future icon-size retune does
+   not have to chase a hardcoded number here. */
 .nav-item__plugin-icon {
-  width: 24px;
-  height: 24px;
+  width: var(--nav-icon-size);
+  height: var(--nav-icon-size);
 }
 
 .nav-item__label {
-  color: var(--content-muted);
+  /* Inactive tabs are still necessary navigation, not decoration — the
+     secondary tier, never tertiary. (The glyph mirrors this in TS via
+     ICON_COLORS.contentMuted, which aliases --secondary-label.) */
+  color: var(--secondary-label);
   font-size: var(--font-xs);
   margin-left: 0;
   /* Breathing room below the icon in the narrow (column) layout. */

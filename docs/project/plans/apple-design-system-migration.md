@@ -525,7 +525,7 @@ Toast 按 §4.1 C 类改 `--toast-fill`；`ToastHost.css:22` 的 `bottom: calc(s
 | **构建告警当错误看** | `progress.md` 记载构建告警自批19b 起归零。本方案不得引入新的 `Unsupported property … was removed` 告警——尤其 `text-transform`（§P1 已避开）。 |
 | **回滚** | P0 回滚 = 还原 `tokens.css` + `theme-pack-mapping.ts` + 4 个测试文件。P1–P9 每阶段回滚 = 还原该屏 CSS/TSX。别名桥接的设计意图正是让每阶段回滚互不牵连。 |
 | **性能** | 别名层引入一层 `var()` 间接。`--glass-ramp`/`--shadow-focus` 已在生产用同样形态，无实测退化记录。P10 后间接层消失。 |
-| **未验����** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
+| **未验�����** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
 
 ## 8. 验收
 
@@ -856,3 +856,33 @@ P2 把副标题基线迁到 `--secondary-label` 后，二级与主级 `--label` 
 - `tokens-hig.test.ts` / `glass-surface.test.ts` 不动：SongRow 无玻璃、无新 token。
 
 编码实测：`dist/main.lynx.bundle` 里 `song-row__content` 出现 2 次（CSS 规则 + TSX 类名），分隔线落在 `__content` 的 `border-bottom` 上。运行时分隔线内缩落位仍需真机确认。
+
+---
+
+# P3 实施记录（导航：度量令牌化 + 配色迁移）
+
+验收：`pnpm test` 201 文件 / 2201 用例全绿；`tsc -b` 通过；`pnpm run build` 双端产物齐备。告警仍为既存那 4 组。
+
+## 不改形状，只改度量与配色
+
+方案 P3 的反直觉结论：现有的悬浮胶囊导航（`--radius-pill`、玻璃填充）**不需要**改成 iOS 传统的 49pt 全宽栏。iOS 26 的 Liquid Glass 导航本身就是悬浮胶囊玻璃 tab bar，现状与之同向。AGENTS.md 也把 `--radius-nav` 与胶囊形状列为冻结项。故 P3 只改度量与配色，不碰形状、`--nav-inset`(80/148) 两档、z-index(90/91/100/200-201)、rail 选中态「只改色不改尺寸」。
+
+## 度量令牌化 + 删死令牌
+
+`--mobile-nav-height: 60px` 声明了却**零消费**，且值还是错的（实栏 64）。按方案「删除死令牌或让底栏消费它」二选一，选了删除 + 新增命名令牌：删 `--mobile-nav-height`，新增 `--bottombar-height`(64)、`--nav-pill-height`(52)、`--nav-icon-size`(24)。底栏高度、选中 pill 高度、插件图标尺寸全部从硬编码改为消费令牌。`--radius-nav` 冻结，不动。
+
+## 配色迁移
+
+- 选中 pill 底 `--glass-glow-faint`（装饰性星光蓝）→ `--tint-fill`（强调色 wash）。语义纠正：选中的 tab 是「选中」，和选中行同语义，该用强调色 wash，不是装饰性 glow。激活字形/标签读 `--accent`，在 `--tint-fill` 上过 3:1（浅 3.12 / 暗 4.39，见 tokens.css 的 wash 推导）。
+- 未激活 tab 标签 `--content-muted` → `--secondary-label`。tab 标签是必要导航信息，不是装饰，用二级（过 3:1）而非三级。底栏标签字号保留 `--font-2xs`(10)，补 `--weight-medium`——全 App 最小字 + 在玻璃上，加粗换可读性（Apple tab bar 同此）。rail 标签仍 `--font-subhead` regular。
+- rail 背景 `--paper` → `--secondary-system-background`；右边框 `--line` → `--separator`；rail 分组头 `--content-muted` → `--secondary-label`；brand 图标圆角 `8px` → `--radius-sm`。
+
+字形色在 TS 侧由 `ICON_COLORS.contentMuted`（别名 `--secondary-label`）注入，未激活字形**本就**是二级——P0 别名层让 TS 侧无需改动即与新语义对齐。
+
+## 闸门
+
+- `glass-surface.test.ts` 的「选中 pill 用 glow」断言**反转**为「用 `--tint-fill`、不用 glow」——这是 P3 的语义反转，旧测试钉的是被推翻的旧决定。
+- 新增 `shell-nav-css.test.ts` 4 条：度量三件套消费令牌（bar/pill/plugin-icon）；`--mobile-nav-height` 不得再出现（删死令牌的回归门）；未激活标签是 `--secondary-label` + 底栏标签 medium；rail 表面与分组头迁到 Apple 名。
+- `contrast.test.ts` 不动：`--tint-fill` 不在 FORBIDDEN 的重填充扫描名单（那是 `--system-fill`/`--secondary-system-fill`），`--accent` 在 `--tint-fill` 上的配对不在禁止之列。
+
+编码实测：`dist/main.lynx.bundle` 里 `--bottombar-height`/`--nav-pill-height` 各 3 次、`--nav-icon-size` 5 次，`mobile-nav-height` 0 次（死令牌已净除）。运行时 pill wash 落位仍需真机确认。
