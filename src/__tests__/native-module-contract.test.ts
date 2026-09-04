@@ -277,6 +277,12 @@ describe('native module method names exist on both hosts', () => {
     expectSwiftMethod(hosts.audioModule.ios, method)
   })
 
+  test('HarmonyOS forwards the facade-normalized 0–1 volume without scaling it again', () => {
+    expect(hosts.audioModule.harmony).toMatch(
+      /public setVolume\(volume: number\): void \{\s*this\.engine\?\.setVolume\(volume\)\s*\}/,
+    )
+  })
+
   test.each(storageMethods)('SongloftStorage.%s', (method) => {
     expectLynxMethod(hosts.storage.android, method)
     expectSwiftMethod(hosts.storage.ios, method)

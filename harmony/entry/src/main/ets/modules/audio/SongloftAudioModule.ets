@@ -100,7 +100,7 @@ export class SongloftAudioModule extends LynxModule {
   }
 
   public setVolume(volume: number): void {
-    this.engine?.setVolume(volume / 100)
+    this.engine?.setVolume(volume)
   }
 
   public setSpeed(rate: number): void {
