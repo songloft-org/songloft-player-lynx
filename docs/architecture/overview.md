@@ -1,12 +1,12 @@
 # 架构总览
 
-一页看懂这个客户端怎么组织的。**为什么会有某些反直觉的约束** → [Lynx 约束](./lynx-constraints.md)；**三端差异** → [平台差异](./platform-differences.md)。
+一页看懂这个客户端怎么组织的。**为什么会有某些反直觉的约束** → [Lynx 约束](./lynx-constraints.md)；**四端差异** → [平台差异](./platform-differences.md)。
 
 ## 分层
 
 ```
-┌─ 宿主（Android Kotlin / iOS Swift / Web 主线程脚本）
-│    9 个自研原生模块 + 自研 HTTP service + 系统外观注入
+┌─ 宿主（Android Kotlin / iOS Swift / HarmonyOS ArkTS / Web 主线程脚本）
+│    10 个契约模块 + 平台专用宿主服务与系统能力注入
 ├─ src/native/            原生模块的 TS facade（callback → Promise）
 ├─ src/core/              网络（api-client / auth-interceptor）· 存储 · 配置
 ├─ src/models/            zod 模型（snake → camelCase，.catch() 容错）
@@ -83,10 +83,10 @@ TanStack Router，**memory history**（没有 URL 栏）。三件事各有归属
 
 ## 测试与闸门
 
-| 层 | 数量 | 作用 |
-|---|---|---|
-| vitest | 2039 / 190 文件 | 单元 + 契约闸门（原生模块、manifest、pbxproj、CSS 不变量、i18n key、web 宿主页） |
-| E2E | 33 scenario | TestBridge（TCP 9230）驱动设备上的 App，断言落在**进程外**状态 |
+| 层 | 作用 |
+|---|---|
+| Vitest | 单元测试 + 契约闸门（原生模块、manifest、pbxproj、CSS 不变量、i18n key、Web 宿主页） |
+| E2E | TestBridge（TCP 9230）驱动设备上的 App，关键断言落在**进程外**状态 |
 
 **闸门只证明它真正读过的东西** —— vitest 读不到 Xcode 工程、Gradle 或真机行为。这条与「闸门要验语义不验子串」「mock 要保留真实前置条件」「断言先反向验证会红」一起构成 [AGENTS.md §6](../../AGENTS.md)，那是三次教训的沉淀。
 

@@ -1,4 +1,4 @@
-# 工作交接（2026-09-01 · 文件夹浏览视图）
+# 工作交接（2026-09-03 · Apple HIG 与玻璃材质收口）
 
 > 本文件是**给接手 AI 的交接说明**，只回答三件事：现在在哪、还剩什么、怎么验证。
 >
@@ -128,6 +128,7 @@ E2E 运行方式、跑前四件环境检查、store 把手清单 → [测试指�
 | [`pitfalls.md`](pitfalls.md) | **踩坑实录**：按主题组织的根因案例 + 操作性参考（SDK 源码 / 自签名环境 / 视频素材） |
 | [`progress.md`](progress.md) | 分批进展（批1–63+）。**每批验收后必须更新** |
 | [`bugs.md`](bugs.md) | 缺陷清单。新问题另起条目 |
+| [`../audit/Report.md`](../audit/Report.md) | 2026-09-01 基线的历史代码审计快照；结论需结合后续提交重新核验 |
 | [`plans/upstream-issues.md`](plans/upstream-issues.md) | 已提交给 Lynx 官方的 issue；修复合入后移除 `patches/` 下对应 patch（当前 2 个） |
 | [`../reference/back-navigation.md`](../reference/back-navigation.md) | 返回导航三层模型 + `consumable` 契约 |
 | [`../reference/native-modules.md`](../reference/native-modules.md) | 原生模块契约速查（以契约闸门为准的可读版） |

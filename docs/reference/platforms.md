@@ -48,7 +48,7 @@
 
 ## HarmonyOS
 
-参考 [harmony-integration-plan.md](../project/plans/harmony-integration-plan.md)：建议 API 12（HarmonyOS NEXT 起步）。`FloatingLyric` / `LiveActivity` 无等价系统 API，TS 侧降级 no-op。
+参考 [harmony-integration-plan.md](../archive/harmony-integration-plan.md)：建议 API 12（HarmonyOS NEXT 起步）。`FloatingLyric` / `LiveActivity` 无等价系统 API，TS 侧降级 no-op。
 
 ## Web
 

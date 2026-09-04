@@ -12,7 +12,7 @@ pnpm test              # vitest run
 pnpm exec tsc -b       # 类型检查（必须 -b）
 ```
 
-当前：**1981 用例 / 189 文件**（2026-08-26 复核，约 20–35 秒）。
+当前用例数量和最近一次通过/失败快照以 [`project/handoff.md`](../project/handoff.md) 为准；本指南不维护易漂移的计数。
 
 - 技术栈：Vitest + @testing-library
 - 测试文件与源码同目录下的 `__tests__/`

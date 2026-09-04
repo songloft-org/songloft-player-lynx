@@ -30,7 +30,7 @@ pnpm run web:sync && pnpm run web:dev   # 最快看到界面的路径
 ```bash
 pnpm run build        # 必须列出两个产物：File (lynx) 与 File (web)
 pnpm run typecheck    # = tsc -b（必须 -b，--noEmit 是空跑）
-pnpm test             # 2037 用例 / 190 文件
+pnpm test             # Vitest 单元测试与契约闸门
 ```
 
 > ⚠️ 以上**只覆盖 JS 产物** —— 不读 Xcode 工程、不编译 Kotlin/ArkTS、不验 Web 产物自洽性。改了 `ios/`、`android/`、`harmony/`、`web/` 必须另跑对应平台那条。
@@ -53,7 +53,7 @@ ios/              iOS 宿主 + 原生模块（Swift）
 harmony/          HarmonyOS 宿主 + 原生模块（ArkTS）
 web/              Web 宿主页 + 宿主模块 + 本地静态服务
 demo-frame-plugin/ Lynx 原生渲染插件演示工程
-e2e/              E2E 测试（driver + 33 个 scenario）
+e2e/              E2E 测试（driver + 跨平台 scenario）
 scripts/          构建脚本（bundle 拷贝、闸门、i18n 转换）
 patches/          上游本地补丁（必须提交）
 docs/             项目文档
@@ -75,23 +75,15 @@ docs/             项目文档
 | 理解某个诡异行为 | [Lynx 约束](./docs/architecture/lynx-constraints.md) · [调试](./docs/guides/debugging.md) |
 | **接手项目** | [交接文档](./docs/project/handoff.md) |
 
-根目录另有两份项目级文档：
+根目录另有四份项目级文档：
 
 - **[AGENTS.md](./AGENTS.md)** —— 开发规范与铁律（给 AI agent 与贡献者）：目录边界、Lynx 约束、验收闸门、原生模块调用约定、测试闸门原则
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** —— 面向代码探索的架构摘要；详细解释仍以 `docs/architecture/` 为准
+- **[HARNESS.md](./HARNESS.md)** —— 构建、测试和平台验证入口及其覆盖边界
 - **[DESIGN.md](./DESIGN.md)** —— Muse 设计语言：色彩/间距/圆角/阴影 token、图标规范、组件模式、WCAG AA 要求
 
 后端 API 契约（OpenAPI）**不在本仓库**：见后端仓库的 `docs/swagger.json`，或 `http://localhost:58091/swagger/index.html`。
 
 ## 状态
 
-迁移路线 **P0–P2 已完成，P3 平台特性 90%（仅剩 Lynxtron 桌面），P4 双轨发布未开始**。
-
-| 平台 | 状态 |
-|---|---|
-| Android | ✅ 真机验证通过（播放/通知栏/扫描/悬浮歌词/全屏视频全链路） |
-| iOS | ✅ 可构建可运行（e2e 110/110），8 个原生模块全部注册 |
-| HarmonyOS | ✅ 宿主工程已就位，9 个原生模块实现；CI 有 GitHub Actions 流水线 |
-| Web | ✅ 可渲染且有音频；几条已知限制见 [Web 部署](./docs/guides/web-deployment.md) |
-| 桌面 | ⛔ 未开始（剩余最大单块能力） |
-
-逐项状态见 [docs/README.md](./docs/README.md)，历史进展见 [progress.md](./docs/project/progress.md)。
+当前交付状态、最近一次验证结果和未完成事项统一维护在[交接文档](./docs/project/handoff.md)；逐批历史见[进展记录](./docs/project/progress.md)，平台能力与降级边界见[平台参考](./docs/reference/platforms.md)。根 README 不再复制易漂移的测试数量、产物大小和平台验收快照。
