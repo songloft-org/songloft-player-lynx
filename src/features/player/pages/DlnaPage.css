@@ -61,7 +61,7 @@
 .dlna-page__now-song {
   font-size: var(--font-sm);
   color: var(--label);
-  margin-top: 2px;
+  margin-top: var(--space-half);
 }
 
 .dlna-page__disconnect {

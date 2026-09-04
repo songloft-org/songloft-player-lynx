@@ -314,7 +314,7 @@
 }
 
 .fp-group__radio-indicator {
-  margin-top: 2px;
+  margin-top: var(--space-half);
   margin-right: var(--space-2);
 }
 
@@ -353,13 +353,13 @@
 .fp-group__song-path {
   font-size: var(--font-caption1);
   color: var(--secondary-label);
-  margin-top: 2px;
+  margin-top: var(--space-half);
 }
 
 .fp-group__song-meta {
   font-size: var(--font-caption1);
   color: var(--secondary-label);
-  margin-top: 2px;
+  margin-top: var(--space-half);
 }
 
 .fp-group__delete-btn {

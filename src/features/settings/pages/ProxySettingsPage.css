@@ -97,7 +97,7 @@
 
 .proxy-settings__save-btn {
   background-color: var(--accent);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: var(--space-3) var(--space-6);
 }
 

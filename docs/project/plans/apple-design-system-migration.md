@@ -525,7 +525,7 @@ Toast 按 §4.1 C 类改 `--toast-fill`；`ToastHost.css:22` 的 `bottom: calc(s
 | **构建告警当错误看** | `progress.md` 记载构建告警自批19b 起归零。本方案不得引入新的 `Unsupported property … was removed` 告警——尤其 `text-transform`（§P1 已避开）。 |
 | **回滚** | P0 回滚 = 还原 `tokens.css` + `theme-pack-mapping.ts` + 4 个测试文件。P1–P9 每阶段回滚 = 还原该屏 CSS/TSX。别名桥接的设计意图正是让每阶段回滚互不牵连。 |
 | **性能** | 别名层引入一层 `var()` 间接。`--glass-ramp`/`--shadow-focus` 已在生产用同样形态，无实测退化记录。P10 后间接层消失。 |
-| **未验����������** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
+| **未验������������** | Apple 语义色精确值未经工具核对（`developer.apple.com` 被网络策略拦截，WebSearch 报提供方错误）。iOS 抽屉/alert 的准确圆角、iOS 26 tab bar 度量同样无法从本仓库验证。全部标记为��实施时需 pin / 需真机复核」。 |
 
 ## 8. 验收
 
@@ -969,7 +969,7 @@ P2 把副标题基线迁到 `--secondary-label` 后，二级与主级 `--label` 
 
 新增 `playlist-css.test.ts` 4 条：详情封面 160×160+radius-sm、meta 160、name title2、desc/count footnote；两处搜索框 control-height-sm+填充+无描边；卡片名 subhead、卡片封面 104+radius-sm；整个 playlist 目录不得残留 Muse 颜色别名（新文件滑入未迁移即红）。`input-css.test.ts` 不动（已接受 `--tertiary-system-fill`）。
 
-编码实测：`dist/main.lynx.bundle` 双端产物齐备，playlist 目录 CSS 全部 Apple 名。运行时封面 160 落位仍需真机确认。
+编码实测：`dist/main.lynx.bundle` 双端产物齐备，playlist 目录 CSS 全部 Apple 名。运行��封面 160 落位仍需真机确认。
 
 ---
 
@@ -1094,3 +1094,27 @@ P1–P7 各迁了各自 feature，但 library / library-ops / jsplugin / routes 
 新增 `sheet-dialog-css.test.ts` 4 条：三处把手 36×5/2.5；无 sheet 残用 `--radius-xl`；滑轨/进度轨/分页点用 `--tertiary-system-fill`（非 `--opaque-separator`）；**全仓除 EqualizerPage/PlayerBackdrop 外零 Muse 颜色别名**（新文件滑入未迁移即红）。`confirm-dialog-overlay.test.ts` 的按钮断言更新 `--primary`→`--accent`/`--accent-content`（钉旧别名的那条）；`app-switch-css.test.ts` 的 checkbox 断言同批更新。`input-css.test.ts` 不动。
 
 编码实测：`dist/main.lynx.bundle` 双端产物齐备，全仓（除 Equalizer/Backdrop）零旧别名。
+
+---
+
+# P9 实施记录（硬编码 px 清零）
+
+验收：`pnpm test` 207 文件 / 2228 用例全绿；`tsc -b` 通过；`pnpm run build` 双端产物齐备。告警仍为既存那 4 组。
+
+## 三个零令牌文件迁令牌
+
+**EqualizerPage.css**（约 24 处硬编码）：chrome（间距/圆角/字号/颜色）全部令牌化——toggle-row `12px 16px`→`--space-3 --space-4`、radius `12px`→`--radius-md`、toggle-label `16px`→`--font-body`、chip `16px` radius→`--radius-pill`、chip-text `13px`→`--font-footnote`、band-gain `11px`→`--font-caption2`、band-freq `10px`→`--font-2xs`、reset `14px`→`--font-subhead` 等。颜色别名（15 处，P8 推迟）一并迁到 Apple 名。**band 图形几何刻意保留硬编码**：track 6px、thumb 16×16/8px、indicator 3px、bands 高 200px、band 内 6px gap、gain min-width 28px——这些是 EQ 图的绘图参数（与 PlaylistsView 的 eq bars、SizeLimitSlider 刻度点、进度条同归类），令牌化只增间接层。
+
+**ServerEditPage.css / ServerListPage.css**（约 13/12 处）：间距/圆角/字号令牌化（card radius `12px`→`--radius-md`、label `14px`→`--font-footnote`、input/save `15px`→`--font-subhead`、empty `16px`→`--font-body`/`14px`→`--font-footnote`、各种 16/12/8/4px→`--space-*`、48px empty padding→`--space-10`）。颜色别名 P8 已迁。
+
+## 散落硬编码清零
+
+`margin-top: 2px` 全仓 sed → `var(--space-half)`（实际比方案「×5」多，共 8 处：ThemePacksSection/ThemeCatalogPage/DuplicateCheckPage×3/RegistryManageDialog/PluginRegistryPage×2/SheetShell/DlnaPage）。`gap: 2px`/`padding: 2px` 中属 eq/绘图几何的（`.playlist-card__eq-bars`）保留，其余未在方案明确列出、多为结构边框（`border: 2px`）或绘图，本批不动。
+
+CacheManagePage 输入 `44px`/保存 `48px` → `var(--control-height)`（48→44，方案明确）；ProxySettingsPage 保存按钮 `border-radius: 8px` → `var(--radius-sm)`。
+
+## 闸门
+
+新增 `src/__tests__/px-cleanup.test.ts` 5 条：三文件 chrome 令牌化（抽查 toggle-row/card/label/empty）；EqualizerPage band 绘图几何**保留**硬编码（thumb 16px/track 6px/bands 200px，防误令牌化）；三文件零 Muse 颜色别名（含 `--canvas`）；**全仓无 `margin-top: 2px`**（margin-top 是布局间距、非绘图，2px 必是漏迁）；CacheManage 控件高 + ProxySettings radius 令牌化。
+
+编码实测：`dist/main.lynx.bundle` 双端产物齐备。EqualizerPage 现在用 Apple 令牌（不再「仅顶栏标题」）。

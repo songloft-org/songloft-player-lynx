@@ -1,28 +1,28 @@
 
 
 .server-edit__content {
-  padding: 16px;
+  padding: var(--space-4);
 }
 
 /* A card on a PLAIN page (Server edit has no SettingsSection), so it takes the
    plain secondary background, not the grouped one. */
 .server-edit__card {
   background-color: var(--secondary-system-background);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .server-edit__field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 .server-edit__label {
-  font-size: 14px;
+  font-size: var(--font-footnote);
   font-weight: var(--weight-medium);
   color: var(--label);
 }
@@ -30,15 +30,15 @@
 /*
  * Form field. The fill was `--canvas` — the token for the *bottom layer
  * background* — so the field was painted the same colour as the page behind it and
- * only the hairline gave it away. `--neutral-faint` is what DESIGN.md assigns to
- * input fills.
+ * only the hairline gave it away. `--tertiary-system-fill` is what DESIGN.md
+ * assigns to input fills.
  */
 .server-edit__input {
   background-color: var(--tertiary-system-fill);
   border: 1px solid var(--separator);
   border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  font-size: 15px;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-subhead);
   color: var(--label);
   /* Without this the placeholder keeps the host's own default, which is
      unreadable on the dark theme — the batch-19 bug, missed here. */
@@ -49,30 +49,30 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .server-edit__toggle-text {
   display: flex;
   flex-direction: column;
   flex: 1;
-  gap: 2px;
+  gap: var(--space-half);
 }
 
 .server-edit__toggle-title {
-  font-size: 15px;
+  font-size: var(--font-subhead);
   color: var(--label);
 }
 
 .server-edit__toggle-subtitle {
-  font-size: 13px;
+  font-size: var(--font-footnote);
   color: var(--secondary-label);
 }
 
 .server-edit__save {
   align-self: stretch;
-  padding: 12px;
-  border-radius: 8px;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
   background-color: var(--accent);
   display: flex;
   align-items: center;
@@ -84,7 +84,7 @@
 }
 
 .server-edit__save-text {
-  font-size: 15px;
+  font-size: var(--font-subhead);
   font-weight: var(--weight-semibold);
   color: var(--accent-content);
 }

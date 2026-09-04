@@ -137,13 +137,13 @@
 .plugin-registry__item-meta {
   font-size: var(--font-sm);
   color: var(--secondary-label);
-  margin-top: 2px;
+  margin-top: var(--space-half);
 }
 
 .plugin-registry__item-desc {
   font-size: var(--font-caption1);
   color: var(--secondary-label);
-  margin-top: 2px;
+  margin-top: var(--space-half);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

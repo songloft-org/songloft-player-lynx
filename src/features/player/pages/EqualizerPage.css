@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--canvas);
+  background-color: var(--system-background);
 }
 
 .eq-page__topbar {
@@ -19,13 +19,13 @@
   flex: 1;
   font-size: var(--font-title3);
   font-weight: var(--weight-bold);
-  color: var(--content);
+  color: var(--label);
 }
 
 .eq-page__content {
   flex: 1;
-  padding: 16px;
-  gap: 20px;
+  padding: var(--space-4);
+  gap: var(--space-7);
   display: flex;
   flex-direction: column;
 }
@@ -35,52 +35,60 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background-color: var(--paper);
-  border-radius: 12px;
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--secondary-system-background);
+  border-radius: var(--radius-md);
 }
 
 .eq-page__toggle-label {
-  font-size: 16px;
+  font-size: var(--font-body);
   font-weight: var(--weight-medium);
-  color: var(--content);
+  color: var(--label);
 }
 
 .eq-page__presets {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .eq-page__chip {
-  padding: 6px 14px;
-  border-radius: 16px;
-  background-color: var(--neutral-faint);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--tertiary-system-fill);
 }
 
 .eq-page__chip--active {
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .eq-page__chip-text {
-  font-size: 13px;
-  color: var(--content);
+  font-size: var(--font-footnote);
+  color: var(--label);
 }
 
 .eq-page__chip--active .eq-page__chip-text {
-  color: var(--primary-content);
+  color: var(--accent-content);
 }
 
+/*
+ * The band graph. Its INNER geometry (track 6px, thumb 16×16, indicator, the
+ * 200px graph height, the band-internal 6px gap, the gain label's 28px min-width)
+ * is kept HARDCODED on purpose — these are drawing parameters of the equalizer
+ * graph, not design tokens (same call as the eq bars in PlaylistsView.css and the
+ * slider ticks). Only the surrounding chrome (padding, card radius, gap, the
+ * band labels' type) is tokenized.
+ */
 .eq-page__bands {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
   align-items: stretch;
-  padding: 16px 8px 8px;
-  background-color: var(--paper);
-  border-radius: 12px;
-  gap: 2px;
+  padding: var(--space-4) var(--space-2) var(--space-2);
+  background-color: var(--secondary-system-background);
+  border-radius: var(--radius-md);
+  gap: var(--space-half);
   height: 200px;
 }
 
@@ -94,8 +102,8 @@
 }
 
 .eq-page__band-gain {
-  font-size: 11px;
-  color: var(--content-2);
+  font-size: var(--font-caption2);
+  color: var(--secondary-label);
   text-align: center;
   min-width: 28px;
   flex-shrink: 0;
@@ -112,12 +120,12 @@
 .eq-page__band-track {
   width: 6px;
   height: 100%;
-  background-color: var(--neutral-faint);
+  background-color: var(--tertiary-system-fill);
   border-radius: 3px;
 }
 
 .eq-page__band-indicator {
-  background-color: var(--primary);
+  background-color: var(--accent);
   border-radius: 3px;
 }
 
@@ -125,24 +133,24 @@
   width: 16px;
   height: 16px;
   border-radius: 8px;
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .eq-page__band-freq {
-  font-size: 10px;
-  color: var(--content-2);
+  font-size: var(--font-2xs);
+  color: var(--secondary-label);
   text-align: center;
   flex-shrink: 0;
 }
 
 .eq-page__reset {
   align-self: center;
-  padding: 10px 24px;
-  border-radius: 8px;
-  background-color: var(--neutral-faint);
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-sm);
+  background-color: var(--tertiary-system-fill);
 }
 
 .eq-page__reset-text {
-  font-size: 14px;
-  color: var(--content);
+  font-size: var(--font-subhead);
+  color: var(--label);
 }

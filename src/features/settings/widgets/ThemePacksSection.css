@@ -32,7 +32,7 @@
 .theme-packs__item-meta {
   font-size: var(--font-caption1);
   color: var(--secondary-label);
-  margin-top: 2px;
+  margin-top: var(--space-half);
 }
 
 /* Catalog install-button / installed-label styles live on the theme-catalog

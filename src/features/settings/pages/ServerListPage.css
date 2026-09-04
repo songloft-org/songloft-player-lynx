@@ -1,29 +1,29 @@
 
 
 .server-list__add {
-  padding: 4px;
+  padding: var(--space-1);
 }
 
 .server-list__content {
-  padding: 16px;
+  padding: var(--space-4);
 }
 
 .server-list__empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 48px 16px;
-  gap: 8px;
+  padding: var(--space-10) var(--space-4);
+  gap: var(--space-2);
 }
 
 .server-list__empty-title {
-  font-size: 16px;
+  font-size: var(--font-body);
   font-weight: var(--weight-medium);
   color: var(--label);
 }
 
 .server-list__empty-hint {
-  font-size: 14px;
+  font-size: var(--font-footnote);
   color: var(--secondary-label);
   text-align: center;
 }
@@ -36,26 +36,26 @@
 .server-list__actions {
   display: flex;
   flex-direction: row;
-  gap: 12px;
+  gap: var(--space-3);
   align-self: flex-end;
-  margin-top: 2px;
-  margin-bottom: 8px;
+  margin-top: var(--space-half);
+  margin-bottom: var(--space-2);
 }
 
 .server-list__edit {
-  padding: 4px 12px;
+  padding: var(--space-1) var(--space-3);
 }
 
 .server-list__edit-text {
-  font-size: 13px;
+  font-size: var(--font-footnote);
   color: var(--accent);
 }
 
 .server-list__delete {
-  padding: 4px 12px;
+  padding: var(--space-1) var(--space-3);
 }
 
 .server-list__delete-text {
-  font-size: 13px;
+  font-size: var(--font-footnote);
   color: var(--system-red);
 }
