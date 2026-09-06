@@ -80,7 +80,7 @@
 **B. 验证欠账（不写代码，但欠着）**
 
 3. **e2e + `gradlew assembleDebug` + `ios:build` 自批49 后没跑过**，中间大量提交、e2e 场景 33 个。见 §1 闸门快照的警示。
-4. **近期原生改动的真机目视待验**：后台播放稳定性（AudioFocus / MEDIA_BUTTON / 通知栏点击）、悬浮歌词首次授权即显、HarmonyOS 图片/SVG 渲染。
+4. **近期原生改动的真机目视待验**：后台播放稳定性（AudioFocus / MEDIA_BUTTON / 通知栏点击）、悬浮歌词首次授权即显、HarmonyOS 图片/SVG 渲染、**Issue #2 的通知看护**（HyperOS 连播到无歌词曲目，见 §4「Issue #2」）。
 
 ## 4. 已知缺陷
 
@@ -98,6 +98,18 @@
 前一版 `1edd44b` 只在 `BUFFERING + playWhenReady` 时拦截，因此 stop intent 到达时已经漏掉。当前工作树的修复在 `ENDED -> load` 过渡上设置 2 秒单次 guard；服务解析 `EXTRA_KEY_EVENT`，只拦截 `KEYCODE_MEDIA_STOP` 且 guard 有效的 intent，其他媒体按键不受影响。guard 在显式 `stop()` / `release()` 清理。
 
 已验证：`./gradlew --no-daemon compileDebugKotlin`、定向 Vitest 2/2、`pnpm exec tsc -b --force`。尚未验证：新 APK 真机后台连续播放。验收日志应包含 `mediaButtonKey=86`、`suppressed stale MEDIA_STOP during auto-advance`，且该事件后不能有 `playback state changed state=IDLE`。
+
+### Issue #2：后台播放通知栏偶现消失（2026-09-06）
+
+Issue 附件 `songloft-logs-20260903-083706.zip` 的关键顺序：
+
+`08:34:28.351 ENDED` → `.412 released the foreground slot` → `.519 placeholder foreground started` → `.545 owns the foreground slot`（真卡片重发）→ `08:34:29.181 mediaButtonKey=86` + `suppressed stale MEDIA_STOP`。
+
+media3 通知的 deleteIntent 只在通知真的离开通知栏时才发，而它晚于 `.545` ⇒ 被 HyperOS 清掉的是刚重发的那张卡片。守卫保住了播放，但 `mediaNotificationOwnsSlot` 与 media3 的 `startedInForeground` 都还记着「已发出」，此前没有任何一处校验通知是否还在 ⇒ 无人重发；下一首无歌词、不产生 metadata 变化，通知栏空了 77 秒。
+
+当前工作树的修复：`SongloftPlaybackService` 通知看护——`getActiveNotifications()` 读 id 1001 + channel 作判据，播放中每 10 秒一拍、抑制 stale MEDIA_STOP 时另排 400ms 快检查，缺失则 `onUpdateNotification(session, true)` 经 media3 漏斗重发；判据不可用报「在」，连续 3 次盲发熔断，只在 `isPlaying` 为真时动作。
+
+已验证：`pnpm test` 2243 项、`./gradlew --no-daemon assembleDebug`、闸门 14 条 + 变异 9/9。尚未验证：HyperOS 真机。验收日志应出现 `media notification missing from the shade (reason=...)` 且通知栏在 0.4–10 秒内恢复；旁证 `dumpsys notification` 的 `channel=default_channel_id`。
 
 ## 5. 明确不做（避免被当成缺陷重开）
 

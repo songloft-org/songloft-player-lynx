@@ -67,6 +67,20 @@ worker 侧最终走 `listener.apply(ctx, params)`，普通对象没有 `length` 
 - **另一半**：`load()` 失败时 media3 什么都不发，而它的 `maybeStopForegroundService` 只 cancel「它自己发过的」1001 ⇒ 占位会永久留在通知栏，且 `ONGOING | NO_CLEAR` 连划都划不掉。所以 `onUpdateNotification` 里用与 media3 `shouldShowNotification` 同款的条件（player 非 `STATE_IDLE` 且 timeline 非空）判断「没人会来接手」，此时 `stopForeground(true)` 自己收尾。
 - **与 minSdk 21 无关**：机制在任何 API 级别都成立（实测机 Android 13）。时间上撞在一起纯属巧合——占位通知是降 minSdk 那批之前一个提交引入的，两者都在同一天。
 
+### 拿到通知位 ≠ 通知还在栏里：被系统清掉之后没人重发（Android）
+
+`mediaNotificationOwnsSlot` 镜像的是 media3 的 `startedInForeground`，两者都只是「**发过**」的记录，不是「**还在**」的证据。HyperOS 会在连播尾巴上清掉它认为「session 已非活跃」的媒体通知，而这次清除**晚于**新卡片的重发：Issue #2 的导出日志里 `08:34:28.456` media3 交还前台位、`.519` service 补占位、`.545` media3 重新 `startForeground` 发出真卡片，`08:34:29.181` 才收到 media3 通知的 deleteIntent（`KEYCODE_MEDIA_STOP` + session URI）——**deleteIntent 只在通知真的离开通知栏时才发**，所以被清掉的是 `.545` 那张。
+
+于是两侧记账同时错向同一边：谁都认为卡片在，谁都不重发。stop 被自动连播守卫吃掉（否则播放会停），音频继续，通知栏空着、锁屏也没控件，直到下一次有事情去调 `onUpdateNotification`。**「偶现」的另一半在这里**：一首没有逐行歌词的曲子不产生 metadata 变化，也就不产生任何通知更新——实测空了 **77 秒**，直到用户自己回播放器切下一首。
+
+- **唯一可信的判据在自己的记账之外**：`NotificationManager.getActiveNotifications()`（API 23）里找 id 1001，并且**要读 channel**——占位与真卡片共用 1001，只看 id 会把一张卡住的空白占位读成「卡片在」。这与上一条用 `dumpsys notification` 的 `channel=` 区分的是同一件事，只不过这次在进程内就能读。
+- **修法**：`SongloftPlaybackService` 的通知看护——播放中每 10 秒查一次，卡片不在就走 media3 自己的漏斗 `onUpdateNotification(session, true)` 重发。**不能自己 `notify` 也不能补占位**：前者绕开 provider 会丢封面/按钮/歌词行，后者是拿一张空白卡片换掉一张缺失卡片。抑制 stale MEDIA_STOP 的那条分支额外排一次 400ms 快检查——那个 intent 本身就是「卡片已经没了」的通知，是最早的信号。
+- **判据不可用时一律报「在」**：API < 23、取不到 service、ROM 抛异常，全部返回 `true` 并放弃这次修复；抛异常时还要把读取 latch 掉（它跑在定时器上，导出日志的可读性是硬要求）。宁可不修，也不能对着看不见的通知栏盲发。
+- **必须能自己收手**：连续 3 次重发后仍观察不到卡片就熄火并记一条日志（有的 ROM 压根不把自己的前台通知报回来），再看到卡片才重新武装。
+- **心跳只在 `isPlaying` 为真时续期**：Android 13+ 用户可以主动划掉前台服务通知，而播放中被划掉时 media3 的 deleteIntent 会真的停播（`isPlaying` 随即为假）。所以「在播且卡片没了」是唯一属于我们该修的状态，重发不会跟用户对抗。
+- **闸门**：`src/__tests__/android-media-notification.test.ts` 后半段 8 条（判据来自 `.activeNotifications`、占位不算卡片、不可读时报「在」且 latch 掉日志、`isPlaying` 门在重发之前、重发走 media3 漏斗且不碰占位、stale STOP 分支排快检查、重发有下限与上限、`onDestroy` 撤回 tick），9 个变异全部反向验证会红。第一条断言写成 `/activeNotifications/` 时**是绿的**——同一个函数里的 latch 变量 `activeNotificationsReadable` 就能满足它，必须锚成 `/\.activeNotifications\b/` 才咬得住「删掉真实读取」这个变异。
+- **真机判据（尚未真机复验）**：连播到一首**无歌词**曲目，日志应出现 `media notification missing from the shade (reason=...)`，通知栏在 0.4–10 秒内恢复。
+
 ### 无结果回传的系统授权页：答复只能等到 App 重回前台（Android）
 
 `SYSTEM_ALERT_WINDOW`（`Settings.ACTION_MANAGE_OVERLAY_PERMISSION`）**不能 `startActivityForResult`、什么都不回传**，唯一可观测的时刻是 App 重回前台。`startActivity` 之后顺手答 `false` 等于对每一次「用户正要去授权」都回答「拒绝」——悬浮歌词开关因此拨上去了、pref 写了、`show()` 永不发生，用户只能「再关一次再开一次」（那时走的是「已授权」早返回分支）。

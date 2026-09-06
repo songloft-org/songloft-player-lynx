@@ -8,6 +8,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.Player
@@ -90,6 +93,32 @@ import org.songloft.lynx.platform.ClientFileLog
  * the next `startForegroundService` from [SongloftAudioModule] still gets its
  * deadline covered.
  *
+ * ## Why the slot needs a watchdog ([verifyMediaNotification])
+ *
+ * Owning the slot is not the same as still being in the shade. At the end of a
+ * track media3 hands the foreground slot back (`onUpdateNotification` with
+ * `startInForegroundRequired = false`), auto-advance immediately loads the next
+ * item, and media3 takes the slot again — three notification transitions inside
+ * ~150ms. HyperOS answers that burst by dropping the media notification of the
+ * session it considers inactive, and the removal lands *after* the new card was
+ * posted: the exported log shows the card re-posted at `+0.545s` and media3's
+ * own delete intent (`KEYCODE_MEDIA_STOP` + session URI, only sent when a
+ * notification is actually removed) arriving at `+1.181s`.
+ *
+ * Both bookkeepers are then wrong in the same direction: this service's
+ * [mediaNotificationOwnsSlot] and media3's `startedInForeground` both say the
+ * card is up, so nobody re-posts. Playback keeps going (the stale STOP is
+ * suppressed, see [isMediaNotificationStopIntent]) with no notification and no
+ * lock-screen controls, until something else happens to call
+ * [onUpdateNotification] — a lyric line, a track change, a play/pause. A track
+ * without synced lyrics produces none of those, which is why the shade stayed
+ * empty for 77 seconds in issue #2 and why the bug reads as "occasional".
+ *
+ * So the only reliable judgement is the one taken from outside our own
+ * bookkeeping: ask the notification manager what is actually posted
+ * ([mediaCardInShade]) and re-post through media3's funnel when the card is
+ * gone while the player is playing. See `docs/project/pitfalls.md` §3.
+ *
  * Registered in the manifest with `foregroundServiceType="mediaPlayback"` and
  * the required `<intent-filter>` for `MediaSessionService`.
  */
@@ -136,6 +165,153 @@ class SongloftPlaybackService : MediaSessionService() {
 
     /** Whether the notification currently in the shade is our placeholder. */
     private var placeholderPosted = false
+
+    // -- notification watchdog -------------------------------------------------
+
+    /** Main-thread ticker; the service's callbacks all run on the main looper. */
+    private val watchdogHandler = Handler(Looper.getMainLooper())
+
+    /** Whether [watchdogTick] is currently queued. Keeps arming idempotent. */
+    private var watchdogScheduled = false
+
+    /** Guard against the fast check and the heartbeat both re-posting. */
+    private var lastRepostAtMs = 0L
+
+    /** Re-posts since the card was last actually seen — the circuit breaker's input. */
+    private var repostsSinceLastSighting = 0
+
+    /** Cumulative count, logged so a repeating removal is visible in the export. */
+    private var repostTotal = 0
+
+    /** Set when [MAX_BLIND_REPOSTS] re-posts in a row left the shade empty. */
+    private var repostSuppressed = false
+
+    /** Cleared for good if this ROM refuses to report our own notifications. */
+    private var activeNotificationsReadable = true
+
+    private val watchdogTick = Runnable {
+        watchdogScheduled = false
+        verifyMediaNotification("heartbeat")
+        // Self-sustaining only while playing: a paused or stopped player has
+        // nothing to defend, and the next onUpdateNotification re-arms us.
+        if (isPlayingNow()) scheduleWatchdog(WATCHDOG_INTERVAL_MS)
+    }
+
+    /**
+     * Queue a notification check. A pending check is never pushed further out —
+     * a short fast check replaces a queued heartbeat, not the other way round.
+     */
+    private fun scheduleWatchdog(delayMs: Long) {
+        if (watchdogScheduled) {
+            if (delayMs >= WATCHDOG_INTERVAL_MS) return
+            watchdogHandler.removeCallbacks(watchdogTick)
+        }
+        watchdogScheduled = true
+        watchdogHandler.postDelayed(watchdogTick, delayMs)
+    }
+
+    /**
+     * Re-post the media notification if it is gone from the shade while the
+     * player is playing.
+     *
+     * Deliberately gated on `isPlaying` rather than on "playback ongoing":
+     * since Android 13 the user may swipe a foreground-service notification
+     * away, and re-posting a card the user just dismissed would be fighting
+     * them. While *playing* that dismissal cannot reach us silently — media3's
+     * delete intent stops playback, so `isPlaying` turns false and this returns
+     * early. What is left is exactly the failure this exists for: the card
+     * removed by something outside the app while audio keeps running.
+     *
+     * The repair goes through [onUpdateNotification], i.e. media3's own funnel,
+     * so the card is rebuilt from the session (correct artwork, actions and
+     * lyric line) and [mediaNotificationOwnsSlot] is realigned on the way.
+     */
+    private fun verifyMediaNotification(reason: String) {
+        val session = SongloftAudioEngine.mediaSession ?: return
+        if (!isPlayingNow(session)) return
+        // Nothing to defend if media3 itself would show nothing for this player.
+        if (!mediaNotificationWillShow(session)) return
+
+        if (mediaCardInShade()) {
+            if (repostSuppressed) {
+                repostSuppressed = false
+                ClientFileLog.write(
+                    'I', "audio-svc",
+                    "notification watchdog re-armed (card seen in the shade again)",
+                )
+            }
+            repostsSinceLastSighting = 0
+            return
+        }
+        if (repostSuppressed) return
+
+        val now = SystemClock.elapsedRealtime()
+        if (lastRepostAtMs != 0L && now - lastRepostAtMs < MIN_REPOST_INTERVAL_MS) return
+        if (repostsSinceLastSighting >= MAX_BLIND_REPOSTS) {
+            // Either this ROM does not report the foreground notification back
+            // to us, or it removes the card faster than we can post it. Both
+            // make further re-posts pointless; stop instead of looping forever.
+            repostSuppressed = true
+            ClientFileLog.write(
+                'W', "audio-svc",
+                "notification watchdog disarmed: $repostsSinceLastSighting re-posts left "
+                    + "id=$PLACEHOLDER_NOTIFICATION_ID unreported",
+            )
+            return
+        }
+
+        lastRepostAtMs = now
+        repostsSinceLastSighting++
+        repostTotal++
+        ClientFileLog.write(
+            'W', "audio-svc",
+            "media notification missing from the shade (reason=$reason repost=#$repostTotal "
+                + "ownsSlot=$mediaNotificationOwnsSlot placeholder=$placeholderPosted) "
+                + "snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
+        )
+        onUpdateNotification(session, /* startInForegroundRequired= */ true)
+    }
+
+    /**
+     * Whether media3's player card is the thing posted on
+     * [PLACEHOLDER_NOTIFICATION_ID] right now.
+     *
+     * Reading the channel is what separates the card from our own placeholder
+     * on the shared id — the same distinction `dumpsys notification` shows, and
+     * the reason a stuck placeholder counts as "card missing" here. Unreadable
+     * (old API, or a ROM that throws) reports `true`: no judgement means no
+     * repair, never a blind re-post.
+     */
+    private fun mediaCardInShade(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || !activeNotificationsReadable) return true
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return true
+        return try {
+            nm.activeNotifications.any { posted ->
+                posted.id == PLACEHOLDER_NOTIFICATION_ID
+                    && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O
+                        || posted.notification.channelId != PLACEHOLDER_CHANNEL_ID)
+            }
+        } catch (error: Throwable) {
+            // Log once: this runs on a timer, and the exported log has to stay
+            // readable.
+            activeNotificationsReadable = false
+            ClientFileLog.write(
+                'W', "audio-svc",
+                "activeNotifications unreadable, watchdog off "
+                    + "(${error.javaClass.simpleName}: ${error.message ?: "no message"})",
+            )
+            true
+        }
+    }
+
+    /** Strict "sound is coming out" test, not media3's broader ongoing-playback one. */
+    private fun isPlayingNow(session: MediaSession? = SongloftAudioEngine.mediaSession): Boolean {
+        return try {
+            session?.player?.isPlaying == true
+        } catch (error: Throwable) {
+            false
+        }
+    }
 
     /**
      * Post a placeholder foreground notification before delegating to the base
@@ -189,6 +365,12 @@ class SongloftPlaybackService : MediaSessionService() {
                 "suppressed stale MEDIA_STOP during auto-advance "
                     + "snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
             )
+            // This intent *is* the removal notice for the card media3 just
+            // re-posted (see the class docstring): the delete intent only fires
+            // when a notification actually left the shade. Suppressing the stop
+            // keeps audio alive, so check the slot right away instead of waiting
+            // out a full heartbeat.
+            scheduleWatchdog(STOP_SUPPRESSED_CHECK_DELAY_MS)
             return START_STICKY
         }
         if (!mediaNotificationOwnsSlot) startForegroundPlaceholder()
@@ -247,6 +429,10 @@ class SongloftPlaybackService : MediaSessionService() {
                 + "playerOngoing=${playerPlaybackOngoing(session)} "
                 + "snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
         )
+        // media3's single funnel is also the single place the watchdog needs to
+        // be armed from: every isPlaying transition passes through here, and the
+        // tick keeps itself alive from there on.
+        if (isPlayingNow(session)) scheduleWatchdog(WATCHDOG_INTERVAL_MS)
     }
 
     /**
@@ -397,6 +583,8 @@ class SongloftPlaybackService : MediaSessionService() {
                 + "ownsSlot=$mediaNotificationOwnsSlot placeholder=$placeholderPosted "
                 + "snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
         )
+        watchdogHandler.removeCallbacks(watchdogTick)
+        watchdogScheduled = false
         mediaNotificationOwnsSlot = false
         placeholderPosted = false
         // Let the engine release player + session; the base class then cleans
@@ -438,5 +626,21 @@ class SongloftPlaybackService : MediaSessionService() {
         /** Placeholder channel used only to satisfy the FGS start deadline. */
         private const val PLACEHOLDER_CHANNEL_ID = "songloft.playback.placeholder"
         private const val PLACEHOLDER_NOTIFICATION_ID = 1001
+
+        /** Watchdog period while playing. One binder read per tick. */
+        private const val WATCHDOG_INTERVAL_MS = 10_000L
+
+        /**
+         * The stale MEDIA_STOP arrives ~0.7s after the track ended, and it is
+         * itself the removal notice, so the card can be back well inside the
+         * gap where the user would reach for the shade.
+         */
+        private const val STOP_SUPPRESSED_CHECK_DELAY_MS = 400L
+
+        /** Floor between two re-posts, so a fast check plus a tick counts once. */
+        private const val MIN_REPOST_INTERVAL_MS = 2_000L
+
+        /** Re-posts tolerated without ever seeing the card before giving up. */
+        private const val MAX_BLIND_REPOSTS = 3
     }
 }
