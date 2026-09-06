@@ -140,18 +140,22 @@
   text-overflow: ellipsis;
   white-space: normal;
   /*
-   * Two-line clamp on Web (the standard properties survive the web encode);
-   * on the native Lynx template encoder `-webkit-box-orient` /
-   * `-webkit-line-clamp` are STRIPPED with a build warning, so the clamp is
-   * backed by a hard two-line `max-height`. The clamp is governed by the
-   * line-height (16px = --font-callout), NOT the font-size, so dropping the
-   * text to --font-footnote(13) did not change the box: 2 × 16 = 32px still
-   * holds two lines.
+   * Two lines with an ellipsis, driven by the element's `text-maxline='2'`
+   * attribute on BOTH platforms — not by CSS. Native Lynx supports the
+   * attribute directly; on Web `x-text[text-maxline]` is what web-elements
+   * keys its own clamp off (`x-text.css` puts `display: -webkit-box` +
+   * `-webkit-box-orient: vertical` on `::part(inner-box)` and
+   * `XTextTruncation` writes `-webkit-line-clamp` there). Declaring that trio
+   * out here instead was strictly worse: the native template encoder strips it
+   * with a build warning, and on Web it lands on the host element, where
+   * `display: -webkit-box` overrides `x-text { display: flex }` for nothing.
+   *
+   * The `max-height` stays as the belt-and-braces height cap. It is governed
+   * by the line-height (16px = --font-callout), NOT the font-size, so dropping
+   * the text to --font-footnote(13) did not change the box: 2 × 16 = 32px
+   * still holds two lines.
    */
   max-height: 32px;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 .playlist-detail__count {

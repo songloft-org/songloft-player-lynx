@@ -164,7 +164,9 @@ export function SongInfoDialog({ show, song, onClose, onEdit }: SongInfoDialogPr
                       <Icon name='music' size={22} color={ICON_COLORS.contentMuted} />
                     </view>
                   )}
-                <text className='song-info-dialog__name'>{data.title}</text>
+                <text className='song-info-dialog__name' text-maxline='2'>
+                  {data.title}
+                </text>
               </view>
 
               {/*

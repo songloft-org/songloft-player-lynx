@@ -369,6 +369,8 @@ export function PlaylistDetailPage() {
                * target and competes with the song list for gestures). */
               <text
                 className='playlist-detail__desc'
+                /* The two-line clamp itself — see the CSS rule. */
+                text-maxline='2'
                 bindtap={() => setShowDesc(true)}
                 data-testid='playlist-detail-desc'
               >

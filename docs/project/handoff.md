@@ -99,6 +99,12 @@
 
 已验证：`./gradlew --no-daemon compileDebugKotlin`、定向 Vitest 2/2、`pnpm exec tsc -b --force`。尚未验证：新 APK 真机后台连续播放。验收日志应包含 `mediaButtonKey=86`、`suppressed stale MEDIA_STOP during auto-advance`，且该事件后不能有 `playback state changed state=IDLE`。
 
+### 共享 JSX 扫描器吞标签（2026-09-06 发现，未修）
+
+`shared/testing/jsx-classes.ts` 的 `openingTags` 跟踪引号状态，但不认 JSX 注释：标签属性之间的 `/* … */` 里只要有一个单引号（`SongInfoDialog.tsx` 的 `the stylesheet's calc/vh`），引号状态就翻转，后面整片标签被吞进同一个「开标签」。于是**从用法反推的清单会静默漏掉那些标签**，闸门全绿。
+
+`src/__tests__/text-clamp.test.ts` 自己先剥注释再扫，绕开了它。但 `a11y-tap-target.test.ts`（44px 反推清单）与 `shared/ui/__tests__/glass-surface.test.ts`（玻璃面板 BFS）也吃这个扫描器，**同一通道对它们仍然开着**——`SongInfoDialog` 那颗子树里的类现在都归到那个被吞的 `<view>` 名下。修法是让 `openingTags` 先剥 `/* … */`（或识别注释状态），并给它补一条以「带撇号注释的标签」为形状的测试；改动会影响两个既有闸门的清单规模，需要单独一轮反向验证，所以没有夹在本批里。
+
 ### Issue #2：后台播放通知栏偶现消失（2026-09-06）
 
 Issue 附件 `songloft-logs-20260903-083706.zip` 的关键顺序：

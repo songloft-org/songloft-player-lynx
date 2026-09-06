@@ -96,6 +96,18 @@ worker 侧最终走 `listener.apply(ctx, params)`，普通对象没有 `length` 
 
 批41 三条 P0 同属这一类：① `lynx.config.ts` 的 `environments` 是**替换**隐式默认环境而非扩展，`build` 静默停产出原生 bundle 而 copy 脚本照拷陈旧文件（`assert-bundle-fresh.mjs` 按产物**年龄**拦截，`existsSync` 抓不到「文件在但是旧的」）；② pbxproj 数组内多一行赋值语句，契约闸门的 `.toContain` 子串断言恰好被畸形行骗过；③ `build:web` 产物黑屏两层根因（宿主页请求错文件名 + 入口必须 module 加载）。**闸门只证明它真正读过的东西**——vitest 读不到 Xcode 工程、Gradle 与真机行为；`web:dev` 能跑也证明不了 `build:web` 能跑（两者取的静态资源目录不同）。
 
+### 「刻意的跨平台双写」有时只是没读宿主实现：多行截断该在 `text-maxline` 上
+
+四个界面（`.playlist-detail__desc` / `.plugin-manager__desc` / `.song-info-dialog__name` / `.lyric-adjust__line-text`）长期在业务 CSS 里写 `display: -webkit-box` + `-webkit-box-orient: vertical` + `-webkit-line-clamp: 2`，每个文件都带注释说明「原生模板编码器会剥掉它、`max-height` 才是那边真正的 clamp」，于是它被当成**有意的跨平台双写**接受下来，代价是每次 `pnpm run build` 固定 4 组 `⚠ Unsupported property … was removed during template encode`——而本仓的规矩是这类警告要当错误看。
+
+**它从一开始就不必要**：web-elements 把整套机制放在属性后面（`x-text.css` 里 `x-text[text-maxline] { overflow: hidden }` 与 `x-text[text-maxline]::part(inner-box) { display: -webkit-box; -webkit-box-orient: vertical }`，`XTextTruncation._handleAttributeChange` 再往同一个 inner box 上写 `-webkit-line-clamp`），原生 Lynx 则直接支持 `text-maxline`。所以那套三件套在一端被剥离、在另一端是重复——**而且比重复更糟**：它落在 host 元素上，把 `x-text { display: flex }` 覆盖成了 `-webkit-box`。
+
+- **无头 Chrome 实测（对照组是判据的一半）**：带 `text-maxline='2'` 时 inner box 算出 `display: -webkit-box` / `-webkit-box-orient: vertical` / `-webkit-line-clamp: 2`，host 保持 `display: flex`，`scrollHeight === clientHeight === 32` ⇒ 真截断；去掉属性只留 `max-height` 的对照组 inner box 是 `display: block`、`scrollHeight 192` vs `clientHeight 32` ⇒ 硬裁十行、无省略号。**只量带属性那一组是量不出结论的**，两组一起才说明属性是承重件。
+- **`x-text-clipped` 不出现是正常的**：没有自定义 `inline-truncation` 且 `tail-color-convert` 不为 false 时，web-elements 走纯 CSS clamp、跳过那趟昂贵的 JS 行布局分析，因此不设该属性。拿它当判据会得出「没生效」的错结论。
+- **`max-height` 留着**：属性负责截断，它只是高度封顶，值由 line-height（16px）而非 font-size 决定。
+- **闸门**：`src/__tests__/text-clamp.test.ts` 4 条——任何业务样式表出现这三件套即红（带遍历非空断言）、每个 clamp 的 `<text>` 必须有正整数 `text-maxline` 且其 CSS 规则 `overflow: hidden`（从属性用法反推）、四个面另有一条下限清单（面若整片丢掉属性，反推清单会连同它一起消失，只靠反推是绿的）。6 个变异全部反向验证会红。
+- **顺带发现共享扫描器的一个缺陷**：`shared/testing/jsx-classes.ts` 的 `openingTags` 跟踪引号状态，标签内的 JSX 注释若含一个单引号（`SongInfoDialog.tsx` 里的 `the stylesheet's calc/vh`）就会翻转它，把后面整片标签吞成一个——`<text text-maxline='2'>` 因此根本不出现在反推清单里，闸门全绿且失明。本闸门先剥注释再扫；**a11y 44px 与玻璃面板两个闸门也吃这个扫描器，同一通道对它们仍然开着**（未修，见 handoff）。
+
 ### 闸门要验语义，不验子串；mock 要保留真实前置条件
 
 - pbxproj 闸门被「恰好包含该子串」的畸形行骗过；iOS 注册断言曾被「整行注释掉的 `config.register(...)`」骗过——反向验证是唯一发现手段。

@@ -191,13 +191,10 @@
   font-size: var(--font-body);
   color: var(--label);
   overflow: hidden;
-  /* `text-maxline` truncates; the height cap is the native-encoder fallback
-     (the `-webkit-line-clamp` family is stripped there — see
-     PlaylistDetailPage.css for the full story). */
+  /* `text-maxline='2'` does the truncating on both platforms; this is just the
+     height cap. See `.playlist-detail__desc` for why the `-webkit-line-clamp`
+     trio does not belong in business CSS. */
   max-height: 32px;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 .lyric-adjust__line-delta {

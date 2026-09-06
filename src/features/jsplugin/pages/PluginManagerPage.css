@@ -112,10 +112,10 @@
   color: var(--secondary-label);
 }
 
-/* Two-line clamp on Web (the standard properties survive the web encode); the
-   native template encoder strips `-webkit-box-orient` / `-webkit-line-clamp`, so
-   the hard `max-height` (2 × --font-md = 32px) backs it there. Same pattern as
-   `.playlist-detail__desc`. */
+/* Two lines with an ellipsis via the element's `text-maxline='2'` attribute on
+   both platforms; the `max-height` (2 × 16px line-height) is the height cap.
+   Same pattern as `.playlist-detail__desc` — see that rule for why the
+   `-webkit-line-clamp` trio does not belong in business CSS. */
 .plugin-manager__desc {
   margin-top: var(--space-1);
   color: var(--secondary-label);
@@ -123,9 +123,6 @@
   line-height: var(--font-callout);
   overflow: hidden;
   max-height: 32px;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 .plugin-manager__item-actions {

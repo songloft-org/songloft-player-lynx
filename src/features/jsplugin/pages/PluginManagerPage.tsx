@@ -435,7 +435,11 @@ function PluginRow({
               : null}
           </view>
           {plugin.description
-            ? <text className='plugin-manager__desc'>{plugin.description}</text>
+            ? (
+              <text className='plugin-manager__desc' text-maxline='2'>
+                {plugin.description}
+              </text>
+            )
             : null}
         </view>
         <view className='plugin-manager__item-actions'>

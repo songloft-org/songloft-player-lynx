@@ -32,9 +32,10 @@ function block(css: string, selector: string): string {
  * row past the panel edge (a `flex: 1` title keeps its automatic minimum size
  * while overflow is visible), `overflow: hidden` alone would cut mid-glyph,
  * and `text-overflow: ellipsis` without a clipped box does nothing. The
- * standard trio survives both the native template encode and the web encode —
- * only the `-webkit-line-clamp` family is stripped (see
- * `PlaylistDetailPage.css`'s desc rule for that caveat).
+ * standard trio survives both the native template encode and the web encode.
+ * (The `-webkit-line-clamp` family, which is stripped natively, is no longer
+ * written in business CSS at all — multi-line clamping rides on the
+ * `text-maxline` attribute now; see `src/__tests__/text-clamp.test.ts`.)
  */
 test('the panel title is one line, ellipsized on overflow', () => {
   const title = block(rules(), '.play-history__title')
