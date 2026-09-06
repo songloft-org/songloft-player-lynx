@@ -48,7 +48,7 @@ export function MetadataSection({
   const kind = metadataViewKind(progress)
 
   return (
-    <SettingsSection title={t('libops.metaSection')} icon='info'>
+    <SettingsSection title={t('libops.metaSection')}>
       <SwitchRow
         icon='library'
         title={t('libops.metaUseTagTitle')}

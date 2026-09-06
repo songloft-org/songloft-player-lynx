@@ -67,7 +67,7 @@ export function ScanSettingsSection({ onWriteError }: ScanSettingsSectionProps) 
     readFailed ? t('libops.readConfigFailed') : normal
 
   return (
-    <SettingsSection title={t('libops.switchesSection')} icon='settings'>
+    <SettingsSection title={t('libops.switchesSection')}>
       <SwitchRow
         icon='plus'
         title={t('libops.autoCreatePlaylists')}

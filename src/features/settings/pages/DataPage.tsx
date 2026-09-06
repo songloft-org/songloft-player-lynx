@@ -50,10 +50,9 @@ export function DataPage() {
     <SubPageShell title={t('settings.categoryData')} backTestId='data-back' grouped>
       {canTransfer
         ? (
-          <SettingsSection title={t('data.sectionTitle')} icon='folder'>
+          <SettingsSection title={t('data.sectionTitle')}>
             <SettingsRow
               icon='link'
-              tint='blue'
               title={t('data.export')}
               subtitle={t('data.exportSubtitle')}
               trailingIcon='chevron-right'
@@ -62,7 +61,6 @@ export function DataPage() {
             />
             <SettingsRow
               icon='folder-open'
-              tint='green'
               title={t('data.import')}
               subtitle={importStatus ?? t('data.importSubtitle')}
               trailingIcon='chevron-right'
@@ -75,10 +73,9 @@ export function DataPage() {
           // Rendering nothing here would leave a page with a title bar and a blank
           // body, which reads as a failed load. Say why it is empty instead. The
           // settings list also hides its entry row; this covers the deep link.
-          <SettingsSection icon='folder'>
+          <SettingsSection>
             <SettingsRow
               icon='folder'
-              tint='gray'
               title={t('settings.dataUnavailable')}
               disabled
               testId='settings-data-unavailable'

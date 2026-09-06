@@ -240,18 +240,15 @@ export function CacheManagePage() {
       {/* ─── Section 1: Cache Stats (read-only) ─────────────────────── */}
       <SettingsSection
         title={t('cacheManage.overviewSection')}
-        icon='info'
       >
         <SettingsRow
           icon='music'
-          tint='blue'
           title={t('cacheManage.fileCount')}
           trailingText={stats ? String(stats.fileCount) : '-'}
           testId='cache-file-count'
         />
         <SettingsRow
           icon='menu'
-          tint='gray'
           title={t('cacheManage.totalSize')}
           trailingText={stats ? formatBytes(stats.totalSize) : '-'}
           testId='cache-total-size'
@@ -279,7 +276,6 @@ export function CacheManagePage() {
           : null}
         <SettingsRow
           icon='settings'
-          tint='gray'
           title={t('cacheManage.maxSizeLimit')}
           trailingText={
             stats
@@ -315,11 +311,9 @@ export function CacheManagePage() {
         ? (
           <SettingsSection
             title={t('cacheManage.deviceSection')}
-            icon='download'
           >
             <SettingsRow
               icon='music'
-              tint='blue'
               title={t('cacheManage.deviceSize')}
               trailingText={deviceCacheSize != null ? formatBytes(deviceCacheSize) : '-'}
               testId='device-cache-size'
@@ -358,7 +352,6 @@ export function CacheManagePage() {
       {/* ─── Section 2: Cache Config (editable) ─────────────────────── */}
       <SettingsSection
         title={t('cacheManage.configSection')}
-        icon='settings'
       >
         {/* Cache directory */}
         <view className='cache-manage__field'>
@@ -470,7 +463,6 @@ export function CacheManagePage() {
         ? (
           <SettingsSection
             title={t('cacheManage.validationSection')}
-            icon='info'
           >
             <view className='cache-manage__validate-result' data-testid='validate-result'>
               {validateResult.valid

@@ -93,7 +93,7 @@ export function ExcludeDirSection({ onWriteError }: ExcludeDirSectionProps) {
   const suggestions = filterDirNameSuggestions(dirNames.data?.value ?? [], nameInput, excludeDirs)
 
   return (
-    <SettingsSection title={t('libops.excludeSection')} icon='folder'>
+    <SettingsSection title={t('libops.excludeSection')}>
       <view className='libops-exclude__tabs' data-testid='exclude-tabs'>
         {EXCLUDE_TABS.map((tab) => (
           <view

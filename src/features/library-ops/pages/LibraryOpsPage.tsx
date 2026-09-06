@@ -266,10 +266,9 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
         through the same section/row widgets as the rest of the page is what
         makes them line up.
       */}
-      <SettingsSection title={t('libops.maintenanceSection')} icon='settings'>
+      <SettingsSection title={t('libops.maintenanceSection')}>
         <SettingsRow
           icon='fingerprint'
-          tint='indigo'
           title={t('libops.duplicateDetection')}
           trailingIcon='chevron-right'
           onTap={() => {

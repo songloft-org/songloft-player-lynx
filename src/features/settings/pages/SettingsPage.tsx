@@ -190,7 +190,6 @@ export function SettingsPage() {
             <SettingsSection>
               <SettingsRow
                 icon='palette'
-                tint='indigo'
                 title={t('settings.categoryAppearance')}
                 subtitle={t('settings.categoryAppearanceSubtitle')}
                 trailingIcon='chevron-right'
@@ -200,7 +199,6 @@ export function SettingsPage() {
               />
               <SettingsRow
                 icon='music'
-                tint='pink'
                 title={t('settings.categoryPlayback')}
                 subtitle={t('settings.categoryPlaybackSubtitle')}
                 trailingIcon='chevron-right'
@@ -214,7 +212,6 @@ export function SettingsPage() {
             <SettingsSection>
               <SettingsRow
                 icon='search'
-                tint='blue'
                 title={t('libops.pageTitle')}
                 subtitle={t('libops.entrySubtitle')}
                 trailingIcon='chevron-right'
@@ -226,7 +223,6 @@ export function SettingsPage() {
               />
               <SettingsRow
                 icon='menu'
-                tint='purple'
                 title={t('settings.plugins')}
                 subtitle={t('jsplugin.managerSubtitle')}
                 trailingIcon='chevron-right'
@@ -236,7 +232,6 @@ export function SettingsPage() {
               />
               <SettingsRow
                 icon='menu'
-                tint='teal'
                 title={t('jsplugin.tabConfigTitle')}
                 subtitle={t('jsplugin.tabConfigSubtitle')}
                 trailingIcon='chevron-right'
@@ -250,7 +245,6 @@ export function SettingsPage() {
             <SettingsSection>
               <SettingsRow
                 icon='settings'
-                tint='green'
                 title={t('settings.storageCache')}
                 subtitle={t('settings.cacheManageSubtitle')}
                 trailingIcon='chevron-right'
@@ -262,7 +256,6 @@ export function SettingsPage() {
                 ? (
                   <SettingsRow
                     icon='link'
-                    tint='blue'
                     title={t('servers.title')}
                     subtitle={serverText}
                     trailingIcon='chevron-right'
@@ -274,7 +267,6 @@ export function SettingsPage() {
                 : null}
               <SettingsRow
                 icon='link'
-                tint='indigo'
                 title={t('settings.networkProxy')}
                 subtitle={t('settings.proxySubtitle')}
                 trailingIcon='chevron-right'
@@ -286,7 +278,6 @@ export function SettingsPage() {
                 ? (
                   <SettingsRow
                     icon='folder'
-                    tint='blue'
                     title={t('settings.categoryData')}
                     subtitle={t('settings.categoryDataSubtitle')}
                     trailingIcon='chevron-right'
@@ -300,7 +291,6 @@ export function SettingsPage() {
                 ? (
                   <SettingsRow
                     icon='settings'
-                    tint='orange'
                     title={t('settings.backgroundKeepAlive')}
                     subtitle={t('settings.backgroundKeepAliveSubtitle')}
                     trailingIcon='open-external'
@@ -318,7 +308,6 @@ export function SettingsPage() {
             <SettingsSection>
               <SettingsRow
                 icon='settings'
-                tint='orange'
                 title={t('settings.diagnostics')}
                 subtitle={t('settings.diagnosticsSubtitle')}
                 trailingIcon='chevron-right'
@@ -328,7 +317,6 @@ export function SettingsPage() {
               />
               <SettingsRow
                 icon='info'
-                tint='gray'
                 title={t('settings.aboutUpdates')}
                 subtitle={t('settings.aboutSubtitle')}
                 trailingIcon='chevron-right'

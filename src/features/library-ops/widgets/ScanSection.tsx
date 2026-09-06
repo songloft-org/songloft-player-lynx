@@ -52,7 +52,7 @@ export function ScanSection(props: ScanSectionProps) {
   const view = deriveScanView(props.progress, props.startError, props.dismissed)
 
   return (
-    <SettingsSection title={t('libops.scanSection')} icon='search'>
+    <SettingsSection title={t('libops.scanSection')}>
       {view.kind === 'idle'
         ? <IdleState {...props} />
         : view.kind === 'running'

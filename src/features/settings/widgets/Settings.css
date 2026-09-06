@@ -32,18 +32,8 @@
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  margin-bottom: var(--space-2);
-  /* Aligned with the row text (the card's own inset), not with the card edge —
-     Apple's grouped headers sit above the text column, not above the card. */
+  margin-bottom: var(--space-3);
   padding: 0 var(--space-4);
-}
-
-.settings-section__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: var(--space-2);
-  margin-top: 1px;
 }
 
 .settings-section__header-text {
@@ -52,20 +42,10 @@
   flex: 1;
 }
 
-/*
- * Footnote, regular weight, secondary label — Apple's grouped section header.
- *
- * Deliberately NOT uppercase. Apple's classic grouped header is, but
- * `text-transform` does not exist in Lynx (batch 19b had to delete the one
- * declaration that used it, see progress.md), and pre-uppercasing the i18n
- * string is meaningless for Chinese. Sentence case at 13pt is also what modern
- * iOS uses in many places, so this is a constraint that happens to land on a
- * defensible answer rather than a compromise.
- */
 .settings-section__title {
-  color: var(--secondary-label);
-  font-size: var(--font-footnote);
-  font-weight: var(--weight-regular);
+  color: var(--label);
+  font-size: var(--font-headline);
+  font-weight: var(--weight-bold);
 }
 
 .settings-section__subtitle {
@@ -118,43 +98,10 @@
   align-items: center;
   justify-content: center;
   align-self: center;
-  width: 29px;
-  height: 29px;
-  border-radius: var(--radius-xs);
+  width: 24px;
+  height: 24px;
   margin-right: var(--space-3);
 }
-
-/*
- * Apple's tinted row-icon tile: a saturated system-colour square with a white
- * glyph. The colour is per-row (by function), picked from the 12-tint palette
- * in tokens.css; the GLYPH is always white because the tile is decorative — the
- * row's title label carries the meaning, so the tile/glyph pair is exempt from
- * WCAG 1.4.11's graphic-object 3:1 floor (same exemption Apple's own Settings
- * relies on). That exemption is recorded next to the tint tokens in
- * tokens.css; contrast.test.ts therefore has no tile/glyph assertion.
- *
- * `--red` uses --system-red-strong, the fill-optimised red where white clears AA
- * (4.56), not the text-optimised --system-red — the same split the destructive
- * button controls use. A danger row's TITLE still reads in the text-optimised
- * --system-red via `.settings-row__title--danger`; only the tile uses the fill
- * variant.
- *
- * `--blue` resolves to --accent so a theme pack's seed colour tints the
- * "network / search / info" rows along with everything else, the way a pack is
- * meant to shift the app's voice rather than leave half the icons on stock
- * systemBlue. The other tints are fixed platform colours (not pack-driven),
- * matching how --system-green already behaves.
- */
-.settings-row__icon--blue { background-color: var(--accent); }
-.settings-row__icon--green { background-color: var(--system-green); }
-.settings-row__icon--orange { background-color: var(--system-orange); }
-.settings-row__icon--yellow { background-color: var(--system-yellow); }
-.settings-row__icon--pink { background-color: var(--system-pink); }
-.settings-row__icon--purple { background-color: var(--system-purple); }
-.settings-row__icon--indigo { background-color: var(--system-indigo); }
-.settings-row__icon--teal { background-color: var(--system-teal); }
-.settings-row__icon--gray { background-color: var(--system-gray); }
-.settings-row__icon--red { background-color: var(--system-red-strong); }
 
 .settings-row__content {
   display: flex;

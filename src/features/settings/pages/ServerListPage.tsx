@@ -71,12 +71,11 @@ export function ServerListPage() {
           <text className='server-list__empty-hint'>{t('servers.noServersHint')}</text>
         </view>
       ) : (
-        <SettingsSection title={t('servers.title')} icon='link'>
+        <SettingsSection title={t('servers.title')}>
           {profiles.map((profile) => (
             <view key={profile.id} className='server-list__row-wrap'>
               <SettingsRow
                 icon='link'
-                tint='blue'
                 title={profile.name}
                 subtitle={profile.url}
                 selected={profile.id === activeProfileId}

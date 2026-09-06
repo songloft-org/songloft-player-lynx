@@ -35,6 +35,7 @@ import {
   enableFloatingLyricOverlay,
   syncFloatingLyricOverlay,
 } from '../domain/floating-lyric-overlay.js'
+import { SegmentedControl } from '../widgets/SegmentedControl.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import { SubPageShell } from '../widgets/SubPageShell.js'
@@ -129,23 +130,21 @@ export function PlaybackPage() {
   return (
     <SubPageShell title={t('settings.categoryPlayback')} backTestId='playback-back' grouped>
       {/* ── Playback ────────────────────────────────────────────────────── */}
-      <SettingsSection title={t('settings.audioQuality')} icon='music'>
-        {AUDIO_QUALITY_OPTIONS.map((option) => (
-          <SettingsRow
-            key={option}
-            title={t(`settings.quality_${option}`)}
-            selected={option === audioQuality}
-            trailingIcon={option === audioQuality ? 'check' : undefined}
-            onTap={() => selectAudioQuality(option)}
-            testId={`audio-quality-${option}`}
+      <SettingsSection title={t('settings.audioQuality')}>
+        <view className='settings-section__padded'>
+          <SegmentedControl
+            options={AUDIO_QUALITY_OPTIONS}
+            selected={audioQuality}
+            onSelect={selectAudioQuality}
+            labelFor={(option) => t(`settings.quality_${option}`)}
+            testId='audio-quality'
           />
-        ))}
+        </view>
       </SettingsSection>
 
       <SettingsSection>
         <SwitchRow
           icon='music'
-          tint='pink'
           title={t('settings.autoResume')}
           subtitle={t('settings.autoResumeSubtitle')}
           checked={autoResume}
@@ -154,7 +153,6 @@ export function PlaybackPage() {
         />
         <SwitchRow
           icon='volume'
-          tint='teal'
           title={t('settings.normalize')}
           subtitle={t('settings.normalizeSubtitle')}
           checked={normalize}
@@ -172,10 +170,9 @@ export function PlaybackPage() {
       </SettingsSection>
 
       {/* ── Lyrics ─────────────────────────────────────────────────────── */}
-      <SettingsSection title={t('settings.lyricsSection')} icon='music'>
+      <SettingsSection title={t('settings.lyricsSection')}>
         <SwitchRow
           icon='music'
-          tint='pink'
           title={t('settings.autoEnterLyrics')}
           subtitle={t('settings.autoEnterLyricsSubtitle')}
           checked={autoEnterLyrics}
@@ -184,7 +181,6 @@ export function PlaybackPage() {
         />
         <SwitchRow
           icon='music'
-          tint='indigo'
           title={t('settings.notificationLyricInTitle')}
           subtitle={t('settings.notificationLyricInTitleSubtitle')}
           checked={notificationLyricInTitle}
@@ -195,7 +191,6 @@ export function PlaybackPage() {
           ? (
             <SwitchRow
               icon='music'
-              tint='pink'
               title={t('settings.floatingLyrics')}
               subtitle={t('settings.floatingLyricsSubtitle')}
               checked={floatingLyricEnabled}
@@ -223,7 +218,7 @@ export function PlaybackPage() {
       {getPlatformCapabilities().floatingLyric && floatingLyricEnabled
         ? (
           <>
-            <SettingsSection title={t('settings.floatingLyricFontSize')} icon='music'>
+            <SettingsSection title={t('settings.floatingLyricFontSize')}>
               {FLOATING_LYRIC_FONT_SIZE_OPTIONS.map((option) => (
                 <SettingsRow
                   key={option}
@@ -238,7 +233,6 @@ export function PlaybackPage() {
             <SettingsSection>
               <SwitchRow
                 icon='music'
-                tint='indigo'
                 title={t('settings.floatingLyricTwoLine')}
                 subtitle={t('settings.floatingLyricTwoLineSubtitle')}
                 checked={floatingLyricTwoLine}
@@ -249,14 +243,13 @@ export function PlaybackPage() {
             <SettingsSection>
               <SwitchRow
                 icon='music'
-                tint='orange'
                 title={t('settings.floatingLyricLock')}
                 checked={floatingLyricLocked}
                 onChange={(next) => { setFloatingLyricLocked(next); void writeFloatingLyricLocked(next); void getFloatingLyricModule().setLocked(next).catch(() => {}) }}
                 testId='settings-floating-lyric-lock'
               />
             </SettingsSection>
-            <SettingsSection title={t('settings.floatingLyricOpacity')} icon='music'>
+            <SettingsSection title={t('settings.floatingLyricOpacity')}>
               {FLOATING_LYRIC_OPACITY_OPTIONS.map((option) => (
                 <SettingsRow
                   key={option}

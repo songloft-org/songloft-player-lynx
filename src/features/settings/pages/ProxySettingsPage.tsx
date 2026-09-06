@@ -97,7 +97,7 @@ export function ProxySettingsPage() {
         )
         : (
           <view className='proxy-settings__content'>
-            <SettingsSection title={t('proxy.httpSection')} icon='link'>
+            <SettingsSection title={t('proxy.httpSection')}>
               <view className='proxy-settings__field'>
                 <Input
                   className='proxy-settings__input'
@@ -108,7 +108,7 @@ export function ProxySettingsPage() {
               </view>
             </SettingsSection>
 
-            <SettingsSection title={t('proxy.githubSection')} icon='link'>
+            <SettingsSection title={t('proxy.githubSection')}>
               <view className='proxy-settings__field'>
                 <Input
                   className='proxy-settings__input'
@@ -138,7 +138,7 @@ export function ProxySettingsPage() {
               </view>
             </SettingsSection>
 
-            <SettingsSection title={t('proxy.hlsSection')} icon='link'>
+            <SettingsSection title={t('proxy.hlsSection')}>
               <view className='proxy-settings__switch-row'>
                 <text className='proxy-settings__switch-label'>{t('proxy.hlsEnable')}</text>
                 <AppSwitch
@@ -148,7 +148,7 @@ export function ProxySettingsPage() {
               </view>
             </SettingsSection>
 
-            <SettingsSection title={t('proxy.allowlistSection')} icon='link'>
+            <SettingsSection title={t('proxy.allowlistSection')}>
               <view className='proxy-settings__field'>
                 {/*
                   A `TextArea`, not an `Input`: `save` splits this value on `\n`

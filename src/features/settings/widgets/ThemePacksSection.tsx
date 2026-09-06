@@ -99,7 +99,7 @@ export function ThemePacksSection({ onOpenCatalog }: { onOpenCatalog?: () => voi
   }
 
   return (
-    <SettingsSection title={t('themePacks.title')} icon='palette'>
+    <SettingsSection title={t('themePacks.title')}>
       {loading
         ? <text className='theme-packs__empty'>{t('common.loading')}</text>
         : installed.length === 0

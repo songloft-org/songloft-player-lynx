@@ -194,7 +194,7 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
 
   return (
     <SubPageShell title={t('settings.categoryAppearance')} backTestId='appearance-back' grouped>
-      <SettingsSection title={t('settings.themeSection')} icon='palette'>
+      <SettingsSection title={t('settings.themeSection')}>
         <view className='settings-section__padded'>
           <ThemeAppearancePicker
             options={APP_THEME_OPTIONS}
@@ -206,7 +206,7 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
         </view>
       </SettingsSection>
 
-      <SettingsSection title={t('settings.materialSection')} icon='grid'>
+      <SettingsSection title={t('settings.materialSection')}>
         <view className='settings-section__padded'>
           <SegmentedControl
             options={MATERIAL_VARIANT_OPTIONS}
@@ -219,7 +219,7 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
         </view>
       </SettingsSection>
 
-      <SettingsSection title={t('settings.fontScaleSection')} icon='settings'>
+      <SettingsSection title={t('settings.fontScaleSection')}>
         <view className='settings-section__padded'>
           <FontScaleSlider
             options={FONT_SCALE_OPTIONS}
@@ -233,7 +233,7 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
 
       <ThemePacksSection onOpenCatalog={openCatalog} />
 
-      <SettingsSection title={t('settings.languageSection')} icon='settings'>
+      <SettingsSection title={t('settings.languageSection')}>
         {APP_LANGUAGE_OPTIONS.map((option) => (
           <SettingsRow
             key={option}
