@@ -53,6 +53,14 @@ export interface PlatformCapabilities {
    */
   fileExport: boolean
   /**
+   * Host can build the log archive itself (`shareLogArchive`), instead of
+   * having JS deflate + base64 up to 30 MB on a JIT-less engine and push it
+   * across the bridge. Keyed off the method: the JS path still exists for Web
+   * (a real JIT engine, and a download rather than a share sheet) and for a
+   * hot-updated bundle sitting on a shell that predates the method.
+   */
+  fastLogExport: boolean
+  /**
    * Can cache a song on the device for offline replay.
    *
    * Needs the `SongloftSongCache` module's **`getCacheInfo`** — a method added with
@@ -119,7 +127,16 @@ export function getPlatformCapabilities(): PlatformCapabilities {
     // Method-level check, not module-level: `shareFile` postdates the module
     // itself, so an older shell may register `SongloftPlatform` without it. Not
     // gated on `isWeb` — Web implements `shareFile` as a browser download.
-    fileExport: hasNativeMethod('SongloftPlatform', 'shareFile'),
+    // Either method can hand a file to the user, so either one is enough. `||`
+    // rather than `shareFile` alone: a host that implements only the newer
+    // `shareLogArchive` would otherwise report `false` here and get pushed to
+    // the degraded "open the backend log URL" path — which carries no client
+    // logs — despite having the better implementation of exactly this feature.
+    fileExport: hasNativeMethod('SongloftPlatform', 'shareFile')
+      || hasNativeMethod('SongloftPlatform', 'shareLogArchive'),
+    // Additive on top: `fileExport` decides whether the export row is offered at
+    // all, this only decides who does the zipping.
+    fastLogExport: hasNativeMethod('SongloftPlatform', 'shareLogArchive'),
     // Method-level for the reason in the interface note: `getCacheInfo` stands in
     // for the whole reworked cache contract.
     songCache: hasNativeMethod('SongloftSongCache', 'getCacheInfo'),

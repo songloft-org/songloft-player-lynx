@@ -589,9 +589,164 @@ describe('SongloftPlatform module methods exist on both hosts', () => {
   // and ATS relaxes *cleartext HTTP* — it has no bearing on certificate
   // validation, so self-signed servers were simply unreachable on iOS. Now that
   // both hosts implement it, it belongs in the main loop like everything else.
+  // HarmonyOS was missing from this loop entirely, which is how `logWrite` /
+  // `logRead` / `shareFile` shipped there as stubs (see `ClientFileLog.ets`'s
+  // header): the module existed, the JS sink probe saw functions, and every log
+  // line was silently dropped. It is a first-class host for this module, so it
+  // is asserted like the other two.
   test.each(methods)('SongloftPlatform.%s', (method) => {
     expectLynxMethod(hosts.platform.android, method)
     expectSwiftMethod(hosts.platform.ios, method)
+    expectArkTsMethod(hosts.platform.harmony, method)
+  })
+})
+
+/**
+ * The log-export fast path (`shareLogArchive`, songloft-player-lynx#3).
+ *
+ * Its entire reason to exist is *where the work happens*, and nothing about that
+ * is visible to a typechecker or a unit test: a host that quietly went back to
+ * accepting a base64 payload, or read the client log into a string, or zipped on
+ * the UI thread, would still satisfy every other gate in this file — and would
+ * put the multi-second pause back in front of the share sheet, on a device, with
+ * no failing test anywhere.
+ *
+ * So each assertion below names a specific way the win can be lost.
+ */
+describe('shareLogArchive keeps the bytes out of JS', () => {
+  const androidLog = read(`${ANDROID_PLATFORM}/ClientFileLog.kt`)
+  const harmonyLog = read(`${HARMONY_MODULES}/platform/ClientFileLog.ets`)
+
+  test('no host base64-encodes anything for the archive', () => {
+    // Exactly one decode site each: the legacy `shareFile`, which Web and older
+    // shells still use. A second one means the fast path grew a base64 payload —
+    // i.e. the ~40 MB bridge string this replaced.
+    expect(
+      hosts.platform.android.split('Base64.decode').length - 1,
+      'Base64.decode belongs only in shareFile',
+    ).toBe(1)
+    expect(
+      hosts.platform.ios.split('Data(base64Encoded:').length - 1,
+      'base64 decoding belongs only in shareFile',
+    ).toBe(1)
+    expect(
+      hosts.platform.harmony.split('decodeSync(').length - 1,
+      'base64 decoding belongs only in shareFile',
+    ).toBe(1)
+  })
+
+  test('each host zips natively instead of accepting a JS-built archive', () => {
+    expect(hosts.platform.android, 'Android must build the zip itself').toContain(
+      'ZipOutputStream(',
+    )
+    expect(hosts.platform.android).toContain('putNextEntry(')
+    // Apple has no zip-entry API; `.forUploading` is the coordinated-read that
+    // produces one, and it avoids a hand-rolled archive format.
+    expect(hosts.platform.ios, 'iOS must zip via NSFileCoordinator').toContain('.forUploading')
+    expect(hosts.platform.harmony, 'HarmonyOS must zip via zlib').toContain('zlib.compressFile(')
+  })
+
+  test('the client log is copied on the log thread, never read into a string', () => {
+    // `logRead` hands the whole (≤20 MB) file to JS as one bridge string. The
+    // archive path must use the file copy instead — and it must be the log
+    // thread's copy, so lines queued while reproducing the bug are already on
+    // disk.
+    expect(androidLog, 'Android ClientFileLog needs copyTo').toMatch(/fun copyTo\(/)
+    expect(androidLog, 'copyTo must run on the log executor').toMatch(
+      /fun copyTo\([\s\S]{0,400}?executor\.execute/,
+    )
+    expect(hosts.platform.ios, 'iOS ClientFileLog needs copyTo').toMatch(/static func copyTo\(/)
+    expect(hosts.platform.ios, 'copyTo must run on the log queue').toMatch(
+      /static func copyTo\([\s\S]{0,200}?queue\.async/,
+    )
+    expect(harmonyLog, 'HarmonyOS ClientFileLog needs copyTo').toMatch(/static copyTo\(/)
+
+    for (const [platform, source] of [
+      ['Android', hosts.platform.android],
+      ['iOS', hosts.platform.ios],
+      ['HarmonyOS', hosts.platform.harmony],
+    ] as const) {
+      expect(source, `${platform} must call ClientFileLog.copyTo`).toContain(
+        'ClientFileLog.copyTo',
+      )
+    }
+  })
+
+  test('the backend log is streamed to disk, not buffered as a string', () => {
+    // Kotlin's `bufferedReader().readText()` is fine for an error body but would
+    // hold the whole 10 MiB log; the success path must copy the stream.
+    expect(hosts.platform.android).toMatch(
+      /conn\.inputStream\.use \{ input[\s\S]{0,160}?copyTo\(output\)/,
+    )
+    // `downloadTask` streams to a temp file; `dataTask` would hand back a Data.
+    expect(hosts.platform.ios, 'iOS must use downloadTask for the backend log').toContain(
+      'downloadTask(with: request)',
+    )
+  })
+
+  test('the backend download honours the insecure-TLS switch on every host', () => {
+    // A self-signed LAN server is the common setup, and an export has to work
+    // exactly when things are broken.
+    expect(hosts.platform.android).toContain('InsecureTls.configure(conn)')
+    expect(hosts.platform.ios).toContain('InsecureTls.shared.session.downloadTask')
+    expect(hosts.platform.harmony).toContain('InsecureTls.isEnabled()')
+  })
+
+  test('staging is wiped before each run', () => {
+    // A leftover directory from an interrupted export would ship stale logs
+    // inside the new archive — silently, and to whoever the user sends it to.
+    expect(hosts.platform.android).toContain('staging.deleteRecursively()')
+    expect(hosts.platform.ios).toMatch(/try\? fm\.removeItem\(at: container\)/)
+    expect(hosts.platform.harmony).toContain('removeDir(container)')
+  })
+
+  test('the result payload keys match the TS parser verbatim', () => {
+    // Three hand-written JSON literals against one hand-written parser, matched
+    // by identity at runtime and by nothing at build time. A typo degrades the
+    // success toast to "backend logs unavailable" on a successful export.
+    const facade = read('src/native/native-platform.ts')
+    for (const key of ['hasBackend', 'hasFrontend']) {
+      expect(facade, `the TS facade does not read ${key}`).toContain(`parsed.${key} === true`)
+      expect(hosts.platform.android, `Android does not emit ${key}`).toContain(`\\"${key}\\"`)
+      expect(hosts.platform.ios, `iOS does not emit ${key}`).toContain(`\\"${key}\\"`)
+      expect(hosts.platform.harmony, `HarmonyOS does not emit ${key}`).toContain(`"${key}":`)
+    }
+  })
+
+  test('no host can report a blank error, which reads as success', () => {
+    // The facade rejects on `error != null`, but a blank message would still
+    // produce an empty-looking failure toast — and the hosts build this argument
+    // from a caught exception, whose message is allowed to be blank. Each one
+    // needs a fallback that a null-check alone does not give.
+    expect(hosts.platform.android, 'Kotlin needs a blank-safe reason()').toMatch(
+      /fun reason\(e: Throwable[\s\S]{0,200}?isNotBlank\(\)/,
+    )
+    expect(hosts.platform.harmony, 'ArkTS needs a blank-safe errorText()').toMatch(
+      /static errorText\(err: Error\)[\s\S]{0,200}?length > 0/,
+    )
+    // iOS only ever passes fixed literals or `localizedDescription`, which is
+    // documented non-empty — no helper needed, but the literals must be there.
+    expect(hosts.platform.ios).toContain('"zip_failed"')
+    expect(hosts.platform.ios).toContain('"staging_failed"')
+  })
+
+  test('iOS copies the coordinator zip instead of moving it', () => {
+    // The coordinator owns that temp file and cleans it up itself; moving it out
+    // from under it is a bet on an undocumented detail.
+    expect(hosts.platform.ios).toMatch(/copyItem\(at: zipped, to: dest\)/)
+    expect(hosts.platform.ios, 'do not move the coordinator temp file').not.toMatch(
+      /moveItem\(at: zipped/,
+    )
+  })
+
+  test('an empty archive fails with the same message on every path', () => {
+    // The toast is `settings.exportLogsFailed` with the raw message in it, so a
+    // host wording of its own would read as a different bug.
+    const sentinel = 'no logs to export'
+    expect(read('src/features/settings/data/log-export.ts')).toContain(sentinel)
+    expect(hosts.platform.android).toContain(sentinel)
+    expect(hosts.platform.ios).toContain(sentinel)
+    expect(hosts.platform.harmony).toContain(sentinel)
   })
 })
 

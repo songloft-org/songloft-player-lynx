@@ -35,8 +35,18 @@ final class SongloftPlatformModule: NSObject, LynxModule {
       "shareFile": NSStringFromSelector(
         #selector(SongloftPlatformModule.shareFile(_:fileName:mimeType:callback:))
       ),
+      "shareLogArchive": NSStringFromSelector(
+        #selector(SongloftPlatformModule.shareLogArchive(_:authHeader:fileName:callback:))
+      ),
     ]
   }
+
+  // Archive entry names and staging layout, shared with the Android/HarmonyOS
+  // hosts and the JS fallback path.
+  private static let logExportDir = "logexport"
+  private static let entryBackend = "backend.log"
+  private static let entryBackendError = "backend-error.txt"
+  private static let entryFrontend = "frontend.log"
 
   /**
    * Enable or disable trust-all certificate validation (self-signed servers).
@@ -134,9 +144,225 @@ final class SongloftPlatformModule: NSObject, LynxModule {
       callback(["write_failed", NSNull()] as NSArray)
       return
     }
+    Self.presentShareSheet(url) { error in
+      if let error {
+        callback([error, NSNull()] as NSArray)
+      } else {
+        callback([NSNull(), NSNull()] as NSArray)
+      }
+    }
+  }
+
+  /**
+   * Build the log archive here and hand it to the share sheet — the fast path
+   * behind `SongloftPlatform.shareLogArchive`.
+   *
+   * Why it exists next to `shareFile`: the JS layer used to fetch the backend log
+   * (≤10 MiB) and read this app's client log (≤20 MB) into JS strings, deflate
+   * both with a pure-JS zipper and base64 the result by hand — on the JS thread
+   * of an engine with no JIT — then push the payload back across the bridge.
+   * That pause in front of the share sheet is songloft-player-lynx#3. Here JS
+   * passes three short strings and every byte is streamed natively.
+   *
+   * `backendLogUrl` empty skips the backend side. `authHeader` is sent verbatim
+   * as `Authorization` (empty = no header). A backend failure writes
+   * `backend-error.txt` into the archive rather than failing the export — the
+   * semantic the JS path and the Flutter reference both keep.
+   *
+   * Callback receives (error-or-null, `{"hasBackend":…,"hasFrontend":…}`).
+   */
+  @objc func shareLogArchive(
+    _ backendLogUrl: String, authHeader: String, fileName: String, callback: @escaping LynxCallbackBlock
+  ) {
+    // Module methods arrive on the JS thread; nothing below may run there.
+    DispatchQueue.global(qos: .utility).async {
+      let fm = FileManager.default
+      let safeName = (fileName as NSString).lastPathComponent
+      let baseName = (safeName as NSString).deletingPathExtension
+      let container = fm.temporaryDirectory.appendingPathComponent(
+        Self.logExportDir, isDirectory: true
+      )
+      // `.forUploading` zips a *directory*, and the directory's name becomes the
+      // archive's single top-level entry — so name it after the archive itself
+      // rather than leaking a scratch name to whoever opens the zip.
+      let staging = container.appendingPathComponent(
+        baseName.isEmpty ? "songloft-logs" : baseName, isDirectory: true
+      )
+      let fail: (String) -> Void = { message in
+        try? fm.removeItem(at: container)
+        DispatchQueue.main.async { callback([message, NSNull()] as NSArray) }
+      }
+
+      // A leftover staging dir from an interrupted run would ship stale logs
+      // inside this archive.
+      try? fm.removeItem(at: container)
+      do {
+        try fm.createDirectory(at: staging, withIntermediateDirectories: true)
+      } catch {
+        fail("staging_failed")
+        return
+      }
+
+      let hasBackend = backendLogUrl.isEmpty
+        ? false
+        : Self.downloadBackendLog(backendLogUrl, authHeader: authHeader, into: staging)
+      let hasFrontend = Self.copyClientLog(into: staging)
+
+      let entries = (try? fm.contentsOfDirectory(atPath: staging.path)) ?? []
+      if entries.isEmpty {
+        // Same message as the JS path, so the toast reads identically whichever
+        // path ran.
+        fail("no logs to export")
+        return
+      }
+
+      let archive = fm.temporaryDirectory.appendingPathComponent(safeName)
+      do {
+        try Self.zipDirectory(staging, to: archive)
+      } catch {
+        fail("zip_failed")
+        return
+      }
+      try? fm.removeItem(at: container)
+
+      let result = "{\"hasBackend\":\(hasBackend),\"hasFrontend\":\(hasFrontend)}"
+      Self.presentShareSheet(archive) { error in
+        if let error {
+          callback([error, NSNull()] as NSArray)
+        } else {
+          callback([NSNull(), result] as NSArray)
+        }
+      }
+    }
+  }
+
+  /**
+   * Zip `dir` to `dest` using the coordinated-read `.forUploading` option —
+   * Apple's own directory-to-zip path, so there is no hand-rolled archive
+   * format and no third-party dependency (which would also mean touching the
+   * hand-written `project.pbxproj`).
+   *
+   * The zip the coordinator hands over only exists for the duration of the
+   * accessor block, hence the copy inside it. `copyItem`, not `moveItem`: the
+   * coordinator owns that temp file and cleans it up itself, and moving it out
+   * from under it is a bet on an undocumented detail. The extra pass costs a few
+   * MB of I/O — nothing next to what this whole change removed.
+   */
+  private static func zipDirectory(_ dir: URL, to dest: URL) throws {
+    var coordinationError: NSError?
+    var copyError: Error?
+    NSFileCoordinator().coordinate(
+      readingItemAt: dir, options: [.forUploading], error: &coordinationError
+    ) { zipped in
+      do {
+        if FileManager.default.fileExists(atPath: dest.path) {
+          try FileManager.default.removeItem(at: dest)
+        }
+        try FileManager.default.copyItem(at: zipped, to: dest)
+      } catch {
+        copyError = error
+      }
+    }
+    if let coordinationError { throw coordinationError }
+    if let copyError { throw copyError }
+  }
+
+  /**
+   * GET `urlString` straight into `staging/backend.log`. True when the file ended
+   * up with content; every failure writes `backend-error.txt` instead.
+   *
+   * `downloadTask` (not `dataTask`) so the response streams to disk: it is up to
+   * 10 MiB, and holding it in memory is what the fast path exists to stop doing.
+   * `InsecureTls.shared.session` rather than `URLSession.shared` — a self-signed
+   * LAN server is the common setup, and an export has to work when things are
+   * broken. Blocking is fine here: the caller is a utility queue, and the
+   * session's delegate queue is its own.
+   */
+  private static func downloadBackendLog(
+    _ urlString: String, authHeader: String, into staging: URL
+  ) -> Bool {
+    guard let url = URL(string: urlString) else {
+      writeBackendError("invalid url", into: staging)
+      return false
+    }
+    var request = URLRequest(url: url)
+    request.httpMethod = "GET"
+    request.timeoutInterval = 60
+    if !authHeader.isEmpty {
+      request.setValue(authHeader, forHTTPHeaderField: "Authorization")
+    }
+    let target = staging.appendingPathComponent(entryBackend)
+    let done = DispatchSemaphore(value: 0)
+    var ok = false
+    let task = InsecureTls.shared.session.downloadTask(with: request) { tempUrl, response, error in
+      defer { done.signal() }
+      if let error {
+        writeBackendError(error.localizedDescription, into: staging)
+        return
+      }
+      let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+      guard (200...299).contains(status), let tempUrl else {
+        writeBackendError("HTTP \(status)", into: staging)
+        return
+      }
+      do {
+        try FileManager.default.moveItem(at: tempUrl, to: target)
+      } catch {
+        writeBackendError("write_failed", into: staging)
+        return
+      }
+      let attributes = try? FileManager.default.attributesOfItem(atPath: target.path)
+      if ((attributes?[.size] as? NSNumber)?.intValue ?? 0) == 0 {
+        // An empty side is omitted silently, not reported as a failure.
+        try? FileManager.default.removeItem(at: target)
+        return
+      }
+      ok = true
+    }
+    task.resume()
+    done.wait()
+    return ok
+  }
+
+  private static func writeBackendError(_ reason: String, into staging: URL) {
+    let note = "Failed to fetch backend logs: \(reason)\n"
+    // The note is a courtesy to whoever reads the archive; losing it must not
+    // lose the export.
+    try? note.data(using: .utf8)?.write(
+      to: staging.appendingPathComponent(entryBackendError), options: .atomic
+    )
+  }
+
+  /**
+   * Copy this app's client log into `staging/frontend.log`. False when there is
+   * nothing to copy. `ClientFileLog.copyTo` runs on the log queue, so lines
+   * queued before the export are already on disk.
+   */
+  private static func copyClientLog(into staging: URL) -> Bool {
+    let target = staging.appendingPathComponent(entryFrontend)
+    let done = DispatchSemaphore(value: 0)
+    var bytes = 0
+    ClientFileLog.copyTo(target) { copied in
+      bytes = copied
+      done.signal()
+    }
+    done.wait()
+    if bytes <= 0 {
+      try? FileManager.default.removeItem(at: target)
+      return false
+    }
+    return true
+  }
+
+  /**
+   * Present `url` through `UIActivityViewController`. Always hops to the main
+   * thread — UIKit presentation is main-thread-only and the callers run on the
+   * JS thread or a utility queue.
+   */
+  private static func presentShareSheet(_ url: URL, onDone: @escaping (String?) -> Void) {
     DispatchQueue.main.async {
-      guard let vc = Self.topViewController() else {
-        callback(["no_view_controller", NSNull()] as NSArray)
+      guard let vc = topViewController() else {
+        onDone("no_view_controller")
         return
       }
       let activity = UIActivityViewController(activityItems: [url], applicationActivities: nil)
@@ -147,7 +373,7 @@ final class SongloftPlatformModule: NSObject, LynxModule {
         x: vc.view.bounds.midX, y: vc.view.bounds.midY, width: 0, height: 0
       )
       vc.present(activity, animated: true)
-      callback([NSNull(), NSNull()] as NSArray)
+      onDone(nil)
     }
   }
 }
@@ -305,6 +531,41 @@ enum ClientFileLog {
         return
       }
       completion(nil, content)
+    }
+  }
+
+  /**
+   * Copy the current log file to `dest`, then report how many bytes landed
+   * (0 = nothing to copy). Runs on the log queue **on purpose**: every line
+   * queued before this call is already written by the time the copy starts,
+   * which is the same ordering guarantee `read` gives — an export must not miss
+   * the lines the user just produced while reproducing the bug.
+   *
+   * A file copy, not a read: the file is capped at 20 MB and this used to reach
+   * JS as one `String` across the bridge, which is half of why the export felt
+   * slow.
+   */
+  static func copyTo(_ dest: URL, completion: @escaping (Int) -> Void) {
+    queue.async {
+      guard let url = ensureLogFile(),
+        FileManager.default.fileExists(atPath: url.path)
+      else {
+        completion(0)
+        return
+      }
+      do {
+        if FileManager.default.fileExists(atPath: dest.path) {
+          try FileManager.default.removeItem(at: dest)
+        }
+        try FileManager.default.copyItem(at: url, to: dest)
+        let attributes = try FileManager.default.attributesOfItem(atPath: dest.path)
+        completion((attributes[.size] as? NSNumber)?.intValue ?? 0)
+      } catch {
+        // A half-written copy must not reach the archive as if it were the
+        // whole log.
+        try? FileManager.default.removeItem(at: dest)
+        completion(0)
+      }
     }
   }
 

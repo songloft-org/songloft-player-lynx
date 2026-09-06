@@ -25,14 +25,22 @@ import { describe, expect, test } from 'vitest'
  * bytes that are not valid UTF-8 at all (the same mangling, caught one step
  * earlier, before some editor "repairs" it into U+FFFD).
  *
+ * `docs/` is in scope for the same reason the root rule docs are, and it was
+ * added the hard way: editing `docs/project/progress.md` smashed five unrelated
+ * CJK characters elsewhere in that file into 14 U+FFFD, and nothing noticed —
+ * the gate did not read `docs/`, and the ad-hoc `grep` used to double-check it
+ * was written with a bash-only `$'\xef\xbf\xbd'` quote that `/bin/sh` passes
+ * through literally, so it searched for nothing and reported clean. A gate that
+ * covers the tree is the only version of this check that cannot be forgotten.
+ *
  * If prose ever needs to *discuss* the character, name it "U+FFFD" or build it
  * from its code point — never paste the literal glyph, or this gate flags itself.
  */
 
 const ROOT = path.resolve(__dirname, '..', '..')
 
-/** Directories of hand-written source this gate is responsible for. */
-const SCANNED_DIRS = ['src', 'web', 'scripts', 'e2e']
+/** Directories of hand-written source and prose this gate is responsible for. */
+const SCANNED_DIRS = ['src', 'web', 'scripts', 'e2e', 'docs']
 
 /** Rule/reference docs at the repo root — a mangled invariant is worse than a mangled string. */
 const SCANNED_ROOT_FILES = ['AGENTS.md', 'README.md', 'DESIGN.md']
@@ -99,6 +107,15 @@ describe('source encoding (bugs.md: 中文字符串被编辑工具打碎成 U+FF
       path.join(ROOT, 'src', 'i18n', 'resources.ts'),
     )
     expect(files.some((f) => f.endsWith('.css')), 'stylesheets carry CJK comments too').toBe(true)
+    // `docs/` is where the most recent round of this landed, and it is nearly all
+    // CJK prose — a walk that silently skips it puts the gate back where it was.
+    expect(files, 'docs/ must be scanned, not just src/').toContain(
+      path.join(ROOT, 'docs', 'project', 'progress.md'),
+    )
+    expect(
+      files.filter((f) => f.startsWith(path.join(ROOT, 'docs'))).length,
+      'only a handful of docs reached — the docs walk is broken',
+    ).toBeGreaterThan(20)
   })
 
   test('no source file contains the Unicode replacement character', () => {

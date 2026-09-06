@@ -90,6 +90,24 @@ worker 侧最终走 `listener.apply(ctx, params)`，普通对象没有 `length` 
 - 同族：**pref 与系统授权是两个真相源**。授权被撤销后 pref 仍为 true ⇒ 开关显示「开」而屏幕上什么都没有。进页/启动时以授权为准回写 pref，协调逻辑收在一处。
 - 未授权时碰 `WindowManager.addView` 抛 `BadTokenException: permission denied for window type 2038`，而它抛在 `onStartCommand` 里 ⇒ **未捕获 = 杀进程**。服务自己也要查一遍授权：调用方查过不代表此刻仍成立（用户可随时撤销，`START_STICKY` 还会重发 SHOW）。
 
+### 「原生模块能跑就算移植完成」漏掉了成本：CPU 密集活不能留在 JS 侧
+
+日志导出（songloft-player-lynx#3）功能上三端都通，但用户报「导出日志需要等很久才弹出安卓分享界面，Flutter 版很快」。形态是：JS 把后端日志（后端上限 10 MiB）和客户端日志（会话上限 20 MB）读成 JS 字符串 → `fflate.zipSync` 压缩 → 手写 base64 → 整个 payload 跨桥回原生。Flutter 参考实现同样的步骤用 AOT Dart 的 `archive` 做，再把**文件路径**交给 `share_plus`，没有 base64、没有跨桥搬运。
+
+同一份 `fflate` + 同一个 base64 实现在 Node(V8) 上的实测（这是**下限**，设备端 JS 引擎无 JIT，这类紧凑数值循环通常再慢一个数量级）：
+
+| 日志量 | `strToU8` | `zipSync`(L6) | 手写 base64 | 合计 |
+|---|---|---|---|---|
+| 1MB | 2ms | 94ms | 10ms | ~106ms |
+| 5MB | 9ms | 370ms | 32ms | ~411ms |
+| 10MB | 19ms | 777ms | 71ms | ~867ms |
+| 20MB | 44ms | 1501ms | 179ms | ~1724ms |
+
+- **在 JS 里省不掉**：`level: 0`（只存不压）把 deflate 从 1501ms 降到 127ms，但 base64 涨到 1683ms、跨桥字符串从 3.7MB 涨到 27MB —— 实测总账更差。唯一的解法是把工作整体搬到原生（`shareLogArchive`）。
+- **判据**：跨桥 payload 与 JS 侧 CPU 都要按**上限**估，不是按「我这次测的那份日志」。20MB 的会话上限就在 `ClientFileLog` 里写着。
+- **推论**：把 Flutter 的某个 service 逐行照搬成 TS 时，凡是原文里由 AOT 代码或平台库承担的活（压缩、编解码、大文件读写、哈希），照搬后就落在了没有 JIT 的 JS 线程上。移植的等价性要看**工作发生在哪一侧**，不只看结果对不对。
+- 顺带：`logRead` 这种「把整份文件当一个字符串还给 JS」的读接口，本身就是这个坑的入口。归档路径改用 `ClientFileLog.copyTo` 在日志线程做原生文件拷贝，既省掉跨桥又保住了「导出前排队的日志行已落盘」的顺序语义。
+
 ## 4. 构建与闸门
 
 ### 「闸门全绿而产物是坏的」
@@ -204,6 +222,10 @@ TS facade 无论成败一律返回 resolved promise——只问 `isShowing()` �
 - **`\bcolor:` 会命中 `background-color:`。** `-` 是非单词字符，词边界照样成立，于是「找出 `color` 是 X 的规则」这种扫描先读到 `background-color` 的值，每个违规规则都读成干净的。要用 `(?<![-\w])color:`。
 
 两次都是「扫描返回空数组」而不是「扫描报错」，所以正解不是更小心地写正则，而是**给每个扫描配一条缺陷形状测试**：喂一个已知违规的输入，断言它被抓到。`contrast.test.ts` 里那条 wash 扫描就同时钉了 `\bcolor:` 的错法和 `(?<![-\w])color:` 的对法。
+
+**第三次，同一条 dash 陷阱，而且这条早就写在上面第一点里**（Issue #3 那批）：改完 `docs/project/progress.md` 之后，用 `for f in $(git status --short | awk '{print $2}'); do grep -q $'\xef\xbf\xbd' "$f" ...` 自查，报「干净」；实际那次编辑把文件里**别处**五个无关的中文字（`。门出端件`）打成了 14 个 U+FFFD。写着规则、读过规则、照样踩——**因为规则要靠人在正确的时刻想起来，闸门不用**。真正的修法不是「下次记得用 python」，而是把 `docs/` 纳入 `source-encoding.test.ts` 的扫描范围（那条闸门此前只扫 `src`/`web`/`scripts`/`e2e` + 根目录三个 md），于是这类自查压根不需要有人手写。同批给它补了「docs 必须被扫到且文件数 > 20」的非空断言：一个静默变空的遍历和一个坏正则是同一种失败。
+
+**推论**：编辑大文件（本仓 `progress.md` 单行数千字、整文件近 200 KB）时，编辑工具打碎**改动区之外**的多字节字符是真实存在的失败模式（`4868733`/`580e002` 两次事故也是这个形态）。改完必须比对 `git diff -U0` 的删除行——只应出现你**有意**替换的那几行；多出来的单字符差异就是被打碎的证据。修法是从 HEAD 取原文、用无损方式（python + 显式 UTF-8）重建，而不是就地补那几个字。
 
 ### skip 数变了要查
 

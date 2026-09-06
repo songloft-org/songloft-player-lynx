@@ -14,7 +14,7 @@
 |---|---|---|---|---|
 | `SongloftAudio` | `android/app/src/main/java/org/songloft/lynx/audio/SongloftAudioModule.kt`（引擎 `SongloftAudioEngine.kt`） | `ios/SongloftLynx/SongloftAudioModule.swift`（引擎 `SongloftAudioEngine.swift`） | `src/native/audio-facade.ts` → `src/native/native-audio.ts`（类型 `src/native/audio-types.ts`） | 播放引擎（ExoPlayer / AVPlayer）+ MediaSession + EQ |
 | `SongloftStorage` | `storage/SongloftStorageModule.kt` | `SongloftStorageModule.swift` | `src/core/storage/native-storage.ts` | 键值持久化（`prefs` / `secure` 两区）+ 目录路径 |
-| `SongloftPlatform` | `platform/SongloftPlatformModule.kt` | `SongloftPlatformModule.swift` | `src/native/native-platform.ts` | 打开 URL、文件选择上传、剪贴板、客户端日志、分享、TLS 开关 |
+| `SongloftPlatform` | `platform/SongloftPlatformModule.kt` | `SongloftPlatformModule.swift` | `src/native/native-platform.ts` | 打开 URL、文件选择上传、剪贴板、客户端日志、分享、日志导出打包、TLS 开关 |
 | `SongloftDlna` | `dlna/SongloftDlnaModule.kt` | `SongloftDlnaModule.swift` | `src/native/dlna.ts` | DLNA/UPnP 设备发现与投屏控制 |
 | `SongloftVideo` | `video/SongloftVideoModule.kt`（画面 `SongloftVideoActivity.kt`） | `SongloftVideoModule.swift` | `src/native/video.ts` | 全屏视频画面（借用同一个播放器，不新建） |
 | `SongloftSongCache` | `cache/SongloftSongCacheModule.kt` | `SongloftSongCacheModule.swift` | `src/features/player/data/song-cache.ts` | 设备端歌曲缓存（下载 / 查询 / 删除 / 清空） |
@@ -105,7 +105,7 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 4 个模块：`SongloftAu
 
 **闸门锁住的不变量**：5 个方法两侧齐备；`"secure"` 拼写在两个宿主里逐字一致（写错会让 token 落进非敏感区，而 `secure.get` 一直读空的那个）。
 
-### 2.3 `SongloftPlatform`（7 方法）
+### 2.3 `SongloftPlatform`（8 方法）
 
 | 方法 | Kotlin 签名 | iOS 选择器 | 形状 |
 |---|---|---|---|
@@ -116,12 +116,24 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 4 个模块：`SongloftAu
 | `logWrite` | `logWrite(line: String)` | `logWrite(_:)` | 写 |
 | `logRead` | `logRead(callback: Callback)` | `logRead(_:)` | Callback `(error, content)` |
 | `shareFile` | `shareFile(base64: String, fileName: String, mimeType: String, callback: Callback)` | `shareFile(_:fileName:mimeType:callback:)` | Callback `(error)` |
+| `shareLogArchive` | `shareLogArchive(backendLogUrl: String, authHeader: String, fileName: String, callback: Callback)` | `shareLogArchive(_:authHeader:fileName:callback:)` | Callback `(error, resultJson)` |
 
-- **平台差异**：Web 的 worker 侧模块（`web/songloft-platform-module.js`）只实现 `openURL` / `setClipboard` / `setInsecureTls`（no-op，浏览器自己管证书信任）/ `pickAndUploadFile` / `shareFile`（走浏览器下载而非分享面板）；**没有 `logWrite` / `logRead`**，所以 `appendClientLog()` 在 Web 返回 `false`，调用方回落到内存缓冲。
+- **平台差异**：Web 的 worker 侧模块（`web/songloft-platform-module.js`）只实现 `openURL` / `setClipboard` / `setInsecureTls`（no-op，浏览器自己管证书信任）/ `pickAndUploadFile` / `shareFile`（走浏览器下载而非分享面板）；**没有 `logWrite` / `logRead` / `shareLogArchive`**，所以 `appendClientLog()` 在 Web 返回 `false`（调用方回落到内存缓冲），日志导出也留在 JS 打包路径上。
+
+#### `shareLogArchive` —— 日志导出快路径
+
+存在的理由是**工作发生在哪一侧**。JS 打包路径要把后端日志（≤10 MiB）和本机客户端日志（≤20 MB）读进 JS 字符串、用纯 JS zipper 压缩、再手写 base64，全部跑在无 JIT 的 JS 线程上，然后把整个 payload 推回原生；这就是 songloft-player-lynx#3「导出日志很慢」。快路径只跨桥三个短字符串，其余全在原生流式完成。
+
+- **参数**：`backendLogUrl` 为空表示跳过后端日志；`authHeader` 原样作为 `Authorization` 头发送（为空则不带头，用头而不是 `?access_token=`，避免 token 落进访问日志）。
+- **`resultJson`**：`{"hasBackend":bool,"hasFrontend":bool}`，驱动成功提示文案。三端各自手写这段 JSON，键名与 `native-platform.ts` 的解析逐字对齐，由契约闸门锁住。
+- **归档条目**：`backend.log` / `backend-error.txt` / `frontend.log`。后端拉取失败写 `backend-error.txt` 而**不**中断导出；某一侧为空则整条省略；两侧都空时 callback 返回 `no logs to export`（与 JS 路径同一字符串，提示文案不因路径而异）。
+- **平台差异（zip 内部布局）**：Android 用 `ZipOutputStream` 精确控制条目名，条目在归档根部；iOS 用 `NSFileCoordinator` 的 `.forUploading`、HarmonyOS 用 `zlib.compressFile`，两者都是「把一个目录打成 zip」，条目会嵌在一层以归档名命名的目录下。要做到字节级一致就得在 iOS 手写 ZIP writer（本地头 + 中央目录 + CRC32），风险不值当，这里接受差异。
+- **顺序保证**：客户端日志由 `ClientFileLog.copyTo` 在**日志线程**上拷贝，所以导出前排队的日志行已经落盘。ArkTS 单线程天然满足，Android/iOS 各自 hop 到自己的日志 executor/queue。
+- **旧壳兼容**：`getPlatformCapabilities().fastLogExport` 是方法级探测。热更新的 JS bundle 落在没有该方法的原生壳上时自动回退 JS 打包路径，不会调用一个不存在的方法。
 - `setInsecureTls` 在 TS 接口里是**必填**（此前是可选，可选链把「iOS 根本没实现」整个吞掉了），但运行时仍保留 `typeof` 守卫 —— JS bundle 可能热更到旧原生壳上。
 - `setInsecureTls` 是三条出站路径（`fetch` / 媒体流 / 模块自己的上传与 SOAP）的唯一开关，见 [`../../AGENTS.md`](../../AGENTS.md) §5「宿主 HTTP service 是我们自己的」。
 
-**闸门锁住的不变量**：7 个方法两侧齐备（`setInsecureTls` 已纳入主循环，不再豁免）。
+**闸门锁住的不变量**：8 个方法**三端**齐备（HarmonyOS 此前整个不在这个循环里，正是 `logWrite`/`logRead`/`shareFile` 在那端以桩形式发布的原因）；`setInsecureTls` 已纳入主循环，不再豁免。另有一组只在设备上才会暴露的不变量：三端都不为归档做 base64、都用原生 zip、都用 `ClientFileLog.copyTo` 而不是 `logRead`、后端日志流式落盘、后端下载尊重 InsecureTls、staging 目录每次运行前清空、`resultJson` 键名与 TS 解析一致。
 
 ### 2.4 `SongloftDlna`（5 方法）
 

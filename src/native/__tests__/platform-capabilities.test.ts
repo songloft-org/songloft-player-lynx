@@ -103,6 +103,46 @@ describe('on a device host', () => {
   })
 })
 
+describe('native log-archive fast path', () => {
+  test('off when the host only has the old shareFile', () => {
+    // This is the shape that made "export logs" slow: JS deflates + base64s up
+    // to 30 MB on a JIT-less engine. A shell without `shareLogArchive` must
+    // still get that path, not a rejected call.
+    withModules('SongloftPlatform')
+    g.NativeModules = { SongloftPlatform: { shareFile: () => {} } }
+    const caps = getPlatformCapabilities()
+    expect(caps.fastLogExport).toBe(false)
+    expect(caps.fileExport).toBe(true)
+  })
+
+  test('on once the host implements shareLogArchive', () => {
+    g.SystemInfo = { platform: 'Android' }
+    g.NativeModules = { SongloftPlatform: { shareFile: () => {}, shareLogArchive: () => {} } }
+    expect(getPlatformCapabilities().fastLogExport).toBe(true)
+  })
+
+  test('shareLogArchive alone is enough for fileExport', () => {
+    // Either method hands a file to the user. Keying `fileExport` on `shareFile`
+    // alone would push a host that implements only the newer method to the
+    // degraded "open the backend log URL" row — which carries no client logs —
+    // despite having the better implementation of this exact feature.
+    g.SystemInfo = { platform: 'Android' }
+    g.NativeModules = { SongloftPlatform: { shareLogArchive: () => {} } }
+    const caps = getPlatformCapabilities()
+    expect(caps.fileExport).toBe(true)
+    expect(caps.fastLogExport).toBe(true)
+  })
+
+  test('off on Web, which has no client log file to zip natively', () => {
+    // Web keeps the JS path deliberately: its client log lives in an in-memory
+    // buffer no host can read, the realm has a JIT, and `shareFile` there is a
+    // browser download rather than a share sheet.
+    asWeb()
+    g.NativeModules = { SongloftPlatform: { shareFile: () => {} } }
+    expect(getPlatformCapabilities().fastLogExport).toBe(false)
+  })
+})
+
 describe('on-device song cache', () => {
   test('off when the module is absent', () => {
     withModules('SongloftPlatform')

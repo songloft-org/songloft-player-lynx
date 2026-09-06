@@ -22,6 +22,17 @@ interface SongloftPlatformNative {
     mimeType: string,
     callback: (error: string | null) => void,
   ): void
+  /**
+   * Build the log archive on the native side and hand it to the OS share sheet.
+   * `callback` receives (error, resultJson) where resultJson is
+   * `{"hasBackend":bool,"hasFrontend":bool}`.
+   */
+  shareLogArchive(
+    backendLogUrl: string,
+    authHeader: string,
+    fileName: string,
+    callback: (error: string | null, resultJson: string | null) => void,
+  ): void
 }
 
 function getModule(): SongloftPlatformNative | null {
@@ -155,4 +166,72 @@ export function shareFile(base64: string, fileName: string, mimeType: string): P
       }
     })
   })
+}
+
+/** Which sides the native host actually got into the archive. */
+export interface LogArchiveResult {
+  hasBackend: boolean
+  hasFrontend: boolean
+}
+
+/**
+ * Build the log archive **natively** and present the share sheet.
+ *
+ * The reason this exists next to `shareFile`: doing it in JS meant deflating up
+ * to 30 MB (10 MiB backend + 20 MB client log) with `fflate` and base64-encoding
+ * the result by hand, all on the JS thread of an engine with no JIT — and moving
+ * the same bytes across the bridge twice (client log out, base64 in). That is
+ * what made "export logs" take a long visible pause before the share sheet
+ * appeared, while the Flutter build (AOT Dart + a file path handed to
+ * `share_plus`) felt instant. Here JS passes only three short strings and the
+ * host does the download, the file copy, the zip and the sheet.
+ *
+ * `backendLogUrl` empty means "skip the backend side". `authHeader` is sent
+ * verbatim as `Authorization` (empty = no header). A backend fetch failure does
+ * not fail the export — the host writes `backend-error.txt` into the archive
+ * instead, same bargain as the JS path and the Flutter reference.
+ *
+ * Rejects when the method is unavailable (callers must gate on
+ * `getPlatformCapabilities().fastLogExport`) or when there was nothing to
+ * export / the share failed.
+ */
+export function shareLogArchive(
+  backendLogUrl: string,
+  authHeader: string,
+  fileName: string,
+): Promise<LogArchiveResult> {
+  const mod = getModule()
+  if (!mod || typeof mod.shareLogArchive !== 'function') {
+    return Promise.reject(new Error('SongloftPlatform.shareLogArchive not available'))
+  }
+  return new Promise((resolve, reject) => {
+    mod.shareLogArchive(backendLogUrl, authHeader, fileName, (error, resultJson) => {
+      // `!= null` rather than a truthiness test: an **empty** error string is
+      // still an error, and `if (error)` would read it as success and show the
+      // success toast for a failed export. Three hosts hand-roll this argument
+      // from a caught exception's message, and a blank message is exactly what a
+      // caught exception can carry.
+      if (error != null) {
+        reject(new Error(error.length > 0 ? error : 'log_archive_failed'))
+        return
+      }
+      // The archive is already shared at this point, so a missing or malformed
+      // payload must not turn into a rejection. Report the conservative answer
+      // instead: the success toast then claims less, never more.
+      resolve(parseLogArchiveResult(resultJson))
+    })
+  })
+}
+
+function parseLogArchiveResult(resultJson: string | null): LogArchiveResult {
+  if (!resultJson) return { hasBackend: false, hasFrontend: false }
+  try {
+    const parsed = JSON.parse(resultJson) as Record<string, unknown>
+    return {
+      hasBackend: parsed.hasBackend === true,
+      hasFrontend: parsed.hasFrontend === true,
+    }
+  } catch {
+    return { hasBackend: false, hasFrontend: false }
+  }
 }

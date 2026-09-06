@@ -80,6 +80,36 @@ export class ClientFileLog {
     }
   }
 
+  /**
+   * Copy the current log file to `dest`; returns the bytes copied (0 = nothing
+   * to copy). Used by `SongloftPlatformModule.shareLogArchive`, which stages the
+   * archive natively instead of shipping the whole file to JS as one string —
+   * ArkTS is single-threaded, so this is already ordered after every `writeRaw`
+   * that came before it (Android/iOS need a log-thread hop for that).
+   */
+  public static copyTo(dest: string): number {
+    if (ClientFileLog.filesDir === null) {
+      return 0
+    }
+    try {
+      const file = ClientFileLog.ensureLogFile()
+      if (file === null || !fileIo.accessSync(file)) {
+        return 0
+      }
+      fileIo.copyFileSync(file, dest)
+      return fileIo.statSync(dest).size
+    } catch (err) {
+      // A half-written copy must not reach the archive as if it were the whole
+      // log.
+      try {
+        fileIo.unlinkSync(dest)
+      } catch (e) {
+        // Nothing to clean up.
+      }
+      return 0
+    }
+  }
+
   /** Log-safe text: null-aware, capped at 60 chars (lyric lines, titles). */
   public static truncText(value: string | null | undefined, max: number = 60): string {
     if (value === null || value === undefined || value === '') {

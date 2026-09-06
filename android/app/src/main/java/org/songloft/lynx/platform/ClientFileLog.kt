@@ -81,6 +81,45 @@ object ClientFileLog {
         }
     }
 
+    /**
+     * Copy the current log file to [dest], then report how many bytes landed
+     * (0 = nothing to copy). Runs on the log thread **on purpose**: every line
+     * queued before this call is already written by the time the copy starts,
+     * which is the same ordering guarantee [read] gives — an export must not
+     * miss the lines the user just produced while reproducing the bug.
+     *
+     * Streamed, not read into memory: the file is capped at 20 MB and this used
+     * to reach JS as one `String` across the bridge, which is half of why the
+     * export felt slow. `onResult` runs on the log thread; post it wherever it
+     * is consumed.
+     */
+    fun copyTo(dest: File, onResult: (Long) -> Unit) {
+        val ctx = appContext
+        if (ctx == null) {
+            onResult(0L)
+            return
+        }
+        executor.execute {
+            var copied = 0L
+            try {
+                val file = ensureLogFile(ctx)
+                if (file != null && file.exists()) {
+                    file.inputStream().use { input ->
+                        dest.outputStream().use { output ->
+                            copied = input.copyTo(output)
+                        }
+                    }
+                }
+            } catch (_: Throwable) {
+                // A half-written copy must not reach the archive as if it were
+                // the whole log.
+                try { dest.delete() } catch (_: Throwable) {}
+                copied = 0L
+            }
+            onResult(copied)
+        }
+    }
+
     private fun append(line: String) {
         val ctx = appContext
         if (ctx == null) {

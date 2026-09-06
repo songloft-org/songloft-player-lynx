@@ -15,11 +15,15 @@ import com.lynx.jsbridge.LynxModule
 import com.lynx.react.bridge.Callback
 import com.lynx.jsbridge.LynxMethod
 import org.songloft.lynx.net.InsecureTls
+import java.io.BufferedOutputStream
 import java.io.File
 import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 /**
  * Platform utilities native module — opens URLs and performs file-pick-then-upload.
@@ -185,34 +189,222 @@ class SongloftPlatformModule(context: Context) : LynxModule(context) {
         Thread {
             try {
                 val bytes = Base64.decode(base64, Base64.DEFAULT)
-                val dir = File(mContext.cacheDir, "shared")
-                if (!dir.exists()) dir.mkdirs()
-                // Belt and braces: the name comes from our own TS layer, but a
-                // separator here would escape the shared dir.
-                val file = File(dir, fileName.substringAfterLast('/'))
+                val file = File(sharedDir(), safeName(fileName))
                 file.writeBytes(bytes)
-                mainHandler.post {
-                    try {
-                        val uri = FileProvider.getUriForFile(
-                            mContext, "${mContext.packageName}.fileprovider", file
-                        )
-                        val send = Intent(Intent.ACTION_SEND).apply {
-                            type = mimeType
-                            putExtra(Intent.EXTRA_STREAM, uri)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        val chooser = Intent.createChooser(send, null).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        mContext.startActivity(chooser)
-                        callback.invoke(null)
-                    } catch (e: Throwable) {
-                        callback.invoke(e.message ?: "share_failed")
-                    }
-                }
+                presentShareSheet(file, mimeType) { error -> callback.invoke(error) }
             } catch (e: Throwable) {
                 mainHandler.post { callback.invoke(e.message ?: "decode_failed") }
             }
         }.start()
+    }
+
+    /**
+     * Build the log archive here and hand it to the share sheet — the fast path
+     * behind `SongloftPlatform.shareLogArchive`.
+     *
+     * Why it exists next to [shareFile]: the JS layer used to fetch the backend
+     * log (≤10 MiB) and read this app's client log (≤20 MB) into JS strings,
+     * deflate both with a pure-JS zipper and base64 the result by hand — on the
+     * JS thread of an engine with no JIT — then push the whole payload back
+     * across the bridge. That pause in front of the share sheet is
+     * songloft-player-lynx#3. Here JS passes three short strings and every byte
+     * is streamed natively.
+     *
+     * `backendLogUrl` empty skips the backend side. `authHeader` is sent
+     * verbatim as `Authorization` (empty = no header). A backend failure writes
+     * `backend-error.txt` into the archive rather than failing the export, which
+     * is the semantic the JS path and the Flutter reference both keep.
+     *
+     * Callback receives (error-or-null, `{"hasBackend":…,"hasFrontend":…}`).
+     */
+    @LynxMethod
+    fun shareLogArchive(backendLogUrl: String, authHeader: String, fileName: String, callback: Callback) {
+        Thread {
+            try {
+                val staging = File(mContext.cacheDir, LOG_EXPORT_DIR)
+                // A leftover staging dir from an interrupted run would ship
+                // someone else's stale logs inside this archive.
+                staging.deleteRecursively()
+                staging.mkdirs()
+
+                val hasBackend = if (backendLogUrl.isNotEmpty()) {
+                    downloadBackendLog(backendLogUrl, authHeader, staging)
+                } else {
+                    false
+                }
+                val hasFrontend = copyClientLog(staging)
+
+                // Sorted so the archive's entry order does not depend on the
+                // filesystem's directory order.
+                val entries = staging.listFiles()?.sortedBy { it.name } ?: emptyList()
+                if (entries.isEmpty()) {
+                    staging.deleteRecursively()
+                    // Same message as the JS path, so the toast reads identically
+                    // whichever path ran.
+                    mainHandler.post { callback.invoke("no logs to export", null) }
+                    return@Thread
+                }
+
+                val archive = File(sharedDir(), safeName(fileName))
+                // No `setLevel`: ZipOutputStream already constructs its Deflater
+                // with DEFAULT_COMPRESSION, and `setLevel`'s javadoc documents
+                // 0–9 only — passing DEFAULT_COMPRESSION (-1) happens to work
+                // but is a needless bet on an implementation detail.
+                ZipOutputStream(BufferedOutputStream(archive.outputStream())).use { zip ->
+                    for (entry in entries) {
+                        zip.putNextEntry(ZipEntry(entry.name))
+                        entry.inputStream().use { it.copyTo(zip) }
+                        zip.closeEntry()
+                    }
+                }
+                staging.deleteRecursively()
+
+                val result = "{\"hasBackend\":$hasBackend,\"hasFrontend\":$hasFrontend}"
+                presentShareSheet(archive, MIME_ZIP) { error ->
+                    if (error != null) callback.invoke(error, null) else callback.invoke(null, result)
+                }
+            } catch (e: Throwable) {
+                mainHandler.post { callback.invoke(reason(e, "archive_failed"), null) }
+            }
+        }.start()
+    }
+
+    /**
+     * GET [url] straight into `staging/backend.log`. True when the file ended up
+     * with content. Streamed rather than buffered: this is up to 10 MiB, and
+     * holding it in memory is exactly what the fast path exists to stop doing.
+     *
+     * [InsecureTls.configure] per connection like [uploadFile] — a self-signed
+     * LAN server is the common setup, and the whole point of an export is that
+     * it works when things are broken.
+     */
+    private fun downloadBackendLog(url: String, authHeader: String, staging: File): Boolean {
+        val target = File(staging, ENTRY_BACKEND)
+        var conn: HttpURLConnection? = null
+        try {
+            conn = URL(url).openConnection() as HttpURLConnection
+            InsecureTls.configure(conn)
+            conn.requestMethod = "GET"
+            conn.connectTimeout = CONNECT_TIMEOUT_MS
+            conn.readTimeout = READ_TIMEOUT_MS
+            if (authHeader.isNotEmpty()) conn.setRequestProperty("Authorization", authHeader)
+            val code = conn.responseCode
+            if (code !in 200..299) {
+                val detail = conn.errorStream?.bufferedReader()?.use { it.readText() }
+                    ?.take(ERROR_DETAIL_CHARS) ?: ""
+                writeBackendError(staging, if (detail.isEmpty()) "HTTP $code" else "HTTP $code: $detail")
+                return false
+            }
+            conn.inputStream.use { input ->
+                target.outputStream().use { output -> input.copyTo(output) }
+            }
+            if (target.length() == 0L) {
+                // An empty side is omitted silently, not reported as a failure.
+                target.delete()
+                return false
+            }
+            return true
+        } catch (e: Throwable) {
+            try { target.delete() } catch (_: Throwable) {}
+            writeBackendError(staging, reason(e, "download_failed"))
+            return false
+        } finally {
+            conn?.disconnect()
+        }
+    }
+
+    private fun writeBackendError(staging: File, reason: String) {
+        try {
+            File(staging, ENTRY_BACKEND_ERROR).writeText("Failed to fetch backend logs: $reason\n")
+        } catch (_: Throwable) {
+            // The note is a courtesy to whoever reads the archive; losing it
+            // must not lose the export.
+        }
+    }
+
+    /**
+     * Copy this app's client log into `staging/frontend.log`. False when there
+     * is nothing to copy. Blocks on [ClientFileLog.copyTo], which runs on the
+     * log thread so lines queued before the export are already on disk — this
+     * runs on a dedicated thread, never the JS or main thread, so the wait is
+     * nobody's latency but this export's.
+     */
+    private fun copyClientLog(staging: File): Boolean {
+        val target = File(staging, ENTRY_FRONTEND)
+        val done = CountDownLatch(1)
+        var copied = 0L
+        ClientFileLog.copyTo(target) { bytes ->
+            copied = bytes
+            done.countDown()
+        }
+        done.await()
+        if (copied <= 0L) {
+            try { target.delete() } catch (_: Throwable) {}
+            return false
+        }
+        return true
+    }
+
+    private fun sharedDir(): File {
+        val dir = File(mContext.cacheDir, SHARED_DIR)
+        if (!dir.exists()) dir.mkdirs()
+        return dir
+    }
+
+    /**
+     * Belt and braces: the name comes from our own TS layer, but a separator
+     * here would escape the shared dir.
+     */
+    private fun safeName(fileName: String): String = fileName.substringAfterLast('/')
+
+    /**
+     * Present [file] through the `ACTION_SEND` chooser (the FileProvider and
+     * `res/xml/file_paths.xml` are declared in the manifest). Always hops to the
+     * main thread: `startActivity` from the export/share worker thread is the
+     * same wrong-thread trap batch 48 hit with the lyric overlay.
+     */
+    private fun presentShareSheet(file: File, mimeType: String, onDone: (String?) -> Unit) {
+        mainHandler.post {
+            try {
+                val uri = FileProvider.getUriForFile(
+                    mContext, "${mContext.packageName}.fileprovider", file
+                )
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = mimeType
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                val chooser = Intent.createChooser(send, null).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                mContext.startActivity(chooser)
+                onDone(null)
+            } catch (e: Throwable) {
+                onDone(reason(e, "share_failed"))
+            }
+        }
+    }
+
+    /**
+     * A **non-empty** reason string for a bridge callback. The TS facade decides
+     * "failed" from this argument, and a blank one would be read as success —
+     * and `Throwable.message` is legitimately allowed to be blank, which `?:`
+     * (null-only) does not catch.
+     */
+    private fun reason(e: Throwable, fallback: String): String {
+        val message = e.message
+        return if (message != null && message.isNotBlank()) message else fallback
+    }
+
+    private companion object {
+        const val SHARED_DIR = "shared"
+        const val LOG_EXPORT_DIR = "logexport"
+        const val ENTRY_BACKEND = "backend.log"
+        const val ENTRY_BACKEND_ERROR = "backend-error.txt"
+        const val ENTRY_FRONTEND = "frontend.log"
+        const val MIME_ZIP = "application/zip"
+        const val CONNECT_TIMEOUT_MS = 15_000
+        const val READ_TIMEOUT_MS = 60_000
+        const val ERROR_DETAIL_CHARS = 500
     }
 }
