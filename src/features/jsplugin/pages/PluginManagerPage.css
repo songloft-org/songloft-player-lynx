@@ -148,40 +148,10 @@
   border-radius: var(--radius-pill);
 }
 
-/* Avatar: the plugin icon (or initial) inside a status-coloured ring.
-   Declaration order matters: `app-switch-css.test.ts`'s fork detector reads a
-   `border-radius` *followed by* a `border-width` in one block as "drawing a
-   little ticked square"; the ring is not that, so the width comes first. */
-.plugin-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-width: 2px;
-  border-color: var(--separator);
-  border-radius: var(--radius-pill);
-  overflow: hidden;
-}
-
-.plugin-avatar__icon {
-  width: 28px;
-  height: 28px;
-}
-
-.plugin-avatar__initial {
-  font-size: var(--font-callout);
-  font-weight: var(--weight-bold);
-  color: var(--accent);
-}
-
-.plugin-avatar--active {
-  border-color: var(--accent);
-}
-
-.plugin-avatar--error {
-  border-color: var(--system-red);
-}
+/* The row's icon is the shared `PluginIconTile` (see `PluginIconTile.css`) — this
+   page no longer styles one of its own. It used to draw a circle inside a
+   status-coloured ring, which duplicated the status dot + label a few pixels to
+   the right and clipped the corners off square logos. */
 
 /* The delete dialog's "keep plugin data" row: the shared tick control from
    shared/ui (presentational — the tap lands on this row, which owns the state)

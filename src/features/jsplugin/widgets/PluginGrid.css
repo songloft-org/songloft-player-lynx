@@ -24,6 +24,10 @@
   gap: var(--space-3);
 }
 
+/* No `background-color`: the card holds a `PluginIconTile`, which paints the same
+   `--secondary-system-background` — the tile would have disappeared into it. The
+   card is now the tap target and the label's column; the tile is the visual. The
+   radius stays for a future press fill to take the right shape. */
 .plugin-grid__card {
   display: flex;
   flex-direction: column;
@@ -31,27 +35,6 @@
   width: 72px;
   padding: var(--space-2);
   border-radius: var(--radius-md);
-  background-color: var(--secondary-system-background);
-}
-
-.plugin-grid__card-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-sm);
-  /*
-   * Shared by the `<image>` and `<svg>` branches of `PluginIcon` (see
-   * `PluginGrid.tsx`), since which element renders depends on the icon's file type.
-   * No `object-fit` here: Lynx `<image>` has no such CSS property (template encode
-   * dropped it with a build warning) — fitting is the element's `mode` attribute
-   * instead. `<svg>` needs no fitting control; it scales to the layout box.
-   */
-}
-
-.plugin-grid__card-icon--placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--system-background);
 }
 
 .plugin-grid__card-name {

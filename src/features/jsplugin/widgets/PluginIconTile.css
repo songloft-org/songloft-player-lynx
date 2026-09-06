@@ -1,0 +1,34 @@
+/*
+ * The shared plugin icon tile. See `PluginIconTile.tsx` for why it is a rounded
+ * square and why the nav bar's plugin glyph is not one of these.
+ *
+ * The tile paints its own surface, so a container that shows one must not paint
+ * the same fill underneath it — the home grid's card dropped its
+ * `--secondary-system-background` for exactly this reason (the tile would have
+ * vanished into it).
+ */
+
+.plugin-icon-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background-color: var(--secondary-system-background);
+  overflow: hidden;
+}
+
+/* Shared by the `<svg>` and `<image>` branches, since which element renders
+   depends on the icon's file type. Inset inside the 40px tile so a logo that
+   fills its own canvas edge-to-edge still reads as sitting *on* the tile. */
+.plugin-icon-tile__img {
+  width: 32px;
+  height: 32px;
+}
+
+.plugin-icon-tile__initial {
+  font-size: var(--font-callout);
+  font-weight: var(--weight-bold);
+  color: var(--accent);
+}

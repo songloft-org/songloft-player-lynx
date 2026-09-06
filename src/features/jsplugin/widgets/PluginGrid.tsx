@@ -5,6 +5,7 @@ import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { JSPlugin } from '../../../models/jsplugin.js'
 import { usePluginIconQuery, usePluginsQuery } from '../data/jsplugin-query.js'
+import { PluginIconTile } from './PluginIconTile.js'
 import './PluginGrid.css'
 
 export function PluginGrid() {
@@ -57,33 +58,25 @@ function PluginCard({ plugin, onTap }: { plugin: JSPlugin; onTap: () => void }) 
  * `<svg content>`, which needs no host support (it is how `shared/ui/Icon.tsx` has
  * always worked).
  *
- * Bitmap icons keep the `<image>` path, where `mode` — not the non-existent
- * `object-fit` CSS property — controls fitting. `aspectFit` (= `contain`) rather
- * than `cover`, because cropping a non-square logo cuts the mark.
+ * The rendering (and the no-icon fallback, which used to be a `settings` glyph
+ * here and the plugin's initial on the other two surfaces) belongs to
+ * `PluginIconTile`; this only resolves where the markup comes from.
  */
 function PluginIcon({ plugin }: { plugin: JSPlugin }) {
   const icon = plugin.icon ?? ''
   const entryPath = plugin.entryPath ?? ''
   const isSvg = isSvgIcon(icon)
   const { data: markup } = usePluginIconQuery(entryPath, icon, isSvg)
+  const hasIcon = Boolean(icon && entryPath)
 
-  if (icon && entryPath && isSvg && markup) {
-    return <svg className='plugin-grid__card-icon' content={markup} />
-  }
-  if (icon && entryPath && !isSvg) {
-    return (
-      <image
-        className='plugin-grid__card-icon'
-        mode='aspectFit'
-        src={buildCoverUrl(`/api/v1/jsplugin/${entryPath}/static/${icon}`)}
-      />
-    )
-  }
-  // No icon declared, or the SVG markup is still loading / came back unusable.
   return (
-    <view className='plugin-grid__card-icon plugin-grid__card-icon--placeholder'>
-      <Icon name='settings' size={24} color={ICON_COLORS.contentMuted} />
-    </view>
+    <PluginIconTile
+      markup={hasIcon && isSvg ? markup : undefined}
+      imageSrc={hasIcon && !isSvg
+        ? buildCoverUrl(`/api/v1/jsplugin/${entryPath}/static/${icon}`)
+        : undefined}
+      name={plugin.displayName}
+    />
   )
 }
 
