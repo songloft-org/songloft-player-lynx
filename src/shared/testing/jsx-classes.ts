@@ -15,11 +15,30 @@
  */
 
 /**
- * Every JSX opening tag in a source file, as raw text.
+ * Every JSX opening tag in a source file, with comment spans elided.
  *
  * Brace- and quote-aware, because attribute values are arbitrary expressions:
  * a naive `/<[^>]*>/` stops at the first `>` inside `{() => cond > 0}` and
  * would split one tag into two, losing whichever attribute straddles the cut.
+ *
+ * Comment-aware for a reason worth spelling out, because it cost a roster
+ * once: comments hold prose, and prose holds apostrophes. A `/* … *\/` between
+ * attributes saying "the stylesheet's calc/vh" flipped the quote state, so the
+ * scanner ran on past this tag's `>` and swallowed every following tag into
+ * one blob — measured across `src`, 45 files had wrong tag boundaries.
+ *
+ * The blob keeps all the swallowed `className` attributes, so a per-file union
+ * (`fileClasses`) survives it and a whole-blob `bindtap` test still answers
+ * yes; that is why the two gates reading this scanner stayed green. What they
+ * got was a roster that was too *wide* (44 non-tappable classes attributed to
+ * `bindtap` tags) rather than one with holes. A gate that filters tags by
+ * element type is the one that goes blind: the swallowed `<text>` is not a
+ * `<text>` tag any more, it is part of the `<view>` above it.
+ *
+ * Comments are elided from the returned text rather than merely skipped, so a
+ * class name or a `bindtap` *mentioned in prose* is not read as usage — one
+ * such phantom (`ui-backdrop-blur--panel`, named in a comment in
+ * `BackdropBlur.tsx`) was in the roster before this.
  */
 export function openingTags(src: string): string[] {
   const tags: string[] = []
@@ -27,17 +46,48 @@ export function openingTags(src: string): string[] {
     if (src[i] !== '<' || !/[a-zA-Z]/.test(src[i + 1] ?? '')) continue
     let depth = 0
     let quote: string | null = null
+    let text = '<'
     let j = i + 1
     for (; j < src.length; j++) {
       const c = src[j]!
       if (quote !== null) {
         if (c === quote && src[j - 1] !== '\\') quote = null
-      } else if (c === '"' || c === '\'' || c === '`') quote = c
+        text += c
+        continue
+      }
+      // Comments first: inside one, every other rule is off (an apostrophe is
+      // not a quote, a `>` does not end the tag, a class name is not usage).
+      if (c === '/' && src[j + 1] === '*') {
+        const end = src.indexOf('*/', j + 2)
+        j = end < 0 ? src.length : end + 1
+        text += ' '
+        continue
+      }
+      // `//` is only a comment inside an expression container.
+      //
+      // The BRANCH is load-bearing and gated (a class or handler named in a
+      // line comment must not read as usage). The `depth > 0` GUARD on it is
+      // not: in attribute position a `//` can only occur inside a string, and
+      // the quote branch above already owns that (`src='https://…'`). No valid
+      // JSX distinguishes the two, so dropping the guard alone changes no
+      // roster and no mutation can redden it — said plainly here rather than
+      // propped up with a test that proves nothing.
+      if (c === '/' && src[j + 1] === '/' && depth > 0) {
+        const newline = src.indexOf('\n', j + 2)
+        j = newline < 0 ? src.length : newline
+        text += ' '
+        continue
+      }
+      if (c === '>' && depth === 0) {
+        text += c
+        break
+      }
+      if (c === '"' || c === '\'' || c === '`') quote = c
       else if (c === '{') depth++
       else if (c === '}') depth--
-      else if (c === '>' && depth === 0) break
+      text += c
     }
-    tags.push(src.slice(i, j + 1))
+    tags.push(text)
     i = j
   }
   return tags

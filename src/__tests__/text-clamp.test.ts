@@ -54,16 +54,17 @@ const stylesheets = walk(SRC, '.css').map(file => ({
 /**
  * Every `<text …>` opening tag that clamps, with the classes it carries.
  *
- * Comments are stripped from the TSX *before* the scan, and that is
- * load-bearing rather than tidiness: `openingTags` tracks quote state, so a
- * JSX comment sitting between attributes with an apostrophe in its prose
- * (`SongInfoDialog.tsx` has "the stylesheet's calc/vh") flips it and makes the
- * scanner swallow every following tag into one. Without this strip the
- * `<text text-maxline='2'>` in that file is absorbed by the `<view>` above it
- * and simply does not appear in the derived list — green, and blind.
+ * This list is only as wide as `openingTags`, and that scanner used to be
+ * comment-blind: a JSX comment between attributes whose prose contained an
+ * apostrophe (`SongInfoDialog.tsx` has "the stylesheet's calc/vh") flipped its
+ * quote state and made it swallow the following tags into one blob, so the
+ * `<text text-maxline='2'>` there was not a `<text>` tag any more and dropped
+ * out of this list silently. Fixed in `shared/testing/jsx-classes.ts` and
+ * pinned by `shared/testing/__tests__/jsx-classes.test.ts`; this gate reads the
+ * shared scanner directly so a regression there fails here too.
  */
 const clampedTags = walk(SRC, '.tsx').flatMap(file =>
-  openingTags(stripComments(readFileSync(file, 'utf8')))
+  openingTags(readFileSync(file, 'utf8'))
     .filter(tag => /^<text[\s>]/.test(tag) && tag.includes('text-maxline'))
     .map(tag => ({
       file: path.relative(SRC, file),
