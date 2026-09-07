@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import type { Playlist } from '../../../models/playlist.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { IconName } from '../../../shared/ui/icons.js'
-import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 // Reuse the batch-6 playlist card (cover / music-note placeholder + name +
 // song-count). Its base rules are global CSS tuned for the library's three-per-row
 // grid (`width: 33.33%`, cover `height: 96px`); the home strip overrides both into
@@ -26,6 +25,9 @@ export interface HomeSectionProps {
   onRetry?: () => void
   onTapPlaylist: (playlist: Playlist) => void
   playingPlaylistId?: number
+  /** Wide-screen layout switch, sourced from `HomePage`'s shell-seeded breakpoint
+   * (not measured independently here — see songloft-player-lynx#6). */
+  isWide: boolean
 }
 
 export function HomeSection({
@@ -37,9 +39,9 @@ export function HomeSection({
   onRetry,
   onTapPlaylist,
   playingPlaylistId,
+  isWide,
 }: HomeSectionProps) {
   const { t } = useTranslation()
-  const { isWide, onLayoutChange } = useBreakpoint()
 
   const cards = items.map((playlist) => (
     <PlaylistCard
@@ -51,7 +53,7 @@ export function HomeSection({
   ))
 
   return (
-    <view className='home-section' bindlayoutchange={onLayoutChange}>
+    <view className='home-section'>
       <view className='home-section__header'>
         {icon
           ? (

@@ -38,6 +38,7 @@
 - [x] 首页统计改用 `/songs/stats` 接口数据
 - [x] 外观跟随系统无效（恒深色）— 修复 SystemAppearance 链路
 - [x] 语言跟随系统无效（恒英语）— 修复
+- [x] SettingsPage/HomePage/HomeSection 首帧闪帧 + HomeSection Web 网格失效 — 同类隐患排查：shell 内各页面 `useBreakpoint(0)` 首帧窄屏、测量返回后跳宽屏 = 闪帧；HomeSection `useBreakpoint()` 无 selector 致 Web 网格永不可达。提取 `useShellSeededBreakpoint` 共享 hook 做种子，HomeSection 改收 `isWide` prop。细节见 [progress.md](progress.md)「布局稳定性全量修复」
 - [x] 插件顶部标题改用插件 name 字段
 - [x] 首页下拉刷新不触发（批20 发现，非本批引入；首页数据靠 query 缓存自动失效，未阻塞）
 - [x] 底部导航插件 tab 图标硬编码 settings — `ShellLayout.tsx` 改用插件自身图标

@@ -4,7 +4,7 @@ import path from 'node:path'
 import { describe, expect, test } from 'vitest'
 
 /**
- * Every `useBreakpoint()` call must pass a `measureSelector`.
+ * Every `useBreakpoint()` / `useShellSeededBreakpoint()` call must pass a `measureSelector`.
  *
  * `bindlayoutchange` reports *changes*, and on Web it only ever fires for elements
  * present at first paint. A page that mounts on navigation therefore receives
@@ -19,30 +19,38 @@ import { describe, expect, test } from 'vitest'
  * were found by reading the hook, not by using the app — a wrong-but-plausible
  * narrow layout looks exactly like a correct narrow layout.
  *
+ * Shell-internal pages now go through `useShellSeededBreakpoint(selector)`, which
+ * both seeds from the shell cache (anti-flash, songloft-player-lynx#6) and always
+ * forwards the selector to `useBreakpoint`. This contract checks both hook variants.
+ *
  * Three assertions, each catching something the others cannot.
  */
 
 const SRC = path.resolve(__dirname, '../../..')
 
 /**
- * Files allowed to call `useBreakpoint` without a selector, with the reason.
+ * Files allowed to call a breakpoint hook without a selector, with the reason.
  *
- * `HomeSection` renders several instances on one page, and `select()` returns only
- * the first — so a selector would measure the wrong box for every instance but one.
- * It is also the one caller that does not need an exact width: it only asks `isWide`
- * to choose between 6 and 9 cards, and all its instances share the page width, which
- * `HomePage` (a first-paint element, and now measured) already tracks.
+ * Currently empty — `HomeSection` used to be here (it called `useBreakpoint()`
+ * with no selector because `select()` returns only the first of several
+ * instances), but that call was removed: `HomeSection` now receives `isWide` as
+ * a prop from `HomePage`, which measures once via `useShellSeededBreakpoint`
+ * (songloft-player-lynx#6). Kept as a set so a future exemption has a home.
  */
-const MEASURE_EXEMPT = new Set(['HomeSection.tsx'])
+const MEASURE_EXEMPT = new Set<string>()
 
 /**
  * Lower bound on call sites, so a broken regex cannot assert over an empty list.
  *
- * Only counts real calls: `LibraryShell` mentions `useBreakpoint()` in a doc comment
- * and must not be counted, which is what the comment-stripping below buys. Pages under
- * a route layout that owns the breakpoint for them (`AddSongsPage`,
- * `CreatePlaylistPage`, `LibraryPage` — all under `LibraryLayout`) are outside this gate
- * by construction: they read its context and never call the hook.
+ * Counts both `useBreakpoint` and `useShellSeededBreakpoint` calls in `.tsx`
+ * files. The shared hook's own internal `useBreakpoint` call lives in a `.ts`
+ * file and is not scanned — it is structurally guaranteed to pass the selector.
+ * Only counts real calls: `LibraryShell` mentions `useBreakpoint()` in a doc
+ * comment and must not be counted, which is what the comment-stripping below
+ * buys. Pages under a route layout that owns the breakpoint for them
+ * (`AddSongsPage`, `CreatePlaylistPage`, `LibraryPage` — all under
+ * `LibraryLayout`) are outside this gate by construction: they read its context
+ * and never call the hook.
  */
 const MIN_CALL_SITES = 6
 
@@ -62,10 +70,12 @@ interface CallSite {
   args: string
 }
 
-/** `useBreakpoint(` … `)` — the argument list, without nested parens (there are none). */
-const CALL = /useBreakpoint\(([^)]*)\)/g
-/** A string-literal class selector, e.g. `'.full-player'`. */
-const SELECTOR_ARG = /,\s*'\.([\w-]+)'/
+/** `useBreakpoint(` or `useShellSeededBreakpoint(` … `)` — the argument list. */
+const CALL = /(?:useBreakpoint|useShellSeededBreakpoint)\(([^)]*)\)/g
+/** A string-literal class selector, e.g. `'.full-player'`. The selector is the
+ *  second arg of `useBreakpoint` (after a comma) but the only arg of
+ *  `useShellSeededBreakpoint`, so the match is position-independent. */
+const SELECTOR_ARG = /'\.([\w-]+)'/
 
 /**
  * `.tsx` files reachable from `file` through one hop of relative imports.

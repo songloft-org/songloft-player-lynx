@@ -1,8 +1,6 @@
-import { useSyncExternalStore } from '@lynx-js/react'
 import { Outlet, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 
-import { getShellWidth, subscribeShellWidth } from '../../../shared/nav/shell-navigation.js'
-import { breakpointFromWidth, isWide as isWideBreakpoint, useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
+import { useShellSeededBreakpoint } from '../../../shared/responsive/use-shell-seeded-breakpoint.js'
 import { getLastLibrarySearch } from '../data/last-library-search.js'
 import {
   libraryBrowseConfigOrFallback,
@@ -12,9 +10,6 @@ import { railSelection, requestedRailView } from '../domain/library-rail-view.js
 import { resolveLibraryView, type LibraryViewKey } from '../domain/library-views.js'
 import { LibraryShell } from '../widgets/LibraryShell.js'
 import { LibraryViewportProvider } from './library-viewport.js'
-
-/** Width of `.shell__rail`, the app-level nav rail (`ShellLayout.css`). */
-const SHELL_RAIL_WIDTH = 220
 
 /**
  * Route layout for the whole library section: the library itself, its two forms
@@ -42,23 +37,15 @@ export function LibraryLayout() {
 
   /*
    * Seed the measurement with a width we already know, so frame 1 is right.
-   *
-   * `useBreakpoint` starts at `initialWidth` and only learns the truth after
-   * paint (`bindlayoutchange` is a change notification; `boundingClientRect` is
-   * an async invoke) — so a `0` seed *guarantees* one narrow frame on every
-   * mount. `ShellLayout` has already measured the window and publishes it, and
-   * the content area is the window minus the nav rail when the shell is wide.
+   * Extracted into `useShellSeededBreakpoint` so the home and settings pages
+   * cannot forget the seed and reintroduce the flash (songloft-player-lynx#6).
    *
    * Measured against the **content area**, not the window: two 220px rails side
    * by side leave only 260px of content at a 700px window, so the window-width
    * criterion the drill-in pages used was simply wrong, and it disagreed with
    * `LibraryPage` across the whole 600–820px band.
    */
-  const shellWidth = useSyncExternalStore(subscribeShellWidth, getShellWidth)
-  const seedWidth = isWideBreakpoint(breakpointFromWidth(shellWidth))
-    ? Math.max(0, shellWidth - SHELL_RAIL_WIDTH)
-    : shellWidth
-  const { isWide, onLayoutChange } = useBreakpoint(seedWidth, '.library-shell')
+  const { isWide, onLayoutChange } = useShellSeededBreakpoint('.library-shell')
 
   /*
    * Which row is lit. Sub-pages carry no `?view=`, so the policy (per route, and

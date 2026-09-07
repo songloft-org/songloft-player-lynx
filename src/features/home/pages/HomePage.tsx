@@ -4,7 +4,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { isWebPlatform } from '../../../native/web-platform.js'
-import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
+import { useShellSeededBreakpoint } from '../../../shared/responsive/use-shell-seeded-breakpoint.js'
 
 import { EMPTY_LIBRARY_STATS } from '../../../models/library-stats.js'
 import type { Playlist } from '../../../models/playlist.js'
@@ -45,7 +45,7 @@ export function HomePage() {
   const statsQuery = useLibraryStatsQuery()
   const playingPlaylistId = usePlayerStore((s) => s.sourcePlaylistId)
 
-  const { isWide: homeIsWide, onLayoutChange: homeLayoutChange } = useBreakpoint(0, '.home')
+  const { isWide: homeIsWide, onLayoutChange: homeLayoutChange } = useShellSeededBreakpoint('.home')
   const sectionLimit = homeIsWide ? 9 : 6
   const normalItems = homeSectionItems(normal.data?.pages, sectionLimit)
   const radioItems = homeSectionItems(radio.data?.pages, sectionLimit)
@@ -120,6 +120,7 @@ export function HomePage() {
                         onRetry={() => void normal.refetch()}
                         onTapPlaylist={openPlaylist}
                         playingPlaylistId={playingPlaylistId}
+                        isWide={homeIsWide}
                       />
                     )
                     : null}
@@ -134,6 +135,7 @@ export function HomePage() {
                         onRetry={() => void radio.refetch()}
                         onTapPlaylist={openPlaylist}
                         playingPlaylistId={playingPlaylistId}
+                        isWide={homeIsWide}
                       />
                     )
                     : null}

@@ -11,7 +11,7 @@ import { getPlatformCapabilities } from '../../../native/platform-capabilities.j
 // (which crashes the ReactLynx Vitest snapshot tree).
 import { useAuthStore } from '../../auth/store/index.js'
 import { serverDisplay } from '../domain/settings-model.js'
-import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
+import { useShellSeededBreakpoint } from '../../../shared/responsive/use-shell-seeded-breakpoint.js'
 import { useScrollMemory } from '../../../shared/nav/scroll-memory.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
@@ -97,8 +97,9 @@ export function SettingsPage() {
   // rather than a `useRef`.
   const { initialOffset, onScroll } = useScrollMemory(SCROLL_KEY)
   // The selector is how the width gets measured on mount: this page is not in the
-  // first paint, so on Web `bindlayoutchange` never fires for it at all.
-  const { width: layoutWidth, onLayoutChange } = useBreakpoint(0, '.settings')
+  // first paint, so on Web `bindlayoutchange` never fires for it at all. Seeded
+  // from the shell cache so frame 1 is right (songloft-player-lynx#6).
+  const { width: layoutWidth, onLayoutChange } = useShellSeededBreakpoint('.settings')
   const isDualColumn = layoutWidth >= DUAL_COLUMN_MIN_WIDTH
 
   /**
