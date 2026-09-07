@@ -21,6 +21,7 @@ import {
   flatViewType,
   isFolderLibraryView,
   LIBRARY_VIEW_GROUP,
+  playlistViewSongSource,
   playlistViewType,
   resolveLibraryView,
   type LibraryViewKey,
@@ -44,7 +45,8 @@ import './LibraryPage.css'
  * dispatches one of three content kinds:
  *   - songs group    → `FlatSongsView` (all/local/remote/radio)
  *   - facets group   → `FacetGridView` (artist/album/genre/year/…)
- *   - playlists group→ `PlaylistsView` (playlist/playlist_normal/playlist_radio)
+ *   - playlists group→ `PlaylistsView` (playlist/playlist_normal/playlist_radio/
+ *     playlist_remote/playlist_local; the last two filter by song source)
  *
  * View customization (visibility + order) is edited **in-page** via the topbar
  * `tune` button → `LibraryViewEditor` (replaces the whole body), not in
@@ -183,7 +185,14 @@ export function LibraryPage() {
         : selected === 'tag'
           ? <TagGridView key='tag' viewMode={viewMode} />
           : <FacetGridView key={selected} field={selected} viewMode={viewMode} />
-      : <PlaylistsView key={selected} type={playlistViewType(selected)} viewMode={viewMode} />
+      : (
+        <PlaylistsView
+          key={selected}
+          type={playlistViewType(selected)}
+          songSource={playlistViewSongSource(selected)}
+          viewMode={viewMode}
+        />
+      )
 
   return (
     <view className='library'>

@@ -14,6 +14,12 @@ import {
 
 export interface PlaylistsFilters {
   type?: string
+  /**
+   * Filter by the source of the songs the playlist holds: `'remote'` (network
+   * playlists) or `'local'`. EXISTS semantics — a mixed playlist matches both,
+   * an empty one matches neither (songloft-org/songloft#445).
+   */
+  songSource?: string
   excludeLabels?: string
   keyword?: string
 }
@@ -69,6 +75,7 @@ export function buildPlaylistsQuery(
     offset: page.offset ?? 0,
   }
   putStr(query, 'type', filters.type)
+  putStr(query, 'song_source', filters.songSource)
   putStr(query, 'exclude_labels', filters.excludeLabels)
   putStr(query, 'keyword', filters.keyword)
   return query

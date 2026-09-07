@@ -112,12 +112,32 @@ export function PlaylistCard({
           : null}
       </view>
       <text className='playlist-card__name'>{playlist.name || t('common.untitled')}</text>
-      {playlist.isPinned
+      {/*
+        * Pinned and "network" are both chips in the same meta row, so unlike the
+        * list mode's single `badge` slot they can coexist. The network chip marks
+        * network only, never local: local is what nearly every playlist is, so a
+        * "local" chip on every card would be noise — what needs calling out is
+        * the few network ones mixed in (songloft-org/songloft#445). Radio
+        * playlists are excluded: they already read as radio and hold `radio`
+        * songs, not `remote` ones.
+        */}
+      {playlist.isPinned || (playlist.type !== 'radio' && playlist.hasRemoteSongs)
         ? (
           <view className='playlist-card__meta'>
-            <text className='playlist-card__chip' data-testid={`playlist-card-pinned-${playlist.id}`}>
-              {t('playlist.labelPinned')}
-            </text>
+            {playlist.isPinned
+              ? (
+                <text className='playlist-card__chip' data-testid={`playlist-card-pinned-${playlist.id}`}>
+                  {t('playlist.labelPinned')}
+                </text>
+              )
+              : null}
+            {playlist.type !== 'radio' && playlist.hasRemoteSongs
+              ? (
+                <text className='playlist-card__chip' data-testid={`playlist-card-remote-${playlist.id}`}>
+                  {t('playlist.labelRemote')}
+                </text>
+              )
+              : null}
             <text className='playlist-card__count'>{count}</text>
           </view>
         )

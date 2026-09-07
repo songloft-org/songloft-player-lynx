@@ -56,6 +56,22 @@ describe('buildPlaylistsQuery (pure)', () => {
     })
   })
 
+  test('maps songSource onto the song_source query param', () => {
+    expect(buildPlaylistsQuery({ songSource: 'remote' })).toEqual({
+      limit: 20,
+      offset: 0,
+      song_source: 'remote',
+    })
+    // type and song_source are independent dimensions and may coexist on the wire.
+    expect(buildPlaylistsQuery({ type: 'normal', songSource: 'local' })).toEqual({
+      limit: 20,
+      offset: 0,
+      type: 'normal',
+      song_source: 'local',
+    })
+    expect(buildPlaylistsQuery({ songSource: '' })).toEqual({ limit: 20, offset: 0 })
+  })
+
   test('drops empty-string filters', () => {
     expect(buildPlaylistsQuery({ type: undefined, keyword: '', excludeLabels: '' })).toEqual({
       limit: 20,

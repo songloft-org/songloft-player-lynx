@@ -25,6 +25,10 @@ export const playlistSchema = z
     cover_url: z.string().nullish().catch(undefined),
     labels: z.array(z.string()).catch([]),
     song_count: z.coerce.number().catch(0),
+    // Number of network songs (`songs.type = 'remote'`) the playlist holds; > 0
+    // means it is a "network playlist". Only the *list* endpoint fills this —
+    // `GET /playlists/{id}` always sends 0 (songloft-org/songloft#445).
+    remote_count: z.coerce.number().catch(0),
     sort_by: z.string().catch('position'),
     sort_order: z.string().catch('asc'),
     created_at: z.string().nullish().catch(undefined),
@@ -43,12 +47,16 @@ export const playlistSchema = z
     coverUrl: p.cover_url ?? undefined,
     labels: p.labels,
     songCount: p.song_count,
+    remoteCount: p.remote_count,
     sortBy: p.sort_by,
     sortOrder: p.sort_order,
     createdAt: p.created_at ?? nowIso(),
     updatedAt: p.updated_at ?? nowIso(),
     pinnedAt: p.pinned_at ?? undefined,
     isPinned: p.pinned_at != null,
+    // "Holds network songs", not "is entirely network" — matches the backend's
+    // EXISTS-based `song_source` filter, so a mixed playlist is true here too.
+    hasRemoteSongs: p.remote_count > 0,
     isBuiltIn: p.labels.includes('built_in'),
     isAutoCreated: p.labels.includes('auto_created'),
     isHidden: p.labels.includes('hidden'),
@@ -64,6 +72,7 @@ export interface PlaylistJson {
   cover_url: string | null
   labels: string[]
   song_count: number
+  remote_count: number
   sort_by: string
   sort_order: string
   created_at: string
@@ -80,6 +89,7 @@ export function playlistToJson(playlist: Playlist): PlaylistJson {
     cover_url: playlist.coverUrl ?? null,
     labels: playlist.labels,
     song_count: playlist.songCount,
+    remote_count: playlist.remoteCount,
     sort_by: playlist.sortBy,
     sort_order: playlist.sortOrder,
     created_at: playlist.createdAt,

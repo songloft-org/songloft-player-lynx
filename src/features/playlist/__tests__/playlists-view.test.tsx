@@ -82,6 +82,8 @@ function makePlaylist(id: number, over: Partial<Playlist> = {}): Playlist {
     isHidden: false,
     pinnedAt: undefined,
     isPinned: false,
+    remoteCount: 0,
+    hasRemoteSongs: false,
     ...over,
   }
 }
@@ -389,6 +391,35 @@ test('shows a pinned chip only on pinned playlists', async () => {
 
   expect(queryByTestId('playlist-card-pinned-1')).toBeInTheDocument()
   expect(queryByTestId('playlist-card-pinned-2')).not.toBeInTheDocument()
+})
+
+test('shows a network chip on playlists holding remote songs, never on local or radio ones', async () => {
+  listHook.mockReturnValue(
+    listResult([
+      {
+        playlists: [
+          // Pure network.
+          makePlaylist(1, { name: 'Net', remoteCount: 2, hasRemoteSongs: true }),
+          // Mixed: still chipped — it *does* hold network songs, and cleaning
+          // those up is the whole point (songloft-org/songloft#445).
+          makePlaylist(2, { name: 'Mixed', remoteCount: 1, hasRemoteSongs: true }),
+          // Pure local: no chip. Local is the default expectation, so chipping
+          // every card would be noise.
+          makePlaylist(3, { name: 'Local', remoteCount: 0, hasRemoteSongs: false }),
+          // Radio playlists are excluded even if the count somehow says otherwise:
+          // they already read as radio and hold `radio` songs, not `remote` ones.
+          makePlaylist(4, { name: 'Radio', type: 'radio', remoteCount: 1, hasRemoteSongs: true }),
+        ],
+        total: 4,
+      },
+    ]),
+  )
+  const { queryByTestId } = await renderView()
+
+  expect(queryByTestId('playlist-card-remote-1')).toBeInTheDocument()
+  expect(queryByTestId('playlist-card-remote-2')).toBeInTheDocument()
+  expect(queryByTestId('playlist-card-remote-3')).not.toBeInTheDocument()
+  expect(queryByTestId('playlist-card-remote-4')).not.toBeInTheDocument()
 })
 
 /*

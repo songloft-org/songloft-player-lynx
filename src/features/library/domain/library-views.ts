@@ -38,6 +38,8 @@ export const LIBRARY_VIEW_GROUP: Record<LibraryViewKey, LibraryViewGroup> = {
   playlist: 'playlists',
   playlist_normal: 'playlists',
   playlist_radio: 'playlists',
+  playlist_remote: 'playlists',
+  playlist_local: 'playlists',
 }
 
 /** i18n keys, resolved through `t()` at render time (never store the text). */
@@ -58,6 +60,8 @@ export const LIBRARY_VIEW_LABEL_KEY: Record<LibraryViewKey, string> = {
   playlist: 'library.viewPlaylistAll',
   playlist_normal: 'library.viewPlaylistNormal',
   playlist_radio: 'library.viewPlaylistRadio',
+  playlist_remote: 'library.viewPlaylistRemote',
+  playlist_local: 'library.viewPlaylistLocal',
 }
 
 export const LIBRARY_VIEW_ICON: Record<LibraryViewKey, IconName> = {
@@ -77,6 +81,10 @@ export const LIBRARY_VIEW_ICON: Record<LibraryViewKey, IconName> = {
   playlist: 'queue',
   playlist_normal: 'music',
   playlist_radio: 'radio',
+  // Same icons as the songs group's remote/local views, so "network" and
+  // "local" read the same wherever they appear.
+  playlist_remote: 'cloud',
+  playlist_local: 'folder',
 }
 
 export const LIBRARY_VIEW_GROUP_LABEL_KEY: Record<LibraryViewGroup, string> = {
@@ -95,7 +103,10 @@ export function isFolderLibraryView(key: LibraryViewKey): boolean {
   return key === 'folder'
 }
 
-/** Playlist card lists (`playlist` / `playlist_normal` / `playlist_radio`). */
+/**
+ * Playlist card lists (`playlist` / `playlist_normal` / `playlist_radio` /
+ * `playlist_remote` / `playlist_local`).
+ */
 export function isPlaylistLibraryView(key: LibraryViewKey): boolean {
   return LIBRARY_VIEW_GROUP[key] === 'playlists'
 }
@@ -240,11 +251,35 @@ export function flatViewType(key: LibraryViewKey): 'local' | 'remote' | 'radio' 
   }
 }
 
-/** The playlist `type` filter for a playlist view; `playlist` sends none. */
+/**
+ * The playlist `type` filter for a playlist view; `playlist` sends none.
+ *
+ * `playlist_remote` / `playlist_local` also send none — they do not filter on
+ * `playlists.type` at all, but on {@link playlistViewSongSource}.
+ */
 export function playlistViewType(key: LibraryViewKey): 'normal' | 'radio' | undefined {
   switch (key) {
     case 'playlist_normal': return 'normal'
     case 'playlist_radio': return 'radio'
+    default: return undefined
+  }
+}
+
+/**
+ * The `song_source` filter for a playlist view — "which playlists hold songs of
+ * this source" (backend `song_source`, songloft-org/songloft#445). Other views
+ * send none.
+ *
+ * The match is EXISTS, not "all of them": a playlist holding both local and
+ * network songs shows up under *both* views, and an empty playlist shows up
+ * under neither (no songs, so no source to infer — putting it on either side
+ * would be a guess). Radio songs are typed `radio`, not `remote`, so radio
+ * playlists never surface here; they have their own `playlist_radio` view.
+ */
+export function playlistViewSongSource(key: LibraryViewKey): 'remote' | 'local' | undefined {
+  switch (key) {
+    case 'playlist_remote': return 'remote'
+    case 'playlist_local': return 'local'
     default: return undefined
   }
 }
@@ -301,7 +336,7 @@ export function resolveLibraryView(
 }
 
 /**
- * Old four-tab values → the 16-view keys they map onto.
+ * Old four-tab values → the 18-view keys they map onto.
  *
  * `radio` is deliberately ABSENT: it collides with the new songs-group `radio`
  * key (radio stations as a flat list). New keys win the passthrough below —

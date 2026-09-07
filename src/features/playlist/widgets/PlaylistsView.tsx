@@ -34,14 +34,27 @@ import { useDebounce } from '../../library/data/use-debounce.js'
 import { PlaylistCard } from './PlaylistCard.js'
 import './PlaylistsView.css'
 
-export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; viewMode?: 'grid' | 'list' } = {}) {
+export function PlaylistsView(
+  { type, songSource, viewMode = 'grid' }: {
+    type?: string
+    /** `'remote'` / `'local'` — filter by the source of the songs held. */
+    songSource?: string
+    viewMode?: 'grid' | 'list'
+  } = {},
+) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [searchText, setSearchText] = useState('')
   const debouncedSearch = useDebounce(searchText, 350)
-  const query = usePlaylistsInfiniteQuery(
-    type ? { type, keyword: debouncedSearch || undefined } : { keyword: debouncedSearch || undefined },
-  )
+  // `type` and `songSource` are independent and never both set by LibraryPage
+  // (type views vs source views), but the filter object carries whichever is
+  // present. Keys are omitted rather than set to `undefined` so the query key
+  // stays identical to what the callers without filters produce.
+  const query = usePlaylistsInfiniteQuery({
+    ...(type ? { type } : {}),
+    ...(songSource ? { songSource } : {}),
+    keyword: debouncedSearch || undefined,
+  })
   const allPlaylists = flattenPlaylists(query.data?.pages)
   const [showHidden, setShowHidden] = useState(false)
   const playlists = showHidden ? allPlaylists : allPlaylists.filter((p) => !p.isHidden)
@@ -449,7 +462,18 @@ export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; view
                     playlist.songCount === 1 ? 'common.songCountOne' : 'common.songCountOther',
                     { count: playlist.songCount },
                   )}
-                  badge={playlist.isPinned ? t('playlist.labelPinned') : undefined}
+                  badge={
+                    /*
+                     * Single badge slot on the shared MediaListItem, so pinned wins
+                     * when a playlist is both — keeps the pre-existing pinned
+                     * behaviour byte-identical. The grid card shows both chips.
+                     */
+                    playlist.isPinned
+                      ? t('playlist.labelPinned')
+                      : playlist.type !== 'radio' && playlist.hasRemoteSongs
+                        ? t('playlist.labelRemote')
+                        : undefined
+                  }
                   coverUrl={playlist.coverUrl ? buildCoverUrl(playlist.coverUrl, playlist.updatedAt) : undefined}
                   onTap={() => onTap(playlist)}
                   onPlayAll={() => onPlayAll(playlist)}

@@ -18,6 +18,7 @@ import {
   LIBRARY_VIEW_LABEL_KEY,
   migrateLibrarySearch,
   moveGroup,
+  playlistViewSongSource,
   playlistViewType,
   resolveLibraryView,
   setGroupOrder,
@@ -79,7 +80,7 @@ describe('groupLibraryViewKeys', () => {
     expect(buckets.map((b) => b.group)).toEqual(['songs', 'facets', 'playlists'])
     expect(buckets[0]!.keys).toEqual(['all', 'local', 'remote', 'radio'])
     expect(buckets[1]!.keys).toEqual(['folder', 'artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag'])
-    expect(buckets[2]!.keys).toEqual(['playlist', 'playlist_normal', 'playlist_radio'])
+    expect(buckets[2]!.keys).toEqual(['playlist', 'playlist_normal', 'playlist_radio', 'playlist_remote', 'playlist_local'])
   })
 
   test('group order is implicit — playlists first in, playlists first out', () => {
@@ -140,8 +141,8 @@ describe('setGroupOrder', () => {
     const buckets = groupLibraryViewKeys(next.map((v) => v.key))
     expect(buckets.find((b) => b.group === 'facets')!.keys[0]).toBe('genre')
     expect(buckets.find((b) => b.group === 'songs')!.keys).toEqual(['all', 'local', 'remote', 'radio'])
-    expect(buckets.find((b) => b.group === 'playlists')!.keys).toEqual(['playlist', 'playlist_normal', 'playlist_radio'])
-    expect(next).toHaveLength(16)
+    expect(buckets.find((b) => b.group === 'playlists')!.keys).toEqual(['playlist', 'playlist_normal', 'playlist_radio', 'playlist_remote', 'playlist_local'])
+    expect(next).toHaveLength(18)
   })
 
   test('ignores keys from other groups and keeps any omitted member', () => {
@@ -168,6 +169,25 @@ describe('content dispatch', () => {
     expect(playlistViewType('playlist_normal')).toBe('normal')
     expect(playlistViewType('playlist_radio')).toBe('radio')
     expect(playlistViewType('all')).toBeUndefined()
+  })
+
+  test('playlistViewType: the source-filtered views send no type either', () => {
+    // They filter on song source, not `playlists.type` — sending a type would
+    // wrongly exclude radio playlists from `playlist_local`.
+    expect(playlistViewType('playlist_remote')).toBeUndefined()
+    expect(playlistViewType('playlist_local')).toBeUndefined()
+  })
+
+  test('playlistViewSongSource: only the two source views send song_source', () => {
+    expect(playlistViewSongSource('playlist_remote')).toBe('remote')
+    expect(playlistViewSongSource('playlist_local')).toBe('local')
+    expect(playlistViewSongSource('playlist')).toBeUndefined()
+    expect(playlistViewSongSource('playlist_normal')).toBeUndefined()
+    expect(playlistViewSongSource('playlist_radio')).toBeUndefined()
+    // The songs-group `remote`/`local` views filter songs, not playlists —
+    // they must not leak into the playlist query.
+    expect(playlistViewSongSource('remote')).toBeUndefined()
+    expect(playlistViewSongSource('local')).toBeUndefined()
   })
 
   test('facetViewField: only the 7 facet dimensions', () => {
@@ -200,7 +220,7 @@ describe('resolveLibraryView', () => {
     expect(keysOf(resolved)).toEqual([
       'all', 'local', 'remote', 'radio',
       'folder', 'artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag',
-      'playlist', 'playlist_normal', 'playlist_radio',
+      'playlist', 'playlist_normal', 'playlist_radio', 'playlist_remote', 'playlist_local',
     ])
   })
 

@@ -9,21 +9,26 @@ import { makeParsers } from './_shared.js'
  * Wire contract, verified against the backend handler rather than the old
  * Lynx port (which spoke `{id, visible, order}` and got a silent 400 on every
  * PUT): each view is `{ key, visible }`; **order is the array position**, not
- * a field. The backend validates keys against its 16-key whitelist and echoes
- * a normalized, always-complete 16-entry config.
+ * a field. The backend validates keys against its 18-key whitelist and echoes
+ * a normalized, always-complete 18-entry config.
  */
 
 /**
- * The 16 legal view keys in the backend's default order
+ * The 18 legal view keys in the backend's default order
  * (`libraryViewKeys`, library_browse_setting.go:31) — three contiguous groups:
  *   - songs: flat song lists filtered by `type` (`all` sends no type);
  *   - facets: `/songs/facets` category dimensions, drilled into song lists;
  *   - playlists: playlist card lists.
+ *
+ * Within the playlists group the first three filter on `playlists.type`, while
+ * `playlist_remote` / `playlist_local` filter on the *source of the songs the
+ * playlist holds* (`song_source`) — the playlists table has no source column,
+ * so it can only be inferred from its songs (songloft-org/songloft#445).
  */
 export const LIBRARY_VIEW_KEYS = [
   'all', 'local', 'remote', 'radio',
   'folder', 'artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag',
-  'playlist', 'playlist_normal', 'playlist_radio',
+  'playlist', 'playlist_normal', 'playlist_radio', 'playlist_remote', 'playlist_local',
 ] as const
 
 export type LibraryViewKey = (typeof LIBRARY_VIEW_KEYS)[number]
@@ -45,7 +50,7 @@ export function isLibraryViewKey(value: string): value is LibraryViewKey {
   return libraryViewKeySet.has(value)
 }
 
-/** Default config: all 16 views visible, backend default order. */
+/** Default config: all 18 views visible, backend default order. */
 export const DEFAULT_LIBRARY_BROWSE_CONFIG: LibraryBrowseConfig = {
   views: LIBRARY_VIEW_KEYS.map((key) => ({ key, visible: true })),
 }

@@ -97,7 +97,7 @@ test('narrow: the routed page only, no rail', async () => {
 test('wide: the rail renders one row per visible view, beside the routed page', async () => {
   breakpointHook.mockReturnValue({ isWide: true, onLayoutChange: vi.fn() })
   const { queryAllByTestId, queryByText } = await renderLayout()
-  expect(queryAllByTestId(/^library-view-row-/)).toHaveLength(16)
+  expect(queryAllByTestId(/^library-view-row-/)).toHaveLength(18)
   expect(queryByText('OUTLET')).toBeInTheDocument()
 })
 

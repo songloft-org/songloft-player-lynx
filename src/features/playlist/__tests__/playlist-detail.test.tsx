@@ -163,6 +163,8 @@ function makePlaylist(over: Partial<Playlist> = {}): Playlist {
     isHidden: false,
     pinnedAt: undefined,
     isPinned: false,
+    remoteCount: 0,
+    hasRemoteSongs: false,
     ...over,
   }
 }

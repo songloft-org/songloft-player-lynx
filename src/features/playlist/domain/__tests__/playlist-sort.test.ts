@@ -25,6 +25,8 @@ function makePlaylist(id: number, name: string): Playlist {
     isHidden: false,
     pinnedAt: undefined,
     isPinned: false,
+    remoteCount: 0,
+    hasRemoteSongs: false,
   }
 }
 
