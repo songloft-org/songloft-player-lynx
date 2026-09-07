@@ -40,7 +40,13 @@
   font-size: var(--font-footnote);
   color: var(--label);
   text-align: center;
-  white-space: nowrap;
+  /* No `white-space: nowrap`: each segment is only `flex: 1` (≈¼ of the track),
+     so on narrow screens a long label (e.g. "原始（无损）" / "Original (lossless)")
+     cannot fit on one line and would overflow the capsule. Letting it wrap keeps
+     the text inside the segment; `align-items: center` on `__item` still centers
+     the (now possibly two-line) block, and every segment grows to the tallest so
+     the row stays even. */
+  line-height: 1.25;
 }
 
 .segmented__label--selected {

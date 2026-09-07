@@ -225,6 +225,7 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
       title={t('libops.pageTitle')}
       backTestId='libops-back'
       contentClassName='libops__content'
+      scrollMemoryKey='library-ops'
     >
       <ScanSection
         progress={progress}

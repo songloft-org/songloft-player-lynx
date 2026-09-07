@@ -32,15 +32,18 @@ export interface ScanSettingsSectionProps {
 /**
  * The five backend-owned scan preferences.
  *
- * Multi-choice settings (playlist mode, auto-scan interval) render as option
- * rows with a `check` on the selection — Lynx has no dropdown, and this matches
- * the existing play-mode picker in `SettingsPage`. The interval list is only
- * mounted while auto-scan is on, so it does not cost seven rows of vertical
- * space when disabled.
+ * Multi-choice settings (playlist mode, auto-scan interval) render as a
+ * collapsible header row plus option rows with a `check` on the selection — Lynx
+ * has no dropdown, and the header toggles a `chevron-up/down` so the options stay
+ * folded until tapped. Both option lists are mounted only when relevant: the
+ * interval list only while auto-scan is on, and the playlist-mode list only while
+ * auto-create is on **and** the header is expanded, so neither costs vertical
+ * space when it is not in use.
  */
 export function ScanSettingsSection({ onWriteError }: ScanSettingsSectionProps) {
   const { t } = useTranslation()
   const [showIntervals, setShowIntervals] = useState(false)
+  const [showPlaylistModes, setShowPlaylistModes] = useState(false)
 
   const autoCreate = useAutoCreatePlaylists()
   const setAutoCreate = useSetAutoCreatePlaylists()
@@ -84,10 +87,12 @@ export function ScanSettingsSection({ onWriteError }: ScanSettingsSectionProps) 
           ? t(playlistModeDescKey(currentMode))
           : t('libops.playlistModeDisabled')}
         trailingText={t(playlistModeLabelKey(currentMode))}
+        trailingIcon={showPlaylistModes ? 'chevron-up' : 'chevron-down'}
+        onTap={() => setShowPlaylistModes(!showPlaylistModes)}
         disabled={!autoCreateOn}
         testId='row-playlist-mode'
       />
-      {autoCreateOn
+      {autoCreateOn && showPlaylistModes
         ? PLAYLIST_MODES.map((mode) => (
           <SettingsRow
             key={mode}

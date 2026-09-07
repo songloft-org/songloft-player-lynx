@@ -389,6 +389,12 @@ test('switch rows render their on/off state as a class on the track', async () =
 
 test('playlist mode options are selectable and report the current choice', async () => {
   const { queryByTestId } = await renderPage()
+  // Options are folded behind the header row until it is tapped (same
+  // collapse-on-demand pattern as the scan-interval picker below).
+  expect(queryByTestId('playlist-mode-directory')).not.toBeInTheDocument()
+  await act(async () => {
+    fireEvent.tap(queryByTestId('row-playlist-mode')!)
+  })
   expect(queryByTestId('playlist-mode-directory')).toBeInTheDocument()
   await act(async () => {
     fireEvent.tap(queryByTestId('playlist-mode-top_level')!)

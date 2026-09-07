@@ -1,6 +1,7 @@
 import { createContext, useContext } from '@lynx-js/react'
 import type { ReactNode } from '@lynx-js/react'
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
+import { useScrollMemory } from '../../../shared/nav/scroll-memory.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import './SubPageShell.css'
 
@@ -41,6 +42,15 @@ export interface SubPageShellProps {
   scrollable?: boolean
   /** Extra class on the content wrapper, for page-specific layout rules. */
   contentClassName?: string
+  /**
+   * Remember this page's scroll offset across unmounts, so returning from a
+   * drill-in sub-page (e.g. Music library → Duplicate detection) lands where the
+   * user left off instead of back at the top. Pass a stable per-page key; omit to
+   * keep the default "always start at the top" behaviour. Backed by the same
+   * module-level `useScrollMemory` the settings master list uses — see that hook
+   * for why it must be module-level (sibling routes unmount the page).
+   */
+  scrollMemoryKey?: string
   /**
    * True when the page is an Apple **inset-grouped list** — i.e. its body is
    * `SettingsSection` cards. Those pages invert the page background: the page goes
@@ -83,11 +93,18 @@ export function SubPageShell({
   actions,
   scrollable = true,
   contentClassName,
+  scrollMemoryKey,
   grouped = false,
   overlay,
   children,
 }: SubPageShellProps) {
   const embedded = useContext(SubPageEmbedContext)
+
+  // Hooks must run unconditionally, so the memory is always resolved; it is only
+  // *wired* to the scroll-view when `scrollMemoryKey` is set. The `__none__`
+  // fallback key never has `onScroll` attached (no `bindscroll`), so it stays
+  // empty and cannot leak an offset into a page that opted out.
+  const { initialOffset, onScroll } = useScrollMemory(scrollMemoryKey ?? '__none__')
 
   /**
    * There used to be a `backTo` prop here, defaulting to `/settings`. It is gone
@@ -124,7 +141,16 @@ export function SubPageShell({
       </view>
 
       {scrollable
-        ? <scroll-view className='subpage__scroll' scroll-y>{content}</scroll-view>
+        ? (
+          <scroll-view
+            className='subpage__scroll'
+            scroll-y
+            initial-scroll-offset={scrollMemoryKey ? initialOffset : undefined}
+            bindscroll={scrollMemoryKey ? onScroll : undefined}
+          >
+            {content}
+          </scroll-view>
+        )
         : content}
 
       {overlay ?? null}

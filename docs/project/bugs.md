@@ -62,6 +62,9 @@
 - [x] Web 刷新掉登录 — worker realm 无 `localStorage`，能力探测落到内存存储；新增 `idb-storage.ts`（worker 里 IndexedDB 原生可用，零宿主配合，`open` 带 3s 超时防 version-change 挂死）
 - [x] 日志导出缺客户端日志 / 日志等级设置缺标题 — 对齐 Flutter 补齐
 - [x] 速度/播放模式弹出层能同时开两个（批51）— `PopoverBackdrop` 有 `100vw×100vh` 却没 `top`/`left`，fixed 元素落在静态位置没盖住触发器外侧；补 `top:0;left:0`
+- [x] 音频质量分段控件小屏文字超框（Issue #8）— `.segmented__label` 的 `white-space: nowrap` 逼长标签（`原始（无损）`/`高（320 kbps）`）单行，而每段只 `flex:1`（≈¼ 宽），窄屏放不下就横向溢出胶囊；删 nowrap 让其段内换行 + `line-height:1.25`，四段仍等宽、选中态不变。已过 playback-page vitest + `tsc -b`
+- [x] 音乐库从重复检测页返回丢失滚动位置（Issue #8）— 上文「设置页从二级页返回落回顶部」只修了 `SettingsPage` 主列表，子页壳 `SubPageShell` 的 `<scroll-view>` 没接 `scroll-memory`；进入 `/settings/duplicates`（窄屏路由 / 宽屏 pane 切换）都会卸载 `LibraryOpsPage`，返回重挂载即回顶。给 `SubPageShell` 加可选 `scrollMemoryKey`（无条件调 `useScrollMemory`，仅在传 key 时挂 `initial-scroll-offset`/`bindscroll`），`LibraryOpsPage` 传 `'library-ops'`。已过 sub-page-shell + library-ops vitest + `tsc -b`
+- [x] 歌单创建方式选项常驻展开（Issue #8）— `ScanSettingsSection` 里「扫描间隔」是折叠交互（`showIntervals` + `chevron-up/down` + 点头部切换），但「歌单创建方式」头部行不可点、选项只要 autoCreate 开就全铺出；对齐扫描间隔：加 `showPlaylistModes` 状态 + 头部行 `trailingIcon`/`onTap`，选项条件由 `autoCreateOn` 改 `autoCreateOn && showPlaylistModes`（`disabled` 时 `SettingsRow` 已忽略 onTap）。同步改 library-ops 测试为先点头部再断言选项。已过 vitest + `tsc -b`
 - [x] 弹出层点完约 1 秒才消失（批51，非卡顿）— CSS 没声明任何 transition，`Presence` 等不到 `transitionend`，退化成 24 帧空转（BTS 背景线程每帧一次往返）；补 `transition: opacity 140ms` + closed 态 `opacity:0`。同批修了自己引入的回归：受控模式漏传 `onVisibleChange` 导致弹层根本打不开。铁律见 `AGENTS.md` §4「Popover / Presence」
 - [x] 全屏播放器封面 Android 整块不显示 — `box-shadow` 加在 `<image>` 上导致位图不渲染（元素占位画背景色）；阴影挪到外层 `<view>`。这类失效只有真机可见
 - [x] 全屏播放器 Web 宽度恒 0、歌词页不可达 — `useBreakpoint()` 漏传 `measureSelector`（Web 的 `bindlayoutchange` 只对首屏元素触发）；新增全库闸门 `measure-selector-contract.test.ts`
