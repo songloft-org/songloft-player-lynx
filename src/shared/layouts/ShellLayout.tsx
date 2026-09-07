@@ -1,4 +1,4 @@
-import { useState } from '@lynx-js/react'
+import { useSyncExternalStore, useState } from '@lynx-js/react'
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -19,7 +19,7 @@ import {
   type NavDestination,
 } from '../nav/destinations.js'
 import { MoreTabsSheet } from '../nav/MoreTabsSheet.js'
-import { activeNavPath, setLastShellLocation, setNavPaths, setShellWidth, showsMiniPlayer } from '../nav/shell-navigation.js'
+import { activeNavPath, getShellWidth, setLastShellLocation, setNavPaths, setShellWidth, showsMiniPlayer, subscribeShellWidth } from '../nav/shell-navigation.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import { BackdropBlur } from '../ui/BackdropBlur.js'
 import { Icon, activeAccentIconColor, ICON_COLORS } from '../ui/Icon.js'
@@ -38,7 +38,19 @@ import './ShellLayout.css'
 export function ShellLayout() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { width, breakpoint, isWide, onLayoutChange } = useBreakpoint(0, '.shell')
+  // Seed the breakpoint from the shell-width cache so a remount (returning
+  // from the chrome-less `/player` route, which sits outside `shellRoute` and
+  // unmounts this layout) paints the correct layout on frame 1. Without the
+  // seed, `useBreakpoint(0, ...)` starts at width 0 → `mobile` → the first
+  // frame paints a narrow bottom bar, and only after the async
+  // `boundingClientRect` measurement lands does it switch to the wide side
+  // rail — the "left sidebar appears late" flash (songloft-player-lynx#6).
+  // The cache is module-level, survives the shell's unmount while the player
+  // is open, and is published by this same render on every width change.
+  // Same pattern as `LibraryLayout` (see its anti-flash comment). Cold start:
+  // cache is 0 → behaves exactly as before (narrow first frame).
+  const cachedWidth = useSyncExternalStore(subscribeShellWidth, getShellWidth)
+  const { width, breakpoint, isWide, onLayoutChange } = useBreakpoint(cachedWidth, '.shell')
   const pathname = useRouterState({ select: s => s.location.pathname })
   const shellTabs = useShellNavTabs()
   // Song presence for the mini-player inset tier — same condition MiniPlayer

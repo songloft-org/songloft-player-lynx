@@ -9,6 +9,7 @@ import type { Song } from '../../../models/song.js'
 // Direct module import, not the library barrel: that would pull the whole library
 // feature (API client included) into the player's graph for one getter.
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
+import { setShellWidth } from '../../../shared/nav/shell-navigation.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { resolveVideoSourceKind } from '../../../core/network/video-source.js'
 import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
@@ -135,6 +136,13 @@ export function FullPlayerPage() {
    * branch below is never taken, and the lyrics screen is unreachable.
    */
   const { width, breakpoint, isWide, onLayoutChange } = useBreakpoint(0, '.full-player')
+  // `/player` is chrome-less and full-screen → its width *is* the window width,
+  // which is the shell width. Publishing it keeps the cache fresh while the
+  // shell is unmounted (e.g. a rotation during playback), so the shell that
+  // remounts on close seeds frame 1 from a current value, not a stale one
+  // (songloft-player-lynx#6). Before measurement `width` is 0, which
+  // `setShellWidth` rejects — no risk of clobbering a good cache with 0.
+  setShellWidth(width)
   /*
    * The stage measures itself, separately from the page.
    *

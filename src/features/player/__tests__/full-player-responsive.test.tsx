@@ -341,3 +341,16 @@ test('auto-enter survives the width arriving after the preference', async () => 
 
   expect(swiperMock.swipeTo).toHaveBeenCalledWith(1)
 })
+
+/*
+ * The player publishes its measured window width to the shell cache so the
+ * shell that remounts on close seeds frame 1 from a current value
+ * (songloft-player-lynx#6). `/player` is chrome-less and full-screen, so its
+ * width *is* the shell width. Before the fix, `setShellWidth` was never called
+ * from the player, so this assertion failed (reverse-verified).
+ */
+test('publishes its measured width to the shell cache', async () => {
+  await renderAt(1200, TALL, 'desktop')
+  const { getShellWidth } = await import('../../../shared/nav/shell-navigation.js')
+  expect(getShellWidth()).toBe(1200)
+})
