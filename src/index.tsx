@@ -18,6 +18,7 @@ import { initBackController } from './core/navigation/back-controller.js'
 // down with it (auth status stuck at `unknown` forever).
 import { readDefaultPlayMode } from './features/settings/data/settings-prefs.js'
 import { usePlayerStore, restorePlaybackState } from './features/player/store/index.js'
+import { navigateAutoEnterLyricsIfNeeded } from './features/player/data/auto-enter-lyrics.js'
 import { syncFloatingLyricOverlay } from './features/settings/domain/floating-lyric-overlay.js'
 import { applySavedLanguage } from './i18n/index.js'
 import { applyHostDeployMode } from './core/config/app-config.js'
@@ -110,6 +111,11 @@ void (async () => {
       // globalProps, so navigate now that auth has resolved and the player store
       // has a restored queue.
       navigateFromNotificationIfNeeded()
+      // "打开后自动进入歌词" (Issue #7): navigate to the player once a song has
+      // been restored, mirroring Flutter's `_scheduleAutoEnterLyrics`. Lands on
+      // lyrics via FullPlayerPage's existing auto-swipe. A duplicate navigate to
+      // /player (notification tap already did) is a harmless no-op.
+      void navigateAutoEnterLyricsIfNeeded().catch(() => {})
     }
   } catch {
     await useAuthStore
