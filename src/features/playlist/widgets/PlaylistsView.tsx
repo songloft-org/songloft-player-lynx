@@ -84,9 +84,8 @@ export function PlaylistsView({ type, viewMode = 'grid' }: { type?: string; view
         toast.show(t('playlist.emptyPlaylist'))
         return
       }
-      await usePlayerStore.getState().playPlaylist(
+      await usePlayerStore.getState().playAll(
         res.songs,
-        0,
         playlistContext(playlist.id),
       )
     } catch {

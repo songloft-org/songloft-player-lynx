@@ -229,7 +229,7 @@ export function PlaylistDetailPage() {
 
   const playAll = () => {
     if (songs.length === 0) return
-    void usePlayerStore.getState().playPlaylist(songs, 0, playlistCtx)
+    void usePlayerStore.getState().playAll(songs, playlistCtx)
   }
 
   const header = (

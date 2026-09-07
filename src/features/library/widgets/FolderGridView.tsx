@@ -47,7 +47,7 @@ export function FolderGridView({ viewMode = 'grid' }: FolderGridViewProps) {
         toast.show(t('playlist.emptyPlaylist'))
         return
       }
-      await usePlayerStore.getState().playPlaylist(res.songs, 0)
+      await usePlayerStore.getState().playAll(res.songs)
     } catch {
       toast.error(t('playlist.playFailed'))
     }

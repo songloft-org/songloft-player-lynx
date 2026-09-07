@@ -90,6 +90,23 @@ export function hasPrevForMode(mode: PlayMode, index: number, length: number): b
   return index > 0
 }
 
+/**
+ * Resolve the starting track index for a "play all" request (mirrors the Flutter
+ * `playAllSongs` / `playPlaylistById` behaviour): in `random` mode start on a
+ * random track instead of always the first one; in every other mode start at 0.
+ *
+ * This is the *initial* index only — subsequent auto-advance still goes through
+ * {@link resolveNext}. A single-track (or empty) queue always resolves to 0.
+ */
+export function resolveStartIndex(
+  mode: PlayMode,
+  length: number,
+  rng: Rng = Math.random,
+): number {
+  if (mode !== 'random' || length <= 1) return 0
+  return Math.min(Math.floor(rng() * length), length - 1)
+}
+
 /** Cycle to the next play mode (order → loop → single → random → order). */
 export function cyclePlayMode(mode: PlayMode): PlayMode {
   const i = playModes.indexOf(mode)

@@ -155,6 +155,53 @@ describe('playback + progress', () => {
   })
 })
 
+describe('playAll start index by play mode', () => {
+  const fiveSongs = () => [song(1, 30), song(2, 30), song(3, 30), song(4, 30), song(5, 30)]
+
+  test('random mode starts on a random track, not always the first', async () => {
+    const rand = vi.spyOn(Math, 'random').mockReturnValue(0.5) // floor(0.5 * 5) = 2
+    try {
+      usePlayerStore.getState().setPlayMode('random')
+      await usePlayerStore.getState().playAll(fiveSongs())
+      await flush()
+      expect(usePlayerStore.getState().currentIndex).toBe(2)
+      expect(usePlayerStore.getState().currentSong?.id).toBe(3)
+    } finally {
+      rand.mockRestore()
+    }
+  })
+
+  test('non-random modes start at the first track', async () => {
+    usePlayerStore.getState().setPlayMode('order')
+    await usePlayerStore.getState().playAll(fiveSongs())
+    await flush()
+    expect(usePlayerStore.getState().currentIndex).toBe(0)
+    expect(usePlayerStore.getState().currentSong?.id).toBe(1)
+  })
+
+  test('playPlaylist(…, 0) stays exact even in random mode (play-all vs single tap)', async () => {
+    // The strict distinction: an explicit index 0 (a tap on the first song) must
+    // NOT be randomised — only the `playAll` action consults the play mode.
+    const rand = vi.spyOn(Math, 'random').mockReturnValue(0.5)
+    try {
+      usePlayerStore.getState().setPlayMode('random')
+      await usePlayerStore.getState().playPlaylist(fiveSongs(), 0)
+      await flush()
+      expect(usePlayerStore.getState().currentIndex).toBe(0)
+      expect(usePlayerStore.getState().currentSong?.id).toBe(1)
+    } finally {
+      rand.mockRestore()
+    }
+  })
+
+  test('playAll on an empty queue is a no-op', async () => {
+    usePlayerStore.getState().setPlayMode('random')
+    await usePlayerStore.getState().playAll([])
+    await flush()
+    expect(usePlayerStore.getState().currentSong).toBeUndefined()
+  })
+})
+
 describe('completion routing by play mode', () => {
   test('order advances to the next track', async () => {
     await usePlayerStore.getState().playPlaylist([song(1, 1), song(2, 1)], 0)

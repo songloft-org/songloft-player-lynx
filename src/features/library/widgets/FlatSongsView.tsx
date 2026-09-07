@@ -96,7 +96,7 @@ export function FlatSongsView({ type, sortId, sortOrder, onSortChange }: FlatSon
 
   const playAll = () => {
     if (songs.length === 0) return
-    void usePlayerStore.getState().playPlaylist(songs, 0)
+    void usePlayerStore.getState().playAll(songs)
   }
 
   const enterSelectMode = () => {

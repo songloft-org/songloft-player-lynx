@@ -105,7 +105,7 @@ export function CategorySongsPage() {
 
   const playAll = () => {
     if (songs.length === 0) return
-    void usePlayerStore.getState().playPlaylist(songs, 0, playbackCtx)
+    void usePlayerStore.getState().playAll(songs, playbackCtx)
   }
 
   const header = (

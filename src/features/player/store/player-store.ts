@@ -24,7 +24,7 @@ import { getPlatformTarget } from '../../../native/platform-target.js'
 import { getFavoriteState, toggleFavoriteNonReact } from '../../library/data/favorites.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
 import { getSongsApi } from '../../library/api/index.js'
-import { cyclePlayMode, resolveNext, resolvePrev, type PlayMode } from '../domain/play-mode.js'
+import { cyclePlayMode, resolveNext, resolvePrev, resolveStartIndex, type PlayMode } from '../domain/play-mode.js'
 import { playlistIdOf, type PlaybackContext } from '../domain/playback-context.js'
 import { removeAt } from '../domain/queue.js'
 import {
@@ -56,6 +56,13 @@ export interface PlayerState extends PlayerData {
     startIndex?: number,
     context?: PlaybackContext,
   ) => Promise<void>
+  /**
+   * "播放全部": play `songs` from a start index chosen by the current play mode
+   * — a random track in `random` mode, otherwise the first ({@link resolveStartIndex}).
+   * Distinct from {@link playPlaylist}, which always plays the exact `startIndex`
+   * the caller passes (single-song taps, queue/history jumps, plugin `setQueue`).
+   */
+  playAll: (songs: Song[], context?: PlaybackContext) => Promise<void>
   togglePlay: () => Promise<void>
   playNext: () => Promise<void>
   playPrev: () => Promise<void>
@@ -595,6 +602,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       }
       await syncQueueWindow(songs, index)
       await playAtIndex(index)
+    },
+
+    playAll: async (songs, context) => {
+      if (songs.length === 0) return
+      // "播放全部" picks its start track from the current play mode: a random
+      // song when shuffling instead of always the first (Flutter parity). The
+      // resolved index is then handed to `playPlaylist`, which plays it exactly
+      // — keeping the randomisation in one place and `playPlaylist` index-pure.
+      const startIndex = resolveStartIndex(get().playMode, songs.length)
+      await get().playPlaylist(songs, startIndex, context)
     },
 
     /**

@@ -50,7 +50,7 @@ export function TagSongsPage() {
         toast.show(t('playlist.emptyPlaylist'))
         return
       }
-      await usePlayerStore.getState().playPlaylist(res.songs, 0, playbackCtx)
+      await usePlayerStore.getState().playAll(res.songs, playbackCtx)
     } catch {
       toast.error(t('playlist.playFailed'))
     }

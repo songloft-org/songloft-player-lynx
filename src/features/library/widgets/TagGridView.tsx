@@ -43,9 +43,8 @@ export function TagGridView({ viewMode = 'grid' }: TagGridViewProps) {
         toast.show(t('playlist.emptyPlaylist'))
         return
       }
-      await usePlayerStore.getState().playPlaylist(
+      await usePlayerStore.getState().playAll(
         res.songs,
-        0,
         { type: 'tag' as const, key: String(tag.id) },
       )
     } catch {

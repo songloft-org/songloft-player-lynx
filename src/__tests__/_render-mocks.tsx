@@ -430,6 +430,7 @@ function mockPlayerState(over: Partial<PlayerState> = {}): PlayerState {
     speed: 1,
     playSong: asyncNoop,
     playPlaylist: asyncNoop,
+    playAll: asyncNoop,
     togglePlay: asyncNoop,
     playNext: asyncNoop,
     playPrev: asyncNoop,

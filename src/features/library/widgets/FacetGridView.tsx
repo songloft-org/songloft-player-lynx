@@ -49,9 +49,8 @@ export function FacetGridView({ field, viewMode = 'grid' }: FacetGridViewProps) 
         toast.show(t('playlist.emptyPlaylist'))
         return
       }
-      await usePlayerStore.getState().playPlaylist(
+      await usePlayerStore.getState().playAll(
         res.songs,
-        0,
         facetContext(field, facet.value),
       )
     } catch {

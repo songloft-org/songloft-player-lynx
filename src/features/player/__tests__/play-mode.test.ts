@@ -6,6 +6,7 @@ import {
   hasPrevForMode,
   resolveNext,
   resolvePrev,
+  resolveStartIndex,
 } from '../domain/play-mode.js'
 
 describe('resolveNext', () => {
@@ -73,6 +74,28 @@ describe('hasNext / hasPrev', () => {
   test('empty queue has neither', () => {
     expect(hasNextForMode('loop', 0, 0)).toBe(false)
     expect(hasPrevForMode('loop', 0, 0)).toBe(false)
+  })
+})
+
+describe('resolveStartIndex', () => {
+  test('non-random modes always start at 0', () => {
+    expect(resolveStartIndex('order', 5)).toBe(0)
+    expect(resolveStartIndex('loop', 5)).toBe(0)
+    expect(resolveStartIndex('single', 5)).toBe(0)
+  })
+
+  test('random picks an in-range index from the rng', () => {
+    // rng → 0.5 over 5 tracks → floor(2.5) = 2.
+    expect(resolveStartIndex('random', 5, () => 0.5)).toBe(2)
+    // rng → 0.99 must clamp inside the queue, never reach length.
+    expect(resolveStartIndex('random', 5, () => 0.99)).toBe(4)
+    // rng → 0 starts at the first track.
+    expect(resolveStartIndex('random', 5, () => 0)).toBe(0)
+  })
+
+  test('random with a single or empty queue returns 0', () => {
+    expect(resolveStartIndex('random', 1, () => 0.5)).toBe(0)
+    expect(resolveStartIndex('random', 0, () => 0.5)).toBe(0)
   })
 })
 
