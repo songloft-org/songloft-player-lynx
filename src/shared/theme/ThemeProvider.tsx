@@ -10,6 +10,11 @@ import {
   getMaterialVariant,
   subscribeMaterialVariant,
 } from './material-model.js'
+import {
+  getSafeAreaInsets,
+  safeAreaStyleVars,
+  subscribeSafeArea,
+} from '../../native/safe-area.js'
 import { getAppTheme, resolveTheme, subscribeAppTheme } from './theme-model.js'
 import { getActiveThemePack, subscribeActiveThemePack } from './theme-pack-model.js'
 import { themePackToStyleVars } from './theme-pack-mapping.js'
@@ -39,12 +44,22 @@ export interface ThemeProviderProps {
  * emits the full overridable key set with valid values (baseline where the
  * pack has nothing), because the runtime's style diffs merge and never remove
  * properties — a dropped attribute would leave stale pack colours behind.
+ *
+ * The host-reported **safe-area insets** ride the same inline-vars channel, and for
+ * the same reason it works: inline beats the class declarations, so the measured
+ * `--safe-top` / `--safe-bottom` / `--safe-left` / `--safe-right` win over
+ * `tokens.css`'s `env(safe-area-inset-*)` defaults on the hosts that report them
+ * (iOS, where `env()` resolves to zero — see `native/safe-area.ts`) and leave those
+ * defaults alone on the hosts that do not (Web). This is the right layer for it:
+ * the tokens are declared on this element, `/player` and every root-mounted overlay
+ * live inside it but outside `ShellLayout`, and it already re-renders on host pushes.
  */
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setTheme] = useState(() => resolveTheme(getAppTheme()))
   const [pack, setPack] = useState(() => getActiveThemePack())
   const [, setMaterial] = useState(() => getMaterialVariant())
   const [, setFontScale] = useState(() => getFontScaleNumber())
+  const [insets, setInsets] = useState(() => getSafeAreaInsets())
 
   useEffect(
     () => subscribeAppTheme(() => setTheme(resolveTheme(getAppTheme()))),
@@ -69,8 +84,15 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     [],
   )
 
-  const vars = themePackToStyleVars(pack?.data, theme)
-  const style = vars as (Record<string, string> & CSSProperties) | undefined
+  // Rotation, and on iOS the very first resolved layout — the host pushes insets
+  // whenever they move (see `ViewController.pushSafeArea`).
+  useEffect(
+    () => subscribeSafeArea(() => setInsets(getSafeAreaInsets())),
+    [],
+  )
+
+  const vars = { ...themePackToStyleVars(pack?.data, theme), ...safeAreaStyleVars(insets) }
+  const style = vars as Record<string, string> & CSSProperties
 
   return <view className={`theme-root theme-${theme}`} style={style}>{children}</view>
 }

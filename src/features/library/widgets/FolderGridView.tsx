@@ -129,7 +129,8 @@ export function FolderGridView({ viewMode = 'grid' }: FolderGridViewProps) {
                     </view>
                   )
                   : null}
-              </scroll-view>
+                              <view className='library__nav-inset' />
+</scroll-view>
             )}
     </view>
   )

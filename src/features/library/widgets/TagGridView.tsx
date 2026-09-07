@@ -114,7 +114,8 @@ export function TagGridView({ viewMode = 'grid' }: TagGridViewProps) {
                         />
                       ))}
                 </view>
-              </scroll-view>
+                              <view className='library__nav-inset' />
+</scroll-view>
             )}
 
       {renameTag

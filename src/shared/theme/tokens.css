@@ -183,12 +183,51 @@
   --nav-icon-size: 24px;
 
   /*
+   * Safe-area insets — the one place `env(safe-area-inset-*)` is spelled out.
+   *
+   * Every host renders the page into the FULL screen (iOS: `view.bounds`, see
+   * `ViewController.swift`), so avoiding the status bar / Dynamic Island / home
+   * indicator is the page's job, not the host's. Reading them through tokens
+   * rather than calling `env()` at each of the ~15 call sites buys the override
+   * hook: a host that cannot resolve `env()` can push measured insets in as
+   * inline custom properties on this same element (the theme-pack mechanism —
+   * inline beats these class declarations), and no stylesheet changes.
+   *
+   * `env()` is the one CSS function Lynx supports here and only for these four
+   * names; the fallbacks keep them at 0 on the hosts and devices without insets
+   * (Android/HarmonyOS lay out below the status bar already, desktop Web has
+   * none, and iOS Safari reports 0 unless the viewport is `viewport-fit=cover`).
+   * The left/right pair is not decoration: iPhone landscape is a supported
+   * orientation (`INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone`) and
+   * puts the notch on a *side*.
+   */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  /*
    * Composite glass layers. These live here, declared once, rather than being
    * duplicated per theme: a nested `var()` inside a custom property *does*
    * resolve per-theme on the consuming element (headless-Chrome verified through
-   * the lynx-css pipeline), so the atomic per-theme tokens flow through. They
-   * also pick up the material system's runtime overrides for free, since those
-   * are injected as inline vars on this same element.
+   * the lynx-css pipeline), so the atomic per-theme tokens flow through.
+   *
+   * **But that verification was Web-only, and on iOS the nested form does NOT pick
+   * up an inline override.** Measured: an inline custom property on `.theme-root`
+   * reaches a `var()` used directly in a property value (`padding-top:
+   * var(--safe-top)` → 62px, and inside a calc there too → the nav capsule's
+   * `bottom: calc(var(--space-2) + var(--safe-bottom))` → 42px), but a `var()`
+   * nested inside *another custom property's* value resolves against the
+   * **stylesheet** declaration instead — forcing `--font-scale: 2` inline left
+   * `.nav-item__label` at 16.7pt and the page's content height unchanged to the
+   * pixel, i.e. `calc(10px * var(--font-scale))` still used the class-declared
+   * `1`. So the claim that these "pick up the material system's runtime overrides
+   * for free" holds on Web and is unverified-to-false on iOS for any token the
+   * material system or a theme pack overrides inline (`--glass-ramp-*`,
+   * `--glass-rim-side`, `--tint-fill`, `--font-scale`). Consequence and open bug:
+   * `docs/project/bugs.md`. Rule of thumb until it is settled: **inline overrides
+   * must be consumed directly by a property, never through a second custom
+   * property.**
    *
    * The point of bundling them is that a glass surface stays four lines instead
    * of nine, and there is exactly one place to retune.

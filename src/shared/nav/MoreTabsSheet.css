@@ -35,7 +35,9 @@
      shows: at most eight rows. The cap keeps the sheet from swallowing the
      screen; anything past it scrolls. */
   max-height: 70%;
-  padding-bottom: var(--space-4);
+  /* Docked at the viewport's bottom edge — its own padding keeps the last row off
+     the home indicator (`--safe-bottom`, 0 where there is none). */
+  padding-bottom: calc(var(--space-4) + var(--safe-bottom));
   border-top-left-radius: var(--radius-sheet);
   border-top-right-radius: var(--radius-sheet);
   background-color: var(--glass-fill-strong);

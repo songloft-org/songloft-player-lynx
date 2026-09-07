@@ -155,7 +155,8 @@ export function EditPlaylistPage() {
                 </view>
               )
               : null}
-      </scroll-view>
+              <view className='edit-playlist__nav-inset' />
+</scroll-view>
 
       {pickerOpen
         ? (

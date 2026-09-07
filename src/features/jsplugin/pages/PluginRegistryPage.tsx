@@ -431,7 +431,8 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
                           ))}
                         </view>
                       )}
-              </scroll-view>
+                              <view className='plugin-registry__nav-inset' />
+</scroll-view>
 
               {!loading && plugins.length > 0
                 ? (

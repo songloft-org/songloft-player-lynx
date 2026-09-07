@@ -82,6 +82,6 @@
 /* Floating-nav capsule inset (see ShellLayout.css): the fixed bottom bar lets
    content scroll under it, so this tail reserves the capsule stack
    (64 bar + 8 offset + 8 gap). Narrow only — the wide rail is in-flow. */
-.shell--narrow .settings__scroll {
-  padding-bottom: var(--nav-inset, 80px);
+.shell--narrow .settings__scroll .settings__content {
+  padding-bottom: calc(var(--space-6) + var(--nav-inset, 80px) + var(--safe-bottom));
 }

@@ -31,7 +31,10 @@
   display: flex;
   flex-direction: column;
   max-height: 60%;
-  padding-bottom: var(--space-4);
+  /* The panel docks at the viewport's bottom edge, so its own padding is what
+     keeps the last line off the home indicator (`--safe-bottom`, 0 where there
+     is none). Same shape as `SheetShell.css`. */
+  padding-bottom: calc(var(--space-4) + var(--safe-bottom));
   border-top-left-radius: var(--radius-sheet);
   border-top-right-radius: var(--radius-sheet);
   background-color: var(--glass-fill-strong);

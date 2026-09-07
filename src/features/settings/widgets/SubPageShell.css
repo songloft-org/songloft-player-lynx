@@ -3,8 +3,8 @@
  *
  * Mirrors `.settings` so a sub-page and the main list line up. Two things this
  * deliberately does NOT do, each one a bug that was shipped before:
- *   1. no `env(safe-area-inset-top)` — `.shell__body` already applies it, and a
- *      second one insets the topbar twice;
+ *   1. no `var(--safe-top)` — `.shell__body` already applies it, and a second one
+ *      insets the topbar twice;
  *   2. no horizontal padding on `__content` — `.settings-section` already carries
  *      `margin: var(--space-4) var(--space-4) 0`, so page padding on top of it
  *      double-insets every card (which is why `.cache-manage__content` reads
@@ -88,6 +88,6 @@
 /* Floating-nav capsule inset (see ShellLayout.css): the fixed bottom bar lets
    content scroll under it, so this tail reserves the capsule stack
    (64 bar + 8 offset + 8 gap). Narrow only — the wide rail is in-flow. */
-.shell--narrow .subpage__scroll {
-  padding-bottom: var(--nav-inset, 80px);
+.shell--narrow .subpage__scroll .subpage__content {
+  padding-bottom: calc(var(--space-6) + var(--nav-inset, 80px) + var(--safe-bottom));
 }

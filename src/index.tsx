@@ -22,6 +22,7 @@ import { navigateAutoEnterLyricsIfNeeded } from './features/player/data/auto-ent
 import { syncFloatingLyricOverlay } from './features/settings/domain/floating-lyric-overlay.js'
 import { applySavedLanguage } from './i18n/index.js'
 import { applyHostDeployMode } from './core/config/app-config.js'
+import { initSafeArea } from './native/safe-area.js'
 import { initSystemAppearance } from './native/system-appearance.js'
 import { installNotificationNavigateListener, navigateFromNotificationIfNeeded } from './native/notification-navigate.js'
 import { applySavedFontScale } from './shared/theme/font-scale-model.js'
@@ -86,6 +87,10 @@ void (async () => {
     // render above already reads `lynx.__globalProps` lazily, so the launch frame
     // is painted in the right theme without waiting for this.)
     initSystemAppearance()
+    // Same shape and the same launch-frame reasoning: `ThemeProvider` already read
+    // `lynx.__globalProps` lazily for the first frame, so this only installs the
+    // listener that keeps the `--safe-*` tokens following rotation.
+    initSafeArea()
     await applySavedLanguage()
     await applySavedTheme()
     await applySavedMaterial()

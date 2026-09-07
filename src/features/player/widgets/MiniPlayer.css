@@ -39,9 +39,11 @@
    + gap between the two capsules (8). Translucent like the nav capsule. */
 .shell--narrow .mini-player {
   position: fixed;
-  left: var(--space-2);
-  right: var(--space-2);
-  bottom: calc(80px + env(safe-area-inset-bottom));
+  /* Fixed, so `.shell`'s horizontal safe-area padding does not apply — same
+     reason the nav capsule adds the side insets itself. */
+  left: calc(var(--space-2) + var(--safe-left));
+  right: calc(var(--space-2) + var(--safe-right));
+  bottom: calc(80px + var(--safe-bottom));
   margin: 0;
   background-color: var(--glass-fill);
   z-index: 91;
@@ -50,7 +52,7 @@
 /* Wide: a touch more side gap and clear the bottom safe-area inset via margin
    (the bar floats above the home indicator rather than docking into it). */
 .shell--wide .mini-player {
-  margin: 0 var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
+  margin: 0 var(--space-3) calc(var(--space-3) + var(--safe-bottom));
 }
 
 /*

@@ -3,6 +3,13 @@
   flex-direction: column;
   height: 100%;
   background-color: var(--system-background);
+  /* Chrome-less route (rootRoute, not shellRoute), so the safe-area inset has to
+     land here or the topbar runs under the status bar. Padding is inside the
+     100% height (Lynx defaults to border-box), and 0 wherever there is no inset. */
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
 }
 
 .eq-page__topbar {

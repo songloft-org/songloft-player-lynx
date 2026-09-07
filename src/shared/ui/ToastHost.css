@@ -30,7 +30,7 @@
      derived — the toast clears bottom chrome, the nav inset reserves scroll
      tail under the capsule; same number, two unrelated budgets, do not align
      them by edit. */
-  bottom: calc(env(safe-area-inset-bottom) + 150px);
+  bottom: calc(var(--safe-bottom) + 150px);
   left: 0;
   right: 0;
   display: flex;

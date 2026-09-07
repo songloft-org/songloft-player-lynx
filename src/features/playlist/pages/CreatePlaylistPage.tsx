@@ -80,7 +80,8 @@ export function CreatePlaylistPage() {
             {createMutation.isPending ? t('playlist.creating') : t('playlist.create')}
           </text>
         </view>
-      </scroll-view>
+              <view className='create-playlist__nav-inset' />
+</scroll-view>
     </view>
   )
 }

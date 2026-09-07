@@ -94,7 +94,8 @@ export function AddSongsPage() {
         <view className='add-songs__btn' bindtap={onAdd}>
           <text className='add-songs__btn-text'>{saving ? t('common.loading') : t('addSongs.add')}</text>
         </view>
-      </scroll-view>
+              <view className='add-songs__nav-inset' />
+</scroll-view>
     </view>
   )
 }

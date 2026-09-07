@@ -98,6 +98,7 @@
 /* Floating-nav capsule inset (see ShellLayout.css): the fixed bottom bar lets
    content scroll under it, so this tail reserves the capsule stack
    (64 bar + 8 offset + 8 gap). Narrow only — the wide rail is in-flow. */
-.shell--narrow .add-songs {
-  padding-bottom: var(--nav-inset, 80px);
+/* Floating-nav capsule inset (see ShellLayout.css). The tail has to be REAL CONTENT HEIGHT inside the scroller: a `<scroll-view>`'s own `padding-bottom` does not extend its scroll range on iOS Lynx (measured — `maxScrollOffset` unchanged with it at `var(--nav-inset)` and at a literal `200px`), and on a page root it shortens the whole viewport instead, which stops content reaching the bottom edge. `--safe-bottom` is added HERE, at the use site, because a `calc()` inside a custom property never sees an inline override on iOS. Unconditional: a blank tail in wide layouts costs nothing. */
+.add-songs__nav-inset {
+  height: calc(var(--nav-inset, 80px) + var(--safe-bottom));
 }

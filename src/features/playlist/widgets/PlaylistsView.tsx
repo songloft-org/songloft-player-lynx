@@ -491,7 +491,8 @@ export function PlaylistsView(
             </view>
           )
           : null}
-      </scroll-view>
+              <view className='playlists__nav-inset' />
+</scroll-view>
       {selectMode && selected.size > 0
         ? (
           <view className='playlists__select-toolbar'>

@@ -394,7 +394,21 @@
 
 /* Floating-nav capsule inset (see ShellLayout.css): the fixed bottom bar lets
    content scroll under it, so this tail reserves the capsule stack
-   (64 bar + 8 offset + 8 gap). Narrow only — the wide rail is in-flow. */
-.shell--narrow .home__scroll {
-  padding-bottom: var(--nav-inset, 80px);
+   (64 bar + 8 offset + 8 gap). Narrow only — the wide rail is in-flow.
+
+   On `.home__content`, **not** on `.home__scroll`. A `<scroll-view>`'s own
+   `padding-bottom` does not extend its scroll range on iOS Lynx — measured:
+   `scrollRange` stayed at the child's height (910) and `maxScrollOffset` at
+   `910 − viewport` with the padding at `var(--nav-inset)` and at a literal
+   `200px` alike, i.e. the value is irrelevant because it is never consulted. So
+   the tail has to be real content height, which is what the scroller's child
+   contributes. (This is the same reason AGENTS.md §3.4 tells `<list>` pages to
+   use a footer spacer "不依赖 CSS padding".)
+
+   Stacked on the section gap in ONE `calc()` whose operands are both plain
+   lengths — `--nav-inset` is a bare `80px`/`148px` and `--space-6` a bare `32px`,
+   so nothing here depends on an inline override reaching a `var()` nested inside
+   another custom property (which iOS does not do — see ShellLayout.css). */
+.shell--narrow .home__scroll .home__content {
+  padding-bottom: calc(var(--space-6) + var(--nav-inset, 80px) + var(--safe-bottom));
 }

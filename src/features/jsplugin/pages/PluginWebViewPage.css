@@ -61,5 +61,5 @@
 /* Margin rather than padding: the frame is the flex:1 webview host, so the
    inset must shorten its box rather than pad inside it. */
 .shell--narrow .plugin-webview__frame {
-  margin-bottom: var(--nav-inset, 80px);
+  margin-bottom: calc(var(--nav-inset, 80px) + var(--safe-bottom));
 }

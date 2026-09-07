@@ -56,3 +56,52 @@ enum SystemAppearance {
     Locale.preferredLanguages.first ?? ""
   }
 }
+
+/**
+ * The host half of the safe-area contract: the four inset values, in points, that
+ * the page turns into its `--safe-top` / `--safe-bottom` / `--safe-left` /
+ * `--safe-right` tokens (`src/shared/theme/tokens.css`).
+ *
+ * **Why the host has to send these at all.** The stylesheets ask for
+ * `env(safe-area-inset-*)`, which the Lynx CSS docs list as supported on every
+ * backend. On this engine (iOS Lynx 4.0.1) it is **not**: measured on an
+ * iPhone 17 Pro simulator through `boundingClientRect`, a
+ * `padding-top: env(safe-area-inset-top)` on `.shell__body` leaves its child at
+ * `top: 0` — both as a direct declaration and through a custom property, while
+ * the same rule with a literal `59px` correctly reports `top: 59`. So `env()`
+ * parses, resolves to zero, and reports nothing: the exact silent-failure shape
+ * this app's host↔page contracts are otherwise gated against. The previous batch
+ * worked around it by insetting the LynxView to the safe area, which is what left
+ * the top and bottom bands painted by `view.backgroundColor` instead of the page
+ * (see `ViewController`'s type comment).
+ *
+ * So this rides the same two channels as [SystemAppearance] — `globalProps` for
+ * the value the first frame needs, a global event for later changes — and the
+ * page prefers it over `env()` because inline custom properties beat the class
+ * declarations that carry the `env()` defaults. Hosts that *do* resolve `env()`
+ * (Web, with `viewport-fit=cover`) need to send nothing.
+ *
+ * Points, not CSS strings: Lynx treats 1pt as 1px, and keeping units out of the
+ * host means the page owns the whole CSS vocabulary. Keys and event name must stay
+ * byte-identical to `src/native/safe-area.ts`.
+ */
+enum SafeAreaInsets {
+  /// `lynx.__globalProps` keys.
+  static let propTop = "safeAreaTop"
+  static let propBottom = "safeAreaBottom"
+  static let propLeft = "safeAreaLeft"
+  static let propRight = "safeAreaRight"
+
+  /// Global-event name for a live change (rotation, or the first resolved layout).
+  static let eventChanged = "SongloftSystem.safeAreaChanged"
+
+  /// Snapshot the insets in the shape the JS side parses.
+  static func snapshot(insets: UIEdgeInsets) -> [String: Any] {
+    [
+      propTop: Double(insets.top),
+      propBottom: Double(insets.bottom),
+      propLeft: Double(insets.left),
+      propRight: Double(insets.right),
+    ]
+  }
+}

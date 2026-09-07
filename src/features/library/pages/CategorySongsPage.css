@@ -175,5 +175,5 @@
    native list's own CSS padding is unreliable, so the inset rides the footer
    slot instead. Unconditional: a blank tail in wide layouts costs nothing. */
 .category-songs__nav-inset {
-  height: var(--nav-inset, 80px);
+  height: calc(var(--nav-inset, 80px) + var(--safe-bottom));
 }

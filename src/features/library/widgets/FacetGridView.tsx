@@ -126,7 +126,8 @@ export function FacetGridView({ field, viewMode = 'grid' }: FacetGridViewProps) 
                         />
                       ))}
                 </view>
-              </scroll-view>
+                              <view className='library__nav-inset' />
+</scroll-view>
             )}
     </view>
   )

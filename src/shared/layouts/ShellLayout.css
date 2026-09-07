@@ -4,6 +4,12 @@
   width: 100%;
   height: 100%;
   background-color: var(--system-background);
+  /* Horizontal insets on the shell, not on each page: the background stays edge
+     to edge (that is the whole point of rendering full-screen) while every
+     descendant starts inside the safe area. Both are 0 in portrait — this is the
+     landscape notch, where the inset lands on a side. */
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
 }
 
 .shell--narrow {
@@ -14,7 +20,32 @@
      gap) + ~57 (compact mini-player: 36px row content + 6px padding ×2 +
      progress + border) + breathing room; the mini tier rides the
      `shell--with-mini` class the shell toggles with song presence, so the
-     list tail never hides under the floating player. */
+     list tail never hides under the floating player.
+
+     **These must stay plain lengths — never `calc(… + var(--safe-bottom))`.**
+     Measured on iOS, an inline custom-property override on an ancestor reaches a
+     `var()` used *directly* in a property value, but **not** a `var()` nested
+     inside another custom property's value. So when this was
+     `calc(80px + var(--safe-bottom))`, the `var(--safe-bottom)` resolved against
+     the *stylesheet* declaration (`env(safe-area-inset-bottom, 0px)`), never
+     against the `34px` `ThemeProvider` sets inline — and since `env()` is invalid
+     in that position on iOS, the whole token became invalid at computed-value
+     time. Every one of the ~15 consumers then lost its tail padding: the
+     `, 80px` fallback does NOT rescue you, because a fallback applies only when
+     the property is *undefined*, not when its value is invalid. `.home__content`
+     measured `padding-bottom: 0`; with the plain `80px` it measures 80.
+
+     Note this is NOT "calc inside a custom property is broken" — `tokens.css`'s
+     font tokens are all `calc(Npx * var(--font-scale))` and they do resolve. They
+     just resolve against the class-declared `--font-scale: 1`, which is why an
+     inline font-scale override silently does nothing on iOS (filed in
+     `docs/project/bugs.md`).
+
+     So these two numbers are the **pure chrome heights** (which is what the
+     mini-player's height gate asserts against), and each consumer adds the bottom
+     safe area at its own use site, where an inline override *does* arrive:
+     `padding-bottom: calc(var(--nav-inset, 80px) + var(--safe-bottom))`.
+     `inline-token-indirection.test.ts` gates the rule. */
   --nav-inset: 80px;
 }
 
@@ -46,10 +77,31 @@
   overflow: hidden;
   /* Clear the status bar / notch on narrow devices so page headers (e.g. the
      Library view switcher, which sits at the very top) are not occluded. */
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--safe-top);
+  /* Deliberately NO `padding-bottom` here. The whole point of rendering into the
+     full screen is that content runs to the physical bottom edge and scrolls
+     *under* the home indicator, the way Apple's own apps do — padding the body
+     would stop every scroller 34px short and leave that band showing nothing but
+     `.shell`'s background colour (which is exactly what it did the first time this
+     was tried, and reads as "底部区域没有内容").
+
+     Clearing the capsule is therefore the *scrolling content's* job, not the
+     viewport's: each page reserves a tail of `--nav-inset + --safe-bottom`. Two
+     consequences worth knowing before touching this:
+       - the tail must be real content height. A `<scroll-view>`'s own
+         `padding-bottom` does NOT extend its scroll range on iOS Lynx — measured:
+         `scrollRange` stayed at the child's height and `maxScrollOffset` at
+         `child − viewport` with that padding at `var(--nav-inset)` and at a
+         literal `200px` alike — so it goes on the content element (or a footer
+         spacer), never on the scroller.
+       - the `+ var(--safe-bottom)` arithmetic happens at the **use site**, because
+         a `calc()` inside a custom property does not see an inline override on iOS
+         (see `--nav-inset`). */
 }
 
-/* On wide layouts the rail owns the top edge; the body content starts at 0. */
+/* On wide layouts the rail owns the top edge and the mini-player owns the bottom
+   one (it clears the indicator via its own margin — see `.shell--wide
+   .mini-player`), so the body adds no inset on either edge. */
 .shell--wide .shell__body {
   padding-top: 0;
 }
@@ -61,7 +113,7 @@
   width: 256px;
   padding: var(--space-4);
   /* Add the top safe-area inset on top of the base padding (0 on desktop). */
-  padding-top: calc(var(--space-4) + env(safe-area-inset-top));
+  padding-top: calc(var(--space-4) + var(--safe-top));
   background-color: var(--secondary-system-background);
   border-right: 1px solid var(--separator);
 }
@@ -104,9 +156,12 @@
    whole capsule up via `bottom` — the 64px height is pure content height. */
 .shell__bottombar {
   position: fixed;
-  left: var(--space-3);
-  right: var(--space-3);
-  bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
+  /* Fixed elements are positioned against the VIEWPORT, so `.shell`'s horizontal
+     safe-area padding does not reach them — the capsule has to add the side
+     insets itself or it runs under the landscape notch. */
+  left: calc(var(--space-3) + var(--safe-left));
+  right: calc(var(--space-3) + var(--safe-right));
+  bottom: calc(var(--space-2) + var(--safe-bottom));
   height: var(--bottombar-height);
   display: flex;
   flex-direction: row;

@@ -24,6 +24,9 @@
   height: 70%;
   display: flex;
   flex-direction: column;
+  /* Docked at the viewport's bottom edge — its own padding keeps the grid's last
+     row off the home indicator (`--safe-bottom`, 0 where there is none). */
+  padding-bottom: var(--safe-bottom);
   border-top-left-radius: var(--radius-sheet);
   border-top-right-radius: var(--radius-sheet);
   background-color: var(--glass-fill-strong);

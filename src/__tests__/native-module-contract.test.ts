@@ -4,6 +4,13 @@ import path from 'node:path'
 import { describe, expect, test } from 'vitest'
 
 import {
+  GLOBAL_PROP_SAFE_BOTTOM,
+  GLOBAL_PROP_SAFE_LEFT,
+  GLOBAL_PROP_SAFE_RIGHT,
+  GLOBAL_PROP_SAFE_TOP,
+  SAFE_AREA_EVENT,
+} from '../native/safe-area.js'
+import {
   GLOBAL_PROP_LOCALE,
   GLOBAL_PROP_THEME,
   SYSTEM_APPEARANCE_EVENT,
@@ -211,6 +218,88 @@ describe('system appearance keys reach both hosts verbatim', () => {
     expect(hosts.system.ios).toContain(`"${value}"`)
   })
 })
+
+/**
+ * Safe-area insets — **iOS only**, and that is the contract, not an omission.
+ *
+ * The page reads the insets from `env(safe-area-inset-*)` by default (`tokens.css`),
+ * which is correct on Web and irrelevant on Android/HarmonyOS: those two lay the
+ * page out below the status bar, so their insets are zero by construction. iOS is
+ * the one host that renders full-screen *and* cannot resolve `env()` (it returns 0
+ * on Lynx 4.0.1 — see `native/safe-area.ts`), so it is the one host that has to
+ * measure and push.
+ *
+ * Same silent-failure shape as the appearance keys above, one step worse: a drifted
+ * key here does not fall back to a wrong-but-visible value, it falls back to zero
+ * insets, i.e. content under the Dynamic Island and the home indicator, with nothing
+ * logged. The `ios-safe-area` scenario covers the runtime half; this covers the
+ * strings, which is the half that compiles either way.
+ */
+describe('safe-area keys reach the iOS host verbatim', () => {
+  test.each([
+    GLOBAL_PROP_SAFE_TOP,
+    GLOBAL_PROP_SAFE_BOTTOM,
+    GLOBAL_PROP_SAFE_LEFT,
+    GLOBAL_PROP_SAFE_RIGHT,
+    SAFE_AREA_EVENT,
+  ])('%s', (key) => {
+    expect(hosts.system.ios, `${key} missing from the iOS host`).toContain(key)
+  })
+
+  /**
+   * The push has to exist and be *wired*, not just have its constants declared.
+   *
+   * Both assertions below were substring checks on the whole file when first
+   * written, and reverse-verification caught both being vacuous:
+   *  - renaming `viewSafeAreaInsetsDidChange` to a private unused function kept
+   *    the substring present, so the override could be deleted and stay green;
+   *  - `SafeAreaInsets.snapshot` also appears in the `loadTemplate` globalProps
+   *    merge, so gutting the *push* kept the substring present too.
+   * That is AGENTS.md §5.3's "闸门验证语义和结构，不只查子串" — so these now match
+   * the declaration shape and scope the body check to the function itself.
+   */
+  test('the iOS host observes inset changes with a real UIViewController override', () => {
+    // The exact override signature: an `override func`, not any mention of the name.
+    expect(hosts.system.ios).toMatch(/override\s+func\s+viewSafeAreaInsetsDidChange\s*\(\s*\)/)
+    // And it must actually route to the push. Extract the override's body rather
+    // than trusting the file: a renamed/detached override would otherwise pass.
+    const body = swiftFuncBody(hosts.system.ios, 'viewSafeAreaInsetsDidChange')
+    expect(body, 'viewSafeAreaInsetsDidChange must call pushSafeArea()').toContain('pushSafeArea()')
+  })
+
+  test('pushSafeArea snapshots the insets and sends both channels', () => {
+    const body = swiftFuncBody(hosts.system.ios, 'pushSafeArea')
+    expect(body, 'pushSafeArea must build its payload from SafeAreaInsets.snapshot')
+      .toMatch(/SafeAreaInsets\.snapshot\s*\(\s*insets:/)
+    // globalProps alone does not reach an already-rendered tree — the event is the
+    // half that makes rotation work. Both, or the live page never hears a change.
+    expect(body).toContain('updateGlobalProps')
+    expect(body).toMatch(/sendGlobalEvent\s*\(\s*SafeAreaInsets\.eventChanged/)
+  })
+})
+
+/**
+ * The body of a Swift function, brace-matched from its declaration.
+ *
+ * Needed because "the file mentions X" is not "the function that should do X does
+ * X" — see the reverse-verification note above. Returns `''` when the declaration
+ * is absent, so every assertion against it fails rather than passing vacuously.
+ */
+function swiftFuncBody(source: string, name: string): string {
+  const start = source.search(new RegExp(`func\\s+${name}\\s*\\(`))
+  if (start < 0) return ''
+  const open = source.indexOf('{', start)
+  if (open < 0) return ''
+  let depth = 0
+  for (let i = open; i < source.length; i += 1) {
+    if (source[i] === '{') depth += 1
+    else if (source[i] === '}') {
+      depth -= 1
+      if (depth === 0) return source.slice(open, i + 1)
+    }
+  }
+  return ''
+}
 
 /**
  * The back key is the one contract with a **third** host: Android (Kotlin), Web

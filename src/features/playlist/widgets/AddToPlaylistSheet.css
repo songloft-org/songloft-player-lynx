@@ -42,7 +42,9 @@
     inset 0 1px 0 var(--glass-highlight),
     var(--glass-rim-sides),
     inset 0 -1px 0 var(--separator);
-  padding-bottom: var(--space-4);
+  /* Docked at the viewport's bottom edge — its own padding keeps the last row off
+     the home indicator (`--safe-bottom`, 0 where there is none). */
+  padding-bottom: calc(var(--space-4) + var(--safe-bottom));
 }
 
 .atp__handle-wrap {

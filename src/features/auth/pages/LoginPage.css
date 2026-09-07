@@ -12,7 +12,14 @@
      card go full-bleed L/R while the white page showed through T/B — a floating
      slab; restoring the inset makes the form read as centred content, not a
      card with mismatched margins. */
-  padding: var(--space-6) var(--space-5);
+  /* Longhands, not the shorthand: `/login` is chrome-less (rootRoute, not
+     shellRoute — see router.tsx), so nothing above it applies a safe-area inset
+     and the logo would sit under the clock / Dynamic Island. Each edge is the
+     base inset PLUS the safe area, which is 0 wherever there is none. */
+  padding-top: calc(var(--space-6) + var(--safe-top));
+  padding-bottom: calc(var(--space-6) + var(--safe-bottom));
+  padding-left: calc(var(--space-5) + var(--safe-left));
+  padding-right: calc(var(--space-5) + var(--safe-right));
 }
 
 .login__card {

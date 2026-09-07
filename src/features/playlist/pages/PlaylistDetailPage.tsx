@@ -462,7 +462,8 @@ export function PlaylistDetailPage() {
                 </SortableItem>
               )}
             </SortableRoot>
-            </scroll-view>
+                          <view className='playlist-detail__nav-inset' />
+</scroll-view>
           )
           : songsQuery.isLoading
           ? <DetailState text={t('library.loadingSongs')} />

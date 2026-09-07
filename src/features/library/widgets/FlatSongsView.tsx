@@ -203,7 +203,7 @@ export function FlatSongsView({ type, sortId, sortOrder, onSortChange }: FlatSon
                       <text className='library__footer-text'>{t('common.loadingMore')}</text>
                     </view>
                   )
-                  : undefined}
+                  : <view className='library__nav-inset' />}
               />
             )}
 

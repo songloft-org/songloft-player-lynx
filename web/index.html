@@ -2,7 +2,14 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- `viewport-fit=cover` is what makes iOS report non-zero
+       `env(safe-area-inset-*)` at all: under the default `contain` every inset is
+       0px, so the page's `--safe-top` / `--safe-bottom` (tokens.css) collapse and
+       the header lands under the notch / the nav capsule under the home indicator
+       — exactly the layout the native hosts avoid. It also lets the page paint
+       edge to edge, which is why the tokens exist rather than the host insetting
+       the viewport. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Songloft</title>
