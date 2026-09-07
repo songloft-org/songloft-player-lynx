@@ -1,4 +1,4 @@
-# 工作交接（2026-09-06 · Issue #3 导出日志下移到原生，未提交）
+# 工作交接（2026-09-07 · Issue #4 队列抽屉虚拟化，未提交）
 
 > 本文件是**给接手 AI 的交接说明**，只回答三件事：现在在哪、还剩什么、怎么验证。
 >
@@ -6,7 +6,7 @@
 >
 > **最新代码批次（`b08ae1a`、`54233ac`、`40e7cf9`）**：HarmonyOS 三个 P1 已完成代码修复：音量删除二次 `/ 100`；删除恒失败的 `SongloftVideo` 占位注册，让能力位诚实返回 `false`；DLNA 持久保存发现结果、解析 AVTransport `controlUrl` 并按设备 id 控制。相关 209 项 Vitest、`tsc -b`、Lynx/Web 双环境 build 均通过。本机无 hvigor/DevEco，发包前必须补 HarmonyOS HAP 编译；音量与 DLNA 仍需真机验证。全套测试的剩余失败由既有 Android CRLF 工作树改动与 `/mnt/d` 默认超时造成，证据见 [progress.md](progress.md) 最新条目。
 >
-> **未提交的工作树改动（Issue #3 · 导出日志很慢）**：新增原生 `SongloftPlatform.shareLogArchive`，把后端日志下载、客户端日志拷贝、zip 与分享整体下移到三端原生，JS 只跨桥三个短字符串；`fastLogExport` 是方法级探测，Web 与旧原生壳继续走 JS 打包路径。改了 12 个文件 + 1 个新测试文件（TS facade / 能力探测 / log-export、Android 2 个、iOS 1 个、HarmonyOS 2 个、4 个测试）。已过 `tsc -b --force`、`pnpm test` **2289 全绿（212 文件，+31，反向验证 21/21 全咬）**、`pnpm run build` 双产物、Android `assembleDebug`。**既存未修（不在本批 scope）**：`SongloftPlatformModule.kt` 的 `pickAndUploadFile` 与 `shareFile` 仍用 `e.message ?: …`（只兜 null 不兜空串），而它们的 TS facade 也是真值判断 —— 空 message 会被读成成功。新加的 `shareLogArchive` 三端都已兜住（Kotlin `reason()` / ArkTS `errorText()` / facade `!= null`）。**接手要补的**：iOS 与 HarmonyOS 编译（本机 Linux，无 Xcode/DevEco；Harmony 走 `dev-build-harmony.yml`），以及真机上「点击导出到分享面板弹出」的耗时对比。**顺带**：本批还修掉了自己引入的一次事故——编辑 `docs/project/progress.md` 时编辑工具把该文件**别处**五个无关中文字打成 14 个 U+FFFD（已从 HEAD 无损重建），并把 `docs/` 纳入 `source-encoding.test.ts` 的扫描范围，这类问题以后由闸门兜住，见 [pitfalls.md](pitfalls.md) §6。**最高风险的一行**：HarmonyOS `downloadBackendLog` 里的 `remoteValidation: InsecureTls.isEnabled() ? 'skip' : 'system'` —— API 12+ 的字段、上下文类型推导，但没编译过；若 hvigor 报错，删掉这一行即可（其余逻辑不依赖它，只是丢掉自签名服务器下的后端日志）。
+> **未提交的工作树改动（Issue #4 · 播放列表歌曲很多时打开卡死）**：`PlaylistDrawer` 从 `SortableRoot`（ScrollView 全量挂载，每行一个主线程 DraggableRoot + 拖拽 overlay）改为项目既有 `VirtualList`（原生 `<list>`）；按用户决定（方案 A）移除队列内拖拽排序，级联删除 store `reorderPlaylist`、`queue.ts` `moveItem`/`indexAfterMove`/`reorder`、8 个对应用例、mock 行与死 CSS —— 共 7 个代码文件 + 3 个项目文档。已过 `tsc -b --force`、`pnpm test` **2285 全绿（212 文件，重写的 drawer 测试反向验证 6/6 全咬）**、`pnpm run build` 双产物（lynx 2251.9 kB、web 2344.8 kB）、`build:web`；Docker Chrome 500 首队列同一脚本 A/B：打开 **6246ms → 387ms**、节点 **13017 → 5513**、帧延迟 1ms、滚动/点击播放/console 全干净。**接手要补的**：三端真机验证（Issue 报告者平台未知；web-core `<list>` 不虚拟化尚且 16× 快，原生虚拟化结构性更优）；若恢复拖拽排序，从 git 历史找回 `moveItem`/`reorder`（`queue.ts` 头注有 duplicate-song pinning 算术的说明）。上一批 Issue #3（导出日志下移原生）已提交为 `1cf992f`。
 >
 > **一句话现状**：Apple HIG 重构全部 11 阶段已提交；玻璃材质优化三批（批B 播放器页背景层 / 批C 伪玻璃精致化 / 批A `<blur-view>` 真背景模糊）已全部完成并提交，另有批A-fix 修掉 Web 上 `blur-view` 标签映射缺失导致的静默无效、批A-fix2 补齐批A 漏掉的 6 个弹窗并给 popover / 底部导航胶囊 / mini-player 加上面板模式模糊、批A-fix3 修掉全应用最后一个仍是不透明 `--paper` 的浮层（全局菜单），并把面板模式清单改为从表面反推而非手写。最新一批按用户决定把 **HIG 44px 触控目标全量落地**（24 个控件直接放大 + 5 个圆片用 `__*-hit` 包裹层只撑命中盒不改绘制），同步修掉 `CARD_CHROME_PX` 与弹窗按钮高度的耦合（AGENTS.md 警告的「卡片钳制与 body 钳制不自洽」），并把 `a11y-tap-target.test.ts` 从手写模式改为按用法反推。随后按用户报障修掉**玻璃面板里的列表行背景**（`.song-row` 的 `background-color: var(--canvas)` 在播放历史面板上盖掉整片玻璃，顺带盖掉歌单详情的整行选中高亮），并把「面板内可达元素不许有无界不透明填充」写成从用法反推的闸门（复查确认播放列表面板无此问题）。接着按用户决定（「符合 Apple HIG 设计规范就行」）修掉**玻璃上的行状态填充**：`.drawer__row--active` / `.popover-menu__item--selected` 的满幅不透明板改为 accent wash `--primary-faint`，两个看不见的多选高亮（`--paper` 叠 `--canvas`，比值 1.04/1.07）同改；新增中性通道 `--fill-faint` 收走插件弹窗 6 处内嵌块与 mini-player 进度槽（后者此前用分隔线令牌 `--line` 当背景）；并把 wash 在暗色下提亮表面带来的三级文字缺口一起付掉（被 wash 行的元数据抬到 `--content-2`，light `--content-2` 加深到 `#67676f`）。**JS 侧闸门**：`tsc -b` 绿 / **2201 vitest 全绿（198 文件）** / build:web 绿 / Docker Chrome 运行时验证通过。近期重点：后台播放稳定性、Lynx 原生渲染插件、自定义标签、记住密码、HarmonyOS 宿主修复、文件夹浏览视图、**Apple HIG 重构（11 阶段）**。
 
@@ -44,10 +44,10 @@
 
 | 闸门 | 结果 | 何时验的 |
 |---|---|---|
-| `pnpm test` | **2208 全绿 / 199 文件** | ✅ **2026-09-03**（HIG 全部 11 阶段 + 玻璃优化批B/批C/批A + 批A-fix + 批A-fix2 + 批A-fix3 + 全局复查 + 触控目标 44px + 面板内列表行背景 + 玻璃上的行状态填充 + 批后审核（字符串编码 + wash 上的三级文字）） |
-| `pnpm exec tsc -b` | 绿 | 2026-09-03 |
-| `pnpm run build` | 绿（main.lynx.bundle 2232.5 kB） | 2026-09-03 |
-| `pnpm run build:web` | 绿（main.web.bundle 2286.1 kB）+ Docker Chrome 运行时 25/25 | 2026-09-03 |
+| `pnpm test` | **2285 全绿 / 212 文件** | ✅ **2026-09-07**（Issue #4 队列抽屉虚拟化；此前 Issue #3 为 2289，本批删除 8 个 reorder 用例） |
+| `pnpm exec tsc -b` | 绿（`--force` 全量重建） | 2026-09-07 |
+| `pnpm run build` | 绿（main.lynx.bundle 2251.9 kB） | 2026-09-07 |
+| `pnpm run build:web` | 绿（main.web.bundle 2344.8 kB）+ Docker Chrome 运行时 500 首队列 A/B | 2026-09-07 |
 | 新增 `tokens-hig.test.ts` | 6/6 绿 | 2026-09-02 |
 | `gradlew assembleDebug` | 绿 | ✅ **2026-09-06**（Issue #3，`compileDebugKotlin` 实际执行） |
 | `xcodebuild` / hvigor（HAP） | **未验** | 本机是 Linux，无 Xcode、无 DevEco；iOS 与 HarmonyOS 的原生改动只有契约与结构闸门覆盖 |

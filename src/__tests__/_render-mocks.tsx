@@ -443,7 +443,6 @@ function mockPlayerState(over: Partial<PlayerState> = {}): PlayerState {
     addToPlaylist: noop,
     insertNextInQueue: noop,
     removeFromPlaylist: asyncNoop,
-    reorderPlaylist: noop,
     clearPlaylist: noop,
     toggleFullPlayer: noop,
     closeFullPlayer: noop,

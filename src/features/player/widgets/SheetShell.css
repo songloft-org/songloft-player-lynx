@@ -101,6 +101,18 @@
   flex: 1;
 }
 
+/*
+ * The queue drawer's body is the native `<list>` (VirtualList), while the
+ * sleep-timer sheet shares `.drawer__list` on a `<scroll-view>` — so the
+ * `<list>`-specific shape lives on a modifier: the same column flex the other
+ * `<list>` consumers declare (`.category-songs__list`, `.playlist-detail__list`),
+ * resolving its height from the fixed-footprint panel (`height: 70%`).
+ */
+.drawer__list--queue {
+  display: flex;
+  flex-direction: column;
+}
+
 .drawer__row {
   display: flex;
   flex-direction: row;
@@ -162,21 +174,6 @@
   justify-content: center;
   width: var(--tap-target);
   height: var(--tap-target);
-}
-
-.drawer__row-actions {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-}
-
-.drawer__row-handle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 32px;
-  margin-right: 4px;
 }
 
 .drawer__row-remove-glyph {

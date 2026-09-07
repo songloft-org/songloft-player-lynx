@@ -26,7 +26,7 @@ import { getPlaylistApi } from '../../playlist/api/index.js'
 import { getSongsApi } from '../../library/api/index.js'
 import { cyclePlayMode, resolveNext, resolvePrev, type PlayMode } from '../domain/play-mode.js'
 import { playlistIdOf, type PlaybackContext } from '../domain/playback-context.js'
-import { moveItem, removeAt } from '../domain/queue.js'
+import { removeAt } from '../domain/queue.js'
 import {
   sleepTimerAfterSongs,
   sleepTimerByDuration,
@@ -75,7 +75,6 @@ export interface PlayerState extends PlayerData {
   addToPlaylist: (songs: Song[]) => void
   insertNextInQueue: (songs: Song[]) => void
   removeFromPlaylist: (index: number) => Promise<void>
-  reorderPlaylist: (oldIndex: number, newIndex: number) => void
   clearPlaylist: () => void
 
   // ── ui ──
@@ -717,13 +716,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       }
       await syncQueueWindow(result.playlist, result.currentIndex)
       if (result.removedCurrent) await playAtIndex(result.currentIndex)
-    },
-
-    reorderPlaylist: (oldIndex, newIndex) => {
-      const s = get()
-      const result = moveItem(s.playlist, s.currentIndex, oldIndex, newIndex)
-      set({ playlist: result.playlist, currentIndex: result.currentIndex })
-      void syncQueueWindow(result.playlist, result.currentIndex)
     },
 
     clearPlaylist: () => {

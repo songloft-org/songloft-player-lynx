@@ -6,6 +6,14 @@ import type { Song } from '../../../models/song.js'
  * `currentSong`, keeping the current track pinned to the same song across the
  * mutation. Extracted as pure functions so the queue math is unit-tested
  * independently of the zustand store / audio bridge.
+ *
+ * The reorder family (`moveItem`/`reorder`) was removed together with the
+ * queue drawer's drag-to-sort UI: eagerly mounting one draggable row per
+ * queued song froze the drawer on large queues
+ * (songloft-org/songloft-player-lynx#4), and the drawer now renders through
+ * the virtualized `VirtualList`, which has no in-list drag. If drag-to-sort
+ * ever returns, restore them from git history rather than re-deriving the
+ * duplicate-song pinning arithmetic.
  */
 
 export interface QueueSnapshot {
@@ -64,64 +72,4 @@ export function removeAt(
     shouldStop: false,
     removedCurrent: removeIndex === currentIndex,
   }
-}
-
-/** Move the item at `from` to `to`, keeping the current track pinned. */
-export function moveItem(
-  playlist: Song[],
-  currentIndex: number,
-  from: number,
-  to: number,
-): QueueSnapshot {
-  if (
-    from === to ||
-    from < 0 ||
-    from >= playlist.length ||
-    to < 0 ||
-    to >= playlist.length
-  ) {
-    return { playlist, currentIndex, currentSong: songAt(playlist, currentIndex) }
-  }
-  const next = [...playlist]
-  const [moved] = next.splice(from, 1)
-  next.splice(to, 0, moved)
-  const newIndex = indexAfterMove(currentIndex, from, to)
-  return { playlist: next, currentIndex: newIndex, currentSong: songAt(next, newIndex) }
-}
-
-/**
- * Where `currentIndex` lands after moving `from` → `to`, derived from the indices
- * alone.
- *
- * This used to be `next.indexOf(pinned)`, i.e. locate the playing song by object
- * identity. The same `Song` object legitimately appears twice in a queue — "add
- * to queue" on a song already queued pushes the very same reference — and
- * `indexOf` then always reports the *first* copy. Reordering with a duplicate
- * present would silently re-pin `currentIndex` to the wrong entry, so progress
- * and the now-playing highlight drifted onto a different row than the audio.
- *
- * Arithmetic has no such ambiguity. An out-of-range `currentIndex` (notably -1,
- * "nothing playing") is passed through untouched.
- */
-function indexAfterMove(currentIndex: number, from: number, to: number): number {
-  if (currentIndex < 0) return currentIndex
-  if (currentIndex === from) return to
-  // Removing an earlier item shifts us down; re-inserting at/before us shifts us back up.
-  if (from < currentIndex) return to >= currentIndex ? currentIndex - 1 : currentIndex
-  // Removing a later item leaves us put; inserting at/before us pushes us down.
-  return to <= currentIndex ? currentIndex + 1 : currentIndex
-}
-
-/**
- * Classic `onReorder` semantics (the `newIndex` is the pre-removal target),
- * converted to a `moveItem` call. Mirrors the Flutter `reorderPlaylist`.
- */
-export function reorder(
-  playlist: Song[],
-  currentIndex: number,
-  oldIndex: number,
-  newIndex: number,
-): QueueSnapshot {
-  const insertIndex = newIndex > oldIndex ? newIndex - 1 : newIndex
-  return moveItem(playlist, currentIndex, oldIndex, insertIndex)
 }
