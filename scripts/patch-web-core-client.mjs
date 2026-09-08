@@ -1,7 +1,7 @@
 /**
  * Patch @lynx-js/web-core's bundled production files (client_prod) in place.
  *
- * Two fixes, both applied the same way — a literal string replacement on the
+ * Several fixes, all applied the same way — a literal string replacement on the
  * minified bundle — because a unified diff over a single-line 100 KB file would
  * embed two whole lines in the patch. The non-minified twin of each fix lives
  * in `patches/@lynx-js__web-core@0.23.1.patch` (applied by pnpm), which covers
@@ -107,6 +107,20 @@ const REPLACEMENTS = [
     marker: 'x-textarea::part(textarea){--placeholder-color:var(--content-muted,grey)',
     oldText: 'x-textarea::part(textarea){--placeholder-color:grey',
     newText: 'x-textarea::part(textarea){--placeholder-color:var(--content-muted,grey)',
+  },
+  {
+    // Fix 4, on web-elements.js: horizontal `initial-scroll-offset` restore.
+    // `ScrollAttributes` computes `leftScrollDistance` for a `scroll-left` or
+    // `initial-scroll-offset` attribute, but its condition tests
+    // `scrollOrientation === 'vertical'` instead of `'horizontal'`. On a
+    // horizontal scroll-view the initial offset therefore never reaches
+    // `scrollLeft` and a remounted strip (the narrow library view switcher)
+    // snaps back to the start. Native scrollers apply the offset along the
+    // scroll axis; this keeps Web agreeing with them.
+    file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-elements.js'),
+    marker: 'l=("scroll-left"===i||"initial-scroll-offset"===i)&&(""===o||"true"===o||"horizontal"===n||"both"===n)',
+    oldText: 'l=("scroll-left"===i||"initial-scroll-offset"===i)&&(""===o||"true"===o||"vertical"===n||"both"===n)',
+    newText: 'l=("scroll-left"===i||"initial-scroll-offset"===i)&&(""===o||"true"===o||"horizontal"===n||"both"===n)',
   },
 ]
 

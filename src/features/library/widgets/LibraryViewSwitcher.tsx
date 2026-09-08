@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { useScrollMemory } from '../../../shared/nav/scroll-memory.js'
 import {
   groupLibraryViewKeys,
   LIBRARY_VIEW_ICON,
@@ -25,9 +26,16 @@ export interface LibraryViewSwitcherProps {
 export function LibraryViewSwitcher({ displayKeys, selected, onSelect }: LibraryViewSwitcherProps) {
   const { t } = useTranslation()
   const buckets = groupLibraryViewKeys(displayKeys)
+  const { initialOffset, onScroll } = useScrollMemory('library-view-switcher', 'x')
 
   return (
-    <scroll-view className='library-switcher' scroll-orientation='horizontal'>
+    <scroll-view
+      className='library-switcher'
+      scroll-orientation='horizontal'
+      initial-scroll-offset={initialOffset}
+      bindscroll={onScroll}
+      data-testid='library-view-switcher-scroll'
+    >
       <view className='library-switcher__row'>
         {buckets.map((bucket, i) => (
           <view key={bucket.group} className='library-switcher__group'>

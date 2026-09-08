@@ -32,6 +32,8 @@ export function clearScrollMemory(): void {
   offsets.clear()
 }
 
+export type ScrollAxis = 'x' | 'y'
+
 export interface UseScrollMemoryResult {
   /**
    * Offset to restore, read **once** at mount and then held constant for the
@@ -52,6 +54,11 @@ export interface UseScrollMemoryResult {
  * <scroll-view scroll-y initial-scroll-offset={initialOffset} bindscroll={onScroll} />
  * ```
  *
+ * Pass `'x'` as the second argument for a horizontally scrolling view (e.g. the
+ * narrow library pill strip); it then records `event.detail.scrollLeft` instead
+ * of `scrollTop`. The stored value stays a single number per key, so the same
+ * module map serves both axes.
+ *
  * **Use `initial-scroll-offset`, not `scroll-top`.** Checked against all three
  * SDKs rather than assumed, because the docs give no per-platform matrix for
  * either one:
@@ -70,14 +77,14 @@ export interface UseScrollMemoryResult {
  * `setInitialScrollOffset` puts it back through `dipToPx`. Handing that prop a raw
  * px value would overshoot by the display density and land at the page bottom.
  */
-export function useScrollMemory(key: string): UseScrollMemoryResult {
+export function useScrollMemory(key: string, axis: ScrollAxis = 'y'): UseScrollMemoryResult {
   const initialOffset = useRef(getScrollOffset(key)).current
 
   const onScroll = useCallback(
     (event: ScrollEvent) => {
-      setScrollOffset(key, event.detail.scrollTop)
+      setScrollOffset(key, axis === 'x' ? event.detail.scrollLeft : event.detail.scrollTop)
     },
-    [key],
+    [key, axis],
   )
 
   return { initialOffset, onScroll }
