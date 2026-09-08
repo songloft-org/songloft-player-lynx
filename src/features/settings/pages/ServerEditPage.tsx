@@ -1,9 +1,8 @@
-import { useState } from '@lynx-js/react'
+import { useEffect, useState } from '@lynx-js/react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
 
-import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { SubPageShell } from '../widgets/SubPageShell.js'
 import { useServerStore } from '../store/server-store.js'
@@ -36,10 +35,33 @@ export function ServerEditPage({ editId: editIdProp, onBack }: ServerEditPagePro
   const existing = useServerStore((s) =>
     editId ? s.profiles.find((p) => p.id === editId) : undefined,
   )
+  const activeProfile = useServerStore((s) =>
+    s.activeProfileId ? s.profiles.find((p) => p.id === s.activeProfileId) : undefined,
+  )
 
   const [name, setName] = useState(existing?.name ?? '')
   const [url, setUrl] = useState(existing?.url ?? '')
   const [insecureTls, setInsecureTls] = useState(existing?.insecureTls ?? false)
+
+  // Username: for edit mode, start with existing. For add mode, inherit from
+  // the currently active profile (matches Flutter's "default credentials from
+  // current server" behavior). The user can clear/override either way.
+  const [username, setUsername] = useState(
+    existing?.username ?? activeProfile?.username ?? '',
+  )
+
+  // Password: loaded async to avoid the controlled-Input flicker (same
+  // discipline as LoginPage — one write per field). Empty string means "no
+  // stored password"; the save action treats empty as "clear".
+  const [password, setPassword] = useState('')
+  useEffect(() => {
+    if (!editId) return
+    let cancelled = false
+    void useServerStore.getState().readCredentials(editId).then((creds) => {
+      if (!cancelled && creds?.password) setPassword(creds.password)
+    })
+    return () => { cancelled = true }
+  }, [editId])
 
   /** Where saving (and the shell's back arrow) lands: the server list. */
   const goBack = () => {
@@ -52,9 +74,21 @@ export function ServerEditPage({ editId: editIdProp, onBack }: ServerEditPagePro
   const onSave = async () => {
     if (!canSave) return
     if (editId && existing) {
-      await useServerStore.getState().editProfile(editId, { name, url, insecureTls })
+      await useServerStore.getState().editProfile(editId, {
+        name,
+        url,
+        insecureTls,
+        username: username.trim(),
+        password,
+      })
     } else {
-      await useServerStore.getState().addProfile({ name, url, insecureTls })
+      await useServerStore.getState().addProfile({
+        name,
+        url,
+        insecureTls,
+        username: username.trim(),
+        password,
+      })
     }
     goBack()
   }
@@ -92,6 +126,28 @@ export function ServerEditPage({ editId: editIdProp, onBack }: ServerEditPagePro
             placeholder={t('servers.urlPlaceholder')}
             value={url}
             onInput={(value) => setUrl(value)}
+          />
+        </view>
+
+        <view className='server-edit__field'>
+          <text className='server-edit__label'>{t('servers.username')}</text>
+          <Input
+            className='server-edit__input'
+            type='text'
+            placeholder={t('servers.usernamePlaceholder')}
+            value={username}
+            onInput={(value) => setUsername(value)}
+          />
+        </view>
+
+        <view className='server-edit__field'>
+          <text className='server-edit__label'>{t('servers.password')}</text>
+          <Input
+            className='server-edit__input'
+            type='password'
+            placeholder={t('servers.passwordPlaceholder')}
+            value={password}
+            onInput={(value) => setPassword(value)}
           />
         </view>
 

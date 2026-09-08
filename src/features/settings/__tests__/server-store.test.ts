@@ -226,3 +226,147 @@ describe('hydrate', () => {
     expect(useServerStore.getState().activeProfileId).not.toBeNull()
   })
 })
+
+describe('credentials', () => {
+  test('addProfile stores username in profile and password in secure', async () => {
+    const profile = await useServerStore.getState().addProfile({
+      name: 'Creds',
+      url: 'http://creds',
+      username: 'admin',
+      password: 'secret',
+    })
+    expect(profile.username).toBe('admin')
+    const saved = useServerStore.getState().profiles[0]
+    expect(saved.username).toBe('admin')
+    // Password goes to secure storage, not the profile JSON.
+    expect(storageMock.secure.set).toHaveBeenCalledWith(
+      `password_${profile.id}`,
+      'secret',
+    )
+    // The profile JSON written to prefs should contain username but NOT password.
+    const prefsCall = storageMock.prefs.set.mock.calls.find(
+      (c: unknown[]) => c[0] === 'server_profiles',
+    )
+    expect(prefsCall).toBeDefined()
+    const parsed = JSON.parse(prefsCall![1] as string)
+    expect(parsed[0].username).toBe('admin')
+    expect(parsed[0].password).toBeUndefined()
+  })
+
+  test('addProfile with empty username stores undefined', async () => {
+    const profile = await useServerStore.getState().addProfile({
+      name: 'NoUser',
+      url: 'http://no',
+      username: '   ',
+      password: '',
+    })
+    expect(profile.username).toBeUndefined()
+    expect(storageMock.secure.set).not.toHaveBeenCalledWith(
+      `password_${profile.id}`,
+      expect.anything(),
+    )
+  })
+
+  test('editProfile updates username and password', async () => {
+    const profile = await useServerStore.getState().addProfile({
+      name: 'E', url: 'http://e',
+    })
+    await useServerStore.getState().editProfile(profile.id, {
+      username: 'newuser',
+      password: 'newpass',
+    })
+    const updated = useServerStore.getState().profiles[0]
+    expect(updated.username).toBe('newuser')
+    expect(storageMock.secure.set).toHaveBeenCalledWith(
+      `password_${profile.id}`,
+      'newpass',
+    )
+  })
+
+  test('editProfile with empty password clears the stored password', async () => {
+    const profile = await useServerStore.getState().addProfile({
+      name: 'E', url: 'http://e', password: 'old',
+    })
+    vi.clearAllMocks()
+    await useServerStore.getState().editProfile(profile.id, { password: '' })
+    expect(storageMock.secure.remove).toHaveBeenCalledWith(`password_${profile.id}`)
+  })
+
+  test('removeProfile also removes the stored password', async () => {
+    const profile = await useServerStore.getState().addProfile({
+      name: 'R', url: 'http://r', password: 'pw',
+    })
+    vi.clearAllMocks()
+    await useServerStore.getState().removeProfile(profile.id)
+    expect(storageMock.secure.remove).toHaveBeenCalledWith(`password_${profile.id}`)
+  })
+
+  test('readCredentials returns stored credentials for a profile', async () => {
+    const profile = await useServerStore.getState().addProfile({
+      name: 'RC', url: 'http://rc', username: 'u', password: 'p',
+    })
+    storageMock.secure.get.mockImplementation(async (key: string) => {
+      if (key === `password_${profile.id}`) return 'p'
+      return null
+    })
+    const creds = await useServerStore.getState().readCredentials(profile.id)
+    expect(creds).toEqual({ username: 'u', password: 'p' })
+  })
+
+  test('readCredentials returns null when no password is stored', async () => {
+    const profile = await useServerStore.getState().addProfile({
+      name: 'RC', url: 'http://rc', username: 'u',
+    })
+    storageMock.secure.get.mockResolvedValue(null)
+    const creds = await useServerStore.getState().readCredentials(profile.id)
+    expect(creds).toBeNull()
+  })
+
+  test('loadCredentialsForUrl finds credentials from in-memory profiles', async () => {
+    await useServerStore.getState().addProfile({
+      name: 'L', url: 'http://l', username: 'lu', password: 'lp',
+    })
+    storageMock.secure.get.mockImplementation(async (key: string) => {
+      const profile = useServerStore.getState().profiles[0]
+      if (key === `password_${profile.id}`) return 'lp'
+      return null
+    })
+    const creds = await useServerStore.getState().loadCredentialsForUrl('http://l')
+    expect(creds).toEqual({ username: 'lu', password: 'lp' })
+  })
+
+  test('loadCredentialsForUrl reads persisted profiles when not hydrated', async () => {
+    // Simulate not-yet-hydrated state: in-memory is empty.
+    useServerStore.setState({ profiles: [], activeProfileId: null })
+    const persisted = JSON.stringify([
+      { id: 'srv_p', name: 'P', url: 'http://p', insecure_tls: false, username: 'pu' },
+    ])
+    storageMock.prefs.get.mockImplementation(async (key: string) => {
+      if (key === 'server_profiles') return persisted
+      return null
+    })
+    storageMock.secure.get.mockImplementation(async (key: string) => {
+      if (key === 'password_srv_p') return 'pp'
+      return null
+    })
+    const creds = await useServerStore.getState().loadCredentialsForUrl('http://p')
+    expect(creds).toEqual({ username: 'pu', password: 'pp' })
+  })
+
+  test('rememberCredentials updates in-memory profile and persists password', async () => {
+    const profile = await useServerStore.getState().addProfile({
+      name: 'RM', url: 'http://rm',
+    })
+    vi.clearAllMocks()
+    await useServerStore.getState().rememberCredentials('http://rm', {
+      username: 'rmuser',
+      password: 'rmpass',
+    })
+    const updated = useServerStore.getState().profiles[0]
+    expect(updated.username).toBe('rmuser')
+    expect(storageMock.secure.set).toHaveBeenCalledWith(
+      `password_${profile.id}`,
+      'rmpass',
+    )
+  })
+})

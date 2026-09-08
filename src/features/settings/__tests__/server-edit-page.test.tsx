@@ -30,6 +30,16 @@ const PROFILE: ServerProfile = {
   name: 'LAN',
   url: 'https://lan:8443',
   insecureTls: true,
+  username: 'lanuser',
+  lastUsed: undefined,
+}
+
+const ACTIVE_PROFILE: ServerProfile = {
+  id: 'srv_active',
+  name: 'Active',
+  url: 'http://active:8080',
+  insecureTls: false,
+  username: 'activeuser',
   lastUsed: undefined,
 }
 
@@ -60,8 +70,9 @@ vi.mock('@lynx-js/lynx-ui-input', () => ({
 
 vi.mock('../store/server-store.js', () => {
   const state = {
-    profiles: [PROFILE],
-    activeProfileId: 'srv_active',
+    profiles: [PROFILE, ACTIVE_PROFILE],
+    activeProfileId: ACTIVE_PROFILE.id,
+    readCredentials: vi.fn(async () => null),
   } as unknown as ServerStoreState
 
   function useServerStore<T>(selector?: (s: ServerStoreState) => T): T | ServerStoreState {
@@ -126,6 +137,31 @@ test('the pane passes the profile as a prop, where there are no route params', (
   const { container } = render(<ServerEditPage editId={PROFILE.id} onBack={vi.fn()} />)
   const text = (container as unknown as { textContent: string }).textContent ?? ''
 
+  expect(text).toContain(PROFILE.name)
+  expect(text).toContain(PROFILE.url)
+})
+
+test('add mode inherits username from the active profile', () => {
+  // No editId → add mode. The form should prefill username from the active
+  // profile, not from the profile being edited (which doesn't exist yet).
+  paramsRef.current = {}
+  const { container } = render(<ServerEditPage onBack={vi.fn()} />)
+  const text = (container as unknown as { textContent: string }).textContent ?? ''
+  // Active profile's username should be present.
+  expect(text).toContain(ACTIVE_PROFILE.username)
+  // The add-form name/url fields start empty — their placeholders are visible.
+  // The mock i18n translates keys to their English values, so assert on the
+  // actual translated text (not the key).
+  expect(text).toContain('My server')
+  expect(text).toContain('http://192.168.1.100:58091')
+})
+
+test('edit mode shows username from the existing profile', () => {
+  paramsRef.current = { id: PROFILE.id }
+  const { container } = render(<ServerEditPage editId={PROFILE.id} onBack={vi.fn()} />)
+  const text = (container as unknown as { textContent: string }).textContent ?? ''
+  // The profile being edited has its own username.
+  expect(text).toContain(PROFILE.username)
   expect(text).toContain(PROFILE.name)
   expect(text).toContain(PROFILE.url)
 })

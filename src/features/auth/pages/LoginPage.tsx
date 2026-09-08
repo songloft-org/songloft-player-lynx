@@ -17,6 +17,7 @@ import {
   SECURE_LAST_PASSWORD,
   useAuthStore,
 } from '../store/index.js'
+import { useServerStore } from '../../settings/store/server-store.js'
 
 import './LoginPage.css'
 
@@ -67,6 +68,11 @@ export function LoginPage() {
   // lands) — swallow and skip. All reads run in parallel and all writes happen
   // in the same synchronous tail, so the controlled Inputs still cost a
   // single commit (the one-write discipline from the useState comments).
+  //
+  // Prefill priority (standalone): per-profile credentials for `apiUrl` first,
+  // then fall back to the global last credentials. This matches Flutter's
+  // `login_page.dart` semantics: switching servers prefills the credentials
+  // the user last used *on that server*, not the global last.
   useEffect(() => {
     let cancelled = false
     const storage = getSongloftStorage()
@@ -78,22 +84,27 @@ export function LoginPage() {
           return null
         }
       }
-      const [savedName, savedPassword, savedUrl] = await Promise.all([
+      const [savedName, savedPassword, savedUrl, profileCreds] = await Promise.all([
         read('prefs', PREF_LAST_USERNAME),
         read('secure', SECURE_LAST_PASSWORD),
         showServerFields
           ? read('prefs', PREF_SERVER_URL)
           : Promise.resolve(null),
+        showServerFields
+          ? useServerStore.getState().loadCredentialsForUrl(appConfig.baseUrl)
+          : Promise.resolve(null),
       ])
       if (cancelled) return
       // One write per field, whichever source wins — see the useState comments.
-      const nextName = savedName || devCredentials.username
+      // Per-profile credentials win over global last credentials.
+      const nextName = profileCreds?.username || savedName || devCredentials.username
       if (nextName) setUsername(nextName)
       // Only ever fill the password from a genuinely remembered one. Never fall
       // back to a dev default here (see the useState comment) — an empty field
       // is the correct state when we have no saved password, on both a fresh
       // install and an upgraded one that has not re-logged-in yet.
-      if (savedPassword) setPassword(savedPassword)
+      const nextPassword = profileCreds?.password || savedPassword
+      if (nextPassword) setPassword(nextPassword)
       if (savedUrl) setApiUrl(savedUrl)
     })()
     return () => {
@@ -117,6 +128,14 @@ export function LoginPage() {
       insecureTls: showServerFields ? insecureTls : undefined,
     })
     if (useAuthStore.getState().status === 'authenticated') {
+      // Persist credentials to the profile matching the server URL (if any).
+      // The global last credentials are still written by auth-store.login for
+      // backward compatibility with embedded mode and legacy flows.
+      if (showServerFields) {
+        void useServerStore
+          .getState()
+          .rememberCredentials(apiUrl.trim(), { username: username.trim(), password })
+      }
       navigate({ to: '/' })
     }
   }

@@ -77,6 +77,20 @@ vi.mock('../store/index.js', async () => {
   const { makeAuthStoreMock } = await import('../../../__tests__/_render-mocks.js')
   return makeAuthStoreMock(actual)
 })
+vi.mock('../../settings/store/server-store.js', () => ({
+  useServerStore: (() => {
+    function useServerStore<T>(selector?: (s: unknown) => T): T | unknown {
+      return selector ? selector({}) : {}
+    }
+    useServerStore.getState = () => ({
+      loadCredentialsForUrl: async () => null,
+      rememberCredentials: async () => {},
+    })
+    useServerStore.setState = () => {}
+    useServerStore.subscribe = () => () => {}
+    return useServerStore
+  })(),
+}))
 // The root route mounts the global `<ToastHost/>`, which subscribes to a zustand
 // store (`useSyncExternalStore`) — the same crash class as the auth store above.
 // Stand it in with a no-op; toast behaviour is covered by toast-store.test.ts.

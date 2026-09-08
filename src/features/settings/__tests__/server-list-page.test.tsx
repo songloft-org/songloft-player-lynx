@@ -32,8 +32,8 @@ import type { ServerStoreState } from '../store/server-store.js'
  */
 
 const PROFILES: ServerProfile[] = [
-  { id: 'srv_active', name: 'Home', url: 'http://home:8080', insecureTls: false, lastUsed: undefined },
-  { id: 'srv_other', name: 'LAN', url: 'https://lan:8443', insecureTls: true, lastUsed: undefined },
+  { id: 'srv_active', name: 'Home', url: 'http://home:8080', insecureTls: false, username: undefined, lastUsed: undefined },
+  { id: 'srv_other', name: 'LAN', url: 'https://lan:8443', insecureTls: true, username: undefined, lastUsed: undefined },
 ]
 
 const { navigateSpy, hydrateSpy } = vi.hoisted(() => ({
