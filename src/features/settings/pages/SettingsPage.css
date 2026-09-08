@@ -27,11 +27,18 @@
 }
 
 /* Apple's large title is 34pt bold — the page-level heading, one step above the
-   22pt section titles below it. */
+   22pt section titles below it. Wide screens step down to title1 (28px): the
+   title sits beside the shell's nav rail (256px, labels at --font-subhead 15px),
+   and 34px bold creates too aggressive a jump. Same reduction the library and
+   home pages apply — the three tabs must agree when they share a sidebar. */
 .settings__title {
   color: var(--label);
   font-size: var(--font-largeTitle);
   font-weight: var(--weight-bold);
+}
+
+.shell--wide .settings__title {
+  font-size: var(--font-title1);
 }
 
 /* ─── Body wrapper (single / dual column) ────────────────────────────────── */

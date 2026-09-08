@@ -29,19 +29,35 @@
   min-height: 0;
 }
 
-/* Topbar: section title + the "customize views" (tune) entry. */
+/* Topbar: section title + the "customize views" (tune) entry. Padding matches
+   the home and settings topbars (space-4 top/sides, space-3 bottom) so the
+   three tab-root titles sit at the same vertical position when switching. */
 .library__topbar {
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4) var(--space-4) var(--space-3);
 }
 
+/* Large title — matches the home greeting and settings title so the three
+   bottom-bar tabs read as peers. Was title3/semibold (20px/600); the 14px gap
+   to largeTitle (34px/700) was especially visible on web and made the library
+   feel like a sub-page rather than a top-level section.
+
+   Wide screens step down to title1 (28px): the library sits beside two sidebar
+   columns (shell rail 256px + library rail 220px), and 34px bold next to 15px
+   rail labels is too aggressive a jump. title1 keeps the page-level prominence
+   without visually competing with the adjacent navigation chrome — same call
+   Apple Music makes for its sidebar-adjacent section headings on iPad. */
 .library__topbar-title {
   flex: 1;
   color: var(--label);
-  font-size: var(--font-title3);
-  font-weight: var(--weight-semibold);
+  font-size: var(--font-largeTitle);
+  font-weight: var(--weight-bold);
+}
+
+.shell--wide .library__topbar-title {
+  font-size: var(--font-title1);
 }
 
 .library__topbar-toggle {

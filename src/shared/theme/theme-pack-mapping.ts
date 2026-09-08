@@ -290,7 +290,41 @@ export function themePackToStyleVars(
   vars['--glass-border'] = mt['--glass-border']
   vars['--glass-highlight'] = mt['--glass-highlight']
 
-  vars['--font-scale'] = String(getFontScaleNumber())
+  // --font-scale is kept for any direct consumer, but the 12 HIG font-size
+  // tokens cannot rely on calc(Npx * var(--font-scale)) resolving the inline
+  // override on iOS — nested var() inside a custom property's calc() does not
+  // see inline overrides there (see docs/project/bugs.md). So we compute each
+  // font-size token as a plain px value inline, bypassing the indirection.
+  // The stylesheet declarations still serve as the fallback when no provider
+  // has run yet (first paint before ThemeProvider mounts).
+  const scale = getFontScaleNumber()
+  vars['--font-scale'] = String(scale)
+  for (const [token, basePx] of Object.entries(FONT_SIZE_BASES)) {
+    vars[token] = `${basePx * scale}px`
+  }
 
   return vars
+}
+
+/**
+ * Base pixel sizes for the 12 HIG text-style tokens (before --font-scale).
+ * Mirrors `tokens.css`'s `.theme-root` declarations; kept here so
+ * `ThemeProvider` can emit computed px values inline and bypass the iOS bug
+ * where nested var() inside calc() ignores inline custom-property overrides.
+ *
+ * Gate: `tokens-hig.test.ts` asserts these match the stylesheet bases.
+ */
+export const FONT_SIZE_BASES: Record<string, number> = {
+  '--font-2xs': 10,
+  '--font-caption2': 11,
+  '--font-caption1': 12,
+  '--font-footnote': 13,
+  '--font-subhead': 15,
+  '--font-callout': 16,
+  '--font-body': 17,
+  '--font-headline': 17,
+  '--font-title3': 20,
+  '--font-title2': 22,
+  '--font-title1': 28,
+  '--font-largeTitle': 34,
 }

@@ -4,6 +4,7 @@ import path from 'node:path'
 import { describe, expect, test } from 'vitest'
 
 import {
+  FONT_SIZE_BASES,
   hexToRgba,
   isHexColor,
   PACK_OVERRIDABLE_BASELINE,
@@ -83,11 +84,17 @@ describe('themePackToStyleVars', () => {
 
 /** The full inline-style output themePackToStyleVars produces for a given theme
  * when no pack is active: the baseline plus the material glass tokens (always
- * injected, regular = baseline) and --font-scale (default 1). */
+ * injected, regular = baseline), --font-scale (default 1), and the 12 computed
+ * font-size tokens (plain px values — the iOS calc() indirection bypass). */
 function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
+  const fontSizes: Record<string, string> = {}
+  for (const [token, basePx] of Object.entries(FONT_SIZE_BASES)) {
+    fontSizes[token] = `${basePx}px`
+  }
   return {
     ...PACK_OVERRIDABLE_BASELINE[resolved],
     '--font-scale': '1',
+    ...fontSizes,
   }
 }
   test('maps the full sakura pack in light mode', () => {
@@ -239,6 +246,15 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
     expect(themePackToStyleVars(undefined, 'dark')).toEqual(expectBaseline('dark'))
   })
 
+  test('computed font-size tokens reflect the current font scale', () => {
+    // At default scale (1), the inline values match the stylesheet bases.
+    const vars = themePackToStyleVars(null, 'light')
+    expect(vars['--font-largeTitle']).toBe('34px')
+    expect(vars['--font-body']).toBe('17px')
+    expect(vars['--font-caption1']).toBe('12px')
+    expect(vars['--font-2xs']).toBe('10px')
+  })
+
   test('the key set is constant across pack/no-pack and light/dark', () => {
     const keys = (v: Record<string, string>) => Object.keys(v).sort()
     expect(keys(themePackToStyleVars(SAKURA, 'light')))
@@ -256,6 +272,50 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
       navigationRadius: undefined,
     }, 'light')
     expect(vars).toEqual(expectBaseline('light'))
+  })
+})
+
+describe('FONT_SIZE_BASES mirrors tokens.css', () => {
+  /**
+   * `FONT_SIZE_BASES` duplicates the base px values from `tokens.css`'s
+   * `.theme-root` declarations (`--font-*: calc(Npx * var(--font-scale))`).
+   * The inline-computed values bypass the calc() indirection on iOS, so if
+   * these drift from the stylesheet the two platforms will render different
+   * sizes silently. Parse the CSS and assert the bases match.
+   */
+  function blockDeclarations(source: string, selector: string): Record<string, string> {
+    const match = source.match(new RegExp(`${selector.replace(/[.]/g, '\\.')}\\s*\\{([\\s\\S]*?)\\}`, 'm'))
+    expect(match, `${selector} block exists`).toBeTruthy()
+    const declared: Record<string, string> = {}
+    for (const m of Array.from(match![1]!.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g))) {
+      declared[m[1]!] = m[2]!.trim()
+    }
+    return declared
+  }
+
+  test('every FONT_SIZE_BASES entry matches the stylesheet calc() base', () => {
+    const css = readFileSync(path.resolve(__dirname, '../tokens.css'), 'utf8')
+    const declared = blockDeclarations(css, '.theme-root')
+    for (const [token, basePx] of Object.entries(FONT_SIZE_BASES)) {
+      const expected = `calc(${basePx}px * var(--font-scale))`
+      expect(declared[token], `${token} declared in .theme-root`).toBeDefined()
+      expect(declared[token], `${token} base is ${basePx}px`).toBe(expected)
+    }
+  })
+
+  test('FONT_SIZE_BASES covers all calc()-based font-size tokens in the stylesheet', () => {
+    const css = readFileSync(path.resolve(__dirname, '../tokens.css'), 'utf8')
+    const declared = blockDeclarations(css, '.theme-root')
+    // Match font-size tokens that use calc(Npx * var(--font-scale)), excluding
+    // --font-scale itself (which is the multiplier, not a font-size token).
+    const calcFonts = Object.entries(declared)
+      .filter(([k, v]) => k.startsWith('--font-') && k !== '--font-scale'
+        && v.includes('calc(') && v.includes('--font-scale'))
+      .map(([k]) => k)
+    expect(calcFonts.length, 'at least one calc-based font token exists').toBeGreaterThan(0)
+    for (const token of calcFonts) {
+      expect(FONT_SIZE_BASES[token], `${token} must be in FONT_SIZE_BASES`).toBeDefined()
+    }
   })
 })
 

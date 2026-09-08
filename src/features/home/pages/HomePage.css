@@ -37,6 +37,14 @@
   font-weight: var(--weight-bold);
 }
 
+/* Wide screens step down to title1 (28px): the greeting sits beside the shell's
+   nav rail (256px, labels at --font-subhead 15px), and 34px bold creates too
+   aggressive a jump from the rail text. Same reduction the library page applies
+   to its topbar title — the three tabs must agree when they share a sidebar. */
+.shell--wide .home__greeting {
+  font-size: var(--font-title1);
+}
+
 
 
 /*
