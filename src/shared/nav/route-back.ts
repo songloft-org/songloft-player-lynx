@@ -90,6 +90,28 @@ const EXPLICIT_PARENT_PREFIXES: Array<[prefix: string, parent: string]> = [
 /** The 7 facet dimensions are also library view keys, so `/library?view=<field>`. */
 const CATEGORY_PREFIX = '/library/category/'
 
+/**
+ * The declared parent of `pathname`, or `undefined` when it has none of its own
+ * (i.e. it falls through to a section root / tab rule below).
+ *
+ * Split out of {@link resolveRouteBack} so the settings master–detail pane can
+ * reuse *this* table instead of keeping a second one. The pane swaps sub-pages in
+ * place, so it never asks "where does back navigate" — it asks "which sub-page is
+ * the parent of this one", and that is the same answer. Two tables would drift the
+ * moment someone adds a third-level settings page, which is exactly what
+ * `AGENTS.md` §3.4 forbids.
+ */
+export function explicitParentOf(pathname: string): string | undefined {
+  const explicit = EXPLICIT_PARENTS[pathname]
+  if (explicit) return explicit
+
+  for (const [prefix, parent] of EXPLICIT_PARENT_PREFIXES) {
+    if (pathname.startsWith(prefix)) return parent
+  }
+
+  return undefined
+}
+
 export function resolveRouteBack(
   pathname: string,
   ctx: RouteBackContext,
@@ -113,12 +135,8 @@ export function resolveRouteBack(
   // Not authenticated: there is nothing behind login.
   if (pathname === '/login') return { kind: 'exit-prompt' }
 
-  const explicit = EXPLICIT_PARENTS[pathname]
+  const explicit = explicitParentOf(pathname)
   if (explicit) return { kind: 'navigate', to: explicit }
-
-  for (const [prefix, parent] of EXPLICIT_PARENT_PREFIXES) {
-    if (pathname.startsWith(prefix)) return { kind: 'navigate', to: parent }
-  }
 
   // Drill-down into one facet dimension returns to that dimension's view, not to
   // whatever the library was showing before.

@@ -10,7 +10,21 @@ import { SubPageShell } from '../widgets/SubPageShell.js'
 import { useServerStore } from '../store/server-store.js'
 import './ServerListPage.css'
 
-export function ServerListPage() {
+export interface ServerListPageProps {
+  /**
+   * Open the add/edit form — `id` set to edit that profile, omitted to add one.
+   *
+   * In the wide settings master–detail this page sits in the right pane and the
+   * callback swaps the pane to the form in place; a route navigation would unmount
+   * SettingsPage and drop the settings list. As a standalone route (single-column)
+   * there is no pane, so fall back to routing. Same shape as
+   * `LibraryOpsPage.onOpenDuplicates` / `PluginManagerPage.onOpenStore`, with an
+   * argument because the form needs to know which profile.
+   */
+  onOpenServerForm?: (id?: string) => void
+}
+
+export function ServerListPage({ onOpenServerForm }: ServerListPageProps = {}) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const profiles = useServerStore((s) => s.profiles)
@@ -29,7 +43,13 @@ export function ServerListPage() {
 
 
   const onAdd = () => {
-    void navigate({ to: '/settings/servers/add' })
+    if (onOpenServerForm) onOpenServerForm()
+    else void navigate({ to: '/settings/servers/add' })
+  }
+
+  const onEditProfile = (id: string) => {
+    if (onOpenServerForm) onOpenServerForm(id)
+    else void navigate({ to: '/settings/servers/edit/$id', params: { id } })
   }
 
   const onTapProfile = async (id: string) => {
@@ -87,7 +107,7 @@ export function ServerListPage() {
                 <view className='server-list__actions'>
                   <view
                     className='server-list__edit'
-                    bindtap={() => void navigate({ to: `/settings/servers/edit/$id`, params: { id: profile.id } })}
+                    bindtap={() => onEditProfile(profile.id)}
                     data-testid={`server-edit-${profile.id}`}
                   >
                     <text className='server-list__edit-text'>{t('servers.edit')}</text>

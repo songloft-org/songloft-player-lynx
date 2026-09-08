@@ -11,6 +11,12 @@ import { getPlatformCapabilities } from '../../../native/platform-capabilities.j
 // (which crashes the ReactLynx Vitest snapshot tree).
 import { useAuthStore } from '../../auth/store/index.js'
 import { serverDisplay } from '../domain/settings-model.js'
+import {
+  DEFAULT_SUB_PAGE,
+  SUB_PAGE_ROUTES,
+  parentSubPage,
+  type SettingsSubPage,
+} from '../domain/sub-page-nav.js'
 import { useShellSeededBreakpoint } from '../../../shared/responsive/use-shell-seeded-breakpoint.js'
 import { useScrollMemory } from '../../../shared/nav/scroll-memory.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
@@ -32,40 +38,13 @@ import { DiagnosticsPage } from './DiagnosticsPage.js'
 import { LicensesPage } from './LicensesPage.js'
 import { PlaybackPage } from './PlaybackPage.js'
 import { ProxySettingsPage } from './ProxySettingsPage.js'
+import { ServerEditPage } from './ServerEditPage.js'
 import { ServerListPage } from './ServerListPage.js'
 import { ThemeCatalogPage } from './ThemeCatalogPage.js'
 import './SettingsPage.css'
 
 /** Width threshold (px) for activating the dual-column layout. */
 const DUAL_COLUMN_MIN_WIDTH = 768
-
-/**
- * Sub-page identifiers for the right pane in dual-column mode.
- * Each value corresponds to a navigation target that would normally route away.
- *
- * There is deliberately no "nothing selected" member: an empty right pane is
- * dead space on a wide screen, so the pane always shows a page and defaults to
- * the first row of the list ({@link DEFAULT_SUB_PAGE}).
- */
-type SettingsSubPage =
-  | 'appearance'
-  | 'theme-catalog'
-  | 'playback'
-  | 'library'
-  | 'duplicates'
-  | 'plugins'
-  | 'registry'
-  | 'tab-config'
-  | 'cache'
-  | 'servers'
-  | 'proxy'
-  | 'data'
-  | 'diagnostics'
-  | 'about'
-  | 'licenses'
-
-/** Sub-page shown in the right pane before the user picks one. */
-const DEFAULT_SUB_PAGE: SettingsSubPage = 'appearance'
 
 /** Scroll-memory key for the settings list; see {@link useScrollMemory}. */
 const SCROLL_KEY = 'settings'
@@ -86,7 +65,9 @@ const SCROLL_KEY = 'settings'
  *   picker, and the server row where the backend is bundled (`isEmbedded`);
  * - **dual-column** (>=768px) — rows swap the right pane instead of routing, so
  *   the list stays put. `SubPageEmbedContext` tells the sub-pages they are in the
- *   pane, which is how they drop their (there, dead) back arrow.
+ *   pane, which is how they drop their (there, dead) back arrow. Third-level pages
+ *   (theme store, duplicates, plugin store, licenses, server form) swap the pane
+ *   too — see `domain/sub-page-nav.ts` for how the pane derives their parents.
  */
 export function SettingsPage() {
   const navigate = useNavigate()
@@ -108,6 +89,12 @@ export function SettingsPage() {
    * first row of the list so the pane is never blank on a wide screen.
    */
   const [activeSubPage, setActiveSubPage] = useState<SettingsSubPage>(DEFAULT_SUB_PAGE)
+  /**
+   * Profile the pane's server form is editing, or `undefined` for "add a server".
+   * Held here rather than inside `ServerListPage` because the form is a pane page
+   * of its own — the list unmounts when the pane swaps to it.
+   */
+  const [serverFormId, setServerFormId] = useState<string | undefined>(undefined)
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
 
   const serverText = serverDisplay(appConfig.baseUrl, appConfig.isEmbedded, {
@@ -139,8 +126,12 @@ export function SettingsPage() {
   /**
    * Navigate to a sub-page: in dual-column mode, show it in the right pane;
    * in single-column mode, use the router.
+   *
+   * The route is looked up rather than passed in: every row used to hand over both
+   * its page id and its path, which is the same "sub-page ↔ route" fact written
+   * sixteen times. It now lives once, in `SUB_PAGE_ROUTES`.
    */
-  const goToSubPage = (page: SettingsSubPage, route: string) => {
+  const goToSubPage = (page: SettingsSubPage) => {
     if (isDualColumn) {
       // Logged because a pane swap unmounts a whole page and mounts another
       // inside one commit; when something goes wrong mid-swap the exported log
@@ -148,32 +139,55 @@ export function SettingsPage() {
       logInfo('settings', `pane ${activeSubPage} → ${page}`)
       setActiveSubPage(page)
     } else {
+      const route = SUB_PAGE_ROUTES[page]
       logInfo('settings', `route → ${route}`)
       void navigate({ to: route })
     }
   }
 
   /**
-   * Whether a sub-page row is the one currently shown in the right pane. Only
-   * meaningful in dual-column mode — in single-column mode the rows are plain
+   * Open the pane's server form — `id` set to edit that profile, omitted to add a
+   * new one. Only reached in dual-column mode: as a route, `ServerListPage` does
+   * its own `navigate` instead (it is the one holding the `+` button).
+   */
+  const openServerForm = (id?: string) => {
+    logInfo('settings', `pane ${activeSubPage} → server-form${id ? ` (${id})` : ''}`)
+    setServerFormId(id)
+    setActiveSubPage('server-form')
+  }
+
+  /**
+   * Whether a sub-page row is the one currently shown in the right pane — or the
+   * parent of it, so drilling one level deeper (library → duplicates, plugins →
+   * store, about → licenses, appearance → theme store, servers → server form)
+   * keeps the row the user came through lit rather than unlighting the whole list.
+   *
+   * Only meaningful in dual-column mode — in single-column mode the rows are plain
    * navigation entries and highlighting one of them would look like a stuck
    * selection.
    */
-  const isActive = (page: SettingsSubPage) => isDualColumn && activeSubPage === page
+  const isActive = (page: SettingsSubPage) =>
+    isDualColumn && (activeSubPage === page || parentSubPage(activeSubPage) === page)
 
   /*
    * In the dual-column layout the right pane swaps sub-pages in place — the router
-   * stays on `/settings`, so there is no route for the back key to pop. Back returns
-   * the pane to its default page instead. Only while a non-default page is showing:
-   * at the default, back falls through to the route level, which (this being a tab
-   * root) offers "press again to exit".
+   * stays on `/settings`, so there is no route for the back key to pop. Back moves
+   * the pane one level up instead: to the parent sub-page for a third-level page,
+   * and to the default page for a second-level one. Only while a non-default page
+   * is showing: at the default, back falls through to the route level, which (this
+   * being a tab root) offers "press again to exit".
+   *
+   * `parentSubPage` reads the route table, so the pane and the hardware key agree
+   * with the back arrows without a second parent table (AGENTS §3.4). Without it a
+   * third-level page's back jumped straight to "appearance", skipping the page the
+   * user had drilled in from.
    *
    * The sub-pages themselves register nothing here — `SubPageShell` hides its back
    * affordance inside the pane (this is the "dead key" its comment names), and any
    * overlay they open registers above this handler and so closes first.
    */
   useBackHandler(isDualColumn && activeSubPage !== DEFAULT_SUB_PAGE, () => {
-    setActiveSubPage(DEFAULT_SUB_PAGE)
+    setActiveSubPage(parentSubPage(activeSubPage) ?? DEFAULT_SUB_PAGE)
     return true
   })
 
@@ -203,7 +217,7 @@ export function SettingsPage() {
                 subtitle={t('settings.categoryAppearanceSubtitle')}
                 trailingIcon='chevron-right'
                 selected={isActive('appearance')}
-                onTap={() => goToSubPage('appearance', '/settings/appearance')}
+                onTap={() => goToSubPage('appearance')}
                 testId='settings-appearance'
               />
               <SettingsRow
@@ -212,7 +226,7 @@ export function SettingsPage() {
                 subtitle={t('settings.categoryPlaybackSubtitle')}
                 trailingIcon='chevron-right'
                 selected={isActive('playback')}
-                onTap={() => goToSubPage('playback', '/settings/playback')}
+                onTap={() => goToSubPage('playback')}
                 testId='settings-playback'
               />
             </SettingsSection>
@@ -224,10 +238,8 @@ export function SettingsPage() {
                 title={t('libops.pageTitle')}
                 subtitle={t('libops.entrySubtitle')}
                 trailingIcon='chevron-right'
-                // Duplicate detection is reached *through* this page, so keep the
-                // row lit while the pane shows it.
-                selected={isActive('library') || (isDualColumn && activeSubPage === 'duplicates')}
-                onTap={() => goToSubPage('library', '/settings/library')}
+                selected={isActive('library')}
+                onTap={() => goToSubPage('library')}
                 testId='settings-library-ops'
               />
               <SettingsRow
@@ -235,8 +247,8 @@ export function SettingsPage() {
                 title={t('settings.plugins')}
                 subtitle={t('jsplugin.managerSubtitle')}
                 trailingIcon='chevron-right'
-                selected={isActive('plugins') || (isDualColumn && activeSubPage === 'registry')}
-                onTap={() => goToSubPage('plugins', '/settings/plugins')}
+                selected={isActive('plugins')}
+                onTap={() => goToSubPage('plugins')}
                 testId='settings-plugins'
               />
               <SettingsRow
@@ -245,7 +257,7 @@ export function SettingsPage() {
                 subtitle={t('jsplugin.tabConfigSubtitle')}
                 trailingIcon='chevron-right'
                 selected={isActive('tab-config')}
-                onTap={() => goToSubPage('tab-config', '/settings/tab-config')}
+                onTap={() => goToSubPage('tab-config')}
                 testId='settings-tab-config'
               />
             </SettingsSection>
@@ -258,7 +270,7 @@ export function SettingsPage() {
                 subtitle={t('settings.cacheManageSubtitle')}
                 trailingIcon='chevron-right'
                 selected={isActive('cache')}
-                onTap={() => goToSubPage('cache', '/settings/cache')}
+                onTap={() => goToSubPage('cache')}
                 testId='settings-cache'
               />
               {showConnection
@@ -269,7 +281,7 @@ export function SettingsPage() {
                     subtitle={serverText}
                     trailingIcon='chevron-right'
                     selected={isActive('servers')}
-                    onTap={() => goToSubPage('servers', '/settings/servers')}
+                    onTap={() => goToSubPage('servers')}
                     testId='settings-server'
                   />
                 )
@@ -280,7 +292,7 @@ export function SettingsPage() {
                 subtitle={t('settings.proxySubtitle')}
                 trailingIcon='chevron-right'
                 selected={isActive('proxy')}
-                onTap={() => goToSubPage('proxy', '/settings/proxy')}
+                onTap={() => goToSubPage('proxy')}
                 testId='settings-proxy'
               />
               {showData
@@ -291,7 +303,7 @@ export function SettingsPage() {
                     subtitle={t('settings.categoryDataSubtitle')}
                     trailingIcon='chevron-right'
                     selected={isActive('data')}
-                    onTap={() => goToSubPage('data', '/settings/data')}
+                    onTap={() => goToSubPage('data')}
                     testId='settings-data'
                   />
                 )
@@ -321,7 +333,7 @@ export function SettingsPage() {
                 subtitle={t('settings.diagnosticsSubtitle')}
                 trailingIcon='chevron-right'
                 selected={isActive('diagnostics')}
-                onTap={() => goToSubPage('diagnostics', '/settings/diagnostics')}
+                onTap={() => goToSubPage('diagnostics')}
                 testId='settings-diagnostics'
               />
               <SettingsRow
@@ -329,10 +341,8 @@ export function SettingsPage() {
                 title={t('settings.aboutUpdates')}
                 subtitle={t('settings.aboutSubtitle')}
                 trailingIcon='chevron-right'
-                // Licenses is reached *through* About, so keep this row lit while
-                // the pane shows it — same idea as the plugins/registry pair.
-                selected={isActive('about') || (isDualColumn && activeSubPage === 'licenses')}
-                onTap={() => goToSubPage('about', '/settings/about')}
+                selected={isActive('about')}
+                onTap={() => goToSubPage('about')}
                 testId='settings-about'
               />
             </SettingsSection>
@@ -357,7 +367,12 @@ export function SettingsPage() {
                   drops the back arrow (the list is right there and the router is
                   already at `/settings`). */}
               <SubPageEmbedContext.Provider value={true}>
-                <SettingsDetailPane activeSubPage={activeSubPage} onOpenSubPage={setActiveSubPage} />
+                <SettingsDetailPane
+                  activeSubPage={activeSubPage}
+                  serverFormId={serverFormId}
+                  onOpenSubPage={setActiveSubPage}
+                  onOpenServerForm={openServerForm}
+                />
               </SubPageEmbedContext.Provider>
             </view>
           )
@@ -384,16 +399,24 @@ export function SettingsPage() {
  * default (see {@link DEFAULT_SUB_PAGE}), so there is no empty state.
  *
  * `onOpenSubPage` lets a pane swap to another sub-page *without* a route
- * navigation. Two drill-ins use it — plugins → store and about → licenses —
- * because routing there would unmount this whole master–detail page and drop the
+ * navigation. Every third-level drill-in uses it — appearance → theme store,
+ * library → duplicates, plugins → store, about → licenses, servers → server form
+ * — because routing there would unmount this whole master–detail page and drop the
  * settings list (the wide-screen "first-level" menu).
+ *
+ * `onOpenServerForm` is the one drill-in that carries an argument (which profile),
+ * so it cannot go through `onOpenSubPage` alone.
  */
 function SettingsDetailPane({
   activeSubPage,
+  serverFormId,
   onOpenSubPage,
+  onOpenServerForm,
 }: {
   activeSubPage: SettingsSubPage
+  serverFormId: string | undefined
   onOpenSubPage: (page: SettingsSubPage) => void
+  onOpenServerForm: (id?: string) => void
 }) {
   switch (activeSubPage) {
     case 'appearance':
@@ -419,7 +442,19 @@ function SettingsDetailPane({
     case 'cache':
       return <CacheManagePage />
     case 'servers':
-      return <ServerListPage />
+      return <ServerListPage onOpenServerForm={onOpenServerForm} />
+    case 'server-form':
+      return (
+        <ServerEditPage
+          // Keyed on the profile because the form seeds three `useState` from that
+          // store row: the component's identity IS "which server am I editing".
+          // Today the list always sits between two visits (there is no form → form
+          // path), so this is insurance rather than a live fix.
+          key={serverFormId ?? '__add__'}
+          editId={serverFormId}
+          onBack={() => onOpenSubPage('servers')}
+        />
+      )
     case 'proxy':
       return <ProxySettingsPage />
     case 'data':
@@ -433,7 +468,7 @@ function SettingsDetailPane({
     default: {
       // Every member is listed above, so adding one to `SettingsSubPage` without
       // a case here is a compile error rather than a silent fall-through to the
-      // wrong page (16 branches is well past the size where that goes unnoticed).
+      // wrong page (17 branches is well past the size where that goes unnoticed).
       const exhaustive: never = activeSubPage
       void exhaustive
       return <AppearancePage />

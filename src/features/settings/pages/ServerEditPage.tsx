@@ -9,11 +9,29 @@ import { SubPageShell } from '../widgets/SubPageShell.js'
 import { useServerStore } from '../store/server-store.js'
 import './ServerEditPage.css'
 
-export function ServerEditPage() {
+export interface ServerEditPageProps {
+  /**
+   * Profile to edit, or omitted to add a new one.
+   *
+   * Only the settings detail pane passes it: in the pane there is no route, so
+   * there are no `$id` params to read — the page id comes from the pane's own
+   * state. As a route the two forms are two paths (`/settings/servers/add` and
+   * `/settings/servers/edit/$id`) and the id comes from the params below.
+   */
+  editId?: string
+  /**
+   * Go back without a route navigation. The settings detail pane passes this so
+   * server form → server list is a swap *inside* the pane; routing there would
+   * unmount the whole master–detail page and drop the settings list.
+   */
+  onBack?: () => void
+}
+
+export function ServerEditPage({ editId: editIdProp, onBack }: ServerEditPageProps = {}) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const params = useParams({ strict: false }) as { id?: string }
-  const editId = params.id
+  const editId = editIdProp ?? params.id
 
   const existing = useServerStore((s) =>
     editId ? s.profiles.find((p) => p.id === editId) : undefined,
@@ -23,8 +41,10 @@ export function ServerEditPage() {
   const [url, setUrl] = useState(existing?.url ?? '')
   const [insecureTls, setInsecureTls] = useState(existing?.insecureTls ?? false)
 
+  /** Where saving (and the shell's back arrow) lands: the server list. */
   const goBack = () => {
-    void navigate({ to: '/settings/servers' })
+    if (onBack) onBack()
+    else void navigate({ to: '/settings/servers' })
   }
 
   const canSave = name.trim().length > 0 && url.trim().length > 0
@@ -44,9 +64,11 @@ export function ServerEditPage() {
   return (
     <SubPageShell
       title={title}
-      // No `onBack`: this is a plain route-back (to the server list), and only an
-      // in-pane sibling swap should survive inside the pane. Where it goes is
-      // declared in `shared/nav/route-back.ts`.
+      // Forwarded, not built here: in the pane this is a real sibling swap back to
+      // the server list, so the arrow must survive. As a route `onBack` is
+      // undefined and the shell falls through to `performRouteBack`, whose answer
+      // (`/settings/servers`) is declared once in `shared/nav/route-back.ts`.
+      onBack={onBack}
       backTestId='server-edit-back'
       contentClassName='server-edit__content'
     >

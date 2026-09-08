@@ -1,10 +1,12 @@
-# 工作交接（2026-09-07 · Issue #7 冷启动自动进歌词导航，未提交）
+# 工作交接（2026-09-08 · 宽屏设置三级页 pane 切换）
 
 > 本文件是**给接手 AI 的交接说明**，只回答三件事：现在在哪、还剩什么、怎么验证。
 >
 > **读文档顺序**：① [AGENTS.md](../../AGENTS.md) §4–§6（铁律，必读）→ ② 本文 §3「剩余工作」→ ③ [pitfalls.md](pitfalls.md)（踩坑实录：每条铁律背后的证据）。细节按需查 [progress.md](progress.md)（逐批交付）与 [bugs.md](bugs.md)（逐条缺陷根因）。
 >
-> **最新代码批次（`b08ae1a`、`54233ac`、`40e7cf9`）**：HarmonyOS 三个 P1 已完成代码修复：音量删除二次 `/ 100`；删除恒失败的 `SongloftVideo` 占位注册，让能力位诚实返回 `false`；DLNA 持久保存发现结果、解析 AVTransport `controlUrl` 并按设备 id 控制。相关 209 项 Vitest、`tsc -b`、Lynx/Web 双环境 build 均通过。本机无 hvigor/DevEco，发包前必须补 HarmonyOS HAP 编译；音量与 DLNA 仍需真机验证。全套测试的剩余失败由既有 Android CRLF 工作树改动与 `/mnt/d` 默认超时造成，证据见 [progress.md](progress.md) 最新条目。
+> **最新代码批次（2026-09-08 · 本提交）**：宽屏设置三级页 pane 切换 —— 用户报「服务器添加页面在宽屏把设置左侧 tab 覆盖了」。根因：服务器添加/编辑是最后一个只有路由入口的三级页，`navigate` 离开 `/settings` 即卸载整个 master–detail 双栏；其余四个三级页（主题商店/重复检测/插件商店/开源许可）早已走「有回调切 pane、无回调退回路由」。修复：`ServerListPage.onOpenServerForm(id?)` + `ServerEditPage.editId/onBack`，pane 新增 `server-form` 分支。同类缺陷一并修：pane 返回键此前在任何三级页直接跳回「外观」，改为回各自父页；父级信息不开第二张表 —— `route-back.ts` 抽 `explicitParentOf()`，新 `domain/sub-page-nav.ts` 只维护子页→路由一张总表，父子关系派生（AGENTS §3.4）。闸门 +35、反向验证 4/4 全咬；`tsc -b` 绿 / **2423 vitest 全绿（225 文件）** / build 双产物（lynx 2269.3 kB、web 2364.1 kB）。**接手要补的**：宽屏浏览器/真机界面实测（用户手动验证中）——服务器「+」/「编辑」左栏应保留、pane 内返回键应回服务器列表、窄屏应无变化。细节见 [progress.md](progress.md) 最新条目。只报不改的 2 个既有缺陷（`onSave` 在 store 未 hydrate 时把编辑静默变新增；`persistProfiles` fire-and-forget 与 `hydrate` 覆盖的竞态窗口）也记在该条目 ⑧。
+>
+> **上一代码批次（`b08ae1a`、`54233ac`、`40e7cf9`）**：HarmonyOS 三个 P1 已完成代码修复：音量删除二次 `/ 100`；删除恒失败的 `SongloftVideo` 占位注册，让能力位诚实返回 `false`；DLNA 持久保存发现结果、解析 AVTransport `controlUrl` 并按设备 id 控制。相关 209 项 Vitest、`tsc -b`、Lynx/Web 双环境 build 均通过。本机无 hvigor/DevEco，发包前必须补 HarmonyOS HAP 编译；音量与 DLNA 仍需真机验证。全套测试的剩余失败由既有 Android CRLF 工作树改动与 `/mnt/d` 默认超时造成，证据见 [progress.md](progress.md) 最新条目。
 >
 > **未提交的工作树改动（Issue #7 · 冷启动没有正常进入歌词界面）**：偏好「打开后自动进入歌词」此前只被 `FullPlayerPage` 消费（挂载后 auto-swipe `swipeTo(1)`），而该页仅**手动**打开全屏播放器才挂载，冷启动落首页时那段代码永不执行——移植遗漏了 Flutter `shell_layout.dart` `_scheduleAutoEnterLyrics()` 的「启动后主动导航进全屏播放器」这一步。新增 `src/features/player/data/auto-enter-lyrics.ts`（`navigateAutoEnterLyricsIfNeeded()`：有恢复歌曲 + 偏好开 → `router.navigate({ to: '/player' })`），接入 `src/index.tsx` 启动链路 authenticated 分支（紧跟 `navigateFromNotificationIfNeeded()`，此时 `restorePlaybackState()` 已 await、auth 已解析）。落到 `/player` 后复用既有逻辑：窄屏 FullPlayerPage auto-swipe 落歌词、宽屏分栏天然同屏；无恢复歌曲刻意不导航（避免落进空态页）；auto-resume 关闭时仍导航（与 Flutter 一致，只要求有恢复歌曲不要求正在播放）。共 2 个新文件（含测试）+ 1 处 `index.tsx` 改动 + 3 个项目文档。已过 `tsc -b --force`、`pnpm test` **2299 全绿（213 文件，新增 `auto-enter-lyrics.test.ts` 3 条，反向验证 3/3 全咬）**、`pnpm run build` 双产物（lynx 2255.6 kB、web 2348.4 kB）、`git diff --check` 与 U+FFFD 干净。**接手要补的**：三端真机冷启动实测（本机无设备）——纯 JS 启动导航、无原生改动，验证「开偏好 + 有上次歌曲」冷启动是否直接落歌词页。上一批 Issue #4（队列抽屉虚拟化）已提交为 `1b410ee`；Issue #3（导出日志下移原生）已提交为 `1cf992f`。
 >

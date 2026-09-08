@@ -17,6 +17,9 @@ export { ServerListPage } from './pages/ServerListPage.js'
 export { ServerEditPage } from './pages/ServerEditPage.js'
 export { coercePlayMode, serverDisplay } from './domain/settings-model.js'
 export type { ServerDisplayLabels } from './domain/settings-model.js'
+// `domain/sub-page-nav.js` is deliberately NOT re-exported: the settings pane and
+// its own test are the only consumers and both import it directly. Adding it here
+// would widen the feature's public surface with nothing behind it.
 export {
   LOG_LEVELS,
   coerceLogLevel,
