@@ -18,10 +18,19 @@
  *
  * So the host measures and sends them, and {@link safeAreaStyleVars} turns what
  * arrived into inline custom properties on the theme root. Inline beats the class
- * declarations, so a host that reports insets wins over the `env()` defaults and a
- * host that reports nothing keeps them — which is exactly right for Web, where
- * `env()` does work (given `viewport-fit=cover`, see `web/index.html`), and for
- * Android/HarmonyOS, which lay the page out below the status bar already.
+ * declarations.
+ *
+ * What to do about an edge the host did **not** report depends on the platform
+ * ({@link resolveInsetsForPlatform}):
+ *  - **Web** keeps the stylesheet `env()` default — `env()` works there (given
+ *    `viewport-fit=cover`, see `web/index.html`), so only there may an unreported
+ *    edge stay at `env(...)`.
+ *  - **native** (iOS/Android/HarmonyOS) pins an unreported edge to `0px`. On iOS
+ *    that is just the landing state before the host's push arrives; on
+ *    Android/HarmonyOS there is nothing to push, and their `env()` inside a
+ *    custom-property value is invalid the same way iOS's is — leaving it to
+ *    `env()` dropped the bottom-bar and mini-player `left/right/bottom`
+ *    declarations entirely.
  *
  * Two channels, same shape and the same reasoning as
  * [system-appearance.ts](./system-appearance.ts):
@@ -35,6 +44,7 @@
  * guessed zero, and only the edges the host actually reported are overridden.
  */
 import { readLynxGlobal } from './native-modules.js'
+import { getPlatformTarget } from './platform-target.js'
 
 /** One edge's inset in px, or `null` when the host reported nothing usable. */
 export type SafeAreaEdge = number | null
@@ -69,6 +79,39 @@ export const SAFE_AREA_VARS = {
 
 /** Nothing known about the host — the stylesheets' `env()` defaults stand. */
 const UNKNOWN_INSETS: SafeAreaInsets = { top: null, bottom: null, left: null, right: null }
+
+/**
+ * On native Lynx hosts an `env(safe-area-inset-*)` inside a custom-property value
+ * is invalid at computed-value time (measured on iOS 4.0.1; Android/HarmonyOS
+ * report no insets and showed the same breakage — the bottom-bar and mini-player
+ * `left/right/bottom` calc()s were dropped when they fell through to the stylesheet
+ * `--safe-*` defaults). Web is the one platform where `env()` resolves, so only
+ * there may an unreported edge stay `null` and fall back to `env()`.
+ *
+ * A known native host that reported nothing therefore gets an explicit `0px` per
+ * edge: an inline `0px` is a valid length that keeps every
+ * `calc(var(--safe-*))` alive, whereas the stylesheet's `env()` default would
+ * make the token invalid and drop the whole declaration. An unknown host (tests /
+ * plain node) stays `null`, same as Web — it is the safe default when the engine
+ * is unidentified.
+ */
+export function resolveInsetsForPlatform(
+  insets: SafeAreaInsets,
+  isNativeHost: boolean,
+): SafeAreaInsets {
+  if (!isNativeHost) return insets
+  return {
+    top: insets.top ?? 0,
+    bottom: insets.bottom ?? 0,
+    left: insets.left ?? 0,
+    right: insets.right ?? 0,
+  }
+}
+
+/** `getPlatformTarget()` is `'web'` for both Web and an unknown host. */
+function isNativeHost(): boolean {
+  return getPlatformTarget() !== 'web'
+}
 
 /** `null` until the first read; afterwards the last value the host reported. */
 let current: SafeAreaInsets | null = null
@@ -105,7 +148,10 @@ function readHostInsets(): SafeAreaInsets {
   const l = readLynxGlobal()
   if (!l) return UNKNOWN_INSETS
   try {
-    return parseSafeAreaInsets(l.__globalProps)
+    return resolveInsetsForPlatform(
+      parseSafeAreaInsets(l.__globalProps),
+      isNativeHost(),
+    )
   } catch {
     return UNKNOWN_INSETS
   }
@@ -189,7 +235,10 @@ function installHostListener(): void {
     // `sendGlobalEvent(name, [payload])` delivers the array's first element as the
     // listener's first argument — same contract as `mapGlobalEvent`.
     emitter.addListener(SAFE_AREA_EVENT, (payload: unknown) => {
-      applySafeAreaInsets(parseSafeAreaInsets(payload))
+      applySafeAreaInsets(resolveInsetsForPlatform(
+        parseSafeAreaInsets(payload),
+        isNativeHost(),
+      ))
     })
     hostListenerInstalled = true
   } catch {

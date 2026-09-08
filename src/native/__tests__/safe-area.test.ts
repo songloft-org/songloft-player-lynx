@@ -9,6 +9,7 @@ import {
   GLOBAL_PROP_SAFE_RIGHT,
   GLOBAL_PROP_SAFE_TOP,
   parseSafeAreaInsets,
+  resolveInsetsForPlatform,
   safeAreaStyleVars,
   setSafeAreaForTests,
   subscribeSafeArea,
@@ -81,6 +82,31 @@ test('only reported edges become style vars', () => {
     .toEqual({ '--safe-top': '62px' })
   expect(safeAreaStyleVars({ top: null, bottom: null, left: null, right: null }))
     .toEqual({})
+})
+
+test('native hosts pin unreported edges to 0 instead of leaving them to env()', () => {
+  // Android/HarmonyOS never push insets, and their `env()` inside a custom-property
+  // value is invalid (like iOS) — so an unreported edge must become an inline
+  // `0px`, not a fall-through to the broken stylesheet default.
+  expect(resolveInsetsForPlatform(
+    { top: null, bottom: null, left: null, right: null },
+    true,
+  )).toEqual({ top: 0, bottom: 0, left: 0, right: 0 })
+  expect(resolveInsetsForPlatform(
+    { top: 62, bottom: null, left: 0, right: null },
+    true,
+  )).toEqual({ top: 62, bottom: 0, left: 0, right: 0 })
+})
+
+test('web and unknown hosts keep unreported edges null so the stylesheet env() default stands', () => {
+  expect(resolveInsetsForPlatform(
+    { top: null, bottom: null, left: null, right: null },
+    false,
+  )).toEqual({ top: null, bottom: null, left: null, right: null })
+  expect(resolveInsetsForPlatform(
+    { top: 62, bottom: null, left: null, right: null },
+    false,
+  )).toEqual({ top: 62, bottom: null, left: null, right: null })
 })
 
 test('a host push notifies subscribers only when something moved', () => {

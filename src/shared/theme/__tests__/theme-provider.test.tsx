@@ -112,6 +112,13 @@ function expectBaselineStyle(resolved: 'light' | 'dark'): Record<string, string>
   return {
     ...PACK_OVERRIDABLE_BASELINE[resolved],
     '--font-scale': '1',
+    // The test host reports `SystemInfo.platform === 'ios'` and no insets, so
+    // safe-area edges are pinned to 0 on native (see safe-area.test.ts) and land
+    // here as valid inline `0px` instead of the broken stylesheet `env()` default.
+    '--safe-top': '0px',
+    '--safe-bottom': '0px',
+    '--safe-left': '0px',
+    '--safe-right': '0px',
   }
 }
 
