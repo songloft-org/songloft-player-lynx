@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from '@lynx-js/react'
+import { useEffect, useRef, useState } from '@lynx-js/react'
 
 import { appConfig } from '../../../core/config/app-config.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
@@ -60,28 +60,39 @@ interface Props {
 export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
   const frameId = useRef(`frame-${entryPath}-${Date.now()}`).current
   const bundleUrl = buildLynxBundleUrl(entryPath)
-  const [loaded, setLoaded] = useState(false)
   const [theme, setTheme] = useState(() => resolveTheme(getAppTheme()))
   const isWeb = isWebPlatform()
 
+  /*
+   * `playerState` rides along with the initial props on purpose.
+   *
+   * The push channel below only carries *changes*, so a child that boots after a
+   * change — or is re-entered after being kept alive off screen — would otherwise
+   * never learn the current state. globalProps is the one delivery that is
+   * guaranteed: the host sets it before `url` (so the first render sees it) and
+   * merges a fresh snapshot on every `open`, which is what a re-entry is.
+   *
+   * This replaces a `loaded` gate that never opened on Web: it was set from the
+   * native `<frame>`'s `bindload`, and the Web branch renders a placeholder
+   * `<view>` with no such event — so the player-state subscription was never
+   * installed there at all. When the native push path gets wired, it should use
+   * the same shape (snapshot in props, deltas over the bridge) rather than
+   * reviving the gate.
+   */
   const globalProps = {
     frameId,
     theme,
     hostVersion: '1.0.0',
     embed: isTabEntry,
+    playerState: playerStateToJson(),
   }
-
-  const onLoad = useCallback(() => {
-    setLoaded(true)
-  }, [])
 
   // Web path: manage the nested <lynx-view> via the frame host module
   useEffect(() => {
-    if (!isWeb) return
     const mod = getLynxFrameModule()
     if (!mod.available) return
 
-    mod.open(bundleUrl, '#plugin-lynx-frame', JSON.stringify(globalProps))
+    mod.open(bundleUrl, '#plugin-lynx-frame', JSON.stringify(globalProps), entryPath)
 
     // Handle host calls from the child frame
     setLynxFrameBridgeHandlers({
@@ -95,9 +106,16 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
 
     return () => {
       setLynxFrameBridgeHandlers(null)
-      mod.close()
+      /*
+       * `hide`, not `close`. Detaching the child <lynx-view> on every tab switch
+       * is what crashed the renderer (error code 11), and it also started an
+       * async dispose that the next `open` raced. Hiding keeps the child's
+       * worker and state; real teardown belongs to the plugin manager and the
+       * logout path. See docs/archive/web-plugin-tab-crash.md.
+       */
+      mod.hide(entryPath)
     }
-  }, [bundleUrl, isWeb])
+  }, [bundleUrl, isWeb, entryPath])
 
   // Track theme changes
   useEffect(() => {
@@ -112,9 +130,10 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
     return unsub
   }, [isWeb])
 
-  // Push player state to child
+  // Push player state changes to the child (the initial snapshot travels in
+  // globalProps — see above).
   useEffect(() => {
-    if (!loaded) return
+    if (!isWeb) return
     return usePlayerStore.subscribe((state, prev) => {
       const sig = `${state.currentIndex}|${state.isPlaying}|${state.currentSong?.id}|${state.playMode}|${state.playlist.length}`
       const prevSig = `${prev.currentIndex}|${prev.isPlaying}|${prev.currentSong?.id}|${prev.playMode}|${prev.playlist.length}`
@@ -127,7 +146,7 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
       // Native path: NativeModules.SongloftPluginBridge.pushToChild(frameId, 'playerState', stateJson)
       // Will be wired in Phase 5 when the TS NativeModule facade is complete
     })
-  }, [loaded, frameId, isWeb])
+  }, [frameId, isWeb])
 
   // On Web, the nested <lynx-view> is managed by lynx-frame-host.js; this
   // placeholder is what it positions over.
@@ -146,7 +165,6 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
     <frame
       src={bundleUrl}
       global-props={globalProps}
-      bindload={onLoad}
       className="plugin-webview__frame"
       data-testid="plugin-lynx-frame"
     />

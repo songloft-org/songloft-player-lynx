@@ -26,6 +26,14 @@ web-core 把背景线程实现为**真 Web Worker**（`new Worker(…, { name: '
 
 塞普通对象会被 `import(url)` 强转成 `"[object Object]"`、`Promise.all` 拒绝——worker 里**一个自定义模块都没有**，同时静默杀死文件选择器、剪贴板与音频（批43 的 Web 音频修复因此从未生效过）。修法：ESM URL 工厂 + `call` 转发到主线程（`web/songloft-*-module.js`）。**`SongloftStorage` 刻意不注册**——worker 已有 idb-storage（DB `songloft`），宿主那份用另一个 DB 名，接上会把已持久化的 token 换库、刷新即掉登录。闸门：`web-host-page.test.ts` 四条（value 是 URL / 文件存在 / 被 copy 脚本拷贝 / 有 default-export 工厂）。
 
+### 插件 frame 只能隐藏，不能 detach
+
+`web/webview-host.js` / `web/lynx-frame-host.js` 里 `remove()` / `removeChild(` 是禁忌。切 tab 时销毁插件 frame 会撞 Chrome 在「往正在拆掉的 frame 里注入扩展内容脚本」路径上的空指针：渲染进程 SIGSEGV（error code 11），`fault_addr` 恒为 `0xf8`。三个必要条件是 ①我们 detach ②装了 `all_frames: true` 的扩展（实测 KISS Translator）③DevTools 真的打开 —— 全齐 15/15 崩，缺一即 0。所以离开插件页只 `hide`（iframe 置 `visibility: hidden`，lynx 子视图置 `display: none`），`close` 只在插件禁用/卸载/强制更新与登出时调，且 iframe 的 `close` 是导航到 `about:blank` 而**元素仍不摘除**。仅去掉 `src = 'about:blank'` 这一行**不管用**（3/3 仍崩），触发点是 detach 本身。`<lynx-view>` 没有 `about:blank` 退路（web-core 的 `#render()` 在 `url` 为假值时直接返回，清空 url 不 dispose），所以它的 `close` 仍要 detach，随之必须等 `disconnectedCallback` 那个**异步** dispose 完成（可观测信号：web-core 清空该元素的 shadow root）再重建，否则新 worker/WASM/realm 会叠在下沉的旧实例上。全部证据与实验矩阵见 [`../archive/web-plugin-tab-crash.md`](../archive/web-plugin-tab-crash.md)；闸门 `web-plugin-frame-keepalive.test.ts`（执行宿主脚本、数 `appendChild`/`removeChild`）+ 真实浏览器脚本 `scripts/cdp-plugin-tab-crash.mjs`。
+
+### 部署清单是手写的，index.html 引用了不代表产物里有
+
+`scripts/copy-bundle-web.mjs` 的 `HOST_SCRIPTS` 是人工维护的数组。`lynx-frame-host.js` 和它的两个 module URL 从来没进过这个数组，于是 **`renderEngine: "lynx"` 的插件在 standalone 可部署产物里从未工作过**：`index.html` 的 script 标签 404 → `SongloftLynxFrame` 未注册 → facade 报 unavailable。本该拦住的闸门把宿主脚本列表也硬编码成 `['web/audio-host.js', 'web/webview-host.js']`，两处同一个毛病互相掩护。现在 `web-host-page.test.ts` 从 `index.html` 推导该列表并断言每个引用都在部署清单里 —— **凡是「两边各写一份名单」的地方，闸门要从一边推导另一边，不要也写第三份**。
+
 ### 未映射标签走恒等回落
 
 web-core 的 `LYNX_TAG_TO_HTML_TAG_MAP` 只映射 view/text/image/raw-text/scroll-view/wrapper/list/page/input/textarea/svg/frame；`<refresh>` / `<webview>` 落成 `HTMLUnknownElement`，**属性开关完全无效**。写跨平台页用了新标签先查这张表，Web 分支该整段不渲染而不是靠属性关掉。

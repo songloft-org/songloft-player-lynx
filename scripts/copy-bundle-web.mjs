@@ -155,6 +155,18 @@ const HOST_SCRIPTS = [
   'songloft-navigation-module.js',
   'songloft-webview-module.js',
   'webview-host.js',
+  /*
+   * The lynx-engine plugin trio, missing from this list until 2026-09-08 — so
+   * `renderEngine: "lynx"` plugins never worked in the standalone deployable at
+   * all: `index.html` loads `/lynx-frame-host.js`, the deploy did not ship it,
+   * the tag 404'd, `SongloftLynxFrame` was never registered and the facade
+   * answered "unavailable". The gate that should have caught it
+   * (`web-host-page.test.ts`) hardcoded its host-script list and did not include
+   * lynx-frame-host.js either; it now derives the list from index.html.
+   */
+  'lynx-frame-host.js',
+  'songloft-lynx-frame-module.js',
+  'songloft-lynx-bridge-module.js',
 ]
 for (const name of HOST_SCRIPTS) {
   const src = resolve(repoRoot, 'web', name)

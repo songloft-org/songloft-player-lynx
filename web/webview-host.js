@@ -36,7 +36,43 @@
 
   // ── iframe lifecycle ──
 
-  var iframe = null
+  /*
+   * One iframe per plugin, kept alive and NEVER detached.
+   *
+   * Detaching a cross-process plugin frame is what crashed the renderer
+   * (error code 11 / SIGSEGV, `EXC_BAD_ACCESS` at a fixed `0xf8` offset):
+   * leaving a plugin tab used to run `close()` → `remove()`, and with an
+   * extension that injects into every frame (`all_frames: true` +
+   * `match_about_blank`) plus DevTools open, Chrome dereferences a null in the
+   * teardown path. Reproduced 15/15 with all three conditions present; drop any
+   * one of them and it never fires (no extension 0/6, DevTools closed 0/8, frame
+   * left attached 0/5). Removing only the `about:blank` assignment does NOT help
+   * (3/3 still crash) — the detach itself is the trigger, so the rule here is
+   * simply: never detach.
+   * See docs/archive/web-plugin-tab-crash.md.
+   *
+   * The Flutter Web build reached the same fix from the same crash
+   * (`clients/player` `32d8924`, Offstage-based keep-alive).
+   *
+   * Consequences we accept on purpose:
+   *  - Keyed by plugin (`entryPath`), not by URL: the URL carries `?theme=` and
+   *    `?access_token=`, so a URL key would strand a frame per theme flip and
+   *    per re-login. Same key → the existing frame navigates.
+   *  - The map never shrinks. `close()` tears the *document* down by navigating
+   *    to `about:blank` and keeps the (now empty) element, because dropping the
+   *    element means detaching it. An empty iframe costs a DOM node; a detach
+   *    costs a renderer crash.
+   *  - Only the active frame follows the placeholder and may talk to the host;
+   *    hidden plugins keep running but their messages are ignored (their page is
+   *    unmounted, so there is nobody to reply to — and delivering them to the
+   *    page that IS mounted would cross plugin boundaries).
+   */
+  var frames = Object.create(null)
+  var activeKey = null
+
+  function activeFrame() {
+    return activeKey == null ? null : frames[activeKey] || null
+  }
 
   /*
    * Follow-the-placeholder placement.
@@ -65,6 +101,7 @@
   var followTimer = null
 
   function placeFromElement() {
+    var iframe = activeFrame()
     if (!iframe || !followTarget) return
     var rect = followTarget.getBoundingClientRect()
     if (!(rect.width > 0) || !(rect.height > 0)) return
@@ -73,6 +110,12 @@
     iframe.style.top = (rect.top - base.top) + 'px'
     iframe.style.width = rect.width + 'px'
     iframe.style.height = rect.height + 'px'
+    /*
+     * Still the "first placement landed" marker, and now also what un-hides a
+     * kept-alive frame on re-entry: `hide` sets `visibility: hidden`, and a
+     * frame may only become visible once its rect is known good. Never show a
+     * frame anywhere else.
+     */
     iframe.style.visibility = 'visible'
   }
 
@@ -97,7 +140,7 @@
    * falls back to the "unavailable" message.
    */
   function startFollowing(selector, attempt) {
-    if (!iframe) return
+    if (!activeFrame()) return
     var el = null
     try {
       var root = lynxView.shadowRoot
@@ -109,7 +152,7 @@
         return
       }
       followTimer = setTimeout(function () {
-        if (iframe) startFollowing(selector, attempt + 1)
+        if (activeFrame()) startFollowing(selector, attempt + 1)
       }, 100)
       return
     }
@@ -125,11 +168,11 @@
   }
 
   function onWindowResize() {
-    if (iframe) placeFromElement()
+    if (activeFrame()) placeFromElement()
   }
 
-  function ensureIframe() {
-    if (iframe) return iframe
+  function ensureIframe(key) {
+    if (frames[key]) return frames[key]
     var el = document.createElement('iframe')
     el.style.position = 'fixed'
     el.style.border = 'none'
@@ -177,17 +220,41 @@
       sendEvent('SongloftWebview.load', {})
     })
     ;(lynxView.shadowRoot || document.body).appendChild(el)
-    iframe = el
+    frames[key] = el
     return el
   }
 
-  function destroyIframe() {
-    if (!iframe) return
-    stopFollowing()
-    var el = iframe
-    iframe = null
+  /**
+   * Take a frame off screen without touching its document — the keep-alive half
+   * of the fix. The plugin keeps running (timers, sockets, scroll position); it
+   * simply stops being placed, painted and hit-tested.
+   */
+  function hideFrame(key) {
+    var el = frames[key]
+    if (!el) return
+    if (activeKey === key) {
+      stopFollowing()
+      activeKey = null
+    }
+    // `visibility: hidden` alone removes it from painting AND hit-testing, which
+    // is why nothing here has to fight z-index or pointer-events.
+    el.style.visibility = 'hidden'
+  }
+
+  /**
+   * Release a plugin's document while keeping its (now empty) frame attached.
+   *
+   * This is the real teardown — plugin disabled, uninstalled, force-updated, or
+   * the user logged out. Navigating to `about:blank` drops the plugin's JS,
+   * timers and network; the element stays because detaching it is the crash (see
+   * the note at the top of this section). The next `open` for the same key
+   * navigates this frame back to the plugin.
+   */
+  function releaseFrame(key) {
+    var el = frames[key]
+    if (!el) return
+    hideFrame(key)
     el.src = 'about:blank'
-    el.remove()
   }
 
   // ── plugin → host messages ──
@@ -200,6 +267,13 @@
    * message forge a host call.
    */
   function onWindowMessage(e) {
+    /*
+     * The ACTIVE frame only. Kept-alive frames keep running and can post at any
+     * time, but their page is unmounted (no handler, nobody to reply to), and
+     * forwarding them while another plugin is on screen would hand plugin A's
+     * host call to plugin B's page — and reply into B.
+     */
+    var iframe = activeFrame()
     if (!iframe || e.source !== iframe.contentWindow) return
     var data = e.data
     if (!data || typeof data !== 'object' || typeof data.type !== 'string') return
@@ -234,15 +308,34 @@
     open: function (args) {
       var url = args[0]
       var selector = args[1]
+      var key = typeof args[2] === 'string' && args[2] ? args[2] : url
       if (!url) return
+      // Whatever was on screen goes off screen — hidden, not destroyed.
+      if (activeKey != null && activeKey !== key) hideFrame(activeKey)
       stopFollowing()
-      var el = ensureIframe()
+      var el = ensureIframe(key)
+      activeKey = key
+      /*
+       * Only navigate when the URL actually changed. On re-entry to a
+       * kept-alive plugin the URL is identical, so the document — and with it
+       * the plugin's state — survives; the frame is merely placed and shown
+       * again. A changed URL (new token after re-login, or the embed/pushed
+       * variant of the same plugin) navigates this frame instead of stranding
+       * a second one.
+       */
       if (el.src !== url) el.src = url
       startFollowing(typeof selector === 'string' ? selector : '', 0)
     },
 
+    /** Leave the plugin page — keep it alive, just off screen. */
+    hide: function (args) {
+      var key = typeof args[0] === 'string' && args[0] ? args[0] : activeKey
+      if (key != null) hideFrame(key)
+    },
+
     postMessage: function (args) {
-      var win = iframe && iframe.contentWindow
+      var el = activeFrame()
+      var win = el && el.contentWindow
       if (!win) return
       var msg
       try {
@@ -255,8 +348,18 @@
       win.postMessage(msg, '*')
     },
 
-    close: function () {
-      destroyIframe()
+    /**
+     * Real teardown: the plugin is gone (disabled / uninstalled / force-updated)
+     * or the session ended. Releases the document, keeps the empty frame.
+     * With no key, releases every frame — the logout case.
+     */
+    close: function (args) {
+      var key = typeof args[0] === 'string' && args[0] ? args[0] : null
+      if (key != null) {
+        releaseFrame(key)
+        return
+      }
+      for (var k in frames) releaseFrame(k)
     },
   }
 

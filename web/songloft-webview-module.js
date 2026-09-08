@@ -31,8 +31,25 @@ export default function (_nativeModules, call) {
      * worker never measures and no rect can go stale. An empty/unknown
      * selector eventually reports back as `SongloftWebview.openFailed`.
      */
-    open(url, selector) {
-      void call('open', [url, typeof selector === 'string' ? selector : ''])
+    open(url, selector, key) {
+      void call('open', [
+        url,
+        typeof selector === 'string' ? selector : '',
+        typeof key === 'string' ? key : '',
+      ])
+    },
+
+    /**
+     * Leave the plugin page without destroying it.
+     *
+     * This — not `close` — is what a tab switch does. Detaching the frame is
+     * what crashed the renderer (error code 11); `hide` keeps the document
+     * alive and off screen, so re-entering the plugin restores its state
+     * instead of reloading it. See `webview-host.js` and
+     * docs/archive/web-plugin-tab-crash.md.
+     */
+    hide(key) {
+      void call('hide', [typeof key === 'string' ? key : ''])
     },
 
     /**
@@ -47,9 +64,14 @@ export default function (_nativeModules, call) {
       void call('postMessage', [json])
     },
 
-    /** Tear the iframe down; safe to call when none is open. */
-    close() {
-      void call('close', [])
+    /**
+     * Real teardown — the plugin is gone (disabled / uninstalled / updated) or
+     * the session ended. Releases the plugin document; the empty frame element
+     * stays attached on purpose (detaching it is the crash). Omit `key` to
+     * release every plugin, which is the logout case. Safe when none is open.
+     */
+    close(key) {
+      void call('close', [typeof key === 'string' ? key : ''])
     },
   }
 }

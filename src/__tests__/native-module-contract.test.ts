@@ -582,7 +582,81 @@ describe('SongloftWebview module surface (Web only)', () => {
   )
 
   test('the interface was parsed (guard against a silent empty list)', () => {
-    expect(methods).toEqual(['open', 'postMessage', 'close'])
+    expect(methods).toEqual(['open', 'postMessage', 'hide', 'close'])
+  })
+
+  /*
+   * `hide` is load-bearing, not a convenience: leaving a plugin page must NOT
+   * detach the frame (that detach crashed the renderer with error code 11 — see
+   * docs/archive/web-plugin-tab-crash.md), so the page's cleanup calls `hide` and
+   * only the plugin manager / logout call `close`. If a refactor ever routes the
+   * cleanup back through `close`, the crash comes back silently — hence a gate on
+   * the call site rather than only on the module surface.
+   */
+  test('leaving the Web plugin page hides the frame, never closes it', () => {
+    const page = read('src/features/jsplugin/pages/PluginWebViewPage.tsx')
+    expect(page, 'the Web plugin page never calls hide()').toMatch(/webview\.hide\(/)
+    expect(page, 'the Web plugin page must not close() the frame on unmount')
+      .not.toMatch(/webview\.close\(/)
+
+    const lynxFrame = read('src/features/jsplugin/widgets/LynxPluginFrame.tsx')
+    expect(lynxFrame, 'the lynx plugin frame never calls hide()').toMatch(/mod\.hide\(/)
+    expect(lynxFrame, 'the lynx plugin frame must not close() on unmount')
+      .not.toMatch(/mod\.close\(/)
+  })
+
+  /**
+   * The lynx render engine had NO contract gate at all, which is how its two
+   * module URLs and its host script stayed missing from the deploy list for as
+   * long as the engine existed (see `web-host-page.test.ts` and
+   * docs/archive/web-plugin-tab-crash.md). Same shape as the webview block above.
+   */
+  test('every SongloftLynxFrame method reaches both Web halves', () => {
+    const methods = interfaceMethods(
+      read('src/native/web-lynx-frame.ts'),
+      'LynxFrameNativeModule',
+    )
+    expect(methods).toEqual([
+      'open', 'updateGlobalProps', 'sendEvent', 'hostReply', 'hide', 'close',
+    ])
+    for (const method of methods) {
+      expect(
+        read('web/songloft-lynx-frame-module.js'),
+        `the Web worker module has no ${method}`,
+      ).toMatch(new RegExp(`\\b${method}\\(`))
+      expect(
+        read('web/lynx-frame-host.js'),
+        `the Web main thread has no ${method} handler`,
+      ).toMatch(new RegExp(`${method}:\\s*function`))
+    }
+  })
+
+  test('the lynx frame event names match between the facade and the main thread', () => {
+    for (const name of ['SongloftLynxFrame.message', 'SongloftLynxFrame.openFailed']) {
+      expect(read('src/native/web-lynx-frame.ts'), `the facade does not declare ${name}`)
+        .toContain(name)
+      expect(read('web/lynx-frame-host.js'), `the main thread does not emit ${name}`)
+        .toContain(name)
+    }
+  })
+
+  /*
+   * The dispose race (`removeChild` + an immediate recreate stacking a second
+   * worker on one still going down) is gated BEHAVIOURALLY in
+   * `web-plugin-frame-keepalive.test.ts`, which runs the host script and asserts no
+   * child appears until the old one finished disposing. A text assertion was tried
+   * here first and was worthless: renaming the function definition left the call
+   * site matching, so the gate stayed green with the fix removed. Don't re-add one.
+   */
+
+  /**
+   * The host must never detach a plugin frame. `remove()` / `removeChild` in
+   * `webview-host.js` is the exact line that crashed the renderer.
+   */
+  test('the Web iframe host never detaches a plugin frame', () => {
+    const host = read('web/webview-host.js')
+    expect(host, 'webview-host.js detaches a frame again').not.toMatch(/\.remove\(\)/)
+    expect(host, 'webview-host.js detaches a frame again').not.toMatch(/removeChild\(/)
   })
 
   test.each(methods)('SongloftWebview.%s reaches both Web halves', (method) => {

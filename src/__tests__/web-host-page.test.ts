@@ -261,10 +261,40 @@ describe('web-core event-dispatch guards are applied on both code paths', () => 
  * real file that the copy script ships.
  */
 describe('nativeModulesMap points at real, shipped ESM modules', () => {
-  // webview-host.js registers its module the same way audio-host.js does, from
-  // its own script tag — both files' registrations are gated here.
-  const hostScripts = ['web/audio-host.js', 'web/webview-host.js']
+  /*
+   * Derived from index.html, never hardcoded.
+   *
+   * This list used to be `['web/audio-host.js', 'web/webview-host.js']`, which
+   * quietly exempted `web/lynx-frame-host.js` — and that file's two module URLs
+   * (`songloft-lynx-frame-module.js`, `songloft-lynx-bridge-module.js`) were
+   * missing from the deploy script for as long as the lynx render engine existed.
+   * Whatever index.html loads is what has to be checked.
+   */
+  const hostScripts = Array.from(
+    read('web/index.html').matchAll(/<script[^>]+src="\/([a-z0-9._-]+\.js)"/g),
+  )
+    .map((m) => `web/${m[1]!}`)
+    // web-core's own client entry is not ours and ships with the engine assets.
+    .filter((f) => existsSync(path.join(repoRoot, f)))
   const copyScript = read('scripts/copy-bundle-web.mjs')
+
+  test('the host-script list was derived (guard against a silent empty list)', () => {
+    expect(hostScripts).toContain('web/audio-host.js')
+    expect(hostScripts).toContain('web/webview-host.js')
+    expect(hostScripts).toContain('web/lynx-frame-host.js')
+  })
+
+  /*
+   * Every `<script src="/…">` in index.html must be in the deploy list, or the
+   * deployed page 404s on it. `lynx-frame-host.js` failed exactly this.
+   */
+  test.each(hostScripts)('%s is copied by the deploy script', (f) => {
+    const file = f.replace(/^web\//, '')
+    expect(
+      copyScript,
+      `copy-bundle-web.mjs must copy ${file} or the deployed page 404s on its script tag`,
+    ).toContain(`'${file}'`)
+  })
 
   // Registration lines look like `SongloftAudio: '/songloft-audio-module.js',`.
   // Matching the whole files is safe: the dispatch sites use `=== 'SongloftAudio'`
@@ -273,10 +303,11 @@ describe('nativeModulesMap points at real, shipped ESM modules', () => {
     Array.from(read(f).matchAll(/Songloft\w+\s*:\s*([^,\n]+)/g)).map((m) => m[1]!.trim()),
   )
 
-  test('the map registers at least the platform, audio and webview modules', () => {
+  test('the map registers at least the platform, audio, webview and lynx-frame modules', () => {
     expect(entries).toContain("'/songloft-platform-module.js'")
     expect(entries).toContain("'/songloft-audio-module.js'")
     expect(entries).toContain("'/songloft-webview-module.js'")
+    expect(entries).toContain("'/songloft-lynx-frame-module.js'")
   })
 
   test('every registered value is a URL string, not a plain object', () => {

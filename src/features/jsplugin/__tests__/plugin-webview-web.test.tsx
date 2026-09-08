@@ -18,11 +18,14 @@ import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/tes
  *  - `open` is called with the plugin URL and the placeholder selector;
  *  - a plugin host call gets a `songloft-host-reply` carrying the same id;
  *  - an `openFailed` notice degrades to the unavailable message;
- *  - unmounting closes the iframe and detaches the bridge handlers.
+ *  - unmounting HIDES the iframe (never closes it) and detaches the bridge
+ *    handlers — detaching the frame is what crashed the renderer, see
+ *    docs/archive/web-plugin-tab-crash.md.
  */
 const h = vi.hoisted(() => ({
   open: vi.fn(),
   postMessage: vi.fn(),
+  hide: vi.fn(),
   close: vi.fn(),
   available: true,
   // `?tab=true` in the search string for this test.
@@ -65,6 +68,7 @@ vi.mock('../../../native/web-webview.js', () => ({
   getWebviewModule: () => ({
     available: h.available,
     open: h.open,
+    hide: h.hide,
     postMessage: h.postMessage,
     close: h.close,
   }),
@@ -213,14 +217,37 @@ test('an openFailed notice degrades to the unavailable message', async () => {
   expect(q.getByText(/This plugin requires the native app/)).toBeTruthy()
 })
 
-test('unmount closes the iframe and detaches the handlers', async () => {
+/*
+ * Leaving the page must HIDE, not close. `close` detaches the iframe, and that
+ * detach is what took the Chrome renderer down with error code 11 (reproduced
+ * 15/15 with an all-frames extension + DevTools open, 0/5 once the frame stays
+ * attached). It also means re-entering the tab restores the plugin's own state
+ * instead of reloading it. Real teardown belongs to the plugin manager and the
+ * logout path — never to a tab switch.
+ */
+/*
+ * The frame is kept alive, so entering the page does not reload the plugin — and
+ * the theme / player subscriptions do not exist while it is off screen. Without a
+ * push on entry a plugin shows whatever it last heard before being hidden.
+ */
+test('entering the page pushes the current theme and player state', async () => {
+  await renderPage()
+  const types = h.postMessage.mock.calls.map((c) => JSON.parse(c[0] as string).type)
+  expect(types).toContain('songloft-theme')
+  expect(types).toContain('songloft-player-state')
+})
+
+test('unmount hides the iframe, never closes it, and detaches the handlers', async () => {
   const result = await renderPage()
-  // The library's own afterEach cleanup may already have closed a previous
+  // The library's own afterEach cleanup may already have hidden a previous
   // render's frame by the time this test starts; what matters is that THIS
-  // unmount closes one more and detaches the handlers.
-  const before = h.close.mock.calls.length
+  // unmount hides one more and detaches the handlers.
+  const before = h.hide.mock.calls.length
   result.unmount()
-  expect(h.close.mock.calls.length).toBeGreaterThan(before)
+  expect(h.hide.mock.calls.length).toBeGreaterThan(before)
+  // The plugin's `entryPath` is the keep-alive key the host frames are stored by.
+  expect(h.hide).toHaveBeenLastCalledWith('lx')
+  expect(h.close, 'a tab switch must never tear the frame down').not.toHaveBeenCalled()
   expect(h.handlerCalls.at(-1)).toBeNull()
 })
 

@@ -83,6 +83,19 @@ const root = await page.evaluate(() => document.querySelector('lynx-view').shado
 - **业务代码跑在 Web Worker realm 里**（web-core 的 `new Worker(…, { name: 'lynx-bg' })`），那里没有 `document` / `localStorage` / `HTMLAudioElement`。**所以 DOM 探测在 Web 上会回答「不是 Web」** —— 已踩三次。判平台一律 `isWebPlatform()`（读 `SystemInfo.platform`）。
 - **不进 `console.error` 的异常**：`import.meta` 用错脚本类型时只走 `pageerror`。监听 `page.on('pageerror')`，别只看 console。
 
+## macOS 上的真实 Chrome（需要扩展或 DevTools 在场时）
+
+有些 bug 只在**特定浏览器配置**下出现，Docker 里的无头 Chrome 复现不了。插件 tab 切换崩溃就是这种：需要 ①我们 detach 插件 frame ②装了 `all_frames: true` 的扩展 ③DevTools 真的打开，缺一即不发生。现成的驱动器是 [`scripts/cdp-plugin-tab-crash.mjs`](../../scripts/cdp-plugin-tab-crash.mjs)（自带浏览器启动、DevTools 停靠、登录、来回切 tab、崩溃判定）。
+
+从中抽出来的可复用事实：
+
+- **`--remote-debugging-port` 在默认 profile 上被 Chrome 拒绝**（安全限制），所以没法附加到用户正在用的那个实例；必须另起一个带 `--user-data-dir` 的实例。
+- **`--load-extension` 从 Chrome 137 起被忽略**。侧载要用 CDP `Extensions.loadUnpacked`（profile 的 `Preferences` 里还得先打开 `extensions.ui.developer_mode`）。
+- **商店安装目录不能直接 unpacked 加载**：里面有 `_metadata/`，而 `_` 前缀是保留名 —— 先 `cp -R` 出来再 `rm -rf _metadata`。
+- 以上两条都**静默失败**：扩展没装上，测试照样"通过"。凡是「缺了某个条件就一定不会失败」的测试，脚本必须自检该条件是否真的成立，否则那个通过毫无意义。
+- **崩溃 dump 在 Chrome 自己的目录**：`~/Library/Application Support/Google/Chrome/Crashpad/completed/*.dmp`（不是 `~/Library/Logs/DiagnosticReports/`）。用 Python 解 minidump 的 exception stream 就能拿到异常码与故障地址，不需要符号；crashpad 注解里还带崩溃进程类型和**当时注入的扩展 ID**。
+- **想验证一个改法值不值得落盘**：用 CDP `Fetch` 域拦响应体、改写后 `fulfillRequest`，可以在完全不动仓库文件的前提下 A/B 几种改法。
+
 ## 一次性探针 scenario
 
 需要弄清「宿主到底发了什么」时，写个 `zz-probe.scenario.ts`，跑完删。TestBridge 能直接 eval 到 store，密集轮询几秒就能把 tick 节奏、事件时序量化出来。

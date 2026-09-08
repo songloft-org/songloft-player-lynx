@@ -8,9 +8,14 @@
  * (`web/songloft-webview-module.js`) produces and exposes the same
  * fire-and-forget surface as `navigation.ts`.
  *
- * Everything flows one way through the module (open / move / postMessage /
+ * Everything flows one way through the module (open / postMessage / hide /
  * close); the iframe's own traffic comes back as global events, subscribed via
  * {@link setWebviewBridgeHandlers}.
+ *
+ * Leaving a plugin page calls {@link WebviewModule.hide}, never `close`: the
+ * main thread must not detach the frame, because detaching a plugin frame is
+ * what crashed the renderer (error code 11). `close` is reserved for the plugin
+ * actually going away. See docs/archive/web-plugin-tab-crash.md.
  */
 import { readLynxGlobal, readNativeModules } from './native-modules.js'
 
@@ -30,19 +35,29 @@ export const WEBVIEW_OPEN_FAILED_EVENT = 'SongloftWebview.openFailed'
 
 /** The native shape: writes with positional args, no callbacks. */
 export interface SongloftWebviewNativeModule {
-  open(url: string, selector: string): void
+  /**
+   * `key` identifies the plugin surface (its `entryPath`) and is what the main
+   * thread keeps frames alive by. Deliberately NOT the URL: the URL carries
+   * `?theme=` and `?access_token=`, so keying on it would strand one frame per
+   * theme flip and per re-login.
+   */
+  open(url: string, selector: string, key: string): void
   postMessage(json: string): void
-  close(): void
+  /** Leave the page, keep the plugin alive off screen (the tab-switch path). */
+  hide(key: string): void
+  /** Release the plugin's document. Empty `key` releases all (logout). */
+  close(key: string): void
 }
 
-const NATIVE_METHODS = ['open', 'postMessage', 'close'] as const
+const NATIVE_METHODS = ['open', 'postMessage', 'hide', 'close'] as const
 
 function readNative(): SongloftWebviewNativeModule | null {
   const mod = readNativeModules()?.SongloftWebview as Record<string, unknown> | undefined
   if (!mod) return null
   // A partial module is worse than none: `mod?.method?.()` would turn the
-  // missing half into a silent no-op — for `close` that leaks an iframe over
-  // the app every time the plugin page is left. Same rule as `navigation.ts`.
+  // missing half into a silent no-op — for `hide` that leaves the plugin frame
+  // painted over the app every time the page is left, and for `close` it keeps a
+  // removed plugin running. Same rule as `navigation.ts`.
   for (const name of NATIVE_METHODS) {
     if (typeof mod[name] !== 'function') return null
   }
@@ -57,9 +72,9 @@ export interface WebviewModule extends SongloftWebviewNativeModule {
 function createNativeAdapter(native: SongloftWebviewNativeModule): WebviewModule {
   return {
     available: true,
-    open(url, selector) {
+    open(url, selector, key) {
       try {
-        native.open(url, selector)
+        native.open(url, selector, key)
       } catch {
         // The page keeps its placeholder; the caller surfaces unavailability.
       }
@@ -71,11 +86,18 @@ function createNativeAdapter(native: SongloftWebviewNativeModule): WebviewModule
         // One lost frame of state is harmless; the next change re-sends.
       }
     },
-    close() {
+    hide(key) {
       try {
-        native.close()
+        native.hide(key)
       } catch {
-        // Worst case the iframe lingers until reload.
+        // Worst case the frame stays on screen until the next placement.
+      }
+    },
+    close(key) {
+      try {
+        native.close(key)
+      } catch {
+        // Worst case the plugin document lives until reload.
       }
     },
   }
@@ -87,6 +109,7 @@ function createUnavailableStub(): WebviewModule {
     available: false,
     open() {},
     postMessage() {},
+    hide() {},
     close() {},
   }
 }

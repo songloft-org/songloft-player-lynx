@@ -26,6 +26,13 @@
 - [ ] HarmonyOS 视频入口是假能力 — 宿主注册的 `SongloftVideo` 占位实现对 `open` / `isOpen` 恒返回 `false`，模块存在性却让能力探测报 `video=true`。代码已删除占位模块及注册，界面按能力位隐藏入口；完整 HarmonyOS 视频表面另作功能实现，待 HAP 编译确认后闭合本缺陷。
 - [ ] HarmonyOS DLNA 扫描后仍为空且无法控制设备 — 发现结果只存于局部数组，`getDevices` 恒返回空；投屏又把 `deviceId` 当 SOAP URL。代码已持久保存解析后的设备与 AVTransport `controlUrl`，控制前按 id 查表，并加三端契约闸门；待 HAP 编译与真实投屏设备验证后闭合。
 
+## Web 端插件（2026-09-08 用户报障）
+
+- [x] **打开插件 tab 后切走，Chrome 渲染进程崩溃（error code 11）** — 根因不在无障碍（用户与前一轮调查的初判都指向那里，已证伪），而是我们在切 tab 时 `detach` 插件 iframe：`PluginWebViewPage` 卸载 → `webview.close()` → `destroyIframe()` → `remove()`，撞上 Chrome「往正在拆掉的 frame 里注入扩展内容脚本」路径的空指针（`EXC_BAD_ACCESS`，`fault_addr` 7 个 dump 恒为 `0xf8`）。三个必要条件：①我们 detach ②装了 `all_frames: true` 的扩展（二分确认是 KISS Translator；React DevTools 与 Vimium C 各自 0/2）③DevTools 真的打开（仅启用 CDP `Accessibility` 域不够，0/3；视口高度也已排除）。全齐 **15/15** 崩，缺一即 0。修法：主线程按插件保活 frame，切 tab 只 `hide` 不 detach；`close` 改为导航 `about:blank` 且不摘元素，只在禁用/卸载/强制更新/登出时调。lynx 路径同样保活，并补上等待 web-core 异步 dispose 再重建。已验：`tsc -b` + **2363 全绿（220 文件，新增 18 条执行宿主脚本的单测，反向验证 8/8 全咬）** + `build:web` 产物与源逐字节一致 + **真实 Chrome（KISS + DevTools docked，修复前 15/15 崩）单次 0/4、7 插件轮转 30 次 0 崩、落地脚本 24 次 0 崩**，且保活有界（frame 数 1→8 后停止增长）。**lynx 引擎路径无真实浏览器验证**（本机 7 个插件全是 iframe 路径，没有 lynx 插件；仅单测覆盖）。根因全文见 [`../archive/web-plugin-tab-crash.md`](../archive/web-plugin-tab-crash.md)
+- [x] **`renderEngine: "lynx"` 插件在 standalone 部署产物里从未生效** — 上一条的连带发现。`web/index.html` 引用 `/lynx-frame-host.js`，但 `copy-bundle-web.mjs` 的 `HOST_SCRIPTS` 没有它，也没有 `songloft-lynx-frame-module.js` / `songloft-lynx-bridge-module.js`：script 标签 404，`SongloftLynxFrame` 从未注册。补齐三个文件，并把 `web-host-page.test.ts` 里同样硬编码的宿主脚本列表改为从 `index.html` 推导 + 断言每个引用都在部署清单里
+
+- [x] **lynx 引擎插件在 Web 上收不到播放状态** — 上面两条的自审连带发现。`LynxPluginFrame` 把播放状态订阅 gate 在 `loaded`，而 `loaded` 只由原生 `<frame>` 的 `bindload` 置位；Web 分支渲染的是占位 `<view>`，没有该事件 ⇒ 订阅从未安装，而推送通道只送变化量 ⇒ 子 frame 对播放一无所知。修法：初始快照随 `globalProps` 送达（宿主在 `url` 前设置，且每次 `open` 合并新快照，正好覆盖保活后的再进入），增量继续走 `sendEvent`；`loaded` / `onLoad` / 原生 `bindload` 一并作为死代码删除。新增 `lynx-plugin-frame-web.test.tsx` 8 条，反向验证 2/2 全咬（去掉 `playerState` 咬 1 条、恢复永不置位的门咬 4 条）。**仅单测覆盖，无真实浏览器验证**（本机无 lynx 引擎插件）
+
 ## 手动测试发现
 
 - [x] 暗色下输入框提示文字看不清 — 补 `-x-placeholder-color`（批19）；后续查出全库 15 个文本字段有 6 处用 `--paper`/`--canvas` 当输入框底（对比度 1.04:1）、15 处圆角用错 token，统一为 `--neutral-faint` + `--radius-sm`，新增 `input-css.test.ts` 闸门从 TSX 反推字段清单

@@ -325,7 +325,7 @@ export function PluginWebViewPage() {
     return (
       <view className='plugin-webview'>
         {topbar}
-        <WebPluginFrame src={src} />
+        <WebPluginFrame src={src} frameKey={entryPath} />
       </view>
     )
   }
@@ -365,7 +365,7 @@ export function PluginWebViewPage() {
  *  - plugin → host: `songloft-host-call` `{id, ns, method, params}`, replied to
  *    with `songloft-host-reply` `{id, ok, data|error}`.
  */
-function WebPluginFrame({ src }: { src: string }) {
+function WebPluginFrame({ src, frameKey }: { src: string; frameKey: string }) {
   const { t } = useTranslation()
   const [failed, setFailed] = useState(false)
 
@@ -392,7 +392,18 @@ function WebPluginFrame({ src }: { src: string }) {
      * when the nav inset tier or the shell breakpoint flips; if the element
      * never appears, the main thread reports `openFailed` and we degrade.
      */
-    webview.open(src, '#plugin-webview-frame')
+    webview.open(src, '#plugin-webview-frame', frameKey)
+
+    /*
+     * Re-entry has to re-sync, because the frame is kept alive: the document is
+     * NOT reloaded, and the theme/player subscriptions below were torn down while
+     * the plugin was off screen — so anything that changed in between was missed.
+     * On a first open these two pushes are redundant at worst (the initial theme
+     * also rides in the URL's `?theme=`, and a message to a still-loading iframe
+     * is simply dropped).
+     */
+    send({ type: 'songloft-theme', theme: resolveTheme(getAppTheme()) })
+    send({ type: 'songloft-player-state', state: playerStateToJson() })
 
     unsubTheme = subscribeAppTheme(() => {
       send({ type: 'songloft-theme', theme: resolveTheme(getAppTheme()) })
@@ -425,9 +436,18 @@ function WebPluginFrame({ src }: { src: string }) {
       unsubTheme?.()
       unsubPlayer?.()
       setWebviewBridgeHandlers(null)
-      webview.close()
+      /*
+       * `hide`, not `close`. This cleanup runs on every tab switch away from the
+       * plugin, and `close` used to detach the iframe — which crashed the
+       * renderer (error code 11 / SIGSEGV) with an extension that injects into
+       * every frame plus DevTools open. Hiding also means re-entering the tab
+       * restores the plugin's own state instead of reloading it. Real teardown
+       * is the plugin manager's job (disable / uninstall / update) and the
+       * logout path. See docs/archive/web-plugin-tab-crash.md.
+       */
+      webview.hide(frameKey)
     }
-  }, [src])
+  }, [src, frameKey])
 
   if (failed) {
     return (

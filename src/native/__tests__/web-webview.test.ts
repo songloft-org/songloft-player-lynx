@@ -13,14 +13,16 @@ import {
  *
  * The failure these pin is the one `navigation.ts` documents: a partial module
  * is worse than none, because `mod?.method?.()` swallows the missing half as a
- * silent no-op — and for this module the missing half is `close`, which leaks a
- * main-thread iframe over the app every time the plugin page is left.
+ * silent no-op — and for this module the missing half is `hide`, which leaves the
+ * plugin frame painted over the app every time the page is left (or `close`,
+ * which keeps a removed plugin running).
  */
 
 function fullModule() {
   return {
     open: vi.fn(),
     postMessage: vi.fn(),
+    hide: vi.fn(),
     close: vi.fn(),
   }
 }
@@ -80,11 +82,11 @@ describe('module probing', () => {
     expect(mod.available).toBe(false)
     // The stub must be inert: calling close() on it may not throw, and must not
     // have reached the (close-less) native object.
-    mod.close()
+    mod.close('lx')
     expect(native.open).not.toHaveBeenCalled()
   })
 
-  test.each(['open', 'postMessage'])(
+  test.each(['open', 'postMessage', 'hide'])(
     'a module missing only %s is rejected too',
     (missing) => {
       const native = fullModule()
@@ -108,19 +110,24 @@ describe('module probing', () => {
 })
 
 describe('the adapter forwards every call', () => {
-  test('open / postMessage / close reach the native module', () => {
+  test('open / postMessage / hide / close reach the native module', () => {
     const native = fullModule()
     installModule(native)
     const mod = getWebviewModule()
-    mod.open('http://server/api/v1/jsplugin/lx/', '#plugin-webview-frame')
+    mod.open('http://server/api/v1/jsplugin/lx/', '#plugin-webview-frame', 'lx')
     mod.postMessage('{"type":"songloft-theme"}')
-    mod.close()
+    mod.hide('lx')
+    mod.close('lx')
+    // The key travels with every call: the main thread keeps one frame per
+    // plugin alive, so a call that forgot it would act on the wrong plugin.
     expect(native.open).toHaveBeenCalledWith(
       'http://server/api/v1/jsplugin/lx/',
       '#plugin-webview-frame',
+      'lx',
     )
     expect(native.postMessage).toHaveBeenCalledWith('{"type":"songloft-theme"}')
-    expect(native.close).toHaveBeenCalled()
+    expect(native.hide).toHaveBeenCalledWith('lx')
+    expect(native.close).toHaveBeenCalledWith('lx')
   })
 
   test('a throwing native call is swallowed, not propagated', () => {
@@ -131,8 +138,9 @@ describe('the adapter forwards every call', () => {
     installModule(native)
     const mod = getWebviewModule()
     // The page must survive a dead bridge; the other calls still go through.
-    expect(() => mod.open('x', '#f')).not.toThrow()
-    expect(() => mod.close()).not.toThrow()
+    expect(() => mod.open('x', '#f', 'lx')).not.toThrow()
+    expect(() => mod.hide('lx')).not.toThrow()
+    expect(() => mod.close('lx')).not.toThrow()
   })
 })
 

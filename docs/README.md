@@ -90,6 +90,7 @@ Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr
 | [harmony-integration-plan.md](./archive/harmony-integration-plan.md) | HarmonyOS 宿主集成计划。**已完成**（9 个原生模块实现，DevEco 工程就位） |
 | [lynx-native-plugin-rendering.md](./archive/lynx-native-plugin-rendering.md) | Lynx 原生渲染插件设计（插件以 `<frame>` 子页渲染于原生容器）。**已落地**（`4f0060b`，批63 后续） |
 | [migration/](./archive/migration/) | 项目启动前的 5 份迁移可行性调研 + **订正说明** |
+| [web-plugin-tab-crash.md](./archive/web-plugin-tab-crash.md) | 插件 tab 切换崩溃（error code 11）根因记录：三个必要条件的实验矩阵、两个被证伪的假设、「主线程永不 detach 插件 frame」规则与闸门。**已闭合**（2026-09-08） |
 | [web-support.md](./archive/web-support.md) | Web 支持原始计划 + 7 处「未经验证就写进设计的假设」及其后果 |
 
 > 歌词设置、设置页排序、设置页分类三份执行计划已删除（2026-08-26）：内容已全部实现，且设置页其后又经历两轮重构（批50 下沉二级页、批59 主题包并入外观页），计划描述的目标状态不再是现状，无根因/决策记录价值。

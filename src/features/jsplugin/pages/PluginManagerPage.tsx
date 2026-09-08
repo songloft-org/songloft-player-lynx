@@ -20,6 +20,7 @@ import {
   usePluginAutoUpdateQuery,
 } from '../data/jsplugin-query.js'
 import { getJSPluginApi } from '../api/index.js'
+import { releasePluginFrame } from '../domain/plugin-frame-release.js'
 import {
   useTogglePluginMutation,
   useDeletePluginMutation,
@@ -79,15 +80,28 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
   const [uploadResult, setUploadResult] = useState<JSPluginUploadResponse | null>(null)
 
   const onToggle = (plugin: JSPlugin) => {
+    const disabling = plugin.isActive
     toggleMutation.mutate(
       { id: plugin.id, enable: !plugin.isActive },
-      { onError: (e: unknown) => toast.error(String(e instanceof Error ? e.message : e)) },
+      {
+        // A disabled plugin must stop running. Its Web frame survives tab
+        // switches by design (see `plugin-frame-release.ts`), so this is one of
+        // the few places that actually releases it.
+        onSuccess: () => {
+          if (disabling && plugin.entryPath) releasePluginFrame(plugin.entryPath)
+        },
+        onError: (e: unknown) => toast.error(String(e instanceof Error ? e.message : e)),
+      },
     )
   }
 
   /**
-   * Keep-alive pins an *active* plugin's webview so reopening its tab is instant;
-   * the backend stores the entry_path whitelist, so toggle = add/remove from it.
+   * Keep-alive pins an *active* plugin's **backend JS service** so it is not put
+   * to sleep when idle (`internal/jsplugin/health.go` `checkIdle`), which is what
+   * makes reopening its tab instant; the backend stores the entry_path whitelist,
+   * so toggle = add/remove from it. Unrelated to the *frontend* frame keep-alive
+   * in `web/webview-host.js` — that one is not user-configurable and exists to
+   * avoid a renderer crash, not to warm anything up.
    */
   const onToggleKeepAlive = (plugin: JSPlugin) => {
     const entryPath = plugin.entryPath
@@ -115,7 +129,13 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
     setDeleteOpen(false)
     deleteMutation.mutate(
       { id: plugin.id, keepData: deleteKeepData },
-      { onError: (e: unknown) => toast.error(String(e instanceof Error ? e.message : e)) },
+      {
+        // The files are gone; the kept-alive frame must not keep running them.
+        onSuccess: () => {
+          if (plugin.entryPath) releasePluginFrame(plugin.entryPath)
+        },
+        onError: (e: unknown) => toast.error(String(e instanceof Error ? e.message : e)),
+      },
     )
   }
 
@@ -135,7 +155,12 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
         ...(githubProxy ? { githubProxy } : {}),
       },
       {
-        onSuccess: () => toast.success(t('jsplugin.forceUpdateSuccess')),
+        onSuccess: () => {
+          // Reinstall replaced the plugin's files — a kept-alive frame would keep
+          // serving the old build until something else navigated it.
+          if (plugin.entryPath) releasePluginFrame(plugin.entryPath)
+          toast.success(t('jsplugin.forceUpdateSuccess'))
+        },
         onError: (e: unknown) =>
           toast.error(t('jsplugin.forceUpdateFailed', {
             error: e instanceof Error ? e.message : String(e),

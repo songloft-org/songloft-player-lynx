@@ -24,6 +24,7 @@ import { PluginManagerPage } from '../../jsplugin/pages/PluginManagerPage.js'
 import { PluginRegistryPage } from '../../jsplugin/pages/PluginRegistryPage.js'
 import { TabConfigPage } from '../../jsplugin/pages/TabConfigPage.js'
 import { AboutPage } from './AboutPage.js'
+import { releaseAllPluginFrames } from '../../jsplugin/domain/plugin-frame-release.js'
 import { AppearancePage } from './AppearancePage.js'
 import { CacheManagePage } from './CacheManagePage.js'
 import { DataPage } from './DataPage.js'
@@ -116,6 +117,13 @@ export function SettingsPage() {
 
   const confirmLogout = () => {
     setShowLogoutDialog(false)
+    /*
+     * Plugin frames outlive their pages on Web (they are kept alive so a tab
+     * switch never detaches them — see `plugin-frame-release.ts`), so logging out
+     * has to release them explicitly. Otherwise a logged-out session leaves
+     * plugin documents polling with a token that is no longer valid.
+     */
+    releaseAllPluginFrames()
     void useAuthStore.getState().logout()
     void navigate({ to: '/login' })
   }
