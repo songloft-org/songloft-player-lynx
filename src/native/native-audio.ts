@@ -138,7 +138,7 @@ export function mapGlobalEvent(name: string, payload: unknown): AudioEvent | nul
       }
     case NATIVE_EVENT.remoteCommand: {
       const command = data.command
-      if (command !== 'next' && command !== 'previous' && command !== 'toggleFavorite') {
+      if (command !== 'next' && command !== 'previous' && command !== 'toggleFavorite' && command !== 'stop') {
         return null
       }
       return { type: 'remoteCommand', command }

@@ -82,10 +82,15 @@ object SongloftAudioEngine {
     const val REMOTE_COMMAND_NEXT = "next"
     const val REMOTE_COMMAND_PREVIOUS = "previous"
     const val REMOTE_COMMAND_TOGGLE_FAVORITE = "toggleFavorite"
+    const val REMOTE_COMMAND_STOP = "stop"
 
     /** Custom session command backing the notification's favorite button. */
     private const val FAVORITE_ACTION = "org.songloft.lynx.TOGGLE_FAVORITE"
     private val FAVORITE_SESSION_COMMAND = SessionCommand(FAVORITE_ACTION, Bundle.EMPTY)
+
+    /** Custom session command backing the notification's stop/exit button. */
+    private const val STOP_ACTION = "org.songloft.lynx.STOP_PLAYBACK"
+    private val STOP_SESSION_COMMAND = SessionCommand(STOP_ACTION, Bundle.EMPTY)
 
     /** Progress tick cadence (ms). */
     private const val PROGRESS_INTERVAL_MS = 500L
@@ -163,6 +168,7 @@ object SongloftAudioEngine {
             val sessionCommands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS
                 .buildUpon()
                 .add(FAVORITE_SESSION_COMMAND)
+                .add(STOP_SESSION_COMMAND)
                 .build()
             return MediaSession.ConnectionResult.accept(
                 sessionCommands,
@@ -176,6 +182,14 @@ object SongloftAudioEngine {
             customCommand: SessionCommand,
             args: Bundle,
         ): ListenableFuture<SessionResult> {
+            if (customCommand.customAction == STOP_ACTION) {
+                ClientFileLog.write('I', "audio", "notification stop command received")
+                // Stop playback immediately (no JS round-trip — instant UI feedback).
+                stop()
+                // Notify JS so it can clean up store state (currentSong, playlist, etc.).
+                sink?.emit(EVENT_REMOTE_COMMAND, mapOf("command" to REMOTE_COMMAND_STOP))
+                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            }
             if (customCommand.customAction == FAVORITE_ACTION) {
                 sink?.emit(EVENT_REMOTE_COMMAND, mapOf("command" to REMOTE_COMMAND_TOGGLE_FAVORITE))
                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
@@ -195,6 +209,16 @@ object SongloftAudioEngine {
             .setSessionCommand(FAVORITE_SESSION_COMMAND)
             .setIconResId(iconRes)
             .setDisplayName(if (isFavorite) "取消收藏" else "收藏")
+            .build()
+    }
+
+    /** The stop/exit [CommandButton], placed on the right side of the expanded
+     * notification by [SongloftMediaNotificationProvider.getMediaButtons]. */
+    fun buildStopButton(): CommandButton {
+        return CommandButton.Builder()
+            .setSessionCommand(STOP_SESSION_COMMAND)
+            .setIconResId(R.drawable.ic_notification_close)
+            .setDisplayName("退出")
             .build()
     }
 

@@ -53,7 +53,7 @@ export interface EqualizerBand {
 }
 
 /** A media-notification / lock-screen remote command not backed by a real seek. */
-export type RemoteCommand = 'next' | 'previous' | 'toggleFavorite'
+export type RemoteCommand = 'next' | 'previous' | 'toggleFavorite' | 'stop'
 
 /** Discriminated union of events the player emits (spec: `AudioEvent`). */
 export type AudioEvent =

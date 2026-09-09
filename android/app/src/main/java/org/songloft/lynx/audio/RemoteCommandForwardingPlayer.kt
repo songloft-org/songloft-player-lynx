@@ -35,6 +35,7 @@ class RemoteCommandForwardingPlayer(
             .add(Player.COMMAND_SEEK_TO_PREVIOUS)
             .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
             .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+            .add(Player.COMMAND_STOP)
             .build()
     }
 
@@ -46,4 +47,8 @@ class RemoteCommandForwardingPlayer(
 
     override fun seekToPreviousMediaItem() =
         onRemoteCommand(SongloftAudioEngine.REMOTE_COMMAND_PREVIOUS)
+
+    override fun stop() {
+        onRemoteCommand(SongloftAudioEngine.REMOTE_COMMAND_STOP)
+    }
 }

@@ -185,12 +185,18 @@ describe('audio global-event names reach both hosts verbatim', () => {
   })
 
   test.each(['next', 'previous', 'toggleFavorite'])(
-    'remoteCommand payload value %s',
+    'remoteCommand payload value %s in both platforms',
     (command) => {
       expect(hosts.audio.android).toContain(`"${command}"`)
       expect(hosts.audio.ios).toContain(`"${command}"`)
     },
   )
+
+  test('remoteCommand payload value stop exists in Android', () => {
+    expect(hosts.audio.android).toContain('"stop"')
+    // TODO(songloft-org/songloft#452): add stop command to iOS when implementing
+    // the stop/exit button on the iOS client.
+  })
 
   /**
    * The state vocabulary is the other half of the audio contract:

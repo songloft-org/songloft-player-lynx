@@ -15,7 +15,6 @@ import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import org.songloft.lynx.R
@@ -43,6 +42,17 @@ import org.songloft.lynx.platform.ClientFileLog
  * 2. [onGetSession] returns the engine's session -- guaranteed non-null after
  *    `onCreate`.
  * 3. [onTaskRemoved] / [onDestroy] release the player to avoid leaked sessions.
+ *    [onTaskRemoved] unconditionally stops playback and the service so the
+ *    notification disappears when the user swipes from recents
+ *    (songloft-org/songloft#452).
+ *
+ * ## Notification stays foreground on pause
+ *
+ * [onUpdateNotification] forces `startInForegroundRequired = true` whenever
+ * the player has content loaded (even while paused), which is the media3
+ * equivalent of the Flutter client's `androidStopForegroundOnPause: false`.
+ * Without this, aggressive ROMs (HyperOS, MIUI) remove the notification when
+ * the base class calls `stopForeground(false)` on pause.
  *
  * The module ([SongloftAudioModule]) starts this service **before** issuing any
  * play/load command, ensuring (in the common case) the service is alive and
@@ -129,15 +139,10 @@ class SongloftPlaybackService : MediaSessionService() {
         super.onCreate()
         ClientFileLog.init(this)
         ClientFileLog.write('I', "audio-svc", "created")
-        // Custom small icon so the media notification (and the badge over its
-        // large icon/artwork) shows the Songloft logo instead of media3's
-        // built-in music-note placeholder (`media3_notification_small_icon`).
-        // The monochrome adaptive-icon layer is already alpha-safe for this.
-        setMediaNotificationProvider(
-            DefaultMediaNotificationProvider(this).apply {
-                setSmallIcon(R.drawable.ic_launcher_monochrome)
-            },
-        )
+        // The custom [SongloftMediaNotificationProvider] sets the small icon
+        // and places the stop button on the right side of the notification
+        // (after the transport controls) — see its class docstring.
+        setMediaNotificationProvider(SongloftMediaNotificationProvider(this))
         // Create (or re-bind) the player + session using this service's context
         // so the framework's notification manager can post the media notification.
         SongloftAudioEngine.initFromService(this)
@@ -389,27 +394,44 @@ class SongloftPlaybackService : MediaSessionService() {
      * notification. Recording the ownership flag here — and before `super`,
      * whose foreground path re-enters [onStartCommand] — is what keeps the
      * placeholder from clobbering the notification it exists to bridge to.
+     *
+     * ## Pause keeps the foreground slot (songloft-org/songloft#452)
+     *
+     * When the player has content loaded (not STATE_IDLE, timeline not empty)
+     * the effective foreground flag is forced to `true` even when the player
+     * is paused. The base class's `stopForeground(false)` on pause is legal
+     * on stock Android, but aggressive ROMs (HyperOS, MIUI) remove the
+     * notification entirely when the foreground service detaches. Keeping the
+     * foreground slot prevents that, which is the same approach the Flutter
+     * client takes with `androidStopForegroundOnPause: false`.
+     *
+     * The notification is only released when the player is idle/stopped (no
+     * content) or the service itself is destroyed.
      */
     override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        // Keep the notification in the foreground whenever there is media
+        // content to show — even while paused (songloft-org/songloft#452).
+        val effectiveForeground = startInForegroundRequired || mediaNotificationWillShow(session)
         val ownsSlotBefore = mediaNotificationOwnsSlot
         ClientFileLog.write(
             'I', "audio-svc",
-            "notification update requested=$startInForegroundRequired mirrorBefore=$ownsSlotBefore "
+            "notification update requested=$startInForegroundRequired effective=$effectiveForeground "
+                + "mirrorBefore=$ownsSlotBefore "
                 + "media3Ongoing=${media3PlaybackOngoing()} playerOngoing=${playerPlaybackOngoing(session)} "
                 + "snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
         )
-        if (startInForegroundRequired != mediaNotificationOwnsSlot) {
+        if (effectiveForeground != mediaNotificationOwnsSlot) {
             // Transitions only: while playing this runs on every metadata change
             // (each lyric line), and the whole point of the exported log is to
             // stay readable.
             ClientFileLog.write(
                 'I', "audio-svc",
-                "media notification " + (if (startInForegroundRequired) "owns" else "released")
+                "media notification " + (if (effectiveForeground) "owns" else "released")
                     + " the foreground slot",
             )
         }
-        mediaNotificationOwnsSlot = startInForegroundRequired
-        super.onUpdateNotification(session, startInForegroundRequired)
+        mediaNotificationOwnsSlot = effectiveForeground
+        super.onUpdateNotification(session, effectiveForeground)
         if (mediaNotificationWillShow(session)) {
             // media3 is posting into id 1001, so whatever is in the shade is
             // (about to be) its notification, not ours.
@@ -552,12 +574,12 @@ class SongloftPlaybackService : MediaSessionService() {
     }
 
     /**
-     * When the user swipes the app away from Recents, stop playback and tear
-     * down the service so the notification disappears and resources are freed.
+     * When the user swipes the app away from Recents, always stop playback and
+     * tear down the service so the notification disappears (songloft-org/songloft#452).
+     * Unlike pause (which keeps the notification for quick resume), swiping from
+     * recents is an explicit "I'm done" signal.
      */
     override fun onTaskRemoved(rootIntent: Intent?) {
-        val session = SongloftAudioEngine.mediaSession
-        val player = session?.player
         ClientFileLog.write(
             'W', "audio-svc",
             "task removed action=${rootIntent?.action ?: "null"} "
@@ -565,10 +587,8 @@ class SongloftPlaybackService : MediaSessionService() {
                 + "ownsSlot=$mediaNotificationOwnsSlot "
                 + "placeholder=$placeholderPosted snapshot=${SongloftAudioEngine.diagnosticSnapshot()}",
         )
-        if (player == null || !player.playWhenReady) {
-            // Nothing playing -- stop the service immediately.
-            stopSelf()
-        }
+        SongloftAudioEngine.stop()
+        stopSelf()
         super.onTaskRemoved(rootIntent)
     }
 

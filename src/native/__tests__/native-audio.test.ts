@@ -144,6 +144,10 @@ describe('mapGlobalEvent (native → facade decode)', () => {
       type: 'remoteCommand',
       command: 'toggleFavorite',
     })
+    expect(mapGlobalEvent(NATIVE_EVENT.remoteCommand, { command: 'stop' })).toEqual({
+      type: 'remoteCommand',
+      command: 'stop',
+    })
     expect(mapGlobalEvent(NATIVE_EVENT.remoteCommand, { command: 'bogus' })).toBeNull()
     expect(mapGlobalEvent(NATIVE_EVENT.remoteCommand, {})).toBeNull()
   })
