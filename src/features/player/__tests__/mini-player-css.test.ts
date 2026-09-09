@@ -64,3 +64,35 @@ test('the row height is fixed, not content-sized', () => {
   expect(block(rules(), '.mini-player__row'), 'no vertical padding — it would ' +
     'add on top of the fixed height under content-box').toMatch(/padding:\s*0\s/)
 })
+
+/**
+ * Transport cluster (prev · play/pause · next) must exist so the mini player
+ * lets the user skip tracks without opening the full player — the standard
+ * mini-bar affordance every major music player ships.
+ */
+test('the transport cluster exists with flex layout', () => {
+  const transport = block(rules(), '.mini-player__transport')
+  expect(transport).toMatch(/display:\s*flex/)
+  expect(transport).toMatch(/flex-direction:\s*row/)
+  expect(transport).toMatch(/flex-shrink:\s*0/)
+})
+
+/**
+ * Prev/next buttons must use the HIG 44px tap target — same as the play
+ * button's hit area, so the three buttons are equally tappable.
+ */
+test('skip buttons use the HIG tap target', () => {
+  const btn = block(rules(), '.mini-player__btn')
+  expect(btn).toMatch(/width:\s*var\(--tap-target\)/)
+  expect(btn).toMatch(/height:\s*var\(--tap-target\)/)
+})
+
+/**
+ * Favorite button: hidden on narrow, shown on wide. `display: none` on the
+ * base class keeps the DOM element mounted (the hook stays hot) while the
+ * `.shell--wide` override reveals it where there is room.
+ */
+test('favorite is hidden on narrow, visible on wide', () => {
+  expect(block(rules(), '.mini-player__favorite')).toMatch(/display:\s*none/)
+  expect(block(rules(), '.shell--wide .mini-player__favorite')).toMatch(/display:\s*flex/)
+})

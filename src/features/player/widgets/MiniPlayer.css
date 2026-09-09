@@ -126,6 +126,9 @@
      (same trap as `.play-history__title`). */
   min-width: 0;
   margin-left: var(--space-3);
+  /* Right gap to the transport cluster — the same space-2 the play button's
+     own margin-left used to provide before the transport group was added. */
+  margin-right: var(--space-2);
 }
 
 /* Both meta lines are one line, ellipsized on overflow — the standard trio
@@ -155,6 +158,23 @@
  * player. HIG's minimum is the touch target, so the box grows and the disc does
  * not. The wrapper inherits the row gap and the no-shrink; the disc centres in it.
  */
+/*
+ * Transport cluster: prev · play/pause · next, grouped so the three read as one
+ * control. Added so the mini player lets the user skip tracks without opening the
+ * full player — the standard mini-bar affordance Spotify, YouTube Music and the
+ * Chinese players (NetEase, QQ) all ship. The group takes the margin-left the
+ * play-hit used to own, so the cluster sits at the same distance from the meta
+ * column as the lone play button once did.
+ */
+.mini-player__transport {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-shrink: 0;
+  gap: var(--space-1);
+  margin-left: var(--space-2);
+}
+
 .mini-player__play-hit {
   display: flex;
   align-items: center;
@@ -162,7 +182,6 @@
   width: var(--tap-target);
   height: var(--tap-target);
   flex-shrink: 0;
-  margin-left: var(--space-2);
 }
 
 /* Play button — Muse primary: ink fill + accent-contrast glyph. */
@@ -174,4 +193,50 @@
   height: 36px;
   border-radius: var(--radius-pill);
   background-color: var(--accent);
+}
+
+/* Prev/next tap target inside the transport cluster. Same 44px square as the
+   play button's hit area; transparent background — only the glyph is visible,
+   matching the full player's secondary controls (PlayControls.css). */
+.mini-player__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  border-radius: var(--radius-pill);
+}
+
+.mini-player__btn--disabled {
+  opacity: 0.35;
+}
+
+/*
+ * Favorite button: visible only on wide screens. On narrow, the transport
+ * cluster already fills the right edge of a phone-width capsule; a fourth
+ * button would crowd the meta text. On wide, the content column has room
+ * and the user is likely at a desk where a quick tap-to-like earns more
+ * than opening the full player. Hidden via `display: none` rather than a
+ * conditional render so the hook stays mounted and the favorite state
+ * never desyncs while the layout reflows.
+ */
+.mini-player__favorite {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  margin-left: var(--space-1);
+}
+
+.shell--wide .mini-player__favorite {
+  display: flex;
+}
+
+/* Pending toggle — dim the button while the mutation is in flight so a
+   double-tap cannot dispatch two requests. */
+.mini-player__favorite--pending {
+  opacity: 0.5;
 }

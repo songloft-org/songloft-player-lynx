@@ -1,9 +1,11 @@
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
-import { progressOf, usePlayerStore } from '../store/index.js'
+import { useFavoriteToggle } from '../../library/data/favorites.js'
+import { hasNext, hasPrev, progressOf, usePlayerStore } from '../store/index.js'
 import './MiniPlayer.css'
 
 /**
@@ -15,9 +17,14 @@ import './MiniPlayer.css'
  */
 export function MiniPlayer() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const song = usePlayerStore((s) => s.currentSong)
   const isPlaying = usePlayerStore((s) => s.isPlaying)
   const progress = usePlayerStore(progressOf)
+  const canNext = usePlayerStore(hasNext)
+  const canPrev = usePlayerStore(hasPrev)
+  const { isFavorite, toggle: toggleFavorite, isPending: isFavPending } =
+    useFavoriteToggle(song?.id ?? 0)
 
   if (!song) return null
 
@@ -42,13 +49,45 @@ export function MiniPlayer() {
           <text className='mini-player__title'>{song.title}</text>
           {subtitle ? <text className='mini-player__subtitle'>{subtitle}</text> : null}
         </view>
-        <view
-          className='mini-player__play-hit'
-          catchtap={() => usePlayerStore.getState().togglePlay()}
-        >
-          <view className='mini-player__play'>
-            <Icon name={isPlaying ? 'pause' : 'play'} size={18} color={ICON_COLORS.primaryContent} />
+        <view className='mini-player__transport'>
+          <view
+            className={canPrev
+              ? 'mini-player__btn'
+              : 'mini-player__btn mini-player__btn--disabled'}
+            catchtap={() => usePlayerStore.getState().playPrev()}
+          >
+            <Icon name='skip-prev' size={22} color={ICON_COLORS.content} />
           </view>
+          <view
+            className='mini-player__play-hit'
+            catchtap={() => usePlayerStore.getState().togglePlay()}
+          >
+            <view className='mini-player__play'>
+              <Icon name={isPlaying ? 'pause' : 'play'} size={18} color={ICON_COLORS.primaryContent} />
+            </view>
+          </view>
+          <view
+            className={canNext
+              ? 'mini-player__btn'
+              : 'mini-player__btn mini-player__btn--disabled'}
+            catchtap={() => usePlayerStore.getState().playNext()}
+          >
+            <Icon name='skip-next' size={22} color={ICON_COLORS.content} />
+          </view>
+        </view>
+        <view
+          className={isFavPending
+            ? 'mini-player__favorite mini-player__favorite--pending'
+            : 'mini-player__favorite'}
+          catchtap={isFavPending ? undefined : toggleFavorite}
+          data-testid='mini-favorite-btn'
+          aria-label={isFavorite ? t('player.unfavorite') : t('player.favorite')}
+        >
+          <Icon
+            name={isFavorite ? 'heart-filled' : 'heart'}
+            size={20}
+            color={isFavorite ? ICON_COLORS.primary : ICON_COLORS.content2}
+          />
         </view>
       </view>
     </view>
