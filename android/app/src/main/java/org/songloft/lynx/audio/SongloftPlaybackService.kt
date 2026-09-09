@@ -15,6 +15,7 @@ import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import org.songloft.lynx.R
@@ -53,6 +54,14 @@ import org.songloft.lynx.platform.ClientFileLog
  * equivalent of the Flutter client's `androidStopForegroundOnPause: false`.
  * Without this, aggressive ROMs (HyperOS, MIUI) remove the notification when
  * the base class calls `stopForeground(false)` on pause.
+ *
+ * ## Stop/exit button
+ *
+ * A stop button is added via `MediaSession.setCustomLayout` alongside the
+ * favorite button (songloft-org/songloft#452). The button issues a custom
+ * `STOP_PLAYBACK` session command handled by [SongloftAudioEngine.sessionCallback],
+ * which stops the ExoPlayer and emits a `remoteCommand` event to JS for
+ * state cleanup.
  *
  * The module ([SongloftAudioModule]) starts this service **before** issuing any
  * play/load command, ensuring (in the common case) the service is alive and
@@ -139,10 +148,15 @@ class SongloftPlaybackService : MediaSessionService() {
         super.onCreate()
         ClientFileLog.init(this)
         ClientFileLog.write('I', "audio-svc", "created")
-        // The custom [SongloftMediaNotificationProvider] sets the small icon
-        // and places the stop button on the right side of the notification
-        // (after the transport controls) — see its class docstring.
-        setMediaNotificationProvider(SongloftMediaNotificationProvider(this))
+        // Custom small icon so the media notification (and the badge over its
+        // large icon/artwork) shows the Songloft logo instead of media3's
+        // built-in music-note placeholder (`media3_notification_small_icon`).
+        // The monochrome adaptive-icon layer is already alpha-safe for this.
+        setMediaNotificationProvider(
+            DefaultMediaNotificationProvider(this).apply {
+                setSmallIcon(R.drawable.ic_launcher_monochrome)
+            },
+        )
         // Create (or re-bind) the player + session using this service's context
         // so the framework's notification manager can post the media notification.
         SongloftAudioEngine.initFromService(this)

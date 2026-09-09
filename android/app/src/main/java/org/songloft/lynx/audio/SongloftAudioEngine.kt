@@ -212,8 +212,7 @@ object SongloftAudioEngine {
             .build()
     }
 
-    /** The stop/exit [CommandButton], placed on the right side of the expanded
-     * notification by [SongloftMediaNotificationProvider.getMediaButtons]. */
+    /** The stop/exit [CommandButton] for the notification action bar. */
     fun buildStopButton(): CommandButton {
         return CommandButton.Builder()
             .setSessionCommand(STOP_SESSION_COMMAND)
@@ -230,7 +229,7 @@ object SongloftAudioEngine {
      */
     fun setFavorite(value: Boolean) {
         isFavorite = value
-        mediaSessionInternal?.setCustomLayout(listOf(buildFavoriteButton()))
+        mediaSessionInternal?.setCustomLayout(listOf(buildFavoriteButton(), buildStopButton()))
     }
 
     // -- equalizer -------------------------------------------------------------
@@ -536,7 +535,7 @@ object SongloftAudioEngine {
         )
         return MediaSession.Builder(context, forwardingPlayer)
             .setCallback(sessionCallback)
-            .setCustomLayout(listOf(buildFavoriteButton()))
+            .setCustomLayout(listOf(buildFavoriteButton(), buildStopButton()))
             .setSessionActivity(sessionActivity)
             .build()
     }
