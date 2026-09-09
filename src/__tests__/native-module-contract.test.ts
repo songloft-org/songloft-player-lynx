@@ -1340,8 +1340,11 @@ describe('HarmonyOS module.json5 declares required permissions and background mo
     expect(permissions).toContain('ohos.permission.KEEP_BACKGROUND_RUNNING')
   })
 
-  test('MULTICAST permission is declared (required for DLNA SSDP discovery)', () => {
-    expect(permissions).toContain('ohos.permission.MULTICAST')
+  // `ohos.permission.MULTICAST` is NOT defined in the HarmonyOS SDK — declaring
+  // it broke the local build and was removed (e6c7bc9). This guard keeps the
+  // removed permission from being "restored" by whoever reads the old intent.
+  test('MULTICAST permission is NOT declared (undefined in the SDK, build blocker)', () => {
+    expect(permissions).not.toContain('ohos.permission.MULTICAST')
   })
 
   test('audioPlayback backgroundMode is declared on the main ability', () => {

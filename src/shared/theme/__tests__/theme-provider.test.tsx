@@ -8,7 +8,7 @@ import {
 } from '../../../native/system-appearance.js'
 import { createMemoryStorage } from '../../../core/storage/index.js'
 import { changeAppTheme, DEFAULT_RESOLVED_THEME } from '../theme-model.js'
-import { PACK_OVERRIDABLE_BASELINE } from '../theme-pack-mapping.js'
+import { FONT_SIZE_BASES, PACK_OVERRIDABLE_BASELINE } from '../theme-pack-mapping.js'
 import { setActiveThemePack } from '../theme-pack-model.js'
 import { ThemeProvider } from '../ThemeProvider.js'
 
@@ -107,11 +107,19 @@ const SAKURA = {
 }
 
 
-/** Expected inline style when no pack is active — baseline + --font-scale (default 1). */
+/** Expected inline style when no pack is active — baseline + inline font-size
+ *  tokens + --font-scale (default 1).
+ *
+ *  The 12 HIG font tokens ride the inline channel since the iOS font-scale fix
+ *  (`themePackToStyleVars` emits `basePx × scale` px directly — nested var()
+ *  inside calc() ignores inline overrides there). Derived from the same
+ *  `FONT_SIZE_BASES` table the provider uses, so expectation and source cannot
+ *  drift apart again. */
 function expectBaselineStyle(resolved: 'light' | 'dark'): Record<string, string> {
-  return {
+  const fontScale = 1 // the test host does not override the scale preference
+  const style: Record<string, string> = {
     ...PACK_OVERRIDABLE_BASELINE[resolved],
-    '--font-scale': '1',
+    '--font-scale': String(fontScale),
     // The test host reports `SystemInfo.platform === 'ios'` and no insets, so
     // safe-area edges are pinned to 0 on native (see safe-area.test.ts) and land
     // here as valid inline `0px` instead of the broken stylesheet `env()` default.
@@ -120,6 +128,10 @@ function expectBaselineStyle(resolved: 'light' | 'dark'): Record<string, string>
     '--safe-left': '0px',
     '--safe-right': '0px',
   }
+  for (const [token, basePx] of Object.entries(FONT_SIZE_BASES)) {
+    style[token] = `${basePx * fontScale}px`
+  }
+  return style
 }
 
 test('without a pack the root inline tokens equal the Muse baseline', async () => {
