@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from '@lynx-js/react'
 
 import { appConfig } from '../../../core/config/app-config.js'
+import { getSongloftStorage } from '../../../core/storage/index.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
 import { getAppTheme, resolveTheme, subscribeAppTheme } from '../../../shared/theme/theme-model.js'
 import { usePlayerStore } from '../../player/store/index.js'
@@ -61,7 +62,23 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
   const frameId = useRef(`frame-${entryPath}-${Date.now()}`).current
   const bundleUrl = buildLynxBundleUrl(entryPath)
   const [theme, setTheme] = useState(() => resolveTheme(getAppTheme()))
+  const [accessToken, setAccessToken] = useState('')
   const isWeb = isWebPlatform()
+
+  // Load access token for Lynx bundle plugins (they don't get it via URL query params)
+  useEffect(() => {
+    void (async () => {
+      try {
+        const storage = getSongloftStorage()
+        const token = (await storage.secure.get('access_token')) ?? ''
+        console.error('[LynxPluginFrame] Loaded token, length=' + (token ? token.length : 0))
+        setAccessToken(token)
+      } catch (e) {
+        console.error('[LynxPluginFrame] Failed to load token: ' + e)
+        setAccessToken('')
+      }
+    })()
+  }, [])
 
   /*
    * `playerState` rides along with the initial props on purpose.
@@ -85,6 +102,7 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
     hostVersion: '1.0.0',
     embed: isTabEntry,
     playerState: playerStateToJson(),
+    access_token: accessToken,
   }
 
   // Web path: manage the nested <lynx-view> via the frame host module

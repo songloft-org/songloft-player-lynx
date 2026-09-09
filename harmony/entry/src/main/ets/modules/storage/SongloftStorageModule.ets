@@ -8,18 +8,20 @@ const SECURE_PREFIX = 'secure_'
 export class SongloftStorageModule extends LynxModule {
   private abilityContext: common.UIAbilityContext
   private prefs: preferences.Preferences | null = null
+  private prefsReady: Promise<void>
 
   constructor(context: LynxContext, param?: Object) {
     super(context, param)
     this.abilityContext = param as common.UIAbilityContext
-    this.initPrefs()
+    this.prefsReady = this.initPrefs()
   }
 
   private async initPrefs(): Promise<void> {
     this.prefs = await preferences.getPreferences(this.abilityContext, PREFS_NAME)
   }
 
-  public setItem(area: string, key: string, value: string): void {
+  public async setItem(area: string, key: string, value: string): Promise<void> {
+    await this.prefsReady
     if (area === 'secure') {
       const alias = SECURE_PREFIX + key
       this.prefs?.putSync(alias, value)
@@ -29,7 +31,8 @@ export class SongloftStorageModule extends LynxModule {
     this.prefs?.flush()
   }
 
-  public getItem(area: string, key: string, callback: (value: string | null) => void): void {
+  public async getItem(area: string, key: string, callback: (value: string | null) => void): Promise<void> {
+    await this.prefsReady
     const actualKey = area === 'secure' ? SECURE_PREFIX + key : key
     try {
       const value = this.prefs?.getSync(actualKey, '') as string
@@ -39,13 +42,15 @@ export class SongloftStorageModule extends LynxModule {
     }
   }
 
-  public removeItem(area: string, key: string): void {
+  public async removeItem(area: string, key: string): Promise<void> {
+    await this.prefsReady
     const actualKey = area === 'secure' ? SECURE_PREFIX + key : key
     this.prefs?.deleteSync(actualKey)
     this.prefs?.flush()
   }
 
-  public getKeys(area: string, callback: (keys: string[]) => void): void {
+  public async getKeys(area: string, callback: (keys: string[]) => void): Promise<void> {
+    await this.prefsReady
     try {
       const allKeys = this.prefs?.getAllSync() as Record<string, preferences.ValueType> | undefined
       if (!allKeys) {
