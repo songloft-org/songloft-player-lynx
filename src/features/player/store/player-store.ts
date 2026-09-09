@@ -983,6 +983,7 @@ audio.on('remoteCommand', (e) => {
       // Native already stopped the engine (instant feedback); reset JS state
       // to match. Do NOT call audio.stop() — the engine is already idle and
       // the foreground service is stopping.
+      _queueLoader.invalidate()
       usePlayerStore.setState({
         currentSong: undefined,
         isPlaying: false,
@@ -991,6 +992,8 @@ audio.on('remoteCommand', (e) => {
         duration: 0,
         playlist: [],
         currentIndex: -1,
+        playbackContext: undefined,
+        sourcePlaylistId: undefined,
       })
       break
     case 'toggleFavorite': {
