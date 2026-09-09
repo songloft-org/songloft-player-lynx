@@ -25,7 +25,7 @@
     "build:harmony-bundle": "rspeedy build && node scripts/copy-bundle-harmony.mjs",
     "harmony:postinstall": "node scripts/patch-harmony-webview.mjs",
     "harmony:sync": "rspeedy build && node scripts/copy-bundle-harmony.mjs",
-    "harmony:build": "pnpm run build:harmony-bundle && cd harmony && hvigorw assembleHap --mode module -p module=entry@default -p product=default --no-daemon",
+    "harmony:build": "pnpm run harmony:postinstall && pnpm run build:harmony-bundle && cd harmony && hvigorw assembleHap --mode module -p module=entry@default -p product=default --no-daemon",
     "harmony:run": "pnpm run harmony:build && hdc install $(ls harmony/entry/build/default/outputs/default/entry-default-*.hap | head -1) && hdc shell aa start -a EntryAbility -b org.songloft.lynx",
     "web:dev": "node web/serve.mjs",
     "web:sync": "rspeedy build --environment web && node scripts/copy-bundle-web.mjs",
