@@ -74,6 +74,23 @@ export function FlatSongsView({ type, sortId, sortOrder, onSortChange }: FlatSon
 
   const query = useSongsInfiniteQuery(filters)
   const songs = flattenSongs(query.data?.pages)
+  const total = query.data?.pages[0]?.total ?? 0
+
+  /**
+   * Queue the rest of the list in the background after playback starts — the
+   * visible pages alone would truncate the queue (songloft-player-lynx#9).
+   * Call synchronously right after the play call; see the store action's doc
+   * for why the snapshot timing matters.
+   */
+  const fillRemainingQueue = () => {
+    if (total <= songs.length) return
+    usePlayerStore.getState().loadRemainingSongsForCurrentPlaylist({
+      loadedCount: songs.length,
+      total,
+      fetch: (offset, limit) =>
+        getSongsApi().getSongs(filters, { limit, offset }).then((res) => res.songs),
+    })
+  }
 
   const onEndReached = () => {
     if (query.hasNextPage && !query.isFetchingNextPage) {
@@ -91,12 +108,14 @@ export function FlatSongsView({ type, sortId, sortOrder, onSortChange }: FlatSon
       })
     } else {
       void usePlayerStore.getState().playPlaylist(songs, index)
+      fillRemainingQueue()
     }
   }
 
   const playAll = () => {
     if (songs.length === 0) return
     void usePlayerStore.getState().playAll(songs)
+    fillRemainingQueue()
   }
 
   const enterSelectMode = () => {

@@ -72,6 +72,21 @@ export function FolderContentPage() {
 
   const onTapSong = (_song: Song, index: number) => {
     void usePlayerStore.getState().playPlaylist(songs, index)
+    // The folder endpoint carries the true total; when it exceeds the songs
+    // returned, fetch the remainder by the same `path_prefix` filter `playAll`
+    // uses so the queue is not truncated (songloft-player-lynx#9).
+    const totalSongs = data?.totalSongs ?? 0
+    if (totalSongs > songs.length) {
+      const pathPrefix = data?.musicPath
+        ? `${data.musicPath}/${folderPath}/`
+        : `${folderPath}/`
+      usePlayerStore.getState().loadRemainingSongsForCurrentPlaylist({
+        loadedCount: songs.length,
+        total: totalSongs,
+        fetch: (offset, limit) =>
+          getSongsApi().getSongs({ pathPrefix }, { limit, offset }).then((res) => res.songs),
+      })
+    }
   }
 
   const allItems = useMemo(() => {

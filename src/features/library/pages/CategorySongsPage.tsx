@@ -14,7 +14,7 @@ import { usePlayerStore } from '../../player/store/index.js'
 // Safe with respect to the note above: the panel is built from plain views, not
 // lynx-ui gesture components.
 import { PlayHistoryPanel } from '../../player/widgets/PlayHistoryPanel.js'
-import type { SongsFilters } from '../api/index.js'
+import { getSongsApi, type SongsFilters } from '../api/index.js'
 import { flattenSongs } from '../data/pagination.js'
 import { useSongsInfiniteQuery } from '../data/songs-query.js'
 import {
@@ -99,13 +99,35 @@ export function CategorySongsPage() {
   const playbackCtx = useMemo(() => facetContext(field, value), [field, value])
   const [showHistory, setShowHistory] = useState(false)
 
+  /** Server-side total for this facet (first page carries it; see `pagination.ts`). */
+  const total = songsQuery.data?.pages[0]?.total ?? 0
+
+  /**
+   * Queue the rest of this facet into the background after playback starts.
+   * Without it the queue stays truncated to the scrolled-in pages
+   * (songloft-player-lynx#9). Call synchronously right after the play call:
+   * the store snapshots its load generation at this moment, and the play's
+   * synchronous prefix has just re-based it.
+   */
+  const fillRemainingQueue = () => {
+    if (total <= songs.length) return
+    usePlayerStore.getState().loadRemainingSongsForCurrentPlaylist({
+      loadedCount: songs.length,
+      total,
+      fetch: (offset, limit) =>
+        getSongsApi().getSongs(filters, { limit, offset }).then((res) => res.songs),
+    })
+  }
+
   const onTapSong = (_song: Song, index: number) => {
     void usePlayerStore.getState().playPlaylist(songs, index, playbackCtx)
+    fillRemainingQueue()
   }
 
   const playAll = () => {
     if (songs.length === 0) return
     void usePlayerStore.getState().playAll(songs, playbackCtx)
+    fillRemainingQueue()
   }
 
   const header = (

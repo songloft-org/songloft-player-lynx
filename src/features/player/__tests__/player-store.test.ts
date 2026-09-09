@@ -776,3 +776,90 @@ describe('HLS radio source flag', () => {
     expect((getAudio() as MockSongloftAudio).lastLoad?.opts?.hls).toBe(false)
   })
 })
+
+describe('background queue fill (songloft-player-lynx#9)', () => {
+  test('addToPlaylist dedups against the queue by (id, type)', async () => {
+    await usePlayerStore.getState().playPlaylist([song(1, 30), song(2, 30)], 0)
+    // Second `song(2)` is a duplicate within the incoming batch itself.
+    usePlayerStore.getState().addToPlaylist([song(2), song(2), song(3)])
+    expect(usePlayerStore.getState().playlist.map((s) => s.id)).toEqual([1, 2, 3])
+  })
+
+  test('addToPlaylist keeps a same-id song of a different type', async () => {
+    await usePlayerStore.getState().playPlaylist([song(1, 30)], 0)
+    usePlayerStore.getState().addToPlaylist([{ ...song(1, 30), type: 'remote' } as Song])
+    expect(usePlayerStore.getState().playlist.map((s) => `${s.id}:${s.type}`))
+      .toEqual(['1:local', '1:remote'])
+  })
+
+  test('loadRemainingSongsForCurrentPlaylist appends fetched batches', async () => {
+    await usePlayerStore.getState().playPlaylist([song(1, 30), song(2, 30)], 0)
+    const fetch = vi.fn(async (offset: number, limit: number): Promise<Song[]> => {
+      const batch: Song[] = []
+      for (let i = offset; i < Math.min(offset + limit, 5); i++) batch.push(song(i + 1))
+      return batch
+    })
+
+    usePlayerStore.getState().loadRemainingSongsForCurrentPlaylist({
+      loadedCount: 2,
+      total: 5,
+      fetch,
+    })
+    await flush()
+
+    // First request continues exactly where the loaded pages stopped, at the
+    // loader's batch size — the whole point of the background fill.
+    expect(fetch.mock.calls[0]).toEqual([2, 100])
+    expect(usePlayerStore.getState().playlist.map((s) => s.id)).toEqual([1, 2, 3, 4, 5])
+  })
+
+  test('loadRemainingSongsForCurrentPlaylist is a no-op when nothing remains', async () => {
+    await usePlayerStore.getState().playPlaylist([song(1, 30)], 0)
+    const fetch = vi.fn(async (): Promise<Song[]> => [])
+    usePlayerStore.getState().loadRemainingSongsForCurrentPlaylist({
+      loadedCount: 1,
+      total: 1,
+      fetch,
+    })
+    await flush()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  test('starting new playback cancels an in-flight fill', async () => {
+    await usePlayerStore.getState().playPlaylist([song(1, 30), song(2, 30)], 0)
+    let release: (songs: Song[]) => void = () => {}
+    const fetch = vi.fn(() => new Promise<Song[]>((res) => { release = res }))
+
+    usePlayerStore.getState().loadRemainingSongsForCurrentPlaylist({
+      loadedCount: 2,
+      total: 100,
+      fetch,
+    })
+
+    // The user starts something else while the first batch is in flight…
+    await usePlayerStore.getState().playPlaylist([song(9, 30)], 0)
+    // …and that batch lands anyway. The generation check must drop it.
+    release([song(3)])
+    await flush()
+
+    expect(usePlayerStore.getState().playlist.map((s) => s.id)).toEqual([9])
+  })
+
+  test('clearing the queue cancels an in-flight fill', async () => {
+    await usePlayerStore.getState().playPlaylist([song(1, 30), song(2, 30)], 0)
+    let release: (songs: Song[]) => void = () => {}
+    const fetch = vi.fn(() => new Promise<Song[]>((res) => { release = res }))
+
+    usePlayerStore.getState().loadRemainingSongsForCurrentPlaylist({
+      loadedCount: 2,
+      total: 100,
+      fetch,
+    })
+
+    usePlayerStore.getState().clearPlaylist()
+    release([song(3)])
+    await flush()
+
+    expect(usePlayerStore.getState().playlist).toEqual([])
+  })
+})

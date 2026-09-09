@@ -40,6 +40,18 @@ export function TagSongsPage() {
 
   const onTapSong = (_song: Song, index: number) => {
     void usePlayerStore.getState().playPlaylist(songs, index, playbackCtx)
+    // Tap plays the scrolled-in pages immediately; the rest of the tag comes
+    // in as a background fill so the queue is not truncated at page size
+    // (songloft-player-lynx#9). Sync call right after the play — see the
+    // store action doc. Same filter as `useTagSongsInfiniteQuery` above.
+    if (total > songs.length) {
+      usePlayerStore.getState().loadRemainingSongsForCurrentPlaylist({
+        loadedCount: songs.length,
+        total,
+        fetch: (offset, limit) =>
+          getSongsApi().getSongs({ tagId }, { limit, offset }).then((res) => res.songs),
+      })
+    }
   }
 
   const playAll = async () => {

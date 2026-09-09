@@ -19,6 +19,7 @@ import { SongListRow } from '../../library/widgets/SongListRow.js'
 import { VirtualList } from '../../library/widgets/VirtualList.js'
 import { PlaylistDescPanel } from '../widgets/PlaylistDescPanel.js'
 import { PlaylistToolbar } from '../widgets/PlaylistToolbar.js'
+import { getPlaylistApi } from '../api/index.js'
 import { playlistContext } from '../../player/domain/playback-context.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import { PlayHistoryPanel } from '../../player/widgets/PlayHistoryPanel.js'
@@ -56,6 +57,25 @@ export function PlaylistDetailPage() {
   const keyword = debouncedKeyword.trim() || undefined
   const songsQuery = usePlaylistSongsInfiniteQuery(id, { sort: currentSort, order: currentOrder, keyword })
   const songs = flattenSongs(songsQuery.data?.pages)
+  const total = songsQuery.data?.pages[0]?.total ?? 0
+
+  /**
+   * Background-fill the rest of the playlist (same pages the infinite query
+   * would have fetched, but driven by the store so playback continues past
+   * the scrolled-in window — songloft-player-lynx#9). Call synchronously
+   * right after the play; see the store action doc.
+   */
+  const fillRemainingQueue = () => {
+    if (total <= songs.length) return
+    usePlayerStore.getState().loadRemainingSongsForCurrentPlaylist({
+      loadedCount: songs.length,
+      total,
+      fetch: (offset, limit) =>
+        getPlaylistApi()
+          .getPlaylistSongs(id, { sort: currentSort, order: currentOrder, keyword }, { limit, offset })
+          .then((res) => res.songs),
+    })
+  }
 
   // Last-built cover URL keyed by cover path — see `cover` below.
   const coverUrlRef = useRef<{ path: string; built: string }>({
@@ -224,12 +244,14 @@ export function PlaylistDetailPage() {
       })
     } else {
       void usePlayerStore.getState().playPlaylist(songs, index, playlistCtx)
+      fillRemainingQueue()
     }
   }
 
   const playAll = () => {
     if (songs.length === 0) return
     void usePlayerStore.getState().playAll(songs, playlistCtx)
+    fillRemainingQueue()
   }
 
   const header = (

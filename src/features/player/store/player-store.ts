@@ -27,6 +27,7 @@ import { getSongsApi } from '../../library/api/index.js'
 import { cyclePlayMode, resolveNext, resolvePrev, resolveStartIndex, type PlayMode } from '../domain/play-mode.js'
 import { playlistIdOf, type PlaybackContext } from '../domain/playback-context.js'
 import { removeAt } from '../domain/queue.js'
+import { QueueLoader, type FetchPage } from '../domain/queue-loader.js'
 import {
   sleepTimerAfterSongs,
   sleepTimerByDuration,
@@ -79,7 +80,32 @@ export interface PlayerState extends PlayerData {
   setSpeed: (rate: number) => Promise<void>
 
   // ── queue edits ──
+  /**
+   * Append to the queue with `(id, type)` dedup (Flutter `PlayQueue.add`
+   * parity). Dedup is not cosmetic: a background
+   * {@link loadRemainingSongsForCurrentPlaylist} can overlap with pages the
+   * user scrolls into the source list while it runs, and without it the queue
+   * grows duplicates.
+   */
   addToPlaylist: (songs: Song[]) => void
+  /**
+   * Background-fill the rest of a paginated source into the current playlist
+   * (Flutter `loadRemainingSongsForCurrentPlaylist` parity,
+   * songloft-player-lynx#9): fetches in batches from `loadedCount` to `total`
+   * and appends each batch through {@link addToPlaylist}. Fire-and-forget.
+   *
+   * The generation is snapshotted at call time, so callers must invoke this
+   * right after the play call it completes: the play paths re-base the
+   * generation synchronously, and a fill scheduled before the play would see
+   * the older generation and silently no-op. `fetch` is injected by the
+   * caller (library songs vs playlist songs) so the store never reaches into
+   * feature APIs for it.
+   */
+  loadRemainingSongsForCurrentPlaylist: (params: {
+    loadedCount: number
+    total: number
+    fetch: FetchPage
+  }) => void
   insertNextInQueue: (songs: Song[]) => void
   removeFromPlaylist: (index: number) => Promise<void>
   clearPlaylist: () => void
@@ -117,6 +143,14 @@ export interface PlayerState extends PlayerData {
 }
 
 const audio = getAudio()
+
+/**
+ * Generation-guarded background loader shared by every
+ * `loadRemainingSongsForCurrentPlaylist` call. Playback-start paths
+ * (`playSong`, `playPlaylist`, `clearPlaylist`) bump its generation, which
+ * cancels any in-flight fill into a queue the user has since replaced.
+ */
+const _queueLoader = new QueueLoader()
 
 /** Countdown interval handle for `duration` sleep timers (module-scoped). */
 let sleepIntervalHandle: number | null = null
@@ -555,6 +589,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     ...INITIAL,
 
     playSong: async (song, queue) => {
+      _queueLoader.invalidate()
       const current = get()
       let list: Song[]
       if (queue && queue.length > 0) {
@@ -586,6 +621,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     playPlaylist: async (songs, startIndex = 0, context) => {
       if (songs.length === 0) return
+      // Re-base the background-load generation before any await: callers
+      // snapshot it synchronously right after this call to start their own
+      // fill (see `loadRemainingSongsForCurrentPlaylist`), and an in-flight
+      // fill from previous playback must die here.
+      _queueLoader.invalidate()
       const index = Math.min(Math.max(0, startIndex), songs.length - 1)
       const playlistId = playlistIdOf(context)
       set({
@@ -702,9 +742,39 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     addToPlaylist: (songs) => {
       if (songs.length === 0) return
-      const list = [...get().playlist, ...songs]
+      // `(id, type)` dedup against the current queue (and within `songs`
+      // itself) — see the interface doc for why this is load-bearing.
+      const current = get().playlist
+      const seen = new Set(current.map((s) => `${s.id}:${s.type}`))
+      const fresh: Song[] = []
+      for (const s of songs) {
+        const key = `${s.id}:${s.type}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        fresh.push(s)
+      }
+      if (fresh.length === 0) return
+      const list = [...current, ...fresh]
       set({ playlist: list })
       void syncQueueWindow(list, get().currentIndex)
+    },
+
+    loadRemainingSongsForCurrentPlaylist: ({ loadedCount, total, fetch }) => {
+      if (total <= loadedCount) return
+      const generation = _queueLoader.generation
+      void _queueLoader.loadRemaining({
+        generation,
+        totalCount: total,
+        alreadyLoaded: loadedCount,
+        fetch,
+        onBatch: (batch) => {
+          // Re-enter through the store action so queue-window metadata and
+          // persistence keep following every append. A queue the user cleared
+          // or replaced in the meantime cannot receive this batch: both paths
+          // bumped the generation, which exits the loop above.
+          get().addToPlaylist(batch)
+        },
+      })
     },
 
     insertNextInQueue: (songs) => {
@@ -736,6 +806,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     },
 
     clearPlaylist: () => {
+      _queueLoader.invalidate()
       void audio.stop()
       set({
         playlist: [],
@@ -818,6 +889,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     reset: () => {
       stopSleepInterval()
       cancelRetry()
+      // Cancel in-flight background fills too, so a reset (used between tests)
+      // cannot leave a stale load appending into the next test's queue.
+      _queueLoader.invalidate()
       void audio.stop()
       _videoSourceSongId = null
       set({ ...INITIAL })
