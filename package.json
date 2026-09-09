@@ -23,6 +23,7 @@
     "build:ios-bundle": "rspeedy build && node scripts/copy-bundle-ios.mjs",
     "copy-bundle:harmony": "node scripts/copy-bundle-harmony.mjs",
     "build:harmony-bundle": "rspeedy build && node scripts/copy-bundle-harmony.mjs",
+    "harmony:postinstall": "node scripts/patch-harmony-webview.mjs",
     "harmony:sync": "rspeedy build && node scripts/copy-bundle-harmony.mjs",
     "harmony:build": "pnpm run build:harmony-bundle && cd harmony && hvigorw assembleHap --mode module -p module=entry@default -p product=default --no-daemon",
     "harmony:run": "pnpm run harmony:build && hdc install $(ls harmony/entry/build/default/outputs/default/entry-default-*.hap | head -1) && hdc shell aa start -a EntryAbility -b org.songloft.lynx",
