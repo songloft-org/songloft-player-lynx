@@ -1,6 +1,7 @@
 import { common } from '@kit.AbilityKit'
 import { Behavior, BehaviorRegistryMap, LynxView, MetaData, ModuleClassWrapper, TemplateBundle, TemplateData, LynxContext, LynxGenericResourceFetcher, LynxMediaResourceFetcher } from '@lynx/lynx'
 import { UISVG } from '@lynx/xelement_svg'
+import { UIWebView } from '@lynx/xelement_webview'
 import { SongloftGenericResourceFetcher } from '../net/SongloftGenericResourceFetcher'
 import { SongloftMediaResourceFetcher } from '../net/SongloftMediaResourceFetcher'
 import { SongloftAudioModule } from '../modules/audio/SongloftAudioModule'
@@ -17,7 +18,10 @@ import { SystemAppearance } from '../modules/system/SystemAppearance'
 struct Index {
   private context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext
   private modules: Map<string, ModuleClassWrapper> = new Map()
-  private behaviors: BehaviorRegistryMap = new Map([['svg', new Behavior(UISVG, undefined)]])
+  private behaviors: BehaviorRegistryMap = new Map([
+    ['svg', new Behavior(UISVG, undefined)],
+    ['webview', new Behavior(UIWebView, undefined)],
+  ])
   private templateBundle?: TemplateBundle = undefined
   private metaData: MetaData = new MetaData()
   private genericResourceFetcher: LynxGenericResourceFetcher = new SongloftGenericResourceFetcher()
