@@ -39,37 +39,49 @@ export function ProgressBar() {
    * vertical space — the scarcest thing on this screen, and the reason the cover has
    * to shrink on short viewports at all (see `player-layout.ts`). Fixed-width time
    * columns keep the rail from twitching sideways as `9:59` becomes `10:00`.
+   *
+   * The drag preview is an **absolutely-positioned tooltip** that floats above the
+   * thumb, tracking its horizontal position (`left: value * 100%`). It occupies no
+   * layout space, so the cover never shifts — the old in-flow preview pushed the
+   * rail down on drag-start and yanked the cover up, the most visible layout jump
+   * on the whole screen. Apple Music, Spotify and YouTube Music all use this
+   * floating-bubble pattern for the same reason.
    */
   return (
     <view className='player-progress'>
-      {dragging
-        ? (
-          <view className='player-progress__preview'>
-            <text className='player-progress__preview-text'>{formatMs(shownMs)}</text>
-          </view>
-        )
-        : null}
       <view className='player-progress__row'>
         <text className='player-progress__time'>{formatMs(shownMs)}</text>
-        <SliderRoot
-          className='player-progress__slider'
-          value={value}
-          onDragging={() => setDragging(true)}
-          onValueChange={(v: number) => {
-            if (dragging) setDragValue(v)
-          }}
-          onValueCommit={(v: number) => {
-            setDragging(false)
-            void usePlayerStore.getState().seek(v * duration)
-          }}
-        >
-          <SliderTrack className='player-progress__track'>
-            <SliderIndicator className='player-progress__indicator' />
-            <SliderThumb className='player-progress__thumb-wrap'>
-              <view className='player-progress__thumb' />
-            </SliderThumb>
-          </SliderTrack>
-        </SliderRoot>
+        <view className='player-progress__slider-wrap'>
+          {dragging
+            ? (
+              <view
+                className='player-progress__preview'
+                style={{ left: `${value * 100}%` }}
+              >
+                <text className='player-progress__preview-text'>{formatMs(shownMs)}</text>
+              </view>
+            )
+            : null}
+          <SliderRoot
+            className='player-progress__slider'
+            value={value}
+            onDragging={() => setDragging(true)}
+            onValueChange={(v: number) => {
+              if (dragging) setDragValue(v)
+            }}
+            onValueCommit={(v: number) => {
+              setDragging(false)
+              void usePlayerStore.getState().seek(v * duration)
+            }}
+          >
+            <SliderTrack className='player-progress__track'>
+              <SliderIndicator className='player-progress__indicator' />
+              <SliderThumb className='player-progress__thumb-wrap'>
+                <view className='player-progress__thumb' />
+              </SliderThumb>
+            </SliderTrack>
+          </SliderRoot>
+        </view>
         <text className='player-progress__time player-progress__time--total'>
           {formatMs(duration)}
         </text>

@@ -7,6 +7,9 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
+  /* Containing block for the "back to current" floating button, which is
+     positioned absolute inside. */
+  position: relative;
 }
 
 /* Tools row (re-fetch / adjust entries) — right-aligned, mirrors the Flutter
@@ -140,4 +143,25 @@
   font-size: var(--font-caption1);
   text-align: center;
   margin-bottom: var(--space-1);
+}
+
+/* ── "Back to current line" floating button ──
+ *
+ * Surfaces when the user has scrolled the active line out of view. Positioned
+ * in the bottom-right corner of the lyrics container, above the last few lines
+ * where it would obscure content. Uses `--secondary-system-background` for the
+ * pill so it reads against any backdrop. */
+
+.player-lyrics__back-to-current {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  width: var(--tap-target);
+  height: var(--tap-target);
+  border-radius: var(--radius-pill);
+  background-color: var(--secondary-system-background);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

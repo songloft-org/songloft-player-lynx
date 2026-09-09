@@ -123,6 +123,15 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
       }]
       : []),
     /*
+     * DLNA cast. Moved here from the tool row so that row stays a fixed three
+     * items (volume · speed · queue) regardless of platform capability — which
+     * stops the layout shifting when DLNA is absent. The cast screen lives at
+     * `/player/dlna`, a chrome-less sibling of `/player`.
+     */
+    ...(getPlatformCapabilities().dlna
+      ? [{ key: 'cast', label: t('player.cast'), icon: 'cast' as const }]
+      : []),
+    /*
      * The equalizer's only entry point. Its page lives at `/player/eq` (a
      * chrome-less sibling of `/player`, not a settings sub-page) so returning
      * from it goes back to the player rather than the settings list — which is
@@ -158,6 +167,7 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
         onSelect={(key) => {
           if (key === 'songInfo' && song != null) songRowOverlays.openInfo(song)
           else if (key === 'cache') onCacheEntry()
+          else if (key === 'cast') void navigate({ to: '/player/dlna' })
           else if (key === 'equalizer') void navigate({ to: '/player/eq' })
           else onOpenSleepTimer()
         }}

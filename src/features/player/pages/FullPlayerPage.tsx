@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from '@lynx-js/react'
+import { useCallback, useEffect, useRef, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -46,7 +46,7 @@ import './FullPlayerPage.css'
  * pending state and switches the source first; `'direct'` opens straight away,
  * because the picture is already in the stream being played.
  */
-function CoverArt({ song, size }: { song: Song, size: number }) {
+function CoverArt({ song, size, onClose }: { song: Song, size: number, onClose: () => void }) {
   const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
   const { t } = useTranslation()
   const [pending, setPending] = useState(false)
@@ -76,12 +76,75 @@ function CoverArt({ song, size }: { song: Song, size: number }) {
     }
   }
 
+  /*
+   * Pull-down to dismiss: a vertical drag on the cover closes the player, the same
+   * gesture Apple Music and Spotify ship. The cover is the one element that exists
+   * on every narrow-layout frame (the lyrics page is a separate Swiper screen) and
+   * is not inside a vertical scroll-view, so there is nothing to fight for the
+   * vertical gesture. Wide layouts have no Swiper, so the gesture works there too.
+   *
+   * We use `catchtouch*` to stop the gesture propagating to the Swiper's
+   * horizontal swipe — it consumes only the angles listed in `consumeSlideEvent`,
+   * but catching avoids any ambiguity at the boundary. `bind*` would also work
+   * in practice; `catch*` is the safer default.
+   *
+   * Mouse handlers mirror the touch ones for Web: `mousedown` starts, `mousemove`
+   * tracks (only while a button is held), `mouseup` commits.
+   */
+  const touchStartYRef = useRef<number | null>(null)
+  const mouseDownRef = useRef(false)
+
+  const pointerY = useCallback((e: unknown): number | null => {
+    const ev = e as {
+      touches?: Array<{ clientY?: unknown }>
+      clientY?: unknown
+    }
+    const touch = ev.touches?.[0]
+    const y = Number(touch?.clientY ?? ev.clientY)
+    return Number.isFinite(y) ? y : null
+  }, [])
+
+  const onStart = useCallback((y: number | null) => {
+    if (y == null) return
+    touchStartYRef.current = y
+  }, [])
+
+  const onEnd = useCallback(() => {
+    touchStartYRef.current = null
+    mouseDownRef.current = false
+  }, [])
+
+  const onMove = useCallback((y: number | null) => {
+    if (y == null || touchStartYRef.current == null) return
+    const deltaY = y - touchStartYRef.current
+    // Only commit on release — mid-drag visual feedback would need a transform
+    // pipeline we don't have here, and a threshold on release is the common case.
+    if (deltaY > 120) {
+      touchStartYRef.current = null
+      onClose()
+    }
+  }, [onClose])
+
   // Inline rather than in CSS: the edge length comes from the screen class and the
   // leftover height (see `domain/player-layout.ts`), and this repo has no `@media`.
   const box = { width: `${size}px`, height: `${size}px` }
 
   return (
-    <view className='full-player__cover-wrap'>
+    <view
+      className='full-player__cover-wrap'
+      catchtouchstart={(e: unknown) => onStart(pointerY(e))}
+      catchtouchmove={(e: unknown) => onMove(pointerY(e))}
+      catchtouchend={onEnd}
+      catchtouchcancel={onEnd}
+      catchmousedown={(e: unknown) => {
+        mouseDownRef.current = true
+        onStart(pointerY(e))
+      }}
+      catchmousemove={(e: unknown) => {
+        if (mouseDownRef.current) onMove(pointerY(e))
+      }}
+      catchmouseup={onEnd}
+    >
       {/*
         * The artwork is an `<image>` **inside** a shadowed `<view>`, not an `<image>`
         * carrying the shadow itself.
@@ -113,7 +176,13 @@ function CoverArt({ song, size }: { song: Song, size: number }) {
             bindtap={canWatch && !pending ? () => { void openVideo() } : undefined}
             data-testid={canWatch ? 'video-fullscreen' : undefined}
           >
-            <text className='full-player__video-badge-text'>{pending ? '…' : '▶'}</text>
+            {/* Pill badge: the old "▶" text was too small to read at a glance and
+                looked like a rendering artifact. A labelled pill with a play icon
+                clearly states "this is a music video — tap to watch". */}
+            <Icon name='play' size={12} color={ICON_COLORS.content} />
+            <text className='full-player__video-badge-text'>
+              {pending ? '…' : 'MV'}
+            </text>
           </view>
         )
         : null}
@@ -239,6 +308,11 @@ export function FullPlayerPage() {
   if (!song) {
     return (
       <view className='full-player full-player--enter full-player--empty'>
+        {/* Large glyph gives the empty state presence — text alone reads as an
+            error, an icon + text reads as a deliberate resting place. */}
+        <view className='full-player__empty-icon'>
+          <Icon name='music' size={64} color={ICON_COLORS.contentMuted} />
+        </view>
         <text className='full-player__empty-title'>{t('player.nothingPlaying')}</text>
         <text className='full-player__empty-subtitle'>
           {t('player.nothingPlayingSubtitle')}
@@ -284,7 +358,7 @@ export function FullPlayerPage() {
           timerLabel={timerLabel}
         />
 
-        <view className='full-player__stage' bindlayoutchange={onStageLayout}>
+        <view className='full-player__stage full-player__stage--enter' bindlayoutchange={onStageLayout}>
           {/*
             * Split (cover beside lyrics) from tablet up; two swiped screens below it.
             * Both branches are gated on `layout.measured`, and the third one is what
@@ -298,7 +372,7 @@ export function FullPlayerPage() {
                   className='full-player__cover-col'
                   style={{ flexGrow: layout.coverFlex, flexShrink: 1, flexBasis: '0%' }}
                 >
-                  <CoverArt song={song} size={layout.coverSize} />
+                  <CoverArt song={song} size={layout.coverSize} onClose={closePlayer} />
                 </view>
                 <view
                   className='full-player__lyrics-pane'
@@ -324,7 +398,7 @@ export function FullPlayerPage() {
                     {({ index }: { index: number }) => (
                       <SwiperItem>
                         {index === 0
-                          ? <CoverArt song={song} size={layout.coverSize} />
+                          ? <CoverArt song={song} size={layout.coverSize} onClose={closePlayer} />
                           : (
                             <view className='full-player__lyrics-page'>
                               <LyricsView />
@@ -338,22 +412,24 @@ export function FullPlayerPage() {
                   <PageDots count={2} index={swiperIndex} />
                 </>
               )
-              : <CoverArt song={song} size={layout.coverSize} />}
+              : <CoverArt song={song} size={layout.coverSize} onClose={closePlayer} />}
         </view>
 
-        <view className='full-player__meta'>
+        <view className='full-player__meta full-player__meta--enter'>
           <text className='full-player__title'>{song.title}</text>
           {song.artist ? <text className='full-player__artist'>{song.artist}</text> : null}
         </view>
 
-        <ProgressBar />
-        <PlayControls
-          playBtn={layout.playBtn}
-          playRadius={layout.playRadius}
-          slot={layout.toolSlot}
-          songId={song.id}
-        />
-        <PlayerToolBar slot={layout.toolSlot} />
+        <view className='full-player__controls-enter'>
+          <ProgressBar />
+          <PlayControls
+            playBtn={layout.playBtn}
+            playRadius={layout.playRadius}
+            slot={layout.toolSlot}
+            songId={song.id}
+          />
+          <PlayerToolBar slot={layout.toolSlot} />
+        </view>
       </view>
 
       <PlaylistDrawer />

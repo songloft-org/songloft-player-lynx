@@ -56,8 +56,18 @@ export function PlayerTopBar({
         : <text className='full-player__eyebrow'>{t('player.nowPlaying')}</text>}
 
       <view className='full-player__topbar-end'>
-        {timerLabel
-          ? <text className='full-player__timer-remaining'>{timerLabel}</text>
+        {timerActive
+          ? (
+            /*
+             * Narrow topbars have no room for "Timer: 2h 30min left" — the text
+             * runs into the close button on 320px screens. Wide layouts get the
+             * full label; narrow ones get the moon glyph, which says "timer is
+             * on" and the detail is one tap away in the overflow menu.
+             */
+            isWide
+              ? <text className='full-player__timer-remaining'>{timerLabel}</text>
+              : <text className='full-player__timer-glyph'>🌙</text>
+          )
           : null}
         <PlayerMoreMenu song={song} onOpenSleepTimer={onOpenSleepTimer} timerActive={timerActive} />
       </view>

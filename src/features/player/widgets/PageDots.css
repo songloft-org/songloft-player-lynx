@@ -1,24 +1,32 @@
-/* Page indicator for the cover ↔ lyrics swiper. Sizes match Flutter's 8/6px dots. */
+/* Page indicator for the cover ↔ lyrics swiper.
+ *
+ * The old 6/8px dots were too small to notice on a hi-DPI phone, and the only
+ * hint that a second screen existed was a 2px size jump — easy to miss against
+ * a blurred backdrop. The active dot is now a pill (16×8px) so the indicator
+ * reads as "you can swipe" rather than "a speck moved". Transition smooths the
+ * shape change between frames. */
 
 .page-dots {
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  /* Fixed height so the row does not shift by 2px as the active dot moves. */
-  height: 8px;
+  /* Fixed height so the row does not shift as the active pill moves. */
+  height: 10px;
+  padding: var(--space-1) 0;
 }
 
 .page-dots__dot {
-  width: 6px;
-  height: 6px;
-  margin: 0 var(--space-1);
+  width: 8px;
+  height: 8px;
+  margin: 0 3px;
   border-radius: var(--radius-pill);
   background-color: var(--tertiary-system-fill);
+  transition: width var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out);
 }
 
 .page-dots__dot--active {
-  width: 8px;
-  height: 8px;
+  width: 16px;
   background-color: var(--accent);
 }

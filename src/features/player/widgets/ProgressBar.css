@@ -6,19 +6,6 @@
   margin-bottom: var(--space-3);
 }
 
-.player-progress__preview {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: var(--space-1);
-}
-
-.player-progress__preview-text {
-  font-size: var(--font-title3);
-  font-weight: var(--weight-bold);
-  color: var(--accent);
-}
-
 /* Elapsed · rail · total, on one line (Flutter's `progress_bar.dart` layout). */
 .player-progress__row {
   display: flex;
@@ -27,11 +14,44 @@
   gap: var(--space-2);
 }
 
-.player-progress__slider {
+/* Wrapper that owns the slider's flex weight and anchors the drag tooltip.
+   The tooltip is absolutely positioned inside this box, so it floats above
+   the rail without affecting the row height — the cover never shifts. */
+.player-progress__slider-wrap {
+  position: relative;
   flex: 1;
   /* `min-width: 0` so the rail yields to the two fixed time columns instead of
      overflowing the row. */
   min-width: 0;
+  height: 24px;
+  display: flex;
+  align-items: center;
+}
+
+/* Drag tooltip: a pill that floats above the thumb, tracking its horizontal
+ * position via an inline `left: value * 100%`. `translateX(-50%)` centres it
+ * on the thumb. Apple Music / Spotify / YouTube Music all use this pattern —
+ * it gives spatial feedback ("where in the song am I seeking to?") and costs
+ * zero layout space, so the cover art never jumps. */
+.player-progress__preview {
+  position: absolute;
+  bottom: calc(100% + var(--space-1));
+  transform: translateX(-50%);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  z-index: 1;
+}
+
+.player-progress__preview-text {
+  font-size: var(--font-footnote);
+  font-weight: var(--weight-bold);
+  color: var(--accent-content);
+}
+
+.player-progress__slider {
+  width: 100%;
   height: 24px;
   display: flex;
   align-items: center;
@@ -67,10 +87,10 @@
   width: 14px;
   height: 14px;
   border-radius: var(--radius-pill);
-  /* White, not the accent: the thumb sits on the accent indicator and reads as
-   * a knob on a filled rail. A white knob on accent clears 3:1; an accent knob
-   * would disappear into the indicator it rides. */
-  background-color: #ffffff;
+  /* On-accent surface: the thumb sits on the accent indicator and reads as a
+   * knob on a filled rail. `--accent-content` is white on blue in light and
+   * white on blue in dark — always clears 3:1 against the indicator. */
+  background-color: var(--accent-content);
   box-shadow: var(--shadow-sm);
 }
 

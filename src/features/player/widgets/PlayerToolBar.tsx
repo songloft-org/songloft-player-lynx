@@ -1,8 +1,6 @@
 import { useState } from '@lynx-js/react'
-import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
 import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
@@ -27,7 +25,6 @@ export interface PlayerToolBarProps {
  */
 export function PlayerToolBar({ slot }: PlayerToolBarProps) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const speed = usePlayerStore((s) => s.speed)
   const [showSpeed, setShowSpeed] = useState(false)
 
@@ -41,21 +38,6 @@ export function PlayerToolBar({ slot }: PlayerToolBarProps) {
 
   return (
     <view className='player-tools'>
-      {/* No DLNA module (Web, or a build without it) ⇒ the cast screen could only ever
-          scan forever, so do not offer the entry at all. */}
-      {getPlatformCapabilities().dlna
-        ? (
-          <view
-            className='player-tools__btn'
-            style={box}
-            bindtap={() => void navigate({ to: '/player/dlna' })}
-            data-testid='full-player-dlna'
-          >
-            <Icon name='cast' size={20} color={ICON_COLORS.content} />
-          </view>
-        )
-        : null}
-
       <VolumePopover slot={slot} />
 
       <PopoverMenu

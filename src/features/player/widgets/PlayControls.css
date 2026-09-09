@@ -53,6 +53,17 @@
   font-size: var(--font-title1);
 }
 
+/* Buffering ellipsis: a soft pulse conveys "loading" instead of a static freeze.
+ * Duration ≈ 4× --duration-slow (350ms × 4 = 1.4s, close to the original 1.2s). */
+.player-controls__glyph--buffering {
+  animation: buffer-pulse calc(var(--duration-slow) * 4) var(--ease-default) infinite;
+}
+
+@keyframes buffer-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
 /* Inner box of the mode trigger, carrying the inline slot size: the trigger wrapper's
    style attribute belongs to lynx-ui, so it cannot take it. */
 .player-controls__mode-hit {
@@ -66,4 +77,17 @@
   color: var(--secondary-label);
   font-size: var(--font-caption2);
   margin-top: var(--space-half);
+}
+
+/* Favorite heart: a bounce on toggle gives tactile feedback (Apple Music style). */
+@keyframes heart-bounce {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.3); }
+  50% { transform: scale(0.9); }
+  70% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.player-controls__heart {
+  animation: heart-bounce var(--duration-normal) var(--ease-spring);
 }

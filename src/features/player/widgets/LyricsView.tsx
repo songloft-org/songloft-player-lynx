@@ -1,5 +1,5 @@
-import { useEffect, useRef } from '@lynx-js/react'
-import type { NodesRef } from '@lynx-js/types'
+import { useCallback, useEffect, useRef, useState } from '@lynx-js/react'
+import type { NodesRef, ScrollEvent } from '@lynx-js/types'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 
@@ -135,6 +135,23 @@ export function LyricsView() {
 
   const activeLineRef = useRef<NodesRef>(null)
 
+  /*
+   * "Back to current line" button.
+   *
+   * Auto-scroll centres the active line when `currentIndex` changes, but a user
+   * scrolling ahead or behind loses it in the viewport. The button surfaces only
+   * when the scroll position has drifted more than `DRIFT_PX` from the last
+   * auto-scroll position — enough to have moved the current line off-screen,
+   * not so little that it flickers on every finger twitch.
+   *
+   * `lastAutoScrollTop` is a ref (not state): it is write-mostly and only read
+   * inside the scroll callback, so re-rendering on every write would be waste.
+   * `userScrolled` is state because it drives the button's visibility.
+   */
+  const DRIFT_PX = 150
+  const [userScrolled, setUserScrolled] = useState(false)
+  const lastAutoScrollTopRef = useRef(0)
+
   useEffect(() => {
     if (currentIndex >= 0 && activeLineRef.current) {
       try {
@@ -151,6 +168,40 @@ export function LyricsView() {
           .exec()
       } catch (_) { /* no-op in test env */ }
     }
+    // The auto-scroll is about to land; reset the drift anchor so the next
+    // scroll callback measures from the new position. A small delay would be
+    // more precise, but smooth scroll finishes within `--duration-normal` and
+    // the next scroll event will just re-anchor.
+    setUserScrolled(false)
+  }, [currentIndex])
+
+  const handleScroll = useCallback((e: ScrollEvent) => {
+    const top = e.detail.scrollTop
+    // Anchor the first scroll after an auto-scroll: we don't know the final
+    // position until the smooth animation lands, so keep updating the anchor
+    // while the user hasn't drifted yet.
+    if (!userScrolled) {
+      lastAutoScrollTopRef.current = top
+    }
+    const drift = Math.abs(top - lastAutoScrollTopRef.current)
+    if (drift > DRIFT_PX && !userScrolled) setUserScrolled(true)
+    else if (drift <= DRIFT_PX && userScrolled) setUserScrolled(false)
+  }, [userScrolled])
+
+  const scrollToCurrent = useCallback(() => {
+    if (currentIndex >= 0 && activeLineRef.current) {
+      try {
+        activeLineRef.current
+          .invoke({
+            method: 'scrollIntoView',
+            params: {
+              scrollIntoViewOptions: { block: 'center', behavior: 'smooth' },
+            },
+          })
+          .exec()
+      } catch (_) { /* no-op in test env */ }
+    }
+    setUserScrolled(false)
   }, [currentIndex])
 
   return (
@@ -180,7 +231,7 @@ export function LyricsView() {
           </view>
         )
         : null}
-    <scroll-view className='player-lyrics' scroll-y>
+    <scroll-view className='player-lyrics' scroll-y bindscroll={handleScroll}>
       <view className='player-lyrics__inner'>
         {lyrics.map((line, index) => {
           const active = index === currentIndex
@@ -239,6 +290,17 @@ export function LyricsView() {
         })}
       </view>
     </scroll-view>
+      {userScrolled && currentIndex >= 0
+        ? (
+          <view
+            className='player-lyrics__back-to-current'
+            bindtap={scrollToCurrent}
+            data-testid='lyrics-back-to-current'
+          >
+            <Icon name='arrow-down' size={16} color={ICON_COLORS.content} />
+          </view>
+        )
+        : null}
     </view>
   )
 }

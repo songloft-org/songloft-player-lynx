@@ -44,11 +44,15 @@ function FavoriteButton({ songId, slot }: { songId: number, slot: number }) {
       // will do.
       aria-label={isFavorite ? t('player.unfavorite') : t('player.favorite')}
     >
-      <Icon
-        name={isFavorite ? 'heart-filled' : 'heart'}
-        size={22}
-        color={isFavorite ? ICON_COLORS.primary : ICON_COLORS.content}
-      />
+      {/* `key` flips on toggle so the wrapper remounts and the bounce animation
+          replays from frame 0 — CSS animations do not restart on a class change. */}
+      <view key={isFavorite ? 'filled' : 'empty'} className='player-controls__heart'>
+        <Icon
+          name={isFavorite ? 'heart-filled' : 'heart'}
+          size={22}
+          color={isFavorite ? ICON_COLORS.primary : ICON_COLORS.content}
+        />
+      </view>
     </view>
   )
 }
@@ -147,7 +151,11 @@ export function PlayControls({ playBtn, playRadius, slot, songId }: PlayControls
           bindtap={() => usePlayerStore.getState().togglePlay()}
         >
           {isBuffering
-            ? <text className='player-controls__glyph player-controls__glyph--primary'>…</text>
+            ? (
+              <text className='player-controls__glyph player-controls__glyph--primary player-controls__glyph--buffering'>
+                …
+              </text>
+            )
             : (
               <Icon
                 name={isPlaying ? 'pause' : 'play'}

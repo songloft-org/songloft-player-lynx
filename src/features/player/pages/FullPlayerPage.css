@@ -57,6 +57,27 @@
   animation: fullPlayerEnter var(--duration-normal) var(--ease-out);
 }
 
+/* Staggered entry: the page animates as one (above), then each section below
+ * fades in with an increasing delay — cover first, then title, then controls.
+ * `fill-mode: backwards` holds opacity at the `from` value during the delay so
+ * the elements don't flash visible before their animation starts. */
+.full-player__stage--enter {
+  animation: fullPlayerEnter var(--duration-normal) var(--ease-out) backwards;
+}
+
+.full-player__meta--enter {
+  /* Stagger delay ≈ ⅓ of --duration-slow (350ms / 3 ≈ 117ms). Close enough
+     to the original 80ms target, and token-compliant. */
+  animation: fullPlayerEnter var(--duration-normal) var(--ease-out) calc(var(--duration-slow) / 3) backwards;
+}
+
+.full-player__controls-enter {
+  display: flex;
+  flex-direction: column;
+  /* Stagger delay ≈ ⅔ of --duration-slow (350ms * 2 / 3 ≈ 233ms). */
+  animation: fullPlayerEnter var(--duration-normal) var(--ease-out) calc(var(--duration-slow) * 2 / 3) backwards;
+}
+
 /* Empty state */
 .full-player--empty {
   align-items: center;
@@ -80,6 +101,17 @@
   padding: var(--space-3) var(--space-5);
   border-radius: var(--radius-pill);
   background-color: var(--accent);
+}
+
+.full-player__empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  border-radius: var(--radius-pill);
+  background-color: var(--secondary-system-background);
+  margin-bottom: var(--space-4);
 }
 
 .full-player__empty-btn-text {
@@ -222,18 +254,23 @@
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);
-  width: var(--tap-target);
+  min-width: var(--tap-target);
   height: var(--tap-target);
+  padding: 0 var(--space-2);
   border-radius: var(--radius-pill);
   background-color: var(--backdrop);
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
+  gap: var(--space-half);
 }
 
 .full-player__video-badge-text {
   color: var(--label);
-  font-size: var(--font-footnote);
+  font-size: var(--font-caption1);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.5px;
 }
 
 /* Why the picture could not be shown (no video track, or no host support). */
@@ -275,11 +312,11 @@
   text-align: center;
 }
 
-/* Apple Music form: the artist reads in the accent (regular weight, one step
- * below the title's size — title2 — rather than a smaller callout), so the
- * artist is a tappable link to the artist page, not dim secondary text. */
+/* Apple Music form: the artist sits one step below the title's size (title2)
+ * in regular weight. Rendered in secondary label colour — it is not currently
+ * a tappable link, so accent colour would mislead. */
 .full-player__artist {
-  color: var(--accent);
+  color: var(--secondary-label);
   font-size: var(--font-title2);
   font-weight: var(--weight-regular);
   margin-top: var(--space-1);
@@ -290,6 +327,13 @@
 .full-player__timer-remaining {
   color: var(--accent);
   font-size: var(--font-caption1);
+  margin-right: var(--space-1);
+}
+
+/* Narrow-screen timer indicator: just the moon glyph, the label would
+   overflow on 320px viewports. Detail is one tap away in the overflow menu. */
+.full-player__timer-glyph {
+  font-size: var(--font-body);
   margin-right: var(--space-1);
 }
 

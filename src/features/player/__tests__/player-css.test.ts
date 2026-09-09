@@ -30,12 +30,12 @@ const MINI = css('features/player/widgets/MiniPlayer.css')
 test('the full-player cover and meta moved to Apple Music form', () => {
   expect(ruleFor(FULL, '.full-player__cover')).toMatch(/border-radius:\s*var\(--radius-md\)/)
   expect(ruleFor(FULL, '.full-player__cover-img')).toMatch(/border-radius:\s*var\(--radius-md\)/)
-  // Title down to title2; artist UP to title2 regular + accent (a link, not dim).
+  // Title down to title2; artist in secondary-label (not accent — it is not a link).
   expect(ruleFor(FULL, '.full-player__title')).toMatch(/font-size:\s*var\(--font-title2\)/)
   const artist = ruleFor(FULL, '.full-player__artist')
   expect(artist).toMatch(/font-size:\s*var\(--font-title2\)/)
   expect(artist).toMatch(/font-weight:\s*var\(--weight-regular\)/)
-  expect(artist).toMatch(/color:\s*var\(--accent\)/)
+  expect(artist).toMatch(/color:\s*var\(--secondary-label\)/)
   // Album & eyebrow: footnote / caption1, semibold (not bold) eyebrow.
   expect(ruleFor(FULL, '.full-player__album')).toMatch(/font-size:\s*var\(--font-footnote\)/)
   expect(ruleFor(FULL, '.full-player__eyebrow')).toMatch(/font-weight:\s*var\(--weight-semibold\)/)
@@ -47,7 +47,7 @@ test('the video badge / note geometry is tokenized, not hardcoded', () => {
     expect(body, `${sel} no hardcoded 8px`).not.toMatch(/:\s*8px/)
   }
   expect(ruleFor(FULL, '.full-player__video-badge-text')).toMatch(
-    /font-size:\s*var\(--font-footnote\)/,
+    /font-size:\s*var\(--font-caption1\)/,
   )
   expect(ruleFor(FULL, '.full-player__video-note')).toMatch(
     /font-size:\s*var\(--font-caption1\)/,
@@ -65,8 +65,8 @@ test('the progress rail + thumb use the Apple fills, the thumb white', () => {
   expect(ruleFor(PROG, '.player-progress__track')).toMatch(
     /background-color:\s*var\(--tertiary-system-fill\)/,
   )
-  // Thumb is white on the accent indicator (a knob, not accent-on-accent).
-  expect(ruleFor(PROG, '.player-progress__thumb')).toMatch(/background-color:\s*#ffffff/)
+  // Thumb uses accent-content token: white on accent indicator in both themes.
+  expect(ruleFor(PROG, '.player-progress__thumb')).toMatch(/background-color:\s*var\(--accent-content\)/)
   expect(ruleFor(PROG, '.player-progress__thumb')).toMatch(/box-shadow:\s*var\(--shadow-sm\)/)
   // The played indicator rides the accent.
   expect(ruleFor(PROG, '.player-progress__indicator')).toMatch(/background-color:\s*var\(--accent\)/)
