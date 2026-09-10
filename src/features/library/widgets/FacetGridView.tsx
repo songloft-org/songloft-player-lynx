@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
 
 import type { SongFacet } from '../../../models/song.js'
+import { useScrollNotifier } from '../../../shared/nav/scroll-visibility.js'
 import { flattenFacets } from '../data/pagination.js'
 import { useDebounce } from '../data/use-debounce.js'
 import { useFacetsInfiniteQuery } from '../data/songs-query.js'
@@ -36,6 +37,7 @@ export interface FacetGridViewProps {
  */
 export function FacetGridView({ field, viewMode = 'grid' }: FacetGridViewProps) {
   const navigate = useNavigate()
+  const { onScroll: onScrollEdge } = useScrollNotifier()
   const { t } = useTranslation()
   const [searchText, setSearchText] = useState('')
   const keyword = useDebounce(searchText, DEBOUNCE_MS).trim()
@@ -94,6 +96,7 @@ export function FacetGridView({ field, viewMode = 'grid' }: FacetGridViewProps) 
                 className='library__grid-scroll'
                 scroll-y
                 lower-threshold={200}
+                bindscroll={onScrollEdge}
                 bindscrolltolower={() => {
                   if (query.hasNextPage && !query.isFetchingNextPage) {
                     void query.fetchNextPage()

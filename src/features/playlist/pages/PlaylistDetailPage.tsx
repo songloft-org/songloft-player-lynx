@@ -10,6 +10,7 @@ import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
+import { useScrollNotifier } from '../../../shared/nav/scroll-visibility.js'
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
 import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
 import { toast } from '../../../shared/ui/toast-store.js'
@@ -41,6 +42,7 @@ import './PlaylistDetailPage.css'
 
 export function PlaylistDetailPage() {
   const navigate = useNavigate()
+  const { onScroll: onScrollEdge } = useScrollNotifier()
   const { t } = useTranslation()
   const params = useParams({ strict: false }) as { id?: string }
   const id = Number(params.id ?? 0) || 0
@@ -445,6 +447,7 @@ export function PlaylistDetailPage() {
               className='playlist-detail__sort-scroll'
               scroll-y
               lower-threshold={200}
+              bindscroll={onScrollEdge}
               bindscrolltolower={onEndReached}
             >
               <SortableRoot
@@ -498,6 +501,7 @@ export function PlaylistDetailPage() {
                   className='playlist-detail__list'
                   items={songs}
                   itemKey={(song) => String(song.id)}
+                  onScroll={onScrollEdge}
                   renderItem={(song, index) => (
                     <view className={selectMode && selected.has(song.id) ? 'playlist-detail__song-row-wrapper playlist-detail__song-row-wrapper--selected' : 'playlist-detail__song-row-wrapper'}>
                       {selectMode

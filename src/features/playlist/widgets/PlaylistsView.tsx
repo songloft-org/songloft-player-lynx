@@ -9,6 +9,7 @@ import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
+import { useScrollNotifier } from '../../../shared/nav/scroll-visibility.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import { playlistContext } from '../../player/domain/playback-context.js'
 import { getPlaylistApi } from '../api/index.js'
@@ -44,6 +45,7 @@ export function PlaylistsView(
   } = {},
 ) {
   const navigate = useNavigate()
+  const { onScroll: onScrollEdge } = useScrollNotifier()
   const { t } = useTranslation()
   const [searchText, setSearchText] = useState('')
   const debouncedSearch = useDebounce(searchText, 350)
@@ -423,6 +425,7 @@ export function PlaylistsView(
         className='playlists__scroll'
         scroll-y
         lower-threshold={200}
+        bindscroll={onScrollEdge}
         bindscrolltolower={() => {
           if (query.hasNextPage && !query.isFetchingNextPage) {
             void query.fetchNextPage()

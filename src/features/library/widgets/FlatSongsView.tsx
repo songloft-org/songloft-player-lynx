@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
 
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
+import { useScrollNotifier } from '../../../shared/nav/scroll-visibility.js'
 import type { Song } from '../../../models/song.js'
 import { getSongsApi, type SongsFilters } from '../api/index.js'
 import { flattenSongs } from '../data/pagination.js'
@@ -44,6 +45,7 @@ export interface FlatSongsViewProps {
 export function FlatSongsView({ type, sortId, sortOrder, onSortChange, isWide }: FlatSongsViewProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { onScroll: onScrollEdge } = useScrollNotifier()
   const [searchText, setSearchText] = useState('')
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -269,6 +271,7 @@ export function FlatSongsView({ type, sortId, sortOrder, onSortChange, isWide }:
                 className='library__list'
                 items={songs}
                 itemKey={(song) => String(song.id)}
+                onScroll={onScrollEdge}
                 renderItem={(song, index) => (
                   <view className={selectMode && selected.has(song.id) ? 'library__select-row library__select-row--selected' : 'library__select-row'}>
                     {selectMode

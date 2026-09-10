@@ -32,7 +32,20 @@
     inset 0 1px 0 var(--glass-highlight),
     var(--glass-rim-sides),
     inset 0 -1px 0 var(--separator);
+  /* See `.shell--scrolled` in ShellLayout.css: the drop shadow is the one
+     channel the scroll-edge effect animates, on the base rule so the exit
+     animates too. Fill and blur are never animated (HIG §10). */
+  transition: box-shadow var(--duration-normal) var(--ease-default);
   overflow: hidden;
+}
+
+/* Scroll-edge: deeper shadow when content rolls under the capsule. Only the
+   drop shadow grows; the inset rim stack repeats verbatim so the sheen stays. */
+.shell--narrow.shell--scrolled .mini-player {
+  box-shadow: var(--shadow-lg),
+    inset 0 1px 0 var(--glass-highlight),
+    var(--glass-rim-sides),
+    inset 0 -1px 0 var(--separator);
 }
 
 /* Narrow: fixed floating layer — 80px = nav capsule (64) + bottom offset (8)

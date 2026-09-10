@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
 
 import type { SongTag } from '../../../models/song-tag.js'
+import { useScrollNotifier } from '../../../shared/nav/scroll-visibility.js'
 import { useDebounce } from '../data/use-debounce.js'
 import { flattenTags, useTagListInfiniteQuery } from '../data/song-tags-query.js'
 import { getSongsApi } from '../api/index.js'
@@ -27,6 +28,7 @@ export interface TagGridViewProps {
 
 export function TagGridView({ viewMode = 'grid' }: TagGridViewProps) {
   const navigate = useNavigate()
+  const { onScroll: onScrollEdge } = useScrollNotifier()
   const { t } = useTranslation()
   const [searchText, setSearchText] = useState('')
   const keyword = useDebounce(searchText, DEBOUNCE_MS).trim()
@@ -83,6 +85,7 @@ export function TagGridView({ viewMode = 'grid' }: TagGridViewProps) {
                 className='library__grid-scroll'
                 scroll-y
                 lower-threshold={200}
+                bindscroll={onScrollEdge}
                 bindscrolltolower={() => {
                   if (query.hasNextPage && !query.isFetchingNextPage) {
                     void query.fetchNextPage()

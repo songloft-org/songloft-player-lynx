@@ -1,4 +1,5 @@
 import type { ReactNode } from '@lynx-js/react'
+import type { ScrollEvent } from '@lynx-js/types'
 
 /**
  * Thin wrapper over the native Lynx `<list>` element (virtualized scrolling +
@@ -20,6 +21,8 @@ export interface VirtualListProps<T> {
   renderItem: (item: T, index: number) => ReactNode
   /** Fired when the list scrolls near the bottom (load-more). */
   onEndReached?: () => void
+  /** Fired on every scroll; used to feed the cross-layer scroll-edge signal. */
+  onScroll?: (event: ScrollEvent) => void
   /** Optional trailing element (e.g. a "loading more…" footer). */
   footer?: ReactNode
   className?: string
@@ -32,6 +35,7 @@ export function VirtualList<T>({
   itemKey,
   renderItem,
   onEndReached,
+  onScroll,
   footer,
   className,
   lowerThreshold = 200,
@@ -42,6 +46,7 @@ export function VirtualList<T>({
       scroll-y
       lower-threshold={lowerThreshold}
       bindscrolltolower={onEndReached}
+      bindscroll={onScroll}
     >
       {items.map((item, index) => (
         <list-item

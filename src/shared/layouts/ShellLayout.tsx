@@ -20,6 +20,7 @@ import {
 } from '../nav/destinations.js'
 import { MoreTabsSheet } from '../nav/MoreTabsSheet.js'
 import { activeNavPath, getShellWidth, setLastShellLocation, setNavPaths, setShellWidth, showsMiniPlayer, subscribeShellWidth } from '../nav/shell-navigation.js'
+import { getIsScrolled, subscribeIsScrolled } from '../nav/scroll-visibility.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import { BackdropBlur } from '../ui/BackdropBlur.js'
 import { Icon, activeAccentIconColor, ICON_COLORS } from '../ui/Icon.js'
@@ -50,6 +51,11 @@ export function ShellLayout() {
   // Same pattern as `LibraryLayout` (see its anti-flash comment). Cold start:
   // cache is 0 → behaves exactly as before (narrow first frame).
   const cachedWidth = useSyncExternalStore(subscribeShellWidth, getShellWidth)
+  // Scroll-edge signal: a page scrolled past its top deepens the floating
+  // capsule's shadow (see `.shell--scrolled` in `ShellLayout.css`). Lives in a
+  // cross-layer store because the scroller is in the page the shell renders via
+  // `<Outlet />`, not a child the shell can reach through props.
+  const scrolled = useSyncExternalStore(subscribeIsScrolled, getIsScrolled)
   const { width, breakpoint, isWide, onLayoutChange } = useBreakpoint(cachedWidth, '.shell')
   const pathname = useRouterState({ select: s => s.location.pathname })
   const shellTabs = useShellNavTabs()
@@ -201,7 +207,7 @@ export function ShellLayout() {
     <view
       className={isWide
         ? 'shell shell--wide'
-        : `shell shell--narrow${withMini ? ' shell--with-mini' : ''}`}
+        : `shell shell--narrow${withMini ? ' shell--with-mini' : ''}${scrolled ? ' shell--scrolled' : ''}`}
       data-testid='shell-root'
       bindlayoutchange={onLayoutChange}
       data-breakpoint={breakpoint}

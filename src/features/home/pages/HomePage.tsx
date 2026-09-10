@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 
 import { isWebPlatform } from '../../../native/web-platform.js'
 import { useShellSeededBreakpoint } from '../../../shared/responsive/use-shell-seeded-breakpoint.js'
+import { useScrollNotifier } from '../../../shared/nav/scroll-visibility.js'
 
 import { EMPTY_LIBRARY_STATS } from '../../../models/library-stats.js'
 import type { Playlist } from '../../../models/playlist.js'
@@ -103,6 +104,9 @@ export function HomePage() {
     }
   }
   const refreshRef = useRef<NodesRef>(null)
+  // Scroll-edge: report the page's scroll to the cross-layer signal so the
+  // floating capsule deepens its shadow when content rolls under it.
+  const { onScroll: onScrollEdge } = useScrollNotifier()
   // Platform, not realm: this render runs on the background thread, which on Web
   // is a worker with no `window`/`document` (see `isWebPlatform`).
   const isWeb = isWebPlatform()
@@ -113,7 +117,7 @@ export function HomePage() {
   }
 
   const scroller = (
-    <scroll-view className='home__scroll' scroll-y enable-nested-scroll={true}>
+    <scroll-view className='home__scroll' scroll-y enable-nested-scroll={true} bindscroll={onScrollEdge}>
       <view className='home__content'>
         {isFirstLoad
           ? loadingSlow

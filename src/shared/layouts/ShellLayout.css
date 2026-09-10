@@ -180,7 +180,26 @@
     inset 0 1px 0 var(--glass-highlight),
     var(--glass-rim-sides),
     inset 0 -1px 0 var(--separator);
+  /* The shadow is the one property the scroll-edge effect animates (see
+     `.shell--scrolled` below), so it carries the transition on the base rule —
+     the entry and the exit both animate. The blur and the fill never animate
+     (HIG §10); only the drop shadow's weight changes. */
+  transition: box-shadow var(--duration-normal) var(--ease-default);
   z-index: 90;
+}
+
+/* Scroll-edge: when the page is scrolled past its top, the floating capsule
+   deepens its shadow so the glass reads as sitting closer to the content —
+   Apple's scroll-edge treatment for a floating bar. The fill is unchanged: on
+   iOS the native material responds on its own, and on the other platforms
+   raising alpha would re-open the contrast budget the surface was tuned
+   against. Only the drop shadow grows; the inset rim stack is repeated verbatim
+   so the edge sheen does not blink off during the transition. */
+.shell--narrow.shell--scrolled .shell__bottombar {
+  box-shadow: var(--shadow-lg),
+    inset 0 1px 0 var(--glass-highlight),
+    var(--glass-rim-sides),
+    inset 0 -1px 0 var(--separator);
 }
 
 /* Tab slot: a pure hit area. All visuals moved onto the pill inside — narrow
