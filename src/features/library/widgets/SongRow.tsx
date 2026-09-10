@@ -55,7 +55,7 @@ export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleF
   return (
     <view className={`song-row${isCurrentSong ? ' song-row--current' : ''}${isSelected ? ' song-row--selected' : ''}`} bindtap={() => onTap?.(song, index)} bindlongpress={() => onLongPress?.(song)}>
       {cover
-        ? <image className='song-row__cover' src={cover} />
+        ? <image className='song-row__cover' mode='aspectFill' src={cover} />
         : <view className='song-row__cover song-row__cover--empty' />}
       <view className='song-row__content'>
         {isWide

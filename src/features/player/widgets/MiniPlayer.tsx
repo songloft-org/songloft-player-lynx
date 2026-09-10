@@ -43,7 +43,7 @@ export function MiniPlayer() {
       </view>
       <view className='mini-player__row'>
         {cover
-          ? <image className='mini-player__cover' src={cover} />
+          ? <image className='mini-player__cover' mode='aspectFill' src={cover} />
           : <view className='mini-player__cover mini-player__cover--empty' />}
         <view className='mini-player__meta'>
           <text className='mini-player__title'>{song.title}</text>

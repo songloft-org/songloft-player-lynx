@@ -96,7 +96,7 @@ export function TagSongsPage() {
       </view>
       <view className='category-songs__hero'>
         {cover
-          ? <image className='category-songs__cover' src={cover} />
+          ? <image className='category-songs__cover' mode='aspectFill' src={cover} />
           : (
             <view className='category-songs__cover category-songs__cover--empty'>
               <Icon name='label' size={40} color={ICON_COLORS.contentMuted} />

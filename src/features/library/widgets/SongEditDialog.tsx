@@ -411,7 +411,7 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
                     ? (
                       <view className='song-edit__preview'>
                         <text className='song-edit__label'>{t('songEdit.coverPreview')}</text>
-                        <image className='song-edit__preview-img' src={cover} />
+                        <image className='song-edit__preview-img' mode='aspectFill' src={cover} />
                       </view>
                     )
                     : null}

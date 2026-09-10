@@ -158,7 +158,7 @@ export function SongInfoDialog({ show, song, onClose, onEdit }: SongInfoDialogPr
             >
               <view className='song-info-dialog__header'>
                 {cover
-                  ? <image className='song-info-dialog__cover' src={cover} />
+                  ? <image className='song-info-dialog__cover' mode='aspectFill' src={cover} />
                   : (
                     <view className='song-info-dialog__cover song-info-dialog__cover--empty'>
                       <Icon name='music' size={22} color={ICON_COLORS.contentMuted} />
