@@ -60,6 +60,10 @@ export function FolderGridView({ viewMode = 'grid' }: FolderGridViewProps) {
     })
   }
 
+  const goToSettings = () => {
+    navigate({ to: '/settings' })
+  }
+
   return (
     <view className='library__facets'>
       <view className='library__search-bar'>
@@ -85,6 +89,8 @@ export function FolderGridView({ viewMode = 'grid' }: FolderGridViewProps) {
                       ? t('library.noFolderMatch')
                       : t('library.noFolders')
                 }
+                actionLabel={data && !data.musicPath ? t('library.configureMusicPath') : undefined}
+                onAction={data && !data.musicPath ? goToSettings : undefined}
               />
             )
             : (

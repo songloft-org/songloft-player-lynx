@@ -13,8 +13,6 @@
 .library-rail {
   width: 220px;
   height: 100%;
-  /* Sidebar material, same as the shell rail — the whole navigation stack is
-     one surface; the shell rail's border-right hairline is the only seam. */
   background-color: var(--secondary-system-background);
   border-right: 1px solid var(--separator);
 }
@@ -23,10 +21,6 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  /* Top inset mirrors the shell rail's (`--space-4` + safe area), so the
-     first group header lines up with the brand row in the adjacent column.
-     Plain lengths in the calc — see the `--nav-inset` note in ShellLayout.css
-     for why nested custom properties are avoided on iOS. */
   padding: calc(var(--space-4) + var(--safe-top)) var(--space-4) var(--space-4);
 }
 
@@ -35,9 +29,7 @@
   flex-direction: column;
 }
 
-/* Section header — the shell rail's "插件" header idiom, not hairline
-   dividers: one grouping language across both columns. Horizontal margin
-   matches the shell's so header text and row glyphs share a left inset. */
+/* Section header — the shell rail's "插件" header idiom. */
 .library-rail__group-header {
   color: var(--secondary-label);
   font-size: var(--font-footnote);
@@ -48,8 +40,7 @@
   margin-top: var(--space-4);
 }
 
-/* Row — same metrics as the shell's wide nav rows: 44px minimum height,
-   iPadOS-sidebar spacing (4px between selection rects), `--radius-md`. */
+/* Row — same metrics as the shell's wide nav rows. */
 .library-rail__row {
   display: flex;
   flex-direction: row;
@@ -60,15 +51,19 @@
   border-radius: var(--radius-md);
 }
 
-/* Selection — the shell's wide-rail idiom: neutral gray5 rounded rect, with
-   the accent carried by the icon (activeAccentIconColor in the TSX) and the
-   label below. Colour-only, so rows do not shift when selection moves. */
+/* Active row — neutral grey rounded rect (iPadOS sidebar idiom) *plus* a 3px
+   accent inset bar on the left. `--system-gray5` on `--secondary-system-background`
+   is ~1.05:1 in light mode (deliberately subtle), so the bar is the primary
+   selection signal and the fill is the secondary one. Colour-only selection
+   (no size change), so active rows don't shift the layout. */
 .library-rail__row--active {
   background-color: var(--system-gray5);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
+/* Label — must satisfy WCAG AA (≥4.5:1) at --font-subhead (~15px). */
 .library-rail__label {
-  color: var(--secondary-label);
+  color: var(--label);
   font-size: var(--font-subhead);
   margin-left: var(--space-3);
 }

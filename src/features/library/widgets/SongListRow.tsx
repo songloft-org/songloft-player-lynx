@@ -21,13 +21,6 @@ export interface SongListRowProps {
   /** This row is one of the selected ones — see `SongRowProps.isSelected`. */
   isSelected?: boolean
   /**
-   * Wide screens only: show the destructive "delete from library" shortcut in
-   * the row tail. The playlist detail page passes `false` because its rows
-   * already carry a dedicated "remove from this playlist" button and stacking
-   * both deletes would be ambiguous.
-   */
-  showDeleteAction?: boolean
-  /**
    * Forwarded to the row's subtitle tail — see `SongRowProps.subtitleSuffix`.
    * The play-history panel uses it for the entry's played-at time.
    */
@@ -48,27 +41,16 @@ export interface SongListRowProps {
  * `SongListTile`.
  *
  * Wraps the plain `SongRow` with the favorite hook (absorbing the old
- * `FavoriteSongRow`), and forwards the row's menu / delete / detail intents to
+ * `FavoriteSongRow`), and forwards the row's menu / add-to-playlist intents to
  * the global overlays (`SongRowOverlays` in the root route). The overlays cannot
  * render here: this row lives inside a virtualized `<list-item>`, whose paint
  * containment clips and re-anchors any `position: fixed` child — see
  * `song-row-overlays.ts`.
  *
- * Because of that, anchoring the menu to the `⋯` button is this row's job: it
- * measures the button on tap and sends the rect along with the song, since the menu
- * renders in a subtree that cannot see the row. Measured **on tap** rather than on
- * mount — rows recycle and lists scroll, so a mount-time rect would be stale (see
- * `useTapAnchor`). If the host cannot measure, the menu docks to the bottom instead
- * of not opening.
- *
  * Responsive: narrow rows end with a single `more` button (plus the favorite
  * heart and long-press as the other entry points); wide rows (>= tablet, per
- * `useLibraryViewport`) additionally flatten the high-frequency actions —
- * detail, add-to-playlist, delete — into icon buttons in the row tail, and the
- * `⋯` menu prunes those same actions (see `buildSongMenuItems`): on a wide row
- * it carries only play/edit — plus delete where this row renders no delete
- * shortcut (`showDeleteAction=false`, e.g. the playlist detail page whose
- * row-tail × removes from the playlist, not the library).
+ * `useLibraryViewport`) additionally show the high-frequency "add to playlist"
+ * shortcut — detail, delete, and other actions stay in the `⋯` menu.
  */
 export function SongListRow({
   song,
@@ -76,41 +58,27 @@ export function SongListRow({
   onTap,
   selectionMode = false,
   isSelected = false,
-  showDeleteAction = true,
   subtitleSuffix,
   onOpenMenu,
 }: SongListRowProps) {
   const openMenu = useSongRowOverlays((s) => s.openMenu)
-  const openInfo = useSongRowOverlays((s) => s.openInfo)
   const openAddToPlaylist = useSongRowOverlays((s) => s.openAddToPlaylist)
-  const requestDelete = useSongRowOverlays((s) => s.requestDelete)
   const { anchorId, measure } = useTapAnchor()
   const { isWide } = useLibraryViewport()
   const { isFavorite, toggle } = useFavoriteToggle(song.id)
   const currentSongId = usePlayerStore((s) => s.currentSong?.id)
 
-  // Both entry points (the `⋯` button and long-press) anchor on the `⋯` button:
-  // it is the only box in the row the menu can be measured against, and on Web the
-  // button is the *only* entry point anyway (web-core synthesizes no longpress).
-  // `onOpenMenu` redirects both to the caller's own menu when provided. The row
-  // context rides along so the global menu can prune the actions this row's own
-  // tail already exposes — the menu mounts outside `LibraryViewportProvider` and
-  // cannot read `isWide` itself.
+  // Both entry points (the `⋯` button and long-press) anchor on the `⋯` button.
   const openMenuAnchored = (target: Song) => measure((rect) => {
     if (onOpenMenu) onOpenMenu(target, rect)
-    else openMenu({ song: target, anchor: rect, row: { isWide, deleteShortcut: showDeleteAction } })
+    else openMenu({ song: target, anchor: rect, row: { isWide } })
   })
 
+  // Wide rows: one shortcut — "add to playlist" (the highest-frequency action).
+  // Info, delete, and everything else stay in the `⋯` menu.
   const wideActions = !selectionMode && isWide
     ? (
       <view className='song-row__actions'>
-        <view
-          className='song-row__action'
-          bindtap={() => openInfo(song)}
-          data-testid='song-row-detail'
-        >
-          <Icon name='info' size={16} color={ICON_COLORS.contentMuted} />
-        </view>
         <view
           className='song-row__action'
           bindtap={() => openAddToPlaylist({ songIds: [song.id] })}
@@ -118,17 +86,6 @@ export function SongListRow({
         >
           <Icon name='music' size={16} color={ICON_COLORS.contentMuted} />
         </view>
-        {showDeleteAction
-          ? (
-            <view
-              className='song-row__action'
-              bindtap={() => requestDelete(song)}
-              data-testid='song-row-delete'
-            >
-              <Icon name='x' size={16} color={ICON_COLORS.danger} />
-            </view>
-          )
-          : null}
       </view>
     )
     : null
@@ -143,6 +100,7 @@ export function SongListRow({
       onToggleFavorite={selectionMode ? undefined : toggle}
       isCurrentSong={currentSongId === song.id}
       isSelected={isSelected}
+      isWide={isWide}
       trailing={wideActions}
       subtitleSuffix={subtitleSuffix}
       onMore={selectionMode ? undefined : openMenuAnchored}

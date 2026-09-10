@@ -2,12 +2,43 @@
  * Narrow-layout view switcher — a horizontal pill strip. LUNA tokens only.
  * The inner row MUST be `width: max-content` or the horizontal scroll-view
  * has nothing to scroll (AGENTS §4).
+ *
+ * Fade masks hint at scrollable content beyond the edges (HIG progressive
+ * disclosure); they sit above the pill strip with `pointer-events: none`.
  */
 
 .library-switcher {
   width: 100%;
   height: 48px;
   border-bottom: 1px solid var(--separator);
+  /* Anchor for fade masks. */
+  position: relative;
+}
+
+/* Left fade mask — gradient from the background colour to transparent. */
+.library-switcher::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  z-index: 1;
+  background: linear-gradient(to right, var(--system-background), transparent);
+  pointer-events: none;
+}
+
+/* Right fade mask. */
+.library-switcher::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  z-index: 1;
+  background: linear-gradient(to left, var(--system-background), transparent);
+  pointer-events: none;
 }
 
 .library-switcher__row {
@@ -43,17 +74,21 @@
   background-color: transparent;
 }
 
+/* Active pill — filled accent background (was outline-only; the switch to fill
+   makes the current view instantly scannable in a strip of 14 pills). */
 .library-switcher__pill--active {
   border-color: var(--accent);
+  background-color: var(--accent);
 }
 
 .library-switcher__pill-text {
-  color: var(--secondary-label);
+  /* Must satisfy WCAG AA (≥4.5:1) at --font-caption1 (~10-12px). */
+  color: var(--label);
   font-size: var(--font-caption1);
   margin-left: var(--space-1);
 }
 
 .library-switcher__pill--active .library-switcher__pill-text {
-  color: var(--accent);
+  color: var(--accent-content);
   font-weight: var(--weight-semibold);
 }

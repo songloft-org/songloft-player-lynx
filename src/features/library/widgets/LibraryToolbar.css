@@ -12,6 +12,10 @@
   gap: var(--space-2);
 }
 
+/*
+ * Secondary buttons — `--tertiary-system-fill` background, neutral label.
+ * Sort / Add / Select share this style.
+ */
 .library-toolbar__btn {
   display: flex;
   flex-direction: row;
@@ -22,25 +26,49 @@
   gap: var(--space-1);
 }
 
-.library-toolbar__btn--active {
+/*
+ * Primary button — accent-filled pill for "play all" (HIG: ≤2 prominent
+ * buttons per view). Uses the same accent background as the app's primary
+ * action style so it reads as the main action in the toolbar.
+ */
+.library-toolbar__btn--primary {
   background-color: var(--accent);
 }
 
 .library-toolbar__btn--disabled {
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
+/* Secondary button label colour — must satisfy WCAG AA (≥4.5:1 at --font-caption1). */
 .library-toolbar__btn-text {
   color: var(--label);
   font-size: var(--font-caption1);
 }
 
-.library-toolbar__btn--active .library-toolbar__btn-text {
+/* Primary button label — accent-content (white on blue), guaranteed high contrast. */
+.library-toolbar__btn-text-primary {
   color: var(--accent-content);
+  font-size: var(--font-caption1);
 }
 
-.library-toolbar__btn--disabled .library-toolbar__btn-text {
+/* Active state — select mode toggle visual distinction. */
+.library-toolbar__btn--active {
+  background-color: var(--accent);
+}
+
+.library-toolbar__btn-text-active {
+  color: var(--accent-content);
+  font-size: var(--font-caption1);
+}
+
+.library-toolbar__btn--disabled .library-toolbar__btn-text,
+.library-toolbar__btn--disabled .library-toolbar__btn-text-primary {
   color: var(--secondary-label);
+}
+
+/* Chevron hint on the sort trigger — small, muted, margin-left via parent gap. */
+.library-toolbar__sort-chevron {
+  margin-left: 0;
 }
 
 .library-toolbar__spacer {

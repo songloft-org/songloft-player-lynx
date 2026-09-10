@@ -58,12 +58,12 @@ test('openMenu records the song and row context, clearing the other overlays', (
   useSongRowOverlays.getState().openAddToPlaylist({ songIds: [song.id] })
   useSongRowOverlays.getState().openMenu({
     song,
-    row: { isWide: true, deleteShortcut: true },
+    row: { isWide: true },
   })
 
   const s = useSongRowOverlays.getState()
   expect(s.menuSong).toBe(song)
-  expect(s.menuRow).toEqual({ isWide: true, deleteShortcut: true })
+  expect(s.menuRow).toEqual({ isWide: true })
   expect(s.addToPlaylistSongIds).toEqual([])
   expect(s.deleteSong).toBeNull()
   expect(s.infoSong).toBeNull()
@@ -78,7 +78,7 @@ test('openMenu without a row context stores null (the full narrow-screen set)', 
 test('closeMenu drops the row context with the song', () => {
   useSongRowOverlays.getState().openMenu({
     song: makeSong(2),
-    row: { isWide: true, deleteShortcut: false },
+    row: { isWide: true },
   })
   useSongRowOverlays.getState().closeMenu()
   expect(useSongRowOverlays.getState().menuSong).toBeNull()
@@ -87,7 +87,7 @@ test('closeMenu drops the row context with the song', () => {
 
 test('openAddToPlaylist records the ids, closing the menu it was chosen from', () => {
   const song = makeSong(2)
-  useSongRowOverlays.getState().openMenu({ song, row: { isWide: false, deleteShortcut: true } })
+  useSongRowOverlays.getState().openMenu({ song, row: { isWide: false } })
   useSongRowOverlays.getState().openAddToPlaylist({ songIds: [song.id] })
 
   const s = useSongRowOverlays.getState()
@@ -209,19 +209,19 @@ const keysOf = (row: Parameters<typeof buildSongMenuItems>[1] | undefined) =>
 
 test('a narrow row (or no row context) keeps all six menu items', () => {
   expect(keysOf(null)).toEqual(['play', 'info', 'edit', 'add', 'manageTags', 'delete'])
-  expect(keysOf({ isWide: false, deleteShortcut: true })).toEqual(['play', 'info', 'edit', 'add', 'manageTags', 'delete'])
+  expect(keysOf({ isWide: false })).toEqual(['play', 'info', 'edit', 'add', 'manageTags', 'delete'])
 })
 
-test('a wide row prunes the actions its own buttons already expose', () => {
-  // The library/category rows: info/add/delete all sit in the row tail, so the
-  // menu keeps only what no button covers — play, edit, and manageTags.
-  expect(keysOf({ isWide: true, deleteShortcut: true })).toEqual(['play', 'edit', 'manageTags'])
+test('a wide row prunes only the add-to-playlist item (the sole row-tail shortcut)', () => {
+  // Wide rows now show only "add to playlist" as a row-tail shortcut.
+  // Info and delete always stay in the ... menu regardless of viewport width.
+  expect(keysOf({ isWide: true })).toEqual(['play', 'info', 'edit', 'manageTags', 'delete'])
 })
 
-test('a wide row without the delete shortcut keeps the menu delete (playlist detail)', () => {
-  // Its tail × removes the song *from the playlist* — a different action — so
-  // the library delete stays reachable from the menu.
-  expect(keysOf({ isWide: true, deleteShortcut: false })).toEqual(['play', 'edit', 'manageTags', 'delete'])
+test('every wide row keeps info and delete in the menu (there is no delete shortcut concept)', () => {
+  // The deleteShortcut field no longer exists. All wide rows have exactly one
+  // shortcut (add-to-playlist), so the menu always carries info and delete.
+  expect(keysOf({ isWide: true })).toEqual(['play', 'info', 'edit', 'manageTags', 'delete'])
 })
 
 test('only the delete item is danger-flagged', () => {

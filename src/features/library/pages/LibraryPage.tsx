@@ -177,6 +177,7 @@ export function LibraryPage() {
         sortId={sortId}
         sortOrder={sortOrder}
         onSortChange={onSortChange}
+        isWide={isWide}
       />
     )
     : group === 'facets'

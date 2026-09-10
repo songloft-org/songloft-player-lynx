@@ -17,13 +17,11 @@ export interface OpenAddToPlaylistParams {
 /**
  * The opening row's viewport/shortcut state, snapshotted at openMenu time —
  * drives which menu items get pruned as duplicates of the row's own buttons.
- * See `buildSongMenuItems` in `SongRowOverlays.tsx`.
+ * See `buildSongMenuItems` in `song-menu-items.ts`.
  */
 export interface SongMenuRowContext {
-  /** Wide viewport: the row tail already renders info/add (maybe delete) shortcut buttons. */
+  /** Wide viewport: the row tail already renders the "add-to-playlist" shortcut button. */
   isWide: boolean
-  /** Whether that tail includes the library-delete shortcut (`SongListRow.showDeleteAction`). */
-  deleteShortcut: boolean
 }
 
 export interface OpenMenuParams {

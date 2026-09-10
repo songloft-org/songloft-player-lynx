@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-sortable'
 
 import type { LibraryBrowseConfig, LibraryBrowseView, LibraryViewKey } from '../../../models/library-browse.js'
+import { LIBRARY_VIEW_KEYS } from '../../../models/library-browse.js'
 import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { useUpdateLibraryBrowseMutation } from '../data/library-browse-query.js'
@@ -69,6 +70,11 @@ export function LibraryViewEditor({ initialConfig, onCancel, onSaved }: LibraryV
     onSaved()
   }
 
+  const resetToDefault = () => {
+    setShowMinOneError(false)
+    setDraft(LIBRARY_VIEW_KEYS.map((key) => ({ key, visible: true })))
+  }
+
   return (
     <view className='library-editor'>
       <view className='library-editor__topbar'>
@@ -76,6 +82,9 @@ export function LibraryViewEditor({ initialConfig, onCancel, onSaved }: LibraryV
           <Icon name='x' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='library-editor__title'>{t('library.customizeViews')}</text>
+        <view className='library-editor__reset' bindtap={resetToDefault} data-testid='library-editor-reset'>
+          <text className='library-editor__reset-text'>{t('library.resetToDefault')}</text>
+        </view>
         <view className='library-editor__save' bindtap={save} data-testid='library-editor-save'>
           <text className='library-editor__save-text'>{t('library.save')}</text>
         </view>

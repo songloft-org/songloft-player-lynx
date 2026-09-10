@@ -21,6 +21,12 @@ export interface SongRowProps {
    */
   isSelected?: boolean
   /**
+   * Wide viewport: renders artist and album as separate text columns
+   * (instead of stacking them under the title in a subtitle line) so they
+   * align with the column headers above the list.
+   */
+  isWide?: boolean
+  /**
    * Row-tail action area (wide-screen shortcut buttons, injected by
    * `SongListRow`). Rendered between the favorite heart and the more button.
    */
@@ -42,7 +48,7 @@ export interface SongRowProps {
   moreAnchorId?: string
 }
 
-export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleFavorite, isCurrentSong, isSelected, trailing, subtitleSuffix, onMore, moreAnchorId }: SongRowProps) {
+export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleFavorite, isCurrentSong, isSelected, isWide, trailing, subtitleSuffix, onMore, moreAnchorId }: SongRowProps) {
   const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
   const subtitle = [song.artist, song.album, subtitleSuffix].filter(Boolean).join(' · ')
 
@@ -51,19 +57,34 @@ export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleF
       {cover
         ? <image className='song-row__cover' src={cover} />
         : <view className='song-row__cover song-row__cover--empty' />}
-      {/* `__content` carries the inset separator (border-bottom), so it must wrap
-          everything to the right of the cover — the cover stays a sibling so the
-          separator begins at its right edge. See SongRow.css. */}
       <view className='song-row__content'>
-        <view className='song-row__meta'>
-          <view className='song-row__title-row'>
-            <text className='song-row__title'>{song.title}</text>
-            {song.isVideo ? <text className='song-row__video-badge'>▶</text> : null}
-          </view>
-          {subtitle
-            ? <text className='song-row__subtitle'>{subtitle}</text>
-            : null}
-        </view>
+        {isWide
+          ? (
+            /* Wide: title / artist / album as separate columns that align with
+               the column headers above the list. */
+            <>
+              <view className='song-row__meta song-row__meta--wide'>
+                <view className='song-row__title-row'>
+                  <text className='song-row__title'>{song.title}</text>
+                  {song.isVideo ? <text className='song-row__video-badge'>▶</text> : null}
+                </view>
+              </view>
+              <text className='song-row__col-artist'>{song.artist || ''}</text>
+              <text className='song-row__col-album'>{song.album || ''}</text>
+            </>
+          )
+          : (
+            /* Narrow: stacked title + subtitle (artist · album). */
+            <view className='song-row__meta'>
+              <view className='song-row__title-row'>
+                <text className='song-row__title'>{song.title}</text>
+                {song.isVideo ? <text className='song-row__video-badge'>▶</text> : null}
+              </view>
+              {subtitle
+                ? <text className='song-row__subtitle'>{subtitle}</text>
+                : null}
+            </view>
+          )}
         <text className='song-row__duration'>{formatDuration(song.duration)}</text>
         {onToggleFavorite != null
           ? <view className='song-row__fav' catchtap={() => onToggleFavorite()} data-testid='song-row-fav'>

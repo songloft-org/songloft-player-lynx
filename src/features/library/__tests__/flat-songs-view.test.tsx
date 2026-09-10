@@ -127,7 +127,7 @@ async function renderView(
   onSortChange: (id: LibrarySortId, order: 'asc' | 'desc') => void = () => {},
   sortOrder: 'asc' | 'desc' = 'desc',
 ) {
-  render(<FlatSongsView type={type} sortId={sortId} sortOrder={sortOrder} onSortChange={onSortChange} />)
+  render(<FlatSongsView type={type} sortId={sortId} sortOrder={sortOrder} onSortChange={onSortChange} isWide={false} />)
   await act(async () => {
     await Promise.resolve()
   })

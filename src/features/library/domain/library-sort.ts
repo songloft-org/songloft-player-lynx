@@ -26,6 +26,13 @@ export const LIBRARY_SORT_OPTIONS = [
 export type LibrarySortId = (typeof LIBRARY_SORT_OPTIONS)[number]['id']
 export type SortOrder = 'asc' | 'desc'
 
+/** Sort options grouped for menu display. */
+export const LIBRARY_SORT_GROUPS: { labelKey: string; ids: LibrarySortId[] }[] = [
+  { labelKey: 'library.sortGroupTime', ids: ['added_at', 'file_modified_at'] },
+  { labelKey: 'library.sortGroupText', ids: ['title', 'artist', 'album'] },
+  { labelKey: 'library.sortGroupOther', ids: ['year', 'duration'] },
+]
+
 export const DEFAULT_LIBRARY_SORT_ID: LibrarySortId = 'added_at'
 
 /** Look up an option; unknown ids fall back to the default (never throws). */

@@ -112,7 +112,7 @@ test('renders a card per facet and tapping one drills into the category page', a
 
 test('typing in the search box passes the keyword to the query', async () => {
   await renderView()
-  const input = searchInputs.find((i) => i.placeholder === 'Search categories…')
+  const input = searchInputs.find((i) => i.placeholder === 'Search artists…')
   expect(input).toBeDefined()
   await act(async () => {
     input!.onInput('mi')
@@ -123,7 +123,7 @@ test('typing in the search box passes the keyword to the query', async () => {
 test('empty with a keyword shows the no-match state', async () => {
   facetsHook.mockReturnValue(facetsResult([{ facets: [], total: 0 }]))
   const { queryByText } = await renderView()
-  const input = searchInputs.find((i) => i.placeholder === 'Search categories…')
+  const input = searchInputs.find((i) => i.placeholder === 'Search artists…')
   await act(async () => {
     input!.onInput('zzz')
   })

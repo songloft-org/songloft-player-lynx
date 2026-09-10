@@ -659,17 +659,11 @@ describe('state washes over the surfaces they sit on', () => {
 
   test('the SongRow selected step-up lifts secondary-label to label', () => {
     /*
-     * P2 migrated SongRow onto the real Apple tokens. The subtitle/duration
-     * baseline is now `--secondary-label` (the accepted secondary tier), and a
-     * selected row steps them to `--label` — full AA — because there is no tier
-     * between secondary and primary. That is a REAL step (it raises contrast),
-     * not the inert alias-no-op this test used to assert. Stepping to `--label`
-     * can only raise contrast, never lower it; the wash remains the primary
-     * selection signal.
-     *
-     * `SheetShell.css` still carries the old `--content-muted → --content-2`
-     * step-up, which IS inert (both alias `--secondary-label`) until its own
-     * stage migrates it — left alone here on purpose.
+     * The subtitle/duration baseline is `--label` at 65% opacity (~4.5:1 AA on both
+     * themes). `--secondary-label` does not hit 4.5:1 against a white page (3.3:1)
+     * and `--font-footnote` at 13px needs AA per WCAG, so the baseline itself uses
+     * the primary label at reduced opacity. Selected rows step to full-opacity
+     * `--label`.
      */
     const css = readFileSync(
       resolve(process.cwd(), 'src/features/library/widgets/SongRow.css'),
@@ -679,12 +673,12 @@ describe('state washes over the surfaces they sit on', () => {
       rulesOf(css).find((r) => r.selector === sel)?.body ?? ''
     expect(
       textColour(rule('.song-row__subtitle')),
-      'the subtitle baseline is the Apple secondary tier',
-    ).toBe('var(--secondary-label)')
+      'the subtitle baseline is --label at reduced opacity (AA at 13px)',
+    ).toBe('var(--label)')
     expect(
       textColour(rule('.song-row__duration')),
-      'the duration baseline is the Apple secondary tier',
-    ).toBe('var(--secondary-label)')
+      'the duration baseline is --label at reduced opacity',
+    ).toBe('var(--label)')
     // The selected step-up is a single rule covering both; it must step to label.
     const stepped = rulesOf(css).find((r) =>
       r.selector.includes('.song-row--selected') && r.selector.includes('__subtitle'),
@@ -695,7 +689,7 @@ describe('state washes over the surfaces they sit on', () => {
     ).toBeDefined()
     expect(
       textColour(stepped!.body),
-      'a selected row steps its metadata to --label (the only tier above secondary)',
+      'a selected row steps its metadata to --label (full opacity)',
     ).toBe('var(--label)')
   })
 })

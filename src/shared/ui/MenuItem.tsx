@@ -10,6 +10,11 @@ export interface MenuItemSpec {
   selectedIcon?: IconName
   /** Destructive actions (delete): icon + label in the danger color. */
   danger?: boolean
+  /**
+   * 'item' (default) — a tappable menu row.
+   * 'header' — a non-interactive section header (muted, smaller).
+   */
+  kind?: 'item' | 'header'
 }
 
 export interface MenuItemProps {
@@ -30,6 +35,20 @@ export interface MenuItemProps {
  * one both menus load.
  */
 export function MenuItem({ item, onTap, hideCheckmark }: MenuItemProps) {
+  // Section header — non-interactive, compact, muted.
+  if (item.kind === 'header') {
+    return (
+      <view
+        className='popover-menu__item popover-menu__item--header'
+        data-testid={`menu-header-${item.key}`}
+      >
+        <text className='popover-menu__item-label popover-menu__item-label--header'>
+          {item.label}
+        </text>
+      </view>
+    )
+  }
+
   return (
     <view
       className={item.selected

@@ -31,6 +31,16 @@
   font-weight: var(--weight-semibold);
 }
 
+.library-editor__reset {
+  padding: var(--space-1) var(--space-3);
+}
+
+.library-editor__reset-text {
+  color: var(--accent);
+  font-size: var(--font-subhead);
+  font-weight: var(--weight-medium);
+}
+
 .library-editor__save {
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
@@ -83,8 +93,12 @@
 }
 
 .library-editor__group-btn {
-  padding: var(--space-1);
+  padding: var(--space-2);
   margin-left: var(--space-1);
+}
+
+.library-editor__group-btn--disabled {
+  opacity: 0.4;
 }
 
 .library-editor__row {

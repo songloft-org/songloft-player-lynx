@@ -6,6 +6,7 @@ import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
 import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
 import {
   LIBRARY_SORT_OPTIONS,
+  LIBRARY_SORT_GROUPS,
   defaultLibrarySortOrder,
   type LibrarySortId,
   type SortOrder,
@@ -31,6 +32,9 @@ export interface LibraryToolbarProps {
  * bar. Sort is now a seven-option bottom sheet (every field inside the backend
  * `songOrderWhitelist`), and the choice is lifted to the page so it persists
  * (prefs) and survives switching views.
+ *
+ * Visual hierarchy (HIG): "play all" is the primary action → accent-filled
+ * pill. Sort / Add / Select are secondary → `--tertiary-system-fill` pills.
  */
 export function LibraryToolbar({
   sortId,
@@ -47,17 +51,40 @@ export function LibraryToolbar({
 
   const current = LIBRARY_SORT_OPTIONS.find((o) => o.id === sortId) ?? LIBRARY_SORT_OPTIONS[0]!
 
+  // Build sort menu items grouped into time / text / other sections.
+  const sortItems: PopoverMenuItem[] = []
+  for (const group of LIBRARY_SORT_GROUPS) {
+    // Section header — a non-interactive label row.
+    sortItems.push({
+      key: `__sort_group_${group.labelKey}`,
+      label: t(group.labelKey),
+      kind: 'header',
+    })
+    for (const id of group.ids) {
+      const o = LIBRARY_SORT_OPTIONS.find((o) => o.id === id)
+      if (!o) continue
+      sortItems.push({
+        key: o.id,
+        label: t(o.labelKey),
+        selected: o.id === sortId,
+        selectedIcon: sortOrder === 'asc' ? 'arrow-up' : 'arrow-down',
+      })
+    }
+  }
+
   return (
     <view className='library-toolbar'>
+      {/* Play all — primary action */}
       <view
-        className={hasSongs ? 'library-toolbar__btn' : 'library-toolbar__btn library-toolbar__btn--disabled'}
+        className={hasSongs ? 'library-toolbar__btn library-toolbar__btn--primary' : 'library-toolbar__btn library-toolbar__btn--primary library-toolbar__btn--disabled'}
         bindtap={() => { if (hasSongs) onPlayAll() }}
         data-testid='library-toolbar-play-all'
       >
-        <Icon name='play' size={14} color={ICON_COLORS.content} />
-        <text className='library-toolbar__btn-text'>{t('playlist.playAll')}</text>
+        <Icon name='play' size={14} color={ICON_COLORS.primaryContent} />
+        <text className='library-toolbar__btn-text-primary'>{t('playlist.playAll')}</text>
       </view>
 
+      {/* Sort — popover with grouped items + chevron-down hint */}
       <PopoverMenu
         show={sortOpen}
         onShowChange={setSortOpen}
@@ -65,29 +92,18 @@ export function LibraryToolbar({
         contentClassName='popover-menu--wide'
         triggerClassName='library-toolbar__btn'
         trigger={
-          /*
-           * A fragment, NOT a wrapping `<view>`: the row layout lives on
-           * `triggerClassName` (which `PopoverSurface` puts on the trigger's own view), so an
-           * extra `<view>` here becomes an unstyled child — and an unstyled view is
-           * Lynx *linear* layout, whose default direction is `column`. That stacked
-           * the icon above the label and overflowed the pill. The testid therefore
-           * rides on the label `<text>` (same as `speed-btn` in `FullPlayerPage`);
-           * taps on it bubble to the trigger.
-           */
           <>
             <Icon name='sort' size={14} color={ICON_COLORS.content} />
             <text className='library-toolbar__btn-text' data-testid='library-toolbar-sort'>
               {t(current!.labelKey)}
             </text>
+            <Icon name='chevron-down' size={10} color={ICON_COLORS.contentMuted} />
           </>
         }
-        items={LIBRARY_SORT_OPTIONS.map((o): PopoverMenuItem => ({
-          key: o.id,
-          label: t(o.labelKey),
-          selected: o.id === sortId,
-          selectedIcon: sortOrder === 'asc' ? 'arrow-up' : 'arrow-down',
-        }))}
+        items={sortItems}
         onSelect={(key) => {
+          // Skip group header items.
+          if (typeof key === 'string' && key.startsWith('__sort_group_')) return
           const id = key as LibrarySortId
           const order: SortOrder = id === sortId
             ? (sortOrder === 'asc' ? 'desc' : 'asc')
@@ -104,17 +120,17 @@ export function LibraryToolbar({
         <text className='library-toolbar__btn-text'>{t('addSongs.add')}</text>
       </view>
 
+      {/* Select — active state toggles visual distinction between normal and select mode */}
       <view
         className={selectMode ? 'library-toolbar__btn library-toolbar__btn--active' : 'library-toolbar__btn'}
         bindtap={onToggleSelect}
         data-testid='library-toolbar-select'
       >
         <Icon name={selectMode ? 'x' : 'check'} size={14} color={selectMode ? ICON_COLORS.primaryContent : ICON_COLORS.content} />
-        <text className='library-toolbar__btn-text'>
+        <text className={selectMode ? 'library-toolbar__btn-text-active' : 'library-toolbar__btn-text'}>
           {selectMode ? t('library.cancelSelect') : t('library.select')}
         </text>
       </view>
-
     </view>
   )
 }

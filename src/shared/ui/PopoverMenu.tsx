@@ -76,6 +76,8 @@ export function PopoverMenu({
           item={item}
           hideCheckmark={hideCheckmark}
           onTap={() => {
+            // Group headers are non-interactive.
+            if (item.kind === 'header') return
             onSelect(item.key)
             onShowChange(false)
           }}

@@ -514,7 +514,6 @@ export function PlaylistDetailPage() {
                           onTap={onTapSong}
                           selectionMode={selectMode}
                           isSelected={selected.has(song.id)}
-                          showDeleteAction={false}
                         />
                       </view>
                       {!isBuiltIn && !selectMode

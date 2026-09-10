@@ -13,6 +13,7 @@ import { useSongsInfiniteQuery } from '../data/songs-query.js'
 import { librarySortFilters, type LibrarySortId, type SortOrder } from '../domain/library-sort.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
+import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { songRowOverlays } from '../../../shared/ui/song-row-overlays.js'
 import { SongRow } from './SongRow.js'
 import { SongListRow } from './SongListRow.js'
@@ -30,6 +31,8 @@ export interface FlatSongsViewProps {
   /** Current sort direction. */
   sortOrder: SortOrder
   onSortChange: (id: LibrarySortId, order: SortOrder) => void
+  /** Wide viewport flag, passed from LibraryPage (above the provider boundary). */
+  isWide: boolean
 }
 
 /**
@@ -38,7 +41,7 @@ export interface FlatSongsViewProps {
  * choice is owned by the page (persisted to prefs, kept across view switches);
  * this view only reports changes upward.
  */
-export function FlatSongsView({ type, sortId, sortOrder, onSortChange }: FlatSongsViewProps) {
+export function FlatSongsView({ type, sortId, sortOrder, onSortChange, isWide }: FlatSongsViewProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [searchText, setSearchText] = useState('')
@@ -152,12 +155,28 @@ export function FlatSongsView({ type, sortId, sortOrder, onSortChange }: FlatSon
     songRowOverlays.openAddToPlaylist({ songIds, onAdded: exitSelectMode })
   }
 
+  // Build a column-header click handler for a given sort field.
+  const columnSort = (id: LibrarySortId) => () => {
+    if (id === sortId) {
+      onSortChange(id, sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      onSortChange(id, id === 'title' || id === 'artist' || id === 'album' || id === 'duration' ? 'asc' : 'desc')
+    }
+  }
+
+  // Dynamic search placeholder — tells the user what scope they're searching.
+  const searchPlaceholder =
+    type === 'local' ? t('library.searchLocalPlaceholder') :
+    type === 'remote' ? t('library.searchRemotePlaceholder') :
+    type === 'radio' ? t('library.searchRadioPlaceholder') :
+    t('library.searchPlaceholder')
+
   return (
     <view className='library__songs-view'>
       <view className='library__search-bar'>
         <Input
           className='library__search-input'
-          placeholder={t('library.searchPlaceholder')}
+          placeholder={searchPlaceholder}
           value={searchText}
           onInput={(value: string) => setSearchText(value)}
         />
@@ -185,6 +204,53 @@ export function FlatSongsView({ type, sortId, sortOrder, onSortChange }: FlatSon
         hasSongs={songs.length > 0}
       />
 
+      {/* Wide-screen column headers — click to sort.
+         Layout mirrors the SongRow wide layout:
+           [16px pad] [48px cover] [12px gap] [title flex:1] [artist 140] [album 160] [duration] [...] [16px pad] */}
+      {isWide
+        ? (
+          <view className='library__column-headers'>
+            <view className='library__column-header-cover-spacer' />
+            <view
+              className={`library__column-header library__column-header--title${sortId === 'title' ? ' library__column-header--active' : ''}`}
+              bindtap={columnSort('title')}
+            >
+              <text className='library__column-header-text'>{t('library.columnTitle')}</text>
+              {sortId === 'title'
+                ? <view className='library__column-header-arrow'><Icon name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} size={10} color={ICON_COLORS.primary} /></view>
+                : null}
+            </view>
+            <view
+              className={`library__column-header library__column-header--artist${sortId === 'artist' ? ' library__column-header--active' : ''}`}
+              bindtap={columnSort('artist')}
+            >
+              <text className='library__column-header-text'>{t('library.columnArtist')}</text>
+              {sortId === 'artist'
+                ? <view className='library__column-header-arrow'><Icon name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} size={10} color={ICON_COLORS.primary} /></view>
+                : null}
+            </view>
+            <view
+              className={`library__column-header library__column-header--album${sortId === 'album' ? ' library__column-header--active' : ''}`}
+              bindtap={columnSort('album')}
+            >
+              <text className='library__column-header-text'>{t('library.columnAlbum')}</text>
+              {sortId === 'album'
+                ? <view className='library__column-header-arrow'><Icon name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} size={10} color={ICON_COLORS.primary} /></view>
+                : null}
+            </view>
+            <view
+              className={`library__column-header library__column-header--duration${sortId === 'duration' ? ' library__column-header--active' : ''}`}
+              bindtap={columnSort('duration')}
+            >
+              <text className='library__column-header-text'>{t('library.columnDuration')}</text>
+              {sortId === 'duration'
+                ? <view className='library__column-header-arrow'><Icon name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} size={10} color={ICON_COLORS.primary} /></view>
+                : null}
+            </view>
+          </view>
+        )
+        : null}
+
       {query.isLoading
         ? <LibraryStateMessage text={t('library.loadingSongs')} />
         : query.isError && songs.length === 0
@@ -194,6 +260,8 @@ export function FlatSongsView({ type, sortId, sortOrder, onSortChange }: FlatSon
               <LibraryStateMessage
                 text={debouncedSearch ? t('library.noSearchResults') : t('library.noSongs')}
                 subtext={debouncedSearch ? undefined : t('library.noSongsSubtitle')}
+                actionLabel={debouncedSearch ? undefined : t('library.addSongs')}
+                onAction={debouncedSearch ? undefined : () => navigate({ to: '/library/add' })}
               />
             )
             : (

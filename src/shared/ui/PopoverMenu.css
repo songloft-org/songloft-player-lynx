@@ -138,6 +138,21 @@
   min-width: 180px;
 }
 
+/* Section header row — non-interactive, muted, compact. */
+.popover-menu__item--header {
+  height: auto;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-1);
+  /* Block touch — this is a label, not an action row. */
+  pointer-events: none;
+}
+
+.popover-menu__item-label--header {
+  color: var(--secondary-label);
+  font-size: var(--font-caption1);
+  font-weight: var(--weight-semibold);
+}
+
 /*
  * `PopoverPanel` bodies hold arbitrary content rather than a row list, so the row
  * list's vertical padding just adds slack around e.g. a slider. Everything else about

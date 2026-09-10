@@ -167,6 +167,18 @@
   height: 100%;
 }
 
+.library__grid,
+.library__facet-list {
+  transition: opacity var(--duration-fast) var(--ease-default);
+}
+
+/* Grid-to-list transition state: briefly transparent while the layout
+   rebuilds. Applied inline by FacetGridView when viewMode changes. */
+.library__grid--animating,
+.library__facet-list--animating {
+  opacity: 0;
+}
+
 .library__grid {
   display: flex;
   flex-direction: row;
@@ -174,11 +186,105 @@
   padding: var(--space-3) var(--space-4);
 }
 
+/* ── Wide-screen column headers (FlatSongsView) ── */
+/*
+ * Mirrors the SongRow wide layout so header labels sit above the columns they name:
+ *   [16px pad] [48px cover] [12px gap] [title flex:1] [artist 140] [album 160] [duration] [...] [16px pad]
+ * Column widths MUST match `.song-row__col-artist` (140px) and `.song-row__col-album` (160px).
+ */
+
+.library__column-headers {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--separator);
+  min-height: 32px;
+}
+
+.library__column-header-cover-spacer {
+  width: calc(48px + var(--space-3));
+  flex-shrink: 0;
+}
+
+.library__column-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.library__column-header--title {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Must match `.song-row__col-artist` width. */
+.library__column-header--artist {
+  width: 140px;
+  flex-shrink: 0;
+}
+
+/* Must match `.song-row__col-album` width. */
+.library__column-header--album {
+  width: 160px;
+  flex-shrink: 0;
+}
+
+/* Duration — same left margin as `.song-row__duration`. */
+.library__column-header--duration {
+  margin-left: var(--space-3);
+  /* Reserve space for the row tail (fav + actions + more) so the duration
+     header doesn't drift right of the actual duration text. */
+  margin-right: 68px;
+}
+
+.library__column-header-text {
+  font-size: var(--font-caption1);
+  color: var(--secondary-label);
+  font-weight: var(--weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library__column-header--active .library__column-header-text {
+  color: var(--accent);
+}
+
+.library__column-header-arrow {
+  margin-left: var(--space-half);
+}
+
+/* ── Empty state action button ── */
+
+.library__state-action {
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background-color: var(--accent);
+}
+
+.library__state-action-text {
+  font-size: var(--font-subhead);
+  color: var(--accent-content);
+  font-weight: var(--weight-semibold);
+}
+
 .facet-card {
   display: flex;
   flex-direction: column;
   width: 120px;
   padding: var(--space-2);
+  /* Smooth press/hover feedback. */
+  transition: opacity var(--duration-fast) var(--ease-default),
+              transform var(--duration-fast) var(--ease-default);
+}
+
+.facet-card:active {
+  opacity: 0.7;
+  transform: scale(0.97);
 }
 
 .facet-card__cover {
@@ -292,6 +398,10 @@
    `SongRow.css` (one file owns `.song-row*`). */
 .library__select-row--selected {
   background-color: var(--tint-fill);
+  /* 3px accent inset bar on the left edge — the tint-fill wash alone is a very
+     faint signal (~1.05:1 vs background in light at 0.1 alpha), so the bar is
+     the primary selection cue and the wash is the secondary one. */
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .library__select-box {

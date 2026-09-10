@@ -59,12 +59,20 @@ export function FacetGridView({ field, viewMode = 'grid' }: FacetGridViewProps) 
   }
   const facets = flattenFacets(query.data?.pages)
 
+  // Dynamic search placeholder — scoped to the current facet dimension.
+  const searchPlaceholder =
+    field === 'artist' ? t('library.searchArtistPlaceholder') :
+    field === 'album' ? t('library.searchAlbumPlaceholder') :
+    field === 'genre' ? t('library.searchGenrePlaceholder') :
+    field === 'year' || field === 'decade' ? t('library.searchYearPlaceholder') :
+    t('library.categorySearchPlaceholder')
+
   return (
     <view className='library__facets'>
       <view className='library__search-bar'>
         <Input
           className='library__search-input'
-          placeholder={t('library.categorySearchPlaceholder')}
+          placeholder={searchPlaceholder}
           value={searchText}
           onInput={(value: string) => setSearchText(value)}
         />
