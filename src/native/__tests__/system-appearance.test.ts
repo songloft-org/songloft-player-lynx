@@ -2,10 +2,12 @@ import { afterEach, describe, expect, test, vi } from 'vitest'
 
 import {
   applySystemAppearance,
+  coerceReduceMotion,
   coerceSystemLocale,
   coerceSystemTheme,
   getSystemAppearance,
   GLOBAL_PROP_LOCALE,
+  GLOBAL_PROP_REDUCE_MOTION,
   GLOBAL_PROP_THEME,
   initSystemAppearance,
   parseSystemAppearance,
@@ -68,6 +70,15 @@ describe('coercion (host values are untrusted)', () => {
     expect(coerceSystemLocale(42)).toBeNull()
   })
 
+  test('only an actual boolean survives as the reduce-motion flag', () => {
+    expect(coerceReduceMotion(true)).toBe(true)
+    expect(coerceReduceMotion(false)).toBe(false)
+    expect(coerceReduceMotion(1)).toBeNull()
+    expect(coerceReduceMotion('true')).toBeNull()
+    expect(coerceReduceMotion(undefined)).toBeNull()
+    expect(coerceReduceMotion(null)).toBeNull()
+  })
+
   test('parseSystemAppearance tolerates a missing / non-object payload', () => {
     expect(parseSystemAppearance(null)).toEqual({ theme: null, locale: null })
     expect(parseSystemAppearance(undefined)).toEqual({ theme: null, locale: null })
@@ -75,6 +86,13 @@ describe('coercion (host values are untrusted)', () => {
     expect(
       parseSystemAppearance({ [GLOBAL_PROP_THEME]: 'dark', [GLOBAL_PROP_LOCALE]: 'zh-CN' }),
     ).toEqual({ theme: 'dark', locale: 'zh-CN' })
+    // The reduce-motion flag is surfaced only when the host reported it.
+    expect(
+      parseSystemAppearance({ [GLOBAL_PROP_REDUCE_MOTION]: true }),
+    ).toEqual({ theme: null, locale: null, reduceMotion: true })
+    expect(
+      parseSystemAppearance({ [GLOBAL_PROP_REDUCE_MOTION]: 'yes' }),
+    ).toEqual({ theme: null, locale: null })
   })
 })
 

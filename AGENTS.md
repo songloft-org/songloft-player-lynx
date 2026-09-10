@@ -74,6 +74,7 @@ src/router.tsx
 - rail 选中态只变色，不改尺寸；底栏图标选中色使用 `activeAccentIconColor()`，SVG 不吃 CSS 级联。
 - Liquid Glass 表面复用 `BackdropBlur` 与材质 token；底栏选中态使用 `--glass-glow-faint`，玻璃上的强调/中性状态分别使用 `--primary-faint` / `--fill-faint`，不得换成不透明 surface。
 - 系统主题/语言初值由宿主 globalProps 在首帧前注入，运行中变化走 global event。`sendGlobalEvent(name, params)` 的第二参必须是数组。
+- reduce-motion：宿主经 `systemReduceMotion` 字段（与 systemTheme 同通道）推送 OS 减弱动效开关；`reduce-motion-model.ts` 读取、`ThemeProvider` 落 `.reduce-motion` 类零化所有 `--duration-*`。iOS 已接 `UIAccessibility.isReduceMotionEnabled`；Android/Harmony 尚需在各自 `SystemAppearance` 推送里补该字段，补前默认 motion-on。
 - 返回顺序为：覆盖层 LIFO 栈 → `resolveRouteBack` 父级 → tab 首页退出策略。新增覆盖层挂载时必须先让 `useBackHandler(active, handler)` 的 `active` 为 `false`，新增叶子路由同步登记 `route-back.ts`。
 - 不使用 `router.history.back()`；`SubPageShell` 不维护第二份父级信息。完整契约见 back-navigation reference。
 

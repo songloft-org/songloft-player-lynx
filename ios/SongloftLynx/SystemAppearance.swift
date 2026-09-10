@@ -16,13 +16,19 @@ enum SystemAppearance {
   /// `lynx.__globalProps` keys.
   static let propTheme = "systemTheme"
   static let propLocale = "systemLocale"
+  /// OS "reduce motion" accessibility flag, same channel as theme.
+  static let propReduceMotion = "systemReduceMotion"
 
   /// Global-event name for a live change.
   static let eventChanged = "SongloftSystem.appearanceChanged"
 
   /// Snapshot the host state in the shape the JS side parses.
   static func snapshot(traits: UITraitCollection) -> [String: Any] {
-    [propTheme: theme(of: traits), propLocale: localeTag()]
+    [
+      propTheme: theme(of: traits),
+      propLocale: localeTag(),
+      propReduceMotion: UIAccessibility.isReduceMotionEnabled,
+    ]
   }
 
   /**

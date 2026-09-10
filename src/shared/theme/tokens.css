@@ -272,9 +272,12 @@
 }
 
 /* HIG §10 Motion: reduce-motion zeroes durations so transitions/animations
-   become instant when the host signals it. The host activation channel is
-   not wired here (needs a native SystemAppearance field) — this CSS is ready
-   so flipping the class is all that's needed once the host provides it. */
+   become instant when the host signals it. The class is landed by
+   `ThemeProvider` from `reduce-motion-model.ts`, which reads the host's
+   `SystemAppearance.reduceMotion` flag (the same globalProps + appearanceChanged
+   channel as the system theme). iOS pushes `UIAccessibility.isReduceMotionEnabled`
+   as `systemReduceMotion`; Android/Harmony still need the field wired into their
+   `SystemAppearance` push — until then they resolve to motion-on (the default). */
 .theme-root.reduce-motion {
   --duration-fast: 0ms;
   --duration-normal: 0ms;

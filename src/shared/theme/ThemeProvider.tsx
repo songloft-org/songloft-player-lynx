@@ -7,6 +7,10 @@ import {
   subscribeFontScale,
 } from './font-scale-model.js'
 import {
+  getReduceMotion,
+  subscribeReduceMotion,
+} from './reduce-motion-model.js'
+import {
   getMaterialVariant,
   subscribeMaterialVariant,
 } from './material-model.js'
@@ -62,6 +66,12 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const [, setFontScale] = useState(() => getFontScaleNumber())
   const [insets, setInsets] = useState(() => getSafeAreaInsets())
 
+  // OS "reduce motion" accessibility flag → the `.reduce-motion` class that
+  // zeroes every `--duration-*` token (see `tokens.css`). Subscribed, not read
+  // at render, so a host toggle re-colours the whole tree in place. Defaults to
+  // motion-on until a host that reports the flag lands the class.
+  const [reduceMotion, setReduceMotion] = useState(() => getReduceMotion())
+
   // The platform does not change at runtime — a host is iOS or it is not — so
   // it is read once and pinned. The class it puts on the root lets the iOS
   // Liquid Glass token override (see `tokens.css`'s `.platform-ios` blocks)
@@ -100,8 +110,13 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     [],
   )
 
+  useEffect(
+    () => subscribeReduceMotion(() => setReduceMotion(getReduceMotion())),
+    [],
+  )
+
   const vars = { ...themePackToStyleVars(pack?.data, theme), ...safeAreaStyleVars(insets) }
   const style = vars as Record<string, string> & CSSProperties
 
-  return <view className={`theme-root theme-${theme} platform-${platform}`} style={style}>{children}</view>
+  return <view className={`theme-root theme-${theme} platform-${platform}${reduceMotion ? ' reduce-motion' : ''}`} style={style}>{children}</view>
 }

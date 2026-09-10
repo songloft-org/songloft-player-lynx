@@ -36,6 +36,12 @@ export interface SystemAppearance {
   theme: SystemTheme | null
   /** System locale as a BCP-47-ish tag, e.g. `'zh-CN'`, `'en-US'`. */
   locale: string | null
+  /**
+   * Whether the user enabled the OS "reduce motion" / "reduce animations"
+   * accessibility setting. `null`/absent means the host said nothing; the page
+   * treats that as "motion on" (the default) — see `reduce-motion-model.ts`.
+   */
+  reduceMotion?: boolean | null
 }
 
 /**
@@ -48,6 +54,8 @@ export const SYSTEM_APPEARANCE_EVENT = 'SongloftSystem.appearanceChanged'
 /** `lynx.__globalProps` keys the host populates. Must match `MainActivity`. */
 export const GLOBAL_PROP_THEME = 'systemTheme'
 export const GLOBAL_PROP_LOCALE = 'systemLocale'
+/** Host key for the OS reduce-motion accessibility flag, same channel as theme. */
+export const GLOBAL_PROP_REDUCE_MOTION = 'systemReduceMotion'
 
 /** Nothing known about the host — every consumer falls back to its own default. */
 const UNKNOWN_APPEARANCE: SystemAppearance = { theme: null, locale: null }
@@ -69,12 +77,22 @@ export function coerceSystemLocale(raw: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
+/** Coerce an untrusted host value into the reduce-motion flag, else `null`. */
+export function coerceReduceMotion(raw: unknown): boolean | null {
+  return typeof raw === 'boolean' ? raw : null
+}
+
 /** Decode an appearance out of an arbitrary host payload (globalProps or event). */
 export function parseSystemAppearance(raw: unknown): SystemAppearance {
   const data = (raw ?? {}) as Record<string, unknown>
+  const reduceMotion = coerceReduceMotion(data[GLOBAL_PROP_REDUCE_MOTION])
+  // Only surface the flag when the host actually reported it, so callers and
+  // tests that compare against `{ theme, locale }` do not need to know about the
+  // optional field; `getReduceMotion()` treats absent as motion-on (the default).
   return {
     theme: coerceSystemTheme(data[GLOBAL_PROP_THEME]),
     locale: coerceSystemLocale(data[GLOBAL_PROP_LOCALE]),
+    ...(reduceMotion !== null ? { reduceMotion } : {}),
   }
 }
 
@@ -111,7 +129,9 @@ export function subscribeSystemAppearance(listener: () => void): () => void {
  */
 export function applySystemAppearance(next: SystemAppearance): void {
   const prev = getSystemAppearance()
-  if (prev.theme === next.theme && prev.locale === next.locale) return
+  if (prev.theme === next.theme
+    && prev.locale === next.locale
+    && (prev.reduceMotion ?? null) === (next.reduceMotion ?? null)) return
   current = next
   listeners.forEach((listener) => listener())
 }

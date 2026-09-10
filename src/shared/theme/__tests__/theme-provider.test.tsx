@@ -54,6 +54,24 @@ test('renders the host theme when the choice is system', async () => {
   expect(themeClass(container)).toContain('theme-light')
 })
 
+test('adds the reduce-motion class only when the host reports the flag', async () => {
+  await changeAppTheme('light', createMemoryStorage())
+
+  setSystemAppearanceForTests({ theme: 'light', locale: null })
+  let r = render(<ThemeProvider />)
+  expect(themeClass(r.container)).not.toContain('reduce-motion')
+  r.unmount()
+
+  setSystemAppearanceForTests({ theme: 'light', locale: null, reduceMotion: true })
+  r = render(<ThemeProvider />)
+  expect(themeClass(r.container)).toContain('reduce-motion')
+  r.unmount()
+
+  setSystemAppearanceForTests({ theme: 'light', locale: null, reduceMotion: false })
+  r = render(<ThemeProvider />)
+  expect(themeClass(r.container)).not.toContain('reduce-motion')
+})
+
 test('a host flip re-renders the root class while the choice is system', async () => {
   setSystemAppearanceForTests({ theme: 'dark', locale: null })
   await changeAppTheme('system', createMemoryStorage())
