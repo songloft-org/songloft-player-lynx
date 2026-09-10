@@ -1,0 +1,47 @@
+/*
+ * Slow drift of the faux-glass sheen — the one "alive" cue the static CSS
+ * glass-stack lacks on platforms that do not get the native iOS material.
+ *
+ * iOS drives a real `UIGlassEffect`, whose specular highlight already tracks
+ * content and light, so the drift is disabled there to avoid a doubled,
+ * out-of-phase shimmer over a dynamic material. Everywhere else the sheen is a
+ * fixed 160deg streak; shifting its `background-position` slowly along the same
+ * diagonal reads as environment light grazing the glass — subtle on purpose,
+ * because the cue that actually registers (the scroll-edge shadow) already lives
+ * in `ShellLayout.css`.
+ *
+ * This is a **bespoke decorative loop**, not a UI transition: its 14s period is
+ * bespoke geometry (a breath), so it cannot use a `--duration-*` token without
+ * homogenising it with 150–350ms UI motion. It is allowlisted in
+ * `motion-tokens-consumer.test.ts` under `BESPOKE_LOOPS`, which also asserts this
+ * file contains only this one keyframe so the exemption cannot widen silently.
+ *
+ * Two `background-position` values per step: the sheen layer drifts, the
+ * vertical luminance ramp (`--glass-ramp`) stays pinned — shifting a vertical
+ * gradient sideways is invisible, and pinning it keeps the top/bottom luminance
+ * edges stable so the breathing never disturbs the contrast budget the ramp was
+ * tuned against.
+ */
+@keyframes glass-sheen-breathe {
+  0%, 100% {
+    background-position: 0% 0%, 0 0;
+  }
+  50% {
+    background-position: 30% 30%, 0 0;
+  }
+}
+
+.glass-sheen-breathe {
+  animation: glass-sheen-breathe 14s ease-in-out infinite;
+}
+
+/* iOS drives a native dynamic material; the CSS drift is redundant there. */
+.theme-root.platform-ios .glass-sheen-breathe {
+  animation: none;
+}
+
+/* Decorative motion — kill under reduce-motion. The bespoke 14s is not a
+   `--duration-*` token, so the token-zeroing does not reach it; this rule does. */
+.theme-root.reduce-motion .glass-sheen-breathe {
+  animation: none;
+}

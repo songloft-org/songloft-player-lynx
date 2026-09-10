@@ -24,6 +24,7 @@ import { getIsScrolled, subscribeIsScrolled } from '../nav/scroll-visibility.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import { BackdropBlur } from '../ui/BackdropBlur.js'
 import { Icon, activeAccentIconColor, ICON_COLORS } from '../ui/Icon.js'
+import '../ui/glass-sheen-motion.css'
 import './ShellLayout.css'
 
 /**
@@ -244,7 +245,7 @@ export function ShellLayout() {
         {isWide
           ? null
           : (
-            <view className='shell__bottombar'>
+            <view className='shell__bottombar glass-sheen-breathe'>
               {/* Panel-mode blur, so the capsule is a real material over the
                   scrolling content rather than an 0.85 wash. Apple's tab bar is
                   the reference here. See `BackdropBlur.tsx`. */}
