@@ -45,11 +45,14 @@ test('the search fields are the Apple control height, filled, and borderless', (
   }
 })
 
-test('the card name is subhead, the card cover keeps 104 with the small radius', () => {
+test('the card name is subhead, the card cover is responsive-square with the small radius', () => {
   expect(ruleFor(LIST, '.playlist-card__name')).toMatch(/font-size:\s*var\(--font-subhead\)/)
   const cover = ruleFor(LIST, '.playlist-card__cover')
-  expect(cover, 'the 104 square is kept (only the radius changed)').toMatch(/width:\s*104px/)
-  expect(cover).toMatch(/height:\s*104px/)
+  // Cover tracks the grid-item column width (was fixed 104×104): width:100%
+  // fills the .playlists__grid-item wrapper, aspect-ratio:1 keeps it square at
+  // any column size. The grid-item carries the grow/cap flex sizing.
+  expect(cover, 'cover fills its column, not a fixed 104px').toMatch(/width:\s*100%/)
+  expect(cover).toMatch(/aspect-ratio:\s*1/)
   expect(cover).toMatch(/border-radius:\s*var\(--radius-sm\)/)
 })
 

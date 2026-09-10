@@ -17,6 +17,7 @@ import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
 import { GlobalMenu } from '../../../shared/ui/GlobalMenu.js'
 import { MediaListItem } from '../../../shared/ui/MediaListItem.js'
+import { GridSpacers } from '../../../shared/ui/GridSpacers.js'
 import type { AnchorMeasurement } from '../../../shared/ui/anchored-overlay.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { sortPlaylistsByName, sortPlaylistsByNumberPrefix } from '../domain/playlist-sort.js'
@@ -483,6 +484,7 @@ export function PlaylistsView(
                   isSelected={selected.has(playlist.id)}
                 />
               ))}
+          {viewMode === 'grid' ? <GridSpacers /> : null}
         </view>
         {query.isFetchingNextPage
           ? (

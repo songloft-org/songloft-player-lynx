@@ -12,6 +12,7 @@ import { getSongsApi } from '../api/index.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { MediaListItem } from '../../../shared/ui/MediaListItem.js'
+import { GridSpacers } from '../../../shared/ui/GridSpacers.js'
 import { SongListRow } from '../widgets/SongListRow.js'
 import { FolderCard } from './FolderCard.js'
 import { LibraryStateMessage } from './LibraryStateMessage.js'
@@ -120,6 +121,7 @@ export function FolderGridView({ viewMode = 'grid' }: FolderGridViewProps) {
                               onTap={onTapFolder}
                             />
                           ))}
+                      {viewMode === 'list' ? null : <GridSpacers />}
                     </view>
                   )
                   : null}

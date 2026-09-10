@@ -18,16 +18,27 @@
 }
 
 .playlists__grid {
+  /* Same card-sizing vars + grow-to-fill treatment as .library__grid (see there
+     for the rationale): left/right margins both zero, covers capped. Spacers
+     (GridSpacers) pad the last row so its cards match full-row width. */
+  --grid-card-min: 108px;
+  --grid-card-max: 128px;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
+  gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
 }
 
 .playlist-card {
   display: flex;
   flex-direction: column;
-  width: 120px;
+  /* Fill the .playlists__grid-item wrapper (the actual flex child of the
+     grid) — the grow/cap sizing lives on the wrapper, not here, because
+     PlaylistsView wraps each card in .playlists__grid-item. Home's overrides
+     (.home-section__grid/.home-section__row, where the card IS the flex child)
+     set their own width + flex:none by specificity, so they are unaffected. */
+  width: 100%;
   padding: var(--space-2);
 }
 
@@ -143,8 +154,11 @@
 }
 
 .playlist-card__cover {
-  width: 104px;
-  height: 104px;
+  /* Track column width (was fixed 104×104); aspect-ratio keeps it square, same
+     as .facet-card__cover and .home-section__grid. Home's
+     .home-section__row override still pins the strip cover to --home-card-size. */
+  width: 100%;
+  aspect-ratio: 1;
   border-radius: var(--radius-sm);
   background-color: var(--tertiary-system-fill);
 }
@@ -399,6 +413,11 @@
 }
 
 .playlists__grid-item {
+  /* This wrapper is the flex child of .playlists__grid (each card is wrapped,
+     unlike the facet grids where .facet-card is the direct child). So the
+     grow-to-fill + cap sizing lives here. Mirrored by .grid-spacer. */
+  flex: 1 0 var(--grid-card-min);
+  max-width: var(--grid-card-max);
   position: relative;
 }
 

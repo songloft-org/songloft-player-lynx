@@ -14,6 +14,7 @@ import { usePlayerStore } from '../../player/store/index.js'
 import { facetContext } from '../../player/domain/playback-context.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { MediaListItem } from '../../../shared/ui/MediaListItem.js'
+import { GridSpacers } from '../../../shared/ui/GridSpacers.js'
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { FacetCard } from './FacetCard.js'
 import { LibraryStateMessage } from './LibraryStateMessage.js'
@@ -133,6 +134,7 @@ export function FacetGridView({ field, viewMode = 'grid' }: FacetGridViewProps) 
                             })}
                         />
                       ))}
+                  {viewMode === 'list' ? null : <GridSpacers />}
                 </view>
                               <view className='library__nav-inset' />
 </scroll-view>

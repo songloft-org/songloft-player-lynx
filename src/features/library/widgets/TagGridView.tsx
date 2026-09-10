@@ -11,6 +11,7 @@ import { getSongsApi } from '../api/index.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { MediaListItem } from '../../../shared/ui/MediaListItem.js'
+import { GridSpacers } from '../../../shared/ui/GridSpacers.js'
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { TagCard } from './TagCard.js'
 import { LibraryStateMessage } from './LibraryStateMessage.js'
@@ -113,6 +114,7 @@ export function TagGridView({ viewMode = 'grid' }: TagGridViewProps) {
                           onPlayAll={onPlayAll}
                         />
                       ))}
+                  {viewMode === 'list' ? null : <GridSpacers />}
                 </view>
                               <view className='library__nav-inset' />
 </scroll-view>

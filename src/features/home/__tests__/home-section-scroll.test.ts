@@ -113,11 +113,18 @@ test('the strip separates sizing (scroll-view) from layout (inner row)', () => {
   expect(row).toMatch(/width:\s*max-content/)
 
   // Lynx skips the web's automatic min-content protection when resolving
-  // flex-shrink, so cards without this compress to fit and kill the scroll range.
+  // flex-shrink, so cards without shrink:0 compress to fit and kill the scroll
+  // range. The base .playlist-card is `flex: 1 0 <min>` (grow:1) for the library
+  // grid's fill-width rows, so here we cancel *both* grow and shrink with
+  // `flex: none` (0 0 auto → width governs) — grow:1 alone would stretch the
+  // strip cards to the scroll-view width and also kill the range.
   const card = /\.home-section__row\s+\.playlist-card\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
-  expect(card).toMatch(/flex-shrink:\s*0/)
+  expect(card).toMatch(/flex:\s*none/)
 
-  // Square cover, overriding the library grid's 104px without touching that page.
+  // Square cover pinned to a fixed size for the strip. The base
+  // .playlist-card__cover is responsive (width:100%; aspect-ratio:1) so the
+  // library grid's covers track the column; the strip's cards are fixed-width
+  // (flex: none + --home-card-size), so the cover is pinned here to match.
   // P4 tokenized the hardcoded 120 → --home-card-size (same fixed square).
   const cover = /\.home-section__row\s+\.playlist-card__cover\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
   expect(cover).toMatch(/width:\s*var\(--home-card-size\)/)

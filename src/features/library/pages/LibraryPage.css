@@ -180,9 +180,18 @@
 }
 
 .library__grid {
+  /* Card sizing is shared with .grid-spacer (the invisible last-row padder in
+     GridSpacers.css) so the two stay byte-for-byte aligned: `flex: 1 0 <min>`
+     grows each card to fill the row edge-to-edge (left & right margins both
+     zero), `max-width` caps it so covers never balloon on wide screens. The
+     min basis picks the column count (3 on phone, more on wide) — cards never
+     exceed the cap, so a cover stays ~92px (min 108 − 2×padding) everywhere. */
+  --grid-card-min: 108px;
+  --grid-card-max: 128px;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
+  gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
 }
 
@@ -275,7 +284,13 @@
 .facet-card {
   display: flex;
   flex-direction: column;
-  width: 120px;
+  /* Grow to fill the row evenly (left & right margins both zero → symmetric),
+   * but cap the width so covers never balloon on wide screens. The min basis
+   * sets the column count; the cap keeps covers ~92px everywhere. Mirrored
+   * exactly by .grid-spacer (see GridSpacers.css) so the last row — padded by
+   * invisible spacers — stays the same card width as full rows. */
+  flex: 1 0 var(--grid-card-min);
+  max-width: var(--grid-card-max);
   padding: var(--space-2);
   /* Smooth press/hover feedback. */
   transition: opacity var(--duration-fast) var(--ease-default),
@@ -288,8 +303,11 @@
 }
 
 .facet-card__cover {
-  width: 104px;
-  height: 104px;
+  /* Cover now tracks the column width (was fixed 104×104); aspect-ratio keeps
+     it square at any width, matching .home-section__grid's cover pattern.
+     aspect-ratio is supported in Lynx (already used by the home grid). */
+  width: 100%;
+  aspect-ratio: 1;
   border-radius: var(--radius-md);
   background-color: var(--tertiary-system-fill);
 }

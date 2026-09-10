@@ -20,7 +20,11 @@
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  justify-content: center;
+  /* flex-start, not center: center centers each row independently, so a short
+     last row floats mid-width instead of lining up under the first. Left-align
+     keeps every row's first card on the same left edge; the gap carries the
+     even spacing. */
+  justify-content: flex-start;
   gap: var(--space-3);
 }
 

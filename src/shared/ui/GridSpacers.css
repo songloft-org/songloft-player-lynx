@@ -1,0 +1,14 @@
+/*
+ * Invisible flex spacer for padding a card grid's last row (see GridSpacers.tsx).
+ * Sizing MUST mirror the real card rule: same `flex: 1 0 <min>` basis and same
+ * `max-width` cap, so a short last row's real cards grow by the same factor as
+ * a full row's and stay the same width. `height: 0` makes it invisible; surplus
+ * spacers form their own zero-height rows.
+ */
+.grid-spacer {
+  flex: 1 0 var(--grid-card-min, 108px);
+  max-width: var(--grid-card-max, 128px);
+  height: 0;
+  padding: 0;
+  margin: 0;
+}

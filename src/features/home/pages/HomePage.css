@@ -187,22 +187,29 @@
 }
 
 /*
- * Fixed-width cards instead of the library grid's 33.33% columns. `flex-shrink: 0`
- * is load-bearing: Lynx does not apply the web's automatic min-content protection
- * when resolving `flex-shrink`, so without it the cards compress to fit the
- * viewport and — again — leave no scroll range.
+ * Fixed-width cards instead of the library grid's flex-grow columns.
+ * `flex: none` (0 0 auto) is load-bearing: the base .playlist-card is now
+ * `flex: 1 0 108px` (grow:1) so the library grid fills its width — here we must
+ * cancel that growth, or the strip cards would stretch to the scroll-view's
+ * width and leave no scroll range (the same failure `flex-shrink: 0` alone
+ * guards against, but shrink alone no longer suffices once grow is 1). Lynx
+ * does not apply the web's automatic min-content protection when resolving
+ * flex-shrink either, so the explicit `none` (no grow, no shrink, basis auto →
+ * width governs) is what keeps the cards at --home-card-size.
  */
 .home-section__row .playlist-card {
   width: var(--home-card-size);
   min-width: var(--home-card-size);
-  flex-shrink: 0;
+  flex: none;
   padding: 0;
 }
 
 /*
- * Square cover, overriding the base `width: 104px; height: 104px` that is tuned for
- * the library's three-per-row grid. Overridden here rather than in
- * `PlaylistsView.css` so the library page keeps its own proportions.
+ * Square cover pinned to a fixed size for the horizontal strip. The base
+ * .playlist-card__cover is now responsive (width:100%; aspect-ratio:1) so the
+ * library grid fills three columns; the strip cannot use that — its cards are
+ * fixed-width (see .home-section__row .playlist-card above) for scroll range —
+ * so the cover is pinned to --home-card-size here.
  */
 .home-section__row .playlist-card__cover {
   width: var(--home-card-size);
@@ -223,7 +230,7 @@
 
 .home-section__grid .playlist-card {
   width: 30%;
-  flex-shrink: 0;
+  flex: none;
   padding: 0;
 }
 
