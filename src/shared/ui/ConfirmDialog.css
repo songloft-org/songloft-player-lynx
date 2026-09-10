@@ -104,18 +104,26 @@
      below and the `transition` prop on `DialogBackdrop`/`DialogContent`, fires
      `transitionend` so presence tears the dialog down the moment the fade ends.
      Only the leave is styled (`ui-leaving`), so opening stays instant — no
-     fade-in and none of presence's 8-frame enter gap made visible. */
-  transition: opacity var(--duration-fast) var(--ease-default);
+     fade-in and none of presence's 8-frame enter gap made visible. The card
+     itself enters on `dialog-enter` (scale 0.95→1); the leave mirrors it with
+     a scale-down, so the dialog recedes rather than only fading. */
+  transition: opacity var(--duration-fast) var(--ease-default),
+    transform var(--duration-fast) var(--ease-spring);
 }
 
 /*
  * The one styled presence state: `ui-leaving` is added (because `transition` is
  * set on the two views) only while the dialog animates out. Opening never sets
- * opacity, so it appears at full strength immediately.
+ * opacity, so it appears at full strength immediately. The backdrop fades only;
+ * the content also scales down to mirror the `dialog-enter` scale-up.
  */
-.confirm-dialog__backdrop.ui-leaving,
+.confirm-dialog__backdrop.ui-leaving {
+  opacity: 0;
+}
+
 .confirm-dialog__content.ui-leaving {
   opacity: 0;
+  transform: scale(0.96);
 }
 
 .confirm-dialog {

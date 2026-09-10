@@ -7,6 +7,8 @@ import { useBackHandler } from './use-back-handler.js'
 import { Icon, ICON_COLORS } from '../ui/Icon.js'
 import type { NavDestination } from './destinations.js'
 import { BackdropBlur } from '../ui/BackdropBlur.js'
+import { usePresence } from '../ui/usePresence.js'
+import '../ui/overlay-motion.css'
 import './MoreTabsSheet.css'
 
 export interface MoreTabsSheetProps {
@@ -58,7 +60,11 @@ export function MoreTabsSheet({ items, activePath, show, onShowChange }: MoreTab
     }
   }
 
-  if (!show) return null
+  const { mounted, leaving } = usePresence(show)
+  if (!mounted) return null
+
+  const leaveClass = leaving ? ' overlay--leave-fade' : ''
+  const panelMotion = leaving ? 'overlay--leave-up' : 'overlay--enter-up'
 
   return (
     <view className='more-tabs' data-testid='more-tabs-sheet'>
@@ -69,8 +75,8 @@ export function MoreTabsSheet({ items, activePath, show, onShowChange }: MoreTab
       {/* Outside-tap close on the backdrop (the panel's sibling), never on this
           root: a tap inside the panel must not be able to reach a close
           handler. Same rule as `PopoverMenu` and `PlayHistoryPanel`. */}
-      <view className='more-tabs__backdrop' bindtap={close} data-testid='more-tabs-backdrop' />
-      <view className='more-tabs__panel'>
+      <view className={`more-tabs__backdrop${leaveClass}`} bindtap={close} data-testid='more-tabs-backdrop' />
+      <view className={`more-tabs__panel ${panelMotion}`}>
         <view className='more-tabs__handle-wrap'>
           <view className='more-tabs__handle' />
         </view>

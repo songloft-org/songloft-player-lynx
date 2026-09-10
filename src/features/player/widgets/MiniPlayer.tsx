@@ -6,6 +6,7 @@ import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { useFavoriteToggle } from '../../library/data/favorites.js'
 import { hasNext, hasPrev, progressOf, usePlayerStore } from '../store/index.js'
+import '../../../shared/ui/overlay-motion.css'
 import './MiniPlayer.css'
 
 /**
@@ -33,7 +34,7 @@ export function MiniPlayer() {
   const pct = `${Math.round(progress * 100)}%`
 
   return (
-    <view className='mini-player' bindtap={() => navigate({ to: '/player' })}>
+    <view className='mini-player overlay--enter-scale' bindtap={() => navigate({ to: '/player' })}>
       {/* Panel-mode blur — same reason as the nav capsule below it: this bar
           floats over scrolling content with no scrim of its own. The root's
           `bindtap` still receives taps, since a child bubbles to it. */}

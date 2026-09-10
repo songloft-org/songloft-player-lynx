@@ -4,6 +4,8 @@ import { VirtualList } from '../../library/widgets/VirtualList.js'
 import { usePlayerStore } from '../store/index.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import { usePresence } from '../../../shared/ui/usePresence.js'
+import '../../../shared/ui/overlay-motion.css'
 import './SheetShell.css'
 
 export function PlaylistDrawer() {
@@ -17,9 +19,13 @@ export function PlaylistDrawer() {
     return true
   })
 
-  if (!show) return null
-
   const close = () => usePlayerStore.getState().closePlaylistDrawer()
+
+  const { mounted, leaving } = usePresence(show)
+  if (!mounted) return null
+
+  const leaveClass = leaving ? ' overlay--leave-fade' : ''
+  const panelMotion = leaving ? 'overlay--leave-up' : 'overlay--enter-up'
 
   return (
     <view className='drawer__root' data-testid='playlist-drawer'>
@@ -27,8 +33,8 @@ export function PlaylistDrawer() {
           darkened. A preceding sibling, not a child: the scrim below owns
           tap-to-dismiss and a child would sit in front of it. */}
       <BackdropBlur />
-      <view className='drawer__backdrop' bindtap={close} />
-      <view className='drawer__panel drawer__panel--queue' catchtap={() => {}}>
+      <view className={`drawer__backdrop${leaveClass}`} bindtap={close} />
+      <view className={`drawer__panel drawer__panel--queue ${panelMotion}`} catchtap={() => {}}>
         <view className='drawer__handle-wrap'>
           <view className='drawer__handle' />
         </view>

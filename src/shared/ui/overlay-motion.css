@@ -1,0 +1,70 @@
+/*
+ * Spring enter / leave for the hand-rolled overlay surfaces — the bottom sheets
+ * that are not inside a `DialogRoot` and so do not get `lynx-ui-presence`'s
+ * `ui-leaving` for free. `usePresence` keeps them mounted through the leave;
+ * these classes are what actually moves them.
+ *
+ * The shapes mirror what already ships: the enter is the full-player's
+ * translateY + fade (`fullPlayerEnter` in `FullPlayerPage.css`), and the leave
+ * is the dialog scrim's opacity fade (`ConfirmDialog.css`'s `.ui-leaving`).
+ * Unified on `--ease-spring` so the language is one, and every duration goes
+ * through `--duration-*` so `reduce-motion` governs them all (the
+ * `motion-tokens-consumer` gate enforces this).
+ *
+ * **Blur is never animated here** (HIG §10): only `opacity` and `transform`
+ * transition. The `<blur-view>` stays on for the whole leave; it is the scrim's
+ * `opacity` that fades, not the blur's radius.
+ */
+
+@keyframes overlay-enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes overlay-enter-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Enter (applied on mount, while `leaving` is false). */
+.overlay--enter-up {
+  animation: overlay-enter-up var(--duration-normal) var(--ease-spring);
+}
+
+.overlay--enter-scale {
+  animation: overlay-enter-scale var(--duration-normal) var(--ease-spring);
+}
+
+/* Leave (applied while `leaving` is true). Transition, not animation, so the
+   element runs from wherever it is to the target. */
+.overlay--leave-up {
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity var(--duration-normal) var(--ease-default),
+    transform var(--duration-normal) var(--ease-spring);
+}
+
+.overlay--leave-scale {
+  opacity: 0;
+  transform: scale(0.96);
+  transition: opacity var(--duration-normal) var(--ease-default),
+    transform var(--duration-normal) var(--ease-spring);
+}
+
+/* Scrim/backdrop leave: opacity only — the dim fades while the blur stays. */
+.overlay--leave-fade {
+  opacity: 0;
+  transition: opacity var(--duration-normal) var(--ease-default);
+}

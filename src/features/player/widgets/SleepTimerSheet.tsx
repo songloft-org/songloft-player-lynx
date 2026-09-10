@@ -15,6 +15,8 @@ import {
   type SleepTimerStatus,
 } from '../domain/sleep-timer.js'
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import { usePresence } from '../../../shared/ui/usePresence.js'
+import '../../../shared/ui/overlay-motion.css'
 import './SheetShell.css'
 import './SleepTimerSheet.css'
 
@@ -96,7 +98,11 @@ export function SleepTimerSheet({
         { count: sleepTimer.remainingSongs ?? 0 })
     : undefined
 
-  if (!show) return null
+  const { mounted, leaving } = usePresence(show)
+  if (!mounted) return null
+
+  const leaveClass = leaving ? ' overlay--leave-fade' : ''
+  const panelMotion = leaving ? 'overlay--leave-up' : 'overlay--enter-up'
 
   return (
     <>
@@ -105,8 +111,8 @@ export function SleepTimerSheet({
             darkened. A preceding sibling, not a child: the scrim below owns
             tap-to-dismiss and a child would sit in front of it. */}
         <BackdropBlur />
-        <view className='drawer__backdrop' bindtap={onClose} />
-        <view className='drawer__panel drawer__panel--sleep' catchtap={() => {}}>
+        <view className={`drawer__backdrop${leaveClass}`} bindtap={onClose} />
+        <view className={`drawer__panel drawer__panel--sleep ${panelMotion}`} catchtap={() => {}}>
           <view className='drawer__handle-wrap'>
             <view className='drawer__handle' />
           </view>
