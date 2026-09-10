@@ -262,6 +262,18 @@
   color: var(--secondary-label);
 }
 
+/* The pager sits below the scroll-view, at the content's bottom edge. On narrow
+   layouts the floating nav capsule (and mini-player stack) covers that edge, so
+   reserve the same tail the scrollable sub-pages reserve via SubPageShell's
+   `.shell--narrow .subpage__scroll .subpage__content` rule — which this page
+   opts out of with scrollable={false} (it owns its own scroll container). The
+   list's own tail is the `.plugin-registry__nav-inset` inside the scroller;
+   that does not cover the pager, which lives outside it. See ShellLayout.css
+   for why the `+ var(--safe-bottom)` arithmetic happens here at the use site. */
+.shell--narrow .plugin-registry__pager {
+  margin-bottom: calc(var(--nav-inset, 80px) + var(--safe-bottom));
+}
+
 .plugin-registry__state {
   display: flex;
   align-items: center;
