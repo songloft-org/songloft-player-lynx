@@ -87,6 +87,29 @@
   padding-bottom: var(--space-6);
 }
 
+/*
+ * Section container. Narrow and tablet stack vertically (the default); at
+ * desktop/tv the `.home--bento` class (set by HomePage from `breakpoint ===
+ * desktop|tv`) lays the two playlist sections side by side, halving the vertical
+ * run to see both. Gated on content width, not `shell--wide`: tablet halves
+ * would cramp the 30%-width grid cards. PluginGrid and the stats strip stay
+ * full-width below, so the bento is only this one row.
+ */
+.home__sections {
+  display: flex;
+  flex-direction: column;
+}
+
+.home--bento .home__sections {
+  flex-direction: row;
+  gap: var(--space-4);
+}
+
+.home--bento .home__sections .home-section {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ── Section ─────────────────────────────────────────────────────────────── */
 
 .home-section {
@@ -237,6 +260,42 @@
   font-size: var(--font-subhead);
 }
 
+/*
+ * Section empty state — distinct from the error row above: this is a
+ * constructive "create one" nudge, so the CTA is an accent pill (a primary
+ * action), where the error retry is a neutral fill. Only the normal section
+ * carries a CTA; the radio section renders text only, so a both-empty screen
+ * has exactly one accent surface (DESIGN.md §3.1: one accent channel).
+ */
+.home-section__empty {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+}
+
+.home-section__empty-title {
+  color: var(--secondary-label);
+  font-size: var(--font-footnote);
+  flex: 1;
+}
+
+.home-section__empty-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap-target);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--accent);
+}
+
+.home-section__empty-action-text {
+  color: var(--accent-content);
+  font-size: var(--font-subhead);
+  font-weight: var(--weight-bold);
+}
+
 /* ── Library stats panel ─────────────────────────────────────────────────── */
 
 /*
@@ -363,42 +422,9 @@
   font-size: var(--font-subhead);
   font-weight: var(--weight-bold);
 }
-.home__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-6) var(--space-5);
-}
 
-.home__empty-title {
-  color: var(--secondary-label);
-  font-size: var(--font-callout);
-  font-weight: var(--weight-bold);
-}
-
-.home__empty-subtitle {
-  color: var(--secondary-label);
-  font-size: var(--font-footnote);
-  margin-top: var(--space-2);
-  margin-bottom: var(--space-4);
-}
-
-.home__empty-action {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--tap-target);
-  padding: var(--space-2) var(--space-5);
-  border-radius: var(--radius-pill);
-  background-color: var(--accent);
-}
-
-.home__empty-action-text {
-  color: var(--accent-content);
-  font-size: var(--font-subhead);
-  font-weight: var(--weight-bold);
-}
+/* The section-level empty state (`.home-section__empty`) replaced the old
+   whole-page `.home__empty` block when per-section empty states landed. */
 
 /* Floating-nav capsule inset (see ShellLayout.css): the fixed bottom bar lets
    content scroll under it, so this tail reserves the capsule stack

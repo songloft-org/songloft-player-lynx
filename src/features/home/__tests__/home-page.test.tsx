@@ -130,6 +130,9 @@ test('renders greeting, both sections, cards and the stats strip', async () => {
   // Each section has its own "View all".
   expect(getAllByText('View all')).toHaveLength(2)
   expect(queryByTestId('home-stats')).toBeInTheDocument()
+  // The home cover now wires onPlayAll → the play disc renders on each card
+  // (the disc is conditional on the handler being passed).
+  expect(elementTree.root!.querySelector('.playlist-card__play-hit')).not.toBeNull()
 })
 
 /**
@@ -191,12 +194,18 @@ test('shows the first-load state while both sections load', async () => {
   expect(queryByText('Loading…')).toBeInTheDocument()
 })
 
-test('shows the empty state when both sections are empty', async () => {
+test('shows per-section empty states when both sections are empty', async () => {
   normalHook.mockReturnValue(result([{ playlists: [], total: 0 }]))
   radioHook.mockReturnValue(result([{ playlists: [], total: 0 }]))
   const { queryByText } = await renderPage()
+  // Normal section: empty title + the single accent CTA (create playlist).
   expect(queryByText('No playlists yet')).toBeInTheDocument()
-  expect(queryByText('Browse library')).toBeInTheDocument()
+  expect(queryByText('Create playlist')).toBeInTheDocument()
+  // Radio section: text-only empty — no dedicated CTA (header "View all" is the
+  // escape), keeping one accent surface on a both-empty screen.
+  expect(queryByText('No radios yet')).toBeInTheDocument()
+  // The old whole-page "Browse library" CTA is gone.
+  expect(queryByText('Browse library')).not.toBeInTheDocument()
 })
 
 test('shows the whole-page error when both sections fail with no data', async () => {

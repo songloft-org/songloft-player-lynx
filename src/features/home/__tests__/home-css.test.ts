@@ -55,3 +55,21 @@ test('the retry button uses the Apple fill, not the neutral alias', () => {
     /background-color:\s*var\(--tertiary-system-fill\)/,
   )
 })
+
+test('the section empty CTA is an accent pill, distinct from the neutral retry', () => {
+  expect(ruleFor('.home-section__empty-action')).toMatch(
+    /background-color:\s*var\(--accent\)/,
+  )
+  expect(ruleFor('.home-section__empty-action-text')).toMatch(
+    /color:\s*var\(--accent-content\)/,
+  )
+})
+
+test('wide bento lays the two sections side by side, gated on home--bento', () => {
+  // Default (narrow + tablet): stacked.
+  expect(ruleFor('.home__sections')).toMatch(/flex-direction:\s*column/)
+  // Only at desktop/tv (the .home--bento class HomePage sets) do they go row.
+  const bento = ruleFor('.home--bento .home__sections')
+  expect(bento).toMatch(/flex-direction:\s*row/)
+  expect(ruleFor('.home--bento .home__sections .home-section')).toMatch(/flex:\s*1/)
+})

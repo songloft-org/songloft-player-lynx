@@ -9,6 +9,9 @@ import { useShellSeededBreakpoint } from '../../../shared/responsive/use-shell-s
 import { EMPTY_LIBRARY_STATS } from '../../../models/library-stats.js'
 import type { Playlist } from '../../../models/playlist.js'
 import { usePlayerStore } from '../../player/store/index.js'
+import { playlistContext } from '../../player/domain/playback-context.js'
+import { getPlaylistApi } from '../../playlist/api/index.js'
+import { toast } from '../../../shared/ui/toast-store.js'
 import { PluginGrid } from '../../jsplugin/widgets/PluginGrid.js'
 import { currentGreetingKey } from '../domain/greeting.js'
 import { useHomePlaylists } from '../data/home-query.js'
@@ -45,7 +48,12 @@ export function HomePage() {
   const statsQuery = useLibraryStatsQuery()
   const playingPlaylistId = usePlayerStore((s) => s.sourcePlaylistId)
 
-  const { isWide: homeIsWide, onLayoutChange: homeLayoutChange } = useShellSeededBreakpoint('.home')
+  const { isWide: homeIsWide, breakpoint: homeBreakpoint, onLayoutChange: homeLayoutChange } = useShellSeededBreakpoint('.home')
+  // Bento (the two sections side by side) only at desktop/tv: at tablet the
+  // half-width cramps the 30%-width grid cards. `breakpoint` reflects the
+  // measured `.home` content rect, so `desktop` means content ≥ 900px — not the
+  // shell window, which is why `shell--wide` (≥600) is the wrong gate here.
+  const isBento = homeBreakpoint === 'desktop' || homeBreakpoint === 'tv'
   const sectionLimit = homeIsWide ? 9 : 6
   const normalItems = homeSectionItems(normal.data?.pages, sectionLimit)
   const radioItems = homeSectionItems(radio.data?.pages, sectionLimit)
@@ -75,6 +83,25 @@ export function HomePage() {
   const viewAllRadios = () => {
     void navigate({ to: '/library', search: { view: 'playlist_radio' } })
   }
+  const createPlaylist = () => {
+    void navigate({ to: '/playlists/create' })
+  }
+  // One-tap "play this playlist" from the home cover disc — mirrors PlaylistsView's
+  // onPlayAll: fetch up to 9999 songs, playAll with the playlist context so the play
+  // event lands in that playlist's history. Empty → toast; failure → toast. The
+  // cover's catchtap already stops this from also navigating into the detail page.
+  const onPlayAll = async (playlist: Playlist) => {
+    try {
+      const res = await getPlaylistApi().getPlaylistSongs(playlist.id, {}, { limit: 9999, offset: 0 })
+      if (res.songs.length === 0) {
+        toast.show(t('playlist.emptyPlaylist'))
+        return
+      }
+      await usePlayerStore.getState().playAll(res.songs, playlistContext(playlist.id))
+    } catch {
+      toast.error(t('playlist.playFailed'))
+    }
+  }
   const refreshRef = useRef<NodesRef>(null)
   // Platform, not realm: this render runs on the background thread, which on Web
   // is a worker with no `window`/`document` (see `isWebPlatform`).
@@ -94,61 +121,50 @@ export function HomePage() {
             : <HomeState text={t('common.loading')} />
           : bothFailed
             ? <HomeState text={t('home.loadError')} tone='error' />
-            : (normalItems.length === 0 && radioItems.length === 0 &&
-                !normalFailed && !radioFailed)
-              ? (
-                <view className='home__empty'>
-                  <text className='home__empty-title'>{t('home.noPlaylistsTitle')}</text>
-                  <text className='home__empty-subtitle'>
-                    {t('home.noPlaylistsSubtitle')}
-                  </text>
-                  <view className='home__empty-action' bindtap={viewAllPlaylists}>
-                    <text className='home__empty-action-text'>{t('home.browseLibrary')}</text>
-                  </view>
+            : (
+              <view>
+                <view className='home__sections'>
+                  <HomeSection
+                    title={t('home.myPlaylists')}
+                    icon='library'
+                    items={normalItems}
+                    failed={normalFailed}
+                    loading={normal.isLoading && !normal.data}
+                    onViewAll={viewAllPlaylists}
+                    onRetry={() => void normal.refetch()}
+                    onTapPlaylist={openPlaylist}
+                    onPlayAll={onPlayAll}
+                    playingPlaylistId={playingPlaylistId}
+                    isWide={homeIsWide}
+                    emptyTitle={t('home.sectionEmptyPlaylists')}
+                    emptyActionLabel={t('home.sectionCreatePlaylist')}
+                    onEmptyAction={createPlaylist}
+                  />
+                  <HomeSection
+                    title={t('home.myRadios')}
+                    icon='music'
+                    items={radioItems}
+                    failed={radioFailed}
+                    loading={radio.isLoading && !radio.data}
+                    onViewAll={viewAllRadios}
+                    onRetry={() => void radio.refetch()}
+                    onTapPlaylist={openPlaylist}
+                    onPlayAll={onPlayAll}
+                    playingPlaylistId={playingPlaylistId}
+                    isWide={homeIsWide}
+                    emptyTitle={t('home.sectionEmptyRadios')}
+                  />
                 </view>
-              )
-              : (
-                <view>
-                  {normalItems.length > 0 || normalFailed
-                    ? (
-                      <HomeSection
-                        title={t('home.myPlaylists')}
-                        icon='library'
-                        items={normalItems}
-                        failed={normalFailed}
-                        onViewAll={viewAllPlaylists}
-                        onRetry={() => void normal.refetch()}
-                        onTapPlaylist={openPlaylist}
-                        playingPlaylistId={playingPlaylistId}
-                        isWide={homeIsWide}
-                      />
-                    )
-                    : null}
-                  {radioItems.length > 0 || radioFailed
-                    ? (
-                      <HomeSection
-                        title={t('home.myRadios')}
-                        icon='music'
-                        items={radioItems}
-                        failed={radioFailed}
-                        onViewAll={viewAllRadios}
-                        onRetry={() => void radio.refetch()}
-                        onTapPlaylist={openPlaylist}
-                        playingPlaylistId={playingPlaylistId}
-                        isWide={homeIsWide}
-                      />
-                    )
-                    : null}
-                  <PluginGrid />
-                  <StatsStrip stats={stats} />
-                </view>
-              )}
+                <PluginGrid />
+                <StatsStrip stats={stats} />
+              </view>
+            )}
       </view>
     </scroll-view>
   )
 
   return (
-    <view className='home' bindlayoutchange={homeLayoutChange}>
+    <view className={isBento ? 'home home--bento' : 'home'} bindlayoutchange={homeLayoutChange}>
       <view className='home__topbar'>
         <text className='home__greeting' data-testid='home-greeting'>
           {t(currentGreetingKey())}
