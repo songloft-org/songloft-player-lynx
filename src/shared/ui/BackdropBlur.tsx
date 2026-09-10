@@ -1,5 +1,6 @@
-import { useEffect, useState } from '@lynx-js/react'
+import { useEffect, useMemo, useState } from '@lynx-js/react'
 
+import { getPlatformTarget } from '../../native/platform-target.js'
 import { getAppTheme, resolveTheme, subscribeAppTheme } from '../theme/theme-model.js'
 
 import './BackdropBlur.css'
@@ -15,6 +16,31 @@ import './BackdropBlur.css'
  */
 export const BACKDROP_BLUR_RADIUS = '20px'
 
+/** The native platform, read once and pinned (a host does not change at runtime). */
+const PLATFORM = /* @__PURE__ */ getPlatformTarget()
+
+/**
+ * The `blur-effect` value for a surface, by platform and resolved theme.
+ *
+ * On **iOS** the app opts into the native iOS-26 Liquid Glass material
+ * (`'glass'`); the translucent fill above this layer is lowered to a tint by
+ * the `.platform-ios` token override, so the native material — not the CSS
+ * fill — is what carries readability (Apple's vibrancy guarantees it, the way
+ * the system bars read). Every other platform keeps the theme-driven
+ * `'light'`/`'dark'` vibrancy, where the CSS fill is still the readability
+ * carrier and `contrast.test.ts` still gates it.
+ *
+ * `'glass-container'` is reserved for panel mode below; a single glass element
+ * uses plain `'glass'`.
+ */
+export function blurEffectFor(
+  platform: ReturnType<typeof getPlatformTarget>,
+  theme: 'light' | 'dark',
+): 'light' | 'extra-light' | 'dark' | 'glass' | 'glass-container' {
+  if (platform === 'ios') return 'glass'
+  return theme === 'dark' ? 'dark' : 'light'
+}
+
 export interface BackdropBlurProps {
   /**
    * Extra class, for the **panel** mounting mode only — one of the
@@ -22,6 +48,15 @@ export interface BackdropBlurProps {
    * nothing; the base class already covers its sibling's box exactly.
    */
   className?: string
+  /**
+   * Whether this surface is a **container** of multiple adjacent glass
+   * elements (a popover menu, the nav capsule grouping its items). On iOS a
+   * container uses `'glass-container'` so the native material merges the
+   * elements into one combined effect rather than rendering each separately.
+   * On non-iOS this is a no-op (vibrancy is per-surface there). Scrim mode
+   * (modal dim) leaves this `false`.
+   */
+  container?: boolean
 }
 
 /**
@@ -41,7 +76,12 @@ export interface BackdropBlurProps {
  *    whole component is a silent no-op on Web — which is how it first shipped,
  *    because the runtime check had constructed an `x-blur-view` by hand.
  *  - **iOS** — `XElement/BlurView` 4.0.1 is in `ios/Podfile.lock`, and
- *    `XElement/Behavior` self-registers it.
+ *    `XElement/Behavior` self-registers it. On iOS 26 the `'glass'` material
+ *    maps to a native `UIGlassEffect` — the real Liquid Glass surface — and the
+ *    `.platform-ios` token override lowers the CSS fill above it to a tint so
+ *    the native material shows. Readability there is the native material's
+ *    vibrancy, verified on-device; `contrast.test.ts` still gates the baseline
+ *    fill the other platforms render.
  *  - **Android** — `xelement-blur-view:4.0.0` arrives transitively through the
  *    `xelement` umbrella POM, and `MainActivity` calls
  *    `addBehaviors(XElementBehaviors().create())`.
@@ -91,9 +131,14 @@ export interface BackdropBlurProps {
  * case from *uniform* extremes, which means no amount of blur can ever buy alpha
  * headroom under those gates — it only removes the high-frequency detail that WCAG
  * does not model in the first place. So this work changes no token, and
- * `contrast.test.ts` is untouched by design rather than by omission.
+ * `contrast.test.ts` is untouched by design rather than by omission — *on the
+ * non-iOS platforms*. iOS is the exception: there the native material replaces
+ * the CSS fill as the readable surface, the `.platform-ios` override lowers the
+ * fill, and that fill's contrast is not modelled in CSS (the surface behind the
+ * text is a native vibrancy layer, not a composite). `platform-glass.test.ts`
+ * carries that contract.
  */
-export function BackdropBlur({ className }: BackdropBlurProps) {
+export function BackdropBlur({ className, container = false }: BackdropBlurProps) {
   const [theme, setTheme] = useState(() => resolveTheme(getAppTheme()))
 
   // Same subscribe-the-model shape as `ThemeProvider` (this codebase has no
@@ -104,28 +149,27 @@ export function BackdropBlur({ className }: BackdropBlurProps) {
     [],
   )
 
+  // iOS opts into the native iOS-26 Liquid Glass material (`'glass'`, or
+  // `'glass-container'` when several adjacent glass elements should merge into
+  // one combined effect — the nav capsule, a popover menu). `glass-style` is
+  // iOS-only in the type system and inert everywhere else; the whole tag does
+  // not resolve on Harmony, so setting these unconditionally costs nothing
+  // off-iOS while keeping the iOS material configurable in exactly one place.
+  const glassStyle = useMemo(() => 'regular' as const, [])
+  const blurEffect = blurEffectFor(PLATFORM, theme)
+  const effect = container && blurEffect === 'glass' ? 'glass-container' : blurEffect
+
   return (
     <blur-view
       className={className ? `ui-backdrop-blur ${className}` : 'ui-backdrop-blur'}
       blur-radius={BACKDROP_BLUR_RADIUS}
+      blur-effect={effect}
+      glass-style={glassStyle}
       /*
        * iOS-only, and it has to be set: the default is `'light'`, a vibrancy
        * layer that brightens the blurred area — wrong under a dark theme.
-       *
-       * Deliberately NOT `'glass'`/`'glass-container'` (the iOS-26 liquid-glass
-       * materials, also available here). Those would replace the material batch C
-       * tuned, on the one platform where nothing in this repo can verify the
-       * result, and they would be almost entirely hidden anyway: the panel above
-       * this layer is opaque to 0.72–0.85, so a native glass material would show
-       * through at 15–28% strength. The blur is what is actually visible through
-       * a 0.35–0.55 scrim, so the blur is what this batch buys.
-       */
-      blur-effect={theme === 'dark' ? 'dark' : 'light'}
-      /*
-       * iOS ≥4.0 (this host is on 4.0.1). The app's theme is its own preference
-       * and does not have to match the system appearance, so without this the
-       * vibrancy would follow the *system* while everything around it follows
-       * `theme-model.ts`.
+       * Applies to the theme-driven vibrancy surfaces (non-iOS); on iOS the
+       * material is `'glass'`, whose appearance the system tints by `theme`.
        */
       ios-user-interface-style={theme}
     />

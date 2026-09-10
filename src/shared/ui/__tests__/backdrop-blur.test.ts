@@ -3,7 +3,7 @@ import { join, relative } from 'node:path'
 
 import { describe, it, expect } from 'vitest'
 
-import { BACKDROP_BLUR_RADIUS } from '../BackdropBlur.js'
+import { BACKDROP_BLUR_RADIUS, blurEffectFor } from '../BackdropBlur.js'
 
 /**
  * The real backdrop blur behind every translucent surface in the app.
@@ -268,9 +268,19 @@ describe('BackdropBlur component', () => {
 
   it('drives the iOS vibrancy from the resolved theme, never the default', () => {
     // The `blur-effect` default is 'light' — a layer that *brightens* what it
-    // blurs, which is wrong under a dark theme. Both props must be present and
-    // both must be theme-derived, not literals.
-    expect(COMPONENT).toMatch(/blur-effect=\{theme === 'dark' \? 'dark' : 'light'\}/)
+    // blurs, which is wrong under a dark theme. iOS opts into the native
+    // iOS-26 Liquid Glass material instead; every other platform follows the
+    // resolved theme. The branching lives in `blurEffectFor`, exercised below.
+    expect(blurEffectFor('ios', 'light')).toBe('glass')
+    expect(blurEffectFor('ios', 'dark')).toBe('glass')
+    expect(blurEffectFor('android', 'light')).toBe('light')
+    expect(blurEffectFor('android', 'dark')).toBe('dark')
+    expect(blurEffectFor('harmony', 'dark')).toBe('dark')
+    expect(blurEffectFor('web', 'light')).toBe('light')
+    expect(COMPONENT).toMatch(/blur-effect=\{effect\}/)
+    expect(COMPONENT).toMatch(/blurEffectFor\(PLATFORM, theme\)/)
+    expect(COMPONENT).toMatch(/container && blurEffect === 'glass' \? 'glass-container' : blurEffect/)
+    expect(COMPONENT).toMatch(/glass-style=\{glassStyle\}/)
     expect(COMPONENT).toMatch(/ios-user-interface-style=\{theme\}/)
     expect(COMPONENT).toMatch(/resolveTheme\(getAppTheme\(\)\)/)
     // Resolved theme, subscribed: under 'system' the choice never changes when

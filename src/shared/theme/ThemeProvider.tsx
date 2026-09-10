@@ -1,4 +1,4 @@
-import { useEffect, useState } from '@lynx-js/react'
+import { useEffect, useMemo, useState } from '@lynx-js/react'
 import type { ReactNode } from '@lynx-js/react'
 import type { CSSProperties } from '@lynx-js/types/common'
 
@@ -15,6 +15,7 @@ import {
   safeAreaStyleVars,
   subscribeSafeArea,
 } from '../../native/safe-area.js'
+import { getPlatformTarget } from '../../native/platform-target.js'
 import { getAppTheme, resolveTheme, subscribeAppTheme } from './theme-model.js'
 import { getActiveThemePack, subscribeActiveThemePack } from './theme-pack-model.js'
 import { themePackToStyleVars } from './theme-pack-mapping.js'
@@ -61,6 +62,14 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const [, setFontScale] = useState(() => getFontScaleNumber())
   const [insets, setInsets] = useState(() => getSafeAreaInsets())
 
+  // The platform does not change at runtime — a host is iOS or it is not — so
+  // it is read once and pinned. The class it puts on the root lets the iOS
+  // Liquid Glass token override (see `tokens.css`'s `.platform-ios` blocks)
+  // take effect: on iOS the native UIGlassEffect is the readable surface, and
+  // the CSS `--glass-fill*` comes down to a tint that lets it show. Other
+  // platforms keep the baseline fills, which `contrast.test.ts` still gates.
+  const platform = useMemo(() => getPlatformTarget(), [])
+
   useEffect(
     () => subscribeAppTheme(() => setTheme(resolveTheme(getAppTheme()))),
     [],
@@ -94,5 +103,5 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const vars = { ...themePackToStyleVars(pack?.data, theme), ...safeAreaStyleVars(insets) }
   const style = vars as Record<string, string> & CSSProperties
 
-  return <view className={`theme-root theme-${theme}`} style={style}>{children}</view>
+  return <view className={`theme-root theme-${theme} platform-${platform}`} style={style}>{children}</view>
 }

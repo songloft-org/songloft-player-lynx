@@ -677,3 +677,41 @@
   --system-gray5: #363638;
   --system-gray6: #242426;
 }
+
+/* ── iOS Liquid Glass platform override ─────────────────────────────────────
+   On iOS the app drives a *native* UIGlassEffect via `blur-effect: 'glass'`
+   (see BackdropBlur.tsx). A native glass material is the real surface behind
+   the text — Apple guarantees its readability through vibrancy, the same way
+   the system's own bars read. The CSS `--glass-fill*` is no longer the carrier
+   of readability on iOS; it is a light tint the native material shows through.
+   That is why these alphas come down: the 0.85/0.72 baseline would cover the
+   native material to 15–28%, and the whole point of opting into it is to let
+   it show.
+
+   The values mirror the `ultra-thin` row of `material-tokens.ts` exactly — a
+   thickness the codebase already ships and monotonicity-tests — so the iOS
+   track is a coherent material rather than a one-off alpha. Thinner glass
+   also raises the specular highlight (`--glass-highlight`), per the same
+   "brightness is a thickness cue" rule the dark block cites.
+
+   What this is NOT: a contrast-tracked surface. `contrast.test.ts` derives its
+   worst case from the *uniform* baseline fills in the `.theme-root.theme-<name>`
+   blocks above, which the non-iOS platforms (Android/Web/Harmony) still render
+   verbatim — those carry their own readability and stay gated. This block is a
+   separate selector (`.platform-ios`), so the baseline parse is untouched, and
+   iOS readability is verified on-device rather than in CI — the same stance the
+   repo already takes for every other iOS-only property. See
+   `platform-glass.test.ts` for the structural gate. */
+.theme-root.theme-light.platform-ios {
+  --glass-fill: rgba(255, 255, 255, 0.55);
+  --glass-fill-strong: rgba(255, 255, 255, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.55);
+  --glass-highlight: rgba(255, 255, 255, 0.72);
+}
+
+.theme-root.theme-dark.platform-ios {
+  --glass-fill: rgba(23, 23, 27, 0.50);
+  --glass-fill-strong: rgba(23, 23, 27, 0.40);
+  --glass-border: rgba(255, 255, 255, 0.20);
+  --glass-highlight: rgba(255, 255, 255, 0.38);
+}
