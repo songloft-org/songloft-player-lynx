@@ -13,6 +13,7 @@ import { useAppSessionStore } from '../../../store/index.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import {
   createAuthStore,
+  normalizeServerUrl,
   PREF_LAST_USERNAME,
   PREF_SERVER_URL,
   SECURE_LAST_PASSWORD,
@@ -221,5 +222,60 @@ describe('auth store', () => {
     expect(store.getState().status).toBe('unknown')
     await store.getState().checkAuth()
     expect(store.getState().status).toBe('unauthenticated')
+  })
+
+  test('login with schemeless URL auto-prepends http://', async () => {
+    const { transport, calls } = makeTransport()
+    const deps = makeDeps(storage, transport)
+    const store = createAuthStore(deps)
+
+    await store.getState().login({
+      username: 'admin',
+      password: 'admin',
+      apiBaseUrl: '192.168.1.100:58091',
+    })
+
+    expect(store.getState().status).toBe('authenticated')
+    expect(appConfig.baseUrl).toBe('http://192.168.1.100:58091')
+    expect(appConfig.resolvedBaseUrl).toBe('http://192.168.1.100:58091')
+    expect(await storage.prefs.get(PREF_SERVER_URL)).toBe('http://192.168.1.100:58091')
+    expect(calls[0].url).toContain('http://192.168.1.100:58091')
+  })
+})
+
+describe('normalizeServerUrl', () => {
+  test('prepends http:// when no scheme', () => {
+    expect(normalizeServerUrl('192.168.1.100:58091')).toBe('http://192.168.1.100:58091')
+  })
+
+  test('prepends http:// for hostname only', () => {
+    expect(normalizeServerUrl('my-nas.local')).toBe('http://my-nas.local')
+  })
+
+  test('preserves http://', () => {
+    expect(normalizeServerUrl('http://192.168.1.100:58091')).toBe('http://192.168.1.100:58091')
+  })
+
+  test('preserves https://', () => {
+    expect(normalizeServerUrl('https://example.com')).toBe('https://example.com')
+  })
+
+  test('case-insensitive scheme detection', () => {
+    expect(normalizeServerUrl('HTTP://server:1234')).toBe('HTTP://server:1234')
+    expect(normalizeServerUrl('HTTPS://server:1234')).toBe('HTTPS://server:1234')
+  })
+
+  test('trims whitespace', () => {
+    expect(normalizeServerUrl('  192.168.1.100:58091  ')).toBe('http://192.168.1.100:58091')
+  })
+
+  test('strips trailing slashes', () => {
+    expect(normalizeServerUrl('http://server:1234/')).toBe('http://server:1234')
+    expect(normalizeServerUrl('192.168.1.100:58091/')).toBe('http://192.168.1.100:58091')
+  })
+
+  test('returns empty for empty input', () => {
+    expect(normalizeServerUrl('')).toBe('')
+    expect(normalizeServerUrl('  ')).toBe('')
   })
 })

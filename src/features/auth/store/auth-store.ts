@@ -81,9 +81,23 @@ export function defaultAuthStoreDeps(): AuthStoreDeps {
   }
 }
 
-/** Normalize a user-entered server URL: trim + strip trailing slashes. */
+/**
+ * Normalize a user-entered server URL: trim, strip trailing slashes, and
+ * prepend `http://` when no scheme is present.
+ *
+ * Users commonly type bare addresses like `192.168.1.100:58091` — without a
+ * scheme the URL is not absolute and `fetch` cannot resolve it. The Flutter
+ * reference (`ServerEntry.normalizeUrl`) rejects schemeless URLs with an error;
+ * we auto-prepend `http://` instead, which is friendlier and matches the most
+ * common self-hosted (plain HTTP) case. Users who need HTTPS type the scheme
+ * explicitly or their server redirects.
+ */
 export function normalizeServerUrl(raw: string): string {
-  return raw.trim().replace(/\/+$/, '')
+  let trimmed = raw.trim().replace(/\/+$/, '')
+  if (trimmed.length > 0 && !/^https?:\/\//i.test(trimmed)) {
+    trimmed = `http://${trimmed}`
+  }
+  return trimmed
 }
 
 function messageOf(e: unknown): string {

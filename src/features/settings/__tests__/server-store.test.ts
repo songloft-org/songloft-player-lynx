@@ -42,7 +42,13 @@ vi.mock('../../../core/config/app-config.js', async () => {
 })
 
 vi.mock('../../auth/store/index.js', () => ({
-  normalizeServerUrl: (url: string) => url.trim().replace(/\/+$/, ''),
+  normalizeServerUrl: (url: string) => {
+    let trimmed = url.trim().replace(/\/+$/, '')
+    if (trimmed.length > 0 && !/^https?:\/\//i.test(trimmed)) {
+      trimmed = `http://${trimmed}`
+    }
+    return trimmed
+  },
   PREF_SERVER_URL: 'server_url',
 }))
 
