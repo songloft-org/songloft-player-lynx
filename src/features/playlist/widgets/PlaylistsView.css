@@ -19,13 +19,16 @@
 
 .playlists__grid {
   /* Same card-sizing vars + grow-to-fill treatment as .library__grid (see there
-     for the rationale): left/right margins both zero, covers capped. Spacers
-     (GridSpacers) pad the last row so its cards match full-row width. */
+     for the rationale): covers capped, and `justify-content: center` splits the
+     surplus evenly once the cap binds (2-column phones) instead of stacking it
+     on the right. Spacers (GridSpacers) pad the last row so its cards match
+     full-row width. */
   --grid-card-min: 108px;
   --grid-card-max: 128px;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
+  justify-content: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
 }
@@ -415,7 +418,8 @@
 .playlists__grid-item {
   /* This wrapper is the flex child of .playlists__grid (each card is wrapped,
      unlike the facet grids where .facet-card is the direct child). So the
-     grow-to-fill + cap sizing lives here. Mirrored by .grid-spacer. */
+     grow-to-fill + cap sizing lives here. Mirrored by .grid-spacer; the surplus
+     once the cap binds is centered by .playlists__grid. */
   flex: 1 0 var(--grid-card-min);
   max-width: var(--grid-card-max);
   position: relative;

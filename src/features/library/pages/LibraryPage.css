@@ -182,15 +182,25 @@
 .library__grid {
   /* Card sizing is shared with .grid-spacer (the invisible last-row padder in
      GridSpacers.css) so the two stay byte-for-byte aligned: `flex: 1 0 <min>`
-     grows each card to fill the row edge-to-edge (left & right margins both
-     zero), `max-width` caps it so covers never balloon on wide screens. The
-     min basis picks the column count (3 on phone, more on wide) — cards never
-     exceed the cap, so a cover stays ~92px (min 108 − 2×padding) everywhere. */
+     grows each card until the row is full, `max-width` caps it so covers never
+     balloon on wide screens, and the min basis picks the column count (cover
+     lands between 92px and 112px: min 108 − 2×padding … cap 128 − 2×padding).
+
+     `justify-content: center` is what keeps the two outer margins equal when the
+     cap binds before the row fills. On a 375pt phone the 343px content fits 2
+     columns, not 3 (3 × 108 + 2 × 12 = 348 > 343); they cap at 128, so the row is
+     268px and the leftover 75px would sit entirely on the right under the default
+     main-axis alignment — 16px left vs 91px right. Centering splits it. (Both
+     platforms land on that side by default: Lynx's `justify-content` default is
+     `stretch`, the Web's is `flex-start`; neither can stretch a capped card, so
+     both pack the surplus to one edge.) Rows that already fill (or that
+     GridSpacers pad to a full row) are unaffected. */
   --grid-card-min: 108px;
   --grid-card-max: 128px;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
+  justify-content: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
 }
@@ -284,11 +294,12 @@
 .facet-card {
   display: flex;
   flex-direction: column;
-  /* Grow to fill the row evenly (left & right margins both zero → symmetric),
-   * but cap the width so covers never balloon on wide screens. The min basis
-   * sets the column count; the cap keeps covers ~92px everywhere. Mirrored
-   * exactly by .grid-spacer (see GridSpacers.css) so the last row — padded by
-   * invisible spacers — stays the same card width as full rows. */
+  /* Grow to fill the row evenly — up to the cap, past which `.library__grid`'s
+   * centering keeps the outer margins symmetric (see there) — and cap the width
+   * so covers never balloon on wide screens. The min basis sets the column count
+   * (cover 92px…112px). Mirrored exactly by .grid-spacer (see GridSpacers.css) so
+   * the last row — padded by invisible spacers — stays the same card width as
+   * full rows. */
   flex: 1 0 var(--grid-card-min);
   max-width: var(--grid-card-max);
   padding: var(--space-2);

@@ -4,15 +4,17 @@ import './GridSpacers.css'
  * Invisible trailing spacers that pad a flex-wrap card grid's last row.
  *
  * Why this exists: a responsive card grid (`flex: 1 0 <min>; max-width: <cap>`
- * on the cards) fills every full row edge-to-edge — left & right margins both
- * zero, covers a constant size. But the *last* row is usually short, and
- * `flex-grow: 1` would stretch its few cards to fill the whole width — a lone
- * trailing card balloons to 300+px. There is no way to both "fill the width"
- * and "keep the last row's cards the same size" without something occupying
- * the empty slots, so these invisible spacers do exactly that: they take the
- * same flex sizing as a real card (`flex: 1 0 <min>; max-width: <cap>`) but
- * `height: 0`, so they pad a short last row to a full one (cards stay uniform)
- * while surplus spacers collapse into zero-height invisible rows below.
+ * on the cards) fills every full row up to the cap — covers a constant size, and
+ * the grid centers whatever the cap leaves over so both outer margins agree. But
+ * the *last* row is usually short, and `flex-grow: 1` would stretch its few cards
+ * wider than a full row's (they only stop at the cap, and the cap is not what
+ * binds on a wide screen) — a lone trailing card balloons to 300+px where the cap
+ * is loose. There is no way to both "fill the row" and "keep the last row's cards
+ * the same size" without something occupying the empty slots, so these invisible
+ * spacers do exactly that: they take the same flex sizing as a real card
+ * (`flex: 1 0 <min>; max-width: <cap>`) but `height: 0`, so they pad a short last
+ * row to a full one (cards stay uniform) while surplus spacers collapse into
+ * zero-height invisible rows below.
  *
  * Render at most `count` (default 8 — enough for up to ~8 columns; any extra
  * just forms invisible zero-height rows, harmless).
