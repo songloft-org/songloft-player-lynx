@@ -98,10 +98,13 @@ test('radius and shadow additions land alongside the untouched originals', () =>
   // --shadow-sm/md/lg are per-theme (in .theme-dark/.theme-light), so they are
   // NOT in the theme-root block. Only the theme-agnostic shadow extras live here.
   expect(decl['--shadow-none']).toBe('none')
-  // --shadow-focus resolves --tint-fill at use time, so the literal is kept
-  // verbatim — the theme-layer resolution is covered by the Docker-Chrome
-  // runtime check, not by static text matching.
-  expect(decl['--shadow-focus']).toBe('0 0 0 3px var(--tint-fill)')
+  // No focus ring: `--shadow-focus` was deleted in batch 68. It had been
+  // declared with the HIG migration and never consumed — the app has no tab
+  // order or key handling on any platform, so the ring was unreachable. This
+  // assertion is the tripwire for re-adding it: the token and the consumer that
+  // makes it visible belong in the same batch (AGENTS §5.3), not one after the
+  // other with years in between.
+  expect(decl['--shadow-focus']).toBeUndefined()
 })
 
 test('the Apple grouped-list corner is its own token, not --radius-sm', () => {

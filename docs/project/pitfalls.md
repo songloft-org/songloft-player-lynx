@@ -252,6 +252,12 @@ TS facade 无论成败一律返回 resolved promise——只问 `isShowing()` �
 
 批48 出现过门控条件写反、5 例整体静默跳过而报「全绿」（`E2E_PLATFORM === 'android'` 在裸 `pnpm run test:e2e` 下不成立，而 `createDriver()` 把未设视为 Android；正确写法 `(process.env.E2E_PLATFORM ?? 'android') === 'android'`）。素材缺失要让用例**可见地 skip**（模块级 `test.skipIf`），不是每个 test 里 `return` 的假绿。
 
+### 没被 import 的样式表不会喊，写在 markup 里的类名更不会
+
+两个文件（`src/shared/ui/buttons.css` 48 行、`src/routes/pages.css` 104 行）自 Apple 迁移起就没被任何 `.ts/.tsx` import，运行期**完全不存在**：不会失败、不会告警、不出现在任何截图或测量里，却都带着「Consumed by new code」这种自信的头部注释（批68 删）。**更坏的一半是类名还留在 markup 里**：`LoginPage.tsx` 的根元素写着 `page page--centered`，而这两个类的规则**只存在于那个孤儿文件**——于是「什么在给这个元素上样式」这个问题得到一个从来不为真的答案（竖居中是两个 `flex: 1` spacer 做的，`justify-content: center` 从未生效过）。
+
+判据不是「有没有人用」，而是「在不在加载图里」：批68 的 `src/__tests__/orphan-css.test.ts` 就是这条（每个 `src/**/*.css` 必须被 import；每条 import 必须指向存在的文件；反向验证 2/2 全咬）。删孤儿样式表时**顺手 grep 一遍它定义的类名**——命中就说明那处样式是空的，要么补规则、要么摘类名。
+
 ## 7. 没有闸门读的状态断言会腐化
 
 四个实例：批43 记错 manifest（「权限与 service 声明此前已有」，活了 4 批）；「构建警告自批19b 起归零」漂移（后订正为「警告应当只剩 3 类已知项」）；`docs/README.md` 指标连续腐烂两次（批32、批42 各一次）；HANDOFF 把 7 个已完成功能列为待做，导致那批工作「在文档上不存在了十天」、下一版 HANDOFF 仍列为待做。**改完代码顺手带走相关文档句子**；可检验的断言要么配闸门，要么别写死数字。

@@ -14,7 +14,9 @@ import { CONTRAST_ACCENT, PACK_OVERRIDABLE_BASELINE, themePackToStyleVars } from
  * authored, documented and then never switched on: the CSS landed with the
  * Apple Design System migration (batch P…), the comment said activation was
  * waiting on a native field, and nothing ever added the class. The other two
- * were the `:active` press states (batch 64) and `--shadow-focus`.
+ * were the `:active` press states (batch 64) and `--shadow-focus` — the latter
+ * turned out to have no reachable consumer at all and was deleted in batch 68
+ * rather than wired.
  *
  * `increase-contrast-model.test.ts` proves the flag and the pref behave;
  * `theme-provider.test.tsx` proves the class reaches the root. This file guards

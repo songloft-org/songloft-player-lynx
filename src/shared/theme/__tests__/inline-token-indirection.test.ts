@@ -110,12 +110,13 @@ test('no calc-bearing custom property consumes an inline-overridden token', () =
     for (const decl of customPropertyDeclarations(css)) {
       // Scoped to `calc()` because that is the shape actually measured to fail on
       // iOS (both known defects are calc-bearing). A *plain* substitution inside a
-      // custom property — `--shadow-focus: 0 0 0 3px var(--tint-fill)`,
-      // `--glass-sheen-layer: … var(--glass-sheen)`, `--glass-rim-sides: …
-      // var(--glass-rim-side)` — is **unverified either way** and deliberately not
-      // flagged: asserting it broken without measuring would be the same mistake as
-      // the docs that claimed `env()` worked. Candidates listed in
-      // `docs/project/bugs.md`; if one is ever measured to fail, widen this test.
+      // custom property — `--glass-sheen-layer: … var(--glass-sheen)`,
+      // `--glass-rim-sides: … var(--glass-rim-side)` — is **unverified either way**
+      // and deliberately not flagged: asserting it broken without measuring would be
+      // the same mistake as the docs that claimed `env()` worked. Candidates listed
+      // in `docs/project/bugs.md`; if one is ever measured to fail, widen this test.
+      // (A third candidate, `--shadow-focus`, left this list in batch 68 by being
+      // deleted: it had no consumer.)
       if (!decl.value.includes('calc(')) continue
       for (const m of decl.value.matchAll(/var\(\s*(--[\w-]+)/g)) {
         if (!tokens.has(m[1]!)) continue

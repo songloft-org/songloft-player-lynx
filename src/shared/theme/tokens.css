@@ -166,11 +166,15 @@
   --press-scale: 0.97;
 
   /* shadow extras — --shadow-sm/md/lg stay per-theme (see the theme blocks
-     below); --shadow-none is the semantic zero, --shadow-focus is the a11y
-     focus ring. --shadow-focus reads --tint-fill at use time, so it tracks
-     whichever theme is active (and never silently no-ops). */
+     below); --shadow-none is the semantic zero.
+     There is deliberately no focus-ring token here: `--shadow-focus` was
+     declared with the HIG migration for keyboard navigation and never had a
+     consumer — nothing in the app can take focus (no tab order, no key handling
+     on any platform), so a ring could not be reached or painted. Deleted in
+     batch 68 rather than left as decoration; it comes back in the same batch as
+     the keyboard-navigation consumer (desktop / clay is the likely first
+     target — `box-shadow` itself is available on every backend). */
   --shadow-none: none;
-  --shadow-focus: 0 0 0 3px var(--tint-fill);
 
   /* HIG Motion — duration and easing tokens (HIG §10 Motion).
      Consumer CSS references these as var(--duration-*) / var(--ease-*).

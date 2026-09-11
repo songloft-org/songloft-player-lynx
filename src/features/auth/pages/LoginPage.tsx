@@ -141,7 +141,7 @@ export function LoginPage() {
   }
 
   return (
-    <view className='page page--centered login'>
+    <view className='login'>
       <view style={{ flex: 1 }} />
       <view className='login__card'>
         <image
