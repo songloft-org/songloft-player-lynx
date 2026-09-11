@@ -1,16 +1,19 @@
 import { useEffect, useState } from '@lynx-js/react'
 
+import { getReduceMotion } from '../theme/reduce-motion-model.js'
+
 /**
  * Keeps a subtree mounted through its leave animation, then unmounts it.
  *
- * The hand-rolled sheets (`PlaylistDrawer`, `SleepTimerSheet`, `MoreTabsSheet`,
- * `AddToPlaylistSheet`) all mount with `if (!show) return null`, which tears the
- * panel down the instant `show` flips false — so a leave animation has nothing
- * to play on. This hook splits that flip: `show` going false enters a `leaving`
- * phase (still mounted, so the leave CSS runs), and the unmount is deferred
- * until the leave duration elapses. `ConfirmDialog` gets the same effect from
- * `lynx-ui-presence`'s `ui-leaving` + `transitionend`; this is the equivalent
- * for surfaces that do not sit inside a `DialogRoot`.
+ * The hand-rolled modal sheets (`PlaylistDrawer`, `SleepTimerSheet`) mount with
+ * `if (!show) return null`, which tears the panel down the instant `show` flips
+ * false — so a leave animation has nothing to play on. This hook splits that
+ * flip: `show` going false enters a `leaving` phase (still mounted, so the leave
+ * CSS runs), and the unmount is deferred until the leave duration elapses.
+ * `ConfirmDialog` gets the same effect from `lynx-ui-presence`'s `ui-leaving` +
+ * `transitionend`; this is the equivalent for surfaces that do not sit inside a
+ * `DialogRoot`. (`MoreTabsSheet`/`AddToPlaylistSheet`/the anchored popovers
+ * stay instant-unmount by design — see their own comments.)
  *
  * Teardown is on a **timeout**, not `transitionend`/`animationend`: this repo
  * measured `animationend` as unreliable on Lynx (see `ToastHost.tsx`), and a
@@ -18,10 +21,10 @@ import { useEffect, useState } from '@lynx-js/react'
  * event. The cost is a fixed wait even if the transition finishes early; the
  * wait is short and the element is invisible by then, so it does not show.
  *
- * `reduce-motion` zeroes the CSS durations, so the leave visual is instant —
- * the timeout still waits, but on an already-invisible element. Once the host
- * `SystemAppearance` reduce-motion signal lands (batch 5), this can collapse to
- * a synchronous unmount under that flag.
+ * Under reduce-motion the CSS durations are zero, so the leave visual is
+ * instant — and the hook collapses to a synchronous unmount too, so no invisible
+ * element lingers for the timeout. The flag comes from `reduce-motion-model`,
+ * which the host pushes via `SystemAppearance` (batch 5).
  */
 const LEAVE_MS = 280 // ≈ --duration-normal (250ms) + a small tail for slow paints
 
@@ -52,9 +55,16 @@ export function usePresence(show: boolean): UsePresenceResult {
     // Closing: if it was on screen, enter the leave phase and schedule the
     // unmount. A sheet that was never mounted (show started false) stays gone.
     setState((prev) => (prev.mounted ? { mounted: true, leaving: true } : prev))
+    if (getReduceMotion()) {
+      // reduce-motion: the leave visual is instant (0ms tokens), so unmount now
+      // rather than holding an invisible subtree for the timeout.
+      setState({ mounted: false, leaving: false })
+      return
+    }
     const id = setTimeout(() => setState({ mounted: false, leaving: false }), LEAVE_MS)
     return () => clearTimeout(id)
   }, [show])
 
   return state
 }
+

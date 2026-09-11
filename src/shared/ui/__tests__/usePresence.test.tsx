@@ -2,6 +2,7 @@ import { useState } from '@lynx-js/react'
 import { act, fireEvent, render } from '@lynx-js/react/testing-library'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
+import { setSystemAppearanceForTests } from '../../../native/system-appearance.js'
 import { usePresence } from '../usePresence.js'
 
 /**
@@ -43,7 +44,7 @@ function leavingOf(el: unknown): string | null {
 }
 
 beforeEach(() => { vi.useFakeTimers() })
-afterEach(() => { vi.useRealTimers() })
+afterEach(() => { vi.useRealTimers(); setSystemAppearanceForTests(null) })
 
 test('mounts when shown', () => {
   const q = render(<Presence show={true} />)
@@ -86,4 +87,16 @@ test('re-opening mid-leave cancels the teardown and re-mounts fresh', () => {
   act(() => { vi.advanceTimersByTime(LEAVE_MS + 50) })
   expect(q.queryByTestId('subject')).not.toBeNull()
   expect(leavingOf(q.queryByTestId('subject'))).toBe('0')
+})
+
+test('reduce-motion tears down synchronously, with no leaving phase or timeout', () => {
+  setSystemAppearanceForTests({ theme: null, locale: null, reduceMotion: true })
+  const q = render(<Harness />)
+  expect(q.queryByTestId('subject')).not.toBeNull()
+
+  act(() => { fireEvent.tap(q.getByTestId('close') as unknown as HTMLElement, {}) })
+  // Unmounted immediately — no leaving phase, no 280ms wait.
+  expect(q.queryByTestId('subject')).toBeNull()
+  act(() => { vi.advanceTimersByTime(LEAVE_MS + 50) })
+  expect(q.queryByTestId('subject')).toBeNull()
 })
