@@ -212,6 +212,17 @@
   align-self: stretch;
 }
 
+/* Press feedback for the tab slot. The slot itself is a pure hit area (every
+ * visual lives on the pill inside it), so dimming the slot dims glyph, label
+ * and capsule together — one rule, no descendant `:active` matching to rely
+ * on. Opacity only: the slot sits inside the fixed bottom-bar capsule, and a
+ * transform there would create an independent compositing layer whose
+ * coordinate transform may miss the parent's scroll offset
+ * (lynx-vs-web/css-differences.md). */
+.nav-item:active {
+  opacity: var(--press-opacity);
+}
+
 .shell--wide .nav-item {
   flex: none;
   align-self: auto;
@@ -241,6 +252,11 @@
      plugin names only. */
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-pill);
+  /* The selection tint cross-fades instead of snapping. Colours only — the
+   * comment above `.nav-item--active .nav-item__pill` explains why no size
+   * may change on selection. Uses the motion tokens, so reduce-motion (which
+   * zeroes --duration-*) makes the fade instant with no extra branch. */
+  transition: background-color var(--duration-fast) var(--ease-default);
 }
 
 /* The selection tint — background only, shared by both bars. The active pill

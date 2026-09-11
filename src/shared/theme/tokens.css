@@ -152,6 +152,17 @@
   --control-height: 44px;
   --control-height-sm: 36px;
 
+  /* press feedback — HIG §12: a custom button with no pressed state reads as
+     unresponsive. Applied through Lynx's `:active` pseudo-class (documented in
+     lynx-api-docs/css/pseudo-classes.md), which needs no JS and therefore no
+     per-call-site change across the ~244 tap handlers.
+     `--press-scale` is for standalone circular/rect controls only. NEVER apply
+     it to a row: a transformed element inside a virtual <list> hits the
+     compositing-layer scroll-offset bug documented in
+     lynx-api-docs/lynx-vs-web/css-differences.md — rows use opacity alone. */
+  --press-opacity: 0.7;
+  --press-scale: 0.97;
+
   /* shadow extras — --shadow-sm/md/lg stay per-theme (see the theme blocks
      below); --shadow-none is the semantic zero, --shadow-focus is the a11y
      focus ring. --shadow-focus reads --tint-fill at use time, so it tracks

@@ -136,7 +136,12 @@ export function PlayControls({ playBtn, playRadius, slot, songId }: PlayControls
             ? 'player-controls__btn'
             : 'player-controls__btn player-controls__btn--disabled'}
           style={slotBox}
-          bindtap={() => usePlayerStore.getState().playPrev()}
+          data-testid='prev-btn'
+          // Same rule as FavoriteButton above: a disabled control must not fire.
+          // The `--disabled` class only dims it — Lynx has no working `:disabled`
+          // (lynx-api-docs/css/pseudo-classes.md), so removing the handler is
+          // what actually disables it.
+          bindtap={canPrev ? () => usePlayerStore.getState().playPrev() : undefined}
         >
           <Icon name='skip-prev' size={26} color={ICON_COLORS.content} />
         </view>
@@ -172,7 +177,8 @@ export function PlayControls({ playBtn, playRadius, slot, songId }: PlayControls
             ? 'player-controls__btn'
             : 'player-controls__btn player-controls__btn--disabled'}
           style={slotBox}
-          bindtap={() => usePlayerStore.getState().playNext()}
+          data-testid='next-btn'
+          bindtap={canNext ? () => usePlayerStore.getState().playNext() : undefined}
         >
           <Icon name='skip-next' size={26} color={ICON_COLORS.content} />
         </view>

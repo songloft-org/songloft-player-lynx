@@ -65,6 +65,15 @@
    */
 }
 
+/* Press feedback. Opacity ALONE — never `transform`: rows live inside a virtual
+ * <list>, where a transformed element becomes an independent compositing layer
+ * whose coordinate transform may miss the list's scroll offset
+ * (lynx-vs-web/css-differences.md). A scale here would also disturb the subpixel
+ * alignment of the 1px inset separator that `__content` carries. */
+.song-row:active {
+  opacity: var(--press-opacity);
+}
+
 .song-row__cover {
   /* `align-self: center` overrides the row's `stretch` so the 48×48 cover stays
      put (a definite cross-size is not stretched, but it would otherwise

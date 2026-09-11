@@ -7,6 +7,13 @@
   gap: var(--space-3);
 }
 
+/* Press feedback. Opacity only — these rows render inside virtual lists, where
+ * a transformed row risks the compositing-layer scroll-offset bug
+ * (lynx-vs-web/css-differences.md). */
+.media-list-item:active {
+  opacity: var(--press-opacity);
+}
+
 .media-list-item--playing .media-list-item__name {
   color: var(--accent);
 }

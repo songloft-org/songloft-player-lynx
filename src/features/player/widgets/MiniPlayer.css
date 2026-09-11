@@ -35,8 +35,17 @@
   /* See `.shell--scrolled` in ShellLayout.css: the drop shadow is the one
      channel the scroll-edge effect animates, on the base rule so the exit
      animates too. Fill and blur are never animated (HIG §10). */
-  transition: box-shadow var(--duration-normal) var(--ease-default);
+  transition: box-shadow var(--duration-normal) var(--ease-default),
+              opacity var(--duration-fast) var(--ease-default);
   overflow: hidden;
+}
+
+/* Press feedback. The capsule as a whole is the "open the player" hit area
+ * (MiniPlayer.tsx binds the root), so the dim belongs on the root: the
+ * transport buttons inside use `catchtap` and carry no press rule of their
+ * own, which also keeps a nested 0.7 × 0.7 from compounding into 0.49. */
+.mini-player:active {
+  opacity: var(--press-opacity);
 }
 
 /* Scroll-edge: deeper shadow when content rolls under the capsule. Only the

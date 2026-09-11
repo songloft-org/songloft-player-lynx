@@ -31,6 +31,25 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-pill);
+  /* Press feedback is a transition, not a snap, so the release eases back.
+   * Both properties read the motion tokens ⇒ reduce-motion zeroes them. */
+  transition: opacity var(--duration-fast) var(--ease-default),
+              transform var(--duration-fast) var(--ease-default);
+}
+
+/* `:not()` (supported — lynx-api-docs/css/pseudo-classes.md) keeps a disabled
+ * control from dimming on touch. Lynx matches `:active` on touch regardless of
+ * whether a handler is bound, so the class is the only thing that can suppress
+ * it; PlayControls.tsx additionally drops the handler, so the visual and the
+ * behaviour agree. */
+.player-controls__btn:active:not(.player-controls__btn--disabled) {
+  opacity: var(--press-opacity);
+}
+
+/* The primary play button is a standalone circle, so it also scales. Never do
+ * this to a row — see the --press-scale note in tokens.css. */
+.player-controls__btn--primary:active:not(.player-controls__btn--disabled) {
+  transform: scale(var(--press-scale));
 }
 
 .player-controls__btn--disabled {

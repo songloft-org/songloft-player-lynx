@@ -46,13 +46,13 @@
 
 | 闸门 | 结果 | 何时验的 |
 |---|---|---|
-| `pnpm test` | **2299 全绿 / 213 文件** | ✅ **2026-09-07**（Issue #7 冷启动自动进歌词导航；新增 3 条单测，此前 Issue #4 为 2285） |
-| `pnpm exec tsc -b` | 绿（`--force` 全量重建） | 2026-09-07（Issue #7） |
-| `pnpm run build` | 绿（main.lynx.bundle 2255.6 kB） | 2026-09-07（Issue #7） |
+| `pnpm test` | **2511 全绿 / 233 文件** | ✅ **2026-09-11**（批64 按压态 + 真禁用；新增 13 条，此前 2423 为宽屏设置 pane 批） |
+| `pnpm exec tsc -b` | 绿 | 2026-09-11（批64；`--force` 全量重建的最后一次是 Issue #7） |
+| `pnpm run build` | 绿（main.lynx.bundle 2320.2 kB） | 2026-09-11（批64，lynx + web 双产物均列出） |
 | `pnpm run build:web` | 绿（main.web.bundle 2348.4 kB）+ Docker Chrome 运行时 500 首队列 A/B | 2026-09-07（build:web 尺寸为 Issue #7；A/B 为 Issue #4） |
 | 新增 `tokens-hig.test.ts` | 6/6 绿 | 2026-09-02 |
 | `gradlew assembleDebug` | 绿 | ✅ **2026-09-06**（Issue #3，`compileDebugKotlin` 实际执行） |
-| `xcodebuild` / hvigor（HAP） | **未验** | 本机是 Linux，无 Xcode、无 DevEco；iOS 与 HarmonyOS 的原生改动只有契约与结构闸门覆盖 |
+| `xcodebuild` / hvigor（HAP） | **可跑但未跑** | **订正（2026-09-11 实测）**：此前这里写「本机是 Linux，无 Xcode、无 DevEco」——**已过期**。当前机器是 macOS（Darwin 25.6.0 arm64），`xcodebuild` 为 **Xcode 26.6 (17F113)**，`hvigorw` 在 PATH 上，`xcrun simctl` 有已启动的 iPhone 17 Pro (iOS 26.5) 模拟器，`adb devices` 有 `emulator-5554`。故 `ios:build` 与 HAP 编译**本机可跑**，只是本批（纯 CSS/TSX）按 AGENTS §5.2 不触发该闸门 |
 | `ios:build` | `BUILD SUCCEEDED` | **批49 时代** |
 | HarmonyOS CI | GitHub Actions `dev-build-harmony.yml` | 有流水线；本地需 DevEco Studio |
 | HarmonyOS 本批定向契约 | 相关 209 项 Vitest 全绿 | 2026-09-04；HAP / 真机待验 |

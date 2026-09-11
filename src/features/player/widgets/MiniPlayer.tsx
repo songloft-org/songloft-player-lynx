@@ -56,7 +56,7 @@ export function MiniPlayer() {
             className={canPrev
               ? 'mini-player__btn'
               : 'mini-player__btn mini-player__btn--disabled'}
-            catchtap={() => usePlayerStore.getState().playPrev()}
+            catchtap={canPrev ? () => usePlayerStore.getState().playPrev() : undefined}
           >
             <Icon name='skip-prev' size={22} color={ICON_COLORS.content} />
           </view>
@@ -72,7 +72,7 @@ export function MiniPlayer() {
             className={canNext
               ? 'mini-player__btn'
               : 'mini-player__btn mini-player__btn--disabled'}
-            catchtap={() => usePlayerStore.getState().playNext()}
+            catchtap={canNext ? () => usePlayerStore.getState().playNext() : undefined}
           >
             <Icon name='skip-next' size={22} color={ICON_COLORS.content} />
           </view>
