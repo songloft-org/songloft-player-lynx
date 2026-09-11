@@ -1,4 +1,5 @@
 import type { ReactNode } from '@lynx-js/react'
+import { useTranslation } from 'react-i18next'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
@@ -49,6 +50,7 @@ export interface SongRowProps {
 }
 
 export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleFavorite, isCurrentSong, isSelected, isWide, trailing, subtitleSuffix, onMore, moreAnchorId }: SongRowProps) {
+  const { t } = useTranslation()
   const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
   const subtitle = [song.artist, song.album, subtitleSuffix].filter(Boolean).join(' · ')
 
@@ -87,7 +89,13 @@ export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleF
           )}
         <text className='song-row__duration'>{formatDuration(song.duration)}</text>
         {onToggleFavorite != null
-          ? <view className='song-row__fav' catchtap={() => onToggleFavorite()} data-testid='song-row-fav'>
+          ? <view
+              className='song-row__fav'
+              catchtap={() => onToggleFavorite()}
+              accessibility-element={true}
+              accessibility-label={isFavorite ? t('songMenu.unfavorite') : t('songMenu.favorite')}
+              data-testid='song-row-fav'
+            >
               <Icon
                 name={isFavorite ? 'heart-filled' : 'heart'}
                 size={18}
@@ -98,7 +106,14 @@ export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleF
         {trailing}
         {onMore != null
           ? (
-            <view id={moreAnchorId} className='song-row__more' catchtap={() => onMore(song)} data-testid='song-row-more'>
+            <view
+              id={moreAnchorId}
+              className='song-row__more'
+              catchtap={() => onMore(song)}
+              accessibility-element={true}
+              accessibility-label={t('common.more')}
+              data-testid='song-row-more'
+            >
               <Icon name='more' size={18} color={ICON_COLORS.contentMuted} />
             </view>
           )

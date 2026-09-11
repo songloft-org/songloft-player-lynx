@@ -36,6 +36,24 @@ const APOSTROPHE_COMMENT = [
   '</view>',
 ].join('\n')
 
+/**
+ * The real shape from `MiniPlayer.tsx` (batch 67), trimmed to the trigger: a
+ * LINE comment sitting between two attributes, with an apostrophe in its prose.
+ */
+const LINE_COMMENT_BETWEEN_ATTRIBUTES = [
+  '<view',
+  '  className=\'mini-player__btn\'',
+  '  catchtap={canPrev ? playPrev : undefined}',
+  '  // `disabled` rather than `button,disabled`: Lynx\'s converter splits the',
+  '  // comma list, but the typed prop is a union of single tokens.',
+  '  accessibility-traits={canPrev ? \'button\' : \'disabled\'}',
+  '>',
+  '  <text className=\'mini-player__label\' text-maxline=\'1\'>',
+  '    {song.title}',
+  '  </text>',
+  '</view>',
+].join('\n')
+
 describe('openingTags', () => {
   test('a comment between attributes does not swallow the tags after it', () => {
     // The apostrophe in "the stylesheet's calc/vh" used to flip the quote
@@ -49,6 +67,25 @@ describe('openingTags', () => {
     expect(
       tags[0],
       'the <text> attributes must not end up inside the <view> tag',
+    ).not.toContain('text-maxline')
+  })
+
+  test('a LINE comment between attributes is elided as well', () => {
+    // The block-comment case above was fixed by eliding only `/* … */`, and the
+    // `//` branch was left guarded by `depth > 0` on the stated belief that
+    // attribute position cannot hold a line comment — "no valid JSX
+    // distinguishes the two". Batch 67 is the counterexample: the TS/Babel JSX
+    // parser accepts prose there, and the apostrophe in "Lynx's converter"
+    // flipped the quote state, blobbing the rest of `MiniPlayer.tsx` into this
+    // very tag. Nothing in THIS file went red; the tap-target gate caught it
+    // downstream, as a 36px `.mini-player__play` suddenly reading as tappable.
+    const tags = openingTags(LINE_COMMENT_BETWEEN_ATTRIBUTES)
+    expect(tags, 'the view and the text are two tags').toHaveLength(2)
+    expect(tags[1]).toMatch(/^<text/)
+    expect(tags[0], 'comment prose must not survive into the tag').not.toContain('Lynx')
+    expect(
+      tags[0],
+      'the next element must not be swallowed into this tag',
     ).not.toContain('text-maxline')
   })
 

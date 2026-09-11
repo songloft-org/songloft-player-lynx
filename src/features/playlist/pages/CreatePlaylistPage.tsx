@@ -46,7 +46,12 @@ export function CreatePlaylistPage() {
   return (
     <view className='create-playlist'>
       <view className='create-playlist__topbar'>
-        <view className='create-playlist__back' bindtap={() => performRouteBack()}>
+        <view
+          className='create-playlist__back'
+          bindtap={() => performRouteBack()}
+          accessibility-element={true}
+          accessibility-label={t('common.back')}
+        >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='create-playlist__title'>{t('createPlaylist.title')}</text>

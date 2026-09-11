@@ -84,11 +84,21 @@ export function DlnaPage() {
   return (
     <view className='dlna-page'>
       <view className='dlna-page__topbar'>
-        <view className='dlna-page__back' bindtap={() => performRouteBack()}>
+        <view
+          className='dlna-page__back'
+          bindtap={() => performRouteBack()}
+          accessibility-element={true}
+          accessibility-label={t('common.back')}
+        >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='dlna-page__title'>{t('dlna.title')}</text>
-        <view className='dlna-page__refresh' bindtap={startScan}>
+        <view
+          className='dlna-page__refresh'
+          bindtap={startScan}
+          accessibility-element={true}
+          accessibility-label={t('common.refresh')}
+        >
           <Icon name='refresh' size={18} color={ICON_COLORS.content} />
         </view>
       </view>

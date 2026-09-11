@@ -295,6 +295,8 @@ export function LyricsView() {
           <view
             className='player-lyrics__back-to-current'
             bindtap={scrollToCurrent}
+            accessibility-element={true}
+            accessibility-label={t('common.backToCurrent')}
             data-testid='lyrics-back-to-current'
           >
             <Icon name='arrow-down' size={16} color={ICON_COLORS.content} />

@@ -180,13 +180,21 @@ export function PlayHistoryPanel({
                 <view
                   className='play-history__header-btn'
                   bindtap={() => setConfirmClear(true)}
+                  accessibility-element={true}
+                  accessibility-label={t('history.clear')}
                   data-testid='play-history-clear'
                 >
                   <Icon name='trash' size={18} color={ICON_COLORS.content2} />
                 </view>
               )
               : null}
-            <view className='play-history__header-btn' bindtap={onClose} data-testid='play-history-close'>
+            <view
+              className='play-history__header-btn'
+              bindtap={onClose}
+              accessibility-element={true}
+              accessibility-label={t('common.close')}
+              data-testid='play-history-close'
+            >
               <Icon name='x' size={18} color={ICON_COLORS.content2} />
             </view>
           </view>

@@ -39,6 +39,14 @@
  * class name or a `bindtap` *mentioned in prose* is not read as usage — one
  * such phantom (`ui-backdrop-blur--panel`, named in a comment in
  * `BackdropBlur.tsx`) was in the roster before this.
+ *
+ * Only C-style block comments and line comments are elided — but note that a
+ * *line* comment is recognised anywhere outside a string, including between the
+ * attributes of an opening tag. The TS/Babel JSX parser accepts prose there, so
+ * a quote in it used to flip the quote state and blob the rest of the file into
+ * one tag: batch 67's apostrophe in `Lynx's` put `mini-player__play` into the
+ * tap-target roster. Keep prose above the tag anyway — it reads better and this
+ * parser is not the only reader of these files.
  */
 export function openingTags(src: string): string[] {
   const tags: string[] = []
@@ -63,16 +71,19 @@ export function openingTags(src: string): string[] {
         text += ' '
         continue
       }
-      // `//` is only a comment inside an expression container.
+      // `//` is a comment anywhere outside a string or a block comment.
       //
-      // The BRANCH is load-bearing and gated (a class or handler named in a
-      // line comment must not read as usage). The `depth > 0` GUARD on it is
-      // not: in attribute position a `//` can only occur inside a string, and
-      // the quote branch above already owns that (`src='https://…'`). No valid
-      // JSX distinguishes the two, so dropping the guard alone changes no
-      // roster and no mutation can redden it — said plainly here rather than
-      // propped up with a test that proves nothing.
-      if (c === '/' && src[j + 1] === '/' && depth > 0) {
+      // Both parts are load-bearing and gated. The BRANCH: a class or handler
+      // named in a line comment must not read as usage. The GUARD (`depth > 0`,
+      // i.e. only inside an expression container): this was here on the claim
+      // that attribute position cannot hold a `//`, "so no valid JSX
+      // distinguishes the two". Batch 67 produced the counterexample — the
+      // TS/Babel JSX parser accepts a `//` comment between attributes, and the
+      // apostrophe in `// … Lynx's converter …` flipped the quote state, blobbing
+      // the rest of `MiniPlayer.tsx` into one tag and putting `mini-player__play`
+      // into the tap-target roster (`a11y-tap-target.test.ts` caught it). Prose
+      // between attributes is rare but legal; drop the guard rather than bet on it.
+      if (c === '/' && src[j + 1] === '/') {
         const newline = src.indexOf('\n', j + 2)
         j = newline < 0 ? src.length : newline
         text += ' '

@@ -79,6 +79,8 @@ export function EqualizerPage() {
         <view
           className='eq-page__back'
           bindtap={() => performRouteBack()}
+          accessibility-element={true}
+          accessibility-label={t('common.back')}
           data-testid='eq-back'
         >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />

@@ -78,7 +78,13 @@ export function LibraryViewEditor({ initialConfig, onCancel, onSaved }: LibraryV
   return (
     <view className='library-editor'>
       <view className='library-editor__topbar'>
-        <view className='library-editor__cancel' bindtap={onCancel} data-testid='library-editor-cancel'>
+        <view
+          className='library-editor__cancel'
+          bindtap={onCancel}
+          accessibility-element={true}
+          accessibility-label={t('common.close')}
+          data-testid='library-editor-cancel'
+        >
           <Icon name='x' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='library-editor__title'>{t('library.customizeViews')}</text>
@@ -109,6 +115,8 @@ export function LibraryViewEditor({ initialConfig, onCancel, onSaved }: LibraryV
                   <view
                     className={isFirst ? 'library-editor__group-btn library-editor__group-btn--disabled' : 'library-editor__group-btn'}
                     bindtap={() => { if (!isFirst) move(bucket.group, -1) }}
+                    accessibility-element={true}
+                    accessibility-label={t('common.moveUp')}
                     data-testid={`library-editor-group-up-${bucket.group}`}
                   >
                     <Icon name='chevron-up' size={18} color={isFirst ? ICON_COLORS.contentMuted : ICON_COLORS.content2} />
@@ -116,6 +124,8 @@ export function LibraryViewEditor({ initialConfig, onCancel, onSaved }: LibraryV
                   <view
                     className={isLast ? 'library-editor__group-btn library-editor__group-btn--disabled' : 'library-editor__group-btn'}
                     bindtap={() => { if (!isLast) move(bucket.group, 1) }}
+                    accessibility-element={true}
+                    accessibility-label={t('common.moveDown')}
                     data-testid={`library-editor-group-down-${bucket.group}`}
                   >
                     <Icon name='chevron-down' size={18} color={isLast ? ICON_COLORS.contentMuted : ICON_COLORS.content2} />

@@ -1,4 +1,5 @@
 import type { Song } from '../../../models/song.js'
+import { useTranslation } from 'react-i18next'
 import { useTapAnchor } from '../../../shared/ui/anchored-overlay.js'
 import type { AnchorMeasurement } from '../../../shared/ui/anchored-overlay.js'
 import { useSongRowOverlays } from '../../../shared/ui/song-row-overlays.js'
@@ -61,6 +62,7 @@ export function SongListRow({
   subtitleSuffix,
   onOpenMenu,
 }: SongListRowProps) {
+  const { t } = useTranslation()
   const openMenu = useSongRowOverlays((s) => s.openMenu)
   const openAddToPlaylist = useSongRowOverlays((s) => s.openAddToPlaylist)
   const { anchorId, measure } = useTapAnchor()
@@ -82,6 +84,8 @@ export function SongListRow({
         <view
           className='song-row__action'
           bindtap={() => openAddToPlaylist({ songIds: [song.id] })}
+          accessibility-element={true}
+          accessibility-label={t('songMenu.addToPlaylist')}
           data-testid='song-row-add'
         >
           <Icon name='music' size={16} color={ICON_COLORS.contentMuted} />

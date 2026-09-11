@@ -47,7 +47,13 @@ export function SongCoverPicker({ playlistId, onSelect, onClose }: SongCoverPick
       <view className='song-cover-picker__panel' catchtap={() => {}}>
         <view className='song-cover-picker__header'>
           <text className='song-cover-picker__title'>{t('playlist.pickFromSongs')}</text>
-          <view className='song-cover-picker__close' bindtap={onClose} data-testid='song-cover-picker-close'>
+          <view
+            className='song-cover-picker__close'
+            bindtap={onClose}
+            accessibility-element={true}
+            accessibility-label={t('common.close')}
+            data-testid='song-cover-picker-close'
+          >
             <Icon name='x' size={18} color={ICON_COLORS.content2} />
           </view>
         </view>

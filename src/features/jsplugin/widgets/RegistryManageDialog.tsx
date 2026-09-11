@@ -174,6 +174,8 @@ export function RegistryManageDialog({ show, onClose, registries, onSaved }: Reg
                             <view
                               className='registry-manage__row-btn'
                               bindtap={() => openForm(i)}
+                              accessibility-element={true}
+                              accessibility-label={t('common.edit')}
                               data-testid={`registry-manage-edit-${i}`}
                             >
                               <Icon name='edit' size={16} color={ICON_COLORS.content2} />
@@ -181,6 +183,8 @@ export function RegistryManageDialog({ show, onClose, registries, onSaved }: Reg
                             <view
                               className='registry-manage__row-btn'
                               bindtap={() => setDraft((list) => list.filter((_, j) => j !== i))}
+                              accessibility-element={true}
+                              accessibility-label={t('common.delete')}
                               data-testid={`registry-manage-delete-${i}`}
                             >
                               <Icon name='trash' size={16} color={ICON_COLORS.danger} />

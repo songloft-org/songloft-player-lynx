@@ -140,6 +140,8 @@ export function LibraryPage() {
           <view
             className='library__topbar-toggle'
             bindtap={onToggleViewMode}
+            accessibility-element={true}
+            accessibility-label={viewMode === 'grid' ? t('playlist.switchToListView') : t('playlist.switchToGridView')}
             data-testid='library-view-toggle'
           >
             <Icon name={viewMode === 'grid' ? 'list' : 'grid'} size={20} color={ICON_COLORS.content2} />
@@ -149,6 +151,8 @@ export function LibraryPage() {
       <view
         className='library__topbar-customize'
         bindtap={() => setEditMode(true)}
+        accessibility-element={true}
+        accessibility-label={t('library.customizeViews')}
         data-testid='library-customize'
       >
         <Icon name='tune' size={20} color={ICON_COLORS.content2} />

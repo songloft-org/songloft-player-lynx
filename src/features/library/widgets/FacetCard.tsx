@@ -31,6 +31,8 @@ export function FacetCard({ facet, onTap, onPlayAll }: FacetCardProps) {
             <view
               className='facet-card__play-hit'
               catchtap={() => { onPlayAll(facet) }}
+              accessibility-element={true}
+              accessibility-label={t('common.playAll')}
             >
               <view className='facet-card__play-btn'>
                 <Icon name='play' size={14} color={ICON_COLORS.primaryContent} />

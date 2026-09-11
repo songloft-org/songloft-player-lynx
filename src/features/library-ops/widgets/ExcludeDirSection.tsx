@@ -131,6 +131,8 @@ export function ExcludeDirSection({ onWriteError }: ExcludeDirSectionProps) {
               <view
                 className='libops-exclude__add-btn'
                 bindtap={() => addExcludeDir(nameInput)}
+                accessibility-element={true}
+                accessibility-label={t('common.add')}
                 data-testid='exclude-name-add'
               >
                 <Icon name='plus' size={16} color={ICON_COLORS.primaryContent} />
@@ -204,6 +206,8 @@ export function ExcludeDirSection({ onWriteError }: ExcludeDirSectionProps) {
               <view
                 className='libops-exclude__add-btn'
                 bindtap={() => addAutoCreateExcludeDir(autoCreateInput)}
+                accessibility-element={true}
+                accessibility-label={t('common.add')}
                 data-testid='exclude-auto-create-add'
               >
                 <Icon name='plus' size={16} color={ICON_COLORS.primaryContent} />
@@ -252,6 +256,7 @@ function ChipList({
   display: (item: string) => string
   onRemove: (item: string) => void
 }) {
+  const { t } = useTranslation()
   return (
     <view className='libops-exclude__chips'>
       <text className='libops-exclude__chips-label'>{label}</text>
@@ -265,6 +270,8 @@ function ChipList({
                 <view
                   className='libops-exclude__chip-remove'
                   bindtap={() => onRemove(item)}
+                  accessibility-element={true}
+                  accessibility-label={t('common.remove')}
                   data-testid={`exclude-chip-remove-${item}`}
                 >
                   <Icon name='x' size={12} color={ICON_COLORS.contentMuted} />

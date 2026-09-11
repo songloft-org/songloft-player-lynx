@@ -138,7 +138,13 @@ export function LyricAdjustPage() {
   return (
     <view className='lyric-adjust'>
       <view className='lyric-adjust__topbar'>
-        <view className='lyric-adjust__back' bindtap={() => requestClose()} data-testid='lyric-adjust-back'>
+        <view
+          className='lyric-adjust__back'
+          bindtap={() => requestClose()}
+          accessibility-element={true}
+          accessibility-label={t('common.back')}
+          data-testid='lyric-adjust-back'
+        >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='lyric-adjust__title'>{t('lyricAdjust.title')}</text>

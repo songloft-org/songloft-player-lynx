@@ -261,11 +261,23 @@ export function PluginWebViewPage() {
    */
   const topbar = isTabEntry ? null : (
     <view className='plugin-webview__topbar'>
-      <view className='plugin-webview__back' bindtap={goBack} data-testid='plugin-webview-back'>
+      <view
+        className='plugin-webview__back'
+        bindtap={goBack}
+        accessibility-element={true}
+        accessibility-label={t('common.back')}
+        data-testid='plugin-webview-back'
+      >
         <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
       </view>
       <text className='plugin-webview__title' data-testid='plugin-webview-title'>{title}</text>
-      <view className='plugin-webview__open' bindtap={openInBrowser} data-testid='plugin-webview-open'>
+      <view
+        className='plugin-webview__open'
+        bindtap={openInBrowser}
+        accessibility-element={true}
+        accessibility-label={t('jsplugin.openInBrowser')}
+        data-testid='plugin-webview-open'
+      >
         <Icon name='open-external' size={20} color={ICON_COLORS.content} />
       </view>
     </view>

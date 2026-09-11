@@ -136,6 +136,8 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
         <view
           className='song-edit__ro-copy'
           data-testid='song-edit-copy'
+          accessibility-element={true}
+          accessibility-label={t('common.copy')}
           bindtap={() => {
             copyToClipboard(value)
             toast.success(t('songEdit.copied'))

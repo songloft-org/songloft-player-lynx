@@ -17,6 +17,23 @@ import './MiniPlayer.css'
  * `catchtap` so it does not also trigger the open. A thin non-interactive
  * progress bar (plain views — no gesture leaf) tracks position.
  */
+/**
+ * The prev/next controls are the only ones here that can be disabled. Exposing a
+ * disabled control as a plain accessibility element would announce an action that
+ * cannot happen, so its trait switches to `disabled`.
+ *
+ * Not `'button,disabled'`: Lynx's converter does split a comma list and OR the
+ * traits, but the typed prop is a union of single tokens, so one of the two has
+ * to go. Written as a helper rather than inline because prose inside a JSX
+ * opening tag is a trap — `openingTags()` elides block comments only, so a line
+ * comment carrying an apostrophe flips the scanner's quote state and swallows
+ * every following tag (this is what put `mini-player__play` into the tappable
+ * roster of `a11y-tap-target.test.ts`).
+ */
+function accessibilityTrait(enabled: boolean) {
+  return enabled ? 'button' : 'disabled'
+}
+
 export function MiniPlayer() {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -57,12 +74,17 @@ export function MiniPlayer() {
               ? 'mini-player__btn'
               : 'mini-player__btn mini-player__btn--disabled'}
             catchtap={canPrev ? () => usePlayerStore.getState().playPrev() : undefined}
+            accessibility-element={true}
+            accessibility-label={t('common.previous')}
+            accessibility-traits={accessibilityTrait(canPrev)}
           >
             <Icon name='skip-prev' size={22} color={ICON_COLORS.content} />
           </view>
           <view
             className='mini-player__play-hit'
             catchtap={() => usePlayerStore.getState().togglePlay()}
+            accessibility-element={true}
+            accessibility-label={isPlaying ? t('common.pause') : t('common.play')}
           >
             <view className='mini-player__play'>
               <Icon name={isPlaying ? 'pause' : 'play'} size={18} color={ICON_COLORS.primaryContent} />
@@ -73,6 +95,9 @@ export function MiniPlayer() {
               ? 'mini-player__btn'
               : 'mini-player__btn mini-player__btn--disabled'}
             catchtap={canNext ? () => usePlayerStore.getState().playNext() : undefined}
+            accessibility-element={true}
+            accessibility-label={t('common.next')}
+            accessibility-traits={accessibilityTrait(canNext)}
           >
             <Icon name='skip-next' size={22} color={ICON_COLORS.content} />
           </view>
@@ -82,8 +107,9 @@ export function MiniPlayer() {
             ? 'mini-player__favorite mini-player__favorite--pending'
             : 'mini-player__favorite'}
           catchtap={isFavPending ? undefined : toggleFavorite}
+          accessibility-element={true}
+          accessibility-label={isFavorite ? t('player.unfavorite') : t('player.favorite')}
           data-testid='mini-favorite-btn'
-          aria-label={isFavorite ? t('player.unfavorite') : t('player.favorite')}
         >
           <Icon
             name={isFavorite ? 'heart-filled' : 'heart'}

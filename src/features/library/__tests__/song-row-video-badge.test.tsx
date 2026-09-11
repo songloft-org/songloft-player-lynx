@@ -1,9 +1,15 @@
 import '@testing-library/jest-dom'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import { getQueriesForElement, render } from '@lynx-js/react/testing-library'
 
 import { SongRow } from '../widgets/SongRow.js'
 import type { Song } from '../../../models/song.js'
+
+// `SongRow` reads `t` for the accessible names on its heart and ⋯ buttons, so it
+// needs the shared react-i18next mock like every other rendering test.
+vi.mock('react-i18next', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
+)
 
 function makeSong(isVideo: boolean): Song {
   return {

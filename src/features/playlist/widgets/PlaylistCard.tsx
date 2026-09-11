@@ -80,6 +80,8 @@ export function PlaylistCard({
             <view
               className='playlist-card__play-hit'
               catchtap={() => { onPlayAll(playlist) }}
+              accessibility-element={true}
+              accessibility-label={t('common.playAll')}
             >
               <view className='playlist-card__play-btn'>
                 <Icon name='play' size={14} color={ICON_COLORS.primaryContent} />
@@ -102,6 +104,8 @@ export function PlaylistCard({
               id={anchorId}
               className='playlist-card__more-hit'
               catchtap={() => { measure((rect) => onMore(playlist, rect)) }}
+              accessibility-element={true}
+              accessibility-label={t('common.more')}
               data-testid={`playlist-card-more-${playlist.id}`}
             >
               <view className='playlist-card__more-btn'>

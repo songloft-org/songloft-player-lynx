@@ -205,8 +205,8 @@ TS facade 无论成败一律返回 resolved promise——只问 `isShowing()` �
 - **影响方向和第一直觉相反，我第一次就报错了**（文档里写成「两个闸门同样失明」并已推送，后按量化订正）：`fileClasses` 是整文件求并集，标签合并**丢不掉**类；a11y 的 `direct` 判定跑在合并后的 blob 上，可点类同样掉不出来。实测 `handler` 桶 **255 → 211**（44 个非可点类此前被错算成可点）、`viaProp` **31 → 35**，**修复后一个类都没新增** ⇒ 这两个闸门是**清单过宽、归属错**（偏严），不是失明，也没有被它藏住的真实缺陷。
 - **真正会失明的是按标签「元素类型」过滤的闸门**：被吞的 `<text>` 不再是 `<text>` 标签，`text-clamp` 那条反推因此整片消失。**判据**：闸门是问「这个标签是什么」还是问「这个文件用了哪些类」——前者吃标签边界，后者不吃。
 - **注释要抹掉而不是跳过**：只跳过能修好边界，但注释里的散文仍留在标签文本里，被每个消费方的正则当代码读——`BackdropBlur.tsx` 注释里提到的 `ui-backdrop-blur--panel` 就这么变成了「这个文件渲染了它」，一句写着 `bindtap` 的注释同理会让 a11y 认为元素可点。
-- **不可证伪的分支就别假装有闸门**：`//` 只在表达式容器内才是注释这条限制，在合法 JSX 上没有任何可观测差异（属性位置的 `//` 只能出现在字符串里，引号分支已经接住），所以变异测试打它必然是绿的。代码注释里直接写明「这是保守写法、无闸门覆盖」，而不是硬凑一条测试。
-- **闸门**：`src/shared/testing/__tests__/jsx-classes.test.ts` 10 条（撇号注释不吞标签、注释文本被抹掉、行注释同样被抹、属性字符串里的 `>` 受引号保护、`{() => n > 0}` 不截断、插值模板取到 base+modifier、`*ClassName` 全算、非空守卫），6 个变异全部反向验证会红。
+- **「这条分支不可证伪」本身也是断言，会被后来的代码推翻**：`openingTags` 的 `//` 分支长期带 `depth > 0` 守卫，理由写在代码里——「属性位置的 `//` 只能出现在字符串里，合法 JSX 区分不出两者，变异必然绿」。**批67 就是反例**：TS/Babel 的 JSX 解析器接受属性之间的行注释，`MiniPlayer.tsx` 里 `// … Lynx's converter …` 的撇号再次翻转引号状态、把文件后半段吞成一个标签，下游 `a11y-tap-target` 于是把 36px 的 `.mini-player__play` 读成了可点元素（**闸门是在另一个文件里红起来的，这个解析器自己的测试全绿**）。修法：删掉守卫（属性位置的 `//` 与表达式容器内同样按注释处理），并把真实反例写成 `jsx-classes.test.ts` 的第 12 条——恢复守卫即转红。**教训**：写下「不可证伪」时同时写下它依赖的前提；前提出现反例时，注释、代码、闸门一起改。另：即使解析器已能吃属性位置的行注释，**散文也一律写在标签之外**（更好读，且这些文件不止这一个读者）。
+- **闸门**：`src/shared/testing/__tests__/jsx-classes.test.ts` **12 条**（撇号注释不吞标签、注释文本被抹掉、行注释同样被抹、**属性位置的行注释同样被抹（批67 反例）**、属性字符串里的 `>` 受引号保护、`{() => n > 0}` 不截断、插值模板取到 base+modifier、`*ClassName` 全算、非空守卫），6 个变异全部反向验证会红；批67 补的守卫变异（把 `depth > 0` 放回去）实测同样转红。
 
 ### 对比度闸门管「文字对背景」，不管「填充对表面」
 
@@ -257,6 +257,12 @@ TS facade 无论成败一律返回 resolved promise——只问 `isShowing()` �
 四个实例：批43 记错 manifest（「权限与 service 声明此前已有」，活了 4 批）；「构建警告自批19b 起归零」漂移（后订正为「警告应当只剩 3 类已知项」）；`docs/README.md` 指标连续腐烂两次（批32、批42 各一次）；HANDOFF 把 7 个已完成功能列为待做，导致那批工作「在文档上不存在了十天」、下一版 HANDOFF 仍列为待做。**改完代码顺手带走相关文档句子**；可检验的断言要么配闸门，要么别写死数字。
 
 ---
+
+## 8. 无障碍属性：ARIA 那一套在 Lynx 里不存在
+
+`aria-label` / `aria-*` **不是 Lynx 属性**——写上去既不报错也不生效（`@lynx-js/types` 里带 `accessib` 的连字符属性只有 `accessibility-label` / `accessibility-element` / `accessibility-traits`）。这是「写了没接线」的第三次（批64 `:active`、批65 `.increase-contrast`、批67 `aria-label`），规则：**Lynx 属性名先去 `node_modules/@lynx-js/types/types/common/props.d.ts` 查平台矩阵，别按 Web 习惯写**。
+
+第二条更隐蔽：**`<view>` 在 iOS 上默认不是无障碍元素**（`LynxUIView -enableAccessibilityByDefault` 返回 NO，只有 `LynxUIText` 返回 YES），所以 `accessibility-label` 必须与 **`accessibility-element`** 同元素成对出现（iOS `isAccessibilityElement` / Android `setImportantForAccessibility`），否则 VoiceOver 永不停在那个 view 上——「属性在了」和「用户能听到」是两件事，闸门要按后者写（`src/__tests__/a11y-label.test.ts`）。禁用态另需 `accessibility-traits`：`canX ? 'button' : 'disabled'`（`'button,disabled'` 过不了 TS 的单 token 联合类型，iOS 转换器却接受逗号列表）。**验证手段：附进程读无障碍树**（`lldb` 遍历 `UIApplication.sharedApplication.windows`，打印 `isAccessibilityElement`/`accessibilityLabel`/`accessibilityTraits`）——比触控注入可靠，且不受 macOS 屏幕锁定影响（批66 记过 `cliclick` 被锁屏静默吞掉）。
 
 ## 附录：操作性参考
 

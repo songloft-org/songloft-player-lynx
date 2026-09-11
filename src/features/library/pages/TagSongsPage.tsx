@@ -74,6 +74,8 @@ export function TagSongsPage() {
         <view
           className='category-songs__back'
           bindtap={() => performRouteBack()}
+          accessibility-element={true}
+          accessibility-label={t('common.back')}
         >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
@@ -88,6 +90,8 @@ export function TagSongsPage() {
           <view
             className='category-songs__icon-btn'
             bindtap={() => setShowHistory(true)}
+            accessibility-element={true}
+            accessibility-label={t('history.title')}
             data-testid='tag-songs-history'
           >
             <Icon name='history' size={20} color={ICON_COLORS.content2} />

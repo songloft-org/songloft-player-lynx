@@ -106,6 +106,8 @@ export function FolderContentPage() {
         <view
           className='category-songs__back'
           bindtap={() => performRouteBack()}
+          accessibility-element={true}
+          accessibility-label={t('common.back')}
         >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
@@ -114,6 +116,8 @@ export function FolderContentPage() {
           <view
             className='category-songs__icon-btn'
             bindtap={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+            accessibility-element={true}
+            accessibility-label={viewMode === 'grid' ? t('playlist.switchToListView') : t('playlist.switchToGridView')}
           >
             <Icon name={viewMode === 'grid' ? 'list' : 'grid'} size={20} color={ICON_COLORS.content2} />
           </view>

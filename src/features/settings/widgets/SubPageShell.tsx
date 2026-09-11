@@ -1,5 +1,6 @@
 import { createContext, useContext } from '@lynx-js/react'
 import type { ReactNode } from '@lynx-js/react'
+import { useTranslation } from 'react-i18next'
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 import { useScrollMemory } from '../../../shared/nav/scroll-memory.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
@@ -98,6 +99,7 @@ export function SubPageShell({
   overlay,
   children,
 }: SubPageShellProps) {
+  const { t } = useTranslation()
   const embedded = useContext(SubPageEmbedContext)
 
   // Hooks must run unconditionally, so the memory is always resolved; it is only
@@ -131,7 +133,13 @@ export function SubPageShell({
       <view className='subpage__topbar'>
         {showBack
           ? (
-            <view className='subpage__back' bindtap={goBack} data-testid={backTestId}>
+            <view
+              className='subpage__back'
+              bindtap={goBack}
+              accessibility-element={true}
+              accessibility-label={t('common.back')}
+              data-testid={backTestId}
+            >
               <Icon name='chevron-left' size={22} color={ICON_COLORS.content} />
             </view>
           )

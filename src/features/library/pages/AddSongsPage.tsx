@@ -60,7 +60,12 @@ export function AddSongsPage() {
   return (
     <view className='add-songs'>
       <view className='add-songs__topbar'>
-        <view className='add-songs__back' bindtap={() => performRouteBack()}>
+        <view
+          className='add-songs__back'
+          bindtap={() => performRouteBack()}
+          accessibility-element={true}
+          accessibility-label={t('common.back')}
+        >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='add-songs__title'>{t('addSongs.title')}</text>

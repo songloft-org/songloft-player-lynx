@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 import { Icon, ICON_COLORS } from './Icon.js'
 import { AppCheckbox } from './AppCheckbox.js'
 import { useTapAnchor } from './anchored-overlay.js'
@@ -48,6 +50,7 @@ export function MediaListItem({
   onMore,
   testIdSuffix,
 }: MediaListItemProps) {
+  const { t } = useTranslation()
   const { anchorId, measure } = useTapAnchor()
   return (
     <view
@@ -98,6 +101,8 @@ export function MediaListItem({
           <view
             className='media-list-item__play-btn'
             catchtap={() => { onPlayAll() }}
+            accessibility-element={true}
+            accessibility-label={t('common.play')}
           >
             <Icon name='play' size={16} color={ICON_COLORS.content} />
           </view>
@@ -114,6 +119,8 @@ export function MediaListItem({
             id={anchorId}
             className='media-list-item__more-btn'
             catchtap={() => { measure((rect) => onMore(rect)) }}
+            accessibility-element={true}
+            accessibility-label={t('common.more')}
             data-testid={testIdSuffix ? `media-list-item-more-${testIdSuffix}` : undefined}
           >
             <Icon name='more' size={16} color={ICON_COLORS.content} />

@@ -265,6 +265,8 @@ export function PlaylistDetailPage() {
           // page — Home or Library — rather than always Library. The rule lives in
           // `shared/nav/route-back.ts` so the hardware back key matches.
           bindtap={() => performRouteBack()}
+          accessibility-element={true}
+          accessibility-label={t('common.back')}
         >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
@@ -286,6 +288,8 @@ export function PlaylistDetailPage() {
             <view
               className='playlist-detail__icon-btn'
               bindtap={() => setShowHistory(true)}
+              accessibility-element={true}
+              accessibility-label={t('history.title')}
               data-testid='playlist-detail-history'
             >
               <Icon name='history' size={20} color={ICON_COLORS.content2} />
@@ -525,6 +529,8 @@ export function PlaylistDetailPage() {
                           <view
                             className='playlist-detail__remove-btn'
                             bindtap={() => onRemoveSong(song)}
+                            accessibility-element={true}
+                            accessibility-label={t('playlist.removeSong')}
                             data-testid='playlist-detail-remove'
                           >
                             <Icon name='x' size={16} color={ICON_COLORS.contentMuted} />

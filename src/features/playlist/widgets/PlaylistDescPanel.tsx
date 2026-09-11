@@ -49,7 +49,13 @@ export function PlaylistDescPanel({ title, description, onClose }: PlaylistDescP
       <view className='playlist-desc__panel' catchtap={() => {}}>
         <view className='playlist-desc__header'>
           <text className='playlist-desc__title'>{title}</text>
-          <view className='playlist-desc__close' bindtap={onClose} data-testid='playlist-desc-close'>
+          <view
+            className='playlist-desc__close'
+            bindtap={onClose}
+            accessibility-element={true}
+            accessibility-label={t('common.close')}
+            data-testid='playlist-desc-close'
+          >
             <Icon name='x' size={18} color={ICON_COLORS.content2} />
           </view>
         </view>

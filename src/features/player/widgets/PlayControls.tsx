@@ -33,16 +33,19 @@ function FavoriteButton({ songId, slot }: { songId: number, slot: number }) {
   const { isFavorite, toggle, isPending } = useFavoriteToggle(songId)
 
   return (
+    // Names the *action*, not the state: "favorited" does not tell you what a tap
+    // will do. Written above the tag rather than inside it because `openingTags()`
+    // elides block comments only — a line comment with a quote in it flips the
+    // scanner's quote state and swallows the following tags (batch 67).
     <view
       className={isPending
         ? 'player-controls__btn player-controls__btn--disabled'
         : 'player-controls__btn'}
       style={{ width: `${slot}px`, height: `${slot}px` }}
       bindtap={isPending ? undefined : toggle}
+      accessibility-element={true}
+      accessibility-label={isFavorite ? t('player.unfavorite') : t('player.favorite')}
       data-testid='favorite-btn'
-      // Names the *action*, not the state: "favorited" does not tell you what a tap
-      // will do.
-      aria-label={isFavorite ? t('player.unfavorite') : t('player.favorite')}
     >
       {/* `key` flips on toggle so the wrapper remounts and the bounce animation
           replays from frame 0 — CSS animations do not restart on a class change. */}
@@ -142,6 +145,13 @@ export function PlayControls({ playBtn, playRadius, slot, songId }: PlayControls
           // (lynx-api-docs/css/pseudo-classes.md), so removing the handler is
           // what actually disables it.
           bindtap={canPrev ? () => usePlayerStore.getState().playPrev() : undefined}
+          accessibility-element={true}
+          accessibility-label={t('common.previous')}
+          // Same rule as the handler above, one layer in: a disabled control must
+          // not be announced as actionable. These two are the only controls here
+          // that can go disabled, which is why they are the only ones with a trait
+          // (`disabled` rather than `button,disabled` — see MiniPlayer).
+          accessibility-traits={canPrev ? 'button' : 'disabled'}
         >
           <Icon name='skip-prev' size={26} color={ICON_COLORS.content} />
         </view>
@@ -154,6 +164,8 @@ export function PlayControls({ playBtn, playRadius, slot, songId }: PlayControls
             borderRadius: `${playRadius}px`,
           }}
           bindtap={() => usePlayerStore.getState().togglePlay()}
+          accessibility-element={true}
+          accessibility-label={isPlaying ? t('common.pause') : t('common.play')}
         >
           {isBuffering
             ? (
@@ -179,6 +191,9 @@ export function PlayControls({ playBtn, playRadius, slot, songId }: PlayControls
           style={slotBox}
           data-testid='next-btn'
           bindtap={canNext ? () => usePlayerStore.getState().playNext() : undefined}
+          accessibility-element={true}
+          accessibility-label={t('common.next')}
+          accessibility-traits={canNext ? 'button' : 'disabled'}
         >
           <Icon name='skip-next' size={26} color={ICON_COLORS.content} />
         </view>

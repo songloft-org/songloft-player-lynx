@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { VerticalSlider } from '../../../shared/ui/VerticalSlider.js'
 import { isMuted, usePlayerStore } from '../store/index.js'
@@ -18,6 +20,7 @@ import './VolumeControl.css'
  * memory.
  */
 export function VolumeControl() {
+  const { t } = useTranslation()
   const volume = usePlayerStore((s) => s.volume)
   const muted = usePlayerStore(isMuted)
 
@@ -39,6 +42,8 @@ export function VolumeControl() {
       <view
         className='player-volume__mute'
         bindtap={() => usePlayerStore.getState().toggleMute()}
+        accessibility-element={true}
+        accessibility-label={muted ? t('common.unmute') : t('common.mute')}
         data-testid='volume-mute'
       >
         <Icon

@@ -111,6 +111,8 @@ function DirectoryNode({ entry, depth, ...rest }: NodeProps) {
               <view
                 className='libops-tree__expand-hit'
                 bindtap={() => actions.toggleExpand(entry.path, entry.hasChildren)}
+                accessibility-element={true}
+                accessibility-label={expanded ? t('common.collapse') : t('common.expand')}
                 data-testid={`dir-expand-${entry.path}`}
               >
                 <Icon

@@ -66,6 +66,8 @@ export function PlayerToolBar({ slot }: PlayerToolBarProps) {
         className='player-tools__btn'
         style={box}
         bindtap={() => usePlayerStore.getState().togglePlaylistDrawer()}
+        accessibility-element={true}
+        accessibility-label={t('player.queue')}
         data-testid='queue-btn'
       >
         <Icon name='queue' size={20} color={ICON_COLORS.content} />

@@ -87,7 +87,12 @@ export function EditPlaylistPage() {
   return (
     <view className='edit-playlist'>
       <view className='edit-playlist__topbar'>
-        <view className='edit-playlist__back' bindtap={() => performRouteBack()}>
+        <view
+          className='edit-playlist__back'
+          bindtap={() => performRouteBack()}
+          accessibility-element={true}
+          accessibility-label={t('common.back')}
+        >
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='edit-playlist__title'>{pageTitle}</text>

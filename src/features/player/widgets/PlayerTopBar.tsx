@@ -46,6 +46,8 @@ export function PlayerTopBar({
       <view
         className='full-player__icon-btn'
         bindtap={onClose}
+        accessibility-element={true}
+        accessibility-label={t('common.collapse')}
         data-testid='full-player-close'
       >
         <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
