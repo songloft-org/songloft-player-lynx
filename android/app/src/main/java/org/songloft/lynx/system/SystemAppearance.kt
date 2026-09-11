@@ -1,6 +1,8 @@
 package org.songloft.lynx.system
 
+import android.content.ContentResolver
 import android.content.res.Configuration
+import android.provider.Settings
 
 /**
  * The host half of the system-appearance contract: the OS dark/light setting and
@@ -18,14 +20,17 @@ object SystemAppearance {
     /** `lynx.__globalProps` keys. */
     const val PROP_THEME = "systemTheme"
     const val PROP_LOCALE = "systemLocale"
+    /** OS "reduce motion" / animations-off flag, same channel as theme. */
+    const val PROP_REDUCE_MOTION = "systemReduceMotion"
 
     /** Global-event name for a live change. */
     const val EVENT_CHANGED = "SongloftSystem.appearanceChanged"
 
-    /** Snapshot `configuration` in the shape the JS side parses. */
-    fun from(configuration: Configuration): Map<String, Any> = mapOf(
+    /** Snapshot `configuration` + [ContentResolver] in the shape the JS side parses. */
+    fun from(configuration: Configuration, contentResolver: ContentResolver): Map<String, Any> = mapOf(
         PROP_THEME to themeOf(configuration),
         PROP_LOCALE to localeTagOf(configuration),
+        PROP_REDUCE_MOTION to reduceMotionOf(contentResolver),
     )
 
     /**
@@ -48,4 +53,20 @@ object SystemAppearance {
      */
     private fun localeTagOf(configuration: Configuration): String =
         configuration.locales.takeIf { !it.isEmpty }?.get(0)?.toLanguageTag() ?: ""
+
+    /**
+     * Whether the user has disabled animations. Android has no single "reduce
+     * motion" accessibility toggle (unlike iOS's `UIAccessibility.isReduceMotionEnabled`);
+     * the standard signal is the Developer-Options / accessibility animation
+     * scale. `ANIMATOR_DURATION_SCALE == 0` is the value set when animations are
+     * turned off, and is what `ValueAnimator.areAnimatorsDisabled()` itself reads.
+     * `getFloat` returns the default (1f → motion on) when the setting is absent,
+     * so hosts that never set it resolve to motion-on — the same default as iOS.
+     *
+     * Live toggles of this setting do not fire `onConfigurationChanged`, so the
+     * page picks the new value up on the next launch / config change rather than
+     * the instant it is toggled — the same launch-foreground cadence iOS uses.
+     */
+    private fun reduceMotionOf(contentResolver: ContentResolver): Boolean =
+        Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
 }

@@ -49,7 +49,7 @@ class MainActivity : Activity() {
         // deprecated in both overloads, and this is its replacement.) The URL is
         // still resolved by DemoTemplateProvider from
         // app/src/main/assets/main.lynx.bundle.
-        val props = SystemAppearance.from(resources.configuration).toMutableMap()
+        val props = SystemAppearance.from(resources.configuration, contentResolver).toMutableMap()
         if (intent?.getBooleanExtra(EXTRA_NAVIGATE_TO_PLAYER, false) == true) {
             props[PROP_NAVIGATE_TO_PLAYER] = true
         }
@@ -95,7 +95,7 @@ class MainActivity : Activity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         val view = lynxView ?: return
-        val appearance = SystemAppearance.from(newConfig)
+        val appearance = SystemAppearance.from(newConfig, contentResolver)
         view.updateGlobalProps(appearance)
         val params = JavaOnlyArray()
         params.pushMap(JavaOnlyMap.from(appearance))
