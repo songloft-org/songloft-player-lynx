@@ -83,9 +83,15 @@ describe('the media notification keeps notification id 1001 while playing', () =
         + 'funnel for showing, updating and dropping the media notification, and the only place '
         + 'this service can learn who owns id 1001',
     ).toContain('super.onUpdateNotification')
-    const assignment = onUpdate.indexOf('mediaNotificationOwnsSlot = startInForegroundRequired')
+    // `effectiveForeground` is the value the service both records as ownership
+    // and passes to super as `startInForegroundRequired` (it OR-s in media3's
+    // will-show signal so a paused-but-shown card is not overwritten by the
+    // placeholder — the original bug). The gate's load-bearing property is that
+    // this assignment precedes the super call, whose foreground path re-enters
+    // onStartCommand synchronously enough that a later assignment loses the race.
+    const assignment = onUpdate.indexOf('mediaNotificationOwnsSlot = effectiveForeground')
     const delegation = onUpdate.indexOf('super.onUpdateNotification')
-    expect(assignment, 'ownership must be taken from startInForegroundRequired').toBeGreaterThan(-1)
+    expect(assignment, 'ownership must be recorded from the effective foreground flag').toBeGreaterThan(-1)
     expect(
       assignment,
       'assign the ownership flag BEFORE calling super: super delegates to media3, whose '
