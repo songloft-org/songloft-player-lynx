@@ -21,6 +21,7 @@ import {
 } from '../../../native/index.js'
 import { readNativeModules } from '../../../native/native-modules.js'
 import { getPlatformTarget } from '../../../native/platform-target.js'
+import { getVideoModule } from '../../../native/video.js'
 import { getFavoriteState, toggleFavoriteNonReact } from '../../library/data/favorites.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
 import { getSongsApi } from '../../library/api/index.js'
@@ -132,8 +133,14 @@ export interface PlayerState extends PlayerData {
    * everything else the stream already carries the picture and this is a no-op. The
    * promise resolves once playback resumes, which may be minutes away — the endpoint
    * transcodes the whole file before answering.
+   *
+   * Answers *what happened* rather than resolving silently, because the two failures
+   * are not the same thing to the user: a `'failed'` switch means the server could not
+   * re-encode the file and the picture will never arrive, while `'skipped'` means
+   * there was nothing to switch. Callers that only care about the picture should use
+   * `openCurrentSongVideo()` (data/video-open.ts) instead of reading this.
    */
-  enterVideoSource: () => Promise<void>
+  enterVideoSource: () => Promise<VideoSourceOutcome>
 
   // ── test/reset hook ──
   reset: () => void
@@ -266,6 +273,19 @@ export function songCacheExtOf(song: Song): string {
  * server hiccup.
  */
 let _videoSourceSongId: number | null = null
+
+/**
+ * What `enterVideoSource()` did.
+ *
+ *  - `'skipped'` — nothing to do: no song, or a container the device plays as-is
+ *                  (its stream already carries the picture), or a song already
+ *                  switched to the transcoded source.
+ *  - `'switched'` — the transcoded stream is loaded and playing.
+ *  - `'failed'`   — the server refused or the transcode broke (503 without ffmpeg
+ *                  is the usual cause). Playback is left on the audio stream, and
+ *                  the picture will not arrive on a retry.
+ */
+export type VideoSourceOutcome = 'skipped' | 'switched' | 'failed'
 
 /** What the engine should load, and whether it is a playlist rather than a file. */
 interface PlaybackSource {
@@ -857,11 +877,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       set({ sleepTimer: undefined })
     },
 
-    enterVideoSource: async () => {
+    enterVideoSource: async (): Promise<VideoSourceOutcome> => {
       const song = get().currentSong
-      if (!song) return
-      if (resolveVideoSourceKind(song, getPlatformTarget()) !== 'hls') return
-      if (_videoSourceSongId === song.id) return
+      if (!song) return 'skipped'
+      if (resolveVideoSourceKind(song, getPlatformTarget()) !== 'hls') return 'skipped'
+      if (_videoSourceSongId === song.id) return 'skipped'
 
       _videoSourceSongId = song.id
       const positionMs = get().currentTime
@@ -878,11 +898,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         _loadedSourceKind = 'stream'
         if (positionMs > 0) await audio.seek(positionMs)
         await audio.play()
+        return 'switched'
       } catch (e) {
         // 503 means the server has no ffmpeg, or the transcode failed. Fall back to
         // the audio stream so the user keeps listening instead of losing playback.
         _videoSourceSongId = null
         set({ errorMessage: String(e), isBuffering: false })
+        return 'failed'
       }
     },
 
@@ -1144,6 +1166,28 @@ export function resetLiveActivityForTests(): void {
 usePlayerStore.subscribe((state, prev) => {
   if (state.currentSong === prev.currentSong) return
   void useLyricStore.getState().loadForSong(state.currentSong)
+})
+
+/**
+ * A fullscreen video surface belongs to the **player**, not to a song.
+ *
+ * The host lends the *running* engine a surface (`attachVideoOutput`), so whatever
+ * the queue loads next is drawn into it. Auto-advance therefore used to leave the
+ * user staring at the last frame of the clip — or at a black rectangle once the
+ * engine released the video renderer — while the next song played behind it, with
+ * no way out except the system back key. Nothing in JS closed it: the only caller
+ * of `close()` was the e2e bridge.
+ *
+ * Guarded on the *outgoing* song rather than closing unconditionally: `close()` is
+ * a bridge round-trip, and a song that could never have been watched cannot have
+ * left a surface up.
+ */
+usePlayerStore.subscribe((state, prev) => {
+  if (state.currentSong === prev.currentSong) return
+  const outgoing = prev.currentSong
+  if (!outgoing) return
+  if (resolveVideoSourceKind(outgoing, getPlatformTarget()) === 'none') return
+  void getVideoModule().close()
 })
 
 export async function restorePlaybackState(): Promise<void> {

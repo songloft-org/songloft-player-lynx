@@ -204,8 +204,10 @@ test('each close action clears only its own overlay', () => {
  * are what matters — order included, since info keeps its read-only-peek slot
  * between play and the destructive tail on a narrow row.
  */
-const keysOf = (row: Parameters<typeof buildSongMenuItems>[1] | undefined) =>
-  buildSongMenuItems((key) => key, row ?? null).map((item) => item.key)
+const keysOf = (
+  row: Parameters<typeof buildSongMenuItems>[1] | undefined,
+  options?: Parameters<typeof buildSongMenuItems>[2],
+) => buildSongMenuItems((key) => key, row ?? null, options).map((item) => item.key)
 
 test('a narrow row (or no row context) keeps all six menu items', () => {
   expect(keysOf(null)).toEqual(['play', 'info', 'edit', 'add', 'manageTags', 'delete'])
@@ -222,6 +224,33 @@ test('every wide row keeps info and delete in the menu (there is no delete short
   // The deleteShortcut field no longer exists. All wide rows have exactly one
   // shortcut (add-to-playlist), so the menu always carries info and delete.
   expect(keysOf({ isWide: true })).toEqual(['play', 'info', 'edit', 'manageTags', 'delete'])
+})
+
+/*
+ * "Watch MV" — the entry point that saves the trip through the full player, where
+ * the cover badge was previously the only way to the picture. Its position (right
+ * after "play", in both viewport shapes) and its absence by default are both pinned:
+ * `canWatchVideo` is the caller's answer, so a caller that forgets to pass it must
+ * get a menu with no video item rather than a dead one.
+ */
+test('watch MV sits right after play, on either row shape', () => {
+  expect(keysOf(null, { canWatchVideo: true }))
+    .toEqual(['play', 'video', 'info', 'edit', 'add', 'manageTags', 'delete'])
+  expect(keysOf({ isWide: true }, { canWatchVideo: true }))
+    .toEqual(['play', 'video', 'info', 'edit', 'manageTags', 'delete'])
+})
+
+test('no video item unless the caller says the picture can be shown', () => {
+  expect(keysOf(null, { canWatchVideo: false })).not.toContain('video')
+  expect(keysOf(null)).not.toContain('video')
+})
+
+test('the video item is not danger-flagged (it plays, it does not delete anything)', () => {
+  const items = buildSongMenuItems((key) => key, null, { canWatchVideo: true })
+  expect(items.find((item) => item.key === 'video')?.danger).toBeUndefined()
+  // The distinct glyph matters: a "play" icon next to the "play" item reads as the
+  // same action twice.
+  expect(items.find((item) => item.key === 'video')?.icon).toBe('video')
 })
 
 test('only the delete item is danger-flagged', () => {

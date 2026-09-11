@@ -1,12 +1,16 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
+import { resolveVideoSourceKind } from '../../core/network/video-source.js'
 import { getSongsApi } from '../../features/library/api/index.js'
 import { SongEditDialog } from '../../features/library/widgets/SongEditDialog.js'
 import { SongInfoDialog } from '../../features/library/widgets/SongInfoDialog.js'
 import { ManageTagsSheet } from '../../features/library/widgets/ManageTagsSheet.js'
 import { AddToPlaylistSheet } from '../../features/playlist/widgets/AddToPlaylistSheet.js'
+import { canWatchVideo, openCurrentSongVideo } from '../../features/player/data/video-open.js'
 import { usePlayerStore } from '../../features/player/store/index.js'
+import { getPlatformTarget } from '../../native/platform-target.js'
+import type { Song } from '../../models/song.js'
 import { ConfirmDialog } from './ConfirmDialog.js'
 import { GlobalMenu } from './GlobalMenu.js'
 import { buildSongMenuItems } from './song-menu-items.js'
@@ -64,7 +68,33 @@ export function SongRowOverlays() {
    * and edit — read-only peek before any destructive "edit" muscle memory
    * lands.
    */
-  const items = buildSongMenuItems(t, menuRow)
+  const items = buildSongMenuItems(t, menuRow, { canWatchVideo: canWatchVideo(menuSong) })
+
+  /**
+   * Play this song and put its picture on screen, without the trip through the full
+   * player that this action exists to replace.
+   *
+   * Play first, then open: the surface is lent to the engine that is already playing,
+   * so there has to *be* a current song before there is a picture to attach. Attaching
+   * is what fails with `'noTrack'` (the stream has no video track — a remote song
+   * served from a `-vn` cache entry), and a server-side transcode that fails is
+   * `'transcodeFailed'`; neither should be reported as the other.
+   */
+  const watchVideo = async (song: Song) => {
+    /*
+     * A container the host cannot demux is re-encoded server-side, and that request
+     * answers only when the whole file is done. There is no player pending state on
+     * screen here — the library is still up — so the wait is otherwise indistinguishable
+     * from nothing having happened.
+     */
+    if (resolveVideoSourceKind(song, getPlatformTarget()) === 'hls') {
+      toast.show(t('player.videoTranscoding'))
+    }
+    await usePlayerStore.getState().playSong(song)
+    const outcome = await openCurrentSongVideo()
+    if (outcome === 'transcodeFailed') toast.error(t('player.videoTranscodeFailed'))
+    else if (outcome === 'noTrack') toast.error(t('player.videoNoTrack'))
+  }
 
   const onSelect = (key: string) => {
     const song = menuSong
@@ -72,6 +102,9 @@ export function SongRowOverlays() {
     switch (key) {
       case 'play':
         void usePlayerStore.getState().playSong(song)
+        return
+      case 'video':
+        void watchVideo(song)
         return
       case 'info':
         openInfo(song)

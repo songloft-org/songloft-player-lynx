@@ -271,6 +271,11 @@ export const en = {
     enterIntegerInRange: 'Enter an integer between {{min}} and {{max}}',
     videoNoTrack: 'This file has no video track',
     videoUnavailable: 'Video playback is unavailable',
+    /* The cover badge that opens the fullscreen picture. Kept as the acronym in
+       both languages — it is what the feature is called on screen. */
+    videoBadge: 'MV',
+    videoTranscoding: 'Transcoding the video, this can take a while…',
+    videoTranscodeFailed: 'Could not transcode this video — playing audio only',
     more: 'More',
     songInfo: 'Song info',
     cacheToDevice: 'Cache on device',
@@ -687,6 +692,7 @@ export const en = {
   },
   songMenu: {
     play: 'Play',
+    watchVideo: 'Watch MV',
     info: 'Song info',
     edit: 'Edit',
     playNext: 'Play next',
@@ -1228,6 +1234,9 @@ export const zh: TranslationTree = {
     enterIntegerInRange: '请输入 {{min}} - {{max}} 之间的整数',
     videoNoTrack: '该文件没有视频轨',
     videoUnavailable: '视频播放不可用',
+    videoBadge: 'MV',
+    videoTranscoding: '正在转码视频，可能需要一会儿…',
+    videoTranscodeFailed: '视频转码失败，只能播放音频',
     more: '更多',
     songInfo: '歌曲信息',
     cacheToDevice: '缓存到本机',
@@ -1628,6 +1637,7 @@ export const zh: TranslationTree = {
   },
   songMenu: {
     play: '播放',
+    watchVideo: '观看 MV',
     info: '歌曲信息',
     edit: '编辑',
     playNext: '下一首播放',

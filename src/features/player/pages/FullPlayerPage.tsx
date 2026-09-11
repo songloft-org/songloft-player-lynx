@@ -11,11 +11,8 @@ import type { Song } from '../../../models/song.js'
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 import { setShellWidth } from '../../../shared/nav/shell-navigation.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
-import { resolveVideoSourceKind } from '../../../core/network/video-source.js'
-import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 import { readAutoEnterLyrics } from '../../settings/data/settings-prefs.js'
-import { getPlatformTarget } from '../../../native/platform-target.js'
-import { getVideoModule } from '../../../native/video.js'
+import { canWatchVideo, openCurrentSongVideo } from '../data/video-open.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { resolvePlayerLayout } from '../domain/player-layout.js'
 import { formatSleepRemaining } from '../domain/sleep-timer.js'
@@ -39,12 +36,13 @@ import './FullPlayerPage.css'
  * plain metadata ("this is a music video"). It only becomes *tappable* where a
  * fullscreen surface actually exists and the container can be shown — on Web, or in a
  * build without the native module, tapping would be the silent no-op this repo has
- * already shipped three times.
+ * already shipped three times. That question is `canWatchVideo` (data/video-open.ts),
+ * shared with the library's "watch MV" item so the two cannot disagree.
  *
- * `kind === 'hls'` means the server has to transcode the file before anything can be
- * drawn, and it answers only when the whole transcode is done. So that path shows a
- * pending state and switches the source first; `'direct'` opens straight away,
- * because the picture is already in the stream being played.
+ * Opening is `openCurrentSongVideo`, which switches to the transcoded HLS stream when
+ * the container needs it: that request answers only when the whole transcode is done,
+ * so the badge shows a pending state and names the failure at the end (no video track
+ * vs. the server refusing to transcode).
  */
 function CoverArt({ song, size }: { song: Song, size: number }) {
   const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
@@ -52,8 +50,7 @@ function CoverArt({ song, size }: { song: Song, size: number }) {
   const [pending, setPending] = useState(false)
   const [note, setNote] = useState('')
 
-  const kind = resolveVideoSourceKind(song, getPlatformTarget())
-  const canWatch = getPlatformCapabilities().video && kind !== 'none'
+  const canWatch = canWatchVideo(song)
 
   useEffect(() => {
     setPending(false)
@@ -64,11 +61,9 @@ function CoverArt({ song, size }: { song: Song, size: number }) {
     setNote('')
     setPending(true)
     try {
-      if (kind === 'hls') await usePlayerStore.getState().enterVideoSource()
-      const shown = await getVideoModule().open()
-      // The host refuses when the stream turns out to carry no video track — a real
-      // case for remote songs cached through `-vn`, and one only the host can see.
-      if (!shown) setNote(t('player.videoNoTrack'))
+      const outcome = await openCurrentSongVideo()
+      if (outcome === 'noTrack') setNote(t('player.videoNoTrack'))
+      else if (outcome === 'transcodeFailed') setNote(t('player.videoTranscodeFailed'))
     } catch {
       setNote(t('player.videoUnavailable'))
     } finally {
@@ -114,11 +109,13 @@ function CoverArt({ song, size }: { song: Song, size: number }) {
             data-testid={canWatch ? 'video-fullscreen' : undefined}
           >
             {/* Pill badge: the old "▶" text was too small to read at a glance and
-                looked like a rendering artifact. A labelled pill with a play icon
-                clearly states "this is a music video — tap to watch". */}
-            <Icon name='play' size={12} color={ICON_COLORS.content} />
+                looked like a rendering artifact. A labelled pill carrying the screen
+                glyph clearly states "this is a music video — tap to watch". (Not the
+                `play` glyph: the song menu has a "play" item of its own, and the two
+                actions must not read as the same one.) */}
+            <Icon name='video' size={12} color={ICON_COLORS.content} />
             <text className='full-player__video-badge-text'>
-              {pending ? '…' : 'MV'}
+              {pending ? '…' : t('player.videoBadge')}
             </text>
           </view>
         )

@@ -455,7 +455,9 @@ function mockPlayerState(over: Partial<PlayerState> = {}): PlayerState {
     setSleepTimerAfterSongs: noop,
     cancelSleepTimer: noop,
     setAudioTrack: asyncNoop,
-    enterVideoSource: asyncNoop,
+    // Answers the same value the real action does for "there was nothing to switch"
+    // — the only outcome that needs no picture to exist.
+    enterVideoSource: async () => 'skipped' as const,
     reset: noop,
     _onCompleted: noop,
     ...over,

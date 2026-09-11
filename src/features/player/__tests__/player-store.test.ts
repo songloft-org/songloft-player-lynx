@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import type { Song } from '../../../models/song.js'
 import { getAudio } from '../../../native/index.js'
 import type { MockSongloftAudio } from '../../../native/mock-audio.js'
+import { resetVideoModuleForTests } from '../../../native/video.js'
 import { resetLoadedSongForTests, restorePlaybackState, usePlayerStore } from '../store/player-store.js'
 
 /**
@@ -644,7 +645,7 @@ describe('video songs open the video stream', () => {
   async function loadCallFor(
     format: string,
     platform: string,
-    prime?: () => Promise<void>,
+    prime?: () => Promise<unknown>,
   ): Promise<{ url: string; hls: boolean | undefined }> {
     g.SystemInfo = { platform }
     resetLoadedSongForTests()
@@ -737,6 +738,97 @@ describe('video songs open the video stream', () => {
     expect(loadSpy).not.toHaveBeenCalled()
     loadSpy.mockRestore()
     delete g.SystemInfo
+  })
+})
+
+/**
+ * A fullscreen video surface is lent to the *player*, not to a song, so the queue
+ * moving on leaves whatever was drawn last still on screen. Reported from the device
+ * as "the MV finished and I was left on a black screen"; the fix is the
+ * `currentSong` subscription in player-store.ts, exercised here through the store
+ * (the subscription is what a page-level effect cannot cover: auto-advance fires it
+ * while the Lynx page is behind the native surface).
+ */
+describe('the fullscreen video surface follows the queue', () => {
+  const g = globalThis as Record<string, unknown>
+
+  /** The host bag the store will find when it reaches for `SongloftVideo`. */
+  function installVideoHost(): { close: ReturnType<typeof vi.fn> } {
+    const close = vi.fn((_args: string, cb: (json: string) => void) => cb('{}'))
+    g.NativeModules = {
+      SongloftVideo: {
+        open: (_a: string, cb: (json: string) => void) => cb('{"result":true}'),
+        close,
+        isOpen: (_a: string, cb: (json: string) => void) => cb('{"result":false}'),
+      },
+    }
+    resetVideoModuleForTests()
+    return { close }
+  }
+
+  function videoSong(id: number): Song {
+    return { ...song(id, 300), url: `/api/v1/songs/${id}/play`, format: 'mp4', isVideo: true } as Song
+  }
+
+  afterEach(() => {
+    delete g.NativeModules
+    delete g.SystemInfo
+    resetVideoModuleForTests()
+  })
+
+  test('moving to the next song closes it', async () => {
+    g.SystemInfo = { platform: 'iOS' }
+    const { close } = installVideoHost()
+    resetLoadedSongForTests()
+
+    await usePlayerStore.getState().playPlaylist([videoSong(1), song(2)], 0)
+    await flush()
+    expect(close).not.toHaveBeenCalled()
+
+    await usePlayerStore.getState().playNext()
+    await flush()
+    expect(close).toHaveBeenCalledTimes(1)
+  })
+
+  test('clearing the queue closes it too (nothing left to draw)', async () => {
+    g.SystemInfo = { platform: 'Android' }
+    const { close } = installVideoHost()
+    resetLoadedSongForTests()
+
+    await usePlayerStore.getState().playPlaylist([videoSong(1)], 0)
+    await flush()
+    usePlayerStore.getState().clearPlaylist()
+    await flush()
+    expect(close).toHaveBeenCalledTimes(1)
+  })
+
+  /*
+   * The guard that keeps this from becoming a bridge call on every track change: a
+   * song that could never have been watched cannot have left a surface up. Without
+   * it, `close()` runs for every audio track the user skips past.
+   */
+  test('an audio-only song change never reaches the host', async () => {
+    g.SystemInfo = { platform: 'iOS' }
+    const { close } = installVideoHost()
+    resetLoadedSongForTests()
+
+    await usePlayerStore.getState().playPlaylist([song(1), song(2)], 0)
+    await flush()
+    await usePlayerStore.getState().playNext()
+    await flush()
+    expect(close).not.toHaveBeenCalled()
+  })
+
+  test('on Web there is no surface to close, so the host is not asked', async () => {
+    g.SystemInfo = { platform: 'web' }
+    const { close } = installVideoHost()
+    resetLoadedSongForTests()
+
+    await usePlayerStore.getState().playPlaylist([videoSong(1), song(2)], 0)
+    await flush()
+    await usePlayerStore.getState().playNext()
+    await flush()
+    expect(close).not.toHaveBeenCalled()
   })
 })
 

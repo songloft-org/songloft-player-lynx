@@ -77,6 +77,7 @@ export type IconName =
   | 'label'
   | 'arrow-up'
   | 'arrow-down'
+  | 'video'
 
 /** Shared stroke attributes for line icons — Muse §4.5 stroke-width 1.6. */
 function stroke(color: string): string {
@@ -351,6 +352,13 @@ const ICONS: Record<IconName, (color: string) => string> = {
     `<circle cx="15" cy="6" r="2.2" ${stroke(c)}/>` +
     `<circle cx="8" cy="12" r="2.2" ${stroke(c)}/>` +
     `<circle cx="17" cy="18" r="2.2" ${stroke(c)}/>`,
+
+  // Video: a screen carrying a play triangle — "watch MV". Deliberately not the
+  // bare `play` glyph: in a menu that already has "play", the two must not read as
+  // the same action.
+  video: (c) =>
+    `<rect x="2.5" y="5" width="19" height="14" rx="2.5" ${stroke(c)}/>` +
+    `<path d="M10.2 9.2 15.6 12l-5.4 2.8z" ${fill(c)}/>`,
 
   // Cast: screen with signal arcs — DLNA / screen casting.
   cast: (c) =>
