@@ -111,7 +111,7 @@ export function PopoverSurface({
                * `z-index: -1`, so it sits under the rows without touching their
                * taps; see `BackdropBlur.tsx`.
                */}
-              <BackdropBlur className='ui-backdrop-blur--panel' />
+              <BackdropBlur className='ui-backdrop-blur--panel' container />
               {children}
             </view>
           </>

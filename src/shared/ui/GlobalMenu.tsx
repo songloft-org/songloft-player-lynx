@@ -109,7 +109,7 @@ export function GlobalMenu({
             over a blurred, dimmed page, so a second layer would only re-blur what
             the scrim layer blurred. `overflow-y: auto` on the panel clips this to
             the rounded corners. */}
-        {anchored && <BackdropBlur className='ui-backdrop-blur--panel' />}
+        {anchored && <BackdropBlur className='ui-backdrop-blur--panel' container />}
         <view className='global-menu__items'>
           {items.map((item) => (
             <MenuItem

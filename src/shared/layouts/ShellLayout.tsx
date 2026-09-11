@@ -249,7 +249,7 @@ export function ShellLayout() {
               {/* Panel-mode blur, so the capsule is a real material over the
                   scrolling content rather than an 0.85 wash. Apple's tab bar is
                   the reference here. See `BackdropBlur.tsx`. */}
-              <BackdropBlur className='ui-backdrop-blur--pill' />
+              <BackdropBlur className='ui-backdrop-blur--pill' container />
               {renderBottomBarItems()}
             </view>
           )}

@@ -432,7 +432,7 @@ describe('panel mode', () => {
       it('mounts the blur as the panel’s first child, with its modifier', () => {
         const tsx = read(site.tsx)
         expect(tsx).toContain(`import { BackdropBlur } from '${importPath(site.tsx)}'`)
-        const mount = `<BackdropBlur className='${site.modifier}' />`
+        const mount = `<BackdropBlur className='${site.modifier}' container />`
         const blur = tsx.indexOf(mount)
         expect(blur, `${mount} is not mounted`).toBeGreaterThan(-1)
         const panel = tsx.indexOf(site.panel)
@@ -565,7 +565,7 @@ describe('panel mode', () => {
       .toMatch(/\{!anchored && <BackdropBlur \/>\}/)
     // Anchored: a popover, so panel mode — no dim, the material is the panel.
     expect(tsx, 'the anchored form is a popover and needs the panel-mode layer')
-      .toMatch(/\{anchored && <BackdropBlur className='ui-backdrop-blur--panel' \/>\}/)
+      .toMatch(/\{anchored && <BackdropBlur className='ui-backdrop-blur--panel' container \/>\}/)
     const css = stripCssComments(read('shared/ui/GlobalMenu.css'))
     expect(css, 'only the docked form dims the page behind it').toMatch(
       /\.global-menu__backdrop--docked\s*\{[^{}]*background-color:\s*var\(--backdrop\)/,
