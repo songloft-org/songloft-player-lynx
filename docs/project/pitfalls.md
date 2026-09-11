@@ -212,6 +212,19 @@ TS facade 无论成败一律返回 resolved promise——只问 `isShowing()` �
 
 两个多选高亮拿 `--paper` 坐在 `--canvas` 上，比值 **1.04（light）/ 1.07（dark）**——画出来了，看不见，而全部对比度断言是绿的：WCAG 对「填充 vs 它坐的表面」一个字都没有。对策是给状态填充单独钉一条**可见度下限**（本项目取 1.08，已发货的 wash 落在 1.11–1.41），并配一条**缺陷形状**测试——`--paper` 叠 `--canvas` 必须**低于**这条线，否则说明下限定松了。反向的代价也要一起算：wash 在暗色下**提亮**表面，把它上面的三级文字推下 AA（`--content-muted` 5.42 → 3.86），所以推导必须算在**叠加之后**（与批C 那两层渐变同一形状），并且要有一条非空断言证明推导真的生效（暗色 `content-muted` 叠 wash 必须 < 4.5）。
 
+### 闸门测「规则存在」和「状态翻转」，都没测**解析之后的层叠**
+
+`.theme-root.theme-light.increase-contrast { --accent: #1e6ef4 }` 这条规则从 Apple Design System 迁移起就躺在 `tokens.css` 里，写得没错，`tokens-hig.test.ts` 也断言它在——**但那个 accent 值从未出现在屏幕上**（批65 发现并当批修掉）。原因是它和 `ThemeProvider` 写在**同一个元素**上的内联声明撞了车：`PACK_OVERRIDABLE_BASELINE`（含 `--accent` / `--accent-content`）被当作 inline 自定义属性输出到 `.theme-root`，而 `theme-pack-mapping.ts` 自己写着「inline beats the `.theme-root.theme-<x>` class declarations… **no `!important` anywhere**」——内联赢是**刻意设计**，class 天然是下位。
+
+这类缺陷能全套闸门绿着出门，因为没有任何一层在看层叠：CSS 闸门问「有没有这条规则」，模型闸门问「flag 会不会翻」、`theme-provider.test.tsx` 问「类名在不在根上」——三问全对，而浏览器/原生解析出的值依然是旧的。**真机取色一眼就破**：开关前后量 `.theme-tile__check` 这个实心 accent 徽章，两态都是 `#0088ff`（应为 `#1e6ef4`）；同一次探针里分隔线像素从 `#b5bfc9` 变 `#c6c6c8`（`--opaque-separator`），反证 class 生效、坏的是优先级。
+
+**规则**：给主题 token 加覆盖前，先查它在不在 `PACK_OVERRIDABLE_BASELINE`；在的就必须走内联通道，只写 CSS 类等于没写。**一个 token 只许活在两条通道中的一条** —— 两条都声明就是死一条（`increase-contrast-wiring.test.ts` 现在断言两个键集不相交，就是这个缺陷留下的守卫）。要声称生效，就用**该 token 的实心填充**在真机上取色，而不是引一条规则出来。
+
+**批65 的修法**（记录一下这题的正确解法，因为它不是唯一解）：Apple 的可达 accent 移进 `theme-pack-mapping.ts` 的 `CONTRAST_ACCENT`，在展开 baseline 之后、应用 pack 字段**之前**写入 —— 于是开关生效，而**主题包（用户显式选择）仍然赢**。`tokens.css` 里那两行删掉，其余对比度 token（label、`--system-red`、`--separator`、灰阶）留在类里不动，因为它们不在 baseline 里、没人压得过。设备上验的是同一像素的三态：ON `#1e6ef4` → OFF `#0088ff` → 再 ON `#1e6ef4`。
+
+附带教训：**「某个无障碍/主题开关半残」是本仓库最容易长期藏住的一类缺陷** —— 它不报错、不改布局、不影响任何非目标用户，而唯一能发现它的量（解析后的颜色）恰好没有闸门在看。
+
+
 ### 「非空字符串」不等于「没被打碎」
 
 改中文文案的工具会切坏多字节序列，留下 U+FFFD（替换字符）。它**本身是合法 UTF-8**，所以 `tsc` 过、打包过、产物里逐字带着上线，屏幕上是句子中间一个黑菱形。

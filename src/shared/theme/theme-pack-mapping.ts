@@ -1,4 +1,5 @@
 import { getFontScaleNumber } from './font-scale-model.js'
+import { getIncreaseContrast } from './increase-contrast-model.js'
 import { getMaterialVariant } from './material-model.js'
 import { MATERIAL_TOKENS } from './material-tokens.js'
 
@@ -206,6 +207,46 @@ export const PACK_OVERRIDABLE_BASELINE: Record<'light' | 'dark', Record<string, 
 }
 
 /**
+ * Increase-Contrast accent, per brightness — the two tokens that CANNOT live in
+ * the `.theme-root.theme-<x>.increase-contrast` class.
+ *
+ * They were in that class until this batch, and they were dead there: the
+ * baseline above is emitted as inline custom properties on the very same
+ * element (always, pack or no pack — see the module header), inline beats a
+ * class declaration, so `.increase-contrast { --accent: #1e6ef4 }` never won.
+ * Measured on iOS: the accent badge stayed `#0088ff` with the switch on, while
+ * `--separator` in the same block did change — proof the class was reaching the
+ * element and only the collided keys were being outranked. Nothing about the
+ * cascade here is accidental; "inline beats the class" is stated above as the
+ * design. The fix is therefore to put the accent in the same channel as the
+ * value it has to beat, not to reach for `!important`.
+ *
+ * **Ordering is the whole semantics: theme pack wins.** This table is applied
+ * BEFORE the pack fields below, so a pack's `seedColor` overwrites it. A pack is
+ * something the user picked explicitly in Settings; an accessibility switch
+ * must not silently repaint it. In the no-pack case (the default, and the
+ * majority) contrast gets Apple's accessible accent, which is what the class
+ * always intended. Edge-trimming: Apple derives a high-contrast variant of the
+ * *user's* accent, which would be a transformation of the pack seed — out of
+ * scope, and left as pack colour rather than a wrong system blue.
+ *
+ * The other `.increase-contrast` tokens (label tiers, `--system-red`, the grey
+ * ladder, `--separator`) stay in the class and keep working: they are not in
+ * `PACK_OVERRIDABLE_BASELINE`, so nothing outranks them. **The invariant worth
+ * remembering: a contrast token may live in exactly one of the two channels.**
+ * Adding one to the baseline without moving it here silently kills it again —
+ * `increase-contrast-wiring.test.ts` asserts the two key sets stay disjoint.
+ */
+export const CONTRAST_ACCENT: Record<'light' | 'dark', { accent: string; accentContent: string }> = {
+  // Apple's accessible blue. Reaches 4.57 on white but only 4.10 on the
+  // grouped grey — a partial answer, stated plainly in tokens.css.
+  light: { accent: '#1e6ef4', accentContent: '#ffffff' },
+  // #5cb8ff is bright enough that WHITE on it drops to 2.15, so the label must
+  // flip to black (9.76). A brighter accent moves the label, not just the fill.
+  dark: { accent: '#5cb8ff', accentContent: '#000000' },
+}
+
+/**
  * Map a pack onto inline CSS custom properties for the given resolved theme.
  *
  * The result always carries **every** overridable token (see the module
@@ -223,6 +264,14 @@ export function themePackToStyleVars(
 ): Record<string, string> {
   const colors = pack ? (resolved === 'light' ? pack.light : pack.dark) : undefined
   const vars: Record<string, string> = { ...PACK_OVERRIDABLE_BASELINE[resolved] }
+
+  // Increase Contrast goes in BEFORE the pack fields on purpose — see
+  // CONTRAST_ACCENT: the pack is the explicit choice and keeps the accent.
+  if (getIncreaseContrast()) {
+    const contrast = CONTRAST_ACCENT[resolved]
+    vars['--accent'] = contrast.accent
+    vars['--accent-content'] = contrast.accentContent
+  }
 
   if (colors) {
     if (isHexColor(colors.seedColor)) {

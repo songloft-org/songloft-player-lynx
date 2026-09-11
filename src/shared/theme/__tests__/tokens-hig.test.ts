@@ -339,8 +339,8 @@ test('increase-contrast raises what Apple leaves below AA, per theme', () => {
    *
    * The asymmetry is the point and is asserted: light must deepen its secondary
    * label (0.60 clears only 3.0 there), dark must not bother (0.60 already
-   * measures 5.27–6.36). And the dark accent must flip --accent-content to black —
-   * white on #409cff is 2.83, so a brighter accent moves the label too.
+   * measures 5.27–6.36). The accent is asserted to be ABSENT — it cannot win
+   * from a class, so it lives in the inline channel; see the bottom of this test.
    */
   function variant(theme: 'light' | 'dark'): Record<string, string> {
     const block = TOKENS.match(
@@ -351,7 +351,6 @@ test('increase-contrast raises what Apple leaves below AA, per theme', () => {
   }
 
   const light = variant('light')
-  expect(light['--accent']).toBe('#1e6ef4')
   expect(light['--secondary-label']).toBe('rgba(60, 60, 67, 0.73)')
   expect(light['--tertiary-label']).toBe('rgba(60, 60, 67, 0.57)')
   expect(light['--system-red']).toBe('#e9152d')
@@ -361,13 +360,23 @@ test('increase-contrast raises what Apple leaves below AA, per theme', () => {
   expect(light['--system-gray6']).toBe('#ebebf0')
 
   const dark = variant('dark')
-  expect(dark['--accent']).toBe('#5cb8ff')
-  expect(dark['--accent-content'], 'white on #5cb8ff is 2.15 — the label must flip')
-    .toBe('#000000')
   expect(dark['--system-gray']).toBe('#aeaeb2')
   expect(dark['--system-gray6']).toBe('#242426')
   expect(dark['--tertiary-label']).toBe('rgba(235, 235, 245, 0.38)')
   expect(dark['--separator']).toBe('var(--opaque-separator)')
   expect(dark['--secondary-label'], 'dark already clears AA at 0.60 — leave it alone')
     .toBeUndefined()
+
+  // The accent is NOT here, and that is the fix rather than an omission: these
+  // keys are in PACK_OVERRIDABLE_BASELINE, which `ThemeProvider` writes as
+  // inline properties on the same element, so a declaration in this class is
+  // outranked and dead (that is what it was — iOS-measured). It lives in
+  // `CONTRAST_ACCENT` in theme-pack-mapping.ts now. Re-adding it here means
+  // re-killing it; `increase-contrast-wiring.test.ts` asserts the two channels
+  // stay disjoint, and that the inline one really carries Apple's values.
+  for (const [theme, decl] of [['light', light], ['dark', dark]] as const) {
+    expect(decl['--accent'], `${theme} must not declare --accent (it would be dead)`)
+      .toBeUndefined()
+    expect(decl['--accent-content']).toBeUndefined()
+  }
 })

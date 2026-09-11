@@ -11,6 +11,10 @@ import {
   subscribeReduceMotion,
 } from './reduce-motion-model.js'
 import {
+  getIncreaseContrast,
+  subscribeIncreaseContrast,
+} from './increase-contrast-model.js'
+import {
   getMaterialVariant,
   subscribeMaterialVariant,
 } from './material-model.js'
@@ -72,6 +76,13 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   // motion-on until a host that reports the flag lands the class.
   const [reduceMotion, setReduceMotion] = useState(() => getReduceMotion())
 
+  // The app-level "Increase Contrast" accessibility switch → the
+  // `.increase-contrast` class, which swaps in Apple's accessible accent and
+  // grey ladder per theme (see `tokens.css`). A user preference, not a host
+  // signal, so it is persisted and replayed at startup alongside the theme —
+  // see `increase-contrast-model.ts` for why it is app-side.
+  const [increaseContrast, setIncreaseContrast] = useState(() => getIncreaseContrast())
+
   // The platform does not change at runtime — a host is iOS or it is not — so
   // it is read once and pinned. The class it puts on the root lets the iOS
   // Liquid Glass token override (see `tokens.css`'s `.platform-ios` blocks)
@@ -115,8 +126,21 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     [],
   )
 
+  useEffect(
+    () => subscribeIncreaseContrast(() => setIncreaseContrast(getIncreaseContrast())),
+    [],
+  )
+
   const vars = { ...themePackToStyleVars(pack?.data, theme), ...safeAreaStyleVars(insets) }
   const style = vars as Record<string, string> & CSSProperties
 
-  return <view className={`theme-root theme-${theme} platform-${platform}${reduceMotion ? ' reduce-motion' : ''}`} style={style}>{children}</view>
+  // Built here rather than inline so the state-driven classes read as a set:
+  // each one is a toggle whose *absence* is the default look.
+  const className = 'theme-root'
+    + ` theme-${theme}`
+    + ` platform-${platform}`
+    + (reduceMotion ? ' reduce-motion' : '')
+    + (increaseContrast ? ' increase-contrast' : '')
+
+  return <view className={className} style={style}>{children}</view>
 }

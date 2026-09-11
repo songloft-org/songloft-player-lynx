@@ -14,8 +14,10 @@
  * applied alongside it by `ThemeProvider` (`theme-root theme-dark` /
  * `theme-root theme-light`), so switching themes is just swapping that second
  * class. `.theme-root.theme-<name>.increase-contrast` (three classes, so it
- * wins on specificity regardless of source order) carries Apple's
- * Increase-Contrast accent.
+ * wins on specificity regardless of source order) carries the Increase-Contrast
+ * label/separator/grey tiers — but NOT its accent, which has to beat the inline
+ * baseline and therefore rides the inline channel (see "Where the accent is NOT"
+ * below).
  *
  * ── The alias bridge (deleted in P10) ────────────────────────────────────────
  * The Apple tokens are the single source of truth. The former Muse names were
@@ -653,20 +655,35 @@
  *  - Dark's `--secondary-label` already measures 5.27–6.36 at 0.60, so it is left
  *    alone; only tertiary needs lifting (0.30 → 0.38).
  *
+ * ── Where the accent is NOT ──────────────────────────────────────────────────
+ * `--accent` / `--accent-content` are deliberately absent from the two blocks
+ * below. They were here, and they were dead: `ThemeProvider` writes
+ * `PACK_OVERRIDABLE_BASELINE` as INLINE custom properties on this same element
+ * (see `theme-pack-mapping.ts`), and inline beats a class declaration — so the
+ * accent stayed `#0088ff` with the switch on (iOS-measured), while `--separator`
+ * in the same block DID change. Apple's accessible accent now lives in
+ * `CONTRAST_ACCENT` in `theme-pack-mapping.ts` and rides the inline channel,
+ * where a theme pack's `seedColor` still wins — the pack is the user's explicit
+ * choice and an accessibility switch must not repaint it. Nothing else below is
+ * affected: none of these keys are in the overridable baseline, so nothing
+ * outranks them.
+ *
  * The dark accent carries a consequence worth naming: #5cb8ff is bright enough
- * that WHITE on it drops to 2.15, so `--accent-content` must flip to black
- * (9.76). A brighter accent is not free — it moves the label, not just the fill.
+ * that WHITE on it drops to 2.15, so its `--accent-content` flips to black
+ * (9.76) — recorded next to the value itself, in `CONTRAST_ACCENT`.
  *
  * The greys are Apple's own accessible ladder, not a rescaling of the default one:
  * light starts darker (#6c6c70 vs #8e8e93) and dark starts lighter (#aeaeb2).
  *
- * The host activation channel is not wired yet (it needs a native
- * SystemAppearance field, same as reduce-motion above); this CSS is ready so
- * flipping the class is all that is needed once the host provides it.
+ * Activation is an app-level switch (`increase-contrast-model.ts`, reached from
+ * Settings → Appearance → Accessibility), applied by `ThemeProvider` as the
+ * third class on the root — so flipping this class really is the whole
+ * mechanism. Deliberately app-side rather than a host `SystemAppearance` field
+ * (the shape `reduce-motion` above uses): the OS flag is not readable on every
+ * platform we ship to, and this is the user's preference to set regardless of
+ * what their OS chooses to expose.
  */
 .theme-root.theme-light.increase-contrast {
-  --accent: #1e6ef4;
-  --accent-content: #ffffff;
   --secondary-label: rgba(60, 60, 67, 0.73);
   --tertiary-label: rgba(60, 60, 67, 0.57);
   --system-red: #e9152d;
@@ -680,8 +697,6 @@
 }
 
 .theme-root.theme-dark.increase-contrast {
-  --accent: #5cb8ff;
-  --accent-content: #000000;
   --tertiary-label: rgba(235, 235, 245, 0.38);
   --separator: var(--opaque-separator);
   --system-gray: #aeaeb2;

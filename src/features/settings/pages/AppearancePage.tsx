@@ -27,6 +27,12 @@ import {
   PREF_MATERIAL,
 } from '../../../shared/theme/material-model.js'
 import {
+  changeIncreaseContrast,
+  coerceIncreaseContrast,
+  getIncreaseContrast,
+  PREF_INCREASE_CONTRAST,
+} from '../../../shared/theme/increase-contrast-model.js'
+import {
   APP_THEME_OPTIONS,
   type AppTheme,
   changeAppTheme,
@@ -38,6 +44,7 @@ import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import { SegmentedControl } from '../widgets/SegmentedControl.js'
 import { FontScaleSlider } from '../widgets/FontScaleSlider.js'
+import { SwitchRow } from '../widgets/SwitchRow.js'
 import { ThemeAppearancePicker } from '../widgets/ThemeAppearancePicker.js'
 import { SubPageShell } from '../widgets/SubPageShell.js'
 import { ThemePacksSection } from '../widgets/ThemePacksSection.js'
@@ -116,6 +123,7 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
   const [theme, setTheme] = useState<AppTheme>(getAppTheme)
   const [material, setMaterial] = useState<MaterialVariant>(getMaterialVariant)
   const [fontScale, setFontScale] = useState<FontScaleOption>(getFontScale)
+  const [increaseContrast, setIncreaseContrast] = useState<boolean>(getIncreaseContrast)
   const [language, setLanguage] = useState<AppLanguage>('system')
 
   useEffect(() => {
@@ -145,6 +153,16 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
           /* best-effort */
         }
       })()
+      void (async () => {
+        try {
+          const saved = coerceIncreaseContrast(
+            await getSongloftStorage().prefs.get(PREF_INCREASE_CONTRAST),
+          )
+          if (!cancelled) setIncreaseContrast(saved)
+        } catch {
+          /* best-effort */
+        }
+      })()
       try {
         const saved = coerceAppLanguage(await getSongloftStorage().prefs.get(PREF_LANGUAGE))
         if (!cancelled) setLanguage(saved)
@@ -165,6 +183,11 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
   const selectFontScale = (next: FontScaleOption) => {
     setFontScale(next)
     void changeFontScale(next)
+  }
+
+  const toggleIncreaseContrast = (next: boolean) => {
+    setIncreaseContrast(next)
+    void changeIncreaseContrast(next)
   }
 
   const selectMaterial = (next: MaterialVariant) => {
@@ -229,6 +252,20 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
             testId='fontscale'
           />
         </view>
+      </SettingsSection>
+
+      {/* Sits right after text size: both are accessibility knobs that restyle
+          the whole app live. Grouped under their own heading so a second a11y
+          switch has an obvious home rather than joining the colour pickers. */}
+      <SettingsSection title={t('settings.accessibilitySection')}>
+        <SwitchRow
+          icon='eye'
+          title={t('settings.increaseContrast')}
+          subtitle={t('settings.increaseContrastDesc')}
+          checked={increaseContrast}
+          onChange={toggleIncreaseContrast}
+          testId='increase-contrast'
+        />
       </SettingsSection>
 
       <ThemePacksSection onOpenCatalog={openCatalog} />

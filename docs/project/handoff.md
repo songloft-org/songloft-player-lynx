@@ -1,8 +1,12 @@
-# 工作交接（2026-09-08 · 宽屏设置三级页 pane 切换）
+# 工作交接（2026-09-11 · 批65 `.increase-contrast` 接线）
 
 > 本文件是**给接手 AI 的交接说明**，只回答三件事：现在在哪、还剩什么、怎么验证。
 >
 > **读文档顺序**：① [AGENTS.md](../../AGENTS.md) §4–§6（铁律，必读）→ ② 本文 §3「剩余工作」→ ③ [pitfalls.md](pitfalls.md)（踩坑实录：每条铁律背后的证据）。细节按需查 [progress.md](progress.md)（逐批交付）与 [bugs.md](bugs.md)（逐条缺陷根因）。
+>
+> **未提交（工作树，批65 · D3）**：`.increase-contrast` 接线 + App 内设置开关，含真机上查出并当批修掉的一个优先级缺陷。新增 `shared/theme/increase-contrast-model.ts`、`ThemeProvider` 拼第三个根类并订阅、`index.tsx` 启动回放、外观页新增「辅助功能」分组的 `SwitchRow`。**accent 不在这个类里**：它和 `ThemeProvider` 写在同一个元素上的内联 baseline 撞车、而 inline 必然赢，所以移进了内联通道（`theme-pack-mapping.ts` 的 `CONTRAST_ACCENT`，在展开 baseline 之后、应用 pack 字段之前写入 ⇒ 开关生效且**主题包仍赢**）；`tokens.css` 里那两行已删。闸门 +25（`increase-contrast-model.test.ts` 17 + `increase-contrast-wiring.test.ts` 7 + provider 1），反向验证 8/8 + 4/4 全咬。`tsc -b` 绿 / **2536 vitest 全绿（235 文件）** / `pnpm run build` 双产物 / `pnpm run build:web` 绿。**iOS 真机实测通过**（整屏 37089 px 换色、可逆到逐像素、重启后仍生效；accent 同一像素 ON `#1e6ef4` → OFF `#0088ff` → 再 ON `#1e6ef4`）。**新增不变式**：一个对比度 token 只许活在「class」与「内联」两条通道中的一条（键集不相交，闸门钉住）。**未验**：Android / HarmonyOS、暗色主题、带主题包的设备取色（pack 赢目前只有单测）。细节见 [progress.md](progress.md) 批65 条目。
+>
+> **上一代码批次（批64 · 已提交 `4fff54c`）**：`feat(ui): 全仓铺开按压态反馈，禁用控件摘除 handler 并补底栏选中过渡`。全仓 86 个 CSS 此前只有 1 处 `:active`；本批 token 化 `--press-opacity` / `--press-scale` 并落到 5 个活样式表，**列表行只用 `opacity` 绝不用 `transform`**（虚拟 `<list>` 的合成层坐标会丢父容器滚动偏移）；顺带修掉 `PlayControls` / `MiniPlayer` 四处「禁用只降透明度但 handler 照旧绑着」的真缺陷。同批做了只报不改的 D6 spike（Lynx CSS 伪类/属性支持结论）。iOS 实测：按压为元素级（变化行精确落在矩形内）、反解不透明度 0.690 vs 声明 0.7、禁用键同页 A/B 为 0.00 而相邻可用键 42.78。
 >
 > **最新代码批次（2026-09-08 · 本提交）**：宽屏设置三级页 pane 切换 —— 用户报「服务器添加页面在宽屏把设置左侧 tab 覆盖了」。根因：服务器添加/编辑是最后一个只有路由入口的三级页，`navigate` 离开 `/settings` 即卸载整个 master–detail 双栏；其余四个三级页（主题商店/重复检测/插件商店/开源许可）早已走「有回调切 pane、无回调退回路由」。修复：`ServerListPage.onOpenServerForm(id?)` + `ServerEditPage.editId/onBack`，pane 新增 `server-form` 分支。同类缺陷一并修：pane 返回键此前在任何三级页直接跳回「外观」，改为回各自父页；父级信息不开第二张表 —— `route-back.ts` 抽 `explicitParentOf()`，新 `domain/sub-page-nav.ts` 只维护子页→路由一张总表，父子关系派生（AGENTS §3.4）。闸门 +35、反向验证 4/4 全咬；`tsc -b` 绿 / **2423 vitest 全绿（225 文件）** / build 双产物（lynx 2269.3 kB、web 2364.1 kB）。**接手要补的**：宽屏浏览器/真机界面实测（用户手动验证中）——服务器「+」/「编辑」左栏应保留、pane 内返回键应回服务器列表、窄屏应无变化。细节见 [progress.md](progress.md) 最新条目。只报不改的 2 个既有缺陷（`onSave` 在 store 未 hydrate 时把编辑静默变新增；`persistProfiles` fire-and-forget 与 `hydrate` 覆盖的竞态窗口）也记在该条目 ⑧。
 >
@@ -46,10 +50,10 @@
 
 | 闸门 | 结果 | 何时验的 |
 |---|---|---|
-| `pnpm test` | **2511 全绿 / 233 文件** | ✅ **2026-09-11**（批64 按压态 + 真禁用；新增 13 条，此前 2423 为宽屏设置 pane 批） |
-| `pnpm exec tsc -b` | 绿 | 2026-09-11（批64；`--force` 全量重建的最后一次是 Issue #7） |
-| `pnpm run build` | 绿（main.lynx.bundle 2320.2 kB） | 2026-09-11（批64，lynx + web 双产物均列出） |
-| `pnpm run build:web` | 绿（main.web.bundle 2348.4 kB）+ Docker Chrome 运行时 500 首队列 A/B | 2026-09-07（build:web 尺寸为 Issue #7；A/B 为 Issue #4） |
+| `pnpm test` | **2536 全绿 / 235 文件** | ✅ **2026-09-11**（批65 `.increase-contrast` 接线 + accent 走内联通道；新增 25 条，此前 2511 为批64 按压态） |
+| `pnpm exec tsc -b` | 绿 | 2026-09-11（批65；`--force` 全量重建的最后一次是 Issue #7） |
+| `pnpm run build` | 绿（main.lynx.bundle 2320.2 kB） | 2026-09-11（批65，lynx + web 双产物均列出） |
+| `pnpm run build:web` | 绿（main.web.bundle **2427.6 kB**） | 2026-09-11（批65；此前的 2348.4 kB 与 2348.4/2425.4 两组为 Issue #7 / 批64） |
 | 新增 `tokens-hig.test.ts` | 6/6 绿 | 2026-09-02 |
 | `gradlew assembleDebug` | 绿 | ✅ **2026-09-06**（Issue #3，`compileDebugKotlin` 实际执行） |
 | `xcodebuild` / hvigor（HAP） | **可跑但未跑** | **订正（2026-09-11 实测）**：此前这里写「本机是 Linux，无 Xcode、无 DevEco」——**已过期**。当前机器是 macOS（Darwin 25.6.0 arm64），`xcodebuild` 为 **Xcode 26.6 (17F113)**，`hvigorw` 在 PATH 上，`xcrun simctl` 有已启动的 iPhone 17 Pro (iOS 26.5) 模拟器，`adb devices` 有 `emulator-5554`。故 `ios:build` 与 HAP 编译**本机可跑**，只是本批（纯 CSS/TSX）按 AGENTS §5.2 不触发该闸门 |

@@ -7,6 +7,7 @@ import {
   setSystemAppearanceForTests,
 } from '../../../native/system-appearance.js'
 import { createMemoryStorage } from '../../../core/storage/index.js'
+import { changeIncreaseContrast } from '../increase-contrast-model.js'
 import { changeAppTheme, DEFAULT_RESOLVED_THEME } from '../theme-model.js'
 import { FONT_SIZE_BASES, PACK_OVERRIDABLE_BASELINE } from '../theme-pack-mapping.js'
 import { setActiveThemePack } from '../theme-pack-model.js'
@@ -70,6 +71,32 @@ test('adds the reduce-motion class only when the host reports the flag', async (
   setSystemAppearanceForTests({ theme: 'light', locale: null, reduceMotion: false })
   r = render(<ThemeProvider />)
   expect(themeClass(r.container)).not.toContain('reduce-motion')
+})
+
+test('adds the increase-contrast class from the app switch, and follows it live', async () => {
+  // Unlike reduce-motion this is a *user preference*, so the signal is the model
+  // rather than the host. It still has to arrive as a root class the CSS can
+  // match (`.theme-root.theme-light.increase-contrast`) and to survive a flip
+  // mid-session, because the switch lives on the Settings page.
+  setSystemAppearanceForTests({ theme: 'light', locale: null })
+  await changeAppTheme('light', createMemoryStorage())
+
+  await changeIncreaseContrast(false, createMemoryStorage())
+  const r = render(<ThemeProvider />)
+  expect(themeClass(r.container)).toContain('theme-light')
+  expect(themeClass(r.container)).not.toContain('increase-contrast')
+
+  await act(async () => {
+    await changeIncreaseContrast(true, createMemoryStorage())
+  })
+  expect(themeClass(r.container)).toContain('increase-contrast')
+
+  await act(async () => {
+    await changeIncreaseContrast(false, createMemoryStorage())
+  })
+  expect(themeClass(r.container)).not.toContain('increase-contrast')
+
+  r.unmount()
 })
 
 test('a host flip re-renders the root class while the choice is system', async () => {
