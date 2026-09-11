@@ -125,6 +125,11 @@ export function ShellLayout() {
                 name={dest.icon}
                 size={24}
                 color={active ? activeAccentIconColor() : ICON_COLORS.contentMuted}
+                // Pinned: the bar's capsule is a fixed `--nav-pill-height`, and a
+                // plugin tab's glyph is a CSS-sized `<image>`/`<svg>`
+                // (`--nav-icon-size`) that the font scale cannot reach — scaling
+                // only the built-in glyphs would put two sizes in one bar.
+                scale={false}
               />
             )}
         </view>
@@ -195,6 +200,8 @@ export function ShellLayout() {
               name='more'
               size={24}
               color={moreActive ? activeAccentIconColor() : ICON_COLORS.contentMuted}
+              // Pinned for the same reason as the destinations above.
+              scale={false}
             />
           </view>
           <text className='nav-item__label'>{t('nav.more')}</text>

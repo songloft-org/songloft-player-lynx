@@ -26,6 +26,10 @@ vi.mock('../../../shared/theme/font-scale-model.js', () => ({
   coerceFontScale: (raw: unknown) =>
     raw === 'small' || raw === 'large' || raw === 'xlarge' ? raw : 'default',
   getFontScale: () => 'default',
+  // `Icon` reads this to damp glyph sizes; the page renders icons, so the mock
+  // must carry it or every Icon render in this file throws (AGENTS §5.3: a mock
+  // keeps the real module's export surface).
+  getFontScaleNumber: () => 1,
   changeFontScale: vi.fn(async () => 'default'),
 }))
 vi.mock('../../../shared/theme/material-model.js', () => ({

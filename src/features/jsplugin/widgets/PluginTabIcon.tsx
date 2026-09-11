@@ -38,5 +38,8 @@ export function PluginTabIcon({ tab, active }: { tab: PluginTabEntry; active: bo
       />
     )
   }
-  return <Icon name='settings' size={24} color={color} />
+  // Pinned: the sibling branches above are `<svg>`/`<image>` sized by
+  // `--nav-icon-size` in CSS, which the font scale cannot reach. Scaling only
+  // this fallback would give the same slot two different glyph sizes.
+  return <Icon name='settings' size={24} color={color} scale={false} />
 }

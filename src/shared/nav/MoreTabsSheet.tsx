@@ -101,6 +101,9 @@ export function MoreTabsSheet({ items, activePath, show, onShowChange }: MoreTab
                         name={dest.icon}
                         size={24}
                         color={active ? ICON_COLORS.primary : ICON_COLORS.contentMuted}
+                        // Pinned to match the bar: this sheet lists the same
+                        // destinations, and their plugin glyphs are CSS-sized.
+                        scale={false}
                       />
                     )}
                 </view>
