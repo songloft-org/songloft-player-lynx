@@ -37,6 +37,9 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
+  /** Append-fetch in flight (infinite scroll). Keeps the list visible while the
+   * next page loads — distinct from `loading`, which replaces the whole list. */
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [plugins, setPlugins] = useState<RegistryPluginEntry[]>([])
   const [total, setTotal] = useState(0)
@@ -62,10 +65,14 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
     p: number,
     keyword: string,
     mode: { allSources: boolean, url?: string, token?: string },
-    opts: { force?: boolean } = {},
+    opts: { force?: boolean, append?: boolean } = {},
   ) => {
-    setLoading(true)
-    setError(null)
+    if (opts.append) {
+      setLoadingMore(true)
+    } else {
+      setLoading(true)
+      setError(null)
+    }
     void getJSPluginApi()
       .refreshRegistry({
         allSources: mode.allSources,
@@ -80,13 +87,31 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
         githubProxy: githubProxy || undefined,
       })
       .then((res) => {
-        setPlugins(res.plugins)
+        // Append mode accumulates the next page onto the list (infinite scroll);
+        // a fresh fetch (initial / search / source switch / force-refresh)
+        // replaces it. Warnings describe the current listing and only refresh on
+        // a replace — an append's partial-source failures would just flicker the
+        // banner without adding actionable detail.
+        if (opts.append) {
+          setPlugins((prev) => [...prev, ...res.plugins])
+        } else {
+          setPlugins(res.plugins)
+          setWarnings(res.warnings)
+        }
         setTotal(res.total)
         setPage(res.page)
-        setWarnings(res.warnings)
       })
-      .catch((e: unknown) => setError(String(e instanceof Error ? e.message : e)))
-      .finally(() => setLoading(false))
+      .catch((e: unknown) => {
+        // An append failure leaves the already-loaded rows intact: `page` did
+        // not advance and `hasNext` still holds, so the next scroll-to-bottom
+        // retries — mirroring the song list's react-query infinite scroll,
+        // which surfaces `isError` without dropping the rows already shown.
+        if (!opts.append) setError(String(e instanceof Error ? e.message : e))
+      })
+      .finally(() => {
+        setLoading(false)
+        setLoadingMore(false)
+      })
   }
 
   const currentMode = () => {
@@ -98,7 +123,7 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
     }
   }
 
-  const doFetch = (p: number, keyword: string, opts: { force?: boolean } = {}) => {
+  const doFetch = (p: number, keyword: string, opts: { force?: boolean, append?: boolean } = {}) => {
     fetchList(p, keyword, currentMode(), opts)
   }
 
@@ -147,7 +172,10 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
   }, [search])
 
   const onForceRefresh = () => {
-    if (!loading) doFetch(page, search, { force: true })
+    // Refresh reloads from the first page (replace, not append) — the natural
+    // "pull-to-refresh" semantic for an infinite list, which may have scrolled
+    // several pages deep.
+    if (!loading && !loadingMore) doFetch(1, search, { force: true })
   }
 
   const onSourceSelected = (url: string) => {
@@ -259,7 +287,17 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
   ]
 
   const hasNext = page * pageSize < total
-  const hasPrev = page > 1
+
+  /**
+   * Infinite-scroll load-more: fired by the scroller's `bindscrolltolower`
+   * within 200px of the bottom. The `!loadingMore` guard stops the re-entrant
+   * fires Lynx emits while the user holds the scroll position at the tail; the
+   * `!loading` guard avoids racing a fresh replace fetch (force-refresh / source
+   * switch) that is about to reset the list anyway.
+   */
+  const onEndReached = () => {
+    if (hasNext && !loading && !loadingMore) doFetch(page + 1, search, { append: true })
+  }
 
   // Back while nothing is armed follows the shell's normal route-back.
   useBackHandler(sourceMenuOpen, () => {
@@ -275,6 +313,12 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
       // The search bar stays pinned above the results, so this page keeps its own
       // scroll container rather than letting the shell wrap everything.
       scrollable={false}
+      // The shell's `.subpage__content` carries a `padding-bottom: var(--space-6)`
+      // tail for shell-scrolled pages; here the page owns its scroll-view and
+      // reserves the capsule tail itself via `.plugin-registry__nav-inset` inside
+      // it, so the shell's extra padding would leave a dead strip below the
+      // scroll-view (behind the bottom tab) that the list can never scroll into.
+      contentClassName='plugin-registry__content'
       actions={(
         <view className='plugin-registry__topbar-actions'>
           {registries.length > 0
@@ -396,7 +440,13 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
                 )
                 : null}
 
-              <scroll-view className='plugin-registry__scroll' scroll-y>
+              <scroll-view
+                className='plugin-registry__scroll'
+                scroll-y
+                lower-threshold={200}
+                bindscrolltolower={onEndReached}
+                data-testid='registry-scroll'
+              >
                 {loading
                   ? <RegistryState text={t('jsplugin.loadingList')} testId='registry-loading' />
                   : error
@@ -431,32 +481,15 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
                           ))}
                         </view>
                       )}
-                              <view className='plugin-registry__nav-inset' />
-</scroll-view>
-
-              {!loading && plugins.length > 0
-                ? (
-                  <view className='plugin-registry__pager'>
-                    <view
-                      className={hasPrev ? 'plugin-registry__page-btn' : 'plugin-registry__page-btn plugin-registry__page-btn--disabled'}
-                      bindtap={() => { if (hasPrev) doFetch(page - 1, search) }}
-                      data-testid='registry-prev'
-                    >
-                      <Icon name='chevron-down' size={16} color={hasPrev ? ICON_COLORS.content : ICON_COLORS.contentMuted} />
+                {loadingMore
+                  ? (
+                    <view className='plugin-registry__footer'>
+                      <text className='plugin-registry__footer-text'>{t('common.loadingMore')}</text>
                     </view>
-                    <text className='plugin-registry__page-text'>
-                      {page} / {Math.ceil(total / pageSize) || 1}
-                    </text>
-                    <view
-                      className={hasNext ? 'plugin-registry__page-btn' : 'plugin-registry__page-btn plugin-registry__page-btn--disabled'}
-                      bindtap={() => { if (hasNext) doFetch(page + 1, search) }}
-                      data-testid='registry-next'
-                    >
-                      <Icon name='chevron-up' size={16} color={hasNext ? ICON_COLORS.content : ICON_COLORS.contentMuted} />
-                    </view>
-                  </view>
-                )
-                : null}
+                  )
+                  : null}
+                <view className='plugin-registry__nav-inset' />
+              </scroll-view>
             </view>
           )}
     </SubPageShell>

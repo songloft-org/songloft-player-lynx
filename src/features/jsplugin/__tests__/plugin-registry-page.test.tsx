@@ -20,7 +20,7 @@ import type { RegistryPluginEntry } from '../../../models/jsplugin.js'
 const h = vi.hoisted(() => ({
   navigate: vi.fn(),
   registries: [] as Array<{ url: string; name?: string; token?: string; enabled?: boolean }>,
-  refreshRegistry: vi.fn(async () => ({
+  refreshRegistry: vi.fn(async (_params: { page?: number } = {}) => ({
     plugins: [] as RegistryPluginEntry[],
     total: 0,
     page: 1,
@@ -307,12 +307,13 @@ test('picking a source refetches with that url and token', async () => {
   )
 })
 
-test('the refresh button forces, paging does not', async () => {
-  // Two pages worth of entries so the pager is actually usable.
-  h.refreshRegistry.mockImplementation(async () => ({
-    plugins: [makeEntry()],
+test('the refresh button forces, loading more does not', async () => {
+  // Two pages worth of entries so there is a next page to load. The mock
+  // echoes the requested page so the append accumulates realistically.
+  h.refreshRegistry.mockImplementation(async (params: { page?: number } = {}) => ({
+    plugins: [makeEntry({ entryPath: `lx-p${params.page ?? 1}` })],
     total: 30,
-    page: 1,
+    page: params.page ?? 1,
     pageSize: 20,
     warnings: [],
   }))
@@ -323,15 +324,25 @@ test('the refresh button forces, paging does not', async () => {
     fireEvent.tap(getByTestId('registry-force-refresh'))
     for (let i = 0; i < 5; i++) await Promise.resolve()
   })
+  // Force-refresh reloads from page 1 with force.
   expect(h.refreshRegistry).toHaveBeenLastCalledWith(
-    expect.objectContaining({ force: true }),
+    expect.objectContaining({ force: true, page: 1 }),
   )
 
   await act(async () => {
-    fireEvent.tap(getByTestId('registry-next'))
+    // `fireEvent.scrolltolower` rejects `scroll-view` (a registered custom
+    // element, not `HTMLUnknownElement`), so dispatch the same DOM event the
+    // renderer listens for directly on the node — the path `fireEvent` would
+    // take past its own `getElement` guard.
+    getByTestId('registry-scroll').dispatchEvent(
+      new Event('bindEvent:scrolltolower', { bubbles: true }),
+    )
     for (let i = 0; i < 5; i++) await Promise.resolve()
   })
-  // Not forced — paging slices the server's cached tree.
+  // Scrolling to the bottom loads the next page — advances page, not forced.
+  expect(h.refreshRegistry).toHaveBeenLastCalledWith(
+    expect.objectContaining({ page: 2 }),
+  )
   expect(h.refreshRegistry).toHaveBeenLastCalledWith(
     expect.not.objectContaining({ force: true }),
   )
