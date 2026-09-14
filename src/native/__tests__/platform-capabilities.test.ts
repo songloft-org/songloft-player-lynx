@@ -63,6 +63,14 @@ describe('on the Web platform', () => {
     g.NativeModules = { SongloftPlatform: {} }
     expect(getPlatformCapabilities().fileExport).toBe(false)
   })
+
+  test('video is on once the web host registers SongloftVideo', () => {
+    // Web backs `SongloftVideo` with a main-thread <video> surface now, so the
+    // "watch MV" entry must be offered — not hidden as if no surface existed.
+    asWeb()
+    g.NativeModules = { SongloftVideo: {} }
+    expect(getPlatformCapabilities().video).toBe(true)
+  })
 })
 
 describe('on a device host', () => {

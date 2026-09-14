@@ -300,6 +300,9 @@
       width: 100vw;
       height: 100vh;
       display: block;
+      /* Above the host <video> surface (z-index 0, injected by audio-host.js). */
+      position: relative;
+      z-index: 1;
     }
   </style>
 </head>

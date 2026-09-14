@@ -21,14 +21,18 @@ describe('resolveVideoSourceKind', () => {
     expect(resolveVideoSourceKind(video('mp4', { isVideo: false }), 'ios')).toBe('none')
   })
 
-  test('Web never gets one — it has no native video surface', () => {
-    for (const fmt of ['mp4', 'mkv', 'avi', '']) {
-      expect(resolveVideoSourceKind(video(fmt), 'web'), fmt).toBe('none')
+  test('Web plays the MP4 family directly and transcodes the rest', () => {
+    for (const fmt of ['m4a', 'mp4', 'MP4', 'mov', 'm4v', '3gp', 'webm']) {
+      expect(resolveVideoSourceKind(video(fmt), 'web'), `${fmt}/web`).toBe('direct')
+    }
+    for (const fmt of ['mkv', 'matroska', 'ts', 'avi', 'flv', 'wmv']) {
+      expect(resolveVideoSourceKind(video(fmt), 'web'), `${fmt}/web`).toBe('hls')
     }
   })
 
   test('live sources are excluded: the HLS endpoints work off a file', () => {
     expect(resolveVideoSourceKind(video('mp4', { isLive: true }), 'android')).toBe('none')
+    expect(resolveVideoSourceKind(video('mp4', { isLive: true }), 'web')).toBe('none')
     expect(resolveVideoSourceKind(video('mp4', { type: 'radio' }), 'ios')).toBe('none')
   })
 
@@ -39,6 +43,7 @@ describe('resolveVideoSourceKind', () => {
     for (const fmt of ['m4a', 'mp4', 'MP4', 'mov', 'm4v', '3gp']) {
       expect(resolveVideoSourceKind(video(fmt), 'ios'), `${fmt}/ios`).toBe('direct')
       expect(resolveVideoSourceKind(video(fmt), 'android'), `${fmt}/android`).toBe('direct')
+      expect(resolveVideoSourceKind(video(fmt), 'web'), `${fmt}/web`).toBe('direct')
     }
   })
 

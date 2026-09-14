@@ -819,7 +819,7 @@ describe('the fullscreen video surface follows the queue', () => {
     expect(close).not.toHaveBeenCalled()
   })
 
-  test('on Web there is no surface to close, so the host is not asked', async () => {
+  test('on Web the surface is closed on track change, same as device hosts', async () => {
     g.SystemInfo = { platform: 'web' }
     const { close } = installVideoHost()
     resetLoadedSongForTests()
@@ -828,7 +828,7 @@ describe('the fullscreen video surface follows the queue', () => {
     await flush()
     await usePlayerStore.getState().playNext()
     await flush()
-    expect(close).not.toHaveBeenCalled()
+    expect(close).toHaveBeenCalledTimes(1)
   })
 })
 

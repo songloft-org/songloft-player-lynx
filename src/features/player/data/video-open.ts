@@ -2,6 +2,7 @@ import { resolveVideoSourceKind } from '../../../core/network/video-source.js'
 import type { Song } from '../../../models/song.js'
 import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 import { getPlatformTarget } from '../../../native/platform-target.js'
+import { isWebPlatform } from '../../../native/web-platform.js'
 import { getVideoModule } from '../../../native/video.js'
 import { usePlayerStore } from '../store/index.js'
 
@@ -49,7 +50,7 @@ export type VideoOpenOutcome = 'opened' | 'noTrack' | 'transcodeFailed'
  * player. The two entry points agree through this predicate.
  */
 export function usesJsVideoSurface(): boolean {
-  return getPlatformTarget() === 'android'
+  return getPlatformTarget() === 'android' || isWebPlatform()
 }
 
 /**

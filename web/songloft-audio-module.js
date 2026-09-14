@@ -30,6 +30,7 @@ var METHODS = [
   'setFavorite',
   'setEqualizerEnabled',
   'setEqualizerBand',
+  'updateNotificationLyric',
   'dispose',
 ]
 

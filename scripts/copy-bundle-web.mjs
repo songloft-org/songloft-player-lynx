@@ -153,6 +153,7 @@ const HOST_SCRIPTS = [
   'songloft-platform-module.js',
   'songloft-audio-module.js',
   'songloft-navigation-module.js',
+  'songloft-video-module.js',
   'songloft-webview-module.js',
   'webview-host.js',
   /*

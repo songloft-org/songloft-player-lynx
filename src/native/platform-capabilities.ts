@@ -35,9 +35,9 @@ export interface PlatformCapabilities {
    * Fullscreen native video playback.
    *
    * Keyed off its own module rather than the shared `hasPlatform`: Web registers a
-   * `SongloftAudio` host module but has no video surface at all — Lynx 4.0.x ships no
-   * video element and web-core's tag map has no entry for one — so a shared flag
-   * would claim a capability that cannot exist there.
+   * `SongloftVideo` host module the same way it registers `SongloftAudio`, backing a
+   * main-thread `<video>` that mirrors the running audio stream. HarmonyOS still has
+   * no such module, so it reports false here.
    */
   video: boolean
   /**

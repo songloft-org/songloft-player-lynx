@@ -94,17 +94,17 @@ describe('canWatchVideo', () => {
    * check — the song is a video song and the container is playable there — which is
    * exactly how the badge came to be tappable on Web and do nothing.
    */
-  test('false where the host has no video module (Web, HarmonyOS)', () => {
+  test('false where the host has no video module (HarmonyOS, or a stale shell)', () => {
     g.SystemInfo = { platform: 'iOS' }
     delete g.NativeModules
     resetVideoModuleForTests()
     expect(canWatchVideo(videoSong())).toBe(false)
   })
 
-  test('false for a host that reports web, even with the module registered', () => {
+  test('true on Web once the host registers SongloftVideo', () => {
     g.SystemInfo = { platform: 'web' }
     installHost()
-    expect(canWatchVideo(videoSong())).toBe(false)
+    expect(canWatchVideo(videoSong())).toBe(true)
   })
 
   /* `/video-hls` works off a file, and a live stream has none. */

@@ -55,6 +55,10 @@
   var volume = 1
   var speed = 1
   var progressTimer = null
+  // The URL the audio engine currently holds. `audio.currentSrc` stays '' while
+  // hls.js drives the element through MSE, so the video surface cannot read its
+  // source from the element; keep the last `load` URL ourselves.
+  var audioSrcUrl = ''
 
   // ── HLS ──
 
@@ -67,13 +71,16 @@
     }
   }
 
-  function loadHls(url) {
+  function loadHls(url, onManifest) {
     var Hls = window.Hls
     if (Hls && typeof Hls.isSupported === 'function' && Hls.isSupported()) {
       var hls = new Hls()
       hls.on('hlsError', function (_, data) {
         console.warn('[audio-host] hls.js error:', data)
       })
+      if (onManifest) {
+        hls.on(Hls.Events.MANIFEST_PARSED, onManifest)
+      }
       hls.attachMedia(audio)
       hls.loadSource(url)
       hlsInstance = hls
@@ -81,6 +88,195 @@
       // Native HLS fallback (Safari)
       audio.src = url
     }
+  }
+
+  // ── video surface ──
+  //
+  // Layered like the Android host: a full-viewport <video> sits *under* <lynx-view>
+  // and the JS page (FullVideoPage) draws the controls above it. On Web, while MV is
+  // open the video also becomes the *single* media element — sound and picture come
+  // from this one element, so there is no dual-stream drift — and its events are
+  // forwarded onto the existing SongloftAudio channel so the player store keeps
+  // working without knowing the engine swapped underneath it.
+
+  var video = document.createElement('video')
+  video.setAttribute('playsinline', '')
+  video.setAttribute('webkit-playsinline', '')
+  video.muted = true
+  video.crossOrigin = 'anonymous'
+  video.removeAttribute('controls')
+  video.style.position = 'fixed'
+  video.style.top = '0'
+  video.style.left = '0'
+  video.style.width = '100vw'
+  video.style.height = '100vh'
+  video.style.objectFit = 'contain'
+  video.style.background = '#000'
+  video.style.zIndex = '0'
+  video.style.pointerEvents = 'none'
+  video.style.display = 'none'
+  document.body.insertBefore(video, lynxView)
+
+  var videoOpen = false
+  var videoPrimary = false
+  var videoHls = null
+
+  /** The element that currently produces sound + progress: video while MV is open. */
+  function activeMedia() {
+    return videoPrimary ? video : audio
+  }
+
+  function releaseVideoSurface() {
+    videoOpen = false
+    videoPrimary = false
+    if (videoHls) {
+      try { videoHls.destroy() } catch (_) {}
+      videoHls = null
+    }
+    // Detach stale event handlers before `load()` so an "empty src" error from the
+    // cleanup cannot fire into the next open and settle it as a false failure.
+    video.onloadedmetadata = null
+    video.onerror = null
+    try { video.pause() } catch (_) {}
+    video.removeAttribute('src')
+    try { video.load() } catch (_) {}
+    video.style.display = 'none'
+  }
+
+  function startSingleVideo(startAt) {
+    try { video.currentTime = startAt } catch (_) {}
+    var pr
+    try { pr = video.play() } catch (_) { pr = null }
+    if (pr && typeof pr.then === 'function') {
+      pr.catch(function () {
+        // Browser refused unmuted playback (no main-thread user activation): keep
+        // the picture but hand sound back to the parked audio element so the user
+        // never ends up with a frozen fullscreen and no sound.
+        if (videoPrimary && !video.ended) {
+          video.muted = true
+          videoPrimary = false
+          try { audio.currentTime = video.currentTime || startAt } catch (_) {}
+          audio.play().catch(function () {})
+        }
+      })
+    }
+  }
+
+  function openVideoStream() {
+    return new Promise(function (resolve) {
+      releaseVideoSurface()
+      var url = audioSrcUrl || audio.currentSrc || audio.src
+      if (!url || url === 'about:blank') {
+        resolve('{"result":"failed"}')
+        return
+      }
+
+      var startAt = audio.currentTime || 0
+      var settled = false
+      var finish = function (reason) {
+        if (settled) return
+        settled = true
+        if (reason === 'opened') {
+          videoOpen = true
+          videoPrimary = true
+          video.style.display = 'block'
+          try { audio.pause() } catch (_) {}
+          // Stop the audio engine's HLS pipeline so it doesn't keep fetching the
+          // same TS segments behind the now-primary video.
+          cleanupHls()
+        } else {
+          releaseVideoSurface()
+        }
+        resolve(JSON.stringify({ result: reason }))
+      }
+
+      // Single-element takeover: this video is the sound source now.
+      video.muted = false
+
+      var isHls = /\.m3u8(?:$|\?)/i.test(url)
+      if (isHls && window.Hls && typeof window.Hls.isSupported === 'function' && window.Hls.isSupported()) {
+        var hls = new window.Hls()
+        videoHls = hls
+        hls.on(window.Hls.Events.ERROR, function (_, data) {
+          if (data && data.fatal) finish('failed')
+        })
+        hls.on(window.Hls.Events.MANIFEST_PARSED, function () {
+          startSingleVideo(startAt)
+          finish('opened')
+        })
+        hls.attachMedia(video)
+        hls.loadSource(url)
+        video.style.display = 'block'
+        return
+      }
+
+      // Direct container. Safari native-HLS also lands here when the window has no
+      // hls.js engine; the <video> element still plays that playlist natively.
+      video.onloadedmetadata = function () {
+        if (video.videoWidth > 0) {
+          startSingleVideo(startAt)
+          finish('opened')
+        } else {
+          finish('noTrack')
+        }
+      }
+      video.onerror = function () {
+        finish('failed')
+      }
+      video.src = url
+      video.style.display = 'block'
+    })
+  }
+
+  var videoHandlers = {
+    open: openVideoStream,
+    close: function () {
+      var primary = videoPrimary
+      var url = audioSrcUrl
+      var resumeAt = video.currentTime || audio.currentTime || 0
+      var shouldResume = primary && state === STATE_PLAYING
+      releaseVideoSurface()
+      if (!primary) return Promise.resolve('{}')
+
+      var isHls = /\.m3u8(?:$|\?)/i.test(url)
+      if (!isHls) {
+        audio.src = url
+        if (resumeAt > 0) {
+          try { audio.currentTime = resumeAt } catch (_) {}
+        }
+        if (shouldResume) audio.play().catch(function () {})
+        return Promise.resolve('{}')
+      }
+
+      // Video played the HLS playlist while primary and the audio pipeline was torn
+      // down; rebuild it and resume from where the video left off. Bonus: this also
+      // loses only one segment, never re-fetches the whole playlist from 0.
+      var Hls = window.Hls
+      if (Hls && typeof Hls.isSupported === 'function' && Hls.isSupported()) {
+        cleanupHls()
+        var hls = new Hls()
+        hls.on('hlsError', function (_, data) {
+          console.warn('[audio-host] hls.js error:', data)
+        })
+        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+          try { audio.currentTime = resumeAt } catch (_) {}
+          if (shouldResume) audio.play().catch(function () {})
+        })
+        hls.attachMedia(audio)
+        hls.loadSource(url)
+        hlsInstance = hls
+      } else {
+        audio.src = url
+        if (resumeAt > 0) {
+          try { audio.currentTime = resumeAt } catch (_) {}
+        }
+        if (shouldResume) audio.play().catch(function () {})
+      }
+      return Promise.resolve('{}')
+    },
+    isOpen: function () {
+      return Promise.resolve(JSON.stringify({ result: videoOpen }))
+    },
   }
 
   // ── EQ (Web Audio API) ──
@@ -147,10 +343,10 @@
     navigator.mediaSession.metadata = new MediaMetadata(meta)
 
     navigator.mediaSession.setActionHandler('play', function () {
-      audio.play()
+      activeMedia().play()
     })
     navigator.mediaSession.setActionHandler('pause', function () {
-      audio.pause()
+      activeMedia().pause()
     })
     navigator.mediaSession.setActionHandler('previoustrack', function () {
       sendEvent('SongloftAudio.remoteCommand', { command: 'previous' })
@@ -159,14 +355,16 @@
       sendEvent('SongloftAudio.remoteCommand', { command: 'next' })
     })
     navigator.mediaSession.setActionHandler('seekbackward', function () {
-      var sec = Math.max(0, audio.currentTime - 10)
-      audio.currentTime = sec
+      var media = activeMedia()
+      var sec = Math.max(0, media.currentTime - 10)
+      media.currentTime = sec
       positionMs = Math.round(sec * 1000)
       emitProgress()
     })
     navigator.mediaSession.setActionHandler('seekforward', function () {
-      var sec = Math.min(audio.duration || 0, audio.currentTime + 10)
-      audio.currentTime = sec
+      var media = activeMedia()
+      var sec = Math.min(media.duration || 0, media.currentTime + 10)
+      media.currentTime = sec
       positionMs = Math.round(sec * 1000)
       emitProgress()
     })
@@ -219,9 +417,10 @@
   function startProgress() {
     stopProgress()
     progressTimer = setInterval(function () {
-      if (audio && !audio.paused && !audio.ended) {
-        positionMs = Math.round((audio.currentTime || 0) * 1000)
-        durationMs = Math.round((audio.duration || 0) * 1000)
+      var media = activeMedia()
+      if (media && !media.paused && !media.ended) {
+        positionMs = Math.round((media.currentTime || 0) * 1000)
+        durationMs = Math.round((media.duration || 0) * 1000)
         emitProgress()
       }
     }, TICK_MS)
@@ -234,19 +433,25 @@
     }
   }
 
-  // ── audio element event handlers ──
+  // ── media element event handlers ──
+  // Both elements forward onto the same SongloftAudio channel, but only the one
+  // that is currently the active engine may emit: while video is primary the audio
+  // element is parked and its events (pause etc.) must not overwrite video state.
 
   audio.addEventListener('loadstart', function () {
+    if (videoPrimary) return
     emitState(STATE_LOADING)
   })
 
   audio.addEventListener('loadedmetadata', function () {
+    if (videoPrimary) return
     durationMs = Math.round((audio.duration || 0) * 1000)
     emitState(STATE_READY)
     emitProgress()
   })
 
   audio.addEventListener('play', function () {
+    if (videoPrimary) return
     emitState(STATE_PLAYING)
     startProgress()
     // Resume AudioContext if suspended (autoplay policy)
@@ -256,6 +461,7 @@
   })
 
   audio.addEventListener('pause', function () {
+    if (videoPrimary) return
     stopProgress()
     if (!audio.ended) {
       emitState(STATE_PAUSED)
@@ -263,6 +469,7 @@
   })
 
   audio.addEventListener('ended', function () {
+    if (videoPrimary) return
     stopProgress()
     positionMs = durationMs
     emitProgress()
@@ -270,6 +477,7 @@
   })
 
   audio.addEventListener('error', function () {
+    if (videoPrimary) return
     stopProgress()
     var err = audio.error
     emitState(STATE_ERROR)
@@ -282,21 +490,66 @@
   audio.addEventListener('waiting', function () {})
 
   audio.addEventListener('canplay', function () {
+    if (videoPrimary) return
     if (state === STATE_LOADING) {
       emitState(STATE_READY)
     }
+  })
+
+  video.addEventListener('loadedmetadata', function () {
+    if (!videoPrimary) return
+    durationMs = Math.round((video.duration || 0) * 1000)
+    emitState(STATE_READY)
+    emitProgress()
+  })
+
+  video.addEventListener('play', function () {
+    if (!videoPrimary) return
+    emitState(STATE_PLAYING)
+    startProgress()
+  })
+
+  video.addEventListener('pause', function () {
+    if (!videoPrimary) return
+    stopProgress()
+    if (!video.ended) {
+      emitState(STATE_PAUSED)
+    }
+  })
+
+  video.addEventListener('ended', function () {
+    if (!videoPrimary) return
+    stopProgress()
+    positionMs = durationMs
+    emitProgress()
+    emitState(STATE_COMPLETED)
+  })
+
+  video.addEventListener('error', function () {
+    if (!videoPrimary) return
+    stopProgress()
+    var err = video.error
+    emitState(STATE_ERROR)
+    emitError(
+      err ? 'MEDIA_ERR_' + err.code : 'unknown',
+      (err && err.message) || 'video playback error',
+    )
   })
 
   // ── native module implementation ──
 
   var songloftAudio = {
     load: function (url, opts) {
+      if (videoPrimary) {
+        releaseVideoSurface()
+      }
       stopProgress()
       cleanupHls()
       positionMs = 0
       durationMs = 0
       audio.currentTime = 0
       audio.src = ''
+      audioSrcUrl = url || ''
 
       if (opts && opts.hls) {
         loadHls(url)
@@ -308,6 +561,11 @@
     },
 
     play: function () {
+      if (videoPrimary) {
+        if (video.ended) video.currentTime = 0
+        video.play().catch(function (_) {})
+        return
+      }
       if (state === STATE_COMPLETED) {
         audio.currentTime = 0
       }
@@ -315,13 +573,19 @@
     },
 
     pause: function () {
+      if (videoPrimary) {
+        video.pause()
+        return
+      }
       audio.pause()
     },
 
     stop: function () {
+      videoPrimary && releaseVideoSurface()
       audio.pause()
       audio.currentTime = 0
       audio.src = ''
+      audioSrcUrl = ''
       cleanupHls()
       stopProgress()
       positionMs = 0
@@ -330,6 +594,13 @@
     },
 
     seek: function (ms) {
+      if (videoPrimary) {
+        var sec = Math.max(0, Math.min(ms / 1000, video.duration || 0))
+        video.currentTime = sec
+        positionMs = Math.round(sec * 1000)
+        emitProgress()
+        return
+      }
       var sec = Math.max(0, Math.min(ms / 1000, audio.duration || 0))
       audio.currentTime = sec
       positionMs = Math.round(sec * 1000)
@@ -338,11 +609,13 @@
 
     setVolume: function (v) {
       volume = Math.min(1, Math.max(0, v))
+      video.volume = volume
       audio.volume = volume
     },
 
     setSpeed: function (rate) {
       speed = Math.min(3, Math.max(0.5, rate))
+      video.playbackRate = speed
       audio.playbackRate = speed
     },
 
@@ -383,6 +656,10 @@
         eqFilters[index].gain.value = gainDb
       }
     },
+
+    // Native platforms paint the now-playing lyric in the OS notification; Web has
+    // no such surface. No-op to match the no-op Web facade in `web-audio.ts`.
+    updateNotificationLyric: function (_lyric, _inTitle) {},
 
     dispose: function () {
       stopProgress()
@@ -628,6 +905,7 @@
       SongloftAudio: '/songloft-audio-module.js',
       SongloftPlatform: '/songloft-platform-module.js',
       SongloftNavigation: '/songloft-navigation-module.js',
+      SongloftVideo: '/songloft-video-module.js',
     },
   )
 
@@ -673,6 +951,11 @@
       // `sendGlobalEvent`, not this channel.
       var fn = songloftAudio[name]
       if (typeof fn === 'function') return fn.apply(songloftAudio, data || [])
+      return undefined
+    }
+    if (moduleName === 'SongloftVideo') {
+      var videoFn = videoHandlers[name]
+      if (typeof videoFn === 'function') return videoFn(data || [])
       return undefined
     }
     return previousCall ? previousCall(name, data, moduleName) : undefined

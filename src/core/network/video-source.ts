@@ -48,11 +48,19 @@ const ANDROID_DIRECT = new Set([
 ])
 
 /**
+ * Containers a browser `<video>` element can open directly: the MP4 family plus
+ * WebM. Matroska stays out — no browser ships an MKV demuxer in `<video>` — and
+ * `.ts` belongs to HLS only.
+ */
+const WEB_DIRECT = new Set(['m4a', 'mp4', 'm4v', 'mov', 'qt', '3gp', '3g2', 'webm'])
+
+/**
  * How to get a picture for `song` on `platform`.
  *
- * `'none'` means do not offer video at all: not a video song, or Web (which has no
- * native video surface — see `platform-capabilities.ts`), or a live stream (the
- * `/video-hls` endpoints work off a file, and a radio stream has none).
+ * `'none'` means do not offer video at all: not a video song, or a live stream (the
+ * `/video-hls` endpoints work off a file, and a radio stream has none). Web answers
+ * the same direct/HLS question as the devices now that its host registers a
+ * `SongloftVideo` surface — see `platform-capabilities.ts`.
  *
  * An **unknown container** (`format: ''`, which is every remote song until its
  * metadata is refreshed) resolves to `'direct'`. Guessing `'hls'` there would force
@@ -64,10 +72,10 @@ export function resolveVideoSourceKind(
   platform: 'web' | 'ios' | 'android' | 'harmony',
 ): VideoSourceKind {
   if (!song.isVideo) return 'none'
-  if (platform === 'web') return 'none'
   if (song.isLive || song.type === 'radio') return 'none'
   const format = (song.format ?? '').toLowerCase()
   if (!format) return 'direct'
+  if (platform === 'web') return WEB_DIRECT.has(format) ? 'direct' : 'hls'
   const direct = platform === 'ios' ? IOS_DIRECT : ANDROID_DIRECT
   return direct.has(format) ? 'direct' : 'hls'
 }
