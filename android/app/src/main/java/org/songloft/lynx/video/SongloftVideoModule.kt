@@ -7,8 +7,6 @@ import android.os.Looper
 import com.lynx.jsbridge.LynxMethod
 import com.lynx.jsbridge.LynxModule
 import com.lynx.react.bridge.Callback
-import com.lynx.react.bridge.JavaOnlyArray
-import com.lynx.react.bridge.JavaOnlyMap
 import com.lynx.tasm.behavior.LynxContext
 import org.json.JSONObject
 import org.songloft.lynx.audio.SongloftAudioEngine
@@ -29,9 +27,6 @@ class SongloftVideoModule(context: Context) : LynxModule(context) {
     companion object {
         const val NAME = "SongloftVideo"
 
-        /** Event JS listens for so it can drop any "transcoding…" pending state. */
-        const val EVENT_CLOSED = "SongloftVideo.closed"
-
         private const val OPEN_TIMEOUT_MS = 8_000L
 
         private const val OPENED = "opened"
@@ -43,15 +38,6 @@ class SongloftVideoModule(context: Context) : LynxModule(context) {
 
         fun setActivity(value: SongloftVideoActivity?) {
             activity = value
-            if (value == null) sink?.invoke()
-        }
-
-        /** Set by the module instance so the activity's exit reaches JS. */
-        @Volatile
-        private var sink: (() -> Unit)? = null
-
-        internal fun installSink(block: () -> Unit) {
-            sink = block
         }
 
         /**
@@ -79,10 +65,6 @@ class SongloftVideoModule(context: Context) : LynxModule(context) {
             }
             mainHandler.postDelayed({ decideVideoTrack(deadlineMs, completion) }, 100L)
         }
-    }
-
-    init {
-        installSink { emitClosed() }
     }
 
     /**
@@ -129,11 +111,5 @@ class SongloftVideoModule(context: Context) : LynxModule(context) {
     @LynxMethod
     fun isOpen(args: String, callback: Callback) {
         callback.invoke(JSONObject().put("result", activity != null).toString())
-    }
-
-    private fun emitClosed() {
-        val params = JavaOnlyArray()
-        params.pushMap(JavaOnlyMap())
-        (mContext as? LynxContext)?.sendGlobalEvent(EVENT_CLOSED, params)
     }
 }

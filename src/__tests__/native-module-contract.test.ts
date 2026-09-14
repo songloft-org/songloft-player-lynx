@@ -1060,8 +1060,15 @@ describe('SongloftVideo module surface (Android)', () => {
     ).toMatch(new RegExp(`fun ${method}\\([^)]*callback:\\s*Callback`))
   })
 
-  test('the close event name matches the TS listener verbatim', () => {
-    expect(hosts.video.android).toContain('SongloftVideo.closed')
+  test('the dead closed event is gone, replaced by an explicit close button', () => {
+    // The event was emitted by both hosts but listened to by neither — a fake ready
+    // signal is worse than none, so it was removed rather than wired to nothing. The
+    // Android screen still needs a way out that JS cannot provide: one close button,
+    // through the normal finish() path so onStop detaches and audio keeps playing.
+    expect(hosts.video.android).not.toContain('SongloftVideo.closed')
+    expect(hosts.video.androidActivity).toContain('buildCloseButton')
+    expect(hosts.video.androidActivity).toContain('setOnClickListener')
+    expect(hosts.video.androidActivity).toContain('finish()')
   })
 
   test('the engine can lend out a surface, and the screen hands it back', () => {
@@ -1108,8 +1115,8 @@ describe('SongloftVideo module surface (iOS)', () => {
     expectSwiftMethod(hosts.video.ios, method)
   })
 
-  test('the close event name matches the TS listener verbatim', () => {
-    expect(hosts.video.ios).toContain('SongloftVideo.closed')
+  test('the dead closed event is gone', () => {
+    expect(hosts.video.ios).not.toContain('SongloftVideo.closed')
   })
 
   test('the engine can lend out the player, and the module hands it back', () => {

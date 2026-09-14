@@ -52,8 +52,6 @@ final class SongloftVideoModule: NSObject, LynxModule {
     ]
   }
 
-  static let eventClosed = "SongloftVideo.closed"
-
   private static var presentedVC: AVPlayerViewController?
 
   @objc func open(_ args: String, callback: @escaping (String) -> Void) {
@@ -146,7 +144,7 @@ final class SongloftVideoModule: NSObject, LynxModule {
         return
       }
       // Released before the dismissal, so the `viewDidDisappear` that follows finds
-      // nothing to answer and the event fires once.
+      // an already-nil `presentedVC` and is a no-op.
       Self.teardown(vc)
       vc.dismiss(animated: true) {
         callback("{}")
@@ -155,22 +153,20 @@ final class SongloftVideoModule: NSObject, LynxModule {
   }
 
   /**
-   * Give the surface back: drop the controller's hold on the engine's player, tell
-   * the engine the picture is gone, and let JS know the same way `close()` does.
+   * Give the surface back: drop the controller's hold on the player and release
+   * `presentedVC`. Every path that ends the presentation funnels through here.
    *
    * Audio deliberately keeps playing — the user closed the *picture*, not the song,
    * and the stream is one and the same. Nothing here pauses or stops the engine.
    *
    * Idempotent by identity: after the first call `presentedVC` is nil, so the
-   * dismissal that follows (and any later Done press on an old controller) is a
-   * no-op instead of a second event.
+   * dismissal that follows (and any later Done press on an old controller) is a no-op.
    */
   private static func teardown(_ vc: AVPlayerViewController) {
     guard presentedVC === vc else { return }
     vc.player = nil
     SongloftAudioEngine.shared.detachVideoOutput()
     presentedVC = nil
-    SongloftAudioEngine.shared.sink?(eventClosed, [:])
   }
 
   @objc func isOpen(_ args: String, callback: @escaping (String) -> Void) {

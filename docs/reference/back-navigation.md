@@ -155,7 +155,7 @@ Lynx `<webview>` 没有 `canGoBack`/`goBack`，只能近似：
 
 ### 不需要处理的一层
 
-全屏视频与文件选择器是**独立 Activity**（`SongloftVideoActivity` / `platform.FilePickerActivity`），它们在栈顶时 `MainActivity.onBackPressed()` 根本不会被调用，系统默认 finish 已经正确，视频退出还会 emit `SongloftVideo.closed`。软键盘同理由系统先消费。**刻意不在 JS 侧介入这一层**，避免与 Activity 抢事件。
+全屏视频与文件选择器是**独立 Activity**（`SongloftVideoActivity` / `platform.FilePickerActivity`），它们在栈顶时 `MainActivity.onBackPressed()` 根本不会被调用，系统默认 finish 已经正确，视频退出走 `finish()` 回主 Activity、音频不停（无事件通知 JS，`SongloftVideo` 不广播 exit）。软键盘同理由系统先消费。**刻意不在 JS 侧介入这一层**，避免与 Activity 抢事件。
 
 ---
 

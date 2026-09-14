@@ -1,10 +1,12 @@
-# 工作交接（2026-09-14 · 批71 视频播放体验档 B2/open 返回失败原因）
+# 工作交接（2026-09-14 · 批72 视频播放档 C1/Android 关闭按钮 + 删死事件）
 
 > 本文件是**给接手 AI 的交接说明**，只回答三件事：现在在哪、还剩什么、怎么验证。
 >
 > **读文档顺序**：① [AGENTS.md](../../AGENTS.md) §4–§6（铁律，必读）→ ② 本文 §3「剩余工作」→ ③ [pitfalls.md](pitfalls.md)（踩坑实录：每条铁律背后的证据）。细节按需查 [progress.md](progress.md)（逐批交付）与 [bugs.md](bugs.md)（逐条缺陷根因）。
 >
-> **未提交（工作树，批71）**：**视频播放体验「档 B2 · `open` 返回失败原因」** —— JS facade + iOS + Android 两端 + 契约文档 + 测试共 11 个文件。**修什么**：`SongloftVideo.open` 的返回从布尔升级为三态原因 `{result:"opened"|"noTrack"|"failed"}`，把「流本身加载失败」（转码被拒 / HLS playlist 404）与「流 ready 但确实没有视频轨」分开——批69 ⑤/⑦ 查出的缺陷正是 404 这类失败不会让 `load()` reject、落回 `hasVideoTrack()` 一律读成「没有视频轨」。**怎么修**：两端引擎各加 `videoTrackState()`（先按 item.status / `playerError` 判 `failed`，再问有没有轨道，否则 `loading`），模块 `open()` 轮询到 ready/failed/8s 超时才回答；iOS 沿用批70 的「已开即回 + `present` 摘画面」结构，只把布尔回调换成三态；TS facade 加 `openReason()` 兼容旧宿主布尔（`true`→opened / `false`→noTrack，其余→failed），`openCurrentSongVideo()` 把 `'failed'` 映射为 `'transcodeFailed'`（`noTrack` 仍是独立结果）。**验证**：`tsc -b` 绿 / **2565 vitest 全绿（239 文件，+1）** / `pnpm run build` 双产物 / `pnpm run ios:build` **BUILD SUCCEEDED** / `./gradlew --no-daemon assembleDebug` **BUILD SUCCESSFUL**（仅历史 `args` 未用告警） / **iOS 模拟器实测 3/3**：无 current item → `"failed"`；audio-only ready → `"noTrack"`；video ready → `"opened"`（宿主 HTTP 直喂 8899 造流，收工 `base=18091` + 真实 admin 登录 + `clearPlaylist` 复位）。**未验**：Android 行为端（本批只有编译闸门；video 场景缺同源视频素材）、HarmonyOS（不注册 `SongloftVideo`，无关）。**待拍板（未擅自决定）**：`SongloftVideo.closed` 仍是死线（接线还是删）；iOS `videoOutputAttached` 只写标志；档 C 的 Android 控件层与「Android 只有裸 surface」的刻意边界冲突。
+> **未提交（工作树，批72）**：**视频播放体验「档 C1 · Android 最小关闭按钮 + 删 `closed` 死事件」** —— Android 两个文件 + iOS 一个文件 + 契约文档 + 契约测试共 5 个文件。**① Android 视频面只加一个「离开」按钮**（`SongloftVideoActivity.buildCloseButton`，44dp 命中区、半透明圆底 ✕，`setOnClickListener { finish() }`），走普通 `finish()` 所以 `onStop` 照常 detach、音频不断——此前 Android 看 MV 只能靠系统返回键。**刻意不带**播放/暂停/进度/标题（输运归 JS store，重复实现会打架）。**② 删 `SongloftVideo.closed` 死事件**：两端都发、JS 零监听（全仓只有两处契约测试引用），Android 连带删掉 `sink`/`installSink`/`emitClosed`/`EVENT_CLOSED`，`setActivity` 只剩登记 `activity`；iOS 删 `eventClosed` 与 `teardown` 里的 emit。契约测试从「事件名逐字一致」改为反向「事件必须不存在 + Android 有关闭按钮」。**③ 验证**：`tsc -b` 绿 / **2565 vitest 全绿（239 文件）** / `pnpm run build` 双产物 / `ios:build` BUILD SUCCEEDED / `assembleDebug` BUILD SUCCESSFUL / **Android 模拟器实测**（`emulator-5554`，TestBridge + 宿主 HTTP 直喂 10.0.2.2:8899）：空 item→`failed`、video→`opened`、`uiautomator` 读 `✕` 按钮坐标→`input tap`→**`isOpen()` false 且 `playing` 继续**。**④ 新发现并入库 1 条**：Android `open` 刚返回的瞬间 `isOpen()` 还是 false（`activity` 要等 onCreate），二次点击会叠第二个 Activity——见 [bugs.md](bugs.md)，修法候选是 companion 加 idle `opening` 标志，未在本批做。**⑤ 仍待拍板**：iOS `videoOutputAttached` 只写标志（档 C 收尾时一并处置）；`load` 阶段就把 HTTP 失败 reject（B2 更彻底修法，未拍板）。
+>
+> **已提交（批71 · `af5b1cf`）**：**视频播放体验「档 B2 · `open` 返回失败原因」** —— JS facade + iOS + Android 两端 + 契约文档 + 测试共 11 个文件。**修什么**：`SongloftVideo.open` 的返回从布尔升级为三态原因 `{result:"opened"|"noTrack"|"failed"}`，把「流本身加载失败」（转码被拒 / HLS playlist 404）与「流 ready 但确实没有视频轨」分开——批69 ⑤/⑦ 查出的缺陷正是 404 这类失败不会让 `load()` reject、落回 `hasVideoTrack()` 一律读成「没有视频轨」。**怎么修**：两端引擎各加 `videoTrackState()`（先按 item.status / `playerError` 判 `failed`，再问有没有轨道，否则 `loading`），模块 `open()` 轮询到 ready/failed/8s 超时才回答；iOS 沿用批70 的「已开即回 + `present` 摘画面」结构，只把布尔回调换成三态；TS facade 加 `openReason()` 兼容旧宿主布尔（`true`→opened / `false`→noTrack，其余→failed），`openCurrentSongVideo()` 把 `'failed'` 映射为 `'transcodeFailed'`（`noTrack` 仍是独立结果）。**验证**：`tsc -b` 绿 / **2565 vitest 全绿（239 文件，+1）** / `pnpm run build` 双产物 / `pnpm run ios:build` **BUILD SUCCEEDED** / `./gradlew --no-daemon assembleDebug` **BUILD SUCCESSFUL**（仅历史 `args` 未用告警） / **iOS 模拟器实测 3/3**：无 current item → `"failed"`；audio-only ready → `"noTrack"`；video ready → `"opened"`（宿主 HTTP 直喂 8899 造流，收工 `base=18091` + 真实 admin 登录 + `clearPlaylist` 复位）。**未验**：Android 行为端（本批只有编译闸门；video 场景缺同源视频素材）、HarmonyOS（不注册 `SongloftVideo`，无关）。**待拍板（未擅自决定）**：`SongloftVideo.closed` 仍是死线（接线还是删）；iOS `videoOutputAttached` 只写标志；档 C 的 Android 控件层与「Android 只有裸 surface」的刻意边界冲突。
 >
 > **已提交（批70 · `517796b`）**：**视频播放体验「档 B1 · iOS 生命周期」** —— 只有 `ios/SongloftLynx/SongloftVideoModule.swift` 一个文件。**修什么**：AVKit 模态播放 UI 自带的 Done 按钮是**直接 dismiss**、不走 `close()`，所以 iOS 上画面关了而 `presentedVC` 还挂着 → `isOpen()` 说谎（批69 A3 的「观看 MV」再点一次就变死点击）+ `closed` 不发。**怎么修**：`AVPlayerViewController` 换内部子类 `SongloftVideoViewController`，只重写 `viewDidDisappear`（`guard isBeingDismissed`，排除「被另一层全屏盖住」时误判）→ 落到唯一的 `teardown(_:)`；`teardown` 按引用相等幂等，先 `vc.player = nil` 再 detach、清 `presentedVC`、发 `closed`，**音频不停**（关画面不关歌）；`close()` 也走 teardown，先清后 dismiss，紧接的 `viewDidDisappear` 撞空引用不再二次发事件。`open()` 顺带加「已开即回 true」守卫（放 `hasVideoTrack` 前）。**验证**：`xcodebuild -list` ✓；`pnpm run ios:build` 两次 **BUILD SUCCEEDED**（含临时钩子版与撤钩版）；iOS 模拟器 iPhone 17 Pro / 26.5 实测——60s 探针 open/isOpen **true**，`debugDismiss`（= 一次不带 teardown 的 `dismiss`，与 Done 按钮同机制）后 **`isOpen()` false**、音频继续（`playing:true` t=13.5s）；撤钩后正式包 close→false、reopen→true。**未验**：真实 Done 按钮的 OS 级点击（触控注入不稳 + 无读图），但 `debugDismiss` 逐字复刻了 Done 的机制，未覆盖的只剩「AVKit 按钮确实调 dismiss」这个框架契约（也是此 bug 存在的前提）；Android/HarmonyOS 本批无关（iOS-only）。**残留**：`SongloftVideo.closed` 仍是死线（两端都发、JS 零监听；Android 注释还谎称「JS listens for it」）——接线还是删仍未拍板；`videoOutputAttached`（iOS 引擎）只写不读，attach/detach 是空操作，待档 C 一并处置。
 >
@@ -67,10 +69,11 @@
 | `pnpm run build` | 绿（lynx 2334.8 kB + web 双产物均列出） | ✅ **2026-09-14**（批71） |
 | `pnpm run build:web` | 绿 | 2026-09-11（批69；批71 未改 `web/`） |
 | 新增 `tokens-hig.test.ts` | 6/6 绿 | 2026-09-02 |
-| `gradlew assembleDebug` | 绿（`compileDebugKotlin` 实际执行，仅历史 `args` 未用告警） | ✅ **2026-09-14**（批71 改 `android/` 后重跑） |
+| `gradlew assembleDebug` | 绿（`compileDebugKotlin` 实际执行，仅历史 `args` 未用告警） | ✅ **2026-09-14**（批72 改 `android/` 后重跑；批71 首次重开） |
 | `xcodebuild -list` | 可跑且已跑（targets: SongloftLynx；schemes: SongloftLynx；Debug/Release） | ✅ **2026-09-14**（批70 改 `ios/` 后重跑） |
-| `ios:build` | `BUILD SUCCEEDED` | ✅ **2026-09-14**（批71 改 `ios/` 后重跑；批70 两次含钩子版） |
+| `ios:build` | `BUILD SUCCEEDED` | ✅ **2026-09-14**（批72 改 `ios/` 后重跑） |
 | iOS 模拟器（视频 reason 实测） | 3/3：无 item→`failed` / audio-only→`noTrack` / video→`opened` | ✅ **2026-09-14**（批71 TestBridge；收工 `base=18091` + real login + `clearPlaylist`） |
+| Android 模拟器（关闭按钮 + reason） | 空→`failed` / video→`opened` / tap ✕→`isOpen` false + 音频继续 | ✅ **2026-09-14**（批72 TestBridge，`emulator-5554`） |
 | HarmonyOS CI | GitHub Actions `dev-build-harmony.yml` | 有流水线；本地需 DevEco Studio |
 | HarmonyOS 本批定向契约 | 相关 209 项 Vitest 全绿 | 2026-09-04；HAP / 真机待验 |
 | Android e2e | 112 passed / 8 skipped (120) | **批49 时代（2026-08-16）** |
@@ -101,7 +104,7 @@
 
 **B. 验证欠账（不写代码，但欠着）**
 
-**待用户确认的后续批次（视频优化，2026-09-11 批69 出方案时用户选了「按建议分批执行分批提交」）**：**档 B1**（iOS `presentedVC` 生命周期）**批70 已完成（未提交）**。**档 B2**（bugs.md 新条目「宿主分开回答 item 加载失败 / ready 但无视频轨」——`open()` 的 `{"result":bool}` 改原因字符串，iOS `AVPlayerItem.status` 与 Android `PlaybackException` 两端同改 + JS facade + `video-open.ts` + `docs/reference/native-modules.md`；**需要 Android 模拟器/真机验另一端**）；**档 C**（Android 视频面加最小控件层——注意这与 §5「Android 侧只有裸 surface 没有原生控件」的刻意边界冲突，要用户重新拍板；同时处置 `SongloftVideo.closed` 死线与 iOS `videoOutputAttached` 只写标志；`hls` 等待的「转码中 + 可取消」，真进度条需**后端仓库**把转码异步化）；**档 D**（视频歌蜂窝下默认仍带视频轨、点视频歌直接全屏）。档 A 已提交 `ad8dd68`。
+**待用户确认的后续批次（视频优化，2026-09-11 批69 出方案时用户选了「按建议分批执行分批提交」）**：**档 B1 / B2 已完成并提交（批70 `517796b` / 批71 `af5b1cf`）**。**档 C 已缩小并完成**（批72：`closed` 死线已删、Android 视频面加最小关闭按钮，见顶部未提交块），**刻意不继续加**进度/播放暂停/标题。**仍开放、下次可做**：① iOS `videoOutputAttached` 只写标志；② Android `open→isOpen` 竞态（bugs.md 新条目）；③ 更彻底的「`load` 阶段就 reject HTTP 失败」；④ 若想加「进度条/双击暂停/自动隐藏」等输运，需先拍板放 **JS 层**还是继续放宽「裸 surface」边界；`hls` 真进度条/转码取消需**后端仓库**把转码异步化。**档 D**（视频歌蜂窝下默认仍带视频轨、点视频歌直接全屏）未动。档 A 已提交 `ad8dd68`。
 
 3. **e2e + `gradlew assembleDebug` 自批49 后没跑过**，中间大量提交、e2e 场景 33 个；`gradlew assembleDebug` 上次 2026-09-06（Issue #3）。见 §1 闸门快照的警示。
 4. **近期原生改动的真机目视待验**：后台播放稳定性（AudioFocus / MEDIA_BUTTON / 通知栏点击）、悬浮歌词首次授权即显、HarmonyOS 图片/SVG 渲染、**Issue #2 的通知看护**（HyperOS 连播到无歌词曲目，见 §4「Issue #2」）。
@@ -147,7 +150,7 @@ media3 通知的 deleteIntent 只在通知真的离开通知栏时才发，而�
 
 键盘快捷键、HomeGridConfig、/configs KV 编辑器、完整 GPL 全文许可页、升级的版本选择/手动上传/回退、客户端下载页、Web 调试控制台、热更、桌面歌词独立窗口、深目录树虚拟化、Settings 主从九分类 IA、黑胶唱片环动画、「清空浏览器缓存」（部署层已根治，见 [Web 部署](../guides/web-deployment.md)）。
 
-视频播放的刻意边界：画面不在 Lynx 布局里（无法与歌词混排 / mini 小窗）、Android 侧只有裸 surface 没有原生控件、PiP 两端都不做、`avi/flv/mpg` 依赖服务端转码、mkv 里的 AC-3/DTS 音轨在很多 Android 设备上无授权。
+视频播放的刻意边界：画面不在 Lynx 布局里（无法与歌词混排 / mini 小窗）、Android 侧只有裸 surface + 一个「离开」按钮、PiP 两端都不做、`avi/flv/mpg` 依赖服务端转码、mkv 里的 AC-3/DTS 音轨在很多 Android 设备上无授权。
 
 ## 6. 常用命令与验证
 

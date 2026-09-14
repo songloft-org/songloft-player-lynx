@@ -2,11 +2,13 @@ package org.songloft.lynx.video
 
 import android.app.Activity
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.SurfaceView
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.TextView
 import org.songloft.lynx.audio.SongloftAudioEngine
 
 /**
@@ -19,9 +21,10 @@ import org.songloft.lynx.audio.SongloftAudioEngine
  * cannot interrupt playback, and why there is no second `MediaSession` competing for
  * the lock screen.
  *
- * Deliberately just a surface: media3's `PlayerView` would bring its own transport
- * controls, which would fight the JS store for who owns play/pause/seek. The Lynx
- * side already has those controls, and `media3-ui` is not even a dependency.
+ * Deliberately just a surface plus one close button: media3's `PlayerView` would
+ * bring its own transport controls, which would fight the JS store for who owns
+ * play/pause/seek. The Lynx side already has those controls, and `media3-ui` is not
+ * even a dependency.
  */
 class SongloftVideoActivity : Activity() {
 
@@ -43,8 +46,40 @@ class SongloftVideoActivity : Activity() {
                     Gravity.CENTER,
                 ),
             )
+            addView(buildCloseButton(), buildCloseButtonParams())
         }
         setContentView(root)
+    }
+
+    /** Minimal exit affordance: `finish()` so onStop detaches and audio keeps playing. */
+    private fun buildCloseButton(): TextView {
+        val density = resources.displayMetrics.density
+        val hit = (44 * density).toInt()
+        return TextView(this).apply {
+            text = "\u2715"
+            setTextColor(Color.WHITE)
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 22f)
+            gravity = Gravity.CENTER
+            setOnClickListener { finish() }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(0x66000000)
+            }
+            minimumWidth = hit
+            minimumHeight = hit
+        }
+    }
+
+    private fun buildCloseButtonParams(): FrameLayout.LayoutParams {
+        val density = resources.displayMetrics.density
+        val margin = (14 * density).toInt()
+        return FrameLayout.LayoutParams(
+            (44 * density).toInt(),
+            (44 * density).toInt(),
+            Gravity.TOP or Gravity.END,
+        ).apply {
+            setMargins(margin, margin, margin, margin)
+        }
     }
 
     /**

@@ -163,9 +163,9 @@ Callback 形状，参数为单个 JSON 字符串（facade 一律传 `'{}'`）。
 | `close` | `close(args: String, callback: Callback)` | `close(_:callback:)` | `{}` |
 | `isOpen` | `isOpen(args: String, callback: Callback)` | `isOpen(_:callback:)` | `{result: boolean}` |
 
-**事件**：`SongloftVideo.closed`（无 payload 字段）。Android 常量 `SongloftVideoModule.EVENT_CLOSED`，iOS 常量 `SongloftVideoModule.eventClosed`（经 `SongloftAudioEngine.shared.sink?` 发出）。
+**事件**：无。历史上两端发过 `SongloftVideo.closed`（Android `EVENT_CLOSED` / iOS `eventClosed`），但 JS 零监听、是个死线，批71 已删——真要通知 JS 时再按「能力探测器与首个消费点同批落地」重新加。
 
-**平台边界**：本节契约当前只由 Android / iOS 实现。HarmonyOS 不注册 `SongloftVideo`，因此 `getPlatformCapabilities().video === false`，界面不会展示不可用入口。只有实现“借用现有播放器 + 真视频表面 + 关闭事件”完整闭环后，才能恢复注册。
+**平台边界**：本节契约当前只由 Android / iOS 实现。HarmonyOS 不注册 `SongloftVideo`，因此 `getPlatformCapabilities().video === false`，界面不会展示不可用入口。只有实现“借用现有播放器 + 真视频表面”完整闭环后，才能恢复注册。Android 视频面仅带一个「离开」按钮（`SongloftVideoActivity.buildCloseButton`，走普通 `finish()`），**刻意不带**播放/暂停/进度/标题——输运控件归 Lynx 侧的 JS store，重复实现会打架。
 
 **闸门锁住的不变量**
 
