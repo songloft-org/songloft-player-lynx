@@ -204,3 +204,58 @@
   border-radius: var(--radius-md);
   background-color: var(--tertiary-system-fill);
 }
+
+/* Multi-artist editor — one Input per row plus add/remove affordances.
+ * Replaces the single artist Input so a duet's partners each get their own
+ * row (and thus their own song_artists entry). The head row mirrors the
+ * switch-row layout: label on the left, action on the right. */
+.song-edit__artists {
+  margin-top: var(--space-3);
+}
+
+.song-edit__artists-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-1);
+}
+
+/* The head's label has no top margin (the block owns its own). */
+.song-edit__artists-head .song-edit__label {
+  margin-top: 0;
+}
+
+.song-edit__artists-hint {
+  font-size: var(--font-caption2);
+  color: var(--secondary-label);
+  margin-bottom: var(--space-2);
+}
+
+.song-edit__artists-add {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.song-edit__artists-add-text {
+  font-size: var(--font-caption1);
+  color: var(--accent);
+}
+
+.song-edit__artist-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.song-edit__artist-input {
+  flex: 1;
+}
+
+.song-edit__artists-remove {
+  padding: var(--space-2);
+}

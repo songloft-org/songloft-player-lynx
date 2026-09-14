@@ -23,6 +23,7 @@ import {
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import type { Song } from '../../../models/song.js'
+import { ARTIST_ROLE_ARTIST, type ArtistInput } from '../../../models/artist.js'
 import { getSongsApi } from '../api/index.js'
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
 import './SongEditDialog.css'
@@ -30,6 +31,15 @@ import './SongEditDialog.css'
 /** URL-with-scheme check — the Flutter form's `Uri.tryParse(value).hasScheme`. */
 function hasScheme(value: string): boolean {
   return /^[a-z][a-z0-9+.-]*:/i.test(value)
+}
+
+/**
+ * Join the participant names into the single display string cached in
+ * `songs.artist` (`"A & B"`). The inputs already carry only non-empty trimmed
+ * names (built in `onSave`), so this is a straight `" & "` join.
+ */
+function joinDisplayArtists(inputs: ArtistInput[]): string {
+  return inputs.map((i) => i.name).join(' & ')
 }
 
 export interface SongEditDialogProps {
@@ -69,7 +79,13 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
   const [saving, setSaving] = useState(false)
 
   const [title, setTitle] = useState('')
-  const [artist, setArtist] = useState('')
+  /**
+   * Multi-artist editor rows. Seed with the display-cache `song.artist` so the
+   * form is never empty on open; an async effect then fetches the structured
+   * `song_artists` (role=artist) and replaces the rows when a duet is split
+   * across multiple artists — so a `A & B` cache unwinds into two rows.
+   */
+  const [artistFields, setArtistFields] = useState<string[]>([''])
   const [album, setAlbum] = useState('')
   const [url, setUrl] = useState('')
   const [coverUrl, setCoverUrl] = useState('')
@@ -100,7 +116,7 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
   useEffect(() => {
     if (!show || !song) return
     setTitle(song.title)
-    setArtist(song.artist ?? '')
+    setArtistFields([song.artist ?? ''])
     setAlbum(song.album ?? '')
     // Only source_url is editable — song.url is the internal play endpoint
     // (/api/v1/songs/{id}/play), not a source address.
@@ -112,6 +128,32 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
     setIsVideo(song.isVideo)
     setTitleError('')
     setUrlError('')
+  }, [show, song])
+
+  /*
+   * Async-load the structured participants (role=artist). On open this
+   * supersedes the `song.artist` placeholder: a duet stored as `A & B` in the
+   * display cache unwinds into one row per singer. Empty result keeps the
+   * placeholder; failure is silent (the placeholder stays, editing still
+   * works) — mirrors the Flutter `SongEditPage._loadSongArtists` policy.
+   */
+  useEffect(() => {
+    if (!show || !song) return
+    let cancelled = false
+    void getSongsApi()
+      .getSongArtists(song.id)
+      .then((all) => {
+        if (cancelled) return
+        const names = all
+          .filter((a) => a.role === ARTIST_ROLE_ARTIST)
+          .map((a) => a.artist.name)
+          .filter((n) => n.length > 0)
+        if (names.length > 0) setArtistFields(names)
+      })
+      .catch(() => {
+        // 拉取失败不影响编辑（保留占位回显），静默忽略
+      })
+    return () => { cancelled = true }
   }, [show, song])
 
   const isLocal = song?.type === 'local'
@@ -149,40 +191,55 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
     )
   }
 
-  const submit = (target: Song, trimmedTitle: string, trimmedUrl: string): Promise<void> => {
-    if (target.type === 'local') {
-      return getSongsApi().writeTags(target.id, {
-        title: trimmedTitle,
-        artist: artist.trim(),
-        album: album.trim(),
-        renameFile,
-      })
-    }
+  const submit = (
+    target: Song,
+    trimmedTitle: string,
+    trimmedUrl: string,
+    artistInputs: ArtistInput[],
+  ): Promise<void> => {
     const api = getSongsApi()
+    if (target.type === 'local') {
+      // Local: write tags (DB + file) with the merged display string, then sync
+      // the structured song_artists so each singer is independently searchable.
+      return api
+        .writeTags(target.id, {
+          title: trimmedTitle,
+          artist: joinDisplayArtists(artistInputs),
+          album: album.trim(),
+          renameFile,
+        })
+        .then(() => api.setSongArtists(target.id, artistInputs))
+        .then(() => {})
+    }
     const parsedDuration = duration.trim() === '' ? undefined : Number(duration.trim())
-    return api.updateSong(target.id, {
-      title: trimmedTitle,
-      artist: artist.trim(),
-      album: isRadio ? undefined : album.trim(),
-      url: isPluginRemote ? undefined : trimmedUrl,
-      coverUrl: coverUrl.trim(),
-      duration: isRadio || parsedDuration == null || !Number.isFinite(parsedDuration)
-        ? undefined
-        : parsedDuration,
-      isVideo,
-    }).then(() => {
-      // Lyric URL is not a PUT /songs/{id} field: changes (including clearing)
-      // go through the lyrics endpoint, remote songs only.
-      if (isRadio) return
-      const next = lyricUrl.trim()
-      const prev = target.lyricRemoteUrl ?? ''
-      if (next === prev) return
-      // The endpoint's `file_write_status` result is irrelevant here (the song
-      // edit form never writes lyric *content*), so the payload is discarded.
-      return next
-        ? api.updateLyrics(target.id, { lyricSource: 'url', lyricRemoteUrl: next }).then(() => {})
-        : api.updateLyrics(target.id, { lyricSource: '', lyric: '' }).then(() => {})
-    })
+    return api
+      .updateSong(target.id, {
+        title: trimmedTitle,
+        // Empty → omitted → backend clears the display cache; the structured
+        // setSongArtists below carries the real participant list.
+        artist: joinDisplayArtists(artistInputs) || undefined,
+        album: isRadio ? undefined : album.trim(),
+        url: isPluginRemote ? undefined : trimmedUrl,
+        coverUrl: coverUrl.trim(),
+        duration: isRadio || parsedDuration == null || !Number.isFinite(parsedDuration)
+          ? undefined
+          : parsedDuration,
+        isVideo,
+      })
+      .then(() => api.setSongArtists(target.id, artistInputs).then(() => {}))
+      .then(() => {
+        // Lyric URL is not a PUT /songs/{id} field: changes (including clearing)
+        // go through the lyrics endpoint, remote songs only.
+        if (isRadio) return
+        const next = lyricUrl.trim()
+        const prev = target.lyricRemoteUrl ?? ''
+        if (next === prev) return
+        // The endpoint's `file_write_status` result is irrelevant here (the song
+        // edit form never writes lyric *content*), so the payload is discarded.
+        return next
+          ? api.updateLyrics(target.id, { lyricSource: 'url', lyricRemoteUrl: next }).then(() => {})
+          : api.updateLyrics(target.id, { lyricSource: '', lyric: '' }).then(() => {})
+      })
   }
 
   const onSave = () => {
@@ -205,7 +262,15 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
     }
 
     setSaving(true)
-    void submit(song, trimmedTitle, trimmedUrl)
+    // Multi-artist: collect non-empty rows → the structured inputs (for
+    // setSongArtists) and, via joinDisplayArtists, the merged display string
+    // cached in songs.artist. role is lead (`artist`) only; position is the
+    // row order so re-ordering by dragging rows would also persist.
+    const artistInputs: ArtistInput[] = artistFields
+      .map((f) => f.trim())
+      .filter((s) => s.length > 0)
+      .map((name, i) => ({ name, role: ARTIST_ROLE_ARTIST, position: i }))
+    void submit(song, trimmedTitle, trimmedUrl, artistInputs)
       .then(() => {
         // Lists and facets embed the edited fields (title/artist/album are facet
         // values), so a save must age every library/playlist cache, not just the
@@ -305,13 +370,59 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
                   />
                   {titleError ? <text className='song-edit__error'>{titleError}</text> : null}
 
-                  <text className='song-edit__label'>{t('songEdit.artistLabel')}</text>
-                  <Input
-                    className='song-edit__input'
-                    value={artist}
-                    onInput={(v: string) => setArtist(v)}
-                    placeholder={t('songEdit.artistHint')}
-                  />
+                  <view className='song-edit__artists'>
+                    <view className='song-edit__artists-head'>
+                      <text className='song-edit__label'>{t('songEdit.artistLabel')}</text>
+                      <view
+                        className='song-edit__artists-add'
+                        data-testid='song-edit-artists-add'
+                        accessibility-element={true}
+                        accessibility-label={t('songEdit.artistsAdd')}
+                        bindtap={() => {
+                          if (!saving) setArtistFields((fs) => [...fs, ''])
+                        }}
+                      >
+                        <Icon name='plus' size={16} color={ICON_COLORS.primary} />
+                        <text className='song-edit__artists-add-text'>
+                          {t('songEdit.artistsAdd')}
+                        </text>
+                      </view>
+                    </view>
+                    <text className='song-edit__artists-hint'>
+                      {t('songEdit.artistsHint')}
+                    </text>
+                    {artistFields.map((value, i) => (
+                      <view className='song-edit__artist-row' key={i}>
+                        <Input
+                          className='song-edit__input song-edit__artist-input'
+                          value={value}
+                          onInput={(v: string) => {
+                            setArtistFields((fs) => {
+                              const next = fs.slice()
+                              next[i] = v
+                              return next
+                            })
+                          }}
+                          placeholder={t('songEdit.artistHint')}
+                        />
+                        {artistFields.length > 1 ? (
+                          <view
+                            className='song-edit__artists-remove'
+                            accessibility-element={true}
+                            accessibility-label={t('songEdit.artistsRemove')}
+                            bindtap={() => {
+                              if (saving) return
+                              setArtistFields((fs) =>
+                                fs.length <= 1 ? fs : fs.filter((_, idx) => idx !== i),
+                              )
+                            }}
+                          >
+                            <Icon name='x' size={16} color={ICON_COLORS.contentMuted} />
+                          </view>
+                        ) : null}
+                      </view>
+                    ))}
+                  </view>
 
                   {!isRadio
                     ? (

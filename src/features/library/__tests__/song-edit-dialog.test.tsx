@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 
 import type { Song } from '../../../models/song.js'
+import type { SongArtist } from '../../../models/artist.js'
 import { clearBackHandlersForTests } from '../../../shared/nav/back-stack.js'
 
 /*
@@ -16,13 +17,15 @@ import { clearBackHandlersForTests } from '../../../shared/nav/back-stack.js'
  * placeholder-keyed testid plus a tap script, so tests can drive `onInput`
  * without a keyboard.
  */
-const { writeTagsSpy, updateSongSpy, updateLyricsSpy, copyToClipboardMock, invalidateSpy, inputTaps } = vi.hoisted(() => ({
+const { writeTagsSpy, updateSongSpy, updateLyricsSpy, copyToClipboardMock, invalidateSpy, inputTaps, getSongArtistsSpy, setSongArtistsSpy } = vi.hoisted(() => ({
   writeTagsSpy: vi.fn(async () => {}),
   updateSongSpy: vi.fn(async () => {}),
   updateLyricsSpy: vi.fn(async () => {}),
   copyToClipboardMock: vi.fn(),
   invalidateSpy: vi.fn(),
   inputTaps: { script: [] as Array<{ match: RegExp; value: string }> },
+  getSongArtistsSpy: vi.fn(async (): Promise<SongArtist[]> => []),
+  setSongArtistsSpy: vi.fn(async (): Promise<SongArtist[]> => []),
 }))
 
 vi.mock('react-i18next', async () =>
@@ -70,6 +73,8 @@ vi.mock('../api/index.js', () => ({
     writeTags: writeTagsSpy,
     updateSong: updateSongSpy,
     updateLyrics: updateLyricsSpy,
+    getSongArtists: getSongArtistsSpy,
+    setSongArtists: setSongArtistsSpy,
   }),
 }))
 
@@ -152,6 +157,10 @@ beforeEach(() => {
   copyToClipboardMock.mockClear()
   invalidateSpy.mockClear()
   inputTaps.script.length = 0
+  getSongArtistsSpy.mockReset()
+  getSongArtistsSpy.mockResolvedValue([])
+  setSongArtistsSpy.mockClear()
+  setSongArtistsSpy.mockResolvedValue([])
   clearBackHandlersForTests()
 })
 
@@ -318,6 +327,90 @@ describe('radio songs', () => {
       isVideo: false,
     })
     expect(updateLyricsSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('multi-artist editing', () => {
+  test('a duet preloaded from song_artists splits into rows and saves the joined display + structured set', async () => {
+    // The display cache is "A & B" but the structured link carries the real
+    // split; the async load must unwind the cache into two rows.
+    getSongArtistsSpy.mockResolvedValueOnce([
+      { artist: { id: 1, name: 'A' }, role: 'artist', position: 0 },
+      { artist: { id: 2, name: 'B' }, role: 'artist', position: 1 },
+      { artist: { id: 3, name: 'AB' }, role: 'album_artist', position: 0 },
+    ])
+    const { getByTestId, getAllByTestId } = await renderDialog(
+      makeSong({ artist: 'A & B' }),
+    )
+
+    // Two lead-artist rows (album_artist filtered out), seeded by the load.
+    expect(getAllByTestId('song-edit-field-Please enter an artist').length).toBe(2)
+
+    fireEvent.tap(getByTestId('song-edit-save'), {})
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10))
+    })
+
+    expect(writeTagsSpy).toHaveBeenCalledWith(42, expect.objectContaining({
+      artist: 'A & B',
+    }))
+    expect(setSongArtistsSpy).toHaveBeenCalledWith(42, [
+      { name: 'A', role: 'artist', position: 0 },
+      { name: 'B', role: 'artist', position: 1 },
+    ])
+  })
+
+  test('add artist row then save includes the new singer', async () => {
+    const { getByTestId, getAllByTestId } = await renderDialog(localSong)
+
+    expect(getAllByTestId('song-edit-field-Please enter an artist').length).toBe(1)
+    fireEvent.tap(getByTestId('song-edit-artists-add'), {})
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
+    })
+    expect(getAllByTestId('song-edit-field-Please enter an artist').length).toBe(2)
+
+    // Type into the new (empty) row via the placeholder tap script — the last
+    // artist input is the freshly added one; the mock Input fires onInput for
+    // the first placeholder match, so push a second tap entry to reach it.
+    inputTaps.script.push({ match: /enter an artist/, value: 'Partner' })
+    fireEvent.tap(getAllByTestId('song-edit-field-Please enter an artist')[1]!, {})
+
+    fireEvent.tap(getByTestId('song-edit-save'), {})
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10))
+    })
+
+    expect(writeTagsSpy).toHaveBeenCalledWith(42, expect.objectContaining({
+      artist: 'Test Artist & Partner',
+    }))
+    expect(setSongArtistsSpy).toHaveBeenCalledWith(42, [
+      { name: 'Test Artist', role: 'artist', position: 0 },
+      { name: 'Partner', role: 'artist', position: 1 },
+    ])
+  })
+
+  test('a remote duet save sends updateSong with the joined artist and setSongArtists', async () => {
+    getSongArtistsSpy.mockResolvedValueOnce([
+      { artist: { id: 1, name: 'Singer A' }, role: 'artist', position: 0 },
+      { artist: { id: 2, name: 'Singer B' }, role: 'artist', position: 1 },
+    ])
+    const { getByTestId } = await renderDialog(
+      makeSong({ type: 'remote', title: 'Duet', artist: 'Singer A & Singer B', sourceUrl: 'https://a.example.com/x', duration: 0 }),
+    )
+
+    fireEvent.tap(getByTestId('song-edit-save'), {})
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10))
+    })
+
+    expect(updateSongSpy).toHaveBeenCalledWith(42, expect.objectContaining({
+      artist: 'Singer A & Singer B',
+    }))
+    expect(setSongArtistsSpy).toHaveBeenCalledWith(42, [
+      { name: 'Singer A', role: 'artist', position: 0 },
+      { name: 'Singer B', role: 'artist', position: 1 },
+    ])
   })
 })
 

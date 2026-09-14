@@ -18,6 +18,12 @@ import {
   type SongFacetResponse,
   type SongListResponse,
 } from '../../../models/song.js'
+import {
+  artistInputToJson,
+  parseSongArtists,
+  type ArtistInput,
+  type SongArtist,
+} from '../../../models/artist.js'
 
 /**
  * Songs API service, ported from the Flutter `SongsApi`
@@ -253,6 +259,32 @@ export class SongsApi {
     if (data.duration !== undefined) body.duration = data.duration
     if (data.isVideo !== undefined) body.is_video = data.isVideo
     await this.client.put(`${apiPrefix}/songs/${id}`, body)
+  }
+
+  /**
+   * `GET /songs/{id}/artists` → the song's structured participants
+   * (`role` = `artist` | `album_artist`, `position` = order). The edit form
+   * filters `role === 'artist'` to seed the multi-artist rows; this is the
+   * read side that lets a duet's partner singer find the song.
+   */
+  async getSongArtists(id: number): Promise<SongArtist[]> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/songs/${id}/artists`)
+    return parseSongArtists(res.data)
+  }
+
+  /**
+   * `PUT /songs/{id}/artists` — full-replace the song's participants. The
+   * backend deletes the existing `song_artists` rows then inserts the given
+   * list, so the caller must send the complete set (lead `artist` role only
+   * from the edit form; `album_artist` is preserved by resending it, but the
+   * form does not edit it). `role` defaults to `artist`; `position` is the
+   * caller-controlled display order (omitted when 0).
+   */
+  async setSongArtists(id: number, artists: ArtistInput[]): Promise<SongArtist[]> {
+    const res = await this.client.put<unknown>(`${apiPrefix}/songs/${id}/artists`, {
+      artists: artists.map(artistInputToJson),
+    })
+    return parseSongArtists(res.data)
   }
 
   async getTracks(id: number): Promise<AudioTrackInfo[]> {
