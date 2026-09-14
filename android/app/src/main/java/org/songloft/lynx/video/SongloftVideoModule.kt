@@ -1,13 +1,13 @@
 package org.songloft.lynx.video
 
 import android.content.Context
-import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.view.SurfaceView
+import android.view.View
 import com.lynx.jsbridge.LynxMethod
 import com.lynx.jsbridge.LynxModule
 import com.lynx.react.bridge.Callback
-import com.lynx.tasm.behavior.LynxContext
 import org.json.JSONObject
 import org.songloft.lynx.audio.SongloftAudioEngine
 
@@ -21,6 +21,11 @@ import org.songloft.lynx.audio.SongloftAudioEngine
  * second player, which is exactly the design this avoids: one player means no
  * audio/video drift, one `MediaSession`, and one place where EQ and TLS settings
  * apply.
+ *
+ * The fullscreen surface is hosted from `MainActivity`, *under* the Lynx view, so the
+ * JS page owns every control above the picture. `open`/`close` here only toggle that
+ * surface and attach/detach the engine's video output — nothing user-visible is
+ * created on the native side.
  */
 class SongloftVideoModule(context: Context) : LynxModule(context) {
 
@@ -33,11 +38,12 @@ class SongloftVideoModule(context: Context) : LynxModule(context) {
         private const val NO_TRACK = "noTrack"
         private const val FAILED = "failed"
 
-        private var activity: SongloftVideoActivity? = null
+        private var surface: SurfaceView? = null
+        private var isOpen = false
         private val mainHandler = Handler(Looper.getMainLooper())
 
-        fun setActivity(value: SongloftVideoActivity?) {
-            activity = value
+        fun setVideoSurface(value: SurfaceView?) {
+            surface = value
         }
 
         /**
@@ -65,6 +71,20 @@ class SongloftVideoModule(context: Context) : LynxModule(context) {
             }
             mainHandler.postDelayed({ decideVideoTrack(deadlineMs, completion) }, 100L)
         }
+
+        private fun showSurface(view: SurfaceView) {
+            view.visibility = View.VISIBLE
+            SongloftAudioEngine.attachVideoOutput(view)
+            isOpen = true
+        }
+
+        private fun hideSurface() {
+            surface?.let { view ->
+                view.visibility = View.GONE
+                SongloftAudioEngine.detachVideoOutput()
+            }
+            isOpen = false
+        }
     }
 
     /**
@@ -74,21 +94,20 @@ class SongloftVideoModule(context: Context) : LynxModule(context) {
      *
      * - `{"result":"opened"}` — the picture is up.
      * - `{"result":"noTrack"}` — the stream is ready but carries no video track.
-     *   `songs.is_video` is recorded from the original file at scan time, while a
-     *   remote song may be served out of a cache entry that was transcoded with `-vn`.
-     * - `{"result":"failed"}` — the stream itself could not be loaded (a transcode the
-     *   server refused, a 404 on the HLS playlist).
+     * - `{"result":"failed"}` — the stream itself could not be loaded.
      */
     @LynxMethod
     fun open(args: String, callback: Callback) {
-        val ctx = (mContext as LynxContext).getContext()
         SongloftAudioEngine.runOnMain {
             decideVideoTrack(System.currentTimeMillis() + OPEN_TIMEOUT_MS) { state ->
                 when (state) {
                     SongloftAudioEngine.VideoTrackState.HAS_TRACK -> {
-                        val intent = Intent(ctx, SongloftVideoActivity::class.java)
-                        if (ctx !is android.app.Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        ctx.startActivity(intent)
+                        val view = surface
+                        if (view == null) {
+                            callback.invoke(JSONObject().put("result", FAILED).toString())
+                            return@decideVideoTrack
+                        }
+                        showSurface(view)
                         callback.invoke(JSONObject().put("result", OPENED).toString())
                     }
                     SongloftAudioEngine.VideoTrackState.NO_TRACK ->
@@ -104,12 +123,12 @@ class SongloftVideoModule(context: Context) : LynxModule(context) {
 
     @LynxMethod
     fun close(args: String, callback: Callback) {
-        mainHandler.post { activity?.finish() }
+        SongloftAudioEngine.runOnMain { hideSurface() }
         callback.invoke("{}")
     }
 
     @LynxMethod
     fun isOpen(args: String, callback: Callback) {
-        callback.invoke(JSONObject().put("result", activity != null).toString())
+        callback.invoke(JSONObject().put("result", isOpen).toString())
     }
 }

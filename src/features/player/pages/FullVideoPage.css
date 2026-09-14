@@ -1,0 +1,36 @@
+.full-video {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  /* Transparent on purpose: the host SurfaceView underneath is the picture. */
+  background-color: transparent;
+}
+
+.full-video__close {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  /* Translucent circle so the control reads against any frame, video or not. */
+  background-color: rgba(0, 0, 0, 0.35);
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.full-video__note {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 16px 20px;
+  background-color: rgba(0, 0, 0, 0.75);
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 15px;
+  z-index: 1;
+}

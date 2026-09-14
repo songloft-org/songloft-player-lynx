@@ -94,7 +94,7 @@ const hosts = {
   },
   video: {
     android: read(`${ANDROID_VIDEO}/SongloftVideoModule.kt`),
-    androidActivity: read(`${ANDROID_VIDEO}/SongloftVideoActivity.kt`),
+    androidMain: read('android/app/src/main/java/org/songloft/lynx/MainActivity.kt'),
     ios: read(`${IOS_DIR}/SongloftVideoModule.swift`),
   },
   liveActivity: {
@@ -1060,34 +1060,33 @@ describe('SongloftVideo module surface (Android)', () => {
     ).toMatch(new RegExp(`fun ${method}\\([^)]*callback:\\s*Callback`))
   })
 
-  test('the dead closed event is gone, replaced by an explicit close button', () => {
+  test('the dead closed event is gone; the host draws pixels only, JS owns the controls', () => {
     // The event was emitted by both hosts but listened to by neither — a fake ready
     // signal is worse than none, so it was removed rather than wired to nothing. The
-    // Android screen still needs a way out that JS cannot provide: one close button,
-    // through the normal finish() path so onStop detaches and audio keeps playing.
+    // fullscreen now shows a bare surface under the Lynx view: the native side keeps
+    // no close button, so JS is the only control layer (one style on every platform).
     expect(hosts.video.android).not.toContain('SongloftVideo.closed')
-    expect(hosts.video.androidActivity).toContain('buildCloseButton')
-    expect(hosts.video.androidActivity).toContain('setOnClickListener')
-    expect(hosts.video.androidActivity).toContain('finish()')
+    expect(hosts.video.android).not.toContain('buildCloseButton')
+    expect(hosts.video.androidMain).toContain('setZOrderMediaOverlay(true)')
+    expect(hosts.video.androidMain).toContain('addView(')
   })
 
-  test('the engine can lend out a surface, and the screen hands it back', () => {
+  test('the engine can lend out a surface, and the module hands it back', () => {
     expect(
       hosts.audio.android,
       'engine exposes no attachVideoOutput — the video screen would open onto nothing',
     ).toContain('fun attachVideoOutput')
     expect(hosts.audio.android).toContain('fun detachVideoOutput')
     expect(
-      hosts.video.androidActivity,
-      'the video screen never detaches: ExoPlayer would keep drawing into a dead window',
+      hosts.video.android,
+      'the module never detaches: ExoPlayer would keep drawing into a hidden surface',
     ).toContain('detachVideoOutput')
   })
 
-  test('the screen touches the player only on the main thread', () => {
+  test('the module touches the player only on the main thread', () => {
     // A `@LynxMethod` arrives on the BTS thread and ExoPlayer is main-thread-only.
     // Batch 48 shipped the same mistake in FloatingLyricService, where the resulting
     // CalledFromWrongThreadException was swallowed by a bare catch.
-    expect(hosts.video.androidActivity).toContain('runOnMain')
     expect(hosts.video.android).toContain('runOnMain')
   })
 

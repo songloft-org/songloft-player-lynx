@@ -7,6 +7,9 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.view.SurfaceView
+import android.view.View
+import android.widget.FrameLayout
 import com.lynx.react.bridge.JavaOnlyArray
 import com.lynx.react.bridge.JavaOnlyMap
 import com.lynx.tasm.LynxLoadMeta
@@ -18,6 +21,7 @@ import org.songloft.lynx.lyric.OverlayPermission
 import org.songloft.lynx.navigation.BackKeyState
 import org.songloft.lynx.navigation.SongloftNavigationModule
 import org.songloft.lynx.system.SystemAppearance
+import org.songloft.lynx.video.SongloftVideoModule
 
 /**
  * Single full-screen host Activity. Builds one LynxView, registers the XElement
@@ -41,7 +45,24 @@ class MainActivity : Activity() {
         requestNotificationPermissionIfNeeded()
         val view: LynxView = buildLynxView()
         lynxView = view
-        setContentView(view)
+
+        // The fullscreen video surface lives in THIS activity, under the Lynx
+        // view, so the Lynx page can paint its own controls above the picture
+        // (see `SongloftVideoModule`). `setZOrderMediaOverlay(true)` puts the
+        // decoded frame above the window background but below the view hierarchy.
+        val root = FrameLayout(this)
+        val match = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT,
+        )
+        root.addView(SurfaceView(this).apply {
+            setZOrderMediaOverlay(true)
+            visibility = View.GONE
+            SongloftVideoModule.setVideoSurface(this)
+        }, match)
+        root.addView(view, match)
+        setContentView(root)
+
         // `LynxLoadMeta` carries the globalProps *into* the load, so the very
         // first frame already knows the system theme — no flash of the wrong one.
         // (A native-module getter could not manage that: it would be async and

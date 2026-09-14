@@ -12,7 +12,7 @@ import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 import { setShellWidth } from '../../../shared/nav/shell-navigation.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { readAutoEnterLyrics } from '../../settings/data/settings-prefs.js'
-import { canWatchVideo, openCurrentSongVideo } from '../data/video-open.js'
+import { canWatchVideo, openCurrentSongVideo, usesJsVideoSurface } from '../data/video-open.js'
 import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { resolvePlayerLayout } from '../domain/player-layout.js'
 import { formatSleepRemaining } from '../domain/sleep-timer.js'
@@ -47,6 +47,7 @@ import './FullPlayerPage.css'
 function CoverArt({ song, size }: { song: Song, size: number }) {
   const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [pending, setPending] = useState(false)
   const [note, setNote] = useState('')
 
@@ -58,6 +59,10 @@ function CoverArt({ song, size }: { song: Song, size: number }) {
   }, [song.id])
 
   const openVideo = async (): Promise<void> => {
+    if (usesJsVideoSurface()) {
+      void navigate({ to: '/player/video' })
+      return
+    }
     setNote('')
     setPending(true)
     try {

@@ -44,6 +44,15 @@ export function canWatchVideo(song: Song | null | undefined): boolean {
 export type VideoOpenOutcome = 'opened' | 'noTrack' | 'transcodeFailed'
 
 /**
+ * Whether this platform puts the picture in a JS-owned page (the native host only
+ * lends a surface under the Lynx view) instead of opening a native fullscreen
+ * player. The two entry points agree through this predicate.
+ */
+export function usesJsVideoSurface(): boolean {
+  return getPlatformTarget() === 'android'
+}
+
+/**
  * Put the current song's picture on screen, switching to the transcoded stream first
  * when the container needs it.
  *

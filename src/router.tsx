@@ -26,6 +26,7 @@ import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage
 import { DemoFramePage } from './features/jsplugin/pages/DemoFramePage.js'
 import { PlayerPage } from './routes/PlayerPage.js'
 import { EqualizerPage } from './features/player/pages/EqualizerPage.js'
+import { FullVideoPage } from './features/player/pages/FullVideoPage.js'
 import { LyricAdjustPage } from './features/player/pages/LyricAdjustPage.js'
 import { DlnaPage } from './features/player/pages/DlnaPage.js'
 
@@ -131,6 +132,17 @@ const equalizerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/player/eq',
   component: EqualizerPage,
+})
+
+/**
+ * `/player/video` — fullscreen picture with a JS-only control layer. The route's
+ * background is transparent so the host's SurfaceView (under the Lynx view) is
+ * the backdrop; the page only paints the close control above it.
+ */
+const fullVideoRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/player/video',
+  component: FullVideoPage,
 })
 
 /** Pathless layout route: everything under it renders inside the shell. */
@@ -417,6 +429,7 @@ const routeTree = rootRoute.addChildren([
   lyricAdjustRoute,
   dlnaRoute,
   equalizerRoute,
+  fullVideoRoute,
   shellRoute.addChildren([
     listRoute,
     libraryLayoutRoute.addChildren([

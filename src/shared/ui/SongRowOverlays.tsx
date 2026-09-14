@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { resolveVideoSourceKind } from '../../core/network/video-source.js'
@@ -7,7 +8,7 @@ import { SongEditDialog } from '../../features/library/widgets/SongEditDialog.js
 import { SongInfoDialog } from '../../features/library/widgets/SongInfoDialog.js'
 import { ManageTagsSheet } from '../../features/library/widgets/ManageTagsSheet.js'
 import { AddToPlaylistSheet } from '../../features/playlist/widgets/AddToPlaylistSheet.js'
-import { canWatchVideo, openCurrentSongVideo } from '../../features/player/data/video-open.js'
+import { canWatchVideo, openCurrentSongVideo, usesJsVideoSurface } from '../../features/player/data/video-open.js'
 import { usePlayerStore } from '../../features/player/store/index.js'
 import { getPlatformTarget } from '../../native/platform-target.js'
 import type { Song } from '../../models/song.js'
@@ -37,6 +38,7 @@ import { useSongRowOverlays } from './song-row-overlays.js'
 export function SongRowOverlays() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const menuSong = useSongRowOverlays((s) => s.menuSong)
   const menuAnchor = useSongRowOverlays((s) => s.menuAnchor)
@@ -91,6 +93,10 @@ export function SongRowOverlays() {
       toast.show(t('player.videoTranscoding'))
     }
     await usePlayerStore.getState().playSong(song)
+    if (usesJsVideoSurface()) {
+      void navigate({ to: '/player/video' })
+      return
+    }
     const outcome = await openCurrentSongVideo()
     if (outcome === 'transcodeFailed') toast.error(t('player.videoTranscodeFailed'))
     else if (outcome === 'noTrack') toast.error(t('player.videoNoTrack'))
