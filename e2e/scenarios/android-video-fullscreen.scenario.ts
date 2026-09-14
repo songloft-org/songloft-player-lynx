@@ -119,7 +119,7 @@ describe('全屏视频（Android）', () => {
     await driver.sleep(1500)
     const before = await playerState(driver)
 
-    expect(await driver.evaluateJS<boolean>(`globalThis.__E2E_VIDEO__.open()`)).toBe(true)
+    expect(await driver.evaluateJS<string>(`globalThis.__E2E_VIDEO__.open()`)).toBe('opened')
     await driver.sleep(2000)
 
     const resumed = resumedActivity()

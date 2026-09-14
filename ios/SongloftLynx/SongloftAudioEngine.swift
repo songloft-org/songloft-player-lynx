@@ -298,6 +298,37 @@ final class SongloftAudioEngine {
     return item.tracks.contains { $0.assetTrack?.mediaType == .video }
   }
 
+  /**
+   * Why the video screen would, or would not, get a picture — for the module to answer
+   * `open` truthfully instead of a bare boolean.
+   *
+   * `.noTrack` and `.failed` must stay distinct: the first means the stream is ready
+   * and carries no picture (a remote song served from a `-vn` cache entry), the second
+   * that the stream itself could not be loaded (a transcode the server refused, a 404
+   * on the HLS playlist). Treating the latter as the former is how "this file has no
+   * video track" came to mask a transcode failure — the item reports `.failed`, which
+   * leaves `hasVideoTrack()` reading just like an absent track, so the failure needs
+   * its own reading of `item.status` first.
+   */
+  enum VideoTrackState: Equatable {
+    case hasTrack
+    case noTrack
+    case failed
+    case loading
+  }
+
+  func videoTrackState() -> VideoTrackState {
+    guard let item = player?.currentItem else { return .failed }
+    switch item.status {
+    case .readyToPlay:
+      return hasVideoTrack() ? .hasTrack : .noTrack
+    case .failed:
+      return .failed
+    default:
+      return .loading
+    }
+  }
+
   // MARK: - Player lifecycle
 
   private func ensurePlayer() -> AVPlayer {

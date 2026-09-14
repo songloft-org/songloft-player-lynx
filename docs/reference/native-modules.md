@@ -159,7 +159,7 @@ Callback 形状，参数为单个 JSON 字符串（facade 一律传 `'{}'`）。
 
 | 方法 | Kotlin 签名 | iOS 选择器 | 返回 |
 |---|---|---|---|
-| `open` | `open(args: String, callback: Callback)` | `open(_:callback:)` | `{result: boolean}` —— `false` = 宿主找不到视频轨 |
+| `open` | `open(args: String, callback: Callback)` | `open(_:callback:)` | `{result: "opened" \| "noTrack" \| "failed"}` —— `"noTrack"` = 流已就绪但确实无视频轨；`"failed"` = 流本身加载失败（转码被拒 / HLS playlist 404）；旧宿主的布尔 `true`/`false` 仍按 `opened`/`noTrack` 兼容 |
 | `close` | `close(args: String, callback: Callback)` | `close(_:callback:)` | `{}` |
 | `isOpen` | `isOpen(args: String, callback: Callback)` | `isOpen(_:callback:)` | `{result: boolean}` |
 
@@ -172,7 +172,8 @@ Callback 形状，参数为单个 JSON 字符串（facade 一律传 `'{}'`）。
 | 不变量 | 为什么 |
 |---|---|
 | 引擎有 `attachVideoOutput` **和** `detachVideoOutput`（两侧），且视频侧真的调了 `detachVideoOutput` | 缺 attach = 开出一个黑矩形只有声音；缺 detach = ExoPlayer 继续往已销毁窗口画，**下一首纯音频歌**在 video renderer 里静默死掉 |
-| 两侧都有 `hasVideoTrack`（引擎 `fun`/`func` + 模块调用点） | `songs.is_video` 是扫描时按原文件记的，远端歌可能来自 `-vn` 转码的缓存，只有宿主能判断 |
+| 两侧都有 `hasVideoTrack`（引擎 `fun`/`func`，且模块经 `videoTrackState` 读取） | `songs.is_video` 是扫描时按原文件记的，远端歌可能来自 `-vn` 转码的缓存，只有宿主能判断 |
+| `videoTrackState` 先于轨道判断读取失败态（item status / `playerError`），`open` 转发 `"noTrack"` 与 `"failed"` | 转码失败会让 item 报 `.failed`：只问「有没有视频轨」会把「流加载失败」误报成「文件没有视频轨」 |
 | Android 的 Module 与 Activity 都出现 `runOnMain` | `@LynxMethod` 跑在 BTS 线程，ExoPlayer 只能主线程碰 |
 | iOS `updatesNowPlayingInfoCenter = false` | 否则 `AVPlayerViewController` 会用自己那套信息覆盖引擎写的锁屏 title/artist/artwork |
 | iOS **`vc.player = nil` 必须出现在 `dismiss(animated:` 之前** | 否则 `AVPlayerViewController` 在 dismiss 时把播放暂停 |

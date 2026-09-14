@@ -69,7 +69,15 @@ export async function openCurrentSongVideo(): Promise<VideoOpenOutcome> {
   const outcome = await usePlayerStore.getState().enterVideoSource()
   if (outcome === 'failed') return 'transcodeFailed'
 
-  // The host refuses when the stream turned out to carry no video track — the `-vn`
-  // cache case above, and one only the host can see.
-  return (await video.open()) ? 'opened' : 'noTrack'
+  /*
+   * The host alone sees the difference between "the stream has no picture" and "the
+   * stream itself cannot be loaded" (`open()` returns a reason, not a boolean). Both
+   * used to arrive as a bare `false` and were reported as a missing track.
+   */
+  const reason = await video.open()
+  return reason === 'opened'
+    ? 'opened'
+    : reason === 'noTrack'
+      ? 'noTrack'
+      : 'transcodeFailed'
 }

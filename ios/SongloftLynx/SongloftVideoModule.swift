@@ -57,48 +57,85 @@ final class SongloftVideoModule: NSObject, LynxModule {
   private static var presentedVC: AVPlayerViewController?
 
   @objc func open(_ args: String, callback: @escaping (String) -> Void) {
-    DispatchQueue.main.async {
-      let engine = SongloftAudioEngine.shared
+    DispatchQueue.main.async { Self.presentIfPossible(callback: callback) }
+  }
 
-      /*
-       * One surface at a time, and this check comes first: with one already up the
-       * honest answer is "the picture is on screen", whatever the stream that was
-       * just loaded carries. Answering the no-track case first would have JS report
-       * a pictureless file while the picture was in front of the user.
-       *
-       * iOS keeps a single `presentedVC`, so a second `open()` would overwrite it and
-       * orphan the first controller — presented from the video itself, and never
-       * released. JS guards this too; the guard belongs where the state lives.
-       */
-      guard Self.presentedVC == nil else {
-        callback("{\"result\":true}")
-        return
+  private static func presentIfPossible(callback: @escaping (String) -> Void) {
+    /*
+     * One surface at a time, and this check comes first: with one already up the
+     * honest answer is "the picture is on screen", whatever the stream that was
+     * just loaded carries. Answering the no-track case first would have JS report
+     * a pictureless file while the picture was in front of the user.
+     *
+     * iOS keeps a single `presentedVC`, so a second `open()` would overwrite it and
+     * orphan the first controller — presented from the video itself, and never
+     * released. JS guards this too; the guard belongs where the state lives.
+     */
+    guard presentedVC == nil else {
+      callback(#"{"result":"opened"}"#)
+      return
+    }
+
+    decideVideoTrack(deadline: Date().addingTimeInterval(8)) { state in
+      switch state {
+      case .hasTrack:
+        present(callback: callback)
+      case .noTrack:
+        callback(#"{"result":"noTrack"}"#)
+      case .failed, .loading:
+        // `.loading` after the deadline is itself a failure: a servable source would
+        // be ready long before now.
+        callback(#"{"result":"failed"}"#)
       }
+    }
+  }
 
-      guard engine.hasVideoTrack() else {
-        callback("{\"result\":false}")
-        return
-      }
+  /**
+   * Wait until the item's fate is known before answering `open`.
+   *
+   * The item can still be `.readyToPlay` when `open` arrives, in which case we answer
+   * at once. On a transcode the switch happened moments ago and the item is not ready
+   * yet — `hasVideoTrack()` would read like "no track", the exact misreport this
+   * contract exists to kill. Poll until ready / failed / deadline: the engine's own
+   * status observer updates on the main queue, so each check sees fresh state.
+   */
+  private static func decideVideoTrack(
+    deadline: Date,
+    completion: @escaping (SongloftAudioEngine.VideoTrackState) -> Void
+  ) {
+    let state = SongloftAudioEngine.shared.videoTrackState()
+    if state != .loading {
+      completion(state)
+      return
+    }
+    if Date() >= deadline {
+      completion(.failed)
+      return
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+      decideVideoTrack(deadline: deadline, completion: completion)
+    }
+  }
 
-      let vc = SongloftVideoViewController()
-      vc.updatesNowPlayingInfoCenter = false
-      vc.videoGravity = .resizeAspect
-      // No retain cycle: the closure captures neither the controller nor self.
-      vc.onDismissed = { Self.teardown($0) }
+  private static func present(callback: @escaping (String) -> Void) {
+    guard let presenter = topViewController() else {
+      callback(#"{"result":"failed"}"#)
+      return
+    }
 
-      engine.attachVideoOutput { player in
-        vc.player = player
-      }
+    let vc = SongloftVideoViewController()
+    vc.updatesNowPlayingInfoCenter = false
+    vc.videoGravity = .resizeAspect
+    // No retain cycle: the closure captures neither the controller nor self.
+    vc.onDismissed = { Self.teardown($0) }
 
-      guard let presenter = Self.topViewController() else {
-        callback("{\"result\":false}")
-        return
-      }
+    SongloftAudioEngine.shared.attachVideoOutput { player in
+      vc.player = player
+    }
 
-      Self.presentedVC = vc
-      presenter.present(vc, animated: true) {
-        callback("{\"result\":true}")
-      }
+    presentedVC = vc
+    presenter.present(vc, animated: true) {
+      callback(#"{"result":"opened"}"#)
     }
   }
 

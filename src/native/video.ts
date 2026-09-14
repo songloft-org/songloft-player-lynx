@@ -10,16 +10,22 @@ import { readNativeModules } from './native-modules.js'
  * it audio/video drift, two `MediaSession`s fighting over the lock screen, and a
  * playback path that neither the EQ nor the insecure-TLS switch reaches.
  */
+/** Why `open()` could or could not put the picture on screen — see `VideoModule.open`. */
+export type VideoOpenReason = 'opened' | 'noTrack' | 'failed'
+
 export interface VideoModule {
   /**
    * Show the fullscreen video screen.
    *
-   * Resolves `false` when the host found no video track to draw — which happens for
-   * real: `songs.is_video` is recorded from the original file at scan time, while a
-   * remote song may be served from a cache entry that was transcoded with `-vn`.
-   * Callers should say so rather than leaving a black rectangle up.
+   * Answers **why** rather than a bare boolean. `'noTrack'` means the stream is ready
+   * and simply carries no picture — real, because `songs.is_video` is recorded from
+   * the original file at scan time while a remote song may be served from a cache
+   * entry transcoded with `-vn`. `'failed'` means the stream itself could not be
+   * loaded (a transcode the server refused, a 404 on the HLS playlist): the song has
+   * a picture in principle, it is just not playable here and now. Callers report the
+   * two differently rather than leaving either one as "this file has no video track".
    */
-  open(): Promise<boolean>
+  open(): Promise<VideoOpenReason>
   close(): Promise<void>
   isOpen(): Promise<boolean>
   /** False when no native module is present (Web, or a build without it). */
@@ -89,11 +95,26 @@ function boolResult(value: unknown): boolean {
   return !!(value && typeof value === 'object' && (value as { result?: unknown }).result === true)
 }
 
+/**
+ * `open()` results cross a deploy boundary: the bundle can be newer than the native
+ * binary it runs against, so old hosts still answer a boolean while new ones answer a
+ * reason string. Booleans keep their old meaning (`true`/`false` were "opened" and
+ * "no track" respectively); strings pass through; anything unrecognised is
+ * `'failed'` — saying "we could not show a picture" beats inventing a specific lie.
+ */
+function openReason(value: unknown): VideoOpenReason {
+  const result = value && typeof value === 'object' ? (value as { result?: unknown }).result : undefined
+  if (result === true) return 'opened'
+  if (result === false) return 'noTrack'
+  if (result === 'opened' || result === 'noTrack' || result === 'failed') return result
+  return 'failed'
+}
+
 function createNativeAdapter(native: NativeVideoModule): VideoModule {
   return {
     available: true,
     async open() {
-      return boolResult(await invoke((cb) => native.open('{}', cb), 'open'))
+      return openReason(await invoke((cb) => native.open('{}', cb), 'open'))
     },
     async close() {
       await invoke((cb) => native.close('{}', cb), 'close')
@@ -109,7 +130,7 @@ function createUnavailableStub(): VideoModule {
   return {
     available: false,
     async open() {
-      return false
+      return 'failed'
     },
     async close() {},
     async isOpen() {

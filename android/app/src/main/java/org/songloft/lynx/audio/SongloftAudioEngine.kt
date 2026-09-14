@@ -364,6 +364,32 @@ object SongloftAudioEngine {
         return groups.any { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
     }
 
+    /**
+     * Why the video screen would, or would not, get a picture — for the module to
+     * answer `open` truthfully instead of a bare boolean.
+     *
+     * `NO_TRACK` and `FAILED` must stay distinct: the first means the stream is ready
+     * and carries no picture (a remote song served from a `-vn` cache entry), the
+     * second that the stream itself could not be loaded. Treating the latter as the
+     * former is how "this file has no video track" came to mask a transcode failure:
+     * on error ExoPlayer drops back to `STATE_IDLE` with a `playerError`, which reads
+     * exactly like "not prepared", so the failure needs its own branch before the
+     * track groups are asked.
+     */
+    enum class VideoTrackState { HAS_TRACK, NO_TRACK, FAILED, LOADING }
+
+    /** Main-thread only: the module pumps this from `runOnMain` / the main handler. */
+    fun videoTrackState(): VideoTrackState {
+        val p = player ?: return VideoTrackState.FAILED
+        if (p.playerError != null) return VideoTrackState.FAILED
+        return when (p.playbackState) {
+            Player.STATE_READY, Player.STATE_ENDED ->
+                if (hasVideoTrack()) VideoTrackState.HAS_TRACK else VideoTrackState.NO_TRACK
+            Player.STATE_BUFFERING, Player.STATE_IDLE -> VideoTrackState.LOADING
+            else -> VideoTrackState.LOADING
+        }
+    }
+
     // -- volume (system media stream) ------------------------------------------
 
     private var appContext: Context? = null

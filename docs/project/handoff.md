@@ -1,10 +1,12 @@
-# 工作交接（2026-09-14 · 批70 视频播放体验档 B1/iOS 生命周期）
+# 工作交接（2026-09-14 · 批71 视频播放体验档 B2/open 返回失败原因）
 
 > 本文件是**给接手 AI 的交接说明**，只回答三件事：现在在哪、还剩什么、怎么验证。
 >
 > **读文档顺序**：① [AGENTS.md](../../AGENTS.md) §4–§6（铁律，必读）→ ② 本文 §3「剩余工作」→ ③ [pitfalls.md](pitfalls.md)（踩坑实录：每条铁律背后的证据）。细节按需查 [progress.md](progress.md)（逐批交付）与 [bugs.md](bugs.md)（逐条缺陷根因）。
 >
-> **未提交（工作树，批70）**：**视频播放体验「档 B1 · iOS 生命周期」** —— 只有 `ios/SongloftLynx/SongloftVideoModule.swift` 一个文件。**修什么**：AVKit 模态播放 UI 自带的 Done 按钮是**直接 dismiss**、不走 `close()`，所以 iOS 上画面关了而 `presentedVC` 还挂着 → `isOpen()` 说谎（批69 A3 的「观看 MV」再点一次就变死点击）+ `closed` 不发。**怎么修**：`AVPlayerViewController` 换内部子类 `SongloftVideoViewController`，只重写 `viewDidDisappear`（`guard isBeingDismissed`，排除「被另一层全屏盖住」时误判）→ 落到唯一的 `teardown(_:)`；`teardown` 按引用相等幂等，先 `vc.player = nil` 再 detach、清 `presentedVC`、发 `closed`，**音频不停**（关画面不关歌）；`close()` 也走 teardown，先清后 dismiss，紧接的 `viewDidDisappear` 撞空引用不再二次发事件。`open()` 顺带加「已开即回 true」守卫（放 `hasVideoTrack` 前）。**验证**：`xcodebuild -list` ✓；`pnpm run ios:build` 两次 **BUILD SUCCEEDED**（含临时钩子版与撤钩版）；iOS 模拟器 iPhone 17 Pro / 26.5 实测——60s 探针 open/isOpen **true**，`debugDismiss`（= 一次不带 teardown 的 `dismiss`，与 Done 按钮同机制）后 **`isOpen()` false**、音频继续（`playing:true` t=13.5s）；撤钩后正式包 close→false、reopen→true。**未验**：真实 Done 按钮的 OS 级点击（触控注入不稳 + 无读图），但 `debugDismiss` 逐字复刻了 Done 的机制，未覆盖的只剩「AVKit 按钮确实调 dismiss」这个框架契约（也是此 bug 存在的前提）；Android/HarmonyOS 本批无关（iOS-only）。**残留**：`SongloftVideo.closed` 仍是死线（两端都发、JS 零监听；Android 注释还谎称「JS listens for it」）——接线还是删仍未拍板；`videoOutputAttached`（iOS 引擎）只写不读，attach/detach 是空操作，待档 C 一并处置。
+> **未提交（工作树，批71）**：**视频播放体验「档 B2 · `open` 返回失败原因」** —— JS facade + iOS + Android 两端 + 契约文档 + 测试共 11 个文件。**修什么**：`SongloftVideo.open` 的返回从布尔升级为三态原因 `{result:"opened"|"noTrack"|"failed"}`，把「流本身加载失败」（转码被拒 / HLS playlist 404）与「流 ready 但确实没有视频轨」分开——批69 ⑤/⑦ 查出的缺陷正是 404 这类失败不会让 `load()` reject、落回 `hasVideoTrack()` 一律读成「没有视频轨」。**怎么修**：两端引擎各加 `videoTrackState()`（先按 item.status / `playerError` 判 `failed`，再问有没有轨道，否则 `loading`），模块 `open()` 轮询到 ready/failed/8s 超时才回答；iOS 沿用批70 的「已开即回 + `present` 摘画面」结构，只把布尔回调换成三态；TS facade 加 `openReason()` 兼容旧宿主布尔（`true`→opened / `false`→noTrack，其余→failed），`openCurrentSongVideo()` 把 `'failed'` 映射为 `'transcodeFailed'`（`noTrack` 仍是独立结果）。**验证**：`tsc -b` 绿 / **2565 vitest 全绿（239 文件，+1）** / `pnpm run build` 双产物 / `pnpm run ios:build` **BUILD SUCCEEDED** / `./gradlew --no-daemon assembleDebug` **BUILD SUCCESSFUL**（仅历史 `args` 未用告警） / **iOS 模拟器实测 3/3**：无 current item → `"failed"`；audio-only ready → `"noTrack"`；video ready → `"opened"`（宿主 HTTP 直喂 8899 造流，收工 `base=18091` + 真实 admin 登录 + `clearPlaylist` 复位）。**未验**：Android 行为端（本批只有编译闸门；video 场景缺同源视频素材）、HarmonyOS（不注册 `SongloftVideo`，无关）。**待拍板（未擅自决定）**：`SongloftVideo.closed` 仍是死线（接线还是删）；iOS `videoOutputAttached` 只写标志；档 C 的 Android 控件层与「Android 只有裸 surface」的刻意边界冲突。
+>
+> **已提交（批70 · `517796b`）**：**视频播放体验「档 B1 · iOS 生命周期」** —— 只有 `ios/SongloftLynx/SongloftVideoModule.swift` 一个文件。**修什么**：AVKit 模态播放 UI 自带的 Done 按钮是**直接 dismiss**、不走 `close()`，所以 iOS 上画面关了而 `presentedVC` 还挂着 → `isOpen()` 说谎（批69 A3 的「观看 MV」再点一次就变死点击）+ `closed` 不发。**怎么修**：`AVPlayerViewController` 换内部子类 `SongloftVideoViewController`，只重写 `viewDidDisappear`（`guard isBeingDismissed`，排除「被另一层全屏盖住」时误判）→ 落到唯一的 `teardown(_:)`；`teardown` 按引用相等幂等，先 `vc.player = nil` 再 detach、清 `presentedVC`、发 `closed`，**音频不停**（关画面不关歌）；`close()` 也走 teardown，先清后 dismiss，紧接的 `viewDidDisappear` 撞空引用不再二次发事件。`open()` 顺带加「已开即回 true」守卫（放 `hasVideoTrack` 前）。**验证**：`xcodebuild -list` ✓；`pnpm run ios:build` 两次 **BUILD SUCCEEDED**（含临时钩子版与撤钩版）；iOS 模拟器 iPhone 17 Pro / 26.5 实测——60s 探针 open/isOpen **true**，`debugDismiss`（= 一次不带 teardown 的 `dismiss`，与 Done 按钮同机制）后 **`isOpen()` false**、音频继续（`playing:true` t=13.5s）；撤钩后正式包 close→false、reopen→true。**未验**：真实 Done 按钮的 OS 级点击（触控注入不稳 + 无读图），但 `debugDismiss` 逐字复刻了 Done 的机制，未覆盖的只剩「AVKit 按钮确实调 dismiss」这个框架契约（也是此 bug 存在的前提）；Android/HarmonyOS 本批无关（iOS-only）。**残留**：`SongloftVideo.closed` 仍是死线（两端都发、JS 零监听；Android 注释还谎称「JS listens for it」）——接线还是删仍未拍板；`videoOutputAttached`（iOS 引擎）只写不读，attach/detach 是空操作，待档 C 一并处置。
 >
 > **上一代码批次（批69 · 已提交 `ad8dd68`）**：**视频播放体验「档 A」（纯 JS）** —— 用户报「看看视频播放是不是可以优化一下…看 MV 更方便一点」，先出方案再按档分批（档 A 纯 JS / 档 B iOS 原生生命周期 / 档 C Android 控件与 HLS 等待 / 档 D 待定取舍），本批是档 A。**① 三个改动**：**(A1)** `player-store.ts` 新增 `currentSong` 订阅，换歌/清空队列即 `close()` 视频面——真根因是全屏视频面借给**播放器**而不是某首歌（宿主把 surface 挂在正在跑的引擎上），auto-advance 后仍画上一首，而 JS **从不调 `close()`**（全仓唯一调用点在 `e2e-bridge.ts`）；判据取「上一首是否可能被观看」而非无条件调用（`close()` 是一次过桥往返）。**(A3)** 曲库歌曲菜单新增「观看 MV」+ 新的 `video` 图标（`buildSongMenuItems` 加第三个参数 `SongMenuOptions.canWatchVideo`，由调用方算、保持该模块纯函数）；从列表进 MV 从 3 步降到 2 步。**(A4/A5)** `enterVideoSource()` 改为返回 `'skipped' | 'switched' | 'failed'`（原为 `Promise<void>`，失败只写进 `errorMessage`，而**该字段全仓无渲染消费者**），失败提示改「视频转码失败」；`'MV'` 走 i18n。**② 入口判据收到一处**（`features/player/data/video-open.ts` 的 `canWatchVideo` / `openCurrentSongVideo`）：封面徽标与菜单项共用，因为**这个判据写错过两次且都是静默的**（Web、无宿主模块的包里都是可点但什么都不发生的胶囊，外观与可用态一模一样）。**③ 反向验证 2 项全咬**。**④ iOS 模拟器实测（「黑屏」问题已消失）**：App 当时指向用户的远端隧道 18091，**改用宿主 HTTP 直接喂流**（`file://` 会被 `buildResourceUrl` 加基址前缀而失效），因此**没有碰任何登录态**（收工 `auth=authenticated`、`base=http://localhost:18091` 原样）；实测 `open()`/`isOpen()` 由 **true** 在换歌后变 **false**，6s MV 播完 auto-advance 同结论、整屏均值 (32,33,32) → (210,215,221)（黑屏 → App UI），菜单项 `.global-menu__items` 高 **324 vs 280**（差值 44 = 一行，只视频歌才有）。**⑤ 设备上顺带查出并入库 1 条新缺陷**：`format: mkv`（iOS 判 `hls`）实测 `enterVideoSource()` 返回 **`'switched'`** 而远端实际 404 ⇒ **失败的转码请求不一定 reject `load()`**（错误由 `audio.on('error')` 异步送），A4 只覆盖了「load 真的抛」那类，404 这类仍回落「该文件没有视频轨」——修法需要宿主分开回答「item 加载失败 / ready 但无视频轨」，**已排入档 B**，见 [bugs.md](bugs.md)。**⑥ 验收**：`tsc -b` 绿 / **2564 vitest 全绿（239 文件，新增 16 条）** / `pnpm run build` 双产物 / `pnpm run build:web` 绿。**未验**：Android 与 HarmonyOS（本批只在 iOS 模拟器量）。细节见 [progress.md](progress.md) 批69 条目。
 >
@@ -60,14 +62,15 @@
 
 | 闸门 | 结果 | 何时验的 |
 |---|---|---|
-| `pnpm test` | **2564 全绿 / 239 文件** | ✅ **2026-09-11**（批69 视频档 A；新增 16 条，此前 2548 为批68。**注意**批68 条目里写的「237 文件」偏旧，实际当时已是 238） |
-| `pnpm exec tsc -b` | 绿 | 2026-09-11（批69） |
-| `pnpm run build` | 绿（main.lynx.bundle 2334.6 kB） | 2026-09-11（批69，lynx + web 双产物均列出） |
-| `pnpm run build:web` | 绿 | 2026-09-11（批69） |
+| `pnpm test` | **2565 全绿 / 239 文件** | ✅ **2026-09-14**（批71 视频档 B；+1 条 `failed` 分因） |
+| `pnpm exec tsc -b` | 绿 | ✅ **2026-09-14**（批71） |
+| `pnpm run build` | 绿（lynx 2334.8 kB + web 双产物均列出） | ✅ **2026-09-14**（批71） |
+| `pnpm run build:web` | 绿 | 2026-09-11（批69；批71 未改 `web/`） |
 | 新增 `tokens-hig.test.ts` | 6/6 绿 | 2026-09-02 |
-| `gradlew assembleDebug` | 绿 | ✅ **2026-09-06**（Issue #3，`compileDebugKotlin` 实际执行） |
+| `gradlew assembleDebug` | 绿（`compileDebugKotlin` 实际执行，仅历史 `args` 未用告警） | ✅ **2026-09-14**（批71 改 `android/` 后重跑） |
 | `xcodebuild -list` | 可跑且已跑（targets: SongloftLynx；schemes: SongloftLynx；Debug/Release） | ✅ **2026-09-14**（批70 改 `ios/` 后重跑） |
-| `ios:build` | `BUILD SUCCEEDED` | ✅ **2026-09-14**（批70，两次：含临时验证钩子版 + 撤钩后的正式版） |
+| `ios:build` | `BUILD SUCCEEDED` | ✅ **2026-09-14**（批71 改 `ios/` 后重跑；批70 两次含钩子版） |
+| iOS 模拟器（视频 reason 实测） | 3/3：无 item→`failed` / audio-only→`noTrack` / video→`opened` | ✅ **2026-09-14**（批71 TestBridge；收工 `base=18091` + real login + `clearPlaylist`） |
 | HarmonyOS CI | GitHub Actions `dev-build-harmony.yml` | 有流水线；本地需 DevEco Studio |
 | HarmonyOS 本批定向契约 | 相关 209 项 Vitest 全绿 | 2026-09-04；HAP / 真机待验 |
 | Android e2e | 112 passed / 8 skipped (120) | **批49 时代（2026-08-16）** |

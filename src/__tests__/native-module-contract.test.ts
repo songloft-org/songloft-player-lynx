@@ -1084,11 +1084,20 @@ describe('SongloftVideo module surface (Android)', () => {
     expect(hosts.video.android).toContain('runOnMain')
   })
 
-  test('the host refuses to open a screen with no video track', () => {
+  test('the host tells "no video track" apart from "stream failed to load"', () => {
     // `songs.is_video` comes from the original file at scan time; a remote song may be
-    // served from a cache entry transcoded with `-vn`. Only the host can tell.
-    expect(hosts.video.android).toContain('hasVideoTrack')
+    // served from a cache entry transcoded with `-vn` (genuinely no track), or the
+    // transcode itself may have failed (the item errors, which `hasVideoTrack()` alone
+    // reads as "no track"). The engine must distinguish the two and the module must
+    // forward both reason strings.
+    expect(hosts.audio.android).toContain('fun videoTrackState')
     expect(hosts.audio.android).toContain('fun hasVideoTrack')
+    expect(hosts.audio.android, 'a failed stream must be caught before the track check').toContain(
+      'playerError',
+    )
+    expect(hosts.video.android).toContain('videoTrackState')
+    expect(hosts.video.android).toContain('"noTrack"')
+    expect(hosts.video.android).toContain('"failed"')
   })
 })
 
@@ -1122,18 +1131,29 @@ describe('SongloftVideo module surface (iOS)', () => {
     ).toContain('updatesNowPlayingInfoCenter = false')
   })
 
-  test('player is nil-ed before dismiss to prevent AVPlayerViewController from pausing', () => {
+  test('the player is released through teardown before close() dismisses', () => {
+    // The release lives in one funnel (`teardown` sets `vc.player = nil`), and an
+    // explicit close() must run that funnel before it triggers the dismissal — letting
+    // AVPlayerViewController drop its hold instead of pausing playback on the way out.
     const src = hosts.video.ios
-    const nilIndex = src.indexOf('vc.player = nil')
-    const dismissIndex = src.indexOf('dismiss(animated:')
-    expect(nilIndex, 'vc.player = nil must appear').toBeGreaterThan(-1)
-    expect(dismissIndex, 'dismiss must appear').toBeGreaterThan(-1)
-    expect(nilIndex, 'vc.player = nil must come before dismiss').toBeLessThan(dismissIndex)
+    expect(src, 'vc.player = nil must appear').toContain('vc.player = nil')
+    const teardownCallAt = src.indexOf('teardown(vc)')
+    const dismissAt = src.indexOf('dismiss(animated:')
+    expect(teardownCallAt, 'close() must call teardown').toBeGreaterThan(-1)
+    expect(dismissAt, 'dismiss must appear').toBeGreaterThan(-1)
+    expect(teardownCallAt, 'teardown must run before close() dismisses').toBeLessThan(dismissAt)
   })
 
-  test('the host refuses to open when there is no video track', () => {
-    expect(hosts.video.ios).toContain('hasVideoTrack')
+  test('the host tells "no video track" apart from "stream failed to load"', () => {
+    // `hasVideoTrack()` returns false both for a genuinely pictureless stream and for
+    // an item that failed (`.failed` status) — which would mask a refused transcode as
+    // "this file has no video track". The engine must read the item status first and
+    // the module must forward both reason strings.
+    expect(hosts.audio.ios).toContain('func videoTrackState')
     expect(hosts.audio.ios).toContain('func hasVideoTrack')
+    expect(hosts.video.ios).toContain('videoTrackState')
+    expect(hosts.video.ios).toContain('"noTrack"')
+    expect(hosts.video.ios).toContain('"failed"')
   })
 })
 

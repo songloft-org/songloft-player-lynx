@@ -24,8 +24,12 @@ const { canWatchVideo, openCurrentSongVideo } = await import('../data/video-open
 const g = globalThis as Record<string, unknown>
 
 interface HostOptions {
-  /** What `open` answers — `false` is the host's "no video track in this stream". */
-  opens?: boolean
+  /**
+   * What `open` answers. Booleans mirror old hosts (`false` = no video track); new
+   * hosts answer a reason string, of which `'failed'` is the "stream would not load"
+   * case this suite must keep distinct from `'noTrack'`.
+   */
+  opens?: boolean | 'opened' | 'noTrack' | 'failed'
   /** What `isOpen` answers — a surface that is already up. */
   alreadyOpen?: boolean
 }
@@ -155,5 +159,17 @@ describe('openCurrentSongVideo', () => {
     g.SystemInfo = { platform: 'Android' }
     installHost({ opens: false })
     await expect(openCurrentSongVideo()).resolves.toBe('noTrack')
+  })
+
+  /*
+   * The flip side of the `-vn` case: the song *has* a picture but the host could not
+   * load the stream (transcode refused, HLS playlist 404). The host sees the item
+   * fail and says `'failed'`; reporting that as "no video track" is the lie this
+   * whole function exists to avoid.
+   */
+  test("a stream the host could not load is a failed transcode, not 'noTrack'", async () => {
+    g.SystemInfo = { platform: 'iOS' }
+    installHost({ opens: 'failed' })
+    await expect(openCurrentSongVideo()).resolves.toBe('transcodeFailed')
   })
 })

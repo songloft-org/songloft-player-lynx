@@ -32,6 +32,12 @@ class SongloftVideoModule(context: Context) : LynxModule(context) {
         /** Event JS listens for so it can drop any "transcoding…" pending state. */
         const val EVENT_CLOSED = "SongloftVideo.closed"
 
+        private const val OPEN_TIMEOUT_MS = 8_000L
+
+        private const val OPENED = "opened"
+        private const val NO_TRACK = "noTrack"
+        private const val FAILED = "failed"
+
         private var activity: SongloftVideoActivity? = null
         private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -47,6 +53,32 @@ class SongloftVideoModule(context: Context) : LynxModule(context) {
         internal fun installSink(block: () -> Unit) {
             sink = block
         }
+
+        /**
+         * Wait until the item's fate is known before answering `open`.
+         *
+         * The item can still be buffering when `open` arrives, in which case
+         * `hasVideoTrack()` reads like "no track" — the exact misreport this contract
+         * exists to kill (a transcode failure drops ExoPlayer back to `STATE_IDLE`
+         * with an error, indistinguishable from a not-yet-prepared stream). Poll on the
+         * main handler, where the engine requires us to be, until ready / failed /
+         * deadline.
+         */
+        private fun decideVideoTrack(
+            deadlineMs: Long,
+            completion: (SongloftAudioEngine.VideoTrackState) -> Unit,
+        ) {
+            val state = SongloftAudioEngine.videoTrackState()
+            if (state != SongloftAudioEngine.VideoTrackState.LOADING) {
+                completion(state)
+                return
+            }
+            if (System.currentTimeMillis() >= deadlineMs) {
+                completion(SongloftAudioEngine.VideoTrackState.FAILED)
+                return
+            }
+            mainHandler.postDelayed({ decideVideoTrack(deadlineMs, completion) }, 100L)
+        }
     }
 
     init {
@@ -56,23 +88,35 @@ class SongloftVideoModule(context: Context) : LynxModule(context) {
     /**
      * Show the fullscreen surface.
      *
-     * Answers `{"result": false}` when there is no video track to show, rather than
-     * opening a black rectangle. That case is real and invisible from JS:
-     * `songs.is_video` is recorded from the original file at scan time, while a remote
-     * song may be served out of a cache entry that was transcoded with `-vn`.
+     * Answers **why** rather than a bare boolean:
+     *
+     * - `{"result":"opened"}` — the picture is up.
+     * - `{"result":"noTrack"}` — the stream is ready but carries no video track.
+     *   `songs.is_video` is recorded from the original file at scan time, while a
+     *   remote song may be served out of a cache entry that was transcoded with `-vn`.
+     * - `{"result":"failed"}` — the stream itself could not be loaded (a transcode the
+     *   server refused, a 404 on the HLS playlist).
      */
     @LynxMethod
     fun open(args: String, callback: Callback) {
         val ctx = (mContext as LynxContext).getContext()
         SongloftAudioEngine.runOnMain {
-            if (!SongloftAudioEngine.hasVideoTrack()) {
-                callback.invoke(JSONObject().put("result", false).toString())
-                return@runOnMain
+            decideVideoTrack(System.currentTimeMillis() + OPEN_TIMEOUT_MS) { state ->
+                when (state) {
+                    SongloftAudioEngine.VideoTrackState.HAS_TRACK -> {
+                        val intent = Intent(ctx, SongloftVideoActivity::class.java)
+                        if (ctx !is android.app.Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        ctx.startActivity(intent)
+                        callback.invoke(JSONObject().put("result", OPENED).toString())
+                    }
+                    SongloftAudioEngine.VideoTrackState.NO_TRACK ->
+                        callback.invoke(JSONObject().put("result", NO_TRACK).toString())
+                    SongloftAudioEngine.VideoTrackState.FAILED,
+                    SongloftAudioEngine.VideoTrackState.LOADING,
+                    ->
+                        callback.invoke(JSONObject().put("result", FAILED).toString())
+                }
             }
-            val intent = Intent(ctx, SongloftVideoActivity::class.java)
-            if (ctx !is android.app.Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            ctx.startActivity(intent)
-            callback.invoke(JSONObject().put("result", true).toString())
         }
     }
 
