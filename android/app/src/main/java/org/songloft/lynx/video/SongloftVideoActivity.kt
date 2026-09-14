@@ -34,7 +34,9 @@ class SongloftVideoActivity : Activity() {
         super.onCreate(savedInstanceState)
         SongloftVideoModule.setActivity(this)
 
-        val view = SurfaceView(this)
+        val view = SurfaceView(this).apply {
+            setZOrderMediaOverlay(true)
+        }
         surface = view
         val root = FrameLayout(this).apply {
             setBackgroundColor(Color.BLACK)
