@@ -105,26 +105,26 @@ function CoverArt({ song, size }: { song: Song, size: number }) {
               <Icon name='music' size={Math.round(size * 0.4)} color={ICON_COLORS.contentMuted} />
             </view>
           )}
+        {song.isVideo
+          ? (
+            <view
+              className='full-player__video-badge'
+              bindtap={canWatch && !pending ? () => { void openVideo() } : undefined}
+              data-testid={canWatch ? 'video-fullscreen' : undefined}
+            >
+              {/* Pill badge: the old "▶" text was too small to read at a glance and
+                  looked like a rendering artifact. A labelled pill carrying the screen
+                  glyph clearly states "this is a music video — tap to watch". (Not the
+                  `play` glyph: the song menu has a "play" item of its own, and the two
+                  actions must not read as the same one.) */}
+              <Icon name='video' size={12} color={ICON_COLORS.content} />
+              <text className='full-player__video-badge-text'>
+                {pending ? '…' : t('player.videoBadge')}
+              </text>
+            </view>
+          )
+          : null}
       </view>
-      {song.isVideo
-        ? (
-          <view
-            className='full-player__video-badge'
-            bindtap={canWatch && !pending ? () => { void openVideo() } : undefined}
-            data-testid={canWatch ? 'video-fullscreen' : undefined}
-          >
-            {/* Pill badge: the old "▶" text was too small to read at a glance and
-                looked like a rendering artifact. A labelled pill carrying the screen
-                glyph clearly states "this is a music video — tap to watch". (Not the
-                `play` glyph: the song menu has a "play" item of its own, and the two
-                actions must not read as the same one.) */}
-            <Icon name='video' size={12} color={ICON_COLORS.content} />
-            <text className='full-player__video-badge-text'>
-              {pending ? '…' : t('player.videoBadge')}
-            </text>
-          </view>
-        )
-        : null}
       {note
         ? <text className='full-player__video-note'>{note}</text>
         : null}

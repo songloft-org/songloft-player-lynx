@@ -33,11 +33,11 @@ function makeSong(isVideo: boolean): Song {
 test('video badge appears for video songs', () => {
   render(<SongRow song={makeSong(true)} index={0} />)
   const root = getQueriesForElement(elementTree.root!)
-  expect(root.queryByText('▶')).toBeInTheDocument()
+  expect(root.queryByTestId('icon-video')).toBeInTheDocument()
 })
 
 test('video badge does not appear for audio-only songs', () => {
   render(<SongRow song={makeSong(false)} index={0} />)
   const root = getQueriesForElement(elementTree.root!)
-  expect(root.queryByText('▶')).not.toBeInTheDocument()
+  expect(root.queryByTestId('icon-video')).not.toBeInTheDocument()
 })

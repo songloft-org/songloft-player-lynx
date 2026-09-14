@@ -288,6 +288,13 @@
   color: var(--label);
 }
 
+/* Fullscreen-video route: the host's <video>/SurfaceView under the Lynx view is
+   the backdrop, so the root must stop painting the system background over it.
+   Landed by `video-surface-model.ts` → `ThemeProvider`'s `full-video` class. */
+.theme-root.full-video {
+  background-color: transparent;
+}
+
 /* HIG §10 Motion: reduce-motion zeroes durations so transitions/animations
    become instant when the host signals it. The class is landed by
    `ThemeProvider` from `reduce-motion-model.ts`, which reads the host's

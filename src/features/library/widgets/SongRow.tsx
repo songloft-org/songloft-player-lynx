@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
-import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { Icon, ICON_COLORS, activeAccentIconColor } from '../../../shared/ui/Icon.js'
 import { formatDuration } from '../data/format.js'
 import './SongRow.css'
 
@@ -68,7 +68,9 @@ export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleF
               <view className='song-row__meta song-row__meta--wide'>
                 <view className='song-row__title-row'>
                   <text className='song-row__title'>{song.title}</text>
-                  {song.isVideo ? <text className='song-row__video-badge'>▶</text> : null}
+                  {song.isVideo
+                    ? <view className='song-row__video-badge'><Icon name='video' size={13} color={activeAccentIconColor()} /></view>
+                    : null}
                 </view>
               </view>
               <text className='song-row__col-artist'>{song.artist || ''}</text>
@@ -80,7 +82,9 @@ export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleF
             <view className='song-row__meta'>
               <view className='song-row__title-row'>
                 <text className='song-row__title'>{song.title}</text>
-                {song.isVideo ? <text className='song-row__video-badge'>▶</text> : null}
+                {song.isVideo
+                  ? <view className='song-row__video-badge'><Icon name='video' size={13} color={activeAccentIconColor()} /></view>
+                  : null}
               </view>
               {subtitle
                 ? <text className='song-row__subtitle'>{subtitle}</text>

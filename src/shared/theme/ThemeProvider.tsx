@@ -25,6 +25,10 @@ import {
 } from '../../native/safe-area.js'
 import { getPlatformTarget } from '../../native/platform-target.js'
 import { getAppTheme, resolveTheme, subscribeAppTheme } from './theme-model.js'
+import {
+  isFullVideoActive,
+  subscribeFullVideoActive,
+} from './video-surface-model.js'
 import { getActiveThemePack, subscribeActiveThemePack } from './theme-pack-model.js'
 import { themePackToStyleVars } from './theme-pack-mapping.js'
 import './tokens.css'
@@ -82,6 +86,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   // signal, so it is persisted and replayed at startup alongside the theme —
   // see `increase-contrast-model.ts` for why it is app-side.
   const [increaseContrast, setIncreaseContrast] = useState(() => getIncreaseContrast())
+  const [fullVideo, setFullVideo] = useState(() => isFullVideoActive())
 
   // The platform does not change at runtime — a host is iOS or it is not — so
   // it is read once and pinned. The class it puts on the root lets the iOS
@@ -131,6 +136,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     [],
   )
 
+  useEffect(
+    () => subscribeFullVideoActive(setFullVideo),
+    [],
+  )
+
   const vars = { ...themePackToStyleVars(pack?.data, theme), ...safeAreaStyleVars(insets) }
   const style = vars as Record<string, string> & CSSProperties
 
@@ -141,6 +151,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     + ` platform-${platform}`
     + (reduceMotion ? ' reduce-motion' : '')
     + (increaseContrast ? ' increase-contrast' : '')
+    + (fullVideo ? ' full-video' : '')
 
   return <view className={className} style={style}>{children}</view>
 }

@@ -214,6 +214,9 @@
   overflow: hidden;
   border-radius: var(--radius-md);
   background-color: var(--secondary-system-background);
+  /* Containing block for the badge: anchor it to the artwork's corner, not the
+     page — against the page it floated at the screen's top-right and half off. */
+  position: relative;
   /* The cover is the one place a large shadow is earned (DESIGN.md §3.5). */
   box-shadow: var(--shadow-lg);
 }

@@ -1,29 +1,79 @@
 .full-video {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  /* Transparent on purpose: the host SurfaceView underneath is the picture. */
+  /* Sized + anchored inline (see FullVideoPage.tsx); this class keeps it
+     transparent so the host SurfaceView underneath is the picture. */
   background-color: transparent;
 }
 
+.full-video__header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(64px + var(--safe-top));
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--safe-top);
+  padding-left: 20px;
+  padding-right: 12px;
+  background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+  z-index: 1;
+}
+
+.full-video__title {
+  flex: 1;
+  margin-right: 12px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .full-video__close {
-  position: fixed;
-  top: 12px;
-  right: 12px;
   width: 44px;
   height: 44px;
   align-items: center;
   justify-content: center;
-  /* Translucent circle so the control reads against any frame, video or not. */
-  background-color: rgba(0, 0, 0, 0.35);
+  background-color: rgba(255, 255, 255, 0.18);
   border-radius: 50%;
+}
+
+.full-video__controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20px 20px calc(24px + var(--safe-bottom));
+  background-image: linear-gradient(to top, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0));
   z-index: 1;
 }
 
+.full-video__times {
+  flex-direction: row;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.full-video__time {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+}
+
+.full-video__play {
+  margin-top: 18px;
+  align-self: center;
+  width: 56px;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+}
+
 .full-video__note {
-  position: fixed;
+  position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);

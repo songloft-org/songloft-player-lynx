@@ -1,0 +1,33 @@
+.seekbar {
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+}
+
+.seekbar__track {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background-color: rgba(255, 255, 255, 0.28);
+  position: relative;
+}
+
+.seekbar__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 2px;
+  background-color: #ffffff;
+}
+
+.seekbar__thumb {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background-color: #ffffff;
+}

@@ -129,8 +129,8 @@
 }
 
 .song-row__video-badge {
-  color: var(--accent);
-  font-size: var(--font-caption1);
+  /* Mv indicator: a small camera glyph beside the title, tinted accent — plain
+     metadata ("this is a music video"), not a tappable shortcut. */
   margin-left: var(--space-1);
 }
 
