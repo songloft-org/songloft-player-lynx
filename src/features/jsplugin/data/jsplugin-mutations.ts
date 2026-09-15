@@ -12,6 +12,12 @@ import { pluginQueryKeys } from './jsplugin-query.js'
  * or a restart.
  */
 const tabConfigKeys = ['settings', 'tab-config'] as const
+/*
+ * Same story as tab-config for the home plugin grid: install/uninstall changes
+ * which entry_paths are valid, so the cached order must refetch — the backend
+ *'s `handleDelete` prunes the entry, and a fresh GET picks up the change.
+ */
+const pluginOrderKeys = ['settings', 'plugin-order'] as const
 
 export function useTogglePluginMutation() {
   const queryClient = useQueryClient()
@@ -33,6 +39,7 @@ export function useDeletePluginMutation() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: pluginQueryKeys.list() })
       void queryClient.invalidateQueries({ queryKey: tabConfigKeys })
+      void queryClient.invalidateQueries({ queryKey: pluginOrderKeys })
     },
   })
 }

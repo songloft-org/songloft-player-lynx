@@ -453,6 +453,8 @@ export const en = {
   },
   jsplugin: {
     gridTitle: 'Plugins',
+    gridEditOrder: 'Edit',
+    gridDoneEditing: 'Done',
     managerTitle: 'Plugins',
     managerSubtitle: 'Manage installed plugins',
     updateAll: 'Update all',
@@ -567,6 +569,7 @@ export const en = {
     tabLimitReached: 'Maximum {{max}} tabs reached.',
     // Wording mirrors the Flutter `settingsTabConfigCollapseHint` arb entry.
     tabCollapseHint: 'On mobile, tabs beyond 5 will collapse into the “More” menu',
+    tabPluginOrder: 'Plugin order',
   },
   dlna: {
     title: 'Cast to Device',
@@ -1412,6 +1415,8 @@ export const zh: TranslationTree = {
   },
   jsplugin: {
     gridTitle: '插件',
+    gridEditOrder: '排序',
+    gridDoneEditing: '完成',
     managerTitle: '插件管理',
     managerSubtitle: '管理已安装的插件',
     updateAll: '全部更新',
@@ -1524,6 +1529,7 @@ export const zh: TranslationTree = {
     tabFixed: '固定',
     tabLimitReached: '最多 {{max}} 个标签页。',
     tabCollapseHint: '移动端超出 5 个时将折叠到「更多」菜单',
+    tabPluginOrder: '插件顺序',
   },
   dlna: {
     title: '投屏播放',

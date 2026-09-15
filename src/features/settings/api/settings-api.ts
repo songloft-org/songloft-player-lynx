@@ -59,6 +59,32 @@ export class SettingsApi {
     return parseTabConfig(res.data)
   }
 
+  // ── Home plugin grid order (drag-drop) ────────────────────────────────
+
+  /**
+   * `GET /settings/plugin-order` — entry_paths in home-grid display order.
+   *
+   * Empty means "use the plugin list's natural order" (a fresh install).
+   * Backend guarantees `order` is an array; the client parses defensively
+   * anyway so a hand-edited config row can't crash the grid.
+   */
+  async getPluginOrder(): Promise<string[]> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/settings/plugin-order`)
+    const data = (res.data ?? {}) as Record<string, unknown>
+    return Array.isArray(data.order) ? data.order.map(String) : []
+  }
+
+  /**
+   * `PUT /settings/plugin-order` — send the full ordered list. Backend prunes
+   * orphans (uninstalled plugins) and returns the cleaned array. Disabled
+   * plugins stay in place so their spot is preserved across enable/disable.
+   */
+  async updatePluginOrder(order: string[]): Promise<string[]> {
+    const res = await this.client.put<unknown>(`${apiPrefix}/settings/plugin-order`, { order })
+    const data = (res.data ?? {}) as Record<string, unknown>
+    return Array.isArray(data.order) ? data.order.map(String) : []
+  }
+
   // ── User preferences (cloud-synced) ────────────────────────────────────
 
   async getUserPreferences(): Promise<Record<string, unknown>> {

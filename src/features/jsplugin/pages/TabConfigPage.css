@@ -71,3 +71,24 @@
   font-size: var(--font-callout);
   color: var(--secondary-label);
 }
+
+.tab-config__order-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-2) var(--space-2);
+  gap: var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--secondary-system-background);
+  margin-bottom: var(--space-1);
+}
+
+.tab-config__order-name {
+  flex: 1;
+  color: var(--label);
+  font-size: var(--font-callout);
+}
+
+.tab-config__order-handle {
+  padding: var(--space-1);
+}

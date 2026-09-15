@@ -1,6 +1,7 @@
 import { useEffect, useState } from '@lynx-js/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-sortable'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import type { JSPlugin } from '../../../models/jsplugin.js'
@@ -51,13 +52,14 @@ export function TabConfigPage() {
   const isPluginInTabs = (plugin: JSPlugin) =>
     config.pluginTabs.some((t) => t.entryPath === plugin.entryPath)
 
-  const toggleLibrary = () => {
-    const next: TabConfig = { ...config, showLibrary: !config.showLibrary }
+  const persist = (next: TabConfig) => {
     setConfig(next)
     void getSettingsApi().updateTabConfig(next)
       .then(() => queryClient.invalidateQueries({ queryKey: ['settings', 'tab-config'] }))
       .catch(() => {})
   }
+
+  const toggleLibrary = () => persist({ ...config, showLibrary: !config.showLibrary })
 
   const togglePlugin = (plugin: JSPlugin) => {
     const inTabs = isPluginInTabs(plugin)
@@ -73,11 +75,22 @@ export function TabConfigPage() {
         icon: plugin.icon,
       }]
     }
-    const next: TabConfig = { ...config, pluginTabs: nextTabs }
-    setConfig(next)
-    void getSettingsApi().updateTabConfig(next)
-      .then(() => queryClient.invalidateQueries({ queryKey: ['settings', 'tab-config'] }))
-      .catch(() => {})
+    persist({ ...config, pluginTabs: nextTabs })
+  }
+
+  const reorderPluginTabs = (orderedEntryPaths: string[]) => {
+    const byEntry = new Map(config.pluginTabs.map((t) => [t.entryPath, t]))
+    const nextTabs: PluginTabEntry[] = []
+    for (const ep of orderedEntryPaths) {
+      const tab = byEntry.get(ep)
+      if (tab) nextTabs.push(tab)
+    }
+    // Defensive tail: anything Sortable dropped (shouldn't happen) keeps its
+    // original relative order rather than silently disappearing.
+    for (const tab of config.pluginTabs) {
+      if (!orderedEntryPaths.includes(tab.entryPath)) nextTabs.push(tab)
+    }
+    persist({ ...config, pluginTabs: nextTabs })
   }
 
   return (
@@ -134,6 +147,47 @@ export function TabConfigPage() {
                 about what a large tab count does on phones. Mirrors the Flutter
                 config page's `settingsTabConfigCollapseHint`. */}
             <text className='tab-config__limit-hint'>{t('jsplugin.tabCollapseHint')}</text>
+          </view>
+        )
+        : null}
+
+      {/*
+        "Plugin order" — parallels the Flutter tab_config_page.dart section that
+        shows a ReorderableListView once there are ≥2 plugin tabs to reorder.
+        Reuse of SortableRoot + SortableItemArea mirrors the library
+        LibraryViewEditor: long-press the drag handle to lift, drag vertically
+        to reorder. Single-plugin case is skipped because there's nothing to
+        reorder.
+      */}
+      {config.pluginTabs.length > 1
+        ? (
+          <view className='tab-config__section'>
+            <text className='tab-config__section-title'>{t('jsplugin.tabPluginOrder')}</text>
+            <SortableRoot<PluginTabEntry>
+              data={config.pluginTabs.map((tab) => ({
+                getSortingKey: () => tab.entryPath,
+                dataItem: tab,
+              }))}
+              onSortEnd={(sorted) => reorderPluginTabs(sorted.map((d) => d.dataItem.entryPath))}
+            >
+              {(item) => (
+                <SortableItem
+                  sortingKey={item.dataItem.entryPath}
+                  as='DraggableRoot'
+                  className='tab-config__order-row'
+                >
+                  <text className='tab-config__order-name'>{item.dataItem.name}</text>
+                  <SortableItemArea>
+                    <view
+                      className='tab-config__order-handle'
+                      data-testid={`tab-order-handle-${item.dataItem.entryPath}`}
+                    >
+                      <Icon name='menu' size={18} color={ICON_COLORS.content2} />
+                    </view>
+                  </SortableItemArea>
+                </SortableItem>
+              )}
+            </SortableRoot>
           </view>
         )
         : null}

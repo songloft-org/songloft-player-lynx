@@ -14,6 +14,28 @@
   font-size: var(--font-callout);
   font-weight: var(--weight-semibold);
   color: var(--label);
+  flex: 1;
+}
+
+.plugin-grid__edit-toggle {
+  padding: var(--space-1) var(--space-2);
+}
+
+.plugin-grid__edit-toggle-text {
+  font-size: var(--font-caption1);
+  color: var(--accent, var(--label));
+}
+
+.plugin-grid__card--editing {
+  /* Faint highlight so the card reads as "grabbable" during edit mode; the
+     underlying tile keeps its own background, this only adds a soft outline. */
+  border: 1px dashed var(--separator, rgba(0, 0, 0, 0.15));
+}
+
+.plugin-grid__drag-target {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .plugin-grid__items {
