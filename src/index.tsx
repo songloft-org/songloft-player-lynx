@@ -59,7 +59,7 @@ root.render(<App />)
 // Re-run the route guards whenever auth status changes (TanStack Router has no
 // GoRouter-style `refreshListenable`; `invalidate()` re-evaluates `beforeLoad`).
 // The active theme pack rides the same transitions: it is per-server state, so
-// a fresh login refetches it and a logout drops back to the Muse baseline —
+// a fresh login refetches it and a logout drops back to the Apple baseline —
 // otherwise the login screen would keep wearing the logged-out account's pack.
 useAuthStore.subscribe((state, prev) => {
   if (state.status === prev.status) return

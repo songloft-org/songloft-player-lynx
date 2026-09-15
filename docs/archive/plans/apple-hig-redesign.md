@@ -1,6 +1,6 @@
 # Songloft Player Lynx — Apple HIG 风格 UI 重构总计划
 
-> 状态：待审核
+> **已归档（2026-09-15）**：11 个阶段全部交付并提交（逐批见 [`../../project/progress.md`](../../project/progress.md)），下面的「状态：待审核」是当时留下的、不再代表现状。归档后**不再维护**——保留它是因为 §11.2 的触控目标清单与各阶段的 HIG 依据仍在被别的文档引用。设计语言的权威在根目录 [`../../../DESIGN.md`](../../../DESIGN.md)。
 > 日期：2026-09-02
 > 依据：[DESIGN.md](../../../DESIGN.md)（Apple HIG 摘要）、[AGENTS.md](../../../AGENTS.md)（项目约束）
 > 范围：纯前端（Lynx CSS/TSX），不改原生模块层

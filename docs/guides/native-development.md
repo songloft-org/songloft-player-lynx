@@ -2,7 +2,7 @@
 
 怎么给现有模块加一个方法、怎么新建一个模块，以及每一步漏掉会怎样。
 
-> **调用约定的铁律在 [AGENTS.md §5](../../AGENTS.md)**（原生方法不返回 Promise、禁止强转、三侧同步、事件名逐字一致）。本篇是操作步骤，不重复那些论述。
+> **调用约定的铁律在 [AGENTS.md §4](../../AGENTS.md)**（原生方法不返回 Promise、禁止强转、三侧同步、事件名逐字一致）。本篇是操作步骤，不重复那些论述。
 > 已有模块的契约清单 → [reference/native-modules.md](../reference/native-modules.md)。
 > 修改 HarmonyOS `.ets` 文件前先读 [ArkTS 约束速查](../reference/arkts/ArkTS约束速查.md)；完整迁移规则和编码规范由 [ArkTS 参考资料索引](../reference/arkts/) 继续导航。
 
@@ -33,13 +33,13 @@ pnpm run ios:build                                     # Swift 真编译（需 m
 
 ## 新建一个模块
 
-在上面四步之外，还要：
+在上面五步之外，还要：
 
-5. **注册**。Android 在 `SongloftApplication` 的 `registerModule(...)`；iOS 在 `ViewController.buildConfig()` 的 `config.register(...)` **且 pbxproj 四处登记**；HarmonyOS 在 `EntryAbility.ets`（当前模块注册走 Lynx SDK 鸿蒙侧 API）。`@LynxMethod` 写全了但没注册 = 模块不存在。
-6. **扩闸门的三处**：`hosts` 表 + `modules` 表 + 一段 `describe`。
-7. **更新 [AGENTS.md §5](../../AGENTS.md) 的两张平台模块表** —— 这一步以前不在清单上，于是漂了五个条目（闸门覆盖 9 个模块，表里只列了 6+5）。**闸门保护代码，保护不了描述代码的表格。**
-8. **Android 另需 `AndroidManifest.xml`**：新 Service/Activity 必须声明。`android-manifest-contract.test.ts` 从 Kotlin 源码**推导**需求（基类名以 `Service`/`Activity` 结尾就必须有声明，反向亦然），所以这条有闸门兜着 —— 但它是 2026-08 才补的，此前悬浮歌词整个功能死了四个批次没人发现。
-9. **HarmonyOS 另需 `module.json5`**：权限与 `backgroundModes` 必须声明。契约闸门已覆盖（验证 `EntryAbility.ets` 的 `registerModule` 调用 + `module.json5` 权限/backgroundModes 结构）。
+6. **注册**。Android 在 `SongloftApplication` 的 `registerModule(...)`；iOS 在 `ViewController.buildConfig()` 的 `config.register(...)` **且 pbxproj 四处登记**；HarmonyOS 在 `harmony/entry/src/main/ets/pages/Index.ets` 里 `this.modules.set(name, { moduleClass, param })` —— **逐 LynxView 注册**，没有 Android/iOS 那种全局 `registerModule`；`EntryAbility.ets` 只接 HTTP service。注解/装饰器写全了但没注册 ⇒ 模块在、方法在、调用静默无效。
+7. **扩闸门的三处**：`hosts` 表 + `modules` 表 + 一段 `describe`。
+8. **更新 [reference/native-modules.md](../reference/native-modules.md) 的矩阵** —— AGENTS.md 已不再复制模块表（§4.2 明确「权威清单只维护在 native-modules.md」）。这一步以前不在清单上，于是漂了五个条目（闸门覆盖 10 个模块，而表里只列了一部分）。**闸门保护代码，保护不了描述代码的表格。**
+9. **Android 另需 `AndroidManifest.xml`**：新 Service/Activity 必须声明。`android-manifest-contract.test.ts` 从 Kotlin 源码**推导**需求（基类名以 `Service`/`Activity` 结尾就必须有声明，反向亦然），所以这条有闸门兜着 —— 但它是 2026-08 才补的，此前悬浮歌词整个功能死了四个批次没人发现。
+10. **HarmonyOS 另需 `module.json5`**：权限与 `backgroundModes` 必须声明。契约闸门已覆盖（读 `pages/Index.ets` 的注册调用 + `module.json5` 权限/backgroundModes 结构）。
 
 ### iOS 特有的三个坑
 
@@ -53,7 +53,7 @@ pnpm run ios:build                                     # Swift 真编译（需 m
   | `processChunkedData:withData:` | `processChunkedData(_:with:)`（剥 `Data` ≈ `NSData`） |
   | `+registerServiceWithProtocol:protocol:` | `registerService(withProtocol:protocol:)`（原样） |
   | `+getInstanceWithProtocol:` | `getInstanceWith(_:)`（保基础词、剥 `Protocol`；**不是** `getInstance(with:)` 也不是 `instance(withProtocol:)`） |
-- **`@available` 守卫**：`LiveActivityModule` 是 `@available(iOS 16.2, *)` 而部署目标 16.0，`config.register(...)` 不包 `if #available` 就是硬编译错。
+- **`@available` 守卫**：`LiveActivityModule` 是 `@available(iOS 16.2, *)` 而部署目标是 **15.0**（`ios/Podfile` 与 pbxproj 双端声明），`config.register(...)` 不包 `if #available` 就是硬编译错。
 
 ### 线程
 
@@ -75,8 +75,8 @@ pnpm run ios:build                                     # Swift 真编译（需 m
 
 ## 相关
 
-- [reference/native-modules.md](../reference/native-modules.md) —— 9 个模块的契约清单
-- [AGENTS.md §5](../../AGENTS.md) —— 调用约定铁律、宿主 HTTP service、视频画面借用
+- [reference/native-modules.md](../reference/native-modules.md) —— 10 个模块的契约清单
+- [AGENTS.md §4](../../AGENTS.md) —— 调用约定铁律、宿主 HTTP service、视频画面借用
 - [平台差异](../architecture/platform-differences.md) —— 哪个能力在哪个平台上存在
 - [构建与运行](./build-and-run.md) —— Kotlin/Swift/ArkTS 真编译的命令与环境
 - [ArkTS 参考资料](../reference/arkts/) —— HarmonyOS 语言约束、编码规范与 TypeScript 迁移规则

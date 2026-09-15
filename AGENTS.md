@@ -36,7 +36,7 @@ src/router.tsx
 - Zustand 只放客户端态；来自后端的数据由 TanStack Query 管理。新增 store 方法或改签名前先读 API conventions。
 - 1–2 个标量参数使用位置参数；≥3 个参数或含可选参数时使用对象参数。
 - 音量在 store 层为 0–100 整数、native 层为 0–1 浮点，转换由 store action 完成。
-- Flutter 目录 `songloft-player/` 是只读参考，不得修改。
+- Flutter 目录 `songloft-player/` 是只读参考，不得修改（本工作副本未 checkout，存在时适用）。
 
 ## 3. Lynx 与 Web 约束
 
@@ -85,7 +85,7 @@ src/router.tsx
 - Lynx 原生方法不返回 Promise。写操作是 fire-and-forget，读操作用 Callback；Promise 化只在 TS facade 完成。
 - 不得把 `NativeModules.X` 直接强转成 Promise 接口。原生返回 `undefined`，调用 `.then()` 会在运行时崩溃。
 - 新增或修改方法时同步核对 TS facade、Kotlin `@LynxMethod`、iOS `methodLookup`、HarmonyOS 模块实现，以及 Web 宿主降级路径。
-- 新模块还要同步注册：Android `SongloftApplication`、iOS `ViewController.buildConfig()` 与 pbxproj、HarmonyOS `EntryAbility.ets`；事件名逐字一致。
+- 新模块还要同步注册：Android `SongloftApplication`、iOS `ViewController.buildConfig()` 与 pbxproj、HarmonyOS `pages/Index.ets`（逐 LynxView 注册，`EntryAbility.ets` 只接 HTTP service）；事件名逐字一致。
 - 原生模块权威清单和平台差异只维护在 `docs/reference/native-modules.md`，不要在本文件复制模块计数表。
 
 ### 4.2 高风险共享能力

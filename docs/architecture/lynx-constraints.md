@@ -1,6 +1,6 @@
 # Lynx 运行时约束：机制与来历
 
-**这篇讲「为什么」。** 具体该怎么写、不许怎么写的铁律在 [AGENTS.md §4](../../AGENTS.md)，那是行动清单；本文解释背后的机制，这样遇到一个没被列进铁律的新情况时，你能自己推出答案。
+**这篇讲「为什么」。** 具体该怎么写、不许怎么写的铁律在 [AGENTS.md §3](../../AGENTS.md)，那是行动清单；本文解释背后的机制，这样遇到一个没被列进铁律的新情况时，你能自己推出答案。
 
 ---
 
@@ -149,7 +149,7 @@ Lynx 原生方法**不返回 Promise**：写是 fire-and-forget，读靠 `com.ly
 
 另一面：**部分可用的模块比完全没有更糟**。`navigation.ts` 逐个检查三个方法、缺一个就整体当没有，因为缺的那半是「用户永远退不出去」；`song-cache.ts` 探测的是 `getCacheInfo` 而不是 `download`，因为后者的**参数个数变过**，旧壳会报「可用」然后被喂进它绑不了的参数。
 
-完整调用约定见 [AGENTS.md §5](../../AGENTS.md)，模块清单见 [reference/native-modules.md](../reference/native-modules.md)。
+完整调用约定见 [AGENTS.md §4](../../AGENTS.md)，模块清单见 [reference/native-modules.md](../reference/native-modules.md)。
 
 ---
 
@@ -157,13 +157,13 @@ Lynx 原生方法**不返回 Promise**：写是 fire-and-forget，读靠 `com.ly
 
 上面每一条的共同点：**失败是静默的**。未注册的标签不报错、未定义的 CSS 变量让整条声明被丢弃、TS facade 一律返回 resolved promise、原生模块的裸 `catch` 吞掉线程异常、mock 在缺少前置条件时照样"工作"。
 
-所以写代码时值得反复问一句：**如果这里坏了，我会看到什么？** 如果答案是"什么都看不到"，那就得主动造一个可观测的信号 —— 这也是 [AGENTS.md §6](../../AGENTS.md) 那套闸门原则的由来。
+所以写代码时值得反复问一句：**如果这里坏了，我会看到什么？** 如果答案是"什么都看不到"，那就得主动造一个可观测的信号 —— 这也是 [AGENTS.md §5.3](../../AGENTS.md) 那套闸门原则的由来。
 
 ---
 
 ## 相关
 
-- [AGENTS.md §4–§6](../../AGENTS.md) —— 铁律清单（做什么/不做什么）
+- [AGENTS.md §3–§6](../../AGENTS.md) —— 铁律清单（做什么/不做什么）
 - [平台差异](./platform-differences.md) —— 三端能力与行为矩阵
-- [reference/native-modules.md](../reference/native-modules.md) —— 9 个模块的契约
+- [reference/native-modules.md](../reference/native-modules.md) —— 10 个模块的契约
 - [调试](../guides/debugging.md) —— 怎么拿到证据

@@ -1,6 +1,6 @@
 # 构建与运行
 
-五个目标平台的构建命令，以及每个平台上真实踩过的环境坑。命令与 `package.json` 的 `scripts` 一一对应。
+四个目标平台的构建命令，以及每个平台上真实踩过的环境坑。命令与 `package.json` 的 `scripts` 一一对应。
 
 > 只想快速跑起来看一眼 → 先读 [快速上手](../getting-started.md)。
 > 想知道各平台**能力差异**（而不是怎么构建）→ 读 [平台差异](../architecture/platform-differences.md)。
@@ -36,7 +36,7 @@ pnpm test           # vitest
 - **`pnpm run build` 必须列出两个产物** —— `File (lynx)` 与 `File (web)`。只有 web 那一行，说明 `lynx.config.ts` 的 `environments` 少了 `lynx: {}`：该字段是**替换**隐式默认环境而非扩展它，漏掉不会让构建失败，只会静默停止产出 `dist/main.lynx.bundle`，而 copy-bundle 脚本照拷 `dist/` 里的陈旧文件。`scripts/assert-bundle-fresh.mjs` 现在会拦住这种情况（判据是产物**年龄**，因为 `existsSync` 抓不到「文件在但是旧的」）。
 - **类型检查必须带 `-b`**。`tsc --noEmit` 对本仓库是空跑。改动没被检测到时用 `--force`（`-b` 会写 `.tsbuildinfo`，已 gitignore）。
 
-> ⚠️ **以上命令只覆盖 JS 产物**，不读 Xcode 工程、不验 Web 产物自洽性、不编译 Kotlin、不编译 ArkTS。「build 全绿」不等于「能出包」——这个仓库为此付过三次代价，见 [闸门原则](../../AGENTS.md#6-测试与闸门原则来自三次教训)。改了 `ios/`、`android/`、`harmony/`、`web/` 就必须跑对应平台那一条。
+> ⚠️ **以上命令只覆盖 JS 产物**，不读 Xcode 工程、不验 Web 产物自洽性、不编译 Kotlin、不编译 ArkTS。「build 全绿」不等于「能出包」——这个仓库为此付过三次代价，见 [闸门原则](../../AGENTS.md#53-测试原则)。改了 `ios/`、`android/`、`harmony/`、`web/` 就必须跑对应平台那一条。
 
 ## Android
 
@@ -87,29 +87,29 @@ pnpm run build               # 先产出 JS bundle
 ```
 
 - **bundle 拷贝**：JS bundle 需拷贝到 `harmony/entry/src/main/resources/rawfile/`，与 Android 的 `assets/` 同理。
-- **模块注册**：HarmonyOS 侧的模块注册在 `EntryAbility.ets`，HTTP service 替换在此处完成（`SongloftHttpService` 替代 SDK 默认实现，与 Android/iOS 同策略）。
+- **模块注册**：HarmonyOS 侧的模块注册在 `pages/Index.ets`（`this.modules.set(name, { moduleClass, param })`，**按 LynxView 逐视图注册**，不是 Android/iOS 那种全局 `registerModule`）；HTTP service 替换仍在 `EntryAbility.ets`。两处分工由契约闸门锁定（`native-module-contract.test.ts` 的 `harmonyIndex` / `harmonyEntry` 两个 read）。
 - **无等价 API 的模块**：FloatingLyric、LiveActivity 在鸿蒙上无对应能力，TS 侧由 `NativeModules` 探测降级为 no-op。
 - **验证方式**：DevEco Studio 内 Build > Build Hap(s)/APP(s)。真机调试需 HarmonyOS NEXT 设备或模拟器 + `hdc`（类似 `adb`）。
 
 ## Web
 
 ```bash
-pnpm run web:sync            # build --environment web + 拷贝产物到 web/dist
-pnpm run web:dev             # 本地静态服务（先跑一次 web:sync）
-pnpm run build:web           # standalone 部署产物
-pnpm run build:web-embedded  # 供后端嵌入（songloft-player-build/web-embedded）
+pnpm run web:sync            # = rspeedy build --environment web + 拷贝产物到 web/dist
+pnpm run web:dev             # 只为 web/dist 起静态服务（不构建，先跑 web:sync）
+pnpm run build:web           # 与 web:sync 同一条命令（standalone 部署产物）
+pnpm run build:web-embedded  # 同上 + --embedded：供后端嵌入（songloft-player-build/web-embedded）
 ```
 
-- **验证 Web 改动至少跑一次 `build:web` 并真的在浏览器里打开产物**。`web:dev` 能跑证明不了产物可用 —— 两者取的静态资源目录不同，这一条吃过两次亏。
+- **验证 Web 改动至少跑一次 `build:web` 并真的在浏览器里打开产物**。`web:dev` 只起静态服务、不构建，所以「`web:dev` 能跑」证明不了产物是新的。（2026-08 这条吃过两次亏，当时两者取的静态资源目录不同：`web:dev` 读 dev-middleware 的 IIFE 入口，产物用 `client_prod` 的 ESM 入口；现在 `web:sync` / `build:web` 已是同一条命令。）
 - 宿主脚本必须用 `<script type="module">`：`client_prod` 入口用了 `import.meta`，当作传统脚本加载会抛 `Cannot use 'import.meta' outside a module`，而这个异常**不进 `console.error`**（只走 `pageerror`），表现是「资源全 200、零 console 错误、`<lynx-view>` 就是不 upgrade、整页纯黑」。现有 vitest 闸门锁住了「index.html 每个本地引用都存在」+「入口以 module 加载」。
 
 ## 子路径部署
 
-后端启动时用 `-base-path /xxx` 或 `BASE_PATH=/xxx`；前端嵌入模式从 `Uri.base.path` 自动检测子路径。
+后端启动时用 `-base-path /xxx` 或 `BASE_PATH=/xxx`；前端不读子路径参数 —— embedded 部署下 API base 取自 worker realm 的 `self.location.origin`（页面 origin 即后端 origin，`src/core/config/app-config.ts:35-47`），standalone 与 embedded 由 `deployMode` global prop 区分。
 
 ## 相关
 
 - [测试](./testing.md) —— 单元与 E2E 怎么跑
 - [调试](./debugging.md) —— 真机 logcat、无头浏览器实测
 - [Web 部署](./web-deployment.md) —— standalone 与 embedded 两种产物
-- [AGENTS.md §3](../../AGENTS.md) —— 验收闸门的完整清单与边界
+- [AGENTS.md §5](../../AGENTS.md) —— 验收闸门的完整清单与边界

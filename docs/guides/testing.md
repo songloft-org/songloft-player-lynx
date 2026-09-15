@@ -3,7 +3,7 @@
 两层：**单元测试**（vitest，无需设备）与 **E2E 行为测试**（TestBridge 驱动真机/模拟器上的 App）。
 
 > 想理解 E2E 为什么是这个架构（Driver 接口、TestBridge 协议、场景分类）→ 读 [E2E 测试架构设计](../architecture/e2e-testing-design.md)。
-> 想知道**怎么写**一条不会骗人的断言 → 读 [AGENTS.md §6 测试与闸门原则](../../AGENTS.md)，那是本仓库三次教训的沉淀。
+> 想知道**怎么写**一条不会骗人的断言 → 读 [AGENTS.md §5.3 测试与闸门原则](../../AGENTS.md)，那是本仓库三次教训的沉淀。
 
 ## 单元测试
 
@@ -27,11 +27,11 @@ pnpm run e2e:ios:full       # iOS 全流程（含构建）：build → pod insta
 pnpm run e2e:ios:setup      # 仅准备 iOS 环境，不跑测试
 ```
 
-- **33 个** scenario 文件（`e2e/scenarios/`），约 121 处 `test()` 声明，**全部需要设备**
+- **34 个** scenario 文件（`e2e/scenarios/`），约 121 处 `test()` 声明，**全部需要设备**
 - 场景跨平台复用；iOS 另有系统外观测试，Android 另有悬浮歌词与全屏视频测试
 - 报告 → `e2e/reports/`，截图 → `e2e/screenshots/`（均已 gitignore）
 
-**最后一次全量结果是 2026-08-16（批49 时代）**：Android 112 passed / 8 skipped（120）· iOS 110 passed / 10 skipped（120）。此后有 129 个提交、场景从 29 涨到 33，**没有再跑过** —— 这两个数字只能当历史参考。
+**最后一次全量结果是 2026-08-16（批49 时代）**：Android 112 passed / 8 skipped（120）· iOS 110 passed / 10 skipped（120）。此后有 340 个提交、场景从 29 涨到 34，**没有再跑过** —— 这两个数字只能当历史参考。
 
 ### skip 数变了就要查
 

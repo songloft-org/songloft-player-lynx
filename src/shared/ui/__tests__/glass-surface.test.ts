@@ -8,7 +8,7 @@ import { fileClasses } from '../../testing/jsx-classes.js'
 /**
  * Liquid Glass surface gate (A path).
  *
- * Step 0 of `docs/project/plans/liquid-glass-theme.md` verified — via a
+ * Step 0 of `docs/archive/plans/liquid-glass-theme.md` verified — via a
  * headless-Chrome probe on a throwaway surface — that Lynx's style pipeline
  * keeps `box-shadow: inset` and multi-value (drop + inset) shadows, so the
  * glass sheen is done in pure CSS with no TSX structural change.

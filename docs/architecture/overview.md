@@ -69,7 +69,7 @@ TanStack Router，**memory history**（没有 URL 栏）。三件事各有归属
 
 1. `tokens.css` 定义基线
 2. `ThemeProvider` 挂 `.theme-root.theme-dark` / `.theme-light`
-3. 主题包在运行时以内联 custom properties **覆盖 11 个** token（`theme-pack-mapping.ts` 的 `PACK_OVERRIDABLE_BASELINE`）
+3. 主题包在运行时以内联 custom properties **覆盖 17 个** token（`theme-pack-mapping.ts` 的 `PACK_OVERRIDABLE_BASELINE`，light/dark 各 17 个 key）
 
 `<svg content>` 不在 CSS 级联内，所以图标色走单独的 `ICON_COLORS`（Proxy，按当前主题取值）与 `activeAccentIconColor()`（读主题包 seedColor）。详见 [DESIGN.md](../../DESIGN.md)。
 
@@ -88,7 +88,7 @@ TanStack Router，**memory history**（没有 URL 栏）。三件事各有归属
 | Vitest | 单元测试 + 契约闸门（原生模块、manifest、pbxproj、CSS 不变量、i18n key、Web 宿主页） |
 | E2E | TestBridge（TCP 9230）驱动设备上的 App，关键断言落在**进程外**状态 |
 
-**闸门只证明它真正读过的东西** —— vitest 读不到 Xcode 工程、Gradle 或真机行为。这条与「闸门要验语义不验子串」「mock 要保留真实前置条件」「断言先反向验证会红」一起构成 [AGENTS.md §6](../../AGENTS.md)，那是三次教训的沉淀。
+**闸门只证明它真正读过的东西** —— vitest 读不到 Xcode 工程、Gradle 或真机行为。这条与「闸门要验语义不验子串」「mock 要保留真实前置条件」「断言先反向验证会红」一起构成 [AGENTS.md §5.3](../../AGENTS.md)，那是三次教训的沉淀。
 
 ## 相关
 

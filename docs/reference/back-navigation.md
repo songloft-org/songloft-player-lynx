@@ -151,11 +151,11 @@ Lynx `<webview>` 没有 `canGoBack`/`goBack`，只能近似：
 - **`@LynxMethod` 跑在 BTS 线程**，碰 Activity/View 必须 `Handler(Looper.getMainLooper()).post`，否则 `CalledFromWrongThreadException` 会被静默吞掉
 - **事件名逐字一致**：`BACK_PRESSED_EVENT` = `'SongloftNavigation.backPressed'`，Android 与 Web 两侧都由闸门核对
 - **`exitApp` 用 `moveTaskToBack(true)` 而非 `finish()`**：这是音乐播放器，`finish()` 会销毁 LynxView，下次启动变成冷启动、整个 UI 状态重建；`moveTaskToBack` 也与 Android 12+ 根 Activity 的系统默认行为一致。`moveTaskToBack` 拒绝时（非 task root）回落 `finish()`
-- **原生方法不返回 Promise**：Promise 化必须在 TS 适配层做，禁止把原生模块直接强转成 Promise 接口（DLNA 就是这样整页崩的，AGENTS.md §5）
+- **原生方法不返回 Promise**：Promise 化必须在 TS 适配层做，禁止把原生模块直接强转成 Promise 接口（DLNA 就是这样整页崩的，AGENTS.md §4）
 
 ### 不需要处理的一层
 
-全屏视频与文件选择器是**独立 Activity**（`SongloftVideoActivity` / `platform.FilePickerActivity`），它们在栈顶时 `MainActivity.onBackPressed()` 根本不会被调用，系统默认 finish 已经正确，视频退出走 `finish()` 回主 Activity、音频不停（无事件通知 JS，`SongloftVideo` 不广播 exit）。软键盘同理由系统先消费。**刻意不在 JS 侧介入这一层**，避免与 Activity 抢事件。
+全屏视频**不再是独立 Activity**：`SongloftVideoActivity` 已在 2026-09-14 批73（`1cc08e0`）删除，画面改为 `MainActivity` 视图树里、Lynx 视图**之下**的一个 `SurfaceView`，因此**返回键回到本文件这套三层模型**处理 —— `/player/video` 已登记进 `route-back.ts` 的 `EXPLICIT_PARENTS`，父级是 `/player`。文件选择器仍是独立 Activity（`platform.FilePickerActivity`），它在栈顶时 `MainActivity.onBackPressed()` 根本不会被调用，系统默认 finish 已经正确。软键盘同理由系统先消费。**刻意不在 JS 侧介入 Activity 那一层**，避免与 Activity 抢事件。
 
 ---
 
@@ -192,4 +192,4 @@ memory history 的栈**不描述用户认为自己从哪来**：
 | `src/__tests__/android-manifest-contract.test.ts` | 回调选择已声明、且 MainActivity 实现的正是被选中的那种（Kotlin 源先剥注释） |
 | `src/features/settings/__tests__/sub-page-back-contract.test.ts` | `onBack` 仅用于 pane 内兄弟页切换 |
 
-按 AGENTS.md §6：**写断言时先反向验证它会红**。上面每一条都这样验过 —— manifest 那条第一次就因为「文档注释里提到 `OnBackInvokedDispatcher`」而假绿，故现在先剥注释再断言。
+按 AGENTS.md §5.3：**写断言时先反向验证它会红**。上面每一条都这样验过 —— manifest 那条第一次就因为「文档注释里提到 `OnBackInvokedDispatcher`」而假绿，故现在先剥注释再断言。

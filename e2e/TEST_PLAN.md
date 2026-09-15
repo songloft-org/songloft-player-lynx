@@ -4,7 +4,7 @@
 >
 > 本文件是 **2026-08-13 的规划快照**，下方「待新增场景」与「实施优先级 / 预估」两节是**当时的计划**，不是现状：
 >
-> - 计划的 25 个场景中 **21 个已落地**（文件在 `e2e/scenarios/`），另有计划外的 `android-floating-lyric` / `android-video-fullscreen` / `ios-video-fullscreen` / `playlist-pin` / `song-cache` / `library-views` 等新场景，目录现共 **33 个** scenario、约 121 处 `test()` 声明。
+> - 计划的 25 个场景中 **21 个已落地**（文件在 `e2e/scenarios/`），另有计划外的 `android-floating-lyric` / `android-video-fullscreen` / `ios-video-fullscreen` / `playlist-pin` / `song-cache` / `library-views` 等新场景，目录现共 **34 个** scenario、约 121 处 `test()` 声明。
 > - 三个未落地：`library-facets` / `library-category-songs` / `library-playlists` —— 批51 把曲库从硬编码 4 tab 重写为**单页 14 视图**，三者的覆盖目标已由 `library-views.scenario.ts` 整体取代；`add-songs` 场景未写（功能已有，缺 E2E 覆盖，仍是真实欠账）。
 > - 「前置准备」一节描述的暴露缺口（lyric/eq/server/router 把手）**已全部存在**，见 `src/e2e-bridge.ts` 与 `docs/reference/api-conventions.md` §5。
 >

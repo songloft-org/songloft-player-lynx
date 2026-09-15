@@ -9,10 +9,9 @@ Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr
 | [reference/](./reference/) | reference | 我要查一个规范或契约的准确形状 |
 | [architecture/](./architecture/) | explanation | 我想搞明白**为什么**是这样 |
 | [project/](./project/) | —— | 项目管理：进展、交接、缺陷、活跃计划 |
-| [audit/Report.md](./audit/Report.md) | —— | 查看 2026-09-01 历史审计快照、当时未决项与证据入口 |
-| [archive/](./archive/) | —— | 归档：已闭合的计划、项目启动前的迁移调研 |
+| [archive/](./archive/) | —— | 归档：已交付的计划、历史审计快照、项目启动前的迁移调研（**不是现状**） |
 
-根目录项目级入口：**[AGENTS.md](../AGENTS.md)**（开发规范与铁律）· **[ARCHITECTURE.md](../ARCHITECTURE.md)**（架构摘要）· **[HARNESS.md](../HARNESS.md)**（验证契约）· **[DESIGN.md](../DESIGN.md)**（Muse 设计语言）。
+根目录项目级入口：**[AGENTS.md](../AGENTS.md)**（开发规范与铁律）· **[ARCHITECTURE.md](../ARCHITECTURE.md)**（架构摘要）· **[HARNESS.md](../HARNESS.md)**（验证契约）· **[DESIGN.md](../DESIGN.md)**（Apple HIG 总结与本仓库的材质实现注记）。
 
 ---
 
@@ -27,7 +26,7 @@ Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr
 | 开放与已闭合缺陷 | [project/bugs.md](./project/bugs.md) |
 | 平台最低版本、能力和降级路径 | [reference/platforms.md](./reference/platforms.md) |
 | 原生模块方法、事件与注册矩阵 | [reference/native-modules.md](./reference/native-modules.md) |
-| 2026-09-01 历史代码库审计快照 | [audit/Report.md](./audit/Report.md) |
+| 2026-09-01 历史代码库审计快照 | [archive/2026-09-01-codebase-audit/Report.md](./archive/2026-09-01-codebase-audit/Report.md)（仍开放的 4 条已迁入 [project/bugs.md](./project/bugs.md)） |
 
 ---
 
@@ -37,7 +36,7 @@ Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr
 |------|------|
 | [build-and-run.md](./guides/build-and-run.md) | 四平台构建命令 + 每个平台真实踩过的环境坑（JDK 缺失、CocoaPods 被 gitconfig 打断、两次 xcodebuild 的原因） |
 | [testing.md](./guides/testing.md) | 单元与 E2E 怎么跑、跑前四件环境检查、skip 数为什么要盯 |
-| [native-development.md](./guides/native-development.md) | 加方法/加模块的四处（八处）同步清单，漏哪一处会怎样 |
+| [native-development.md](./guides/native-development.md) | 加方法的五处、新建模块的十步同步清单，漏哪一处会怎样 |
 | [web-deployment.md](./guides/web-deployment.md) | standalone 与 embedded 两种产物、Web 已知限制、宿主模块 |
 | [debugging.md](./guides/debugging.md) | Android dumpsys、Web 无头浏览器实测、一次性探针 scenario |
 
@@ -51,7 +50,7 @@ Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr
 | [platforms.md](./reference/platforms.md) | 支持平台矩阵与最低系统版本（Android minSdk 21 / iOS 15.0 / HarmonyOS NEXT / Web 常青浏览器），含 API 分级守卫清单 |
 | [arkts/](./reference/arkts/) | HarmonyOS 宿主开发的 ArkTS 约束、编码规范和 TypeScript 迁移参考；AI 修改 `.ets` 前先读速查 |
 
-设计 token 的权威表在根目录 **[DESIGN.md](../DESIGN.md)**（刻意不在 docs 里复制一份——副本必然漂移）。
+设计 token 的权威表是 **[`src/shared/theme/tokens.css`](../src/shared/theme/tokens.css)**（刻意不在 docs 里复制一份 —— 副本必然漂移）。设计语言本身（Apple HIG 的材质、排版、触控目标规格）在根目录 **[DESIGN.md](../DESIGN.md)**，其中 §6 记录本仓库 Liquid Glass 的双轨实现。
 
 后端 API 契约（OpenAPI）**不在本仓库**：见后端仓库 `docs/swagger.json`，或 `http://localhost:58091/swagger/index.html`。同样是刻意不复制。
 
@@ -74,20 +73,16 @@ Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr
 | [bugs.md](./project/bugs.md) | 开放与已闭合缺陷清单；新问题另起条目，别在已闭合条目上续写 |
 | [plans/upstream-issues.md](./project/plans/upstream-issues.md) | 已提交给 Lynx 官方的 issue；修复合入后移除 `patches/` 下对应 patch（当前 2 个） |
 
-## audit/ — 代码库审计
-
-| 文件 | 说明 |
-|---|---|
-| [Report.md](./audit/Report.md) | 固定于 2026-09-01 基线的历史审计总览；Finding、任务证据与跨模块复核由该目录继续导航 |
-
 ## archive/ — 归档
 
-已执行完或已闭合，保留作历史索引与根因查阅。**不要照抄里面的接口签名与状态判断** —— 见 [archive/migration/README.md](./archive/migration/README.md) 的订正表。
+已执行完或已闭合，保留作历史索引与根因查阅。**不要照抄里面的接口签名与状态判断** —— 见 [archive/migration/README.md](./archive/migration/README.md) 的订正表。每份归档文档头部都写明了它冻结在哪个基线、以及现状的权威位置在哪。
 
 | 文件 | 说明 |
 |------|------|
+| [2026-09-01-codebase-audit/](./archive/2026-09-01-codebase-audit/) | 固定于 2026-09-01 基线的历史代码库审计：Report / Dashboard / Findings + `tasks/`、`results/` 证据。9 条发现里 4 条**当时仍开放**，已迁入 [project/bugs.md](./project/bugs.md) |
+| [plans/](./archive/plans/) | 4 份已交付的设计计划：apple-hig-redesign、apple-design-system-migration、liquid-glass-theme、standard-materials。其中 `apple-design-system-migration` 还留着一份未做完的清单（MediaListItem 分隔线、真机视觉复核、Android/Harmony 补差），见其头部注记 |
 | [2026-08-14-audit-fix-plan.md](./archive/2026-08-14-audit-fix-plan.md) | 四路审计的修复排期（批41–48），含三类系统性根因与明确不做清单。**已闭合** |
-| [harmony-integration-plan.md](./archive/harmony-integration-plan.md) | HarmonyOS 宿主集成计划。**已完成**（9 个原生模块实现，DevEco 工程就位） |
+| [harmony-integration-plan.md](./archive/harmony-integration-plan.md) | HarmonyOS 宿主集成计划。**已完成**（原生模块实现，DevEco 工程就位） |
 | [lynx-native-plugin-rendering.md](./archive/lynx-native-plugin-rendering.md) | Lynx 原生渲染插件设计（插件以 `<frame>` 子页渲染于原生容器）。**已落地**（`4f0060b`，批63 后续） |
 | [migration/](./archive/migration/) | 项目启动前的 5 份迁移可行性调研 + **订正说明** |
 | [web-plugin-tab-crash.md](./archive/web-plugin-tab-crash.md) | 插件 tab 切换崩溃（error code 11）根因记录：三个必要条件的实验矩阵、两个被证伪的假设、「主线程永不 detach 插件 frame」规则与闸门。**已闭合**（2026-09-08） |

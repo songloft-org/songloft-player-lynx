@@ -9,7 +9,7 @@ Songloft Player 的 Lynx 客户端，从 Flutter 版整体重写为 ReactLynx + 
 | 构建/框架 | Rspeedy + ReactLynx + TypeScript |
 | 状态 | Zustand（客户端态）· TanStack Query（服务端态） |
 | 路由 | TanStack Router（memory history，code-based） |
-| UI | lynx-ui 按组件包导入 + Muse design tokens + @lynx-js/motion |
+| UI | lynx-ui 按组件包导入 + Apple 语义色 design tokens（`src/shared/theme/tokens.css`）+ @lynx-js/motion |
 | 数据模型 | zod（snake→camelCase transform） |
 | i18n | i18next + react-i18next（en / zh） |
 | 测试 | Vitest + @testing-library（单元）· TestBridge + Vitest（E2E） |
@@ -80,7 +80,7 @@ docs/             项目文档
 - **[AGENTS.md](./AGENTS.md)** —— 开发规范与铁律（给 AI agent 与贡献者）：目录边界、Lynx 约束、验收闸门、原生模块调用约定、测试闸门原则
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** —— 面向代码探索的架构摘要；详细解释仍以 `docs/architecture/` 为准
 - **[HARNESS.md](./HARNESS.md)** —— 构建、测试和平台验证入口及其覆盖边界
-- **[DESIGN.md](./DESIGN.md)** —— Muse 设计语言：色彩/间距/圆角/阴影 token、图标规范、组件模式、WCAG AA 要求
+- **[DESIGN.md](./DESIGN.md)** —— Apple Human Interface Guidelines 总结（颜色/排版/布局/材质与 Liquid Glass/无障碍/Menus/组件规格），并附本仓库的落地注记
 
 后端 API 契约（OpenAPI）**不在本仓库**：见后端仓库的 `docs/swagger.json`，或 `http://localhost:58091/swagger/index.html`。
 

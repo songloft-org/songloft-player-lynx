@@ -30,7 +30,7 @@ adb logcat -s lynx:V LynxUISVG:E AndroidRuntime:E
 | 前台服务真的在跑 | `adb shell dumpsys activity services \| grep FloatingLyricService` |
 | 覆盖窗口真的存在 | `adb shell dumpsys window windows \| grep org.songloft.lynx` |
 | **文本真的写进了覆盖层** | `dumpsys window windows` 里的 `Requested h` / `mLayoutSeq` / frame 在写入前后是否变化 |
-| 全屏视频 Activity 在栈顶 | `adb shell dumpsys activity activities \| grep topResumedActivity` |
+| 全屏视频面在屏（`MainActivity` 仍在栈顶，不再有 `SongloftVideoActivity`） | `adb shell dumpsys activity activities \| grep topResumedActivity` 应含 `MainActivity` 且**不含** `SongloftVideoActivity` |
 | 视频轨真的被解码 | logcat 出现 `c2.android.avc.decoder` |
 
 **「文本写进去了」这条尤其值得记**：悬浮歌词那次是白字白底，截图和肉眼都看不出区别。定位靠的是写入前后 `Requested h=46` / `mLayoutSeq=4724` **逐字节相同** → 压根没重排。修完后 46→48、4748→4749。这也顺便成了免费的反向验证。

@@ -2,7 +2,7 @@
 
 Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoPlayer）、iOS（Swift + AVPlayer）、HarmonyOS（ArkTS + AVPlayer）、Web（`@lynx-js/web-core`，业务代码在真 Worker 里）。四端**不是**同一套能力的四份实现，差异有三个不同来源：
 
-1. **宿主根本没有那个东西** —— iOS 没有返回键（无 `UINavigationController`，连边缘滑动都没有），Web 没有原生视频画面（Lynx 4.0.x 无 video 元素，web-core 的标签表里也没有条目）。这类差异不可能靠写代码消除。
+1. **宿主根本没有那个东西** —— iOS 没有返回键（无 `UINavigationController`，连边缘滑动都没有），HarmonyOS 没有可借用的视频表面、也没有悬浮窗与 Live Activity 的等价 API。这类差异不可能靠写代码消除。
 2. **同一个 OS 概念的实现语义不同** —— iOS 的 `addPeriodicTimeObserver(forInterval:)` 按**媒体时间**计间隔，Android 的 `postDelayed` 按**墙钟**计。两者都"每 500ms 上报一次进度"，变速时行为分叉。
 3. **某个模块只在一端实现了** —— 悬浮歌词只有 Android，Live Activity 只有 iOS。这类是取舍而非限制，但对上层代码来说与第 1 类没有区别：**必须查能力位，不能假定存在**。
 
@@ -12,7 +12,7 @@ Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoP
 
 ## 能力矩阵
 
-### A. `platform-capabilities.ts` 显式定义的 10 个能力位
+### A. `platform-capabilities.ts` 显式定义的 12 个能力位
 
 每一位都键在**自己的**模块（或方法）上，不是「有没有任何原生模块」的总开关 —— 因为它们真的会分叉。
 
@@ -21,15 +21,17 @@ Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoP
 | 悬浮歌词 `floatingLyric` | ✅ overlay 窗口 | ⛔ 无模块 | ⛔ 无等价 API | ⛔ 无模块 | `SongloftFloatingLyric` 模块存在 |
 | Live Activity `liveActivity` | ⛔ 无模块 | ✅ 灵动岛/锁屏 | ⛔ 无等价 API | ⛔ 无模块 | `SongloftLiveActivity` 模块存在 |
 | DLNA 投屏 `dlna` | ✅ | ✅ | ✅ | ⛔ 无模块 | `SongloftDlna` 模块存在 |
-| 全屏视频 `video` | ✅ 借用同一播放器 | ✅ 借用同一播放器 | ⛔ **未实现视频表面，模块不注册** | ⛔ **无视频表面** | `SongloftVideo` 模块存在 |
+| 全屏视频 `video` | ✅ 借用同一播放器 | ✅ 借用同一播放器 | ⛔ **未实现视频表面，模块不注册** | ✅ 主线程 `<video>`（镜像正在播的音频流） | `SongloftVideo` 模块存在 |
 | 单曲离线缓存 `songCache` | ✅ | ✅ | ✅ | ⛔ 无模块 | `SongloftSongCache.getCacheInfo` **方法**存在 |
 | 数据导入/导出 `dataTransfer` | ✅ | ✅ | ✅ | ⛔ 显式 `isWeb` 关闭 | `isWeb ? false : SongloftPlatform` |
 | 文件交付 `fileExport` | ✅ 系统分享面板 | ✅ 系统分享面板 | ✅ 系统分享面板 | ✅ **浏览器下载** | `SongloftPlatform.shareFile` **方法**存在 |
 | 原生文件选择 `nativeFilePicker` | ✅ | ✅ | ✅ | ✅ 但可能不弹框（见下） | `SongloftPlatform` 模块存在 |
 | Bundle 本地模式 `bundleMode` | ✅ | ✅ | ✅ | ✅（同上探测） | 同 `nativeFilePicker`，**全库暂无消费点** |
 | 系统托盘 `systemTray` | ✅（同探测） | ✅（同探测） | ✅（同探测） | ⛔ 显式 `isWeb` 关闭 | `!isWeb && SongloftPlatform`，**全库暂无消费点** |
+| 原生日志打包 `fastLogExport` | ✅ | ✅ | ✅ | ⛔ 走 JS 打包 + 浏览器下载 | `SongloftPlatform.shareLogArchive` **方法**存在；Web 有真 JIT，JS 路径本就合适 |
+| 后台保活引导 `backgroundKeepAlive` | ✅ | ⛔ 无此概念 | ⛔ 无此概念 | ⛔ 无此概念 | `SongloftAudio.openManufacturerWhitelist` **方法**存在（厂商自启动白名单） |
 
-两处刻意用**方法级**而非模块级探测（`fileExport` / `songCache`）：JS bundle 可以热更到旧原生壳上，那时模块在、方法不在，而「点了才报错的死按钮」正是这个模块存在的理由。`songCache` 键在 `getCacheInfo` 而非 `download` 上，因为后者改过 arity —— 旧壳仍有 `download`，会声称支持缓存然后被喂进绑不上的参数。
+四处刻意用**方法级**而非模块级探测（`fileExport` / `fastLogExport` / `songCache` / `backgroundKeepAlive`）：JS bundle 可以热更到旧原生壳上，那时模块在、方法不在，而「点了才报错的死按钮」正是这个模块存在的理由。`songCache` 键在 `getCacheInfo` 而非 `download` 上，因为后者改过 arity —— 旧壳仍有 `download`，会声称支持缓存然后被喂进绑不上的参数。
 
 `bundleMode` / `systemTray` 两位目前**没有任何消费点**。列在这里是为了说明它们的探测语义（尤其 `bundleMode` 在 Web 上报 true，因为 Web 经 `nativeModulesMap` 注册了 `SongloftPlatform`），别当成已验证过的能力用。
 
@@ -42,7 +44,7 @@ Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoP
 | `SongloftPlatform` 打开 URL / 剪贴板 | ✅ | ✅ | ✅ | ✅ | Web 侧全部转发到主线程 |
 | `SongloftNavigation` 返回键拦截 | ✅ 真拦截 + 双击退出 | ⛔ **无返回键可拦** | ✅ 手势返回拦截 | ✅ 主线程 sentinel history | iOS 侧 TS facade 降级为惰性桩 |
 | `SongloftWebview` 插件页 | ⛔ 用原生 `<webview>` | ⛔ 用原生 `<webview>` | ⛔ 用原生 `<webview>` | ✅ **Web 独有**（iframe） | iframe 必须挂进 `lynxView.shadowRoot`，z-index 50 |
-| `SongloftVideo` 全屏视频 | ✅ | ✅ | ⛔ **不注册** | ⛔ | 同 A 表 `video`；不能用恒失败占位模块冒充能力 |
+| `SongloftVideo` 全屏视频 | ✅ | ✅ | ⛔ **不注册** | ✅ **Web 有独立表面**（主线程 `<video>`） | 同 A 表 `video`；HarmonyOS 不能用恒失败占位模块冒充能力 |
 | `SongloftSongCache` 离线缓存 | ✅ | ✅ | ✅ | ⛔ | 同 A 表 `songCache` |
 | `SongloftDlna` 投屏 | ✅ | ✅ | ✅ | ⛔ | 同 A 表 `dlna` |
 
@@ -112,7 +114,7 @@ iOS 的 `addPeriodicTimeObserver(forInterval:)` 数的是**该 item 时间线**�
 
 归一化是一致的，**暴露程度不一致**：ExoPlayer 进入 `READY` 时已经知道时长，所以 Android 上这个 0 基本不出现；iOS 会在容器解析完成前先发若干 `durationMs: 0` 的 progress 事件。
 
-因此 JS 侧消费必须是 `player-store.ts:816` 那个形状：
+因此 JS 侧消费必须是 `player-store.ts:935` 那个形状：
 
 ```ts
 duration: e.durationMs > 0 ? e.durationMs : s.duration,
@@ -123,7 +125,7 @@ duration: e.durationMs > 0 ? e.durationMs : s.duration,
 ### 其他音频侧分叉
 
 - **EQ 的可靠性不同**：Android 用系统 `audiofx.Equalizer`，构造失败被 `catch (_: Throwable) {}` 吞掉（部分设备确实不支持），且 band 数由设备决定 —— `applyBandGain` 会按 `eq.numberOfBands` 与 `bandLevelRange` 双重钳制。iOS 的 `NBandEQ` 与 Web 的 BiquadFilter 链都是固定 10 段、必定存在。
-- **Android / iOS 全屏视频复用同一个播放器**，不新建：Android 把 `SurfaceView` 借给正在放的 `ExoPlayer`（`attachVideoOutput`），iOS 把 `AVPlayer` 交给 `AVPlayerViewController`。因此 EQ / MediaSession / 锁屏 / 进度事件 / `InsecureTls` 全部零改动继承。退出必须 `detachVideoOutput()`，否则**下一首纯音频歌**会在 video renderer 里静默死掉。HarmonyOS 尚无对应视频表面，因此不注册 `SongloftVideo`，能力位为 `false`。
+- **Android / iOS / Web 全屏视频都复用同一个播放器**，不新建：Android 把 `SurfaceView` 借给正在放的 `ExoPlayer`（`attachVideoOutput`，画面挂在 `MainActivity` 视图树里、Lynx 视图**之下**），iOS 把 `AVPlayer` 交给 `AVPlayerViewController`，Web 是主线程一个镜像同一音频流的 `<video>`（`web/audio-host.js` 持有）。因此 EQ / MediaSession / 锁屏 / 进度事件 / `InsecureTls` 全部零改动继承。退出必须 `detachVideoOutput()`，否则**下一首纯音频歌**会在 video renderer 里静默死掉。HarmonyOS 尚无对应视频表面，因此不注册 `SongloftVideo`，能力位为 `false`。
 - **不安全 TLS 的「关掉」两端机制不同**：Android 重建 `OkHttpClient`（新连接池，天然即时生效）；iOS 必须 `invalidateAndCancel()` 重建 `URLSession`，因为已握手的连接复用时不再发起 server-trust 挑战。验证「关掉是否生效」时若不换 hostname，测到的可能只是热连接。
 
 ---
@@ -142,7 +144,7 @@ duration: e.durationMs > 0 ? e.durationMs : s.duration,
 | **`<list>` 的 px 形式 `lower-threshold` 无效** | `x-list` 只注册了 `lower-threshold-item-count`；`scroll-view` 上的 px 形式**是**有效的（`x-scroll-view` 注册了 `lower-threshold`） |
 | **无 secure enclave** | 见「存储差异」 |
 | **无「清空浏览器缓存」入口（刻意不做）** | Flutter 版 Web 端有该功能（清 Cache Storage + 注销 Service Worker + 对入口 `fetch(cache:'reload')` 强刷 HTTP 缓存），动机是 Flutter Web 默认 PWA 化后旧 `main.dart.js` 撞满 max-age。本仓库三个前提全不成立：宿主零 `caches.` 调用、无 SW 注册（后端 embed.go 注释明说）、两种部署的 app shell 一律 `Cache-Control: no-cache` + ETag 304（仅 canvaskit/fonts 长缓存）——「更新后页面异常」在部署层已根治，普通刷新即最新，该按钮能解决的问题集合为空。2026-08-26 评估，记录见 [Web 部署指南](../guides/web-deployment.md) |
-| **虚拟列表内放不了弹出层** | `x-list` 带 `contain: layout`（成为 fixed 后代的包含块）+ `::part(content)` 是 `overflow: hidden scroll`（必然裁剪）。所以歌曲行的菜单只能挂在全局，见 [AGENTS.md §4](../../AGENTS.md) |
+| **虚拟列表内放不了弹出层** | `x-list` 带 `contain: layout`（成为 fixed 后代的包含块）+ `::part(content)` 是 `overflow: hidden scroll`（必然裁剪）。所以歌曲行的菜单只能挂在全局，见 [AGENTS.md §3.3](../../AGENTS.md) |
 
 ---
 
@@ -153,13 +155,13 @@ duration: e.durationMs > 0 ? e.durationMs : s.duration,
 - `'direct'` = 后端 `?media=video` 直出**原始容器**，设备自己 demux + decode。即时，但设备得认识里面的东西。
 - `'hls'` = 后端 `/video-hls/playlist.m3u8` **重编码**为 H.264+AAC HLS。哪儿都能播，但首个请求会阻塞到整个转码结束，且需要 ffmpeg（缺失时 503）。
 
-| 容器（`songs.format`） | Android | iOS | 理由 |
-|---|---|---|---|
-| `m4a` / `mp4` / `m4v` / `mov` / `qt` / `3gp` / `3g2` | `direct` | `direct` | MP4/QuickTime 家族两端都能开 |
-| `mkv` / `matroska` / `webm` / `ts` | `direct` | **`hls`** | AVFoundation 完全不能 demux Matroska/WebM；独立 `.ts` 只在 HLS playlist 内受支持 |
-| `avi` / `flv` / `wmv` / `rm` / `mpg` … | `hls` | `hls` | media3 有 extractor，但里面通常是 MPEG-2 / Xvid / Sorenson，设备**没有义务**解码。容器级放行会把「能播的流」换成「偶发的静默黑矩形」，后者更难上报 |
-| `''`（空，远程歌元数据刷新前的常态） | `direct` | `direct` | 猜 `hls` 会对通常是普通 MP4 的文件强制服务端转码；猜错的另一头是可见且可恢复的 |
-| 任意（Web） | — | — | 恒 `'none'`：Web 没有原生视频表面 |
+| 容器（`songs.format`） | Android | iOS | Web | 理由 |
+|---|---|---|---|---|
+| `m4a` / `mp4` / `m4v` / `mov` / `qt` / `3gp` / `3g2` | `direct` | `direct` | `direct` | MP4/QuickTime 家族三端都能开 |
+| `webm` | `direct` | **`hls`** | `direct` | 浏览器 `<video>` 能开 WebM，AVFoundation 不能 |
+| `mkv` / `matroska` / `ts` | `direct` | **`hls`** | **`hls`** | AVFoundation 完全不能 demux Matroska/WebM，浏览器也没有 MKV demuxer；独立 `.ts` 只在 HLS playlist 内受支持 |
+| `avi` / `flv` / `wmv` / `rm` / `mpg` … | `hls` | `hls` | `hls` | media3 有 extractor，但里面通常是 MPEG-2 / Xvid / Sorenson，设备**没有义务**解码。容器级放行会把「能播的流」换成「偶发的静默黑矩形」，后者更难上报 |
+| `''`（空，远程歌元数据刷新前的常态） | `direct` | `direct` | `direct` | 猜 `hls` 会对通常是普通 MP4 的文件强制服务端转码；猜错的另一头是可见且可恢复的 |
 
 另外 `isLive` / `type === 'radio'` 恒 `'none'` —— `/video-hls` 端点基于文件工作，直播流没有文件。
 
@@ -175,4 +177,4 @@ duration: e.durationMs > 0 ? e.durationMs : s.duration,
 - [Web 部署](../guides/web-deployment.md) —— standalone / embedded 产物与 Web 限制清单
 - [原生模块参考](../reference/native-modules.md) —— 各模块的方法表与调用约定
 - [Lynx 平台约束](./lynx-constraints.md) —— 无 DOM、双线程、元素与事件层面的约束
-- [AGENTS.md](../../AGENTS.md) —— §4「Web 平台」「平台判断」与 §5 原生模块表（本文档的上游）
+- [AGENTS.md](../../AGENTS.md) —— §3「Lynx 与 Web 约束」与 §4 原生模块契约（本文档的上游）

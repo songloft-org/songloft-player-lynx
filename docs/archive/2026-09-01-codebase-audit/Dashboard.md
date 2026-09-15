@@ -1,5 +1,7 @@
 # 代码库审计看板
 
+> **已归档（2026-09-15）**。本看板固定在 `main@982291d`（2026-08-31 基线 / 2026-09-01 运行）的任务状态，**不是现状**：9 条 finding 里 5 条此后已修，仍开放的 4 条（AUD-002/003/005/009）已迁出到 [`../../project/bugs.md`](../../project/bugs.md)。总览见 [Report.md](Report.md)，问题正文见 [Findings.md](Findings.md)。
+
 > 本看板记录当前审计快照、任务状态和验证门禁。问题正文见 [Findings.md](Findings.md)，总览见 [Report.md](Report.md)。
 
 ## 审计快照
@@ -54,5 +56,5 @@
 
 ## 证据
 
-- Canonical Context：[README](../../README.md)、[AGENTS](../../AGENTS.md)、[ARCHITECTURE](../../ARCHITECTURE.md)、[HARNESS](../../HARNESS.md)
+- Canonical Context：[README](../../../README.md)、[AGENTS](../../../AGENTS.md)、[ARCHITECTURE](../../../ARCHITECTURE.md)、[HARNESS](../../../HARNESS.md)
 - 最近漂移校验：任务完成前复核有效；审计输出与业务工作区隔离。

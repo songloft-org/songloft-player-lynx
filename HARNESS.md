@@ -49,7 +49,7 @@ ReactLynx 多宿主音乐播放器客户端
 
 - `dist/`、`web/dist/`：构建产物，不作为源码修改。
 - `node_modules/`、`harmony/**/oh_modules/`：安装生成的第三方依赖。
-- `songloft-player/`：Flutter 只读参考。
+- `songloft-player/`：Flutter 只读参考（**本工作副本未 checkout**；另行取得后适用）。
 - `.codegraph/`：机器本地索引。
 - `.git/`：除工具维护的私有运行状态外，不手工编辑。
 

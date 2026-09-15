@@ -1,5 +1,7 @@
 # Liquid Glass 主题（Lynx）— 修订版
 
+> **已归档（2026-09-15）**：本文的方案（7 个 `--glass-*` token + 映射 + 伪玻璃）已交付，且其后被玻璃材质优化六批大幅扩展（13 个玻璃 token、`BackdropBlur.tsx`、iOS 原生 Liquid Glass 材质）—— **本文只记录了起点，不是现状**。现状见 [`../../project/progress.md`](../../project/progress.md) 与 [`../../../DESIGN.md`](../../../DESIGN.md)。
+
 > ## 修订（2026-09-03，玻璃材质优化批A）
 >
 > **本文第 1 节「Lynx 无 `backdrop-filter`，做不出真折射玻璃」这句只对了一半。** CSS 属性层面确实没有；但 `<blur-view>` 是一等**元素**（`@lynx-js/types` 的 `BlurViewProps`，`IntrinsicElements` 已注册），Web/iOS/Android 三平台的实现都已逐一查证（Harmony 存疑），Web 侧已在 Docker Chrome 实测到真 `backdrop-filter: blur(20px)`——但**Web 需要宿主页给标签做别名**才接得上（`blur-view` 不在 web-core 的标签映射表里，实现却注册在 `x-blur-view` 名下；批A 首次交付时漏了这步，Web 上整批静默无效）。证据表与那次教训见 `docs/architecture/lynx-constraints.md` §四。

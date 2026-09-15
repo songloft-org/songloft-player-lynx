@@ -8,7 +8,7 @@
 
 ## 1. 总表
 
-闸门 `modules` 表锁定 **9 个原生宿主模块**；`SongloftWebview` 是第 10 个模块名，只存在于 Web 部署产物中，由闸门里独立的 `describe` 块覆盖。
+闸门 `modules` 表锁定 **10 个原生宿主模块**（含 `SongloftPluginBridge`）；`SongloftWebview` 与 `SongloftLynxFrame` 是第 11、12 个模块名，只存在于 Web 部署产物中，各由闸门里独立的 `describe` 块覆盖。
 
 | `NativeModules.X` | Android 实现 | iOS 实现 | TS facade | 职责 |
 |---|---|---|---|---|
@@ -16,16 +16,18 @@
 | `SongloftStorage` | `storage/SongloftStorageModule.kt` | `SongloftStorageModule.swift` | `src/core/storage/native-storage.ts` | 键值持久化（`prefs` / `secure` 两区）+ 目录路径 |
 | `SongloftPlatform` | `platform/SongloftPlatformModule.kt` | `SongloftPlatformModule.swift` | `src/native/native-platform.ts` | 打开 URL、文件选择上传、剪贴板、客户端日志、分享、日志导出打包、TLS 开关 |
 | `SongloftDlna` | `dlna/SongloftDlnaModule.kt` | `SongloftDlnaModule.swift` | `src/native/dlna.ts` | DLNA/UPnP 设备发现与投屏控制 |
-| `SongloftVideo` | `video/SongloftVideoModule.kt`（画面 `SongloftVideoActivity.kt`） | `SongloftVideoModule.swift` | `src/native/video.ts` | 全屏视频画面（借用同一个播放器，不新建） |
+| `SongloftVideo` | `video/SongloftVideoModule.kt`（画面是 `MainActivity.kt` 里的 `SurfaceView`） | `SongloftVideoModule.swift` | `src/native/video.ts` | 全屏视频画面（借用同一个播放器，不新建） |
 | `SongloftSongCache` | `cache/SongloftSongCacheModule.kt` | `SongloftSongCacheModule.swift` | `src/features/player/data/song-cache.ts` | 设备端歌曲缓存（下载 / 查询 / 删除 / 清空） |
 | `SongloftFloatingLyric` | `lyric/FloatingLyricModule.kt`（窗口 `FloatingLyricService.kt`） | **无（仅 Android）** | `src/native/floating-lyric.ts` | 悬浮歌词覆盖层 |
 | `SongloftLiveActivity` | **无（仅 iOS）** | `LiveActivityModule.swift` | `src/native/live-activity.ts` | 灵动岛 / 锁屏 Live Activity |
 | `SongloftNavigation` | `navigation/SongloftNavigationModule.kt`（+ `BackKeyState.kt`、`MainActivity.kt`） | **iOS 刻意不做** —— 没有返回键可拦（无 `UINavigationController`，连边缘滑动都没有），TS facade 降级为惰性桩 | `src/native/navigation.ts` | 硬件 / 浏览器返回键 |
+| `SongloftPluginBridge` | `plugin/SongloftPluginBridgeModule.kt` | `SongloftPluginBridgeModule.swift` | 内联在 `src/features/jsplugin/widgets/LynxPluginFrame.tsx`（无独立 facade 文件） | 父页 ⇄ 子 `<frame>` 插件的双向桥（跨 `LynxContext` 通信，按 `frameId` 注册） |
 | `SongloftWebview` | **无（仅 Web）** —— native 构建渲染真实 `<webview>` 元素 | **无（仅 Web）** | `src/native/web-webview.ts` | 插件页 iframe（worker 侧 `web/songloft-webview-module.js` + 主线程 `web/webview-host.js`） |
+| `SongloftLynxFrame` | **无（仅 Web）** —— native 构建用 `<frame>` 元素渲染 Lynx 插件 | **无（仅 Web）** | `src/native/web-lynx-frame.ts` | Lynx 插件页的 Web 宿主（worker 侧 `web/songloft-lynx-frame-module.js` + 主线程 `web/lynx-frame-host.js`） |
 
 Android 路径均省略前缀 `android/app/src/main/java/org/songloft/lynx/`；iOS 路径均省略前缀 `ios/SongloftLynx/`。
 
-HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatingLyric`、`SongloftLiveActivity` 和 `SongloftVideo` 外均按同名模块注册。`SongloftVideo` 当前没有可借用现有 `AVPlayer` 的视频表面，必须保持不注册；恒返回 `false` 的占位模块会让能力探测误报可用。
+HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatingLyric`、`SongloftLiveActivity` 和 `SongloftVideo` 外均按同名模块注册（`SongloftWebview` / `SongloftLynxFrame` 本就只有 Web 实现）。`SongloftVideo` 当前没有可借用现有 `AVPlayer` 的视频表面，必须保持不注册；恒返回 `false` 的占位模块会让能力探测误报可用。
 
 ### 不是 NativeModules 模块
 
@@ -37,7 +39,7 @@ HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatin
 
 ### Web 宿主注册了哪些模块
 
-Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 4 个模块：`SongloftAudio` / `SongloftNavigation` / `SongloftPlatform`（`web/audio-host.js`）与 `SongloftWebview`（`web/webview-host.js`）。其余模块在 Web 上不存在，facade 降级为惰性桩。
+Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 **7 个**模块：`SongloftAudio` / `SongloftPlatform` / `SongloftNavigation` / **`SongloftVideo`**（`web/audio-host.js` 注册，worker 侧各自是 `web/songloft-*-module.js`）、`SongloftWebview`（`web/webview-host.js`）、`SongloftPluginBridge` 与 `SongloftLynxFrame`（`web/lynx-frame-host.js`，前者另有 `web/lynx-plugin-bridge-shim.js`）。其余模块在 Web 上不存在，facade 降级为惰性桩。`SongloftVideo` 的 Web 半边是主线程一个 `<video>`（由 `web/audio-host.js` 持有、镜像正在播的音频流），worker 侧只负责转发方法名。
 
 ---
 
@@ -163,9 +165,9 @@ Callback 形状，参数为单个 JSON 字符串（facade 一律传 `'{}'`）。
 | `close` | `close(args: String, callback: Callback)` | `close(_:callback:)` | `{}` |
 | `isOpen` | `isOpen(args: String, callback: Callback)` | `isOpen(_:callback:)` | `{result: boolean}` |
 
-**事件**：无。历史上两端发过 `SongloftVideo.closed`（Android `EVENT_CLOSED` / iOS `eventClosed`），但 JS 零监听、是个死线，批71 已删——真要通知 JS 时再按「能力探测器与首个消费点同批落地」重新加。
+**事件**：无。历史上两端发过 `SongloftVideo.closed`（Android `EVENT_CLOSED` / iOS `eventClosed`），但 JS 零监听、是个死线，批72（`895aa97`）已删——真要通知 JS 时再按「能力探测器与首个消费点同批落地」重新加。
 
-**平台边界**：本节契约当前只由 Android / iOS 实现。HarmonyOS 不注册 `SongloftVideo`，因此 `getPlatformCapabilities().video === false`，界面不会展示不可用入口。只有实现“借用现有播放器 + 真视频表面”完整闭环后，才能恢复注册。Android 视频面仅带一个「离开」按钮（`SongloftVideoActivity.buildCloseButton`，走普通 `finish()`），**刻意不带**播放/暂停/进度/标题——输运控件归 Lynx 侧的 JS store，重复实现会打架。
+**平台边界**：Android / iOS 是原生实现，**Web 也有**（主线程 `<video>` 宿主模块，见 §1）；HarmonyOS 不注册 `SongloftVideo`，因此 `getPlatformCapabilities().video === false`，界面不会展示不可用入口。只有实现「借用现有播放器 + 真视频表面」完整闭环后，才能恢复注册。**画面归宿主、控件归 JS**（2026-09-14 批73 `1cc08e0` 起）：Android 的画面是 `MainActivity` 视图树里、Lynx 视图**之下**的一个 `SurfaceView`（`setZOrderMediaOverlay(true)`），iOS 是 `AVPlayerViewController` 模态，Web 是主线程 `<video>` —— 三种形态下**输运控件（播放/暂停/进度/标题）一律由 Lynx 侧的 `/player/video` 页绘制**，原生不再提供任何播放控件（批72 那个「离开」按钮已随 Activity 一起删除）。
 
 **闸门锁住的不变量**
 
@@ -174,7 +176,7 @@ Callback 形状，参数为单个 JSON 字符串（facade 一律传 `'{}'`）。
 | 引擎有 `attachVideoOutput` **和** `detachVideoOutput`（两侧），且视频侧真的调了 `detachVideoOutput` | 缺 attach = 开出一个黑矩形只有声音；缺 detach = ExoPlayer 继续往已销毁窗口画，**下一首纯音频歌**在 video renderer 里静默死掉 |
 | 两侧都有 `hasVideoTrack`（引擎 `fun`/`func`，且模块经 `videoTrackState` 读取） | `songs.is_video` 是扫描时按原文件记的，远端歌可能来自 `-vn` 转码的缓存，只有宿主能判断 |
 | `videoTrackState` 先于轨道判断读取失败态（item status / `playerError`），`open` 转发 `"noTrack"` 与 `"failed"` | 转码失败会让 item 报 `.failed`：只问「有没有视频轨」会把「流加载失败」误报成「文件没有视频轨」 |
-| Android 的 Module 与 Activity 都出现 `runOnMain` | `@LynxMethod` 跑在 BTS 线程，ExoPlayer 只能主线程碰 |
+| Android 的 Module 出现 `runOnMain`，且 `MainActivity.kt` 出现 `setZOrderMediaOverlay(true)` 与 `addView(`；`buildCloseButton` 不得回来 | `@LynxMethod` 跑在 BTS 线程，ExoPlayer 与 View 层级都只能主线程碰；surface 不在窗口内容之上时画面会被窗口盖住（`1bccdf8` 修的就是这个） |
 | iOS `updatesNowPlayingInfoCenter = false` | 否则 `AVPlayerViewController` 会用自己那套信息覆盖引擎写的锁屏 title/artist/artwork |
 | iOS **`vc.player = nil` 必须出现在 `dismiss(animated:` 之前** | 否则 `AVPlayerViewController` 在 dismiss 时把播放暂停 |
 
@@ -293,7 +295,50 @@ Callback 形状，Callback 收到 JSON 字符串。
 - 占位元素 id 两处一致：`src/features/jsplugin/pages/PluginWebViewPage.tsx` 同时含 `id='plugin-webview-frame'` 与 `'#plugin-webview-frame'`。
 - **iframe 必须挂进 `lynxView.shadowRoot`**（`lynx-view` 的 `contain: strict` 使其成为层叠上下文，body 级的 frame 会盖过所有 App 覆盖层），且 `z-index` 必须是 `'50'`（页面内容 auto < frame 50 < 导航胶囊 90 / mini-player 91 / sheet 100 / dialog 200-201）；`ToastHost.css` 的 `.toast-wrap` z-index 必须是三位数以越过 frame。
 
-### 2.11 `SystemAppearance`（不是 NativeModules 模块）
+### 2.11 `SongloftPluginBridge`（6 方法）
+
+全部位置参数、fire-and-forget（无 Callback）。注册在 application 级：每个 `LynxContext`（父页 / 子 `<frame>`）各拿一个模块实例，但 `hostRegistry` / `childRegistry` 按 `frameId` 共享 —— 这是跨 LynxContext 通信的唯一通道。
+
+| 方法 | 调用方 | Kotlin 签名 | iOS `methodLookup` 选择器 |
+|---|---|---|---|
+| `registerHost` | 父页 | `registerHost(frameId: String)` | `registerHost(_:)` |
+| `unregisterHost` | 父页 | `unregisterHost(frameId: String)` | `unregisterHost(_:)` |
+| `hostReply` | 父页 | `hostReply(frameId: String, callId: String, resultJson: String)` | `hostReply(_:callId:resultJson:)` |
+| `pushToChild` | 父页 | `pushToChild(frameId: String, eventName: String, dataJson: String)` | `pushToChild(_:eventName:dataJson:)` |
+| `registerChild` | 子 frame | `registerChild(frameId: String)` | `registerChild(_:)` |
+| `hostCall` | 子 frame | `hostCall(frameId: String, callId: String, ns: String, method: String, paramsJson: String)` | `hostCall(_:callId:ns:method:paramsJson:)` |
+
+**事件（3 个）**：`SongloftPluginBridge.hostCall`（送给**父页**上下文）、`.hostReply`（送给**子 frame**上下文）、`.push`。常量在 Kotlin `SongloftPluginBridgeModule.EVENT_*`；TS 侧唯一消费点是 `src/features/jsplugin/widgets/LynxPluginFrame.tsx`（**facade 内联在那里**，没有独立的 `src/native/*.ts`）。`frameId` 由父页经 global-props 传给子 frame。
+
+**闸门锁住的不变量**：**只有 `modules` 表那一行**（三端的注册调用都在）。**6 个方法面没有逐方法断言** —— 它既不在 `hosts` 表里，也没有专属 `describe`，属于 AUD-009 同一类缺口：改坏签名不会有任何测试变红。
+
+### 2.12 `SongloftLynxFrame`（6 方法，仅 Web）
+
+Web 上渲染 Lynx 插件的宿主（native 构建用真实 `<frame>` 元素，不需要这个模块）。契约跑在三个文件之间：facade `src/native/web-lynx-frame.ts`、worker 侧 `web/songloft-lynx-frame-module.js`、主线程 `web/lynx-frame-host.js`。
+
+| 方法 | 签名 |
+|---|---|
+| `open` | `open(bundleUrl: string, selector: string, globalPropsJson: string, key: string)` |
+| `updateGlobalProps` | `updateGlobalProps(json: string)` |
+| `sendEvent` | `sendEvent(name: string, dataJson: string)` |
+| `hostReply` | `hostReply(callId: string, resultJson: string)` |
+| `hide` | `hide(key: string)` |
+| `close` | `close(key: string)` |
+
+**事件**
+
+| 事件名 | 说明 |
+|---|---|
+| `SongloftLynxFrame.message` | 子 frame 转发上来的插件宿主调用 |
+| `SongloftLynxFrame.openFailed` | 主线程按 selector 找不到占位元素，页面回落到「不可用」提示 |
+
+- `key` 是插件的 `entryPath`，宿主靠它保活子 frame；空 `key` 的 `close` 释放全部（登出）。
+- 离页必须 `hide()`、**不得** `close()`（`PluginWebViewPage` / `LynxPluginFrame` 两处都由闸门锁死）：关掉会让每次切 tab 都重建插件页。
+- `open` / `updateGlobalProps` 等在 facade 里都被 `try/catch` 包住：宿主页过期时最坏是丢一次推送，不能抛在卸载路径上。
+
+**闸门锁住的不变量**：6 个方法在 worker 侧模块与主线程 handler 两半都存在；两个事件名在 facade 与主线程逐字一致；两个插件页都不得在 unmount 调 `close()`。这个模块的两个 URL 与它的主线程脚本一度整块漏在部署清单外（`copy-bundle-web.mjs` 漏拷 = 线上 404，脚本 tag 存在也没用），如今由 `web-host-page.test.ts` 覆盖。
+
+### 2.13 `SystemAppearance`（不是 NativeModules 模块）
 
 | 通道 | 载荷 | 用途 |
 |---|---|---|
@@ -311,7 +356,7 @@ Callback 形状，Callback 收到 JSON 字符串。
 
 ## 3. 调用约定
 
-完整论述见 [`../../AGENTS.md`](../../AGENTS.md) §5「调用约定（铁律）」。要点：
+完整论述见 [`../../AGENTS.md`](../../AGENTS.md) §4「原生模块契约」。要点：
 
 1. **原生方法不返回 Promise**。写是 fire-and-forget，读靠 `com.lynx.react.bridge.Callback`（iOS 同构 `@escaping (String) -> Void`）。
 2. **Promise 化必须在 TS 适配层逐方法完成**。参考 `src/core/storage/native-storage.ts`、`src/native/dlna.ts`。
@@ -325,23 +370,24 @@ Callback 形状，Callback 收到 JSON 字符串。
 
 ## 4. 新增方法的同步清单
 
-一个新方法要在**四处**落地，少任一处都是静默 no-op：
+一个新方法要在**五处**落地，少任一处都是静默 no-op：
 
 | # | 位置 | 具体做什么 |
 |---|---|---|
 | 1 | **TS** | facade 的原生 interface 加方法声明（保持原生真实形状：`void` + Callback），并写 promisify 包装；若它是新能力的探测键，同步 `src/native/platform-capabilities.ts` **并在同一次改动里加消费点** |
 | 2 | **Kotlin** | 方法上必须有 `@LynxMethod`；回调参数写 `callback: Callback`（不要 Kotlin lambda） |
 | 3 | **iOS** | `func` **和** `methodLookup` 条目两者都要 —— 不在 lookup 表里的方法对 JS 等于不存在 |
-| 4 | **闸门** | `src/__tests__/native-module-contract.test.ts`：新模块要扩 `hosts` 表 + `modules` 表 + 一段 `describe`；新方法通常由 `interfaceMethods()` 自动枚举，确认它被解析到（各 describe 都有一条「the interface was parsed」防空列表） |
+| 4 | **HarmonyOS** | ArkTS 侧同名方法 + 装饰器标注（`harmony/entry/src/main/ets/modules/`）；缺了同样是可选链吞掉的 no-op |
+| 5 | **闸门** | `src/__tests__/native-module-contract.test.ts`：新模块要扩 `hosts` 表 + `modules` 表 + 一段 `describe`；新方法通常由 `interfaceMethods()` 自动枚举，确认它被解析到（各 describe 都有一条「the interface was parsed」防空列表）。**注意各模块的通用方法循环未必都含 Harmony** —— AUD-002 就是在这种「全绿」下漏出来的 |
 
-**新模块还要注册**：Android 在 `SongloftApplication.kt` 的 `LynxEnv.inst().registerModule("<Name>", <Class>::class.java)`；iOS 在 `ViewController.swift` 的 `buildConfig()` 里 `config.register(<Class>.self)`，**并且**新的 `.swift` 文件要在 `ios/SongloftLynx.xcodeproj/project.pbxproj` 的**四个 section** 登记（`PBXFileReference` / `PBXBuildFile` / `PBXGroup` / `PBXSourcesBuildPhase`）。新增 Kotlin `Service` / `Activity` 还要在 `AndroidManifest.xml` 声明（由 manifest 闸门从 Kotlin 源码反推，双向校验）。
+**新模块还要注册**：Android 在 `SongloftApplication.kt` 的 `LynxEnv.inst().registerModule("<Name>", <Class>::class.java)`；iOS 在 `ViewController.swift` 的 `buildConfig()` 里 `config.register(<Class>.self)`，**并且**新的 `.swift` 文件要在 `ios/SongloftLynx.xcodeproj/project.pbxproj` 的**四个 section** 登记（`PBXFileReference` / `PBXBuildFile` / `PBXGroup` / `PBXSourcesBuildPhase`）。新增 Kotlin `Service` / `Activity` 还要在 `AndroidManifest.xml` 声明（由 manifest 闸门从 Kotlin 源码反推，双向校验）；HarmonyOS 在 `harmony/entry/src/main/ets/pages/Index.ets` 用 `this.modules.set("<Name>", { moduleClass: ... })` 注册（按 LynxView 逐实例接线，不是全局 `registerModule`；`EntryAbility.ets` 只接 HTTP service），新权限 / `backgroundModes` 还要写进 `module.json5`。
 
-**同时更新文档**：本文件的总表与对应小节，以及 [`../../AGENTS.md`](../../AGENTS.md) §5 的 Android / iOS 两张平台表。
+**同时更新文档**：本文件的总表与对应小节（平台模块表的权威副本就在这里），以及 [`native-development.md`](../guides/native-development.md) 的同步清单。
 
 ---
 
 ## 相关
 
 - [原生开发指南](../guides/native-development.md)
-- [AGENTS.md](../../AGENTS.md) —— §4 Lynx 关键约束、§5 原生模块概览、§6 测试与闸门原则
+- [AGENTS.md](../../AGENTS.md) —— §3 Lynx 与 Web 约束、§4 原生模块契约、§5 验证契约
 - [平台差异](../architecture/platform-differences.md)

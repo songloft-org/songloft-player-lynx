@@ -1,6 +1,6 @@
 # E2E 行为测试架构
 
-> **状态**：已实现。33 个场景文件，Driver 双平台，TestBridge 协议可用。
+> **状态**：已实现。34 个场景文件，Driver 双平台，TestBridge 协议可用。
 > 最后一次全量结果：2026-08-16（批49 时代）Android 112/120 · iOS 110/120。
 
 ## 目标
@@ -19,7 +19,7 @@
 ## 架构
 
 ```
-e2e/scenarios/*.scenario.ts    平台无关的测试定义（33 个文件）
+e2e/scenarios/*.scenario.ts    平台无关的测试定义（34 个文件）
          │ import
 e2e/driver/                    统一 Driver 接口 + 平台实现
   types.ts                     E2EDriver + E2EElement 接口

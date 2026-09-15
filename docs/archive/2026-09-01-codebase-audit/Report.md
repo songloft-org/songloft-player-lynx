@@ -1,6 +1,10 @@
 # 代码库审计报告
 
-> 审计已完成。问题正文见 [Findings.md](Findings.md)，任务状态见 [Dashboard.md](Dashboard.md)。
+> **已归档（2026-09-15）**。这份快照固定在 `main@982291d`（2026-08-31 基线 / 2026-09-01 运行），**不是现状**：9 条 finding 中 5 条此后已修（AUD-001 `b08ae1a`、AUD-004 `6c8c46b`、AUD-006 `54233ac`、AUD-007 / AUD-008 `40e7cf9`），报告里的验数（18 failing / 185 契约 / bundle 大小）也已全面过期。
+>
+> **仍开放的 4 条已迁出**到 [`../../project/bugs.md`](../../project/bugs.md) 的「代码审计发现（2026-09-01）」一节：AUD-002、AUD-003、AUD-005、AUD-009（部分修复）。**要查还有什么没修，读 bugs.md，不要读本目录。**
+>
+> 问题正文见 [Findings.md](Findings.md)，任务状态见 [Dashboard.md](Dashboard.md)。
 
 ## 导航
 
