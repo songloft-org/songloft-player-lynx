@@ -1,12 +1,7 @@
 import { useCallback, useRef, useState } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
-import { Draggable } from '@lynx-js/lynx-ui-draggable'
-
-// Draggable's onDragEnd hands us a { x, y } page-space translate. We type it
-// locally instead of pulling `@lynx-js/lynx-ui-common` into package.json just
-// for one two-field interface.
-type DragTranslate = { x: number; y: number }
+import { DraggableRoot, DraggableArea } from '@lynx-js/lynx-ui-draggable'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
@@ -21,15 +16,24 @@ import { PluginIconTile } from './PluginIconTile.js'
 import './PluginGrid.css'
 
 /**
- * Home plugin grid, with an edit mode for drag-drop reordering
- * (songloft-org/songloft#463). The bottom-tab config is a separate concern —
- * settings page owns that; this only reorders how the grid renders here.
+ * Home plugin grid (songloft-org/songloft#463).
  *
- * The drag primitive is `@lynx-js/lynx-ui-draggable` (not `-sortable`): sortable
- * is a one-dimensional list — it walks item indices with a per-axis delta and
- * ignores `flex-wrap`, so on this grid horizontal moves went nowhere and
- * vertical moves only jumped by list index. Draggable is a single-item follow-
- * finger primitive; hit-testing, swap and reset are done here.
+ * Edit mode keeps the 2D wrapped grid layout and turns every card into a
+ * DraggableRoot with a handle overlaying the icon tile (DraggableArea). Only
+ * touchstart/mousedown on that handle starts the drag — the rest of the card
+ * is inert while editing. On drag end, the translated card's center is hit
+ * tested against the captured rects of the other cards to decide the new
+ * index; if the drop lands over another card, the two swap.
+ *
+ * Why this shape:
+ * - `lynx-ui-sortable` hard-codes `allowedDirection: ['up', 'down']`, so it
+ *   cannot do a wrapped 2D grid. Even in list mode long-press does not fire
+ *   on web because Lynx-web does not dispatch `mouselongpress`.
+ * - `lynx-ui-draggable` with `trigger='immediate'` binds only `mousedown` /
+ *   `mousemove` / `mouseup` / `touchstart` / `touchmove` / `touchend`, which
+ *   Lynx-web does dispatch. No patches.
+ * - `touch-action: none` on the handle CSS is what actually stops the outer
+ *   scroll-view from following a vertical drag — see PluginGrid.css.
  */
 export function PluginGrid() {
   const { t } = useTranslation()
@@ -91,111 +95,171 @@ export function PluginGrid() {
   )
 }
 
+interface Rect {
+  left: number
+  top: number
+  right: number
+  bottom: number
+  width: number
+  height: number
+}
+
 interface EditableGridProps {
   plugins: JSPlugin[]
   onCommit: (entryPaths: string[]) => void
 }
 
-/**
- * Edit-mode grid. Long-press a card to pick it up (2D free drag via
- * `<Draggable allowedDirection='all' trigger='longpress' resetOnEnd>`), then
- * release over another card to swap positions.
- *
- * Rects are captured on drag START (not layout), because `flex-wrap` layout
- * only settles after the DOM is in place — asking the rect map before touch
- * would race. On drag END we take the dragged card's starting-rect center,
- * add the final translate, and find which card that point falls inside.
- * `resetOnEnd` snaps the drag transform back to 0 so React's re-render is
- * the source of truth for position.
- */
-function EditableGrid({ plugins, onCommit }: EditableGridProps) {
-  // Rects are captured on drag start and consumed on drag end; using a ref
-  // avoids re-rendering the whole grid on every gesture start.
-  const rectsRef = useRef<Map<string, { x: number; y: number; w: number; h: number }>>(new Map())
+const cardElementId = (entryPath: string) =>
+  `plugin-card-${entryPath.replace(/[^a-zA-Z0-9_-]/g, '_')}`
 
-  const captureRects = useCallback(() => {
-    const nextRects = new Map<string, { x: number; y: number; w: number; h: number }>()
-    const pending = plugins.length
-    if (pending === 0) {
-      rectsRef.current = nextRects
+function EditableGrid({ plugins, onCommit }: EditableGridProps) {
+  // Rects captured on drag start; index is aligned with `plugins`.
+  const rectsRef = useRef<Rect[]>([])
+  // Last translate reported by `onDragging`. Needed because `lynx-ui-draggable`
+  // with `resetOnEnd: true` zeroes its internal translate BEFORE firing
+  // `onDragEnd`, so the callback always receives `{x:0, y:0}`. We keep our
+  // own copy that survives the reset.
+  const lastTranslateRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  // Live drag state — `target` is the slot the source card is currently over.
+  // Non-source cards use it to compute a shift transform so they visibly
+  // reflow while the drag is in progress (setState fires on every dragging
+  // event, so this rerenders the grid at drag frequency).
+  const [dragState, setDragState] = useState<{ source: number; target: number } | null>(null)
+
+  const captureRects = useCallback((sourceIndex: number) => {
+    console.log('[PluginGrid] dragStart source=', sourceIndex, 'capturing rects for', plugins.length, 'cards')
+    lastTranslateRef.current = { x: 0, y: 0 }
+    setDragState({ source: sourceIndex, target: sourceIndex })
+    if (typeof lynx === 'undefined' || typeof lynx.createSelectorQuery !== 'function') {
+      console.log('[PluginGrid] no lynx.createSelectorQuery bridge — rects cannot be measured on this host')
       return
     }
-    for (const p of plugins) {
-      const key = p.entryPath!
-      lynx.createSelectorQuery()
-        .select(`#${cardElementId(key)}`)
-        ?.invoke({
+    rectsRef.current = []
+    plugins.forEach((plugin, index) => {
+      lynx
+        .createSelectorQuery()
+        .select(`#${cardElementId(plugin.entryPath!)}`)
+        .invoke({
           method: 'boundingClientRect',
-          params: {},
           success: (res) => {
-            const r = res as { left: number; top: number; width: number; height: number }
-            nextRects.set(key, { x: r.left, y: r.top, w: r.width, h: r.height })
+            const r = res as Partial<Rect> | undefined
+            if (!r || typeof r.left !== 'number') return
+            rectsRef.current[index] = {
+              left: r.left,
+              top: r.top ?? 0,
+              right: r.right ?? (r.left + (r.width ?? 0)),
+              bottom: r.bottom ?? ((r.top ?? 0) + (r.height ?? 0)),
+              width: r.width ?? 0,
+              height: r.height ?? 0,
+            }
           },
         })
         .exec()
-    }
-    // The queries are async but ReactLynx doesn't give us a "all done" hook —
-    // we rely on drag END coming later (after longpress → drag start → user
-    // drags → user releases), which gives all the rect callbacks time to land.
-    rectsRef.current = nextRects
+    })
   }, [plugins])
 
-  const onDragEnd = useCallback((draggedKey: string, translate: DragTranslate) => {
+  const hitTest = useCallback((sourceIndex: number, translate: { x: number; y: number }) => {
     const rects = rectsRef.current
-    const src = rects.get(draggedKey)
-    if (!src) return
-    const dropCenter = { x: src.x + src.w / 2 + translate.x, y: src.y + src.h / 2 + translate.y }
-    let targetKey: string | null = null
-    for (const [key, r] of rects.entries()) {
-      if (key === draggedKey) continue
-      if (
-        dropCenter.x >= r.x &&
-        dropCenter.x <= r.x + r.w &&
-        dropCenter.y >= r.y &&
-        dropCenter.y <= r.y + r.h
-      ) {
-        targetKey = key
-        break
-      }
+    const source = rects[sourceIndex]
+    if (!source) return sourceIndex
+    const cx = source.left + source.width / 2 + translate.x
+    const cy = source.top + source.height / 2 + translate.y
+    for (let i = 0; i < plugins.length; i++) {
+      if (i === sourceIndex) continue
+      const r = rects[i]
+      if (!r) continue
+      if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) return i
     }
-    if (targetKey === null) return
-    const currentKeys = plugins.map((p) => p.entryPath!)
-    const from = currentKeys.indexOf(draggedKey)
-    const to = currentKeys.indexOf(targetKey)
-    if (from < 0 || to < 0 || from === to) return
-    const next = currentKeys.slice()
-    const [moved] = next.splice(from, 1)
-    next.splice(to, 0, moved!)
-    onCommit(next)
-  }, [plugins, onCommit])
+    return sourceIndex
+  }, [plugins])
+
+  const onDragging = useCallback((sourceIndex: number, translate: { x: number; y: number }) => {
+    lastTranslateRef.current = translate
+    const target = hitTest(sourceIndex, translate)
+    setDragState((prev) => (
+      prev && prev.source === sourceIndex && prev.target === target
+        ? prev
+        : { source: sourceIndex, target }
+    ))
+  }, [hitTest])
+
+  const onDragEnd = useCallback(
+    (sourceIndex: number, translateFromLib: { x: number; y: number }) => {
+      // `lynx-ui-draggable` zeroes its own translate BEFORE firing `onDragEnd`
+      // when `resetOnEnd: true`. Fall back to our last-known translate.
+      const translate = translateFromLib.x === 0 && translateFromLib.y === 0
+        ? lastTranslateRef.current
+        : translateFromLib
+      const hitIndex = hitTest(sourceIndex, translate)
+      console.log('[PluginGrid] dragEnd source=', sourceIndex, 'translate=', translate, 'hit=', hitIndex)
+      setDragState(null)
+      if (hitIndex === sourceIndex) return
+      const next = plugins.slice()
+      const [moved] = next.splice(sourceIndex, 1)
+      next.splice(hitIndex, 0, moved!)
+      onCommit(next.map((p) => p.entryPath!))
+    },
+    [plugins, onCommit, hitTest],
+  )
+
+  // Where should the card at old index `i` visually sit right now?
+  // If the source were dropped at `target`, `i`'s new slot in the reordered
+  // list is `newIndex`, and its shift is `rects[newIndex] - rects[i]`.
+  const shiftFor = (i: number): { x: number; y: number } => {
+    if (!dragState || i === dragState.source) return { x: 0, y: 0 }
+    const { source, target } = dragState
+    let newIndex = i
+    if (source < target && i > source && i <= target) newIndex = i - 1
+    else if (source > target && i >= target && i < source) newIndex = i + 1
+    if (newIndex === i) return { x: 0, y: 0 }
+    const rects = rectsRef.current
+    const from = rects[i]
+    const to = rects[newIndex]
+    if (!from || !to) return { x: 0, y: 0 }
+    return { x: to.left - from.left, y: to.top - from.top }
+  }
 
   return (
     <view className='plugin-grid__items'>
-      {plugins.map((plugin) => {
-        const key = plugin.entryPath!
+      {plugins.map((plugin, index) => {
+        const isSource = dragState?.source === index
+        const shift = isSource ? { x: 0, y: 0 } : shiftFor(index)
+        // Source card: leave `transform` alone — lynx-ui-draggable writes it
+        // on the main thread via `setStyleProperty('transform', ...)`. Setting
+        // it from React would race that write.
+        const style = isSource ? undefined : { transform: `translate(${shift.x}px, ${shift.y}px)` }
         return (
-          <Draggable
+          <DraggableRoot
             key={String(plugin.id)}
-            id={cardElementId(key)}
-            trigger='longpress'
+            id={cardElementId(plugin.entryPath!)}
+            trigger='immediate'
             allowedDirection='all'
             resetOnEnd={true}
-            onDragStart={captureRects}
-            onDragEnd={(translate) => onDragEnd(key, translate)}
-            className='plugin-grid__card plugin-grid__card--editing'
+            onDragStart={() => captureRects(index)}
+            onDragging={(t) => onDragging(index, t)}
+            onDragEnd={(t) => onDragEnd(index, t)}
+            className={`plugin-grid__card plugin-grid__card--editing${
+              !isSource && dragState ? ' plugin-grid__card--shifting' : ''
+            }`}
+            style={style}
           >
-            <PluginIcon plugin={plugin} />
+            <view className='plugin-grid__icon-slot'>
+              <PluginIcon plugin={plugin} />
+              <DraggableArea className='plugin-grid__drag-handle'>
+                <view
+                  className='plugin-grid__drag-handle-inner'
+                  data-testid={`plugin-card-handle-${plugin.id}`}
+                >
+                  <Icon name='drag' size={22} color={ICON_COLORS.primaryContent} />
+                </view>
+              </DraggableArea>
+            </view>
             <text className='plugin-grid__card-name'>{plugin.displayName}</text>
-          </Draggable>
+          </DraggableRoot>
         )
       })}
     </view>
   )
-}
-
-function cardElementId(entryPath: string): string {
-  // Selector-safe id: entry_path can carry slashes / dots. Prefix + normalise.
-  return `plugin-grid-card-${entryPath.replace(/[^\w-]/g, '-')}`
 }
 
 function PluginCard({ plugin, onTap }: { plugin: JSPlugin; onTap: () => void }) {

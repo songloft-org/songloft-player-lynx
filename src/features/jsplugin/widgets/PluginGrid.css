@@ -32,6 +32,14 @@
   border: 1px dashed var(--separator, rgba(0, 0, 0, 0.15));
 }
 
+/* Non-source cards during a live drag: React writes an inline `transform`
+   that shifts them into their predicted new slot; this transition animates
+   the shift. The source card never gets `--shifting` — its transform is
+   owned by lynx-ui-draggable's main-thread writer. */
+.plugin-grid__card--shifting {
+  transition: transform var(--duration-fast) var(--ease-default);
+}
+
 .plugin-grid__drag-target {
   display: flex;
   flex-direction: column;
@@ -53,7 +61,8 @@
 /* No `background-color`: the card holds a `PluginIconTile`, which paints the same
    `--secondary-system-background` — the tile would have disappeared into it. The
    card is now the tap target and the label's column; the tile is the visual. The
-   radius stays for a future press fill to take the right shape. */
+   radius stays for a future press fill to take the right shape.
+   `position: relative` gives the edit-mode drag handle an anchor. */
 .plugin-grid__card {
   display: flex;
   flex-direction: column;
@@ -61,6 +70,43 @@
   width: 72px;
   padding: var(--space-2);
   border-radius: var(--radius-md);
+  position: relative;
+}
+
+/* Wrapper around the 40x40 `PluginIconTile`, so the drag handle can be
+   `inset: 0` on it (unambiguous, unlike percentages on the outer card). */
+.plugin-grid__icon-slot {
+  position: relative;
+  width: 40px;
+  height: 40px;
+}
+
+/* Edit-mode drag handle: overlays the icon tile pixel-for-pixel. Only this
+   rect starts a drag (it's the DraggableArea inside DraggableRoot); the rest
+   of the card is inert while editing.
+   `touch-action: none` is load-bearing: without it the browser's native pan
+   scrolls the outer <scroll-view> in parallel with the drag, because Lynx's
+   `bindtouchmove` is a passive listener and can't `preventDefault` the
+   native pan. The `scroll-y={!sortActive}` JSX toggle does not help — Lynx
+   web-elements only maps that attribute to programmatic scroll APIs; the
+   CSS `overflow-y: scroll` on the shadow-root scroll-view stays put. */
+.plugin-grid__drag-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  touch-action: none;
+}
+
+.plugin-grid__drag-handle-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background-color: rgba(0, 0, 0, 0.25);
 }
 
 .plugin-grid__card-name {

@@ -152,14 +152,13 @@ export function TabConfigPage() {
         : null}
 
       {/*
-        "Plugin order" — parallels the Flutter tab_config_page.dart section that
-        shows a ReorderableListView once there are ≥2 plugin tabs to reorder.
-        Reuse of SortableRoot + SortableItemArea mirrors the library
-        LibraryViewEditor: long-press the drag handle to lift, drag vertically
-        to reorder. Single-plugin case is skipped because there's nothing to
-        reorder.
+        "Plugin order" — parallels the Flutter tab_config_page.dart section.
+        SortableRoot + SortableItemArea mirrors the library LibraryViewEditor:
+        long-press the drag handle to lift, drag vertically to reorder.
+        Sorting starts → freeze SubPageShell's scroll so touchmove drags the
+        item instead of scrolling the page.
       */}
-      {config.pluginTabs.length > 1
+      {config.pluginTabs.length > 0
         ? (
           <view className='tab-config__section'>
             <text className='tab-config__section-title'>{t('jsplugin.tabPluginOrder')}</text>
@@ -168,7 +167,9 @@ export function TabConfigPage() {
                 getSortingKey: () => tab.entryPath,
                 dataItem: tab,
               }))}
-              onSortEnd={(sorted) => reorderPluginTabs(sorted.map((d) => d.dataItem.entryPath))}
+              onSortEnd={(sorted) => {
+                reorderPluginTabs(sorted.map((d) => d.dataItem.entryPath))
+              }}
             >
               {(item) => (
                 <SortableItem

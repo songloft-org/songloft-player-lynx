@@ -33,6 +33,7 @@ export type IconName =
   | 'chevron-up'
   | 'chevron-right'
   | 'menu'
+  | 'drag'
   | 'info'
   | 'logout'
   | 'link'
@@ -170,6 +171,16 @@ const ICONS: Record<IconName, (color: string) => string> = {
   'chevron-right': (c) => `<path d="M9.5 6 15.5 12 9.5 18" ${stroke(c)}/>`,
 
   menu: (c) => `<path d="M4 6h16M4 12h16M4 18h16" ${stroke(c)}/>`,
+
+  // 拖动指示，四向十字箭头（Material `open_with` 的等价 stroke 版本）。
+  // 主页插件网格编辑态用；跟 `sort` 的"排列列表 + 上下箭头"含义不同——
+  // 这个明确表达"抓这里可以四向拖动"。
+  drag: (c) =>
+    `<path d="M12 3v18M3 12h18" ${stroke(c)}/>` +
+    `<path d="M12 3l-3 3M12 3l3 3" ${stroke(c)}/>` +
+    `<path d="M12 21l-3-3M12 21l3-3" ${stroke(c)}/>` +
+    `<path d="M3 12l3-3M3 12l3 3" ${stroke(c)}/>` +
+    `<path d="M21 12l-3-3M21 12l-3 3" ${stroke(c)}/>`,
 
   // Info: circled "i".
   info: (c) =>
