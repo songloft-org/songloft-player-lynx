@@ -109,11 +109,11 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks())
 
 async function renderRow(
-  isWide: boolean,
+  opts: { isWide?: boolean, isSongListWide?: boolean },
   props: { selectionMode?: boolean } = {},
 ) {
   render(
-    <LibraryViewportProvider value={{ isWide }}>
+    <LibraryViewportProvider value={{ isWide: opts.isWide ?? false, isSongListWide: opts.isSongListWide ?? false }}>
       <SongListRow song={makeSong()} index={0} {...props} />
     </LibraryViewportProvider>,
   )
@@ -124,7 +124,7 @@ async function renderRow(
 }
 
 test('narrow rows show a more button but no flat shortcuts', async () => {
-  const { queryByTestId } = await renderRow(false)
+  const { queryByTestId } = await renderRow({})
   expect(queryByTestId('song-row-more')).toBeInTheDocument()
   expect(queryByTestId('song-row-detail')).not.toBeInTheDocument()
   expect(queryByTestId('song-row-add')).not.toBeInTheDocument()
@@ -134,7 +134,7 @@ test('narrow rows show a more button but no flat shortcuts', async () => {
 test('wide rows show only the add-to-playlist shortcut next to the more button', async () => {
   // Wide rows now show a single high-frequency shortcut (add-to-playlist).
   // Detail and delete stay in the ... menu.
-  const { queryByTestId } = await renderRow(true)
+  const { queryByTestId } = await renderRow({ isSongListWide: true })
   expect(queryByTestId('song-row-detail')).not.toBeInTheDocument()
   expect(queryByTestId('song-row-add')).toBeInTheDocument()
   expect(queryByTestId('song-row-delete')).not.toBeInTheDocument()
@@ -142,13 +142,13 @@ test('wide rows show only the add-to-playlist shortcut next to the more button',
 })
 
 test('selection mode strips the row tail and long-press', async () => {
-  const { queryByTestId } = await renderRow(true, { selectionMode: true })
+  const { queryByTestId } = await renderRow({ isSongListWide: true }, { selectionMode: true })
   expect(queryByTestId('song-row-more')).not.toBeInTheDocument()
   expect(queryByTestId('song-row-add')).not.toBeInTheDocument()
 })
 
 test('the wide add shortcut opens the add-to-playlist sheet directly', async () => {
-  const { getByTestId } = await renderRow(true)
+  const { getByTestId } = await renderRow({ isSongListWide: true })
   fireEvent.tap(getByTestId('song-row-add'), {})
   await act(async () => { await Promise.resolve() })
   expect(openAddToPlaylistMock).toHaveBeenCalledWith({ songIds: [1] })
@@ -157,12 +157,12 @@ test('the wide add shortcut opens the add-to-playlist sheet directly', async () 
 
 test('the favorite heart renders when the hook is wired (tap is catchtap: real-device)', async () => {
   favoriteToggleMock.mockReturnValue({ isFavorite: true, toggle: vi.fn(), isPending: false })
-  const { queryByTestId } = await renderRow(false)
+  const { queryByTestId } = await renderRow({})
   expect(queryByTestId('song-row-fav')).toBeInTheDocument()
 })
 
 test('selection mode hides the favorite heart too', async () => {
-  const { queryByTestId } = await renderRow(false, { selectionMode: true })
+  const { queryByTestId } = await renderRow({}, { selectionMode: true })
   expect(queryByTestId('song-row-fav')).not.toBeInTheDocument()
 })
 
@@ -170,7 +170,7 @@ test('selection mode hides the favorite heart too', async () => {
  * The `⋯` button is the song menu's anchor.
  */
 test('the more button carries an anchor id for the menu to be measured against', async () => {
-  const { getByTestId } = await renderRow(false)
+  const { getByTestId } = await renderRow({})
   expect(getByTestId('song-row-more').getAttribute('id')).toMatch(/^popover-anchor-\d+$/)
 })
 
@@ -208,7 +208,7 @@ test('opening the menu anchors it to the measured button', async () => {
     return query
   }
   try {
-    const { getByText } = await renderRow(false)
+    const { getByText } = await renderRow({})
     fireEvent.longpress(getByText('Blue in Green'), {})
     await act(async () => { await Promise.resolve() })
     expect(openMenuMock).toHaveBeenCalledWith({
@@ -225,7 +225,7 @@ test('opening the menu anchors it to the measured button', async () => {
 })
 
 test('the menu opens even when nothing can be measured', async () => {
-  const { getByText } = await renderRow(false)
+  const { getByText } = await renderRow({})
   fireEvent.longpress(getByText('Blue in Green'), {})
   await act(async () => { await Promise.resolve() })
   expect(openMenuMock).toHaveBeenCalledWith({
@@ -236,7 +236,7 @@ test('the menu opens even when nothing can be measured', async () => {
 })
 
 test('a wide row opens the menu with its viewport recorded as the row context', async () => {
-  const { getByText } = await renderRow(true)
+  const { getByText } = await renderRow({ isWide: true })
   fireEvent.longpress(getByText('Blue in Green'), {})
   await act(async () => { await Promise.resolve() })
   expect(openMenuMock).toHaveBeenCalledWith({

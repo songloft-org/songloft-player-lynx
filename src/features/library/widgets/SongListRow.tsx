@@ -66,7 +66,7 @@ export function SongListRow({
   const openMenu = useSongRowOverlays((s) => s.openMenu)
   const openAddToPlaylist = useSongRowOverlays((s) => s.openAddToPlaylist)
   const { anchorId, measure } = useTapAnchor()
-  const { isWide } = useLibraryViewport()
+  const { isWide, isSongListWide } = useLibraryViewport()
   const { isFavorite, toggle } = useFavoriteToggle(song.id)
   const currentSongId = usePlayerStore((s) => s.currentSong?.id)
 
@@ -78,7 +78,7 @@ export function SongListRow({
 
   // Wide rows: one shortcut — "add to playlist" (the highest-frequency action).
   // Info, delete, and everything else stay in the `⋯` menu.
-  const wideActions = !selectionMode && isWide
+  const wideActions = !selectionMode && isSongListWide
     ? (
       <view className='song-row__actions'>
         <view
@@ -104,7 +104,7 @@ export function SongListRow({
       onToggleFavorite={selectionMode ? undefined : toggle}
       isCurrentSong={currentSongId === song.id}
       isSelected={isSelected}
-      isWide={isWide}
+      isWide={isSongListWide}
       trailing={wideActions}
       subtitleSuffix={subtitleSuffix}
       onMore={selectionMode ? undefined : openMenuAnchored}

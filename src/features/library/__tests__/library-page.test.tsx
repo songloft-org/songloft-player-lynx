@@ -94,7 +94,7 @@ vi.mock('../data/use-debounce.js', () => ({
 
 const { LibraryPage } = await import('../pages/LibraryPage.js')
 const { LibraryViewportProvider } = await import('../pages/library-viewport.js')
-type LibraryViewport = { isWide: boolean }
+type LibraryViewport = { isWide: boolean; isSongListWide: boolean }
 
 /** Build a config from an ordered key list, optionally hiding some keys. */
 function configOf(keys: LibraryViewKey[] = [...LIBRARY_VIEW_KEYS], hidden: LibraryViewKey[] = []): LibraryBrowseConfig {
@@ -128,7 +128,7 @@ afterEach(() => vi.clearAllMocks())
  * the pill strip, and going through the context keeps that wired to the same
  * default (narrow) the layout hands it before its first measurement.
  */
-async function renderPage(viewport: LibraryViewport = { isWide: false }) {
+async function renderPage(viewport: LibraryViewport = { isWide: false, isSongListWide: false }) {
   render(
     <LibraryViewportProvider value={viewport}>
       <LibraryPage />
@@ -231,7 +231,7 @@ test('tapping a pill navigates to /library with that view', async () => {
  * is what would catch the page growing its own second copy again.
  */
 test('wide viewport drops the pill strip and does not render a rail of its own', async () => {
-  const { queryAllByTestId } = await renderPage({ isWide: true })
+  const { queryAllByTestId } = await renderPage({ isWide: true, isSongListWide: false })
   expect(queryAllByTestId(/^library-view-pill-/)).toHaveLength(0)
   expect(queryAllByTestId(/^library-view-row-/)).toHaveLength(0)
 })

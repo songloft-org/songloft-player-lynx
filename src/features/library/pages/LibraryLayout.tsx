@@ -45,7 +45,17 @@ export function LibraryLayout() {
    * criterion the drill-in pages used was simply wrong, and it disagreed with
    * `LibraryPage` across the whole 600–820px band.
    */
-  const { isWide, onLayoutChange } = useShellSeededBreakpoint('.library-shell')
+  const { isWide, breakpoint, onLayoutChange } = useShellSeededBreakpoint('.library-shell')
+
+  /*
+   * Song-list column layout needs more room than the rail.  The rail is useful
+   * at tablet (>= 600 px content width), but the three-column row (title /
+   * artist 140 / album 160) needs ~600 px of song-list content width —
+   * unattainable with two 220 px rails beside it until the window is well past
+   * 1000 px.  Desktop (>= 900 px content width) gives the song list roughly
+   * 680 px, enough for all three columns plus the row tail.
+   */
+  const isSongListWide = breakpoint === 'desktop' || breakpoint === 'tv'
 
   /*
    * Which row is lit. Sub-pages carry no `?view=`, so the policy (per route, and
@@ -61,7 +71,7 @@ export function LibraryLayout() {
     : undefined
 
   return (
-    <LibraryViewportProvider value={{ isWide }}>
+    <LibraryViewportProvider value={{ isWide, isSongListWide }}>
       <LibraryShell
         isWide={isWide}
         onLayoutChange={onLayoutChange}

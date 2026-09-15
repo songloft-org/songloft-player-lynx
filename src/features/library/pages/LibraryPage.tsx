@@ -62,7 +62,7 @@ export function LibraryPage() {
   // Measured once by `LibraryLayout` for the whole section, not here: this page
   // and the rail must never disagree about the breakpoint, and a second
   // measurement of a slightly different box could.
-  const { isWide } = useLibraryViewport()
+  const { isWide, isSongListWide } = useLibraryViewport()
 
   // Song-list sort: owned here (not by the flat view) so it persists to prefs
   // and survives switching between the 14 views. Seeded from prefs once.
@@ -181,7 +181,7 @@ export function LibraryPage() {
         sortId={sortId}
         sortOrder={sortOrder}
         onSortChange={onSortChange}
-        isWide={isWide}
+        isWide={isSongListWide}
       />
     )
     : group === 'facets'

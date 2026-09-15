@@ -62,7 +62,7 @@ const { setShellWidth } = await import('../../../shared/nav/shell-navigation.js'
 beforeEach(() => {
   searchHook.mockReturnValue({})
   browseConfigHook.mockReturnValue({ data: DEFAULT_LIBRARY_BROWSE_CONFIG, isError: false })
-  breakpointHook.mockReturnValue({ isWide: false, onLayoutChange: vi.fn() })
+  breakpointHook.mockReturnValue({ isWide: false, breakpoint: 'mobile', onLayoutChange: vi.fn() })
   lastSearch.current = {}
   location.pathname = '/library'
 })
@@ -70,7 +70,7 @@ beforeEach(() => {
 /** Render at `pathname`, wide, so the rail is up and its highlight is assertable. */
 async function renderWideAt(pathname: string) {
   location.pathname = pathname
-  breakpointHook.mockReturnValue({ isWide: true, onLayoutChange: vi.fn() })
+  breakpointHook.mockReturnValue({ isWide: true, breakpoint: 'tablet', onLayoutChange: vi.fn() })
   return renderLayout()
 }
 
@@ -95,14 +95,14 @@ test('narrow: the routed page only, no rail', async () => {
 })
 
 test('wide: the rail renders one row per visible view, beside the routed page', async () => {
-  breakpointHook.mockReturnValue({ isWide: true, onLayoutChange: vi.fn() })
+  breakpointHook.mockReturnValue({ isWide: true, breakpoint: 'tablet', onLayoutChange: vi.fn() })
   const { queryAllByTestId, queryByText } = await renderLayout()
   expect(queryAllByTestId(/^library-view-row-/)).toHaveLength(18)
   expect(queryByText('OUTLET')).toBeInTheDocument()
 })
 
 test('tapping a rail row navigates to that library view', async () => {
-  breakpointHook.mockReturnValue({ isWide: true, onLayoutChange: vi.fn() })
+  breakpointHook.mockReturnValue({ isWide: true, breakpoint: 'tablet', onLayoutChange: vi.fn() })
   const { getByTestId } = await renderLayout()
   await act(async () => {
     fireEvent.tap(getByTestId('library-view-row-album'))
@@ -111,7 +111,7 @@ test('tapping a rail row navigates to that library view', async () => {
 })
 
 test('config still pending → no rail rows, and the page still renders', async () => {
-  breakpointHook.mockReturnValue({ isWide: true, onLayoutChange: vi.fn() })
+  breakpointHook.mockReturnValue({ isWide: true, breakpoint: 'tablet', onLayoutChange: vi.fn() })
   browseConfigHook.mockReturnValue({ data: undefined, isError: false })
   const { queryAllByTestId, queryByText } = await renderLayout()
   expect(queryAllByTestId(/^library-view-row-/)).toHaveLength(0)
@@ -125,7 +125,7 @@ test('config still pending → no rail rows, and the page still renders', async 
  * keep by hand.
  */
 test('with no ?view= the highlight follows the last library view visited', async () => {
-  breakpointHook.mockReturnValue({ isWide: true, onLayoutChange: vi.fn() })
+  breakpointHook.mockReturnValue({ isWide: true, breakpoint: 'tablet', onLayoutChange: vi.fn() })
   lastSearch.current = { view: 'genre' }
   const { getByTestId } = await renderLayout()
   expect(getByTestId('library-view-row-genre').className).toContain('library-rail__row--active')
