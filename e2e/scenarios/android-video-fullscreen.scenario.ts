@@ -14,7 +14,9 @@ import { fetchRealSongs, fetchVideoSong } from '../fixtures/songs.js'
  * making are the ones that fail if someone ever "simplifies" it into a second player
  * or forgets to hand the surface back:
  *
- *  - the activity is really resumed (not merely started);
+ *  - the picture really goes up **inside the main activity**: since the controls moved
+ *    to JS the surface is a `SurfaceView` under the Lynx view, so the page must keep
+ *    the foreground and no second activity may be started;
  *  - position keeps advancing across open *and* close, never re-buffering — a reload
  *    would show up as a gap and a `loading` state;
  *  - an audio-only track still plays after closing. Skipping `detachVideoOutput`
@@ -104,7 +106,7 @@ describe('全屏视频（Android）', () => {
     expect(kind).toBe('direct')
   })
 
-  test.skipIf(!runnable)('open() 起了全屏 Activity 且播放不中断', async () => {
+  test.skipIf(!runnable)('open() 在主 Activity 内起画面且播放不中断', async () => {
     await driver.evaluateJS(`
       (async () => {
         const store = globalThis.__E2E_PLAYER_STORE__;
@@ -124,7 +126,14 @@ describe('全屏视频（Android）', () => {
 
     const resumed = resumedActivity()
     expect(resumed, 'dumpsys 里没有 topResumedActivity，断言会变成空气').not.toBe('')
-    expect(resumed, '全屏 Activity 没有 resumed').toContain('SongloftVideoActivity')
+    // Two-sided on purpose. `SongloftVideoActivity` was deleted when the controls
+    // moved to JS (1cc08e0): the surface now lives in `MainActivity`'s view tree,
+    // *under* the Lynx view, so the page keeps the foreground and paints its own
+    // controls above the picture. A regression to `startActivity` would make
+    // `MainActivity` give up `topResumedActivity` and take the control layer with it.
+    expect(resumed, '全屏视频不该再起独立 Activity').toContain('MainActivity')
+    expect(resumed, 'SongloftVideoActivity 已删除，这里出现说明退回了独立 Activity')
+      .not.toContain('SongloftVideoActivity')
     expect(await driver.evaluateJS<boolean>(`globalThis.__E2E_VIDEO__.isOpen()`)).toBe(true)
 
     const during = await playerState(driver)
