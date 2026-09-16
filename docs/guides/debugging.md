@@ -77,6 +77,8 @@ const root = await page.evaluate(() => document.querySelector('lynx-view').shado
 | 元素是否被裁掉 | `checkVisibility()` 为 true 但 `document.elementFromPoint` 打不中 ⇒ 是裁剪，不是不可见 |
 | token 没生效 | `getComputedStyle(el).getPropertyValue('--x')` 为空串 ⇒ 元素在 `.theme-root` 子树之外 |
 | 标签没实现 | shadow root 里出现原样的 `<refresh>` / `<webview>`（未映射标签走恒等回落，成为 `HTMLUnknownElement`） |
+| 拖拽「没跟手」 | `getComputedStyle(el).transform` 的**位移模长**在指针大跳之后是否继续增长（`matrix(a,b,c,d,tx,ty)` 的 tx/ty 是索引 **4/5**）。顺序没变 ≠ 拖拽死了：也可能是落盘 404 回滚（首页插件网格就是这种） |
+| 拖拽「松手后还在动」 | 松手**后**把光标移回手柄、**不按任何键**做几次小幅移动，再读同一个位移（真拖拽带 `buttons != 0`，所以按键态本身就是判据）。非 0 ⇒ 事件流里有「没按键的 mousemove 被当成拖拽」：上游 `handleDragMove` 无拖拽态守卫，实测插件网格 4px、修复后 0px |
 
 ### 两个反复踩的坑
 
@@ -95,6 +97,10 @@ const root = await page.evaluate(() => document.querySelector('lynx-view').shado
 - 以上两条都**静默失败**：扩展没装上，测试照样"通过"。凡是「缺了某个条件就一定不会失败」的测试，脚本必须自检该条件是否真的成立，否则那个通过毫无意义。
 - **崩溃 dump 在 Chrome 自己的目录**：`~/Library/Application Support/Google/Chrome/Crashpad/completed/*.dmp`（不是 `~/Library/Logs/DiagnosticReports/`）。用 Python 解 minidump 的 exception stream 就能拿到异常码与故障地址，不需要符号；crashpad 注解里还带崩溃进程类型和**当时注入的扩展 ID**。
 - **想验证一个改法值不值得落盘**：用 CDP `Fetch` 域拦响应体、改写后 `fulfillRequest`，可以在完全不动仓库文件的前提下 A/B 几种改法。
+
+### A/B 一个宿主脚本：`Network.setBlockedURLs`
+
+要判断「某个宿主脚本到底有没有用」，**不需要准备两份产物**：CDP `Network.setBlockedURLs(['*drag-mouse-capture.js'])` 屏蔽它跑一遍（复现旧行为），再解禁重载跑一遍（验证修复）——同一份 build、同一份后端数据，唯一的变量就是那个脚本。现成驱动器是 [`scripts/verify-drag-mouse.mjs`](../../scripts/verify-drag-mouse.mjs)（批76 用它量出曲库视图编辑 26px→26px 死 vs 26px→51px 活），脚本头附完整配方：后端 `make run`（`:58091`）+ `PORT=3010 node web/serve.mjs`（**必须来自 `build:web` 的产物**，否则 `index.html` 是旧的、根本不引用该脚本，屏蔽与解禁毫无差别）+ 宿主 Chrome（有头启动即可，只有 `--headless` 在本机会 core dump）`--remote-debugging-port=3100 --user-data-dir=/tmp/…`，脚本从 `/json/version` 取 `webSocketDebuggerUrl` 连上去。
 
 ## 一次性探针 scenario
 

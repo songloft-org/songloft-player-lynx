@@ -168,6 +168,14 @@ const HOST_SCRIPTS = [
   'lynx-frame-host.js',
   'songloft-lynx-frame-module.js',
   'songloft-lynx-bridge-module.js',
+  /*
+   * Restores the pointer capture a mouse needs to keep a drag handle while the
+   * cursor leaves it — without it, a flick ends the drag (see
+   * web/drag-mouse-capture.js). Loaded by index.html, so the gate above would
+   * fail without this entry; listed here because the deployed product must
+   * serve it too.
+   */
+  'drag-mouse-capture.js',
 ]
 for (const name of HOST_SCRIPTS) {
   const src = resolve(repoRoot, 'web', name)

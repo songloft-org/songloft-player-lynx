@@ -352,6 +352,23 @@
   -->
   <script defer src="/webview-host.js"></script>
   <script defer src="/lynx-frame-host.js"></script>
+  <!--
+    Mouse pointer capture for the drag handles (PluginGrid's edit mode, the
+    library view editor, the settings tab order, the playlist sortables).
+
+    A mouse drag dies on Web the moment the cursor leaves the 22 px handle:
+    web-core routes events by hit path, so the handle gets no `mousemove`, and
+    the `mouseleave` on the way out is bound to `handleDragEnd`
+    (useDraggable.tsx:264) — the drag ends mid-gesture and the card snaps home.
+    Touch is unaffected because the browser captures the pointer implicitly.
+    This file restores that symmetry by capturing the mouse pointer on the
+    handle at `pointerdown`. See web/drag-mouse-capture.js for the measurements.
+
+    Order is not constrained (it only registers document-level listeners), but
+    it is `defer` so it never blocks parsing and is always installed before the
+    page can be pressed.
+  -->
+  <script defer src="/drag-mouse-capture.js"></script>
 
   <!--
     Alias `blur-view` onto web-core's `x-blur-view`.

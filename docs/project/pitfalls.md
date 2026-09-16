@@ -46,6 +46,26 @@ web-core 的 `LYNX_TAG_TO_HTML_TAG_MAP` 只映射 view/text/image/raw-text/scrol
 
 `client_prod` 入口用了 `import.meta`，当传统脚本加载抛 `Cannot use 'import.meta' outside a module`——这个异常**不进 `console.error`**（只走 `pageerror`），表现是整页纯黑、零诊断。教训：无头浏览器验证要监听 `page.on('pageerror')`，别只看 console。
 
+### 鼠标没有隐式指针捕获：Web 上的拖拽手柄得自己补（2026-09-15 批76）
+
+**症状**：同一个拖拽组件，手指拖正常，鼠标拖「卡顿不跟手」；快速甩动时停在原地（`resetOnEnd` 的面还会弹回原位）。四处面都中：首页插件网格、曲库视图编辑、设置 tab 顺序、歌单排序。
+
+**机制**：`lynx-ui` 的 `useDraggable` 把 `main-thread:bindmouseleave` 绑成 `handleDragEnd`（`useDraggable.tsx:264`），而 web-core 按**事件命中路径**派发 —— 等于把「指针此刻在哪」当成了「这次拖拽归谁」。touch 由浏览器做**隐式捕获**（手指滑出 22px 手柄后，`touchmove` 仍归收到 `touchstart` 的那个元素），**鼠标没有这回事**：光标一离开手柄，`mousemove` 就发给底下的元素，手柄收到 **0** 条，而离开时产生的 `mouseleave` 直接结束拖拽。
+
+**判据（怎么量）**：看被拖元素的位移有没有继续跟着指针（别只看 DOM 顺序 —— 顺序没变有两种原因：拖拽死了，或落盘 404 回滚）。复现数据（`drag-repro/`，库代码与 web-core 均未改）：单步 +200px → **0** 条 move、`state` 由 `drag start` 翻 `drag end`、手柄收 4 次 `mouseleave`；30 步 ×2px → 到达 30 但 `mouseleave` **84** 次；同一序列加 `setPointerCapture` 后 → 大跳仍有到达、`leave` 归零、后续 move 继续累加。顺带：这条链与「mouse 通道丢事件」无关（实测 60/60 全到达，touch 反而 54/60），别往节流/丢包方向查。
+
+**不要在库层「拦事件」**：只吞 `mouseleave`/`mouseout` 实测无效 —— 大跳时 move 根本到不了手柄，拖拽照样死。正解是把缺失的捕获补上：document 的 capture 阶段拦 `pointerdown`，对手柄 `setPointerCapture`。
+
+**宿主怎么认出「这是拖拽手柄」**：web-core **不把事件绑定写进 DOM**（`x-view` 上看不到 `bind*` 痕迹），唯一可用标记是库渲染的 `ios-enable-simultaneous-touch`（`DraggableArea`；`SortableItemArea` 是它的再导出，所以四个面一条规则全盖）。它是**上游私有属性**，上游改名字不会报任何错、只会让拖拽静默退回旧行为 —— 必须配闸门盯着（`src/__tests__/web-drag-mouse-capture.test.ts`）。
+
+**实现要点**（`web/drag-mouse-capture.js`）：① `event.target` 在 shadow root 外一律被重定向到宿主（`<lynx-view>`），找手柄必须走 `event.composedPath()`；② 只处理 `pointerType === 'mouse'`（touch/pen 已有隐式捕获，另外捕获 touch 指针有可能压掉原生滚动）；③ 原生 HTML5 拖拽要单独拒：Chrome 默认让 `<img>` 可拖，而 `Icon` 在 Web 上渲染成真实 `<img>`（实测 `dragstart` 在设置 tab 顺序面确实被触发过），一旦它接管，`mousemove` 停发、捕获也救不回来。
+
+**同一处的第二个缺口：没有按下任何键的移动也会被当成拖拽。** `useDraggable` 的 `handleDragMove`（`useDraggable.tsx:204`）**没有「我现在在拖吗」的判断** —— 它只做 `cursor − touchStartPoint` 然后写 transform，而那个锚点只有 `MTSResetInternalTranslateValues()` 会清，全库唯一调用点是 `useSortable`（`useSortable.tsx:455`，`resetStatus` 里遍历各 item 调）。所以：**走 `SortableRoot` 的面（曲库视图编辑、设置 tab 顺序、歌单两处）在一次排序结束后会把锚点清掉，而 `PluginGrid`（唯一直接挂 `DraggableRoot`/`DraggableArea` 的面）** 的锚点会活到这个 lynx-view 节点消失为止 —— 于是**松手之后把光标移回那张卡片，它就继续跟着光标走**（实测 `transform: translate(4px, 0)`，光标不动它就不动，光标一动它就跟着动；用户的原话是「鼠标松开后为何图标还是跟着鼠标动」）。注意它甚至不需要一次拖拽：只要在这个手柄上按过（哪怕一次点击），锚点就已经留下了。
+
+修法同样是宿主守卫，而且只补那个缺失的不变量：**`buttons === 0` 的 `mousemove` 不允许进入手柄**（真拖拽中的移动一定带 `buttons !== 0`，所以不会干扰拖拽）。两个细节：① 必须 `stopPropagation()` **且必须在 capture 相** —— web-core 的监听器在 composed path 更深处（`<lynx-view>` 宿主上），只计数不拦截等于没修（`lynx-view` 上少一层就不会被派发到绑定层）；② 守卫范围限定在手柄子树，别把整页的 hover 移动都吞了。**A/B 判据**：拖完松手，把光标移回那张卡的手柄上做几次不按键的小幅移动，读位移 —— 屏蔽该脚本 **4px**、加载后 **0px**（`scripts/verify-drag-mouse.mjs` 两半都跑这条）。
+
+**闸门断言要限定在函数体里写。** 这条守卫的每个关键词（`buttons !== 0`、`stopPropagation()`）在它周围的注释里都会出现，文件级 `toContain` 会被注释骗过：实测把 `event.stopPropagation()` 那一行删掉、注释原地保留，断言照样通过。改成先 `match` 出监听器块再断言块内字符串，四个变异（删整段、条件取反、删调用、去掉手柄限定）才全部咬住。
+
 ## 3. 原生模块
 
 ### 原生方法不返回 Promise
