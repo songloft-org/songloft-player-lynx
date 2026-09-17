@@ -79,6 +79,10 @@ export type IconName =
   | 'arrow-up'
   | 'arrow-down'
   | 'video'
+  | 'rotate'
+  | 'maximize'
+  | 'minimize'
+  | 'loader'
 
 /** Shared stroke attributes for line icons — Muse §4.5 stroke-width 1.6. */
 function stroke(color: string): string {
@@ -426,6 +430,39 @@ const ICONS: Record<IconName, (color: string) => string> = {
   'arrow-down': (c) =>
     `<path d="M12 5v14" ${stroke(c)}/>` +
     `<path d="M19 12l-7 7-7-7" ${stroke(c)}/>`,
+
+  // Rotate: a phone silhouette with a curved arrow around it — screen orientation toggle.
+  rotate: (c) =>
+    `<rect x="8" y="3.5" width="8" height="17" rx="1.5" ${stroke(c)}/>` +
+    `<path d="M6 8.5A5 5 0 0 1 11 3.5" ${stroke(c)}/>` +
+    `<path d="M4 8l2 .5.5-2" ${stroke(c)}/>`,
+
+  // Maximize: four outward-pointing corners — "fit" (currently letterbox, tap to expand to fill).
+  maximize: (c) =>
+    `<path d="M4 9V4h5" ${stroke(c)}/>` +
+    `<path d="M20 9V4h-5" ${stroke(c)}/>` +
+    `<path d="M4 15v5h5" ${stroke(c)}/>` +
+    `<path d="M20 15v5h-5" ${stroke(c)}/>`,
+
+  // Minimize: four inward-pointing corners — "zoom" (currently filled, tap to shrink back to fit).
+  minimize: (c) =>
+    `<path d="M9 4v5H4" ${stroke(c)}/>` +
+    `<path d="M15 4v5h5" ${stroke(c)}/>` +
+    `<path d="M9 20v-5H4" ${stroke(c)}/>` +
+    `<path d="M15 20v-5h5" ${stroke(c)}/>`,
+
+  // Loader: buffering indicator — a dotted ring (12 tick marks at varying opacity via alpha).
+  // The spin animation lives in CSS on the wrapping element, not here — SVG rotation would
+  // require the runtime to re-render the sprite every frame.
+  loader: (c) =>
+    `<path d="M12 3v3" ${stroke(c)}/>` +
+    `<path d="M12 18v3" ${stroke(c)}/>` +
+    `<path d="M3 12h3" ${stroke(c)}/>` +
+    `<path d="M18 12h3" ${stroke(c)}/>` +
+    `<path d="M5.6 5.6l2.1 2.1" ${stroke(c)}/>` +
+    `<path d="M16.3 16.3l2.1 2.1" ${stroke(c)}/>` +
+    `<path d="M5.6 18.4l2.1-2.1" ${stroke(c)}/>` +
+    `<path d="M16.3 7.7l2.1-2.1" ${stroke(c)}/>`,
 
   // Label: custom song tag (distinct from genre `tag`).
   label: (c) =>

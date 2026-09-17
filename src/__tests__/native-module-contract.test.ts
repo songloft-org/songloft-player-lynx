@@ -1049,7 +1049,10 @@ describe('SongloftVideo module surface (Android)', () => {
   const methods = interfaceMethods(read('src/native/video.ts'), 'NativeVideoModule')
 
   test('the interface was parsed (guard against a silent empty list)', () => {
-    expect(methods).toEqual(['open', 'close', 'isOpen'])
+    expect(methods).toEqual([
+      'open', 'close', 'isOpen',
+      'setSurfaceLayout', 'setOrientation', 'getVideoSize',
+    ])
   })
 
   test.each(methods)('SongloftVideoModule.%s has @LynxMethod and uses Callback', (method) => {
@@ -1060,15 +1063,35 @@ describe('SongloftVideo module surface (Android)', () => {
     ).toMatch(new RegExp(`fun ${method}\\([^)]*callback:\\s*Callback`))
   })
 
-  test('the dead closed event is gone; the host draws pixels only, JS owns the controls', () => {
-    // The event was emitted by both hosts but listened to by neither — a fake ready
-    // signal is worse than none, so it was removed rather than wired to nothing. The
-    // fullscreen now shows a bare surface under the Lynx view: the native side keeps
-    // no close button, so JS is the only control layer (one style on every platform).
-    expect(hosts.video.android).not.toContain('SongloftVideo.closed')
+  test('Android does not push a closed event; the host draws pixels only, JS owns the controls', () => {
+    // The framework back key already routes to the same `performRouteBack` the
+    // page uses on its own, so a second close-from-host channel would just be a
+    // second source of truth for the same signal. The fullscreen shows a bare
+    // surface under the Lynx view: no native close button, JS is the only
+    // control layer (one style on every platform).
+    expect(hosts.video.android).not.toContain('"SongloftVideo.closed"')
     expect(hosts.video.android).not.toContain('buildCloseButton')
     expect(hosts.video.androidMain).toContain('setZOrderMediaOverlay(true)')
     expect(hosts.video.androidMain).toContain('addView(')
+  })
+
+  test('the host emits videoSizeChanged and orientationChanged', () => {
+    // These are the only two channels a JS page can use to learn about the
+    // decoder's aspect ratio and the window's real orientation. Without both,
+    // a rotated device would still paint a stretched picture (the fix this
+    // whole feature exists for).
+    expect(hosts.video.android).toContain('SongloftVideo.videoSizeChanged')
+    expect(hosts.video.android).toContain('SongloftVideo.orientationChanged')
+    // The module owns the constant; MainActivity posts to it by name.
+    expect(hosts.video.androidMain).toContain('EVENT_ORIENTATION_CHANGED')
+  })
+
+  test('MainActivity gives the module a handle to the Activity and an event emitter', () => {
+    // The module cannot lock orientation without an Activity, and cannot push
+    // events without a way into the LynxView. Both wires are cheap to forget
+    // (nothing on the JS side notices) so pin them here.
+    expect(hosts.video.androidMain).toContain('setActivity(this)')
+    expect(hosts.video.androidMain).toContain('setEventEmitter')
   })
 
   test('the engine can lend out a surface, and the module hands it back', () => {
@@ -1108,9 +1131,12 @@ describe('SongloftVideo module surface (Android)', () => {
 })
 
 describe('SongloftVideo module surface (iOS)', () => {
-  const methods = interfaceMethods(read('src/native/video.ts'), 'NativeVideoModule')
+  // iOS still runs on the AVPlayerViewController path (open/close/isOpen only).
+  // The AVPlayerLayer migration in commit 2 will extend this to the full set
+  // that `interfaceMethods(video.ts)` returns.
+  const iosMethods = ['open', 'close', 'isOpen']
 
-  test.each(methods)('SongloftVideoModule.%s exists in Swift with methodLookup', (method) => {
+  test.each(iosMethods)('SongloftVideoModule.%s exists in Swift with methodLookup', (method) => {
     expectSwiftMethod(hosts.video.ios, method)
   })
 

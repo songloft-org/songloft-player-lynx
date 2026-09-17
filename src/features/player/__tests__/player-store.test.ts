@@ -760,6 +760,9 @@ describe('the fullscreen video surface follows the queue', () => {
         open: (_a: string, cb: (json: string) => void) => cb('{"result":true}'),
         close,
         isOpen: (_a: string, cb: (json: string) => void) => cb('{"result":false}'),
+        setSurfaceLayout: (_a: string, cb: (json: string) => void) => cb('{}'),
+        setOrientation: (_a: string, cb: (json: string) => void) => cb('{}'),
+        getVideoSize: (_a: string, cb: (json: string) => void) => cb('{}'),
       },
     }
     resetVideoModuleForTests()

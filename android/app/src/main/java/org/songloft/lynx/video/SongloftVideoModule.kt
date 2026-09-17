@@ -1,13 +1,19 @@
 package org.songloft.lynx.video
 
 import android.content.Context
+import android.content.pm.ActivityInfo
 import android.os.Handler
 import android.os.Looper
+import android.util.DisplayMetrics
 import android.view.SurfaceView
 import android.view.View
+import android.widget.FrameLayout
 import com.lynx.jsbridge.LynxMethod
 import com.lynx.jsbridge.LynxModule
 import com.lynx.react.bridge.Callback
+import com.lynx.react.bridge.JavaOnlyArray
+import com.lynx.react.bridge.JavaOnlyMap
+import com.lynx.tasm.behavior.LynxContext
 import org.json.JSONObject
 import org.songloft.lynx.audio.SongloftAudioEngine
 
@@ -26,11 +32,31 @@ import org.songloft.lynx.audio.SongloftAudioEngine
  * JS page owns every control above the picture. `open`/`close` here only toggle that
  * surface and attach/detach the engine's video output — nothing user-visible is
  * created on the native side.
+ *
+ * ## Sizing
+ *
+ * The picture is *not* stretched to fill the surface: the JS page reads the video's
+ * pixel dimensions from the `videoSizeChanged` event and calls [setSurfaceLayout]
+ * with a letterbox / zoom rect. The rect arrives in CSS-logical pixels (the same
+ * unit `boundingClientRect` returns in Lynx) and is scaled to device px here.
  */
 class SongloftVideoModule(context: Context) : LynxModule(context) {
 
+    private fun androidContext(): Context = (mContext as LynxContext).getContext()
+
+    private fun lynxContext(): LynxContext = mContext as LynxContext
+
     companion object {
         const val NAME = "SongloftVideo"
+
+        /**
+         * Byte-for-byte match with `src/native/video.ts`. Android does not push a
+         * `closed` event: the framework's back key already routes to the same
+         * `performRouteBack` the page uses on its own, so a separate close-from-
+         * host channel would be a second source of truth for the same signal.
+         */
+        const val EVENT_VIDEO_SIZE_CHANGED = "SongloftVideo.videoSizeChanged"
+        const val EVENT_ORIENTATION_CHANGED = "SongloftVideo.orientationChanged"
 
         private const val OPEN_TIMEOUT_MS = 8_000L
 
@@ -40,10 +66,22 @@ class SongloftVideoModule(context: Context) : LynxModule(context) {
 
         private var surface: SurfaceView? = null
         private var isOpen = false
+        /** Set by [MainActivity] on create so [setOrientation] has a target. */
+        private var activityRef: java.lang.ref.WeakReference<android.app.Activity>? = null
+        /** Set by [MainActivity]. Fed the current context so events can go up. */
+        private var eventEmitter: ((String, Map<String, Any?>) -> Unit)? = null
         private val mainHandler = Handler(Looper.getMainLooper())
 
         fun setVideoSurface(value: SurfaceView?) {
             surface = value
+        }
+
+        fun setActivity(activity: android.app.Activity?) {
+            activityRef = activity?.let { java.lang.ref.WeakReference(it) }
+        }
+
+        fun setEventEmitter(emitter: ((String, Map<String, Any?>) -> Unit)?) {
+            eventEmitter = emitter
         }
 
         /**
@@ -74,7 +112,9 @@ class SongloftVideoModule(context: Context) : LynxModule(context) {
 
         private fun showSurface(view: SurfaceView) {
             view.visibility = View.VISIBLE
-            SongloftAudioEngine.attachVideoOutput(view)
+            SongloftAudioEngine.attachVideoOutput(view) { w, h ->
+                mainHandler.post { emitVideoSize(w, h) }
+            }
             isOpen = true
         }
 
@@ -84,6 +124,13 @@ class SongloftVideoModule(context: Context) : LynxModule(context) {
                 SongloftAudioEngine.detachVideoOutput()
             }
             isOpen = false
+        }
+
+        private fun emitVideoSize(width: Int, height: Int) {
+            eventEmitter?.invoke(
+                EVENT_VIDEO_SIZE_CHANGED,
+                mapOf("width" to width.toDouble(), "height" to height.toDouble()),
+            )
         }
     }
 
@@ -123,12 +170,102 @@ class SongloftVideoModule(context: Context) : LynxModule(context) {
 
     @LynxMethod
     fun close(args: String, callback: Callback) {
-        SongloftAudioEngine.runOnMain { hideSurface() }
+        SongloftAudioEngine.runOnMain {
+            hideSurface()
+            releaseOrientationLock()
+        }
         callback.invoke("{}")
     }
 
     @LynxMethod
     fun isOpen(args: String, callback: Callback) {
         callback.invoke(JSONObject().put("result", isOpen).toString())
+    }
+
+    /**
+     * Position and size the surface inside its parent. The JS page passes the rect
+     * in CSS-logical pixels, computed from the decoded video's aspect ratio and the
+     * user's fit/zoom choice — it is the single control point that stops a landscape
+     * frame from being stretched onto a portrait window.
+     */
+    @LynxMethod
+    fun setSurfaceLayout(args: String, callback: Callback) {
+        val obj = try { JSONObject(args) } catch (_: Exception) { JSONObject() }
+        val x = obj.optDouble("x", 0.0)
+        val y = obj.optDouble("y", 0.0)
+        val w = obj.optDouble("width", 0.0)
+        val h = obj.optDouble("height", 0.0)
+        val ctx = androidContext()
+        SongloftAudioEngine.runOnMain {
+            val view = surface ?: return@runOnMain callback.invoke("{}")
+            val density = deviceDensity(ctx)
+            val lp = FrameLayout.LayoutParams(
+                Math.max(1, (w * density).toInt()),
+                Math.max(1, (h * density).toInt()),
+            )
+            lp.leftMargin = (x * density).toInt()
+            lp.topMargin = (y * density).toInt()
+            view.layoutParams = lp
+            view.requestLayout()
+            callback.invoke("{}")
+        }
+    }
+
+    /**
+     * Request an orientation lock for the host activity. `'auto'` releases the lock.
+     *
+     * The manifest declares `configChanges="orientation|screenSize"`, so a lock
+     * change does not tear the Activity down — the running page keeps its state.
+     */
+    @LynxMethod
+    fun setOrientation(args: String, callback: Callback) {
+        val obj = try { JSONObject(args) } catch (_: Exception) { JSONObject() }
+        val mode = obj.optString("mode", "auto")
+        mainHandler.post {
+            val activity = activityRef?.get()
+            if (activity != null) {
+                activity.requestedOrientation = when (mode) {
+                    "portrait" -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                    "landscape" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                    else -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                }
+            }
+            callback.invoke("{}")
+        }
+    }
+
+    /**
+     * Pull the decoded video's pixel dimensions if any. Callers usually listen to
+     * `videoSizeChanged`; this is a fallback for pages that mounted *after* the
+     * first frame decoded.
+     */
+    @LynxMethod
+    fun getVideoSize(args: String, callback: Callback) {
+        SongloftAudioEngine.runOnMain {
+            val size = SongloftAudioEngine.currentVideoSize()
+            if (size == null) {
+                callback.invoke("{}")
+            } else {
+                callback.invoke(
+                    JSONObject().put(
+                        "result",
+                        JSONObject()
+                            .put("width", size.first)
+                            .put("height", size.second),
+                    ).toString(),
+                )
+            }
+        }
+    }
+
+    private fun releaseOrientationLock() {
+        mainHandler.post {
+            activityRef?.get()?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
+    private fun deviceDensity(context: Context): Float {
+        val metrics: DisplayMetrics = context.resources.displayMetrics
+        return metrics.density
     }
 }

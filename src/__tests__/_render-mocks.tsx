@@ -428,6 +428,7 @@ function mockPlayerState(over: Partial<PlayerState> = {}): PlayerState {
     previousVolume: undefined,
     errorMessage: undefined,
     speed: 1,
+    videoScaleMode: 'fit',
     playSong: asyncNoop,
     playPlaylist: asyncNoop,
     playAll: asyncNoop,
@@ -455,6 +456,7 @@ function mockPlayerState(over: Partial<PlayerState> = {}): PlayerState {
     setSleepTimerAfterSongs: noop,
     cancelSleepTimer: noop,
     setAudioTrack: asyncNoop,
+    setVideoScaleMode: noop,
     // Answers the same value the real action does for "there was nothing to switch"
     // — the only outcome that needs no picture to exist.
     enterVideoSource: async () => 'skipped' as const,

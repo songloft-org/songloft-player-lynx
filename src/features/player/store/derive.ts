@@ -1,4 +1,5 @@
 import type { Song } from '../../../models/song.js'
+import type { ScaleMode } from '../../../native/video.js'
 import { hasNextForMode, hasPrevForMode, type PlayMode } from '../domain/play-mode.js'
 import type { PlaybackContext } from '../domain/playback-context.js'
 import type { SleepTimerStatus } from '../domain/sleep-timer.js'
@@ -38,6 +39,13 @@ export interface PlayerData {
    */
   sourcePlaylistId?: number
   speed: number
+  /**
+   * Aspect-fit vs zoom for the full-screen video surface. `'fit'` letterboxes
+   * (the default — landscape video stays landscape inside a portrait screen);
+   * `'zoom'` fills the screen and crops. Persisted so a user's choice sticks
+   * across sessions.
+   */
+  videoScaleMode: ScaleMode
 }
 
 export function hasSong(s: PlayerData): boolean {

@@ -10,6 +10,7 @@ import {
 import { getTranscodeFormat, normalizeFormat } from '../../../core/network/audio-format.js'
 import { resolveVideoSourceKind } from '../../../core/network/video-source.js'
 import { readAudioQuality, readAutoResume, readNormalize, readPlaybackSpeed, writePlaybackSpeed } from '../../settings/data/settings-prefs.js'
+import { DEFAULT_VIDEO_SCALE_MODE, readVideoScaleMode, writeVideoScaleMode } from '../data/video-prefs.js'
 import { loadPlaybackState, savePlaybackState } from '../data/playback-persistence.js'
 import type { Song } from '../../../models/song.js'
 import {
@@ -21,7 +22,7 @@ import {
 } from '../../../native/index.js'
 import { readNativeModules } from '../../../native/native-modules.js'
 import { getPlatformTarget } from '../../../native/platform-target.js'
-import { getVideoModule } from '../../../native/video.js'
+import { getVideoModule, type ScaleMode } from '../../../native/video.js'
 import { getFavoriteState, toggleFavoriteNonReact } from '../../library/data/favorites.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
 import { getSongsApi } from '../../library/api/index.js'
@@ -118,6 +119,14 @@ export interface PlayerState extends PlayerData {
   closePlaylistDrawer: () => void
   clearError: () => void
 
+  // ── video ──
+  /**
+   * Set the aspect-fit / zoom mode for the full-screen video surface and
+   * persist it. Purely a UI-side pref: it does not touch the native player,
+   * only the `<view>` size the FullVideoPage tells the host to paint into.
+   */
+  setVideoScaleMode: (mode: ScaleMode) => void
+
   // ── audio track ──
   setAudioTrack: (trackIndex: number | null) => Promise<void>
 
@@ -181,6 +190,7 @@ const INITIAL: PlayerData = {
   playbackContext: undefined,
   sourcePlaylistId: undefined,
   speed: 1,
+  videoScaleMode: DEFAULT_VIDEO_SCALE_MODE,
 }
 
 function durationMsOf(song: Song): number {
@@ -760,6 +770,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       void writePlaybackSpeed(clamped)
     },
 
+    setVideoScaleMode: (mode) => {
+      if (get().videoScaleMode === mode) return
+      set({ videoScaleMode: mode })
+      void writeVideoScaleMode(mode)
+    },
+
     addToPlaylist: (songs) => {
       if (songs.length === 0) return
       // `(id, type)` dedup against the current queue (and within `songs`
@@ -1191,12 +1207,15 @@ usePlayerStore.subscribe((state, prev) => {
 })
 
 export async function restorePlaybackState(): Promise<void> {
-  const [saved, speed, autoResume] = await Promise.all([
-    loadPlaybackState(), readPlaybackSpeed(), readAutoResume(),
+  const [saved, speed, autoResume, videoScaleMode] = await Promise.all([
+    loadPlaybackState(), readPlaybackSpeed(), readAutoResume(), readVideoScaleMode(),
   ])
   if (speed !== 1) {
     usePlayerStore.setState({ speed })
     void audio.setSpeed(speed)
+  }
+  if (videoScaleMode !== DEFAULT_VIDEO_SCALE_MODE) {
+    usePlayerStore.setState({ videoScaleMode })
   }
   if (!saved || saved.playlist.length === 0) return
   const song = saved.playlist[saved.currentIndex]

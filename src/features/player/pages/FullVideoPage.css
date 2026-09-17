@@ -1,7 +1,28 @@
 .full-video {
-  /* Sized + anchored inline (see FullVideoPage.tsx); this class keeps it
-     transparent so the host SurfaceView underneath is the picture. */
+  /* Sized + anchored inline (see FullVideoPage.tsx). Transparent so the host's
+     native video surface underneath is what shows through. */
   background-color: transparent;
+}
+
+.full-video__chrome {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 1;
+  transition: opacity var(--duration-normal) var(--ease-default);
+  z-index: 1;
+}
+
+.full-video__chrome--hidden {
+  opacity: 0;
+  /* `pointer-events` is not part of the Lynx CSS subset; hiding via opacity
+     alone still lets a tap hit an invisible button. Nudging the whole layer
+     off-hit-test by moving it aside is cheap and reversible.
+     But on Lynx `transform` is fine and does not interfere with the tap-to-
+     show target under it — the root `<view>` still receives bindtap. */
+  transform: translateY(-10000px);
 }
 
 .full-video__header {
@@ -12,48 +33,79 @@
   height: calc(64px + var(--safe-top));
   flex-direction: row;
   align-items: center;
-  justify-content: space-between;
   padding-top: var(--safe-top);
-  padding-left: 20px;
+  padding-left: 12px;
   padding-right: 12px;
   background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
-  z-index: 1;
+}
+
+.full-video__title-block {
+  flex: 1;
+  margin-left: 8px;
+  margin-right: 8px;
+  align-items: center;
 }
 
 .full-video__title {
-  flex: 1;
-  margin-right: 12px;
   color: #ffffff;
   font-size: 16px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
 }
 
-.full-video__close {
+.full-video__subtitle {
+  margin-top: var(--space-half);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.full-video__icon-btn {
   width: 44px;
   height: 44px;
   align-items: center;
   justify-content: center;
-  background-color: rgba(255, 255, 255, 0.18);
+  background-color: rgba(0, 0, 0, 0.35);
   border-radius: 50%;
 }
 
-.full-video__controls {
+.full-video__icon-btn--ghost {
+  background-color: transparent;
+}
+
+.full-video__centre {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.45);
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.full-video__bottom {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 20px 20px calc(24px + var(--safe-bottom));
+  padding: 16px 20px calc(20px + var(--safe-bottom));
   background-image: linear-gradient(to top, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0));
-  z-index: 1;
 }
 
 .full-video__times {
   flex-direction: row;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .full-video__time {
@@ -61,15 +113,24 @@
   font-size: 12px;
 }
 
-.full-video__play {
-  margin-top: 18px;
-  align-self: center;
-  width: 56px;
-  height: 56px;
+.full-video__tools {
+  margin-top: 12px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.full-video__tool {
+  width: 44px;
+  height: 44px;
   align-items: center;
   justify-content: center;
-  background-color: rgba(255, 255, 255, 0.18);
+  background-color: rgba(0, 0, 0, 0.35);
   border-radius: 50%;
+}
+
+.full-video__tool--ghost {
+  background-color: transparent;
 }
 
 .full-video__note {
@@ -82,5 +143,5 @@
   border-radius: 12px;
   color: #ffffff;
   font-size: 15px;
-  z-index: 1;
+  z-index: 3;
 }

@@ -43,6 +43,9 @@ function installHost(options: HostOptions = {}): { open: ReturnType<typeof vi.fn
       close: (_a: string, cb: (json: string) => void) => cb('{}'),
       isOpen: (_a: string, cb: (json: string) => void) =>
         cb(JSON.stringify({ result: options.alreadyOpen ?? false })),
+      setSurfaceLayout: (_a: string, cb: (json: string) => void) => cb('{}'),
+      setOrientation: (_a: string, cb: (json: string) => void) => cb('{}'),
+      getVideoSize: (_a: string, cb: (json: string) => void) => cb('{}'),
     },
   }
   resetVideoModuleForTests()

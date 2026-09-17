@@ -63,6 +63,15 @@ class MainActivity : Activity() {
         root.addView(view, match)
         setContentView(root)
 
+        // Give the video module a handle to this Activity for orientation locks
+        // and to the LynxView for pushing `videoSizeChanged` events up to the page.
+        SongloftVideoModule.setActivity(this)
+        SongloftVideoModule.setEventEmitter { name, payload ->
+            val params = JavaOnlyArray()
+            params.pushMap(JavaOnlyMap.from(payload))
+            lynxView?.sendGlobalEvent(name, params)
+        }
+
         // `LynxLoadMeta` carries the globalProps *into* the load, so the very
         // first frame already knows the system theme — no flash of the wrong one.
         // (A native-module getter could not manage that: it would be async and
@@ -121,6 +130,21 @@ class MainActivity : Activity() {
         val params = JavaOnlyArray()
         params.pushMap(JavaOnlyMap.from(appearance))
         view.sendGlobalEvent(SystemAppearance.EVENT_CHANGED, params)
+
+        val isLandscape = newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val metrics = resources.displayMetrics
+        val density = if (metrics.density > 0f) metrics.density else 1f
+        val orientationParams = JavaOnlyArray()
+        orientationParams.pushMap(
+            JavaOnlyMap.from(
+                mapOf(
+                    "orientation" to if (isLandscape) "landscape" else "portrait",
+                    "width" to (metrics.widthPixels / density).toDouble(),
+                    "height" to (metrics.heightPixels / density).toDouble(),
+                ),
+            ),
+        )
+        view.sendGlobalEvent(SongloftVideoModule.EVENT_ORIENTATION_CHANGED, orientationParams)
     }
 
     /**
@@ -172,6 +196,12 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         lynxView = null
+        // The video module keeps process-level references (Activity + event
+        // emitter); drop them here or a relaunch would push events into the dead
+        // LynxView / take an orientation lock on a torn-down Activity.
+        SongloftVideoModule.setActivity(null)
+        SongloftVideoModule.setEventEmitter(null)
+        SongloftVideoModule.setVideoSurface(null)
         // `BackKeyState` is process-level and outlives this Activity, so a relaunch
         // would otherwise start out believing the previous page's JS still owns the
         // back key.

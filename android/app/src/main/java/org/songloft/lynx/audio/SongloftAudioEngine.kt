@@ -378,6 +378,17 @@ object SongloftAudioEngine {
      */
     enum class VideoTrackState { HAS_TRACK, NO_TRACK, FAILED, LOADING }
 
+    /**
+     * The decoded video's pixel dimensions if any are yet known, else `null`.
+     * Main-thread only: the module pumps this from `runOnMain`. Used by pages that
+     * mount after `onVideoSizeChanged` already fired.
+     */
+    fun currentVideoSize(): Pair<Int, Int>? {
+        val size = player?.videoSize ?: return null
+        if (size.width <= 0 || size.height <= 0) return null
+        return size.width to size.height
+    }
+
     /** Main-thread only: the module pumps this from `runOnMain` / the main handler. */
     fun videoTrackState(): VideoTrackState {
         val p = player ?: return VideoTrackState.FAILED
