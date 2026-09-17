@@ -65,6 +65,7 @@ final class SongloftAudioEngine {
   private var timeObserver: Any?
   private var itemStatusObservation: NSKeyValueObservation?
   private var timeControlObservation: NSKeyValueObservation?
+  private var presentationSizeObservation: NSKeyValueObservation?
   private var endObserver: NSObjectProtocol?
 
   /// url → notification metadata, populated from the JS store's `setQueue`.
@@ -282,20 +283,63 @@ final class SongloftAudioEngine {
   // MARK: - Video output
 
   private var videoOutputAttached = false
+  /// Notified when the current item's decoded picture size changes. Wired by the
+  /// module so it can emit `SongloftVideo.videoSizeChanged`; installed lazily by
+  /// [attachVideoOutput] so the KVO does not stay armed when no picture is on
+  /// screen.
+  private var videoSizeSink: ((Int, Int) -> Void)?
 
-  func attachVideoOutput(_ sink: @escaping (AVPlayer) -> Void) {
+  func attachVideoOutput(_ sink: @escaping (AVPlayer) -> Void, onVideoSize: ((Int, Int) -> Void)? = nil) {
     videoOutputAttached = true
+    videoSizeSink = onVideoSize
+    installPresentationSizeObserver()
     if let player { sink(player) }
+    // A stream that was already decoded before the video screen opened has no
+    // presentationSize change pending — deliver the current one by hand so the
+    // page does not have to poll (mirrors the Android engine's replay).
+    if let size = currentVideoSize() {
+      onVideoSize?(size.width, size.height)
+    }
   }
 
   func detachVideoOutput() {
     videoOutputAttached = false
+    videoSizeSink = nil
+    presentationSizeObservation = nil
   }
 
   func hasVideoTrack() -> Bool {
     guard let item = player?.currentItem else { return false }
     guard item.status == .readyToPlay else { return false }
     return item.tracks.contains { $0.assetTrack?.mediaType == .video }
+  }
+
+  /**
+   * Pixel dimensions of the currently-decoded picture, or nil if none is available
+   * yet. Reads `presentationSize` — which reflects the decoder's actual output —
+   * not the raw track's `naturalSize`, so rotated / anamorphic content lands with
+   * the right aspect ratio.
+   */
+  func currentVideoSize() -> (width: Int, height: Int)? {
+    guard let item = player?.currentItem else { return nil }
+    let size = item.presentationSize
+    guard size.width > 0, size.height > 0 else { return nil }
+    return (Int(size.width.rounded()), Int(size.height.rounded()))
+  }
+
+  private func installPresentationSizeObserver() {
+    guard let item = player?.currentItem else {
+      presentationSizeObservation = nil
+      return
+    }
+    presentationSizeObservation = item.observe(\.presentationSize, options: [.new]) {
+      [weak self] item, _ in
+      let size = item.presentationSize
+      guard size.width > 0, size.height > 0 else { return }
+      self?.runOnMain {
+        self?.videoSizeSink?(Int(size.width.rounded()), Int(size.height.rounded()))
+      }
+    }
   }
 
   /**
@@ -396,6 +440,11 @@ final class SongloftAudioEngine {
       queue: .main
     ) { [weak self] _ in
       self?.onReachedEnd()
+    }
+    // Re-arm on item replacement (a new track / an HLS variant switch), but only
+    // while the video screen is open — otherwise the observation is wasted work.
+    if videoOutputAttached {
+      installPresentationSizeObserver()
     }
   }
 

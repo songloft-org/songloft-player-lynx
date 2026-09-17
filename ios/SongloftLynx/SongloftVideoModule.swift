@@ -1,29 +1,5 @@
-import AVKit
+import AVFoundation
 import UIKit
-
-/**
- * An `AVPlayerViewController` that reports its own dismissal.
- *
- * AVKit puts its own Done button in the modal playback UI, and that button dismisses
- * the controller directly — it never goes through `close()`. So the picture went away
- * while this module went on believing it was still up: `isOpen()` answered true, JS
- * skipped the next open as "already open" (a dead tap), and `closed` never fired.
- * The Done button is not the only such path — a sheet's swipe-down and any
- * system-initiated dismissal behave the same — so listening here covers them all.
- *
- * `isBeingDismissed`, not simply "the view is gone": `viewDidDisappear` also fires
- * when this controller is merely *covered* by another fullscreen presentation, and
- * then the picture is still ours to hand back.
- */
-final class SongloftVideoViewController: AVPlayerViewController {
-  var onDismissed: ((SongloftVideoViewController) -> Void)?
-
-  override func viewDidDisappear(_ animated: Bool) {
-    super.viewDidDisappear(animated)
-    guard isBeingDismissed else { return }
-    onDismissed?(self)
-  }
-}
 
 /**
  * Fullscreen native video playback for the song the audio engine already holds.
@@ -31,45 +7,139 @@ final class SongloftVideoViewController: AVPlayerViewController {
  *
  * The iOS counterpart of `org.songloft.lynx.video.SongloftVideoModule` (Android).
  * No URL is taken — the picture comes from the stream the audio engine is already
- * playing, so this module only lends the running AVPlayer a fullscreen surface.
+ * playing, so this module only lends the running AVPlayer a surface.
  *
- * Every path that ends the presentation — `close()` from JS, the Done button, a
- * swipe-down — funnels through `teardown`, which is also the only place that clears
- * `presentedVC`. Nothing else may clear it, or the identity check below stops being
- * able to tell "already released" from "a second surface".
+ * Design mirrors Android's SurfaceView-under-LynxView pattern: the host builds one
+ * `UIView` that fills the window and lives *below* the LynxView (see
+ * [ViewController]), and hosts an `AVPlayerLayer` on it. `open()` shows the layer
+ * and attaches the engine's video output; `close()` hides it and detaches. The
+ * JS page paints every control above the picture, so styling stays identical on
+ * every platform — no modal chrome to fight.
+ *
+ * ## Sizing
+ *
+ * The picture is *not* stretched to fill the surface: the JS page reads the
+ * video's pixel dimensions from the `videoSizeChanged` event and calls
+ * [setSurfaceLayout] with a letterbox / zoom rect. The rect arrives in
+ * CSS-logical pixels (the same unit `boundingClientRect` returns in Lynx),
+ * which are point-equivalent on iOS — no density scaling is needed here (a
+ * point *is* the layout unit UIKit uses), unlike Android where the rect is
+ * scaled by `DisplayMetrics.density`.
  */
-final class SongloftVideoModule: NSObject, LynxModule {
-  @objc required init(param: Any) {}
-  override init() { super.init() }
-
+final class SongloftVideoModule: NSObject, LynxContextModule {
   @objc static var name: String { "SongloftVideo" }
+
+  /**
+   * Byte-for-byte match with `src/native/video.ts`. iOS, like Android, does not
+   * push a `closed` event today: the framework back button routes to
+   * `performRouteBack` on its own, so a separate close-from-host channel would
+   * be a second source of truth for the same signal.
+   */
+  static let eventVideoSizeChanged = "SongloftVideo.videoSizeChanged"
+  static let eventOrientationChanged = "SongloftVideo.orientationChanged"
 
   @objc static var methodLookup: [String: String] {
     [
       "open": NSStringFromSelector(#selector(SongloftVideoModule.open(_:callback:))),
       "close": NSStringFromSelector(#selector(SongloftVideoModule.close(_:callback:))),
       "isOpen": NSStringFromSelector(#selector(SongloftVideoModule.isOpen(_:callback:))),
+      "setSurfaceLayout":
+        NSStringFromSelector(#selector(SongloftVideoModule.setSurfaceLayout(_:callback:))),
+      "setOrientation":
+        NSStringFromSelector(#selector(SongloftVideoModule.setOrientation(_:callback:))),
+      "getVideoSize":
+        NSStringFromSelector(#selector(SongloftVideoModule.getVideoSize(_:callback:))),
     ]
   }
 
-  private static var presentedVC: AVPlayerViewController?
+  private weak var context: LynxContext?
 
-  @objc func open(_ args: String, callback: @escaping (String) -> Void) {
-    DispatchQueue.main.async { Self.presentIfPossible(callback: callback) }
+  // MARK: - Host wiring
+  //
+  // The container UIView (below the LynxView) and its owning UIViewController
+  // are pushed in by [ViewController] on viewDidLayoutSubviews, matching how
+  // Android's MainActivity pushes the SurfaceView. They stay static because
+  // `LynxContextModule` instances are per-LynxView and short-lived: a fresh
+  // module can pick up an already-registered host.
+
+  private static var host: UIView?
+  private static var playerLayer: AVPlayerLayer?
+  private static weak var hostController: UIViewController?
+  private static var eventEmitter: ((String, [String: Any]) -> Void)?
+  private static var isOpen = false
+
+  static func setHostView(_ view: UIView?) {
+    host = view
+    if view == nil {
+      playerLayer?.removeFromSuperlayer()
+      playerLayer = nil
+    }
   }
 
-  private static func presentIfPossible(callback: @escaping (String) -> Void) {
+  static func setHostController(_ controller: UIViewController?) {
+    hostController = controller
+  }
+
+  static func setEventEmitter(_ emitter: ((String, [String: Any]) -> Void)?) {
+    eventEmitter = emitter
+  }
+
+  /// Push the orientation the OS just switched into. Called by [ViewController]
+  /// from `viewWillTransition`, matching Android's `onConfigurationChanged`.
+  static func emitOrientation(orientation: String, width: Int, height: Int) {
+    eventEmitter?(
+      eventOrientationChanged,
+      [
+        "orientation": orientation,
+        "width": Double(width),
+        "height": Double(height),
+      ]
+    )
+  }
+
+  private init(context: LynxContext?) {
+    self.context = context
+    super.init()
+    // The event emitter forwards through *this* module's context so events
+    // reach the currently-loaded page (a reloaded page cannot be fed by a
+    // stale context — same rule as `SongloftAudioModule`).
+    Self.eventEmitter = { [weak self] event, payload in
+      self?.context?.sendGlobalEvent(event, withParams: [payload])
+    }
+  }
+
+  @objc(initWithLynxContext:)
+  convenience init(lynxContext context: LynxContext) {
+    self.init(context: context)
+  }
+
+  @objc(initWithLynxContext:WithParam:)
+  convenience init(lynxContext context: LynxContext, withParam param: Any) {
+    self.init(context: context)
+  }
+
+  @objc(initWithParam:)
+  convenience init(param: Any) {
+    self.init(context: nil)
+  }
+
+  override convenience init() {
+    self.init(context: nil)
+  }
+
+  // MARK: - open / close / isOpen
+
+  @objc func open(_ args: String, callback: @escaping (String) -> Void) {
+    DispatchQueue.main.async { Self.openIfPossible(callback: callback) }
+  }
+
+  private static func openIfPossible(callback: @escaping (String) -> Void) {
     /*
      * One surface at a time, and this check comes first: with one already up the
      * honest answer is "the picture is on screen", whatever the stream that was
-     * just loaded carries. Answering the no-track case first would have JS report
-     * a pictureless file while the picture was in front of the user.
-     *
-     * iOS keeps a single `presentedVC`, so a second `open()` would overwrite it and
-     * orphan the first controller — presented from the video itself, and never
-     * released. JS guards this too; the guard belongs where the state lives.
+     * just loaded carries.
      */
-    guard presentedVC == nil else {
+    if isOpen {
       callback(#"{"result":"opened"}"#)
       return
     }
@@ -81,8 +151,7 @@ final class SongloftVideoModule: NSObject, LynxModule {
       case .noTrack:
         callback(#"{"result":"noTrack"}"#)
       case .failed, .loading:
-        // `.loading` after the deadline is itself a failure: a servable source would
-        // be ready long before now.
+        // `.loading` after the deadline is itself a failure.
         callback(#"{"result":"failed"}"#)
       }
     }
@@ -91,11 +160,9 @@ final class SongloftVideoModule: NSObject, LynxModule {
   /**
    * Wait until the item's fate is known before answering `open`.
    *
-   * The item can still be `.readyToPlay` when `open` arrives, in which case we answer
-   * at once. On a transcode the switch happened moments ago and the item is not ready
-   * yet — `hasVideoTrack()` would read like "no track", the exact misreport this
-   * contract exists to kill. Poll until ready / failed / deadline: the engine's own
-   * status observer updates on the main queue, so each check sees fresh state.
+   * The item can still be preparing when `open` arrives, in which case
+   * `hasVideoTrack()` would read like "no track" — the exact misreport this
+   * contract exists to kill.
    */
   private static func decideVideoTrack(
     deadline: Date,
@@ -116,73 +183,174 @@ final class SongloftVideoModule: NSObject, LynxModule {
   }
 
   private static func present(callback: @escaping (String) -> Void) {
-    guard let presenter = topViewController() else {
+    guard let host else {
       callback(#"{"result":"failed"}"#)
       return
     }
 
-    let vc = SongloftVideoViewController()
-    vc.updatesNowPlayingInfoCenter = false
-    vc.videoGravity = .resizeAspect
-    // No retain cycle: the closure captures neither the controller nor self.
-    vc.onDismissed = { Self.teardown($0) }
+    // (Re)build the layer so a repeat open cannot inherit a torn-down player.
+    playerLayer?.removeFromSuperlayer()
+    let layer = AVPlayerLayer()
+    // `.resizeAspect` would letterbox at layer level, but every dimension of the
+    // sizing behavior is decided by the JS page via `setSurfaceLayout` — the
+    // layer just fills the rect it is given, so `.resize` (stretch to layer
+    // frame) is correct here. This is the same choice Android's SurfaceView
+    // makes: the LayoutParams *are* the aspect.
+    layer.videoGravity = .resize
+    layer.frame = host.bounds
+    host.layer.addSublayer(layer)
+    playerLayer = layer
+    host.isHidden = false
 
-    SongloftAudioEngine.shared.attachVideoOutput { player in
-      vc.player = player
-    }
-
-    presentedVC = vc
-    presenter.present(vc, animated: true) {
-      callback(#"{"result":"opened"}"#)
-    }
+    SongloftAudioEngine.shared.attachVideoOutput(
+      { player in
+        layer.player = player
+      },
+      onVideoSize: { width, height in
+        eventEmitter?(
+          eventVideoSizeChanged,
+          ["width": Double(width), "height": Double(height)]
+        )
+      }
+    )
+    isOpen = true
+    callback(#"{"result":"opened"}"#)
   }
 
   @objc func close(_ args: String, callback: @escaping (String) -> Void) {
     DispatchQueue.main.async {
-      guard let vc = Self.presentedVC else {
-        callback("{}")
-        return
-      }
-      // Released before the dismissal, so the `viewDidDisappear` that follows finds
-      // an already-nil `presentedVC` and is a no-op.
-      Self.teardown(vc)
-      vc.dismiss(animated: true) {
-        callback("{}")
-      }
+      Self.teardown()
+      Self.releaseOrientationLock()
+      callback("{}")
     }
   }
 
   /**
-   * Give the surface back: drop the controller's hold on the player and release
-   * `presentedVC`. Every path that ends the presentation funnels through here.
+   * Give the surface back: drop the layer's hold on the player and hide the host
+   * view. Every path that ends the presentation funnels through here.
    *
-   * Audio deliberately keeps playing — the user closed the *picture*, not the song,
-   * and the stream is one and the same. Nothing here pauses or stops the engine.
-   *
-   * Idempotent by identity: after the first call `presentedVC` is nil, so the
-   * dismissal that follows (and any later Done press on an old controller) is a no-op.
+   * Audio deliberately keeps playing — the user closed the *picture*, not the
+   * song, and the stream is one and the same.
    */
-  private static func teardown(_ vc: AVPlayerViewController) {
-    guard presentedVC === vc else { return }
-    vc.player = nil
+  private static func teardown() {
+    guard isOpen else { return }
+    playerLayer?.player = nil
+    playerLayer?.removeFromSuperlayer()
+    playerLayer = nil
+    host?.isHidden = true
     SongloftAudioEngine.shared.detachVideoOutput()
-    presentedVC = nil
+    isOpen = false
   }
 
   @objc func isOpen(_ args: String, callback: @escaping (String) -> Void) {
     DispatchQueue.main.async {
-      let open = Self.presentedVC != nil
-      callback("{\"result\":\(open)}")
+      callback("{\"result\":\(Self.isOpen)}")
     }
   }
 
-  private static func topViewController() -> UIViewController? {
+  // MARK: - setSurfaceLayout / setOrientation / getVideoSize
+
+  /**
+   * Position and size the underlay layer inside its host. The JS page passes the
+   * rect in CSS-logical pixels — point-equivalent on iOS (unlike Android, which
+   * needs `DisplayMetrics.density` scaling). It is the single control point that
+   * stops a landscape frame from being stretched onto a portrait window.
+   */
+  @objc func setSurfaceLayout(_ args: String, callback: @escaping (String) -> Void) {
+    let rect = Self.parseRect(args)
+    DispatchQueue.main.async {
+      if let layer = Self.playerLayer {
+        // Disable the implicit animation the layer would otherwise run on a
+        // frame change (visible as a scale-in on every layout push).
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        layer.frame = rect
+        CATransaction.commit()
+      }
+      callback("{}")
+    }
+  }
+
+  private static func parseRect(_ json: String) -> CGRect {
+    guard let data = json.data(using: .utf8),
+          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    else { return .zero }
+    let x = (obj["x"] as? NSNumber)?.doubleValue ?? 0
+    let y = (obj["y"] as? NSNumber)?.doubleValue ?? 0
+    let w = (obj["width"] as? NSNumber)?.doubleValue ?? 0
+    let h = (obj["height"] as? NSNumber)?.doubleValue ?? 0
+    return CGRect(x: x, y: y, width: max(1, w), height: max(1, h))
+  }
+
+  /**
+   * Request an orientation lock for the host window. `'auto'` releases the lock
+   * and returns to the system default (`close` implicitly does this too).
+   *
+   * iOS 16 introduced `requestGeometryUpdate` for programmatic rotation and
+   * deprecated the pre-16 device-orientation trick that flipped the status bar
+   * out from under UIKit's expectations; that is the API path here.
+   * `preferredInterfaceOrientationForPresentation` cannot rotate a live scene —
+   * only lock a future presentation — so this call also has to nudge the scene
+   * into recomputing the supported set.
+   */
+  @objc func setOrientation(_ args: String, callback: @escaping (String) -> Void) {
+    let mode = Self.parseOrientationMode(args)
+    DispatchQueue.main.async {
+      Self.applyOrientation(mode: mode)
+      callback("{}")
+    }
+  }
+
+  private static func parseOrientationMode(_ json: String) -> String {
+    guard let data = json.data(using: .utf8),
+          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let mode = obj["mode"] as? String
+    else { return "auto" }
+    return mode
+  }
+
+  /// Which orientations the scene may currently rotate to. Read by
+  /// [SongloftSceneDelegate.window(_:didUpdateFocusIn:)] via the ViewController
+  /// override that reports supported orientations.
+  static var lockedOrientation: String = "auto"
+
+  private static func applyOrientation(mode: String) {
+    lockedOrientation = mode
     guard let scene = UIApplication.shared.connectedScenes
-      .compactMap({ $0 as? UIWindowScene }).first,
-      let root = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController
-    else { return nil }
-    var top = root
-    while let presented = top.presentedViewController { top = presented }
-    return top
+      .compactMap({ $0 as? UIWindowScene }).first
+    else { return }
+    if #available(iOS 16.0, *) {
+      let mask: UIInterfaceOrientationMask
+      switch mode {
+      case "portrait": mask = .portrait
+      case "landscape": mask = .landscape
+      default: mask = .all
+      }
+      scene.requestGeometryUpdate(.iOS(interfaceOrientations: mask)) { _ in }
+      // The scene also needs its supported-orientations answer to change, or a
+      // subsequent user rotation could push it back out of the requested mask.
+      hostController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+    }
+  }
+
+  private static func releaseOrientationLock() {
+    applyOrientation(mode: "auto")
+  }
+
+  /**
+   * Pull the decoded video's pixel dimensions. Pages usually listen to
+   * `videoSizeChanged`; this is a fallback for pages that come up *after* the
+   * first frame decoded.
+   */
+  @objc func getVideoSize(_ args: String, callback: @escaping (String) -> Void) {
+    DispatchQueue.main.async {
+      guard let size = SongloftAudioEngine.shared.currentVideoSize() else {
+        callback("{}")
+        return
+      }
+      callback(
+        "{\"result\":{\"width\":\(size.width),\"height\":\(size.height)}}"
+      )
+    }
   }
 }

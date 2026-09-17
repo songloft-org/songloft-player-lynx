@@ -46,6 +46,11 @@ class ViewController: UIViewController {
   private static let bundleURL = "main.lynx"
 
   private var lynxView: LynxView?
+  /// Full-screen container hosting the video `AVPlayerLayer`, sits **below** the
+  /// LynxView so the page paints every control above the picture — same layering
+  /// as Android's `SurfaceView + setZOrderMediaOverlay(true)` under the LynxView.
+  /// Hidden until [SongloftVideoModule] opens.
+  private var videoHost: UIView?
   /// Viewport the engine was last laid out for; used to skip no-op updates.
   private var laidOutSize: CGSize = .zero
   /// Insets last pushed to the page; used to skip no-op updates (see [pushSafeArea]).
@@ -67,6 +72,41 @@ class ViewController: UIViewController {
     if let localeObserver {
       NotificationCenter.default.removeObserver(localeObserver)
     }
+    SongloftVideoModule.setHostView(nil)
+    SongloftVideoModule.setHostController(nil)
+    SongloftVideoModule.setEventEmitter(nil)
+  }
+
+  /**
+   * Which orientations UIKit may rotate the scene into. Answered from the video
+   * module's current lock (`portrait` / `landscape` / `auto`), so a landscape
+   * tap from the video screen actually flips the window — otherwise
+   * `requestGeometryUpdate` in [SongloftVideoModule.applyOrientation] would be
+   * clamped back by the default `.all` answer.
+   */
+  override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+    switch SongloftVideoModule.lockedOrientation {
+    case "portrait": return .portrait
+    case "landscape": return .landscape
+    default: return .all
+    }
+  }
+
+  /**
+   * The OS just changed our size; forward the new orientation to the page as
+   * `SongloftVideo.orientationChanged` — the counterpart of Android's
+   * `onConfigurationChanged` push. `size` is the *new* size (this fires before
+   * layout), so it can be used directly.
+   */
+  override func viewWillTransition(to size: CGSize,
+                                   with coordinator: UIViewControllerTransitionCoordinator) {
+    super.viewWillTransition(to: size, with: coordinator)
+    let orientation = size.width > size.height ? "landscape" : "portrait"
+    SongloftVideoModule.emitOrientation(
+      orientation: orientation,
+      width: Int(size.width.rounded()),
+      height: Int(size.height.rounded())
+    )
   }
 
   override func viewDidLayoutSubviews() {
@@ -87,11 +127,24 @@ class ViewController: UIViewController {
       pushSafeArea()
       guard frame.size != laidOutSize else { return }
       laidOutSize = frame.size
+      videoHost?.frame = frame
       lynxView.frame = frame
       lynxView.updateViewport(withPreferredLayoutWidth: frame.width,
                               preferredLayoutHeight: frame.height)
       return
     }
+
+    // Build the video host **before** the LynxView so it sits underneath —
+    // Android's MainActivity orders addView(SurfaceView) before addView(lynxView)
+    // for the same reason.
+    let videoHost = UIView(frame: frame)
+    videoHost.backgroundColor = .black
+    videoHost.isHidden = true
+    videoHost.isUserInteractionEnabled = false
+    view.addSubview(videoHost)
+    self.videoHost = videoHost
+    SongloftVideoModule.setHostView(videoHost)
+    SongloftVideoModule.setHostController(self)
 
     laidOutSize = frame.size
     // `screenSize` is the device screen metric the engine uses (rpx and friends).

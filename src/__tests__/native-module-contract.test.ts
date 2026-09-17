@@ -1131,17 +1131,34 @@ describe('SongloftVideo module surface (Android)', () => {
 })
 
 describe('SongloftVideo module surface (iOS)', () => {
-  // iOS still runs on the AVPlayerViewController path (open/close/isOpen only).
-  // The AVPlayerLayer migration in commit 2 will extend this to the full set
-  // that `interfaceMethods(video.ts)` returns.
-  const iosMethods = ['open', 'close', 'isOpen']
+  // The full set from `interfaceMethods(video.ts)` — commit 2 migrated the module
+  // from AVPlayerViewController-modal to AVPlayerLayer-under-LynxView, so the JS
+  // surface is the same as Android's.
+  const methods = interfaceMethods(read('src/native/video.ts'), 'NativeVideoModule')
 
-  test.each(iosMethods)('SongloftVideoModule.%s exists in Swift with methodLookup', (method) => {
+  test.each(methods)('SongloftVideoModule.%s exists in Swift with methodLookup', (method) => {
     expectSwiftMethod(hosts.video.ios, method)
   })
 
-  test('the dead closed event is gone', () => {
+  test('the dead AVPlayerViewController surface is gone', () => {
+    // AVPlayerViewController put its own Done button in the modal chrome; the
+    // JS page owns every control now, so any leftover reference to the
+    // controller / its dismissal callbacks means we forgot to migrate a path.
+    expect(hosts.video.ios).not.toContain('AVPlayerViewController')
+    expect(hosts.video.ios).not.toContain('SongloftVideoViewController')
     expect(hosts.video.ios).not.toContain('SongloftVideo.closed')
+    expect(hosts.video.ios).not.toContain('presentedVC')
+  })
+
+  test('the picture is painted by an AVPlayerLayer hosted under the LynxView', () => {
+    // Android's `SurfaceView + setZOrderMediaOverlay(true)` counterpart: the
+    // module must render on its own AVPlayerLayer sitting on a host UIView, so
+    // the JS page paints every control above it. `resizeAspect` at layer level
+    // would ignore the JS-driven fit/zoom rect — `resize` is what makes
+    // `setSurfaceLayout` the single control point for sizing.
+    expect(hosts.video.ios).toContain('AVPlayerLayer')
+    expect(hosts.video.ios).toContain('videoGravity = .resize')
+    expect(hosts.video.ios).toContain('setHostView')
   })
 
   test('the engine can lend out the player, and the module hands it back', () => {
@@ -1152,28 +1169,35 @@ describe('SongloftVideo module surface (iOS)', () => {
     expect(hosts.audio.ios).toContain('func detachVideoOutput')
     expect(
       hosts.video.ios,
-      'the video module never detaches: AVPlayer would keep feeding a dismissed vc',
+      'the video module never detaches: AVPlayer would keep feeding a torn-down layer',
     ).toContain('detachVideoOutput')
   })
 
-  test('updatesNowPlayingInfoCenter is disabled', () => {
-    expect(
-      hosts.video.ios,
-      'AVPlayerViewController would overwrite our lock-screen metadata without this',
-    ).toContain('updatesNowPlayingInfoCenter = false')
+  test('the host emits videoSizeChanged and orientationChanged', () => {
+    // Same events, byte-for-byte, as Android — the JS facade decodes both from
+    // the same listener. `orientationChanged` is pushed from viewWillTransition
+    // in ViewController, not from the module itself.
+    expect(hosts.video.ios).toContain('SongloftVideo.videoSizeChanged')
+    expect(hosts.video.ios).toContain('SongloftVideo.orientationChanged')
+    expect(hosts.iosViewController).toContain('emitOrientation')
+    expect(hosts.iosViewController).toContain('viewWillTransition')
   })
 
-  test('the player is released through teardown before close() dismisses', () => {
-    // The release lives in one funnel (`teardown` sets `vc.player = nil`), and an
-    // explicit close() must run that funnel before it triggers the dismissal — letting
-    // AVPlayerViewController drop its hold instead of pausing playback on the way out.
-    const src = hosts.video.ios
-    expect(src, 'vc.player = nil must appear').toContain('vc.player = nil')
-    const teardownCallAt = src.indexOf('teardown(vc)')
-    const dismissAt = src.indexOf('dismiss(animated:')
-    expect(teardownCallAt, 'close() must call teardown').toBeGreaterThan(-1)
-    expect(dismissAt, 'dismiss must appear').toBeGreaterThan(-1)
-    expect(teardownCallAt, 'teardown must run before close() dismisses').toBeLessThan(dismissAt)
+  test('ViewController wires the module up (host view + controller + emitter)', () => {
+    // Without setHostView the picture opens onto nothing; without
+    // setHostController the orientation lock cannot ask UIKit to recompute the
+    // supported set.
+    expect(hosts.iosViewController).toContain('SongloftVideoModule.setHostView')
+    expect(hosts.iosViewController).toContain('SongloftVideoModule.setHostController')
+    expect(hosts.iosViewController).toContain('supportedInterfaceOrientations')
+  })
+
+  test('the engine observes presentationSize so the picture can be laid out', () => {
+    // AVPlayerItem.presentationSize is what carries the *decoded* picture size —
+    // rotated / anamorphic content only lands right through this KVO. `naturalSize`
+    // (raw track dimensions) is not equivalent.
+    expect(hosts.audio.ios).toContain('presentationSize')
+    expect(hosts.audio.ios).toContain('func currentVideoSize')
   })
 
   test('the host tells "no video track" apart from "stream failed to load"', () => {
