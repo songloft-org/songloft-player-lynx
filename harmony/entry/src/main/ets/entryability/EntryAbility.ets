@@ -5,6 +5,7 @@ import { LynxEnv, LynxServiceCenter, LynxServiceType } from '@lynx/lynx'
 import { LynxImageService } from '@lynx/lynx_image_service'
 import { SongloftHttpService } from '../net/SongloftHttpService'
 import { SystemAppearance } from '../modules/system/SystemAppearance'
+import { SongloftVideoModule } from '../modules/video/SongloftVideoModule'
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
@@ -14,10 +15,17 @@ export default class EntryAbility extends UIAbility {
     void(LynxLogService.instance)
   }
 
-  onDestroy(): void {}
+  onDestroy(): void {
+    SongloftVideoModule.setHostWindow(null)
+  }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
     const mainWindow = windowStage.getMainWindowSync()
+    // The video module needs a window handle for orientation locks — same wire
+    // Android's SongloftVideoModule.setActivity provides, and iOS's
+    // setHostController on ViewController.
+    SongloftVideoModule.setHostWindow(mainWindow)
+    this.observeWindowSize(mainWindow)
     mainWindow.setWindowLayoutFullScreen(true).then(() => {
       SystemAppearance.setWindow(mainWindow)
     }).finally(() => {
@@ -34,4 +42,18 @@ export default class EntryAbility extends UIAbility {
   onForeground(): void {}
 
   onBackground(): void {}
+
+  /**
+   * Push `SongloftVideo.orientationChanged` whenever the window resizes —
+   * device rotation is the only real driver on phone/tablet form factors,
+   * and the new size arrives here before the page rebuilds. Same channel as
+   * Android's `onConfigurationChanged` and iOS's `viewWillTransition`.
+   */
+  private observeWindowSize(mainWindow: window.Window): void {
+    mainWindow.on('windowSizeChange', (size: window.Size) => {
+      const orientation: 'portrait' | 'landscape' =
+        size.width > size.height ? 'landscape' : 'portrait'
+      SongloftVideoModule.emitOrientation(orientation, size.width, size.height)
+    })
+  }
 }

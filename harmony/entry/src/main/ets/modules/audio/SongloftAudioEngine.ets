@@ -5,6 +5,21 @@ export type AudioStateCallback = (state: string) => void
 export type AudioProgressCallback = (positionMs: number, durationMs: number) => void
 export type AudioErrorCallback = (code: number, message: string) => void
 export type AudioTrackEndCallback = () => void
+export type VideoSizeCallback = (width: number, height: number) => void
+
+/**
+ * Why the video screen could or could not get a picture.
+ *
+ * Mirrors `SongloftAudioEngine.VideoTrackState` on Android/iOS: `noTrack` and
+ * `failed` must stay distinct so a transcode failure is not misreported as
+ * "this file has no video track".
+ */
+export enum VideoTrackState {
+  HAS_TRACK = 'hasTrack',
+  NO_TRACK = 'noTrack',
+  FAILED = 'failed',
+  LOADING = 'loading',
+}
 
 /**
  * AVPlayer wrapper — single shared player instance.
@@ -20,11 +35,22 @@ export class SongloftAudioEngine {
   private progressTimer: number = -1
   private currentUrl: string = ''
   private prepared: boolean = false
+  /** Surface id pushed by the video module; applied in the `initialized` transition. */
+  private pendingSurfaceId: string = ''
 
   onStateChange: AudioStateCallback = () => {}
   onProgress: AudioProgressCallback = () => {}
   onError: AudioErrorCallback = () => {}
   onTrackEnd: AudioTrackEndCallback = () => {}
+
+  /** Set by [attachVideoOutput]; cleared by [detachVideoOutput]. */
+  private videoSizeCallback: VideoSizeCallback | null = null
+  private videoWidth: number = 0
+  private videoHeight: number = 0
+  private videoOutputAttached: boolean = false
+  /** Item status inferred from the state machine — same three-way as iOS/Android. */
+  private itemFailed: boolean = false
+  private itemReady: boolean = false
 
   static async getInstance(): Promise<SongloftAudioEngine> {
     if (!SongloftAudioEngine.instance) {
@@ -50,13 +76,23 @@ export class SongloftAudioEngine {
     this.avPlayer.on('stateChange', (state: string, reason: media.StateChangeReason) => {
       switch (state) {
         case 'idle':
+          this.itemReady = false
+          this.itemFailed = false
           this.onStateChange('idle')
           break
         case 'initialized':
+          // Bind the video surface **before** `prepare()` — AVPlayer does not
+          // pick up a surfaceId set after preparation, so a late-attached video
+          // screen has to wait for the next `reset() → surfaceId → prepare()`
+          // cycle (the same rule Android has for `setVideoSurface`).
+          if (this.videoOutputAttached && this.pendingSurfaceId.length > 0 && this.avPlayer) {
+            this.avPlayer.surfaceId = this.pendingSurfaceId
+          }
           this.avPlayer?.prepare()
           break
         case 'prepared':
           this.prepared = true
+          this.itemReady = true
           this.onStateChange('ready')
           break
         case 'playing':
@@ -78,9 +114,20 @@ export class SongloftAudioEngine {
         case 'released':
           break
         case 'error':
+          this.itemFailed = true
           this.onStateChange('error')
           break
       }
+    })
+
+    // AVPlayer fires this once the decoder produces its first frame. Same
+    // channel Android reads through `Player.Listener.onVideoSizeChanged` and
+    // iOS through KVO on `AVPlayerItem.presentationSize`.
+    this.avPlayer.on('videoSizeChange', (width: number, height: number) => {
+      if (width <= 0 || height <= 0) return
+      this.videoWidth = width
+      this.videoHeight = height
+      this.videoSizeCallback?.(width, height)
     })
 
     this.avPlayer.on('error', (err) => {
@@ -99,6 +146,10 @@ export class SongloftAudioEngine {
   async play(url: string, startMs: number): Promise<void> {
     if (!this.avPlayer) return
     this.prepared = false
+    this.itemReady = false
+    this.itemFailed = false
+    this.videoWidth = 0
+    this.videoHeight = 0
     this.currentUrl = url
     this.onStateChange('loading')
 
@@ -165,6 +216,89 @@ export class SongloftAudioEngine {
 
   isPlaying(): boolean {
     return this.avPlayer?.state === 'playing'
+  }
+
+  // MARK: - Video output
+
+  /**
+   * Bind the decoder output to `surfaceId` and register a size callback.
+   *
+   * AVPlayer only accepts a `surfaceId` while in the `initialized` state (before
+   * `prepare()`), so a late attach — user opens the video screen after the audio
+   * player is already playing — must reset the pipeline. Same rule as Android,
+   * whose `setVideoSurface` needs an equivalent `player.setVideoSurface(view)`
+   * before decoding a frame.
+   */
+  async attachVideoOutput(surfaceId: string, onVideoSize: VideoSizeCallback | null): Promise<void> {
+    this.videoOutputAttached = true
+    this.videoSizeCallback = onVideoSize
+    this.pendingSurfaceId = surfaceId
+
+    if (!this.avPlayer) return
+    if (this.avPlayer.state === 'initialized') {
+      this.avPlayer.surfaceId = surfaceId
+      return
+    }
+    if (this.avPlayer.state === 'prepared' || this.avPlayer.state === 'playing'
+      || this.avPlayer.state === 'paused' || this.avPlayer.state === 'completed') {
+      // Re-prepare with the surface bound. Retain the current url + position so
+      // the audio does not jump — same trick Android uses when swapping the
+      // SurfaceView underneath ExoPlayer.
+      const url = this.currentUrl
+      const position = this.avPlayer.currentTime
+      if (url.length === 0) return
+      await this.avPlayer.reset()
+      this.avPlayer.url = url
+      // `initialized` transition (above) will pick up `pendingSurfaceId` and
+      // then trigger prepare(); on `ready`, re-seek and resume.
+      const seekAfterReady = (state: string): void => {
+        if (state === 'ready' && position > 0) {
+          this.avPlayer?.seek(position)
+        }
+      }
+      const prevOn = this.onStateChange
+      this.onStateChange = (state: string): void => {
+        prevOn(state)
+        seekAfterReady(state)
+      }
+    }
+
+    if (this.videoWidth > 0 && this.videoHeight > 0) {
+      // Replay the last-known size — a page that opened the video screen
+      // *after* the first frame decoded would otherwise never learn the
+      // aspect ratio and could not compute the letterbox rect.
+      onVideoSize?.(this.videoWidth, this.videoHeight)
+    }
+  }
+
+  detachVideoOutput(): void {
+    this.videoOutputAttached = false
+    this.videoSizeCallback = null
+    this.pendingSurfaceId = ''
+    // Leaving `avPlayer.surfaceId` set is harmless — the decoder just draws
+    // into a hidden XComponent — and clearing it here would fault the running
+    // stream. The XComponent host handles visibility.
+  }
+
+  hasVideoTrack(): boolean {
+    return this.videoWidth > 0 && this.videoHeight > 0
+  }
+
+  /**
+   * Three-way `HAS_TRACK / NO_TRACK / FAILED / LOADING`, same vocabulary as
+   * Android / iOS. `videoSizeChange` fires for any stream that carries a
+   * decodable picture — a genuinely audio-only file simply never fires it, so
+   * `NO_TRACK` is the "ready-but-no-size" branch.
+   */
+  videoTrackState(): VideoTrackState {
+    if (this.itemFailed) return VideoTrackState.FAILED
+    if (!this.itemReady) return VideoTrackState.LOADING
+    return this.hasVideoTrack() ? VideoTrackState.HAS_TRACK : VideoTrackState.NO_TRACK
+  }
+
+  currentVideoSize(): [number, number] | null {
+    if (this.videoWidth <= 0 || this.videoHeight <= 0) return null
+    return [this.videoWidth, this.videoHeight]
   }
 
   private mapSpeed(speed: number): media.PlaybackSpeed {

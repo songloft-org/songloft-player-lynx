@@ -96,6 +96,7 @@ const hosts = {
     android: read(`${ANDROID_VIDEO}/SongloftVideoModule.kt`),
     androidMain: read('android/app/src/main/java/org/songloft/lynx/MainActivity.kt'),
     ios: read(`${IOS_DIR}/SongloftVideoModule.swift`),
+    harmony: read(`${HARMONY_MODULES}/video/SongloftVideoModule.ets`),
   },
   liveActivity: {
     ios: read(`${IOS_DIR}/LiveActivityModule.swift`),
@@ -171,8 +172,11 @@ function expectSwiftMethod(source: string, method: string): void {
 
 /** Assert a HarmonyOS LynxModule exposes a public ArkTS method to JS. */
 function expectArkTsMethod(source: string, method: string): void {
+  // `public async foo(` and `public foo(` both count — Lynx bridges through
+  // whatever the JS surface names, and an async method that returns a Promise
+  // is a first-class member of the bridge (see SongloftVideoModule).
   expect(source, `HarmonyOS has no public ${method}`).toMatch(
-    new RegExp(`public\\s+${method}\\(`),
+    new RegExp(`public\\s+(?:async\\s+)?${method}\\(`),
   )
 }
 
@@ -1213,6 +1217,86 @@ describe('SongloftVideo module surface (iOS)', () => {
   })
 })
 
+describe('SongloftVideo module surface (HarmonyOS)', () => {
+  const methods = interfaceMethods(read('src/native/video.ts'), 'NativeVideoModule')
+
+  test.each(methods)('SongloftVideoModule.%s exists as a public ArkTS method', (method) => {
+    expectArkTsMethod(hosts.video.harmony, method)
+  })
+
+  test('the dead closed event is gone; the host draws pixels only, JS owns the controls', () => {
+    // The system back gesture routes to `performRouteBack` via
+    // SongloftNavigationModule.handleBackPress, so a second close-from-host
+    // channel would just be a second source of truth for the same signal.
+    expect(hosts.video.harmony).not.toContain("'SongloftVideo.closed'")
+    expect(hosts.video.harmony).not.toContain('"SongloftVideo.closed"')
+  })
+
+  test('the picture is painted by an XComponent hosted under the LynxView', () => {
+    // Same z-order as Android (SurfaceView + `setZOrderMediaOverlay(true)`)
+    // and iOS (AVPlayerLayer on a host UIView): the XComponent goes first in
+    // the Stack, so the LynxView paints every control on top of it.
+    expect(hosts.harmonyIndex).toContain('XComponent')
+    expect(hosts.harmonyIndex).toContain('XComponentType.SURFACE')
+    // Order matters: XComponent must appear before LynxView in the Stack body.
+    const xcAt = hosts.harmonyIndex.indexOf('XComponent(')
+    const lynxAt = hosts.harmonyIndex.indexOf('LynxView(')
+    expect(xcAt, 'XComponent must appear before LynxView so the LynxView paints on top')
+      .toBeLessThan(lynxAt)
+    // `HitTestMode.None` lets `bindtap` on the page reach through to the JS
+    // control layer instead of being swallowed by the XComponent.
+    expect(hosts.harmonyIndex).toContain('HitTestMode.None')
+  })
+
+  test('the engine can lend out its surface, and the module hands it back', () => {
+    expect(
+      hosts.audio.harmony,
+      'engine exposes no attachVideoOutput — the video screen would open onto nothing',
+    ).toContain('attachVideoOutput')
+    expect(hosts.audio.harmony).toContain('detachVideoOutput')
+    expect(
+      hosts.video.harmony,
+      'the module never detaches: AVPlayer would keep drawing into a hidden surface',
+    ).toContain('detachVideoOutput')
+  })
+
+  test('the host emits videoSizeChanged and orientationChanged', () => {
+    // Same events, byte-for-byte, as Android/iOS — the JS facade decodes all
+    // three hosts from the same listener. `orientationChanged` is pushed
+    // from EntryAbility.observeWindowSize, not from the module itself.
+    expect(hosts.video.harmony).toContain('SongloftVideo.videoSizeChanged')
+    expect(hosts.video.harmony).toContain('SongloftVideo.orientationChanged')
+    expect(hosts.harmonyEntry).toContain('emitOrientation')
+    expect(hosts.harmonyEntry).toContain('windowSizeChange')
+  })
+
+  test('EntryAbility wires the module up (host window)', () => {
+    // Without setHostWindow the orientation lock cannot ask the window to
+    // rotate — same wire Android's setActivity provides and iOS's
+    // setHostController provides.
+    expect(hosts.harmonyEntry).toContain('SongloftVideoModule.setHostWindow')
+  })
+
+  test('the engine observes the decoded picture size', () => {
+    // AVPlayer's `videoSizeChange` event carries the *decoded* picture size,
+    // the counterpart of Android's `Player.Listener.onVideoSizeChanged` and
+    // iOS's `AVPlayerItem.presentationSize` KVO.
+    expect(hosts.audio.harmony).toContain("'videoSizeChange'")
+    expect(hosts.audio.harmony).toContain('currentVideoSize')
+  })
+
+  test('the host tells "no video track" apart from "stream failed to load"', () => {
+    // Same three-way (`hasTrack`/`noTrack`/`failed`) as Android/iOS. On
+    // Harmony the engine drives it from a two-flag state machine
+    // (itemReady/itemFailed) rather than a per-item status enum, because
+    // AVPlayer does not expose one, but the three exposed values match.
+    expect(hosts.audio.harmony).toContain('videoTrackState')
+    expect(hosts.video.harmony).toContain('videoTrackState')
+    expect(hosts.video.harmony).toContain('noTrack')
+    expect(hosts.video.harmony).toContain('failed')
+  })
+})
+
 describe('SongloftLiveActivity is a proper Lynx module on iOS', () => {
   const src = hosts.liveActivity.ios
   const methods = ['start', 'update', 'end']
@@ -1310,7 +1394,7 @@ describe('every native module is registered in the host bootstrap', () => {
     { name: 'SongloftDlna', android: 'SongloftDlnaModule', ios: 'SongloftDlnaModule', harmony: 'SongloftDlnaModule' },
     { name: 'SongloftFloatingLyric', android: 'FloatingLyricModule', ios: null, harmony: null },
     { name: 'SongloftLiveActivity', android: null, ios: 'LiveActivityModule', harmony: null },
-    { name: 'SongloftVideo', android: 'SongloftVideoModule', ios: 'SongloftVideoModule', harmony: null },
+    { name: 'SongloftVideo', android: 'SongloftVideoModule', ios: 'SongloftVideoModule', harmony: 'SongloftVideoModule' },
     { name: 'SongloftNavigation', android: 'SongloftNavigationModule', ios: null, harmony: 'SongloftNavigationModule' },
     { name: 'SongloftSongCache', android: 'SongloftSongCacheModule', ios: 'SongloftSongCacheModule', harmony: 'SongloftSongCacheModule' },
     { name: 'SongloftPluginBridge', android: 'SongloftPluginBridgeModule', ios: 'SongloftPluginBridgeModule', harmony: 'SongloftPluginBridgeModule' },
@@ -1357,9 +1441,6 @@ describe('every native module is registered in the host bootstrap', () => {
     ).toContain(`.set('${mod.name}', { moduleClass: ${mod.harmony!}`)
   })
 
-  test('HarmonyOS does not register the placeholder video module as a usable capability', () => {
-    expect(hosts.harmonyIndex).not.toContain("this.modules.set('SongloftVideo'")
-  })
 })
 
 /**
