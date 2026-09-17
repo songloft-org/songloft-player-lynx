@@ -228,6 +228,26 @@
     })
   }
 
+  /**
+   * Emit `SongloftVideo.videoSizeChanged` whenever the browser reports a
+   * decoded picture size. `loadedmetadata` is the earliest reliable point
+   * (before that `videoWidth` / `videoHeight` are 0 on some browsers); `resize`
+   * catches a mid-play change (HLS variant switch, rotated iOS capture).
+   *
+   * Not guarded by `videoPrimary`: the FullVideoPage subscribes to the size
+   * event as soon as it mounts, and there is only ever one <video> element
+   * here — a stale event does no harm.
+   */
+  function emitVideoSize() {
+    var w = video.videoWidth || 0
+    var h = video.videoHeight || 0
+    if (w <= 0 || h <= 0) return
+    sendEvent('SongloftVideo.videoSizeChanged', { width: w, height: h })
+  }
+
+  video.addEventListener('loadedmetadata', emitVideoSize)
+  video.addEventListener('resize', emitVideoSize)
+
   var videoHandlers = {
     open: openVideoStream,
     close: function () {
@@ -276,6 +296,53 @@
     },
     isOpen: function () {
       return Promise.resolve(JSON.stringify({ result: videoOpen }))
+    },
+    /**
+     * The page computes a letterbox rect in CSS pixels from the video's
+     * aspect. On device the host applies that rect to a native surface; the
+     * browser here already does letterbox at element level (`object-fit:
+     * contain`), so applying it a second time would just crop the picture
+     * inside the picture. The right answer is a no-op that keeps the same
+     * three-host method surface.
+     */
+    setSurfaceLayout: function () {
+      return Promise.resolve('{}')
+    },
+    /**
+     * `screen.orientation.lock` needs fullscreen + a user gesture and is not
+     * offered by every browser. The rotate button in the JS page is a
+     * best-effort call, so a rejection here is not user-visible — the page
+     * still runs. Treat any failure as "no orientation lock available".
+     */
+    setOrientation: function (args) {
+      var mode = 'auto'
+      try {
+        var json = args && args[0]
+        var obj = json ? JSON.parse(json) : {}
+        if (obj && typeof obj.mode === 'string') mode = obj.mode
+      } catch (_) {}
+      try {
+        if (screen && screen.orientation && typeof screen.orientation.lock === 'function') {
+          if (mode === 'portrait') return screen.orientation.lock('portrait').then(
+            function () { return '{}' },
+            function () { return '{}' },
+          )
+          if (mode === 'landscape') return screen.orientation.lock('landscape').then(
+            function () { return '{}' },
+            function () { return '{}' },
+          )
+          if (typeof screen.orientation.unlock === 'function') {
+            try { screen.orientation.unlock() } catch (_) {}
+          }
+        }
+      } catch (_) {}
+      return Promise.resolve('{}')
+    },
+    getVideoSize: function () {
+      var w = video.videoWidth || 0
+      var h = video.videoHeight || 0
+      if (w <= 0 || h <= 0) return Promise.resolve('{}')
+      return Promise.resolve(JSON.stringify({ result: { width: w, height: h } }))
     },
   }
 

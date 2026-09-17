@@ -1297,6 +1297,69 @@ describe('SongloftVideo module surface (HarmonyOS)', () => {
   })
 })
 
+/**
+ * Web is a fourth host for `SongloftVideo`: `web/songloft-video-module.js` is the
+ * worker-side factory the LynxView's `nativeModulesMap` points at, and
+ * `web/audio-host.js` owns the main-thread `<video>` behind it.
+ *
+ * The whole facade rejects a **partial** module (`readNativeVideo` requires every
+ * method on `NativeVideoModule`) — that is not a defence-in-depth wish, it is how
+ * a stale worker shim used to reduce an entire feature to `open()` returning
+ * `'failed'` while every other host worked. If you add a method to `video.ts`,
+ * add it here **and** in `audio-host.js` in the same change.
+ */
+describe('SongloftVideo module surface (Web)', () => {
+  const methods = interfaceMethods(read('src/native/video.ts'), 'NativeVideoModule')
+  const workerModule = read('web/songloft-video-module.js')
+  const mainHost = read('web/audio-host.js')
+
+  test.each(methods)(
+    'songloft-video-module.js exposes %s (partial module → null adapter → open() returns failed forever)',
+    (method) => {
+      // Grep is enough — the factory currently emits `open: forward(call,
+      // 'open'),` for each method. A refactor that reintroduces per-method
+      // stubs would still land the identifier, and a rename is exactly what
+      // this gate catches.
+      expect(
+        workerModule,
+        `songloft-video-module.js does not expose ${method}. `
+        + `readNativeVideo() would return null, the video facade would use its `
+        + `inert stub, and every open() call would resolve to 'failed'.`,
+      ).toMatch(new RegExp(`${method}\\s*:`))
+    },
+  )
+
+  test('the main-thread host implements every method the worker forwards to', () => {
+    // The forward path is `worker → call(name, [json]) → onNativeModulesCall
+    // dispatch → videoHandlers[name]`. A missing entry in videoHandlers means
+    // the call returns undefined and the JS callback never fires — the facade
+    // times out into the same generic failure mode.
+    for (const method of methods) {
+      expect(
+        mainHost,
+        `audio-host.js's videoHandlers is missing ${method}`,
+      ).toMatch(new RegExp(`${method}\\s*:\\s*(function|openVideoStream)`))
+    }
+  })
+
+  test('the host emits videoSizeChanged so the JS page can lay out its overlay', () => {
+    // On Web the <video> element does letterbox itself (object-fit: contain),
+    // but FullVideoPage still subscribes to the size event to keep the overlay
+    // controls in sync. The <video>'s `loadedmetadata` is what carries the
+    // decoded size, and `resize` catches a mid-play HLS variant change.
+    expect(mainHost).toContain("'SongloftVideo.videoSizeChanged'")
+    expect(mainHost).toContain("addEventListener('loadedmetadata', emitVideoSize)")
+    expect(mainHost).toContain("addEventListener('resize', emitVideoSize)")
+  })
+
+  test('audio-host.js registers the worker module URL', () => {
+    // The URL string must appear inside the nativeModulesMap literal, not just
+    // anywhere in the file — the earlier version had every module *mentioned*
+    // in a doc comment while none were actually registered.
+    expect(mainHost).toMatch(/SongloftVideo:\s*'\/songloft-video-module\.js'/)
+  })
+})
+
 describe('SongloftLiveActivity is a proper Lynx module on iOS', () => {
   const src = hosts.liveActivity.ios
   const methods = ['start', 'update', 'end']

@@ -4,7 +4,17 @@
   background-color: transparent;
 }
 
+/* Every rule below declares `display: flex` explicitly.
+ *
+ * Lynx CSS treats every element as flex on device (Yoga), but the **Web bundle**
+ * emits real CSS into the DOM, where a plain `<div>` is block-layout by default.
+ * Every earlier page in this app (FullPlayerPage, DlnaPage, LyricAdjustPage…) had
+ * to spell out `display: flex` for the Web path to lay out; leaving it off is why
+ * the first Web pass drew every button stacked at the top-left. */
+
 .full-video__chrome {
+  display: flex;
+  flex-direction: column;
   position: absolute;
   top: 0;
   left: 0;
@@ -26,13 +36,14 @@
 }
 
 .full-video__header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: calc(64px + var(--safe-top));
-  flex-direction: row;
-  align-items: center;
   padding-top: var(--safe-top);
   padding-left: 12px;
   padding-right: 12px;
@@ -40,10 +51,16 @@
 }
 
 .full-video__title-block {
+  display: flex;
+  flex-direction: column;
   flex: 1;
+  min-width: 0;
   margin-left: 8px;
   margin-right: 8px;
-  align-items: center;
+  /* No `align-items: center` here: on a flex-column child of the header row that
+     would only cross-center the child items' own boxes. The header itself is
+     already the row that lays this block between the back button and the ghost
+     slot, so leaving it left-aligned reads correctly. */
 }
 
 .full-video__title {
@@ -67,12 +84,14 @@
 }
 
 .full-video__icon-btn {
-  width: 44px;
-  height: 44px;
+  display: flex;
   align-items: center;
   justify-content: center;
+  width: 44px;
+  height: 44px;
   background-color: rgba(0, 0, 0, 0.35);
-  border-radius: 50%;
+  border-radius: 22px;
+  flex-shrink: 0;
 }
 
 .full-video__icon-btn--ghost {
@@ -80,29 +99,36 @@
 }
 
 .full-video__centre {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: 80px;
   height: 80px;
-  align-items: center;
-  justify-content: center;
   background-color: rgba(0, 0, 0, 0.45);
-  border-radius: 50%;
+  border-radius: 40px;
   z-index: 2;
 }
 
 .full-video__bottom {
+  display: flex;
+  flex-direction: column;
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 16px 20px calc(20px + var(--safe-bottom));
+  padding-left: 20px;
+  padding-right: 20px;
+  padding-top: 16px;
+  padding-bottom: calc(20px + var(--safe-bottom));
   background-image: linear-gradient(to top, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0));
 }
 
 .full-video__times {
+  display: flex;
   flex-direction: row;
   justify-content: space-between;
   margin-bottom: 6px;
@@ -114,19 +140,22 @@
 }
 
 .full-video__tools {
-  margin-top: 12px;
+  display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
+  margin-top: 12px;
 }
 
 .full-video__tool {
-  width: 44px;
-  height: 44px;
+  display: flex;
   align-items: center;
   justify-content: center;
+  width: 44px;
+  height: 44px;
   background-color: rgba(0, 0, 0, 0.35);
-  border-radius: 50%;
+  border-radius: 22px;
+  flex-shrink: 0;
 }
 
 .full-video__tool--ghost {
@@ -134,14 +163,23 @@
 }
 
 .full-video__note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  padding: 16px 20px;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  padding-left: 20px;
+  padding-right: 20px;
   background-color: rgba(0, 0, 0, 0.75);
   border-radius: 12px;
+  z-index: 3;
+}
+
+.full-video__note-text {
   color: #ffffff;
   font-size: 15px;
-  z-index: 3;
 }

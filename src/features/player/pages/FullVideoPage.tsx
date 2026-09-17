@@ -235,7 +235,11 @@ export function FullVideoPage() {
       data-testid='video-root'
     >
       {note
-        ? <view className='full-video__note'><text>{note}</text></view>
+        ? (
+          <view className='full-video__note'>
+            <text className='full-video__note-text'>{note}</text>
+          </view>
+        )
         : null}
 
       {showCentrePlay ? (
