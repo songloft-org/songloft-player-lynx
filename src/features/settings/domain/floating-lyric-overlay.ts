@@ -7,6 +7,23 @@ import {
 } from '../data/settings-prefs.js'
 
 /**
+ * Cached "is the overlay currently up" flag, kept in lockstep with the pref
+ * writes below. `lyric-store.syncPosition` reads this on the hot path: on
+ * Android a `progress` event arrives every 500 ms, and pushing the line to the
+ * native module (JSON.stringify + BTS → main-thread RPC + WindowManager work)
+ * for a user who has never opened the overlay is pure waste. Sync so the check
+ * costs one boolean read; the readers here already treat the pref as
+ * source-of-truth and the two sync methods below are the only writers.
+ */
+let _overlayEnabled = false
+readFloatingLyricEnabled().then((v) => { _overlayEnabled = v }).catch(() => {})
+
+/** Non-reactive read for the audio hot path. */
+export function isFloatingLyricOverlayEnabled(): boolean {
+  return _overlayEnabled
+}
+
+/**
  * The floating-lyrics overlay as a switch with **two** sources of truth: our own
  * pref and the OS grant. Every caller (startup, the settings toggle) has to
  * reconcile both, and getting that wrong is invisible — the native calls resolve
@@ -43,15 +60,17 @@ async function showOverlay(m: FloatingLyricModule): Promise<void> {
  * Returns the pref value that is actually honoured.
  */
 export async function syncFloatingLyricOverlay(): Promise<boolean> {
-  if (!getPlatformCapabilities().floatingLyric) return false
-  if (!(await readFloatingLyricEnabled())) return false
+  if (!getPlatformCapabilities().floatingLyric) { _overlayEnabled = false; return false }
+  if (!(await readFloatingLyricEnabled())) { _overlayEnabled = false; return false }
 
   const m = getFloatingLyricModule()
   if (!(await m.hasPermission())) {
     await writeFloatingLyricEnabled(false)
+    _overlayEnabled = false
     return false
   }
   if (!(await m.isShowing())) await showOverlay(m)
+  _overlayEnabled = true
   return true
 }
 
@@ -70,9 +89,11 @@ export async function enableFloatingLyricOverlay(): Promise<boolean> {
   const granted = await m.requestPermission()
   if (!granted) {
     await writeFloatingLyricEnabled(false)
+    _overlayEnabled = false
     return false
   }
   await writeFloatingLyricEnabled(true)
+  _overlayEnabled = true
   if (!(await m.isShowing())) await showOverlay(m)
   return true
 }
@@ -80,6 +101,7 @@ export async function enableFloatingLyricOverlay(): Promise<boolean> {
 /** User turned the overlay off: the pref and the window go together. */
 export async function disableFloatingLyricOverlay(): Promise<void> {
   await writeFloatingLyricEnabled(false)
+  _overlayEnabled = false
   if (!getPlatformCapabilities().floatingLyric) return
   await getFloatingLyricModule().hide()
 }

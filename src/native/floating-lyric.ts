@@ -37,64 +37,45 @@ interface NativeFloatingLyric {
   setTwoLine(args: string, callback: (result: string) => void): void
 }
 
+/**
+ * Every method must be guarded against the host predating it: hosts add these
+ * incrementally, and an unguarded call to a missing method leaves the promise
+ * pending forever. Every progress tick could then leak one from `updateLyric`,
+ * so this is not just a startup concern — a stale host running for a while
+ * accumulates leaked promises and their JSON payloads.
+ */
 function createNativeAdapter(native: NativeFloatingLyric): FloatingLyricModule {
+  function callBool(
+    method: keyof NativeFloatingLyric,
+    args: string,
+    fallback: boolean,
+  ): Promise<boolean> {
+    return new Promise((resolve) => {
+      const fn = native[method]
+      if (typeof fn !== 'function') { resolve(fallback); return }
+      fn.call(native, args, (result: string) => { resolve(readBooleanResult(result)) })
+    })
+  }
+  function callVoid(method: keyof NativeFloatingLyric, args: string): Promise<void> {
+    return new Promise((resolve) => {
+      const fn = native[method]
+      if (typeof fn !== 'function') { resolve(); return }
+      fn.call(native, args, () => resolve())
+    })
+  }
   return {
-    hasPermission() {
-      return new Promise((resolve) => {
-        // Hosts that predate this method would leave the promise pending
-        // forever, and the caller sits in the startup chain.
-        if (typeof native.hasPermission !== 'function') {
-          resolve(false)
-          return
-        }
-        native.hasPermission('{}', (result) => { resolve(readBooleanResult(result)) })
-      })
-    },
-    requestPermission() {
-      return new Promise((resolve) => {
-        native.requestPermission('{}', (result) => { resolve(readBooleanResult(result)) })
-      })
-    },
-    show() {
-      return new Promise((resolve) => {
-        native.show('{}', () => resolve())
-      })
-    },
-    updateLyric(line: string, nextLine?: string) {
-      return new Promise((resolve) => {
-        native.updateLyric(JSON.stringify({ line, nextLine: nextLine ?? '' }), () => resolve())
-      })
-    },
-    hide() {
-      return new Promise((resolve) => {
-        native.hide('{}', () => resolve())
-      })
-    },
-    isShowing() {
-      return new Promise((resolve) => {
-        native.isShowing('{}', (result) => { resolve(readBooleanResult(result)) })
-      })
-    },
-    setFontSize(size: 'small' | 'medium' | 'large') {
-      return new Promise((resolve) => {
-        native.setFontSize(JSON.stringify({ size }), () => resolve())
-      })
-    },
-    setLocked(locked: boolean) {
-      return new Promise((resolve) => {
-        native.setLocked(JSON.stringify({ locked }), () => resolve())
-      })
-    },
-    setOpacity(opacity: number) {
-      return new Promise((resolve) => {
-        native.setOpacity(JSON.stringify({ opacity }), () => resolve())
-      })
-    },
-    setTwoLine(twoLine: boolean) {
-      return new Promise((resolve) => {
-        native.setTwoLine(JSON.stringify({ twoLine }), () => resolve())
-      })
-    },
+    hasPermission: () => callBool('hasPermission', '{}', false),
+    requestPermission: () => callBool('requestPermission', '{}', false),
+    show: () => callVoid('show', '{}'),
+    updateLyric: (line: string, nextLine?: string) =>
+      callVoid('updateLyric', JSON.stringify({ line, nextLine: nextLine ?? '' })),
+    hide: () => callVoid('hide', '{}'),
+    isShowing: () => callBool('isShowing', '{}', false),
+    setFontSize: (size: 'small' | 'medium' | 'large') =>
+      callVoid('setFontSize', JSON.stringify({ size })),
+    setLocked: (locked: boolean) => callVoid('setLocked', JSON.stringify({ locked })),
+    setOpacity: (opacity: number) => callVoid('setOpacity', JSON.stringify({ opacity })),
+    setTwoLine: (twoLine: boolean) => callVoid('setTwoLine', JSON.stringify({ twoLine })),
   }
 }
 

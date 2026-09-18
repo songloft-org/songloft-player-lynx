@@ -32,6 +32,7 @@ vi.mock('../../settings/data/settings-prefs.js', () => ({
   readPlaybackSpeed: vi.fn(async () => 1),
   writePlaybackSpeed: vi.fn(async () => {}),
   readAutoEnterLyrics: vi.fn(async () => false),
+  readFloatingLyricEnabled: vi.fn(async () => false),
 }))
 /*
  * Two react-query consumers now sit inside the player and would each throw

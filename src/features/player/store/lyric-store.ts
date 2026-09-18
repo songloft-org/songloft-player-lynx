@@ -5,6 +5,7 @@ import { apiPrefix } from '../../../core/config/app-config.js'
 import type { Song } from '../../../models/song.js'
 import { getAudio } from '../../../native/audio-facade.js'
 import { getFloatingLyricModule } from '../../../native/floating-lyric.js'
+import { isFloatingLyricOverlayEnabled } from '../../settings/domain/floating-lyric-overlay.js'
 import {
   findCurrentLine,
   mergeTranslations,
@@ -225,7 +226,11 @@ export const useLyricStore = create<LyricState>((set, get) => {
         const line = lyrics[next]
         const text = line?.text ?? null
         logInfo('lyric', `line ${next}/${lyrics.length}: ${text ? truncLog(text) : '(gap)'}`)
-        if (text) {
+        // Only fire the floating-overlay update when the overlay is actually
+        // on — a `progress` event arrives every 500 ms on Android, and a
+        // JSON.stringify + BTS→main RPC + WindowManager touch per line for a
+        // user who has never opened the overlay adds up over a session.
+        if (text && isFloatingLyricOverlayEnabled()) {
           void getFloatingLyricModule().updateLyric(text, lyrics[next + 1]?.text ?? '')
         }
         void getAudio().updateNotificationLyric(text, notificationLyricInTitle)

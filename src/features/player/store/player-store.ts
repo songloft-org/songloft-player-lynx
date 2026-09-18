@@ -962,7 +962,21 @@ audio.on('progress', (e) => {
     const nextIdx = resolveNext(s.playMode, s.currentIndex, s.playlist.length)
     if (nextIdx != null && s.playlist[nextIdx]) {
       const url = songUrl(s.playlist[nextIdx])
-      if (url) void fetch(url, { method: 'HEAD' }).catch(() => {})
+      if (url) {
+        // Small Range GET rather than HEAD: HEAD/GET are keyed separately in
+        // OkHttp's response cache, so the subsequent GET the audio engine
+        // fires would never reuse a HEAD entry. A tiny Range (128 KiB) is
+        // enough to complete DNS + TLS + TCP handshake and land the file
+        // header in the cache, without spending real bandwidth on a track the
+        // user might skip.
+        //
+        // The response body is deliberately consumed (via `arrayBuffer()`) so
+        // OkHttp gets to complete-and-cache; an aborted read is discarded.
+        void fetch(url, {
+          method: 'GET',
+          headers: { Range: 'bytes=0-131071' },
+        }).then((r) => r.arrayBuffer()).catch(() => {})
+      }
     }
   }
 })

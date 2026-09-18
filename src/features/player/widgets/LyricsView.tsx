@@ -100,42 +100,12 @@ export function LyricsView() {
     void refetch(currentSong)
   }
 
-  if (isLoading) {
-    return (
-      <StatusPlaceholder
-        message={t('player.loadingLyrics')}
-        canRefetch={false}
-        onRefetch={onRefetch}
-        refetchLabel={t('lyricAdjust.refetch')}
-      />
-    )
-  }
-
-  if (loadFailed) {
-    return (
-      <StatusPlaceholder
-        message={t('lyricAdjust.loadFailed')}
-        canRefetch={canRefetch}
-        onRefetch={onRefetch}
-        refetchLabel={t('lyricAdjust.refetch')}
-      />
-    )
-  }
-
-  if (lyrics.length === 0) {
-    return (
-      <StatusPlaceholder
-        message={t('player.noLyrics')}
-        canRefetch={canRefetch}
-        onRefetch={onRefetch}
-        refetchLabel={t('lyricAdjust.refetch')}
-      />
-    )
-  }
-
-  const activeLineRef = useRef<NodesRef>(null)
-
   /*
+   * All hooks must run on every render regardless of the placeholder branches
+   * below. React fibers require a stable hook call order; toggling between
+   * loading / failed / empty / loaded across song changes would otherwise
+   * shift the hook order and corrupt state.
+   *
    * "Back to current line" button.
    *
    * Auto-scroll centres the active line when `currentIndex` changes, but a user
@@ -149,6 +119,7 @@ export function LyricsView() {
    * `userScrolled` is state because it drives the button's visibility.
    */
   const DRIFT_PX = 150
+  const activeLineRef = useRef<NodesRef>(null)
   const [userScrolled, setUserScrolled] = useState(false)
   const lastAutoScrollTopRef = useRef(0)
 
@@ -204,6 +175,39 @@ export function LyricsView() {
     setUserScrolled(false)
   }, [currentIndex])
 
+  if (isLoading) {
+    return (
+      <StatusPlaceholder
+        message={t('player.loadingLyrics')}
+        canRefetch={false}
+        onRefetch={onRefetch}
+        refetchLabel={t('lyricAdjust.refetch')}
+      />
+    )
+  }
+
+  if (loadFailed) {
+    return (
+      <StatusPlaceholder
+        message={t('lyricAdjust.loadFailed')}
+        canRefetch={canRefetch}
+        onRefetch={onRefetch}
+        refetchLabel={t('lyricAdjust.refetch')}
+      />
+    )
+  }
+
+  if (lyrics.length === 0) {
+    return (
+      <StatusPlaceholder
+        message={t('player.noLyrics')}
+        canRefetch={canRefetch}
+        onRefetch={onRefetch}
+        refetchLabel={t('lyricAdjust.refetch')}
+      />
+    )
+  }
+
   return (
     <view className='player-lyrics__container'>
       {canAdjust || canRefetch
@@ -231,7 +235,13 @@ export function LyricsView() {
           </view>
         )
         : null}
-    <scroll-view className='player-lyrics' scroll-y bindscroll={handleScroll}>
+    {/*
+      * `key` remounts the scroller when the song changes: `scroll-view` retains
+      * its scroll position across content swaps, so without a remount the user
+      * would see the previous song's tail scroll position for the split second
+      * before `currentIndex` becomes valid and `scrollIntoView` re-centres.
+      */}
+    <scroll-view key={currentSong?.id ?? 'nosong'} className='player-lyrics' scroll-y bindscroll={handleScroll}>
       <view className='player-lyrics__inner'>
         {lyrics.map((line, index) => {
           const active = index === currentIndex

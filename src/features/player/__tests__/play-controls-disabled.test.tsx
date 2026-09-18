@@ -29,6 +29,7 @@ vi.mock('../../settings/data/settings-prefs.js', () => ({
   readPlaybackSpeed: vi.fn(async () => 1),
   writePlaybackSpeed: vi.fn(async () => {}),
   readAutoEnterLyrics: vi.fn(async () => false),
+  readFloatingLyricEnabled: vi.fn(async () => false),
 }))
 vi.mock('../../library/data/favorites.js', () => ({
   useIsFavorite: () => false,
