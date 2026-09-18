@@ -1,0 +1,26 @@
+diff --git a/dist/cjs/index.cjs b/dist/cjs/index.cjs
+index aa1f162548fdb89678debb834bcd10ef1cb96e63..0c7a3dfe6728c9376aa1df198d882b25e914ffd8 100644
+--- a/dist/cjs/index.cjs
++++ b/dist/cjs/index.cjs
+@@ -197,7 +197,7 @@ function createBrowserHistory(opts) {
+ 			state,
+ 			next?.[2] || isPush
+ 		];
+-		if (!hasPendingAction) queueMicrotask(() => flush());
++		if (!hasPendingAction) (typeof queueMicrotask !== "undefined" ? queueMicrotask : (fn) => Promise.resolve().then(fn))(() => flush());
+ 	};
+ 	const onPushPop = (type) => {
+ 		currentLocation = parseLocation();
+diff --git a/dist/esm/index.js b/dist/esm/index.js
+index 64c9519a3a2f0deaf370a52fc5c473eb9a7eb25b..a7b7509e5431fbb7b2e90d89d837246ca7356c8c 100644
+--- a/dist/esm/index.js
++++ b/dist/esm/index.js
+@@ -196,7 +196,7 @@ function createBrowserHistory(opts) {
+ 			state,
+ 			next?.[2] || isPush
+ 		];
+-		if (!hasPendingAction) queueMicrotask(() => flush());
++		if (!hasPendingAction) (typeof queueMicrotask !== "undefined" ? queueMicrotask : (fn) => Promise.resolve().then(fn))(() => flush());
+ 	};
+ 	const onPushPop = (type) => {
+ 		currentLocation = parseLocation();

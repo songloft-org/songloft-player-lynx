@@ -1,3 +1,16 @@
+diff --git a/dist/cjs/router.cjs b/dist/cjs/router.cjs
+index 7f13bfc5d379a16db25fb3350cb426ccf6760557..694454413cdbb6fc725b3db638be26e61e60eff3 100644
+--- a/dist/cjs/router.cjs
++++ b/dist/cjs/router.cjs
+@@ -443,7 +443,7 @@ var RouterCore = class {
+ 				hashScrollIntoView,
+ 				ignoreBlocker
+ 			});
+-			queueMicrotask(() => {
++			(typeof queueMicrotask !== "undefined" ? queueMicrotask : (fn) => Promise.resolve().then(fn))(() => {
+ 				if (this._pendingLocation === location) this._pendingLocation = void 0;
+ 			});
+ 			return commitPromise;
 diff --git a/dist/esm/load-client.js b/dist/esm/load-client.js
 index e9bc451f7a9bdde536aa14de4265fb6f5801963a..56deb3e7f7cd2c9cd3e260c44b72ac54d0efbee5 100644
 --- a/dist/esm/load-client.js
@@ -68,9 +81,18 @@ index e9bc451f7a9bdde536aa14de4265fb6f5801963a..56deb3e7f7cd2c9cd3e260c44b72ac54
  			}
  		}
 diff --git a/dist/esm/router.js b/dist/esm/router.js
-index f21f6005431e4def69d19017c75dafbde634bcec..7eb38a003a6bd595ce21946a4880a1fe16f61a63 100644
+index f21f6005431e4def69d19017c75dafbde634bcec..b2b0a94f7498adde1a12014d39ce068111c8d748 100644
 --- a/dist/esm/router.js
 +++ b/dist/esm/router.js
+@@ -443,7 +443,7 @@ var RouterCore = class {
+ 				hashScrollIntoView,
+ 				ignoreBlocker
+ 			});
+-			queueMicrotask(() => {
++			(typeof queueMicrotask !== "undefined" ? queueMicrotask : (fn) => Promise.resolve().then(fn))(() => {
+ 				if (this._pendingLocation === location) this._pendingLocation = void 0;
+ 			});
+ 			return commitPromise;
 @@ -635,7 +635,7 @@ var RouterCore = class {
  			parseSearch: options.parseSearch ?? defaultParseSearch,
  			protocolAllowlist: options.protocolAllowlist ?? DEFAULT_PROTOCOL_ALLOWLIST

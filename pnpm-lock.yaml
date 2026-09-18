@@ -6,7 +6,8 @@ settings:
 
 patchedDependencies:
   '@lynx-js/web-core@0.23.1': 5593203bd3d4d251d472b7fa22769c09a31116caeea82b44fbc68942354cb8a0
-  '@tanstack/router-core@1.171.18': 1242e2f333e119e37f7900cbfa74ae52216db40b09867d3375cbeffdf3ce38dd
+  '@tanstack/history@1.162.1': 207991a23f96615aa8aa31c012f762a26d948f384ff677fffea294b215ab156d
+  '@tanstack/router-core@1.171.18': a6b43d78e19bceb901d2a9b9851c2b24c0aa71be5418a83deff3f2f56f0bcf35
 
 importers:
 
@@ -4320,7 +4321,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@tanstack/history@1.162.1': {}
+  '@tanstack/history@1.162.1(patch_hash=207991a23f96615aa8aa31c012f762a26d948f384ff677fffea294b215ab156d)': {}
 
   '@tanstack/query-core@5.101.4': {}
 
@@ -4331,9 +4332,9 @@ snapshots:
 
   '@tanstack/react-router@1.170.21(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
-      '@tanstack/history': 1.162.1
+      '@tanstack/history': 1.162.1(patch_hash=207991a23f96615aa8aa31c012f762a26d948f384ff677fffea294b215ab156d)
       '@tanstack/react-store': 0.9.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@tanstack/router-core': 1.171.18(patch_hash=1242e2f333e119e37f7900cbfa74ae52216db40b09867d3375cbeffdf3ce38dd)
+      '@tanstack/router-core': 1.171.18(patch_hash=a6b43d78e19bceb901d2a9b9851c2b24c0aa71be5418a83deff3f2f56f0bcf35)
       isbot: 5.2.1
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
@@ -4345,9 +4346,9 @@ snapshots:
       react-dom: 19.2.8(react@19.2.8)
       use-sync-external-store: 1.6.0(react@19.2.8)
 
-  '@tanstack/router-core@1.171.18(patch_hash=1242e2f333e119e37f7900cbfa74ae52216db40b09867d3375cbeffdf3ce38dd)':
+  '@tanstack/router-core@1.171.18(patch_hash=a6b43d78e19bceb901d2a9b9851c2b24c0aa71be5418a83deff3f2f56f0bcf35)':
     dependencies:
-      '@tanstack/history': 1.162.1
+      '@tanstack/history': 1.162.1(patch_hash=207991a23f96615aa8aa31c012f762a26d948f384ff677fffea294b215ab156d)
       cookie-es: 3.1.1
       seroval: 1.6.2
       seroval-plugins: 1.6.2(seroval@1.6.2)

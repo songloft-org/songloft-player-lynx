@@ -175,6 +175,40 @@ test('built bundle installs the lynx.queueMicrotask substitute before any use', 
 })
 
 /**
+ * FAITHFUL CHECK 5 — no bare `queueMicrotask(…)` call survives into the bundle.
+ *
+ * `@tanstack/history` (`schedule` → `queueMicrotask(() => flush())`) and
+ * `@tanstack/router-core` (`commitLocation` → `queueMicrotask(() => …)`) both
+ * invoke bare `queueMicrotask` — an HTML/Workers global, not ECMAScript. On iOS
+ * JSC the Lynx realm has no such binding, so every `navigate()` throws
+ * `ReferenceError: Can't find variable: queueMicrotask` before the effect
+ * queue can run. A `globalThis.queueMicrotask = …` banner does NOT help
+ * — same failure mode as `self` (see the top-of-file explanation): Lynx BTS
+ * bare identifiers do not fall through to `globalThis` properties.
+ *
+ * Fix: pnpm-patch both packages to `typeof queueMicrotask !== "undefined"
+ * ? queueMicrotask : (fn) => Promise.resolve().then(fn)`. `typeof` on an
+ * undeclared binding never throws, so the fallback branch runs on device.
+ * This test guards the bundle from ever regressing to a bare call again.
+ */
+test('built bundle contains no bare queueMicrotask call site', () => {
+  const bundlePath = path.resolve(__dirname, '../../dist/main.lynx.bundle')
+  if (!existsSync(bundlePath)) {
+    console.warn('[skip] dist/main.lynx.bundle not built; run `pnpm run build`')
+    return
+  }
+  const data = readFileSync(bundlePath, 'latin1')
+  // A "bare call" is `queueMicrotask(` NOT preceded by a `.`/word/`$` (which
+  // would make it a property access — those go through `lynx.queueMicrotask`
+  // etc., not the JSC-fatal free-variable read).
+  const bare = [...data.matchAll(/(^|[^.\w$])queueMicrotask\s*\(/g)]
+  expect(
+    bare.length,
+    'bare queueMicrotask(...) survived into the bundle — restore the router-core / history patches',
+  ).toBe(0)
+})
+
+/**
  * SECONDARY (execution) — the patched, minified createRouter does not throw in a
  * realm shaped like the Lynx background thread. `typeof self` behaves identically
  * in Node and on device, so this check is faithful for the guard under test.

@@ -3,4 +3,5 @@ allowBuilds:
 
 patchedDependencies:
   '@lynx-js/web-core@0.23.1': patches/@lynx-js__web-core@0.23.1.patch
+  '@tanstack/history@1.162.1': patches/@tanstack__history@1.162.1.patch
   '@tanstack/router-core@1.171.18': patches/@tanstack__router-core@1.171.18.patch

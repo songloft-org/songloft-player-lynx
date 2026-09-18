@@ -69,6 +69,10 @@ describe('iOS: safe-area insets', () => {
     driver = await createDriver()
     await driver.launch()
     await driver.login('admin', 'admin')
+    // Earlier scenarios may leave the app on `/player`, `/library`, or a modal;
+    // this scenario asserts geometry on `/` (the shell + home page), so return
+    // there explicitly instead of assuming it's the current route.
+    await driver.evaluateJS("globalThis.__E2E_ROUTER__?.navigate({ to: '/' })")
     await driver.sleep(500)
   })
 
@@ -99,6 +103,14 @@ describe('iOS: safe-area insets', () => {
   test.skipIf(process.env.E2E_PLATFORM !== 'ios')(
     'the LynxView fills the screen and the page is inset inside it',
     async () => {
+      // `.shell` and `.home` are laid out after the auth-gated redirect resolves
+      // to `/`. On a cold-install run this can trail the 1s login sleep by a few
+      // hundred ms — measure() returns null instead of failing loudly, so poll
+      // for the root box to show up before asserting its geometry.
+      await driver.waitFor(async () => (await measure('.shell')) !== null, {
+        timeout: 5000,
+        interval: 100,
+      })
       const shell = await measure('.shell')
       const page = await measure('.home')
       expect(shell).not.toBeNull()
