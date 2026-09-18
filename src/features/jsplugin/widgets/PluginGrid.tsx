@@ -305,7 +305,32 @@ function PluginIcon({ plugin }: { plugin: JSPlugin }) {
   )
 }
 
-/** Extension sniffing on the declared filename, ignoring any query string. */
+/**
+ * Extension sniffing on the declared icon.
+ *
+ * Two shapes reach here:
+ *   1. bare filename declared in `plugin.json`, e.g. `icon.svg` — check its
+ *      extension directly (ignoring any query string appended by callers);
+ *   2. registry entry URL going through the server proxy, e.g.
+ *      `/api/v1/proxy?url=<encoded external icon URL>` — the path itself is
+ *      `/api/v1/proxy` and would otherwise mis-route to `<image>`. Inspect the
+ *      `url=` query parameter (URL-decoded) so a proxied `.svg` still wins.
+ */
 export function isSvgIcon(icon: string | undefined): boolean {
-  return (icon ?? '').split('?')[0]!.trim().toLowerCase().endsWith('.svg')
+  const raw = (icon ?? '').trim()
+  if (!raw) return false
+  const [path, query] = raw.split('?', 2)
+  if (path && path.toLowerCase().endsWith('.svg')) return true
+  if (!query) return false
+  for (const part of query.split('&')) {
+    if (!part.startsWith('url=')) continue
+    let target = part.slice(4)
+    try {
+      target = decodeURIComponent(target)
+    } catch {
+      // malformed percent-encoding; fall through with the raw value
+    }
+    return target.split('?')[0]!.toLowerCase().endsWith('.svg')
+  }
+  return false
 }

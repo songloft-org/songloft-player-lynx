@@ -25,6 +25,32 @@ function isSvgMarkup(text: string): boolean {
 }
 
 /**
+ * Ensure the root `<svg>` carries a `viewBox` — synthesize one from `width` /
+ * `height` when absent.
+ *
+ * Why: Lynx's Android `<svg content>` renderer needs `viewBox` to scale the
+ * artwork into the CSS-sized container (plugin icon tiles paint into 32×32).
+ * A `<svg width="512" height="512">` without `viewBox` paints at its intrinsic
+ * 512px and the visible 32×32 window falls in the empty top-left corner, so
+ * the icon reads as blank on device. iOS's renderer handles this more
+ * forgivingly, which is why the bug is Android-only. Same treatment for the
+ * store `useRegistryIconQuery` path since store SVGs come from third-party
+ * repos with the same variance.
+ *
+ * Only touches the root element and only when `viewBox` is missing.
+ */
+export function normalizeSvgMarkup(text: string): string {
+  const openMatch = text.match(/<svg\b([^>]*)>/i)
+  if (!openMatch) return text
+  const attrs = openMatch[1] ?? ''
+  if (/\bviewBox\s*=/i.test(attrs)) return text
+  const w = attrs.match(/\bwidth\s*=\s*["']?\s*([\d.]+)/i)?.[1]
+  const h = attrs.match(/\bheight\s*=\s*["']?\s*([\d.]+)/i)?.[1]
+  if (!w || !h) return text
+  return text.replace(openMatch[0], `<svg${attrs} viewBox="0 0 ${w} ${h}">`)
+}
+
+/**
  * SVG markup for a plugin icon, for feeding `<svg content>`.
  *
  * `enabled` is false for bitmap icons — those go to `<image>` and must not cost a
@@ -45,7 +71,7 @@ export function usePluginIconQuery(entryPath: string, icon: string, enabled: boo
     retry: false,
     queryFn: async () => {
       const text = await getJSPluginApi().getStaticText(entryPath, icon)
-      return isSvgMarkup(text) ? text : ''
+      return isSvgMarkup(text) ? normalizeSvgMarkup(text) : ''
     },
   })
 }
@@ -97,7 +123,7 @@ export function useRegistryIconQuery(resolvedUrl: string, enabled: boolean) {
     retry: false,
     queryFn: async () => {
       const text = await getJSPluginApi().getRemoteText(resolvedUrl)
-      return isSvgMarkup(text) ? text : ''
+      return isSvgMarkup(text) ? normalizeSvgMarkup(text) : ''
     },
   })
 }
