@@ -65,7 +65,7 @@ export function computeSurfaceRect(
  * Layout (top-left back, tap-empty toggles the chrome):
  *   ┌ back              ▸ title / subtitle          · ┐   <- header
  *   │                                                 │
- *   │            ▶  (only while paused / buffering)   │   <- centre affordance
+ *   │            ▶ / ⏸ / ⟳  (fades with chrome)       │   <- centre affordance
  *   │                                                 │
  *   │  00:00 ────────────────────────────────  03:14  │   <- seek row
  *   └  ⟳ rotate       ⛶ fit / zoom              ⋯    ┘   <- tools row
@@ -196,6 +196,9 @@ export function FullVideoPage() {
 
   const togglePlayback = (): void => {
     showChrome()
+    // 缓冲态点击是无意义的（状态由播放器被动决定），与 YouTube/B 站等一致
+    // 屏蔽这次点击，避免用户以为按了没反应。
+    if (isBuffering) return
     void usePlayerStore.getState().togglePlay()
   }
 
@@ -222,7 +225,12 @@ export function FullVideoPage() {
   }
 
   const shownMs = previewRatio !== null ? previewRatio * duration : currentTime
-  const showCentrePlay = !isPlaying || isBuffering
+  const centreIcon = isBuffering ? 'loader' : isPlaying ? 'pause' : 'play'
+  const centreLabel = isBuffering
+    ? t('common.loading')
+    : isPlaying
+      ? t('common.pause')
+      : t('common.play')
 
   return (
     <view
@@ -242,25 +250,18 @@ export function FullVideoPage() {
         )
         : null}
 
-      {showCentrePlay ? (
+      <view
+        className={`full-video__chrome ${chromeVisible ? '' : 'full-video__chrome--hidden'}`}
+      >
         <view
           className='full-video__centre'
           catchtap={togglePlayback}
           data-testid='video-centre-toggle'
           accessibility-element={true}
-          accessibility-label={isPlaying ? t('common.pause') : t('common.play')}
+          accessibility-label={centreLabel}
         >
-          <Icon
-            name={isBuffering ? 'loader' : 'play'}
-            size={40}
-            color='#ffffff'
-          />
+          <Icon name={centreIcon} size={40} color='#ffffff' />
         </view>
-      ) : null}
-
-      <view
-        className={`full-video__chrome ${chromeVisible ? '' : 'full-video__chrome--hidden'}`}
-      >
         <view className='full-video__header'>
           <view
             className='full-video__icon-btn'
