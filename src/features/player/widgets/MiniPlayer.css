@@ -57,15 +57,15 @@
     inset 0 -1px 0 var(--separator);
 }
 
-/* Narrow: fixed floating layer — 80px = nav capsule (64) + bottom offset (8)
-   + gap between the two capsules (8). Translucent like the nav capsule. */
+/* Narrow: fixed floating layer — 76px = nav capsule (64) + bottom offset (8)
+   + gap between the two capsules (4). Translucent like the nav capsule. */
 .shell--narrow .mini-player {
   position: fixed;
   /* Fixed, so `.shell`'s horizontal safe-area padding does not apply — same
      reason the nav capsule adds the side insets itself. */
   left: calc(var(--space-2) + var(--safe-left));
   right: calc(var(--space-2) + var(--safe-right));
-  bottom: calc(80px + var(--safe-bottom));
+  bottom: calc(76px + var(--safe-bottom));
   margin: 0;
   background-color: var(--material-fill);
   z-index: 91;
@@ -116,7 +116,7 @@
   align-items: center;
   /* Fixed 48px row (the iOS-26 attached-player look): the 36px cover and the
      two one-line meta rows centre in it, and NOTHING can grow the capsule —
-     the shell's --nav-inset: 148px tier is sized against a constant ~53px
+     the shell's --nav-inset: 144px tier is sized against a constant ~53px
      player, so a wrapping title wouldn't just look wrong, it would re-hide
      list tails under the capsule. Height stays content-independent with or
      without a subtitle, whatever the font metrics. No vertical padding:

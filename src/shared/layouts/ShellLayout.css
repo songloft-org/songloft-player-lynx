@@ -16,7 +16,7 @@
   flex-direction: column;
   /* The bottom-inset scale the pages' scrolling tails consume (each page's
      CSS reads `var(--nav-inset, 80px)` — see the feature styles). Two tiers:
-     the capsule alone, and capsule + mini-player stack. 148 = 80 (capsule +
+     the capsule alone, and capsule + mini-player stack. 144 = 76 (capsule +
      gap) + ~57 (compact mini-player: 36px row content + 6px padding ×2 +
      progress + border) + breathing room; the mini tier rides the
      `shell--with-mini` class the shell toggles with song presence, so the
@@ -50,7 +50,7 @@
 }
 
 .shell--narrow.shell--with-mini {
-  --nav-inset: 148px;
+  --nav-inset: 144px;
 }
 
 .shell--wide {

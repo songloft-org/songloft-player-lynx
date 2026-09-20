@@ -54,7 +54,7 @@ test('the meta column can shrink below its content', () => {
 
 /**
  * The capsule's height must not depend on the song metadata — no subtitle,
- * a giant title, any font metrics. The shell sizes the `--nav-inset: 148px`
+ * a giant title, any font metrics. The shell sizes the `--nav-inset: 144px`
  * tier against a constant ~53px player (3px progress + 48px row + border);
  * a taller one re-hides list tails under the floating capsule. The exact
  * value is asserted on purpose: changing it means re-checking that inset.

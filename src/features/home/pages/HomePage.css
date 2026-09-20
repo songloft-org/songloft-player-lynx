@@ -447,7 +447,7 @@
    use a footer spacer "不依赖 CSS padding".)
 
    Stacked on the section gap in ONE `calc()` whose operands are both plain
-   lengths — `--nav-inset` is a bare `80px`/`148px` and `--space-6` a bare `32px`,
+   lengths — `--nav-inset` is a bare `80px`/`144px` and `--space-6` a bare `32px`,
    so nothing here depends on an inline override reaching a `var()` nested inside
    another custom property (which iOS does not do — see ShellLayout.css). */
 .shell--narrow .home__scroll .home__content {
