@@ -58,13 +58,13 @@ export const MATERIAL_TOKENS: Record<
       '--material-fill': lightFill(0.85),
       '--material-fill-elevated': lightFill(0.72),
       '--material-border': lightBorder(0.45),
-      '--material-highlight': lightHighlight(0.6),
+      '--material-highlight': lightHighlight(0.65),
     },
     dark: {
       '--material-fill': darkFill(0.85),
       '--material-fill-elevated': darkFill(0.72),
       '--material-border': darkBorder(0.16),
-      '--material-highlight': darkHighlight(0.3),
+      '--material-highlight': darkHighlight(0.33),
     },
   },
   thick: {

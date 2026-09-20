@@ -268,15 +268,21 @@
     var(--material-ramp-top),
     var(--material-ramp-bottom)
   );
-  /* 160deg puts the streak's origin at the top-left and lets it die at 45% —
-     past that the surface is the plain fill, which is what keeps the bottom of a
-     tall sheet out of the contrast budget entirely. `rgba(0, 0, 0, 0)` rather
-     than `transparent`: an explicit premultiplied-safe stop, and one less
-     keyword to assume Lynx interpolates the way Chrome does. */
+  /* 148deg puts the streak's origin at the top-left on a sharper diagonal,
+     matching the oblique specular seen on Apple's Liquid Glass. The main sheen
+     dies at 38% (keeping the lower surface free of contrast burden); a second,
+     neutral white micro-highlight at 118deg / 0.015α simulates a secondary
+     refraction catch — invisible on light (white-on-white) and barely-there on
+     dark. `rgba(0, 0, 0, 0)` rather than `transparent`: explicit
+     premultiplied-safe stops. */
   --material-sheen-layer: linear-gradient(
-    160deg,
+    148deg,
     var(--material-sheen),
-    rgba(0, 0, 0, 0) 45%
+    rgba(0, 0, 0, 0) 38%
+  ), linear-gradient(
+    118deg,
+    rgba(255, 255, 255, 0.015),
+    rgba(0, 0, 0, 0) 22%
   );
 
   display: flex;
@@ -424,10 +430,11 @@
   --material-fill-elevated: rgba(23, 23, 27, 0.72);
   --material-border: rgba(255, 255, 255, 0.16);
   /* Top specular edge — a 1px `inset` line, so no text ever sits on it and its
-     brightness is free against the contrast gate. Scaled across the four
-     material variants in `material-tokens.ts` (thinner glass → brighter rim),
-     which is the value that wins at runtime; tokens.css is the CSS fallback. */
-  --material-highlight: rgba(255, 255, 255, 0.3);
+     brightness is free against the contrast gate. Pushed from 0.30→0.33 in P1
+     for a sharper lid highlight matching Apple's Liquid Glass rim. Scaled across
+     the four material variants in `material-tokens.ts` (thinner glass →
+     brighter rim); tokens.css is the CSS fallback. */
+  --material-highlight: rgba(255, 255, 255, 0.33);
   --material-glow: #5BC0F5;
   --material-glow-faint: rgba(91, 192, 245, 0.14);
   /*
@@ -436,23 +443,24 @@
    * stacks with `--material-ramp-top` in the top-left corner and the binding
    * constraint is the composite of the two.
    *
-   * These alphas were derived against the former palette, where the binding pair
-   * was tertiary ink at 4.5. Under the Apple labels the tightest pair on this
-   * stack is `--system-red` at 4.70 against a 3.0 floor, so the shipped values now
-   * carry considerably more margin than they were designed with. They are kept
-   * rather than re-opened: `contrast.test.ts` re-derives them either way, and
-   * loosening them is a separate visual decision. */
-  --material-sheen: rgba(91, 192, 245, 0.04);
+   * Pushed from 0.04→0.07 in P1 to bring the tinted refraction streak closer to
+   * Apple's native Liquid Glass. The tightest pair on the stack is `--system-red`
+   * at ~4.08 against a 3.0 floor (it was ~4.70 at the former alpha).
+   * `contrast.test.ts` re-derives both the pass and the anti-vacuity
+   * dynamically. */
+  --material-sheen: rgba(91, 192, 245, 0.07);
   /* Side rim — dimmer than the top edge because light comes from above. Also a
-     1px inset, also free. Deliberately outside the material system: rim
-     *brightness* is a thickness cue (so `--material-highlight` scales), but having
-     sides at all is structural. */
-  --material-rim-side: rgba(255, 255, 255, 0.12);
+     1px inset, also free. Pulled down from 0.12→0.09 in P1 so the lensing
+     contrast (bright top, dim side) is more pronounced, matching the asymmetric
+     rim Apple's glass shows. */
+  --material-rim-side: rgba(255, 255, 255, 0.09);
   /* Vertical luminance ramp (`--material-ramp`). Dark's amplitude lives in the
      *bottom*: darkening a dark surface raises every text ratio, so it is free at
-     any alpha, while brightening the top costs. */
-  --material-ramp-top: rgba(255, 255, 255, 0.03);
-  --material-ramp-bottom: rgba(0, 0, 0, 0.20);
+     any alpha, while brightening the top costs. P1 pushed both endpoints to
+     strengthen the lensing (bright-top / dark-bottom) closer to Apple's native
+     glass: top 0.03→0.06, bottom 0.20→0.28. */
+  --material-ramp-top: rgba(255, 255, 255, 0.06);
+  --material-ramp-bottom: rgba(0, 0, 0, 0.28);
 
   /* overlays */
   --backdrop: rgba(0, 0, 0, 0.55);
@@ -598,14 +606,16 @@
   --material-fill-elevated: rgba(255, 255, 255, 0.72);
   --material-border: rgba(255, 255, 255, 0.45);
   /* Light's rim has to fight a fill that composites to pure white, so it runs
-     brighter still. */
-  --material-highlight: rgba(255, 255, 255, 0.6);
+     brighter still. Pushed 0.60→0.65 in P1 for a crisper top specular. */
+  --material-highlight: rgba(255, 255, 255, 0.65);
   --material-glow: #3BAEEF;
   --material-glow-faint: rgba(59, 174, 239, 0.10);
   /* Packs derive this same alpha from their `glassColor`
-     (theme-pack-mapping.ts), so the two must be changed together. */
-  --material-sheen: rgba(59, 174, 239, 0.1);
-  --material-rim-side: rgba(255, 255, 255, 0.30);
+     (theme-pack-mapping.ts), so the two must be changed together. Pushed
+     0.10→0.12 in P1; binding constraint is `--accent` at ~3.16 on the sheen
+     stack, clearing the 3.0 floor. */
+  --material-sheen: rgba(59, 174, 239, 0.12);
+  --material-rim-side: rgba(255, 255, 255, 0.22);
   /*
    * Light's ramp is a pure *downward* darkening, and the transparent top is a
    * deliberate value rather than an omission. `--material-fill` is 0.85 white over
@@ -614,7 +624,7 @@
    * white, a white top stop would stop being a no-op and start lightening a
    * surface carrying dark text; transparent is safe in both cases. */
   --material-ramp-top: rgba(255, 255, 255, 0);
-  --material-ramp-bottom: rgba(0, 0, 0, 0.05);
+  --material-ramp-bottom: rgba(0, 0, 0, 0.06);
 
   /* overlays */
   --backdrop: rgba(0, 0, 0, 0.35);

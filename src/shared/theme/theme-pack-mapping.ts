@@ -23,7 +23,7 @@ import { MATERIAL_TOKENS } from './material-tokens.js'
  * |                           | --secondary-system-grouped-background |
  * | light/dark.glassColor     | --material-glow (solid)             |
  * | (derived from glassColor) | --material-glow-faint (0.10/0.14)   |
- * | (derived from glassColor) | --material-sheen (0.10/0.04)        |
+ * | (derived from glassColor) | --material-sheen (0.12/0.07)        |
  * | (baseline, not pack-driven)| --material-fill/fill-elevated/border/|
  * |                           |   highlight                         |
  * | cardRadius                | --radius-lg                         |
@@ -175,10 +175,10 @@ export const PACK_OVERRIDABLE_BASELINE: Record<'light' | 'dark', Record<string, 
     '--material-fill': 'rgba(255, 255, 255, 0.85)',
     '--material-fill-elevated': 'rgba(255, 255, 255, 0.72)',
     '--material-border': 'rgba(255, 255, 255, 0.45)',
-    '--material-highlight': 'rgba(255, 255, 255, 0.6)',
+    '--material-highlight': 'rgba(255, 255, 255, 0.65)',
     '--material-glow': '#3BAEEF',
     '--material-glow-faint': 'rgba(59, 174, 239, 0.10)',
-    '--material-sheen': 'rgba(59, 174, 239, 0.1)',
+    '--material-sheen': 'rgba(59, 174, 239, 0.12)',
     '--radius-lg': '20px',
     '--radius-md': '12px',
     '--radius-nav': '12px',
@@ -196,10 +196,10 @@ export const PACK_OVERRIDABLE_BASELINE: Record<'light' | 'dark', Record<string, 
     '--material-fill': 'rgba(23, 23, 27, 0.85)',
     '--material-fill-elevated': 'rgba(23, 23, 27, 0.72)',
     '--material-border': 'rgba(255, 255, 255, 0.16)',
-    '--material-highlight': 'rgba(255, 255, 255, 0.3)',
+    '--material-highlight': 'rgba(255, 255, 255, 0.33)',
     '--material-glow': '#5BC0F5',
     '--material-glow-faint': 'rgba(91, 192, 245, 0.14)',
-    '--material-sheen': 'rgba(91, 192, 245, 0.04)',
+    '--material-sheen': 'rgba(91, 192, 245, 0.07)',
     '--radius-lg': '20px',
     '--radius-md': '12px',
     '--radius-nav': '12px',
@@ -298,7 +298,7 @@ export function themePackToStyleVars(
       // Liquid Glass decorative tint — INDEPENDENT of seedColor (the button
       // channel). A pack colours its glass without recolouring its buttons:
       // true dual-channel. The three glass-glow tokens ride glassColor at the
-      // same alpha split as the star-blue baseline (0.10/0.14 faint, 0.10/0.04
+      // same alpha split as the star-blue baseline (0.10/0.14 faint, 0.12/0.07
       // sheen). The sheen split changed when `--material-sheen` gained its first
       // consumer: it now lies under text as a background layer, so its alpha is
       // part of the contrast budget (see the derivation in tokens.css) rather
@@ -311,7 +311,7 @@ export function themePackToStyleVars(
       // a pack colours the glass, it does not change its质感.
       vars['--material-glow'] = colors.glassColor
       vars['--material-glow-faint'] = hexToRgba(colors.glassColor, resolved === 'light' ? 0.1 : 0.14)
-      vars['--material-sheen'] = hexToRgba(colors.glassColor, resolved === 'light' ? 0.1 : 0.04)
+      vars['--material-sheen'] = hexToRgba(colors.glassColor, resolved === 'light' ? 0.12 : 0.07)
     }
     // Both background groups take the pack's pair — see the module header for why
     // sending it only to the plain group would leave settings-style pages stranded

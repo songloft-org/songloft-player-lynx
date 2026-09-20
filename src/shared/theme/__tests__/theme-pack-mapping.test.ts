@@ -164,7 +164,7 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
     expect(vars['--accent']).toBe('#D81B60')
     expect(vars['--material-glow']).toBe('#3BAEEF') // glass channel = glassColor
     expect(vars['--material-glow-faint']).toBe('rgba(59, 174, 239, 0.1)')
-    expect(vars['--material-sheen']).toBe('rgba(59, 174, 239, 0.1)')
+    expect(vars['--material-sheen']).toBe('rgba(59, 174, 239, 0.12)')
   })
 
   test('an invalid glassColor is dropped, glass falls back to baseline', () => {
