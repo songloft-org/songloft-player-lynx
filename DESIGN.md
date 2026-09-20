@@ -453,7 +453,22 @@ Apple 平台有两类材质：**Liquid Glass** 与**标准材质（standard mate
 
 Liquid Glass 为控件和导航元素（如标签栏、侧边栏）形成一个独立的功能层，漂浮在内容层之上，在功能元素与内容之间建立清晰的视觉层级。它让内容从这些元素下方滚动、透出，赋予界面动感与深度，同时保持控件和导航的可读性。
 
-> **本仓库的双轨实现**：iOS 上 `BackdropBlur` 经 `blur-effect: 'glass'` 直接驱动原生 iOS-26 `UIGlassEffect`，并在 `.theme-root.theme-<name>.platform-ios` token 覆盖块把 CSS `--glass-fill*` 降到约 0.5 让原生材质显出——可读性由原生 vibrancy 保证（真机验证）。Android/Web/Harmony 保留 `tokens.css` 基线的仿玻璃层（`--glass-fill` 0.85/0.72），其对比度由 `contrast.test.ts` 在 CI 闸门。结构契约见 `src/shared/theme/__tests__/platform-glass.test.ts`。
+> **本仓库的双轨实现**：iOS 上 `BackdropBlur` 经 `blur-effect: 'glass'` 直接驱动原生 iOS-26 `UIGlassEffect`，并在 `.theme-root.theme-<name>.platform-ios` token 覆盖块把 CSS `--material-fill*` 降到约 0.5 让原生材质显出——可读性由原生 vibrancy 保证（真机验证）。Android/Web/Harmony 保留 `tokens.css` 基线的仿玻璃层（`--material-fill` 0.85/0.72），其对比度由 `contrast.test.ts` 在 CI 闸门。结构契约见 `src/shared/theme/__tests__/platform-glass.test.ts`。
+>
+> **材质令牌体系（`--material-*`）**：所有材质 CSS 变量统一使用 `--material-*` 前缀（原 `--glass-*` 已全部重命名）。关键令牌：
+>
+> - **填充**：`--material-fill`（常规玻璃填充）、`--material-fill-elevated`（scrim 之上的模态表面，原 `--glass-fill-strong`；命名修正：fill-elevated 用于需要更高可读性的提升表面，fill 用于悬浮 chrome）。
+> - **静态质感**：`--material-sheen` / `--material-sheen-layer`（148deg、38% 停点的二层微高光，营造折射光泽）、`--material-highlight`（镜面高光）、`--material-rim-side`（边缘折射）、`--material-ramp-*`（渐变坡道，模拟 lensing 效应）。填充不透明度不受质感层影响，默认 regular 档不变。
+> - **光晕与色调**：`--material-glow-faint`（底栏选中态光晕）、`--tint-fill`（玻璃上的强调态）、`--quaternary-system-fill`（玻璃上的中性态）。
+>
+> **四档材质模型**（对应 Apple 标准材质）：ultra-thin / thin / regular（默认）/ thick，由 `material-model.ts` 管理，闸门 `material-model.test.ts`。
+>
+> **动效**：
+>
+> - **底栏与分段控件「选中指示器流动动画」**：`.nav-indicator` / `.segmented__indicator` 使用 `transform: translateX` 实现选中态在项目间的平滑滑动，配合新令牌 `--ease-spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1)` 提供弹簧回弹手感。宽屏 rail 仍仅变色不位移。
+> - **弹簧与 gel 反馈**：浮层开合弹簧与独立控件按压 gel 反馈统一使用 spring 缓动。**模糊层永不参与动画**（`BackdropBlur` 不做过渡）。
+> - **reduce-motion**：所有动效依赖 `--duration-*` 令牌，`.reduce-motion` 类将其归零，从而自动禁用流动指示器、弹簧回弹与 gel 反馈。iOS 已接 `UIAccessibility.isReduceMotionEnabled`；Android/Harmony 尚需在各自 `SystemAppearance` 推送里补 `systemReduceMotion` 字段，补前默认 motion-on。
+> - **toast 保持实心**：Toast 有意不使用玻璃材质，以确保在任何背景上的可读性。
 
 - **不要在内容层使用 Liquid Glass**：它最适合区分交互元素与内容；放进内容层会带来不必要的复杂性和混乱的视觉层级。内容层元素（如 App 背景）改用标准材质。例外：内容层中带瞬时交互元素的控件（如 Slider、Toggle）在被激活时会呈现 Liquid Glass 外观以强调可交互性。
 - **克制使用 Liquid Glass 效果**：系统框架的标准组件会自动获得该材质的外观和行为；若给自定义控件应用此效果，务必克制——过度使用会分散对底层内容的注意力。把这些效果限制在最重要的功能元素上。

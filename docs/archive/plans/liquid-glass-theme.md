@@ -1,5 +1,7 @@
 # Liquid Glass 主题（Lynx）— 修订版
 
+> **Superseded（2026-09-20）：本方案已由 DESIGN.md 现行 Liquid Glass / `--material-*` 体系取代，仅作历史参考。**
+>
 > **已归档（2026-09-15）**：本文的方案（7 个 `--glass-*` token + 映射 + 伪玻璃）已交付，且其后被玻璃材质优化六批大幅扩展（13 个玻璃 token、`BackdropBlur.tsx`、iOS 原生 Liquid Glass 材质）—— **本文只记录了起点，不是现状**。现状见 [`../../project/progress.md`](../../project/progress.md) 与 [`../../../DESIGN.md`](../../../DESIGN.md)。
 
 > ## 修订（2026-09-03，玻璃材质优化批A）

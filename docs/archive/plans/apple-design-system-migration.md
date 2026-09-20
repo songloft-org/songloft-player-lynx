@@ -1,5 +1,7 @@
 # Apple 设计系统迁移方案（第二代）
 
+> **Superseded（2026-09-20）：本方案已由 DESIGN.md 现行 Liquid Glass / `--material-*` 体系取代，仅作历史参考。**
+>
 > **已归档（2026-09-15）**：P0–P13 均已落地（Muse 别名层已从仓库消失），下面的「状态：待审核 / 未做任何代码改动」早已失效。**残留未做、也没有搬进 bugs.md 的**：MediaListItem 分隔线、视觉复核那一轮的「真值机」验证、以及 Android / HarmonyOS 两端缺口 —— 若要继续，从本文对应小节读起。
 > 前置文档：[`apple-hig-redesign.md`](apple-hig-redesign.md)（第一代，11 阶段，已完成但只落到令牌重命名层）。
 

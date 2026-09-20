@@ -1,10 +1,16 @@
-# 工作交接（2026-09-15 · 文档一致性整顿批）
+# 工作交接（2026-09-20 · Liquid Glass iOS26 重构 P0–P6）
 
 > 本文件是**给接手 AI 的交接说明**，只回答三件事：现在在哪、还剩什么、怎么验证。**逐批交付细节一律不进本文件**——按日期倒序存放在 [progress.md](progress.md) 顶部，缺陷根因在 [bugs.md](bugs.md)，踩坑证据在 [pitfalls.md](pitfalls.md)。
 >
 > **读文档顺序**：① [AGENTS.md](../../AGENTS.md) §3–§6（铁律，必读）→ ② 本文 §3「剩余工作」→ ③ [pitfalls.md](pitfalls.md)（每条铁律背后的证据）。细节按需查 [progress.md](progress.md) 与 [bugs.md](bugs.md)。
 >
-> **未提交（工作树，本次文档批 · 2026-09-15）**：
+> **未提交（工作树，本次 Liquid Glass P0–P6 批 · 2026-09-20）**：
+>
+> ① **Liquid Glass 重构 P0–P5（代码）**——`--glass-*` 全部重命名为 `--material-*`；`--glass-fill-strong` → `--material-fill-elevated`；静态质感重推（sheen/镜面/lensing）；新增底栏与分段控件「选中指示器流动动画」+ `--ease-spring-bounce`；四档材质模型闸门 `material-model.test.ts`；toast 保持实心。
+>
+> ② **P6（文档与归档）**——`DESIGN.md` 更新材质令牌体系、质感、动效说明；`AGENTS.md` §3.4 令牌重命名与新约束（`--material-glow-faint`、`--tint-fill`、`--quaternary-system-fill`、流动指示器、模糊层不动画、toast 实心）；`docs/architecture/lynx-constraints.md` 同步 `--material-*`；四份旧方案加 Superseded 标记；`progress.md` 追加 P0–P6 快照。
+>
+> **前一次未提交（工作树，文档批 · 2026-09-15）**：
 >
 > ① **文档与代码一致性整顿（方案 A）**——出发点是一批「文档在描述一个已经不存在的世界」的断言。**归档**：`docs/audit/`（含 `tasks/`、`results/`）→ `docs/archive/2026-09-01-codebase-audit/`；4 份已交付计划 → `docs/archive/plans/`；每份归档件头部写明冻结基线与现状权威位置。
 >
@@ -16,7 +22,7 @@
 >
 > **本轮未能验证的**：④ 只在静态层面复核（manifest 只剩 `MainActivity` 与 `platform.FilePickerActivity`，视频路径无 `startActivity`），**没有在设备上跑过** —— 本机 Android 验证通道不可用（SDK 无系统镜像、`~/.android/avd` 为空、`emulator` 包是半下载状态）。①②③ 是文档，由 `tsc -b` / `pnpm test`（2585 全绿）与链接可达性扫描兜底。
 >
-> **最近代码批次（细节见 [progress.md](progress.md) 顶部）**：**批73 视频控制层上移 JS**（`1bccdf8`+`1cc08e0`+`4b850c5`+`aec01ea`，删掉 Android 独立 Activity、画面改挂 `MainActivity` 的 Lynx 视图之下、新增 `/player/video` 路由与 JS 控件层、Web 改用单个 `<video>` 表面）· **批74 歌曲编辑多歌手分行**（`d75c14a`）· **批75 平板曲库三列把标题挤成 0 宽**（`36ae832`）· 附：CI 工作流 `dev-build.yml` → `dev-build-android.yml`（`6a374da`）。
+> **最近代码批次（细节见 [progress.md](progress.md) 顶部）**：**Liquid Glass iOS26 重构 P0–P5**（令牌重命名 `--material-*` + 静态质感 + 流动指示器动效 + 四档材质闸门 + toast 实心）· **批76 Web 鼠标拖拽修复**（`setPointerCapture`）· **批73 视频控制层上移 JS**（`1bccdf8`+`1cc08e0`+`4b850c5`+`aec01ea`）· **批74 歌曲编辑多歌手分行**（`d75c14a`）· **批75 平板曲库三列**（`36ae832`）· 附：CI 工作流 `dev-build.yml` → `dev-build-android.yml`（`6a374da`）。
 >
 > **上一段批次（细节见 [progress.md](progress.md)）**：批69–72 视频档 A/B/C；批64–68 UI/UX 评审 D1–D6（按压态、对比度开关、图标阻尼、无障碍名称、`--shadow-focus` 与孤儿样式表清理）；Apple HIG 11 阶段 + 玻璃材质六批。
 
@@ -30,6 +36,7 @@
 |---|---|---|
 | **视频播放** | `ad8dd68` `517796b` `af5b1cf` `895aa97` `1bccdf8` `1cc08e0` `4b850c5` `aec01ea` | 档 A 纯 JS 入口 / 档 B iOS 生命周期 + `open` 三态原因 / 档 C Android 关闭按钮与删死事件 / **批73 控制层上移 JS：全屏只做播放**。档 D 未动 |
 | **Apple HIG + 玻璃材质** | `4fff54c` `f311705` `3f03f15` `d71c431` `fa0314f` `a69272f` `af9cb15` `d2f23f5` `0def575` `0a17ceb` | 11 阶段全部完成；玻璃材质六批；reduce-motion 三端接通（iOS 原生信号 + Android 推送） |
+| **Liquid Glass iOS26 重构 P0–P6** | （未提交） | `--glass-*` → `--material-*` 令牌重命名；静态质感重推（sheen/镜面/lensing）；流动指示器动效 + `--ease-spring-bounce`；四档材质闸门；toast 实心；文档与归档 |
 | **UI/UX 评审 D1–D6** | `4fff54c` `f311705` `3f03f15` `d71c431` `b0f09ec` `00dde50` | 按压态、对比度开关、图标阻尼、无障碍名称、只报不改 spike、死令牌与孤儿样式表清理。**D2 经用户 2026-09-11 定案不做** |
 | **曲库** | `f804df2` `8f90866` `dc8555e` `d75c14a` `36ae832` | UI/UX 系统优化、封面对齐、多歌手分行编辑、平板三列断点 |
 | **首页 / 播放器** | `14545e6` `4d26fb3` `e6b40b7` `6372f14` `bf17197` | 封面播放按钮与宽屏 bento、全屏界面打磨、mini 条、队列分页补全 |

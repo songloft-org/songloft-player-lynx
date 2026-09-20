@@ -90,7 +90,7 @@ web-core 的 `LYNX_TAG_TO_HTML_TAG_MAP` 只映射 view/text/image/raw-text/scrol
 
 ### 反例：`<blur-view>` 是有实现的，而且是真 backdrop blur 的唯一路径
 
-`backdrop-filter` **不是 Lynx CSS 属性**（`@lynx-js/css-defines` 里没有），所以整套玻璃材质是伪造的（见 `tokens.css` 的 `--glass-*`）。但**元素**这一层不一样：`<blur-view>` 是一等元素（`@lynx-js/types` 里有 `BlurViewProps`，`IntrinsicElements` 已注册），四个平台都有实现，逐一查证过——
+`backdrop-filter` **不是 Lynx CSS 属性**（`@lynx-js/css-defines` 里没有），所以整套玻璃材质是伪造的（见 `tokens.css` 的 `--material-*`）。但**元素**这一层不一样：`<blur-view>` 是一等元素（`@lynx-js/types` 里有 `BlurViewProps`，`IntrinsicElements` 已注册），四个平台都有实现，逐一查证过——
 
 | 平台 | 证据 | 结论 |
 | --- | --- | --- |
@@ -119,7 +119,7 @@ Harmony 这一格决定了**挂载形状**：`<BackdropBlur />` 必须是 scrim 
 - **`z-index: -1` 不是装饰**。绝对定位子节点默认画在非定位的在流兄弟**之上**，不给负 z 就会盖住菜单行。
 - **绘制顺序在两端不同，但结果相同**。Web 上负 z 的子节点在父背景**之后**绘制（模糊采样到的是 `页面 ⊕ 面板填充`），原生上父填充是图层背景、子视图永远在其上。两者靠模糊的线性性收敛到同一张画面（`blur(页面 ⊕ 均匀) === blur(页面) ⊕ 均匀`），**所以不需要平台分支**。
 - **面板自己的基础规则必须是定位的**。`inset: 0` 的绝对子节点会去找最近的定位祖先，`.mini-player` 在宽屏是在流盒子，漏掉 `position: relative` 会把模糊层拉满整个内容列。闸门校的是**基础选择器那条规则**，`.shell--narrow .mini-player { position: fixed }` 这种变体不算数（这条是被变异测试打出来的）。
-- **已接受的局限**：滚动容器里的绝对子节点跟着内容滚。菜单长到出现滚动时，模糊层会随之上移，底部几行退回 `--glass-fill-strong` 的平涂。要修得加一层裁剪外壳＋内层滚动器，代价是所有 `.popover-menu` 消费方都要重排版面。
+- **已接受的局限**：滚动容器里的绝对子节点跟着内容滚。菜单长到出现滚动时，模糊层会随之上移，底部几行退回 `--material-fill-elevated` 的平涂。要修得加一层裁剪外壳＋内层滚动器，代价是所有 `.popover-menu` 消费方都要重排版面。
 
 **一条不会变的数学**：模糊买不到任何 alpha 余量。blur 是线性滤波，**均匀背景是它的不动点**（纯白盖层模糊后还是纯白），而本仓库所有对比度闸门的最坏情况都是从**均匀极值**推出来的。所以再好的模糊也压不低任何 alpha，它只是抹掉了 WCAG 本来就不建模的高频细节。
 
