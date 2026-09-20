@@ -25,12 +25,13 @@ function ruleFor(selector: string): string {
   return m![1]!
 }
 
-test('the bar, pill and plugin-icon sizes are tokenized, not hardcoded', () => {
+test('the bar, indicator pill and plugin-icon sizes are tokenized, not hardcoded', () => {
   expect(ruleFor('.shell__bottombar'), 'bar height must consume --bottombar-height')
     .toMatch(/height:\s*var\(--bottombar-height\)/)
+  // The active pill's metrics migrated to the flow indicator capsule.
   expect(
-    ruleFor('.shell__bottombar .nav-item--active .nav-item__pill'),
-    'active pill height must consume --nav-pill-height',
+    ruleFor('.nav-indicator__pill'),
+    'indicator pill height must consume --nav-pill-height',
   ).toMatch(/height:\s*var\(--nav-pill-height\)/)
   const plugin = ruleFor('.nav-item__plugin-icon')
   expect(plugin, 'plugin icon width must consume --nav-icon-size')

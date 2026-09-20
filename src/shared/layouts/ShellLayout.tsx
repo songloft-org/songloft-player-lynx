@@ -94,6 +94,17 @@ export function ShellLayout() {
   // whole bar dark. See `navPathOwns`.
   const litPath = activeNavPath(pathname, navPaths)
 
+  // Bottom-bar indicator geometry (narrow only). Computed once here so both
+  // the indicator and renderBottomBarItems share the same folding decision.
+  const isNavFolding = destinations.length > NAV_MAX_VISIBLE
+  const navVisibleDests = isNavFolding ? destinations.slice(0, NAV_REAL_SLOTS) : destinations
+  const indicatorSlotCount = isNavFolding ? NAV_REAL_SLOTS + 1 : destinations.length
+  const indicatorSlotIndex = (() => {
+    if (litPath == null) return 0
+    const idx = navVisibleDests.findIndex(d => d.path === litPath)
+    return idx !== -1 ? idx : isNavFolding ? NAV_REAL_SLOTS : 0
+  })()
+
   const go = (dest: NavDestination) => {
     if (dest.plugin) {
       // `tab: true` — the plugin opens chromeless (no topbar), like Flutter's
@@ -182,11 +193,9 @@ export function ShellLayout() {
    * the Flutter `barSelectedIndex = _mobileRealSlots` behaviour.
    */
   const renderBottomBarItems = () => {
-    const folding = destinations.length > NAV_MAX_VISIBLE
-    const visible = folding ? destinations.slice(0, NAV_REAL_SLOTS) : destinations
-    const items = visible.map(dest => renderTab(dest, litPath === dest.path))
-    if (!folding) return items
-    const moreActive = litPath != null && !visible.some(dest => dest.path === litPath)
+    const items = navVisibleDests.map(dest => renderTab(dest, litPath === dest.path))
+    if (!isNavFolding) return items
+    const moreActive = litPath != null && !navVisibleDests.some(dest => dest.path === litPath)
     items.push(
       <view
         key='more-tabs'
@@ -257,6 +266,17 @@ export function ShellLayout() {
                   scrolling content rather than an 0.85 wash. Apple's tab bar is
                   the reference here. See `BackdropBlur.tsx`. */}
               <BackdropBlur className='ui-backdrop-blur--pill' container />
+              {/* Flow indicator — single sliding capsule behind the active tab.
+                  DOM-ordered before the nav items so it renders behind them. */}
+              <view
+                className='nav-indicator'
+                style={{
+                  width: `calc(100% / ${indicatorSlotCount})`,
+                  transform: `translateX(${indicatorSlotIndex * 100}%)`,
+                }}
+              >
+                <view className='nav-indicator__pill' />
+              </view>
               {renderBottomBarItems()}
             </view>
           )}

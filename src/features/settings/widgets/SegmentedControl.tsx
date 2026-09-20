@@ -24,8 +24,17 @@ export function SegmentedControl<T extends string>({
   labelFor,
   testId,
 }: SegmentedControlProps<T>) {
+  const selectedIndex = options.indexOf(selected)
   return (
     <view className='segmented' data-testid={testId}>
+      {/* Sliding indicator — positioned behind the items (earlier in DOM order). */}
+      <view
+        className='segmented__indicator'
+        style={{
+          width: `calc((100% - 4px) / ${options.length})`,
+          transform: `translateX(${selectedIndex * 100}%)`,
+        }}
+      />
       {options.map((opt) => {
         const active = opt === selected
         return (

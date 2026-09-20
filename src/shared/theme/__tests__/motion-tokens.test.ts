@@ -40,6 +40,7 @@ test('HIG motion easing tokens are present', () => {
   expect(decl['--ease-in']).toBe('cubic-bezier(0.42, 0, 1, 1)')
   expect(decl['--ease-out']).toBe('cubic-bezier(0, 0, 0.58, 1)')
   expect(decl['--ease-spring']).toBe('cubic-bezier(0.32, 0.72, 0, 1)')
+  expect(decl['--ease-spring-bounce']).toBe('cubic-bezier(0.34, 1.56, 0.64, 1)')
 })
 
 test('reduce-motion class zeroes all three durations', () => {

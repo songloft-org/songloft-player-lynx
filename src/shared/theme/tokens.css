@@ -187,6 +187,7 @@
   --ease-in: cubic-bezier(0.42, 0, 1, 1);
   --ease-out: cubic-bezier(0, 0, 0.58, 1);
   --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* layout sizes — the floating bottom-bar capsule and its pieces.
      `--mobile-nav-height` (60px) used to live here undeclared-consumed and at

@@ -9,11 +9,28 @@
  */
 
 .segmented {
+  position: relative;
   display: flex;
   flex-direction: row;
   background-color: var(--secondary-system-fill);
   border-radius: var(--radius-sm);
   padding: 2px;
+}
+
+/* Sliding indicator: the raised selected thumb now lives as a single absolute
+   element that slides between segments via transform, animated with the same
+   spring-bounce easing as the bottom-bar flow indicator. reduce-motion zeroes
+   --duration-normal → the slide becomes instant. Width set inline as
+   calc((100% - 4px) / N); 4px accounts for the 2px padding on each side. */
+.segmented__indicator {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  bottom: 2px;
+  border-radius: calc(var(--radius-sm) - 2px);
+  background-color: var(--tertiary-system-background);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--duration-normal) var(--ease-spring-bounce);
 }
 
 .segmented__item {
@@ -29,12 +46,9 @@
   border-radius: calc(var(--radius-sm) - 2px);
 }
 
-/* The raised selected thumb: tertiary-system-background (white / #2c2c2e) on the
-   fill track, lifted by a small shadow — the iOS selected-segment treatment. */
-.segmented__item--selected {
-  background-color: var(--tertiary-system-background);
-  box-shadow: var(--shadow-sm);
-}
+/* The selected segment no longer carries its own background/shadow — the
+   .segmented__indicator provides the raised capsule. The item is a transparent
+   hit area; only its label weight changes on selection (see below). */
 
 .segmented__label {
   font-size: var(--font-footnote);

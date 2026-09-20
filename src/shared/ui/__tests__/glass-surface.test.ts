@@ -135,10 +135,13 @@ test('the nav capsule selection tint is the accent wash, not the glass glow', ()
   // glow would recolour selection silently. (The active glyph/label read in
   // --accent over --tint-fill, which clears 3:1 — 3.12 light / 4.39 dark —
   // per the --tint-fill derivation in tokens.css.)
+  //
+  // Migrated from .nav-item--active .nav-item__pill to .nav-indicator__pill:
+  // the flow indicator now carries the selection capsule.
   const css = rules('shared/layouts/ShellLayout.css')
-  const pill = block(css, '.nav-item--active .nav-item__pill')
-  expect(pill).toMatch(/var\(--tint-fill\)/)
-  expect(pill).not.toMatch(/var\(--material-glow-faint\)/)
+  const indicator = block(css, '.nav-indicator__pill')
+  expect(indicator).toMatch(/var\(--tint-fill\)/)
+  expect(indicator).not.toMatch(/var\(--material-glow-faint\)/)
 })
 
 test('the ten glass tokens are declared in both themes', () => {

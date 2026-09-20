@@ -259,30 +259,33 @@
   transition: background-color var(--duration-fast) var(--ease-default);
 }
 
-/* The selection tint — background only, shared by both bars. The active pill
-   wears the accent wash (a picked tab is the same kind of thing as a selected
-   row anywhere else), not the decorative star-blue glow it used to borrow.
-   Sizing stays untouched here on purpose: the rail's rows are content-height,
-   so a height change on selection would shift every row below (the reported
-   jitter) — the rail's active state is colour-only. */
-.nav-item--active .nav-item__pill {
+/* Flow indicator: a single sliding capsule behind the active tab in the narrow
+   bottom bar. Sized to one slot (100% / visible count, set inline) and positioned
+   via transform, animated with the spring-bounce easing for a Liquid Glass feel.
+   reduce-motion zeroes --duration-normal → the slide becomes instant. Wide rail
+   does NOT use this — AGENTS.md §3.4: rail selection is colour-only. */
+.nav-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--duration-normal) var(--ease-spring-bounce);
+}
+
+.nav-indicator__pill {
+  width: calc(100% - var(--space-2));
+  height: var(--nav-pill-height);
+  border-radius: var(--radius-pill);
   background-color: var(--tint-fill);
 }
 
-/* Bottom bar only: the fixed-size horizontal capsule. Safe there because
-   the 64px bar cell absorbs the size — the slot never grows, so no layout
-   shift. `align-self: stretch` is vertical-only in a row flex, so the width
-   comes from the slot's own `flex: 1` distribution (uniform across tabs),
-   while the pill keeps a compact fixed height. Result: same size whichever
-   tab is selected, regardless of its label length. */
-.shell__bottombar .nav-item--active .nav-item__pill {
-  /* Fill the slot's width (minus a hair of margin so the capsule reads as a
-     capsule inside the bar, not a glued segment). */
-  width: calc(100% - var(--space-2));
-  /* Compact fixed height — a horizontal capsule, not a full-cell block:
-     glyph 24 + label 16 + 8 padding ≈ 48px on the 64px bar. */
-  height: var(--nav-pill-height);
-}
+/* Bottom bar: the active pill's background is now provided by .nav-indicator,
+   so the pill itself no longer carries a visible capsule. Sizing is also
+   delegated to the indicator. The inactive and active pills are identical
+   containers — only the icon/label colour changes (see the rules below). */
 
 /* Plugin names are user strings (洛雪音源…) that can outrun the tab slot.
    One line, clamped: a wrapped 4-char label breaks the capsule's height and
