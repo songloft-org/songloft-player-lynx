@@ -5,14 +5,15 @@ import { getReduceMotion } from '../theme/reduce-motion-model.js'
 /**
  * Keeps a subtree mounted through its leave animation, then unmounts it.
  *
- * The hand-rolled modal sheets (`PlaylistDrawer`, `SleepTimerSheet`) mount with
+ * The hand-rolled modal sheets (`PlaylistDrawer`, `SleepTimerSheet`,
+ * `AddToPlaylistSheet`, `ManageTagsSheet`) mount with
  * `if (!show) return null`, which tears the panel down the instant `show` flips
  * false — so a leave animation has nothing to play on. This hook splits that
  * flip: `show` going false enters a `leaving` phase (still mounted, so the leave
  * CSS runs), and the unmount is deferred until the leave duration elapses.
  * `ConfirmDialog` gets the same effect from `lynx-ui-presence`'s `ui-leaving` +
  * `transitionend`; this is the equivalent for surfaces that do not sit inside a
- * `DialogRoot`. (`MoreTabsSheet`/`AddToPlaylistSheet`/the anchored popovers
+ * `DialogRoot`. (`MoreTabsSheet`/the anchored popovers
  * stay instant-unmount by design — see their own comments.)
  *
  * Teardown is on a **timeout**, not `transitionend`/`animationend`: this repo

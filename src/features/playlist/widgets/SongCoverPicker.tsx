@@ -8,6 +8,7 @@ import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { flattenSongs } from '../../library/data/pagination.js'
 import { usePlaylistSongsInfiniteQuery } from '../data/playlist-query.js'
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import '../../../shared/ui/overlay-motion.css'
 import './SongCoverPicker.css'
 
 export interface SongCoverPickerProps {
@@ -44,7 +45,7 @@ export function SongCoverPicker({ playlistId, onSelect, onClose }: SongCoverPick
           tap-to-dismiss and a child would sit in front of it. */}
       <BackdropBlur />
       <view className='song-cover-picker__backdrop' />
-      <view className='song-cover-picker__panel' catchtap={() => {}}>
+      <view className='song-cover-picker__panel overlay--enter-up' catchtap={() => {}}>
         <view className='song-cover-picker__header'>
           <text className='song-cover-picker__title'>{t('playlist.pickFromSongs')}</text>
           <view

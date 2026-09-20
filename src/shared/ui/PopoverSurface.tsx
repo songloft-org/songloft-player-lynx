@@ -4,6 +4,7 @@ import { useBackHandler } from '../nav/use-back-handler.js'
 import { BackdropBlur } from './BackdropBlur.js'
 import { useAnchoredOverlay } from './anchored-overlay.js'
 import type { Placement } from './anchored-overlay.js'
+import './overlay-motion.css'
 import './PopoverMenu.css'
 
 export interface PopoverSurfaceProps {
@@ -102,7 +103,7 @@ export function PopoverSurface({
               bindtap={() => onShowChange(false)}
               data-testid='popover-backdrop'
             />
-            <view className={panelClassName} style={position}>
+            <view className={`${panelClassName} overlay--enter-scale`} style={position}>
               {/*
                * Panel-mode blur: the material *is* the panel here, so the layer
                * goes inside it rather than behind a scrim — a popover has no

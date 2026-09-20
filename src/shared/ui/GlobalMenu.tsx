@@ -4,6 +4,7 @@ import type { AnchorMeasurement } from './anchored-overlay.js'
 import { MenuItem } from './MenuItem.js'
 import type { MenuItemSpec } from './MenuItem.js'
 import { BackdropBlur } from './BackdropBlur.js'
+import './overlay-motion.css'
 import './PopoverMenu.css'
 import './GlobalMenu.css'
 
@@ -99,8 +100,8 @@ export function GlobalMenu({
       />
       <view
         className={anchored
-          ? 'global-menu__panel global-menu__panel--anchored'
-          : 'global-menu__panel global-menu__panel--docked'}
+          ? 'global-menu__panel global-menu__panel--anchored overlay--enter-scale'
+          : 'global-menu__panel global-menu__panel--docked overlay--enter-up'}
         style={position}
       >
         {/* Panel-mode blur for the anchored form: it is a popover, so there is no

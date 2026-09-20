@@ -12,6 +12,8 @@ import { toast } from '../../../shared/ui/toast-store.js'
 import { getPlaylistApi } from '../api/index.js'
 import { usePlaylistsInfiniteQuery } from '../data/playlist-query.js'
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import { usePresence } from '../../../shared/ui/usePresence.js'
+import '../../../shared/ui/overlay-motion.css'
 import './AddToPlaylistSheet.css'
 
 export interface AddToPlaylistSheetProps {
@@ -64,7 +66,8 @@ export function AddToPlaylistSheet({ songIds, onClose, onAdded }: AddToPlaylistS
     return true
   })
 
-  if (songIds.length === 0) return null
+  const { mounted, leaving } = usePresence(songIds.length > 0)
+  if (!mounted) return null
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['playlist'] })
@@ -130,8 +133,8 @@ export function AddToPlaylistSheet({ songIds, onClose, onAdded }: AddToPlaylistS
           * bubble, which is true on device but leaves "did this row close the
           * sheet?" untestable.
           */}
-        <view className='atp__backdrop' bindtap={onClose} data-testid='atp-backdrop' />
-        <view className='atp__panel'>
+        <view className={`atp__backdrop${leaving ? ' overlay--leave-fade' : ''}`} bindtap={onClose} data-testid='atp-backdrop' />
+        <view className={`atp__panel ${leaving ? 'overlay--leave-up' : 'overlay--enter-up'}`}>
           <view className='atp__handle-wrap'>
             <view className='atp__handle' />
           </view>

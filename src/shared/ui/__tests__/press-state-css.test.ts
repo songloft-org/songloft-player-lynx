@@ -40,6 +40,11 @@ const PRESS_RULES: ReadonlyArray<readonly [string, string]> = [
   ['.media-list-item:active', 'shared/ui/MediaListItem.css'],
   ['.mini-player:active', 'features/player/widgets/MiniPlayer.css'],
   ['.player-controls__btn:active', 'features/player/widgets/PlayControls.css'],
+  ['.confirm-dialog__btn:active', 'shared/ui/ConfirmDialog.css'],
+  ['.facet-card:active', 'features/library/pages/LibraryPage.css'],
+  ['.play-history__header-btn:active', 'features/player/widgets/PlayHistoryPanel.css'],
+  ['.playlist-desc__close:active', 'features/playlist/widgets/PlaylistDescPanel.css'],
+  ['.song-cover-picker__close:active', 'features/playlist/widgets/SongCoverPicker.css'],
 ]
 
 test('the press amounts are declared once, as tokens', () => {
@@ -86,6 +91,22 @@ test('the standalone primary control does scale', () => {
   ).toMatch(/transform:\s*scale\(var\(--press-scale\)\)/)
 })
 
+/** Standalone controls (not rows) that must gel-scale on touch. */
+const SCALE_CONTROLS: ReadonlyArray<readonly [string, string]> = [
+  ['.confirm-dialog__btn:active', 'shared/ui/ConfirmDialog.css'],
+  ['.facet-card:active', 'features/library/pages/LibraryPage.css'],
+  ['.play-history__header-btn:active', 'features/player/widgets/PlayHistoryPanel.css'],
+  ['.playlist-desc__close:active', 'features/playlist/widgets/PlaylistDescPanel.css'],
+  ['.song-cover-picker__close:active', 'features/playlist/widgets/SongCoverPicker.css'],
+]
+
+test.each(SCALE_CONTROLS)('%s gel-scales on touch (%s)', (selector, file) => {
+  expect(
+    ruleBody(file, selector),
+    `${selector} must scale using the press-scale token`,
+  ).toMatch(/transform:\s*scale\(var\(--press-scale\)\)/)
+})
+
 test('a disabled control suppresses the press dim', () => {
   /*
    * Lynx matches `:active` on touch whether or not a handler is bound, so
@@ -95,6 +116,9 @@ test('a disabled control suppresses the press dim', () => {
    */
   expect(rules('features/player/widgets/PlayControls.css')).toMatch(
     /\.player-controls__btn:active:not\(\.player-controls__btn--disabled\)/,
+  )
+  expect(rules('shared/ui/ConfirmDialog.css')).toMatch(
+    /\.confirm-dialog__btn:active:not\(\.confirm-dialog__btn--disabled\)/,
   )
 })
 

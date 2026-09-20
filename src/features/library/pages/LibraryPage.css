@@ -309,8 +309,8 @@
 }
 
 .facet-card:active {
-  opacity: 0.7;
-  transform: scale(0.97);
+  opacity: var(--press-opacity);
+  transform: scale(var(--press-scale));
 }
 
 .facet-card__cover {

@@ -75,6 +75,14 @@
   width: var(--tap-target);
   height: var(--tap-target);
   border-radius: var(--radius-pill);
+  /* Gel press spring — tokens for reduce-motion. */
+  transition: opacity var(--duration-fast) var(--ease-default),
+    transform var(--duration-fast) var(--ease-spring);
+}
+
+.playlist-desc__close:active {
+  opacity: var(--press-opacity);
+  transform: scale(var(--press-scale));
 }
 
 /*

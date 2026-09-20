@@ -11,6 +11,8 @@ import { toast } from '../../../shared/ui/toast-store.js'
 import { getSongTagsApi } from '../api/index.js'
 import { songTagQueryKeys } from '../data/song-tags-query.js'
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import { usePresence } from '../../../shared/ui/usePresence.js'
+import '../../../shared/ui/overlay-motion.css'
 import './ManageTagsSheet.css'
 
 export interface ManageTagsSheetProps {
@@ -74,7 +76,8 @@ export function ManageTagsSheet({ songIds, onClose }: ManageTagsSheetProps) {
     void load()
   }, [songIdsKey])
 
-  if (songIds.length === 0) return null
+  const { mounted, leaving } = usePresence(songIds.length > 0)
+  if (!mounted) return null
 
   const toggle = (id: number) => {
     setSelectedIds((prev) => {
@@ -132,8 +135,8 @@ export function ManageTagsSheet({ songIds, onClose }: ManageTagsSheetProps) {
           darkened. A preceding sibling, not a child: the scrim below owns
           tap-to-dismiss and a child would sit in front of it. */}
       <BackdropBlur />
-      <view className='manage-tags__backdrop' bindtap={onClose} />
-      <view className='manage-tags__panel'>
+      <view className={`manage-tags__backdrop${leaving ? ' overlay--leave-fade' : ''}`} bindtap={onClose} />
+      <view className={`manage-tags__panel ${leaving ? 'overlay--leave-up' : 'overlay--enter-up'}`}>
         <view className='atp__handle-wrap'>
           <view className='atp__handle' />
         </view>

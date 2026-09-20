@@ -17,6 +17,7 @@ import { formatPlayedAt } from '../domain/play-history-time.js'
 import { playHistoryQueryKeys, usePlayHistoryQuery } from '../data/play-history-query.js'
 import { usePlayerStore } from '../store/index.js'
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import '../../../shared/ui/overlay-motion.css'
 import './PlayHistoryPanel.css'
 
 export interface PlayHistoryPanelProps {
@@ -167,7 +168,7 @@ export function PlayHistoryPanel({
          * event bubbles regardless). Same rule as `PopoverMenu`'s backdrop.
          */}
         <view className='play-history__backdrop' bindtap={onClose} data-testid='play-history-backdrop' />
-        <view className='play-history__panel'>
+        <view className='play-history__panel overlay--enter-up'>
           <view className='play-history__header'>
             <text className='play-history__title'>{title}</text>
             {/*

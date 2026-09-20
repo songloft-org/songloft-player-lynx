@@ -209,6 +209,15 @@
   height: var(--tap-target);
   padding: 0 var(--space-4);
   border-radius: var(--radius-md);
+  /* Gel press spring — both properties use motion tokens so reduce-motion
+     zeroes them. The release eases back on --ease-spring for the bounce. */
+  transition: opacity var(--duration-fast) var(--ease-default),
+    transform var(--duration-fast) var(--ease-spring);
+}
+
+.confirm-dialog__btn:active:not(.confirm-dialog__btn--disabled) {
+  opacity: var(--press-opacity);
+  transform: scale(var(--press-scale));
 }
 
 /* Muse ghost (cancel) + danger-ghost (confirm): transparent bodies, hairline
