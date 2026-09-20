@@ -32,6 +32,14 @@ export function EditPlaylistPage() {
   const [name, setName] = useState('')
   const [desc, setDesc] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
+  useEffect(() => {
+    const g = globalThis as Record<string, unknown>
+    const prev = g.__E2E_EDIT_PLAYLIST__ as Record<string, unknown> | undefined
+    const obj = prev ?? {}
+    obj.setPickerOpen = setPickerOpen
+    g.__E2E_EDIT_PLAYLIST__ = obj
+    return () => { delete obj.setPickerOpen }
+  }, [])
   const [selectedCover, setSelectedCover] = useState<{ songId: number; url: string } | null>(null)
 
   useEffect(() => {

@@ -7,6 +7,8 @@ import {
   redirect,
   useRouterState,
 } from '@tanstack/react-router'
+import { Component } from '@lynx-js/react'
+import type { ReactNode } from '@lynx-js/react'
 
 import { ensureRouterEnv } from './shims/router-env.js'
 import { ShellLayout } from './shared/layouts/ShellLayout.js'
@@ -14,6 +16,41 @@ import { ThemeProvider } from './shared/theme/ThemeProvider.js'
 import { SongRowOverlays } from './shared/ui/SongRowOverlays.js'
 import { SplashScreen } from './shared/ui/SplashScreen.js'
 import { ToastHost } from './shared/ui/ToastHost.js'
+
+/** Catches render errors in the route tree so the whole app does not go blank. */
+class RouteErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false }
+
+  static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: unknown) {
+    // eslint-disable-next-line no-console
+    console.error('[RouteErrorBoundary]', error)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <view
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'var(--system-background)',
+          }}
+        >
+          <text style={{ color: 'var(--label)', fontSize: '16px' }}>
+            {'发生错误，请重试'}
+          </text>
+        </view>
+      )
+    }
+    return this.props.children
+  }
+}
 import { evaluateAuthGuard, isAuthTransitionPending, useAuthStore } from './features/auth/store/index.js'
 import { LoginPage } from './features/auth/pages/LoginPage.js'
 import { AddSongsPage, CategorySongsPage, FolderContentPage, LibraryLayout, LibraryPage, TagSongsPage } from './features/library/index.js'
@@ -61,7 +98,9 @@ export function RootRouteView() {
 
   return (
     <ThemeProvider>
-      <Outlet />
+      <RouteErrorBoundary>
+        <Outlet />
+      </RouteErrorBoundary>
       {/*
         Global toast renderer. Mounted here (inside ThemeProvider so CSS vars
         resolve, and after <Outlet/> so DOM order paints it above every page —

@@ -165,6 +165,12 @@ export function FullPlayerPage() {
     useBreakpoint(0, '.full-player__stage')
   const layout = resolvePlayerLayout({ width, height: stageHeight, breakpoint })
   const [showSleepTimer, setShowSleepTimer] = useState(false)
+  useEffect(() => {
+    const g = globalThis as Record<string, unknown>
+    const store = g.__E2E_PLAYER_STORE__ as Record<string, unknown> | undefined
+    if (store) store.setShowSleepTimer = setShowSleepTimer
+    return () => { if (store) delete store.setShowSleepTimer }
+  }, [])
   const swiperRef = useRef<SwiperRef>(null)
   /**
    * Which Swiper screen is showing (0 = cover, 1 = lyrics). Tracked so the back key
@@ -227,6 +233,7 @@ export function FullPlayerPage() {
   }, [swiperMounted])
 
   useEffect(() => {
+    usePlayerStore.getState().closePlaylistDrawer()
     return () => { usePlayerStore.getState().closePlaylistDrawer() }
   }, [])
 

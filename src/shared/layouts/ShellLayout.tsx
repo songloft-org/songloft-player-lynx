@@ -1,4 +1,4 @@
-import { useSyncExternalStore, useState } from '@lynx-js/react'
+import { useEffect, useSyncExternalStore, useState } from '@lynx-js/react'
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -71,6 +71,14 @@ export function ShellLayout() {
     shellTabs.data?.pluginTabs ?? [],
   )
   const [showMoreTabs, setShowMoreTabs] = useState(false)
+  useEffect(() => {
+    const g = globalThis as Record<string, unknown>
+    const prev = g.__E2E_SHELL__ as Record<string, unknown> | undefined
+    const obj = prev ?? {}
+    obj.setShowMoreTabs = setShowMoreTabs
+    g.__E2E_SHELL__ = obj
+    return () => { delete obj.setShowMoreTabs }
+  }, [])
   // The `shell--with-mini` class: while the floating mini-player is up, the
   // pages' `--nav-inset` grows to clear it (see ShellLayout.css) — without
   // this, list tails scroll to a stop half-hidden behind the player.

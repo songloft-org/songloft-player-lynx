@@ -54,7 +54,7 @@
 }
 
 .full-player--enter {
-  animation: fullPlayerEnter var(--duration-normal) var(--ease-out);
+  animation: fullPlayerEnter var(--duration-normal) var(--ease-out) forwards;
 }
 
 /* Staggered entry: the page animates as one (above), then each section below
@@ -62,20 +62,20 @@
  * `fill-mode: backwards` holds opacity at the `from` value during the delay so
  * the elements don't flash visible before their animation starts. */
 .full-player__stage--enter {
-  animation: fullPlayerEnter var(--duration-normal) var(--ease-out) backwards;
+  animation: fullPlayerEnter var(--duration-normal) var(--ease-out) both;
 }
 
 .full-player__meta--enter {
   /* Stagger delay ≈ ⅓ of --duration-slow (350ms / 3 ≈ 117ms). Close enough
      to the original 80ms target, and token-compliant. */
-  animation: fullPlayerEnter var(--duration-normal) var(--ease-out) calc(var(--duration-slow) / 3) backwards;
+  animation: fullPlayerEnter var(--duration-normal) var(--ease-out) calc(var(--duration-slow) / 3) both;
 }
 
 .full-player__controls-enter {
   display: flex;
   flex-direction: column;
   /* Stagger delay ≈ ⅔ of --duration-slow (350ms * 2 / 3 ≈ 233ms). */
-  animation: fullPlayerEnter var(--duration-normal) var(--ease-out) calc(var(--duration-slow) * 2 / 3) backwards;
+  animation: fullPlayerEnter var(--duration-normal) var(--ease-out) calc(var(--duration-slow) * 2 / 3) both;
 }
 
 /* Empty state */

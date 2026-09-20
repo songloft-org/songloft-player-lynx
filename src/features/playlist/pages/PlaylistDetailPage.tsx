@@ -1,4 +1,4 @@
-import { useRef, useState } from '@lynx-js/react'
+import { useEffect, useRef, useState } from '@lynx-js/react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
@@ -119,6 +119,14 @@ export function PlaylistDetailPage() {
 
   const [showHistory, setShowHistory] = useState(false)
   const [showDesc, setShowDesc] = useState(false)
+  useEffect(() => {
+    const g = globalThis as Record<string, unknown>
+    const prev = g.__E2E_PLAYLIST_DETAIL__ as Record<string, unknown> | undefined
+    const obj = prev ?? {}
+    obj.setShowDesc = setShowDesc
+    g.__E2E_PLAYLIST_DETAIL__ = obj
+    return () => { delete obj.setShowDesc }
+  }, [])
   const [menuOpen, setMenuOpen] = useState(false)
   const [sortMode, setSortMode] = useState(false)
   const [selectMode, setSelectMode] = useState(false)

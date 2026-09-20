@@ -24,7 +24,8 @@ export function SegmentedControl<T extends string>({
   labelFor,
   testId,
 }: SegmentedControlProps<T>) {
-  const selectedIndex = options.indexOf(selected)
+  const rawIndex = options.indexOf(selected)
+  const selectedIndex = rawIndex === -1 ? 0 : rawIndex
   return (
     <view className='segmented' data-testid={testId}>
       {/* Sliding indicator — positioned behind the items (earlier in DOM order). */}
