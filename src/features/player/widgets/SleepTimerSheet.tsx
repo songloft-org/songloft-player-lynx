@@ -120,7 +120,7 @@ export function SleepTimerSheet({
             <text className='drawer__title'>{t('player.sleepTimer')}</text>
           </view>
 
-          <scroll-view className='drawer__list' scroll-y>
+          <scroll-view className='drawer__list sleep-timer__body' scroll-y>
             {statusLabel
               ? (
                 <view className='sleep-timer__status'>
