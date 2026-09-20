@@ -24,13 +24,13 @@
   display: flex;
   flex-direction: column;
   margin: 0 var(--space-2) var(--space-2);
-  background-color: var(--glass-fill);
-  background-image: var(--glass-sheen-layer), var(--glass-ramp);
-  border: 1px solid var(--glass-border);
+  background-color: var(--material-fill);
+  background-image: var(--material-sheen-layer), var(--material-ramp);
+  border: 1px solid var(--material-border);
   border-radius: var(--radius-pill);
   box-shadow: var(--shadow-md),
-    inset 0 1px 0 var(--glass-highlight),
-    var(--glass-rim-sides),
+    inset 0 1px 0 var(--material-highlight),
+    var(--material-rim-sides),
     inset 0 -1px 0 var(--separator);
   /* See `.shell--scrolled` in ShellLayout.css: the drop shadow is the one
      channel the scroll-edge effect animates, on the base rule so the exit
@@ -52,8 +52,8 @@
    drop shadow grows; the inset rim stack repeats verbatim so the sheen stays. */
 .shell--narrow.shell--scrolled .mini-player {
   box-shadow: var(--shadow-lg),
-    inset 0 1px 0 var(--glass-highlight),
-    var(--glass-rim-sides),
+    inset 0 1px 0 var(--material-highlight),
+    var(--material-rim-sides),
     inset 0 -1px 0 var(--separator);
 }
 
@@ -67,7 +67,7 @@
   right: calc(var(--space-2) + var(--safe-right));
   bottom: calc(80px + var(--safe-bottom));
   margin: 0;
-  background-color: var(--glass-fill);
+  background-color: var(--material-fill);
   z-index: 91;
 }
 

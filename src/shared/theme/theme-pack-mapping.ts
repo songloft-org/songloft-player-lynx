@@ -21,10 +21,10 @@ import { MATERIAL_TOKENS } from './material-tokens.js'
  * |                           | --system-grouped-background         |
  * | light/dark.surfaceColor   | --secondary-system-background       |
  * |                           | --secondary-system-grouped-background |
- * | light/dark.glassColor     | --glass-glow (solid)                |
- * | (derived from glassColor) | --glass-glow-faint (0.10/0.14)      |
- * | (derived from glassColor) | --glass-sheen (0.10/0.04)           |
- * | (baseline, not pack-driven)| --glass-fill/fill-strong/border/    |
+ * | light/dark.glassColor     | --material-glow (solid)             |
+ * | (derived from glassColor) | --material-glow-faint (0.10/0.14)   |
+ * | (derived from glassColor) | --material-sheen (0.10/0.04)        |
+ * | (baseline, not pack-driven)| --material-fill/fill-elevated/border/|
  * |                           |   highlight                         |
  * | cardRadius                | --radius-lg                         |
  * | controlRadius             | --radius-md                         |
@@ -86,7 +86,7 @@ export interface ThemePackColors {
   surfaceColor?: string
   /**
    * Independent colour for the Liquid Glass decorative tint. Drives
-   * `--glass-glow` / `--glass-glow-faint` / `--glass-sheen` — SEPARATE from
+   * `--material-glow` / `--material-glow-faint` / `--material-sheen` — SEPARATE from
    * `seedColor` (which drives the button/accent channel), so a pack can tint
    * its glass without recolouring its buttons (true dual-channel). Optional:
    * absent → the client's star-blue glass baseline applies (glass stays a
@@ -169,16 +169,16 @@ export const PACK_OVERRIDABLE_BASELINE: Record<'light' | 'dark', Record<string, 
     '--secondary-system-grouped-background': '#ffffff',
     // Liquid Glass tokens. The four texture tokens (fill/fill-strong/border/
     // highlight) are always baseline — glass质感 is fixed, not pack-driven.
-    // Only the decorative `--glass-glow*`/`--glass-sheen` re-point at seedColor
+    // Only the decorative `--material-glow*`/`--material-sheen` re-point at seedColor
     // (see themePackToStyleVars), so a pack tints the glass sheen without
     // touching button ink (--primary stays its own channel).
-    '--glass-fill': 'rgba(255, 255, 255, 0.85)',
-    '--glass-fill-strong': 'rgba(255, 255, 255, 0.72)',
-    '--glass-border': 'rgba(255, 255, 255, 0.45)',
-    '--glass-highlight': 'rgba(255, 255, 255, 0.6)',
-    '--glass-glow': '#3BAEEF',
-    '--glass-glow-faint': 'rgba(59, 174, 239, 0.10)',
-    '--glass-sheen': 'rgba(59, 174, 239, 0.1)',
+    '--material-fill': 'rgba(255, 255, 255, 0.85)',
+    '--material-fill-elevated': 'rgba(255, 255, 255, 0.72)',
+    '--material-border': 'rgba(255, 255, 255, 0.45)',
+    '--material-highlight': 'rgba(255, 255, 255, 0.6)',
+    '--material-glow': '#3BAEEF',
+    '--material-glow-faint': 'rgba(59, 174, 239, 0.10)',
+    '--material-sheen': 'rgba(59, 174, 239, 0.1)',
     '--radius-lg': '20px',
     '--radius-md': '12px',
     '--radius-nav': '12px',
@@ -193,13 +193,13 @@ export const PACK_OVERRIDABLE_BASELINE: Record<'light' | 'dark', Record<string, 
     '--secondary-system-grouped-background': '#1c1c1e',
     // Liquid Glass tokens — see the light block. Same shape, dark-tuned:
     // darker glass fills, dimmer highlight, and the dark star-blue glow.
-    '--glass-fill': 'rgba(23, 23, 27, 0.85)',
-    '--glass-fill-strong': 'rgba(23, 23, 27, 0.72)',
-    '--glass-border': 'rgba(255, 255, 255, 0.16)',
-    '--glass-highlight': 'rgba(255, 255, 255, 0.3)',
-    '--glass-glow': '#5BC0F5',
-    '--glass-glow-faint': 'rgba(91, 192, 245, 0.14)',
-    '--glass-sheen': 'rgba(91, 192, 245, 0.04)',
+    '--material-fill': 'rgba(23, 23, 27, 0.85)',
+    '--material-fill-elevated': 'rgba(23, 23, 27, 0.72)',
+    '--material-border': 'rgba(255, 255, 255, 0.16)',
+    '--material-highlight': 'rgba(255, 255, 255, 0.3)',
+    '--material-glow': '#5BC0F5',
+    '--material-glow-faint': 'rgba(91, 192, 245, 0.14)',
+    '--material-sheen': 'rgba(91, 192, 245, 0.04)',
     '--radius-lg': '20px',
     '--radius-md': '12px',
     '--radius-nav': '12px',
@@ -284,7 +284,7 @@ export function themePackToStyleVars(
       // 0.18 dark) — they used to run two points above it for no stated reason,
       // which meant a pack's wash was always slightly heavier than the wash the
       // contrast gate had verified. The nav pill is NOT this token — it uses
-      // --glass-glow-faint, and saying so here sent a batch looking in the wrong
+      // --material-glow-faint, and saying so here sent a batch looking in the wrong
       // place.
       //
       // The light alpha is bounded on BOTH sides and the window is narrow:
@@ -299,7 +299,7 @@ export function themePackToStyleVars(
       // channel). A pack colours its glass without recolouring its buttons:
       // true dual-channel. The three glass-glow tokens ride glassColor at the
       // same alpha split as the star-blue baseline (0.10/0.14 faint, 0.10/0.04
-      // sheen). The sheen split changed when `--glass-sheen` gained its first
+      // sheen). The sheen split changed when `--material-sheen` gained its first
       // consumer: it now lies under text as a background layer, so its alpha is
       // part of the contrast budget (see the derivation in tokens.css) rather
       // than a free decorative number. It must stay in step with the baseline
@@ -309,9 +309,9 @@ export function themePackToStyleVars(
       // a different colour from buttons even with no pack. The four
       // glass-texture tokens (fill/border/highlight) are always baseline —
       // a pack colours the glass, it does not change its质感.
-      vars['--glass-glow'] = colors.glassColor
-      vars['--glass-glow-faint'] = hexToRgba(colors.glassColor, resolved === 'light' ? 0.1 : 0.14)
-      vars['--glass-sheen'] = hexToRgba(colors.glassColor, resolved === 'light' ? 0.1 : 0.04)
+      vars['--material-glow'] = colors.glassColor
+      vars['--material-glow-faint'] = hexToRgba(colors.glassColor, resolved === 'light' ? 0.1 : 0.14)
+      vars['--material-sheen'] = hexToRgba(colors.glassColor, resolved === 'light' ? 0.1 : 0.04)
     }
     // Both background groups take the pack's pair — see the module header for why
     // sending it only to the plain group would leave settings-style pages stranded
@@ -334,10 +334,10 @@ export function themePackToStyleVars(
   if (navigationRadius != null) vars['--radius-nav'] = navigationRadius
 
   const mt = MATERIAL_TOKENS[getMaterialVariant()][resolved]
-  vars['--glass-fill'] = mt['--glass-fill']
-  vars['--glass-fill-strong'] = mt['--glass-fill-strong']
-  vars['--glass-border'] = mt['--glass-border']
-  vars['--glass-highlight'] = mt['--glass-highlight']
+  vars['--material-fill'] = mt['--material-fill']
+  vars['--material-fill-elevated'] = mt['--material-fill-elevated']
+  vars['--material-border'] = mt['--material-border']
+  vars['--material-highlight'] = mt['--material-highlight']
 
   // --font-scale is kept for any direct consumer, but the 12 HIG font-size
   // tokens cannot rely on calc(Npx * var(--font-scale)) resolving the inline

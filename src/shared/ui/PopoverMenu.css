@@ -50,7 +50,7 @@
  * clips the panel-mode blur layer to these rounded corners for free — with one
  * accepted cost: an absolute child of a scroll container scrolls with its content,
  * so in a menu long enough to actually scroll the blur travels up with it and the
- * bottom rows fall back to the flat `--glass-fill-strong` wash. Fixing that means
+ * bottom rows fall back to the flat `--material-fill-elevated` wash. Fixing that means
  * splitting this into a clipping shell plus an inner scroller, which every consumer
  * of `.popover-menu` would have to be re-laid-out for; the surfaces that scroll are
  * the long sort menus, and the degradation is the appearance this rule had before
@@ -63,14 +63,14 @@
   flex-direction: column;
   min-width: 140px;
   padding: var(--space-2) 0;
-  background-color: var(--glass-fill-strong);
-  background-image: var(--glass-sheen-layer), var(--glass-ramp);
+  background-color: var(--material-fill-elevated);
+  background-image: var(--material-sheen-layer), var(--material-ramp);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md),
-    inset 0 1px 0 var(--glass-highlight),
-    var(--glass-rim-sides),
+    inset 0 1px 0 var(--material-highlight),
+    var(--material-rim-sides),
     inset 0 -1px 0 var(--separator);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--material-border);
   overflow-y: auto;
 }
 

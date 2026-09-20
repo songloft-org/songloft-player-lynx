@@ -92,7 +92,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   // it is read once and pinned. The class it puts on the root lets the iOS
   // Liquid Glass token override (see `tokens.css`'s `.platform-ios` blocks)
   // take effect: on iOS the native UIGlassEffect is the readable surface, and
-  // the CSS `--glass-fill*` comes down to a tint that lets it show. Other
+  // the CSS `--material-fill*` comes down to a tint that lets it show. Other
   // platforms keep the baseline fills, which `contrast.test.ts` still gates.
   const platform = useMemo(() => getPlatformTarget(), [])
 

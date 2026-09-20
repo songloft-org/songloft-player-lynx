@@ -31,7 +31,7 @@
  *
  * A nested `var()` inside a custom property DOES resolve per-theme on the
  * consuming element (headless-Chrome verified through the lynx-css pipeline),
- * and `--glass-ramp` / `--shadow-focus` still ship in exactly this shape.
+ * and `--material-ramp` / `--shadow-focus` still ship in exactly this shape.
  *
  * Alias direction mattered while the bridge lived: theme packs deliver their
  * overrides as INLINE custom properties on the theme root (see
@@ -240,8 +240,8 @@
    * pixel, i.e. `calc(10px * var(--font-scale))` still used the class-declared
    * `1`. So the claim that these "pick up the material system's runtime overrides
    * for free" holds on Web and is unverified-to-false on iOS for any token the
-   * material system or a theme pack overrides inline (`--glass-ramp-*`,
-   * `--glass-rim-side`, `--tint-fill`, `--font-scale`). Consequence and open bug:
+   * material system or a theme pack overrides inline (`--material-ramp-*`,
+   * `--material-rim-side`, `--tint-fill`, `--font-scale`). Consequence and open bug:
    * `docs/project/bugs.md`. Rule of thumb until it is settled: **inline overrides
    * must be consumed directly by a property, never through a second custom
    * property.**
@@ -249,12 +249,11 @@
    * The point of bundling them is that a glass surface stays four lines instead
    * of nine, and there is exactly one place to retune.
    *
-   * The `--glass-*` names are unchanged in this stage on purpose. They are due
-   * for a rename onto Apple's material vocabulary, but that is a pure rename
-   * across 14 call sites plus three gates, and mixing it into a colour-value
-   * replacement would make this diff far harder to review and to bisect. It is
-   * sequenced as its own stage — see the plan's §3.7 note about the name clash
-   * with the existing `MaterialVariant` thickness axis.
+   * The `--glass-*` names have been renamed to `--material-*` as part of the
+   * material vocabulary migration. The composite tokens bundle side rims,
+   * the vertical luminance ramp, and the diagonal sheen into single values
+   * so that a glass surface stays four lines instead of nine, and there is
+   * exactly one place to retune.
    *
    * No leading bare `0` before a negative length in here: the minifier collapses
    * `inset 0 -1px 0` to `inset 0-1px 0` *inside a custom property value* (it
@@ -262,21 +261,21 @@
    * stricter native parser might not, so the bottom hairline stays a direct
    * declaration at each surface and only the sides are bundled here.
    */
-  --glass-rim-sides: inset 1px 0 0 var(--glass-rim-side),
-    inset -1px 0 0 var(--glass-rim-side);
-  --glass-ramp: linear-gradient(
+  --material-rim-sides: inset 1px 0 0 var(--material-rim-side),
+    inset -1px 0 0 var(--material-rim-side);
+  --material-ramp: linear-gradient(
     to bottom,
-    var(--glass-ramp-top),
-    var(--glass-ramp-bottom)
+    var(--material-ramp-top),
+    var(--material-ramp-bottom)
   );
   /* 160deg puts the streak's origin at the top-left and lets it die at 45% —
      past that the surface is the plain fill, which is what keeps the bottom of a
      tall sheet out of the contrast budget entirely. `rgba(0, 0, 0, 0)` rather
      than `transparent`: an explicit premultiplied-safe stop, and one less
      keyword to assume Lynx interpolates the way Chrome does. */
-  --glass-sheen-layer: linear-gradient(
+  --material-sheen-layer: linear-gradient(
     160deg,
-    var(--glass-sheen),
+    var(--material-sheen),
     rgba(0, 0, 0, 0) 45%
   );
 
@@ -414,27 +413,27 @@
 
   /* Liquid Glass surfaces — honest faux-glass (real blur is available via
      <blur-view>, see BackdropBlur.tsx, but these fills are what carries the
-     surface). `--glass-fill` (0.85) is for surfaces floating over content (nav
+     surface). `--material-fill` (0.85) is for surfaces floating over content (nav
      capsule, mini-player) where readability needs the higher alpha;
-     `--glass-fill-strong` (0.72) is for surfaces mounted over a scrim
-     (popover/dialog/sheet), which can lean more transparent — the name is
-     misleading and is fixed in the rename stage. `--glass-glow` is the
+     `--material-fill-elevated` (0.72) is for surfaces mounted over a scrim
+     (popover/dialog/sheet), which can lean more transparent — the former name
+     `--glass-fill-strong` was misleading and has been renamed. `--material-glow` is the
      decorative accent (star blue by default; packs re-point it at their
      `glassColor`), kept as an independent channel from the button accent. */
-  --glass-fill: rgba(23, 23, 27, 0.85);
-  --glass-fill-strong: rgba(23, 23, 27, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.16);
+  --material-fill: rgba(23, 23, 27, 0.85);
+  --material-fill-elevated: rgba(23, 23, 27, 0.72);
+  --material-border: rgba(255, 255, 255, 0.16);
   /* Top specular edge — a 1px `inset` line, so no text ever sits on it and its
      brightness is free against the contrast gate. Scaled across the four
      material variants in `material-tokens.ts` (thinner glass → brighter rim),
      which is the value that wins at runtime; tokens.css is the CSS fallback. */
-  --glass-highlight: rgba(255, 255, 255, 0.3);
-  --glass-glow: #5BC0F5;
-  --glass-glow-faint: rgba(91, 192, 245, 0.14);
+  --material-highlight: rgba(255, 255, 255, 0.3);
+  --material-glow: #5BC0F5;
+  --material-glow-faint: rgba(91, 192, 245, 0.14);
   /*
-   * Diagonal refraction streak, consumed via `--glass-sheen-layer`. Unlike the
+   * Diagonal refraction streak, consumed via `--material-sheen-layer`. Unlike the
    * rim this one lies *under text*, so its alpha is derived, not chosen. It
-   * stacks with `--glass-ramp-top` in the top-left corner and the binding
+   * stacks with `--material-ramp-top` in the top-left corner and the binding
    * constraint is the composite of the two.
    *
    * These alphas were derived against the former palette, where the binding pair
@@ -443,17 +442,17 @@
    * carry considerably more margin than they were designed with. They are kept
    * rather than re-opened: `contrast.test.ts` re-derives them either way, and
    * loosening them is a separate visual decision. */
-  --glass-sheen: rgba(91, 192, 245, 0.04);
+  --material-sheen: rgba(91, 192, 245, 0.04);
   /* Side rim — dimmer than the top edge because light comes from above. Also a
      1px inset, also free. Deliberately outside the material system: rim
-     *brightness* is a thickness cue (so `--glass-highlight` scales), but having
+     *brightness* is a thickness cue (so `--material-highlight` scales), but having
      sides at all is structural. */
-  --glass-rim-side: rgba(255, 255, 255, 0.12);
-  /* Vertical luminance ramp (`--glass-ramp`). Dark's amplitude lives in the
+  --material-rim-side: rgba(255, 255, 255, 0.12);
+  /* Vertical luminance ramp (`--material-ramp`). Dark's amplitude lives in the
      *bottom*: darkening a dark surface raises every text ratio, so it is free at
      any alpha, while brightening the top costs. */
-  --glass-ramp-top: rgba(255, 255, 255, 0.03);
-  --glass-ramp-bottom: rgba(0, 0, 0, 0.20);
+  --material-ramp-top: rgba(255, 255, 255, 0.03);
+  --material-ramp-bottom: rgba(0, 0, 0, 0.20);
 
   /* overlays */
   --backdrop: rgba(0, 0, 0, 0.55);
@@ -595,27 +594,27 @@
   /* Liquid Glass surfaces — see the dark block for the derivation. Light keeps
      the same shape: translucent white over the white page, a brighter highlight
      (white-on-white needs more to read), and the star-blue decorative glow. */
-  --glass-fill: rgba(255, 255, 255, 0.85);
-  --glass-fill-strong: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.45);
+  --material-fill: rgba(255, 255, 255, 0.85);
+  --material-fill-elevated: rgba(255, 255, 255, 0.72);
+  --material-border: rgba(255, 255, 255, 0.45);
   /* Light's rim has to fight a fill that composites to pure white, so it runs
      brighter still. */
-  --glass-highlight: rgba(255, 255, 255, 0.6);
-  --glass-glow: #3BAEEF;
-  --glass-glow-faint: rgba(59, 174, 239, 0.10);
+  --material-highlight: rgba(255, 255, 255, 0.6);
+  --material-glow: #3BAEEF;
+  --material-glow-faint: rgba(59, 174, 239, 0.10);
   /* Packs derive this same alpha from their `glassColor`
      (theme-pack-mapping.ts), so the two must be changed together. */
-  --glass-sheen: rgba(59, 174, 239, 0.1);
-  --glass-rim-side: rgba(255, 255, 255, 0.30);
+  --material-sheen: rgba(59, 174, 239, 0.1);
+  --material-rim-side: rgba(255, 255, 255, 0.30);
   /*
    * Light's ramp is a pure *downward* darkening, and the transparent top is a
-   * deliberate value rather than an omission. `--glass-fill` is 0.85 white over
+   * deliberate value rather than an omission. `--material-fill` is 0.85 white over
    * a white page, so it composites to exactly rgb(255,255,255) and adding white
    * on top is the identity operation. Under a theme pack whose background is not
    * white, a white top stop would stop being a no-op and start lightening a
    * surface carrying dark text; transparent is safe in both cases. */
-  --glass-ramp-top: rgba(255, 255, 255, 0);
-  --glass-ramp-bottom: rgba(0, 0, 0, 0.05);
+  --material-ramp-top: rgba(255, 255, 255, 0);
+  --material-ramp-bottom: rgba(0, 0, 0, 0.05);
 
   /* overlays */
   --backdrop: rgba(0, 0, 0, 0.35);
@@ -722,7 +721,7 @@
    On iOS the app drives a *native* UIGlassEffect via `blur-effect: 'glass'`
    (see BackdropBlur.tsx). A native glass material is the real surface behind
    the text — Apple guarantees its readability through vibrancy, the same way
-   the system's own bars read. The CSS `--glass-fill*` is no longer the carrier
+   the system's own bars read. The CSS `--material-fill*` is no longer the carrier
    of readability on iOS; it is a light tint the native material shows through.
    That is why these alphas come down: the 0.85/0.72 baseline would cover the
    native material to 15–28%, and the whole point of opting into it is to let
@@ -731,7 +730,7 @@
    The values mirror the `ultra-thin` row of `material-tokens.ts` exactly — a
    thickness the codebase already ships and monotonicity-tests — so the iOS
    track is a coherent material rather than a one-off alpha. Thinner glass
-   also raises the specular highlight (`--glass-highlight`), per the same
+   also raises the specular highlight (`--material-highlight`), per the same
    "brightness is a thickness cue" rule the dark block cites.
 
    What this is NOT: a contrast-tracked surface. `contrast.test.ts` derives its
@@ -743,15 +742,15 @@
    repo already takes for every other iOS-only property. See
    `platform-glass.test.ts` for the structural gate. */
 .theme-root.theme-light.platform-ios {
-  --glass-fill: rgba(255, 255, 255, 0.55);
-  --glass-fill-strong: rgba(255, 255, 255, 0.45);
-  --glass-border: rgba(255, 255, 255, 0.55);
-  --glass-highlight: rgba(255, 255, 255, 0.72);
+  --material-fill: rgba(255, 255, 255, 0.55);
+  --material-fill-elevated: rgba(255, 255, 255, 0.45);
+  --material-border: rgba(255, 255, 255, 0.55);
+  --material-highlight: rgba(255, 255, 255, 0.72);
 }
 
 .theme-root.theme-dark.platform-ios {
-  --glass-fill: rgba(23, 23, 27, 0.50);
-  --glass-fill-strong: rgba(23, 23, 27, 0.40);
-  --glass-border: rgba(255, 255, 255, 0.20);
-  --glass-highlight: rgba(255, 255, 255, 0.38);
+  --material-fill: rgba(23, 23, 27, 0.50);
+  --material-fill-elevated: rgba(23, 23, 27, 0.40);
+  --material-border: rgba(255, 255, 255, 0.20);
+  --material-highlight: rgba(255, 255, 255, 0.38);
 }

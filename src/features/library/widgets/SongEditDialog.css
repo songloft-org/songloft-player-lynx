@@ -16,13 +16,13 @@
 .song-edit-dialog {
   display: flex;
   flex-direction: column;
-  background-color: var(--glass-fill-strong);
-  background-image: var(--glass-sheen-layer), var(--glass-ramp);
+  background-color: var(--material-fill-elevated);
+  background-image: var(--material-sheen-layer), var(--material-ramp);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--material-border);
   box-shadow: var(--shadow-lg),
-    inset 0 1px 0 var(--glass-highlight),
-    var(--glass-rim-sides),
+    inset 0 1px 0 var(--material-highlight),
+    var(--material-rim-sides),
     inset 0 -1px 0 var(--separator);
   padding: var(--space-5);
   margin: var(--space-6);

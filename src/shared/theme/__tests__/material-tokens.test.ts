@@ -4,10 +4,10 @@ import { MATERIAL_TOKENS } from '../material-tokens.js'
 import { PACK_OVERRIDABLE_BASELINE } from '../theme-pack-mapping.js'
 
 const GLASS_KEYS = [
-  '--glass-fill',
-  '--glass-fill-strong',
-  '--glass-border',
-  '--glass-highlight',
+  '--material-fill',
+  '--material-fill-elevated',
+  '--material-border',
+  '--material-highlight',
 ] as const
 
 describe('material-tokens', () => {
@@ -25,7 +25,7 @@ describe('material-tokens', () => {
   test('glass-fill alpha increases monotonically from ultra-thin to thick', () => {
     const order = ['ultra-thin', 'thin', 'regular', 'thick'] as const
     for (const theme of ['light', 'dark'] as const) {
-      for (const key of ['--glass-fill', '--glass-fill-strong'] as const) {
+      for (const key of ['--material-fill', '--material-fill-elevated'] as const) {
         const alphas = order.map((v) => {
           const m = MATERIAL_TOKENS[v][theme][key].match(
             /[\d.]+\s*\)$/,

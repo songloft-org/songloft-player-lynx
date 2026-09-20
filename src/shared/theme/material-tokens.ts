@@ -1,10 +1,10 @@
 import type { MaterialVariant } from './material-model.js'
 
-interface GlassTextureTokens {
-  '--glass-fill': string
-  '--glass-fill-strong': string
-  '--glass-border': string
-  '--glass-highlight': string
+interface MaterialTextureTokens {
+  '--material-fill': string
+  '--material-fill-elevated': string
+  '--material-border': string
+  '--material-highlight': string
 }
 
 function rgba(r: number, g: number, b: number, a: number): string {
@@ -23,62 +23,62 @@ function darkHighlight(a: number): string { return rgba(W.r, W.g, W.b, a) }
 
 export const MATERIAL_TOKENS: Record<
   MaterialVariant,
-  Record<'light' | 'dark', GlassTextureTokens>
+  Record<'light' | 'dark', MaterialTextureTokens>
 > = {
   'ultra-thin': {
     light: {
-      '--glass-fill': lightFill(0.55),
-      '--glass-fill-strong': lightFill(0.45),
-      '--glass-border': lightBorder(0.55),
-      '--glass-highlight': lightHighlight(0.72),
+      '--material-fill': lightFill(0.55),
+      '--material-fill-elevated': lightFill(0.45),
+      '--material-border': lightBorder(0.55),
+      '--material-highlight': lightHighlight(0.72),
     },
     dark: {
-      '--glass-fill': darkFill(0.50),
-      '--glass-fill-strong': darkFill(0.40),
-      '--glass-border': darkBorder(0.20),
-      '--glass-highlight': darkHighlight(0.38),
+      '--material-fill': darkFill(0.50),
+      '--material-fill-elevated': darkFill(0.40),
+      '--material-border': darkBorder(0.20),
+      '--material-highlight': darkHighlight(0.38),
     },
   },
   thin: {
     light: {
-      '--glass-fill': lightFill(0.70),
-      '--glass-fill-strong': lightFill(0.58),
-      '--glass-border': lightBorder(0.50),
-      '--glass-highlight': lightHighlight(0.66),
+      '--material-fill': lightFill(0.70),
+      '--material-fill-elevated': lightFill(0.58),
+      '--material-border': lightBorder(0.50),
+      '--material-highlight': lightHighlight(0.66),
     },
     dark: {
-      '--glass-fill': darkFill(0.65),
-      '--glass-fill-strong': darkFill(0.55),
-      '--glass-border': darkBorder(0.18),
-      '--glass-highlight': darkHighlight(0.34),
+      '--material-fill': darkFill(0.65),
+      '--material-fill-elevated': darkFill(0.55),
+      '--material-border': darkBorder(0.18),
+      '--material-highlight': darkHighlight(0.34),
     },
   },
   regular: {
     light: {
-      '--glass-fill': lightFill(0.85),
-      '--glass-fill-strong': lightFill(0.72),
-      '--glass-border': lightBorder(0.45),
-      '--glass-highlight': lightHighlight(0.6),
+      '--material-fill': lightFill(0.85),
+      '--material-fill-elevated': lightFill(0.72),
+      '--material-border': lightBorder(0.45),
+      '--material-highlight': lightHighlight(0.6),
     },
     dark: {
-      '--glass-fill': darkFill(0.85),
-      '--glass-fill-strong': darkFill(0.72),
-      '--glass-border': darkBorder(0.16),
-      '--glass-highlight': darkHighlight(0.3),
+      '--material-fill': darkFill(0.85),
+      '--material-fill-elevated': darkFill(0.72),
+      '--material-border': darkBorder(0.16),
+      '--material-highlight': darkHighlight(0.3),
     },
   },
   thick: {
     light: {
-      '--glass-fill': lightFill(0.92),
-      '--glass-fill-strong': lightFill(0.85),
-      '--glass-border': lightBorder(0.40),
-      '--glass-highlight': lightHighlight(0.5),
+      '--material-fill': lightFill(0.92),
+      '--material-fill-elevated': lightFill(0.85),
+      '--material-border': lightBorder(0.40),
+      '--material-highlight': lightHighlight(0.5),
     },
     dark: {
-      '--glass-fill': darkFill(0.92),
-      '--glass-fill-strong': darkFill(0.82),
-      '--glass-border': darkBorder(0.14),
-      '--glass-highlight': darkHighlight(0.24),
+      '--material-fill': darkFill(0.92),
+      '--material-fill-elevated': darkFill(0.82),
+      '--material-border': darkBorder(0.14),
+      '--material-highlight': darkHighlight(0.24),
     },
   },
 }

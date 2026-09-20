@@ -167,9 +167,9 @@
   flex-direction: row;
   justify-content: space-around;
   align-items: center;
-  background-color: var(--glass-fill);
-  background-image: var(--glass-sheen-layer), var(--glass-ramp);
-  border: 1px solid var(--glass-border);
+  background-color: var(--material-fill);
+  background-image: var(--material-sheen-layer), var(--material-ramp);
+  border: 1px solid var(--material-border);
   border-radius: var(--radius-pill);
   /* Liquid-glass edge: the outer drop shadow, then a rim that varies around the
      perimeter — bright at the top, dimmer down the sides, dark at the bottom.
@@ -177,8 +177,8 @@
      direction can, and since every layer is a 1px `inset` no text sits on any of
      them, so the whole effect is free against the contrast gate. */
   box-shadow: var(--shadow-md),
-    inset 0 1px 0 var(--glass-highlight),
-    var(--glass-rim-sides),
+    inset 0 1px 0 var(--material-highlight),
+    var(--material-rim-sides),
     inset 0 -1px 0 var(--separator);
   /* The shadow is the one property the scroll-edge effect animates (see
      `.shell--scrolled` below), so it carries the transition on the base rule —
@@ -197,8 +197,8 @@
    so the edge sheen does not blink off during the transition. */
 .shell--narrow.shell--scrolled .shell__bottombar {
   box-shadow: var(--shadow-lg),
-    inset 0 1px 0 var(--glass-highlight),
-    var(--glass-rim-sides),
+    inset 0 1px 0 var(--material-highlight),
+    var(--material-rim-sides),
     inset 0 -1px 0 var(--separator);
 }
 

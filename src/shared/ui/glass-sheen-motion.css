@@ -17,7 +17,7 @@
  * file contains only this one keyframe so the exemption cannot widen silently.
  *
  * Two `background-position` values per step: the sheen layer drifts, the
- * vertical luminance ramp (`--glass-ramp`) stays pinned — shifting a vertical
+ * vertical luminance ramp (`--material-ramp`) stays pinned — shifting a vertical
  * gradient sideways is invisible, and pinning it keeps the top/bottom luminance
  * edges stable so the breathing never disturbs the contrast budget the ramp was
  * tuned against.

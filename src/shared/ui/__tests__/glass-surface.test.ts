@@ -23,7 +23,7 @@ import { fileClasses } from '../../testing/jsx-classes.js'
  *    warning (the exact risk the spike measured), leaving the sheen gone while
  *    the declaration stays syntactically valid.
  *
- * So the gate locks the load-bearing facts per surface: a `--glass-fill*`
+ * So the gate locks the load-bearing facts per surface: a `--material-fill*`
  * background AND an `inset` box-shadow. It does not pin the exact shadow
  * value — only that the sheen primitive is present.
  *
@@ -49,27 +49,27 @@ const SURFACES: Surface[] = [
   {
     file: 'shared/layouts/ShellLayout.css',
     selector: '.shell__bottombar',
-    fill: /var\(--glass-fill\)/,
+    fill: /var\(--material-fill\)/,
   },
   {
     file: 'features/player/widgets/MiniPlayer.css',
     selector: '.mini-player',
-    fill: /var\(--glass-fill\)/,
+    fill: /var\(--material-fill\)/,
   },
   {
     file: 'shared/ui/PopoverMenu.css',
     selector: '.popover-menu',
-    fill: /var\(--glass-fill-strong\)/,
+    fill: /var\(--material-fill-elevated\)/,
   },
   {
     file: 'shared/ui/ConfirmDialog.css',
     selector: '.confirm-dialog',
-    fill: /var\(--glass-fill-strong\)/,
+    fill: /var\(--material-fill-elevated\)/,
   },
   {
     file: 'features/player/widgets/SheetShell.css',
     selector: '.drawer__panel',
-    fill: /var\(--glass-fill-strong\)/,
+    fill: /var\(--material-fill-elevated\)/,
   },
   {
     // Added late, and the reason it was late is the point: this panel kept
@@ -79,7 +79,7 @@ const SURFACES: Surface[] = [
     // is a failure for the song menu too, not just for the five that were listed.
     file: 'shared/ui/GlobalMenu.css',
     selector: '.global-menu__panel',
-    fill: /var\(--glass-fill-strong\)/,
+    fill: /var\(--material-fill-elevated\)/,
   },
 ]
 
@@ -102,7 +102,7 @@ test.each(SURFACES)(
     // silent regression. Both the legacy alias and the Apple token it now points
     // at are named: once a screen migrates off `--paper` the alias stops appearing,
     // and a guard that only knew the old name would quietly stop biting.
-    expect(body, `${selector} must use a --glass-fill* background`).toMatch(fill)
+    expect(body, `${selector} must use a --material-fill* background`).toMatch(fill)
     expect(body, `${selector} must not fall back to --paper`).not.toMatch(/var\(--paper\)/)
     expect(body, `${selector} must not fall back to --paper-clear`).not.toMatch(
       /var\(--paper-clear\)/,
@@ -116,12 +116,12 @@ test.each(SURFACES)(
     expect(body, `${selector} must carry an inset box-shadow sheen`).toMatch(/box-shadow:[\s\S]*inset/)
     // Depth stack: both layers, in this order (sheen paints over the ramp).
     expect(body, `${selector} must layer the sheen over the ramp`).toMatch(
-      /background-image:\s*var\(--glass-sheen-layer\),\s*var\(--glass-ramp\)/,
+      /background-image:\s*var\(--material-sheen-layer\),\s*var\(--material-ramp\)/,
     )
     // Side rims complete the perimeter the top highlight starts; without them
     // the bevel reads as a single bright line rather than a lit edge.
     expect(body, `${selector} must carry the side rims`).toMatch(
-      /box-shadow:[\s\S]*var\(--glass-rim-sides\)/,
+      /box-shadow:[\s\S]*var\(--material-rim-sides\)/,
     )
   },
 )
@@ -129,7 +129,7 @@ test.each(SURFACES)(
 test('the nav capsule selection tint is the accent wash, not the glass glow', () => {
   // A picked tab is a selection — the same semantic as a selected row, so it
   // wears --tint-fill (the accent wash a theme pack re-points at its seed),
-  // NOT --glass-glow-faint (the decorative star-blue personality tint). P3
+  // NOT --material-glow-faint (the decorative star-blue personality tint). P3
   // reversed an earlier decision that used the glow here: the glow is a
   // decorative channel and a selection is not decoration. Reverting to the
   // glow would recolour selection silently. (The active glyph/label read in
@@ -138,7 +138,7 @@ test('the nav capsule selection tint is the accent wash, not the glass glow', ()
   const css = rules('shared/layouts/ShellLayout.css')
   const pill = block(css, '.nav-item--active .nav-item__pill')
   expect(pill).toMatch(/var\(--tint-fill\)/)
-  expect(pill).not.toMatch(/var\(--glass-glow-faint\)/)
+  expect(pill).not.toMatch(/var\(--material-glow-faint\)/)
 })
 
 test('the ten glass tokens are declared in both themes', () => {
@@ -148,20 +148,20 @@ test('the ten glass tokens are declared in both themes', () => {
     expect(blockMatch, `theme-${which} block exists`).not.toBeNull()
     const body = blockMatch![1]!
     for (const token of [
-      '--glass-fill',
-      '--glass-fill-strong',
-      '--glass-border',
-      '--glass-highlight',
-      '--glass-glow',
-      '--glass-glow-faint',
-      '--glass-sheen',
+      '--material-fill',
+      '--material-fill-elevated',
+      '--material-border',
+      '--material-highlight',
+      '--material-glow',
+      '--material-glow-faint',
+      '--material-sheen',
       // The depth stack's atomic inputs. The composites that combine them
-      // (`--glass-rim-sides`, `--glass-ramp`, `--glass-sheen-layer`) live once
+      // (`--material-rim-sides`, `--material-ramp`, `--material-sheen-layer`) live once
       // in `.theme-root` and resolve their nested var()s per theme, so they are
       // asserted there instead — see contrast.test.ts.
-      '--glass-rim-side',
-      '--glass-ramp-top',
-      '--glass-ramp-bottom',
+      '--material-rim-side',
+      '--material-ramp-top',
+      '--material-ramp-bottom',
     ]) {
       expect(body, `${token} declared in theme-${which}`).toMatch(
         new RegExp(`${token.replace(/-/g, '\\-')}\\s*:`),
@@ -175,7 +175,7 @@ test('the ten glass tokens are declared in both themes', () => {
  *
  * The regression this exists for was user-reported and is worth stating exactly,
  * because the shape recurs: the play-history panel and the add-to-playlist sheet
- * are the SAME material (`--glass-fill-strong` + depth stack), but their list rows
+ * are the SAME material (`--material-fill-elevated` + depth stack), but their list rows
  * came from different components — `.media-list-item`, which declares no
  * background, and `.song-row`, which declared `background-color: var(--canvas)`.
  * So one panel read as frosted and the other as a flat white list
@@ -220,7 +220,7 @@ test('the ten glass tokens are declared in both themes', () => {
  * `--neutral-faint` over glass.
  *
  * Reach is derived: panels come from the CSS (any base rule filled with
- * `--glass-fill*`), their renderers from usage, and the component graph is walked
+ * `--material-fill*`), their renderers from usage, and the component graph is walked
  * transitively — `.song-row` sits two components below the panel
  * (`PlayHistoryPanel` → `SongListRow` → `SongRow`), so a one-level scan misses it.
  */
@@ -332,7 +332,7 @@ function bounded(cls: string, rules: Map<string, { body: string, file: string }>
  * Tokens that ARE the surface or the lines drawn on it. A state may not paint
  * these (DESIGN.md §3.3 says the same about separators: 不要把 separator 颜色当
  * 背景色用). Accent and glass tokens are deliberately absent — a filled
- * `--accent` chip or a `--glass-glow-faint` pill is how a state should read.
+ * `--accent` chip or a `--material-glow-faint` pill is how a state should read.
  *
  * Both the Apple names and the surviving Muse aliases are listed, because during
  * the staged migration a rule may still say either and both mean the same thing.
@@ -434,7 +434,7 @@ function reachableClasses(entry: string, components: Map<string, string>): Set<s
 
 function glassPanels(rules: Map<string, { body: string, file: string }>): string[] {
   return [...rules.entries()]
-    .filter(([, r]) => /background-color:\s*var\(--glass-fill[\w-]*\)/.test(r.body))
+    .filter(([, r]) => /background-color:\s*var\(--material-fill[\w-]*\)/.test(r.body))
     .map(([cls]) => cls)
 }
 
@@ -532,7 +532,7 @@ test('the opaque-token set is derived from tokens.css, not remembered', () => {
       .toContain(name)
   }
   for (const name of [
-    'glass-fill', 'glass-fill-strong',
+    'material-fill', 'material-fill-elevated',
     // Apple's fills and separators are translucent BY DESIGN — they sit on
     // content rather than replacing it.
     'system-fill', 'secondary-system-fill', 'tertiary-system-fill',

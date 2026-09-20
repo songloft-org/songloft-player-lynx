@@ -110,13 +110,13 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
     // Glass is INDEPENDENT of seed: sakura ships no glassColor, so the glass
     // glow falls back to the star-blue baseline — pink buttons + blue glass
     // (true dual-channel), NOT pink glass. The texture tokens stay baseline too.
-    expect(vars['--glass-glow']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-glow'])
-    expect(vars['--glass-glow-faint']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-glow-faint'])
-    expect(vars['--glass-sheen']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-sheen'])
-    expect(vars['--glass-fill']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-fill'])
-    expect(vars['--glass-fill-strong']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-fill-strong'])
-    expect(vars['--glass-border']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-border'])
-    expect(vars['--glass-highlight']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-highlight'])
+    expect(vars['--material-glow']).toBe(PACK_OVERRIDABLE_BASELINE.light['--material-glow'])
+    expect(vars['--material-glow-faint']).toBe(PACK_OVERRIDABLE_BASELINE.light['--material-glow-faint'])
+    expect(vars['--material-sheen']).toBe(PACK_OVERRIDABLE_BASELINE.light['--material-sheen'])
+    expect(vars['--material-fill']).toBe(PACK_OVERRIDABLE_BASELINE.light['--material-fill'])
+    expect(vars['--material-fill-elevated']).toBe(PACK_OVERRIDABLE_BASELINE.light['--material-fill-elevated'])
+    expect(vars['--material-border']).toBe(PACK_OVERRIDABLE_BASELINE.light['--material-border'])
+    expect(vars['--material-highlight']).toBe(PACK_OVERRIDABLE_BASELINE.light['--material-highlight'])
     expect(vars['--system-background']).toBe('#FFF0F5')
     expect(vars['--secondary-system-background']).toBe('#FFFFFF')
     // The pack's single page/card pair drives BOTH Apple background groups. Apple
@@ -138,9 +138,9 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
     // needs more to stay visible. Mirrors the baseline's 10%/18% split exactly.
     expect(vars['--tint-fill']).toBe('rgba(244, 143, 177, 0.18)')
     // Glass falls back to the dark star-blue baseline (sakura has no glassColor).
-    expect(vars['--glass-glow']).toBe(PACK_OVERRIDABLE_BASELINE.dark['--glass-glow'])
-    expect(vars['--glass-glow-faint']).toBe(PACK_OVERRIDABLE_BASELINE.dark['--glass-glow-faint'])
-    expect(vars['--glass-sheen']).toBe(PACK_OVERRIDABLE_BASELINE.dark['--glass-sheen'])
+    expect(vars['--material-glow']).toBe(PACK_OVERRIDABLE_BASELINE.dark['--material-glow'])
+    expect(vars['--material-glow-faint']).toBe(PACK_OVERRIDABLE_BASELINE.dark['--material-glow-faint'])
+    expect(vars['--material-sheen']).toBe(PACK_OVERRIDABLE_BASELINE.dark['--material-sheen'])
     expect(vars['--system-background']).toBe('#1A0A10')
     expect(vars['--secondary-system-background']).toBe('#261418')
     expect(vars['--system-grouped-background']).toBe('#1A0A10')
@@ -162,9 +162,9 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
     }, 'light')
     expect(vars['--accent']).toBe('#D81B60') // button channel = seed
     expect(vars['--accent']).toBe('#D81B60')
-    expect(vars['--glass-glow']).toBe('#3BAEEF') // glass channel = glassColor
-    expect(vars['--glass-glow-faint']).toBe('rgba(59, 174, 239, 0.1)')
-    expect(vars['--glass-sheen']).toBe('rgba(59, 174, 239, 0.1)')
+    expect(vars['--material-glow']).toBe('#3BAEEF') // glass channel = glassColor
+    expect(vars['--material-glow-faint']).toBe('rgba(59, 174, 239, 0.1)')
+    expect(vars['--material-sheen']).toBe('rgba(59, 174, 239, 0.1)')
   })
 
   test('an invalid glassColor is dropped, glass falls back to baseline', () => {
@@ -172,7 +172,7 @@ function expectBaseline(resolved: 'light' | 'dark'): Record<string, string> {
       ...SAKURA,
       light: { seedColor: '#D81B60', glassColor: 'not-a-color' },
     }, 'light')
-    expect(vars['--glass-glow']).toBe(PACK_OVERRIDABLE_BASELINE.light['--glass-glow'])
+    expect(vars['--material-glow']).toBe(PACK_OVERRIDABLE_BASELINE.light['--material-glow'])
     // seedColor still applies to the button channel (invalid fields are
     // dropped field-by-field, never whole-pack).
     expect(vars['--accent']).toBe('#D81B60')

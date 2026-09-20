@@ -110,8 +110,8 @@ test('no calc-bearing custom property consumes an inline-overridden token', () =
     for (const decl of customPropertyDeclarations(css)) {
       // Scoped to `calc()` because that is the shape actually measured to fail on
       // iOS (both known defects are calc-bearing). A *plain* substitution inside a
-      // custom property — `--glass-sheen-layer: … var(--glass-sheen)`,
-      // `--glass-rim-sides: … var(--glass-rim-side)` — is **unverified either way**
+      // custom property — `--material-sheen-layer: … var(--material-sheen)`,
+      // `--material-rim-sides: … var(--material-rim-side)` — is **unverified either way**
       // and deliberately not flagged: asserting it broken without measuring would be
       // the same mistake as the docs that claimed `env()` worked. Candidates listed
       // in `docs/project/bugs.md`; if one is ever measured to fail, widen this test.

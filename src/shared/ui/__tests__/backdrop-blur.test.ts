@@ -397,10 +397,10 @@ describe('every dimming scrim is blurred', () => {
 })
 
 describe('every translucent glass panel is backed by a real blur', () => {
-  const glassOwners = ownersOf(/background-color:\s*var\(--glass-fill/)
+  const glassOwners = ownersOf(/background-color:\s*var\(--material-fill/)
 
   it('leaves no glass surface over unblurred page content', () => {
-    // The gate that would have caught all of this in one shot. A `--glass-fill`
+    // The gate that would have caught all of this in one shot. A `--material-fill`
     // rule means "you can see through me"; the file that renders it must mount a
     // blur in one mode or the other, or the show-through is of sharp content.
     const bare: string[] = []
@@ -422,7 +422,7 @@ describe('every translucent glass panel is backed by a real blur', () => {
   it('names every glass class that no file renders', () => {
     // A dead surface is not a covered one; it should be deleted, not tolerated.
     const dead = [...glassOwners.keys()].filter((cls) => rendererOf(cls).length === 0)
-    expect(dead, 'a var(--glass-fill*) rule nothing renders').toEqual([])
+    expect(dead, 'a var(--material-fill*) rule nothing renders').toEqual([])
   })
 })
 
@@ -499,7 +499,7 @@ describe('panel mode', () => {
         expect(
           stripCssComments(read(site.css)),
           `.${site.panel} no longer uses a glass fill — drop its PANEL_SITES entry`,
-        ).toMatch(new RegExp(`\\.${site.panel}[^{}]*\\{[^{}]*background-color:\\s*var\\(--glass-fill`))
+        ).toMatch(new RegExp(`\\.${site.panel}[^{}]*\\{[^{}]*background-color:\\s*var\\(--material-fill`))
       })
     })
   }
@@ -508,7 +508,7 @@ describe('panel mode', () => {
     /*
      * `PANEL_SITES` was hand-written, and a hand-written roster is the shape of
      * every miss in this feature: the six dialogs, then the global menu. So derive
-     * it. A `--glass-fill*` panel is see-through; if the file that renders it puts
+     * it. A `--material-fill*` panel is see-through; if the file that renders it puts
      * no `--backdrop` dim on screen, there is no scrim layer standing in for it and
      * the panel needs its own. Both directions are checked, so a new scrimless
      * panel *and* a stale entry both surface here.
@@ -521,7 +521,7 @@ describe('panel mode', () => {
       .filter((cls) => !(cls in NOT_A_SCRIM))
     const scrimmed = (tsx: string) => dims.some((cls) => rendererOf(cls).includes(tsx))
     const needed = new Set<string>()
-    for (const [cls] of ownersOf(/background-color:\s*var\(--glass-fill/)) {
+    for (const [cls] of ownersOf(/background-color:\s*var\(--material-fill/)) {
       for (const tsx of rendererOf(cls)) {
         if (!scrimmed(BLUR_DELEGATED_TO[cls] ?? tsx)) needed.add(cls)
       }
@@ -577,7 +577,7 @@ describe('panel mode', () => {
     // The surface itself matches the popovers it sits beside. Asserted against
     // `.popover-menu`'s own rule rather than a literal, so the two cannot drift
     // apart again the way they just did.
-    const surface = /background-color:\s*var\(--glass-fill-strong\)/
+    const surface = /background-color:\s*var\(--material-fill-elevated\)/
     expect(block(stripCssComments(read('shared/ui/PopoverMenu.css')), '.popover-menu'))
       .toMatch(surface)
     expect(

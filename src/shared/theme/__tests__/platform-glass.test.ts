@@ -10,7 +10,7 @@ import { expect, test } from 'vitest'
  * (`blur-effect: 'glass'`). For that material to actually show, the CSS fill
  * above the blur layer has to come down — the 0.85/0.72 baseline would cover it
  * to 15–28%. The override lives in `tokens.css` as `.theme-root.theme-<name>
- * .platform-ios` blocks that lower `--glass-fill*` (and the rim/highlight that
+ * .platform-ios` blocks that lower `--material-fill*` (and the rim/highlight that
  * a thinner glass needs), mirroring the `ultra-thin` row of
  * `material-tokens.ts`.
  *
@@ -73,7 +73,7 @@ function baselineDecl(theme: 'light' | 'dark', token: string): string {
   return d![2]!.trim()
 }
 
-const GLASS_FILL_KEYS = ['--glass-fill', '--glass-fill-strong'] as const
+const GLASS_FILL_KEYS = ['--material-fill', '--material-fill-elevated'] as const
 
 test.each(['light', 'dark'] as const)(
   '%s: the platform-ios override lowers every glass fill below its baseline',
@@ -95,10 +95,10 @@ test.each(['light', 'dark'] as const)(
   (theme) => {
     const ios = platformBlock(theme)
     for (const key of [
-      '--glass-fill',
-      '--glass-fill-strong',
-      '--glass-border',
-      '--glass-highlight',
+      '--material-fill',
+      '--material-fill-elevated',
+      '--material-border',
+      '--material-highlight',
     ] as const) {
       expect(ios[key], `${key} declared in theme-${theme}.platform-ios`).toBeTruthy()
     }
@@ -111,7 +111,7 @@ test.each(['light', 'dark'] as const)(
     // The non-iOS platforms render the baseline. If the override leaked into
     // the base block, contrast.test.ts would still pass its own model while
     // the real Android/Web fill quietly dropped.
-    expect(alpha(baselineDecl(theme, '--glass-fill'))).toBeGreaterThanOrEqual(0.8)
-    expect(alpha(baselineDecl(theme, '--glass-fill-strong'))).toBeGreaterThanOrEqual(0.7)
+    expect(alpha(baselineDecl(theme, '--material-fill'))).toBeGreaterThanOrEqual(0.8)
+    expect(alpha(baselineDecl(theme, '--material-fill-elevated'))).toBeGreaterThanOrEqual(0.7)
   },
 )

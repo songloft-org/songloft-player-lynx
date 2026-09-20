@@ -60,12 +60,12 @@
   padding-bottom: calc(var(--space-4) + var(--safe-bottom));
   border-top-left-radius: var(--radius-sheet);
   border-top-right-radius: var(--radius-sheet);
-  background-color: var(--glass-fill-strong);
-  background-image: var(--glass-sheen-layer), var(--glass-ramp);
-  border: 1px solid var(--glass-border);
+  background-color: var(--material-fill-elevated);
+  background-image: var(--material-sheen-layer), var(--material-ramp);
+  border: 1px solid var(--material-border);
   box-shadow: var(--shadow-md),
-    inset 0 1px 0 var(--glass-highlight),
-    var(--glass-rim-sides),
+    inset 0 1px 0 var(--material-highlight),
+    var(--material-rim-sides),
     inset 0 -1px 0 var(--separator);
 }
 

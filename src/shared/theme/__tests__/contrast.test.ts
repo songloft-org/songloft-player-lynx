@@ -266,8 +266,8 @@ function surfaces(theme: ThemeName): Array<{ name: string, bg: Rgb }> {
     { name: 'secondary-system-fill ⊕ page', bg: over(t['secondary-system-fill']!, page) },
     { name: 'tertiary-system-fill ⊕ page', bg: over(t['tertiary-system-fill']!, page) },
     { name: 'quaternary-system-fill ⊕ page', bg: over(t['quaternary-system-fill']!, page) },
-    { name: 'glass-fill ⊕ page', bg: over(t['glass-fill']!, page) },
-    { name: 'glass-fill-strong ⊕ page', bg: over(t['glass-fill-strong']!, page) },
+    { name: 'material-fill ⊕ page', bg: over(t['material-fill']!, page) },
+    { name: 'material-fill-elevated ⊕ page', bg: over(t['material-fill-elevated']!, page) },
   ]
 }
 
@@ -333,7 +333,7 @@ describe.each(['dark', 'light'] as const)('%s: text on every surface', (theme) =
  * mini-player, sheets, dialogs, popovers).
  *
  * Those surfaces carry two translucent `background-image` layers on top of the
- * `--glass-fill*` colour: a vertical luminance ramp and a diagonal sheen. Both lie
+ * `--material-fill*` colour: a vertical luminance ramp and a diagonal sheen. Both lie
  * UNDER text, so neither alpha is a free decorative choice — and the constraint is
  * the STACK, not either layer alone. The sheen originates at the top-left and the
  * ramp peaks along the top edge, so they overlap and text in that corner sees both
@@ -356,12 +356,12 @@ describe('glass overlay stack (ramp + sheen) over the glass fills', () => {
     const t = THEMES[theme]
     const page: Rgb = t['system-background']!
 
-    for (const fill of ['glass-fill', 'glass-fill-strong'] as const) {
+    for (const fill of ['material-fill', 'material-fill-elevated'] as const) {
       const base = over(t[fill]!, page)
 
       test(`${theme}: top-left corner (ramp + sheen) reads on ${fill}`, () => {
-        const withRamp = over(parseRgba(rawDecl(theme, 'glass-ramp-top')), base)
-        const corner = over(parseRgba(rawDecl(theme, 'glass-sheen')), withRamp)
+        const withRamp = over(parseRgba(rawDecl(theme, 'material-ramp-top')), base)
+        const corner = over(parseRgba(rawDecl(theme, 'material-sheen')), withRamp)
         for (const token of TEXT_TOKENS) {
           expectReads(t[token]!, corner, `--${token} on ${fill} + ramp + sheen`, TEXT_FLOORS[token]!)
         }
@@ -369,7 +369,7 @@ describe('glass overlay stack (ramp + sheen) over the glass fills', () => {
 
       test(`${theme}: bottom edge (ramp only, sheen has died) reads on ${fill}`, () => {
         // The sheen stop is transparent past 45%, so the lower half is ramp-only.
-        const bottom = over(parseRgba(rawDecl(theme, 'glass-ramp-bottom')), base)
+        const bottom = over(parseRgba(rawDecl(theme, 'material-ramp-bottom')), base)
         for (const token of TEXT_TOKENS) {
           expectReads(t[token]!, bottom, `--${token} on ${fill} + ramp bottom`, TEXT_FLOORS[token]!)
         }
@@ -378,12 +378,12 @@ describe('glass overlay stack (ramp + sheen) over the glass fills', () => {
   }
 
   test("light's ramp top is fully transparent (pack-safe, and a no-op over white)", () => {
-    // `--glass-fill` is 0.85 white over a white page, so it composites to pure
+    // `--material-fill` is 0.85 white over a white page, so it composites to pure
     // white and adding white on top is the identity operation. The reason it is
     // ZERO rather than merely small is theme packs, whose background need not be
     // white — there a white stop would stop being a no-op and start lightening a
     // surface carrying dark text.
-    expect(rawDecl('light', 'glass-ramp-top')).toMatch(/,\s*0\s*\)$/)
+    expect(rawDecl('light', 'material-ramp-top')).toMatch(/,\s*0\s*\)$/)
   })
 
   test('the composite layers are wired to the atomic tokens, in one place', () => {
@@ -395,10 +395,10 @@ describe('glass overlay stack (ramp + sheen) over the glass fills', () => {
     expect(root, '.theme-root block exists').not.toBeNull()
     const body = root![1]!
     expect(body).toMatch(
-      /--glass-ramp:\s*linear-gradient\([\s\S]*?var\(--glass-ramp-top\)[\s\S]*?var\(--glass-ramp-bottom\)/,
+      /--material-ramp:\s*linear-gradient\([\s\S]*?var\(--material-ramp-top\)[\s\S]*?var\(--material-ramp-bottom\)/,
     )
-    expect(body).toMatch(/--glass-sheen-layer:\s*linear-gradient\([\s\S]*?var\(--glass-sheen\)/)
-    expect(body).toMatch(/--glass-rim-sides:[\s\S]*?var\(--glass-rim-side\)/)
+    expect(body).toMatch(/--material-sheen-layer:\s*linear-gradient\([\s\S]*?var\(--material-sheen\)/)
+    expect(body).toMatch(/--material-rim-sides:[\s\S]*?var\(--material-rim-side\)/)
   })
 
   test('no bare 0 before a negative length inside a custom property', () => {
@@ -407,7 +407,7 @@ describe('glass overlay stack (ramp + sheen) over the glass fills', () => {
     // that correctly; a stricter native parser might not, so the bottom hairline
     // stays a direct declaration at each surface.
     const root = TOKENS_CSS.match(/\.theme-root \{([\s\S]*?)\n\}/)![1]!
-    const composites = root.match(/--glass-(?:rim-sides|ramp|sheen-layer):[\s\S]*?;/g) ?? []
+    const composites = root.match(/--material-(?:rim-sides|ramp|sheen-layer):[\s\S]*?;/g) ?? []
     expect(composites.length, 'the three composite layers are declared').toBe(3)
     for (const decl of composites) {
       expect(decl, `no \`0 -\` sequence in ${decl.slice(0, 40)}`).not.toMatch(/\s0\s+-/)
@@ -603,7 +603,7 @@ describe('state washes over the surfaces they sit on', () => {
     const page: Rgb = t['system-background']!
     return [
       { name: 'the page', bg: page },
-      { name: 'glass', bg: over(t['glass-fill-strong']!, page) },
+      { name: 'glass', bg: over(t['material-fill-elevated']!, page) },
     ]
   }
 

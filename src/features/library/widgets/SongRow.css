@@ -39,7 +39,7 @@
    * no-op: every one of those page roots is `--canvas` already, with nothing
    * painting in between). Two places it was not a no-op:
    *
-   *  1. `PlayHistoryPanel` renders these rows inside a `--glass-fill-strong`
+   *  1. `PlayHistoryPanel` renders these rows inside a `--material-fill-elevated`
    *     panel. An opaque full-bleed slab per row covered the glass, the sheen
    *     and the ramp, and hid the `<blur-view>` under the panel entirely — the
    *     list read as flat white while the add-to-playlist sheet next to it,
