@@ -109,8 +109,16 @@ export const useLyricStore = create<LyricState>((set, get) => {
       try {
         // forceRefresh skips the local cache and tells the backend to re-run its
         // lyric search plugins (see `LyricFetchOptions.refresh`).
-        const cached = opts?.forceRefresh ? null : await getCachedLyric(song.id)
+        // We also invalidate on song.updatedAt drift so backend-side edits
+        // (e.g. embedded USLT rewrites) reach the client without a manual
+        // cache clear (songloft-org/songloft#477).
+        const rawCached = opts?.forceRefresh ? null : await getCachedLyric(song.id)
         if (token !== loadToken) return
+        const cached =
+          rawCached && rawCached.songUpdatedAt === song.updatedAt ? rawCached : null
+        if (rawCached && !cached) {
+          logInfo('lyric', `cache stale song=${song.id} (updatedAt changed)`)
+        }
 
         let payload: { lyric?: string; tlyric?: string; rlyric?: string; lxlyric?: string }
 
@@ -127,6 +135,7 @@ export const useLyricStore = create<LyricState>((set, get) => {
             rlyric: payload.rlyric,
             lxlyric: payload.lxlyric,
             cachedAt: Date.now(),
+            songUpdatedAt: song.updatedAt,
           })
         }
 

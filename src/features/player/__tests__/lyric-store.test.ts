@@ -125,6 +125,29 @@ describe('loadForSong', () => {
     expect(useLyricStore.getState().rawLyric).toBe(fresh.lyric)
   })
 
+  test('invalidates cache when song.updatedAt changed (issue #477)', async () => {
+    const fetcher = vi.fn(async () => PAYLOAD)
+    await useLyricStore.getState().loadForSong(song(), fetcher)
+    expect(fetcher).toHaveBeenCalledTimes(1)
+
+    // Same songId, but the server has since updated the song (embedded USLT rewrite).
+    // The cached copy must be invalidated and the fetcher called again.
+    const fresh: LyricPayload = { lyric: '[00:05.000]updated\n' }
+    const fetcher2 = vi.fn(async () => fresh)
+    await useLyricStore.getState().loadForSong(
+      song({ updatedAt: '2026-09-21T12:00:00Z' }),
+      fetcher2,
+    )
+
+    expect(fetcher2).toHaveBeenCalledTimes(1)
+    expect(useLyricStore.getState().rawLyric).toBe(fresh.lyric)
+
+    // And the newly written cache entry carries the new songUpdatedAt, so the
+    // next load with the same updatedAt is a hit.
+    const stored = JSON.parse(mockStorage.get('lyric_7') ?? '{}')
+    expect(stored.songUpdatedAt).toBe('2026-09-21T12:00:00Z')
+  })
+
   test('sets loadFailed when the fetch throws', async () => {
     const fetcher = vi.fn(async () => {
       throw new Error('network down')

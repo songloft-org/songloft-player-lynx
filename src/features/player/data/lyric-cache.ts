@@ -7,6 +7,15 @@ export interface CachedLyric {
   rlyric?: string
   lxlyric?: string
   cachedAt: number
+  /**
+   * The song's `updatedAt` timestamp at the moment the payload was cached.
+   * `loadForSong` invalidates the cache when the current `song.updatedAt`
+   * no longer matches, so server-side lyric edits (e.g. embedded USLT rewrites)
+   * take effect without waiting for a manual cache clear. See songloft-org/songloft#477.
+   * Older entries written before this field existed will lack it and are
+   * treated as stale on first read.
+   */
+  songUpdatedAt?: string
 }
 
 function cacheKey(songId: number): string {
