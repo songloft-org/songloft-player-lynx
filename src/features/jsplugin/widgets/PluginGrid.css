@@ -90,6 +90,14 @@
    native pan. The `scroll-y={!sortActive}` JSX toggle does not help — Lynx
    web-elements only maps that attribute to programmatic scroll APIs; the
    CSS `overflow-y: scroll` on the shadow-root scroll-view stays put. */
+/* When sort mode is active, prevent ALL touch gestures on the entire grid from
+   scrolling the outer scroll-view. On Lynx native `consume-slide-event` handles
+   this; on Web `touch-action: none` is what actually tells the browser not to
+   initiate a native pan/scroll from pointer events inside this area. */
+.plugin-grid__items--sort-active {
+  touch-action: none;
+}
+
 .plugin-grid__drag-handle {
   position: absolute;
   top: 0;

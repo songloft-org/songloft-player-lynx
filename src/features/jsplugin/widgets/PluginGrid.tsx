@@ -220,7 +220,10 @@ function EditableGrid({ plugins, onCommit }: EditableGridProps) {
   }
 
   return (
-    <view className='plugin-grid__items'>
+    <view
+      className='plugin-grid__items plugin-grid__items--sort-active'
+      consume-slide-event={[[-180, 180]]}
+    >
       {plugins.map((plugin, index) => {
         const isSource = dragState?.source === index
         const shift = isSource ? { x: 0, y: 0 } : shiftFor(index)
