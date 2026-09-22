@@ -110,12 +110,13 @@ describe('canWatchVideo', () => {
     expect(canWatchVideo(videoSong())).toBe(true)
   })
 
-  /* `/video-hls` works off a file, and a live stream has none. */
-  test('false for a live stream, including a radio wearing isVideo', () => {
+  /* 直播/电台视频不再排除：原生引擎直接解 HLS 视频轨；/video-hls 转码仅适用本地
+   * 文件，对直播流返回 400（songloft-org/songloft#480）。 */
+  test('true for a live video stream and a video radio (TV live plays directly)', () => {
     g.SystemInfo = { platform: 'Android' }
     installHost()
-    expect(canWatchVideo(videoSong({ isLive: true }))).toBe(false)
-    expect(canWatchVideo(videoSong({ type: 'radio', isLive: true }))).toBe(false)
+    expect(canWatchVideo(videoSong({ isLive: true }))).toBe(true)
+    expect(canWatchVideo(videoSong({ type: 'radio', isLive: true, format: '' }))).toBe(true)
   })
 
   test('true when the picture is already in the stream, and when it needs a transcode', () => {

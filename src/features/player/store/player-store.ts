@@ -323,7 +323,7 @@ interface PlaybackSource {
 function playbackSourceFor(song: Song): PlaybackSource {
   if (!song.url) return { url: '', hls: false, cached: false }
   const kind = resolveVideoSourceKind(song, getPlatformTarget())
-  if (kind === 'direct') return { url: buildVideoUrl(song.url), hls: false, cached: false }
+  if (kind === 'direct') return { url: buildVideoUrl(song.url), hls: isHlsPlaylistPath(song.url), cached: false }
   if (kind === 'hls' && _videoSourceSongId === song.id) {
     return { url: buildVideoHlsUrl(song.id), hls: true, cached: false }
   }

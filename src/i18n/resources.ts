@@ -594,6 +594,8 @@ export const en = {
     titlePlaceholder: 'Song title',
     add: 'Add',
     success: 'Added successfully',
+    videoToggleTitle: 'Video content',
+    videoToggleSubtitle: 'This link contains video (e.g. a live TV stream); when on, the player renders the picture',
   },
 
 
@@ -1558,6 +1560,8 @@ export const zh: TranslationTree = {
     titlePlaceholder: '歌曲标题',
     add: '添加',
     success: '添加成功',
+    videoToggleTitle: '视频内容',
+    videoToggleSubtitle: '此链接含视频画面（如电视直播），开启后播放页渲染画面',
   },
 
   createPlaylist: {

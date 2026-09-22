@@ -346,11 +346,11 @@ export class SongsApi {
     return { cleaned: Number(data.cleaned ?? data.count ?? 0) }
   }
 
-  async addRemoteSongs(songs: { title: string; url: string; artist?: string; album?: string; cover_url?: string; duration?: number }[]): Promise<void> {
+  async addRemoteSongs(songs: { title: string; url: string; artist?: string; album?: string; cover_url?: string; duration?: number; is_video?: boolean }[]): Promise<void> {
     await this.client.post(`${apiPrefix}/songs/remote`, songs)
   }
 
-  async addRadioStations(stations: { title: string; url: string; cover_url?: string }[]): Promise<void> {
+  async addRadioStations(stations: { title: string; url: string; cover_url?: string; is_video?: boolean }[]): Promise<void> {
     await this.client.post(`${apiPrefix}/songs/radio`, stations)
   }
 

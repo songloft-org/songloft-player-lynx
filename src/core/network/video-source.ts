@@ -66,13 +66,18 @@ const WEB_DIRECT = new Set(['m4a', 'mp4', 'm4v', 'mov', 'qt', '3gp', '3g2', 'web
  * metadata is refreshed) resolves to `'direct'`. Guessing `'hls'` there would force
  * a server-side transcode on files that are usually plain MP4, and the failure mode
  * of guessing wrong the other way is visible and recoverable.
+ *
+ * 视频电台/直播流也走 `'direct'`：原生引擎直接解 HLS 视频轨，`/video-hls` 转码
+ * 仅适用于本地文件，对直播流会返回 400（songloft-org/songloft#480）。
  */
 export function resolveVideoSourceKind(
   song: Pick<Song, 'isVideo' | 'isLive' | 'type' | 'format'>,
   platform: 'web' | 'ios' | 'android' | 'harmony',
 ): VideoSourceKind {
   if (!song.isVideo) return 'none'
-  if (song.isLive || song.type === 'radio') return 'none'
+  // 视频电台/直播（HLS m3u8）由原生引擎直接解 HLS 视频轨，不走 /video-hls 转码
+  // （该端点仅支持本地文件，对直播流会返回 400 — songloft-org/songloft#480）。
+  // format 为空（电台常态）落到下方 `if (!format) return 'direct'`。
   const format = (song.format ?? '').toLowerCase()
   if (!format) return 'direct'
   if (platform === 'web') return WEB_DIRECT.has(format) ? 'direct' : 'hls'

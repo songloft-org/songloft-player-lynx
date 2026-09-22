@@ -30,10 +30,14 @@ describe('resolveVideoSourceKind', () => {
     }
   })
 
-  test('live sources are excluded: the HLS endpoints work off a file', () => {
-    expect(resolveVideoSourceKind(video('mp4', { isLive: true }), 'android')).toBe('none')
-    expect(resolveVideoSourceKind(video('mp4', { isLive: true }), 'web')).toBe('none')
-    expect(resolveVideoSourceKind(video('mp4', { type: 'radio' }), 'ios')).toBe('none')
+  test('live/radio video songs resolve by format (TV live plays directly, not via /video-hls)', () => {
+    // 直播/电台视频不再排除：原生引擎直接解 HLS 视频轨；/video-hls 转码仅适用
+    // 本地文件，对直播流返回 400（songloft-org/songloft#480）。
+    expect(resolveVideoSourceKind(video('mp4', { isLive: true }), 'android')).toBe('direct')
+    expect(resolveVideoSourceKind(video('mp4', { isLive: true }), 'web')).toBe('direct')
+    expect(resolveVideoSourceKind(video('mp4', { type: 'radio' }), 'ios')).toBe('direct')
+    // 电台常态 format 为空 → direct（原生引擎直接播 HLS）
+    expect(resolveVideoSourceKind(video('', { type: 'radio', isLive: true }), 'android')).toBe('direct')
   })
 
   test('the MP4/QuickTime family plays directly on both', () => {

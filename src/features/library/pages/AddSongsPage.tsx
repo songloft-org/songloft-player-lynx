@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { getSongsApi } from '../api/index.js'
 import './AddSongsPage.css'
@@ -26,6 +27,7 @@ export function AddSongsPage() {
   const [title, setTitle] = useState('')
   const [artist, setArtist] = useState('')
   const [album, setAlbum] = useState('')
+  const [isVideo, setIsVideo] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const onAdd = () => {
@@ -39,10 +41,12 @@ export function AddSongsPage() {
           url: trimUrl,
           artist: artist.trim() || undefined,
           album: album.trim() || undefined,
+          is_video: isVideo || undefined,
         }])
       : getSongsApi().addRadioStations([{
           title: title.trim() || trimUrl,
           url: trimUrl,
+          is_video: isVideo || undefined,
         }])
 
     void promise
@@ -52,6 +56,7 @@ export function AddSongsPage() {
         setTitle('')
         setArtist('')
         setAlbum('')
+        setIsVideo(false)
       })
       .catch(e => toast.error(String(e instanceof Error ? e.message : e)))
       .finally(() => setSaving(false))
@@ -95,6 +100,14 @@ export function AddSongsPage() {
             <Input className='add-songs__input' value={album} onInput={(v: string) => setAlbum(v)} placeholder={t('songDetail.albumField')} />
           </view>
         ) : null}
+
+        <view className='add-songs__switch-row'>
+          <view className='add-songs__switch-body'>
+            <text className='add-songs__switch-title'>{t('addSongs.videoToggleTitle')}</text>
+            <text className='add-songs__switch-subtitle'>{t('addSongs.videoToggleSubtitle')}</text>
+          </view>
+          <AppSwitch checked={isVideo} onChange={setIsVideo} />
+        </view>
 
         <view className='add-songs__btn' bindtap={onAdd}>
           <text className='add-songs__btn-text'>{saving ? t('common.loading') : t('addSongs.add')}</text>

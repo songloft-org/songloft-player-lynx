@@ -88,6 +88,32 @@
   align-items: center;
 }
 
+.add-songs__switch-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-3) 0;
+  margin-top: var(--space-3);
+  gap: var(--space-3);
+}
+
+.add-songs__switch-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.add-songs__switch-title {
+  font-size: var(--font-body);
+  color: var(--label);
+}
+
+.add-songs__switch-subtitle {
+  font-size: var(--font-caption1);
+  color: var(--secondary-label);
+}
+
 .add-songs__btn-text {
   font-size: var(--font-subhead);
   color: var(--accent-content);
