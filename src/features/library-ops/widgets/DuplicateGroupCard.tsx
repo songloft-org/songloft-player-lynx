@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { RadioGroupRoot, Radio, RadioIndicator } from '@lynx-js/lynx-ui-radio-group'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { ScrollingText } from '../../../shared/ui/ScrollingText.js'
 import type { DuplicateGroup, DuplicateSong } from '../../../models/duplicate.js'
 
 export interface DuplicateGroupCardProps {
@@ -108,9 +109,10 @@ function SongTile({ song, isKeep, isRecommended }: SongTileProps) {
         <RadioIndicator className='fp-group__radio-indicator' />
         <view className='fp-group__song-info'>
           <view className='fp-group__song-row'>
-            <text className={`fp-group__song-title${isKeep ? ' fp-group__song-title--keep' : ''}`}>
-              {song.title} - {song.artist}
-            </text>
+            <ScrollingText
+              textClassName={`fp-group__song-title${isKeep ? ' fp-group__song-title--keep' : ''}`}
+              text={`${song.title} - ${song.artist}`}
+            />
             {isRecommended
               ? (
                 <view className='fp-group__badge'>

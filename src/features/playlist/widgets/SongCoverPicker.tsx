@@ -8,6 +8,7 @@ import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { flattenSongs } from '../../library/data/pagination.js'
 import { usePlaylistSongsInfiniteQuery } from '../data/playlist-query.js'
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import { ScrollingText } from '../../../shared/ui/ScrollingText.js'
 import '../../../shared/ui/overlay-motion.css'
 import './SongCoverPicker.css'
 
@@ -86,7 +87,7 @@ export function SongCoverPicker({ playlistId, onSelect, onClose }: SongCoverPick
                       src={buildCoverUrl(song.coverUrl, song.updatedAt)}
                       mode='aspectFill'
                     />
-                    <text className='song-cover-picker__song-title'>{song.title}</text>
+                    <ScrollingText textClassName='song-cover-picker__song-title' text={song.title} />
                   </view>
                 ))}
               </view>

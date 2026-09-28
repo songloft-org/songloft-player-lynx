@@ -4,6 +4,7 @@ import { VirtualList } from '../../library/widgets/VirtualList.js'
 import { usePlayerStore } from '../store/index.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import { ScrollingText } from '../../../shared/ui/ScrollingText.js'
 import { usePresence } from '../../../shared/ui/usePresence.js'
 import '../../../shared/ui/overlay-motion.css'
 import './SheetShell.css'
@@ -70,7 +71,7 @@ export function PlaylistDrawer() {
                   usePlayerStore.getState().closePlaylistDrawer()
                 }}
               >
-                <text className='drawer__row-title'>{song.title}</text>
+                <ScrollingText textClassName='drawer__row-title' text={song.title} />
                 {song.artist
                   ? <text className='drawer__row-artist'>{song.artist}</text>
                   : null}

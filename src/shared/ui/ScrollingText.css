@@ -1,0 +1,15 @@
+/* Outer box clips the marquee; `min-width: 0` lets it shrink inside flex rows
+   the way the ellipsized <text> it replaces used to. */
+.scrolling-text {
+  overflow: hidden;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+/* Inner text keeps its intrinsic single-line width so it can overflow the
+   outer box; `align-self` stops the default cross-axis stretch from clamping
+   it back to the outer width (which would also break overflow measurement). */
+.scrolling-text__inner {
+  align-self: flex-start;
+  white-space: nowrap;
+}

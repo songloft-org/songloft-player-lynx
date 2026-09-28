@@ -114,10 +114,11 @@ test('a 500-song queue is one virtualized list, not 500 eager rows (songloft-org
 test('the current song row wears the active wash, siblings do not', async () => {
   state = { showPlaylistDrawer: true, playlist: [song(1), song(2), song(3)], currentIndex: 1 }
   const { getByText } = await renderDrawer()
-  // text → row-meta → row (the stub's key wrapper sits above the row).
-  const active = getByText('Song 2').parentElement!.parentElement!
+  // text → ScrollingText clip box → row-meta → row (the stub's key wrapper sits
+  // above the row); the extra hop is the marquee wrapper from #46.
+  const active = getByText('Song 2').parentElement!.parentElement!.parentElement!
   expect(active.className).toContain('drawer__row--active')
-  const sibling = getByText('Song 1').parentElement!.parentElement!
+  const sibling = getByText('Song 1').parentElement!.parentElement!.parentElement!
   expect(sibling.className).not.toContain('drawer__row--active')
 })
 

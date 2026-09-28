@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
 import { Icon, ICON_COLORS, activeAccentIconColor } from '../../../shared/ui/Icon.js'
+import { ScrollingText } from '../../../shared/ui/ScrollingText.js'
 import { formatDuration } from '../data/format.js'
 import './SongRow.css'
 
@@ -67,7 +68,7 @@ export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleF
             <>
               <view className='song-row__meta song-row__meta--wide'>
                 <view className='song-row__title-row'>
-                  <text className='song-row__title'>{song.title}</text>
+                  <ScrollingText textClassName='song-row__title' text={song.title} />
                   {song.isVideo
                     ? <view className='song-row__video-badge'><Icon name='video' size={13} color={activeAccentIconColor()} /></view>
                     : null}
@@ -81,7 +82,7 @@ export function SongRow({ song, index, onTap, onLongPress, isFavorite, onToggleF
             /* Narrow: stacked title + subtitle (artist · album). */
             <view className='song-row__meta'>
               <view className='song-row__title-row'>
-                <text className='song-row__title'>{song.title}</text>
+                <ScrollingText textClassName='song-row__title' text={song.title} />
                 {song.isVideo
                   ? <view className='song-row__video-badge'><Icon name='video' size={13} color={activeAccentIconColor()} /></view>
                   : null}

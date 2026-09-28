@@ -23,6 +23,9 @@ const reactAliases = [
     replacement: require.resolve('@lynx-js/react/jsx-runtime'),
   },
   { find: /^react$/, replacement: fromRoot('./src/shims/react.ts') },
+  // @lynx-js/motion's dist ships import attributes Node's ESM loader rejects;
+  // marquee animation is host-side, so tests get a no-op stub.
+  { find: /^@lynx-js\/motion$/, replacement: fromRoot('./src/shims/lynx-motion.ts') },
   {
     find: /^use-sync-external-store\/shim\/with-selector(\.js)?$/,
     replacement: fromRoot('./src/shims/use-sync-external-store-with-selector.ts'),
