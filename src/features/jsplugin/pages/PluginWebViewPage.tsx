@@ -9,6 +9,10 @@ import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { getAppTheme, resolveTheme, subscribeAppTheme } from '../../../shared/theme/theme-model.js'
+import {
+  getActiveThemePack,
+  subscribeActiveThemePack,
+} from '../../../shared/theme/theme-pack-model.js'
 import { openURL } from '../../../native/native-platform.js'
 import {
   getWebviewModule,
@@ -21,6 +25,11 @@ import {
   type HostCallRequest,
   type PluginHostContext,
 } from '../domain/plugin-host-dispatch.js'
+import {
+  pluginThemeAppearance,
+  type PluginThemeAppearance,
+} from '../domain/plugin-theme-appearance.js'
+import { pluginColorSchemeMap } from '../domain/plugin-color-scheme.js'
 import { getJSPluginApi } from '../api/index.js'
 import { usePluginsQuery } from '../data/jsplugin-query.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
@@ -77,6 +86,31 @@ function decodeHostCall(payload: unknown): IncomingHostCall | null {
   const req = payload as Record<string, unknown>
   if (req['type'] !== 'songloft-host-call') return null
   return req as unknown as IncomingHostCall
+}
+
+/**
+ * The `songloft-theme` payload the host pushes — `theme` plus the `colors`
+ * and `appearance` objects the WebView SDK's `common.js` turns into
+ * `--md-*` / `data-navigation-style` / `--sl-theme-*` (see
+ * plugin-color-scheme.ts / plugin-theme-appearance.ts). Built from the live
+ * theme AND pack state on every call, so any of their changes can be pushed
+ * with one re-send; the receiver re-applies everything idempotently, which is
+ * what makes "redundant" pushes harmless.
+ */
+function buildThemeMessage(): {
+  type: 'songloft-theme'
+  theme: ReturnType<typeof resolveTheme>
+  colors: ReturnType<typeof pluginColorSchemeMap>
+  appearance: PluginThemeAppearance
+} {
+  const resolved = resolveTheme(getAppTheme())
+  const pack = getActiveThemePack()?.data
+  return {
+    type: 'songloft-theme',
+    theme: resolved,
+    colors: pluginColorSchemeMap(pack, resolved),
+    appearance: pluginThemeAppearance(pack, resolved),
+  }
 }
 
 export function PluginWebViewPage() {
@@ -145,6 +179,18 @@ export function PluginWebViewPage() {
   const onWebViewLoad = () => {
     setDepth(0)
     selfBackPendingRef.current = false
+    /*
+     * First-paint delivery of the theme message: `?theme=` carries only
+     * light/dark, and appearance has NO URL channel at all — a postMessage to
+     * a still-loading document is dropped, so this is the moment the payload
+     * can finally land (Flutter's onLoadStop does exactly this re-push). The
+     * page is the native `<webview>`'s `bindload`; the Web iframe emits the
+     * equivalent via `SongloftWebview.load` (WebPluginFrame's onLoad).
+     * Player-state rides the same drop rule (no URL channel either), so it
+     * re-sends here too.
+     */
+    pushThemeMessageRef.current()
+    pushPlayerStateRef.current()
   }
 
   const onLocationChange = () => {
@@ -164,6 +210,64 @@ export function PluginWebViewPage() {
 
   useEffect(() => () => {
     if (backConfirmTimerRef.current) clearTimeout(backConfirmTimerRef.current)
+  }, [])
+
+  /*
+   * The one `songloft-theme` push both platform branches share. A ref, not a
+   * plain function: `onWebViewLoad` outlives any single render (the native
+   * `bindload` may fire after re-renders), and the Web branch's onLoad closure
+   * would otherwise capture a stale theme/pack snapshot.
+   */
+  const pushThemeMessageRef = useRef<() => void>(() => {})
+  pushThemeMessageRef.current = () => {
+    webviewRef.current?.invoke({
+      method: 'eval',
+      params: { func: `window.postMessage(${JSON.stringify(buildThemeMessage())},'*')` },
+    }).exec()
+  }
+
+  /*
+   * The player-state push for the native branch, same ref pattern and for the
+   * same reason (bindload fires after re-renders). The Web branch has its own
+   * player push in WebPluginFrame — no cross-branch ref needed there because
+   * it only ever fires from that component's own closures.
+   */
+  const pushPlayerStateRef = useRef<() => void>(() => {})
+  pushPlayerStateRef.current = () => {
+    webviewRef.current?.invoke({
+      method: 'eval',
+      params: { func: `window.postMessage(${JSON.stringify({ type: 'songloft-player-state', state: playerStateToJson() })},'*')` },
+    }).exec()
+  }
+
+  /*
+   * Runtime theme / theme-pack changes re-push through BOTH channels:
+   * the native `<webview>`'s eval (this component's ref) and, on Web, the
+   * iframe module — whichever exists is the one that reaches the plugin.
+   * The two subscriptions are shared (not per-branch) because `webviewRef`
+   * is null on Web (the eval path no-ops) and the Web module's postMessage
+   * no-ops on native — each host ends up with exactly one live channel.
+   */
+  useEffect(() => {
+    const push = () => pushThemeMessageRef.current()
+    const pushWeb = () => {
+      const webview = getWebviewModule()
+      // Only meaningful on the Web host; `available` is false elsewhere, so
+      // this degrades to a no-op rather than erroring on native platforms.
+      if (webview.available) webview.postMessage(JSON.stringify(buildThemeMessage()))
+    }
+    const unsubTheme = subscribeAppTheme(() => {
+      push()
+      pushWeb()
+    })
+    const unsubPack = subscribeActiveThemePack(() => {
+      push()
+      pushWeb()
+    })
+    return () => {
+      unsubTheme()
+      unsubPack()
+    }
   }, [])
 
   /*
@@ -371,9 +475,11 @@ export function PluginWebViewPage() {
  * Message protocol — the one the plugin SDK's `common.js` already speaks, and
  * the same as the Flutter Web build (`plugin_tab_page_stub.dart`):
  *
- *  - host → plugin: `songloft-theme` (runtime dark/light flips; the initial
- *    value travels in the URL's `?theme=`) and `songloft-player-state`
- *    (throttled to real changes, same signature as the native branch below).
+ *  - host → plugin: `songloft-theme` (runtime dark/light flips plus the
+ *    `appearance` object — navigationStyle/radii/glass; the initial theme
+ *    travels in the URL's `?theme=`, appearance only via this message) and
+ *    `songloft-player-state` (throttled to real changes, same signature as
+ *    the native branch below).
  *  - plugin → host: `songloft-host-call` `{id, ns, method, params}`, replied to
  *    with `songloft-host-reply` `{id, ok, data|error}`.
  */
@@ -412,13 +518,21 @@ function WebPluginFrame({ src, frameKey }: { src: string; frameKey: string }) {
      * the plugin was off screen — so anything that changed in between was missed.
      * On a first open these two pushes are redundant at worst (the initial theme
      * also rides in the URL's `?theme=`, and a message to a still-loading iframe
-     * is simply dropped).
+     * is simply dropped — the `onLoad` re-push below is what lands them).
      */
-    send({ type: 'songloft-theme', theme: resolveTheme(getAppTheme()) })
+    send(buildThemeMessage())
     send({ type: 'songloft-player-state', state: playerStateToJson() })
 
     unsubTheme = subscribeAppTheme(() => {
-      send({ type: 'songloft-theme', theme: resolveTheme(getAppTheme()) })
+      send(buildThemeMessage())
+    })
+
+    /*
+     * A pack activation swaps radii/glass without touching light/dark — the
+     * theme subscription above would stay silent, so the pack gets its own.
+     */
+    const unsubPack = subscribeActiveThemePack(() => {
+      send(buildThemeMessage())
     })
 
     unsubPlayer = usePlayerStore.subscribe((state, prev) => {
@@ -441,11 +555,24 @@ function WebPluginFrame({ src, frameKey }: { src: string; frameKey: string }) {
       onOpenFailed: () => {
         setFailed(true)
       },
+      /*
+       * The iframe finished loading — re-send the theme AND player-state
+       * payloads. A frame that just navigated drops postMessage aimed at its
+       * old/pending document, so the appearance (which has no URL fallback
+       * channel) would otherwise never reach a first load; player-state has no
+       * URL channel either and the same drop applies. Mirrors the native
+       * branch's `bindload` re-push and Flutter's `onLoadStop`.
+       */
+      onLoad: () => {
+        send(buildThemeMessage())
+        send({ type: 'songloft-player-state', state: playerStateToJson() })
+      },
     })
 
     return () => {
       closed = true
       unsubTheme?.()
+      unsubPack()
       unsubPlayer?.()
       setWebviewBridgeHandlers(null)
       /*

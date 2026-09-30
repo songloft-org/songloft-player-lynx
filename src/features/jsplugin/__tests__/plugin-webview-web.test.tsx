@@ -33,6 +33,7 @@ const h = vi.hoisted(() => ({
   handlerCalls: [] as Array<{
     onMessage: (payload: unknown) => void
     onOpenFailed: () => void
+    onLoad?: () => void
   } | null>,
   openURL: vi.fn(),
   // The player-store double: subscribe captures listeners so the state-push
@@ -48,6 +49,10 @@ const h = vi.hoisted(() => ({
     sourcePlaylistId: null,
   },
   playerSubs: [] as Array<(state: unknown, prev: unknown) => void>,
+  // Theme/pack subscription capture — the appearance re-push paths.
+  themeSubs: [] as Array<() => void>,
+  packSubs: [] as Array<() => void>,
+  activePack: null as null | { themeId: string; data: Record<string, unknown> },
 }))
 
 vi.mock('react-i18next', async () =>
@@ -64,18 +69,49 @@ vi.mock('../../../native/web-platform.js', () => ({
   isWebPlatform: () => true,
 }))
 
-vi.mock('../../../native/web-webview.js', () => ({
-  getWebviewModule: () => ({
-    available: h.available,
-    open: h.open,
-    hide: h.hide,
-    postMessage: h.postMessage,
-    close: h.close,
-  }),
-  setWebviewBridgeHandlers: (handlers: unknown) => {
-    h.handlerCalls.push(handlers as never)
+vi.mock('../../../shared/theme/theme-model.js', () => ({
+  getAppTheme: () => 'light',
+  resolveTheme: () => 'light',
+  subscribeAppTheme: (fn: () => void) => {
+    h.themeSubs.push(fn)
+    return () => {}
   },
 }))
+
+vi.mock('../../../shared/theme/theme-pack-model.js', () => ({
+  getActiveThemePack: () => h.activePack,
+  subscribeActiveThemePack: (fn: () => void) => {
+    h.packSubs.push(fn)
+    return () => {}
+  },
+}))
+
+vi.mock('../../../shared/theme/material-model.js', () => ({
+  getMaterialVariant: () => 'regular',
+}))
+
+vi.mock('../../../native/web-webview.js', async () => {
+  const actual = await vi.importActual<typeof import('../../../native/web-webview.js')>(
+    '../../../native/web-webview.js',
+  )
+  return {
+    getWebviewModule: () => ({
+      available: h.available,
+      open: h.open,
+      hide: h.hide,
+      postMessage: h.postMessage,
+      close: h.close,
+    }),
+    setWebviewBridgeHandlers: (handlers: unknown) => {
+      h.handlerCalls.push(handlers as never)
+    },
+    // The real module's event-name constants — the mock above never wires the
+    // listeners, so these are only referenced by types here.
+    WEBVIEW_MESSAGE_EVENT: actual.WEBVIEW_MESSAGE_EVENT,
+    WEBVIEW_OPEN_FAILED_EVENT: actual.WEBVIEW_OPEN_FAILED_EVENT,
+    WEBVIEW_LOAD_EVENT: actual.WEBVIEW_LOAD_EVENT,
+  }
+})
 
 vi.mock('../../../native/native-platform.js', () => ({
   openURL: h.openURL,
@@ -121,12 +157,17 @@ beforeEach(() => {
   h.available = true
   h.handlerCalls = []
   h.playerSubs = []
+  h.themeSubs = []
+  h.packSubs = []
+  h.activePack = null
 })
 
 afterEach(() => {
   vi.clearAllMocks()
   h.handlerCalls = []
   h.playerSubs = []
+  h.themeSubs = []
+  h.packSubs = []
 })
 
 async function renderPage() {
@@ -235,6 +276,68 @@ test('entering the page pushes the current theme and player state', async () => 
   const types = h.postMessage.mock.calls.map((c) => JSON.parse(c[0] as string).type)
   expect(types).toContain('songloft-theme')
   expect(types).toContain('songloft-player-state')
+})
+
+/*
+ * The point of the whole batch: this host's nav is a fixed capsule, and the
+ * plugin can only learn that from the pushed `appearance` — there is no URL
+ * fallback channel for it. Without `navigationStyle: 'capsule'` a capsule-aware
+ * plugin (miot) renders its standard edge-to-edge bar.
+ */
+test('the pushed theme message carries this host’s capsule appearance', async () => {
+  await renderPage()
+  const themeMsg = h.postMessage.mock.calls
+    .map((c) => JSON.parse(c[0] as string))
+    .find((m) => m.type === 'songloft-theme')
+  expect(themeMsg.appearance).toMatchObject({
+    navigationStyle: 'capsule',
+    glassFill: expect.stringMatching(/^rgba\(/),
+    glassBorder: expect.stringMatching(/^rgba\(/),
+  })
+})
+
+/*
+ * A pack activation swaps radii without flipping light/dark — the theme
+ * subscription stays silent, so the pack needs its own re-push. The payload
+ * must reflect the NEW pack, not the one captured at mount.
+ */
+test('a theme-pack change re-pushes the appearance with the pack’s radii', async () => {
+  await renderPage()
+  h.activePack = {
+    themeId: 'p1',
+    data: { id: 'p1', name: 'P', author: 'a', description: 'd', version: '1', schemaVersion: 1, cardRadius: 30 },
+  }
+  act(() => {
+    for (const fn of h.packSubs) fn()
+    // Also fires via the shared subscription on the page level — harmless.
+    for (const fn of h.themeSubs) fn()
+  })
+  const themeMsgs = h.postMessage.mock.calls
+    .map((c) => JSON.parse(c[0] as string))
+    .filter((m) => m.type === 'songloft-theme')
+  expect(themeMsgs.length).toBeGreaterThan(1)
+  expect(themeMsgs.at(-1)!.appearance.cardRadius).toBe(30)
+})
+
+/*
+ * A freshly opened document drops postMessage aimed at it while still loading
+ * — the load event is the moment the theme/appearance payload can land on a
+ * first paint (Flutter's onLoadStop does the same re-push). Player-state rides
+ * the same drop rule and re-sends too.
+ */
+test('an iframe load event re-sends the theme message and player state', async () => {
+  await renderPage()
+  const before = h.postMessage.mock.calls.length
+  act(() => {
+    activeHandlers().onLoad?.()
+  })
+  // One theme + one player-state message.
+  expect(h.postMessage.mock.calls.length).toBe(before + 2)
+  const themeMsg = JSON.parse(h.postMessage.mock.calls.at(-2)![0] as string)
+  expect(themeMsg.type).toBe('songloft-theme')
+  expect(themeMsg.appearance.navigationStyle).toBe('capsule')
+  const playerMsg = JSON.parse(h.postMessage.mock.calls.at(-1)![0] as string)
+  expect(playerMsg.type).toBe('songloft-player-state')
 })
 
 test('unmount hides the iframe, never closes it, and detaches the handlers', async () => {

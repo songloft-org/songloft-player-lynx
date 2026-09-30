@@ -33,6 +33,16 @@ export const WEBVIEW_MESSAGE_EVENT = 'SongloftWebview.message'
  */
 export const WEBVIEW_OPEN_FAILED_EVENT = 'SongloftWebview.openFailed'
 
+/**
+ * The plugin iframe finished a navigation (`load` on the frame element). The
+ * main thread has always sent this (webview-host.js); the worker just never
+ * listened. A freshly `open`ed document drops postMessage traffic aimed at it
+ * while it is still loading, so a push that must land on first paint — the
+ * theme/appearance payload, whose message has no URL fallback — re-sends here.
+ * Same contract as Flutter's `onLoadStop` re-push.
+ */
+export const WEBVIEW_LOAD_EVENT = 'SongloftWebview.load'
+
 /** The native shape: writes with positional args, no callbacks. */
 export interface SongloftWebviewNativeModule {
   /**
@@ -133,6 +143,12 @@ export interface WebviewBridgeHandlers {
   onMessage: (payload: unknown) => void
   /** The main thread could not place the iframe (placeholder never appeared). */
   onOpenFailed: () => void
+  /**
+   * The plugin iframe finished loading (optional — only pages that re-push
+   * state into a fresh document need it). Called on every navigation, not
+   * just the first.
+   */
+  onLoad?: () => void
 }
 
 /**
@@ -160,6 +176,9 @@ export function setWebviewBridgeHandlers(handlers: WebviewBridgeHandlers | null)
     })
     emitter.addListener(WEBVIEW_OPEN_FAILED_EVENT, () => {
       bridgeHandlers?.onOpenFailed()
+    })
+    emitter.addListener(WEBVIEW_LOAD_EVENT, () => {
+      bridgeHandlers?.onLoad?.()
     })
     listenersInstalled = true
   } catch {
