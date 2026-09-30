@@ -200,6 +200,7 @@ jobs:
           name: songloft-lynx-dev-hap
           path: songloft-lynx-dev.hap
           if-no-files-found: error
+          retention-days: 7
 
       # ---- Rolling `dev-harmony` prerelease ----
       - name: Update dev-harmony prerelease

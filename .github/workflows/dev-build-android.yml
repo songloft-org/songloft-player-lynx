@@ -140,6 +140,7 @@ jobs:
           name: songloft-lynx-dev-apk
           path: songloft-lynx-dev.apk
           if-no-files-found: error
+          retention-days: 7
 
       # ---- Rolling `dev` prerelease ----
       - name: Update dev prerelease
