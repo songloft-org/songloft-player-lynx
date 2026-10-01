@@ -21,6 +21,7 @@ import {
 import { MoreTabsSheet } from '../nav/MoreTabsSheet.js'
 import { activeNavPath, getShellWidth, setLastShellLocation, setNavPaths, setShellWidth, showsMiniPlayer, subscribeShellWidth } from '../nav/shell-navigation.js'
 import { getIsScrolled, subscribeIsScrolled } from '../nav/scroll-visibility.js'
+import { getRailCollapsed, subscribeRailCollapsed, toggleRailCollapsed } from './rail-collapse.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import { BackdropBlur } from '../ui/BackdropBlur.js'
 import { Icon, activeAccentIconColor, ICON_COLORS } from '../ui/Icon.js'
@@ -57,6 +58,11 @@ export function ShellLayout() {
   // cross-layer store because the scroller is in the page the shell renders via
   // `<Outlet />`, not a child the shell can reach through props.
   const scrolled = useSyncExternalStore(subscribeIsScrolled, getIsScrolled)
+  // Rail collapse (wide only). Subscribed rather than lifted into this
+  // component's state because the shell unmounts on `/player` and remounts on
+  // close — the module-level store is what survives that round-trip with the
+  // same anti-flash reasoning as `cachedWidth` above.
+  const railCollapsed = useSyncExternalStore(subscribeRailCollapsed, getRailCollapsed)
   const { width, breakpoint, isWide, onLayoutChange } = useBreakpoint(cachedWidth, '.shell')
   const pathname = useRouterState({ select: s => s.location.pathname })
   const shellTabs = useShellNavTabs()
@@ -160,39 +166,18 @@ export function ShellLayout() {
   )
 
   /**
-   * Wide rail: every destination in iPadOS-style sections — main items first,
-   * plugin tabs under a "插件" header (omitted when there are none), Settings
-   * anchored at the foot group. Same destination order as the narrow bar
-   * (home → library → plugins → settings), only visually grouped.
+   * Wide rail: one flat list of destinations, in the same order as the narrow
+   * bar (home → library → plugins → settings).
+   *
+   * There used to be a "插件" group header between the built-ins and the plugin
+   * tabs, with a spacer before Settings. Both are gone (user call, 2026-10-01):
+   * a header that names a group which is already visually obvious (the plugin
+   * tabs are the ones carrying plugin icons) earned its space in neither state,
+   * and it was the element that wrapped into 插/件 on the collapsed rail. The
+   * rail is now a single icon column whose spacing comes from the rows alone.
    */
-  const renderRailItems = () => {
-    const main = destinations.filter(d => !d.plugin && d.path !== '/settings')
-    const plugins = destinations.filter(d => d.plugin)
-    const settings = destinations.filter(d => d.path === '/settings')
-
-    const items = main.map(dest => renderTab(dest, litPath === dest.path))
-    if (plugins.length > 0) {
-      items.push(
-        <text
-          key='rail-plugins-header'
-          className='shell__rail-group-header'
-          data-testid='rail-plugins-header'
-        >
-          {t('nav.plugins')}
-        </text>,
-      )
-      items.push(...plugins.map(dest => renderTab(dest, litPath === dest.path)))
-    }
-    if (settings.length > 0) {
-      // The gap separates the plugin group from the foot group — with no
-      // plugins, Settings just follows the main items directly.
-      if (plugins.length > 0) {
-        items.push(<view key='rail-settings-gap' className='shell__rail-gap' data-testid='rail-settings-gap' />)
-      }
-      items.push(...settings.map(dest => renderTab(dest, litPath === dest.path)))
-    }
-    return items
-  }
+  const renderRailItems = () =>
+    destinations.map(dest => renderTab(dest, litPath === dest.path))
 
   /**
    * Narrow bottom bar: the first {@link NAV_REAL_SLOTS} destinations, plus a
@@ -231,7 +216,7 @@ export function ShellLayout() {
   return (
     <view
       className={isWide
-        ? 'shell shell--wide'
+        ? `shell shell--wide${railCollapsed ? ' shell--rail-collapsed' : ''}`
         : `shell shell--narrow${withMini ? ' shell--with-mini' : ''}${scrolled ? ' shell--scrolled' : ''}`}
       data-testid='shell-root'
       bindlayoutchange={onLayoutChange}
@@ -240,17 +225,59 @@ export function ShellLayout() {
       {isWide
         ? (
           <view className='shell__rail'>
-            <view className='shell__brand'>
-              <image
-                className='shell__brand-icon'
-                src='/app_icon.png'
-                mode='aspectFit'
-              />
-              <text className='shell__brand-text'>Songloft</text>
+            {/* Fixed-geometry column. The rail's own width animates and only its
+                clip edge moves, so every row keeps its expanded position and
+                nothing re-lays-out mid-transition (the Flutter client's fix for
+                the same jitter — see ShellLayout.css). */}
+            <view className='shell__rail-inner'>
+              <view className='shell__brand'>
+                {/* The brand mark keeps the nav glyphs' column, so the logo is
+                    centred on the same axis as every icon below it. */}
+                <view className='shell__brand-mark'>
+                  <image
+                    className='shell__brand-icon'
+                    src='/app_icon.png'
+                    mode='aspectFit'
+                  />
+                </view>
+                <text className='shell__brand-text'>Songloft</text>
+              </view>
+              <scroll-view className='shell__rail-scroll' scroll-y>
+                {renderRailItems()}
+              </scroll-view>
+              {/* Rail foot: the collapse toggle. Reuses the destination row's
+                  classes, so it inherits the row metrics — and, when collapsed,
+                  the same shrinking pill and faded label. The visible label is
+                  always the 收起 wording: in the collapsed state it is clipped
+                  away anyway, and swapping the wording at the moment the fade
+                  starts would flash a different string mid-transition (the
+                  accessibility name does follow the state). */}
+              <view className='shell__rail-foot'>
+                <view
+                  className='nav-item'
+                  bindtap={() => toggleRailCollapsed()}
+                  data-testid='rail-collapse-toggle'
+                  accessibility-element={true}
+                  accessibility-label={t(railCollapsed ? 'nav.expandSidebar' : 'nav.collapseSidebar')}
+                >
+                  <view className='nav-item__pill'>
+                    <view className='nav-item__icon'>
+                      <Icon
+                        name='sidebar'
+                        size={24}
+                        color={ICON_COLORS.contentMuted}
+                        // Pinned like every other rail glyph: a plugin tab's icon
+                        // is CSS-sized and cannot follow the font scale.
+                        scale={false}
+                      />
+                    </view>
+                    <text className='nav-item__label'>
+                      {t('nav.collapseSidebar')}
+                    </text>
+                  </view>
+                </view>
+              </view>
             </view>
-            <scroll-view className='shell__rail-scroll' scroll-y>
-              {renderRailItems()}
-            </scroll-view>
           </view>
         )
         : null}

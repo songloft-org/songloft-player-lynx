@@ -78,6 +78,7 @@ export type IconName =
   | 'label'
   | 'arrow-up'
   | 'arrow-down'
+  | 'sidebar'
   | 'video'
   | 'rotate'
   | 'maximize'
@@ -169,6 +170,11 @@ const ICONS: Record<IconName, (color: string) => string> = {
   'chevron-down': (c) => `<path d="M6 9.5 12 15.5 18 9.5" ${stroke(c)}/>`,
 
   'chevron-left': (c) => `<path d="M14.5 6 8.5 12 14.5 18" ${stroke(c)}/>`,
+
+  // Panel with a left column — the shell rail's own collapse affordance.
+  sidebar: (c) =>
+    `<rect x="3" y="4.5" width="18" height="15" rx="2.5" ${stroke(c)}/>` +
+    `<path d="M9.5 4.5v15" ${stroke(c)}/>`,
 
   'chevron-up': (c) => `<path d="M6 14.5 12 8.5 18 14.5" ${stroke(c)}/>`,
 

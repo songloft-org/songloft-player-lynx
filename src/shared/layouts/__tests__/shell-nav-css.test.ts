@@ -65,11 +65,21 @@ test('inactive tab labels are the secondary tier, not tertiary', () => {
   expect(bottomLabel).toMatch(/font-weight:\s*var\(--weight-medium\)/)
 })
 
-test('the rail surface and section header migrated to Apple names', () => {
+test('the rail surface migrated to Apple names', () => {
   const rail = ruleFor('.shell__rail')
   expect(rail, 'rail background is the Apple plain-group card colour')
     .toMatch(/background-color:\s*var\(--secondary-system-background\)/)
   expect(rail).toMatch(/border-right:\s*1px solid var\(--separator\)/)
-  expect(ruleFor('.shell__rail-group-header')).toMatch(/color:\s*var\(--secondary-label\)/)
   expect(ruleFor('.shell__brand-icon')).toMatch(/border-radius:\s*var\(--radius-sm\)/)
+})
+
+test('the rail has no group header / group spacer to revive', () => {
+  // The 插件 group header and the spacer that followed the plugin tabs were
+  // removed on 2026-10-01 (the rail is a flat list now). Leftover rules would
+  // be dead CSS, and worse, they are what a future edit would re-attach a
+  // header element to — including the 插/件 wrap on the collapsed rail.
+  expect(CSS, 'no .shell__rail-group-header rule may remain')
+    .not.toMatch(/\.shell__rail-group-header/)
+  expect(CSS, 'no .shell__rail-gap rule may remain')
+    .not.toMatch(/\.shell__rail-gap/)
 })

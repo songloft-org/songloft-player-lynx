@@ -27,6 +27,7 @@ import { initSystemAppearance } from './native/system-appearance.js'
 import { installNotificationNavigateListener, navigateFromNotificationIfNeeded } from './native/notification-navigate.js'
 import { applySavedFontScale } from './shared/theme/font-scale-model.js'
 import { applySavedIncreaseContrast } from './shared/theme/increase-contrast-model.js'
+import { applySavedRailCollapsed } from './shared/layouts/rail-collapse.js'
 import { applySavedMaterial } from './shared/theme/material-model.js'
 import { applySavedTheme } from './shared/theme/theme-model.js'
 import { applyActiveThemePack, setActiveThemePack } from './shared/theme/theme-pack-model.js'
@@ -97,6 +98,10 @@ void (async () => {
     await applySavedMaterial()
     await applySavedFontScale()
     await applySavedIncreaseContrast()
+    // Same shape as the appearance model above: the launch frame renders the
+    // expanded rail (the default), and this applies the remembered collapse
+    // before auth resolves — i.e. while the splash is still up.
+    await applySavedRailCollapsed()
     const savedMode = await readDefaultPlayMode()
     usePlayerStore.getState().setPlayMode(savedMode)
     await restorePlaybackState()

@@ -55,6 +55,24 @@
 
 .shell--wide {
   flex-direction: row;
+  /* Rail footprint, expanded ↔ collapsed.
+     Collapsed is **2 × the nav glyph centre** (16 rail padding + 12 pill
+     padding + 12 half of the 24px glyph = 40), so a collapsed rail puts every
+     glyph exactly where the expanded one already had it. Deriving it from the
+     padding instead of reaching for a "nice" number is the whole trick: the
+     transition then moves one edge — the clip — and nothing else. */
+  --rail-width: 256px;
+  --rail-collapsed-width: 80px;
+  /* The rail's content box (256 − 2×--space-4). The inner column below is
+     pinned to this, never to the animated width. */
+  --rail-content-width: 224px;
+  /* Glyph column inside a row pill: 12 padding + 24 glyph + 12. Also the
+     collapsed pill's width, which is why a collapsed selection rect is a
+     square around the glyph rather than a sliced bar. */
+  --rail-glyph-column: 48px;
+  /* Label column: 224 − 2×12 pill padding − 24 glyph − 12 gap. Pinned so the
+     animating pill cannot re-wrap or re-ellipsise the text. */
+  --rail-label-width: 164px;
 }
 
 /* Content column: holds the routed body, the mini-player, and (narrow) the
@@ -110,12 +128,54 @@
 .shell__rail {
   display: flex;
   flex-direction: column;
-  width: 256px;
+  width: var(--rail-width);
   padding: var(--space-4);
   /* Add the top safe-area inset on top of the base padding (0 on desktop). */
   padding-top: calc(var(--space-4) + var(--safe-top));
   background-color: var(--secondary-system-background);
   border-right: 1px solid var(--separator);
+  /* Only the rail's own box is animated. Its content sits in a fixed-width
+     column (below) and is revealed by this clip edge, so the collapse moves one
+     edge instead of re-laying-out every row, label and pill on every frame —
+     the jitter the Flutter client fixed in songloft-org/songloft#487. */
+  overflow: hidden;
+  transition: width var(--duration-normal) var(--ease-spring);
+}
+
+.shell--rail-collapsed .shell__rail {
+  width: var(--rail-collapsed-width);
+}
+
+/* Fixed-geometry column: pinned to the EXPANDED content width in both states,
+   so nothing inside ever re-lays-out — the rail's clip edge is what narrows.
+   Falls outside the rail's box when collapsed and is clipped by it. */
+.shell__rail-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: var(--rail-content-width);
+  /* The rail's own width and this column's width change by the same 176px, so
+     the padding on both sides stays put and the glyph column's LEFT edge is
+     pinned — which is what keeps every glyph on x = 40 in both states.
+     The rail's `overflow: hidden` does the clipping; this is the edge that is
+     actually animated (a transition on the rail's `width` alone would be
+     swallowed by the fixed-size content). */
+  transition: width var(--duration-normal) var(--ease-spring);
+}
+
+/* Collapsed: the inner column is exactly the glyph column. Rail = 16 + 48 + 16
+   = 80 (see --rail-collapsed-width), so the glyph centre stays at 40 and the
+   label column starts precisely at the clip edge. */
+.shell--rail-collapsed .shell__rail-inner {
+  width: var(--rail-glyph-column);
+}
+
+/* Rail foot: the collapse toggle, set apart from the destinations. */
+.shell__rail-foot {
+  flex: none;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--separator);
 }
 
 .shell__brand {
@@ -129,13 +189,43 @@
   width: 36px;
   height: 36px;
   border-radius: var(--radius-sm);
-  margin-right: var(--space-3);
+}
+
+/* The brand mark sits in the glyph column, so the 36px logo is centred on the
+   same axis as the 24px nav glyphs (and on the collapsed rail's centre line).
+   The column is what separates the logo from the wordmark — the icon's own
+   margin-right moved here, which keeps the expanded wordmark at the exact x it
+   has always had. */
+.shell__brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--rail-glyph-column);
+  flex: none;
 }
 
 .shell__brand-text {
   color: var(--accent);
   font-size: var(--font-title3);
   font-weight: var(--weight-bold);
+  /* The wordmark is ONE line at every rail width. Without `nowrap` it re-wraps
+     as the inner column narrows — measured on the collapsed rail: "Songloft"
+     broke into eight stacked lines inside the 48px column, which grew the brand
+     row from 36px to 224px and pushed the whole icon column down, i.e. exactly
+     the "图标位置错乱" the collapse is not supposed to cause. The rail's clip
+     edge, not the text flow, is what absorbs the narrowing. */
+  white-space: nowrap;
+  /* …and it must not shrink either: with `nowrap` a shrinking box would clip
+     the text instead of letting the clip edge do it. */
+  flex: none;
+  /* Fades out ahead of the clip edge (--duration-fast inside --duration-normal)
+     so the wordmark is never sliced in half on its way out. */
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.shell--rail-collapsed .shell__brand-text {
+  opacity: 0;
+  visibility: hidden;
 }
 
 /* Rail destinations scroll when they overflow the rail's height — plugin tabs
@@ -226,6 +316,9 @@
 .shell--wide .nav-item {
   flex: none;
   align-self: auto;
+  /* Pin the row's cross-axis alignment: the pill is the row's content, and a
+     `center`ed pill would slide sideways as the rail's clip box narrows. */
+  justify-content: flex-start;
   min-height: var(--tap-target);
   /* Tighter than the narrow bar: iPadOS sidebar rows sit close together, the
      selection rounded-rects nearly touching (4px), not a spaced-out list. */
@@ -314,9 +407,12 @@
 .shell--wide .nav-item__pill {
   flex-direction: row;
   justify-content: flex-start;
-  /* Stretch across the rail row — the iPadOS sidebar selection rect runs edge
-     to edge of the rail's content width. */
-  flex: 1;
+  /* Fixed footprint, NOT `flex: 1` — the selection rect is the same width in
+     both states and is simply clipped by the rail when collapsed. Sizing it to
+     the animating rail instead would make the rect's right edge and the rail's
+     clip edge race each other (two edges animating at different rates). */
+  flex: none;
+  width: var(--rail-content-width);
   padding: var(--space-2) var(--space-3);
   /* iPadOS sidebar selection is a ROUNDED RECTANGLE, not the full pill the
      narrow bottom-bar capsule uses. The pill reads as an iOS tab-bar affordance;
@@ -343,24 +439,22 @@
   color: var(--accent);
 }
 
-/* iPadOS-style rail section header (插件 group above the plugin tabs). */
-.shell__rail-group-header {
-  color: var(--secondary-label);
-  font-size: var(--font-footnote);
-  margin: var(--space-4) var(--space-3) var(--space-2);
-}
-
-/* Breathing room between the plugin group and the Settings foot group. */
-.shell__rail-gap {
-  height: var(--space-4);
-}
-
 /* Icon wrapper: the glyph color is injected into the SVG markup at render time
    (active -> accent tint, inactive -> --content-muted); this box just centers it. */
 .nav-item__icon {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Rail rows pin the glyph against shrink. The label column next to it is fixed
+   and unshrinkable (it must not re-wrap), so when the pill narrows the flex
+   algorithm hands the ENTIRE overflow to the only shrinkable box — measured in
+   the browser: the icon collapsed to width 0 while the (hidden) label kept its
+   164px, i.e. the collapsed rail lost its glyphs. Pinning the glyph makes the
+   overflow land on the clipped label instead, which is what should absorb it. */
+.shell--wide .nav-item__icon {
+  flex: none;
 }
 
 /* Plugin icon rendered via <svg content> or <image>. Same size as the built-in
@@ -386,4 +480,47 @@
   margin-left: var(--space-3);
   margin-top: 0;
   font-size: var(--font-subhead);
+  /* Pinned label column: without it the animating pill would re-measure the
+     text every frame (re-wrapping and re-ellipsising long plugin names). */
+  width: var(--rail-label-width);
+  flex: none;
+  /* Fades out ahead of the clip edge — see .shell__brand-text. */
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.shell--rail-collapsed .nav-item__label {
+  opacity: 0;
+  /* Clipped as well as transparent: `white-space: nowrap` means the 164px label
+     column runs straight past the clip edge, so without this the browser's
+     ellipsis/hit-testing would still see text inside a rail that shows none.
+     The text stays in the DOM on purpose — it is the row's accessible name, so
+     VoiceOver keeps announcing "曲库" for an icon-only rail. */
+  visibility: hidden;
+}
+
+/* Collapsed selection rect: a square around the glyph (--rail-glyph-column),
+   i.e. exactly the visible part of the pill, so the clipping never shows a
+   half-drawn capsule. The pill stays in place; only its width changes. */
+.shell--rail-collapsed .nav-item__pill {
+  width: var(--rail-glyph-column);
+  transition: width var(--duration-normal) var(--ease-spring);
+}
+
+
+/* The rail foot row is not a nav destination; it takes the row's box metrics
+   without the `nav-item` hit-area's own colour/selection styling. */
+.shell__rail-foot .nav-item {
+  justify-content: flex-start;
+}
+
+/* The toggle's glyph turns to face the way the rail will move: the sidebar
+   panel is 180°-rotated while collapsed, i.e. the left column becomes a right
+   column — the same left/right panel pair the platform sidebars use, and the
+   Flutter client's behaviour. */
+.shell__rail-foot .nav-item__icon {
+  transition: transform var(--duration-normal) var(--ease-spring);
+}
+
+.shell--rail-collapsed .shell__rail-foot .nav-item__icon {
+  transform: rotate(180deg);
 }

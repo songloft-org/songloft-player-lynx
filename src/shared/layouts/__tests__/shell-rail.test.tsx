@@ -69,26 +69,39 @@ beforeEach(() => {
 })
 
 describe('the wide rail groups destinations iPadOS-style', () => {
-  test('no plugins: main items straight down, no plugin header, no gap', () => {
+  test('no plugins: the built-in items only, in order', () => {
     shellTabs.data = { showLibrary: true, pluginTabs: [] }
     const q = renderShell()
 
     expect(q.getByTestId('nav-item-home')).toBeTruthy()
     expect(q.getByTestId('nav-item-library')).toBeTruthy()
     expect(q.getByTestId('nav-item-settings')).toBeTruthy()
-    expect(q.queryByTestId('rail-plugins-header')).toBeNull()
-    expect(q.queryByTestId('rail-settings-gap')).toBeNull()
   })
 
-  test('plugins land under the 插件 header, Settings behind the gap', () => {
+  test('plugins are plain rows between the built-ins and Settings, unlabelled', () => {
+    // The rail used to insert a 插件 group header (and a spacer before
+    // Settings); both were removed on 2026-10-01, so the rail is now one flat
+    // list in exactly the narrow bar's order. A re-introduced header would
+    // render as an extra row here.
     shellTabs.data = { showLibrary: true, pluginTabs: [tab('miot'), tab('weather')] }
     const q = renderShell()
 
-    expect(q.getByTestId('rail-plugins-header')).toBeTruthy()
     expect(q.getByTestId('nav-item-miot')).toBeTruthy()
     expect(q.getByTestId('nav-item-weather')).toBeTruthy()
     expect(q.getByTestId('nav-item-settings')).toBeTruthy()
-    expect(q.getByTestId('rail-settings-gap')).toBeTruthy()
+    expect(q.queryByTestId('rail-plugins-header')).toBeNull()
+    expect(q.queryByTestId('rail-settings-gap')).toBeNull()
+
+    const rail = q.getByTestId('shell-root')
+    const order = [...rail.querySelectorAll('[data-testid^="nav-item-"]')]
+      .map((el) => el.getAttribute('data-testid'))
+    expect(order).toEqual([
+      'nav-item-home',
+      'nav-item-library',
+      'nav-item-miot',
+      'nav-item-weather',
+      'nav-item-settings',
+    ])
   })
 
   test('the rail never folds: every destination is visible however many', () => {
