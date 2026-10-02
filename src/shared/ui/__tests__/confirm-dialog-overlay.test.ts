@@ -6,10 +6,13 @@ import { afterEach, describe, expect, test } from 'vitest'
 import {
   ACTION_ROW_PX,
   CARD_CHROME_PX,
+  DIALOG_CHROME_PX,
+  DIALOG_WIDTH_PX,
   SONG_DIALOG_WIDTH_PX,
   dialogBodyMaxHeight,
   dialogCardMaxHeight,
   dialogCardWidth,
+  dialogContentMaxHeight,
 } from '../dialog-viewport.js'
 
 /**
@@ -58,7 +61,58 @@ const DIALOG_COMPONENTS = [
   '../PromptDialog.tsx',
   '../../../features/library/widgets/SongInfoDialog.tsx',
   '../../../features/library/widgets/SongEditDialog.tsx',
+  '../../../features/jsplugin/widgets/RegistryManageDialog.tsx',
+  '../../../features/jsplugin/widgets/PluginUpdateDialog.tsx',
+  '../../../features/jsplugin/widgets/PluginBatchUpdateDialog.tsx',
 ]
+
+describe('form and confirmation dialogs reserve space for wrapped actions', () => {
+  afterEach(() => {
+    delete (globalThis as Record<string, unknown>).SystemInfo
+  })
+
+  test('long content leaves title and three action rows reachable on a short device', () => {
+    ;(globalThis as Record<string, unknown>).SystemInfo = {
+      platform: 'Android', pixelHeight: 1080, pixelRatio: 2,
+    }
+    const bodyHeight = parseFloat(dialogContentMaxHeight()!)
+    expect(bodyHeight).toBeGreaterThan(0)
+    expect(bodyHeight + DIALOG_CHROME_PX).toBe(parseFloat(dialogCardMaxHeight()!))
+    // Unlike the song-body helper, this must still clamp below 200px.
+    expect(bodyHeight).toBeLessThan(200)
+  })
+
+  test('web leaves viewport measurement to CSS; missing native metrics are harmless', () => {
+    ;(globalThis as Record<string, unknown>).SystemInfo = { platform: 'web' }
+    expect(dialogContentMaxHeight()).toBeUndefined()
+    delete (globalThis as Record<string, unknown>).SystemInfo
+    expect(dialogContentMaxHeight()).toBeUndefined()
+  })
+
+  test('every shared card uses the same width and directly clamps its scroll body', () => {
+    for (const file of DIALOG_COMPONENTS.filter((file) => !file.includes('/library/'))) {
+      const src = readFileSync(path.resolve(__dirname, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+      expect(src, file).toMatch(/width:\s*dialogCardWidth\(DIALOG_WIDTH_PX\)/)
+      expect(src, file).toMatch(/<scroll-view[^>]*className='confirm-dialog__body'[^>]*scroll-y[^>]*maxHeight:\s*dialogContentMaxHeight\(\)/)
+    }
+    const css = readFileSync(path.resolve(__dirname, '../ConfirmDialog.css'), 'utf8')
+    expect(css).toMatch(new RegExp(`max-width:\\s*${DIALOG_WIDTH_PX}px`))
+    expect(css).toMatch(new RegExp(`max-height:\\s*calc\\(85vh - ${DIALOG_CHROME_PX}px\\)`))
+  })
+
+  test('the button wraps as a whole, retaining its single-line label and tap height', () => {
+    const css = readFileSync(path.resolve(__dirname, '../ConfirmDialog.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const actions = css.match(/\.confirm-dialog__actions\s*\{([^}]*)\}/)![1]
+    const button = css.match(/\.confirm-dialog__btn\s*\{([^}]*)\}/)![1]
+    const label = css.match(/\.confirm-dialog__btn-text\s*\{([^}]*)\}/)![1]
+    expect(actions).toMatch(/flex-wrap:\s*wrap/)
+    expect(button).toMatch(/flex-shrink:\s*0/)
+    expect(button).toMatch(/flex-basis:\s*auto/)
+    expect(button).toMatch(/height:\s*var\(--tap-target\)/)
+    expect(label).toMatch(/white-space:\s*nowrap/)
+    expect(label).toMatch(/flex-shrink:\s*0/)
+  })
+})
 
 /** Source with comments stripped — the prose above each fix explains it and
  *  must not be what satisfies these assertions. */
@@ -101,10 +155,10 @@ describe('ConfirmDialog overlay wiring', () => {
 
   test('the card swallows taps so confirm does not also cancel', () => {
     expect(
-      openTag(source(), 'view className=\'confirm-dialog\''),
+      source(),
       'the .confirm-dialog card must catchtap, or button taps bubble into the '
         + 'outside-tap cancel above it',
-    ).toMatch(/catchtap=/)
+    ).toMatch(/<view\s+className='confirm-dialog'[^>]*catchtap=/)
   })
 })
 

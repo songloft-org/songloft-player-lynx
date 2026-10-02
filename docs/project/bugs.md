@@ -56,6 +56,8 @@
 
 ## 手动测试发现
 
+- [x] **插件源和更新弹窗按钮文字换行（2026-10-02，已修复并验证 Web）** — 卡片仅有 `max-width`、按钮等分且横向 padding 共 32px，Lynx 的文本可被继续压缩；源列表同一行还挤入开关与两个图标。统一明确宽度、单行标签及内容尺寸按钮，放不下时整颗按钮换行；源信息/操作分区、更新主操作独占一行。长内容使用独立受限滚动区，标题和按钮固定；全部直接弹窗复核，歌曲弹窗保留原有单行高度预算。中英、最大字号、320px 窄屏及宽屏浏览器验证通过；原生界面复验待补。
+
 - [x] **`.increase-contrast` 的 accent 覆盖被内联基线压过**（批65 发现并当批修复）— **症状**：开关打开后 accent 实心填充仍是 `#0088ff`（应为 `#1e6ef4`），而同一次探针里 `--separator` 确实变成了 `#c6c6c8` ⇒ class 生效、坏的是优先级。**根因**：`ThemeProvider` 把 `PACK_OVERRIDABLE_BASELINE`（含 `--accent` / `--accent-content`）以 inline 自定义属性写在 `.theme-root` 上（无 pack 时也写——ReactLynx 的 style 对象只 merge 不删 key），inline 压过同元素的 class 规则，而这正是 `theme-pack-mapping.ts` 写明的刻意设计（「inline beats the class declarations… no `!important` anywhere」）。**修法（用户拍板方案 A）**：Apple 的可达 accent 并入内联通道（`CONTRAST_ACCENT`），在展开 baseline 之后、应用 pack 字段之前写入 ⇒ **主题包继续赢**（pack 是用户在设置里显式选的，无障碍开关不该悄悄改色），无 pack 时拿到 Apple accent；`tokens.css` 两块里的 `--accent` / `--accent-content` 删除（留着就是死规则），label / `--system-red` / `--separator` / 灰阶**没有**动——它们都不在 baseline 里，没人压得过。**不变式与闸门**：一个对比度 token 只许活在两条通道之一；`increase-contrast-wiring.test.ts` 断言键集不相交 + 开关打开时 `themePackToStyleVars` 真的输出 Apple accent + pack 仍赢（4 条变异全咬）。**iOS 实测（iPhone 17 Pro / iOS 26.5）**：`.theme-tile__check` 像素 ON `#1e6ef4` → OFF `#0088ff` → 再 ON `#1e6ef4`，开关轨道 `#34c759` ↔ `#ffffff` 同步；同一次 ON/OFF 全帧 diff 51023 px（1.61%）跨 22/53 条带。**未验**：Android / HarmonyOS、暗色主题、带主题包的设备取色（pack 赢目前只有单测）。通用教训见 [pitfalls.md](pitfalls.md)
 - [x] 暗色下输入框提示文字看不清 — 补 `-x-placeholder-color`（批19）；后续查出全库 15 个文本字段有 6 处用 `--paper`/`--canvas` 当输入框底（对比度 1.04:1）、15 处圆角用错 token，统一为 `--neutral-faint` + `--radius-sm`，新增 `input-css.test.ts` 闸门从 TSX 反推字段清单
 - [x] 切 tab 回曲库不记得子页签 — 会话记忆恢复

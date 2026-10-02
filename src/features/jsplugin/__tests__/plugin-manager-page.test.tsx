@@ -593,6 +593,8 @@ test('a partial upload failure lists the failing files', async () => {
   const panel = getByTestId('plugin-upload-result')
   expect(panel.textContent).toContain('bad.zip')
   expect(panel.textContent).toContain('invalid manifest')
+  expect(panel.querySelectorAll('.confirm-dialog__btn')).toHaveLength(1)
+  expect(panel.querySelector('.confirm-dialog__btn--confirm')).toBeNull()
 })
 
 test('the auto-update switch writes the setting', async () => {

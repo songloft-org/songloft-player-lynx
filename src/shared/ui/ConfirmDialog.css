@@ -127,13 +127,17 @@
 }
 
 .confirm-dialog {
+  display: flex;
+  flex-direction: column;
   background-color: var(--material-fill-elevated);
   background-image: var(--material-sheen-layer), var(--material-ramp);
   border-radius: var(--radius-lg);
   border: 1px solid var(--material-border);
   padding: var(--space-5);
   margin: var(--space-6);
-  max-width: 360px;
+  width: calc(100vw - 64px);
+  max-width: 440px;
+  max-height: 85vh;
   animation-name: dialog-enter;
   animation-duration: var(--duration-fast);
   animation-timing-function: var(--ease-out);
@@ -148,9 +152,8 @@
 }
 
 /*
- * Alert geometry (HIG Alerts). The text is centred and the two actions form an
- * equal-width paired row — Apple's two-button alert balances its actions side
- * by side, not right-aligned variable-width pills. The pill/glass button
+ * Alert geometry (HIG Alerts). The text is centred; short actions share a row,
+ * while long labels move their whole button onto another row. The pill/glass button
  * language itself is KEPT on purpose: PromptDialog and the app's sheets and
  * popovers all share it, and iOS-26's own Liquid Glass dialogs moved toward
  * glass pill buttons rather than the legacy full-bleed hairline alert buttons.
@@ -160,11 +163,28 @@
  * danger-ghost confirm / accent submit, AA contrast.
  */
 .confirm-dialog__title {
+  flex-shrink: 0;
+  line-height: var(--font-title3);
+  max-height: calc(2 * var(--font-title3));
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: var(--font-headline);
   font-weight: var(--weight-semibold);
   color: var(--label);
   text-align: center;
   margin-bottom: var(--space-2);
+}
+
+/* Clamp the scroller directly on native hosts too (dialogContentMaxHeight).
+ * Auto basis keeps short bodies content-sized; title/actions never shrink. */
+.confirm-dialog__body {
+  width: 100%;
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: auto;
+  min-height: 0;
+  max-height: calc(85vh - 280px);
+  margin-bottom: var(--space-4);
 }
 
 .confirm-dialog__message {
@@ -176,9 +196,8 @@
 }
 
 /*
- * `flex-shrink: 0` matters for the two song dialogs, which reuse this row under
- * a height-clamped column flex card (the confirm card itself is not a flex
- * container, so the declaration is inert there). Measured on Web: the row
+ * `flex-shrink: 0` keeps actions pinned under every height-clamped column flex
+ * card. Measured on Web in the song dialogs: the row
  * resolved to 21.8px against its 36px content height, and since
  * `.confirm-dialog__btn` keeps a fixed height the buttons spilled out of the
  * card's content box into its padding. Same story as the pinned title — the
@@ -188,6 +207,7 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   justify-content: center;
   gap: var(--space-2);
 }
@@ -205,9 +225,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 1;
+  /* Size from the single-line label; wrap the button instead of squeezing it. */
+  flex-grow: 1;
+  flex-shrink: 0;
+  flex-basis: auto;
   height: var(--tap-target);
-  padding: 0 var(--space-4);
+  padding: 0 var(--space-2);
   border-radius: var(--radius-md);
   /* Gel press spring — both properties use motion tokens so reduce-motion
      zeroes them. The release eases back on --ease-spring for the bounce. */
@@ -233,8 +256,24 @@
 }
 
 .confirm-dialog__btn-text {
+  flex-shrink: 0;
+  white-space: nowrap;
   font-size: var(--font-subhead);
   color: var(--label);
+}
+
+/* Song dialogs budget exactly one action row, with short close/edit/save labels. */
+.confirm-dialog__actions--pair {
+  flex-wrap: nowrap;
+}
+
+.confirm-dialog__actions--pair .confirm-dialog__btn {
+  flex-basis: 0;
+}
+
+.confirm-dialog__btn--full {
+  width: 100%;
+  flex-basis: 100%;
 }
 
 .confirm-dialog__btn-text--confirm {

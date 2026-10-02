@@ -531,7 +531,7 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
                 </view>
               </scroll-view>
 
-              <view className='confirm-dialog__actions'>
+              <view className='confirm-dialog__actions confirm-dialog__actions--pair'>
                 {/* No DialogClose — it wraps the child in a lynx-ui Button whose
                  * defaults made the buttons unequal in height; see ConfirmDialog. */}
                 <view

@@ -13,6 +13,20 @@ import { isWebPlatform } from '../../native/web-platform.js'
  */
 export const SONG_DIALOG_WIDTH_PX = 440
 
+/** Shared form/confirmation card width, also used by plugin dialogs. */
+export const DIALOG_WIDTH_PX = 440
+
+/** Padding, two title lines at the largest font scale, and up to three 44px
+ * action rows with their gaps. Keep the shared body's CSS clamp in sync. */
+export const DIALOG_CHROME_PX = 280
+
+/** Direct body clamp for dialogs whose actions can wrap onto multiple rows. */
+export function dialogContentMaxHeight(): string | undefined {
+  const cardHeight = dialogCardMaxHeight()
+  if (cardHeight == null) return undefined
+  return `${Math.max(1, parseFloat(cardHeight) - DIALOG_CHROME_PX)}px`
+}
+
 /** The dialog cards' margin on each side — `--space-6` (tokens.css) in px. */
 const CARD_MARGIN_PX = 32
 

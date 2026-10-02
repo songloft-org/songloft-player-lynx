@@ -16,6 +16,12 @@ import type { JSPluginBatchUpdateResponse } from '../../../models/jsplugin.js'
 // Chrome (card/scrim/buttons + the z-index overlay contract) is ConfirmDialog's;
 // only the stats block and the per-plugin rows are specific to this flow.
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import {
+  DIALOG_WIDTH_PX,
+  dialogCardWidth,
+  dialogCardMaxHeight,
+  dialogContentMaxHeight,
+} from '../../../shared/ui/dialog-viewport.js'
 import '../../../shared/ui/ConfirmDialog.css'
 import './PluginBatchUpdateDialog.css'
 
@@ -127,70 +133,79 @@ export function PluginBatchUpdateDialog({ show, onClose, githubProxy }: PluginBa
           transition
           dialogContentProps={{ bindtap: requestClose }}
         >
-          <view className='confirm-dialog batch-update' data-testid='plugin-batch-dialog' catchtap={() => {}}>
-            <text className='confirm-dialog__title'>{t('jsplugin.updateAll')}</text>
+          <view
+            className='confirm-dialog batch-update'
+            data-testid='plugin-batch-dialog'
+            catchtap={() => {}}
+            style={{ width: dialogCardWidth(DIALOG_WIDTH_PX), maxHeight: dialogCardMaxHeight() }}
+          >
+            <text className='confirm-dialog__title' text-maxline='2'>{t('jsplugin.updateAll')}</text>
+            <scroll-view
+              className='confirm-dialog__body'
+              scroll-y
+              style={{ maxHeight: dialogContentMaxHeight() }}
+            >
+              {phase === 'confirm'
+                ? <text className='batch-update__text'>{t('jsplugin.batchConfirm')}</text>
+                : null}
 
-            {phase === 'confirm'
-              ? <text className='batch-update__text'>{t('jsplugin.batchConfirm')}</text>
-              : null}
+              {phase === 'updating'
+                ? (
+                  <view className='batch-update__updating'>
+                    <text className='batch-update__text'>{t('jsplugin.batchUpdating')}</text>
+                    <text className='batch-update__hint'>{t('jsplugin.doNotClose')}</text>
+                  </view>
+                )
+                : null}
 
-            {phase === 'updating'
-              ? (
-                <view className='batch-update__updating'>
-                  <text className='batch-update__text'>{t('jsplugin.batchUpdating')}</text>
-                  <text className='batch-update__hint'>{t('jsplugin.doNotClose')}</text>
-                </view>
-              )
-              : null}
+              {phase === 'result' && error != null
+                ? (
+                  <view className='batch-update__error' data-testid='plugin-batch-error'>
+                    <text className='batch-update__error-text'>{error}</text>
+                  </view>
+                )
+                : null}
 
-            {phase === 'result' && error != null
-              ? (
-                <view className='batch-update__error' data-testid='plugin-batch-error'>
-                  <text className='batch-update__error-text'>{error}</text>
-                </view>
-              )
-              : null}
-
-            {phase === 'result' && error == null && result != null
-              ? (
-                <view>
-                  <view className='batch-update__stats' data-testid='plugin-batch-stats'>
-                    <view className='batch-update__stat'>
-                      <text className='batch-update__stat-num batch-update__stat-num--ok'>
-                        {result.updated}
-                      </text>
-                      <text className='batch-update__stat-label'>{t('jsplugin.statUpdated')}</text>
+              {phase === 'result' && error == null && result != null
+                ? (
+                  <view>
+                    <view className='batch-update__stats' data-testid='plugin-batch-stats'>
+                      <view className='batch-update__stat'>
+                        <text className='batch-update__stat-num batch-update__stat-num--ok'>
+                          {result.updated}
+                        </text>
+                        <text className='batch-update__stat-label'>{t('jsplugin.statUpdated')}</text>
+                      </view>
+                      <view className='batch-update__stat'>
+                        <text className='batch-update__stat-num batch-update__stat-num--bad'>
+                          {result.failed}
+                        </text>
+                        <text className='batch-update__stat-label'>{t('jsplugin.statFailed')}</text>
+                      </view>
+                      <view className='batch-update__stat'>
+                        <text className='batch-update__stat-num batch-update__stat-num--muted'>
+                          {result.skipped}
+                        </text>
+                        <text className='batch-update__stat-label'>{t('jsplugin.statSkipped')}</text>
+                      </view>
                     </view>
-                    <view className='batch-update__stat'>
-                      <text className='batch-update__stat-num batch-update__stat-num--bad'>
-                        {result.failed}
-                      </text>
-                      <text className='batch-update__stat-label'>{t('jsplugin.statFailed')}</text>
-                    </view>
-                    <view className='batch-update__stat'>
-                      <text className='batch-update__stat-num batch-update__stat-num--muted'>
-                        {result.skipped}
-                      </text>
-                      <text className='batch-update__stat-label'>{t('jsplugin.statSkipped')}</text>
+                    <view className='batch-update__rows' data-testid='plugin-batch-rows'>
+                      {result.results.map((r) => {
+                        const info = row(r)
+                        return (
+                          <view key={`${r.pluginId}-${r.entryPath}`} className='batch-update__row'>
+                            <text className={`batch-update__row-name batch-update__row-name--${info.tone}`}>
+                              {info.name}
+                            </text>
+                            <text className='batch-update__row-note'>{info.note}</text>
+                          </view>
+                        )
+                      })}
                     </view>
                   </view>
-                  <view className='batch-update__rows' data-testid='plugin-batch-rows'>
-                    {result.results.map((r) => {
-                      const info = row(r)
-                      return (
-                        <view key={`${r.pluginId}-${r.entryPath}`} className='batch-update__row'>
-                          <text className={`batch-update__row-name batch-update__row-name--${info.tone}`}>
-                            {info.name}
-                          </text>
-                          <text className='batch-update__row-note'>{info.note}</text>
-                        </view>
-                      )
-                    })}
-                  </view>
-                </view>
-              )
-              : null}
-
+                )
+                : null}
+            </scroll-view>
             {phase !== 'updating'
               ? (
                 <view className='confirm-dialog__actions'>
@@ -206,11 +221,11 @@ export function PluginBatchUpdateDialog({ show, onClose, githubProxy }: PluginBa
                   {phase !== 'result' || error != null
                     ? (
                       <view
-                        className='confirm-dialog__btn confirm-dialog__btn--confirm'
+                        className='confirm-dialog__btn confirm-dialog__btn--submit'
                         bindtap={() => void run()}
                         data-testid='plugin-batch-start'
                       >
-                        <text className='confirm-dialog__btn-text confirm-dialog__btn-text--confirm'>
+                        <text className='confirm-dialog__btn-text confirm-dialog__btn-text--submit'>
                           {t('jsplugin.startUpdate')}
                         </text>
                       </view>

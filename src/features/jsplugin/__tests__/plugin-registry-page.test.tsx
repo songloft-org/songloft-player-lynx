@@ -366,6 +366,8 @@ test('warnings from a partial fetch surface as a banner with details', async () 
   })
   const dialog = queryByTestId('registry-warnings-dialog')
   expect(dialog?.textContent).toContain('source A unreachable')
+  expect(dialog?.querySelectorAll('.confirm-dialog__btn')).toHaveLength(1)
+  expect(dialog?.querySelector('.confirm-dialog__btn--confirm')).toBeNull()
 })
 
 test('the manage dialog adds a source and saves the list', async () => {

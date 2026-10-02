@@ -14,6 +14,12 @@ import {
 import { BackdropBlur } from './BackdropBlur.js'
 import './ConfirmDialog.css'
 import './PromptDialog.css'
+import {
+  DIALOG_WIDTH_PX,
+  dialogCardWidth,
+  dialogCardMaxHeight,
+  dialogContentMaxHeight,
+} from './dialog-viewport.js'
 
 export interface PromptDialogProps {
   show: boolean
@@ -135,31 +141,42 @@ export function PromptDialog({
           transition
           dialogContentProps={{ bindtap: cancel }}
         >
-          <view className='confirm-dialog' data-testid={testId} catchtap={() => {}}>
-            <text className='confirm-dialog__title'>{title}</text>
-            <view className='prompt-dialog__field'>
-              <Input
-                className='prompt-dialog__input'
-                type={inputType}
-                placeholder={label}
-                value={value}
-                onInput={(v: string) => {
-                  setValue(v)
-                  // Clear on edit: leaving the old complaint under a field the user
-                  // is already fixing reads as "still wrong".
-                  setError(undefined)
-                }}
-              />
-              {/* Inside the field wrapper, so it sits snug under the input and
-                  keeps the wrapper's spacing to the buttons below. */}
-              {error
-                ? (
-                  <text className='prompt-dialog__error' data-testid={errorTestId}>
-                    {error}
-                  </text>
-                )
-                : null}
-            </view>
+          <view
+            className='confirm-dialog'
+            data-testid={testId}
+            catchtap={() => {}}
+            style={{ width: dialogCardWidth(DIALOG_WIDTH_PX), maxHeight: dialogCardMaxHeight() }}
+          >
+            <text className='confirm-dialog__title' text-maxline='2'>{title}</text>
+            <scroll-view
+              className='confirm-dialog__body'
+              scroll-y
+              style={{ maxHeight: dialogContentMaxHeight() }}
+            >
+              <view className='prompt-dialog__field'>
+                <Input
+                  className='prompt-dialog__input'
+                  type={inputType}
+                  placeholder={label}
+                  value={value}
+                  onInput={(v: string) => {
+                    setValue(v)
+                    // Clear on edit: leaving the old complaint under a field the user
+                    // is already fixing reads as "still wrong".
+                    setError(undefined)
+                  }}
+                />
+                {/* Inside the field wrapper, so it sits snug under the input and
+                    keeps the wrapper's spacing to the buttons below. */}
+                {error
+                  ? (
+                    <text className='prompt-dialog__error' data-testid={errorTestId}>
+                      {error}
+                    </text>
+                  )
+                  : null}
+              </view>
+            </scroll-view>
             <view className='confirm-dialog__actions'>
               {/* No DialogClose — it wraps the child in a lynx-ui Button whose
                * defaults made the buttons unequal in height; see ConfirmDialog. */}

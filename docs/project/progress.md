@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-02 · 统一弹窗宽度、按钮与内容滚动
+
+- 盘点全部 7 个直接使用 `DialogRoot` 的组件及确认/输入框调用点。通用确认框、输入框、插件源管理、单插件更新、批量更新原本只设最大宽度，卡片随内容变窄；按钮等分宽度并各占 32px 横向内边距，且文字可换行。统一为屏幕两侧各 32px 留白、最大宽度 440px；原生复用 `dialogCardWidth` 的实测 px 宽度，Web 用 CSS viewport 宽度。
+- 按钮采用单行文字、内容宽度与不收缩布局，空间不足时整颗按钮换到下一行，横向内边距降至两侧各 8px，保留 44px 点击高度。歌曲详情/编辑的两个短操作保留单行等宽布局，与既有滚动 body 的高度预算一致。
+- 五类通用卡片增加直接受限的 `scroll-view`，固定标题与操作区不收缩；标题最多两行。`DIALOG_CHROME_PX=280` 与 CSS body 上限同步，预留最大字号标题及最多三行按钮；补充短屏原生高度预算、统一宽度和按钮布局闸门，移除 `nowrap` 后新增按钮闸门会失败。
+- 插件源把名称/URL 与开关/编辑/删除分成上下两块，长源列表滚动，添加/编辑表单与底部操作区分离；保存、添加、单插件更新和批量更新使用实心强调按钮，立即更新独占一行。插件源警告及上传结果只保留一个中性关闭按钮。
+- 浏览器实际验证 320×568 中文、375×812 中文最大字号、320×568 英文最大字号、1024×800 英文共 **24 个布局状态**，另复测英文最大字号的 **7 个状态**（含长警告）；按钮全部单行、44px 高且在卡片内，页面无运行错误。隔离 API 确认源列表保存请求生效；重新检查、列表滚动后添加表单、表单取消和警告关闭均实际点击验证。
+- 最终验证（2026-10-02）：全量 Vitest **252 文件 / 2739 项通过**，类型检查与 Lynx/Web 双产物构建通过，改动文件 UTF-8 与 `git diff --check` 检查通过。构建保留 3 条既有 `touch-action` 警告。本机未做 Android/iOS/HarmonyOS 原生界面实测。
+
 ## 2026-10-02 · 修复 Android 通知栏歌词回归
 
 - 回归点为 `ca7a4393af808cf31fc733196e4784a8ec37f02d`（2026-09-02，`fix(player): pass inTitle flag through notification lyric chain`）：JS 开始传 `(lyric, inTitle)`，但 Android `@LynxMethod` 仍只接收一个参数。Lynx 会严格检查参数数量，调用在进入 Kotlin 方法前即被拒绝；依据为官方 [MethodInvoker 参数校验](https://github.com/lynx-family/lynx/blob/develop/core/runtime/js/bindings/modules/android/method_invoker.cc)。同一提交将 `notificationLyricInTitle` 放入 `EMPTY`，切歌/清空歌词时又把用户选好的副标题模式重置为标题模式。

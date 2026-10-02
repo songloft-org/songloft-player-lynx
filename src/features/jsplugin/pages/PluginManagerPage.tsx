@@ -353,6 +353,7 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
                   .join('\n')
               : ''}
             confirmLabel={t('common.close')}
+            acknowledgeOnly
             onConfirm={() => setUploadResult(null)}
             onCancel={() => setUploadResult(null)}
             testId='plugin-upload-result'

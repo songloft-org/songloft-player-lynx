@@ -18,6 +18,12 @@ import type { JSPlugin, JSPluginUpdateCheck } from '../../../models/jsplugin.js'
 // z-index levels its overlay contract test pins. Only the body and the dynamic
 // action row are specific to the update flow.
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import {
+  DIALOG_WIDTH_PX,
+  dialogCardWidth,
+  dialogCardMaxHeight,
+  dialogContentMaxHeight,
+} from '../../../shared/ui/dialog-viewport.js'
 import '../../../shared/ui/ConfirmDialog.css'
 import './PluginUpdateDialog.css'
 
@@ -164,54 +170,63 @@ export function PluginUpdateDialog({ show, plugin, onClose }: PluginUpdateDialog
           transition
           dialogContentProps={{ bindtap: requestClose }}
         >
-          <view className='confirm-dialog plugin-update' data-testid='plugin-update-dialog' catchtap={() => {}}>
-            <text className='confirm-dialog__title'>
+          <view
+            className='confirm-dialog plugin-update'
+            data-testid='plugin-update-dialog'
+            catchtap={() => {}}
+            style={{ width: dialogCardWidth(DIALOG_WIDTH_PX), maxHeight: dialogCardMaxHeight() }}
+          >
+            <text className='confirm-dialog__title' text-maxline='2'>
               {t('jsplugin.updateDialogTitle', { name: plugin?.displayName ?? '' })}
             </text>
+            <scroll-view
+              className='confirm-dialog__body'
+              scroll-y
+              style={{ maxHeight: dialogContentMaxHeight() }}
+            >
+              {phase === 'checking'
+                ? <text className='plugin-update__phase'>{t('jsplugin.checkingUpdate')}</text>
+                : null}
 
-            {phase === 'checking'
-              ? <text className='plugin-update__phase'>{t('jsplugin.checkingUpdate')}</text>
-              : null}
+              {phase === 'updating'
+                ? (
+                  <view className='plugin-update__updating'>
+                    <text className='plugin-update__phase'>{t('jsplugin.downloadingUpdate')}</text>
+                    <text className='plugin-update__hint'>{t('jsplugin.doNotClose')}</text>
+                  </view>
+                )
+                : null}
 
-            {phase === 'updating'
-              ? (
-                <view className='plugin-update__updating'>
-                  <text className='plugin-update__phase'>{t('jsplugin.downloadingUpdate')}</text>
-                  <text className='plugin-update__hint'>{t('jsplugin.doNotClose')}</text>
-                </view>
-              )
-              : null}
+              {phase === 'result' && error != null
+                ? (
+                  <view className='plugin-update__error' data-testid='plugin-update-error'>
+                    <text className='plugin-update__error-text'>{error}</text>
+                  </view>
+                )
+                : null}
 
-            {phase === 'result' && error != null
-              ? (
-                <view className='plugin-update__error' data-testid='plugin-update-error'>
-                  <text className='plugin-update__error-text'>{error}</text>
-                </view>
-              )
-              : null}
-
-            {phase === 'result' && error == null && check != null
-              ? (
-                check.hasUpdate
-                  ? (
-                    <view className='plugin-update__found' data-testid='plugin-update-found'>
-                      <text className='plugin-update__found-label'>{t('jsplugin.newVersionFound')}</text>
-                      <text className='plugin-update__versions'>
-                        v{check.currentVersion} → v{check.remoteVersion}
-                      </text>
-                    </view>
-                  )
-                  : (
-                    <view className='plugin-update__found'>
-                      <text className='plugin-update__found-label'>{t('jsplugin.alreadyLatest')}</text>
-                      <text className='plugin-update__versions'>
-                        {t('jsplugin.currentVersion', { version: check.currentVersion })}
-                      </text>
-                    </view>
-                  )
-              )
-              : null}
-
+              {phase === 'result' && error == null && check != null
+                ? (
+                  check.hasUpdate
+                    ? (
+                      <view className='plugin-update__found' data-testid='plugin-update-found'>
+                        <text className='plugin-update__found-label'>{t('jsplugin.newVersionFound')}</text>
+                        <text className='plugin-update__versions'>
+                          v{check.currentVersion} → v{check.remoteVersion}
+                        </text>
+                      </view>
+                    )
+                    : (
+                      <view className='plugin-update__found'>
+                        <text className='plugin-update__found-label'>{t('jsplugin.alreadyLatest')}</text>
+                        <text className='plugin-update__versions'>
+                          {t('jsplugin.currentVersion', { version: check.currentVersion })}
+                        </text>
+                      </view>
+                    )
+                )
+                : null}
+            </scroll-view>
             {phase !== 'updating'
               ? (
                 <view className='confirm-dialog__actions'>
@@ -236,11 +251,11 @@ export function PluginUpdateDialog({ show, plugin, onClose }: PluginUpdateDialog
                   {check != null && check.hasUpdate
                     ? (
                       <view
-                        className='confirm-dialog__btn confirm-dialog__btn--confirm'
+                        className='confirm-dialog__btn confirm-dialog__btn--submit confirm-dialog__btn--full'
                         bindtap={() => void runUpdate()}
                         data-testid='plugin-update-now'
                       >
-                        <text className='confirm-dialog__btn-text confirm-dialog__btn-text--confirm'>
+                        <text className='confirm-dialog__btn-text confirm-dialog__btn-text--submit'>
                           {t('jsplugin.updateNow')}
                         </text>
                       </view>

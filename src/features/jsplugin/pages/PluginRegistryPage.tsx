@@ -375,6 +375,7 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
             title={t('jsplugin.registryWarningsTitle')}
             message={warnings.join('\n\n')}
             confirmLabel={t('common.close')}
+            acknowledgeOnly
             onConfirm={() => setWarningsOpen(false)}
             onCancel={() => setWarningsOpen(false)}
             testId='registry-warnings-dialog'

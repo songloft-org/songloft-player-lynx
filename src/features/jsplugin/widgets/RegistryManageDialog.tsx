@@ -18,6 +18,12 @@ import { getJSPluginApi } from '../api/index.js'
 // Chrome (card/scrim/buttons + the z-index overlay contract) is ConfirmDialog's;
 // only the source rows and the edit form are specific to this dialog.
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import {
+  DIALOG_WIDTH_PX,
+  dialogCardWidth,
+  dialogCardMaxHeight,
+  dialogContentMaxHeight,
+} from '../../../shared/ui/dialog-viewport.js'
 import '../../../shared/ui/ConfirmDialog.css'
 import './RegistryManageDialog.css'
 
@@ -136,135 +142,103 @@ export function RegistryManageDialog({ show, onClose, registries, onSaved }: Reg
           transition
           dialogContentProps={{ bindtap: onClose }}
         >
-          <view className='confirm-dialog registry-manage' data-testid='registry-manage-dialog' catchtap={() => {}}>
-            <text className='confirm-dialog__title'>{t('jsplugin.manageRegistries')}</text>
-
-            {phase === 'list'
-              ? (
-                <view>
-                  {draft.length === 0
-                    ? (
-                      <text className='registry-manage__empty' data-testid='registry-manage-empty'>
-                        {t('jsplugin.noRegistries')}
-                      </text>
-                    )
-                    : (
-                      <view className='registry-manage__list'>
-                        {draft.map((r, i) => (
-                          <view key={r.url} className='registry-manage__row' data-testid={`registry-manage-row-${i}`}>
-                            <AppSwitch
-                              checked={r.enabled !== false}
-                              onChange={(enabled) =>
-                                setDraft((list) => list.map((x, j) => (j === i ? { ...x, enabled } : x)))}
-                            />
-                            <view className='registry-manage__row-body'>
-                              <view className='registry-manage__row-title'>
-                                <text className='registry-manage__row-name'>
-                                  {r.name || r.url}
-                                </text>
-                                {r.url === OFFICIAL_REGISTRY_URL
-                                  ? <text className='registry-manage__official'>{t('jsplugin.official')}</text>
-                                  : null}
-                                {r.token
-                                  ? <Icon name='fingerprint' size={12} color={ICON_COLORS.contentMuted} />
-                                  : null}
+          <view
+            className='confirm-dialog registry-manage'
+            data-testid='registry-manage-dialog'
+            catchtap={() => {}}
+            style={{ width: dialogCardWidth(DIALOG_WIDTH_PX), maxHeight: dialogCardMaxHeight() }}
+          >
+            <text className='confirm-dialog__title' text-maxline='2'>{t('jsplugin.manageRegistries')}</text>
+            <scroll-view
+              className='confirm-dialog__body'
+              scroll-y
+              style={{ maxHeight: dialogContentMaxHeight() }}
+            >
+              {phase === 'list'
+                ? (
+                  <view>
+                    {draft.length === 0
+                      ? <text className='registry-manage__empty' data-testid='registry-manage-empty'>{t('jsplugin.noRegistries')}</text>
+                      : (
+                        <view className='registry-manage__list'>
+                          {draft.map((r, i) => (
+                            <view key={r.url} className='registry-manage__row' data-testid={`registry-manage-row-${i}`}>
+                              <view className='registry-manage__row-body'>
+                                <view className='registry-manage__row-title'>
+                                  <text className='registry-manage__row-name'>{r.name || r.url}</text>
+                                  {r.url === OFFICIAL_REGISTRY_URL
+                                    ? <text className='registry-manage__official'>{t('jsplugin.official')}</text>
+                                    : null}
+                                  {r.token ? <Icon name='fingerprint' size={12} color={ICON_COLORS.contentMuted} /> : null}
+                                </view>
+                                <text className='registry-manage__row-url'>{r.url}</text>
                               </view>
-                              <text className='registry-manage__row-url'>{r.url}</text>
+                              <view className='registry-manage__row-controls'>
+                                <AppSwitch
+                                  checked={r.enabled !== false}
+                                  onChange={(enabled) =>
+                                    setDraft((list) => list.map((x, j) => (j === i ? { ...x, enabled } : x)))}
+                                />
+                                <view className='registry-manage__row-spacer' />
+                                <view
+                                  className='registry-manage__row-btn'
+                                  bindtap={() => openForm(i)}
+                                  accessibility-element={true}
+                                  accessibility-label={t('common.edit')}
+                                  data-testid={`registry-manage-edit-${i}`}
+                                >
+                                  <Icon name='edit' size={16} color={ICON_COLORS.content2} />
+                                </view>
+                                <view
+                                  className='registry-manage__row-btn'
+                                  bindtap={() => setDraft((list) => list.filter((_, j) => j !== i))}
+                                  accessibility-element={true}
+                                  accessibility-label={t('common.delete')}
+                                  data-testid={`registry-manage-delete-${i}`}
+                                >
+                                  <Icon name='trash' size={16} color={ICON_COLORS.danger} />
+                                </view>
+                              </view>
                             </view>
-                            <view
-                              className='registry-manage__row-btn'
-                              bindtap={() => openForm(i)}
-                              accessibility-element={true}
-                              accessibility-label={t('common.edit')}
-                              data-testid={`registry-manage-edit-${i}`}
-                            >
-                              <Icon name='edit' size={16} color={ICON_COLORS.content2} />
-                            </view>
-                            <view
-                              className='registry-manage__row-btn'
-                              bindtap={() => setDraft((list) => list.filter((_, j) => j !== i))}
-                              accessibility-element={true}
-                              accessibility-label={t('common.delete')}
-                              data-testid={`registry-manage-delete-${i}`}
-                            >
-                              <Icon name='trash' size={16} color={ICON_COLORS.danger} />
-                            </view>
-                          </view>
-                        ))}
-                      </view>
-                    )}
-                  <view
-                    className='registry-manage__add-btn'
-                    bindtap={() => openForm(null)}
-                    data-testid='registry-manage-add'
-                  >
-                    <Icon name='plus' size={16} color={ICON_COLORS.content} />
-                    <text className='registry-manage__add-text'>{t('jsplugin.addRegistry')}</text>
-                  </view>
-                  <view className='confirm-dialog__actions'>
-                    <view
-                      className='confirm-dialog__btn confirm-dialog__btn--cancel'
-                      bindtap={onClose}
-                      data-testid='registry-manage-cancel'
-                    >
-                      <text className='confirm-dialog__btn-text'>{t('common.cancel')}</text>
-                    </view>
-                    <view
-                      className='confirm-dialog__btn confirm-dialog__btn--confirm'
-                      bindtap={() => void save()}
-                      data-testid='registry-manage-save'
-                    >
-                      <text className='confirm-dialog__btn-text confirm-dialog__btn-text--confirm'>
-                        {saving ? t('common.loading') : t('jsplugin.saveLabel')}
-                      </text>
+                          ))}
+                        </view>
+                      )}
+                    <view className='registry-manage__add-btn' bindtap={() => openForm(null)} data-testid='registry-manage-add'>
+                      <Icon name='plus' size={16} color={ICON_COLORS.content} />
+                      <text className='registry-manage__add-text'>{t('jsplugin.addRegistry')}</text>
                     </view>
                   </view>
-                </view>
-              )
-              : (
-                <view>
+                )
+                : (
                   <view className='registry-manage__form'>
-                    <Input
-                      className='registry-manage__input'
-                      value={formUrl}
-                      placeholder='https://example.com/registry.json'
-                      onInput={(v: string) => setFormUrl(v)}
-                    />
-                    <Input
-                      className='registry-manage__input'
-                      value={formName}
-                      placeholder={t('jsplugin.nameOptional')}
-                      onInput={(v: string) => setFormName(v)}
-                    />
-                    <Input
-                      className='registry-manage__input'
-                      value={formToken}
-                      placeholder={t('jsplugin.tokenOptional')}
-                      onInput={(v: string) => setFormToken(v)}
-                    />
+                    <Input className='registry-manage__input' value={formUrl}
+                      placeholder='https://example.com/registry.json' onInput={(v: string) => setFormUrl(v)} />
+                    <Input className='registry-manage__input' value={formName}
+                      placeholder={t('jsplugin.nameOptional')} onInput={(v: string) => setFormName(v)} />
+                    <Input className='registry-manage__input' value={formToken}
+                      placeholder={t('jsplugin.tokenOptional')} onInput={(v: string) => setFormToken(v)} />
                   </view>
-                  <view className='confirm-dialog__actions'>
-                    <view
-                      className='confirm-dialog__btn confirm-dialog__btn--cancel'
-                      bindtap={() => setPhase('list')}
-                      data-testid='registry-manage-form-cancel'
-                    >
-                      <text className='confirm-dialog__btn-text'>{t('common.cancel')}</text>
-                    </view>
-                    <view
-                      className={`confirm-dialog__btn confirm-dialog__btn--confirm${formUrl.trim() ? '' : ' registry-manage__save--disabled'}`}
-                      bindtap={commitForm}
-                      data-testid='registry-manage-form-save'
-                    >
-                      <text className='confirm-dialog__btn-text confirm-dialog__btn-text--confirm'>
-                        {editingIndex != null
-                          ? t('jsplugin.saveLabel')
-                          : t('jsplugin.addLabel')}
-                      </text>
-                    </view>
-                  </view>
-                </view>
-              )}
+                )}
+            </scroll-view>
+            <view className='confirm-dialog__actions'>
+              <view
+                className='confirm-dialog__btn confirm-dialog__btn--cancel'
+                bindtap={() => { if (phase === 'form') setPhase('list'); else onClose() }}
+                data-testid={phase === 'form' ? 'registry-manage-form-cancel' : 'registry-manage-cancel'}
+              >
+                <text className='confirm-dialog__btn-text'>{t('common.cancel')}</text>
+              </view>
+              <view
+                className={`confirm-dialog__btn confirm-dialog__btn--submit${(phase === 'form' && !formUrl.trim()) || saving ? ' confirm-dialog__btn--disabled' : ''}`}
+                bindtap={() => { if (saving) return; if (phase === 'form') commitForm(); else void save() }}
+                data-testid={phase === 'form' ? 'registry-manage-form-save' : 'registry-manage-save'}
+              >
+                <text className='confirm-dialog__btn-text confirm-dialog__btn-text--submit'>
+                  {saving ? t('common.loading')
+                    : phase === 'form' && editingIndex == null ? t('jsplugin.addLabel') : t('jsplugin.saveLabel')}
+                </text>
+              </view>
+            </view>
           </view>
         </DialogContent>
       </DialogView>

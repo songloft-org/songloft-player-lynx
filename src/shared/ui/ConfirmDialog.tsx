@@ -11,6 +11,12 @@ import {
 } from '@lynx-js/lynx-ui-dialog'
 
 import { BackdropBlur } from './BackdropBlur.js'
+import {
+  DIALOG_WIDTH_PX,
+  dialogCardWidth,
+  dialogCardMaxHeight,
+  dialogContentMaxHeight,
+} from './dialog-viewport.js'
 import './ConfirmDialog.css'
 
 export interface ConfirmDialogProps {
@@ -20,6 +26,8 @@ export interface ConfirmDialogProps {
   /** Label for the destructive action; the cancel side defaults to `common.cancel`. */
   confirmLabel: string
   cancelLabel?: string
+  /** Information-only dialog: one neutral close button, with no duplicate cancel. */
+  acknowledgeOnly?: boolean
   onConfirm: () => void
   onCancel: () => void
   /** testids — kept per-call-site so existing render assertions stay meaningful. */
@@ -53,6 +61,7 @@ export function ConfirmDialog({
   message,
   confirmLabel,
   cancelLabel,
+  acknowledgeOnly = false,
   onConfirm,
   onCancel,
   testId,
@@ -135,10 +144,21 @@ export function ConfirmDialog({
             * including the confirm button — would bubble to the layer above and
             * fire `onCancel` alongside `onConfirm`.
             */}
-          <view className='confirm-dialog' data-testid={testId} catchtap={() => {}}>
-            <text className='confirm-dialog__title'>{title}</text>
-            <text className='confirm-dialog__message'>{message}</text>
-            {children}
+          <view
+            className='confirm-dialog'
+            data-testid={testId}
+            catchtap={() => {}}
+            style={{ width: dialogCardWidth(DIALOG_WIDTH_PX), maxHeight: dialogCardMaxHeight() }}
+          >
+            <text className='confirm-dialog__title' text-maxline='2'>{title}</text>
+            <scroll-view
+              className='confirm-dialog__body'
+              scroll-y
+              style={{ maxHeight: dialogContentMaxHeight() }}
+            >
+              <text className='confirm-dialog__message'>{message}</text>
+              {children}
+            </scroll-view>
             <view className='confirm-dialog__actions'>
               {/*
                * No DialogClose wrapper: it renders a full lynx-ui Button
@@ -149,21 +169,27 @@ export function ConfirmDialog({
                * row from the structurally identical pair in
                * `.confirm-dialog__btn`.
                */}
+              {acknowledgeOnly ? null : (
+                <view
+                  className='confirm-dialog__btn confirm-dialog__btn--cancel'
+                  bindtap={onCancel}
+                  data-testid={cancelTestId}
+                >
+                  <text className='confirm-dialog__btn-text'>
+                    {cancelLabel ?? t('common.cancel')}
+                  </text>
+                </view>
+              )}
               <view
-                className='confirm-dialog__btn confirm-dialog__btn--cancel'
-                bindtap={onCancel}
-                data-testid={cancelTestId}
-              >
-                <text className='confirm-dialog__btn-text'>
-                  {cancelLabel ?? t('common.cancel')}
-                </text>
-              </view>
-              <view
-                className='confirm-dialog__btn confirm-dialog__btn--confirm'
+                className={acknowledgeOnly
+                  ? 'confirm-dialog__btn confirm-dialog__btn--cancel'
+                  : 'confirm-dialog__btn confirm-dialog__btn--confirm'}
                 bindtap={onConfirm}
                 data-testid={confirmTestId}
               >
-                <text className='confirm-dialog__btn-text confirm-dialog__btn-text--confirm'>
+                <text className={acknowledgeOnly
+                  ? 'confirm-dialog__btn-text'
+                  : 'confirm-dialog__btn-text confirm-dialog__btn-text--confirm'}>
                   {confirmLabel}
                 </text>
               </view>
