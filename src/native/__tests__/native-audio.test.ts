@@ -28,6 +28,7 @@ function makeNativeModule(): SongloftAudioNativeModule & Record<string, ReturnTy
     setRepeatMode: vi.fn(),
     setShuffle: vi.fn(),
     setFavorite: vi.fn(),
+    updateNotificationLyric: vi.fn(),
     setEqualizerEnabled: vi.fn(),
     setEqualizerBand: vi.fn(),
     dispose: vi.fn(),
@@ -154,6 +155,17 @@ describe('mapGlobalEvent (native → facade decode)', () => {
 })
 
 describe('NativeSongloftAudio (delegation + event bridge)', () => {
+  test('notification lyrics always pass a concrete boolean to the native bridge', async () => {
+    const native = makeNativeModule()
+    const audio = new NativeSongloftAudio(native, null)
+    await audio.updateNotificationLyric('歌词')
+    await audio.updateNotificationLyric('歌词', false)
+    await audio.updateNotificationLyric(null, true)
+    expect(native.updateNotificationLyric).toHaveBeenNthCalledWith(1, '歌词', true)
+    expect(native.updateNotificationLyric).toHaveBeenNthCalledWith(2, '歌词', false)
+    expect(native.updateNotificationLyric).toHaveBeenNthCalledWith(3, null, true)
+  })
+
   test('methods delegate to the native module', async () => {
     const native = makeNativeModule()
     const audio = new NativeSongloftAudio(native, null)

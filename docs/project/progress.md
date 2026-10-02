@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-02 · 修复 Android 通知栏歌词回归
+
+- 回归点为 `ca7a4393af808cf31fc733196e4784a8ec37f02d`（2026-09-02，`fix(player): pass inTitle flag through notification lyric chain`）：JS 开始传 `(lyric, inTitle)`，但 Android `@LynxMethod` 仍只接收一个参数。Lynx 会严格检查参数数量，调用在进入 Kotlin 方法前即被拒绝；依据为官方 [MethodInvoker 参数校验](https://github.com/lynx-family/lynx/blob/develop/core/runtime/js/bindings/modules/android/method_invoker.cc)。同一提交将 `notificationLyricInTitle` 放入 `EMPTY`，切歌/清空歌词时又把用户选好的副标题模式重置为标题模式。
+- Android module 与 engine 接收并透传 `inTitle`；TS facade 为可选参数补明确的 `true` 默认值。新增 `buildNotificationLyricMetadata`：标题模式显示歌词、第二行显示歌曲名，副标题模式保留歌曲标题并把歌词写入 media3 实际读取的 artist 字段；每次从原始 metadata 重建，空白段恢复歌曲信息，队列更新保留显示位置，加载/停止/释放清除上一曲歌词状态。
+- 歌词 store 的清空状态不再包含用户偏好；异步读取偏好不会覆盖用户刚修改的值。
+- 验证：全量 Vitest **252 文件 / 2735 项通过**，`tsc -b` 与 Lynx/Web 双产物构建通过；Android `assembleDebug` 与 **4 项真实 MediaMetadata 单元测试**通过。反向验证临时恢复单参数桥接、清空状态重置偏好、固定副标题写入，分别触发桥接闸门、store 测试和 Android 标题模式测试失败；恢复修复后复跑相关测试。
+- 没有连接的 ADB 设备，本机 SDK 未安装 emulator/system-images；尚未实测通知栏，尤其需在用户设备验证后台逐行更新、两种显示位置切换、切到无歌词曲目及暂停/恢复。
+
 ## 2026-10-02 · 已安装插件列表直接打开插件（songloft-org/songloft#489）
 
 - 插件图标、名称和信息区域共用点击入口，启用且 `entryPath` 非空时显示进入箭头；开关与更多菜单位于独立操作区，禁用/错误或无入口的插件不跳转。

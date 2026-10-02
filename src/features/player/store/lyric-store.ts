@@ -64,7 +64,6 @@ const EMPTY = {
   hasTranslation: false,
   hasRomanization: false,
   rawLyric: null as string | null,
-  notificationLyricInTitle: true,
 }
 
 function parseLyricText(text: string, enhanced?: string): { lyrics: LyricLine[]; synced: boolean } {
@@ -84,15 +83,19 @@ function parseLyricText(text: string, enhanced?: string): { lyrics: LyricLine[];
 export const useLyricStore = create<LyricState>((set, get) => {
   let loadToken = 0
   let prefLoaded = false
+  let prefSet = false
 
   return {
     ...EMPTY,
+    notificationLyricInTitle: true,
 
     loadForSong: async (song, fetcher = defaultLyricFetcher, opts) => {
       if (!prefLoaded) {
         prefLoaded = true
         readNotificationLyricInTitle()
-          .then((v) => set({ notificationLyricInTitle: v }))
+          .then((v) => {
+            if (!prefSet) set({ notificationLyricInTitle: v })
+          })
           .catch(() => {})
       }
       const token = ++loadToken
@@ -247,6 +250,7 @@ export const useLyricStore = create<LyricState>((set, get) => {
     },
 
     setNotificationLyricInTitle: (inTitle) => {
+      prefSet = true
       set({ notificationLyricInTitle: inTitle })
       const { lyrics, currentIndex } = get()
       const text = currentIndex >= 0 && currentIndex < lyrics.length

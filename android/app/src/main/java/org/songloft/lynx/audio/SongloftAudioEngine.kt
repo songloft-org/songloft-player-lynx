@@ -614,15 +614,18 @@ object SongloftAudioEngine {
             ClientFileLog.write('W', "audio", "queue refresh: no metadata for ${truncUrl(url)}")
             return
         }
+        originalNotificationMetadata = queued
         val newItem = currentItem.buildUpon()
-            .setMediaMetadata(applyLyricLine(queued, queued, currentLyricLine))
+            .setMediaMetadata(buildNotificationLyricMetadata(queued, currentLyricLine, notificationLyricInTitle))
             .build()
         p.replaceMediaItem(p.currentMediaItemIndex, newItem)
     }
 
-    /** Current lyric line shown in the notification subtitle. */
+    /** Current lyric overlay; originals remain separate so switching slots restores both fields. */
     @Volatile
     private var currentLyricLine: String? = null
+    private var notificationLyricInTitle = true
+    private var originalNotificationMetadata: MediaMetadata? = null
 
     /** Log-safe text: null-aware, capped at 60 chars (lyric lines, titles). */
     private fun truncText(value: Any?): String {
@@ -670,23 +673,17 @@ object SongloftAudioEngine {
         .replace(Regex("[\\r\\n]+"), " ")
 
     /**
-     * Update the notification's second line to the current lyric.
-     *
-     * `MediaMetadata.subtitle` is **not** rendered by media3's
-     * `DefaultMediaNotificationProvider` — its `getNotificationContentText`
-     * returns `metadata.artist` when it is set, and only falls back to
-     * `subtitle` when artist is null. That is why the earlier `setSubtitle`
-     * flow appeared to do nothing: every queue entry has an artist. We stamp
-     * the lyric into the `artist` slot instead (the real artist is preserved
-     * in [metadataByUrl] and restored when the lyric is null). This is the
-     * same trick NetEase / QQ Music use for their notification-lyric feature.
+     * Overlay the current lyric in the notification title or second line.
+     * Media3 renders title/displayTitle and artist (before subtitle); preserve
+     * original metadata separately so gaps and slot changes restore song info.
      *
      * Called at most once per lyric line (see `lyric-store.syncPosition`) so
      * `replaceMediaItem` fires on line boundaries — not every progress tick.
      */
-    fun updateNotificationLyric(lyric: String?) {
+    fun updateNotificationLyric(lyric: String?, inTitle: Boolean) {
         currentLyricLine = lyric?.takeIf { it.isNotBlank() }
-        ClientFileLog.write('I', "audio", "notif lyric: ${truncText(currentLyricLine)}")
+        notificationLyricInTitle = inTitle
+        ClientFileLog.write('I', "audio", "notif lyric: ${truncText(currentLyricLine)} inTitle=$inTitle")
         val p = player ?: run {
             ClientFileLog.write('W', "audio", "notif lyric dropped: no player")
             return
@@ -703,25 +700,12 @@ object SongloftAudioEngine {
                 "notif lyric: no queue metadata for ${truncUrl(url)}; basing on item metadata",
             )
         }
+        val original = queued ?: originalNotificationMetadata ?: currentItem.mediaMetadata
+        originalNotificationMetadata = original
         val newItem = currentItem.buildUpon()
-            .setMediaMetadata(applyLyricLine(queued ?: currentItem.mediaMetadata, queued, currentLyricLine))
+            .setMediaMetadata(buildNotificationLyricMetadata(original, currentLyricLine, inTitle))
             .build()
         p.replaceMediaItem(p.currentMediaItemIndex, newItem)
-    }
-
-    /**
-     * Overlay the current lyric onto [base] for notification display. When
-     * lyric is null the **original** artist is actively restored: [base] can
-     * be the item's own metadata, whose artist slot still holds the previous
-     * line when the queue metadata missed — leaving it untouched pinned that
-     * stale line to the notification across instrumental gaps and track
-     * changes. `setArtist(null)` clears the slot when there is no original to
-     * restore (empty second line beats a wrong one).
-     */
-    private fun applyLyricLine(base: MediaMetadata, queued: MediaMetadata?, lyric: String?): MediaMetadata {
-        val builder = base.buildUpon()
-        builder.setArtist(lyric ?: queued?.artist)
-        return builder.build()
     }
 
     fun load(context: Context, url: String, hls: Boolean, headers: Map<String, String>?) {
@@ -734,6 +718,8 @@ object SongloftAudioEngine {
         }
 
         currentUrl = url
+        currentLyricLine = null
+        originalNotificationMetadata = null
         currentHls = hls
         currentHeaders = headers
         progressSaveCounter = 0
@@ -828,6 +814,8 @@ object SongloftAudioEngine {
 
     fun stop() {
         val p = player
+        currentLyricLine = null
+        originalNotificationMetadata = null
         autoAdvanceStopGuardUntilMs = 0L
         currentUrl = null
         currentHeaders = null
@@ -863,6 +851,8 @@ object SongloftAudioEngine {
     /** Full release -- called by the module's `dispose()`. */
     fun release() {
         ClientFileLog.write('W', "audio", "release begin snapshot=${diagnosticSnapshot()}")
+        currentLyricLine = null
+        originalNotificationMetadata = null
         autoAdvanceStopGuardUntilMs = 0L
         currentUrl = null
         currentHeaders = null

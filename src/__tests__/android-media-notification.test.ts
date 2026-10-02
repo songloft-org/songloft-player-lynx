@@ -3,6 +3,17 @@ import path from 'node:path'
 
 import { describe, expect, test } from 'vitest'
 
+describe('Android notification lyric bridge', () => {
+  const audioDir = path.resolve(__dirname, '../../android/app/src/main/java/org/songloft/lynx/audio')
+  const module = readFileSync(path.join(audioDir, 'SongloftAudioModule.kt'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
+
+  test('the exported method accepts both JS arguments and forwards them on the main thread', () => {
+    expect(module).toMatch(/@LynxMethod\s+fun updateNotificationLyric\(lyric: String\?, inTitle: Boolean\)/)
+    expect(module).toMatch(/runOnMain\s*\{\s*SongloftAudioEngine\.updateNotificationLyric\(lyric, inTitle\)/)
+  })
+})
+
 /**
  * Gates for the media notification's ownership of notification id 1001.
  *

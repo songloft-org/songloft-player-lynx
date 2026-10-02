@@ -248,7 +248,7 @@ export class NativeSongloftAudio implements SongloftAudio {
     this.native.setFavorite(isFavorite)
   }
 
-  async updateNotificationLyric(lyric: string | null, inTitle?: boolean): Promise<void> {
+  async updateNotificationLyric(lyric: string | null, inTitle = true): Promise<void> {
     this.native.updateNotificationLyric(lyric, inTitle)
   }
 

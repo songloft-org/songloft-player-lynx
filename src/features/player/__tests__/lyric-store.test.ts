@@ -86,6 +86,20 @@ beforeEach(() => {
 })
 
 describe('loadForSong', () => {
+  test('keeps notification lyric placement across loading, missing lyrics and failures', async () => {
+    useLyricStore.getState().setNotificationLyricInTitle(false)
+    await useLyricStore.getState().loadForSong(song(), async () => PAYLOAD)
+    expect(useLyricStore.getState().notificationLyricInTitle).toBe(false)
+    await useLyricStore.getState().loadForSong(song({ lyricUrl: undefined }))
+    expect(useLyricStore.getState().notificationLyricInTitle).toBe(false)
+    await useLyricStore.getState().loadForSong(song({ id: 8 }), async () => {
+      throw new Error('fetch failed')
+    })
+    expect(useLyricStore.getState().notificationLyricInTitle).toBe(false)
+    useLyricStore.getState().clear()
+    expect(useLyricStore.getState().notificationLyricInTitle).toBe(false)
+  })
+
   test('parses the fetched payload into synced lines', async () => {
     const fetcher = vi.fn(async () => PAYLOAD)
     await useLyricStore.getState().loadForSong(song(), fetcher)
