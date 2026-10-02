@@ -363,12 +363,16 @@ const pluginRegistryRoute = createRoute({
  * are different questions — opening a tabbed plugin from the grid must keep
  * its topbar. Same optional-return pattern as `categorySongsRoute` above, so
  * only the tab entries have to supply it.
+ * `?from=manager` records the installed-list entry so the shared back policy
+ * returns to `/settings/plugins` rather than the last Home/Library tab.
  */
 const pluginWebViewRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/plugin/$entryPath',
-  validateSearch: (search: Record<string, unknown>): { tab?: boolean } =>
-    search.tab === true ? { tab: true } : {},
+  validateSearch: (search: Record<string, unknown>): { tab?: boolean; from?: 'manager' } => ({
+    ...(search.tab === true ? { tab: true } : {}),
+    ...(search.from === 'manager' ? { from: 'manager' as const } : {}),
+  }),
   component: PluginWebViewPage,
 })
 

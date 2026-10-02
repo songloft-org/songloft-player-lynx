@@ -37,6 +37,15 @@
   gap: var(--space-3);
 }
 
+.plugin-manager__entry {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+}
+
 /* The middle column owns the leftover width; `min-width: 0` lets the name
    ellipsize instead of forcing the row wider than the screen. */
 .plugin-manager__item-info {

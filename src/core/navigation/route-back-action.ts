@@ -47,6 +47,9 @@ export function currentBackAction(): BackAction | null {
     pluginTabEntry:
       location.pathname.startsWith('/plugin/')
       && (location.search as { tab?: unknown }).tab === true,
+    pluginManagerEntry:
+      location.pathname.startsWith('/plugin/')
+      && (location.search as { from?: unknown }).from === 'manager',
     lastShellLocation: getLastShellLocation(),
     lastLibrarySearch: getLastLibrarySearch(),
   })

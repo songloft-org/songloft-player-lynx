@@ -50,6 +50,9 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
   const updatePluginMutation = useUpdatePluginMutation()
   const autoUpdateMutation = useSetPluginAutoUpdateMutation()
   const { data: githubProxy } = useGithubProxyQuery()
+  const openingBlocked = toggleMutation.isPending
+    || deleteMutation.isPending
+    || updatePluginMutation.isPending
 
   /*
    * The dialog's visibility and its subject are separate state on purpose. Driving
@@ -93,6 +96,15 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
         onError: (e: unknown) => toast.error(String(e instanceof Error ? e.message : e)),
       },
     )
+  }
+
+  const onOpenPlugin = (plugin: JSPlugin) => {
+    if (!plugin.isActive || !plugin.entryPath || openingBlocked) return
+    void navigate({
+      to: '/plugin/$entryPath',
+      params: { entryPath: plugin.entryPath },
+      search: { from: 'manager' },
+    })
   }
 
   /**
@@ -378,6 +390,8 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
                     key={String(plugin.id)}
                     plugin={plugin}
                     keepAlive={keepAliveList ?? []}
+                    onOpen={onOpenPlugin}
+                    openingBlocked={openingBlocked}
                     onToggleActive={onToggle}
                     onToggleKeepAlive={onToggleKeepAlive}
                     onCheckUpdate={setUpdateTarget}
@@ -406,6 +420,8 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
 function PluginRow({
   plugin,
   keepAlive,
+  onOpen,
+  openingBlocked,
   onToggleActive,
   onToggleKeepAlive,
   onCheckUpdate,
@@ -414,6 +430,8 @@ function PluginRow({
 }: {
   plugin: JSPlugin
   keepAlive: string[]
+  onOpen: (plugin: JSPlugin) => void
+  openingBlocked: boolean
   onToggleActive: (plugin: JSPlugin) => void
   onToggleKeepAlive: (plugin: JSPlugin) => void
   onCheckUpdate: (plugin: JSPlugin) => void
@@ -423,6 +441,7 @@ function PluginRow({
   const { t } = useTranslation()
   const [menuOpen, setMenuOpen] = useState(false)
   const isKeepAlive = plugin.entryPath != null && keepAlive.includes(plugin.entryPath)
+  const canOpen = plugin.isActive && Boolean(plugin.entryPath) && !openingBlocked
 
   const tone = plugin.isError ? 'error' : plugin.isActive ? 'active' : 'inactive'
   const statusLabel = plugin.isError
@@ -444,28 +463,38 @@ function PluginRow({
   return (
     <view className='plugin-manager__item' data-testid={`plugin-item-${plugin.id}`}>
       <view className='plugin-manager__row-main'>
-        <PluginAvatar plugin={plugin} />
-        <view className='plugin-manager__item-info'>
-          <text className='plugin-manager__item-name'>{plugin.displayName}</text>
-          <view className='plugin-manager__item-meta'>
-            <view className={`plugin-manager__status plugin-manager__status--${tone}`}>
-              <view className='plugin-manager__status-dot' />
-              <text className='plugin-manager__status-text'>{statusLabel}</text>
+        <view
+          className='plugin-manager__entry'
+          data-testid={`plugin-entry-${plugin.id}`}
+          bindtap={canOpen ? () => onOpen(plugin) : undefined}
+          accessibility-element={canOpen}
+          accessibility-traits={canOpen ? 'button' : undefined}
+          accessibility-label={canOpen ? plugin.displayName : undefined}
+        >
+          <PluginAvatar plugin={plugin} />
+          <view className='plugin-manager__item-info'>
+            <text className='plugin-manager__item-name'>{plugin.displayName}</text>
+            <view className='plugin-manager__item-meta'>
+              <view className={`plugin-manager__status plugin-manager__status--${tone}`}>
+                <view className='plugin-manager__status-dot' />
+                <text className='plugin-manager__status-text'>{statusLabel}</text>
+              </view>
+              {plugin.version
+                ? <text className='plugin-manager__version'>v{plugin.version}</text>
+                : null}
+              {plugin.author
+                ? <text className='plugin-manager__author'>{t('jsplugin.author', { author: plugin.author })}</text>
+                : null}
             </view>
-            {plugin.version
-              ? <text className='plugin-manager__version'>v{plugin.version}</text>
-              : null}
-            {plugin.author
-              ? <text className='plugin-manager__author'>{t('jsplugin.author', { author: plugin.author })}</text>
+            {plugin.description
+              ? (
+                <text className='plugin-manager__desc' text-maxline='2'>
+                  {plugin.description}
+                </text>
+              )
               : null}
           </view>
-          {plugin.description
-            ? (
-              <text className='plugin-manager__desc' text-maxline='2'>
-                {plugin.description}
-              </text>
-            )
-            : null}
+          {canOpen ? <Icon name='chevron-right' size={18} color={ICON_COLORS.contentMuted} /> : null}
         </view>
         <view className='plugin-manager__item-actions'>
           <AppSwitch checked={plugin.isActive} onChange={() => onToggleActive(plugin)} />

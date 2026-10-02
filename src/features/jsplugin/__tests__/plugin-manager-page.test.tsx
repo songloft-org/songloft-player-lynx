@@ -19,6 +19,7 @@ import type { JSPlugin } from '../../../models/jsplugin.js'
 const h = vi.hoisted(() => ({
   plugins: [] as unknown[],
   keepAlive: [] as string[],
+  pending: { toggle: false, delete: false, update: false },
   toggle: vi.fn(),
   del: vi.fn(),
   updateAll: vi.fn(),
@@ -82,8 +83,8 @@ vi.mock('../api/index.js', () => ({
 }))
 
 vi.mock('../data/jsplugin-mutations.js', () => ({
-  useTogglePluginMutation: () => ({ mutate: h.toggle, isPending: false }),
-  useDeletePluginMutation: () => ({ mutate: h.del, isPending: false }),
+  useTogglePluginMutation: () => ({ mutate: h.toggle, isPending: h.pending.toggle }),
+  useDeletePluginMutation: () => ({ mutate: h.del, isPending: h.pending.delete }),
   useUpdateAllPluginsMutation: () => ({
     mutate: h.updateAll,
     mutateAsync: h.updateAllAsync,
@@ -94,7 +95,7 @@ vi.mock('../data/jsplugin-mutations.js', () => ({
   useUpdatePluginMutation: () => ({
     mutate: h.forceUpdate,
     mutateAsync: h.updatePluginAsync,
-    isPending: false,
+    isPending: h.pending.update,
   }),
 }))
 
@@ -142,6 +143,7 @@ function makePlugin(over: Partial<JSPlugin> = {}): JSPlugin {
 beforeEach(() => {
   h.plugins = [makePlugin()]
   h.keepAlive = []
+  h.pending = { toggle: false, delete: false, update: false }
 })
 
 afterEach(() => {
@@ -153,7 +155,7 @@ async function renderPage() {
   // The page reads the query client directly (the upload success path
   // invalidates the nav-tab query), so it needs a real provider.
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  render(<PluginManagerPage />, {
+  const rendered = render(<PluginManagerPage />, {
     wrapper: ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     ),
@@ -161,8 +163,69 @@ async function renderPage() {
   await act(async () => {
     await Promise.resolve()
   })
-  return getQueriesForElement(elementTree.root!)
+  return {
+    ...getQueriesForElement(elementTree.root!),
+    rerender: () => rendered.rerender(<PluginManagerPage />),
+  }
 }
+
+test('tapping an installed plugin opens its page with a manager return target', async () => {
+  const { getByText } = await renderPage()
+  await act(async () => {
+    fireEvent.tap(getByText('歌曲下载'))
+  })
+  expect(h.navigate).toHaveBeenCalledWith({
+    to: '/plugin/$entryPath',
+    params: { entryPath: 'downloader' },
+    search: { from: 'manager' },
+  })
+  expect(h.openURL).not.toHaveBeenCalled()
+})
+
+test.each([
+  { isActive: false },
+  { isActive: false, isError: true },
+  { entryPath: undefined },
+  { entryPath: '' },
+])('a plugin without an active entry does not navigate: %j', async (overrides) => {
+  h.plugins = [makePlugin(overrides)]
+  const { getByText } = await renderPage()
+  await act(async () => {
+    fireEvent.tap(getByText('歌曲下载'))
+  })
+  expect(h.navigate).not.toHaveBeenCalled()
+})
+
+test('the enable switch and row menu do not open the plugin', async () => {
+  const { getByTestId } = await renderPage()
+  await act(async () => {
+    const row = getByTestId('plugin-item-7')
+    fireEvent.tap(row.querySelector('.app-switch')!)
+  })
+  expect(h.toggle).toHaveBeenCalled()
+  await openRowMenu(getByTestId)
+  expect(h.navigate).not.toHaveBeenCalled()
+})
+
+test.each(['toggle', 'delete', 'update'] as const)(
+  'the entry is blocked during %s and works again when the operation finishes', async (operation) => {
+    h.pending[operation] = true
+    const { getByText, rerender } = await renderPage()
+    await act(async () => {
+      fireEvent.tap(getByText('歌曲下载'))
+    })
+    expect(h.navigate).not.toHaveBeenCalled()
+
+    h.pending[operation] = false
+    await act(async () => {
+      rerender()
+    })
+    await act(async () => {
+      fireEvent.tap(getByText('歌曲下载'))
+    })
+    expect(h.navigate).toHaveBeenCalledTimes(1)
+  },
+)
 
 /**
  * The topbar actions live behind the `⋯` overflow menu now (three labelled

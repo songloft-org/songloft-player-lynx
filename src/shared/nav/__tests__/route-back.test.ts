@@ -1,9 +1,10 @@
 import '../../../shims/router-env.js'
-import { beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { resolveRouteBack, type RouteBackContext } from '../route-back.js'
 import { setLastShellLocation, setNavPaths } from '../shell-navigation.js'
 import { router } from '../../../router.js'
+import { performRouteBack, resetBackRouterForTests, setBackRouter } from '../../../core/navigation/route-back-action.js'
 
 /**
  * The coverage gate for back navigation.
@@ -68,6 +69,49 @@ function ctx(overrides: Partial<RouteBackContext> = {}): RouteBackContext {
 beforeEach(() => {
   setNavPaths(BUILT_IN_TABS)
   setLastShellLocation('/')
+})
+
+afterEach(() => resetBackRouterForTests())
+
+describe('plugins opened from the installed list', () => {
+  test('the plugin route keeps the manager source and ignores arbitrary return targets', () => {
+    const route = Object.values(router.routesById).find((r) => r.fullPath === '/plugin/$entryPath')!
+    const validate = route.options.validateSearch as (search: Record<string, unknown>) => unknown
+    expect(validate({ from: 'manager' })).toEqual({ from: 'manager' })
+    expect(validate({ from: 'https://example.com' })).toEqual({})
+    expect(validate({ tab: true })).toEqual({ tab: true })
+  })
+
+  test.each([
+    [BUILT_IN_TABS],
+    [[...BUILT_IN_TABS, '/plugin/miot']],
+  ])(
+    'back returns to the manager with nav paths %j', (navPaths) => {
+      expect(resolveRouteBack('/plugin/miot', ctx({
+        navPaths,
+        pluginManagerEntry: true,
+        lastShellLocation: '/library',
+      }))).toEqual({ kind: 'navigate', to: '/settings/plugins' })
+    },
+  )
+
+  test('the shared back action reads the route source and returns to the manager', () => {
+    const navigate = vi.fn()
+    setBackRouter({
+      state: { location: { pathname: '/plugin/miot', search: { from: 'manager' } } },
+      navigate,
+    } as never)
+    expect(performRouteBack()).toBe(true)
+    expect(navigate).toHaveBeenCalledWith({ to: '/settings/plugins' })
+  })
+
+  test('a nav tab entry still follows the tab exit policy', () => {
+    expect(resolveRouteBack('/plugin/miot', ctx({
+      navPaths: [...BUILT_IN_TABS, '/plugin/miot'],
+      pluginTabEntry: true,
+      pluginManagerEntry: true,
+    }))).toEqual({ kind: 'exit-prompt' })
+  })
 })
 
 describe('every route the app can be on has a declared back target', () => {

@@ -95,6 +95,8 @@ useBackHandler(open, () => { setOpen(false); return true })
 
 ### 插件 WebView 内部历史（最脆弱的一处）
 
+已安装插件列表打开插件时附带 `?from=manager`（songloft-org/songloft#489）。UI 返回箭头经统一路由策略直接回到 `/settings/plugins`；系统返回键先处理插件内部历史，耗尽后经同一策略回到管理列表。首页网格仍返回最近的首页/曲库，`?tab=true` 的导航 Tab 入口仍执行 Tab 退出策略。路由仅接受固定的 `manager` 来源值，不接受任意返回 URL。
+
 Lynx `<webview>` 没有 `canGoBack`/`goBack`，只能近似：
 
 - `bindlocationchange` 告知页面发生了导航；我们用它维护深度计数 `webDepth`，并用 `eval('history.back()')` 驱动回退。

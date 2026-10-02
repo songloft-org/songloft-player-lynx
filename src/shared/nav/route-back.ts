@@ -57,6 +57,8 @@ export interface RouteBackContext {
    * not offer to exit. `navPaths` alone cannot tell the two apart.
    */
   pluginTabEntry?: boolean
+  /** Plugin opened from the installed list returns there after its internal history. */
+  pluginManagerEntry?: boolean
   /** Which tab the shell was last on, for the chrome-less pages that return to it. */
   lastShellLocation: string
   /** The library's last sub-view, so returning to it does not reset the view. */
@@ -135,6 +137,10 @@ export function resolveRouteBack(
 
   // Not authenticated: there is nothing behind login.
   if (pathname === '/login') return { kind: 'exit-prompt' }
+
+  if (pathname.startsWith('/plugin/') && ctx.pluginManagerEntry) {
+    return { kind: 'navigate', to: '/settings/plugins' }
+  }
 
   const explicit = explicitParentOf(pathname)
   if (explicit) return { kind: 'navigate', to: explicit }

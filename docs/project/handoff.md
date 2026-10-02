@@ -1,5 +1,7 @@
 # 工作交接（2026-09-20 · Liquid Glass iOS26 重构 P0–P6）
 
+> **2026-10-02 · songloft-org/songloft#489（已完成）**：已安装插件列表支持直接打开启用且有入口的插件；通过 `from=manager` 使插件页返回管理列表。实施阶段全量 2729 项测试通过；自审补齐更新期间的入口限制后，相关 99 项测试、类型检查与双产物构建通过。构建保留 3 条既有拖拽样式 `touch-action` 警告；原生设备/浏览器实测待补。改动与验证详见 [progress.md](progress.md) 对应日期条目。
+
 > 本文件是**给接手 AI 的交接说明**，只回答三件事：现在在哪、还剩什么、怎么验证。**逐批交付细节一律不进本文件**——按日期倒序存放在 [progress.md](progress.md) 顶部，缺陷根因在 [bugs.md](bugs.md)，踩坑证据在 [pitfalls.md](pitfalls.md)。
 >
 > **读文档顺序**：① [AGENTS.md](../../AGENTS.md) §3–§6（铁律，必读）→ ② 本文 §3「剩余工作」→ ③ [pitfalls.md](pitfalls.md)（每条铁律背后的证据）。细节按需查 [progress.md](progress.md) 与 [bugs.md](bugs.md)。
