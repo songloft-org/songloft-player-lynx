@@ -33,6 +33,7 @@ import { pluginColorSchemeMap } from '../domain/plugin-color-scheme.js'
 import { getJSPluginApi } from '../api/index.js'
 import { usePluginsQuery } from '../data/jsplugin-query.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
+import { subscribeAppResumed } from '../../../native/app-lifecycle.js'
 import type { Song } from '../../../models/song.js'
 import { LynxPluginFrame } from '../widgets/LynxPluginFrame.js'
 import './PluginWebViewPage.css'
@@ -145,6 +146,21 @@ export function PluginWebViewPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const webviewRef = useRef<NodesRef>(null)
+
+  useEffect(() => {
+    if (!src || isWebPlatform()) return
+    return subscribeAppResumed(() => {
+      'background only'
+      // Run in the hosted browser after its drawing resumes. MIoT uses this
+      // notification to replace a silent, stale status connection (#493).
+      webviewRef.current?.invoke({
+        method: 'eval',
+        params: {
+          func: "requestAnimationFrame(function(){document.dispatchEvent(new Event('visibilitychange'))})",
+        },
+      }).exec()
+    })
+  }, [src])
 
   /*
    * Internal-history tracking for the plugin page.

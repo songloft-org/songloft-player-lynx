@@ -34,6 +34,7 @@ HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatin
 | 名称 | 实现 | 通道 |
 |---|---|---|
 | `SystemAppearance` | `system/SystemAppearance.kt` + `MainActivity.kt` / `SystemAppearance.swift` + `ViewController.swift` | **不注册为模块**，走两条通道：`lynx.__globalProps` 送初值（首帧正确）+ `sendGlobalEvent` 送变更。TS facade `src/native/system-appearance.ts` |
+| `AppLifecycle` | Android `MainActivity.kt`（本批只接 Android） | **不注册为模块**，`onResume` 发出 `SongloftLifecycle.resumed`，TS facade `src/native/app-lifecycle.ts` 订阅。iOS/HarmonyOS 尚未接入；Web iframe 使用浏览器可见性事件 |
 
 另有 `SongloftTestBridge`（`test/SongloftTestBridgeModule.kt` / `SongloftTestBridgeModule.swift`，事件 `TestBridge.eval`），仅 E2E 用，**不在契约闸门的 `modules` 表内**。
 
@@ -351,6 +352,14 @@ Web 上渲染 Lynx 插件的宿主（native 构建用真实 `<frame>` 元素，�
 - `android:configChanges` 必须含 `uiMode|locale|layoutDirection`，否则切换时 Activity 重建（由 manifest 闸门锁住）。
 
 **闸门锁住的不变量**：2 个 globalProps key + 1 个事件名 + `light`/`dark` 两个值逐字出现在两个宿主里。
+
+### 2.14 `AppLifecycle`（不是 NativeModules 模块，目前仅 Android）
+
+- `MainActivity.onResume` 通过 `sendGlobalEvent('SongloftLifecycle.resumed', [{}])` 通知根 LynxView，事件名必须与 TS `APP_RESUMED_EVENT` 一致。
+- `PluginWebViewPage` 在后台线程的 `useEffect` 中订阅；原生 `<webview>` 通过现有 [eval](https://lynxjs.org/next/api/elements/built-in/webview.html) 在其浏览器下一帧派发 `visibilitychange`，让 MIoT 等插件恢复连接与状态。不重载页面，也不新增原生方法。
+- 卸载或更换页面 URL 时取消订阅，已排队的回调也会因订阅失效而跳过。缺少完整事件接口时降级为无操作。
+- 本批只接 Android 宿主，iOS/HarmonyOS 尚不发送该事件。Web 分支不订阅，iframe 的可见性仍由浏览器处理。
+- 闸门：`native-module-contract.test.ts` 检查 `onResume` 发出带数组载荷的同名事件；`app-lifecycle.test.ts` 检查订阅与清理；`plugin-webview-web.test.tsx` 检查原生页执行通知脚本及 Web 分支兼容。
 
 ---
 

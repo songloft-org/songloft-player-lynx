@@ -11,6 +11,8 @@
 
 ## 待修复（开放）
 
+- [ ] **Android 插件页缺少恢复前台通知（songloft-org/songloft#493，2026-10-04 代码检查发现，已补实现待真机验证）** — MIoT 在后台留下的静默失效状态连接可能在返回前台后持续停更；Lynx `MainActivity.onResume` 此前只处理悬浮窗权限，插件页未订阅宿主恢复事件。现补上 `SongloftLifecycle.resumed` → 原生 WebView 下一浏览器帧的 `visibilitychange`，配合 MIoT 插件自身的重连与 HTTP 快照恢复。未修改宿主和页面时两项回归测试失败，当前无 ADB 设备，长时间后台、断网再联网与音箱状态恢复待原生验证。iOS/HarmonyOS 宿主通知不在本批范围。
+
 > 2026-08-31 从 handoff.md 迁入。尚未闭合，修复后改 `[x]` 并移主题归类，别在已闭合条目上续写。
 
 - [ ] **首页插件网格的拖拽排序永远存不下来（Web，2026-09-15 批76 实测发现）** — 症状：编辑模式把卡片拖到新位置，卡片跟手、落点也认了，**松手后顺序回滚**。根因不在拖拽（批76 已修拖拽本身）：`SettingsApi.updatePluginOrder` 打的是 `PUT /api/v1/settings/plugin-order`（配对的 `getPluginOrder` 打同名 GET），而后端**没有这条路由** —— `docs/swagger.json` 里 jsplugin 相关只有 `settings/plugin-auto-update` / `plugin-keep-alive` / `plugin-registries`，`internal/` 全文零引用，**Flutter 客户端也没有插件排序功能**（所以「对齐 Flutter」不适用，要定的是契约本身）。PUT 404 ⇒ `useUpdatePluginOrderMutation` 的 `onSuccess` 不执行（它没有 `onMutate` 乐观写，也没有任何别的路径写 `['settings','plugin-order']`）⇒ 缓存不更新 ⇒ `applyPluginOrder(plugins, [])` 返回原序 ⇒ 顺序还原。修法二选一：后端补 `/settings/plugin-order`（GET 返回有序 entry_path 列表，PUT 收全量并像注释承诺的那样剪掉孤儿），或客户端改走已有的强类型端点。证据：批76 `scripts/verify-drag-mouse.mjs` 的 `pluginGrid` 段（`GET /settings/plugin-order` → **404**、拖拽前后 `GET /jsplugins` 顺序不变、同一次拖拽的位移 42px→84px 证明拖拽本身成立）。

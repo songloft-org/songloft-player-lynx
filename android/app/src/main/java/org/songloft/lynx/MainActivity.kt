@@ -110,6 +110,10 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         OverlayPermission.onAppForegrounded(this)
+        // Plugin WebViews may retain a dead connection after being backgrounded.
+        val params = JavaOnlyArray()
+        params.pushMap(JavaOnlyMap.from(emptyMap<String, Any>()))
+        lynxView?.sendGlobalEvent(EVENT_APP_RESUMED, params)
     }
 
     /**
@@ -223,5 +227,6 @@ class MainActivity : Activity() {
         const val EXTRA_NAVIGATE_TO_PLAYER = "navigate_to_player"
         const val PROP_NAVIGATE_TO_PLAYER = "navigateToPlayer"
         const val EVENT_NAVIGATE_TO_PLAYER = "SongloftNavigation.navigateToPlayer"
+        const val EVENT_APP_RESUMED = "SongloftLifecycle.resumed"
     }
 }

@@ -1,5 +1,12 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-04 · Android 插件页恢复前台通知（songloft-org/songloft#493）
+
+- 代码检查发现 `MainActivity.onResume` 只处理悬浮窗权限，插件页没有恢复前台通知，MIoT 在后台留下的静默失效连接无法靠宿主主动恢复。MIoT 侧的状态重连逻辑已在插件仓库修复，本批补齐 Lynx Android 的通知链路。
+- Android 发出 `SongloftLifecycle.resumed`；TS facade 在后台线程订阅，原生 WebView 插件页复用 `eval`，在浏览器下一帧派发 `visibilitychange`。卸载或 URL 变化时取消监听并使迟到回调失效；Web iframe 分支保持由浏览器处理可见性。
+- 反向验证：未修改 Android 和页面实现时，新增宿主事件契约与页面订阅行为两项测试失败，其余相关 **261 项通过**。修复后相关 **263 项通过**；2026-10-04 18:53 启动的全量 Vitest **253 文件 / 2745 项通过**，`tsc -b`、Lynx/Web 双产物构建及 ReactLynx 线程检查通过。构建保留 3 条既有 `touch-action` 警告；Android 同步新 bundle 后 `assembleDebug` **BUILD SUCCESSFUL**（51 秒）。改动文件 UTF-8 与 `git diff --check` 检查通过。
+- 当前 ADB 无连接设备，长时间后台、断网再联网与实际 MIoT 音箱状态恢复尚未实测。iOS/HarmonyOS 的宿主通知不在本批范围。
+
 ## 2026-10-02 · 统一弹窗宽度、按钮与内容滚动
 
 - 盘点全部 7 个直接使用 `DialogRoot` 的组件及确认/输入框调用点。通用确认框、输入框、插件源管理、单插件更新、批量更新原本只设最大宽度，卡片随内容变窄；按钮等分宽度并各占 32px 横向内边距，且文字可换行。统一为屏幕两侧各 32px 留白、最大宽度 440px；原生复用 `dialogCardWidth` 的实测 px 宽度，Web 用 CSS viewport 宽度。

@@ -17,6 +17,7 @@ import {
 } from '../native/system-appearance.js'
 import { NATIVE_EVENT } from '../native/native-audio.js'
 import { BACK_PRESSED_EVENT } from '../native/navigation.js'
+import { APP_RESUMED_EVENT } from '../native/app-lifecycle.js'
 import { SONG_CACHE_LIMIT_ERROR } from '../features/player/data/song-cache.js'
 
 /**
@@ -39,6 +40,18 @@ import { SONG_CACHE_LIMIT_ERROR } from '../features/player/data/song-cache.js'
 const repoRoot = path.resolve(__dirname, '../..')
 const read = (relative: string): string =>
   readFileSync(path.join(repoRoot, relative), 'utf8')
+
+test('Android onResume emits the lifecycle event consumed by plugin WebViews', () => {
+  const activity = read('android/app/src/main/java/org/songloft/lynx/MainActivity.kt')
+  const event = activity.match(/const val EVENT_APP_RESUMED = "([^"]+)"/)
+  expect(event?.[1]).toBe(APP_RESUMED_EVENT)
+  const onResume = activity.match(/override fun onResume\(\)\s*\{([\s\S]*?)\n    \}/)?.[1]
+  expect(onResume).toBeDefined()
+  expect(onResume).toMatch(/super\.onResume\(\)/)
+  expect(onResume).toMatch(/val params = JavaOnlyArray\(\)/)
+  expect(onResume).toMatch(/params\.pushMap\(JavaOnlyMap\.from\(emptyMap<String, Any>\(\)\)\)/)
+  expect(onResume).toMatch(/lynxView\?\.sendGlobalEvent\(EVENT_APP_RESUMED, params\)/)
+})
 
 const ANDROID_AUDIO = 'android/app/src/main/java/org/songloft/lynx/audio'
 const ANDROID_STORAGE = 'android/app/src/main/java/org/songloft/lynx/storage'

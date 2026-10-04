@@ -1,6 +1,7 @@
 import '../../../shims/router-env.js'
 
 import '@testing-library/jest-dom'
+import { runInNewContext } from 'node:vm'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 
@@ -28,6 +29,7 @@ const h = vi.hoisted(() => ({
   hide: vi.fn(),
   close: vi.fn(),
   available: true,
+  isWeb: true,
   // `?tab=true` in the search string for this test.
   tab: false,
   handlerCalls: [] as Array<{
@@ -66,7 +68,7 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 
 vi.mock('../../../native/web-platform.js', () => ({
-  isWebPlatform: () => true,
+  isWebPlatform: () => h.isWeb,
 }))
 
 vi.mock('../../../shared/theme/theme-model.js', () => ({
@@ -144,6 +146,7 @@ vi.mock('../../player/store/index.js', () => {
 })
 
 const { PluginWebViewPage } = await import('../pages/PluginWebViewPage.js')
+const { APP_RESUMED_EVENT } = await import('../../../native/app-lifecycle.js')
 
 /** The last registered non-null bridge handlers (the page's live set). */
 function activeHandlers() {
@@ -155,6 +158,7 @@ function activeHandlers() {
 beforeEach(() => {
   h.tab = false
   h.available = true
+  h.isWeb = true
   h.handlerCalls = []
   h.playerSubs = []
   h.themeSubs = []
@@ -163,6 +167,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.restoreAllMocks()
   vi.clearAllMocks()
   h.handlerCalls = []
   h.playerSubs = []
@@ -180,6 +185,60 @@ async function renderPage() {
   const q = getQueriesForElement(result.container as unknown as HTMLElement)
   return { ...result, q }
 }
+
+function nativeHost() {
+  const listeners = new Set<() => void>()
+  const emitter = lynx.getJSModule('GlobalEventEmitter')
+  const addListener = emitter.addListener.bind(emitter)
+  const removeListener = emitter.removeListener.bind(emitter)
+  vi.spyOn(emitter, 'addListener').mockImplementation((name, fn) => {
+    if (name === APP_RESUMED_EVENT) listeners.add(fn as () => void)
+    else addListener(name, fn)
+  })
+  vi.spyOn(emitter, 'removeListener').mockImplementation((name, fn) => {
+    if (name === APP_RESUMED_EVENT) listeners.delete(fn as () => void)
+    else removeListener(name, fn)
+  })
+  const invoke = vi.fn((_params: { method: string; params: { func: string } }) => ({ exec: vi.fn() }))
+  vi.spyOn(lynx, 'createSelectorQuery').mockReturnValue({
+    select: () => ({ invoke }),
+  } as unknown as ReturnType<typeof lynx.createSelectorQuery>)
+  return { listeners, invoke, resume: () => listeners.forEach(fn => fn()) }
+}
+
+test('Android resume reaches the mounted WebView and not an unmounted plugin', async () => {
+  h.isWeb = false
+  const host = nativeHost()
+  const { q, unmount } = await renderPage()
+  expect(q.getByTestId('plugin-webview-frame')).toBeTruthy()
+  expect(host.listeners.size).toBe(1)
+  act(() => host.resume())
+  expect(host.invoke).toHaveBeenCalledTimes(1)
+  const call = host.invoke.mock.calls[0]![0] as unknown as { method: string; params: { func: string } }
+  expect(call.method).toBe('eval')
+  const frames: Array<() => void> = []
+  const events: Event[] = []
+  runInNewContext(call.params.func, {
+    requestAnimationFrame: (fn: () => void) => frames.push(fn),
+    document: { dispatchEvent: (event: Event) => events.push(event) },
+    Event,
+  })
+  expect(events).toHaveLength(0)
+  frames.forEach(fn => fn())
+  expect(events.map(event => event.type)).toEqual(['visibilitychange'])
+  act(() => { unmount() })
+  host.resume()
+  expect(host.listeners.size).toBe(0)
+  expect(host.invoke).toHaveBeenCalledTimes(1)
+})
+
+test('Web iframe pages leave browser visibility handling to the iframe', async () => {
+  const host = nativeHost()
+  await renderPage()
+  host.resume()
+  expect(host.listeners.size).toBe(0)
+  expect(host.invoke).not.toHaveBeenCalled()
+})
 
 test('a pushed entry renders the topbar with the open-in-browser action', async () => {
   const { q } = await renderPage()
