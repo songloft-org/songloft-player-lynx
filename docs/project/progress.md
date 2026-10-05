@@ -1,5 +1,12 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-05 · DLNA 接收兼容与投屏控制对齐 Flutter
+
+- 根因：Android 的 DIDL `res` 没有 `protocolInfo`，Songloft 无后缀播放 URL 被 MIoT 拒绝为 714；原生忽略 HTTP 错误仍调用 Play，导致播放旧曲。现 facade 按实际资源/转码格式生成 MIME 元数据，Android 验证 HTTP、SOAP Fault 和响应结构，URI 失败立即停止后续 Play。
+- 新增持久投屏 store，离开投屏页不清空设备。主播放器暂停/继续、上一曲/下一曲、进度与音量控制选定设备；查询远端状态、进度，完成事件复用队列模式，暂停不触发自动下一首。本地音频事件不会覆盖投屏状态。控制串行，快速连点及投屏期间断开的竞态有回归覆盖。
+- 原生沿用现有 5 方法，通过 control 扩展 status/volume，不新增方法名；三端同步 metadata、状态查询、音量与错误处理。Android 重新发现时保留当前设备。iOS/HarmonyOS 源码同步，Linux 未编译验证。
+- 验证：TypeScript 检查、Lynx/Web 双 bundle、最终 Android assembleDebug 通过；JS 回归覆盖 255 文件 / 2760 项（2753 项在全量运行中通过，一个文件因 NDK 解压耗尽空间未加载，释放空间后其 7 项单独重跑通过）；Android 7 项 SOAP 实际 HTTP 测试及 4 项通知元数据测试通过。最终测试 APK：`android/app/build/outputs/apk/debug/app-debug.apk`。当前 ADB 无设备，投屏实效、后台连播仍待用户 Android 实测。
+
 ## 2026-10-04 · Android 插件页恢复前台通知（songloft-org/songloft#493）
 
 - 代码检查发现 `MainActivity.onResume` 只处理悬浮窗权限，插件页没有恢复前台通知，MIoT 在后台留下的静默失效连接无法靠宿主主动恢复。MIoT 侧的状态重连逻辑已在插件仓库修复，本批补齐 Lynx Android 的通知链路。

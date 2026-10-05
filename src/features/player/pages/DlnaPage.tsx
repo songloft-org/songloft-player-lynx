@@ -6,7 +6,7 @@ import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { getDlnaModule, type DlnaDevice } from '../../../native/dlna.js'
 import { safeClearTimeout } from '../../../native/safe-timers.js'
 import { usePlayerStore } from '../store/index.js'
-import { buildSongUrl } from '../../../core/network/url-helper.js'
+import { useDlnaStore } from '../store/dlna-store.js'
 import './DlnaPage.css'
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 
@@ -20,7 +20,8 @@ export function DlnaPage() {
 
   const [devices, setDevices] = useState<DlnaDevice[]>([])
   const [scanning, setScanning] = useState(false)
-  const [casting, setCasting] = useState<string | null>(null)
+  const session = useDlnaStore()
+  const casting = session.activeDevice?.id
   const [error, setError] = useState<string | null>(null)
 
   const dlna = getDlnaModule()
@@ -56,28 +57,21 @@ export function DlnaPage() {
     startScan()
     return () => {
       settleTimer.current = safeClearTimeout(settleTimer.current as unknown as number)
-      if (dlna.available) void dlna.stopDiscovery().catch(() => {})
+      if (dlna.available) void dlna.stopDiscovery().catch(() => { })
     }
   }, [startScan, dlna])
 
   const onCast = (device: DlnaDevice) => {
     if (!song || !song.url) return
     setError(null)
-    setCasting(device.id)
-    const url = buildSongUrl(song.url ?? '')
-    void dlna.cast(device.id, url, song.title).then(() => {
-      // Pause local playback so we don't get dual audio.
-      void usePlayerStore.getState().togglePlay()
-    }).catch((e: unknown) => {
-      setCasting(null)
+    void session.castTo(device, song).catch((e: unknown) => {
       setError(String(e instanceof Error ? e.message : e))
     })
   }
 
   const onDisconnect = () => {
     if (casting) {
-      void dlna.control('stop', { deviceId: casting }).catch(() => {})
-      setCasting(null)
+      void session.disconnect().catch((e: unknown) => setError(String(e instanceof Error ? e.message : e)))
     }
   }
 
@@ -106,21 +100,21 @@ export function DlnaPage() {
       <scroll-view className='dlna-page__list' scroll-y>
         {!dlna.available
           ? <text className='dlna-page__state'>{t('dlna.unavailable')}</text>
-          : error
-          ? <text className='dlna-page__state'>{t('dlna.failed', { error })}</text>
-          : scanning
-          ? <text className='dlna-page__state'>{t('dlna.scanning')}</text>
-          : devices.length === 0
-            ? <text className='dlna-page__state'>{t('dlna.noDevices')}</text>
-            : devices.map(d => (
-              <view key={d.id} className='dlna-page__device' bindtap={() => onCast(d)}>
-                <Icon name='cast' size={20} color={ICON_COLORS.content2} />
-                <text className='dlna-page__device-name'>{d.name}</text>
-                {casting === d.id
-                  ? <Icon name='check' size={16} color={ICON_COLORS.primary} />
-                  : null}
-              </view>
-            ))}
+          : error || session.error
+            ? <text className='dlna-page__state'>{t('dlna.failed', { error: error || session.error })}</text>
+            : scanning
+              ? <text className='dlna-page__state'>{t('dlna.scanning')}</text>
+              : devices.length === 0
+                ? <text className='dlna-page__state'>{t('dlna.noDevices')}</text>
+                : devices.map(d => (
+                  <view key={d.id} className='dlna-page__device' bindtap={() => onCast(d)}>
+                    <Icon name='cast' size={20} color={ICON_COLORS.content2} />
+                    <text className='dlna-page__device-name'>{d.name}</text>
+                    {casting === d.id
+                      ? <Icon name='check' size={16} color={ICON_COLORS.primary} />
+                      : null}
+                  </view>
+                ))}
       </scroll-view>
 
       {song
@@ -130,8 +124,15 @@ export function DlnaPage() {
             <text className='dlna-page__now-song'>{song.title}</text>
             {casting
               ? (
-                <view className='dlna-page__disconnect' bindtap={onDisconnect}>
-                  <text className='dlna-page__disconnect-text'>{t('dlna.disconnect')}</text>
+                <view>
+                  <view className='dlna-page__disconnect' bindtap={() => { void usePlayerStore.getState().togglePlay().catch((e: unknown) => setError(String(e))) }}
+                    accessibility-element={true}
+                    accessibility-label={session.isPlaying ? t('common.pause') : t('common.play')}>
+                    <Icon name={session.isPlaying ? 'pause' : 'play'} size={22} color={ICON_COLORS.primary} />
+                  </view>
+                  <view className='dlna-page__disconnect' bindtap={onDisconnect}>
+                    <text className='dlna-page__disconnect-text'>{t('dlna.disconnect')}</text>
+                  </view>
                 </view>
               )
               : null}

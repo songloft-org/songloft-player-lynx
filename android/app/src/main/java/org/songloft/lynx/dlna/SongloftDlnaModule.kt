@@ -6,6 +6,7 @@ import android.os.Looper
 import com.lynx.jsbridge.LynxModule
 import com.lynx.jsbridge.LynxMethod
 import com.lynx.react.bridge.Callback
+import org.songloft.lynx.net.InsecureTls
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -45,13 +46,18 @@ class SongloftDlnaModule(context: Context) : LynxModule(context) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val discovering = AtomicBoolean(false)
     private val devices = ConcurrentHashMap<String, DlnaDevice>()
+    private val soapClient = DlnaSoapClient { url ->
+        (URL(url).openConnection() as HttpURLConnection).also { InsecureTls.configure(it) }
+    }
     private var socket: DatagramSocket? = null
+    @Volatile private var activeDeviceId: String? = null
 
     data class DlnaDevice(
         val id: String,
         val name: String,
         val location: String,
-        val controlUrl: String
+        val controlUrl: String,
+        val renderingControlUrl: String?
     )
 
     @LynxMethod
@@ -60,7 +66,7 @@ class SongloftDlnaModule(context: Context) : LynxModule(context) {
             callback.invoke(JSONObject().put("success", true).toString())
             return
         }
-        devices.clear()
+        devices.keys.filter { it != activeDeviceId }.forEach { devices.remove(it) }
         executor.execute {
             try {
                 val sock = DatagramSocket().apply { soTimeout = 4000 }
@@ -126,8 +132,8 @@ class SongloftDlnaModule(context: Context) : LynxModule(context) {
                     mainHandler.post { callback.invoke(JSONObject().put("error", "Device not found").toString()) }
                     return@execute
                 }
-                sendSetAVTransportURI(device.controlUrl, url, title)
-                sendPlay(device.controlUrl)
+                soapClient.cast(device.controlUrl, url, title, json.optString("metadata", ""))
+                activeDeviceId = device.id
                 mainHandler.post { callback.invoke(JSONObject().put("success", true).toString()) }
             } catch (e: Exception) {
                 mainHandler.post { callback.invoke(JSONObject().put("error", e.message).toString()) }
@@ -155,6 +161,23 @@ class SongloftDlnaModule(context: Context) : LynxModule(context) {
                         val value = json.optInt("value", 0)
                         sendSeek(device.controlUrl, value)
                     }
+                    "volume" -> {
+                        val url = device.renderingControlUrl ?: error("Device does not support volume control")
+                        val value = json.getInt("value").coerceIn(0, 100)
+                        soapClient.request(url, "SetVolume", "<Channel>Master</Channel><DesiredVolume>$value</DesiredVolume>", "RenderingControl")
+                    }
+                    "status" -> {
+                        val transport = soapClient.request(device.controlUrl, "GetTransportInfo", "")
+                        val position = soapClient.request(device.controlUrl, "GetPositionInfo", "")
+                        val state = transport.getElementsByTagNameNS("*", "CurrentTransportState").item(0)?.textContent ?: ""
+                        val relTime = position.getElementsByTagNameNS("*", "RelTime").item(0)?.textContent ?: ""
+                        val duration = position.getElementsByTagNameNS("*", "TrackDuration").item(0)?.textContent ?: ""
+                        val result = JSONObject().put("state", state)
+                            .put("positionMs", timeMilliseconds(relTime)).put("durationMs", timeMilliseconds(duration))
+                        mainHandler.post { callback.invoke(result.toString()) }
+                        return@execute
+                    }
+                    else -> error("Unsupported DLNA action: $action")
                 }
                 mainHandler.post { callback.invoke(JSONObject().put("success", true).toString()) }
             } catch (e: Exception) {
@@ -186,54 +209,33 @@ class SongloftDlnaModule(context: Context) : LynxModule(context) {
         try {
             val xml = conn.inputStream.bufferedReader().readText()
             val name = Regex("<friendlyName>(.+?)</friendlyName>").find(xml)?.groupValues?.get(1) ?: "Unknown"
-            val controlUrl = extractControlUrl(xml, location)
-            return DlnaDevice(id = "", name = name, location = location, controlUrl = controlUrl)
+            val controlUrl = extractControlUrl(xml, location, "AVTransport") ?: return null
+            val renderingControlUrl = extractControlUrl(xml, location, "RenderingControl")
+            return DlnaDevice(id = "", name = name, location = location, controlUrl = controlUrl, renderingControlUrl = renderingControlUrl)
         } finally {
             conn.disconnect()
         }
     }
 
-    private fun extractControlUrl(xml: String, baseLocation: String): String {
-        val serviceBlock = Regex(
-            "<service>.*?<serviceType>urn:schemas-upnp-org:service:AVTransport:1</serviceType>.*?<controlURL>(.+?)</controlURL>.*?</service>",
-            RegexOption.DOT_MATCHES_ALL
-        ).find(xml)?.groupValues?.get(1) ?: "/MediaRenderer/AVTransport/Control"
+    private fun extractControlUrl(xml: String, baseLocation: String, service: String): String? {
+        val blocks = Regex("<service>.*?</service>", RegexOption.DOT_MATCHES_ALL).findAll(xml)
+        val block = blocks.firstOrNull { it.value.contains("urn:schemas-upnp-org:service:$service:") }?.value ?: return null
+        val path = Regex("<controlURL>(.+?)</controlURL>").find(block)?.groupValues?.get(1)?.trim() ?: return null
+        val urlBase = Regex("<URLBase>(.+?)</URLBase>").find(xml)?.groupValues?.get(1)?.trim() ?: baseLocation
+        return URL(URL(urlBase), path).toString()
+    }
 
-        return if (serviceBlock.startsWith("http")) {
-            serviceBlock
-        } else {
-            val base = URL(baseLocation)
-            "${base.protocol}://${base.host}:${base.port}$serviceBlock"
-        }
+    private fun timeMilliseconds(value: String): Long {
+        val parts = value.trim().split(":")
+        if (parts.size != 3) return 0
+        val h = parts[0].toLongOrNull() ?: return 0
+        val m = parts[1].toLongOrNull() ?: return 0
+        val s = parts[2].toDoubleOrNull() ?: return 0
+        return ((h * 3600 + m * 60 + s) * 1000).toLong().coerceAtLeast(0)
     }
 
     private fun soapRequest(controlUrl: String, action: String, body: String) {
-        val conn = URL(controlUrl).openConnection() as HttpURLConnection
-        conn.requestMethod = "POST"
-        conn.setRequestProperty("Content-Type", "text/xml; charset=utf-8")
-        conn.setRequestProperty("SOAPAction", "\"urn:schemas-upnp-org:service:AVTransport:1#$action\"")
-        conn.doOutput = true
-        conn.connectTimeout = 5000
-        conn.readTimeout = 5000
-        val envelope = """<?xml version="1.0" encoding="utf-8"?>
-<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-<s:Body>
-<u:$action xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
-<InstanceID>0</InstanceID>
-$body
-</u:$action>
-</s:Body>
-</s:Envelope>"""
-        conn.outputStream.write(envelope.toByteArray())
-        conn.responseCode // trigger the request
-        conn.disconnect()
-    }
-
-    private fun sendSetAVTransportURI(controlUrl: String, uri: String, title: String) {
-        val metadata = """<DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/">
-<item><dc:title>$title</dc:title><res>$uri</res></item></DIDL-Lite>"""
-        soapRequest(controlUrl, "SetAVTransportURI",
-            "<CurrentURI>$uri</CurrentURI><CurrentURIMetaData>${escapeXml(metadata)}</CurrentURIMetaData>")
+        soapClient.request(controlUrl, action, body)
     }
 
     private fun sendPlay(controlUrl: String) {
@@ -256,7 +258,4 @@ $body
         soapRequest(controlUrl, "Seek", "<Unit>REL_TIME</Unit><Target>$target</Target>")
     }
 
-    private fun escapeXml(s: String): String =
-        s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            .replace("\"", "&quot;").replace("'", "&apos;")
 }

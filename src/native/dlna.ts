@@ -6,18 +6,45 @@ export interface DlnaDevice {
   location: string
 }
 
+export interface DlnaCastOptions {
+  deviceId: string
+  url: string
+  title: string
+  mimeType?: string
+}
+
+export interface DlnaPlaybackState {
+  state: string
+  positionMs: number
+  durationMs: number
+}
+
+function escapeXml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;')
+}
+
+function mediaMetadata({ url, title, mimeType }: DlnaCastOptions): string {
+  const protocol = mimeType ? ` protocolInfo="http-get:*:${escapeXml(mimeType)}:*"` : ''
+  const itemClass = mimeType?.startsWith('video/') ? 'object.item.videoItem' : 'object.item.audioItem'
+  return '<DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/">'
+    + `<item id="0" parentID="-1" restricted="1"><dc:title>${escapeXml(title)}</dc:title>`
+    + `<upnp:class>${itemClass}</upnp:class><res${protocol}>${escapeXml(url)}</res></item></DIDL-Lite>`
+}
+
 /** Promise-shaped DLNA API used by the app. */
 export interface DlnaModule {
   startDiscovery(): Promise<void>
   stopDiscovery(): Promise<void>
   getDevices(): Promise<DlnaDevice[]>
-  cast(deviceId: string, url: string, title: string): Promise<void>
+  cast(options: DlnaCastOptions): Promise<void>
   control(action: DlnaAction, options?: { deviceId?: string; value?: number }): Promise<void>
+  getPlaybackState(deviceId: string): Promise<DlnaPlaybackState | null>
   /** False when no native module is present (Web, or a build without the module). */
   readonly available: boolean
 }
 
-export type DlnaAction = 'play' | 'pause' | 'stop' | 'seek'
+export type DlnaAction = 'play' | 'pause' | 'stop' | 'seek' | 'volume'
 
 /**
  * The **native** shape: Lynx native methods do not return Promises. Reads and
@@ -120,13 +147,25 @@ function createNativeAdapter(native: NativeDlnaModule): DlnaModule {
     async getDevices() {
       return toDevices(await invoke((cb) => native.getDevices(cb), 'getDevices'))
     },
-    async cast(deviceId, url, title) {
-      const args = JSON.stringify({ deviceId, url, title })
+    async cast(options) {
+      const { deviceId, url, title } = options
+      const args = JSON.stringify({ deviceId, url, title, metadata: mediaMetadata(options) })
       await invoke((cb) => native.cast(args, cb), 'cast')
     },
     async control(action, options) {
       const args = JSON.stringify({ action, ...options })
       await invoke((cb) => native.control(args, cb), 'control')
+    },
+    async getPlaybackState(deviceId) {
+      const value = await invoke((cb) => native.control(JSON.stringify({ action: 'status', deviceId }), cb), 'status')
+      if (!value || typeof value !== 'object') return null
+      const state = value as Partial<DlnaPlaybackState>
+      if (typeof state.state !== 'string') return null
+      return {
+        state: state.state.toUpperCase(),
+        positionMs: typeof state.positionMs === 'number' && Number.isFinite(state.positionMs) ? Math.max(0, state.positionMs) : 0,
+        durationMs: typeof state.durationMs === 'number' && Number.isFinite(state.durationMs) ? Math.max(0, state.durationMs) : 0,
+      }
     },
   }
 }
@@ -135,13 +174,14 @@ function createNativeAdapter(native: NativeDlnaModule): DlnaModule {
 function createUnavailableStub(): DlnaModule {
   return {
     available: false,
-    async startDiscovery() {},
-    async stopDiscovery() {},
+    async startDiscovery() { },
+    async stopDiscovery() { },
     async getDevices() {
       return []
     },
-    async cast() {},
-    async control() {},
+    async cast() { },
+    async control() { },
+    async getPlaybackState() { return null },
   }
 }
 

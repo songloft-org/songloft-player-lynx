@@ -17,12 +17,14 @@ interface SsdpDevice {
 
 interface DlnaDevice extends SsdpDevice {
   controlUrl: string
+  renderingControlUrl: string
 }
 
 export class SongloftDlnaModule extends LynxModule {
   private abilityContext: common.UIAbilityContext
   private devices: DlnaDevice[] = []
   private discoveryGeneration: number = 0
+  private activeDeviceId: string = ''
 
   constructor(context: LynxContext, param?: Object) {
     super(context, param)
@@ -30,7 +32,7 @@ export class SongloftDlnaModule extends LynxModule {
   }
 
   public startDiscovery(callback: (result: string) => void): void {
-    this.devices = []
+    this.devices = this.devices.filter((device: DlnaDevice) => device.id === this.activeDeviceId)
     this.discoveryGeneration += 1
     this.doDiscover(this.discoveryGeneration, callback)
   }
@@ -49,16 +51,16 @@ export class SongloftDlnaModule extends LynxModule {
       const parsed: Record<string, string> = JSON.parse(args)
       const deviceId = parsed.deviceId ?? ''
       const mediaUrl = parsed.url ?? ''
-      const title = parsed.title ?? ''
       const device = this.findDevice(deviceId)
       if (!device) {
         callback(JSON.stringify({ error: 'Device not found' }))
         return
       }
-      const body = this.buildSetTransportURIBody(mediaUrl, title)
+      const body = this.buildSetTransportURIBody(mediaUrl, parsed.metadata ?? '')
       this.soapAction(device.controlUrl, 'SetAVTransportURI', body).then(() => {
         return this.soapAction(device.controlUrl, 'Play', this.buildPlayBody())
       }).then(() => {
+        this.activeDeviceId = deviceId
         callback(JSON.stringify({ success: true }))
       }).catch((err: Error) => {
         callback(JSON.stringify({ error: err.message }))
@@ -82,6 +84,23 @@ export class SongloftDlnaModule extends LynxModule {
         return
       }
 
+      if (action === 'status') {
+        this.readPlaybackState(device, callback)
+        return
+      }
+      if (action === 'volume') {
+        if (device.renderingControlUrl.length === 0) {
+          callback(JSON.stringify({ error: 'Device does not support volume control' }))
+          return
+        }
+        const volume = Math.min(100, Math.max(0, Math.round(Number(value))))
+        const body = this.buildServiceBody('SetVolume', 'RenderingControl', `<Channel>Master</Channel><DesiredVolume>${volume}</DesiredVolume>`)
+        this.soapAction(device.renderingControlUrl, 'SetVolume', body, 'RenderingControl').then(() => {
+          callback(JSON.stringify({ success: true }))
+        }).catch((err: Error) => callback(JSON.stringify({ error: err.message })))
+        return
+      }
+
       let soapAction: string
       let soapBody: string
       switch (action) {
@@ -95,11 +114,17 @@ export class SongloftDlnaModule extends LynxModule {
           break
         case 'seek':
           soapAction = 'Seek'
-          soapBody = this.buildSeekBody(value)
+          const seconds = Math.max(0, Math.floor(Number(value)))
+          const target = `${Math.floor(seconds / 3600).toString().padStart(2, '0')}:${Math.floor(seconds % 3600 / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`
+          soapBody = this.buildSeekBody(target)
           break
-        default:
+        case 'play':
           soapAction = 'Play'
           soapBody = this.buildPlayBody()
+          break
+        default:
+          callback(JSON.stringify({ error: 'Unsupported DLNA action' }))
+          return
       }
 
       this.soapAction(device.controlUrl, soapAction, soapBody).then(() => {
@@ -208,6 +233,7 @@ export class SongloftDlnaModule extends LynxModule {
         name: friendlyName,
         location: device.location,
         controlUrl: controlUrl,
+        renderingControlUrl: this.resolveUrl(device.location, this.firstCapture(xml, 'RenderingControl:1</serviceType>[\\s\\S]*?<controlURL>(.+?)</controlURL>') ?? ''),
       }
       return resolved
     } catch (err) {
@@ -224,6 +250,7 @@ export class SongloftDlnaModule extends LynxModule {
   }
 
   private resolveUrl(location: string, target: string): string {
+    if (target.length === 0) return ''
     if (target.startsWith('http://') || target.startsWith('https://')) return target
     const schemeEnd = location.indexOf('://')
     if (schemeEnd < 0) return ''
@@ -248,34 +275,69 @@ export class SongloftDlnaModule extends LynxModule {
     return match ? match[1].trim() : null
   }
 
-  private async soapAction(controlUrl: string, action: string, body: string): Promise<string> {
+  private async soapAction(controlUrl: string, action: string, body: string, service: string = 'AVTransport'): Promise<string> {
     const httpRequest = http.createHttp()
     const headerMap: Record<string, string> = {
       'Content-Type': 'text/xml; charset="utf-8"',
-      'SOAPAction': `"urn:schemas-upnp-org:service:AVTransport:1#${action}"`,
+      'SOAPAction': `"urn:schemas-upnp-org:service:${service}:1#${action}"`,
     }
     const options: http.HttpRequestOptions = {
       method: http.RequestMethod.POST,
       header: headerMap,
       extraData: body,
+      connectTimeout: 5000,
+      readTimeout: 5000,
     }
-    const response = await httpRequest.request(controlUrl, options)
-    httpRequest.destroy()
-
-    if (response.responseCode !== 200) {
-      throw new Error(`SOAP ${action} failed: HTTP ${response.responseCode}`)
+    try {
+      const response = await httpRequest.request(controlUrl, options)
+      const xml = typeof response.result === 'string' ? response.result : ''
+      if (response.responseCode !== 200 || xml.length > 65536 || /<(?:[\w.-]+:)?Fault[\s>]/.test(xml) || !new RegExp(`<(?:[\\w.-]+:)?${action}Response[\\s/>]`).test(xml)) {
+        const code = this.soapValue(xml, 'errorCode')
+        const detail = /^[0-9]{1,5}$/.test(code) ? `: UPnP ${code}` : ''
+        throw new Error(`SOAP ${action} failed: HTTP ${response.responseCode}${detail}`)
+      }
+      return xml
+    } finally {
+      httpRequest.destroy()
     }
-    return response.result as string
   }
 
-  private buildSetTransportURIBody(url: string, title: string): string {
+  private async readPlaybackState(device: DlnaDevice, callback: (result: string) => void): Promise<void> {
+    try {
+      const transport = await this.soapAction(device.controlUrl, 'GetTransportInfo', this.buildSimpleBody('GetTransportInfo'))
+      const position = await this.soapAction(device.controlUrl, 'GetPositionInfo', this.buildSimpleBody('GetPositionInfo'))
+      callback(JSON.stringify({
+        state: this.soapValue(transport, 'CurrentTransportState'),
+        positionMs: this.timeMilliseconds(this.soapValue(position, 'RelTime')),
+        durationMs: this.timeMilliseconds(this.soapValue(position, 'TrackDuration')),
+      }))
+    } catch (err) {
+      callback(JSON.stringify({ error: String(err) }))
+    }
+  }
+
+  private soapValue(xml: string, name: string): string {
+    return this.firstCapture(xml, `<(?:[\\w.-]+:)?${name}(?:\\s[^>]*)?>([^<]*)</(?:[\\w.-]+:)?${name}>`) ?? ''
+  }
+
+  private timeMilliseconds(value: string): number {
+    const parts = value.split(':').map((part: string) => Number(part))
+    if (parts.length !== 3 || parts.some((part: number) => !Number.isFinite(part))) return 0
+    return Math.max(0, (parts[0] * 3600 + parts[1] * 60 + parts[2]) * 1000)
+  }
+
+  private buildServiceBody(action: string, service: string, args: string): string {
+    return `<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><u:${action} xmlns:u="urn:schemas-upnp-org:service:${service}:1"><InstanceID>0</InstanceID>${args}</u:${action}></s:Body></s:Envelope>`
+  }
+
+  private buildSetTransportURIBody(url: string, metadata: string): string {
     return `<?xml version="1.0" encoding="utf-8"?>
 <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
   <s:Body>
     <u:SetAVTransportURI xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
       <InstanceID>0</InstanceID>
       <CurrentURI>${this.escapeXml(url)}</CurrentURI>
-      <CurrentURIMetaData></CurrentURIMetaData>
+      <CurrentURIMetaData>${this.escapeXml(metadata)}</CurrentURIMetaData>
     </u:SetAVTransportURI>
   </s:Body>
 </s:Envelope>`

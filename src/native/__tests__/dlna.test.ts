@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { createRequire } from 'node:module'
 
 import { getDlnaModule, resetDlnaModuleForTests } from '../dlna.js'
 
@@ -18,6 +19,16 @@ import { getDlnaModule, resetDlnaModuleForTests } from '../dlna.js'
  */
 
 const g = globalThis as Record<string, unknown>
+const { JSDOM } = createRequire(import.meta.url)('jsdom') as {
+  JSDOM: new (xml: string, options: { contentType: string }) => { window: { document: Document; close(): void } }
+}
+
+function parseMetadata(xml: string): Document {
+  const dom = new JSDOM(xml, { contentType: 'application/xml' })
+  const document = dom.window.document
+  dom.window.close()
+  return document
+}
 
 /** A fake native module in the exact callback shape both hosts implement. */
 function fakeNative(overrides: Record<string, unknown> = {}) {
@@ -82,14 +93,39 @@ describe('native adapter (callback → Promise)', () => {
     const { mod, calls } = fakeNative()
     install(mod)
 
-    await getDlnaModule().cast('d1', 'http://host/song.mp3', 'Song A')
+    await getDlnaModule().cast({ deviceId: 'd1', url: 'http://host/song.mp3', title: 'Song A', mimeType: 'audio/mpeg' })
 
     const call = calls.find((c) => c.method === 'cast')!
     expect(JSON.parse(call.args!)).toEqual({
       deviceId: 'd1',
       url: 'http://host/song.mp3',
       title: 'Song A',
+      metadata: expect.any(String),
     })
+    const metadata = JSON.parse(call.args!).metadata
+    const document = parseMetadata(metadata)
+    expect(document.getElementsByTagName('res')[0].getAttribute('protocolInfo')).toBe('http-get:*:audio/mpeg:*')
+  })
+
+  test('suffixless URLs carry MIME metadata and XML entities survive one metadata decode', async () => {
+    const { mod, calls } = fakeNative()
+    install(mod)
+    const url = 'http://host/api/v1/songs/2/play?access_token=example&quality=original'
+    const title = '中文 & <曲名> "引号"'
+    await getDlnaModule().cast({ deviceId: 'd1', url, title, mimeType: 'audio/mpeg' })
+    const { metadata } = JSON.parse(calls.find(c => c.method === 'cast')!.args!)
+    const document = parseMetadata(metadata)
+    expect(document.getElementsByTagName('res')[0].textContent).toBe(url)
+    expect(document.getElementsByTagName('dc:title')[0].textContent).toBe(title)
+    expect(document.getElementsByTagName('upnp:class')[0].textContent).toBe('object.item.audioItem')
+  })
+
+  test('unknown formats do not claim to be MP3', async () => {
+    const { mod, calls } = fakeNative()
+    install(mod)
+    await getDlnaModule().cast({ deviceId: 'd1', url: 'http://host/stream', title: 'Unknown' })
+    const { metadata } = JSON.parse(calls.find(c => c.method === 'cast')!.args!)
+    expect(metadata).not.toContain('protocolInfo=')
   })
 
   test('control serializes the action and optional value', async () => {
@@ -112,7 +148,7 @@ describe('native adapter (callback → Promise)', () => {
     })
     install(mod)
 
-    await expect(getDlnaModule().cast('gone', 'http://x/y.mp3', 'T')).rejects.toThrow(
+    await expect(getDlnaModule().cast({ deviceId: 'gone', url: 'http://x/y.mp3', title: 'T' })).rejects.toThrow(
       /Device not found/,
     )
   })
@@ -159,7 +195,7 @@ describe('no native module (Web, or a build without it)', () => {
     expect(dlna.available).toBe(false)
     await expect(dlna.startDiscovery()).resolves.toBeUndefined()
     await expect(dlna.getDevices()).resolves.toEqual([])
-    await expect(dlna.cast('d', 'u', 't')).resolves.toBeUndefined()
+    await expect(dlna.cast({ deviceId: 'd', url: 'u', title: 't' })).resolves.toBeUndefined()
   })
 
   test('a partially implemented module is treated as absent', async () => {

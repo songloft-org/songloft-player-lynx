@@ -150,9 +150,13 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 **7 个**模块：`Songlo
 | `cast` | `cast(args: String, callback: Callback)` | `cast(_:callback:)` |
 | `control` | `control(args: String, callback: Callback)` | `control(_:callback:)` |
 
-- `cast` 的 `args`：`{deviceId, url, title}`；`control` 的 `args`：`{action, deviceId?, value?}`，`action ∈ play | pause | stop | seek`。
+- TS facade：`cast({deviceId, url, title, mimeType?})`；原生 `args`：`{deviceId, url, title, metadata?}`。facade 生成转义后的 DIDL-Lite，`res.protocolInfo` 声明实际输出 MIME，兼容没有文件后缀的歌曲 API URL。未知格式不冒充 MP3。
+- `control` 的 `args`：`{action, deviceId?, value?}`，`action ∈ play | pause | stop | seek | volume | status`。`seek.value` 单位为秒，`volume.value` 为 0–100，使用 RenderingControl 的 `SetVolume`。
+- facade `getPlaybackState(deviceId)` 通过 `control({action:'status'})` 查询 GetTransportInfo / GetPositionInfo，返回 `{state, positionMs, durationMs}`；查询仅发送 `InstanceID`。旧宿主没有状态结果时返回 null。
 - 无事件。
 - Callback payload 带 `error` 字段时 facade reject；`getDevices` 返回 `{id, name, location}` 数组。
+- SOAP HTTP 失败或 Fault 必须 reject；SetAVTransportURI 被拒绝后不发送 Play，避免继续播放上一个客户端留下的歌曲。重新发现设备保留正在投屏的设备记录。
+- `src/features/player/store/dlna-store.ts` 持有跨页面的投屏会话、串行控制和状态轮询。主播放器控制远端暂停/继续、切歌、进度与音量；完成事件复用播放器的播放模式推进队列，本地音频事件不覆盖远端状态。断开成功后停止远端并恢复本地控制。
 - HarmonyOS 与 Android/iOS 一样，发现阶段先解析设备描述中的 AVTransport `controlURL`，按设备 `id` 持久保存；`getDevices` 直接返回设备数组，`cast` / `control` 必须先以 `deviceId` 查表再向 `controlUrl` 发 SOAP，不能把设备 id 或描述页 URL 当控制端点。
 - **反面教材**：`dlna.ts` 曾把原生 bag 直接 `as DlnaModule`（声称返回 Promise），`startDiscovery()` 实际返回 `undefined`，`DlnaPage` 的 `.then()` 在 effect 挂载瞬间抛 TypeError，投屏页对所有 Android 用户开屏即崩。
 

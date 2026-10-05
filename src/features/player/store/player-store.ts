@@ -40,6 +40,7 @@ import {
 import { getCachedPath } from '../data/song-cache.js'
 import { useLyricStore } from './lyric-store.js'
 import type { PlayerData } from './derive.js'
+import { configureDlnaPlayer, useDlnaStore } from './dlna-store.js'
 
 /**
  * Player state store (zustand), bridging the {@link getAudio} mock to the UI —
@@ -552,6 +553,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     })
     // Lyrics are loaded by the currentSong subscription below, not here: every
     // path that swaps the song flows through it (see the subscription's notes).
+    if (useDlnaStore.getState().activeDevice) {
+      await useDlnaStore.getState().castSong(song)
+      void getSongsApi().recordPlayed(song.id, get().playbackContext).catch(() => {})
+      return
+    }
     const source = await resolvePlaybackSource(song)
     // Refresh the native media-notification window BEFORE loading so the new
     // song's metadata is guaranteed present in the engine's `metadataByUrl`
@@ -586,7 +592,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       set({ sleepTimer: step.status })
       if (step.expired) {
         stopSleepInterval()
-        void audio.pause()
+        if (useDlnaStore.getState().activeDevice && useDlnaStore.getState().isPlaying) {
+          void useDlnaStore.getState().togglePlay().catch(() => {})
+        } else {
+          void audio.pause()
+        }
         set({ isPlaying: false })
       }
     }, SLEEP_TICK_MS) as unknown as number
@@ -697,6 +707,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
      * actually holds so we can load on demand.
      */
     togglePlay: async () => {
+      if (useDlnaStore.getState().activeDevice) {
+        await useDlnaStore.getState().togglePlay()
+        return
+      }
       const s = get()
       if (!s.currentSong) return
       if (s.isPlaying) {
@@ -723,18 +737,22 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       if (s.playlist.length === 0) return
       // > 3s into the track → restart the current track (matches Flutter).
       if (s.currentTime > 3_000) {
-        await audio.seek(0)
+        await get().seek(0)
         return
       }
       const idx = resolvePrev(s.playMode, s.currentIndex, s.playlist.length)
       if (idx == null || idx === s.currentIndex) {
-        await audio.seek(0)
+        await get().seek(0)
         return
       }
       await playAtIndex(idx)
     },
 
     seek: async (positionMs) => {
+      if (useDlnaStore.getState().activeDevice) {
+        await useDlnaStore.getState().seek(positionMs)
+        return
+      }
       await audio.seek(positionMs)
     },
 
@@ -742,11 +760,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       const s = get()
       if (s.duration <= 0) return
       const target = Math.min(s.duration, Math.max(0, s.currentTime + deltaMs))
-      await audio.seek(target)
+      await get().seek(target)
     },
 
     setVolume: async (volume) => {
       const clamped = Math.min(100, Math.max(0, Math.round(volume)))
+      if (useDlnaStore.getState().activeDevice) {
+        await useDlnaStore.getState().setVolume(clamped)
+        set({ volume: clamped })
+        return
+      }
       set({ volume: clamped })
       await audio.setVolume(clamped / 100)
     },
@@ -946,6 +969,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 let _prefetchedForIndex: number | null = null
 
 audio.on('progress', (e) => {
+  if (useDlnaStore.getState().activeDevice) return
   usePlayerStore.setState((s) => ({
     currentTime: e.positionMs,
     duration: e.durationMs > 0 ? e.durationMs : s.duration,
@@ -982,6 +1006,7 @@ audio.on('progress', (e) => {
 })
 
 audio.on('stateChanged', (e) => {
+  if (useDlnaStore.getState().activeDevice) return
   switch (e.state) {
     case 'loading':
       usePlayerStore.setState({ isBuffering: true })
@@ -1009,6 +1034,7 @@ audio.on('stateChanged', (e) => {
 })
 
 audio.on('error', (e) => {
+  if (useDlnaStore.getState().activeDevice) return
   const { currentSong, currentTime } = usePlayerStore.getState()
   usePlayerStore.setState({ isPlaying: false, isBuffering: false, errorMessage: e.message })
   // Retry transparently; `scheduleRetry` is a no-op once the song's budget is spent,
@@ -1066,11 +1092,34 @@ audio.on('remoteCommand', (e) => {
  * store so the UI slider stays in sync.
  */
 audio.on('volumeChanged', (e) => {
+  if (useDlnaStore.getState().activeDevice) return
   usePlayerStore.setState({ volume: Math.round(e.volume) })
 })
 
 // Request initial system volume on startup so the store reflects reality.
 void audio.getVolume()
+
+configureDlnaPlayer({
+  async pauseLocal() {
+    cancelRetry()
+    await audio.pause()
+    _loadedSongId = null
+    _loadedSourceKind = null
+  },
+  onCompleted() { usePlayerStore.getState()._onCompleted() },
+})
+
+useDlnaStore.subscribe((session, previous) => {
+  if (!session.activeDevice && !previous.activeDevice) return
+  usePlayerStore.setState({
+    isPlaying: session.isPlaying,
+    isBuffering: session.isBusy,
+    currentTime: session.positionMs,
+    duration: session.durationMs,
+    errorMessage: session.error ?? undefined,
+  })
+  useLyricStore.getState().syncPosition(session.positionMs)
+})
 
 // ── playback state persistence ───────────────────────────────────────────────
 let _saveTimer: ReturnType<typeof setTimeout> | null = null
