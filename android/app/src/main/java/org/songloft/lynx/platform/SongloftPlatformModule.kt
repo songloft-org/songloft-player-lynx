@@ -96,6 +96,10 @@ class SongloftPlatformModule(context: Context) : LynxModule(context) {
         val boundary = "----LynxBoundary${UUID.randomUUID()}"
         val fileName = getFileName(uri) ?: "import.json"
         val conn = URL(uploadUrl).openConnection() as HttpURLConnection
+        if (URL(uploadUrl).path.endsWith("/api/v1/jsplugins/upload")) {
+            conn.connectTimeout = 15_000
+            conn.readTimeout = 240_000
+        }
         // Relaxed per connection rather than relying on the JVM-wide defaults
         // InsecureTls also mutates for ExoPlayer's sake: this path stays correct
         // if that global mutation is ever dropped.

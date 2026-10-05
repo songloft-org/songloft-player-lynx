@@ -420,6 +420,9 @@ private class PickerDelegate: NSObject, UIDocumentPickerDelegate {
     }
     let boundary = "----LynxBoundary\(UUID().uuidString)"
     var request = URLRequest(url: url)
+    if url.path.hasSuffix("/api/v1/jsplugins/upload") {
+      request.timeoutInterval = 240
+    }
     request.httpMethod = "POST"
     request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 

@@ -57,7 +57,7 @@ export class SongloftPlatformModule extends LynxModule {
           method: http.RequestMethod.POST,
           header: { 'Content-Type': 'application/octet-stream' },
           extraData: buffer,
-          readTimeout: 60000,
+          readTimeout: uploadUrl.split('?')[0].endsWith('/api/v1/jsplugins/upload') ? 240000 : 60000,
           connectTimeout: 15000,
         }
         const response = await httpRequest.request(uploadUrl, httpOptions)

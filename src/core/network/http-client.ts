@@ -5,6 +5,11 @@ import {
 } from '../config/app-config.js'
 import { appConfig } from '../config/app-config.js'
 import { safeClearTimeout } from '../../native/safe-timers.js'
+import { readSystemInfo } from '../../native/native-modules.js'
+import { isWebPlatform } from '../../native/web-platform.js'
+
+/** Native HTTP services consume and remove this header before sending. */
+export const REQUEST_TIMEOUT_HEADER = 'X-Songloft-Request-Timeout-Ms'
 
 /**
  * Transport-agnostic HTTP layer.
@@ -94,15 +99,25 @@ export function createFetchTransport(fetchImpl?: FetchLike): Transport {
       )
     }
     const controller = req.timeoutMs && req.timeoutMs > 0 ? newAbortController() : null
-    const send = (): Promise<Awaited<ReturnType<FetchLike>>> =>
-      f(req.url, {
+    const platform = readSystemInfo()?.['platform']
+    const headers = { ...req.headers }
+    if (req.timeoutMs && req.timeoutMs > 0 && typeof platform === 'string' && !isWebPlatform()) {
+      headers[REQUEST_TIMEOUT_HEADER] = String(req.timeoutMs)
+    }
+    const send = async (): Promise<TransportResponse> => {
+      const res = await f(req.url, {
         method: req.method,
-        headers: req.headers,
+        headers,
         body: req.body,
         ...(controller?.signal != null ? { signal: controller.signal } : {}),
       })
+      const responseHeaders: Record<string, string> = {}
+      res.headers?.forEach?.((value, key) => {
+        responseHeaders[key] = value
+      })
+      return { status: res.status, headers: responseHeaders, body: await res.text() }
+    }
 
-    let res: Awaited<ReturnType<FetchLike>>
     if (req.timeoutMs && req.timeoutMs > 0) {
       const timeoutMs = req.timeoutMs
       let timer: ReturnType<typeof setTimeout> | undefined
@@ -117,19 +132,12 @@ export function createFetchTransport(fetchImpl?: FetchLike): Transport {
         }, timeoutMs)
       })
       try {
-        res = await Promise.race([send(), expiry])
+        return await Promise.race([send(), expiry])
       } finally {
         safeClearTimeout(timer as unknown as number)
       }
-    } else {
-      res = await send()
     }
-
-    const headers: Record<string, string> = {}
-    res.headers?.forEach?.((value, key) => {
-      headers[key] = value
-    })
-    return { status: res.status, headers, body: await res.text() }
+    return send()
   }
 }
 
@@ -179,6 +187,8 @@ export interface RequestOptions {
   skipInterceptor?: boolean
   /** Parse the response body as JSON (default true). */
   parseJson?: boolean
+  /** Override the deadline for this request, including auth replay. */
+  receiveTimeoutMs?: number
 }
 
 export interface HttpResult<T> {
@@ -265,7 +275,7 @@ export class HttpClient {
         method,
         headers: h,
         body: bodyStr,
-        timeoutMs: this.receiveTimeoutMs,
+        timeoutMs: options.receiveTimeoutMs ?? this.receiveTimeoutMs,
       })
 
     let res = await send(ctx.headers)

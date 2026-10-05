@@ -19,6 +19,7 @@ import { NATIVE_EVENT } from '../native/native-audio.js'
 import { BACK_PRESSED_EVENT } from '../native/navigation.js'
 import { APP_RESUMED_EVENT } from '../native/app-lifecycle.js'
 import { SONG_CACHE_LIMIT_ERROR } from '../features/player/data/song-cache.js'
+import { REQUEST_TIMEOUT_HEADER } from '../core/network/http-client.js'
 
 /**
  * Gates for the host↔page contract that **only breaks on a device**.
@@ -1529,6 +1530,28 @@ describe('every native module is registered in the host bootstrap', () => {
  * would otherwise both bind `LynxServiceHttpProtocol`, with no documented winner.
  */
 describe('the host HTTP service is ours, on both hosts', () => {
+  test('Android sends with the deadline-aware client and filtered headers; iOS consumes the same control header', () => {
+    const android = read('android/app/src/main/java/org/songloft/lynx/net/SongloftHttpService.kt')
+    const helper = read('android/app/src/main/java/org/songloft/lynx/net/RequestTimeout.kt')
+    expect(helper).toContain(`name.equals("${REQUEST_TIMEOUT_HEADER}", ignoreCase = true)`)
+    const client = android.match(/val (\w+) = clientWithRequestTimeout\(clientFor\(InsecureTls.enabled\), (\w+)\)/)
+    expect(client).not.toBeNull()
+    expect(android).toContain(`.headers(${client![2]}.toHeaders())`)
+    expect(android).toContain(`${client![1]}.newCall(okRequest)`)
+
+    const ios = read(`${IOS_DIR}/SongloftHttpService.swift`)
+    const guard = ios.match(/if key\.caseInsensitiveCompare\("([^"]+)"\)[\s\S]*?continue/)
+    expect(guard?.[1]).toBe(REQUEST_TIMEOUT_HEADER)
+    expect(guard?.[0]).toContain('nsRequest.timeoutInterval = Double(timeoutMs) / 1000')
+    expect(ios.indexOf(guard![0])).toBeLessThan(ios.indexOf('nsRequest.setValue(value, forHTTPHeaderField: key)'))
+  })
+
+  test('plugin uploads allow four minutes on every native host without changing the method signature', () => {
+    expect(hosts.platform.android).toMatch(/if \(URL\(uploadUrl\)\.path\.endsWith\("\/api\/v1\/jsplugins\/upload"\)\) \{\s*conn\.connectTimeout = 15_000\s*conn\.readTimeout = 240_000/)
+    expect(hosts.platform.ios).toMatch(/if url\.path\.hasSuffix\("\/api\/v1\/jsplugins\/upload"\) \{\s*request\.timeoutInterval = 240/)
+    expect(hosts.platform.harmony).toMatch(/readTimeout: uploadUrl\.split\('\?'\)\[0\]\.endsWith\('\/api\/v1\/jsplugins\/upload'\) \? 240000 : 60000/)
+  })
+
   test('Android registers SongloftHttpService instead of the SDK one', () => {
     expect(hosts.androidApp).toContain('registerService(SongloftHttpService)')
     expect(

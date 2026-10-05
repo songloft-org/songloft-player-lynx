@@ -1,5 +1,7 @@
 # 工作交接（2026-09-20 · Liquid Glass iOS26 重构 P0–P6）
 
+> **2026-10-05 · songloft-org/songloft#497（超时修复与自审验证通过，待原生端到端复验）**：插件检查/源刷新/安装与更新/批量更新分别允许 45 秒/60 秒/4 分钟/30 分钟，移除弹窗较短的重复计时器。原生 HTTP 与插件上传期限同步，控制头不转发上游。实施阶段 2779 项 JS 测试、14 项 Android 原生测试通过；自审修复旧检查覆盖新弹窗结果的竞态后，相关 302 项测试、类型检查、双产物和最终 APK 构建通过。模拟器连接中断，端到端慢请求未完成，iOS/HarmonyOS 未编译。详见 [progress.md](progress.md)。
+
 > **2026-10-05 · DLNA 投屏对齐 Flutter（构建与回归通过，待 Android 实测）**：补齐实际 MIME 的 DIDL-Lite 与 SOAP 错误检查，防止 URI 被拒绝后重播旧曲；投屏会话跨页面保留，主播放器的暂停/继续、切歌、进度和音量路由到远端，远端播完继续队列。2760 项 JS 回归（分批）与 11 项 Android 原生测试、类型检查、双产物及最终 Android APK 编译通过。iOS/HarmonyOS 同步源代码但未在本机编译。详见 [progress.md](progress.md)。
 
 > **2026-10-04 · songloft-org/songloft#493（代码与构建验证完成，待原生复验）**：补齐 Lynx Android 恢复前台 → 全局事件 → 插件 WebView `visibilitychange` 的通知链路，复用 MIoT 插件仓库的重连修复。已反向验证两项缺陷测试会失败；2026-10-04 18:53 启动的全量 **253 文件 / 2745 项测试**、类型检查、Lynx/Web 双产物构建与线程检查通过；新 bundle 同步后 Android `assembleDebug` 成功。当前 ADB 无连接设备，后台恢复行为待原生实测。iOS/HarmonyOS 宿主通知不在本批范围。详见 [progress.md](progress.md) 对应条目。

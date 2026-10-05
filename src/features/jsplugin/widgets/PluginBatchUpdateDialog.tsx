@@ -9,6 +9,7 @@ import {
 } from '@lynx-js/lynx-ui-dialog'
 
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
+import { HttpTimeoutError } from '../../../core/network/http-client.js'
 import { getJSPluginApi } from '../api/index.js'
 import { useUpdateAllPluginsMutation } from '../data/jsplugin-mutations.js'
 import type { GithubProxyParams } from '../api/index.js'
@@ -66,21 +67,14 @@ export function PluginBatchUpdateDialog({ show, onClose, githubProxy }: PluginBa
     setPhase('updating')
     setError(null)
     try {
-      // The server keeps going however long the client waits; the timeout is
-      // only about giving up on the *answer*, not cancelling the work.
-      const res = await new Promise<JSPluginBatchUpdateResponse>((resolve, reject) => {
-        const timer = setTimeout(
-          () => reject(new Error(t('jsplugin.batchUpdateTimeout'))),
-          300_000,
-        )
-        updateAllMutation.mutateAsync(params).then(
-          (v) => { clearTimeout(timer); resolve(v) },
-          (e) => { clearTimeout(timer); reject(e) },
-        )
-      })
+      // The API owns the batch deadline; a second timer can report failure
+      // while the request is still within its allowed update time.
+      const res = await updateAllMutation.mutateAsync(params)
       setResult(res)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(e instanceof HttpTimeoutError
+        ? t('jsplugin.batchUpdateTimeout')
+        : e instanceof Error ? e.message : String(e))
     } finally {
       runningRef.current = false
       setPhase('result')

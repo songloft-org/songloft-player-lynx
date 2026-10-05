@@ -76,12 +76,13 @@ object SongloftHttpService : ILynxHttpService {
         val okBody =
             if ("GET".equals(request.httpMethod, true)) null else request.httpBody.toRequestBody()
 
+        val headers = request.httpHeaders.asHashMap().mapValues { it.value.toString() }.toMutableMap()
+        val client = clientWithRequestTimeout(clientFor(InsecureTls.enabled), headers)
+
         val okRequest = Request.Builder()
             .url(request.url)
             .method(request.httpMethod, okBody)
-            .headers(
-                request.httpHeaders.asHashMap().mapValues { it.value.toString() }.toHeaders(),
-            )
+            .headers(headers.toHeaders())
             .build()
 
         val httpResponse = HttpResponse().also {
@@ -89,7 +90,7 @@ object SongloftHttpService : ILynxHttpService {
             it.statusCode = CODE_FAILED_INTERNALLY
         }
 
-        clientFor(InsecureTls.enabled).newCall(okRequest).enqueue(object : Callback {
+        client.newCall(okRequest).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 callback.invoke(httpResponse.also { it.statusText = e.toString() })
             }

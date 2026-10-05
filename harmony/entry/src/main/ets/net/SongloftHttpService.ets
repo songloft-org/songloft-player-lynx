@@ -27,11 +27,24 @@ export class SongloftHttpService implements ILynxHttpService {
   request(request: LynxHttpRequest, callback: (resp: LynxHttpResponse) => void): void {
     const httpRequest = http.createHttp()
 
+    const headers: Record<string, string> = {}
+    let readTimeout = 30000
+    for (const name of Object.keys(request.httpHeaders)) {
+      if (name.toLowerCase() === 'x-songloft-request-timeout-ms') {
+        const timeoutMs = Number(request.httpHeaders[name])
+        if (Number.isInteger(timeoutMs) && timeoutMs >= 1 && timeoutMs <= 1800000) {
+          readTimeout = timeoutMs
+        }
+      } else {
+        headers[name] = request.httpHeaders[name]
+      }
+    }
+
     const options: http.HttpRequestOptions = {
       method: this.mapMethod(request.httpMethod),
-      header: request.httpHeaders,
+      header: headers,
       extraData: request.httpBody,
-      readTimeout: 30000,
+      readTimeout: readTimeout,
       connectTimeout: 15000,
     }
 

@@ -439,6 +439,59 @@ test('update-now drives the mutation from the dialog', async () => {
   expect(h.updatePluginAsync).toHaveBeenCalledWith({ id: 7 })
 })
 
+test.each(['recheck', 'reopen'])('a late check cannot replace the result after %s', async action => {
+  const oldAnswer = await h.checkUpdate()
+  let finishOld!: () => void
+  h.checkUpdate.mockImplementationOnce(() => new Promise(resolve => {
+    finishOld = () => resolve(oldAnswer)
+  }))
+  h.checkUpdate.mockResolvedValueOnce({...oldAnswer, remoteVersion: '2.0.0'})
+  const {getByTestId} = await renderPage()
+  await openRowMenu(getByTestId)
+  await act(async () => { fireEvent.tap(getByTestId('menu-item-check-update')) })
+  if (action === 'reopen') {
+    await act(async () => { fireEvent.tap(getByTestId('plugin-update-close')) })
+    await openRowMenu(getByTestId)
+    await act(async () => { fireEvent.tap(getByTestId('menu-item-check-update')) })
+  } else {
+    await act(async () => { fireEvent.tap(getByTestId('plugin-update-recheck')) })
+  }
+  await act(async () => {
+    for (let i = 0; i < 5; i++) await Promise.resolve()
+  })
+  expect(h.checkUpdate).toHaveBeenCalledTimes(3)
+  expect(getByTestId('plugin-update-found').textContent).toContain('2.0.0')
+  await act(async () => { finishOld() })
+  expect(getByTestId('plugin-update-found').textContent).toContain('2.0.0')
+  expect(getByTestId('plugin-update-found').textContent).not.toContain('1.1.0')
+})
+
+test('the single update dialog waits past the old 20-second and 120-second deadlines', async () => {
+  const answer = await h.checkUpdate()
+  let finish!: () => void
+  let finishUpdate!: () => void
+  h.checkUpdate.mockImplementationOnce(() => new Promise(resolve => { finish = () => resolve(answer) }))
+  h.updatePluginAsync.mockImplementationOnce(() => new Promise(resolve => { finishUpdate = () => resolve() }))
+  const {getByTestId, queryByTestId} = await renderPage()
+  await openRowMenu(getByTestId)
+  vi.useFakeTimers()
+  try {
+    await act(async () => { fireEvent.tap(getByTestId('menu-item-check-update')) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(30_001) })
+    expect(queryByTestId('plugin-update-error')).toBeNull()
+    await act(async () => { finish() })
+    expect(getByTestId('plugin-update-found').textContent).toContain('1.1.0')
+    await act(async () => { fireEvent.tap(getByTestId('plugin-update-now')) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(180_001) })
+    expect(queryByTestId('plugin-update-error')).toBeNull()
+    expect(queryByTestId('plugin-update-close')).toBeNull()
+    await act(async () => { finishUpdate() })
+    expect(useToastStore.getState().toast?.tone).toBe('success')
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
 test('force update asks first, then reinstalls with force', async () => {
   // Force skips the version check entirely — the confirmation is what stands
   // between a misc tap and a pointless re-download.
@@ -548,6 +601,31 @@ test('update-all opens the batch dialog, which runs and reports', async () => {
   const rows = getByTestId('plugin-batch-rows')
   expect(rows.textContent).toContain('LX Source')
   expect(rows.textContent).toContain('network')
+})
+
+test('a batch still running after six minutes waits for the API result', async () => {
+  const answer = await h.updateAllAsync()
+  let finish!: () => void
+  h.updateAllAsync.mockImplementationOnce(() => new Promise(resolve => {
+    finish = () => resolve(answer)
+  }))
+  const {getByTestId, queryByTestId} = await renderPage()
+  await openOverflow(getByTestId)
+  await act(async () => { fireEvent.tap(getByTestId('menu-item-update-all')) })
+  vi.useFakeTimers()
+  try {
+    await act(async () => { fireEvent.tap(getByTestId('plugin-batch-start')) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(360_001) })
+    expect(queryByTestId('plugin-batch-error')).toBeNull()
+    expect(queryByTestId('plugin-batch-close')).toBeNull()
+    await act(async () => {
+      finish()
+      for (let i = 0; i < 5; i++) await Promise.resolve()
+    })
+    expect(getByTestId('plugin-batch-stats')).toBeTruthy()
+  } finally {
+    vi.useRealTimers()
+  }
 })
 
 test('cleanup asks first, then reports the server message', async () => {

@@ -9,6 +9,7 @@ import {
 } from '@lynx-js/lynx-ui-dialog'
 
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
+import { HttpTimeoutError } from '../../../core/network/http-client.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { getJSPluginApi } from '../api/index.js'
 import { useGithubProxyQuery } from '../data/jsplugin-query.js'
@@ -27,30 +28,8 @@ import {
 import '../../../shared/ui/ConfirmDialog.css'
 import './PluginUpdateDialog.css'
 
-/** Rejects with `label` after `ms`, mirroring the Flutter dialog's timeouts. */
-function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      // The marker keeps the caller from wrapping the timeout text in a
-      // "check failed: …" prefix — the timeout wording is complete on its own.
-      const err = new Error(label) as Error & { timedOut?: boolean }
-      err.timedOut = true
-      reject(err)
-    }, ms)
-    p.then(
-      (v) => { clearTimeout(timer); resolve(v) },
-      (e) => { clearTimeout(timer); reject(e) },
-    )
-  })
-}
-
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
-}
-
-/** A timeout rejects with its own complete wording; anything else gets the prefix. */
-function isTimedOut(e: unknown): boolean {
-  return typeof e === 'object' && e != null && (e as { timedOut?: boolean }).timedOut === true
 }
 
 export interface PluginUpdateDialogProps {
@@ -62,8 +41,8 @@ export interface PluginUpdateDialogProps {
 
 /**
  * The single-plugin update flow, mirroring Flutter's `_JSPluginUpdateDialog`:
- * open → auto check (20s timeout) → result ("already latest" or `v1 → v2`) →
- * update now (120s timeout, no close affordances while it runs).
+ * open → auto check → result ("already latest" or `v1 → v2`) → update now.
+ * The API owns the check/update deadlines; updates cannot be closed mid-run.
  *
  * The GitHub proxy comes from the shared settings query and is forwarded to both
  * endpoints when set — the download often needs it to be reachable at all.
@@ -77,63 +56,56 @@ export function PluginUpdateDialog({ show, plugin, onClose }: PluginUpdateDialog
   const [phase, setPhase] = useState<Phase>('checking')
   const [check, setCheck] = useState<JSPluginUpdateCheck | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const cancelledRef = useRef(false)
+  const requestIdRef = useRef(0)
 
   const proxyParams = githubProxy ? { githubProxy } : {}
 
   const runCheck = async () => {
     if (!plugin) return
+    const requestId = ++requestIdRef.current
     setPhase('checking')
     setError(null)
     setCheck(null)
     try {
-      const res = await withTimeout(
-        Promise.resolve(getJSPluginApi().checkUpdate(plugin.id, proxyParams)),
-        20_000,
-        t('jsplugin.checkUpdateTimeout'),
-      )
-      if (cancelledRef.current) return
+      const res = await getJSPluginApi().checkUpdate(plugin.id, proxyParams)
+      if (requestId !== requestIdRef.current) return
       setCheck(res)
     } catch (e) {
-      if (cancelledRef.current) return
-      setError(isTimedOut(e)
-        ? errorMessage(e)
+      if (requestId !== requestIdRef.current) return
+      setError(e instanceof HttpTimeoutError
+        ? t('jsplugin.checkUpdateTimeout')
         : t('jsplugin.checkUpdateFailed', { error: errorMessage(e) }))
     } finally {
-      if (!cancelledRef.current) setPhase('result')
+      if (requestId === requestIdRef.current) setPhase('result')
     }
   }
 
   const runUpdate = async () => {
     if (!plugin) return
+    const requestId = ++requestIdRef.current
     setPhase('updating')
     setError(null)
     try {
-      await withTimeout(
-        updatePluginMutation.mutateAsync({ id: plugin.id, ...proxyParams }),
-        120_000,
-        t('jsplugin.updateTimeout'),
-      )
-      if (cancelledRef.current) return
+      await updatePluginMutation.mutateAsync({ id: plugin.id, ...proxyParams })
+      if (requestId !== requestIdRef.current) return
       toast.success(t('jsplugin.updateSuccess'))
       onClose()
     } catch (e) {
-      if (cancelledRef.current) return
-      setError(isTimedOut(e)
-        ? errorMessage(e)
+      if (requestId !== requestIdRef.current) return
+      setError(e instanceof HttpTimeoutError
+        ? t('jsplugin.updateTimeout')
         : t('jsplugin.updateFailed', { error: errorMessage(e) }))
       setPhase('result')
     }
   }
 
-  // Every open starts a fresh check. The cancelled flag covers the close-during-
-  // flight case — without it a late answer would flip a closed dialog's state.
+  // Every open starts a fresh check. Invalidate earlier requests on close and
+  // recheck so a late result cannot overwrite a newer dialog's state.
   useEffect(() => {
     if (!show || !plugin) return
-    cancelledRef.current = false
     void runCheck()
     return () => {
-      cancelledRef.current = true
+      ++requestIdRef.current
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run per open, not per proxy flip
   }, [show, plugin?.id])

@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-05 · 插件安装与更新超时对齐（songloft-org/songloft#497）
+
+- `HttpClient` 增加单次 `receiveTimeoutMs`，认证重放保留该值，后续普通请求仍为 15 秒；期限覆盖响应头和正文读取。插件检查更新 45 秒、源刷新 60 秒、安装/单个更新 4 分钟、批量更新 30 分钟。
+- 单插件弹窗移除 20 秒检查与 120 秒更新计时器，批量弹窗移除 5 分钟计时器；界面使用 API 的期限，并保留本地化超时提示。真实返回较慢的更新与假时钟下跨过旧期限的弹窗均有回归覆盖。自审发现重新检查或关闭后重开时，旧检查结果会覆盖新结果；改为按请求序号接收结果，两种场景修复前均已验证失败。
+- Android/iOS/HarmonyOS HTTP 服务消费并移除内部 `X-Songloft-Request-Timeout-Ms` 控制头，Web 不发送该头。Android 派生 client 复用连接池、Dispatcher 与 TLS 策略，并设置整次调用期限；iOS/HarmonyOS 复用各自请求超时选项。三端文件上传为插件 ZIP 单独允许 4 分钟，其他上传策略与桥接签名不变。契约详见 [native-modules.md](../reference/native-modules.md)。
+- 实施验证：`pnpm test --maxWorkers=4` **257 文件 / 2779 项通过**，`tsc -b`、Lynx/Web 双产物、同步 bundle 后的 Android `assembleDebug` 通过；Android **14 项原生测试**通过，其中新增 3 项覆盖期限传递、非法控制头与真实延迟 HTTP 响应。7 项测试执行 HarmonyOS 请求映射源码，但不替代 ArkTS/HAP 编译。恢复旧请求/批量弹窗逻辑时 4 项回归失败，恢复旧单插件计时器时新增弹窗测试失败。
+- 自审修复后的验证：相关 **5 文件 / 302 项**测试、`tsc -b`、Lynx/Web 双产物及同步修复后 bundle 的 Android `assembleDebug` 通过。原生平台判断复用 `isWebPlatform()`，无宿主环境仍不发送控制头。
+- 验证边界：模拟器曾成功安装并启动调试 APK；TestBridge 的 eval 作用域无法直接调用 `fetch`，后续模拟器连接中断，端到端慢请求未完成。最终 APK 已重建，未在设备复验。Linux 环境缺少 Xcode 与 HarmonyOS 编译工具链；iOS/HarmonyOS 尚未编译。原生期限修复需要更新客户端壳，单独热更 JS 无法修复旧壳限制。
+
 ## 2026-10-05 · DLNA 接收兼容与投屏控制对齐 Flutter
 
 - 根因：Android 的 DIDL `res` 没有 `protocolInfo`，Songloft 无后缀播放 URL 被 MIoT 拒绝为 714；原生忽略 HTTP 错误仍调用 Play，导致播放旧曲。现 facade 按实际资源/转码格式生成 MIME 元数据，Android 验证 HTTP、SOAP Fault 和响应结构，URI 失败立即停止后续 Play。

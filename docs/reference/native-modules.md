@@ -136,6 +136,13 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 **7 个**模块：`Songlo
 - `setInsecureTls` 在 TS 接口里是**必填**（此前是可选，可选链把「iOS 根本没实现」整个吞掉了），但运行时仍保留 `typeof` 守卫 —— JS bundle 可能热更到旧原生壳上。
 - `setInsecureTls` 是三条出站路径（`fetch` / 媒体流 / 模块自己的上传与 SOAP）的唯一开关，见 [`../../AGENTS.md`](../../AGENTS.md) §5「宿主 HTTP service 是我们自己的」。
 
+**插件长请求超时（songloft-org/songloft#497）**：`HttpClient` 支持单次 `receiveTimeoutMs`，认证重试沿用该值，普通请求仍为 15 秒。检查更新为 45 秒、插件源刷新为 60 秒、安装/单个更新为 4 分钟、批量更新为 30 分钟；弹窗使用 API 的期限，不再另设 20 秒检查、120 秒更新或 5 分钟批量计时器。JS 的期限覆盖响应头与正文读取。
+
+- 原生 `fetch` 使用内部头 `X-Songloft-Request-Timeout-Ms` 将期限传到宿主；Android/iOS/HarmonyOS **消费并移除**该头，不转发服务器。接受 1–1800000 的整数毫秒值，缺失或无效时保留宿主默认期限。Web 不添加该头。
+- Android 每请求派生 OkHttp client，复用连接池和 TLS 策略，设置读写与整次调用期限；iOS 设置 `URLRequest.timeoutInterval`；HarmonyOS 设置 `readTimeout`。JS 层仍负责整次请求的等待期限。
+- `pickAndUploadFile` 的桥接签名保持原样；三端对 `/api/v1/jsplugins/upload` 的文件上传单独允许 4 分钟，其他上传沿用原策略。Web 上传原本没有较短的宿主超时。
+- 原生超时修复需要重新构建客户端壳；只替换 JS bundle 无法修复旧壳的底层期限。
+
 **闸门锁住的不变量**：8 个方法**三端**齐备（HarmonyOS 此前整个不在这个循环里，正是 `logWrite`/`logRead`/`shareFile` 在那端以桩形式发布的原因）；`setInsecureTls` 已纳入主循环，不再豁免。另有一组只在设备上才会暴露的不变量：三端都不为归档做 base64、都用原生 zip、都用 `ClientFileLog.copyTo` 而不是 `logRead`、后端日志流式落盘、后端下载尊重 InsecureTls、staging 目录每次运行前清空、`resultJson` 键名与 TS 解析一致。
 
 ### 2.4 `SongloftDlna`（5 方法）

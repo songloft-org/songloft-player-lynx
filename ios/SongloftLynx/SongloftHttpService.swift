@@ -56,6 +56,12 @@ final class SongloftHttpService: NSObject, LynxServiceHttpProtocol {
     var nsRequest = URLRequest(url: url)
     nsRequest.httpMethod = request.httpMethod
     for (key, value) in request.httpHeaders ?? [:] {
+      if key.caseInsensitiveCompare("X-Songloft-Request-Timeout-Ms") == .orderedSame {
+        if let timeoutMs = Int(value), (1...1_800_000).contains(timeoutMs) {
+          nsRequest.timeoutInterval = Double(timeoutMs) / 1000
+        }
+        continue
+      }
       nsRequest.setValue(value, forHTTPHeaderField: key)
     }
     nsRequest.httpBody = request.httpBody

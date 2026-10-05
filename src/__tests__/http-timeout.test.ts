@@ -4,6 +4,7 @@ import {
   createFetchTransport,
   HttpClient,
   HttpTimeoutError,
+  REQUEST_TIMEOUT_HEADER,
   type TransportRequest,
 } from '../core/network/http-client.js'
 import { receiveTimeoutMs } from '../core/config/app-config.js'
@@ -40,9 +41,37 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers()
+  vi.unstubAllGlobals()
 })
 
 describe('createFetchTransport timeouts', () => {
+  test('the deadline also covers a response body that stalls after headers', async () => {
+    const transport = createFetchTransport(async () => ({
+      ...okResponse,
+      text: () => new Promise<string>(() => {}),
+    }))
+    const pending = transport({url: 'http://slow.example', method: 'GET', headers: {}, timeoutMs: 1_000})
+    const caught = pending.catch(e => e)
+    await vi.advanceTimersByTimeAsync(1_001)
+    expect(await caught).toBeInstanceOf(HttpTimeoutError)
+  })
+
+  test.each(['Android', 'iOS', 'HarmonyOS'])('passes the deadline to the %s host without mutating headers', async platform => {
+    vi.stubGlobal('SystemInfo', {platform})
+    const impl = vi.fn(async (_url: string, _init: {headers: Record<string, string>}) => okResponse)
+    const transport = createFetchTransport(impl)
+    const headers = {Authorization: 'Bearer test'}
+    await transport({url: 'http://api.example', method: 'POST', headers, timeoutMs: 240_000})
+    expect(impl.mock.calls[0]![1].headers).toEqual({...headers, [REQUEST_TIMEOUT_HEADER]: '240000'})
+    expect(headers).toEqual({Authorization: 'Bearer test'})
+  })
+
+  test('Web does not send the native control header', async () => {
+    vi.stubGlobal('SystemInfo', {platform: 'web'})
+    const impl = vi.fn(async (_url: string, _init: {headers: Record<string, string>}) => okResponse)
+    await createFetchTransport(impl)({url: 'http://api.example', method: 'GET', headers: {}, timeoutMs: 240_000})
+    expect(impl.mock.calls[0]![1].headers).not.toHaveProperty(REQUEST_TIMEOUT_HEADER)
+  })
   test('a request that never answers rejects with HttpTimeoutError', async () => {
     const { impl } = hangingFetch()
     const transport = createFetchTransport(impl as never)
@@ -132,6 +161,21 @@ describe('createFetchTransport timeouts', () => {
 })
 
 describe('HttpClient wires its receive timeout through', () => {
+  test('a per-request override survives auth replay and leaves the next request at its default', async () => {
+    const calls: TransportRequest[] = []
+    const client = new HttpClient({
+      transport: async req => {
+        calls.push(req)
+        return {status: calls.length === 1 ? 401 : 200, headers: {}, body: '{}'}
+      },
+      interceptor: {onError: (_ctx, _res, resend) => resend({Authorization: 'Bearer refreshed'})},
+      getBaseUrl: () => 'http://api.example',
+    })
+    await client.post('/update', {}, {receiveTimeoutMs: 240_000})
+    await client.get('/ordinary')
+    expect(calls.map(req => req.timeoutMs)).toEqual([240_000, 240_000, receiveTimeoutMs])
+    expect(calls[1]!.headers.Authorization).toBe('Bearer refreshed')
+  })
   test('the configured deadline reaches the transport', async () => {
     const calls: TransportRequest[] = []
     const client = new HttpClient({

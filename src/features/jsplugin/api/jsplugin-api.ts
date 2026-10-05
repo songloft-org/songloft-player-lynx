@@ -1,6 +1,7 @@
 import { apiPrefix, appConfig } from '../../../core/config/app-config.js'
 import { getCachedAccessToken } from '../../../core/network/token-cache.js'
 import type { HttpClient } from '../../../core/network/http-client.js'
+
 import {
   parseJSPlugin,
   parseJSPluginListResponse,
@@ -15,6 +16,9 @@ import {
   type JSPluginUploadResponse,
   type RegistryRefreshResponse,
 } from '../../../models/jsplugin.js'
+
+const INSTALL_TIMEOUT_MS = 4 * 60_000
+const BATCH_UPDATE_TIMEOUT_MS = 30 * 60_000
 
 /** A plugin registry source as stored in Settings → Plugin registries. */
 export interface PluginRegistryConfig {
@@ -107,7 +111,9 @@ export class JSPluginApi {
   async checkUpdate(id: number, params: GithubProxyParams = {}): Promise<JSPluginUpdateCheck> {
     const query: Record<string, string> = {}
     if (params.githubProxy) query.github_proxy = params.githubProxy
-    const res = await this.client.get<unknown>(`${apiPrefix}/jsplugins/${id}/check-update`, { query })
+    const res = await this.client.get<unknown>(`${apiPrefix}/jsplugins/${id}/check-update`, {
+      query, receiveTimeoutMs: 45_000,
+    })
     return parseJSPluginUpdateCheck(res.data)
   }
 
@@ -118,7 +124,9 @@ export class JSPluginApi {
     const body: Record<string, unknown> = {}
     if (params.githubProxy) body.github_proxy = params.githubProxy
     if (params.force) body.force = true
-    await this.client.post(`${apiPrefix}/jsplugins/${id}/update`, body)
+    await this.client.post(`${apiPrefix}/jsplugins/${id}/update`, body, {
+      receiveTimeoutMs: INSTALL_TIMEOUT_MS,
+    })
   }
 
   async updateAllPlugins(
@@ -127,7 +135,9 @@ export class JSPluginApi {
     const body: Record<string, unknown> = {}
     if (params.githubProxy) body.github_proxy = params.githubProxy
     if (params.force) body.force = true
-    const res = await this.client.post<unknown>(`${apiPrefix}/jsplugins/update-all`, body)
+    const res = await this.client.post<unknown>(`${apiPrefix}/jsplugins/update-all`, body, {
+      receiveTimeoutMs: BATCH_UPDATE_TIMEOUT_MS,
+    })
     return parseJSPluginBatchUpdateResponse(res.data)
   }
 
@@ -181,7 +191,9 @@ export class JSPluginApi {
     if (params.search) body.search = params.search
     if (params.force) body.force = true
     if (params.githubProxy) body.github_proxy = params.githubProxy
-    const res = await this.client.post<unknown>(`${apiPrefix}/jsplugins/registry/refresh`, body)
+    const res = await this.client.post<unknown>(`${apiPrefix}/jsplugins/registry/refresh`, body, {
+      receiveTimeoutMs: 60_000,
+    })
     return parseRegistryRefreshResponse(res.data)
   }
 
@@ -196,7 +208,9 @@ export class JSPluginApi {
     if (params.overwrite) body.overwrite = true
     if (params.githubProxy) body.github_proxy = params.githubProxy
     if (params.token) body.token = params.token
-    const res = await this.client.post<unknown>(`${apiPrefix}/jsplugins/registry/install`, body)
+    const res = await this.client.post<unknown>(`${apiPrefix}/jsplugins/registry/install`, body, {
+      receiveTimeoutMs: INSTALL_TIMEOUT_MS,
+    })
     return parseJSPluginUploadResponse(res.data)
   }
 
