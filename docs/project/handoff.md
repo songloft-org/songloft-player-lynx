@@ -4,6 +4,8 @@
 
 ## 1. 当前完成度
 
+Linux Playwright WebKit 18.2 已完成当前交付包的 P4 standalone/embedded 根路径数据流程和 P5 播放/快捷键/持久化/菜单保护回归，两个 Worker、最终页面/媒体错误为零。临时 Mesa/GStreamer 修正、空输出、375px 中文与输入/IME 夹具边界见 progress；真实 Safari、扬声器及设备验收继续开放，本批未改应用源码或交付包。
+
 HarmonyOS 已完成 Linux CLI 的 clean release HAP 编译与包内容校验，修复了缓存/更新器 5 处 ArkTS 异常重抛。使用 SDK `26.0.0.105`，最低兼容声明保留 `5.0.1(13)`；包未签名，API 13 及设备行为仍待验。15 项缓存/更新器适配器与 306 项原生契约通过，详见 progress。
 
 当前可审核本地包固定对应客户端 `e09592b`，位于 `/tmp/lynx-local-delivery/e09592b/`：Android 调试 APK、未签名 HarmonyOS HAP 与 standalone/embedded Web 压缩包。统一构建号 `213487589` 的类型、双产物、三端复制、Android 编译、HarmonyOS clean 编译（34 个任务全部执行）及 47 项发布工具均通过，包内版本/bundle/宿主身份一致；APK 为 debuggable，HAP/Web 通过包内容校验器。iOS 只有资源复制，四种包均未在本批安装验收。详细哈希和日志见 progress；后续文档提交不改变这些包的源码身份。

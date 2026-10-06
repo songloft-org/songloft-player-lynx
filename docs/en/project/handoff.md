@@ -4,6 +4,8 @@ This page records current scope and validation limits. Batch evidence is in [pro
 
 ## 1. Current completion
 
+Linux Playwright WebKit 18.2 now passes P4 data flows in standalone/embedded root-path hosting and P5 playback/shortcuts/persistence/menu guards on the current delivery packages, with two Workers and zero final page/media errors. Temporary Mesa/GStreamer adjustments, null output, Chinese 375px and input/IME fixture limits are in progress. Actual Safari, speaker output and device acceptance remain open; this batch changes neither application source nor delivery packages.
+
 HarmonyOS now passes a clean release HAP build and package-content verification using the Linux CLI, after fixing five ArkTS rethrows in cache/updater sources. SDK `26.0.0.105` preserves the declared `5.0.1(13)` minimum; the HAP is unsigned and API 13/device behavior remains unverified. All 15 cache/updater adapter tests and 306 native contract tests pass; see progress.
 
 Reviewable local packages correspond to client commit `e09592b` in `/tmp/lynx-local-delivery/e09592b/`: an Android debug APK, unsigned HarmonyOS HAP and standalone/embedded Web archives. With shared build number `213487589`, type checks, both bundles, three native resource copies, Android compilation, the clean HarmonyOS build (all 34 tasks executed) and all 47 publishing-tool tests pass. Packaged versions, bundles and host identities match; the APK is debuggable, while HAP/Web archives pass package-content verification. iOS has resource copies only, and this batch did not install or device-test any package. Hashes and logs are in progress; later documentation commits do not change these packages' source identity.

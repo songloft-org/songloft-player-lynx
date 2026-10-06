@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · Linux WebKit 的数据传输与快捷键回归
+
+- 上一批补齐 HarmonyOS 真编译并提交源码修复，本批核对父仓库 `fd9c624`、客户端 `87cb2d6` 均干净。实际运行固定对应 `e09592b` 的交付 Web 目录，没有重建应用或混入探针页面。下载既有 Playwright 1.50.1 对应 WebKit **18.2 / revision 2123** 至临时浏览器目录；[Playwright 文档](https://playwright.dev/docs/browsers#webkit) 明确这是 WebKit 构建，不能将 Linux 结果记作真实 Safari 验收。
+- 缺 GTK4、GStreamer、GLES 等库时只下载/解包 Debian 包到临时 sysroot。浏览器 wrapper 覆盖 LD_LIBRARY_PATH，缺失库链接到下载浏览器的临时 WPE 库目录；GLES/lzo 实际动态加载通过。Playwright 的 dlopen 检查只查宿主 ldconfig 缓存，无法看到临时 GLES，因此显式跳过这项宿主预检后运行真实浏览器，未改应用或生产包校验器。首次创建页面因 EGL display 失败退出；补临时 Mesa EGL vendor 配置、软件渲染与 surfaceless 后登录界面、crossOriginIsolated=true、两个 Worker 与截图均通过，日志 `/tmp/lynx-webkit-startup-{debug,mesa}.log`。所有配置只作用于测试进程，未安装系统包或改 HOME/用户音频配置。
+- WebKit 完成 standalone `3015 → 58192` 跨源及 embedded `3016` 根路径同源流程：真实选文件，各创建 1 个歌单/1 首歌（后端总数分别 246→247、247→248）；中文/emoji 导出分别 250381/251068 字节，可解析。空/坏 JSON 0 上传，401 夹具后真实刷新一次并重放成功，500 后恢复、显式激活失效夹具的 DOM 取消、认证失效回登录与临时控件归零通过。两个 Worker、errors=[]，日志 `/tmp/lynx-webkit-data-{standalone-ready,embedded}.log`。首次测试碰到隔离服务器端口绑定失败，未混为业务失败；确认进程退出、端口空闲后补启动就绪检查再测，旧日志保留。
+- 初次快捷键在播放时浏览器退出。空白页原生 Audio 探针也退出，私有 DEBUG/GST 日志明确缺少 `appsink`、`appsrc`、`autoaudiosink`；宿主只有两个 core 插件。临时解包 base/good/libav 插件，并单独设置 GST_PLUGIN_PATH/GST_REGISTRY 和自有 PulseAudio 空输出后，探针 M4A/MP3 进度约 3.17/2.22 秒且无媒体 error。第三个普通 MP3 在空白页被用户激活策略拒绝，不能把三样本都写成通过。原始日志 `/tmp/lynx-webkit-audio-{initial,plugins}-private.log` 权限 600，打印检查对 token 脱敏；缺视频编码器/fakevideosink 的警告保留，不扩大为视频验收。
+- 最终真实客户端在现有 128 kbps 设置下完成播放/持续暂停、1→2→1 切歌、音量 100→95→100、实际长按降至 90、禁用与刷新后持久化、Shadow DOM input 实收空格、iframe/组合输入保护、重复加载无双监听及播放器菜单阻止快捷键。可信键事件 repeat=false/true，audioErrors=[]、errors=[]、退出码 0，日志 `/tmp/lynx-webkit-keyboard-plugins.log`；没有为了通过而替换播放器或伪造媒体进度。`webkit-p4-import.png` 与 `webkit-p5-overlay.png` 已目测。范围为 Linux WebKit 单版本、375px 中文、软件渲染、空输出、注入 input/iframe 与 IME 协议夹具；不覆盖 Safari、扬声器、系统输入法、已安装插件或完整布局矩阵。
+- 中英部署/交接和中文计划补充这些证据，Firefox 间歇 Blob 观察继续开放。本批未改应用源码、依赖清单或产物；只本地提交、不 push。隔离后端/Web/Pulse/浏览器按自有 PID 清理，用户 `58091` 仍运行；Android/HarmonyOS 无连接设备，Apple 工具链及生产签名仍缺，目标未标全平台完成。
+
 ## 2026-10-07 · HarmonyOS 修复提交的四种本地交付包
 
 - 修复提交为客户端 `e09592b7b57e2c410ddf26032bb8c64a19f5c405`，父仓库 `78ce304` 已同步子模块；重新准备统一元数据（dev / 构建号 `213487589` / `2026-10-06T22:06:29.611Z`）后，类型检查、关闭 JS TestBridge 的双产物、三端资源复制与 Android APK 编译通过。日志 `/tmp/lynx-e09592b-bundle-build.log`、`/tmp/lynx-e09592b-android.log`。47 项发布工具最终回归通过（`/tmp/lynx-harmony-arkts-final-release-tests.log`），原生契约 306 项、缓存/更新器适配器 15 项及先前完整 JS 3061 项的边界见上一批。

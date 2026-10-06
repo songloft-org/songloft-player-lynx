@@ -256,8 +256,8 @@
 - [ ] P3a：缓存身份/索引/取消（共享 TS 与三端 v2 源码已接入；发布兼容声明 bridge 3 / schema 2 / `songCache.v2`，旧壳需安装同通道新包；Android 真实文件/HTTP 8 项、设备分音轨缓存及后端不可达冷启动播放通过；HarmonyOS 源码在 Node 文件/HTTP/TLS 适配器下 8 项通过，现另已完成 HAP 真编译；iOS Apple 核心验证程序已配置但未编译/执行，iOS 编译与两端设备验收继续，见 progress）
 - [ ] P3b：批量缓存任务（共享源码已接入；273 文件 / 2960 项回归、双产物及 Android APK 编译通过；Android arm64 界面验证 235 首入队、94 完成含 36 缓存跳过、取消剩余 141 项和暂存清理；x86_64 缺 SVG 库/原生崩溃单独记录，HarmonyOS HAP 已编译；iOS 编译和两端设备验收仍开放，见 progress）
 - [ ] P3c：离线管理与播放（共享源码已接入身份证明、本地列表/搜索/空间/删除/清理及独立本地队列；277 文件 / 2989 项回归和 35 项发布工具、双产物及 Android APK 编译通过；Android 实际断网播放/控制/seek/重播/冷启动、删除/分身份清理及登出隐藏通过，中英最大字号三个宽度六组通过，见 progress；HarmonyOS HAP 已编译；iOS 编译和两端设备验收仍开放）
-- [x] P4：Web 导入/导出（源码与 Chrome、Firefox 134 standalone/embedded 根路径数据流程验收完成；Firefox 兼容性观察与激活夹具边界见 progress，Safari 待验）
-- [x] P5：Web 快捷键（源码与 Chrome 实际播放/菜单/持久化验收完成；Firefox 134 在临时 PulseAudio 空输出/128 kbps 下完成控制流程，间歇 Blob 异常、听感与 IME/插件夹具边界见 progress，Safari 待验）
+- [x] P4：Web 导入/导出（源码与 Chrome、Firefox 134 standalone/embedded 根路径数据流程验收完成；Linux WebKit 18.2 两种部署补充回归通过；Firefox 兼容性观察与激活夹具边界见 progress，Safari 待验）
+- [x] P5：Web 快捷键（源码与 Chrome 实际播放/菜单/持久化验收完成；Firefox 134 在临时 PulseAudio 空输出/128 kbps 下完成控制流程，Linux WebKit 18.2 亦完成空输出控制回归；间歇 Blob 异常、听感与 IME/插件夹具边界见 progress，真实 Safari 待验）
 - [ ] P6a：HarmonyOS 剪贴板（四端确认回调与两处成功/失败反馈已接入；HarmonyOS HAP 已编译，系统粘贴验收仍开放，见 progress）
 - [ ] P6b：HarmonyOS 通知歌词（队列元数据、AVSession 布局/控制、旧壳降级与音频契约源码已补；HarmonyOS HAP 已编译；iOS 编译与真实卡片/锁屏验收仍开放，见 progress）
 - [ ] P6c：iOS/HarmonyOS 插件恢复前台（三端根事件/原生 WebView 与 Lynx frame 消费点源码已接；SDK 独立注册/ready 与 Web 保活推送已补，HarmonyOS HAP 已编译；iOS 编译及 MIoT 长后台/断网重连设备验收仍开放，见 progress）

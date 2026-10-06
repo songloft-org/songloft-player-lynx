@@ -47,6 +47,8 @@ Web 接口请求走共享认证客户端：导入为 `/playlists/import` 的 mul
 
 参考：[文件输入](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/file)、[用户激活与选择器](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/showPicker)、[Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob)、[撤销 object URL](https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static)。
 
+2026-10-07 补充：Linux Playwright WebKit 18.2 也完成上述两种根路径部署的数据传输流程，实际后端新增与 JSON 下载可观测，最终页面错误为零；用户激活失效为显式夹具。临时 Mesa/依赖环境与日志见 [progress](../project/progress.md)。[Playwright 的 WebKit](https://playwright.dev/docs/browsers#webkit) 不是 Safari 品牌浏览器，真实 Safari 继续待验。
+
 ## 复制到剪贴板
 
 复制提示词与歌曲路径等操作使用 `setClipboardWithResult`，等待 `navigator.clipboard.writeText` 完成才提示成功；非安全上下文/点击权限丢失或 API 拒绝时尝试旧复制接口，只有 `execCommand('copy')` 返回 true 才确认，否则显示失败。临时 textarea 和焦点会清理/恢复。Chrome 两处真实按钮复制后的粘贴一致，失败/重试也已检查；其他浏览器仍待验。见 [Clipboard.writeText](https://developer.mozilla.org/en-US/docs/Web/API/Clipboard/writeText)。
@@ -59,6 +61,8 @@ Web 接口请求走共享认证客户端：导入为 `/playlists/import` 的 mul
 
 Chrome 153 已实际验证播放、暂停、切歌、音量、开关持久化和播放器菜单保护。Shadow DOM 输入框/iframe 为浏览器注入夹具，组合输入为协议事件夹具，未宣称操作系统输入法或已安装插件的完整验收。Firefox 134 在临时 PulseAudio 空输出下也完成上述快捷键流程，最终媒体错误/页面异常为零；验证使用现有 128 kbps 设置，实际后端流解码和进度推进，不包含扬声器听感。此前 `MEDIA_ERR_DECODE` 经 Firefox 日志定位为输出端初始化失败 `NS_ERROR_DOM_MEDIA_MEDIASINK_ERR`，不是证实编码器不支持；空白页探针接入输出端后同样恢复。测试只向该浏览器传 `PULSE_SERVER`，未修改宿主音频配置。空输出含义见 [PulseAudio module-null-sink](https://wiki.freedesktop.org/www/Software/PulseAudio/Documentation/User/Modules/#module-null-sink)。间歇性 Blob 脚本异常仍保留观察，Safari 仍待验。事件依据见 [composedPath](https://developer.mozilla.org/en-US/docs/Web/API/Event/composedPath)、[isComposing](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/isComposing)、[repeat](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/repeat)。
 
+Linux WebKit 18.2 也完成快捷键实际控制回归，最终 audioErrors/errors 为空；使用同一交付包、128 kbps 流和临时 PulseAudio 空输出。首次媒体进程退出经空白页探针定位为缺少 GStreamer appsink/appsrc/autoaudiosink，补临时插件后恢复。第三个空白页样本被激活策略拒绝，未记作媒体通过。环境、日志、375px 中文及输入/IME 夹具边界见 [progress](../project/progress.md)；没有改客户端代码或放宽应用校验。Linux WebKit 不替代真实 Safari、系统输入法或扬声器验收。
+
 ## Web 平台的已知限制
 
 部署前该知道用户会遇到什么：
@@ -69,7 +73,7 @@ Chrome 153 已实际验证播放、暂停、切歌、音量、开关持久化和
 | **会话持久化走 IndexedDB**               | worker realm 没有浏览器真正的 `localStorage`（那是 window-only；web-core 注入到背景 realm 的同名 scope 绑定不是页面持久化的那个），存储探测顺序是 native → **IndexedDB** → localStorage → 内存，且 IndexedDB 必须赢过 localStorage                                                                                                                                                                                                                         |
 | **无 longpress**                         | web-core 不合成该手势，任何「长按打开菜单」的功能必须另有按钮入口                                                                                                                                                                                                                                                                                                                                                                                          |
 | ~~占位符颜色恒为库自带 grey~~            | **已修（2026-08-26）**：`-x-placeholder-color` 在 Web 上是空转声明、web-elements 走 `::part(input)::placeholder` 且 part 上有显式默认 —— 这三者接不起来，所以改为 patch web-core 产物的默认值（`grey` → `var(--content-muted,grey)`，`scripts/patch-web-core-client.mjs`），CDP 实测随主题切换（light `#7b7b88` / dark `#8b8b98`）。**同类问题（web-elements 部件样式改不动）先想 part 显式默认 + shadow root 穿透，修法走 patch 脚本**，见 AGENTS.md §3.2 |
-| **歌单文件选择的用户激活** | JSON 导入/导出已提供主线程可点击控件，应对 Worker 调用丢失激活；Chrome 与 Firefox 134 两种根路径部署的数据流程通过，Firefox 激活失效采用夹具。Safari 待验。其他旧 `pickAndUploadFile` 调用仍沿用原桥接。 |
+| **歌单文件选择的用户激活** | JSON 导入/导出已提供主线程可点击控件，应对 Worker 调用丢失激活；Chrome、Firefox 134 与 Linux WebKit 18.2 两种根路径部署的数据流程通过，后两者激活失效采用夹具。Safari 待验。其他旧 `pickAndUploadFile` 调用仍沿用原桥接。 |
 | **无「清空浏览器缓存」入口（刻意不做）** | Flutter 版有（清 Cache Storage + 注销 SW + 强刷 HTTP 缓存，解决 PWA 更新后旧资源问题）。本仓库 Web 端不注册 Service Worker、不用 Cache Storage，standalone（`serve.mjs`）与 embedded（后端 embed.go）的响应一律 `Cache-Control: no-cache` + ETag 304 —— 更新后普通刷新即最新，无需用户手动清                                                                                                                                                               |
 | **部分 Lynx 元素无实现**                 | `<refresh>` / `<webview>` 等未映射标签走恒等回落，成为 `HTMLUnknownElement`——属性开关完全无效。写跨平台页面前先查 web-core 的 `LYNX_TAG_TO_HTML_TAG_MAP`                                                                                                                                                                                                                                                                                                   |
 
