@@ -11,6 +11,8 @@
 
 ## 待修复（开放）
 
+- [ ] Web 前端直接挂载子路径时资源 404、黑屏（2026-10-07 实测）— `e09592b` 的 embedded 交付目录严格挂载 `/songloft/`，HTML 200，但入口模块、样式、WASM 和宿主脚本仍请求根路径，11 项 404、Worker 0、登录页缺失。未改产物或代理根资源掩盖问题；修复需同时覆盖静态资源、引擎/Worker、插件与 embedded API 前缀后再验收。根路径 standalone 连接带前缀后端是另一种部署：同包在 Linux WebKit 18.2 的 P4/P5 已通过，不能拿它闭合此前端挂载问题。日志 `/tmp/lynx-frontend-subpath-probe.log`、截图 `webkit-frontend-subpath.png`；部署边界见[指南](../guides/web-deployment.md)。
+
 - [ ] Firefox 134 间歇性 Blob 脚本加载异常（2026-10-07）：数据导入/导出在 standalone/embedded 根路径通过，但数据流程与后续快捷键流程各捕获过 Lynx MTS iframe 的 `Failed to load script: blob:...`，阶段诊断后的最终流程未复现，具体原因未定，不能凭单次通过闭合。媒体 `MEDIA_ERR_DECODE` 已另定位为本机输出初始化失败 `NS_ERROR_DOM_MEDIA_MEDIASINK_ERR`；接入临时 PulseAudio 空输出后，空白页探针与快捷键最终回归均无媒体错误，不修改应用或宿主配置。实际播放/暂停/切歌/音量/重复/持久化与输入/菜单保护通过，但未验证扬声器听感。当前 web-core 包目标列 Chrome/Safari，不承诺 Firefox 整体稳定；证据与边界见 progress。
 
 - [ ] Android 模拟器宿主崩溃（2026-10-07 P6a）：新 APK 编译/arm64 ABI 安装/预编译通过，但两次启动呈空白首屏，宿主 emulator 37.2.12 随后 SIGSEGV；切换 swiftshader_indirect 后还有 ColorBuffer 绑定错误。与应用进程的既有 x86_64 SVG/JIT 问题分开记录，不在无证据时归因于剪贴板改动。本批 Android 系统粘贴仍待验，日志 `/tmp/lynx-p6a-emulator*.log`，Chrome 复制/粘贴证据见 progress。

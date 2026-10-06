@@ -31,7 +31,9 @@ location / {
 
 ## 子路径部署
 
-**目前未验证子路径部署**。资源与 API 仍有根相对路径，仅给后端设置 `-base-path /xxx` 或 `BASE_PATH=/xxx` 不能保证 Lynx 可用。embedded 下 API base 取 worker realm 的 `self.location.origin`；standalone 与 embedded 由 `deployMode` global prop 区分（`copy-bundle-web.mjs --embedded` 剥掉该属性）。部署请先使用域名根路径。
+**当前前端自身不支持直接挂载子路径**。2026-10-07 用 `e09592b` 交付包在 `/songloft/` 实测：HTML 返回 200，但脚本、样式与 WASM 的根相对请求有 11 项 404，Worker 未启动，登录页不出现。仅给后端设置 `-base-path /xxx` 或 `BASE_PATH=/xxx` 不能修复这些前端路径；embedded 下 API base 仍取 Worker 的 `self.location.origin`。前端请部署在域名根路径。
+
+**standalone 前端在根路径连接带前缀的后端已验证**。同一交付包连接 `http://127.0.0.1:58192/songloft`，Linux WebKit 18.2 完成 JSON 导入/导出、401 刷新重试、取消/错误恢复、播放/切歌/音量快捷键与持久化；请求保留 `/songloft/api/v1/`。这不等于前端子路径挂载可用，也不覆盖真实 Safari、插件或全部资源。证据与空音频输出/输入夹具边界见 [progress](../project/progress.md)。standalone 与 embedded 仍由 `deployMode` global prop 区分（`copy-bundle-web.mjs --embedded` 剥掉该属性）。
 
 > ⚠️ worker realm **也**拿得到 `self.location`，所以「探测 location 是否存在」不能用来判断 standalone 还是 embedded —— 这正是 `deployMode` global prop 存在的理由。
 

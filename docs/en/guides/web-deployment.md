@@ -31,7 +31,9 @@ Vitest checks local index.html references and a type=module entry. Those checks 
 
 ## Subpath deployment
 
-**Subpath deployment is currently unverified.** Resource and API URLs still include root-relative paths; setting the backend's -base-path or BASE_PATH alone cannot establish Lynx compatibility. Use a domain's root path first. Embedded gets its API origin from the Worker; the copy script strips the standalone deployMode prop.
+**The current frontend cannot be mounted directly under a subpath.** A 2026-10-07 test of the `e09592b` delivery at `/songloft/` returned HTML 200, but eleven root-relative script/style/WASM requests returned 404. No Worker started and no login page appeared. Setting backend `-base-path` or `BASE_PATH` cannot repair these frontend paths; embedded still takes its API origin from the Worker. Deploy the frontend at a domain's root path.
+
+**A root-hosted standalone frontend connecting to a prefixed backend is verified.** The same delivery connected to `http://127.0.0.1:58192/songloft` in Linux WebKit 18.2 and passed JSON import/export, 401 refresh/replay, cancellation/error recovery, playback/track/volume shortcuts and persistence. Requests retained `/songloft/api/v1/`. This does not establish frontend subpath mounting or actual Safari, plugins or all resources. See [progress (Chinese)](../../project/progress.md) for evidence and null audio output/input-fixture limits. Deploy modes still use the `deployMode` global prop, removed by `copy-bundle-web.mjs --embedded`.
 
 Workers also have self.location, so location availability cannot distinguish deployment modes.
 

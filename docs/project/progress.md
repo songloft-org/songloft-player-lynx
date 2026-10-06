@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · 前端挂载与后端前缀的真实浏览器核查
+
+- 父仓库 `c1b846d`、客户端 `5d919cd` 起始干净。使用固定 `e09592b` Web 交付目录，隔离 Go 后端 `58192` 设置 `-base-path /songloft`；前端根路径 standalone 为 `3015`，embedded 严格挂载 `/songloft/` 为 `3016`，后者只剥静态挂载前缀、不改 HTML 或补根路径别名。测试脚本仅在 `/tmp/lynx-web-acceptance/`，未改应用、构建依赖、交付包或用户后端。首次就绪检查错用了 `/songloft/health` 得到 404，终止并确认进程退出后改为真实 `/songloft/api/v1/health`，未算作客户端故障。
+- Linux WebKit 18.2 的 embedded 前端挂载探针：HTML 200、crossOriginIsolated=true，11 项根路径脚本/样式/WASM 404、Worker 0、登录控件缺失。截图 `webkit-frontend-subpath.png` 已目测黑屏，日志 `/tmp/lynx-frontend-subpath-probe.log`。由旧“未验证”订正为已实测不支持直接挂载子路径；不进入后续 P4/P5 交互，也不把“无 pageerror”误写为启动成功。
+- 根路径 standalone 连接 `http://127.0.0.1:58192/songloft`：实际文件选择创建 1 个歌单/1 首歌，后端总数 248→249；中文/emoji 导出 251778 字节可解析。空/坏文件 0 上传，401 夹具后真实刷新一次并重放 200，500 恢复、激活过期 DOM 取消、认证失效回登录与临时控件清理通过。请求与刷新均保留 `/songloft/api/v1/`，两个 Worker、errors=[]；日志 `/tmp/lynx-backend-subpath-data.log`，截图 `webkit-subpath-p4-import.png`。
+- 同部署 P5 实际媒体播放进度与持续暂停、1→2→1 切歌、音量 100→95→100、长按至 90、开关禁用/刷新持久化、重复脚本加载、真实播放器菜单保护通过。输入实收空格，iframe/IME 为既有注入与协议夹具；可信 key repeat=false/true，mediaRequests 带 `/songloft/api/v1/songs/.../play`，audioErrors=[]、errors=[]、脚本退出码 0，日志 `/tmp/lynx-backend-subpath-keyboard.log`。范围为 Linux 单引擎、375px 中文、128 kbps/临时 PulseAudio 空输出，不覆盖 Safari、扬声器、已安装插件或全部资源。
+- 中英部署/交接、中文计划和 bugs 按两种部署分别记录；前端子路径修复仍开放，未用后端前缀成功冒充前端挂载成功。隔离服务器、浏览器与 Pulse 按自有 PID 清理，端口 `58192/3015/3016` 均退出，用户 `58091` 继续监听。仅本地提交、不 push；HarmonyOS 许可待答复，设备、Apple 与正式签名条件仍未解决。
+
 ## 2026-10-07 · 剩余验收条件与参考文档订正
 
 - 客户端 `a9bef9e` 与父仓库 `d2f4fb0` 起始工作树干净。重新核对 `/tmp/lynx-local-delivery/e09592b/verification.json` 四种包的大小和 SHA-256 均一致，未重建或修改产物。缓存、更新协议与原生模块参考页仍有“HarmonyOS 未编译”和“通知歌词待补齐”的落后描述，已按当前 HAP 编译及 P6b 源码证据订正；缓存/更新的中英页同步，历史批次记录保留原边界。

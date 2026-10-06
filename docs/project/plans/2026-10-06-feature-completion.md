@@ -172,7 +172,7 @@
 
 ## 6. P4：Web 歌单 JSON 导入/导出
 
-实施记录（2026-10-07）：共享源码与 Chrome standalone/embedded 根路径验收已完成。主线程选择/下载控件处理激活过期，认证请求支持刷新重试；279 文件 / 3012 项 JS、35 项发布工具、类型/双产物和 Android APK 通过。实际选文件、后端歌单/歌曲新增、中文/emoji 下载、取消/错误/认证失效与中英最大字号六组通过，见 progress。Firefox 134 后续实际通过 standalone/embedded 根路径的数据传输，激活失效使用夹具；启动/音频环境观察见 progress，Safari 未运行。部署子路径维持既有未验证边界，原生传输流程未改。
+实施记录（2026-10-07）：共享源码与 Chrome standalone/embedded 根路径验收已完成。主线程选择/下载控件处理激活过期，认证请求支持刷新重试；279 文件 / 3012 项 JS、35 项发布工具、类型/双产物和 Android APK 通过。实际选文件、后端歌单/歌曲新增、中文/emoji 下载、取消/错误/认证失效与中英最大字号六组通过，见 progress。Firefox 134 后续实际通过 standalone/embedded 根路径的数据传输，激活失效使用夹具；启动/音频环境观察见 progress，Safari 未运行。后续实测前端子路径挂载出现 404/黑屏；根路径 standalone 连接带前缀后端的 P4/P5 已通过，详见部署指南，原生传输流程未改。
 
 - 方法级判断文件上传/导出能力，解除 Web 的一刀切禁用；Settings 入口与 DataPage 同步。
 - 导入继续使用现有 `/playlists/import` multipart `file` 契约，导出使用 `/playlists/export`。读取用户选定文件并上传，取消选择、无效 JSON、未授权、服务端失败均结束 busy 状态。
@@ -272,7 +272,7 @@
 | HarmonyOS P1/P2/P3/P6 | `e09592b` clean HAP 编译、包校验与实际源码 Node 适配器通过；HAP 未签名，尚无安装记录 | CLI 已能查询 API 13 phone 镜像 `5.0.0.112`，下载/启动需要用户明确授权接受华为协议；当前账号无 `/dev/kvm` 读写权限，模拟器运行与调试签名仍需验证。许可未确认时不下载、创建或启动实例 |
 | Android P6 与跨批回归 | P1/P2/P3 有前批设备行为证据；当前 `e09592b` APK 已编译，P6 系统复制/恢复与新通知布局尚缺最终设备证据 | 连接可运行设备，安装当前 Debug APK，验收真实粘贴、后台/前台通知、插件退出清理及原有播放/通知回归；旧模拟器原生崩溃不能算通过 |
 | P6c 插件兼容与恢复 | 原生父桥和 SDK ready 协议回归通过；Web Chrome 保活/重入证据，页面可见性为夹具 | 用本地更新 SDK 重建测试插件，再做真实系统前后台、长后台与断网重连；SDK 尚未发布，既有原生插件只保留初始快照，新增推送需要重建 |
-| P2 正式交付与 Web 补充 | 本地签名夹具、版本/包工具通过；Chrome/Firefox/Linux WebKit 的 P4/P5 回归已记录 | 正式受信密钥仍为 0，签名/CI/真实发版不在本次“不 push”的执行动作内；实际 Safari、Web 子路径部署与 Firefox 间歇 Blob 异常仍开放，不用 Linux WebKit 结果替代 Safari |
+| P2 正式交付与 Web 补充 | 本地签名夹具、版本/包工具通过；Chrome/Firefox/Linux WebKit 的 P4/P5 回归已记录 | 正式受信密钥仍为 0，签名/CI/真实发版不在本次“不 push”的执行动作内；实际 Safari、前端子路径挂载兼容修复与 Firefox 间歇 Blob 异常仍开放；根路径 standalone 连接带前缀后端的 P4/P5 已通过，不用 Linux WebKit 结果替代 Safari |
 
 当前四种本地包与 SHA-256 固定在 `/tmp/lynx-local-delivery/e09592b/verification.json`，后续仅文档提交不改变包的源码身份。许可文本在 `/tmp/lynx-harmony-emulator/license-review.log`；目前只审阅，未接受。KVM 权限检查和 CLI 可执行不证明模拟器能运行，也不证明未签名 HAP 可安装。桌面、Bundle 本地模式和视频继续暂缓。
 
