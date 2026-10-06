@@ -27,6 +27,8 @@ Implementation and local validation are complete. After pushing, GitHub Actions/
 
 Linux can validate JS, scripts, and Android; iOS/HarmonyOS require their toolchains. Final evidence is in this batch's [progress entry (Chinese)](../../project/progress.md). Workflow linting cannot replace cloud signing and compilation.
 
+Casting diagnostics now use the existing client log, including device details, media URL/MIME, operations, native SOAP error codes, and playback state changes, with token redaction and polling deduplication. All 258 JS test files / 2786 tests, type checking, and both Lynx/Web builds pass; no native methods were added. Direct TV testing reproduced 716 with Flutter's inline DIDL; the escaped version of the same HTTPS MP3 request was accepted, and Flutter serialization has been fixed. The TV still remained TRANSITIONING and did not fetch an unauthenticated HTTP MP3 either. The user confirmed the TV displays “casting is unavailable in the current scene”; this receiver restriction needs attention on the TV. Client log export and successful playback have not been verified on devices; these changes have not been pushed or published.
+
 ## 4. Outstanding work
 
 1. Configure signing and run all platform jobs. Test APK/HAP upgrades and re-signed IPA installation.

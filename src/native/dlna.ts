@@ -1,4 +1,11 @@
 import { readNativeModules } from './native-modules.js'
+import { logError, logInfo, redactTokens } from '../core/logging/client-logger.js'
+
+const pollErrors = new Map<string, string>()
+
+function diagnostic(message: string): string {
+  return redactTokens(message).replace(/\r/g, '\\r').replace(/\n/g, '\\n').slice(0, 8192)
+}
 
 export interface DlnaDevice {
   id: string
@@ -100,8 +107,12 @@ function parsePayload(json: string): { error?: string; value?: unknown } {
 function invoke(
   run: (callback: (json: string) => void) => void,
   label: string,
+  detail = '',
+  polling = false,
 ): Promise<unknown> {
-  return new Promise((resolve, reject) => {
+  const context = diagnostic(`${label} ${detail}`.trim())
+  if (!polling) logInfo('dlna', `${context} start`)
+  const result = new Promise<unknown>((resolve, reject) => {
     let settled = false
     try {
       run((json) => {
@@ -116,6 +127,18 @@ function invoke(
       settled = true
       reject(e instanceof Error ? e : new Error(`[dlna] ${label} threw`))
     }
+  })
+  return result.then(value => {
+    pollErrors.delete(context)
+    if (!polling) logInfo('dlna', `${context} succeeded`)
+    return value
+  }, error => {
+    const reason = diagnostic(String(error))
+    if (!polling || pollErrors.get(context) !== reason) {
+      logError('dlna', `${context} failed: ${reason}`)
+      if (polling) pollErrors.set(context, reason)
+    }
+    throw error
   })
 }
 
@@ -136,6 +159,12 @@ function toDevices(value: unknown): DlnaDevice[] {
 }
 
 function createNativeAdapter(native: NativeDlnaModule): DlnaModule {
+  const devices = new Map<string, DlnaDevice>()
+  const transportStates = new Map<string, string>()
+  function deviceContext(id?: string): string {
+    const device = id ? devices.get(id) : undefined
+    return diagnostic(`device=${id ?? '(default)'} name=${device?.name ?? '(unknown)'} location=${device?.location ?? '(unknown)'}`)
+  }
   return {
     available: true,
     async startDiscovery() {
@@ -145,27 +174,43 @@ function createNativeAdapter(native: NativeDlnaModule): DlnaModule {
       await invoke((cb) => native.stopDiscovery(cb), 'stopDiscovery')
     },
     async getDevices() {
-      return toDevices(await invoke((cb) => native.getDevices(cb), 'getDevices'))
+      const found = toDevices(await invoke((cb) => native.getDevices(cb), 'getDevices', '', true))
+      for (const device of found) {
+        if (!devices.has(device.id)) {
+          devices.set(device.id, device)
+          logInfo('dlna', `discovered ${deviceContext(device.id)}`)
+        } else {
+          devices.set(device.id, device)
+        }
+      }
+      return found
     },
     async cast(options) {
       const { deviceId, url, title } = options
+      transportStates.delete(deviceId)
       const args = JSON.stringify({ deviceId, url, title, metadata: mediaMetadata(options) })
-      await invoke((cb) => native.cast(args, cb), 'cast')
+      const detail = `${deviceContext(deviceId)} title=${title} mime=${options.mimeType ?? '(unknown)'} url=${redactTokens(url)}`
+      await invoke((cb) => native.cast(args, cb), 'cast', detail)
     },
     async control(action, options) {
       const args = JSON.stringify({ action, ...options })
-      await invoke((cb) => native.control(args, cb), 'control')
+      await invoke((cb) => native.control(args, cb), `control/${action}`, `${deviceContext(options?.deviceId)} value=${options?.value ?? ''}`)
     },
     async getPlaybackState(deviceId) {
-      const value = await invoke((cb) => native.control(JSON.stringify({ action: 'status', deviceId }), cb), 'status')
+      const value = await invoke((cb) => native.control(JSON.stringify({ action: 'status', deviceId }), cb), 'status', deviceContext(deviceId), true)
       if (!value || typeof value !== 'object') return null
       const state = value as Partial<DlnaPlaybackState>
       if (typeof state.state !== 'string') return null
-      return {
+      const playback = {
         state: state.state.toUpperCase(),
         positionMs: typeof state.positionMs === 'number' && Number.isFinite(state.positionMs) ? Math.max(0, state.positionMs) : 0,
         durationMs: typeof state.durationMs === 'number' && Number.isFinite(state.durationMs) ? Math.max(0, state.durationMs) : 0,
       }
+      if (transportStates.get(deviceId) !== playback.state) {
+        transportStates.set(deviceId, playback.state)
+        logInfo('dlna', diagnostic(`transport ${deviceContext(deviceId)} state=${playback.state} positionMs=${playback.positionMs} durationMs=${playback.durationMs}`))
+      }
+      return playback
     },
   }
 }
@@ -197,4 +242,5 @@ export function getDlnaModule(): DlnaModule {
 /** Test hook: drop the memoized module so a scenario can install its own. */
 export function resetDlnaModuleForTests(): void {
   cached = null
+  pollErrors.clear()
 }

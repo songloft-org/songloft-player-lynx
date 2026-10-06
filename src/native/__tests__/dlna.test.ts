@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { createRequire } from 'node:module'
 
 import { getDlnaModule, resetDlnaModuleForTests } from '../dlna.js'
+import { readClientLog, resetClientLoggerForTests } from '../../core/logging/client-logger.js'
 
 /**
  * `dlna.ts` used to be a one-line lie: `nm.SongloftDlna as DlnaModule`, i.e. a
@@ -66,7 +67,10 @@ function install(mod: Record<string, unknown> | undefined): void {
   resetDlnaModuleForTests()
 }
 
-beforeEach(() => resetDlnaModuleForTests())
+beforeEach(() => {
+  resetDlnaModuleForTests()
+  resetClientLoggerForTests()
+})
 
 afterEach(() => {
   delete g.NativeModules
@@ -74,6 +78,49 @@ afterEach(() => {
 })
 
 describe('native adapter (callback → Promise)', () => {
+  test('716 cast failures reach exported logs with device and redacted media context', async () => {
+    const { mod } = fakeNative({
+      cast: vi.fn((_args: string, cb: (s: string) => void) => cb(JSON.stringify({
+        error: 'SOAP SetAVTransportURI failed: HTTP 500: UPnP 716 Resource not found https://host/play?access_token=private-token&quality=original',
+      }))),
+    })
+    install(mod)
+    await getDlnaModule().getDevices()
+    await expect(getDlnaModule().cast({
+      deviceId: 'd1', url: 'https://host/play?access_token=private-token&quality=original',
+      title: '歌曲', mimeType: 'audio/mpeg',
+    })).rejects.toThrow(/716/)
+    const log = await readClientLog()
+    expect(log).toContain('E/dlna cast device=d1 name=Living Room location=http://1.2.3.4/desc.xml')
+    expect(log).toContain('mime=audio/mpeg url=https://host/play?access_token=***&quality=original')
+    expect(log).toContain('SetAVTransportURI failed: HTTP 500: UPnP 716 Resource not found')
+    expect(log).not.toContain('private-token')
+  })
+
+  test('control failures are captured and repeated polling failures are deduplicated', async () => {
+    let error = true
+    const { mod } = fakeNative({
+      control: vi.fn((_args: string, cb: (s: string) => void) => cb(error
+        ? '{"error":"SOAP GetTransportInfo failed: HTTP 500: UPnP 716"}'
+        : '{"state":"PLAYING","positionMs":100,"durationMs":200}')),
+    })
+    install(mod)
+    const dlna = getDlnaModule()
+    await expect(dlna.control('pause', { deviceId: 'd1' })).rejects.toThrow(/716/)
+    for (let i = 0; i < 3; i++) await expect(dlna.getPlaybackState('d1')).rejects.toThrow(/716/)
+    let log = await readClientLog()
+    expect(log).toContain('E/dlna control/pause device=d1')
+    expect(log.match(/E\/dlna status/g)).toHaveLength(1)
+    error = false
+    await dlna.getPlaybackState('d1')
+    await dlna.getPlaybackState('d1')
+    expect((await readClientLog()).match(/I\/dlna transport .*state=PLAYING/g)).toHaveLength(1)
+    error = true
+    await expect(dlna.getPlaybackState('d1')).rejects.toThrow(/716/)
+    log = await readClientLog()
+    expect(log.match(/E\/dlna status/g)).toHaveLength(2)
+  })
+
   test('discovery and device listing resolve through the callback', async () => {
     const { mod } = fakeNative()
     install(mod)
