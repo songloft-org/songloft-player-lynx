@@ -3,11 +3,11 @@ name: Build and Release
 on:
   push:
     branches: [main]
-    tags: ['v*']
-    paths-ignore: ['**.md', 'LICENSE', 'NOTICE']
+    tags: ["v*"]
+    paths-ignore: ["**.md", "LICENSE", "NOTICE"]
   pull_request:
     branches: [main]
-    paths-ignore: ['**.md', 'LICENSE', 'NOTICE']
+    paths-ignore: ["**.md", "LICENSE", "NOTICE"]
   workflow_dispatch:
 
 concurrency:
@@ -19,7 +19,7 @@ permissions:
 
 env:
   SONGLOFT_BUILD_METADATA: ${{ github.workspace }}/.build/version.json
-  SONGLOFT_TEST_BRIDGE: 'false'
+  SONGLOFT_TEST_BRIDGE: "false"
 
 jobs:
   prepare:
@@ -117,7 +117,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
       - uses: android-actions/setup-android@v4
         with:
           packages: platform-tools platforms;android-34 build-tools;34.0.0
@@ -173,9 +173,14 @@ jobs:
       - run: node scripts/copy-bundle-ios.mjs
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+      - name: Install locked CocoaPods version
+        run: gem install cocoapods -v 1.16.2 --no-document
       - name: Install CocoaPods dependencies from lockfile
         working-directory: ios
-        run: pod install --deployment
+        run: pod _1.16.2_ install --deployment
       - name: Build unsigned device app
         working-directory: ios
         env:

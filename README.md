@@ -2,6 +2,8 @@
 
 Songloft Player 的 Lynx 客户端，从 Flutter 版整体重写为 ReactLynx + TypeScript。支持 Android / iOS / HarmonyOS / Web 四端。
 
+了解底层技术：[Lynx 官网](https://lynxjs.org/) · [ReactLynx 官方文档](https://lynxjs.org/react/)。
+
 ## 当前状态
 
 当前定位为**预览版**。核心播放、曲库/歌单、歌词、插件、主题、多服务器和管理设置已有实现；原生桌面客户端、Bundle 本地后端与客户端内检查更新尚未实现。关于页的「后端更新」升级的是服务器。

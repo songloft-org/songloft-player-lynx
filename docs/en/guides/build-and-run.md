@@ -6,14 +6,14 @@ For a quick preview, see [getting started (Chinese)](../../getting-started.md). 
 
 ## Requirements
 
-| Tool | Requirement |
-|---|---|
-| Node | `^20.19.0 \|\| >=22.12.0` |
-| Package manager | pnpm; commit pnpm-lock.yaml |
-| Backend | `http://localhost:58091`, initial `admin/admin`, API prefix `/api/v1` |
-| Android | ANDROID_HOME, JAVA_HOME, JDK 17, Android SDK |
-| iOS | macOS, Xcode, CocoaPods |
-| HarmonyOS | DevEco Studio 5.0+ or CLI/hvigor toolchain |
+| Tool            | Requirement                                                           |
+| --------------- | --------------------------------------------------------------------- |
+| Node            | `^20.19.0 \|\| >=22.12.0`                                             |
+| Package manager | pnpm; commit pnpm-lock.yaml                                           |
+| Backend         | `http://localhost:58091`, initial `admin/admin`, API prefix `/api/v1` |
+| Android         | ANDROID_HOME, JAVA_HOME, JDK 17, Android SDK                          |
+| iOS             | macOS, Xcode, CocoaPods 1.16.2 (matching Podfile.lock)                |
+| HarmonyOS       | DevEco Studio 5.0+ or CLI/hvigor toolchain                            |
 
 ```bash
 pnpm install

@@ -2,6 +2,8 @@
 
 A ReactLynx + TypeScript rewrite of the Songloft Flutter client, targeting Android, iOS, HarmonyOS, and Web.
 
+Learn about the underlying technology: [Lynx official website](https://lynxjs.org/) · [ReactLynx documentation](https://lynxjs.org/react/).
+
 ## Current status
 
 This is a **preview client**. Playback, library/playlists, lyrics, plugins, themes, multiple servers, and administrative settings are implemented. Native desktop clients, a bundled local backend, and in-app client update checks are not implemented. “Backend update” on the About page updates the server.

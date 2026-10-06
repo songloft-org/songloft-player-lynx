@@ -7,14 +7,14 @@
 
 ## 环境要求
 
-| 项 | 要求 |
-|---|---|
-| Node | `^20.19.0 \|\| >=22.12.0`（`package.json` 的 `engines`） |
-| 包管理 | pnpm（`pnpm-lock.yaml` 必须提交） |
-| 后端 | `http://localhost:58091`，账号 `admin/admin`，接口前缀 `/api/v1` |
-| Android | `ANDROID_HOME` + `JAVA_HOME`（本机已有 openjdk 17，见下方 Android 一节） |
-| iOS | macOS + Xcode + CocoaPods |
-| HarmonyOS | DevEco Studio 5.0+（含 hvigor 构建工具链） |
+| 项        | 要求                                                                     |
+| --------- | ------------------------------------------------------------------------ |
+| Node      | `^20.19.0 \|\| >=22.12.0`（`package.json` 的 `engines`）                 |
+| 包管理    | pnpm（`pnpm-lock.yaml` 必须提交）                                        |
+| 后端      | `http://localhost:58091`，账号 `admin/admin`，接口前缀 `/api/v1`         |
+| Android   | `ANDROID_HOME` + `JAVA_HOME`（本机已有 openjdk 17，见下方 Android 一节） |
+| iOS       | macOS + Xcode + CocoaPods 1.16.2（与 Podfile.lock 一致）                 |
+| HarmonyOS | DevEco Studio 5.0+（含 hvigor 构建工具链）                               |
 
 ```bash
 pnpm install
