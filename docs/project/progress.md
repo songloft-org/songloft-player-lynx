@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-06 · 现状文档订正
+
+- 核查订正：音轨历史交付不等于当前闭环，`getTracks()` 使用不含默认标记的旧数组接口，Store 没有 UI 消费点；完整音轨接口为 `/audio-tracks`。80% 进度处已有 Range GET 预取；Web 文件桥接已有，但数据传输仍禁用；HarmonyOS 视频已注册并有 XComponent，iOS 已改 AVPlayerLayer 下层表面。对应现状文档已订正，历史记录保留其当时含义。
+- 本次仅按源码订正文档，没有修改功能实现或新增设备验收结果。
+- 清理过期遗留状态：曲库多选/排序/视图编辑器、插件 WebView/Tab/文件安装、系统主题与主题商店、日志打包分享均已有实现；Android 已上报减弱动效。HarmonyOS 视频缺陷改为当前真实模块/表面的待验收状态；Android 存储按实际普通 SharedPreferences 订正，不再写成 Keystore。
+
 ## 2026-10-06 · 投屏错误写入客户端日志
 
 - 投屏失败此前只进入页面错误状态，导出的客户端日志没有操作证据。DLNA facade 现将发现、投放、控制的开始/成功/失败写入现有客户端日志，包含设备 id、名称、描述地址、媒体 URL、MIME 和原生返回的 SOAP 动作/错误码；不新增宿主方法。
@@ -644,7 +650,7 @@ toast「再按一次返回退出应用」在首页真机截图确认（`/tmp/bac
 - [ ] **批4 遗留（library）**：
   - [x] **playlists 视图**（批6 落地）：占位换成 `PlaylistsView`（歌单网格 + 点卡片→`/playlists/$id`）。
   - [x] **搜索**（批10 完成）：防抖 Input + keyword 参数流到 API；排序 chip（Recent/Title/Artist）。
-  - [x] **收藏**（批11 完成）：SongRow 心形图标切换（`useFavoriteToggle`）。**多选 / 排序菜单 / 自定义视图编辑器**未做（Flutter `LibraryPage` 有，本批裁掉）。
+  - [x] **收藏**（批11 完成）：SongRow 心形图标切换（`useFavoriteToggle`）。**多选 / 排序菜单 / 自定义视图编辑器**后来已落地（`FlatSongsView`、`LibraryToolbar`、`LibraryViewEditor`）；原“未做”仅代表批11 当时裁剪范围。
   - [x] **facet 卡片点击**跳到「该分类下歌曲列表」（`CategorySongsPage` + `/library/category/$field` 路由，早前批次已落地，此处补记）。
   - **待验证：列表拉取**：登录后进 `/library`，songs 视图应见分页歌曲行，触底加载下一页；facets 视图切 Artist/Album/Genre 见网格。
 - [x] **standalone/embedded 部署模式**：批3 登录页已保留 standalone 的 API 地址配置 + 不安全 TLS 开关分支（`LoginPage.tsx` 的 `showServerFields = !appConfig.isEmbedded`）——此条目为过期未更新，非新工作，批26 排查时代码核实补记。
@@ -656,7 +662,7 @@ toast「再按一次返回退出应用」在首页真机截图确认（`/tmp/bac
   - [x] **睡眠定时 UI**（批10 完成）：SleepTimerSheet 底部面板（时长 + 歌数选项）+ topbar timer 按钮 + 激活态显示。
   - [x] **播放队列排序**（批12 完成，批30 换成拖拽）：`PlaylistDrawer` 队列行 UI 已从 chevron 上移/下移按钮换成 `lynx-ui-sortable` 拖拽手柄（复用 `reorderPlaylist` action + `queue.reorder` 纯函数，仅逻辑层未变），仅 >1 首歌时显示。**Issue #4 批（2026-09-07）移除队列内拖拽**：500 首队列全量挂载致打开卡死（songloft-player-lynx#4），抽屉改 `VirtualList` 虚拟化渲染，`reorderPlaylist`/`moveItem`/`reorder` 级联删除。
   - **Home「Open player」简化**：恒跳 `/player`（无歌时全屏页显空态），未做「无歌则播放示例」。
-  - **Flutter player 其余能力裁掉**：~~播放状态持久化/恢复~~（**批32 已完成**）、~~失败重试策略~~（**批40 已完成**：1s/3s/9s backoff，预算按歌计）、预加载 prefetch、通知栏/锁屏媒体控件与收藏回调、Live Activity/悬浮歌词/桌面歌词、视频播放（`is_video`）、音轨切换、~~播放历史~~（**批31 已完成**）、`setSpeed/setShuffle` 无 UI——均后续批（多数真机/桌面绑定）。
+  - **批5 当时裁掉的播放器能力（2026-10-06 订正）**：状态恢复、失败重试、播放历史、通知/锁屏、Live Activity、Android 悬浮歌词、视频、速度/播放模式 UI 与下一曲预取后来已有实现；当前预取为 80% 进度处的 Range GET。音轨曾有历史交付记录，但当前 API 契约错误且没有 UI 消费点，调用链仍不完整。桌面歌词尚未实现；其他平台验收边界见 handoff/bugs，不能从本条历史裁剪清单判断现状。
   - **待验证**：登录→Library 点歌→mini-player 出现→点开 `/player`；mock 进度条应自动前进、上一首/下一首/播放模式切换/音量/抽屉可用；lynx-ui `Slider`/`Sheet`/`Swiper` 三个手势叶子首次上真机（本机无法验手势）。
 - [ ] **批6 遗留（playlist）**：
   - [x] **歌单 CRUD**（批10 完成）：创建/编辑（名称+描述）/删除 + 歌曲移除。[x] 封面上传（**批37 完成**，复用 pickAndUploadFile 原生通道）/批量删除未 port。
@@ -666,24 +672,24 @@ toast「再按一次返回退出应用」在首页真机截图确认（`/tmp/bac
   - **详情页在 shell 内**（底栏 nav 常驻），返回键固定回 `/library`（Flutter 独立 appbar 页 + `pop()`）；[x] **封面缓存刷新参数**（批14 完成）：`buildCoverUrl(coverUrl, updatedAt?)` 已加 `?_t=<updatedAt ms>`（原文本身含乱码字节，已一并清理）。
   - **待验证**：登录→Library→切 Playlists 见歌单网格（封面/名称/歌数）→点歌单进 `/playlists/$id`（头部 + 歌曲行 + 触底分页）→点歌曲 `playPlaylist` → mini-player 出现。
 - [ ] **批7 遗留（home）**：
-  - [x] **首页 JS 插件网格 + 管理页 + 宿主桥接**（批17 完成）：`JSPluginApi`（list/enable/disable/delete/registry）+ `PluginManagerPage`（/settings/plugins）+ 首页 `PluginGrid`（激活插件卡片网格）+ `PluginHostDispatch`（player 命名空间分发）。**未做**：WebView 渲染插件页面（需原生 WebView 模块，B 类）、插件 Tab 页、文件上传安装（需 file picker 原生模块）。
+  - [x] **首页 JS 插件网格 + 管理页 + 宿主桥接**（批17 完成）：`JSPluginApi`、`PluginManagerPage`、`PluginGrid` 与 `PluginHostDispatch`。原先裁掉的 WebView 插件页面、插件 Tab、文件上传安装后来均已实现；Lynx 插件另走 frame 与 PluginBridge，平台恢复前台的未验项见 bugs。
   - [x] ~~区块布局截断网格~~ **批18b 已改为横向 scroll-view**。宽屏可配置行列网格（`HomeGridConfig`）未做。
   - [x] ~~**两区块「View all」共用 `/library?view=playlists`**~~（**批36 已解**）：Library 新增 Radio tab（`?view=radio`），电台区块 View all 独立导航。
   - [x] ~~HeroCard 推荐卡~~ Flutter 也未使用（widget 存在但无引用，属死代码），无需 port。[x] 加载慢提示（**批37 完成**） / [x] equalizer 遮罩（**批38 EQ bars 动画完成**）；[x] **下拉刷新**（原生 `<refresh>`，批11）/ [x] **正在播放歌单高亮**（`sourcePlaylistId`，批11）已完成；问候 4 段**已有 i18n**（早前记的“无 i18n”系过期未更新，见「批7 遗留」①）。
   - **待验证**：登录→首页见问候 + 「我的歌单」「我的电台」两区块（封面/名称/歌数）+ 底部统计条 → 点歌单卡片进 `/playlists/$id` → 点「View all」到 Library Playlists → 点「Log out」回登录。
 - [ ] **批8 遗留（settings）· defer 明细 + 归属阶段**：
-  - [x] **主题 light/system 切换**（批13 完成）：新建 `src/shared/theme/theme-model.ts`（镜像 `i18n/index.ts` 的 `AppLanguage`/`system` 语义）+ `tokens.css` 拆分出 `.theme-root.theme-light`/`.theme-dark` 两套 token + `ThemeProvider` 订阅切换 + `Icon.tsx` 的 `ICON_COLORS` 改成按当前主题动态取值的 `Proxy`（因 `<svg content>` 不走 CSS cascade，硬编码色值必须跟着主题变，对 ~20 个调用文件零改动）+ Settings→Appearance 三选一（system/light/dark）替换原只读 Dark 行。`system` 目前回退到 `dark`（同语言模块 `system` 无宿主 API 时回退默认的既有先例）。**主题包**（可下载主题资源市场，`ThemePackManager`/`ThemePackApi`）**不在本批范围，仍未排期**——本批只做内置 light/dark 两套 token 的切换，不含第三方主题资源分发。
+  - [x] **主题 light/system 切换与主题包**：批13 实现内置 light/dark/system；后续已接宿主系统主题初值/变化事件，`system` 不再恒回落 dark。主题商店、下载和应用链路也已落地（`ThemeCatalogPage`、`theme-pack-model.ts`、`ThemeProvider`），原“主题包未排期”不是当前状态。
   - [x] **多服务器管理**（批30 完成）：`ServerListPage`/`ServerEditPage` + `server-store`（profiles 列表增删改切）+ token 按 profile 隔离持久化（`token_access_${id}`/`token_refresh_${id}`）+ 旧版单服务器数据首次 hydrate 自动迁移成 Default profile。此条目早前记的「真原生模块/桌面阶段」系过期未更新，本批已用纯前端 zod schema + Zustand + `SongloftStorage` 落地。
   - [x] **底部 Tab 配置**（`TabConfig`/`tabConfigProvider`，含 Library 开关 + 插件 tab 开关 + 12 tab 上限）→ **jsplugin 阶段已落地**：`jsplugin/pages/TabConfigPage.tsx` 已实现 Library 开关 + 每插件 tab 开关 + 12 tab 上限，此条目为过期未更新，批26 排查时代码核实订正。
-  - **插件注册表 / 插件管理**（`JSPluginManager`/`jsPluginsProvider`/`pluginRegistry` 路由 + `PluginNavIcon`）、**渲染引擎**→ **jsplugin 阶段**。
+  - [x] **插件注册表 / 插件管理 / 渲染引擎**：已有管理页、源商店、WebView 和 Lynx frame 宿主；旧 jsplugin 阶段占位已完成，实际平台差异见 native-modules。
   - [x] **音乐库运维**：扫描（批19 完成）+ 元数据刷新（批19 完成）+ 重复检测/指纹（批28 完成，真机全路径验过）+ 排除目录管理（批26 完成）。原标「后端 ops 阶段」，实际已全部落地。
   - [x] **缓存管理**（`CacheApi` 5 端点 + `CacheManagePage` 三区：只读统计/编辑配置/目录验证 + 两步 tap 清理确认）→ **批28 已完成**，路由 `/settings/cache`。
-  - **升级/热更**（服务器升级 `UpgradeDialog`/`upgrade_api`、前端 `FrontendUpgradeDialog`/`frontend_version_api`、Android 热更 `PatchUpdateService`、自动检查开关）→ **后端 ops / 桌面/真机 阶段**（Lynx 无 flutter_patcher，热更整体删——见 overview §6）。
+  - **升级**：服务器检查/升级已在 AboutPage 的 UpgradeSection 实现；客户端自身检查/下载更新尚未实现。Flutter PatchUpdateService 不适用于 Lynx，远程 JS 热更新当前也未接入。
   - **下载 / 客户端下载页**（`client_download_page`/`cache_download_provider`）→ **桌面/发布阶段**。[x] **开源许可**（`licenses_page`，**批37 完成**——`/settings/licenses` 静态依赖列表）。
   - [x] **网络代理 UI**（**批31 已完成** `ProxySettingsPage`：HTTP 代理 / GitHub 代理 / HLS 代理 / 代理 allowlist 四端点 GET/PUT）。~~**不安全 TLS 真正生效**仍待原生模块~~ → **批39 已接 Android**（`SongloftPlatformModule.kt:108` 的 `setInsecureTls`）；~~**iOS 仍未实现**~~ → **批45 已修**（两侧替换宿主 HTTP service 拿到 TLS 钩子，`InsecureTls` 收口三条出站路径且双向可逆，批47 实测通过），详见「批45」。
   - [x] **数据导入导出**（批31 完成）：`SongloftPlatformModule`（Android/iOS 原生），`openURL` 导出 + `pickAndUploadFile` 原生 multipart 导入，Settings Data 区入口。
   - **播放高级偏好**：~~音质选择~~（**批31 已完成**）、~~播放速度~~（**批32 已完成**）、~~启动自动恢复~~（**批32 已完成**）、~~音量归一化~~（**批36 已完成**——`SettingsPage.tsx:357` + `url-helper.ts:66` 的 `normalize=1`；⚠️ 但存的是本地 pref，**没走** `PUT /settings/volume-normalize`，故后端 miot 插件读不到这个开关）、自动进歌词、通知栏歌词位置、`miniPlayerControls`（迷你条按钮集）→ **真原生模块阶段**。悬浮歌词的**字号/透明度/锁定**子项：~~前置条件未成立（Android 模块本身未注册，见审计）~~ → **批43 注册 + 批48 补 manifest 后已成立**，子设置已随歌词设置批落地。~~键盘快捷键~~ / ~~桌面歌词独立窗口~~ → **改标 N/A**：Flutter 里前者被 `isDesktop` 门控、后者是桌面专属，移动端不是缺口。
-  - [x] **日志级别 / 日志导出**（批15 完成）：`logLevelProvider` 其实是**后端设置**（`GET/PUT /api/v1/settings/log-level`，不是本地开关）——新建 `SettingsApi`（`getLogLevel`/`setLogLevel`/`exportLogs`，镜像 `PlaylistApi` 用法）+ Settings 新增「诊断」分组（日志级别四选一，真调后端接口）+ `/settings/logs` 子页拉 `GET /api/v1/logs/export` 纯文本滚动展示（离线/后端不可达降级成错误提示，同其它后端相关 Settings 子页）。**裁掉的部分**：Flutter 原版把后端日志 + 本机 `FileLogger` 文件打包成 zip、丢给系统分享面板（`share_plus`）——Lynx 没有对应的原生分享模块（同 SongloftAudio/Storage 一类缺口），留给未来原生模块批；本批只做纯文本查看，不打包不分享。**Web 调试控制台**（`webDebugConsoleProvider`）是 Flutter Web 平台专属的本地布尔开关，与 Lynx 无关，未 port。
+  - [x] **日志级别 / 日志导出**：日志级别使用后端 `/settings/log-level`；诊断页已有后端+客户端日志归档导出。原生优先 `shareLogArchive` 在宿主打包并分享，Web/旧壳回落 JS 打包与文件交付；原“只显示文本、没有分享模块”已过期。导出耗时和设备验收边界仍见 bugs。
   - [x] **语言切换**（`LanguageSelector`/i18n）→ **批9 已解**：Settings 加「语言」分组（跟随系统/English/中文），`changeAppLanguage` 即时切 i18next + 持久化 prefs `app_language`，react-i18next 订阅触发全树重渲染。见「批9 · i18n 国际化」。
   - [x] **默认播放模式启动恢复**（批11 完成）：`src/index.tsx` 启动异步链读回 `readDefaultPlayMode()` 应用到 `usePlayerStore`（原生持久化已在 B2 落地，重启不再丢）。
   - [x] **登出确认 Dialog**（**批31 已改为 lynx-ui-dialog 模态弹窗**，取代原两步 tap）；[x] **登出场景**（批11）与 [x] **服务器切换场景**（批12）均已加 `queryClient.clear()`，避免旧服务器的缓存数据残留。
@@ -692,7 +698,7 @@ toast「再按一次返回退出应用」在首页真机截图确认（`/tmp/bac
   - 已解决，不再逐条展开：~~APK 构建仅在 CI 验证（本机无 SDK）~~（批20 起本机 Android SDK 打通，`compileDebugKotlin`/`assembleDebug` 可跑）、~~音频仍是 TS mock~~（B2 ExoPlayer 已接）、~~release 签名未配~~（CI 已配 `ANDROID_KEYSTORE_*`，无 secret 回退 debug）、~~iOS 宿主未做~~（B3a 完成）、~~后台/通知栏/锁屏真机未验~~（批22/40 已验，批62 后的 `dc1cc22` 又补通知栏歌词/蓝牙断开/音量同步）、~~EQ 仍 stub~~（批30 Android DSP / 批31 iOS DSP 已接）、~~真机侧载待用户验~~（批20 起多轮真机验收）。
   - **cleartext 全开**：`usesCleartextTraffic=true` + `network_security_config.xml` 信任用户安装的 CA（dev 便利：后端 http / 自签名）；正式发布须收敛为 domain-scoped 或仅 https。
   - **devtool 已移除**：宿主不含 lynx-devtool（独立 dev 包非调试宿主）；如需真机 CDP 调试，另起带 devtool 的调试变体或用 LynxExplorer 扫码（dev server 路径仍在）。
-  - **热更/bundle 下发未接**：bundle 内嵌进 APK（离线）；Lynx bundle 远程热更未实现，且已列入「明确不做」清单。
+  - **热更/bundle 下发未接**：bundle 内嵌进 APK（离线）；此历史批次未实现远程热更。2026-10-06 已获准纳入功能补齐计划，当前仍未实现。
 - [x] **native 原生模块**：SongloftAudio / SongloftStorage / SongloftPlatform 均已双端落地（B2/B3b，Web 侧由 `web/` 宿主模块覆盖）；~~`SongloftBackend`~~ 是迁移调研草案里的名字，**实际不存在**（见 [`archive/migration/README.md`](../archive/migration/README.md) 订正表 #2）——仅剩桌面（Lynxtron）批次待做。
 - [x] **i18n**（批9 完成）：i18next + react-i18next（无 detector / 无 DOM / 无 Intl，`compatibilityJSON:'v3'`）；en+zh 内联资源覆盖全 feature UI 串；Settings 语言切换即时生效 + 持久化；arb→i18next 转换脚本（`scripts/arb-to-i18next.ts`，1276 key，ICU 复数键已标记）。**全量 arb 运行时导入留后续**（app 仅内联策展子集，避免包体撑爆）；「跟随系统」暂回落默认（无宿主 locale API）；复数/日期未用 i18next Intl 能力（手动单复数）。见「批9 · i18n 国际化」。
 - [ ] **批19 遗留（音乐库运维）**：

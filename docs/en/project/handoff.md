@@ -38,6 +38,10 @@ Casting diagnostics now use the existing client log, including device details, m
 5. Web subpath deployment is unverified. Plugin ordering needs newer backends supporting `/settings/plugin-order`; older servers return 404.
 6. Desktop clients, bundled backends, and in-app downloads/upgrades remain future work.
 
+### Current source review (2026-10-06)
+
+Source review on 2026-10-06: `getTracks()` uses the existing `/songs/{id}/tracks` array endpoint, which omits the default flag; the backend also exposes the fuller `/songs/{id}/audio-tracks` contract with `{tracks: [...]}`. The store track action has no UI consumer. A next-song Range GET already runs at 80% progress, so prefetch is not wholly missing. Web file bridges exist, but `dataTransfer` remains explicitly disabled. HarmonyOS `Index.ets` registers video and creates an XComponent; iOS now uses an underlay AVPlayerLayer. Existing source does not establish device acceptance.
+
 ## 5. Taking over and validating
 
 Read [AGENTS.en.md](../../../AGENTS.en.md) and [pitfalls (Chinese)](../../project/pitfalls.md), then follow [build](../guides/build-and-run.md) and [testing](../guides/testing.md).

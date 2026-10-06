@@ -2,7 +2,7 @@
 
 Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoPlayer）、iOS（Swift + AVPlayer）、HarmonyOS（ArkTS + AVPlayer）、Web（`@lynx-js/web-core`，业务代码在真 Worker 里）。四端**不是**同一套能力的四份实现，差异有三个不同来源：
 
-1. **宿主根本没有那个东西** —— iOS 没有返回键（无 `UINavigationController`，连边缘滑动都没有），HarmonyOS 没有可借用的视频表面、也没有悬浮窗与 Live Activity 的等价 API。这类差异不可能靠写代码消除。
+1. **平台交互不同** —— iOS 没有 Android 式硬件返回键；悬浮歌词和 Live Activity 也不能直接把一个平台的 API 搬到其他宿主，需要分别设计实现与降级。
 2. **同一个 OS 概念的实现语义不同** —— iOS 的 `addPeriodicTimeObserver(forInterval:)` 按**媒体时间**计间隔，Android 的 `postDelayed` 按**墙钟**计。两者都"每 500ms 上报一次进度"，变速时行为分叉。
 3. **某个模块只在一端实现了** —— 悬浮歌词只有 Android，Live Activity 只有 iOS。这类是取舍而非限制，但对上层代码来说与第 1 类没有区别：**必须查能力位，不能假定存在**。
 
@@ -21,7 +21,7 @@ Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoP
 | 悬浮歌词 `floatingLyric` | ✅ overlay 窗口 | ⛔ 无模块 | ⛔ 无等价 API | ⛔ 无模块 | `SongloftFloatingLyric` 模块存在 |
 | Live Activity `liveActivity` | ⛔ 无模块 | ✅ 灵动岛/锁屏 | ⛔ 无等价 API | ⛔ 无模块 | `SongloftLiveActivity` 模块存在 |
 | DLNA 投屏 `dlna` | ✅ | ✅ | ✅ | ⛔ 无模块 | `SongloftDlna` 模块存在 |
-| 全屏视频 `video` | ✅ 借用同一播放器 | ✅ 借用同一播放器 | ⛔ **未实现视频表面，模块不注册** | ✅ 主线程 `<video>`（镜像正在播的音频流） | `SongloftVideo` 模块存在 |
+| 全屏视频 `video` | ✅ 借用同一播放器 | ✅ 借用同一播放器 | ⚠️ 已注册模块与 XComponent 表面，待编译/设备验证 | ✅ 主线程 `<video>`（镜像正在播的音频流） | `SongloftVideo` 模块存在 |
 | 单曲离线缓存 `songCache` | ✅ | ✅ | ✅ | ⛔ 无模块 | `SongloftSongCache.getCacheInfo` **方法**存在 |
 | 数据导入/导出 `dataTransfer` | ✅ | ✅ | ✅ | ⛔ 显式 `isWeb` 关闭 | `isWeb ? false : SongloftPlatform` |
 | 文件交付 `fileExport` | ✅ 系统分享面板 | ✅ 系统分享面板 | ✅ 系统分享面板 | ✅ **浏览器下载** | `SongloftPlatform.shareFile` **方法**存在 |
@@ -40,11 +40,11 @@ Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoP
 | 模块 / 能力 | Android | iOS | HarmonyOS | Web | 备注 |
 |---|---|---|---|---|---|
 | `SongloftAudio` 音频播放 | ✅ ExoPlayer | ✅ AVPlayer | ✅ AVPlayer | ✅ 主线程 `HTMLAudioElement` | Web 经 `nativeModulesMap` 复用 `NativeSongloftAudio` 路径 |
-| `SongloftStorage` 安全存储 | ✅ Keystore | ✅ Keychain | ✅ dataPreferences（secure 占位） | ⛔ **刻意不注册** | Web 走 worker 内的 IndexedDB，见「存储」节 |
-| `SongloftPlatform` 打开 URL / 剪贴板 | ✅ | ✅ | ✅ | ✅ | Web 侧全部转发到主线程 |
+| `SongloftStorage` 持久存储 | ⚠️ 普通 SharedPreferences，secure 仅命名空间 | ✅ Keychain | ⚠️ dataPreferences，secure 仅命名空间 | ⛔ **刻意不注册** | Web 走 worker 内的 IndexedDB，见「存储」节 |
+| `SongloftPlatform` 打开 URL / 剪贴板 | ✅ | ✅ | ⚠️ 模块存在，剪贴板仍为空实现 | ✅ | Web 侧全部转发到主线程；模块存在不保证方法行为 |
 | `SongloftNavigation` 返回键拦截 | ✅ 真拦截 + 双击退出 | ⛔ **无返回键可拦** | ✅ 手势返回拦截 | ✅ 主线程 sentinel history | iOS 侧 TS facade 降级为惰性桩 |
 | `SongloftWebview` 插件页 | ⛔ 用原生 `<webview>` | ⛔ 用原生 `<webview>` | ⛔ 用原生 `<webview>` | ✅ **Web 独有**（iframe） | iframe 必须挂进 `lynxView.shadowRoot`，z-index 50 |
-| `SongloftVideo` 全屏视频 | ✅ | ✅ | ⛔ **不注册** | ✅ **Web 有独立表面**（主线程 `<video>`） | 同 A 表 `video`；HarmonyOS 不能用恒失败占位模块冒充能力 |
+| `SongloftVideo` 全屏视频 | ✅ | ✅ | ⚠️ 已注册，待编译/设备验证 | ✅ **Web 有独立表面**（主线程 `<video>`） | 同 A 表 `video`；源码存在不等于设备验收 |
 | `SongloftSongCache` 离线缓存 | ✅ | ✅ | ✅ | ⛔ | 同 A 表 `songCache` |
 | `SongloftDlna` 投屏 | ✅ | ✅ | ✅ | ⛔ | 同 A 表 `dlna` |
 
@@ -79,7 +79,7 @@ Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoP
 
 | | 实现 | 持久性 |
 |---|---|---|
-| Android | `SharedPreferences`（`prefs`）+ Keystore（`secure`） | 跨重启持久 |
+| Android | `SharedPreferences`，prefs/secure 使用两个普通文件，未接 Keystore | 跨重启持久 |
 | iOS | `UserDefaults`（`prefs`）+ Keychain（`secure`） | 跨重启持久 |
 | HarmonyOS | `dataPreferences`（`prefs`）+ 带前缀 key（`secure` 占位） | 跨重启持久 |
 | Web | IndexedDB（DB 名 `songloft`） | 跨刷新持久，但**无 secure enclave** |
@@ -125,7 +125,7 @@ duration: e.durationMs > 0 ? e.durationMs : s.duration,
 ### 其他音频侧分叉
 
 - **EQ 的可靠性不同**：Android 用系统 `audiofx.Equalizer`，构造失败被 `catch (_: Throwable) {}` 吞掉（部分设备确实不支持），且 band 数由设备决定 —— `applyBandGain` 会按 `eq.numberOfBands` 与 `bandLevelRange` 双重钳制。iOS 的 `NBandEQ` 与 Web 的 BiquadFilter 链都是固定 10 段、必定存在。
-- **Android / iOS / Web 全屏视频都复用同一个播放器**，不新建：Android 把 `SurfaceView` 借给正在放的 `ExoPlayer`（`attachVideoOutput`，画面挂在 `MainActivity` 视图树里、Lynx 视图**之下**），iOS 把 `AVPlayer` 交给 `AVPlayerViewController`，Web 是主线程一个镜像同一音频流的 `<video>`（`web/audio-host.js` 持有）。因此 EQ / MediaSession / 锁屏 / 进度事件 / `InsecureTls` 全部零改动继承。退出必须 `detachVideoOutput()`，否则**下一首纯音频歌**会在 video renderer 里静默死掉。HarmonyOS 尚无对应视频表面，因此不注册 `SongloftVideo`，能力位为 `false`。
+- **原生视频复用音频引擎的播放器**：Android 用 `SurfaceView`（`attachVideoOutput`），iOS 用下层 `AVPlayerLayer`，HarmonyOS 用 `Index.ets` 的 XComponent 绑定共享 AVPlayer；原生画面都位于 Lynx 控件层之下。Web 是主线程镜像同一音频流的 `<video>`（`web/audio-host.js` 持有）。退出需按各宿主实现解除视频输出，避免影响后续纯音频歌曲。HarmonyOS 的源码接线已存在，编译与设备回归仍待完成。
 - **不安全 TLS 的「关掉」两端机制不同**：Android 重建 `OkHttpClient`（新连接池，天然即时生效）；iOS 必须 `invalidateAndCancel()` 重建 `URLSession`，因为已握手的连接复用时不再发起 server-trust 挑战。验证「关掉是否生效」时若不换 hostname，测到的可能只是热连接。
 
 ---

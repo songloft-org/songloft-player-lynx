@@ -71,7 +71,7 @@ router → feature pages/widgets → store or TanStack Query
 - Glass surfaces use BackdropBlur and --material-* tokens. Selected backgrounds use --material-glow-faint, --tint-fill, or --quaternary-system-fill.
 - Sliding indicators use translateX and the spring-bounce timing curve. Wide rails only change color; duration tokens become zero under reduce-motion. Never animate the blur layer. Toast stays solid.
 - System theme/language initial values arrive through globalProps before the first frame; live changes use global events. sendGlobalEvent's second argument is an array.
-- Reduce-motion uses systemReduceMotion through the appearance channel and ThemeProvider's class. Follow the currently implemented host signals; missing Android/Harmony signals default motion-on.
+- Reduce-motion uses systemReduceMotion through the appearance channel and ThemeProvider's class. iOS reads UIAccessibility.isReduceMotionEnabled. Android reads Settings.Global.ANIMATOR_DURATION_SCALE == 0 at startup/configuration changes without observing live setting changes. HarmonyOS does not emit the field yet and defaults motion-on.
 - Back order is overlay LIFO → route parent → tab exit policy. Register useBackHandler initially inactive and add leaf routes to route-back.ts.
 - Do not use router.history.back or duplicate parent routing in SubPageShell. See the navigation reference.
 

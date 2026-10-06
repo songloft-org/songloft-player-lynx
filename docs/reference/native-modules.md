@@ -27,7 +27,7 @@
 
 Android 路径均省略前缀 `android/app/src/main/java/org/songloft/lynx/`；iOS 路径均省略前缀 `ios/SongloftLynx/`。
 
-HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatingLyric`、`SongloftLiveActivity` 和 `SongloftVideo` 外均按同名模块注册（`SongloftWebview` / `SongloftLynxFrame` 本就只有 Web 实现）。`SongloftVideo` 当前没有可借用现有 `AVPlayer` 的视频表面，必须保持不注册；恒返回 `false` 的占位模块会让能力探测误报可用。
+HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatingLyric`、`SongloftLiveActivity` 外均按同名模块注册（`SongloftWebview` / `SongloftLynxFrame` 本就只有 Web 实现）。2026-10-06 源码复核：`Index.ets` 已注册 `SongloftVideo` 并挂载 XComponent，模块绑定共享 AVPlayer；源码与结构闸门存在，但编译和设备行为仍需验证。模块注册也不能证明每个方法可用，例如 HarmonyOS 剪贴板仍是空实现、通知歌词方法仍缺失。
 
 ### 不是 NativeModules 模块
 
@@ -101,7 +101,7 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 **7 个**模块：`Songlo
 | `getPath` | `getPath(name: String, callback: Callback)` | `getPath(_:callback:)` | 读，Callback |
 
 - `area` 取值：`prefs` / `secure`。两个宿主都只与 `"secure"` 做一次比较，**其余一切值都落到 `prefs`**，所以 `"prefs"` 这个字符串在两侧源码里都不出现。
-- Android 后端：`songloft_prefs` / `songloft_secure`（SharedPreferences + Keystore）；iOS：UserDefaults + Keychain。
+- Android 后端：`songloft_prefs` / `songloft_secure` 两个普通 SharedPreferences 文件；当前 `secure` 仅隔离命名空间，未使用 Keystore 或加密存储。iOS：UserDefaults + Keychain。
 - `getPath(name)` 取值：`cache` / `documents` / 其他（= `appData`）。Android 依次为 `cacheDir` / `getExternalFilesDir(null) ?: filesDir` / `filesDir`；iOS 依次为 `.cachesDirectory` / `.documentDirectory` / `.applicationSupportDirectory`（不存在时先创建）。
 - TS facade 的 `getPath` 声明为**可选**（`getPath?`），缺失时回落到虚拟路径 `/songloft/<name>`。
 - **平台差异**：Web 无 secure enclave，`secure` 只是命名空间；会话持久化走 `src/core/storage/idb-storage.ts`（IndexedDB）。
@@ -179,7 +179,7 @@ Callback 形状，参数为单个 JSON 字符串（facade 一律传 `'{}'`）。
 
 **事件**：无。历史上两端发过 `SongloftVideo.closed`（Android `EVENT_CLOSED` / iOS `eventClosed`），但 JS 零监听、是个死线，批72（`895aa97`）已删——真要通知 JS 时再按「能力探测器与首个消费点同批落地」重新加。
 
-**平台边界**：Android / iOS 是原生实现，**Web 也有**（主线程 `<video>` 宿主模块，见 §1）；HarmonyOS 不注册 `SongloftVideo`，因此 `getPlatformCapabilities().video === false`，界面不会展示不可用入口。只有实现「借用现有播放器 + 真视频表面」完整闭环后，才能恢复注册。**画面归宿主、控件归 JS**（2026-09-14 批73 `1cc08e0` 起）：Android 的画面是 `MainActivity` 视图树里、Lynx 视图**之下**的一个 `SurfaceView`（`setZOrderMediaOverlay(true)`），iOS 是 `AVPlayerViewController` 模态，Web 是主线程 `<video>` —— 三种形态下**输运控件（播放/暂停/进度/标题）一律由 Lynx 侧的 `/player/video` 页绘制**，原生不再提供任何播放控件（批72 那个「离开」按钮已随 Activity 一起删除）。
+**平台边界（2026-10-06 源码复核）**：四端都有视频宿主代码。**画面归宿主、控件归 JS**：Android 是 `MainActivity` 视图树里、Lynx 视图之下的 `SurfaceView`（`setZOrderMediaOverlay(true)`），iOS 是下层 UIView 内的 `AVPlayerLayer`，HarmonyOS 是 `Index.ets` 的 XComponent，Web 是主线程 `<video>`。输运控件（播放/暂停/进度/标题）由 Lynx `/player/video` 页绘制。HarmonyOS 已注册模块，因此存在性探测会返回 `true`；这不代表其编译、表面生命周期与真实播放已验收。
 
 **闸门锁住的不变量**
 

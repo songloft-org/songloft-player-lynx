@@ -12,7 +12,7 @@ This is a **preview client**. Playback, library/playlists, lyrics, plugins, them
 | ------------------------ | ------------------------------ | -------------------------------------------------------------------------------------------------- |
 | Android 5.0+             | Release-signed APK             | Background playback, notifications, and DLNA still need ongoing device regression testing          |
 | iOS 15+                  | Unsigned IPA                   | Re-sign before installation; Live Activity requires iOS 16.2+                                      |
-| HarmonyOS NEXT / API 13+ | Signed HAP                     | Experimental; fullscreen video is unavailable and native validation is incomplete                  |
+| HarmonyOS NEXT / API 13+ | Signed HAP                     | Experimental; video module and XComponent surface exist, but compilation and device behavior need verification |
 | Web                      | Standalone / embedded archives | No bundled backend, DLNA, or per-song offline cache; browser compatibility requires actual testing |
 
 ## Installation and downloads

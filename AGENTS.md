@@ -75,7 +75,7 @@ src/router.tsx
 - Liquid Glass 表面复用 `BackdropBlur` 与材质 token（统一 `--material-*` 前缀）；底栏选中态使用 `--material-glow-faint`，玻璃上的强调/中性状态分别使用 `--tint-fill` / `--quaternary-system-fill`，不得换成不透明 surface。
 - 底栏与分段控件「流动指示器」用 `transform: translateX` + `--ease-spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1)` 实现选中态平滑滑动；宽屏 rail 仅变色不位移。reduce-motion 依赖 `--duration-*` 归零（见下条）。模糊层（`BackdropBlur`）永不做动画。Toast 保持实心（有意不玻璃化）。
 - 系统主题/语言初值由宿主 globalProps 在首帧前注入，运行中变化走 global event。`sendGlobalEvent(name, params)` 的第二参必须是数组。
-- reduce-motion：宿主经 `systemReduceMotion` 字段（与 systemTheme 同通道）推送 OS 减弱动效开关；`reduce-motion-model.ts` 读取、`ThemeProvider` 落 `.reduce-motion` 类零化所有 `--duration-*`。iOS 已接 `UIAccessibility.isReduceMotionEnabled`；Android/Harmony 尚需在各自 `SystemAppearance` 推送里补该字段，补前默认 motion-on。
+- reduce-motion：宿主经 `systemReduceMotion` 字段（与 systemTheme 同通道）推送 OS 减弱动效开关；`reduce-motion-model.ts` 读取、`ThemeProvider` 落 `.reduce-motion` 类零化所有 `--duration-*`。iOS 已接 `UIAccessibility.isReduceMotionEnabled`；Android 已读取 `Settings.Global.ANIMATOR_DURATION_SCALE == 0`，在启动/配置变化时上报，尚不监听该设置的即时变化。HarmonyOS 尚未上报该字段，默认 motion-on。
 - 返回顺序为：覆盖层 LIFO 栈 → `resolveRouteBack` 父级 → tab 首页退出策略。新增覆盖层挂载时必须先让 `useBackHandler(active, handler)` 的 `active` 为 `false`，新增叶子路由同步登记 `route-back.ts`。
 - 不使用 `router.history.back()`；`SubPageShell` 不维护第二份父级信息。完整契约见 back-navigation reference。
 

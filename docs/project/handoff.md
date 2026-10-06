@@ -38,6 +38,10 @@ Linux 可验证 JS、脚本与 Android；iOS/HarmonyOS 需各自工具链。最�
 5. Web 子路径部署未验证；插件排序需要支持 `/settings/plugin-order` 的新后端，旧后端返回 404。
 6. 桌面端、Bundle 本地后端、客户端内下载升级属于后续功能。
 
+### 现状核查（2026-10-06）
+
+2026-10-06 源码复核：音轨 `getTracks()` 使用已有 `/songs/{id}/tracks` 数组接口但缺少默认标记；后端另有 `/songs/{id}/audio-tracks` 和 `{tracks: [...]}` 完整契约。Store 切轨方法没有 UI 消费点。80% 进度处已有下一曲 Range GET 预取，不能再列为完全缺失。Web 文件桥接已存在，但 `dataTransfer` 仍显式禁用。HarmonyOS `Index.ets` 已注册视频模块并创建 XComponent，iOS 视频已使用 AVPlayerLayer 下层表面；源码存在不代表设备验收完成。
+
 ## 5. 接手与验证
 
 先读 [AGENTS.md](../../AGENTS.md)、[pitfalls.md](pitfalls.md)，再按 [构建](../guides/build-and-run.md)、[测试](../guides/testing.md) 执行。

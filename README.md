@@ -12,7 +12,7 @@ Songloft Player 的 Lynx 客户端，从 Flutter 版整体重写为 ReactLynx + 
 | ------------------------ | ---------------------------- | ---------------------------------------------------------- |
 | Android 5.0+             | release 签名 APK             | 后台播放、通知与 DLNA 等需持续真机回归                     |
 | iOS 15+                  | 未签名 IPA                   | 安装前需自行重签；Live Activity 需 iOS 16.2+               |
-| HarmonyOS NEXT / API 13+ | 签名 HAP                     | 实验性；全屏视频未实现，原生能力仍有验证欠账               |
+| HarmonyOS NEXT / API 13+ | 签名 HAP                     | 实验性；已有视频模块与 XComponent 表面，编译和设备行为待验证 |
 | Web                      | standalone / embedded 压缩包 | 无 Bundle、DLNA 与单曲离线缓存；兼容性以实际浏览器验证为准 |
 
 ## 安装与下载

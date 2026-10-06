@@ -48,7 +48,7 @@
 
 ## HarmonyOS
 
-参考 [harmony-integration-plan.md](../archive/harmony-integration-plan.md)：工程实际声明 `compatibleSdkVersion` = `5.0.1(13)`（HarmonyOS NEXT 起步）。`FloatingLyric` / `LiveActivity` 无等价系统 API，TS 侧降级 no-op。全屏视频当前也不支持：宿主没有实现借用现有 `AVPlayer` 的视频表面，`SongloftVideo` 不注册，能力探测返回 `false`；不要用恒失败占位模块恢复注册。
+工程实际声明 `compatibleSdkVersion` = `5.0.1(13)`（HarmonyOS NEXT 起步）。`FloatingLyric` / `LiveActivity` 当前没有宿主实现，TS 侧降级 no-op。2026-10-06 源码复核：`pages/Index.ets` 已注册 `SongloftVideo`，并用 XComponent 表面绑定共享 AVPlayer；视频不是完全缺失，但当前编译与设备行为仍需验证。旧[集成计划](../archive/harmony-integration-plan.md) 是历史资料，不能替代源码与验收记录。
 
 ## Web
 
