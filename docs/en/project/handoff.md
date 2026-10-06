@@ -4,6 +4,8 @@ This page records current scope and validation limits. Batch evidence is in [pro
 
 ## 1. Current completion
 
+Cache, update-protocol and native-module reference pages now reflect the completed HarmonyOS build, with both languages synchronized where counterparts exist. Remaining acceptance is grouped by platform and evidence in the [plan checklist (Chinese)](../../project/plans/2026-10-06-feature-completion.md). The emulator CLI can list an API 13 image, but accepting Huawei's license still requires explicit user authorization; no image was downloaded and no instance was created or started. The current account lacks KVM read/write access, and runtime/debug signing remain unverified. Comparing pre-P6c sources found no evidence of broken existing native state pushes; the new pushes still require rebuilding plugins with the updated SDK.
+
 Linux Playwright WebKit 18.2 now passes P4 data flows in standalone/embedded root-path hosting and P5 playback/shortcuts/persistence/menu guards on the current delivery packages, with two Workers and zero final page/media errors. Temporary Mesa/GStreamer adjustments, null output, Chinese 375px and input/IME fixture limits are in progress. Actual Safari, speaker output and device acceptance remain open; this batch changes neither application source nor delivery packages.
 
 HarmonyOS now passes a clean release HAP build and package-content verification using the Linux CLI, after fixing five ArkTS rethrows in cache/updater sources. SDK `26.0.0.105` preserves the declared `5.0.1(13)` minimum; the HAP is unsigned and API 13/device behavior remains unverified. All 15 cache/updater adapter tests and 306 native contract tests pass; see progress.

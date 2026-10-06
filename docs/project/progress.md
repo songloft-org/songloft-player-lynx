@@ -1,5 +1,12 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · 剩余验收条件与参考文档订正
+
+- 客户端 `a9bef9e` 与父仓库 `d2f4fb0` 起始工作树干净。重新核对 `/tmp/lynx-local-delivery/e09592b/verification.json` 四种包的大小和 SHA-256 均一致，未重建或修改产物。缓存、更新协议与原生模块参考页仍有“HarmonyOS 未编译”和“通知歌词待补齐”的落后描述，已按当前 HAP 编译及 P6b 源码证据订正；缓存/更新的中英页同步，历史批次记录保留原边界。
+- 对照 `50b8131` 的 `LynxPluginFrame.tsx`：原生只传 globalProps 初始快照，播放器变化订阅仅用于 Web，native 父桥尚未接通。当前 `native-plugin-host.ts` 对 SDK ready 合并/放行最新状态，业务 RPC 本身不依赖 ready；Web 原有播放器推送也不依赖 ready。未发现 ready 门控破坏既有原生推送的证据，未进行无依据的实现修改。新增恢复/状态推送仍要求插件用本地更新 SDK 重建，SDK 未发布，设备兼容回归继续开放。
+- 已有 HarmonyOS CLI 内含 Linux Emulator `26.0.0.400`。用临时 XDG 目录、SDK 与浏览器 sysroot 的库路径运行帮助和镜像查询，退出码均 0，日志 `/tmp/lynx-harmony-emulator/{help,images}.log`；phone 镜像列表含 `HarmonyOS 5.0.1(13)` / 软件 `5.0.0.112`。`-license` 先审阅协议，完整文本保存至 `license-review.log`；确认接受提示处没有答复，未执行 `-license accept` 或镜像安装。接受协议会代表用户确认条款，已发出一次明确授权问题，回答到达前不执行依赖步骤。
+- 当前 `/dev/kvm` 存在，但账号不在 kvm 组且 `os.access(..., R_OK | W_OK)` 为 false；当时可用内存约 8.9 GB、磁盘约 30 GiB。HAP 含 arm64-v8a/x86_64 原生库清单，但这不证明运行兼容。未改 KVM 权限或用户组，未声称已启动模拟器/安装未签名 HAP。计划新增按证据归组的剩余验收表，Apple 编译、系统设备、正式签名和真实 Safari 继续开放，桌面/本地模式/视频仍暂缓；只本地提交、不 push。
+
 ## 2026-10-07 · Linux WebKit 的数据传输与快捷键回归
 
 - 上一批补齐 HarmonyOS 真编译并提交源码修复，本批核对父仓库 `fd9c624`、客户端 `87cb2d6` 均干净。实际运行固定对应 `e09592b` 的交付 Web 目录，没有重建应用或混入探针页面。下载既有 Playwright 1.50.1 对应 WebKit **18.2 / revision 2123** 至临时浏览器目录；[Playwright 文档](https://playwright.dev/docs/browsers#webkit) 明确这是 WebKit 构建，不能将 Linux 结果记作真实 Safari 验收。

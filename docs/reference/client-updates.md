@@ -2,7 +2,7 @@
 
 [English](../en/reference/client-updates.md) · [发版指南](../guides/releasing.md)
 
-**P2a 发布契约、P2b 三端原生更新器与 P2c 关于页入口已接入源码。** Android 已用本地签名发布夹具验证界面下载、取消、播放不中断、冷启动生效和恢复内置；Web 部署入口已验证。正式签名密钥未配置，iOS/HarmonyOS 尚未编译或设备验收。桌面和 Bundle 本地后端不在本轮范围。
+**P2a 发布契约、P2b 三端原生更新器与 P2c 关于页入口已接入源码。** Android 已用本地签名发布夹具验证界面下载、取消、播放不中断、冷启动生效和恢复内置；Web 部署入口已验证。HarmonyOS 已通过 clean release HAP 编译，正式签名密钥、iOS 编译和两端设备验收仍开放。桌面和 Bundle 本地后端不在本轮范围。
 
 ## 身份与发布资产
 
@@ -70,4 +70,4 @@ HarmonyOS 在 `filesDir/bundle_updates` 保存签名文件和相同指针，通�
 
 协议回归覆盖五包齐全、签名/key 匹配、原始字节篡改、大小限制、外部文件遗漏、调试包拒绝、旧发布无签名降级、不可变壳信息一致性及平台/引擎/桥接/schema/能力不匹配。正式发布密钥尚未配置，未执行任何 push 或发布。
 
-iOS 编译、Apple 验签程序执行及设备下载/回退仍开放。HarmonyOS 的实际源码经 TypeScript 转译，在 Node 的真实 RSA、HTTPS 与文件系统适配器下运行六项核心回归，新增独立 TLS 元数据读取；这不能替代 ArkTS/HAP 编译或设备 SDK 行为。Android 使用 Debug 原生壳与不含 JS 测试桥的实际 bundle、临时公钥和本地 HTTPS 发布夹具完成界面检查/下载/取消/冷启动/恢复验证，不代表正式签名发版。详细证据见 [progress](../project/progress.md)。原生源码接入不表示三端已完成验收。
+iOS 编译、Apple 验签程序执行及设备下载/回退仍开放。HarmonyOS 的实际源码经 TypeScript 转译，在 Node 的真实 RSA、HTTPS 与文件系统适配器下运行六项核心回归，新增独立 TLS 元数据读取；另已使用 SDK `26.0.0.105` 对 `e09592b` 完成 ArkTS 和 clean release HAP 编译，包内容校验通过，仍未签名或安装。最低兼容声明保留 API 13，设备 SDK、下载/冷启动/回退行为仍待验。Android 使用 Debug 原生壳与不含 JS 测试桥的实际 bundle、临时公钥和本地 HTTPS 发布夹具完成界面检查/下载/取消/冷启动/恢复验证，不代表正式签名发版。详细证据见 [progress](../project/progress.md)。原生源码接入不表示三端已完成验收。

@@ -2,7 +2,7 @@
 
 [English](../en/reference/device-cache.md) · [原生模块](native-modules.md)
 
-P3a 三端源码已增加 v2 身份、索引与任务契约，共享播放/单曲入口优先采用新契约；Android 有编译和设备证据，iOS/HarmonyOS 尚未编译/设备验证。发布兼容声明为 bridge 3 / schema 2，要求 `songCache.v2`，旧壳应升级本通道安装包。P3b 已接入批量入口和任务页；P3c 已接入本地列表、管理和登录失效后的离线入口。三端完整设备验收仍开放。
+P3a 三端源码已增加 v2 身份、索引与任务契约，共享播放/单曲入口优先采用新契约；Android 有编译和设备证据，HarmonyOS 已通过 clean release HAP 编译，iOS 编译及两端设备验收仍开放。发布兼容声明为 bridge 3 / schema 2，要求 `songCache.v2`，旧壳应升级本通道安装包。P3b 已接入批量入口和任务页；P3c 已接入本地列表、管理和登录失效后的离线入口。三端完整设备验收仍开放。
 
 ## 身份与文件
 
@@ -62,6 +62,6 @@ Settings 的“设备缓存”进入 `/device-cache`，只枚举当前服务器�
 
 ## 验证边界
 
-Android 真实文件/HTTP 回归覆盖跨身份同 id、音轨和实际格式、无凭据快照、总容量、真实连接取消、排队取消、崩溃中断、缺文件、分身份/旧缓存清理；共享 Callback 和版本降级另有 JS 测试。iOS 新增 `scripts/verify-ios-cache.swift` 与真实本地 HTTP 夹具，并接入 Apple CI；当前 Linux 缺少 Swift/Xcode，程序尚未编译或执行。HarmonyOS 实际转译源码在 Node 文件/HTTP/TLS 适配器下测试身份/容量、取消/队列、媒体响应、重启清理及 TLS 切换；不能替代 ArkTS 类型检查、HAP 编译或 SDK/设备行为。两端编译、TLS/取消/后台及设备验收、批量与完整离线交互仍开放。详细计数及设备证据见 [progress](../project/progress.md)。
+Android 真实文件/HTTP 回归覆盖跨身份同 id、音轨和实际格式、无凭据快照、总容量、真实连接取消、排队取消、崩溃中断、缺文件、分身份/旧缓存清理；共享 Callback 和版本降级另有 JS 测试。iOS 新增 `scripts/verify-ios-cache.swift` 与真实本地 HTTP 夹具，并接入 Apple CI；当前 Linux 缺少 Swift/Xcode，程序尚未编译或执行。HarmonyOS 实际转译源码在 Node 文件/HTTP/TLS 适配器下测试身份/容量、取消/队列、媒体响应、重启清理及 TLS 切换；另已使用 SDK `26.0.0.105` 对 `e09592b` 完成 ArkTS 和 clean release HAP 编译，最低兼容声明保留 API 13，包未签名。Node 适配器和高版本 SDK 编译不能证明 API 13 设备行为；iOS 编译、两端 TLS/取消/后台及设备验收、批量与完整离线交互仍开放。详细计数及设备证据见 [progress](../project/progress.md)。
 
 实现参考：[Apple URLSessionDataDelegate](https://developer.apple.com/documentation/foundation/urlsessiondatadelegate)、[FileHandle](https://developer.apple.com/documentation/foundation/filehandle)、[Huawei RCP](https://developer.huawei.com/consumer/en/doc/harmonyos-references-V5/remote-communication-rcp-V5)、[OpenHarmony statfs](https://github.com/openharmony/docs/blob/OpenHarmony-5.0.0-Release/en/application-dev/reference/apis-core-file-kit/js-apis-file-statvfs.md)、[AVPlayer](https://github.com/openharmony/docs/blob/OpenHarmony-5.0.0-Release/en/application-dev/reference/apis-media-kit/js-apis-media.md#avplayer9)。

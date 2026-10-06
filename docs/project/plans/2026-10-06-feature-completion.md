@@ -262,6 +262,20 @@
 - [ ] P6b：HarmonyOS 通知歌词（队列元数据、AVSession 布局/控制、旧壳降级与音频契约源码已补；HarmonyOS HAP 已编译；iOS 编译与真实卡片/锁屏验收仍开放，见 progress）
 - [ ] P6c：iOS/HarmonyOS 插件恢复前台（三端根事件/原生 WebView 与 Lynx frame 消费点源码已接；SDK 独立注册/ready 与 Web 保活推送已补，HarmonyOS HAP 已编译；iOS 编译及 MIoT 长后台/断网重连设备验收仍开放，见 progress）
 
+### 剩余验收条件（2026-10-07）
+
+源码批次已落地，以下按缺少的证据安排后续验收，不能用当前包或旧设备记录勾选全部完成。
+
+| 验收组 | 当前可用证据 | 下一步与前置条件 |
+|---|---|---|
+| iOS P1/P2/P3/P6 | 三端共享回归、Swift 源码与 Apple CI 核心验证程序已接入；当前包只有资源复制 | 在 macOS/Xcode 编译当前代码并执行两个原生核心验证程序，再用签名安装包验收切轨、缓存/离线、更新回退、复制和 scene/插件恢复；本机无 Xcode/swiftc |
+| HarmonyOS P1/P2/P3/P6 | `e09592b` clean HAP 编译、包校验与实际源码 Node 适配器通过；HAP 未签名，尚无安装记录 | CLI 已能查询 API 13 phone 镜像 `5.0.0.112`，下载/启动需要用户明确授权接受华为协议；当前账号无 `/dev/kvm` 读写权限，模拟器运行与调试签名仍需验证。许可未确认时不下载、创建或启动实例 |
+| Android P6 与跨批回归 | P1/P2/P3 有前批设备行为证据；当前 `e09592b` APK 已编译，P6 系统复制/恢复与新通知布局尚缺最终设备证据 | 连接可运行设备，安装当前 Debug APK，验收真实粘贴、后台/前台通知、插件退出清理及原有播放/通知回归；旧模拟器原生崩溃不能算通过 |
+| P6c 插件兼容与恢复 | 原生父桥和 SDK ready 协议回归通过；Web Chrome 保活/重入证据，页面可见性为夹具 | 用本地更新 SDK 重建测试插件，再做真实系统前后台、长后台与断网重连；SDK 尚未发布，既有原生插件只保留初始快照，新增推送需要重建 |
+| P2 正式交付与 Web 补充 | 本地签名夹具、版本/包工具通过；Chrome/Firefox/Linux WebKit 的 P4/P5 回归已记录 | 正式受信密钥仍为 0，签名/CI/真实发版不在本次“不 push”的执行动作内；实际 Safari、Web 子路径部署与 Firefox 间歇 Blob 异常仍开放，不用 Linux WebKit 结果替代 Safari |
+
+当前四种本地包与 SHA-256 固定在 `/tmp/lynx-local-delivery/e09592b/verification.json`，后续仅文档提交不改变包的源码身份。许可文本在 `/tmp/lynx-harmony-emulator/license-review.log`；目前只审阅，未接受。KVM 权限检查和 CLI 可执行不证明模拟器能运行，也不证明未签名 HAP 可安装。桌面、Bundle 本地模式和视频继续暂缓。
+
 ## 12. 外部契约参考
 
 - 本地 Flutter 更新参考：`../player/lib/core/updater/channel_release_resolver.dart`、`version_compare.dart` 及 `../player/lib/features/settings/data/frontend_version_api.dart`（路径相对 Lynx 仓库根目录）；仅参考本通道解析和版本判断，Lynx bundle 格式及原生更新器仍单独实现。

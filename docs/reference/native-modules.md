@@ -28,7 +28,7 @@
 
 Android 路径均省略前缀 `android/app/src/main/java/org/songloft/lynx/`；iOS 路径均省略前缀 `ios/SongloftLynx/`。
 
-HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatingLyric`、`SongloftLiveActivity` 外均按同名模块注册（`SongloftWebview` / `SongloftLynxFrame` 本就只有 Web 实现）。`SongloftUpdate` 实现在 `updater/`，根模板与 fatal lifecycle 同步接入，仍待 HAP 编译及设备验证。2026-10-06 源码复核：`Index.ets` 已注册 `SongloftVideo` 并挂载 XComponent，模块绑定共享 AVPlayer；源码与结构闸门存在，但编译和设备行为仍需验证。P6a 剪贴板已接 Pasteboard 与确认回调，设备粘贴待验；通知歌词仍需 P6b 补齐，不能以模块注册判断每个方法可用。
+HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatingLyric`、`SongloftLiveActivity` 外均按同名模块注册（`SongloftWebview` / `SongloftLynxFrame` 本就只有 Web 实现）。`SongloftUpdate` 实现在 `updater/`，根模板与 fatal lifecycle 同步接入。2026-10-07 已对 `e09592b` 完成 clean release HAP 编译与包内容校验，SDK `26.0.0.105`、最低兼容声明 API 13，包未签名，设备行为待验。`Index.ets` 已注册 `SongloftVideo` 并挂载 XComponent，模块绑定共享 AVPlayer；视频设备验收按用户要求暂缓。P6a 已接 Pasteboard 与确认回调，P6b 已补 AVSession 通知歌词与队列元数据；系统粘贴、媒体卡片仍待验，不能以模块注册或编译判断每个方法可用。
 
 ### 不是 NativeModules 模块
 
@@ -101,7 +101,7 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 **7 个**模块：`Songlo
 
 P6b：HarmonyOS `setQueue` 按播放 URL 保存 id/歌曲/歌手/封面/时长，加载时写入 AVSession；歌词标题模式以歌词作 title、歌曲作 subtitle，副标题模式保留歌曲 title、歌词作 subtitle，artist/封面/时长不变。清空、停止和切源恢复歌曲信息，暂停保留当前歌词；元数据/播放状态串行写入，旧源进度不改新歌时长，SDK 卡片失败不阻止音频播放。API 依据见 [OpenHarmony 5.0 AVSession 声明](https://github.com/openharmony/interface_sdk-js/blob/OpenHarmony-5.0.0-Release/api/%40ohos.multimedia.avsession.d.ts)。不把当前行伪装成要求 LRC 格式的 `lyric` 字段。
 
-共享 facade 优先探测可选 `updateNotificationLyricWithLayout`，否则守卫调用旧方法；缺失或同步拒绝安全降级，不改变 bridge 3 / schema 2 必需能力。Android 保持既有通知布局。iOS 新双参数选择器与旧单参数选择器并存：标题模式改 Now Playing title，第二行使用 artist 展示字段组合原歌曲名/歌词与原歌手，清空后恢复原信息；旧方法仍只设置 comments，避免旧 bundle 的参数绑定变更。Web 保持既有无通知歌词降级。iOS/HarmonyOS 编译与真实卡片/锁屏布局验收仍开放，新布局需要安装本通道新原生壳。
+共享 facade 优先探测可选 `updateNotificationLyricWithLayout`，否则守卫调用旧方法；缺失或同步拒绝安全降级，不改变 bridge 3 / schema 2 必需能力。Android 保持既有通知布局。iOS 新双参数选择器与旧单参数选择器并存：标题模式改 Now Playing title，第二行使用 artist 展示字段组合原歌曲名/歌词与原歌手，清空后恢复原信息；旧方法仍只设置 comments，避免旧 bundle 的参数绑定变更。Web 保持既有无通知歌词降级。HarmonyOS HAP 已编译，iOS 编译与真实卡片/锁屏布局验收仍开放，新布局需要安装本通道新原生壳。
 
 HarmonyOS 的两个 EQ 方法仍无 DSP 实现：新增 `equalizer` 能力位为 false，更多菜单隐藏入口，直接进入页面只显示不支持，facade 不发送 EQ 写操作；不将方法注册当功能支持。
 
@@ -228,7 +228,7 @@ Callback 形状，Callback 收到 JSON 字符串。
 
 - 能力探测**刻意用 `getCacheInfo` 而不是 `download`**（`platform-capabilities.ts` 的 `songCache`）：`download` 的入参个数变过，旧壳上探它会报「可用」然后被喂进绑不上的参数。
 - 哨兵 `limit_exceeded`（常量 `SONG_CACHE_LIMIT_ERROR`，`src/features/player/data/song-cache.ts`）：下载会超字节上限时原生侧中止并报这个字符串，facade reject 出的 `Error.message` 就等于它。
-- 三端 P3a 增加 `getCacheContract/cacheEntry/getEntry/listEntries/removeEntry/clearNamespace/clearLegacy/getTasks/cancelTask`，单例 `SongCacheStore` 与旧入口共用串行调度、总容量和真实取消；共享 TS 在方法齐全且版本为 2 时采用身份索引，否则沿用旧 ABI。iOS 改为 `LynxContextModule` 发送数组进度事件，URLSessionDataDelegate 流式写入；HarmonyOS 用 RCP 响应头/数据回调、真实 request 取消及 statfs 空间检查。两端编译/设备行为尚未验证，Node 适配器执行 HarmonyOS 源码不能替代 HAP 编译。发布契约为 bridge 3 / schema 2 / `songCache.v2`；身份、快照、分页、任务和事件契约见[设备歌曲缓存](device-cache.md)。
+- 三端 P3a 增加 `getCacheContract/cacheEntry/getEntry/listEntries/removeEntry/clearNamespace/clearLegacy/getTasks/cancelTask`，单例 `SongCacheStore` 与旧入口共用串行调度、总容量和真实取消；共享 TS 在方法齐全且版本为 2 时采用身份索引，否则沿用旧 ABI。iOS 改为 `LynxContextModule` 发送数组进度事件，URLSessionDataDelegate 流式写入；HarmonyOS 用 RCP 响应头/数据回调、真实 request 取消及 statfs 空间检查。HarmonyOS HAP 已编译，Node 适配器另有真实文件/HTTP/TLS 回归；iOS 编译及两端设备行为仍待验。发布契约为 bridge 3 / schema 2 / `songCache.v2`；身份、快照、分页、任务和事件契约见[设备歌曲缓存](device-cache.md)。
 
 **闸门锁住的不变量**
 
@@ -393,12 +393,13 @@ Web 上渲染 Lynx 插件的宿主（native 构建用真实 `<frame>` 元素，�
 - P6c：iOS SceneDelegate 的 active/inactive 回调送到所属 ViewController，根 LynxView 首屏就绪前保留待发通知、离开活跃取消待发，重复 active 不重发；首屏回调弱捕获并核对当前 view，scene 断开清窗口。HarmonyOS Ability 进入前台/后台驱动 AppLifecycle，Index 的 onCreate 绑定上下文、LynxViewClient.onFirstScreen 放行通知，onDestroy/aboutToDisappear 按实例移除，旧 view 的迟到 ready/detach 不影响新 view。
 - 原生 WebView 与 Lynx frame 消费点分开：WebView 下一浏览器帧派发 visibilitychange；LynxPluginFrame 通过 `native-plugin-host.ts` 注册/注销四方法父桥、过滤 frameId、回复宿主 RPC 并推送 `SongloftPluginBridge.push` 的 `event: 'lifecycle', data: '{"state":"resumed"}'`。播放器/主题提供首帧快照和后续推送，迟到 RPC 回复与卸载回调被抑制，不重载插件。
 - 子插件 SDK 的事件订阅独立注册子 frame，并在 push listener 就绪后以已有 hostCall 通道发送 `lifecycle.ready`；父桥合并准备前的最新快照/恢复通知，就绪后提供初始恢复通知，此后恢复前台继续推送。旧插件要用更新的 `@songloft/lynx-plugin-sdk` 重新构建才能获得 ready 逻辑；源码在 `plugins/toolchain` 独立仓库，未发布 npm 包，不改变必需热更新能力清单。
+- 与 P6c 前的 `50b8131` 核对：原生 Lynx frame 原先只有 globalProps 初始快照，播放器变化订阅仅用于 Web，父桥 RPC/状态推送尚未接入；新增 ready 门控不能据此视为破坏了既有原生推送。旧 SDK 的业务 RPC 可继续走当前父桥，但不会解锁新增原生状态/恢复推送，插件需重建。Web 既有播放器推送不受 ready 门控；普通 RPC 不代替订阅就绪信号，避免通知先于 listener 安装。此为源码兼容性核查，未代替设备回归。
 - Web iframe 继续浏览器可见性；嵌套 Lynx frame 由主线程 `lynx-frame-host.js` 在 document 从 hidden 回 visible、保活插件重新进入时推送同义 lifecycle 事件，只送当前活跃且 ready 的子 frame。隐藏的保活子 frame 不收到恢复通知，切页保持已有 worker/state，不 detach。
-- 闸门覆盖三端生命周期注册、四方法父桥、实际 HOS 控制器适配器、订阅/清理、WebView 执行脚本、native frame 消费点和 Web 保活恢复。SDK 另有独立事件/RPC 注册回归。iOS/HarmonyOS 编译与真实前后台、MIoT 断网重连/快照仍开放，不以源码/夹具替代设备验证。依据：[Apple scene lifecycle](https://developer.apple.com/documentation/uikit/uiscenedelegate)、[OpenHarmony UIAbility](https://github.com/openharmony/interface_sdk-js/blob/OpenHarmony-5.0.0-Release/api/%40ohos.app.ability.UIAbility.d.ts)、[Lynx 4.0.1 ViewClient](https://github.com/lynx-family/lynx/blob/4.0.1/platform/harmony/lynx_harmony/src/main/ets/tasm/LynxViewClient.ets)。
+- 闸门覆盖三端生命周期注册、四方法父桥、实际 HOS 控制器适配器、订阅/清理、WebView 执行脚本、native frame 消费点和 Web 保活恢复。SDK 另有独立事件/RPC 注册回归。HarmonyOS HAP 已编译；iOS 编译与真实前后台、MIoT 断网重连/快照仍开放，不以源码/夹具替代设备验证。依据：[Apple scene lifecycle](https://developer.apple.com/documentation/uikit/uiscenedelegate)、[OpenHarmony UIAbility](https://github.com/openharmony/interface_sdk-js/blob/OpenHarmony-5.0.0-Release/api/%40ohos.app.ability.UIAbility.d.ts)、[Lynx 4.0.1 ViewClient](https://github.com/lynx-family/lynx/blob/4.0.1/platform/harmony/lynx_harmony/src/main/ets/tasm/LynxViewClient.ets)。
 
 ---
 
-### 2.15 `SongloftUpdate`（9 方法，三端源码接入；iOS/HarmonyOS 待编译）
+### 2.15 `SongloftUpdate`（9 方法，三端源码接入；HarmonyOS 已编译、iOS 待编译）
 
 读方法 `getInfo(callback)`、`getState(callback)`、`inspectManifest(raw, signature, callback)`、`fetchMetadata(requestJson, callback)`；异步写入 `download(requestJson, callback)` 与 `restoreBuiltin(callback)` 在持久化完成后回调；void 命令 `cancel(taskId)`、`confirmStartup(bundleId)`、`reportStartupFailure()`。元数据请求 `{url, max_bytes}` 返回 `{status, body}`，独立系统 TLS、12 秒网络期限、有界 UTF-8 读取和 HTTPS 跳转，不继承业务证书跳过设置。进度事件 `SongloftUpdate.progress` 的数组参数含 `{task_id, bytes, total}`。任何出错回调只含机器错误码，不转发带 URL/凭据的网络异常文本。
 
