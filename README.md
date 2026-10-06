@@ -22,7 +22,7 @@ Songloft Player 的 Lynx 客户端，从 Flutter 版整体重写为 ReactLynx + 
 - [安装指南](docs/guides/installation.md)：包名、签名限制、服务器连接和校验方法。
 - [English](README.en.md)
 
-首次开源发布前，维护者仍需配置签名 Secrets 并验证新的四平台 CI。工作树中的流程不代表已有对应下载包。
+下载以 GitHub Releases 中实际发布的资产为准；四平台 CI 仅在五个包全部构建和校验成功后更新 dev。维护自己的 fork 时需配置签名 Secrets，详见[发版指南](docs/guides/releasing.md)。
 
 ## 技术栈
 

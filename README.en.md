@@ -22,7 +22,7 @@ This is a **preview client**. Playback, library/playlists, lyrics, plugins, them
 - [Installation guide](docs/en/guides/installation.md): package names, signing requirements, server connections, and checksums.
 - [简体中文](README.md)
 
-Before the first open-source release, maintainers must configure signing secrets and validate the new four-platform CI. A workflow in the working tree does not mean its packages have been published.
+Download assets published in GitHub Releases; the four-platform CI updates dev only after all five packages build and pass verification. Maintainers of a fork must configure signing secrets; see the [release guide](docs/en/guides/releasing.md).
 
 ## Technology stack
 
