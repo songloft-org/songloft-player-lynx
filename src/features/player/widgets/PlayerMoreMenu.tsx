@@ -131,7 +131,7 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
     ...(!casting && ((audioTracks.data?.length ?? 0) >= 2 || audioTracks.isError)
       ? [{ key: 'audioTracks', label: t(audioTracks.isError ? 'player.audioTracksRetry' : 'player.audioTracks'), icon: 'music' as const }]
       : []),
-    ...(song != null && songCacheCapable && (selectedTrack == null || indexedCache) && !switchingTrack
+    ...(song != null && song.type !== 'radio' && !song.isLive && songCacheCapable && (selectedTrack == null || indexedCache) && !switchingTrack
       ? [{
         key: 'cache',
         label: cached ? t('player.removeFromCache') : t('player.cacheToDevice'),

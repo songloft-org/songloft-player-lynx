@@ -18,6 +18,13 @@ const { songsHook, navigateSpy, filterInputs } = vi.hoisted(() => ({
   navigateSpy: vi.fn(),
   filterInputs: [] as Array<{ placeholder: string; onInput: (v: string) => void }>,
 }))
+const cache = vi.hoisted(() => ({ available: false, beginSongs: vi.fn() }))
+vi.mock('../../player/data/indexed-song-cache.js', async () => ({
+  ...await vi.importActual('../../player/data/indexed-song-cache.js'), indexedSongCacheAvailable: () => cache.available,
+}))
+vi.mock('../../player/widgets/use-cache-batch.js', () => ({
+  useCacheBatchSubmission: () => ({ beginSongs: cache.beginSongs, busy: false, confirmation: null }),
+}))
 
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
@@ -114,12 +121,32 @@ function songsResult(pages: { songs: Song[]; total: number }[], over = {}) {
 }
 
 beforeEach(() => {
+  cache.available = false
   songsHook.mockReturnValue(songsResult([{ songs: [], total: 0 }]))
   useSongRowOverlays.getState().closeAddToPlaylist()
   filterInputs.length = 0
 })
 
 afterEach(() => vi.clearAllMocks())
+
+test('device caching receives only the current multi-selection and hides its entry on older shells', async () => {
+  cache.available = true
+  const songs = [makeSong(1, { title: 'Selected song' }), makeSong(2)]
+  songsHook.mockReturnValue(songsResult([{ songs, total: 2 }]))
+  const { getByText, getByTestId } = await renderView()
+  await act(async () => { fireEvent.tap(getByText('Select')) })
+  await act(async () => { fireEvent.tap(getByText('Selected song')) })
+  await act(async () => { fireEvent.tap(getByTestId('library-select-cache')) })
+  expect(cache.beginSongs).toHaveBeenCalledExactlyOnceWith([songs[0]])
+})
+test('radio multi-selection has no device cache entry even on a capable shell', async () => {
+  cache.available = true
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1, { title: 'Radio', type: 'radio', isLive: true })], total: 1 }]))
+  const { getByText, queryByTestId } = await renderView('radio')
+  await act(async () => { fireEvent.tap(getByText('Select')) })
+  await act(async () => { fireEvent.tap(getByText('Radio')) })
+  expect(queryByTestId('library-select-cache')).not.toBeInTheDocument()
+})
 
 async function renderView(
   type?: 'local' | 'remote' | 'radio',

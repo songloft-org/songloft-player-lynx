@@ -74,6 +74,8 @@ function integer(value: unknown): number {
   if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) throw new Error('invalid_cache_response')
   return value
 }
+/** Verify the callback version before preparing a potentially large batch. */
+export async function requireIndexedSongCache(): Promise<void> { await requireModule() }
 function entry(value: unknown): CachedEntry {
   const raw = record(value), snapshot = record(raw.snapshot)
   if (raw.cached !== true || typeof raw.namespace !== 'string' || typeof raw.key !== 'string' ||
@@ -147,5 +149,9 @@ export function subscribeCacheTask(taskId: string, listener: (value: CacheTask) 
     catch { /* Ignore other tasks, malformed events and detached views. */ }
   }
   emitter.addListener(SONG_CACHE_PROGRESS_EVENT, handler)
-  return () => { if (active) { active = false; emitter.removeListener(SONG_CACHE_PROGRESS_EVENT, handler) } }
+  return () => {
+    if (!active) return
+    active = false
+    try { emitter.removeListener(SONG_CACHE_PROGRESS_EVENT, handler) } catch { /* The view has detached. */ }
+  }
 }

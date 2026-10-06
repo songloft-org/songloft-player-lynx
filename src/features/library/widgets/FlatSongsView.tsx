@@ -13,6 +13,8 @@ import { useDebounce } from '../data/use-debounce.js'
 import { useSongsInfiniteQuery } from '../data/songs-query.js'
 import { librarySortFilters, type LibrarySortId, type SortOrder } from '../domain/library-sort.js'
 import { usePlayerStore } from '../../player/store/index.js'
+import { indexedSongCacheAvailable } from '../../player/data/indexed-song-cache.js'
+import { useCacheBatchSubmission } from '../../player/widgets/use-cache-batch.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { songRowOverlays } from '../../../shared/ui/song-row-overlays.js'
@@ -45,6 +47,8 @@ export interface FlatSongsViewProps {
 export function FlatSongsView({ type, sortId, sortOrder, onSortChange, isWide }: FlatSongsViewProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const cacheBatch = useCacheBatchSubmission()
+  const canCacheBatch = indexedSongCacheAvailable() && type !== 'radio'
   const { onScroll: onScrollEdge } = useScrollNotifier()
   const [searchText, setSearchText] = useState('')
   const [selectMode, setSelectMode] = useState(false)
@@ -299,7 +303,7 @@ export function FlatSongsView({ type, sortId, sortOrder, onSortChange, isWide }:
 
       {selectMode && selected.size > 0
         ? (
-          <view className='library__select-toolbar'>
+          <view className={canCacheBatch ? 'library__select-toolbar library__select-toolbar--cache' : 'library__select-toolbar'}>
             <text className='library__select-toolbar-count'>
               {t('library.selectedCount', { count: selected.size })}
             </text>
@@ -310,9 +314,16 @@ export function FlatSongsView({ type, sortId, sortOrder, onSortChange, isWide }:
             >
               <text className='library__select-toolbar-btn-text'>{t('library.addToPlaylist')}</text>
             </view>
+            {canCacheBatch && <view
+              className={cacheBatch.busy ? 'library__select-toolbar-btn library__select-toolbar-btn--disabled' : 'library__select-toolbar-btn'}
+              bindtap={() => { if (!cacheBatch.busy) cacheBatch.beginSongs(songs.filter(song => selected.has(song.id))) }}
+              data-testid='library-select-cache'>
+              <text className='library__select-toolbar-btn-text'>{cacheBatch.busy ? t('common.loading') : t('player.cacheToDevice')}</text>
+            </view>}
           </view>
         )
         : null}
+      {cacheBatch.confirmation}
     </view>
   )
 }

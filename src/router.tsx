@@ -70,6 +70,7 @@ import { EqualizerPage } from './features/player/pages/EqualizerPage.js'
 import { FullVideoPage } from './features/player/pages/FullVideoPage.js'
 import { LyricAdjustPage } from './features/player/pages/LyricAdjustPage.js'
 import { DlnaPage } from './features/player/pages/DlnaPage.js'
+import { CacheTasksPage } from './features/player/pages/CacheTasksPage.js'
 
 /**
  * Batch 1 uses code-based route definitions (no file-based codegen plugin) to
@@ -322,6 +323,12 @@ const cacheManageRoute = createRoute({
   component: CacheManagePage,
 })
 
+const cacheTasksRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/cache-tasks',
+  component: CacheTasksPage,
+})
+
 /** `/settings/proxy` — proxy configuration sub-page, inside the shell. */
 const proxySettingsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -502,6 +509,7 @@ const routeTree = rootRoute.addChildren([
     serverEditRoute,
     libraryOpsRoute,
     cacheManageRoute,
+    cacheTasksRoute,
     proxySettingsRoute,
     themeCatalogRoute,
     licensesRoute,

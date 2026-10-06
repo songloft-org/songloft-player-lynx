@@ -20,6 +20,13 @@ const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSon
 }))
 
 const navigateMock = vi.hoisted(() => vi.fn())
+const cache = vi.hoisted(() => ({ available: false, beginSongs: vi.fn(), beginPlaylist: vi.fn() }))
+vi.mock('../../player/data/indexed-song-cache.js', async () => ({
+  ...await vi.importActual('../../player/data/indexed-song-cache.js'), indexedSongCacheAvailable: () => cache.available,
+}))
+vi.mock('../../player/widgets/use-cache-batch.js', () => ({
+  useCacheBatchSubmission: () => ({ beginSongs: cache.beginSongs, beginPlaylist: cache.beginPlaylist, busy: false, confirmation: null }),
+}))
 
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
@@ -190,6 +197,7 @@ function mutationResult(over = {}) {
 }
 
 beforeEach(() => {
+  cache.available = false
   detailHook.mockReturnValue(detailResult(makePlaylist()))
   songsHook.mockReturnValue(songsResult([{ songs: [], total: 0 }]))
   deleteMutationHook.mockReturnValue(mutationResult())
@@ -210,6 +218,16 @@ async function renderPage() {
   })
   return getQueriesForElement(elementTree.root!)
 }
+
+test('whole-playlist caching submits the playlist identity instead of its currently loaded songs', async () => {
+  cache.available = true
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1)], total: 235 }]))
+  const { getAllByTestId, getByTestId } = await renderPage()
+  await act(async () => { fireEvent.tap(getAllByTestId('popover-trigger')[0]) })
+  await act(async () => { fireEvent.tap(getByTestId('popover-item-cache')) })
+  expect(cache.beginPlaylist).toHaveBeenCalledExactlyOnceWith(7)
+  expect(cache.beginSongs).not.toHaveBeenCalled()
+})
 
 async function openMoreMenu(queries: ReturnType<typeof getQueriesForElement>) {
   // The page renders one popover (more-menu) when it has songs — the toolbar's

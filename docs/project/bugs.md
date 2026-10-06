@@ -11,6 +11,8 @@
 
 ## 待修复（开放）
 
+- [ ] Android x86_64 / 16 KB 模拟器长批量验证（2026-10-07 新发现）：实际 APK 的 `servalsvg:0.1.1` 仅含 arm64-v8a/armeabi-v7a/x86 `.so`，没有 x86_64；自动选择 x86_64 时 SVG JNI `renderWithDiagnostics` 报 UnsatisfiedLinkError，图标为空。235 首批量任务在已完成 35 首时另有主线程 SIGSEGV，栈落在 ART JIT 的 `UIBody.rebuildViewTree`；不能仅凭同时出现就断定 SVG 缺库是该 SIGSEGV 根因。本机转用同一 APK 的 arm64 ABI（模拟器 native bridge）并预编译后复验，图标正常；两项变更没有分开做对照，因此不宣称修复 x86_64 崩溃。该环境不计作正常 x86_64 验收；继续保留设备回归和 ABI 修复问题。证据 `/tmp/lynx-p3b-device-crash.log`。
+
 - [ ] **DLNA 投屏重播旧曲、离开投屏页后主播放器控制本地音频（2026-10-05，代码与测试包已完成，待 Android 实测）** — DIDL `res` 没有 MIME 且忽略 SOAP HTTP 错误，URI 被拒后仍发 Play；投屏设备只存在页面 state，主播放器控制没有路由到远端。现补 MIME 元数据、SOAP Fault 校验、跨页面会话与串行控制，远端状态/进度轮询及队列完成路由。JS 2760 项与 Android 11 项回归（分批）、类型检查、双 bundle 和最终 APK 编译通过。ADB 无连接设备，需实测主播放器暂停/继续、上一曲/下一曲、自动连播、进度/音量与断开；iOS/HarmonyOS 同步源码，未编译验证。
 
 - [ ] **Android 插件页缺少恢复前台通知（songloft-org/songloft#493，2026-10-04 代码检查发现，已补实现待真机验证）** — MIoT 在后台留下的静默失效状态连接可能在返回前台后持续停更；Lynx `MainActivity.onResume` 此前只处理悬浮窗权限，插件页未订阅宿主恢复事件。现补上 `SongloftLifecycle.resumed` → 原生 WebView 下一浏览器帧的 `visibilitychange`，配合 MIoT 插件自身的重连与 HTTP 快照恢复。未修改宿主和页面时两项回归测试失败，当前无 ADB 设备，长时间后台、断网再联网与音箱状态恢复待原生验证。iOS/HarmonyOS 宿主通知不在本批范围。

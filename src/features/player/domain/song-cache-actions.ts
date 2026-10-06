@@ -12,6 +12,7 @@ import { captureCacheContext, currentCacheNamespace, removeCurrentIndexedSong, t
 import { freezeCacheDownload } from './cache-identity.js'
 import { getPlatformTarget } from '../../../native/platform-target.js'
 import { getSongsApi } from '../../library/api/index.js'
+import { getCachedAccessToken } from '../../../core/network/token-cache.js'
 
 /**
  * The "cache this song on the device" flow, split from the UI so it is testable.
@@ -63,7 +64,8 @@ async function cacheIndexedSongToDevice(source: Song): Promise<SongCacheOutcome>
     const maxBytes = await readLocalCacheMaxSize()
     const tracks = variant.track !== null ? await getSongsApi().getTracks(song.id) : undefined
     if (currentCacheNamespace() !== captured.namespace) throw new Error('cancelled')
-    const request = freezeCacheDownload({ scope: captured.scope, context: captured.context, song, variant, platform, tracks, taskId, maxBytes })
+    const request = freezeCacheDownload({ scope: captured.scope,
+      context: { ...captured.context, accessToken: getCachedAccessToken() ?? '' }, song, variant, platform, tracks, taskId, maxBytes })
     const detach = trackCacheDownload(taskId, captured.namespace)
     try { await cacheIndexedSong(request) } finally { detach() }
     return 'cached'

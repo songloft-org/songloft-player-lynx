@@ -23,6 +23,8 @@ import { PlaylistToolbar } from '../widgets/PlaylistToolbar.js'
 import { getPlaylistApi } from '../api/index.js'
 import { playlistContext } from '../../player/domain/playback-context.js'
 import { usePlayerStore } from '../../player/store/index.js'
+import { indexedSongCacheAvailable } from '../../player/data/indexed-song-cache.js'
+import { useCacheBatchSubmission } from '../../player/widgets/use-cache-batch.js'
 import { PlayHistoryPanel } from '../../player/widgets/PlayHistoryPanel.js'
 import {
   usePlaylistQuery,
@@ -44,6 +46,8 @@ export function PlaylistDetailPage() {
   const navigate = useNavigate()
   const { onScroll: onScrollEdge } = useScrollNotifier()
   const { t } = useTranslation()
+  const cacheBatch = useCacheBatchSubmission()
+  const canCacheBatch = indexedSongCacheAvailable()
   const params = useParams({ strict: false }) as { id?: string }
   const id = Number(params.id ?? 0) || 0
   /** Playback context for this playlist; `undefined` when the route param is missing. */
@@ -337,6 +341,9 @@ export function PlaylistDetailPage() {
                       <Icon name='more' size={20} color={ICON_COLORS.content2} />
                     }
                     items={[
+                      ...(canCacheBatch && playlist?.type !== 'radio'
+                        ? [{ key: 'cache', label: cacheBatch.busy ? t('common.loading') : t('cacheTasks.wholePlaylist'), icon: 'download' as const }]
+                        : []),
                       {
                         key: 'pin',
                         label: isPinned ? t('playlist.unpinPlaylist') : t('playlist.pinPlaylist'),
@@ -366,7 +373,8 @@ export function PlaylistDetailPage() {
                         : []),
                     ]}
                     onSelect={(key) => {
-                      if (key === 'pin') togglePin()
+                      if (key === 'cache') { if (!cacheBatch.busy) void cacheBatch.beginPlaylist(id) }
+                      else if (key === 'pin') togglePin()
                       else if (key === 'editCover') void navigate({ to: '/playlists/$id/edit', params: { id: String(id) }, search: { coverOnly: true } })
                       else if (key === 'sort') enterSortMode()
                       else if (key === 'edit') onStartEdit()
@@ -560,13 +568,21 @@ export function PlaylistDetailPage() {
       </view>
       {selectMode && selected.size > 0
         ? (
-          <view className='playlist-detail__select-toolbar'>
+          <view className={canCacheBatch ? 'playlist-detail__select-toolbar playlist-detail__select-toolbar--cache' : 'playlist-detail__select-toolbar'}>
             <text className='playlist-detail__select-toolbar-count'>
               {t('library.selectedCount', { count: selected.size })}
             </text>
             <view className='playlist-detail__select-toolbar-btn' bindtap={() => setPendingConfirm({ kind: 'remove-batch' })}>
               <text className='playlist-detail__select-toolbar-btn-text'>{t('playlist.removeSong')}</text>
             </view>
+            {canCacheBatch && <view
+              className={cacheBatch.busy ? 'playlist-detail__select-toolbar-btn playlist-detail__cache-btn playlist-detail__cache-btn--disabled' : 'playlist-detail__select-toolbar-btn playlist-detail__cache-btn'}
+              bindtap={() => { if (!cacheBatch.busy) cacheBatch.beginSongs(songs.filter(song => selected.has(song.id))) }}
+              data-testid='playlist-select-cache'>
+              <text className='playlist-detail__select-toolbar-btn-text playlist-detail__cache-btn-text'>
+                {cacheBatch.busy ? t('common.loading') : t('player.cacheToDevice')}
+              </text>
+            </view>}
           </view>
         )
         : null}
@@ -613,6 +629,7 @@ export function PlaylistDetailPage() {
         )
         : null}
       {/* Same mount-only-while-open pattern as the history panel above. */}
+      {cacheBatch.confirmation}
       {showDesc && playlist?.description
         ? (
           <PlaylistDescPanel

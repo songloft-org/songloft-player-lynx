@@ -2,7 +2,7 @@
 
 [中文](../../reference/device-cache.md) · [Native module reference](../../reference/native-modules.md)
 
-P3a sources on all three hosts have the v2 identity, index and task contract; shared playback and single-song actions prefer it. Android has compilation/device evidence; iOS/HarmonyOS are not yet compiled/device-verified. Release compatibility now declares bridge 3 / schema 2 and requires `songCache.v2`; older shells need a full package from their own channel. Batch task UI, the offline list and local access after authentication expiry follow in P3b/P3c. The index foundation does not constitute complete offline support.
+P3a sources on all three hosts have the v2 identity, index and task contract; shared playback and single-song actions prefer it. Android has compilation/device evidence; iOS/HarmonyOS are not yet compiled/device-verified. Release compatibility declares bridge 3 / schema 2 and requires `songCache.v2`; older shells need a full package from their own channel. P3b has batch entry points and a task page. The offline list and local access after authentication expiry follow in P3c; cache downloading does not constitute complete offline support.
 
 ## Identity and files
 
@@ -39,6 +39,16 @@ HarmonyOS source opens the system file URI with `fileIo.openSync` and supplies `
 All three hosts use one process-wide serial writer and shared capacity checks across new/legacy entries, with at most 32 running or queued tasks and 128 retained task records. A failed song does not block later tasks. Unknown-length streams check capacity and disk space per chunk. Android cancellation terminates the actual OkHttp call. iOS source streams through a dedicated URLSessionDataDelegate, checking capacity per chunk and cancelling the real task. HarmonyOS source uses RCP header/data callbacks with real request cancellation, bounded redirects, statfs free-space checks and active-session cancellation when TLS policy changes. Queued cancellation opens no connection. Callbacks follow cleanup and terminal task recording. Server/user changes or logout cancel owned in-flight tasks while preserving completed files.
 
 Machine errors include `limit_exceeded`, `insufficient_space`, `cancelled`, `interrupted`, `cache_queue_full`, `cache_busy`, `invalid_cache_request`, `cache_storage_unavailable`, `download_failed` and `unsupported_media`. JS timeouts cancel the same task and ignore late results. Media downloads use the user's server TLS policy, separately from the client updater's dedicated system TLS.
+
+## Batch entry points and task page
+
+Library and playlist selection toolbars offer device caching; the playlist menu also offers whole-playlist caching. The latter fetches every page in position order independently of visible search filters and loaded pages, respecting server page-size limits. A changed total requires retry; collections are limited to 10000 songs. Radio/live sources are excluded, and collections containing video retain the existing large-file confirmation.
+
+`/settings/cache-tasks` displays six task states, completion counts, cached skips and byte progress, with an explicit unknown-total state. A shared JS producer submits songs sequentially to the native serial queue, deduplicating the first six identity fields and skipping exact cached variants. Individual preparation/download failures preserve machine reasons and allow later songs to proceed; capacity/free-space failures pause remaining work. Users can cancel one task or all remaining work, and retry failed/interrupted/capacity-paused items. Completed and user-cancelled items are excluded from retry.
+
+Track/quality/normalization are captured at the click; snapshots, URLs and tokens are frozen after preparation. Track metadata can refresh authentication, so the whole batch uses the refreshed token. Later playback changes cannot alter queued parameters. Retry reads current song revisions, tokens and limits while retaining the original variant. Identity changes cancel old tasks and clear the view; late results cannot enter another identity's view.
+
+History is stored under `device_cache_batch_v1:<namespace>` and contains only nine-field snapshots, variant keys, machine errors and progress. URLs/tokens remain in memory. Progress writes are coalesced; unfinished cold-start history becomes interrupted without automatic downloads. Foreground resume reconciles native progress; continued background work depends on the OS. Older shells hide the entry points and show an upgrade explanation if the task page is reached directly.
 
 ## Validation boundary
 

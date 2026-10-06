@@ -68,10 +68,10 @@ describe('SUB_PAGE_ROUTES', () => {
   })
 
   test('covers every sub-page the pane can show', () => {
-    // The type is a total `Record`, so this is really a guard on the count: 16 rows
+    // The type is a total `Record`, so this is really a guard on the count: 17 rows
     // and drill-ins today. A member added to the union without a route here is a
     // compile error; this catches a member *removed* along with its assertions.
-    expect(SUB_PAGES.length).toBe(16)
+    expect(SUB_PAGES.length).toBe(17)
   })
 
   for (const page of SUB_PAGES) {

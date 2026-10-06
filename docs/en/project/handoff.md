@@ -4,6 +4,10 @@ This page records current scope and validation limits. Batch evidence is in [pro
 
 ## 1. Current completion
 
+Actual UI cancellation against a slow proxy also passed: all 235 items were cancelled, the streaming socket terminated after 12288 bytes, active requests/staging reached zero, and the original test profile was restored. See progress for evidence; intentionally cancelled batches and emulator adjustments do not constitute acceptance on all native platforms.
+
+P3b shared source adds whole-playlist/selection caching and a task page, with full pagination, frozen variants, cached skips, deduplication, capacity pauses, native cancellation and failed/interrupted retry. Identity-scoped history omits URLs/tokens. Final JS regression passes 273 files / 2960 tests; all 35 publishing-tool tests, both bundles and the Android APK build pass (2026-10-07 02:49). Actual Android UI using the arm64 ABI queued 235 songs, completed 94 (36 cached skips), cancelled the remaining 141 and cleared staging. The missing x86_64 SVG library/native crash and emulator issues remain in bugs; that ABI is not declared fixed. P3c and iOS/HarmonyOS compilation/device acceptance continue; evidence is in progress.
+
 This is a preview client. Playback, library/playlists, lyrics, plugins, themes, multiple servers, and administrative settings are implemented, with four host implementations. About separates client and server updates; the client checks dev or latest stable according to its immutable shell channel. All three updater sources are integrated, Android/Web have local flow evidence, and iOS/HarmonyOS compilation/device acceptance remain open. Production update signing is unconfigured. **Native desktop clients and a bundled local backend remain outside this work.** Unused `bundleMode/systemTray` probes do not represent completed features.
 
 Android has recent compilation evidence. Older successful iOS CI and failed HarmonyOS CI cannot establish that current code is publishable. Background playback, casting, notifications, and video require devices; JS tests cannot establish their behavior.

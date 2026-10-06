@@ -252,7 +252,7 @@ export function isNormalizeEnabled(): boolean {
   return _normalize
 }
 
-export function currentCacheVariant(song: Song): CacheVariant {
+export function currentCacheVariant(song: Pick<Song, 'id'>): CacheVariant {
   const state = usePlayerStore.getState()
   const track = state.currentSong?.id === song.id
     ? state.audioTrackPending !== undefined ? state.audioTrackPending : state.audioTrack

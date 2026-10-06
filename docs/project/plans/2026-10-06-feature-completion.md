@@ -252,7 +252,7 @@
 - [ ] P2b：Android/iOS/HarmonyOS 下载器、加载器与回退（三端源码/共享 TS 已接入；Android 11 项真实 TLS/文件 JVM 回归和四项模拟器冷启动检查完成；iOS Apple CI 验证程序已接入但尚未编译执行；HarmonyOS 转译源码在 Node 适配器下的五项真实 RSA/HTTPS/文件回归通过，不等于 HAP 编译；两端编译和设备验收仍开放，见 progress）
 - [ ] P2c：客户端检查更新、生效交互及全链路验收（源码已接入，Android 本地签名夹具完成实际界面检查/下载/播放不中断/取消/冷启动/恢复，Web 中英最大字号及部署入口通过；正式密钥与 iOS/HarmonyOS 编译、设备验收仍开放，见 progress）
 - [ ] P3a：缓存身份/索引/取消（共享 TS 与三端 v2 源码已接入；发布兼容声明 bridge 3 / schema 2 / `songCache.v2`，旧壳需安装同通道新包；Android 真实文件/HTTP 8 项、设备分音轨缓存及后端不可达冷启动播放通过；HarmonyOS 源码在 Node 文件/HTTP/TLS 适配器下 8 项通过，不等于 HAP 编译；iOS Apple 核心验证程序已配置但未编译/执行，两端编译与设备验收继续，见 progress）
-- [ ] P3b：批量缓存任务
+- [ ] P3b：批量缓存任务（共享源码已接入；273 文件 / 2960 项回归、双产物及 Android APK 编译通过；Android arm64 界面验证 235 首入队、94 完成含 36 缓存跳过、取消剩余 141 项和暂存清理；x86_64 缺 SVG 库/原生崩溃单独记录，iOS/HarmonyOS 编译和设备验收仍开放，见 progress）
 - [ ] P3c：离线管理与播放
 - [ ] P4：Web 导入/导出
 - [ ] P5：Web 快捷键

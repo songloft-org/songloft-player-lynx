@@ -277,6 +277,23 @@
   font-weight: var(--weight-bold);
 }
 
+.playlist-detail__select-toolbar--cache {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.playlist-detail__select-toolbar--cache .playlist-detail__select-toolbar-count {
+  flex: 0 0 100%;
+}
+.playlist-detail__cache-btn {
+  background-color: var(--accent);
+}
+.playlist-detail__cache-btn-text {
+  color: var(--accent-content);
+}
+.playlist-detail__cache-btn--disabled {
+  opacity: 0.5;
+}
+
 .playlist-detail__remove-btn {
   display: flex;
   align-items: center;

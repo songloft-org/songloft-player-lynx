@@ -468,6 +468,17 @@
   color: var(--accent-content);
 }
 
+.library__select-toolbar--cache {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.library__select-toolbar--cache .library__select-toolbar-count {
+  flex: 0 0 100%;
+}
+.library__select-toolbar-btn--disabled {
+  opacity: 0.5;
+}
+
 .library__suggestions {
   margin-top: var(--space-1);
   background-color: var(--secondary-system-background);

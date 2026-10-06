@@ -33,6 +33,8 @@ import { AboutPage } from './AboutPage.js'
 import { releaseAllPluginFrames } from '../../jsplugin/domain/plugin-frame-release.js'
 import { AppearancePage } from './AppearancePage.js'
 import { CacheManagePage } from './CacheManagePage.js'
+import { CacheTasksPage } from '../../player/pages/CacheTasksPage.js'
+import { indexedSongCacheAvailable } from '../../player/data/indexed-song-cache.js'
 import { DataPage } from './DataPage.js'
 import { DiagnosticsPage } from './DiagnosticsPage.js'
 import { LicensesPage } from './LicensesPage.js'
@@ -264,6 +266,10 @@ export function SettingsPage() {
 
             {/* ── System ───────────────────────────────────────────────── */}
             <SettingsSection>
+              {indexedSongCacheAvailable() && <SettingsRow
+                icon='download' title={t('cacheTasks.title')} subtitle={t('cacheTasks.entrySubtitle')}
+                trailingIcon='chevron-right' selected={isActive('cache-tasks')}
+                onTap={() => goToSubPage('cache-tasks')} testId='settings-cache-tasks' />}
               <SettingsRow
                 icon='settings'
                 title={t('settings.storageCache')}
@@ -441,6 +447,8 @@ function SettingsDetailPane({
       return <TabConfigPage />
     case 'cache':
       return <CacheManagePage />
+    case 'cache-tasks':
+      return <CacheTasksPage />
     case 'servers':
       return <ServerListPage onOpenServerForm={onOpenServerForm} />
     case 'server-form':

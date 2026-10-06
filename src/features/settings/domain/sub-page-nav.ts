@@ -32,6 +32,7 @@ export type SettingsSubPage =
   | 'registry'
   | 'tab-config'
   | 'cache'
+  | 'cache-tasks'
   | 'servers'
   | 'server-form'
   | 'proxy'
@@ -69,6 +70,7 @@ export const SUB_PAGE_ROUTES: Record<SettingsSubPage, string> = {
   registry: '/settings/plugins/registry',
   'tab-config': '/settings/tab-config',
   cache: '/settings/cache',
+  'cache-tasks': '/settings/cache-tasks',
   servers: '/settings/servers',
   'server-form': '/settings/servers/add',
   proxy: '/settings/proxy',
