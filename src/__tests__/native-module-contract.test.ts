@@ -240,6 +240,22 @@ describe('iOS updater callback, resource and root-loader integration', () => {
   })
 })
 
+describe('HarmonyOS updater callbacks and root-loader integration', () => {
+  const source = read('harmony/entry/src/main/ets/modules/updater/SongloftUpdateModule.ets')
+  test.each(['getInfo', 'getState', 'inspectManifest', 'download', 'cancel', 'confirmStartup', 'reportStartupFailure', 'restoreBuiltin'])('%s is exposed by Lynx', method => {
+    expectArkTsMethod(source, method)
+  })
+  test('root loader preserves builtin fallback and receives fatal lifecycle errors', () => {
+    const root = read('harmony/entry/src/main/ets/pages/Index.ets')
+    expect(root).toContain("this.modules.set('SongloftUpdate', { moduleClass: SongloftUpdateModule, param: this.context })")
+    expect(root).toContain('updates.beginLaunch()')
+    expect(root).toContain('template.getErrorMessage().length === 0')
+    expect(root).toContain('clients: this.clients')
+    expect(source).toContain('error.isFatal()')
+    expect(source).toContain("sendGlobalEvent('SongloftUpdate.progress', [event])")
+  })
+})
+
 describe('audio global-event names reach both hosts verbatim', () => {
   const names = [...Object.values(NATIVE_EVENT)]
 
@@ -1536,7 +1552,7 @@ describe('every native module is registered in the host bootstrap', () => {
     { name: 'SongloftNavigation', android: 'SongloftNavigationModule', ios: null, harmony: 'SongloftNavigationModule' },
     { name: 'SongloftSongCache', android: 'SongloftSongCacheModule', ios: 'SongloftSongCacheModule', harmony: 'SongloftSongCacheModule' },
     // HarmonyOS registration follows with its P2b implementation.
-    { name: 'SongloftUpdate', android: 'SongloftUpdateModule', ios: 'SongloftUpdateModule', harmony: null },
+    { name: 'SongloftUpdate', android: 'SongloftUpdateModule', ios: 'SongloftUpdateModule', harmony: 'SongloftUpdateModule' },
     { name: 'SongloftPluginBridge', android: 'SongloftPluginBridgeModule', ios: 'SongloftPluginBridgeModule', harmony: 'SongloftPluginBridgeModule' },
   ]
 

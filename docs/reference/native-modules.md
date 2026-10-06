@@ -8,7 +8,7 @@
 
 ## 1. 总表
 
-闸门 `modules` 表锁定 **11 个原生宿主模块**（含 `SongloftPluginBridge` 与新接入 Android/iOS 的 `SongloftUpdate`）；另有 `SongloftWebview` 与 `SongloftLynxFrame` 两个仅存在于 Web 部署的模块名，各由独立 `describe` 块覆盖。
+闸门 `modules` 表锁定 **11 个原生宿主模块**（含 `SongloftPluginBridge` 与新接入三个原生端的 `SongloftUpdate`）；另有 `SongloftWebview` 与 `SongloftLynxFrame` 两个仅存在于 Web 部署的模块名，各由独立 `describe` 块覆盖。
 
 | `NativeModules.X` | Android 实现 | iOS 实现 | TS facade | 职责 |
 |---|---|---|---|---|
@@ -28,7 +28,7 @@
 
 Android 路径均省略前缀 `android/app/src/main/java/org/songloft/lynx/`；iOS 路径均省略前缀 `ios/SongloftLynx/`。
 
-HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatingLyric`、`SongloftLiveActivity` 与本批尚未接入的 `SongloftUpdate` 外均按同名模块注册（`SongloftWebview` / `SongloftLynxFrame` 本就只有 Web 实现）。2026-10-06 源码复核：`Index.ets` 已注册 `SongloftVideo` 并挂载 XComponent，模块绑定共享 AVPlayer；源码与结构闸门存在，但编译和设备行为仍需验证。模块注册也不能证明每个方法可用，例如 HarmonyOS 剪贴板仍是空实现、通知歌词方法仍缺失。
+HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatingLyric`、`SongloftLiveActivity` 外均按同名模块注册（`SongloftWebview` / `SongloftLynxFrame` 本就只有 Web 实现）。`SongloftUpdate` 实现在 `updater/`，根模板与 fatal lifecycle 同步接入，仍待 HAP 编译及设备验证。2026-10-06 源码复核：`Index.ets` 已注册 `SongloftVideo` 并挂载 XComponent，模块绑定共享 AVPlayer；源码与结构闸门存在，但编译和设备行为仍需验证。模块注册也不能证明每个方法可用，例如 HarmonyOS 剪贴板仍是空实现、通知歌词方法仍缺失。
 
 ### 不是 NativeModules 模块
 
@@ -379,7 +379,7 @@ Web 上渲染 Lynx 插件的宿主（native 构建用真实 `<frame>` 元素，�
 
 ---
 
-### 2.15 `SongloftUpdate`（8 方法，Android/iOS 接入；iOS 待编译）
+### 2.15 `SongloftUpdate`（8 方法，三端源码接入；iOS/HarmonyOS 待编译）
 
 读方法 `getInfo(callback)`、`getState(callback)`、`inspectManifest(raw, signature, callback)`；异步写入 `download(requestJson, callback)` 与 `restoreBuiltin(callback)` 在持久化完成后回调；void 命令 `cancel(taskId)`、`confirmStartup(bundleId)`、`reportStartupFailure()`。进度事件 `SongloftUpdate.progress` 的数组参数含 `{task_id, bytes, total}`。任何出错回调只含机器错误码，不转发带 URL/凭据的网络异常文本。
 

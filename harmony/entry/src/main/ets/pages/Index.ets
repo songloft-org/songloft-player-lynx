@@ -1,5 +1,5 @@
 import { common } from '@kit.AbilityKit'
-import { Behavior, BehaviorRegistryMap, LynxView, MetaData, ModuleClassWrapper, TemplateBundle, TemplateData, LynxContext, LynxGenericResourceFetcher, LynxMediaResourceFetcher } from '@lynx/lynx'
+import { Behavior, BehaviorRegistryMap, LynxView, MetaData, ModuleClassWrapper, TemplateBundle, TemplateData, LynxContext, LynxGenericResourceFetcher, LynxMediaResourceFetcher, LynxViewClient } from '@lynx/lynx'
 import { UISVG } from '@lynx/xelement_svg'
 import { UIWebView } from '@lynx/xelement_webview'
 import { SongloftGenericResourceFetcher } from '../net/SongloftGenericResourceFetcher'
@@ -13,12 +13,15 @@ import { SongloftNavigationModule } from '../modules/navigation/SongloftNavigati
 import { SongloftPluginBridgeModule } from '../modules/plugin/SongloftPluginBridgeModule'
 import { SongloftVideoModule, SongloftVideoState } from '../modules/video/SongloftVideoModule'
 import { SystemAppearance } from '../modules/system/SystemAppearance'
+import { BundleUpdateStore } from '../modules/updater/BundleUpdateStore'
+import { SongloftUpdateModule, SongloftUpdateLifecycle } from '../modules/updater/SongloftUpdateModule'
 
 @Entry
 @Component
 struct Index {
   private context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext
   private modules: Map<string, ModuleClassWrapper> = new Map()
+  private clients: LynxViewClient[] = [new SongloftUpdateLifecycle(this.context)]
   private behaviors: BehaviorRegistryMap = new Map([
     ['svg', new Behavior(UISVG, undefined)],
     ['webview', new Behavior(UIWebView, undefined)],
@@ -45,11 +48,26 @@ struct Index {
     this.modules.set('SongloftNavigation', { moduleClass: SongloftNavigationModule, param: this.context })
     this.modules.set('SongloftPluginBridge', { moduleClass: SongloftPluginBridgeModule, param: this.context })
     this.modules.set('SongloftVideo', { moduleClass: SongloftVideoModule, param: this.context })
+    this.modules.set('SongloftUpdate', { moduleClass: SongloftUpdateModule, param: this.context })
 
     const globalProps = SystemAppearance.getInitialProps(this.context)
     this.metaData = new MetaData(undefined, new TemplateData(JSON.stringify(globalProps)))
 
     const resourceMgr = this.context.resourceManager
+    try {
+      const updates = BundleUpdateStore.get(this.context)
+      const candidate = updates.beginLaunch()
+      if (candidate) {
+        const template = TemplateBundle.fromTemplate(candidate)
+        if (template.getErrorMessage().length === 0) {
+          this.templateBundle = template
+          return
+        }
+        updates.useBuiltinAfterFailure()
+      }
+    } catch (_) {
+      try { BundleUpdateStore.get(this.context).useBuiltinAfterFailure() } catch (_) {}
+    }
     const bundleBuffer = resourceMgr.getRawFileContentSync('main.lynx.bundle').buffer as ArrayBuffer
     this.templateBundle = TemplateBundle.fromTemplate(bundleBuffer)
   }
@@ -85,6 +103,7 @@ struct Index {
       LynxView({
         templateBundle: this.templateBundle,
         modules: this.modules,
+        clients: this.clients,
         behaviors: this.behaviors,
         metaData: this.metaData,
         genericResourceFetcher: this.genericResourceFetcher,

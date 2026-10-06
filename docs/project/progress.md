@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · P2b 第三批：HarmonyOS 更新器源码
+
+- 新增 `SongloftUpdateModule`、`BundleUpdateProtocol/Store/Transfer`，读取 rawfile 的不可变壳身份及 SPKI 公钥；使用 API 12 可用的 CryptoFramework 原始字节 RSA PKCS1/SHA256 验签、流式文件 hash、独立私有目录、空间/大小检查与同步写入后的原子状态提交。getInfo/getState/inspectManifest/download/cancel/confirmStartup/reportStartupFailure/restoreBuiltin 八个方法及 task-scoped 数组进度事件与 TS 同步。
+- 专用 Remote Communication Kit 会话明确使用系统 CA、关闭自动重定向，每一跳 HTTPS 校验后手动跟随；180 秒总期限用系统 uptime 计算，不接入业务 TLS 跳过设置；取消真实请求，取消/坏 hash/缺空间/下载失败不写 pending，临时文件在失败或下次冷启动清理。公开 API 12 文档与 Lynx 4.0.1 源码已实际核对，不使用更高 API 才有的 Network Kit 重定向字段。
+- Index 根模板链改为签名候选优先、内置资源兜底；trial 先持久化、正常启动再确认，120 秒单调期限、未确认下次回退、新壳过滤、恢复内置均接入。签名有效但模板解析失败时直接使用内置，同时保留失败 trial；fatal LynxViewClient 回调上报失败。只修改共享根加载链，视频功能/验收仍暂缓。
+- 核心回归实际执行转译后的 ArkTS 源码，SDK API 以 Node 的真实 RSA、HTTPS 和文件系统适配：**5 项通过**，覆盖共享 UTF-8 签名/篡改/未知 key/兼容，完整下载与逐跳跳转、缺确认/迟确认、恢复内置/新壳过滤、TLS 拒绝自签名与拒绝 HTTP 降级、取消传输/排队前取消/零进度取消、坏 hash/磁盘篡改及空间/版本规则。测试使用临时 HTTPS 证书，其私钥随目录清理；不涉及真实发布私钥。证据 `/tmp/lynx-p2b-harmony-core-final.log`。
+- 本地类型检查通过；原生模块/加载器结构闸门 **286 项通过**，全量 Vitest **263 文件 / 2873 项通过**，Node 发布工具连同上述核心回归 **25 项通过**，文档相对链接、UTF-8 与 diff 检查通过。本批不改业务 JS/Web，不重复界面构建/设备验收。**该验证不等于 ArkTS/HAP 编译或真实 SDK/设备验证**；尝试获取 CI 使用的 Linux SDK，下载吞吐不足已停止，当前仍无可用 HarmonyOS 编译/设备环境。iOS Apple 验签程序也尚未执行。
+- 三端更新器源码已接入，P2b 仍保留两端编译、设备下载与回退开放项；接下来继续 P2c 的本通道更新检查/页面。用户授权分批本地提交，不 push，未发版或操作 Issue；桌面和 Bundle 本地模式不做。
+
 ## 2026-10-07 · P2b 第二批：iOS 更新器源码与包资源验证
 
 - iOS 新增 `SongloftUpdateModule`、`BundleUpdateStore` 和 `BundleUpdateTransfer`，同一套签名清单/兼容/通道新旧、pending/trial/active/previous 状态机。原始 UTF-8 RSA 验签走 SecKey；文件 SHA-256 走 CryptoKit 流式读取；独立系统 TLS URLSession 流式写入，逐跳限制 HTTPS、大小/空间检查、实际任务取消、文件同步和原子状态替换，不继承音乐服务器的忽略证书设置。
