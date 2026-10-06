@@ -6,6 +6,7 @@ import { LynxImageService } from '@lynx/lynx_image_service'
 import { SongloftHttpService } from '../net/SongloftHttpService'
 import { SystemAppearance } from '../modules/system/SystemAppearance'
 import { SongloftVideoModule } from '../modules/video/SongloftVideoModule'
+import { AppLifecycle } from '../modules/system/AppLifecycle'
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
@@ -16,6 +17,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onDestroy(): void {
+    AppLifecycle.reset()
     SongloftVideoModule.setHostWindow(null)
   }
 
@@ -37,11 +39,11 @@ export default class EntryAbility extends UIAbility {
     })
   }
 
-  onWindowStageDestroy(): void {}
+  onWindowStageDestroy(): void { AppLifecycle.reset() }
 
-  onForeground(): void {}
+  onForeground(): void { AppLifecycle.enterForeground() }
 
-  onBackground(): void {}
+  onBackground(): void { AppLifecycle.enterBackground() }
 
   /**
    * Push `SongloftVideo.orientationChanged` whenever the window resizes —

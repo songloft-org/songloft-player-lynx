@@ -53,6 +53,23 @@
    */
   var childViews = Object.create(null)
   var activeKey = null
+  var pushReady = Object.create(null)
+  var pageVisible = document.visibilityState !== 'hidden'
+
+  function resumeChild(key) {
+    if (key !== activeKey || !pushReady[key] || document.visibilityState === 'hidden') return
+    var child = childViews[key]
+    if (!child) return
+    try {
+      child.sendGlobalEvent('SongloftPluginBridge.push', [{ event: 'lifecycle', data: JSON.stringify({ state: 'resumed' }) }])
+    } catch (_) {}
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    var visible = document.visibilityState !== 'hidden'
+    if (visible && !pageVisible && activeKey !== null) resumeChild(activeKey)
+    pageVisible = visible
+  })
   /*
    * Monotonic token for lifecycle commands (open / hide / close).
    *
@@ -166,6 +183,7 @@
     if (!el) return
     hideChild(key)
     delete childViews[key]
+    delete pushReady[key]
     if (el.parentNode) el.parentNode.removeChild(el)
     pendingDispose[key] = awaitDisposed(el).then(function () {
       delete pendingDispose[key]
@@ -179,6 +197,15 @@
    * it routes through onNativeModulesCall. We intercept it and forward to the parent.
    */
   function handleChildModuleCall(key, name, data) {
+    // A child can finish loading after it has been hidden. Keep readiness so
+    // re-entry can resume it, while still suppressing inactive business RPCs.
+    if (name === 'hostCall' && data[2] === 'lifecycle' && data[3] === 'ready') {
+      if (!pushReady[key]) {
+        pushReady[key] = true
+        resumeChild(key)
+      }
+      return
+    }
     /*
      * Active child only. Kept-alive children keep running and can call at any
      * time, but their page is unmounted — and forwarding would hand one plugin's
@@ -236,6 +263,7 @@
         if (existing.getAttribute('url') !== bundleUrl) existing.setAttribute('url', bundleUrl)
         activeKey = key
         startFollowing(selector)
+        resumeChild(key)
         return
       }
 
@@ -255,6 +283,7 @@
           SongloftPluginBridge: '/songloft-lynx-bridge-module.js',
         }
         childView.onNativeModulesCall = function (name, data, moduleName) {
+          if (childViews[key] !== childView) return undefined
           if (moduleName === 'SongloftPluginBridge') {
             handleChildModuleCall(key, name, data)
             return undefined

@@ -17,7 +17,7 @@
 
 - [ ] **DLNA 投屏重播旧曲、离开投屏页后主播放器控制本地音频（2026-10-05，代码与测试包已完成，待 Android 实测）** — DIDL `res` 没有 MIME 且忽略 SOAP HTTP 错误，URI 被拒后仍发 Play；投屏设备只存在页面 state，主播放器控制没有路由到远端。现补 MIME 元数据、SOAP Fault 校验、跨页面会话与串行控制，远端状态/进度轮询及队列完成路由。JS 2760 项与 Android 11 项回归（分批）、类型检查、双 bundle 和最终 APK 编译通过。ADB 无连接设备，需实测主播放器暂停/继续、上一曲/下一曲、自动连播、进度/音量与断开；iOS/HarmonyOS 同步源码，未编译验证。
 
-- [ ] **Android 插件页缺少恢复前台通知（songloft-org/songloft#493，2026-10-04 代码检查发现，已补实现待真机验证）** — MIoT 在后台留下的静默失效状态连接可能在返回前台后持续停更；Lynx `MainActivity.onResume` 此前只处理悬浮窗权限，插件页未订阅宿主恢复事件。现补上 `SongloftLifecycle.resumed` → 原生 WebView 下一浏览器帧的 `visibilitychange`，配合 MIoT 插件自身的重连与 HTTP 快照恢复。未修改宿主和页面时两项回归测试失败，当前无 ADB 设备，长时间后台、断网再联网与音箱状态恢复待原生验证。iOS/HarmonyOS 宿主通知不在本批范围。
+- [ ] **三端插件恢复前台通知待设备验收（songloft-org/songloft#493，2026-10-07 P6c 源码补齐）** — MIoT 后台静默失效的连接可能在前台持续停更。Android 原事件已接入，iOS scene 与 HarmonyOS ability 现补首屏就绪、去重和退出清理；原生 WebView 下一浏览器帧派发 `visibilitychange`，Lynx frame 经宿主桥接推送 `lifecycle/resumed`。SDK 修复事件订阅独立注册和 ready，现有 Lynx 插件需重构建，SDK 尚未发布。真实 Chrome 子 frame 验证初始/重入通知、隐藏隔离和 Worker 保活，可见性使用协议夹具；切插件标识与隐藏期间初始化两项回归修复前失败、修复后通过。iOS/HarmonyOS 未编译，Android 模拟器环境问题仍在；MIoT 长后台、断网重连与音箱状态恢复待真机验证，保留未勾选。
 
 > 2026-08-31 从 handoff.md 迁入。尚未闭合，修复后改 `[x]` 并移主题归类，别在已闭合条目上续写。
 

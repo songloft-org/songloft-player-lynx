@@ -1,5 +1,15 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · P6c：插件恢复前台、SDK 注册与 frame 保活
+
+- iOS SceneDelegate 将所属 scene 的活跃/失活转给根 ViewController，首屏就绪前合并待发通知，失活取消、重复活跃去重，弱捕获与 view 身份保护清理迟到回调；HarmonyOS Ability 与 Index 接入实际 AppLifecycle/LynxViewClient，绑定、首屏、前后台、退出和旧上下文清理。Android 沿用既有事件。原生 WebView 下一浏览器帧通知恢复，Lynx frame 使用现有四方法父桥，按 frameId 处理 RPC/最新播放器与主题/生命周期推送，卸载后忽略排队调用和迟到回复，不改变 bridge 3 / schema 2 必需能力。
+- SDK 原先仅 invokeHost 注册子 frame，单独 onPush 订阅收不到原生消息；共享注册辅助函数供 RPC/事件复用，事件监听安装后通过既有 hostCall 发 lifecycle.ready。父宿主在 ready 前合并最新快照和恢复事件，普通 RPC 不提前消耗初始恢复；缺事件模块可在后续订阅重试。工具链仓库已本地提交 `b4baad3`，实际 SDK 构建与 **3 项测试通过**（`/tmp/lynx-p6c-sdk-build-final.log`、`/tmp/lynx-p6c-sdk-tests-final.log`）。未发布 npm 或改版本，现有插件必须使用更新源码重构建才有 ready。
+- Web 主线程保留子插件 Worker；初始 ready、重新进入、页面 hidden→visible 只通知活跃插件。ready 可在隐藏时完成，旧 Worker 的迟到调用不得影响同 key 新实例。新增隐藏初始化与组件切换两项回归在修复前均失败（`/tmp/lynx-p6c-race-negative.log`），修复后两文件 **32 项通过**（`/tmp/lynx-p6c-race-positive.log`）；切 entryPath 换通信标识，原生分支不再误建 Web 父桥，组件/实际 facade/合同与旧 WebView 回归均纳入最终全量。
+- **286 文件 / 3061 项 JS 最终回归通过**（`/tmp/lynx-p6c-delivery-full-final.log`），**47 项 Node 发布/原生适配器回归通过**（`/tmp/lynx-p6c-delivery-release.log`，新增 4 项执行实际 HarmonyOS 生命周期源码的首屏/前后台去重、未就绪取消、旧上下文与重建清理回归）。类型、双产物、三端 bundle/两种 Web 复制及 Android `assembleDebug` 通过（`/tmp/lynx-p6c-delivery-build-final.log`）；SDK/ArkTS 适配器不等于 HAP 编译或系统事件验收。
+- Chrome 153 加载使用实际 SDK 构建的真实 ReactLynx 子插件，初始恢复 1 次、保活重入继续计数，两插件最终计数 **4 / 2**，隐藏期间不增，重新进入不创建额外 Worker，无页面异常（`/tmp/lynx-p6c-browser-lifecycle.log`）。实际标签页切换没有产生 hidden，因此页面可见性部分明确使用协议夹具；不宣称真实标签页/操作系统前后台或 MIoT 已安装插件重连通过。截图 `/tmp/lynx-p1-browser/p6c-plugin-lifecycle.png` 已目测。首次浏览器运行因自有 `3015` 服务退出连接拒绝，重启服务后上述验证通过。
+- 最终 Chrome 播放快捷键/实际媒体/菜单/持久化回归通过（`/tmp/lynx-p6c-browser-keyboard.log`），两处实际复制/粘贴、拒绝与重试通过（`/tmp/lynx-p6c-browser-clipboard.log`，409 字节中文提示词与歌曲路径一致），均无页面异常；两项顺序执行，避免共享浏览器焦点影响证据。
+- iOS 无 Swift/Xcode、HarmonyOS 无 SDK/hvigor/设备；原生编译、MIoT 长后台/断网重连与音箱快照验收保留开放。Android 模拟器此前宿主 SIGSEGV，不以本批 APK 编译代替前后台设备验证。双语交接/Web 部署、中文方法/平台差异/bugs/计划更新；本轮批准源码批次已落地，设备/签名/其他浏览器验收未勾选，桌面、Bundle 和视频暂缓。只本地分批提交，不 push，用户 `58091` 服务未停止。
+
 ## 2026-10-07 · P6b：HarmonyOS 通知歌词、元数据与音频契约
 
 - HarmonyOS `setQueue` 保存按 URL 索引的歌曲 id/名称/歌手/时长/封面；加载源时供给 AVSession 元数据，歌词可切换 title/subtitle，空歌词/切源/停止恢复歌曲信息，暂停保留当前行。元数据与播放状态用串行快照写入，过期源进度不覆盖新歌时长，SDK 更新失败只记录日志，不阻止正常音频。补实际音量回报与播放/暂停/毫秒定位/速度系统命令，下一首/上一首/停止/收藏沿既有 Worker 队列路径；完成状态仍只推进一次。

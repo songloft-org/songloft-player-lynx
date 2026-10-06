@@ -4,6 +4,8 @@
 
 ## 1. 当前完成度
 
+P6c 已补 iOS scene 与 HarmonyOS ability 的恢复事件，等待根视图首屏、去重并清理旧上下文；原生 WebView 与 Lynx frame 均有消费点。frame 宿主按 SDK 就绪通知发送最新播放器/主题状态与恢复事件，切插件换标识，退出后丢弃迟到 RPC。SDK 已修复仅订阅事件时未注册子 frame 的问题，现有插件需重新构建；SDK 尚未发布。真实 Chrome 子 frame 完成初始/重入通知与保活，页面可见性使用协议夹具，未证明真实标签页或操作系统恢复。最终 286 文件 / 3061 项 JS、47 项 Node、SDK 3 项测试，以及类型/双产物/Android APK 均通过。iOS/HarmonyOS 编译与 MIoT 长后台/断网重连设备验收仍开放；本轮计划的源码批次已落地，验收状态见 progress 和计划，仅本地提交，不 push。
+
 P6b 已接入 HarmonyOS 队列元数据、AVSession 歌词 title/subtitle 与清空恢复，补系统播放/暂停/定位/速度参数和实际音量回报；写入按快照串行，SDK 卡片失败不阻止音频。共享歌词按方法安全降级，iOS 新布局接口保留旧单参数选择器，HarmonyOS EQ 入口/调用明确禁用。音频方法/事件/状态及空实现反例闸门已覆盖三端，源码 SDK 适配器覆盖时序、单位、故障与退出清理。最终构建和回归见 progress；iOS/HarmonyOS 编译及真实媒体卡片/锁屏验证仍开放，继续 P6c，只本地提交，不 push。
 
 P6a 已补 HarmonyOS Pasteboard 写入和四端确认回调，旧方法保留且共用实现；复制 facade 等待明确成功，缺方法/拒绝/空回调/15 秒超时不报成功。代理提示词与歌曲编辑只在确认后显示成功、失败可重试。Chrome 真实两处按钮复制后的粘贴文本一致，权限/降级失败夹具显示失败并能重试，临时输入归零；源码适配器与 UI/回调验证见 progress。HarmonyOS SDK/HAP 与系统粘贴、Apple 编译/设备回归仍开放，下一批 P6b/P6c；只本地提交，不 push。
@@ -47,10 +49,10 @@ Linux 可验证 JS、脚本与 Android；iOS/HarmonyOS 需各自工具链。最�
 
 1. 配置签名并运行全平台 CI，真机检查 APK/HAP 安装升级、iOS 重签安装。
 2. Android/iOS 全量 E2E，以及通知歌词、后台连播、插件恢复前台、长请求与 DLNA 实测。
-3. P6a 剪贴板与 P6b 通知歌词源码已补，HarmonyOS 编译/系统粘贴/媒体卡片验收仍开放；P6c 继续插件恢复前台，见 [bugs.md](bugs.md)。
+3. P6a 剪贴板、P6b 通知歌词与 P6c 插件恢复源码已补；HarmonyOS 编译/系统粘贴/媒体卡片、Apple 编译及插件长后台/断网重连验收仍开放。Lynx 插件须使用本地更新的 SDK 重新构建，SDK 尚未发布，见 [bugs.md](bugs.md)。
 4. iOS 字体大小、HLS 自签名地址等开放问题仍以 bugs 为准。
 5. Web 子路径部署未验证；插件排序需要支持 `/settings/plugin-order` 的新后端，旧后端返回 404。
-6. 桌面端和 Bundle 本地后端不在本轮范围；设备批量缓存、离线列表、Web 数据传输/快捷键及剩余原生能力按批准计划继续。
+6. 桌面端、Bundle 本地后端和视频不在本轮交付范围；设备批量缓存、离线列表、Web 数据传输/快捷键及原生补齐已完成源码批次，按批准计划保留未完成的平台验收。
 
 ### 现状核查（2026-10-07）
 
@@ -64,7 +66,7 @@ P2b 第二批已接入 iOS 验签、流式下载、磁盘状态机、根模板�
 
 P2b 第三批已接入 HarmonyOS 8 方法、不可变 rawfile 身份、公钥验签、独立系统 TLS 流式下载、根模板选择和 fatal 回调；关闭自动重定向后逐跳验证 HTTPS，支持取消、下次冷启动确认/回退及恢复内置。转译后的实际源码在 Node 真实 RSA/HTTPS/文件系统适配器下 **5 项核心回归通过**，原生结构闸门 286 项、发布工具 25 项通过；**不等于 ArkTS/HAP 编译或设备 SDK 验证**，相关环境仍缺失。三端源码接入后继续 P2c 页面，P2b 的未验收项仍保留。
 
-80% 进度处已有下一曲 Range GET 预取，不能再列为完全缺失。Web 文件桥接已存在，但 `dataTransfer` 仍显式禁用。HarmonyOS `Index.ets` 已注册视频模块并创建 XComponent，iOS 视频已使用 AVPlayerLayer 下层表面；源码存在不代表设备验收完成。
+80% 进度处已有下一曲 Range GET 预取，不能再列为完全缺失。P4 已接通 Web JSON 文件桥接，`dataTransfer` 按方法判断可用性。HarmonyOS `Index.ets` 已注册视频模块并创建 XComponent，iOS 视频已使用 AVPlayerLayer 下层表面；源码存在不代表设备验收完成。
 
 P2c 关于页入口已接入客户端通道检查、壳/bundle 版本、原生验签后下载、进度/取消、下次冷启动/恢复内置提示及 APK/IPA/HAP/Web 部署包链接。bridge 2 新增 `fetchMetadata`，独立系统 TLS，不继承业务证书跳过设置；旧八方法壳只提供发版页。Android 本地签名夹具验证实际界面下载、播放不中断、取消清理、冷启动 B/壳 A 和恢复内置；Web Worker 检查使用无凭据请求，中英最大字号及三个宽度通过。正式签名、Apple/HarmonyOS 编译及设备验收仍开放。按用户批准的计划继续 P3 缓存，不 push；细节及回归计数见 progress。
 

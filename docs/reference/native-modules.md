@@ -385,13 +385,16 @@ Web 上渲染 Lynx 插件的宿主（native 构建用真实 `<frame>` 元素，�
 
 **闸门锁住的不变量**：2 个 globalProps key + 1 个事件名 + `light`/`dark` 两个值逐字出现在两个宿主里。
 
-### 2.14 `AppLifecycle`（不是 NativeModules 模块，目前仅 Android）
+### 2.14 `AppLifecycle`（不是 NativeModules 模块，三端源码接入）
 
 - `MainActivity.onResume` 通过 `sendGlobalEvent('SongloftLifecycle.resumed', [{}])` 通知根 LynxView，事件名必须与 TS `APP_RESUMED_EVENT` 一致。
 - `PluginWebViewPage` 在后台线程的 `useEffect` 中订阅；原生 `<webview>` 通过现有 [eval](https://lynxjs.org/next/api/elements/built-in/webview.html) 在其浏览器下一帧派发 `visibilitychange`，让 MIoT 等插件恢复连接与状态。不重载页面，也不新增原生方法。
 - 卸载或更换页面 URL 时取消订阅，已排队的回调也会因订阅失效而跳过。缺少完整事件接口时降级为无操作。
-- 本批只接 Android 宿主，iOS/HarmonyOS 尚不发送该事件。Web 分支不订阅，iframe 的可见性仍由浏览器处理。
-- 闸门：`native-module-contract.test.ts` 检查 `onResume` 发出带数组载荷的同名事件；`app-lifecycle.test.ts` 检查订阅与清理；`plugin-webview-web.test.tsx` 检查原生页执行通知脚本及 Web 分支兼容。
+- P6c：iOS SceneDelegate 的 active/inactive 回调送到所属 ViewController，根 LynxView 首屏就绪前保留待发通知、离开活跃取消待发，重复 active 不重发；首屏回调弱捕获并核对当前 view，scene 断开清窗口。HarmonyOS Ability 进入前台/后台驱动 AppLifecycle，Index 的 onCreate 绑定上下文、LynxViewClient.onFirstScreen 放行通知，onDestroy/aboutToDisappear 按实例移除，旧 view 的迟到 ready/detach 不影响新 view。
+- 原生 WebView 与 Lynx frame 消费点分开：WebView 下一浏览器帧派发 visibilitychange；LynxPluginFrame 通过 `native-plugin-host.ts` 注册/注销四方法父桥、过滤 frameId、回复宿主 RPC 并推送 `SongloftPluginBridge.push` 的 `event: 'lifecycle', data: '{"state":"resumed"}'`。播放器/主题提供首帧快照和后续推送，迟到 RPC 回复与卸载回调被抑制，不重载插件。
+- 子插件 SDK 的事件订阅独立注册子 frame，并在 push listener 就绪后以已有 hostCall 通道发送 `lifecycle.ready`；父桥合并准备前的最新快照/恢复通知，就绪后提供初始恢复通知，此后恢复前台继续推送。旧插件要用更新的 `@songloft/lynx-plugin-sdk` 重新构建才能获得 ready 逻辑；源码在 `plugins/toolchain` 独立仓库，未发布 npm 包，不改变必需热更新能力清单。
+- Web iframe 继续浏览器可见性；嵌套 Lynx frame 由主线程 `lynx-frame-host.js` 在 document 从 hidden 回 visible、保活插件重新进入时推送同义 lifecycle 事件，只送当前活跃且 ready 的子 frame。隐藏的保活子 frame 不收到恢复通知，切页保持已有 worker/state，不 detach。
+- 闸门覆盖三端生命周期注册、四方法父桥、实际 HOS 控制器适配器、订阅/清理、WebView 执行脚本、native frame 消费点和 Web 保活恢复。SDK 另有独立事件/RPC 注册回归。iOS/HarmonyOS 编译与真实前后台、MIoT 断网重连/快照仍开放，不以源码/夹具替代设备验证。依据：[Apple scene lifecycle](https://developer.apple.com/documentation/uikit/uiscenedelegate)、[OpenHarmony UIAbility](https://github.com/openharmony/interface_sdk-js/blob/OpenHarmony-5.0.0-Release/api/%40ohos.app.ability.UIAbility.d.ts)、[Lynx 4.0.1 ViewClient](https://github.com/lynx-family/lynx/blob/4.0.1/platform/harmony/lynx_harmony/src/main/ets/tasm/LynxViewClient.ets)。
 
 ---
 

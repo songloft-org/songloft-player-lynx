@@ -54,6 +54,44 @@ test('Android onResume emits the lifecycle event consumed by plugin WebViews', (
   expect(onResume).toMatch(/lynxView\?\.sendGlobalEvent\(EVENT_APP_RESUMED, params\)/)
 })
 
+test('iOS scene activity reaches the current root after first-screen readiness and disconnect releases its window', () => {
+  const scene = read('ios/SongloftLynx/SceneDelegate.swift')
+  expect(scene).toMatch(/func sceneDidBecomeActive\(_ scene: UIScene\)\s*\{[\s\S]*?setSceneActive\(true\)/)
+  expect(scene).toMatch(/func sceneWillResignActive\(_ scene: UIScene\)\s*\{[\s\S]*?setSceneActive\(false\)/)
+  expect(scene).toMatch(/func sceneDidDisconnect\(_ scene: UIScene\)\s*\{[\s\S]*?window = nil/)
+  const controller = read('ios/SongloftLynx/ViewController.swift')
+  expect(controller).toContain('guard sceneActive != active else { return }')
+  expect(controller).toContain('guard sceneActive, lifecycleReady, resumePending, let lynxView else { return }')
+  expect(controller).toContain('updateLifecycle.onFirstScreen = { [weak self] view in')
+  expect(controller).toContain('self.lynxView === view')
+  expect(controller).toContain('lynxView.sendGlobalEvent("' + APP_RESUMED_EVENT + '", withParams: [["state": "resumed"]])')
+})
+
+test('HarmonyOS ability and current root attach/readiness/disposal are wired to the tested lifecycle controller', () => {
+  const ability = read('harmony/entry/src/main/ets/entryability/EntryAbility.ets')
+  expect(ability).toMatch(/onForeground\(\): void \{ AppLifecycle\.enterForeground\(\) \}/)
+  expect(ability).toMatch(/onBackground\(\): void \{ AppLifecycle\.enterBackground\(\) \}/)
+  expect(ability).toMatch(/onDestroy\(\): void \{\s*AppLifecycle\.reset\(\)/)
+  const index = read('harmony/entry/src/main/ets/pages/Index.ets')
+  expect(index).toContain('new SongloftUpdateLifecycle(this.context), this.lifecycleClient')
+  expect(index).toMatch(/onCreate: \(context: LynxContext\) => \{\s*this\.lifecycleClient\.attach\(context\)/)
+  expect(index).toMatch(/aboutToDisappear\(\): void \{\s*this\.lifecycleClient\.detach\(\)/)
+  const lifecycle = read('harmony/entry/src/main/ets/modules/system/AppLifecycle.ets')
+  expect(lifecycle).toContain("context.sendGlobalEvent('" + APP_RESUMED_EVENT + "', [payload])")
+  expect(lifecycle).toMatch(/public onFirstScreen\(\): void \{\s*if \(this\.context\) AppLifecycle\.markReady\(this\.context\)/)
+  expect(lifecycle).toContain('public onDestroy(): void { this.detach() }')
+})
+
+describe('native plugin parent methods are exposed on all three hosts', () => {
+  const methods = interfaceMethods(read('src/native/native-plugin-host.ts'), 'PluginBridgeNativeModule')
+  test('the parent interface is parsed', () => expect(methods).toEqual(['registerHost', 'unregisterHost', 'hostReply', 'pushToChild']))
+  test.each(methods)('%s', method => {
+    expectLynxMethod(read('android/app/src/main/java/org/songloft/lynx/plugin/SongloftPluginBridgeModule.kt'), method)
+    expectSwiftMethod(read('ios/SongloftLynx/SongloftPluginBridgeModule.swift'), method)
+    expectArkTsMethod(read('harmony/entry/src/main/ets/modules/plugin/SongloftPluginBridgeModule.ets'), method)
+  })
+})
+
 const ANDROID_AUDIO = 'android/app/src/main/java/org/songloft/lynx/audio'
 const ANDROID_STORAGE = 'android/app/src/main/java/org/songloft/lynx/storage'
 const ANDROID_SYSTEM = 'android/app/src/main/java/org/songloft/lynx/system'

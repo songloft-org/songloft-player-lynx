@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from '@lynx-js/react'
+import { useEffect, useMemo, useRef, useState } from '@lynx-js/react'
 
 import { appConfig } from '../../../core/config/app-config.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
+import { subscribeAppResumed } from '../../../native/app-lifecycle.js'
+import { connectNativePluginHost, type NativePluginHost } from '../../../native/native-plugin-host.js'
 import { getAppTheme, resolveTheme, subscribeAppTheme } from '../../../shared/theme/theme-model.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import {
@@ -59,26 +61,43 @@ interface Props {
  * explicit module configuration from the main thread).
  */
 export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
-  const frameId = useRef(`frame-${entryPath}-${Date.now()}`).current
+  const frameId = useMemo(() => `frame-${entryPath}-${Date.now()}`, [entryPath])
   const bundleUrl = buildLynxBundleUrl(entryPath)
   const [theme, setTheme] = useState(() => resolveTheme(getAppTheme()))
   const [accessToken, setAccessToken] = useState('')
   const isWeb = isWebPlatform()
+  const nativeHost = useRef<NativePluginHost | null>(null)
 
   // Load access token for Lynx bundle plugins (they don't get it via URL query params)
   useEffect(() => {
+    let active = true
     void (async () => {
       try {
         const storage = getSongloftStorage()
         const token = (await storage.secure.get('access_token')) ?? ''
         console.error('[LynxPluginFrame] Loaded token, length=' + (token ? token.length : 0))
-        setAccessToken(token)
+        if (active) setAccessToken(token)
       } catch (e) {
         console.error('[LynxPluginFrame] Failed to load token: ' + e)
-        setAccessToken('')
+        if (active) setAccessToken('')
       }
     })()
+    return () => { active = false }
   }, [])
+
+  useEffect(() => {
+    if (isWeb) return
+    const host = connectNativePluginHost(frameId, request => handlePluginHostCall(request, hostContext))
+    nativeHost.current = host
+    host.push('playerState', JSON.stringify(playerStateToJson()))
+    host.push('theme', JSON.stringify({ theme: resolveTheme(getAppTheme()) }))
+    const unsubscribe = subscribeAppResumed(() => host.push('lifecycle', JSON.stringify({ state: 'resumed' })))
+    return () => {
+      unsubscribe()
+      host.dispose()
+      if (nativeHost.current === host) nativeHost.current = null
+    }
+  }, [frameId, isWeb])
 
   /*
    * `playerState` rides along with the initial props on purpose.
@@ -89,12 +108,9 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
    * guaranteed: the host sets it before `url` (so the first render sees it) and
    * merges a fresh snapshot on every `open`, which is what a re-entry is.
    *
-   * This replaces a `loaded` gate that never opened on Web: it was set from the
-   * native `<frame>`'s `bindload`, and the Web branch renders a placeholder
-   * `<view>` with no such event — so the player-state subscription was never
-   * installed there at all. When the native push path gets wired, it should use
-   * the same shape (snapshot in props, deltas over the bridge) rather than
-   * reviving the gate.
+   * Web renders a placeholder without a native bindload event. Native pushes
+   * wait for the SDK's lifecycle.ready call after its listener is installed;
+   * snapshots travel in props and the latest queued values flush on readiness.
    */
   const globalProps = {
     frameId,
@@ -107,22 +123,32 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
 
   // Web path: manage the nested <lynx-view> via the frame host module
   useEffect(() => {
+    if (!isWeb) return
     const mod = getLynxFrameModule()
     if (!mod.available) return
 
     mod.open(bundleUrl, '#plugin-lynx-frame', JSON.stringify(globalProps), entryPath)
+    let active = true
 
     // Handle host calls from the child frame
     setLynxFrameBridgeHandlers({
       onMessage: (payload: LynxFrameHostCallPayload) => {
-        const req = { ns: payload.ns, method: payload.method, params: JSON.parse(payload.params || '{}') }
-        void handlePluginHostCall(req, hostContext).then((result) => {
-          mod.hostReply(payload.callId, JSON.stringify(result))
-        })
+        if (!active || payload.frameId !== frameId) return
+        try {
+          const req = { ns: payload.ns, method: payload.method, params: JSON.parse(payload.params || '{}') }
+          void handlePluginHostCall(req, hostContext).then((result) => {
+            if (active) mod.hostReply(payload.callId, JSON.stringify(result))
+          }).catch(() => {
+            if (active) mod.hostReply(payload.callId, JSON.stringify({ ok: false, error: 'host_call_failed' }))
+          })
+        } catch {
+          mod.hostReply(payload.callId, JSON.stringify({ ok: false, error: 'invalid_params' }))
+        }
       },
     })
 
     return () => {
+      active = false
       setLynxFrameBridgeHandlers(null)
       /*
        * `hide`, not `close`. Detaching the child <lynx-view> on every tab switch
@@ -143,6 +169,8 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
       if (isWeb) {
         const mod = getLynxFrameModule()
         if (mod.available) mod.updateGlobalProps(JSON.stringify({ theme: newTheme }))
+      } else {
+        nativeHost.current?.push('theme', JSON.stringify({ theme: newTheme }))
       }
     })
     return unsub
@@ -151,7 +179,6 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
   // Push player state changes to the child (the initial snapshot travels in
   // globalProps — see above).
   useEffect(() => {
-    if (!isWeb) return
     return usePlayerStore.subscribe((state, prev) => {
       const sig = `${state.currentIndex}|${state.isPlaying}|${state.currentSong?.id}|${state.playMode}|${state.playlist.length}`
       const prevSig = `${prev.currentIndex}|${prev.isPlaying}|${prev.currentSong?.id}|${prev.playMode}|${prev.playlist.length}`
@@ -160,9 +187,7 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
       if (isWeb) {
         const mod = getLynxFrameModule()
         if (mod.available) mod.sendEvent('SongloftPluginBridge.push', JSON.stringify({ event: 'playerState', data: stateJson }))
-      }
-      // Native path: NativeModules.SongloftPluginBridge.pushToChild(frameId, 'playerState', stateJson)
-      // Will be wired in Phase 5 when the TS NativeModule facade is complete
+      } else nativeHost.current?.push('playerState', stateJson)
     })
   }, [frameId, isWeb])
 

@@ -55,6 +55,7 @@ Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoP
 |---|---|---|---|---|
 | 后台播放 | ✅ 前台服务 + `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | ✅ `UIBackgroundModes: audio` + `.playback` 会话 | ✅ 后台长时任务（`BackgroundTaskManager`） | ⚠️ 由浏览器标签页策略决定，应用无法保证 |
 | 锁屏 / 通知栏元数据 | ✅ media3 `MediaSession` | ✅ `MPNowPlayingInfoCenter` | ✅ AVSession | ⚠️ `navigator.mediaSession`，依浏览器支持与安全上下文 |
+| 插件恢复前台通知 | ✅ 既有 onResume，设备验收开放 | ⚠️ scene/首屏门控源码已接，待编译/设备 | ⚠️ ability/首屏门控源码已接，待编译/设备 | iframe 走浏览器可见性；嵌套 Lynx frame 推送 lifecycle |
 | 10 段 EQ | ⚠️ `audiofx.Equalizer`，**部分设备不支持**（静默降级） | ✅ `MTAudioProcessingTap` + `NBandEQ`，固定 10 段 | ⛔ DSP 未实现，UI/facade 禁用 | ✅ `BiquadFilterNode` 链（lowshelf + 8 peaking + highshelf） |
 | HLS | ✅ ExoPlayer 原生 | ✅ AVPlayer 原生 | ✅ AVPlayer 原生 | ✅ hls.js（Safari 回落原生 HLS） |
 | 不安全 TLS（自签名） | ✅ 重建 OkHttpClient 即时生效 | ✅ `invalidateAndCancel()` 重建 session + `InsecureMediaLoader` | ✅ 销毁旧 http 实例重建 | ⛔ **no-op**，证书信任归浏览器 |

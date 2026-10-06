@@ -30,6 +30,11 @@ const h = vi.hoisted(() => ({
   hide: vi.fn(),
   close: vi.fn(),
   available: true,
+  isWeb: true,
+  nativePush: vi.fn(),
+  nativeDispose: vi.fn(),
+  nativeConnect: vi.fn(),
+  resumeSubs: new Set<() => void>(),
   handlerCalls: [] as unknown[],
   themeSubs: [] as Array<() => void>,
   playerState: {
@@ -46,7 +51,20 @@ const h = vi.hoisted(() => ({
 }))
 
 vi.mock('../../../native/web-platform.js', () => ({
-  isWebPlatform: () => true,
+  isWebPlatform: () => h.isWeb,
+}))
+
+vi.mock('../../../native/native-plugin-host.js', () => ({
+  connectNativePluginHost: (frameId: string, dispatch: unknown) => {
+    h.nativeConnect(frameId, dispatch)
+    return { push: h.nativePush, dispose: h.nativeDispose }
+  },
+}))
+vi.mock('../../../native/app-lifecycle.js', () => ({
+  subscribeAppResumed: (fn: () => void) => {
+    h.resumeSubs.add(fn)
+    return () => { h.resumeSubs.delete(fn) }
+  },
 }))
 
 vi.mock('../../../native/web-lynx-frame.js', () => ({
@@ -89,12 +107,15 @@ vi.mock('../api/index.js', () => ({
 const { LynxPluginFrame } = await import('../widgets/LynxPluginFrame.js')
 
 beforeEach(() => {
+  h.isWeb = true
+  h.resumeSubs.clear()
   h.available = true
   h.handlerCalls = []
   h.themeSubs = []
   h.playerSubs = []
 })
 afterEach(() => {
+  vi.unstubAllGlobals()
   vi.clearAllMocks()
   h.handlerCalls = []
   h.playerSubs = []
@@ -190,4 +211,50 @@ test('an unavailable module is a no-op rather than a crash', async () => {
   h.available = false
   await renderFrame()
   expect(h.open).not.toHaveBeenCalled()
+})
+
+function nativeFrameLeaf() {
+  // This renderer omits the native frame constructor. Supply only the element
+  // leaf; the component's subscription/cleanup effects still run unchanged.
+  vi.stubGlobal('__CreateFrame', (id: number) => {
+    const create = (globalThis as unknown as { __CreateElement: (tag: string, id: number) => unknown }).__CreateElement
+    return create('frame', id)
+  })
+}
+
+test('a native frame consumes foreground events once, supplies snapshots and unregisters on unmount', async () => {
+  nativeFrameLeaf()
+  h.isWeb = false
+  const result = await renderFrame()
+  expect(h.open).not.toHaveBeenCalled()
+  expect(h.nativeConnect).toHaveBeenCalledOnce()
+  expect(h.nativeConnect.mock.calls[0]![0]).toMatch(/^frame-alpha-/)
+  expect(h.nativePush.mock.calls.map(c => c[0])).toEqual(['playerState', 'theme'])
+  expect(h.resumeSubs.size).toBe(1)
+  act(() => h.resumeSubs.forEach(fn => fn()))
+  expect(h.nativePush).toHaveBeenLastCalledWith('lifecycle', '{"state":"resumed"}')
+  result.unmount()
+  expect(h.resumeSubs.size).toBe(0)
+  expect(h.nativeDispose).toHaveBeenCalledOnce()
+  const count = h.nativePush.mock.calls.length
+  act(() => h.resumeSubs.forEach(fn => fn()))
+  expect(h.nativePush).toHaveBeenCalledTimes(count)
+})
+
+test('reusing the native page for another plugin replaces the scoped bridge and resume subscription', async () => {
+  nativeFrameLeaf()
+  h.isWeb = false
+  const result = await renderFrame()
+  const first = h.nativeConnect.mock.calls[0]![0]
+  await act(async () => {
+    result.rerender(<LynxPluginFrame entryPath='beta' isTabEntry={true} />)
+    await Promise.resolve()
+  })
+  expect(h.nativeConnect).toHaveBeenCalledTimes(2)
+  expect(h.nativeConnect.mock.calls[1]![0]).toMatch(/^frame-beta-/)
+  expect(h.nativeConnect.mock.calls[1]![0]).not.toBe(first)
+  expect(h.nativeDispose).toHaveBeenCalledOnce()
+  expect(h.resumeSubs.size).toBe(1)
+  result.unmount()
+  expect(h.resumeSubs.size).toBe(0)
 })

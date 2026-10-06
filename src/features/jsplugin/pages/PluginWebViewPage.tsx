@@ -138,7 +138,8 @@ export function PluginWebViewPage() {
   // uses as the user-visible label everywhere else (grid, manager, tab config).
   // Falls back to `entryPath` so the title never flashes empty while the list loads.
   const { data: pluginList } = usePluginsQuery()
-  const title = pluginList?.plugins.find((p) => p.entryPath === entryPath)?.displayName || entryPath
+  const plugin = pluginList?.plugins.find((p) => p.entryPath === entryPath)
+  const title = plugin?.displayName || entryPath
 
   const [src, setSrc] = useState('')
   /** The plain (non-embed) URL for "open in browser" — pushed pages only. */
@@ -148,19 +149,19 @@ export function PluginWebViewPage() {
   const webviewRef = useRef<NodesRef>(null)
 
   useEffect(() => {
-    if (!src || isWebPlatform()) return
+    if (!src || isWebPlatform() || plugin?.renderEngine === 'lynx') return
     return subscribeAppResumed(() => {
       'background only'
       // Run in the hosted browser after its drawing resumes. MIoT uses this
       // notification to replace a silent, stale status connection (#493).
-      webviewRef.current?.invoke({
+      try { webviewRef.current?.invoke({
         method: 'eval',
         params: {
           func: "requestAnimationFrame(function(){document.dispatchEvent(new Event('visibilitychange'))})",
         },
-      }).exec()
+      }).exec() } catch { /* The platform view may already be tearing down. */ }
     })
-  }, [src])
+  }, [src, plugin?.renderEngine])
 
   /*
    * Internal-history tracking for the plugin page.
@@ -436,7 +437,6 @@ export function PluginWebViewPage() {
    * .lynx.bundle and renders via <frame> (native) or nested <lynx-view> (Web).
    * Both platforms use the same component since <frame> maps to <lynx-view> on Web.
    */
-  const plugin = pluginList?.plugins.find((p) => p.entryPath === entryPath)
   if (plugin?.renderEngine === 'lynx') {
     return (
       <view className='plugin-webview'>

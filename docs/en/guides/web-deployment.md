@@ -87,6 +87,8 @@ SongloftStorage is intentionally not registered. Worker idb-storage already pers
 
 Native hosts use webview; Web uses an iframe **inside lynxView.shadowRoot**. The lynx-view contain:strict creates a stacking context; body-level iframes would cover overlays. The mount point and z-index 50 are checked by contract tests.
 
+`renderEngine: "lynx"` uses a nested `<lynx-view>`. In P6c the main thread sends `lifecycle` / `{"state":"resumed"}` through `SongloftPluginBridge.push` when the browser becomes visible again or a kept-alive plugin is re-entered. Only the active, ready plugin is notified; its worker/state is preserved. Rebuild child plugins with the updated Lynx SDK: event subscriptions register the child independently and send `lifecycle.ready`, without requiring a prior RPC. SDK source is updated but has not been published to npm; older plugins without readiness do not receive this new push.
+
 ## Related
 
 - [Build and run](build-and-run.md)

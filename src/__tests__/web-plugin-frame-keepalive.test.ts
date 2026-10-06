@@ -74,6 +74,7 @@ interface Harness {
   call(moduleName: string, method: string, args?: unknown[]): unknown
   messageListeners: Array<(e: unknown) => void>
   window: Record<string, unknown>
+  visibility(state: 'visible' | 'hidden'): void
 }
 
 function makeEl(tagName: string, h: { mutations: Harness['mutations'] }): FakeEl {
@@ -147,7 +148,10 @@ function runHost(scriptName: string, placeholderId: string): Harness {
   placeholder.rect = { left: 0, top: 60, width: 1200, height: 700 }
   shadowRoot.children.push(placeholder)
 
+  const visibilityListeners: Array<() => void> = []
   const document = {
+    visibilityState: 'visible',
+    addEventListener: (name: string, fn: () => void) => { if (name === 'visibilitychange') visibilityListeners.push(fn) },
     getElementById: (id: string) => (id === 'app' ? lynxView : null),
     createElement: (tag: string) => { createdTags.push(tag); return makeEl(tag, holder) },
     body: makeEl('body', holder),
@@ -176,6 +180,7 @@ function runHost(scriptName: string, placeholderId: string): Harness {
     events,
     messageListeners,
     window,
+    visibility(state) { document.visibilityState = state; visibilityListeners.forEach(fn => fn()) },
     call: (moduleName, method, args = []) =>
       lynxView.onNativeModulesCall!(method, args, moduleName),
   }
@@ -466,5 +471,44 @@ describe('lynx-frame-host.js keeps nested <lynx-view> children alive', () => {
     h.call('SongloftLynxFrame', 'hostReply', ['cid', '{"ok":true}'])
     expect(seenA).toEqual([])
     expect(seenB).toEqual(['SongloftPluginBridge.push', 'SongloftPluginBridge.hostReply'])
+  })
+
+  test('ready, foreground and re-entry resume only the active child without reloading it', async () => {
+    await open(BUNDLE_A, 'alpha')
+    const a = lynxChildren(h)[0]!, seenA: unknown[] = []
+    a.sendGlobalEvent = (name, args) => seenA.push([name, args])
+    const ready = (child: FakeEl) => child.onNativeModulesCall!('hostCall', ['fid', 'lifecycle-ready', 'lifecycle', 'ready', '{}'], 'SongloftPluginBridge')
+    ready(a); ready(a)
+    expect(seenA).toEqual([['SongloftPluginBridge.push', [{ event: 'lifecycle', data: '{"state":"resumed"}' }]]])
+    h.visibility('hidden'); h.visibility('visible'); h.visibility('visible')
+    expect(seenA).toHaveLength(2)
+    await open(BUNDLE_B, 'beta')
+    const b = lynxChildren(h)[1]!, seenB: unknown[] = []
+    b.sendGlobalEvent = (name, args) => seenB.push([name, args])
+    ready(b); h.visibility('hidden'); h.visibility('visible')
+    expect(seenA).toHaveLength(2); expect(seenB).toHaveLength(2)
+    await open(BUNDLE_A, 'alpha')
+    expect(lynxChildren(h)[0]).toBe(a); expect(seenA).toHaveLength(3)
+    h.call('SongloftLynxFrame', 'hide', ['alpha'])
+    h.visibility('hidden'); h.visibility('visible'); expect(seenA).toHaveLength(3)
+    expect(h.events.filter(e => e.name === 'SongloftLynxFrame.message')).toHaveLength(0)
+    expect(detachCount(h)).toBe(0)
+  })
+
+  test('readiness while hidden survives re-entry; a released worker cannot mark the replacement ready', async () => {
+    await open(BUNDLE_A, 'alpha')
+    const old = lynxChildren(h)[0]!, seen: unknown[] = []
+    old.sendGlobalEvent = (name, args) => seen.push([name, args])
+    const ready = (child: FakeEl) => child.onNativeModulesCall!('hostCall', ['fid', 'lifecycle-ready', 'lifecycle', 'ready', '{}'], 'SongloftPluginBridge')
+    h.call('SongloftLynxFrame', 'hide', ['alpha']); ready(old)
+    expect(seen).toHaveLength(0)
+    await open(BUNDLE_A, 'alpha'); expect(seen).toHaveLength(1)
+    h.call('SongloftLynxFrame', 'close', ['alpha'])
+    await open(BUNDLE_A, 'alpha')
+    const replacement = lynxChildren(h)[0]!, replacementEvents: unknown[] = []
+    replacement.sendGlobalEvent = (name, args) => replacementEvents.push([name, args])
+    ready(old); h.visibility('hidden'); h.visibility('visible')
+    expect(replacementEvents).toHaveLength(0)
+    ready(replacement); expect(replacementEvents).toHaveLength(1)
   })
 })

@@ -1,6 +1,6 @@
 import { readLynxGlobal } from './native-modules.js'
 
-/** Android MainActivity.onResume pushes this event into the root LynxView. */
+/** Native hosts push this event into the root LynxView after foreground/readiness. */
 export const APP_RESUMED_EVENT = 'SongloftLifecycle.resumed'
 
 /** Subscribe from a background effect; other hosts may never emit this event. */

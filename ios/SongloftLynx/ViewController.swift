@@ -40,6 +40,13 @@ import UIKit
  * [pushAppearance]).
  */
 private final class UpdateLifecycleClient: NSObject, LynxViewLifecycle {
+  var onFirstScreen: ((LynxView) -> Void)?
+
+  @objc(lynxViewDidFirstScreen:)
+  func lynxViewDidFirstScreen(_ view: LynxView) {
+    onFirstScreen?(view)
+  }
+
   @objc(lynxView:didRecieveError:)
   func lynxView(_ view: LynxView, didRecieveError error: NSError) {
     guard (error as? LynxError)?.isFatal == true else { return }
@@ -65,6 +72,9 @@ class ViewController: UIViewController {
   /// Insets last pushed to the page; used to skip no-op updates (see [pushSafeArea]).
   private var pushedInsets: UIEdgeInsets?
   private var localeObserver: NSObjectProtocol?
+  private var sceneActive = false
+  private var lifecycleReady = false
+  private var resumePending = false
 
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -75,6 +85,24 @@ class ViewController: UIViewController {
     // qualifier (no flash of the wrong colour at launch).
     view.backgroundColor = .systemBackground
     observeAppearanceChanges()
+    updateLifecycle.onFirstScreen = { [weak self] view in
+      guard let self, self.lynxView === view else { return }
+      self.lifecycleReady = true
+      self.flushResume()
+    }
+  }
+
+  func setSceneActive(_ active: Bool) {
+    guard sceneActive != active else { return }
+    sceneActive = active
+    resumePending = active
+    flushResume()
+  }
+
+  private func flushResume() {
+    guard sceneActive, lifecycleReady, resumePending, let lynxView else { return }
+    resumePending = false
+    lynxView.sendGlobalEvent("SongloftLifecycle.resumed", withParams: [["state": "resumed"]])
   }
 
   deinit {

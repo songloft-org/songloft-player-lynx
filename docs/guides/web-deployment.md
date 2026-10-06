@@ -89,6 +89,8 @@ Chrome 153 已实际验证播放、暂停、切歌、音量、开关持久化和
 
 原生用 `<webview>`，Web 用 iframe —— 且 **iframe 必须挂进 `lynxView.shadowRoot`**。lynx-view 带 `contain: strict`，是个 stacking context；body 级的 iframe 会盖住所有覆盖层，只能靠隐藏来对抗。z-index 固定 50，由契约闸门锁住挂载点。
 
+`renderEngine: "lynx"` 使用嵌套 `<lynx-view>`。P6c 主线程在浏览器恢复可见、保活插件重新进入时，通过 `SongloftPluginBridge.push` 推送 `lifecycle` / `{"state":"resumed"}`，只通知当前活跃且 ready 的插件，不重载其 worker/state。子插件需用更新的 Lynx SDK 重建：事件订阅自行注册子 frame，再发 `lifecycle.ready`，不依赖先调用 RPC。SDK 源码已更新但尚未发布 npm；旧插件缺 ready 时不会收到此新增推送。
+
 ## 相关
 
 - [构建与运行](./build-and-run.md) —— 全部平台的构建命令

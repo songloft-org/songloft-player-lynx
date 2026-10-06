@@ -13,6 +13,7 @@ import { SongloftNavigationModule } from '../modules/navigation/SongloftNavigati
 import { SongloftPluginBridgeModule } from '../modules/plugin/SongloftPluginBridgeModule'
 import { SongloftVideoModule, SongloftVideoState } from '../modules/video/SongloftVideoModule'
 import { SystemAppearance } from '../modules/system/SystemAppearance'
+import { AppLifecycleClient } from '../modules/system/AppLifecycle'
 import { BundleUpdateStore } from '../modules/updater/BundleUpdateStore'
 import { SongloftUpdateModule, SongloftUpdateLifecycle } from '../modules/updater/SongloftUpdateModule'
 
@@ -21,7 +22,8 @@ import { SongloftUpdateModule, SongloftUpdateLifecycle } from '../modules/update
 struct Index {
   private context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext
   private modules: Map<string, ModuleClassWrapper> = new Map()
-  private clients: LynxViewClient[] = [new SongloftUpdateLifecycle(this.context)]
+  private lifecycleClient: AppLifecycleClient = new AppLifecycleClient()
+  private clients: LynxViewClient[] = [new SongloftUpdateLifecycle(this.context), this.lifecycleClient]
   private behaviors: BehaviorRegistryMap = new Map([
     ['svg', new Behavior(UISVG, undefined)],
     ['webview', new Behavior(UIWebView, undefined)],
@@ -109,6 +111,7 @@ struct Index {
         genericResourceFetcher: this.genericResourceFetcher,
         mediaResourceFetcher: this.mediaResourceFetcher,
         onCreate: (context: LynxContext) => {
+          this.lifecycleClient.attach(context)
           SystemAppearance.attach(context, this.context)
         }
       })
@@ -117,5 +120,9 @@ struct Index {
     }
     .width('100%')
     .height('100%')
+  }
+
+  aboutToDisappear(): void {
+    this.lifecycleClient.detach()
   }
 }

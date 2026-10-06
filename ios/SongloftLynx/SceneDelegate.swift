@@ -20,4 +20,17 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     self.window = window
     window.makeKeyAndVisible()
   }
+
+  func sceneDidBecomeActive(_ scene: UIScene) {
+    (window?.rootViewController as? ViewController)?.setSceneActive(true)
+  }
+
+  func sceneWillResignActive(_ scene: UIScene) {
+    (window?.rootViewController as? ViewController)?.setSceneActive(false)
+  }
+
+  func sceneDidDisconnect(_ scene: UIScene) {
+    (window?.rootViewController as? ViewController)?.setSceneActive(false)
+    window = nil
+  }
 }
