@@ -110,6 +110,7 @@ require(metadata == null || metadata["package_version"] == packageVersion) {
 
 dependencies {
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20180813")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 

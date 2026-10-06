@@ -44,6 +44,8 @@ P1 now consumes `/songs/{id}/audio-tracks` with `{tracks: [...]}` and provides a
 
 P2a adds independent bundle/manifest signing, compatibility models, and the immutable prepare-stage shell snapshot; see [client update protocol](../reference/client-updates.md). Full JS and Node/Java protocol regressions pass. Production signing remains unconfigured. P2b/P2c will implement native loading/download/rollback and the update UI; there is still no usable in-app client updater.
 
+The first P2b batch integrates Android modules, immutable APK metadata, and the root template loader. The shared TS facade handles timeouts/cancellation, real-route startup confirmation, and render-boundary failures. All **11 Android JVM tests** pass using real TLS/files, covering cancellation, disk tampering, unconfirmed rollback, channel/newness rules, and shell replacement. Full JS **263 files / 2849 tests** and **19 publishing-tool tests** pass. iOS/HarmonyOS modules and the P2c UI remain in progress; this does not establish hot-update completion on all three platforms. See the batch's progress entry for final compilation and emulator evidence.
+
 A next-song Range GET already runs at 80% progress, so prefetch is not wholly missing. Web file bridges exist, but `dataTransfer` remains explicitly disabled. HarmonyOS `Index.ets` registers video and creates an XComponent; iOS now uses an underlay AVPlayerLayer. Existing source does not establish device acceptance.
 
 ## 5. Taking over and validating

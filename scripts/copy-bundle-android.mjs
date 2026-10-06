@@ -26,6 +26,7 @@ assertBundleFresh(SRC, 'copy-bundle-android')
 
 mkdirSync(dirname(DEST), { recursive: true })
 copyFileSync(SRC, DEST)
+copyFileSync(resolve(repoRoot, '.build/bundle-host.json'), resolve(dirname(DEST), 'native-host.json'))
 
 const { size } = statSync(DEST)
 console.log(

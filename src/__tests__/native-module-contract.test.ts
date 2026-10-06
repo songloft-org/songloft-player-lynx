@@ -194,6 +194,31 @@ function expectArkTsMethod(source: string, method: string): void {
   )
 }
 
+describe('Android updater callback/loader integration (other native hosts pending P2b)', () => {
+  const source = read('android/app/src/main/java/org/songloft/lynx/updater/SongloftUpdateModule.kt')
+  test.each(['getInfo', 'getState', 'inspectManifest', 'download', 'cancel', 'confirmStartup', 'reportStartupFailure', 'restoreBuiltin'])('%s is exposed by Lynx', method => {
+    expectLynxMethod(source, method)
+  })
+  test('download progress reaches the shared task-scoped subscriber', () => {
+    expect(source).toContain('sendGlobalEvent("SongloftUpdate.progress", params)')
+    expect(read('src/core/updater/native-updater.ts')).toContain("emitter.addListener('SongloftUpdate.progress', handler)")
+  })
+  test('only the app root template uses the update loader', () => {
+    const provider = read('android/app/src/main/java/org/songloft/lynx/DemoTemplateProvider.kt')
+    expect(provider).toMatch(/if \(uri == "main\.lynx\.bundle"\)[\s\S]*update\?\.beginLaunch\(\)/)
+    expect(read('android/app/src/main/java/org/songloft/lynx/updater/BundleUpdates.kt')).toContain('app.assets.open("native-host.json")')
+  })
+  test('startup confirmation mounts after the splash and inside the render error boundary', () => {
+    const router = read('src/router.tsx')
+    const start = router.indexOf('export function RootRouteView()')
+    const body = router.slice(start, router.indexOf('const rootRoute', start))
+    expect(body).toMatch(/<RouteErrorBoundary>\s*<Outlet \/>\s*<UpdateStartup \/>\s*<\/RouteErrorBoundary>/)
+    expect(body.indexOf('<UpdateStartup />')).toBeGreaterThan(body.indexOf('<SplashScreen />'))
+    const boundary = router.slice(router.indexOf('componentDidCatch'), router.indexOf('\n  render()'))
+    expect(boundary).toContain('reportUpdateStartupFailure()')
+  })
+})
+
 describe('audio global-event names reach both hosts verbatim', () => {
   const names = [...Object.values(NATIVE_EVENT)]
 
@@ -1489,6 +1514,8 @@ describe('every native module is registered in the host bootstrap', () => {
     { name: 'SongloftVideo', android: 'SongloftVideoModule', ios: 'SongloftVideoModule', harmony: 'SongloftVideoModule' },
     { name: 'SongloftNavigation', android: 'SongloftNavigationModule', ios: null, harmony: 'SongloftNavigationModule' },
     { name: 'SongloftSongCache', android: 'SongloftSongCacheModule', ios: 'SongloftSongCacheModule', harmony: 'SongloftSongCacheModule' },
+    // P2b Android batch; iOS/Harmony registrations are added with their implementations.
+    { name: 'SongloftUpdate', android: 'SongloftUpdateModule', ios: null, harmony: null },
     { name: 'SongloftPluginBridge', android: 'SongloftPluginBridgeModule', ios: 'SongloftPluginBridgeModule', harmony: 'SongloftPluginBridgeModule' },
   ]
 

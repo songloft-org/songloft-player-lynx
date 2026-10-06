@@ -17,6 +17,8 @@ import { SongRowOverlays } from './shared/ui/SongRowOverlays.js'
 import { SplashScreen } from './shared/ui/SplashScreen.js'
 import { ToastHost } from './shared/ui/ToastHost.js'
 import { AudioTrackSheet } from './features/player/widgets/AudioTrackSheet.js'
+import { UpdateStartup } from './core/updater/UpdateStartup.js'
+import { reportUpdateStartupFailure } from './core/updater/native-updater.js'
 
 /** Catches render errors in the route tree so the whole app does not go blank. */
 class RouteErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -27,6 +29,7 @@ class RouteErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
   }
 
   componentDidCatch(error: unknown) {
+    reportUpdateStartupFailure()
     // eslint-disable-next-line no-console
     console.error('[RouteErrorBoundary]', error)
   }
@@ -101,6 +104,7 @@ export function RootRouteView() {
     <ThemeProvider>
       <RouteErrorBoundary>
         <Outlet />
+        <UpdateStartup />
       </RouteErrorBoundary>
       {/*
         Global toast renderer. Mounted here (inside ThemeProvider so CSS vars

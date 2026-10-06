@@ -15,6 +15,8 @@ import com.lynx.react.bridge.JavaOnlyMap
 import com.lynx.tasm.LynxLoadMeta
 import com.lynx.tasm.LynxView
 import com.lynx.tasm.LynxViewBuilder
+import com.lynx.tasm.LynxViewClient
+import com.lynx.tasm.LynxError
 import com.lynx.tasm.TemplateData
 import com.lynx.xelement.XElementBehaviors
 import org.songloft.lynx.lyric.OverlayPermission
@@ -22,6 +24,7 @@ import org.songloft.lynx.navigation.BackKeyState
 import org.songloft.lynx.navigation.SongloftNavigationModule
 import org.songloft.lynx.system.SystemAppearance
 import org.songloft.lynx.video.SongloftVideoModule
+import org.songloft.lynx.updater.BundleUpdates
 
 /**
  * Single full-screen host Activity. Builds one LynxView, registers the XElement
@@ -44,6 +47,13 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         requestNotificationPermissionIfNeeded()
         val view: LynxView = buildLynxView()
+        view.addLynxViewClient(object : LynxViewClient() {
+            override fun onLoadFailed(message: String?) { markStartupFailed() }
+            override fun onReceivedError(error: LynxError?) { if (error?.isFatal == true) markStartupFailed() }
+            private fun markStartupFailed() {
+                Thread { runCatching { BundleUpdates.get(applicationContext)?.failStartup() } }.start()
+            }
+        })
         lynxView = view
 
         // The fullscreen video surface lives in THIS activity, under the Lynx

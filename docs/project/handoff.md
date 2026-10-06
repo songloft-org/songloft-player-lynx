@@ -44,6 +44,8 @@ P1 已改用 `/songs/{id}/audio-tracks` 的 `{tracks: [...]}` 完整契约，播
 
 P2a 已加入独立 bundle/清单签名、兼容模型和 prepare 阶段的不可变壳快照，见 [客户端更新协议](../reference/client-updates.md)。全量 JS 与 Node/Java 协议回归通过；真实发布密钥尚未配置。原生加载器/下载/回退和更新界面继续由 P2b/P2c 实施，当前仍没有可用的客户端内更新入口。
 
+P2b 第一批已接入 Android 模块、APK 不可变信息与根模板加载器；共享 TS facade 有超时/取消、真实路由启动确认与错误边界。Android JVM 用真实 TLS/文件测试 11 项通过，包含取消、磁盘篡改、未确认回退、通道新旧和安装新壳；全量 JS **263 文件 / 2849 项通过**，Node 发布工具 **19 项通过**。iOS/HarmonyOS 模块和 P2c 界面继续实施，尚不能声称三端热更新完成；本地模拟器证据与最终编译见 progress 本批条目。
+
 80% 进度处已有下一曲 Range GET 预取，不能再列为完全缺失。Web 文件桥接已存在，但 `dataTransfer` 仍显式禁用。HarmonyOS `Index.ets` 已注册视频模块并创建 XComponent，iOS 视频已使用 AVPlayerLayer 下层表面；源码存在不代表设备验收完成。
 
 ## 5. 接手与验证

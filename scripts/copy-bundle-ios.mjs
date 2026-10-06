@@ -30,6 +30,7 @@ assertBundleFresh(SRC, 'copy-bundle-ios')
 
 mkdirSync(dirname(DEST), { recursive: true })
 copyFileSync(SRC, DEST)
+copyFileSync(resolve(repoRoot, '.build/bundle-host.json'), resolve(dirname(DEST), 'native-host.json'))
 
 const { size } = statSync(DEST)
 console.log(`[copy-bundle-ios] Copied bundle → ${DEST} (${(size / 1024).toFixed(1)} kB)`)

@@ -1,5 +1,16 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · P2b 第一批：Android 热更新加载与回退
+
+- `SongloftUpdate` 及进程级 `BundleUpdates` 接入 Android；`BundleUpdateStore` 从 APK `native-host.json` 读取不可变身份/公钥，独立系统 TLS 流式下载，验证原始清单签名、通道新旧、SDK/桥接/schema/能力、完整文件大小与 SHA-256 后才原子提交 pending。真实取消、空间检查、孤立临时目录、崩溃清理、旧候选清理和新壳安装过滤已实现；不沿用业务服务器忽略证书设置。
+- 根模板 provider 在每次冷启动重验磁盘候选，trial 先落盘再加载，保留已确认包/前一包/内置包。运行中不换根或中断播放；未确认、加载失败及崩溃在下次冷启动回退。共享 TS facade 用 Callback 包 Promise，读/下载超时分别 15/240 秒，超时取消原 task、忽略晚到结果；真实路由结束启动屏后延迟确认，渲染边界报告失败。
+- 构建器为当前 bundle 身份生成 `.build/bundle-host.json`，资源复制脚本准备 `native-host.json`；显式 release 构建拒绝与 prepare 的身份/契约不一致。iOS/HarmonyOS 仅复制脚本已准备，原生模块、资源引用与运行时继续实施，尚无 P2c 更新入口。公开契约与中英 handoff 同步，本中文计划保留全平台未验收状态。
+- 验证：类型检查、Lynx/Web 双生产产物和 `build:web` 通过；全量 Vitest **263 文件 / 2849 项通过**；Node 发布回归 **19 项通过**。Android 最终 `assembleDebug` 真编译通过，实际 APK 检查有匹配壳身份/临时公钥的资源，JS 不含测试桥标记。构建仍有既有 `touch-action` 和 SDK/JDK 警告。
+- JVM **11 项通过**，使用真实本地 HTTPS、RSA 与真实文件系统：共享 UTF-8 签名向量、坏签名、跨通道/SDK/桥接/schema/能力、默认 TLS 拒绝自签名、完整下载、真实取消及排队前取消、坏 hash、磁盘篡改/中断、未确认及第二次失败回退、新壳过滤、正式数字版本及 dev commit/时间规则。证据 `/tmp/lynx-p2b-jvm-final.log`。
+- Android API 35 / x86_64 / 16 KB 模拟器安装新 Debug 壳，使用无 JS 测试桥的生产 bundle 与临时 RSA 公钥；通过 adb 写入隔离私有目录准备已签名候选，真实根加载器验证和 JS 页面确认。**四项通过**：有效包确认、签名有效但模板损坏时原生报告失败且不确认、下一次冷启动恢复已确认包、同大小磁盘篡改后回到内置。截图与状态证据 `/tmp/lynx-p2b-device/`。页面业务数据加载错误没有触发回退。设备端下载未验证，真实下载/取消由上述 JVM TLS 测试覆盖；不混写成完整设备下载验收。临时私钥已丢弃，不是正式发布密钥。
+- Web 部署目录在 Docker Chromium 153 验证，中英、最大字号、320×568 / 375×812 / 1024×768 均正常；真实音轨请求/解码播放和暂停切轨回归通过，恢复误差小于 250 ms，无页面异常，44 px 关闭触点。证据 `/tmp/lynx-p2b-browser-{zh,en}.log` 与 `/tmp/lynx-p1-browser/` 截图。
+- 用户已授权分批本地提交，不 push。iOS/HarmonyOS 编译与设备环境仍缺失；下一批按同一协议接入两端，再继续 P2c/P3–P6。桌面、Bundle 本地模式和视频仍按约定暂缓；未发布或操作 Issue。
+
 ## 2026-10-06 · P2a 更新签名与兼容发布契约
 
 - `updates/native-contract.json` 定义协议、桥接/schema、最低壳版本、必需能力和三端准确 SDK 版本；prepare 核对 Android Gradle / iOS Podfile.lock / HarmonyOS 依赖，拒绝契约漂移。另生成 `.build/native-host.json` 的不可变壳身份/受信公钥快照；原生资源与运行时暴露在 P2b 接入，当前还不能客户端内热更新。

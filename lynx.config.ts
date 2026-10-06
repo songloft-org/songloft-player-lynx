@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import { readFileSync } from 'node:fs'
+import { writeBundleHost } from './scripts/bundle-host.mjs'
 
 import {
   createBuildMetadata,
@@ -100,6 +101,7 @@ const buildMetadata = process.env.SONGLOFT_BUILD_METADATA
     )
   : createBuildMetadata({ packageVersion })
 const testBridgeEnabled = process.env.SONGLOFT_TEST_BRIDGE === 'true'
+writeBundleHost(fileURLToPath(new URL('.', import.meta.url)), buildMetadata)
 
 /**
  * Lynx's native CSS engine supports CSS custom properties in class-based

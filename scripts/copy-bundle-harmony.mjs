@@ -31,6 +31,7 @@ if (!existsSync(destDir)) {
 }
 
 copyFileSync(src, dest)
+copyFileSync(resolve(root, '.build/bundle-host.json'), resolve(destDir, 'native-host.json'))
 copyFileSync(iconSrc, iconDest)
 console.log(
   `✅ Copied bundle to harmony/entry/src/main/resources/rawfile/main.lynx.bundle`,

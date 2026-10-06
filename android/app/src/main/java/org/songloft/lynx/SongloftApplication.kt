@@ -22,6 +22,7 @@ import org.songloft.lynx.storage.SongloftStorageModule
 import org.songloft.lynx.test.SongloftTestBridgeModule
 import org.songloft.lynx.test.TestBridgeServer
 import org.songloft.lynx.video.SongloftVideoModule
+import org.songloft.lynx.updater.SongloftUpdateModule
 
 /**
  * Application entry: initialises the Lynx runtime once, before any LynxView is created.
@@ -88,6 +89,7 @@ class SongloftApplication : Application() {
         LynxEnv.inst().registerModule("SongloftFloatingLyric", FloatingLyricModule::class.java)
         LynxEnv.inst().registerModule("SongloftVideo", SongloftVideoModule::class.java)
         LynxEnv.inst().registerModule("SongloftSongCache", SongloftSongCacheModule::class.java)
+        LynxEnv.inst().registerModule("SongloftUpdate", SongloftUpdateModule::class.java)
         LynxEnv.inst().registerModule("SongloftNavigation", SongloftNavigationModule::class.java)
         LynxEnv.inst()
             .registerModule("SongloftPluginBridge", SongloftPluginBridgeModule::class.java)
