@@ -28,7 +28,7 @@
 
 Android 路径均省略前缀 `android/app/src/main/java/org/songloft/lynx/`；iOS 路径均省略前缀 `ios/SongloftLynx/`。
 
-HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatingLyric`、`SongloftLiveActivity` 外均按同名模块注册（`SongloftWebview` / `SongloftLynxFrame` 本就只有 Web 实现）。`SongloftUpdate` 实现在 `updater/`，根模板与 fatal lifecycle 同步接入，仍待 HAP 编译及设备验证。2026-10-06 源码复核：`Index.ets` 已注册 `SongloftVideo` 并挂载 XComponent，模块绑定共享 AVPlayer；源码与结构闸门存在，但编译和设备行为仍需验证。模块注册也不能证明每个方法可用，例如 HarmonyOS 剪贴板仍是空实现、通知歌词方法仍缺失。
+HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatingLyric`、`SongloftLiveActivity` 外均按同名模块注册（`SongloftWebview` / `SongloftLynxFrame` 本就只有 Web 实现）。`SongloftUpdate` 实现在 `updater/`，根模板与 fatal lifecycle 同步接入，仍待 HAP 编译及设备验证。2026-10-06 源码复核：`Index.ets` 已注册 `SongloftVideo` 并挂载 XComponent，模块绑定共享 AVPlayer；源码与结构闸门存在，但编译和设备行为仍需验证。P6a 剪贴板已接 Pasteboard 与确认回调，设备粘贴待验；通知歌词仍需 P6b 补齐，不能以模块注册判断每个方法可用。
 
 ### 不是 NativeModules 模块
 
@@ -113,12 +113,13 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 **7 个**模块：`Songlo
 
 **闸门锁住的不变量**：5 个方法两侧齐备；`"secure"` 拼写在两个宿主里逐字一致（写错会让 token 落进非敏感区，而 `secure.get` 一直读空的那个）。
 
-### 2.3 `SongloftPlatform`（8 方法）
+### 2.3 `SongloftPlatform`（9 方法）
 
 | 方法 | Kotlin 签名 | iOS 选择器 | 形状 |
 |---|---|---|---|
 | `openURL` | `openURL(url: String)` | `openURL(_:)` | 写 |
 | `setClipboard` | `setClipboard(text: String)` | `setClipboard(_:)` | 写 |
+| `setClipboardWithResult` | `setClipboardWithResult(text: String, callback: Callback)` | `setClipboardWithResult(_:callback:)` | Callback `(error)`，仅 null 确认成功 |
 | `pickAndUploadFile` | `pickAndUploadFile(uploadUrl: String, fieldName: String, mimeType: String, callback: Callback)` | `pickAndUploadFile(_:fieldName:mimeType:callback:)` | Callback `(error, responseBody)` |
 | `setInsecureTls` | `setInsecureTls(enabled: Boolean)` | `setInsecureTls(_:)` | 写 |
 | `logWrite` | `logWrite(line: String)` | `logWrite(_:)` | 写 |
@@ -129,6 +130,8 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 **7 个**模块：`Songlo
 - **平台差异**：Web 的 worker 侧模块（`web/songloft-platform-module.js`）实现 `openURL` / `setClipboard` / `setInsecureTls`（no-op，浏览器自己管证书信任）/ `pickAndUploadFile` / `shareFile`（走浏览器下载而非分享面板）；另有 Web 专属 `pickTextFile(options, callback)`、`saveTextFile(options, callback)` 与 `cancelTextFile()`，由 `src/native/web-files.ts` Promise 化并委托主线程 `web/file-transfer-host.js`。新文本桥只负责选择/保存，不传服务器地址或 token；歌单 JSON 认证 HTTP 在 Worker 复用共享客户端。三个方法齐备才开放 Web 数据管理，未改变原生 ABI。**没有 `logWrite` / `logRead` / `shareLogArchive`**，所以 `appendClientLog()` 在 Web 返回 `false`（调用方回落到内存缓冲），日志导出也留在 JS 打包路径上。文件上限、用户激活降级和验证边界见 [Web 部署](../guides/web-deployment.md#歌单-json-导入与导出)。
 
 Web 另提供 `setPlaybackShortcuts(state)`：共享 facade 在确认 Web 与该方法存在后配置主线程监听，主线程通过 `SongloftKeyboard.action` 的 `[{action}]` 事件传回 Worker，播放器沿原有 store 执行动作。`SongloftAudio.getVolume()` 回报实际音量的 `SongloftAudio.volumeChanged` 事件。按键脚本随 Web 发布资源复制，原生 ABI 未改变；焦点/覆盖层/重复监听保护与验证边界见 [快捷键](../guides/web-deployment.md#播放键盘快捷键)。
+
+P6a 新增四端 `setClipboardWithResult`，共享 `copyToClipboard` 返回 Promise：只在成功回调后显示复制提示，拒绝/缺方法/空回调/15 秒超时均失败。旧 `setClipboard` 保留并复用同一写入路径。Android/iOS 在主线程写入后回调；HarmonyOS 使用 API 13 可用的 `pasteboard.createData` / `getSystemPasteboard().setData`，等待 Promise 成功；Web 等待 `writeText`，降级 `execCommand('copy')` 必须返回 true。临时 textarea 与焦点在 finally 清理。该方法按运行时探测兼容旧壳，不改变必需热更新能力清单；旧壳需安装同通道新包才能确认复制。HarmonyOS 系统粘贴与 Apple 编译/设备回归仍开放。SDK 依据见 [OpenHarmony 5.0 Pasteboard 声明](https://github.com/openharmony/interface_sdk-js/blob/OpenHarmony-5.0.0-Release/api/%40ohos.pasteboard.d.ts)。
 
 #### `shareLogArchive` —— 日志导出快路径
 

@@ -26,6 +26,9 @@ final class SongloftPlatformModule: NSObject, LynxModule {
       "setClipboard": NSStringFromSelector(
         #selector(SongloftPlatformModule.setClipboard(_:))
       ),
+      "setClipboardWithResult": NSStringFromSelector(
+        #selector(SongloftPlatformModule.setClipboardWithResult(_:callback:))
+      ),
       "logWrite": NSStringFromSelector(
         #selector(SongloftPlatformModule.logWrite(_:))
       ),
@@ -64,8 +67,17 @@ final class SongloftPlatformModule: NSObject, LynxModule {
 
   /// Copy `text` to the system clipboard. `UIPasteboard` is main-thread-only.
   @objc func setClipboard(_ text: String) {
+    writeClipboard(text, callback: nil)
+  }
+
+  @objc func setClipboardWithResult(_ text: String, callback: @escaping LynxCallbackBlock) {
+    writeClipboard(text, callback: callback)
+  }
+
+  private func writeClipboard(_ text: String, callback: LynxCallbackBlock?) {
     DispatchQueue.main.async {
       UIPasteboard.general.string = text
+      callback?([NSNull()] as NSArray)
     }
   }
 

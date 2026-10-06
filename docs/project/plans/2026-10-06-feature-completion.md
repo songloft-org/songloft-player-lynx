@@ -258,7 +258,7 @@
 - [ ] P3c：离线管理与播放（共享源码已接入身份证明、本地列表/搜索/空间/删除/清理及独立本地队列；277 文件 / 2989 项回归和 35 项发布工具、双产物及 Android APK 编译通过；Android 实际断网播放/控制/seek/重播/冷启动、删除/分身份清理及登出隐藏通过，中英最大字号三个宽度六组通过，见 progress；iOS/HarmonyOS 编译和设备验收仍开放）
 - [x] P4：Web 导入/导出（源码与 Chrome standalone/embedded 根路径验收完成；Firefox/Safari 待验，见 progress）
 - [x] P5：Web 快捷键（源码与 Chrome 实际播放/菜单/持久化验收完成；IME/插件夹具和其他浏览器边界见 progress）
-- [ ] P6a：HarmonyOS 剪贴板
+- [ ] P6a：HarmonyOS 剪贴板（四端确认回调与两处成功/失败反馈已接入；HarmonyOS 编译/系统粘贴验收仍开放，见 progress）
 - [ ] P6b：HarmonyOS 通知歌词
 - [ ] P6c：iOS/HarmonyOS 插件恢复前台
 

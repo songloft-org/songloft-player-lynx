@@ -3,7 +3,7 @@ import { Want, common } from '@kit.AbilityKit'
 import { systemShare } from '@kit.ShareKit'
 import { uniformTypeDescriptor } from '@kit.ArkData'
 import { util } from '@kit.ArkTS'
-import { zlib } from '@kit.BasicServicesKit'
+import { zlib, pasteboard, BusinessError } from '@kit.BasicServicesKit'
 import { http } from '@kit.NetworkKit'
 import { LynxModule, LynxContext } from '@lynx/lynx'
 import { InsecureTls } from '../../net/InsecureTls'
@@ -27,7 +27,22 @@ export class SongloftPlatformModule extends LynxModule {
     this.abilityContext.startAbility(want).catch(() => {})
   }
 
-  public setClipboard(text: string): void {}
+  public setClipboard(text: string): void {
+    this.setClipboardWithResult(text, (error: string | null): void => {})
+  }
+
+  public setClipboardWithResult(text: string, callback: (error: string | null) => void): void {
+    try {
+      const data: pasteboard.PasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text)
+      pasteboard.getSystemPasteboard().setData(data).then((): void => {
+        callback(null)
+      }, (error: BusinessError): void => {
+        callback('clipboard_failed')
+      })
+    } catch {
+      callback('clipboard_failed')
+    }
+  }
 
   public setInsecureTls(enabled: boolean): void {
     InsecureTls.setEnabled(enabled)

@@ -41,7 +41,7 @@ Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoP
 |---|---|---|---|---|---|
 | `SongloftAudio` 音频播放 | ✅ ExoPlayer | ✅ AVPlayer | ✅ AVPlayer | ✅ 主线程 `HTMLAudioElement` | Web 经 `nativeModulesMap` 复用 `NativeSongloftAudio` 路径 |
 | `SongloftStorage` 持久存储 | ⚠️ 普通 SharedPreferences，secure 仅命名空间 | ✅ Keychain | ⚠️ dataPreferences，secure 仅命名空间 | ⛔ **刻意不注册** | Web 走 worker 内的 IndexedDB，见「存储」节 |
-| `SongloftPlatform` 打开 URL / 剪贴板 | ✅ | ✅ | ⚠️ 模块存在，剪贴板仍为空实现 | ✅ | Web 侧全部转发到主线程；模块存在不保证方法行为 |
+| `SongloftPlatform` 打开 URL / 剪贴板 | ✅ | ✅ 源码，当前回调待编译/设备回归 | ⚠️ Pasteboard 源码/确认回调已接，待 SDK/设备验收 | ✅ | P6a 新调用等待 `setClipboardWithResult` 确认；旧壳与失败不显示已复制 |
 | `SongloftNavigation` 返回键拦截 | ✅ 真拦截 + 双击退出 | ⛔ **无返回键可拦** | ✅ 手势返回拦截 | ✅ 主线程 sentinel history | iOS 侧 TS facade 降级为惰性桩 |
 | `SongloftWebview` 插件页 | ⛔ 用原生 `<webview>` | ⛔ 用原生 `<webview>` | ⛔ 用原生 `<webview>` | ✅ **Web 独有**（iframe） | iframe 必须挂进 `lynxView.shadowRoot`，z-index 50 |
 | `SongloftVideo` 全屏视频 | ✅ | ✅ | ⚠️ 已注册，待编译/设备验证 | ✅ **Web 有独立表面**（主线程 `<video>`） | 同 A 表 `video`；源码存在不等于设备验收 |

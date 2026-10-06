@@ -11,6 +11,8 @@
 
 ## 待修复（开放）
 
+- [ ] Android 模拟器宿主崩溃（2026-10-07 P6a）：新 APK 编译/arm64 ABI 安装/预编译通过，但两次启动呈空白首屏，宿主 emulator 37.2.12 随后 SIGSEGV；切换 swiftshader_indirect 后还有 ColorBuffer 绑定错误。与应用进程的既有 x86_64 SVG/JIT 问题分开记录，不在无证据时归因于剪贴板改动。本批 Android 系统粘贴仍待验，日志 `/tmp/lynx-p6a-emulator*.log`，Chrome 复制/粘贴证据见 progress。
+
 - [ ] Android x86_64 / 16 KB 模拟器长批量验证（2026-10-07 新发现）：实际 APK 的 `servalsvg:0.1.1` 仅含 arm64-v8a/armeabi-v7a/x86 `.so`，没有 x86_64；自动选择 x86_64 时 SVG JNI `renderWithDiagnostics` 报 UnsatisfiedLinkError，图标为空。235 首批量任务在已完成 35 首时另有主线程 SIGSEGV，栈落在 ART JIT 的 `UIBody.rebuildViewTree`；不能仅凭同时出现就断定 SVG 缺库是该 SIGSEGV 根因。本机转用同一 APK 的 arm64 ABI（模拟器 native bridge）并预编译后复验，图标正常；两项变更没有分开做对照，因此不宣称修复 x86_64 崩溃。该环境不计作正常 x86_64 验收；继续保留设备回归和 ABI 修复问题。证据 `/tmp/lynx-p3b-device-crash.log`。
 
 - [ ] **DLNA 投屏重播旧曲、离开投屏页后主播放器控制本地音频（2026-10-05，代码与测试包已完成，待 Android 实测）** — DIDL `res` 没有 MIME 且忽略 SOAP HTTP 错误，URI 被拒后仍发 Play；投屏设备只存在页面 state，主播放器控制没有路由到远端。现补 MIME 元数据、SOAP Fault 校验、跨页面会话与串行控制，远端状态/进度轮询及队列完成路由。JS 2760 项与 Android 11 项回归（分批）、类型检查、双 bundle 和最终 APK 编译通过。ADB 无连接设备，需实测主播放器暂停/继续、上一曲/下一曲、自动连播、进度/音量与断开；iOS/HarmonyOS 同步源码，未编译验证。
@@ -57,7 +59,7 @@
 
 - [ ] **AUD-002 · HarmonyOS 缺 `updateNotificationLyric`，facade 少一处降级守卫**（P2）— Harmony `SongloftAudioModule.ets` 没有该方法，而 `src/native/native-audio.ts:251-253` 直接调用、**没有 `typeof` 守卫**（同一个类里的 `getVolume` 有守卫 ⇒ 这是漏了一处，不是统一的降级策略）。影响：Harmony 上每次歌词行变化都会产生未处理的 rejected Promise，且媒体通知歌词永不更新。修法：补 Harmony 方法，或把 facade 改成按方法降级；顺带把 Harmony 纳入方法面闸门（见 AUD-009）。**核查 2026-09-15：仍在。**
 - [ ] **AUD-003 · 全局删除歌曲失效的是一个不存在的查询键**（P2）— `src/shared/ui/SongRowOverlays.tsx:139` 失效 `['songs']`，而仓库里歌曲列表的真实 key 是 `['library','songs']` / `['playlist','songs']`，全仓没有任何 query 以裸 `['songs']` 建立 ⇒ **没有缓存被命中**。影响：后端已删歌，曲库/歌单/统计仍显示陈旧数据，直到发生无关 refetch。修法：按权威 key factory 同时失效 library / playlist / stats。**核查 2026-09-15：仍在，行号未变。**
-- [ ] **AUD-005 · HarmonyOS 剪贴板是空实现，界面却提示复制成功**（P2）— `harmony/entry/src/main/ets/modules/platform/SongloftPlatformModule.ets:30` 是 `public setClipboard(text: string): void {}`，而 TS facade 与两个 UI 调用点（`ProxySettingsPage` / `SongEditDialog`）无条件显示成功。影响：Harmony 上复制按钮对用户撒谎。修法：用 Harmony Pasteboard API 实现，并让 facade/UI 能区分不可用或失败。**核查 2026-09-15：仍在。**
+- [ ] **AUD-005 · HarmonyOS 剪贴板系统验收待完成**（P2）— P6a 已用 Pasteboard 异步写入替换空实现，四端新增 `setClipboardWithResult`；TS 与 ProxySettingsPage/SongEditDialog 只在确认成功后提示，缺方法/拒绝/空回调/超时均失败。源码适配器覆盖成功/拒绝/同步异常，Chrome 已验流程的证据见 progress；仍缺 HarmonyOS SDK/HAP 和系统输入框粘贴验收，保持开放，不将源码检查当设备通过。
 - [ ] **AUD-009 · 原生契约闸门对 HarmonyOS 仍只覆盖到「注册」**（P2，**部分修复**）— 审计时 Harmony 完全不在 interface 方法循环里；此后 platform / DLNA 等模块已纳入（`native-module-contract.test.ts` 里的 `harmony` 断言），但 **`SongloftAudio` 的通用方法循环仍只断言 Android + iOS** —— AUD-002 因此在全绿时依然存在。修法：把 Harmony 纳入每个 interface 方法表，并针对单位与空实现加窄断言。
 
 ## 手动测试发现

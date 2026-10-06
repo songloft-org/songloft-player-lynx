@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from '@lynx-js/react'
+import { useCallback, useEffect, useRef, useState } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 
 import { Input, TextArea } from '@lynx-js/lynx-ui-input'
@@ -6,6 +6,7 @@ import { Input, TextArea } from '@lynx-js/lynx-ui-input'
 import { copyToClipboard } from '../../../native/native-platform.js'
 import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { toast } from '../../../shared/ui/toast-store.js'
 import { useSaveProxySettingsMutation } from '../data/proxy-mutations.js'
 import { useProxySettingsQuery } from '../data/proxy-query.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
@@ -47,6 +48,26 @@ export function ProxySettingsPage() {
   const [draft, setDraft] = useState<ProxyDraft | null>(null)
   const [saved, setSaved] = useState(false)
   const [promptCopied, setPromptCopied] = useState(false)
+  const copying = useRef(false)
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const alive = useRef(true)
+  useEffect(() => () => { alive.current = false; clearTimeout(copyTimer.current) }, [])
+
+  const copyPrompt = async () => {
+    if (copying.current) return
+    copying.current = true
+    clearTimeout(copyTimer.current)
+    setPromptCopied(false)
+    try {
+      await copyToClipboard(AI_PROMPT)
+      if (alive.current) {
+        setPromptCopied(true)
+        copyTimer.current = setTimeout(() => setPromptCopied(false), 2000)
+      }
+    } catch {
+      if (alive.current) toast.error(t('common.copyFailed'))
+    } finally { copying.current = false }
+  }
 
   // Seed the draft once, when the settings first arrive. The `draft == null` guard
   // means a later refetch (e.g. the invalidate after save) does not clobber edits.
@@ -123,11 +144,7 @@ export function ProxySettingsPage() {
                 */}
                 <view
                   className='proxy-settings__prompt-btn'
-                  bindtap={() => {
-                    copyToClipboard(AI_PROMPT)
-                    setPromptCopied(true)
-                    setTimeout(() => setPromptCopied(false), 2000)
-                  }}
+                  bindtap={copyPrompt}
                   data-testid='github-copy-prompt'
                 >
                   <Icon name='info' size={14} color={ICON_COLORS.primary} />

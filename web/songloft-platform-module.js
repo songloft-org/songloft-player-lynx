@@ -41,7 +41,14 @@ export default function (_nativeModules, call) {
     },
 
     setClipboard(text) {
-      void call('setClipboard', [text])
+      void call('setClipboard', [text]).catch(() => {})
+    },
+
+    setClipboardWithResult(text, callback) {
+      call('setClipboardWithResult', [text]).then(
+        result => callback(result?.error === null ? null : 'clipboard_failed'),
+        () => callback('clipboard_failed'),
+      )
     },
 
     setInsecureTls(_enabled) {

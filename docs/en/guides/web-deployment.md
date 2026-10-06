@@ -47,6 +47,10 @@ Docker Chrome 153 with real Workers has verified standalone cross-origin CORS an
 
 References: [File input](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/file), [Activation and pickers](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/showPicker), [Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob), [Revoking object URLs](https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static).
 
+## Copy to clipboard
+
+Copying prompts or song paths uses `setClipboardWithResult` and announces success only after `navigator.clipboard.writeText` completes. In insecure contexts, after activation loss or on API rejection, the legacy path confirms success only when `execCommand('copy')` returns true; otherwise the UI shows failure. Temporary textareas are removed and focus is restored. Chrome pasted matching text from both real buttons and exercised failure/retry; other browsers remain open. See [Clipboard.writeText](https://developer.mozilla.org/en-US/docs/Web/API/Clipboard/writeText).
+
 ## Playback keyboard shortcuts
 
 Playback settings include a locally persisted switch, enabled by default. When the app owns interaction focus and has a playable queue, Space toggles playback, Ctrl/⌘ + ←/→ goes to the previous/next track, and Ctrl/⌘ + ↑/↓ changes volume by five percentage points within 0–100%. Actions reuse the existing player; the main thread recognizes keys and sends Worker events. It also reports actual media volume so the first adjustment does not jump to a default value.

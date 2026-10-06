@@ -452,6 +452,26 @@ describe('the read-only endpoint card', () => {
     fireEvent.tap(getAllByTestId('song-edit-copy')[0]!, {})
     expect(copyToClipboardMock).toHaveBeenCalledWith('/api/v1/songs/42/play')
   })
+
+  test('copy does not announce success before confirmation and shows failures', async () => {
+    const { toast } = await import('../../../shared/ui/toast-store.js')
+    const success = vi.spyOn(toast, 'success')
+    const failure = vi.spyOn(toast, 'error')
+    let finish!: () => void
+    copyToClipboardMock.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve }))
+    const { getAllByTestId } = await renderDialog(remoteSong)
+    fireEvent.tap(getAllByTestId('song-edit-copy')[0]!, {})
+    fireEvent.tap(getAllByTestId('song-edit-copy')[0]!, {})
+    expect(copyToClipboardMock).toHaveBeenCalledTimes(1)
+    expect(success).not.toHaveBeenCalled()
+    await act(async () => { finish(); await Promise.resolve() })
+    expect(success).toHaveBeenCalledWith('Copied')
+    copyToClipboardMock.mockRejectedValueOnce(new Error('denied'))
+    await act(async () => { fireEvent.tap(getAllByTestId('song-edit-copy')[0]!, {}); await Promise.resolve() })
+    expect(failure).toHaveBeenCalledWith(expect.stringContaining('Copy failed'))
+    expect(success).toHaveBeenCalledTimes(1)
+    success.mockRestore(); failure.mockRestore()
+  })
 })
 
 /*

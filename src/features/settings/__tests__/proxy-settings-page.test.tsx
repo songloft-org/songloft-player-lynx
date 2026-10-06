@@ -93,15 +93,35 @@ test('the prompt asks for the things that make an answer usable', () => {
   expect(AI_PROMPT).toContain('免费')
 })
 
+test('the prompt success waits for confirmation; denial keeps the copy affordance', async () => {
+  let finish!: (error: string | null) => void
+  const method = vi.fn((_text: string, callback: (error: string | null) => void) => { finish = callback })
+  vi.stubGlobal('NativeModules', { SongloftPlatform: { openURL() {}, setClipboardWithResult: method } })
+  const { toast } = await import('../../../shared/ui/toast-store.js')
+  const failure = vi.spyOn(toast, 'error')
+  try {
+    const { getByTestId } = await renderPage()
+    const button = getByTestId('github-copy-prompt')
+    fireEvent.tap(button, {}); fireEvent.tap(button, {})
+    expect(method).toHaveBeenCalledTimes(1)
+    expect(button.textContent).not.toContain('Copied')
+    await act(async () => { finish(null); await Promise.resolve() })
+    expect(button.textContent).toContain('Copied')
+    await act(async () => { fireEvent.tap(button, {}); finish('denied'); await Promise.resolve() })
+    expect(button.textContent).not.toContain('Copied')
+    expect(failure).toHaveBeenCalledWith(expect.stringContaining('Copy failed'))
+  } finally { vi.unstubAllGlobals(); failure.mockRestore() }
+})
+
 test('copyToClipboard hands the text to the platform module', async () => {
-  const setClipboard = vi.fn()
-  const mods = { SongloftPlatform: { openURL: () => {}, setClipboard } }
+  const setClipboardWithResult = vi.fn((_text: string, callback: (error: string | null) => void) => callback(null))
+  const mods = { SongloftPlatform: { openURL: () => {}, setClipboardWithResult } }
   vi.stubGlobal('NativeModules', mods)
 
   const { copyToClipboard } = await import('../../../native/native-platform.js')
-  copyToClipboard(AI_PROMPT)
+  await copyToClipboard(AI_PROMPT)
 
-  expect(setClipboard).toHaveBeenCalledWith(AI_PROMPT)
+  expect(setClipboardWithResult).toHaveBeenCalledWith(AI_PROMPT, expect.any(Function))
   vi.unstubAllGlobals()
   vi.resetModules()
 })

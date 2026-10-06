@@ -1,4 +1,4 @@
-import { useEffect, useState } from '@lynx-js/react'
+import { useEffect, useRef, useState } from '@lynx-js/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
@@ -157,6 +157,7 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
   }, [show, song])
 
   const isLocal = song?.type === 'local'
+  const copying = useRef(false)
   const isRadio = song?.type === 'radio'
   const isPluginRemote = song != null && song.type === 'remote' && !song.sourceUrl
 
@@ -180,9 +181,14 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
           data-testid='song-edit-copy'
           accessibility-element={true}
           accessibility-label={t('common.copy')}
-          bindtap={() => {
-            copyToClipboard(value)
-            toast.success(t('songEdit.copied'))
+          bindtap={async () => {
+            if (copying.current) return
+            copying.current = true
+            try {
+              await copyToClipboard(value)
+              toast.success(t('songEdit.copied'))
+            } catch { toast.error(t('common.copyFailed')) }
+            finally { copying.current = false }
           }}
         >
           <Icon name='copy' size={14} color={ICON_COLORS.contentMuted} />

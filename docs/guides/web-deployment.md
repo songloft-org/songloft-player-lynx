@@ -47,6 +47,10 @@ Web 接口请求走共享认证客户端：导入为 `/playlists/import` 的 mul
 
 参考：[文件输入](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/file)、[用户激活与选择器](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/showPicker)、[Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob)、[撤销 object URL](https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static)。
 
+## 复制到剪贴板
+
+复制提示词与歌曲路径等操作使用 `setClipboardWithResult`，等待 `navigator.clipboard.writeText` 完成才提示成功；非安全上下文/点击权限丢失或 API 拒绝时尝试旧复制接口，只有 `execCommand('copy')` 返回 true 才确认，否则显示失败。临时 textarea 和焦点会清理/恢复。Chrome 两处真实按钮复制后的粘贴一致，失败/重试也已检查；其他浏览器仍待验。见 [Clipboard.writeText](https://developer.mozilla.org/en-US/docs/Web/API/Clipboard/writeText)。
+
 ## 播放键盘快捷键
 
 播放设置提供本地保存的开关，默认开启。应用拥有交互焦点、已有可播放队列时：空格播放/暂停；Ctrl/⌘ + ←/→ 上一首/下一首；Ctrl/⌘ + ↑/↓ 调整音量，每次 5%，范围 0–100%。动作复用现有播放器，Web 主线程只识别按键并向 Worker 发事件。主线程还回报实际媒体音量，避免首次调整跳到默认值。

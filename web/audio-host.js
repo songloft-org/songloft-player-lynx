@@ -823,17 +823,32 @@
   // ── SongloftPlatform module (openURL + file picker + clipboard) ──
 
   function legacyCopy(text) {
+    var ta = null
+    var previousFocus = document.activeElement
     try {
-      var ta = document.createElement('textarea')
+      ta = document.createElement('textarea')
       ta.value = text
       ta.setAttribute('readonly', '')
       ta.style.position = 'fixed'
       ta.style.opacity = '0'
       document.body.appendChild(ta)
       ta.select()
-      document.execCommand('copy')
-      ta.remove()
-    } catch (e) { /* nothing further to try */ }
+      return document.execCommand('copy') === true
+    } catch (_) { return false }
+    finally {
+      if (ta) ta.remove()
+      if (previousFocus && previousFocus.isConnected && previousFocus.focus) previousFocus.focus()
+    }
+  }
+
+  async function writeClipboard(text) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text)
+        return { error: null }
+      }
+    } catch (_) { /* Try the legacy copy path, which must also confirm success. */ }
+    return { error: legacyCopy(text) ? null : 'clipboard_failed' }
   }
 
 
@@ -876,17 +891,8 @@
     },
 
     setClipboard: function (text) {
-      // `navigator.clipboard` needs a secure context, and this call arrives a
-      // bridge hop away from the user gesture, so the async API can be rejected
-      // for lost user activation. The textarea + execCommand path has no such
-      // requirement and is the fallback rather than the primary.
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text)['catch'](function () { legacyCopy(text) })
-          return
-        }
-      } catch (e) { /* fall through */ }
-      legacyCopy(text)
+      // Legacy bundles ignore the result; current callers await the confirming method.
+      void writeClipboard(text).catch(function () {})
     },
 
     setInsecureTls: function (_enabled) {
@@ -1076,6 +1082,9 @@
     },
     setClipboard: function (args) {
       songloftPlatform.setClipboard(args[0])
+    },
+    setClipboardWithResult: function (args) {
+      return writeClipboard(args[0])
     },
     pickAndUploadFile: function (args) {
       return new Promise(function (resolve) {

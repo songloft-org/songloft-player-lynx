@@ -60,11 +60,25 @@ class SongloftPlatformModule(context: Context) : LynxModule(context) {
      */
     @LynxMethod
     fun setClipboard(text: String) {
+        writeClipboard(text, null)
+    }
+
+    @LynxMethod
+    fun setClipboardWithResult(text: String, callback: Callback) {
+        writeClipboard(text, callback)
+    }
+
+    private fun writeClipboard(text: String, callback: Callback?) {
         mainHandler.post {
             try {
                 val manager = mContext.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                manager?.setPrimaryClip(ClipData.newPlainText("songloft", text))
-            } catch (_: Throwable) {}
+                    ?: throw IllegalStateException("clipboard_unavailable")
+                manager.setPrimaryClip(ClipData.newPlainText("songloft", text))
+            } catch (_: Throwable) {
+                callback?.invoke("clipboard_failed")
+                return@post
+            }
+            callback?.invoke(null)
         }
     }
 

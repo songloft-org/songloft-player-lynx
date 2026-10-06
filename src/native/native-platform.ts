@@ -11,6 +11,7 @@ interface SongloftPlatformNative {
   ): void
   setInsecureTls(enabled: boolean): void
   setClipboard(text: string): void
+  setClipboardWithResult(text: string, callback: (error: string | null) => void): void
   /** Append one already-formatted line to the client log file (fire-and-forget). */
   logWrite(line: string): void
   /** Read the current client log file; content is `null` when no file exists. */
@@ -97,18 +98,25 @@ export function pickAndUploadFile(uploadUrl: string, fieldName: string, mimeType
   return Promise.reject(new Error('SongloftPlatform native module not available'))
 }
 
-/**
- * Put `text` on the system clipboard.
- *
- * Lynx has no clipboard API of its own and the render realm has no
- * `navigator.clipboard`, so this goes through the platform module on all three
- * hosts. Fire-and-forget by design: every host's clipboard write is either
- * synchronous or best-effort, and there is nothing useful for a caller to do
- * about a failure — the caller shows its "copied" note either way, which is the
- * same bargain the Flutter reference makes.
- */
-export function copyToClipboard(text: string): void {
-  getModule()?.setClipboard(text)
+/** Resolve only after the host confirms writing. Old void-only shells cannot confirm success. */
+export function copyToClipboard(text: string): Promise<void> {
+  const mod = getModule()
+  if (!mod || typeof mod.setClipboardWithResult !== 'function') {
+    return Promise.reject(new Error('clipboard_unavailable'))
+  }
+  return new Promise((resolve, reject) => {
+    let settled = false
+    const finish = (error: string | null) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      if (error !== null) reject(new Error(error || 'clipboard_failed'))
+      else resolve()
+    }
+    const timer = setTimeout(() => finish('clipboard_timeout'), 15000)
+    try { mod.setClipboardWithResult(text, finish) }
+    catch { finish('clipboard_failed') }
+  })
 }
 
 /**

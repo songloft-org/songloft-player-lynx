@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · P6a：剪贴板写入确认与 HarmonyOS 源码补齐
+
+- 四端新增 `SongloftPlatform.setClipboardWithResult(text, callback)`，保留旧 void 方法并共用写入逻辑。Android/iOS 主线程写入后回调；HarmonyOS 按 OpenHarmony 5.0/API 13 官方声明使用 Pasteboard 文本数据和异步 setData，捕获同步异常/Promise 拒绝。没有申请读剪贴板权限或用读回来确认写入，避免扩大权限。
+- 共享 `copyToClipboard` 返回 Promise，仅明确 null 回调成功；缺方法的旧壳、异常/拒绝、缺失回调内容、15 秒超时均失败，迟到回调不改结果。该可降级方法不加入必需 bundle 兼容能力，现有 bridge 3 / schema 2 保持；旧壳通过同通道安装包获得确认能力。ProxySettingsPage 与 SongEditDialog 等待成功才提示，重复点击被锁定，失败可重试；代理页退出清理提示计时器。
+- Web 等待真实 writeText 完成，失败/非安全上下文回落 execCommand 但必须返回 true；同步异常/false 报失败，finally 清理 textarea 并恢复焦点，Worker RPC 无结果也不误报成功。真实 Chrome 153 两个 Worker：实际两处按钮复制、通过 Ctrl+V 粘贴核对 **409 字节中文提示词**与本地歌曲路径一致；权限/旧复制失败为宿主注入夹具，真实界面显示失败、临时输入归零，恢复后重试成功，无页面异常（`/tmp/lynx-p6a-browser-final.log`）。失败提示已目测（`/tmp/lynx-p1-browser/p6-clipboard-denied.png`）。
+- 最终 **284 文件 / 3036 项 JS 回归通过**（`/tmp/lynx-p6a-delivery-full.log`），**37 项 Node 发布/原生适配器回归通过**（`/tmp/lynx-p6a-release.log`，新增 HarmonyOS 实际模块源码 2 项成功延迟/Unicode/旧方法共用与 SDK 异常回归）。两处 UI 回归证明未回调前不显示成功，拒绝显示失败；首次文案落在错误分组被这两项拦下，已移入 common。VM 执行真实 Web 模块覆盖 writeText 和降级，源码适配器不等于 HarmonyOS 编译/设备验证。
+- `tsc -b --force`、双产物、两种 Web/三端 bundle 复制、Android `assembleDebug` 通过（`/tmp/lynx-p6a-delivery-build.log`）；新 APK 已用 arm64 native bridge 安装并预编译。Android 模拟器两次出现空白首屏，随后**宿主 emulator 进程 SIGSEGV**，第二次还记录 ColorBuffer 绑定错误；无证据将其归因为客户端修改，也不宣称本批 Android 系统粘贴通过。模拟器环境问题保留开放。HarmonyOS SDK/HAP/系统输入框粘贴、Apple 编译/设备和其他浏览器均待验。
+- 双语 Web 部署/交接、中文原生方法/平台差异/bugs/计划按当前实现更新；AUD-005 保留系统验收开放项。继续 P6b/P6c，只本地分批提交，不 push；桌面、Bundle 和视频继续暂缓，用户 `58091` 服务未停止。
+
 ## 2026-10-07 · P5：Web 播放键盘快捷键
 
 - 新增主线程 `playback-keyboard-host.js`、Web 方法/事件 facade 与 Worker 动作模型。应用拥有交互焦点且队列可播放时支持空格、Ctrl/⌘ + 方向键，复用现有播放器/DLNA 路径；播放设置显示固定映射与默认开启的本地持久化开关。旧 Web 宿主无方法时隐藏入口，移动端不注册 DOM 监听，原生 ABI 不变。
