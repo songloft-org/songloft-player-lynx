@@ -157,11 +157,16 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
         appConfig.insecureTls = insecure === 'true'
         applyInsecureTls(appConfig.insecureTls)
       }
+      try {
+        const has = await tokenStore.hasTokens()
+        useAppSessionStore.getState().setUsername(has ? await tryReadPref(storage, PREF_LAST_USERNAME) : null)
+      } catch { useAppSessionStore.getState().setUsername(null) }
     },
 
     checkAuth: async () => {
       try {
         const has = await tokenStore.hasTokens()
+        useAppSessionStore.getState().setUsername(has ? await tryReadPref(storage, PREF_LAST_USERNAME) : null)
         set({
           status: has ? 'authenticated' : 'unauthenticated',
           isLoading: false,

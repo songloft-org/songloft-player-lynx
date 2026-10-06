@@ -5,7 +5,7 @@ import { getSongloftStorage } from '../../../core/storage/index.js'
 import { getQueryClient } from '../../../lib/query/index.js'
 import { useAppSessionStore } from '../../../store/index.js'
 import { ServerProfileList, type ServerProfile } from '../../../models/server-profile.js'
-import { normalizeServerUrl, PREF_SERVER_URL } from '../../auth/store/index.js'
+import { normalizeServerUrl, PREF_SERVER_URL, PREF_LAST_USERNAME } from '../../auth/store/index.js'
 import { setCachedAccessToken } from '../../../core/network/token-cache.js'
 import { getSharedTokenStore } from '../../../core/network/api-client.js'
 import { applyInsecureTls } from '../../../native/native-platform.js'
@@ -31,7 +31,7 @@ export interface ProfileCredentials {
 export interface ServerStoreState {
   profiles: ServerProfile[]
   activeProfileId: string | null
-  hydrate: () => Promise<void>
+  hydrate: (options?: { probe?: boolean }) => Promise<void>
   addProfile: (params: {
     name: string
     url: string
@@ -114,7 +114,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
   profiles: [],
   activeProfileId: null,
 
-  async hydrate() {
+  async hydrate(options = {}) {
     const storage = getSongloftStorage()
     try {
       const [rawProfiles, activeId, legacyUrl] = await Promise.all([
@@ -130,7 +130,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
           set({ profiles, activeProfileId: activeId })
 
           // Auto-probe: if the active profile is unreachable, try others.
-          if (activeId && profiles.length > 1) {
+          if (options.probe !== false && activeId && profiles.length > 1) {
             const active = profiles.find((p) => p.id === activeId)
             if (active) {
               const reachable = await get().probeProfile(active.url)
@@ -227,6 +227,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
     void storage.secure.remove(tokenAccessKey(id)).catch(() => {})
     void storage.secure.remove(tokenRefreshKey(id)).catch(() => {})
     void storage.secure.remove(passwordKey(id)).catch(() => {})
+    void storage.prefs.remove(`server_session_username_${id}`).catch(() => {})
   },
 
   async switchTo(id) {
@@ -245,11 +246,17 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
         ])
         if (access) await storage.secure.set(tokenAccessKey(activeProfileId), access).catch(() => {})
         if (refresh) await storage.secure.set(tokenRefreshKey(activeProfileId), refresh).catch(() => {})
+        // Bind the authenticated actor to the saved token, independently of editable login-prefill fields.
+        const owner = useAppSessionStore.getState().username
+        const ownerKey = `server_session_username_${activeProfileId}`
+        if (access && owner) await storage.prefs.set(ownerKey, owner)
+        else await storage.prefs.remove(ownerKey)
       } catch { /* best-effort */ }
     }
 
     // Load tokens for the target profile
     let hasToken = false
+    let username: string | null = null
     try {
       const [access, refresh] = await Promise.all([
         storage.secure.get(tokenAccessKey(id)).catch(() => null),
@@ -259,6 +266,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
         await storage.secure.set('access_token', access)
         setCachedAccessToken(access)
         hasToken = true
+        username = await storage.prefs.get(`server_session_username_${id}`).catch(() => null)
       } else {
         await storage.secure.remove('access_token').catch(() => {})
         setCachedAccessToken(null)
@@ -286,6 +294,9 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
     // and the reverse must relax it — neither happens by writing `appConfig`.
     applyInsecureTls(target.insecureTls)
     useAppSessionStore.getState().setBaseUrl(target.url)
+    useAppSessionStore.getState().setUsername(hasToken ? username : null)
+    if (hasToken && username) void storage.prefs.set(PREF_LAST_USERNAME, username).catch(() => {})
+    else void storage.prefs.remove(PREF_LAST_USERNAME).catch(() => {})
     void storage.prefs.set(PREF_SERVER_URL, target.url).catch(() => {})
 
     // Update profile last_used + active

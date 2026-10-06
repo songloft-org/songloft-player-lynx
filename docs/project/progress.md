@@ -1,5 +1,15 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · P3a 第一批：共享缓存身份与 Android 持久索引
+
+- 新增 namespace（服务器档案、标准化地址含部署路径、用户名）及七字段变体 key（歌曲、音轨、音质、归一化、修订、实际格式），下载参数在开始前冻结。共享 Callback facade 探测完整九方法及版本 2，旧壳维持原单曲入口；iOS/HarmonyOS 新接口后续接入，当前不将它们列为 v2 已完成。
+- Android 新/旧入口共用进程级串行调度和总容量，最多 32 个运行/排队任务，任务终态保留 128 条；真实 OkHttp 取消，排队取消不建立连接，Callback 在临时文件清理和任务终态保存后返回。未知长度逐块限额/空间检查；完整媒体与白名单快照原子提交到独立 hash 目录，启动检查大小、清理暂存文件、将未结束任务标为中断。旧无身份缓存不归属、不自动删除、计入容量并支持独立清理。
+- 共享播放器和更多菜单匹配当前身份及具体变体；指定音轨依据后端抽轨/响应类型记录 MP3/M4A 等实际格式。下载 URL 仅在内存使用，索引不存 token 或临时 URL；拒绝 radio/live、HLS 清单、部分响应、HTML/JSON。恢复播放前读取身份，启动不因断网换服务器；切换服务器使用 token 绑定用户名，未证明身份的旧档案需重新登录才能使用 v2 缓存，不能用可编辑的预填用户名推测用户。
+- Android 真实文件/HTTP JVM **8 项通过**：同 id 的不同服务器/用户、音轨与实际容器、无凭据快照、新/旧总容量、真实连接和排队取消、32 项队列上限、故障重启/缺文件/临时文件、分身份和旧缓存清理、非法身份与 HLS 拒绝。证据 `/tmp/lynx-p3a-audio-final.log` 及 `SongCacheStoreTest` XML。
+- Android API 35 模拟器用实际界面缓存默认/第 1 条音轨，磁盘生成两个独立 MP3 条目，白名单快照不含 token/URL。移除仅测试后端的 adb 端口转发后冷启动，从恢复队列实际点击播放，MediaSession PLAYING、暂停实测位置约 3.15 秒并再次继续播放；恢复了端口转发。设备检验发现并修正原音频引擎将 `file://` 交给 HTTP 数据源的缺陷，改用 Media3 `DefaultDataSource` 分派。证据 `/tmp/lynx-p3a-device/`；不把恢复既有队列写成缓存列表或过期认证入口已完成，也不把 JVM 取消写成设备取消验收。
+- 最终源码全量 Vitest **269 文件 / 2930 项通过**，包括 token 用户名绑定回归；Node 发布回归 **26 项通过**，类型检查通过。统一 prepare 元数据后的 Lynx/Web 生产构建、Web 部署、Android 资源复制及 APK 编译/安装通过，实际 APK 的 bundle/壳身份与产物一致，JS 无测试桥标记，未携带临时签名公钥。最终 Web Worker 关于页/更新入口在中英、最大字号、320/375/1024 px 通过，真实窗口打开成功，无页面异常；最终 APK 后端不可达冷启动播放重跑通过。证据 `/tmp/lynx-p3a-{full-test-final,release-test-final,build-final,offline,browser-zh-final,browser-en-final}.log`。详细契约见 [设备缓存](../reference/device-cache.md)，中英 handoff/索引同步，计划仍保留 P3a 未验收状态。
+- 用户授权分批本地提交，不 push；继续 iOS/HarmonyOS v2、P3b 批量任务及 P3c 离线列表/认证边界。桌面、Bundle 本地模式和视频按约定暂缓，未发布、未操作 Issue。
+
 ## 2026-10-07 · P2c 本通道客户端检查与更新入口
 
 - 关于页分开客户端与服务器更新，分别显示运行 bundle、安装壳和不可变壳通道。dev 只查询 `releases/tags/dev`，正式版只查询 `releases/latest` 并拒绝预发布；dev 按 commit、未知 commit 按严格构建时间及 10 分钟容差比较，正式版按数字版本比较。不跨通道降级、不从历史发布猜测候选；无法比较或远端更旧时仅打开本通道发版页。

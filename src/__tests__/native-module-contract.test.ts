@@ -116,7 +116,7 @@ const hosts = {
     ios: read(`${IOS_DIR}/LiveActivityModule.swift`),
   },
   songCache: {
-    android: read(`${ANDROID_CACHE}/SongloftSongCacheModule.kt`),
+    android: read(`${ANDROID_CACHE}/SongloftSongCacheModule.kt`) + read(`${ANDROID_CACHE}/SongCacheStore.kt`),
     ios: read(`${IOS_DIR}/SongloftSongCacheModule.swift`),
     harmony: read(`${HARMONY_MODULES}/cache/SongloftSongCacheModule.ets`),
   },
@@ -1510,6 +1510,13 @@ describe('SongloftSongCache module methods exist on both hosts', () => {
 })
 
 describe('SongloftSongCache keeps its on-device invariants', () => {
+  test('Android indexed cache exposes the complete optional callback contract and task event', () => {
+    const methods = interfaceMethods(read('src/features/player/data/indexed-song-cache.ts'), 'IndexedSongCacheModule')
+    expect(methods).toHaveLength(9)
+    for (const method of methods) expectLynxMethod(hosts.songCache.android, method)
+    expect(hosts.songCache.android).toContain('sendGlobalEvent("songCacheProgress", params)')
+    expect(hosts.songCache.android).toContain('params.pushMap(event)')
+  })
   test('downloads honour the insecure-TLS switch on both hosts', () => {
     expect(hosts.songCache.android).toContain('clientFor(InsecureTls.enabled)')
     expect(hosts.songCache.ios).toContain('InsecureTls.shared.session')
@@ -1523,7 +1530,7 @@ describe('SongloftSongCache keeps its on-device invariants', () => {
   })
 
   test('callbacks hand back a playable file:// URL, never a hand-built one', () => {
-    expect(hosts.songCache.android).toContain('Uri.fromFile')
+    expect(hosts.songCache.android).toContain('java.net.URI("file", "", file.absolutePath, null).toASCIIString()')
     expect(hosts.songCache.ios).toContain('absoluteString')
     expect(hosts.songCache.android).not.toContain('"file://')
     expect(hosts.songCache.ios).not.toContain('"file://')

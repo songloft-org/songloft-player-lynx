@@ -211,6 +211,9 @@ describe('auth store', () => {
       tokenType: 'Bearer',
     })
 
+    await storage.prefs.set('last_username', 'cached-user')
+    await store.getState().hydrate()
+    expect(useAppSessionStore.getState().username).toBe('cached-user')
     await store.getState().checkAuth()
     expect(store.getState().status).toBe('authenticated')
   })
@@ -220,6 +223,10 @@ describe('auth store', () => {
     const store = createAuthStore(makeDeps(storage, transport))
 
     expect(store.getState().status).toBe('unknown')
+    useAppSessionStore.getState().setUsername('previous-user')
+    await storage.prefs.set('last_username', 'remembered-user')
+    await store.getState().hydrate()
+    expect(useAppSessionStore.getState().username).toBeNull()
     await store.getState().checkAuth()
     expect(store.getState().status).toBe('unauthenticated')
   })

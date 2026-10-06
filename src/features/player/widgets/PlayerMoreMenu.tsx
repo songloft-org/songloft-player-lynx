@@ -11,6 +11,9 @@ import { toast } from '../../../shared/ui/toast-store.js'
 import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
 import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
 import { getCacheInfo } from '../data/song-cache.js'
+import { indexedSongCacheAvailable } from '../data/indexed-song-cache.js'
+import { getIndexedCacheInfo } from '../data/cache-context.js'
+import { currentCacheVariant } from '../store/player-store.js'
 import { cacheSongToDevice, removeSongCache } from '../domain/song-cache-actions.js'
 import { useAudioTracks } from '../data/audio-tracks-query.js'
 import { usePlayerStore } from '../store/player-store.js'
@@ -59,6 +62,8 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
   const casting = useDlnaStore((s) => s.activeDevice != null)
   const selectedTrack = usePlayerStore((s) => s.audioTrack)
   const switchingTrack = usePlayerStore((s) => s.isAudioTrackSwitching)
+  const indexedCache = indexedSongCacheAvailable()
+  const cacheVariant = song ? currentCacheVariant(song) : null
   const audioTracks = useAudioTracks(casting ? null : song)
 
   // Track whether the current song is already on device so the entry reads as
@@ -69,11 +74,12 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
       return
     }
     let alive = true
-    getCacheInfo(song.id)
+    const lookup = indexedCache && cacheVariant ? getIndexedCacheInfo(song, cacheVariant) : getCacheInfo(song.id)
+    lookup
       .then((info) => { if (alive) setCached(info.cached) })
       .catch(() => { if (alive) setCached(false) })
     return () => { alive = false }
-  }, [song?.id, songCacheCapable])
+  }, [song?.id, song?.updatedAt, songCacheCapable, indexedCache, selectedTrack, cacheVariant?.quality, cacheVariant?.normalize])
 
   const cacheCurrent = async () => {
     if (!song || busy) return
@@ -125,7 +131,7 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
     ...(!casting && ((audioTracks.data?.length ?? 0) >= 2 || audioTracks.isError)
       ? [{ key: 'audioTracks', label: t(audioTracks.isError ? 'player.audioTracksRetry' : 'player.audioTracks'), icon: 'music' as const }]
       : []),
-    ...(song != null && songCacheCapable && selectedTrack == null && !switchingTrack
+    ...(song != null && songCacheCapable && (selectedTrack == null || indexedCache) && !switchingTrack
       ? [{
         key: 'cache',
         label: cached ? t('player.removeFromCache') : t('player.cacheToDevice'),

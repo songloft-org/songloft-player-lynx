@@ -53,6 +53,7 @@ Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr
 | [api-conventions.md](./reference/api-conventions.md) | API/Store 设计规范（参数风格、数值范围、命名、E2E 暴露约定） |
 | [native-modules.md](./reference/native-modules.md) | 全部原生模块的方法/事件/平台矩阵与闸门锁住的不变量 |
 | [client-updates.md](./reference/client-updates.md) | bundle 更新签名、兼容声明、资产与壳身份契约及当前交付边界 |
+| [device-cache.md](./reference/device-cache.md) | 设备缓存身份、变体索引与任务 Callback 契约及分端实施状态 |
 | [back-navigation.md](./reference/back-navigation.md) | 返回导航三层模型、`consumable` 契约、Web sentinel、新增页面/弹出层清单 |
 | [platforms.md](./reference/platforms.md) | 支持平台矩阵与最低系统版本（Android minSdk 21 / iOS 15.0 / HarmonyOS NEXT / Web 常青浏览器），含 API 分级守卫清单 |
 | [arkts/](./reference/arkts/) | HarmonyOS 宿主开发的 ArkTS 约束、编码规范和 TypeScript 迁移参考；AI 修改 `.ets` 前先读速查 |

@@ -27,8 +27,9 @@ vi.mock('../../../lib/query/index.js', () => ({
   getQueryClient: () => ({ clear: vi.fn() }),
 }))
 
+const session = vi.hoisted(() => ({ username: 'outgoing-user' as string | null, setBaseUrl: vi.fn(), setUsername: vi.fn() }))
 vi.mock('../../../store/index.js', () => ({
-  useAppSessionStore: { getState: () => ({ setBaseUrl: vi.fn() }) },
+  useAppSessionStore: { getState: () => session },
 }))
 
 vi.mock('../../../core/config/app-config.js', async () => {
@@ -50,6 +51,7 @@ vi.mock('../../auth/store/index.js', () => ({
     return trimmed
   },
   PREF_SERVER_URL: 'server_url',
+  PREF_LAST_USERNAME: 'last_username',
 }))
 
 vi.mock('../../../native/native-platform.js', () => ({
@@ -106,9 +108,20 @@ describe('removeProfile', () => {
 })
 
 describe('switchTo', () => {
+  test('cache identity follows the token owner instead of editable profile credentials', async () => {
+    const target = await useServerStore.getState().addProfile({ name: 'Target', url: 'http://target', username: 'edited-prefill' })
+    useServerStore.setState({ activeProfileId: 'outgoing' })
+    storageMock.secure.get.mockImplementation(async key => key === 'access_token' || key === `token_access_${target.id}` ? 'token' : null)
+    storageMock.prefs.get.mockImplementation(async key => key === `server_session_username_${target.id}` ? 'authenticated-user' : null)
+    await useServerStore.getState().switchTo(target.id)
+    expect(storageMock.prefs.set).toHaveBeenCalledWith('server_session_username_outgoing', 'outgoing-user')
+    expect(session.setUsername).toHaveBeenCalledWith('authenticated-user')
+    expect(storageMock.prefs.set).toHaveBeenCalledWith('last_username', 'authenticated-user')
+  })
+
   test('saves current tokens and loads target tokens', async () => {
     const p1 = await useServerStore.getState().addProfile({ name: 'S1', url: 'http://s1' })
-    const p2 = await useServerStore.getState().addProfile({ name: 'S2', url: 'http://s2' })
+    const p2 = await useServerStore.getState().addProfile({ name: 'S2', url: 'http://s2', username: 'prefill-only' })
     useServerStore.setState({ activeProfileId: p1.id })
 
     // Mock current tokens
@@ -122,6 +135,7 @@ describe('switchTo', () => {
 
     const result = await useServerStore.getState().switchTo(p2.id)
     expect(result.hasToken).toBe(true)
+    expect(session.setUsername).toHaveBeenCalledWith(null)
     expect(useServerStore.getState().activeProfileId).toBe(p2.id)
 
     // Saved outgoing tokens
@@ -171,6 +185,20 @@ describe('switchTo', () => {
     expect(await tokens.getRefreshToken()).toBe('tok_r2')
   })
 
+  test('cold cache startup hydrates profiles without probing or switching the server', async () => {
+    storageMock.prefs.get.mockImplementation(async key => key === 'server_profiles'
+      ? JSON.stringify([{ id: 'offline', name: 'Offline', url: 'http://offline', username: 'user' }, { id: 'other', name: 'Other', url: 'http://online' }])
+      : key === 'server_active_profile' ? 'offline' : null)
+    const original = useServerStore.getState().probeProfile
+    const probe = vi.fn(async () => true)
+    useServerStore.setState({ probeProfile: probe })
+    try {
+      await useServerStore.getState().hydrate({ probe: false })
+      expect(useServerStore.getState().activeProfileId).toBe('offline')
+      expect(probe).not.toHaveBeenCalled()
+    } finally { useServerStore.setState({ probeProfile: original }); storageMock.prefs.get.mockResolvedValue(null) }
+  })
+
   test('returns hasToken=false when target has no tokens', async () => {
     const p1 = await useServerStore.getState().addProfile({ name: 'S1', url: 'http://s1' })
     const p2 = await useServerStore.getState().addProfile({ name: 'S2', url: 'http://s2' })
@@ -179,6 +207,8 @@ describe('switchTo', () => {
     storageMock.secure.get.mockResolvedValue(null)
     const result = await useServerStore.getState().switchTo(p2.id)
     expect(result.hasToken).toBe(false)
+    expect(session.setUsername).toHaveBeenLastCalledWith(null)
+    expect(storageMock.prefs.remove).toHaveBeenCalledWith('last_username')
   })
 
   // Regression: the switch wrote `appConfig.insecureTls` from the target profile

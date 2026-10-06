@@ -36,7 +36,7 @@ Casting diagnostics now use the existing client log, including device details, m
 3. HarmonyOS lacks a notification-lyrics method, has placeholder clipboard behavior, and has contract-coverage gaps; see [bugs (Chinese)](../../project/bugs.md).
 4. Open iOS font-size and HLS self-signed URI issues remain in bugs.
 5. Web subpath deployment is unverified. Plugin ordering needs newer backends supporting `/settings/plugin-order`; older servers return 404.
-6. Desktop clients, bundled backends, and in-app downloads/upgrades remain future work.
+6. Desktop clients and bundled backends are excluded from this work. Device batch caching/offline lists, Web data transfer/shortcuts, and remaining native capabilities continue under the approved plan.
 
 ### Current source review (2026-10-06)
 
@@ -55,6 +55,8 @@ A next-song Range GET already runs at 80% progress, so prefetch is not wholly mi
 P2c adds the About entry: channel checks, shell/bundle identity, native-verified downloads, progress/cancel, cold-start/builtin restore guidance, and APK/IPA/HAP/Web deployment links. Bridge 2 adds independent system-TLS `fetchMetadata` without business certificate bypass; older eight-method shells retain release-page links. A local Android signed fixture verifies actual UI downloads, uninterrupted playback, cancellation cleanup, bundle B/shell A after cold start, and builtin restore. Web Worker checks omit credentials, with both languages, maximum text size, and three viewport widths verified. Production signing and Apple/HarmonyOS compilation/device acceptance remain open. Continue the approved P3 cache work without pushing; evidence/counts are in progress.
 
 ## 5. Taking over and validating
+
+The first P3a batch integrates the shared cache identity/variant model and Callback facade with Android's durable v2 index/task scheduler. Downloads freeze identity, track, quality and normalization; snapshots omit credentials, while legacy files are preserved and counted toward capacity. Cancellation terminates real connections and queued cancellation opens none. Identity loads before playback; server switches use token-bound usernames. Actual device UI caching of default/track 1 produced separate MP3 files. Cold-start playback, pause and resume passed with the backend port unavailable, after correcting the HTTP-only data source's inability to open local files. iOS/HarmonyOS v2, batch UI and the offline list remain in progress. See [device cache](../reference/device-cache.md) for the contract and progress for validation counts. Commits remain local without pushing.
 
 Read [AGENTS.en.md](../../../AGENTS.en.md) and [pitfalls (Chinese)](../../project/pitfalls.md), then follow [build](../guides/build-and-run.md) and [testing](../guides/testing.md).
 

@@ -20,6 +20,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import android.view.SurfaceView
@@ -778,6 +779,8 @@ object SongloftAudioEngine {
         val itemBuilder = MediaItem.Builder().setUri(url).setMediaId(sourceId ?: "")
         metadataByUrl[url]?.let { itemBuilder.setMediaMetadata(it) }
         val item = itemBuilder.build()
+        // Route file:// caches through FileDataSource; only remote URLs use HTTP.
+        val dataFactory = DefaultDataSource.Factory(context, httpFactory)
         val source = if (hls || url.endsWith(".m3u8")) {
             // `/video-hls/playlist.m3u8` transcodes the **whole file** before it
             // answers, so the first request can sit there for minutes on a weak
@@ -795,9 +798,9 @@ object SongloftAudioEngine {
             if (url.contains(VIDEO_HLS_PATH_MARKER)) {
                 httpFactory.setReadTimeoutMs(HLS_READ_TIMEOUT_MS)
             }
-            HlsMediaSource.Factory(httpFactory).createMediaSource(item)
+            HlsMediaSource.Factory(dataFactory).createMediaSource(item)
         } else {
-            ProgressiveMediaSource.Factory(httpFactory).createMediaSource(item)
+            ProgressiveMediaSource.Factory(dataFactory).createMediaSource(item)
         }
         try {
             if (sourceId != null) {

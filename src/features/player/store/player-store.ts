@@ -39,6 +39,9 @@ import {
   type SleepTimerStatus,
 } from '../domain/sleep-timer.js'
 import { getCachedPath } from '../data/song-cache.js'
+import { indexedSongCacheAvailable } from '../data/indexed-song-cache.js'
+import { getIndexedCachedPath } from '../data/cache-context.js'
+import type { CacheVariant } from '../domain/cache-identity.js'
 import { useLyricStore } from './lyric-store.js'
 import type { PlayerData } from './derive.js'
 import { configureDlnaPlayer, useDlnaStore } from './dlna-store.js'
@@ -249,6 +252,15 @@ export function isNormalizeEnabled(): boolean {
   return _normalize
 }
 
+export function currentCacheVariant(song: Song): CacheVariant {
+  const state = usePlayerStore.getState()
+  const track = state.currentSong?.id === song.id
+    ? state.audioTrackPending !== undefined ? state.audioTrackPending : state.audioTrack
+    : null
+  const quality = _audioQuality === '320' || _audioQuality === '192' || _audioQuality === '128' ? _audioQuality : 'original'
+  return { track: track ?? null, quality, normalize: _normalize }
+}
+
 /**
  * Playback URL for the native engine.
  *
@@ -374,10 +386,11 @@ function playbackSourceFor(song: Song): PlaybackSource {
  */
 async function resolvePlaybackSource(song: Song): Promise<PlaybackSource> {
   const state = usePlayerStore.getState()
-  if (state.currentSong?.id === song.id && (state.audioTrackPending !== undefined || state.audioTrack != null)) {
+  const indexed = indexedSongCacheAvailable()
+  if (!indexed && state.currentSong?.id === song.id && (state.audioTrackPending !== undefined || state.audioTrack != null)) {
     return playbackSourceFor(song)
   }
-  const cached = await getCachedPath(song.id).catch(() => null)
+  const cached = await (indexed ? getIndexedCachedPath(song, currentCacheVariant(song)) : getCachedPath(song.id)).catch(() => null)
   if (cached) return { url: cached, hls: false, cached: true }
   return playbackSourceFor(song)
 }
@@ -963,11 +976,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         const version = await audio.getSourceLoadVersion?.()
         if (generation !== _loadGeneration) return
         if (version !== 1) throw new Error('source_load_unsupported')
-        const source = playbackSourceFor(song)
+        const source = await resolvePlaybackSource(song)
         await syncQueueWindow(get().playlist, get().currentIndex)
         if (generation !== _loadGeneration) return
         _loadedSongId = song.id
-        _loadedSourceKind = 'stream'
+        _loadedSourceKind = source.cached ? 'cache' : 'stream'
         const restoredPositionMs = await loadAudioSource(audio, {
           url: source.url,
           load: { durationMs: durationMsOf(song), hls: source.hls,

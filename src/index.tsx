@@ -23,6 +23,8 @@ import { navigateAutoEnterLyricsIfNeeded } from './features/player/data/auto-ent
 import { syncFloatingLyricOverlay } from './features/settings/domain/floating-lyric-overlay.js'
 import { applySavedLanguage } from './i18n/index.js'
 import { applyHostDeployMode } from './core/config/app-config.js'
+import { useServerStore } from './features/settings/store/server-store.js'
+import { initializeCacheContext } from './features/player/data/cache-context.js'
 import { initSafeArea } from './native/safe-area.js'
 import { initSystemAppearance } from './native/system-appearance.js'
 import {
@@ -109,6 +111,11 @@ void (async () => {
     // expanded rail (the default), and this applies the remembered collapse
     // before auth resolves — i.e. while the splash is still up.
     await applySavedRailCollapsed()
+    const auth = useAuthStore.getState()
+    await auth.hydrate()
+    // Restore identity without switching to another reachable server while the current server is offline.
+    await useServerStore.getState().hydrate({ probe: false })
+    initializeCacheContext()
     const savedMode = await readDefaultPlayMode()
     usePlayerStore.getState().setPlayMode(savedMode)
     await restorePlaybackState()
@@ -119,8 +126,6 @@ void (async () => {
     // Off the chain (`void`) for the same reason nothing below it may wait on an
     // overlay: auth must resolve even if the host's lyric module misbehaves.
     void syncFloatingLyricOverlay().catch(() => {})
-    const auth = useAuthStore.getState()
-    await auth.hydrate()
     await auth.checkAuth()
     // Only once auth resolved: the pack lives behind the API's auth, and a
     // tokenless GET would 401 (the Flutter provider guards the same way).

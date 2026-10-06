@@ -6,7 +6,12 @@ import {
   SONG_CACHE_LIMIT_ERROR,
 } from '../data/song-cache.js'
 import { readLocalCacheMaxSize } from '../data/song-cache-prefs.js'
-import { songCacheExtOf, songUrl, usePlayerStore } from '../store/player-store.js'
+import { currentCacheVariant, songCacheExtOf, songUrl, usePlayerStore } from '../store/player-store.js'
+import { cacheIndexedSong, createCacheTaskId, indexedSongCacheAvailable } from '../data/indexed-song-cache.js'
+import { captureCacheContext, currentCacheNamespace, removeCurrentIndexedSong, trackCacheDownload } from '../data/cache-context.js'
+import { freezeCacheDownload } from './cache-identity.js'
+import { getPlatformTarget } from '../../../native/platform-target.js'
+import { getSongsApi } from '../../library/api/index.js'
 
 /**
  * The "cache this song on the device" flow, split from the UI so it is testable.
@@ -31,6 +36,7 @@ export type SongCacheOutcome = 'cached' | 'limit' | 'failed'
  * file, so both are needed.
  */
 export async function cacheSongToDevice(song: Song): Promise<SongCacheOutcome> {
+  if (indexedSongCacheAvailable()) return cacheIndexedSongToDevice(song)
   const player = usePlayerStore.getState()
   if (player.currentSong?.id === song.id && (player.audioTrack != null || player.isAudioTrackSwitching)) return 'failed'
   const url = songUrl(song)
@@ -46,10 +52,29 @@ export async function cacheSongToDevice(song: Song): Promise<SongCacheOutcome> {
   }
 }
 
+async function cacheIndexedSongToDevice(source: Song): Promise<SongCacheOutcome> {
+  try {
+    if (usePlayerStore.getState().currentSong?.id === source.id && usePlayerStore.getState().isAudioTrackSwitching) return 'failed'
+    const song = { ...source }
+    const captured = captureCacheContext()
+    const variant = currentCacheVariant(song)
+    const platform = getPlatformTarget()
+    const taskId = createCacheTaskId()
+    const maxBytes = await readLocalCacheMaxSize()
+    const tracks = variant.track !== null ? await getSongsApi().getTracks(song.id) : undefined
+    if (currentCacheNamespace() !== captured.namespace) throw new Error('cancelled')
+    const request = freezeCacheDownload({ scope: captured.scope, context: captured.context, song, variant, platform, tracks, taskId, maxBytes })
+    const detach = trackCacheDownload(taskId, captured.namespace)
+    try { await cacheIndexedSong(request) } finally { detach() }
+    return 'cached'
+  } catch (error) { return error instanceof Error && error.message === SONG_CACHE_LIMIT_ERROR ? 'limit' : 'failed' }
+}
+
 /** Remove `song` from the device cache. */
 export async function removeSongCache(song: Song): Promise<'removed' | 'failed'> {
   try {
-    await removeCachedSong(song.id)
+    if (indexedSongCacheAvailable()) await removeCurrentIndexedSong(song, currentCacheVariant(song))
+    else await removeCachedSong(song.id)
     return 'removed'
   } catch {
     return 'failed'

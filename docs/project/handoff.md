@@ -36,7 +36,7 @@ Linux 可验证 JS、脚本与 Android；iOS/HarmonyOS 需各自工具链。最�
 3. HarmonyOS 缺失通知歌词方法、剪贴板占位及契约覆盖不足，见 [bugs.md](bugs.md)。
 4. iOS 字体大小、HLS 自签名地址等开放问题仍以 bugs 为准。
 5. Web 子路径部署未验证；插件排序需要支持 `/settings/plugin-order` 的新后端，旧后端返回 404。
-6. 桌面端、Bundle 本地后端、客户端内下载升级属于后续功能。
+6. 桌面端和 Bundle 本地后端不在本轮范围；设备批量缓存、离线列表、Web 数据传输/快捷键及剩余原生能力按批准计划继续。
 
 ### 现状核查（2026-10-06）
 
@@ -55,6 +55,8 @@ P2b 第三批已接入 HarmonyOS 8 方法、不可变 rawfile 身份、公钥验
 P2c 关于页入口已接入客户端通道检查、壳/bundle 版本、原生验签后下载、进度/取消、下次冷启动/恢复内置提示及 APK/IPA/HAP/Web 部署包链接。bridge 2 新增 `fetchMetadata`，独立系统 TLS，不继承业务证书跳过设置；旧八方法壳只提供发版页。Android 本地签名夹具验证实际界面下载、播放不中断、取消清理、冷启动 B/壳 A 和恢复内置；Web Worker 检查使用无凭据请求，中英最大字号及三个宽度通过。正式签名、Apple/HarmonyOS 编译及设备验收仍开放。按用户批准的计划继续 P3 缓存，不 push；细节及回归计数见 progress。
 
 ## 5. 接手与验证
+
+P3a 第一批已接入共享缓存身份/变体模型、Callback facade 和 Android v2 持久索引/任务调度。下载冻结身份及音轨/音质/归一化，索引快照不含凭据，旧文件保留并计入容量；取消真实连接且排队取消不开连接。恢复播放前读取身份，切换服务器使用 token 绑定的用户名。设备界面缓存默认/第 1 条音轨得到两个独立 MP3 文件；后端端口不可达时冷启动播放、暂停/继续通过，并修正了 HTTP 数据源无法打开本地文件的问题。iOS/HarmonyOS v2、批量与离线列表仍继续实施；详细契约见 [设备缓存](../reference/device-cache.md)，验证计数见 progress。仅本地提交，不 push。
 
 先读 [AGENTS.md](../../AGENTS.md)、[pitfalls.md](pitfalls.md)，再按 [构建](../guides/build-and-run.md)、[测试](../guides/testing.md) 执行。
 
