@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · Android 隔离 KVM 与当前 APK 安装复测
+
+- 父仓库 `2b8f360`、客户端 `561739c` 起始干净，交付输入仍为 `e09592b`。当前无连接设备，宿主账号无 KVM 读写权限；在核对镜像来源后创建独立 Debian bookworm slim 容器，镜像摘要 `debian@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587`，仅映射 `/dev/kvm`、只读 Android SDK 和 `/tmp/lynx-p6-container/` 测试目录。KVM 检查通过，未修改宿主权限、用户组、SDK 或原 AVD 数据。新 AVD 只复制硬件配置，使用 API 35 / 16 KB x86_64 镜像与 arm64 native bridge；专用 ADB `5039`、设备 `emulator-5556`，不使用默认 ADB 或其他设备。
+- Emulator `37.2.12` 的 `-gpu software` 首次开机 50435 ms；安装前复核固定 APK 大小 `33438787` 与 SHA-256 `58b2bd501b8e053f56a3abf95a1bfe289f3e12b21cfe6efdcf0692210964e3e0`，以 arm64 ABI 安装成功，包信息为 versionCode `213487589` / dev / primaryCpuAbi=arm64-v8a。启动后的截图请求失联，容器退出码 **139**、OOMKilled=false，末尾有 ColorBuffer/纹理绑定错误，日志 `/tmp/lynx-p6-android-device/emulator-software-crash.log`。这证明安装成功，不能证明应用交互或 P6 通过。
+- 按[官方图形参数说明](https://developer.android.com/studio/run/emulator-acceleration)改为显式 SwiftShader，关闭指标采集并保留临时 AVD；先遇到崩溃遗留锁导致退出 1，确认本容器已退出后只清理该临时 AVD 的两个锁，再复测。开机 31848 ms，重新安装成功，`cmd package compile -m speed -f` 成功；系统桌面和当前 APK 启动页截图已目测（`swiftshader-launcher.png`、`swiftshader-current-apk.png`）。应用 PID 曾存在，但后续截图/ADB 超时，出现 bad color buffer handle，最终容器退出 **139**、OOMKilled=false；日志 `emulator-swiftshader-crash.log`。未进入可操作界面，没有将启动页或空错误日志当作 P6 验收。
+- 另从[官方归档](https://developer.android.com/studio/emulator_archive)下载 Emulator **35.6.11 / build 13610412**，大小 `319086252`、SHA-256 `2fe2b56fe93ce75e1d478a40162131381d911c355efeaedb54dd1e0d0897a5cf` 均与归档清单一致，ZIP 完整性/路径检查后仅解包到临时目录。容器内 KVM 检查仍通过，但用同镜像、swiftshader_indirect 启动在系统路径初始化阶段退出 **139**，没有开机；日志 `/tmp/lynx-p6-container/{accel-check35,emulator35}.log`。这一失败没有足够栈证据，不归因于应用或剪贴板。未替换宿主 SDK，也未声称解决既有 x86_64 SVG/JIT 问题。
+- 初次模拟器日志提示 gRPC 未认证，立即停止自有容器，加入 `-grpc-use-jwt` 后复测，实际控制接口绑定 loopback `5559` 并要求 JWT。最终容器 exited，测试服务器 `58192` 已优雅退出，专用 ADB 与 `5557/5559` 均不监听，用户 `58091` 继续运行；保留临时证据。本批仅订正文档，四种固定交付包和原回执不改，原回执的未安装字段是当时快照。本次只证明 APK 安装/预编译与启动页，系统粘贴、真实前后台/插件恢复与跨批行为回归仍开放。HarmonyOS 许可仍未获授权，容器 KVM 成功不证明其模拟器可运行；Apple、正式签名与其他设备条件继续开放。只本地提交，不 push。
+
 ## 2026-10-07 · P6c 官方 Firefox 的真实标签页恢复与重建
 
 - 父仓库 `d49aff1`、客户端 `224bb8b`、SDK `b4baad3` 工作树起始干净，交付输入仍为 `e09592b`。重新用当前 SDK dist 构建 `/tmp/lynx-p6c-plugin/main.tsx` 的 ReactLynx 子插件，87.4 kB、构建通过，日志 `/tmp/lynx-p6c-real-visibility-fixture-build.log`。临时 HTTP 服务 `3015` 提供未修改的交付目录和单独测试 bundle 路由；通过现有宿主入口调用 open/hide/close，插入定位节点，不改应用组件或插件业务源码。
