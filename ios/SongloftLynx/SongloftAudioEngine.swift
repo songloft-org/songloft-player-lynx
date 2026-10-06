@@ -129,10 +129,19 @@ final class SongloftAudioEngine {
     ClientFileLog.write("I", tag: "audio", "queue metadata registered: n=\(metadataByURL.count)")
   }
 
-  func load(url: String, hls: Bool, headers: [String: String]?) {
+  private var sourceId: String?
+  private var pendingInitialPositionMs: Double?
+  private var pendingAutoplay = false
+
+  func load(url: String, hls: Bool, headers: [String: String]?, sourceId: String? = nil,
+            initialPositionMs: Double = 0, autoplay: Bool = false) {
     activateSession()
     installRemoteCommands()
     let player = ensurePlayer()
+    if sourceId != nil { player.pause() }
+    self.sourceId = sourceId
+    pendingInitialPositionMs = sourceId == nil ? nil : max(0, initialPositionMs)
+    pendingAutoplay = autoplay
     reachedEnd = false
     itemFailed = false
     currentURL = url
@@ -174,6 +183,8 @@ final class SongloftAudioEngine {
   }
 
   func play() {
+    pendingAutoplay = true
+    if pendingInitialPositionMs != nil { return }
     let player = ensurePlayer()
     activateSession()
     reachedEnd = false
@@ -184,11 +195,13 @@ final class SongloftAudioEngine {
   }
 
   func pause() {
+    pendingAutoplay = false
     player?.pause()
     updateNowPlaying()
   }
 
   func stop() {
+    pendingInitialPositionMs = nil
     player?.pause()
     player?.replaceCurrentItem(with: nil)
     currentURL = nil
@@ -429,7 +442,7 @@ final class SongloftAudioEngine {
 
   private func observe(item: AVPlayerItem) {
     itemStatusObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
-      self?.onItemStatus(of: item)
+      self?.runOnMain { self?.onItemStatus(of: item) }
     }
     if let endObserver {
       NotificationCenter.default.removeObserver(endObserver)
@@ -438,8 +451,9 @@ final class SongloftAudioEngine {
       forName: AVPlayerItem.didPlayToEndTimeNotification,
       object: item,
       queue: .main
-    ) { [weak self] _ in
-      self?.onReachedEnd()
+    ) { [weak self, weak item] _ in
+      guard let self, let item, self.player?.currentItem === item else { return }
+      self.onReachedEnd()
     }
     // Re-arm on item replacement (a new track / an HLS variant switch), but only
     // while the video screen is open — otherwise the observation is wasted work.
@@ -451,9 +465,30 @@ final class SongloftAudioEngine {
   // MARK: - Player state → facade events
 
   private func onItemStatus(of item: AVPlayerItem) {
+    guard player?.currentItem === item else { return }
     switch item.status {
     case .readyToPlay:
       emitState("ready")
+      if let positionMs = pendingInitialPositionMs, let player {
+        let expectedSourceId = sourceId
+        let seconds = item.duration.seconds
+        let targetMs = seconds.isFinite && seconds > 0 ? min(positionMs, seconds * 1000) : positionMs
+        let target = CMTime(seconds: targetMs / 1000, preferredTimescale: 600)
+        player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self, weak item] finished in
+          guard let self, let item else { return }
+          self.runOnMain {
+            guard self.sourceId == expectedSourceId, self.player?.currentItem === item else { return }
+            self.pendingInitialPositionMs = nil
+            if !finished {
+              self.emit(Self.eventError, ["code": "seek_failed", "message": "Initial seek failed"])
+              return
+            }
+            if self.pendingAutoplay { self.play() } else { self.pause() }
+            self.emitProgress()
+            self.emit("SongloftAudio.sourceReady", ["positionMs": Self.milliseconds(player.currentTime())])
+          }
+        }
+      }
       updateNowPlaying()
     case .failed:
       itemFailed = true
@@ -506,7 +541,11 @@ final class SongloftAudioEngine {
   // MARK: - Events
 
   private func emit(_ event: String, _ payload: [String: Any]) {
-    sink?(event, payload)
+    var identified = payload
+    if let sourceId, event == Self.eventState || event == Self.eventProgress || event == Self.eventError || event == "SongloftAudio.sourceReady" {
+      identified["sourceId"] = sourceId
+    }
+    sink?(event, identified)
   }
 
   private func emitState(_ state: String) {

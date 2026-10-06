@@ -16,6 +16,7 @@ import { ThemeProvider } from './shared/theme/ThemeProvider.js'
 import { SongRowOverlays } from './shared/ui/SongRowOverlays.js'
 import { SplashScreen } from './shared/ui/SplashScreen.js'
 import { ToastHost } from './shared/ui/ToastHost.js'
+import { AudioTrackSheet } from './features/player/widgets/AudioTrackSheet.js'
 
 /** Catches render errors in the route tree so the whole app does not go blank. */
 class RouteErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -117,6 +118,7 @@ export function RootRouteView() {
         * rendered unstyled and unclickable).
         */}
       <SongRowOverlays />
+      <AudioTrackSheet />
     </ThemeProvider>
   )
 }

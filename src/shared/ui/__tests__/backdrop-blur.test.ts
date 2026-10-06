@@ -167,6 +167,7 @@ const EXPECTED_SCRIM_SITES = [
   'features/library/widgets/ManageTagsSheet.tsx',
   'features/library/widgets/SongEditDialog.tsx',
   'features/library/widgets/SongInfoDialog.tsx',
+  'features/player/widgets/AudioTrackSheet.tsx',
   'features/player/widgets/PlayHistoryPanel.tsx',
   'features/player/widgets/PlaylistDrawer.tsx',
   'features/player/widgets/SleepTimerSheet.tsx',

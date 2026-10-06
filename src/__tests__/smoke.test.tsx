@@ -1,6 +1,16 @@
 import '../shims/router-env.js'
 
 import '@testing-library/jest-dom'
+// New player consumers use native stores/query observers; render stand-ins
+// keep this renderer from invoking Node's external React dispatcher.
+vi.mock('../features/player/data/audio-tracks-query.js', () => ({
+  useAudioTracks: () => ({ data: [], isPending: false, isError: false, refetch: async () => {} }),
+}))
+vi.mock('../features/player/store/dlna-store.js', async (original) => {
+  const actual = await original<typeof import('../features/player/store/dlna-store.js')>()
+  const { makeDlnaStoreMock } = await import('./_render-mocks.js')
+  return makeDlnaStoreMock(actual)
+})
 import { afterEach, expect, test, vi } from 'vitest'
 import {
   act,

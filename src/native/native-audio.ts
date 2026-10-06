@@ -27,6 +27,7 @@ import {
   type RepeatMode,
   type SongloftAudio,
 } from './audio-types.js'
+import { cancelSourceLoad } from './source-load.js'
 
 /** Valid `stateChanged` states (mirrors {@link AudioState}). */
 const AUDIO_STATES: readonly AudioState[] = [
@@ -46,6 +47,7 @@ const AUDIO_STATES: readonly AudioState[] = [
  * bridge, so they live in one place and are asserted in tests.
  */
 export const NATIVE_EVENT = {
+  sourceReady: 'SongloftAudio.sourceReady',
   stateChanged: 'SongloftAudio.stateChanged',
   progress: 'SongloftAudio.progress',
   error: 'SongloftAudio.error',
@@ -69,7 +71,8 @@ const REQUIRED_METHODS = [
  * Methods are fire-and-forget; results/state come back over global events.
  */
 export interface SongloftAudioNativeModule {
-  load(url: string, opts: { hls?: boolean; headers?: Record<string, string> }): void
+  load(url: string, opts: AudioLoadOptions): void
+  getSourceLoadVersion?(callback: (version: number) => void): void
   play(): void
   pause(): void
   stop(): void
@@ -116,8 +119,18 @@ export function isNativeAudioAvailable(
  * listener's first argument, so `payload` is the event's data object.
  */
 export function mapGlobalEvent(name: string, payload: unknown): AudioEvent | null {
+  const event = decodeGlobalEvent(name, payload)
+  const sourceId = (payload as { sourceId?: unknown } | null)?.sourceId
+  return event && typeof sourceId === 'string' ? { ...event, sourceId } : event
+}
+
+function decodeGlobalEvent(name: string, payload: unknown): AudioEvent | null {
   const data = (payload ?? {}) as Record<string, unknown>
   switch (name) {
+    case NATIVE_EVENT.sourceReady:
+      return typeof data.sourceId === 'string'
+        ? { type: 'sourceReady', sourceId: data.sourceId, positionMs: num(data.positionMs) }
+        : null
     case NATIVE_EVENT.stateChanged: {
       const state = data.state
       if (typeof state !== 'string' || !AUDIO_STATES.includes(state as AudioState)) return null
@@ -159,6 +172,10 @@ function num(v: unknown): number {
  * bridging its global events into facade listeners.
  */
 export class NativeSongloftAudio implements SongloftAudio {
+  private loadGeneration = 0
+  private sourceId: string | null = null
+  private sourceVersion: Promise<number> | null = null
+  private negotiatedVersion = 0
   private readonly listeners = new Map<AudioEventType, Set<AudioEventListener>>()
   /** Bound global-event handlers kept for removal on dispose. */
   private readonly bridged: Array<[string, (...args: unknown[]) => void]> = []
@@ -171,7 +188,12 @@ export class NativeSongloftAudio implements SongloftAudio {
       for (const name of Object.values(NATIVE_EVENT)) {
         const handler = (...args: unknown[]) => {
           const event = mapGlobalEvent(name, args[0])
-          if (event) this.dispatch(event)
+          if (event) {
+            const sourceEvent = event.type === 'progress' || event.type === 'stateChanged' || event.type === 'error' || event.type === 'sourceReady'
+            if (sourceEvent && this.sourceId !== null && event.sourceId !== this.sourceId) return
+            if (sourceEvent && this.sourceId === null && event.sourceId) return
+            this.dispatch(event)
+          }
         }
         emitter.addListener(name, handler)
         this.bridged.push([name, handler])
@@ -181,7 +203,34 @@ export class NativeSongloftAudio implements SongloftAudio {
 
   // ── source & transport ──
 
+  getSourceLoadVersion(): Promise<number> {
+    if (this.sourceVersion) return this.sourceVersion
+    this.sourceVersion = new Promise<number>((resolve) => {
+      if (!this.native.getSourceLoadVersion || !this.emitter) { resolve(0); return }
+      let settled = false
+      const timer = setTimeout(() => { settled = true; resolve(0) }, 2_000)
+      try {
+        this.native.getSourceLoadVersion((version) => {
+          if (settled) return
+          settled = true
+          clearTimeout(timer)
+          this.negotiatedVersion = version === 1 ? 1 : 0
+          resolve(this.negotiatedVersion)
+        })
+      } catch {
+        settled = true
+        clearTimeout(timer)
+        resolve(0)
+      }
+    })
+    return this.sourceVersion
+  }
+
   async load(url: string, opts?: AudioLoadOptions): Promise<void> {
+    const generation = ++this.loadGeneration
+    if (!opts?.sourceId) cancelSourceLoad(this)
+    const version = await this.getSourceLoadVersion()
+    if (generation !== this.loadGeneration) return
     // Only forward defined keys: passing `undefined` values across the bridge
     // can surface as a present-but-null key, which the native `getBoolean` /
     // `getMap` reads would choke on. `durationMs` is mock-only and dropped here.
@@ -192,9 +241,22 @@ export class NativeSongloftAudio implements SongloftAudio {
     // arrives nil (`lynx_module_darwin.mm`: "NativeModule: sub class of
     // NSObject"), so a null here would log an engine error on each track change.
     // An empty map costs nothing and both hosts read it as "no options".
-    const nativeOpts: { hls?: boolean; headers?: Record<string, string> } = {}
+    const nativeOpts: AudioLoadOptions = {}
     if (opts?.hls != null) nativeOpts.hls = opts.hls
     if (opts?.headers != null) nativeOpts.headers = opts.headers
+    if (opts?.sourceId != null) {
+      if (this.negotiatedVersion !== 1) throw new Error('Source load contract unavailable')
+      nativeOpts.sourceId = opts.sourceId
+      nativeOpts.initialPositionMs = opts.initialPositionMs ?? 0
+      nativeOpts.autoplay = opts.autoplay ?? false
+    } else if (version === 1) {
+      // Ordinary songs also receive an identity, so their late events cannot
+      // overwrite a subsequent track switch (or vice versa).
+      nativeOpts.sourceId = `audio-${generation}`
+      nativeOpts.initialPositionMs = 0
+      nativeOpts.autoplay = false
+    }
+    this.sourceId = nativeOpts.sourceId ?? null
     this.native.load(url, nativeOpts)
   }
 
@@ -207,6 +269,8 @@ export class NativeSongloftAudio implements SongloftAudio {
   }
 
   async stop(): Promise<void> {
+    ++this.loadGeneration
+    cancelSourceLoad(this)
     this.native.stop()
   }
 
@@ -289,6 +353,8 @@ export class NativeSongloftAudio implements SongloftAudio {
   }
 
   dispose(): void {
+    ++this.loadGeneration
+    cancelSourceLoad(this)
     if (this.emitter) {
       for (const [name, handler] of this.bridged) {
         this.emitter.removeListener(name, handler)

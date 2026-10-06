@@ -40,7 +40,9 @@ Casting diagnostics now use the existing client log, including device details, m
 
 ### Current source review (2026-10-06)
 
-Source review on 2026-10-06: `getTracks()` uses the existing `/songs/{id}/tracks` array endpoint, which omits the default flag; the backend also exposes the fuller `/songs/{id}/audio-tracks` contract with `{tracks: [...]}`. The store track action has no UI consumer. A next-song Range GET already runs at 80% progress, so prefetch is not wholly missing. Web file bridges exist, but `dataTransfer` remains explicitly disabled. HarmonyOS `Index.ets` registers video and creates an XComponent; iOS now uses an underlay AVPlayerLayer. Existing source does not establish device acceptance.
+P1 now consumes `/songs/{id}/audio-tracks` with `{tracks: [...]}` and provides a multiple-track sheet in the player menu. Switching uses the actual index and preserves position and playback intent. The source-readiness contract is implemented in all four hosts; older shells disable switching and request an upgrade. Android device tests and real Web-browser playback pass; iOS/HarmonyOS compilation and device acceptance remain open. Video remains deferred as requested. Evidence and outstanding checks are in [progress (Chinese)](../../project/progress.md).
+
+A next-song Range GET already runs at 80% progress, so prefetch is not wholly missing. Web file bridges exist, but `dataTransfer` remains explicitly disabled. HarmonyOS `Index.ets` registers video and creates an XComponent; iOS now uses an underlay AVPlayerLayer. Existing source does not establish device acceptance.
 
 ## 5. Taking over and validating
 

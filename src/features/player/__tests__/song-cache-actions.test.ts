@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   readLocalCacheMaxSize: vi.fn(),
   songUrl: vi.fn(),
   songCacheExtOf: vi.fn(),
+  player: { currentSong: null as Song | null, audioTrack: null as number | null, isAudioTrackSwitching: false },
 }))
 
 vi.mock('../data/song-cache.js', () => ({
@@ -30,12 +31,14 @@ vi.mock('../data/song-cache-prefs.js', () => ({
 vi.mock('../store/player-store.js', () => ({
   songUrl: mocks.songUrl,
   songCacheExtOf: mocks.songCacheExtOf,
+  usePlayerStore: { getState: () => mocks.player },
 }))
 
 const song = { id: 7, title: 'T', isVideo: false } as Song
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.player = { currentSong: null, audioTrack: null, isAudioTrackSwitching: false }
   mocks.readLocalCacheMaxSize.mockResolvedValue(1000)
   mocks.getSongCacheSize.mockResolvedValue(0)
   mocks.songUrl.mockReturnValue('http://x/play')
@@ -45,7 +48,22 @@ beforeEach(() => {
 })
 
 describe('cacheSongToDevice', () => {
+  test('does not write an extracted audio track into the unqualified song cache', async () => {
+    mocks.player = { currentSong: song, audioTrack: 2, isAudioTrackSwitching: false }
+    await expect(cacheSongToDevice(song)).resolves.toBe('failed')
+    expect(mocks.downloadSong).not.toHaveBeenCalled()
+  })
   test('downloads with the resolved URL, extension and cap', async () => {
+    await expect(cacheSongToDevice(song)).resolves.toBe('cached')
+    expect(mocks.downloadSong).toHaveBeenCalledWith(7, 'http://x/play', 'mp3', 1000)
+  })
+
+  test('freezes the default source before a track is selected during the capacity check', async () => {
+    mocks.getSongCacheSize.mockImplementationOnce(async () => {
+      mocks.player = { currentSong: song, audioTrack: 2, isAudioTrackSwitching: false }
+      mocks.songUrl.mockReturnValue('http://x/play?track=2')
+      return 0
+    })
     await expect(cacheSongToDevice(song)).resolves.toBe('cached')
     expect(mocks.downloadSong).toHaveBeenCalledWith(7, 'http://x/play', 'mp3', 1000)
   })

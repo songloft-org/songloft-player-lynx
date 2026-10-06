@@ -59,6 +59,9 @@
   // hls.js drives the element through MSE, so the video surface cannot read its
   // source from the element; keep the last `load` URL ourselves.
   var audioSrcUrl = ''
+  var sourceId = null
+  var sourceGeneration = 0
+  var pendingSourceLoad = null
 
   // ── HLS ──
 
@@ -455,6 +458,9 @@
    * is the contract `src/native/*.ts` is written against on device too.
    */
   function sendEvent(name, data) {
+    if (sourceId && (name === 'SongloftAudio.stateChanged' || name === 'SongloftAudio.progress' || name === 'SongloftAudio.error' || name === 'SongloftAudio.sourceReady')) {
+      data.sourceId = sourceId
+    }
     try {
       lynxView.sendGlobalEvent(name, [data])
     } catch (_) {}
@@ -505,20 +511,33 @@
   // that is currently the active engine may emit: while video is primary the audio
   // element is parked and its events (pause etc.) must not overwrite video state.
 
-  audio.addEventListener('loadstart', function () {
-    if (videoPrimary) return
+  function bindAudioEvents(element) {
+  element.addEventListener('loadstart', function () {
+    if (videoPrimary || audio !== element) return
     emitState(STATE_LOADING)
   })
 
-  audio.addEventListener('loadedmetadata', function () {
-    if (videoPrimary) return
+  element.addEventListener('loadedmetadata', function () {
+    if (videoPrimary || audio !== element) return
     durationMs = Math.round((audio.duration || 0) * 1000)
+    if (pendingSourceLoad) {
+      audio.currentTime = Math.max(0, Math.min(pendingSourceLoad.positionMs / 1000, audio.duration || Infinity))
+      audio.playbackRate = speed
+      audio.volume = volume
+      if (audio.currentTime === 0) finishSourceLoad()
+      return
+    }
     emitState(STATE_READY)
     emitProgress()
   })
 
-  audio.addEventListener('play', function () {
-    if (videoPrimary) return
+  element.addEventListener('seeked', function () {
+    if (videoPrimary || audio !== element) return
+    if (pendingSourceLoad) finishSourceLoad()
+  })
+
+  element.addEventListener('play', function () {
+    if (videoPrimary || audio !== element) return
     emitState(STATE_PLAYING)
     startProgress()
     // Resume AudioContext if suspended (autoplay policy)
@@ -527,24 +546,25 @@
     }
   })
 
-  audio.addEventListener('pause', function () {
-    if (videoPrimary) return
+  element.addEventListener('pause', function () {
+    if (videoPrimary || audio !== element) return
     stopProgress()
     if (!audio.ended) {
       emitState(STATE_PAUSED)
     }
   })
 
-  audio.addEventListener('ended', function () {
-    if (videoPrimary) return
+  element.addEventListener('ended', function () {
+    if (videoPrimary || audio !== element) return
     stopProgress()
     positionMs = durationMs
     emitProgress()
     emitState(STATE_COMPLETED)
   })
 
-  audio.addEventListener('error', function () {
-    if (videoPrimary) return
+  element.addEventListener('error', function () {
+    if (videoPrimary || audio !== element) return
+    pendingSourceLoad = null
     stopProgress()
     var err = audio.error
     emitState(STATE_ERROR)
@@ -554,14 +574,36 @@
     )
   })
 
-  audio.addEventListener('waiting', function () {})
+  element.addEventListener('waiting', function () {})
 
-  audio.addEventListener('canplay', function () {
-    if (videoPrimary) return
+  element.addEventListener('canplay', function () {
+    if (videoPrimary || audio !== element || pendingSourceLoad) return
     if (state === STATE_LOADING) {
       emitState(STATE_READY)
     }
   })
+  }
+  bindAudioEvents(audio)
+
+  function finishSourceLoad() {
+    var pending = pendingSourceLoad
+    if (!pending) return
+    pendingSourceLoad = null
+    var generation = sourceGeneration
+    positionMs = Math.round(audio.currentTime * 1000)
+    emitState(STATE_READY)
+    emitProgress()
+    var intent = pending.autoplay ? audio.play() : Promise.resolve()
+    if (!pending.autoplay) emitState(STATE_PAUSED)
+    intent.then(function () {
+      if (generation !== sourceGeneration) return
+      sendEvent('SongloftAudio.sourceReady', { positionMs: positionMs })
+    }, function (error) {
+      if (generation !== sourceGeneration) return
+      emitState(STATE_ERROR)
+      emitError('play_blocked', error.message || 'Playback was prevented')
+    })
+  }
 
   video.addEventListener('loadedmetadata', function () {
     if (!videoPrimary) return
@@ -606,17 +648,43 @@
   // ── native module implementation ──
 
   var songloftAudio = {
+    getSourceLoadVersion: function () { return 1 },
     load: function (url, opts) {
       if (videoPrimary) {
         releaseVideoSurface()
       }
       stopProgress()
       cleanupHls()
+      // Each source owns its element/listeners. Late events from the outgoing
+      // element cannot be mislabeled as the newly requested source.
+      var outgoing = audio
+      audio = new Audio()
+      audio.preload = 'auto'
+      audio.crossOrigin = 'anonymous'
+      audio.volume = volume
+      audio.playbackRate = speed
+      bindAudioEvents(audio)
+      outgoing.pause()
+      outgoing.removeAttribute('src')
+      outgoing.load()
+      if (eqContext) {
+        try { eqSource.disconnect() } catch (_) {}
+        eqSource = eqContext.createMediaElementSource(audio)
+        if (eqEnabled) connectEq()
+        else disconnectEq()
+      }
+      ++sourceGeneration
+      sourceId = opts && opts.sourceId || null
+      pendingSourceLoad = sourceId ? {
+        positionMs: opts.initialPositionMs || 0,
+        autoplay: opts.autoplay === true,
+      } : null
       positionMs = 0
       durationMs = 0
       audio.currentTime = 0
       audio.src = ''
       audioSrcUrl = url || ''
+      emitState(STATE_LOADING)
 
       if (opts && opts.hls) {
         loadHls(url)
@@ -628,6 +696,7 @@
     },
 
     play: function () {
+      if (pendingSourceLoad) { pendingSourceLoad.autoplay = true; return }
       if (videoPrimary) {
         if (video.ended) video.currentTime = 0
         video.play().catch(function (_) {})
@@ -640,6 +709,7 @@
     },
 
     pause: function () {
+      if (pendingSourceLoad) pendingSourceLoad.autoplay = false
       if (videoPrimary) {
         video.pause()
         return
@@ -648,6 +718,8 @@
     },
 
     stop: function () {
+      ++sourceGeneration
+      pendingSourceLoad = null
       videoPrimary && releaseVideoSurface()
       audio.pause()
       audio.currentTime = 0

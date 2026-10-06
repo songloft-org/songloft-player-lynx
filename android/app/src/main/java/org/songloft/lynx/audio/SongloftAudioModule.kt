@@ -8,6 +8,7 @@ import com.lynx.jsbridge.LynxMethod
 import com.lynx.jsbridge.LynxModule
 import com.lynx.react.bridge.JavaOnlyArray
 import com.lynx.react.bridge.JavaOnlyMap
+import com.lynx.react.bridge.Callback
 import com.lynx.react.bridge.ReadableArray
 import com.lynx.react.bridge.ReadableMap
 import com.lynx.react.bridge.ReadableType
@@ -57,15 +58,25 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
     // -- source & transport --
 
     @LynxMethod
+    fun getSourceLoadVersion(callback: Callback) {
+        callback.invoke(1)
+    }
+
+    @LynxMethod
     fun load(url: String, opts: ReadableMap?) {
         ensureSink()
         val hls = opts != null && opts.hasKey("hls") && opts.getBoolean("hls")
         val headers = opts?.takeIf { it.hasKey("headers") }?.getMap("headers")?.let(::toStringMap)
+        val sourceId = opts?.takeIf { it.hasKey("sourceId") }?.getString("sourceId")
+        val positionMs = opts?.takeIf { it.hasKey("initialPositionMs") }?.getDouble("initialPositionMs")?.toLong() ?: 0L
+        val autoplay = opts?.takeIf { it.hasKey("autoplay") }?.getBoolean("autoplay") ?: false
         val ctx = androidContext()
         // Start the playback service BEFORE loading so the player is created in
         // the service context (required for the media notification to work).
         startPlaybackService(ctx)
-        SongloftAudioEngine.runOnMain { SongloftAudioEngine.load(ctx, url, hls, headers) }
+        SongloftAudioEngine.runOnMain {
+            SongloftAudioEngine.load(ctx, url, hls, headers, sourceId, positionMs, autoplay)
+        }
     }
 
     @LynxMethod

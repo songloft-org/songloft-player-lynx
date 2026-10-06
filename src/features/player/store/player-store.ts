@@ -23,6 +23,7 @@ import {
 import { readNativeModules } from '../../../native/native-modules.js'
 import { getPlatformTarget } from '../../../native/platform-target.js'
 import { getVideoModule, type ScaleMode } from '../../../native/video.js'
+import { cancelSourceLoad, loadAudioSource, SourceLoadCancelled } from '../../../native/source-load.js'
 import { getFavoriteState, toggleFavoriteNonReact } from '../../library/data/favorites.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
 import { getSongsApi } from '../../library/api/index.js'
@@ -41,6 +42,7 @@ import { getCachedPath } from '../data/song-cache.js'
 import { useLyricStore } from './lyric-store.js'
 import type { PlayerData } from './derive.js'
 import { configureDlnaPlayer, useDlnaStore } from './dlna-store.js'
+import { useAppSessionStore } from '../../../store/app-session.js'
 
 /**
  * Player state store (zustand), bridging the {@link getAudio} mock to the UI —
@@ -119,6 +121,9 @@ export interface PlayerState extends PlayerData {
   togglePlaylistDrawer: () => void
   closePlaylistDrawer: () => void
   clearError: () => void
+  showAudioTrackSheet: boolean
+  openAudioTrackSheet: () => void
+  closeAudioTrackSheet: () => void
 
   // ── video ──
   /**
@@ -160,6 +165,15 @@ export interface PlayerState extends PlayerData {
 }
 
 const audio = getAudio()
+let _loadGeneration = 0
+let _trackPlayIntent: boolean | null = null
+
+function invalidateSourceLoad(): number {
+  ++_loadGeneration
+  cancelSourceLoad(audio)
+  _trackPlayIntent = null
+  return _loadGeneration
+}
 
 /**
  * Generation-guarded background loader shared by every
@@ -191,6 +205,10 @@ const INITIAL: PlayerData = {
   playbackContext: undefined,
   sourcePlaylistId: undefined,
   speed: 1,
+  audioTrack: null,
+  audioTrackPending: undefined,
+  isAudioTrackSwitching: false,
+  audioTrackError: undefined,
   videoScaleMode: DEFAULT_VIDEO_SCALE_MODE,
 }
 
@@ -240,16 +258,18 @@ export function isNormalizeEnabled(): boolean {
  * play them, while every video container was sent `?format=mp3`, which makes the
  * server run `-vn` and drop the picture.
  */
-let _audioTrack: number | null = null
-
 export function songUrl(song: Song): string {
   if (!song.url) return ''
+  const state = usePlayerStore.getState()
+  const audioTrack = state.currentSong?.id === song.id && state.currentSong?.type === song.type
+    ? state.audioTrackPending !== undefined ? state.audioTrackPending : state.audioTrack
+    : null
   return buildSongUrl(song.url, {
     songFormat: song.format,
     quality: _audioQuality,
     normalize: _normalize,
     platform: getPlatformTarget(),
-    audioTrack: _audioTrack,
+    audioTrack,
   })
 }
 
@@ -323,6 +343,11 @@ interface PlaybackSource {
  */
 function playbackSourceFor(song: Song): PlaybackSource {
   if (!song.url) return { url: '', hls: false, cached: false }
+  const state = usePlayerStore.getState()
+  const track = state.currentSong?.id === song.id
+    ? state.audioTrackPending !== undefined ? state.audioTrackPending : state.audioTrack
+    : null
+  if (track != null) return { url: songUrl(song), hls: false, cached: false }
   const kind = resolveVideoSourceKind(song, getPlatformTarget())
   if (kind === 'direct') return { url: buildVideoUrl(song.url), hls: isHlsPlaylistPath(song.url), cached: false }
   if (kind === 'hls' && _videoSourceSongId === song.id) {
@@ -348,6 +373,10 @@ function playbackSourceFor(song: Song): PlaybackSource {
  * through one resolver is what keeps the two in agreement.
  */
 async function resolvePlaybackSource(song: Song): Promise<PlaybackSource> {
+  const state = usePlayerStore.getState()
+  if (state.currentSong?.id === song.id && (state.audioTrackPending !== undefined || state.audioTrack != null)) {
+    return playbackSourceFor(song)
+  }
   const cached = await getCachedPath(song.id).catch(() => null)
   if (cached) return { url: cached, hls: false, cached: true }
   return playbackSourceFor(song)
@@ -476,6 +505,7 @@ export function resetLoadedSongForTests(): void {
   _loadedSongId = null
   _loadedSourceKind = null
   _videoSourceSongId = null
+  invalidateSourceLoad()
 }
 
 function clearRetryTimer(): void {
@@ -491,7 +521,7 @@ function cancelRetry(): void {
   _consecutiveSkips = 0
 }
 
-function scheduleRetry(song: Song, positionMs: number): void {
+function scheduleRetry(song: Song, { positionMs, autoplay }: { positionMs: number; autoplay: boolean }): void {
   if (_retrySongId !== song.id) {
     _retryCount = 0
     _retrySongId = song.id
@@ -520,21 +550,31 @@ function scheduleRetry(song: Song, positionMs: number): void {
     // The user may have skipped, stopped, or picked another song while we waited;
     // reloading here would yank playback back to a track they left behind.
     if (usePlayerStore.getState().currentSong?.id !== song.id) return
+    const generation = _loadGeneration
     usePlayerStore.setState({ errorMessage: undefined, isBuffering: true })
-    void resolvePlaybackSource(song).then((retrySource) =>
-      audio.load(retrySource.url, { durationMs: durationMsOf(song), hls: retrySource.hls })
-        .then(() => {
-          // The reloaded track may resolve differently than the attempt that
-          // failed (a cache fill finishing mid-playback), so record it too.
-          _loadedSongId = song.id
-          _loadedSourceKind = retrySource.cached ? 'cache' : 'stream'
-          return positionMs > 0 ? audio.seek(positionMs) : undefined
-        })
-        .then(() => audio.play())
-        // A failure here re-emits `error`, which schedules the next attempt; there
-        // is nothing to do with the rejection itself.
-        .catch(() => {}),
-    )
+    void (async () => {
+      const retrySource = await resolvePlaybackSource(song)
+      if (generation !== _loadGeneration) return
+      _loadedSongId = song.id
+      _loadedSourceKind = retrySource.cached ? 'cache' : 'stream'
+      const load = { durationMs: durationMsOf(song), hls: retrySource.hls }
+      if (usePlayerStore.getState().audioTrack != null) {
+        await syncQueueWindow(usePlayerStore.getState().playlist, usePlayerStore.getState().currentIndex)
+        if (generation !== _loadGeneration) return
+        await loadAudioSource(audio, { url: retrySource.url, load: { ...load, initialPositionMs: positionMs, autoplay } })
+      } else {
+        await audio.load(retrySource.url, load)
+        if (generation !== _loadGeneration) return
+        if (positionMs > 0) await audio.seek(positionMs)
+        if (autoplay) await audio.play()
+      }
+    })().catch((error: unknown) => {
+      if (generation !== _loadGeneration || error instanceof SourceLoadCancelled) return
+      usePlayerStore.setState({ isPlaying: false, isBuffering: false,
+        errorMessage: error instanceof Error ? error.message : String(error) })
+      // Native errors already schedule a retry; readiness timeouts do not emit one.
+      if (_retryTimer == null) scheduleRetry(song, { positionMs, autoplay })
+    })
   }, delay)
 }
 
@@ -543,6 +583,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   async function playAtIndex(index: number): Promise<void> {
     const song = get().playlist[index]
     if (!song) return
+    const generation = invalidateSourceLoad()
     cancelRetry()
     set({
       currentIndex: index,
@@ -550,6 +591,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       currentTime: 0,
       duration: stateDurationMsOf(song),
       errorMessage: undefined,
+      audioTrack: null,
+      audioTrackPending: undefined,
+      isAudioTrackSwitching: false,
+      audioTrackError: undefined,
     })
     // Lyrics are loaded by the currentSong subscription below, not here: every
     // path that swaps the song flows through it (see the subscription's notes).
@@ -559,6 +604,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       return
     }
     const source = await resolvePlaybackSource(song)
+    if (generation !== _loadGeneration) return
     // Refresh the native media-notification window BEFORE loading so the new
     // song's metadata is guaranteed present in the engine's `metadataByUrl`
     // map by the time it looks it up. Otherwise remote next/previous outside
@@ -566,10 +612,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     // current index) leaves the notification stuck on the outgoing song's
     // title/artwork — the "点下一曲偶尔不及时更新" symptom.
     await syncQueueWindow(get().playlist, index)
+    if (generation !== _loadGeneration) return
     await audio.load(source.url, {
       durationMs: durationMsOf(song),
       hls: source.hls,
     })
+    if (generation !== _loadGeneration) return
     _loadedSongId = song.id
     _loadedSourceKind = source.cached ? 'cache' : 'stream'
     await audio.play()
@@ -627,6 +675,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
   return {
     ...INITIAL,
+    showAudioTrackSheet: false,
 
     playSong: async (song, queue) => {
       _queueLoader.invalidate()
@@ -655,7 +704,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         playbackContext: undefined,
         sourcePlaylistId: undefined,
       })
-      await syncQueueWindow(list, index)
       await playAtIndex(index)
     },
 
@@ -680,7 +728,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       if (playlistId != null) {
         void getPlaylistApi().touchPlaylist(playlistId).catch(() => {})
       }
-      await syncQueueWindow(songs, index)
       await playAtIndex(index)
     },
 
@@ -713,6 +760,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       }
       const s = get()
       if (!s.currentSong) return
+      if (s.isAudioTrackSwitching) {
+        _trackPlayIntent = !(_trackPlayIntent ?? s.isPlaying)
+        set({ isPlaying: _trackPlayIntent })
+        if (_trackPlayIntent) await audio.play()
+        else await audio.pause()
+        return
+      }
       if (s.isPlaying) {
         await audio.pause()
         return
@@ -854,8 +908,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         currentSong: result.currentSong,
       })
       if (result.shouldStop) {
+        invalidateSourceLoad()
         await audio.stop()
-        set({ isPlaying: false, currentTime: 0, duration: 0 })
+        set({ isPlaying: false, currentTime: 0, duration: 0, audioTrack: null,
+          audioTrackPending: undefined, isAudioTrackSwitching: false, audioTrackError: undefined,
+          showAudioTrackSheet: false })
         // No lyric clear here: `currentSong` just became undefined in the set
         // above, and the currentSong subscription resets the lyric store.
         return
@@ -865,6 +922,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     },
 
     clearPlaylist: () => {
+      invalidateSourceLoad()
       _queueLoader.invalidate()
       void audio.stop()
       set({
@@ -874,6 +932,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         isPlaying: false,
         currentTime: 0,
         duration: 0,
+        audioTrack: null,
+        audioTrackPending: undefined,
+        isAudioTrackSwitching: false,
+        audioTrackError: undefined,
       })
     },
 
@@ -882,20 +944,50 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     togglePlaylistDrawer: () => set((s) => ({ showPlaylistDrawer: !s.showPlaylistDrawer })),
     closePlaylistDrawer: () => set({ showPlaylistDrawer: false }),
     clearError: () => set({ errorMessage: undefined }),
+    openAudioTrackSheet: () => set({ showAudioTrackSheet: true }),
+    closeAudioTrackSheet: () => set({ showAudioTrackSheet: false }),
 
     setAudioTrack: async (trackIndex) => {
-      _audioTrack = trackIndex
-      const song = get().currentSong
-      if (song) {
-        const pos = get().currentTime
+      if (trackIndex != null && (!Number.isSafeInteger(trackIndex) || trackIndex < 0)) return
+      const state = get()
+      const song = state.currentSong
+      if (!song?.url || song.isLive || song.type === 'radio' || useDlnaStore.getState().activeDevice) return
+      if (!state.audioTrackError && !state.isAudioTrackSwitching && (state.audioTrack ?? null) === trackIndex) return
+      const positionMs = state.currentTime
+      const intent = _trackPlayIntent ?? state.isPlaying
+      const generation = invalidateSourceLoad()
+      _trackPlayIntent = intent
+      cancelRetry()
+      set({ audioTrackPending: trackIndex, isAudioTrackSwitching: true, audioTrackError: undefined })
+      try {
+        const version = await audio.getSourceLoadVersion?.()
+        if (generation !== _loadGeneration) return
+        if (version !== 1) throw new Error('source_load_unsupported')
         const source = playbackSourceFor(song)
-        await audio.load(source.url, { hls: source.hls })
+        await syncQueueWindow(get().playlist, get().currentIndex)
+        if (generation !== _loadGeneration) return
         _loadedSongId = song.id
-        // Track switching resolves through `playbackSourceFor`, which never
-        // consults the device cache — the engine is on the remote stream.
         _loadedSourceKind = 'stream'
-        await audio.seek(pos)
-        await audio.play()
+        const restoredPositionMs = await loadAudioSource(audio, {
+          url: source.url,
+          load: { durationMs: durationMsOf(song), hls: source.hls,
+            initialPositionMs: positionMs, autoplay: _trackPlayIntent ?? intent },
+        })
+        if (generation !== _loadGeneration) return
+        set({ audioTrack: trackIndex, audioTrackPending: undefined, isAudioTrackSwitching: false,
+          isBuffering: false, currentTime: restoredPositionMs })
+        _trackPlayIntent = null
+        syncFavoriteToNative(song.id)
+      } catch (error) {
+        if (generation !== _loadGeneration || error instanceof SourceLoadCancelled) return
+        if (!(error instanceof Error && error.message === 'source_load_unsupported')) await audio.pause()
+        if (generation !== _loadGeneration) return
+        // The old stream may already be gone. Clear engine identity so play
+        // can recover the song, and leave the committed selection unchanged.
+        _loadedSongId = null
+        _trackPlayIntent = null
+        set({ audioTrackPending: undefined, isAudioTrackSwitching: false, isBuffering: false,
+          audioTrackError: error instanceof Error ? error.message : String(error) })
       }
     },
 
@@ -948,6 +1040,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     },
 
     reset: () => {
+      invalidateSourceLoad()
       stopSleepInterval()
       cancelRetry()
       // Cancel in-flight background fills too, so a reset (used between tests)
@@ -955,7 +1048,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       _queueLoader.invalidate()
       void audio.stop()
       _videoSourceSongId = null
-      set({ ...INITIAL })
+      set({ ...INITIAL, showAudioTrackSheet: false })
     },
 
     _onCompleted: onCompleted,
@@ -970,6 +1063,7 @@ let _prefetchedForIndex: number | null = null
 
 audio.on('progress', (e) => {
   if (useDlnaStore.getState().activeDevice) return
+  if (usePlayerStore.getState().isAudioTrackSwitching) return
   usePlayerStore.setState((s) => ({
     currentTime: e.positionMs,
     duration: e.durationMs > 0 ? e.durationMs : s.duration,
@@ -1035,11 +1129,15 @@ audio.on('stateChanged', (e) => {
 
 audio.on('error', (e) => {
   if (useDlnaStore.getState().activeDevice) return
-  const { currentSong, currentTime } = usePlayerStore.getState()
+  const { currentSong, currentTime, isPlaying } = usePlayerStore.getState()
+  if (usePlayerStore.getState().isAudioTrackSwitching) {
+    usePlayerStore.setState({ isPlaying: false, isBuffering: false })
+    return
+  }
   usePlayerStore.setState({ isPlaying: false, isBuffering: false, errorMessage: e.message })
   // Retry transparently; `scheduleRetry` is a no-op once the song's budget is spent,
   // so the error state above is what the user is left with after the last attempt.
-  if (currentSong) scheduleRetry(currentSong, currentTime)
+  if (currentSong) scheduleRetry(currentSong, { positionMs: currentTime, autoplay: isPlaying })
 })
 
 /**
@@ -1062,6 +1160,7 @@ audio.on('remoteCommand', (e) => {
       // to match. Do NOT call audio.stop() — the engine is already idle and
       // the foreground service is stopping.
       cancelRetry()
+      invalidateSourceLoad()
       _queueLoader.invalidate()
       usePlayerStore.setState({
         currentSong: undefined,
@@ -1073,6 +1172,10 @@ audio.on('remoteCommand', (e) => {
         currentIndex: -1,
         playbackContext: undefined,
         sourcePlaylistId: undefined,
+        audioTrack: null,
+        audioTrackPending: undefined,
+        isAudioTrackSwitching: false,
+        audioTrackError: undefined,
       })
       break
     case 'toggleFavorite': {
@@ -1101,12 +1204,26 @@ void audio.getVolume()
 
 configureDlnaPlayer({
   async pauseLocal() {
+    invalidateSourceLoad()
+    usePlayerStore.setState({ audioTrackPending: undefined, isAudioTrackSwitching: false })
     cancelRetry()
     await audio.pause()
     _loadedSongId = null
     _loadedSourceKind = null
   },
   onCompleted() { usePlayerStore.getState()._onCompleted() },
+})
+
+// A song id is meaningful only inside its server/user scope. A late switch
+// from the outgoing session must never apply its selection to the new one.
+useAppSessionStore.subscribe((session, previous) => {
+  if (session.baseUrl === previous.baseUrl && session.username === previous.username) return
+  const switching = usePlayerStore.getState().isAudioTrackSwitching
+  invalidateSourceLoad()
+  cancelRetry()
+  if (switching) void audio.pause()
+  usePlayerStore.setState({ audioTrack: null, audioTrackPending: undefined,
+    isAudioTrackSwitching: false, audioTrackError: undefined, showAudioTrackSheet: false })
 })
 
 useDlnaStore.subscribe((session, previous) => {

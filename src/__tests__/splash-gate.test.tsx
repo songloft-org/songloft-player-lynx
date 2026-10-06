@@ -62,6 +62,9 @@ vi.mock('../shared/ui/ToastHost.js', async () =>
 vi.mock('../shared/ui/SongRowOverlays.js', () => ({
   SongRowOverlays: () => null,
 }))
+vi.mock('../features/player/widgets/AudioTrackSheet.js', () => ({
+  AudioTrackSheet: () => null,
+}))
 
 async function renderRoot() {
   render(<RootRouteView />)

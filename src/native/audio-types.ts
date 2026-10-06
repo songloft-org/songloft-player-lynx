@@ -44,6 +44,10 @@ export interface AudioLoadOptions {
   headers?: Record<string, string>
   /** Mock extension: total track duration so progress can be simulated. */
   durationMs?: number
+  /** Version-1 source-load contract; only send after capability negotiation. */
+  sourceId?: string
+  initialPositionMs?: number
+  autoplay?: boolean
 }
 
 /** One equalizer band descriptor (spec: 10 bands, 31Hz–16kHz). */
@@ -56,13 +60,15 @@ export interface EqualizerBand {
 export type RemoteCommand = 'next' | 'previous' | 'toggleFavorite' | 'stop'
 
 /** Discriminated union of events the player emits (spec: `AudioEvent`). */
-export type AudioEvent =
+export type AudioEvent = (
   | { type: 'stateChanged'; state: AudioState }
   | { type: 'progress'; positionMs: number; bufferedMs: number; durationMs: number }
   | { type: 'queueIndexChanged'; index: number }
   | { type: 'error'; code: string; message: string }
   | { type: 'remoteCommand'; command: RemoteCommand }
   | { type: 'volumeChanged'; volume: number }
+  | { type: 'sourceReady'; sourceId: string; positionMs: number }
+) & { sourceId?: string }
 
 export type AudioEventType = AudioEvent['type']
 
@@ -81,6 +87,8 @@ export type AudioEventListener<T extends AudioEventType = AudioEventType> = (
 export interface SongloftAudio {
   // ── source & transport ──
   load(url: string, opts?: AudioLoadOptions): Promise<void>
+  /** Optional for old hosts. Version 1 confirms ready/seek/intent/source events. */
+  getSourceLoadVersion?(): Promise<number>
   play(): Promise<void>
   pause(): Promise<void>
   stop(): Promise<void>

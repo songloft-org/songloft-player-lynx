@@ -708,8 +708,24 @@ object SongloftAudioEngine {
         p.replaceMediaItem(p.currentMediaItemIndex, newItem)
     }
 
-    fun load(context: Context, url: String, hls: Boolean, headers: Map<String, String>?) {
+    private var currentSourceId: String? = null
+    private var sourceReadyPending = false
+
+    fun load(
+        context: Context,
+        url: String,
+        hls: Boolean,
+        headers: Map<String, String>?,
+        sourceId: String? = null,
+        initialPositionMs: Long = 0L,
+        autoplay: Boolean = false,
+    ) {
         val p = ensurePlayer(context)
+        // Pause the outgoing item before assigning the next source identity.
+        // setMediaSource/startPosition restores seek only on the new timeline.
+        if (sourceId != null) p.pause()
+        currentSourceId = sourceId
+        sourceReadyPending = sourceId != null
         val wasNaturallyEnded = p.playbackState == Player.STATE_ENDED && p.playWhenReady
         autoAdvanceStopGuardUntilMs = if (wasNaturallyEnded) {
             SystemClock.elapsedRealtime() + AUTO_ADVANCE_STOP_GUARD_MS
@@ -759,7 +775,7 @@ object SongloftAudioEngine {
         }
         // Attach media metadata (if the JS store pre-registered it via setQueue)
         // so the foreground notification / lock screen shows title + artist.
-        val itemBuilder = MediaItem.Builder().setUri(url)
+        val itemBuilder = MediaItem.Builder().setUri(url).setMediaId(sourceId ?: "")
         metadataByUrl[url]?.let { itemBuilder.setMediaMetadata(it) }
         val item = itemBuilder.build()
         val source = if (hls || url.endsWith(".m3u8")) {
@@ -784,7 +800,12 @@ object SongloftAudioEngine {
             ProgressiveMediaSource.Factory(httpFactory).createMediaSource(item)
         }
         try {
-            p.setMediaSource(source)
+            if (sourceId != null) {
+                p.setMediaSource(source, initialPositionMs.coerceAtLeast(0L))
+                p.playWhenReady = autoplay
+            } else {
+                p.setMediaSource(source)
+            }
             p.prepare()
             PlaybackStateStore.save(url, 0, 0, hls, headers, p.playWhenReady)
             ClientFileLog.write('I', "audio", "load prepared ${truncUrl(url)} snapshot=${playerSnapshot(p)}")
@@ -794,7 +815,8 @@ object SongloftAudioEngine {
                 "load prepare failed ${truncUrl(url)} (${error.javaClass.simpleName}: "
                     + "${safeErrorText(error.message)}) snapshot=${playerSnapshot(p)}",
             )
-            throw error
+            emitSourceEvent(EVENT_ERROR, mapOf("code" to "load_failed", "message" to (error.message ?: "load failed")))
+            emitState("error")
         }
     }
 
@@ -818,6 +840,7 @@ object SongloftAudioEngine {
         originalNotificationMetadata = null
         autoAdvanceStopGuardUntilMs = 0L
         currentUrl = null
+        sourceReadyPending = false
         currentHeaders = null
         ClientFileLog.write('W', "audio", "stop begin snapshot=${playerSnapshot(p)}")
         p?.let {
@@ -972,7 +995,7 @@ object SongloftAudioEngine {
     }
 
     private fun emitProgressValues(positionMs: Long, bufferedMs: Long, durationMs: Long) {
-        sink?.emit(
+        emitSourceEvent(
             EVENT_PROGRESS,
             mapOf(
                 "positionMs" to positionMs.toDouble(),
@@ -983,7 +1006,12 @@ object SongloftAudioEngine {
     }
 
     private fun emitState(state: String) {
-        sink?.emit(EVENT_STATE, mapOf("state" to state))
+        emitSourceEvent(EVENT_STATE, mapOf("state" to state))
+    }
+
+    private fun emitSourceEvent(event: String, payload: Map<String, Any?>) {
+        val id = currentSourceId
+        sink?.emit(event, if (id == null) payload else payload + ("sourceId" to id))
     }
 
     // -- ExoPlayer listener -> facade events -----------------------------------
@@ -1017,13 +1045,23 @@ object SongloftAudioEngine {
         }
 
         override fun onPlaybackStateChanged(state: Int) {
+            if (player?.playbackState != state) return
             ClientFileLog.write(
                 'I', "audio",
                 "playback state changed state=${playbackStateName(state)}($state) snapshot=${diagnosticSnapshot()}",
             )
             when (state) {
                 Player.STATE_BUFFERING -> emitState("loading")
-                Player.STATE_READY -> emitState("ready")
+                Player.STATE_READY -> {
+                    val p = player
+                    if (p?.playbackState != Player.STATE_READY) return
+                    emitState("ready")
+                    if (sourceReadyPending && p.currentMediaItem?.mediaId == currentSourceId) {
+                        sourceReadyPending = false
+                        emitProgress()
+                        emitSourceEvent("SongloftAudio.sourceReady", mapOf("positionMs" to p.currentPosition.toDouble()))
+                    }
+                }
                 Player.STATE_ENDED -> {
                     stopProgress()
                     emitProgress()
@@ -1048,6 +1086,7 @@ object SongloftAudioEngine {
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (player?.isPlaying != isPlaying) return
             ClientFileLog.write(
                 'I', "audio",
                 "isPlaying changed value=$isPlaying snapshot=${diagnosticSnapshot()}",
@@ -1089,6 +1128,7 @@ object SongloftAudioEngine {
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            if (player?.playerError !== error) return
             ClientFileLog.write(
                 'E', "audio",
                 "player error code=${error.errorCodeName} type=${error.javaClass.simpleName} "
@@ -1097,7 +1137,8 @@ object SongloftAudioEngine {
                     + "snapshot=${diagnosticSnapshot()}",
             )
             stopProgress()
-            sink?.emit(
+            sourceReadyPending = false
+            emitSourceEvent(
                 EVENT_ERROR,
                 mapOf(
                     "code" to error.errorCodeName,

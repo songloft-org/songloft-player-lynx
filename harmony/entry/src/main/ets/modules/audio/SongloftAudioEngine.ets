@@ -30,6 +30,19 @@ export enum VideoTrackState {
  * - Volume/speed/seek are immediate imperative calls
  */
 export class SongloftAudioEngine {
+  private loadGeneration: number = 0
+  private loadSerial: Promise<void> = Promise.resolve()
+  private resetting: boolean = false
+  private sourceId: string = ''
+  private initialPositionMs: number = 0
+  private desiredPlay: boolean = false
+  private sourceReadyPending: boolean = false
+  private initialSeekPending: boolean = false
+  private volume: number = 1
+  private speed: number = 1
+  onSourceReady: (sourceId: string, positionMs: number) => void = () => {}
+
+  getSourceId(): string { return this.sourceId }
   private static instance: SongloftAudioEngine | null = null
   private avPlayer: media.AVPlayer | null = null
   private progressTimer: number = -1
@@ -74,6 +87,7 @@ export class SongloftAudioEngine {
     if (!this.avPlayer) return
 
     this.avPlayer.on('stateChange', (state: string, reason: media.StateChangeReason) => {
+      if (this.resetting) return
       switch (state) {
         case 'idle':
           this.itemReady = false
@@ -94,6 +108,17 @@ export class SongloftAudioEngine {
           this.prepared = true
           this.itemReady = true
           this.onStateChange('ready')
+          if (this.sourceReadyPending) {
+            this.avPlayer?.setVolume(this.volume)
+            this.setSpeed(this.speed)
+            if (this.initialPositionMs > 0) {
+              this.initialSeekPending = true
+              const duration = this.avPlayer?.duration ?? 0
+              this.avPlayer?.seek(duration > 0 ? Math.min(this.initialPositionMs, duration) : this.initialPositionMs)
+            } else {
+              this.finishSourceLoad()
+            }
+          }
           break
         case 'playing':
           this.startProgressTimer()
@@ -140,11 +165,61 @@ export class SongloftAudioEngine {
 
     this.avPlayer.on('seekDone', (seekTime: number) => {
       this.onProgress(seekTime, this.avPlayer?.duration ?? 0)
+      if (this.initialSeekPending) this.finishSourceLoad()
     })
+  }
+
+  private finishSourceLoad(): void {
+    if (!this.sourceReadyPending) return
+    this.sourceReadyPending = false
+    this.initialSeekPending = false
+    const generation = this.loadGeneration
+    const sourceId = this.sourceId
+    const intent = this.desiredPlay ? this.avPlayer?.play() : Promise.resolve()
+    intent?.then(() => {
+      if (generation !== this.loadGeneration) return
+      this.onSourceReady(sourceId, this.avPlayer?.currentTime ?? 0)
+    }).catch((err: Error) => {
+      if (generation === this.loadGeneration) this.onError(-1, err.message)
+    })
+  }
+
+  load(url: string, startMs: number, autoplay: boolean, sourceId: string): Promise<void> {
+    const generation = ++this.loadGeneration
+    this.sourceReadyPending = false
+    this.initialSeekPending = false
+    this.stopProgressTimer()
+    // Serialize resets, but do not wait for preparation: a new request must
+    // supersede an unreachable source without waiting for its network timeout.
+    this.loadSerial = this.loadSerial.catch(() => {}).then(async () => {
+      if (generation !== this.loadGeneration || !this.avPlayer) return
+      this.resetting = true
+      try {
+        await this.avPlayer.reset()
+      } finally {
+        this.resetting = false
+      }
+      if (generation !== this.loadGeneration) return
+      this.sourceId = sourceId
+      this.initialPositionMs = Math.max(0, startMs)
+      this.desiredPlay = autoplay
+      this.sourceReadyPending = sourceId.length > 0
+      this.prepared = false
+      this.itemReady = false
+      this.itemFailed = false
+      this.currentUrl = url
+      this.onStateChange('loading')
+      this.avPlayer.url = url
+    })
+    return this.loadSerial
   }
 
   async play(url: string, startMs: number): Promise<void> {
     if (!this.avPlayer) return
+    ++this.loadGeneration
+    this.sourceId = ''
+    this.sourceReadyPending = false
+    this.initialSeekPending = false
     this.prepared = false
     this.itemReady = false
     this.itemFailed = false
@@ -178,14 +253,21 @@ export class SongloftAudioEngine {
   }
 
   async resume(): Promise<void> {
+    this.desiredPlay = true
+    if (this.sourceReadyPending) return
     await this.avPlayer?.play()
   }
 
   async pause(): Promise<void> {
+    this.desiredPlay = false
+    if (this.sourceReadyPending) return
     await this.avPlayer?.pause()
   }
 
   async stop(): Promise<void> {
+    ++this.loadGeneration
+    this.sourceReadyPending = false
+    this.initialSeekPending = false
     this.stopProgressTimer()
     await this.avPlayer?.stop()
   }
@@ -195,11 +277,13 @@ export class SongloftAudioEngine {
   }
 
   setVolume(volume: number): void {
+    this.volume = volume
     // volume: 0-1 float (converted from 0-100 by store layer)
     this.avPlayer?.setVolume(volume)
   }
 
   setSpeed(speed: number): void {
+    this.speed = speed
     if (!this.avPlayer) return
     // AVPlayer speed mapping
     const speedMode = this.mapSpeed(speed)

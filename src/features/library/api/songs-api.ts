@@ -5,6 +5,8 @@ import {
   playEventSource,
 } from '../../../core/config/constants.js'
 import type { HttpClient } from '../../../core/network/http-client.js'
+import { parseAudioTracks, type AudioTrackInfo } from '../../../models/audio-track.js'
+export type { AudioTrackInfo } from '../../../models/audio-track.js'
 import type { PlaybackContext } from '../../player/domain/playback-context.js'
 import { parseFolderListResponse, type FolderListResponse } from '../../../models/folder.js'
 import { parseLibraryStats, type LibraryStats } from '../../../models/library-stats.js'
@@ -41,13 +43,6 @@ import {
  */
 
 /** Shared filter set for the songs list + song-ids endpoints. */
-export interface AudioTrackInfo {
-  index: number
-  codec: string
-  language: string | null
-  title: string | null
-}
-
 export interface SongsFilters {
   /** Song source type: `local` / `remote` / `radio`. */
   type?: string
@@ -288,14 +283,8 @@ export class SongsApi {
   }
 
   async getTracks(id: number): Promise<AudioTrackInfo[]> {
-    const res = await this.client.get<unknown[]>(`${apiPrefix}/songs/${id}/tracks`)
-    const raw = Array.isArray(res.data) ? res.data : []
-    return raw.map((t: any) => ({
-      index: typeof t.index === 'number' ? t.index : 0,
-      codec: String(t.codec ?? ''),
-      language: t.language ?? null,
-      title: t.title ?? null,
-    }))
+    const res = await this.client.get<unknown>(`${apiPrefix}/songs/${id}/audio-tracks`)
+    return parseAudioTracks(res.data)
   }
 
   async deleteSong(id: number): Promise<void> {

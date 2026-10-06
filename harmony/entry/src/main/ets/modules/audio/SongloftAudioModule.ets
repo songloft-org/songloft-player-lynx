@@ -7,15 +7,18 @@ import { ClientFileLog } from '../platform/ClientFileLog'
 
 interface AudioStateEvent {
   state: string
+  sourceId: string
 }
 
 interface AudioProgressEvent {
+  sourceId: string
   positionMs: number
   bufferedMs: number
   durationMs: number
 }
 
 interface AudioErrorEvent {
+  sourceId: string
   code: number
   message: string
 }
@@ -24,12 +27,18 @@ interface AudioRemoteCommandEvent {
   command: string
 }
 
+interface AudioSourceReadyEvent {
+  sourceId: string
+  positionMs: number
+}
+
 export class SongloftAudioModule extends LynxModule {
   private abilityContext: common.UIAbilityContext
   private engine: SongloftAudioEngine | null = null
   private sessionController: AVSessionController
   private backgroundTask: BackgroundTaskManager
   private currentSpeed: number = 1.0
+  private initialization: Promise<void>
 
   constructor(context: LynxContext, param?: Object) {
     super(context, param)
@@ -38,7 +47,7 @@ export class SongloftAudioModule extends LynxModule {
     ClientFileLog.init(this.abilityContext)
     this.sessionController = new AVSessionController(this.abilityContext)
     this.backgroundTask = new BackgroundTaskManager(this.abilityContext)
-    this.initEngine()
+    this.initialization = this.initEngine()
   }
 
   private async initEngine(): Promise<void> {
@@ -46,7 +55,7 @@ export class SongloftAudioModule extends LynxModule {
     await this.sessionController.create()
 
     this.engine.onStateChange = (state: string) => {
-      const event: AudioStateEvent = { state: state }
+      const event: AudioStateEvent = { state: state, sourceId: this.engine?.getSourceId() ?? '' }
       this.context.sendGlobalEvent('SongloftAudio.stateChanged', [event])
       ClientFileLog.write('I', 'audio', `state=${state}`)
       this.updateSessionState(state)
@@ -54,19 +63,20 @@ export class SongloftAudioModule extends LynxModule {
 
     this.engine.onProgress = (positionMs: number, durationMs: number) => {
       // No log here: the tick fires every 500 ms and would bury the file.
-      const event: AudioProgressEvent = { positionMs: positionMs, bufferedMs: positionMs, durationMs: durationMs }
+      const event: AudioProgressEvent = { positionMs: positionMs, bufferedMs: positionMs, durationMs: durationMs, sourceId: this.engine?.getSourceId() ?? '' }
       this.context.sendGlobalEvent('SongloftAudio.progress', [event])
     }
 
     this.engine.onError = (code: number, message: string) => {
-      const event: AudioErrorEvent = { code: code, message: message }
+      const event: AudioErrorEvent = { code: code, message: message, sourceId: this.engine?.getSourceId() ?? '' }
       this.context.sendGlobalEvent('SongloftAudio.error', [event])
       ClientFileLog.write('E', 'audio', `error code=${code} ${ClientFileLog.truncText(message)}`)
     }
 
-    this.engine.onTrackEnd = () => {
-      const event: AudioStateEvent = { state: 'completed' }
-      this.context.sendGlobalEvent('SongloftAudio.stateChanged', [event])
+    // completed already arrives through onStateChange; do not advance twice.
+    this.engine.onSourceReady = (sourceId: string, positionMs: number) => {
+      const event: AudioSourceReadyEvent = { sourceId: sourceId, positionMs: positionMs }
+      this.context.sendGlobalEvent('SongloftAudio.sourceReady', [event])
     }
 
     this.sessionController.onCommand = (command: string) => {
@@ -76,10 +86,24 @@ export class SongloftAudioModule extends LynxModule {
   }
 
   public load(url: string, opts?: Record<string, Object>): void {
-    const startMs = opts?.startMs as number ?? 0
+    const sourceId = opts?.sourceId as string ?? ''
+    const startMs = opts?.initialPositionMs as number ?? 0
+    const autoplay = opts?.autoplay as boolean ?? false
     ClientFileLog.write('I', 'audio', `load ${ClientFileLog.truncUrl(url)} startMs=${startMs}`)
     this.backgroundTask.startBackgroundTask()
-    this.engine?.play(url, startMs)
+    this.initialization.then(() => {
+      if (sourceId.length > 0) {
+        return this.engine?.load(url, startMs, autoplay, sourceId)
+      }
+      return this.engine?.play(url, startMs)
+    }).catch((err: Error) => {
+      const event: AudioErrorEvent = { code: -1, message: err.message, sourceId: sourceId }
+      this.context.sendGlobalEvent('SongloftAudio.error', [event])
+    })
+  }
+
+  public getSourceLoadVersion(callback: (version: number) => void): void {
+    callback(1)
   }
 
   public play(): void {

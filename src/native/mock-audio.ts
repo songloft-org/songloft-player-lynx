@@ -1,4 +1,5 @@
 import { safeClearInterval } from './safe-timers.js'
+import { cancelSourceLoad } from './source-load.js'
 import {
   DEFAULT_DURATION_MS,
   EQ_CENTER_FREQS,
@@ -27,6 +28,8 @@ const TICK_MS = 250
  * Lynx's strict `clearTimeout/clearInterval` "param 0 should be Number".
  */
 export class MockSongloftAudio implements SongloftAudio {
+  private sourceId: string | undefined
+  async getSourceLoadVersion(): Promise<number> { return 1 }
   private state: AudioState = 'idle'
   private positionMs = 0
   private durationMs = DEFAULT_DURATION_MS
@@ -63,7 +66,9 @@ export class MockSongloftAudio implements SongloftAudio {
   // ── source & transport ──
 
   async load(url: string, opts?: AudioLoadOptions): Promise<void> {
+    if (!opts?.sourceId) cancelSourceLoad(this)
     this.lastLoad = { url, opts }
+    this.sourceId = opts?.sourceId
     this.stopTick()
     this.positionMs = 0
     this.durationMs =
@@ -73,6 +78,12 @@ export class MockSongloftAudio implements SongloftAudio {
     this.setState('loading')
     // Simulate a decode/buffer step resolving to `ready`.
     this.setState('ready')
+    if (opts?.sourceId) {
+      this.positionMs = this.clampPosition(opts.initialPositionMs ?? 0)
+      if (opts.autoplay) await this.play()
+      else await this.pause()
+      this.emit({ type: 'sourceReady', sourceId: opts.sourceId, positionMs: this.positionMs })
+    }
     this.emitProgress()
   }
 
@@ -88,6 +99,7 @@ export class MockSongloftAudio implements SongloftAudio {
   }
 
   async stop(): Promise<void> {
+    cancelSourceLoad(this)
     this.stopTick()
     this.positionMs = 0
     this.setState('idle')
@@ -171,6 +183,7 @@ export class MockSongloftAudio implements SongloftAudio {
   }
 
   dispose(): void {
+    cancelSourceLoad(this)
     this.stopTick()
     this.listeners.clear()
   }
@@ -244,6 +257,9 @@ export class MockSongloftAudio implements SongloftAudio {
   }
 
   private emit(event: AudioEvent): void {
+    if (this.sourceId && (event.type === 'stateChanged' || event.type === 'progress' || event.type === 'error')) {
+      event = { ...event, sourceId: this.sourceId }
+    }
     const set = this.listeners.get(event.type)
     if (!set) return
     for (const cb of [...set]) {

@@ -1,4 +1,12 @@
 import '@testing-library/jest-dom'
+vi.mock('../data/audio-tracks-query.js', () => ({
+  useAudioTracks: () => ({ data: [], isPending: false, isError: false, refetch: async () => {} }),
+}))
+vi.mock('../store/dlna-store.js', async (original) => {
+  const actual = await original<typeof import('../store/dlna-store.js')>()
+  const { makeDlnaStoreMock } = await import('../../../__tests__/_render-mocks.js')
+  return makeDlnaStoreMock(actual)
+})
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 

@@ -36,6 +36,9 @@ var METHODS = [
 
 export default function (_nativeModules, call) {
   var module = {}
+  module.getSourceLoadVersion = function (callback) {
+    call('getSourceLoadVersion', []).then(function (version) { callback(version) }, function () { callback(0) })
+  }
   for (var i = 0; i < METHODS.length; i++) {
     (function (name) {
       module[name] = function () {

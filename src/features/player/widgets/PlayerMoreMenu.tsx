@@ -12,6 +12,9 @@ import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
 import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
 import { getCacheInfo } from '../data/song-cache.js'
 import { cacheSongToDevice, removeSongCache } from '../domain/song-cache-actions.js'
+import { useAudioTracks } from '../data/audio-tracks-query.js'
+import { usePlayerStore } from '../store/player-store.js'
+import { useDlnaStore } from '../store/dlna-store.js'
 
 export interface PlayerMoreMenuProps {
   /** The song being played; its per-song entries are omitted when nothing is loaded. */
@@ -53,6 +56,10 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
   const [videoConfirm, setVideoConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
   const songCacheCapable = getPlatformCapabilities().songCache
+  const casting = useDlnaStore((s) => s.activeDevice != null)
+  const selectedTrack = usePlayerStore((s) => s.audioTrack)
+  const switchingTrack = usePlayerStore((s) => s.isAudioTrackSwitching)
+  const audioTracks = useAudioTracks(casting ? null : song)
 
   // Track whether the current song is already on device so the entry reads as
   // "remove" vs "cache". Re-runs when the song changes.
@@ -115,7 +122,10 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
     ...(song != null
       ? [{ key: 'songInfo', label: t('player.songInfo'), icon: 'info' as const }]
       : []),
-    ...(song != null && songCacheCapable
+    ...(!casting && ((audioTracks.data?.length ?? 0) >= 2 || audioTracks.isError)
+      ? [{ key: 'audioTracks', label: t(audioTracks.isError ? 'player.audioTracksRetry' : 'player.audioTracks'), icon: 'music' as const }]
+      : []),
+    ...(song != null && songCacheCapable && selectedTrack == null && !switchingTrack
       ? [{
         key: 'cache',
         label: cached ? t('player.removeFromCache') : t('player.cacheToDevice'),
@@ -166,6 +176,10 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
         items={items}
         onSelect={(key) => {
           if (key === 'songInfo' && song != null) songRowOverlays.openInfo(song)
+          else if (key === 'audioTracks') {
+            if (audioTracks.isError) void audioTracks.refetch()
+            else usePlayerStore.getState().openAudioTrackSheet()
+          }
           else if (key === 'cache') onCacheEntry()
           else if (key === 'cast') void navigate({ to: '/player/dlna' })
           else if (key === 'equalizer') void navigate({ to: '/player/eq' })

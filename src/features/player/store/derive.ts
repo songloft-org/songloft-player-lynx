@@ -39,6 +39,12 @@ export interface PlayerData {
    */
   sourcePlaylistId?: number
   speed: number
+  /** Selection belongs only to the current song. null uses the container default. */
+  audioTrack?: number | null
+  /** undefined = no switch; null = switching back to the default. */
+  audioTrackPending?: number | null
+  isAudioTrackSwitching?: boolean
+  audioTrackError?: string
   /**
    * Aspect-fit vs zoom for the full-screen video surface. `'fit'` letterboxes
    * (the default — landscape video stays landscape inside a portrait screen);

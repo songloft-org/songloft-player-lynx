@@ -34,6 +34,7 @@ final class SongloftAudioModule: NSObject, LynxContextModule {
   @objc static var methodLookup: [String: String] {
     [
       "load": NSStringFromSelector(#selector(SongloftAudioModule.load(_:opts:))),
+      "getSourceLoadVersion": NSStringFromSelector(#selector(SongloftAudioModule.getSourceLoadVersion(_:))),
       "play": NSStringFromSelector(#selector(SongloftAudioModule.play)),
       "pause": NSStringFromSelector(#selector(SongloftAudioModule.pause)),
       "stop": NSStringFromSelector(#selector(SongloftAudioModule.stop)),
@@ -111,11 +112,21 @@ final class SongloftAudioModule: NSObject, LynxContextModule {
 
   // MARK: - Source & transport
 
+  @objc func getSourceLoadVersion(_ callback: @escaping LynxCallbackBlock) {
+    callback([1] as NSArray)
+  }
+
   @objc func load(_ url: String, opts: [AnyHashable: Any]?) {
     let hls = (opts?["hls"] as? NSNumber)?.boolValue ?? false
     let headers = opts?["headers"] as? [String: String]
+    let sourceId = opts?["sourceId"] as? String
+    let positionMs = (opts?["initialPositionMs"] as? NSNumber)?.doubleValue ?? 0
+    let autoplay = (opts?["autoplay"] as? NSNumber)?.boolValue ?? false
     let engine = SongloftAudioEngine.shared
-    engine.runOnMain { engine.load(url: url, hls: hls, headers: headers) }
+    engine.runOnMain {
+      engine.load(url: url, hls: hls, headers: headers, sourceId: sourceId,
+                  initialPositionMs: positionMs, autoplay: autoplay)
+    }
   }
 
   @objc func play() {

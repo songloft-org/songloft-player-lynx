@@ -6,7 +6,7 @@ import {
   SONG_CACHE_LIMIT_ERROR,
 } from '../data/song-cache.js'
 import { readLocalCacheMaxSize } from '../data/song-cache-prefs.js'
-import { songCacheExtOf, songUrl } from '../store/player-store.js'
+import { songCacheExtOf, songUrl, usePlayerStore } from '../store/player-store.js'
 
 /**
  * The "cache this song on the device" flow, split from the UI so it is testable.
@@ -31,11 +31,15 @@ export type SongCacheOutcome = 'cached' | 'limit' | 'failed'
  * file, so both are needed.
  */
 export async function cacheSongToDevice(song: Song): Promise<SongCacheOutcome> {
+  const player = usePlayerStore.getState()
+  if (player.currentSong?.id === song.id && (player.audioTrack != null || player.isAudioTrackSwitching)) return 'failed'
+  const url = songUrl(song)
+  const ext = songCacheExtOf(song)
   const maxSize = await readLocalCacheMaxSize()
   try {
     const currentSize = await getSongCacheSize()
     if (currentSize >= maxSize) return 'limit'
-    await downloadSong(song.id, songUrl(song), songCacheExtOf(song), maxSize)
+    await downloadSong(song.id, url, ext, maxSize)
     return 'cached'
   } catch (e) {
     return e instanceof Error && e.message === SONG_CACHE_LIMIT_ERROR ? 'limit' : 'failed'

@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import type { Song } from '../../../models/song.js'
 import { getAudio } from '../../../native/index.js'
 import type { MockSongloftAudio } from '../../../native/mock-audio.js'
+import type { AudioEvent, AudioLoadOptions } from '../../../native/audio-types.js'
+import { songUrl } from '../store/player-store.js'
 import { resetVideoModuleForTests } from '../../../native/video.js'
 import { resetLoadedSongForTests, restorePlaybackState, usePlayerStore } from '../store/player-store.js'
 
@@ -96,6 +98,124 @@ beforeEach(() => {
 afterEach(() => {
   usePlayerStore.getState().reset()
   vi.useRealTimers()
+})
+
+describe('audio-track selection', () => {
+  afterEach(async () => {
+    vi.restoreAllMocks()
+    await audio.setSpeed(1)
+    await audio.setVolume(0.5)
+  })
+  const audio = getAudio() as MockSongloftAudio
+  const emit = (event: AudioEvent) => (audio as unknown as { emit: (event: AudioEvent) => void }).emit(event)
+  const trackSong = (id: number) => ({ ...song(id, 300), url: `/api/v1/songs/${id}/play`, format: 'mka' })
+
+  test.each([true, false])('preserves progress and playback intent %s, and resets selection on next song', async (playing) => {
+    const songs = [trackSong(1), trackSong(2)]
+    await usePlayerStore.getState().playPlaylist(songs)
+    await usePlayerStore.getState().seek(12500)
+    if (!playing) await usePlayerStore.getState().togglePlay()
+    await usePlayerStore.getState().setAudioTrack(5)
+    const state = usePlayerStore.getState()
+    expect(state).toMatchObject({ audioTrack: 5, audioTrackPending: undefined,
+      isAudioTrackSwitching: false, currentTime: 12500, isPlaying: playing })
+    expect(audio.lastLoad?.url).toContain('track=5')
+    expect(audio.lastLoad?.opts).toMatchObject({ initialPositionMs: 12500, autoplay: playing })
+    expect(songUrl(songs[1])).not.toContain('track=')
+    await state.playNext()
+    expect(usePlayerStore.getState().audioTrack).toBeNull()
+    expect(audio.lastLoad?.url).not.toContain('track=')
+  })
+
+  test('bypasses the unqualified device cache and keeps speed/volume/queue', async () => {
+    songCache.cachedPath = 'file:///default.mp3'
+    await usePlayerStore.getState().playPlaylist([trackSong(1), trackSong(2)])
+    await usePlayerStore.getState().setSpeed(1.5)
+    await usePlayerStore.getState().setVolume(30)
+    await usePlayerStore.getState().setAudioTrack(2)
+    expect(audio.lastLoad?.url).toContain('/songs/1/play?')
+    expect(audio.lastLoad?.url).toContain('track=2')
+    expect(usePlayerStore.getState()).toMatchObject({ speed: 1.5, volume: 30, currentIndex: 0 })
+    expect(usePlayerStore.getState().playlist).toHaveLength(2)
+  })
+
+  test('late ready after rapid switching cannot commit the outgoing choice', async () => {
+    await usePlayerStore.getState().playPlaylist([trackSong(1)])
+    await usePlayerStore.getState().seek(8000)
+    const calls: AudioLoadOptions[] = []
+    vi.spyOn(audio, 'load').mockImplementation(async (_url, options) => { calls.push(options!) })
+    const first = usePlayerStore.getState().setAudioTrack(2)
+    await flush()
+    expect(calls).toHaveLength(1)
+    const second = usePlayerStore.getState().setAudioTrack(5)
+    await flush()
+    expect(calls).toHaveLength(2)
+    expect(usePlayerStore.getState().audioTrack).toBeNull()
+    emit({ type: 'sourceReady', sourceId: calls[0].sourceId!, positionMs: 0 })
+    expect(usePlayerStore.getState().audioTrackPending).toBe(5)
+    emit({ type: 'sourceReady', sourceId: calls[1].sourceId!, positionMs: 7970 })
+    await Promise.all([first, second])
+    expect(usePlayerStore.getState()).toMatchObject({ audioTrack: 5, currentTime: 7970, isAudioTrackSwitching: false })
+  })
+
+  test('next song invalidates an in-flight source and an async failure leaves the previous selection', async () => {
+    const songs = [trackSong(1), trackSong(2)]
+    await usePlayerStore.getState().playPlaylist(songs)
+    const original = audio.load.bind(audio)
+    let options: AudioLoadOptions = {}
+    vi.spyOn(audio, 'load').mockImplementation(async (url, opts) => {
+      if (opts?.sourceId) options = opts
+      else await original(url, opts)
+    })
+    const first = usePlayerStore.getState().setAudioTrack(2)
+    await flush()
+    await usePlayerStore.getState().playNext()
+    emit({ type: 'sourceReady', sourceId: options.sourceId!, positionMs: 9000 })
+    await first
+    expect(usePlayerStore.getState()).toMatchObject({ currentSong: { id: 2 }, audioTrack: null, currentTime: 0 })
+    const failed = usePlayerStore.getState().setAudioTrack(5)
+    await flush()
+    emit({ type: 'error', sourceId: options.sourceId!, code: '404', message: 'HTTP 404' })
+    await failed
+    expect(usePlayerStore.getState()).toMatchObject({ audioTrack: null, audioTrackError: 'HTTP 404', isAudioTrackSwitching: false })
+  })
+
+  test('old host receives no new load and playback continues', async () => {
+    await usePlayerStore.getState().playPlaylist([trackSong(1)])
+    const load = vi.spyOn(audio, 'load')
+    vi.spyOn(audio, 'getSourceLoadVersion').mockResolvedValue(0)
+    await usePlayerStore.getState().setAudioTrack(2)
+    expect(load).not.toHaveBeenCalled()
+    expect(usePlayerStore.getState()).toMatchObject({ isPlaying: true, audioTrack: null, audioTrackError: 'source_load_unsupported' })
+  })
+
+  test('a selected-track retry that never becomes ready exits buffering and keeps its retry budget', async () => {
+    await usePlayerStore.getState().playPlaylist([trackSong(1)])
+    await usePlayerStore.getState().setAudioTrack(2)
+    const load = vi.spyOn(audio, 'load').mockResolvedValue(undefined)
+    audio.simulateError('502')
+    vi.advanceTimersByTime(1000)
+    await flush()
+    expect(load).toHaveBeenCalledTimes(1)
+    vi.advanceTimersByTime(30000)
+    await flush()
+    expect(usePlayerStore.getState()).toMatchObject({ isBuffering: false, errorMessage: 'Source load timed out' })
+    vi.advanceTimersByTime(3000)
+    await flush()
+    expect(load).toHaveBeenCalledTimes(2)
+  })
+
+  test('removing the last song cancels its pending selection and clears the sheet', async () => {
+    await usePlayerStore.getState().playPlaylist([trackSong(1)])
+    vi.spyOn(audio, 'load').mockResolvedValue(undefined)
+    usePlayerStore.getState().openAudioTrackSheet()
+    const switching = usePlayerStore.getState().setAudioTrack(2)
+    await flush()
+    await usePlayerStore.getState().removeFromPlaylist(0)
+    await switching
+    expect(usePlayerStore.getState()).toMatchObject({ audioTrack: null,
+      audioTrackPending: undefined, isAudioTrackSwitching: false, showAudioTrackSheet: false })
+  })
 })
 
 describe('playback + progress', () => {

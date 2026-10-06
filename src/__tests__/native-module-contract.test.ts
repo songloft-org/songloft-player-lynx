@@ -376,6 +376,21 @@ describe('the back-press event name reaches every host verbatim', () => {
 })
 
 describe('native module method names exist on both hosts', () => {
+  test('source-load capability is a callback read on all hosts', () => {
+    expectLynxMethod(hosts.audioModule.android, 'getSourceLoadVersion')
+    expectSwiftMethod(hosts.audioModule.ios, 'getSourceLoadVersion')
+    expectArkTsMethod(hosts.audioModule.harmony, 'getSourceLoadVersion')
+    expect(hosts.audioModule.android).toMatch(/fun getSourceLoadVersion\(callback: Callback\)\s*\{\s*callback\.invoke\(1\)/)
+    expect(hosts.audioModule.ios).toMatch(/func getSourceLoadVersion\(_ callback: @escaping LynxCallbackBlock\)\s*\{\s*callback\(\[1\] as NSArray\)/)
+    expect(hosts.audioModule.harmony).toMatch(/getSourceLoadVersion\(callback: \(version: number\) => void\): void\s*\{\s*callback\(1\)/)
+    for (const platform of ['android', 'ios', 'harmony'] as const) {
+      expect(hosts.audioModule[platform]).toContain('initialPositionMs')
+      expect(hosts.audioModule[platform]).toContain('autoplay')
+      expect(hosts.audio[platform]).toContain('sourceId')
+    }
+    expect(read('web/songloft-audio-module.js')).toContain("call('getSourceLoadVersion', [])")
+    expect(read('web/audio-host.js')).toContain("sendEvent('SongloftAudio.sourceReady'")
+  })
   const audioMethods = interfaceMethods(
     read('src/native/native-audio.ts'),
     'SongloftAudioNativeModule',

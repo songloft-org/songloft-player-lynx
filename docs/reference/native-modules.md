@@ -46,13 +46,14 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 **7 个**模块：`Songlo
 
 ## 2. 各模块契约
 
-### 2.1 `SongloftAudio`（16 方法）
+### 2.1 `SongloftAudio`
 
-原生方法全部 **fire-and-forget（`void`）**，无 Callback；结果与状态只经全局事件回来。TS facade 把它们包成 `Promise<void>`（立即 resolve），facade 契约与 TS mock 完全一致，便于 native ⇄ mock ⇄ web 互换。
+写方法为 **fire-and-forget（`void`）**；`getSourceLoadVersion(callback)` 是 Callback 读方法，当前四端返回 `1`。TS facade 的 `load()` 只确认命令已发出；`src/native/source-load.ts` 用匹配源标识的准备事件确认真实加载与初始 seek，默认超时 30 秒，换源/停止会取消等待。旧壳无准备契约时保持普通播放，音轨选择提示升级，不发送新增 load 字段。
 
 | 方法 | Kotlin 签名 | iOS `methodLookup` 选择器 |
 |---|---|---|
 | `load` | `load(url: String, opts: ReadableMap?)` | `load(_:opts:)` |
+| `getSourceLoadVersion` | `getSourceLoadVersion(callback: Callback)` | `getSourceLoadVersion(_:)` |
 | `play` / `pause` / `stop` | 无参 | 同名无参 |
 | `seek` | `seek(positionMs: Double)` | `seek(_:)` |
 | `setVolume` | `setVolume(volume: Double)` | `setVolume(_:)` |
@@ -66,7 +67,7 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 **7 个**模块：`Songlo
 | `setEqualizerBand` | `setEqualizerBand(index: Double, gainDb: Double)` | `setEqualizerBand(_:gainDb:)` |
 | `dispose` | 无参 | 同名无参 |
 
-**事件（4 个，宿主 → JS）**，常量在 `src/native/native-audio.ts` 的 `NATIVE_EVENT`、Kotlin `SongloftAudioEngine.EVENT_*`、Swift `SongloftAudioEngine`：
+**事件（宿主 → JS）**，常量在 `src/native/native-audio.ts` 的 `NATIVE_EVENT`、Kotlin `SongloftAudioEngine.EVENT_*`、Swift `SongloftAudioEngine`：
 
 | 事件名 | payload |
 |---|---|
@@ -74,17 +75,20 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 **7 个**模块：`Songlo
 | `SongloftAudio.progress` | `{ positionMs, bufferedMs, durationMs }` |
 | `SongloftAudio.error` | `{ code, message }` |
 | `SongloftAudio.remoteCommand` | `{ command }` |
+| `SongloftAudio.sourceReady` | `{ sourceId, positionMs }`，对应新源准备并完成初始 seek 后的实际位置 |
+
+版本 1 的 `load` 可选字段为 `sourceId / initialPositionMs / autoplay`；状态、进度、错误与准备事件带对应 `sourceId`。facade 丢弃过期源事件，不能将旧源回调标记成新源。没有选定音轨时也为支持该契约的宿主分配源标识。队列、音量与速度不随换源清空。
 
 词表：
 
 - `state` 共 **7 个**：`idle` / `loading` / `ready` / `playing` / `paused` / `completed` / `error`。`mapGlobalEvent` 丢弃表外值 ⇒ 宿主发 `"buffering"` 会让播放器永远停在上一状态。
 - `command` 共 **3 个**：`next` / `previous` / `toggleFavorite`。
-- facade 的 `AudioEvent` 联合类型有 **5 种**，第 5 种 `queueIndexChanged` **只有 mock 与 Web 实现发**（`src/native/mock-audio.ts` / `src/native/web-audio.ts`），两个原生宿主不发。
+- facade 的 `AudioEvent` 还含 `queueIndexChanged`，**只有 mock 与 Web 实现发**（`src/native/mock-audio.ts` / `src/native/web-audio.ts`），原生宿主不发。
 
 **闸门锁住的不变量**
 
-- 4 个事件名 + 7 个 state + 3 个 command 逐字出现在两个宿主的引擎源码里。
-- 16 个方法在 Kotlin 有 `@LynxMethod`、在 Swift 同时有 `func` 与 `methodLookup` 条目。
+- 基础事件名、7 个 state 和 3 个 command 在 Android/iOS 引擎中一致；准备契约的事件、版本读取与 load 字段同时核对 Android/iOS/HarmonyOS/Web。
+- TS 原生接口方法在 Kotlin 有 `@LynxMethod`、在 Swift 同时有 `func` 与 `methodLookup` 条目。
 - iOS 后台播放两半必须都在：`Info.plist` 的 `UIBackgroundModes` 含 `<string>audio</string>`，且引擎调 `setCategory(.playback`。
 - `load` 的 `opts` **永远传对象、不传 `null`**：iOS 按方法签名构造 ObjC 调用，对象参数为 nil 会每次换歌打一条 `LynxError`。
 - 音量只在 store 层从 0–100 整数换算一次为 0–1 浮点；四端 facade / module / engine 均透传 0–1。HarmonyOS 不得再次 `/ 100`，契约闸门直接锁住该调用形状。

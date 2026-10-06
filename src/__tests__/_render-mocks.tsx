@@ -410,6 +410,13 @@ export function mockSong(): Song {
 const noop = (): void => {}
 const asyncNoop = async (): Promise<void> => {}
 
+/** Read a real vanilla store without installing Node React render hooks. */
+export function makeDlnaStoreMock<M extends { useDlnaStore: { getState: () => unknown } }>(actual: M): M {
+  const store = actual.useDlnaStore
+  const hook = Object.assign((select: (state: unknown) => unknown) => select(store.getState()), store)
+  return { ...actual, useDlnaStore: hook } as M
+}
+
 /** Static, non-subscribing player state used by the mocked store. */
 function mockPlayerState(over: Partial<PlayerState> = {}): PlayerState {
   return {
@@ -424,6 +431,9 @@ function mockPlayerState(over: Partial<PlayerState> = {}): PlayerState {
     isBuffering: false,
     showFullPlayer: false,
     showPlaylistDrawer: false,
+    showAudioTrackSheet: false,
+    openAudioTrackSheet: noop,
+    closeAudioTrackSheet: noop,
     sleepTimer: undefined,
     previousVolume: undefined,
     errorMessage: undefined,

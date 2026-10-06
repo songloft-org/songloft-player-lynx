@@ -1,4 +1,19 @@
 import '@testing-library/jest-dom'
+vi.mock('../store/player-store.js', async (original) => {
+  const actual = await original<Record<string, unknown>>()
+  const { makePlayerStoreMock } = await import('../../../__tests__/_render-mocks.js')
+  return makePlayerStoreMock(actual)
+})
+// New player consumers use native stores/query observers; render stand-ins
+// keep this renderer from invoking Node's external React dispatcher.
+vi.mock('../data/audio-tracks-query.js', () => ({
+  useAudioTracks: () => ({ data: [], isPending: false, isError: false, refetch: async () => {} }),
+}))
+vi.mock('../store/dlna-store.js', async (original) => {
+  const actual = await original<typeof import('../store/dlna-store.js')>()
+  const { makeDlnaStoreMock } = await import('../../../__tests__/_render-mocks.js')
+  return makeDlnaStoreMock(actual)
+})
 import { expect, test, vi } from 'vitest'
 import { render, getQueriesForElement, fireEvent, act } from '@lynx-js/react/testing-library'
 
