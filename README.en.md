@@ -10,6 +10,8 @@ This is a **preview client**. Playback, library/playlists, lyrics, plugins, them
 
 Native device caching now has identity/track-variant indexes, whole-playlist/selection tasks and local management/offline playback. Authentication expiry preserves local-only access; explicit logout hides the previous identity. See [Device cache](docs/en/reference/device-cache.md). Android has real-file/UI evidence; iOS/HarmonyOS compilation and device acceptance remain open.
 
+Web supports playlist JSON import/export with file selection, authenticated refresh, downloads and cancellation. Expired browser activation falls back to main-thread controls. Chrome standalone and root-path embedded flows were exercised; Firefox/Safari remain unverified. See [Web deployment](docs/en/guides/web-deployment.md#playlist-json-import-and-export).
+
 | Platform                 | Release artifact               | Limitations                                                                                        |
 | ------------------------ | ------------------------------ | -------------------------------------------------------------------------------------------------- |
 | Android 5.0+             | Release-signed APK             | Background playback, notifications, and DLNA still need ongoing device regression testing          |

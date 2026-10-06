@@ -191,6 +191,7 @@ if (existsSync(htmlSrc)) {
 const HOST_SCRIPTS = [
   'app_icon.png',
   'audio-host.js',
+  'file-transfer-host.js',
   'hls.min.js',
   'songloft-platform-module.js',
   'songloft-audio-module.js',

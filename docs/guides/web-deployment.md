@@ -35,6 +35,18 @@ location / {
 
 > ⚠️ worker realm **也**拿得到 `self.location`，所以「探测 location 是否存在」不能用来判断 standalone 还是 embedded —— 这正是 `deployMode` global prop 存在的理由。
 
+## 歌单 JSON 导入与导出
+
+在「设置 → 数据管理」选择之前导出的 Songloft 版本 1 JSON 备份，或导出服务器的全部歌单。Web 宿主按 `pickTextFile/saveTextFile/cancelTextFile` 三个真实方法开放入口；旧宿主未实现这些方法时隐藏入口，并在数据页说明原因。
+
+文件选择与 Blob 下载在主线程执行，业务 Worker 只接收文件文本；读取的导入文件上限为 20 MiB。若跨线程调用或网络等待丢失浏览器临时用户激活，主线程显示可点击的文件选择/下载控件与取消按钮，继续点击即可。下载后撤销临时 object URL，取消或离开数据页会移除文件控件；取消不上传文件。空文件、无效 JSON 和非版本 1 备份在客户端报错。
+
+Web 接口请求走共享认证客户端：导入为 `/playlists/import` 的 multipart `file`，导出为 `/playlists/export` 的认证 GET，token 只进入 Authorization 请求头。401 复用已有刷新与原请求重试，刷新失效回登录；HTTP 错误结束 busy 状态。传输期间禁用两个按钮，成功导入失效 `['playlist']` 与 `['library']` 查询，包括详情、歌曲列表和首页统计。原生客户端继续使用已有文件上传/浏览器导出流程。
+
+已在 Docker Chrome 153 的真实 Worker 页面验证 standalone 跨源 CORS 和 embedded 根路径同源：实际文件选择、新歌单/歌曲入库、中文/emoji JSON 下载、空/坏文件拒绝、取消、401 刷新重试和服务器失败恢复。用户激活过期路径通过延迟真实宿主调用后点击主线程控件验证。Firefox/Safari 未在当前环境运行；子路径部署仍保留上节的限制。
+
+参考：[文件输入](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/file)、[用户激活与选择器](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/showPicker)、[Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob)、[撤销 object URL](https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static)。
+
 ## Web 平台的已知限制
 
 部署前该知道用户会遇到什么：
@@ -45,7 +57,7 @@ location / {
 | **会话持久化走 IndexedDB**               | worker realm 没有浏览器真正的 `localStorage`（那是 window-only；web-core 注入到背景 realm 的同名 scope 绑定不是页面持久化的那个），存储探测顺序是 native → **IndexedDB** → localStorage → 内存，且 IndexedDB 必须赢过 localStorage                                                                                                                                                                                                                         |
 | **无 longpress**                         | web-core 不合成该手势，任何「长按打开菜单」的功能必须另有按钮入口                                                                                                                                                                                                                                                                                                                                                                                          |
 | ~~占位符颜色恒为库自带 grey~~            | **已修（2026-08-26）**：`-x-placeholder-color` 在 Web 上是空转声明、web-elements 走 `::part(input)::placeholder` 且 part 上有显式默认 —— 这三者接不起来，所以改为 patch web-core 产物的默认值（`grey` → `var(--content-muted,grey)`，`scripts/patch-web-core-client.mjs`），CDP 实测随主题切换（light `#7b7b88` / dark `#8b8b98`）。**同类问题（web-elements 部件样式改不动）先想 part 显式默认 + shadow root 穿透，修法走 patch 脚本**，见 AGENTS.md §3.2 |
-| **文件选择器可能不弹**                   | `pickAndUploadFile` 的调用从 worker 经桥过来，user activation 可能已丢。无头环境不可观测，需真浏览器确认                                                                                                                                                                                                                                                                                                                                                   |
+| **歌单文件选择的用户激活** | JSON 导入/导出已提供主线程可点击控件，应对 Worker 调用丢失激活；Chrome 已验证，Firefox/Safari 待验。其他旧 `pickAndUploadFile` 调用仍沿用原桥接。 |
 | **无「清空浏览器缓存」入口（刻意不做）** | Flutter 版有（清 Cache Storage + 注销 SW + 强刷 HTTP 缓存，解决 PWA 更新后旧资源问题）。本仓库 Web 端不注册 Service Worker、不用 Cache Storage，standalone（`serve.mjs`）与 embedded（后端 embed.go）的响应一律 `Cache-Control: no-cache` + ETag 304 —— 更新后普通刷新即最新，无需用户手动清                                                                                                                                                               |
 | **部分 Lynx 元素无实现**                 | `<refresh>` / `<webview>` 等未映射标签走恒等回落，成为 `HTMLUnknownElement`——属性开关完全无效。写跨平台页面前先查 web-core 的 `LYNX_TAG_TO_HTML_TAG_MAP`                                                                                                                                                                                                                                                                                                   |
 

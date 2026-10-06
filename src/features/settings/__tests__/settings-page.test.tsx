@@ -223,7 +223,7 @@ test('the data row is hidden where the platform has no file picker', async () =>
 
 test('the data row appears, and navigates, on a host with a file picker', async () => {
   ;(globalThis as Record<string, unknown>).NativeModules = {
-    SongloftPlatform: { pickFile: () => {} },
+    SongloftPlatform: { openURL: () => {}, pickAndUploadFile: () => {} },
   }
   const { queryByTestId } = await renderPage()
 

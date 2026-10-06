@@ -1,5 +1,15 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · P4：Web 歌单 JSON 导入与导出
+
+- Settings 与数据页改为方法级能力判断：Web 要求 `pickTextFile/saveTextFile/cancelTextFile` 齐备，原生要求原有 `openURL/pickAndUploadFile`。新增 `web/file-transfer-host.js` 与 TS facade，文件对象与 DOM 留在主线程，Worker 只收文本；三端原生 ABI 不变。
+- 导入按既有 multipart `file` 契约发送 UTF-8 字符串，边界避免与内容碰撞；共享 HTTP 客户端提供 Authorization、超时、401 刷新和同一请求体重试。空/坏 JSON、非版本 1 备份和超过 20 MiB 的导入文件有本地错误，响应计数严格校验。导出认证 GET 后用 Blob 下载，不将 token 放进 URL，不开异步 popup；下载后撤销 object URL。
+- 点击权限过期时显示主线程可直接操作的文件选择/下载与取消控件，提供 Escape 与焦点约束。成功、取消、读取失败、页面退出均清理临时控件；迟到文件读取结果不能恢复已取消操作。数据页两个按钮共享 busy 与即时并发锁，离开页面停止后续上传/下载；选择期间服务器或 token 改变则拒绝上传。成功导入失效 `['playlist']` / `['library']`，覆盖详情/歌曲/统计。
+- 最终 `pnpm test` **279 文件 / 3012 项通过**（`/tmp/lynx-p4-delivery-full.log`）；35 项发布工具通过（`/tmp/lynx-p4-release.log`）。`tsc -b --force`、同时列出 lynx/web 的生产构建、两种 Web 复制、三个原生 bundle 复制及 Android `assembleDebug` 通过（`/tmp/lynx-p4-delivery-build.log`）。原生只复制新 JS，未声称 iOS/HarmonyOS 编译或设备通过。首次全量闸门将 `.import()` 方法名误判为动态 import，已改用明确的 `importBackup/exportBackup`，没有放宽闸门。
+- 真实 Docker Chrome 153 / web-core Worker：standalone `3015 → 58192` 跨源 CORS 与 embedded `3016` 根路径同源各实际选择 JSON，新建 **1 个歌单 / 1 首歌曲**，下载文件可解析且含中文/emoji；导出约 246 KiB。空文件和坏 JSON **0 上传**。注入一次 401 后，真实后端 `/auth/refresh` 一次成功、原导入重试 200；模拟 500 后按钮恢复并可下载，模拟刷新失效后回到登录且临时控件归零。日志为 `/tmp/lynx-p4-browser-final.log` 与 `/tmp/lynx-p4-embedded-browser-final.log`，未记录 token 内容。
+- 激活过期通过延迟真实主线程调用 5.5 秒，再实际点击控件验证取消；没有声称 Safari 的激活规则已测。中英最大字号 × 320/375/1024 六组页面边界和最小点击高度通过，英文 320px 文件控件可见可取消（`/tmp/lynx-p4-layout.log`、`/tmp/lynx-p1-browser/p4-*.png`），已目测英文窄屏页面与选择面板。Firefox/Safari 无运行环境；部署子路径仍保留既有未验证限制，原生上传/外部浏览器导出流程保持原样。
+- 文档同步双语 README、Web 部署和交接，原生方法清单与中文计划更新。隔离测试只使用本批后端 `58192` 与自有浏览器；用户 `58091` 服务未停止。提交仅本地，不 push，下一批 P5 Web 快捷键。
+
 ## 2026-10-07 · P3c：设备缓存列表、断网播放与登录隔离
 
 - 新增 Settings“设备缓存”和公开的 `/device-cache` 本地路由：按已证明的服务器档案/部署路径/用户枚举 v2 索引，支持本地搜索、变体与空间统计、单版本删除、当前账号清理及独立旧文件清理。虚拟列表页头可滚动，根路由单独消费安全区；删除需确认，当前播放项删除/整账号清理先停止并清空本地队列。

@@ -10,6 +10,8 @@ Songloft Player 的 Lynx 客户端，从 Flutter 版整体重写为 ReactLynx + 
 
 原生设备缓存已有身份/音轨变体索引、整歌单/多选批量任务和本地管理/断网播放入口；过期登录保留仅本地访问，显式退出隐藏旧身份，详见[设备缓存](docs/reference/device-cache.md)。Android 有实际文件/界面验证，iOS/HarmonyOS 的编译与设备验收仍开放。
 
+Web 已提供歌单 JSON 导入/导出，支持选择文件、认证刷新、下载和取消；浏览器点击权限过期时提供主线程控件。Chrome standalone/embedded 根路径已实测，Firefox/Safari 待验，见 [Web 部署](docs/guides/web-deployment.md#歌单-json-导入与导出)。
+
 | 平台                     | 发布产物                     | 使用边界                                                   |
 | ------------------------ | ---------------------------- | ---------------------------------------------------------- |
 | Android 5.0+             | release 签名 APK             | 后台播放、通知与 DLNA 等需持续真机回归                     |

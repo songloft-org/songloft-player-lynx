@@ -1050,6 +1050,19 @@
 
   /** Main-thread half of `SongloftPlatform`: this is where the DOM lives. */
   var platformHandlers = {
+    pickTextFile: function (args) {
+      return window.__SONGLOFT_TEXT_FILES__
+        ? window.__SONGLOFT_TEXT_FILES__.pickTextFile(args[0])
+        : { error: 'file_transfer_unavailable' }
+    },
+    saveTextFile: function (args) {
+      return window.__SONGLOFT_TEXT_FILES__
+        ? window.__SONGLOFT_TEXT_FILES__.saveTextFile(args[0])
+        : { error: 'file_transfer_unavailable' }
+    },
+    cancelTextFile: function () {
+      if (window.__SONGLOFT_TEXT_FILES__) window.__SONGLOFT_TEXT_FILES__.cancelTextFile()
+    },
     openURL: function (args) {
       songloftPlatform.openURL(args[0])
     },

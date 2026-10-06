@@ -22,6 +22,19 @@
 
 export default function (_nativeModules, call) {
   return {
+    pickTextFile(options, callback) {
+      call('pickTextFile', [options]).then(
+        res => callback(res?.error ?? null, res?.body ?? null),
+        () => callback('file_transfer_failed', null),
+      )
+    },
+    saveTextFile(options, callback) {
+      call('saveTextFile', [options]).then(
+        res => callback(res?.error ?? null),
+        () => callback('file_transfer_failed'),
+      )
+    },
+    cancelTextFile() { void call('cancelTextFile', []).catch(() => {}) },
     openURL(url) {
       void call('openURL', [url])
     },

@@ -3,8 +3,9 @@ import '@testing-library/jest-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 
-const { exportSpy, importSpy } = vi.hoisted(() => ({
+const { exportSpy, importSpy, invalidateSpy } = vi.hoisted(() => ({
   exportSpy: vi.fn(),
+  invalidateSpy: vi.fn(async () => {}),
   importSpy: vi.fn(async () => ({
     playlists_created: 2,
     playlists_merged: 1,
@@ -17,6 +18,7 @@ vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn() }))
+vi.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({ invalidateQueries: invalidateSpy }) }))
 
 vi.mock('../domain/data-transfer.js', () => ({
   canExport: () => true,
@@ -29,7 +31,7 @@ const { DataPage } = await import('../pages/DataPage.js')
 /** Turns the `dataTransfer` platform capability on for the current test. */
 function withPlatformHost() {
   ;(globalThis as Record<string, unknown>).NativeModules = {
-    SongloftPlatform: { pickFile: () => {} },
+    SongloftPlatform: { openURL: () => {}, pickAndUploadFile: () => {} },
   }
 }
 
@@ -83,4 +85,25 @@ test('the import row reports what was created and merged', async () => {
   // 2 created / 1 merged / 15 songs, interpolated from the real English copy.
   expect(queryByText(/2/)).toBeInTheDocument()
   expect(importSpy).toHaveBeenCalledTimes(1)
+  expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['playlist'] })
+  expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['library'] })
+})
+
+test('blocks duplicate and opposite-direction taps while the picker is pending, then recovers on cancel', async () => {
+  withPlatformHost()
+  let cancel!: (error: Error) => void
+  importSpy.mockImplementationOnce(() => new Promise((_resolve, reject) => { cancel = reject }))
+  const { queryByTestId, queryByText } = await renderPage()
+  await act(async () => {
+    fireEvent.tap(queryByTestId('settings-import')!)
+    fireEvent.tap(queryByTestId('settings-import')!)
+    fireEvent.tap(queryByTestId('settings-export')!)
+  })
+  expect(importSpy).toHaveBeenCalledTimes(1)
+  expect(exportSpy).not.toHaveBeenCalled()
+  await act(async () => { cancel(new Error('cancelled')) })
+  expect(queryByText('Import cancelled')).toBeInTheDocument()
+  expect(invalidateSpy).not.toHaveBeenCalled()
+  await act(async () => { fireEvent.tap(queryByTestId('settings-export')!) })
+  expect(exportSpy).toHaveBeenCalledTimes(1)
 })

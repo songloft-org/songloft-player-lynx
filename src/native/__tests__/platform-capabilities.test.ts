@@ -42,11 +42,15 @@ describe('on the Web platform', () => {
     expect(caps.systemTray).toBe(false)
   })
 
-  test('data transfer is off even if a platform module were present', () => {
+  test('data transfer requires all text-file methods', () => {
     asWeb()
     g.NativeModules = { SongloftPlatform: {} }
     // openURL / pickAndUploadFile need main-thread APIs the render realm lacks.
     expect(getPlatformCapabilities().dataTransfer).toBe(false)
+    g.NativeModules = { SongloftPlatform: { pickTextFile() {}, saveTextFile() {} } }
+    expect(getPlatformCapabilities().dataTransfer).toBe(false)
+    g.NativeModules = { SongloftPlatform: { pickTextFile() {}, saveTextFile() {}, cancelTextFile() {} } }
+    expect(getPlatformCapabilities().dataTransfer).toBe(true)
   })
 
   test('file export is on once the web module implements shareFile', () => {
@@ -76,6 +80,7 @@ describe('on the Web platform', () => {
 describe('on a device host', () => {
   test('a capability is on exactly when its own module is registered', () => {
     withModules('SongloftPlatform', 'SongloftDlna')
+    g.NativeModules = { SongloftPlatform: { openURL() {}, pickAndUploadFile() {} }, SongloftDlna: {} }
     const caps = getPlatformCapabilities()
     expect(caps.dlna).toBe(true)
     expect(caps.dataTransfer).toBe(true)
@@ -90,6 +95,7 @@ describe('on a device host', () => {
     // the cast screen is offered on a build without the DLNA module.
     withModules('SongloftPlatform')
     expect(getPlatformCapabilities().dlna).toBe(false)
+    expect(getPlatformCapabilities().dataTransfer).toBe(false)
   })
 
   test('floating lyrics and live activity light up once registered', () => {

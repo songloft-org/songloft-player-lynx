@@ -172,6 +172,8 @@
 
 ## 6. P4：Web 歌单 JSON 导入/导出
 
+实施记录（2026-10-07）：共享源码与 Chrome standalone/embedded 根路径验收已完成。主线程选择/下载控件处理激活过期，认证请求支持刷新重试；279 文件 / 3012 项 JS、35 项发布工具、类型/双产物和 Android APK 通过。实际选文件、后端歌单/歌曲新增、中文/emoji 下载、取消/错误/认证失效与中英最大字号六组通过，见 progress。Firefox/Safari 尚未运行；部署子路径维持既有未验证边界，原生传输流程未改。
+
 - 方法级判断文件上传/导出能力，解除 Web 的一刀切禁用；Settings 入口与 DataPage 同步。
 - 导入继续使用现有 `/playlists/import` multipart `file` 契约，导出使用 `/playlists/export`。读取用户选定文件并上传，取消选择、无效 JSON、未授权、服务端失败均结束 busy 状态。
 - 选择器与下载在宿主主线程执行。真实浏览器先验证 Worker → host 的用户激活；若丢失，则由主线程直接承接用户点击，或显示用户明确点击的文件选择/下载控件，不能只替换 `.click()` 为 `showPicker()`。
@@ -254,7 +256,7 @@
 - [ ] P3a：缓存身份/索引/取消（共享 TS 与三端 v2 源码已接入；发布兼容声明 bridge 3 / schema 2 / `songCache.v2`，旧壳需安装同通道新包；Android 真实文件/HTTP 8 项、设备分音轨缓存及后端不可达冷启动播放通过；HarmonyOS 源码在 Node 文件/HTTP/TLS 适配器下 8 项通过，不等于 HAP 编译；iOS Apple 核心验证程序已配置但未编译/执行，两端编译与设备验收继续，见 progress）
 - [ ] P3b：批量缓存任务（共享源码已接入；273 文件 / 2960 项回归、双产物及 Android APK 编译通过；Android arm64 界面验证 235 首入队、94 完成含 36 缓存跳过、取消剩余 141 项和暂存清理；x86_64 缺 SVG 库/原生崩溃单独记录，iOS/HarmonyOS 编译和设备验收仍开放，见 progress）
 - [ ] P3c：离线管理与播放（共享源码已接入身份证明、本地列表/搜索/空间/删除/清理及独立本地队列；277 文件 / 2989 项回归和 35 项发布工具、双产物及 Android APK 编译通过；Android 实际断网播放/控制/seek/重播/冷启动、删除/分身份清理及登出隐藏通过，中英最大字号三个宽度六组通过，见 progress；iOS/HarmonyOS 编译和设备验收仍开放）
-- [ ] P4：Web 导入/导出
+- [x] P4：Web 导入/导出（源码与 Chrome standalone/embedded 根路径验收完成；Firefox/Safari 待验，见 progress）
 - [ ] P5：Web 快捷键
 - [ ] P6a：HarmonyOS 剪贴板
 - [ ] P6b：HarmonyOS 通知歌词

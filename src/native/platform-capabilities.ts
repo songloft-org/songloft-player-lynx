@@ -118,10 +118,12 @@ export function getPlatformCapabilities(): PlatformCapabilities {
     dlna: hasNativeModule('SongloftDlna'),
     nativeFilePicker: hasPlatform,
     bundleMode: hasPlatform,
-    // `openURL` / `pickAndUploadFile` need main-thread APIs (`window.open`,
-    // `document.createElement`) that the render realm does not have, so on Web
-    // both directions are dead until a host bridge exists (fix plan P2-2).
-    dataTransfer: isWeb ? false : hasPlatform,
+    dataTransfer: isWeb
+      ? hasNativeMethod('SongloftPlatform', 'pickTextFile')
+        && hasNativeMethod('SongloftPlatform', 'saveTextFile')
+        && hasNativeMethod('SongloftPlatform', 'cancelTextFile')
+      : hasNativeMethod('SongloftPlatform', 'openURL')
+        && hasNativeMethod('SongloftPlatform', 'pickAndUploadFile'),
     systemTray: !isWeb && hasPlatform,
     video: hasNativeModule('SongloftVideo'),
     // Method-level check, not module-level: `shareFile` postdates the module

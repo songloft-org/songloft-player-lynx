@@ -35,6 +35,18 @@ Vitest checks local index.html references and a type=module entry. Those checks 
 
 Workers also have self.location, so location availability cannot distinguish deployment modes.
 
+## Playlist JSON import and export
+
+Settings → Data accepts a previously exported Songloft version 1 JSON backup or exports all server playlists. Web enables this entry only when the host supplies `pickTextFile/saveTextFile/cancelTextFile`; older hosts hide the entry and explain the limitation on the data page.
+
+File selection and Blob downloads run on the main thread; the business Worker receives file text only. Import files are limited to 20 MiB. If a cross-thread call or network delay loses transient user activation, the main thread displays an actual file/download control and a cancel button. Click that control to continue. Object URLs are revoked after downloads; cancellation or leaving the data page removes temporary file controls. Cancellation uploads nothing. Empty files, invalid JSON and backups other than version 1 are rejected locally.
+
+Web requests use the shared authenticated client: multipart `file` to `/playlists/import` and an authenticated GET to `/playlists/export`. Tokens appear only in Authorization headers. A 401 uses the existing refresh and request replay; failed refresh returns to login, and HTTP errors end the busy state. Both actions are disabled during transfer. Successful imports invalidate `['playlist']` and `['library']`, covering details, song lists and home statistics. Native clients retain their existing upload/browser-export flows.
+
+Docker Chrome 153 with real Workers has verified standalone cross-origin CORS and root-path same-origin embedded hosting: actual file selection, playlist/song database changes, Chinese/emoji JSON downloads, empty/invalid file rejection, cancellation, 401 refresh/replay and recovery after server failures. Activation expiry was exercised by delaying the real host call and then clicking its main-thread control. Firefox/Safari have not run in this environment; subpath deployment retains the limitations above.
+
+References: [File input](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/file), [Activation and pickers](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/showPicker), [Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob), [Revoking object URLs](https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static).
+
 ## Known Web limitations
 
 | Limitation                     | Behavior                                                                                                                                                                                                       |
@@ -43,7 +55,7 @@ Workers also have self.location, so location availability cannot distinguish dep
 | IndexedDB persistence          | Workers lack actual Window localStorage; storage probes native → IndexedDB → localStorage → memory. IndexedDB must win over the injected scope binding                                                         |
 | No longpress                   | web-core does not synthesize it; long-press actions need a button alternative                                                                                                                                  |
 | Placeholder color patched      | Fixed on 2026-08-26: web-core default grey is patched to var(--content-muted,grey) by scripts/patch-web-core-client.mjs. Theme behavior was browser-tested. Shadow-root part defaults can require host patches |
-| File picker may not open       | Worker-to-host calls may lose user activation; verify in a real browser                                                                                                                                        |
+| Playlist file activation | JSON import/export supplies main-thread controls when Worker calls lose activation. Chrome is verified; Firefox/Safari remain unverified. Other legacy `pickAndUploadFile` callers retain the old bridge. |
 | No clear-browser-cache action  | This client registers no Service Worker and uses no Cache Storage. Controlled host serving uses no-cache/ETag; normal refresh loads updates. Flutter's PWA cache flow differs                                  |
 | Some Lynx elements unavailable | Unmapped tags such as refresh/webview become HTMLUnknownElement; their attributes have no effect. Check LYNX_TAG_TO_HTML_TAG_MAP before using them                                                             |
 
