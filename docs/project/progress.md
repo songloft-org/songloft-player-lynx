@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · Firefox 音频输出定位与快捷键最终回归
+
+- 上一批属于进展：增加 Firefox 两种部署的数据传输真实证据，并保留媒体/启动异常。本批复核主仓库 `37e1530`、客户端 `94f3ec7` 的干净状态，继续媒体环境调查，未重复无关 JS/Android 测试。Firefox 调试日志明确报告 `NS_ERROR_DOM_MEDIA_MEDIASINK_ERR`，同时 FFmpeg decoder 支持 AAC/MP3；DOM 暴露的通用 `MEDIA_ERR_DECODE` 不能据此归因为格式不支持。私有原始日志 `/tmp/lynx-web-acceptance/firefox-media-debug*.moz_log` 以 600 权限保存，检查输出已对凭据脱敏。
+- ALSA 临时 null 配置/后端选择未让探针恢复。转而下载/解包 PulseAudio、工具及两个缺失库到既有临时 sysroot，模块加载路径包含协议共享库；独立私有目录保存 socket/state/cookie，浏览器通过 `PULSE_SERVER` 连接自有服务，不安装宿主包或改用户音频配置。依据 [PulseAudio 模块](https://wiki.freedesktop.org/www/Software/PulseAudio/Documentation/User/Modules/#module-null-sink) 建立时钟驱动的空输出，会丢弃样本，不是扬声器验收。
+- 同一空白页、同一后端、同一 Firefox 134 的三种原生 Audio 探针恢复：原样 M4A 与 MP3 转码分别推进约 2.15/2.14 秒，既有普通 MP3 推进约 1.95 秒，观察窗口内无 error（`/tmp/lynx-ff-audio-pulse-probe.log`，outcome=timeout 仅为探针 4 秒观察窗口结束）。这与失败日志共同证明本批输出端限制及可复验的环境修正；不宣称所有浏览器/编码组合通过。
+- 实际客户端保持既有 128 kbps 设置、真实后端音频请求和两个 Worker。最终验证播放、持续暂停、切歌 1→2→1、音量 100→95→100、长按音量降至 90、禁用与刷新后持久化、真实播放器更多菜单阻止按键。Shadow DOM input 实收空格，iframe 不向宿主传播；组合输入是协议夹具。真实重复按键事件分别 repeat=false/true，空格只切换一次。全过程 audioErrors=[]、errors=[]、退出码 0（`/tmp/lynx-ff-keyboard-pulse-audit.log`）；中间一次回归因 Blob 页异常退出 1（`/tmp/lynx-ff-keyboard-pulse-final.log`），未忽略。最终菜单截图 `/tmp/lynx-web-acceptance/firefox-p5-overlay.png` 已目测。
+- 浏览器的间歇性 Blob 脚本问题在数据及快捷键回归均曾出现，最终阶段诊断流程通过仍不能消除此观察，bugs 保留开放；只将实际完成的控制行为记入 P5。Firefox 单版本、空输出、128 kbps、注入输入/IME 的边界同步中英 Web 部署/交接和中文计划，不扩为 Safari、扬声器或已安装插件验收。没有改应用源码或依赖清单；只本地提交，不 push。测试服务器/输出端/浏览器关闭，用户 `58091` 保持运行。
+
 ## 2026-10-07 · 计划剩余验收：Firefox 数据传输与媒体边界
 
 - 复核当前 `1f87211` 源码及最终 Web 产物，主仓库/客户端/SDK 工作树干净。本机无 Firefox、Swift/Xcode、hvigor；发现已有 Playwright 1.50.1 驱动后，将对应 Firefox **134.0** 下载到 `/tmp/lynx-web-acceptance/browsers`。启动缺 GTK 时只下载/解包两个 Debian 库到临时 sysroot，没有安装或改宿主系统依赖。实际登录界面正常、crossOriginIsolated=true，启动截图 `/tmp/lynx-web-acceptance/firefox-startup.png` 已目测。

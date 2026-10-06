@@ -57,7 +57,7 @@ Web 接口请求走共享认证客户端：导入为 `/playlists/import` 的 mul
 
 输入框、可编辑内容、按钮/链接/滑块、插件 iframe、组合输入及已处理的事件保留自己的操作；有返回栈覆盖层、选择/编辑模式或宽屏设置子页时暂停响应。播放与切歌忽略长按重复，音量允许重复；失焦和关闭开关后不消费按键。重复初始化清理旧监听，移动端不安装此监听。
 
-Chrome 153 已实际验证播放、暂停、切歌、音量、开关持久化和播放器菜单保护。Shadow DOM 输入框/iframe 为浏览器注入夹具，组合输入为协议事件夹具，未宣称操作系统输入法或已安装插件的完整验收。Firefox 134 当前环境的原生 HTML Audio 对 M4A、转码 MP3 和普通 MP3 均报 `MEDIA_ERR_DECODE`，与 Songloft 无关的空白页探针同样失败；播放自动重试会干扰快捷键断言，不能标为通过，具体环境原因仍待查。Safari 仍待验。事件依据见 [composedPath](https://developer.mozilla.org/en-US/docs/Web/API/Event/composedPath)、[isComposing](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/isComposing)、[repeat](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/repeat)。
+Chrome 153 已实际验证播放、暂停、切歌、音量、开关持久化和播放器菜单保护。Shadow DOM 输入框/iframe 为浏览器注入夹具，组合输入为协议事件夹具，未宣称操作系统输入法或已安装插件的完整验收。Firefox 134 在临时 PulseAudio 空输出下也完成上述快捷键流程，最终媒体错误/页面异常为零；验证使用现有 128 kbps 设置，实际后端流解码和进度推进，不包含扬声器听感。此前 `MEDIA_ERR_DECODE` 经 Firefox 日志定位为输出端初始化失败 `NS_ERROR_DOM_MEDIA_MEDIASINK_ERR`，不是证实编码器不支持；空白页探针接入输出端后同样恢复。测试只向该浏览器传 `PULSE_SERVER`，未修改宿主音频配置。空输出含义见 [PulseAudio module-null-sink](https://wiki.freedesktop.org/www/Software/PulseAudio/Documentation/User/Modules/#module-null-sink)。间歇性 Blob 脚本异常仍保留观察，Safari 仍待验。事件依据见 [composedPath](https://developer.mozilla.org/en-US/docs/Web/API/Event/composedPath)、[isComposing](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/isComposing)、[repeat](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/repeat)。
 
 ## Web 平台的已知限制
 

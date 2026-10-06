@@ -11,7 +11,7 @@
 
 ## 待修复（开放）
 
-- [ ] Firefox 134 测试环境的媒体与启动兼容性观察（2026-10-07）：数据导入/导出在 standalone/embedded 根路径实际通过，但一次启动捕获 Lynx MTS iframe 的 Blob 脚本加载异常，后续两种流程未复现，具体原因未定。快捷键测试的暂停/重复断言曾受媒体自动重试干扰；独立空白页的原生 HTML Audio 对 M4A、转码 MP3 和普通 MP3 同样报 `MEDIA_ERR_DECODE / Failed to decode media`，因此不能断定是 Songloft 键盘实现缺陷，也不能称播放验收通过。当前 web-core 包目标列 Chrome/Safari，不承诺 Firefox；环境与版本范围、日志见 progress。
+- [ ] Firefox 134 间歇性 Blob 脚本加载异常（2026-10-07）：数据导入/导出在 standalone/embedded 根路径通过，但数据流程与后续快捷键流程各捕获过 Lynx MTS iframe 的 `Failed to load script: blob:...`，阶段诊断后的最终流程未复现，具体原因未定，不能凭单次通过闭合。媒体 `MEDIA_ERR_DECODE` 已另定位为本机输出初始化失败 `NS_ERROR_DOM_MEDIA_MEDIASINK_ERR`；接入临时 PulseAudio 空输出后，空白页探针与快捷键最终回归均无媒体错误，不修改应用或宿主配置。实际播放/暂停/切歌/音量/重复/持久化与输入/菜单保护通过，但未验证扬声器听感。当前 web-core 包目标列 Chrome/Safari，不承诺 Firefox 整体稳定；证据与边界见 progress。
 
 - [ ] Android 模拟器宿主崩溃（2026-10-07 P6a）：新 APK 编译/arm64 ABI 安装/预编译通过，但两次启动呈空白首屏，宿主 emulator 37.2.12 随后 SIGSEGV；切换 swiftshader_indirect 后还有 ColorBuffer 绑定错误。与应用进程的既有 x86_64 SVG/JIT 问题分开记录，不在无证据时归因于剪贴板改动。本批 Android 系统粘贴仍待验，日志 `/tmp/lynx-p6a-emulator*.log`，Chrome 复制/粘贴证据见 progress。
 
