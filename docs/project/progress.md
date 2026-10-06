@@ -1,5 +1,12 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · HarmonyOS 修复提交的四种本地交付包
+
+- 修复提交为客户端 `e09592b7b57e2c410ddf26032bb8c64a19f5c405`，父仓库 `78ce304` 已同步子模块；重新准备统一元数据（dev / 构建号 `213487589` / `2026-10-06T22:06:29.611Z`）后，类型检查、关闭 JS TestBridge 的双产物、三端资源复制与 Android APK 编译通过。日志 `/tmp/lynx-e09592b-bundle-build.log`、`/tmp/lynx-e09592b-android.log`。47 项发布工具最终回归通过（`/tmp/lynx-harmony-arkts-final-release-tests.log`），原生契约 306 项、缓存/更新器适配器 15 项及先前完整 JS 3061 项的边界见上一批。
+- 临时 checkout 切到该修复提交，再复制同一份新 bundle/宿主快照并准备 HarmonyOS 版本；最终 **clean HAP 构建 34 个任务全部执行成功**，日志 `/tmp/lynx-e09592b-harmony-clean.log`。包内 compile SDK `26.0.0.105`、target API `260000026`、minimum API `50001013`，buildMode=release/debug=false；没有 signingConfig，仍为未签名包。
+- `/tmp/lynx-local-delivery/e09592b/` 保存四种包和 `verification.json`：Android 调试 APK、未签名 HarmonyOS HAP、standalone/embedded Web 压缩包。使用未修改的包校验逻辑检查 HAP/Web，APK 独立核对调试标志/aapt2 版本与 ZIP 内容；APK/HAP 内 bundle 与 dist 字节相同，宿主身份/公钥匹配（生产受信密钥仍 0），资源副本一致，JS 无测试桥标记。Web 首次打包遗漏 version.json 被校验器检出，补入统一元数据并重打包后两种部署均通过；没有修改校验器规避失败。
+- SHA-256：APK `58b2bd501b8e053f56a3abf95a1bfe289f3e12b21cfe6efdcf0692210964e3e0`；HAP `1930371591733072f26250e4de3726ba44ee108769b91c21f4f83fb3bd7b3441`；Web standalone `30b1954e29b6f98b145c14e202879c2868660687a853f3e670b8a4bdcdf37125`、embedded `6617d6779da34abc2879cebd7fdacf61ac7574e753f70e5d3accc7c90f3e2919`。产物固定对应 `e09592b`，后续文档提交不改变其源码身份。未安装/设备验收，iOS 只有资源复制；签名、设备和 Apple 编译继续开放，只本地分批提交，不 push。
+
 ## 2026-10-07 · HarmonyOS 真编译与 ArkTS 异常重抛修复
 
 - 从现有 CI 使用的 [setup-ohos v2](https://github.com/ErBWs/setup-ohos/tree/v2) 核对分发脚本，固定下载镜像版本 `26.0.0.821`；两分片 SHA-256 与 Release 元数据一致，合并包 SHA-256 `0cbdf7ac5c1be1e42694d448ffaee0c0be0ba9a948197e2bc5b61ca5bdc481f2` 校验通过。归档路径检查后解包至 `/tmp/lynx-harmony-toolchain/`，未执行 action 安装脚本、未更改 HOME 或安装系统包。CLI 内置 SDK 为 `26.0.0.105 / API 26`、hvigor `6.26.4`，这是第三方 CI 镜像，不描述为自行验证过官方分发签名。
