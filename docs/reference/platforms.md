@@ -48,7 +48,7 @@
 
 ## HarmonyOS
 
-工程实际声明 `compatibleSdkVersion` = `5.0.1(13)`（HarmonyOS NEXT 起步）。`FloatingLyric` / `LiveActivity` 当前没有宿主实现，TS 侧降级 no-op。2026-10-06 源码复核：`pages/Index.ets` 已注册 `SongloftVideo`，并用 XComponent 表面绑定共享 AVPlayer；视频不是完全缺失，但当前编译与设备行为仍需验证。旧[集成计划](../archive/harmony-integration-plan.md) 是历史资料，不能替代源码与验收记录。
+工程实际声明 `compatibleSdkVersion` = `5.0.1(13)`（HarmonyOS NEXT 起步）。`FloatingLyric` / `LiveActivity` 当前没有宿主实现，TS 侧降级 no-op。`pages/Index.ets` 已注册 `SongloftVideo`，并用 XComponent 表面绑定共享 AVPlayer；视频不是完全缺失。2026-10-07 已用 Linux CLI `26.0.0.821` / SDK `26.0.0.105` 完成整个宿主的未签名 release HAP 编译和包内容校验，最低兼容声明保持不变，compile/target 为新 SDK；不证明 API 13 设备行为或视频验收。签名和设备行为仍开放，视频按用户要求暂缓。详细证据见 [progress](../project/progress.md)；旧[集成计划](../archive/harmony-integration-plan.md) 是历史资料，不能替代源码与验收记录。
 
 ## Web
 

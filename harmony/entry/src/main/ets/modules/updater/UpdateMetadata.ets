@@ -56,7 +56,7 @@ export class UpdateMetadata {
       throw new Error('metadata_failed')
     } catch (error) {
       if (failure) throw new Error(failure)
-      if (['invalid_update_url', 'invalid_metadata_request'].includes((error as Error).message)) throw error
+      if (['invalid_update_url', 'invalid_metadata_request'].includes((error as Error).message)) throw error as Error
       throw new Error('metadata_failed')
     } finally { session.close() }
   }

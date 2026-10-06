@@ -87,6 +87,22 @@ pnpm run build:harmony-bundle # 构建并拷贝 JS bundle
 # 在 DevEco Studio 中打开 harmony/ 目录，Build > Build Hap(s)/APP(s)
 ```
 
+Linux 也可使用 CI 的 CLI 工具链编译。2026-10-07 在临时目录使用 CLI `26.0.0.821` / SDK `26.0.0.105` / hvigor `6.26.4` 完成未签名 release HAP 构建；下载来源与 SHA-256、ArkTS 修复及日志见 [progress](../project/progress.md)。工具链 `bin` 加入 PATH 后，在独立 checkout 中按以下顺序执行（`prepare-harmony` 会改写版本和签名配置）：
+
+```bash
+pnpm run build:harmony-bundle
+node scripts/prepare-harmony.mjs
+cd harmony
+ohpm install
+cd ..
+bash harmony/scripts/patch-lynx-event-reporter.sh harmony
+node scripts/patch-harmony-webview.mjs --required
+cd harmony
+hvigorw clean assembleHap --mode module -p product=default -p buildMode=release --no-daemon
+```
+
+该验证保持最低兼容声明 `5.0.1(13)`，包的 compile/target SDK 由上述新工具链确定；不代表 API 13 设备行为。生成 `entry-default-unsigned.hap`，尚需签名及设备验收。
+
 - **bundle 拷贝**：JS bundle 需拷贝到 `harmony/entry/src/main/resources/rawfile/`，与 Android 的 `assets/` 同理。
 - **模块注册**：HarmonyOS 侧的模块注册在 `pages/Index.ets`（`this.modules.set(name, { moduleClass, param })`，**按 LynxView 逐视图注册**，不是 Android/iOS 那种全局 `registerModule`）；HTTP service 替换仍在 `EntryAbility.ets`。两处分工由契约闸门锁定（`native-module-contract.test.ts` 的 `harmonyIndex` / `harmonyEntry` 两个 read）。
 - **无等价 API 的模块**：FloatingLyric、LiveActivity 在鸿蒙上无对应能力，TS 侧由 `NativeModules` 探测降级为 no-op。

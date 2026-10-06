@@ -18,7 +18,7 @@ export class LocalAudioSource {
       this.file = file
     } catch (error) {
       fileIo.closeSync(file.fd)
-      throw error
+      throw error as Error
     }
   }
 

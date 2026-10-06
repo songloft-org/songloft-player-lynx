@@ -1,5 +1,19 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · HarmonyOS 真编译与 ArkTS 异常重抛修复
+
+- 从现有 CI 使用的 [setup-ohos v2](https://github.com/ErBWs/setup-ohos/tree/v2) 核对分发脚本，固定下载镜像版本 `26.0.0.821`；两分片 SHA-256 与 Release 元数据一致，合并包 SHA-256 `0cbdf7ac5c1be1e42694d448ffaee0c0be0ba9a948197e2bc5b61ca5bdc481f2` 校验通过。归档路径检查后解包至 `/tmp/lynx-harmony-toolchain/`，未执行 action 安装脚本、未更改 HOME 或安装系统包。CLI 内置 SDK 为 `26.0.0.105 / API 26`、hvigor `6.26.4`，这是第三方 CI 镜像，不描述为自行验证过官方分发签名。
+- 客户端 `acca95d` 的 detached 临时 checkout `/tmp/lynx-harmony-acca95d/` 复制当前 bundle/宿主快照，运行版本准备、ohpm 安装（10 个依赖）与 CI 的两项 SDK 补丁。初次命令目录错误单独留在 `/tmp/lynx-harmony-acca95d-build.log`，更正目录后首次真正 ArkTS 编译发现 **5 处** catch 变量裸重抛错误（编译汇总 ERROR:6，含失败任务），日志 `/tmp/lynx-harmony-acca95d-build-harmony.log`。
+- 修复 `LocalAudioSource.ets`、`BundleUpdateStore.ets` 与 `UpdateMetadata.ets` 的重抛表达式，显式转为 `Error`，保留原异常、文件清理、更新回退及错误码语义。对应实际源码 Node 适配器 **15 项**和原生契约 **306 项**通过，日志 `/tmp/lynx-harmony-arkts-{rethrow-tests,contract}.log`。
+- 修复后的增量及 `clean assembleHap --mode module -p product=default -p buildMode=release --no-daemon` 均 **BUILD SUCCESSFUL**；后者 34 个任务、33 个执行、1 个未变化，日志 `/tmp/lynx-harmony-arkts-clean-build.log`。生成 `entry-default-unsigned.hap`，未改生产包校验器即可通过版本/宿主身份/生产 JS/原生库检查，实际 ZIP 内 bundle 字节与当前 dist 一致。没有签名配置，不能安装验收或视为可发布已签名 HAP。
+- HAP 实际 `compileSdkVersion=26.0.0.105`、`targetAPIVersion=260000026`；源码的最低兼容声明 `5.0.1(13)` 保留（包内 minAPIVersion=50001013）。这不证明 API 13 设备行为。现有 API/依赖警告保留，未为通过编译放宽 ArkTS 检查或升级 Lynx 依赖。HarmonyOS 的“未编译/缺 SDK”现状已更正，系统粘贴、媒体卡片、缓存/更新与插件前后台仍需设备验收；iOS 仍缺 Swift/Xcode。用户 `58091` 未停止，所有修改只本地提交，不 push。
+
+## 2026-10-07 · 当前提交的本地构建与交付包校验
+
+- 在客户端 `acca95d4a9899db21f7103a4533645f4f2d749c3` 重新生成统一 dev 元数据（构建号 `213486499`，时间 `2026-10-06T21:48:19.100Z`），关闭 JS TestBridge 后运行类型检查、Lynx/Web 双产物、三端 bundle 复制及 Android `assembleDebug`，全部通过；发布工具 **47 项**通过。应用源码仍为 P6c 批次，未因后续文档修改重复完整 JS 回归，已有 **286 文件 / 3061 项**证据保留。日志 `/tmp/lynx-acca95d-delivery-build.log` 与 `/tmp/lynx-acca95d-release-validation.log`。
+- 本地交付目录 `/tmp/lynx-local-delivery/acca95d/` 保留 Android 调试 APK、standalone/embedded Web 压缩包、统一版本/宿主身份和 `verification.json`。APK 的实际 aapt2 版本、ZIP 内 bundle 与宿主身份均匹配构建输入，无 JS TestBridge；它是 **debuggable 调试包**，不作为生产签名 APK 验收。iOS/HarmonyOS 当前仅校验资源复制一致，不等于宿主编译。
+- 两个 Web 压缩包均通过未修改的 `scripts/verify-package.py`，检查路径、部署模式、版本、资源和测试标记。交付目录重新创建，不混入浏览器探针页面。APK SHA-256 `0b0f8aa370761154a811606c100acef5abcd1b804f3549dee4b8b957ab6b4edd`；Web standalone `1991370b5151bd1c735d746f375b5cec786206b7d9437a52e639178f87c0c035`，embedded `f7a002438fe121b7056cbf6dd53095f7646d6e68fce5deaf7e2448ec2346c5dc`。包固定对应 `acca95d`；后续仅文档提交不会更改这些包的源码身份。
+
 ## 2026-10-07 · Firefox 音频输出定位与快捷键最终回归
 
 - 上一批属于进展：增加 Firefox 两种部署的数据传输真实证据，并保留媒体/启动异常。本批复核主仓库 `37e1530`、客户端 `94f3ec7` 的干净状态，继续媒体环境调查，未重复无关 JS/Android 测试。Firefox 调试日志明确报告 `NS_ERROR_DOM_MEDIA_MEDIASINK_ERR`，同时 FFmpeg decoder 支持 AAC/MP3；DOM 暴露的通用 `MEDIA_ERR_DECODE` 不能据此归因为格式不支持。私有原始日志 `/tmp/lynx-web-acceptance/firefox-media-debug*.moz_log` 以 600 权限保存，检查输出已对凭据脱敏。

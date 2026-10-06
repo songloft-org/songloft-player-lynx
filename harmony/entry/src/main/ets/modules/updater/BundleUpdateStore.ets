@@ -111,7 +111,7 @@ export class BundleUpdateStore {
       fileIo.fsyncSync(file.fd)
     } catch (error) {
       try { fileIo.unlinkSync(temporary) } catch (_) {}
-      throw error
+      throw error as Error
     } finally { fileIo.closeSync(file.fd) }
     try { fileIo.renameSync(temporary, path) }
     finally { try { fileIo.unlinkSync(temporary) } catch (_) {} }
@@ -172,7 +172,7 @@ export class BundleUpdateStore {
         if (this.selected) this.state.active = this.selected.key
       }
       try { this.save(); this.prune() }
-      catch (error) { this.selected = undefined; this.failed = true; throw error }
+      catch (error) { this.selected = undefined; this.failed = true; throw error as Error }
     }
     if (!this.selected) return undefined
     const file = fileIo.openSync(this.selected.path, fileIo.OpenMode.READ_ONLY)
@@ -187,7 +187,7 @@ export class BundleUpdateStore {
         position += count
       }
       return data
-    } catch (error) { this.reportStartupFailure(); throw error }
+    } catch (error) { this.reportStartupFailure(); throw error as Error }
     finally { fileIo.closeSync(file.fd) }
   }
   confirmStartup(id: string): void {

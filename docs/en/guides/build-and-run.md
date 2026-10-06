@@ -81,6 +81,22 @@ pnpm run build:harmony-bundle
 # In DevEco Studio, open harmony/ and Build > Build Hap(s)/APP(s)
 ```
 
+Linux can also compile with the CI CLI toolchain. On 2026-10-07, CLI `26.0.0.821`, SDK `26.0.0.105` and hvigor `6.26.4` produced an unsigned release HAP in a temporary directory. Download provenance, SHA-256 checks, ArkTS fixes and logs are in [progress (Chinese)](../../project/progress.md). With the toolchain's `bin` on PATH, run these steps in an isolated checkout (`prepare-harmony` rewrites version and signing configuration):
+
+```bash
+pnpm run build:harmony-bundle
+node scripts/prepare-harmony.mjs
+cd harmony
+ohpm install
+cd ..
+bash harmony/scripts/patch-lynx-event-reporter.sh harmony
+node scripts/patch-harmony-webview.mjs --required
+cd harmony
+hvigorw clean assembleHap --mode module -p product=default -p buildMode=release --no-daemon
+```
+
+This verification preserves the minimum compatibility declaration `5.0.1(13)`; the newer toolchain determines the package's compile/target SDK. It does not establish API 13 device behavior. The result is `entry-default-unsigned.hap`; signing and device acceptance remain required.
+
 The bundle is copied to entry/src/main/resources/rawfile. Module registration is per LynxView in pages/Index.ets; EntryAbility.ets configures the HTTP service. FloatingLyric and LiveActivity are unavailable and degrade to no-op. Use a HarmonyOS NEXT device/simulator and hdc for behavioral testing.
 
 ## Web
