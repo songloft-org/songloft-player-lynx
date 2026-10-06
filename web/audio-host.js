@@ -746,6 +746,11 @@
       emitProgress()
     },
 
+    getVolume: function () {
+      sendEvent('SongloftAudio.volumeChanged', {
+        volume: Math.round((videoPrimary ? video.volume : audio.volume) * 100),
+      })
+    },
     setVolume: function (v) {
       volume = Math.min(1, Math.max(0, v))
       video.volume = volume
@@ -1050,6 +1055,9 @@
 
   /** Main-thread half of `SongloftPlatform`: this is where the DOM lives. */
   var platformHandlers = {
+    setPlaybackShortcuts: function (args) {
+      if (window.__SONGLOFT_KEYBOARD__) window.__SONGLOFT_KEYBOARD__.configure(args[0])
+    },
     pickTextFile: function (args) {
       return window.__SONGLOFT_TEXT_FILES__
         ? window.__SONGLOFT_TEXT_FILES__.pickTextFile(args[0])

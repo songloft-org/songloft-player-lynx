@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · P5：Web 播放键盘快捷键
+
+- 新增主线程 `playback-keyboard-host.js`、Web 方法/事件 facade 与 Worker 动作模型。应用拥有交互焦点且队列可播放时支持空格、Ctrl/⌘ + 方向键，复用现有播放器/DLNA 路径；播放设置显示固定映射与默认开启的本地持久化开关。旧 Web 宿主无方法时隐藏入口，移动端不注册 DOM 监听，原生 ABI 不变。
+- 主线程检查 composed path/activeElement 的输入、可编辑内容、按钮、链接、滑块、iframe，保留组合输入/已处理事件；文件选择 DOM 和返回栈覆盖层、选择/编辑模式、宽屏设置子页均阻止响应。播放/切歌忽略 key repeat，音量允许重复并钳制上下限；失焦/禁用不消费按键。重复初始化和迟到偏好读取有代次保护，监听可销毁；配置去重避免每次播放进度都发 IPC。
+- 实测发现 Web 原音量为 100%，但缺少 `getVolume` 回报令 store 留在 50%；本批接通实际音量事件，首次按键真实变化为 100% → 95% → 100%。首次接线误用了不存在的事件函数名，已改正并加入直接执行完整主线程脚本的 VM 回归，未只断言文本包含方法名。
+- Chrome 153 真实两个 Worker 与实际媒体：空格播放/暂停、下一首 1→2、上一首 2→1、音量 ±5、长按音量连续两次 100→90、重复空格仅执行一次、宿主重载只有一套监听。实际设置关闭后按键无动作，刷新后仍关闭，重新开启有效；真实播放器更多菜单打开时播放与音量不变。日志 `/tmp/lynx-p5-browser-final.log`，无页面异常。
+- Shadow DOM 输入框实际收到空格且播放器不变；注入 iframe 的输入不向宿主传播，组合输入协议夹具期间不触发。两者没有被称为真实已安装插件/操作系统输入法验收；Firefox/Safari 与相应完整流程仍待验。中英最大字号 × 320/375/1024 六组设置行边界通过，滚动后开关和说明均可见，已目测英文 320px（`/tmp/lynx-p5-layout-visible-final.log`、`/tmp/lynx-p1-browser/p5-keys-*.png`）。
+- 最终 **282 文件 / 3026 项 JS 回归通过**（`/tmp/lynx-p5-delivery-full.log`），**35 项发布工具通过**（`/tmp/lynx-p5-delivery-release.log`）；类型检查、双产物、standalone/embedded 与三端 bundle 复制、Android `assembleDebug` 通过（`/tmp/lynx-p5-delivery-build.log`）。双语 README/Web 部署/handoff 和中文方法清单/计划已更新，下一批 P6a 剪贴板；只本地提交，不 push。用户 `58091` 服务未停止。
+
 ## 2026-10-07 · P4：Web 歌单 JSON 导入与导出
 
 - Settings 与数据页改为方法级能力判断：Web 要求 `pickTextFile/saveTextFile/cancelTextFile` 齐备，原生要求原有 `openURL/pickAndUploadFile`。新增 `web/file-transfer-host.js` 与 TS facade，文件对象与 DOM 留在主线程，Worker 只收文本；三端原生 ABI 不变。

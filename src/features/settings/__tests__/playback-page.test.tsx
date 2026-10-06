@@ -19,6 +19,7 @@ const {
   readEnabled,
   writeTwoLineSpy,
   setTwoLineSpy,
+  webKeysAvailable,
 } = vi.hoisted(() => ({
   writeQualitySpy: vi.fn(async () => {}),
   setQualityCacheSpy: vi.fn(),
@@ -35,12 +36,17 @@ const {
   readEnabled: vi.fn(async () => false),
   writeTwoLineSpy: vi.fn(async () => {}),
   setTwoLineSpy: vi.fn(async () => {}),
+  webKeysAvailable: { value: false },
 }))
 
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn() }))
+vi.mock('../../../native/web-playback-keys.js', async importOriginal => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  hasPlaybackKeys: () => webKeysAvailable.value,
+}))
 // The real Switch is a native gesture leaf; the mock keeps the checked→className
 // mapping so an ON switch stays distinguishable from an OFF one.
 vi.mock('@lynx-js/lynx-ui-switch', async () =>
@@ -100,12 +106,14 @@ function withFloatingLyricHost() {
 }
 
 afterEach(() => {
+  webKeysAvailable.value = false
   vi.clearAllMocks()
   readEnabled.mockResolvedValue(false)
   requestPermissionSpy.mockResolvedValue(true)
   hasPermissionSpy.mockResolvedValue(true)
   isShowingSpy.mockResolvedValue(false)
   delete (globalThis as Record<string, unknown>).NativeModules
+  delete (globalThis as Record<string, unknown>).SystemInfo
 })
 
 /**
@@ -157,6 +165,27 @@ test('picking a concrete quality persists it and overrides the player store', as
 
   expect(writeQualitySpy).toHaveBeenCalledWith('320')
   expect(setQualityCacheSpy).toHaveBeenCalledWith('320')
+})
+
+test('Web shortcuts are visible only with the host method and the switch changes the local preference', async () => {
+  const { webShortcuts } = await import('../../player/data/web-shortcuts.js')
+  webShortcuts.setState({ enabled: true })
+  webKeysAvailable.value = true
+  ;(globalThis as Record<string, unknown>).SystemInfo = { platform: 'web' }
+  ;(globalThis as Record<string, unknown>).NativeModules = { SongloftPlatform: { setPlaybackShortcuts() {} } }
+  const { queryByTestId } = await renderPage()
+  const row = queryByTestId('settings-keyboard-shortcuts')!
+  expect(row).toBeInTheDocument()
+  await act(async () => { fireEvent.tap(row.querySelector('.app-switch') as unknown as Element) })
+  expect(webShortcuts.getState().enabled).toBe(false)
+  webShortcuts.setState({ enabled: true })
+})
+
+test('native hosts and older Web hosts do not advertise playback keyboard settings', async () => {
+  ;(globalThis as Record<string, unknown>).SystemInfo = { platform: 'web' }
+  ;(globalThis as Record<string, unknown>).NativeModules = { SongloftPlatform: {} }
+  const { queryByTestId } = await renderPage()
+  expect(queryByTestId('settings-keyboard-shortcuts')).not.toBeInTheDocument()
 })
 
 test('picking "original" clears the player-store override rather than passing the string', async () => {

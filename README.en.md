@@ -12,6 +12,8 @@ Native device caching now has identity/track-variant indexes, whole-playlist/sel
 
 Web supports playlist JSON import/export with file selection, authenticated refresh, downloads and cancellation. Expired browser activation falls back to main-thread controls. Chrome standalone and root-path embedded flows were exercised; Firefox/Safari remain unverified. See [Web deployment](docs/en/guides/web-deployment.md#playlist-json-import-and-export).
 
+Web playback settings also provide a persisted keyboard-shortcut switch: Space toggles playback and Ctrl/⌘ + arrows change tracks or volume. See [Shortcuts](docs/en/guides/web-deployment.md#playback-keyboard-shortcuts) for input/overlay/plugin focus protection and the Chrome validation scope.
+
 | Platform                 | Release artifact               | Limitations                                                                                        |
 | ------------------------ | ------------------------------ | -------------------------------------------------------------------------------------------------- |
 | Android 5.0+             | Release-signed APK             | Background playback, notifications, and DLNA still need ongoing device regression testing          |

@@ -12,6 +12,8 @@ Songloft Player 的 Lynx 客户端，从 Flutter 版整体重写为 ReactLynx + 
 
 Web 已提供歌单 JSON 导入/导出，支持选择文件、认证刷新、下载和取消；浏览器点击权限过期时提供主线程控件。Chrome standalone/embedded 根路径已实测，Firefox/Safari 待验，见 [Web 部署](docs/guides/web-deployment.md#歌单-json-导入与导出)。
 
+Web 播放设置另有可持久保存的键盘快捷键开关，支持空格播放/暂停、Ctrl/⌘ + 方向键切歌及音量调整。输入/覆盖层/插件焦点保护和 Chrome 实测范围见 [快捷键说明](docs/guides/web-deployment.md#播放键盘快捷键)。
+
 | 平台                     | 发布产物                     | 使用边界                                                   |
 | ------------------------ | ---------------------------- | ---------------------------------------------------------- |
 | Android 5.0+             | release 签名 APK             | 后台播放、通知与 DLNA 等需持续真机回归                     |

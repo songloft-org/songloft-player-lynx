@@ -128,6 +128,8 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 **7 个**模块：`Songlo
 
 - **平台差异**：Web 的 worker 侧模块（`web/songloft-platform-module.js`）实现 `openURL` / `setClipboard` / `setInsecureTls`（no-op，浏览器自己管证书信任）/ `pickAndUploadFile` / `shareFile`（走浏览器下载而非分享面板）；另有 Web 专属 `pickTextFile(options, callback)`、`saveTextFile(options, callback)` 与 `cancelTextFile()`，由 `src/native/web-files.ts` Promise 化并委托主线程 `web/file-transfer-host.js`。新文本桥只负责选择/保存，不传服务器地址或 token；歌单 JSON 认证 HTTP 在 Worker 复用共享客户端。三个方法齐备才开放 Web 数据管理，未改变原生 ABI。**没有 `logWrite` / `logRead` / `shareLogArchive`**，所以 `appendClientLog()` 在 Web 返回 `false`（调用方回落到内存缓冲），日志导出也留在 JS 打包路径上。文件上限、用户激活降级和验证边界见 [Web 部署](../guides/web-deployment.md#歌单-json-导入与导出)。
 
+Web 另提供 `setPlaybackShortcuts(state)`：共享 facade 在确认 Web 与该方法存在后配置主线程监听，主线程通过 `SongloftKeyboard.action` 的 `[{action}]` 事件传回 Worker，播放器沿原有 store 执行动作。`SongloftAudio.getVolume()` 回报实际音量的 `SongloftAudio.volumeChanged` 事件。按键脚本随 Web 发布资源复制，原生 ABI 未改变；焦点/覆盖层/重复监听保护与验证边界见 [快捷键](../guides/web-deployment.md#播放键盘快捷键)。
+
 #### `shareLogArchive` —— 日志导出快路径
 
 存在的理由是**工作发生在哪一侧**。JS 打包路径要把后端日志（≤10 MiB）和本机客户端日志（≤20 MB）读进 JS 字符串、用纯 JS zipper 压缩、再手写 base64，全部跑在无 JIT 的 JS 线程上，然后把整个 payload 推回原生；这就是 songloft-player-lynx#3「导出日志很慢」。快路径只跨桥三个短字符串，其余全在原生流式完成。

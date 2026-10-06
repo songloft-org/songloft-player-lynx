@@ -47,6 +47,14 @@ Web 接口请求走共享认证客户端：导入为 `/playlists/import` 的 mul
 
 参考：[文件输入](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/file)、[用户激活与选择器](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/showPicker)、[Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob)、[撤销 object URL](https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static)。
 
+## 播放键盘快捷键
+
+播放设置提供本地保存的开关，默认开启。应用拥有交互焦点、已有可播放队列时：空格播放/暂停；Ctrl/⌘ + ←/→ 上一首/下一首；Ctrl/⌘ + ↑/↓ 调整音量，每次 5%，范围 0–100%。动作复用现有播放器，Web 主线程只识别按键并向 Worker 发事件。主线程还回报实际媒体音量，避免首次调整跳到默认值。
+
+输入框、可编辑内容、按钮/链接/滑块、插件 iframe、组合输入及已处理的事件保留自己的操作；有返回栈覆盖层、选择/编辑模式或宽屏设置子页时暂停响应。播放与切歌忽略长按重复，音量允许重复；失焦和关闭开关后不消费按键。重复初始化清理旧监听，移动端不安装此监听。
+
+Chrome 153 已实际验证播放、暂停、切歌、音量、开关持久化和播放器菜单保护。Shadow DOM 输入框/iframe 为浏览器注入夹具，组合输入为协议事件夹具，未宣称操作系统输入法或已安装插件的完整验收；Firefox/Safari 仍待验。事件依据见 [composedPath](https://developer.mozilla.org/en-US/docs/Web/API/Event/composedPath)、[isComposing](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/isComposing)、[repeat](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/repeat)。
+
 ## Web 平台的已知限制
 
 部署前该知道用户会遇到什么：

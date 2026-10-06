@@ -47,6 +47,14 @@ Docker Chrome 153 with real Workers has verified standalone cross-origin CORS an
 
 References: [File input](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/file), [Activation and pickers](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/showPicker), [Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob), [Revoking object URLs](https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static).
 
+## Playback keyboard shortcuts
+
+Playback settings include a locally persisted switch, enabled by default. When the app owns interaction focus and has a playable queue, Space toggles playback, Ctrl/⌘ + ←/→ goes to the previous/next track, and Ctrl/⌘ + ↑/↓ changes volume by five percentage points within 0–100%. Actions reuse the existing player; the main thread recognizes keys and sends Worker events. It also reports actual media volume so the first adjustment does not jump to a default value.
+
+Inputs, editable content, buttons/links/sliders, plugin iframes, composition and previously handled events retain their own controls. A back-stack overlay, selection/edit mode or wide-screen settings subpage pauses shortcuts. Playback and track changes ignore key repeat; volume accepts it. Lost focus or a disabled switch leaves keys unconsumed. Reinitialization removes old listeners; mobile hosts do not install this listener.
+
+Chrome 153 exercised real playback, pause, track changes, volume, persisted settings and player-menu blocking. Shadow DOM inputs/iframes were injected browser fixtures and composition used protocol-event fixtures; this does not establish operating-system IME or installed-plugin acceptance. Firefox/Safari remain open. Event references: [composedPath](https://developer.mozilla.org/en-US/docs/Web/API/Event/composedPath), [isComposing](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/isComposing), [repeat](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/repeat).
+
 ## Known Web limitations
 
 | Limitation                     | Behavior                                                                                                                                                                                                       |

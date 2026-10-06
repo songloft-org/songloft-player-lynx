@@ -22,6 +22,7 @@
 
 export default function (_nativeModules, call) {
   return {
+    setPlaybackShortcuts(state) { void call('setPlaybackShortcuts', [state]).catch(() => {}) },
     pickTextFile(options, callback) {
       call('pickTextFile', [options]).then(
         res => callback(res?.error ?? null, res?.body ?? null),

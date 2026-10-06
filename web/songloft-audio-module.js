@@ -21,6 +21,7 @@ var METHODS = [
   'stop',
   'seek',
   'setVolume',
+  'getVolume',
   'setSpeed',
   'setQueue',
   'next',

@@ -5,6 +5,8 @@ import { getFloatingLyricModule } from '../../../native/floating-lyric.js'
 import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 import { setAudioQualityCache, setNormalizeEnabled } from '../../player/store/player-store.js'
 import { useLyricStore } from '../../player/store/lyric-store.js'
+import { webShortcuts } from '../../player/data/web-shortcuts.js'
+import { hasPlaybackKeys } from '../../../native/web-playback-keys.js'
 import { getSettingsApi } from '../api/index.js'
 import {
   type AudioQuality,
@@ -56,6 +58,12 @@ const FLOATING_LYRIC_OPACITY_OPTIONS: FloatingLyricOpacity[] = [0.2, 0.4, 0.6, 0
  * it lives at `/player/eq`, reached from the player's `⋯` menu.
  */
 export function PlaybackPage() {
+  const [shortcutsEnabled, setShortcutsEnabled] = useState(webShortcuts.getState().enabled)
+  useEffect(() => {
+    const stop = webShortcuts.subscribe(state => setShortcutsEnabled(state.enabled))
+    setShortcutsEnabled(webShortcuts.getState().enabled)
+    return stop
+  }, [])
   const { t } = useTranslation()
 
   // ── Playback state ───────────────────────────────────────────────────────
@@ -168,6 +176,17 @@ export function PlaybackPage() {
           testId='settings-normalize'
         />
       </SettingsSection>
+
+      {hasPlaybackKeys() && <SettingsSection title={t('settings.keyboardShortcuts')}>
+        <SwitchRow
+          icon='music'
+          title={t('settings.keyboardShortcuts')}
+          subtitle={t('settings.keyboardShortcutsMap')}
+          checked={shortcutsEnabled}
+          onChange={next => webShortcuts.getState().setEnabled(next)}
+          testId='settings-keyboard-shortcuts'
+        />
+      </SettingsSection>}
 
       {/* ── Lyrics ─────────────────────────────────────────────────────── */}
       <SettingsSection title={t('settings.lyricsSection')}>
