@@ -3,6 +3,7 @@ import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createBuildMetadata } from './release-lib.mjs'
+import { createNativeHostMetadata, loadNativeContract } from './update-release-lib.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const version = JSON.parse(
@@ -22,6 +23,11 @@ mkdirSync(resolve(root, '.build'), { recursive: true })
 writeFileSync(
   resolve(root, '.build/version.json'),
   JSON.stringify(metadata, null, 2) + '\n',
+)
+writeFileSync(
+  resolve(root, '.build/native-host.json'),
+  JSON.stringify(createNativeHostMetadata(metadata, loadNativeContract(root),
+    process.env.SONGLOFT_UPDATE_PUBLIC_KEY ?? ''), null, 2) + '\n',
 )
 if (process.env.GITHUB_OUTPUT) {
   for (const [key, value] of Object.entries(metadata))

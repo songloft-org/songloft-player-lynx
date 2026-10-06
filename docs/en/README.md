@@ -48,6 +48,7 @@ Avoid duplicating changing test counts, artifact sizes, or platform validation d
 | ------------------------------------------------------------ | -------------------------------------------------------- |
 | [API conventions (Chinese)](../reference/api-conventions.md) | API/store signatures, ranges, naming, E2E handles        |
 | [Native modules (Chinese)](../reference/native-modules.md)   | Methods, events, platform matrix, and invariants         |
+| [Client updates](reference/client-updates.md) | Bundle signatures, compatibility, assets, shell identity, and current delivery limits |
 | [Back navigation (Chinese)](../reference/back-navigation.md) | Overlay/route/tab back behavior                          |
 | [Platforms (Chinese)](../reference/platforms.md)             | Android API 21, iOS 15, HarmonyOS NEXT, current browsers |
 | [ArkTS references (Chinese)](../reference/arkts/)            | HarmonyOS constraints and migration references           |

@@ -42,6 +42,8 @@ Casting diagnostics now use the existing client log, including device details, m
 
 P1 now consumes `/songs/{id}/audio-tracks` with `{tracks: [...]}` and provides a multiple-track sheet in the player menu. Switching uses the actual index and preserves position and playback intent. The source-readiness contract is implemented in all four hosts; older shells disable switching and request an upgrade. Android device tests and real Web-browser playback pass; iOS/HarmonyOS compilation and device acceptance remain open. Video remains deferred as requested. Evidence and outstanding checks are in [progress (Chinese)](../../project/progress.md).
 
+P2a adds independent bundle/manifest signing, compatibility models, and the immutable prepare-stage shell snapshot; see [client update protocol](../reference/client-updates.md). Full JS and Node/Java protocol regressions pass. Production signing remains unconfigured. P2b/P2c will implement native loading/download/rollback and the update UI; there is still no usable in-app client updater.
+
 A next-song Range GET already runs at 80% progress, so prefetch is not wholly missing. Web file bridges exist, but `dataTransfer` remains explicitly disabled. HarmonyOS `Index.ets` registers video and creates an XComponent; iOS now uses an underlay AVPlayerLayer. Existing source does not establish device acceptance.
 
 ## 5. Taking over and validating

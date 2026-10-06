@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-06 · P2a 更新签名与兼容发布契约
+
+- `updates/native-contract.json` 定义协议、桥接/schema、最低壳版本、必需能力和三端准确 SDK 版本；prepare 核对 Android Gradle / iOS Podfile.lock / HarmonyOS 依赖，拒绝契约漂移。另生成 `.build/native-host.json` 的不可变壳身份/受信公钥快照；原生资源与运行时暴露在 P2b 接入，当前还不能客户端内热更新。
+- `finalize-release.mjs` 保留五种完整包，共用 `version.json`，有有效独立 RSA 密钥时增加原生 bundle、兼容声明、原始清单签名和完整 checksum。发布时核对壳快照、key 匹配、32 MiB bundle/128 KiB 清单上限、调试包和外部资源遗漏；无私钥仅发布完整包，绝不产出未签名热更新。
+- 公钥作为 Repository Variable 在 prepare/release 两阶段核对，私钥只进入 release job Secret；协议使用 RSA PKCS#1 v1.5 + SHA-256，SPKI/PKCS#1 公钥编码对应三端。新增共享公开 UTF-8 签名向量，临时私钥已丢弃；没有生成或配置真实发布私钥。dev/正式通道解析和更新界面留在 P2c，不改变已有发布触发条件。
+- 验证：类型检查、Lynx/Web 双产物构建、全量 Vitest **262 文件 / 2827 项通过**，Node 发布回归 **18 项通过**，含 Java 实际验签及坏签名负例；actionlint、文档相对链接、diff/UTF-8 检查通过。临时禁用验签后篡改清单测试按预期失败，恢复后通过。
+- 正式更新签名密钥尚未配置；CI 真发版、iOS/HarmonyOS 验签及原生下载/回退仍开放。用户授权分批本地提交，不 push；P2b 按该契约继续实施，不把发布基础设施写成完整更新功能。
+
 ## 2026-10-06 · P1 多音轨选择与源准备契约
 
 - `getTracks()` 改用 `/songs/{id}/audio-tracks` 对象契约，保留默认标记和真实 audio-relative index；探测缓存按服务器、用户、profile、歌曲及修订隔离。播放器更多菜单在多轨时提供根级面板，显示标题、语言、编码、默认、当前与切换状态；DLNA 时隐藏入口，探测失败可重试。

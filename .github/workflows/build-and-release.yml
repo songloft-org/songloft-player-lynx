@@ -43,6 +43,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Prepare shared metadata (validates v* tag against package.json)
         id: metadata
+        env:
+          SONGLOFT_UPDATE_PUBLIC_KEY: ${{ vars.LYNX_UPDATE_PUBLIC_KEY }}
         run: node scripts/prepare-build.mjs
       - run: pnpm run typecheck
       - run: pnpm run build
@@ -55,6 +57,7 @@ jobs:
           path: |
             dist/
             .build/version.json
+            .build/native-host.json
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
@@ -303,9 +306,12 @@ jobs:
           name: js-bundles
           path: shared-build
       - name: Verify complete asset set and generate checksums
+        env:
+          SONGLOFT_UPDATE_PUBLIC_KEY: ${{ vars.LYNX_UPDATE_PUBLIC_KEY }}
+          SONGLOFT_UPDATE_PRIVATE_KEY: ${{ secrets.LYNX_UPDATE_PRIVATE_KEY }}
         run: |
           cp shared-build/.build/version.json release-files/version.json
-          node scripts/finalize-release.mjs release-files
+          node scripts/finalize-release.mjs release-files shared-build/dist/main.lynx.bundle shared-build/.build/native-host.json
       - name: Publish dev or versioned release
         env:
           GH_TOKEN: ${{ github.token }}

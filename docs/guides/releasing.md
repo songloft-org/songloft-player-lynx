@@ -41,6 +41,10 @@ dev 与正式版必须长期共用同一 Android 签名身份；换 key 会破�
 
 iOS 只构建设备 Release，明确标为 `nosign`。目前没有 iOS 分发证书导入或 App Store 上传流程。
 
+bundle 热更新另使用独立 RSA 签名身份，配置 Repository Variable `LYNX_UPDATE_PUBLIC_KEY`（SPKI PEM 公钥）与 Secret `LYNX_UPDATE_PRIVATE_KEY`（PKCS#8 PEM 私钥）。私钥只供 release job 签名，不进入 JS、安装包、artifact 或日志；prepare job 将公钥写入同次构建的不可变壳信息。keyId 由公钥摘要生成，无需另配。详细格式见 [客户端更新协议](../reference/client-updates.md)。
+
+缺少私钥时继续生成五种完整包，不发布未签名热更新资产；私钥存在而公钥缺失/不匹配，或 prepare/release 两阶段公钥变化，发布失败。首次热更新须安装 P2b 接入更新器和受信公钥的新壳；当前 P2a 尚未实现客户端更新入口。轮换公钥也须先安装信任新公钥的壳，不能仅替换远程清单。
+
 ## 手动发版脚本
 
 ```bash
@@ -88,6 +92,8 @@ SONGLOFT_BUILD_METADATA="$PWD/.build/version.json" pnpm run build
 ## 发布闸门
 
 prepare job 运行类型检查、生产双产物构建、完整 JS 测试与发版工具回归。平台 job 编译宿主，再检查实际包内 bundle、原生版本/构建号、Lynx 动态库、签名与 Web 静态引用。release job 要求五个非空包齐全，生成逐包 SHA-256 和包含包清单的 version.json。
+
+配置更新密钥时，release job 同时验证 prepare 阶段壳信息、生产 bundle 和自包含资源约束，发布原生 bundle、`bundle_update` 兼容声明和 `version.json.sig`。签名覆盖原始清单字节，checksum 同时覆盖清单与签名。发布工具回归中的 Java 验签需要 JDK；无 JDK 时该项明确 skip，其余 Node 协议测试仍执行。
 
 正式 JS 构建默认替换掉 devtools/E2E 入口。原生测试桥只能在 Debug 注册/启动，监听 `127.0.0.1:9230`；dev 下载包同样为 Release，不能用于 TestBridge E2E。测试构建方法见[测试指南](testing.md)。
 

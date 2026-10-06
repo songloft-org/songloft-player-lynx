@@ -41,6 +41,10 @@ Keep the same Android signing identity across development/stable releases to pre
 
 iOS builds a device Release app explicitly labeled `nosign`. Certificate import and App Store upload are not implemented.
 
+Bundle updates use an independent RSA signing identity: repository variable `LYNX_UPDATE_PUBLIC_KEY` (SPKI PEM public key) and secret `LYNX_UPDATE_PRIVATE_KEY` (PKCS#8 PEM private key). Only the release job receives the private key; it never enters JS, packages, artifacts, or logs. Prepare embeds the public key into the immutable same-build shell snapshot. The key ID derives from its hash. See [client update protocol](../reference/client-updates.md).
+
+Without a private key, the five full packages still publish without unsigned hot-update assets. A private key with a missing/mismatched public key, or a key change between prepare and release, fails publishing. Initial hot updates require installing the P2b updater shell with its trusted public key; P2a does not provide the client UI yet. Key rotation also requires a shell trusting the new key.
+
 ## Manual release script
 
 ```bash
@@ -88,6 +92,8 @@ This generates dev metadata. Ordinary local builds also display dev and carry no
 ## Release gates
 
 Prepare runs typechecking, production builds for both JS targets, the full JS suite, and release-tool regressions. Platform jobs compile hosts and inspect embedded bundles, versions/build numbers, Lynx libraries, signatures, and Web asset references. The release job requires all five nonempty packages and generates SHA-256 hashes and a version.json asset manifest.
+
+With update signing configured, release also validates the prepared shell snapshot, production bundle, and self-contained resource contract, then publishes the native bundle, compatibility declarations, and `version.json.sig`. Signatures cover original manifest bytes; checksums include manifest and signature. Java verification regressions require a JDK and visibly skip if unavailable; other Node protocol tests still run.
 
 Production JS replaces the devtools/E2E entry point by default. Native TestBridge registration/startup is Debug-only and listens on `127.0.0.1:9230`. Downloadable dev packages are Release builds too and cannot be used for TestBridge E2E. See [testing](testing.md) for test builds.
 

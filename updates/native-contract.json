@@ -1,0 +1,12 @@
+{
+  "protocol": 1,
+  "bridge_version": 1,
+  "local_schema": 1,
+  "minimum_host_version": "0.1.0",
+  "required_capabilities": ["audio.sourceLoad.v1", "updater.v1"],
+  "engines": {
+    "android": "4.0.0",
+    "ios": "4.0.1",
+    "harmony": "4.0.1"
+  }
+}
