@@ -18,6 +18,9 @@ import { usePlayerStore } from '../../player/store/index.js'
 import { useAppSessionStore } from '../../../store/index.js'
 import { AuthApi } from '../api/auth-api.js'
 import type { AuthStatus } from './guard.js'
+import { offlineIdentity, OfflineIdentityStore, readOfflineAddress } from '../../player/data/offline-identity.js'
+import { clearSavedPlaybackState } from '../../player/data/playback-persistence.js'
+import { cachedSongIdentity } from '../../player/domain/offline-cache.js'
 
 /** prefs key for the last server URL (standalone mode). */
 export const PREF_SERVER_URL = 'server_url'
@@ -54,6 +57,7 @@ export interface AuthState {
   checkAuth: () => Promise<void>
   login: (args: LoginArgs) => Promise<void>
   logout: () => Promise<void>
+  expireSession: () => Promise<void>
   /** Test hook. */
   reset: () => void
 }
@@ -69,6 +73,7 @@ export interface AuthStoreDeps {
   tokenStore: TokenStore
   /** Build a public (no-interceptor) client pointed at `baseUrl`. */
   createLoginClient: (baseUrl: string) => HttpClient
+  offlineIdentity?: OfflineIdentityStore
 }
 
 export function defaultAuthStoreDeps(): AuthStoreDeps {
@@ -76,6 +81,7 @@ export function defaultAuthStoreDeps(): AuthStoreDeps {
   return {
     storage,
     tokenStore: getSharedTokenStore(),
+    offlineIdentity,
     createLoginClient: (baseUrl) =>
       createPublicClient({ getBaseUrl: () => baseUrl }),
   }
@@ -137,6 +143,16 @@ async function tryReadPref(
  */
 export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
   const { storage, tokenStore, createLoginClient } = deps
+  const identity = deps.offlineIdentity ?? new OfflineIdentityStore(storage)
+  const sessionAddress = () => readOfflineAddress(storage, `${appConfig.baseUrl}${appConfig.basePath}`)
+  const clearProfileSession = async (profile: string | null) => {
+    if (!profile) return
+    await Promise.all([
+      storage.secure.remove(`token_access_${profile}`),
+      storage.secure.remove(`token_refresh_${profile}`),
+      storage.prefs.remove(`server_session_username_${profile}`),
+    ].map(request => request.catch(() => {})))
+  }
 
   return create<AuthState>((set, get) => ({
     status: 'unknown',
@@ -177,6 +193,8 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
     },
 
     login: async ({ username, password, apiBaseUrl, insecureTls }) => {
+      const previousUsername = useAppSessionStore.getState().username
+      const previousServer = appConfig.baseUrl
       set({ isLoading: true, error: undefined })
       try {
         // standalone: record + normalize the entered server URL. On Lynx the
@@ -209,7 +227,12 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
         } catch {
           // ignore — forgetting the password only costs one retype next time.
         }
+        if (previousUsername !== username || previousServer !== appConfig.baseUrl) {
+          usePlayerStore.getState().reset()
+          await clearSavedPlaybackState(storage)
+        }
         useAppSessionStore.getState().setUsername(username)
+        await identity.activate(await sessionAddress(), username)
 
         set({ status: 'authenticated', isLoading: false, error: undefined })
       } catch (e) {
@@ -222,6 +245,9 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
     },
 
     logout: async () => {
+      const address = await sessionAddress()
+      // Revoke offline visibility before asynchronous token/server work. Files stay on device.
+      const revoke = identity.revoke(address)
       // Capture the token before clearing, for the server-side revoke below.
       let accessToken: string | null = null
       try {
@@ -248,6 +274,7 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
       }
       useAppSessionStore.getState().setUsername(null)
       set({ status: 'unauthenticated', isLoading: false, error: undefined })
+      await Promise.all([revoke, clearProfileSession(address.profile), clearSavedPlaybackState(storage)])
 
       try {
         getQueryClient().clear()
@@ -264,6 +291,24 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
       }
     },
 
+    expireSession: async () => {
+      const address = await sessionAddress()
+      identity.invalidatePending()
+      useAppSessionStore.getState().setUsername(null)
+      set({ status: 'unauthenticated', isLoading: false, error: undefined })
+      // Expired credentials cannot be restored by switching away and back.
+      try {
+        const player = usePlayerStore.getState()
+        const local = player.currentSong ? cachedSongIdentity(player.currentSong) : null
+        if (!local || local.namespace !== identity.get()?.namespace) {
+          player.reset()
+          await clearSavedPlaybackState(storage)
+        }
+      } catch { /* Early startup. */ }
+      await Promise.all([tokenStore.clearTokens(), clearProfileSession(address.profile)].map(request => request.catch(() => {})))
+      try { getQueryClient().clear() } catch { /* Early startup. */ }
+    },
+
     reset: () => set({ status: 'unknown', isLoading: false, error: undefined }),
   }))
 }
@@ -272,8 +317,8 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
 export const useAuthStore = createAuthStore()
 
 // Wire the shared auth interceptor's session-expired callback to the auth
-// store's logout. This was previously done per-feature (six copies); now it
+// store's expiry handler. Expiry preserves proven offline ownership; explicit sign-out revokes it.
 // fires once for the process-wide singleton (P2-1).
 setSharedOnTokenExpired(() => {
-  void useAuthStore.getState().logout()
+  return useAuthStore.getState().expireSession()
 })

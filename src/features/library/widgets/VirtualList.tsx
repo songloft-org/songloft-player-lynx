@@ -25,6 +25,8 @@ export interface VirtualListProps<T> {
   onScroll?: (event: ScrollEvent) => void
   /** Optional trailing element (e.g. a "loading more…" footer). */
   footer?: ReactNode
+  /** Scrolls with the rows, so large-font page chrome cannot consume their viewport. */
+  header?: ReactNode
   className?: string
   /** Distance (px) from the end that triggers `onEndReached`. */
   lowerThreshold?: number
@@ -37,6 +39,7 @@ export function VirtualList<T>({
   onEndReached,
   onScroll,
   footer,
+  header,
   className,
   lowerThreshold = 200,
 }: VirtualListProps<T>) {
@@ -48,6 +51,7 @@ export function VirtualList<T>({
       bindscrolltolower={onEndReached}
       bindscroll={onScroll}
     >
+      {header ? <list-item key='__header__' item-key='__header__' className='library__list-item'>{header}</list-item> : null}
       {items.map((item, index) => (
         <list-item
           key={itemKey(item, index)}

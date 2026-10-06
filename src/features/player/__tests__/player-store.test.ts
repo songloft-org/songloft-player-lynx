@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import type { Song } from '../../../models/song.js'
+import { setCachedAccessToken } from '../../../core/network/token-cache.js'
 import { getAudio } from '../../../native/index.js'
 import type { MockSongloftAudio } from '../../../native/mock-audio.js'
 import type { AudioEvent, AudioLoadOptions } from '../../../native/audio-types.js'
@@ -666,6 +667,8 @@ describe('lyrics follow the current song', () => {
 })
 
 describe('restorePlaybackState', () => {
+  beforeEach(() => setCachedAccessToken('authenticated-fixture'))
+  afterEach(() => setCachedAccessToken(null))
   test('auto-resume loads the restored song once; togglePlay resumes without reloading', async () => {
     playback.saved = {
       playlist: [{ ...song(7, 300), url: '/api/v1/songs/7/play' }],

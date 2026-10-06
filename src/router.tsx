@@ -71,6 +71,17 @@ import { FullVideoPage } from './features/player/pages/FullVideoPage.js'
 import { LyricAdjustPage } from './features/player/pages/LyricAdjustPage.js'
 import { DlnaPage } from './features/player/pages/DlnaPage.js'
 import { CacheTasksPage } from './features/player/pages/CacheTasksPage.js'
+import { DeviceCachePage } from './features/player/pages/DeviceCachePage.js'
+import { useOfflineOwner } from './features/player/widgets/use-offline-owner.js'
+import { currentOfflineOwner } from './features/player/data/offline-identity.js'
+import { cachedSongIdentity } from './features/player/domain/offline-cache.js'
+import { usePlayerStore } from './features/player/store/player-store.js'
+
+function offlinePlaybackAllowed(): boolean {
+  const song = usePlayerStore.getState().currentSong
+  const identity = song ? cachedSongIdentity(song) : null
+  return identity !== null && identity.namespace === currentOfflineOwner()?.namespace
+}
 
 /**
  * Batch 1 uses code-based route definitions (no file-based codegen plugin) to
@@ -92,8 +103,10 @@ import { CacheTasksPage } from './features/player/pages/CacheTasksPage.js'
 export function RootRouteView() {
   const status = useAuthStore((s) => s.status)
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  useOfflineOwner()
+  usePlayerStore(s => s.currentSong)
 
-  if (isAuthTransitionPending(status, pathname)) {
+  if (isAuthTransitionPending(status, pathname, offlinePlaybackAllowed())) {
     return (
       <ThemeProvider>
         <SplashScreen />
@@ -137,6 +150,7 @@ const rootRoute = createRootRoute({
     const target = evaluateAuthGuard(
       useAuthStore.getState().status,
       location.pathname,
+      offlinePlaybackAllowed(),
     )
     if (target) throw redirect({ to: target })
   },
@@ -148,6 +162,12 @@ const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
   component: LoginPage,
+})
+
+const deviceCacheRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/device-cache',
+  component: DeviceCachePage,
 })
 
 /** `/player` — chrome-less, not wrapped by the shell. */
@@ -481,6 +501,7 @@ const editPlaylistRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
+  deviceCacheRoute,
   playerRoute,
   lyricAdjustRoute,
   dlnaRoute,

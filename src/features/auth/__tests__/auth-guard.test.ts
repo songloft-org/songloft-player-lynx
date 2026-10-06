@@ -2,6 +2,17 @@ import { describe, expect, test } from 'vitest'
 
 import { evaluateAuthGuard, isAuthTransitionPending } from '../store/guard.js'
 
+test('unauthenticated local browsing is separate from authenticated server routes and requires a proven queue for playback', () => {
+  expect(evaluateAuthGuard('unauthenticated', '/device-cache')).toBeNull()
+  expect(isAuthTransitionPending('unauthenticated', '/device-cache')).toBe(false)
+  expect(evaluateAuthGuard('unauthenticated', '/player')).toBe('/login')
+  expect(evaluateAuthGuard('unauthenticated', '/player', true)).toBeNull()
+  expect(evaluateAuthGuard('unauthenticated', '/player/eq', true)).toBeNull()
+  for (const path of ['/', '/library', '/settings', '/settings/cache-tasks', '/player/dlna', '/player/video']) {
+    expect(evaluateAuthGuard('unauthenticated', path, true)).toBe('/login')
+  }
+})
+
 /**
  * The route-guard policy as a pure function: status × target-route →
  * allow (`null`) / redirect. Mirrors the Flutter GoRouter `redirect`.

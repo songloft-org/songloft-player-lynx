@@ -21,12 +21,14 @@ export const HOME_PATH = '/'
 export function evaluateAuthGuard(
   status: AuthStatus,
   targetPath: string,
+  offlinePlayback = false,
 ): string | null {
   if (status === 'unknown') return null
 
   const isLoginRoute = targetPath === LOGIN_PATH
 
-  if (status === 'unauthenticated' && !isLoginRoute) return LOGIN_PATH
+  const isLocalRoute = targetPath === '/device-cache' || offlinePlayback && ['/player', '/player/eq'].includes(targetPath)
+  if (status === 'unauthenticated' && !isLoginRoute && !isLocalRoute) return LOGIN_PATH
   if (status === 'authenticated' && isLoginRoute) return HOME_PATH
 
   return null
@@ -53,7 +55,8 @@ export function evaluateAuthGuard(
 export function isAuthTransitionPending(
   status: AuthStatus,
   pathname: string,
+  offlinePlayback = false,
 ): boolean {
   if (status === 'unknown') return true
-  return evaluateAuthGuard(status, pathname) !== null
+  return evaluateAuthGuard(status, pathname, offlinePlayback) !== null
 }

@@ -9,6 +9,9 @@ import { normalizeServerUrl, PREF_SERVER_URL, PREF_LAST_USERNAME } from '../../a
 import { setCachedAccessToken } from '../../../core/network/token-cache.js'
 import { getSharedTokenStore } from '../../../core/network/api-client.js'
 import { applyInsecureTls } from '../../../native/native-platform.js'
+import { offlineIdentity } from '../../player/data/offline-identity.js'
+import { usePlayerStore } from '../../player/store/player-store.js'
+import { clearSavedPlaybackState } from '../../player/data/playback-persistence.js'
 
 const PREF_SERVER_PROFILES = 'server_profiles'
 const PREF_ACTIVE_PROFILE_ID = 'server_active_profile'
@@ -219,6 +222,11 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
   },
 
   async removeProfile(id) {
+    if (id === get().activeProfileId) {
+      offlineIdentity.clearMemory()
+      usePlayerStore.getState().reset()
+      await clearSavedPlaybackState()
+    }
     const profiles = get().profiles.filter((p) => p.id !== id)
     set({ profiles })
     persistProfiles(profiles, get().activeProfileId)
@@ -228,12 +236,16 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
     void storage.secure.remove(tokenRefreshKey(id)).catch(() => {})
     void storage.secure.remove(passwordKey(id)).catch(() => {})
     void storage.prefs.remove(`server_session_username_${id}`).catch(() => {})
+    void storage.prefs.remove(`device_cache_actor_v1:${id}`).catch(() => {})
   },
 
   async switchTo(id) {
     const { profiles, activeProfileId } = get()
     const target = profiles.find((p) => p.id === id)
     if (!target) return { hasToken: false }
+    offlineIdentity.clearMemory()
+    usePlayerStore.getState().reset()
+    await clearSavedPlaybackState()
 
     const storage = getSongloftStorage()
 
@@ -245,7 +257,9 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
           storage.secure.get('refresh_token').catch(() => null),
         ])
         if (access) await storage.secure.set(tokenAccessKey(activeProfileId), access).catch(() => {})
+        else await storage.secure.remove(tokenAccessKey(activeProfileId)).catch(() => {})
         if (refresh) await storage.secure.set(tokenRefreshKey(activeProfileId), refresh).catch(() => {})
+        else await storage.secure.remove(tokenRefreshKey(activeProfileId)).catch(() => {})
         // Bind the authenticated actor to the saved token, independently of editable login-prefill fields.
         const owner = useAppSessionStore.getState().username
         const ownerKey = `server_session_username_${activeProfileId}`
@@ -305,6 +319,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
     )
     set({ profiles: updated, activeProfileId: id })
     persistProfiles(updated, id)
+    await offlineIdentity.activate({ profile: id, server: `${target.url}${appConfig.basePath}` }, hasToken ? username : null)
 
     // Clear stale data from previous server
     try { getQueryClient().clear() } catch { /* */ }

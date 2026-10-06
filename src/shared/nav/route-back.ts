@@ -73,6 +73,7 @@ export interface RouteBackContext {
  * `ServerEditPage`, `DuplicateCheckPage`, `PluginRegistryPage`.
  */
 const EXPLICIT_PARENTS: Record<string, string> = {
+  '/device-cache': '/settings',
   '/settings/cache-tasks': '/settings',
   '/settings/licenses': '/settings/about',
   '/settings/servers/add': '/settings/servers',

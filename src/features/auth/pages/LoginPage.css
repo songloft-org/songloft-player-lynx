@@ -29,8 +29,40 @@
      .login above. */
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   width: 100%;
   max-width: var(--login-card-width);
+}
+
+.login__scroll {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+.login__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100%;
+  width: 100%;
+}
+.login__offline {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: var(--login-card-width);
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-pill);
+  background-color: var(--tertiary-system-fill);
+}
+.login__offline-text {
+  font-size: var(--font-body);
+  color: var(--accent);
+  text-align: center;
 }
 
 .login__logo {

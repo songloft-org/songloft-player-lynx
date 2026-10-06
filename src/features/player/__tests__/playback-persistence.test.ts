@@ -13,7 +13,8 @@ vi.mock('../../../core/storage/index.js', () => ({
 }))
 
 import type { Song } from '../../../models/song.js'
-import { loadPlaybackState, savePlaybackState } from '../data/playback-persistence.js'
+import { clearSavedPlaybackState, loadPlaybackState, savePlaybackState } from '../data/playback-persistence.js'
+import { cacheIdentity, cacheNamespace } from '../domain/cache-identity.js'
 import { playlistContext } from '../domain/playback-context.js'
 
 /** Parsed (camelCase) form of {@link SONG_JSON}, as the store holds it. */
@@ -75,6 +76,28 @@ const SONG_JSON = {
 
 describe('playback-persistence', () => {
   beforeEach(() => { mockStorage.clear() })
+
+  test('local queue round-trips its precise variant, strips remote URLs, and rejects corrupt local identity', async () => {
+    const namespace = cacheNamespace({ profile: 'one', server: 'http://server', username: 'alice' })
+    const identity = cacheIdentity({ namespace, song: SONG, variant: { track: 1, quality: '192', normalize: true }, format: 'm4a' })
+    const local = { ...SONG, deviceCache: identity, url: 'http://server?access_token=secret', coverUrl: 'secret-cover', lyricUrl: 'secret-lyrics' }
+    await savePlaybackState({ playlist: [local], currentIndex: 0, positionMs: 42 })
+    expect(mockStorage.has('playback_queue')).toBe(false)
+    expect(mockStorage.get('device_cache_playback_queue_v1')).not.toMatch(/secret|file:\/\/|\/music/)
+    const saved = await loadPlaybackState()
+    expect(saved?.playlist[0]).toMatchObject({ deviceCache: identity, format: 'm4a', isVideo: false })
+    expect(saved?.playlist[0].url).toBeUndefined()
+    const corrupt = JSON.parse(mockStorage.get('device_cache_playback_queue_v1')!); corrupt.queue[0].device_cache.namespace = 'another-user'
+    mockStorage.set('device_cache_playback_queue_v1', JSON.stringify(corrupt))
+    expect(await loadPlaybackState()).toBeNull()
+  })
+  test('queue revocation is ordered after an older pending save', async () => {
+    const save = savePlaybackState({ playlist: [SONG], currentIndex: 0, positionMs: 0 })
+    const clear = clearSavedPlaybackState()
+    await Promise.all([save, clear])
+    expect(mockStorage.has('playback_queue')).toBe(false)
+    expect(await loadPlaybackState()).toBeNull()
+  })
 
   test('returns null when no saved state', async () => {
     expect(await loadPlaybackState()).toBeNull()

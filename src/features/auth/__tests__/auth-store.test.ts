@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { apiPrefix, appConfig } from '../../../core/config/app-config.js'
 import { createPublicClient } from '../../../core/network/api-client.js'
@@ -11,6 +11,7 @@ import {
 } from '../../../core/storage/index.js'
 import { useAppSessionStore } from '../../../store/index.js'
 import { usePlayerStore } from '../../player/store/index.js'
+import { OfflineIdentityStore, offlineOwnerKey } from '../../player/data/offline-identity.js'
 import {
   createAuthStore,
   normalizeServerUrl,
@@ -22,6 +23,71 @@ import {
 
 const LOGIN = `${apiPrefix}/auth/login`
 const LOGOUT = `${apiPrefix}/auth/logout`
+
+test('login, expiry and logout work when the native Promise has no allSettled support', async () => {
+  const unsupported = vi.spyOn(Promise, 'allSettled').mockImplementation(() => { throw new Error('native_allSettled_unavailable') })
+  appConfig.reset(); useAppSessionStore.getState().reset()
+  try {
+    const storage = createMemoryStorage()
+    await storage.prefs.set('server_active_profile', 'one')
+    await storage.prefs.set('server_profiles', JSON.stringify([{ id: 'one', url: 'http://offline-server' }]))
+    const { transport } = makeTransport()
+    const store = createAuthStore(makeDeps(storage, transport))
+    await store.getState().login({ username: 'alice', password: 'password', apiBaseUrl: 'http://offline-server' })
+    expect(store.getState().status).toBe('authenticated')
+    await store.getState().expireSession()
+    expect(await storage.secure.get('access_token')).toBeNull()
+    await store.getState().login({ username: 'alice', password: 'password' })
+    expect(store.getState().status).toBe('authenticated')
+    await store.getState().logout()
+    expect(await storage.prefs.get(offlineOwnerKey('one'))).toBeNull()
+    expect(unsupported).not.toHaveBeenCalled()
+  } finally { unsupported.mockRestore(); appConfig.reset(); useAppSessionStore.getState().reset() }
+})
+
+test('expiry clears saved profile credentials but preserves proven offline ownership without server logout', async () => {
+  appConfig.reset(); useAppSessionStore.getState().reset()
+  const storage = createMemoryStorage(), identity = new OfflineIdentityStore(storage)
+  await storage.prefs.set('server_active_profile', 'one')
+  await storage.prefs.set('server_profiles', JSON.stringify([{ id: 'one', url: 'http://offline-server', username: 'editable-bob' }]))
+  const { transport, calls } = makeTransport()
+  const store = createAuthStore({ ...makeDeps(storage, transport), offlineIdentity: identity })
+  await store.getState().login({ username: 'alice', password: 'password', apiBaseUrl: 'http://offline-server' })
+  await storage.secure.set('token_access_one', 'stale-access'); await storage.secure.set('token_refresh_one', 'stale-refresh')
+  await storage.prefs.set('server_session_username_one', 'alice')
+  await store.getState().expireSession()
+  expect(store.getState().status).toBe('unauthenticated')
+  expect(useAppSessionStore.getState().username).toBeNull()
+  expect(identity.get()?.username).toBe('alice')
+  expect(await storage.secure.get('access_token')).toBeNull()
+  expect(await storage.secure.get('token_access_one')).toBeNull()
+  expect(await storage.secure.get('token_refresh_one')).toBeNull()
+  expect(await storage.prefs.get('server_session_username_one')).toBeNull()
+  expect(await storage.prefs.get(offlineOwnerKey('one'))).not.toBeNull()
+  expect(calls.some(call => call.url.includes(LOGOUT))).toBe(false)
+  appConfig.reset(); useAppSessionStore.getState().reset()
+})
+test('explicit logout revokes offline visibility and removes saved profile tokens and queue across restart', async () => {
+  appConfig.reset(); useAppSessionStore.getState().reset()
+  const storage = createMemoryStorage(), identity = new OfflineIdentityStore(storage)
+  await storage.prefs.set('server_active_profile', 'one')
+  await storage.prefs.set('server_profiles', JSON.stringify([{ id: 'one', url: 'http://offline-server' }]))
+  const { transport } = makeTransport()
+  const store = createAuthStore({ ...makeDeps(storage, transport), offlineIdentity: identity })
+  await store.getState().login({ username: 'alice', password: 'password', apiBaseUrl: 'http://offline-server' })
+  await storage.secure.set('token_access_one', 'stale'); await storage.secure.set('token_refresh_one', 'stale')
+  await storage.prefs.set('playback_queue', '[{"id":7,"title":"Private song"}]')
+  await store.getState().logout()
+  expect(identity.get()).toBeNull()
+  expect(await storage.prefs.get(offlineOwnerKey('one'))).toBeNull()
+  expect(await storage.prefs.get('playback_queue')).toBeNull()
+  expect(await storage.secure.get('token_access_one')).toBeNull()
+  expect(await storage.secure.get('token_refresh_one')).toBeNull()
+  const restored = new OfflineIdentityStore(storage)
+  await restored.activate({ profile: 'one', server: 'http://offline-server' }, null)
+  expect(restored.get()).toBeNull()
+  appConfig.reset(); useAppSessionStore.getState().reset()
+})
 
 function tokensJson(access = 'access-1') {
   return JSON.stringify({

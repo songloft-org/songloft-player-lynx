@@ -2,7 +2,7 @@
 
 [中文](../../reference/device-cache.md) · [Native module reference](../../reference/native-modules.md)
 
-P3a sources on all three hosts have the v2 identity, index and task contract; shared playback and single-song actions prefer it. Android has compilation/device evidence; iOS/HarmonyOS are not yet compiled/device-verified. Release compatibility declares bridge 3 / schema 2 and requires `songCache.v2`; older shells need a full package from their own channel. P3b has batch entry points and a task page. The offline list and local access after authentication expiry follow in P3c; cache downloading does not constitute complete offline support.
+P3a sources on all three hosts have the v2 identity, index and task contract; shared playback and single-song actions prefer it. Android has compilation/device evidence; iOS/HarmonyOS are not yet compiled/device-verified. Release compatibility declares bridge 3 / schema 2 and requires `songCache.v2`; older shells need a full package from their own channel. P3b has batch entry points and a task page. P3c adds the local list, management and access after authentication expiry. Full device acceptance on all three hosts remains open.
 
 ## Identity and files
 
@@ -49,6 +49,16 @@ Library and playlist selection toolbars offer device caching; the playlist menu 
 Track/quality/normalization are captured at the click; snapshots, URLs and tokens are frozen after preparation. Track metadata can refresh authentication, so the whole batch uses the refreshed token. Later playback changes cannot alter queued parameters. Retry reads current song revisions, tokens and limits while retaining the original variant. Identity changes cancel old tasks and clear the view; late results cannot enter another identity's view.
 
 History is stored under `device_cache_batch_v1:<namespace>` and contains only nine-field snapshots, variant keys, machine errors and progress. URLs/tokens remain in memory. Progress writes are coalesced; unfinished cold-start history becomes interrupted without automatic downloads. Foreground resume reconciles native progress; continued background work depends on the OS. Older shells hide the entry points and show an upgrade explanation if the task page is reached directly.
+
+## Offline list and playback
+
+The Device cache entry in Settings opens `/device-cache` and enumerates only the v2 index for the current server profile, deployment path and user, without requesting the remote library. It supports title/artist/album search, variant count and account usage, whole-device and legacy usage, individual variant deletion, account clearing and separate legacy clearing. The header scrolls with the list so large fonts leave songs and actions reachable. Deletion requires confirmation; deleting the current item stops audio and clears the queue, while deleting another queued item adjusts the index.
+
+A successful login saves an identity proof in `device_cache_actor_v1:<profile>`. Token expiry clears global and profile tokens but retains this proof; the login page offers access only to that identity’s cache, while server routes still require authentication. Explicit logout revokes the proof and clears playback state, preserving completed media files; signing in as the same identity restores visibility. An unreachable server at cold start does not switch identities, and an editable prefilled username cannot establish offline proof.
+
+Tapping a variant builds a local audio queue from whitelisted snapshots only. For duplicate variants of a song, the tapped variant wins; other songs use one variant each. Exact keys retain the native JSON bytes (Android escapes slashes); validation compares decoded fields rather than looking up a directory with a reserialized key. Playback reads files directly; missing files or mismatched identities fail locally without remote retry. Pause, seek, previous/next, EQ and sleep timers use the existing player, without remote detail, favorite, history, track or next-song prefetch requests. Unsaved artwork/lyrics use placeholders. The cache page does not offer video or DLNA playback.
+
+The separate `device_cache_playback_queue_v1` preference stores snapshots, exact identities, position and index, omitting media URLs/tokens. Cold start checks the current identity and real file. Serialized writes/clears prevent earlier writes from restoring a signed-out queue. Older bundles ignore this key and see an empty remote queue after rollback instead of streaming local snapshots. Native bridge/schema versions are unchanged by this batch.
 
 ## Validation boundary
 

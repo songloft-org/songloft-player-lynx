@@ -24,7 +24,10 @@ import { syncFloatingLyricOverlay } from './features/settings/domain/floating-ly
 import { applySavedLanguage } from './i18n/index.js'
 import { applyHostDeployMode } from './core/config/app-config.js'
 import { useServerStore } from './features/settings/store/server-store.js'
-import { initializeCacheContext } from './features/player/data/cache-context.js'
+import { initializeCacheContext, currentCacheScope } from './features/player/data/cache-context.js'
+import { offlineIdentity, readOfflineAddress } from './features/player/data/offline-identity.js'
+import { appConfig } from './core/config/app-config.js'
+import { getSongloftStorage } from './core/storage/index.js'
 import { initSafeArea } from './native/safe-area.js'
 import { initSystemAppearance } from './native/system-appearance.js'
 import {
@@ -80,6 +83,10 @@ useAuthStore.subscribe((state, prev) => {
     setActiveThemePack(null)
   }
 })
+offlineIdentity.subscribe(() => { void router.invalidate() })
+usePlayerStore.subscribe((state, previous) => {
+  if (state.currentSong !== previous.currentSong && useAuthStore.getState().status === 'unauthenticated') void router.invalidate()
+})
 
 // One-time startup: apply the persisted UI language + theme, hydrate persisted
 // server URL / insecure-TLS into config, then probe stored tokens to resolve
@@ -115,6 +122,8 @@ void (async () => {
     await auth.hydrate()
     // Restore identity without switching to another reachable server while the current server is offline.
     await useServerStore.getState().hydrate({ probe: false })
+    const cacheScope = currentCacheScope()
+    await offlineIdentity.activate(cacheScope ?? await readOfflineAddress(getSongloftStorage(), `${appConfig.baseUrl}${appConfig.basePath}`), cacheScope?.username ?? null)
     initializeCacheContext()
     const savedMode = await readDefaultPlayMode()
     usePlayerStore.getState().setPlayMode(savedMode)

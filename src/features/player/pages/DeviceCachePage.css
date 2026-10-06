@@ -1,0 +1,86 @@
+.device-cache-page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  /* This route is outside ShellLayout, which normally owns these insets. */
+  padding-top: var(--safe-top);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+.device-cache {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.device-cache__summary {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  padding: var(--space-4);
+  gap: var(--space-2);
+  width: 100%;
+}
+.device-cache__note {
+  overflow: hidden;
+  color: var(--secondary-label);
+  font-size: var(--font-body);
+}
+.device-cache__search {
+  min-height: var(--tap-target);
+  color: var(--label);
+  font-size: var(--font-body);
+  background-color: var(--tertiary-system-fill);
+  border-radius: var(--radius-sm);
+  -x-placeholder-color: var(--secondary-label);
+}
+.device-cache__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.device-cache__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--secondary-system-background);
+  color: var(--accent);
+  font-size: var(--font-body);
+}
+.device-cache__list {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+.device-cache__item {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--separator);
+}
+.device-cache__title {
+  overflow: hidden;
+  color: var(--label);
+  font-size: var(--font-body);
+  font-weight: 600;
+}
+.device-cache__message {
+  padding: var(--space-4);
+  color: var(--secondary-label);
+  font-size: var(--font-body);
+}
+.device-cache__now-playing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4) calc(var(--space-2) + var(--safe-bottom));
+}
+.device-cache__inset {
+  height: var(--safe-bottom);
+}

@@ -5,6 +5,7 @@ import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { useFavoriteToggle } from '../../library/data/favorites.js'
+import { cachedSongIdentity } from '../domain/offline-cache.js'
 import { hasNext, hasPrev, progressOf, usePlayerStore } from '../store/index.js'
 import '../../../shared/ui/overlay-motion.css'
 import '../../../shared/ui/glass-sheen-motion.css'
@@ -43,7 +44,7 @@ export function MiniPlayer() {
   const canNext = usePlayerStore(hasNext)
   const canPrev = usePlayerStore(hasPrev)
   const { isFavorite, toggle: toggleFavorite, isPending: isFavPending } =
-    useFavoriteToggle(song?.id ?? 0)
+    useFavoriteToggle(song?.id ?? 0, song != null && !cachedSongIdentity(song))
 
   if (!song) return null
 
@@ -102,7 +103,7 @@ export function MiniPlayer() {
             <Icon name='skip-next' size={22} color={ICON_COLORS.content} />
           </view>
         </view>
-        <view
+        {(!cachedSongIdentity(song)) && <view
           className={isFavPending
             ? 'mini-player__favorite mini-player__favorite--pending'
             : 'mini-player__favorite'}
@@ -116,7 +117,7 @@ export function MiniPlayer() {
             size={20}
             color={isFavorite ? ICON_COLORS.primary : ICON_COLORS.content2}
           />
-        </view>
+        </view>}
       </view>
     </view>
   )

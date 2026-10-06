@@ -8,6 +8,8 @@ Learn about the underlying technology: [Lynx official website](https://lynxjs.or
 
 This is a **preview client**. Playback, library/playlists, lyrics, plugins, themes, multiple servers, and administrative settings are implemented. About now separates client checks from server upgrades: dev checks only dev, while stable checks only the latest stable release. All three native bundle updaters are integrated in source; Android has local UI download/cancel/cold-start evidence, while iOS/HarmonyOS compilation and device acceptance remain open. Production update signing is unconfigured. Older shells and incompatible updates provide same-channel installation links; see [Client updates](docs/en/reference/client-updates.md). Native desktop clients and a bundled local backend remain outside this work.
 
+Native device caching now has identity/track-variant indexes, whole-playlist/selection tasks and local management/offline playback. Authentication expiry preserves local-only access; explicit logout hides the previous identity. See [Device cache](docs/en/reference/device-cache.md). Android has real-file/UI evidence; iOS/HarmonyOS compilation and device acceptance remain open.
+
 | Platform                 | Release artifact               | Limitations                                                                                        |
 | ------------------------ | ------------------------------ | -------------------------------------------------------------------------------------------------- |
 | Android 5.0+             | Release-signed APK             | Background playback, notifications, and DLNA still need ongoing device regression testing          |

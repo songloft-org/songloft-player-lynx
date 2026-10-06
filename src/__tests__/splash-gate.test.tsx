@@ -21,6 +21,11 @@ import { setMockAuthStatus } from './_render-mocks.js'
  * promise-chain tick away — cannot be staged any other way.
  */
 const mockLocation = vi.hoisted(() => ({ pathname: '/login' }))
+vi.mock('../features/player/store/player-store.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../features/player/store/player-store.js')>()
+  return { ...actual, usePlayerStore: Object.assign((select: (state: { currentSong: undefined }) => unknown) => select({ currentSong: undefined }),
+    { getState: () => actual.usePlayerStore.getState() }) }
+})
 
 vi.mock('@tanstack/react-router', async () => {
   const actual =

@@ -7,6 +7,7 @@ import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { findCurrentWord, type LyricLine } from '../domain/lyric-parser.js'
 import { useLyricStore } from '../store/index.js'
 import { usePlayerStore } from '../store/index.js'
+import { cachedSongIdentity } from '../domain/offline-cache.js'
 import './LyricsView.css'
 
 function WordHighlightLine({
@@ -84,13 +85,14 @@ export function LyricsView() {
   // id); remote/radio songs need an explicit lyric URL. Same gate as the
   // Flutter `_canRefetch`.
   const canRefetch =
-    currentSong != null && (currentSong.type === 'local' || !!currentSong.lyricUrl)
+    currentSong != null && !cachedSongIdentity(currentSong) && (currentSong.type === 'local' || !!currentSong.lyricUrl)
 
   // Timing adjustment only makes sense for time-stamped lyrics of a local song
   // (the save writes `lyric_source: 'manual'`). Same gate as the Flutter
   // `_shouldShowEditButton`.
   const canAdjust =
     currentSong?.type === 'local' &&
+    !cachedSongIdentity(currentSong) &&
     lyrics.length > 0 &&
     synced &&
     !isLoading &&

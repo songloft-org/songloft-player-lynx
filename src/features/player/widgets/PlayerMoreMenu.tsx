@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import type { Song } from '../../../models/song.js'
+import { cachedSongIdentity } from '../domain/offline-cache.js'
 import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { songRowOverlays } from '../../../shared/ui/song-row-overlays.js'
@@ -58,7 +59,8 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
   const [cached, setCached] = useState(false)
   const [videoConfirm, setVideoConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
-  const songCacheCapable = getPlatformCapabilities().songCache
+  const local = song ? cachedSongIdentity(song) !== null : false
+  const songCacheCapable = getPlatformCapabilities().songCache && !local
   const casting = useDlnaStore((s) => s.activeDevice != null)
   const selectedTrack = usePlayerStore((s) => s.audioTrack)
   const switchingTrack = usePlayerStore((s) => s.isAudioTrackSwitching)
@@ -125,7 +127,7 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
   }
 
   const items: PopoverMenuItem[] = [
-    ...(song != null
+    ...(song != null && !local
       ? [{ key: 'songInfo', label: t('player.songInfo'), icon: 'info' as const }]
       : []),
     ...(!casting && ((audioTracks.data?.length ?? 0) >= 2 || audioTracks.isError)
@@ -144,7 +146,7 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
      * stops the layout shifting when DLNA is absent. The cast screen lives at
      * `/player/dlna`, a chrome-less sibling of `/player`.
      */
-    ...(getPlatformCapabilities().dlna
+    ...(getPlatformCapabilities().dlna && !local
       ? [{ key: 'cast', label: t('player.cast'), icon: 'cast' as const }]
       : []),
     /*

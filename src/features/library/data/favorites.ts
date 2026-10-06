@@ -39,22 +39,23 @@ async function fetchFavoriteSongIds(): Promise<Set<number>> {
   return new Set(ids)
 }
 
-function useFavoriteSongIds() {
+function useFavoriteSongIds(enabled = true) {
   return useQuery({
     queryKey: FAV_QUERY_KEY,
     queryFn: fetchFavoriteSongIds,
     staleTime: FAV_STALE_TIME_MS,
+    enabled,
   })
 }
 
-export function useIsFavorite(songId: number): boolean {
-  const { data } = useFavoriteSongIds()
+export function useIsFavorite(songId: number, enabled = true): boolean {
+  const { data } = useFavoriteSongIds(enabled)
   return data?.has(songId) ?? false
 }
 
-export function useFavoriteToggle(songId: number) {
+export function useFavoriteToggle(songId: number, enabled = true) {
   const queryClient = useQueryClient()
-  const isFavorite = useIsFavorite(songId)
+  const isFavorite = useIsFavorite(songId, enabled)
   const playlistId = Number(favoritePlaylistId)
 
   const add = useMutation({
@@ -68,9 +69,10 @@ export function useFavoriteToggle(songId: number) {
   })
 
   const toggle = useCallback(() => {
+    if (!enabled) return
     if (isFavorite) remove.mutate()
     else add.mutate()
-  }, [isFavorite, add, remove])
+  }, [enabled, isFavorite, add, remove])
 
   return { isFavorite, toggle, isPending: add.isPending || remove.isPending }
 }

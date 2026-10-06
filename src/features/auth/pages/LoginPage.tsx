@@ -18,6 +18,8 @@ import {
   useAuthStore,
 } from '../store/index.js'
 import { useServerStore } from '../../settings/store/server-store.js'
+import { useOfflineOwner } from '../../player/widgets/use-offline-owner.js'
+import { indexedSongCacheAvailable } from '../../player/data/indexed-song-cache.js'
 
 import './LoginPage.css'
 
@@ -38,6 +40,7 @@ export function LoginPage() {
   const isLoading = useAuthStore((s) => s.isLoading)
   const error = useAuthStore((s) => s.error)
   const login = useAuthStore((s) => s.login)
+  const offlineOwner = useOfflineOwner()
 
   const showServerFields = !appConfig.isEmbedded
 
@@ -142,99 +145,106 @@ export function LoginPage() {
 
   return (
     <view className='login'>
-      <view style={{ flex: 1 }} />
-      <view className='login__card'>
-        <image
-          className='login__logo'
-          src='/app_icon.png'
-          mode='aspectFit'
-        />
-        <text className='login__title'>{t('auth.title')}</text>
-        <text className='login__subtitle'>{t('auth.subtitle')}</text>
-
-        <view className='login__field'>
-          <text className='login__label'>{t('auth.username')}</text>
-          <Input
-            className='login__input'
-            placeholder={t('auth.usernamePlaceholder')}
-            value={username}
-            onInput={(value) => setUsername(value)}
-          />
-        </view>
-
-        <view className='login__field'>
-          <text className='login__label'>{t('auth.password')}</text>
-          <Input
-            className='login__input'
-            type='password'
-            placeholder={t('auth.passwordPlaceholder')}
-            value={password}
-            confirmType='done'
-            onInput={(value) => setPassword(value)}
-            onConfirm={() => void handleLogin()}
-          />
-        </view>
-
-        {showServerFields ? (
-          <view className='login__field'>
-            <text className='login__label'>{t('auth.apiBaseUrl')}</text>
-            <Input
-              className='login__input'
-              type='text'
-              placeholder={t('auth.apiBaseUrlPlaceholder')}
-              value={apiUrl}
-              onInput={(value) => setApiUrl(value)}
+      {offlineOwner && indexedSongCacheAvailable() && <view className='login__offline' bindtap={() => { void navigate({ to: '/device-cache' }) }} data-testid='login-device-cache'>
+        <text className='login__offline-text'>{t('deviceCache.openOffline')}</text>
+      </view>}
+      <scroll-view className='login__scroll' scroll-y>
+        <view className='login__content'>
+          <view style={{ flex: 1 }} />
+          <view className='login__card'>
+            <image
+              className='login__logo'
+              src='/app_icon.png'
+              mode='aspectFit'
             />
-            <view className='login__toggle'>
-              <AppSwitch
-                checked={insecureTls}
-                onChange={(checked) => setInsecureTls(checked)}
+            <text className='login__title'>{t('auth.title')}</text>
+            <text className='login__subtitle'>{t('auth.subtitle')}</text>
+
+            <view className='login__field'>
+              <text className='login__label'>{t('auth.username')}</text>
+              <Input
+                className='login__input'
+                placeholder={t('auth.usernamePlaceholder')}
+                value={username}
+                onInput={(value) => setUsername(value)}
               />
-              <view className='login__toggle-text'>
-                <text className='login__toggle-title'>
-                  {t('auth.insecureTls')}
-                </text>
-                <text className='login__toggle-subtitle'>
-                  {t('auth.insecureTlsHint')}
-                </text>
-              </view>
             </view>
-          </view>
-        ) : null}
 
-        {error ? <text className='login__error'>{error}</text> : null}
+            <view className='login__field'>
+              <text className='login__label'>{t('auth.password')}</text>
+              <Input
+                className='login__input'
+                type='password'
+                placeholder={t('auth.passwordPlaceholder')}
+                value={password}
+                confirmType='done'
+                onInput={(value) => setPassword(value)}
+                onConfirm={() => void handleLogin()}
+              />
+            </view>
 
-        <view
-          className='login__agreement'
-          bindtap={() => setAgreedToTerms(!agreedToTerms)}
-        >
-          <AppCheckbox checked={agreedToTerms} testId='agreement-checkbox' />
-          <text className='login__agreement-text'>
-            {t('auth.agreePrefix')}
-            <text className='login__agreement-link'>
-              {t('auth.termsAndPrivacy')}
-            </text>
-          </text>
-        </view>
+            {showServerFields ? (
+              <view className='login__field'>
+                <text className='login__label'>{t('auth.apiBaseUrl')}</text>
+                <Input
+                  className='login__input'
+                  type='text'
+                  placeholder={t('auth.apiBaseUrlPlaceholder')}
+                  value={apiUrl}
+                  onInput={(value) => setApiUrl(value)}
+                />
+                <view className='login__toggle'>
+                  <AppSwitch
+                    checked={insecureTls}
+                    onChange={(checked) => setInsecureTls(checked)}
+                  />
+                  <view className='login__toggle-text'>
+                    <text className='login__toggle-title'>
+                      {t('auth.insecureTls')}
+                    </text>
+                    <text className='login__toggle-subtitle'>
+                      {t('auth.insecureTlsHint')}
+                    </text>
+                  </view>
+                </view>
+              </view>
+            ) : null}
 
-        <Button disabled={!canSubmit} onClick={() => void handleLogin()}>
-          {({ active = false, disabled = false }) => (
+            {error ? <text className='login__error'>{error}</text> : null}
+
             <view
-              className={
-                'login__button' +
-                (disabled ? ' login__button--disabled' : '') +
-                (active ? ' login__button--active' : '')
-              }
-              data-testid='login-button'
+              className='login__agreement'
+              bindtap={() => setAgreedToTerms(!agreedToTerms)}
             >
-              <text className='login__button-text'>
-                {isLoading ? t('auth.signingIn') : t('auth.logIn')}
+              <AppCheckbox checked={agreedToTerms} testId='agreement-checkbox' />
+              <text className='login__agreement-text'>
+                {t('auth.agreePrefix')}
+                <text className='login__agreement-link'>
+                  {t('auth.termsAndPrivacy')}
+                </text>
               </text>
             </view>
-          )}
-        </Button>
-      </view>
-      <view style={{ flex: 1 }} />
+
+            <Button disabled={!canSubmit} onClick={() => void handleLogin()}>
+              {({ active = false, disabled = false }) => (
+                <view
+                  className={
+                    'login__button' +
+                    (disabled ? ' login__button--disabled' : '') +
+                    (active ? ' login__button--active' : '')
+                  }
+                  data-testid='login-button'
+                >
+                  <text className='login__button-text'>
+                    {isLoading ? t('auth.signingIn') : t('auth.logIn')}
+                  </text>
+                </view>
+              )}
+            </Button>
+          </view>
+          <view style={{ flex: 1 }} />
+        </view>
+      </scroll-view>
     </view>
   )
 }

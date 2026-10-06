@@ -214,13 +214,15 @@ interface VirtualListStubProps {
   itemKey: (item: unknown, index: number) => string
   renderItem: (item: unknown, index: number) => unknown
   footer?: unknown
+  header?: unknown
   className?: string
 }
 
 export function mockVirtualList() {
   return {
-    VirtualList: ({ items = [], itemKey, renderItem, footer, className }: VirtualListStubProps) => (
+    VirtualList: ({ items = [], itemKey, renderItem, footer, header, className }: VirtualListStubProps) => (
       <view className={className}>
+        {header ? <view>{header as never}</view> : null}
         {items.map((item, index) => (
           <view key={itemKey(item, index)}>{renderItem(item, index) as never}</view>
         ))}
@@ -246,6 +248,7 @@ const authState: AuthState = {
   checkAuth: async () => {},
   login: async () => {},
   logout: async () => {},
+  expireSession: async () => {},
   reset: () => {},
 }
 

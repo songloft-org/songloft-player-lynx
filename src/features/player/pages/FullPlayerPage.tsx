@@ -9,6 +9,7 @@ import type { Song } from '../../../models/song.js'
 // Direct module import, not the library barrel: that would pull the whole library
 // feature (API client included) into the player's graph for one getter.
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
+import { cachedSongIdentity } from '../domain/offline-cache.js'
 import { setShellWidth } from '../../../shared/nav/shell-navigation.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { readAutoEnterLyrics } from '../../settings/data/settings-prefs.js'
@@ -136,6 +137,8 @@ export function FullPlayerPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const song = usePlayerStore((s) => s.currentSong)
+  const local = song ? cachedSongIdentity(song) !== null : false
+  useBackHandler(local, () => { void navigate({ to: '/device-cache' }); return true })
   const sleepTimer = usePlayerStore((s) => s.sleepTimer)
   /*
    * The `'.full-player'` selector is load-bearing. `/player` mounts on navigation,
@@ -252,7 +255,8 @@ export function FullPlayerPage() {
    * hardware back key reads it too.
    */
   const closePlayer = () => {
-    performRouteBack()
+    if (local) void navigate({ to: '/device-cache' })
+    else performRouteBack()
   }
 
   if (!song) {
@@ -376,7 +380,7 @@ export function FullPlayerPage() {
             playBtn={layout.playBtn}
             playRadius={layout.playRadius}
             slot={layout.toolSlot}
-            songId={song.id}
+            songId={local ? undefined : song.id}
           />
           <PlayerToolBar slot={layout.toolSlot} />
         </view>

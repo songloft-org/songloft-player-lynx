@@ -11,7 +11,7 @@ import { getTranscodeFormat, normalizeFormat } from '../../../core/network/audio
 import { resolveVideoSourceKind } from '../../../core/network/video-source.js'
 import { readAudioQuality, readAutoResume, readNormalize, readPlaybackSpeed, writePlaybackSpeed } from '../../settings/data/settings-prefs.js'
 import { DEFAULT_VIDEO_SCALE_MODE, readVideoScaleMode, writeVideoScaleMode } from '../data/video-prefs.js'
-import { loadPlaybackState, savePlaybackState } from '../data/playback-persistence.js'
+import { clearSavedPlaybackState, loadPlaybackState, savePlaybackState } from '../data/playback-persistence.js'
 import type { Song } from '../../../models/song.js'
 import {
   DEFAULT_DURATION_MS,
@@ -39,7 +39,11 @@ import {
   type SleepTimerStatus,
 } from '../domain/sleep-timer.js'
 import { getCachedPath } from '../data/song-cache.js'
-import { indexedSongCacheAvailable } from '../data/indexed-song-cache.js'
+import { indexedSongCacheAvailable, readIndexedSong } from '../data/indexed-song-cache.js'
+import { cachedSongIdentity } from '../domain/offline-cache.js'
+import type { CacheIdentity } from '../domain/cache-identity.js'
+import { currentOfflineOwner } from '../data/offline-identity.js'
+import { getCachedAccessToken } from '../../../core/network/token-cache.js'
 import { getIndexedCachedPath } from '../data/cache-context.js'
 import type { CacheVariant } from '../domain/cache-identity.js'
 import { useLyricStore } from './lyric-store.js'
@@ -385,6 +389,13 @@ function playbackSourceFor(song: Song): PlaybackSource {
  * through one resolver is what keeps the two in agreement.
  */
 async function resolvePlaybackSource(song: Song): Promise<PlaybackSource> {
+  const local = cachedSongIdentity(song)
+  if (local) {
+    if (currentOfflineOwner()?.namespace !== local.namespace) throw new Error('cache_identity_unavailable')
+    const entry = await readIndexedSong(local)
+    if (currentOfflineOwner()?.namespace !== local.namespace || !entry || entry.key !== local.key) throw new Error('cache_file_unavailable')
+    return { url: entry.url, hls: false, cached: true }
+  }
   const state = usePlayerStore.getState()
   const indexed = indexedSongCacheAvailable()
   if (!indexed && state.currentSong?.id === song.id && (state.audioTrackPending !== undefined || state.audioTrack != null)) {
@@ -434,9 +445,13 @@ async function syncQueueWindow(playlist: Song[], index: number): Promise<void> {
   const end = Math.min(playlist.length, index + QUEUE_WINDOW + 1)
   const window = playlist.slice(start, end)
   const items = await Promise.all(
-    window.map(async (s) => toAudioItem(s, (await resolvePlaybackSource(s)).url)),
+    window.map(async (s) => {
+      try { return toAudioItem(s, (await resolvePlaybackSource(s)).url) }
+      catch (error) { if (cachedSongIdentity(s)) return null; throw error }
+    }),
   )
-  void audio.setQueue(items, index - start)
+  const available = items.filter((item): item is AudioItem => item !== null)
+  void audio.setQueue(available, available.findIndex(item => item.id === playlist[index]?.id))
 }
 
 /**
@@ -535,6 +550,7 @@ function cancelRetry(): void {
 }
 
 function scheduleRetry(song: Song, { positionMs, autoplay }: { positionMs: number; autoplay: boolean }): void {
+  if (cachedSongIdentity(song)) return
   if (_retrySongId !== song.id) {
     _retryCount = 0
     _retrySongId = song.id
@@ -596,6 +612,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   async function playAtIndex(index: number): Promise<void> {
     const song = get().playlist[index]
     if (!song) return
+    if (!cachedSongIdentity(song) && get().playlist.some(value => cachedSongIdentity(value) !== null) && !getCachedAccessToken()) {
+      set({ errorMessage: 'cache_file_unavailable', isPlaying: false, isBuffering: false })
+      await audio.stop()
+      throw new Error('cache_identity_unavailable')
+    }
+    if (cachedSongIdentity(song) && useDlnaStore.getState().activeDevice) throw new Error('cache_cast_unavailable')
     const generation = invalidateSourceLoad()
     cancelRetry()
     set({
@@ -616,7 +638,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       void getSongsApi().recordPlayed(song.id, get().playbackContext).catch(() => {})
       return
     }
-    const source = await resolvePlaybackSource(song)
+    let source: PlaybackSource
+    try { source = await resolvePlaybackSource(song) }
+    catch (error) {
+      if (generation === _loadGeneration && cachedSongIdentity(song)) {
+        await audio.stop()
+        set({ errorMessage: 'cache_file_unavailable', isPlaying: false, isBuffering: false })
+      }
+      throw error
+    }
     if (generation !== _loadGeneration) return
     // Refresh the native media-notification window BEFORE loading so the new
     // song's metadata is guaranteed present in the engine's `metadataByUrl`
@@ -634,12 +664,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     _loadedSongId = song.id
     _loadedSourceKind = source.cached ? 'cache' : 'stream'
     await audio.play()
-    syncFavoriteToNative(song.id)
+    if (cachedSongIdentity(song)) void audio.setFavorite(false)
+    else syncFavoriteToNative(song.id)
     // Report the play event (fire-and-forget). The context decides whether it
     // also lands in play history: without one the backend just broadcasts the
     // event to plugins, which is right for playback that has no stable context.
     // There is no "library" bucket to fall back on — that value is rejected.
-    void getSongsApi().recordPlayed(song.id, get().playbackContext).catch(() => {})
+    if (!cachedSongIdentity(song)) void getSongsApi().recordPlayed(song.id, get().playbackContext).catch(() => {})
   }
 
   function stopSleepInterval(): void {
@@ -678,6 +709,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     const nextIdx = resolveNext(s.playMode, s.currentIndex, s.playlist.length)
     if (nextIdx == null) {
+      // An ended native engine will not restart from its final position on play().
+      // The next user play must reload this song at the beginning.
+      _loadedSongId = null
+      _loadedSourceKind = null
       set({ isPlaying: false })
       return
     }
@@ -961,6 +996,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     closeAudioTrackSheet: () => set({ showAudioTrackSheet: false }),
 
     setAudioTrack: async (trackIndex) => {
+      if (get().currentSong && cachedSongIdentity(get().currentSong!)) return
       if (trackIndex != null && (!Number.isSafeInteger(trackIndex) || trackIndex < 0)) return
       const state = get()
       const song = state.currentSong
@@ -1061,6 +1097,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       _queueLoader.invalidate()
       void audio.stop()
       _videoSourceSongId = null
+      _loadedSongId = null
+      _loadedSourceKind = null
       set({ ...INITIAL, showAudioTrackSheet: false })
     },
 
@@ -1086,12 +1124,13 @@ audio.on('progress', (e) => {
   const s = usePlayerStore.getState()
   if (
     s.duration > 0 &&
+    s.currentSong != null && !cachedSongIdentity(s.currentSong) &&
     e.positionMs > s.duration * 0.8 &&
     _prefetchedForIndex !== s.currentIndex
   ) {
     _prefetchedForIndex = s.currentIndex
     const nextIdx = resolveNext(s.playMode, s.currentIndex, s.playlist.length)
-    if (nextIdx != null && s.playlist[nextIdx]) {
+    if (nextIdx != null && s.playlist[nextIdx] && !cachedSongIdentity(s.playlist[nextIdx])) {
       const url = songUrl(s.playlist[nextIdx])
       if (url) {
         // Small Range GET rather than HEAD: HEAD/GET are keyed separately in
@@ -1193,7 +1232,7 @@ audio.on('remoteCommand', (e) => {
       break
     case 'toggleFavorite': {
       const song = usePlayerStore.getState().currentSong
-      if (!song) break
+      if (!song || cachedSongIdentity(song)) break
       toggleFavoriteNonReact(song.id)
         .then((isFavorite) => audio.setFavorite(isFavorite))
         .catch(() => {})
@@ -1413,6 +1452,18 @@ export async function restorePlaybackState(): Promise<void> {
   if (!saved || saved.playlist.length === 0) return
   const song = saved.playlist[saved.currentIndex]
   if (!song) return
+  const local = cachedSongIdentity(song)
+  if (local) {
+    if (currentOfflineOwner()?.namespace !== local.namespace ||
+      saved.playlist.some(value => cachedSongIdentity(value)?.namespace !== local.namespace)) {
+      await clearSavedPlaybackState()
+      return
+    }
+    try { await resolvePlaybackSource(song) } catch { await clearSavedPlaybackState(); return }
+  } else if (!getCachedAccessToken()) {
+    await clearSavedPlaybackState()
+    return
+  }
   usePlayerStore.setState({
     playlist: saved.playlist,
     currentIndex: saved.currentIndex,
@@ -1422,7 +1473,7 @@ export async function restorePlaybackState(): Promise<void> {
     playbackContext: saved.context,
     sourcePlaylistId: saved.sourcePlaylistId,
   })
-  if (autoResume && song.url) {
+  if (autoResume && (song.url || local)) {
     // Use the shared `toAudioItem`/`durationMsOf` rather than re-inlining the
     // mapping: this path used to carry its own copy, which silently omitted any
     // field added to the queue item (it missed `artworkUrl` on arrival).
@@ -1437,4 +1488,21 @@ export async function restorePlaybackState(): Promise<void> {
     await audio.seek(saved.positionMs)
     await audio.play()
   }
+}
+
+/** Deleting the playing file stops playback immediately; other queued variants are retained. */
+export async function forgetCachedPlayback(identity: CacheIdentity | { namespace: string }): Promise<void> {
+  const state = usePlayerStore.getState()
+  const matches = (song: Song) => {
+    const value = cachedSongIdentity(song)
+    return value?.namespace === identity.namespace && (!('key' in identity) || value.key === identity.key)
+  }
+  if (state.currentSong && matches(state.currentSong)) state.reset()
+  else {
+    const playlist = state.playlist.filter(song => !matches(song))
+    if (playlist.length === state.playlist.length) return
+    usePlayerStore.setState({ playlist, currentIndex: playlist.findIndex(song => song === state.currentSong) })
+  }
+  const next = usePlayerStore.getState()
+  await savePlaybackState({ playlist: next.playlist, currentIndex: next.currentIndex, positionMs: next.currentTime, context: next.playbackContext })
 }

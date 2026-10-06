@@ -5,6 +5,7 @@ import type { Song } from '../../../models/song.js'
 import { useAppSessionStore } from '../../../store/app-session.js'
 import { useServerStore } from '../../settings/store/server-store.js'
 import { getSongsApi } from '../../library/api/index.js'
+import { cachedSongIdentity } from '../domain/offline-cache.js'
 
 export function audioTracksQueryKey({ profile, server, username, song }: {
   profile: string | null
@@ -22,7 +23,7 @@ export function useAudioTracks(song: Song | null) {
   return useQuery({
     queryKey: audioTracksQueryKey({ profile, server: `${baseUrl}${appConfig.basePath}`, username, song }),
     queryFn: () => getSongsApi().getTracks(song!.id),
-    enabled: song != null && !song.isLive && song.type !== 'radio',
+    enabled: song != null && !cachedSongIdentity(song) && !song.isLive && song.type !== 'radio',
     staleTime: 60_000,
     retry: false,
   })

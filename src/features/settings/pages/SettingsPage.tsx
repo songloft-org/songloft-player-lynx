@@ -267,6 +267,9 @@ export function SettingsPage() {
             {/* ── System ───────────────────────────────────────────────── */}
             <SettingsSection>
               {indexedSongCacheAvailable() && <SettingsRow
+                icon='download' title={t('deviceCache.title')} subtitle={t('deviceCache.entrySubtitle')}
+                trailingIcon='chevron-right' onTap={() => { void navigate({ to: '/device-cache' }) }} testId='settings-device-cache' />}
+              {indexedSongCacheAvailable() && <SettingsRow
                 icon='download' title={t('cacheTasks.title')} subtitle={t('cacheTasks.entrySubtitle')}
                 trailingIcon='chevron-right' selected={isActive('cache-tasks')}
                 onTap={() => goToSubPage('cache-tasks')} testId='settings-cache-tasks' />}

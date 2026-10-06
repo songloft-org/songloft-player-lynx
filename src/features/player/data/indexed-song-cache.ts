@@ -1,5 +1,6 @@
 import { readLynxGlobal, readNativeModules } from '../../../native/native-modules.js'
 import type { CacheDownload, CacheIdentity, CacheSnapshot } from '../domain/cache-identity.js'
+import { parseCacheSnapshot, cachedEntrySong } from '../domain/offline-cache.js'
 
 type Callback = (json: string) => void
 interface IndexedSongCacheModule {
@@ -83,8 +84,10 @@ function entry(value: unknown): CachedEntry {
     !['local', 'remote'].includes(String(snapshot.type))) throw new Error('invalid_cache_response')
   const identity = JSON.parse(raw.key)
   if (!Array.isArray(identity) || identity.length !== 7 || identity[0] !== raw.namespace || String(snapshot.id) !== identity[1]) throw new Error('invalid_cache_response')
-  return { namespace: raw.namespace, key: raw.key, cached: true, url: raw.url,
-    sizeBytes: integer(raw.sizeBytes), createdAt: integer(raw.createdAt), snapshot: snapshot as unknown as CacheSnapshot }
+  const result: CachedEntry = { namespace: raw.namespace, key: raw.key, cached: true, url: raw.url,
+    sizeBytes: integer(raw.sizeBytes), createdAt: integer(raw.createdAt), snapshot: parseCacheSnapshot(snapshot) }
+  cachedEntrySong(result)
+  return result
 }
 function task(value: unknown): CacheTask {
   const raw = record(value)
