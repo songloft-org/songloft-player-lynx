@@ -10,6 +10,7 @@ import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import { SubPageShell } from '../widgets/SubPageShell.js'
 import { UpgradeSection } from '../widgets/UpgradeSection.js'
+import { ClientUpdateSection } from '../widgets/ClientUpdateSection.js'
 
 export interface AboutPageProps {
   /**
@@ -23,7 +24,7 @@ export interface AboutPageProps {
 
 /**
  * `/settings/about` — client / backend versions, the server this build talks to,
- * the project link, the open-source licenses **and** the backend update check.
+ * the project link, licenses, client release checks and the backend update check.
  * "后端更新" (backend update) used to be its own route (`/settings/upgrade`); it
  * merged in here because the two are the same "what is this build, is it current"
  * question — version rows and an update check sit naturally together.
@@ -92,6 +93,8 @@ export function AboutPage({ onOpenLicenses }: AboutPageProps = {}) {
           subtitle={t('settings.songloftUrl')}
         />
       </SettingsSection>
+
+      <ClientUpdateSection />
 
       <SettingsSection title={t('upgrade.title')}>
         <UpgradeSection />

@@ -9,6 +9,7 @@ final class SongloftUpdateModule: NSObject, LynxContextModule {
     [
       "getInfo": NSStringFromSelector(#selector(SongloftUpdateModule.getInfo(_:))),
       "getState": NSStringFromSelector(#selector(SongloftUpdateModule.getState(_:))),
+      "fetchMetadata": NSStringFromSelector(#selector(SongloftUpdateModule.fetchMetadata(_:callback:))),
       "inspectManifest": NSStringFromSelector(#selector(SongloftUpdateModule.inspectManifest(_:signature:callback:))),
       "download": NSStringFromSelector(#selector(SongloftUpdateModule.download(_:callback:))),
       "cancel": NSStringFromSelector(#selector(SongloftUpdateModule.cancel(_:))),
@@ -47,6 +48,10 @@ final class SongloftUpdateModule: NSObject, LynxContextModule {
   }
   @objc func getState(_ callback: @escaping (String) -> Void) {
     Self.commands.async { Self.reply(callback, Result { try Self.store().info() }) }
+  }
+  @objc func fetchMetadata(_ requestJSON: String, callback: @escaping (String) -> Void) {
+    do { try UpdateMetadata.fetch(requestJSON) { result in Self.reply(callback, result) } }
+    catch { Self.reply(callback, .failure(error)) }
   }
   @objc func inspectManifest(_ raw: String, signature: String, callback: @escaping (String) -> Void) {
     Self.commands.async { Self.reply(callback, Result { try Self.store().inspect(raw, signature: signature) }) }

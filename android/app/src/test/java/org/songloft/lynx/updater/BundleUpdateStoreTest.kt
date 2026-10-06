@@ -50,7 +50,9 @@ class BundleUpdateStoreTest {
     }
 
     /** A real local TLS endpoint; only the injected test client trusts its certificate. */
-    private class Server(private val directory: File, private val data: ByteArray, private val slow: Boolean = false) : AutoCloseable {
+    private class Server(private val directory: File, private val data: ByteArray, private val slow: Boolean = false,
+        private val status: Int = 200, private val location: String? = null,
+        private val observe: (List<String>) -> Unit = {}) : AutoCloseable {
         private val executor = Executors.newCachedThreadPool()
         private val server: SSLServerSocket
         val client: OkHttpClient
@@ -76,9 +78,12 @@ class BundleUpdateStoreTest {
                         socket.use {
                             try {
                                 val input = socket.getInputStream().bufferedReader()
-                                while (true) { val line = input.readLine() ?: break; if (line.isEmpty()) break }
+                                val headers = mutableListOf<String>()
+                                while (true) { val line = input.readLine() ?: break; if (line.isEmpty()) break; headers.add(line) }
+                                observe(headers)
                                 val output = socket.getOutputStream()
-                                output.write("HTTP/1.1 200 OK\r\nContent-Length: ${data.size}\r\nConnection: close\r\n\r\n".toByteArray())
+                                val redirect = location?.let { "Location: $it\r\n" } ?: ""
+                                output.write("HTTP/1.1 $status OK\r\n${redirect}Content-Length: ${data.size}\r\nConnection: close\r\n\r\n".toByteArray())
                                 for (offset in data.indices step 4096) {
                                     output.write(data, offset, minOf(4096, data.size - offset)); output.flush()
                                     if (slow) Thread.sleep(25)
@@ -96,6 +101,37 @@ class BundleUpdateStoreTest {
 
     private fun fails(message: String, action: () -> Unit) {
         try { action(); fail("Expected $message") } catch (error: Exception) { assertEquals(message, error.message) }
+    }
+
+    @Test fun metadataUsesSystemTLSBoundedUTF8AndNoCredentials() {
+        Fixture().use { fixture ->
+            val text = "{\"说明\":\"开发版\"}"
+            var observed: List<String> = emptyList()
+            Server(fixture.root, text.toByteArray(), observe = { observed = it }).use { server ->
+                val request = JSONObject().put("url", server.url).put("max_bytes", 1024)
+                try { UpdateMetadata().fetch(request); fail("Self-signed certificate must fail") } catch (_: javax.net.ssl.SSLException) {}
+                val result = UpdateMetadata(server.client).fetch(request)
+                assertEquals(text, result.getString("body"))
+                assertEquals(200, result.getInt("status"))
+                assertTrue(observed.none { it.startsWith("Authorization:", true) || it.startsWith("Cookie:", true) })
+                fails("metadata_too_large") { UpdateMetadata(server.client).fetch(JSONObject(request.toString()).put("max_bytes", 1)) }
+                fails("invalid_metadata_request") { UpdateMetadata(server.client).fetch(JSONObject(request.toString()).put("max_bytes", 1.5)) }
+                fails("invalid_update_url") { UpdateMetadata(server.client).fetch(JSONObject(request.toString()).put("url", "https://user:pass@example.com")) }
+            }
+        }
+    }
+
+    @Test fun metadataReportsHTTPStatusAndRejectsDowngradeRedirect() {
+        Fixture().use { fixture ->
+            Server(fixture.root, "missing".toByteArray(), status = 404).use { server ->
+                val result = UpdateMetadata(server.client).fetch(JSONObject().put("url", server.url).put("max_bytes", 1024))
+                assertEquals(404, result.getInt("status")); assertEquals("missing", result.getString("body"))
+            }
+            File(fixture.root, "tls-test.p12").delete()
+            Server(fixture.root, ByteArray(0), status = 302, location = "http://127.0.0.1/bundle").use { server ->
+                fails("invalid_update_url") { UpdateMetadata(server.client).fetch(JSONObject().put("url", server.url).put("max_bytes", 1024)) }
+            }
+        }
     }
 
     @Test fun sharedSignatureVectorIsAcceptedAndByteTamperingRejected() {
@@ -204,10 +240,9 @@ class BundleUpdateStoreTest {
     @Test fun defaultClientRejectsUntrustedTLSAndPlainHttp() {
         Fixture().use { fixture -> Server(fixture.root, fixture.data).use { server ->
             val store = fixture.store()
-            try {
+            fails("download_failed") {
                 store.prepare(fixture.manifest.toString(), fixture.envelope(), server.url, "tls-1") { _, _ -> }
-                fail("Untrusted TLS must fail")
-            } catch (error: javax.net.ssl.SSLHandshakeException) { /* Expected real TLS failure. */ }
+            }
             fails("invalid_update_url") { store.prepare(fixture.manifest.toString(), fixture.envelope(), server.url.replace("https:", "http:"), "tls-2") { _, _ -> } }
             fails("invalid_update_url") { store.prepare(fixture.manifest.toString(), fixture.envelope(), server.url + "?access_token=ignored", "tls-3") { _, _ -> } }
             assertNull(store.info().optJSONObject("pending"))

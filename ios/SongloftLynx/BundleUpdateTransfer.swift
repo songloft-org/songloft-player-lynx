@@ -1,5 +1,69 @@
 import Foundation
 
+/// Small public metadata with the same independent system TLS and bounded streaming as bundles.
+final class UpdateMetadata: NSObject, URLSessionDataDelegate {
+  private let limit: Int
+  private let completion: (Result<[String: Any], Error>) -> Void
+  private var data = Data()
+  private var status = 0
+  private var redirects = 0
+  private var failure: BundleUpdateStore.Failure?
+  private init(limit: Int, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+    self.limit = limit; self.completion = completion
+    super.init()
+  }
+  static func fetch(_ raw: String, completion: @escaping (Result<[String: Any], Error>) -> Void) throws {
+    struct Request: Decodable { let url: String; let max_bytes: Int }
+    let input = try JSONDecoder().decode(Request.self, from: Data(raw.utf8))
+    guard (1...524288).contains(input.max_bytes), let url = URL(string: input.url),
+      !input.url.unicodeScalars.contains(where: { $0.value <= 32 || $0.value == 92 }), BundleUpdateTransfer.validURL(url) else {
+      throw BundleUpdateStore.Failure(code: "invalid_metadata_request")
+    }
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.timeoutIntervalForRequest = 12
+    configuration.timeoutIntervalForResource = 12
+    configuration.httpCookieStorage = nil
+    configuration.urlCredentialStorage = nil
+    configuration.urlCache = nil
+    let delegate = UpdateMetadata(limit: input.max_bytes, completion: completion)
+    let queue = OperationQueue(); queue.maxConcurrentOperationCount = 1
+    let session = URLSession(configuration: configuration, delegate: delegate, delegateQueue: queue)
+    var request = URLRequest(url: url)
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    session.dataTask(with: request).resume() // The session retains its delegate until invalidated.
+  }
+  func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+    newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+    redirects += 1
+    guard redirects <= 8, let url = request.url, BundleUpdateTransfer.validURL(url) else {
+      failure = BundleUpdateStore.Failure(code: "invalid_update_url")
+      completionHandler(nil); return
+    }
+    data.removeAll(keepingCapacity: true)
+    completionHandler(request)
+  }
+  func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse,
+    completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+    status = (response as? HTTPURLResponse)?.statusCode ?? 0
+    if response.expectedContentLength > limit {
+      failure = BundleUpdateStore.Failure(code: "metadata_too_large"); completionHandler(.cancel)
+    } else { completionHandler(.allow) }
+  }
+  func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive chunk: Data) {
+    guard data.count + chunk.count <= limit else {
+      failure = BundleUpdateStore.Failure(code: "metadata_too_large"); dataTask.cancel(); return
+    }
+    data.append(chunk)
+  }
+  func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+    defer { session.finishTasksAndInvalidate() }
+    guard error == nil, failure == nil, let body = String(data: data, encoding: .utf8), (100...599).contains(status) else {
+      completion(.failure(failure ?? BundleUpdateStore.Failure(code: "metadata_failed"))); return
+    }
+    completion(.success(["status": status, "body": body]))
+  }
+}
+
 /// Bounded file streaming with system TLS. It never uses the music-server TLS bypass session.
 final class BundleUpdateTransfer: NSObject, URLSessionDataDelegate {
   let id: String

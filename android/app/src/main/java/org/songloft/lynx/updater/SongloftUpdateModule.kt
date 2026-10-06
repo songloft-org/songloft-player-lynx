@@ -15,10 +15,12 @@ class SongloftUpdateModule(context: Context) : LynxModule(context) {
         // Commands are serialized; downloads use a separate worker so cancel/restore can interrupt them.
         private val commands = Executors.newSingleThreadExecutor()
         private val downloads = Executors.newSingleThreadExecutor()
+        private val metadata = Executors.newSingleThreadExecutor()
         private val errors = setOf("invalid_manifest", "invalid_signature", "unknown_signing_key", "incompatible_channel",
             "incompatible_protocol", "incompatible_schema", "incompatible_platform", "incompatible_engine",
             "incompatible_host", "incompatible_bridge", "incompatible_capability", "invalid_task", "invalid_update_url",
-            "update_busy", "update_not_newer", "update_storage_unavailable", "insufficient_space", "download_failed", "checksum_mismatch", "cancelled")
+            "update_busy", "update_not_newer", "update_storage_unavailable", "insufficient_space", "download_failed", "checksum_mismatch", "cancelled",
+            "invalid_metadata_request", "metadata_failed", "metadata_too_large")
     }
 
     private fun store(): BundleUpdateStore = BundleUpdates.get(mContext) ?: error("update_unavailable")
@@ -32,6 +34,9 @@ class SongloftUpdateModule(context: Context) : LynxModule(context) {
     }
 
     @LynxMethod fun getInfo(callback: Callback) { commands.execute { answer(callback) { store().hostInfo() } } }
+    @LynxMethod fun fetchMetadata(requestJson: String, callback: Callback) {
+        metadata.execute { answer(callback) { UpdateMetadata().fetch(JSONObject(requestJson)) } }
+    }
     @LynxMethod fun getState(callback: Callback) { commands.execute { answer(callback) { store().info() } } }
     @LynxMethod fun inspectManifest(raw: String, signature: String, callback: Callback) {
         commands.execute { answer(callback) { store().inspect(raw, signature) } }

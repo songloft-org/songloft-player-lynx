@@ -1,0 +1,11 @@
+.client-update__note,
+.client-update__error {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-footnote);
+  line-height: 1.5;
+  color: var(--secondary-label);
+}
+
+.client-update__error {
+  color: var(--system-red);
+}

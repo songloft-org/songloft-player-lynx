@@ -196,7 +196,7 @@ function expectArkTsMethod(source: string, method: string): void {
 
 describe('Android updater callback/loader integration', () => {
   const source = read('android/app/src/main/java/org/songloft/lynx/updater/SongloftUpdateModule.kt')
-  test.each(['getInfo', 'getState', 'inspectManifest', 'download', 'cancel', 'confirmStartup', 'reportStartupFailure', 'restoreBuiltin'])('%s is exposed by Lynx', method => {
+  test.each(['getInfo', 'getState', 'inspectManifest', 'download', 'cancel', 'confirmStartup', 'reportStartupFailure', 'restoreBuiltin', 'fetchMetadata'])('%s is exposed by Lynx', method => {
     expectLynxMethod(source, method)
   })
   test('download progress reaches the shared task-scoped subscriber', () => {
@@ -221,7 +221,7 @@ describe('Android updater callback/loader integration', () => {
 
 describe('iOS updater callback, resource and root-loader integration', () => {
   const source = read('ios/SongloftLynx/SongloftUpdateModule.swift')
-  test.each(['getInfo', 'getState', 'inspectManifest', 'download', 'cancel', 'confirmStartup', 'reportStartupFailure', 'restoreBuiltin'])('%s is exposed by Lynx', method => {
+  test.each(['getInfo', 'getState', 'inspectManifest', 'download', 'cancel', 'confirmStartup', 'reportStartupFailure', 'restoreBuiltin', 'fetchMetadata'])('%s is exposed by Lynx', method => {
     expectSwiftMethod(source, method)
   })
   test('only the app root template activates disk candidates', () => {
@@ -242,7 +242,7 @@ describe('iOS updater callback, resource and root-loader integration', () => {
 
 describe('HarmonyOS updater callbacks and root-loader integration', () => {
   const source = read('harmony/entry/src/main/ets/modules/updater/SongloftUpdateModule.ets')
-  test.each(['getInfo', 'getState', 'inspectManifest', 'download', 'cancel', 'confirmStartup', 'reportStartupFailure', 'restoreBuiltin'])('%s is exposed by Lynx', method => {
+  test.each(['getInfo', 'getState', 'inspectManifest', 'download', 'cancel', 'confirmStartup', 'reportStartupFailure', 'restoreBuiltin', 'fetchMetadata'])('%s is exposed by Lynx', method => {
     expectArkTsMethod(source, method)
   })
   test('root loader preserves builtin fallback and receives fatal lifecycle errors', () => {

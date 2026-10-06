@@ -24,7 +24,11 @@ function native(t, options = {}) {
   const metadata = () => Buffer.from(JSON.stringify(host))
   const util = {
     TextEncoder: class { encodeInto(text) { return new TextEncoder().encode(text) } },
-    TextDecoder: { create: () => ({ decodeToString: data => new TextDecoder().decode(data) }) },
+    TextDecoder: class {
+      constructor(encoding, options) { this.decoder = new TextDecoder(encoding, options) }
+      decodeToString(data) { return this.decoder.decode(data) }
+      static create(encoding, options) { return new this(encoding, options) }
+    },
     Base64Helper: class {
       decodeSync(data) { return new Uint8Array(Buffer.from(data, 'base64')) }
       encodeToStringSync(data) { return Buffer.from(data).toString('base64') }
@@ -78,11 +82,11 @@ function native(t, options = {}) {
               response.on('end', () => done({ statusCode: response.statusCode, headers: response.headers }))
               response.on('error', fail)
             })
-            active.set(request, connection)
+            active.set(request, { connection, fail })
             connection.on('error', fail)
           }),
-          cancel: request => active.get(request)?.destroy(new Error('cancelled')),
-          close: () => { for (const connection of active.values()) connection.destroy() },
+          cancel: request => { const task = active.get(request); if (task) { task.connection.destroy(); task.fail(new Error('cancelled')) } },
+          close: () => { for (const task of active.values()) task.connection.destroy() },
         }
       },
     },
@@ -95,12 +99,12 @@ function native(t, options = {}) {
     Object.assign(globals, exports)
     return exports
   }
-  load('BundleUpdateProtocol'); load('BundleUpdateTransfer')
+  load('BundleUpdateProtocol'); load('BundleUpdateTransfer'); load('UpdateMetadata')
   const Store = load('BundleUpdateStore').BundleUpdateStore
   const context = { filesDir: root, resourceManager: { getRawFileContentSync: metadata } }
   const make = () => new Store(context)
   const request = (url, task_id = 'test-1') => ({ task_id, manifest: vector.raw_manifest, signature: JSON.stringify(vector.envelope), url })
-  return { make, host, root, request, clock: value => { clock = value }, protocol: globals.BundleUpdateProtocol }
+  return { make, host, root, request, clock: value => { clock = value }, protocol: globals.BundleUpdateProtocol, metadata: globals.UpdateMetadata }
 }
 
 async function endpoint(t) {
@@ -112,6 +116,7 @@ async function endpoint(t) {
   const server = https.createServer({ cert: ca, key: fs.readFileSync(join(root, 'key.pem')) }, (request, response) => {
     if (request.url === '/redirect') { response.writeHead(302, { location: '/bundle' }); response.end(); return }
     if (request.url === '/downgrade') { response.writeHead(302, { location: 'http://127.0.0.1/bundle' }); response.end(); return }
+    if (request.url === '/missing') { response.writeHead(404); response.end('missing'); return }
     if (request.url === '/slow') {
       response.writeHead(200); response.write(payload.subarray(0, 3))
       const timer = setTimeout(() => response.end(payload.subarray(3)), 1000)
@@ -216,4 +221,18 @@ test('HarmonyOS space and version/channel rules refuse preparation before transp
   assert.doesNotThrow(() => env.protocol.newUpdate({ ...manifest, version: '1.10.0' }, stable, stable))
   assert.throws(() => env.protocol.newUpdate({ ...manifest, version: '1.9.0' }, stable, stable), /update_not_newer/)
   assert.throws(() => env.protocol.newUpdate({ ...manifest, git_commit: '' }, { ...env.host, git_commit: '' }, env.host), /update_not_newer/)
+})
+
+test('HarmonyOS public metadata uses independent system TLS, bounded UTF-8 and validated redirects', async t => {
+  const server = await endpoint(t)
+  const env = native(t, { ca: server.ca })
+  const request = (path, limit = 1024) => JSON.stringify({ url: server.url + path, max_bytes: limit })
+  const result = await env.metadata.fetch(request('/redirect'))
+  assert.equal(result.status, 200)
+  assert.equal(result.body, payload.toString('utf8'))
+  assert.equal((await env.metadata.fetch(request('/missing'))).status, 404)
+  await assert.rejects(env.metadata.fetch(request('/bundle', 1)), /metadata_too_large/)
+  await assert.rejects(env.metadata.fetch(request('/downgrade')), /invalid_update_url/)
+  await assert.rejects(env.metadata.fetch(request('/bundle', 1.5)), /invalid_metadata_request/)
+  await assert.rejects(native(t).metadata.fetch(request('/bundle')), /metadata_failed/)
 })

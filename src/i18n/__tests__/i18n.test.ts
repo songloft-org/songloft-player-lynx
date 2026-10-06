@@ -70,7 +70,7 @@ describe('resource completeness', () => {
    * shape tests above.
    */
   test('every literal t() key in src/ exists in the resource tree', () => {
-    const DYNAMIC_KEY_PREFIXES = ['settings.quality_', 'eq.preset_']
+    const DYNAMIC_KEY_PREFIXES = ['settings.quality_', 'eq.preset_', 'clientUpdate.errors.', 'clientUpdate.reasons.']
     const defined = new Set(flattenKeys(en))
     const srcDir = path.resolve(__dirname, '..', '..')
 

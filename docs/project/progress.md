@@ -1,5 +1,16 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · P2c 本通道客户端检查与更新入口
+
+- 关于页分开客户端与服务器更新，分别显示运行 bundle、安装壳和不可变壳通道。dev 只查询 `releases/tags/dev`，正式版只查询 `releases/latest` 并拒绝预发布；dev 按 commit、未知 commit 按严格构建时间及 10 分钟容差比较，正式版按数字版本比较。不跨通道降级、不从历史发布猜测候选；无法比较或远端更旧时仅打开本通道发版页。
+- 公共元数据使用独立系统 TLS、无认证/Cookie、12 秒期限及有界 UTF-8 流读取，三端增加 Callback `fetchMetadata`，bridge 升为 2、能力新增 `updater.metadata.v1`。旧八方法壳仍可启动/回退，但更新检查提示安装新壳。60 秒公共缓存、并发去重、手动强制刷新、dev 前后资产快照与一次重查；代理失败仅重试相同地址/通道，不继承业务证书跳过设置。
+- 原生验签后才提供 bundle 下载，任务状态跨页面保留，进度按 taskId 订阅、取消等待原生结束；持久 pending 完成后显示下次冷启动生效。恢复内置需要再次点击确认，只影响下次冷启动；主动恢复不再显示启动失败回退提示。完整包按 Android/iOS/HarmonyOS/Web standalone 或 embedded 选择，iOS 明示未签名 IPA 需要重签。
+- Android JVM 真实 TLS/RSA/文件测试 **13 项通过**，新增元数据默认拒绝自签名、无凭据读取、字节限制、非法 URL/请求、404 和 HTTPS 降级拒绝；Android 最终 `assembleDebug` 编译及安装通过。最终普通构建 APK 不带临时公钥，新壳冷启动已过滤此前测试候选，无 active/pending/trial；生产 JS 不含测试桥。证据 `/tmp/lynx-p2c-android-final.log`、`/tmp/lynx-p2c-final-apk.log`。
+- Android API 35 模拟器使用 Debug 壳 A / 生产 JS 与临时公钥、真实本地 HTTPS 签名发布 B：界面检查、下载、冷启动 B 确认而壳保持 A、恢复后冷启动内置 A 均通过。播放中完整下载，MediaSession 始终 PLAYING，位置从约 0 秒继续到 9.5 秒，运行根没有替换；实际点击取消后没有 pending、临时下载目录清理，仍 PLAYING。请求均无认证/Cookie。证据 `/tmp/lynx-p2c-device/`；临时签名私钥已丢弃、测试 CA/代理/下载服务已清理，未配置正式发布密钥。
+- Web 最终部署目录在 Docker Chromium 153 的真实 Worker 中检查无凭据元数据，中英、最大字号、320×568 / 375×812 / 1024×768 测量通过，更新触点至少 44 px；部署包 URL 与当前通道匹配，宿主实际允许用户点击打开新窗口，无页面异常。网络发布数据由浏览器测试夹具提供，不把它写成真实 GitHub 发版验收。证据 `/tmp/lynx-p2c-browser-{zh,en}.log`。
+- 类型检查、Lynx/Web 双生产构建、Web 部署及三端资源复制通过。全量 Vitest **267 文件 / 2916 项**：首次 2915 项通过，一项动态加载扫描将类型 `import(...)` 识别为动态 import；改成普通 `import type` 后该文件 **4 项重跑通过**。发版断言同步 bridge 2 与新增元数据能力，Node 发布回归 **26 项通过**。diff、修改文件 UTF-8 与文档相对链接检查通过。HarmonyOS 的实际 ArkTS 核心经转译，在 Node 真实 RSA/HTTPS/文件适配器下 **6 项通过**；这不替代 ArkTS/HAP 编译。Apple 编译/原生验签程序、iOS/HarmonyOS 设备行为、正式签名与 CI 发版仍开放；不将 P2 标为三端完整验收。
+- 用户授权分批本地提交，不 push；完成此批后继续 P3a 缓存身份、索引与真实取消。桌面、Bundle 本地模式和视频仍按约定暂缓，未发布、未操作 Issue。
+
 ## 2026-10-07 · P2b 第三批：HarmonyOS 更新器源码
 
 - 新增 `SongloftUpdateModule`、`BundleUpdateProtocol/Store/Transfer`，读取 rawfile 的不可变壳身份及 SPKI 公钥；使用 API 12 可用的 CryptoFramework 原始字节 RSA PKCS1/SHA256 验签、流式文件 hash、独立私有目录、空间/大小检查与同步写入后的原子状态提交。getInfo/getState/inspectManifest/download/cancel/confirmStartup/reportStartupFailure/restoreBuiltin 八个方法及 task-scoped 数组进度事件与 TS 同步。

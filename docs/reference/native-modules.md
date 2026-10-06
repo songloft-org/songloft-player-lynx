@@ -18,7 +18,7 @@
 | `SongloftDlna` | `dlna/SongloftDlnaModule.kt` | `SongloftDlnaModule.swift` | `src/native/dlna.ts` | DLNA/UPnP 设备发现与投屏控制 |
 | `SongloftVideo` | `video/SongloftVideoModule.kt`（画面是 `MainActivity.kt` 里的 `SurfaceView`） | `SongloftVideoModule.swift` | `src/native/video.ts` | 全屏视频画面（借用同一个播放器，不新建） |
 | `SongloftSongCache` | `cache/SongloftSongCacheModule.kt` | `SongloftSongCacheModule.swift` | `src/features/player/data/song-cache.ts` | 设备端歌曲缓存（下载 / 查询 / 删除 / 清空） |
-| `SongloftUpdate` | `updater/SongloftUpdateModule.kt`（文件/网络核心 `BundleUpdateStore.kt`） | `SongloftUpdateModule.swift`（`BundleUpdateStore/Transfer.swift`） | `src/core/updater/native-updater.ts` | 签名 bundle 下载、冷启动试运行/确认/回退；iOS 待编译，更新 UI 在 P2c |
+| `SongloftUpdate` | `updater/SongloftUpdateModule.kt`（文件/网络核心 `BundleUpdateStore.kt`） | `SongloftUpdateModule.swift`（`BundleUpdateStore/Transfer.swift`） | `src/core/updater/native-updater.ts` | 独立 TLS 元数据、签名下载、冷启动确认/回退；关于页入口已接入，iOS 待编译 |
 | `SongloftFloatingLyric` | `lyric/FloatingLyricModule.kt`（窗口 `FloatingLyricService.kt`） | **无（仅 Android）** | `src/native/floating-lyric.ts` | 悬浮歌词覆盖层 |
 | `SongloftLiveActivity` | **无（仅 iOS）** | `LiveActivityModule.swift` | `src/native/live-activity.ts` | 灵动岛 / 锁屏 Live Activity |
 | `SongloftNavigation` | `navigation/SongloftNavigationModule.kt`（+ `BackKeyState.kt`、`MainActivity.kt`） | **iOS 刻意不做** —— 没有返回键可拦（无 `UINavigationController`，连边缘滑动都没有），TS facade 降级为惰性桩 | `src/native/navigation.ts` | 硬件 / 浏览器返回键 |
@@ -379,11 +379,11 @@ Web 上渲染 Lynx 插件的宿主（native 构建用真实 `<frame>` 元素，�
 
 ---
 
-### 2.15 `SongloftUpdate`（8 方法，三端源码接入；iOS/HarmonyOS 待编译）
+### 2.15 `SongloftUpdate`（9 方法，三端源码接入；iOS/HarmonyOS 待编译）
 
-读方法 `getInfo(callback)`、`getState(callback)`、`inspectManifest(raw, signature, callback)`；异步写入 `download(requestJson, callback)` 与 `restoreBuiltin(callback)` 在持久化完成后回调；void 命令 `cancel(taskId)`、`confirmStartup(bundleId)`、`reportStartupFailure()`。进度事件 `SongloftUpdate.progress` 的数组参数含 `{task_id, bytes, total}`。任何出错回调只含机器错误码，不转发带 URL/凭据的网络异常文本。
+读方法 `getInfo(callback)`、`getState(callback)`、`inspectManifest(raw, signature, callback)`、`fetchMetadata(requestJson, callback)`；异步写入 `download(requestJson, callback)` 与 `restoreBuiltin(callback)` 在持久化完成后回调；void 命令 `cancel(taskId)`、`confirmStartup(bundleId)`、`reportStartupFailure()`。元数据请求 `{url, max_bytes}` 返回 `{status, body}`，独立系统 TLS、12 秒网络期限、有界 UTF-8 读取和 HTTPS 跳转，不继承业务证书跳过设置。进度事件 `SongloftUpdate.progress` 的数组参数含 `{task_id, bytes, total}`。任何出错回调只含机器错误码，不转发带 URL/凭据的网络异常文本。
 
-旧壳逐方法探测，缺任一方法即不可用；原生信息来自内置 `native-host.json`，签名/hash/兼容及新旧判断由壳执行。下载只准备下次冷启动，根模板加载器重新验证磁盘并持久化 trial；RouteErrorBoundary 内的 `UpdateStartup` 确认真实路由启动，未确认下次回退。Web 无该原生模块；完整协议与开放项见 [client-updates.md](client-updates.md)。
+旧壳逐方法探测：原有八方法是状态/下载/启动能力，新 `fetchMetadata` 单独探测，缺失时关于页只提供本通道发版页。原生信息来自内置 `native-host.json`，签名/hash/兼容及新旧判断由壳执行；当前发布契约为 bridge 2，含 `updater.metadata.v1`。下载只准备下次冷启动，根模板加载器重新验证磁盘并持久化 trial；RouteErrorBoundary 内的 `UpdateStartup` 确认真实路由启动，未确认下次回退。Web 无该原生模块；完整协议与开放项见 [client-updates.md](client-updates.md)。
 
 ## 3. 调用约定
 

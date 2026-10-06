@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { cancelBundleUpdate, confirmUpdateStartup, createUpdateTaskId, getUpdateHost, getUpdateState,
   inspectUpdateManifest, nativeUpdaterAvailable, prepareBundleUpdate, reportUpdateStartupFailure,
-  restoreBuiltinBundle, subscribeUpdateProgress } from '../native-updater.js'
+  restoreBuiltinBundle, subscribeUpdateProgress, fetchNativeUpdateMetadata, nativeUpdateMetadataAvailable } from '../native-updater.js'
 
 const vector = JSON.parse(readFileSync(resolve(__dirname, '../../../../updates/fixtures/signature-v1.json'), 'utf8'))
 const manifest = JSON.parse(vector.raw_manifest)
@@ -25,6 +25,17 @@ beforeEach(() => { native = module(); vi.stubGlobal('NativeModules', { SongloftU
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
 describe('native updater callback boundary', () => {
+  test('metadata capability is optional for old shell state reads, and callback responses are validated', async () => {
+    expect(nativeUpdateMetadataAvailable()).toBe(false)
+    await expect(fetchNativeUpdateMetadata('https://example.com', 1024)).rejects.toThrow('metadata_unavailable')
+    const fetchMetadata = vi.fn((_request: string, callback: Callback) => callback('{"status":404,"body":"missing"}'))
+    vi.stubGlobal('NativeModules', { SongloftUpdate: { ...native, fetchMetadata } })
+    expect(nativeUpdateMetadataAvailable()).toBe(true)
+    expect(await fetchNativeUpdateMetadata('https://example.com', 1024)).toEqual({ status: 404, body: 'missing' })
+    expect(JSON.parse(fetchMetadata.mock.calls[0][0])).toEqual({ url: 'https://example.com', max_bytes: 1024 })
+    fetchMetadata.mockImplementation((_request, callback) => callback('{"status":200,"body":"too big"}'))
+    await expect(fetchNativeUpdateMetadata('https://example.com', 1)).rejects.toThrow('invalid_update_response')
+  })
   test('old/missing shells are unavailable; no native method returns a promise', async () => {
     expect(nativeUpdaterAvailable()).toBe(true)
     vi.stubGlobal('NativeModules', { SongloftUpdate: { ...native, inspectManifest: undefined } })

@@ -9,6 +9,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.security.KeyFactory
 import java.security.MessageDigest
 import java.security.Signature
@@ -377,7 +378,8 @@ class BundleUpdateStore(
             val call = client.newCall(request)
             task.call = call
             if (task.cancelled) error("cancelled")
-            call.execute().use { response ->
+            val response = try { call.execute() } catch (_: IOException) { error("download_failed") }
+            response.use {
                 require(response.request.url.isHttps && response.request.url.username.isEmpty() &&
                     response.request.url.password.isEmpty()) { "invalid_update_url" }
                 check(response.isSuccessful) { "download_failed" }
@@ -388,7 +390,7 @@ class BundleUpdateStore(
                     progress(0, task.total)
                     while (true) {
                         if (task.cancelled) error("cancelled")
-                        val count = input.read(buffer)
+                        val count = try { input.read(buffer) } catch (_: IOException) { error("download_failed") }
                         if (count < 0) break
                         task.bytes += count
                         require(task.bytes <= task.total && task.bytes <= MAX_BUNDLE_BYTES) { "checksum_mismatch" }

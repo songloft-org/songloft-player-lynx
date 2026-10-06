@@ -4,17 +4,23 @@
  * them without pulling in Lynx runtime globals.
  */
 
+import type { BuildIdentity } from '../updater/update-contract.js'
+
 /**
  * Injected by lynx.config.ts from the shared release metadata. The fallback is
  * only for unbundled tests; application builds always receive the injected value.
  */
-export const clientBuild =
+export const clientBuild: BuildIdentity =
   typeof __SONGLOFT_BUILD__ === 'undefined'
     ? {
         version: 'dev',
         git_commit: 'unknown',
         build_time: 'unknown',
         build_number: 1,
+        package_version: '0.1.0',
+        native_version: '0.1.0',
+        channel: 'dev',
+        release_tag: 'dev',
       }
     : __SONGLOFT_BUILD__
 export const clientVersion = clientBuild.version

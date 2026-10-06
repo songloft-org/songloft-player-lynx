@@ -152,6 +152,11 @@ export class SettingsApi {
     }
   }
 
+  async getGithubProxy(): Promise<string> {
+    const res = await this.client.get<{ proxy?: string }>(`${apiPrefix}/settings/github-proxy`)
+    return typeof res.data?.proxy === 'string' ? res.data.proxy : ''
+  }
+
   async updateProxySettings(settings: ProxySettings): Promise<void> {
     await Promise.all([
       this.client.put(`${apiPrefix}/settings/http-proxy`, { proxy: settings.httpProxy }),

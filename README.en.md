@@ -6,7 +6,7 @@ Learn about the underlying technology: [Lynx official website](https://lynxjs.or
 
 ## Current status
 
-This is a **preview client**. Playback, library/playlists, lyrics, plugins, themes, multiple servers, and administrative settings are implemented. Native desktop clients, a bundled local backend, and in-app client update checks are not implemented. “Backend update” on the About page updates the server.
+This is a **preview client**. Playback, library/playlists, lyrics, plugins, themes, multiple servers, and administrative settings are implemented. About now separates client checks from server upgrades: dev checks only dev, while stable checks only the latest stable release. All three native bundle updaters are integrated in source; Android has local UI download/cancel/cold-start evidence, while iOS/HarmonyOS compilation and device acceptance remain open. Production update signing is unconfigured. Older shells and incompatible updates provide same-channel installation links; see [Client updates](docs/en/reference/client-updates.md). Native desktop clients and a bundled local backend remain outside this work.
 
 | Platform                 | Release artifact               | Limitations                                                                                        |
 | ------------------------ | ------------------------------ | -------------------------------------------------------------------------------------------------- |

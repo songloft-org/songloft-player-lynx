@@ -3,6 +3,7 @@ import { parseReleaseManifest, type BuildIdentity, type NativeHostInfo, type Rel
 
 type Callback = (json: string) => void
 interface UpdateModule {
+  fetchMetadata?(request: string, callback: Callback): void
   getInfo(callback: Callback): void
   getState(callback: Callback): void
   inspectManifest(raw: string, signature: string, callback: Callback): void
@@ -28,6 +29,15 @@ function module(): UpdateModule | null {
   return value && methods.every(name => typeof value[name] === 'function') ? value as unknown as UpdateModule : null
 }
 export function nativeUpdaterAvailable(): boolean { return module() !== null }
+export function nativeUpdateMetadataAvailable(): boolean { return typeof module()?.fetchMetadata === 'function' }
+export async function fetchNativeUpdateMetadata(url: string, maxBytes: number): Promise<{ status: number; body: string }> {
+  const value = requiredModule()
+  if (typeof value.fetchMetadata !== 'function') throw new Error('metadata_unavailable')
+  const raw = record(await invoke(callback => value.fetchMetadata!(JSON.stringify({ url, max_bytes: maxBytes }), callback)))
+  if (typeof raw.status !== 'number' || !Number.isInteger(raw.status) || raw.status < 100 || raw.status > 599 ||
+    typeof raw.body !== 'string' || raw.body.length > maxBytes) throw new Error('invalid_update_response')
+  return { status: raw.status, body: raw.body }
+}
 function requiredModule(): UpdateModule { const value = module(); if (!value) throw new Error('update_unavailable'); return value }
 
 function invoke(run: (callback: Callback) => void, timeout = 15_000, onTimeout?: () => void): Promise<unknown> {

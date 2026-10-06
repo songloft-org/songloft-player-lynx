@@ -2,13 +2,13 @@
 
 [English](../en/reference/client-updates.md) · [发版指南](../guides/releasing.md)
 
-**P2a 发布契约和 P2b 的三个原生端下载器、冷启动加载器已接入源码；P2c 更新界面仍在实施，客户端尚无热更新入口。** iOS/HarmonyOS 尚未编译或设备验收。桌面和 Bundle 本地后端不在本轮范围。
+**P2a 发布契约、P2b 三端原生更新器与 P2c 关于页入口已接入源码。** Android 已用本地签名发布夹具验证界面下载、取消、播放不中断、冷启动生效和恢复内置；Web 部署入口已验证。正式签名密钥未配置，iOS/HarmonyOS 尚未编译或设备验收。桌面和 Bundle 本地后端不在本轮范围。
 
 ## 身份与发布资产
 
 版本源仍为 `package.json` 与共享 `.build/version.json`。`prepare-build.mjs` 另生成 `.build/native-host.json`，含安装壳身份、协议、桥接/本地 schema、三端引擎版本、必需能力与受信公钥；随同一次构建分发。编译器按同一 bundle 身份生成 `.build/bundle-host.json`，copy 脚本将其复制为壳资源 `native-host.json`；显式 release 构建拒绝与 prepare 不一致的快照。Android 从 APK assets、iOS 从 app Resources、HarmonyOS 从 rawfile 读取，热更新包不得覆盖该文件。CI 共享两份快照，安装包检查要求嵌入身份、公钥和能力与 prepare 完全一致。
 
-`updates/native-contract.json` 是兼容契约的源文件：Android 引擎 `4.0.0`，iOS/HarmonyOS `4.0.1`；当前桥接版本 `1`、本地 schema `1`、最低壳版本 `0.1.0`。`audio.sourceLoad.v1` 和 `updater.v1` 表示完整安装壳必须提供的能力。新增原生能力、SDK 变化或不兼容本地数据读写时，先调整契约并升级安装包。
+`updates/native-contract.json` 是兼容契约的源文件：Android 引擎 `4.0.0`，iOS/HarmonyOS `4.0.1`；当前桥接版本 `2`、本地 schema `1`、最低壳版本 `0.1.0`。完整安装壳必须提供 `audio.sourceLoad.v1`、`updater.v1` 和 `updater.metadata.v1`。桥接版本 2 新增独立系统 TLS 的元数据读取；旧壳不能靠业务 fetch 的证书跳过设置代替它。新增原生能力、SDK 变化或不兼容本地数据读写时，先调整契约并升级安装包。
 
 完整安装/部署包仍为五种原有资产。配置有效签名密钥后，另提供：
 
@@ -41,7 +41,7 @@ TS 的 `bundleCompatibility()` 仅用于界面展示，**不能授权加载**。
 
 ## 三端冷启动与回退（P2b）
 
-`SongloftUpdate` 的 Callback 读取为 `getInfo/getState/inspectManifest`；`download(requestJson, callback)` 和 `restoreBuiltin(callback)` 在持久化完成后回调。取消、启动确认和启动失败报告为 void 命令。TS facade 逐方法检测旧壳，读取 15 秒、下载 240 秒超时；下载超时取消同一 task，晚到 Callback 不再提交结果。Web 无此模块，完整部署更新继续由 P2c 处理。
+`SongloftUpdate` 的 Callback 读取为 `getInfo/getState/inspectManifest/fetchMetadata`；`download(requestJson, callback)` 和 `restoreBuiltin(callback)` 在持久化完成后回调。取消、启动确认和启动失败报告为 void 命令。TS facade 逐方法检测旧壳，读取 15 秒、下载 240 秒超时；下载超时取消同一 task，晚到 Callback 不再提交结果。旧壳原有八方法可继续读取状态/确认启动，缺少第九个 `fetchMetadata` 时禁用原生更新检查并提供本通道发版页。Web 无此原生模块，使用浏览器证书验证和完整部署包入口。
 
 Android 在 `filesDir/bundle_updates` 保存签名清单和 bundle，流式下载先写独立临时目录，验签、兼容及完整大小/hash 通过后原子提交 `pending`；取消实际 HTTP Call 并清理临时文件。下载使用独立系统 TLS，禁止 HTTP、HTTPS 降级跳转和带 token 的初始 URL，不继承歌曲服务器的忽略证书设置。下载前检查剩余空间，最大 32 MiB；后续提交/启动清理未引用候选。
 
@@ -55,8 +55,19 @@ HarmonyOS 在 `filesDir/bundle_updates` 保存签名文件和相同指针，通�
 
 原生下载器重新执行同通道新版本规则：正式版本严格递增；已知 dev commit 不同才可准备，缺失 commit 时构建时间至少更新 10 分钟。签名/hash 失败、空间不足、取消等错误不提交 `pending`。
 
+## 检查通道与交互
+
+关于页的「客户端更新」独立于后端升级，分别展示不可变壳与当前 bundle。只手动检查，不自动下载或替换正在运行的根视图；准备完成提示下次冷启动生效。下载任务跨页面保留，进度按 taskId 隔离，取消等待原生终止。恢复内置需再次点击确认，也只在下次冷启动生效。
+
+- dev 仅 GET `releases/tags/dev`，正式仅 GET `releases/latest`；拒绝草稿、跨通道清单、正式预发布及异常资产 URL，不查历史或另一通道。bundle 和安装包共用同一候选。
+- 有效 dev commit 相同不更新、不同更新；缺失 commit 时才比较构建时间，至少晚 10 分钟才更新。正式按数字语义版本严格递增，元数据不足显示无法确定并提供本通道发版页，不猜测已经最新或引导安装较旧资产。
+- 公共 Release 数据缓存 60 秒、同通道/代理并发去重；显式检查绕过缓存。dev 读取前后核对 Release 及资产修订，变化时重查一次；验签失败也最多重查一次 dev，仍失败仅提供安装包/发版页。
+- 元数据请求不经过业务 HttpClient，也不带 Songloft token、Authorization 或 Cookie。三端独立系统 TLS、最多八次经验证的 HTTPS 跳转、12 秒网络总期限、流式大小限制：API 512 KiB、清单 128 KiB、签名 8 KiB。Web 使用浏览器 TLS 和无凭据有界 fetch。
+- 代理按既有 GitHub HTTPS 前缀约定分别包装 API 与下载 URL，不包含凭据/查询参数；代理网络失败仅回退同一 URL 的直连。下载时仍由壳验签与检查 hash，不因代理放宽安全要求。
+- Android/HarmonyOS 提供 APK/HAP，iOS 提醒 IPA 需要重签；Web 提供对应 standalone/embedded 部署包及部署后刷新说明，不能用原生 bundle 更新 Web 主线程宿主。
+
 ## 当前验证与开放项
 
 协议回归覆盖五包齐全、签名/key 匹配、原始字节篡改、大小限制、外部文件遗漏、调试包拒绝、旧发布无签名降级、不可变壳信息一致性及平台/引擎/桥接/schema/能力不匹配。正式发布密钥尚未配置，未执行任何 push 或发布。
 
-iOS 编译、Apple 验签程序执行及设备下载/回退仍开放。HarmonyOS 的实际源码经 TypeScript 转译，在 Node 的真实 RSA、HTTPS 与文件系统适配器下运行五项核心回归，覆盖签名/兼容、下载/取消、TLS 拒绝与降级、试运行/确认/恢复、磁盘篡改及新壳过滤；这不能替代 ArkTS/HAP 编译或设备 SDK 行为。P2c 补本通道检查、安装包链接与 Web 部署更新入口。原生源码接入不表示三端已完成验收。
+iOS 编译、Apple 验签程序执行及设备下载/回退仍开放。HarmonyOS 的实际源码经 TypeScript 转译，在 Node 的真实 RSA、HTTPS 与文件系统适配器下运行六项核心回归，新增独立 TLS 元数据读取；这不能替代 ArkTS/HAP 编译或设备 SDK 行为。Android 使用 Debug 原生壳与不含 JS 测试桥的实际 bundle、临时公钥和本地 HTTPS 发布夹具完成界面检查/下载/取消/冷启动/恢复验证，不代表正式签名发版。详细证据见 [progress](../project/progress.md)。原生源码接入不表示三端已完成验收。

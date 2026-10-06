@@ -2,13 +2,13 @@
 
 [简体中文](../../reference/client-updates.md) · [Releasing](../guides/releasing.md)
 
-**P2a publishing and the P2b downloaders and cold-start loaders for all three native platforms are implemented in source. The P2c UI remains in progress; there is no in-app hot-update entry yet.** iOS/HarmonyOS compilation and device acceptance remain open. Desktop and bundled local backends remain outside this work.
+**P2a publishing, P2b native updaters, and the P2c About entry are integrated in source.** A local signed fixture verifies Android UI download/cancel, uninterrupted playback, cold activation, and builtin restore; Web deployment links are also verified. Production signing is unconfigured; iOS/HarmonyOS compilation and device acceptance remain open. Desktop and bundled local backends remain outside this work.
 
 ## Identity and release assets
 
 Versions still originate from `package.json` and shared `.build/version.json`. `prepare-build.mjs` generates `.build/native-host.json` with shell identity, protocol, bridge/schema, engines, capabilities, and public keys. The compiler writes `.build/bundle-host.json` for the same compiled identity; copy scripts copy it as `native-host.json`. Explicit release builds reject snapshots differing from prepare. Android reads APK assets, iOS reads app Resources, and HarmonyOS reads rawfile; hot bundles must never replace this resource. CI shares both snapshots; package inspection requires embedded identity, public keys, and capabilities to exactly match preparation.
 
-`updates/native-contract.json` defines Android engine `4.0.0`, iOS/HarmonyOS `4.0.1`, bridge/local schema `1`, and minimum shell `0.1.0`. `audio.sourceLoad.v1` and `updater.v1` require a complete newly installed shell. Native capabilities, SDK changes, and incompatible local data changes require updating the contract and installing a new package.
+`updates/native-contract.json` defines Android engine `4.0.0`, iOS/HarmonyOS `4.0.1`, bridge `2`, local schema `1`, and minimum shell `0.1.0`. A complete shell provides `audio.sourceLoad.v1`, `updater.v1`, and `updater.metadata.v1`. Bridge 2 adds metadata reads using independent system TLS; older shells cannot substitute business fetch with certificate bypass. Native capabilities, SDK changes, and incompatible local data changes require updating the contract and installing a new package.
 
 The five full installation/deployment packages remain. With valid signing configuration, releases additionally provide:
 
@@ -41,7 +41,7 @@ Native build output currently consists of `main.lynx.bundle`, with Web output in
 
 ## Three native cold-start loaders and rollback (P2b)
 
-`SongloftUpdate` reads use Callbacks: `getInfo/getState/inspectManifest`. `download(requestJson, callback)` and `restoreBuiltin(callback)` respond after persistence. Cancel, startup confirmation, and failure reporting are void commands. TS detects every required method, times out reads after 15 seconds and downloads after 240 seconds, cancels the exact timed-out task, and ignores late callbacks. Web has no such module; deployment updates follow in P2c.
+`SongloftUpdate` reads use Callbacks: `getInfo/getState/inspectManifest/fetchMetadata`. `download(requestJson, callback)` and `restoreBuiltin(callback)` respond after persistence. Cancel, startup confirmation, and failure reporting are void commands. TS detects every required method, times out reads after 15 seconds and downloads after 240 seconds, cancels the exact timed-out task, and ignores late callbacks. Older eight-method shells may still read state/confirm startup; without the ninth `fetchMetadata` method, native checks are disabled and the same-channel release page remains available. Web uses browser trust and full deployment packages instead of this native module.
 
 Android stores signed manifests and bundles in `filesDir/bundle_updates`. Streaming writes an isolated temporary directory; signature, compatibility, full size, and hash must pass before atomically committing `pending`. Cancellation stops the actual HTTP Call and cleans partial files. Downloads use independent system TLS, prohibit HTTP/downgrade redirects and initial token-bearing URLs, and never inherit music-server certificate bypass settings. Available storage is checked before downloading, with a 32 MiB cap. Subsequent preparation/startup prunes unreferenced candidates.
 
@@ -55,8 +55,19 @@ The trial pointer is persisted before loading. Once the real route mounts and th
 
 The native downloader independently enforces channel/newness: stable versions strictly increase; known dev commits must differ, with a build-time fallback of at least ten minutes when commit identity is missing. Signature/hash, storage, cancellation, and download failures never commit `pending`.
 
+## Channel checks and interaction
+
+About separates client updates from backend upgrades and displays immutable shell and running bundle identities. Checks are manual, downloads never replace the running root, and prepared code applies on the next cold start. Task state survives navigation, progress is scoped to taskId, and cancellation waits for native termination. Builtin restore requires a second tap and also applies on the next cold start.
+
+- Dev queries only `releases/tags/dev`; stable queries only `releases/latest`. Drafts, cross-channel manifests, stable prereleases, and unexpected asset URLs are rejected. No history or alternate channel is consulted; bundle and package links share one candidate.
+- Matching valid dev commits mean no update; different commits mean an update. Missing commits fall back to build timestamps with a ten-minute minimum increase. Stable versions must strictly increase numerically. Insufficient metadata displays an unknown comparison and the channel release page instead of claiming current or suggesting an older package.
+- Public release data is cached for 60 seconds and concurrent reads deduplicate by channel/proxy; explicit checks bypass cache. Dev revisions/assets are checked before and after reading, with one retry on changes. Signature failure also allows at most one dev recheck; continued failure offers only installation/release links.
+- Metadata bypasses business HttpClient and never sends Songloft tokens, Authorization, or Cookie. Native system TLS permits at most eight HTTPS-validated redirects, a twelve-second overall network deadline, and bounded streaming: API 512 KiB, manifest 128 KiB, signature 8 KiB. Web uses browser TLS and bounded credential-free fetch.
+- The existing HTTPS GitHub proxy prefix wraps API and download addresses separately, without credentials/query parameters. Proxy transport failures retry only the same direct URL. Native signature/hash checks remain mandatory.
+- Android/HarmonyOS offer APK/HAP; iOS explains IPA signing. Web offers the matching standalone/embedded deployment archive and refresh guidance; native bundles cannot update the Web host scripts.
+
 ## Validation and outstanding work
 
 Regressions cover complete full packages, signing keys, byte tampering, size limits, missing external resources, debug payloads, unsigned fallback, immutable host snapshot consistency, and platform/engine/bridge/schema/capability mismatches. Production update signing is unconfigured; nothing was pushed or published.
 
-iOS compilation, execution of the Apple verification harness, and device download/rollback remain open. Five HarmonyOS core regressions execute the actual source after TypeScript transpilation with real Node RSA, HTTPS, and filesystem adapters, covering signatures/compatibility, download/cancellation, TLS rejection/downgrade, trial/confirmation/restore, disk tampering, and shell replacement. This cannot replace ArkTS/HAP compilation or device SDK behavior. P2c adds channel-specific checking, full-package links, and Web deployment updates. Native source integration does not establish acceptance on all three platforms.
+iOS compilation, execution of the Apple verification harness, and device download/rollback remain open. Six HarmonyOS core regressions execute actual transpiled source using real Node RSA, HTTPS, and filesystem adapters, now including independent TLS metadata reads. This cannot replace ArkTS/HAP compilation or device SDK behavior. Android evidence uses a Debug native shell, actual bundles without JS test-bridge markers, temporary public keys, and a local HTTPS release fixture; UI check/download/cancel/cold-start/restore evidence is not a production signing release. See [progress](../../project/progress.md). Native source integration does not establish acceptance on all three platforms.
