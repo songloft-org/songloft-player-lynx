@@ -886,6 +886,7 @@ export const en = {
     deleteFailed: 'Delete failed: {{error}}',
   },
   eq: {
+    unsupported: 'Equalizer is unavailable on this platform.',
     title: 'Equalizer',
     subtitle: '10-band audio equalizer',
     enabled: 'Enabled',
@@ -1951,6 +1952,7 @@ export const zh: TranslationTree = {
     deleteFailed: '删除失败：{{error}}',
   },
   eq: {
+    unsupported: '此平台暂不支持均衡器。',
     title: '均衡器',
     subtitle: '10 段音频均衡器',
     enabled: '启用',

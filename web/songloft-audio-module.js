@@ -32,6 +32,7 @@ var METHODS = [
   'setEqualizerEnabled',
   'setEqualizerBand',
   'updateNotificationLyric',
+  'updateNotificationLyricWithLayout',
   'dispose',
 ]
 

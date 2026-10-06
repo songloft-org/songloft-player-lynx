@@ -57,10 +57,10 @@
 
 > 完整快照已归档：[`../archive/2026-09-01-codebase-audit/`](../archive/2026-09-01-codebase-audit/)。原报告的「漂移状态：有效」与验数（18 failing / 185 契约）都已过期，**只把仍开放的条目迁到这里**，其余随审计归档。已修 5 条：AUD-001（`b08ae1a` Harmony 音量二次 `/100`）、AUD-004（`6c8c46b` 响应式测试门禁）、AUD-006（`54233ac` Harmony 视频假能力）、AUD-007 / AUD-008（`40e7cf9` Harmony DLNA 发现持久化 + `controlUrl`）。
 
-- [ ] **AUD-002 · HarmonyOS 缺 `updateNotificationLyric`，facade 少一处降级守卫**（P2）— Harmony `SongloftAudioModule.ets` 没有该方法，而 `src/native/native-audio.ts:251-253` 直接调用、**没有 `typeof` 守卫**（同一个类里的 `getVolume` 有守卫 ⇒ 这是漏了一处，不是统一的降级策略）。影响：Harmony 上每次歌词行变化都会产生未处理的 rejected Promise，且媒体通知歌词永不更新。修法：补 Harmony 方法，或把 facade 改成按方法降级；顺带把 Harmony 纳入方法面闸门（见 AUD-009）。**核查 2026-09-15：仍在。**
+- [ ] **AUD-002 · HarmonyOS 通知歌词设备验收待完成**（P2）— P6b 已接入队列元数据/AVSession 歌词 title/subtitle、清空/切源/暂停与串行更新；facade 按方法探测并安全降级。实际源码在 Node SDK 适配器下覆盖元数据、故障、毫秒命令、音量与销毁时序；iOS 保留旧单参数选择器并新增布局接口。HarmonyOS HAP/媒体卡片与 Apple 编译/锁屏回归仍开放，证据见 progress。
 - [ ] **AUD-003 · 全局删除歌曲失效的是一个不存在的查询键**（P2）— `src/shared/ui/SongRowOverlays.tsx:139` 失效 `['songs']`，而仓库里歌曲列表的真实 key 是 `['library','songs']` / `['playlist','songs']`，全仓没有任何 query 以裸 `['songs']` 建立 ⇒ **没有缓存被命中**。影响：后端已删歌，曲库/歌单/统计仍显示陈旧数据，直到发生无关 refetch。修法：按权威 key factory 同时失效 library / playlist / stats。**核查 2026-09-15：仍在，行号未变。**
 - [ ] **AUD-005 · HarmonyOS 剪贴板系统验收待完成**（P2）— P6a 已用 Pasteboard 异步写入替换空实现，四端新增 `setClipboardWithResult`；TS 与 ProxySettingsPage/SongEditDialog 只在确认成功后提示，缺方法/拒绝/空回调/超时均失败。源码适配器覆盖成功/拒绝/同步异常，Chrome 已验流程的证据见 progress；仍缺 HarmonyOS SDK/HAP 和系统输入框粘贴验收，保持开放，不将源码检查当设备通过。
-- [ ] **AUD-009 · 原生契约闸门对 HarmonyOS 仍只覆盖到「注册」**（P2，**部分修复**）— 审计时 Harmony 完全不在 interface 方法循环里；此后 platform / DLNA 等模块已纳入（`native-module-contract.test.ts` 里的 `harmony` 断言），但 **`SongloftAudio` 的通用方法循环仍只断言 Android + iOS** —— AUD-002 因此在全绿时依然存在。修法：把 Harmony 纳入每个 interface 方法表，并针对单位与空实现加窄断言。
+- [x] **AUD-009 · HarmonyOS 音频契约漏检**（P6b）— 音频接口方法、事件与七种状态已纳入 HarmonyOS；拒绝空方法的反例闸门和转译实际源码的毫秒/音量/命令参数测试已落地。EQ 明确禁用并验证消费点，保留其非支持占位。HAP 编译与设备行为仍在 AUD-002 等条目验收，契约测试不作设备证明。
 
 ## 手动测试发现
 

@@ -28,6 +28,7 @@ import {
   type SongloftAudio,
 } from './audio-types.js'
 import { cancelSourceLoad } from './source-load.js'
+import { getPlatformTarget } from './platform-target.js'
 
 /** Valid `stateChanged` states (mirrors {@link AudioState}). */
 const AUDIO_STATES: readonly AudioState[] = [
@@ -88,6 +89,7 @@ export interface SongloftAudioNativeModule {
   setEqualizerEnabled(on: boolean): void
   setEqualizerBand(index: number, gainDb: number): void
   updateNotificationLyric(lyric: string | null, inTitle?: boolean): void
+  updateNotificationLyricWithLayout?(lyric: string | null, inTitle: boolean): void
   getVolume(): void
   dispose(): void
 }
@@ -313,7 +315,13 @@ export class NativeSongloftAudio implements SongloftAudio {
   }
 
   async updateNotificationLyric(lyric: string | null, inTitle = true): Promise<void> {
-    this.native.updateNotificationLyric(lyric, inTitle)
+    try {
+      if (typeof this.native.updateNotificationLyricWithLayout === 'function') {
+        this.native.updateNotificationLyricWithLayout(lyric, inTitle)
+      } else if (typeof this.native.updateNotificationLyric === 'function') {
+        this.native.updateNotificationLyric(lyric, inTitle)
+      }
+    } catch { /* Notification lyrics are optional on older shells. */ }
   }
 
   async getVolume(): Promise<void> {
@@ -325,10 +333,12 @@ export class NativeSongloftAudio implements SongloftAudio {
   // ── equalizer (native stub; bands mirror the standard 10-band layout) ──
 
   async setEqualizerEnabled(on: boolean): Promise<void> {
+    if (getPlatformTarget() === 'harmony') return
     this.native.setEqualizerEnabled(on)
   }
 
   async setEqualizerBand(index: number, gainDb: number): Promise<void> {
+    if (getPlatformTarget() === 'harmony') return
     this.native.setEqualizerBand(index, gainDb)
   }
 

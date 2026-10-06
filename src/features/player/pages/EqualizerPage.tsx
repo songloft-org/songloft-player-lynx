@@ -2,6 +2,7 @@ import { useEffect } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 
 import { EQ_CENTER_FREQS } from '../../../native/audio-types.js'
+import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { VerticalSlider } from '../../../shared/ui/VerticalSlider.js'
@@ -68,10 +69,11 @@ export function EqualizerPage() {
   const enabled = useEqStore((s) => s.enabled)
   const bands = useEqStore((s) => s.bands)
   const activePreset = useEqStore((s) => s.activePreset)
+  const supported = getPlatformCapabilities().equalizer
 
   useEffect(() => {
-    void useEqStore.getState().hydrate()
-  }, [])
+    if (supported) void useEqStore.getState().hydrate()
+  }, [supported])
 
   return (
     <view className='eq-page'>
@@ -88,7 +90,7 @@ export function EqualizerPage() {
         <text className='eq-page__title'>{t('eq.title')}</text>
       </view>
 
-      <scroll-view className='eq-page__content' scroll-y>
+      {supported ? <scroll-view className='eq-page__content' scroll-y>
         {/* Enable toggle */}
         <view className='eq-page__toggle-row'>
           <text className='eq-page__toggle-label'>{t('eq.enabled')}</text>
@@ -144,7 +146,9 @@ export function EqualizerPage() {
         >
           <text className='eq-page__reset-text'>{t('eq.reset')}</text>
         </view>
-      </scroll-view>
+      </scroll-view> : <view className='eq-page__content'>
+        <text>{t('eq.unsupported')}</text>
+      </view>}
     </view>
   )
 }

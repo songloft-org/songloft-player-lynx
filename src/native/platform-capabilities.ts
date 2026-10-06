@@ -15,8 +15,11 @@
 
 import { readNativeModules } from './native-modules.js'
 import { isWebPlatform } from './web-platform.js'
+import { getPlatformTarget } from './platform-target.js'
 
 export interface PlatformCapabilities {
+  /** HarmonyOS API 13 host has no implemented equalizer DSP. */
+  equalizer: boolean
   /** User-facing floating lyrics overlay (Android overlay window). */
   floatingLyric: boolean
   /** iOS Dynamic Island / Lock Screen live activity. */
@@ -113,6 +116,7 @@ export function getPlatformCapabilities(): PlatformCapabilities {
   const hasPlatform = hasNativeModule('SongloftPlatform')
 
   return {
+    equalizer: getPlatformTarget() !== 'harmony',
     floatingLyric: hasNativeModule('SongloftFloatingLyric'),
     liveActivity: hasNativeModule('SongloftLiveActivity'),
     dlna: hasNativeModule('SongloftDlna'),

@@ -168,6 +168,11 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
         SongloftAudioEngine.runOnMain { SongloftAudioEngine.updateNotificationLyric(lyric, inTitle) }
     }
 
+    @LynxMethod
+    fun updateNotificationLyricWithLayout(lyric: String?, inTitle: Boolean) {
+        updateNotificationLyric(lyric, inTitle)
+    }
+
     // -- equalizer --
 
     @LynxMethod

@@ -132,6 +132,7 @@ export class SongloftAudioEngine {
           break
         case 'stopped':
           this.stopProgressTimer()
+          this.onStateChange('idle')
           break
         case 'completed':
           this.stopProgressTimer()
@@ -283,6 +284,8 @@ export class SongloftAudioEngine {
     // volume: 0-1 float (converted from 0-100 by store layer)
     this.avPlayer?.setVolume(volume)
   }
+
+  getVolume(): number { return this.volume }
 
   setSpeed(speed: number): void {
     this.speed = speed

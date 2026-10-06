@@ -87,6 +87,8 @@ final class SongloftAudioEngine {
   private var remoteCommandsInstalled = false
   private var volumeObservation: NSKeyValueObservation?
   private var currentLyricLine: String?
+  // nil preserves the legacy one-argument API's comments-only behavior.
+  private var notificationLyricInTitle: Bool?
 
   /// 10-band parametric EQ, attached to each AVPlayerItem via MTAudioProcessingTap.
   let equalizer = AudioEqualizer()
@@ -145,6 +147,7 @@ final class SongloftAudioEngine {
     reachedEnd = false
     itemFailed = false
     currentURL = url
+    currentLyricLine = nil
     ClientFileLog.write("I", tag: "audio", "load \(Self.truncUrl(url)) hls=\(hls) queuedMetadata=\(metadataByURL[url] != nil)")
     emitState("loading")
 
@@ -205,6 +208,7 @@ final class SongloftAudioEngine {
     player?.pause()
     player?.replaceCurrentItem(with: nil)
     currentURL = nil
+    currentLyricLine = nil
     reachedEnd = false
     MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     emitState("idle")
@@ -250,8 +254,9 @@ final class SongloftAudioEngine {
     like.localizedTitle = value ? "取消收藏" : "收藏"
   }
 
-  func updateNotificationLyric(_ lyric: String?) {
+  func updateNotificationLyric(_ lyric: String?, inTitle: Bool? = nil) {
     currentLyricLine = lyric
+    notificationLyricInTitle = inTitle
     ClientFileLog.write("I", tag: "audio", "notif lyric: \(Self.truncLog(currentLyricLine))")
     updateNowPlaying()
   }
@@ -610,6 +615,16 @@ final class SongloftAudioEngine {
     if let artist = metadata?.artist { info[MPMediaItemPropertyArtist] = artist }
     if let lyric = currentLyricLine, !lyric.isEmpty {
       info[MPMediaItemPropertyComments] = lyric
+      if let inTitle = notificationLyricInTitle {
+        if inTitle {
+          info[MPMediaItemPropertyTitle] = lyric
+        }
+        // Use the artist display line for the subtitle, retaining the original
+        // artist in the text and in metadataByURL.
+        let subtitle = inTitle ? (metadata?.title ?? "") : lyric
+        let artist = metadata?.artist ?? ""
+        info[MPMediaItemPropertyArtist] = [subtitle, artist].filter { !$0.isEmpty }.joined(separator: " · ")
+      }
     }
     let duration = Self.milliseconds(item.duration) / 1000
     if duration > 0 { info[MPMediaItemPropertyPlaybackDuration] = duration }

@@ -22,6 +22,11 @@ const { navigateSpy, openInfoSpy, popoverProps } = vi.hoisted(() => ({
   openInfoSpy: vi.fn(),
   popoverProps: { current: null as unknown as Record<string, unknown> },
 }))
+const capability = vi.hoisted(() => ({ equalizer: true }))
+vi.mock('../../../native/platform-capabilities.js', async original => ({
+  ...await original<typeof import('../../../native/platform-capabilities.js')>(),
+  getPlatformCapabilities: () => capability,
+}))
 
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
@@ -97,4 +102,12 @@ test('selecting song info opens the global info dialog for the current song', as
     await Promise.resolve()
   })
   expect(openInfoSpy).toHaveBeenCalledWith(song)
+})
+
+test('unsupported EQ has no menu entry while other playback actions remain', () => {
+  capability.equalizer = false
+  try {
+    render(<PlayerMoreMenu song={song} onOpenSleepTimer={() => {}} timerActive={false} />)
+    expect((popoverProps.current.items as { key: string }[]).map(i => i.key)).toEqual(['songInfo', 'sleepTimer'])
+  } finally { capability.equalizer = true }
 })

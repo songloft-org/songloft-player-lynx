@@ -78,6 +78,16 @@ describe('on the Web platform', () => {
 })
 
 describe('on a device host', () => {
+  test('HarmonyOS EQ is unsupported despite registered placeholder methods', () => {
+    g.SystemInfo = { platform: 'harmony' }
+    g.NativeModules = { SongloftAudio: { setEqualizerEnabled() {}, setEqualizerBand() {} } }
+    expect(getPlatformCapabilities().equalizer).toBe(false)
+    for (const platform of ['Android', 'iOS', 'web']) {
+      g.SystemInfo = { platform }
+      expect(getPlatformCapabilities().equalizer).toBe(true)
+    }
+  })
+
   test('a capability is on exactly when its own module is registered', () => {
     withModules('SongloftPlatform', 'SongloftDlna')
     g.NativeModules = { SongloftPlatform: { openURL() {}, pickAndUploadFile() {} }, SongloftDlna: {} }

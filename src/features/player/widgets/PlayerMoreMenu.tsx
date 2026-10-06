@@ -157,7 +157,9 @@ export function PlayerMoreMenu({ song, onOpenSleepTimer, timerActive }: PlayerMo
      * work (e.g. a host without native EQ), that belongs in
      * `platform-capabilities.ts`, not here.
      */
-    { key: 'equalizer', label: t('player.equalizer'), icon: 'tune' },
+    ...(getPlatformCapabilities().equalizer
+      ? [{ key: 'equalizer', label: t('player.equalizer'), icon: 'tune' as const }]
+      : []),
     {
       key: 'sleepTimer',
       label: t('player.sleepTimer'),

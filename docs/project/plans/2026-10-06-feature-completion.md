@@ -259,7 +259,7 @@
 - [x] P4：Web 导入/导出（源码与 Chrome standalone/embedded 根路径验收完成；Firefox/Safari 待验，见 progress）
 - [x] P5：Web 快捷键（源码与 Chrome 实际播放/菜单/持久化验收完成；IME/插件夹具和其他浏览器边界见 progress）
 - [ ] P6a：HarmonyOS 剪贴板（四端确认回调与两处成功/失败反馈已接入；HarmonyOS 编译/系统粘贴验收仍开放，见 progress）
-- [ ] P6b：HarmonyOS 通知歌词
+- [ ] P6b：HarmonyOS 通知歌词（队列元数据、AVSession 布局/控制、旧壳降级与音频契约源码已补；iOS/HarmonyOS 编译与真实卡片/锁屏验收仍开放，见 progress）
 - [ ] P6c：iOS/HarmonyOS 插件恢复前台
 
 ## 12. 外部契约参考

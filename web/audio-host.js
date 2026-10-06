@@ -804,6 +804,9 @@
     // Native platforms paint the now-playing lyric in the OS notification; Web has
     // no such surface. No-op to match the no-op Web facade in `web-audio.ts`.
     updateNotificationLyric: function (_lyric, _inTitle) {},
+    updateNotificationLyricWithLayout: function (lyric, inTitle) {
+      songloftAudio.updateNotificationLyric(lyric, inTitle)
+    },
 
     dispose: function () {
       stopProgress()

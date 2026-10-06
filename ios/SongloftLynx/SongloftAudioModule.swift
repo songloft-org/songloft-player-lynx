@@ -53,6 +53,8 @@ final class SongloftAudioModule: NSObject, LynxContextModule {
         NSStringFromSelector(#selector(SongloftAudioModule.setEqualizerBand(_:gainDb:))),
       "updateNotificationLyric":
         NSStringFromSelector(#selector(SongloftAudioModule.updateNotificationLyric(_:))),
+      "updateNotificationLyricWithLayout":
+        NSStringFromSelector(#selector(SongloftAudioModule.updateNotificationLyricWithLayout(_:inTitle:))),
       "getVolume": NSStringFromSelector(#selector(SongloftAudioModule.getVolume)),
       "dispose": NSStringFromSelector(#selector(SongloftAudioModule.dispose)),
     ]
@@ -194,6 +196,11 @@ final class SongloftAudioModule: NSObject, LynxContextModule {
   @objc func updateNotificationLyric(_ lyric: String?) {
     let engine = SongloftAudioEngine.shared
     engine.runOnMain { engine.updateNotificationLyric(lyric) }
+  }
+
+  @objc func updateNotificationLyricWithLayout(_ lyric: String?, inTitle: Bool) {
+    let engine = SongloftAudioEngine.shared
+    engine.runOnMain { engine.updateNotificationLyric(lyric, inTitle: inTitle) }
   }
 
   @objc func getVolume() {

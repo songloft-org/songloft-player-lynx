@@ -64,6 +64,9 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 **7 个**模块：`Songlo
 | `setRepeatMode` | `setRepeatMode(mode: String)` | `setRepeatMode(_:)` |
 | `setShuffle` | `setShuffle(on: Boolean)` | `setShuffle(_:)` |
 | `setFavorite` | `setFavorite(isFavorite: Boolean)` | `setFavorite(_:)` |
+| `getVolume` | 无参，回报 `volumeChanged` | 同名无参 |
+| `updateNotificationLyric` | `lyric: String?, inTitle: Boolean` | 旧 `updateNotificationLyric(_:)` 单参数 |
+| `updateNotificationLyricWithLayout` | `lyric: String?, inTitle: Boolean` | 新 `updateNotificationLyricWithLayout(_:inTitle:)` |
 | `setEqualizerEnabled` | `setEqualizerEnabled(on: Boolean)` | `setEqualizerEnabled(_:)` |
 | `setEqualizerBand` | `setEqualizerBand(index: Double, gainDb: Double)` | `setEqualizerBand(_:gainDb:)` |
 | `dispose` | 无参 | 同名无参 |
@@ -77,23 +80,30 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 **7 个**模块：`Songlo
 | `SongloftAudio.error` | `{ code, message }` |
 | `SongloftAudio.remoteCommand` | `{ command }` |
 | `SongloftAudio.sourceReady` | `{ sourceId, positionMs }`，对应新源准备并完成初始 seek 后的实际位置 |
+| `SongloftAudio.volumeChanged` | `{ volume }`，系统查询回报 0–100 整数，设置仍传 0–1 |
 
 版本 1 的 `load` 可选字段为 `sourceId / initialPositionMs / autoplay`；状态、进度、错误与准备事件带对应 `sourceId`。facade 丢弃过期源事件，不能将旧源回调标记成新源。没有选定音轨时也为支持该契约的宿主分配源标识。队列、音量与速度不随换源清空。
 
 词表：
 
 - `state` 共 **7 个**：`idle` / `loading` / `ready` / `playing` / `paused` / `completed` / `error`。`mapGlobalEvent` 丢弃表外值 ⇒ 宿主发 `"buffering"` 会让播放器永远停在上一状态。
-- `command` 共 **3 个**：`next` / `previous` / `toggleFavorite`。
+- `command` 共 **4 个**：`next` / `previous` / `toggleFavorite` / `stop`（iOS 尚无 stop 远端命令）。HarmonyOS 的 play/pause/seek/setSpeed 直接控制引擎，不传无法解码的 Worker 命令。
 - facade 的 `AudioEvent` 还含 `queueIndexChanged`，**只有 mock 与 Web 实现发**（`src/native/mock-audio.ts` / `src/native/web-audio.ts`），原生宿主不发。
 
 **闸门锁住的不变量**
 
-- 基础事件名、7 个 state 和 3 个 command 在 Android/iOS 引擎中一致；准备契约的事件、版本读取与 load 字段同时核对 Android/iOS/HarmonyOS/Web。
-- TS 原生接口方法在 Kotlin 有 `@LynxMethod`、在 Swift 同时有 `func` 与 `methodLookup` 条目。
+- 基础事件名与 7 个 state 核对三端；准备契约的事件、版本读取与 load 字段同时核对 Android/iOS/HarmonyOS/Web。
+- TS 原生接口方法在 Kotlin 有 `@LynxMethod`、在 Swift 同时有 `func` 与 `methodLookup` 条目，在 HarmonyOS 有 public 方法；除明确禁用的 EQ 外，HarmonyOS 音频方法拒绝空实现。Node 转译源码适配器验证毫秒定位、音量比例、命令参数与元数据时序，不能替代 HAP 编译和设备验证。
 - iOS 后台播放两半必须都在：`Info.plist` 的 `UIBackgroundModes` 含 `<string>audio</string>`，且引擎调 `setCategory(.playback`。
 - `load` 的 `opts` **永远传对象、不传 `null`**：iOS 按方法签名构造 ObjC 调用，对象参数为 nil 会每次换歌打一条 `LynxError`。
 - 音量只在 store 层从 0–100 整数换算一次为 0–1 浮点；四端 facade / module / engine 均透传 0–1。HarmonyOS 不得再次 `/ 100`，契约闸门直接锁住该调用形状。
 - Android 的**通知位（notification id 1001）只能有一个主人**：`SongloftPlaybackService` 的 FGS 占位通知与 media3 `DefaultMediaNotificationProvider` 共用该 id，占位只允许在 media3 未持有时发（`mediaNotificationOwnsSlot`，在 `onUpdateNotification` 里先赋值再 `super`）。闸门 `src/__tests__/android-media-notification.test.ts`；机制与实测判据见 [pitfalls §3](../project/pitfalls.md)。
+
+P6b：HarmonyOS `setQueue` 按播放 URL 保存 id/歌曲/歌手/封面/时长，加载时写入 AVSession；歌词标题模式以歌词作 title、歌曲作 subtitle，副标题模式保留歌曲 title、歌词作 subtitle，artist/封面/时长不变。清空、停止和切源恢复歌曲信息，暂停保留当前歌词；元数据/播放状态串行写入，旧源进度不改新歌时长，SDK 卡片失败不阻止音频播放。API 依据见 [OpenHarmony 5.0 AVSession 声明](https://github.com/openharmony/interface_sdk-js/blob/OpenHarmony-5.0.0-Release/api/%40ohos.multimedia.avsession.d.ts)。不把当前行伪装成要求 LRC 格式的 `lyric` 字段。
+
+共享 facade 优先探测可选 `updateNotificationLyricWithLayout`，否则守卫调用旧方法；缺失或同步拒绝安全降级，不改变 bridge 3 / schema 2 必需能力。Android 保持既有通知布局。iOS 新双参数选择器与旧单参数选择器并存：标题模式改 Now Playing title，第二行使用 artist 展示字段组合原歌曲名/歌词与原歌手，清空后恢复原信息；旧方法仍只设置 comments，避免旧 bundle 的参数绑定变更。Web 保持既有无通知歌词降级。iOS/HarmonyOS 编译与真实卡片/锁屏布局验收仍开放，新布局需要安装本通道新原生壳。
+
+HarmonyOS 的两个 EQ 方法仍无 DSP 实现：新增 `equalizer` 能力位为 false，更多菜单隐藏入口，直接进入页面只显示不支持，facade 不发送 EQ 写操作；不将方法注册当功能支持。
 
 ### 2.2 `SongloftStorage`（5 方法）
 

@@ -194,6 +194,18 @@ function expectArkTsMethod(source: string, method: string): void {
   )
 }
 
+function expectImplementedArkTsAudioMethod(source: string, method: string): void {
+  expectArkTsMethod(source, method)
+  const withoutComments = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
+  expect(withoutComments, `${method} must not be an empty placeholder`).not.toMatch(
+    new RegExp(`public\\s+${method}\\([^\\n]*\\)\\s*:\\s*void\\s*\\{\\s*\\}`),
+  )
+}
+
+test('HarmonyOS audio implementation gate rejects a registered but empty method', () => {
+  expect(() => expectImplementedArkTsAudioMethod('public setQueue(items: Object[], startIndex: number): void { /* TODO */ }', 'setQueue')).toThrow()
+})
+
 describe('Android updater callback/loader integration', () => {
   const source = read('android/app/src/main/java/org/songloft/lynx/updater/SongloftUpdateModule.kt')
   test.each(['getInfo', 'getState', 'inspectManifest', 'download', 'cancel', 'confirmStartup', 'reportStartupFailure', 'restoreBuiltin', 'fetchMetadata'])('%s is exposed by Lynx', method => {
@@ -262,6 +274,7 @@ describe('audio global-event names reach both hosts verbatim', () => {
   test.each(names)('%s', (name) => {
     expect(hosts.audio.android, `${name} missing from the Kotlin engine`).toContain(name)
     expect(hosts.audio.ios, `${name} missing from the Swift engine`).toContain(name)
+    expect(hosts.audioModule.harmony, `${name} missing from the HarmonyOS module`).toContain(name)
   })
 
   test.each(['next', 'previous', 'toggleFavorite'])(
@@ -289,6 +302,7 @@ describe('audio global-event names reach both hosts verbatim', () => {
     (state) => {
       expect(hosts.audio.android).toContain(`"${state}"`)
       expect(hosts.audio.ios).toContain(`"${state}"`)
+      expect(hosts.audio.harmony).toContain(`'${state}'`)
     },
   )
 })
@@ -471,6 +485,15 @@ describe('native module method names exist on both hosts', () => {
   test.each(audioMethods)('SongloftAudio.%s', (method) => {
     expectLynxMethod(hosts.audioModule.android, method)
     expectSwiftMethod(hosts.audioModule.ios, method)
+    expectArkTsMethod(hosts.audioModule.harmony, method)
+    if (!['setEqualizerEnabled', 'setEqualizerBand'].includes(method)) {
+      expectImplementedArkTsAudioMethod(hosts.audioModule.harmony, method)
+    }
+  })
+
+  test('iOS retains the legacy lyric selector and registers the separate two-argument layout selector', () => {
+    expect(hosts.audioModule.ios).toMatch(/"updateNotificationLyric":\s*NSStringFromSelector\(#selector\(SongloftAudioModule\.updateNotificationLyric\(_:\)\)\)/)
+    expect(hosts.audioModule.ios).toMatch(/"updateNotificationLyricWithLayout":\s*NSStringFromSelector\(#selector\(SongloftAudioModule\.updateNotificationLyricWithLayout\(_:inTitle:\)\)\)/)
   })
 
   test('HarmonyOS forwards the facade-normalized 0–1 volume without scaling it again', () => {

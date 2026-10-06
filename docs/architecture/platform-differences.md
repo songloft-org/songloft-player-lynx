@@ -12,18 +12,19 @@ Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoP
 
 ## 能力矩阵
 
-### A. `platform-capabilities.ts` 显式定义的 12 个能力位
+### A. `platform-capabilities.ts` 显式定义的 13 个能力位
 
 每一位都键在**自己的**模块（或方法）上，不是「有没有任何原生模块」的总开关 —— 因为它们真的会分叉。
 
 | 能力（能力位） | Android | iOS | HarmonyOS | Web | 探测什么 |
 |---|---|---|---|---|---|
+| 均衡器 `equalizer` | ⚠️ 受设备 DSP 限制 | ✅ 已有 DSP | ⛔ DSP 未实现，隐藏入口/禁用调用 | ✅ Web Audio | 当前平台不是 HarmonyOS |
 | 悬浮歌词 `floatingLyric` | ✅ overlay 窗口 | ⛔ 无模块 | ⛔ 无等价 API | ⛔ 无模块 | `SongloftFloatingLyric` 模块存在 |
 | Live Activity `liveActivity` | ⛔ 无模块 | ✅ 灵动岛/锁屏 | ⛔ 无等价 API | ⛔ 无模块 | `SongloftLiveActivity` 模块存在 |
 | DLNA 投屏 `dlna` | ✅ | ✅ | ✅ | ⛔ 无模块 | `SongloftDlna` 模块存在 |
 | 全屏视频 `video` | ✅ 借用同一播放器 | ✅ 借用同一播放器 | ⚠️ 已注册模块与 XComponent 表面，待编译/设备验证 | ✅ 主线程 `<video>`（镜像正在播的音频流） | `SongloftVideo` 模块存在 |
 | 单曲离线缓存 `songCache` | ✅ | ✅ | ✅ | ⛔ 无模块 | `SongloftSongCache.getCacheInfo` **方法**存在 |
-| 数据导入/导出 `dataTransfer` | ✅ | ✅ | ✅ | ⛔ 显式 `isWeb` 关闭 | `isWeb ? false : SongloftPlatform` |
+| 数据导入/导出 `dataTransfer` | ✅ | ✅ | ✅ | ✅ P4 JSON 文本文件桥 | 原生要求 openURL/pickAndUploadFile，Web 要求 pickTextFile/saveTextFile/cancelTextFile |
 | 文件交付 `fileExport` | ✅ 系统分享面板 | ✅ 系统分享面板 | ✅ 系统分享面板 | ✅ **浏览器下载** | `SongloftPlatform.shareFile` **方法**存在 |
 | 原生文件选择 `nativeFilePicker` | ✅ | ✅ | ✅ | ✅ 但可能不弹框（见下） | `SongloftPlatform` 模块存在 |
 | Bundle 本地模式 `bundleMode` | ✅ | ✅ | ✅ | ✅（同上探测） | 同 `nativeFilePicker`，**全库暂无消费点** |
@@ -54,7 +55,7 @@ Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoP
 |---|---|---|---|---|
 | 后台播放 | ✅ 前台服务 + `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | ✅ `UIBackgroundModes: audio` + `.playback` 会话 | ✅ 后台长时任务（`BackgroundTaskManager`） | ⚠️ 由浏览器标签页策略决定，应用无法保证 |
 | 锁屏 / 通知栏元数据 | ✅ media3 `MediaSession` | ✅ `MPNowPlayingInfoCenter` | ✅ AVSession | ⚠️ `navigator.mediaSession`，依浏览器支持与安全上下文 |
-| 10 段 EQ | ⚠️ `audiofx.Equalizer`，**部分设备不支持**（静默降级） | ✅ `MTAudioProcessingTap` + `NBandEQ`，固定 10 段 | ⚠️ 占位（EQ API 待评估） | ✅ `BiquadFilterNode` 链（lowshelf + 8 peaking + highshelf） |
+| 10 段 EQ | ⚠️ `audiofx.Equalizer`，**部分设备不支持**（静默降级） | ✅ `MTAudioProcessingTap` + `NBandEQ`，固定 10 段 | ⛔ DSP 未实现，UI/facade 禁用 | ✅ `BiquadFilterNode` 链（lowshelf + 8 peaking + highshelf） |
 | HLS | ✅ ExoPlayer 原生 | ✅ AVPlayer 原生 | ✅ AVPlayer 原生 | ✅ hls.js（Safari 回落原生 HLS） |
 | 不安全 TLS（自签名） | ✅ 重建 OkHttpClient 即时生效 | ✅ `invalidateAndCancel()` 重建 session + `InsecureMediaLoader` | ✅ 销毁旧 http 实例重建 | ⛔ **no-op**，证书信任归浏览器 |
 | 系统深浅色跟随 | ✅ `setGlobalProps` + `sendGlobalEvent` | ✅ 同左 | ✅ `setGlobalProps` + `sendGlobalEvent` | ✅ `global-props` 属性 + 主线程 `matchMedia` |

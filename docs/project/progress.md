@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · P6b：HarmonyOS 通知歌词、元数据与音频契约
+
+- HarmonyOS `setQueue` 保存按 URL 索引的歌曲 id/名称/歌手/时长/封面；加载源时供给 AVSession 元数据，歌词可切换 title/subtitle，空歌词/切源/停止恢复歌曲信息，暂停保留当前行。元数据与播放状态用串行快照写入，过期源进度不覆盖新歌时长，SDK 更新失败只记录日志，不阻止正常音频。补实际音量回报与播放/暂停/毫秒定位/速度系统命令，下一首/上一首/停止/收藏沿既有 Worker 队列路径；完成状态仍只推进一次。
+- 共享 facade 优先可选双参数 `updateNotificationLyricWithLayout`，缺失时守卫旧方法，旧壳缺失/同步拒绝安全降级，不改变 bridge 3 / schema 2 必需热更新能力。Android 复用现有布局；iOS 保留旧单参数 selector，仅新接口改变 Now Playing 标题/第二行（artist 展示字段组合歌曲/歌词与原歌手）；切源/停止清旧歌词。Web 保持无通知歌词降级。iOS/HarmonyOS 新布局需安装本通道新壳。
+- HarmonyOS 两个 EQ 占位没有 DSP，因此增加 `equalizer` 能力位、隐藏更多菜单入口，直接打开页面显示不支持且不 hydrate，facade 不发 EQ 写命令。相关能力/菜单/页面/旧壳测试通过；音频方法/事件/七种状态纳入 HarmonyOS 契约，空实现反例会被拒绝，EQ 保留明确非支持例外。AUD-009 关闭源码漏检，AUD-002 保留媒体卡片设备验收开放项。
+- **285 文件 / 3045 项 JS 最终回归通过**（`/tmp/lynx-p6b-delivery-full-final.log`），**43 项 Node 发布/原生适配器回归通过**（`/tmp/lynx-p6b-delivery-release.log`）。新增 6 项转译实际 HarmonyOS module/controller/engine 的 SDK 适配器回归，覆盖元数据布局/清空/暂停、12345 毫秒定位与 37% 音量、延迟旧写入/旧源、SDK 创建/更新失败，以及创建中与创建后退出清理；不等于 ArkTS 编译或系统卡片实测。第一次销毁测试没有等到真正进入创建，修正为检查真实 SDK 创建/销毁计数；同时补退出后的迟到回调/待执行加载防护。
+- 类型与双产物、三端 bundle/两种 Web 复制、Android APK 编译通过（`/tmp/lynx-p6b-delivery-build-final.log`）。强制类型检查拦下测试 spy 的错误类型访问，修正后类型检查及构建类型闸门通过；首次全量测试的 selector 预期没有匹配真实 NSStringFromSelector 注册方式，已修正并在最终全量通过，不忽略失败。Chrome 153 最终两 Worker 产物回归真实播放/切歌/音量/菜单/持久化（`/tmp/lynx-p6b-browser-keyboard.log`）和两处复制后粘贴/拒绝重试（`/tmp/lynx-p6b-browser-clipboard.log`），无页面异常。
+- 本批未运行 Android 通知设备回归：P6a 模拟器宿主 SIGSEGV 环境问题仍开放；其后已用无 GPU 启动精确恢复原 prefs/secure，字节对比一致，并关闭本次模拟器。iOS 无 Swift/Xcode、HarmonyOS 无 SDK/hvigor/设备，原生编译、歌词媒体卡片/锁屏和控件效果均待验，不以源码适配器替代。双语交接及中文方法/平台/bugs/计划已同步。继续 P6c，只本地分批提交，不 push；桌面、Bundle 与视频继续暂缓，用户 `58091` 服务未停止。
+
 ## 2026-10-07 · P6a：剪贴板写入确认与 HarmonyOS 源码补齐
 
 - 四端新增 `SongloftPlatform.setClipboardWithResult(text, callback)`，保留旧 void 方法并共用写入逻辑。Android/iOS 主线程写入后回调；HarmonyOS 按 OpenHarmony 5.0/API 13 官方声明使用 Pasteboard 文本数据和异步 setData，捕获同步异常/Promise 拒绝。没有申请读剪贴板权限或用读回来确认写入，避免扩大权限。

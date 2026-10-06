@@ -63,6 +63,7 @@ afterEach(() => {
   setAudioForTests(null)
   delete (globalThis as { NativeModules?: unknown }).NativeModules
   delete (globalThis as { lynx?: unknown }).lynx
+  delete (globalThis as { SystemInfo?: unknown }).SystemInfo
 })
 
 describe('isNativeAudioAvailable (probe)', () => {
@@ -155,6 +156,39 @@ describe('mapGlobalEvent (native → facade decode)', () => {
 })
 
 describe('NativeSongloftAudio (delegation + event bridge)', () => {
+  test('prefers the new two-argument lyric method without invoking the legacy selector', async () => {
+    const native = makeNativeModule()
+    const layout = vi.fn()
+    native.updateNotificationLyricWithLayout = layout
+    const audio = new NativeSongloftAudio(native, null)
+    await audio.updateNotificationLyric('歌词')
+    await audio.updateNotificationLyric('第二句', false)
+    await audio.updateNotificationLyric(null)
+    expect(layout.mock.calls).toEqual([
+      ['歌词', true], ['第二句', false], [null, true],
+    ])
+    expect(native.updateNotificationLyric).not.toHaveBeenCalled()
+  })
+
+  test('missing or throwing optional lyrics on older shells resolve safely', async () => {
+    const native = makeNativeModule()
+    delete (native as Partial<SongloftAudioNativeModule>).updateNotificationLyric
+    const audio = new NativeSongloftAudio(native, null)
+    await expect(audio.updateNotificationLyric('歌词')).resolves.toBeUndefined()
+    native.updateNotificationLyric = vi.fn(() => { throw new Error('old shell') })
+    await expect(audio.updateNotificationLyric(null)).resolves.toBeUndefined()
+  })
+
+  test('HarmonyOS cannot send DSP operations to its empty EQ methods', async () => {
+    ;(globalThis as { SystemInfo?: unknown }).SystemInfo = { platform: 'harmony' }
+    const native = makeNativeModule()
+    const audio = new NativeSongloftAudio(native, null)
+    await audio.setEqualizerEnabled(true)
+    await audio.setEqualizerBand(0, 3)
+    expect(native.setEqualizerEnabled).not.toHaveBeenCalled()
+    expect(native.setEqualizerBand).not.toHaveBeenCalled()
+  })
+
   test('notification lyrics always pass a concrete boolean to the native bridge', async () => {
     const native = makeNativeModule()
     const audio = new NativeSongloftAudio(native, null)
