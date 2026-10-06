@@ -95,6 +95,8 @@ Native hosts use webview; Web uses an iframe **inside lynxView.shadowRoot**. The
 
 `renderEngine: "lynx"` uses a nested `<lynx-view>`. In P6c the main thread sends `lifecycle` / `{"state":"resumed"}` through `SongloftPluginBridge.push` when the browser becomes visible again or a kept-alive plugin is re-entered. Only the active, ready plugin is notified; its worker/state is preserved. Rebuild child plugins with the updated Lynx SDK: event subscriptions register the child independently and send `lifecycle.ready`, without requiring a prior RPC. SDK source is updated but has not been published to npm; older plugins without readiness do not receive this new push.
 
+On 2026-10-07, official Firefox 134 and geckodriver 0.36.0 on temporary Xvfb pass actual tab switching: six hidden→visible cycles produce twelve isTrusted=true events. Each active resume adds one notification; hidden plugins do not increment, re-entry preserves elements/counts, and close/recreation uses a new element and renewed SDK readiness. Evidence is `/tmp/lynx-p6c-gecko-plugin-visibility-final.log` and `firefox-real-plugin-visibility.png`, with no captured page exceptions. A local SDK probe is loaded through the host entry; this does not cover installed-plugin UI, MIoT long-background reconnection, OS recovery or Safari. Environment/warning limits are in [progress (Chinese)](../../project/progress.md). Playwright's [multiple-page documentation](https://playwright.dev/docs/pages#multiple-pages) treats pages as active, so automation switching without a hidden transition cannot establish actual visibility acceptance.
+
 ## Related
 
 - [Build and run](build-and-run.md)

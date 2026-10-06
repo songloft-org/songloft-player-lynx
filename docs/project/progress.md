@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · P6c 官方 Firefox 的真实标签页恢复与重建
+
+- 父仓库 `d49aff1`、客户端 `224bb8b`、SDK `b4baad3` 工作树起始干净，交付输入仍为 `e09592b`。重新用当前 SDK dist 构建 `/tmp/lynx-p6c-plugin/main.tsx` 的 ReactLynx 子插件，87.4 kB、构建通过，日志 `/tmp/lynx-p6c-real-visibility-fixture-build.log`。临时 HTTP 服务 `3015` 提供未修改的交付目录和单独测试 bundle 路由；通过现有宿主入口调用 open/hide/close，插入定位节点，不改应用组件或插件业务源码。
+- 为获取真实可见性，下载/解包 Debian Xvfb、libXfont、XKB 工具到临时 sysroot，不安装系统包。Xvfb 初次缺绝对 `/usr/bin/xkbcomp` 失败；仅临时副本中唯一的编译 bindir 字符串等长改为 `/tmp/lv` 并链接已有临时工具，原包和宿主路径不改。displayfd 自动选本地显示，关闭 TCP，仅测试进程使用 DISPLAY/LD_LIBRARY_PATH。Playwright Firefox 即使有窗口并关闭 focusmanager.testmode，切页仍均 visible、没有真实恢复事件；两次探针失败保留，不当作成功。
+- 使用 [Mozilla geckodriver 0.36.0](https://github.com/mozilla/geckodriver/releases/tag/v0.36.0) 和官方 Firefox 134.0 归档，下载包 SHA-512 与同站 `SHA512SUMS` 的 `linux-x86_64/en-US/firefox-134.0.tar.bz2` 一致（`6d49b9bd7acd5441b51e7cd414233e16e1df70552c2d61021e630477645bdbbe9af8fd95e8d6b8dd8b48bcf1b619b6de14681a7fcfb26a3915a626d1dd9d8404`），路径检查后解包。先试 tar.xz 得到 404，按清单改为真实 tar.bz2；Debian firefox-esr 旧索引也返回 404，未更新宿主 apt。首个官方浏览器探针早于解包完成而失败，等待原解包进程完成后再跑，真实 trusted hidden→visible 通过。Gecko 驱动仅 loopback `58194`，临时浏览器 profile，不执行 Juggler。Playwright [多页面](https://playwright.dev/docs/pages#multiple-pages)的活跃语义解释了为何此前切页不能视为真实可见性证据。
+- 最终实际子 frame：首次 SDK ready 为 1；切到另一真实标签页再返回为 2；B 活跃时 A 不增，均隐藏时均不增；重新进入 A 保持同元素/SDK 状态，后续计数 **4/2**。关闭隐藏 B 后，元素确已 detached，A 下一次恢复为 5；重建 B 为新元素、重新 ready 得到 1，再次真实切页后为 2，最终 **5/2**。共 6 次 hidden→visible、12 个事件全部 isTrusted=true，crossOriginIsolated=true、捕获页面错误=[]、脚本退出码 0；日志 `/tmp/lynx-p6c-gecko-plugin-visibility-final.log`，截图 `firefox-real-plugin-visibility.png` 已目测。初版仅保活结果保留在 `...-initial.log`；SDK 短计数测试和宿主入口夹具不等于已安装插件 UI、OS 恢复或 MIoT 长后台/断网重连。
+- Firefox/Gecko 日志保留无窗口管理器的窗口还原警告、空媒体 URI 和 SWGL/远端配置警告，本批未测播放或布局矩阵，不声称这些警告已修复。应用源码、依赖与四种交付包未变，只更新中英部署/交接及中文方法、计划、进展，不重复无关完整 JS 回归。临时服务、驱动/浏览器与显示按自有 PID 清理，用户 `58091` 仍运行。
+- 本批错误沿用旧容器名 `lynx-p1-chrome`，启动后核对发现当前镜像实际为 `jc21/nginx-proxy-manager:latest`，立即停止恢复先前 exited 状态并向用户说明，后续测试全用临时本地工具。当前容器状态已复核 exited；不能按历史名称推断镜像或继续使用。HarmonyOS 许可仍待答复，Apple/系统设备/正式签名验收继续开放；只本地提交、不 push。
+
 ## 2026-10-07 · 前端挂载与后端前缀的真实浏览器核查
 
 - 父仓库 `c1b846d`、客户端 `5d919cd` 起始干净。使用固定 `e09592b` Web 交付目录，隔离 Go 后端 `58192` 设置 `-base-path /songloft`；前端根路径 standalone 为 `3015`，embedded 严格挂载 `/songloft/` 为 `3016`，后者只剥静态挂载前缀、不改 HTML 或补根路径别名。测试脚本仅在 `/tmp/lynx-web-acceptance/`，未改应用、构建依赖、交付包或用户后端。首次就绪检查错用了 `/songloft/health` 得到 404，终止并确认进程退出后改为真实 `/songloft/api/v1/health`，未算作客户端故障。

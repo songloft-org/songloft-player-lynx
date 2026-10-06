@@ -12,7 +12,7 @@ HarmonyOS 已完成 Linux CLI 的 clean release HAP 编译与包内容校验，�
 
 当前可审核本地包固定对应客户端 `e09592b`，位于 `/tmp/lynx-local-delivery/e09592b/`：Android 调试 APK、未签名 HarmonyOS HAP 与 standalone/embedded Web 压缩包。统一构建号 `213487589` 的类型、双产物、三端复制、Android 编译、HarmonyOS clean 编译（34 个任务全部执行）及 47 项发布工具均通过，包内版本/bundle/宿主身份一致；APK 为 debuggable，HAP/Web 通过包内容校验器。iOS 只有资源复制，四种包均未在本批安装验收。详细哈希和日志见 progress；后续文档提交不改变这些包的源码身份。
 
-P6c 已补 iOS scene 与 HarmonyOS ability 的恢复事件，等待根视图首屏、去重并清理旧上下文；原生 WebView 与 Lynx frame 均有消费点。frame 宿主按 SDK 就绪通知发送最新播放器/主题状态与恢复事件，切插件换标识，退出后丢弃迟到 RPC。SDK 已修复仅订阅事件时未注册子 frame 的问题，现有插件需重新构建；SDK 尚未发布。真实 Chrome 子 frame 完成初始/重入通知与保活，页面可见性使用协议夹具，未证明真实标签页或操作系统恢复。最终 286 文件 / 3061 项 JS、47 项 Node、SDK 3 项测试，以及类型/双产物/Android APK 均通过。HarmonyOS HAP 已编译；iOS 编译与 MIoT 长后台/断网重连设备验收仍开放；本轮计划的源码批次已落地，验收状态见 progress 和计划，仅本地提交，不 push。
+P6c 已补 iOS scene 与 HarmonyOS ability 的恢复事件，等待根视图首屏、去重并清理旧上下文；原生 WebView 与 Lynx frame 均有消费点。frame 宿主按 SDK 就绪通知发送最新播放器/主题状态与恢复事件，切插件换标识，退出后丢弃迟到 RPC。SDK 已修复仅订阅事件时未注册子 frame 的问题，现有插件需重新构建；SDK 尚未发布。真实 Chrome 子 frame 完成初始/重入通知与保活；后续官方 Firefox 134 / geckodriver 在虚拟显示中完成真实标签页 hidden→visible（全部 isTrusted=true）、活跃过滤、隐藏保活和关闭重建，页面异常为空，详见 progress。测试使用 SDK 子插件和宿主入口夹具，未证明操作系统恢复或已安装 MIoT 重连。最终 286 文件 / 3061 项 JS、47 项 Node、SDK 3 项测试，以及类型/双产物/Android APK 均通过。HarmonyOS HAP 已编译；iOS 编译与 MIoT 长后台/断网重连设备验收仍开放；本轮计划的源码批次已落地，验收状态见 progress 和计划，仅本地提交，不 push。
 
 P6b 已接入 HarmonyOS 队列元数据、AVSession 歌词 title/subtitle 与清空恢复，补系统播放/暂停/定位/速度参数和实际音量回报；写入按快照串行，SDK 卡片失败不阻止音频。共享歌词按方法安全降级，iOS 新布局接口保留旧单参数选择器，HarmonyOS EQ 入口/调用明确禁用。音频方法/事件/状态及空实现反例闸门已覆盖三端，源码 SDK 适配器覆盖时序、单位、故障与退出清理。最终构建和回归见 progress；HarmonyOS HAP 已编译；iOS 编译及真实媒体卡片/锁屏验证仍开放，继续 P6c，只本地提交，不 push。
 

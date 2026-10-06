@@ -395,6 +395,7 @@ Web 上渲染 Lynx 插件的宿主（native 构建用真实 `<frame>` 元素，�
 - 子插件 SDK 的事件订阅独立注册子 frame，并在 push listener 就绪后以已有 hostCall 通道发送 `lifecycle.ready`；父桥合并准备前的最新快照/恢复通知，就绪后提供初始恢复通知，此后恢复前台继续推送。旧插件要用更新的 `@songloft/lynx-plugin-sdk` 重新构建才能获得 ready 逻辑；源码在 `plugins/toolchain` 独立仓库，未发布 npm 包，不改变必需热更新能力清单。
 - 与 P6c 前的 `50b8131` 核对：原生 Lynx frame 原先只有 globalProps 初始快照，播放器变化订阅仅用于 Web，父桥 RPC/状态推送尚未接入；新增 ready 门控不能据此视为破坏了既有原生推送。旧 SDK 的业务 RPC 可继续走当前父桥，但不会解锁新增原生状态/恢复推送，插件需重建。Web 既有播放器推送不受 ready 门控；普通 RPC 不代替订阅就绪信号，避免通知先于 listener 安装。此为源码兼容性核查，未代替设备回归。
 - Web iframe 继续浏览器可见性；嵌套 Lynx frame 由主线程 `lynx-frame-host.js` 在 document 从 hidden 回 visible、保活插件重新进入时推送同义 lifecycle 事件，只送当前活跃且 ready 的子 frame。隐藏的保活子 frame 不收到恢复通知，切页保持已有 worker/state，不 detach。
+- 2026-10-07 官方 Firefox 134 / geckodriver 的真实标签页测试完成 6 次 hidden→visible，12 个事件均 isTrusted=true；本地 SDK 子插件计数验证一次通知、活跃过滤、隐藏保活、同元素重入和关闭后新元素重新就绪，无捕获到的页面异常。宿主入口为测试夹具，不覆盖已安装插件 UI、MIoT 长后台/断网重连或原生系统恢复，证据见 progress。
 - 闸门覆盖三端生命周期注册、四方法父桥、实际 HOS 控制器适配器、订阅/清理、WebView 执行脚本、native frame 消费点和 Web 保活恢复。SDK 另有独立事件/RPC 注册回归。HarmonyOS HAP 已编译；iOS 编译与真实前后台、MIoT 断网重连/快照仍开放，不以源码/夹具替代设备验证。依据：[Apple scene lifecycle](https://developer.apple.com/documentation/uikit/uiscenedelegate)、[OpenHarmony UIAbility](https://github.com/openharmony/interface_sdk-js/blob/OpenHarmony-5.0.0-Release/api/%40ohos.app.ability.UIAbility.d.ts)、[Lynx 4.0.1 ViewClient](https://github.com/lynx-family/lynx/blob/4.0.1/platform/harmony/lynx_harmony/src/main/ets/tasm/LynxViewClient.ets)。
 
 ---

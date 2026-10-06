@@ -97,6 +97,8 @@ Linux WebKit 18.2 也完成快捷键实际控制回归，最终 audioErrors/erro
 
 `renderEngine: "lynx"` 使用嵌套 `<lynx-view>`。P6c 主线程在浏览器恢复可见、保活插件重新进入时，通过 `SongloftPluginBridge.push` 推送 `lifecycle` / `{"state":"resumed"}`，只通知当前活跃且 ready 的插件，不重载其 worker/state。子插件需用更新的 Lynx SDK 重建：事件订阅自行注册子 frame，再发 `lifecycle.ready`，不依赖先调用 RPC。SDK 源码已更新但尚未发布 npm；旧插件缺 ready 时不会收到此新增推送。
 
+2026-10-07 官方 Firefox 134 / geckodriver 0.36.0 在临时 Xvfb 中补验真实标签页切换：6 次 hidden→visible、12 个事件均 isTrusted=true；活跃插件一次恢复一次通知，隐藏插件不增，保活重入保持同元素/计数，关闭后重建采用新元素并重新等待 SDK 就绪。日志 `/tmp/lynx-p6c-gecko-plugin-visibility-final.log`、截图 `firefox-real-plugin-visibility.png`，无捕获到的页面异常。测试通过宿主入口加载本地 SDK 测试插件，不覆盖已安装插件 UI、MIoT 长后台重连、操作系统恢复或 Safari；环境与警告边界见 [progress](../project/progress.md)。Playwright [多页面文档](https://playwright.dev/docs/pages#multiple-pages)说明其页面按活跃页面处理，不能把未产生 hidden 的自动化切页当作真实可见性验收。
+
 ## 相关
 
 - [构建与运行](./build-and-run.md) —— 全部平台的构建命令
