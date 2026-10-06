@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · P2b 第二批：iOS 更新器源码与包资源验证
+
+- iOS 新增 `SongloftUpdateModule`、`BundleUpdateStore` 和 `BundleUpdateTransfer`，同一套签名清单/兼容/通道新旧、pending/trial/active/previous 状态机。原始 UTF-8 RSA 验签走 SecKey；文件 SHA-256 走 CryptoKit 流式读取；独立系统 TLS URLSession 流式写入，逐跳限制 HTTPS、大小/空间检查、实际任务取消、文件同步和原子状态替换，不继承音乐服务器的忽略证书设置。
+- 根模板 provider 只对 `main.lynx` 选择已验证候选；真实 Lynx fatal 生命周期回调上报启动失败，确认窗口使用单调时间。不可变 `native-host.json`、三个 Swift 文件和桥接头已进入 Xcode 的源文件/资源引用及模块注册；共享 TS 启动确认和旧壳降级契约不变。业务网络错误仍不触发回退，恢复内置只影响下次冷启动。
+- 修复 CI 共享产物漏传 `.build/bundle-host.json`。新增实际执行三端 copy 脚本的隔离下载产物回归；实际 ZIP 包检查要求嵌入宿主身份、能力和公钥与 prepare 完全一致，负例覆盖资源缺失、版本/能力/公钥被改。
+- Apple job 新增原生 CLI 验证程序，使用真实 Security/CryptoKit 和临时文件目录验证共享 UTF-8 向量、篡改、未知密钥、兼容拒绝、未确认回退、错误 id 不确认、确认持久化、恢复内置及磁盘 hash。**当前 Linux 没有 swiftc/Xcode，程序尚未编译或执行，未把配置的 CI 检查当成验证结果。** iOS 实际下载、编译及设备回退仍待 Apple 环境。
+- 本地类型检查通过；共享更新器/模块契约 **3 文件 / 298 项通过**，全量 Vitest **263 文件 / 2863 项通过**，Node 发布工具 **20 项通过**，actionlint 与 diff 检查通过。本批不改业务 JS/Web，不重复已有界面验收；HarmonyOS 模块和 P2c 页面继续实施。
+- 用户授权分批本地提交，不 push；未发版、未配置正式签名、未操作 Issue。桌面、Bundle 本地后端与视频继续暂缓。
+
 ## 2026-10-07 · P2b 第一批：Android 热更新加载与回退
 
 - `SongloftUpdate` 及进程级 `BundleUpdates` 接入 Android；`BundleUpdateStore` 从 APK `native-host.json` 读取不可变身份/公钥，独立系统 TLS 流式下载，验证原始清单签名、通道新旧、SDK/桥接/schema/能力、完整文件大小与 SHA-256 后才原子提交 pending。真实取消、空间检查、孤立临时目录、崩溃清理、旧候选清理和新壳安装过滤已实现；不沿用业务服务器忽略证书设置。

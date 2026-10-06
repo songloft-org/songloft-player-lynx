@@ -25,6 +25,14 @@ class SongloftTemplateProvider: NSObject, LynxTemplateProvider {
       return
     }
     do {
+      if url == "main.lynx", let updates = BundleUpdateStore.shared {
+        do {
+          if let candidate = try updates.beginLaunch() {
+            callback(candidate, nil)
+            return
+          }
+        } catch { try? updates.failStartup() }
+      }
       let data = try Data(contentsOf: URL(fileURLWithPath: path))
       callback(data, nil)
     } catch {

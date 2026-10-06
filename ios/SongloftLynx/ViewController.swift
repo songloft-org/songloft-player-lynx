@@ -39,6 +39,14 @@ import UIKit
  * them process-wide on `LynxEnv`) and the system appearance (see
  * [pushAppearance]).
  */
+private final class UpdateLifecycleClient: NSObject, LynxViewLifecycle {
+  @objc(lynxView:didRecieveError:)
+  func lynxView(_ view: LynxView, didRecieveError error: NSError) {
+    guard (error as? LynxError)?.isFatal == true else { return }
+    DispatchQueue.global(qos: .utility).async { try? BundleUpdateStore.shared?.failStartup() }
+  }
+}
+
 class ViewController: UIViewController {
   /// Asset base name. `SongloftTemplateProvider` appends the `.bundle`
   /// extension, so this resolves to `main.lynx.bundle` in app resources —
@@ -46,6 +54,7 @@ class ViewController: UIViewController {
   private static let bundleURL = "main.lynx"
 
   private var lynxView: LynxView?
+  private let updateLifecycle = UpdateLifecycleClient()
   /// Full-screen container hosting the video `AVPlayerLayer`, sits **below** the
   /// LynxView so the page paints every control above the picture — same layering
   /// as Android's `SurfaceView + setZOrderMediaOverlay(true)` under the LynxView.
@@ -69,6 +78,7 @@ class ViewController: UIViewController {
   }
 
   deinit {
+    lynxView?.removeLifecycleClient(updateLifecycle)
     if let localeObserver {
       NotificationCenter.default.removeObserver(localeObserver)
     }
@@ -163,6 +173,7 @@ class ViewController: UIViewController {
     lynxView.frame = frame
     view.addSubview(lynxView)
     self.lynxView = lynxView
+    lynxView.addLifecycleClient(updateLifecycle)
 
     // `LynxLoadMeta` carries the globalProps *into* the load (the render applies
     // `meta.globalProps` before it resolves the URL), so the very first frame
@@ -240,6 +251,7 @@ class ViewController: UIViewController {
     #endif
     config.register(SongloftVideoModule.self)
     config.register(SongloftSongCacheModule.self)
+    config.register(SongloftUpdateModule.self)
     config.register(SongloftPluginBridgeModule.self)
     // LiveActivityModule is @available(iOS 16.2, *) (ActivityKit floor) while the
     // deployment target stays 16.0, so the registration itself needs the guard —

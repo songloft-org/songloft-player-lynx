@@ -39,9 +39,14 @@ def check_production_bundle(bundle):
         assert marker not in bundle, f"Production bundle contains {marker!r}"
 
 
-def verify_native(kind, package, metadata):
+def verify_native(kind, package, metadata, expected_host):
     with zipfile.ZipFile(package) as archive:
         names = archive.namelist()
+        hosts = [name for name in names if name.endswith("/native-host.json")]
+        assert len(hosts) == 1, "Expected one immutable native host resource"
+        host = json.loads(archive.read(hosts[0]))
+        assert host == expected_host, "Packaged native host/trusted keys mismatch"
+        assert all(host.get(key) == value for key, value in metadata.items()), "Native host build identity mismatch"
         bundles = [name for name in names if name.endswith("main.lynx.bundle")]
         assert len(bundles) == 1, "Expected one embedded Lynx bundle"
         check_production_bundle(archive.read(bundles[0]))
@@ -84,5 +89,6 @@ if __name__ == "__main__":
     if args.platform.startswith("web"):
         verify_web(args.package, build, args.platform == "web-embedded")
     else:
-        verify_native(args.platform, args.package, build)
+        expected_host = json.loads(args.metadata.with_name("native-host.json").read_text())
+        verify_native(args.platform, args.package, build, expected_host)
     print(f"Verified {args.package}: version, payload and package contents")

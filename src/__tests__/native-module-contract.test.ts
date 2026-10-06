@@ -194,7 +194,7 @@ function expectArkTsMethod(source: string, method: string): void {
   )
 }
 
-describe('Android updater callback/loader integration (other native hosts pending P2b)', () => {
+describe('Android updater callback/loader integration', () => {
   const source = read('android/app/src/main/java/org/songloft/lynx/updater/SongloftUpdateModule.kt')
   test.each(['getInfo', 'getState', 'inspectManifest', 'download', 'cancel', 'confirmStartup', 'reportStartupFailure', 'restoreBuiltin'])('%s is exposed by Lynx', method => {
     expectLynxMethod(source, method)
@@ -216,6 +216,27 @@ describe('Android updater callback/loader integration (other native hosts pendin
     expect(body.indexOf('<UpdateStartup />')).toBeGreaterThan(body.indexOf('<SplashScreen />'))
     const boundary = router.slice(router.indexOf('componentDidCatch'), router.indexOf('\n  render()'))
     expect(boundary).toContain('reportUpdateStartupFailure()')
+  })
+})
+
+describe('iOS updater callback, resource and root-loader integration', () => {
+  const source = read('ios/SongloftLynx/SongloftUpdateModule.swift')
+  test.each(['getInfo', 'getState', 'inspectManifest', 'download', 'cancel', 'confirmStartup', 'reportStartupFailure', 'restoreBuiltin'])('%s is exposed by Lynx', method => {
+    expectSwiftMethod(source, method)
+  })
+  test('only the app root template activates disk candidates', () => {
+    expect(read('ios/SongloftLynx/SongloftTemplateProvider.swift')).toMatch(/url == "main\.lynx"[\s\S]*updates\.beginLaunch\(\)/)
+    expect(read('ios/SongloftLynx/BundleUpdateStore.swift')).toContain('Bundle.main.url(forResource: "native-host", withExtension: "json")')
+    const project = read('ios/SongloftLynx.xcodeproj/project.pbxproj')
+    expect(project).toContain('native-host.json in Resources')
+    for (const name of ['BundleUpdateStore.swift', 'BundleUpdateTransfer.swift', 'SongloftUpdateModule.swift']) {
+      expect(project).toContain(`${name} in Sources`)
+    }
+  })
+  test('fatal template errors report failure, and download events retain task identity', () => {
+    expect(read('ios/SongloftLynx/ViewController.swift')).toContain('lynxView.addLifecycleClient(updateLifecycle)')
+    expect(read('ios/SongloftLynx/ViewController.swift')).toContain('didRecieveError')
+    expect(source).toContain('sendGlobalEvent("SongloftUpdate.progress", withParams: [["task_id": request.task_id')
   })
 })
 
@@ -1514,8 +1535,8 @@ describe('every native module is registered in the host bootstrap', () => {
     { name: 'SongloftVideo', android: 'SongloftVideoModule', ios: 'SongloftVideoModule', harmony: 'SongloftVideoModule' },
     { name: 'SongloftNavigation', android: 'SongloftNavigationModule', ios: null, harmony: 'SongloftNavigationModule' },
     { name: 'SongloftSongCache', android: 'SongloftSongCacheModule', ios: 'SongloftSongCacheModule', harmony: 'SongloftSongCacheModule' },
-    // P2b Android batch; iOS/Harmony registrations are added with their implementations.
-    { name: 'SongloftUpdate', android: 'SongloftUpdateModule', ios: null, harmony: null },
+    // HarmonyOS registration follows with its P2b implementation.
+    { name: 'SongloftUpdate', android: 'SongloftUpdateModule', ios: 'SongloftUpdateModule', harmony: null },
     { name: 'SongloftPluginBridge', android: 'SongloftPluginBridgeModule', ios: 'SongloftPluginBridgeModule', harmony: 'SongloftPluginBridgeModule' },
   ]
 

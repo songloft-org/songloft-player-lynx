@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AB0000000000000000000001 /* BundleUpdateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000011 /* BundleUpdateStore.swift */; };
+		AB0000000000000000000002 /* BundleUpdateTransfer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000012 /* BundleUpdateTransfer.swift */; };
+		AB0000000000000000000003 /* SongloftUpdateModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000013 /* SongloftUpdateModule.swift */; };
+		AB0000000000000000000004 /* native-host.json in Resources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000014 /* native-host.json */; };
 		AA0000000000000000000020 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000014 /* AppDelegate.swift */; };
 		AA0000000000000000000021 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000015 /* SceneDelegate.swift */; };
 		AA0000000000000000000022 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000016 /* ViewController.swift */; };
@@ -33,6 +37,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		AB0000000000000000000011 /* BundleUpdateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleUpdateStore.swift; sourceTree = "<group>"; };
+		AB0000000000000000000012 /* BundleUpdateTransfer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleUpdateTransfer.swift; sourceTree = "<group>"; };
+		AB0000000000000000000013 /* SongloftUpdateModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongloftUpdateModule.swift; sourceTree = "<group>"; };
+		AB0000000000000000000014 /* native-host.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "native-host.json"; sourceTree = "<group>"; };
 		0DB3DFE43924D58FBFD6E648 /* Pods-SongloftLynx.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SongloftLynx.release.xcconfig"; path = "Target Support Files/Pods-SongloftLynx/Pods-SongloftLynx.release.xcconfig"; sourceTree = "<group>"; };
 		AA0000000000000000000008 /* SongloftLynx.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SongloftLynx.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000014 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -122,6 +130,10 @@
 				AA0000000000000000000040 /* InsecureMediaLoader.swift */,
 				AA0000000000000000000042 /* SongloftVideoModule.swift */,
 				AA0000000000000000000044 /* SongloftSongCacheModule.swift */,
+				AB0000000000000000000011 /* BundleUpdateStore.swift */,
+				AB0000000000000000000012 /* BundleUpdateTransfer.swift */,
+				AB0000000000000000000013 /* SongloftUpdateModule.swift */,
+				AB0000000000000000000014 /* native-host.json */,
 				AA0000000000000000000038 /* SongloftHttpService.swift */,
 				AA0000000000000000000046 /* SongloftPluginBridgeModule.swift */,
 				AA0000000000000000000018 /* SongloftLynx-Bridging-Header.h */,
@@ -203,6 +215,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA0000000000000000000025 /* main.lynx.bundle in Resources */,
+				AB0000000000000000000004 /* native-host.json in Resources */,
 				AA0000000000000000000024 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -274,6 +287,9 @@
 				AA0000000000000000000041 /* InsecureMediaLoader.swift in Sources */,
 				AA0000000000000000000043 /* SongloftVideoModule.swift in Sources */,
 				AA0000000000000000000045 /* SongloftSongCacheModule.swift in Sources */,
+				AB0000000000000000000001 /* BundleUpdateStore.swift in Sources */,
+				AB0000000000000000000002 /* BundleUpdateTransfer.swift in Sources */,
+				AB0000000000000000000003 /* SongloftUpdateModule.swift in Sources */,
 				AA0000000000000000000039 /* SongloftHttpService.swift in Sources */,
 				AA0000000000000000000047 /* SongloftPluginBridgeModule.swift in Sources */,
 			);

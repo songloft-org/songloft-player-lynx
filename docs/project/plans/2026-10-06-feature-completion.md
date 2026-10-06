@@ -249,7 +249,7 @@
 - [x] P2 方向：用户确认 bundle 更新优先、需要原生能力时升级安装包
 - [x] P2 通道：用户确认 dev 只更新 dev，正式版只更新最新正式版，对齐 Flutter
 - [ ] P2a：兼容元数据、签名发布契约及更新资产（发布工具、模型和本地回归完成；壳运行时暴露在 P2b 接入，正式密钥/CI 真发版待配置）
-- [ ] P2b：Android/iOS/HarmonyOS 下载器、加载器与回退（Android 源码/共享 TS、11 项真实 TLS/文件 JVM 回归和四项模拟器冷启动检查完成；设备下载、iOS/HarmonyOS 接入/验收仍开放，见 progress）
+- [ ] P2b：Android/iOS/HarmonyOS 下载器、加载器与回退（Android 源码/共享 TS、11 项真实 TLS/文件 JVM 回归和四项模拟器冷启动检查完成；iOS 源码/资源/Apple CI 验证程序已接入但尚未编译执行；HarmonyOS 接入和设备验收仍开放，见 progress）
 - [ ] P2c：客户端检查更新、生效交互及全链路验收
 - [ ] P3a：缓存身份/索引/取消
 - [ ] P3b：批量缓存任务

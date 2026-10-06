@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
+import { createNativeHostMetadata, loadNativeContract } from '../update-release-lib.mjs'
 import {
   bumpVersion,
   compareVersions,
@@ -32,12 +33,20 @@ const metadata = createBuildMetadata({
 test('actual ZIP inspection rejects mismatched native versions, missing engines and debug payloads', (t) => {
   const dir = fixture(t)
   writeFileSync(join(dir, 'version.json'), JSON.stringify(metadata))
+  writeFileSync(join(dir, 'native-host.json'), JSON.stringify(createNativeHostMetadata(metadata, loadNativeContract(root))))
   const createZip = String.raw`
 import json, plistlib, sys, zipfile
 from pathlib import Path
 root, kind, defect = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
 build = json.loads((root / 'version.json').read_text())
+host = json.loads((root / 'native-host.json').read_text())
+if defect == 'host-identity': host['git_commit'] = '0000000'
+if defect == 'host-keys': host['trusted_keys'] = [{'key_id': 'untrusted'}]
+if defect == 'host-capabilities': host['capabilities'] = []
 with zipfile.ZipFile(root / 'package.zip', 'w') as archive:
+    if defect != 'missing-host':
+        path = 'Payload/SongloftLynx.app/native-host.json' if kind == 'ios' else 'resources/rawfile/native-host.json'
+        archive.writestr(path, json.dumps(host))
     if defect != 'missing-bundle':
         archive.writestr('assets/main.lynx.bundle', b'TestBridge.eval' if defect == 'debug' else b'production')
     number = build['build_number'] + (1 if defect == 'version' else 0)
@@ -53,6 +62,10 @@ with zipfile.ZipFile(root / 'package.zip', 'w') as archive:
       'version',
       'missing-bundle',
       'debug',
+      'missing-host',
+      'host-identity',
+      'host-keys',
+      'host-capabilities',
       ...(kind === 'harmony' ? ['engine'] : []),
     ]) {
       execFileSync('python3', ['-c', createZip, dir, kind, defect])

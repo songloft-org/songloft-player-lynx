@@ -8,7 +8,7 @@
 
 ## 1. 总表
 
-闸门 `modules` 表锁定 **11 个原生宿主模块**（含 `SongloftPluginBridge` 与新接入 Android 的 `SongloftUpdate`）；另有 `SongloftWebview` 与 `SongloftLynxFrame` 两个仅存在于 Web 部署的模块名，各由独立 `describe` 块覆盖。
+闸门 `modules` 表锁定 **11 个原生宿主模块**（含 `SongloftPluginBridge` 与新接入 Android/iOS 的 `SongloftUpdate`）；另有 `SongloftWebview` 与 `SongloftLynxFrame` 两个仅存在于 Web 部署的模块名，各由独立 `describe` 块覆盖。
 
 | `NativeModules.X` | Android 实现 | iOS 实现 | TS facade | 职责 |
 |---|---|---|---|---|
@@ -18,7 +18,7 @@
 | `SongloftDlna` | `dlna/SongloftDlnaModule.kt` | `SongloftDlnaModule.swift` | `src/native/dlna.ts` | DLNA/UPnP 设备发现与投屏控制 |
 | `SongloftVideo` | `video/SongloftVideoModule.kt`（画面是 `MainActivity.kt` 里的 `SurfaceView`） | `SongloftVideoModule.swift` | `src/native/video.ts` | 全屏视频画面（借用同一个播放器，不新建） |
 | `SongloftSongCache` | `cache/SongloftSongCacheModule.kt` | `SongloftSongCacheModule.swift` | `src/features/player/data/song-cache.ts` | 设备端歌曲缓存（下载 / 查询 / 删除 / 清空） |
-| `SongloftUpdate` | `updater/SongloftUpdateModule.kt`（文件/网络核心 `BundleUpdateStore.kt`） | **P2b 后续批次待接入** | `src/core/updater/native-updater.ts` | 签名 bundle 下载、冷启动试运行/确认/回退；更新 UI 在 P2c |
+| `SongloftUpdate` | `updater/SongloftUpdateModule.kt`（文件/网络核心 `BundleUpdateStore.kt`） | `SongloftUpdateModule.swift`（`BundleUpdateStore/Transfer.swift`） | `src/core/updater/native-updater.ts` | 签名 bundle 下载、冷启动试运行/确认/回退；iOS 待编译，更新 UI 在 P2c |
 | `SongloftFloatingLyric` | `lyric/FloatingLyricModule.kt`（窗口 `FloatingLyricService.kt`） | **无（仅 Android）** | `src/native/floating-lyric.ts` | 悬浮歌词覆盖层 |
 | `SongloftLiveActivity` | **无（仅 iOS）** | `LiveActivityModule.swift` | `src/native/live-activity.ts` | 灵动岛 / 锁屏 Live Activity |
 | `SongloftNavigation` | `navigation/SongloftNavigationModule.kt`（+ `BackKeyState.kt`、`MainActivity.kt`） | **iOS 刻意不做** —— 没有返回键可拦（无 `UINavigationController`，连边缘滑动都没有），TS facade 降级为惰性桩 | `src/native/navigation.ts` | 硬件 / 浏览器返回键 |
@@ -379,7 +379,7 @@ Web 上渲染 Lynx 插件的宿主（native 构建用真实 `<frame>` 元素，�
 
 ---
 
-### 2.15 `SongloftUpdate`（8 方法，当前仅 Android 接入）
+### 2.15 `SongloftUpdate`（8 方法，Android/iOS 接入；iOS 待编译）
 
 读方法 `getInfo(callback)`、`getState(callback)`、`inspectManifest(raw, signature, callback)`；异步写入 `download(requestJson, callback)` 与 `restoreBuiltin(callback)` 在持久化完成后回调；void 命令 `cancel(taskId)`、`confirmStartup(bundleId)`、`reportStartupFailure()`。进度事件 `SongloftUpdate.progress` 的数组参数含 `{task_id, bytes, total}`。任何出错回调只含机器错误码，不转发带 URL/凭据的网络异常文本。
 

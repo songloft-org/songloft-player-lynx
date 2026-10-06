@@ -8,6 +8,8 @@
 #import <Lynx/LynxEnv.h>
 #import <Lynx/LynxTemplateProvider.h>
 #import <Lynx/LynxView.h>
+#import <Lynx/LynxViewClient.h>
+#import <Lynx/LynxError.h>
 
 // Native modules (batch B3b) + the load path that carries globalProps into the
 // first frame. `LynxContextModule` is the protocol a module adopts to receive a
