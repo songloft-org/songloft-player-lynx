@@ -258,7 +258,7 @@
 - [ ] P3c：离线管理与播放（共享源码已接入身份证明、本地列表/搜索/空间/删除/清理及独立本地队列；277 文件 / 2989 项回归和 35 项发布工具、双产物及 Android APK 编译通过；Android 实际断网播放/控制/seek/重播/冷启动、删除/分身份清理及登出隐藏通过，中英最大字号三个宽度六组通过，见 progress；HarmonyOS HAP 已编译；iOS 编译和两端设备验收仍开放）
 - [x] P4：Web 导入/导出（源码与 Chrome、Firefox 134 standalone/embedded 根路径数据流程验收完成；Linux WebKit 18.2 两种部署补充回归通过；Firefox 兼容性观察与激活夹具边界见 progress，Safari 待验）
 - [x] P5：Web 快捷键（源码与 Chrome 实际播放/菜单/持久化验收完成；Firefox 134 在临时 PulseAudio 空输出/128 kbps 下完成控制流程，Linux WebKit 18.2 亦完成空输出控制回归；间歇 Blob 异常、听感与 IME/插件夹具边界见 progress，真实 Safari 待验）
-- [ ] P6a：HarmonyOS 剪贴板（四端确认回调与两处成功/失败反馈已接入；HarmonyOS HAP 已编译，系统粘贴验收仍开放，见 progress）
+- [ ] P6a：HarmonyOS 剪贴板（四端确认回调与两处成功/失败反馈已接入；Android 当前包两处跨应用系统粘贴已通过；HarmonyOS HAP 已编译，其系统粘贴验收仍开放，见 progress）
 - [ ] P6b：HarmonyOS 通知歌词（队列元数据、AVSession 布局/控制、旧壳降级与音频契约源码已补；HarmonyOS HAP 已编译；iOS 编译与真实卡片/锁屏验收仍开放，见 progress）
 - [ ] P6c：iOS/HarmonyOS 插件恢复前台（三端根事件/原生 WebView 与 Lynx frame 消费点源码已接；SDK 独立注册/ready 与 Web 保活推送已补，HarmonyOS HAP 已编译；iOS 编译及 MIoT 长后台/断网重连设备验收仍开放，见 progress）
 
@@ -270,11 +270,11 @@
 |---|---|---|
 | iOS P1/P2/P3/P6 | 三端共享回归、Swift 源码与 Apple CI 核心验证程序已接入；当前包只有资源复制 | 在 macOS/Xcode 编译当前代码并执行两个原生核心验证程序，再用签名安装包验收切轨、缓存/离线、更新回退、复制和 scene/插件恢复；本机无 Xcode/swiftc |
 | HarmonyOS P1/P2/P3/P6 | `e09592b` clean HAP 编译、包校验与实际源码 Node 适配器通过；HAP 未签名，尚无安装记录 | CLI 已能查询 API 13 phone 镜像 `5.0.0.112`，下载/启动需要用户明确授权接受华为协议；当前账号无 `/dev/kvm` 读写权限，模拟器运行与调试签名仍需验证。许可未确认时不下载、创建或启动实例 |
-| Android P6 与跨批回归 | P1/P2/P3 有前批设备行为证据；独立 Docker/KVM 中当前 `e09592b` APK arm64 安装、speed 预编译与启动页截图通过，但 Emulator 37.2.12 两种软件渲染均退出 139；临时官方 35.6.11 初始化也失败 | 先取得稳定进入应用的设备环境，再验收真实粘贴、后台/前台通知、插件退出清理及原有播放/通知回归；KVM、安装和启动页不能代替 P6 行为通过，日志见 progress |
+| Android P6 与跨批回归 | 独立 Docker/KVM 的 API 34 / 4 KB、35.6.11 / Mesa llvmpipe 环境可用；当前 `e09592b` APK arm64 两处跨应用系统粘贴、三轮根 resumed、基础播放/系统暂停与通知标题通过；SwiftShader 宿主崩溃仍开放 | 继续真实原生插件 frame 收件/退出清理、长后台/断网重连，以及歌词布局/锁屏与跨批回归；当前根事件不能代替子 frame 通过，基础通知不能代替歌词或锁屏，脚本与边界见 progress |
 | P6c 插件兼容与恢复 | 原生父桥和 SDK ready 协议回归通过；Chrome 保活/重入证据，官方 Firefox 134 真实标签页可见性、活跃过滤与关闭重建通过（SDK 子插件/宿主入口夹具） | 用本地更新 SDK 重建测试插件，再做真实系统前后台、长后台与断网重连；SDK 尚未发布，既有原生插件只保留初始快照，新增推送需要重建 |
 | P2 正式交付与 Web 补充 | 本地签名夹具、版本/包工具通过；Chrome/Firefox/Linux WebKit 的 P4/P5 回归已记录 | 正式受信密钥仍为 0，签名/CI/真实发版不在本次“不 push”的执行动作内；实际 Safari、前端子路径挂载兼容修复与 Firefox 间歇 Blob 异常仍开放；根路径 standalone 连接带前缀后端的 P4/P5 已通过，不用 Linux WebKit 结果替代 Safari |
 
-当前四种本地包与 SHA-256 固定在 `/tmp/lynx-local-delivery/e09592b/verification.json`，后续仅文档提交不改变包的源码身份；原回执未安装字段是当时快照，后续 Android 安装证据见 progress。许可文本在 `/tmp/lynx-harmony-emulator/license-review.log`；目前只审阅，未接受。Android 独立容器内 KVM 已通过且系统能开机，但随后宿主崩溃；这不证明 HarmonyOS 模拟器可运行或未签名 HAP 可安装。桌面、Bundle 本地模式和视频继续暂缓。
+当前四种本地包与 SHA-256 固定在 `/tmp/lynx-local-delivery/e09592b/verification.json`，后续仅文档提交不改变包的源码身份；原回执未安装字段是当时快照，后续 Android 系统复制/根事件/基础播放证据见 progress。许可文本在 `/tmp/lynx-harmony-emulator/license-review.log`；目前只审阅，未接受。Android 的独立 KVM/Mesa 环境已经可用，但不证明 HarmonyOS 模拟器可运行或未签名 HAP 可安装。桌面、Bundle 本地模式和视频继续暂缓。
 
 ## 12. 外部契约参考
 

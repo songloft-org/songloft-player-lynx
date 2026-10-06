@@ -1,5 +1,16 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · Android API 34 / Mesa 的系统复制与根恢复验收
+
+- 父仓库 `cd1f6fe`、客户端 `f9c69a3` 起始干净，继续使用固定 `e09592b` APK，未重建或打开 JS TestBridge。给临时 Emulator 35.6.11 补显式 SDK 根目录和系统路径末尾斜杠后，API 35 / 16 KB 镜像开机 29354 ms、bundle 首屏已加载；随后仍退出 139，另捕获 SystemUI 的 TelephonyManager 空指针 SIGSEGV。两项路径设置没有分开对照，不推断是哪一项绕过初始化失败；原日志与新 `emulator35-path-probe.log` 保留。
+- 用已有 `android-sdk-license` 文件、stdin EOF，在 `/tmp/lynx-p6-container/sdk34/` 安装 Google APIs API 34 x86_64 revision 14，没有接受新许可或覆盖宿主 SDK。镜像最低 Emulator 34.2.16，35.6.11 满足；新 AVD 不复制 userdata，实查页面大小 4096、ABI x86_64/arm64-v8a。SwiftShader 下开机 49061 ms、当前 APK arm64 安装/speed 预编译和真实登录成功（隔离后端 auth/login 200，随后歌单/统计/插件读取 200），登录后截图超时，最终宿主仍退出 139、OOMKilled=false。日志 `emulator35-api34.log`；因此不能把问题限定为 16 KB 镜像。
+- 从自有容器取得宿主 core，以本地 GDB 禁用在线符号下载/自动加载后查看栈，确认 qemu-system-x86_64-headless SIGSEGV；现场 PC 无符号、栈未完整解析，不能凭寄存器/附近库断言具体根因。core 经 gzip 完整性校验后保留为 `/tmp/lynx-p6-android-device/emulator35-api34.core.gz`（mode 600），删掉重复原件以回收空间；诊断日志同目录，未上传。
+- 切换为 `-gpu host`、`LIBGL_ALWAYS_SOFTWARE=1`、`GALLIUM_DRIVER=llvmpipe` 和临时 Xvfb（仅本机、TCP 关闭）。Mesa/GLX 依赖仅安装在自有容器，宿主不装包。glxinfo 与 emulator 均确认实际 renderer 为 **llvmpipe / LLVM 15.0.6 / Mesa 22.3.6**，非 SwiftShader 回退，API 34 开机 29426 ms；同 APK 冷恢复身份、主页/设置/曲库和弹窗均能操作。本批完成后容器优雅退出 0、OOMKilled=false。这是此环境的可复现绕过，不宣称修复 SwiftShader 或既有 x86_64 SVG/JIT 应用问题。
+- 两处真实复制按钮均通过跨应用系统粘贴：代理 AI 提示词在 Android 系统 Settings 搜索 EditText 中通过 KEYCODE_PASTE 得到 **409 UTF-8 字节**，与源码常量逐字一致；歌曲编辑复制 `id=3 / P3b batch 002` 的文件路径，系统同控件收到 **55 字节**，与真实后端歌曲详情一致。JSON 回执 `api34-{proxy,song}-system-clipboard.json`、成功反馈/系统粘贴截图均已目测；没有保存代理草稿或歌曲修改。初次粘贴到应用代理 Input 只得到前 140 字符，负例回执保留；核对组件源码 Input/TextArea 默认 maxLength=140，故改用外部系统控件，而非放宽比较。ADB 一次输入整串地址也丢字符，逐字输入并核对后才登录，不把失败输入算通过。
+- 从系统 Settings 返回时根 LynxView resumed 计数 1→2；随后三轮真实 HOME→am start 返回，计数 **3→4→5→6**、每轮 delta=1，应用 PID 不变，编辑弹窗状态保留，取消后正常回曲库。回执 `api34-root-resume.json` 与各轮根日志保留。本机此时没有安装插件，证据仅覆盖 Android 根事件，不能替代 SDK 子 frame 收件、退出清理、长后台或 MIoT 断网重连。
+- 播放本地歌曲后发系统 MEDIA_PAUSE，当前应用 MediaSession 为 **PAUSED、position=925 ms、buffered=2037 ms、error=null、标题 P3b batch 002**；系统通知卡片显示相同标题与暂停后的播放按钮。`api34-media-smoke.json`、私有 media_session 原始日志和 `api34-paused-media-notification-ready.png` 已核对。其他系统媒体会话错误未归给本应用；仅基础播放/暂停/无歌词元数据回归，未测听感、歌词布局或锁屏。
+- 录完证据后停止媒体，隔离 Go `58192`、自有模拟器/ADB/gRPC 与 Xvfb 均按自有句柄退出，用户 `58091` 保留。临时镜像/AVD、运行脚本和证据保留以供原生 frame 后续验收；应用、依赖与四种固定交付包未改。本批同步计划、bugs、中英交接与中文进展，未重复无源码变更的全量 JS 测试。HarmonyOS 许可、Apple 编译/设备和正式签名条件仍开放；仅本地提交，不 push。
+
 ## 2026-10-07 · Android 隔离 KVM 与当前 APK 安装复测
 
 - 父仓库 `2b8f360`、客户端 `561739c` 起始干净，交付输入仍为 `e09592b`。当前无连接设备，宿主账号无 KVM 读写权限；在核对镜像来源后创建独立 Debian bookworm slim 容器，镜像摘要 `debian@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587`，仅映射 `/dev/kvm`、只读 Android SDK 和 `/tmp/lynx-p6-container/` 测试目录。KVM 检查通过，未修改宿主权限、用户组、SDK 或原 AVD 数据。新 AVD 只复制硬件配置，使用 API 35 / 16 KB x86_64 镜像与 arm64 native bridge；专用 ADB `5039`、设备 `emulator-5556`，不使用默认 ADB 或其他设备。
