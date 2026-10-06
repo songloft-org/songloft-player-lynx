@@ -1,4 +1,10 @@
 import { fileURLToPath } from 'node:url'
+import { readFileSync } from 'node:fs'
+
+import {
+  createBuildMetadata,
+  validateBuildMetadata,
+} from './scripts/release-lib.mjs'
 
 import { defineConfig, rspack } from '@lynx-js/rspeedy'
 
@@ -84,6 +90,17 @@ const GLOBAL_QUEUE_MICROTASK_FIX =
 const GLOBAL_BOOTSTRAP_BANNER =
   GLOBAL_SELF_BANNER + GLOBAL_ABORT_POLYFILL + GLOBAL_QUEUE_MICROTASK_FIX
 
+const packageVersion = JSON.parse(
+  readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
+).version as string
+const buildMetadata = process.env.SONGLOFT_BUILD_METADATA
+  ? validateBuildMetadata(
+      JSON.parse(readFileSync(process.env.SONGLOFT_BUILD_METADATA, 'utf8')),
+      packageVersion,
+    )
+  : createBuildMetadata({ packageVersion })
+const testBridgeEnabled = process.env.SONGLOFT_TEST_BRIDGE === 'true'
+
 /**
  * Lynx's native CSS engine supports CSS custom properties in class-based
  * selectors but not in inline styles — the `__SetInlineStyles` path ignores
@@ -108,8 +125,7 @@ class EnableCSSInlineVariablesPlugin {
           'EnableCSSInlineVariablesPlugin',
           (args: any) => {
             if (args.encodeData?.sourceContent?.config) {
-              args.encodeData.sourceContent.config.enableCSSInlineVariables =
-                true
+              args.encodeData.sourceContent.config.enableCSSInlineVariables = true
             }
             if (args.encodeData?.compilerOptions) {
               args.encodeData.compilerOptions.enableCSSInlineVariables = true
@@ -124,7 +140,19 @@ class EnableCSSInlineVariablesPlugin {
 
 export default defineConfig({
   source: {
+    define: {
+      __SONGLOFT_BUILD__: JSON.stringify(buildMetadata),
+      __SONGLOFT_TEST_BRIDGE__: JSON.stringify(testBridgeEnabled),
+    },
     alias: {
+      'songloft-debug$': fileURLToPath(
+        new URL(
+          testBridgeEnabled
+            ? './src/debug-entry.ts'
+            : './src/debug-disabled.ts',
+          import.meta.url,
+        ),
+      ),
       // Third-party libraries (e.g. TanStack Router) import from the bare
       // `react` specifier. Route them to a local shim that re-exports
       // ReactLynx's compat entry (adding `startTransition` / `useTransition`)

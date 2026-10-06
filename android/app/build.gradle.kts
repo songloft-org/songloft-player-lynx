@@ -1,3 +1,4 @@
+import groovy.json.JsonSlurper
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -9,9 +10,15 @@ plugins {
 // Read key.properties (local dev); CI passes env vars instead.
 val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties()
+
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
+
+val packageVersion =
+    (JsonSlurper().parse(rootProject.file("../package.json")) as Map<*, *>)["version"].toString()
+val metadataPath = System.getenv("SONGLOFT_BUILD_METADATA")
+val metadata = metadataPath?.let { JsonSlurper().parse(file(it)) as Map<*, *> }
 
 android {
     namespace = "org.songloft.lynx"
@@ -21,20 +28,26 @@ android {
         applicationId = "org.songloft.lynx"
         minSdk = 21
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0-dev"
+        versionCode = (metadata?.get("build_number") as Number?)?.toInt() ?: 1
+        versionName = metadata?.get("version")?.toString() ?: "dev"
+    }
+    buildFeatures {
+        buildConfig = true
     }
 
     signingConfigs {
         create("release") {
-            val storeFilePath = System.getenv("ANDROID_KEYSTORE_PATH")
-                ?: keystoreProperties.getProperty("storeFile")
-            val storePass = System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                ?: keystoreProperties.getProperty("storePassword")
-            val keyAliasVal = System.getenv("ANDROID_KEY_ALIAS")
-                ?: keystoreProperties.getProperty("keyAlias")
-            val keyPass = System.getenv("ANDROID_KEY_PASSWORD")
-                ?: keystoreProperties.getProperty("keyPassword")
+            val storeFilePath =
+                System.getenv("ANDROID_KEYSTORE_PATH")
+                    ?: keystoreProperties.getProperty("storeFile")
+            val storePass =
+                System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                    ?: keystoreProperties.getProperty("storePassword")
+            val keyAliasVal =
+                System.getenv("ANDROID_KEY_ALIAS") ?: keystoreProperties.getProperty("keyAlias")
+            val keyPass =
+                System.getenv("ANDROID_KEY_PASSWORD")
+                    ?: keystoreProperties.getProperty("keyPassword")
 
             if (storeFilePath != null) {
                 storeFile = file(storeFilePath)
@@ -53,7 +66,18 @@ android {
                 "proguard-rules.pro",
             )
             val releaseConfig = signingConfigs.findByName("release")
-            signingConfig = if (releaseConfig?.storeFile != null) releaseConfig
+            if (System.getenv("SONGLOFT_REQUIRE_SIGNING") == "true") {
+                require(
+                    releaseConfig?.storeFile?.isFile == true &&
+                        !releaseConfig.storePassword.isNullOrBlank() &&
+                        !releaseConfig.keyAlias.isNullOrBlank() &&
+                        !releaseConfig.keyPassword.isNullOrBlank()
+                ) {
+                    "Published APKs require a complete release signing configuration"
+                }
+            }
+            signingConfig =
+                if (releaseConfig?.storeFile != null) releaseConfig
                 else signingConfigs.getByName("debug")
         }
     }
@@ -78,6 +102,10 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+}
+
+require(metadata == null || metadata["package_version"] == packageVersion) {
+    "Build metadata does not match package.json"
 }
 
 dependencies {

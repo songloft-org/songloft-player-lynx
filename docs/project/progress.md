@@ -1,5 +1,15 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-06 · 开源、统一打包与发版准备
+
+- 补 Apache-2.0 与双语公共指南、英文索引和当前交接；明确预览版及桌面/Bundle/客户端升级缺口，订正插件排序旧后端事实，历史记录保留原始语言。
+- 用单一 workflow 取代三条手动 dev 流程；main/dev、v* 正式/预览 tag、PR 检查和手动重跑共用 JS 闸门与版本元数据，五包成功后发布。真实签名与版本/包内容检查均设为门禁。
+- 新增发版 CLI（dry-run、原生版本同步、tag 校验、原子推送）、完整资产清单/校验和、实际包验证与真实临时 Git 仓库测试。
+- 关闭发布版本 TCP/eval 与 JS E2E 入口，Debug 仅 loopback；修复 Web embedded 打包清理顺序。
+- 验证：TypeScript、Lynx/Web 双构建、258 文件 / 2784 项 JS 测试、9 项发版/ZIP/压缩包/Git 测试通过；Android Release/Debug 编译与 14 项原生测试通过，实际 Release APK 版本与签名检查通过（本地使用调试签名；CI 强制发布签名）。缺少签名时发布构建明确失败；两种实际 Web 压缩包内容与版本检查通过；actionlint 与文档链接检查通过。
+- GitHub 所需 Android/HarmonyOS 签名 secret 名称均已配置，未读取内容或更改配置。Linux 没有 Xcode/HarmonyOS 工具链，设备安装升级待验证。以上为提交前的本地验证快照；推送后的编译和签名结果以 Actions/Release 为准，仓库可见性需独立管理。
+- 实际 Web 包已在 Docker Chromium 打开：standalone 显示 API 地址与 TLS 选项，embedded 隐藏这些入口；两者登录页渲染、COOP/COEP 隔离、资源加载和页面异常检查通过。双语文档补上 HTTPS 与隔离响应头的部署条件，并修正默认嵌入路径为父仓库 `clients/player-build/web-embedded`。截图/执行证据位于本机 `/tmp/songloft-lynx-release-tools/`。
+
 ## 2026-10-05 · 插件安装与更新超时对齐（songloft-org/songloft#497）
 
 - `HttpClient` 增加单次 `receiveTimeoutMs`，认证重放保留该值，后续普通请求仍为 15 秒；期限覆盖响应头和正文读取。插件检查更新 45 秒、源刷新 60 秒、安装/单个更新 4 分钟、批量更新 30 分钟。

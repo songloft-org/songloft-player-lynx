@@ -115,12 +115,14 @@ pnpm test               # Vitest 单元测试与契约闸门
 |---|---|
 | `android/` | `cd android && ./gradlew --no-daemon assembleDebug`；涉及行为时跑 Android E2E/真机 |
 | `ios/` | `xcodebuild -list -project ios/SongloftLynx.xcodeproj`；可用 macOS 环境再跑 `pnpm run ios:build` |
-| `harmony/` | GitHub Actions `dev-build-harmony.yml` 或 DevEco Studio Build Hap；涉及行为时真机/模拟器 |
+| `harmony/` | GitHub Actions `build-and-release.yml` 的 HarmonyOS job 或 DevEco Studio Build Hap；涉及行为时真机/模拟器 |
 | `web/` | `pnpm run build:web`，检查 `index.html` 本地引用并实际打开产物 |
 | 原生模块契约 | `src/__tests__/native-module-contract.test.ts` 与对应宿主编译 |
 | 路由/覆盖层 | route-back、root-overlay、overlay back、CSS 契约测试 |
 
 E2E 通过 TestBridge（TCP 9230）驱动设备，运行入口和环境检查见 `docs/guides/testing.md`。修改 bundle 或宿主后确认设备上安装的是新产物，避免测旧进程。
+
+发布产物必须关闭 TestBridge 与 JS devtools。桥只在原生 Debug 注册并监听 loopback；测试 JS 通过 `SONGLOFT_TEST_BRIDGE=true` 构建。发布入口、签名材料与统一版本见 `docs/guides/releasing.md`；生产构建后运行 `pnpm run test:release`。
 
 ### 5.3 测试原则
 

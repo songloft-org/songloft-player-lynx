@@ -24,7 +24,9 @@ import UIKit
 class AppDelegate: UIResponder, UIApplicationDelegate {
   var window: UIWindow?
 
+  #if DEBUG
   private let testBridgeServer = TestBridgeServer()
+  #endif
 
   func application(
     _ application: UIApplication,
@@ -32,7 +34,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   ) -> Bool {
     LynxEnv.sharedInstance()
     registerHttpService()
+    #if DEBUG
     testBridgeServer.start()
+    #endif
     return true
   }
 

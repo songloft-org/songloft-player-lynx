@@ -235,7 +235,9 @@ class ViewController: UIViewController {
     config.register(SongloftStorageModule.self)
     config.register(SongloftPlatformModule.self)
     config.register(SongloftDlnaModule.self)
+    #if DEBUG
     config.register(SongloftTestBridgeModule.self)
+    #endif
     config.register(SongloftVideoModule.self)
     config.register(SongloftSongCacheModule.self)
     config.register(SongloftPluginBridgeModule.self)

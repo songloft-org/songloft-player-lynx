@@ -1,0 +1,341 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths-ignore: ['**.md', 'LICENSE', 'NOTICE']
+  pull_request:
+    branches: [main]
+    paths-ignore: ['**.md', 'LICENSE', 'NOTICE']
+  workflow_dispatch:
+
+concurrency:
+  group: lynx-release-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+permissions:
+  contents: read
+
+env:
+  SONGLOFT_BUILD_METADATA: ${{ github.workspace }}/.build/version.json
+  SONGLOFT_TEST_BRIDGE: 'false'
+
+jobs:
+  prepare:
+    name: JS validation and build metadata
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.metadata.outputs.version }}
+      native_version: ${{ steps.metadata.outputs.native_version }}
+      build_number: ${{ steps.metadata.outputs.build_number }}
+      channel: ${{ steps.metadata.outputs.channel }}
+      release_tag: ${{ steps.metadata.outputs.release_tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Prepare shared metadata (validates v* tag against package.json)
+        id: metadata
+        run: node scripts/prepare-build.mjs
+      - run: pnpm run typecheck
+      - run: pnpm run build
+      - run: pnpm test
+      - run: pnpm run test:release
+      - name: Share the exact bundles and metadata with all platforms
+        uses: actions/upload-artifact@v4
+        with:
+          name: js-bundles
+          path: |
+            dist/
+            .build/version.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  web:
+    name: Web (${{ matrix.mode }})
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mode: [standalone, embedded]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: js-bundles
+      - name: Assemble and verify Web archive
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          set -euo pipefail
+          EXTRA=()
+          PLATFORM=web
+          if [ "$MODE" = embedded ]; then
+            EXTRA=(--embedded)
+            PLATFORM=web-embedded
+          fi
+          node scripts/copy-bundle-web.mjs "${EXTRA[@]}" --out-dir ".build/web-$MODE"
+          cp .build/version.json ".build/web-$MODE/version.json"
+          tar -czf "songloft-lynx-web-$MODE.tar.gz" -C ".build/web-$MODE" .
+          python3 scripts/verify-package.py "$PLATFORM" "songloft-lynx-web-$MODE.tar.gz" .build/version.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-web-${{ matrix.mode }}
+          path: songloft-lynx-web-${{ matrix.mode }}.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  android:
+    name: Android APK
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: js-bundles
+      - run: node scripts/copy-bundle-android.mjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools platforms;android-34 build-tools;34.0.0
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Configure release signing
+        # Fork PRs compile a local debug-signed release APK without publishing.
+        if: github.event_name != 'pull_request'
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in KEYSTORE STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then echo "::error::Missing Android signing secret: $name"; exit 1; fi
+          done
+          printf '%s' "$KEYSTORE" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          echo "SONGLOFT_REQUIRE_SIGNING=true" >> "$GITHUB_ENV"
+      - name: Build APK and native tests
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon :app:assembleRelease :app:testDebugUnitTest
+      - name: Inspect APK version, payload and signature
+        run: |
+          set -euo pipefail
+          cp android/app/build/outputs/apk/release/app-release.apk songloft-lynx-android.apk
+          python3 scripts/verify-package.py android songloft-lynx-android.apk .build/version.json
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose songloft-lynx-android.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-android
+          path: songloft-lynx-android.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  ios:
+    name: iOS IPA (unsigned)
+    needs: prepare
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: js-bundles
+      - run: node scripts/copy-bundle-ios.mjs
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+      - name: Install CocoaPods dependencies from lockfile
+        working-directory: ios
+        run: pod install --deployment
+      - name: Build unsigned device app
+        working-directory: ios
+        env:
+          NATIVE_VERSION: ${{ needs.prepare.outputs.native_version }}
+          BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+        run: |
+          xcodebuild -workspace SongloftLynx.xcworkspace -scheme SongloftLynx \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData \
+            MARKETING_VERSION="$NATIVE_VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' \
+            CODE_SIGN_ENTITLEMENTS='' CODE_SIGN_STYLE=Manual AD_HOC_CODE_SIGNING_ALLOWED=NO build
+      - name: Package and inspect IPA
+        run: |
+          set -euo pipefail
+          APP=ios/build/DerivedData/Build/Products/Release-iphoneos/SongloftLynx.app
+          test -d "$APP"
+          mkdir Payload
+          cp -R "$APP" Payload/
+          zip -qry songloft-lynx-ios-nosign.ipa Payload
+          python3 scripts/verify-package.py ios songloft-lynx-ios-nosign.ipa .build/version.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-ios
+          path: songloft-lynx-ios-nosign.ipa
+          if-no-files-found: error
+          retention-days: 7
+
+  harmony:
+    name: HarmonyOS HAP
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: js-bundles
+      - run: node scripts/copy-bundle-harmony.mjs
+      - run: node scripts/prepare-harmony.mjs
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev
+      - uses: ErBWs/setup-ohos@v2
+        with:
+          cache: true
+      - name: Install HarmonyOS dependencies
+        working-directory: harmony
+        run: ohpm install
+      - name: Apply required host patches
+        run: |
+          bash harmony/scripts/patch-lynx-event-reporter.sh harmony
+          node scripts/patch-harmony-webview.mjs --required
+      - name: Build HAP
+        working-directory: harmony
+        run: hvigorw assembleHap --mode module -p product=default -p buildMode=release --no-daemon
+      - name: Select the unsigned HAP
+        run: |
+          set -euo pipefail
+          mapfile -t HAPS < <(find harmony/entry/build -name '*-unsigned.hap' -type f)
+          test "${#HAPS[@]}" -eq 1
+          cp "${HAPS[0]}" songloft-lynx-harmony.hap
+      - name: Sign and verify HAP
+        if: github.event_name != 'pull_request'
+        env:
+          SIGNING_KEY: ${{ secrets.HARMONY_SIGNING_KEY_BASE64 }}
+          SIGNING_PROFILE: ${{ secrets.HARMONY_SIGNING_PROFILE_BASE64 }}
+          SIGNING_CERT: ${{ secrets.HARMONY_SIGNING_CERT_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.HARMONY_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.HARMONY_SIGNING_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.HARMONY_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          for name in SIGNING_KEY SIGNING_PROFILE SIGNING_CERT KEYSTORE_PASSWORD KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then echo "::error::Missing HarmonyOS signing secret: $name"; exit 1; fi
+          done
+          printf '%s' "$SIGNING_KEY" | base64 --decode > "$RUNNER_TEMP/signing-key.p12"
+          printf '%s' "$SIGNING_PROFILE" | base64 --decode > "$RUNNER_TEMP/signing-profile.p7b"
+          printf '%s' "$SIGNING_CERT" | base64 --decode > "$RUNNER_TEMP/signing-cert.cer"
+          SIGN_TOOL=$(find /home/runner/ohos-sdk -name hap-sign-tool.jar -print -quit)
+          test -n "$SIGN_TOOL"
+          java -jar "$SIGN_TOOL" sign-app -keyAlias "${KEY_ALIAS:-songloft}" \
+            -signAlg SHA256withECDSA -mode localSign \
+            -appCertFile "$RUNNER_TEMP/signing-cert.cer" -profileFile "$RUNNER_TEMP/signing-profile.p7b" \
+            -keystoreFile "$RUNNER_TEMP/signing-key.p12" -keystorePwd "$KEYSTORE_PASSWORD" \
+            -keyPwd "$KEY_PASSWORD" -inFile songloft-lynx-harmony.hap \
+            -outFile songloft-lynx-harmony-signed.hap -signCode 1
+          java -jar "$SIGN_TOOL" verify-app -inFile songloft-lynx-harmony-signed.hap \
+            -outCertChain "$RUNNER_TEMP/verified-chain.cer" -outProfile "$RUNNER_TEMP/verified-profile.p7b"
+          mv songloft-lynx-harmony-signed.hap songloft-lynx-harmony.hap
+      - run: python3 scripts/verify-package.py harmony songloft-lynx-harmony.hap .build/version.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-harmony
+          path: songloft-lynx-harmony.hap
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Publish complete release
+    needs: [prepare, web, android, ios, harmony]
+    # Manual dispatch can publish dev only from main, or rebuild a v* tag.
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-files
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: js-bundles
+          path: shared-build
+      - name: Verify complete asset set and generate checksums
+        run: |
+          cp shared-build/.build/version.json release-files/version.json
+          node scripts/finalize-release.mjs release-files
+      - name: Publish dev or versioned release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.release_tag }}
+          CHANNEL: ${{ needs.prepare.outputs.channel }}
+        run: |
+          set -euo pipefail
+          NOTES="$RUNNER_TEMP/release-notes.md"
+          printf 'Songloft Player (Lynx) %s\n\nCommit: %s\n\nAndroid APK and HarmonyOS HAP are release-signed. iOS IPA is unsigned and requires re-signing. Web packages include standalone and embedded modes.\n\nAll five packages share the metadata in version.json. Verify downloads with checksums.txt.\n' "$TAG" "$GITHUB_SHA" > "$NOTES"
+          if [ "$CHANNEL" = dev ]; then
+            # Move only the rolling dev tag. Never force-update a versioned tag.
+            git tag --force dev "$GITHUB_SHA"
+            git push --force origin refs/tags/dev
+            if gh release view dev --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              gh release edit dev --repo "$GITHUB_REPOSITORY" --draft=true --title 'Dev build' --notes-file "$NOTES" --prerelease --latest=false
+              gh release upload dev release-files/* --repo "$GITHUB_REPOSITORY" --clobber
+            else
+              gh release create dev release-files/* --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title 'Dev build' --notes-file "$NOTES" --prerelease --latest=false
+            fi
+            # Remove legacy assets so downloads cannot mix old and new naming.
+            gh release view dev --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' > "$RUNNER_TEMP/asset-names.txt"
+            while IFS= read -r name; do
+              if [ ! -f "release-files/$name" ]; then
+                gh release delete-asset dev "$name" --repo "$GITHUB_REPOSITORY" --yes
+              fi
+            done < "$RUNNER_TEMP/asset-names.txt"
+            gh release edit dev --repo "$GITHUB_REPOSITORY" --draft=false --prerelease --latest=false
+          else
+            # Existing stable/preview releases are immutable: a rerun fails explicitly.
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "::error::Release $TAG already exists; refusing to overwrite it"
+              exit 1
+            fi
+            EXTRA=(--latest)
+            if [ "$CHANNEL" = preview ]; then EXTRA=(--prerelease --latest=false); fi
+            gh release create "$TAG" release-files/* --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title "$TAG" --notes-file "$NOTES" --generate-notes "${EXTRA[@]}"
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false "${EXTRA[@]}"
+          fi

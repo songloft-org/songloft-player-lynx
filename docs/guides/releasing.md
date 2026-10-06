@@ -1,0 +1,94 @@
+# 构建与发版
+
+[English](../en/guides/releasing.md)
+
+## 触发与产物
+
+统一入口是 `.github/workflows/build-and-release.yml`，替代三个独立的手动 dev workflow。
+
+| 触发                    | 行为                                                       |
+| ----------------------- | ---------------------------------------------------------- |
+| 代码 push 到 `main`     | 自动验证与四平台打包，成功后更新 `dev` prerelease          |
+| push `vX.Y.Z`           | 校验 tag 与 package.json 一致，发布正式版本                |
+| push `vX.Y.Z-beta.N` 等 | 发布带版本号的 prerelease，不成为 latest                   |
+| Actions → Run workflow  | 选择 main 重建 dev，或选择 v\* tag 构建对应版本            |
+| Pull request            | 验证和打包，Android 用 debug 签名/HarmonyOS 不签名，不发布 |
+
+文档/许可证修改不自动触发构建。手动构建其他分支只生成 artifacts。正式和 dev 发布均要求 Android、iOS、HarmonyOS、Web 两种模式全部成功，失败时保留各自 artifacts，不更新 Release。
+
+产物名见[安装指南](installation.md)。`version.json` 和 `checksums.txt` 随 Release 发布。新流程移除旧的独立 `dev-harmony` 入口；历史 Release 不自动删除。
+
+上传先写 draft，全部资产成功后才公开，避免下载到部分包。dev 替换期间暂时隐藏；上传失败会留 draft 供维护者检查和重跑。正式/preview 的已有 Release（包括 draft）仍拒绝覆盖；先人工确认失败 draft 的状态再决定删除或发布。dev 会清理同一 Release 内的旧资产名称。
+
+## 一次性配置
+
+仓库 Actions 需要允许运行工作流及 Release job 的 `contents: write`。配置 Repository Secrets：
+
+| Secret                           | 用途                               |
+| -------------------------------- | ---------------------------------- |
+| `ANDROID_KEYSTORE_BASE64`        | Android release keystore 的 Base64 |
+| `ANDROID_KEYSTORE_PASSWORD`      | keystore 密码                      |
+| `ANDROID_KEY_ALIAS`              | 签名 alias                         |
+| `ANDROID_KEY_PASSWORD`           | 私钥密码                           |
+| `HARMONY_SIGNING_KEY_BASE64`     | `.p12` 私钥容器 Base64             |
+| `HARMONY_SIGNING_PROFILE_BASE64` | `.p7b` profile Base64              |
+| `HARMONY_SIGNING_CERT_BASE64`    | 证书链 Base64                      |
+| `HARMONY_KEYSTORE_PASSWORD`      | 容器密码                           |
+| `HARMONY_SIGNING_KEY_PASSWORD`   | 私钥密码                           |
+| `HARMONY_KEY_ALIAS`              | 可选，默认 `songloft`              |
+
+dev 与正式版必须长期共用同一 Android 签名身份；换 key 会破坏覆盖升级。HarmonyOS 的 profile 决定可安装设备范围。发布用的签名材料缺失直接失败，不回退 debug/unsigned；PR 的未签名产物仅用于编译验证。
+
+iOS 只构建设备 Release，明确标为 `nosign`。目前没有 iOS 分发证书导入或 App Store 上传流程。
+
+## 手动发版脚本
+
+```bash
+pnpm run release patch --dry-run
+pnpm run release patch
+pnpm run release minor
+pnpm run release major
+pnpm run release 0.2.0-beta.1
+pnpm run release release       # 去掉当前版本的 prerelease 后缀
+```
+
+`--dry-run` 打印版本与命令，不改文件、不提交、不联网或推送；可以在 dirty 工作树中预览。实际发布要求：`main`、干净工作树、新版本高于当前版本、tag 本地及远程都不存在、本地 main 包含远程 main。脚本先检查这些前提，再询问确认。
+
+实际操作依次为：同步 `package.json` 与 iOS/HarmonyOS 原生版本 → 创建中文 Conventional Commit → 创建 annotated `v*` tag → 用 `git push --atomic` 一次推送 main 与该 tag。tag 推送触发 CI。Android 默认值从 package.json/构建元数据读取，不维护第五份版本常量。
+
+可用 `--yes` 跳过脚本自己的交互确认，`--no-push` 只创建本地 commit/tag。网络预检仍会执行。已发布版本不覆盖；失败后保留本地结果供检查，不会删除 tag、reset 或自动回滚。
+
+```bash
+pnpm run release minor --no-push
+# 检查后自行发布已生成的确切 tag：
+git push --atomic origin HEAD:refs/heads/main refs/tags/v0.2.0
+```
+
+不要重复运行 bump 脚本来重试同一个版本：它会计算下一个版本。构建失败时在 Actions 重跑对应 tag；已有正式/preview Release 时重跑会拒绝覆盖。
+
+## 统一版本与构建号
+
+`package.json.version` 是基础语义版本的唯一来源。CI prepare job 只生成一次 `.build/version.json`，把元数据与 Lynx/Web bundle 一起分发给平台 job。
+
+- dev 的显示版本为 `dev`，正式/preview 为 tag 去掉 `v`。
+- iOS `MARKETING_VERSION` 使用基础 `X.Y.Z`，不带 prerelease；JS 显示完整版本。
+- Android/HarmonyOS/iOS 使用同一 `build_number`：UTC 构建秒数减去 `2020-01-01T00:00:00Z`。它跨 dev/正式通道增长，不依赖某个 workflow 的运行序号，也不受 rerun 编号重置影响。
+- 关于页显示客户端版本、commit 与 UTC 构建时间。
+- `SONGLOFT_BUILD_METADATA` 指向元数据文件，构建时校验与 package.json 一致；损坏或混用的元数据会失败。
+
+本地模拟 CI 元数据注入：
+
+```bash
+node scripts/prepare-build.mjs
+SONGLOFT_BUILD_METADATA="$PWD/.build/version.json" pnpm run build
+```
+
+这生成 dev 元数据；普通本地 build 也默认显示 dev，不携带 Release 的源码证明。客户端内检查更新尚未实现；`version.json` 为后续接入保留准确来源。
+
+## 发布闸门
+
+prepare job 运行类型检查、生产双产物构建、完整 JS 测试与发版工具回归。平台 job 编译宿主，再检查实际包内 bundle、原生版本/构建号、Lynx 动态库、签名与 Web 静态引用。release job 要求五个非空包齐全，生成逐包 SHA-256 和包含包清单的 version.json。
+
+正式 JS 构建默认替换掉 devtools/E2E 入口。原生测试桥只能在 Debug 注册/启动，监听 `127.0.0.1:9230`；dev 下载包同样为 Release，不能用于 TestBridge E2E。测试构建方法见[测试指南](testing.md)。
+
+CI 通过证明构建和包检查通过。后台播放、系统权限、DLNA、视频与 HarmonyOS 仍需要对应设备验收。首次切换新工作流后，要核对 Release 的五个包、版本信息、签名身份，并实际安装验证覆盖升级。

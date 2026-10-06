@@ -35,10 +35,12 @@ const webViewPath = resolve(
   'src',
   'main',
   'ets',
-  'UIWebView.ets'
+  'UIWebView.ets',
 )
 
 if (!existsSync(webViewPath)) {
+  if (process.argv.includes('--required'))
+    throw new Error('[patch-harmony-webview] required UIWebView.ets not found')
   console.log('[patch-harmony-webview] UIWebView.ets not found, skipping')
   process.exit(0)
 }
@@ -57,10 +59,14 @@ const oldText = marker
 const newText = marker + '\n        .domStorageAccess(true)'
 
 if (!content.includes(oldText)) {
-  console.error('[patch-harmony-webview] Unexpected: pattern not found in UIWebView.ets')
+  console.error(
+    '[patch-harmony-webview] Unexpected: pattern not found in UIWebView.ets',
+  )
   process.exit(1)
 }
 
 const patched = content.replace(oldText, newText)
 writeFileSync(webViewPath, patched)
-console.log('[patch-harmony-webview] Patched UIWebView.ets to enable DOM storage')
+console.log(
+  '[patch-harmony-webview] Patched UIWebView.ets to enable DOM storage',
+)

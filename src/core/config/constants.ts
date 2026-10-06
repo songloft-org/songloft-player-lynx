@@ -5,12 +5,19 @@
  */
 
 /**
- * Client (Lynx app) version string shown in Settings → About. There is no
- * build-time version injection yet on Lynx (no `--dart-define`), so this is a
- * hand-maintained constant. The server version is a separate concern (a
- * `/version` API call) this batch does not make. Bump on release.
+ * Injected by lynx.config.ts from the shared release metadata. The fallback is
+ * only for unbundled tests; application builds always receive the injected value.
  */
-export const clientVersion = '0.1.0-dev'
+export const clientBuild =
+  typeof __SONGLOFT_BUILD__ === 'undefined'
+    ? {
+        version: 'dev',
+        git_commit: 'unknown',
+        build_time: 'unknown',
+        build_number: 1,
+      }
+    : __SONGLOFT_BUILD__
+export const clientVersion = clientBuild.version
 
 /** Default page size for paginated list endpoints. */
 export const defaultPageSize = 20

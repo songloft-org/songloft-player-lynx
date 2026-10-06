@@ -1,9 +1,7 @@
 // Compat shims must load before anything imports the router.
 import './shims/router-env.js'
 
-import '@lynx-js/preact-devtools'
-import '@lynx-js/react/debug'
-import './e2e-bridge.js'
+import 'songloft-debug'
 import { root } from '@lynx-js/react'
 
 import { App } from './App.js'
@@ -17,20 +15,29 @@ import { initBackController } from './core/navigation/back-controller.js'
 // awaits sit in the startup chain, it took `auth.hydrate()`/`auth.checkAuth()`
 // down with it (auth status stuck at `unknown` forever).
 import { readDefaultPlayMode } from './features/settings/data/settings-prefs.js'
-import { usePlayerStore, restorePlaybackState } from './features/player/store/index.js'
+import {
+  usePlayerStore,
+  restorePlaybackState,
+} from './features/player/store/index.js'
 import { navigateAutoEnterLyricsIfNeeded } from './features/player/data/auto-enter-lyrics.js'
 import { syncFloatingLyricOverlay } from './features/settings/domain/floating-lyric-overlay.js'
 import { applySavedLanguage } from './i18n/index.js'
 import { applyHostDeployMode } from './core/config/app-config.js'
 import { initSafeArea } from './native/safe-area.js'
 import { initSystemAppearance } from './native/system-appearance.js'
-import { installNotificationNavigateListener, navigateFromNotificationIfNeeded } from './native/notification-navigate.js'
+import {
+  installNotificationNavigateListener,
+  navigateFromNotificationIfNeeded,
+} from './native/notification-navigate.js'
 import { applySavedFontScale } from './shared/theme/font-scale-model.js'
 import { applySavedIncreaseContrast } from './shared/theme/increase-contrast-model.js'
 import { applySavedRailCollapsed } from './shared/layouts/rail-collapse.js'
 import { applySavedMaterial } from './shared/theme/material-model.js'
 import { applySavedTheme } from './shared/theme/theme-model.js'
-import { applyActiveThemePack, setActiveThemePack } from './shared/theme/theme-pack-model.js'
+import {
+  applyActiveThemePack,
+  setActiveThemePack,
+} from './shared/theme/theme-pack-model.js'
 import { router } from './router.js'
 
 // Start client logging before the first render so startup/render issues are

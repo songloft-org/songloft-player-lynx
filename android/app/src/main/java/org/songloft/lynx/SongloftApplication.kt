@@ -11,30 +11,28 @@ import com.lynx.service.log.LynxLogService
 import com.lynx.tasm.LynxEnv
 import com.lynx.tasm.service.LynxServiceCenter
 import org.songloft.lynx.audio.SongloftAudioModule
+import org.songloft.lynx.cache.SongloftSongCacheModule
 import org.songloft.lynx.dlna.SongloftDlnaModule
 import org.songloft.lynx.lyric.FloatingLyricModule
 import org.songloft.lynx.navigation.SongloftNavigationModule
-import org.songloft.lynx.plugin.SongloftPluginBridgeModule
-import org.songloft.lynx.video.SongloftVideoModule
 import org.songloft.lynx.net.SongloftHttpService
 import org.songloft.lynx.platform.SongloftPlatformModule
+import org.songloft.lynx.plugin.SongloftPluginBridgeModule
 import org.songloft.lynx.storage.SongloftStorageModule
-import org.songloft.lynx.cache.SongloftSongCacheModule
 import org.songloft.lynx.test.SongloftTestBridgeModule
 import org.songloft.lynx.test.TestBridgeServer
+import org.songloft.lynx.video.SongloftVideoModule
 
 /**
- * Application entry: initialises the Lynx runtime once, before any LynxView is
- * created. Registration order and service set mirror the official
- * `integrating-lynx-demo-projects` KotlinEmptyProject (Lynx SDK 3.8.0), trimmed
- * to the three services this app actually needs:
- *   - image  → `<image>` cover art (backed by Fresco)
- *   - log    → engine logging
- *   - http   → the host HTTP service that backs the bare global `fetch` the
- *              network layer relies on (see AGENTS.md §3; Android 2.18+).
- *              **Ours, not the SDK's** — see [SongloftHttpService].
- * DevTool service is included to enable the Lynx Inspector Protocol (WebSocket)
- * for e2e behavior testing via the `e2e/` driver.
+ * Application entry: initialises the Lynx runtime once, before any LynxView is created.
+ * Registration order and service set mirror the official `integrating-lynx-demo-projects`
+ * KotlinEmptyProject (Lynx SDK 3.8.0), trimmed to the three services this app actually needs:
+ * - image → `<image>` cover art (backed by Fresco)
+ * - log → engine logging
+ * - http → the host HTTP service that backs the bare global `fetch` the network layer relies on
+ *   (see AGENTS.md §3; Android 2.18+). **Ours, not the SDK's** — see [SongloftHttpService]. DevTool
+ *   service is included to enable the Lynx Inspector Protocol (WebSocket) for e2e behavior testing
+ *   via the `e2e/` driver.
  */
 class SongloftApplication : Application() {
     override fun onCreate() {
@@ -58,20 +56,23 @@ class SongloftApplication : Application() {
         // client is private, which is why "allow insecure TLS" never reached
         // `fetch` before. See `net/SongloftHttpService.kt`.
         LynxServiceCenter.inst().registerService(SongloftHttpService)
-        LynxServiceCenter.inst().registerService(LynxDevToolService.INSTANCE)
-        LynxDevToolService.INSTANCE.devtoolEnvInit(this)
-        LynxDevToolService.INSTANCE.lynxDebugPresetValue = true
+        if (BuildConfig.DEBUG) {
+            LynxServiceCenter.inst().registerService(LynxDevToolService.INSTANCE)
+            LynxDevToolService.INSTANCE.devtoolEnvInit(this)
+            LynxDevToolService.INSTANCE.lynxDebugPresetValue = true
+        }
     }
 
     private fun initLynxEnv() {
-        LynxEnv.inst().init(
-            this,
-            null,
-            null,
-            null,
-        )
-        LynxEnv.inst().enableDevtool(true)
-        LynxEnv.inst().enableLynxDebug(true)
+        LynxEnv.inst()
+            .init(
+                this,
+                null,
+                null,
+                null,
+            )
+        LynxEnv.inst().enableDevtool(BuildConfig.DEBUG)
+        LynxEnv.inst().enableLynxDebug(BuildConfig.DEBUG)
         // Register the real native audio backend (ExoPlayer). Exposed to JS as
         // `NativeModules.SongloftAudio`; the name MUST match the TS facade's
         // detection + the interface spec (`docs/lynx_native_modules_spec.md#1`).
@@ -88,10 +89,12 @@ class SongloftApplication : Application() {
         LynxEnv.inst().registerModule("SongloftVideo", SongloftVideoModule::class.java)
         LynxEnv.inst().registerModule("SongloftSongCache", SongloftSongCacheModule::class.java)
         LynxEnv.inst().registerModule("SongloftNavigation", SongloftNavigationModule::class.java)
-        LynxEnv.inst().registerModule("SongloftPluginBridge", SongloftPluginBridgeModule::class.java)
-        LynxEnv.inst().registerModule("SongloftTestBridge", SongloftTestBridgeModule::class.java)
-
-        // Start the TCP test bridge server for e2e driver communication
-        TestBridgeServer().start()
+        LynxEnv.inst()
+            .registerModule("SongloftPluginBridge", SongloftPluginBridgeModule::class.java)
+        if (BuildConfig.DEBUG) {
+            LynxEnv.inst()
+                .registerModule("SongloftTestBridge", SongloftTestBridgeModule::class.java)
+            TestBridgeServer().start()
+        }
     }
 }

@@ -2,6 +2,10 @@
 
 Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr/) 组织 —— **按你此刻的意图找，而不是按主题猜**。
 
+[English](en/README.md) · [安装](guides/installation.md) · [发版](guides/releasing.md) · [贡献](../CONTRIBUTING.md)
+
+对外安装、发版、构建、测试与贡献入口提供中英文版本。历史批次、内部审计与 ArkTS 参考保留原有语言，英文索引会明确链接到中文来源。
+
 | 目录 | 象限 | 什么时候来这里 |
 |---|---|---|
 | [getting-started.md](./getting-started.md) | tutorial | 第一次跑这个项目 |
@@ -34,6 +38,8 @@ Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr
 
 | 文件 | 说明 |
 |------|------|
+| [installation.md](./guides/installation.md) | 四平台安装、签名限制、下载校验与服务器连接 |
+| [releasing.md](./guides/releasing.md) | 自动 dev、手动发版、版本注入、Secrets 与发布闸门 |
 | [build-and-run.md](./guides/build-and-run.md) | 四平台构建命令 + 每个平台真实踩过的环境坑（JDK 缺失、CocoaPods 被 gitconfig 打断、两次 xcodebuild 的原因） |
 | [testing.md](./guides/testing.md) | 单元与 E2E 怎么跑、跑前四件环境检查、skip 数为什么要盯 |
 | [native-development.md](./guides/native-development.md) | 加方法的五处、新建模块的十步同步清单，漏哪一处会怎样 |

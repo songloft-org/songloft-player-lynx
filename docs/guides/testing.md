@@ -1,5 +1,11 @@
 # 测试
 
+## 测试包与下载包
+
+下载的 dev/正式包都是 Release，已关闭 TestBridge。Android 用 `pnpm run android:install`，iOS 用 `pnpm run ios:build` 生成带测试 JS 的 Debug 宿主。手动编译 bundle 时设置 `SONGLOFT_TEST_BRIDGE=true`；普通 `pnpm run build` 默认不包含测试桥。原生桥只监听 `127.0.0.1:9230`，Android 经 `adb forward tcp:9230 tcp:9230` 连接。
+
+`pnpm run test:release` 在生产 `build` 后执行，验证发版工具与实际 Web 输出。重新编译带桥的 E2E bundle 后，需要再跑生产 build 才能验证发布闸门。详见[发版指南](releasing.md)与[English](../en/guides/testing.md)。
+
 两层：**单元测试**（vitest，无需设备）与 **E2E 行为测试**（TestBridge 驱动真机/模拟器上的 App）。
 
 > 想理解 E2E 为什么是这个架构（Driver 接口、TestBridge 协议、场景分类）→ 读 [E2E 测试架构设计](../architecture/e2e-testing-design.md)。

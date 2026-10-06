@@ -17,6 +17,16 @@
 import type { SongloftAudioNativeModule } from './native/native-audio.js'
 import type { SongloftStorageNativeModule } from './core/storage/native-storage.js'
 
+declare global {
+  const __SONGLOFT_TEST_BRIDGE__: boolean
+  const __SONGLOFT_BUILD__: {
+    version: string
+    git_commit: string
+    build_time: string
+    build_number: number
+  }
+}
+
 declare module '@lynx-js/types/background' {
   interface NativeModules {
     /** Real native audio backend (ExoPlayer / AVPlayer). Absent in mock hosts. */

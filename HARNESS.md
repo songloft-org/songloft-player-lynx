@@ -35,10 +35,13 @@ ReactLynx 多宿主音乐播放器客户端
 | Android 编译 | `cd android && ./gradlew --no-daemon assembleDebug` | JDK 17、Android SDK | Kotlin、资源、Manifest 与 APK 组装；不含设备行为 |
 | iOS 工程解析 | `xcodebuild -list -project ios/SongloftLynx.xcodeproj` | macOS、Xcode | pbxproj 可解析；不等于 App 可构建 |
 | iOS 构建 | `pnpm run ios:build` | macOS、Xcode、CocoaPods | Pods、Swift 与模拟器 App |
-| HarmonyOS 构建 | GitHub Actions `dev-build-harmony.yml` 或 DevEco Studio Build Hap | HarmonyOS 工具链 | ArkTS、资源与 HAP；本地命令依环境而定 |
+| HarmonyOS 构建 | GitHub Actions `build-and-release.yml` 的 HarmonyOS job 或 DevEco Studio Build Hap | HarmonyOS 工具链 | ArkTS、资源与 HAP；本地命令依环境而定 |
 | Web 产物 | `pnpm run build:web` | Node、pnpm | standalone 产物；还需浏览器实际打开 |
 | Android E2E | `pnpm run test:e2e:android` | 已连接设备、已安装 debug APK | 设备行为场景 |
 | iOS E2E | `pnpm run e2e:ios` | macOS、可用模拟器 | iOS 设备行为场景 |
+| 发版工具 | `pnpm run test:release` | 先运行生产 `build` | 版本、Git 发布脚本与真实 Web 拷贝产物；不替代原生编译 |
+
+发布构建使用同一 `.build/version.json`，入口为 `build-and-release.yml`。下载包是关闭测试桥的 Release；E2E 需 Debug 宿主 + `SONGLOFT_TEST_BRIDGE=true` 的 JS bundle。详见 [发版指南](docs/guides/releasing.md)。
 
 ## 高风险目录
 - android/、ios/、harmony/、web/：平台宿主变更需要对应工具链或运行环境验证

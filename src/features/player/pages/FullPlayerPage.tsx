@@ -166,6 +166,10 @@ export function FullPlayerPage() {
   const layout = resolvePlayerLayout({ width, height: stageHeight, breakpoint })
   const [showSleepTimer, setShowSleepTimer] = useState(false)
   useEffect(() => {
+    if (
+      typeof __SONGLOFT_TEST_BRIDGE__ === 'undefined' ||
+      !__SONGLOFT_TEST_BRIDGE__
+    ) return
     const g = globalThis as Record<string, unknown>
     const store = g.__E2E_PLAYER_STORE__ as Record<string, unknown> | undefined
     if (store) store.setShowSleepTimer = setShowSleepTimer

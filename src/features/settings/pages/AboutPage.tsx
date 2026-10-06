@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { appConfig } from '../../../core/config/app-config.js'
-import { clientVersion } from '../../../core/config/constants.js'
+import { clientBuild, clientVersion } from '../../../core/config/constants.js'
 import { getSettingsApi } from '../api/index.js'
 import { serverDisplay } from '../domain/settings-model.js'
 import { SettingsRow } from '../widgets/SettingsRow.js'
@@ -35,8 +35,11 @@ export function AboutPage({ onOpenLicenses }: AboutPageProps = {}) {
 
   useEffect(() => {
     let cancelled = false
-    void getSettingsApi().getVersion()
-      .then((v) => { if (!cancelled) setBackendVersion(v) })
+    void getSettingsApi()
+      .getVersion()
+      .then((v) => {
+        if (!cancelled) setBackendVersion(v)
+      })
       .catch(() => {
         /* best-effort — backend unreachable, the row just stays hidden */
       })
@@ -58,24 +61,33 @@ export function AboutPage({ onOpenLicenses }: AboutPageProps = {}) {
   }
 
   return (
-    <SubPageShell title={t('settings.aboutUpdates')} backTestId='about-back' grouped>
+    <SubPageShell
+      title={t('settings.aboutUpdates')}
+      backTestId="about-back"
+      grouped
+    >
       <SettingsSection title={t('settings.about')}>
         <SettingsRow
-          icon='info'
+          icon="info"
           title={t('settings.appVersion')}
           trailingText={clientVersion}
-          testId='settings-version'
+          subtitle={`${clientBuild.git_commit} · ${clientBuild.build_time}`}
+          testId="settings-version"
         />
-        {backendVersion
-          ? <SettingsRow icon='info' title={t('settings.backendVersion')} trailingText={backendVersion} />
-          : null}
+        {backendVersion ? (
+          <SettingsRow
+            icon="info"
+            title={t('settings.backendVersion')}
+            trailingText={backendVersion}
+          />
+        ) : null}
         <SettingsRow
-          icon='link'
+          icon="link"
           title={t('settings.server')}
           subtitle={serverText}
         />
         <SettingsRow
-          icon='music'
+          icon="music"
           title={t('settings.songloft')}
           subtitle={t('settings.songloftUrl')}
         />
@@ -87,11 +99,11 @@ export function AboutPage({ onOpenLicenses }: AboutPageProps = {}) {
 
       <SettingsSection>
         <SettingsRow
-          icon='info'
+          icon="info"
           title={t('settings.licenses')}
-          trailingIcon='chevron-right'
+          trailingIcon="chevron-right"
           onTap={openLicenses}
-          testId='settings-licenses'
+          testId="settings-licenses"
         />
       </SettingsSection>
     </SubPageShell>

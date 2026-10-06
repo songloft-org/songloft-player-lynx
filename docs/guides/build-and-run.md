@@ -79,10 +79,11 @@ pnpm run ios:run     # build + 装进已启动的模拟器 + 启动
 
 ## HarmonyOS
 
-构建需要 DevEco Studio（含 hvigor 构建工具链），CI 环境没有 hvigor，只能在本地 IDE 中验证。
+本地构建需要 DevEco Studio/CLI（含 hvigor）。CI 的 `build-and-release.yml` 会安装 HarmonyOS 工具链并打包 HAP；有工作流不等于当前源码已通过 HAP 构建，需检查实际运行结果。
 
 ```bash
-pnpm run build               # 先产出 JS bundle
+pnpm run build:harmony-bundle # 构建并拷贝 JS bundle
+# 安装 ohpm 依赖后运行 pnpm run harmony:postinstall
 # 在 DevEco Studio 中打开 harmony/ 目录，Build > Build Hap(s)/APP(s)
 ```
 
@@ -97,7 +98,7 @@ pnpm run build               # 先产出 JS bundle
 pnpm run web:sync            # = rspeedy build --environment web + 拷贝产物到 web/dist
 pnpm run web:dev             # 只为 web/dist 起静态服务（不构建，先跑 web:sync）
 pnpm run build:web           # 与 web:sync 同一条命令（standalone 部署产物）
-pnpm run build:web-embedded  # 同上 + --embedded：供后端嵌入（songloft-player-build/web-embedded）
+pnpm run build:web-embedded  # 同上 + --embedded：供后端嵌入（父仓库 clients/player-build/web-embedded）
 ```
 
 - **验证 Web 改动至少跑一次 `build:web` 并真的在浏览器里打开产物**。`web:dev` 只起静态服务、不构建，所以「`web:dev` 能跑」证明不了产物是新的。（2026-08 这条吃过两次亏，当时两者取的静态资源目录不同：`web:dev` 读 dev-middleware 的 IIFE 入口，产物用 `client_prod` 的 ESM 入口；现在 `web:sync` / `build:web` 已是同一条命令。）
@@ -105,9 +106,13 @@ pnpm run build:web-embedded  # 同上 + --embedded：供后端嵌入（songloft-
 
 ## 子路径部署
 
+宿主中仍有根路径资源 URL，API 也尚未完成带前缀的适配，因此 Lynx 子路径部署**未验证**。下述后端参数并不能独自保证本客户端在子路径下可用。
+
 后端启动时用 `-base-path /xxx` 或 `BASE_PATH=/xxx`；前端不读子路径参数 —— embedded 部署下 API base 取自 worker realm 的 `self.location.origin`（页面 origin 即后端 origin，`src/core/config/app-config.ts:35-47`），standalone 与 embedded 由 `deployMode` global prop 区分。
 
 ## 相关
+
+- [安装](installation.md) / [发版](releasing.md) / [English](../en/guides/build-and-run.md)
 
 - [测试](./testing.md) —— 单元与 E2E 怎么跑
 - [调试](./debugging.md) —— 真机 logcat、无头浏览器实测

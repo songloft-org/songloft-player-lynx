@@ -4,7 +4,7 @@
   "description": "Songloft Player entry module",
   "main": "",
   "author": "",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "dependencies": {
     "@lynx/lynx": "4.0.1",
     "@lynx/primjs": "4.0.0",
