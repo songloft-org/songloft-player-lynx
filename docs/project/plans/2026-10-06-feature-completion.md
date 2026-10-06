@@ -251,7 +251,7 @@
 - [ ] P2a：兼容元数据、签名发布契约及更新资产（发布工具、模型和本地回归完成；壳运行时暴露在 P2b 接入，正式密钥/CI 真发版待配置）
 - [ ] P2b：Android/iOS/HarmonyOS 下载器、加载器与回退（三端源码/共享 TS 已接入；Android 11 项真实 TLS/文件 JVM 回归和四项模拟器冷启动检查完成；iOS Apple CI 验证程序已接入但尚未编译执行；HarmonyOS 转译源码在 Node 适配器下的五项真实 RSA/HTTPS/文件回归通过，不等于 HAP 编译；两端编译和设备验收仍开放，见 progress）
 - [ ] P2c：客户端检查更新、生效交互及全链路验收（源码已接入，Android 本地签名夹具完成实际界面检查/下载/播放不中断/取消/冷启动/恢复，Web 中英最大字号及部署入口通过；正式密钥与 iOS/HarmonyOS 编译、设备验收仍开放，见 progress）
-- [ ] P3a：缓存身份/索引/取消（共享 TS 与 Android v2 首批已接入；真实文件/HTTP 8 项、设备分音轨缓存及后端不可达冷启动播放通过；iOS/HarmonyOS 扩展与设备验收继续，见 progress）
+- [ ] P3a：缓存身份/索引/取消（共享 TS 与 Android/iOS v2 源码已接入；Android 真实文件/HTTP 8 项、设备分音轨缓存及后端不可达冷启动播放通过；iOS Apple 核心验证程序已配置但未编译/执行，HarmonyOS 扩展及两端设备验收继续，见 progress）
 - [ ] P3b：批量缓存任务
 - [ ] P3c：离线管理与播放
 - [ ] P4：Web 导入/导出

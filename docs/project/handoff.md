@@ -1,4 +1,4 @@
-# 工作交接（2026-10-06）
+# 工作交接（2026-10-07）
 
 本文维护当前范围和验证边界；逐批证据见 [progress.md](progress.md)，已知问题见 [bugs.md](bugs.md)。旧记录中的「未提交」和验数仅代表当时快照。[English](../en/project/handoff.md)。
 
@@ -38,7 +38,7 @@ Linux 可验证 JS、脚本与 Android；iOS/HarmonyOS 需各自工具链。最�
 5. Web 子路径部署未验证；插件排序需要支持 `/settings/plugin-order` 的新后端，旧后端返回 404。
 6. 桌面端和 Bundle 本地后端不在本轮范围；设备批量缓存、离线列表、Web 数据传输/快捷键及剩余原生能力按批准计划继续。
 
-### 现状核查（2026-10-06）
+### 现状核查（2026-10-07）
 
 P1 已改用 `/songs/{id}/audio-tracks` 的 `{tracks: [...]}` 完整契约，播放器更多菜单提供多音轨面板；按真实 index 切换并保留进度和播放意图。四端源准备契约已同步源码，旧壳禁用切轨并提示升级。Android 双音轨设备测试与 Web 真浏览器播放已通过；iOS/HarmonyOS 编译和设备验收仍开放，视频仍按用户要求暂缓。详细证据与剩余项见 [progress.md](progress.md)。
 
@@ -54,9 +54,11 @@ P2b 第三批已接入 HarmonyOS 8 方法、不可变 rawfile 身份、公钥验
 
 P2c 关于页入口已接入客户端通道检查、壳/bundle 版本、原生验签后下载、进度/取消、下次冷启动/恢复内置提示及 APK/IPA/HAP/Web 部署包链接。bridge 2 新增 `fetchMetadata`，独立系统 TLS，不继承业务证书跳过设置；旧八方法壳只提供发版页。Android 本地签名夹具验证实际界面下载、播放不中断、取消清理、冷启动 B/壳 A 和恢复内置；Web Worker 检查使用无凭据请求，中英最大字号及三个宽度通过。正式签名、Apple/HarmonyOS 编译及设备验收仍开放。按用户批准的计划继续 P3 缓存，不 push；细节及回归计数见 progress。
 
-## 5. 接手与验证
-
 P3a 第一批已接入共享缓存身份/变体模型、Callback facade 和 Android v2 持久索引/任务调度。下载冻结身份及音轨/音质/归一化，索引快照不含凭据，旧文件保留并计入容量；取消真实连接且排队取消不开连接。恢复播放前读取身份，切换服务器使用 token 绑定的用户名。设备界面缓存默认/第 1 条音轨得到两个独立 MP3 文件；后端端口不可达时冷启动播放、暂停/继续通过，并修正了 HTTP 数据源无法打开本地文件的问题。iOS/HarmonyOS v2、批量与离线列表仍继续实施；详细契约见 [设备缓存](../reference/device-cache.md)，验证计数见 progress。仅本地提交，不 push。
+
+P3a 第二批已接入 iOS v2 源码：Documents 持久目录、身份/实际容器索引、串行调度、流式字节/空间限制、真实 task 取消和数组进度事件；旧五方法与新九方法共用同一调度器。原生模块已改为 LynxContextModule 并加入 Xcode 源文件引用。Apple CI 已配置实际核心验证程序与本地 HTTP 夹具，但 Linux 无 Swift/Xcode，程序尚未编译/执行，不将语法解析或 293 项方法闸门视为设备证据。全量 JS 269 文件 / 2933 项、发布工具 26 项通过；HarmonyOS v2 和 P3b/P3c 继续，iOS TLS/下载/后台/播放设备验收仍开放。
+
+## 5. 接手与验证
 
 先读 [AGENTS.md](../../AGENTS.md)、[pitfalls.md](pitfalls.md)，再按 [构建](../guides/build-and-run.md)、[测试](../guides/testing.md) 执行。
 

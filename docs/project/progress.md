@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · P3a 第二批：iOS 缓存索引与流式任务源码
+
+- iOS 增加 `SongCacheStore/SongCacheTransfer` 和相同九方法 Callback，保留旧五方法；模块改为 `LynxContextModule` 取得宿主 context 并发送数组进度事件，新 Swift 文件进入 Xcode Sources。Documents 持久目录、UTF-8 SHA-256 namespace/key 目录、完整文件/白名单快照原子提交、文件大小核对、旧文件不归属且计容量、终态记录/重启中断均与共享模型对齐。
+- 新旧入口共用进程级串行写入，最多 32 项、保留 128 条历史；独立 URLSessionDataDelegate 实际边收边写，已知/未知长度均限额及空间检查，明确调用用户服务器的 `InsecureTls.shared.handle`。取消真正 task，排队取消不打开连接；先清理文件并保存终态再回 Callback。取消与进度/完成回调避免倒置 store/transfer 锁次序，不再用旧 downloadTask 完成后才检查容量。
+- 增加 `scripts/verify-ios-cache.swift`，直接执行真实 Foundation/CryptoKit 核心，设计覆盖身份/音轨/MIME、快照白名单、重复变体、冷读、总容量/未知长度、HLS 拒绝、真实/排队取消、临时清理、跨身份清理及重启中断/缺文件；Apple job 配置本地 HTTP 夹具和原生程序。**本机无 Swift/Xcode，验证程序尚未编译或执行；配置的 CI 检查不是通过结果。** 本地仅确认夹具真的提供媒体/未知长度/HLS/断开连接，语法树解析通过，不能替代 Swift 类型检查、IPA 编译或设备行为。
+- 类型检查、全量 Vitest **269 文件 / 2933 项**、Node 发布工具 **26 项**、原生方法/事件闸门 **293 项**、actionlint、diff/UTF-8/文档链接检查通过。证据 `/tmp/lynx-p3a-ios-{contract,tsc,full-test,release-test}.log`。本批只改 iOS 宿主及验证/文档，业务 JS/Web 不变，不重复已有 Android/Web 界面验收。
+- 中英设备缓存契约/交接同步；P3a 未勾完整完成。iOS 下载/TLS/后台/播放设备验收、HarmonyOS v2 继续，随后是批量缓存与离线页面。用户授权分批本地提交，不 push；桌面、Bundle 本地模式、视频继续暂缓，未发布或操作 Issue。
+
 ## 2026-10-07 · P3a 第一批：共享缓存身份与 Android 持久索引
 
 - 新增 namespace（服务器档案、标准化地址含部署路径、用户名）及七字段变体 key（歌曲、音轨、音质、归一化、修订、实际格式），下载参数在开始前冻结。共享 Callback facade 探测完整九方法及版本 2，旧壳维持原单曲入口；iOS/HarmonyOS 新接口后续接入，当前不将它们列为 v2 已完成。

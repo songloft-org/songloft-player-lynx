@@ -2,7 +2,7 @@
 
 [中文](../../reference/device-cache.md) · [Native module reference](../../reference/native-modules.md)
 
-P3a is being implemented per platform. Android has the v2 identity, index and task contract; shared playback and single-song actions prefer that contract. iOS/HarmonyOS retain their original five methods pending the equivalent extension. Batch task UI, the offline list and local access after authentication expiry follow in P3b/P3c. The index foundation does not constitute complete offline support.
+P3a is being implemented per platform. Android/iOS sources have the v2 identity, index and task contract; shared playback and single-song actions prefer it. Android has compilation/device evidence; iOS is not yet compiled/device-verified. HarmonyOS retains its original five methods pending the equivalent extension. Batch task UI, the offline list and local access after authentication expiry follow in P3b/P3c. The index foundation does not constitute complete offline support.
 
 ## Identity and files
 
@@ -34,10 +34,12 @@ A complete entry is `{namespace,key,cached:true,url,sizeBytes,createdAt,snapshot
 
 The Android audio engine uses Media3 `DefaultDataSource` to dispatch local files and remote URLs, preserving the existing HTTP configuration. An HTTP-only data source cannot play a matched `file://` cache.
 
-Android uses one process-wide serial writer and shared capacity checks across new/legacy entries, with at most 32 running or queued tasks and 128 retained task records. A failed song does not block later tasks. Unknown-length streams check capacity and disk space per chunk. Cancellation terminates the actual OkHttp call; queued cancellation opens no connection. Callbacks follow cleanup and terminal task recording. Server/user changes or logout cancel owned in-flight tasks while preserving completed files.
+Android/iOS use one process-wide serial writer and shared capacity checks across new/legacy entries, with at most 32 running or queued tasks and 128 retained task records. A failed song does not block later tasks. Unknown-length streams check capacity and disk space per chunk. Android cancellation terminates the actual OkHttp call. iOS source streams through a dedicated URLSessionDataDelegate, checking capacity per chunk and cancelling the real task; it no longer waits for downloadTask completion before enforcing capacity. Queued cancellation opens no connection. Callbacks follow cleanup and terminal task recording. Server/user changes or logout cancel owned in-flight tasks while preserving completed files.
 
 Machine errors include `limit_exceeded`, `insufficient_space`, `cancelled`, `interrupted`, `cache_queue_full`, `cache_busy`, `invalid_cache_request`, `cache_storage_unavailable`, `download_failed` and `unsupported_media`. JS timeouts cancel the same task and ignore late results. Media downloads use the user's server TLS policy, separately from the client updater's dedicated system TLS.
 
 ## Validation boundary
 
-Android real-file/HTTP regressions cover same IDs across identities, tracks/actual format, credential-free snapshots, total capacity, connection/queued cancellation, interrupted startup, missing files and namespace/legacy cleanup. JS tests separately exercise callbacks and version downgrade. Counts and device evidence are recorded in [progress](../../project/progress.md). iOS/HarmonyOS v2 extensions and native acceptance, batch UI and complete offline behavior remain open; Android/JS tests cannot replace them.
+Android real-file/HTTP regressions cover same IDs across identities, tracks/actual format, credential-free snapshots, total capacity, connection/queued cancellation, interrupted startup, missing files and namespace/legacy cleanup. JS tests separately exercise callbacks and version downgrade. iOS adds `scripts/verify-ios-cache.swift` and a real loopback HTTP fixture to Apple CI. Linux lacks Swift/Xcode: the verifier has not been compiled or executed, and syntax parsing/method gates cannot replace it. iOS TLS/cancellation/background/device acceptance, HarmonyOS v2, batch UI and complete offline behavior remain open. Counts and device evidence are recorded in [progress](../../project/progress.md).
+
+Implementation references: [Apple URLSessionDataDelegate](https://developer.apple.com/documentation/foundation/urlsessiondatadelegate), [FileHandle](https://developer.apple.com/documentation/foundation/filehandle).

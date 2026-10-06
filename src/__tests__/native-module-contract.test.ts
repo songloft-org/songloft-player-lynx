@@ -117,7 +117,7 @@ const hosts = {
   },
   songCache: {
     android: read(`${ANDROID_CACHE}/SongloftSongCacheModule.kt`) + read(`${ANDROID_CACHE}/SongCacheStore.kt`),
-    ios: read(`${IOS_DIR}/SongloftSongCacheModule.swift`),
+    ios: read(`${IOS_DIR}/SongloftSongCacheModule.swift`) + read(`${IOS_DIR}/SongCacheStore.swift`) + read(`${IOS_DIR}/SongCacheTransfer.swift`),
     harmony: read(`${HARMONY_MODULES}/cache/SongloftSongCacheModule.ets`),
   },
   /*
@@ -1517,9 +1517,14 @@ describe('SongloftSongCache keeps its on-device invariants', () => {
     expect(hosts.songCache.android).toContain('sendGlobalEvent("songCacheProgress", params)')
     expect(hosts.songCache.android).toContain('params.pushMap(event)')
   })
+  test('iOS indexed cache registers the complete optional callback contract and task event', () => {
+    const methods = interfaceMethods(read('src/features/player/data/indexed-song-cache.ts'), 'IndexedSongCacheModule')
+    for (const method of methods) expectSwiftMethod(hosts.songCache.ios, method)
+    expect(hosts.songCache.ios).toContain('sendGlobalEvent("songCacheProgress", withParams: [value])')
+  })
   test('downloads honour the insecure-TLS switch on both hosts', () => {
     expect(hosts.songCache.android).toContain('clientFor(InsecureTls.enabled)')
-    expect(hosts.songCache.ios).toContain('InsecureTls.shared.session')
+    expect(hosts.songCache.ios).toContain('InsecureTls.shared.handle($0)')
   })
 
   test('cache lives in non-evictable storage, not the OS cache dir', () => {

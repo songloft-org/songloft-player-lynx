@@ -199,7 +199,7 @@ Callback 形状，参数为单个 JSON 字符串（facade 一律传 `'{}'`）。
 
 视频源的 direct/转码判定在 `src/core/network/video-source.ts`。
 
-### 2.6 `SongloftSongCache`（Android 14 方法，iOS/HarmonyOS 当前 5 方法）
+### 2.6 `SongloftSongCache`（Android/iOS 14 方法，HarmonyOS 当前 5 方法）
 
 Callback 形状，Callback 收到 JSON 字符串。
 
@@ -213,13 +213,13 @@ Callback 形状，Callback 收到 JSON 字符串。
 
 - 能力探测**刻意用 `getCacheInfo` 而不是 `download`**（`platform-capabilities.ts` 的 `songCache`）：`download` 的入参个数变过，旧壳上探它会报「可用」然后被喂进绑不上的参数。
 - 哨兵 `limit_exceeded`（常量 `SONG_CACHE_LIMIT_ERROR`，`src/features/player/data/song-cache.ts`）：下载会超字节上限时原生侧中止并报这个字符串，facade reject 出的 `Error.message` 就等于它。
-- Android P3a 增加 `getCacheContract/cacheEntry/getEntry/listEntries/removeEntry/clearNamespace/clearLegacy/getTasks/cancelTask`，单例 `SongCacheStore` 与旧入口共用串行调度、总容量和真实取消；共享 TS 在方法齐全且版本为 2 时采用身份索引，否则沿用旧 ABI。身份、快照、分页、任务和事件契约见[设备歌曲缓存](device-cache.md)。iOS/HarmonyOS 新九方法继续实施，不将旧五方法注册视作 v2 已可用。
+- Android/iOS P3a 增加 `getCacheContract/cacheEntry/getEntry/listEntries/removeEntry/clearNamespace/clearLegacy/getTasks/cancelTask`，单例 `SongCacheStore` 与旧入口共用串行调度、总容量和真实取消；共享 TS 在方法齐全且版本为 2 时采用身份索引，否则沿用旧 ABI。iOS 改为 `LynxContextModule` 发送数组进度事件，URLSessionDataDelegate 流式写入且遵守服务器 TLS 策略；Apple 编译/设备行为尚未验证。身份、快照、分页、任务和事件契约见[设备歌曲缓存](device-cache.md)。HarmonyOS 新九方法继续实施，不将旧五方法注册视作 v2 已可用。
 
 **闸门锁住的不变量**
 
 | 不变量 | Android | iOS |
 |---|---|---|
-| 下载遵守 insecure-TLS 开关 | `clientFor(InsecureTls.enabled)` | `InsecureTls.shared.session` |
+| 下载遵守 insecure-TLS 开关 | `clientFor(InsecureTls.enabled)` | 独立流式 delegate 调用 `InsecureTls.shared.handle` |
 | 缓存不放在 OS 可回收目录 | 用 `.filesDir`，**禁止** `ctx.cacheDir` | 用 `.documentDirectory`，**禁止** `.cachesDirectory` |
 | 回调返回可播放的 `file://` URL，且不是手拼的 | `java.net.URI` 编码，源码里**不得**出现 `"file://` | `absoluteString`，同样不得出现 `"file://` |
 | 下载原子提交（崩溃不留半截「可播放」文件） | `renameTo` | `moveItem` |

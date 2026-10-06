@@ -1,4 +1,4 @@
-# Handoff (2026-10-06)
+# Handoff (2026-10-07)
 
 This page records current scope and validation limits. Batch evidence is in [progress (Chinese)](../../project/progress.md); known issues are in [bugs (Chinese)](../../project/bugs.md). Historical uncommitted labels and counts describe their original snapshots. [中文版](../../project/handoff.md).
 
@@ -38,7 +38,7 @@ Casting diagnostics now use the existing client log, including device details, m
 5. Web subpath deployment is unverified. Plugin ordering needs newer backends supporting `/settings/plugin-order`; older servers return 404.
 6. Desktop clients and bundled backends are excluded from this work. Device batch caching/offline lists, Web data transfer/shortcuts, and remaining native capabilities continue under the approved plan.
 
-### Current source review (2026-10-06)
+### Current source review (2026-10-07)
 
 P1 now consumes `/songs/{id}/audio-tracks` with `{tracks: [...]}` and provides a multiple-track sheet in the player menu. Switching uses the actual index and preserves position and playback intent. The source-readiness contract is implemented in all four hosts; older shells disable switching and request an upgrade. Android device tests and real Web-browser playback pass; iOS/HarmonyOS compilation and device acceptance remain open. Video remains deferred as requested. Evidence and outstanding checks are in [progress (Chinese)](../../project/progress.md).
 
@@ -54,9 +54,11 @@ A next-song Range GET already runs at 80% progress, so prefetch is not wholly mi
 
 P2c adds the About entry: channel checks, shell/bundle identity, native-verified downloads, progress/cancel, cold-start/builtin restore guidance, and APK/IPA/HAP/Web deployment links. Bridge 2 adds independent system-TLS `fetchMetadata` without business certificate bypass; older eight-method shells retain release-page links. A local Android signed fixture verifies actual UI downloads, uninterrupted playback, cancellation cleanup, bundle B/shell A after cold start, and builtin restore. Web Worker checks omit credentials, with both languages, maximum text size, and three viewport widths verified. Production signing and Apple/HarmonyOS compilation/device acceptance remain open. Continue the approved P3 cache work without pushing; evidence/counts are in progress.
 
-## 5. Taking over and validating
-
 The first P3a batch integrates the shared cache identity/variant model and Callback facade with Android's durable v2 index/task scheduler. Downloads freeze identity, track, quality and normalization; snapshots omit credentials, while legacy files are preserved and counted toward capacity. Cancellation terminates real connections and queued cancellation opens none. Identity loads before playback; server switches use token-bound usernames. Actual device UI caching of default/track 1 produced separate MP3 files. Cold-start playback, pause and resume passed with the backend port unavailable, after correcting the HTTP-only data source's inability to open local files. iOS/HarmonyOS v2, batch UI and the offline list remain in progress. See [device cache](../reference/device-cache.md) for the contract and progress for validation counts. Commits remain local without pushing.
+
+The second P3a batch integrates iOS v2 source: durable Documents storage, identity/actual-container indexing, serial scheduling, streaming capacity/disk checks, real task cancellation and array progress events. The original five and new nine methods share the scheduler. The module now conforms to LynxContextModule and the new files are referenced in Xcode. Apple CI includes an actual-core verifier and loopback HTTP fixture, but Linux lacks Swift/Xcode; the program has not been compiled/executed. Syntax parsing and 293 method-gate tests do not constitute device evidence. Full JS 269 files / 2933 tests and all 26 publishing-tool tests pass. HarmonyOS v2 and P3b/P3c continue; iOS TLS/download/background/playback device acceptance remains open.
+
+## 5. Taking over and validating
 
 Read [AGENTS.en.md](../../../AGENTS.en.md) and [pitfalls (Chinese)](../../project/pitfalls.md), then follow [build](../guides/build-and-run.md) and [testing](../guides/testing.md).
 

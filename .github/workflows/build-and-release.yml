@@ -182,6 +182,21 @@ jobs:
           set -euo pipefail
           swiftc -swift-version 5 ios/SongloftLynx/BundleUpdateStore.swift ios/SongloftLynx/BundleUpdateTransfer.swift scripts/verify-ios-updater.swift -o "$RUNNER_TEMP/verify-ios-updater"
           "$RUNNER_TEMP/verify-ios-updater" updates/fixtures/signature-v1.json
+      - name: Verify device cache with Apple Foundation and real HTTP/files
+        run: |
+          set -euo pipefail
+          CACHE_PORT_FILE="$RUNNER_TEMP/cache-port"
+          rm -f "$CACHE_PORT_FILE"
+          python3 scripts/fixtures/cache-http-server.py --port-file "$CACHE_PORT_FILE" &
+          CACHE_SERVER_PID=$!
+          trap 'kill "$CACHE_SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 50); do
+            if [ -s "$CACHE_PORT_FILE" ]; then break; fi
+            sleep 0.1
+          done
+          test -s "$CACHE_PORT_FILE"
+          swiftc -swift-version 5 ios/SongloftLynx/SongCacheStore.swift ios/SongloftLynx/SongCacheTransfer.swift scripts/verify-ios-cache.swift -o "$RUNNER_TEMP/verify-ios-cache"
+          "$RUNNER_TEMP/verify-ios-cache" "$(cat "$CACHE_PORT_FILE")"
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
