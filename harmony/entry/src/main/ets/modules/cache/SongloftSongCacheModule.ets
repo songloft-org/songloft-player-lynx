@@ -1,150 +1,64 @@
-import { fileIo } from '@kit.CoreFileKit'
-import { http } from '@kit.NetworkKit'
 import { LynxModule, LynxContext } from '@lynx/lynx'
 import { common } from '@kit.AbilityKit'
-import { InsecureTls } from '../../net/InsecureTls'
+import { CacheContract, CacheError, CacheHistory, CacheLookup, CacheSize, CacheTask } from './SongCacheTypes'
+import { SongCacheStore } from './SongCacheStore'
 
+/** Fourteen Callback methods; all writes share the same durable process-wide scheduler. */
 export class SongloftSongCacheModule extends LynxModule {
-  private abilityContext: common.UIAbilityContext
-  private cacheDir: string
-
+  private readonly ability: common.UIAbilityContext
+  private readonly lynxContext: LynxContext
   constructor(context: LynxContext, param?: Object) {
     super(context, param)
-    this.abilityContext = param as common.UIAbilityContext
-    this.cacheDir = this.abilityContext.filesDir + '/song_cache'
-    this.ensureCacheDir()
+    this.ability = param as common.UIAbilityContext
+    this.lynxContext = context
   }
-
-  private ensureCacheDir(): void {
+  private store(): SongCacheStore { return SongCacheStore.get(this.ability) }
+  private error(callback: (result: string) => void, error: Error): void {
+    const value: CacheError = { error: SongCacheStore.errorCode(error) }
+    callback(JSON.stringify(value))
+  }
+  private read(callback: (result: string) => void, operation: () => Object): void {
+    try { callback(JSON.stringify(operation())) } catch (error) { this.error(callback, error as Error) }
+  }
+  private downloadResult(callback: (result: string) => void, operation: () => Promise<Object>): void {
     try {
-      fileIo.mkdirSync(this.cacheDir)
-    } catch (e) {
-      // Already exists
-    }
+      void operation().then((result: Object) => callback(JSON.stringify(result))).catch((error: Error) => this.error(callback, error))
+    } catch (error) { this.error(callback, error as Error) }
   }
-
-  public download(songId: string, url: string, ext: string, maxBytes: number,
-    callback: (result: string) => void): void {
-    this.doDownload(songId, url, ext, maxBytes, callback)
+  private mutate(callback: (result: string) => void, operation: () => Promise<void>): void {
+    try { void operation().then(() => callback('{}')).catch((error: Error) => this.error(callback, error)) }
+    catch (error) { this.error(callback, error as Error) }
   }
-
-  public getCacheInfo(songId: string, callback: (result: string) => void): void {
-    const files = this.findCacheFile(songId)
-    if (files) {
-      try {
-        const stat = fileIo.statSync(files)
-        callback(JSON.stringify({
-          cached: true,
-          url: `file://${files}`,
-          sizeBytes: stat.size,
-        }))
-      } catch (e) {
-        callback(JSON.stringify({ cached: false }))
-      }
-    } else {
-      callback(JSON.stringify({ cached: false }))
-    }
+  public getCacheContract(callback: (result: string) => void): void {
+    const value: CacheContract = { version: 2 }
+    callback(JSON.stringify(value))
   }
-
-  public remove(songId: string, callback: (result: string) => void): void {
-    const file = this.findCacheFile(songId)
-    if (file) {
-      try {
-        fileIo.unlinkSync(file)
-      } catch (e) {
-        // ignore
-      }
-    }
-    callback(JSON.stringify({ success: true }))
+  public cacheEntry(request: string, callback: (result: string) => void): void {
+    this.downloadResult(callback, () => this.store().cacheEntry(request, (task: CacheTask) => {
+      try { this.lynxContext.sendGlobalEvent('songCacheProgress', [task]) } catch (_) {}
+    }))
   }
-
+  public getEntry(request: string, callback: (result: string) => void): void { this.read(callback, () => this.store().getEntry(request)) }
+  public listEntries(request: string, callback: (result: string) => void): void { this.read(callback, () => this.store().listEntries(request)) }
+  public removeEntry(request: string, callback: (result: string) => void): void { this.mutate(callback, () => this.store().remove(request)) }
+  public clearNamespace(request: string, callback: (result: string) => void): void {
+    this.mutate(callback, () => {
+      const value = JSON.parse(request) as CacheLookup
+      return this.store().clearNamespace(value.namespace)
+    })
+  }
+  public clearLegacy(callback: (result: string) => void): void { this.mutate(callback, () => this.store().clearLegacy()) }
+  public getTasks(callback: (result: string) => void): void {
+    this.read(callback, () => { const history: CacheHistory = { tasks: this.store().getTasks() }; return history })
+  }
+  public cancelTask(taskId: string): void { try { this.store().cancel(taskId) } catch (_) {} }
+  public download(songId: string, remote: string, ext: string, maxBytes: number, callback: (result: string) => void): void {
+    this.downloadResult(callback, () => this.store().legacyDownload(songId, remote, ext, maxBytes))
+  }
+  public getCacheInfo(songId: string, callback: (result: string) => void): void { this.read(callback, () => this.store().legacyInfo(songId)) }
+  public remove(songId: string, callback: (result: string) => void): void { this.mutate(callback, () => this.store().legacyRemove(songId)) }
   public getCacheSize(callback: (result: string) => void): void {
-    try {
-      let totalSize = 0
-      const files = fileIo.listFileSync(this.cacheDir)
-      for (const file of files) {
-        try {
-          const stat = fileIo.statSync(`${this.cacheDir}/${file}`)
-          totalSize += stat.size
-        } catch (e) {
-          // skip
-        }
-      }
-      callback(JSON.stringify({ bytes: totalSize }))
-    } catch (e) {
-      callback(JSON.stringify({ bytes: 0 }))
-    }
+    this.read(callback, () => { const size: CacheSize = { bytes: this.store().size() }; return size })
   }
-
-  public clearAll(callback: (result: string) => void): void {
-    try {
-      const files = fileIo.listFileSync(this.cacheDir)
-      for (const file of files) {
-        try {
-          fileIo.unlinkSync(`${this.cacheDir}/${file}`)
-        } catch (e) {
-          // skip
-        }
-      }
-      callback(JSON.stringify({ success: true }))
-    } catch (e) {
-      callback(JSON.stringify({ success: false }))
-    }
-  }
-
-  private findCacheFile(songId: string): string | null {
-    try {
-      const files = fileIo.listFileSync(this.cacheDir)
-      for (const file of files) {
-        if (file === songId || file.startsWith(songId + '.')) {
-          return `${this.cacheDir}/${file}`
-        }
-      }
-    } catch (e) {
-      // ignore
-    }
-    return null
-  }
-
-  private async doDownload(songId: string, url: string, ext: string, maxBytes: number,
-    callback: (result: string) => void): Promise<void> {
-    const fileName = ext ? `${songId}.${ext}` : songId
-    const partPath = `${this.cacheDir}/${fileName}.part`
-    const finalPath = `${this.cacheDir}/${fileName}`
-
-    try {
-      const httpRequest = http.createHttp()
-      const options: http.HttpRequestOptions = {
-        method: http.RequestMethod.GET,
-        readTimeout: 120000,
-        connectTimeout: 15000,
-      }
-
-      const response = await httpRequest.request(url, options)
-      httpRequest.destroy()
-
-      if (response.responseCode !== 200) {
-        callback(JSON.stringify({ success: false, error: `HTTP ${response.responseCode}` }))
-        return
-      }
-
-      const data = response.result as ArrayBuffer
-      if (data.byteLength > maxBytes) {
-        callback(JSON.stringify({ success: false, error: 'limit_exceeded' }))
-        return
-      }
-
-      const file = fileIo.openSync(partPath,
-        fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC)
-      fileIo.writeSync(file.fd, data)
-      fileIo.closeSync(file.fd)
-
-      fileIo.renameSync(partPath, finalPath)
-
-      callback(JSON.stringify({ success: true, url: `file://${finalPath}`, sizeBytes: data.byteLength }))
-    } catch (err) {
-      try { fileIo.unlinkSync(partPath) } catch (e) { /* ignore */ }
-      callback(JSON.stringify({ success: false, error: String(err) }))
-    }
-  }
+  public clearAll(callback: (result: string) => void): void { this.mutate(callback, () => this.store().clearAll()) }
 }

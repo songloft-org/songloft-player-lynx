@@ -8,7 +8,7 @@
 
 版本源仍为 `package.json` 与共享 `.build/version.json`。`prepare-build.mjs` 另生成 `.build/native-host.json`，含安装壳身份、协议、桥接/本地 schema、三端引擎版本、必需能力与受信公钥；随同一次构建分发。编译器按同一 bundle 身份生成 `.build/bundle-host.json`，copy 脚本将其复制为壳资源 `native-host.json`；显式 release 构建拒绝与 prepare 不一致的快照。Android 从 APK assets、iOS 从 app Resources、HarmonyOS 从 rawfile 读取，热更新包不得覆盖该文件。CI 共享两份快照，安装包检查要求嵌入身份、公钥和能力与 prepare 完全一致。
 
-`updates/native-contract.json` 是兼容契约的源文件：Android 引擎 `4.0.0`，iOS/HarmonyOS `4.0.1`；当前桥接版本 `2`、本地 schema `1`、最低壳版本 `0.1.0`。完整安装壳必须提供 `audio.sourceLoad.v1`、`updater.v1` 和 `updater.metadata.v1`。桥接版本 2 新增独立系统 TLS 的元数据读取；旧壳不能靠业务 fetch 的证书跳过设置代替它。新增原生能力、SDK 变化或不兼容本地数据读写时，先调整契约并升级安装包。
+`updates/native-contract.json` 是兼容契约的源文件：Android 引擎 `4.0.0`，iOS/HarmonyOS `4.0.1`；当前桥接版本 `3`、本地 schema `2`、最低壳版本 `0.1.0`。完整安装壳必须提供 `audio.sourceLoad.v1`、`updater.v1`、`updater.metadata.v1` 和 `songCache.v2`。桥接版本 2 新增独立系统 TLS 的元数据读取；版本 3 / schema 2 增加带身份的缓存索引与任务接口，旧文件保留，新目录与旧 ABI 隔离。旧壳检查此 bundle 时引导安装同通道新壳。新增原生能力、SDK 变化或不兼容本地数据读写时，先调整契约并升级安装包。
 
 完整安装/部署包仍为五种原有资产。配置有效签名密钥后，另提供：
 

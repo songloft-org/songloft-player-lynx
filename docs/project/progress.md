@@ -1,5 +1,15 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · P3a 第三批：HarmonyOS 缓存索引、流式取消与本地音频源
+
+- HarmonyOS 三个缓存核心源文件与原模块接入十四个 Callback/void 方法、数组 `songCacheProgress` 事件。新/旧入口共用进程级串行写入、总容量、32 项队列及 128 条持久任务；身份/实际格式 hash 索引、白名单快照、原子提交、重启中断/暂存清理及按身份/旧文件清理与 Android/iOS 对齐。
+- RCP 响应头和数据回调流式写入，已知/未知长度均逐块检查容量和磁盘空间；限制重定向，拒绝 HLS/部分媒体/HTML/JSON，真实 request 取消与 TLS 策略切换清理连接。完成临时清理和任务终态落盘后才回 Callback；索引和任务不存远端 URL/凭据。
+- 核对官方 AVPlayer 契约后增加 `LocalAudioSource`：系统文件 URI 打开为只读描述符，`fd://` 交给播放器，reset 完成后换源、release 完成后关闭句柄。**这是源码修正及真实文件句柄回归，不是 HarmonyOS 设备解码验收；本机没有 ArkTS/hvigor/HAP 构建或设备环境。** 视频功能仍按用户要求暂缓，没有修改视频页面/表面交互。
+- 发布兼容声明升级为 **bridge 3 / local schema 2 / `songCache.v2`**。旧壳检查此 bundle 时安装本通道新包；历史签名 v1 向量未改，原五方法 ABI 和旧缓存文件保留。原生三端方法闸门包含实际注册、Callback 形状、数组事件、持久目录、TLS 和本地描述符调用链。
+- HarmonyOS 实际转译源码在 Node 真实文件/HTTP/TLS 适配器下 **9 项通过**（缓存核心 8 项，文件描述符 1 项），含跨身份/音轨/MIME、容量/未知长度、真实/排队取消、32 项上限/去重/继续、重启/缺文件/清理、TLS 默认拒绝/显式跳过/收紧、中文空格 URI 与句柄失败释放。全量 Vitest **269 文件 / 2935 项通过**，发布工具 **35 项通过**，共享 TS 类型检查通过。证据 `/tmp/lynx-p3a-harmony-{full-final,release-final,tsc}.log`；Node 适配结果不能代替 ArkTS 类型检查、HAP 编译或 SDK 行为。
+- 统一 prepare 元数据后的 Lynx/Web 双生产构建、Web 部署、三端资源复制及 Android APK 编译/安装通过；实际 APK 内 bridge/schema/能力、壳身份、bundle 与准备产物相符，无临时更新信任公钥或 JS 测试桥标记。最终 Web Worker 关于页/更新入口在中英、最大字号、320/375/1024 px 无异常，实际部署链接窗口打开通过。Android 已有分音轨条目保持完整，后端端口不可达时冷启动实际 UI 播放/暂停/继续复验通过；检查脚本改为等待实际媒体状态，保留早期等待不足的失败日志。证据 `/tmp/lynx-p3a-harmony-{build,install,device-index,offline-final2,browser-zh,browser-en}.log` 与 `/tmp/lynx-p3a-device/`。不将恢复队列复验写成离线列表、过期认证入口或设备取消已完成。
+- 中英设备缓存/更新契约与 handoff 同步，中文计划仍保留 P3a 未完整验收；Apple/HarmonyOS 编译/设备与正式签名继续开放，下一批是 P3b 批量缓存任务，再做 P3c 离线管理。按用户授权仅分批本地提交，不 push、发版或操作 Issue，桌面/Bundle/视频继续暂缓。
+
 ## 2026-10-07 · P3a 第二批：iOS 缓存索引与流式任务源码
 
 - iOS 增加 `SongCacheStore/SongCacheTransfer` 和相同九方法 Callback，保留旧五方法；模块改为 `LynxContextModule` 取得宿主 context 并发送数组进度事件，新 Swift 文件进入 Xcode Sources。Documents 持久目录、UTF-8 SHA-256 namespace/key 目录、完整文件/白名单快照原子提交、文件大小核对、旧文件不归属且计容量、终态记录/重启中断均与共享模型对齐。

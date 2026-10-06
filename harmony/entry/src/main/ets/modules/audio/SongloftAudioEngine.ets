@@ -1,5 +1,6 @@
 import { media } from '@kit.MediaKit'
 import { audio } from '@kit.AudioKit'
+import { LocalAudioSource } from './LocalAudioSource'
 
 export type AudioStateCallback = (state: string) => void
 export type AudioProgressCallback = (positionMs: number, durationMs: number) => void
@@ -47,6 +48,7 @@ export class SongloftAudioEngine {
   private avPlayer: media.AVPlayer | null = null
   private progressTimer: number = -1
   private currentUrl: string = ''
+  private localSource: LocalAudioSource = new LocalAudioSource()
   private prepared: boolean = false
   /** Surface id pushed by the video module; applied in the `initialized` transition. */
   private pendingSurfaceId: string = ''
@@ -209,7 +211,7 @@ export class SongloftAudioEngine {
       this.itemFailed = false
       this.currentUrl = url
       this.onStateChange('loading')
-      this.avPlayer.url = url
+      this.localSource.assign(this.avPlayer, url)
     })
     return this.loadSerial
   }
@@ -229,7 +231,7 @@ export class SongloftAudioEngine {
     this.onStateChange('loading')
 
     await this.avPlayer.reset()
-    this.avPlayer.url = url
+    this.localSource.assign(this.avPlayer, url)
 
     // Wait for prepared state, then seek and play
     const waitForPrepared = (): Promise<void> => {
@@ -332,7 +334,7 @@ export class SongloftAudioEngine {
       const position = this.avPlayer.currentTime
       if (url.length === 0) return
       await this.avPlayer.reset()
-      this.avPlayer.url = url
+      this.localSource.assign(this.avPlayer, url)
       // `initialized` transition (above) will pick up `pendingSurfaceId` and
       // then trigger prepare(); on `ready`, re-seek and resume.
       const seekAfterReady = (state: string): void => {
@@ -413,7 +415,9 @@ export class SongloftAudioEngine {
 
   private destroy(): void {
     this.stopProgressTimer()
-    this.avPlayer?.release()
+    const player = this.avPlayer
     this.avPlayer = null
+    if (player) void player.release().finally(() => this.localSource.close()).catch(() => {})
+    else this.localSource.close()
   }
 }

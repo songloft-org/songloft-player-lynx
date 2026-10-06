@@ -58,6 +58,8 @@ P3a 第一批已接入共享缓存身份/变体模型、Callback facade 和 Andr
 
 P3a 第二批已接入 iOS v2 源码：Documents 持久目录、身份/实际容器索引、串行调度、流式字节/空间限制、真实 task 取消和数组进度事件；旧五方法与新九方法共用同一调度器。原生模块已改为 LynxContextModule 并加入 Xcode 源文件引用。Apple CI 已配置实际核心验证程序与本地 HTTP 夹具，但 Linux 无 Swift/Xcode，程序尚未编译/执行，不将语法解析或 293 项方法闸门视为设备证据。全量 JS 269 文件 / 2933 项、发布工具 26 项通过；HarmonyOS v2 和 P3b/P3c 继续，iOS TLS/下载/后台/播放设备验收仍开放。
 
+P3a 第三批已接入 HarmonyOS v2 源码：持久目录、身份/实际容器索引、串行新旧下载、RCP 流式限额/空间检查、真实连接取消和重启清理；十四个 public Callback/void 接口与数组事件已纳入闸门。转译实际源码在 Node 真实文件/HTTP/TLS 适配器下 8 项通过，覆盖队列上限/去重、未知长度、媒体响应、清理和 TLS 策略切换；仍未做 ArkTS/HAP 编译或设备 SDK 验证。当前发布契约升级 bridge 3 / schema 2 / `songCache.v2`，旧壳只能安装本通道新包；历史验签向量保持原样。详细最终构建、设备复验及计数见 progress。三端源码接入后继续 P3b/P3c，Apple/HarmonyOS 编译和设备验收保持开放，不 push。
+
 ## 5. 接手与验证
 
 先读 [AGENTS.md](../../AGENTS.md)、[pitfalls.md](pitfalls.md)，再按 [构建](../guides/build-and-run.md)、[测试](../guides/testing.md) 执行。

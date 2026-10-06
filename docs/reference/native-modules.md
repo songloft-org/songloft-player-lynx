@@ -199,7 +199,7 @@ Callback 形状，参数为单个 JSON 字符串（facade 一律传 `'{}'`）。
 
 视频源的 direct/转码判定在 `src/core/network/video-source.ts`。
 
-### 2.6 `SongloftSongCache`（Android/iOS 14 方法，HarmonyOS 当前 5 方法）
+### 2.6 `SongloftSongCache`（三个原生端均 14 方法）
 
 Callback 形状，Callback 收到 JSON 字符串。
 
@@ -213,18 +213,18 @@ Callback 形状，Callback 收到 JSON 字符串。
 
 - 能力探测**刻意用 `getCacheInfo` 而不是 `download`**（`platform-capabilities.ts` 的 `songCache`）：`download` 的入参个数变过，旧壳上探它会报「可用」然后被喂进绑不上的参数。
 - 哨兵 `limit_exceeded`（常量 `SONG_CACHE_LIMIT_ERROR`，`src/features/player/data/song-cache.ts`）：下载会超字节上限时原生侧中止并报这个字符串，facade reject 出的 `Error.message` 就等于它。
-- Android/iOS P3a 增加 `getCacheContract/cacheEntry/getEntry/listEntries/removeEntry/clearNamespace/clearLegacy/getTasks/cancelTask`，单例 `SongCacheStore` 与旧入口共用串行调度、总容量和真实取消；共享 TS 在方法齐全且版本为 2 时采用身份索引，否则沿用旧 ABI。iOS 改为 `LynxContextModule` 发送数组进度事件，URLSessionDataDelegate 流式写入且遵守服务器 TLS 策略；Apple 编译/设备行为尚未验证。身份、快照、分页、任务和事件契约见[设备歌曲缓存](device-cache.md)。HarmonyOS 新九方法继续实施，不将旧五方法注册视作 v2 已可用。
+- 三端 P3a 增加 `getCacheContract/cacheEntry/getEntry/listEntries/removeEntry/clearNamespace/clearLegacy/getTasks/cancelTask`，单例 `SongCacheStore` 与旧入口共用串行调度、总容量和真实取消；共享 TS 在方法齐全且版本为 2 时采用身份索引，否则沿用旧 ABI。iOS 改为 `LynxContextModule` 发送数组进度事件，URLSessionDataDelegate 流式写入；HarmonyOS 用 RCP 响应头/数据回调、真实 request 取消及 statfs 空间检查。两端编译/设备行为尚未验证，Node 适配器执行 HarmonyOS 源码不能替代 HAP 编译。发布契约为 bridge 3 / schema 2 / `songCache.v2`；身份、快照、分页、任务和事件契约见[设备歌曲缓存](device-cache.md)。
 
 **闸门锁住的不变量**
 
-| 不变量 | Android | iOS |
-|---|---|---|
-| 下载遵守 insecure-TLS 开关 | `clientFor(InsecureTls.enabled)` | 独立流式 delegate 调用 `InsecureTls.shared.handle` |
-| 缓存不放在 OS 可回收目录 | 用 `.filesDir`，**禁止** `ctx.cacheDir` | 用 `.documentDirectory`，**禁止** `.cachesDirectory` |
-| 回调返回可播放的 `file://` URL，且不是手拼的 | `java.net.URI` 编码，源码里**不得**出现 `"file://` | `absoluteString`，同样不得出现 `"file://` |
-| 下载原子提交（崩溃不留半截「可播放」文件） | `renameTo` | `moveItem` |
-| 字节上限哨兵与 TS facade 逐字共享 | 含 `limit_exceeded` | 含 `limit_exceeded` |
-| 5 个方法都收 bridge `Callback`（不是 Kotlin lambda） | 闸门单独验 | — |
+| 不变量 | Android | iOS | HarmonyOS |
+|---|---|---|---|
+| 下载遵守 insecure-TLS 开关 | `clientFor(InsecureTls.enabled)` | 独立流式 delegate 调用 `InsecureTls.shared.handle` | RCP `remoteValidation`，切换策略取消当前 session |
+| 缓存不放在 OS 可回收目录 | 用 `.filesDir`，**禁止** `ctx.cacheDir` | 用 `.documentDirectory`，**禁止** `.cachesDirectory` | 用 ability `.filesDir` |
+| 回调返回可播放的 `file://` URL，且不是手拼的 | `java.net.URI` 编码 | `absoluteString` | `fileUri.getUriFromPath` |
+| 下载原子提交（崩溃不留半截「可播放」文件） | `renameTo` | `moveItem` | `fileIo.renameSync` |
+| 字节上限哨兵与 TS facade 逐字共享 | 含 `limit_exceeded` | 含 `limit_exceeded` | 含 `limit_exceeded` |
+| 新旧方法的桥接注册 | `@LynxMethod` + Callback | `methodLookup` + Callback | public 方法 + Callback |
 
 ### 2.7 `SongloftFloatingLyric`（10 方法，仅 Android）
 
@@ -384,7 +384,7 @@ Web 上渲染 Lynx 插件的宿主（native 构建用真实 `<frame>` 元素，�
 
 读方法 `getInfo(callback)`、`getState(callback)`、`inspectManifest(raw, signature, callback)`、`fetchMetadata(requestJson, callback)`；异步写入 `download(requestJson, callback)` 与 `restoreBuiltin(callback)` 在持久化完成后回调；void 命令 `cancel(taskId)`、`confirmStartup(bundleId)`、`reportStartupFailure()`。元数据请求 `{url, max_bytes}` 返回 `{status, body}`，独立系统 TLS、12 秒网络期限、有界 UTF-8 读取和 HTTPS 跳转，不继承业务证书跳过设置。进度事件 `SongloftUpdate.progress` 的数组参数含 `{task_id, bytes, total}`。任何出错回调只含机器错误码，不转发带 URL/凭据的网络异常文本。
 
-旧壳逐方法探测：原有八方法是状态/下载/启动能力，新 `fetchMetadata` 单独探测，缺失时关于页只提供本通道发版页。原生信息来自内置 `native-host.json`，签名/hash/兼容及新旧判断由壳执行；当前发布契约为 bridge 2，含 `updater.metadata.v1`。下载只准备下次冷启动，根模板加载器重新验证磁盘并持久化 trial；RouteErrorBoundary 内的 `UpdateStartup` 确认真实路由启动，未确认下次回退。Web 无该原生模块；完整协议与开放项见 [client-updates.md](client-updates.md)。
+旧壳逐方法探测：原有八方法是状态/下载/启动能力，新 `fetchMetadata` 单独探测，缺失时关于页只提供本通道发版页。原生信息来自内置 `native-host.json`，签名/hash/兼容及新旧判断由壳执行；当前发布契约为 bridge 3 / schema 2，含 `updater.metadata.v1` 与 `songCache.v2`。下载只准备下次冷启动，根模板加载器重新验证磁盘并持久化 trial；RouteErrorBoundary 内的 `UpdateStartup` 确认真实路由启动，未确认下次回退。Web 无该原生模块；完整协议与开放项见 [client-updates.md](client-updates.md)。
 
 ## 3. 调用约定
 

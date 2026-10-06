@@ -118,7 +118,7 @@ const hosts = {
   songCache: {
     android: read(`${ANDROID_CACHE}/SongloftSongCacheModule.kt`) + read(`${ANDROID_CACHE}/SongCacheStore.kt`),
     ios: read(`${IOS_DIR}/SongloftSongCacheModule.swift`) + read(`${IOS_DIR}/SongCacheStore.swift`) + read(`${IOS_DIR}/SongCacheTransfer.swift`),
-    harmony: read(`${HARMONY_MODULES}/cache/SongloftSongCacheModule.ets`),
+    harmony: read(`${HARMONY_MODULES}/cache/SongloftSongCacheModule.ets`) + read(`${HARMONY_MODULES}/cache/SongCacheStore.ets`) + read(`${HARMONY_MODULES}/cache/SongCacheTransfer.ets`),
   },
   /*
    * Back key. Split like `system` above: the module writes the flag, but the press
@@ -1486,7 +1486,7 @@ describe('SongloftLiveActivity is a proper Lynx module on iOS', () => {
  *    reported as playable;
  *  - the byte-cap sentinel must be the exact string the TS facade matches on.
  */
-describe('SongloftSongCache module methods exist on both hosts', () => {
+describe('SongloftSongCache module methods exist on all three hosts', () => {
   const methods = interfaceMethods(
     read('src/features/player/data/song-cache.ts'),
     'NativeSongCacheModule',
@@ -1500,6 +1500,7 @@ describe('SongloftSongCache module methods exist on both hosts', () => {
   test.each(methods)('SongloftSongCache.%s', (method) => {
     expectLynxMethod(hosts.songCache.android, method)
     expectSwiftMethod(hosts.songCache.ios, method)
+    expectArkTsMethod(hosts.songCache.harmony, method)
   })
 
   test.each(methods)('%s takes a bridge Callback, not a Kotlin lambda', (method) => {
@@ -1510,6 +1511,15 @@ describe('SongloftSongCache module methods exist on both hosts', () => {
 })
 
 describe('SongloftSongCache keeps its on-device invariants', () => {
+  test('HarmonyOS hands cached local files to AVPlayer via owned descriptors after reset', () => {
+    const source = read(`${HARMONY_MODULES}/audio/LocalAudioSource.ets`)
+    expect(source).toContain('fileIo.openSync(address, fileIo.OpenMode.READ_ONLY)')
+    expect(source).toContain("player.url = 'fd://' + file.fd")
+    expect(source).toContain('fileIo.closeSync(file.fd)')
+    expect(hosts.audio.harmony.match(/this\.localSource\.assign\(this\.avPlayer, url\)/g)).toHaveLength(3)
+    expect(hosts.audio.harmony).not.toContain('this.avPlayer.url = url')
+    expect(hosts.audio.harmony).toContain('player.release().finally(() => this.localSource.close())')
+  })
   test('Android indexed cache exposes the complete optional callback contract and task event', () => {
     const methods = interfaceMethods(read('src/features/player/data/indexed-song-cache.ts'), 'IndexedSongCacheModule')
     expect(methods).toHaveLength(9)
@@ -1522,9 +1532,22 @@ describe('SongloftSongCache keeps its on-device invariants', () => {
     for (const method of methods) expectSwiftMethod(hosts.songCache.ios, method)
     expect(hosts.songCache.ios).toContain('sendGlobalEvent("songCacheProgress", withParams: [value])')
   })
+  test('HarmonyOS indexed cache exposes callback methods and array task events', () => {
+    const methods = interfaceMethods(read('src/features/player/data/indexed-song-cache.ts'), 'IndexedSongCacheModule')
+    expect(methods).toHaveLength(9)
+    for (const method of methods) {
+      expectArkTsMethod(hosts.songCache.harmony, method)
+      if (method !== 'cancelTask') {
+        expect(hosts.songCache.harmony).toMatch(new RegExp(`public ${method}\\([^\\n]*callback: \\(result: string\\) => void`))
+      }
+    }
+    expect(hosts.songCache.harmony).toContain("sendGlobalEvent('songCacheProgress', [task])")
+  })
   test('downloads honour the insecure-TLS switch on both hosts', () => {
     expect(hosts.songCache.android).toContain('clientFor(InsecureTls.enabled)')
     expect(hosts.songCache.ios).toContain('InsecureTls.shared.handle($0)')
+    expect(hosts.songCache.harmony).toContain("remoteValidation: InsecureTls.isEnabled() ? 'skip' : 'system'")
+    expect(hosts.songCache.harmony).toContain('InsecureTls.removeListener(onTlsChange)')
   })
 
   test('cache lives in non-evictable storage, not the OS cache dir', () => {
@@ -1532,6 +1555,7 @@ describe('SongloftSongCache keeps its on-device invariants', () => {
     expect(hosts.songCache.android).not.toContain('ctx.cacheDir')
     expect(hosts.songCache.ios).toContain('.documentDirectory')
     expect(hosts.songCache.ios).not.toContain('.cachesDirectory')
+    expect(hosts.songCache.harmony).toContain("context.filesDir + '/song_cache'")
   })
 
   test('callbacks hand back a playable file:// URL, never a hand-built one', () => {
@@ -1539,16 +1563,19 @@ describe('SongloftSongCache keeps its on-device invariants', () => {
     expect(hosts.songCache.ios).toContain('absoluteString')
     expect(hosts.songCache.android).not.toContain('"file://')
     expect(hosts.songCache.ios).not.toContain('"file://')
+    expect(hosts.songCache.harmony).toContain('fileUri.getUriFromPath(this.media(entry))')
   })
 
   test('downloads commit atomically (no half-written playable file)', () => {
     expect(hosts.songCache.android).toContain('renameTo')
     expect(hosts.songCache.ios).toContain('moveItem')
+    expect(hosts.songCache.harmony).toContain('fileIo.renameSync(temporary, this.entryDirectory(request.namespace, actual))')
   })
 
   test('the byte-cap sentinel is shared verbatim with the TS facade', () => {
     expect(hosts.songCache.android).toContain(SONG_CACHE_LIMIT_ERROR)
     expect(hosts.songCache.ios).toContain(SONG_CACHE_LIMIT_ERROR)
+    expect(hosts.songCache.harmony).toContain(SONG_CACHE_LIMIT_ERROR)
   })
 })
 
