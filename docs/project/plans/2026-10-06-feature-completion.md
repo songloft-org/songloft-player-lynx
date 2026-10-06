@@ -172,7 +172,7 @@
 
 ## 6. P4：Web 歌单 JSON 导入/导出
 
-实施记录（2026-10-07）：共享源码与 Chrome standalone/embedded 根路径验收已完成。主线程选择/下载控件处理激活过期，认证请求支持刷新重试；279 文件 / 3012 项 JS、35 项发布工具、类型/双产物和 Android APK 通过。实际选文件、后端歌单/歌曲新增、中文/emoji 下载、取消/错误/认证失效与中英最大字号六组通过，见 progress。Firefox/Safari 尚未运行；部署子路径维持既有未验证边界，原生传输流程未改。
+实施记录（2026-10-07）：共享源码与 Chrome standalone/embedded 根路径验收已完成。主线程选择/下载控件处理激活过期，认证请求支持刷新重试；279 文件 / 3012 项 JS、35 项发布工具、类型/双产物和 Android APK 通过。实际选文件、后端歌单/歌曲新增、中文/emoji 下载、取消/错误/认证失效与中英最大字号六组通过，见 progress。Firefox 134 后续实际通过 standalone/embedded 根路径的数据传输，激活失效使用夹具；启动/音频环境观察见 progress，Safari 未运行。部署子路径维持既有未验证边界，原生传输流程未改。
 
 - 方法级判断文件上传/导出能力，解除 Web 的一刀切禁用；Settings 入口与 DataPage 同步。
 - 导入继续使用现有 `/playlists/import` multipart `file` 契约，导出使用 `/playlists/export`。读取用户选定文件并上传，取消选择、无效 JSON、未授权、服务端失败均结束 busy 状态。
@@ -256,7 +256,7 @@
 - [ ] P3a：缓存身份/索引/取消（共享 TS 与三端 v2 源码已接入；发布兼容声明 bridge 3 / schema 2 / `songCache.v2`，旧壳需安装同通道新包；Android 真实文件/HTTP 8 项、设备分音轨缓存及后端不可达冷启动播放通过；HarmonyOS 源码在 Node 文件/HTTP/TLS 适配器下 8 项通过，不等于 HAP 编译；iOS Apple 核心验证程序已配置但未编译/执行，两端编译与设备验收继续，见 progress）
 - [ ] P3b：批量缓存任务（共享源码已接入；273 文件 / 2960 项回归、双产物及 Android APK 编译通过；Android arm64 界面验证 235 首入队、94 完成含 36 缓存跳过、取消剩余 141 项和暂存清理；x86_64 缺 SVG 库/原生崩溃单独记录，iOS/HarmonyOS 编译和设备验收仍开放，见 progress）
 - [ ] P3c：离线管理与播放（共享源码已接入身份证明、本地列表/搜索/空间/删除/清理及独立本地队列；277 文件 / 2989 项回归和 35 项发布工具、双产物及 Android APK 编译通过；Android 实际断网播放/控制/seek/重播/冷启动、删除/分身份清理及登出隐藏通过，中英最大字号三个宽度六组通过，见 progress；iOS/HarmonyOS 编译和设备验收仍开放）
-- [x] P4：Web 导入/导出（源码与 Chrome standalone/embedded 根路径验收完成；Firefox/Safari 待验，见 progress）
+- [x] P4：Web 导入/导出（源码与 Chrome、Firefox 134 standalone/embedded 根路径数据流程验收完成；Firefox 兼容性观察与激活夹具边界见 progress，Safari 待验）
 - [x] P5：Web 快捷键（源码与 Chrome 实际播放/菜单/持久化验收完成；IME/插件夹具和其他浏览器边界见 progress）
 - [ ] P6a：HarmonyOS 剪贴板（四端确认回调与两处成功/失败反馈已接入；HarmonyOS 编译/系统粘贴验收仍开放，见 progress）
 - [ ] P6b：HarmonyOS 通知歌词（队列元数据、AVSession 布局/控制、旧壳降级与音频契约源码已补；iOS/HarmonyOS 编译与真实卡片/锁屏验收仍开放，见 progress）

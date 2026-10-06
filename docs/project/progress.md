@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · 计划剩余验收：Firefox 数据传输与媒体边界
+
+- 复核当前 `1f87211` 源码及最终 Web 产物，主仓库/客户端/SDK 工作树干净。本机无 Firefox、Swift/Xcode、hvigor；发现已有 Playwright 1.50.1 驱动后，将对应 Firefox **134.0** 下载到 `/tmp/lynx-web-acceptance/browsers`。启动缺 GTK 时只下载/解包两个 Debian 库到临时 sysroot，没有安装或改宿主系统依赖。实际登录界面正常、crossOriginIsolated=true，启动截图 `/tmp/lynx-web-acceptance/firefox-startup.png` 已目测。
+- Firefox 真实 Worker 页面完成 **standalone `3015 → 58192` 跨源** 与 **embedded `3016` 根路径同源** 数据流程：分别新建 1 个歌单/1 首歌曲，后端观察到歌曲总数 +1；中文/emoji JSON 实际下载可解析，约 249 KiB。空/坏 JSON 0 上传，401 夹具后真实刷新一次并重试成功，500 后恢复、认证刷新失效回登录、临时控件归零。日志 `/tmp/lynx-web-firefox-data-diagnostic.log` 与 `/tmp/lynx-web-firefox-data-embedded.log` 均最终无页面异常；截图 `/tmp/lynx-web-acceptance/firefox-p4-*.png` 与私有下载文件保留。
+- Chrome 的 5.5 秒延迟夹具在 Firefox 没有显示备用控件，不能据此称 Firefox 激活已过期；改为明确覆盖 userActivation.isActive=false，再实际点击备用取消按钮，验证取消和清理。原脚本等待 networkidle 曾在 reload 超时，改等待 load 和应用真实元素，未修改客户端。Safari 未运行，部署子路径与实际操作系统选择器取消仍待验，不将单版本 Firefox 的结果扩展到所有版本。
+- 一次数据流程虽然完成了入库/下载/取消/认证清理，但捕获 `Failed to load script: blob:...`（`/tmp/lynx-web-firefox-data-final.log`）；定位到实际 web-core MTS iframe 动态 script 的 onerror，未证明原因。后续加阶段诊断的 standalone 与 embedded 流程均未复现，不忽略首次异常，bugs 保留兼容性观察。当前安装 web-core 的 browserslist 只列 Chrome >=92 / Safari >=16.4。
+- 快捷键首次脚本出现重复空格失败，另一次短暂暂停后又播放；持续状态/音频事件检查发现实际媒体 `error.code=3` 后播放器自动重试，早先脚本退出码 0 不足以证明可靠播放，**Firefox P5 不标通过**。原样双音轨 M4A 与 128 kbps MP3 转码均失败（`/tmp/lynx-web-firefox-keyboard-stable.log`、`/tmp/lynx-web-firefox-keyboard-mp3.log`）。绕过 Songloft、在空白 HTML 页用原生 Audio 直接请求 M4A、转码 MP3 和已有普通 MP3，三者同样 `Failed to decode media`（`/tmp/lynx-web-firefox-audio-probe.log`）；证明该失败不依赖客户端键盘代码，但具体环境/解码原因仍未确定，不扩大为全部 M4A/MP3 或 Firefox 平台的缺陷结论。
+- 本批只更新验收文档，没有改应用代码、依赖清单或发布材料，无需重复已通过的 JS/Android 构建。Web 部署与交接同步中英、中文计划/bugs 更新；P4 新证据与 Firefox P5/原生平台未完成项分别保留。只本地提交，不 push；隔离服务和自有 Firefox 使用完后关闭，用户 `58091` 服务保持运行。
+
 ## 2026-10-07 · P6c：插件恢复前台、SDK 注册与 frame 保活
 
 - iOS SceneDelegate 将所属 scene 的活跃/失活转给根 ViewController，首屏就绪前合并待发通知，失活取消、重复活跃去重，弱捕获与 view 身份保护清理迟到回调；HarmonyOS Ability 与 Index 接入实际 AppLifecycle/LynxViewClient，绑定、首屏、前后台、退出和旧上下文清理。Android 沿用既有事件。原生 WebView 下一浏览器帧通知恢复，Lynx frame 使用现有四方法父桥，按 frameId 处理 RPC/最新播放器与主题/生命周期推送，卸载后忽略排队调用和迟到回复，不改变 bridge 3 / schema 2 必需能力。

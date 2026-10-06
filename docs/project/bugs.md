@@ -11,6 +11,8 @@
 
 ## 待修复（开放）
 
+- [ ] Firefox 134 测试环境的媒体与启动兼容性观察（2026-10-07）：数据导入/导出在 standalone/embedded 根路径实际通过，但一次启动捕获 Lynx MTS iframe 的 Blob 脚本加载异常，后续两种流程未复现，具体原因未定。快捷键测试的暂停/重复断言曾受媒体自动重试干扰；独立空白页的原生 HTML Audio 对 M4A、转码 MP3 和普通 MP3 同样报 `MEDIA_ERR_DECODE / Failed to decode media`，因此不能断定是 Songloft 键盘实现缺陷，也不能称播放验收通过。当前 web-core 包目标列 Chrome/Safari，不承诺 Firefox；环境与版本范围、日志见 progress。
+
 - [ ] Android 模拟器宿主崩溃（2026-10-07 P6a）：新 APK 编译/arm64 ABI 安装/预编译通过，但两次启动呈空白首屏，宿主 emulator 37.2.12 随后 SIGSEGV；切换 swiftshader_indirect 后还有 ColorBuffer 绑定错误。与应用进程的既有 x86_64 SVG/JIT 问题分开记录，不在无证据时归因于剪贴板改动。本批 Android 系统粘贴仍待验，日志 `/tmp/lynx-p6a-emulator*.log`，Chrome 复制/粘贴证据见 progress。
 
 - [ ] Android x86_64 / 16 KB 模拟器长批量验证（2026-10-07 新发现）：实际 APK 的 `servalsvg:0.1.1` 仅含 arm64-v8a/armeabi-v7a/x86 `.so`，没有 x86_64；自动选择 x86_64 时 SVG JNI `renderWithDiagnostics` 报 UnsatisfiedLinkError，图标为空。235 首批量任务在已完成 35 首时另有主线程 SIGSEGV，栈落在 ART JIT 的 `UIBody.rebuildViewTree`；不能仅凭同时出现就断定 SVG 缺库是该 SIGSEGV 根因。本机转用同一 APK 的 arm64 ABI（模拟器 native bridge）并预编译后复验，图标正常；两项变更没有分开做对照，因此不宣称修复 x86_64 崩溃。该环境不计作正常 x86_64 验收；继续保留设备回归和 ABI 修复问题。证据 `/tmp/lynx-p3b-device-crash.log`。

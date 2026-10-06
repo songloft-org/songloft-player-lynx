@@ -43,7 +43,7 @@ location / {
 
 Web 接口请求走共享认证客户端：导入为 `/playlists/import` 的 multipart `file`，导出为 `/playlists/export` 的认证 GET，token 只进入 Authorization 请求头。401 复用已有刷新与原请求重试，刷新失效回登录；HTTP 错误结束 busy 状态。传输期间禁用两个按钮，成功导入失效 `['playlist']` 与 `['library']` 查询，包括详情、歌曲列表和首页统计。原生客户端继续使用已有文件上传/浏览器导出流程。
 
-已在 Docker Chrome 153 的真实 Worker 页面验证 standalone 跨源 CORS 和 embedded 根路径同源：实际文件选择、新歌单/歌曲入库、中文/emoji JSON 下载、空/坏文件拒绝、取消、401 刷新重试和服务器失败恢复。用户激活过期路径通过延迟真实宿主调用后点击主线程控件验证。Firefox/Safari 未在当前环境运行；子路径部署仍保留上节的限制。
+已在 Docker Chrome 153 的真实 Worker 页面验证 standalone 跨源 CORS 和 embedded 根路径同源：实际文件选择、新歌单/歌曲入库、中文/emoji JSON 下载、空/坏文件拒绝、取消、401 刷新重试和服务器失败恢复。用户激活过期路径通过延迟真实宿主调用后点击主线程控件验证。Firefox 134 在独立 Playwright 环境也通过两种根路径部署的选文件、入库、下载、错误与认证回归；其激活失效取消使用显式夹具，5.5 秒延迟并未触发备用控件。一次启动出现 Blob 脚本加载异常，后续两种部署流程通过，仍保留该兼容性观察，不代表所有 Firefox 版本稳定。Safari 未运行；子路径部署仍保留上节的限制。
 
 参考：[文件输入](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/file)、[用户激活与选择器](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/showPicker)、[Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob)、[撤销 object URL](https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static)。
 
@@ -57,7 +57,7 @@ Web 接口请求走共享认证客户端：导入为 `/playlists/import` 的 mul
 
 输入框、可编辑内容、按钮/链接/滑块、插件 iframe、组合输入及已处理的事件保留自己的操作；有返回栈覆盖层、选择/编辑模式或宽屏设置子页时暂停响应。播放与切歌忽略长按重复，音量允许重复；失焦和关闭开关后不消费按键。重复初始化清理旧监听，移动端不安装此监听。
 
-Chrome 153 已实际验证播放、暂停、切歌、音量、开关持久化和播放器菜单保护。Shadow DOM 输入框/iframe 为浏览器注入夹具，组合输入为协议事件夹具，未宣称操作系统输入法或已安装插件的完整验收；Firefox/Safari 仍待验。事件依据见 [composedPath](https://developer.mozilla.org/en-US/docs/Web/API/Event/composedPath)、[isComposing](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/isComposing)、[repeat](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/repeat)。
+Chrome 153 已实际验证播放、暂停、切歌、音量、开关持久化和播放器菜单保护。Shadow DOM 输入框/iframe 为浏览器注入夹具，组合输入为协议事件夹具，未宣称操作系统输入法或已安装插件的完整验收。Firefox 134 当前环境的原生 HTML Audio 对 M4A、转码 MP3 和普通 MP3 均报 `MEDIA_ERR_DECODE`，与 Songloft 无关的空白页探针同样失败；播放自动重试会干扰快捷键断言，不能标为通过，具体环境原因仍待查。Safari 仍待验。事件依据见 [composedPath](https://developer.mozilla.org/en-US/docs/Web/API/Event/composedPath)、[isComposing](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/isComposing)、[repeat](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/repeat)。
 
 ## Web 平台的已知限制
 
@@ -69,7 +69,7 @@ Chrome 153 已实际验证播放、暂停、切歌、音量、开关持久化和
 | **会话持久化走 IndexedDB**               | worker realm 没有浏览器真正的 `localStorage`（那是 window-only；web-core 注入到背景 realm 的同名 scope 绑定不是页面持久化的那个），存储探测顺序是 native → **IndexedDB** → localStorage → 内存，且 IndexedDB 必须赢过 localStorage                                                                                                                                                                                                                         |
 | **无 longpress**                         | web-core 不合成该手势，任何「长按打开菜单」的功能必须另有按钮入口                                                                                                                                                                                                                                                                                                                                                                                          |
 | ~~占位符颜色恒为库自带 grey~~            | **已修（2026-08-26）**：`-x-placeholder-color` 在 Web 上是空转声明、web-elements 走 `::part(input)::placeholder` 且 part 上有显式默认 —— 这三者接不起来，所以改为 patch web-core 产物的默认值（`grey` → `var(--content-muted,grey)`，`scripts/patch-web-core-client.mjs`），CDP 实测随主题切换（light `#7b7b88` / dark `#8b8b98`）。**同类问题（web-elements 部件样式改不动）先想 part 显式默认 + shadow root 穿透，修法走 patch 脚本**，见 AGENTS.md §3.2 |
-| **歌单文件选择的用户激活** | JSON 导入/导出已提供主线程可点击控件，应对 Worker 调用丢失激活；Chrome 已验证，Firefox/Safari 待验。其他旧 `pickAndUploadFile` 调用仍沿用原桥接。 |
+| **歌单文件选择的用户激活** | JSON 导入/导出已提供主线程可点击控件，应对 Worker 调用丢失激活；Chrome 与 Firefox 134 两种根路径部署的数据流程通过，Firefox 激活失效采用夹具。Safari 待验。其他旧 `pickAndUploadFile` 调用仍沿用原桥接。 |
 | **无「清空浏览器缓存」入口（刻意不做）** | Flutter 版有（清 Cache Storage + 注销 SW + 强刷 HTTP 缓存，解决 PWA 更新后旧资源问题）。本仓库 Web 端不注册 Service Worker、不用 Cache Storage，standalone（`serve.mjs`）与 embedded（后端 embed.go）的响应一律 `Cache-Control: no-cache` + ETag 304 —— 更新后普通刷新即最新，无需用户手动清                                                                                                                                                               |
 | **部分 Lynx 元素无实现**                 | `<refresh>` / `<webview>` 等未映射标签走恒等回落，成为 `HTMLUnknownElement`——属性开关完全无效。写跨平台页面前先查 web-core 的 `LYNX_TAG_TO_HTML_TAG_MAP`                                                                                                                                                                                                                                                                                                   |
 
