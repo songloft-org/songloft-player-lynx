@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · Android 封面/时长回归与 Firefox Blob 观察
+
+- 沿用 `1cfe401` Debug APK，实际安装的 base.apk SHA-256 再次与交付的 `7f7c7ee07d1158472ad02dd2e58fcb9ab7be74972f94addc4d55a53a6f1171ea` 一致，构建号 `213499686`、arm64 native bridge、API 34 / Mesa 环境，当前 PID **3921**。本批没有改运行时代码或重建包；此前 3082 项 JS/42 项 JVM 是前批验证，不写成本批重跑。
+- 私有后端 `58192` 给歌曲 `259` 写入现有应用图标作为封面（PNG **67384** 字节），认证读取返回相同字节；歌曲名/歌手/数据库时长 `178s` 与定时歌词不变，`260` 继续无封面/歌词。系统通知实际显示封面，两种歌词布局分别在 **15029ms / 14065ms** 显示第二行，**45009ms** 空行恢复原歌曲名/歌手，封面仍在；系统时长在所有选定观测中保持 **03:00**（实际 MP3 媒体时长，不强行等同数据库的 178s）。下一首暂停于 **3154ms** 时旧封面和歌词均清除；上一首返回后封面恢复，实际 keyguard `showing=true` 下也显示封面与第一行。**7 组**本应用媒体/系统 UI 观测严格核对位置、顺序、PAUSED、同 PID、无错误和总时长，截图已目测。
+- 失败样本保留：首轮封面 HTTP 探针未带认证返回 401，修正探针后取到同一图片，不能据此认定客户端封面故障；一次返回歌曲后的 uiautomator idle 失败留下旧 XML，该 UI 样本排除。探针改为先删除旧 dump 并要求成功输出，再重新采集锁屏 XML。回执 `/tmp/lynx-android-cover-acceptance/cover-device-acceptance.json`，独立复制到 `/tmp/lynx-local-delivery/1cfe401/cover-device-acceptance.json`，没有覆盖上一批 `device-acceptance.json` 或安装回执。这里验的是模拟器通知/锁屏封面，不是实体厂商设备、听感或长后台。
+- Firefox 134 对原 `f5d00c0` standalone 包补充 **10 组正常加载 + 10 组快速加载/刷新**，全部呈现且隔离开启、无页面错误；快速刷新第 1/5 组各保留一条 `main.lynx.bundle` 的 `NS_BINDING_ABORTED` 失败请求，未写成请求零失败，也未改应用以消除此取消现象；另 **5 组提前注入私有会话夹具 + 5 组实际 UI 登录**，每组访问设置/播放设置并做 3 次会话刷新，共 **30 次**，均无页面错误或失败请求。Blob src/revoke、iframe 生命周期与脚本资源错误探针未捕获原异常，证据 `/tmp/lynx-firefox-blob-investigation/{reload,auth}-observations.json`；实际 UI 登录与会话注入明确区分。检查 web-core 的 iframe 脚本加载和 TemplateManager Blob 生命周期，没有足够证据定位根因，未改依赖或应用代码，**Firefox 间歇 Blob 条目继续开放**。
+- 当前可验范围增加 Android 封面/时长；HarmonyOS 媒体卡片与许可/设备、Apple 编译/设备、正式密钥、MIoT 长后台/断网重连、听感/厂商保活仍开放。恢复标题模式和原锁屏设置，停止本批自有模拟器/Xvfb/Go `58192`，保留用户 `58091`。仅文档本地分批提交，不 push；P6b 不整体勾选。
+
 ## 2026-10-07 · Android 新包的通知歌词与锁屏验收
 
 - 修复源码 `1cfe401fa6fb37c4f0f58e892d8c137f0574291a` 后 prepare 固定 dev / `0.1.0`、构建号 **213499686**、时间 `2026-10-07T01:28:06.370Z`。新 APK 在 `/tmp/lynx-local-delivery/1cfe401/songloft-lynx-android-debug.apk`：**33497304** 字节、SHA-256 **`7f7c7ee07d1158472ad02dd2e58fcb9ab7be74972f94addc4d55a53a6f1171ea`**；native bundle SHA-256 **`5f347d35e4870f3e8cdda6d9c5b3510b885a9cfd9c952731181aa5d7b8b52954`**。bridge 3/schema 2、模板能力与生产公钥 0 保持原契约，JS TestBridge 关闭，APK 为 Debug。本批仅交付 APK，不重建 HAP/IPA/Web 两包。
