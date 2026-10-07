@@ -187,15 +187,14 @@ jobs:
           set -euo pipefail
           CACHE_PORT_FILE="$RUNNER_TEMP/cache-port"
           rm -f "$CACHE_PORT_FILE"
+          echo "[ios-cache] Starting HTTP fixture"
           python3 scripts/fixtures/cache-http-server.py --port-file "$CACHE_PORT_FILE" &
           CACHE_SERVER_PID=$!
-          trap 'kill "$CACHE_SERVER_PID" 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 50); do
-            if [ -s "$CACHE_PORT_FILE" ]; then break; fi
-            sleep 0.1
-          done
-          test -s "$CACHE_PORT_FILE"
+          trap 'kill "$CACHE_SERVER_PID" 2>/dev/null || true; wait "$CACHE_SERVER_PID" 2>/dev/null || true' EXIT
+          node scripts/wait-for-fixture.mjs "$CACHE_PORT_FILE" "$CACHE_SERVER_PID"
+          echo "[ios-cache] Compiling Apple cache verifier"
           swiftc -swift-version 5 ios/SongloftLynx/SongCacheStore.swift ios/SongloftLynx/SongCacheTransfer.swift scripts/verify-ios-cache.swift -o "$RUNNER_TEMP/verify-ios-cache"
+          echo "[ios-cache] Running Apple cache verifier"
           "$RUNNER_TEMP/verify-ios-cache" "$(cat "$CACHE_PORT_FILE")"
       - name: Verify plugin templates with Apple Foundation and real HTTP/TLS
         run: |
@@ -203,17 +202,16 @@ jobs:
           TEMPLATE_FIXTURE_DIR=$(mktemp -d "$RUNNER_TEMP/templates.XXXXXX")
           openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost \
             -keyout "$TEMPLATE_FIXTURE_DIR/key.pem" -out "$TEMPLATE_FIXTURE_DIR/cert.pem"
+          echo "[ios-templates] Starting HTTP/TLS fixture"
           python3 scripts/fixtures/template-http-server.py --port-file "$TEMPLATE_FIXTURE_DIR/ports.json" \
             --cert "$TEMPLATE_FIXTURE_DIR/cert.pem" --key "$TEMPLATE_FIXTURE_DIR/key.pem" &
           TEMPLATE_SERVER_PID=$!
           trap 'kill "$TEMPLATE_SERVER_PID" 2>/dev/null || true; wait "$TEMPLATE_SERVER_PID" 2>/dev/null || true; rm -rf "$TEMPLATE_FIXTURE_DIR"' EXIT
-          for attempt in $(seq 1 50); do
-            if [ -s "$TEMPLATE_FIXTURE_DIR/ports.json" ]; then break; fi
-            sleep 0.1
-          done
-          test -s "$TEMPLATE_FIXTURE_DIR/ports.json"
+          node scripts/wait-for-fixture.mjs "$TEMPLATE_FIXTURE_DIR/ports.json" "$TEMPLATE_SERVER_PID"
+          echo "[ios-templates] Compiling Apple template verifier"
           swiftc -swift-version 5 ios/SongloftLynx/InsecureTls.swift ios/SongloftLynx/PluginTemplateTransfer.swift \
             scripts/verify-ios-templates.swift -o "$TEMPLATE_FIXTURE_DIR/verify-ios-templates"
+          echo "[ios-templates] Running Apple template verifier"
           "$TEMPLATE_FIXTURE_DIR/verify-ios-templates" "$TEMPLATE_FIXTURE_DIR/ports.json"
       - uses: ruby/setup-ruby@v1
         with:
