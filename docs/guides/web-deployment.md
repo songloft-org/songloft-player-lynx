@@ -58,6 +58,8 @@ location /songloft/ {
 
 > ⚠️ worker realm **也**拿得到 `self.location`，所以「探测 location 是否存在」不能用来判断 standalone 还是 embedded —— 这正是 `deployMode` global prop 存在的理由。
 
+最终复验使用源码 `f5d00c0`、构建号 `213498463` 的新 standalone/embedded 包；两种子路径的 Linux WebKit 播放/切歌/音量快捷键与持久化也通过。浏览器目录与实际归档逐文件一致，源码身份和回执见 `/tmp/lynx-local-delivery/f5d00c0/{verification,browser-acceptance}.json` 与 progress；输入/组合事件及空音频输出仍不替代系统输入法和扬声器验收。
+
 ## 歌单 JSON 导入与导出
 
 在「设置 → 数据管理」选择之前导出的 Songloft 版本 1 JSON 备份，或导出服务器的全部歌单。Web 宿主按 `pickTextFile/saveTextFile/cancelTextFile` 三个真实方法开放入口；旧宿主未实现这些方法时隐藏入口，并在数据页说明原因。

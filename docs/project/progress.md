@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · 子路径 Web 两包与最终浏览器复验
+
+- 源码本地提交 `f5d00c0839f3f53d82916492448cfa62234e04a7` 后 prepare 生成 dev / `0.1.0`、构建号 **213498463**、时间 `2026-10-07T01:07:43.791Z`；关闭 JS TestBridge 后完整双 bundle、`build:web` 和最终 **56 项发布工具**通过。本批只生成 Web 两包，没有重建或改写旧 APK/HAP/IPA，正式更新公钥仍为 0。
+- 新交付目录 `/tmp/lynx-local-delivery/f5d00c0/`：standalone `songloft-lynx-web.tar.gz` **1315060** 字节、SHA-256 **`d134dee1b03e17d4b22854b19a755ac0bde6ad9f891972ea6ca3853cde0e076b`**；embedded `songloft-lynx-web-embedded.tar.gz` **1315056** 字节、SHA-256 **`f51bc9474ae509e9a7ac48bf56950a4dd71fcc0710cf26cfc792e93b6679bce4`**。共享 bundle SHA-256 **`da84137eaefc415a4a9da8a8ea462835aee86a1ff0cf6eff132d75385a8d1b88`**。实际归档模式、全部 HTML 资源、生产桥及版本通过仓内校验；逐文件哈希确认浏览器直接提供的目录与归档一致，并解码 bundle 内实际元数据对象，全部字段与统一身份相等。结果见 `verification.json`。
+- 首轮手工归档漏放 `version.json`，严格校验拒绝，两份未完成包保留在 `incomplete-first-attempt/`；补入 prepare 的原始元数据后重新归档并通过，没有放宽检查。临时额外身份断言曾假设数字以十进制文本存储；实际产物为 `build_number:0xcb9ba5f`，现按数值解码整个对象核对，不改产物或元数据。
+- 最终 Chrome 153 直接使用新目录，根路径 standalone/embedded 登录、严格 `/songloft/` 两种模式登录/图标/Worker、已安装 Lynx 插件首次通知及 WebView 插件 `host.getInfo` 往返均通过，错误为空。Linux WebKit 18.2 也直接使用新目录，两种子路径模式的 P4 导入/入库/下载、401 刷新重放、500 恢复、取消与认证失效清理通过；P5 播放/暂停、切歌、±5% 音量、偏好重载、重复事件及菜单保护通过，audioErrors/errors 为空。最终校验脚本将归档哈希与浏览器结果写入 `browser-acceptance.json`，不借用源码预览包回执。
+- 首轮最终 P5 在切歌后固定 500ms 检查音量失败，日志保留为 `webkit-keyboard-first-final.log`。重新验证前改为等待实际播放进度/可播放状态，再等待相同的 ±5% 音量断言；两种模式全流程通过，未修改客户端代码或容差。回执保留媒体就绪前的快照和最终状态，不将前一轮标为通过。空音频输出、输入/iframe/组合事件与激活失效夹具边界保持原说明；Safari、Firefox 间歇 Blob 异常与 MIoT 长后台仍开放。
+- Chrome 容器补 CJK 字体仅用于自有测试环境；没有改宿主字体或音频配置。最终自有容器、Go `58192/58193`、静态 `3015–3018` 和临时 PulseAudio 均停止，脚本/截图/日志留在 `/tmp/lynx-web-subpath-acceptance/`。文档双语、中文计划/bugs/交接已同步；源码与文档分批本地提交、父仓库更新子模块指针，不 push。Apple 编译/设备、HarmonyOS 设备/签名、正式更新密钥、通知歌词/锁屏仍按计划继续；未接受待确认的华为协议。
+
 ## 2026-10-07 · Web 前端目录挂载与 embedded 会话恢复
 
 - 从父仓库 `d3e28c3`、客户端 `b1ee20e` 的干净状态继续。旧实现的新增回归先出现 5 项失败；修复宿主页相对资源、升级前绝对 bundle URL/`webBaseUrl`、全部宿主模块和插件子 frame 桥接 URL，以及登录/侧栏/启动图标。静态资源使用页面目录，standalone 的 API 地址仍独立配置，embedded 使用同源目录并忽略旧 `server_url`；原生资源路径保留。

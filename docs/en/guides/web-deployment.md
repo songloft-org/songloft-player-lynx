@@ -58,6 +58,8 @@ On 2026-10-07, both modes were tested on strict servers exposing resources only 
 
 Workers also have self.location, so location availability cannot distinguish deployment modes.
 
+Final acceptance uses the new standalone/embedded packages from source `f5d00c0`, build `213498463`. Linux WebKit playback/track/volume shortcuts and persistence also pass under both subpath modes. Browser-served directories match the actual archives file by file; source identity and receipts are in `/tmp/lynx-local-delivery/f5d00c0/{verification,browser-acceptance}.json` and progress. Input/composition fixtures and null audio output still do not establish operating-system IME or speaker acceptance.
+
 ## Playlist JSON import and export
 
 Settings → Data accepts a previously exported Songloft version 1 JSON backup or exports all server playlists. Web enables this entry only when the host supplies `pickTextFile/saveTextFile/cancelTextFile`; older hosts hide the entry and explain the limitation on the data page.
