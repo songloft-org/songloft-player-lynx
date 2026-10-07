@@ -28,6 +28,7 @@ import { DuplicateCheckPage } from '../../library-ops/pages/DuplicateCheckPage.j
 import { LibraryOpsPage } from '../../library-ops/pages/LibraryOpsPage.js'
 import { PluginManagerPage } from '../../jsplugin/pages/PluginManagerPage.js'
 import { PluginRegistryPage } from '../../jsplugin/pages/PluginRegistryPage.js'
+import { GithubDiscoveryPage } from '../../jsplugin/pages/GithubDiscoveryPage.js'
 import { TabConfigPage } from '../../jsplugin/pages/TabConfigPage.js'
 import { AboutPage } from './AboutPage.js'
 import { releaseAllPluginFrames } from '../../jsplugin/domain/plugin-frame-release.js'
@@ -168,8 +169,15 @@ export function SettingsPage() {
    * navigation entries and highlighting one of them would look like a stuck
    * selection.
    */
-  const isActive = (page: SettingsSubPage) =>
-    isDualColumn && (activeSubPage === page || parentSubPage(activeSubPage) === page)
+  const isActive = (page: SettingsSubPage) => {
+    if (!isDualColumn) return false
+    let current: SettingsSubPage | undefined = activeSubPage
+    while (current) {
+      if (current === page) return true
+      current = parentSubPage(current)
+    }
+    return false
+  }
 
   /*
    * In the dual-column layout the right pane swaps sub-pages in place — the router
@@ -445,7 +453,9 @@ function SettingsDetailPane({
     case 'plugins':
       return <PluginManagerPage onOpenStore={() => onOpenSubPage('registry')} />
     case 'registry':
-      return <PluginRegistryPage onBack={() => onOpenSubPage('plugins')} />
+      return <PluginRegistryPage onBack={() => onOpenSubPage('plugins')} onOpenDiscovery={() => onOpenSubPage('github-discovery')} />
+    case 'github-discovery':
+      return <GithubDiscoveryPage onBack={() => onOpenSubPage('registry')} />
     case 'tab-config':
       return <TabConfigPage />
     case 'cache':

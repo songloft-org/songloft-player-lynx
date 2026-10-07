@@ -63,7 +63,7 @@ import { CreatePlaylistPage, EditPlaylistPage, PlaylistDetailPage } from './feat
 import { HomePage } from './features/home/index.js'
 import { AboutPage, AppearancePage, CacheManagePage, DataPage, DiagnosticsPage, LicensesPage, PlaybackPage, ProxySettingsPage, ServerEditPage, ServerListPage, SettingsPage, ThemeCatalogPage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
-import { PluginManagerPage, PluginRegistryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
+import { PluginManagerPage, PluginRegistryPage, GithubDiscoveryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
 import { DemoFramePage } from './features/jsplugin/pages/DemoFramePage.js'
 import { PlayerPage } from './routes/PlayerPage.js'
 import { EqualizerPage } from './features/player/pages/EqualizerPage.js'
@@ -383,6 +383,12 @@ const pluginRegistryRoute = createRoute({
   component: PluginRegistryPage,
 })
 
+const githubDiscoveryRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/plugins/registry/github',
+  component: GithubDiscoveryPage,
+})
+
 /**
  * `/plugin/$entryPath` — plugin webview page, inside the shell (batch 18).
  *
@@ -537,6 +543,7 @@ const routeTree = rootRoute.addChildren([
     duplicatesRoute,
     pluginsRoute,
     pluginRegistryRoute,
+    githubDiscoveryRoute,
     pluginWebViewRoute,
     tabConfigRoute,
     demoFrameRoute,

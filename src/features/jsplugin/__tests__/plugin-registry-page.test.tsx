@@ -136,7 +136,7 @@ beforeEach(() => {
 
 afterEach(() => vi.clearAllMocks())
 
-async function renderPage(props: { onBack?: () => void } = {}) {
+async function renderPage(props: { onBack?: () => void; onOpenDiscovery?: () => void } = {}) {
   render(<PluginRegistryPage {...props} />)
   // Flush the registries load, the first listing fetch it triggers, and the
   // row render that follows — three chained async layers of state updates.
@@ -409,4 +409,30 @@ test('no sources configured shows the empty state with its add button', async ()
     fireEvent.tap(getByTestId('registry-add-source'))
   })
   expect(queryByTestId('registry-manage-dialog')).toBeInTheDocument()
+})
+
+test('GitHub discovery remains available in the globe menu with no configured sources', async () => {
+  h.registries = []
+  const onOpenDiscovery = vi.fn()
+  const rendered = render(<PluginRegistryPage onOpenDiscovery={onOpenDiscovery} />)
+  await act(async () => { for (let i = 0; i < 20; i++) await Promise.resolve() })
+  await act(async () => { fireEvent.tap(getQueriesForElement(elementTree.root!).getByTestId('registry-source-btn')) })
+  await act(async () => { fireEvent.tap(getQueriesForElement(elementTree.root!).getByTestId('menu-item-__github_discovery__')) })
+  expect(onOpenDiscovery).toHaveBeenCalledOnce()
+  expect(h.navigate).not.toHaveBeenCalled()
+  rendered.unmount()
+  // Return consumes the snapshot rather than reloading the store from page 1.
+  const calls = h.refreshRegistry.mock.calls.length
+  await renderPage()
+  expect(h.refreshRegistry.mock.calls.length).toBe(calls)
+})
+
+test('the standalone globe discovery item opens the independent route', async () => {
+  const rendered = render(<PluginRegistryPage />)
+  await act(async () => { for (let i = 0; i < 20; i++) await Promise.resolve() })
+  await act(async () => { fireEvent.tap(getQueriesForElement(elementTree.root!).getByTestId('registry-source-btn')) })
+  await act(async () => { fireEvent.tap(getQueriesForElement(elementTree.root!).getByTestId('menu-item-__github_discovery__')) })
+  expect(h.navigate).toHaveBeenCalledWith({ to: '/settings/plugins/registry/github' })
+  rendered.unmount()
+  await renderPage()
 })

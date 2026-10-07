@@ -53,6 +53,7 @@ const EXPECTED_PARENTS: Partial<Record<SettingsSubPage, SettingsSubPage>> = {
   'theme-catalog': 'appearance',
   duplicates: 'library',
   registry: 'plugins',
+  'github-discovery': 'registry',
   licenses: 'about',
   'server-form': 'servers',
 }
@@ -71,7 +72,7 @@ describe('SUB_PAGE_ROUTES', () => {
     // The type is a total `Record`, so this is really a guard on the count: 17 rows
     // and drill-ins today. A member added to the union without a route here is a
     // compile error; this catches a member *removed* along with its assertions.
-    expect(SUB_PAGES.length).toBe(17)
+    expect(SUB_PAGES.length).toBe(18)
   })
 
   for (const page of SUB_PAGES) {
@@ -116,13 +117,17 @@ describe('parentSubPage', () => {
     }
   })
 
-  test('the parent of a third-level page is itself a second-level page', () => {
-    // Guards against a chain (A → B → C): the pane's back key steps one level per
-    // press, and the master list highlights exactly one row.
+  test('every drill-in ancestry terminates without a cycle', () => {
     for (const page of Object.keys(EXPECTED_PARENTS) as SettingsSubPage[]) {
       const parent = parentSubPage(page)
       expect(parent).toBeDefined()
-      expect(parentSubPage(parent as SettingsSubPage)).toBeUndefined()
+      const visited = new Set<SettingsSubPage>([page])
+      let current = parent
+      while (current) {
+        expect(visited.has(current)).toBe(false)
+        visited.add(current)
+        current = parentSubPage(current)
+      }
     }
   })
 })

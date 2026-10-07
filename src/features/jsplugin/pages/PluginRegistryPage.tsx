@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from '@lynx-js/react'
+import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
 
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
+import { appConfig } from '../../../core/config/app-config.js'
+import { useScrollMemory } from '../../../shared/nav/scroll-memory.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
@@ -14,6 +17,7 @@ import { getJSPluginApi } from '../api/index.js'
 import type { PluginRegistryConfig } from '../api/index.js'
 import { useGithubProxyQuery } from '../data/jsplugin-query.js'
 import { useInstallFromRegistryMutation } from '../data/jsplugin-mutations.js'
+import { saveRegistryReturnState, takeRegistryReturnState } from '../data/registry-return-state.js'
 import { SubPageShell } from '../../settings/widgets/SubPageShell.js'
 import { RegistryIcon } from '../widgets/RegistryIcon.js'
 import { RegistryManageDialog } from '../widgets/RegistryManageDialog.js'
@@ -21,29 +25,34 @@ import './PluginRegistryPage.css'
 
 /** Sentinel for the aggregated "all sources" picker entry. */
 const ALL_SOURCES = '__all_sources__'
+const GITHUB_DISCOVERY = '__github_discovery__'
 
-export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
+export function PluginRegistryPage({ onBack, onOpenDiscovery }: { onBack?: () => void; onOpenDiscovery?: () => void }) {
+  const navigate = useNavigate()
   const { t } = useTranslation()
+  const returnKey = `${appConfig.resolvedBaseUrl}${appConfig.basePath}`
+  const [restored] = useState(() => takeRegistryReturnState(returnKey))
+  const { initialOffset, onScroll } = useScrollMemory(`plugin-registry:${returnKey}`)
   const installMutation = useInstallFromRegistryMutation()
   const { data: githubProxy } = useGithubProxyQuery()
 
-  const [registries, setRegistries] = useState<PluginRegistryConfig[]>([])
-  const [loadingRegistries, setLoadingRegistries] = useState(true)
+  const [registries, setRegistries] = useState<PluginRegistryConfig[]>(restored?.registries ?? [])
+  const [loadingRegistries, setLoadingRegistries] = useState(!restored?.ready)
   /** The selected single source's URL; null = the aggregated "all" mode. */
-  const [selectedUrl, setSelectedUrl] = useState<string | null>(null)
+  const [selectedUrl, setSelectedUrl] = useState<string | null>(restored?.selectedUrl ?? null)
   const [sourceMenuOpen, setSourceMenuOpen] = useState(false)
   const [manageOpen, setManageOpen] = useState(false)
 
-  const [search, setSearch] = useState('')
-  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState(restored?.search ?? '')
+  const [page, setPage] = useState(restored?.page ?? 1)
   const [loading, setLoading] = useState(false)
   /** Append-fetch in flight (infinite scroll). Keeps the list visible while the
    * next page loads — distinct from `loading`, which replaces the whole list. */
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [plugins, setPlugins] = useState<RegistryPluginEntry[]>([])
-  const [total, setTotal] = useState(0)
-  const [warnings, setWarnings] = useState<string[]>([])
+  const [plugins, setPlugins] = useState<RegistryPluginEntry[]>(restored?.plugins ?? [])
+  const [total, setTotal] = useState(restored?.total ?? 0)
+  const [warnings, setWarnings] = useState<string[]>(restored?.warnings ?? [])
   const [warningsOpen, setWarningsOpen] = useState(false)
   const pageSize = 20
 
@@ -137,10 +146,10 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
    * listing defaults to "all sources" — exactly what Flutter's default
    * selection is — so it never needs the registries answer to start.
    */
-  const [didInit, setDidInit] = useState(false)
+  const [didInit, setDidInit] = useState(!!restored?.ready)
   if (!didInit) {
     setDidInit(true)
-    doFetch(1, '')
+    doFetch(1, restored?.search ?? '')
     void getJSPluginApi().getPluginRegistries()
       .then((list) => {
         setRegistries(list)
@@ -179,6 +188,14 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
   }
 
   const onSourceSelected = (url: string) => {
+    'background only'
+    if (url === GITHUB_DISCOVERY) {
+      saveRegistryReturnState(returnKey, { registries, selectedUrl, search, page, plugins, total, warnings, ready: !loading && !loadingMore && !loadingRegistries && !error })
+      setSourceMenuOpen(false)
+      if (onOpenDiscovery) onOpenDiscovery()
+      else void navigate({ to: '/settings/plugins/registry/github' })
+      return
+    }
     const allSources = url === ALL_SOURCES
     const source = registries.find((r) => r.url === url)
     setSelectedUrl(allSources ? null : url)
@@ -284,6 +301,8 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
       label: r.name || r.url,
       selected: selectedUrl === r.url,
     })),
+    { key: 'community', label: t('githubDiscovery.community'), kind: 'header' },
+    { key: GITHUB_DISCOVERY, label: t('githubDiscovery.title'), icon: 'globe' },
   ]
 
   const hasNext = page * pageSize < total
@@ -321,19 +340,15 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
       contentClassName='plugin-registry__content'
       actions={(
         <view className='plugin-registry__topbar-actions'>
-          {registries.length > 0
-            ? (
-              <PopoverMenu
-                show={sourceMenuOpen}
-                onShowChange={setSourceMenuOpen}
-                placement='bottom-end'
-                triggerClassName='plugin-registry__topbar-btn'
-                trigger={<Icon name='globe' size={18} color={ICON_COLORS.content} testId='registry-source-btn' />}
-                items={sourceItems}
-                onSelect={onSourceSelected}
-              />
-            )
-            : null}
+          <PopoverMenu
+            show={sourceMenuOpen}
+            onShowChange={setSourceMenuOpen}
+            placement='bottom-end'
+            triggerClassName='plugin-registry__topbar-btn'
+            trigger={<Icon name='globe' size={18} color={ICON_COLORS.content} testId='registry-source-btn' />}
+            items={sourceItems}
+            onSelect={onSourceSelected}
+          />
           <view
             className='plugin-registry__topbar-btn'
             bindtap={onForceRefresh}
@@ -444,6 +459,8 @@ export function PluginRegistryPage({ onBack }: { onBack?: () => void }) {
               <scroll-view
                 className='plugin-registry__scroll'
                 scroll-y
+                initial-scroll-offset={initialOffset}
+                bindscroll={onScroll}
                 lower-threshold={200}
                 bindscrolltolower={onEndReached}
                 data-testid='registry-scroll'

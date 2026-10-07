@@ -30,6 +30,7 @@ export type SettingsSubPage =
   | 'duplicates'
   | 'plugins'
   | 'registry'
+  | 'github-discovery'
   | 'tab-config'
   | 'cache'
   | 'cache-tasks'
@@ -68,6 +69,7 @@ export const SUB_PAGE_ROUTES: Record<SettingsSubPage, string> = {
   duplicates: '/settings/duplicates',
   plugins: '/settings/plugins',
   registry: '/settings/plugins/registry',
+  'github-discovery': '/settings/plugins/registry/github',
   'tab-config': '/settings/tab-config',
   cache: '/settings/cache',
   'cache-tasks': '/settings/cache-tasks',

@@ -147,6 +147,7 @@ vi.mock('../features/jsplugin/index.js', () => ({
   PluginTabIcon: () => null,
   PluginManagerPage: () => null,
   PluginRegistryPage: () => null,
+  GithubDiscoveryPage: () => null,
   PluginWebViewPage: () => null,
   TabConfigPage: () => null,
 }))

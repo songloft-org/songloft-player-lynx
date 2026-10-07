@@ -1,5 +1,6 @@
 export { PluginManagerPage } from './pages/PluginManagerPage.js'
 export { PluginRegistryPage } from './pages/PluginRegistryPage.js'
+export { GithubDiscoveryPage } from './pages/GithubDiscoveryPage.js'
 export { PluginWebViewPage } from './pages/PluginWebViewPage.js'
 export { TabConfigPage } from './pages/TabConfigPage.js'
 export { PluginGrid } from './widgets/PluginGrid.js'

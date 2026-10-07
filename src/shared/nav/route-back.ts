@@ -79,6 +79,7 @@ const EXPLICIT_PARENTS: Record<string, string> = {
   '/settings/servers/add': '/settings/servers',
   '/settings/duplicates': '/settings/library',
   '/settings/plugins/registry': '/settings/plugins',
+  '/settings/plugins/registry/github': '/settings/plugins/registry',
   '/settings/theme-catalog': '/settings/appearance',
   '/player/lyrics/adjust': '/player',
   '/player/dlna': '/player',
