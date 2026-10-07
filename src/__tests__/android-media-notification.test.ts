@@ -12,6 +12,18 @@ describe('Android notification lyric bridge', () => {
     expect(module).toMatch(/@LynxMethod\s+fun updateNotificationLyric\(lyric: String\?, inTitle: Boolean\)/)
     expect(module).toMatch(/runOnMain\s*\{\s*SongloftAudioEngine\.updateNotificationLyric\(lyric, inTitle\)/)
   })
+
+  test('system seeks publish progress while paused, scoped to the current source', () => {
+    const engine = readFileSync(path.join(audioDir, 'SongloftAudioEngine.kt'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
+    const callback = /override fun onPositionDiscontinuity\([\s\S]*?\n {8}\}/.exec(engine)?.[0] ?? ''
+    expect(callback, 'MediaSession seeks bypass the facade seek method').toMatch(
+      /if \(reason != Player\.DISCONTINUITY_REASON_SEEK &&\s*reason != Player\.DISCONTINUITY_REASON_SEEK_ADJUSTMENT\s*\) return/,
+    )
+    expect(callback).toMatch(/currentSourceId != null && newPosition\.mediaItem\?\.mediaId != currentSourceId\) return/)
+    expect(callback).toContain('emitProgress()')
+    expect(callback).not.toContain('isPlaying')
+  })
 })
 
 /**

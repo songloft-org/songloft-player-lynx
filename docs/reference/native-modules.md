@@ -98,6 +98,7 @@ Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 **7 个**模块：`Songlo
 - `load` 的 `opts` **永远传对象、不传 `null`**：iOS 按方法签名构造 ObjC 调用，对象参数为 nil 会每次换歌打一条 `LynxError`。
 - 音量只在 store 层从 0–100 整数换算一次为 0–1 浮点；四端 facade / module / engine 均透传 0–1。HarmonyOS 不得再次 `/ 100`，契约闸门直接锁住该调用形状。
 - Android 的**通知位（notification id 1001）只能有一个主人**：`SongloftPlaybackService` 的 FGS 占位通知与 media3 `DefaultMediaNotificationProvider` 共用该 id，占位只允许在 media3 未持有时发（`mediaNotificationOwnsSlot`，在 `onUpdateNotification` 里先赋值再 `super`）。闸门 `src/__tests__/android-media-notification.test.ts`；机制与实测判据见 [pitfalls §3](../project/pitfalls.md)。
+- Android 系统媒体滑块直接定位播放器；`Player.Listener.onPositionDiscontinuity` 在 SEEK/SEEK_ADJUSTMENT 时按当前 sourceId 发布既有进度事件，让暂停时歌词和 UI 位置也能更新。周期进度仍只在播放时运行；来源/负例和设备复验边界见 progress。
 
 P6b：HarmonyOS `setQueue` 按播放 URL 保存 id/歌曲/歌手/封面/时长，加载时写入 AVSession；歌词标题模式以歌词作 title、歌曲作 subtitle，副标题模式保留歌曲 title、歌词作 subtitle，artist/封面/时长不变。清空、停止和切源恢复歌曲信息，暂停保留当前歌词；元数据/播放状态串行写入，旧源进度不改新歌时长，SDK 卡片失败不阻止音频播放。API 依据见 [OpenHarmony 5.0 AVSession 声明](https://github.com/openharmony/interface_sdk-js/blob/OpenHarmony-5.0.0-Release/api/%40ohos.multimedia.avsession.d.ts)。不把当前行伪装成要求 LRC 格式的 `lyric` 字段。
 

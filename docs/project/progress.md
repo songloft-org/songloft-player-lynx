@@ -1,5 +1,12 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · Android 暂停时系统定位遗漏歌词同步
+
+- 用 `f5d00c0` 新 Debug APK（构建号 `213498463`、SHA-256 `dffa433d1508170e2b3bba96d1a0e9a4e2bb4f6dad560bb1fe3684e0d5585351`）在 API 34 / Mesa / arm64 native bridge 复验。42 项 JVM 与 APK 组装通过，重新安装后直接读取 base.apk 的哈希一致；包内统一身份/native bundle 已校验，JS TestBridge 关闭。原有 Web 两包与 `verification.json` 不改，本次 APK 单独记录在同目录 `android-verification.json`。
+- 私有后端 `58192` 创建两首实际 MP3 和歌单 `28`：歌曲 `259` 含定时歌词与 `36–48s` 空行，`260` 无歌词。实际通知的标题/第二行模式、暂停保留当前行均通过。系统通知滑块把暂停位置从 `32568ms` 改为 `45009ms`，媒体会话已更新，但卡片仍是 `QA THIRD LINE`；重新播放到 `46856ms` 后才恢复 `Native QA`。证据在 `/tmp/lynx-android-notification-acceptance/`，没有注入 JS 或直接操作数据库。
+- 原因是 MediaSession 直接定位 ExoPlayer，绕过引擎 `seek()` 的 `emitProgress()`；暂停时周期进度已停止，JS 收不到新位置。引擎新增 `onPositionDiscontinuity`，只处理 SEEK/SEEK_ADJUSTMENT 并核对当前 sourceId，向既有进度事件发布新位置。API 依据为 [Media3 Player.Listener](https://developer.android.com/reference/androidx/media3/common/Player.Listener#onPositionDiscontinuity(androidx.media3.common.Player.PositionInfo,androidx.media3.common.Player.PositionInfo,int))。不为此恢复播放或开启后台轮询。新增源码闸门在旧实现上 1 失败 / 16 通过，缺陷实测回执保留；新原生包与定位/锁屏设备复验继续。
+- **287 文件 / 3082 项 JS、56 项发布工具、tsc -b、Lynx/Web 双 bundle、42 项 JVM 与 assembleDebug** 通过。原生 43 个任务（8 执行、35 up-to-date）；日志 `/tmp/lynx-android-notification-{negative,positive-final,js-tests,release-tests,types,bundle,fixed-build}.log`。diff/UTF-8/U+FFFD 干净。此处的编译包还沿用先前身份，不作为修复交付；先本地提交源码，再 prepare 新身份并重建/安装复验。整项 P6b、HarmonyOS/iOS 设备与 Apple 编译仍开放，不 push。
+
 ## 2026-10-07 · 子路径 Web 两包与最终浏览器复验
 
 - 源码本地提交 `f5d00c0839f3f53d82916492448cfa62234e04a7` 后 prepare 生成 dev / `0.1.0`、构建号 **213498463**、时间 `2026-10-07T01:07:43.791Z`；关闭 JS TestBridge 后完整双 bundle、`build:web` 和最终 **56 项发布工具**通过。本批只生成 Web 两包，没有重建或改写旧 APK/HAP/IPA，正式更新公钥仍为 0。

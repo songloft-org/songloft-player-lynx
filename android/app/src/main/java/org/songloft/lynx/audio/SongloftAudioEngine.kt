@@ -1020,6 +1020,21 @@ object SongloftAudioEngine {
     // -- ExoPlayer listener -> facade events -----------------------------------
 
     private val playerListener = object : Player.Listener {
+        // MediaSession controllers seek directly on the player, bypassing seek().
+        // Paused playback has no progress tick, so publish the new position here
+        // to update lyrics and the saved UI position without restarting playback.
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int,
+        ) {
+            if (reason != Player.DISCONTINUITY_REASON_SEEK &&
+                reason != Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT
+            ) return
+            if (currentSourceId != null && newPosition.mediaItem?.mediaId != currentSourceId) return
+            emitProgress()
+        }
+
         /**
          * The media notification renders exactly this metadata, so logging it
          * closes the loop between "we replaced the item" and "the session
