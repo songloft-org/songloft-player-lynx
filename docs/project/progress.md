@@ -1,5 +1,15 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · iOS 远程插件模板入口与 Apple 原生验证程序
+
+- 父仓库 `00d5b78`、客户端 `3d76c3a` 起始干净。延续已批准 P6c，核对官方 Lynx 4.0.1 的 iOS builder/动态组件/模板协议后，控制器保留一个 provider，同步接根 config、旧动态和新模板 fetcher；没有启用 generic resource 模式。新增远程分支，根资源名 `main.lynx` 的磁盘候选选择/验签回退保持原调用链。新版返回 Data 包装，ObjC bridge 显式使用 SDK `initWithNSData:`；SSR 返回不支持。未修改视频、桌面或本地后端。
+- 新 `PluginTemplateTransfer` 使用独立 ephemeral URLSession，不继承 Cookie/credential/cache 存储；HTTP/HTTPS 地址拒绝 userinfo/控制字符，重定向原 Location 与最终请求均校验并重建请求、最多五次。30 秒请求/总资源超时，50 MiB 已知/未知长度限额；非 2xx/空内容/超额失败。`InsecureTls` 新增加锁监听，设置变化时取消独立模板会话；回调锁内去重，锁外移除监听/失效 session/通知结果，避免持锁调用业务回调。常规 trust challenge 复用已有策略，根更新器仍用独立系统 TLS。
+- Xcode 项目登记新 Swift 源文件；原生契约中 module 注册提取器原先写死 `buildConfig()` 无参声明，注入 provider 后先复现收集失败，改为按函数名定位，保持函数体/去注释/实际 register 调用检查。307 项契约通过，不能据此证明 Swift 编译或动态 fetcher 设备效果。
+- Apple CI 已配置 `verify-ios-templates.swift`，编译实际 Foundation 下载器与 `InsecureTls`，新增 loopback HTTP/自签 HTTPS 夹具；程序计划核对原始二进制、默认凭据/Cookie 隔离、404/401/空内容、已知/未知长度、五次重定向与 userinfo、超时、自签拒绝→显式允许→再拒绝、并发/TLS 取消与监听回收。**当前程序尚未编译或执行**；没有 push/触发云构建。本机 `xcodebuild -list -project ios/SongloftLynx.xcodeproj` 明确退出 127，日志 `/tmp/lynx-ios-template-xcode-list.log`，缺 Xcode/swiftc。
+- 私有临时目录创建测试证书，实际启动 Python 双端口夹具，核对二进制/普通重定向、空内容、HTTP 状态、已知/未知长度、自签 HTTPS 拒绝和显式跳过、空凭据统计，smoke 通过；进程按自有句柄退出并删除临时证书，日志 `/tmp/lynx-ios-template-fixture-smoke.log`。这只验证未来 Apple 程序依赖的夹具，不是 Swift 测试。
+- 自审发现原兼容声明没有反映三端模板加载器修复：旧 bridge 3 / schema 2 快照缺此原生能力却仍可通过后续 bundle 检查。给签名发布工具新增能力断言，先在旧契约下验证失败（`/tmp/lynx-ios-template-capability-before.log`），再增加 `pluginFrame.templates.v1` 到必需能力；新的不可变壳快照/三端签名目标都会含此标记。旧壳检查新版时走 capability 不兼容与同通道安装包，UI 检查回归确认不放行 bundle/不调用原生签名检查。原四包及 `9bfd35c` APK 的快照/哈希不改写；桥接 3/schema 2 不变，没有新的方法 ABI 或本地数据格式。中英更新协议同步。
+- 最终 **286 文件 / 3063 项 JS、55 项发布工具、tsc -b、双 bundle** 通过，`.build/bundle-host.json` 实际包含新模板能力；日志 `/tmp/lynx-ios-template-final-{js-tests,release-tests,types,bundle-build}.log` 保留。workflow YAML/bash/Python 语法与步骤顺序检查通过，未执行 Apple 步骤；现有 sourcemap/`touch-action` 警告保留。逐项自审 URL/状态/字节限额、回调与锁顺序/清理、provider 持有/根更新调用链和不可变能力匹配，`git diff --check`、UTF-8/替换字符检查通过。双语交接、中文原生参考/bugs/计划同步，iOS 编译及 iOS/HarmonyOS 新壳安装/恢复、MIoT 长后台/断网重连继续开放；三端原生加载器改动都不能靠仅更新 bundle 生效。用户 `58091` 保留，仅本地分批提交，不 push。
+
 ## 2026-10-07 · HarmonyOS 远程插件模板接线与真实 SDK 编译
 
 - 从父仓库 `38631c2`、客户端 `4806e9c` 继续，先前 Android frame 加载与 SDK 子订阅修复保留。对照 Lynx 4.0.1 的实际 HarmonyOS SDK：`Index.ets` 原先只有 generic/media fetcher，模板 provider 未设置；SDK 将模板 fetcher 传入子运行时。因此新增 `SongloftTemplateResourceFetcher` 并在 LynxView 注册，根模板仍由 `BundleUpdateStore.beginLaunch()` 选择后直接构造 `TemplateBundle`，没有借插件下载绕过根模板验签。iOS 原 provider 确认只读 Bundle.main，后续继续补其远程配置；未在本批修改 Swift。

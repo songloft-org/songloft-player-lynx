@@ -197,6 +197,24 @@ jobs:
           test -s "$CACHE_PORT_FILE"
           swiftc -swift-version 5 ios/SongloftLynx/SongCacheStore.swift ios/SongloftLynx/SongCacheTransfer.swift scripts/verify-ios-cache.swift -o "$RUNNER_TEMP/verify-ios-cache"
           "$RUNNER_TEMP/verify-ios-cache" "$(cat "$CACHE_PORT_FILE")"
+      - name: Verify plugin templates with Apple Foundation and real HTTP/TLS
+        run: |
+          set -euo pipefail
+          TEMPLATE_FIXTURE_DIR=$(mktemp -d "$RUNNER_TEMP/templates.XXXXXX")
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost \
+            -keyout "$TEMPLATE_FIXTURE_DIR/key.pem" -out "$TEMPLATE_FIXTURE_DIR/cert.pem"
+          python3 scripts/fixtures/template-http-server.py --port-file "$TEMPLATE_FIXTURE_DIR/ports.json" \
+            --cert "$TEMPLATE_FIXTURE_DIR/cert.pem" --key "$TEMPLATE_FIXTURE_DIR/key.pem" &
+          TEMPLATE_SERVER_PID=$!
+          trap 'kill "$TEMPLATE_SERVER_PID" 2>/dev/null || true; wait "$TEMPLATE_SERVER_PID" 2>/dev/null || true; rm -rf "$TEMPLATE_FIXTURE_DIR"' EXIT
+          for attempt in $(seq 1 50); do
+            if [ -s "$TEMPLATE_FIXTURE_DIR/ports.json" ]; then break; fi
+            sleep 0.1
+          done
+          test -s "$TEMPLATE_FIXTURE_DIR/ports.json"
+          swiftc -swift-version 5 ios/SongloftLynx/InsecureTls.swift ios/SongloftLynx/PluginTemplateTransfer.swift \
+            scripts/verify-ios-templates.swift -o "$TEMPLATE_FIXTURE_DIR/verify-ios-templates"
+          "$TEMPLATE_FIXTURE_DIR/verify-ios-templates" "$TEMPLATE_FIXTURE_DIR/ports.json"
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"

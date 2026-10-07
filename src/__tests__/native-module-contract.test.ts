@@ -1674,8 +1674,8 @@ describe('every native module is registered in the host bootstrap', () => {
    *    same substring-vs-semantics trap as batch 39's pbxproj gate.
    */
   const buildConfigBody = ((): string => {
-    const start = hosts.iosViewController.indexOf('private static func buildConfig()')
-    expect(start, 'buildConfig() not found in ViewController.swift').toBeGreaterThan(-1)
+    const start = hosts.iosViewController.indexOf('private static func buildConfig(')
+    expect(start, 'buildConfig declaration not found in ViewController.swift').toBeGreaterThan(-1)
     return hosts.iosViewController
       .slice(start, hosts.iosViewController.indexOf('\n  }', start))
       .replace(/\/\*[\s\S]*?\*\//g, '')

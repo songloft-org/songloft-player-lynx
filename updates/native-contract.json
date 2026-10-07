@@ -3,7 +3,7 @@
   "bridge_version": 3,
   "local_schema": 2,
   "minimum_host_version": "0.1.0",
-  "required_capabilities": ["audio.sourceLoad.v1", "updater.v1", "updater.metadata.v1", "songCache.v2"],
+  "required_capabilities": ["audio.sourceLoad.v1", "updater.v1", "updater.metadata.v1", "songCache.v2", "pluginFrame.templates.v1"],
   "engines": {
     "android": "4.0.0",
     "ios": "4.0.1",

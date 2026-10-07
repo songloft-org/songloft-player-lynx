@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AD0000000000000000000001 /* PluginTemplateTransfer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD0000000000000000000011 /* PluginTemplateTransfer.swift */; };
 		AC0000000000000000000001 /* SongCacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000011 /* SongCacheStore.swift */; };
 		AC0000000000000000000002 /* SongCacheTransfer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000012 /* SongCacheTransfer.swift */; };
 		AB0000000000000000000001 /* BundleUpdateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000011 /* BundleUpdateStore.swift */; };
@@ -39,6 +40,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		AD0000000000000000000011 /* PluginTemplateTransfer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginTemplateTransfer.swift; sourceTree = "<group>"; };
 		AC0000000000000000000011 /* SongCacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongCacheStore.swift; sourceTree = "<group>"; };
 		AC0000000000000000000012 /* SongCacheTransfer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongCacheTransfer.swift; sourceTree = "<group>"; };
 		AB0000000000000000000011 /* BundleUpdateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleUpdateStore.swift; sourceTree = "<group>"; };
@@ -136,6 +138,7 @@
 				AA0000000000000000000044 /* SongloftSongCacheModule.swift */,
 				AC0000000000000000000011 /* SongCacheStore.swift */,
 				AC0000000000000000000012 /* SongCacheTransfer.swift */,
+				AD0000000000000000000011 /* PluginTemplateTransfer.swift */,
 				AB0000000000000000000011 /* BundleUpdateStore.swift */,
 				AB0000000000000000000012 /* BundleUpdateTransfer.swift */,
 				AB0000000000000000000013 /* SongloftUpdateModule.swift */,
@@ -295,6 +298,7 @@
 				AA0000000000000000000045 /* SongloftSongCacheModule.swift in Sources */,
 				AC0000000000000000000001 /* SongCacheStore.swift in Sources */,
 				AC0000000000000000000002 /* SongCacheTransfer.swift in Sources */,
+				AD0000000000000000000001 /* PluginTemplateTransfer.swift in Sources */,
 				AB0000000000000000000001 /* BundleUpdateStore.swift in Sources */,
 				AB0000000000000000000002 /* BundleUpdateTransfer.swift in Sources */,
 				AB0000000000000000000003 /* SongloftUpdateModule.swift in Sources */,

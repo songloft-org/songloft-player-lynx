@@ -42,6 +42,28 @@ final class InsecureTls: NSObject {
   /// read on `URLSession` delegate queues.
   private let lock = NSLock()
   private var _enabled = false
+  private var listeners: [UUID: () -> Void] = [:]
+
+  /// Per-request sessions use these hooks to stop when the trust policy changes.
+  func addListener(_ listener: @escaping () -> Void) -> UUID {
+    lock.lock()
+    defer { lock.unlock() }
+    let id = UUID()
+    listeners[id] = listener
+    return id
+  }
+
+  func removeListener(_ id: UUID) {
+    lock.lock()
+    defer { lock.unlock() }
+    listeners.removeValue(forKey: id)
+  }
+
+  var listenerCount: Int {
+    lock.lock()
+    defer { lock.unlock() }
+    return listeners.count
+  }
 
   var enabled: Bool {
     lock.lock()
@@ -80,8 +102,10 @@ final class InsecureTls: NSObject {
     _enabled = value
     let stale = _session
     _session = nil
+    let notify = Array(listeners.values)
     lock.unlock()
     stale?.invalidateAndCancel()
+    for listener in notify { listener() }
   }
 
   private var _session: URLSession?
@@ -137,4 +161,3 @@ extension InsecureTls: URLSessionDelegate {
     completionHandler(disposition, credential)
   }
 }
-

@@ -2,9 +2,9 @@ import UIKit
 
 /**
  * Single host view controller: builds one `LynxView`, points it at the
- * `SongloftTemplateProvider` (reads the bundle embedded in app resources) and
- * renders `main.lynx.bundle`. No dev server, no LynxExplorer — fully offline,
- * exactly like the Android host's `MainActivity`.
+ * `SongloftTemplateProvider` and renders the selected local root bundle.
+ * The same provider fetches remote plugin frames; root startup still works
+ * from the embedded bundle or a verified disk update without a dev server.
  *
  * Structure (builder block, `preferredLayout*` + `.exact` layout modes,
  * `loadTemplate(fromURL:)`) is copied from the official
@@ -61,6 +61,7 @@ class ViewController: UIViewController {
   private static let bundleURL = "main.lynx"
 
   private var lynxView: LynxView?
+  private let templateProvider = SongloftTemplateProvider()
   private let updateLifecycle = UpdateLifecycleClient()
   /// Full-screen container hosting the video `AVPlayerLayer`, sits **below** the
   /// LynxView so the page paints every control above the picture — same layering
@@ -189,8 +190,11 @@ class ViewController: UIViewController {
     // It is the full screen, which is now also what the layout viewport is — the
     // two only diverged while the view was inset.
     let screenSize = view.window?.windowScene?.screen.bounds.size ?? view.bounds.size
+    let provider = templateProvider
     let lynxView = LynxView { builder in
-      builder.config = Self.buildConfig()
+      builder.config = Self.buildConfig(provider: provider)
+      builder.fetcher = provider
+      builder.templateResourceFetcher = provider
       builder.screenSize = screenSize
       builder.fontScale = 1.0
     }
@@ -268,8 +272,8 @@ class ViewController: UIViewController {
    * have to be registered by hand, and the `methodLookup` tables inside them are
    * the only description of their JS surface.
    */
-  private static func buildConfig() -> LynxConfig {
-    let config = LynxConfig(provider: SongloftTemplateProvider())
+  private static func buildConfig(provider: SongloftTemplateProvider) -> LynxConfig {
+    let config = LynxConfig(provider: provider)
     config.register(SongloftAudioModule.self)
     config.register(SongloftStorageModule.self)
     config.register(SongloftPlatformModule.self)

@@ -49,6 +49,16 @@ test('stable uses latest only, never retries on a signature failure and never se
   expect(await checkClientUpdate({ proxy: '' })).toMatchObject({ comparison: 'newer', bundleURL: null, bundleReason: 'signature_invalid' })
   expect(mocks.resolve).toHaveBeenCalledExactlyOnceWith({ channel: 'stable', proxy: '', force: false })
 })
+test('a shell without remote plugin templates offers a full package in its own channel', async () => {
+  const remote = candidate()
+  for (const target of remote.manifest.bundle_update.targets)
+    target.required_capabilities.push('pluginFrame.templates.v1')
+  mocks.resolve.mockResolvedValue(remote)
+  const result = await checkClientUpdate({ proxy: '' })
+  expect(result).toMatchObject({ comparison: 'newer', bundleURL: null, bundleReason: 'capability' })
+  expect(mocks.resolve).toHaveBeenCalledExactlyOnceWith({ channel: 'dev', proxy: '', force: false })
+  expect(mocks.inspect).not.toHaveBeenCalled()
+})
 test('an older shell cannot use business fetch as a fallback; Web always offers its deployment package', async () => {
   mocks.metadata = false
   await expect(checkClientUpdate({ proxy: '' })).rejects.toThrow('metadata_unavailable')
