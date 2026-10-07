@@ -4,6 +4,8 @@
 
 ## 1. 当前完成度
 
+Android/HarmonyOS 已新增实际更新器的 RSA 签名回归，验证 bridge 3/schema 2 不变时，缺少 `pluginFrame.templates.v1` 的旧壳拒绝新版 bundle，新壳接受，旧实例快照保持不变；公共历史签名向量不改写。14 项 Android 更新器 JVM、7 项 HarmonyOS 源码适配器及 56 项发布工具测试通过；隔离副本移除能力检查后新用例按预期失败。含此标记的新 APK/HAP 仍待重建，设备与 Apple 编译边界保留，见 progress。
+
 iOS 已在源码中补远程插件模板加载：同一个 `SongloftTemplateProvider` 由控制器持有，接到根 config、动态 fetcher 和新版模板 fetcher；根资源选择/验签更新回退保留。新增独立 URLSession 流式下载器，50 MiB/30 秒、最多五次重定向，不继承账号 Cookie/凭据，TLS 设置变化取消在途请求并清理监听。Apple CI 新增实际 Foundation/TLS 下载验证程序，尚未编译或执行；本机 `xcodebuild -list` 因工具缺失退出 127。结构闸门和本地 HTTP/TLS 夹具通过不代表 Swift/SDK/设备通过，详见 progress。兼容契约新增 `pluginFrame.templates.v1`，旧壳检查后续 bundle 会引导同通道新安装包，既有快照不改写。三端加载器接线源码现已补齐，但 iOS 编译、iOS/HarmonyOS 新壳安装与插件恢复验收继续开放；仅本地提交，不 push。
 
 HarmonyOS 已补远程插件模板 fetcher，并在 `Index.ets` 的 LynxView 中注册。根模板仍由 `BundleUpdateStore` 选择后直接构造 `TemplateBundle`；远程下载采用独立 RCP session、50 MiB 流式限额、30 秒传输时限、最多五次重定向，不附账号凭据，复用用户 TLS 开关并在设置变化时取消在途请求。8 项实际源码 Node HTTP/TLS 适配器测试及真实 SDK clean HAP 编译通过，详见 progress；适配器不是设备验证。需要安装包含此修复的新原生壳，旧 `e09592b` HAP 不含本次接线且哈希未改。HarmonyOS 设备加载/恢复仍开放，iOS 后续已补远程模板接线源码，编译与设备验收仍开放。仅本地提交，不 push。

@@ -165,6 +165,42 @@ class BundleUpdateStoreTest {
         }
     }
 
+    @Test fun pluginTemplateCapabilityRequiresANewShellWithoutChangingBridgeOrSchema() {
+        Fixture().use { fixture ->
+            fixture.host.put("bridge_version", 3).put("local_schema", 2)
+            fixture.manifest.getJSONObject("bundle_update").put("local_schema", 2)
+            val legacyTargets = fixture.manifest.getJSONObject("bundle_update").getJSONArray("targets")
+            for (index in 0 until legacyTargets.length()) {
+                legacyTargets.getJSONObject(index).put("minimum_bridge", 3).put("maximum_bridge", 3)
+            }
+            val oldHost = JSONObject(fixture.host.toString())
+            val oldStore = BundleUpdateStore(fixture.root, oldHost)
+            val legacyRaw = fixture.manifest.toString()
+            assertEquals("dev", oldStore.inspect(legacyRaw, fixture.envelope(legacyRaw)).getString("channel"))
+
+            val next = JSONObject(legacyRaw)
+            val targets = next.getJSONObject("bundle_update").getJSONArray("targets")
+            for (index in 0 until targets.length()) {
+                targets.getJSONObject(index).getJSONArray("required_capabilities").put("pluginFrame.templates.v1")
+            }
+            val raw = next.toString()
+            val signature = fixture.envelope(raw)
+            fails("incompatible_capability") { oldStore.inspect(raw, signature) }
+            assertNull(oldStore.info().optJSONObject("pending"))
+
+            val newHost = JSONObject(oldHost.toString())
+            newHost.getJSONArray("capabilities").put("pluginFrame.templates.v1")
+            val newStore = BundleUpdateStore(fixture.root, newHost)
+            assertEquals(oldHost.getInt("bridge_version"), newHost.getInt("bridge_version"))
+            assertEquals(oldHost.getInt("local_schema"), newHost.getInt("local_schema"))
+            assertEquals(3, newHost.getInt("bridge_version"))
+            assertEquals(2, newHost.getInt("local_schema"))
+            assertEquals("dev", newStore.inspect(raw, signature).getString("channel"))
+            assertEquals("dev", newStore.inspect(legacyRaw, fixture.envelope(legacyRaw)).getString("channel"))
+            fails("incompatible_capability") { oldStore.inspect(raw, signature) }
+        }
+    }
+
     @Test fun realDownloadActivatesOnlyOnColdStartAndConfirmationPersists() {
         Fixture().use { fixture -> Server(fixture.root, fixture.data).use { server ->
             val first = fixture.store(server.client)

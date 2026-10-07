@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · 新旧原生壳的插件模板能力验签回归
+
+- 从父仓库 `d1d8938`、客户端 `8068a15` 的干净状态继续。为 Android 和 HarmonyOS 实际更新器新增 RSA 签名回归：旧壳/新壳保持 bridge 3、schema 2，只有新快照具有 `pluginFrame.templates.v1`；旧壳拒绝需要此能力的 bundle 且不创建 pending，新壳接受新旧两种清单，创建新壳不会改变旧实例的不可变快照。公共 bridge 1/schema 1 签名向量未改写；本测试单独生成密钥与签名，并明确设置当前桥接范围和 schema。
+- Android **14 项更新器 JVM 测试**通过；HarmonyOS **7 项实际 ArkTS 源码适配器测试**通过，使用真实 RSA 和文件系统，但不证明 SDK/设备行为。隔离副本先通过新用例，再移除能力检查后按预期失败，错误为 `Missing expected exception`，日志 `/tmp/lynx-capability-negative-{positive,removed-guard}.log`；未改动工作树内更新器或旧包。
+- **286 文件 / 3063 项 JS、56 项发布工具、tsc -b** 通过；日志 `/tmp/lynx-native-capability-{js-tests,release-tests,types,android-tests,harmony-tests}.log`。当前仍需用新源码提交统一生成构建身份并重建含能力标记的 APK/HAP；不把旧包标为新能力，不把转译测试标为 HarmonyOS 设备验收。仅本地分批提交，不 push。
+
 ## 2026-10-07 · iOS 远程插件模板入口与 Apple 原生验证程序
 
 - 父仓库 `00d5b78`、客户端 `3d76c3a` 起始干净。延续已批准 P6c，核对官方 Lynx 4.0.1 的 iOS builder/动态组件/模板协议后，控制器保留一个 provider，同步接根 config、旧动态和新模板 fetcher；没有启用 generic resource 模式。新增远程分支，根资源名 `main.lynx` 的磁盘候选选择/验签回退保持原调用链。新版返回 Data 包装，ObjC bridge 显式使用 SDK `initWithNSData:`；SSR 返回不支持。未修改视频、桌面或本地后端。

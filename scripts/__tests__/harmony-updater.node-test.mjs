@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { createHash, createPublicKey, verify } from 'node:crypto'
+import { createHash, createPublicKey, generateKeyPairSync, sign, verify } from 'node:crypto'
 import * as fs from 'node:fs'
 import https from 'node:https'
 import { tmpdir } from 'node:os'
@@ -148,6 +148,42 @@ test('HarmonyOS core verifies the shared raw UTF-8 vector and rejects tampering/
     assert.throws(() => env.make().inspect(vector.raw_manifest, JSON.stringify(vector.envelope)), new RegExp(code))
     Object.assign(env.host, saved)
   }
+})
+
+test('HarmonyOS signed plugin-template capability requires a new immutable shell snapshot', t => {
+  const env = native(t)
+  const pair = generateKeyPairSync('rsa', { modulusLength: 2048 })
+  const spki = pair.publicKey.export({ type: 'spki', format: 'der' })
+  env.host.trusted_keys = [{ key_id: 'template-test', key_bits: 2048,
+    algorithm: 'rsa-pkcs1v15-sha256', spki_base64: spki.toString('base64') }]
+  env.host.bridge_version = 3
+  env.host.local_schema = 2
+  const legacy = JSON.parse(vector.raw_manifest)
+  legacy.bundle_update.local_schema = 2
+  for (const target of legacy.bundle_update.targets) {
+    target.minimum_bridge = 3
+    target.maximum_bridge = 3
+  }
+  const legacyRaw = JSON.stringify(legacy)
+  const envelope = raw => JSON.stringify({ protocol: 1, key_id: 'template-test',
+    algorithm: 'rsa-pkcs1v15-sha256', signature: sign('RSA-SHA256', Buffer.from(raw), pair.privateKey).toString('base64') })
+  const old = env.make()
+  assert.equal(old.inspect(legacyRaw, envelope(legacyRaw)).channel, 'dev')
+  const next = JSON.parse(legacyRaw)
+  for (const target of next.bundle_update.targets) target.required_capabilities.push('pluginFrame.templates.v1')
+  const raw = JSON.stringify(next), signature = envelope(raw)
+  assert.throws(() => old.inspect(raw, signature), /incompatible_capability/)
+  assert.equal(old.info().pending, null)
+  const bridge = env.host.bridge_version, schema = env.host.local_schema
+  env.host.capabilities.push('pluginFrame.templates.v1')
+  const upgraded = env.make()
+  assert.equal(upgraded.inspect(raw, signature).channel, 'dev')
+  assert.equal(upgraded.inspect(legacyRaw, envelope(legacyRaw)).channel, 'dev')
+  assert.equal(upgraded.info().host.bridge_version, bridge)
+  assert.equal(upgraded.info().host.local_schema, schema)
+  assert.equal(bridge, 3)
+  assert.equal(schema, 2)
+  assert.throws(() => old.inspect(raw, signature), /incompatible_capability/)
 })
 
 test('HarmonyOS signed streaming download activates only on cold start, confirms, restores and rejects disk tampering', async t => {
