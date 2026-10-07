@@ -27,6 +27,14 @@
 - 反向验证临时让组件忽略开关：Flutter 停止滚动回归 1 项、Lynx 静态样式及停止命令回归 2 项按预期失败；随后恢复实现，完整测试通过。Flutter 同批 `flutter analyze`、格式检查及完整 **508 项测试通过**，新增中文/英文/西班牙文与生成文件已同步；关闭销毁动画子树并取消暂停计时器，完整读屏标签保留。
 - 两端 diff 与 UTF-8/替换字符检查通过。Lynx 动画回归拦截主线程派发边界，不宣称真实动画执行；本批未做浏览器或原生设备实测，也未修改 Kotlin/Swift/ArkTS 或宿主 Web 文件。当前已有签名配置批次的三份文档改动保留，仅追加本批记录和中英 handoff。未提交、推送、更新父仓库子模块指针或操作 Issue，等待实施结果确认。
 
+## 2026-10-07 · 热更新签名配置与 dev 发布验签
+
+- 缓存修复 `a6291a9` 已提交并推送，CI [37571012905](https://github.com/songloft-org/songloft-player-lynx/actions/runs/37571012905) 全部通过：Apple 实跑三种 root URL 的冷恢复、七种损坏/错位条目清理及原有缓存行为，模板 HTTP/TLS 验证、IPA 编译/包检查和其他平台均成功。但当时发布日志为 `signed bundle update: false`，dev 只有五种完整包、清单和校验和，未配置热更新密钥。
+- 用户明确授权配置后，生成并验证 **3072 位 RSA** 密钥对，公钥为 SPKI PEM、私钥为 PKCS#8 PEM，key ID **`4c2fabb72ee966ce`**。公钥写入 Repository Variable `LYNX_UPDATE_PUBLIC_KEY`，私钥通过标准输入加密写入 Actions Secret `LYNX_UPDATE_PRIVATE_KEY`，未输出私钥内容。备份保留在客户端仓库 Git 已忽略的 `.env.lynx-update-signing/`，目录权限 700、密钥文件权限 600；没有把密钥写进版本控制。
+- 重新 dispatch `main`，CI [37575231925](https://github.com/songloft-org/songloft-player-lynx/actions/runs/37575231925) 在同一源码 `a6291a9`、构建号 **213513212** 全部通过，五平台包及发布成功，日志确认 `Verified 6 release assets; signed bundle update: true`。共享 artifact 中 `native-host.json` 与 `bundle-host.json` 的受信公钥均与本机公钥完整一致。[dev Release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev) 已包含热更新 `songloft-lynx-main.lynx.bundle`（**2874872 字节**）与 `version.json.sig`，连同五种完整包、清单和校验和共九个附件。
+- 从真实 Release 下载清单、签名、bundle 和校验和，用本机公钥及实际发布验签实现验证成功：签名 key ID 匹配、通道/提交正确、Android/iOS/HarmonyOS 三个 target 齐全、bundle 大小及 SHA-256 与已签名清单一致，三个下载文件均匹配 checksums。bundle SHA-256 为 `81e61aa5a5d241c532eb0580c8d30235fc7eb514dbb94bba846348ca3ef9a50e`；修改提交号后保持 JSON 可解析，验签明确拒绝，避免把 JSON 语法错误误作验签证据。
+- 旧无公钥安装包不会因此自动信任新密钥，首次须安装本次含公钥的新壳；设备安装、真实网络下载/冷启动/回退验收仍开放。本批未修改运行时代码，未新增提交；同步 progress 和中英 handoff，记录改动尚未提交。密钥备份保留，验证用临时下载与辅助脚本在核对后清理。
+
 ## 2026-10-07 · iOS 缓存冷恢复目录校验
 
 - Python 夹具修复 `5900940` 已推送，CI [37569104168](https://github.com/songloft-org/songloft-player-lynx/actions/runs/37569104168) 的缓存夹具 **417ms 就绪**，Apple 缓存验证程序编译通过，执行时在 `cold_lookup` 抛错并退出 133。共享验证、Android、HarmonyOS 与两种 Web 通过，发布跳过；这次运行已越过夹具启动阻塞，但 Apple 缓存行为和 IPA 构建尚未通过。

@@ -12,6 +12,8 @@ iOS CI 耗时优化的实施结果已确认，提交前自审未发现新增问�
 
 songloft-org/songloft#504 的长歌名滚动开关已在 Flutter 与 Lynx 两端实现：播放设置中默认开启，关闭后切回单行省略号，选择按设备本地保存；Lynx 保留系统减弱动效优先级。共享滚动组件接入实时状态、启动恢复及串行保存，防止旧读取覆盖用户选择；关闭会发送主线程归零命令。Flutter 静态分析、格式检查与全部 508 项测试通过；Lynx 类型检查、双 bundle 构建、全部 288 文件 / 3091 项测试及 ReactLynx 扫描通过，diff/编码检查通过。忽略开关的反向版本触发 Flutter 1 项、Lynx 2 项预期失败，已恢复实现。Lynx 单元测试验证主线程命令派发，不代表设备动画执行；本批未做浏览器或原生设备实测，未修改原生模块。已有文档改动保留，未提交、推送或操作 Issue，等待实施结果确认，详情见 progress。
 
+热更新签名已按用户授权配置：RSA 3072 位，key ID `4c2fabb72ee966ce`；GitHub Variable `LYNX_UPDATE_PUBLIC_KEY` 与 Secret `LYNX_UPDATE_PRIVATE_KEY` 已写入，本机备份在 Git 忽略的 `.env.lynx-update-signing/`（目录 700、密钥 600）。源码 `a6291a9` 的 CI [37575231925](https://github.com/songloft-org/songloft-player-lynx/actions/runs/37575231925) 全部通过，构建号 213513212，[dev Release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev) 已发布五平台包、2874872 字节热更新 bundle、清单签名和校验文件。共享宿主公钥与本机一致；真实发布文件的 RSA 签名、bundle 大小/哈希和校验和验证通过，JSON 有效的篡改清单被拒绝。前一 CI [37571012905](https://github.com/songloft-org/songloft-player-lynx/actions/runs/37571012905) 已实跑通过新增 Apple 冷恢复回归及 IPA 构建。旧无公钥壳需安装本次新壳一次，设备安装/热更新回退验收仍开放；未新增代码提交，本批记录尚未提交，详情见 progress。
+
 缓存冷恢复批次提交前自审未发现新增问题：目录哈希与持久写入规则一致，调用接口、身份/文件大小检查保持兼容；任务回调前落盘，隔离测试副本退出清理已覆盖复制失败路径。代码无需再改，307/70 项通过数沿用实施阶段，未重复测试；diff/编码复查通过。Apple 编译、新增行为回归和缺陷版本反向执行仍待验证，本批未提交或推送，等待审查确认。
 
 Python 夹具修复 `5900940` 已推送，CI [37569104168](https://github.com/songloft-org/songloft-player-lynx/actions/runs/37569104168) 的缓存夹具 417ms 就绪，Apple 验证程序编译通过，但执行在 `cold_lookup` 失败并退出 133，IPA/发布未通过，其他平台通过。当前批次将冷恢复的 URL 对象相等判断改为 namespace/key 目录哈希校验，保留身份、普通媒体文件与大小检查；补三种 root URL 表示下的有效缓存恢复，以及七种错位/损坏条目的清理和有效身份保留回归。307 项原生契约与 70 项发布工具测试通过，diff/编码检查通过；本机无 Swift/Xcode（`xcodebuild -list` 退出 127），新增 Swift 回归未编译或执行，URL 表示假设与实际修复效果均待后续 macOS CI 确认。中英同步，本批未提交或推送，等待实施结果确认，详情见 progress。
@@ -64,9 +66,9 @@ P3c 已接入当前身份设备缓存列表、本地搜索/空间/删除/清理�
 
 P3b 共享源码已接入整歌单/多选批量缓存和任务页，支持完整分页、变体冻结、缓存跳过、去重、容量暂停、真实宿主取消和失败/中断重试；历史按身份保存且不含 URL/token。最终 273 文件 / 2960 项 JS 回归、35 项发布工具、双产物与 Android APK 编译通过（2026-10-07 02:49）。Android arm64 ABI 实际 UI 验证 235 首入队、94 完成（36 缓存跳过）、取消剩余 141 项及暂存清理；x86_64 SVG 缺库/原生崩溃和模拟器环境问题见 bugs，不宣称该 ABI 已修复。HarmonyOS HAP 已编译；iOS 编译及两端设备验收仍继续，详细证据见 progress。
 
-定位为预览版。核心播放、曲库/歌单、歌词、插件、主题、多服务器和管理设置已有实现，四端都有宿主代码。关于页已分开提供客户端和服务器更新；客户端严格按壳通道检查 dev 或最新正式发布，三端更新器源码已接入，Android/Web 有本地流程证据，HarmonyOS HAP 已编译；iOS 编译和两端设备验收开放，正式更新签名未配置。**原生桌面客户端与 Bundle 本地后端不在本轮范围**。未消费的 `bundleMode/systemTray` 能力探测不代表功能完成。
+定位为预览版。核心播放、曲库/歌单、歌词、插件、主题、多服务器和管理设置已有实现，四端都有宿主代码。关于页已分开提供客户端和服务器更新；客户端严格按壳通道检查 dev 或最新正式发布，三端更新器源码已接入，Android/Web 有本地流程证据。当前五平台 CI、Apple 验证与 IPA 构建通过，热更新签名已配置并完成真实 dev 资产验签；两端设备验收仍开放。**原生桌面客户端与 Bundle 本地后端不在本轮范围**。未消费的 `bundleMode/systemTray` 能力探测不代表功能完成。
 
-Android 和 HarmonyOS 有当前编译记录；iOS 旧 CI 成功不能证明当前代码可发布，未签名 HAP 也不等于完成发布签名。后台播放、投屏、通知与视频需要设备验证，不能从 JS 测试推断。
+Android、HarmonyOS 和 iOS 的当前源码已有 CI 编译及包检查证据，Android/HarmonyOS 发布签名检查与 dev 热更新资产验签通过；旧本地未签名包不能代替本次发布包。后台播放、投屏、通知与视频需要设备验证，不能从 JS 测试推断。
 
 ## 2. 开源与发布准备
 
@@ -81,7 +83,7 @@ Android 和 HarmonyOS 有当前编译记录；iOS 旧 CI 成功不能证明当�
 - Android/iOS TCP 测试桥仅 Debug 注册且绑定 loopback；JS E2E 需显式 `SONGLOFT_TEST_BRIDGE=true`，发布包禁止包含。
 - Web 打包先清理再复制，修复 embedded 复制后删除 bundle/引擎的问题。
 
-本批实现与本地验证已完成。推送后的云端构建和下载资产以 GitHub Actions/Release 为准；仓库可见性需独立管理。Android/HarmonyOS 签名 secret 名称已配置，实际签名需 CI 验证；iOS IPA 需自行签名，不能直接安装。
+实现、本地验证与本次云端发布已完成，下载资产以 GitHub Actions/Release 为准；仓库可见性需独立管理。Android/HarmonyOS 发布签名检查与独立 RSA 热更新签名已在 CI 通过，dev 资产下载验签通过；iOS IPA 仍需自行签名，不能直接安装。
 
 ## 3. 本次验证
 
@@ -91,9 +93,9 @@ Linux 可验证 JS、脚本与 Android；iOS/HarmonyOS 需各自工具链。最�
 
 ## 4. 剩余工作
 
-1. 配置签名并运行全平台 CI，真机检查 APK/HAP 安装升级、iOS 重签安装。
+1. 全平台 CI 与签名发布已通过；真机检查含公钥的新 APK/HAP 安装升级、iOS 重签安装及后续热更新。
 2. Android/iOS 全量 E2E，以及通知歌词、后台连播、插件恢复前台、长请求与 DLNA 实测。
-3. P6a 剪贴板、P6b 通知歌词与 P6c 插件恢复源码已补；HarmonyOS HAP 已编译；系统粘贴/媒体卡片、Apple 编译及插件长后台/断网重连验收仍开放。Lynx 插件须使用本地更新的 SDK 重新构建，SDK 尚未发布，见 [bugs.md](bugs.md)。
+3. P6a 剪贴板、P6b 通知歌词与 P6c 插件恢复源码已补，原生编译通过；HarmonyOS 系统粘贴/媒体卡片及插件长后台/断网重连验收仍开放。Lynx 插件须使用本地更新的 SDK 重新构建，SDK 尚未发布，见 [bugs.md](bugs.md)。
 4. iOS 字体大小、HLS 自签名地址等开放问题仍以 bugs 为准。
 5. Web 前端子路径已修复，Chrome 两种模式的登录/插件与 Linux WebKit 两种模式的 P4/P5 通过；真实 Safari、Firefox 间歇 Blob 异常仍开放，见[部署指南](../guides/web-deployment.md)。插件排序需要支持 `/settings/plugin-order` 的新后端，旧后端返回 404。
 6. 桌面端、Bundle 本地后端和视频不在本轮交付范围；设备批量缓存、离线列表、Web 数据传输/快捷键及原生补齐已完成源码批次，按批准计划保留未完成的平台验收。
