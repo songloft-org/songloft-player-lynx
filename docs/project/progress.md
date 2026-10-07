@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · iOS Python 夹具 DNS 依赖与启动栈诊断
+
+- 前一批 `3bf291b` 已推送，GitHub Actions [37566472108](https://github.com/songloft-org/songloft-player-lynx/actions/runs/37566472108) 的共享验证、Android、HarmonyOS 和两种 Web 均通过，iOS 仍失败、发布跳过。新日志明确显示 Python PID 存活，但 30 秒后端口文件仍不存在或为空；未进入 Swift 编译。延长等待没有消除启动阻塞，不能将前一批写成 CI 已修复。
+- 两个 Python 夹具均使用 `ThreadingHTTPServer`；标准库 `HTTPServer.server_bind` 在绑定后调用 `socket.getfqdn(host)`。新增真实夹具回归将 DNS 反查替换成明确拒绝，在旧实现上 **2/2 失败**，调用栈命中 `getfqdn(127.0.0.1)`，证明这条依赖存在。原 runner 没有 Python 栈，因此其实际阻塞点仍未确认，DNS 仍是待验证原因。
+- 新增共享 `scripts/fixtures/loopback_http_server.py`，沿用实际 TCP 绑定和线程服务，固定服务名并从实际绑定结果取端口，移除回环服务不需要的反查。缓存与模板夹具在加载其余模块前启用 faulthandler，启动每 10 秒输出一次栈；导入、绑定、TLS 配置和端口发布阶段日志立即刷新，就绪或异常退出时取消诊断计时器。监听器使用上下文管理，模板证书加载失败也会关闭已绑定的两端口。
+- **5 项新增真实 Python/HTTP/HTTPS 验证通过**：DNS 被明确拒绝时，缓存仍返回 32768 字节媒体、未知长度流、HLS MIME 和计数；模板两个端口提供相同二进制，默认拒绝自签名证书、仅测试请求显式接受，重定向/计数正确；两个夹具的故意绑定阻塞均输出阶段和 Python 栈；缺失证书以 traceback 退出，未发布就绪。仅对 DNS、故意启动阻塞和诊断计时器加速作注入，服务程序、socket、TLS、文件和 handler 均为真实实现，不替身化 Python 服务。
+- `pnpm run test:release` 在沙箱外 **70/70 通过**；新增 5 项独立执行通过，Node/Python 语法、diff 和 UTF-8/U+FFFD 检查通过。中英 handoff 同步，progress 沿用仅中文结构。本批尚未提交、推送或触发新 CI；macOS 实际启动、Apple 缓存/模板验证和 IPA 构建仍待验证，尚不能断言已解除 runner 阻塞。
+- 提交前自审未发现新增问题：TCP 绑定/实际端口与线程服务沿用标准库行为；诊断计时器在就绪/异常路径取消，监听器及测试进程的清理顺序正确。两个脚本从 `/tmp` 以绝对路径直接执行 `--help` 均成功，验证共享模块导入和 CLI 参数，不冒充监听就绪测试；监听行为沿用本批真实 HTTP/HTTPS 回归证据。语法、编码与 diff 检查通过，未改运行时代码，因此未重复完整测试；等待自审确认，未提交或推送。
+
 ## 2026-10-07 · iOS CI 夹具启动等待与失败诊断
 
 - GitHub Actions [37564042104](https://github.com/songloft-org/songloft-player-lynx/actions/runs/37564042104) 在 `42dcad0` 的 Apple 缓存验证步骤退出 1，没有编译或验证程序输出；Android、HarmonyOS 和两个 Web job 通过，发布跳过。原 shell 只等待 `50 × 100ms`，之后的 `test -s` 在端口文件不存在时静默退出。隔离模拟中立即发布端口成功，延迟 8 秒则约 5 秒后无输出退出 1；这是与 CI 一致的失败路径，但 runner 实际启动变慢的原因和具体退出命令仍未由原日志证实。

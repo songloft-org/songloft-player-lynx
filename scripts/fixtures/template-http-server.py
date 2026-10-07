@@ -1,12 +1,20 @@
 """Loopback HTTP/self-signed HTTPS fixture for the Apple plugin-template verifier."""
 
+import faulthandler
+
+faulthandler.enable()
+faulthandler.dump_traceback_later(10, repeat=True)
+print("[template-fixture] Importing Python modules", flush=True)
+
 import argparse
 import json
 import ssl
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from threading import Lock, Thread
 from time import sleep
+
+from loopback_http_server import LoopbackHTTPServer
 
 
 def main():
@@ -71,16 +79,28 @@ def main():
             except (BrokenPipeError, ConnectionResetError, ssl.SSLError):
                 pass
 
-    plain = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    secure = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    tls.load_cert_chain(args.cert, args.key)
-    secure.socket = tls.wrap_socket(secure.socket, server_side=True)
-    Thread(target=secure.serve_forever, daemon=True).start()
-    # Publish only after both listeners are bound, so the verifier never guesses readiness.
-    Path(args.port_file).write_text(json.dumps({"http": plain.server_port, "https": secure.server_port}), encoding="utf-8")
-    plain.serve_forever()
+    print("[template-fixture] Binding HTTP listener", flush=True)
+    with LoopbackHTTPServer(("127.0.0.1", 0), Handler) as plain:
+        print("[template-fixture] Binding HTTPS listener", flush=True)
+        with LoopbackHTTPServer(("127.0.0.1", 0), Handler) as secure:
+            print("[template-fixture] Loading TLS certificate", flush=True)
+            tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            tls.load_cert_chain(args.cert, args.key)
+            secure.socket = tls.wrap_socket(secure.socket, server_side=True)
+            Thread(target=secure.serve_forever, daemon=True).start()
+            # Publish only after both listeners are bound and TLS is configured.
+            print("[template-fixture] Publishing listener ports", flush=True)
+            Path(args.port_file).write_text(
+                json.dumps({"http": plain.server_port, "https": secure.server_port}),
+                encoding="utf-8",
+            )
+            faulthandler.cancel_dump_traceback_later()
+            print("[template-fixture] Ready", flush=True)
+            plain.serve_forever()
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        faulthandler.cancel_dump_traceback_later()

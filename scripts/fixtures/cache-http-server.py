@@ -1,12 +1,20 @@
 """Loopback-only real streaming fixture for the Apple cache verifier."""
 
+import faulthandler
+
+faulthandler.enable()
+faulthandler.dump_traceback_later(10, repeat=True)
+print("[cache-fixture] Importing Python modules", flush=True)
+
 import argparse
 import json
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from threading import Lock
 from time import sleep
 from urllib.parse import urlsplit
+
+from loopback_http_server import LoopbackHTTPServer
 
 
 def main():
@@ -48,10 +56,17 @@ def main():
             except (BrokenPipeError, ConnectionResetError):
                 pass
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    Path(args.port_file).write_text(str(server.server_port), encoding="utf-8")
-    server.serve_forever()
+    print("[cache-fixture] Binding HTTP listener", flush=True)
+    with LoopbackHTTPServer(("127.0.0.1", 0), Handler) as server:
+        print("[cache-fixture] Publishing listener port", flush=True)
+        Path(args.port_file).write_text(str(server.server_port), encoding="utf-8")
+        faulthandler.cancel_dump_traceback_later()
+        print("[cache-fixture] Ready", flush=True)
+        server.serve_forever()
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        faulthandler.cancel_dump_traceback_later()
