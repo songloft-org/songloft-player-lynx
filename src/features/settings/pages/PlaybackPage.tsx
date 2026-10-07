@@ -1,4 +1,4 @@
-import { useEffect, useState } from '@lynx-js/react'
+import { useEffect, useState, useSyncExternalStore } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 
 import { getFloatingLyricModule } from '../../../native/floating-lyric.js'
@@ -42,6 +42,11 @@ import { SettingsRow } from '../widgets/SettingsRow.js'
 import { SettingsSection } from '../widgets/SettingsSection.js'
 import { SubPageShell } from '../widgets/SubPageShell.js'
 import { SwitchRow } from '../widgets/SwitchRow.js'
+import {
+  changeSongTitleScrolling,
+  getSongTitleScrolling,
+  subscribeSongTitleScrolling,
+} from '../../../shared/ui/scrolling-text-preference.js'
 
 const AUDIO_QUALITY_OPTIONS: AudioQuality[] = ['original', '320', '192', '128']
 const FLOATING_LYRIC_FONT_SIZE_OPTIONS: FloatingLyricFontSize[] = ['small', 'medium', 'large']
@@ -65,6 +70,7 @@ export function PlaybackPage() {
     return stop
   }, [])
   const { t } = useTranslation()
+  const songTitleScrolling = useSyncExternalStore(subscribeSongTitleScrolling, getSongTitleScrolling)
 
   // ── Playback state ───────────────────────────────────────────────────────
   const [audioQuality, setAudioQuality] = useState<AudioQuality>('original')
@@ -151,6 +157,14 @@ export function PlaybackPage() {
       </SettingsSection>
 
       <SettingsSection>
+        <SwitchRow
+          icon='music'
+          title={t('settings.songTitleScrolling')}
+          subtitle={t('settings.songTitleScrollingSubtitle')}
+          checked={songTitleScrolling}
+          onChange={(next) => { void changeSongTitleScrolling(next) }}
+          testId='settings-song-title-scrolling'
+        />
         <SwitchRow
           icon='music'
           title={t('settings.autoResume')}

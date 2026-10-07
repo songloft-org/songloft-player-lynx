@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · 长歌名滚动开关（songloft-org/songloft#504）
+
+- 实施结果已由用户确认。提交前逐文件审查默认值、本地偏好读写及竞态、动画/计时器清理与过期测量、系统减弱动效、全部调用点、翻译生成文件和文档，未发现新增问题，无需修改运行时代码。沿用下述实施阶段的 508 / 3091 项完整测试和双 bundle 构建结果，未重复运行；diff/编码复查通过。浏览器和设备实测边界保留，未提交、推送或操作 Issue，等待审查确认。
+- 用户确认 Flutter、Lynx 两端同步增加开关。在播放设置中默认开启，关闭后静态显示单行省略号；客户端分别保存设备本地偏好 `song_title_scrolling_enabled`，不参与服务端同步。Lynx 的所有现有 `ScrollingText` 消费点统一响应，系统减弱动效开启时仍优先静态显示。
+- `src/shared/ui/scrolling-text-preference.ts` 使用 Zustand 客户端态和现有 `SongloftStorage.prefs`，在 `src/index.tsx` 的认证完成前恢复。读取以 revision/hydration 守卫防止过期结果覆盖当前选择，保存串行化防止快速切换乱序落盘。`PlaybackPage.tsx` 使用共享状态与既有 `SwitchRow`；`ScrollingText.tsx` 在关闭时取消待完成测量并派发主线程归零命令，开启后重新测量，CSS 恢复有宽度约束的省略号。中英文案同步。
+- 新增偏好默认值、启动恢复、读取竞态、快速切换、存储失败、多个标题实时响应、系统减弱动效、主线程命令与设置页交互回归。首轮定向 31 项及后续 7 项组件测试通过；完整 `pnpm test` **288 文件 / 3091 项通过**，`pnpm exec tsc -b` 与 `pnpm run build` 通过并同时列出 `File (lynx)` / `File (web)`。ReactLynx 扫描两组件无诊断；构建仍报告已有兼容属性警告，测试依赖仍报告 sourcemap 与内存存储提示。
+- 反向验证临时让组件忽略开关：Flutter 停止滚动回归 1 项、Lynx 静态样式及停止命令回归 2 项按预期失败；随后恢复实现，完整测试通过。Flutter 同批 `flutter analyze`、格式检查及完整 **508 项测试通过**，新增中文/英文/西班牙文与生成文件已同步；关闭销毁动画子树并取消暂停计时器，完整读屏标签保留。
+- 两端 diff 与 UTF-8/替换字符检查通过。Lynx 动画回归拦截主线程派发边界，不宣称真实动画执行；本批未做浏览器或原生设备实测，也未修改 Kotlin/Swift/ArkTS 或宿主 Web 文件。当前已有签名配置批次的三份文档改动保留，仅追加本批记录和中英 handoff。未提交、推送、更新父仓库子模块指针或操作 Issue，等待实施结果确认。
+
 ## 2026-10-07 · iOS 缓存冷恢复目录校验
 
 - Python 夹具修复 `5900940` 已推送，CI [37569104168](https://github.com/songloft-org/songloft-player-lynx/actions/runs/37569104168) 的缓存夹具 **417ms 就绪**，Apple 缓存验证程序编译通过，执行时在 `cold_lookup` 抛错并退出 133。共享验证、Android、HarmonyOS 与两种 Web 通过，发布跳过；这次运行已越过夹具启动阻塞，但 Apple 缓存行为和 IPA 构建尚未通过。

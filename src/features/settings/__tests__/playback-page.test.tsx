@@ -2,6 +2,9 @@ import '../../../shims/router-env.js'
 import '@testing-library/jest-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
+import { createMemoryStorage } from '../../../core/storage/memory-storage.js'
+import { setSongloftStorage } from '../../../core/storage/index.js'
+import { getSongTitleScrolling, PREF_SONG_TITLE_SCROLLING, songTitleScrolling } from '../../../shared/ui/scrolling-text-preference.js'
 
 const {
   writeQualitySpy,
@@ -106,6 +109,7 @@ function withFloatingLyricHost() {
 }
 
 afterEach(() => {
+  songTitleScrolling.setState({ enabled: true })
   webKeysAvailable.value = false
   vi.clearAllMocks()
   readEnabled.mockResolvedValue(false)
@@ -156,6 +160,22 @@ test('renders the four quality rows and the two toggles', async () => {
   }
   expect(queryByTestId('settings-auto-resume')).toBeInTheDocument()
   expect(queryByTestId('settings-normalize')).toBeInTheDocument()
+  expect(queryByTestId('settings-song-title-scrolling')).toBeInTheDocument()
+})
+
+test('song title switch updates the shared live preference and persists the choice', async () => {
+  const storage = createMemoryStorage()
+  setSongloftStorage(storage)
+  const { queryByTestId } = await renderPage()
+  const row = queryByTestId('settings-song-title-scrolling')!
+  expect(isOn(row)).toBe(true)
+  await tapSwitch(row)
+  expect(isOn(row)).toBe(false)
+  expect(getSongTitleScrolling()).toBe(false)
+  expect(await storage.prefs.get(PREF_SONG_TITLE_SCROLLING)).toBe('false')
+  await tapSwitch(row)
+  expect(getSongTitleScrolling()).toBe(true)
+  expect(await storage.prefs.get(PREF_SONG_TITLE_SCROLLING)).toBe('true')
 })
 
 test('picking a concrete quality persists it and overrides the player store', async () => {

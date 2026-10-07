@@ -1,9 +1,10 @@
 import { animate } from '@lynx-js/motion'
-import { runOnMainThread, useEffect, useMainThreadRef, useMemo, useState } from '@lynx-js/react'
+import { runOnMainThread, useEffect, useMainThreadRef, useMemo, useState, useSyncExternalStore } from '@lynx-js/react'
 import type { MainThread } from '@lynx-js/types'
 
 import { getReduceMotion, subscribeReduceMotion } from '../theme/reduce-motion-model.js'
 import { marqueeSchedule } from './scrolling-text-schedule.js'
+import { getSongTitleScrolling, subscribeSongTitleScrolling } from './scrolling-text-preference.js'
 import './ScrollingText.css'
 
 export interface ScrollingTextProps {
@@ -19,13 +20,15 @@ let uidSeq = 0
 /**
  * Single-line text that marquees horizontally when it overflows its box, so
  * long same-prefix song titles stay readable in lists (songloft-org/songloft-player#46).
- * Static when it fits, when the host has no measurement bridge, or under
- * reduce-motion.
+ * Static when it fits, when disabled in playback settings, when the host has
+ * no measurement bridge, or under reduce-motion.
  */
 export function ScrollingText({ text, textClassName, className }: ScrollingTextProps) {
   const innerRef = useMainThreadRef<MainThread.Element>(null)
   const [uid] = useState(() => ++uidSeq)
   const [reduceMotion, setReduceMotion] = useState(getReduceMotion)
+  const enabled = useSyncExternalStore(subscribeSongTitleScrolling, getSongTitleScrolling)
+  const staticText = !enabled || reduceMotion
   const outerId = `scrolling-text-outer-${uid}`
   const innerId = `scrolling-text-inner-${uid}`
 
@@ -59,6 +62,10 @@ export function ScrollingText({ text, textClassName, className }: ScrollingTextP
   )
 
   useEffect(() => {
+    if (staticText) {
+      settleMarquee()
+      return
+    }
     let cancelled = false
 
     const overflow = (): Promise<number> =>
@@ -103,7 +110,7 @@ export function ScrollingText({ text, textClassName, className }: ScrollingTextP
       })
 
     void overflow().then((value) => {
-      if (cancelled || value <= 0 || reduceMotion) return
+      if (cancelled || value <= 0) return
       const schedule = marqueeSchedule(value)
       startMarquee(schedule.x, schedule.times, schedule.durationMs / 1000)
     })
@@ -112,14 +119,14 @@ export function ScrollingText({ text, textClassName, className }: ScrollingTextP
       cancelled = true
       settleMarquee()
     }
-  }, [text, reduceMotion, outerId, innerId, startMarquee, settleMarquee])
+  }, [text, staticText, outerId, innerId, startMarquee, settleMarquee])
 
   return (
     <view id={outerId} className={`scrolling-text${className ? ` ${className}` : ''}`}>
       <text
         id={innerId}
         main-thread:ref={innerRef}
-        className={`scrolling-text__inner${textClassName ? ` ${textClassName}` : ''}`}
+        className={`scrolling-text__inner${textClassName ? ` ${textClassName}` : ''}${staticText ? ' scrolling-text__inner--static' : ''}`}
       >
         {text}
       </text>

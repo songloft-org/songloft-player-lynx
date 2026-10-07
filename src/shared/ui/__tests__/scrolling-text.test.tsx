@@ -1,11 +1,31 @@
 import '../../../shims/router-env.js'
 
 import '@testing-library/jest-dom'
-import { describe, expect, test } from 'vitest'
-import { render, screen } from '@lynx-js/react/testing-library'
+import { afterEach, describe, expect, test, vi } from 'vitest'
+import { act, render, screen } from '@lynx-js/react/testing-library'
 
 import { ScrollingText } from '../ScrollingText.js'
 import { marqueeSchedule, MARQUEE_PAUSE_MS, MARQUEE_VELOCITY } from '../scrolling-text-schedule.js'
+import { changeSongTitleScrolling, songTitleScrolling } from '../scrolling-text-preference.js'
+import { createMemoryStorage } from '../../../core/storage/memory-storage.js'
+import { applySystemAppearance, setSystemAppearanceForTests } from '../../../native/system-appearance.js'
+// Observe background → main-thread commands. The Vitest host has no real
+// animated element refs; this verifies dispatch, not native animation execution.
+const { mainThreadCalls } = vi.hoisted(() => ({ mainThreadCalls: [] as unknown[][] }))
+vi.mock('@lynx-js/react', async importOriginal => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  runOnMainThread: () => (...args: unknown[]) => {
+    mainThreadCalls.push(args)
+    return Promise.resolve()
+  },
+}))
+
+afterEach(() => {
+  songTitleScrolling.setState({ enabled: true })
+  setSystemAppearanceForTests(null)
+  vi.clearAllMocks()
+  mainThreadCalls.length = 0
+})
 
 /**
  * The marquee schedule is the only pure piece of ScrollingText — measurement and
@@ -47,5 +67,56 @@ describe('ScrollingText', () => {
   test('无测量桥接时静态渲染完整文本', () => {
     render(<ScrollingText text='孙子兵法与三十六计 第01集' textClassName='song-row__title' />)
     expect(screen.getByText('孙子兵法与三十六计 第01集')).toBeInTheDocument()
+  })
+
+  test('开关实时控制所有标题的静态省略样式，保持完整文本', async () => {
+    const storage = createMemoryStorage()
+    render(<view><ScrollingText text='很长的标题一' /><ScrollingText text='很长的标题二' /></view>)
+    await act(async () => { await changeSongTitleScrolling(false, storage) })
+    for (const title of ['很长的标题一', '很长的标题二']) {
+      expect(screen.getByText(title)).toHaveClass('scrolling-text__inner--static')
+    }
+    await act(async () => { await changeSongTitleScrolling(true, storage) })
+    expect(screen.getByText('很长的标题一')).not.toHaveClass('scrolling-text__inner--static')
+  })
+
+  test('开关开启时系统减弱动效仍优先保持静态', async () => {
+    render(<ScrollingText text='完整的长歌名' />)
+    await act(async () => {
+      applySystemAppearance({ theme: null, locale: null, reduceMotion: true })
+    })
+    expect(screen.getByText('完整的长歌名')).toHaveClass('scrolling-text__inner--static')
+    await act(async () => {
+      applySystemAppearance({ theme: null, locale: null, reduceMotion: false })
+    })
+    expect(screen.getByText('完整的长歌名')).not.toHaveClass('scrolling-text__inner--static')
+  })
+
+  test('关闭向主线程发送归零命令，再开启发送新的滚动计划', async () => {
+    const host = lynx as unknown as { createSelectorQuery: unknown }
+    const saved = host.createSelectorQuery
+    host.createSelectorQuery = () => {
+      let selector = ''
+      const query = {
+        select(value: string) { selector = value; return query },
+        invoke({ success }: { success: (rect: { width: number }) => void }) {
+          success({ width: selector.includes('outer') ? 100 : 300 })
+          return query
+        },
+        exec() {},
+      }
+      return query
+    }
+    try {
+      const storage = createMemoryStorage()
+      await act(async () => { render(<ScrollingText text='已启动滚动的长歌名' />) })
+      expect(mainThreadCalls.at(-1)).toEqual([[0, 0, -200, -200, 0], expect.any(Array), expect.any(Number)])
+      await act(async () => { await changeSongTitleScrolling(false, storage) })
+      expect(mainThreadCalls.at(-1)).toEqual([])
+      await act(async () => { await changeSongTitleScrolling(true, storage) })
+      expect(mainThreadCalls.at(-1)).toEqual([[0, 0, -200, -200, 0], expect.any(Array), expect.any(Number)])
+    } finally {
+      host.createSelectorQuery = saved
+    }
   })
 })

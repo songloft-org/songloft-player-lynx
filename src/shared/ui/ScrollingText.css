@@ -13,3 +13,11 @@
   align-self: flex-start;
   white-space: nowrap;
 }
+
+/* Restore a bounded single line when disabled or under system reduce-motion. */
+.scrolling-text__inner--static {
+  align-self: stretch;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -36,6 +36,7 @@ import {
   navigateFromNotificationIfNeeded,
 } from './native/notification-navigate.js'
 import { applySavedFontScale } from './shared/theme/font-scale-model.js'
+import { applySavedSongTitleScrolling } from './shared/ui/scrolling-text-preference.js'
 import { applySavedIncreaseContrast } from './shared/theme/increase-contrast-model.js'
 import { applySavedRailCollapsed } from './shared/layouts/rail-collapse.js'
 import { applySavedMaterial } from './shared/theme/material-model.js'
@@ -114,6 +115,7 @@ void (async () => {
     await applySavedTheme()
     await applySavedMaterial()
     await applySavedFontScale()
+    await applySavedSongTitleScrolling()
     await applySavedIncreaseContrast()
     // Same shape as the appearance model above: the launch frame renders the
     // expanded rail (the default), and this applies the remembered collapse
