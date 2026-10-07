@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · Android 新包的通知歌词与锁屏验收
+
+- 修复源码 `1cfe401fa6fb37c4f0f58e892d8c137f0574291a` 后 prepare 固定 dev / `0.1.0`、构建号 **213499686**、时间 `2026-10-07T01:28:06.370Z`。新 APK 在 `/tmp/lynx-local-delivery/1cfe401/songloft-lynx-android-debug.apk`：**33497304** 字节、SHA-256 **`7f7c7ee07d1158472ad02dd2e58fcb9ab7be74972f94addc4d55a53a6f1171ea`**；native bundle SHA-256 **`5f347d35e4870f3e8cdda6d9c5b3510b885a9cfd9c952731181aa5d7b8b52954`**。bridge 3/schema 2、模板能力与生产公钥 0 保持原契约，JS TestBridge 关闭，APK 为 Debug。本批仅交付 APK，不重建 HAP/IPA/Web 两包。
+- 首轮最终 bundle 命令漏传 `SONGLOFT_BUILD_METADATA`，其内嵌版本落到 `unknown`，构建号也与 prepare 不同。包校验解码实际 bundle 中全部八个版本字段，拒绝该包，未安装；失败样本保存在 `rejected-first-package/`。传入同一份 prepare 元数据重建双 bundle、复制与 APK 后，内嵌身份/原生宿主/版本/生产桥全部通过。最终原生 **43 个任务（3 执行、40 up-to-date）、42 项 JVM**通过；源码阶段 **3082 项 JS、56 项发布工具、类型/双 bundle**见下节。最终日志 `/tmp/lynx-android-notification-final-{bundle,copy,package}-corrected.log`，包装快照 `android-verification.json` 的 pending 是设备验收前状态，后续结果独立写入 `device-acceptance.json`。
+- 私有 API 34 / 4 KB、Emulator 35.6.11 / Mesa llvmpipe / arm64 native bridge 实际安装哈希与新交付一致，PID **5384**，通知权限已授予。实际播放后暂停，旧第二行偏好在安装/冷启动后保留；系统通知滑块定位到 **14065ms** 显示 `QA SECOND LINE`，定位到 **45009ms** 空行立即恢复歌曲名/`Native QA`，始终 PAUSED。设置切回标题模式后，同一暂停位置显示歌词标题和原歌曲名。此前 `f5d00c0` 的暂停定位缺陷没有借重新播放掩盖，新包直接定位即更新。
+- 临时启用无 PIN 锁屏，`window policy` 确认 keyguard `showing=true`。锁屏实际播放/暂停把 **14065ms → 17078ms → 18262ms**；定位空行 **36570ms** 立即恢复元数据。下一首实际进入无歌词 `Notify QA Two`，暂停后没有旧歌词；上一首第一次按既有「超过 3 秒先归零」规则回到 0，第二次返回有歌词歌曲。锁屏从 **53448ms** 播放并熄屏 12 秒，`power` 确认 Asleep，媒体位置 **65553ms**、歌词跨到 `QA BACKGROUND LINE`；唤醒后锁屏暂停于 **70166ms**。退出按钮令会话 NONE、位置/缓冲为 0、元数据为空，回应用后迷你播放器已清空，截图已目测。18 次本应用媒体观测均无错误、PID 不变。
+- 自动化失败保留：播放动画时 uiautomator 无法取得 idle；关闭自动恢复时冷启动只恢复 UI，并未加载媒体会话，后续通过实际迷你播放器按钮开始播放；首轮锁屏拖动落在 **49206ms** 超出夹具空行，极左 `80px` 点击未定位，之后按实际位置重验，未放宽区间断言。首次安装未指定 ABI 引发既有 x86_64 SVG 错误，改显式 arm64 后才验收。失败不标通过；所有设备脚本/夹具/JSON/截图与私有日志在 `/tmp/lynx-android-notification-acceptance/`，最终回执及安装身份也复制到交付目录。
+- 只证明上述短周期行为：无可听输出、设备封面、长后台/厂商保活与 HyperOS 通知看护仍未验；HarmonyOS 媒体卡片/签名/设备、Apple 编译/设备、MIoT 重连及正式更新密钥继续开放，P6b 不整体勾选。锁屏设置恢复原值 true，自有模拟器、Xvfb 与 Go `58192` 停止；用户 `58091` 保留。旧 `f5d00c0` Web 两包和 `1d86b77` APK/HAP 四个哈希复核不变。中英交接/中文计划/参考/bugs 同步，只本地分批提交，不 push。
+
 ## 2026-10-07 · Android 暂停时系统定位遗漏歌词同步
 
 - 用 `f5d00c0` 新 Debug APK（构建号 `213498463`、SHA-256 `dffa433d1508170e2b3bba96d1a0e9a4e2bb4f6dad560bb1fe3684e0d5585351`）在 API 34 / Mesa / arm64 native bridge 复验。42 项 JVM 与 APK 组装通过，重新安装后直接读取 base.apk 的哈希一致；包内统一身份/native bundle 已校验，JS TestBridge 关闭。原有 Web 两包与 `verification.json` 不改，本次 APK 单独记录在同目录 `android-verification.json`。

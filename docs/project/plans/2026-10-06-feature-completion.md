@@ -259,7 +259,7 @@
 - [x] P4：Web 导入/导出（源码与 Chrome、Firefox 134 standalone/embedded 根路径数据流程验收完成；Linux WebKit 18.2 两种部署补充回归通过；Firefox 兼容性观察与激活夹具边界见 progress，Safari 待验）
 - [x] P5：Web 快捷键（源码与 Chrome 实际播放/菜单/持久化验收完成；Firefox 134 在临时 PulseAudio 空输出/128 kbps 下完成控制流程，Linux WebKit 18.2 亦完成空输出控制回归；间歇 Blob 异常、听感与 IME/插件夹具边界见 progress，真实 Safari 待验）
 - [ ] P6a：HarmonyOS 剪贴板（四端确认回调与两处成功/失败反馈已接入；Android 当前包两处跨应用系统粘贴已通过；HarmonyOS HAP 已编译，其系统粘贴验收仍开放，见 progress）
-- [ ] P6b：HarmonyOS 通知歌词（队列元数据、AVSession 布局/控制、旧壳降级与音频契约源码已补；HarmonyOS HAP 已编译；iOS 编译与真实卡片/锁屏验收仍开放，见 progress）
+- [ ] P6b：HarmonyOS 通知歌词（队列元数据、AVSession 布局/控制、旧壳降级与音频契约源码已补；HarmonyOS HAP 已编译；Android `1cfe401` 新 APK 已通过通知两种布局、暂停系统定位/空行、锁屏播放/暂停/切歌/定位、12 秒熄屏跨行及退出；HarmonyOS 媒体卡片、iOS 编译/设备仍开放，见 progress）
 - [ ] P6c：iOS/HarmonyOS 插件恢复前台（三端生命周期/消费点与 SDK ready 已接；Android 后续修复真实插件 frame 模板加载，`9bfd35c` APK 的初始通知、五次 HOME、A/B 退出与新标识重入通过；HarmonyOS 补远程模板 fetcher，8 项实际源码 HTTP/TLS 适配器及真实 SDK clean HAP 编译通过，需安装新壳；iOS 已补双模板入口与流式下载源码、Apple 验证程序，尚未编译执行；两端 frame 设备验收、iOS 编译及 MIoT 长后台/断网重连仍开放，见 progress）
 
 ### 剩余验收条件（2026-10-07）
@@ -270,11 +270,11 @@
 |---|---|---|
 | iOS P1/P2/P3/P6 | 三端共享回归、Swift 源码与 Apple CI 核心验证程序已接入；当前包只有资源复制 | 在 macOS/Xcode 编译当前代码并执行更新器、缓存、插件模板三个原生核心验证程序，再用签名安装包验收切轨、缓存/离线、更新回退、复制和 scene/插件恢复；本机无 Xcode/swiftc |
 | HarmonyOS P1/P2/P3/P6 | `1d86b77` 新 HAP 含远程模板接线与能力标记，34 个 clean 构建任务全部执行，包校验与实际源码 Node 适配器通过；HAP 未签名，尚无安装记录 | CLI 已能查询 API 13 phone 镜像 `5.0.0.112`，下载/启动需要用户明确授权接受华为协议；当前账号无 `/dev/kvm` 读写权限，模拟器运行与调试签名仍需验证。许可未确认时不下载、创建或启动实例 |
-| Android P6 与跨批回归 | API 34 / 4 KB、35.6.11 / Mesa llvmpipe 环境可用；`e09592b` 两处跨应用复制、根恢复和基础播放/暂停/通知通过；修复模板加载后的 `9bfd35c` APK 完成原生 SDK 子 frame 初始、五次 HOME、A/B 退出与重入 | 继续 MIoT 长后台/断网重连、歌词布局/锁屏和跨批回归；短周期计数插件不能代替 MIoT 重连或堆内存检测，SwiftShader 宿主与 x86_64 问题仍开放 |
+| Android P6 与跨批回归 | API 34 / 4 KB、35.6.11 / Mesa llvmpipe 环境可用；两处跨应用复制、根/子 frame 恢复已记录；`1cfe401` 新 APK 严格身份/实际安装哈希一致，通知两种布局、暂停系统定位/空行、锁屏播放/暂停/定位/切歌、12 秒熄屏跨歌词与退出清理通过 | 继续 MIoT 长后台/断网重连、设备封面/听感与厂商保活、HyperOS 通知看护等跨批回归；短周期计数插件和熄屏测试不能替代长后台、MIoT 重连或堆内存检测，SwiftShader 宿主与 x86_64 问题仍开放 |
 | P6c 插件兼容与恢复 | 父桥/SDK ready、Chrome/Firefox 保活可见性通过；Android 新 `1d86b77` APK 安装哈希确认与初始/五次 HOME/退出/重入复验通过；同源 HAP 编译和包校验通过；两端实际验签测试验证新旧模板能力快照兼容；SDK 未发布，插件 bundle 在本地重建 | iOS 已补模板入口源码，需完成编译与实际 Foundation 验证程序；两端再用新壳做 frame 设备验收与 MIoT 长后台/断网重连；旧 SDK 不解锁新增原生推送，仍需插件重建；三端加载器修复需安装新 APK/IPA/HAP；新增必需能力 `pluginFrame.templates.v1`，旧快照引导本通道安装包，不能仅更新 bundle |
 | P2 正式交付与 Web 补充 | 本地签名夹具、版本/包工具通过；Chrome/Firefox/Linux WebKit 的 P4/P5 回归已记录；前端子路径已修复并通过 Chrome 两种模式插件/登录与 Linux WebKit 两种模式 P4/P5 | 正式受信密钥仍为 0，签名/CI/真实发版不在本次“不 push”的执行动作内；实际 Safari 与 Firefox 间歇 Blob 异常仍开放；目录入口需尾斜杠和隔离响应头，不用 Linux WebKit 结果替代 Safari |
 
-原四种本地包与 SHA-256 固定在 `/tmp/lynx-local-delivery/e09592b/verification.json`，原回执未安装字段是当时快照，后续 Android 系统复制/根事件/基础播放证据见 progress。模板加载修复另提供 `/tmp/lynx-local-delivery/9bfd35c/` 的 Android APK；当前含模板能力标记的 APK/HAP 在 `/tmp/lynx-local-delivery/1d86b77/`，构建号 `213496964`，有严格包校验和新 APK 的逐项设备复验回执。旧包哈希未变，未将 Android 新证据写成全部平台通过。许可文本在 `/tmp/lynx-harmony-emulator/license-review.log`；目前只审阅，未接受。Android 的独立 KVM/Mesa 环境已经可用，但不证明 HarmonyOS 模拟器可运行或未签名 HAP 可安装。桌面、Bundle 本地模式和视频继续暂缓。
+原四种本地包与 SHA-256 固定在 `/tmp/lynx-local-delivery/e09592b/verification.json`，原回执未安装字段是当时快照，后续 Android 系统复制/根事件/基础播放证据见 progress。模板加载修复另提供 `/tmp/lynx-local-delivery/9bfd35c/` 的 Android APK；含模板能力标记的 APK/HAP 在 `/tmp/lynx-local-delivery/1d86b77/`，构建号 `213496964`。Android 暂停定位修复的新 APK 在 `/tmp/lynx-local-delivery/1cfe401/`，构建号 `213499686`，严格包校验及通知/锁屏回执已补；当前 Web 两包仍为 `/tmp/lynx-local-delivery/f5d00c0/`，最新 HAP 仍为 `1d86b77`。旧包哈希未变，未将 Android 新证据写成全部平台通过。许可文本在 `/tmp/lynx-harmony-emulator/license-review.log`；目前只审阅，未接受。Android 的独立 KVM/Mesa 环境已经可用，但不证明 HarmonyOS 模拟器可运行或未签名 HAP 可安装。桌面、Bundle 本地模式和视频继续暂缓。
 
 ## 12. 外部契约参考
 

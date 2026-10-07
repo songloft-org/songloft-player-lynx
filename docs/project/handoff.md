@@ -4,9 +4,9 @@
 
 ## 1. 当前完成度
 
-Android 通知歌词标题/第二行与暂停显示已有实际证据，暂停拖动系统媒体滑块时发现歌词停在旧行。已补播放器 SEEK/SEEK_ADJUSTMENT 的进度同步与当前源检查；新增闸门在旧实现上失败。修复后新包及锁屏/定位复验继续，P6b 整体不勾选，见 progress。
+Android 暂停时系统定位遗漏歌词同步已修复，源码 `1cfe401`；新 Debug APK 构建号 `213499686` 在 `/tmp/lynx-local-delivery/1cfe401/`，实际安装哈希与交付一致。通知标题/第二行、暂停定位到新行/空行、实际锁屏播放/暂停/定位、无歌词切歌/上一首、12 秒熄屏跨歌词与退出清理均通过；18 次本应用媒体观测无错误，PID 不变。3082 项 JS、56 项发布工具、类型/双 bundle、42 项 JVM 与 APK 通过，首轮元数据命令错误被严格校验拒绝，失败包未安装。锁屏设置已恢复，自有测试服务已停止。新包身份/证据和设备封面/可听输出/长后台等边界见 progress；HarmonyOS 媒体卡片、Apple 编译/设备仍开放，P6b 不整体勾选，不 push。
 
-Web 目录挂载已补齐：源码 `f5d00c0`、构建号 `213498463` 的 standalone/embedded 两包在 `/tmp/lynx-local-delivery/f5d00c0/`。Chrome 根路径两种模式登录、子路径两种模式登录/已安装 Lynx/WebView 夹具桥接，以及 Linux WebKit 两种子路径模式的 P4/P5 已用新包复验；实际归档/源码身份与浏览器服务目录一致。恢复 embedded 会话忽略旧服务器地址，Web 无 location 的主线程使用同一宿主目录。287 文件 / 3081 项 JS、56 项发布工具、类型、双 bundle 与 build:web 通过。旧包不修改，原生交付仍为下面的 `1d86b77`。自有测试服务已停止；真实 Safari、Firefox 间歇 Blob 异常及各原生未验项继续开放，不 push。哈希/回执见 progress。
+Web 目录挂载已补齐：源码 `f5d00c0`、构建号 `213498463` 的 standalone/embedded 两包在 `/tmp/lynx-local-delivery/f5d00c0/`。Chrome 根路径两种模式登录、子路径两种模式登录/已安装 Lynx/WebView 夹具桥接，以及 Linux WebKit 两种子路径模式的 P4/P5 已用新包复验；实际归档/源码身份与浏览器服务目录一致。恢复 embedded 会话忽略旧服务器地址，Web 无 location 的主线程使用同一宿主目录。287 文件 / 3081 项 JS、56 项发布工具、类型、双 bundle 与 build:web 通过。旧包不修改，Android 后续新包见首段，最新 HAP 仍为下面的 `1d86b77`。自有测试服务已停止；真实 Safari、Firefox 间歇 Blob 异常及各原生未验项继续开放，不 push。哈希/回执见 progress。
 
 已为 `1d86b77` 生成含 `pluginFrame.templates.v1` 的新 APK/HAP，统一构建号 `213496964`，保存到 `/tmp/lynx-local-delivery/1d86b77/`；旧包哈希不变。42 项 Android JVM、34 个全部执行的 HarmonyOS clean HAP 任务、3063 项 JS、56 项发布工具及类型/双 bundle 通过。新 APK 的实际安装哈希与交付一致，A/B 插件初始通知、五次 HOME、退出不再推送与新标识重入复验通过。APK 为 Debug、HAP 未签名、正式更新公钥仍为 0；Apple 编译、两端设备及 MIoT 长后台/断网重连继续开放。自有测试服务已停止，不 push，详细哈希/回执见 progress。
 
