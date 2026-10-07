@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · iOS CI 编译耗时优化
+
+- 用户确认优化 CI [37623723623 / iOS job 112801551279](https://github.com/songloft-org/songloft-player-lynx/actions/runs/37623723623/job/112801551279)。该 job 为 23 分 34 秒，原生编译 21 分 36 秒；日志包含 1667 次 arm64 `CompileC`，Lynx 占 958 次，应用 Swift 编译约 18 秒，主要开销是原生依赖全量构建。
+- 工作流启用 Xcode 内容寻址编译缓存，保存 `.build/ios-compilation-cache` 与 CocoaPods 下载/specs；key 隔离系统、架构、工具链、SDK、依赖和工程，按 run/attempt 保存更新条目，PR 只恢复。增加缓存诊断和 `-showBuildTimingSummary`；缓存不保存 IPA、bundle 或构建元数据。
+- Debug/Release 共用 `ios/pods.rb`，分别维护 `ios/Podfile.lock` 和 `ios/release/Podfile.lock`。Release 从依赖图中移除 LynxDevtool、BaseDevtool、DebugRouter、SocketRocket 及 PrimJS 调试 subspec，Debug 保留 Inspector。两种入口共用 `ios/Pods`，保持原有 xcconfig 引用；CI 改从 Release 入口安装。现存 13 个运行时 Pod 的版本及 spec 校验和均未变化，Debug 锁文件仅更新 Podfile 校验和。
+- 类型检查、Lynx/Web 双 bundle 构建、307 项原生契约和全部 70 项发布工具测试通过；发布工具测试在沙箱内因子进程/网络限制失败，沙箱外复跑全部通过。真实 Ruby 语法、actionlint、工作流格式、diff/编码检查通过。CocoaPods 1.16.2 使用官方 Specs 仓库的 17 个锁定版本快照（逐一与既有 spec 校验和匹配）完成两套依赖图解析、锁文件生成及 deployment 模式一致性检查，确认 17 → 13 个 Pod。记录在 `/tmp/lynx-ios-ci-check/`。
+- 在线 CDN 解析遇到无关 nightly 超时与截断 JSON，未完成完整依赖下载/工程生成。本机没有 Swift/Xcode，未编译 IPA，未验证 macOS 缓存命中或实际提速；后续 CI 需对照冷/热缓存日志评估。中英发版指南及交接同步，保留其他任务的既有文档改动。
+- 用户确认实施结果后完成提交前自审，未发现新增问题。逐文件核对缓存 key/保存条件、Release 安装入口及两套锁文件；结合 CocoaPods 1.16.2 源码检查 Podfile 加载早于 sandbox 创建、workspace 相对路径解析，以及生成的 `PODS_PODFILE_DIR_PATH` 指向 `ios/release`、`PODS_ROOT` 指向共用 `ios/Pods` 的路径计算。原生调用点未直接导入四个被移除的调试库，运行时版本和 Debug Inspector 保持兼容。无需追加代码修改，沿用实施阶段测试结果，未重复执行；diff/编码复查通过。上述源码检查不替代完整安装/工程生成或 Apple 编译；自审结果与提交信息已获用户确认，本批未提交、推送或触发 CI，等待暂存内容及提交确认。
+
 ## 2026-10-07 · 首页插件网格居中
 
 - 用户确认参照曲库优化首页插件格子。原布局的卡片固定 72px、容器 `justify-content: flex-start`，一行剩余空间全部留在右边。`PluginGrid.css` 改为 72–88px 弹性卡片与居中容器，普通/排序两种模式复用 `GridSpacers` 保持末行列对齐；占位数量按 shell 宽度取上界，覆盖超过 8 列的宽屏。40px 图标及现有点击/拖动逻辑保留。

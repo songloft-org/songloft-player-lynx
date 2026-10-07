@@ -20,6 +20,23 @@ Assets upload to a draft and become public only after every upload succeeds. Dev
 
 See [installation](installation.md) for filenames. Releases include `version.json` and `checksums.txt`. The new workflow replaces the separate `dev-harmony` entry point; historical releases are not automatically deleted.
 
+## iOS native build caching
+
+The iOS release job installs runtime dependencies from `ios/release/Podfile.lock`. It shares dependency declarations with local Debug builds through `ios/pods.rb`. `ios/Podfile` retains Devtool for local simulator and Inspector use; the separate Release installation graph excludes LynxDevtool, BaseDevtool, DebugRouter, SocketRocket, and the PrimJS debugging subspecs. CocoaPods cannot assign subspecs of the same pod to different build configurations, so the two entry points maintain separate lockfiles that must both be updated when changing dependencies.
+
+The workflow enables Xcode 26's content-addressed compilation cache and saves `.build/ios-compilation-cache`, along with CocoaPods downloads and specs. Caches are isolated by runner OS/architecture, macOS build, Xcode build, iPhoneOS SDK build, dependency declarations/Release lockfile, and the Xcode project. Matching inputs restore the latest successful cache; each successful build saves a new entry. Pull requests may restore caches but do not save them.
+
+Caches contain no installation packages, bundles, or previous build metadata. Each run still builds and inspects the current IPA. The first build, or a build after toolchain/dependency changes, needs to warm the cache; no particular speedup is guaranteed. Logs include compilation-cache hit diagnostics and `Build Timing Summary`; compare subsequent cold and warm native-build durations to measure the effect.
+
+To reproduce the CI dependency installation locally:
+
+```bash
+cd ios/release
+pod _1.16.2_ install --deployment
+```
+
+This still generates `ios/SongloftLynx.xcworkspace`. Both entry points share `ios/Pods` so existing xcconfig references remain valid when switching. Run `pnpm run ios:pods` again when returning to local Debug/Inspector development to restore the Debug dependencies and matching lockfile check.
+
 ## One-time setup
 
 Repository Actions must allow workflow execution and `contents: write` for the release job. Configure repository secrets:

@@ -176,7 +176,29 @@ jobs:
           name: js-bundles
       - run: node scripts/copy-bundle-ios.mjs
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+        id: xcode
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          TOOLCHAIN=$(xcodebuild -version)
+          SDK=$(xcrun --sdk iphoneos --show-sdk-build-version)
+          OS_BUILD=$(sw_vers -buildVersion)
+          printf '%s\n' "$TOOLCHAIN" "iPhoneOS SDK build: $SDK" "macOS build: $OS_BUILD"
+          CACHE_ID=$(printf '%s\n' "$TOOLCHAIN" "$SDK" "$OS_BUILD" | shasum -a 256 | cut -d ' ' -f1)
+          echo "cache_id=$CACHE_ID" >> "$GITHUB_OUTPUT"
+      # Xcode's content-addressed compilation cache works across fresh checkouts;
+      # caching DerivedData alone would still invalidate inputs with new mtimes.
+      - name: Restore iOS compilation and CocoaPods caches
+        id: ios-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .build/ios-compilation-cache
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods/repos
+          key: ios-compile-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.cache_id }}-${{ hashFiles('ios/Podfile', 'ios/pods.rb', 'ios/release/Podfile', 'ios/release/Podfile.lock', 'ios/SongloftLynx.xcodeproj/project.pbxproj') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ios-compile-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.cache_id }}-${{ hashFiles('ios/Podfile', 'ios/pods.rb', 'ios/release/Podfile', 'ios/release/Podfile.lock', 'ios/SongloftLynx.xcodeproj/project.pbxproj') }}-
       - name: Verify updater with Apple Security and real disk state
         run: |
           set -euo pipefail
@@ -219,7 +241,7 @@ jobs:
       - name: Install locked CocoaPods version
         run: gem install cocoapods -v 1.16.2 --no-document
       - name: Install CocoaPods dependencies from lockfile
-        working-directory: ios
+        working-directory: ios/release
         run: pod _1.16.2_ install --deployment
       - name: Build unsigned device app
         working-directory: ios
@@ -230,6 +252,10 @@ jobs:
           xcodebuild -workspace SongloftLynx.xcworkspace -scheme SongloftLynx \
             -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
             -derivedDataPath build/DerivedData \
+            -showBuildTimingSummary \
+            COMPILATION_CACHE_ENABLE_CACHING=YES \
+            COMPILATION_CACHE_ENABLE_DIAGNOSTIC_REMARKS=YES \
+            COMPILATION_CACHE_CAS_PATH="$GITHUB_WORKSPACE/.build/ios-compilation-cache" \
             MARKETING_VERSION="$NATIVE_VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' \
             CODE_SIGN_ENTITLEMENTS='' CODE_SIGN_STYLE=Manual AD_HOC_CODE_SIGNING_ALLOWED=NO build
@@ -242,6 +268,15 @@ jobs:
           cp -R "$APP" Payload/
           zip -qry songloft-lynx-ios-nosign.ipa Payload
           python3 scripts/verify-package.py ios songloft-lynx-ios-nosign.ipa .build/version.json
+      - name: Save iOS compilation and CocoaPods caches
+        if: github.event_name != 'pull_request'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .build/ios-compilation-cache
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods/repos
+          key: ${{ steps.ios-cache.outputs.cache-primary-key }}
       - uses: actions/upload-artifact@v4
         with:
           name: release-ios

@@ -1,0 +1,16 @@
+source 'https://cdn.cocoapods.org/'
+platform :ios, '15.0'
+
+# Separate installation graph because CocoaPods cannot select subspecs of the
+# same root pod (LynxService) independently for Debug and Release.
+# Keep the same sandbox so the project's existing CocoaPods xcconfig references
+# remain valid when switching between the two lockfiles.
+Pod::Config.instance.sandbox_root = Pathname.new(__dir__).parent.join('Pods')
+project '../SongloftLynx.xcodeproj'
+workspace '../SongloftLynx'
+require_relative '../pods'
+extend SongloftPods
+
+target 'SongloftLynx' do
+  songloft_pods(devtools: false)
+end

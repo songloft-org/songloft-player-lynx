@@ -20,6 +20,23 @@
 
 上传先写 draft，全部资产成功后才公开，避免下载到部分包。dev 替换期间暂时隐藏；上传失败会留 draft 供维护者检查和重跑。正式/preview 的已有 Release（包括 draft）仍拒绝覆盖；先人工确认失败 draft 的状态再决定删除或发布。dev 会清理同一 Release 内的旧资产名称。
 
+## iOS 原生构建缓存
+
+iOS 发布 job 从 `ios/release/Podfile.lock` 安装运行时依赖，依赖版本与本地 Debug 共用 `ios/pods.rb` 中的声明。`ios/Podfile` 保留 Devtool，供本地模拟器与 Inspector 使用；Release 的独立安装图不包含 LynxDevtool、BaseDevtool、DebugRouter、SocketRocket 及 PrimJS 的调试 subspec。CocoaPods 不支持将同一 Pod 的不同 subspec 分配到不同构建配置，因此两种入口分别维护锁文件，修改依赖时需同步更新。
+
+工作流启用 Xcode 26 的内容寻址编译缓存，保存 `.build/ios-compilation-cache`，同时缓存 CocoaPods 下载和 specs。缓存按 runner OS/架构、macOS build、Xcode build、iPhoneOS SDK build、依赖声明/Release 锁文件和 Xcode 工程隔离；同一组输入恢复上次成功的缓存，每次成功构建保存新的条目。PR 可以恢复缓存，不写入缓存。
+
+缓存不包含安装包、bundle 或旧构建元数据；每次仍构建并检查当前版本的 IPA。首次构建或更换工具链/依赖后的构建需要预热，不承诺具体提速比例。日志输出编译缓存命中诊断和 `Build Timing Summary`，应对照后续冷/热缓存 job 的原生编译耗时评估效果。
+
+本地重现 CI 的依赖安装入口：
+
+```bash
+cd ios/release
+pod _1.16.2_ install --deployment
+```
+
+它仍生成 `ios/SongloftLynx.xcworkspace`，两种入口共用 `ios/Pods` 路径，避免切换时已有 xcconfig 引用失效。返回本地 Debug/Inspector 开发时，重新运行 `pnpm run ios:pods`，恢复 Debug 依赖和对应的锁文件检查。
+
 ## 一次性配置
 
 仓库 Actions 需要允许运行工作流及 Release job 的 `contents: write`。配置 Repository Secrets：

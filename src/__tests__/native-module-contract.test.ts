@@ -1752,7 +1752,7 @@ describe('the host HTTP service is ours, on both hosts', () => {
       appDelegate.indexOf('registerHttpService()'),
     )
 
-    const podfile = read('ios/Podfile')
+    const podfile = read('ios/pods.rb')
     const lynxService = podfile.slice(
       podfile.indexOf("pod 'LynxService'"),
       podfile.indexOf(']', podfile.indexOf("pod 'LynxService'")),
