@@ -1,10 +1,12 @@
-import { useCallback, useRef, useState } from '@lynx-js/react'
+import { useCallback, useRef, useState, useSyncExternalStore } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import { DraggableRoot, DraggableArea } from '@lynx-js/lynx-ui-draggable'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { GridSpacers } from '../../../shared/ui/GridSpacers.js'
+import { getShellWidth, subscribeShellWidth } from '../../../shared/nav/shell-navigation.js'
 import type { JSPlugin } from '../../../models/jsplugin.js'
 import { usePluginIconQuery, usePluginsQuery } from '../data/jsplugin-query.js'
 import {
@@ -42,6 +44,10 @@ export function PluginGrid() {
   const { data: order = [] } = usePluginOrderQuery()
   const updateOrder = useUpdatePluginOrderMutation()
   const [editing, setEditing] = useState(false)
+  const shellWidth = useSyncExternalStore(subscribeShellWidth, getShellWidth)
+  // The viewport is an upper bound for the grid width. Cover every possible
+  // column even on wide screens; 72 matches --grid-card-min in PluginGrid.css.
+  const spacerCount = Math.max(8, Math.ceil(shellWidth / 72))
 
   const activePlugins = (data?.plugins ?? []).filter((p) => p.isActive && p.entryPath)
   const orderedPlugins = applyPluginOrder(activePlugins, order)
@@ -77,6 +83,7 @@ export function PluginGrid() {
         ? (
           <EditableGrid
             plugins={orderedPlugins}
+            spacerCount={spacerCount}
             onCommit={(entryPaths) => updateOrder.mutate(entryPaths)}
           />
         )
@@ -89,6 +96,7 @@ export function PluginGrid() {
                 onTap={() => onTap(plugin)}
               />
             ))}
+            <GridSpacers count={spacerCount} />
           </view>
         )}
     </view>
@@ -106,13 +114,14 @@ interface Rect {
 
 interface EditableGridProps {
   plugins: JSPlugin[]
+  spacerCount: number
   onCommit: (entryPaths: string[]) => void
 }
 
 const cardElementId = (entryPath: string) =>
   `plugin-card-${entryPath.replace(/[^a-zA-Z0-9_-]/g, '_')}`
 
-function EditableGrid({ plugins, onCommit }: EditableGridProps) {
+function EditableGrid({ plugins, spacerCount, onCommit }: EditableGridProps) {
   // Rects captured on drag start; index is aligned with `plugins`.
   const rectsRef = useRef<Rect[]>([])
   // Last translate reported by `onDragging`. Needed because `lynx-ui-draggable`
@@ -261,6 +270,7 @@ function EditableGrid({ plugins, onCommit }: EditableGridProps) {
           </DraggableRoot>
         )
       })}
+      <GridSpacers count={spacerCount} />
     </view>
   )
 }

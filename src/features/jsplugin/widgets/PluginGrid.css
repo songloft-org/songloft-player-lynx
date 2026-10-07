@@ -47,14 +47,14 @@
 }
 
 .plugin-grid__items {
+  --grid-card-min: 72px;
+  --grid-card-max: 88px;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  /* flex-start, not center: center centers each row independently, so a short
-     last row floats mid-width instead of lining up under the first. Left-align
-     keeps every row's first card on the same left edge; the gap carries the
-     even spacing. */
-  justify-content: flex-start;
+  /* Match the library grid: center any space left after cards reach the cap.
+     GridSpacers share the card sizing and keep a short last row column-aligned. */
+  justify-content: center;
   gap: var(--space-3);
 }
 
@@ -67,7 +67,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 72px;
+  flex: 1 0 var(--grid-card-min);
+  max-width: var(--grid-card-max);
   padding: var(--space-2);
   border-radius: var(--radius-md);
   position: relative;
