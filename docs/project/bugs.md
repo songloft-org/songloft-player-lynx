@@ -68,6 +68,8 @@
 
 ## 手动测试发现
 
+- [ ] HarmonyOS/iOS 原生插件模板加载验收（2026-10-07 P6c 接线核查）— HarmonyOS 原 LynxView 没有 templateResourceFetcher，现补远程 RCP 下载器和注册，8 项实际源码 HTTP/TLS 适配器、真实 SDK clean HAP 编译通过。根模板验签选择不变，原 `e09592b` 包未重写；修复需安装新 HAP。HarmonyOS 设备 frame 加载/恢复及重定向行为尚未验证，不能套用 Android 160101 的设备结论；iOS provider 仍仅读内置资源，远程配置和编译/设备验收继续。证据见 progress。
+
 - [x] Android 已安装 Lynx 插件空白（2026-10-07 P6c 实测）— `e09592b` 只设置根资源 provider，frame 报 160101，没有可用 lazy bundle fetcher。仅注册新版模板 fetcher 的 `f91d861` 仍失败，默认资源模式没有启用该接口；`9bfd35c` 补动态入口并复用同一限时/限额/TLS 下载器，保留根模板更新选择器和现有图片/字体路径。41 项 JVM、相关桥接回归、类型/双产物/APK 通过；真实上传的 SDK 插件在新 APK 中加载并完成初始、五次 HOME、切换/退出和重入验收。负例与新包身份见 progress；不据此闭合 iOS/HarmonyOS 模板加载或 MIoT 重连。
 
 - [x] HarmonyOS 缓存/更新器 ArkTS 编译失败（2026-10-07）：5 处 catch 变量裸重抛违反 `arkts-limited-throw`。改为显式 `Error` 类型，保留原异常与清理/回退；15 项实际源码适配器、306 项原生契约和 clean release HAP 构建通过，包内版本/身份/生产 bundle 校验通过。SDK `26.0.0.105`，未签名及设备边界见 progress。

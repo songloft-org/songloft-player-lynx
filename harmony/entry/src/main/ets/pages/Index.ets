@@ -1,9 +1,10 @@
 import { common } from '@kit.AbilityKit'
-import { Behavior, BehaviorRegistryMap, LynxView, MetaData, ModuleClassWrapper, TemplateBundle, TemplateData, LynxContext, LynxGenericResourceFetcher, LynxMediaResourceFetcher, LynxViewClient } from '@lynx/lynx'
+import { Behavior, BehaviorRegistryMap, LynxView, MetaData, ModuleClassWrapper, TemplateBundle, TemplateData, LynxContext, LynxGenericResourceFetcher, LynxMediaResourceFetcher, LynxTemplateResourceFetcher, LynxViewClient } from '@lynx/lynx'
 import { UISVG } from '@lynx/xelement_svg'
 import { UIWebView } from '@lynx/xelement_webview'
 import { SongloftGenericResourceFetcher } from '../net/SongloftGenericResourceFetcher'
 import { SongloftMediaResourceFetcher } from '../net/SongloftMediaResourceFetcher'
+import { SongloftTemplateResourceFetcher } from '../net/SongloftTemplateResourceFetcher'
 import { SongloftAudioModule } from '../modules/audio/SongloftAudioModule'
 import { SongloftStorageModule } from '../modules/storage/SongloftStorageModule'
 import { SongloftPlatformModule } from '../modules/platform/SongloftPlatformModule'
@@ -40,6 +41,7 @@ struct Index {
   private metaData: MetaData = new MetaData()
   private genericResourceFetcher: LynxGenericResourceFetcher = new SongloftGenericResourceFetcher()
   private mediaResourceFetcher: LynxMediaResourceFetcher = new SongloftMediaResourceFetcher()
+  private templateResourceFetcher: LynxTemplateResourceFetcher = new SongloftTemplateResourceFetcher()
 
   aboutToAppear(): void {
     this.modules.set('SongloftAudio', { moduleClass: SongloftAudioModule, param: this.context })
@@ -110,6 +112,7 @@ struct Index {
         metaData: this.metaData,
         genericResourceFetcher: this.genericResourceFetcher,
         mediaResourceFetcher: this.mediaResourceFetcher,
+        templateResourceFetcher: this.templateResourceFetcher,
         onCreate: (context: LynxContext) => {
           this.lifecycleClient.attach(context)
           SystemAppearance.attach(context, this.context)

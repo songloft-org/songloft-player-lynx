@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · HarmonyOS 远程插件模板接线与真实 SDK 编译
+
+- 从父仓库 `38631c2`、客户端 `4806e9c` 继续，先前 Android frame 加载与 SDK 子订阅修复保留。对照 Lynx 4.0.1 的实际 HarmonyOS SDK：`Index.ets` 原先只有 generic/media fetcher，模板 provider 未设置；SDK 将模板 fetcher 传入子运行时。因此新增 `SongloftTemplateResourceFetcher` 并在 LynxView 注册，根模板仍由 `BundleUpdateStore.beginLaunch()` 选择后直接构造 `TemplateBundle`，没有借插件下载绕过根模板验签。iOS 原 provider 确认只读 Bundle.main，后续继续补其远程配置；未在本批修改 Swift。
+- 每个下载独立 RCP session，不加账号凭据，允许 HTTP/HTTPS 并拒绝 userinfo/控制字符地址；已知长度与流式内容限额 50 MiB，连接 15 秒、传输/空闲 30 秒，最多五次自动重定向。非 2xx、空内容、超额返回错误；SSR 明确不支持。使用用户 TLS 开关，设置变化取消在途请求，结束后关闭 session/移除监听。接口未伪装 Promise 原生模块，使用 SDK `AsyncCallback<TemplateProviderResult>`。
+- 8 项测试转译执行实际 ArkTS，接真实本地 HTTP/自签 HTTPS：逐字节二进制、无 Authorization/Cookie、404/空内容、已知/未知长度超额、非法 URL、TLS 拒绝→允许→再拒绝、TLS 切换取消、并发 session 隔离与 SSR 错误。每个模板请求核对回调一次、session 全关闭及无残留 TLS 监听。Node RCP 适配器不证明设备 SDK 网络行为，也没有重定向设备验收。
+- 在既有私有 `/tmp/lynx-harmony-acca95d/` 编译副本只同步本批两个 ArkTS 文件；SHA-256 对比一致，未覆盖已有临时构建版本/签名配置。真实 SDK `26.0.0.105` / Lynx `4.0.1` 的 clean release HAP 构建通过，**34 个任务：33 执行、1 up-to-date**，日志 `/tmp/lynx-harmony-template-clean-build.log`。这是包含新源码的编译验证，临时包沿用旧构建元数据，不把它当新发版交付；原四种固定包与新 Android 包未覆盖。本批没有接受华为协议、下载镜像或运行 HarmonyOS 设备。
+- 最终 **286 文件 / 3061 项 JS、55 项发布工具、tsc -b、双 bundle** 通过；加强回调/监听清理断言后的 8 项加载器测试复跑通过。日志 `/tmp/lynx-harmony-template-{js-tests,release-tests,focused-tests,types,bundle-build}.log` 保留。逐项检查 URL/限额/错误回调、并发与资源清理、根更新选择和 SDK 接口；`git diff --check`、UTF-8/替换字符检查通过。现有 `touch-action`、SDK 弃用/未签名等警告保留。HarmonyOS frame 加载/恢复与 API 13 设备、iOS 编译/设备、MIoT 长后台/断网重连仍开放。原生 fetcher 修复需安装新 HAP，不能只靠 bundle 热更新。双语交接与中文参考/bugs/计划已同步，仅本地分批提交、不 push，桌面/Bundle/视频仍暂缓。
+
 ## 2026-10-07 · Android 原生插件加载修复与 frame 恢复/退出验收
 
 - 从父仓库 `d5df76a`、客户端 `d353361` 和 SDK `b4baad3` 的干净状态继续。用本地 SDK 构建事件订阅专用 ReactLynx 插件，经隔离 Go `58192` 的真实 ZIP 上传/双哈希校验启用 A、B 两个插件，再从应用首页打开；没有启用主应用 JS TestBridge、注入宿主脚本或访问用户 `58091`。插件 bundle 为 89333 字节，SHA-256 `4d9024b4326963e22cc3a329e4bf338fd4dda26a9a64e32889a8dc4fd63085f9`。

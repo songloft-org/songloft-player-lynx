@@ -4,7 +4,9 @@
 
 ## 1. 当前完成度
 
-Android 新增原生插件模板加载修复，源码提交 `f91d861` / `9bfd35c`。`e09592b` 真实安装插件时 frame 报 160101；仅注册新 fetcher 仍失败，现按 Lynx 4.0 当前资源模式同时接动态入口，保留根更新选择器与图片/字体路径。新 APK 在 `/tmp/lynx-local-delivery/9bfd35c/`，构建号 `213494756`；41 项 JVM、3061 项 JS、47 项发布工具、类型/双 bundle/APK 通过。真实 SDK 插件初始恢复通知、A/B 共五次 HOME 每次一次、退出后不再推送与新 frame 标识重入通过。完整证据/哈希见 progress，MIoT 长后台/断网重连、歌词卡片/锁屏及 iOS/HarmonyOS 加载配置/设备验收继续。测试服务已停止，旧四种固定包哈希未变；仅本地提交，不 push。
+HarmonyOS 已补远程插件模板 fetcher，并在 `Index.ets` 的 LynxView 中注册。根模板仍由 `BundleUpdateStore` 选择后直接构造 `TemplateBundle`；远程下载采用独立 RCP session、50 MiB 流式限额、30 秒传输时限、最多五次重定向，不附账号凭据，复用用户 TLS 开关并在设置变化时取消在途请求。8 项实际源码 Node HTTP/TLS 适配器测试及真实 SDK clean HAP 编译通过，详见 progress；适配器不是设备验证。需要安装包含此修复的新原生壳，旧 `e09592b` HAP 不含本次接线且哈希未改。HarmonyOS 设备加载/恢复仍开放，iOS provider 目前仅支持内置资源，其远程模板加载配置继续补齐。仅本地提交，不 push。
+
+Android 新增原生插件模板加载修复，源码提交 `f91d861` / `9bfd35c`。`e09592b` 真实安装插件时 frame 报 160101；仅注册新 fetcher 仍失败，现按 Lynx 4.0 当前资源模式同时接动态入口，保留根更新选择器与图片/字体路径。新 APK 在 `/tmp/lynx-local-delivery/9bfd35c/`，构建号 `213494756`；41 项 JVM、3061 项 JS、47 项发布工具、类型/双 bundle/APK 通过。真实 SDK 插件初始恢复通知、A/B 共五次 HOME 每次一次、退出后不再推送与新 frame 标识重入通过。完整证据/哈希见 progress，MIoT 长后台/断网重连、歌词卡片/锁屏及 iOS 远程配置及两端设备验收继续。测试服务已停止，旧四种固定包哈希未变；仅本地提交，不 push。
 
 已订正缓存、更新协议和原生模块参考页遗漏的 HarmonyOS 编译现状，中英对应页同步。剩余验收按平台/证据归组，见[计划检查表](plans/2026-10-06-feature-completion.md)。模拟器 CLI 已能查询 API 13 镜像，但华为许可仍待用户明确授权接受，尚未下载/创建/启动；宿主账号无 KVM 读写权限，独立 Android 容器内 KVM 检查和开机已通过，未改宿主权限。这不证明 HarmonyOS 运行和调试签名可用。旧 SDK 兼容性已对照 P6c 前源码核查，未发现既有原生状态推送被破坏的证据；新增推送仍须插件重建。
 
