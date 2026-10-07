@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · 模板能力新 APK/HAP 与 Android 安装复验
+
+- 在验签回归提交 `1d86b77cd915c04ca960bb238311732716f5b3ad` 后生成统一身份：dev、原生版本 `0.1.0`、构建号 **213496964**、时间 `2026-10-07T00:42:44.868Z`。bridge 3/schema 2 不变，包内不可变快照含 `pluginFrame.templates.v1`，受信更新公钥仍为 0；JS TestBridge 未启用。双 bundle 构建通过，原有 `touch-action` 警告保留。iOS 仅同步 bundle/身份资源，没有获得原生编译证据。
+- Android `--no-daemon testDebugUnitTest assembleDebug` 通过，**42 项 JVM、43 个任务（18 执行、25 up-to-date）**；HarmonyOS 私有编译副本全部 **31 个已跟踪 ArkTS 文件**与当前提交逐字一致，SDK `26.0.0.105` / Lynx `4.0.1` 的 clean release HAP **34 个任务全部执行**成功。新元数据仅通过既有 prepare 脚本写入私有副本，未覆盖仓内签名配置；现有 JDK/SDK 弃用、资源重复、未签名警告保留。日志 `/tmp/lynx-native-capability-{bundle-build,android-package,harmony-package}.log`，源码哈希清单在交付目录。
+- 新两包独立保存在 `/tmp/lynx-local-delivery/1d86b77/`：`songloft-lynx-android-debug.apk` **33442696** 字节，SHA-256 **`8f4f448953ac39b2d783b729cbd160818f9d77a6405dabdaec5fa698f5aebe6d`**；`songloft-lynx-harmony-unsigned.hap` **26496358** 字节，SHA-256 **`421343ac27d0514dec006dee0fd4d95bbf3451a87d8a2c581234da317a020099`**。实际包内身份、版本、引擎、公钥和 bundle 逐字检查通过，bundle SHA-256 **`1213dacb50c5d443599d2ba125eacc698771a341cf9d85105aa2c6aacd5176fe`**；APK 为 Debug、HAP 未签名。原 `e09592b` 四包和 `9bfd35c` APK 的哈希均未变，未回写旧包能力或回执。首轮临时校验因误写旧 standalone 文件名中止，修正文件名后重新严格校验；中止副本保留，不放宽身份/哈希断言。结果见 `verification.json`。
+- 在自有 API 34 / 4 KB、Emulator 35.6.11 / Mesa llvmpipe、arm64 native bridge 安装并预编译新 APK，包管理器确认构建号/ABI；直接读取实际安装的 base.apk，其 SHA-256 与交付包一致。使用隔离 Go `58192` 和已安装 SDK 计数插件，从实际界面打开 A，初始恢复一次；A 三次 HOME、B 两次 HOME 均各一次，应用 PID 不变。A/B 退出后 unregister 各一次，随后 HOME 不再给已退出 frame 推送；重开 A 使用新标识且初始恢复一次，截图已目测。日志/脚本/截图在 `/tmp/lynx-native-capability-device/`，安装、恢复、退出 JSON 与 `device-acceptance.json` 已复制到新交付目录。没有用旧 APK 的设备记录替代本次复验。
+- 自有模拟器容器先停止，再关闭 Xvfb；自有后端退出，用户 `58091` 保留。没有接受华为协议、下载镜像、运行 HarmonyOS 设备或触发 CI。HAP 签名/设备与 Apple 编译/设备、正式更新公钥、MIoT 长后台/断网重连、通知歌词/锁屏继续开放。交接双语、中文 bugs/参考/计划同步，只本地分批提交、不 push；桌面、Bundle 本地模式、视频仍暂缓。
+
 ## 2026-10-07 · 新旧原生壳的插件模板能力验签回归
 
 - 从父仓库 `d1d8938`、客户端 `8068a15` 的干净状态继续。为 Android 和 HarmonyOS 实际更新器新增 RSA 签名回归：旧壳/新壳保持 bridge 3、schema 2，只有新快照具有 `pluginFrame.templates.v1`；旧壳拒绝需要此能力的 bundle 且不创建 pending，新壳接受新旧两种清单，创建新壳不会改变旧实例的不可变快照。公共 bridge 1/schema 1 签名向量未改写；本测试单独生成密钥与签名，并明确设置当前桥接范围和 schema。

@@ -28,7 +28,7 @@
 
 Android 路径均省略前缀 `android/app/src/main/java/org/songloft/lynx/`；iOS 路径均省略前缀 `ios/SongloftLynx/`。
 
-HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatingLyric`、`SongloftLiveActivity` 外均按同名模块注册（`SongloftWebview` / `SongloftLynxFrame` 本就只有 Web 实现）。`SongloftUpdate` 实现在 `updater/`，根模板与 fatal lifecycle 同步接入。2026-10-07 已对 `e09592b` 完成 clean release HAP 编译与包内容校验，SDK `26.0.0.105`、最低兼容声明 API 13，包未签名，设备行为待验。`Index.ets` 已注册 `SongloftVideo` 并挂载 XComponent，模块绑定共享 AVPlayer；视频设备验收按用户要求暂缓。P6a 已接 Pasteboard 与确认回调，P6b 已补 AVSession 通知歌词与队列元数据；系统粘贴、媒体卡片仍待验，不能以模块注册或编译判断每个方法可用。
+HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatingLyric`、`SongloftLiveActivity` 外均按同名模块注册（`SongloftWebview` / `SongloftLynxFrame` 本就只有 Web 实现）。`SongloftUpdate` 实现在 `updater/`，根模板与 fatal lifecycle 同步接入。2026-10-07 已对 `e09592b` 及补远程模板接线/能力标记后的 `1d86b77` 完成 clean release HAP 编译与包内容校验，SDK `26.0.0.105`、最低兼容声明 API 13，包未签名，设备行为待验。新包在 `/tmp/lynx-local-delivery/1d86b77/`，旧包未覆盖。`Index.ets` 已注册 `SongloftVideo` 并挂载 XComponent，模块绑定共享 AVPlayer；视频设备验收按用户要求暂缓。P6a 已接 Pasteboard 与确认回调，P6b 已补 AVSession 通知歌词与队列元数据；系统粘贴、媒体卡片仍待验，不能以模块注册或编译判断每个方法可用。
 
 ### 不是 NativeModules 模块
 
@@ -410,7 +410,7 @@ Web 上渲染 Lynx 插件的宿主（native 构建用真实 `<frame>` 元素，�
 
 读方法 `getInfo(callback)`、`getState(callback)`、`inspectManifest(raw, signature, callback)`、`fetchMetadata(requestJson, callback)`；异步写入 `download(requestJson, callback)` 与 `restoreBuiltin(callback)` 在持久化完成后回调；void 命令 `cancel(taskId)`、`confirmStartup(bundleId)`、`reportStartupFailure()`。元数据请求 `{url, max_bytes}` 返回 `{status, body}`，独立系统 TLS、12 秒网络期限、有界 UTF-8 读取和 HTTPS 跳转，不继承业务证书跳过设置。进度事件 `SongloftUpdate.progress` 的数组参数含 `{task_id, bytes, total}`。任何出错回调只含机器错误码，不转发带 URL/凭据的网络异常文本。
 
-旧壳逐方法探测：原有八方法是状态/下载/启动能力，新 `fetchMetadata` 单独探测，缺失时关于页只提供本通道发版页。原生信息来自内置 `native-host.json`，签名/hash/兼容及新旧判断由壳执行；当前发布契约为 bridge 3 / schema 2，含 `updater.metadata.v1` 与 `songCache.v2`。下载只准备下次冷启动，根模板加载器重新验证磁盘并持久化 trial；RouteErrorBoundary 内的 `UpdateStartup` 确认真实路由启动，未确认下次回退。Web 无该原生模块；完整协议与开放项见 [client-updates.md](client-updates.md)。
+旧壳逐方法探测：原有八方法是状态/下载/启动能力，新 `fetchMetadata` 单独探测，缺失时关于页只提供本通道发版页。原生信息来自内置 `native-host.json`，签名/hash/兼容及新旧判断由壳执行；当前发布契约为 bridge 3 / schema 2，含 `updater.metadata.v1`、`songCache.v2` 与 `pluginFrame.templates.v1`。Android/HarmonyOS 真实签名回归验证缺模板能力的旧快照拒绝新版 bundle，需本通道新安装包；历史快照不修改。下载只准备下次冷启动，根模板加载器重新验证磁盘并持久化 trial；RouteErrorBoundary 内的 `UpdateStartup` 确认真实路由启动，未确认下次回退。Web 无该原生模块；完整协议与开放项见 [client-updates.md](client-updates.md)。
 
 ## 3. 调用约定
 

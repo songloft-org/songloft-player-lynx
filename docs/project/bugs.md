@@ -21,7 +21,7 @@
 
 - [ ] **DLNA 投屏重播旧曲、离开投屏页后主播放器控制本地音频（2026-10-05，代码与测试包已完成，待 Android 实测）** — DIDL `res` 没有 MIME 且忽略 SOAP HTTP 错误，URI 被拒后仍发 Play；投屏设备只存在页面 state，主播放器控制没有路由到远端。现补 MIME 元数据、SOAP Fault 校验、跨页面会话与串行控制，远端状态/进度轮询及队列完成路由。JS 2760 项与 Android 11 项回归（分批）、类型检查、双 bundle 和最终 APK 编译通过。ADB 无连接设备，需实测主播放器暂停/继续、上一曲/下一曲、自动连播、进度/音量与断开；iOS/HarmonyOS 同步源码；HarmonyOS HAP 现已编译，iOS 编译及两端设备验证仍开放。
 
-- [ ] **三端插件恢复前台通知待设备验收（songloft-org/songloft#493，2026-10-07 P6c 源码补齐）** — MIoT 后台静默失效的连接可能在前台持续停更。三端根生命周期与 WebView/Lynx 消费点已接入，SDK 事件独立注册/ready 已补但未发布，插件需重建。Chrome/Firefox 的保活与可见性证据见 progress。Android 后续修复真实安装插件的模板加载失败，`9bfd35c` 在 API 34 / Mesa 环境通过原生子 frame 初始通知、A/B 共五次 HOME 每次一次、退出后无推送与新标识重入；不再把它描述为仅有根事件或环境完全不可用。iOS/HarmonyOS 的 frame 加载配置还需核对；HarmonyOS 只有 `e09592b` HAP 编译，iOS 尚未编译。MIoT 长后台、断网重连和音箱状态恢复仍待设备验证，不勾选整体完成。
+- [ ] **三端插件恢复前台通知待设备验收（songloft-org/songloft#493，2026-10-07 P6c 源码补齐）** — MIoT 后台静默失效的连接可能在前台持续停更。三端根生命周期与 WebView/Lynx 消费点已接入，SDK 事件独立注册/ready 已补但未发布，插件需重建。Chrome/Firefox 的保活与可见性证据见 progress。Android 模板加载修复后的 `9bfd35c` 及含能力标记的新 `1d86b77` APK 均在 API 34 / Mesa 环境通过原生子 frame 初始通知、A/B 共五次 HOME 每次一次、退出后无推送与新标识重入。iOS/HarmonyOS 也已补模板接线源码；`1d86b77` 新 HAP 的实际源码 clean 编译和包校验通过，尚未签名/安装，iOS 尚未编译。MIoT 长后台、断网重连和音箱状态恢复仍待设备验证，不勾选整体完成。
 
 > 2026-08-31 从 handoff.md 迁入。尚未闭合，修复后改 `[x]` 并移主题归类，别在已闭合条目上续写。
 
@@ -68,7 +68,7 @@
 
 ## 手动测试发现
 
-- [ ] HarmonyOS/iOS 原生插件模板加载验收（2026-10-07 P6c 接线核查）— HarmonyOS 原 LynxView 没有 templateResourceFetcher，现补远程 RCP 下载器和注册，8 项实际源码 HTTP/TLS 适配器、真实 SDK clean HAP 编译通过。根模板验签选择不变，原 `e09592b` 包未重写；修复需安装新 HAP。HarmonyOS 设备 frame 加载/恢复及重定向行为尚未验证，不能套用 Android 160101 的设备结论；iOS 已补根/动态/新版模板入口与流式下载源码，Apple 核心验证程序已配置但未编译执行；iOS 编译与两端设备验收继续。证据见 progress。
+- [ ] HarmonyOS/iOS 原生插件模板加载验收（2026-10-07 P6c 接线核查）— HarmonyOS 原 LynxView 没有 templateResourceFetcher，现补远程 RCP 下载器和注册，8 项实际源码 HTTP/TLS 适配器、真实 SDK clean HAP 编译通过。含接线与 `pluginFrame.templates.v1` 的 `1d86b77` 新 HAP 已完成 clean 编译和包校验，独立保存在 `/tmp/lynx-local-delivery/1d86b77/`，尚未签名/安装；根模板验签选择不变，原 `e09592b` 包未重写。HarmonyOS 设备 frame 加载/恢复及重定向行为尚未验证，不能套用 Android 160101 的设备结论；iOS 已补根/动态/新版模板入口与流式下载源码，Apple 核心验证程序已配置但未编译执行；iOS 编译与两端设备验收继续。证据见 progress。
 
 - [x] Android 已安装 Lynx 插件空白（2026-10-07 P6c 实测）— `e09592b` 只设置根资源 provider，frame 报 160101，没有可用 lazy bundle fetcher。仅注册新版模板 fetcher 的 `f91d861` 仍失败，默认资源模式没有启用该接口；`9bfd35c` 补动态入口并复用同一限时/限额/TLS 下载器，保留根模板更新选择器和现有图片/字体路径。41 项 JVM、相关桥接回归、类型/双产物/APK 通过；真实上传的 SDK 插件在新 APK 中加载并完成初始、五次 HOME、切换/退出和重入验收。负例与新包身份见 progress；不据此闭合 iOS/HarmonyOS 模板加载或 MIoT 重连。
 

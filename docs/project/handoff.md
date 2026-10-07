@@ -4,7 +4,9 @@
 
 ## 1. 当前完成度
 
-Android/HarmonyOS 已新增实际更新器的 RSA 签名回归，验证 bridge 3/schema 2 不变时，缺少 `pluginFrame.templates.v1` 的旧壳拒绝新版 bundle，新壳接受，旧实例快照保持不变；公共历史签名向量不改写。14 项 Android 更新器 JVM、7 项 HarmonyOS 源码适配器及 56 项发布工具测试通过；隔离副本移除能力检查后新用例按预期失败。含此标记的新 APK/HAP 仍待重建，设备与 Apple 编译边界保留，见 progress。
+已为 `1d86b77` 生成含 `pluginFrame.templates.v1` 的新 APK/HAP，统一构建号 `213496964`，保存到 `/tmp/lynx-local-delivery/1d86b77/`；旧包哈希不变。42 项 Android JVM、34 个全部执行的 HarmonyOS clean HAP 任务、3063 项 JS、56 项发布工具及类型/双 bundle 通过。新 APK 的实际安装哈希与交付一致，A/B 插件初始通知、五次 HOME、退出不再推送与新标识重入复验通过。APK 为 Debug、HAP 未签名、正式更新公钥仍为 0；Apple 编译、两端设备及 MIoT 长后台/断网重连继续开放。自有测试服务已停止，不 push，详细哈希/回执见 progress。
+
+Android/HarmonyOS 已新增实际更新器的 RSA 签名回归，验证 bridge 3/schema 2 不变时，缺少 `pluginFrame.templates.v1` 的旧壳拒绝新版 bundle，新壳接受，旧实例快照保持不变；公共历史签名向量不改写。14 项 Android 更新器 JVM、7 项 HarmonyOS 源码适配器及 56 项发布工具测试通过；隔离副本移除能力检查后新用例按预期失败。设备与 Apple 编译边界保留，见 progress。
 
 iOS 已在源码中补远程插件模板加载：同一个 `SongloftTemplateProvider` 由控制器持有，接到根 config、动态 fetcher 和新版模板 fetcher；根资源选择/验签更新回退保留。新增独立 URLSession 流式下载器，50 MiB/30 秒、最多五次重定向，不继承账号 Cookie/凭据，TLS 设置变化取消在途请求并清理监听。Apple CI 新增实际 Foundation/TLS 下载验证程序，尚未编译或执行；本机 `xcodebuild -list` 因工具缺失退出 127。结构闸门和本地 HTTP/TLS 夹具通过不代表 Swift/SDK/设备通过，详见 progress。兼容契约新增 `pluginFrame.templates.v1`，旧壳检查后续 bundle 会引导同通道新安装包，既有快照不改写。三端加载器接线源码现已补齐，但 iOS 编译、iOS/HarmonyOS 新壳安装与插件恢复验收继续开放；仅本地提交，不 push。
 
