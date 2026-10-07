@@ -226,7 +226,9 @@ class MainActivity : Activity() {
     private fun buildLynxView(): LynxView {
         val viewBuilder = LynxViewBuilder()
         viewBuilder.addBehaviors(XElementBehaviors().create())
-        viewBuilder.setTemplateProvider(DemoTemplateProvider(this))
+        val templates = DemoTemplateProvider(this)
+        viewBuilder.setTemplateProvider(templates)
+        viewBuilder.setTemplateResourceFetcher(SongloftTemplateResourceFetcher(templates))
         return viewBuilder.build(this)
     }
 

@@ -53,7 +53,7 @@ object SongloftHttpService : ILynxHttpService {
      * new setting applies from the next request on.
      */
     @Synchronized
-    private fun clientFor(insecure: Boolean): OkHttpClient {
+    internal fun clientFor(insecure: Boolean): OkHttpClient {
         cachedClient?.let { if (cachedInsecure == insecure) return it }
         val client = if (insecure) {
             OkHttpClient.Builder()
