@@ -1055,10 +1055,10 @@
     {},
     lynxView.nativeModulesMap || {},
     {
-      SongloftAudio: '/songloft-audio-module.js',
-      SongloftPlatform: '/songloft-platform-module.js',
-      SongloftNavigation: '/songloft-navigation-module.js',
-      SongloftVideo: '/songloft-video-module.js',
+      SongloftAudio: new URL('./songloft-audio-module.js', document.baseURI).href,
+      SongloftPlatform: new URL('./songloft-platform-module.js', document.baseURI).href,
+      SongloftNavigation: new URL('./songloft-navigation-module.js', document.baseURI).href,
+      SongloftVideo: new URL('./songloft-video-module.js', document.baseURI).href,
     },
   )
 

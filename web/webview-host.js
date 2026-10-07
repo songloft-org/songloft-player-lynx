@@ -371,7 +371,7 @@
     {},
     lynxView.nativeModulesMap || {},
     {
-      SongloftWebview: '/songloft-webview-module.js',
+      SongloftWebview: new URL('./songloft-webview-module.js', document.baseURI).href,
     },
   )
 

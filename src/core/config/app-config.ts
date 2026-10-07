@@ -12,6 +12,7 @@
  */
 
 import { readLynxGlobal } from '../../native/native-modules.js'
+import { isWebPlatform } from '../../native/web-platform.js'
 
 /** API path prefix, e.g. `/api/v1`. */
 export const apiPrefix = '/api/v1'
@@ -35,9 +36,9 @@ const DEV_BACKEND_URL = 'http://localhost:58091'
  * The page origin as seen from the worker realm, or null off-web.
  *
  * In a web worker, `self.location.origin` still reports the page origin, which
- * IS the backend's own origin in an embedded deploy — so that deploy gets the
- * right default base URL with zero configuration. On Lynx native, `self` has
- * no `location` at all.
+ * IS the backend's own origin in an embedded deploy. The document supplies
+ * its directory separately because the Worker URL names an engine script.
+ * On Lynx native, `self` has no `location` at all.
  */
 function readWorkerOrigin(): string | null {
   try {
@@ -55,6 +56,33 @@ function readWorkerOrigin(): string | null {
  * both web deploys, so the page is the only party that knows which one it is.
  */
 export const GLOBAL_PROP_DEPLOY_MODE = 'deployMode'
+/** Document directory supplied by the main-thread Web host, before upgrade. */
+export const GLOBAL_PROP_WEB_BASE_URL = 'webBaseUrl'
+
+function readHostWebBaseUrl(): string | null {
+  const origin = readWorkerOrigin()
+  // Web's main-thread Lynx realm may omit location. Its SystemInfo still
+  // identifies Web, so trusted host props must work there too.
+  if (origin == null && !isWebPlatform()) return null
+  try {
+    const raw = readLynxGlobal()?.__globalProps?.[GLOBAL_PROP_WEB_BASE_URL]
+    if (typeof raw !== 'string') return null
+    const url = new URL(raw)
+    if (
+      (origin != null && url.origin !== origin) || !['http:', 'https:'].includes(url.protocol) ||
+      url.username || url.password || url.search || url.hash
+    ) return null
+    return `${url.origin}${url.pathname.replace(/\/+$/, '')}`
+  } catch {
+    return null
+  }
+}
+
+/** Static app assets belong to the Web page, independently of the API server. */
+export function hostAssetUrl(name: string): string {
+  const base = readHostWebBaseUrl() ?? readWorkerOrigin()
+  return `${base ?? ''}/${name}`
+}
 
 /** Read the host-tagged deploy mode; null when the host said nothing. */
 function readHostDeployMode(): 'standalone' | 'embedded' | null {
@@ -77,7 +105,7 @@ function readHostDeployMode(): 'standalone' | 'embedded' | null {
  * origin, leaving a fresh browser unable to log in at all.
  */
 const HOST_DEPLOY_MODE = readHostDeployMode()
-const ORIGIN_BASE_URL = readWorkerOrigin()
+const WEB_BASE_URL = readHostWebBaseUrl() ?? readWorkerOrigin()
 
 // DEV default: the local test backend. `localhost` is the right default for
 // BOTH emulator/simulator targets, so this must not be a LAN IP:
@@ -98,7 +126,7 @@ const ORIGIN_BASE_URL = readWorkerOrigin()
 // behind it.
 const DEFAULT_BASE_URL = HOST_DEPLOY_MODE === 'standalone'
   ? DEV_BACKEND_URL
-  : (ORIGIN_BASE_URL ?? DEV_BACKEND_URL)
+  : (WEB_BASE_URL ?? DEV_BACKEND_URL)
 
 /**
  * DEV convenience: credentials prefilled into the login form so device testing
@@ -150,21 +178,19 @@ export type DeployMode = 'standalone' | 'embedded'
  */
 function resolveDeployMode(): DeployMode {
   if (HOST_DEPLOY_MODE) return HOST_DEPLOY_MODE
-  return ORIGIN_BASE_URL != null ? 'embedded' : 'standalone'
+  return WEB_BASE_URL != null ? 'embedded' : 'standalone'
 }
 
 /**
  * Re-read the host's deploy-mode tag and apply it if it arrived late.
  *
- * The tag rides `lynx.__globalProps`, which the web host page sets on
- * `lynxviewready`; whether that lands before or after this module evaluates is
- * web-core's business, so `src/index.tsx` calls this once more before the first
- * render. Idempotent, and a no-op when the host said nothing (native hosts
- * never set the key).
+ * The host sets the attribute before web-core upgrades the element. The second
+ * read before rendering also handles a late host, without replacing a user URL.
  */
 export function applyHostDeployMode(): void {
   const tagged = readHostDeployMode()
-  if (tagged == null || tagged === appConfig.deployMode) return
+  if (tagged == null) return
+  const previousMode = appConfig.deployMode
   appConfig.deployMode = tagged
   // `readWorkerOrigin()` live rather than the module constant: same value by
   // definition (the page origin never changes), but it keeps the branch testable
@@ -174,6 +200,14 @@ export function applyHostDeployMode(): void {
     // lives behind it. Swap to the dev backend default; a persisted server URL
     // (applied later by the auth hydrate) still wins.
     appConfig.baseUrl = DEV_BACKEND_URL
+  } else if (tagged === 'embedded') {
+    const base = readHostWebBaseUrl()
+    if (base && (
+      appConfig.baseUrl === readWorkerOrigin() ||
+      (previousMode === 'standalone' && appConfig.baseUrl === DEV_BACKEND_URL)
+    )) {
+      appConfig.baseUrl = base
+    }
   }
 }
 

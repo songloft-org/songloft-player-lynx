@@ -5,10 +5,10 @@ import vm from 'node:vm'
 import { expect, test } from 'vitest'
 
 interface Dom { window: Window & typeof globalThis }
-const { JSDOM } = createRequire(import.meta.url)('jsdom') as { JSDOM: new (html: string) => Dom }
+const { JSDOM } = createRequire(import.meta.url)('jsdom') as { JSDOM: new (html: string, options: { url: string }) => Dom }
 
 test('Web getVolume forwards the real audio volume through the existing event channel', () => {
-  const dom = new JSDOM('<body><lynx-view id="app"></lynx-view></body>')
+  const dom = new JSDOM('<body><lynx-view id="app"></lynx-view></body>', { url: 'https://music.example/songloft/' })
   try {
     const app = dom.window.document.getElementById('app') as HTMLElement & {
       sendGlobalEvent: (name: string, values: unknown[]) => void

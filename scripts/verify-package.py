@@ -28,7 +28,7 @@ def verify_web(package, metadata, embedded):
         for ref in re.findall(r'(?:src|href)=["\']([^"\']+)["\']', html):
             if re.match(r"^(?:https?:|data:|#)", ref):
                 continue
-            name = ref.split("?")[0].split("#")[0].lstrip("/")
+            name = ref.split("?")[0].split("#")[0].lstrip("/").removeprefix("./")
             assert name in files, f"Missing HTML asset: {name}"
         packaged = json.loads(files["version.json"])
         assert packaged == metadata, "Web metadata mismatch"

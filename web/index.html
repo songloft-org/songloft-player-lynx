@@ -13,8 +13,8 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Songloft</title>
-  <link rel="icon" type="image/png" sizes="32x32" href="/app_icon.png">
-  <link rel="apple-touch-icon" href="/app_icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="./app_icon.png">
+  <link rel="apple-touch-icon" href="./app_icon.png">
   <!--
     These two names must match what scripts/copy-bundle-web.mjs actually copies,
     i.e. @lynx-js/web-core's client_prod assets (client.css / client.js). They
@@ -23,7 +23,7 @@
     while `web:dev` worked because serve.mjs was reading a different directory.
     A vitest gate now asserts every local ref here exists in the output.
   -->
-  <link href="/web-core/static/css/client.css" rel="stylesheet">
+  <link href="./web-core/static/css/client.css" rel="stylesheet">
   <!--
     Preload hints for web-core's WASM engine. client.js only discovers these once
     it executes, so the hint overlaps their download with script parsing.
@@ -55,8 +55,8 @@
     copy-bundle-web.mjs both rewrite them from the actual wasm/ directory, so the
     hashes below are only a template.
   -->
-  <link rel="preload" as="fetch" href="/web-core/static/wasm/e5defb6b3b.module.wasm">
-  <link rel="preload" as="fetch" href="/web-core/static/wasm/4c5aa2efc5.module.wasm">
+  <link rel="preload" as="fetch" href="./web-core/static/wasm/e5defb6b3b.module.wasm">
+  <link rel="preload" as="fetch" href="./web-core/static/wasm/4c5aa2efc5.module.wasm">
   <!--
     Main-thread crash/console capture, inline and FIRST so it is installed before
     web-core's client module runs.
@@ -323,9 +323,23 @@
   -->
   <lynx-view
     id="app"
-    url="/main.lynx.bundle"
+    url="./main.lynx.bundle"
     global-props='{"deployMode":"standalone"}'
   ></lynx-view>
+
+  <!-- Resolve the page directory on the main thread before custom-element
+       upgrade. Worker locations name engine scripts, not the deployment path.
+       Absolute bundle/module URLs also survive imports in those Worker realms. -->
+  <script data-songloft-deployment>
+    (function () {
+      var app = document.getElementById('app')
+      var base = new URL('.', document.baseURI)
+      var props = JSON.parse(app.getAttribute('global-props') || '{}')
+      props.webBaseUrl = base.href
+      app.setAttribute('global-props', JSON.stringify(props))
+      app.setAttribute('url', new URL('main.lynx.bundle', base).href)
+    })()
+  </script>
 
   <!--
     audio-host.js MUST load before the web-core client module so
@@ -341,10 +355,10 @@
     is preserved (deferred scripts run in order, before module scripts), so
     hls.min.js → audio-host.js → webview-host.js → client.js still holds.
   -->
-  <script defer src="/hls.min.js"></script>
-  <script type="module" src="/file-transfer-host.js"></script>
-  <script type="module" src="/playback-keyboard-host.js"></script>
-  <script defer src="/audio-host.js"></script>
+  <script defer src="./hls.min.js"></script>
+  <script type="module" src="./file-transfer-host.js"></script>
+  <script type="module" src="./playback-keyboard-host.js"></script>
+  <script defer src="./audio-host.js"></script>
   <!--
     The plugin iframe host, registering NativeModules.SongloftWebview the same
     way audio-host.js registers its three modules. Order constraints are the
@@ -352,8 +366,8 @@
     creates) and before the web-core client module (the map must be complete
     when <lynx-view> upgrades). See web/webview-host.js.
   -->
-  <script defer src="/webview-host.js"></script>
-  <script defer src="/lynx-frame-host.js"></script>
+  <script defer src="./webview-host.js"></script>
+  <script defer src="./lynx-frame-host.js"></script>
   <!--
     Mouse pointer capture for the drag handles (PluginGrid's edit mode, the
     library view editor, the settings tab order, the playlist sortables).
@@ -370,7 +384,7 @@
     it is `defer` so it never blocks parsing and is always installed before the
     page can be pressed.
   -->
-  <script defer src="/drag-mouse-capture.js"></script>
+  <script defer src="./drag-mouse-capture.js"></script>
 
   <!--
     Alias `blur-view` onto web-core's `x-blur-view`.
@@ -415,7 +429,7 @@
     is why `web:dev` used to work while `build:web` did not.) Modules are deferred
     by default, so the old `defer` attribute is now redundant.
   -->
-  <script type="module" src="/web-core/static/js/client.js"></script>
+  <script type="module" src="./web-core/static/js/client.js"></script>
   <script>
     (function() {
       var lynxView = document.getElementById('app');

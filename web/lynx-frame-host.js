@@ -280,7 +280,7 @@
         // Configure the bridge module — the child's SongloftPluginBridge calls
         // route through onNativeModulesCall below.
         childView.nativeModulesMap = {
-          SongloftPluginBridge: '/songloft-lynx-bridge-module.js',
+          SongloftPluginBridge: new URL('./songloft-lynx-bridge-module.js', document.baseURI).href,
         }
         childView.onNativeModulesCall = function (name, data, moduleName) {
           if (childViews[key] !== childView) return undefined
@@ -390,7 +390,7 @@
     {},
     lynxView.nativeModulesMap || {},
     {
-      SongloftLynxFrame: '/songloft-lynx-frame-module.js',
+      SongloftLynxFrame: new URL('./songloft-lynx-frame-module.js', document.baseURI).href,
     },
   )
 

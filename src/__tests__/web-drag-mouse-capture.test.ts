@@ -44,7 +44,7 @@ describe('the drag-capture shim is loaded and shipped', () => {
   const copy = read('scripts/copy-bundle-web.mjs')
 
   test('index.html loads it exactly once, deferred', () => {
-    const tags = [...html.matchAll(/<script[^>]+src="\/(drag-mouse-capture\.js)"[^>]*>/g)]
+    const tags = [...html.matchAll(/<script[^>]+src="\.\/(drag-mouse-capture\.js)"[^>]*>/g)]
     expect(tags, 'index.html must load the shim, or the mouse drag stays broken').toHaveLength(1)
     // `defer` both keeps it off the parse path and guarantees the listeners are
     // registered before any press can happen; the other host scripts follow the

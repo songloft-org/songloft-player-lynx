@@ -4,6 +4,8 @@
 
 ## 1. 当前完成度
 
+Web 目录挂载已补齐：Chrome 两种子路径模式的实际登录、已安装 Lynx/WebView 夹具桥接，以及 Linux WebKit 两种模式的 P4/P5 通过；恢复 embedded 会话忽略旧服务器地址，Web 无 location 的主线程使用同一宿主目录。287 文件 / 3081 项 JS、56 项发布工具、类型与双 bundle 通过。新 Web 包将按本地源码提交生成统一身份后复验；旧包不修改，原生交付仍为下面的 `1d86b77`。真实 Safari、Firefox 间歇 Blob 异常及各原生未验项继续开放，不 push。证据见 progress。
+
 已为 `1d86b77` 生成含 `pluginFrame.templates.v1` 的新 APK/HAP，统一构建号 `213496964`，保存到 `/tmp/lynx-local-delivery/1d86b77/`；旧包哈希不变。42 项 Android JVM、34 个全部执行的 HarmonyOS clean HAP 任务、3063 项 JS、56 项发布工具及类型/双 bundle 通过。新 APK 的实际安装哈希与交付一致，A/B 插件初始通知、五次 HOME、退出不再推送与新标识重入复验通过。APK 为 Debug、HAP 未签名、正式更新公钥仍为 0；Apple 编译、两端设备及 MIoT 长后台/断网重连继续开放。自有测试服务已停止，不 push，详细哈希/回执见 progress。
 
 Android/HarmonyOS 已新增实际更新器的 RSA 签名回归，验证 bridge 3/schema 2 不变时，缺少 `pluginFrame.templates.v1` 的旧壳拒绝新版 bundle，新壳接受，旧实例快照保持不变；公共历史签名向量不改写。14 项 Android 更新器 JVM、7 项 HarmonyOS 源码适配器及 56 项发布工具测试通过；隔离副本移除能力检查后新用例按预期失败。设备与 Apple 编译边界保留，见 progress。
@@ -71,7 +73,7 @@ Linux 可验证 JS、脚本与 Android；iOS/HarmonyOS 需各自工具链。最�
 2. Android/iOS 全量 E2E，以及通知歌词、后台连播、插件恢复前台、长请求与 DLNA 实测。
 3. P6a 剪贴板、P6b 通知歌词与 P6c 插件恢复源码已补；HarmonyOS HAP 已编译；系统粘贴/媒体卡片、Apple 编译及插件长后台/断网重连验收仍开放。Lynx 插件须使用本地更新的 SDK 重新构建，SDK 尚未发布，见 [bugs.md](bugs.md)。
 4. iOS 字体大小、HLS 自签名地址等开放问题仍以 bugs 为准。
-5. Web 前端直接挂载子路径已实测 404/黑屏，根路径 standalone 连接带前缀后端的 P4/P5 已通过；前端路径兼容修复仍开放，见[部署指南](../guides/web-deployment.md)。插件排序需要支持 `/settings/plugin-order` 的新后端，旧后端返回 404。
+5. Web 前端子路径已修复，Chrome 两种模式的登录/插件与 Linux WebKit 两种模式的 P4/P5 通过；真实 Safari、Firefox 间歇 Blob 异常仍开放，见[部署指南](../guides/web-deployment.md)。插件排序需要支持 `/settings/plugin-order` 的新后端，旧后端返回 404。
 6. 桌面端、Bundle 本地后端和视频不在本轮交付范围；设备批量缓存、离线列表、Web 数据传输/快捷键及原生补齐已完成源码批次，按批准计划保留未完成的平台验收。
 
 ### 现状核查（2026-10-07）

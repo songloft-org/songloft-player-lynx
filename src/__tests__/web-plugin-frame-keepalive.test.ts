@@ -150,6 +150,7 @@ function runHost(scriptName: string, placeholderId: string): Harness {
 
   const visibilityListeners: Array<() => void> = []
   const document = {
+    baseURI: 'https://music.example/songloft/',
     visibilityState: 'visible',
     addEventListener: (name: string, fn: () => void) => { if (name === 'visibilitychange') visibilityListeners.push(fn) },
     getElementById: (id: string) => (id === 'app' ? lynxView : null),

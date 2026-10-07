@@ -1508,7 +1508,7 @@ describe('SongloftVideo module surface (Web)', () => {
     // The URL string must appear inside the nativeModulesMap literal, not just
     // anywhere in the file — the earlier version had every module *mentioned*
     // in a doc comment while none were actually registered.
-    expect(mainHost).toMatch(/SongloftVideo:\s*'\/songloft-video-module\.js'/)
+    expect(mainHost).toMatch(/SongloftVideo:\s*new URL\('\.\/songloft-video-module\.js', document\.baseURI\)\.href/)
   })
 })
 

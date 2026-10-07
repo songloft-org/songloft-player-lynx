@@ -7,7 +7,7 @@ pnpm run build:web            # standalone
 pnpm run build:web-embedded   # embedded → 父仓库 clients/player-build/web-embedded
 ```
 
-两者的差别不只是产物路径 —— `deployMode` 决定要不要显示「API 地址」配置 UI，embedded 模式下后端地址由 `self.location.origin` 自动检测。
+两者的差别不只是产物路径：`deployMode` 决定是否显示「API 地址」配置 UI，embedded 后端地址使用宿主页注入的 `webBaseUrl`（页面目录，含部署前缀）。未提供该字段的旧宿主仍回退到 Worker origin。
 
 ## 部署前必做
 
@@ -31,9 +31,30 @@ location / {
 
 ## 子路径部署
 
-**当前前端自身不支持直接挂载子路径**。2026-10-07 用 `e09592b` 交付包在 `/songloft/` 实测：HTML 返回 200，但脚本、样式与 WASM 的根相对请求有 11 项 404，Worker 未启动，登录页不出现。仅给后端设置 `-base-path /xxx` 或 `BASE_PATH=/xxx` 不能修复这些前端路径；embedded 下 API base 仍取 Worker 的 `self.location.origin`。前端请部署在域名根路径。
+前端支持根路径和目录子路径，例如 `/songloft/`。宿主页在 web-core 升级元素前注入页面目录，并将 bundle、模块、脚本、样式、WASM 和应用图标定位到该目录；插件子 frame 的桥接模块也从宿主页目录加载。standalone 的服务器地址独立配置，允许与前端目录不同；embedded 的 API 使用同源目录，恢复会话时忽略旧 standalone 的 `server_url`。没有 `location` 的 Web Lynx 主线程通过平台标识读取同一宿主目录，原生资源路径保持原行为。
 
-**standalone 前端在根路径连接带前缀的后端已验证**。同一交付包连接 `http://127.0.0.1:58192/songloft`，Linux WebKit 18.2 完成 JSON 导入/导出、401 刷新重试、取消/错误恢复、播放/切歌/音量快捷键与持久化；请求保留 `/songloft/api/v1/`。这不等于前端子路径挂载可用，也不覆盖真实 Safari、插件或全部资源。证据与空音频输出/输入夹具边界见 [progress](../project/progress.md)。standalone 与 embedded 仍由 `deployMode` global prop 区分（`copy-bundle-web.mjs --embedded` 剥掉该属性）。
+目录入口必须带尾斜杠，或显式访问目录内的 `index.html`；代理应将 `/songloft` 重定向到 `/songloft/`。应用使用内存路由，不把应用内路由映射成任意服务器目录。embedded 后端同时配置 `-base-path /songloft`（或 `BASE_PATH=/songloft`），代理保留 API 前缀。以下示例将前端文件放在 `/var/www/songloft/`；安全上下文和隔离响应头仍是必需条件：
+
+```nginx
+location = /songloft {
+    return 308 /songloft/$is_args$args;
+}
+location /songloft/api/ {
+    proxy_pass http://127.0.0.1:58091;
+}
+location /songloft/ {
+    root /var/www;
+    index index.html;
+    try_files $uri $uri/ =404;
+    add_header Cross-Origin-Opener-Policy same-origin always;
+    add_header Cross-Origin-Embedder-Policy require-corp always;
+    add_header Cache-Control no-cache always;
+}
+```
+
+2026-10-07 已在严格只提供 `/songloft/` 资源的测试服务验证两种部署：Chrome 153 实际登录、应用图标、引擎/Worker、已安装 Lynx 计数插件及 WebView 插件 `host.getInfo` 往返通过；Linux WebKit 18.2 的歌单选择/入库/下载、401 刷新重试、取消/错误恢复通过。旧服务器地址夹具不会影响 embedded 请求。测试插件是隔离验收夹具，不代表 MIoT 长后台或真实 Safari 验收。此前 `e09592b` 包的 11 项 404/黑屏记录保留，该旧包未修改；新包身份与验证细节见 [progress](../project/progress.md)。
+
+**旧包 `e09592b` 的 standalone 根路径连接带前缀后端已验证**。该交付包连接 `http://127.0.0.1:58192/songloft`，Linux WebKit 18.2 完成 JSON 导入/导出、401 刷新重试、取消/错误恢复、播放/切歌/音量快捷键与持久化；请求保留 `/songloft/api/v1/`。这不等于前端子路径挂载可用，也不覆盖真实 Safari、插件或全部资源。证据与空音频输出/输入夹具边界见 [progress](../project/progress.md)。standalone 与 embedded 仍由 `deployMode` global prop 区分（`copy-bundle-web.mjs --embedded` 剥掉该属性）。
 
 > ⚠️ worker realm **也**拿得到 `self.location`，所以「探测 location 是否存在」不能用来判断 standalone 还是 embedded —— 这正是 `deployMode` global prop 存在的理由。
 
@@ -45,7 +66,7 @@ location / {
 
 Web 接口请求走共享认证客户端：导入为 `/playlists/import` 的 multipart `file`，导出为 `/playlists/export` 的认证 GET，token 只进入 Authorization 请求头。401 复用已有刷新与原请求重试，刷新失效回登录；HTTP 错误结束 busy 状态。传输期间禁用两个按钮，成功导入失效 `['playlist']` 与 `['library']` 查询，包括详情、歌曲列表和首页统计。原生客户端继续使用已有文件上传/浏览器导出流程。
 
-已在 Docker Chrome 153 的真实 Worker 页面验证 standalone 跨源 CORS 和 embedded 根路径同源：实际文件选择、新歌单/歌曲入库、中文/emoji JSON 下载、空/坏文件拒绝、取消、401 刷新重试和服务器失败恢复。用户激活过期路径通过延迟真实宿主调用后点击主线程控件验证。Firefox 134 在独立 Playwright 环境也通过两种根路径部署的选文件、入库、下载、错误与认证回归；其激活失效取消使用显式夹具，5.5 秒延迟并未触发备用控件。一次启动出现 Blob 脚本加载异常，后续两种部署流程通过，仍保留该兼容性观察，不代表所有 Firefox 版本稳定。Safari 未运行；子路径部署仍保留上节的限制。
+已在 Docker Chrome 153 的真实 Worker 页面验证 standalone 跨源 CORS 和 embedded 根路径同源：实际文件选择、新歌单/歌曲入库、中文/emoji JSON 下载、空/坏文件拒绝、取消、401 刷新重试和服务器失败恢复。用户激活过期路径通过延迟真实宿主调用后点击主线程控件验证。Firefox 134 在独立 Playwright 环境也通过两种根路径部署的选文件、入库、下载、错误与认证回归；其激活失效取消使用显式夹具，5.5 秒延迟并未触发备用控件。一次启动出现 Blob 脚本加载异常，后续两种部署流程通过，仍保留该兼容性观察，不代表所有 Firefox 版本稳定。Safari 未运行；子路径部署的独立验证见上节。
 
 参考：[文件输入](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/file)、[用户激活与选择器](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/showPicker)、[Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob)、[撤销 object URL](https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static)。
 

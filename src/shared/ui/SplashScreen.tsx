@@ -1,3 +1,4 @@
+import { hostAssetUrl } from '../../core/config/app-config.js'
 import './SplashScreen.css'
 
 /**
@@ -15,7 +16,7 @@ import './SplashScreen.css'
 export function SplashScreen() {
   return (
     <view className='splash' data-testid='splash'>
-      <image className='splash__logo' src='/app_icon.png' mode='aspectFit' />
+      <image className='splash__logo' src={hostAssetUrl('app_icon.png')} mode='aspectFit' />
     </view>
   )
 }

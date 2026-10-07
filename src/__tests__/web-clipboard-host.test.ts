@@ -12,10 +12,10 @@ const platformFactory = vm.runInNewContext(`(${readFileSync(
 ) => { setClipboardWithResult: (text: string, callback: (error: string | null) => void) => void }
 
 const { JSDOM } = createRequire(import.meta.url)('jsdom') as {
-  JSDOM: new (html: string) => { window: Window & typeof globalThis }
+  JSDOM: new (html: string, options: { url: string }) => { window: Window & typeof globalThis }
 }
 function host(clipboard?: { writeText: (text: string) => Promise<void> }) {
-  const dom = new JSDOM('<body><lynx-view id="app"></lynx-view></body>')
+  const dom = new JSDOM('<body><lynx-view id="app"></lynx-view></body>', { url: 'https://music.example/songloft/' })
   const fallback = vi.fn().mockReturnValue(false)
   Object.defineProperty(dom.window.navigator, 'clipboard', { value: clipboard })
   Object.defineProperty(dom.window.document, 'execCommand', { value: fallback })

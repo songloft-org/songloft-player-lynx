@@ -98,14 +98,15 @@ root, defect = Path(sys.argv[1]), sys.argv[2]
 metadata = json.loads((root / 'version.json').read_text())
 if defect == 'metadata': metadata['git_commit'] = '0000000'
 mode = 'embedded' if defect == 'mode' else 'standalone'
-files = {'index.html': ('<script src="engine.js"></script><lynx-view global-props=\'{"deployMode":"' + mode + '"}\'></lynx-view>').encode(), 'main.lynx.bundle': b'production', 'version.json': json.dumps(metadata).encode()}
-if defect != 'asset': files['engine.js'] = b'engine'
+asset = './engine.js' if defect in ('relative', 'relative-asset') else 'engine.js'
+files = {'index.html': ('<script src="' + asset + '"></script><lynx-view global-props=\'{"deployMode":"' + mode + '"}\'></lynx-view>').encode(), 'main.lynx.bundle': b'production', 'version.json': json.dumps(metadata).encode()}
+if defect not in ('asset', 'relative-asset'): files['engine.js'] = b'engine'
 if defect == 'unsafe': files['../escape'] = b'unsafe'
 with tarfile.open(root / 'package.tar.gz', 'w:gz') as archive:
     for name, data in files.items():
         info = tarfile.TarInfo(name); info.size = len(data); archive.addfile(info, io.BytesIO(data))
 `
-  for (const defect of ['none', 'asset', 'mode', 'metadata', 'unsafe']) {
+  for (const defect of ['none', 'relative', 'relative-asset', 'asset', 'mode', 'metadata', 'unsafe']) {
     execFileSync('python3', ['-c', createTar, dir, defect])
     const result = spawnSync(
       'python3',
@@ -119,7 +120,7 @@ with tarfile.open(root / 'package.tar.gz', 'w:gz') as archive:
     )
     assert.equal(
       result.status,
-      defect === 'none' ? 0 : 1,
+      ['none', 'relative'].includes(defect) ? 0 : 1,
       `${defect}: ${result.stderr}`,
     )
   }

@@ -297,6 +297,19 @@ describe('auth store', () => {
     expect(store.getState().status).toBe('unauthenticated')
   })
 
+  test('embedded hydration keeps the host path rather than a persisted standalone server', async () => {
+    appConfig.deployMode = 'embedded'
+    appConfig.baseUrl = 'https://music.example/songloft'
+    await storage.prefs.set(PREF_SERVER_URL, 'https://other.example/old-server')
+    const { transport, calls } = makeTransport()
+    const store = createAuthStore(makeDeps(storage, transport))
+    await store.getState().hydrate()
+    await store.getState().login({ username: 'admin', password: 'admin' })
+    expect(appConfig.baseUrl).toBe('https://music.example/songloft')
+    expect(calls.find(c => c.url.includes(LOGIN))?.url).toBe('https://music.example/songloft/api/v1/auth/login')
+    expect(await storage.prefs.get(PREF_SERVER_URL)).toBe('https://other.example/old-server')
+  })
+
   test('login with schemeless URL auto-prepends http://', async () => {
     const { transport, calls } = makeTransport()
     const deps = makeDeps(storage, transport)

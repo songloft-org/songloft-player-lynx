@@ -1,5 +1,7 @@
 import { existsSync, readFileSync, readdirSync, realpathSync } from 'node:fs'
 import path from 'node:path'
+import vm from 'node:vm'
+import ts from 'typescript'
 
 import { describe, expect, test } from 'vitest'
 
@@ -43,7 +45,7 @@ describe('web/index.html references files the build actually ships', () => {
   const html = read('web/index.html')
 
   /** Local (non-http) refs from href="…" / src="…" / url="…". */
-  const refs = [...html.matchAll(/(?:href|src|url)="(\/[^"]+)"/g)].map((m) => m[1])
+  const refs = [...html.matchAll(/(?:href|src|url)="(\.\/[^\"]+)"/g)].map((m) => m[1]!.slice(1))
 
   test('the host page has local refs at all', () => {
     expect(refs.length).toBeGreaterThanOrEqual(4)
@@ -137,7 +139,7 @@ describe('web/index.html references files the build actually ships', () => {
       ['scripts/copy-bundle-web.mjs', read('scripts/copy-bundle-web.mjs')],
     ] as const) {
       const literal = source.match(
-        /\/<link rel="preload" as="fetch" href="\\\/web-core\\\/static\\\/wasm\\\/[^/]*\/g/,
+        /\/<link rel="preload" as="fetch" href=".*?\/g/,
       )
       expect(literal, `${name} must contain the wasm-preload rewrite regex`).toBeTruthy()
       // Rebuild the pattern from the source and check it actually matches.
@@ -271,7 +273,7 @@ describe('nativeModulesMap points at real, shipped ESM modules', () => {
    * Whatever index.html loads is what has to be checked.
    */
   const hostScripts = Array.from(
-    read('web/index.html').matchAll(/<script[^>]+src="\/([a-z0-9._-]+\.js)"/g),
+    read('web/index.html').matchAll(/<script[^>]+src="\.\/([a-z0-9._-]+\.js)"/g),
   )
     .map((m) => `web/${m[1]!}`)
     // web-core's own client entry is not ours and ships with the engine assets.
@@ -296,38 +298,58 @@ describe('nativeModulesMap points at real, shipped ESM modules', () => {
     ).toContain(`'${file}'`)
   })
 
-  // Registration lines look like `SongloftAudio: '/songloft-audio-module.js',`.
-  // Matching the whole files is safe: the dispatch sites use `=== 'SongloftAudio'`
-  // (no colon) and the adapter variables are lowercase `songloftAudio`.
-  const entries = hostScripts.flatMap((f) =>
-    Array.from(read(f).matchAll(/Songloft\w+\s*:\s*([^,\n]+)/g)).map((m) => m[1]!.trim()),
-  )
+  // Parse full expressions, including URL constructor commas, rather than
+  // assuming every registry value is a string literal. Comments never qualify.
+  const entries = hostScripts.flatMap(file => {
+    const source = ts.createSourceFile(file, read(file), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
+    const found: Array<{ name: string; expression: string }> = []
+    const visit = (node: ts.Node): void => {
+      if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name) && /^Songloft\w+$/.test(node.name.text)) {
+        found.push({ name: node.name.text, expression: node.initializer.getText(source) })
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(source)
+    return found
+  })
+  const evaluate = (expression: string, baseURI: string): unknown =>
+    vm.runInNewContext(expression, { URL, document: { baseURI } })
 
   test('the map registers at least the platform, audio, webview and lynx-frame modules', () => {
-    expect(entries).toContain("'/songloft-platform-module.js'")
-    expect(entries).toContain("'/songloft-audio-module.js'")
-    expect(entries).toContain("'/songloft-webview-module.js'")
-    expect(entries).toContain("'/songloft-lynx-frame-module.js'")
+    const names = entries.map(entry => entry.name)
+    expect(names).toContain('SongloftPlatform')
+    expect(names).toContain('SongloftAudio')
+    expect(names).toContain('SongloftWebview')
+    expect(names).toContain('SongloftLynxFrame')
+    expect(names).toContain('SongloftPluginBridge')
   })
 
   test('every registered value is a URL string, not a plain object', () => {
     // A non-string value is the regression that sank everything: web-core does
     // `import(value)`, so an object becomes `import("[object Object]")`, rejects,
     // and `Promise.all` drops *every* custom module at once.
-    for (const value of entries) {
+    for (const { expression } of entries) {
+      const value = evaluate(expression, 'https://music.example/songloft/')
       expect(
-        value.startsWith("'") && value.endsWith("'"),
+        typeof value === 'string',
         `nativeModulesMap entry must be a URL string, got: ${value}`,
       ).toBe(true)
     }
   })
 
-  const moduleUrls = entries
-    .filter((v) => v.startsWith("'"))
-    .map((v) => v.slice(1, -1))
+  test.each(['https://music.example/', 'https://music.example/nested/songloft/'])(
+    'every registry URL resolves from the page directory, including the child bridge: %s', baseURI => {
+      for (const { expression } of entries) {
+        const value = evaluate(expression, baseURI) as string
+        expect(value).toBe(new URL(path.basename(new URL(value, baseURI).pathname), baseURI).href)
+      }
+    },
+  )
+
+  const moduleUrls = entries.map(entry => evaluate(entry.expression, 'https://music.example/') as string)
 
   test.each(moduleUrls)('%s exists in web/ and is copied by the deploy script', (url) => {
-    const file = url.replace(/^\//, '')
+    const file = path.basename(new URL(url).pathname)
     expect(
       existsSync(path.join(repoRoot, 'web', file)),
       `web/${file} is registered in nativeModulesMap but does not exist`,
@@ -339,7 +361,7 @@ describe('nativeModulesMap points at real, shipped ESM modules', () => {
   })
 
   test.each(moduleUrls)('%s has a default-export factory', (url) => {
-    const file = url.replace(/^\//, '')
+    const file = path.basename(new URL(url).pathname)
     const src = read(path.join('web', file))
     expect(
       src,

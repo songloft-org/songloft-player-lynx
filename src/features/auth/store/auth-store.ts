@@ -164,7 +164,7 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
         tryReadPref(storage, PREF_SERVER_URL),
         tryReadPref(storage, PREF_INSECURE_TLS),
       ])
-      if (serverUrl && serverUrl.length > 0) {
+      if (!appConfig.isEmbedded && serverUrl && serverUrl.length > 0) {
         appConfig.baseUrl = serverUrl
         appConfig.resolvedBaseUrl = serverUrl
         useAppSessionStore.getState().setBaseUrl(serverUrl)

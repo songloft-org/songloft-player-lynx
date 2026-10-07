@@ -73,7 +73,7 @@ console.log(`[serve] Using web-core bundle at ${WEB_CORE_PATH}`)
  * `<link>` tags in index.html: it would flip the preload's credentials mode to
  * `omit` and stop web-core's bare `fetch()` from ever reusing the entry.
  */
-const wasmPreload = (f) => `<link rel="preload" as="fetch" href="/web-core/static/wasm/${f}">`
+const wasmPreload = (f) => `<link rel="preload" as="fetch" href="./web-core/static/wasm/${f}">`
 
 function buildIndexHtml() {
   const raw = readFileSync(resolve(__dirname, 'index.html'), 'utf-8')
@@ -84,7 +84,7 @@ function buildIndexHtml() {
 
   let wasmIdx = 0
   let result = raw.replace(
-    /<link rel="preload" as="fetch" href="\/web-core\/static\/wasm\/[^"]+\.module\.wasm"[^>]*>/g,
+    /<link rel="preload" as="fetch" href="\.\/web-core\/static\/wasm\/[^"]+\.module\.wasm"[^>]*>/g,
     () => {
       const f = wasmFiles[wasmIdx++]
       // Fewer files than slots: drop the surplus tag rather than leave a 404.
@@ -94,7 +94,7 @@ function buildIndexHtml() {
   // More files than slots (a web-core upgrade added one): give each a tag.
   for (let i = wasmIdx; i < wasmFiles.length; i++) {
     result = result.replace(
-      /(<link href="\/web-core\/static\/css\/client\.css" rel="stylesheet">)/,
+      /(<link href="\.\/web-core\/static\/css\/client\.css" rel="stylesheet">)/,
       `$1\n  ${wasmPreload(wasmFiles[i])}`
     )
   }

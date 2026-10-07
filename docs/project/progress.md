@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · Web 前端目录挂载与 embedded 会话恢复
+
+- 从父仓库 `d3e28c3`、客户端 `b1ee20e` 的干净状态继续。旧实现的新增回归先出现 5 项失败；修复宿主页相对资源、升级前绝对 bundle URL/`webBaseUrl`、全部宿主模块和插件子 frame 桥接 URL，以及登录/侧栏/启动图标。静态资源使用页面目录，standalone 的 API 地址仍独立配置，embedded 使用同源目录并忽略旧 `server_url`；原生资源路径保留。
+- WebKit 恢复带 token 的会话时，两个主题请求仍误用旧地址。新增「Web realm 无 location」回归在旧实现上 1 失败/18 通过，按 `SystemInfo` 确认 Web 后读取宿主目录的修复通过。此后实际 UI 登录、保存旧服务器地址并重新载入，两种子路径的数据流程均无页面错误。早期直接向正在初始化的页面写会话也发生认证竞争；脚本改为真实 UI 登录，没有移除 token/错误断言。
+- **287 文件 / 3081 项 JS、56 项发布工具、tsc -b、Lynx/Web 双产物与 build:web** 通过；UTF-8/U+FFFD 与 diff 检查通过。静态闸门解析真正的注册表达式并执行 URL 解析，保留 URL 字符串、模块文件/default factory、模式/身份/生产桥检查；包校验接受 `./` 引用但仍拒绝缺失文件。日志 `/tmp/lynx-web-subpath-{js-tests-final,types-final,realm-build,build-web,release-tests}.log`。
+- 严格服务器只提供 `/songloft/` 资源，不代理根路径静态文件。Docker Chrome 153 两种部署实际登录通过，应用图标 1024px 解码、主 Worker 和已安装 SDK 计数插件的子 Worker/首次通知通过；另安装 WebView 夹具，`host.getInfo` 返回 `platform=lynx`。宿主/子 frame 模块保留页面前缀，登录后的 API 均保留 `/songloft/api/v1/`，无 404/页面异常；独立根路径两种模式登录回归也通过。私有插件只用于路径/桥接验收，未声称 MIoT 长后台或其他设备验收。
+- Linux WebKit 18.2 两种子路径部署实际选文件、后端歌单/歌曲新增、中文/emoji 下载、空/坏文件不上传、一次真实 401 刷新及导入重放、500 恢复、激活失效取消与认证失效清理通过。两种模式的播放/暂停、切歌、±5% 音量、开关/重载、重复初始化/按键和播放器菜单保护通过；实际 128 kbps 流进度推进，audioErrors/errors 为空。输入框/iframe/组合输入是明确夹具，音频为临时 PulseAudio 空输出，不替代 Safari、系统输入法或扬声器验收。脚本、JSON 与截图在 `/tmp/lynx-web-subpath-acceptance/`。
+- 本批先本地提交源码，再生成统一身份的新 Web 两包并复验，交付回执将在后续条目补齐；不重写旧包。Android/HarmonyOS 的最新交付仍为 `1d86b77`，Apple/HarmonyOS 设备、正式更新公钥、MIoT 长后台/断网重连及通知歌词/锁屏仍开放。不 push；桌面、Bundle 本地模式和视频仍暂缓。
+
 ## 2026-10-07 · 模板能力新 APK/HAP 与 Android 安装复验
 
 - 在验签回归提交 `1d86b77cd915c04ca960bb238311732716f5b3ad` 后生成统一身份：dev、原生版本 `0.1.0`、构建号 **213496964**、时间 `2026-10-07T00:42:44.868Z`。bridge 3/schema 2 不变，包内不可变快照含 `pluginFrame.templates.v1`，受信更新公钥仍为 0；JS TestBridge 未启用。双 bundle 构建通过，原有 `touch-action` 警告保留。iOS 仅同步 bundle/身份资源，没有获得原生编译证据。

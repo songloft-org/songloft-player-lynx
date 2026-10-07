@@ -157,11 +157,11 @@ if (existsSync(htmlSrc)) {
     : []
   if (wasmFiles.length > 0) {
     const tag = (f) =>
-      `<link rel="preload" as="fetch" href="/web-core/static/wasm/${f}">`
+      `<link rel="preload" as="fetch" href="./web-core/static/wasm/${f}">`
     const remaining = [...wasmFiles]
     let html = readFileSync(htmlDest, 'utf-8')
     html = html.replace(
-      /<link rel="preload" as="fetch" href="\/web-core\/static\/wasm\/[^"]+\.module\.wasm"[^>]*>/g,
+      /<link rel="preload" as="fetch" href="\.\/web-core\/static\/wasm\/[^"]+\.module\.wasm"[^>]*>/g,
       () => {
         const f = remaining.shift()
         return f ? tag(f) : '' // fewer files than slots → drop the surplus tag
@@ -170,7 +170,7 @@ if (existsSync(htmlSrc)) {
     // More files than slots (an upgrade added one): give each its own tag.
     for (const f of remaining) {
       html = html.replace(
-        /(<link href="\/web-core\/static\/css\/client\.css" rel="stylesheet">)/,
+        /(<link href="\.\/web-core\/static\/css\/client\.css" rel="stylesheet">)/,
         `$1\n  ${tag(f)}`,
       )
     }

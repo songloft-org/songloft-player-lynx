@@ -11,7 +11,7 @@
 
 ## 待修复（开放）
 
-- [ ] Web 前端直接挂载子路径时资源 404、黑屏（2026-10-07 实测）— `e09592b` 的 embedded 交付目录严格挂载 `/songloft/`，HTML 200，但入口模块、样式、WASM 和宿主脚本仍请求根路径，11 项 404、Worker 0、登录页缺失。未改产物或代理根资源掩盖问题；修复需同时覆盖静态资源、引擎/Worker、插件与 embedded API 前缀后再验收。根路径 standalone 连接带前缀后端是另一种部署：同包在 Linux WebKit 18.2 的 P4/P5 已通过，不能拿它闭合此前端挂载问题。日志 `/tmp/lynx-frontend-subpath-probe.log`、截图 `webkit-frontend-subpath.png`；部署边界见[指南](../guides/web-deployment.md)。
+- [x] Web 前端直接挂载子路径时资源 404、黑屏（2026-10-07）— 保留 `e09592b` 旧包 11 项 404、Worker 0 的记录，旧包未修改。已补宿主目录、静态资源/图标、引擎/Worker、全部宿主模块/子 frame 桥接与 embedded API；恢复会话忽略旧服务器地址，Web 无 location 的主线程使用平台标识读取宿主目录。新源码在严格 `/songloft/` 服务的 Chrome 两种模式实际登录、已安装 Lynx/WebView 插件桥接及 Linux WebKit 两种模式的 P4/P5 通过，页面/媒体错误为空；根路径登录回归通过。目录入口需尾斜杠与隔离响应头，真实 Safari/MIoT 长后台仍开放。日志、夹具和交付记录见 [progress](progress.md) 与[部署指南](../guides/web-deployment.md)。
 
 - [ ] Firefox 134 间歇性 Blob 脚本加载异常（2026-10-07）：数据导入/导出在 standalone/embedded 根路径通过，但数据流程与后续快捷键流程各捕获过 Lynx MTS iframe 的 `Failed to load script: blob:...`，阶段诊断后的最终流程未复现，具体原因未定，不能凭单次通过闭合。媒体 `MEDIA_ERR_DECODE` 已另定位为本机输出初始化失败 `NS_ERROR_DOM_MEDIA_MEDIASINK_ERR`；接入临时 PulseAudio 空输出后，空白页探针与快捷键最终回归均无媒体错误，不修改应用或宿主配置。实际播放/暂停/切歌/音量/重复/持久化与输入/菜单保护通过，但未验证扬声器听感。当前 web-core 包目标列 Chrome/Safari，不承诺 Firefox 整体稳定；证据与边界见 progress。
 

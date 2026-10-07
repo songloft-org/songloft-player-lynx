@@ -172,7 +172,7 @@
 
 ## 6. P4：Web 歌单 JSON 导入/导出
 
-实施记录（2026-10-07）：共享源码与 Chrome standalone/embedded 根路径验收已完成。主线程选择/下载控件处理激活过期，认证请求支持刷新重试；279 文件 / 3012 项 JS、35 项发布工具、类型/双产物和 Android APK 通过。实际选文件、后端歌单/歌曲新增、中文/emoji 下载、取消/错误/认证失效与中英最大字号六组通过，见 progress。Firefox 134 后续实际通过 standalone/embedded 根路径的数据传输，激活失效使用夹具；启动/音频环境观察见 progress，Safari 未运行。后续实测前端子路径挂载出现 404/黑屏；根路径 standalone 连接带前缀后端的 P4/P5 已通过，详见部署指南，原生传输流程未改。
+实施记录（2026-10-07）：共享源码与 Chrome standalone/embedded 根路径验收已完成。主线程选择/下载控件处理激活过期，认证请求支持刷新重试；279 文件 / 3012 项 JS、35 项发布工具、类型/双产物和 Android APK 通过。实际选文件、后端歌单/歌曲新增、中文/emoji 下载、取消/错误/认证失效与中英最大字号六组通过，见 progress。Firefox 134 后续实际通过 standalone/embedded 根路径的数据传输，激活失效使用夹具；启动/音频环境观察见 progress，Safari 未运行。旧包曾实测前端子路径挂载 404/黑屏；后续已修复，Chrome 两种模式的登录/插件与 Linux WebKit 两种模式的 P4/P5 通过，详见部署指南，原生传输流程未改。
 
 - 方法级判断文件上传/导出能力，解除 Web 的一刀切禁用；Settings 入口与 DataPage 同步。
 - 导入继续使用现有 `/playlists/import` multipart `file` 契约，导出使用 `/playlists/export`。读取用户选定文件并上传，取消选择、无效 JSON、未授权、服务端失败均结束 busy 状态。
@@ -272,7 +272,7 @@
 | HarmonyOS P1/P2/P3/P6 | `1d86b77` 新 HAP 含远程模板接线与能力标记，34 个 clean 构建任务全部执行，包校验与实际源码 Node 适配器通过；HAP 未签名，尚无安装记录 | CLI 已能查询 API 13 phone 镜像 `5.0.0.112`，下载/启动需要用户明确授权接受华为协议；当前账号无 `/dev/kvm` 读写权限，模拟器运行与调试签名仍需验证。许可未确认时不下载、创建或启动实例 |
 | Android P6 与跨批回归 | API 34 / 4 KB、35.6.11 / Mesa llvmpipe 环境可用；`e09592b` 两处跨应用复制、根恢复和基础播放/暂停/通知通过；修复模板加载后的 `9bfd35c` APK 完成原生 SDK 子 frame 初始、五次 HOME、A/B 退出与重入 | 继续 MIoT 长后台/断网重连、歌词布局/锁屏和跨批回归；短周期计数插件不能代替 MIoT 重连或堆内存检测，SwiftShader 宿主与 x86_64 问题仍开放 |
 | P6c 插件兼容与恢复 | 父桥/SDK ready、Chrome/Firefox 保活可见性通过；Android 新 `1d86b77` APK 安装哈希确认与初始/五次 HOME/退出/重入复验通过；同源 HAP 编译和包校验通过；两端实际验签测试验证新旧模板能力快照兼容；SDK 未发布，插件 bundle 在本地重建 | iOS 已补模板入口源码，需完成编译与实际 Foundation 验证程序；两端再用新壳做 frame 设备验收与 MIoT 长后台/断网重连；旧 SDK 不解锁新增原生推送，仍需插件重建；三端加载器修复需安装新 APK/IPA/HAP；新增必需能力 `pluginFrame.templates.v1`，旧快照引导本通道安装包，不能仅更新 bundle |
-| P2 正式交付与 Web 补充 | 本地签名夹具、版本/包工具通过；Chrome/Firefox/Linux WebKit 的 P4/P5 回归已记录 | 正式受信密钥仍为 0，签名/CI/真实发版不在本次“不 push”的执行动作内；实际 Safari、前端子路径挂载兼容修复与 Firefox 间歇 Blob 异常仍开放；根路径 standalone 连接带前缀后端的 P4/P5 已通过，不用 Linux WebKit 结果替代 Safari |
+| P2 正式交付与 Web 补充 | 本地签名夹具、版本/包工具通过；Chrome/Firefox/Linux WebKit 的 P4/P5 回归已记录；前端子路径已修复并通过 Chrome 两种模式插件/登录与 Linux WebKit 两种模式 P4/P5 | 正式受信密钥仍为 0，签名/CI/真实发版不在本次“不 push”的执行动作内；实际 Safari 与 Firefox 间歇 Blob 异常仍开放；目录入口需尾斜杠和隔离响应头，不用 Linux WebKit 结果替代 Safari |
 
 原四种本地包与 SHA-256 固定在 `/tmp/lynx-local-delivery/e09592b/verification.json`，原回执未安装字段是当时快照，后续 Android 系统复制/根事件/基础播放证据见 progress。模板加载修复另提供 `/tmp/lynx-local-delivery/9bfd35c/` 的 Android APK；当前含模板能力标记的 APK/HAP 在 `/tmp/lynx-local-delivery/1d86b77/`，构建号 `213496964`，有严格包校验和新 APK 的逐项设备复验回执。旧包哈希未变，未将 Android 新证据写成全部平台通过。许可文本在 `/tmp/lynx-harmony-emulator/license-review.log`；目前只审阅，未接受。Android 的独立 KVM/Mesa 环境已经可用，但不证明 HarmonyOS 模拟器可运行或未签名 HAP 可安装。桌面、Bundle 本地模式和视频继续暂缓。
 

@@ -7,7 +7,7 @@ pnpm run build:web
 pnpm run build:web-embedded # parent repository: clients/player-build/web-embedded
 ```
 
-The deployMode global prop controls the API-address UI. Embedded uses self.location.origin as the backend origin.
+The `deployMode` global prop controls the API-address UI. Embedded uses the host's `webBaseUrl`, the document directory including its deployment prefix. Older hosts without this field still fall back to the Worker origin.
 
 ## Before deployment
 
@@ -31,9 +31,30 @@ Vitest checks local index.html references and a type=module entry. Those checks 
 
 ## Subpath deployment
 
-**The current frontend cannot be mounted directly under a subpath.** A 2026-10-07 test of the `e09592b` delivery at `/songloft/` returned HTML 200, but eleven root-relative script/style/WASM requests returned 404. No Worker started and no login page appeared. Setting backend `-base-path` or `BASE_PATH` cannot repair these frontend paths; embedded still takes its API origin from the Worker. Deploy the frontend at a domain's root path.
+The frontend supports both root hosting and directory subpaths such as `/songloft/`. Before web-core upgrades the element, the host supplies the document directory and resolves bundles, modules, scripts, styles, WASM and app icons there. Child plugin-frame bridge modules also load from the host directory. Standalone configures its server independently, allowing different frontend and backend directories; embedded uses the same-origin directory and ignores a stored standalone `server_url` during session restoration. Web Lynx main-thread realms without `location` read the same host directory using the platform identifier. Native resource paths retain their existing behavior.
 
-**A root-hosted standalone frontend connecting to a prefixed backend is verified.** The same delivery connected to `http://127.0.0.1:58192/songloft` in Linux WebKit 18.2 and passed JSON import/export, 401 refresh/replay, cancellation/error recovery, playback/track/volume shortcuts and persistence. Requests retained `/songloft/api/v1/`. This does not establish frontend subpath mounting or actual Safari, plugins or all resources. See [progress (Chinese)](../../project/progress.md) for evidence and null audio output/input-fixture limits. Deploy modes still use the `deployMode` global prop, removed by `copy-bundle-web.mjs --embedded`.
+Directory entry URLs must end in a slash, or explicitly name that directory's `index.html`; redirect `/songloft` to `/songloft/`. The app uses an in-memory router rather than mapping app routes to arbitrary server directories. For embedded hosting, also start the backend with `-base-path /songloft` (or `BASE_PATH=/songloft`) and preserve the API prefix in the proxy. This example stores frontend files under `/var/www/songloft/`; a secure context and isolation headers remain required:
+
+```nginx
+location = /songloft {
+    return 308 /songloft/$is_args$args;
+}
+location /songloft/api/ {
+    proxy_pass http://127.0.0.1:58091;
+}
+location /songloft/ {
+    root /var/www;
+    index index.html;
+    try_files $uri $uri/ =404;
+    add_header Cross-Origin-Opener-Policy same-origin always;
+    add_header Cross-Origin-Embedder-Policy require-corp always;
+    add_header Cache-Control no-cache always;
+}
+```
+
+On 2026-10-07, both modes were tested on strict servers exposing resources only under `/songloft/`. Chrome 153 passes actual login, app icons, engine/Workers, an installed Lynx counting plugin and an installed WebView plugin's `host.getInfo` round trip. Linux WebKit 18.2 passes playlist selection/database changes/downloads, 401 refresh/replay and cancellation/error recovery. A stale server-address fixture does not affect embedded requests. These are isolated acceptance plugins, not MIoT long-background or actual Safari acceptance. The historical eleven 404s/black screen in `e09592b` remain recorded, and that package is unchanged. New delivery identity and evidence are in [progress (Chinese)](../../project/progress.md).
+
+**The older `e09592b` root-hosted standalone frontend is verified against a prefixed backend.** That delivery connected to `http://127.0.0.1:58192/songloft` in Linux WebKit 18.2 and passed JSON import/export, 401 refresh/replay, cancellation/error recovery, playback/track/volume shortcuts and persistence. Requests retained `/songloft/api/v1/`. This does not establish frontend subpath mounting or actual Safari, plugins or all resources. See [progress (Chinese)](../../project/progress.md) for evidence and null audio output/input-fixture limits. Deploy modes still use the `deployMode` global prop, removed by `copy-bundle-web.mjs --embedded`.
 
 Workers also have self.location, so location availability cannot distinguish deployment modes.
 
@@ -45,7 +66,7 @@ File selection and Blob downloads run on the main thread; the business Worker re
 
 Web requests use the shared authenticated client: multipart `file` to `/playlists/import` and an authenticated GET to `/playlists/export`. Tokens appear only in Authorization headers. A 401 uses the existing refresh and request replay; failed refresh returns to login, and HTTP errors end the busy state. Both actions are disabled during transfer. Successful imports invalidate `['playlist']` and `['library']`, covering details, song lists and home statistics. Native clients retain their existing upload/browser-export flows.
 
-Docker Chrome 153 with real Workers has verified standalone cross-origin CORS and root-path same-origin embedded hosting: actual file selection, playlist/song database changes, Chinese/emoji JSON downloads, empty/invalid file rejection, cancellation, 401 refresh/replay and recovery after server failures. Activation expiry was exercised by delaying the real host call and then clicking its main-thread control. Firefox 134 in an isolated Playwright environment also passes both root-path hosting modes for selection, database changes, downloads, errors and authentication. Its activation-loss cancellation uses an explicit fixture: a 5.5-second delay did not trigger fallback controls. One startup produced a Blob-script loading error; subsequent runs passed both hosting modes. That compatibility observation remains open and does not establish stability across all Firefox versions. Safari has not run; subpath deployment retains the limitations above.
+Docker Chrome 153 with real Workers has verified standalone cross-origin CORS and root-path same-origin embedded hosting: actual file selection, playlist/song database changes, Chinese/emoji JSON downloads, empty/invalid file rejection, cancellation, 401 refresh/replay and recovery after server failures. Activation expiry was exercised by delaying the real host call and then clicking its main-thread control. Firefox 134 in an isolated Playwright environment also passes both root-path hosting modes for selection, database changes, downloads, errors and authentication. Its activation-loss cancellation uses an explicit fixture: a 5.5-second delay did not trigger fallback controls. One startup produced a Blob-script loading error; subsequent runs passed both hosting modes. That compatibility observation remains open and does not establish stability across all Firefox versions. Safari has not run; separate subpath acceptance is described above.
 
 References: [File input](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/file), [Activation and pickers](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/showPicker), [Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob), [Revoking object URLs](https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static).
 

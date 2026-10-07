@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@lynx-js/lynx-ui-button'
 import { Input } from '@lynx-js/lynx-ui-input'
 
-import { appConfig, devCredentials } from '../../../core/config/app-config.js'
+import { appConfig, devCredentials, hostAssetUrl } from '../../../core/config/app-config.js'
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
@@ -154,7 +154,7 @@ export function LoginPage() {
           <view className='login__card'>
             <image
               className='login__logo'
-              src='/app_icon.png'
+              src={hostAssetUrl('app_icon.png')}
               mode='aspectFit'
             />
             <text className='login__title'>{t('auth.title')}</text>

@@ -114,3 +114,70 @@ test('the global-prop key matches what the web host page writes', () => {
   expect(typeof readLynxGlobal).toBe('function')
   expect(GLOBAL_PROP_DEPLOY_MODE).toBe('deployMode')
 })
+
+test.each(['/', '/songloft/', '/nested/%E9%9F%B3%E4%B9%90/'])(
+  'an embedded host supplies the API directory instead of the Worker directory: %s', async path => {
+    vi.stubGlobal('self', { location: { origin: 'https://music.example', pathname: '/web-core/static/js/worker.js' } })
+    restoreHost = hostGlobalProps({ deployMode: 'embedded', webBaseUrl: `https://music.example${path}` })
+    vi.resetModules()
+    const { appConfig: config } = await import('../app-config.js')
+    expect(config.baseUrl).toBe(`https://music.example${path.replace(/\/$/, '')}`)
+    expect(config.apiBaseUrl).toBe(`https://music.example${path.replace(/\/$/, '')}/api/v1`)
+    expect(config.basePath).toBe('')
+    config.reset()
+    expect(config.baseUrl).toBe(`https://music.example${path.replace(/\/$/, '')}`)
+  },
+)
+
+test.each(['https://other.example/path/', 'javascript:alert(1)', 'https://user@music.example/path/',
+  'https://music.example/path/?token=secret', 'https://music.example/path/#player'])(
+  'an invalid or foreign host API base is ignored: %s', async webBaseUrl => {
+    vi.stubGlobal('self', { location: { origin: 'https://music.example' } })
+    restoreHost = hostGlobalProps({ deployMode: 'embedded', webBaseUrl })
+    vi.resetModules()
+    const { appConfig: config } = await import('../app-config.js')
+    expect(config.baseUrl).toBe('https://music.example')
+  },
+)
+
+test('a standalone page mount does not become its API address', async () => {
+  vi.stubGlobal('self', { location: { origin: 'https://music.example' } })
+  restoreHost = hostGlobalProps({ deployMode: 'standalone', webBaseUrl: 'https://music.example/songloft/' })
+  vi.resetModules()
+  const { appConfig: config, hostAssetUrl } = await import('../app-config.js')
+  expect(config.deployMode).toBe('standalone')
+  expect(config.baseUrl).toBe('http://localhost:58091')
+  expect(config.basePath).toBe('')
+  config.baseUrl = 'https://api.example/backend'
+  expect(hostAssetUrl('app_icon.png')).toBe('https://music.example/songloft/app_icon.png')
+})
+
+test('native assets preserve their existing root resource path', async () => {
+  vi.stubGlobal('self', undefined)
+  vi.stubGlobal('SystemInfo', { platform: 'Android' })
+  restoreHost = hostGlobalProps({ webBaseUrl: 'https://music.example/songloft/' })
+  vi.resetModules()
+  const { hostAssetUrl } = await import('../app-config.js')
+  expect(hostAssetUrl('app_icon.png')).toBe('/app_icon.png')
+})
+
+test('Web realms without a location retain the untagged embedded host directory', async () => {
+  vi.stubGlobal('self', undefined)
+  vi.stubGlobal('SystemInfo', { platform: 'web' })
+  restoreHost = hostGlobalProps({ webBaseUrl: 'https://music.example/songloft/' })
+  vi.resetModules()
+  const { appConfig: config, hostAssetUrl } = await import('../app-config.js')
+  expect(config.isEmbedded).toBe(true)
+  expect(config.resolvedBaseUrl).toBe('https://music.example/songloft')
+  expect(hostAssetUrl('app_icon.png')).toBe('https://music.example/songloft/app_icon.png')
+})
+
+test('late embedded path props update an origin default even when the mode already matches', () => {
+  vi.stubGlobal('self', { location: { origin: 'https://music.example' } })
+  appConfig.deployMode = 'embedded'
+  appConfig.baseUrl = 'https://music.example'
+  restoreHost = hostGlobalProps({ deployMode: 'embedded', webBaseUrl: 'https://music.example/songloft/' })
+  applyHostDeployMode()
+  applyHostDeployMode()
+  expect(appConfig.baseUrl).toBe('https://music.example/songloft')
+})

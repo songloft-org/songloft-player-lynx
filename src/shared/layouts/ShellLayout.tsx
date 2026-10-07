@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore, useState } from '@lynx-js/react'
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { hostAssetUrl } from '../../core/config/app-config.js'
 
 // Import MiniPlayer directly (not the player feature barrel) so the shell graph
 // does not eagerly pull in the full player + its lynx-ui gesture leaves.
@@ -236,7 +237,7 @@ export function ShellLayout() {
                 <view className='shell__brand-mark'>
                   <image
                     className='shell__brand-icon'
-                    src='/app_icon.png'
+                    src={hostAssetUrl('app_icon.png')}
                     mode='aspectFit'
                   />
                 </view>
