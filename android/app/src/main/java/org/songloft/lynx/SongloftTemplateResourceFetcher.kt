@@ -1,6 +1,7 @@
 package org.songloft.lynx
 
 import com.lynx.tasm.provider.AbsTemplateProvider
+import com.lynx.tasm.component.DynamicComponentFetcher
 import com.lynx.tasm.resourceprovider.LynxResourceCallback
 import com.lynx.tasm.resourceprovider.LynxResourceRequest
 import com.lynx.tasm.resourceprovider.LynxResourceResponse
@@ -10,8 +11,19 @@ import org.songloft.lynx.net.InsecureTls
 import org.songloft.lynx.net.SongloftHttpService
 import java.io.IOException
 
-/** The legacy root provider alone is not used to fetch a <frame>'s lazy bundle. */
-class SongloftTemplateResourceFetcher(private val embedded: AbsTemplateProvider) : LynxTemplateResourceFetcher() {
+/** Supports both Lynx resource modes without changing image/font loading. */
+@Suppress("DEPRECATION")
+class SongloftTemplateResourceFetcher(private val embedded: AbsTemplateProvider) :
+    LynxTemplateResourceFetcher(), DynamicComponentFetcher {
+
+    override fun loadDynamicComponent(url: String, handler: DynamicComponentFetcher.LoadedHandler) {
+        fetchTemplate(
+            LynxResourceRequest(url, LynxResourceRequest.LynxResourceType.LynxResourceTypeDynamicComponent),
+            LynxResourceCallback { response ->
+                handler.onComponentLoaded(response.data?.templateBinary, response.error)
+            },
+        )
+    }
     override fun fetchTemplate(
         request: LynxResourceRequest,
         callback: LynxResourceCallback<TemplateProviderResult>,

@@ -228,7 +228,9 @@ class MainActivity : Activity() {
         viewBuilder.addBehaviors(XElementBehaviors().create())
         val templates = DemoTemplateProvider(this)
         viewBuilder.setTemplateProvider(templates)
-        viewBuilder.setTemplateResourceFetcher(SongloftTemplateResourceFetcher(templates))
+        val frameTemplates = SongloftTemplateResourceFetcher(templates)
+        viewBuilder.setTemplateResourceFetcher(frameTemplates)
+        viewBuilder.setDynamicComponentFetcher(frameTemplates)
         return viewBuilder.build(this)
     }
 

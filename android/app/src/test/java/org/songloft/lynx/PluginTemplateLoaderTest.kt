@@ -13,6 +13,8 @@ import java.io.IOException
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.util.concurrent.Executors
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class PluginTemplateLoaderTest {
     private class Server(private val response: ByteArray) : AutoCloseable {
@@ -101,5 +103,34 @@ class PluginTemplateLoaderTest {
             LynxResourceCallback { response = it },
         )
         assertEquals("missing template", response?.error?.message)
+    }
+
+    @Suppress("DEPRECATION")
+    @Test fun dynamicFrameEntryDownloadsAndReportsHttpFailure() {
+        val embedded = object : AbsTemplateProvider() {
+            override fun loadTemplate(uri: String, callback: Callback) = fail("Remote URL must not use assets")
+        }
+        val fetcher = SongloftTemplateResourceFetcher(embedded)
+        for (status in listOf(200, 404)) {
+            val text = "HTTP/1.1 $status Response\r\nContent-Length: 3\r\nConnection: close\r\n\r\nabc"
+            Server(text.toByteArray()).use { server ->
+                val latch = CountDownLatch(1)
+                var binary: ByteArray? = null
+                var failure: Throwable? = null
+                fetcher.loadDynamicComponent(server.url) { data, error ->
+                    binary = data
+                    failure = error
+                    latch.countDown()
+                }
+                assertTrue(latch.await(5, TimeUnit.SECONDS))
+                if (status == 200) {
+                    assertArrayEquals("abc".toByteArray(), binary)
+                    assertNull(failure)
+                } else {
+                    assertNull(binary)
+                    assertEquals("Plugin template HTTP 404", failure?.message)
+                }
+            }
+        }
     }
 }
