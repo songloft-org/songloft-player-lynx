@@ -1,5 +1,15 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · Android 原生插件加载修复与 frame 恢复/退出验收
+
+- 从父仓库 `d5df76a`、客户端 `d353361` 和 SDK `b4baad3` 的干净状态继续。用本地 SDK 构建事件订阅专用 ReactLynx 插件，经隔离 Go `58192` 的真实 ZIP 上传/双哈希校验启用 A、B 两个插件，再从应用首页打开；没有启用主应用 JS TestBridge、注入宿主脚本或访问用户 `58091`。插件 bundle 为 89333 字节，SHA-256 `4d9024b4326963e22cc3a329e4bf338fd4dda26a9a64e32889a8dc4fd63085f9`。
+- 固定 `e09592b` APK 打开已安装插件时页面空白，实际报 **160101 / No available provider or fetcher**，只有父桥注册，子 frame 未加载。`f91d861` 接新版模板 fetcher 后设备仍复现，负例 APK/回执/日志保留。核对官方 Lynx 4.0 源码：新版接口受资源模式开关控制，当前默认模式需要动态组件入口。`9bfd35c` 同时接入两种模板接口，共用有 30 秒时限、50 MiB 限额和 HTTP/空内容错误处理的下载器，复用业务 TLS 客户端，不携带账号 token；根模板继续委托原更新选择器，未切换图片/字体资源模式。依据：[4.0 模板渲染接线](https://github.com/lynx-family/lynx/blob/4.0.0/platform/android/lynx_android/src/main/java/com/lynx/tasm/LynxTemplateRender.java)、[动态组件入口](https://github.com/lynx-family/lynx/blob/4.0.0/platform/android/lynx_android/src/main/java/com/lynx/tasm/component/DynamicComponentFetcher.java)。
+- 新 Android APK 独立保存到 `/tmp/lynx-local-delivery/9bfd35c/`，源码 `9bfd35cb1f88efe469db804c136b1ef31d347874`、构建号 **213494756**、dev、时间 `2026-10-07T00:05:56.111Z`；大小 **33442672**，SHA-256 **`9dbebdb13eeb63d7d34826397199d34aa1e13cc1204e07050047967f6619c285`**。包内 native-host 与构建版本一致，bundle 与当前 dist 逐字一致；JS TestBridge 未启用。实际以 arm64 ABI 安装并预编译，包管理器确认版本/ABI。原 `e09592b` 四种包重新核对大小与哈希均未变；iOS/HarmonyOS 没有因此获得新编译或设备证据。
+- 类型检查、双 bundle、Android APK 编译及 **41 项 JVM 测试**通过，其中 6 项加载器测试覆盖二进制内容、无凭据请求、HTTP/空内容失败、已知/未知长度限额、根模板委托与动态入口实际 HTTP 成功/失败回调。共享原生契约/父桥 **311 项**通过；最终 **286 文件 / 3061 项 JS、47 项发布工具、tsc -b** 通过，`--no-daemon assembleDebug` 成功（37 个任务均 up-to-date）。日志 `9bfd35c-{full-js-tests,release-tests,apk-tests-build,apk-no-daemon}.log` 保留。构建仍有现有 `touch-action` 原生编码警告，以及 SDK/JDK/废弃接口警告，未宣称警告为零。
+- 沿用独立 API 34 / 4 KB、Emulator 35.6.11 / Mesa llvmpipe、arm64 native bridge 环境。A 子 frame 实际加载，SDK `registerChild` / `lifecycle.ready` 到达父桥，界面初始 **Resumes 1**，播放器和主题快照也送达。三轮真实 HOME 返回，根事件 **0→1→2→3**、A 收件 **1→2→3→4**，每轮各一次，应用 PID 与 frameId 不变。截图已目测，JSON 回执 `api34-native-frame-resume.json`。
+- 系统 BACK 退出 A 后 `unregisterHost` 一次；在首页 HOME 返回时根事件继续增加，A 收件保持 **4**、推送调用保持 **6**。打开 B 后初始收件 **1**，两轮 HOME 为 **2→3**，旧 A 两项计数不变。退出 B 后也只注销一次，首页恢复不再推送给任一旧 frame。重新打开 A 使用新 frameId、初始收件 **1**；旧 A/B 收件保持 **4/3**。回执 `api34-native-frame-dispose.json`，截图 `api34-final-probe-{a-home-3,b-home-2,a-reopen}.png` 已目测。此证据覆盖短周期系统恢复、切换与退出消息清理，不代表堆内存泄漏检测、迟到 RPC 设备测试或 MIoT 长后台/断网重连通过。
+- 插件源码/安装脚本在 `/tmp/lynx-p6c-native-plugin/`，设备脚本/负例/私有日志与截图在 `/tmp/lynx-p6-android-device/`，当前 APK 回执记录逐项通过与未验收范围。测试后自有容器优雅退出、Go `58192` 与临时 Xvfb 停止，用户服务保留。继续核对 iOS/HarmonyOS 的 frame 加载配置及其编译/设备条件，歌词卡片/锁屏与 MIoT 验收保持开放；仅本地提交，不 push。
+
 ## 2026-10-07 · Android API 34 / Mesa 的系统复制与根恢复验收
 
 - 父仓库 `cd1f6fe`、客户端 `f9c69a3` 起始干净，继续使用固定 `e09592b` APK，未重建或打开 JS TestBridge。给临时 Emulator 35.6.11 补显式 SDK 根目录和系统路径末尾斜杠后，API 35 / 16 KB 镜像开机 29354 ms、bundle 首屏已加载；随后仍退出 139，另捕获 SystemUI 的 TelephonyManager 空指针 SIGSEGV。两项路径设置没有分开对照，不推断是哪一项绕过初始化失败；原日志与新 `emulator35-path-probe.log` 保留。

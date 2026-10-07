@@ -4,15 +4,17 @@
 
 ## 1. 当前完成度
 
+Android 新增原生插件模板加载修复，源码提交 `f91d861` / `9bfd35c`。`e09592b` 真实安装插件时 frame 报 160101；仅注册新 fetcher 仍失败，现按 Lynx 4.0 当前资源模式同时接动态入口，保留根更新选择器与图片/字体路径。新 APK 在 `/tmp/lynx-local-delivery/9bfd35c/`，构建号 `213494756`；41 项 JVM、3061 项 JS、47 项发布工具、类型/双 bundle/APK 通过。真实 SDK 插件初始恢复通知、A/B 共五次 HOME 每次一次、退出后不再推送与新 frame 标识重入通过。完整证据/哈希见 progress，MIoT 长后台/断网重连、歌词卡片/锁屏及 iOS/HarmonyOS 加载配置/设备验收继续。测试服务已停止，旧四种固定包哈希未变；仅本地提交，不 push。
+
 已订正缓存、更新协议和原生模块参考页遗漏的 HarmonyOS 编译现状，中英对应页同步。剩余验收按平台/证据归组，见[计划检查表](plans/2026-10-06-feature-completion.md)。模拟器 CLI 已能查询 API 13 镜像，但华为许可仍待用户明确授权接受，尚未下载/创建/启动；宿主账号无 KVM 读写权限，独立 Android 容器内 KVM 检查和开机已通过，未改宿主权限。这不证明 HarmonyOS 运行和调试签名可用。旧 SDK 兼容性已对照 P6c 前源码核查，未发现既有原生状态推送被破坏的证据；新增推送仍须插件重建。
 
-Android 当前 `e09592b` APK 已在独立 API 34 / 4 KB、arm64 native bridge、Emulator 35.6.11 / Mesa llvmpipe 环境完成两处跨应用系统粘贴（提示词 409 字节、歌曲路径 55 字节）、三轮 HOME 根恢复事件每轮一次，以及真实播放后的系统暂停/通知标题回归。SwiftShader 下的宿主 SIGSEGV 仍开放；35.6.11 原初始化失败已绕过，不能继续描述为无法开机。新证据只覆盖根事件和基础无歌词通知，原生插件 frame 收件/退出、长后台/断网重连、歌词布局/锁屏与其他跨批回归继续。脚本、负例、core 诊断和边界见 progress；测试服务/显示均已退出，用户 `58091` 保留，应用源码和固定交付包未改。
+上一批 `e09592b` APK 在独立 API 34 / 4 KB、arm64 native bridge、Emulator 35.6.11 / Mesa llvmpipe 环境完成两处跨应用系统粘贴（提示词 409 字节、歌曲路径 55 字节）、三轮 HOME 根恢复事件每轮一次，以及真实播放后的系统暂停/通知标题回归。SwiftShader 下的宿主 SIGSEGV 仍开放；35.6.11 原初始化失败已绕过，不能继续描述为无法开机。该批只覆盖根事件和基础无歌词通知，未改应用源码或固定包；后续子 frame 修复/收件/退出验证见本节首段。长后台/断网重连、歌词布局/锁屏与其他跨批回归继续。脚本、负例、core 诊断和边界见 progress；测试服务/显示均已退出，用户 `58091` 保留。
 
 Linux Playwright WebKit 18.2 已完成当前交付包的 P4 standalone/embedded 根路径数据流程和 P5 播放/快捷键/持久化/菜单保护回归，两个 Worker、最终页面/媒体错误为零。临时 Mesa/GStreamer 修正、空输出、375px 中文与输入/IME 夹具边界见 progress；真实 Safari、扬声器及设备验收继续开放，本批未改应用源码或交付包。
 
 HarmonyOS 已完成 Linux CLI 的 clean release HAP 编译与包内容校验，修复了缓存/更新器 5 处 ArkTS 异常重抛。使用 SDK `26.0.0.105`，最低兼容声明保留 `5.0.1(13)`；包未签名，API 13 及设备行为仍待验。15 项缓存/更新器适配器与 306 项原生契约通过，详见 progress。
 
-当前可审核本地包固定对应客户端 `e09592b`，位于 `/tmp/lynx-local-delivery/e09592b/`：Android 调试 APK、未签名 HarmonyOS HAP 与 standalone/embedded Web 压缩包。统一构建号 `213487589` 的类型、双产物、三端复制、Android 编译、HarmonyOS clean 编译（34 个任务全部执行）及 47 项发布工具均通过，包内版本/bundle/宿主身份一致；APK 为 debuggable，HAP/Web 通过包内容校验器。iOS 只有资源复制；原交付回执的未安装字段是当时快照，后续 Android 安装及 Web 浏览器行为证据见 progress，HAP 仍未安装。详细哈希和日志见 progress；后续文档提交不改变这些包的源码身份。
+上一轮四种可审核包固定对应客户端 `e09592b`，位于 `/tmp/lynx-local-delivery/e09592b/`：Android 调试 APK、未签名 HarmonyOS HAP 与 standalone/embedded Web 压缩包。统一构建号 `213487589` 的类型、双产物、三端复制、Android 编译、HarmonyOS clean 编译（34 个任务全部执行）及 47 项发布工具均通过，包内版本/bundle/宿主身份一致；APK 为 debuggable，HAP/Web 通过包内容校验器。iOS 只有资源复制；原交付回执的未安装字段是当时快照，后续 Android 安装及 Web 浏览器行为证据见 progress，HAP 仍未安装。模板加载修复的新 Android 包见首段，须安装新 APK，不能只靠 bundle 热更新；旧包身份和哈希不变。
 
 P6c 已补 iOS scene 与 HarmonyOS ability 的恢复事件，等待根视图首屏、去重并清理旧上下文；原生 WebView 与 Lynx frame 均有消费点。frame 宿主按 SDK 就绪通知发送最新播放器/主题状态与恢复事件，切插件换标识，退出后丢弃迟到 RPC。SDK 已修复仅订阅事件时未注册子 frame 的问题，现有插件需重新构建；SDK 尚未发布。真实 Chrome 子 frame 完成初始/重入通知与保活；后续官方 Firefox 134 / geckodriver 在虚拟显示中完成真实标签页 hidden→visible（全部 isTrusted=true）、活跃过滤、隐藏保活和关闭重建，页面异常为空，详见 progress。测试使用 SDK 子插件和宿主入口夹具，未证明操作系统恢复或已安装 MIoT 重连。最终 286 文件 / 3061 项 JS、47 项 Node、SDK 3 项测试，以及类型/双产物/Android APK 均通过。HarmonyOS HAP 已编译；iOS 编译与 MIoT 长后台/断网重连设备验收仍开放；本轮计划的源码批次已落地，验收状态见 progress 和计划，仅本地提交，不 push。
 

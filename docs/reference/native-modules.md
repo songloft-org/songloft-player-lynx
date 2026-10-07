@@ -341,9 +341,11 @@ Callback 形状，Callback 收到 JSON 字符串。
 | `registerChild` | 子 frame | `registerChild(frameId: String)` | `registerChild(_:)` |
 | `hostCall` | 子 frame | `hostCall(frameId: String, callId: String, ns: String, method: String, paramsJson: String)` | `hostCall(_:callId:ns:method:paramsJson:)` |
 
-**事件（3 个）**：`SongloftPluginBridge.hostCall`（送给**父页**上下文）、`.hostReply`（送给**子 frame**上下文）、`.push`。常量在 Kotlin `SongloftPluginBridgeModule.EVENT_*`；TS 侧唯一消费点是 `src/features/jsplugin/widgets/LynxPluginFrame.tsx`（**facade 内联在那里**，没有独立的 `src/native/*.ts`）。`frameId` 由父页经 global-props 传给子 frame。
+**事件（3 个）**：`SongloftPluginBridge.hostCall`（送给**父页**上下文）、`.hostReply`（送给**子 frame**上下文）、`.push`。常量在 Kotlin `SongloftPluginBridgeModule.EVENT_*`；父桥 facade 是 `src/native/native-plugin-host.ts`，由 `LynxPluginFrame.tsx` 管理挂载/退出；子插件 SDK 消费 reply/push。`frameId` 由父页经 global-props 传给子 frame。
 
-**闸门锁住的不变量**：**只有 `modules` 表那一行**（三端的注册调用都在）。**6 个方法面没有逐方法断言** —— 它既不在 `hosts` 表里，也没有专属 `describe`，属于 AUD-009 同一类缺口：改坏签名不会有任何测试变红。
+**闸门**：原生契约从父桥接口解析 `registerHost/unregisterHost/hostReply/pushToChild`，检查三端对应声明；另有三端模块注册、SDK 独立子注册/ready 和父桥过滤、准备前合并、退出/迟到 RPC 回归。该四方法闸门不等于六方法全部完成设备验收。
+
+**Android frame 模板加载**：`MainActivity.buildLynxView` 给同一 `SongloftTemplateResourceFetcher` 同时注册新版模板与旧动态组件入口。Lynx 4.0 当前默认资源模式使用后者；只设置根 `AbsTemplateProvider` 或只注册未启用的新接口都会使 frame 报 160101。下载器复用 `SongloftHttpService.clientFor(InsecureTls.enabled)`，不附账号凭据，30 秒/50 MiB 限制并报告 HTTP/空内容错误；根模板继续由 `DemoTemplateProvider` 选择内置或已验签更新，不切换图片/字体资源模式。[SDK 4.0 接线依据](https://github.com/lynx-family/lynx/blob/4.0.0/platform/android/lynx_android/src/main/java/com/lynx/tasm/LynxTemplateRender.java)。此修复需要安装新 APK，不能仅靠 bundle 热更新。`9bfd35c` 已通过真实安装的 SDK 子插件初始、五次 HOME、A/B 退出和重入验证，详见 progress；iOS/HarmonyOS 配置及设备行为不能从这份结果推定。
 
 ### 2.12 `SongloftLynxFrame`（6 方法，仅 Web）
 
@@ -396,7 +398,7 @@ Web 上渲染 Lynx 插件的宿主（native 构建用真实 `<frame>` 元素，�
 - 与 P6c 前的 `50b8131` 核对：原生 Lynx frame 原先只有 globalProps 初始快照，播放器变化订阅仅用于 Web，父桥 RPC/状态推送尚未接入；新增 ready 门控不能据此视为破坏了既有原生推送。旧 SDK 的业务 RPC 可继续走当前父桥，但不会解锁新增原生状态/恢复推送，插件需重建。Web 既有播放器推送不受 ready 门控；普通 RPC 不代替订阅就绪信号，避免通知先于 listener 安装。此为源码兼容性核查，未代替设备回归。
 - Web iframe 继续浏览器可见性；嵌套 Lynx frame 由主线程 `lynx-frame-host.js` 在 document 从 hidden 回 visible、保活插件重新进入时推送同义 lifecycle 事件，只送当前活跃且 ready 的子 frame。隐藏的保活子 frame 不收到恢复通知，切页保持已有 worker/state，不 detach。
 - 2026-10-07 官方 Firefox 134 / geckodriver 的真实标签页测试完成 6 次 hidden→visible，12 个事件均 isTrusted=true；本地 SDK 子插件计数验证一次通知、活跃过滤、隐藏保活、同元素重入和关闭后新元素重新就绪，无捕获到的页面异常。宿主入口为测试夹具，不覆盖已安装插件 UI、MIoT 长后台/断网重连或原生系统恢复，证据见 progress。
-- 闸门覆盖三端生命周期注册、四方法父桥、实际 HOS 控制器适配器、订阅/清理、WebView 执行脚本、native frame 消费点和 Web 保活恢复。SDK 另有独立事件/RPC 注册回归。HarmonyOS HAP 已编译；iOS 编译与真实前后台、MIoT 断网重连/快照仍开放，不以源码/夹具替代设备验证。依据：[Apple scene lifecycle](https://developer.apple.com/documentation/uikit/uiscenedelegate)、[OpenHarmony UIAbility](https://github.com/openharmony/interface_sdk-js/blob/OpenHarmony-5.0.0-Release/api/%40ohos.app.ability.UIAbility.d.ts)、[Lynx 4.0.1 ViewClient](https://github.com/lynx-family/lynx/blob/4.0.1/platform/harmony/lynx_harmony/src/main/ets/tasm/LynxViewClient.ets)。
+- 闸门覆盖三端生命周期注册、四方法父桥、实际 HOS 控制器适配器、订阅/清理、WebView 执行脚本、native frame 消费点和 Web 保活恢复。SDK 另有独立事件/RPC 注册回归。Android `9bfd35c` 已完成真实安装插件的初始、五次 HOME、A/B 退出/重入；这是短周期计数插件证据。HarmonyOS 只有 `e09592b` HAP 编译，iOS 未编译；两端 frame 加载配置/设备恢复、MIoT 长后台/断网重连继续，不以源码/夹具替代。依据：[Apple scene lifecycle](https://developer.apple.com/documentation/uikit/uiscenedelegate)、[OpenHarmony UIAbility](https://github.com/openharmony/interface_sdk-js/blob/OpenHarmony-5.0.0-Release/api/%40ohos.app.ability.UIAbility.d.ts)、[Lynx 4.0.1 ViewClient](https://github.com/lynx-family/lynx/blob/4.0.1/platform/harmony/lynx_harmony/src/main/ets/tasm/LynxViewClient.ets)。
 
 ---
 

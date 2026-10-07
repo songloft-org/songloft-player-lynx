@@ -21,7 +21,7 @@
 
 - [ ] **DLNA 投屏重播旧曲、离开投屏页后主播放器控制本地音频（2026-10-05，代码与测试包已完成，待 Android 实测）** — DIDL `res` 没有 MIME 且忽略 SOAP HTTP 错误，URI 被拒后仍发 Play；投屏设备只存在页面 state，主播放器控制没有路由到远端。现补 MIME 元数据、SOAP Fault 校验、跨页面会话与串行控制，远端状态/进度轮询及队列完成路由。JS 2760 项与 Android 11 项回归（分批）、类型检查、双 bundle 和最终 APK 编译通过。ADB 无连接设备，需实测主播放器暂停/继续、上一曲/下一曲、自动连播、进度/音量与断开；iOS/HarmonyOS 同步源码；HarmonyOS HAP 现已编译，iOS 编译及两端设备验证仍开放。
 
-- [ ] **三端插件恢复前台通知待设备验收（songloft-org/songloft#493，2026-10-07 P6c 源码补齐）** — MIoT 后台静默失效的连接可能在前台持续停更。Android 原事件已接入，iOS scene 与 HarmonyOS ability 现补首屏就绪、去重和退出清理；原生 WebView 下一浏览器帧派发 `visibilitychange`，Lynx frame 经宿主桥接推送 `lifecycle/resumed`。SDK 修复事件订阅独立注册和 ready，现有 Lynx 插件需重构建，SDK 尚未发布。真实 Chrome 子 frame 验证初始/重入通知、隐藏隔离和 Worker 保活，可见性使用协议夹具；切插件标识与隐藏期间初始化两项回归修复前失败、修复后通过。HarmonyOS HAP 已编译，iOS 仍未编译，Android 模拟器环境问题仍在；MIoT 长后台、断网重连与音箱状态恢复待真机验证，保留未勾选。
+- [ ] **三端插件恢复前台通知待设备验收（songloft-org/songloft#493，2026-10-07 P6c 源码补齐）** — MIoT 后台静默失效的连接可能在前台持续停更。三端根生命周期与 WebView/Lynx 消费点已接入，SDK 事件独立注册/ready 已补但未发布，插件需重建。Chrome/Firefox 的保活与可见性证据见 progress。Android 后续修复真实安装插件的模板加载失败，`9bfd35c` 在 API 34 / Mesa 环境通过原生子 frame 初始通知、A/B 共五次 HOME 每次一次、退出后无推送与新标识重入；不再把它描述为仅有根事件或环境完全不可用。iOS/HarmonyOS 的 frame 加载配置还需核对；HarmonyOS 只有 `e09592b` HAP 编译，iOS 尚未编译。MIoT 长后台、断网重连和音箱状态恢复仍待设备验证，不勾选整体完成。
 
 > 2026-08-31 从 handoff.md 迁入。尚未闭合，修复后改 `[x]` 并移主题归类，别在已闭合条目上续写。
 
@@ -67,6 +67,8 @@
 - [x] **AUD-009 · HarmonyOS 音频契约漏检**（P6b）— 音频接口方法、事件与七种状态已纳入 HarmonyOS；拒绝空方法的反例闸门和转译实际源码的毫秒/音量/命令参数测试已落地。EQ 明确禁用并验证消费点，保留其非支持占位。HAP 编译已通过，设备行为仍在 AUD-002 等条目验收，契约测试不作设备证明。
 
 ## 手动测试发现
+
+- [x] Android 已安装 Lynx 插件空白（2026-10-07 P6c 实测）— `e09592b` 只设置根资源 provider，frame 报 160101，没有可用 lazy bundle fetcher。仅注册新版模板 fetcher 的 `f91d861` 仍失败，默认资源模式没有启用该接口；`9bfd35c` 补动态入口并复用同一限时/限额/TLS 下载器，保留根模板更新选择器和现有图片/字体路径。41 项 JVM、相关桥接回归、类型/双产物/APK 通过；真实上传的 SDK 插件在新 APK 中加载并完成初始、五次 HOME、切换/退出和重入验收。负例与新包身份见 progress；不据此闭合 iOS/HarmonyOS 模板加载或 MIoT 重连。
 
 - [x] HarmonyOS 缓存/更新器 ArkTS 编译失败（2026-10-07）：5 处 catch 变量裸重抛违反 `arkts-limited-throw`。改为显式 `Error` 类型，保留原异常与清理/回退；15 项实际源码适配器、306 项原生契约和 clean release HAP 构建通过，包内版本/身份/生产 bundle 校验通过。SDK `26.0.0.105`，未签名及设备边界见 progress。
 
