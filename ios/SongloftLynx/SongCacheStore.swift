@@ -78,7 +78,8 @@ final class SongCacheStore {
         do {
           let entry = try JSONDecoder().decode(Entry.self, from: Data(contentsOf: directory.appendingPathComponent("entry.json")))
           _ = try identity(entry.namespace, entry.key)
-          guard directory == entryDirectory(entry.namespace, entry.key), entry.sizeBytes > 0,
+          // Enumerated and constructed file URLs can represent the same directory differently.
+          guard namespace.lastPathComponent == hash(entry.namespace), directory.lastPathComponent == hash(entry.key), entry.sizeBytes > 0,
             sizeOf(media(entry)) == entry.sizeBytes else { throw Failure(code: "invalid_cache_request") }
           entries[entry.key] = entry
         } catch { try fm.removeItem(at: directory) }

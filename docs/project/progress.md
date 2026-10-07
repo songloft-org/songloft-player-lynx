@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-07 · iOS 缓存冷恢复目录校验
+
+- Python 夹具修复 `5900940` 已推送，CI [37569104168](https://github.com/songloft-org/songloft-player-lynx/actions/runs/37569104168) 的缓存夹具 **417ms 就绪**，Apple 缓存验证程序编译通过，执行时在 `cold_lookup` 抛错并退出 133。共享验证、Android、HarmonyOS 与两种 Web 通过，发布跳过；这次运行已越过夹具启动阻塞，但 Apple 缓存行为和 IPA 构建尚未通过。
+- 冷恢复原先直接比较枚举 URL 与构造 URL，比较结果可能受到目录提示、base URL 等表示差异影响；失败后会删除条目目录。现改为核对所在 namespace/key 两层目录名是否分别等于元数据身份的 SHA-256，继续验证身份、媒体为普通文件、正大小与实际大小一致。枚举范围仍限定在当前 root 的 `v2` 下，不放宽跨 namespace/key 的定位规则。URL 表示差异是本次修复的假设，尚无本机 Apple 执行证据确认它就是该 CI 的根因。
+- 实际 Apple 验证脚本新增三种同一路径的 root URL 表示（原 root、显式目录 URL、带 base 的相对 URL），重开后核对三条有效缓存的命中、身份/大小、32768 字节完整媒体、分 namespace 列表和总容量。另用七份隔离目录副本分别注入 namespace 错位、key 错位、损坏 JSON、非法身份、大小不符、缺失媒体、截断媒体，断言坏条目已删除且另外两条身份仍可读取；每份副本在退出时清理，原有容量/取消/重启验证保留。这些新增 Swift 回归**尚未编译或执行**，不能计入本地通过项，也未完成缺陷版本上的反向执行。
+- 本批 `pnpm exec vitest run src/__tests__/native-module-contract.test.ts` **307/307 通过**，`pnpm run test:release` 在沙箱外 **70/70 通过**。`xcodebuild -list -project ios/SongloftLynx.xcodeproj` 因工具缺失退出 127，本机亦无 Swift；Apple 编译、新增回归与 IPA 验证仍待后续 macOS CI。中英 handoff 同步，progress 沿用仅中文结构；diff 与严格 UTF-8/U+FFFD 检查通过。未提交、未推送，等待实施结果确认。
+- 提交前自审未发现新增问题：已核对原生模块初始化、持久写入、恢复与读取调用链，两层目录哈希与写入规则一致，身份/文件大小检查和 ABI 保持兼容。回调前已完成任务落盘；七份测试副本在复制前注册退出清理，仅修改各自副本，不影响原有容量/取消验证。运行时代码未再改，307/70 项通过数沿用实施阶段，未重复测试；重新检查 diff 与编码通过。Apple 编译、行为回归及缺陷版本反向验证仍未执行，等待审查确认，未提交或推送。
+
 ## 2026-10-07 · iOS Python 夹具 DNS 依赖与启动栈诊断
 
 - 前一批 `3bf291b` 已推送，GitHub Actions [37566472108](https://github.com/songloft-org/songloft-player-lynx/actions/runs/37566472108) 的共享验证、Android、HarmonyOS 和两种 Web 均通过，iOS 仍失败、发布跳过。新日志明确显示 Python PID 存活，但 30 秒后端口文件仍不存在或为空；未进入 Swift 编译。延长等待没有消除启动阻塞，不能将前一批写成 CI 已修复。

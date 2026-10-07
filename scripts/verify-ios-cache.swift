@@ -47,8 +47,78 @@ struct VerifyIOSCache {
     try check((try store.listEntries(raw(["namespace": ns])))["total"] as? Int == 2, "namespace_listing")
     let repeated = try cache(request("repeat"))
     try check(repeated["url"] as? String == first["url"] as? String, "duplicate_variant")
-    let restored = try SongCacheStore(root: root)
-    try check((try restored.getEntry(raw(["namespace": ns, "key": first["key"]!])))["cached"] as? Bool == true, "cold_lookup")
+    func verifyRestored(_ restored: SongCacheStore, entries: [[String: Any]], label: String) throws {
+      for entry in entries {
+        let found = try restored.getEntry(raw(["namespace": entry["namespace"]!, "key": entry["key"]!]))
+        try check(found["cached"] as? Bool == true, label + "_lookup")
+        try check(found["key"] as? String == entry["key"] as? String && found["sizeBytes"] as? Int == 32768, label + "_metadata")
+        guard let value = found["url"] as? String, let file = URL(string: value), file.isFileURL else {
+          throw SongCacheStore.Failure(code: label + "_file_uri")
+        }
+        let bytes = try Data(contentsOf: file)
+        try check(bytes == Data(repeating: 109, count: 32768), label + "_media")
+      }
+      for namespace in [ns, other] {
+        let expected = entries.filter { $0["namespace"] as? String == namespace }.count
+        try check((try restored.listEntries(raw(["namespace": namespace])))["total"] as? Int == expected, label + "_listing")
+      }
+      try check(restored.size() == entries.count * 32768, label + "_size")
+    }
+    let roots = [root, URL(fileURLWithPath: root.path, isDirectory: true),
+      URL(fileURLWithPath: root.lastPathComponent, isDirectory: true, relativeTo: root.deletingLastPathComponent())]
+    for (index, representation) in roots.enumerated() {
+      try verifyRestored(SongCacheStore(root: representation), entries: [first, second, track], label: "cold_\(index)")
+    }
+    print("PASS: cold cache lookup, listing and media bytes for three root URL representations")
+    let firstFile = URL(string: first["url"] as! String)!, firstDirectory = firstFile.deletingLastPathComponent()
+    func editEntry(_ directory: URL, _ update: (inout [String: Any]) throws -> Void) throws {
+      let file = directory.appendingPathComponent("entry.json")
+      var value = try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as! [String: Any]
+      try update(&value)
+      try SongCacheStore.encode(value).write(to: file)
+    }
+    let corruptions: [(String, (URL, URL) throws -> URL)] = [
+      ("wrong_namespace", { directory, _ in
+        let parent = directory.deletingLastPathComponent().deletingLastPathComponent()
+          .appendingPathComponent(String(repeating: "0", count: 64), isDirectory: true)
+        try fm.createDirectory(at: parent, withIntermediateDirectories: true)
+        let moved = parent.appendingPathComponent(directory.lastPathComponent, isDirectory: true)
+        try fm.moveItem(at: directory, to: moved); return moved
+      }),
+      ("wrong_key", { directory, _ in
+        let moved = directory.deletingLastPathComponent().appendingPathComponent(String(repeating: "0", count: 64), isDirectory: true)
+        try fm.moveItem(at: directory, to: moved); return moved
+      }),
+      ("invalid_json", { directory, _ in
+        try Data("{broken".utf8).write(to: directory.appendingPathComponent("entry.json")); return directory
+      }),
+      ("invalid_identity", { directory, _ in
+        try editEntry(directory) { $0["key"] = try raw([ns, "0", "default", "original", "0", "revision", "mp3"]) }; return directory
+      }),
+      ("wrong_size", { directory, _ in
+        try editEntry(directory) { $0["sizeBytes"] = 32769 }; return directory
+      }),
+      ("missing_media", { directory, file in
+        try fm.removeItem(at: file); return directory
+      }),
+      ("truncated_media", { directory, file in
+        try Data([109]).write(to: file); return directory
+      })
+    ]
+    for (label, corrupt) in corruptions {
+      let copy = fm.temporaryDirectory.appendingPathComponent("cache-invalid-\(label)-\(UUID().uuidString)", isDirectory: true)
+      defer { try? fm.removeItem(at: copy) }
+      try fm.copyItem(at: root, to: copy)
+      let directory = copy.appendingPathComponent("v2", isDirectory: true)
+        .appendingPathComponent(firstDirectory.deletingLastPathComponent().lastPathComponent, isDirectory: true)
+        .appendingPathComponent(firstDirectory.lastPathComponent, isDirectory: true)
+      let invalid = try corrupt(directory, directory.appendingPathComponent(firstFile.lastPathComponent))
+      let restored = try SongCacheStore(root: copy)
+      try check((try restored.getEntry(raw(["namespace": ns, "key": first["key"]!])))["cached"] as? Bool == false, label + "_lookup")
+      try check(!fm.fileExists(atPath: invalid.path), label + "_cleanup")
+      try verifyRestored(restored, entries: [second, track], label: label + "_survivors")
+    }
+    print("PASS: seven misplaced/corrupt cache entries removed without deleting valid identities")
     let legacy = root.appendingPathComponent("123.mp3"); try Data(repeating: 0, count: 4096).write(to: legacy)
     let limited = try cache(request("limited", track: "2", maximum: store.size() + 1024))
     try check(limited["error"] as? String == "limit_exceeded", "shared_total_limit")
