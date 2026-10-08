@@ -76,7 +76,7 @@ describe('manifest contract', () => {
     expect((await api.discover(input)).plugins[0]?.manifest.version).toBe(version)
   })
   test.each([
-    { entryHash: undefined }, { zipHash: 'bad' }, { permissions: null }, { permissions: [42] },
+    { entryHash: null }, { zipHash: 'bad' }, { permissions: null }, { permissions: [42] },
     { entryPath: '../evil' }, { main: '../main.js' }, { renderEngine: 'react' }, { version: 'dev' },
     { name: 'a' }, { name: '歌'.repeat(17) },
   ])('filters invalid required fields %j', async changes => {
@@ -240,4 +240,9 @@ test('verifies cross-repository packages against the target release, including l
       expect(installedFromRepository(plugin, parseJSPlugin({ entry_path: 'music', download_url: url.replace('bob/music', 'carol/music'), version: manifest.version }))).toBe(false)
     }
   } finally { vi.unstubAllGlobals() }
+})
+
+test.each([{ entryHash: '', zipHash: '' }, { entryHash: undefined, zipHash: undefined }])('discovers repositories with empty or omitted root hashes %j', async hashes => {
+  const { api, input } = fixture({ manifest: { ...manifest, ...hashes } })
+  expect((await api.discover(input)).plugins).toHaveLength(1)
 })
