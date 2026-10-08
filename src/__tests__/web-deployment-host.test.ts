@@ -17,6 +17,8 @@ test.each(['/', '/songloft/', '/nested/音乐/index.html?preview=1#player'])(
     for (const embedded of [false, true]) {
       const source = embedded ? html.replace(`global-props='{"deployMode":"standalone"}'`, '') : html
       const dom = new JSDOM(source, { url: pageUrl.href, runScripts: 'outside-only' })
+      dom.window.matchMedia = (query: string) => ({ matches: false }) as MediaQueryList
+      Object.defineProperty(dom.window, 'CSS', { value: { supports: () => true } })
       try {
         const document = dom.window.document
         const bootstrap = document.querySelector('script[data-songloft-deployment]')
@@ -26,6 +28,8 @@ test.each(['/', '/songloft/', '/nested/音乐/index.html?preview=1#player'])(
         expect(app.getAttribute('url')).toBe(new URL('main.lynx.bundle', base).href)
         expect(JSON.parse(app.getAttribute('global-props')!)).toEqual({
           ...(embedded ? {} : { deployMode: 'standalone' }), webBaseUrl: base.href,
+          systemTheme: 'light', systemLocale: 'en-US', systemReduceMotion: false,
+          systemReduceTransparency: false, systemIncreaseContrast: false, backdropBlurSupported: true,
         })
         for (const element of document.querySelectorAll('script[src], link[href]')) {
           const raw = element.getAttribute('src') ?? element.getAttribute('href')!

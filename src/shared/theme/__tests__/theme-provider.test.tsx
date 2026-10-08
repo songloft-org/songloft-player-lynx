@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom'
 import { act, render } from '@lynx-js/react/testing-library'
-import { afterEach, expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 
 import {
   applySystemAppearance,
@@ -12,6 +12,10 @@ import { changeAppTheme, DEFAULT_RESOLVED_THEME } from '../theme-model.js'
 import { FONT_SIZE_BASES, PACK_OVERRIDABLE_BASELINE } from '../theme-pack-mapping.js'
 import { setActiveThemePack } from '../theme-pack-model.js'
 import { ThemeProvider } from '../ThemeProvider.js'
+import { MATERIAL_TOKENS } from '../material-tokens.js'
+vi.mock('../../../native/backdrop-capabilities.js', () => ({
+  getBackdropCapabilities: () => ({ blur: true, liquidGlass: true, androidCapture: false }),
+}))
 
 /**
  * `ThemeProvider` is the only place the resolved theme becomes visible (as the
@@ -152,7 +156,7 @@ const SAKURA = {
 }
 
 
-/** Expected inline style when no pack is active — baseline + inline font-size
+/** Expected inline style when no pack is active — iOS texture + inline font-size
  *  tokens + --font-scale (default 1).
  *
  *  The 12 HIG font tokens ride the inline channel since the iOS font-scale fix
@@ -164,6 +168,8 @@ function expectBaselineStyle(resolved: 'light' | 'dark'): Record<string, string>
   const fontScale = 1 // the test host does not override the scale preference
   const style: Record<string, string> = {
     ...PACK_OVERRIDABLE_BASELINE[resolved],
+    ...MATERIAL_TOKENS['ultra-thin'][resolved],
+    '--material-fill-menu': resolved === 'light' ? 'rgba(255, 255, 255, 0.99)' : 'rgba(23, 23, 27, 0.92)',
     '--font-scale': String(fontScale),
     // The test host reports `SystemInfo.platform === 'ios'` and no insets, so
     // safe-area edges are pinned to 0 on native (see safe-area.test.ts) and land
@@ -179,7 +185,7 @@ function expectBaselineStyle(resolved: 'light' | 'dark'): Record<string, string>
   return style
 }
 
-test('without a pack the root inline tokens equal the Muse baseline', async () => {
+test('without a pack the root inline tokens carry the Muse baseline and iOS texture', async () => {
   setSystemAppearanceForTests({ theme: 'light', locale: null })
   await changeAppTheme('system', createMemoryStorage())
 
@@ -187,7 +193,7 @@ test('without a pack the root inline tokens equal the Muse baseline', async () =
 
   // The runtime merges style objects and never removes keys, so the provider
   // cannot drop the attribute on "no pack" — it writes the baseline instead.
-  // Inline equals the class declarations, so the rendered look is unchanged.
+  // The test host is iOS: its final material policy must win over that baseline.
   expect(rootStyle(container)).toEqual(expectBaselineStyle('light'))
 })
 

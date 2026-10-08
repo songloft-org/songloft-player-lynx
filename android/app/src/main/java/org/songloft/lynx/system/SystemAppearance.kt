@@ -3,6 +3,7 @@ package org.songloft.lynx.system
 import android.content.ContentResolver
 import android.content.res.Configuration
 import android.provider.Settings
+import android.os.Build
 
 /**
  * The host half of the system-appearance contract: the OS dark/light setting and
@@ -31,6 +32,8 @@ object SystemAppearance {
         PROP_THEME to themeOf(configuration),
         PROP_LOCALE to localeTagOf(configuration),
         PROP_REDUCE_MOTION to reduceMotionOf(contentResolver),
+        "backdropBlurSupported" to (Build.VERSION.SDK_INT >= 23),
+        "androidCaptureSupported" to (Build.VERSION.SDK_INT >= 23),
     )
 
     /**
@@ -48,11 +51,16 @@ object SystemAppearance {
 
     /**
      * The primary locale as a BCP-47 tag (`"zh-CN"`). `Configuration.getLocales()`
-     * needs API 24, which is this app's `minSdk`, so no legacy branch is needed.
+     * needs API 24; the API 21 floor uses the legacy primary locale.
      * Empty when the list is empty — again, JS applies the fallback.
      */
+    @Suppress("DEPRECATION")
     private fun localeTagOf(configuration: Configuration): String =
-        configuration.locales.takeIf { !it.isEmpty }?.get(0)?.toLanguageTag() ?: ""
+        if (Build.VERSION.SDK_INT >= 24) {
+            configuration.locales.takeIf { !it.isEmpty }?.get(0)?.toLanguageTag() ?: ""
+        } else {
+            configuration.locale?.toLanguageTag() ?: ""
+        }
 
     /**
      * Whether the user has disabled animations. Android has no single "reduce
@@ -63,9 +71,7 @@ object SystemAppearance {
      * `getFloat` returns the default (1f → motion on) when the setting is absent,
      * so hosts that never set it resolve to motion-on — the same default as iOS.
      *
-     * Live toggles of this setting do not fire `onConfigurationChanged`, so the
-     * page picks the new value up on the next launch / config change rather than
-     * the instant it is toggled — the same launch-foreground cadence iOS uses.
+     * MainActivity observes this setting and refreshes the snapshot on resume.
      */
     private fun reduceMotionOf(contentResolver: ContentResolver): Boolean =
         Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f

@@ -57,7 +57,7 @@ export function MiniPlayer() {
       {/* Panel-mode blur — same reason as the nav capsule below it: this bar
           floats over scrolling content with no scrim of its own. The root's
           `bindtap` still receives taps, since a child bubbles to it. */}
-      <BackdropBlur className='ui-backdrop-blur--pill' container />
+      <BackdropBlur className='ui-backdrop-blur--pill' />
       <view className='mini-player__progress'>
         <view className='mini-player__progress-fill' style={{ width: pct }} />
       </view>

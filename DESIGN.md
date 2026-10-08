@@ -453,13 +453,17 @@ Apple 平台有两类材质：**Liquid Glass** 与**标准材质（standard mate
 
 Liquid Glass 为控件和导航元素（如标签栏、侧边栏）形成一个独立的功能层，漂浮在内容层之上，在功能元素与内容之间建立清晰的视觉层级。它让内容从这些元素下方滚动、透出，赋予界面动感与深度，同时保持控件和导航的可读性。
 
-> **本仓库的双轨实现**：iOS 上 `BackdropBlur` 经 `blur-effect: 'glass'` 直接驱动原生 iOS-26 `UIGlassEffect`，并在 `.theme-root.theme-<name>.platform-ios` token 覆盖块把 CSS `--material-fill*` 降到约 0.5 让原生材质显出——可读性由原生 vibrancy 保证（真机验证）。Android/Web/Harmony 保留 `tokens.css` 基线的仿玻璃层（`--material-fill` 0.85/0.72），其对比度由 `contrast.test.ts` 在 CI 闸门。结构契约见 `src/shared/theme/__tests__/platform-glass.test.ts`。
+> **本仓库的材质实现（2026-10-08 P0/P1）**：普通背景叶节点在宿主明确支持 Liquid Glass 时使用单表面 `blur-effect='glass'`；`glass-container` 仅用于分组子玻璃表面，不能拿空节点替代普通背景。iOS 26 以前使用 themed blur，未知 SDK/注册/能力使用实心材质。最终材质由 `ThemeProvider` 经 `resolveMaterialTokens` 写到 inline 根节点，避免主题包映射覆盖 CSS 平台规则。native regular 沿用 ultra-thin 色调参考（亮色 fill/elevated 为 0.55/0.45，暗色为 0.50/0.40），其他厚度按档位相对 regular 缩放；标准材质保留四档，默认为 0.85/0.72。系统或应用增强对比度使用标准 thick，停止选择 glass；系统或本机降低透明度则卸载 blur、写实心纹理。系统已开启的辅助功能不能被本机开关关闭。原生效果不代表自定义文本自动获得 vibrancy，可读性仍需实际背景验证；本机没有 iOS 26 真机证据。
+
+> **P2 表面分工**：带 panel/pill className 的紧凑 chrome 才选择 regular glass；全屏 scrim 使用随主题切换的普通 blur。装饰 blur 叶节点显式关闭 `glass-interactive` 并从无障碍树排除，交互仍由前景控件消费。播放器封面当前经过强 veil，不满足 clear 所需丰富媒体背景，本批不添加 clear。根节点和玻璃层复用 `useSurfaceAppearance`，共享一组上游策略/主题订阅、按有效快照去重，最后一个消费者卸载时断开；不把减少订阅宣称为已测帧率提升。
+>
+> **滚动菜单**：`PopoverSurface` / `GlobalMenu` 使用裁剪外壳、固定模糊背景、独立原生 `scroll-view`；直接钳制滚动区高度，边框占用从测量上限扣除，内边距随内容滚动。滑块等任意内容的布局放在内部 content 上，避免新增滚动层改变对齐或抢走手势。行为闸门见 `platform-glass-root.test.tsx` / `menu-scroll.test.tsx`，实测证据见 progress。
 >
 > **材质令牌体系（`--material-*`）**：所有材质 CSS 变量统一使用 `--material-*` 前缀（原 `--glass-*` 已全部重命名）。关键令牌：
 >
-> - **填充**：`--material-fill`（常规玻璃填充）、`--material-fill-elevated`（scrim 之上的模态表面，原 `--glass-fill-strong`；命名修正：fill-elevated 用于需要更高可读性的提升表面，fill 用于悬浮 chrome）。
+> - **填充**：`--material-fill`（常规玻璃填充）、`--material-fill-elevated`（scrim 之上的模态表面，原 `--glass-fill-strong`）、`--material-fill-menu`（未调暗的文字密集菜单）。菜单采用独立最低 alpha（亮 .99、暗 .92），保留 blur 与边缘高光，移除覆盖整面文字区域的 sheen/ramp；选中态 wash 一起参与对比度验证。四档材质仍控制导航/普通模态表面，菜单不随 ultra-thin 变得难以阅读；降低透明度的菜单 alpha=1。基线正文采用 4.5 门槛，secondary/accent/red 仍沿用仓库明确接受的 3.0 分层门槛，自定义主题包不自动保证这些比值。
 > - **静态质感**：`--material-sheen` / `--material-sheen-layer`（148deg、38% 停点的二层微高光，营造折射光泽）、`--material-highlight`（镜面高光）、`--material-rim-side`（边缘折射）、`--material-ramp-*`（渐变坡道，模拟 lensing 效应）。填充不透明度不受质感层影响，默认 regular 档不变。
-> - **光晕与色调**：`--material-glow-faint`（底栏选中态光晕）、`--tint-fill`（玻璃上的强调态）、`--quaternary-system-fill`（玻璃上的中性态）。
+> - **光晕与色调**：`--material-glow-faint`（装饰光晕）、`--tint-fill`（底栏选中态背景及玻璃上的强调态）、`--quaternary-system-fill`（玻璃上的中性态）。
 >
 > **四档材质模型**（对应 Apple 标准材质）：ultra-thin / thin / regular（默认）/ thick，由 `material-model.ts` 管理，闸门 `material-model.test.ts`。
 >

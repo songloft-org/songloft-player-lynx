@@ -12,14 +12,10 @@ import type { SongloftStorage } from '../../core/storage/types.js'
  * channel "is not wired yet" because the plan at the time was a native
  * `SystemAppearance` field (same shape as `reduce-motion-model.ts`).
  *
- * **Deliberately app-side, not host-side.** An OS flag is not readable on every
- * host we ship to (Android and HarmonyOS have no such push, and iOS's
- * `UIAccessibility.isDarkerSystemColorsEnabled` would need three native
- * implementations plus the pbxproj/manifest wiring in AGENTS §4.1), and the
- * preference is one the user should be able to reach regardless of what their
- * OS exposes. So the class is driven by a persisted in-app switch. The
- * `.increase-contrast` CSS is already theme-scoped, which is what makes that
- * possible: flipping one class is the whole activation.
+ * This module retains the local choice. `surface-policy.ts` combines it with
+ * the host's optional Increase Contrast flag using OR; switching the app choice
+ * off cannot override an enabled OS setting. Theme-pack mapping applies the same
+ * effective flag to inline palette values.
  *
  * Shape mirrors `font-scale-model.ts`: a persisted choice applied live, with a
  * plain listener `Set` + `useState` in `ThemeProvider` rather than

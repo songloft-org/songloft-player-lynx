@@ -439,6 +439,8 @@ export const en = {
     fontScaleXLarge: 'Extra Large',
     accessibilitySection: 'Accessibility',
     increaseContrast: 'Increase Contrast',
+    reduceTransparency: 'Reduce Transparency',
+    reduceTransparencyDesc: 'Use solid surfaces; system accessibility preferences also apply',
     increaseContrastDesc: 'Deeper label colors and solid separators',
     about: 'About',
     aboutUpdates: 'About & Updates',
@@ -878,16 +880,20 @@ export const en = {
     fullPackage: 'Open installation package / release page', packageHint: 'Native changes require installing a new client package.',
     iosSigning: 'The IPA is unsigned and requires signing before installation.', webPackage: 'Open Web deployment package / release page',
     webDeploy: 'Deploy the matching standalone or embedded package, then refresh. Native bundles do not update the Web host.',
-    reasons: { unavailable: 'This release provides an installation package update.', signing_key: 'Install a shell with a trusted update key to enable bundle updates.',
+    reasons: {
+      unavailable: 'This release provides an installation package update.', signing_key: 'Install a shell with a trusted update key to enable bundle updates.',
       signature_missing: 'No signed bundle manifest is available. Use the installation package.', signature_invalid: 'Bundle signature verification failed. Use the installation package or check again later.',
-      incompatible: 'This bundle requires a different native shell. Use the installation package.' },
-    errors: { release_rate_limited: 'GitHub rate limit reached. Try again later.', release_unpublished: 'No release has been published in this channel.',
+      incompatible: 'This bundle requires a different native shell. Use the installation package.'
+    },
+    errors: {
+      release_rate_limited: 'GitHub rate limit reached. Try again later.', release_unpublished: 'No release has been published in this channel.',
       release_missing_asset: 'This release is missing update files. Open its release page.', release_changed: 'Release files changed during the check. Try again later.',
       invalid_update_proxy: 'The GitHub proxy must be an HTTPS prefix without credentials or query parameters.',
       metadata_unavailable: 'Install a newer shell to enable secure update checks and bundle updates.', update_channel_unsupported: 'Updates are unavailable for this channel.',
       insufficient_space: 'There is not enough free space for this update.', cancelled: 'Bundle download cancelled.', checksum_mismatch: 'Bundle verification failed. Check for updates and retry.',
       invalid_release: 'The release metadata is invalid. Check again later or open the release page.',
-      failed: 'Client update failed. Check the network and try again.' },
+      failed: 'Client update failed. Check the network and try again.'
+    },
   },
   upgrade: {
     title: 'Backend Update',
@@ -1561,6 +1567,8 @@ export const zh: TranslationTree = {
     fontScaleXLarge: '超大',
     accessibilitySection: '辅助功能',
     increaseContrast: '增强对比度',
+    reduceTransparency: '降低透明度',
+    reduceTransparencyDesc: '使用实心表面，同时遵循系统辅助功能设置',
     increaseContrastDesc: '加深文字颜色，分隔线改为不透明',
     about: '关于',
     aboutUpdates: '关于与更新',
@@ -1983,16 +1991,20 @@ export const zh: TranslationTree = {
     fullPackage: '打开安装包或发版页', packageHint: '涉及原生能力的更新需要安装新版客户端。',
     iosSigning: 'IPA 未签名，安装前需要重新签名。', webPackage: '打开 Web 部署包或发版页',
     webDeploy: '部署对应 standalone 或 embedded 包后刷新，原生 bundle 不能更新 Web 宿主。',
-    reasons: { unavailable: '本次发布提供安装包更新。', signing_key: '需要安装含受信更新公钥的新壳，才能使用 bundle 更新。',
+    reasons: {
+      unavailable: '本次发布提供安装包更新。', signing_key: '需要安装含受信更新公钥的新壳，才能使用 bundle 更新。',
       signature_missing: '本次发布缺少已签名的 bundle 清单，请使用安装包。', signature_invalid: 'bundle 签名校验失败，请使用安装包或稍后重新检查。',
-      incompatible: '此 bundle 需要不同的原生壳，请安装新版客户端。' },
-    errors: { release_rate_limited: 'GitHub 请求受到限流，请稍后重试。', release_unpublished: '本通道尚未发布版本。',
+      incompatible: '此 bundle 需要不同的原生壳，请安装新版客户端。'
+    },
+    errors: {
+      release_rate_limited: 'GitHub 请求受到限流，请稍后重试。', release_unpublished: '本通道尚未发布版本。',
       release_missing_asset: '本次发布缺少更新文件，请查看发版页。', release_changed: '检查期间发布文件发生变化，请稍后重试。',
       invalid_update_proxy: 'GitHub 代理应为不含凭据和查询参数的 HTTPS 前缀。',
       metadata_unavailable: '请先安装新版原生壳，启用安全更新检查和 bundle 更新。', update_channel_unsupported: '当前通道暂不支持更新。',
       insufficient_space: '可用空间不足，无法准备更新。', cancelled: '已取消 bundle 下载。', checksum_mismatch: 'bundle 文件校验失败，请重新检查更新后重试。',
       invalid_release: '发布元数据无效，请稍后重新检查或查看发版页。',
-      failed: '客户端更新失败，请检查网络后重试。' },
+      failed: '客户端更新失败，请检查网络后重试。'
+    },
   },
   upgrade: {
     title: '后端更新',

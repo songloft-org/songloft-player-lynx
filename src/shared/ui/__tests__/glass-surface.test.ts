@@ -43,6 +43,7 @@ interface Surface {
   selector: string
   /** Background token the surface must use (glass fill, not --paper). */
   fill: RegExp
+  rimOnly?: boolean
 }
 
 const SURFACES: Surface[] = [
@@ -59,7 +60,8 @@ const SURFACES: Surface[] = [
   {
     file: 'shared/ui/PopoverMenu.css',
     selector: '.popover-menu',
-    fill: /var\(--material-fill-elevated\)/,
+    fill: /var\(--material-fill-menu\)/,
+    rimOnly: true,
   },
   {
     file: 'shared/ui/ConfirmDialog.css',
@@ -95,7 +97,7 @@ function block(css: string, selector: string): string {
 
 test.each(SURFACES)(
   '$selector uses a glass fill (not --paper) and an inset sheen',
-  ({ file, selector, fill }) => {
+  ({ file, selector, fill, rimOnly }) => {
     const css = rules(file)
     const body = block(css, selector)
     // A reverted surface (an opaque card colour instead of the glass fill) is the
@@ -115,7 +117,8 @@ test.each(SURFACES)(
     // declaration stays valid but the highlight is gone.
     expect(body, `${selector} must carry an inset box-shadow sheen`).toMatch(/box-shadow:[\s\S]*inset/)
     // Depth stack: both layers, in this order (sheen paints over the ramp).
-    expect(body, `${selector} must layer the sheen over the ramp`).toMatch(
+    if (rimOnly) expect(body).toMatch(/background-image:\s*none/)
+    else expect(body, `${selector} must layer the sheen over the ramp`).toMatch(
       /background-image:\s*var\(--material-sheen-layer\),\s*var\(--material-ramp\)/,
     )
     // Side rims complete the perimeter the top highlight starts; without them
@@ -459,10 +462,10 @@ test('no opaque unbounded fill is painted over a glass panel', () => {
         if (cls in NOT_INSIDE_A_PANEL) continue
         violations.push(
           `.${cls} (${path.relative(SHARED, rule.file)}) paints opaque --${token} with no `
-            + `border-radius inside .${panel} — rendered via `
-            + `${path.basename(renderer, '.tsx')}. An unbounded opaque box replaces the `
-            + 'glass instead of sitting on it: let the panel own the fill, and give a '
-            + 'row STATE a translucent one.',
+          + `border-radius inside .${panel} — rendered via `
+          + `${path.basename(renderer, '.tsx')}. An unbounded opaque box replaces the `
+          + 'glass instead of sitting on it: let the panel own the fill, and give a '
+          + 'row STATE a translucent one.',
         )
       }
     }
@@ -502,7 +505,7 @@ test('the shared row components leave their surface to whatever they sit on', ()
     expect(
       opaqueFill(rule!.body),
       `.${cls} is rendered on pages AND inside glass panels; an opaque fill here `
-        + 'is invisible on the former and covers the material on the latter',
+      + 'is invisible on the former and covers the material on the latter',
     ).toBeNull()
   }
 })
@@ -587,16 +590,16 @@ test('no surface or separator colour is used as a row-state wash inside a panel'
         if (!SURFACE_CHANNEL.includes(fill)) continue
         violations.push(
           `.${cls} (${path.relative(SHARED, rule.file)}) washes a state with --${fill} `
-            + `inside .${panel}. That token is the surface (or a line on it), not a `
-            + 'state: an opaque background tier replaces the material over glass, and '
-            + 'a line colour is not a fill at any opacity. Use --tint-fill for a '
-            + 'selection the theme pack should tint, or --quaternary-system-fill for '
-            + 'a neutral on-material fill.\n'
-            + 'Note the original invisibility argument no longer applies: under the '
-            + 'Muse palette --paper on --canvas was 250 vs 255 (ratio 1.04, i.e. the '
-            + 'wash did not exist), whereas Apple\'s secondary background on the '
-            + 'primary one measures 1.116 in light and 1.234 in dark. It is now '
-            + 'visible and still wrong — the objection is semantic.',
+          + `inside .${panel}. That token is the surface (or a line on it), not a `
+          + 'state: an opaque background tier replaces the material over glass, and '
+          + 'a line colour is not a fill at any opacity. Use --tint-fill for a '
+          + 'selection the theme pack should tint, or --quaternary-system-fill for '
+          + 'a neutral on-material fill.\n'
+          + 'Note the original invisibility argument no longer applies: under the '
+          + 'Muse palette --paper on --canvas was 250 vs 255 (ratio 1.04, i.e. the '
+          + 'wash did not exist), whereas Apple\'s secondary background on the '
+          + 'primary one measures 1.116 in light and 1.234 in dark. It is now '
+          + 'visible and still wrong — the objection is semantic.',
         )
       }
     }

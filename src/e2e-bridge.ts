@@ -28,6 +28,8 @@ import { getPlatformTarget } from './native/platform-target.js'
 import { resolveVideoSourceKind } from './core/network/video-source.js'
 import { getSafeAreaInsets, safeAreaStyleVars } from './native/safe-area.js'
 import { getSystemAppearance } from './native/system-appearance.js'
+import { getBackdropCapabilities } from './native/backdrop-capabilities.js'
+import { getSurfacePolicy } from './shared/theme/surface-policy.js'
 import { changeAppTheme, getAppTheme, resolveTheme } from './shared/theme/theme-model.js'
 import { dispatchBack, getBackStackDepth, pushBackHandler } from './shared/nav/back-stack.js'
 import { resolveRouteBack } from './shared/nav/route-back.js'
@@ -71,6 +73,17 @@ import { getPlatformCapabilities } from './native/platform-capabilities.js'
   getAppTheme,
   resolveTheme,
   changeAppTheme,
+  getBackdropCapabilities,
+  getSurfacePolicy,
+  getBackdropHostProps: () => {
+    const props = readLynxGlobal()?.__globalProps ?? {}
+    return {
+      backdropSdkVersion: props.backdropSdkVersion,
+      backdropBlurSupported: props.backdropBlurSupported,
+      liquidGlassSupported: props.liquidGlassSupported,
+      androidCaptureSupported: props.androidCaptureSupported,
+    }
+  },
 }
 // Floating-lyrics overlay (Android). Same realm problem as the theme block above,
 // one level worse: `NativeModules` is not reachable from the eval scope *at all*

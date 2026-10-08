@@ -25,6 +25,7 @@
   /* Below `.full-player__layer` (z-index 1), above `.full-player`'s own background.
      Must stay an explicit 0 rather than `auto`: see the note on `__layer`. */
   z-index: 0;
+  background-color: var(--system-background);
 }
 
 .player-backdrop__vivid {

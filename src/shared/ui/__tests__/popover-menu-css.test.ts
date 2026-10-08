@@ -92,8 +92,10 @@ test('the popover panel is fixed and declares no offsets of its own', () => {
  * and without a scroller the capped panel would just clip its last rows with no way
  * to reach them.
  */
-test('the popover panel scrolls when the anchor leaves it little room', () => {
-  expect(block(rules(), '.popover-menu')).toMatch(/overflow-y:\s*auto/)
+test('the material shell clips while the inner scroller can shrink', () => {
+  expect(block(rules(), '.popover-menu')).toMatch(/overflow:\s*hidden/)
+  expect(block(rules(), '.popover-menu__scroll')).toMatch(/min-height:\s*0/)
+  expect(block(rules(), '.popover-menu__scroll')).toMatch(/flex-shrink:\s*1/)
 })
 
 /**
@@ -111,6 +113,6 @@ test('menu labels do not wrap', () => {
   expect(
     block(rules(), '.popover-menu__item-label'),
     '.popover-menu__item-label must set white-space: nowrap, or long/CJK labels '
-      + 'wrap to a second line inside a narrow panel',
+    + 'wrap to a second line inside a narrow panel',
   ).toMatch(/white-space:\s*nowrap/)
 })

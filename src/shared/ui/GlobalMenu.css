@@ -44,8 +44,8 @@
  * be overridden (same reason `.popover-menu` declares none — see `anchored-overlay.ts`).
  * Each form therefore brings its own offsets, in its own modifier.
  *
- * `overflow-y: auto` pairs with the `max-height` both forms set: a menu taller than the
- * room it was given scrolls instead of running off the screen.
+ * A clipped material shell and a separately capped scroll-view keep the blur
+ * stationary while a long menu scrolls.
  */
 .global-menu__panel {
   position: absolute;
@@ -63,10 +63,8 @@
    * ones, on every platform. The note on `--anchored` below asserted the two
    * matched; it had quietly stopped being true.
    *
-   * Declared on the shared rule because both forms want the same material: anchored
-   * it is a popover carrying its own blur layer (the panel-mode mount in
-   * `GlobalMenu.tsx`), docked it is a modal sheet over the already blurred and
-   * dimmed page.
+   * Docked is a modal sheet over a blurred, dimmed page. The anchored modifier
+   * raises the fill to the undimmed-menu readability floor used by popovers.
    */
   background-color: var(--material-fill-elevated);
   background-image: var(--material-sheen-layer), var(--material-ramp);
@@ -75,7 +73,7 @@
     inset 0 1px 0 var(--material-highlight),
     var(--material-rim-sides),
     inset 0 -1px 0 var(--separator);
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 /*
@@ -89,7 +87,6 @@
   left: 0;
   right: 0;
   max-height: 60%;
-  padding-bottom: var(--space-6);
   border-top-left-radius: var(--radius-sheet);
   border-top-right-radius: var(--radius-sheet);
 }
@@ -103,12 +100,21 @@
  */
 .global-menu__panel--anchored {
   min-width: 180px;
-  padding-top: var(--space-2);
-  padding-bottom: var(--space-2);
+  background-color: var(--material-fill-menu);
+  background-image: none;
   /* `--radius-md` is also what `.ui-backdrop-blur--panel` rounds itself to, so the
-     blur layer's corners land on the panel's. Surface, border and shadow all come
-     from the shared rule above — this modifier is geometry only. */
+     blur layer's corners land on the panel's. Border and shadow come from the
+     shared rule; the stronger menu fill protects text over undimmed content. */
   border-radius: var(--radius-md);
+}
+
+.global-menu__scroll {
+  min-height: 0;
+  flex-shrink: 1;
+}
+
+.global-menu__panel--docked .global-menu__items {
+  padding-bottom: var(--space-6);
 }
 
 .global-menu__items {

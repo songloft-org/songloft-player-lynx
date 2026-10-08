@@ -284,7 +284,7 @@ export function ShellLayout() {
         : null}
 
       <view className='shell__content'>
-        <view className='shell__body'>
+        <view className='shell__body' id='songloft-backdrop' flatten={false}>
           <Outlet />
         </view>
 
@@ -301,7 +301,7 @@ export function ShellLayout() {
               {/* Panel-mode blur, so the capsule is a real material over the
                   scrolling content rather than an 0.85 wash. Apple's tab bar is
                   the reference here. See `BackdropBlur.tsx`. */}
-              <BackdropBlur className='ui-backdrop-blur--pill' container />
+              <BackdropBlur className='ui-backdrop-blur--pill' />
               {/* Flow indicator — single sliding capsule behind the active tab.
                   DOM-ordered before the nav items so it renders behind them. */}
               <view

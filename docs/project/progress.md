@@ -1,6 +1,52 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-08 · 液态玻璃优化提交前自审
+
+- 自审结果和提交信息已获用户确认，进入本批暂存范围核对；提交标题为 `feat(appearance): 优化液态玻璃材质与辅助功能适配`。暂存仅涉及本仓库 P0/P1/P2 代码、测试和对应文档，不包含父仓库指针或生成物。等待暂存内容及提交确认，尚未提交或推送；下方待确认描述保留为自审时快照。
+
+- 用户确认 P2 实施结果后进入自审。逐文件核对 P0/P1/P2 的有效 inline 材质、主题包覆盖顺序、SDK/注册/OS 能力门控、系统与本机偏好的 OR、首帧恢复、所有 BackdropBlur 调用点、固定 capture source 与菜单滚动/滑块手势。未知能力保持实心，旧 iOS themed blur；Web 依赖实际同时输出标准与 WebKit 前缀 backdrop-filter，与宿主能力检测一致。
+- 核对共享订阅的 render/effect 间隙、缓存/已发布快照、重复通知、最后消费者退出和重新连接；Android 动效/contrast、iOS 三种辅助功能、Harmony 环境/窗口/动效监听按宿主生命周期清理，Android capture 排队回调在父类销毁前失效。新增与调整的测试、数值失败对照和设备证据均已审阅。
+- 修正 **1 项文档一致性问题**：中英 AGENTS 和 DESIGN 原先把底栏选中背景描述为 material-glow-faint，实际代码与现有闸门使用 tint-fill；现同步说明 glow 仅作装饰。运行时代码和测试未再改，完整 **296 文件 / 3218 项**、类型/双 bundle/Web、发布工具 **70 项**、产物 **3 项**、Android APK/HarmonyOS HAP 及实际 UI 验证均沿用 P2 实施证据，未重复执行。diff 与严格 UTF-8/U+FFFD 复查通过。
+- 逻辑、调用链、状态与资源、UI 和回归自审通过；原生 iOS 26/旧 iOS/HarmonyOS 光学与设备矩阵、Android API 21–23、帧率/能耗仍未验证，本机无 Xcode，Swift 未编译，不把单测/编译替代这些验收。等待用户确认自审结果；应用改动、父仓库指针未提交或推送，skill 提交 1825e34 未推送。
+
+## 2026-10-08 · 液态玻璃优化 P2
+
+- 用户确认 P1 后继续视觉与订阅优化。`BackdropBlur.tsx` 的 panel/pill 叶节点保留 regular glass，全屏 scrim 改用 themed blur；装饰叶节点明确 `glass-interactive=false`、`accessibility-element=false`，交互由前景控件处理。播放器目前强 veil 背景不满足 clear 的场景要求，本批不启用 clear，也不添加无消费者的玻璃配置。SDK、engineVersion、CSS Rule 编码与媒体/后端接口未升级。
+- `material-tokens.ts` / `tokens.css` / `ThemeProvider.tsx` 增加最终 inline `--material-fill-menu`；`PopoverMenu.css` 与 `GlobalMenu.css` 的 anchored form 消费它。菜单最低 alpha 为亮 .99、暗 .92，降低透明度时为 1；保留 native blur、边缘高光与固定裁剪外壳，移除覆盖全文字面的 sheen/ramp。其他导航与模态材质仍消费原有四档。原 ultra-thin tint 在黑白极端背景无法保证正文可读；提高 fill 后完整渐变下的选中 accent 仍失败，原叠层失败对照保留在 `contrast.test.ts`。亮 .98 的选中项仅 2.996，不按四舍五入视作 3.0，最终 .99。正文沿用 4.5，secondary/accent/red 沿用仓库已接受的 3.0 分层门槛；不宣称所有小字满足 AA，也不保证主题包自选色的比例。
+- 新增 `surface-appearance.ts` 与行为回归 `surface-appearance.test.tsx`：根节点和所有 blur 层共享一次 policy/theme 上游订阅，稳定有效快照过滤重复通知，最后一个消费者退出时释放。分开 cached/published，避免读快照吞事件；effect 订阅后补读，处理挂载间隙。12 个消费者只建立一组上游订阅。临时移除去重/补读使 **2 项失败**，恢复后 **5/5** 通过；该证据是订阅与通知数量，不是 FPS/耗电实测。
+- 回归同步 `surface-policy.test.tsx`、`theme-provider.test.tsx`、`increase-contrast-wiring.test.ts`、`backdrop-blur.test.ts`、`glass-surface.test.ts` 与 `contrast.test.ts`。2026-10-08 **14:34:50** 开始的完整 **296 文件 / 3218 项**通过（131.78s），类型检查、生产 Lynx/Web 双 bundle、Web 复制、发布工具 **70/70** 通过；恢复最终生产后发布产物 **3/3** 通过。ReactLynx 扫描三处消费/订阅源码无诊断，格式/diff/UTF-8 检查通过。初次全量与源调整、dist 清空的构建重叠，出现旧 alpha/缺产物和根 style 旧期待失败；修正期待并在稳定源/构建完成后重跑通过，未降低数字阈值或移除产物闸门。最初类型检查发现测试 act 返回 Promise<AppTheme>，改为 await 后返回 void。构建仍有依赖中的既有 touch-action 编码提示。
+- Chrome 最终生产 Web 实际操作 **明/暗 × 四档**，sort 与 song menu 的填充一致、background-image=none、blur 存在；contrast/motion 实时到根，系统降低透明度后菜单 alpha=1、blur 卸载。本机开关开/刷新/关也通过。375×420 排序/歌曲菜单滚动分别 202/64px，blur 框前后相同、末项实际触发 duration 查询与删除确认；375×900 音量滑块 132px，手势后 Audio.volume=.8。页面错误为空。独立夹具和上下文，不连接用户真实后端，不执行真实删除，不把媒体夹具当音频播放验证。证据 `/tmp/lynx-glass-p2-visual.json`、`browser.json`、`web.json`，截图 `light-sort.png`、`dark-song.png`，以上文件均以 `/tmp/lynx-glass-p2-` 为前缀。
+- Android 最终 Debug APK 编译通过（31s），包内测试 bundle 与 assets 相同，SHA-256 `575e6fbef11e7a2bb04eb1e02f9994a4b09f30bc6c75a700defa39449d5bfc09`。首次默认安装选中 x86_64，SVG 缺 native 实现，界面流程完成但不能计作干净验收；同环境旧 P1 APK 重现同一异常，两版 arm64 SVG 库哈希相同。测试重新明确 `adb install --abi arm64-v8a`，与原 API 34 / Mesa / arm64 native bridge 条件一致；这不是应用依赖修复。
+- 最终 arm64 设备流程通过：capture source `(0,0,375,900)`，菜单 blur `(137,143,178,280)`，系统 animator scale 0/1 实时切换 reduce-motion，实际设备 tap 卸载/恢复 blur，冷启动保留 reduceTransparency=true/opaque=true/blur=false，关闭后恢复同一框。`logcat -s AndroidRuntime` 最终为空，截图的 SVG 图标正常。receipt `/tmp/lynx-glass-p2-native.json`，日志 `/tmp/lynx-glass-p2-native-final.log` 和 `/tmp/lynx-glass-p2-android-runtime-final.log`，截图 `/tmp/songloft-discovery-native/glass-p2-menu.png`、`glass-p2-native.png`。结束恢复模拟器尺寸、停止两个测试容器和 HTTP 夹具。
+- HarmonyOS 使用依赖已就绪的隔离副本，同步 49 个 tracked 源路径和最终 rawfiles；最终 HAP **编译通过（10.034s）**。生产 bundle SHA-256 `4484040fac5c199a803655ed5277e17a91ed4e5243355e698fe2de171d5403fc`，HAP 内嵌与 dist 一致。旧生产快照因最新测试源时间戳被 copy freshness 闸门拒绝，完整生产重建后再 copy/打包通过，没有绕过闸门。生成物均忽略、TestBridge 已在最终生产产物关闭；HAP 未签名，不作为发版包。
+- 文件入口与使用规则同步到 `AGENTS.md` / `AGENTS.en.md`、`DESIGN.md`、pitfalls 和中英 handoff。原生 iOS 26/旧 iOS/HarmonyOS 光学与设备验证、Android API 21–23 矩阵、帧率/能耗仍未验收；本机无 Xcode，Swift 未编译。应用改动与父仓库指针未提交、推送，skill 提交 `1825e34` 未推送。最终日志为 `/tmp/lynx-glass-p2-{tests-final,types-final,production-restored,release-final,artifact-final,android,harmony-final}.log`。
+
+## 2026-10-08 · 液态玻璃优化 P1
+
+- 用户确认 P0 后继续已批准的 P1。新增 `src/native/backdrop-capabilities.ts`、`src/shared/theme/surface-policy.ts`、`reduce-transparency-model.ts`，由宿主 SDK/注册/OS 能力决定是否渲染 blur 和 glass；未知能力采用实心材质，旧 iOS 使用 themed blur。系统和本机透明度/对比度作 OR；根材质与主题包 palette 消费同一有效标志，系统开启不能被本机开关覆盖。SDK/engineVersion/CSS Rule 编码、媒体与后端未升级。
+- 消费点：`BackdropBlur.tsx`、`ThemeProvider.tsx`、`material-tokens.ts`、`theme-pack-mapping.ts`、`AppearancePage.tsx`、`src/index.tsx` 和中英文 i18n。新增本机“降低透明度”，prefs 为 `reduce_transparency`，关闭删除该键，启动恢复；不是服务器设置。
+- Android `MainActivity.kt` / `system/SystemAppearance.kt` 实时监听 animator scale，API 34+ 读取/监听 UiModeManager contrast，检查硬件加速、API 23+ blur。补 API 21–23 的旧 locale 分支。shell body 和 PlayerBackdrop 使用稳定 id、flatten=false，排除玻璃后代。设备诊断确认 LynxEnv 返回占位 `0.0.1`，运行时 SystemInfo 返回 `4.0`；门控优先读 `engineVersion`，兼容 `lynxSdkVersion`，运行时缺失才回退宿主版本。支持二段/三段版本，旧运行时不能被新宿主元数据覆盖。硬件加速使用 attach 前可用的 ActivityInfo 配置。
+- iOS `SystemAppearance.swift` / `ViewController.swift` 首帧上报 SDK、iOS 26 glass 能力与三项 UIAccessibility 状态，监听相应通知，前台补刷新、析构清理。Harmony `modules/system/SystemAppearance.ets` 检查 API 15 背景 blur，API 23+ 读取/监听减弱动效；保存 environment callback id 与原函数引用，detach 清理。确认 4.0.1 核心 C++ 已注册 blur-view，无需另装 ArkTS 包；同步本地 API skill。Web `index.html` 在升级元素前写宿主能力与四种媒体偏好，完整载荷实时发送到 Worker。
+- 新行为回归 `surface-policy.test.tsx` 与宿主契约 `backdrop-host-contract.test.ts` 覆盖实际根纹理、palette、blur 属性、旧系统/未知能力、本机持久化和订阅清理；相关旧测试同步新策略。临时断开系统透明度输入使两项回归失败，恢复源码。2026-10-08 14:04 开始的完整 **295 文件 / 3197 项**通过（124.03s）；最终类型检查、生产 Lynx/Web 双 bundle 与 Web 复制、70 项发布工具通过。ReactLynx 扫描无诊断。日志 `/tmp/lynx-glass-p1-tests-final.log`、`types-final.log`、`production-final.log`、`release-final.log`，后三项同为 `/tmp/lynx-glass-p1-` 前缀。
+- Android 实测先发现 LynxEnv 占位版本造成实心误判，运行时优先规则的 15 项策略回归通过。门控修复后首次登录出现 SDK 原生 `BlurUtils.createEffect` 的 `NullPointerException: null receiver`：4.0.0 capture target 的排队 Runnable 在销毁后重新初始化 blur 尺寸，引用已清空 RenderNode。新增 `android/.../ui/SongloftBlurUI.kt` 包装 post，在父类 destroy 前使回调失效，保留 SDK setter/绘制；`MainActivity` 替换原 blur behavior，Gradle 显式引用同版本既有运行时 blur 依赖，不升级 SDK。`BlurCallbackLifetimeTest.kt` 的队列执行/销毁后跳过回归 **1/1** 与最终 APK 编译通过；相关宿主契约 **309 项**和最终正常生产产物 **3 项**通过。初次宿主保护编译因 blur 未在 compile classpath 失败，显式依赖后通过。最终 APK assets 与测试 bundle 一致，SHA-256 `fe312fe76313bec307fa0624004ce006d060084d787e0aa526de730a3a839e2c`。
+- 最终隔离 Android API 34 / arm64 native bridge / Mesa，viewport 375×900：capture source `(0,0,375,900)`，菜单 blur `(137,143,178,280)`；系统 animator scale 0/1 实时添加/移除 reduce-motion，原系统值在 finally 恢复。实际设备 tap 开启降低透明度后 blur 卸载，冷启动仍为 reduceTransparency=true/opaque=true/blur=false，关闭后恢复同一 blur 框；登录、导航、菜单关闭与冷启动流程没有 AndroidRuntime 崩溃。TestBridge 首帧尚未初始化时保留明确错误并有界等待，不将测试壳启动差异宣称修复；原生 selector 不支持测试脚本使用的属性组合，改为可测类并结合截图核对位置。证据 `/tmp/lynx-glass-p1-native.json`、`/tmp/lynx-glass-p1-native.log`、`/tmp/songloft-discovery-native/glass-p1-native.png`，编译/回归 `/tmp/lynx-glass-p1-android-final.log`。
+- Chrome 最终生产 Web：系统 motion/contrast/transparency 实时到根纹理；系统降低透明度或本机开启时 fill alpha=1、blur=0，本机刷新恢复，关闭后 fill alpha=.85、blur=1，页面错误为空。证据 `/tmp/lynx-glass-p1-web.json`、`/tmp/lynx-glass-p1-web-solid.png`。独立 HTTP 夹具/浏览器上下文与测试壳，不接用户真实后端。HarmonyOS 原生改动 HAP **编译通过（45s）**，日志 `/tmp/lynx-glass-p1-harmony.log`；最终生产 bundle 再打包通过（10.49s），HAP 内嵌 bundle 与 dist 相同，日志 `/tmp/lynx-glass-p1-harmony-final.log`。使用依赖已就绪的 `/tmp/lynx-harmony-acca95d` 隔离副本并核对/同步仓库源码；直接在无 oh_modules 的工作目录重打包曾因依赖缺失失败，没有修改业务代码绕过。未签名调试产物不作为发版包。最终生产产物 TestBridge 关闭，生成物均未入库。结束后恢复模拟器尺寸，停止 HTTP 夹具和两个临时容器。
+- iOS 26/旧 iOS/HarmonyOS 与 Android API 21–23 设备矩阵、原生光学质量仍开放；本机无 Xcode，改动 Swift 未编译。不把行为/边界测量写成光学验收，也不宣称正文自动 vibrancy。P2 视觉/性能尚未实施。应用改动未提交、推送，父仓库指针未提交；先前 skill 提交 `1825e34` 未推送。
+
+## 2026-10-08 · 液态玻璃优化 P0
+
+- 用户已确认优化计划，本批先修复共享表面与滚动结构。`BackdropBlur` 删除空叶节点的 `container` 参数，nav、mini player、popover、anchored GlobalMenu 都使用单玻璃表面。regular 原生风格、20px 模糊半径、根级挂载和返回/关闭契约保留。
+- 主题根节点经统一 `resolveMaterialTokens` 最后写入完整四键；去掉无法盖过 inline 的 iOS CSS 规则。regular 使用原设计的 ultra-thin 色调，其他档位相对 regular 缩放，保持填充顺序；应用增强对比度切换为标准 thick，非 iOS 档位不变。新根节点回归在旧实现中 **3 项失败 / 3 项通过**，修复后全部通过；测试验证实际输出与实时切换，不再只解析 CSS 中存在的声明。
+- 菜单拆为材质裁剪外壳与内部原生 `scroll-view`，直接扣除 2px 边框后钳制滚动高度，内容内边距随滚动移动。音量面板的居中迁入 content 层，保留滑块消费手势。类型检查、Lynx/Web 双 bundle、生产 Web 输出、完整 **293 文件 / 3180 项**通过；ReactLynx 扫描无诊断。初次全量仅三处旧 ThemeProvider 基线期待失败，更新为实际 iOS 根纹理后全量通过。
+- Docker Chrome 375×420：排序菜单滚动 225px、歌曲菜单滚动 50px，模糊层框前后完全相同；最后一项分别触发 duration 数据查询与删除确认。375×900 音量面板的 132px 滑块拖动后实际 Audio 音量为 0.8，页面错误为空。使用独立 HTTP 夹具与浏览器上下文，不连接用户真实后端；不执行真实删除，也不将媒体夹具视为音频播放验证。证据 `/tmp/lynx-glass-p0-browser.json`、`sort.png`、`global.png`、`volume.png`，后三项路径均以 `/tmp/lynx-glass-p0-` 开头。
+- 最后将可选高度参数改为仓库规定的对象参数，相关 **8 文件 / 117 项**与类型检查通过；完整 3180 项是此前全量快照。最终生产双 bundle 已恢复并部署到 Web 目录，浏览器再次通过，**70 项发布工具测试**通过。发布测试在限制沙箱中有本地夹具进程失败，允许本机端口后全部通过；没有修改发布工具。
+- Android Debug APK 编译通过，隔离 API 34 / arm64 native bridge / Mesa 模拟器实际根 viewport 为 375×396。通过设备滑动手势，锚定菜单 scrollY 从 0 到 94、底部菜单从 0 到 68；两者末项均可选，菜单关闭且 deleteSong.id=1，没有执行删除。锚定层的 blur 框保持 `(172,201,178,186)`，滚动区直接限高。最终布局 APK 的内嵌 bundle 与 assets 相同，SHA-256 为 `0e4422e3c6e4e2c6affbdedfab9ce026ee1530b03e61fea63b01de02eb6f4c0c`；此后仅高度 helper 调用签名改为对象，行为由上述 117 项覆盖。测量 `/tmp/lynx-glass-p0-native.json`，截图 `/tmp/songloft-discovery-native/glass-p0-native.png`、`glass-p0-docked.png`。不将边界/手势证据视为 Android capture target 的光学效果验收；该宿主接线仍属 P1。
+- 环境对照：首次权限弹窗曾遮挡点击，预授予隔离实例通知权限后复验；设备点击需计入 24px 状态栏，底部滑动需避开系统 Home 手势区。覆盖安装后一度报 TestBridgeModule 未初始化，全新隔离数据启动后最终 APK 通过，未定位启动差异、未改宿主代码，也不声称修复测试桥。测试结束恢复模拟器尺寸并关闭本批服务与两个容器，用户真实后端未变。
+- iOS 26 效果和旧 OS 降级未验证，本机无 Xcode。P1 能力门控、系统辅助功能同步与 P2 视觉/性能优化尚未实施。应用改动未提交或推送；skill 已单独提交 `1825e34`，父仓库指针未提交。
+
 ## 2026-10-08 · Lynx 4.0 skills 核查与更新
+
+- 本批 skill 与记录已按用户授权提交 `1825e34 docs(skills): 更新 Lynx 4.0 液态玻璃与 CSS 兼容指引`，未推送。下述未提交状态保留原实施快照。
 
 - 核对官方 Lynx 4.0 公告、blur-view 属性/兼容性源码及 Media Query 文档；补齐 iOS 26+ 的 `glass-style`、`glass-tint-color`、`glass-interactive`、子玻璃表面分组语义、Android capture target 的 `flatten={false}` 与 Web 部分支持说明。原有 `BackdropBlur` 已消费玻璃效果，本批不修改应用 UI 或宿主集成。
 - 修正 `lynx-api-docs` 多处和 `vanilla-lynx` 中「不支持 @media」的过时结论：4.0+ 还需 CSS Rule encoding。当前 `lynx.config.ts` 的 `engineVersion: '2.14'` 且未启用 `enableCSSRule`，不宣称项目已开启媒体查询。增加官方索引/版本页查询路径，区分 CSS 属性、元素属性和 at-rule；`lynx-ui` 导入规则对齐 AGENTS.md。

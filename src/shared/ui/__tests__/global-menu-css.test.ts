@@ -92,7 +92,9 @@ test('the shared panel rule declares no offsets, and the docked one does', () =>
 /** Paired with the inline `max-height`: a capped panel with no scroller just hides its
  *  last rows, and the docked sheet is capped at 60% by the stylesheet. */
 test('the panel scrolls when it is capped', () => {
-  expect(block('.global-menu__panel')).toMatch(/overflow-y:\s*auto/)
+  expect(block('.global-menu__panel')).toMatch(/overflow:\s*hidden/)
+  expect(block('.global-menu__scroll')).toMatch(/min-height:\s*0/)
+  expect(block('.global-menu__scroll')).toMatch(/flex-shrink:\s*1/)
   expect(block('.global-menu__panel--docked')).toMatch(/max-height:/)
 })
 

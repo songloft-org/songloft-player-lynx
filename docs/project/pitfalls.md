@@ -2,9 +2,30 @@
 
 本项目反复踩过的坑，按主题组织：每条 = 现象 → 根因 → 一句话规则 → 证据位置。
 
+### 2026-10-08 · 未调暗菜单的文字与重复外观订阅
+
+- native regular 的 ultra-thin tint 并不能保证 Lynx 自定义文本在任意媒体背景上可读；正文不是 UIKit vibrancy。对比度必须合成 fill、完整 sheen/ramp、选中态 wash 和文字 alpha。P2 数值测试发现原 tint 在黑白极端背景失败；即使提高填充，完整渐变下的选中 accent 仍不足 3.0。未调暗的 popover/anchored song menu 改用独立 `--material-fill-menu`（亮 .99、暗 .92）并去除整面渐变，保留 native blur 与边缘高光。正文 4.5、secondary/accent/red 3.0 是仓库原有分层门槛，不是所有小字满足 WCAG AA；主题包自选颜色另需验证。见 `contrast.test.ts` 的原填充/原渐变失败对照。
+- 每个 blur 叶节点独立订阅策略会重复监听同一系统/本机事件。`surface-appearance.ts` 共享上游订阅，缓存有效值并在最后一个消费者退出时断开；区分缓存与已发布快照，避免读取新值吞掉待发布事件。`useEffect` 订阅后补读一次，处理 render 到 effect 之间的变化；不在根节点引入本项目测试环境有已知问题的 useSyncExternalStore。12 个消费者/最后退出/重复通知/提前读取/挂载间隙回归见 `surface-appearance.test.tsx`。
+- API 34 x86_64 测试容器使用 arm64 native bridge 时，安装必须明确 `adb install --abi arm64-v8a` 并核对 dumpsys package 的 primaryCpuAbi。默认安装选中 x86_64，但现有 servalsvg 包没有该 ABI 的库，SVG 线程会报 UnsatisfiedLinkError、图标消失，界面流程仍可能继续。P2 同环境旧 APK 重现相同错误，两版 SVG 库哈希一致；按原 arm64 条件重装后图标/流程正常、AndroidRuntime 日志为空。界面完成和截图不能替代日志核对，也不能把测试安装条件改变写成应用缺陷修复。
+
+### 2026-10-08 · 玻璃能力与系统辅助功能
+
+- SDK 版本不是必然的三段 SemVer：Android 4.0.0 的 SystemInfo 实际返回 `4.0`，而 LynxEnv 返回占位 `0.0.1`。优先读 `SystemInfo.engineVersion`，兼容旧名 `lynxSdkVersion`，运行时字段缺失才用宿主版本；三段解析或占位版本都曾把已注册 blur 降级成实心。旧运行时不得被新宿主元数据覆盖，拒绝无版本、旧版本或非布尔注册标志。官方字段说明见 [SystemInfo](https://lynxjs.org/next/api/lynx-api/global/system-info.html)，相关回归和 Android 实测见 progress。
+- Android 4.0.0 的 capture target 会排队调用 updateBlurTarget；其 Runnable 没有销毁检查，销毁后会重新初始化尺寸并给已清空的 RenderNode 调用 createEffect，实际登录导航触发 `NullPointerException: null receiver`。`SongloftBlurUI` 在父类 destroy 前标记回调失效，包装 BlurView.post，在执行时跳过失效回调，保留原 setter/绘制。原行为失败栈与源码路径一致；不是 Mesa 宿主崩溃。升级上游前必须复验后再移除保护，源见 [BlurView 4.0.0](https://github.com/lynx-family/lynx/blob/4.0.0/platform/android/lynx_xelement/lynx_xelement_blur_view/src/main/java/com/lynx/xelement/blur/BlurView.java)。
+- HarmonyOS 4.0.1 的 blur-view 已由核心 C++ 注册，不在 ArkTS Behavior 列表中。不要据此误判未集成或添加不存在的组件包；背景 blur 从 API 15 生效，公开减弱动效接口从 API 23 生效。设备效果与源码/编译证据分开记录。
+- 应用透明度/对比度开关与系统标志作 OR，关闭本机开关不能关闭 OS 偏好；必须验证最终 inline 根纹理和 palette。断开系统透明度输入的反向验证实际使两项回归失败。Harmony application environment 的 on 返回 callback id，off 接受该 id；动效/窗口监听则需要保留同一个函数引用。
+- 生产 bundle 检查不能与清空/重写 dist 的构建并行。第一次全量的发布产物闸门因文件生成中失败，产物恢复后另行复验；不能把这个失败修成删除闸门或容忍无产物。
+
 > **规则本体在 [AGENTS.md](../../AGENTS.md)**（§4 Lynx 约束 / §5 原生模块 / §6 测试与闸门），本文是它们背后的证据与案例。逐条缺陷的完整根因在 [bugs.md](bugs.md)，逐批交付在 [progress.md](progress.md)。
 
 ---
+
+## 2026-10-08 · 玻璃分组、inline token 与滚动外壳
+
+- `glass-container` 负责分组**子玻璃表面**。nav、mini player、popover 的 `BackdropBlur` 都是空背景叶节点，原先传 `container` 后并没有可合并的子表面；现统一为普通 glass。未来真正的分组要检查子元素和宿主/OS 支持，不能根据面板里有多个按钮推断分组成立。
+- CSS 的 `.platform-ios` 声明存在，不能证明屏幕用了该值。`themePackToStyleVars` 在无主题包时也会写完整 inline 值，覆盖了薄填充规则。最终材质政策要在根节点 inline 输出之后验证；新增根节点测试在旧实现中明暗两项失败，修复后通过。Lynx 的样式更新会合并键，所有路径仍必须输出完整四键。
+- 模糊层不能放进会滚动的内容。外层裁剪和内层 `scroll-view` 分开，并把高度上限直接给滚动区。Chrome 375×420 实测排序/歌曲菜单分别滚动 225/50px，模糊层框不变，末项可选择。音量滑块的 `consume-slide-event` 与 `catch*` 手势保留；新 content 层要同时接住原有居中规则。证据见 progress 的液态玻璃 P0 批次。
+
 
 ## 1. 平台判断：DOM 探测在 Web 上回答「不是 Web」
 

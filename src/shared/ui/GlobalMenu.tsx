@@ -4,6 +4,7 @@ import type { AnchorMeasurement } from './anchored-overlay.js'
 import { MenuItem } from './MenuItem.js'
 import type { MenuItemSpec } from './MenuItem.js'
 import { BackdropBlur } from './BackdropBlur.js'
+import { menuScrollMaxHeight } from './menu-viewport.js'
 import './overlay-motion.css'
 import './PopoverMenu.css'
 import './GlobalMenu.css'
@@ -108,22 +109,28 @@ export function GlobalMenu({
             scrim to dim and nothing page-sized to blur — the material is the panel
             itself, exactly as in `PopoverSurface`. Docked, the panel already sits
             over a blurred, dimmed page, so a second layer would only re-blur what
-            the scrim layer blurred. `overflow-y: auto` on the panel clips this to
-            the rounded corners. */}
-        {anchored && <BackdropBlur className='ui-backdrop-blur--panel' container />}
-        <view className='global-menu__items'>
-          {items.map((item) => (
-            <MenuItem
-              key={item.key}
-              item={item}
-              hideCheckmark
-              onTap={() => {
-                onSelect(item.key)
-                onClose()
-              }}
-            />
-          ))}
-        </view>
+            the scrim layer blurred. The shell clips the fixed blur while only
+            the sibling scroll-view moves. */}
+        {anchored && <BackdropBlur className='ui-backdrop-blur--panel' />}
+        <scroll-view
+          className='global-menu__scroll'
+          scroll-orientation='vertical'
+          style={{ maxHeight: menuScrollMaxHeight({ panelMaxHeight: position?.maxHeight }) }}
+        >
+          <view className='global-menu__items'>
+            {items.map((item) => (
+              <MenuItem
+                key={item.key}
+                item={item}
+                hideCheckmark
+                onTap={() => {
+                  onSelect(item.key)
+                  onClose()
+                }}
+              />
+            ))}
+          </view>
+        </scroll-view>
       </view>
     </view>
   )

@@ -61,8 +61,8 @@ export interface VerticalSliderProps {
  *    (the same pattern lynx-ui's Slider uses).
  *
  * 2. **Gesture ownership.** These surfaces sit inside vertically scrollable
- *    parents (the EQ page's `scroll-view`, the volume popover's `overflow-y`
- *    panel), which would otherwise claim the vertical swipe and scroll instead of
+ *    parents (the EQ page's and volume popover's `scroll-view`), which would
+ *    otherwise claim the vertical swipe and scroll instead of
  *    moving the slider. `consume-slide-event` tells the native layer this surface
  *    consumes the swipe, and the `catch*` handlers stop it bubbling.
  *

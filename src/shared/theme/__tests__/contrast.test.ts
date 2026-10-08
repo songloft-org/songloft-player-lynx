@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, test } from 'vitest'
+import { resolveMenuMaterialFill, resolveMaterialTokens } from '../material-tokens.js'
 
 /**
  * Contrast gate for the Apple semantic tokens in `tokens.css`.
@@ -191,6 +192,51 @@ const TEXT_FLOORS: Record<string, number> = {
 }
 const TEXT_TOKENS = Object.keys(TEXT_FLOORS)
 
+describe.each(['light', 'dark'] as const)('%s undimmed menu over unknown content', theme => {
+  test.each(['ultra-thin', 'thin', 'regular', 'thick'] as const)('%s retains readable text across cover extremes', variant => {
+    for (const nativeGlass of [false, true]) {
+      const fill = parseRgba(resolveMenuMaterialFill({ variant, theme, nativeGlass, increaseContrast: false }))
+      for (const cover of [parseHex('#000000'), parseHex('#ffffff')]) {
+        const base = over(fill, cover)
+        for (const token of TEXT_TOKENS) {
+          expectReads(THEMES[theme][token]!, base, `${variant}, glass=${nativeGlass}, --${token}`, TEXT_FLOORS[token]!)
+        }
+        const selected = over(THEMES[theme]['tint-fill']!, base)
+        expectReads(THEMES[theme]['accent']!, selected, 'selected accent on menu wash', TEXT_FLOORS.accent!)
+      }
+    }
+  })
+  test('the old ultra-thin tint fails on the opposite cover, proving the floor is necessary', () => {
+    const old = parseRgba(resolveMaterialTokens({ variant: 'ultra-thin', theme, nativeGlass: true, increaseContrast: false })['--material-fill-elevated'])
+    const bg = over(old, parseHex(theme === 'light' ? '#000000' : '#ffffff'))
+    expect(contrastOn(THEMES[theme].label!, bg)).toBeLessThan(TEXT_FLOORS.label!)
+  })
+  test('opaque fallback covers the content in every thickness', () => {
+    for (const variant of ['ultra-thin', 'thin', 'regular', 'thick'] as const) {
+      for (const increaseContrast of [false, true]) {
+        expect(parseRgba(resolveMenuMaterialFill({ variant, theme, nativeGlass: true, increaseContrast, opaque: true })).a).toBe(1)
+      }
+    }
+  })
+  test('the removed full-face decoration would still fail on selected rows', () => {
+    const fill = parseRgba(resolveMenuMaterialFill({ variant: 'regular', theme, nativeGlass: true, increaseContrast: false }))
+    const base = over(fill, parseHex(theme === 'light' ? '#000000' : '#ffffff'))
+    const decorated = theme === 'light'
+      ? over(THEMES[theme]['material-ramp-bottom']!, base)
+      : over(THEMES[theme]['material-sheen']!, over(THEMES[theme]['material-ramp-top']!, base))
+    expect(contrastOn(THEMES[theme].accent!, over(THEMES[theme]['tint-fill']!, decorated))).toBeLessThan(3)
+  })
+})
+
+test('both undimmed menu forms consume the protected fill without full-face washes', () => {
+  for (const [file, selector] of [['PopoverMenu', '.popover-menu'], ['GlobalMenu', '.global-menu__panel--anchored']]) {
+    const css = readFileSync(resolve(process.cwd(), `src/shared/ui/${file}.css`), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const body = css.slice(css.indexOf(`${selector} {`)).split('}')[0]!
+    expect(body).toContain('background-color: var(--material-fill-menu)')
+    expect(body).toContain('background-image: none')
+  }
+})
+
 /**
  * Token × surface combinations that measurably do NOT clear the floor, and are
  * therefore forbidden rather than exempted.
@@ -294,7 +340,7 @@ describe.each(['dark', 'light'] as const)('%s: text on every surface', (theme) =
       expect(
         r,
         `--${token} on --${surface} = ${r.toFixed(2)}; it now clears `
-          + `${TEXT_FLOORS[token]}, so remove this FORBIDDEN entry`,
+        + `${TEXT_FLOORS[token]}, so remove this FORBIDDEN entry`,
       ).toBeLessThan(TEXT_FLOORS[token]!)
     }
   })
@@ -527,7 +573,7 @@ describe('player scrim over worst-case cover art', () => {
     expect(
       bound! > 0 && !clearsAt(theme, bound! - 0.01),
       `${theme}'s bound ${bound} must be a real bound — one step below it has to fail, `
-        + 'or the veil is unconstrained and this whole derivation is decoration',
+      + 'or the veil is unconstrained and this whole derivation is decoration',
     ).toBe(true)
   })
 })
@@ -617,9 +663,9 @@ describe('state washes over the surfaces they sit on', () => {
         expect(
           r,
           `--${wash} over ${name} = ${r.toFixed(3)} (${hexOf(washed)} on ${hexOf(bg)}). `
-            + `Below ${FLOOR} the state is not visible — which is how a selection `
-            + 'highlight painted an adjacent surface colour shipped: every text pair '
-            + 'passed, the highlight did not exist.',
+          + `Below ${FLOOR} the state is not visible — which is how a selection `
+          + 'highlight painted an adjacent surface colour shipped: every text pair '
+          + 'passed, the highlight did not exist.',
         ).toBeGreaterThanOrEqual(FLOOR)
       }
     })
@@ -733,7 +779,7 @@ describe('gate B: the bottom label tiers stay out of load-bearing text', () => {
           expect(
             r,
             `--${token} on --${name} (${theme}) = ${r.toFixed(2)}; if it now clears 3.0 `
-              + 'it should get a numeric floor in TEXT_FLOORS instead of a usage rule',
+            + 'it should get a numeric floor in TEXT_FLOORS instead of a usage rule',
           ).toBeLessThan(3.0)
         }
       }
@@ -747,8 +793,8 @@ describe('gate B: the bottom label tiers stay out of load-bearing text', () => {
     expect(
       violations.sort(),
       'tertiary/quaternary label is below 3.0 on every surface. Use --secondary-label '
-        + 'for anything a user has to read; these two are for placeholders, disabled '
-        + 'controls and decoration.',
+      + 'for anything a user has to read; these two are for placeholders, disabled '
+      + 'controls and decoration.',
     ).toEqual([])
   })
 
@@ -809,8 +855,8 @@ test('no stylesheet puts chromatic text on one of the two heavy Apple fills', ()
   expect(
     offenders.sort(),
     'in light, --accent measures 2.77 / 2.91 and --system-red 2.81 / 2.95 on '
-      + '--system-fill / --secondary-system-fill. Those two fills are for shapes, not '
-      + 'for coloured text: use --tertiary-system-fill or --quaternary-system-fill '
-      + 'under blue or red text, or keep the heavy fill and use --label on it (16.5+).',
+    + '--system-fill / --secondary-system-fill. Those two fills are for shapes, not '
+    + 'for coloured text: use --tertiary-system-fill or --quaternary-system-fill '
+    + 'under blue or red text, or keep the heavy fill and use --label on it (16.5+).',
   ).toEqual([])
 })

@@ -42,6 +42,8 @@ export interface SystemAppearance {
    * treats that as "motion on" (the default) — see `reduce-motion-model.ts`.
    */
   reduceMotion?: boolean | null
+  reduceTransparency?: boolean | null
+  increaseContrast?: boolean | null
 }
 
 /**
@@ -86,6 +88,8 @@ export function coerceReduceMotion(raw: unknown): boolean | null {
 export function parseSystemAppearance(raw: unknown): SystemAppearance {
   const data = (raw ?? {}) as Record<string, unknown>
   const reduceMotion = coerceReduceMotion(data[GLOBAL_PROP_REDUCE_MOTION])
+  const reduceTransparency = coerceReduceMotion(data.systemReduceTransparency)
+  const increaseContrast = coerceReduceMotion(data.systemIncreaseContrast)
   // Only surface the flag when the host actually reported it, so callers and
   // tests that compare against `{ theme, locale }` do not need to know about the
   // optional field; `getReduceMotion()` treats absent as motion-on (the default).
@@ -93,6 +97,8 @@ export function parseSystemAppearance(raw: unknown): SystemAppearance {
     theme: coerceSystemTheme(data[GLOBAL_PROP_THEME]),
     locale: coerceSystemLocale(data[GLOBAL_PROP_LOCALE]),
     ...(reduceMotion !== null ? { reduceMotion } : {}),
+    ...(reduceTransparency !== null ? { reduceTransparency } : {}),
+    ...(increaseContrast !== null ? { increaseContrast } : {}),
   }
 }
 
@@ -131,7 +137,9 @@ export function applySystemAppearance(next: SystemAppearance): void {
   const prev = getSystemAppearance()
   if (prev.theme === next.theme
     && prev.locale === next.locale
-    && (prev.reduceMotion ?? null) === (next.reduceMotion ?? null)) return
+    && (prev.reduceMotion ?? null) === (next.reduceMotion ?? null)
+    && (prev.reduceTransparency ?? null) === (next.reduceTransparency ?? null)
+    && (prev.increaseContrast ?? null) === (next.increaseContrast ?? null)) return
   current = next
   listeners.forEach((listener) => listener())
 }

@@ -73,6 +73,7 @@ class ViewController: UIViewController {
   /// Insets last pushed to the page; used to skip no-op updates (see [pushSafeArea]).
   private var pushedInsets: UIEdgeInsets?
   private var localeObserver: NSObjectProtocol?
+  private var accessibilityObservers: [NSObjectProtocol] = []
   private var sceneActive = false
   private var lifecycleReady = false
   private var resumePending = false
@@ -103,10 +104,14 @@ class ViewController: UIViewController {
   private func flushResume() {
     guard sceneActive, lifecycleReady, resumePending, let lynxView else { return }
     resumePending = false
+    pushAppearance()
     lynxView.sendGlobalEvent("SongloftLifecycle.resumed", withParams: [["state": "resumed"]])
   }
 
   deinit {
+    for observer in accessibilityObservers {
+      NotificationCenter.default.removeObserver(observer)
+    }
     lynxView?.removeLifecycleClient(updateLifecycle)
     if let localeObserver {
       NotificationCenter.default.removeObserver(localeObserver)
@@ -313,6 +318,15 @@ class ViewController: UIViewController {
    *    edits that do not.
    */
   private func observeAppearanceChanges() {
+    for name in [
+      UIAccessibility.reduceMotionStatusDidChangeNotification,
+      UIAccessibility.reduceTransparencyStatusDidChangeNotification,
+      UIAccessibility.darkerSystemColorsStatusDidChangeNotification,
+    ] {
+      accessibilityObservers.append(NotificationCenter.default.addObserver(
+        forName: name, object: nil, queue: .main
+      ) { [weak self] _ in self?.pushAppearance() })
+    }
     if #available(iOS 17.0, *) {
       registerForTraitChanges([UITraitUserInterfaceStyle.self]) {
         (self: Self, _: UITraitCollection) in

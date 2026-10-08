@@ -1,11 +1,16 @@
 import { ConfigurationConstant, common, EnvironmentCallback, Configuration } from '@kit.AbilityKit'
 import { i18n } from '@kit.LocalizationKit'
 import { window } from '@kit.ArkUI'
-import { LynxContext } from '@lynx/lynx'
+import { LynxContext, LynxEnv } from '@lynx/lynx'
+import { deviceInfo } from '@kit.BasicServicesKit'
+import { accessibility } from '@kit.AccessibilityKit'
 
 interface AppearanceProps {
   systemTheme: string
   systemLocale: string
+  backdropSdkVersion: string
+  backdropBlurSupported: boolean
+  systemReduceMotion?: boolean
   safeAreaTop?: number
   safeAreaBottom?: number
   safeAreaLeft?: number
@@ -28,6 +33,11 @@ export class SystemAppearance {
   private static lastBottom: number = 0
   private static lastLeft: number = 0
   private static lastRight: number = 0
+  private static motionListener: ((enabled: boolean) => void) | null = null
+  private static currentReduceMotion: boolean = false
+  private static appContext: common.ApplicationContext | null = null
+  private static environmentCallbackId: number | null = null
+  private static safeAreaListener: (() => void) | null = null
 
   static setWindow(win: window.Window): void {
     SystemAppearance.mainWindow = win
@@ -66,6 +76,14 @@ export class SystemAppearance {
     const props: AppearanceProps = {
       systemTheme: SystemAppearance.currentColorMode,
       systemLocale: SystemAppearance.currentLocale,
+      backdropSdkVersion: LynxEnv.getLynxVersion(),
+      backdropBlurSupported: deviceInfo.sdkApiVersion >= 15,
+    }
+    if (deviceInfo.sdkApiVersion >= 23) {
+      try {
+        SystemAppearance.currentReduceMotion = accessibility.isAnimationReduceEnabledSync()
+        props.systemReduceMotion = SystemAppearance.currentReduceMotion
+      } catch (_) { /* Unsupported system capability stays unknown. */ }
     }
     if (SystemAppearance.mainWindow) {
       const insets = SystemAppearance.safeAreaPayload()
@@ -78,7 +96,18 @@ export class SystemAppearance {
   }
 
   static attach(lynxContext: LynxContext, context: common.UIAbilityContext): void {
+    SystemAppearance.detach()
     SystemAppearance.lynxContext = lynxContext
+    if (deviceInfo.sdkApiVersion >= 23) {
+      const listener = (enabled: boolean): void => {
+        SystemAppearance.currentReduceMotion = enabled
+        SystemAppearance.pushAppearance()
+      }
+      try {
+        accessibility.onAnimationReduceStateChange(listener)
+        SystemAppearance.motionListener = listener
+      } catch (_) { /* No animation-reduction service on this device. */ }
+    }
 
     const envCallback: EnvironmentCallback = {
       onConfigurationUpdated(config: Configuration): void {
@@ -99,24 +128,36 @@ export class SystemAppearance {
         }
 
         if (changed && SystemAppearance.lynxContext) {
-          const eventParam: AppearanceProps = {
-            systemTheme: SystemAppearance.currentColorMode,
-            systemLocale: SystemAppearance.currentLocale,
-          }
-          SystemAppearance.lynxContext.sendGlobalEvent('SongloftSystem.appearanceChanged', [eventParam])
+          SystemAppearance.pushAppearance()
         }
       },
       onMemoryLevel(): void {},
     }
 
     const appContext = context.getApplicationContext()
-    appContext.on('environment', envCallback)
+    SystemAppearance.environmentCallbackId = appContext.on('environment', envCallback)
+    SystemAppearance.appContext = appContext
 
     if (SystemAppearance.mainWindow) {
-      SystemAppearance.mainWindow.on('avoidAreaChange', () => {
+      const listener = (): void => {
         SystemAppearance.pushSafeArea()
-      })
+      }
+      SystemAppearance.mainWindow.on('avoidAreaChange', listener)
+      SystemAppearance.safeAreaListener = listener
     }
+  }
+
+  private static pushAppearance(): void {
+    const props: AppearanceProps = {
+      systemTheme: SystemAppearance.currentColorMode,
+      systemLocale: SystemAppearance.currentLocale,
+      backdropSdkVersion: LynxEnv.getLynxVersion(),
+      backdropBlurSupported: deviceInfo.sdkApiVersion >= 15,
+    }
+    if (SystemAppearance.motionListener) {
+      props.systemReduceMotion = SystemAppearance.currentReduceMotion
+    }
+    SystemAppearance.lynxContext?.sendGlobalEvent('SongloftSystem.appearanceChanged', [props])
   }
 
   private static pushSafeArea(): void {
@@ -139,6 +180,22 @@ export class SystemAppearance {
   }
 
   static detach(): void {
+    if (SystemAppearance.appContext && SystemAppearance.environmentCallbackId !== null) {
+      void SystemAppearance.appContext.off('environment', SystemAppearance.environmentCallbackId)
+        .catch(() => { console.warn('[SystemAppearance] environment listener cleanup failed') })
+    }
+    SystemAppearance.appContext = null
+    SystemAppearance.environmentCallbackId = null
+    if (SystemAppearance.mainWindow && SystemAppearance.safeAreaListener) {
+      SystemAppearance.mainWindow.off('avoidAreaChange', SystemAppearance.safeAreaListener)
+    }
+    SystemAppearance.safeAreaListener = null
+    if (SystemAppearance.motionListener) {
+      try {
+        accessibility.offAnimationReduceStateChange(SystemAppearance.motionListener)
+      } catch (_) { console.warn('[SystemAppearance] motion listener cleanup failed') }
+      SystemAppearance.motionListener = null
+    }
     SystemAppearance.lynxContext = null
   }
 }

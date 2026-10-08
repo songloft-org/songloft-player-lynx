@@ -1,4 +1,5 @@
 import UIKit
+import Lynx
 
 /**
  * The host half of the system-appearance contract: the OS dark/light setting and
@@ -28,7 +29,17 @@ enum SystemAppearance {
       propTheme: theme(of: traits),
       propLocale: localeTag(),
       propReduceMotion: UIAccessibility.isReduceMotionEnabled,
+      "systemReduceTransparency": UIAccessibility.isReduceTransparencyEnabled,
+      "systemIncreaseContrast": UIAccessibility.isDarkerSystemColorsEnabled,
+      "backdropSdkVersion": LynxVersion.versionString(),
+      "backdropBlurSupported": true,
+      "liquidGlassSupported": supportsLiquidGlass,
     ]
+  }
+
+  private static var supportsLiquidGlass: Bool {
+    if #available(iOS 26.0, *) { return true }
+    return false
   }
 
   /**

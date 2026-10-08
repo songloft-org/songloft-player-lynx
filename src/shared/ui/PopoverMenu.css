@@ -45,16 +45,8 @@
  * screen instead of being overridden. `useAnchoredOverlay` therefore returns a
  * docked position of its own until the first measurement lands.
  *
- * `overflow-y: auto` pairs with the inline `max-height`: a menu taller than the
- * room beside its trigger scrolls rather than running off the screen. It also
- * clips the panel-mode blur layer to these rounded corners for free — with one
- * accepted cost: an absolute child of a scroll container scrolls with its content,
- * so in a menu long enough to actually scroll the blur travels up with it and the
- * bottom rows fall back to the flat `--material-fill-elevated` wash. Fixing that means
- * splitting this into a clipping shell plus an inner scroller, which every consumer
- * of `.popover-menu` would have to be re-laid-out for; the surfaces that scroll are
- * the long sort menus, and the degradation is the appearance this rule had before
- * the blur existed.
+ * The outer shell clips a stationary blur. The native scroll-view inside it
+ * owns scrolling and its own height cap, so material covers even the last row.
  */
 .popover-menu {
   position: fixed;
@@ -62,16 +54,28 @@
   display: flex;
   flex-direction: column;
   min-width: 140px;
-  padding: var(--space-2) 0;
-  background-color: var(--material-fill-elevated);
-  background-image: var(--material-sheen-layer), var(--material-ramp);
+  background-color: var(--material-fill-menu);
+  /* Full-face sheen/ramp washes reduce selected text contrast over artwork.
+     Menus keep their native blur and inset rims without those extra washes. */
+  background-image: none;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md),
     inset 0 1px 0 var(--material-highlight),
     var(--material-rim-sides),
     inset 0 -1px 0 var(--separator);
   border: 1px solid var(--material-border);
-  overflow-y: auto;
+  overflow: hidden;
+}
+
+.popover-menu__scroll {
+  min-height: 0;
+  flex-shrink: 1;
+}
+
+.popover-menu__content {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) 0;
 }
 
 .popover-menu__item {
@@ -159,6 +163,6 @@
  * the panel — surface, radius, shadow, positioning — is shared with `.popover-menu`
  * deliberately; see `PopoverPanel.tsx`.
  */
-.popover-panel {
+.popover-panel .popover-menu__content {
   padding: var(--space-3);
 }

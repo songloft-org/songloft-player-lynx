@@ -38,6 +38,7 @@ import {
 import { applySavedFontScale } from './shared/theme/font-scale-model.js'
 import { applySavedSongTitleScrolling } from './shared/ui/scrolling-text-preference.js'
 import { applySavedIncreaseContrast } from './shared/theme/increase-contrast-model.js'
+import { applySavedReduceTransparency } from './shared/theme/reduce-transparency-model.js'
 import { applySavedRailCollapsed } from './shared/layouts/rail-collapse.js'
 import { applySavedMaterial } from './shared/theme/material-model.js'
 import { applySavedTheme } from './shared/theme/theme-model.js'
@@ -117,6 +118,7 @@ void (async () => {
     await applySavedFontScale()
     await applySavedSongTitleScrolling()
     await applySavedIncreaseContrast()
+    await applySavedReduceTransparency()
     // Same shape as the appearance model above: the launch frame renders the
     // expanded rail (the default), and this applies the remembered collapse
     // before auth resolves — i.e. while the splash is still up.
@@ -137,7 +139,7 @@ void (async () => {
     // startup chain that would both hijack the launch and stall everything below.
     // Off the chain (`void`) for the same reason nothing below it may wait on an
     // overlay: auth must resolve even if the host's lyric module misbehaves.
-    void syncFloatingLyricOverlay().catch(() => {})
+    void syncFloatingLyricOverlay().catch(() => { })
     await auth.checkAuth()
     await initializeWebShortcuts()
     // Only once auth resolved: the pack lives behind the API's auth, and a
@@ -152,7 +154,7 @@ void (async () => {
       // been restored, mirroring Flutter's `_scheduleAutoEnterLyrics`. Lands on
       // lyrics via FullPlayerPage's existing auto-swipe. A duplicate navigate to
       // /player (notification tap already did) is a harmless no-op.
-      void navigateAutoEnterLyricsIfNeeded().catch(() => {})
+      void navigateAutoEnterLyricsIfNeeded().catch(() => { })
     }
   } catch {
     await useAuthStore

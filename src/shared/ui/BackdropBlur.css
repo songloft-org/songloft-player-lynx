@@ -37,7 +37,7 @@
  * negative value to the panel's own paint.
  *
  * `border-radius` rather than the parent's `overflow: hidden`. Two of the three
- * panels already clip (`.mini-player` hides overflow, `.popover-menu` scrolls it),
+ * panels already clip (`.mini-player` and `.popover-menu` hide overflow),
  * but `.shell__bottombar` does not, and giving a nav capsule an overflow clip to
  * round one child layer would change what its contents are allowed to do. Rounding
  * the layer instead is local to the layer. The two modifiers exist because the

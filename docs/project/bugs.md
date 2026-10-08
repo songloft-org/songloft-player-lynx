@@ -11,6 +11,10 @@
 
 ## 待修复（开放）
 
+- [x] **Android 4.0.0 capture target 排队更新在销毁后崩溃（2026-10-08 P1）** — 实际登录导航出现 `BlurUtils.createEffect → BlurView.updateBlur` 的空 RenderNode 接收者；官方 capture Runnable 缺少销毁检查，销毁后可重新初始化尺寸。宿主 SongloftBlurUI 只保护 post 生命周期，父类 destroy 前使回调失效，沿用原属性与绘制。JVM 回归和 APK 编译通过，隔离 API 34 原生登录/导航/关闭菜单/透明度卸载与恢复/冷启动保留设置通过，AndroidRuntime 无新增崩溃。限于当前测试设备与 4.0.0，其他设备及后续 SDK 升级仍须复验；详见 progress/pitfalls。
+
+- [ ] **iOS / HarmonyOS 玻璃光学效果与旧系统行为待设备验证（2026-10-08 P0/P1）** — P0 已修复空容器、inline 材质覆盖和菜单滚动；P1 已接宿主 SDK/注册/OS 能力门控、系统辅助功能与本机降低透明度，未知能力实心降级，iOS 26 以前 themed blur。HarmonyOS 核心 C++ 已注册 blur-view，背景 blur 要求 API 15，动效接口要求 API 23。不能把 JS 测试、HAP 编译或 Web 截图作为原生可读性/光学效果证据；iOS 26、旧 iOS、HarmonyOS 设备矩阵仍开放，详细证据见 progress。
+
 - [x] Web 前端直接挂载子路径时资源 404、黑屏（2026-10-07）— 保留 `e09592b` 旧包 11 项 404、Worker 0 的记录，旧包未修改。已补宿主目录、静态资源/图标、引擎/Worker、全部宿主模块/子 frame 桥接与 embedded API；恢复会话忽略旧服务器地址，Web 无 location 的主线程使用平台标识读取宿主目录。新源码在严格 `/songloft/` 服务的 Chrome 两种模式实际登录、已安装 Lynx/WebView 插件桥接及 Linux WebKit 两种模式的 P4/P5 通过，页面/媒体错误为空；根路径登录回归通过。目录入口需尾斜杠与隔离响应头，真实 Safari/MIoT 长后台仍开放。日志、夹具和交付记录见 [progress](progress.md) 与[部署指南](../guides/web-deployment.md)。
 
 - [ ] Firefox 134 间歇性 Blob 脚本加载异常（2026-10-07）：数据导入/导出在 standalone/embedded 根路径通过，但数据流程与后续快捷键流程各捕获过 Lynx MTS iframe 的 `Failed to load script: blob:...`，阶段诊断后的最终流程未复现；新增 20 组加载/快速刷新和 10 组认证流程（30 次会话刷新）也未捕获异常，仍未定位根因，不能凭这些通过闭合。媒体 `MEDIA_ERR_DECODE` 已另定位为本机输出初始化失败 `NS_ERROR_DOM_MEDIA_MEDIASINK_ERR`；接入临时 PulseAudio 空输出后，空白页探针与快捷键最终回归均无媒体错误，不修改应用或宿主配置。实际播放/暂停/切歌/音量/重复/持久化与输入/菜单保护通过，但未验证扬声器听感。当前 web-core 包目标列 Chrome/Safari，不承诺 Firefox 整体稳定；证据与边界见 progress。

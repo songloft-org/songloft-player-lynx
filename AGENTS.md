@@ -72,10 +72,12 @@ src/router.tsx
 - 底部导航是 fixed 胶囊：nav `z-index: 90`、mini player `91`、sheet/popover `100`、dialog `200/201`。新 fixed 层不得插入 90–91。
 - 新增滚动页必须消费 `--nav-inset`；原生 `<list>` 页面用 footer spacer，不依赖 CSS padding。
 - rail 选中态只变色，不改尺寸；底栏图标选中色使用 `activeAccentIconColor()`，SVG 不吃 CSS 级联。
-- Liquid Glass 表面复用 `BackdropBlur` 与材质 token（统一 `--material-*` 前缀）；底栏选中态使用 `--material-glow-faint`，玻璃上的强调/中性状态分别使用 `--tint-fill` / `--quaternary-system-fill`，不得换成不透明 surface。
+- Liquid Glass 表面复用 `BackdropBlur` 与材质 token（统一 `--material-*` 前缀）；底栏选中态背景使用 `--tint-fill`，`--material-glow-faint` 仅作光晕装饰；玻璃上的强调/中性状态分别使用 `--tint-fill` / `--quaternary-system-fill`，不得换成不透明 surface。
 - 底栏与分段控件「流动指示器」用 `transform: translateX` + `--ease-spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1)` 实现选中态平滑滑动；宽屏 rail 仅变色不位移。reduce-motion 依赖 `--duration-*` 归零（见下条）。模糊层（`BackdropBlur`）永不做动画。Toast 保持实心（有意不玻璃化）。
 - 系统主题/语言初值由宿主 globalProps 在首帧前注入，运行中变化走 global event。`sendGlobalEvent(name, params)` 的第二参必须是数组。
-- reduce-motion：宿主经 `systemReduceMotion` 字段（与 systemTheme 同通道）推送 OS 减弱动效开关；`reduce-motion-model.ts` 读取、`ThemeProvider` 落 `.reduce-motion` 类零化所有 `--duration-*`。iOS 已接 `UIAccessibility.isReduceMotionEnabled`；Android 已读取 `Settings.Global.ANIMATOR_DURATION_SCALE == 0`，在启动/配置变化时上报，尚不监听该设置的即时变化。HarmonyOS 尚未上报该字段，默认 motion-on。
+- reduce-motion：宿主经 `systemReduceMotion` 字段推送；iOS 使用 UIAccessibility 通知，Android 监听 `ANIMATOR_DURATION_SCALE`，HarmonyOS API 23+ 读取并监听公开接口，旧 API 保持未知。Web 在主线程读媒体偏好并推送给 Worker；`.reduce-motion` 零化动效 token。订阅随宿主生命周期清理。
+- 玻璃能力由宿主首帧 globalProps 上报（SDK、注册与 OS 门控）；未知能力使用实心材质，iOS 26+ 才选择 glass。`surface-policy.ts` 将系统辅助功能与本机偏好合并，系统开启时不能被应用开关关闭；降低透明度时卸载 blur。Android capture target 必须有稳定 id、`flatten={false}`，并排除玻璃层自身。
+- 根节点和 blur 叶节点复用 `useSurfaceAppearance`，避免每层重复订阅外观源。无 className 的全屏 scrim 使用 themed blur；紧凑 chrome 才使用 regular glass，装饰叶节点不启用 glass-interactive。未调暗的菜单使用 `--material-fill-menu` 和边缘高光，不铺整面 sheen/ramp；文字对比度须计入选中态 wash 与未知背景。
 - 返回顺序为：覆盖层 LIFO 栈 → `resolveRouteBack` 父级 → tab 首页退出策略。新增覆盖层挂载时必须先让 `useBackHandler(active, handler)` 的 `active` 为 `false`，新增叶子路由同步登记 `route-back.ts`。
 - 不使用 `router.history.back()`；`SubPageShell` 不维护第二份父级信息。完整契约见 back-navigation reference。
 

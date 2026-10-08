@@ -82,3 +82,53 @@ export const MATERIAL_TOKENS: Record<
     },
   },
 }
+
+/** Final texture written inline by ThemeProvider, after theme-pack mapping.
+ * Native regular glass uses the existing ultra-thin tint as its reference.
+ * Other thicknesses scale that tint relative to regular, preserving the user's
+ * ordering. These are app tint values, not UIKit material/vibrancy guarantees.
+ */
+export function resolveMaterialTokens({
+  variant,
+  theme,
+  nativeGlass,
+  increaseContrast,
+  opaque = false,
+}: {
+  variant: MaterialVariant
+  theme: 'light' | 'dark'
+  nativeGlass: boolean
+  increaseContrast: boolean
+  opaque?: boolean
+}): MaterialTextureTokens {
+  if (opaque) {
+    return {
+      '--material-fill': theme === 'light' ? 'rgba(255, 255, 255, 1)' : 'rgba(28, 28, 30, 1)',
+      '--material-fill-elevated': theme === 'light' ? 'rgba(255, 255, 255, 1)' : 'rgba(44, 44, 46, 1)',
+      '--material-border': theme === 'light' ? 'rgba(209, 209, 214, 1)' : 'rgba(72, 72, 74, 1)',
+      '--material-highlight': theme === 'light' ? 'rgba(255, 255, 255, 1)' : 'rgba(72, 72, 74, 1)',
+    }
+  }
+  if (increaseContrast) return MATERIAL_TOKENS.thick[theme]
+  if (!nativeGlass) return MATERIAL_TOKENS[variant][theme]
+  const reference = MATERIAL_TOKENS['ultra-thin'][theme]
+  if (variant === 'regular') return reference
+
+  const baseline = MATERIAL_TOKENS.regular[theme]
+  const selected = MATERIAL_TOKENS[variant][theme]
+  const result = { ...reference }
+  for (const key of Object.keys(reference) as (keyof MaterialTextureTokens)[]) {
+    const alpha = (value: string) => Number(value.slice(value.lastIndexOf(',') + 1, -1))
+    const scaled = Math.min(1, alpha(reference[key]) * alpha(selected[key]) / alpha(baseline[key]))
+    result[key] = reference[key].replace(/[^,]+\)$/, ` ${Number(scaled.toFixed(3))})`)
+  }
+  return result
+}
+
+/** Text-heavy, undimmed menus use a protected tint and rim-only decoration. */
+export function resolveMenuMaterialFill(options: Parameters<typeof resolveMaterialTokens>[0]): string {
+  const fill = resolveMaterialTokens(options)['--material-fill-elevated']
+  const currentAlpha = Number(fill.slice(fill.lastIndexOf(',') + 1, -1))
+  const floor = options.theme === 'light' ? 0.99 : 0.92
+  return fill.replace(/[^,]+\)$/, ` ${Math.max(currentAlpha, floor)})`)
+}

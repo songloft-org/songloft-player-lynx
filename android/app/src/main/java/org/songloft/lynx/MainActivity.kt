@@ -2,27 +2,36 @@ package org.songloft.lynx
 
 import android.Manifest
 import android.app.Activity
+import android.app.UiModeManager
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.database.ContentObserver
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
 import android.view.SurfaceView
 import android.view.View
 import android.widget.FrameLayout
 import com.lynx.react.bridge.JavaOnlyArray
 import com.lynx.react.bridge.JavaOnlyMap
+import com.lynx.tasm.LynxError
 import com.lynx.tasm.LynxLoadMeta
 import com.lynx.tasm.LynxView
 import com.lynx.tasm.LynxViewBuilder
 import com.lynx.tasm.LynxViewClient
-import com.lynx.tasm.LynxError
 import com.lynx.tasm.TemplateData
+import com.lynx.tasm.behavior.Behavior
+import com.lynx.tasm.behavior.LynxContext
 import com.lynx.xelement.XElementBehaviors
 import org.songloft.lynx.lyric.OverlayPermission
 import org.songloft.lynx.navigation.BackKeyState
 import org.songloft.lynx.navigation.SongloftNavigationModule
 import org.songloft.lynx.system.SystemAppearance
+import org.songloft.lynx.ui.SongloftBlurUI
 import org.songloft.lynx.video.SongloftVideoModule
 import org.songloft.lynx.updater.BundleUpdates
 
@@ -42,6 +51,32 @@ import org.songloft.lynx.updater.BundleUpdates
 class MainActivity : Activity() {
     /** Kept so [onConfigurationChanged] can push appearance updates into the page. */
     private var lynxView: LynxView? = null
+    private val motionObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) { pushAppearance() }
+    }
+    private var contrastListener: UiModeManager.ContrastChangeListener? = null
+
+    private fun appearance(): Map<String, Any> {
+        val props = SystemAppearance.from(resources.configuration, contentResolver).toMutableMap()
+        // Window attach happens after the initial globalProps snapshot. Use the
+        // resolved Activity configuration rather than transient Window flags.
+        val accelerated = packageManager.getActivityInfo(componentName, 0).flags and ActivityInfo.FLAG_HARDWARE_ACCELERATED != 0
+        props["backdropBlurSupported"] = props["backdropBlurSupported"] == true && accelerated
+        props["androidCaptureSupported"] = props["androidCaptureSupported"] == true && accelerated
+        if (Build.VERSION.SDK_INT >= 34) {
+            props["systemIncreaseContrast"] = getSystemService(UiModeManager::class.java).contrast > 0f
+        }
+        return props
+    }
+
+    private fun pushAppearance() {
+        val view = lynxView ?: return
+        val props = appearance()
+        view.updateGlobalProps(props)
+        val params = JavaOnlyArray()
+        params.pushMap(JavaOnlyMap.from(props))
+        view.sendGlobalEvent(SystemAppearance.EVENT_CHANGED, params)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +90,14 @@ class MainActivity : Activity() {
             }
         })
         lynxView = view
+        contentResolver.registerContentObserver(
+            Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE), false, motionObserver,
+        )
+        if (Build.VERSION.SDK_INT >= 34) {
+            val listener = UiModeManager.ContrastChangeListener { pushAppearance() }
+            contrastListener = listener
+            getSystemService(UiModeManager::class.java).addContrastChangeListener(mainExecutor, listener)
+        }
 
         // The fullscreen video surface lives in THIS activity, under the Lynx
         // view, so the Lynx page can paint its own controls above the picture
@@ -89,7 +132,7 @@ class MainActivity : Activity() {
         // deprecated in both overloads, and this is its replacement.) The URL is
         // still resolved by DemoTemplateProvider from
         // app/src/main/assets/main.lynx.bundle.
-        val props = SystemAppearance.from(resources.configuration, contentResolver).toMutableMap()
+        val props = appearance().toMutableMap()
         if (intent?.getBooleanExtra(EXTRA_NAVIGATE_TO_PLAYER, false) == true) {
             props[PROP_NAVIGATE_TO_PLAYER] = true
         }
@@ -120,6 +163,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         OverlayPermission.onAppForegrounded(this)
+        pushAppearance()
         // Plugin WebViews may retain a dead connection after being backgrounded.
         val params = JavaOnlyArray()
         params.pushMap(JavaOnlyMap.from(emptyMap<String, Any>()))
@@ -139,11 +183,7 @@ class MainActivity : Activity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         val view = lynxView ?: return
-        val appearance = SystemAppearance.from(newConfig, contentResolver)
-        view.updateGlobalProps(appearance)
-        val params = JavaOnlyArray()
-        params.pushMap(JavaOnlyMap.from(appearance))
-        view.sendGlobalEvent(SystemAppearance.EVENT_CHANGED, params)
+        pushAppearance()
 
         val isLandscape = newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
         val metrics = resources.displayMetrics
@@ -209,6 +249,11 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        contentResolver.unregisterContentObserver(motionObserver)
+        if (Build.VERSION.SDK_INT >= 34) {
+            contrastListener?.let { getSystemService(UiModeManager::class.java).removeContrastChangeListener(it) }
+        }
+        contrastListener = null
         lynxView = null
         // The video module keeps process-level references (Activity + event
         // emitter); drop them here or a relaunch would push events into the dead
@@ -225,7 +270,10 @@ class MainActivity : Activity() {
 
     private fun buildLynxView(): LynxView {
         val viewBuilder = LynxViewBuilder()
-        viewBuilder.addBehaviors(XElementBehaviors().create())
+        viewBuilder.addBehaviors(XElementBehaviors().create().filter { it.name != "blur-view" })
+        viewBuilder.addBehavior(object : Behavior("blur-view", false) {
+            override fun createUI(context: LynxContext): SongloftBlurUI = SongloftBlurUI(context)
+        })
         val templates = DemoTemplateProvider(this)
         viewBuilder.setTemplateProvider(templates)
         val frameTemplates = SongloftTemplateResourceFetcher(templates)

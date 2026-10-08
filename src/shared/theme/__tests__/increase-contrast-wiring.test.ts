@@ -101,8 +101,8 @@ test('no token is declared in both contrast channels', () => {
     expect(
       classKeys.filter((key) => inlineKeys.includes(key)),
       'a contrast token declared in BOTH channels is dead in the class one (the '
-        + 'inline baseline is on the same element and wins). Move it to '
-        + 'CONTRAST_ACCENT, or take it out of PACK_OVERRIDABLE_BASELINE.',
+      + 'inline baseline is on the same element and wins). Move it to '
+      + 'CONTRAST_ACCENT, or take it out of PACK_OVERRIDABLE_BASELINE.',
     ).toEqual([])
   }
 })
@@ -125,7 +125,7 @@ test("Apple's accessible accent reaches the inline channel, and a pack keeps its
     expect(
       themePackToStyleVars(null, 'light')['--accent'],
       'the switch does not reach the style object — this is exactly the failure '
-        + 'the class channel had: a value that exists and never wins',
+      + 'the class channel had: a value that exists and never wins',
     ).toBe('#1e6ef4')
     expect(themePackToStyleVars(null, 'dark')['--accent']).toBe('#5cb8ff')
     expect(themePackToStyleVars(null, 'dark')['--accent-content']).toBe('#000000')
@@ -154,7 +154,7 @@ test('ThemeProvider adds the class conditionally and subscribes to the model', (
   const tsx = source('src/shared/theme/ThemeProvider.tsx')
 
   expect(tsx, 'ThemeProvider no longer reads the app switch')
-    .toMatch(/getIncreaseContrast\(\)/)
+    .toMatch(/useSurfaceAppearance/)
 
   const additions = tsx.match(/' increase-contrast'/g) ?? []
   expect(additions, 'expected exactly one place that adds the class').toHaveLength(1)
@@ -169,9 +169,9 @@ test('ThemeProvider adds the class conditionally and subscribes to the model', (
   // Without the subscription a flip from the Settings page would never reach an
   // already-mounted tree — the class would only appear after a relaunch.
   expect(
-    tsx,
+    source('src/shared/theme/surface-appearance.ts'),
     'ThemeProvider must subscribe, or the Settings switch only applies next launch',
-  ).toMatch(/subscribeIncreaseContrast\(/)
+  ).toMatch(/subscribeSurfacePolicy\(/)
 })
 
 /* ── The user can reach it ─────────────────────────────────────────────────── */
@@ -203,7 +203,7 @@ test('startup replays the persisted switch', () => {
   expect(
     source('src/index.tsx'),
     'applySavedIncreaseContrast is not awaited at startup — the preference would '
-      + 'only come back the next time the user opened the settings page',
+    + 'only come back the next time the user opened the settings page',
   ).toMatch(/await applySavedIncreaseContrast\(\)/)
 })
 
@@ -231,11 +231,11 @@ test('the model has non-test consumers', () => {
   expect(
     [...consumers].sort(),
     'the increase-contrast model is imported only by its own tests — the class '
-      + 'would never be switched on',
+    + 'would never be switched on',
   ).toEqual([
     'src/features/settings/pages/AppearancePage.tsx',
     'src/index.tsx',
-    'src/shared/theme/ThemeProvider.tsx',
+    'src/shared/theme/surface-policy.ts',
     // The inline channel: it has to read the flag to move the accent, because no
     // class declaration can outrank the baseline written on the same element.
     'src/shared/theme/theme-pack-mapping.ts',

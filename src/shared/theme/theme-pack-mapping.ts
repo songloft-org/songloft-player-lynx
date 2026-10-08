@@ -1,5 +1,6 @@
 import { getFontScaleNumber } from './font-scale-model.js'
 import { getIncreaseContrast } from './increase-contrast-model.js'
+import { getSystemAppearance } from '../../native/system-appearance.js'
 import { getMaterialVariant } from './material-model.js'
 import { MATERIAL_TOKENS } from './material-tokens.js'
 
@@ -267,7 +268,7 @@ export function themePackToStyleVars(
 
   // Increase Contrast goes in BEFORE the pack fields on purpose — see
   // CONTRAST_ACCENT: the pack is the explicit choice and keeps the accent.
-  if (getIncreaseContrast()) {
+  if (getIncreaseContrast() || getSystemAppearance().increaseContrast === true) {
     const contrast = CONTRAST_ACCENT[resolved]
     vars['--accent'] = contrast.accent
     vars['--accent-content'] = contrast.accentContent

@@ -4,7 +4,7 @@ This guide covers the open-source Lynx 4.0 `<blur-view>` on Android, iOS, Harmon
 
 ## Host Integration
 
-The element must be installed and registered in the host; TypeScript props and an SDK version alone do not establish runtime availability. For Songloft, reuse `src/shared/ui/BackdropBlur.tsx`: Android registers XElement behaviors, iOS includes `XElement/BlurView`, and Web aliases the older `x-blur-view` implementation. HarmonyOS's current dependency/registration list does not establish a blur implementation; retain its material fallback until integration is verified.
+The element must be installed and registered in the host; TypeScript props and an SDK version alone do not establish runtime availability. For Songloft, reuse `src/shared/ui/BackdropBlur.tsx`: Android registers XElement behaviors, iOS includes `XElement/BlurView`, and Web aliases the older `x-blur-view` implementation. HarmonyOS Lynx 4.0.1 registers `blur-view` in its core C++ `XElementRegistry::Initialize()`; it does not need an ArkTS Behavior or a separate blur package. Its backdrop implementation requires API 15+. Songloft gates rendering through host-reported capabilities; actual HarmonyOS optics still need device verification.
 
 ## When to Use `<blur-view>`
 

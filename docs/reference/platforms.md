@@ -50,6 +50,10 @@
 
 工程实际声明 `compatibleSdkVersion` = `5.0.1(13)`（HarmonyOS NEXT 起步）。`FloatingLyric` / `LiveActivity` 当前没有宿主实现，TS 侧降级 no-op。`pages/Index.ets` 已注册 `SongloftVideo`，并用 XComponent 表面绑定共享 AVPlayer；视频不是完全缺失。2026-10-07 已用 Linux CLI `26.0.0.821` / SDK `26.0.0.105` 完成整个宿主的未签名 release HAP 编译和包内容校验，最低兼容声明保持不变，compile/target 为新 SDK；不证明 API 13 设备行为或视频验收。签名和设备行为仍开放，视频按用户要求暂缓。详细证据见 [progress](../project/progress.md)；旧[集成计划](../archive/harmony-integration-plan.md) 是历史资料，不能替代源码与验收记录。
 
+## 背景模糊与辅助功能
+
+宿主能力与辅助功能载荷详见 [SystemAppearance](native-modules.md#213-systemappearance不是-nativemodules-模块)。原生 SDK 4.0+ 且已注册元素时：iOS 常规 blur 可用，Liquid Glass 额外要求 iOS 26；Android 自动模糊要求 API 23+ 和硬件加速；HarmonyOS 核心背景模糊要求 API 15+。未知能力使用实心材质。iOS 实时同步三种辅助功能，Android 动效实时监听、contrast 要求 API 34+；HarmonyOS 的减弱动效公开接口要求 API 23+。所有平台有本机“降低透明度”开关，不能覆盖系统已开启的设置。
+
 ## Web
 
 无独立最低版本声明。已知硬约束：

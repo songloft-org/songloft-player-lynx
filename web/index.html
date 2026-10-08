@@ -336,6 +336,13 @@
       var base = new URL('.', document.baseURI)
       var props = JSON.parse(app.getAttribute('global-props') || '{}')
       props.webBaseUrl = base.href
+      props.systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+      props.systemLocale = navigator.language
+      props.systemReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      props.systemReduceTransparency = window.matchMedia('(prefers-reduced-transparency: reduce)').matches
+      props.systemIncreaseContrast = window.matchMedia('(prefers-contrast: more)').matches
+      props.backdropBlurSupported = CSS.supports('backdrop-filter', 'blur(1px)')
+        || CSS.supports('-webkit-backdrop-filter', 'blur(1px)')
       app.setAttribute('global-props', JSON.stringify(props))
       app.setAttribute('url', new URL('main.lynx.bundle', base).href)
     })()
@@ -458,11 +465,18 @@
         said nothing", and the appearance is applied as a whole, so sending only the
         theme would have reset the language to the default on the first switch.
       */
-      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+      function pushAppearance() {
         lynxView.sendGlobalEvent('SongloftSystem.appearanceChanged', [{
-          systemTheme: e.matches ? 'dark' : 'light',
-          systemLocale: navigator.language.startsWith('zh') ? 'zh' : 'en'
+          systemTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+          systemLocale: navigator.language,
+          systemReduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+          systemReduceTransparency: window.matchMedia('(prefers-reduced-transparency: reduce)').matches,
+          systemIncreaseContrast: window.matchMedia('(prefers-contrast: more)').matches
         }]);
+      }
+      ['(prefers-color-scheme: dark)', '(prefers-reduced-motion: reduce)',
+        '(prefers-reduced-transparency: reduce)', '(prefers-contrast: more)'].forEach(function(query) {
+        window.matchMedia(query).addEventListener('change', pushAppearance);
       });
     })();
   </script>

@@ -24,17 +24,15 @@ export interface PlayerBackdropProps {
  * which also means everything above it keeps using the ordinary `--content*` tokens
  * rather than a parallel palette.
  *
- * Renders nothing without a cover: an empty veil over bare canvas is exactly
- * `--canvas`, so the extra nodes would buy a repaint and no pixels.
+ * The source view remains without a cover so Android toolbar/popover blur can
+ * capture a stable background id. It contains no glass surfaces itself.
  */
 export function PlayerBackdrop({ coverUrl }: PlayerBackdropProps) {
-  if (!coverUrl) return null
-
   return (
-    <view className='player-backdrop' data-testid='player-backdrop'>
-      <view className='player-backdrop__vivid'>
+    <view className='player-backdrop' data-testid='player-backdrop' id='songloft-backdrop' flatten={false}>
+      {coverUrl ? <view className='player-backdrop__vivid'>
         <image className='player-backdrop__img' src={coverUrl} mode='aspectFill' />
-      </view>
+      </view> : null}
       <view className='player-backdrop__scrim' />
     </view>
   )

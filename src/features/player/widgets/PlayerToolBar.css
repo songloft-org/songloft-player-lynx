@@ -56,6 +56,9 @@
 .player-volume-panel {
   min-width: 0;
   width: 84px;
+}
+
+.player-volume-panel .popover-menu__content {
   align-items: center;
 }
 

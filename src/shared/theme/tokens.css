@@ -429,6 +429,7 @@
      `glassColor`), kept as an independent channel from the button accent. */
   --material-fill: rgba(23, 23, 27, 0.85);
   --material-fill-elevated: rgba(23, 23, 27, 0.72);
+  --material-fill-menu: rgba(23, 23, 27, 0.92);
   --material-border: rgba(255, 255, 255, 0.16);
   /* Top specular edge — a 1px `inset` line, so no text ever sits on it and its
      brightness is free against the contrast gate. Pushed from 0.30→0.33 in P1
@@ -605,6 +606,7 @@
      (white-on-white needs more to read), and the star-blue decorative glow. */
   --material-fill: rgba(255, 255, 255, 0.85);
   --material-fill-elevated: rgba(255, 255, 255, 0.72);
+  --material-fill-menu: rgba(255, 255, 255, 0.99);
   --material-border: rgba(255, 255, 255, 0.45);
   /* Light's rim has to fight a fill that composites to pure white, so it runs
      brighter still. Pushed 0.60→0.65 in P1 for a crisper top specular. */
@@ -699,10 +701,8 @@
  * Activation is an app-level switch (`increase-contrast-model.ts`, reached from
  * Settings → Appearance → Accessibility), applied by `ThemeProvider` as the
  * third class on the root — so flipping this class really is the whole
- * mechanism. Deliberately app-side rather than a host `SystemAppearance` field
- * (the shape `reduce-motion` above uses): the OS flag is not readable on every
- * platform we ship to, and this is the user's preference to set regardless of
- * what their OS chooses to expose.
+ * mechanism. `surface-policy.ts` combines the persisted app choice with the
+ * optional host Increase Contrast flag; an enabled OS setting takes priority.
  */
 .theme-root.theme-light.increase-contrast {
   --secondary-label: rgba(60, 60, 67, 0.73);
@@ -728,40 +728,6 @@
   --system-gray6: #242426;
 }
 
-/* ── iOS Liquid Glass platform override ─────────────────────────────────────
-   On iOS the app drives a *native* UIGlassEffect via `blur-effect: 'glass'`
-   (see BackdropBlur.tsx). A native glass material is the real surface behind
-   the text — Apple guarantees its readability through vibrancy, the same way
-   the system's own bars read. The CSS `--material-fill*` is no longer the carrier
-   of readability on iOS; it is a light tint the native material shows through.
-   That is why these alphas come down: the 0.85/0.72 baseline would cover the
-   native material to 15–28%, and the whole point of opting into it is to let
-   it show.
-
-   The values mirror the `ultra-thin` row of `material-tokens.ts` exactly — a
-   thickness the codebase already ships and monotonicity-tests — so the iOS
-   track is a coherent material rather than a one-off alpha. Thinner glass
-   also raises the specular highlight (`--material-highlight`), per the same
-   "brightness is a thickness cue" rule the dark block cites.
-
-   What this is NOT: a contrast-tracked surface. `contrast.test.ts` derives its
-   worst case from the *uniform* baseline fills in the `.theme-root.theme-<name>`
-   blocks above, which the non-iOS platforms (Android/Web/Harmony) still render
-   verbatim — those carry their own readability and stay gated. This block is a
-   separate selector (`.platform-ios`), so the baseline parse is untouched, and
-   iOS readability is verified on-device rather than in CI — the same stance the
-   repo already takes for every other iOS-only property. See
-   `platform-glass.test.ts` for the structural gate. */
-.theme-root.theme-light.platform-ios {
-  --material-fill: rgba(255, 255, 255, 0.55);
-  --material-fill-elevated: rgba(255, 255, 255, 0.45);
-  --material-border: rgba(255, 255, 255, 0.55);
-  --material-highlight: rgba(255, 255, 255, 0.72);
-}
-
-.theme-root.theme-dark.platform-ios {
-  --material-fill: rgba(23, 23, 27, 0.50);
-  --material-fill-elevated: rgba(23, 23, 27, 0.40);
-  --material-border: rgba(255, 255, 255, 0.20);
-  --material-highlight: rgba(255, 255, 255, 0.38);
-}
+/* Platform material textures are emitted inline by ThemeProvider through
+   resolveMaterialTokens. A CSS platform override cannot beat the pack mapping's
+   inline values. Keep the final material policy in that resolver. */

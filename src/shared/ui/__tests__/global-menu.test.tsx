@@ -81,7 +81,7 @@ const VIEWPORT = { width: 420, height: 900 }
  */
 test('the panel docks to the bottom when the row could not be measured', () => {
   const { getByTestId } = renderMenu()
-  const panel = getByTestId('menu-item-play').parentElement!.parentElement!
+  const panel = getByTestId('menu-item-play').parentElement!.parentElement!.parentElement!
   expect(panel.className).toContain('global-menu__panel--docked')
   expect(panel.className).not.toContain('global-menu__panel--anchored')
   // Offsets come from the stylesheet in this form, so nothing may be inlined — a
@@ -95,7 +95,7 @@ test('a measured row anchors the panel to the trigger, opening downwards', () =>
   const { getByTestId } = renderMenu({
     anchor: { anchor: { left: 280, top: 100, width: 36, height: 36 }, viewport: VIEWPORT },
   })
-  const panel = getByTestId('menu-item-play').parentElement!.parentElement!
+  const panel = getByTestId('menu-item-play').parentElement!.parentElement!.parentElement!
   expect(panel.className).toContain('global-menu__panel--anchored')
   expect(panel.className).not.toContain('global-menu__panel--docked')
   // Right edge of the trigger (420 - 316), and the gap below it (136 + 6).
@@ -116,7 +116,7 @@ test('a row in the lower half opens upwards instead', () => {
   const { getByTestId } = renderMenu({
     anchor: { anchor: { left: 280, top: 700, width: 36, height: 36 }, viewport: VIEWPORT },
   })
-  const panel = getByTestId('menu-item-play').parentElement!.parentElement!
+  const panel = getByTestId('menu-item-play').parentElement!.parentElement!.parentElement!
   expect(panel.style.bottom).toBe('206px') // 900 - 700 + 6, so it grows upwards
   expect(panel.style.top).toBe('')
 })

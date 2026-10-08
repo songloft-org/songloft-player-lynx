@@ -6,14 +6,7 @@ import {
   getFontScaleNumber,
   subscribeFontScale,
 } from './font-scale-model.js'
-import {
-  getReduceMotion,
-  subscribeReduceMotion,
-} from './reduce-motion-model.js'
-import {
-  getIncreaseContrast,
-  subscribeIncreaseContrast,
-} from './increase-contrast-model.js'
+import { useSurfaceAppearance } from './surface-appearance.js'
 import {
   getMaterialVariant,
   subscribeMaterialVariant,
@@ -24,13 +17,13 @@ import {
   subscribeSafeArea,
 } from '../../native/safe-area.js'
 import { getPlatformTarget } from '../../native/platform-target.js'
-import { getAppTheme, resolveTheme, subscribeAppTheme } from './theme-model.js'
 import {
   isFullVideoActive,
   subscribeFullVideoActive,
 } from './video-surface-model.js'
 import { getActiveThemePack, subscribeActiveThemePack } from './theme-pack-model.js'
 import { themePackToStyleVars } from './theme-pack-mapping.js'
+import { resolveMaterialTokens, resolveMenuMaterialFill } from './material-tokens.js'
 import './tokens.css'
 
 export interface ThemeProviderProps {
@@ -42,7 +35,8 @@ export interface ThemeProviderProps {
  * `theme-root theme-<light|dark>` (which declares all CSS custom properties
  * for the currently resolved theme). Everything rendered inside inherits the
  * token variables and base surface/content colors, and re-renders when the
- * user switches themes in Settings (`theme-model.ts`'s `subscribeAppTheme`).
+ * user switches themes in Settings. The root and blur leaves share the
+ * `surface-appearance.ts` subscription to theme and accessibility models.
  *
  * State holds the **resolved** theme, not the `AppTheme` choice. With the choice
  * in state, a host dark-mode flip under `'system'` (batch 21) would call
@@ -68,38 +62,17 @@ export interface ThemeProviderProps {
  * live inside it but outside `ShellLayout`, and it already re-renders on host pushes.
  */
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [theme, setTheme] = useState(() => resolveTheme(getAppTheme()))
+  const surface = useSurfaceAppearance()
+  const { theme, reduceMotion, increaseContrast } = surface
   const [pack, setPack] = useState(() => getActiveThemePack())
-  const [, setMaterial] = useState(() => getMaterialVariant())
+  const [material, setMaterial] = useState(() => getMaterialVariant())
   const [, setFontScale] = useState(() => getFontScaleNumber())
   const [insets, setInsets] = useState(() => getSafeAreaInsets())
 
-  // OS "reduce motion" accessibility flag → the `.reduce-motion` class that
-  // zeroes every `--duration-*` token (see `tokens.css`). Subscribed, not read
-  // at render, so a host toggle re-colours the whole tree in place. Defaults to
-  // motion-on until a host that reports the flag lands the class.
-  const [reduceMotion, setReduceMotion] = useState(() => getReduceMotion())
-
-  // The app-level "Increase Contrast" accessibility switch → the
-  // `.increase-contrast` class, which swaps in Apple's accessible accent and
-  // grey ladder per theme (see `tokens.css`). A user preference, not a host
-  // signal, so it is persisted and replayed at startup alongside the theme —
-  // see `increase-contrast-model.ts` for why it is app-side.
-  const [increaseContrast, setIncreaseContrast] = useState(() => getIncreaseContrast())
   const [fullVideo, setFullVideo] = useState(() => isFullVideoActive())
 
-  // The platform does not change at runtime — a host is iOS or it is not — so
-  // it is read once and pinned. The class it puts on the root lets the iOS
-  // Liquid Glass token override (see `tokens.css`'s `.platform-ios` blocks)
-  // take effect: on iOS the native UIGlassEffect is the readable surface, and
-  // the CSS `--material-fill*` comes down to a tint that lets it show. Other
-  // platforms keep the baseline fills, which `contrast.test.ts` still gates.
+  // Platform is pinned; surface capability comes from the registered host.
   const platform = useMemo(() => getPlatformTarget(), [])
-
-  useEffect(
-    () => subscribeAppTheme(() => setTheme(resolveTheme(getAppTheme()))),
-    [],
-  )
 
   // The pack arrives asynchronously (server round-trip after auth). Keeping a
   // live copy in state — not reading the model during render — is what makes
@@ -127,21 +100,28 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   )
 
   useEffect(
-    () => subscribeReduceMotion(() => setReduceMotion(getReduceMotion())),
-    [],
-  )
-
-  useEffect(
-    () => subscribeIncreaseContrast(() => setIncreaseContrast(getIncreaseContrast())),
-    [],
-  )
-
-  useEffect(
     () => subscribeFullVideoActive(setFullVideo),
     [],
   )
 
-  const vars = { ...themePackToStyleVars(pack?.data, theme), ...safeAreaStyleVars(insets) }
+  const vars = {
+    ...themePackToStyleVars(pack?.data, theme),
+    ...resolveMaterialTokens({
+      variant: material,
+      theme,
+      nativeGlass: surface.liquidGlass,
+      increaseContrast,
+      opaque: surface.opaque,
+    }),
+    '--material-fill-menu': resolveMenuMaterialFill({
+      variant: material,
+      theme,
+      nativeGlass: surface.liquidGlass,
+      increaseContrast,
+      opaque: surface.opaque,
+    }),
+    ...safeAreaStyleVars(insets),
+  }
   const style = vars as Record<string, string> & CSSProperties
 
   // Built here rather than inline so the state-driven classes read as a set:

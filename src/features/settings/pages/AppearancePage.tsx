@@ -48,6 +48,11 @@ import { SwitchRow } from '../widgets/SwitchRow.js'
 import { ThemeAppearancePicker } from '../widgets/ThemeAppearancePicker.js'
 import { SubPageShell } from '../widgets/SubPageShell.js'
 import { ThemePacksSection } from '../widgets/ThemePacksSection.js'
+import {
+  getReduceTransparency,
+  changeReduceTransparency,
+  subscribeReduceTransparency,
+} from '../../../shared/theme/reduce-transparency-model.js'
 
 /** i18n key for a language option's label. */
 function languageLabelKey(lang: AppLanguage): string {
@@ -125,6 +130,8 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
   const [fontScale, setFontScale] = useState<FontScaleOption>(getFontScale)
   const [increaseContrast, setIncreaseContrast] = useState<boolean>(getIncreaseContrast)
   const [language, setLanguage] = useState<AppLanguage>('system')
+  const [reduceTransparency, setReduceTransparency] = useState(getReduceTransparency)
+  useEffect(() => subscribeReduceTransparency(() => setReduceTransparency(getReduceTransparency())), [])
 
   useEffect(() => {
     let cancelled = false
@@ -258,6 +265,14 @@ export function AppearancePage({ onOpenCatalog }: { onOpenCatalog?: () => void }
           the whole app live. Grouped under their own heading so a second a11y
           switch has an obvious home rather than joining the colour pickers. */}
       <SettingsSection title={t('settings.accessibilitySection')}>
+        <SwitchRow
+          icon='eye'
+          title={t('settings.reduceTransparency')}
+          subtitle={t('settings.reduceTransparencyDesc')}
+          checked={reduceTransparency}
+          onChange={(on) => { void changeReduceTransparency(on) }}
+          testId='reduce-transparency'
+        />
         <SwitchRow
           icon='eye'
           title={t('settings.increaseContrast')}

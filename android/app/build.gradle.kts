@@ -146,6 +146,8 @@ dependencies {
     // `<input>` (login / server settings), overlay (Sheet), refresh,
     // `<webview>` (plugin pages).
     implementation("org.lynxsdk.lynx:xelement:4.0.0")
+    // Compile against the existing runtime blur implementation for its lifecycle guard.
+    implementation("org.lynxsdk.lynx:xelement-blur-view:4.0.0")
     implementation("org.lynxsdk.lynx:xelement-input:4.0.0")
     implementation("org.lynxsdk.lynx:xelement-overlay:4.0.0")
     implementation("org.lynxsdk.lynx:xelement-svg:4.0.0")

@@ -4,6 +4,7 @@ import { useBackHandler } from '../nav/use-back-handler.js'
 import { BackdropBlur } from './BackdropBlur.js'
 import { useAnchoredOverlay } from './anchored-overlay.js'
 import type { Placement } from './anchored-overlay.js'
+import { menuScrollMaxHeight } from './menu-viewport.js'
 import './overlay-motion.css'
 import './PopoverMenu.css'
 
@@ -112,8 +113,14 @@ export function PopoverSurface({
                * `z-index: -1`, so it sits under the rows without touching their
                * taps; see `BackdropBlur.tsx`.
                */}
-              <BackdropBlur className='ui-backdrop-blur--panel' container />
-              {children}
+              <BackdropBlur className='ui-backdrop-blur--panel' />
+              <scroll-view
+                className='popover-menu__scroll'
+                scroll-orientation='vertical'
+                style={{ maxHeight: menuScrollMaxHeight({ panelMaxHeight: position.maxHeight }) }}
+              >
+                <view className='popover-menu__content'>{children}</view>
+              </scroll-view>
             </view>
           </>
         )

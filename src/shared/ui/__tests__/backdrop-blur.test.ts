@@ -220,7 +220,7 @@ const PANEL_SITES: PanelSite[] = [
     modifier: 'ui-backdrop-blur--panel',
     panel: 'popover-menu',
     css: 'shared/ui/PopoverMenu.css',
-    firstChild: '{children}',
+    firstChild: "className='popover-menu__scroll'",
   },
   {
     name: 'bottom nav capsule',
@@ -246,7 +246,7 @@ const PANEL_SITES: PanelSite[] = [
     modifier: 'ui-backdrop-blur--panel',
     panel: 'global-menu__panel',
     css: 'shared/ui/GlobalMenu.css',
-    firstChild: "className='global-menu__items'",
+    firstChild: "className='global-menu__scroll'",
   },
 ]
 
@@ -272,21 +272,20 @@ describe('BackdropBlur component', () => {
     // blurs, which is wrong under a dark theme. iOS opts into the native
     // iOS-26 Liquid Glass material instead; every other platform follows the
     // resolved theme. The branching lives in `blurEffectFor`, exercised below.
-    expect(blurEffectFor('ios', 'light')).toBe('glass')
-    expect(blurEffectFor('ios', 'dark')).toBe('glass')
+    expect(blurEffectFor('ios', 'light')).toBe('light')
+    expect(blurEffectFor('ios', 'dark')).toBe('dark')
     expect(blurEffectFor('android', 'light')).toBe('light')
     expect(blurEffectFor('android', 'dark')).toBe('dark')
     expect(blurEffectFor('harmony', 'dark')).toBe('dark')
     expect(blurEffectFor('web', 'light')).toBe('light')
-    expect(COMPONENT).toMatch(/blur-effect=\{effect\}/)
-    expect(COMPONENT).toMatch(/blurEffectFor\(PLATFORM, theme\)/)
-    expect(COMPONENT).toMatch(/container && blurEffect === 'glass' \? 'glass-container' : blurEffect/)
-    expect(COMPONENT).toMatch(/glass-style=\{glassStyle\}/)
-    expect(COMPONENT).toMatch(/ios-user-interface-style=\{theme\}/)
-    expect(COMPONENT).toMatch(/resolveTheme\(getAppTheme\(\)\)/)
+    expect(COMPONENT).toMatch(/blurEffectFor\(platform, theme\)/)
+    expect(COMPONENT).not.toMatch(/container\?:|blur-effect=['"]glass-container/)
+    expect(COMPONENT).toMatch(/'glass-style': 'regular'/)
+    expect(COMPONENT).toMatch(/'ios-user-interface-style': theme/)
+    expect(COMPONENT).toMatch(/useSurfaceAppearance\(/)
     // Resolved theme, subscribed: under 'system' the choice never changes when
     // the host flips appearance, so subscribing to the choice alone would stick.
-    expect(COMPONENT).toMatch(/subscribeAppTheme\(/)
+    expect(read('shared/theme/surface-appearance.ts')).toMatch(/subscribeAppTheme\(/)
   })
 
   it('keeps the base class an inset-0 fill that paints nothing', () => {
@@ -433,7 +432,7 @@ describe('panel mode', () => {
       it('mounts the blur as the panel’s first child, with its modifier', () => {
         const tsx = read(site.tsx)
         expect(tsx).toContain(`import { BackdropBlur } from '${importPath(site.tsx)}'`)
-        const mount = `<BackdropBlur className='${site.modifier}' container />`
+        const mount = `<BackdropBlur className='${site.modifier}' />`
         const blur = tsx.indexOf(mount)
         expect(blur, `${mount} is not mounted`).toBeGreaterThan(-1)
         const panel = tsx.indexOf(site.panel)
@@ -566,7 +565,7 @@ describe('panel mode', () => {
       .toMatch(/\{!anchored && <BackdropBlur \/>\}/)
     // Anchored: a popover, so panel mode — no dim, the material is the panel.
     expect(tsx, 'the anchored form is a popover and needs the panel-mode layer')
-      .toMatch(/\{anchored && <BackdropBlur className='ui-backdrop-blur--panel' container \/>\}/)
+      .toMatch(/\{anchored && <BackdropBlur className='ui-backdrop-blur--panel' \/>\}/)
     const css = stripCssComments(read('shared/ui/GlobalMenu.css'))
     expect(css, 'only the docked form dims the page behind it').toMatch(
       /\.global-menu__backdrop--docked\s*\{[^{}]*background-color:\s*var\(--backdrop\)/,
@@ -578,11 +577,11 @@ describe('panel mode', () => {
     // The surface itself matches the popovers it sits beside. Asserted against
     // `.popover-menu`'s own rule rather than a literal, so the two cannot drift
     // apart again the way they just did.
-    const surface = /background-color:\s*var\(--material-fill-elevated\)/
+    const surface = /background-color:\s*var\(--material-fill-menu\)/
     expect(block(stripCssComments(read('shared/ui/PopoverMenu.css')), '.popover-menu'))
       .toMatch(surface)
     expect(
-      block(css, '.global-menu__panel'),
+      block(css, '.global-menu__panel--anchored'),
       'the song menu must use the same fill as the toolbar menus beside it',
     ).toMatch(surface)
   })
