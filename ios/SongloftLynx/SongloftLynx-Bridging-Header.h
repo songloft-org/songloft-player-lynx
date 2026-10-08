@@ -25,6 +25,7 @@ NS_INLINE LynxTemplateResource * _Nonnull SongloftTemplateResourceFromData(NSDat
 #import <Lynx/LynxContextModule.h>
 #import <Lynx/LynxLoadMeta.h>
 #import <Lynx/LynxTemplateData.h>
+#import <Lynx/LynxVersion.h>
 
 // Host HTTP service (batch 45). `LynxServiceHttpProtocol.h` transitively brings
 // in `LynxHttpRequest`/`LynxHttpResponse`, the `LynxHttpCallback` block typedef,

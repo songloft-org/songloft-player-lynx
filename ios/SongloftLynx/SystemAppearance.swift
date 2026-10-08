@@ -1,5 +1,4 @@
 import UIKit
-import Lynx
 
 /**
  * The host half of the system-appearance contract: the OS dark/light setting and
