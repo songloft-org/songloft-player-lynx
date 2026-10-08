@@ -23,7 +23,7 @@ Use the smallest relevant reference set.
 
 ## Rules
 
-- Import from `@lynx-js/lynx-ui` unless the API reference requires a package-specific import.
+- Follow the consuming repository's import constraints. Songloft imports component packages individually and uses `src/shared/ui/AppSwitch.tsx`; its AGENTS.md forbids the `@lynx-js/lynx-ui` barrel and `@lynx-js/lynx-ui-popover`. Check installed exports before adapting upstream examples.
 - Preserve documented component composition and state handling.
 - Verify props, methods, and exports in `api.md`.
 - Treat examples as usage patterns; verify their APIs in `api.md`.

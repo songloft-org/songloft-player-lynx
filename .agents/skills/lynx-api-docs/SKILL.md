@@ -34,6 +34,16 @@ Lynx is **not** a web browser. Web assumptions produce broken Lynx code:
 4. Apply the rules and constraints from the doc
 5. If uncertain, search the `elements/` or `css/` directories
 
+## Version and Host Checks
+
+This is a local reference snapshot, not a guarantee that every installed host supports every documented feature. Check the host SDK, bundle `engineVersion`, build flags, element dependencies/registration, and OS version before adopting an API.
+
+For missing or conflicting coverage, use the [official documentation index](https://lynxjs.org/llms.txt), then the versioned API page for the target SDK. `/next/llms.txt` describes development documentation and can include features newer than the shipped SDK; do not infer availability from it alone.
+
+- Native backdrop blur and iOS Liquid Glass: read [elements/blur-view.md](elements/blur-view.md). Liquid Glass is an element capability, not proof of native CSS `backdrop-filter` support.
+- CSS media queries: read [patterns/responsive.md](patterns/responsive.md). Lynx 4.0+ supports them with CSS Rule encoding enabled; older blanket prohibitions are obsolete.
+- CSS property/value compatibility: query the sibling `lynx-check-css-support` skill with the actual backend and SDK version. Its dataset does not cover element attributes or CSS at-rules.
+
 ## Quick Reference
 
 | Task | Read These Files First |
@@ -42,6 +52,7 @@ Lynx is **not** a web browser. Web assumptions produce broken Lynx code:
 | CSS properties/units | `css/supported-properties.md`, `css/values-and-units.md` |
 | CSS selectors | `css/selectors.md`, `css/pseudo-classes.md` |
 | Use an element | `elements/<element-name>.md` |
+| Backdrop blur / Liquid Glass | `elements/blur-view.md` (OS, host registration, Web fallback, glass props) |
 | Migrate from web | `lynx-vs-web/migration-guide.md`, `lynx-vs-web/css-differences.md` |
 | Theming/animation/responsive | `patterns/theming.md`, `patterns/animation.md`, `patterns/responsive.md` |
 | General lookup | `quick-reference.md`, `best-practices.md` |

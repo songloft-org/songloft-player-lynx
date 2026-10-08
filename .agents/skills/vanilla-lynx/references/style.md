@@ -76,8 +76,8 @@ Avoid cyclic percentage sizing. A percentage beneath an `auto`, `fit-content`, o
 
 ## Build Responsive Styles
 
-- Do not use `@media`; it has no runtime effect in Lynx.
-- Prefer `rem` with `vw`, or use `vw` and `vh` directly. Use JavaScript when the style must switch at a discrete breakpoint.
+- Lynx 4.0+ supports a subset of CSS media queries when the build enables CSS Rule encoding (`pluginLynxConfig({ enableCSSRule: true })`). Without that flag, the rules are not encoded and have no runtime effect. Check the host SDK and build configuration before using them; see the [official Media Query reference](https://lynxjs.org/4.0/api/css/media-query.html) for supported features and limits.
+- Use `rem`, `vw`, and `vh` for fluid scaling, enabled media queries for style breakpoints, and JavaScript when the component tree must change or the target cannot encode media rules.
 - `rpx` works in Lynx but is not Web-compatible.
 - Only `env(safe-area-inset-top|right|bottom|left)` is supported.
 - Do not use physical units (`cm`, `mm`, `in`, `pt`, `pc`) or `ch` and `ex`. Treat `vmin` and `vmax` as partially supported.

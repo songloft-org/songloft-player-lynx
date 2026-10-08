@@ -2,6 +2,41 @@
 
 Build responsive layouts in Lynx.
 
+## CSS Media Queries (Lynx 4.0+)
+
+Lynx 4.0 adds a subset of CSS Media Queries Level 4. Both the host SDK and bundle build must support the feature. CSS Rule encoding is required; without it, media rules are not encoded and have no runtime effect.
+
+Add the config plugin to the existing build plugins, preserving the ReactLynx and other plugins:
+
+```ts
+import { pluginLynxConfig } from '@lynx-js/config-rsbuild-plugin'
+
+// Inside the existing plugins array:
+pluginLynxConfig({ enableCSSRule: true })
+```
+
+Verify the installed config plugin and encoder support this option and that the bundle's engine compatibility matches the target hosts. Songloft currently targets `engineVersion: '2.14'` and does not enable `enableCSSRule` in `lynx.config.ts`; upgrading native hosts to 4.0 alone does not activate media queries. Do not change that build contract merely to follow a documentation example.
+
+```css
+.container {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Requires Lynx 4.0+ and CSS Rule encoding. */
+@media (min-width: 768px) {
+  .container { flex-direction: row; }
+}
+```
+
+- Supported queries include viewport width/height, aspect ratio, orientation, pixel density, and `prefers-color-scheme`, with min/max forms, range syntax, query lists, and logical conditions.
+- `device-*` dimensions use the viewport, not the physical device size. The host must update viewport/screen metrics during resizing or folding.
+- Native `prefers-color-scheme` depends on the host's color-scheme update API; a theme class or globalProps field alone does not establish that integration. Preserve Songloft's existing theme and reduce-motion contracts.
+- Native `hover`/`pointer` queries have no host-provided environment values; do not use them as reliable capability probes. Unrecognized features evaluate to false. `print` and other non-screen media types never match.
+- For older hosts or builds without CSS Rule encoding, use fluid units and host-driven JavaScript breakpoints. Web behavior must be checked independently against the installed web-core/build pipeline.
+
+Sources, checked 2026-10-08: [Lynx 4.0 release](https://lynxjs.org/next/blog/lynx-4-0), [Media Query API](https://lynxjs.org/4.0/api/css/media-query.html), [official API source](https://github.com/lynx-family/lynx-website/blob/main/docs/en/api/css/media-query.mdx). Development docs may cover newer APIs; apply SDK gates rather than assuming all examples work in 4.0.
+
 ## Scale Automatically with `rem` and `vw` (Recommended)
 
 > **Recommended approach:** Use `rem` together with `vw` to set the root font size. `rpx` is a fully supported Lynx-specific unit, but it is not Web-compatible.
@@ -35,10 +70,10 @@ page {
 
 ## Use Viewport Units (`vw` and `vh`)
 
-> **Note:** Lynx does **not** support CSS `@media` queries. Use viewport units to create fluid layouts.
+> Viewport units provide fluid layouts on both older and newer hosts. Media queries additionally require the version and encoding checks above.
 
 ```css
-/* Use vw instead of @media */
+/* Fluid layout without a discrete breakpoint */
 .container {
   display: flex;
   flex-direction: column;
@@ -151,10 +186,10 @@ Combine this with conditional rendering:
 
 ## Responsive Design Best Practices
 
-1. **Start mobile-first**: Define mobile styles first, then adjust them dynamically with JavaScript.
+1. **Start mobile-first**: Define mobile styles first, then use enabled media queries for style changes or JavaScript for structural changes.
 2. **Use `rem`**: Prefer `rem` for responsive scaling, with `vw` defining the root font size.
 3. **Use viewport units**: Use `vw` and `vh` to create fluid layouts.
-4. **Choose breakpoints in JavaScript**:
+4. **Choose breakpoints for the actual content**, in enabled media queries or JavaScript:
    - 320px - Small phone
    - 375px - Standard iPhone
    - 414px - iPhone Plus
@@ -164,10 +199,10 @@ Combine this with conditional rendering:
 
 ## Common Pitfalls
 
-### Do Not Use `@media`
+### Do Not Assume `@media` Is Enabled
 
 ```css
-/* ❌ Unsupported: this rule has no effect */
+/* No effect in native bundles without CSS Rule encoding, or on older SDKs. */
 @media (min-width: 768px) {
   .container {
     flex-direction: row;

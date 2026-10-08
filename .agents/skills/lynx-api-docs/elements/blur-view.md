@@ -1,6 +1,10 @@
 # Lynx blur-view Element
 
-This guide covers the current native Android, iOS, and Harmony `<blur-view>` element behavior.
+This guide covers the open-source Lynx 4.0 `<blur-view>` on Android, iOS, HarmonyOS, and Web. Checked against the [official API source](https://github.com/lynx-family/lynx-website/blob/main/docs/en/api/elements/built-in/blur-view-API.mdx) and [platform compatibility data](https://github.com/lynx-family/lynx-website/blob/main/packages/lynx-compat-data/elements/blur-view.json) on 2026-10-08. Development documentation may include later APIs; check their SDK gates separately.
+
+## Host Integration
+
+The element must be installed and registered in the host; TypeScript props and an SDK version alone do not establish runtime availability. For Songloft, reuse `src/shared/ui/BackdropBlur.tsx`: Android registers XElement behaviors, iOS includes `XElement/BlurView`, and Web aliases the older `x-blur-view` implementation. HarmonyOS's current dependency/registration list does not establish a blur implementation; retain its material fallback until integration is verified.
 
 ## When to Use `<blur-view>`
 
@@ -9,6 +13,7 @@ This guide covers the current native Android, iOS, and Harmony `<blur-view>` ele
 - you need a child-hosting visual container with a blur treatment
 - you want one portable blur control through `blur-radius`
 - you need iOS material-style blur selection such as `light`, `dark`, or `extra-light`
+- you need native iOS 26+ Liquid Glass, including style, tint, interactive behavior, or grouped glass surfaces
 - you need Android to blur only the overlap with a specific Lynx view id
 - you need Android runtime blur auto-update control
 
@@ -23,11 +28,12 @@ This guide covers the current native Android, iOS, and Harmony `<blur-view>` ele
 - treat `<blur-view>` as a container that accepts Lynx children
 - use `blur-radius` as the main portable blur prop
 - prefer string length values such as `"16px"` for `blur-radius` when Android or Harmony is in scope
-- keep `blur-effect` and `spacing` in the iOS-only lane
+- keep `blur-effect`, `glass-style`, `glass-tint-color`, `glass-interactive`, and `spacing` in the iOS-only lane
 - keep `android-capture-target`, `blur-sampling`, `enable-auto-blur`, `experimental-update-blur-radius`, and `enableAutoBlur(...)` in the Android-only lane
 - pass a raw Lynx `id` such as `"backdrop"` to Android `android-capture-target`; do not include `#`
 - when Android version requirements matter, separate the declared build floor from the practical runtime floor
 - Harmony currently only proves `blur-radius`, and the native path is gated by the platform API level
+- Web supports `blur-radius` through browser CSS `backdrop-filter`; native presets, glass effects, and Android capture controls are not supported
 
 ## Quick Start
 
@@ -56,7 +62,7 @@ This guide covers the current native Android, iOS, and Harmony `<blur-view>` ele
 Use `android-capture-target` on Android when the blur source should be a specific view instead of the default parent-walk source. The prop value is the target view's raw `id`, and Android only blurs the part where that target view intersects the `<blur-view>`.
 
 ```tsx
-<view id="backdrop" style={{ width: '100%', height: '260px' }}>
+<view id="backdrop" flatten={false} style={{ width: '100%', height: '260px' }}>
   <image src={heroImage} style={{ width: '100%', height: '100%' }} />
 </view>
 
@@ -96,23 +102,42 @@ this.getNodeRef('#blur').invoke({
 </blur-view>
 ```
 
-On supported iOS `26+` paths, `blur-effect="glass"` and `blur-effect="glass-container"` may select the newer glass-material path. Do not assume those values are portable.
+### iOS Liquid Glass
+
+With a registered Lynx 4.0+ blur element and iOS 26+, `blur-effect="glass"` selects `UIGlassEffect`. `glass-container` selects `UIGlassContainerEffect` for grouping child glass surfaces; `spacing` controls when those surfaces merge. A container does not turn ordinary child views into glass surfaces.
+
+```tsx
+<blur-view
+  blur-effect="glass-container"
+  spacing={16}
+  style={{ display: 'flex', flexDirection: 'row', width: '240px', height: '56px' }}
+>
+  <blur-view
+    blur-effect="glass"
+    glass-style="regular"
+    glass-tint-color="#1479ff"
+    glass-interactive={true}
+    style={{ width: '112px', height: '56px', borderRadius: '28px' }}
+  >
+    <text>Play</text>
+  </blur-view>
+</blur-view>
+```
+
+Use a normal blur/material fallback on older iOS versions and other platforms; verify the installed implementation's downgrade behavior. Do not assume a translucent CSS fill reproduces native Liquid Glass. Keep opaque decoration from covering the effect and verify actual UI rendering.
 
 ## Android Version Requirements
 
 Answer Android version questions in two layers:
 
-- declared Android integration floor in this repo:
-  - `minSdkVersion 16`
-  - `targetSdkVersion 28`
-  - `compileSdkVersion 30`
+- declared Android integration floor: inspect the consuming app's Gradle configuration and the installed XElement dependency, rather than copying SDK values from an upstream example
 - practical runtime guidance:
   - treat Android `23+` as the practical floor for the intended auto-updating backdrop blur path, because the implementation forcibly disables blur auto-update below `23`
   - Android `29+` adds `RenderNode` replay for the blurred bitmap
   - Android `31+` is the first bucket where the `RenderEffect` path can be used
   - auto-updating blur also expects a hardware-accelerated window
 
-If you only need the packaging floor, `minSdkVersion 16` is the declared answer. If you need the blur effect to behave as designed, use `23+` as the safer Android guidance.
+If you need the blur effect to behave as designed, use `23+` as practical Android guidance in addition to the consuming app's own minimum SDK.
 
 ## Properties
 
@@ -131,6 +156,9 @@ If you only need the packaging floor, `minSdkVersion 16` is the declared answer.
 | `enable-auto-blur` | Android | Enables or disables automatic blur refresh during pre-draw |
 | `experimental-update-blur-radius` | Android | Switches the Android internal blur-buffer refresh path |
 | `blur-effect` | iOS | Selects the iOS blur material such as `light`, `dark`, or `extra-light`; supported iOS `26+` paths may also honor `glass` and `glass-container` |
+| `glass-style` | iOS 26+ | `'regular'` (default) or `'clear'` for `UIGlassEffect` |
+| `glass-tint-color` | iOS 26+ | Tint color for the glass effect; default `'transparent'` |
+| `glass-interactive` | iOS 26+ | Enables interactive glass behavior; boolean, default `false` |
 | `spacing` | iOS | Sets the glass-container merge spacing |
 
 ## UI Methods
@@ -174,17 +202,22 @@ The current native Android, iOS, and Harmony implementations do not prove any el
 
 ## Platform Availability Matrix
 
-| Feature | Android | iOS | Harmony |
-| --- | --- | --- | --- |
-| Child-hosting container | Yes | Yes | Yes |
-| `blur-radius` | Yes | Yes | `API 15+` |
-| `blur-effect` | No | Yes | No |
-| `spacing` | No | Yes | No |
-| `android-capture-target` | Yes | No | No |
-| `blur-sampling` | Yes | No | No |
-| `enable-auto-blur` prop | Yes | No | No |
-| `enableAutoBlur(...)` method | Yes | No | No |
-| `glass` / `glass-container` material values | No | Supported iOS `26+` path only | No |
+This matrix describes element support, subject to host integration; it does not certify Songloft device behavior.
+
+| Feature | Android | iOS | HarmonyOS | Web |
+| --- | --- | --- | --- | --- |
+| Child-hosting container | Yes | Yes | Yes | Yes |
+| `blur-radius` | Yes | Yes | `API 15+` | Browser backdrop-filter |
+| `blur-effect` | No | Yes | No | No |
+| `spacing` | No | Yes | No | No |
+| `android-capture-target` | Yes | No | No | No |
+| `blur-sampling` | Yes | No | No | No |
+| `enable-auto-blur` prop | Yes | No | No | No |
+| `enableAutoBlur(...)` method | Yes | No | No | No |
+| `glass` / `glass-container` material values | No | iOS 26+ | No | No |
+| `glass-style`, `glass-tint-color`, `glass-interactive` | No | iOS 26+ | No | No |
+
+Web updates the backdrop automatically; `enable-auto-blur` does not disable browser updates. Older web-core releases need the `x-blur-view` tag or a host alias. Do not apply mobile support claims to Clay desktop backends.
 
 ## What Not to Assume
 

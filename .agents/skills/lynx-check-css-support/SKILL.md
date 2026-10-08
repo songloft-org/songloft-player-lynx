@@ -9,6 +9,8 @@ Use the bundled CLI instead of inferring Lynx support from browser CSS behavior,
 
 Treat this skill as the authority for declared backend/version availability. For questions about how a property behaves, layout semantics, syntax, or usage examples, consult the official Lynx documentation. If a request asks both whether a feature is supported and how it behaves, query support here first, then consult the docs.
 
+The CLI covers CSS properties and their nested values, not element attributes or at-rules. For native backdrop blur / Liquid Glass, consult `lynx-api-docs/elements/blur-view.md`; absence of CSS `backdrop-filter` does not mean `<blur-view>` is unsupported. For `@media`, consult `lynx-api-docs/patterns/responsive.md` and check Lynx 4.0+ plus `enableCSSRule`; an unknown CLI property is not evidence against the at-rule.
+
 ## Query support
 
 Resolve this skill directory, then run:
@@ -76,10 +78,12 @@ Treat `availability` as follows:
 
 ## Keep data current
 
+The bundled snapshot was reviewed and synchronized from the official npm package `@lynx-js/css-defines@0.0.18` on 2026-10-08. It includes declarations for SDK versions newer than Songloft's hosts (for example 4.2); always pass `--lynx-version` when checking this project. Package freshness does not imply host availability.
+
 Report the displayed package version with every compatibility answer. When the user asks whether the data is current, or freshness is important to the task, run:
 
 ```bash
 node <skill-directory>/scripts/query-css-compat.mjs --check-updates
 ```
 
-Use `--json` when structured output is useful. The check reads only the latest numeric version from the public npm registry. It does not download dataset files, modify the bundled copy, or accept cache overrides. If an update is available, report both versions and recommend updating the skill. Compatibility data changes only through reviewed skill releases that bump the pinned dependency.
+Use `--json` when structured output is useful. The check reads only the latest numeric version from the public npm registry. It does not download dataset files, modify the bundled copy, or accept cache overrides. If an update is available, report both versions and recommend a reviewed skill update. Synchronize the pinned package version and its definition JSON together, review the published changes, and verify CLI queries against older and newer SDK targets before accepting a new snapshot. Never update data as a side effect of an ordinary compatibility query.

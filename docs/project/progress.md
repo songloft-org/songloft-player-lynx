@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-08 · Lynx 4.0 skills 核查与更新
+
+- 核对官方 Lynx 4.0 公告、blur-view 属性/兼容性源码及 Media Query 文档；补齐 iOS 26+ 的 `glass-style`、`glass-tint-color`、`glass-interactive`、子玻璃表面分组语义、Android capture target 的 `flatten={false}` 与 Web 部分支持说明。原有 `BackdropBlur` 已消费玻璃效果，本批不修改应用 UI 或宿主集成。
+- 修正 `lynx-api-docs` 多处和 `vanilla-lynx` 中「不支持 @media」的过时结论：4.0+ 还需 CSS Rule encoding。当前 `lynx.config.ts` 的 `engineVersion: '2.14'` 且未启用 `enableCSSRule`，不宣称项目已开启媒体查询。增加官方索引/版本页查询路径，区分 CSS 属性、元素属性和 at-rule；`lynx-ui` 导入规则对齐 AGENTS.md。
+- 审查官方 npm 变更后，将离线 `css-defines` JSON 与包版本从 0.0.16 同步为 0.0.18；不改运行时依赖和上游安装来源锁。新数据含 4.2 门槛，查询必须带目标 SDK。验证包含 skill 结构、官方数据一致性、4.0/4.2/显式不支持后端的 CLI 结果与 diff/编码检查；未运行应用构建或设备 UI 验证，本批仅改 skills 与记录。未提交或推送。
+
 ## 2026-10-08 · 客户端自动热更新
 
 - 用户已授权提交并推送。提交前逐文件核对默认值、偏好持久化、任务互斥、关闭/取消与代理重试竞态、定时器生命周期、原生兼容和回退及双语文档，未发现新增问题；沿用下述验证结果，不重复无关测试。提交包括本功能、测试和对应记录，父仓库同步子模块指针，结果以 Git 记录为准。下述未提交状态为实施阶段快照。

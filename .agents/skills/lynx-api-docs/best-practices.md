@@ -194,7 +194,7 @@ list-item {
   flex-direction: column;
 }
 
-/* Note: Lynx does not support @media. Adjust with JavaScript or viewport units. */
+/* Lynx 4.0+ can use @media with enableCSSRule; otherwise use JS or fluid units. */
 /* JavaScript: if (viewportWidth >= 768) { setLayout('row') } */
 ```
 
@@ -242,7 +242,7 @@ list-item {
 
 ### Grid Layout Patterns
 
-**Note:** Lynx does **not** support `@media` queries. See [Responsive Layout Patterns](patterns/responsive.md) for responsive layout strategies.
+**Note:** Lynx 4.0+ supports `@media` with CSS Rule encoding enabled. See [Responsive Layout Patterns](patterns/responsive.md) for prerequisites and older-target fallbacks.
 
 ## Style Organization
 
@@ -362,7 +362,7 @@ page {
 
 #### 20. Scale Typography
 
-⚠️ **Note:** Lynx does **not** support `@media`. Use one of the following alternatives:
+For fluid typography, use the following approaches. Discrete style breakpoints can use `@media` on Lynx 4.0+ with CSS Rule encoding enabled; see [Responsive Layout Patterns](patterns/responsive.md).
 
 **Option 1: Use `rem` (recommended)**
 

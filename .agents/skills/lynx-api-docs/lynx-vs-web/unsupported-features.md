@@ -137,20 +137,20 @@ The CSS parser recognizes the following selectors without reporting an error, bu
 
 #### Media Queries: `@media` ⚠️
 
-**Important**: Lynx does **not support** the CSS `@media` rule.
+Lynx 4.0+ supports a subset of CSS Media Queries Level 4 when the build enables CSS Rule encoding (`enableCSSRule: true`). Older SDKs and bundles without that flag do not apply media rules. See [Responsive Layout Patterns](../patterns/responsive.md) for the build prerequisite and host checks.
 
-- ❌ **Completely unsupported**: `@media (min-width: ...)` and `@media (max-width: ...)` have no effect at runtime
-- ❌ **Unsupported**: `@media print`
-- ❌ **Unsupported**: Other media types such as `@media speech` and `@media tty`
+- Width/height, aspect ratio, orientation, pixel density, and color-scheme queries are supported, subject to documented host integration.
+- `@media print`, `speech`, and `tty` never match on the native screen-only surface.
+- Unrecognized features evaluate to false; do not assume all browser media features or preference queries are implemented.
 
-**Alternatives**:
+**Fluid layouts and fallbacks for older or unconfigured targets**:
 
 1. Use **`rem` with `vw`** for responsive adaptation; this is **recommended**.
 2. Use **viewport units**, `vw` and `vh`, for fluid layouts.
 3. Adjust styles dynamically with **JavaScript**.
 
 ```css
-/* Recommended: use rem with vw instead of media queries. */
+/* Fluid scaling also works without media-query encoding. */
 page {
   font-size: calc(100vw / 23.4375); /* 1rem = 16px at a width of 375px */
 }
@@ -179,7 +179,7 @@ if (viewportWidth >= 768) {
 ```
 
 ```css
-/* Use viewport units instead of media queries. */
+/* Viewport-unit fallback for older or unconfigured targets. */
 .container {
   width: 100vw;
   padding: 4vw; /* Adjusts automatically to the viewport width. */
