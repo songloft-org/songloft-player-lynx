@@ -59,7 +59,7 @@ The native downloader independently enforces channel/newness: stable versions st
 
 ## Channel checks and interaction
 
-About separates client updates from backend upgrades and displays immutable shell and running bundle identities. Checks are manual, downloads never replace the running root, and prepared code applies on the next cold start. Task state survives navigation, progress is scoped to taskId, and cancellation waits for native termination. Builtin restore requires a second tap and also applies on the next cold start.
+About separates client updates from backend upgrades and displays immutable shell and running bundle identities. Checks are manual by default; enabling “Automatically check for updates” checks and downloads compatible new bundles automatically. Downloads never replace the running root, and prepared code applies on the next cold start. Task state survives navigation, progress is scoped to taskId, and cancellation waits for native termination. Builtin restore requires a second tap and also applies on the next cold start.
 
 - Dev queries only `releases/tags/dev`; stable queries only `releases/latest`. Drafts, cross-channel manifests, stable prereleases, and unexpected asset URLs are rejected. No history or alternate channel is consulted; bundle and package links share one candidate.
 - Matching valid dev commits mean no update; different commits mean an update. Missing commits fall back to build timestamps with a ten-minute minimum increase. Stable versions must strictly increase numerically. Insufficient metadata displays an unknown comparison and the channel release page instead of claiming current or suggesting an older package.
@@ -67,6 +67,18 @@ About separates client updates from backend upgrades and displays immutable shel
 - Metadata bypasses business HttpClient and never sends Songloft tokens, Authorization, or Cookie. Native system TLS permits at most eight HTTPS-validated redirects, a twelve-second overall network deadline, and bounded streaming: API 512 KiB, manifest 128 KiB, signature 8 KiB. Web uses browser TLS and bounded credential-free fetch.
 - The existing HTTPS GitHub proxy prefix wraps API and download addresses separately, without credentials/query parameters. Proxy transport failures retry only the same direct URL. Native signature/hash checks remain mandatory.
 - Android/HarmonyOS offer APK/HAP; iOS explains IPA signing. Web offers the matching standalone/embedded deployment archive and refresh guidance; native bundles cannot update the Web host scripts.
+
+## Automatic checks and downloads
+
+The switch defaults to OFF and uses the device-local `client_automatic_update` preference in `SongloftStorage.prefs`, independently of accounts and servers. Android/iOS/HarmonyOS share scheduling. Web hides the switch; older shells without secure metadata support disable it. Native signatures, the complete compatibility contract, and download hashes remain mandatory. Incompatible releases offer installation links in About.
+
+- Enabling checks immediately. Cold launches check asynchronously after the real page renders, with at least ten minutes between automatic startup checks; manual checks bypass this throttle. A trial bundle must confirm startup before another automatic update can proceed.
+- While running, the app checks every six hours and catches up on overdue work when returning to the foreground. Timers are not guaranteed while suspended or closed; no OS background jobs are added. The next launch/resume catches up. Downloads preserve playback without refreshing the root or restarting; native hosts still select bundles on cold launches.
+- Manual and automatic checks share the complete request and result. Downloads share one exclusive task and About progress. Existing pending bundles are preserved until cold activation. Public GitHub releases remain directly reachable when the backend is offline; metadata carries no business credentials.
+- Network/download failures back off for thirty minutes, two hours, and six hours. Persisted deadlines survive relaunches. Errors and compatibility results remain in About without automatic dialogs.
+- Turning OFF stops scheduling and cancels automatic downloads, leaving manual downloads alone. Prepared bundles still activate on the next cold launch. Cancelling skips that bundle ID + SHA-256 for automatic tasks; manual retry and new identities/corrected hashes remain eligible.
+- Bundle identity is journaled before downloading. On the next launch, native rollback state suppresses automatic reinstallation of the failed bundle. Native pending state takes precedence over download timeout results. Builtin restore also disables automatic updates to prevent immediate redownload.
+- Preference reads have a five-second limit; missing/corrupt data defaults to OFF. Writes are serialized and late reads cannot overwrite user choices. Scheduling works without opening About, and route changes cannot create duplicate timers.
 
 ## Validation and outstanding work
 

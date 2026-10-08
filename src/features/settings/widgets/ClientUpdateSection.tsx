@@ -1,16 +1,17 @@
 import { useEffect, useState } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 import { appConfig } from '../../../core/config/app-config.js'
-import { checkClientUpdate, updateIdentity, type ClientUpdateCheck } from '../../../core/updater/client-updates.js'
+import { updateIdentity } from '../../../core/updater/client-updates.js'
 import { nativeUpdateMetadataAvailable, nativeUpdaterAvailable } from '../../../core/updater/native-updater.js'
 import { releaseAsset, releasePage, withGithubProxy } from '../../../core/updater/release-resolver.js'
-import { cancelClientBundle, downloadClientBundle, refreshUpdateSession, restoreClientBuiltin, updateSession } from '../../../core/updater/update-session.js'
+import { cancelClientBundle, checkClientRelease, downloadClientBundle, refreshUpdateSession, restoreClientBuiltin, updateSession } from '../../../core/updater/update-session.js'
+import { automaticUpdatePolicy } from '../../../core/updater/automatic-update-policy.js'
 import { getPlatformTarget } from '../../../native/platform-target.js'
 import { openURL } from '../../../native/native-platform.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
-import { getSettingsApi } from '../api/index.js'
 import { SettingsRow } from './SettingsRow.js'
 import { SettingsSection } from './SettingsSection.js'
+import { SwitchRow } from './SwitchRow.js'
 import './ClientUpdateSection.css'
 
 function errorKey(error: string): string {
@@ -23,17 +24,17 @@ function reasonKey(reason: string): string {
   return 'incompatible'
 }
 
-/** Manual public release checks; downloads preserve playback and activate on the next cold launch. */
+/** Shared manual/automatic update state; prepared bundles activate on the next cold launch. */
 export function ClientUpdateSection() {
   const { t } = useTranslation()
   const [session, setSession] = useState(updateSession.getState())
-  const [checking, setChecking] = useState(false)
-  const [check, setCheck] = useState<ClientUpdateCheck | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [automatic, setAutomatic] = useState(automaticUpdatePolicy.store.getState())
   const [restoreConfirm, setRestoreConfirm] = useState(false)
   const web = isWebPlatform()
   const native = !web && nativeUpdaterAvailable()
   const available = web || nativeUpdateMetadataAvailable()
+  const { checking, check } = session
+  const error = session.checkError ? errorKey(session.checkError) : null
   const identity = updateIdentity(session.native)
   const page = releasePage(identity.channel)
   const busy = checking || session.operation !== null || !!session.native?.download
@@ -45,26 +46,25 @@ export function ClientUpdateSection() {
     return unsubscribe
   }, [])
   useEffect(() => {
+    if (!native) return
+    const unsubscribe = automaticUpdatePolicy.store.subscribe(setAutomatic)
+    setAutomatic(automaticUpdatePolicy.store.getState())
+    void automaticUpdatePolicy.hydrate()
+    return unsubscribe
+  }, [native])
+  useEffect(() => {
     if (!session.native?.download || session.operation) return
     const timer = setInterval(() => { void refreshUpdateSession() }, 2000)
     return () => clearInterval(timer)
   }, [session.native?.download?.task_id, session.operation])
-  // A late check can populate the short public cache, but cannot write an unmounted widget.
-  useEffect(() => {
-    let mounted = true
-    if (checking) {
-      void (async () => {
-        let proxy = ''
-        try { proxy = await getSettingsApi().getGithubProxy() } catch { /* Offline backend: public GitHub remains usable. */ }
-        return checkClientUpdate({ proxy, force: true })
-      })().then(value => { if (mounted) setCheck(value) })
-        .catch(value => { if (mounted) setError(errorKey((value as Error).message)) })
-        .finally(() => { if (mounted) setChecking(false) })
-    }
-    return () => { mounted = false }
-  }, [checking])
-
-  const startCheck = () => { if (!busy) { setError(null); setCheck(null); setChecking(true) } }
+  const startCheck = () => {
+    'background only'
+    if (!busy) void checkClientRelease({ force: true }).catch(() => { })
+  }
+  const changeAutomatic = (enabled: boolean) => {
+    'background only'
+    void automaticUpdatePolicy.setEnabled(enabled)
+  }
   const openPackage = () => {
     const platform = getPlatformTarget()
     const assetName = web ? `songloft-lynx-web-${appConfig.isEmbedded ? 'embedded' : 'standalone'}.tar.gz`
@@ -76,7 +76,7 @@ export function ClientUpdateSection() {
   }
   const restore = () => {
     if (!restoreConfirm) setRestoreConfirm(true)
-    else { setRestoreConfirm(false); setCheck(null); void restoreClientBuiltin() }
+    else { setRestoreConfirm(false); void restoreClientBuiltin() }
   }
   const pending = session.native?.pending
   const progress = session.progress ?? session.native?.download
@@ -91,6 +91,9 @@ export function ClientUpdateSection() {
       <SettingsRow title={t('clientUpdate.channel')} subtitle={identity.channel === 'dev' ? t('clientUpdate.dev')
         : identity.channel === 'stable' ? t('clientUpdate.stable') : t('clientUpdate.unsupported')} />
       {!available && !web ? <text className='client-update__note'>{t('clientUpdate.errors.metadata_unavailable')}</text> : null}
+      {native ? <SwitchRow title={t('clientUpdate.automatic')} subtitle={t('clientUpdate.automaticHint')}
+        checked={automatic.enabled} onChange={changeAutomatic} disabled={!automatic.loaded || !available || !page}
+        testId='client-update-automatic' /> : null}
       <SettingsRow icon='refresh' title={checking ? t('clientUpdate.checking') : t('clientUpdate.check')}
         disabled={busy || !available || !page} onTap={startCheck} testId='client-update-check' />
       {error ? <text className='client-update__error' data-testid='client-update-error'>{t(`clientUpdate.errors.${error}`)}</text> : null}
