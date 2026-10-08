@@ -93,7 +93,7 @@ export function releaseDownload(address: string, repository: string): { tag: str
 }
 
 export function hostCompatibility(minimum: string, current: string | undefined): 'compatible' | 'incompatible' | 'unknown' {
-  if (!minimum) return 'compatible'
+  if (current === 'dev' || !minimum) return 'compatible'
   if (!current) return 'unknown'
   const comparison = compareStableVersions(current.replace(/^v/, ''), minimum.replace(/^v/, ''))
   return comparison == null ? 'unknown' : comparison < 0 ? 'incompatible' : 'compatible'

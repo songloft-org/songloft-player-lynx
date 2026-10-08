@@ -185,7 +185,11 @@ test('honours abort before scheduling repository validation', async () => {
 test('host compatibility compares the connected server rather than the client', () => {
   expect(hostCompatibility('2.9.5', '2.9.4')).toBe('incompatible')
   expect(hostCompatibility('2.9.5', 'v2.10.0')).toBe('compatible')
-  expect(hostCompatibility('2.9.5', 'dev')).toBe('unknown')
+  for (const minimum of ['2.9.5', '999.0.0', 'future']) {
+    expect(hostCompatibility(minimum, 'dev')).toBe('compatible')
+  }
+  expect(hostCompatibility('2.9.5', undefined)).toBe('unknown')
+  expect(hostCompatibility('2.9.5', 'unknown')).toBe('unknown')
   expect(hostCompatibility('', undefined)).toBe('compatible')
 })
 

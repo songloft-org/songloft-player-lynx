@@ -89,7 +89,18 @@ test('an already-installed matching repository/version is shown as installed', a
   expect(h.install).not.toHaveBeenCalled()
 })
 
-test.each(['2.9.4', 'dev'])('blocks installing when host compatibility is insufficient or unknown (%s)', async version => {
+test('dev server skips minimum-version checks but still requires installation confirmation', async () => {
+  h.host = 'dev'
+  h.plugins = [{ ...plugin, manifest: { ...plugin.manifest, minHostVersion: '999.0.0' } }]
+  await page()
+  await tap('github-plugin-1')
+  await tap('github-plugin-install')
+  expect(h.install).not.toHaveBeenCalled()
+  await tap('github-install-confirm')
+  expect(h.install).toHaveBeenCalledTimes(1)
+})
+
+test.each(['2.9.4', 'unknown'])('blocks installing when host compatibility is insufficient or unknown (%s)', async version => {
   h.host = version
   await page()
   await tap('github-plugin-1')
