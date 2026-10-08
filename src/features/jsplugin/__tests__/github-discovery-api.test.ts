@@ -65,6 +65,16 @@ test('discovers topic repositories through their actual default branch and stabl
 })
 
 describe('manifest contract', () => {
+  test.each(['0.17.0', '2026.10.8'])('release tag does not constrain manifest version %s', async version => {
+    const url = download.replace('/v2026.10.8/', '/v0.17/')
+    const { api, input } = fixture({
+      manifest: { ...manifest, version, download_url: url },
+      route: address => address.endsWith('/releases/tags/v0.17') ? json({
+        ...release, tag_name: 'v0.17', assets: [{ ...release.assets[0], browser_download_url: url }],
+      }) : undefined,
+    })
+    expect((await api.discover(input)).plugins[0]?.manifest.version).toBe(version)
+  })
   test.each([
     { entryHash: undefined }, { zipHash: 'bad' }, { permissions: null }, { permissions: [42] },
     { entryPath: '../evil' }, { main: '../main.js' }, { renderEngine: 'react' }, { version: 'dev' },

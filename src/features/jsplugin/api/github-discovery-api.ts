@@ -126,7 +126,7 @@ export class GithubDiscoveryApi {
     if (!download) throw new GithubDiscoveryError('invalidRelease')
     const release = record(await this.get({ address: `https://api.github.com/repos/${repository.fullName}/releases/tags/${encodeURIComponent(download.tag)}`, proxy, signal }))
     if (release.draft !== false || release.prerelease !== false || release.tag_name !== download.tag
-      || download.tag.replace(/^v/, '') !== manifest.version || !Array.isArray(release.assets)
+      || !Array.isArray(release.assets)
       || typeof release.published_at !== 'string' || !Number.isFinite(Date.parse(release.published_at))) throw new GithubDiscoveryError('invalidRelease')
     const asset = release.assets.find(value => {
       const item = record(value)
