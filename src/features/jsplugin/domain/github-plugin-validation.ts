@@ -57,24 +57,35 @@ export interface GithubPlugin {
   publishedAt: string
 }
 
+/** PrimJS has no browser URL constructor. Parse only our narrow public URL grammar. */
+function publicRepositoryUrl(address: string): { host: string; path: string } | null {
+  const match = /^https:\/\/(github\.com|raw\.githubusercontent\.com)(\/[^\s?#\\]*)$/i.exec(address)
+  if (!match) return null
+  try {
+    // Reject traversal, including percent-encoded dot segments, before prefix checks.
+    for (const segment of match[2]!.split('/')) {
+      const decoded = decodeURIComponent(segment)
+      if (decoded === '.' || decoded === '..' || decoded.includes('\\')) return null
+    }
+    return { host: match[1]!.toLowerCase(), path: match[2]! }
+  } catch { return null }
+}
+
 /** Only this repository's own raw/contents/update metadata may be followed. */
 export function isRepositoryMetadataUrl(address: string, repository: string): boolean {
-  try {
-    const url = new URL(address)
-    if (url.protocol !== 'https:' || url.username || url.password || url.port || url.search || url.hash) return false
-    const path = url.pathname.toLowerCase(), repo = repository.toLowerCase()
-    return url.hostname === 'raw.githubusercontent.com' && path.startsWith(`/${repo}/`)
-      || url.hostname === 'github.com' && path.startsWith(`/${repo}/raw/`)
-  } catch { return false }
+  const url = publicRepositoryUrl(address)
+  if (!url) return false
+  const path = url.path.toLowerCase(), repo = repository.toLowerCase()
+  return url.host === 'raw.githubusercontent.com' && path.startsWith(`/${repo}/`)
+    || url.host === 'github.com' && path.startsWith(`/${repo}/raw/`)
 }
 
 export function releaseDownload(address: string, repository: string): { tag: string; file: string } | null {
   try {
-    const url = new URL(address)
+    const url = publicRepositoryUrl(address)
     const prefix = `/${repository}/releases/download/`
-    if (url.protocol !== 'https:' || url.hostname !== 'github.com' || url.port || url.username || url.password
-      || url.search || url.hash || !url.pathname.toLowerCase().startsWith(prefix.toLowerCase())) return null
-    const parts = url.pathname.slice(prefix.length).split('/')
+    if (!url || url.host !== 'github.com' || !url.path.toLowerCase().startsWith(prefix.toLowerCase())) return null
+    const parts = url.path.slice(prefix.length).split('/')
     if (parts.length !== 2) return null
     const tag = decodeURIComponent(parts[0]!), file = decodeURIComponent(parts[1]!)
     return tag && file.endsWith('.jsplugin.zip') && !file.includes('/') && !file.includes('\\') ? { tag, file } : null

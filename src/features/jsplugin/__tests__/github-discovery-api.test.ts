@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from 'vitest'
 
 import type { Transport, TransportResponse } from '../../../core/network/http-client.js'
 import { GithubDiscoveryApi } from '../api/github-discovery-api.js'
-import { discoveryHasUpdate, hostCompatibility, installedFromRepository, parseGithubPluginManifest, releaseDownload } from '../domain/github-plugin-validation.js'
+import { discoveryHasUpdate, hostCompatibility, installedFromRepository, isRepositoryMetadataUrl, parseGithubPluginManifest, releaseDownload } from '../domain/github-plugin-validation.js'
 import { parseJSPlugin } from '../../../models/jsplugin.js'
 
 const repo = {
@@ -32,6 +32,23 @@ function fixture(overrides: { manifest?: unknown; release?: unknown; repos?: unk
   const input = { page: 1, search: '', sort: 'updated' as const, proxy: '' }
   return { transport, api, input }
 }
+
+test('native discovery works without the browser URL constructor', async () => {
+  vi.stubGlobal('URL', undefined)
+  try {
+    const { api, input } = fixture()
+    const result = await api.discover(input)
+    expect(result.plugins).toHaveLength(1)
+    expect(result.failures).toEqual({})
+    expect(releaseDownload(download, 'alice/music')).toEqual({ tag: 'v2026.10.8', file: 'music.jsplugin.zip' })
+    expect(isRepositoryMetadataUrl('https://raw.githubusercontent.com/alice/music/main/plugin.json', 'alice/music')).toBe(true)
+    for (const address of [download.replace('/v2026.10.8/', '/%2e%2e/'), download.replace('github.com', 'user@github.com'),
+      download.replace('github.com', 'github.com:443'), `${download}?token=abc`, `${download}#fragment`,
+      download.replace('alice/music', 'alice/other'), download.replace('github.com', 'github.com.evil')]) {
+      expect(releaseDownload(address, 'alice/music')).toBeNull()
+    }
+  } finally { vi.unstubAllGlobals() }
+})
 
 test('discovers topic repositories through their actual default branch and stable release assets without server credentials', async () => {
   const { api, transport, input } = fixture()
