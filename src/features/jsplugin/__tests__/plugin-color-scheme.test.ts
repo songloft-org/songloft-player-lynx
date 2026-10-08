@@ -1,4 +1,7 @@
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
+const accessibility = vi.hoisted(() => ({ increaseContrast: false }))
+vi.mock('../../../shared/theme/surface-policy.js', () => ({ getSurfacePolicy: () => accessibility }))
+afterEach(() => { accessibility.increaseContrast = false })
 
 /**
  * The `colors` half of the `songloft-theme` push — the plugin SDK's
@@ -18,6 +21,15 @@ import { describe, expect, test } from 'vitest'
  * No pack-model mocking needed: the pack data is a plain input here.
  */
 import { pluginColorSchemeMap } from '../domain/plugin-color-scheme.js'
+
+test('contrast uses the host accessible accent without overriding a pack seed', () => {
+  accessibility.increaseContrast = true
+  expect(pluginColorSchemeMap(null, 'light').primary).toBe('#1e6ef4')
+  expect(pluginColorSchemeMap(null, 'light').error).toBe('#e9152d')
+  expect(pluginColorSchemeMap(null, 'dark').primary).toBe('#5cb8ff')
+  expect(pluginColorSchemeMap(null, 'dark').onPrimary).toBe('#000000')
+  expect(pluginColorSchemeMap({ light: { seedColor: '#123456' } } as never, 'light').primary).toBe('#123456')
+})
 
 const PACK = {
   id: 'p1',

@@ -1,7 +1,8 @@
 import type { ThemePackData } from '../../../shared/theme/theme-pack-mapping.js'
 import { PACK_OVERRIDABLE_BASELINE } from '../../../shared/theme/theme-pack-mapping.js'
-import { MATERIAL_TOKENS } from '../../../shared/theme/material-tokens.js'
+import { resolveMaterialTokens } from '../../../shared/theme/material-tokens.js'
 import { getMaterialVariant } from '../../../shared/theme/material-model.js'
+import { getSurfacePolicy } from '../../../shared/theme/surface-policy.js'
 import type { ResolvedTheme } from '../../../shared/theme/theme-model.js'
 
 /**
@@ -37,6 +38,8 @@ export interface PluginThemeAppearance {
   navigationRadius: number
   glassFill: string
   glassBorder: string
+  reduceTransparency: boolean
+  increaseContrast: boolean
 }
 
 /** Radius clamped to the pack schema's own 0–100 range (mirrors radiusVar). */
@@ -61,7 +64,12 @@ export function pluginThemeAppearance(
   resolved: ResolvedTheme,
 ): PluginThemeAppearance {
   const baseline = PACK_OVERRIDABLE_BASELINE[resolved]
-  const material = MATERIAL_TOKENS[getMaterialVariant()][resolved]
+  const policy = getSurfacePolicy()
+  // WebView glass uses CSS blur, even when the surrounding host uses UIKit glass.
+  const material = resolveMaterialTokens({
+    variant: getMaterialVariant(), theme: resolved, nativeGlass: false,
+    increaseContrast: policy.increaseContrast, opaque: policy.opaque,
+  })
   return {
     navigationStyle: 'capsule',
     cardRadius: clampRadius(pack?.cardRadius, pxToNumber(baseline['--radius-lg'], 20)),
@@ -69,5 +77,7 @@ export function pluginThemeAppearance(
     navigationRadius: clampRadius(pack?.navigationRadius, pxToNumber(baseline['--radius-nav'], 12)),
     glassFill: material['--material-fill'],
     glassBorder: material['--material-border'],
+    reduceTransparency: policy.reduceTransparency,
+    increaseContrast: policy.increaseContrast,
   }
 }

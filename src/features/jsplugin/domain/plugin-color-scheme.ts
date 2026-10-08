@@ -1,5 +1,6 @@
 import type { ThemePackData } from '../../../shared/theme/theme-pack-mapping.js'
-import { PACK_OVERRIDABLE_BASELINE } from '../../../shared/theme/theme-pack-mapping.js'
+import { CONTRAST_ACCENT, PACK_OVERRIDABLE_BASELINE } from '../../../shared/theme/theme-pack-mapping.js'
+import { getSurfacePolicy } from '../../../shared/theme/surface-policy.js'
 import type { ResolvedTheme } from '../../../shared/theme/theme-model.js'
 
 /**
@@ -182,6 +183,11 @@ export function pluginColorSchemeMap(
   resolved: ResolvedTheme,
 ): PluginColorScheme {
   const out: PluginColorScheme = { ...BASELINE[resolved] }
+  if (getSurfacePolicy().increaseContrast) {
+    out.primary = CONTRAST_ACCENT[resolved].accent
+    out.onPrimary = CONTRAST_ACCENT[resolved].accentContent
+    if (resolved === 'light') out.error = '#e9152d'
+  }
   const colors = pack ? (resolved === 'light' ? pack.light : pack.dark) : undefined
   if (!colors) return out
 

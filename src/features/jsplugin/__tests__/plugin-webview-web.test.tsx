@@ -55,6 +55,10 @@ const h = vi.hoisted(() => ({
   themeSubs: [] as Array<() => void>,
   packSubs: [] as Array<() => void>,
   activePack: null as null | { themeId: string; data: Record<string, unknown> },
+  policySubs: new Set<() => void>(),
+  materialSubs: new Set<() => void>(),
+  policy: { reduceTransparency: false, increaseContrast: false, opaque: false },
+  variant: 'regular' as 'regular' | 'ultra-thin' | 'thin' | 'thick',
 }))
 
 vi.mock('react-i18next', async () =>
@@ -62,7 +66,7 @@ vi.mock('react-i18next', async () =>
 )
 
 vi.mock('@tanstack/react-router', () => ({
-  useNavigate: () => () => {},
+  useNavigate: () => () => { },
   useParams: () => ({ entryPath: 'lx' }),
   useSearch: () => ({ tab: h.tab }),
 }))
@@ -76,7 +80,7 @@ vi.mock('../../../shared/theme/theme-model.js', () => ({
   resolveTheme: () => 'light',
   subscribeAppTheme: (fn: () => void) => {
     h.themeSubs.push(fn)
-    return () => {}
+    return () => { }
   },
 }))
 
@@ -84,12 +88,24 @@ vi.mock('../../../shared/theme/theme-pack-model.js', () => ({
   getActiveThemePack: () => h.activePack,
   subscribeActiveThemePack: (fn: () => void) => {
     h.packSubs.push(fn)
-    return () => {}
+    return () => { }
   },
 }))
 
 vi.mock('../../../shared/theme/material-model.js', () => ({
-  getMaterialVariant: () => 'regular',
+  getMaterialVariant: () => h.variant,
+  subscribeMaterialVariant: (fn: () => void) => {
+    h.materialSubs.add(fn)
+    return () => h.materialSubs.delete(fn)
+  },
+}))
+
+vi.mock('../../../shared/theme/surface-policy.js', () => ({
+  getSurfacePolicy: () => h.policy,
+  subscribeSurfacePolicy: (fn: () => void) => {
+    h.policySubs.add(fn)
+    return () => h.policySubs.delete(fn)
+  },
 }))
 
 vi.mock('../../../native/web-webview.js', async () => {
@@ -139,7 +155,7 @@ vi.mock('../../player/store/index.js', () => {
     getState: () => h.playerState,
     subscribe: (fn: (state: unknown, prev: unknown) => void) => {
       h.playerSubs.push(fn)
-      return () => {}
+      return () => { }
     },
   })
   return { usePlayerStore }
@@ -164,6 +180,10 @@ beforeEach(() => {
   h.themeSubs = []
   h.packSubs = []
   h.activePack = null
+  h.policySubs.clear()
+  h.materialSubs.clear()
+  h.policy = { reduceTransparency: false, increaseContrast: false, opaque: false }
+  h.variant = 'regular'
 })
 
 afterEach(() => {
@@ -353,6 +373,31 @@ test('the pushed theme message carries this host’s capsule appearance', async 
     glassFill: expect.stringMatching(/^rgba\(/),
     glassBorder: expect.stringMatching(/^rgba\(/),
   })
+})
+
+test('material/accessibility changes send one complete payload and detach on unmount', async () => {
+  const result = await renderPage()
+  const latest = () => JSON.parse(h.postMessage.mock.calls.at(-1)![0] as string)
+  expect(h.materialSubs.size).toBe(1)
+  expect(h.policySubs.size).toBe(1)
+  let before = h.postMessage.mock.calls.length
+  act(() => {
+    h.variant = 'ultra-thin'
+    h.materialSubs.forEach(fn => fn())
+  })
+  expect(h.postMessage.mock.calls.length).toBe(before + 1)
+  expect(latest().appearance.glassFill).toBe('rgba(255, 255, 255, 0.55)')
+  before = h.postMessage.mock.calls.length
+  act(() => {
+    h.policy = { reduceTransparency: true, increaseContrast: true, opaque: true }
+    h.policySubs.forEach(fn => fn())
+  })
+  expect(h.postMessage.mock.calls.length).toBe(before + 1)
+  expect(latest().appearance).toMatchObject({ reduceTransparency: true, increaseContrast: true, glassFill: 'rgba(255, 255, 255, 1)' })
+  expect(latest().colors.primary).toBe('#1e6ef4')
+  act(() => { result.unmount() })
+  expect(h.policySubs.size).toBe(0)
+  expect(h.materialSubs.size).toBe(0)
 })
 
 /*

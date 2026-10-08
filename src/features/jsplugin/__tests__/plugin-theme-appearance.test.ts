@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+const policy = vi.hoisted(() => ({ reduceTransparency: false, increaseContrast: false, opaque: false }))
+vi.mock('../../../shared/theme/surface-policy.js', () => ({ getSurfacePolicy: () => policy }))
 
 /**
  * The `appearance` half of the `songloft-theme` push — the payload that makes
@@ -36,7 +38,9 @@ const PACK = {
 }
 
 describe('pluginThemeAppearance', () => {
-  beforeEach(() => {})
+  beforeEach(() => {
+    Object.assign(policy, { reduceTransparency: false, increaseContrast: false, opaque: false })
+  })
 
   afterEach(() => {
     vi.clearAllMocks()
@@ -92,5 +96,16 @@ describe('pluginThemeAppearance', () => {
   test('playerGradient is never part of the payload', () => {
     const app = pluginThemeAppearance({ ...PACK, playerGradient: ['#112233', '#445566'] }, 'light')
     expect('playerGradient' in app).toBe(false)
+  })
+
+  test('effective accessibility changes both the flags and the actual plugin fill', () => {
+    Object.assign(policy, { reduceTransparency: true, opaque: true })
+    const solid = pluginThemeAppearance(null, 'light')
+    expect(solid.reduceTransparency).toBe(true)
+    expect(solid.glassFill).toBe('rgba(255, 255, 255, 1)')
+    Object.assign(policy, { reduceTransparency: false, increaseContrast: true, opaque: false })
+    const thick = pluginThemeAppearance(null, 'dark')
+    expect(thick.increaseContrast).toBe(true)
+    expect(thick.glassFill).toBe('rgba(23, 23, 27, 0.92)')
   })
 })

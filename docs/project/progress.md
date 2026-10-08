@@ -1,5 +1,15 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-08 · MIoT 迷你播放器材质适配实施
+
+- 前批液态玻璃与 skill 已提交并推送 `be1ee84` / `1825e34`；父仓库指针已提交 `1986a46`，尚未推送。本批验收与自审完成，用户授权提交；不含推送授权，提交记录以 Git 历史为准。
+- WebView 主题使用 `getSurfacePolicy` 与当前档位解析 CSS 材质，新增有效 `reduceTransparency` / `increaseContrast`；增强对比度时默认主色同步可访问 accent。主题、主题包、材质和辅助功能统一推送完整消息，离页释放全部订阅，Web 分支只保留实际 iframe 的订阅。
+- 父仓库 `common.js` 严格接收可选布尔标志并写 HTML 属性，缺失/非法时移除；标志不跨宿主会话缓存。MIoT 保留 RGB 并保护填充至亮 .96 / 暗 .92，两种胶囊尺寸共享独立模糊层，偏好或无 blur 时实心；无歌词但可点击的按钮不再整体半透明。Flutter 同期新增减少透明度/增强对比度本机设置、系统高对比度 OR、实心材质和模糊卸载，原生 WebView 与 Web iframe 实时推送有效偏好；缺少新字段的旧客户端仍兼容。
+- Flutter 格式化无差异、静态分析无问题、完整 **557 项**测试和 embedded Web 生产构建通过。隔离 Docker Chrome 使用实际 Flutter、MIoT 与公共资源，验证 **6 个**场景（默认、减少透明度、本机偏好刷新恢复、增强对比度、深色、375px 手机布局关闭后恢复），本机存储及插件 DOM/材质断言通过且无页面异常。证据 `/tmp/flutter-glass-ui/browser-result.json`、`/tmp/flutter-glass-ui/settings-mobile.png`、`/tmp/flutter-glass-ui/plugin-dark-contrast.png`。原生 Flutter 本批未打安装包或实测系统信号，原生 WebView 推送以模拟平台回归为依据。
+- 本仓库类型检查、生产双 bundle/Web、完整 **296 文件 / 3221 项**与发布工具 **70 项**通过，ReactLynx 页面扫描无诊断。相关新增回归验证实时材质/偏好消息、色板、缺省状态与订阅释放。父仓库公共桥接 **2 项**和 `go test ./internal/jsplugin/...` 通过；MIoT 类型/构建、结构检查与前端 **16 项**通过。反向移除桥接属性使 **1 项**失败，降低填充底线使 **3 项**失败，恢复后均通过。
+- 隔离 Docker Chrome 使用实际生产 MIoT 产物及真实公共资源：亮暗 × 375/768/1280、标准布局 375/1280、600 宽更多菜单、音量/模式/歌词操作、偏好实时切换、浏览器与宿主 OR、无 blur 降级均通过；动作落到夹具 HTTP 请求，无真实音箱操作。证据 `/tmp/miot-glass-browser.json`、`/tmp/miot-glass-375-dark.png`、`/tmp/miot-glass-1280-light.png`、`/tmp/miot-glass-volume.png`。对比度测试覆盖 Flutter/Lynx 默认色板与黑白背景；任意主题包颜色、iOS/HarmonyOS 光学效果及帧率/能耗未验收。
+- Android 测试容器先因 Xvfb 残留锁、启动时序与测试 AVD 锁失败，清理本次测试环境后恢复。API 34 / arm64 bridge 使用前批 `glass-p2.apk` 加载本批实际 MIoT 与 common.js，WebView CDP 确认亮 .96 / 暗 .92、独立 blur(20px)、shell 不形成 fixed 包含块；手动发送宿主偏好后实心且无 blur。实际 ADB 点击「下一首」产生夹具 POST，AndroidRuntime 无异常。证据 `/tmp/miot-glass-native.json`、`/tmp/songloft-discovery-native/miot-glass-dark.png`。此项验证插件和公共资源，不代表本批新 Lynx 桥接已打包或设备验证；新桥接以自动化回归为依据。测试主题恢复亮色，结束时停止临时服务与浏览器/模拟器容器。
+
 ## 2026-10-08 · 液态玻璃优化提交前自审
 
 - 自审结果和提交信息已获用户确认，进入本批暂存范围核对；提交标题为 `feat(appearance): 优化液态玻璃材质与辅助功能适配`。暂存仅涉及本仓库 P0/P1/P2 代码、测试和对应文档，不包含父仓库指针或生成物。等待暂存内容及提交确认，尚未提交或推送；下方待确认描述保留为自审时快照。

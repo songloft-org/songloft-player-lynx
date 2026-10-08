@@ -332,6 +332,8 @@ Callback 形状，Callback 收到 JSON 字符串。
 
 ### 2.11 `SongloftPluginBridge`（6 方法）
 
+WebView 插件的 `songloft-theme` 外观消息使用有效材质档位，并携带布尔值 `reduceTransparency` / `increaseContrast`；主题包、材质与辅助功能变化均重发完整消息，页面退出时释放订阅。WebView 使用 CSS themed blur，即使宿主启用 UIKit 原生 glass 也不下推 clear glass。服务端 `common.js` 将标志映射为 HTML `data-reduce-transparency` / `data-increase-contrast`，旧公共资源会忽略新字段；辅助功能标志不跨宿主会话缓存。这是 WebView 主题消息契约，不是下述原生 frame RPC 的新增方法。
+
 全部位置参数、fire-and-forget（无 Callback）。注册在 application 级：每个 `LynxContext`（父页 / 子 `<frame>`）各拿一个模块实例，但 `hostRegistry` / `childRegistry` 按 `frameId` 共享 —— 这是跨 LynxContext 通信的唯一通道。
 
 | 方法 | 调用方 | Kotlin 签名 | iOS `methodLookup` 选择器 |

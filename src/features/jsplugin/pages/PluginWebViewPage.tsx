@@ -9,6 +9,8 @@ import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { getAppTheme, resolveTheme, subscribeAppTheme } from '../../../shared/theme/theme-model.js'
+import { subscribeSurfacePolicy } from '../../../shared/theme/surface-policy.js'
+import { subscribeMaterialVariant } from '../../../shared/theme/material-model.js'
 import {
   getActiveThemePack,
   subscribeActiveThemePack,
@@ -114,6 +116,15 @@ function buildThemeMessage(): {
   }
 }
 
+/** Every appearance source uses the same complete payload and lifecycle. */
+function subscribePluginAppearance(push: () => void): () => void {
+  const stops = [
+    subscribeAppTheme(push), subscribeActiveThemePack(push),
+    subscribeSurfacePolicy(push), subscribeMaterialVariant(push),
+  ]
+  return () => stops.forEach(stop => stop())
+}
+
 export function PluginWebViewPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -154,12 +165,14 @@ export function PluginWebViewPage() {
       'background only'
       // Run in the hosted browser after its drawing resumes. MIoT uses this
       // notification to replace a silent, stale status connection (#493).
-      try { webviewRef.current?.invoke({
-        method: 'eval',
-        params: {
-          func: "requestAnimationFrame(function(){document.dispatchEvent(new Event('visibilitychange'))})",
-        },
-      }).exec() } catch { /* The platform view may already be tearing down. */ }
+      try {
+        webviewRef.current?.invoke({
+          method: 'eval',
+          params: {
+            func: "requestAnimationFrame(function(){document.dispatchEvent(new Event('visibilitychange'))})",
+          },
+        }).exec()
+      } catch { /* The platform view may already be tearing down. */ }
     })
   }, [src, plugin?.renderEngine])
 
@@ -235,7 +248,7 @@ export function PluginWebViewPage() {
    * `bindload` may fire after re-renders), and the Web branch's onLoad closure
    * would otherwise capture a stale theme/pack snapshot.
    */
-  const pushThemeMessageRef = useRef<() => void>(() => {})
+  const pushThemeMessageRef = useRef<() => void>(() => { })
   pushThemeMessageRef.current = () => {
     webviewRef.current?.invoke({
       method: 'eval',
@@ -249,7 +262,7 @@ export function PluginWebViewPage() {
    * player push in WebPluginFrame — no cross-branch ref needed there because
    * it only ever fires from that component's own closures.
    */
-  const pushPlayerStateRef = useRef<() => void>(() => {})
+  const pushPlayerStateRef = useRef<() => void>(() => { })
   pushPlayerStateRef.current = () => {
     webviewRef.current?.invoke({
       method: 'eval',
@@ -258,33 +271,13 @@ export function PluginWebViewPage() {
   }
 
   /*
-   * Runtime theme / theme-pack changes re-push through BOTH channels:
-   * the native `<webview>`'s eval (this component's ref) and, on Web, the
-   * iframe module — whichever exists is the one that reaches the plugin.
-   * The two subscriptions are shared (not per-branch) because `webviewRef`
-   * is null on Web (the eval path no-ops) and the Web module's postMessage
-   * no-ops on native — each host ends up with exactly one live channel.
+   * Native WebView appearance changes use eval. WebPluginFrame owns the Web
+   * channel so an event is not sent twice to the same iframe.
    */
   useEffect(() => {
+    if (isWebPlatform()) return
     const push = () => pushThemeMessageRef.current()
-    const pushWeb = () => {
-      const webview = getWebviewModule()
-      // Only meaningful on the Web host; `available` is false elsewhere, so
-      // this degrades to a no-op rather than erroring on native platforms.
-      if (webview.available) webview.postMessage(JSON.stringify(buildThemeMessage()))
-    }
-    const unsubTheme = subscribeAppTheme(() => {
-      push()
-      pushWeb()
-    })
-    const unsubPack = subscribeActiveThemePack(() => {
-      push()
-      pushWeb()
-    })
-    return () => {
-      unsubTheme()
-      unsubPack()
-    }
+    return subscribePluginAppearance(push)
   }, [])
 
   /*
@@ -539,15 +532,7 @@ function WebPluginFrame({ src, frameKey }: { src: string; frameKey: string }) {
     send(buildThemeMessage())
     send({ type: 'songloft-player-state', state: playerStateToJson() })
 
-    unsubTheme = subscribeAppTheme(() => {
-      send(buildThemeMessage())
-    })
-
-    /*
-     * A pack activation swaps radii/glass without touching light/dark — the
-     * theme subscription above would stay silent, so the pack gets its own.
-     */
-    const unsubPack = subscribeActiveThemePack(() => {
+    unsubTheme = subscribePluginAppearance(() => {
       send(buildThemeMessage())
     })
 
@@ -588,7 +573,6 @@ function WebPluginFrame({ src, frameKey }: { src: string; frameKey: string }) {
     return () => {
       closed = true
       unsubTheme?.()
-      unsubPack()
       unsubPlayer?.()
       setWebviewBridgeHandlers(null)
       /*
