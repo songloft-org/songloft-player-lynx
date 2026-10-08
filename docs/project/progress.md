@@ -1,5 +1,15 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-08 · Android 导航胶囊材质一致性修复
+
+- 用户要求继续后完成提交前自审：核对全部调用点、原生负层级与圆角、父/子阴影职责、共享策略与材质订阅补读/清理、opaque 与 contrast 分支、装饰层触摸/无障碍、动效及实际设备证据，未发现新增问题。运行时代码未再修改，沿用下述已通过的验证；最终 diff/编码复查通过。用户已授权提交和推送，实际提交状态以 Git 历史为准。
+- 按用户反馈和 DESIGN 的导航 regular 材质规则修复：首页胶囊下的图标/文字不应清晰透出；曲库、设置滚动时主要呈现模糊颜色变化符合导航可读性目标。Android 支持 backdrop blur，不能把页面间差异归因于平台不支持。
+- `.shell__body` 是独立 Android capture target。首页透明底使采样位图保留 alpha，漏出未模糊的底层内容；补齐 `--system-background`，页面自己的普通/分组底色继续覆盖采样底。
+- 原生先画父背景再画子 blur，旧父层填色被采样位图盖住。底栏与 MiniPlayer 改用独立材质层，blur / tint / controls 分别使用 -2 / -1 / 默认层级，避免相同负层级的原生排序差异。父层保留外阴影和边框，材质层承担填色、高光与内缘；模糊不做动画，材质层不捕获点击、不进入无障碍树。
+- `useCapsuleMaterialStyle` 复用有效外观与材质解析，直接写入实际 fill/highlight，使原生叶节点明确消费有效档位及辅助功能；材质订阅接入后立即补读，卸载时释放。四档材质、增强对比度和降低透明度共享已有规则，opaque 时移除 blur 并保留实心填色。
+- 类型检查、81 项针对性检查、最终完整 **297 文件 / 3226 项**、生产双 bundle/Web、70 项发布工具检查与最终 Android APK 编译通过。新增回归反向验证：移除采样底使 1 项失败，将实际填色退回变量使 2 项失败；均已恢复。最终 APK 的嵌入 bundle 与生产 assets 字节一致，JS TestBridge/E2E 句柄不存在。调试包期间的发布产物闸门失败、并行 Web 构建清理产物造成的闸门失败已通过顺序生产构建解决；一轮完整测试进程退出 143，降低并发并在沙箱外执行最终全量后全部通过。
+- API 34 模拟器采用 arm64 native bridge，复现首页透出清晰条纹/文字并验证修复；三页明暗 × 实际滑动、四档实际画面差异、系统减少动画、增强对比度有效策略、实心回退与 blur 卸载、真实底栏/迷你播放器点击通过。测试后恢复 regular 和模拟器动画/屏幕配置，并停止本批启动的测试服务。证据 `/tmp/lynx-capsule-native-before.json`、`/tmp/lynx-capsule-controls.json`、`/tmp/lynx-capsule-contrast.json`、`/tmp/lynx-capsule-native-final-{light,dark}.json` 和 `/tmp/songloft-discovery-native/capsule-*.png`。模拟器不能代表用户 Android 13 真机、低版本 Android、iOS/HarmonyOS 或能耗/帧率验收。本批提交及推送已获授权，Git 历史为最终记录。
+
 ## 2026-10-08 · MIoT 迷你播放器材质适配实施
 
 - 前批液态玻璃与 skill 已提交并推送 `be1ee84` / `1825e34`；父仓库指针已提交 `1986a46`，尚未推送。本批验收与自审完成，用户授权提交；不含推送授权，提交记录以 Git 历史为准。

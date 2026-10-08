@@ -25,6 +25,7 @@ import { getIsScrolled, subscribeIsScrolled } from '../nav/scroll-visibility.js'
 import { getRailCollapsed, subscribeRailCollapsed, toggleRailCollapsed } from './rail-collapse.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import { BackdropBlur } from '../ui/BackdropBlur.js'
+import { useCapsuleMaterialStyle } from '../ui/capsule-material.js'
 import { Icon, activeAccentIconColor, ICON_COLORS } from '../ui/Icon.js'
 import '../ui/glass-sheen-motion.css'
 import './ShellLayout.css'
@@ -41,6 +42,7 @@ import './ShellLayout.css'
  */
 export function ShellLayout() {
   const navigate = useNavigate()
+  const capsuleMaterialStyle = useCapsuleMaterialStyle()
   const { t } = useTranslation()
   // Seed the breakpoint from the shell-width cache so a remount (returning
   // from the chrome-less `/player` route, which sits outside `shellRoute` and
@@ -297,11 +299,12 @@ export function ShellLayout() {
         {isWide
           ? null
           : (
-            <view className='shell__bottombar glass-sheen-breathe'>
+            <view className='shell__bottombar'>
               {/* Panel-mode blur, so the capsule is a real material over the
                   scrolling content rather than an 0.85 wash. Apple's tab bar is
                   the reference here. See `BackdropBlur.tsx`. */}
               <BackdropBlur className='ui-backdrop-blur--pill' />
+              <view className='ui-capsule-material glass-sheen-breathe' style={capsuleMaterialStyle} flatten={false} accessibility-element={false} />
               {/* Flow indicator — single sliding capsule behind the active tab.
                   DOM-ordered before the nav items so it renders behind them. */}
               <view

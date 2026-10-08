@@ -44,6 +44,8 @@ interface Surface {
   /** Background token the surface must use (glass fill, not --paper). */
   fill: RegExp
   rimOnly?: boolean
+  /** Capsules paint their material as a sibling above the native blur. */
+  childMaterial?: boolean
 }
 
 const SURFACES: Surface[] = [
@@ -51,11 +53,13 @@ const SURFACES: Surface[] = [
     file: 'shared/layouts/ShellLayout.css',
     selector: '.shell__bottombar',
     fill: /var\(--material-fill\)/,
+    childMaterial: true,
   },
   {
     file: 'features/player/widgets/MiniPlayer.css',
     selector: '.mini-player',
     fill: /var\(--material-fill\)/,
+    childMaterial: true,
   },
   {
     file: 'shared/ui/PopoverMenu.css',
@@ -97,9 +101,17 @@ function block(css: string, selector: string): string {
 
 test.each(SURFACES)(
   '$selector uses a glass fill (not --paper) and an inset sheen',
-  ({ file, selector, fill, rimOnly }) => {
+  ({ file, selector, fill, rimOnly, childMaterial }) => {
     const css = rules(file)
-    const body = block(css, selector)
+    const shell = block(css, selector)
+    const body = childMaterial
+      ? block(rules('shared/ui/BackdropBlur.css'), '.ui-capsule-material')
+      : shell
+    if (childMaterial) {
+      expect(shell).toMatch(/background-color:\s*transparent/)
+      expect(shell).not.toMatch(/background-image:/)
+      expect(shell).toMatch(/box-shadow:\s*var\(--shadow-md\)/)
+    }
     // A reverted surface (an opaque card colour instead of the glass fill) is the
     // silent regression. Both the legacy alias and the Apple token it now points
     // at are named: once a screen migrates off `--paper` the alias stops appearing,
@@ -234,16 +246,17 @@ test('the ten glass tokens are declared in both themes', () => {
 /** Classes the walk reaches that are not actually inside the panel. */
 const NOT_INSIDE_A_PANEL: Record<string, string> = {
   /*
-   * Both are rendered by `ShellLayout`, which also renders `.shell__bottombar`,
+   * These are rendered by `ShellLayout`, which also renders `.shell__bottombar`,
    * but they are the app root and the wide-screen side rail — the bottombar's
    * ANCESTOR and its SIBLING. This is the walk's one honest blind spot: it
    * resolves "which components render a panel" and then "what those components
    * paint", which is not the same as "what is inside the panel's subtree". These
-   * two entries are a tool limitation, not a design decision — unlike the
+   * entries are a tool limitation, not a design decision — unlike the
    * rounded objects above, which the border-radius rule admits on purpose.
    */
   shell: 'the app root behind everything, not inside the nav capsule',
   shell__rail: 'the wide-screen side rail, a sibling of the nav capsule',
+  shell__body: 'the Android capture source, a sibling behind the nav capsule',
 }
 
 /*

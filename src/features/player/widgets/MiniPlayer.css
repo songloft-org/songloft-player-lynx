@@ -24,14 +24,11 @@
   display: flex;
   flex-direction: column;
   margin: 0 var(--space-2) var(--space-2);
-  background-color: var(--material-fill);
-  background-image: var(--material-sheen-layer), var(--material-ramp);
+  /* The shared child material paints its tint and rims after the native blur. */
+  background-color: transparent;
   border: 1px solid var(--material-border);
   border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-md),
-    inset 0 1px 0 var(--material-highlight),
-    var(--material-rim-sides),
-    inset 0 -1px 0 var(--separator);
+  box-shadow: var(--shadow-md);
   /* See `.shell--scrolled` in ShellLayout.css: the drop shadow is the one
      channel the scroll-edge effect animates, on the base rule so the exit
      animates too. Fill and blur are never animated (HIG §10). */

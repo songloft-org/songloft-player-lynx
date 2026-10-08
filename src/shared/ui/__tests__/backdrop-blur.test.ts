@@ -311,7 +311,7 @@ describe('BackdropBlur component', () => {
       const body = rule![1]!
       // Without this the layer paints above the panel's in-flow contents, because
       // a positioned child outranks its non-positioned siblings.
-      expect(body, `.${modifier} must sit under the panel contents`).toMatch(/z-index:\s*-1/)
+      expect(body, `.${modifier} must sit under the panel contents`).toMatch(/z-index:\s*-[12]/)
       // Its own rounding, rather than relying on the parent to clip: one of the
       // three panels does not clip, and giving it an overflow clip for this would
       // change what its contents may do.
@@ -496,6 +496,13 @@ describe('panel mode', () => {
       it('is a translucent surface in the first place', () => {
         // If a panel ever goes opaque the blur is dead weight behind it, and this
         // entry should be dropped rather than left to mislead.
+        if (site.modifier === 'ui-backdrop-blur--pill') {
+          expect(read(site.tsx)).toMatch(/<view className='ui-capsule-material\b/)
+          expect(stripCssComments(COMPONENT_CSS)).toMatch(
+            /\.ui-capsule-material\s*\{[^{}]*background-color:\s*var\(--material-fill\)/,
+          )
+          return
+        }
         expect(
           stripCssComments(read(site.css)),
           `.${site.panel} no longer uses a glass fill — drop its PANEL_SITES entry`,
@@ -523,7 +530,13 @@ describe('panel mode', () => {
     const needed = new Set<string>()
     for (const [cls] of ownersOf(/background-color:\s*var\(--material-fill/)) {
       for (const tsx of rendererOf(cls)) {
-        if (!scrimmed(BLUR_DELEGATED_TO[cls] ?? tsx)) needed.add(cls)
+        if (!scrimmed(BLUR_DELEGATED_TO[cls] ?? tsx)) {
+          // The shared capsule tint belongs to the panel that mounts it.
+          const panel = cls === 'ui-capsule-material'
+            ? PANEL_SITES.find(site => site.tsx === tsx && site.modifier === 'ui-backdrop-blur--pill')?.panel
+            : cls
+          needed.add(panel ?? cls)
+        }
       }
     }
     const listed = new Set(PANEL_SITES.map((site) => site.panel))

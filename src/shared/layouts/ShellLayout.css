@@ -93,6 +93,10 @@
   flex-direction: column;
   flex: 1;
   overflow: hidden;
+  /* Android captures this subtree, including its alpha. A complete base keeps
+     sharp content beneath a transparent blur bitmap from leaking through on Home.
+     Routed pages still paint their own ordinary/grouped background above it. */
+  background-color: var(--system-background);
   /* Clear the status bar / notch on narrow devices so page headers (e.g. the
      Library view switcher, which sits at the very top) are not occluded. */
   padding-top: var(--safe-top);
@@ -257,8 +261,8 @@
   flex-direction: row;
   justify-content: space-around;
   align-items: center;
-  background-color: var(--material-fill);
-  background-image: var(--material-sheen-layer), var(--material-ramp);
+  /* Fill and inset rims live in the child material layer ABOVE the native blur. */
+  background-color: transparent;
   border: 1px solid var(--material-border);
   border-radius: var(--radius-pill);
   /* Liquid-glass edge: the outer drop shadow, then a rim that varies around the
@@ -266,10 +270,7 @@
      A uniform border cannot read as thickness; a rim that changes with the light
      direction can, and since every layer is a 1px `inset` no text sits on any of
      them, so the whole effect is free against the contrast gate. */
-  box-shadow: var(--shadow-md),
-    inset 0 1px 0 var(--material-highlight),
-    var(--material-rim-sides),
-    inset 0 -1px 0 var(--separator);
+  box-shadow: var(--shadow-md);
   /* The shadow is the one property the scroll-edge effect animates (see
      `.shell--scrolled` below), so it carries the transition on the base rule —
      the entry and the exit both animate. The blur and the fill never animate
@@ -283,13 +284,9 @@
    Apple's scroll-edge treatment for a floating bar. The fill is unchanged: on
    iOS the native material responds on its own, and on the other platforms
    raising alpha would re-open the contrast budget the surface was tuned
-   against. Only the drop shadow grows; the inset rim stack is repeated verbatim
-   so the edge sheen does not blink off during the transition. */
+   against. Only the outer shadow grows; the child material keeps its inset rims. */
 .shell--narrow.shell--scrolled .shell__bottombar {
-  box-shadow: var(--shadow-lg),
-    inset 0 1px 0 var(--material-highlight),
-    var(--material-rim-sides),
-    inset 0 -1px 0 var(--separator);
+  box-shadow: var(--shadow-lg);
 }
 
 /* Tab slot: a pure hit area. All visuals moved onto the pill inside — narrow

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import { useCapsuleMaterialStyle } from '../../../shared/ui/capsule-material.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { useFavoriteToggle } from '../../library/data/favorites.js'
 import { cachedSongIdentity } from '../domain/offline-cache.js'
@@ -37,6 +38,7 @@ function accessibilityTrait(enabled: boolean) {
 
 export function MiniPlayer() {
   const navigate = useNavigate()
+  const capsuleMaterialStyle = useCapsuleMaterialStyle()
   const { t } = useTranslation()
   const song = usePlayerStore((s) => s.currentSong)
   const isPlaying = usePlayerStore((s) => s.isPlaying)
@@ -53,11 +55,12 @@ export function MiniPlayer() {
   const pct = `${Math.round(progress * 100)}%`
 
   return (
-    <view className='mini-player overlay--enter-scale glass-sheen-breathe' bindtap={() => navigate({ to: '/player' })}>
+    <view className='mini-player overlay--enter-scale' bindtap={() => navigate({ to: '/player' })}>
       {/* Panel-mode blur — same reason as the nav capsule below it: this bar
           floats over scrolling content with no scrim of its own. The root's
           `bindtap` still receives taps, since a child bubbles to it. */}
       <BackdropBlur className='ui-backdrop-blur--pill' />
+      <view className='ui-capsule-material glass-sheen-breathe' style={capsuleMaterialStyle} flatten={false} accessibility-element={false} />
       <view className='mini-player__progress'>
         <view className='mini-player__progress-fill' style={{ width: pct }} />
       </view>

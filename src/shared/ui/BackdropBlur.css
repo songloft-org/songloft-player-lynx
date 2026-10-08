@@ -28,7 +28,7 @@
  * than a page-sized scrim, so the layer inherits the panel's bounds instead of
  * the screen's. Two additions, both load-bearing:
  *
- * `z-index: -1` is what keeps the blur *behind* the panel's contents. An
+ * A negative `z-index` keeps the blur *behind* the panel's contents. An
  * absolutely positioned child paints above its non-positioned in-flow siblings,
  * and every one of these panels lays its contents out in flow (menu rows, nav
  * items, the mini-player's stack) — so without this the blur layer would cover
@@ -49,6 +49,28 @@
 }
 
 .ui-backdrop-blur--pill {
+  z-index: -2;
+  border-radius: var(--radius-pill);
+}
+
+/* Capsules mount this sibling AFTER their blur, at a higher negative z-index.
+   Android paints a parent's background before its child blur bitmap, even with
+   a negative child z-index. Keeping the tint on the parent therefore loses it
+   whenever the captured page is opaque. This layer makes the order explicit:
+   complete backdrop → blur → tint/rims → foreground controls. It stays mounted
+   for the opaque accessibility/unsupported-host fallback, when blur is removed. */
+.ui-capsule-material {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: -1;
   border-radius: var(--radius-pill);
+  background-color: var(--material-fill);
+  background-image: var(--material-sheen-layer), var(--material-ramp);
+  box-shadow: inset 0 1px 0 var(--material-highlight),
+    var(--material-rim-sides),
+    inset 0 -1px 0 var(--separator);
+  pointer-events: none;
 }
