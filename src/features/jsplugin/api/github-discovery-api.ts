@@ -1,7 +1,7 @@
 import { createFetchTransport, type Transport, type TransportResponse } from '../../../core/network/http-client.js'
 import { withGithubProxy } from '../../../core/updater/release-resolver.js'
 import {
-  isRepositoryMetadataUrl, parseGithubPluginManifest, releaseDownload, utf8Size,
+  isRepositoryMetadataUrl, githubUrlRepository, parseGithubPluginManifest, parseReleaseDownload, utf8Size,
   type GithubPlugin, type GithubRepository,
 } from '../domain/github-plugin-validation.js'
 
@@ -110,7 +110,7 @@ export class GithubDiscoveryApi {
     for (let depth = 0; !manifest.download_url && depth < 2; depth++) {
       address = manifest.updateUrl
       if (!address) throw new GithubDiscoveryError('unpublished')
-      if (visited.has(address) || !isRepositoryMetadataUrl(address, repository.fullName)) throw new GithubDiscoveryError('invalidManifest')
+      if (visited.has(address) || !isRepositoryMetadataUrl(address, githubUrlRepository(address) ?? '')) throw new GithubDiscoveryError('invalidManifest')
       visited.add(address)
       // Legacy update metadata can be a minimal version/download_url document.
       const update = record(await this.get({ address, proxy, signal, invalidData: 'invalidManifest' }))
@@ -122,9 +122,9 @@ export class GithubDiscoveryApi {
       } else throw new GithubDiscoveryError('unpublished')
     }
     if (!manifest.download_url) throw new GithubDiscoveryError('invalidManifest')
-    const download = releaseDownload(manifest.download_url, repository.fullName)
+    const download = parseReleaseDownload(manifest.download_url)
     if (!download) throw new GithubDiscoveryError('invalidRelease')
-    const release = record(await this.get({ address: `https://api.github.com/repos/${repository.fullName}/releases/tags/${encodeURIComponent(download.tag)}`, proxy, signal }))
+    const release = record(await this.get({ address: `https://api.github.com/repos/${download.repository}/releases/tags/${encodeURIComponent(download.tag)}`, proxy, signal }))
     if (release.draft !== false || release.prerelease !== false || release.tag_name !== download.tag
       || !Array.isArray(release.assets)
       || typeof release.published_at !== 'string' || !Number.isFinite(Date.parse(release.published_at))) throw new GithubDiscoveryError('invalidRelease')
@@ -135,7 +135,7 @@ export class GithubDiscoveryApi {
     })
     if (!asset) throw new GithubDiscoveryError('unpublished')
     const plugin: GithubPlugin = { repository, manifest, downloadUrl: manifest.download_url,
-      releaseUrl: `https://github.com/${repository.fullName}/releases/tag/${encodeURIComponent(download.tag)}`, publishedAt: release.published_at }
+      releaseUrl: `https://github.com/${download.repository}/releases/tag/${encodeURIComponent(download.tag)}`, publishedAt: release.published_at }
     this.cache.set(key, { until: this.now() + 60 * 60 * 1000, plugin })
     if (this.cache.size > 500) this.cache.delete(this.cache.keys().next().value!)
     return plugin

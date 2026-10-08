@@ -122,8 +122,8 @@ test('rejects update metadata that changes the plugin version', async () => {
   expect((await api.discover(input)).failures.invalidRelease).toBe(1)
 })
 
-test('rejects cross-repository links, update cycles, and credentials without requesting them', async () => {
-  for (const updateUrl of ['https://raw.githubusercontent.com/bob/music/main/plugin.json', 'https://raw.githubusercontent.com/alice/music/develop/plugin.json', 'https://user:pass@raw.githubusercontent.com/alice/music/main/plugin.json']) {
+test('rejects external links, update cycles, and credentials without requesting them', async () => {
+  for (const updateUrl of ['https://example.com/bob/music/main/plugin.json', 'https://raw.githubusercontent.com/alice/music/develop/plugin.json', 'https://user:pass@raw.githubusercontent.com/alice/music/main/plugin.json']) {
     const { api, transport, input } = fixture({ manifest: { ...manifest, download_url: '', updateUrl } })
     expect((await api.discover(input)).failures.invalidManifest).toBe(1)
     expect(transport).toHaveBeenCalledTimes(2)
@@ -217,4 +217,27 @@ test('reports validated plugins progressively while a different repository is st
   expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({ checked: 1, plugins: [expect.objectContaining({ downloadUrl: download })] }))
   releaseSlow?.()
   expect((await pending).checked).toBe(2)
+})
+
+test('verifies cross-repository packages against the target release, including legacy metadata on native runtimes', async () => {
+  vi.stubGlobal('URL', undefined)
+  try {
+    const url = download.replace('alice/music', 'bob/music')
+    const updateUrl = 'https://raw.githubusercontent.com/bob/music/main/update.json'
+    for (const legacy of [false, true]) {
+      const { api, input, transport } = fixture({
+        manifest: { ...manifest, download_url: legacy ? '' : url, updateUrl },
+        route: address => address === updateUrl ? json({ version: manifest.version, entryPath: manifest.entryPath, download_url: url })
+          : address === 'https://api.github.com/repos/bob/music/releases/tags/v2026.10.8' ? json({ ...release, assets: [{ ...release.assets[0], browser_download_url: url }] }) : undefined,
+      })
+      const result = await api.discover(input)
+      const plugin = result.plugins[0]!
+      expect(result.failures).toEqual({})
+      expect(plugin.repository.fullName).toBe('alice/music')
+      expect(plugin.releaseUrl).toBe('https://github.com/bob/music/releases/tag/v2026.10.8')
+      expect(transport.mock.calls.some(([request]) => request.url.includes('/repos/alice/music/releases/'))).toBe(false)
+      expect(installedFromRepository(plugin, parseJSPlugin({ entry_path: 'music', download_url: url, version: manifest.version }))).toBe(true)
+      expect(installedFromRepository(plugin, parseJSPlugin({ entry_path: 'music', download_url: url.replace('bob/music', 'carol/music'), version: manifest.version }))).toBe(false)
+    }
+  } finally { vi.unstubAllGlobals() }
 })

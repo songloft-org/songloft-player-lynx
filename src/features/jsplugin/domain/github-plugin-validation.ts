@@ -80,6 +80,25 @@ export function isRepositoryMetadataUrl(address: string, repository: string): bo
     || url.host === 'github.com' && path.startsWith(`/${repo}/raw/`)
 }
 
+export function githubUrlRepository(address: string): string | null {
+  const url = publicRepositoryUrl(address)
+  if (!url) return null
+  const parts = url.path.split('/')
+  if (parts.length < 4 || !/^[A-Za-z0-9_.-]+$/.test(parts[1]!) || !/^[A-Za-z0-9_.-]+$/.test(parts[2]!)) return null
+  return `${parts[1]}/${parts[2]}`
+}
+
+export function parseReleaseDownload(address: string): { repository: string; tag: string; file: string } | null {
+  const repository = githubUrlRepository(address)
+  if (!repository) return null
+  const download = releaseDownload(address, repository)
+  return download ? { repository, ...download } : null
+}
+
+export function downloadRepository(plugin: GithubPlugin): string {
+  return parseReleaseDownload(plugin.downloadUrl)?.repository ?? plugin.repository.fullName
+}
+
 export function releaseDownload(address: string, repository: string): { tag: string; file: string } | null {
   try {
     const url = publicRepositoryUrl(address)
@@ -106,7 +125,7 @@ export function occupiedPlugin(plugin: GithubPlugin, installed: readonly JSPlugi
 
 export function installedFromRepository(plugin: GithubPlugin, installed: JSPlugin | undefined): boolean {
   return !!installed && (isRepositoryMetadataUrl(installed.updateUrl ?? '', plugin.repository.fullName)
-    || releaseDownload(installed.downloadUrl ?? '', plugin.repository.fullName) != null)
+    || releaseDownload(installed.downloadUrl ?? '', downloadRepository(plugin)) != null)
 }
 
 export function discoveryHasUpdate(plugin: GithubPlugin, installed: JSPlugin | undefined): boolean {

@@ -143,3 +143,7 @@ pnpm run test:release
 ```
 
 Copy fresh bundles and compile after native edits. Debug E2E needs the JS flag and adb forward/iproxy. Package inspection requires production bundles without the bridge; do not mix them.
+
+### GitHub discovery: cross-repository packages (2026-10-08)
+
+Download URLs and public update metadata may belong to other GitHub repositories. Clients validate the target repository’s stable Release and actual nonempty asset, retaining version, entry-path, hash and URL checks. Details show the download URL and installation confirmation identifies the package repository. Installed and update status use the actual package repository.

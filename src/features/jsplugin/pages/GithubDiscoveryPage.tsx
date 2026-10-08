@@ -17,7 +17,7 @@ import { discoveryErrorKey, useDiscoveryHostVersion, useGithubDiscoveryQuery } f
 import { useGithubProxyQuery, usePluginsQuery } from '../data/jsplugin-query.js'
 import { useInstallFromRegistryMutation } from '../data/jsplugin-mutations.js'
 import { updateRegistryReturnState } from '../data/registry-return-state.js'
-import { discoveryHasUpdate, hostCompatibility, installedFromRepository, occupiedPlugin, type GithubPlugin } from '../domain/github-plugin-validation.js'
+import { downloadRepository, discoveryHasUpdate, hostCompatibility, installedFromRepository, occupiedPlugin, type GithubPlugin } from '../domain/github-plugin-validation.js'
 import './PluginRegistryPage.css'
 import './GithubDiscoveryPage.css'
 
@@ -120,7 +120,7 @@ export function GithubDiscoveryPage({ onBack }: { onBack?: () => void }) {
           <ConfirmDialog show={helpOpen} title={t('githubDiscovery.helpTitle')} message={t('githubDiscovery.help')}
             acknowledgeOnly confirmLabel={t('common.close')} onConfirm={() => setHelpOpen(false)} onCancel={() => setHelpOpen(false)} testId='github-discovery-help-dialog' />
           <ConfirmDialog show={confirmOpen} title={t('githubDiscovery.installTitle')}
-            message={t('githubDiscovery.installWarning', { repository: detail?.repository.fullName ?? '', version: detail?.manifest.version ?? '' })
+            message={t('githubDiscovery.installWarning', { repository: detail ? downloadRepository(detail) : '', version: detail?.manifest.version ?? '' })
               + (occupied && !sameRepository ? `\n\n${t('githubDiscovery.replaceWarning', { name: occupied.displayName, version: occupied.version ?? '' })}` : '')
               + `\n\n${t('githubDiscovery.permissions')}: ${detail?.manifest.permissions.join(', ') || t('githubDiscovery.noPermissions')}`}
             confirmLabel={occupied && !sameRepository ? t('jsplugin.conflictDialogConfirm') : t('jsplugin.install')}
@@ -178,6 +178,7 @@ export function GithubDiscoveryPage({ onBack }: { onBack?: () => void }) {
             <view className='github-discovery__detail'>
               <text className='github-discovery__notice-text'>{t('githubDiscovery.notice')}</text>
               <text className='github-discovery__meta'>{detail.repository.fullName}</text>
+              <text className='github-discovery__meta'>{detail.downloadUrl}</text>
               <text className='github-discovery__description'>{detail.manifest.description}</text>
               <text className='github-discovery__meta'>{`v${detail.manifest.version} · ${detail.manifest.renderEngine || 'webview'} · ★ ${detail.repository.stars}`}</text>
               <text className='github-discovery__meta'>{t('githubDiscovery.published', { date: detail.publishedAt.slice(0, 10) })}</text>

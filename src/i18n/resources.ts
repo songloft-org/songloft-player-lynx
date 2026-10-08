@@ -39,7 +39,7 @@ export const en = {
     incomplete: 'These are partial results. GitHub search or repository verification did not complete.',
     loadMore: 'Check more repositories',
     helpTitle: 'How discovery works',
-    help: 'Add the songloft-plugin topic to your public repository. Publish a valid plugin.json at the default branch root, including entryHash and zipHash, and point download_url to a .jsplugin.zip asset in a stable release of this repository. The version must match the release tag (an optional v prefix is accepted). Legacy updateUrl is supported within this repository. Archived repositories and forks are excluded.\n\nDiscovery checks publishing format and release assets; it does not audit code or inspect ZIP contents. Installation uses the connected server’s existing package validation. Results are ordered by repository update time or stars, not plugin release date.',
+    help: 'Add the songloft-plugin topic to your public repository. Publish a valid plugin.json at the default branch root, including entryHash and zipHash, and point download_url to a .jsplugin.zip asset in a stable GitHub release, including releases in another repository. The actual target release and asset are verified; the tag need not match the manifest version. Legacy updateUrl may reference public metadata in another GitHub repository, with consistent versions and entry paths. Archived repositories and forks are excluded.\n\nDiscovery checks publishing format and release assets; it does not audit code or inspect ZIP contents. Installation uses the connected server’s existing package validation. Results are ordered by repository update time or stars, not plugin release date.',
   },
   deviceCache: {
     title: 'Device cache',
@@ -1168,7 +1168,7 @@ export const zh: TranslationTree = {
     incomplete: '当前为部分结果，GitHub 搜索或仓库验证尚未完成。',
     loadMore: '继续检查更多仓库',
     helpTitle: '如何发现插件',
-    help: '给公开仓库添加 songloft-plugin topic。在默认分支根目录发布合法的 plugin.json（含 entryHash、zipHash），download_url 指向本仓库正式 Release 中的 .jsplugin.zip 资产，版本需与发布 tag 一致（允许 v 前缀）。兼容同仓库内的旧式 updateUrl。归档仓库和 fork 默认排除。\n\n发现仅检查发布格式和资产，不审核代码或检查 ZIP 内容；安装时仍由连接的服务器执行现有包校验。列表按仓库更新时间或 Stars 排序，不代表插件发布时间顺序。',
+    help: '给公开仓库添加 songloft-plugin topic。在默认分支根目录发布合法的 plugin.json（含 entryHash、zipHash），download_url 指向GitHub 正式 Release 中的 .jsplugin.zip 资产，允许跨仓库，会验证目标 Release 和资产；发布 tag 不要求与清单版本一致。兼容跨 GitHub 仓库的公开旧式 updateUrl，版本和插件入口须一致。归档仓库和 fork 默认排除。\n\n发现仅检查发布格式和资产，不审核代码或检查 ZIP 内容；安装时仍由连接的服务器执行现有包校验。列表按仓库更新时间或 Stars 排序，不代表插件发布时间顺序。',
   },
   deviceCache: {
     title: '设备缓存',
