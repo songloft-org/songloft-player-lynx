@@ -77,6 +77,7 @@ src/router.tsx
 - 系统主题/语言初值由宿主 globalProps 在首帧前注入，运行中变化走 global event。`sendGlobalEvent(name, params)` 的第二参必须是数组。
 - reduce-motion：宿主经 `systemReduceMotion` 字段推送；iOS 使用 UIAccessibility 通知，Android 监听 `ANIMATOR_DURATION_SCALE`，HarmonyOS API 23+ 读取并监听公开接口，旧 API 保持未知。Web 在主线程读媒体偏好并推送给 Worker；`.reduce-motion` 零化动效 token。订阅随宿主生命周期清理。
 - 玻璃能力由宿主首帧 globalProps 上报（SDK、注册与 OS 门控）；未知能力使用实心材质，iOS 26+ 才选择 glass。`surface-policy.ts` 将系统辅助功能与本机偏好合并，系统开启时不能被应用开关关闭；降低透明度时卸载 blur。Android capture target 必须有稳定 id、`flatten={false}`，并排除玻璃层自身。
+- Android 13+ 胶囊经 `androidGlassSupported` 门控，用 AGSL 对实时 blur 输入做边缘折射；显式圆角透明裁剪，不能依赖输入 alpha（RenderEffect 会 clamp 越界输入）。普通菜单和 scrim 不启用此透镜。胶囊仅有一层有效填色，不铺全表面渐变或定时 shimmer；增强对比度关闭透镜，降低透明度卸载 blur。
 - 根节点和 blur 叶节点复用 `useSurfaceAppearance`，避免每层重复订阅外观源。无 className 的全屏 scrim 使用 themed blur；紧凑 chrome 才使用 regular glass，装饰叶节点不启用 glass-interactive。未调暗的菜单使用 `--material-fill-menu` 和边缘高光，不铺整面 sheen/ramp；文字对比度须计入选中态 wash 与未知背景。
 - 返回顺序为：覆盖层 LIFO 栈 → `resolveRouteBack` 父级 → tab 首页退出策略。新增覆盖层挂载时必须先让 `useBackHandler(active, handler)` 的 `active` 为 `false`，新增叶子路由同步登记 `route-back.ts`。
 - 不使用 `router.history.back()`；`SubPageShell` 不维护第二份父级信息。完整契约见 back-navigation reference。

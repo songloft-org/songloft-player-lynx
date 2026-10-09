@@ -11,9 +11,10 @@ import { ThemeProvider } from '../../theme/ThemeProvider.js'
 import { BackdropBlur } from '../BackdropBlur.js'
 import { useCapsuleMaterialStyle } from '../capsule-material.js'
 
+const capabilities = vi.hoisted(() => ({ blur: true, liquidGlass: false, androidCapture: true, androidGlass: false }))
 vi.mock('../../../native/backdrop-capabilities.js', () => ({
   BACKDROP_CAPTURE_TARGET: 'songloft-backdrop',
-  getBackdropCapabilities: () => ({ blur: true, liquidGlass: false, androidCapture: true }),
+  getBackdropCapabilities: () => capabilities,
 }))
 vi.mock('../../../native/platform-target.js', () => ({ getPlatformTarget: () => 'android' }))
 
@@ -26,6 +27,7 @@ const rule = (source: string, name: string) => {
 }
 const storage = createMemoryStorage()
 afterEach(async () => {
+  capabilities.androidGlass = false
   await changeReduceTransparency(false, storage)
   await changeIncreaseContrast(false, storage)
   await changeMaterialVariant('regular', storage)
@@ -33,7 +35,7 @@ afterEach(async () => {
 
 function Material() {
   const style = useCapsuleMaterialStyle()
-  return <view className='ui-capsule-material' style={style} />
+  return <view className="ui-capsule-material" style={style} />
 }
 
 test('Android captures a complete page base, preventing sharp alpha bleed-through on Home', () => {
@@ -45,11 +47,16 @@ test('Android captures a complete page base, preventing sharp alpha bleed-throug
 
 test.each([
   ['shared/layouts/ShellLayout.tsx', 'shared/layouts/ShellLayout.css', 'shell__bottombar', 'nav-indicator'],
-  ['features/player/widgets/MiniPlayer.tsx', 'features/player/widgets/MiniPlayer.css', 'mini-player', 'mini-player__progress'],
+  [
+    'features/player/widgets/MiniPlayer.tsx',
+    'features/player/widgets/MiniPlayer.css',
+    'mini-player',
+    'mini-player__progress',
+  ],
 ])('%s composites blur, material and controls in that order', (tsx, stylesheet, panel, content) => {
   const source = read(tsx)
   const blur = source.indexOf("<BackdropBlur className='ui-backdrop-blur--pill' />")
-  const tint = source.indexOf("<view className='ui-capsule-material ")
+  const tint = source.indexOf("<view className='ui-capsule-material'")
   const foreground = source.indexOf(`className='${content}'`)
   expect(blur).toBeGreaterThan(source.indexOf(`className='${panel}`))
   expect(tint).toBeGreaterThan(blur)
@@ -73,13 +80,17 @@ test.each([
 })
 
 test('reducing transparency removes only blur and preserves the opaque capsule material', async () => {
-  const r = render(<ThemeProvider>
-    <BackdropBlur className='ui-backdrop-blur--pill' />
-    <Material />
-    <text>Navigation</text>
-  </ThemeProvider>)
+  const r = render(
+    <ThemeProvider>
+      <BackdropBlur className="ui-backdrop-blur--pill" />
+      <Material />
+      <text>Navigation</text>
+    </ThemeProvider>,
+  )
   expect(r.container.querySelector('blur-view')).not.toBeNull()
-  await act(async () => { await changeReduceTransparency(true, storage) })
+  await act(async () => {
+    await changeReduceTransparency(true, storage)
+  })
   expect(r.container.querySelector('blur-view')).toBeNull()
   expect(r.container.querySelector('.ui-capsule-material')).not.toBeNull()
   const root = r.container.firstElementChild as unknown as { style: Record<string, string> }
@@ -91,13 +102,55 @@ test('reducing transparency removes only blur and preserves the opaque capsule m
 
 test('the capsule updates its concrete paint when thickness and contrast change', async () => {
   const r = render(<Material />)
-  const fill = () => (r.container.firstElementChild as unknown as { style: Record<string, string> }).style.backgroundColor
-  await act(async () => { await changeMaterialVariant('ultra-thin', storage) })
+  const fill = () =>
+    (r.container.firstElementChild as unknown as { style: Record<string, string> }).style.backgroundColor
+  await act(async () => {
+    await changeMaterialVariant('ultra-thin', storage)
+  })
   const thin = fill()
-  await act(async () => { await changeMaterialVariant('thick', storage) })
+  await act(async () => {
+    await changeMaterialVariant('thick', storage)
+  })
   expect(fill()).not.toBe(thin)
+  expect(fill()).toMatch(/, 0\.779\)$/)
+  await act(async () => {
+    await changeMaterialVariant('ultra-thin', storage)
+  })
+  await act(async () => {
+    await changeIncreaseContrast(true, storage)
+  })
   expect(fill()).toMatch(/, 0\.92\)$/)
-  await act(async () => { await changeMaterialVariant('ultra-thin', storage) })
-  await act(async () => { await changeIncreaseContrast(true, storage) })
-  expect(fill()).toMatch(/, 0\.92\)$/)
+})
+
+test('narrow and scrolled mini-player do not repaint the material on its shell', () => {
+  const css = read('features/player/widgets/MiniPlayer.css').replace(/\/\*[\s\S]*?\*\//g, '')
+  const narrow = /\.shell--narrow \.mini-player\s*\{([^{}]*)\}/.exec(css)![1]!
+  expect(narrow).toMatch(/background-color:\s*transparent/)
+  const scrolled = /\.shell--narrow\.shell--scrolled \.mini-player\s*\{([^{}]*)\}/.exec(css)![1]!
+  expect(scrolled).not.toContain('inset')
+  const press = /\.mini-player:active \.mini-player__row\s*\{([^{}]*)\}/.exec(css)![1]!
+  expect(press).toContain('opacity: var(--press-opacity)')
+  expect(css).not.toMatch(/\.mini-player:active\s*\{/)
+})
+
+test('regular capsule has a single Flutter-reference tint and no independent moving wash', () => {
+  const r = render(<Material />)
+  const style = (r.container.firstElementChild as unknown as { style: Record<string, string> }).style
+  expect(style.backgroundColor).toBe('rgba(255, 255, 255, 0.72)')
+  expect(style.backgroundImage).toBe('none')
+  for (const file of ['shared/layouts/ShellLayout.tsx', 'features/player/widgets/MiniPlayer.tsx']) {
+    expect(read(file)).not.toContain('glass-sheen-breathe')
+  }
+})
+
+test('the Android lens uses Flutter shader tint strength and contrast still overrides it', async () => {
+  capabilities.androidGlass = true
+  const r = render(<Material />)
+  const fill = () =>
+    (r.container.firstElementChild as unknown as { style: Record<string, string> }).style.backgroundColor
+  expect(fill()).toBe('rgba(255, 255, 255, 0.504)')
+  await act(async () => {
+    await changeIncreaseContrast(true, storage)
+  })
+  expect(fill()).toBe('rgba(255, 255, 255, 0.92)')
 })

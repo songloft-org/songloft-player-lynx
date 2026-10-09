@@ -23,8 +23,19 @@ export function useCapsuleMaterialStyle() {
     increaseContrast: surface.increaseContrast,
     opaque: surface.opaque,
   })
+  // Match Flutter's capsule fill, including its .7 tint factor for a lens.
+  // Modal/menu fills have their own readability constraints and must not
+  // inherit this lighter optical material.
+  const referenceAlpha = (surface.theme === 'light' ? 0.72 : 0.68) * (surface.androidGlass ? 0.7 : 1)
+  const fill = tokens['--material-fill']
+  const alpha = Number(fill.slice(fill.lastIndexOf(',') + 1, -1))
+  const capsuleFill =
+    surface.opaque || surface.increaseContrast || surface.liquidGlass
+      ? fill
+      : fill.replace(/[^,]+\)$/, ` ${Number(((alpha * referenceAlpha) / 0.85).toFixed(3))})`)
   return {
-    backgroundColor: tokens['--material-fill'],
+    backgroundColor: capsuleFill,
+    backgroundImage: 'none',
     boxShadow: `inset 0 1px 0 ${tokens['--material-highlight']}, var(--material-rim-sides), inset 0 -1px 0 var(--separator)`,
   }
 }

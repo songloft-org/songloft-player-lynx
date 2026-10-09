@@ -38,7 +38,7 @@ const PRESS_RULES: ReadonlyArray<readonly [string, string]> = [
   ['.nav-item:active', 'shared/layouts/ShellLayout.css'],
   ['.song-row:active', 'features/library/widgets/SongRow.css'],
   ['.media-list-item:active', 'shared/ui/MediaListItem.css'],
-  ['.mini-player:active', 'features/player/widgets/MiniPlayer.css'],
+  ['.mini-player:active .mini-player__row', 'features/player/widgets/MiniPlayer.css'],
   ['.player-controls__btn:active', 'features/player/widgets/PlayControls.css'],
   ['.confirm-dialog__btn:active', 'shared/ui/ConfirmDialog.css'],
   ['.facet-card:active', 'features/library/pages/LibraryPage.css'],
@@ -72,7 +72,7 @@ test('rows dim with opacity ALONE — never transform', () => {
     ['features/library/widgets/SongRow.css', '.song-row:active'],
     ['shared/ui/MediaListItem.css', '.media-list-item:active'],
     ['shared/layouts/ShellLayout.css', '.nav-item:active'],
-    ['features/player/widgets/MiniPlayer.css', '.mini-player:active'],
+    ['features/player/widgets/MiniPlayer.css', '.mini-player:active .mini-player__row'],
   ]
   for (const [file, selector] of rows) {
     expect(ruleBody(file, selector), `${selector} must not transform`).not.toMatch(/transform/)

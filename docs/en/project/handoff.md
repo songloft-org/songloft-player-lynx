@@ -1,8 +1,10 @@
-# Handoff (2026-10-08)
+# Handoff (2026-10-09)
 
 This page records current scope and validation limits. Batch evidence is in [progress (Chinese)](../../project/progress.md); known issues are in [bugs (Chinese)](../../project/bugs.md). Historical uncommitted labels and counts describe their original snapshots. [中文版](../../project/handoff.md).
 
 ## 1. Current completion
+
+The bottom bar and mini-player were compared with current native Flutter screenshots and recordings. Duplicate tint, full-surface gradients and timed breathing were removed. Android 13+ gates live AGSL edge refraction on explicit host capability: lens blur is 6px, ordinary capsule blur 12px, and tint follows Flutter's baseline and shader .7 factor. Explicit transparent rounded clipping fixes the vertical stripe found in recording. Press feedback dims foreground controls while preserving the optical material and Lynx's existing no-scale rule for rows. Accessibility and older-platform fallbacks remain. Type checking, **297 files / 3231 tests** of regression coverage (the final CSS-selector false positive was fixed and **34 checks** rerun), **111 targeted checks**, **43 Android JVM tests**, **70 release-tool checks**, production Lynx/Web builds and the Debug APK pass. API 34 arm64 native bridge covers light/dark scrolling, tab changes and mini-player interaction; Docker Chrome is also exercised. Native Flutter uses the same fixture without source changes. Failed test-service/emulator fragments are excluded; progress records evidence and final hashes. Device frame rate/power and iOS/HarmonyOS optical acceptance remain open. The user authorized this round's commit; pushing remains unauthorized. Git history is authoritative. The following entries are earlier snapshots.
 
 The Android capsule fix passes pre-commit self-review with no new issues. Runtime code is unchanged, so the verification below remains the evidence. Final diff/encoding checks pass; the user has authorized committing and pushing; Git history is authoritative for their actual status.
 

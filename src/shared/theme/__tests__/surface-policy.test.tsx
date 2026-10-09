@@ -131,3 +131,23 @@ test('Android capture props are emitted only on Android', () => {
   expect(html).not.toContain('glass-style')
   expect(html).not.toContain('ios-user-interface-style')
 })
+
+test('Android refraction needs an explicit host capability and only decorates capsules', async () => {
+  vi.mocked(getPlatformTarget).mockReturnValue('android')
+  host().__globalProps = { ...props(), androidCaptureSupported: true }
+  expect(getSurfacePolicy().androidGlass).toBe(false)
+  host().__globalProps = { ...props(), androidCaptureSupported: true, androidGlassSupported: true }
+  const r = render(<>
+    <BackdropBlur />
+    <BackdropBlur className='ui-backdrop-blur--panel' />
+    <BackdropBlur className='ui-backdrop-blur--pill' />
+  </>)
+  const layers = () => [...r.container.querySelectorAll('blur-view')]
+  expect(layers().map(layer => layer.getAttribute('songloft-glass'))).toEqual(['false', 'false', 'true'])
+  expect(layers().map(layer => layer.getAttribute('blur-radius'))).toEqual(['20px', '20px', '6px'])
+  await act(async () => { await changeIncreaseContrast(true, storage) })
+  expect(layers().every(layer => layer.getAttribute('songloft-glass') === 'false')).toBe(true)
+  expect(layers().map(layer => layer.getAttribute('blur-radius'))).toEqual(['20px', '20px', '12px'])
+  await act(async () => { await changeReduceTransparency(true, storage) })
+  expect(layers()).toHaveLength(0)
+})

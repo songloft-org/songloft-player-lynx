@@ -19,7 +19,8 @@ function rules(): string {
 }
 
 function block(css: string, selector: string): string {
-  const match = new RegExp(`\\${selector}\\s*\\{([^}]*)\}`).exec(css)
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = new RegExp(`^\\s*${escaped}\\s*\\{([^}]*)\\}`, 'm').exec(css)
   expect(match, `missing rule for ${selector}`).not.toBeNull()
   return match![1]!
 }
@@ -61,8 +62,11 @@ test('the meta column can shrink below its content', () => {
  */
 test('the row height is fixed, not content-sized', () => {
   expect(block(rules(), '.mini-player__row')).toMatch(/height:\s*48px/)
-  expect(block(rules(), '.mini-player__row'), 'no vertical padding — it would ' +
-    'add on top of the fixed height under content-box').toMatch(/padding:\s*0\s/)
+  expect(block(rules(), '.mini-player:active .mini-player__row')).toMatch(/opacity:\s*var\(--press-opacity\)/)
+  expect(
+    block(rules(), '.mini-player__row'),
+    'no vertical padding — it would ' + 'add on top of the fixed height under content-box',
+  ).toMatch(/padding:\s*0\s/)
 })
 
 /**

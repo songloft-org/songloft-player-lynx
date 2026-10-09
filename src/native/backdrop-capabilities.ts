@@ -10,14 +10,14 @@ export function getBackdropCapabilities() {
   const system = readSystemInfo()
   // Runtime engineVersion is authoritative; LynxEnv may report a placeholder.
   const sdkVersion = system?.engineVersion ?? system?.lynxSdkVersion ?? props.backdropSdkVersion
-  const version = typeof sdkVersion === 'string'
-    ? /^(\d+)\.(\d+)(?:\.\d+)?(?:$|[-])/.exec(sdkVersion)
-    : null
+  const version = typeof sdkVersion === 'string' ? /^(\d+)\.(\d+)(?:\.\d+)?(?:$|[-])/.exec(sdkVersion) : null
   const sdkSupported = platform === 'web' || (!!version && Number(version[1]) >= 4)
   const blur = sdkSupported && props.backdropBlurSupported === true
   return {
     blur,
     liquidGlass: blur && platform === 'ios' && props.liquidGlassSupported === true,
     androidCapture: blur && platform === 'android' && props.androidCaptureSupported === true,
+    androidGlass:
+      blur && platform === 'android' && props.androidCaptureSupported === true && props.androidGlassSupported === true,
   }
 }

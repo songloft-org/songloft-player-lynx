@@ -54,12 +54,14 @@ const SURFACES: Surface[] = [
     selector: '.shell__bottombar',
     fill: /var\(--material-fill\)/,
     childMaterial: true,
+    rimOnly: true,
   },
   {
     file: 'features/player/widgets/MiniPlayer.css',
     selector: '.mini-player',
     fill: /var\(--material-fill\)/,
     childMaterial: true,
+    rimOnly: true,
   },
   {
     file: 'shared/ui/PopoverMenu.css',

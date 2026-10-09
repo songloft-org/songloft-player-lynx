@@ -16,6 +16,7 @@ export function getSurfacePolicy() {
     blur,
     liquidGlass: blur && capabilities.liquidGlass && !increaseContrast,
     androidCapture: blur && capabilities.androidCapture,
+    androidGlass: blur && !!capabilities.androidGlass && !increaseContrast,
   }
 }
 
@@ -25,5 +26,5 @@ export function subscribeSurfacePolicy(listener: () => void): () => void {
     subscribeIncreaseContrast(listener),
     subscribeReduceTransparency(listener),
   ]
-  return () => unsubscribers.forEach(unsubscribe => unsubscribe())
+  return () => unsubscribers.forEach((unsubscribe) => unsubscribe())
 }

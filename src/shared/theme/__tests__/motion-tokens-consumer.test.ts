@@ -30,10 +30,6 @@ const BESPOKE_LOOPS: Record<string, string[]> = {
   'features/playlist/widgets/PlaylistsView.css': ['eq-bounce'],
   // `linear` is the deliberate curve for a constant-speed indeterminate sweep.
   'features/library-ops/pages/LibraryOpsPage.css': ['libops-indeterminate'],
-  // A slow faux-glass sheen drift (a 14s "breath") — bespoke geometry, not a
-  // UI transition, so it cannot share a --duration token. Lives in its own file
-  // so the exemption does not widen onto real UI transitions elsewhere.
-  'shared/ui/glass-sheen-motion.css': ['glass-sheen-breathe'],
 }
 
 function filesOf(dir: string, ext: string): string[] {

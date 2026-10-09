@@ -63,6 +63,7 @@ class MainActivity : Activity() {
         val accelerated = packageManager.getActivityInfo(componentName, 0).flags and ActivityInfo.FLAG_HARDWARE_ACCELERATED != 0
         props["backdropBlurSupported"] = props["backdropBlurSupported"] == true && accelerated
         props["androidCaptureSupported"] = props["androidCaptureSupported"] == true && accelerated
+        props["androidGlassSupported"] = props["androidGlassSupported"] == true && accelerated
         if (Build.VERSION.SDK_INT >= 34) {
             props["systemIncreaseContrast"] = getSystemService(UiModeManager::class.java).contrast > 0f
         }

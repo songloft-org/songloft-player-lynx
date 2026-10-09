@@ -462,7 +462,7 @@ Liquid Glass 为控件和导航元素（如标签栏、侧边栏）形成一个�
 > **材质令牌体系（`--material-*`）**：所有材质 CSS 变量统一使用 `--material-*` 前缀（原 `--glass-*` 已全部重命名）。关键令牌：
 >
 > - **填充**：`--material-fill`（常规玻璃填充）、`--material-fill-elevated`（scrim 之上的模态表面，原 `--glass-fill-strong`）、`--material-fill-menu`（未调暗的文字密集菜单）。菜单采用独立最低 alpha（亮 .99、暗 .92），保留 blur 与边缘高光，移除覆盖整面文字区域的 sheen/ramp；选中态 wash 一起参与对比度验证。四档材质仍控制导航/普通模态表面，菜单不随 ultra-thin 变得难以阅读；降低透明度的菜单 alpha=1。基线正文采用 4.5 门槛，secondary/accent/red 仍沿用仓库明确接受的 3.0 分层门槛，自定义主题包不自动保证这些比值。
-> - **静态质感**：`--material-sheen` / `--material-sheen-layer`（148deg、38% 停点的二层微高光，营造折射光泽）、`--material-highlight`（镜面高光）、`--material-rim-side`（边缘折射）、`--material-ramp-*`（渐变坡道，模拟 lensing 效应）。填充不透明度不受质感层影响，默认 regular 档不变。
+> - **胶囊光学层**：底栏和迷你播放器仅叠加一次有效填色及边缘高光，不使用全表面 sheen/ramp 或定时渐变。普通 blur 的 regular 填色参考 Flutter：亮 .72、暗 .68；Android 13+ 实时 AGSL 透镜再乘 Flutter shader 的 .7 tint 系数。透镜 6px、普通胶囊 12px 与菜单/scrim 20px 模糊分离，折射只作用于装饰层，显式圆角透明裁剪。迷你播放器按压仅淡化前景控制，保持玻璃采样/填色；避免整体 opacity 暴露清晰背景，也保持 Lynx 的行控件不缩放规则。增强对比度使用 thick 并关闭透镜，降低透明度移除 blur 且填色实心；iOS 系统 glass 保留自身材质策略。
 > - **光晕与色调**：`--material-glow-faint`（装饰光晕）、`--tint-fill`（底栏选中态背景及玻璃上的强调态）、`--quaternary-system-fill`（玻璃上的中性态）。
 >
 > **四档材质模型**（对应 Apple 标准材质）：ultra-thin / thin / regular（默认）/ thick，由 `material-model.ts` 管理，闸门 `material-model.test.ts`。

@@ -27,7 +27,6 @@ import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import { BackdropBlur } from '../ui/BackdropBlur.js'
 import { useCapsuleMaterialStyle } from '../ui/capsule-material.js'
 import { Icon, activeAccentIconColor, ICON_COLORS } from '../ui/Icon.js'
-import '../ui/glass-sheen-motion.css'
 import './ShellLayout.css'
 
 /**
@@ -304,7 +303,7 @@ export function ShellLayout() {
                   scrolling content rather than an 0.85 wash. Apple's tab bar is
                   the reference here. See `BackdropBlur.tsx`. */}
               <BackdropBlur className='ui-backdrop-blur--pill' />
-              <view className='ui-capsule-material glass-sheen-breathe' style={capsuleMaterialStyle} flatten={false} accessibility-element={false} />
+              <view className='ui-capsule-material' style={capsuleMaterialStyle} flatten={false} accessibility-element={false} />
               {/* Flow indicator — single sliding capsule behind the active tab.
                   DOM-ordered before the nav items so it renders behind them. */}
               <view

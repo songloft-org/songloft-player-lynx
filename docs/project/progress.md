@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-09 · 对照 Flutter 修复胶囊光学效果
+
+- 对照 Flutter `LiquidGlassSurface`：透镜 blur 6px、普通胶囊 12px 与菜单/scrim 20px 分离；regular 填色亮 .72 / 暗 .68，Android 透镜再乘 shader 的 .7 tint 系数。移除胶囊整面渐变和定时 breathing；窄屏迷你播放器父层不再重复填色或绘制 inset 边缘，保持 blur → 单层 tint → controls。按压只淡化迷你播放器前景，避免整体 opacity 暴露清晰背景；沿用 Lynx 行控件不缩放约束，未复制 Flutter 的根层 scale。
+- API 33+、硬件加速、SDK 和显式宿主能力共同门控 `androidGlassSupported`。`SongloftBlurUI` 的装饰叶层对实时 blur 输入使用 AGSL 边缘折射，尺寸变化更新、关闭/销毁释放 effect；不变形前景文字或点击区域。增强对比度关闭透镜，降低透明度移除 blur，旧壳/低版本保持既有降级。没有为菜单/scrim 新增透镜，也没有改 iOS 系统 glass。
+- 录屏发现首版 shader 的 clamp 输入在胶囊外变成纵向色带，已补显式圆角透明裁剪并重新安装验证；该失败版不作为交付证据。最终录屏覆盖三次真实滑动、首页/曲库/设置点击、迷你播放器按压与打开，胶囊及 blur 几何稳定。最终包 SHA-256 `cbdbda3279697ab9668cfddc98b6ec4e69f7b3a011b5435eadb43fcadbe9630d`，内嵌 bundle 与 Android assets 一致（`f3ca1aaaeab36c210a39e411524b915f6918c045e17fe1f511de4ce9c75f7960`）；为本地验收的 Debug/TestBridge 包，生产双 bundle 不含测试入口。
+- 类型检查、**111 项**针对检查、**43 项** Android JVM、**70 项**发布工具、最终生产双 bundle/Web 与 Android APK 编译通过。回归覆盖 **297 文件 / 3231 项**：生产产物生成后一次全量全部通过；最终半径/按压调整后的全量 3230 项通过，唯一失败是旧 CSS 测试误把按压选择器当基础行高规则。修正精确匹配后 **3 文件 / 34 项**定向复测通过，运行时代码未再改。首次全量时 dist 尚是测试 bundle，发布产物闸门如预期失败；最终生产产物闸门通过。Docker Chrome 实际滚动/切页/迷你播放器验证单层填色、12px blur、固定胶囊且无页面异常；按压实际确认根 opacity=1、前景 .7、填色不变。四档、降低透明度和增强对比度经实际开关复核。
+- Flutter 原生参考包由当前源码编译（源码未改），SHA-256 `64f2540dcf5a579e02025f6ea646b48ae05d7d1d4958688ad879d777869e5535`。API 34 x86_64 实际初始化 shader 后，对同一彩色条纹夹具拍明暗截图/滚动与切页录屏；布局、字号与背景主题不同，不作像素相等断言。`/tmp/songloft-discovery-native/flutter-reference-{light,dark}.png` / `.mp4`。空歌单会使 Flutter 首页提前返回，夹具补一条歌单后才显示插件背景；深色首次回首页时夹具服务停止造成加载失败，重录后验收，不把失败截图作为最终结果。
+- 证据：`/tmp/lynx-glass-acceptance-tests.log`、`/tmp/lynx-glass-acceptance-retest.log`、`/tmp/lynx-glass-followup-web.json`、`/tmp/lynx-glass-final-{light,dark}.json`、`/tmp/songloft-discovery-native/glass-final-{light,dark}.png` / `-mini.png` / `.mp4`、`/tmp/lynx-glass-flutter-comparison.png`。最终 AndroidRuntime 日志为空，diff/UTF-8 自审通过。API 34 使用 arm64 native bridge；专用模拟器 QEMU 曾在高负载后退出，清理测试 AVD 后重装，最终录屏不采用启动/权限弹窗片段。自建夹具与两台 Docker 测试容器已停止。真机帧率/能耗、API 21–32 回退设备和 iOS/HarmonyOS 光学效果仍待设备验收。用户已授权提交；尚未授权推送，实际提交以 Git 历史为准。
+
 ## 2026-10-08 · Android 导航胶囊材质一致性修复
 
 - 用户要求继续后完成提交前自审：核对全部调用点、原生负层级与圆角、父/子阴影职责、共享策略与材质订阅补读/清理、opaque 与 contrast 分支、装饰层触摸/无障碍、动效及实际设备证据，未发现新增问题。运行时代码未再修改，沿用下述已通过的验证；最终 diff/编码复查通过。用户已授权提交和推送，实际提交状态以 Git 历史为准。

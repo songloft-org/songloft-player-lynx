@@ -264,7 +264,8 @@ describe('BackdropBlur component', () => {
 
   it('sets the blur radius from the shared constant', () => {
     expect(BACKDROP_BLUR_RADIUS).toMatch(/^\d+px$/)
-    expect(COMPONENT).toMatch(/blur-radius=\{BACKDROP_BLUR_RADIUS\}/)
+    expect(COMPONENT).toMatch(/blur-radius=\{radius\}/)
+    expect(COMPONENT).toContain('policy.androidGlass ? CAPSULE_GLASS_RADIUS : CAPSULE_BLUR_RADIUS')
   })
 
   it('drives the iOS vibrancy from the resolved theme, never the default', () => {

@@ -34,6 +34,7 @@ object SystemAppearance {
         PROP_REDUCE_MOTION to reduceMotionOf(contentResolver),
         "backdropBlurSupported" to (Build.VERSION.SDK_INT >= 23),
         "androidCaptureSupported" to (Build.VERSION.SDK_INT >= 23),
+        "androidGlassSupported" to (Build.VERSION.SDK_INT >= 33),
     )
 
     /**
