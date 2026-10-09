@@ -1,8 +1,12 @@
-# Handoff (2026-10-09)
+# Handoff (2026-10-10)
 
 This page records current scope and validation limits. Batch evidence is in [progress (Chinese)](../../project/progress.md); known issues are in [bugs (Chinese)](../../project/bugs.md). Historical uncommitted labels and counts describe their original snapshots. [中文版](../../project/handoff.md).
 
 ## 1. Current completion
+
+The user authorized committing and pushing the drag sorting fix, including the parent submodule pointer. Precommit review found no new issues; runtime code is unchanged and the final validation results remain applicable. Git history and the remote record actual completion; uncommitted labels below describe implementation snapshots.
+
+**Current batch: drag sorting has been isolated from page scrolling; nothing is committed or pushed.** Custom library views, plugin tabs, the playlist list and playlist songs now use a shared `DragHandle`. Handles consume native swipes and disable browser panning on Web, release interception when disabled, and preserve SDK touch delivery and scrolling from other row content. Stable React keys also retain MTS reference and overlay ownership across consecutive sorts. Home plugin editing already intercepts gestures; the current playback queue has no drag interface and needs no change. Final **309 files / 3384 tests**, types, production Lynx/Web dual bundles, **70 release checks** and a five-file ReactLynx scan pass. Chromium at 390×760 verifies upward/downward touch dragging, unchanged scroll positions and persisted server order for all four interfaces; ordinary rows still scroll, and consecutive playlist/song drags and the final screenshot are checked. Progress records evidence and driver corrections. Backend and native host sources are unchanged. No adb devices are connected, so Android/iOS/HarmonyOS gestures still need device verification. The parent submodule pointer is unchanged. Following entries are earlier snapshots.
 
 The user authorized committing and pushing this Android lens synchronization batch, including the parent submodule pointer. Precommit review found no new issues; runtime code is unchanged and the final validation results remain applicable. Git history and the remote record actual completion; uncommitted/unpushed labels below describe implementation snapshots. K40 device acceptance of the blue line remains open.
 

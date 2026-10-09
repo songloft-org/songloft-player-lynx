@@ -455,6 +455,11 @@ test('sort mode renders drag handles for each song', async () => {
     fireEvent.tap(queries.getByTestId('popover-item-sort')!, {})
     await Promise.resolve()
   })
+
+  for (const id of [1, 2]) {
+    expect(queries.queryByTestId(`playlist-detail-drag-${id}`)).toHaveAttribute('consume-slide-event', '[[-180,180]]')
+  }
+  expect(elementTree.root!.querySelectorAll('[consume-slide-event]')).toHaveLength(2)
   expect(queries.queryByTestId('playlist-detail-drag-1')).toBeInTheDocument()
   expect(queries.queryByTestId('playlist-detail-drag-2')).toBeInTheDocument()
 })

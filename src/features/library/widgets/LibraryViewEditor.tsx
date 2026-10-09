@@ -2,9 +2,14 @@ import { useState } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-sortable'
 
-import type { LibraryBrowseConfig, LibraryBrowseView, LibraryViewKey } from '../../../models/library-browse.js'
+import type {
+  LibraryBrowseConfig,
+  LibraryBrowseView,
+  LibraryViewKey,
+} from '../../../models/library-browse.js'
 import { LIBRARY_VIEW_KEYS } from '../../../models/library-browse.js'
 import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
+import { DragHandle } from '../../../shared/ui/DragHandle.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { useUpdateLibraryBrowseMutation } from '../data/library-browse-query.js'
 import {
@@ -35,9 +40,9 @@ export interface LibraryViewEditorProps {
  * before the optimistic PUT.
  *
  * Reorder uses one `SortableRoot` per group (default `as` = plain view, nested
- * in the page scroll-view). `scrollableBoundaryId` is deliberately NOT set —
- * the group-move buttons are the non-gesture fallback on any platform where
- * nested drag misbehaves (see the batch plan's risk note).
+ * in the page scroll-view). Each handle consumes native slides and disables
+ * browser panning, while touch events still bubble to SortableItemArea. The
+ * rest of each row remains available for normal page scrolling.
  */
 export function LibraryViewEditor({ initialConfig, onCancel, onSaved }: LibraryViewEditorProps) {
   const { t } = useTranslation()
@@ -50,15 +55,15 @@ export function LibraryViewEditor({ initialConfig, onCancel, onSaved }: LibraryV
 
   const toggleVisible = (key: string) => {
     setShowMinOneError(false)
-    setDraft(prev => prev.map((v) => (v.key === key ? { ...v, visible: !v.visible } : v)))
+    setDraft((prev) => prev.map((v) => (v.key === key ? { ...v, visible: !v.visible } : v)))
   }
 
   const move = (group: LibraryViewGroup, delta: -1 | 1) => {
-    setDraft(prev => moveGroup(prev, group, delta))
+    setDraft((prev) => moveGroup(prev, group, delta))
   }
 
   const reorder = (group: LibraryViewGroup, orderedKeys: string[]) => {
-    setDraft(prev => setGroupOrder(prev, group, orderedKeys as LibraryViewKey[]))
+    setDraft((prev) => setGroupOrder(prev, group, orderedKeys as LibraryViewKey[]))
   }
 
   const save = () => {
@@ -88,7 +93,11 @@ export function LibraryViewEditor({ initialConfig, onCancel, onSaved }: LibraryV
           <Icon name='x' size={22} color={ICON_COLORS.content} />
         </view>
         <text className='library-editor__title'>{t('library.customizeViews')}</text>
-        <view className='library-editor__reset' bindtap={resetToDefault} data-testid='library-editor-reset'>
+        <view
+          className='library-editor__reset'
+          bindtap={resetToDefault}
+          data-testid='library-editor-reset'
+        >
           <text className='library-editor__reset-text'>{t('library.resetToDefault')}</text>
         </view>
         <view className='library-editor__save' bindtap={save} data-testid='library-editor-save'>
@@ -96,9 +105,9 @@ export function LibraryViewEditor({ initialConfig, onCancel, onSaved }: LibraryV
         </view>
       </view>
 
-      {showMinOneError
-        ? <text className='library-editor__error'>{t('library.viewsMinOne')}</text>
-        : null}
+      {showMinOneError ? (
+        <text className='library-editor__error'>{t('library.viewsMinOne')}</text>
+      ) : null}
 
       <scroll-view className='library-editor__scroll' scroll-y>
         <view className='library-editor__content'>
@@ -113,39 +122,68 @@ export function LibraryViewEditor({ initialConfig, onCancel, onSaved }: LibraryV
                     {t(LIBRARY_VIEW_GROUP_LABEL_KEY[bucket.group])}
                   </text>
                   <view
-                    className={isFirst ? 'library-editor__group-btn library-editor__group-btn--disabled' : 'library-editor__group-btn'}
-                    bindtap={() => { if (!isFirst) move(bucket.group, -1) }}
+                    className={
+                      isFirst
+                        ? 'library-editor__group-btn library-editor__group-btn--disabled'
+                        : 'library-editor__group-btn'
+                    }
+                    bindtap={() => {
+                      if (!isFirst) move(bucket.group, -1)
+                    }}
                     accessibility-element={true}
                     accessibility-label={t('common.moveUp')}
                     data-testid={`library-editor-group-up-${bucket.group}`}
                   >
-                    <Icon name='chevron-up' size={18} color={isFirst ? ICON_COLORS.contentMuted : ICON_COLORS.content2} />
+                    <Icon
+                      name='chevron-up'
+                      size={18}
+                      color={isFirst ? ICON_COLORS.contentMuted : ICON_COLORS.content2}
+                    />
                   </view>
                   <view
-                    className={isLast ? 'library-editor__group-btn library-editor__group-btn--disabled' : 'library-editor__group-btn'}
-                    bindtap={() => { if (!isLast) move(bucket.group, 1) }}
+                    className={
+                      isLast
+                        ? 'library-editor__group-btn library-editor__group-btn--disabled'
+                        : 'library-editor__group-btn'
+                    }
+                    bindtap={() => {
+                      if (!isLast) move(bucket.group, 1)
+                    }}
                     accessibility-element={true}
                     accessibility-label={t('common.moveDown')}
                     data-testid={`library-editor-group-down-${bucket.group}`}
                   >
-                    <Icon name='chevron-down' size={18} color={isLast ? ICON_COLORS.contentMuted : ICON_COLORS.content2} />
+                    <Icon
+                      name='chevron-down'
+                      size={18}
+                      color={isLast ? ICON_COLORS.contentMuted : ICON_COLORS.content2}
+                    />
                   </view>
                 </view>
 
                 <SortableRoot<LibraryBrowseView>
                   data={rows.map((v) => ({ getSortingKey: () => v.key, dataItem: v }))}
-                  onSortEnd={(sorted) => reorder(bucket.group, sorted.map((d) => d.dataItem.key))}
+                  onSortEnd={(sorted) =>
+                    reorder(
+                      bucket.group,
+                      sorted.map((d) => d.dataItem.key),
+                    )
+                  }
                 >
                   {(item) => (
                     <SortableItem
+                      key={item.dataItem.key}
                       sortingKey={item.dataItem.key}
                       as='DraggableRoot'
                       className='library-editor__row'
                     >
                       <SortableItemArea>
-                        <view className='library-editor__drag' data-testid={`library-editor-drag-${item.dataItem.key}`}>
+                        <DragHandle
+                          className='library-editor__drag'
+                          testId={`library-editor-drag-${item.dataItem.key}`}
+                        >
                           <Icon name='menu' size={18} color={ICON_COLORS.content2} />
-                        </view>
+                        </DragHandle>
                       </SortableItemArea>
                       <Icon
                         name={LIBRARY_VIEW_ICON[item.dataItem.key]}
@@ -155,7 +193,10 @@ export function LibraryViewEditor({ initialConfig, onCancel, onSaved }: LibraryV
                       <text className='library-editor__row-label'>
                         {t(LIBRARY_VIEW_LABEL_KEY[item.dataItem.key])}
                       </text>
-                      <view className='library-editor__row-switch' data-testid={`library-editor-switch-${item.dataItem.key}`}>
+                      <view
+                        className='library-editor__row-switch'
+                        data-testid={`library-editor-switch-${item.dataItem.key}`}
+                      >
                         <AppSwitch
                           checked={item.dataItem.visible}
                           onChange={() => toggleVisible(item.dataItem.key)}

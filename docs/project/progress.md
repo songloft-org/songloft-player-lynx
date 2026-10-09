@@ -1,5 +1,14 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-10 · 列表拖拽排序与页面滚动隔离
+
+- 提交收尾：用户已明确授权提交并推送，并同步父仓库子模块指针。逐文件复核手势传递、禁用状态、Web 分支和排序身份，无新增问题；运行时代码未再修改，沿用本轮最终验证结果。实际提交与推送以 Git 历史和远端为准，下方未提交状态为实施时快照。
+- 用户反馈自定义视图、Tab 插件排序时页面跟随上下滚动，并要求检查其他列表。排查当前全部四个 `SortableRoot` 入口，歌单列表与歌单歌曲排序同样缺少手势所有权。首页插件编辑区已使用原生 `consume-slide-event` 和 Web `touch-action` 拦截；当前播放队列使用虚拟列表，已没有拖拽入口，无需改动。
+- 新增共享 `DragHandle`，只在手柄上消费原生滑动，Web 分支动态设置 `touchAction: none`，禁用时撤掉两种拦截；不绑定 `catchtouch*`，保留事件向 SDK 拖拽区域传递。四个列表入口统一使用它，其他行内容与滚动容器保持正常滚动；歌单列表原有边缘自动滚动保留。Tab 手柄旧 CSS 的 Web 属性移入共享组件，不再作为原生不支持的 CSS 编码。
+- 缺陷反向验证：最初两条原生手柄断言在旧代码失败，自定义视图的 Web 用例也失败；扩大范围后的歌单列表/歌曲两条原生断言同样失败。日志 `/tmp/lynx-reorder-scroll-{before,web-before,playlists-before}.log`。连续拖动复测发现未设置 React key 时的残留浮层；四个入口补齐与 `sortingKey` 相同的稳定 key，保持 SDK 的 MTS 引用和浮层状态归属。AST 身份闸门在补齐前 **4 项失败**（`/tmp/lynx-reorder-scroll-identity-before.log`），补齐后相关 **6 文件 / 71 项**通过，包含原生/Web、启用/禁用、拦截范围及排序身份验证。
+- 最终全量 **309 文件 / 3384 项**通过（01:03:36 CST 开始，129.15s），`pnpm exec tsc -b`、生产 Lynx/Web 双 bundle、**70 项发布检查**与五文件 ReactLynx 扫描通过，日志 `/tmp/lynx-reorder-scroll-{focused-reviewed,full-reviewed,types-reviewed,build-reviewed,release-reviewed,react-scan-reviewed}.log`。构建剩余两条 `touch-action` 警告来自既有首页插件 CSS，本批没有新增警告。部署 Web bundle 与构建 hash 相同：`5b8cd0824bdc630ed4a2a1a7cd0c6ab3ee8f3e2eee443d21a292b56088142bd4`。
+- Chromium **390×760** 实际触摸与真实临时后端验证了四个入口的向下/向上拖动及保存：自定义视图滚动位置为 **80px**，Tab 插件为 **45px**，歌单和歌曲列表为 **100px**，拖动期间均不变；自定义视图的普通行仍可滑动。四入口完整回执 `/tmp/lynx-reorder-scroll/browser-all-final.json` 和歌单/歌曲连续拖动回执 `/tmp/lynx-reorder-scroll/browser-playlists.json` 均没有页面错误，最终截图 `browser-all-final.png` 已复核。早期脚本漏掉 SDK 隐藏浮层造成重复 ID，并把分页子集与完整歌单列表直接比较；已修正测试驱动，最终断言对真实保存顺序。脚本包含被动触摸事件和样式读取诊断，不作为原生性能或触摸延迟证据。实际部署 Web 的触摸回归和临时真实后端夹具位于 `/tmp/lynx-reorder-scroll/`，本批临时后端、静态服务和浏览器容器已停止。没有改动后端或原生宿主，当前 adb 无连接设备，Android/iOS/HarmonyOS 的实际手势尚未验收。未提交、未推送、未更新父仓库子模块指针；用户已有录屏保持原样。
+
 ## 2026-10-09 · Redmi K40 Tab 录屏分析与 Android 透镜同步修正
 
 - 提交收尾：用户已明确授权提交并推送，父仓库子模块指针一并同步。逐文件复核空引用、能力门控、完整变换、零激活清理、源隔离及 attach/detach/destroy 生命周期，无新增问题，运行时代码未再修改；沿用本轮最终测试、构建与录屏证据。实际结果以 Git 历史和远端为准，下方未提交状态为实施时快照；K40 蓝线验收仍开放。

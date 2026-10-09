@@ -19,11 +19,14 @@ import {
  * checked mapping + toggle, the save payload shape, and the two guards
  * (all-hidden blocked, cancel doesn't write).
  */
-const { mutateSpy, onCancelSpy, onSavedSpy } = vi.hoisted(() => ({
+const { mutateSpy, onCancelSpy, onSavedSpy, webPlatform } = vi.hoisted(() => ({
   mutateSpy: vi.fn(),
   onCancelSpy: vi.fn(),
   onSavedSpy: vi.fn(),
+  webPlatform: vi.fn(() => false),
 }))
+
+vi.mock('../../../native/web-platform.js', () => ({ isWebPlatform: webPlatform }))
 
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
@@ -47,7 +50,10 @@ vi.mock('../data/library-browse-query.js', () => ({
 
 const { LibraryViewEditor } = await import('../widgets/LibraryViewEditor.js')
 
-function configOf(keys: LibraryViewKey[] = [...LIBRARY_VIEW_KEYS], hidden: LibraryViewKey[] = []): LibraryBrowseConfig {
+function configOf(
+  keys: LibraryViewKey[] = [...LIBRARY_VIEW_KEYS],
+  hidden: LibraryViewKey[] = [],
+): LibraryBrowseConfig {
   return { views: keys.map((key) => ({ key, visible: !hidden.includes(key) })) }
 }
 
@@ -55,6 +61,7 @@ beforeEach(() => {
   mutateSpy.mockClear()
   onCancelSpy.mockClear()
   onSavedSpy.mockClear()
+  webPlatform.mockReturnValue(false)
 })
 
 afterEach(() => vi.clearAllMocks())
@@ -78,6 +85,34 @@ test('renders the three group headers and all 15 view rows', async () => {
   expect(queryAllByTestId(/^library-editor-drag-/)).toHaveLength(18)
   expect(queryAllByTestId(/^library-editor-switch-/)).toHaveLength(18)
 })
+
+test('only drag handles consume native swipes; rows and the page remain scrollable', async () => {
+  const { queryAllByTestId } = await renderEditor()
+  const handles = queryAllByTestId(/^library-editor-drag-/)
+  expect(handles).toHaveLength(18)
+  for (const handle of handles) {
+    expect(handle).toHaveAttribute('consume-slide-event', JSON.stringify([[-180, 180]]))
+  }
+  expect(elementTree.root!.querySelectorAll('[consume-slide-event]')).toHaveLength(handles.length)
+  expect(elementTree.root!.querySelector('scroll-view')).not.toHaveAttribute(
+    'enable-scroll',
+    'false',
+  )
+})
+
+test.each([false, true])(
+  'drag handles disable browser panning only on Web (web=%s)',
+  async (web) => {
+    webPlatform.mockReturnValue(web)
+    const { queryAllByTestId } = await renderEditor()
+    for (const handle of queryAllByTestId(/^library-editor-drag-/)) {
+      expect(handle.style.touchAction ?? '').toBe(web ? 'none' : '')
+    }
+    expect(
+      elementTree.root!.querySelector<HTMLElement>('scroll-view')!.style.touchAction ?? '',
+    ).toBe('')
+  },
+)
 
 test('a hidden view renders its switch unchecked; visible views are checked', async () => {
   const { queryByTestId } = await renderEditor(configOf([...LIBRARY_VIEW_KEYS], ['decade']))
@@ -122,9 +157,24 @@ test('moving a whole group reorders the saved config group-contiguously', async 
   // Still all 16, still contiguous by group.
   expect(saved.views).toHaveLength(18)
   expect(saved.views.map((v) => v.key)).toEqual([
-    'folder', 'artist', 'album', 'genre', 'year', 'decade', 'language', 'style', 'tag',
-    'all', 'local', 'remote', 'radio',
-    'playlist', 'playlist_normal', 'playlist_radio', 'playlist_remote', 'playlist_local',
+    'folder',
+    'artist',
+    'album',
+    'genre',
+    'year',
+    'decade',
+    'language',
+    'style',
+    'tag',
+    'all',
+    'local',
+    'remote',
+    'radio',
+    'playlist',
+    'playlist_normal',
+    'playlist_radio',
+    'playlist_remote',
+    'playlist_local',
   ])
 })
 

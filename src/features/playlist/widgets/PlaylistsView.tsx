@@ -8,6 +8,7 @@ import type { Playlist } from '../../../models/playlist.js'
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { DragHandle } from '../../../shared/ui/DragHandle.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { useScrollNotifier } from '../../../shared/nav/scroll-visibility.js'
 import { usePlayerStore } from '../../player/store/index.js'
@@ -328,14 +329,18 @@ export function PlaylistsView(
         >
           {(item) => (
             <SortableItem
+              key={String(item.dataItem.id)}
               sortingKey={String(item.dataItem.id)}
               as='DraggableRoot'
               className='playlists__sort-row'
             >
               <SortableItemArea>
-                <view className='playlists__sort-handle' data-testid={`playlists-drag-${item.dataItem.id}`}>
+                <DragHandle
+                  className='playlists__sort-handle'
+                  testId={`playlists-drag-${item.dataItem.id}`}
+                >
                   <Icon name='menu' size={18} color={ICON_COLORS.content2} />
-                </view>
+                </DragHandle>
               </SortableItemArea>
               <text className='playlists__sort-row-name'>
                 {item.dataItem.name || t('common.untitled')}

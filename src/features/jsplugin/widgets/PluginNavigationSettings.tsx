@@ -12,6 +12,7 @@ import {
 } from '../data/navigation-settings.js'
 import { SwitchRow } from '../../settings/widgets/SwitchRow.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { DragHandle } from '../../../shared/ui/DragHandle.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import '../pages/TabConfigPage.css'
 
@@ -134,6 +135,7 @@ export function PluginNavigationOrder({
               >
                 {(item) => (
                   <SortableItem
+                    key={item.dataItem.entryPath}
                     sortingKey={item.dataItem.entryPath}
                     as='DraggableRoot'
                     className='tab-config__order-row'
@@ -145,12 +147,13 @@ export function PluginNavigationOrder({
                       )?.displayName ?? item.dataItem.name}
                     </text>
                     <SortableItemArea>
-                      <view
+                      <DragHandle
                         className='tab-config__order-handle'
-                        data-testid={`tab-order-handle-${item.dataItem.entryPath}`}
+                        disabled={disabled}
+                        testId={`tab-order-handle-${item.dataItem.entryPath}`}
                       >
                         <Icon name='menu' size={18} color={ICON_COLORS.content2} />
-                      </view>
+                      </DragHandle>
                     </SortableItemArea>
                   </SortableItem>
                 )}

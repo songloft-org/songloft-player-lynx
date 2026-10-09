@@ -272,6 +272,10 @@ test('sort mode renders drag handles for each playlist', async () => {
   })
   expect(queryByTestId('playlists-drag-1')).toBeInTheDocument()
   expect(queryByTestId('playlists-drag-2')).toBeInTheDocument()
+  for (const id of [1, 2]) {
+    expect(queryByTestId(`playlists-drag-${id}`)).toHaveAttribute('consume-slide-event', '[[-180,180]]')
+  }
+  expect(elementTree.root!.querySelectorAll('[consume-slide-event]')).toHaveLength(2)
 })
 
 test('sort menu opens when the sort button is tapped', async () => {

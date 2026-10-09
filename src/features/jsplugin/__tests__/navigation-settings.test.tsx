@@ -323,6 +323,24 @@ function Controls({ empty = false, path = 'a' }: { empty?: boolean; path?: strin
   )
 }
 
+test('active tab drag handles consume native swipes without locking the surrounding section', async () => {
+  h.read.mockResolvedValue(config(['a', 'b']))
+  h.plugins.mockResolvedValue({ plugins: [plugin('a'), plugin('b')] })
+  const { wrapper } = clientAndWrapper()
+  render(<Controls />, { wrapper })
+  await waitFor(() =>
+    expect(
+      getQueriesForElement(elementTree.root!).queryByTestId('tab-order-handle-a'),
+    ).toBeInTheDocument(),
+  )
+  const handles = getQueriesForElement(elementTree.root!).queryAllByTestId(/^tab-order-handle-/)
+  expect(handles).toHaveLength(2)
+  for (const handle of handles) {
+    expect(handle).toHaveAttribute('consume-slide-event', JSON.stringify([[-180, 180]]))
+  }
+  expect(elementTree.root!.querySelectorAll('[consume-slide-event]')).toHaveLength(handles.length)
+})
+
 test('an obsolete write after clearing the same server cache cannot lock or overwrite the new editor', async () => {
   const old = deferred<TabConfig>()
   h.write.mockReturnValueOnce(old.promise)

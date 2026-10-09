@@ -98,11 +98,4 @@
 
 .tab-config__order-handle {
   padding: var(--space-1);
-  /* `touch-action: none` is load-bearing: without it the browser's native pan
-     scrolls the SubPageShell in parallel with the drag, because Lynx's
-     `bindtouchmove` is a passive listener and cannot preventDefault. Toggling
-     `scroll-y` from JSX does NOT help — web-elements only wires that attribute
-     to programmatic scroll APIs, not to the underlying `overflow-y: scroll`
-     CSS. Same fix as the home plugin grid, see PluginGrid.css. */
-  touch-action: none;
 }

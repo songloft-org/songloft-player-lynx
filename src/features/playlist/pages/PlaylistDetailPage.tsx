@@ -8,6 +8,7 @@ import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { DragHandle } from '../../../shared/ui/DragHandle.js'
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { useScrollNotifier } from '../../../shared/nav/scroll-visibility.js'
@@ -494,14 +495,18 @@ export function PlaylistDetailPage() {
             >
               {(item) => (
                 <SortableItem
+                  key={String(item.dataItem.id)}
                   sortingKey={String(item.dataItem.id)}
                   as='DraggableRoot'
                   className='playlist-detail__sort-row'
                 >
                   <SortableItemArea>
-                    <view className='playlist-detail__sort-handle' data-testid={`playlist-detail-drag-${item.dataItem.id}`}>
+                    <DragHandle
+                      className='playlist-detail__sort-handle'
+                      testId={`playlist-detail-drag-${item.dataItem.id}`}
+                    >
                       <Icon name='menu' size={18} color={ICON_COLORS.content2} />
-                    </view>
+                    </DragHandle>
                   </SortableItemArea>
                   <text className='playlist-detail__sort-row-name'>{item.dataItem.title}</text>
                 </SortableItem>
