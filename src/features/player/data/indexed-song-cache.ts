@@ -1,6 +1,7 @@
 import { readLynxGlobal, readNativeModules } from '../../../native/native-modules.js'
 import type { CacheDownload, CacheIdentity, CacheSnapshot } from '../domain/cache-identity.js'
 import { parseCacheSnapshot, cachedEntrySong } from '../domain/offline-cache.js'
+import { storageAwareRequest } from './cache-directory.js'
 
 type Callback = (json: string) => void
 interface IndexedSongCacheModule {
@@ -14,7 +15,7 @@ interface IndexedSongCacheModule {
   getTasks(callback: Callback): void
   cancelTask(taskId: string): void
 }
-export interface CachedEntry extends CacheIdentity { cached: true; url: string; sizeBytes: number; createdAt: number; snapshot: CacheSnapshot }
+export interface CachedEntry extends CacheIdentity { cached: true; url: string; sizeBytes: number; createdAt: number; snapshot: CacheSnapshot; available?: boolean }
 export interface CacheTask extends CacheIdentity {
   task_id: string
   status: 'waiting' | 'downloading' | 'completed' | 'failed' | 'cancelled' | 'interrupted'
@@ -77,15 +78,19 @@ function integer(value: unknown): number {
 }
 /** Verify the callback version before preparing a potentially large batch. */
 export async function requireIndexedSongCache(): Promise<void> { await requireModule() }
-function entry(value: unknown): CachedEntry {
+function entry(value: unknown, storage = false): CachedEntry {
   const raw = record(value), snapshot = record(raw.snapshot)
   if (raw.cached !== true || typeof raw.namespace !== 'string' || typeof raw.key !== 'string' ||
-    typeof raw.url !== 'string' || !raw.url.startsWith('file://') || typeof snapshot.title !== 'string' ||
+    typeof raw.url !== 'string' || !(raw.url.startsWith('file://') || storage && /^content:\/\/com\.android\.externalstorage\.documents\/tree\/[^/?#]+\/document\/[^?#]+$/.test(raw.url)) || typeof snapshot.title !== 'string' ||
     !['local', 'remote'].includes(String(snapshot.type))) throw new Error('invalid_cache_response')
   const identity = JSON.parse(raw.key)
   if (!Array.isArray(identity) || identity.length !== 7 || identity[0] !== raw.namespace || String(snapshot.id) !== identity[1]) throw new Error('invalid_cache_response')
   const result: CachedEntry = { namespace: raw.namespace, key: raw.key, cached: true, url: raw.url,
     sizeBytes: integer(raw.sizeBytes), createdAt: integer(raw.createdAt), snapshot: parseCacheSnapshot(snapshot) }
+  if (raw.available !== undefined) {
+    if (typeof raw.available !== 'boolean') throw new Error('invalid_cache_response')
+    result.available = raw.available
+  }
   cachedEntrySong(result)
   return result
 }
@@ -100,13 +105,15 @@ function task(value: unknown): CacheTask {
 export function createCacheTaskId(): string { return `cache-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}` }
 export async function cacheIndexedSong(request: CacheDownload): Promise<CachedEntry> {
   const value = await requireModule()
-  return entry(await invoke(callback => value.cacheEntry(JSON.stringify(request), callback),
-    { timeout: 20 * 60_000, cancel: () => value.cancelTask(request.task_id) }))
+  const input = await storageAwareRequest(request)
+  return entry(await invoke(callback => value.cacheEntry(JSON.stringify(input), callback),
+    { timeout: 20 * 60_000, cancel: () => value.cancelTask(request.task_id) }), input.storage_version === 1)
 }
 export async function readIndexedSong(request: { namespace: string; key?: string; song_id?: number }): Promise<CachedEntry | null> {
   const value = await requireModule()
-  const raw = await invoke(callback => value.getEntry(JSON.stringify(request), callback))
-  const result = raw.cached === false ? null : entry(raw)
+  const input = await storageAwareRequest(request)
+  const raw = await invoke(callback => value.getEntry(JSON.stringify(input), callback))
+  const result = raw.cached === false ? null : entry(raw, input.storage_version === 1)
   if (result && result.namespace !== request.namespace) throw new Error('invalid_cache_response')
   if (result && request.key) {
     const wanted = JSON.parse(request.key), actual = JSON.parse(result.key)
@@ -117,19 +124,22 @@ export async function readIndexedSong(request: { namespace: string; key?: string
 }
 export async function listIndexedSongs(request: { namespace: string; offset?: number; limit?: number }): Promise<CachePage> {
   const value = await requireModule()
-  const raw = await invoke(callback => value.listEntries(JSON.stringify(request), callback))
+  const input = await storageAwareRequest(request)
+  const raw = await invoke(callback => value.listEntries(JSON.stringify(input), callback))
   if (!Array.isArray(raw.entries)) throw new Error('invalid_cache_response')
-  const entries = raw.entries.map(entry)
+  const entries = raw.entries.map(value => entry(value, input.storage_version === 1))
   if (entries.some(value => value.namespace !== request.namespace)) throw new Error('invalid_cache_response')
   return { entries, total: integer(raw.total), bytes: integer(raw.bytes), legacy_bytes: integer(raw.legacy_bytes) }
 }
 export async function removeIndexedSong(request: { namespace: string; key?: string; song_id?: number }): Promise<void> {
   const value = await requireModule()
-  await invoke(callback => value.removeEntry(JSON.stringify(request), callback), { timeout: 20 * 60_000 })
+  const input = await storageAwareRequest(request)
+  await invoke(callback => value.removeEntry(JSON.stringify(input), callback), { timeout: 20 * 60_000 })
 }
 export async function clearIndexedNamespace(namespace: string): Promise<void> {
   const value = await requireModule()
-  await invoke(callback => value.clearNamespace(JSON.stringify({ namespace }), callback), { timeout: 20 * 60_000 })
+  const input = await storageAwareRequest({ namespace })
+  await invoke(callback => value.clearNamespace(JSON.stringify(input), callback), { timeout: 20 * 60_000 })
 }
 export async function clearLegacySongs(): Promise<void> {
   const value = await requireModule()

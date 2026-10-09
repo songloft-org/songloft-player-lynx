@@ -1572,6 +1572,17 @@ describe('SongloftSongCache module methods exist on all three hosts', () => {
 })
 
 describe('SongloftSongCache keeps its on-device invariants', () => {
+  test('Android directory extension is explicitly optional and exposes callback methods', () => {
+    const methods = interfaceMethods(read('src/features/player/data/cache-directory.ts'), 'CacheDirectoryModule')
+    expect(methods).toEqual(['getStorageContract', 'storageCommand', 'cancelTask'])
+    for (const method of methods) expectLynxMethod(hosts.songCache.android, method)
+    expect(hosts.songCache.android).toContain('songCacheMigrationProgress')
+    const manifest = read('android/app/src/main/AndroidManifest.xml')
+    const activity = manifest.match(/<activity\b[^>]*>/g)?.filter(tag => /android:name="\.cache\.CacheDirectoryPickerActivity"/.test(tag))
+    expect(activity).toHaveLength(1)
+    expect(activity![0]).toMatch(/android:exported="false"/)
+    expect(activity![0]).toMatch(/android:theme="@android:style\/Theme.Translucent.NoTitleBar"/)
+  })
   test('HarmonyOS hands cached local files to AVPlayer via owned descriptors after reset', () => {
     const source = read(`${HARMONY_MODULES}/audio/LocalAudioSource.ets`)
     expect(source).toContain('fileIo.openSync(address, fileIo.OpenMode.READ_ONLY)')

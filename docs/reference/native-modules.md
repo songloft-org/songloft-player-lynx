@@ -216,7 +216,7 @@ Callback 形状，参数为单个 JSON 字符串（facade 一律传 `'{}'`）。
 
 视频源的 direct/转码判定在 `src/core/network/video-source.ts`。
 
-### 2.6 `SongloftSongCache`（三个原生端均 14 方法）
+### 2.6 `SongloftSongCache`（三端共有 14 方法；Android 可选目录扩展另增 2 方法）
 
 Callback 形状，Callback 收到 JSON 字符串。
 
@@ -231,8 +231,11 @@ Callback 形状，Callback 收到 JSON 字符串。
 - 能力探测**刻意用 `getCacheInfo` 而不是 `download`**（`platform-capabilities.ts` 的 `songCache`）：`download` 的入参个数变过，旧壳上探它会报「可用」然后被喂进绑不上的参数。
 - 哨兵 `limit_exceeded`（常量 `SONG_CACHE_LIMIT_ERROR`，`src/features/player/data/song-cache.ts`）：下载会超字节上限时原生侧中止并报这个字符串，facade reject 出的 `Error.message` 就等于它。
 - 三端 P3a 增加 `getCacheContract/cacheEntry/getEntry/listEntries/removeEntry/clearNamespace/clearLegacy/getTasks/cancelTask`，单例 `SongCacheStore` 与旧入口共用串行调度、总容量和真实取消；共享 TS 在方法齐全且版本为 2 时采用身份索引，否则沿用旧 ABI。iOS 改为 `LynxContextModule` 发送数组进度事件，URLSessionDataDelegate 流式写入；HarmonyOS 用 RCP 响应头/数据回调、真实 request 取消及 statfs 空间检查。HarmonyOS HAP 已编译，Node 适配器另有真实文件/HTTP/TLS 回归；iOS 编译及两端设备行为仍待验。发布契约为 bridge 3 / schema 2 / `songCache.v2`；身份、快照、分页、任务和事件契约见[设备歌曲缓存](device-cache.md)。
+- Android 可选 `getStorageContract(callback: Callback)` 返回 `{version:1}`；`storageCommand(request: String, callback: Callback)` 分发目录读取、系统选择、恢复默认和当前 namespace 迁移。独立 facade 为 `cache-directory.ts`，不扩充三端必需契约。支持的 v2 请求显式附加 `storage_version:1` 后才枚举/下载 SAF 媒体；旧 bundle 保持私有目录行为。迁移进度用 `songCacheMigrationProgress` 数组中的 JSON 字符串，取消复用 `cancelTask`。`CacheDirectoryPickerActivity` 不导出、按请求 ID 交付回调，公共媒体索引独立保存在 `public-v1`；旧 `clearAll` 不清公共媒体或其索引。完整字段、兼容边界与文件保护见[设备歌曲缓存](device-cache.md)。
 
 **闸门锁住的不变量**
+
+Android 目录迁移的新索引保留内部 `pending_cleanup`，直至原文件删除和收尾元数据提交均完成；重启重试只收尾，容量计入两处。默认目录恢复可安全替换旧 bundle 的同 key 私有副本；新副本失效不会自动删除尚存原件。Callback 不暴露收尾字段，页面销毁时的取消保护宿主已 detach 的异常。
 
 | 不变量 | Android | iOS | HarmonyOS |
 |---|---|---|---|

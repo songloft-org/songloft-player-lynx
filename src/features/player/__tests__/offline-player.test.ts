@@ -51,6 +51,15 @@ test('missing files fail locally and never start a remote request or retry loop'
   expect(host.read).toHaveBeenCalledTimes(reads)
   expect(host.network).not.toHaveBeenCalled()
 })
+test('a SAF cache passes its content URI to audio without any remote detail or favorite requests', async () => {
+  const song = cached(7)
+  const uri = 'content://com.android.externalstorage.documents/tree/primary%3AMusic/document/primary%3AMusic%2Foffline.m4a'
+  host.entries.get(song.deviceCache.key)!.url = uri
+  const load = vi.spyOn(getAudio(), 'load')
+  await usePlayerStore.getState().playPlaylist([song])
+  expect(load.mock.calls[0][0]).toBe(uri)
+  expect(host.network).not.toHaveBeenCalled()
+})
 test('another authenticated actor cannot play the same song ID from the previous actor’s queue', async () => {
   const song = cached(7)
   await offlineIdentity.activate(address, 'bob')

@@ -1,5 +1,24 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-09 · 缓存目录提交前审查（songloft-org/songloft#510）
+
+- 用户确认实施结果后逐文件复核原生/JS 调用链、身份与旧壳兼容、迁移失败/重启、取消/页面销毁、容量与清理。修复三个问题：提交新位置后原件删除失败失去追踪；旧 bundle 同 key 私有副本阻止恢复默认；原生宿主 detach 时取消异常打断清理。私有 `pending_cleanup` 在原件删除且收尾索引提交后才移除，重启重试不重复复制；新副本失效禁止自动删原件，可回退本地原件播放。恢复默认完整复制后替换旧副本，发布失败回滚。内部收尾字段不暴露给 Callback/快照/任务。
+- 修复前四条新增 JVM 回归均失败（`/tmp/issue-510-review-native-before.log`），修复后连同新副本失效保护共五条通过；Store 共 **23 项**。detach 取消回归修复前失败、修复后通过（`/tmp/issue-510-review-js-before.log`、`/tmp/issue-510-review-js-after.log`）；相关 JS **341 项**通过。缺陷新起条目记录于 bugs，中英 device-cache/handoff 与原生契约同步。
+- 审查后最终完整 **305 文件 / 3298 项**通过（2026-10-09 **18:58:19 UTC+8** 开始，143.83s；`/tmp/issue-510-review-all-tests.log`）。类型检查、四文件 ReactLynx 扫描零问题、生产 Lynx/Web 双 bundle 与 Web 部署、**70 项发布工具**通过；重建最终 Android Debug APK 并运行完整 **62 项 JVM**通过。日志 `/tmp/issue-510-review-{typecheck,production,release,android}.log`。不重复沿用实施阶段的旧产物哈希。
+- 审查最终 APK SHA-256 `f167644aad2cfa529c48373aedfab8a21934afc32711e419a164c6bcf4b67250`；包内及三端生产 bundle 均为 `13aeb45f6293c72ea7ff4c40ef4f4c479421107fd5c110e9ec1fa6d5b5c8bed7`，Web 部署与 Web 构建一致，回执 `/tmp/issue-510-review-artifacts.json`。24 个改动文件 UTF-8/替换字符、manifest XML 和 diff 检查通过。
+- 审查逻辑/接口/状态并发/资源与文档通过，修复已验证；真实 SAF/授权/SD 卡/content URI 解码/第三方播放器发现仍未验收，原因和夹具边界沿用下方实施记录。用户已确认审查及提交信息，授权在 Lynx 子仓库 main 提交；实际提交结果以 Git 历史为准，尚未推送。父仓库指针及 Issue 未操作。
+
+## 2026-10-09 · Android 缓存目录同步（songloft-org/songloft#510）
+
+- 用户确认 Android 实施方案后同步 Flutter 已完成的功能：“设置 → 设备缓存”可选择本机/SD 卡目录、重新授权、恢复默认；新缓存采用所选目录，已有缓存按当前 namespace 单独确认迁移，带进度和取消。旧无身份缓存保留独立清理，其他账号不迁移。本批未提交/推送，父仓库指针未更新，未操作已关闭的 Issue。
+- 新增 SAF 适配器、按请求 ID 交付的系统选择器、Android 可选 Callback 扩展与共享 facade/UI。方法齐全且 `getStorageContract` 为 1 才附加 `storage_version:1`；旧壳给出升级说明，旧 bundle 在新壳仍读写私有目录，三端必需 bridge/schema 不变。公共目录写可读媒体文件，快照/身份/URI 保留私有 `public-v1` 索引，旧 v2 启动清理/clearAll 不会删公共文件。Media3 直接读取可信 content URI，离线播放不请求远端。
+- 下载、目录修改和迁移共用串行写入保护；复制核对字节并提交新索引后才删原件。回归覆盖当前账号全部变体、恢复默认、部分复制失败、取消与索引提交失败、授权/卷不可用后重启、只删索引文件、旧 bundle 同 key 私有副本和下载互斥。UI 覆盖选择/取消/旧壳降级、确认/进度、卸载后迟到回调及准备期间切身份；最后两处生命周期修复避免刷新后更新已卸载页面或停止新账号播放。系统选择器销毁回调按请求匹配并保护已 detach 的 Lynx view。
+- **最终全量 305 文件 / 3297 项**通过（2026-10-09 **18:27:38 UTC+8** 开始，144.62s）；此前一次全量为 3296 项，新增身份切换回归并修正生命周期后重新完整执行，计数取最终结果。`pnpm exec tsc -b`、ReactLynx 四文件扫描、生产 Lynx/Web 双 bundle、Web 部署和 **70 项发布工具**通过；Android `assembleDebug testDebugUnitTest` **57 项 JVM**通过（缓存 Store 18 项），最后选择器销毁保护后另重编最终 APK。生产 bundle 已同步三个原生宿主，构建产物不提交。
+- 证据：`/tmp/issue-510-lynx-final-tests.log`、`/tmp/issue-510-ui-final.log`、`/tmp/issue-510-typecheck.log`、`/tmp/issue-510-production.log`、`/tmp/issue-510-release.log`、`/tmp/issue-510-android.log`、`/tmp/issue-510-final-apk.log`。首轮重复缓存用例错误地先写私有缓存，新入口正确命中已有缓存而未生成副本；夹具改为先公共缓存再模拟旧 bundle 私有写入，最终完整 JVM 通过。Gradle 缓存只读、构建元数据子进程限制及发布测试本地服务限制已在授权的沙箱外复跑通过，不算代码失败。
+- 反向验证只在 `/tmp/issue-510-native-mutation` 的隔离 Store 副本中将删除候选恢复为去重集合，同一真实文件/HTTP 回归按预期失败：应清零而剩余 **40 字节**私有副本（`/tmp/issue-510-native-mutation.log`）；产品源码未改动，最终 Android JVM 中同一用例通过。原生契约最后收紧为检查选择器自己的唯一 activity 元素及其 exported/theme，避免匹配到后续元素。
+- 最后契约收紧后 **320 项**定向复测通过（2026-10-09 18:41:27 UTC+8）。XML 结构、23 个改动文件 UTF-8/U+FFFD、diff 检查通过。最终 APK SHA-256 `d3a208bd3de08654ba1f515f109bea94f370f7550455211e339bac6b37e6a514`；包内与三端生产 bundle 一致（`9a50a37a7459ae0bcb13559582c0830e74d4af89fa78720cedafd942460ca244`），Web 部署 bundle 与 Web 构建输出一致，回执 `/tmp/issue-510-final-artifacts.json`。APK 为本地 Debug 验证包，bundle 未开启 TestBridge，不代表设备运行验收。
+- **设备验收仍开放**：当前 adb 无设备；`songloft-lynx-p1` 只读模拟器在沙箱外仍因当前用户无 `/dev/kvm` 权限启动失败。JVM 文档适配器不是真实 DocumentsProvider，尚未验证系统 SAF UI/持久授权、实际 SD 卡卸载重挂、content URI 原生解码及第三方播放器发现。iOS/HarmonyOS 无本批目录扩展，现有功能和原设备验收边界保留。中英 device-cache/handoff 与原生契约记录同步。
+
 ## 2026-10-09 · 弹窗与播放列表 Sheet 局部材质、轻遮罩及滑入采样修复
 
 - 用户已确认实施结果并授权提交。本次提交前逐文件复核共享材质、嵌套遮罩恢复、动画与采样时序、原生回调销毁、所有迁移调用点和测试契约，未发现新增问题；运行时代码未再修改，沿用下述验证证据。提交仅包含本批修复和记录，主仓库同步 Lynx 子模块指针；未推送，实际提交以 Git 历史为准，下方未提交描述为实施快照。

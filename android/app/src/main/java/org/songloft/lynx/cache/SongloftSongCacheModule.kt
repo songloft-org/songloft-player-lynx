@@ -31,7 +31,7 @@ class SongloftSongCacheModule(context: Context) : LynxModule(context) {
             return created
         }
         @Synchronized private fun store(context: Context): SongCacheStore {
-            return instance ?: SongCacheStore(File(context.filesDir, "song_cache")) { clientFor(InsecureTls.enabled) }
+            return instance ?: SongCacheStore(File(context.filesDir, "song_cache"), AndroidSongCacheDocuments(context.applicationContext)) { clientFor(InsecureTls.enabled) }
                 .also { instance = it }
         }
     }
@@ -56,12 +56,38 @@ class SongloftSongCacheModule(context: Context) : LynxModule(context) {
         } catch (_: Exception) { /* Detached page must not abort a durable download. */ }
     }
     @LynxMethod fun getCacheContract(callback: Callback) { answer(callback, JSONObject().put("version", 2)) }
+    // Optional Android extension. Existing methods still read/write private caches
+    // unless the new bundle explicitly opts in through the JSON storage_version.
+    @LynxMethod fun getStorageContract(callback: Callback) { answer(callback, JSONObject().put("version", 1)) }
+    @LynxMethod fun storageCommand(request: String, callback: Callback) {
+        try {
+            val value = JSONObject(request)
+            when (value.getString("command")) {
+                "getDirectory" -> read(callback) { store().directoryInfo() }
+                "setDirectory" -> store().setDirectory(if (value.isNull("tree")) null else value.getString("tree"), if (value.isNull("label")) null else value.getString("label")) { answer(callback, it) }
+                "pickDirectory" -> reads.execute {
+                    if (store().directoryInfo().getBoolean("busy")) answer(callback, JSONObject().put("error", "cache_busy"))
+                    else CacheDirectoryPicker.pick((mContext as LynxContext).getContext()) { selected ->
+                        if (selected.has("error") || selected.optBoolean("cancelled")) answer(callback, selected)
+                        else store().setDirectory(selected.getString("tree"), selected.getString("label")) { answer(callback, it) }
+                    }
+                }
+                "migrate" -> store().migrate(request, { progress ->
+                    try {
+                        val params = JavaOnlyArray(); params.pushString(progress.toString())
+                        (mContext as LynxContext).sendGlobalEvent("songCacheMigrationProgress", params)
+                    } catch (_: Exception) { /* Detached UI cannot commit or delete files. */ }
+                }) { answer(callback, it) }
+                else -> answer(callback, JSONObject().put("error", "invalid_cache_request"))
+            }
+        } catch (_: Exception) { answer(callback, JSONObject().put("error", "invalid_cache_request")) }
+    }
     @LynxMethod fun cacheEntry(request: String, callback: Callback) { store().cacheEntry(request, ::progress) { answer(callback, it) } }
     @LynxMethod fun getEntry(request: String, callback: Callback) { read(callback) { store().getEntry(request) } }
     @LynxMethod fun listEntries(request: String, callback: Callback) { read(callback) { store().listEntries(request) } }
     @LynxMethod fun removeEntry(request: String, callback: Callback) { store().remove(request) { answer(callback, it) } }
     @LynxMethod fun clearNamespace(request: String, callback: Callback) {
-        try { store().clearNamespace(JSONObject(request).getString("namespace")) { answer(callback, it) } }
+        try { val value = JSONObject(request); store().clearNamespace(value.getString("namespace"), { answer(callback, it) }, value.optInt("storage_version") == 1) }
         catch (_: Exception) { answer(callback, JSONObject().put("error", "invalid_cache_request")) }
     }
     @LynxMethod fun clearLegacy(callback: Callback) { store().clearLegacy { answer(callback, it) } }

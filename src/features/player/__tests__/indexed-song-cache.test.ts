@@ -74,3 +74,22 @@ test('progress is task scoped, tolerates unknown total, and unregisters after de
   install(); cancelCacheTask('cancel')
   expect((global.NativeModules as { SongloftSongCache: { cancelTask: ReturnType<typeof vi.fn> } }).SongloftSongCache.cancelTask).toHaveBeenCalledWith('cancel')
 })
+test('SAF URIs require the supported storage handshake and preserve the exact document ID', async () => {
+  const publicEntry = { ...cached, url: 'content://com.android.externalstorage.documents/tree/primary%3AMusic/document/primary%3AMusic%2FSong.mp3', available: false }
+  const getEntry = vi.fn((_raw, callback) => callback(JSON.stringify(publicEntry)))
+  install({ getEntry })
+  await expect(readIndexedSong(identity)).rejects.toThrow('invalid_cache_response')
+  const getStorageContract = vi.fn(callback => callback('{"version":1}'))
+  install({ getEntry, getStorageContract, storageCommand: vi.fn() })
+  expect(await readIndexedSong(identity)).toEqual(publicEntry)
+  expect(JSON.parse(getEntry.mock.calls.at(-1)![0])).toMatchObject({ ...identity, storage_version: 1 })
+  getEntry.mockImplementationOnce((_raw, callback) => callback(JSON.stringify({ ...publicEntry, url: 'content://untrusted/cloud/song.mp3' })))
+  await expect(readIndexedSong(identity)).rejects.toThrow('invalid_cache_response')
+  expect(getStorageContract).toHaveBeenCalledOnce()
+})
+test('a changed optional storage version keeps private-cache requests on the original ABI', async () => {
+  const getEntry = vi.fn((_raw, callback) => callback(JSON.stringify(cached)))
+  install({ getEntry, getStorageContract: vi.fn(callback => callback('{"version":2}')), storageCommand: vi.fn() })
+  expect(await readIndexedSong(identity)).toEqual(cached)
+  expect(JSON.parse(getEntry.mock.calls[0][0])).toEqual(identity)
+})

@@ -16,6 +16,7 @@ import { forgetCachedPlayback, usePlayerStore } from '../store/player-store.js'
 import { useDlnaStore } from '../store/dlna-store.js'
 import { cacheBatchController } from '../data/cache-batch-controller.js'
 import { useOfflineOwner } from '../widgets/use-offline-owner.js'
+import { useCacheDirectory } from '../widgets/use-cache-directory.js'
 import './DeviceCachePage.css'
 
 type Removal = { namespace: string; entry?: CachedEntry; legacy?: boolean }
@@ -37,6 +38,7 @@ export function DeviceCachePage() {
   const epoch = useRef(0)
   const valid = () => currentOfflineOwner()?.namespace === namespace
   const load = async () => {
+    'background only'
     const generation = ++epoch.current
     if (!namespace || !supported) { setData(null); return }
     setLoading(true); setError(false)
@@ -61,11 +63,13 @@ export function DeviceCachePage() {
     return () => { ++epoch.current; stop() }
   }, [namespace, supported])
   const entries = data?.namespace === namespace ? data.entries : []
+  const storage = useCacheDirectory({ namespace, busy, hasEntries: entries.length > 0, onChanged: load })
   const needle = search.trim().toLocaleLowerCase()
   const filtered = entries.filter(entry => [entry.snapshot.title, entry.snapshot.artist, entry.snapshot.album].join(' ').toLocaleLowerCase().includes(needle))
   const localCurrent = current && cachedSongIdentity(current)?.namespace === namespace ? current : null
   const play = async (entry: CachedEntry) => {
-    if (busy || !valid()) return
+    if (busy || storage.busy || !valid()) return
+    if (entry.available === false) { toast.error(t('deviceCache.fileUnavailable')); return }
     if (useDlnaStore.getState().activeDevice) { toast.error(t('deviceCache.castUnavailable')); return }
     setBusy(true)
     try {
@@ -78,7 +82,7 @@ export function DeviceCachePage() {
   const remove = async () => {
     const request = removal
     setRemoval(null)
-    if (!request || busy || request.namespace !== currentOfflineOwner()?.namespace) return
+    if (!request || busy || storage.busy || request.namespace !== currentOfflineOwner()?.namespace) return
     setBusy(true)
     try {
       if (request.legacy) await clearLegacySongs()
@@ -92,10 +96,11 @@ export function DeviceCachePage() {
         }
       }
       if (valid()) await load()
-    } catch { toast.error(t('player.cacheFailed')) }
+    } catch { toast.error(t('player.cacheFailed')); if (valid()) await load() }
     finally { setBusy(false) }
   }
   const header = owner ? <view className='device-cache__summary'>
+    {storage.controls}
     <text className='device-cache__note'>{status === 'authenticated' ? t('deviceCache.scope', { username: owner.username }) : t('deviceCache.offlineHint')}</text>
     <text className='device-cache__note' data-testid='device-cache-summary'>
       {t('deviceCache.summary', { count: entries.length, bytes: formatBytes(entries.reduce((sum, entry) => sum + entry.sizeBytes, 0)) })}
@@ -104,16 +109,16 @@ export function DeviceCachePage() {
     <Input className='device-cache__search' value={search} maxLength={256} placeholder={t('deviceCache.search')} onInput={setSearch} />
     <view className='device-cache__actions'>
       <view className='device-cache__button' bindtap={() => { if (!busy) void load() }} data-testid='device-cache-refresh'><text>{t('common.refresh')}</text></view>
-      {entries.length > 0 && <view className='device-cache__button' bindtap={() => { if (!busy && namespace) setRemoval({ namespace }) }} data-testid='device-cache-clear'><text>{t('deviceCache.clear')}</text></view>}
-      {(data?.legacy ?? 0) > 0 && <view className='device-cache__button' bindtap={() => { if (!busy && namespace) setRemoval({ namespace, legacy: true }) }} data-testid='device-cache-clear-legacy'><text>{t('deviceCache.clearLegacy')}</text></view>}
+      {entries.length > 0 && <view className='device-cache__button' bindtap={() => { if (!busy && !storage.busy && namespace) setRemoval({ namespace }) }} data-testid='device-cache-clear'><text>{t('deviceCache.clear')}</text></view>}
+      {(data?.legacy ?? 0) > 0 && <view className='device-cache__button' bindtap={() => { if (!busy && !storage.busy && namespace) setRemoval({ namespace, legacy: true }) }} data-testid='device-cache-clear-legacy'><text>{t('deviceCache.clearLegacy')}</text></view>}
     </view>
     {error ? <text className='device-cache__note'>{t('deviceCache.loadFailed')}</text> : loading && !data ? <text className='device-cache__note'>{t('common.loading')}</text> : null}
     {!loading && !error && filtered.length === 0 ? <text className='device-cache__note'>{t('deviceCache.empty')}</text> : null}
   </view> : null
   const footer = <view className='device-cache__inset' />
-  const overlay = <ConfirmDialog show={removal !== null} title={t('deviceCache.deleteTitle')}
+  const overlay = <><ConfirmDialog show={removal !== null} title={t('deviceCache.deleteTitle')}
     message={removal?.legacy ? t('deviceCache.clearLegacyConfirm') : removal?.entry ? t('deviceCache.deleteConfirm', { title: removal.entry.snapshot.title }) : t('deviceCache.clearConfirm')}
-    confirmLabel={t('common.delete')} onConfirm={() => { void remove() }} onCancel={() => setRemoval(null)} confirmTestId='device-cache-confirm-delete' />
+    confirmLabel={t('common.delete')} onConfirm={() => { void remove() }} onCancel={() => setRemoval(null)} confirmTestId='device-cache-confirm-delete' />{storage.overlay}</>
   return (
     <view className='device-cache-page'>
       <SubPageShell title={t('deviceCache.title')} onBack={() => { void navigate({ to: status === 'authenticated' ? '/settings' : '/login' }) }}
@@ -129,9 +134,10 @@ export function DeviceCachePage() {
                   <text className='device-cache__title' text-maxline='2'>{entry.snapshot.title}</text>
                   {(entry.snapshot.artist || entry.snapshot.album) && <text className='device-cache__note' text-maxline='2'>{[entry.snapshot.artist, entry.snapshot.album].filter(Boolean).join(' · ')}</text>}
                   <text className='device-cache__note'>{`${variant[6].toUpperCase()} · ${formatBytes(entry.sizeBytes)} · ${variant[3] === 'original' ? t('deviceCache.original') : t('deviceCache.quality', { value: variant[3] })}${variant[2] === 'default' ? '' : ` · ${t('deviceCache.track', { index: variant[2] })}`}${variant[4] === '1' ? ` · ${t('deviceCache.normalized')}` : ''}`}</text>
+                  {entry.available === false && <text className='device-cache__note'>{t('deviceCache.fileUnavailable')}</text>}
                   <view className='device-cache__actions'>
                     <view className='device-cache__button' bindtap={() => { void play(entry) }} data-testid={`device-cache-play-${entry.snapshot.id}`}><text>{t('common.play')}</text></view>
-                    <view className='device-cache__button' bindtap={() => { if (!busy) setRemoval({ namespace: entry.namespace, entry }) }} data-testid={`device-cache-delete-${entry.snapshot.id}`}><text>{t('common.delete')}</text></view>
+                    <view className='device-cache__button' bindtap={() => { if (!busy && !storage.busy) setRemoval({ namespace: entry.namespace, entry }) }} data-testid={`device-cache-delete-${entry.snapshot.id}`}><text>{t('common.delete')}</text></view>
                   </view>
                 </view>
               )

@@ -30,7 +30,7 @@ P3a 三端源码已增加 v2 身份、索引与任务契约，共享播放/单�
 | `getTasks` | callback | `{tasks:[...]}` |
 | `cancelTask` | taskId | void |
 
-完整条目为 `{namespace,key,cached:true,url,sizeBytes,createdAt,snapshot}`，url 是系统编码的 `file://` URL。`songCacheProgress` 数组事件传 `{task_id,namespace,key,status,bytes,total,error}`，total 为 0 时表示未知长度，不表示下载失败。
+完整条目为 `{namespace,key,cached:true,url,sizeBytes,createdAt,snapshot,available?}`，私有目录的 url 是系统编码的 `file://` URL；Android 目录扩展允许受信的 SAF `content://` URL。`available:false` 保留不可用目录的索引，播放前仍须重新核对。`songCacheProgress` 数组事件传 `{task_id,namespace,key,status,bytes,total,error}`，total 为 0 时表示未知长度，不表示下载失败。
 
 Android 音频引擎使用 Media3 `DefaultDataSource` 分派本地文件与网络地址，保留原 HTTP 配置；仅使用 HTTP 数据源无法播放命中的 `file://` 缓存。
 
@@ -39,6 +39,27 @@ HarmonyOS 源码将系统文件 URI 用 `fileIo.openSync` 打开后，以 `fd://
 三端使用进程级串行写入调度，新/旧入口共用容量检查，最多 32 个运行或排队任务；持久任务记录最多保留 128 条。单曲失败可继续后续任务；未知长度流逐块检查字节和磁盘空间。Android 取消真实 OkHttp call；iOS 源码用独立 URLSessionDataDelegate 边接收边写文件、逐块限额并取消真实 task。HarmonyOS 源码用 RCP 响应头/数据回调与真实 request 取消，限制重定向次数，使用 statfs 检查剩余空间；收紧 TLS 策略时取消当前连接。排队取消不打开连接；只有清理完成和终态记录完成后才回 Callback。切服务器/用户/登出取消所属进行中任务，已完成文件保留。
 
 机器错误包括 `limit_exceeded`、`insufficient_space`、`cancelled`、`interrupted`、`cache_queue_full`、`cache_busy`、`invalid_cache_request`、`cache_storage_unavailable`、`download_failed`、`unsupported_media`。JS 超时会取消同 taskId，并忽略迟到结果。设备媒体下载沿用用户的服务器 TLS 策略，与独立系统 TLS 的客户端更新下载器区分。
+
+## Android 缓存目录（songloft-org/songloft#510）
+
+“设置 → 设备缓存”提供选择本机/SD 卡目录、重新授权和恢复默认目录。默认仍是应用私有目录；设置按设备保存，只改变之后新增缓存的位置。已有缓存需另行确认“迁移当前账号缓存”，按当前服务器档案、部署路径与用户的 namespace 迁移全部变体，不移动其他账号或旧无身份缓存。
+
+可选扩展由 `cache-directory.ts` 探测 `getStorageContract(callback)` 返回 `{version:1}`，通过 `storageCommand(JSON, callback)` 执行：
+
+| command | 参数 | 结果 |
+|---|---|---|
+| `getDirectory` | 无 | `{tree,label,available,busy}`；默认 tree/label 为 null |
+| `pickDirectory` | 无 | 系统选择并持久授权后 `{saved:true}`；取消 `{cancelled:true}` |
+| `setDirectory` | `{tree:null,label:null}` | 恢复默认后 `{saved:true}` |
+| `migrate` | `{task_id,namespace}` | `{done,total}` 或 `{error,done,total}` |
+
+只有方法完整且扩展版本为 1 的壳才向 v2 缓存请求附加 `storage_version:1`。旧 Android 壳显示升级说明；iOS/HarmonyOS/Web 沿用既有私有目录功能。扩展不增加必需热更新能力、不改 bridge/schema 版本；旧 bundle 在新壳仍只读写私有 v2 缓存。SAF 仅接受 Android 外部存储提供者的本地目录，系统限制的卷根目录、Download 根目录及 Android/data 等目录不能选取，云盘不作为离线缓存目录。
+
+公共目录只写可读的“歌手 - 标题 - 歌曲 ID - 变体哈希.实际扩展名”媒体文件，原始 namespace/key、快照及文档 URI 保留在私有 `song_cache/public-v1/<namespaceHash>/<keyHash>.json`；目录选择保存在 `song_cache/storage.json`。公共索引与 v2 私有媒体目录分开，旧壳启动/clearAll 不会把公共记录当损坏私有文件删除。移除变体/清理当前账号只处理索引记录对应的文档，也清理旧 bundle 写出的同 key 私有副本；不扫描或删除用户目录里的其他文件。
+
+迁移复用串行写入调度，下载进行中拒绝换目录/迁移。迁移前停止当前缓存播放、移除当前账号离线队列；逐文件核对源可用性和复制字节数，提交新私有索引后才删除原文件。进度事件 `songCacheMigrationProgress` 的数组参数为 JSON 字符串 `{task_id,namespace,done,total}`，复用 `cancelTask(taskId)` 取消。失败/取消保留已完成的迁移，未提交文件保留原件，清理当前复制出的临时文档；界面重新读取索引。离开页面、切换账号或超时取消自身迁移并忽略迟到回调。授权失效、卷卸载时不自动丢弃公共索引；重新授权或挂载后可再次使用。Media3 `DefaultDataSource` 接收 `content://`，离线播放无需远端详情/收藏请求。
+
+迁移提交的新记录携带私有 `pending_cleanup` 原位置，原件删除及收尾索引写入均成功后才移除此字段。删除失败或收尾元数据写入失败时，两处容量继续计入，重启后重试迁移只完成收尾，不重复复制；移除变体/清理账号也会处理待清理原件。新副本失效时禁止自动删除尚存原件，并可从可用原件本地播放。恢复默认采用完整临时目录替换旧 bundle 写出的同 key 私有副本，提交失败保留原媒体。该内部字段不进入 Callback、歌曲快照或任务历史。
 
 ## 批量入口与任务页
 
@@ -61,6 +82,8 @@ Settings 的“设备缓存”进入 `/device-cache`，只枚举当前服务器�
 离线队列独立保存为 `device_cache_playback_queue_v1`，仅含歌曲快照、精确身份、位置和索引，不保存媒体 URL/token。冷启动核对当前身份及真实文件；写入/清理串行，旧写入不能在登出后恢复队列。旧 bundle 忽略独立键，回退后看到空远端队列而不会把本地快照误作网络源；原生 bridge/schema 本批不变。
 
 ## 验证边界
+
+Android 目录扩展的 JVM 回归使用真实文件/HTTP 和文档存储适配器，覆盖当前 namespace 迁移/恢复默认、失败/取消/索引提交失败保护、卷不可用与重启、只清索引文件、旧 bundle 私有副本及下载互斥。共享 UI 回归覆盖目录标签、取消、旧壳降级、迁移确认/进度、离开页面与身份切换；离线回归验证 content URI 直接交给音频而不请求远端。适配器不是实际 DocumentsProvider，SAF 系统选择、持久授权、真机/SD 卡挂载和第三方播放器发现仍待设备验证；当前无 adb 设备，模拟器启动因用户无 KVM 权限失败。本批无 iOS/HarmonyOS 目录扩展。
 
 Android 真实文件/HTTP 回归覆盖跨身份同 id、音轨和实际格式、无凭据快照、总容量、真实连接取消、排队取消、崩溃中断、缺文件、分身份/旧缓存清理；共享 Callback 和版本降级另有 JS 测试。iOS 新增 `scripts/verify-ios-cache.swift` 与真实本地 HTTP 夹具，并接入 Apple CI；当前 Linux 缺少 Swift/Xcode，程序尚未编译或执行。HarmonyOS 实际转译源码在 Node 文件/HTTP/TLS 适配器下测试身份/容量、取消/队列、媒体响应、重启清理及 TLS 切换；另已使用 SDK `26.0.0.105` 对 `e09592b` 完成 ArkTS 和 clean release HAP 编译，最低兼容声明保留 API 13，包未签名。Node 适配器和高版本 SDK 编译不能证明 API 13 设备行为；iOS 编译、两端 TLS/取消/后台及设备验收、批量与完整离线交互仍开放。详细计数及设备证据见 [progress](../project/progress.md)。
 

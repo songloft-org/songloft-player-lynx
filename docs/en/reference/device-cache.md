@@ -30,7 +30,7 @@ The module remains `SongloftSongCache`. Its original five-method ABI is preserve
 | `getTasks` | callback | `{tasks:[...]}` |
 | `cancelTask` | taskId | void |
 
-A complete entry is `{namespace,key,cached:true,url,sizeBytes,createdAt,snapshot}` with a system-encoded `file://` URL. The `songCacheProgress` array event carries `{task_id,namespace,key,status,bytes,total,error}`; total 0 means unknown length, not failure.
+A complete entry is `{namespace,key,cached:true,url,sizeBytes,createdAt,snapshot,available?}`. Private entries use system-encoded `file://` URLs; the Android directory extension also accepts trusted SAF `content://` URLs. `available:false` preserves records for unavailable directories; playback rechecks availability. The `songCacheProgress` array event carries `{task_id,namespace,key,status,bytes,total,error}`; total 0 means unknown length, not failure.
 
 The Android audio engine uses Media3 `DefaultDataSource` to dispatch local files and remote URLs, preserving the existing HTTP configuration. An HTTP-only data source cannot play a matched `file://` cache.
 
@@ -39,6 +39,27 @@ HarmonyOS source opens the system file URI with `fileIo.openSync` and supplies `
 All three hosts use one process-wide serial writer and shared capacity checks across new/legacy entries, with at most 32 running or queued tasks and 128 retained task records. A failed song does not block later tasks. Unknown-length streams check capacity and disk space per chunk. Android cancellation terminates the actual OkHttp call. iOS source streams through a dedicated URLSessionDataDelegate, checking capacity per chunk and cancelling the real task. HarmonyOS source uses RCP header/data callbacks with real request cancellation, bounded redirects, statfs free-space checks and active-session cancellation when TLS policy changes. Queued cancellation opens no connection. Callbacks follow cleanup and terminal task recording. Server/user changes or logout cancel owned in-flight tasks while preserving completed files.
 
 Machine errors include `limit_exceeded`, `insufficient_space`, `cancelled`, `interrupted`, `cache_queue_full`, `cache_busy`, `invalid_cache_request`, `cache_storage_unavailable`, `download_failed` and `unsupported_media`. JS timeouts cancel the same task and ignore late results. Media downloads use the user's server TLS policy, separately from the client updater's dedicated system TLS.
+
+## Android cache directory (songloft-org/songloft#510)
+
+Settings → Device cache supports choosing a local/SD card folder, granting access again and restoring the default. The default remains app-private storage. The device-wide selection only affects newly cached media. Moving existing variants requires a separate confirmation and applies to the current server profile, deployment path and username namespace; other accounts and unidentified legacy caches are left in place.
+
+The optional `cache-directory.ts` facade checks `{version:1}` from `getStorageContract(callback)` and calls `storageCommand(JSON, callback)`:
+
+| command | Parameters | Result |
+|---|---|---|
+| `getDirectory` | None | `{tree,label,available,busy}`; default tree/label are null |
+| `pickDirectory` | None | `{saved:true}` after system selection and persisted access; `{cancelled:true}` on cancellation |
+| `setDirectory` | `{tree:null,label:null}` | `{saved:true}` after restoring the default |
+| `migrate` | `{task_id,namespace}` | `{done,total}` or `{error,done,total}` |
+
+Only shells with all extension methods and version 1 receive `storage_version:1` on v2 requests. Older Android shells display an upgrade message; iOS/HarmonyOS/Web retain existing private-storage behavior. Required update capabilities and bridge/schema versions are unchanged. Older bundles on a new shell still read/write private v2 caches only. SAF accepts local folders from Android's external-storage provider; system-restricted volume roots, the Download root and Android/data cannot be selected. Cloud folders are excluded from offline cache storage.
+
+Public folders contain readable media filenames: artist - title - song ID - variant hash.actual extension. Original namespace/key, snapshots and document URIs stay in private `song_cache/public-v1/<namespaceHash>/<keyHash>.json`; the directory preference is `song_cache/storage.json`. Separate public metadata prevents older shell startup/clearAll from deleting it as damaged private media. Removing a variant or clearing an account deletes only indexed documents and duplicate private copies written by older bundles, without scanning or deleting unrelated user files.
+
+Migration shares the serial writer; active downloads block folder changes and migration. It stops current cached playback and removes the current account's offline queue, validates source availability and copied bytes, then commits the new private index before deleting the original. The `songCacheMigrationProgress` event carries a JSON string array argument `{task_id,namespace,done,total}` and reuses `cancelTask(taskId)`. Failure/cancellation preserves completed moves and uncommitted originals, removes newly copied temporary documents and reloads the index. Departure, identity changes or timeout cancel the migration and ignore late callbacks. Revoked access or unmounted volumes do not discard public records; granting access again or remounting makes them usable again. Media3 `DefaultDataSource` receives `content://` URLs; offline playback needs no remote detail/favorite requests.
+
+A committed migration record retains its original location in private `pending_cleanup` metadata until both original deletion and the final index write succeed. Deletion or metadata failure keeps both locations in capacity accounting; after restart, retrying migration finishes cleanup without copying again. Variant/account removal also handles pending originals. Automatic cleanup refuses to delete a remaining original if the replacement becomes unavailable, and local playback can use the available original. Restoring the default replaces a same-key private copy from an older bundle with a complete temporary directory; failed publication preserves the original media. This internal field is excluded from callbacks, song snapshots and task history.
 
 ## Batch entry points and task page
 
@@ -61,6 +82,8 @@ Tapping a variant builds a local audio queue from whitelisted snapshots only. Fo
 The separate `device_cache_playback_queue_v1` preference stores snapshots, exact identities, position and index, omitting media URLs/tokens. Cold start checks the current identity and real file. Serialized writes/clears prevent earlier writes from restoring a signed-out queue. Older bundles ignore this key and see an empty remote queue after rollback instead of streaming local snapshots. Native bridge/schema versions are unchanged by this batch.
 
 ## Validation boundary
+
+Android directory-extension JVM tests use real files/HTTP and a document-storage adapter to cover namespace migration/default restore, failure/cancellation/index-commit protection, unavailable volumes and restart, indexed-only deletion, old-bundle private duplicates and download exclusion. Shared UI tests cover labels, cancellation, old-shell fallback, migration confirmation/progress, departure and identity changes. Offline tests pass content URIs directly to audio without remote requests. The adapter is not a real DocumentsProvider. System SAF selection, persisted grants, physical devices/SD card mounting and discovery by other players still need device validation: adb lists no devices and emulator startup fails because this user lacks KVM permission. This batch adds no iOS/HarmonyOS directory extension.
 
 Android real-file/HTTP regressions cover same IDs across identities, tracks/actual format, credential-free snapshots, total capacity, connection/queued cancellation, interrupted startup, missing files and namespace/legacy cleanup. JS tests separately exercise callbacks and version downgrade. iOS adds `scripts/verify-ios-cache.swift` and a real loopback HTTP fixture to Apple CI. Linux lacks Swift/Xcode: the verifier has not been compiled or executed. HarmonyOS transpiled source is tested against real Node filesystem/HTTP/TLS adapters for identity/capacity, cancellation/queue limits, media guards, startup cleanup and TLS changes. Separately, SDK `26.0.0.105` passes ArkTS compilation and a clean release HAP build of `e09592b`, preserving the API 13 minimum declaration; the HAP is unsigned. Node adapters and compilation with a newer SDK do not establish API 13 device behavior. iOS compilation, TLS/cancellation/background/device acceptance on both hosts, batch UI and complete offline behavior remain open. Counts and device evidence are recorded in [progress](../../project/progress.md).
 
