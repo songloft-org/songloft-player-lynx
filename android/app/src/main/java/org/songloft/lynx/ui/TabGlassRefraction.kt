@@ -2,10 +2,12 @@ package org.songloft.lynx.ui
 
 import android.annotation.TargetApi
 import android.graphics.Canvas
+import android.graphics.Matrix
 import android.graphics.RenderEffect
 import android.graphics.RenderNode
 import android.graphics.RuntimeShader
 import android.view.View
+import kotlin.math.hypot
 
 /** Clear moving lens over a fixed material capture, excluding glyphs. The
  * sampling domain never moves or scales, so content cannot lag behind it. */
@@ -13,9 +15,55 @@ import android.view.View
 internal class TabGlassRefraction {
     private val shader = RuntimeShader(SOURCE)
     private val capture = RenderNode("songloft-tab-backdrop")
+    private val selectionMatrix = Matrix()
+    private val surfaceMatrix = Matrix()
+    private val inverseSurfaceMatrix = Matrix()
+    private val points = FloatArray(6)
+    private val geometry = FloatArray(6)
+    private var geometryReady = false
 
-    fun draw(canvas: Canvas, source: View, width: Int, height: Int, density: Float, count: Int, pose: FloatArray, light: Float) {
-        if (!canvas.isHardwareAccelerated) return
+    fun updateGeometry(selection: View, surface: View): Boolean {
+        if (selection.width <= 0 || selection.height <= 0) return clearGeometry()
+        // Element.animate() and the invoked native animator can begin on
+        // different frames. Read the painted selection's complete transform
+        // instead of reconstructing a second geometry from its wall clock.
+        selectionMatrix.reset()
+        surfaceMatrix.reset()
+        selection.transformMatrixToGlobal(selectionMatrix)
+        surface.transformMatrixToGlobal(surfaceMatrix)
+        if (!surfaceMatrix.invert(inverseSurfaceMatrix)) return clearGeometry()
+        selectionMatrix.postConcat(inverseSurfaceMatrix)
+        points[0] = selection.width * 0.5f
+        points[1] = selection.height * 0.5f
+        points[2] = points[0] + 1f
+        points[3] = points[1]
+        points[4] = points[0]
+        points[5] = points[1] + 1f
+        selectionMatrix.mapPoints(points)
+        val scaleX = hypot(points[2] - points[0], points[3] - points[1])
+        val scaleY = hypot(points[4] - points[0], points[5] - points[1])
+        if (!scaleX.isFinite() || !scaleY.isFinite() || scaleX <= 0f || scaleY <= 0f) return clearGeometry()
+        val changed = !geometryReady || geometry[0] != points[0] || geometry[1] != points[1] ||
+            geometry[2] != selection.width * 0.5f || geometry[3] != selection.height * 0.5f ||
+            geometry[4] != scaleX || geometry[5] != scaleY
+        geometry[0] = points[0]
+        geometry[1] = points[1]
+        geometry[2] = selection.width * 0.5f
+        geometry[3] = selection.height * 0.5f
+        geometry[4] = scaleX
+        geometry[5] = scaleY
+        geometryReady = true
+        return changed
+    }
+
+    private fun clearGeometry(): Boolean {
+        val changed = geometryReady
+        geometryReady = false
+        return changed
+    }
+
+    fun draw(canvas: Canvas, source: View, width: Int, height: Int, density: Float, engagement: Float, light: Float) {
+        if (!canvas.isHardwareAccelerated || !geometryReady) return
         capture.setPosition(0, 0, width, height)
         val recording = capture.beginRecording(width, height)
         try {
@@ -26,15 +74,14 @@ internal class TabGlassRefraction {
         } finally {
             capture.endRecording()
         }
-        val slot = width.toFloat() / count
         shader.setFloatUniform("size", width.toFloat(), height.toFloat())
-        shader.setFloatUniform("center", slot * (pose[0] + 0.5f), height * 0.5f)
-        shader.setFloatUniform("extent", (slot - 8f * density) * 0.5f, 26f * density)
-        shader.setFloatUniform("scale", pose[1], pose[2])
+        shader.setFloatUniform("center", geometry[0], geometry[1])
+        shader.setFloatUniform("extent", geometry[2], geometry[3])
+        shader.setFloatUniform("scale", geometry[4], geometry[5])
         shader.setFloatUniform("bevel", 10f * density)
-        shader.setFloatUniform("bend", 5f * density * pose[3])
-        shader.setFloatUniform("light", light * pose[3])
-        shader.setFloatUniform("engagement", pose[3])
+        shader.setFloatUniform("bend", 5f * density * engagement)
+        shader.setFloatUniform("light", light * engagement)
+        shader.setFloatUniform("engagement", engagement)
         capture.setRenderEffect(RenderEffect.createRuntimeShaderEffect(shader, "backdrop"))
         canvas.drawRenderNode(capture)
     }
@@ -58,7 +105,10 @@ internal class TabGlassRefraction {
                 float2 q = abs(p) - (extent - radius);
                 float2 outside = max(q, float2(0));
                 float d = length(outside) + min(max(q.x, q.y), 0.0) - radius;
-                if (d >= 1.0) return half4(0);
+                // Only the bevel contributes optical pixels. In particular,
+                // do not normalize the capsule medial axis (zero gradient),
+                // or sample/composite its transparent interior on mobile GPUs.
+                if (d >= 1.0 || d <= -bevel || engagement <= 0.0) return half4(0);
                 float2 n = outside * sign(p);
                 if (length(n) < 0.001) n = q.x > q.y ? float2(sign(p.x), 0) : float2(0, sign(p.y));
                 n /= max(length(n), 0.001);

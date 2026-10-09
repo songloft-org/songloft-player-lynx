@@ -87,7 +87,12 @@ export function LiquidTabIndicator({ index, count, backdrop, children }: { index
         accessibility-element={false}
         style={{ width: `calc(100% / ${count})`, transform: `translateX(${initialIndex * 100}%)` }}
       >
-        <view className={`nav-indicator__pill${iosLens ? ' nav-indicator__pill--ios-glass' : ''}`} main-thread:ref={jellyRef}>
+        <view
+          className={`nav-indicator__pill${iosLens ? ' nav-indicator__pill--ios-glass' : ''}`}
+          id={androidLens ? 'songloft-tab-selection' : undefined}
+          flatten={androidLens ? false : undefined}
+          main-thread:ref={jellyRef}
+        >
           {iosLens ? (
             <songloft-tab-glass
               className='nav-indicator__glass'
@@ -108,7 +113,13 @@ export function LiquidTabIndicator({ index, count, backdrop, children }: { index
             />
           ) : null}
           {appearance.blur && !appearance.increaseContrast ? (
-            <view className='nav-indicator__light' main-thread:ref={lightRef} accessibility-element={false} />
+            <view
+              className='nav-indicator__light'
+              id={androidLens ? 'songloft-tab-light' : undefined}
+              flatten={androidLens ? false : undefined}
+              main-thread:ref={lightRef}
+              accessibility-element={false}
+            />
           ) : null}
         </view>
       </view>

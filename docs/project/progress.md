@@ -1,5 +1,27 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-09 · Redmi K40 Tab 录屏分析与 Android 透镜同步修正
+
+- 提交收尾：用户已明确授权提交并推送，父仓库子模块指针一并同步。逐文件复核空引用、能力门控、完整变换、零激活清理、源隔离及 attach/detach/destroy 生命周期，无新增问题，运行时代码未再修改；沿用本轮最终测试、构建与录屏证据。实际结果以 Git 历史和远端为准，下方未提交状态为实施时快照；K40 蓝线验收仍开放。
+
+- 用户补充设备为 **Redmi K40 / Android 13 / 最新 dev 完整 APK**，提供根目录 `Screenrecorder-2026-10-09-22-34-40-35.mp4`（7.434s，174 个原始视频帧，SHA-256 `111ffc3d60f11ef52a4a89c4daa219b0adfb44efb8674098872a404183012a00`）。原文件只读保留，不上传、不入库。原始帧、局部裁剪和色差辅助图用于调查；没有确认蓝线单独的 GPU 根因。
+- 录屏与源码确认透镜/填色错位：CSS 胶囊由 `Element.animate()` 驱动，Android 另起 `ValueAnimator` 并按墙钟补进度；相同关键帧和起始参数不能保证实际绘制同帧。现在 Android 在 pre-draw 读取实际胶囊完整变换和边缘光 View 的 alpha，几何及激活度都跟随同一个 UI 动画，移除独立原生动画时钟。两个引用节点仅在 Android 透镜启用时有稳定 id 和 `flatten={false}`，仍排除在材质采样根外；共享 UI 方法保留，旧 bundle 缺少引用时保留填色。
+- 继续使用固定全栏硬件 RenderNode 采样。AGSL 在透明内部、轮廓外和零激活时直接返回，避免在不贡献光学像素的中轴区域归一化零梯度或采样/合成；这属于明确透明掩膜及防御性修正，不将其宣称为已证实的 K40 蓝线根因。pre-draw 只在几何、激活或活动源变化时使透镜变脏，停稳不自行产生帧或捕获；detach、关闭和 destroy 清理观察者与引用，销毁后禁止重新注册。
+- 最终 `pnpm exec tsc -b`、Lynx/Web 双 bundle、相关三文件 **18 项**、Android Debug 编译和 **62 项 JVM**通过。现有渲染回归增加引用/非扁平化/源隔离/辅助功能移除断言；隔离 Vite transform 撤掉引用绑定后 **1 项失败**，正式源码未变，日志 `/tmp/lynx-tab-line-single-clock-{focused,negative,types,debug-build,android}.log`。最终全量 **307 文件 / 3372 项**通过（22:55:23 开始，266.95s），`/tmp/lynx-tab-line-single-clock-final-tests.log`。中途的位置同步版本还存在激活时钟问题，其构建及未完成套件不作为最终交付证据。
+- 最终 Debug APK SHA-256 `ff587dd153b24d6120cff757230b972290d7d9072a5ec490e560d0aea487a5c7`，已核对设备安装包一致，并通过运行时引用节点测量证明加载了新 bundle。API 34 / arm64 native bridge / Mesa llvmpipe 的五 Tab 明暗各 **30s**实际 ADB 录屏完整包含七次导航，最后路由回执分别在 17.071s / 15.197s；这些 ADB 点击间隔受命令启动影响，不能冒充 120ms 触摸连点。视频 `/tmp/songloft-discovery-native/tab-line-single-clock-final-{light,dark}.mp4`、回执 `/tmp/lynx-tab-line-single-clock-final-{light,dark}.json`，逐帧拼图已复核，透镜与填色贴合，未看到横线。
+- 另以调试桥路由入口做动画期间转向，实际发送时间为 **1/120/243/408/977ms**，回执及最终 `/` 已核对；这是路由转向验证，不是真机触摸延迟/帧率证据。系统 `animator_duration_scale=0` 时实际 `reduceMotion=true`，发送时间 **1/120/241/374/496ms**，录屏确认直接落位、透镜清除，随后恢复 scale=1。视频与 JSON 为 `/tmp/songloft-discovery-native/tab-line-single-clock-{rapid-dark,reduced}.mp4`、`/tmp/lynx-tab-line-single-clock-{rapid-dark,reduced}.json`，截图和帧拼图已复核。
+- 生产双 bundle 已恢复关闭 TestBridge 并依次同步四端，发布检查 **70 项通过**；Lynx bundle SHA-256 `6b53f8b867a5735f5519337e380cf2e1685b7caba3629108fb1c29708530530c`，Web `10c6445efd4a72ea3fb300dffecf8740fa0b23aba20c2cf94c099ef337455ace`。Release APK 构建成功，SHA-256 `0a0a296c01d5ad890ef416827d5a554aa6ccbba72171d351c2f7c56f8180c521`；包内 bundle hash 一致。日志 `/tmp/lynx-tab-line-single-clock-{production-build,copy-android,copy-ios,copy-harmony,copy-web,final-release,release-apk}.log`。本地没有正式签名配置，Release 产物使用本机 debug 签名，不作为已发布 dev 包的升级安装证据。
+- 同一 Release APK 已安装并核对设备 base.apk hash，冷启动后实际点击曲库、设置、首页。20s 生产录屏 `/tmp/songloft-discovery-native/tab-line-production.mp4` 和帧拼图 `/tmp/lynx-tab-line-production-all.png` 已复核，录到曲库→设置的透镜移动，没有横线；模拟器页面响应延迟，最后首页落位另由 `/tmp/songloft-discovery-native/tab-line-production-settled.png` 确认，不把 20s 视频宣称为包含全部三次落位。当前应用 PID 的 AndroidRuntime 错误为空。截图采样期间的旧页面/新指示器混合状态不作为稳态验收。
+- **修复候选已落地，K40 蓝线验收仍开放**：模拟器不是用户的 Android 13 / Adreno 设备，不能凭本轮未复现闭合。改动包含原生宿主，需后续安装重建的完整 APK 复测，单独 JS 热更新不足。没有修改 Flutter/iOS/HarmonyOS 宿主；本批未提交、未推送，全平台原始目标仍保留未验收项。8 个改动文件 UTF-8 与 diff 检查通过，本轮夹具进程和自建模拟器容器已停止；用户原始 MP4 的 hash 未变。
+
+## 2026-10-09 · Android Tab 切换蓝色横线调查（未复现）
+
+- 用户反馈切换时图标中间出现蓝色横线。当前基线为 `928435c`，工作区开始时干净；没有修改产品源码，也没有确认根因或完成修复。已询问手机型号、Android/客户端版本和横线是否只在动画期间出现，尚待补充。
+- 从当前源码重新构建 TestBridge Lynx/Web 双 bundle 与 Android Debug APK，安装到 API 34 模拟器，使用 arm64 ABI/native bridge 与 Mesa llvmpipe。APK SHA-256 `d6fd539453686913260b39ff71f94f90fd6db96ef104f66fc3208f5149b291c9`，安装时间回执为 `2026-10-09 14:19:01`。模拟器不是用户设备，不能排除其他 GPU/系统或旧客户端的问题。
+- 实际 ADB 点击及 18 秒录屏覆盖三 Tab 明/暗、五 Tab 亮色，以及重启后的 density=3 五 Tab 暗色，包含跨栏和快速反向切换；路由回执均为 `/library → /settings → / → /settings → / → /library → /`。录屏目录 `/tmp/songloft-discovery-native/`，有效文件为 `tab-line-before-{light,dark}.mp4`、`tab-line-before-five-light.mp4`、`tab-line-before-density3-restart-dark.mp4`；对应 JSON 位于 `/tmp/lynx-tab-line-*.json`。截图和动画帧拼图已复核，尚未看到所报蓝线；当前像素检查也未发现比正常图标笔画更长的纯蓝横线，不能据此认定真机问题不存在。
+- 动画帧另观察到胶囊填色与原生透镜短暂错位，是否与所报横线相关尚未确定。已检查图标、CSS 边缘光、共享关键帧和 Android AGSL/采样调用；没有以猜测的 shader 或动画改动冒充修复。
+- 调查结束恢复关闭 TestBridge 的生产双 bundle，依次同步 Android/iOS/HarmonyOS/Web；发布检查 **70 项通过**。日志 `/tmp/lynx-tab-line-production-restore-{build,android,ios,harmony,web,release}.log`。本批只更新调查记录，问题保持开放，未提交或推送。
+
 ## 2026-10-09 · 曲库顶栏歌曲与歌单显隐
 
 - 提交收尾：用户已确认实施结果并授权本地提交。逐文件自审检查查询条件组合、独立状态、分类切换、分页/播放补齐、多选与排序退出、图标及双语文案，无新增问题；实际提交以 Git 历史为准，尚未推送。父仓库指针随本次提交同步，下方未提交状态为实施时快照。

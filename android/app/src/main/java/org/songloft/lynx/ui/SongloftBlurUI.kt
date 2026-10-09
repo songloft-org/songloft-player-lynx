@@ -2,10 +2,9 @@ package org.songloft.lynx.ui
 
 import android.content.Context
 import android.os.Build
-import android.animation.ValueAnimator
 import android.graphics.Canvas
 import android.view.View
-import android.view.animation.LinearInterpolator
+import android.view.ViewTreeObserver
 import com.lynx.react.bridge.Callback
 import com.lynx.react.bridge.ReadableMap
 import com.lynx.tasm.behavior.LynxContext
@@ -45,6 +44,8 @@ class SongloftBlurUI(context: LynxContext) : LynxUIBlurView<LifecycleBlurView>(c
 
     override fun createBlurView(context: Context): LifecycleBlurView = LifecycleBlurView(context).also {
         it.tabSource = { lynxContext.lynxView?.findViewByIdSelector("songloft-tab-backdrop") }
+        it.tabSelection = { lynxContext.lynxView?.findViewByIdSelector("songloft-tab-selection") }
+        it.tabLight = { lynxContext.lynxView?.findViewByIdSelector("songloft-tab-light") }
         it.captureOnMove = { refreshCapture() }
     }
 
@@ -64,18 +65,11 @@ class SongloftBlurUI(context: LynxContext) : LynxUIBlurView<LifecycleBlurView>(c
     }
 
     @LynxUIMethod
+    @Suppress("UNUSED_PARAMETER")
     fun animateTabLens(params: ReadableMap, callback: Callback) {
-        val rows = params.getArray("frames")
-        val frames = (0 until (rows?.size() ?: 0)).map { i ->
-            val row = rows!!.getArray(i)
-            FloatArray(4) { j -> row.getDouble(j).toFloat() }
-        }
-        (view as? LifecycleBlurView)?.animateTabLens(
-            frames,
-            params.getInt("count"),
-            params.getInt("duration"),
-            params.getDouble("startedAt", 0.0).toLong(),
-        )
+        // Keep the shared UI method contract, but Android optics follow the
+        // painted pill/light rather than starting a competing native animator.
+        (view as? LifecycleBlurView)?.refreshTabLens()
         callback.invoke(0)
     }
 
@@ -93,49 +87,69 @@ class LifecycleBlurView(context: Context) : BlurView(context) {
     private var glass: GlassRefraction? = null
     private var tabLens = false
     private var tabGlass: TabGlassRefraction? = null
-    private var tabAnimation: ValueAnimator? = null
     internal var tabSource: (() -> View?)? = null
+    internal var tabSelection: (() -> View?)? = null
+    internal var tabLight: (() -> View?)? = null
     internal var captureOnMove: (() -> Unit)? = null
-    private var tabPose: FloatArray? = null
-    private var tabCount = 1
+    private var tabEngagement = 0f
+    private var tabObserver: ViewTreeObserver? = null
+    private var disposed = false
+    private val tabPreDraw = ViewTreeObserver.OnPreDrawListener { refreshTabLens(); true }
 
     fun setTabLens(enabled: Boolean) {
         tabLens = enabled
-        if (enabled) alpha = 0f
+        alpha = 1f
+        tabEngagement = 0f
+        unregisterTabObserver()
+        if (enabled) registerTabObserver()
         else {
-            tabAnimation?.cancel()
-            tabAnimation = null
             tabGlass?.dispose()
             tabGlass = null
-            tabPose = null
-            alpha = 1f
             updateGlass()
         }
+        invalidate()
     }
 
-    fun animateTabLens(frames: List<FloatArray>, count: Int, duration: Int, startedAt: Long) {
-        tabAnimation?.cancel()
-        tabAnimation = null
-        alpha = 0f
-        if (Build.VERSION.SDK_INT < 33 || !tabLens || count <= 0 || duration <= 0 || frames.size < 2) return
-        val animator = ValueAnimator.ofFloat(0f, (frames.size - 1).toFloat())
-        animator.duration = duration.toLong()
-        animator.interpolator = LinearInterpolator()
-        animator.addUpdateListener {
-            val cursor = it.animatedValue as Float
-            val first = cursor.toInt().coerceAtMost(frames.lastIndex - 1)
-            val fraction = cursor - first
-            val pose = FloatArray(4) { j -> frames[first][j] * (1 - fraction) + frames[first + 1][j] * fraction }
-            if (width > 0 && height > 0) {
-                tabPose = pose
-                tabCount = count
-                alpha = if (pose[3] > 0f) 1f else 0f
-                invalidate()
-            }
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        registerTabObserver()
+    }
+
+    override fun onDetachedFromWindow() {
+        unregisterTabObserver()
+        super.onDetachedFromWindow()
+    }
+
+    private fun registerTabObserver() {
+        if (disposed || !tabLens || !isAttachedToWindow || Build.VERSION.SDK_INT < 33) return
+        val observer = viewTreeObserver
+        if (tabObserver === observer) return
+        unregisterTabObserver()
+        observer.addOnPreDrawListener(tabPreDraw)
+        tabObserver = observer
+    }
+
+    private fun unregisterTabObserver() {
+        tabObserver?.takeIf { it.isAlive }?.removeOnPreDrawListener(tabPreDraw)
+        tabObserver = null
+    }
+
+    fun refreshTabLens() {
+        if (disposed || !tabLens || Build.VERSION.SDK_INT < 33) return
+        val selection = tabSelection?.invoke()
+        val engagement = if (selection != null) tabLight?.invoke()?.alpha?.coerceIn(0f, 1f) ?: 0f else 0f
+        if (engagement <= 0f) {
+            if (tabEngagement > 0f) invalidate()
+            tabEngagement = 0f
+            return
         }
-        tabAnimation = animator
-        animator.start()
-        if (startedAt > 0) animator.currentPlayTime = (System.currentTimeMillis() - startedAt).coerceIn(0L, duration.toLong())
+        val effect = tabGlass ?: TabGlassRefraction().also { tabGlass = it }
+        val changed = effect.updateGeometry(selection!!, this)
+        // Observing a frame never schedules another one. Only painted geometry,
+        // light or a dirty source invalidates the optical layer; idle costs no
+        // capture and there is no second animation clock or per-frame JS bridge.
+        if (changed || engagement != tabEngagement || tabSource?.invoke()?.isDirty == true) invalidate()
+        tabEngagement = engagement
     }
 
     override fun onPreDraw(): Boolean {
@@ -156,11 +170,10 @@ class LifecycleBlurView(context: Context) : BlurView(context) {
             super.draw(canvas)
             return
         }
-        if (Build.VERSION.SDK_INT < 33 || alpha <= 0f || width <= 0 || height <= 0) return
-        val pose = tabPose ?: return
+        if (Build.VERSION.SDK_INT < 33 || tabEngagement <= 0f || width <= 0 || height <= 0) return
         val source = tabSource?.invoke() ?: return
-        val effect = tabGlass ?: TabGlassRefraction().also { tabGlass = it }
-        effect.draw(canvas, source, width, height, resources.displayMetrics.density, tabCount, pose, lightIntensity)
+        val effect = tabGlass ?: return
+        effect.draw(canvas, source, width, height, resources.displayMetrics.density, tabEngagement, lightIntensity)
     }
 
     override fun post(action: Runnable): Boolean {
@@ -177,6 +190,7 @@ class LifecycleBlurView(context: Context) : BlurView(context) {
 
     fun setGlassLight(intensity: Float) {
         lightIntensity = intensity.coerceIn(0f, 1f)
+        if (tabLens) invalidate()
         updateGlass()
     }
 
@@ -197,13 +211,15 @@ class LifecycleBlurView(context: Context) : BlurView(context) {
     }
 
     fun disposeCallbacks() {
+        disposed = true
         callbacks.dispose()
-        tabAnimation?.cancel()
-        tabAnimation = null
+        unregisterTabObserver()
         tabGlass?.dispose()
         tabGlass = null
-        tabPose = null
+        tabEngagement = 0f
         tabSource = null
+        tabSelection = null
+        tabLight = null
         captureOnMove = null
         if (Build.VERSION.SDK_INT >= 33) setRenderEffect(null)
         glass = null

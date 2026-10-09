@@ -26,6 +26,8 @@
 
 ## 待修复（开放）
 
+- [ ] **Android Tab 切换时图标中间出现蓝色横线（2026-10-09 用户反馈）** — 设备已确认 Redmi K40 / Android 13 / 最新 dev 完整 APK，用户录屏已逐帧检查。已修复确认的填色/透镜不同步：Android 几何和激活度直接跟随实际胶囊及边缘光，取消独立原生时钟，透明内部不再参与法线/采样计算。API 34 新包明暗、连续转向和减少动画录屏通过，完整 3372 项、62 项 JVM、70 项发布检查及 APK 构建通过；尚未证实蓝线单独的 GPU 根因，也未在 K40 复测，**不得凭模拟器未复现闭合**。需安装后续完整 APK，JS 热更新不足。证据与边界见 progress。
+
 - [ ] **全平台液态玻璃显示与动画尚未达到一致验收**（2026-10-09 用户反馈）— 共享弹簧/连续激活/隆起/边缘光、保留填色与排除前景采样已修复。Android 明暗/连点/减少动画已有新包录屏；HarmonyOS 小区域异步采样与 GPU 网格已编译并通过生命周期检查；iOS opacity 实现已撤销，改为原生 effect 插值并保持玻璃/祖先 alpha 为 1；新 Objective-C/Swift 尚未 Apple 编译或运行。WebKit 18.2 / Firefox 134 已接有界实际背景镜像，并通过明暗快速切换、背景对齐和 3/5/更多 Tab 与辅助功能实测。镜像不支持的 iframe/video/canvas 等仍退回 blur，普通模糊不视为完整液态玻璃。Mac 连接失败及鸿蒙模拟器首次许可待授权，**不得以编译、自动化通过或单端录屏闭合此项。** Apple 设计参考 [Meet Liquid Glass](https://developer.apple.com/videos/play/wwdc2025/219/)；应用时长/幅度属于校准参数。
 
 - [x] **移动 Tab 胶囊只有填色与形变，缺少玻璃边缘折射（2026-10-09）** — 对照 Flutter 的 clear moving lens，新增独立透镜采样真实底栏材质与图标，并与水滴弹簧同步。Android 使用固定全栏硬件 RenderNode，避免 SDK 零半径跳过采样、BlurViewCanvas 排除嵌套 blur 和软件 Canvas 读到未模糊输入；采样根明确层叠上下文，排除光学 sibling。独立能力标志保护旧壳。Chromium 使用 SVG 背景位移；API 34 原生明暗录屏、冻结透镜前后像素变化与 Chrome 真实点击通过。iOS/HarmonyOS 仍由下方开放条目跟踪，详见 progress。
