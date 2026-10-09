@@ -1,5 +1,26 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-09 · 插件导航同步提交前自审（songloft-org/songloft#501）
+
+- 用户确认实施结果后，逐文件检查页面、导航查询、设置 API、排序与中英文文案；搜索启用/停用、卸载、安装、单独更新和批量更新的调用点。自审发现三类遗漏：更新只刷新插件列表，导航编辑缓存仍保留旧入口/运行状态；保存期间启动的刷新可能迟到并覆盖后端规范化响应；固定地址请求在异步认证或 401 重试期间切换会话，仍可能进入新会话的认证处理或发送。
+- 单独/批量更新追加 tab-config 前缀失效；保存响应返回后，对当前查询实例取消未完成的旧刷新，采用后端返回配置，再刷新插件资格。只有确有并发刷新时才增加编辑查询请求，原有服务器/账号/查询实例保护与同步锁保留。可选固定地址改为 options 对象，默认调用方式不变。
+- 导航保存将会话和查询实例校验传到 `HttpClient` 的可选 `assertCurrent` 请求参数；首次发送、进入 401 恢复前和重发前检查，过期操作不再发送或启动恢复。其他调用未传回调，行为不变；不涉及后端或原生桥接契约。新增三条延迟认证、迟到 401 和异步恢复后的重发回归，隔离 Vite transform 去掉保护时三条均失败，正式源码未改，日志 `/tmp/issue-501-lynx-review-session-negative.log`。
+- 前三条回归均先证明失败：更新两条 `/tmp/issue-501-lynx-review-before.log`；迟到刷新一条 `/tmp/issue-501-lynx-review-refresh-before.log`。修复后相关三文件 **57 项**通过；认证三条反向失败、修复后设置 API **9 项**通过。本轮共追加六条回归。最终 `pnpm test` **307 文件 / 3356 项**通过（2026-10-09 **20:41:06 UTC+8** 开始，119.16s），日志 `/tmp/issue-501-lynx-reviewed-tests-final.log`。中途一次完整套件进程收到终止信号、没有汇总，`reviewed-full.log` 不作为通过证据；上一版 3353 项的通过快照仅对应追加认证回归前的源码。
+- `pnpm exec tsc -b`、生产 Lynx/Web 双 bundle、`pnpm run build:web`、`pnpm run test:release` **70 项**与五文件 ReactLynx 扫描通过；沿用既有 sourcemap 与 `touch-action` 警告。日志 `/tmp/issue-501-lynx-review-types.log`、`/tmp/issue-501-lynx-reviewed-{build-final,web-final,release-final,react-scan-final}.log`。最终 Lynx SHA-256 `3aabbe40aa7b6feda003d731ccfed16da3e390edbd7a3e58aae3529b259e3572`；Web 构建与实际部署均为 `539a78eebab8984074a86675b82d245942e9737d091ea2e8e547cc7eaccd6795`。
+- 最终生产产物再次通过 Chromium 中文 **390px** / 英文 **1200px** 交互：启用/停用、导航偏好、活动排序真实落盘、曲库开关保存、旧页无重复插件开关、保存失败保留选择与重试。回执 `/tmp/issue-501-lynx-reviewed-{chinese-final,english-final}.json` 页面错误为空；`/tmp/issue-501-lynx-reviewed-final-{mobile,builtIn,english,failure}.png` 已目测复核。测试服务与容器已停止，生成产物不入库。
+- 逻辑正确性、调用链、状态与并发、UI/性能/资源、回归与文档检查通过，三类遗漏已修复。仅存在并发刷新时才多发编辑查询；没有新增原生订阅、定时器或高频路径。UTF-8 与 diff 检查通过；中英 handoff 已同步，用户已确认审查结果与提交信息，待确认本地提交，未提交、未推送，父仓库指针及 #501 未操作。
+- 文件范围沿用下方实施记录，追加 `src/features/jsplugin/data/jsplugin-mutations.ts`、`src/core/network/http-client.ts` 与 `docs/reference/api-conventions.md`，共 17 个文件。reference 沿用现有仅中文文件。本批没有后端、schema 或原生宿主源码变更；Android/iOS/HarmonyOS 设备验收仍开放。
+
+## 2026-10-09 · 插件导航设置同步（songloft-org/songloft#501）
+
+- 按用户确认方案，将插件启用、导航显示与导航排序集中到插件管理页；Tab 配置页保留内置曲库开关、数量及移动端折叠提示。无入口插件不显示导航开关，新装插件沿用默认不加入导航的规则。停用插件隐藏导航、不占数量名额，但完整配置仍保留显示偏好与排序位置；活动项排序只替换活动槽位。
+- `useNavigationSettings` 使用服务器地址、子路径与账号区分查询，合并读取完整导航配置与插件列表。保存期间跨页面禁用编辑，成功后采用后端规范化响应更新缓存并刷新导航；失败保留已保存状态，可重试。初次读取或携带旧数据的刷新失败均阻止保存；同步锁阻止连续点击，查询实例隔离缓存清空前的旧回执与旧回调。
+- 检查 HTTP 调用链发现地址在异步 Token 读取后才拼接，增加导航写入的可选固定服务器地址，避免旧配置写入刚切换的服务器。含子路径的真实 `HttpClient` 延迟认证测试反向验证失败，修复后通过；API、数据库和原生宿主契约未变。
+- 新增 15 条导航回归及 1 条 HTTP 地址回归，适配原插件管理 33 条测试。旧计数方式与未固定请求地址的反向检查分别失败，日志 `/tmp/issue-501-lynx-{negative,url-negative}.log`。2026-10-09 **20:15:11 UTC+8** 开始的最终完整 **307 文件 / 3350 项**通过（126.14s），`pnpm exec tsc -b`、`pnpm run build`、`pnpm run build:web`、`pnpm run test:release` **70 项**及四文件 ReactLynx 扫描通过。最终日志 `/tmp/issue-501-lynx-{full-final,types,build-final,web-final,release-final}.log`。第一次全量的发布产物检查撞上并行构建清空 dist，构建固定后重跑完整套件通过；沿用既有 sourcemap 与 `touch-action` 警告。
+- 实际生产 Web 中文 **390px** 与英文 **1200px** 操作已验证：启用/停用、导航偏好保留、活动项拖拽落盘、曲库开关保存不丢插件配置、旧页无重复插件开关；英文单次 PUT 500 后后端和开关均保留原值，重试成功。真实排序首轮发现动态启用插件后 SDK 缺少新增项尺寸缓存，按可见入口序列重建 SortableRoot 后拖拽写入顺序通过；调试日志已移除，并用最终产物复验。回执 `/tmp/issue-501-lynx-{verify-final,english}.json` 页面错误为空，截图 `/tmp/issue-501-lynx-{mobile,builtIn,english,failure}.png` 已复核。
+- 本批测试服务与浏览器容器已停止。原生 Android/iOS/HarmonyOS 设备尚未运行；没有修改原生宿主源码，构建产物不入库。未提交、未推送，父仓库指针未更新，Issue #501 保持打开，等待实施结果确认。
+- 文件范围：`src/features/jsplugin/{data/navigation-settings.ts,widgets/PluginNavigationSettings.tsx,pages/PluginManagerPage.tsx,pages/TabConfigPage.tsx,__tests__/navigation-settings.test.tsx,__tests__/plugin-manager-page.test.tsx}`、`src/features/settings/{api/settings-api.ts,__tests__/settings-api.test.ts}`、`src/i18n/resources.ts` 及 progress/bugs/pitfalls/中英 handoff，共 14 个文件。progress/bugs/pitfalls 沿用现有仅中文文件，中英 handoff 同步。此前缓存目录和播放导航批次已在调查期间由其他工作提交，本批不混入其改动。
+
 ## 2026-10-09 · 下一首播放与随机历史导航提交前自审（songloft-org/songloft#511）
 
 - 用户确认实施结果后，逐文件及消费点检查队列、播放导航、来源上下文、后台补齐、预加载、缓存身份、DLNA、原生通知、Web 快捷键、恢复/清空/账号切换。自审修复五类遗漏：首次失败后重试成功漏报播放事件；首次播放前切音轨漏记实际历史；删除当前曲的旧异步操作覆盖新队列（连同旧通知元数据、最后一曲停止回执保护）；Web 快捷键在队列末尾忽略手动优先项；原生通知停止未清空导航。首次真实播放报告跨重试/音轨重载保留并只消费一次，后续重试不重复上报。

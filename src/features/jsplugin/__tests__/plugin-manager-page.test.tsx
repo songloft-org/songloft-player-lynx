@@ -76,11 +76,20 @@ vi.mock('../api/index.js', () => ({
   // Only the pieces the page/dialogs actually call in these tests; the upload
   // URL is inert because pickAndUpload is itself mocked.
   getJSPluginApi: () => ({
+    getPlugins: async () => ({ plugins: h.plugins }),
     getUploadUrl: () => 'http://server/api/v1/jsplugins/upload',
     checkUpdate: h.checkUpdate,
     cleanupOrphanStorage: h.cleanup,
   }),
 }))
+
+vi.mock('../../settings/api/index.js', () => ({
+  getSettingsApi: () => ({ getTabConfig: async () => ({ showLibrary: true, pluginTabs: [] }) }),
+}))
+
+vi.mock('@lynx-js/lynx-ui-sortable', async () =>
+  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSortable(),
+)
 
 vi.mock('../data/jsplugin-mutations.js', () => ({
   useTogglePluginMutation: () => ({ mutate: h.toggle, isPending: h.pending.toggle }),

@@ -189,6 +189,8 @@ export interface RequestOptions {
   parseJson?: boolean
   /** Override the deadline for this request, including auth replay. */
   receiveTimeoutMs?: number
+  /** Reject an obsolete operation before sending or entering auth recovery. */
+  assertCurrent?: () => void
 }
 
 export interface HttpResult<T> {
@@ -269,18 +271,21 @@ export class HttpClient {
     const url = this.buildUrl(path, options.query)
     // `receiveTimeoutMs` was read into a field and then never used — every request
     // could hang forever. Pass it to the transport so the promise always settles.
-    const send = (h: Record<string, string>): Promise<TransportResponse> =>
-      this.transport({
+    const send = (h: Record<string, string>): Promise<TransportResponse> => {
+      options.assertCurrent?.()
+      return this.transport({
         url,
         method,
         headers: h,
         body: bodyStr,
         timeoutMs: options.receiveTimeoutMs ?? this.receiveTimeoutMs,
       })
+    }
 
     let res = await send(ctx.headers)
 
     if (res.status === 401 && useInterceptor && this.interceptor!.onError) {
+      options.assertCurrent?.()
       const recovered = await this.interceptor!.onError(ctx, res, send)
       if (recovered) res = recovered
     }

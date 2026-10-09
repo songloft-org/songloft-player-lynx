@@ -51,6 +51,7 @@ export function useUpdateAllPluginsMutation() {
       getJSPluginApi().updateAllPlugins(params),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: pluginQueryKeys.list() })
+      void queryClient.invalidateQueries({ queryKey: tabConfigKeys })
     },
   })
 }
@@ -62,6 +63,7 @@ export function useUpdatePluginMutation() {
       getJSPluginApi().updatePlugin(id, params),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: pluginQueryKeys.list() })
+      void queryClient.invalidateQueries({ queryKey: tabConfigKeys })
     },
   })
 }

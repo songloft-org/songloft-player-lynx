@@ -1,197 +1,56 @@
-import { useEffect, useState } from '@lynx-js/react'
-import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-sortable'
 
-import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
-import type { JSPlugin } from '../../../models/jsplugin.js'
-import { getSettingsApi } from '../../settings/api/index.js'
 import { SubPageShell } from '../../settings/widgets/SubPageShell.js'
 import { SwitchRow } from '../../settings/widgets/SwitchRow.js'
-import { getJSPluginApi } from '../api/index.js'
-import type { PluginTabEntry, TabConfig } from '../data/tab-config.js'
+import {
+  MAX_NAVIGATION_TABS,
+  navigationTabCount,
+  useNavigationSettings,
+} from '../data/navigation-settings.js'
+import { NavigationReadState, saveNavigation } from '../widgets/PluginNavigationSettings.js'
 import './TabConfigPage.css'
 
-const MAX_TABS = 12
-
 export function TabConfigPage() {
-  const queryClient = useQueryClient()
   const { t } = useTranslation()
-
-  const [config, setConfig] = useState<TabConfig | null>(null)
-  const [plugins, setPlugins] = useState<JSPlugin[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const [tabCfg, pluginRes] = await Promise.all([
-          getSettingsApi().getTabConfig(),
-          getJSPluginApi().getPlugins(),
-        ])
-        setConfig(tabCfg)
-        setPlugins(pluginRes.plugins.filter((p) => p.isActive && p.entryPath))
-      } catch { /* degrade gracefully */ }
-      setLoading(false)
-    })()
-  }, [])
-
-  if (loading || !config) {
-    return (
-      <SubPageShell title={t('jsplugin.tabConfigTitle')} backTestId='tab-config-back'>
-        <view className='tab-config__state'>
-          <text className='tab-config__state-text'>{t('common.loading')}</text>
-        </view>
-      </SubPageShell>
-    )
-  }
-
-  const totalCount = 2 + (config.showLibrary ? 1 : 0) + config.pluginTabs.length
-  const atLimit = totalCount >= MAX_TABS
-
-  const isPluginInTabs = (plugin: JSPlugin) =>
-    config.pluginTabs.some((t) => t.entryPath === plugin.entryPath)
-
-  const persist = (next: TabConfig) => {
-    setConfig(next)
-    void getSettingsApi().updateTabConfig(next)
-      .then(() => queryClient.invalidateQueries({ queryKey: ['settings', 'tab-config'] }))
-      .catch(() => {})
-  }
-
-  const toggleLibrary = () => persist({ ...config, showLibrary: !config.showLibrary })
-
-  const togglePlugin = (plugin: JSPlugin) => {
-    const inTabs = isPluginInTabs(plugin)
-    let nextTabs: PluginTabEntry[]
-    if (inTabs) {
-      nextTabs = config.pluginTabs.filter((t) => t.entryPath !== plugin.entryPath)
-    } else {
-      if (atLimit) return
-      nextTabs = [...config.pluginTabs, {
-        pluginId: plugin.id,
-        entryPath: plugin.entryPath!,
-        name: plugin.displayName,
-        icon: plugin.icon,
-      }]
-    }
-    persist({ ...config, pluginTabs: nextTabs })
-  }
-
-  const reorderPluginTabs = (orderedEntryPaths: string[]) => {
-    const byEntry = new Map(config.pluginTabs.map((t) => [t.entryPath, t]))
-    const nextTabs: PluginTabEntry[] = []
-    for (const ep of orderedEntryPaths) {
-      const tab = byEntry.get(ep)
-      if (tab) nextTabs.push(tab)
-    }
-    // Defensive tail: anything Sortable dropped (shouldn't happen) keeps its
-    // original relative order rather than silently disappearing.
-    for (const tab of config.pluginTabs) {
-      if (!orderedEntryPaths.includes(tab.entryPath)) nextTabs.push(tab)
-    }
-    persist({ ...config, pluginTabs: nextTabs })
-  }
-
+  const settings = useNavigationSettings()
+  const { config } = settings
+  const count = config ? navigationTabCount(config, settings.plugins) : 0
   return (
     <SubPageShell
       title={t('jsplugin.tabConfigTitle')}
       backTestId='tab-config-back'
-      actions={<text className='tab-config__count'>{totalCount}/{MAX_TABS}</text>}
+      actions={
+        config ? (
+          <text className='tab-config__count'>{`${count}/${MAX_NAVIGATION_TABS}`}</text>
+        ) : undefined
+      }
     >
-      <view className='tab-config__section'>
-        <text className='tab-config__section-title'>{t('jsplugin.tabBuiltIn')}</text>
-        <view className='tab-config__row'>
-          <text className='tab-config__row-name'>{t('nav.home')}</text>
-          <text className='tab-config__row-badge'>{t('jsplugin.tabFixed')}</text>
-        </view>
-        {/*
-          Showing a tab is on/off, so it is a switch. These rows used to draw
-          their own 22px box-and-tick — a different shape *and* a different
-          convention from the switches everywhere else in settings.
-        */}
-        <SwitchRow
-          title={t('nav.library')}
-          checked={config.showLibrary}
-          onChange={toggleLibrary}
-          testId='tab-toggle-library'
-        />
-        <view className='tab-config__row'>
-          <text className='tab-config__row-name'>{t('nav.settings')}</text>
-          <text className='tab-config__row-badge'>{t('jsplugin.tabFixed')}</text>
-        </view>
-      </view>
-
-      {plugins.length > 0
-        ? (
-          <view className='tab-config__section'>
-            <text className='tab-config__section-title'>{t('jsplugin.tabPlugins')}</text>
-            {plugins.map((plugin) => {
-              const enabled = isPluginInTabs(plugin)
-              const disabled = !enabled && atLimit
-              return (
-                <SwitchRow
-                  key={String(plugin.id)}
-                  title={plugin.displayName}
-                  checked={enabled}
-                  disabled={disabled}
-                  onChange={() => togglePlugin(plugin)}
-                  testId={`tab-toggle-${plugin.id}`}
-                />
-              )
-            })}
-            {atLimit
-              ? <text className='tab-config__limit-hint'>{t('jsplugin.tabLimitReached', { max: MAX_TABS })}</text>
-              : null}
-            {/* Same slot as the limit hint: one ever-present line of context
-                about what a large tab count does on phones. Mirrors the Flutter
-                config page's `settingsTabConfigCollapseHint`. */}
-            <text className='tab-config__limit-hint'>{t('jsplugin.tabCollapseHint')}</text>
+      <NavigationReadState settings={settings} />
+      {config ? (
+        <view className='tab-config__section'>
+          <text className='tab-config__section-title'>{t('jsplugin.tabBuiltIn')}</text>
+          <view className='tab-config__row'>
+            <text className='tab-config__row-name'>{t('nav.home')}</text>
+            <text className='tab-config__row-badge'>{t('jsplugin.tabFixed')}</text>
           </view>
-        )
-        : null}
-
-      {/*
-        "Plugin order" — parallels the Flutter tab_config_page.dart section.
-        SortableRoot + SortableItemArea mirrors the library LibraryViewEditor:
-        long-press the drag handle to lift, drag vertically to reorder.
-        Sorting starts → freeze SubPageShell's scroll so touchmove drags the
-        item instead of scrolling the page.
-      */}
-      {config.pluginTabs.length > 0
-        ? (
-          <view className='tab-config__section'>
-            <text className='tab-config__section-title'>{t('jsplugin.tabPluginOrder')}</text>
-            <SortableRoot<PluginTabEntry>
-              data={config.pluginTabs.map((tab) => ({
-                getSortingKey: () => tab.entryPath,
-                dataItem: tab,
-              }))}
-              onSortEnd={(sorted) => {
-                reorderPluginTabs(sorted.map((d) => d.dataItem.entryPath))
-              }}
-            >
-              {(item) => (
-                <SortableItem
-                  sortingKey={item.dataItem.entryPath}
-                  as='DraggableRoot'
-                  className='tab-config__order-row'
-                >
-                  <text className='tab-config__order-name'>{item.dataItem.name}</text>
-                  <SortableItemArea>
-                    <view
-                      className='tab-config__order-handle'
-                      data-testid={`tab-order-handle-${item.dataItem.entryPath}`}
-                    >
-                      <Icon name='menu' size={18} color={ICON_COLORS.content2} />
-                    </view>
-                  </SortableItemArea>
-                </SortableItem>
-              )}
-            </SortableRoot>
+          <SwitchRow
+            title={t('nav.library')}
+            checked={config.showLibrary}
+            disabled={!settings.ready || (!config.showLibrary && count >= MAX_NAVIGATION_TABS)}
+            onChange={(showLibrary) => {
+              if (settings.ready && (!showLibrary || count < MAX_NAVIGATION_TABS))
+                saveNavigation(settings, { ...config, showLibrary })
+            }}
+            testId='tab-toggle-library'
+          />
+          <view className='tab-config__row'>
+            <text className='tab-config__row-name'>{t('nav.settings')}</text>
+            <text className='tab-config__row-badge'>{t('jsplugin.tabFixed')}</text>
           </view>
-        )
-        : null}
+          <text className='tab-config__limit-hint'>{t('jsplugin.tabCollapseHint')}</text>
+          <text className='tab-config__limit-hint'>{t('jsplugin.navigationManagedHint')}</text>
+        </view>
+      ) : null}
     </SubPageShell>
   )
 }

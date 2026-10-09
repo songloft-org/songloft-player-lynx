@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
-import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { PopoverMenu } from '../../../shared/ui/PopoverMenu.js'
 import type { PopoverMenuItem } from '../../../shared/ui/PopoverMenu.js'
@@ -33,13 +32,16 @@ import { SwitchRow } from '../../settings/widgets/SwitchRow.js'
 import { PluginAvatar } from '../widgets/PluginAvatar.js'
 import { PluginUpdateDialog } from '../widgets/PluginUpdateDialog.js'
 import { PluginBatchUpdateDialog } from '../widgets/PluginBatchUpdateDialog.js'
+import { useNavigationSettings, type NavigationSettings } from '../data/navigation-settings.js'
+import { PluginNavigationToggle, PluginNavigationOrder } from '../widgets/PluginNavigationSettings.js'
 import './PluginManagerPage.css'
 
 export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const { data, isLoading, isError, refetch } = usePluginsQuery()
+  const { data, isLoading, isError, isFetching, refetch } = usePluginsQuery()
+  const navigation = useNavigationSettings()
   const plugins = data?.plugins ?? []
   const { data: keepAliveList } = usePluginKeepAliveQuery()
   const { data: autoUpdate, isLoading: autoUpdateLoading } = usePluginAutoUpdateQuery()
@@ -83,6 +85,7 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
   const [uploadResult, setUploadResult] = useState<JSPluginUploadResponse | null>(null)
 
   const onToggle = (plugin: JSPlugin) => {
+    if (openingBlocked || navigation.saving || isFetching) return
     const disabling = plugin.isActive
     toggleMutation.mutate(
       { id: plugin.id, enable: !plugin.isActive },
@@ -393,6 +396,8 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
                     keepAlive={keepAliveList ?? []}
                     onOpen={onOpenPlugin}
                     openingBlocked={openingBlocked}
+                    navigation={navigation}
+                    navigationBusy={openingBlocked || isFetching || isError}
                     onToggleActive={onToggle}
                     onToggleKeepAlive={onToggleKeepAlive}
                     onCheckUpdate={setUpdateTarget}
@@ -409,6 +414,7 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
                 ))}
               </view>
             )}
+      <PluginNavigationOrder settings={navigation} busy={openingBlocked || isFetching || isError} />
     </SubPageShell>
   )
 }
@@ -416,13 +422,15 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
 /**
  * One installed plugin, mirroring the Flutter manager's `_JSPluginItem`: avatar
  * with a status ring, name + version + author, a two-line description, the
- * enable switch, and an overflow menu (homepage / keep-alive / delete).
+ * labelled enable/navigation switches, and an overflow menu (homepage / keep-alive / delete).
  */
 function PluginRow({
   plugin,
   keepAlive,
   onOpen,
   openingBlocked,
+  navigation,
+  navigationBusy,
   onToggleActive,
   onToggleKeepAlive,
   onCheckUpdate,
@@ -433,6 +441,8 @@ function PluginRow({
   keepAlive: string[]
   onOpen: (plugin: JSPlugin) => void
   openingBlocked: boolean
+  navigation: NavigationSettings
+  navigationBusy: boolean
   onToggleActive: (plugin: JSPlugin) => void
   onToggleKeepAlive: (plugin: JSPlugin) => void
   onCheckUpdate: (plugin: JSPlugin) => void
@@ -498,7 +508,6 @@ function PluginRow({
           {canOpen ? <Icon name='chevron-right' size={18} color={ICON_COLORS.contentMuted} /> : null}
         </view>
         <view className='plugin-manager__item-actions'>
-          <AppSwitch checked={plugin.isActive} onChange={() => onToggleActive(plugin)} />
           <PopoverMenu
             show={menuOpen}
             onShowChange={setMenuOpen}
@@ -516,6 +525,14 @@ function PluginRow({
           />
         </view>
       </view>
+      <SwitchRow
+        title={t('jsplugin.enablePlugin')}
+        checked={plugin.isActive}
+        disabled={navigationBusy || navigation.saving}
+        onChange={() => onToggleActive(plugin)}
+        testId={`plugin-enabled-${plugin.id}`}
+      />
+      <PluginNavigationToggle plugin={plugin} settings={navigation} busy={navigationBusy} />
     </view>
   )
 }

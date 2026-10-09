@@ -90,6 +90,10 @@ export interface LoginArgs {
 | API 调用 | 由 `HttpClient` 抛 `ApiError`，store action 捕获并设 state.error |
 | UI | 读 `store.error` 展示，不自行 try-catch |
 
+### 绑定服务器/账号的异步请求
+
+固定 URL 只能防止地址在异步认证后变动，不能证明原操作仍属于当前会话。导航保存通过 `SettingsApi.updateTabConfig(config, { serverBaseUrl, assertCurrent })` 同时固定地址并校验服务器、账号及查询实例。`HttpClient` 的可选 `RequestOptions.assertCurrent` 在首次发送、进入 401 恢复前和每次重发前执行；回调抛错时停止该操作，未传回调的既有请求行为不变。校验不能撤回已经发送到服务器的写入，响应回到查询缓存前仍须检查原实例。
+
 ---
 
 ## 5. E2E 测试 — Store 暴露约定

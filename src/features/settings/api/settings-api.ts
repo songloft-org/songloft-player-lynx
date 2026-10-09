@@ -1,5 +1,5 @@
 import { apiPrefix } from '../../../core/config/app-config.js'
-import type { HttpClient } from '../../../core/network/http-client.js'
+import type { HttpClient, RequestOptions } from '../../../core/network/http-client.js'
 import { coerceLogLevel, type LogLevel } from '../domain/log-level.js'
 import type { ProxySettings } from '../domain/proxy-model.js'
 import { parseTabConfig, type TabConfig } from '../../jsplugin/data/tab-config.js'
@@ -45,7 +45,13 @@ export class SettingsApi {
     return parseTabConfig(res.data)
   }
 
-  async updateTabConfig(config: TabConfig): Promise<TabConfig> {
+  async updateTabConfig(
+    config: TabConfig,
+    { serverBaseUrl, assertCurrent }: {
+      serverBaseUrl?: string
+      assertCurrent?: RequestOptions['assertCurrent']
+    } = {},
+  ): Promise<TabConfig> {
     const body = {
       show_library: config.showLibrary,
       plugin_tabs: config.pluginTabs.map((t) => ({
@@ -55,7 +61,12 @@ export class SettingsApi {
         icon: t.icon ?? '',
       })),
     }
-    const res = await this.client.put<unknown>(`${apiPrefix}/settings/tab-config`, body)
+    // Pin the target before asynchronous token lookup can overlap a server switch.
+    const res = await this.client.put<unknown>(
+      `${serverBaseUrl ?? ''}${apiPrefix}/settings/tab-config`,
+      body,
+      { assertCurrent },
+    )
     return parseTabConfig(res.data)
   }
 

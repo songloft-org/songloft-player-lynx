@@ -87,6 +87,10 @@ web-core 的 `LYNX_TAG_TO_HTML_TAG_MAP` 只映射 view/text/image/raw-text/scrol
 
 **闸门断言要限定在函数体里写。** 这条守卫的每个关键词（`buttons !== 0`、`stopPropagation()`）在它周围的注释里都会出现，文件级 `toContain` 会被注释骗过：实测把 `event.stopPropagation()` 那一行删掉、注释原地保留，断言照样通过。改成先 `match` 出监听器块再断言块内字符串，四个变异（删整段、条件取反、删调用、去掉手柄限定）才全部咬住。
 
+### 动态排序项需要刷新主线程尺寸缓存（2026-10-09 · songloft-org/songloft#501）
+
+插件启用会动态增加导航排序项。实际 Web 验证发现，已有 `SortableRoot` 的主线程缓存未包含新增项：手柄和卡片可以移动，却无法交换顺序，调试日志持续提示缺少项尺寸。对根节点设置 `key={JSON.stringify(tabs.map((tab) => tab.entryPath))}`，在可见入口序列变化时重建尺寸缓存；保存期间仍禁用排序。不要只断言拖拽回调被调用，必须在真实界面启用第二项、拖拽交换，并读取后端保存顺序。修复前后实际生产 Web 已完成对比，调试日志从产品中移除；原生设备仍待验收。
+
 ## 3. 原生模块
 
 ### 原生方法不返回 Promise
