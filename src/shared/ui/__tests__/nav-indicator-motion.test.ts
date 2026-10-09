@@ -5,8 +5,8 @@ import { expect, test } from 'vitest'
 
 /**
  * Flow-indicator gate: the bottom-bar and segmented-control sliding indicators
- * must transition `transform` with token duration/easing so reduce-motion
- * (which zeroes `--duration-*`) makes the slide instant. The indicators also
+ * use the jelly spring (bottom bar) or token-based transitions (segmented).
+ * Both honor reduce-motion. The indicators also
  * carry the correct selection token (`--tint-fill` for the nav capsule,
  * `--tertiary-system-background` + `--shadow-sm` for the segmented thumb).
  */
@@ -22,13 +22,18 @@ function ruleBody(css: string, selector: string): string {
   return new RegExp(`${escaped}\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? ''
 }
 
-test('.nav-indicator transitions transform with motion tokens', () => {
+test('.nav-indicator delegates motion to the jelly spring without a competing CSS transition', () => {
   const css = rules('shared/layouts/ShellLayout.css')
   const body = ruleBody(css, '.nav-indicator')
-  expect(body, '.nav-indicator must exist with a transition rule').toBeTruthy()
-  expect(body, '.nav-indicator transition must use --duration and --ease tokens').toMatch(
-    /transition:\s*transform\s+var\(--duration-normal\)\s+var\(--ease-spring-bounce\)/,
-  )
+  expect(body).toBeTruthy()
+  expect(body).not.toMatch(/transition:/)
+  expect(body).toMatch(/overflow:\s*visible/)
+  expect(body).toMatch(/pointer-events:\s*none/)
+  // Without a stacking context native negative blur/tint layers leave the
+  // capture root, producing an opaque accent-colored moving lens.
+  expect(ruleBody(css, '.shell__tab-backdrop')).toMatch(/z-index:\s*0/)
+  const shell = rules('shared/layouts/ShellLayout.tsx')
+  expect(shell).toMatch(/<LiquidTabIndicator\s+key=\{indicatorSlotCount\}/)
 })
 
 test('.nav-indicator__pill carries the selection tint and pill metrics', () => {

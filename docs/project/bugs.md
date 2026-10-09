@@ -11,6 +11,8 @@
 
 ## 待修复（开放）
 
+- [x] **移动 Tab 胶囊只有填色与形变，缺少玻璃边缘折射（2026-10-09）** — 对照 Flutter 的 clear moving lens，新增独立透镜采样真实底栏材质与图标，并与水滴弹簧同步。Android 使用固定全栏硬件 RenderNode，避免 SDK 零半径跳过采样、BlurViewCanvas 排除嵌套 blur 和软件 Canvas 读到未模糊输入；采样根明确层叠上下文，排除光学 sibling。独立能力标志保护旧壳。Chromium 使用 SVG 背景位移；API 34 原生明暗录屏、冻结透镜前后像素变化与 Chrome 真实点击通过。iOS/HarmonyOS 仍由下方开放条目跟踪，详见 progress。
+
 - [x] **Android 4.0.0 capture target 排队更新在销毁后崩溃（2026-10-08 P1）** — 实际登录导航出现 `BlurUtils.createEffect → BlurView.updateBlur` 的空 RenderNode 接收者；官方 capture Runnable 缺少销毁检查，销毁后可重新初始化尺寸。宿主 SongloftBlurUI 只保护 post 生命周期，父类 destroy 前使回调失效，沿用原属性与绘制。JVM 回归和 APK 编译通过，隔离 API 34 原生登录/导航/关闭菜单/透明度卸载与恢复/冷启动保留设置通过，AndroidRuntime 无新增崩溃。限于当前测试设备与 4.0.0，其他设备及后续 SDK 升级仍须复验；详见 progress/pitfalls。
 
 - [ ] **iOS / HarmonyOS 玻璃光学效果与旧系统行为待设备验证（2026-10-08 P0/P1）** — P0 已修复空容器、inline 材质覆盖和菜单滚动；P1 已接宿主 SDK/注册/OS 能力门控、系统辅助功能与本机降低透明度，未知能力实心降级，iOS 26 以前 themed blur。HarmonyOS 核心 C++ 已注册 blur-view，背景 blur 要求 API 15，动效接口要求 API 23。不能把 JS 测试、HAP 编译或 Web 截图作为原生可读性/光学效果证据；iOS 26、旧 iOS、HarmonyOS 设备矩阵仍开放，详细证据见 progress。

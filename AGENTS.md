@@ -73,11 +73,12 @@ src/router.tsx
 - 新增滚动页必须消费 `--nav-inset`；原生 `<list>` 页面用 footer spacer，不依赖 CSS padding。
 - rail 选中态只变色，不改尺寸；底栏图标选中色使用 `activeAccentIconColor()`，SVG 不吃 CSS 级联。
 - Liquid Glass 表面复用 `BackdropBlur` 与材质 token（统一 `--material-*` 前缀）；底栏选中态背景使用 `--tint-fill`，`--material-glow-faint` 仅作光晕装饰；玻璃上的强调/中性状态分别使用 `--tint-fill` / `--quaternary-system-fill`，不得换成不透明 surface。
-- 底栏与分段控件「流动指示器」用 `transform: translateX` + `--ease-spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1)` 实现选中态平滑滑动；宽屏 rail 仅变色不位移。reduce-motion 依赖 `--duration-*` 归零（见下条）。模糊层（`BackdropBlur`）永不做动画。Toast 保持实心（有意不玻璃化）。
+- 底栏 `LiquidTabIndicator` 对齐 Flutter 的 350ms snappy spring（bounce .15），主线程关键帧共用位移和速度驱动的压缩/拉伸；连点从当前姿态与速度转向，reduce-motion 订阅实时取消并落位。分段控件仍用 `translateX` + `--ease-spring-bounce` 和归零的 `--duration-*`。宽屏 rail 仅变色，文字/命中区/模糊层永不跟着指示器缩放或位移。Toast 保持实心。
 - 系统主题/语言初值由宿主 globalProps 在首帧前注入，运行中变化走 global event。`sendGlobalEvent(name, params)` 的第二参必须是数组。
 - reduce-motion：宿主经 `systemReduceMotion` 字段推送；iOS 使用 UIAccessibility 通知，Android 监听 `ANIMATOR_DURATION_SCALE`，HarmonyOS API 23+ 读取并监听公开接口，旧 API 保持未知。Web 在主线程读媒体偏好并推送给 Worker；`.reduce-motion` 零化动效 token。订阅随宿主生命周期清理。
 - 玻璃能力由宿主首帧 globalProps 上报（SDK、注册与 OS 门控）；未知能力使用实心材质，iOS 26+ 才选择 glass。`surface-policy.ts` 将系统辅助功能与本机偏好合并，系统开启时不能被应用开关关闭；降低透明度时卸载 blur。Android capture target 必须有稳定 id、`flatten={false}`，并排除玻璃层自身。
 - Android 13+ 胶囊经 `androidGlassSupported` 门控，用 AGSL 对实时 blur 输入做边缘折射；显式圆角透明裁剪，不能依赖输入 alpha（RenderEffect 会 clamp 越界输入）。普通菜单和 scrim 不启用此透镜。胶囊仅有一层有效填色，不铺全表面渐变或定时 shimmer；增强对比度关闭透镜，降低透明度卸载 blur。
+- 移动 Tab 使用独立清晰透镜：`songloft-tab-backdrop` 采样底栏材质与图标，须 `flatten={false}` 并建立 `z-index:0` 层叠上下文，将负层级 blur/填色留在原生采样根中；光学层在其外部，禁止递归采样。Android 在固定全栏 RenderNode 上录制硬件绘制结果，仅在 AGSL 中改变透镜几何，禁用透镜自身 SDK auto-blur。必须同时具备独立 `androidTabGlassSupported` 能力标志，旧壳只有外栏透镜能力时保留填色。SDK 4.0 在零半径时跳过 bitmap，BlurViewCanvas 排除嵌套 blur，而软件 Canvas 读取其尚未模糊的 bitmap；这些都不能作为真实底栏输入。空输入必须透明。透镜与填色交接使用同一组关键帧和起始时间；Web SVG 位移只在已验证的 Chromium 宿主启用，其余宿主保留填色降级。文字与命中区本身保持不动。
 - 根节点和 blur 叶节点复用 `useSurfaceAppearance`，避免每层重复订阅外观源。无 className 的全屏 scrim 使用 themed blur；紧凑 chrome 才使用 regular glass，装饰叶节点不启用 glass-interactive。未调暗的菜单使用 `--material-fill-menu` 和边缘高光，不铺整面 sheen/ramp；文字对比度须计入选中态 wash 与未知背景。
 - 返回顺序为：覆盖层 LIFO 栈 → `resolveRouteBack` 父级 → tab 首页退出策略。新增覆盖层挂载时必须先让 `useBackHandler(active, handler)` 的 `active` 为 `false`，新增叶子路由同步登记 `route-back.ts`。
 - 不使用 `router.history.back()`；`SubPageShell` 不维护第二份父级信息。完整契约见 back-navigation reference。

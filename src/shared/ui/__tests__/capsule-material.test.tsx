@@ -57,7 +57,7 @@ test.each([
   const source = read(tsx)
   const blur = source.indexOf("<BackdropBlur className='ui-backdrop-blur--pill' />")
   const tint = source.indexOf("<view className='ui-capsule-material'")
-  const foreground = source.indexOf(`className='${content}'`)
+  const foreground = source.indexOf(content === 'nav-indicator' ? '{renderBottomBarItems()}' : `className='${content}'`)
   expect(blur).toBeGreaterThan(source.indexOf(`className='${panel}`))
   expect(tint).toBeGreaterThan(blur)
   expect(foreground).toBeGreaterThan(tint)

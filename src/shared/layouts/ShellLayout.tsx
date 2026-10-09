@@ -23,6 +23,7 @@ import { MoreTabsSheet } from '../nav/MoreTabsSheet.js'
 import { activeNavPath, getShellWidth, setLastShellLocation, setNavPaths, setShellWidth, showsMiniPlayer, subscribeShellWidth } from '../nav/shell-navigation.js'
 import { getIsScrolled, subscribeIsScrolled } from '../nav/scroll-visibility.js'
 import { getRailCollapsed, subscribeRailCollapsed, toggleRailCollapsed } from './rail-collapse.js'
+import { LiquidTabIndicator } from './LiquidTabIndicator.js'
 import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import { BackdropBlur } from '../ui/BackdropBlur.js'
 import { useCapsuleMaterialStyle } from '../ui/capsule-material.js'
@@ -299,23 +300,11 @@ export function ShellLayout() {
           ? null
           : (
             <view className='shell__bottombar'>
-              {/* Panel-mode blur, so the capsule is a real material over the
-                  scrolling content rather than an 0.85 wash. Apple's tab bar is
-                  the reference here. See `BackdropBlur.tsx`. */}
-              <BackdropBlur className='ui-backdrop-blur--pill' />
-              <view className='ui-capsule-material' style={capsuleMaterialStyle} flatten={false} accessibility-element={false} />
-              {/* Flow indicator — single sliding capsule behind the active tab.
-                  DOM-ordered before the nav items so it renders behind them. */}
-              <view
-                className='nav-indicator'
-                style={{
-                  width: `calc(100% / ${indicatorSlotCount})`,
-                  transform: `translateX(${indicatorSlotIndex * 100}%)`,
-                }}
-              >
-                <view className='nav-indicator__pill' />
-              </view>
-              {renderBottomBarItems()}
+              <LiquidTabIndicator key={indicatorSlotCount} index={indicatorSlotIndex} count={indicatorSlotCount}>
+                <BackdropBlur className='ui-backdrop-blur--pill' />
+                <view className='ui-capsule-material' style={capsuleMaterialStyle} flatten={false} accessibility-element={false} />
+                {renderBottomBarItems()}
+              </LiquidTabIndicator>
             </view>
           )}
       </view>

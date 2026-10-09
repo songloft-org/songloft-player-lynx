@@ -220,6 +220,7 @@ const HOST_SCRIPTS = [
    * serve it too.
    */
   'drag-mouse-capture.js',
+  'tab-glass-host.js',
 ]
 for (const name of HOST_SCRIPTS) {
   const src = resolve(repoRoot, 'web', name)

@@ -30,6 +30,7 @@ test.each(['/', '/songloft/', '/nested/音乐/index.html?preview=1#player'])(
           ...(embedded ? {} : { deployMode: 'standalone' }), webBaseUrl: base.href,
           systemTheme: 'light', systemLocale: 'en-US', systemReduceMotion: false,
           systemReduceTransparency: false, systemIncreaseContrast: false, backdropBlurSupported: true,
+          webTabGlassSupported: false,
         })
         for (const element of document.querySelectorAll('script[src], link[href]')) {
           const raw = element.getAttribute('src') ?? element.getAttribute('href')!

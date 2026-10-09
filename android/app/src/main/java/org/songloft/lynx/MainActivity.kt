@@ -64,6 +64,7 @@ class MainActivity : Activity() {
         props["backdropBlurSupported"] = props["backdropBlurSupported"] == true && accelerated
         props["androidCaptureSupported"] = props["androidCaptureSupported"] == true && accelerated
         props["androidGlassSupported"] = props["androidGlassSupported"] == true && accelerated
+        props["androidTabGlassSupported"] = props["androidTabGlassSupported"] == true && accelerated
         if (Build.VERSION.SDK_INT >= 34) {
             props["systemIncreaseContrast"] = getSystemService(UiModeManager::class.java).contrast > 0f
         }

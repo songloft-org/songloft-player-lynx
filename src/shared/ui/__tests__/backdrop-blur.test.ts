@@ -40,10 +40,11 @@ import { BACKDROP_BLUR_RADIUS, blurEffectFor } from '../BackdropBlur.js'
  *     `bindtap={onClose}`, so a child there would swallow tap-to-dismiss. Panels
  *     carry no gesture and must clip the blur to their own rounded box, so a child
  *     is the only option there — with `z-index: -1`, or it covers the contents.
- *  4. **The props live in exactly one place.** `blur-effect` and
+ *  4. **Ordinary blur props live in exactly one place.** `blur-effect` and
  *     `ios-user-interface-style` are iOS-only and theme-dependent; hand-rolling a
  *     second `<blur-view>` somewhere would fork them silently on the one platform
- *     no test here can reach.
+ *     no test here can reach. The tab's clear selection lens is a separate
+ *     optical role, gated by the same surface policy and checked explicitly.
  *
  * Note what is deliberately absent: any contrast assertion. Blur is a linear
  * filter, so a uniform backdrop is a fixed point of it, and every contrast gate
@@ -251,12 +252,24 @@ const PANEL_SITES: PanelSite[] = [
 ]
 
 describe('BackdropBlur component', () => {
-  it('is the only place a blur-view is configured', () => {
+  it('owns ordinary blur configuration; the moving tab owns only a gated clear lens', () => {
     // Cheap, and it is the whole reason the component exists: `blur-effect` and
     // `ios-user-interface-style` are iOS-only, so a second call site would fork
     // them where nothing in CI can see the difference.
     for (const rel of TSX) {
       if (rel === 'shared/ui/BackdropBlur.tsx') continue
+      if (rel === 'shared/layouts/LiquidTabIndicator.tsx') {
+        const source = read(rel)
+        const lenses = source.match(/<blur-view[\s\S]*?\/>/g) ?? []
+        expect(lenses).toHaveLength(2)
+        for (const lens of lenses) expect(lens).toMatch(/glass-style='clear'|blur-radius='0px'/)
+        expect(source).toContain('useSurfaceAppearance()')
+        expect(source).toContain('const androidLens = appearance.androidGlass')
+        expect(source).toContain('const iosLens = appearance.liquidGlass')
+        expect(source).toContain('&& appearance.blur && !appearance.increaseContrast')
+        expect(source).toContain('ios-user-interface-style={appearance.theme}')
+        continue
+      }
       expect(read(rel), `${rel} must mount <BackdropBlur/>, not a raw blur-view`)
         .not.toMatch(/<blur-view/)
     }

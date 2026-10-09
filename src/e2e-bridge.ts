@@ -287,6 +287,25 @@ function invokeScroll(
 ;(globalThis as Record<string, unknown>).__E2E_CONTENT_SIZE__ = (selector: string) =>
   invokeScroll(selector, 'takeContentScreenshot')
 
+/** Hold the optical lens independently of navigation for before/after pixel
+ * checks. This module is excluded from production bundles with TestBridge. */
+;(globalThis as Record<string, unknown>).__E2E_TAB_LENS__ = (
+  frames: number[][],
+  count: number,
+  duration: number,
+): Promise<boolean> => new Promise(resolve => {
+  if (typeof lynx === 'undefined' || typeof lynx.createSelectorQuery !== 'function') {
+    resolve(false)
+    return
+  }
+  lynx.createSelectorQuery().select('.nav-indicator__optics').invoke({
+    method: 'animateTabLens',
+    params: { frames, count, duration },
+    success: () => resolve(true),
+    fail: () => resolve(false),
+  }).exec()
+})
+
 /** Scroll to an absolute offset (px) and report whether the invoke was accepted. */
 ;(globalThis as Record<string, unknown>).__E2E_SCROLL_TO__ = (
   selector: string,

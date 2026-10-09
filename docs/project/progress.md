@@ -1,5 +1,25 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-09 · 补齐移动 Tab 胶囊的玻璃折射
+
+- 用户确认提交水滴切换与移动透镜修复；最终自审核对动效中断/销毁、宿主能力与辅助功能降级、采样层级、部署产物及中英交接，无新增问题。运行时代码未再修改，沿用下述已通过验证；仅同步提交授权记录，尚未推送，实际提交以 Git 历史为准。下方未提交状态为实施时快照。
+
+- 用户指出水滴移动仍像普通填色：上一批只有弹簧位移和形变，缺少 Flutter clear indicator 的边缘透镜。新增随相同轨迹形变的清晰透镜，折射已渲染底栏材质与图标；移动时淡出填色，停稳后交回填色。主线程与光学宿主共享关键帧和起始时间，连续切换取消旧动画，减少动画直接落位。
+- Android 13+ 使用独立 `androidTabGlassSupported` 能力（同时要求硬件加速及现有玻璃策略），旧壳只有外栏透镜能力时保留可见填色。固定全栏 RenderNode 录制硬件绘制结果，在 AGSL 中改变几何、边缘法线与采样位置；采样根必须 `flatten={false}` 和 `z-index:0`，负层级材质留在根内，光学 sibling 排除自身。零半径 SDK 不生成 bitmap，BlurViewCanvas 排除嵌套 blur，软件 Canvas 读取未模糊 bitmap，均已排除；失败探针不作为最终交付。圆角外显式透明、空输入透明，法线零值保护避免奇数像素中心出现 NaN。
+- Web 宿主脚本在浏览器主线程使用实时 SVG backdrop displacement，保持 ReactLynx Worker 无 DOM；仅已验证 Chromium 能力开启，其他引擎保留填色。修正 RAF 时间戳早于方法调用导致负进度的边界；部署复制脚本与生产宿主同步。iOS clear glass 已接入，仍待原生设备验收；降低透明度和增强对比度沿用统一门控。
+- 最终类型检查、生产 Lynx/Web 双 bundle、Web 部署、发布工具 **70 项**、Android APK 与 JVM **43 项**通过；完整回归 **299 文件 / 3242 项**通过（`/tmp/lynx-tab-lens-tests-green.log`）。首轮全量的 4 项失败为新增能力字段/专用透镜的旧契约期待，更新有边界的例外与兼容性回归后定向 **79 项**和最终全量通过，没有移除闸门。测试桥包 SHA-256 `e6029db7f871c37a8dc65db7031206ab8376f69d371ee79fc71c4cb61e72f5bd`；内嵌 bundle 与 Android assets 相同（`5f097d11b916edba57eaf4d0efb49e9a17e82b1263f27f0a36ba310bb826f203`），生产产物不含测试入口。
+- API 34 arm64 native bridge 冻结透镜前后差异局限在胶囊内，边缘穿过音乐图标时 **348 个**图标像素改变；材质仍保留静态外栏 blur。明暗各 7 次真实点击含 120ms 连点、实际导航与固定底栏几何通过；系统动画关闭场景采用独立普通点击验收（首轮快速导航等待不足的失败已排除），设置恢复。默认 ABI 安装触发已有 x86_64 SVG JNI 错误，指定 arm64 重装后图标恢复，最终 AndroidRuntime 无异常。全量回归结束后重新录制最终明暗动画，避免并行测试的模拟器负载。证据 `/tmp/lynx-tab-lens-native-optics.json`、`/tmp/lynx-tab-lens-native-proof.png`、`/tmp/lynx-tab-lens-verified-{light,dark}.json`、`/tmp/songloft-discovery-native/tab-lens-verified-{light,dark}.mp4` 及 `tab-lens-reduced-dark.mp4`。
+- Docker Chrome 实际点击/逐帧记录、反向连点后停留与减少动画均通过，页面异常为空；独立冻结透镜截图确认实际 backdrop filter 和胶囊内背景变化，证据 `/tmp/lynx-tab-lens-web.json`、`/tmp/lynx-tab-lens-web.webm`、`/tmp/lynx-tab-lens-optics.json`、`/tmp/lynx-tab-lens-web-{unfiltered,optical}.png`。Flutter 源码未修改，慢放 `/tmp/lynx-tab-lens-comparison.gif` 依次为之前仅填色版本、Flutter 原生参考、当前玻璃版，各客户端布局/点击时序不同，不作像素相等断言。自建夹具和两台专用测试容器已停止，系统动画设置恢复；diff/严格 UTF-8 自审通过。真实设备帧率/能耗、iOS/HarmonyOS 光学与动画仍待验收；本轮未提交或推送，之前提交 `95ec1dc` 保留。
+
+## 2026-10-09 · 对照 Flutter 修复底栏水滴切换动画
+
+- 旧底栏只将固定形状的选中胶囊按 CSS bezier 平移，缺少 Flutter `GlassTabBar.bottom` 的速度驱动形变。本轮参考当前 Flutter 源码及同夹具原生录屏，使用相同的 350ms snappy spring（bounce .15）；standard 形变上限 .35，移动时横向压缩、纵向拉伸，减速时回到原形。350ms 是 spring 的名义参数，主线程关键帧包含 560ms 的收敛尾段。
+- `LiquidTabIndicator` 在主线程播放同步的位移/形变关键帧，不做逐帧 React 更新；连续点击从当前弹簧姿态与速度转向，旧动画取消。重新挂载或 Tab 数变化直接落位，离页释放动画；系统 reduce-motion 实时取消并落位。不改变底栏、文字、命中区域或背景模糊层，也未复制 Flutter 的前景透镜变形和拖拽手势。分段控件及宽屏 rail 保留既有动效策略。
+- 最终类型检查、**299 文件 / 3238 项**全量回归、生产 Lynx/Web 双 bundle、Web 部署产物、**70 项**发布工具检查及 Android Debug APK 编译通过。首轮全量在 295 文件通过后收到 SIGTERM，降低并发后完整跑通（`/tmp/lynx-tab-tests-final.log`）。测试桥 APK SHA-256 `6252053560947bcc266d0d339e7b124bc569ad04ebccb7d0017521a55b2d7074`；内嵌 bundle 与 Android assets 一致（`35213866701cfcc98b7fa4d89756df74e421712167047d3367e2c650782b6f97`），生产 dist 不含测试桥。
+- API 34 arm64 native bridge 明暗主题各实录 7 次真实 Tab 点击，含跨两个槽位与 120ms 间隔反向连点；导航路径与最终落位核对通过，底栏几何始终为 `{left:12,top:804,width:351,height:64}`。系统 `animator_duration_scale=0` 的录屏验证即时落位，设置已还原。证据：`/tmp/lynx-tab-final-{light,dark}.json`、`/tmp/lynx-tab-reduced-dark.json`、`/tmp/songloft-discovery-native/tab-final-{light,dark}.mp4`、`tab-reduced-dark.mp4`。AndroidRuntime 日志为空；启动沿用已有的存储 getItem 空 key 警告，未作为动画成功证据。
+- Docker Chrome 实际逐帧采样确认位移和形变同时发生、底栏不动，最终恢复原形；快速连点后停留 1.8s 确认指示器仍位于实际选中的曲库。模拟系统减少动画后，选中态与静止指示器一致且无在播动画。五个 Tab 和超过五个折叠为「更多」的选择/落位通过。证据：`/tmp/lynx-tab-web.json`、`/tmp/lynx-tab-web-probe.log`、`/tmp/lynx-tab-{five,folded}.json`，浏览器主流程无 pageerror；夹具插件内容不作为真实插件验收。
+- 当前 Flutter 参考源码未改，复用上轮本地参考 APK；重新录制前确认首页及 shader 已启动，启动画面录屏排除。旧 Lynx 包重新录制浅色基线后，已恢复安装最终测试包。`/tmp/songloft-discovery-native/flutter-tab-reference.mp4` 为最终参考，动画对比 `/tmp/lynx-tab-comparison.gif`（各客户端布局不同，不作像素相等断言）。自建夹具服务与两台专用测试容器已停止。真机帧率/能耗、iOS/HarmonyOS 动画仍待设备验收。本轮未授权提交或推送；此前光学修复已提交 `95ec1dc`。
+
 ## 2026-10-09 · 对照 Flutter 修复胶囊光学效果
 
 - 对照 Flutter `LiquidGlassSurface`：透镜 blur 6px、普通胶囊 12px 与菜单/scrim 20px 分离；regular 填色亮 .72 / 暗 .68，Android 透镜再乘 shader 的 .7 tint 系数。移除胶囊整面渐变和定时 breathing；窄屏迷你播放器父层不再重复填色或绘制 inset 边缘，保持 blur → 单层 tint → controls。按压只淡化迷你播放器前景，避免整体 opacity 暴露清晰背景；沿用 Lynx 行控件不缩放约束，未复制 Flutter 的根层 scale。

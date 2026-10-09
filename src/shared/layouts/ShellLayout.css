@@ -349,11 +349,9 @@
   transition: background-color var(--duration-fast) var(--ease-default);
 }
 
-/* Flow indicator: a single sliding capsule behind the active tab in the narrow
-   bottom bar. Sized to one slot (100% / visible count, set inline) and positioned
-   via transform, animated with the spring-bounce easing for a Liquid Glass feel.
-   reduce-motion zeroes --duration-normal → the slide becomes instant. Wide rail
-   does NOT use this — AGENTS.md §3.4: rail selection is colour-only. */
+/* Flutter-style jelly: LiquidTabIndicator samples a single spring for travel
+   and velocity-driven squash/stretch. Only this decorative leaf moves;
+   the bar, capture and controls stay fixed. Reduce motion snaps immediately. */
 .nav-indicator {
   position: absolute;
   top: 0;
@@ -362,7 +360,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform var(--duration-normal) var(--ease-spring-bounce);
+  overflow: visible;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.shell__tab-backdrop {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  position: relative;
+  /* Keep negative blur/material layers inside the native capture root. */
+  z-index: 0;
+}
+
+.shell__tab-backdrop .nav-item {
+  position: relative;
+  z-index: 1;
 }
 
 .nav-indicator__pill {
@@ -370,6 +384,28 @@
   height: var(--nav-pill-height);
   border-radius: var(--radius-pill);
   background-color: var(--tint-fill);
+  transform-origin: center;
+  position: relative;
+}
+
+.nav-indicator__glass {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: var(--radius-pill);
+  pointer-events: none;
+}
+
+.nav-indicator__optics {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Bottom bar: the active pill's background is now provided by .nav-indicator,

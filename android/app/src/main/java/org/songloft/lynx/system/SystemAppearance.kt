@@ -35,6 +35,7 @@ object SystemAppearance {
         "backdropBlurSupported" to (Build.VERSION.SDK_INT >= 23),
         "androidCaptureSupported" to (Build.VERSION.SDK_INT >= 23),
         "androidGlassSupported" to (Build.VERSION.SDK_INT >= 33),
+        "androidTabGlassSupported" to (Build.VERSION.SDK_INT >= 33),
     )
 
     /**

@@ -469,9 +469,9 @@ Liquid Glass 为控件和导航元素（如标签栏、侧边栏）形成一个�
 >
 > **动效**：
 >
-> - **底栏与分段控件「选中指示器流动动画」**：`.nav-indicator` / `.segmented__indicator` 使用 `transform: translateX` 实现选中态在项目间的平滑滑动，配合新令牌 `--ease-spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1)` 提供弹簧回弹手感。宽屏 rail 仍仅变色不位移。
+> - **底栏「水滴」选中动画**：`LiquidTabIndicator` 参考 Flutter `GlassTabBar.bottom` 的 350ms snappy spring（bounce .15），由主线程播放同一轨迹的位移与速度驱动形变；standard 形变上限 .35，横向压缩最多 17.5%、纵向拉伸最多 10.5%，减速后回到原形。连续点击从当前姿态/速度转向，Tab 数变化和重新挂载直接落位。移动时清晰透镜折射底栏背景与图标，停稳后恢复选中填色；Android 固定全栏 RenderNode 录制硬件绘制结果并在 AGSL 中改变透镜几何，Chromium 使用 SVG 背景位移，iOS 26 使用原生 clear glass。光学层排除自身采样，未知宿主/增强对比度/降低透明度保留普通填色。底栏、实际文字/命中区、背景模糊层不随透镜移动；尚未实现拖拽手势。分段控件保留原 CSS 过渡，宽屏 rail 仍仅变色。
 > - **弹簧与 gel 反馈**：浮层开合弹簧与独立控件按压 gel 反馈统一使用 spring 缓动。**模糊层永不参与动画**（`BackdropBlur` 不做过渡）。
-> - **reduce-motion**：所有动效依赖 `--duration-*` 令牌，`.reduce-motion` 类将其归零，从而自动禁用流动指示器、弹簧回弹与 gel 反馈。iOS 已接 `UIAccessibility.isReduceMotionEnabled`；Android/Harmony 尚需在各自 `SystemAppearance` 推送里补 `systemReduceMotion` 字段，补前默认 motion-on。
+> - **reduce-motion**：CSS 动效依赖归零的 `--duration-*`；底栏主线程弹簧订阅同一系统偏好，开启时取消运动并立即落位。iOS 已接 `UIAccessibility`、Android 监听 `ANIMATOR_DURATION_SCALE`、HarmonyOS API 23+ 使用公开接口（旧 API 未知），Web 从主线程媒体偏好推送到 Worker。
 > - **toast 保持实心**：Toast 有意不使用玻璃材质，以确保在任何背景上的可读性。
 
 - **不要在内容层使用 Liquid Glass**：它最适合区分交互元素与内容；放进内容层会带来不必要的复杂性和混乱的视觉层级。内容层元素（如 App 背景）改用标准材质。例外：内容层中带瞬时交互元素的控件（如 Slider、Toggle）在被激活时会呈现 Liquid Glass 外观以强调可交互性。

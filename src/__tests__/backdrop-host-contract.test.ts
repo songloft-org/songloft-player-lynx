@@ -29,6 +29,9 @@ test('the iOS registered BlurView dependency and guarded OS capability remain pa
 test('Android advertises AGSL at API 33 and applies it only to the decorative native leaf', () => {
   const system = read('android/app/src/main/java/org/songloft/lynx/system/SystemAppearance.kt')
   expect(system).toMatch(/"androidGlassSupported" to \(Build.VERSION.SDK_INT >= 33\)/)
+  expect(system).toMatch(/"androidTabGlassSupported" to \(Build.VERSION.SDK_INT >= 33\)/)
+  expect(read('android/app/src/main/java/org/songloft/lynx/MainActivity.kt'))
+    .toContain('props["androidTabGlassSupported"] == true && accelerated')
   const blur = read('android/app/src/main/java/org/songloft/lynx/ui/SongloftBlurUI.kt')
   expect(blur).toContain('@LynxProp(name = "songloft-glass"')
   expect(blur).toContain('if (Build.VERSION.SDK_INT < 33) return')
