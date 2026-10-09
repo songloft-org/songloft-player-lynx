@@ -26,7 +26,7 @@ export function useCapsuleMaterialStyle() {
   // Match Flutter's capsule fill, including its .7 tint factor for a lens.
   // Modal/menu fills have their own readability constraints and must not
   // inherit this lighter optical material.
-  const referenceAlpha = (surface.theme === 'light' ? 0.72 : 0.68) * (surface.androidGlass ? 0.7 : 1)
+  const referenceAlpha = (surface.theme === 'light' ? 0.72 : 0.68) * (surface.androidGlass || surface.webGlass || surface.harmonyGlass ? 0.7 : 1)
   const fill = tokens['--material-fill']
   const alpha = Number(fill.slice(fill.lastIndexOf(',') + 1, -1))
   const capsuleFill =

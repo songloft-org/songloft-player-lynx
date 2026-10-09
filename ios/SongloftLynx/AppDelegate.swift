@@ -33,6 +33,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     LynxEnv.sharedInstance()
+    SongloftTabGlassUI.registerComponent()
     registerHttpService()
     #if DEBUG
     testBridgeServer.start()

@@ -262,10 +262,12 @@ describe('BackdropBlur component', () => {
         const source = read(rel)
         const lenses = source.match(/<blur-view[\s\S]*?\/>/g) ?? []
         expect(lenses).toHaveLength(2)
-        for (const lens of lenses) expect(lens).toMatch(/glass-style='clear'|blur-radius='0px'/)
+        for (const lens of lenses) expect(lens).toContain("blur-radius='0px'")
         expect(source).toContain('useSurfaceAppearance()')
         expect(source).toContain('const androidLens = appearance.androidGlass')
         expect(source).toContain('const iosLens = appearance.liquidGlass')
+        expect(source).toContain('iosTabGlassSupported === true')
+        expect(source).toContain('<songloft-tab-glass')
         expect(source).toContain('&& appearance.blur && !appearance.increaseContrast')
         expect(source).toContain('ios-user-interface-style={appearance.theme}')
         continue
@@ -278,7 +280,7 @@ describe('BackdropBlur component', () => {
   it('sets the blur radius from the shared constant', () => {
     expect(BACKDROP_BLUR_RADIUS).toMatch(/^\d+px$/)
     expect(COMPONENT).toMatch(/blur-radius=\{radius\}/)
-    expect(COMPONENT).toContain('policy.androidGlass ? CAPSULE_GLASS_RADIUS : CAPSULE_BLUR_RADIUS')
+    expect(COMPONENT).toContain('opticalCapsule ? CAPSULE_GLASS_RADIUS : CAPSULE_BLUR_RADIUS')
   })
 
   it('drives the iOS vibrancy from the resolved theme, never the default', () => {

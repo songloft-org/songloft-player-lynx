@@ -44,6 +44,27 @@ test.each([undefined, null, '3.9.0', 'nonsense', '4'])('unknown or old SDK %s ca
   const r = render(<ThemeProvider><BackdropBlur /></ThemeProvider>)
   expect((r.container.firstElementChild as unknown as { style: Record<string, string> }).style['--material-fill']).toBe('rgba(255, 255, 255, 1)')
 })
+test.each(['web', 'harmony'] as const)('%s optics require their own host capability and respect live accessibility', async platform => {
+  vi.mocked(getPlatformTarget).mockReturnValue(platform)
+  host().__globalProps = { ...props(), webGlassSupported: platform === 'web', harmonyGlassSupported: platform === 'harmony' }
+  const r = render(<BackdropBlur className='ui-backdrop-blur--pill' />)
+  const blur = () => r.container.querySelector('blur-view')!
+  expect(blur().getAttribute('blur-radius')).toBe('6px')
+  if (platform === 'harmony') {
+    const optics = r.container.querySelector('songloft-capsule-glass')!
+    const source = r.container.querySelector(`#${optics.getAttribute('capture-target')}`)!
+    expect(source).not.toBeNull()
+    expect(source.contains(optics)).toBe(false)
+    expect(source.contains(blur())).toBe(true)
+  } else expect(blur().className).toContain('ui-backdrop-blur--optical')
+  await act(async () => { await changeIncreaseContrast(true, storage) })
+  expect(blur().getAttribute('blur-radius')).toBe('12px')
+  expect(r.container.querySelector('songloft-capsule-glass')).toBeNull()
+  expect(blur().className).not.toContain('ui-backdrop-blur--optical')
+  await act(async () => { await changeReduceTransparency(true, storage) })
+  expect(r.container.querySelector('blur-view')).toBeNull()
+})
+
 test('old iOS uses themed blur without glass-only props; supported iOS selects glass', () => {
   host().__globalProps = { ...props(), liquidGlassSupported: false }
   expect(getSurfacePolicy().liquidGlass).toBe(false)

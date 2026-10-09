@@ -10,6 +10,7 @@ export interface TabSpring {
   target: number
   velocity: number
   startedAt: number
+  engagement?: number
 }
 
 export function sampleTabSpring(spring: TabSpring, elapsedMs: number) {
@@ -39,21 +40,37 @@ export function tabJellyScale(velocity: number, slotCount: number) {
   return { x: 1 - distortion * 0.5, y: 1 + distortion * 0.3 }
 }
 
-export function tabSpringFrames(spring: TabSpring, slotCount: number, refracts = false) {
+/** Optical engagement has a continuous attack. Retargeting preserves the
+ * visible engagement instead of swapping the selection's visibility. */
+export function sampleTabEngagement(spring: TabSpring, elapsedMs: number) {
+  'main thread'
+  const pose = sampleTabSpring(spring, elapsedMs)
+  const demand = Math.min(1, Math.abs(pose.velocity) / 2 + Math.abs(pose.position - spring.target) * 2)
+  const attack = Math.min(1, Math.max(0, elapsedMs) / 90)
+  const blend = attack * attack * (3 - 2 * attack)
+  return (spring.engagement ?? 0) * (1 - blend) + demand * blend
+}
+
+export function tabSpringFrames(spring: TabSpring, slotCount: number) {
   'main thread'
   const travel: Record<string, string | number>[] = []
   const jelly: Record<string, string | number>[] = []
+  const light: Record<string, string | number>[] = []
   const optics: number[][] = []
   // Equal frame spacing works with Element.animate() on native and Web;
   // interpolation stays on the UI thread, with no per-frame React updates.
   for (let i = 0; i <= 36; i++) {
-    const pose = sampleTabSpring(spring, TAB_SETTLE_MS * i / 36)
-    const scale = tabJellyScale(pose.velocity, slotCount)
+    const elapsed = TAB_SETTLE_MS * i / 36
+    const pose = sampleTabSpring(spring, elapsed)
+    const squash = tabJellyScale(pose.velocity, slotCount)
+    const strength = sampleTabEngagement(spring, elapsed)
+    // A moving drop lifts slightly before settling. Calibrated bounds fit the
+    // 64px bar even for a multi-slot jump; foreground controls never scale.
+    const scale = { x: squash.x * (1 + 0.10 * strength), y: squash.y * (1 + 0.08 * strength) }
     travel.push({ transform: `translateX(${pose.position * 100}%)` })
-    // Clear moving lens, fading back to the resting tint as the spring settles.
-    const strength = Math.min(1, Math.abs(pose.velocity) / 2 + Math.abs(pose.position - spring.target) * 2)
-    jelly.push({ transform: `scaleX(${scale.x}) scaleY(${scale.y})`, ...(refracts ? { opacity: 1 - strength } : {}) })
+    jelly.push({ transform: `scaleX(${scale.x}) scaleY(${scale.y})` })
+    light.push({ opacity: strength })
     optics.push([pose.position, scale.x, scale.y, strength])
   }
-  return { travel, jelly, optics }
+  return { travel, jelly, light, optics }
 }

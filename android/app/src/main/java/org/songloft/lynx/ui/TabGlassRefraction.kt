@@ -7,7 +7,7 @@ import android.graphics.RenderNode
 import android.graphics.RuntimeShader
 import android.view.View
 
-/** Clear moving lens over a fixed full-bar capture, including glyphs. The
+/** Clear moving lens over a fixed material capture, excluding glyphs. The
  * sampling domain never moves or scales, so content cannot lag behind it. */
 @TargetApi(33)
 internal class TabGlassRefraction {
@@ -32,8 +32,9 @@ internal class TabGlassRefraction {
         shader.setFloatUniform("extent", (slot - 8f * density) * 0.5f, 26f * density)
         shader.setFloatUniform("scale", pose[1], pose[2])
         shader.setFloatUniform("bevel", 10f * density)
-        shader.setFloatUniform("bend", 5f * density)
-        shader.setFloatUniform("light", light)
+        shader.setFloatUniform("bend", 5f * density * pose[3])
+        shader.setFloatUniform("light", light * pose[3])
+        shader.setFloatUniform("engagement", pose[3])
         capture.setRenderEffect(RenderEffect.createRuntimeShaderEffect(shader, "backdrop"))
         canvas.drawRenderNode(capture)
     }
@@ -50,6 +51,7 @@ internal class TabGlassRefraction {
             uniform float bevel;
             uniform float bend;
             uniform float light;
+            uniform float engagement;
             half4 main(float2 position) {
                 float radius = min(extent.x, extent.y);
                 float2 p = (position - center) / scale;
@@ -75,7 +77,7 @@ internal class TabGlassRefraction {
                 float shade = pow(edge, 3.0) * max(dot(n, float2(0.6, 0.8)), 0.0) * light * 0.12;
                 rgb *= half(1.0 - shade);
                 rgb = mix(rgb, half3(1), half(rim));
-                half coverage = half(1.0 - smoothstep(-0.5, 0.5, d / normalScale));
+                half coverage = half((1.0 - smoothstep(-0.5, 0.5, d / normalScale)) * edge * engagement);
                 return half4(rgb * coverage, coverage);
             }
         """

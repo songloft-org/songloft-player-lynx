@@ -300,9 +300,12 @@ export function ShellLayout() {
           ? null
           : (
             <view className='shell__bottombar'>
-              <LiquidTabIndicator key={indicatorSlotCount} index={indicatorSlotIndex} count={indicatorSlotCount}>
-                <BackdropBlur className='ui-backdrop-blur--pill' />
-                <view className='ui-capsule-material' style={capsuleMaterialStyle} flatten={false} accessibility-element={false} />
+              <LiquidTabIndicator key={indicatorSlotCount} index={indicatorSlotIndex} count={indicatorSlotCount} backdrop={(
+                <>
+                  <BackdropBlur className='ui-backdrop-blur--pill' />
+                  <view className='ui-capsule-material' style={capsuleMaterialStyle} flatten={false} accessibility-element={false} />
+                </>
+              )}>
                 {renderBottomBarItems()}
               </LiquidTabIndicator>
             </view>

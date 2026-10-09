@@ -17,6 +17,8 @@ export function getSurfacePolicy() {
     liquidGlass: blur && capabilities.liquidGlass && !increaseContrast,
     androidCapture: blur && capabilities.androidCapture,
     androidGlass: blur && !!capabilities.androidGlass && !increaseContrast,
+    webGlass: blur && !!capabilities.webGlass && !increaseContrast,
+    harmonyGlass: blur && !!capabilities.harmonyGlass && !increaseContrast,
   }
 }
 

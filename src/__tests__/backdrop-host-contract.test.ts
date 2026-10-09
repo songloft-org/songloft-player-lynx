@@ -17,7 +17,7 @@ test('Android capture sources are real views and exclude panel blur descendants'
 test('the iOS registered BlurView dependency and guarded OS capability remain paired', () => {
   expect(read('ios/Podfile.lock')).toContain('XElement/BlurView (4.0.1)')
   const system = read('ios/SongloftLynx/SystemAppearance.swift')
-  expect(system).toMatch(/if #available\(iOS 26\.0, \*\) \{ return true \}/)
+  expect(system).toMatch(/if #available\(iOS 26\.0, \*\) \{ return SongloftTabGlassUI\.supportsSystemGlass\(\) \}/)
   expect(system).toContain('LynxVersion.versionString()')
   const view = read('ios/SongloftLynx/ViewController.swift')
   for (const name of ['reduceMotion', 'reduceTransparency', 'darkerSystemColors']) {

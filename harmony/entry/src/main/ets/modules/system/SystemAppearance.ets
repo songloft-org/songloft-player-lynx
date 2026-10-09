@@ -10,6 +10,8 @@ interface AppearanceProps {
   systemLocale: string
   backdropSdkVersion: string
   backdropBlurSupported: boolean
+  harmonyTabGlassSupported: boolean
+  harmonyGlassSupported: boolean
   systemReduceMotion?: boolean
   safeAreaTop?: number
   safeAreaBottom?: number
@@ -78,6 +80,8 @@ export class SystemAppearance {
       systemLocale: SystemAppearance.currentLocale,
       backdropSdkVersion: LynxEnv.getLynxVersion(),
       backdropBlurSupported: deviceInfo.sdkApiVersion >= 15,
+      harmonyTabGlassSupported: deviceInfo.sdkApiVersion >= 20,
+      harmonyGlassSupported: deviceInfo.sdkApiVersion >= 20,
     }
     if (deviceInfo.sdkApiVersion >= 23) {
       try {
@@ -153,6 +157,8 @@ export class SystemAppearance {
       systemLocale: SystemAppearance.currentLocale,
       backdropSdkVersion: LynxEnv.getLynxVersion(),
       backdropBlurSupported: deviceInfo.sdkApiVersion >= 15,
+      harmonyTabGlassSupported: deviceInfo.sdkApiVersion >= 20,
+      harmonyGlassSupported: deviceInfo.sdkApiVersion >= 20,
     }
     if (SystemAppearance.motionListener) {
       props.systemReduceMotion = SystemAppearance.currentReduceMotion

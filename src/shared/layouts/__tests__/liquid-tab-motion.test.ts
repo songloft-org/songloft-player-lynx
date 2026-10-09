@@ -13,7 +13,7 @@ const source = readFileSync(resolve(__dirname, '../liquid-tab-motion.ts'), 'utf8
 const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 const exports: Record<string, unknown> = {}
 runInNewContext(js, { exports })
-const { sampleTabSpring, TAB_SETTLE_MS, tabJellyScale, tabSpringFrames } = exports as typeof Motion
+const { sampleTabEngagement, sampleTabSpring, TAB_SETTLE_MS, tabJellyScale, tabSpringFrames } = exports as typeof Motion
 
 const spring: TabSpring = { from: 0, target: 1, velocity: 0, startedAt: 0 }
 
@@ -60,18 +60,35 @@ describe('the liquid tab spring', () => {
     expect(frames.jelly.at(-1)).toEqual({ transform: 'scaleX(1) scaleY(1)' })
   })
 
-  test('the clear lens and resting tint exchange visibility without changing the shared trajectory', () => {
-    const frames = tabSpringFrames(spring, 3, true)
+  test('selection stays visible while the edge engages continuously on the shared trajectory', () => {
+    const frames = tabSpringFrames(spring, 3)
     expect(frames.optics).toHaveLength(frames.travel.length)
     for (let i = 0; i < frames.optics.length; i++) {
       const [position, sx, sy, strength] = frames.optics[i]!
       expect(frames.travel[i]!.transform).toBe(`translateX(${position! * 100}%)`)
       expect(frames.jelly[i]!.transform).toBe(`scaleX(${sx}) scaleY(${sy})`)
-      expect(Number(frames.jelly[i]!.opacity) + strength!).toBeCloseTo(1)
+      expect(frames.jelly[i]!.opacity).toBeUndefined()
+      expect(Number(frames.light[i]!.opacity)).toBe(strength)
       expect(strength).toBeGreaterThanOrEqual(0)
       expect(strength).toBeLessThanOrEqual(1)
     }
     expect(frames.optics.at(-1)).toEqual([1, 1, 1, 0])
-    expect(frames.jelly.at(-1)!.opacity).toBe(1)
+    expect(frames.optics[0]).toEqual([0, 1, 1, 0])
+    expect(frames.optics[1]![3]).toBeLessThan(0.1)
+    expect(Math.max(...frames.optics.map(p => p[2]! * 52))).toBeLessThan(64)
+  })
+
+  test('rapid reversal preserves the visible lens geometry and engagement', () => {
+    const elapsed = 85
+    const pose = sampleTabSpring(spring, elapsed)
+    const engagement = sampleTabEngagement(spring, elapsed)
+    const reverse = { ...spring, from: pose.position, velocity: pose.velocity, engagement, target: 0 }
+    expect(sampleTabEngagement(reverse, 0)).toBe(engagement)
+    const [position, sx, sy, strength] = tabSpringFrames(reverse, 3).optics[0]!
+    expect(position).toBeCloseTo(pose.position)
+    const squash = tabJellyScale(pose.velocity, 3)
+    expect(sx).toBeCloseTo(squash.x * (1 + 0.10 * engagement))
+    expect(sy).toBeCloseTo(squash.y * (1 + 0.08 * engagement))
+    expect(strength).toBeCloseTo(engagement)
   })
 })

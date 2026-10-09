@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AF0000000000000000000001 /* SongloftTabGlassUI.m in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000000011 /* SongloftTabGlassUI.m */; };
 		AD0000000000000000000001 /* PluginTemplateTransfer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD0000000000000000000011 /* PluginTemplateTransfer.swift */; };
 		AC0000000000000000000001 /* SongCacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000011 /* SongCacheStore.swift */; };
 		AC0000000000000000000002 /* SongCacheTransfer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000012 /* SongCacheTransfer.swift */; };
@@ -40,6 +41,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		AF0000000000000000000011 /* SongloftTabGlassUI.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SongloftTabGlassUI.m; sourceTree = "<group>"; };
+		AF0000000000000000000012 /* SongloftTabGlassUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SongloftTabGlassUI.h; sourceTree = "<group>"; };
+		AF0000000000000000000013 /* SongloftTabGlassMotion.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SongloftTabGlassMotion.h; sourceTree = "<group>"; };
 		AD0000000000000000000011 /* PluginTemplateTransfer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginTemplateTransfer.swift; sourceTree = "<group>"; };
 		AC0000000000000000000011 /* SongCacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongCacheStore.swift; sourceTree = "<group>"; };
 		AC0000000000000000000012 /* SongCacheTransfer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongCacheTransfer.swift; sourceTree = "<group>"; };
@@ -118,6 +122,9 @@
 		AA0000000000000000000004 /* SongloftLynx */ = {
 			isa = PBXGroup;
 			children = (
+				AF0000000000000000000011 /* SongloftTabGlassUI.m */,
+				AF0000000000000000000012 /* SongloftTabGlassUI.h */,
+				AF0000000000000000000013 /* SongloftTabGlassMotion.h */,
 				AA0000000000000000000014 /* AppDelegate.swift */,
 				AA0000000000000000000015 /* SceneDelegate.swift */,
 				AA0000000000000000000016 /* ViewController.swift */,
@@ -278,6 +285,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AF0000000000000000000001 /* SongloftTabGlassUI.m in Sources */,
 				AA0000000000000000000020 /* AppDelegate.swift in Sources */,
 				AA0000000000000000000021 /* SceneDelegate.swift in Sources */,
 				AA0000000000000000000022 /* ViewController.swift in Sources */,

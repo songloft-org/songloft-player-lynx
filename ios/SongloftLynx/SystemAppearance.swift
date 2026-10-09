@@ -33,11 +33,12 @@ enum SystemAppearance {
       "backdropSdkVersion": LynxVersion.versionString(),
       "backdropBlurSupported": true,
       "liquidGlassSupported": supportsLiquidGlass,
+      "iosTabGlassSupported": supportsLiquidGlass && SongloftTabGlassUI.isRegistered(),
     ]
   }
 
   private static var supportsLiquidGlass: Bool {
-    if #available(iOS 26.0, *) { return true }
+    if #available(iOS 26.0, *) { return SongloftTabGlassUI.supportsSystemGlass() }
     return false
   }
 

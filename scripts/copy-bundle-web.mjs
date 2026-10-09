@@ -220,6 +220,7 @@ const HOST_SCRIPTS = [
    * serve it too.
    */
   'drag-mouse-capture.js',
+  'glass-scene-host.js',
   'tab-glass-host.js',
 ]
 for (const name of HOST_SCRIPTS) {

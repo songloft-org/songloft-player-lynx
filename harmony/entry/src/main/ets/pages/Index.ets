@@ -14,6 +14,7 @@ import { SongloftNavigationModule } from '../modules/navigation/SongloftNavigati
 import { SongloftPluginBridgeModule } from '../modules/plugin/SongloftPluginBridgeModule'
 import { SongloftVideoModule, SongloftVideoState } from '../modules/video/SongloftVideoModule'
 import { SystemAppearance } from '../modules/system/SystemAppearance'
+import { SongloftTabGlassUI } from '../ui/SongloftTabGlassUI'
 import { AppLifecycleClient } from '../modules/system/AppLifecycle'
 import { BundleUpdateStore } from '../modules/updater/BundleUpdateStore'
 import { SongloftUpdateModule, SongloftUpdateLifecycle } from '../modules/updater/SongloftUpdateModule'
@@ -28,6 +29,8 @@ struct Index {
   private behaviors: BehaviorRegistryMap = new Map([
     ['svg', new Behavior(UISVG, undefined)],
     ['webview', new Behavior(UIWebView, undefined)],
+    ['songloft-tab-glass', new Behavior(SongloftTabGlassUI, undefined)],
+    ['songloft-capsule-glass', new Behavior(SongloftTabGlassUI, undefined)],
   ])
   /**
    * Video state, driven by [SongloftVideoModule]. `@StorageLink`-style sharing

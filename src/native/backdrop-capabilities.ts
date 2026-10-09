@@ -19,5 +19,7 @@ export function getBackdropCapabilities() {
     androidCapture: blur && platform === 'android' && props.androidCaptureSupported === true,
     androidGlass:
       blur && platform === 'android' && props.androidCaptureSupported === true && props.androidGlassSupported === true,
+    webGlass: blur && platform === 'web' && props.webGlassSupported === true,
+    harmonyGlass: blur && platform === 'harmony' && props.harmonyGlassSupported === true,
   }
 }

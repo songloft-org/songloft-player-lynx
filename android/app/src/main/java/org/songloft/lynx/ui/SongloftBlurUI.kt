@@ -99,7 +99,7 @@ class LifecycleBlurView(context: Context) : BlurView(context) {
             if (width > 0 && height > 0) {
                 tabPose = pose
                 tabCount = count
-                alpha = pose[3]
+                alpha = if (pose[3] > 0f) 1f else 0f
                 invalidate()
             }
         }

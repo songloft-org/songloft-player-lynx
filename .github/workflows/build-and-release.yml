@@ -199,6 +199,11 @@ jobs:
           key: ios-compile-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.cache_id }}-${{ hashFiles('ios/Podfile', 'ios/pods.rb', 'ios/release/Podfile', 'ios/release/Podfile.lock', 'ios/SongloftLynx.xcodeproj/project.pbxproj') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             ios-compile-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.cache_id }}-${{ hashFiles('ios/Podfile', 'ios/pods.rb', 'ios/release/Podfile', 'ios/release/Podfile.lock', 'ios/SongloftLynx.xcodeproj/project.pbxproj') }}-
+      - name: Verify native tab glass engagement clock
+        run: |
+          set -euo pipefail
+          clang -std=c11 -Wall -Wextra -Werror scripts/verify-ios-tab-glass.c -lm -o "$RUNNER_TEMP/verify-ios-tab-glass"
+          "$RUNNER_TEMP/verify-ios-tab-glass"
       - name: Verify updater with Apple Security and real disk state
         run: |
           set -euo pipefail

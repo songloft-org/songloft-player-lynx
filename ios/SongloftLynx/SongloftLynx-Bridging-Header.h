@@ -34,3 +34,4 @@ NS_INLINE LynxTemplateResource * _Nonnull SongloftTemplateResourceFromData(NSDat
 // explicitly rather than relying on that transitivity.
 #import <Lynx/LynxServiceHttpProtocol.h>
 #import <LynxServiceAPI/ServiceAPI.h>
+#import "SongloftTabGlassUI.h"

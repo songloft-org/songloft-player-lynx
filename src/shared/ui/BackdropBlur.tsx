@@ -1,8 +1,11 @@
+import { useState } from '@lynx-js/react'
 import { getPlatformTarget } from '../../native/platform-target.js'
 import { BACKDROP_CAPTURE_TARGET } from '../../native/backdrop-capabilities.js'
 import { useSurfaceAppearance } from '../theme/surface-appearance.js'
 
 import './BackdropBlur.css'
+
+let nextCaptureId = 0
 
 /**
  * Gaussian radius shared by modal scrims and menus. Floating capsules use
@@ -48,9 +51,11 @@ export interface BackdropBlurProps {
 export function BackdropBlur({ className }: BackdropBlurProps) {
   const platform = getPlatformTarget()
   const policy = useSurfaceAppearance()
+  const [captureId] = useState(() => `songloft-capsule-${++nextCaptureId}`)
   const { theme } = policy
   const capsule = className === 'ui-backdrop-blur--pill'
-  const radius = capsule ? (policy.androidGlass ? CAPSULE_GLASS_RADIUS : CAPSULE_BLUR_RADIUS) : BACKDROP_BLUR_RADIUS
+  const opticalCapsule = capsule && (policy.androidGlass || policy.webGlass || policy.harmonyGlass)
+  const radius = capsule ? (opticalCapsule ? CAPSULE_GLASS_RADIUS : CAPSULE_BLUR_RADIUS) : BACKDROP_BLUR_RADIUS
 
   if (!policy.blur) return null
   // A full-screen scrim blurs content. Glass is reserved for compact chrome.
@@ -71,13 +76,28 @@ export function BackdropBlur({ className }: BackdropBlurProps) {
       }
     : {}
 
-  return (
+  const blur = (
     <blur-view
-      className={className ? `ui-backdrop-blur ${className}` : 'ui-backdrop-blur'}
+      key={capsule && policy.webGlass ? 'glass' : 'blur'}
+      className={className ? `ui-backdrop-blur ${className}${capsule && policy.webGlass ? ' ui-backdrop-blur--optical' : ''}` : 'ui-backdrop-blur'}
       blur-radius={radius}
       accessibility-element={false}
       {...iosProps}
       {...androidProps}
     />
+  )
+  if (!capsule || !policy.harmonyGlass) return blur
+  return (
+    <>
+      <view id={captureId} className='ui-backdrop-blur ui-backdrop-blur--pill' flatten={false} accessibility-element={false}>
+        {blur}
+      </view>
+      <songloft-capsule-glass
+        className='ui-backdrop-blur ui-backdrop-blur--pill'
+        capture-target={captureId}
+        songloft-glass-light={theme === 'light' ? 0.55 : 0.35}
+        accessibility-element={false}
+      />
+    </>
   )
 }
