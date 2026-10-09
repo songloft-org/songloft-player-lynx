@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { VirtualList } from '../../library/widgets/VirtualList.js'
 import { usePlayerStore } from '../store/index.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
-import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import { ModalMaterial } from '../../../shared/ui/ModalMaterial.js'
+import { ModalScrim } from '../../../shared/ui/ModalScrim.js'
 import { ScrollingText } from '../../../shared/ui/ScrollingText.js'
 import { usePresence } from '../../../shared/ui/usePresence.js'
 import '../../../shared/ui/overlay-motion.css'
@@ -30,12 +31,11 @@ export function PlaylistDrawer() {
 
   return (
     <view className='drawer__root' data-testid='playlist-drawer'>
-      {/* Real backdrop blur, behind the dim so the page is blurred and then
-          darkened. A preceding sibling, not a child: the scrim below owns
-          tap-to-dismiss and a child would sit in front of it. */}
-      <BackdropBlur />
-      <view className={`drawer__backdrop${leaveClass}`} bindtap={close} />
-      <view className={`drawer__panel drawer__panel--queue ${panelMotion}`} catchtap={() => {}}>
+      {/* Light page dim; the content panel owns its local material. */}
+
+      <ModalScrim className={`drawer__backdrop${leaveClass}`} bindtap={close} />
+      <view className={`drawer__panel drawer__panel--queue ${panelMotion}`} flatten={false} catchtap={() => {}}>
+        <ModalMaterial shape='sheet' captureTarget='songloft-player-content' />
         <view className='drawer__handle-wrap'>
           <view className='drawer__handle' />
         </view>

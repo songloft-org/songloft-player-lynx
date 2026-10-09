@@ -14,6 +14,22 @@ test('Android capture sources are real views and exclude panel blur descendants'
   }
 })
 
+test('player sheets capture opaque full-page content without capturing themselves', () => {
+  const player = jsxElements(read('src/features/player/pages/FullPlayerPage.tsx'))
+  const source = player.find(element => /id='songloft-player-content'/.test(element.tag))!
+  expect(source.tag).toContain('flatten={false}')
+  expect(source.body).toContain('<PlayerBackdrop')
+  expect(source.body).toContain('<PlayControls')
+  expect(source.body).not.toMatch(/<PlaylistDrawer|<SleepTimerSheet|<ModalMaterial/)
+  for (const sheet of ['PlaylistDrawer', 'SleepTimerSheet']) {
+    expect(read(`src/features/player/widgets/${sheet}.tsx`)).toContain("captureTarget='songloft-player-content'")
+  }
+  const css = read('src/features/player/pages/FullPlayerPage.css')
+  const scene = css.match(/\.full-player__scene\s*\{([^}]*)\}/)![1]!
+  expect(scene).toContain('background-color: var(--system-background)')
+  for (const side of ['top', 'right', 'bottom', 'left']) expect(scene).toContain(`${side}: 0;`)
+})
+
 test('the iOS registered BlurView dependency and guarded OS capability remain paired', () => {
   expect(read('ios/Podfile.lock')).toContain('XElement/BlurView (4.0.1)')
   const system = read('ios/SongloftLynx/SystemAppearance.swift')

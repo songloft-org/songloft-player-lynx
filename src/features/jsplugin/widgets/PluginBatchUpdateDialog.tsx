@@ -16,7 +16,8 @@ import type { GithubProxyParams } from '../api/index.js'
 import type { JSPluginBatchUpdateResponse } from '../../../models/jsplugin.js'
 // Chrome (card/scrim/buttons + the z-index overlay contract) is ConfirmDialog's;
 // only the stats block and the per-plugin rows are specific to this flow.
-import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import { ModalMaterial } from '../../../shared/ui/ModalMaterial.js'
+import { ModalScrim } from '../../../shared/ui/ModalScrim.js'
 import {
   DIALOG_WIDTH_PX,
   dialogCardWidth,
@@ -116,11 +117,9 @@ export function PluginBatchUpdateDialog({ show, onClose, githubProxy }: PluginBa
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
           clickToClose
         >
-          {/* Real backdrop blur, behind the dim so the page is blurred and then
-              darkened. Same five-piece chrome as `ConfirmDialog`, whose stylesheet
-              this dialog reuses — so it needs the blur for the same reason. */}
-          <BackdropBlur />
-          <view className='confirm-dialog__backdrop-inner' />
+          {/* Light page dim; the content panel owns its local material. */}
+
+          <ModalScrim active={show} priority={200} className='confirm-dialog__backdrop-inner' />
         </DialogBackdrop>
         <DialogContent
           className='confirm-dialog__content'
@@ -133,6 +132,7 @@ export function PluginBatchUpdateDialog({ show, onClose, githubProxy }: PluginBa
             catchtap={() => {}}
             style={{ width: dialogCardWidth(DIALOG_WIDTH_PX), maxHeight: dialogCardMaxHeight() }}
           >
+            <ModalMaterial shape='dialog' />
             <text className='confirm-dialog__title' text-maxline='2'>{t('jsplugin.updateAll')}</text>
             <scroll-view
               className='confirm-dialog__body'

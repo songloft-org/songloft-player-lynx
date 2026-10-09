@@ -16,7 +16,8 @@ import type { PlaybackContext } from '../domain/playback-context.js'
 import { formatPlayedAt } from '../domain/play-history-time.js'
 import { playHistoryQueryKeys, usePlayHistoryQuery } from '../data/play-history-query.js'
 import { usePlayerStore } from '../store/index.js'
-import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import { ModalMaterial } from '../../../shared/ui/ModalMaterial.js'
+import { ModalScrim } from '../../../shared/ui/ModalScrim.js'
 import '../../../shared/ui/overlay-motion.css'
 import './PlayHistoryPanel.css'
 
@@ -156,10 +157,8 @@ export function PlayHistoryPanel({
   return (
     <>
       <view className='play-history' data-testid='play-history-panel'>
-        {/* Real backdrop blur, behind the dim so the page is blurred and then
-            darkened. A preceding sibling, not a child: the scrim below owns
-            tap-to-dismiss and a child would sit in front of it. */}
-        <BackdropBlur />
+        {/* Light page dim; the content panel owns its local material. */}
+
         {/*
          * Outside-tap close lives on the backdrop (the panel's sibling), not on
          * this root: with it on the root, every tap inside the panel rides up
@@ -167,8 +166,9 @@ export function PlayHistoryPanel({
          * the panel — true on device, but invisible to render tests (the DOM
          * event bubbles regardless). Same rule as `PopoverMenu`'s backdrop.
          */}
-        <view className='play-history__backdrop' bindtap={onClose} data-testid='play-history-backdrop' />
+        <ModalScrim className='play-history__backdrop' bindtap={onClose} data-testid='play-history-backdrop' />
         <view className='play-history__panel overlay--enter-up'>
+          <ModalMaterial shape='sheet' />
           <view className='play-history__header'>
             <text className='play-history__title'>{title}</text>
             {/*

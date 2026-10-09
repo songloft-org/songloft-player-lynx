@@ -300,90 +300,98 @@ export function FullPlayerPage() {
       // Scales with the screen class (16 → 64), which CSS cannot express here.
       style={{ paddingLeft: `${layout.padH}px`, paddingRight: `${layout.padH}px` }}
     >
-      <PlayerBackdrop coverUrl={coverUrl} />
+      <view
+        className='full-player__scene'
+        id='songloft-player-content'
+        flatten={false}
+        style={{ paddingLeft: `${layout.padH}px`, paddingRight: `${layout.padH}px` }}
+      >
+        <PlayerBackdrop coverUrl={coverUrl} />
 
-      <view className='full-player__layer'>
-        <PlayerTopBar
-          song={song}
-          isWide={isWide}
-          onClose={closePlayer}
-          onOpenSleepTimer={() => setShowSleepTimer(true)}
-          timerActive={timerActive}
-          timerLabel={timerLabel}
-        />
-
-        <view className='full-player__stage full-player__stage--enter' bindlayoutchange={onStageLayout}>
-          {/*
-            * Split (cover beside lyrics) from tablet up; two swiped screens below it.
-            * Both branches are gated on `layout.measured`, and the third one is what
-            * renders until then — the Swiper caches the `itemWidth` it is first handed,
-            * so feeding it a guessed width leaves the page permanently misaligned.
-            */}
-          {layout.isSplit
-            ? (
-              <view className='full-player__stage-row'>
-                <view
-                  className='full-player__cover-col'
-                  style={{ flexGrow: layout.coverFlex, flexShrink: 1, flexBasis: '0%' }}
-                >
-                  <CoverArt song={song} size={layout.coverSize} />
-                </view>
-                <view
-                  className='full-player__lyrics-pane'
-                  style={{ flexGrow: layout.lyricsFlex, flexShrink: 1, flexBasis: '0%' }}
-                >
-                  <LyricsView />
-                </view>
-              </view>
-            )
-            : layout.measured
-              ? (
-                <>
-                  <Swiper
-                    ref={swiperRef}
-                    data={[0, 1]}
-                    itemWidth={width}
-                    containerWidth={width}
-                    itemHeight='auto'
-                    onChange={setSwiperIndex}
-                    experimentalHorizontalSwipeOnly
-                    consumeSlideEvent={[[-180, -150], [-30, 30], [150, 180]]}
-                  >
-                    {({ index }: { index: number }) => (
-                      <SwiperItem>
-                        {index === 0
-                          ? <CoverArt song={song} size={layout.coverSize} />
-                          : (
-                            <view className='full-player__lyrics-page'>
-                              <LyricsView />
-                            </view>
-                          )}
-                      </SwiperItem>
-                    )}
-                  </Swiper>
-                  {/* Only meaningful next to a real swiper — the fallback below has
-                      one screen, and the wide layout shows both at once. */}
-                  <PageDots count={2} index={swiperIndex} />
-                </>
-              )
-              : <CoverArt song={song} size={layout.coverSize} />}
-        </view>
-
-        <view className='full-player__meta full-player__meta--enter'>
-          <text className='full-player__title'>{song.title}</text>
-          {song.artist ? <text className='full-player__artist'>{song.artist}</text> : null}
-        </view>
-
-        <view className='full-player__controls-enter'>
-          <ProgressBar />
-          <PlayControls
-            playBtn={layout.playBtn}
-            playRadius={layout.playRadius}
-            slot={layout.toolSlot}
-            songId={local ? undefined : song.id}
+        <view className='full-player__layer'>
+          <PlayerTopBar
+            song={song}
+            isWide={isWide}
+            onClose={closePlayer}
+            onOpenSleepTimer={() => setShowSleepTimer(true)}
+            timerActive={timerActive}
+            timerLabel={timerLabel}
           />
-          <PlayerToolBar slot={layout.toolSlot} />
+
+          <view className='full-player__stage full-player__stage--enter' bindlayoutchange={onStageLayout}>
+            {/*
+              * Split (cover beside lyrics) from tablet up; two swiped screens below it.
+              * Both branches are gated on `layout.measured`, and the third one is what
+              * renders until then — the Swiper caches the `itemWidth` it is first handed,
+              * so feeding it a guessed width leaves the page permanently misaligned.
+              */}
+            {layout.isSplit
+              ? (
+                <view className='full-player__stage-row'>
+                  <view
+                    className='full-player__cover-col'
+                    style={{ flexGrow: layout.coverFlex, flexShrink: 1, flexBasis: '0%' }}
+                  >
+                    <CoverArt song={song} size={layout.coverSize} />
+                  </view>
+                  <view
+                    className='full-player__lyrics-pane'
+                    style={{ flexGrow: layout.lyricsFlex, flexShrink: 1, flexBasis: '0%' }}
+                  >
+                    <LyricsView />
+                  </view>
+                </view>
+              )
+              : layout.measured
+                ? (
+                  <>
+                    <Swiper
+                      ref={swiperRef}
+                      data={[0, 1]}
+                      itemWidth={width}
+                      containerWidth={width}
+                      itemHeight='auto'
+                      onChange={setSwiperIndex}
+                      experimentalHorizontalSwipeOnly
+                      consumeSlideEvent={[[-180, -150], [-30, 30], [150, 180]]}
+                    >
+                      {({ index }: { index: number }) => (
+                        <SwiperItem>
+                          {index === 0
+                            ? <CoverArt song={song} size={layout.coverSize} />
+                            : (
+                              <view className='full-player__lyrics-page'>
+                                <LyricsView />
+                              </view>
+                            )}
+                        </SwiperItem>
+                      )}
+                    </Swiper>
+                    {/* Only meaningful next to a real swiper — the fallback below has
+                        one screen, and the wide layout shows both at once. */}
+                    <PageDots count={2} index={swiperIndex} />
+                  </>
+                )
+                : <CoverArt song={song} size={layout.coverSize} />}
+          </view>
+
+          <view className='full-player__meta full-player__meta--enter'>
+            <text className='full-player__title'>{song.title}</text>
+            {song.artist ? <text className='full-player__artist'>{song.artist}</text> : null}
+          </view>
+
+          <view className='full-player__controls-enter'>
+            <ProgressBar />
+            <PlayControls
+              playBtn={layout.playBtn}
+              playRadius={layout.playRadius}
+              slot={layout.toolSlot}
+              songId={local ? undefined : song.id}
+            />
+            <PlayerToolBar slot={layout.toolSlot} />
+          </view>
         </view>
+
       </view>
 
       <PlaylistDrawer />

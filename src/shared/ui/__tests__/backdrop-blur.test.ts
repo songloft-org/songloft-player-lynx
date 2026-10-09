@@ -339,7 +339,7 @@ describe('BackdropBlur component', () => {
   it('uses no modifier that the stylesheet does not define', () => {
     // A typo'd modifier is a silent square blur over the panel contents.
     const defined = new Set(
-      [...COMPONENT_CSS.matchAll(/\.(ui-backdrop-blur--[\w-]+)\s*\{/g)].map((m) => m[1]!),
+      [...(COMPONENT_CSS + read('shared/ui/ModalMaterial.css')).matchAll(/\.(ui-backdrop-blur--[\w-]+)\s*[,\{]/g)].map((m) => m[1]!),
     )
     const used = new Set<string>()
     for (const rel of TSX) {
@@ -388,24 +388,16 @@ describe('every dimming scrim is blurred', () => {
           }
         })
 
-        it('mounts the blur before the dim, as a sibling', () => {
+        it('uses coordinated page dim and a local material instead of full-screen blur', () => {
           const owner = BLUR_DELEGATED_TO[cls] ?? tsx
           const text = read(owner)
-          expect(text, 'must import the shared component').toContain(
-            `import { BackdropBlur } from '${importPath(owner)}'`,
-          )
-          const blur = text.indexOf('<BackdropBlur />')
-          expect(blur, '<BackdropBlur /> is not mounted').toBeGreaterThan(-1)
-          const dim = read(tsx).indexOf(cls)
-          expect(dim, `${cls} not found in the markup`).toBeGreaterThan(-1)
-          if (owner === tsx) {
-            // Tree order is paint order: after the dim, the blur would sample a
-            // backdrop the dim had already covered.
-            expect(blur, 'the blur must precede the dim it sits behind').toBeLessThan(dim)
-          }
-          // Self-closing, so it can never acquire children — a child of the blur
-          // would be inside the tag that may not resolve on Harmony.
-          expect(text).not.toMatch(/<BackdropBlur[^/>]*>\s*[^<\s]/)
+          expect(text).toContain('<ModalScrim ')
+          expect(text).toContain('<ModalMaterial ')
+          expect(text).not.toContain('<BackdropBlur />')
+          const material = read('shared/ui/ModalMaterial.tsx')
+          expect(material).toContain("<BackdropBlur className={shape === 'sheet' ? 'ui-backdrop-blur--modal-sheet' : 'ui-backdrop-blur--modal-dialog'}")
+          expect(material).toContain('captureTarget={captureTarget}')
+          expect(material).toContain("className={`ui-modal-material ui-modal-material--${shape}`}")
         })
       })
     }
@@ -545,6 +537,7 @@ describe('panel mode', () => {
     const scrimmed = (tsx: string) => dims.some((cls) => rendererOf(cls).includes(tsx))
     const needed = new Set<string>()
     for (const [cls] of ownersOf(/background-color:\s*var\(--material-fill/)) {
+      if (cls === 'ui-modal-material') continue // Shared local blur + tint; mounted by the modal owners above.
       for (const tsx of rendererOf(cls)) {
         if (!scrimmed(BLUR_DELEGATED_TO[cls] ?? tsx)) {
           // The shared capsule tint belongs to the panel that mounts it.
@@ -589,9 +582,10 @@ describe('panel mode', () => {
      * is, each form gets the mode that matches its shape.
      */
     const tsx = read('shared/ui/GlobalMenu.tsx')
-    // Docked: modal, so scrim mode — page blurred, then dimmed.
-    expect(tsx, 'the docked form is modal and needs the scrim-mode blur')
-      .toMatch(/\{!anchored && <BackdropBlur \/>\}/)
+    // Docked: coordinated dim with local blur/material, never page-sized blur.
+    expect(tsx, 'the docked form needs a local material')
+      .toMatch(/\{!anchored && <ModalMaterial shape='sheet' \/>\}/)
+    expect(tsx).toContain('<ModalScrim active={!anchored}')
     // Anchored: a popover, so panel mode — no dim, the material is the panel.
     expect(tsx, 'the anchored form is a popover and needs the panel-mode layer')
       .toMatch(/\{anchored && <BackdropBlur className='ui-backdrop-blur--panel' \/>\}/)

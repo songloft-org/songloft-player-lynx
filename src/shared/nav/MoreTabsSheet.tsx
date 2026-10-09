@@ -6,7 +6,8 @@ import { getLastLibrarySearch } from '../../features/library/index.js'
 import { useBackHandler } from './use-back-handler.js'
 import { Icon, ICON_COLORS } from '../ui/Icon.js'
 import type { NavDestination } from './destinations.js'
-import { BackdropBlur } from '../ui/BackdropBlur.js'
+import { ModalMaterial } from '../ui/ModalMaterial.js'
+import { ModalScrim } from '../ui/ModalScrim.js'
 import '../ui/overlay-motion.css'
 import './MoreTabsSheet.css'
 
@@ -68,15 +69,14 @@ export function MoreTabsSheet({ items, activePath, show, onShowChange }: MoreTab
 
   return (
     <view className='more-tabs' data-testid='more-tabs-sheet'>
-      {/* Real backdrop blur, behind the dim so the page is blurred and then
-          darkened. A preceding sibling, not a child: the scrim below owns
-          tap-to-dismiss and a child would sit in front of it. */}
-      <BackdropBlur />
+      {/* Light page dim; the content panel owns its local material. */}
+
       {/* Outside-tap close on the backdrop (the panel's sibling), never on this
           root: a tap inside the panel must not be able to reach a close
           handler. Same rule as `PopoverMenu` and `PlayHistoryPanel`. */}
-      <view className='more-tabs__backdrop' bindtap={close} data-testid='more-tabs-backdrop' />
+      <ModalScrim className='more-tabs__backdrop' bindtap={close} data-testid='more-tabs-backdrop' />
       <view className={`more-tabs__panel ${panelMotion}`}>
+        <ModalMaterial shape='sheet' />
         <view className='more-tabs__handle-wrap'>
           <view className='more-tabs__handle' />
         </view>

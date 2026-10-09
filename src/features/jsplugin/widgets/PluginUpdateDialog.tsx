@@ -18,7 +18,8 @@ import type { JSPlugin, JSPluginUpdateCheck } from '../../../models/jsplugin.js'
 // The dialog chrome (card, scrim, buttons) is ConfirmDialog's — including the
 // z-index levels its overlay contract test pins. Only the body and the dynamic
 // action row are specific to the update flow.
-import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import { ModalMaterial } from '../../../shared/ui/ModalMaterial.js'
+import { ModalScrim } from '../../../shared/ui/ModalScrim.js'
 import {
   DIALOG_WIDTH_PX,
   dialogCardWidth,
@@ -131,11 +132,9 @@ export function PluginUpdateDialog({ show, plugin, onClose }: PluginUpdateDialog
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
           clickToClose
         >
-          {/* Real backdrop blur, behind the dim so the page is blurred and then
-              darkened. Same five-piece chrome as `ConfirmDialog`, whose stylesheet
-              this dialog reuses — so it needs the blur for the same reason. */}
-          <BackdropBlur />
-          <view className='confirm-dialog__backdrop-inner' />
+          {/* Light page dim; the content panel owns its local material. */}
+
+          <ModalScrim active={show} priority={200} className='confirm-dialog__backdrop-inner' />
         </DialogBackdrop>
         <DialogContent
           className='confirm-dialog__content'
@@ -148,6 +147,7 @@ export function PluginUpdateDialog({ show, plugin, onClose }: PluginUpdateDialog
             catchtap={() => {}}
             style={{ width: dialogCardWidth(DIALOG_WIDTH_PX), maxHeight: dialogCardMaxHeight() }}
           >
+            <ModalMaterial shape='dialog' />
             <text className='confirm-dialog__title' text-maxline='2'>
               {t('jsplugin.updateDialogTitle', { name: plugin?.displayName ?? '' })}
             </text>

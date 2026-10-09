@@ -302,7 +302,7 @@ describe('dialogs paint above the overlays that open them', () => {
  * render env (no layout, the Dialog stand-in drops these props), so it is pinned
  * statically — the same reason as the block above.
  */
-describe('dialogs close on the fade, not on the presence fallback stall', () => {
+describe('dialogs close on transitionend without the presence fallback stall', () => {
   const DIALOG_CSS = path.resolve(__dirname, '../ConfirmDialog.css')
 
   test('both dialog views opt their scrim and content into the transition classes', () => {
@@ -320,22 +320,25 @@ describe('dialogs close on the fade, not on the presence fallback stall', () => 
     }
   })
 
-  test('the scrim and content fade out on ui-leaving', () => {
+  test('the scrim fades and content scales out on ui-leaving while retaining blur', () => {
     const css = readFileSync(DIALOG_CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
-    for (const base of ['.confirm-dialog__backdrop', '.confirm-dialog__content']) {
+    for (const [base, property] of [['.confirm-dialog__backdrop', 'opacity'], ['.confirm-dialog__content', 'transform']]) {
       const rule = css.match(new RegExp(`\\${base}\\s*\\{([^}]*)\\}`))
       expect(rule, `${base} rule not found`).not.toBeNull()
       expect(
         rule![1],
-        `${base} must declare a \`transition\` on opacity so the leave animates and `
+        `${base} must declare a \`transition\` on ${property} so the leave animates and `
           + 'presence unmounts on transitionend.',
-      ).toMatch(/transition:[^;]*opacity/)
+      ).toMatch(new RegExp(`transition:[^;]*${property}`))
     }
     // The leave is what animates; opening stays instant because nothing else
     // touches opacity.
     const leaving = css.match(/\.ui-leaving[^{]*\{([^}]*)\}/)
     expect(leaving, 'a .ui-leaving rule must fade the dialog out').not.toBeNull()
     expect(leaving![1]).toMatch(/opacity:\s*0/)
+    const content = css.match(/\.confirm-dialog__content\.ui-leaving\s*\{([^}]*)\}/)![1]!
+    expect(content).toMatch(/transform:\s*scale\(0\.96\)/)
+    expect(content).not.toMatch(/opacity:/)
   })
 })
 

@@ -16,8 +16,36 @@ import com.lynx.xelement.blur.LynxUIBlurView
 
 /** Lynx 4.0.0 posts capture updates that can outlive BlurView.destroy(). */
 class SongloftBlurUI(context: LynxContext) : LynxUIBlurView<LifecycleBlurView>(context) {
+    private var captureTargetId: String? = null
+    private val captureGeometry = BlurCaptureGeometry()
+    private val captureLocation = IntArray(2)
+
+    @LynxProp(name = "android-capture-target")
+    override fun setCaptureTarget(id: String?) {
+        captureTargetId = id
+        captureGeometry.reset()
+        super.setCaptureTarget(id)
+    }
+
+    override fun onLayoutUpdated() {
+        super.onLayoutUpdated()
+        refreshCapture()
+    }
+
+    private fun refreshCapture() {
+        val id = captureTargetId ?: return
+        val surface = view ?: return
+        surface.getLocationOnScreen(captureLocation)
+        // The SDK only refreshes a dirty source. A sheet sliding over an idle
+        // page otherwise keeps its initial, off-screen transparent capture.
+        if (captureGeometry.update(surface.width, surface.height, captureLocation[0], captureLocation[1])) {
+            super.setCaptureTarget(id)
+        }
+    }
+
     override fun createBlurView(context: Context): LifecycleBlurView = LifecycleBlurView(context).also {
         it.tabSource = { lynxContext.lynxView?.findViewByIdSelector("songloft-tab-backdrop") }
+        it.captureOnMove = { refreshCapture() }
     }
 
     @LynxProp(name = "songloft-glass", defaultBoolean = false)
@@ -59,6 +87,7 @@ class SongloftBlurUI(context: LynxContext) : LynxUIBlurView<LifecycleBlurView>(c
 
 class LifecycleBlurView(context: Context) : BlurView(context) {
     private val callbacks = BlurCallbackLifetime()
+    private var captureBeforeDraw = false
     private var glassEnabled = false
     private var lightIntensity = 0.55f
     private var glass: GlassRefraction? = null
@@ -66,6 +95,7 @@ class LifecycleBlurView(context: Context) : BlurView(context) {
     private var tabGlass: TabGlassRefraction? = null
     private var tabAnimation: ValueAnimator? = null
     internal var tabSource: (() -> View?)? = null
+    internal var captureOnMove: (() -> Unit)? = null
     private var tabPose: FloatArray? = null
     private var tabCount = 1
 
@@ -108,7 +138,18 @@ class LifecycleBlurView(context: Context) : BlurView(context) {
         if (startedAt > 0) animator.currentPlayTime = (System.currentTimeMillis() - startedAt).coerceIn(0L, duration.toLong())
     }
 
-    override fun onPreDraw(): Boolean = if (tabLens) true else super.onPreDraw()
+    override fun onPreDraw(): Boolean {
+        if (tabLens) return true
+        // SDK 4.0.0 queues capture with View.post(), one frame after the sheet
+        // moves. Complete only pre-draw capture work before painting this frame.
+        captureBeforeDraw = true
+        try {
+            captureOnMove?.invoke()
+            return super.onPreDraw()
+        } finally {
+            captureBeforeDraw = false
+        }
+    }
 
     override fun draw(canvas: Canvas) {
         if (!tabLens) {
@@ -122,7 +163,12 @@ class LifecycleBlurView(context: Context) : BlurView(context) {
         effect.draw(canvas, source, width, height, resources.displayMetrics.density, tabCount, pose, lightIntensity)
     }
 
-    override fun post(action: Runnable): Boolean = super.post(callbacks.wrap(action))
+    override fun post(action: Runnable): Boolean {
+        val guarded = callbacks.wrap(action)
+        if (!captureBeforeDraw) return super.post(guarded)
+        guarded.run()
+        return true
+    }
 
     fun setGlass(enabled: Boolean) {
         glassEnabled = enabled
@@ -158,6 +204,7 @@ class LifecycleBlurView(context: Context) : BlurView(context) {
         tabGlass = null
         tabPose = null
         tabSource = null
+        captureOnMove = null
         if (Build.VERSION.SDK_INT >= 33) setRenderEffect(null)
         glass = null
     }
@@ -170,4 +217,24 @@ internal class BlurCallbackLifetime {
     fun wrap(action: Runnable): Runnable = Runnable { if (!disposed) action.run() }
 
     fun dispose() { disposed = true }
+}
+
+/** Bounds-only invalidation: static overlays must not run a capture loop. */
+internal class BlurCaptureGeometry {
+    private var width = 0
+    private var height = 0
+    private var left = 0
+    private var top = 0
+
+    fun update(nextWidth: Int, nextHeight: Int, nextLeft: Int = 0, nextTop: Int = 0): Boolean {
+        if (nextWidth <= 0 || nextHeight <= 0) return false
+        if (width == nextWidth && height == nextHeight && left == nextLeft && top == nextTop) return false
+        width = nextWidth
+        height = nextHeight
+        left = nextLeft
+        top = nextTop
+        return true
+    }
+
+    fun reset() { width = 0; height = 0; left = 0; top = 0 }
 }

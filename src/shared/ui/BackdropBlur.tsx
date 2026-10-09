@@ -8,7 +8,7 @@ import './BackdropBlur.css'
 let nextCaptureId = 0
 
 /**
- * Gaussian radius shared by modal scrims and menus. Floating capsules use
+ * Gaussian radius shared by modal panels and menus. Floating capsules use
  * their own optical radius below, matching the Flutter capsule reference.
  *
  * `blur-radius` is a **string with a unit** (`BlurViewProps` documents the
@@ -17,7 +17,7 @@ let nextCaptureId = 0
  */
 export const BACKDROP_BLUR_RADIUS = '20px'
 // Flutter's floating capsules use sigma 12 (shader blur 6). Keep the stronger
-// page-sized modal blur separate from the compact optical material.
+// content-panel blur separate from the compact optical material.
 export const CAPSULE_BLUR_RADIUS = '12px'
 export const CAPSULE_GLASS_RADIUS = '6px'
 
@@ -30,6 +30,8 @@ export function blurEffectFor(
 }
 
 export interface BackdropBlurProps {
+  /** Android source must contain the page under this surface, excluding it. */
+  captureTarget?: string
   /**
    * Extra class, for the **panel** mounting mode only — one of the
    * `.ui-backdrop-blur--*` modifiers in `BackdropBlur.css`. Scrim mode passes
@@ -48,7 +50,7 @@ export interface BackdropBlurProps {
  * Web's host aliases blur-view to web-core's implementation (web/index.html).
  * Native registration and OS support must be verified independently of JS.
  */
-export function BackdropBlur({ className }: BackdropBlurProps) {
+export function BackdropBlur({ className, captureTarget = BACKDROP_CAPTURE_TARGET }: BackdropBlurProps) {
   const platform = getPlatformTarget()
   const policy = useSurfaceAppearance()
   const [captureId] = useState(() => `songloft-capsule-${++nextCaptureId}`)
@@ -58,8 +60,8 @@ export function BackdropBlur({ className }: BackdropBlurProps) {
   const radius = capsule ? (opticalCapsule ? CAPSULE_GLASS_RADIUS : CAPSULE_BLUR_RADIUS) : BACKDROP_BLUR_RADIUS
 
   if (!policy.blur) return null
-  // A full-screen scrim blurs content. Glass is reserved for compact chrome.
-  const nativeGlass = policy.liquidGlass && !!className
+  // Modal content uses themed blur. Glass is reserved for compact chrome.
+  const nativeGlass = policy.liquidGlass && (capsule || className === 'ui-backdrop-blur--panel')
   const iosProps =
     platform === 'ios'
       ? {
@@ -70,7 +72,7 @@ export function BackdropBlur({ className }: BackdropBlurProps) {
       : {}
   const androidProps = policy.androidCapture
     ? {
-        'android-capture-target': BACKDROP_CAPTURE_TARGET,
+        'android-capture-target': captureTarget,
         'songloft-glass': capsule && policy.androidGlass,
         'songloft-glass-light': theme === 'light' ? 0.55 : 0.35,
       }

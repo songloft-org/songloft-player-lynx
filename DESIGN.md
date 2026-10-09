@@ -455,13 +455,13 @@ Liquid Glass 为控件和导航元素（如标签栏、侧边栏）形成一个�
 
 > **本仓库的材质实现（2026-10-08 P0/P1）**：普通背景叶节点在宿主明确支持 Liquid Glass 时使用单表面 `blur-effect='glass'`；`glass-container` 仅用于分组子玻璃表面，不能拿空节点替代普通背景。iOS 26 以前使用 themed blur，未知 SDK/注册/能力使用实心材质。最终材质由 `ThemeProvider` 经 `resolveMaterialTokens` 写到 inline 根节点，避免主题包映射覆盖 CSS 平台规则。native regular 沿用 ultra-thin 色调参考（亮色 fill/elevated 为 0.55/0.45，暗色为 0.50/0.40），其他厚度按档位相对 regular 缩放；标准材质保留四档，默认为 0.85/0.72。系统或应用增强对比度使用标准 thick，停止选择 glass；系统或本机降低透明度则卸载 blur、写实心纹理。系统已开启的辅助功能不能被本机开关关闭。原生效果不代表自定义文本自动获得 vibrancy，可读性仍需实际背景验证；本机没有 iOS 26 真机证据。
 
-> **P2 表面分工**：带 panel/pill className 的紧凑 chrome 才选择 regular glass；全屏 scrim 使用随主题切换的普通 blur。装饰 blur 叶节点显式关闭 `glass-interactive` 并从无障碍树排除，交互仍由前景控件消费。播放器封面当前经过强 veil，不满足 clear 所需丰富媒体背景，本批不添加 clear。根节点和玻璃层复用 `useSurfaceAppearance`，共享一组上游策略/主题订阅、按有效快照去重，最后一个消费者卸载时断开；不把减少订阅宣称为已测帧率提升。
+> **P2 表面分工**：带 panel/pill className 的紧凑 chrome 才选择 regular glass；弹窗与 Sheet 的 `ModalMaterial` 在面板内使用随主题切换的普通 blur，整页只由 `ModalScrim` 轻度调暗（亮 .16、暗 .24、增强对比 .32），嵌套仅一层遮罩。内容填色最低亮 .94/暗 .82，增强对比与降低透明度保留实心回退。装饰 blur 叶节点显式关闭 `glass-interactive` 并从无障碍树排除，交互仍由前景控件消费。播放器封面当前经过强 veil，不满足 clear 所需丰富媒体背景，本批不添加 clear。根节点和玻璃层复用 `useSurfaceAppearance`，共享一组上游策略/主题订阅、按有效快照去重，最后一个消费者卸载时断开；不把减少订阅宣称为已测帧率提升。
 >
 > **滚动菜单**：`PopoverSurface` / `GlobalMenu` 使用裁剪外壳、固定模糊背景、独立原生 `scroll-view`；直接钳制滚动区高度，边框占用从测量上限扣除，内边距随内容滚动。滑块等任意内容的布局放在内部 content 上，避免新增滚动层改变对齐或抢走手势。行为闸门见 `platform-glass-root.test.tsx` / `menu-scroll.test.tsx`，实测证据见 progress。
 >
 > **材质令牌体系（`--material-*`）**：所有材质 CSS 变量统一使用 `--material-*` 前缀（原 `--glass-*` 已全部重命名）。关键令牌：
 >
-> - **填充**：`--material-fill`（常规玻璃填充）、`--material-fill-elevated`（scrim 之上的模态表面，原 `--glass-fill-strong`）、`--material-fill-menu`（未调暗的文字密集菜单）。菜单采用独立最低 alpha（亮 .99、暗 .92），保留 blur 与边缘高光，移除覆盖整面文字区域的 sheen/ramp；选中态 wash 一起参与对比度验证。四档材质仍控制导航/普通模态表面，菜单不随 ultra-thin 变得难以阅读；降低透明度的菜单 alpha=1。基线正文采用 4.5 门槛，secondary/accent/red 仍沿用仓库明确接受的 3.0 分层门槛，自定义主题包不自动保证这些比值。
+> - **填充**：`--material-fill`（常规玻璃填充）、`--material-fill-elevated`（scrim 之上的模态表面，原 `--glass-fill-strong`）、`--material-fill-menu`（未调暗的文字密集菜单）。菜单采用独立最低 alpha（亮 .99、暗 .92），模态内容采用普通材质最低 alpha（亮 .94、暗 .82）；均保留 blur 与边缘高光，移除覆盖整面文字区域的 sheen/ramp，选中态 wash 一起参与对比度验证。四档材质控制导航和保护下限之上的内容厚度，文字密集表面不随 ultra-thin 变得难以阅读；降低透明度时 alpha=1。基线正文采用 4.5 门槛，secondary/accent/red 仍沿用仓库明确接受的 3.0 分层门槛，自定义主题包不自动保证这些比值。
 > - **胶囊光学层**：底栏和迷你播放器仅叠加一次有效填色及边缘高光，不使用全表面 sheen/ramp 或定时渐变。普通 blur 的 regular 填色参考 Flutter：亮 .72、暗 .68；Android 13+ AGSL、Chromium SVG 与 HarmonyOS API 20+ 网格透镜均再乘 Flutter shader 的 .7 tint 系数。透镜 6px、普通胶囊 12px 与菜单/scrim 20px 模糊分离，折射只作用于装饰层，显式圆角透明裁剪。迷你播放器按压仅淡化前景控制，保持玻璃采样/填色；避免整体 opacity 暴露清晰背景，也保持 Lynx 的行控件不缩放规则。增强对比度使用 thick 并关闭透镜，降低透明度移除 blur 且填色实心；iOS 系统 glass 保留自身材质策略。
 > - **光晕与色调**：`--material-glow-faint`（装饰光晕）、`--tint-fill`（底栏选中态背景及玻璃上的强调态）、`--quaternary-system-fill`（玻璃上的中性态）。
 >
@@ -472,7 +472,7 @@ Liquid Glass 为控件和导航元素（如标签栏、侧边栏）形成一个�
 > - **底栏「水滴」选中动画**：`LiquidTabIndicator` 保留 Flutter 350ms snappy spring（bounce .15），但选中填色始终可见，透镜不能通过整面淡出将其替换。速度驱动压缩/拉伸叠加轻微隆起；光学激活约 90ms 连续建立，光学、边缘光与形变共享关键帧。最大高度小于 64px 底栏；连点保留当前姿态、速度、激活度，Tab 数变化/重挂载直接落位。采样仅包括底栏材质，前景图标、文字和命中区保持清晰、固定。Android 使用固定全栏硬件 RenderNode + AGSL；Chromium 透镜挂在实际移动胶囊内，静态局部位移图 + 浏览器动画，禁止逐帧编码或独立 RAF 几何；HarmonyOS API 20+ 使用独立能力门控的小区域异步采样 + GPU 网格；iOS 26 经编译 SDK 与实际注册门控，使用原生 clear glass；效果视图及祖先 alpha 保持 1，由暂停的原生 UIViewPropertyAnimator 按共享激活度插值 effect，选中 wash 在效果上方。未知宿主/增强对比度/降低透明度保留可见填色。尚未实现拖拽手势；分段控件保留原 CSS 过渡，宽屏 rail 仅变色。350ms、90ms 及形变幅度为本应用校准值，**不是 Apple 规定的参数**。
 >
 > **跨端验收基准**：参照 [Apple WWDC25：Meet Liquid Glass](https://developer.apple.com/videos/play/wwdc2025/219/) 的连续光学变化、凝胶形变与同一材质层级。导航和迷你播放器的静态折射、色彩响应、边缘光，及切换/中断/减少动画都必须逐端验收。Android、Chromium、HarmonyOS 的自绘光学使用同一填色补偿，iOS 系统材质保留自身调节。HarmonyOS 和 iOS 设备验收、Web 复杂内容的完整折射仍是开放工作；WebKit 18.2+（含同内核的 iOS 浏览器）与 Firefox 134+ 使用浏览器主线程的有界实际背景镜像，经 SVG 模糊/位移绘制；SVG 文字按实际基线和换行复制。镜像只随源变化刷新，移动透镜在实际胶囊内用同一动画时钟逆变换背景，不复制前景控件。遇到可见 iframe/video/canvas 等无法忠实采样的内容，明确退回原生 blur，不能算完整折射验收。共享 CSS、编译通过或单端录屏均不能证明全平台一致。
-> - **弹簧与 gel 反馈**：浮层开合弹簧与独立控件按压 gel 反馈统一使用 spring 缓动。**模糊层永不参与动画**（`BackdropBlur` 不做过渡）。
+> - **弹簧与 gel 反馈**：浮层开合弹簧与独立控件按压 gel 反馈统一使用 spring 缓动。弹窗/Sheet 仅缩放或平移，内容与效果视图祖先 opacity 保持 1；遮罩独立淡出。`BackdropBlur` 的半径与效果不做过渡。
 > - **reduce-motion**：CSS 动效依赖归零的 `--duration-*`；底栏主线程弹簧订阅同一系统偏好，开启时取消运动并立即落位。iOS 已接 `UIAccessibility`、Android 监听 `ANIMATOR_DURATION_SCALE`、HarmonyOS API 23+ 使用公开接口（旧 API 未知），Web 从主线程媒体偏好推送到 Worker。
 > - **toast 保持实心**：Toast 有意不使用玻璃材质，以确保在任何背景上的可读性。
 

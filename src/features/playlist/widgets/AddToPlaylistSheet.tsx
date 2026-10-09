@@ -11,7 +11,8 @@ import { PromptDialog } from '../../../shared/ui/PromptDialog.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { getPlaylistApi } from '../api/index.js'
 import { usePlaylistsInfiniteQuery } from '../data/playlist-query.js'
-import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import { ModalMaterial } from '../../../shared/ui/ModalMaterial.js'
+import { ModalScrim } from '../../../shared/ui/ModalScrim.js'
 import { usePresence } from '../../../shared/ui/usePresence.js'
 import '../../../shared/ui/overlay-motion.css'
 import './AddToPlaylistSheet.css'
@@ -121,10 +122,8 @@ export function AddToPlaylistSheet({ songIds, onClose, onAdded }: AddToPlaylistS
   return (
     <>
       <view className='atp' data-testid='add-to-playlist-sheet'>
-        {/* Real backdrop blur, behind the dim so the page is blurred and then
-            darkened. A preceding sibling, not a child: the scrim below owns
-            tap-to-dismiss and a child would sit in front of it. */}
-        <BackdropBlur />
+        {/* Light page dim; the content panel owns its local material. */}
+
         {/*
           * Outside-tap close sits on the backdrop, not on this root with a
           * `catchtap` on the panel: the backdrop is a sibling of the panel, so a
@@ -133,8 +132,9 @@ export function AddToPlaylistSheet({ songIds, onClose, onAdded }: AddToPlaylistS
           * bubble, which is true on device but leaves "did this row close the
           * sheet?" untestable.
           */}
-        <view className={`atp__backdrop${leaving ? ' overlay--leave-fade' : ''}`} bindtap={onClose} data-testid='atp-backdrop' />
+        <ModalScrim className={`atp__backdrop${leaving ? ' overlay--leave-fade' : ''}`} bindtap={onClose} data-testid='atp-backdrop' />
         <view className={`atp__panel ${leaving ? 'overlay--leave-up' : 'overlay--enter-up'}`}>
+          <ModalMaterial shape='sheet' />
           <view className='atp__handle-wrap'>
             <view className='atp__handle' />
           </view>

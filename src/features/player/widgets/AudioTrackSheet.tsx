@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { getAudio } from '../../../native/index.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
-import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import { ModalMaterial } from '../../../shared/ui/ModalMaterial.js'
+import { ModalScrim } from '../../../shared/ui/ModalScrim.js'
 import { useAudioTracks } from '../data/audio-tracks-query.js'
 import { usePlayerStore } from '../store/player-store.js'
 import { useDlnaStore } from '../store/dlna-store.js'
@@ -48,9 +49,10 @@ export function AudioTrackSheet() {
 
   return (
     <view className='drawer__root' data-testid='audio-track-sheet'>
-      <BackdropBlur />
-      <view className='drawer__backdrop' bindtap={close} />
+
+      <ModalScrim className='drawer__backdrop' bindtap={close} />
       <view className='drawer__panel audio-tracks__panel' catchtap={() => {}}>
+        <ModalMaterial shape='sheet' />
         <view className='drawer__handle-wrap'><view className='drawer__handle' /></view>
         <view className='drawer__header'>
           <text className='drawer__title'>{t('player.audioTracks')}</text>

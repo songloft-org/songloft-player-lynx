@@ -14,16 +14,15 @@
  */
 
 .song-info-dialog {
+  z-index: 1;
+  position: relative;
   display: flex;
   flex-direction: column;
-  background-color: var(--material-fill-elevated);
-  background-image: var(--material-sheen-layer), var(--material-ramp);
+  background-color: transparent;
+  background-image: none;
   border-radius: var(--radius-lg);
   border: 1px solid var(--material-border);
-  box-shadow: var(--shadow-lg),
-    inset 0 1px 0 var(--material-highlight),
-    var(--material-rim-sides),
-    inset 0 -1px 0 var(--separator);
+  box-shadow: var(--shadow-lg);
   padding: var(--space-5);
   margin: var(--space-6);
   /*

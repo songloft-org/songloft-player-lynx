@@ -1,0 +1,34 @@
+/* Owners establish a positioned stacking context and carry only the outside
+   border/shadow. Blur and tint are siblings so native bitmap replay cannot
+   cover the tint, and neither layer paints over text or receives taps. */
+.ui-backdrop-blur--modal-dialog,
+.ui-backdrop-blur--modal-sheet {
+  z-index: -2;
+  pointer-events: none;
+}
+
+.ui-modal-material {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  background-color: var(--material-fill-elevated);
+  background-image: none;
+  box-shadow: inset 0 1px 0 var(--material-highlight),
+    var(--material-rim-sides),
+    inset 0 -1px 0 var(--separator);
+  pointer-events: none;
+}
+
+.ui-backdrop-blur--modal-dialog,
+.ui-modal-material--dialog {
+  border-radius: var(--radius-lg);
+}
+
+.ui-backdrop-blur--modal-sheet,
+.ui-modal-material--sheet {
+  border-top-left-radius: var(--radius-sheet);
+  border-top-right-radius: var(--radius-sheet);
+}

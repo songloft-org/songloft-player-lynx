@@ -10,7 +10,8 @@ import {
   DialogContent,
 } from '@lynx-js/lynx-ui-dialog'
 
-import { BackdropBlur } from './BackdropBlur.js'
+import { ModalMaterial } from './ModalMaterial.js'
+import { ModalScrim } from './ModalScrim.js'
 import {
   DIALOG_WIDTH_PX,
   dialogCardWidth,
@@ -121,11 +122,9 @@ export function ConfirmDialog({
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
           clickToClose
         >
-          {/* Real backdrop blur, behind the dim so the page is blurred and then
-              darkened. `DialogBackdrop` is the fixed inset-0 wrapper; the dim
-              lives on the inner view, so both layers cover the same box. */}
-          <BackdropBlur />
-          <view className='confirm-dialog__backdrop-inner' />
+          {/* Light page dim; the content panel owns its local material. */}
+
+          <ModalScrim active={show} priority={200} className='confirm-dialog__backdrop-inner' />
         </DialogBackdrop>
         <DialogContent
           className='confirm-dialog__content'
@@ -146,10 +145,12 @@ export function ConfirmDialog({
             */}
           <view
             className='confirm-dialog'
+            flatten={false}
             data-testid={testId}
             catchtap={() => {}}
             style={{ width: dialogCardWidth(DIALOG_WIDTH_PX), maxHeight: dialogCardMaxHeight() }}
           >
+            <ModalMaterial shape='dialog' />
             <text className='confirm-dialog__title' text-maxline='2'>{title}</text>
             <scroll-view
               className='confirm-dialog__body'

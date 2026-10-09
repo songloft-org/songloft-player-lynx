@@ -97,18 +97,18 @@
      page root on its own — so it must sit above both its own backdrop and every
      app overlay, or the card renders behind the sheet / player that opened it. */
   z-index: 201;
-  /* Exit fade, load-bearing (not decoration). lynx-ui-presence keeps the dialog
+  /* Exit transition, load-bearing (not decoration). lynx-ui-presence keeps the dialog
      mounted while it "leaves"; with no animation to end it, its fallback spins
      MAX_WAIT_FRAMES (24) — the dialog froze on screen ~a second after
      cancel/confirm before disappearing. This transition, paired with `ui-leaving`
      below and the `transition` prop on `DialogBackdrop`/`DialogContent`, fires
-     `transitionend` so presence tears the dialog down the moment the fade ends.
+     `transitionend` so presence tears the dialog down when motion ends.
      Only the leave is styled (`ui-leaving`), so opening stays instant — no
      fade-in and none of presence's 8-frame enter gap made visible. The card
      itself enters on `dialog-enter` (scale 0.95→1); the leave mirrors it with
-     a scale-down, so the dialog recedes rather than only fading. */
-  transition: opacity var(--duration-fast) var(--ease-default),
-    transform var(--duration-fast) var(--ease-spring);
+     a scale-down. Keep content opacity at 1: an opacity animation makes a Web
+     backdrop root and prevents the local blur from sampling the page. */
+  transition: transform var(--duration-fast) var(--ease-spring);
 }
 
 /*
@@ -122,15 +122,16 @@
 }
 
 .confirm-dialog__content.ui-leaving {
-  opacity: 0;
   transform: scale(0.96);
 }
 
 .confirm-dialog {
+  z-index: 1;
+  position: relative;
   display: flex;
   flex-direction: column;
-  background-color: var(--material-fill-elevated);
-  background-image: var(--material-sheen-layer), var(--material-ramp);
+  background-color: transparent;
+  background-image: none;
   border-radius: var(--radius-lg);
   border: 1px solid var(--material-border);
   padding: var(--space-5);
@@ -142,13 +143,8 @@
   animation-duration: var(--duration-fast);
   animation-timing-function: var(--ease-out);
   animation-fill-mode: forwards;
-  /* Dialogs mount over a scrim, so they earn the larger shadow; the three-part
-     inset rim (top highlight / sides / bottom hairline) gives the glass its
-     thickness. */
-  box-shadow: var(--shadow-lg),
-    inset 0 1px 0 var(--material-highlight),
-    var(--material-rim-sides),
-    inset 0 -1px 0 var(--separator);
+  /* Outside shadow here; ModalMaterial owns the inset rim above the blur. */
+  box-shadow: var(--shadow-lg);
 }
 
 /*
@@ -306,11 +302,9 @@
 
 @keyframes dialog-enter {
   from {
-    opacity: 0;
     transform: scale(0.95);
   }
   to {
-    opacity: 1;
     transform: scale(1);
   }
 }

@@ -10,7 +10,8 @@ import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { getSongTagsApi } from '../api/index.js'
 import { songTagQueryKeys } from '../data/song-tags-query.js'
-import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import { ModalMaterial } from '../../../shared/ui/ModalMaterial.js'
+import { ModalScrim } from '../../../shared/ui/ModalScrim.js'
 import { usePresence } from '../../../shared/ui/usePresence.js'
 import '../../../shared/ui/overlay-motion.css'
 import './ManageTagsSheet.css'
@@ -131,12 +132,11 @@ export function ManageTagsSheet({ songIds, onClose }: ManageTagsSheetProps) {
 
   return (
     <view className='manage-tags' data-testid='manage-tags-sheet'>
-      {/* Real backdrop blur, behind the dim so the page is blurred and then
-          darkened. A preceding sibling, not a child: the scrim below owns
-          tap-to-dismiss and a child would sit in front of it. */}
-      <BackdropBlur />
-      <view className={`manage-tags__backdrop${leaving ? ' overlay--leave-fade' : ''}`} bindtap={onClose} />
+      {/* Light page dim; the content panel owns its local material. */}
+
+      <ModalScrim className={`manage-tags__backdrop${leaving ? ' overlay--leave-fade' : ''}`} bindtap={onClose} />
       <view className={`manage-tags__panel ${leaving ? 'overlay--leave-up' : 'overlay--enter-up'}`}>
+        <ModalMaterial shape='sheet' />
         <view className='atp__handle-wrap'>
           <view className='atp__handle' />
         </view>

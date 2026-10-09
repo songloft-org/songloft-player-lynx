@@ -4,6 +4,7 @@ import path from 'node:path'
 import { expect, test } from 'vitest'
 
 import { fileClasses } from '../../testing/jsx-classes.js'
+import { jsxElements } from '../../testing/jsx-elements.js'
 
 /**
  * Liquid Glass surface gate (A path).
@@ -46,6 +47,7 @@ interface Surface {
   rimOnly?: boolean
   /** Capsules paint their material as a sibling above the native blur. */
   childMaterial?: boolean
+  modalMaterial?: boolean
 }
 
 const SURFACES: Surface[] = [
@@ -73,11 +75,15 @@ const SURFACES: Surface[] = [
     file: 'shared/ui/ConfirmDialog.css',
     selector: '.confirm-dialog',
     fill: /var\(--material-fill-elevated\)/,
+    modalMaterial: true,
+    rimOnly: true,
   },
   {
     file: 'features/player/widgets/SheetShell.css',
     selector: '.drawer__panel',
     fill: /var\(--material-fill-elevated\)/,
+    modalMaterial: true,
+    rimOnly: true,
   },
   {
     // Added late, and the reason it was late is the point: this panel kept
@@ -88,6 +94,8 @@ const SURFACES: Surface[] = [
     file: 'shared/ui/GlobalMenu.css',
     selector: '.global-menu__panel',
     fill: /var\(--material-fill-elevated\)/,
+    modalMaterial: true,
+    rimOnly: true,
   },
 ]
 
@@ -103,16 +111,23 @@ function block(css: string, selector: string): string {
 
 test.each(SURFACES)(
   '$selector uses a glass fill (not --paper) and an inset sheen',
-  ({ file, selector, fill, rimOnly, childMaterial }) => {
+  ({ file, selector, fill, rimOnly, childMaterial, modalMaterial }) => {
     const css = rules(file)
     const shell = block(css, selector)
-    const body = childMaterial
+    const body = modalMaterial
+      ? block(rules('shared/ui/ModalMaterial.css'), '.ui-modal-material')
+      : childMaterial
       ? block(rules('shared/ui/BackdropBlur.css'), '.ui-capsule-material')
       : shell
     if (childMaterial) {
       expect(shell).toMatch(/background-color:\s*transparent/)
       expect(shell).not.toMatch(/background-image:/)
       expect(shell).toMatch(/box-shadow:\s*var\(--shadow-md\)/)
+    }
+    if (modalMaterial) {
+      expect(shell).toMatch(/background-color:\s*transparent/)
+      expect(shell).toMatch(/background-image:\s*none/)
+      expect(shell).toMatch(/z-index:\s*\d+/)
     }
     // A reverted surface (an opaque card colour instead of the glass fill) is the
     // silent regression. Both the legacy alias and the Apple token it now points
@@ -454,9 +469,20 @@ function reachableClasses(entry: string, components: Map<string, string>): Set<s
 }
 
 function glassPanels(rules: Map<string, { body: string, file: string }>): string[] {
-  return [...rules.entries()]
+  const panels = new Set([...rules.entries()]
     .filter(([, r]) => /background-color:\s*var\(--material-fill[\w-]*\)/.test(r.body))
-    .map(([cls]) => cls)
+    .map(([cls]) => cls))
+  // A modal owner is transparent because its child paints the material. Keep
+  // walking its rows rather than mistaking that compositing fix for no glass.
+  for (const file of filesOf(SHARED, '.tsx')) {
+    for (const element of jsxElements(readFileSync(file, 'utf8'))) {
+      if (element.name !== 'view' || !element.body?.includes('<ModalMaterial ')) continue
+      for (const cls of fileClasses(element.tag)) {
+        if (/background-color:\s*transparent/.test(rules.get(cls)?.body ?? '')) panels.add(cls)
+      }
+    }
+  }
+  return [...panels]
 }
 
 test('no opaque unbounded fill is painted over a glass panel', () => {

@@ -1,5 +1,19 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-09 · 弹窗与播放列表 Sheet 局部材质、轻遮罩及滑入采样修复
+
+- 用户已确认实施结果并授权提交。本次提交前逐文件复核共享材质、嵌套遮罩恢复、动画与采样时序、原生回调销毁、所有迁移调用点和测试契约，未发现新增问题；运行时代码未再修改，沿用下述验证证据。提交仅包含本批修复和记录，主仓库同步 Lynx 子模块指针；未推送，实际提交以 Git 历史为准，下方未提交描述为实施快照。
+
+- 用户授权修复并截图检查。参考当前 Flutter `ConfirmDialog`/`QueueBottomSheet`：队列本身为普通内容 surface，并无整页 blur。本轮保留播放器封面 veil 与 Flutter 工作区改动，统一 Lynx 17 处弹窗/Sheet 的局部普通模糊、单层保护填色与边缘光；移除全屏 blur、整面 sheen/ramp 和父层重复填色。浅/深色遮罩由 .35/.55 改为 .16/.24，增强对比 .32；内容最低 alpha .94/.82，降低透明度仍卸载 blur 并实心回退。队列选中行标题改用 label，wash 保留且参与未知背景对比度验证。
+- `ModalScrim` 按 Sheet/Dialog 层级协调遮罩，同层后挂载者拥有；Prompt 叠在添加歌单 Sheet 上只有一层 dim，关闭后底层恢复，再关闭全部释放。开合仅动画面板几何，模糊及祖先 opacity 保持 1，遮罩独立淡出；保留 transitionend 及时卸载。第一次 Chromium 截图发现透明度关键帧即使结束也会形成 backdrop root，局部 blur 无法采到页面；移除该关键帧后才计通过。
+- Android 实际截图另发现队列下清晰标题/按钮残影。增加全屏、不包含队列与睡眠 Sheet 的 `songloft-player-content`，保留播放器原布局。仅换源仍失败：临时原生日志显示滑入初始位置 `mBlurViewLocation=2,1802`、位图中心为透明 0，源却为正常 750×1752。SDK 只监听源变脏，不跟踪效果视图移动；静止页面不会刷新屏幕外的首帧。`SongloftBlurUI` 现在跟踪实际位置/尺寸，仅变化时重新采样，停稳不循环；销毁清空回调，保留 SDK 23+ 回退和既有 Tab 专用光学路径。首次录屏还发现 SDK capture post 延后一帧；现在只在 pre-draw 期间同步执行受生命周期保护的采样，其他 post 继续排队，新包明暗录屏逐帧复核无滑入背景残影。临时反射诊断已删除。新增 JVM 检查覆盖空尺寸、相同尺寸停稳、换源、滑入到停稳。
+- 最终完整 **303 文件 / 3281 项**、类型检查、生产 Lynx/Web 双 bundle 与 Web 部署、发布工具 **70 项**、Android Debug APK 与 **47 项 JVM**通过。日志 `/tmp/lynx-modal-all-tests-green.log`、`/tmp/lynx-modal-native-synchronous.log`、`/tmp/lynx-modal-production-final.log`；原生位置刷新接线/模态 **9 项**定向复测通过，最后 pre-draw 时序修改后重编 APK、重跑 47 项 JVM 并重新截图/录屏。早期旧源字符串/内容淡出契约失败已按新行为更新；全量曾在 TestBridge dist 未恢复时命中发布保护，生产构建后串行重跑才通过。沙箱构建 SIGTERM、新鲜度保护拒绝复制和浏览器依赖缺失均不计成功结果。
+- Chromium 真实登录、取消、播放队列与嵌套 Prompt 点击通过，明暗共 6 张最终截图逐张复核，页面错误为空。局部 blur 约 309×200（弹窗）/373×628（Sheet），不再覆盖整页，面板内无清晰背景文字；嵌套只有最高层 dim，关闭全部后无残留。证据 `/tmp/lynx-modal-final.json`、`/tmp/lynx-modal-final-{light,dark}-{dialog,queue,nested}.png`；基线 `/tmp/lynx-modal-before-*`，对比 `/tmp/lynx-modal-comparison.png`。
+- Android API 34 arm64 native bridge 新包真实点击明暗弹窗/队列，四张最终截图逐张复核：局部 blur 边界与面板差 2px，关闭后材质节点消失，队列下标题/按钮/进度残影已消除；开合录屏帧序列已检查，但软件模拟器录制不证明真机帧率。证据 `/tmp/lynx-modal-native.json`、`/tmp/lynx-modal-native-synchronous-proof.log`、`/tmp/songloft-discovery-native/modal-{light,dark}-{dialog,queue}.png`、`modal-{light,dark}-motion.mp4`，汇总 `/tmp/lynx-modal-android.png`。测试夹具注入播放状态只用于视觉验证，不代表真实音乐播放 API 验收。最终测试 APK SHA-256 `4ece4daed77641dd898e6f12f95ce68f9952706d97e08f1c038b4f1e583dfd50`，内嵌测试 bundle `e9f570a447c7198ce5784ec3373c20f01f066607cd8f7750d9b4b07f9808bfeb`；生产资源已另行恢复，Android/iOS/HarmonyOS 三端 bundle 与 dist SHA-256 均为 `16a346dbef80392b044725955d76bb75d1d5e058b1da9069fa14a6568cf0571a`，不能混称同一安装包。
+- Firefox 134/WebKit 18.2 的布局、遮罩和清理检查通过，但像素截图仍清晰；最小红蓝条纹普通 HTML 对照也不渲染 blur（Firefox 强制软件 WebRender 仍失败），定位为当前无头渲染环境限制，**这两组截图不计模糊视觉通过**，未为环境问题修改产品背景算法。iOS/HarmonyOS 设备验收继续开放，不能宣称全平台正确视觉已验证。AGENTS/交接中英同步；本轮未提交或推送，上一批 `e2f119d`/`f42f2b9` 已推送。
+
+- 最终生产恢复后发布 **70 项**复测通过（`/tmp/lynx-modal-release-final.log`），最终 pre-draw 修改后接线/模态 **9 项**复测通过（`/tmp/lynx-modal-native-wiring-final.log`）。安装 APK 哈希与本地最终验证包一致，当前应用进程无 AndroidRuntime 错误。严格 UTF-8/替换字符与 `git diff --check` 通过；本轮夹具服务和两个自建容器已停止，58311/58315/19230 端口无监听。
+
 ## 2026-10-09 · iOS 移动玻璃改为原生 effect 插值（全平台验收仍开放）
 
 - 用户已授权提交当前跨平台玻璃修复。提交前复核改动范围、能力门控、背景采样、动画中断和资源清理，未发现新增问题；运行时代码未再修改，沿用下述回归、构建与实测证据。交接中英同步记录授权，实际提交以 Git 历史为准；尚未推送。全平台目标仍受 iOS/鸿蒙运行环境及复杂 Web 背景折射缺口阻塞，下方「未提交」为实施时快照。

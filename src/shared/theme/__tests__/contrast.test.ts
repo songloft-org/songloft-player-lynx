@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { resolveMenuMaterialFill, resolveMaterialTokens } from '../material-tokens.js'
+import { resolveModalFill } from '../../ui/ModalMaterial.js'
 
 /**
  * Contrast gate for the Apple semantic tokens in `tokens.css`.
@@ -191,6 +192,25 @@ const TEXT_FLOORS: Record<string, number> = {
   'system-red': 3.0,
 }
 const TEXT_TOKENS = Object.keys(TEXT_FLOORS)
+
+describe.each(['light', 'dark'] as const)('%s local modal material with a light page dim', theme => {
+  test.each(['ultra-thin', 'thin', 'regular', 'thick'] as const)('%s remains readable over both cover extremes', variant => {
+    const dim = { r: 0, g: 0, b: 0, a: theme === 'light' ? 0.16 : 0.24 }
+    for (const nativeGlass of [false, true]) {
+      const fill = parseRgba(resolveModalFill({ variant, theme, nativeGlass, increaseContrast: false }))
+      for (const cover of [parseHex('#000000'), parseHex('#ffffff')]) {
+        const base = over(fill, over(dim, cover))
+        for (const token of TEXT_TOKENS) {
+          expectReads(THEMES[theme][token]!, base, `${variant} modal --${token}`, TEXT_FLOORS[token]!)
+        }
+        const selected = over(THEMES[theme]['tint-fill']!, base)
+        for (const token of ['label', 'secondary-label']) {
+          expectReads(THEMES[theme][token]!, selected, `${variant} selected queue --${token}`, TEXT_FLOORS[token]!)
+        }
+      }
+    }
+  })
+})
 
 describe.each(['light', 'dark'] as const)('%s undimmed menu over unknown content', theme => {
   test.each(['ultra-thin', 'thin', 'regular', 'thick'] as const)('%s retains readable text across cover extremes', variant => {

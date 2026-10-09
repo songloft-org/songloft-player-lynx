@@ -4,6 +4,8 @@ import type { AnchorMeasurement } from './anchored-overlay.js'
 import { MenuItem } from './MenuItem.js'
 import type { MenuItemSpec } from './MenuItem.js'
 import { BackdropBlur } from './BackdropBlur.js'
+import { ModalMaterial } from './ModalMaterial.js'
+import { ModalScrim } from './ModalScrim.js'
 import { menuScrollMaxHeight } from './menu-viewport.js'
 import './overlay-motion.css'
 import './PopoverMenu.css'
@@ -74,13 +76,8 @@ export function GlobalMenu({
 
   return (
     <view className='global-menu' data-testid={testId}>
-      {/* Scrim-mode blur for the docked form only, behind the dim — gated on the
-          same `anchored` flag as the scrim's paint, because only the docked form is
-          modal. A preceding sibling, not a child: the scrim below owns
-          tap-to-dismiss and a child would sit in front of it. The anchored form
-          gets a panel-mode layer inside its panel instead; see `BackdropBlur.tsx`
-          for why the two modes mount differently. */}
-      {!anchored && <BackdropBlur />}
+      {/* Only the docked form participates in the modal dim stack. Both forms
+          blur locally inside the panel, leaving the rest of the page sharp. */}
       {/*
         * The outside-tap catcher is the backdrop, a sibling of the panel — so a
         * tap on a menu row cannot reach it. Putting the close handler on the root
@@ -92,7 +89,7 @@ export function GlobalMenu({
         * scrim behind it would be the one thing setting it apart from every other
         * popover menu in the app.
         */}
-      <view
+      <ModalScrim active={!anchored}
         className={anchored
           ? 'global-menu__backdrop'
           : 'global-menu__backdrop global-menu__backdrop--docked'}
@@ -105,12 +102,10 @@ export function GlobalMenu({
           : 'global-menu__panel global-menu__panel--docked overlay--enter-up'}
         style={position}
       >
-        {/* Panel-mode blur for the anchored form: it is a popover, so there is no
-            scrim to dim and nothing page-sized to blur — the material is the panel
-            itself, exactly as in `PopoverSurface`. Docked, the panel already sits
-            over a blurred, dimmed page, so a second layer would only re-blur what
-            the scrim layer blurred. The shell clips the fixed blur while only
-            the sibling scroll-view moves. */}
+        {!anchored && <ModalMaterial shape='sheet' />}
+        {/* Anchored popovers use the compact material, docked menus use the
+            content material above. The shell clips either local blur while
+            only the sibling scroll-view moves. */}
         {anchored && <BackdropBlur className='ui-backdrop-blur--panel' />}
         <scroll-view
           className='global-menu__scroll'

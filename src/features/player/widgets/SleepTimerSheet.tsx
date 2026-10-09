@@ -14,7 +14,8 @@ import {
   type IntegerRange,
   type SleepTimerStatus,
 } from '../domain/sleep-timer.js'
-import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
+import { ModalMaterial } from '../../../shared/ui/ModalMaterial.js'
+import { ModalScrim } from '../../../shared/ui/ModalScrim.js'
 import { usePresence } from '../../../shared/ui/usePresence.js'
 import '../../../shared/ui/overlay-motion.css'
 import './SheetShell.css'
@@ -107,12 +108,11 @@ export function SleepTimerSheet({
   return (
     <>
       <view className='drawer__root' data-testid='sleep-timer-sheet'>
-        {/* Real backdrop blur, behind the dim so the page is blurred and then
-            darkened. A preceding sibling, not a child: the scrim below owns
-            tap-to-dismiss and a child would sit in front of it. */}
-        <BackdropBlur />
-        <view className={`drawer__backdrop${leaveClass}`} bindtap={onClose} />
+        {/* Light page dim; the content panel owns its local material. */}
+
+        <ModalScrim className={`drawer__backdrop${leaveClass}`} bindtap={onClose} />
         <view className={`drawer__panel drawer__panel--sleep ${panelMotion}`} catchtap={() => {}}>
+          <ModalMaterial shape='sheet' captureTarget='songloft-player-content' />
           <view className='drawer__handle-wrap'>
             <view className='drawer__handle' />
           </view>
