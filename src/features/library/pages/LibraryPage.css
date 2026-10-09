@@ -69,6 +69,21 @@
   padding: var(--space-1);
 }
 
+.library__topbar-visibility {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  margin-right: var(--space-1);
+  border-radius: var(--radius-sm);
+}
+
+.library__topbar-visibility--active {
+  background-color: var(--tint-fill);
+}
+
 /* Songs view wrapper */
 .library__songs-view {
   display: flex;

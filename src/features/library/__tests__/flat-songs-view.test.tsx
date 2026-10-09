@@ -129,6 +129,20 @@ beforeEach(() => {
 
 afterEach(() => vi.clearAllMocks())
 
+test('visibility changes discard the previous multi-selection and update the song query', async () => {
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1)], total: 1 }]))
+  const props = { sortId: 'added_at' as const, sortOrder: 'desc' as const, onSortChange: () => {}, isWide: false }
+  const { rerender } = render(<FlatSongsView {...props} showHidden />)
+  await act(async () => { await Promise.resolve() })
+  const { getByText, queryByText } = getQueriesForElement(elementTree.root!)
+  await act(async () => { fireEvent.tap(getByText('Select')) })
+  await act(async () => { fireEvent.tap(getByText('Song 1')) })
+  expect(queryByText('1 selected')).toBeInTheDocument()
+  await act(async () => { rerender(<FlatSongsView {...props} showHidden={false} />) })
+  expect(queryByText('1 selected')).not.toBeInTheDocument()
+  expect(songsHook.mock.lastCall?.[0].excludePlaylistLabels).toBeUndefined()
+})
+
 test('device caching receives only the current multi-selection and hides its entry on older shells', async () => {
   cache.available = true
   const songs = [makeSong(1, { title: 'Selected song' }), makeSong(2)]

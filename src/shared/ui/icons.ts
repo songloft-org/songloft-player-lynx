@@ -71,6 +71,7 @@ export type IconName =
   | 'cast'
   | 'more'
   | 'eye'
+  | 'eye-off'
   | 'edit'
   | 'trash'
   | 'pin'
@@ -399,6 +400,10 @@ const ICONS: Record<IconName, (color: string) => string> = {
   eye: (c) =>
     `<path d="M2.5 12s3.2-6.5 9.5-6.5S21.5 12 21.5 12s-3.2 6.5-9.5 6.5S2.5 12 2.5 12Z" ${stroke(c)}/>` +
     `<circle cx="12" cy="12" r="2.8" ${stroke(c)}/>`,
+
+  'eye-off': (c) =>
+    `<path d="M9.5 5.8A10.2 10.2 0 0 1 12 5.5c6.3 0 9.5 6.5 9.5 6.5a19.8 19.8 0 0 1-3 3.9M6.1 6.1A20.5 20.5 0 0 0 2.5 12s3.2 6.5 9.5 6.5a10.2 10.2 0 0 0 4.4-1" ${stroke(c)}/>` +
+    `<path d="M10 10a2.8 2.8 0 0 0 4 4M3 3l18 18" ${stroke(c)}/>`,
 
   // Pencil — marks the "custom value" chips in the sleep-timer sheet, as
   // `Icons.edit_outlined` does in the Flutter build.

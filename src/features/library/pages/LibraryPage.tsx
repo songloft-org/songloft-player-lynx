@@ -3,7 +3,7 @@ import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { Icon, ICON_COLORS, activeAccentIconColor } from '../../../shared/ui/Icon.js'
 import { readPlaylistViewMode, writePlaylistViewMode, type PlaylistViewMode } from '../../playlist/data/playlist-view-prefs.js'
 import { setLastLibrarySearch } from '../data/last-library-search.js'
 import {
@@ -91,6 +91,10 @@ export function LibraryPage() {
   }
 
   const [editMode, setEditMode] = useState(false)
+  // Separate per-group display preferences; keep them above the keyed views
+  // so selecting another source/category does not reset visibility.
+  const [showHiddenSongs, setShowHiddenSongs] = useState(false)
+  const [showHiddenPlaylists, setShowHiddenPlaylists] = useState(false)
 
   // Edit mode replaces the entire page body with `LibraryViewEditor`, so back has to
   // leave the mode before it can mean "leave the page".
@@ -132,6 +136,11 @@ export function LibraryPage() {
   // Compute showViewToggle from selected (available before group).
   const selectedGroup = selected ? LIBRARY_VIEW_GROUP[selected] : 'songs'
   const showViewToggle = selectedGroup === 'facets' || selectedGroup === 'playlists'
+  const showVisibilityToggle = selected != null && selectedGroup !== 'facets'
+  const showHidden = selectedGroup === 'playlists' ? showHiddenPlaylists : showHiddenSongs
+  const visibilityLabel = selectedGroup === 'playlists'
+    ? t(showHidden ? 'playlist.hideHidden' : 'playlist.showHidden')
+    : t(showHidden ? 'library.hideHiddenSongs' : 'library.showHiddenSongs')
   const topbar = (
     <view className='library__topbar'>
       <text className='library__topbar-title'>{t('nav.library')}</text>
@@ -145,6 +154,29 @@ export function LibraryPage() {
             data-testid='library-view-toggle'
           >
             <Icon name={viewMode === 'grid' ? 'list' : 'grid'} size={20} color={ICON_COLORS.content2} />
+          </view>
+        )
+        : null}
+      {showVisibilityToggle
+        ? (
+          <view
+            className={showHidden
+              ? 'library__topbar-visibility library__topbar-visibility--active'
+              : 'library__topbar-visibility'}
+            bindtap={() => {
+              if (selectedGroup === 'playlists') setShowHiddenPlaylists(value => !value)
+              else setShowHiddenSongs(value => !value)
+            }}
+            accessibility-element={true}
+            accessibility-traits='button'
+            accessibility-label={visibilityLabel}
+            data-testid='library-hidden-toggle'
+          >
+            <Icon
+              name={showHidden ? 'eye' : 'eye-off'}
+              size={20}
+              color={showHidden ? activeAccentIconColor() : ICON_COLORS.content2}
+            />
           </view>
         )
         : null}
@@ -182,6 +214,7 @@ export function LibraryPage() {
         sortOrder={sortOrder}
         onSortChange={onSortChange}
         isWide={isSongListWide}
+        showHidden={showHiddenSongs}
       />
     )
     : group === 'facets'
@@ -196,6 +229,7 @@ export function LibraryPage() {
           type={playlistViewType(selected)}
           songSource={playlistViewSongSource(selected)}
           viewMode={viewMode}
+          showHidden={showHiddenPlaylists}
         />
       )
 

@@ -36,6 +36,8 @@ export interface FlatSongsViewProps {
   onSortChange: (id: LibrarySortId, order: SortOrder) => void
   /** Wide viewport flag, passed from LibraryPage (above the provider boundary). */
   isWide: boolean
+  /** Include songs belonging to hidden playlists. */
+  showHidden?: boolean
 }
 
 /**
@@ -44,7 +46,9 @@ export interface FlatSongsViewProps {
  * choice is owned by the page (persisted to prefs, kept across view switches);
  * this view only reports changes upward.
  */
-export function FlatSongsView({ type, sortId, sortOrder, onSortChange, isWide }: FlatSongsViewProps) {
+export function FlatSongsView({
+  type, sortId, sortOrder, onSortChange, isWide, showHidden = false,
+}: FlatSongsViewProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const cacheBatch = useCacheBatchSubmission()
@@ -70,16 +74,17 @@ export function FlatSongsView({ type, sortId, sortOrder, onSortChange, isWide }:
   const filters = useMemo<SongsFilters>(() => {
     const f: SongsFilters = { ...librarySortFilters(sortId, sortOrder) }
     if (type) f.type = type
+    if (showHidden) f.excludePlaylistLabels = 'none'
     if (debouncedSearch.trim()) f.keyword = debouncedSearch.trim()
     return f
-  }, [sortId, sortOrder, debouncedSearch, type])
+  }, [sortId, sortOrder, debouncedSearch, type, showHidden])
 
   // Clear multi-select when the visible song list changes (search / sort /
-  // source view). Otherwise selected IDs from the previous result set linger
+  // source view / visibility). Otherwise selected IDs from the previous result set linger
   // and get added to playlists even though they are no longer visible.
   useEffect(() => {
     setSelected(new Set())
-  }, [debouncedSearch, sortId, sortOrder, type])
+  }, [debouncedSearch, sortId, sortOrder, type, showHidden])
 
   const query = useSongsInfiniteQuery(filters)
   const songs = flattenSongs(query.data?.pages)

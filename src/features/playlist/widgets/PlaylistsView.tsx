@@ -1,4 +1,4 @@
-import { useState } from '@lynx-js/react'
+import { useEffect, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
@@ -37,11 +37,13 @@ import { PlaylistCard } from './PlaylistCard.js'
 import './PlaylistsView.css'
 
 export function PlaylistsView(
-  { type, songSource, viewMode = 'grid' }: {
+  { type, songSource, viewMode = 'grid', showHidden = false }: {
     type?: string
     /** `'remote'` / `'local'` — filter by the source of the songs held. */
     songSource?: string
     viewMode?: 'grid' | 'list'
+    /** Include hidden playlists; controlled by the library topbar. */
+    showHidden?: boolean
   } = {},
 ) {
   const navigate = useNavigate()
@@ -56,12 +58,11 @@ export function PlaylistsView(
   const query = usePlaylistsInfiniteQuery({
     ...(type ? { type } : {}),
     ...(songSource ? { songSource } : {}),
+    ...(showHidden ? { excludeLabels: 'none' } : {}),
     keyword: debouncedSearch || undefined,
   })
   const allPlaylists = flattenPlaylists(query.data?.pages)
-  const [showHidden, setShowHidden] = useState(false)
   const playlists = showHidden ? allPlaylists : allPlaylists.filter((p) => !p.isHidden)
-  const hiddenCount = allPlaylists.filter((p) => p.isHidden).length
   const reorderMutation = useReorderPlaylistsMutation()
   const deleteMutation = useDeletePlaylistMutation()
   const pinnedMutation = useSetPinnedMutation()
@@ -70,6 +71,11 @@ export function PlaylistsView(
   const [sortMode, setSortMode] = useState(false)
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  useEffect(() => {
+    setSelected(new Set())
+    setSelectMode(false)
+    setSortMode(false)
+  }, [showHidden])
   const [confirmDelete, setConfirmDelete] = useState(false)
   /*
    * The row menu's state lives here rather than in a store, and the menu renders
@@ -387,15 +393,6 @@ export function PlaylistsView(
                   else if (key === 'manual') setSortMode(true)
                 }}
               />
-            )
-            : null}
-          {hiddenCount > 0
-            ? (
-              <view className='playlists__create-trigger' bindtap={() => setShowHidden(!showHidden)}>
-                <text className='playlists__create-trigger-text'>
-                  {showHidden ? t('playlist.hideHidden') : t('playlist.showHidden', { count: hiddenCount })}
-                </text>
-              </view>
             )
             : null}
         </view>

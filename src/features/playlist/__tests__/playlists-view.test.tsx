@@ -117,6 +117,25 @@ beforeEach(() => {
   visibilityMutationHook.mockReturnValue({ mutate: vi.fn(), mutateAsync: vi.fn(async () => {}), isPending: false })
 })
 
+test('controlled visibility fetches hidden playlists and clears selections when hiding again', async () => {
+  const visible = makePlaylist(1)
+  const hidden = makePlaylist(2, { name: 'Hidden playlist', isHidden: true, labels: ['hidden'] })
+  listHook.mockReturnValue(listResult([{ playlists: [visible, hidden], total: 2 }]))
+  const { rerender } = render(<PlaylistsView showHidden />)
+  await act(async () => { await Promise.resolve() })
+  const { getByText, queryByText, getByTestId } = getQueriesForElement(elementTree.root!)
+  expect(listHook.mock.lastCall?.[0]).toMatchObject({ excludeLabels: 'none' })
+  expect(queryByText('Hidden playlist')).toBeInTheDocument()
+  await act(async () => { fireEvent.tap(getByTestId('playlists-select-toggle')) })
+  await act(async () => { fireEvent.tap(getByText('Hidden playlist')) })
+  expect(queryByText('1 selected')).toBeInTheDocument()
+  await act(async () => { rerender(<PlaylistsView showHidden={false} />) })
+  expect(listHook.mock.lastCall?.[0].excludeLabels).toBeUndefined()
+  expect(queryByText('Hidden playlist')).not.toBeInTheDocument()
+  expect(queryByText('1 selected')).not.toBeInTheDocument()
+  expect(elementTree.root!.querySelector('.playlists__select-badge')).not.toBeInTheDocument()
+})
+
 afterEach(() => {
   vi.clearAllMocks()
   toast.clear()

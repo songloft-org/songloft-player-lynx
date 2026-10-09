@@ -41,6 +41,11 @@ vi.mock('../data/songs-query.js', () => ({
   libraryQueryKeys: { songs: () => [], facets: () => [] },
 }))
 
+vi.mock('../data/song-tags-query.js', () => ({
+  useTagListInfiniteQuery: () => ({ data: undefined, isLoading: false, isError: false }),
+  flattenTags: () => [],
+}))
+
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateSpy,
   useSearch: searchHook,
@@ -129,7 +134,7 @@ afterEach(() => vi.clearAllMocks())
  * default (narrow) the layout hands it before its first measurement.
  */
 async function renderPage(viewport: LibraryViewport = { isWide: false, isSongListWide: false }) {
-  render(
+  const { rerender } = render(
     <LibraryViewportProvider value={viewport}>
       <LibraryPage />
     </LibraryViewportProvider>,
@@ -137,8 +142,66 @@ async function renderPage(viewport: LibraryViewport = { isWide: false, isSongLis
   await act(async () => {
     await Promise.resolve()
   })
-  return getQueriesForElement(elementTree.root!)
+  return {
+    ...getQueriesForElement(elementTree.root!),
+    async switchView(view: LibraryViewKey) {
+      searchHook.mockReturnValue({ view })
+      await act(async () => {
+        rerender(
+          <LibraryViewportProvider value={viewport}>
+            <LibraryPage />
+          </LibraryViewportProvider>,
+        )
+      })
+    },
+  }
 }
+
+test.each(['all', 'local', 'remote', 'radio'] as const)('%s has a song visibility button even with no visible songs', async (view) => {
+  searchHook.mockReturnValue({ view })
+  const { getByTestId } = await renderPage()
+  expect(getByTestId('library-hidden-toggle')).toHaveAttribute('accessibility-label', 'Show hidden songs')
+  expect(getByTestId('icon-eye-off')).toBeInTheDocument()
+})
+
+test.each(['playlist', 'playlist_normal', 'playlist_radio', 'playlist_remote', 'playlist_local'] as const)('%s has a playlist visibility button even with no visible playlists', async (view) => {
+  searchHook.mockReturnValue({ view })
+  const { getByTestId } = await renderPage()
+  expect(getByTestId('library-hidden-toggle')).toHaveAttribute('accessibility-label', 'Show hidden playlists')
+})
+
+test.each(['artist', 'album', 'folder', 'tag'] as const)('%s omits the visibility button', async (view) => {
+  searchHook.mockReturnValue({ view })
+  const { queryByTestId } = await renderPage()
+  expect(queryByTestId('library-hidden-toggle')).not.toBeInTheDocument()
+})
+
+test('song and playlist visibility drive independent server filters and survive category switches', async () => {
+  const { getByTestId, switchView } = await renderPage()
+  expect(songsHook.mock.lastCall?.[0].excludePlaylistLabels).toBeUndefined()
+  await act(async () => { fireEvent.tap(getByTestId('library-hidden-toggle')) })
+  expect(songsHook.mock.lastCall?.[0].excludePlaylistLabels).toBe('none')
+  expect(getByTestId('library-hidden-toggle')).toHaveAttribute('accessibility-label', 'Hide hidden songs')
+  expect(getByTestId('icon-eye')).toBeInTheDocument()
+
+  await switchView('local')
+  expect(songsHook.mock.lastCall?.[0]).toMatchObject({ type: 'local', excludePlaylistLabels: 'none' })
+  await switchView('playlist_normal')
+  expect(playlistsHook.mock.lastCall?.[0].excludeLabels).toBeUndefined()
+  await act(async () => { fireEvent.tap(getByTestId('library-hidden-toggle')) })
+  expect(playlistsHook.mock.lastCall?.[0]).toMatchObject({ type: 'normal', excludeLabels: 'none' })
+  expect(getByTestId('library-hidden-toggle')).toHaveAttribute('accessibility-label', 'Hide hidden playlists')
+
+  await switchView('playlist_remote')
+  expect(playlistsHook.mock.lastCall?.[0]).toMatchObject({ songSource: 'remote', excludeLabels: 'none' })
+  await act(async () => { fireEvent.tap(getByTestId('library-hidden-toggle')) })
+  expect(playlistsHook.mock.lastCall?.[0].excludeLabels).toBeUndefined()
+  await switchView('artist')
+  await switchView('all')
+  expect(songsHook.mock.lastCall?.[0].excludePlaylistLabels).toBe('none')
+  await act(async () => { fireEvent.tap(getByTestId('library-hidden-toggle')) })
+  expect(songsHook.mock.lastCall?.[0].excludePlaylistLabels).toBeUndefined()
+})
 
 test('all 18 views visible → 18 pills in 3 groups (2 dividers), defaulting to the flat "all" list', async () => {
   const { queryAllByTestId } = await renderPage()
@@ -214,6 +277,7 @@ test('every view hidden → the keep-one-visible empty state', async () => {
 
   expect(queryByText('Keep at least one view visible')).toBeInTheDocument()
   expect(queryAllByTestId(/^library-view-pill-/)).toHaveLength(0)
+  expect(queryAllByTestId('library-hidden-toggle')).toHaveLength(0)
 })
 
 test('tapping a pill navigates to /library with that view', async () => {
