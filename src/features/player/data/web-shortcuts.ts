@@ -4,7 +4,7 @@ import { getSongloftStorage } from '../../../core/storage/index.js'
 import { configurePlaybackKeys, hasPlaybackKeys, subscribePlaybackKeys, type PlaybackKeyAction, type PlaybackKeyState } from '../../../native/web-playback-keys.js'
 import { getBackStackDepth, subscribeBackStack } from '../../../shared/nav/back-stack.js'
 import { useAuthStore } from '../../auth/store/index.js'
-import { hasNextForMode } from '../domain/play-mode.js'
+import { hasNext } from '../store/derive.js'
 import { usePlayerStore } from '../store/player-store.js'
 
 export const PREF_WEB_SHORTCUTS = 'web_playback_shortcuts'
@@ -36,7 +36,7 @@ export function currentPlaybackKeyState(): PlaybackKeyState {
     enabled: webShortcuts.getState().enabled,
     blocked: getBackStackDepth() > 0,
     canPlay,
-    canNext: canPlay && hasNextForMode(player.playMode, player.currentIndex, player.playlist.length),
+    canNext: canPlay && hasNext(player),
     // Previous can restart the current track even without a previous item.
     canPrev: canPlay,
     volume: player.volume,

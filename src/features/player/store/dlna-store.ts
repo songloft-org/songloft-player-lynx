@@ -20,6 +20,7 @@ interface DlnaSession {
 
 let pauseLocal: () => Promise<void> = async () => { }
 let onCompleted: () => void = () => { }
+let onPlayed: (song: Song) => void = () => { }
 let generation = 0
 let queue: Promise<unknown> = Promise.resolve()
 let pollTimer: ReturnType<typeof setTimeout> | null = null
@@ -27,9 +28,10 @@ let sawPlaying = false
 let pendingDevice: DlnaDevice | null = null
 
 /** Inject the local player without a circular store import. */
-export function configureDlnaPlayer(callbacks: { pauseLocal(): Promise<void>; onCompleted(): void }): void {
+export function configureDlnaPlayer(callbacks: { pauseLocal(): Promise<void>; onCompleted(): void; onPlayed(song: Song): void }): void {
   pauseLocal = callbacks.pauseLocal
   onCompleted = callbacks.onCompleted
+  onPlayed = callbacks.onPlayed
 }
 
 function serialized<T>(action: () => Promise<T>): Promise<T> {
@@ -101,6 +103,7 @@ export const useDlnaStore = create<DlnaSession>((set, get) => {
           activeDevice: device, isPlaying: true, isBusy: false, positionMs: 0,
           durationMs: Math.max(0, Math.round(song.duration * 1000)), error: null
         })
+        onPlayed(song)
       })
     } catch (error) {
       if (gen === generation) set({ isBusy: false, error: error instanceof Error ? error.message : String(error) })

@@ -22,6 +22,10 @@ export interface PlayerData {
   /** Track duration in ms. */
   duration: number
   playMode: PlayMode
+  /** Session navigation snapshot, refreshed when the queue or playback changes. */
+  hasPriorityNext?: boolean
+  hasHistoryPrevious?: boolean
+  nextQueueIndex?: number | null
   isBuffering: boolean
   showFullPlayer: boolean
   showPlaylistDrawer: boolean
@@ -59,10 +63,11 @@ export function hasSong(s: PlayerData): boolean {
 }
 
 export function hasNext(s: PlayerData): boolean {
-  return hasNextForMode(s.playMode, s.currentIndex, s.playlist.length)
+  return s.hasPriorityNext === true || hasNextForMode(s.playMode, s.currentIndex, s.playlist.length)
 }
 
 export function hasPrev(s: PlayerData): boolean {
+  if (s.playMode === 'random') return s.hasHistoryPrevious === true
   return hasPrevForMode(s.playMode, s.currentIndex, s.playlist.length)
 }
 
@@ -77,9 +82,10 @@ export function isMuted(s: PlayerData): boolean {
   return s.volume === 0
 }
 
-/** The next song in the queue (order-mode preview), or `undefined`. */
+/** The actual next selection, including manual priority and random history. */
 export function nextSongOf(s: PlayerData): Song | undefined {
   if (!hasNext(s) || s.playlist.length === 0) return undefined
-  const nextIndex = (s.currentIndex + 1) % s.playlist.length
+  const nextIndex = s.nextQueueIndex === undefined ? (s.currentIndex + 1) % s.playlist.length : s.nextQueueIndex
+  if (nextIndex == null) return undefined
   return s.playlist[nextIndex]
 }

@@ -209,21 +209,21 @@ const keysOf = (
   options?: Parameters<typeof buildSongMenuItems>[2],
 ) => buildSongMenuItems((key) => key, row ?? null, options).map((item) => item.key)
 
-test('a narrow row (or no row context) keeps all six menu items', () => {
-  expect(keysOf(null)).toEqual(['play', 'info', 'edit', 'add', 'manageTags', 'delete'])
-  expect(keysOf({ isWide: false })).toEqual(['play', 'info', 'edit', 'add', 'manageTags', 'delete'])
+test('a narrow row (or no row context) keeps all seven menu items', () => {
+  expect(keysOf(null)).toEqual(['play', 'playNext', 'info', 'edit', 'add', 'manageTags', 'delete'])
+  expect(keysOf({ isWide: false })).toEqual(['play', 'playNext', 'info', 'edit', 'add', 'manageTags', 'delete'])
 })
 
 test('a wide row prunes only the add-to-playlist item (the sole row-tail shortcut)', () => {
   // Wide rows now show only "add to playlist" as a row-tail shortcut.
   // Info and delete always stay in the ... menu regardless of viewport width.
-  expect(keysOf({ isWide: true })).toEqual(['play', 'info', 'edit', 'manageTags', 'delete'])
+  expect(keysOf({ isWide: true })).toEqual(['play', 'playNext', 'info', 'edit', 'manageTags', 'delete'])
 })
 
 test('every wide row keeps info and delete in the menu (there is no delete shortcut concept)', () => {
   // The deleteShortcut field no longer exists. All wide rows have exactly one
   // shortcut (add-to-playlist), so the menu always carries info and delete.
-  expect(keysOf({ isWide: true })).toEqual(['play', 'info', 'edit', 'manageTags', 'delete'])
+  expect(keysOf({ isWide: true })).toEqual(['play', 'playNext', 'info', 'edit', 'manageTags', 'delete'])
 })
 
 /*
@@ -235,9 +235,9 @@ test('every wide row keeps info and delete in the menu (there is no delete short
  */
 test('watch MV sits right after play, on either row shape', () => {
   expect(keysOf(null, { canWatchVideo: true }))
-    .toEqual(['play', 'video', 'info', 'edit', 'add', 'manageTags', 'delete'])
+    .toEqual(['play', 'video', 'playNext', 'info', 'edit', 'add', 'manageTags', 'delete'])
   expect(keysOf({ isWide: true }, { canWatchVideo: true }))
-    .toEqual(['play', 'video', 'info', 'edit', 'manageTags', 'delete'])
+    .toEqual(['play', 'video', 'playNext', 'info', 'edit', 'manageTags', 'delete'])
 })
 
 test('no video item unless the caller says the picture can be shown', () => {

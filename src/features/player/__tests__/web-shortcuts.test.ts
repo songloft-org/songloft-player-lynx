@@ -65,6 +65,13 @@ test('disabled, unauthenticated, buffering and active back-consuming layers reje
   await performPlaybackKey('toggle');expect(toggle).toHaveBeenCalledOnce()
 })
 
+test('next shortcut remains available at the queue end when manual priority is pending', async () => {
+  usePlayerStore.setState({ currentIndex: 1, hasPriorityNext: true })
+  expect(currentPlaybackKeyState().canNext).toBe(true)
+  await performPlaybackKey('next')
+  expect(next).toHaveBeenCalledOnce()
+})
+
 test('initialization hydrates disabled preference, deduplicates progress sync and disposes late events', async () => {
   await storage.prefs.set(PREF_WEB_SHORTCUTS, 'false')
   stop = await initializeWebShortcuts()

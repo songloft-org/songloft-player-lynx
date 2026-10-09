@@ -67,7 +67,7 @@ export function PlaylistDrawer() {
               <view
                 className='drawer__row-meta'
                 bindtap={() => {
-                  void usePlayerStore.getState().playPlaylist(playlist, index)
+                  void usePlayerStore.getState().playQueueIndex(index)
                   usePlayerStore.getState().closePlaylistDrawer()
                 }}
               >

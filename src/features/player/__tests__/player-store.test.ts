@@ -101,6 +101,29 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
+test('clearing during auto-resume cannot revive old playback or history', async () => {
+  setCachedAccessToken('restore-test-token')
+  playback.saved = { playlist: [{ ...song(1, 60), url: '/api/v1/songs/1/play' }], currentIndex: 0, positionMs: 5000 }
+  prefs.autoResume = true
+  const restoring = restorePlaybackState()
+  usePlayerStore.getState().clearPlaylist()
+  await restoring
+  expect(usePlayerStore.getState().playlist).toEqual([])
+  expect(usePlayerStore.getState().hasHistoryPrevious).toBe(false)
+  expect(usePlayerStore.getState().isPlaying).toBe(false)
+})
+
+test('restored but unplayed selection is absent from random playback history', async () => {
+  setCachedAccessToken('restore-test-token')
+  playback.saved = { playlist: [song(1, 60), song(2, 60)], currentIndex: 0, positionMs: 5000 }
+  await restorePlaybackState()
+  usePlayerStore.getState().setPlayMode('random')
+  await usePlayerStore.getState().playNext()
+  await usePlayerStore.getState().playPrev()
+  expect(usePlayerStore.getState().currentSong?.id).toBe(2)
+  expect(usePlayerStore.getState().hasHistoryPrevious).toBe(false)
+})
+
 describe('audio-track selection', () => {
   afterEach(async () => {
     vi.restoreAllMocks()

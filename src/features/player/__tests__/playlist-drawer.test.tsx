@@ -55,7 +55,7 @@ function defaultState() {
 
 let state = defaultState()
 
-const playPlaylist = vi.fn()
+const playQueueIndex = vi.fn()
 const removeFromPlaylist = vi.fn()
 const closePlaylistDrawer = vi.fn()
 
@@ -65,7 +65,7 @@ vi.mock('../store/index.js', () => {
   }
   usePlayerStore.getState = () => ({
     ...state,
-    playPlaylist,
+    playQueueIndex,
     removeFromPlaylist,
     closePlaylistDrawer,
   })
@@ -135,7 +135,7 @@ test('tapping a row plays that song and closes the drawer', async () => {
   await act(async () => {
     await Promise.resolve()
   })
-  expect(playPlaylist).toHaveBeenCalledWith(state.playlist, 2)
+  expect(playQueueIndex).toHaveBeenCalledWith(2)
   expect(closePlaylistDrawer).toHaveBeenCalledTimes(1)
 })
 

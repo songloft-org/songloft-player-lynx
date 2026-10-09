@@ -17,7 +17,7 @@ export interface SongMenuOptions {
 /**
  * The song menu's items, pruned by the opening row's viewport snapshot.
  *
- * Narrow rows render no shortcut buttons, so the menu carries all six items.
+ * Narrow rows render no shortcut buttons, so the menu carries all seven items.
  * Wide rows flatten only "add-to-playlist" into a row-tail button — the
  * highest-frequency action — and the menu prunes just that one. Info, delete,
  * and the rest always appear in the menu regardless of viewport width.
@@ -41,6 +41,7 @@ export function buildSongMenuItems(
     ...(options.canWatchVideo
       ? [{ key: 'video', label: t('songMenu.watchVideo'), icon: 'video' as const }]
       : []),
+    { key: 'playNext', label: t('songMenu.playNext'), icon: 'skip-next' },
     { key: 'info', label: t('songMenu.info'), icon: 'info' },
     { key: 'edit', label: t('songMenu.edit'), icon: 'brush' },
     ...(wide ? [] : [{ key: 'add', label: t('songMenu.addToPlaylist'), icon: 'music' as const }]),

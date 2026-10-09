@@ -443,6 +443,8 @@ function mockPlayerState(over: Partial<PlayerState> = {}): PlayerState {
     speed: 1,
     videoScaleMode: 'fit',
     playSong: asyncNoop,
+    playSongNext: asyncNoop,
+    playQueueIndex: asyncNoop,
     playPlaylist: asyncNoop,
     playAll: asyncNoop,
     togglePlay: asyncNoop,

@@ -1,4 +1,5 @@
 import type { Song } from '../../../models/song.js'
+import { cachedSongIdentity } from './offline-cache.js'
 
 /**
  * Pure play-queue mutations, ported (trimmed) from the Flutter `PlayQueue`
@@ -31,6 +32,26 @@ export interface RemoveResult extends QueueSnapshot {
 
 function songAt(playlist: Song[], index: number): Song | undefined {
   return index >= 0 && index < playlist.length ? playlist[index] : undefined
+}
+
+/** Cached variants must keep their exact owner/file identity in a queue. */
+export function queueSongKey(song: Song): string {
+  const cached = cachedSongIdentity(song)
+  return cached ? JSON.stringify([cached.namespace, cached.key]) : `${song.id}:${song.type}`
+}
+
+/** Move an existing occurrence or insert a new one; never move the playing occurrence. */
+export function scheduleNext(playlist: Song[], currentIndex: number, song: Song): QueueSnapshot & { indices: Map<number, number> } {
+  const entries = playlist.map((value, index) => ({ song: value, index: index as number | undefined }))
+  const key = queueSongKey(song)
+  const existing = entries.findIndex((value, index) => index !== currentIndex && queueSongKey(value.song) === key)
+  const entry = existing >= 0 ? entries.splice(existing, 1)[0] : { song, index: undefined }
+  const adjustedCurrent = existing >= 0 && existing < currentIndex ? currentIndex - 1 : currentIndex
+  entries.splice(adjustedCurrent + 1, 0, entry)
+  const indices = new Map<number, number>()
+  entries.forEach((value, index) => { if (value.index != null) indices.set(value.index, index) })
+  const list = entries.map(value => value.song)
+  return { playlist: list, currentIndex: adjustedCurrent, currentSong: songAt(list, adjustedCurrent), indices }
 }
 
 /** Remove `removeIndex`, keeping the current track pinned where possible. */

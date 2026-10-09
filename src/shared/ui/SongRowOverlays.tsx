@@ -62,11 +62,11 @@ export function SongRowOverlays() {
   const closeEdit = useSongRowOverlays((s) => s.closeEdit)
 
   /*
-   * Five actions on a narrow row (the Flutter build's song-menu set plus "song
-   * info"), pruned on a wide one — see `buildSongMenuItems` above. Play and edit
-   * always stay: neither has a row-tail button, and on a narrow row the menu is
+   * Song actions on a narrow row, pruned on a wide one — see
+   * `buildSongMenuItems` above. Play, play-next and edit
+   * always stay: none has a row-tail button, and on a narrow row the menu is
    * the info dialog's only entry (the detail page is otherwise reachable only
-   * from the player menu and the wide-screen row icon). Info sits between play
+   * from the player menu and the wide-screen row icon). Info sits between play-next
    * and edit — read-only peek before any destructive "edit" muscle memory
    * lands.
    */
@@ -108,6 +108,10 @@ export function SongRowOverlays() {
     switch (key) {
       case 'play':
         void usePlayerStore.getState().playSong(song)
+        return
+      case 'playNext':
+        void usePlayerStore.getState().playSongNext(song)
+          .catch(error => toast.error(String(error instanceof Error ? error.message : error)))
         return
       case 'video':
         void watchVideo(song)

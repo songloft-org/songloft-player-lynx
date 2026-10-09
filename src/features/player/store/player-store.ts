@@ -27,9 +27,10 @@ import { cancelSourceLoad, loadAudioSource, SourceLoadCancelled } from '../../..
 import { getFavoriteState, toggleFavoriteNonReact } from '../../library/data/favorites.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
 import { getSongsApi } from '../../library/api/index.js'
-import { cyclePlayMode, resolveNext, resolvePrev, resolveStartIndex, type PlayMode } from '../domain/play-mode.js'
+import { cyclePlayMode, resolveStartIndex, type PlayMode } from '../domain/play-mode.js'
 import { playlistIdOf, type PlaybackContext } from '../domain/playback-context.js'
-import { removeAt } from '../domain/queue.js'
+import { queueSongKey, removeAt, scheduleNext } from '../domain/queue.js'
+import { QueueNavigation } from '../domain/queue-navigation.js'
 import { QueueLoader, type FetchPage } from '../domain/queue-loader.js'
 import {
   sleepTimerAfterSongs,
@@ -64,6 +65,10 @@ import { useAppSessionStore } from '../../../store/app-session.js'
 export interface PlayerState extends PlayerData {
   // ── playback ──
   playSong: (song: Song, queue?: Song[]) => Promise<void>
+  /** Schedule once after current, without replacing its queue or context. */
+  playSongNext: (song: Song) => Promise<void>
+  /** Select from the current queue, preserving context and background fills. */
+  playQueueIndex: (index: number) => Promise<void>
   playPlaylist: (
     songs: Song[],
     startIndex?: number,
@@ -173,10 +178,16 @@ export interface PlayerState extends PlayerData {
 
 const audio = getAudio()
 let _loadGeneration = 0
+let _awaitingPlayback: { song: Song; generation: number } | null = null
+// A source retry/switch can happen before the first playing event. Carry its
+// pending report across that reload, then consume it once playback starts.
+let _playEventPending = false
 let _trackPlayIntent: boolean | null = null
 
 function invalidateSourceLoad(): number {
   ++_loadGeneration
+  _awaitingPlayback = null
+  _playEventPending = false
   cancelSourceLoad(audio)
   _trackPlayIntent = null
   return _loadGeneration
@@ -189,6 +200,22 @@ function invalidateSourceLoad(): number {
  * cancels any in-flight fill into a queue the user has since replaced.
  */
 const _queueLoader = new QueueLoader()
+const _navigation = new QueueNavigation()
+
+function syncNavigation(): void {
+  const s = usePlayerStore.getState()
+  usePlayerStore.setState({
+    hasPriorityNext: _navigation.hasPriority,
+    hasHistoryPrevious: _navigation.hasPrevious(s.currentIndex),
+    nextQueueIndex: _navigation.peekNext(s.currentIndex, s.playlist.length),
+  })
+  _prefetchedForIndex = null
+}
+
+function markCurrentPlayed(): void {
+  _navigation.markPlayed(usePlayerStore.getState().currentIndex)
+  syncNavigation()
+}
 
 /** Countdown interval handle for `duration` sleep timers (module-scoped). */
 let sleepIntervalHandle: number | null = null
@@ -203,6 +230,9 @@ const INITIAL: PlayerData = {
   currentTime: 0,
   duration: 0,
   playMode: 'order',
+  hasPriorityNext: false,
+  hasHistoryPrevious: false,
+  nextQueueIndex: null,
   isBuffering: false,
   showFullPlayer: false,
   showPlaylistDrawer: false,
@@ -441,6 +471,7 @@ const QUEUE_WINDOW = 5
  * before the engine looks it up.
  */
 async function syncQueueWindow(playlist: Song[], index: number): Promise<void> {
+  const generation = _loadGeneration
   const start = Math.max(0, index - QUEUE_WINDOW)
   const end = Math.min(playlist.length, index + QUEUE_WINDOW + 1)
   const window = playlist.slice(start, end)
@@ -450,6 +481,8 @@ async function syncQueueWindow(playlist: Song[], index: number): Promise<void> {
       catch (error) { if (cachedSongIdentity(s)) return null; throw error }
     }),
   )
+  const current = usePlayerStore.getState()
+  if (generation !== _loadGeneration || current.playlist !== playlist || current.currentIndex !== index) return
   const available = items.filter((item): item is AudioItem => item !== null)
   void audio.setQueue(available, available.findIndex(item => item.id === playlist[index]?.id))
 }
@@ -565,7 +598,9 @@ function scheduleRetry(song: Song, { positionMs, autoplay }: { positionMs: numbe
     if (_consecutiveSkips > MAX_CONSECUTIVE_SKIPS) return
     // Find the next playable index via the same logic as `playNext`.
     const s = usePlayerStore.getState()
-    const nextIdx = resolveNext(s.playMode, s.currentIndex, s.playlist.length)
+    _navigation.markFailed(s.currentIndex)
+    syncNavigation()
+    const nextIdx = _navigation.peekNext(s.currentIndex, s.playlist.length)
     if (nextIdx != null && nextIdx !== s.currentIndex) {
       void usePlayerStore.getState().playNext()
     }
@@ -590,10 +625,12 @@ function scheduleRetry(song: Song, { positionMs, autoplay }: { positionMs: numbe
       if (usePlayerStore.getState().audioTrack != null) {
         await syncQueueWindow(usePlayerStore.getState().playlist, usePlayerStore.getState().currentIndex)
         if (generation !== _loadGeneration) return
+        _awaitingPlayback = { song, generation }
         await loadAudioSource(audio, { url: retrySource.url, load: { ...load, initialPositionMs: positionMs, autoplay } })
       } else {
         await audio.load(retrySource.url, load)
         if (generation !== _loadGeneration) return
+        _awaitingPlayback = { song, generation }
         if (positionMs > 0) await audio.seek(positionMs)
         if (autoplay) await audio.play()
       }
@@ -612,65 +649,73 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   async function playAtIndex(index: number): Promise<void> {
     const song = get().playlist[index]
     if (!song) return
-    if (!cachedSongIdentity(song) && get().playlist.some(value => cachedSongIdentity(value) !== null) && !getCachedAccessToken()) {
-      set({ errorMessage: 'cache_file_unavailable', isPlaying: false, isBuffering: false })
-      await audio.stop()
-      throw new Error('cache_identity_unavailable')
-    }
-    if (cachedSongIdentity(song) && useDlnaStore.getState().activeDevice) throw new Error('cache_cast_unavailable')
     const generation = invalidateSourceLoad()
     cancelRetry()
-    set({
-      currentIndex: index,
-      currentSong: song,
-      currentTime: 0,
-      duration: stateDurationMsOf(song),
-      errorMessage: undefined,
-      audioTrack: null,
-      audioTrackPending: undefined,
-      isAudioTrackSwitching: false,
-      audioTrackError: undefined,
-    })
-    // Lyrics are loaded by the currentSong subscription below, not here: every
-    // path that swaps the song flows through it (see the subscription's notes).
-    if (useDlnaStore.getState().activeDevice) {
-      await useDlnaStore.getState().castSong(song)
-      void getSongsApi().recordPlayed(song.id, get().playbackContext).catch(() => {})
-      return
-    }
-    let source: PlaybackSource
-    try { source = await resolvePlaybackSource(song) }
-    catch (error) {
-      if (generation === _loadGeneration && cachedSongIdentity(song)) {
-        await audio.stop()
+    try {
+      if (!cachedSongIdentity(song) && get().playlist.some(value => cachedSongIdentity(value) !== null) && !getCachedAccessToken()) {
         set({ errorMessage: 'cache_file_unavailable', isPlaying: false, isBuffering: false })
+        await audio.stop()
+        throw new Error('cache_identity_unavailable')
+      }
+      if (cachedSongIdentity(song) && useDlnaStore.getState().activeDevice) throw new Error('cache_cast_unavailable')
+      set({
+        currentIndex: index,
+        currentSong: song,
+        currentTime: 0,
+        duration: stateDurationMsOf(song),
+        errorMessage: undefined,
+        audioTrack: null,
+        audioTrackPending: undefined,
+        isAudioTrackSwitching: false,
+        audioTrackError: undefined,
+      })
+      _playEventPending = !cachedSongIdentity(song)
+      syncNavigation()
+      // Lyrics are loaded by the currentSong subscription below, not here: every
+      // path that swaps the song flows through it (see the subscription's notes).
+      if (useDlnaStore.getState().activeDevice) {
+        await useDlnaStore.getState().castSong(song)
+        return
+      }
+      let source: PlaybackSource
+      try { source = await resolvePlaybackSource(song) }
+      catch (error) {
+        if (generation === _loadGeneration && cachedSongIdentity(song)) {
+          await audio.stop()
+          set({ errorMessage: 'cache_file_unavailable', isPlaying: false, isBuffering: false })
+        }
+        throw error
+      }
+      if (generation !== _loadGeneration) return
+      // Refresh the native media-notification window BEFORE loading so the new
+      // song's metadata is guaranteed present in the engine's `metadataByUrl`
+      // map by the time it looks it up. Otherwise remote next/previous outside
+      // the last-pushed window (five songs on either side of the previous
+      // current index) leaves the notification stuck on the outgoing song's
+      // title/artwork — the "点下一曲偶尔不及时更新" symptom.
+      await syncQueueWindow(get().playlist, get().currentIndex)
+      if (generation !== _loadGeneration) return
+      await audio.load(source.url, {
+        durationMs: durationMsOf(song),
+        hls: source.hls,
+      })
+      if (generation !== _loadGeneration) return
+      _loadedSongId = song.id
+      _loadedSourceKind = source.cached ? 'cache' : 'stream'
+      _awaitingPlayback = { song, generation }
+      await audio.play()
+      if (generation !== _loadGeneration) return
+      if (cachedSongIdentity(song)) void audio.setFavorite(false)
+      else syncFavoriteToNative(song.id)
+    } catch (error) {
+      if (generation === _loadGeneration) {
+        _awaitingPlayback = null
+        const failedIndex = get().playlist.indexOf(song)
+        if (failedIndex >= 0) _navigation.markFailed(failedIndex)
+        syncNavigation()
       }
       throw error
     }
-    if (generation !== _loadGeneration) return
-    // Refresh the native media-notification window BEFORE loading so the new
-    // song's metadata is guaranteed present in the engine's `metadataByUrl`
-    // map by the time it looks it up. Otherwise remote next/previous outside
-    // the last-pushed window (five songs on either side of the previous
-    // current index) leaves the notification stuck on the outgoing song's
-    // title/artwork — the "点下一曲偶尔不及时更新" symptom.
-    await syncQueueWindow(get().playlist, index)
-    if (generation !== _loadGeneration) return
-    await audio.load(source.url, {
-      durationMs: durationMsOf(song),
-      hls: source.hls,
-    })
-    if (generation !== _loadGeneration) return
-    _loadedSongId = song.id
-    _loadedSourceKind = source.cached ? 'cache' : 'stream'
-    await audio.play()
-    if (cachedSongIdentity(song)) void audio.setFavorite(false)
-    else syncFavoriteToNative(song.id)
-    // Report the play event (fire-and-forget). The context decides whether it
-    // also lands in play history: without one the backend just broadcasts the
-    // event to plugins, which is right for playback that has no stable context.
-    // There is no "library" bucket to fall back on — that value is rejected.
-    if (!cachedSongIdentity(song)) void getSongsApi().recordPlayed(song.id, get().playbackContext).catch(() => {})
   }
 
   function stopSleepInterval(): void {
@@ -707,7 +752,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       return
     }
 
-    const nextIdx = resolveNext(s.playMode, s.currentIndex, s.playlist.length)
+    const nextIdx = _navigation.next(s.currentIndex, s.playlist.length)
     if (nextIdx == null) {
       // An ended native engine will not restart from its final position on play().
       // The next user play must reload this song at the beginning.
@@ -732,13 +777,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       if (queue && queue.length > 0) {
         list = queue
       } else {
-        const existing = current.playlist.findIndex((s) => s.id === song.id)
+        const existing = current.playlist.findIndex((s) => queueSongKey(s) === queueSongKey(song))
         list = existing >= 0 ? current.playlist : [...current.playlist, song]
       }
       const index = Math.max(
         0,
-        list.findIndex((s) => s.id === song.id),
+        list.findIndex((s) => queueSongKey(s) === queueSongKey(song)),
       )
+      if (queue && queue.length > 0) _navigation.reset(current.playMode)
       // Clears the playback context: a bare single song was not started from a
       // playlist or a facet, so keeping the previous one would record it into
       // whatever the user last played from. A consequence worth keeping in mind
@@ -755,6 +801,24 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       await playAtIndex(index)
     },
 
+    playSongNext: async (song) => {
+      const s = get()
+      if (s.playlist.length === 0) {
+        await get().playPlaylist([song])
+        return
+      }
+      const result = scheduleNext(s.playlist, s.currentIndex, song)
+      _navigation.remap(result.indices)
+      _navigation.prioritize(result.currentIndex + 1)
+      set({ playlist: result.playlist, currentIndex: result.currentIndex, currentSong: result.currentSong })
+      syncNavigation()
+      void syncQueueWindow(result.playlist, result.currentIndex)
+    },
+
+    playQueueIndex: async (index) => {
+      await playAtIndex(index)
+    },
+
     playPlaylist: async (songs, startIndex = 0, context) => {
       if (songs.length === 0) return
       // Re-base the background-load generation before any await: callers
@@ -762,6 +826,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       // fill (see `loadRemainingSongsForCurrentPlaylist`), and an in-flight
       // fill from previous playback must die here.
       _queueLoader.invalidate()
+      _navigation.reset(get().playMode)
       const index = Math.min(Math.max(0, startIndex), songs.length - 1)
       const playlistId = playlistIdOf(context)
       set({
@@ -829,7 +894,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     playNext: async () => {
       const s = get()
       if (s.playlist.length === 0) return
-      const idx = resolveNext(s.playMode, s.currentIndex, s.playlist.length)
+      const idx = _navigation.next(s.currentIndex, s.playlist.length)
       if (idx == null) return
       await playAtIndex(idx)
     },
@@ -837,12 +902,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     playPrev: async () => {
       const s = get()
       if (s.playlist.length === 0) return
-      // > 3s into the track → restart the current track (matches Flutter).
-      if (s.currentTime > 3_000) {
+      // Non-random playback keeps the > 3s restart behavior.
+      if (s.playMode !== 'random' && s.currentTime > 3_000) {
         await get().seek(0)
         return
       }
-      const idx = resolvePrev(s.playMode, s.currentIndex, s.playlist.length)
+      const idx = _navigation.previous(s.currentIndex, s.playlist.length)
       if (idx == null || idx === s.currentIndex) {
         await get().seek(0)
         return
@@ -886,8 +951,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       }
     },
 
-    setPlayMode: (mode) => set({ playMode: mode }),
-    cyclePlayMode: () => set((s) => ({ playMode: cyclePlayMode(s.playMode) })),
+    setPlayMode: (mode) => {
+      if (get().playMode === mode) return
+      const lastPlayed = _navigation.lastPlayedIndex
+      _navigation.reset(mode, true)
+      set({ playMode: mode })
+      if (lastPlayed >= 0) _navigation.markPlayed(lastPlayed)
+      syncNavigation()
+    },
+    cyclePlayMode: () => get().setPlayMode(cyclePlayMode(get().playMode)),
     setSpeed: async (rate) => {
       const clamped = Math.min(3, Math.max(0.25, rate))
       set({ speed: clamped })
@@ -917,6 +989,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       if (fresh.length === 0) return
       const list = [...current, ...fresh]
       set({ playlist: list })
+      // Append keeps all existing indices stable; discard only the random preview.
+      _navigation.remap(new Map(current.map((_, index) => [index, index])))
+      syncNavigation()
       void syncQueueWindow(list, get().currentIndex)
     },
 
@@ -940,24 +1015,31 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     insertNextInQueue: (songs) => {
       if (songs.length === 0) return
-      const s = get()
-      const insertAt = s.currentIndex + 1
-      const list = [...s.playlist.slice(0, insertAt), ...songs, ...s.playlist.slice(insertAt)]
-      set({ playlist: list })
-      void syncQueueWindow(list, s.currentIndex)
+      if (get().playlist.length === 0) { void get().playPlaylist(songs); return }
+      for (const song of [...songs].reverse()) void get().playSongNext(song)
     },
 
     removeFromPlaylist: async (index) => {
       const s = get()
+      if (!Number.isInteger(index) || index < 0 || index >= s.playlist.length) return
       const result = removeAt(s.playlist, s.currentIndex, index)
+      const indices = new Map<number, number>()
+      s.playlist.forEach((_, oldIndex) => {
+        if (oldIndex !== index) indices.set(oldIndex, oldIndex > index ? oldIndex - 1 : oldIndex)
+      })
+      _navigation.remap(indices)
       set({
         playlist: result.playlist,
         currentIndex: result.currentIndex,
         currentSong: result.currentSong,
       })
+      syncNavigation()
       if (result.shouldStop) {
-        invalidateSourceLoad()
+        _navigation.reset(get().playMode)
+        const generation = invalidateSourceLoad()
+        cancelRetry()
         await audio.stop()
+        if (generation !== _loadGeneration) return
         set({ isPlaying: false, currentTime: 0, duration: 0, audioTrack: null,
           audioTrackPending: undefined, isAudioTrackSwitching: false, audioTrackError: undefined,
           showAudioTrackSheet: false })
@@ -965,13 +1047,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         // above, and the currentSong subscription resets the lyric store.
         return
       }
-      await syncQueueWindow(result.playlist, result.currentIndex)
+      // Start the replacement synchronously so playAtIndex owns the generation
+      // before any metadata await; a newer queue must supersede this removal.
       if (result.removedCurrent) await playAtIndex(result.currentIndex)
+      else await syncQueueWindow(result.playlist, result.currentIndex)
     },
 
     clearPlaylist: () => {
       invalidateSourceLoad()
       _queueLoader.invalidate()
+      _navigation.reset(get().playMode)
+      cancelRetry()
       void audio.stop()
       set({
         playlist: [],
@@ -980,6 +1066,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         isPlaying: false,
         currentTime: 0,
         duration: 0,
+        hasPriorityNext: false,
+        hasHistoryPrevious: false,
+        nextQueueIndex: null,
         audioTrack: null,
         audioTrackPending: undefined,
         isAudioTrackSwitching: false,
@@ -1004,7 +1093,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       if (!state.audioTrackError && !state.isAudioTrackSwitching && (state.audioTrack ?? null) === trackIndex) return
       const positionMs = state.currentTime
       const intent = _trackPlayIntent ?? state.isPlaying
+      const pendingReport = _playEventPending
       const generation = invalidateSourceLoad()
+      _playEventPending = pendingReport
       _trackPlayIntent = intent
       cancelRetry()
       set({ audioTrackPending: trackIndex, isAudioTrackSwitching: true, audioTrackError: undefined })
@@ -1017,6 +1108,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         if (generation !== _loadGeneration) return
         _loadedSongId = song.id
         _loadedSourceKind = source.cached ? 'cache' : 'stream'
+        _awaitingPlayback = { song, generation }
         const restoredPositionMs = await loadAudioSource(audio, {
           url: source.url,
           load: { durationMs: durationMsOf(song), hls: source.hls,
@@ -1035,6 +1127,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         // can recover the song, and leave the committed selection unchanged.
         _loadedSongId = null
         _trackPlayIntent = null
+        _awaitingPlayback = null
+        _navigation.markFailed(get().currentIndex)
+        syncNavigation()
         set({ audioTrackPending: undefined, isAudioTrackSwitching: false, isBuffering: false,
           audioTrackError: error instanceof Error ? error.message : String(error) })
       }
@@ -1095,6 +1190,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       // Cancel in-flight background fills too, so a reset (used between tests)
       // cannot leave a stale load appending into the next test's queue.
       _queueLoader.invalidate()
+      _navigation.reset(INITIAL.playMode)
       void audio.stop()
       _videoSourceSongId = null
       _loadedSongId = null
@@ -1129,7 +1225,7 @@ audio.on('progress', (e) => {
     _prefetchedForIndex !== s.currentIndex
   ) {
     _prefetchedForIndex = s.currentIndex
-    const nextIdx = resolveNext(s.playMode, s.currentIndex, s.playlist.length)
+    const nextIdx = _navigation.peekNext(s.currentIndex, s.playlist.length)
     if (nextIdx != null && s.playlist[nextIdx] && !cachedSongIdentity(s.playlist[nextIdx])) {
       const url = songUrl(s.playlist[nextIdx])
       if (url) {
@@ -1162,6 +1258,19 @@ audio.on('stateChanged', (e) => {
       break
     case 'playing':
       usePlayerStore.setState({ isPlaying: true, isBuffering: false })
+      // Native load/play promises acknowledge commands, not playback. Commit
+      // history only when the current source actually starts; retries do not
+      // duplicate the backend play event.
+      if (_awaitingPlayback?.generation === _loadGeneration &&
+        _awaitingPlayback.song === usePlayerStore.getState().currentSong) {
+        const started = _awaitingPlayback
+        _awaitingPlayback = null
+        markCurrentPlayed()
+        if (_playEventPending) {
+          _playEventPending = false
+          void getSongsApi().recordPlayed(started.song.id, usePlayerStore.getState().playbackContext).catch(() => {})
+        }
+      }
       break
     case 'paused':
       usePlayerStore.setState({ isPlaying: false })
@@ -1182,6 +1291,11 @@ audio.on('stateChanged', (e) => {
 audio.on('error', (e) => {
   if (useDlnaStore.getState().activeDevice) return
   const { currentSong, currentTime, isPlaying } = usePlayerStore.getState()
+  if (_awaitingPlayback?.generation === _loadGeneration) {
+    _awaitingPlayback = null
+    _navigation.markFailed(usePlayerStore.getState().currentIndex)
+    syncNavigation()
+  }
   if (usePlayerStore.getState().isAudioTrackSwitching) {
     usePlayerStore.setState({ isPlaying: false, isBuffering: false })
     return
@@ -1214,6 +1328,7 @@ audio.on('remoteCommand', (e) => {
       cancelRetry()
       invalidateSourceLoad()
       _queueLoader.invalidate()
+      _navigation.reset(usePlayerStore.getState().playMode)
       usePlayerStore.setState({
         currentSong: undefined,
         isPlaying: false,
@@ -1229,6 +1344,7 @@ audio.on('remoteCommand', (e) => {
         isAudioTrackSwitching: false,
         audioTrackError: undefined,
       })
+      syncNavigation()
       break
     case 'toggleFavorite': {
       const song = usePlayerStore.getState().currentSong
@@ -1256,12 +1372,19 @@ void audio.getVolume()
 
 configureDlnaPlayer({
   async pauseLocal() {
-    invalidateSourceLoad()
+    if (!useDlnaStore.getState().activeDevice) invalidateSourceLoad()
     usePlayerStore.setState({ audioTrackPending: undefined, isAudioTrackSwitching: false })
     cancelRetry()
     await audio.pause()
     _loadedSongId = null
     _loadedSourceKind = null
+  },
+  onPlayed(song) {
+    if (usePlayerStore.getState().currentSong === song) {
+      _playEventPending = false
+      markCurrentPlayed()
+      void getSongsApi().recordPlayed(song.id, usePlayerStore.getState().playbackContext).catch(() => {})
+    }
   },
   onCompleted() { usePlayerStore.getState()._onCompleted() },
 })
@@ -1273,6 +1396,8 @@ useAppSessionStore.subscribe((session, previous) => {
   const switching = usePlayerStore.getState().isAudioTrackSwitching
   invalidateSourceLoad()
   cancelRetry()
+  _navigation.reset(usePlayerStore.getState().playMode)
+  syncNavigation()
   if (switching) void audio.pause()
   usePlayerStore.setState({ audioTrack: null, audioTrackPending: undefined,
     isAudioTrackSwitching: false, audioTrackError: undefined, showAudioTrackSheet: false })
@@ -1439,9 +1564,11 @@ usePlayerStore.subscribe((state, prev) => {
 })
 
 export async function restorePlaybackState(): Promise<void> {
+  const restoreGeneration = _loadGeneration
   const [saved, speed, autoResume, videoScaleMode] = await Promise.all([
     loadPlaybackState(), readPlaybackSpeed(), readAutoResume(), readVideoScaleMode(),
   ])
+  if (restoreGeneration !== _loadGeneration) return
   if (speed !== 1) {
     usePlayerStore.setState({ speed })
     void audio.setSpeed(speed)
@@ -1464,6 +1591,9 @@ export async function restorePlaybackState(): Promise<void> {
     await clearSavedPlaybackState()
     return
   }
+  if (restoreGeneration !== _loadGeneration) return
+  const generation = invalidateSourceLoad()
+  _queueLoader.invalidate()
   usePlayerStore.setState({
     playlist: saved.playlist,
     currentIndex: saved.currentIndex,
@@ -1473,20 +1603,28 @@ export async function restorePlaybackState(): Promise<void> {
     playbackContext: saved.context,
     sourcePlaylistId: saved.sourcePlaylistId,
   })
+  _navigation.reset(usePlayerStore.getState().playMode)
+  syncNavigation()
   if (autoResume && (song.url || local)) {
     // Use the shared `toAudioItem`/`durationMsOf` rather than re-inlining the
     // mapping: this path used to carry its own copy, which silently omitted any
     // field added to the queue item (it missed `artworkUrl` on arrival).
     await syncQueueWindow(saved.playlist, saved.currentIndex)
+    if (generation !== _loadGeneration) return
     const restored = await resolvePlaybackSource(song)
+    if (generation !== _loadGeneration) return
     await audio.load(restored.url, { durationMs: durationMsOf(song), hls: restored.hls })
+    if (generation !== _loadGeneration) return
     // Record what the engine now holds: without this the first `togglePlay`
     // took the `playAtIndex` path and reloaded a media item the engine
     // already had (see the `_loadedSongId` note at `togglePlay`).
     _loadedSongId = song.id
     _loadedSourceKind = restored.cached ? 'cache' : 'stream'
+    _awaitingPlayback = { song, generation }
     await audio.seek(saved.positionMs)
+    if (generation !== _loadGeneration) return
     await audio.play()
+    if (generation !== _loadGeneration) return
   }
 }
 
@@ -1501,7 +1639,12 @@ export async function forgetCachedPlayback(identity: CacheIdentity | { namespace
   else {
     const playlist = state.playlist.filter(song => !matches(song))
     if (playlist.length === state.playlist.length) return
-    usePlayerStore.setState({ playlist, currentIndex: playlist.findIndex(song => song === state.currentSong) })
+    const indices = new Map<number, number>()
+    let index = 0
+    state.playlist.forEach((song, oldIndex) => { if (!matches(song)) indices.set(oldIndex, index++) })
+    _navigation.remap(indices)
+    usePlayerStore.setState({ playlist, currentIndex: indices.get(state.currentIndex) ?? -1 })
+    syncNavigation()
   }
   const next = usePlayerStore.getState()
   await savePlaybackState({ playlist: next.playlist, currentIndex: next.currentIndex, positionMs: next.currentTime, context: next.playbackContext })
