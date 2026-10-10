@@ -55,6 +55,17 @@ test('constructs the app router with no self/window/document (device shape)', ()
   expect(router.isServer).toBe(false)
 })
 
+test('the legacy tab configuration route replaces itself with the unified manager', () => {
+  const router = createAppRouter(['/settings/tab-config'])
+  let redirect: unknown
+  try {
+    router.routesByPath['/settings/tab-config'].options.beforeLoad?.({} as never)
+  } catch (error) {
+    redirect = error
+  }
+  expect(redirect).toMatchObject({ options: { to: '/settings/plugins', replace: true } })
+})
+
 test('survives the exact self.__TSR_ROUTER__ write path (self absent, document present)', () => {
   g.document = {}
   expect(typeof g.self).toBe('undefined')

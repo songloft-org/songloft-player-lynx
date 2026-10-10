@@ -29,7 +29,6 @@ import { LibraryOpsPage } from '../../library-ops/pages/LibraryOpsPage.js'
 import { PluginManagerPage } from '../../jsplugin/pages/PluginManagerPage.js'
 import { PluginRegistryPage } from '../../jsplugin/pages/PluginRegistryPage.js'
 import { GithubDiscoveryPage } from '../../jsplugin/pages/GithubDiscoveryPage.js'
-import { TabConfigPage } from '../../jsplugin/pages/TabConfigPage.js'
 import { AboutPage } from './AboutPage.js'
 import { releaseAllPluginFrames } from '../../jsplugin/domain/plugin-frame-release.js'
 import { AppearancePage } from './AppearancePage.js'
@@ -254,21 +253,12 @@ export function SettingsPage() {
               />
               <SettingsRow
                 icon='menu'
-                title={t('settings.plugins')}
+                title={t('jsplugin.managerTitle')}
                 subtitle={t('jsplugin.managerSubtitle')}
                 trailingIcon='chevron-right'
                 selected={isActive('plugins')}
                 onTap={() => goToSubPage('plugins')}
                 testId='settings-plugins'
-              />
-              <SettingsRow
-                icon='menu'
-                title={t('jsplugin.tabConfigTitle')}
-                subtitle={t('jsplugin.tabConfigSubtitle')}
-                trailingIcon='chevron-right'
-                selected={isActive('tab-config')}
-                onTap={() => goToSubPage('tab-config')}
-                testId='settings-tab-config'
               />
             </SettingsSection>
 
@@ -456,8 +446,6 @@ function SettingsDetailPane({
       return <PluginRegistryPage onBack={() => onOpenSubPage('plugins')} onOpenDiscovery={() => onOpenSubPage('github-discovery')} />
     case 'github-discovery':
       return <GithubDiscoveryPage onBack={() => onOpenSubPage('registry')} />
-    case 'tab-config':
-      return <TabConfigPage />
     case 'cache':
       return <CacheManagePage />
     case 'cache-tasks':

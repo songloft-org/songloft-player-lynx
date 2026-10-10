@@ -63,7 +63,7 @@ import { CreatePlaylistPage, EditPlaylistPage, PlaylistDetailPage } from './feat
 import { HomePage } from './features/home/index.js'
 import { AboutPage, AppearancePage, CacheManagePage, DataPage, DiagnosticsPage, LicensesPage, PlaybackPage, ProxySettingsPage, ServerEditPage, ServerListPage, SettingsPage, ThemeCatalogPage } from './features/settings/index.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
-import { PluginManagerPage, PluginRegistryPage, GithubDiscoveryPage, PluginWebViewPage, TabConfigPage } from './features/jsplugin/index.js'
+import { PluginManagerPage, PluginRegistryPage, GithubDiscoveryPage, PluginWebViewPage } from './features/jsplugin/index.js'
 import { DemoFramePage } from './features/jsplugin/pages/DemoFramePage.js'
 import { PlayerPage } from './routes/PlayerPage.js'
 import { EqualizerPage } from './features/player/pages/EqualizerPage.js'
@@ -415,11 +415,13 @@ const pluginWebViewRoute = createRoute({
   component: PluginWebViewPage,
 })
 
-/** `/settings/tab-config` — tab configuration page, inside the shell (batch 18). */
+/** The legacy route opens the unified navigation and plugin manager. */
 const tabConfigRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings/tab-config',
-  component: TabConfigPage,
+  beforeLoad: () => {
+    throw redirect({ to: '/settings/plugins', replace: true })
+  },
 })
 
 /** `/demo-frame` — Phase 0 验证：<frame> 加载子 bundle (临时路由，验证后删除). */

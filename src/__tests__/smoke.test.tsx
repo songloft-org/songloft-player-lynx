@@ -149,7 +149,6 @@ vi.mock('../features/jsplugin/index.js', () => ({
   PluginRegistryPage: () => null,
   GithubDiscoveryPage: () => null,
   PluginWebViewPage: () => null,
-  TabConfigPage: () => null,
 }))
 
 // The root route mounts the global `<ToastHost/>`, which subscribes to a zustand

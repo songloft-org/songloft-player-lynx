@@ -33,7 +33,12 @@ import { PluginAvatar } from '../widgets/PluginAvatar.js'
 import { PluginUpdateDialog } from '../widgets/PluginUpdateDialog.js'
 import { PluginBatchUpdateDialog } from '../widgets/PluginBatchUpdateDialog.js'
 import { useNavigationSettings, type NavigationSettings } from '../data/navigation-settings.js'
-import { PluginNavigationToggle, PluginNavigationOrder } from '../widgets/PluginNavigationSettings.js'
+import {
+  PluginNavigationToggle,
+  PluginNavigationOrder,
+  BuiltInNavigationSettings,
+  NavigationSummary,
+} from '../widgets/PluginNavigationSettings.js'
 import './PluginManagerPage.css'
 
 export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void }) {
@@ -365,6 +370,9 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
         </>
       )}
     >
+      <view className='tab-config__section'>
+        <text className='tab-config__section-title'>{t('jsplugin.managementSection')}</text>
+      </view>
       {/*
        * The auto-update switch mirrors the Flutter manager's SwitchListTile —
        * a page-level setting, so it stays put across the list's loading states.
@@ -414,7 +422,9 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
                 ))}
               </view>
             )}
+      <BuiltInNavigationSettings settings={navigation} busy={openingBlocked || isFetching || isError} />
       <PluginNavigationOrder settings={navigation} busy={openingBlocked || isFetching || isError} />
+      <NavigationSummary settings={navigation} />
     </SubPageShell>
   )
 }

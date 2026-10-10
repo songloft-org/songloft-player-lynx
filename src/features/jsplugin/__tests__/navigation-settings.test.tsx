@@ -50,10 +50,9 @@ vi.mock('@lynx-js/lynx-ui-sortable', async () =>
 const { navigationTabCount, reorderActivePluginTabs, useNavigationSettings } = await import(
   '../data/navigation-settings.js'
 )
-const { PluginNavigationToggle, PluginNavigationOrder } = await import(
+const { PluginNavigationToggle, PluginNavigationOrder, BuiltInNavigationSettings, NavigationSummary } = await import(
   '../widgets/PluginNavigationSettings.js'
 )
-const { TabConfigPage } = await import('../pages/TabConfigPage.js')
 const { useUpdatePluginMutation, useUpdateAllPluginsMutation } = await import(
   '../data/jsplugin-mutations.js'
 )
@@ -318,7 +317,9 @@ function Controls({ empty = false, path = 'a' }: { empty?: boolean; path?: strin
         busy={false}
       />
       <PluginNavigationToggle plugin={plugin('b', false)} settings={settings} busy={false} />
+      <BuiltInNavigationSettings settings={settings} busy={false} />
       <PluginNavigationOrder settings={settings} busy={false} />
+      <NavigationSummary settings={settings} />
     </>
   )
 }
@@ -461,18 +462,59 @@ test('plugins with empty entry paths have no navigation control', async () => {
   ).not.toBeInTheDocument()
 })
 
-test('built-in config page has no plugin visibility or ordering controls and preserves their config', async () => {
+test('built-in navigation sits between plugin controls and ordering and preserves their config', async () => {
+  h.read.mockResolvedValue(config(['a', 'b']))
   const { wrapper } = clientAndWrapper()
-  render(<TabConfigPage />, { wrapper })
+  render(<Controls />, { wrapper })
   await waitFor(() =>
-    expect(getQueriesForElement(elementTree.root!).queryByText('3/12')).toBeInTheDocument(),
+    expect(getQueriesForElement(elementTree.root!).queryByText('4/12')).toBeInTheDocument(),
   )
   const queries = getQueriesForElement(elementTree.root!)
-  expect(queries.queryByTestId('plugin-navigation-order')).not.toBeInTheDocument()
-  expect(queries.queryAllByTestId(/^plugin-navigation-/)).toHaveLength(0)
+  const sections = [...elementTree.root!.querySelectorAll('[data-testid]')].map((node) => node.getAttribute('data-testid'))
+  expect(sections.indexOf('plugin-navigation-98')).toBeLessThan(sections.indexOf('built-in-navigation'))
+  expect(sections.indexOf('built-in-navigation')).toBeLessThan(sections.indexOf('plugin-navigation-order'))
+  expect(sections.indexOf('plugin-navigation-order')).toBeLessThan(sections.indexOf('navigation-summary'))
   await act(async () => {
     fireEvent.tap(queries.getByTestId('tab-toggle-library').querySelector('.app-switch')!)
   })
   await waitFor(() => expect(h.write).toHaveBeenCalledTimes(1))
-  expect(h.write.mock.calls[0]![0]).toEqual(config(['b'], false))
+  expect(h.write.mock.calls[0]![0]).toEqual(config(['a', 'b'], false))
+})
+
+test('the library switch remains available without installed plugins', async () => {
+  h.read.mockResolvedValue(config([]))
+  h.plugins.mockResolvedValue({ plugins: [] })
+  const { wrapper } = clientAndWrapper()
+  render(<Controls />, { wrapper })
+  await waitFor(() => expect(getQueriesForElement(elementTree.root!).queryByText('3/12')).toBeInTheDocument())
+  const queries = getQueriesForElement(elementTree.root!)
+  expect(queries.queryByTestId('plugin-navigation-order')).not.toBeInTheDocument()
+  await act(async () => {
+    fireEvent.tap(queries.getByTestId('tab-toggle-library').querySelector('.app-switch')!)
+  })
+  await waitFor(() => expect(h.write).toHaveBeenCalledTimes(1))
+  expect(h.write.mock.calls[0]![0]).toEqual(config([], false))
+})
+
+test('at the limit, library additions are blocked until a visible plugin is removed', async () => {
+  const paths = Array.from({ length: 10 }, (_, index) => String(index))
+  h.read.mockResolvedValue(config(paths, false))
+  h.plugins.mockResolvedValue({ plugins: paths.map((path) => plugin(path)) })
+  const { wrapper } = clientAndWrapper()
+  render(<Controls path='0' />, { wrapper })
+  const queries = getQueriesForElement(elementTree.root!)
+  await waitFor(() => expect(queries.queryByText('12/12')).toBeInTheDocument())
+  await act(async () => {
+    fireEvent.tap(queries.getByTestId('tab-toggle-library').querySelector('.app-switch')!)
+  })
+  expect(h.write).not.toHaveBeenCalled()
+  await act(async () => {
+    fireEvent.tap(queries.getByTestId('plugin-navigation-48').querySelector('.app-switch')!)
+  })
+  await waitFor(() => expect(queries.queryByText('11/12')).toBeInTheDocument())
+  await act(async () => {
+    fireEvent.tap(queries.getByTestId('tab-toggle-library').querySelector('.app-switch')!)
+  })
+  await waitFor(() => expect(h.write).toHaveBeenCalledTimes(2))
+  expect(h.write.mock.calls[1]![0]).toEqual(config(paths.slice(1), true))
 })

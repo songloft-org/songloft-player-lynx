@@ -14,7 +14,7 @@ import { SwitchRow } from '../../settings/widgets/SwitchRow.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { DragHandle } from '../../../shared/ui/DragHandle.js'
 import { toast } from '../../../shared/ui/toast-store.js'
-import '../pages/TabConfigPage.css'
+import './PluginNavigationSettings.css'
 
 export function saveNavigation(settings: NavigationSettings, next: TabConfig): void {
   void settings
@@ -101,67 +101,104 @@ export function PluginNavigationOrder({
   const { config } = settings
   const tabs = config ? filterActivePluginTabs(config.pluginTabs, settings.plugins) : []
   const disabled = !settings.ready || busy
+  if (!config || tabs.length === 0) return null
   return (
-    <>
-      <NavigationReadState settings={settings} />
-      {config ? (
-        <view className='tab-config__section' data-testid='plugin-navigation-order'>
-          <text className='tab-config__count'>{`${navigationTabCount(config, settings.plugins)}/${MAX_NAVIGATION_TABS}`}</text>
-          <text className='tab-config__limit-hint'>{t('jsplugin.tabCollapseHint')}</text>
-          {navigationTabCount(config, settings.plugins) >= MAX_NAVIGATION_TABS ? (
-            <text className='tab-config__limit-hint'>
-              {t('jsplugin.tabLimitReached', { max: MAX_NAVIGATION_TABS })}
+    <view className='tab-config__section' data-testid='plugin-navigation-order'>
+      <text className='tab-config__section-title'>{t('jsplugin.navigationOrder')}</text>
+      <SortableRoot<PluginTabEntry>
+        // Recreate MTS size caches when enabling a plugin changes the visible list.
+        key={JSON.stringify(tabs.map((tab) => tab.entryPath))}
+        data={tabs.map((tab) => ({ getSortingKey: () => tab.entryPath, dataItem: tab }))}
+        enableSorting={!disabled}
+        onSortEnd={(sorted) => {
+          if (!disabled)
+            saveNavigation(
+              settings,
+              reorderActivePluginTabs(
+                config,
+                settings.plugins,
+                sorted.map((item) => item.dataItem.entryPath),
+              ),
+            )
+        }}
+      >
+        {(item) => (
+          <SortableItem
+            key={item.dataItem.entryPath}
+            sortingKey={item.dataItem.entryPath}
+            as='DraggableRoot'
+            className='tab-config__order-row'
+            disabled={disabled}
+          >
+            <text className='tab-config__order-name'>
+              {settings.plugins.find(
+                (plugin) => plugin.entryPath === item.dataItem.entryPath,
+              )?.displayName ?? item.dataItem.name}
             </text>
-          ) : null}
-          {tabs.length > 0 ? (
-            <>
-              <text className='tab-config__section-title'>{t('jsplugin.navigationOrder')}</text>
-              <SortableRoot<PluginTabEntry>
-                // Recreate MTS size caches when enabling a plugin changes the visible list.
-                key={JSON.stringify(tabs.map((tab) => tab.entryPath))}
-                data={tabs.map((tab) => ({ getSortingKey: () => tab.entryPath, dataItem: tab }))}
-                enableSorting={!disabled}
-                onSortEnd={(sorted) => {
-                  if (!disabled)
-                    saveNavigation(
-                      settings,
-                      reorderActivePluginTabs(
-                        config,
-                        settings.plugins,
-                        sorted.map((item) => item.dataItem.entryPath),
-                      ),
-                    )
-                }}
+            <SortableItemArea>
+              <DragHandle
+                className='tab-config__order-handle'
+                disabled={disabled}
+                testId={`tab-order-handle-${item.dataItem.entryPath}`}
               >
-                {(item) => (
-                  <SortableItem
-                    key={item.dataItem.entryPath}
-                    sortingKey={item.dataItem.entryPath}
-                    as='DraggableRoot'
-                    className='tab-config__order-row'
-                    disabled={disabled}
-                  >
-                    <text className='tab-config__order-name'>
-                      {settings.plugins.find(
-                        (plugin) => plugin.entryPath === item.dataItem.entryPath,
-                      )?.displayName ?? item.dataItem.name}
-                    </text>
-                    <SortableItemArea>
-                      <DragHandle
-                        className='tab-config__order-handle'
-                        disabled={disabled}
-                        testId={`tab-order-handle-${item.dataItem.entryPath}`}
-                      >
-                        <Icon name='menu' size={18} color={ICON_COLORS.content2} />
-                      </DragHandle>
-                    </SortableItemArea>
-                  </SortableItem>
-                )}
-              </SortableRoot>
-            </>
-          ) : null}
-        </view>
+                <Icon name='menu' size={18} color={ICON_COLORS.content2} />
+              </DragHandle>
+            </SortableItemArea>
+          </SortableItem>
+        )}
+      </SortableRoot>
+    </view>
+  )
+}
+
+export function BuiltInNavigationSettings({
+  settings,
+  busy,
+}: {
+  settings: NavigationSettings
+  busy: boolean
+}) {
+  const { t } = useTranslation()
+  const { config } = settings
+  const atLimit = config
+    ? navigationTabCount(config, settings.plugins) >= MAX_NAVIGATION_TABS
+    : false
+  const disabled = !settings.ready || busy || (!config?.showLibrary && atLimit)
+  return (
+    <view className='tab-config__section' data-testid='built-in-navigation'>
+      <text className='tab-config__section-title'>{t('jsplugin.tabBuiltIn')}</text>
+      <NavigationReadState settings={settings} />
+      <SwitchRow
+        title={t('jsplugin.showLibraryInNavigation')}
+        subtitle={t('jsplugin.libraryNavigationHint')}
+        checked={config?.showLibrary ?? false}
+        disabled={disabled}
+        testId='tab-toggle-library'
+        onChange={(showLibrary) => {
+          if (!disabled && config) saveNavigation(settings, { ...config, showLibrary })
+        }}
+      />
+    </view>
+  )
+}
+
+export function NavigationSummary({ settings }: { settings: NavigationSettings }) {
+  const { t } = useTranslation()
+  const { config } = settings
+  if (!config) return null
+  const count = navigationTabCount(config, settings.plugins)
+  return (
+    <view className='tab-config__section' data-testid='navigation-summary'>
+      <text className='tab-config__count'>
+        {`${count}/${MAX_NAVIGATION_TABS}`}
+      </text>
+      <text className='tab-config__limit-hint'>{t('jsplugin.tabFixedHint')}</text>
+      <text className='tab-config__limit-hint'>{t('jsplugin.tabCollapseHint')}</text>
+      {count >= MAX_NAVIGATION_TABS ? (
+        <text className='tab-config__limit-hint'>
+          {t('jsplugin.tabLimitReached', { max: MAX_NAVIGATION_TABS })}
+        </text>
       ) : null}
-    </>
+    </view>
   )
 }

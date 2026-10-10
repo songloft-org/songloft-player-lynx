@@ -158,7 +158,6 @@ const ENTRY_ROWS: Array<[string, string]> = [
   ['settings-playback', '/settings/playback'],
   ['settings-library-ops', '/settings/library'],
   ['settings-plugins', '/settings/plugins'],
-  ['settings-tab-config', '/settings/tab-config'],
   ['settings-cache', '/settings/cache'],
   ['settings-server', '/settings/servers'],
   ['settings-proxy', '/settings/proxy'],
@@ -192,6 +191,7 @@ test('renders one entry row per sub-page, plus log out', async () => {
     expect(queryByTestId(testId), testId).toBeInTheDocument()
   }
   expect(queryByTestId('settings-logout')).toBeInTheDocument()
+  expect(queryByTestId('settings-tab-config')).not.toBeInTheDocument()
 })
 
 test('holds no in-place control of its own', async () => {

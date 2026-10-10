@@ -159,7 +159,7 @@ describe('the handle marker is still on the components the app uses', () => {
   test('every sortable surface inherits it via the re-export', () => {
     /*
      * `SortableItemArea` is `DraggableArea` renamed, so LibraryViewEditor,
-     * TabConfigPage, PlaylistsView and PlaylistDetailPage are covered by the one
+     * PluginNavigationSettings, PlaylistsView and PlaylistDetailPage are covered by the one
      * selector. If sortable ever ships its own area component, that component
      * needs the marker — and this test is where that shows up.
      */

@@ -32,7 +32,7 @@
   right: 0;
   display: flex;
   flex-direction: column;
-  /* Twelve tabs max (TabConfigPage's MAX_TABS) minus the four the bar still
+  /* Twelve tabs max (MAX_NAVIGATION_TABS) minus the four the bar still
      shows: at most eight rows. The cap keeps the sheet from swallowing the
      screen; anything past it scrolls. */
   max-height: 70%;

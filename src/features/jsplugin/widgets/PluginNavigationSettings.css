@@ -1,12 +1,8 @@
-/*
- * Tab configuration. The page chrome (topbar / back / title / scroll) comes from
- * `SubPageShell.css`; the n/max counter is passed to its `actions` slot.
- */
+/* Navigation sections and footer inside the unified plugin manager. */
 .tab-config__count {
   font-size: var(--font-footnote);
   color: var(--secondary-label);
 }
-
 
 .tab-config__section {
   padding: var(--space-4);
@@ -34,44 +30,10 @@
    */
 }
 
-.tab-config__row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: var(--space-3) 0;
-  border-bottom-width: 1px;
-  border-bottom-color: var(--separator);
-}
-
-.tab-config__row--disabled {
-  opacity: 0.4;
-}
-
-.tab-config__row-name {
-  flex: 1;
-  font-size: var(--font-callout);
-  color: var(--label);
-}
-
-.tab-config__row-badge {
-  font-size: var(--font-caption1);
-  color: var(--secondary-label);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background-color: var(--secondary-system-background);
-}
-
 .tab-config__limit-hint {
   font-size: var(--font-caption1);
   color: var(--secondary-label);
   margin-top: var(--space-2);
-}
-
-.tab-config__state {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .tab-config__state-text {

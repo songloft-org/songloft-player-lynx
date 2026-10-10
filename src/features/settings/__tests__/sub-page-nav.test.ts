@@ -72,7 +72,8 @@ describe('SUB_PAGE_ROUTES', () => {
     // The type is a total `Record`, so this is really a guard on the count: 17 rows
     // and drill-ins today. A member added to the union without a route here is a
     // compile error; this catches a member *removed* along with its assertions.
-    expect(SUB_PAGES.length).toBe(18)
+    expect(SUB_PAGES.length).toBe(17)
+    expect(SUB_PAGES).not.toContain('tab-config')
   })
 
   for (const page of SUB_PAGES) {
