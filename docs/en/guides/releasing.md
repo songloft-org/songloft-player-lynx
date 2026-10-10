@@ -22,6 +22,8 @@ See [installation](installation.md) for filenames. Releases include `version.jso
 
 Dev, preview, and stable release bodies use the Chinese and English installation notes in `.github/release-notes.md`, covering installation/deployment of all five packages, server connection requirements, and SHA-256 verification. They also generate categorized Conventional Commits with commit links using the Flutter client's approach. The range compares the current commit with the most recent merged `v*` tag, skipping tags pointing to the current commit; without a previous version tag, it falls back to the first commit. Only commit types supported by the Flutter workflow are included. If there are no changes to list, the installation notes remain.
 
+After a version-tag release succeeds, a separate job updates the Chinese-only root `CHANGELOG.md` from the latest `main`, localizes generated category headings and author labels, and commits it back. Updates for different versions run serially. Dev builds do not write this file, and changelog commits do not trigger another build. An English CHANGELOG is intentionally omitted as requested.
+
 ## iOS native build caching
 
 The iOS release job installs runtime dependencies from `ios/release/Podfile.lock`. It shares dependency declarations with local Debug builds through `ios/pods.rb`. `ios/Podfile` retains Devtool for local simulator and Inspector use; the separate Release installation graph excludes LynxDevtool, BaseDevtool, DebugRouter, SocketRocket, and the PrimJS debugging subspecs. CocoaPods cannot assign subspecs of the same pod to different build configurations, so the two entry points maintain separate lockfiles that must both be updated when changing dependencies.

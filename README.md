@@ -126,6 +126,8 @@ pnpm run release patch
 
 发版脚本同步版本、提交到 `main`、创建 `v*` tag 并推送。详见[发版指南](docs/guides/releasing.md)。开发约定和验证要求见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
+版本变更见根目录的中文 [CHANGELOG.md](CHANGELOG.md)；版本 Release 发布成功后自动更新，滚动 dev 的提交记录见对应 Release 页面。
+
 ## 许可证
 
 本项目使用 [Apache-2.0](LICENSE)，与 Songloft 后端及 Flutter 客户端一致。第三方依赖保留各自许可证。

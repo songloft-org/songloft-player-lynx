@@ -124,6 +124,8 @@ pnpm run release patch
 
 The script synchronizes versions, commits to `main`, creates a `v*` tag, and pushes. See the [release guide](docs/en/guides/releasing.md) and [CONTRIBUTING.en.md](CONTRIBUTING.en.md).
 
+Version history is maintained in the Chinese-only root [CHANGELOG.md](CHANGELOG.md), updated after a versioned release succeeds. Rolling dev commit history remains on its release page.
+
 ## License
 
 [Apache-2.0](LICENSE), matching the Songloft backend and Flutter client. Dependencies retain their own licenses.
