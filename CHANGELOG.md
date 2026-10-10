@@ -2,6 +2,636 @@
 
 此文件记录 Songloft Player（Lynx）的版本变更，仅提供中文版本。版本 tag 的 Release 发布成功后，由 CI 根据 Conventional Commits 分类追加记录并提交到 `main`；滚动 dev 记录见 [GitHub Releases](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev)。
 
+## [v0.1.1] - 2026-10-10
+### :sparkles: 新增功能
+- [`a486924`](https://github.com/songloft-org/songloft-player-lynx/commit/a4869247cfdb8bc355956970f032a8338f5e82d9) - **core**: 批2 核心基础设施（models+zod / 网络401单飞刷新 / UrlHelper / 存储 / Query无DOM / Zustand） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6aa99d5`](https://github.com/songloft-org/songloft-player-lynx/commit/6aa99d56316847e86268e13f5faf1d126a7ee2e0) - **auth**: 批3 登录页 + 鉴权守卫 + token 持久化 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d709d32`](https://github.com/songloft-org/songloft-player-lynx/commit/d709d321aca13a4551940a35680668e9006f9fcd) - **library**: 批4 歌曲列表 + 分页（useInfiniteQuery + QueryClientProvider 首次入包） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`640aab9`](https://github.com/songloft-org/songloft-player-lynx/commit/640aab9e5154db68c39d28ac586e741cbc4acfa4) - **player**: 批5 播放页 + mini-player + TS mock 音频 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b8a3cf0`](https://github.com/songloft-org/songloft-player-lynx/commit/b8a3cf0fdc1e33c8638241a3a3b39486c0349715) - **playlist**: 批6 歌单列表 + 详情 + Library Playlists 视图 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`74460e1`](https://github.com/songloft-org/songloft-player-lynx/commit/74460e1dc034951a3001e2bf58c5c106ad74747a) - **library**: Categories 分类卡片钻取到分类歌曲列表 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`313fb06`](https://github.com/songloft-org/songloft-player-lynx/commit/313fb06c9e9b193a6f45bbd4b5190808f5e0127e) - **home**: 批7 首页（问候 + 我的歌单/电台区块 + 统计条） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6599c7c`](https://github.com/songloft-org/songloft-player-lynx/commit/6599c7c4b29caca6c58c4bdb3e75b5c6116f8e3f) - **settings**: 批8 设置页（自包含项） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`686cf8a`](https://github.com/songloft-org/songloft-player-lynx/commit/686cf8af3fbe579c806e1c2eb6cb9d1a00b2bf7f) - **i18n**: 批9 国际化（i18next 无 DOM 接入 + en/zh + 语言切换 + arb 转换脚本） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`05fc7fe`](https://github.com/songloft-org/songloft-player-lynx/commit/05fc7fe349fadffbfb63ade81d5ea0e7bd20d846) - **android**: B1 Android 原生宿主 + 内嵌 bundle + CI dev APK *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d7efd4b`](https://github.com/songloft-org/songloft-player-lynx/commit/d7efd4bf02369c6323cd60ca34672f8c996444e7) - **android**: B2 真原生音频 SongloftAudio（ExoPlayer/media3） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`dd0ad2e`](https://github.com/songloft-org/songloft-player-lynx/commit/dd0ad2e069e21a81fa4157ef462a792f14212c8e) - **library**: 搜索（防抖 Input + keyword 参数）+ 排序（Recent/Title/Artist）+ i18n 资源扩展 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`29a1ee6`](https://github.com/songloft-org/songloft-player-lynx/commit/29a1ee6e17d7312aeed7b9b87f48f06e94e2507d) - **playlist**: 歌单 CRUD（创建/编辑/删除 + 歌曲移除 + 内置歌单保护） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`739eb52`](https://github.com/songloft-org/songloft-player-lynx/commit/739eb522aa29315dc775c99a48c613edf4736a2d) - **player**: 睡眠定时 UI + 逐字/翻译/罗马音歌词解析 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`68679f5`](https://github.com/songloft-org/songloft-player-lynx/commit/68679f5cd9826ad7deb3e771e8538f82e9fc9c9d) - **library**: 收藏切换 + 播放模式启动恢复 + 登出清缓存 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fcbc9b4`](https://github.com/songloft-org/songloft-player-lynx/commit/fcbc9b4c334a1097ffe490565e76bf2bda9b62d8) - **home**: 移除登出按钮 + 原生下拉刷新 + 正在播放歌单高亮 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b5f0319`](https://github.com/songloft-org/songloft-player-lynx/commit/b5f031964e00d24749068d803c77aae06c6457c6) - **playlist**: 歌单排序 + 歌单内歌曲排序（上移/下移按钮） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f5903be`](https://github.com/songloft-org/songloft-player-lynx/commit/f5903be7ed89cebd6dde7e8cb959624b30d02259) - **player**: 歌词本地缓存 + 补充遗留 i18n key/icons *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`251943a`](https://github.com/songloft-org/songloft-player-lynx/commit/251943a9e6f6234b7fa45ce6050d31b5aa9c5e4a) - **playlist**: 内置歌单封面加心形徽标 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`542fee7`](https://github.com/songloft-org/songloft-player-lynx/commit/542fee77e566514d4b3eb4b15fdd075803658fbf) - **player**: 播放队列抽屉加上移/下移排序 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3635830`](https://github.com/songloft-org/songloft-player-lynx/commit/36358305a9d8c76fa53a7ce80d0a51c71b3bc3ab) - **theme**: 主题 light/system 三选一切换 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d894661`](https://github.com/songloft-org/songloft-player-lynx/commit/d8946612bcf6eb577b4e7fea5f64453dcc016d12) - **cover**: 封面图 URL 补缓存刷新参数 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0aa66f5`](https://github.com/songloft-org/songloft-player-lynx/commit/0aa66f5e9b7da5ed435561592745e3d9d3274094) - **settings**: 诊断类·日志级别选择 + 日志导出查看 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`13b5970`](https://github.com/songloft-org/songloft-player-lynx/commit/13b597051863325ed54c82e0e6531221d3589260) - **playlist**: 补充端点 · song-ids / touch / visibility / sort *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a5dbc81`](https://github.com/songloft-org/songloft-player-lynx/commit/a5dbc814664b13e20238c214f94e6dea94d2c4d6) - **jsplugin**: 插件模块 · 管理层 + 首页网格 + 宿主桥接 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3f98950`](https://github.com/songloft-org/songloft-player-lynx/commit/3f98950241036c0b7d8732b5fd57a7f83f508b3e) - **jsplugin**: 插件注册表商店页面 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a644c41`](https://github.com/songloft-org/songloft-player-lynx/commit/a644c419f4bd1c3233e2f06df6fa7bc9660c5d2e) - **jsplugin**: 插件 WebView 渲染 + 动态 Tab 显示 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a0aec58`](https://github.com/songloft-org/songloft-player-lynx/commit/a0aec58e19e3f3f2f67a0cced28eb0b253b2de1d) - **jsplugin+home**: Tab 配置页 + 首页区块横向滚动 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`65ff185`](https://github.com/songloft-org/songloft-player-lynx/commit/65ff185bfacd39e83d40ca12c1b0ab1450a9adc7) - **library-ops**: 音乐库扫描 · 进度轮询 + 目录树 + 扫描开关 + 元数据刷新 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fd68e56`](https://github.com/songloft-org/songloft-player-lynx/commit/fd68e568c7d43c34fe9359b7b9775c3221504bda) - **auth**: dev 默认凭据预填 admin/admin + 修正类型检查命令 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d244d4f`](https://github.com/songloft-org/songloft-player-lynx/commit/d244d4f2ad461911861baaf6fab04fc9b0911894) - **theme+i18n**: 外观与语言真正跟随系统（宿主注入 + 实时推送） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5054173`](https://github.com/songloft-org/songloft-player-lynx/commit/505417317969eb59120ba3d943f927d20deff142) - **android**: 通知栏下一曲/收藏按钮 + 正式小图标 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ef5a4d1`](https://github.com/songloft-org/songloft-player-lynx/commit/ef5a4d19bc8cf5f69ab8d1b5117edd82d627ac5d) - 底部导航插件 tab 图标改为插件自己的图标 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`142967b`](https://github.com/songloft-org/songloft-player-lynx/commit/142967bfebc9d4efb02f1a998b7989d06e9b4540) - **library-ops**: 排除目录管理三 Tab（对齐 Flutter ExcludeDirManager） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`503109d`](https://github.com/songloft-org/songloft-player-lynx/commit/503109d3a2e84233b5589e3a3723cc4684273076) - **theme**: 暗色对比度审计（WCAG AA：拆 --primary/--accent/--danger/--danger-2 + contrast 回归测试） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`88a4b0a`](https://github.com/songloft-org/songloft-player-lynx/commit/88a4b0aca1d186b22b8f89934c7867a48b021413) - **library-ops,settings**: 重复检测/指纹 + 缓存管理 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f21ab41`](https://github.com/songloft-org/songloft-player-lynx/commit/f21ab419d351c3ebb5d9a6ba8898ab800407b205) - **ios**: B3a iOS 原生宿主 + 内嵌 bundle（模拟器跑通登录→首页） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9f750eb`](https://github.com/songloft-org/songloft-player-lynx/commit/9f750eb3edbb09d03bcdbf31b640cb781b5a2545) - **B3b**: iOS native modules — Audio, Storage, SystemAppearance *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3cf6ec2`](https://github.com/songloft-org/songloft-player-lynx/commit/3cf6ec216640f7ea83966f3983f1d71eeed1f958) - EQ UI + multi-server management + lynx-ui-sortable drag reorder *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c4cb018`](https://github.com/songloft-org/songloft-player-lynx/commit/c4cb018cf6e40d3e14a729805fc3ddbd1b0b1b16) - data export/import — SongloftPlatform native module + Settings UI *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4d97fa0`](https://github.com/songloft-org/songloft-player-lynx/commit/4d97fa0825df14f5cdd0bd5c9074e629a9ed5b00) - **ios**: real 10-band EQ DSP via MTAudioProcessingTap + kAudioUnitSubType_NBandEQ *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3763f8f`](https://github.com/songloft-org/songloft-player-lynx/commit/3763f8f9be29ce46f63c13a7afd36d6e56ca13d4) - batch 31 — logout dialog, audio quality, play history, proxy settings *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6b89922`](https://github.com/songloft-org/songloft-player-lynx/commit/6b899220e548b6e3291b4c806994e3525ee58085) - batch 32 — playback state persistence + docs cleanup *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`8a71949`](https://github.com/songloft-org/songloft-player-lynx/commit/8a71949932aaa54dc185644d63b4fd433c0bbbd0) - batch 32 — playback speed selector, auto-resume, docs fix *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`7ffb992`](https://github.com/songloft-org/songloft-player-lynx/commit/7ffb992eb4a175a19116802d43f70eb419d13e7c) - **batch33**: 文档重构 + bug 修复 + 歌单搜索 + 多选操作 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`29372b5`](https://github.com/songloft-org/songloft-player-lynx/commit/29372b55b3f0a7f64d20354930a7c62961c695ac) - **batch33b**: 歌曲长按菜单 + bug.md 更新 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0583761`](https://github.com/songloft-org/songloft-player-lynx/commit/0583761e44d43c3ce6f01bd7be9c85ce9c7959b7) - **batch33c**: 主题包管理页 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`cab9242`](https://github.com/songloft-org/songloft-player-lynx/commit/cab9242741859cd94fa973e1dc949b6ea1722f05) - **batch34**: 歌词自动滚动 + 后端更新管理 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ed148ae`](https://github.com/songloft-org/songloft-player-lynx/commit/ed148ae4598454e91f4d4e91ddb34b0c697d4b1b) - **batch34b**: 后端版本 + 高级筛选 + 歌曲详情编辑 + 清理无效歌曲 + 歌词编辑 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`86e4e74`](https://github.com/songloft-org/songloft-player-lynx/commit/86e4e74f51e60bec448969f07722f3a5949e0620) - **batch34c**: 添加网络歌曲/电台 + 标签写入 + 搜索建议 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6da8c12`](https://github.com/songloft-org/songloft-player-lynx/commit/6da8c128239fc450ac7b87aaedf02fe863521961) - **batch35**: 添加歌曲入口 + 进度拖拽预览 + 4项新页面测试 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`95c37b3`](https://github.com/songloft-org/songloft-player-lynx/commit/95c37b33396989ac9607d258417ff3543fbda57d) - **batch35b**: E2E脚本 + DLNA投屏 + 悬浮歌词 + iOS Live Activity *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ea9f253`](https://github.com/songloft-org/songloft-player-lynx/commit/ea9f25383de6882d50c7b714d3c5c6134a929f73) - **batch35c**: 模块接入 + 代码清理 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`dd7e1a8`](https://github.com/songloft-org/songloft-player-lynx/commit/dd7e1a8483962c5298a90fc9dcdb0821c0927064) - 实现 E2E 自动化行为测试框架（Android/iOS 双平台） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fd20d92`](https://github.com/songloft-org/songloft-player-lynx/commit/fd20d924338416e187aab91f659b592d71b45fd9) - **playlist**: 对接后端 move 式歌曲重排接口 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2330c22`](https://github.com/songloft-org/songloft-player-lynx/commit/2330c222ec2d55f1ee0b19c605329cca8170227d) - **web**: add Web platform support with audio, storage, and host page *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4ac7009`](https://github.com/songloft-org/songloft-player-lynx/commit/4ac700970c45a98c8fec9bb4631a11c97d787262) - 批36 三个前端功能 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3af2cfd`](https://github.com/songloft-org/songloft-player-lynx/commit/3af2cfd086bcaa41ef419f43494d2a2c6a110d2a) - 批40 六项边角料收尾 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`755172d`](https://github.com/songloft-org/songloft-player-lynx/commit/755172d532831078b6423b38ed3dbf0416b21387) - **native**: insecureTls 三条出站路径生效 + iOS 锁屏封面 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`656807e`](https://github.com/songloft-org/songloft-player-lynx/commit/656807eca263dcb3ab7031e116b406aa463fa5c5) - **player**: 批49 Step 2 视频源选择，direct 优先、不行回退 video-hls *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a2c361f`](https://github.com/songloft-org/songloft-player-lynx/commit/a2c361f2dd1bd6644d98c665421242c9b02bab3c) - **android**: 批49 Step 3 全屏原生视频，画面接到现有播放器上 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ee4b48d`](https://github.com/songloft-org/songloft-player-lynx/commit/ee4b48db28b6678b82993aba886f74cf662e0f44) - **settings**: 宽屏双栏默认打开音乐库管理并高亮当前项 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`37a800e`](https://github.com/songloft-org/songloft-player-lynx/commit/37a800eb4bee189d375e525dbf80f16a23966915) - **settings**: GitHub 代理加「复制 Prompt 让 AI 帮你找」，并补齐剪贴板能力 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b0a82c2`](https://github.com/songloft-org/songloft-player-lynx/commit/b0a82c268148630b9d0e3faef77b1e5f617aa7df) - **settings**: 服务器列表页增加编辑入口 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0b08724`](https://github.com/songloft-org/songloft-player-lynx/commit/0b0872479040ad3fd2ce86e1158b76f4f09968cb) - **settings**: 新增歌词设置区块，对齐 Flutter 版功能 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f915bb8`](https://github.com/songloft-org/songloft-player-lynx/commit/f915bb8494e32d86bb31ced2bd730943c1586e76) - **settings**: 日志导出对齐 Flutter（客户端日志落盘 + zip 分享）并补日志等级标题 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5aaf766`](https://github.com/songloft-org/songloft-player-lynx/commit/5aaf766a42d5b4f7624de17200eccf67bb201c28) - **logging**: 给客户端日志补上日志源，并修 Web 端宽屏双栏从未生效 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b8519b0`](https://github.com/songloft-org/songloft-player-lynx/commit/b8519b02fe314a0e1b1cbef4ae3a6ca5546b94b8) - **ui**: 新增全局 Toast 组件，统一 7 处手写临时提示 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3580c11`](https://github.com/songloft-org/songloft-player-lynx/commit/3580c11d8839ea7fcc8203b616b322696ae1c0a1) - **player**: 速度/播放模式改为弹出菜单，修三处静默失败并清零 lynx-ui 桶入口 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1b59ebf`](https://github.com/songloft-org/songloft-player-lynx/commit/1b59ebfc8c1a79b28c8f5d5ea1b3b0facae9fbeb) - **nav**: 接入返回键与 Web 浏览器返回，全页面/弹出层逐层退出 + tab 首页双击退出 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d7758c3`](https://github.com/songloft-org/songloft-player-lynx/commit/d7758c3e6842dacbd91d59c3d8818a0977643488) - **lynx**: 登录页和宽屏侧栏添加应用图标 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0f00e51`](https://github.com/songloft-org/songloft-player-lynx/commit/0f00e51f2f3fd720ad15a44eec001072a6847e21) - **lynx**: 添加网站 favicon 和 apple-touch-icon *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`03895f2`](https://github.com/songloft-org/songloft-player-lynx/commit/03895f275a46e1ba5339a12eb0ba54730a3593a8) - **lynx**: 曲库和歌单页面工具栏重构 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e520ad8`](https://github.com/songloft-org/songloft-player-lynx/commit/e520ad80f6132d5a11a6862a695591130f3d440c) - **lynx**: 歌单播放按钮改为播放全部歌曲 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d184b83`](https://github.com/songloft-org/songloft-player-lynx/commit/d184b83388abd05995a2ac2f0e3ef65eb3b515be) - **lynx**: 分类卡片（歌手/专辑/风格等）添加播放全部按钮 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`491b1f5`](https://github.com/songloft-org/songloft-player-lynx/commit/491b1f596789548b848f9a88b47b34a0c90c6cf2) - library rail layout refactor + CreatePlaylist page + test fixes *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d5cb551`](https://github.com/songloft-org/songloft-player-lynx/commit/d5cb551d7c9070cc8606f5e86385c39f947f6f87) - **lynx**: 歌单/分类/歌曲详情页纳入曲库布局，宽屏侧栏常驻 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b9846c8`](https://github.com/songloft-org/songloft-player-lynx/commit/b9846c8715b883e47269b60f84446dba2bda37c6) - **player**: 全屏播放器对齐 Flutter 布局并做多分辨率适配 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5b1200f`](https://github.com/songloft-org/songloft-player-lynx/commit/5b1200f77382eb142c743df401d3be160062e85b) - **library**: 多选添加到歌单改用全局底部面板 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fca9c94`](https://github.com/songloft-org/songloft-player-lynx/commit/fca9c9438e76dccd9f2f4380e03edc57e5652540) - **player**: 睡眠定时面板重做为双分组芯片 + 自定义值 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2e2a1f2`](https://github.com/songloft-org/songloft-player-lynx/commit/2e2a1f2fd4e959633b9c16f1c42420a5c0bd69e7) - **library**: 歌曲编辑页参考 Flutter 版重做为独立页面 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`215c4a2`](https://github.com/songloft-org/songloft-player-lynx/commit/215c4a214c788ac2bdd0d0f26817704bcbedd927) - **nav**: 底部导航 tab 超过 5 个折叠为「更多」面板 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ce853c8`](https://github.com/songloft-org/songloft-player-lynx/commit/ce853c847edfb20dcab5e33b15a85b46886f98b2) - **jsplugin**: 插件管理页与商店页对齐 Flutter 版并修复 nav tab 残留 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ba8764b`](https://github.com/songloft-org/songloft-player-lynx/commit/ba8764b1c739afced51719d8b88f0778b66640b4) - **theme**: 修复主题商店契约并实现主题包应用到 UI *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5d588e9`](https://github.com/songloft-org/songloft-player-lynx/commit/5d588e966de58ab162ab4b3b3b4228912de7baaf) - **player**: 歌词时间轴调整页对齐 Flutter 版并支持重新抓取歌词 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`afaa010`](https://github.com/songloft-org/songloft-player-lynx/commit/afaa010a21b2ea10998a819ad0cdddad88c15c25) - **shell**: 底部导航改 iOS-26 悬浮胶囊并对齐 iPadOS 侧栏 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`28b2f11`](https://github.com/songloft-org/songloft-player-lynx/commit/28b2f116c84ca186f27e7ee354ec4bad8288cb3f) - **jsplugin**: Web 平台插件 tab 以 iframe 打开并挂入 lynx-view shadow root *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fbfe464`](https://github.com/songloft-org/songloft-player-lynx/commit/fbfe4644abb1366d545563a3d8646004a79df535) - **nav**: 插件 tab 入口标记 ?tab=true 并修复推入页返回箭头 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a4aefcc`](https://github.com/songloft-org/songloft-player-lynx/commit/a4aefcc74515823d797d9963d7a061aa45ff4bf5) - 对齐 Flutter 的歌单置顶、播放器歌曲信息与缓存到本机 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`13c4bd0`](https://github.com/songloft-org/songloft-player-lynx/commit/13c4bd08dfd4c7f94198ff513b4d56b93efb2ef0) - **settings**: 缓存大小上限改为分段滑条并补容量进度条 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`31726c6`](https://github.com/songloft-org/songloft-player-lynx/commit/31726c6557b02c9448825d18949d24f01661785a) - **library**: 歌曲信息与编辑弹窗化，退役详情/编辑两路由 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`92e5863`](https://github.com/songloft-org/songloft-player-lynx/commit/92e58630d0f657ba25856f4f15642e993a344038) - **ui**: 歌曲菜单按视口裁剪，去掉与宽屏行内按钮重复的项 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`54001b1`](https://github.com/songloft-org/songloft-player-lynx/commit/54001b1d3c14a0863b3f55a725f2c516e7d65832) - **playlist**: 歌单封面改进——修复变形、支持从歌曲选择封面、收藏歌单可改封面 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e235c90`](https://github.com/songloft-org/songloft-player-lynx/commit/e235c907a36fe38ab371960744d801cfe4d86a38) - add HarmonyOS platform support *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1f2c04b`](https://github.com/songloft-org/songloft-player-lynx/commit/1f2c04b0e999436229c04069ecc545d5d801e5f1) - **ci**: use hap-sign-tool.jar for post-build signing *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c027ca7`](https://github.com/songloft-org/songloft-player-lynx/commit/c027ca7767190af18a37611bc7d074bffe1a0b17) - **android**: 桌面歌词支持双行显示（当前行 + 下一行） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`11f37da`](https://github.com/songloft-org/songloft-player-lynx/commit/11f37dacaf736361f8fe1fc3805fc7bc8da28ec7) - 实现自定义标签功能 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4f0060b`](https://github.com/songloft-org/songloft-player-lynx/commit/4f0060b5585f528f0a48689d8dbb8e269c5cd9f3) - add Lynx native rendering support for JS plugins *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1089235`](https://github.com/songloft-org/songloft-player-lynx/commit/1089235b739c0a66cf1c3768946d63ecd5cf1d1d) - **android**: 增加后台播放诊断日志 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e6bdad2`](https://github.com/songloft-org/songloft-player-lynx/commit/e6bdad2d4992c5113726234ea2ff139547097472) - **player**: 歌单和曲库排序菜单支持升降序切换 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`908448e`](https://github.com/songloft-org/songloft-player-lynx/commit/908448e79179f38d41e87b69008dea0e9d3c8940) - **library**: 曲库新增文件夹浏览视图 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`dfa2ded`](https://github.com/songloft-org/songloft-player-lynx/commit/dfa2dedb0bc116b94ac0bce3bbc8037aa0dfe699) - **theme**: Liquid Glass 浮动表面 + glassColor 映射 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`023fcc7`](https://github.com/songloft-org/songloft-player-lynx/commit/023fcc7925ab005a032b88a57e104691cb2fde14) - **auth**: 登录页添加同意协议勾选框 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`580e002`](https://github.com/songloft-org/songloft-player-lynx/commit/580e0028e12839a8213d502d696319c3a74fbfd3) - **theme**: Apple HIG 阶段2 — 标准材质系统 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4868733`](https://github.com/songloft-org/songloft-player-lynx/commit/4868733eef777bac690cadd6efa16e34a10b4373) - **a11y**: Apple HIG 阶段11 — 无障碍（全部 11 阶段完成） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4e36702`](https://github.com/songloft-org/songloft-player-lynx/commit/4e36702cda7d78940dc8df28b3a2b96dc21c3f1c) - **ui**: 玻璃材质优化批A — <blur-view> 真背景模糊落地 10 个弹层 scrim *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`29d4dfb`](https://github.com/songloft-org/songloft-player-lynx/commit/29d4dfb928cb64ebcd4be351f9de10cae0878c9c) - **a11y**: HIG 44px 触控目标全量落地，闸门改为按用法反推 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`31678ce`](https://github.com/songloft-org/songloft-player-lynx/commit/31678ce5178c48af6d85fe9a2ec5454f725ffa54) - **theme**: Muse 令牌体系整体换为 Apple 语义色，色值经 HIG 核实并推翻一批旧值 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4fea566`](https://github.com/songloft-org/songloft-player-lynx/commit/4fea5663382a51cf14456458ade071cc9b420d86) - **settings**: 设置类页面改为 Apple 分组列表，分隔线内缩到文字起点 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1d75237`](https://github.com/songloft-org/songloft-player-lynx/commit/1d752374d96542a2950e6560bc302e1795772f5d) - **settings**: 行图标改为 Apple 彩色色调方块 + 白色字形（P1b） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ec59f6e`](https://github.com/songloft-org/songloft-player-lynx/commit/ec59f6eca634487ac39c6272a7033af2492e2bcd) - **library**: SongRow 改为 Apple 曲目行形态，分隔线内缩到封面右缘（P2） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a346591`](https://github.com/songloft-org/songloft-player-lynx/commit/a346591f1b6f07b5c840f22043c5818b2ae10528) - **layout**: 导航度量令牌化 + 配色迁 Apple 名，选中 pill 改用 accent wash（P3） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b8a2c68`](https://github.com/songloft-org/songloft-player-lynx/commit/b8a2c68c7ffac0053f04a48f015bf91410994ef4) - **home**: 首页排版上移、统计卡去边框分组圆角、度量令牌化（P4） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9ad4010`](https://github.com/songloft-org/songloft-player-lynx/commit/9ad401092b528d35eb43ce5910ddd15206640579) - **playlist**: 歌单列表与详情迁 Apple（封面 160、搜索框 Apple 填充、font-sm 分流）（P5） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d8f3137`](https://github.com/songloft-org/songloft-player-lynx/commit/d8f3137f3099436ca68b741fefbfd023a11fdc53) - **player**: 全屏+mini 播放器迁 Apple（封面圆角、歌手 accent、进度条 Apple 填充、别名清零）（P6） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fb8c8ba`](https://github.com/songloft-org/songloft-player-lynx/commit/fb8c8bad3dba176e63fa5f046e88087f699979d8) - **auth**: 登录页迁 Apple（logo 80/18 对齐 Splash、卡片去边框、输入框 Apple 填充、排版分流）（P7） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a9c8754`](https://github.com/songloft-org/songloft-player-lynx/commit/a9c8754d7bff98035a453ecbc0351fbfa4ce28ed) - **ui**: P8 对话框/抽屉/菜单/Toast + 全仓颜色别名扫荡 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5a4cb5b`](https://github.com/songloft-org/songloft-player-lynx/commit/5a4cb5bbd39555ddfae5f4a9d6a78d16b1126bd4) - P9 硬编码 px 清零（EqualizerPage/ServerEdit/ServerList 三个零令牌文件 + 散落） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e9720fa`](https://github.com/songloft-org/songloft-player-lynx/commit/e9720fa91accdfaea515fa32c48b0bb6bec4a83b) - **theme**: P10 删除 Muse 颜色别名层（硬校验点，迁移完成） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a589905`](https://github.com/songloft-org/songloft-player-lynx/commit/a589905f12ca97cedf6ae41fbdb78b90c58b11dd) - **theme**: font-role 扫荡，删 legacy --font-*（只留 --font-2xs） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6f9695b`](https://github.com/songloft-org/songloft-player-lynx/commit/6f9695b41cbf1dffc54f495517021067c576cf89) - **settings**: 外观页全面 iOS 化——主题预览块/材质分段/字号 A—A 滑块/语言勾选
+- [`264b136`](https://github.com/songloft-org/songloft-player-lynx/commit/264b136f5cc08a040a8a754dcecee1215daeef44) - **settings**: 设置页去 Settings.app 化——图标去彩色方块、分组标题加粗、音质改分段控件 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`bcdcf6b`](https://github.com/songloft-org/songloft-player-lynx/commit/bcdcf6b5b6d2c410af1a728ec629d904b3a6c8de) - **playlist**: 曲库歌单组新增网络/本地歌单视图与网络徽标 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6b97c22`](https://github.com/songloft-org/songloft-player-lynx/commit/6b97c22b7bee781497ac900ded36da3e25fb3e4e) - **settings**: 服务器表单增加账号密码输入 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4d26fb3`](https://github.com/songloft-org/songloft-player-lynx/commit/4d26fb3a30b181fa46813adb53aa276c73de23f9) - **player**: 全屏播放界面 UI/UX 全面打磨 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e6b40b7`](https://github.com/songloft-org/songloft-player-lynx/commit/e6b40b79858352cbc8fd9b008d168af403cf2d13) - 优化mini播放条 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5f05619`](https://github.com/songloft-org/songloft-player-lynx/commit/5f05619b59bfa445c419c3ab1f071607673468c4) - **harmony**: 全屏布局 + 底部安全区域修复 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`aac1a46`](https://github.com/songloft-org/songloft-player-lynx/commit/aac1a46b038998f129d6ccbfeb5f215e600b57b0) - **harmony**: 添加 webview 组件支持插件页面渲染 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`77e02e3`](https://github.com/songloft-org/songloft-player-lynx/commit/77e02e3900830554d81d8599bfb146a212cee0de) - **harmony**: add patch script to enable DOM storage in webview *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f804df2`](https://github.com/songloft-org/songloft-player-lynx/commit/f804df29a5601f2768adda0b3e2f9eec01d699d3) - **library**: 曲库界面 UI/UX 系统优化 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`14545e6`](https://github.com/songloft-org/songloft-player-lynx/commit/14545e6e739b4306482952c2976f32198e624df2) - **home**: 封面播放按钮、区块独立空态与宽屏 bento *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fa0314f`](https://github.com/songloft-org/songloft-player-lynx/commit/fa0314f1c911a3391382e8d53441be2ff5c758ef) - **theme**: iOS 启用原生 Liquid Glass 材质并分层降透明度 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d2f23f5`](https://github.com/songloft-org/songloft-player-lynx/commit/d2f23f5c0df72ca7c8e1853690fc8080d3d66196) - **nav**: 玻璃胶囊的滚动边缘效果与跨层 scroll store *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`af9cb15`](https://github.com/songloft-org/songloft-player-lynx/commit/af9cb15bad2a8fc95226df2478e80bc96896e59f) - **ui**: 玻璃面板弹簧入场/退场与 usePresence 退场基建 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`94a4a47`](https://github.com/songloft-org/songloft-player-lynx/commit/94a4a47721fdcf3d8ce7e3d92d756adac3c18af4) - **ui**: 非iOS 仿玻璃 sheen 缓慢漂移呼吸 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0def575`](https://github.com/songloft-org/songloft-player-lynx/commit/0def575f164255bd5c0c31d6052c69a10fa8f654) - **theme**: 接通 reduce-motion 宿主信号 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0a17ceb`](https://github.com/songloft-org/songloft-player-lynx/commit/0a17ceb4c31f35b08d64631b2270e643c279e9d1) - **native/android**: 推送 systemReduceMotion，接通 Android reduce-motion *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a69272f`](https://github.com/songloft-org/songloft-player-lynx/commit/a69272f91e8deb34908589c8fdb1af4885bb2088) - **ui/ios**: 面板站点启用 glass-container 合并材质 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fdda11d`](https://github.com/songloft-org/songloft-player-lynx/commit/fdda11d3a162f8430543ea95c500d413b620e86b) - **jsplugin**: 插件商店改为无限滚动，修复底部 tab 遮挡列表 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4fff54c`](https://github.com/songloft-org/songloft-player-lynx/commit/4fff54c455b0b16d11329f05d4516e1188218985) - **ui**: 全仓铺开按压态反馈，禁用控件摘除 handler 并补底栏选中过渡 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f311705`](https://github.com/songloft-org/songloft-player-lynx/commit/f311705678905dcb9660416dce92cdc98b9a35d4) - **theme**: 接通 increase-contrast App 内开关，accent 改走内联通道 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3f03f15`](https://github.com/songloft-org/songloft-player-lynx/commit/3f03f1573f6094bdc16e92dd6747d75e623f980d) - **ui**: 图标随字号阻尼缩放，底栏与插件字形 pin 住 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d71c431`](https://github.com/songloft-org/songloft-player-lynx/commit/d71c431068cc171b059e82fd8a1896871a7e2bf5) - **a11y**: 图标按钮接通 Lynx 无障碍名称，禁用态补 disabled trait *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ad8dd68`](https://github.com/songloft-org/songloft-player-lynx/commit/ad8dd686c30bdfba3836fc27d554e0fcf4c2239b) - **player**: 换歌关闭全屏视频面，曲库新增「观看 MV」入口 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1cc08e0`](https://github.com/songloft-org/songloft-player-lynx/commit/1cc08e03df0f136f603428eff418d5d5232938d3) - **player**: 视频控制层上移 JS，全屏只做播放 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4b850c5`](https://github.com/songloft-org/songloft-player-lynx/commit/4b850c5024c24062aa4cfae6ca61f424b10ca6b9) - **player**: Web MV 改用单 video 表面，修转码失败与通知歌词报错 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`aec01ea`](https://github.com/songloft-org/songloft-player-lynx/commit/aec01eacf5859afc9e8141eaa629e787716dacee) - **player**: 全屏视频补 JS 播放控件，MV 徽标锚定封面并改列表标识 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d75c14a`](https://github.com/songloft-org/songloft-player-lynx/commit/d75c14a15bca4ea0def8fdcea20310825bbd1296) - **library**: 歌曲编辑支持多歌手分行填写并同步 song_artists *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e6d9206`](https://github.com/songloft-org/songloft-player-lynx/commit/e6d9206bd2e7bec597b12aa3d56fcaf2d9087067) - **jsplugin**: 主页插件网格支持拖拽排序 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0492f4b`](https://github.com/songloft-org/songloft-player-lynx/commit/0492f4bb5bf61f4cc264cce410b6962fb8d55815) - **jsplugin**: 主页 2D 网格 handle 拖动 + 排序页拖拽体验对齐 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`7a19f34`](https://github.com/songloft-org/songloft-player-lynx/commit/7a19f349ebaa4101069b8081bd5ef092964292d6) - **video**: 视频播放三端重设计 —— TS/Android 全实现 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5758d72`](https://github.com/songloft-org/songloft-player-lynx/commit/5758d72ebc269cf6684797cd509c9507162bdaaf) - **video/ios**: AVPlayerLayer 迁移，方法契约对齐三端 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`658d597`](https://github.com/songloft-org/songloft-player-lynx/commit/658d597ecb5b28505bfead1c366709b7ac8efb83) - **video/harmony**: 从零实现 Harmony 端，三端方法契约齐平 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`efe2387`](https://github.com/songloft-org/songloft-player-lynx/commit/efe23871b972bb3e86ff98edc3c1db04b617357f) - **theme**: 提升 Liquid Glass 静态质感（sheen 折射/镜面高光/lensing 重推） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a11b8e6`](https://github.com/songloft-org/songloft-player-lynx/commit/a11b8e64e0211304e61d7fb7e554f2bcd0ded132) - **nav**: Tab 与分段控件选中指示器流动动画（--ease-spring-bounce） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`69af250`](https://github.com/songloft-org/songloft-player-lynx/commit/69af2505cbb85d2647deb5b771451dc963095c42) - **ui**: 统一浮层开合弹簧与独立控件按压 gel 反馈 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`22f083e`](https://github.com/songloft-org/songloft-player-lynx/commit/22f083e2030d9f82414de0c026b837590c09462d) - **player**: 收紧导航胶囊与 mini-player 间距至 4px（P4 Path C） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b63d463`](https://github.com/songloft-org/songloft-player-lynx/commit/b63d4636699dc9a87c1e3c1da3b1e5f65f7f30cc) - **lynx**: 支持视频电台/电视直播播放与添加 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d61c248`](https://github.com/songloft-org/songloft-player-lynx/commit/d61c248ecfb68adcb8bd8b46f56d7d6086919746) - **lynx**: 歌曲名列表溢出时改为自动滚动显示 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`8503a6e`](https://github.com/songloft-org/songloft-player-lynx/commit/8503a6ef2839dbe8107f44d4851059d4a4b32bd6) - **jsplugin**: 向 WebView 插件下推胶囊 appearance 与宿主色板 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`8d984e0`](https://github.com/songloft-org/songloft-player-lynx/commit/8d984e00ebdfc996901360637225ccc91512089d) - **nav**: 宽屏侧栏支持收起为图标栏 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`80bce91`](https://github.com/songloft-org/songloft-player-lynx/commit/80bce915c1bd8ad236e3bd0cbc3d3921899b08c5) - **jsplugin**: 支持从已安装列表打开插件并返回管理页 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`af03042`](https://github.com/songloft-org/songloft-player-lynx/commit/af03042b04a5ad5e16ebb63d0c2b48ce980acb33) - **release**: 统一多平台打包发版并完善开源文档 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5fce66f`](https://github.com/songloft-org/songloft-player-lynx/commit/5fce66f8987fb9870bed810a211e84b93952f1b0) - **player**: 补齐多音轨选择与四端源准备契约 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`027edb5`](https://github.com/songloft-org/songloft-player-lynx/commit/027edb55f0871358e8e25a7630dc812897a22e51) - **updater**: 建立 bundle 签名与壳兼容发布契约 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b95d77e`](https://github.com/songloft-org/songloft-player-lynx/commit/b95d77ee88df15e680a48336c237655d122b30db) - **updater**: 接入 Android 签名下载与冷启动回退 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d3198b6`](https://github.com/songloft-org/songloft-player-lynx/commit/d3198b6ae5e2beeae80ab25fa3c340984734fbbe) - **updater**: 接入 iOS 下载回退并验证安装包宿主资源 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3734675`](https://github.com/songloft-org/songloft-player-lynx/commit/3734675cedbd17a4f6e67ccd5f9cd602679d4590) - **updater**: 接入 HarmonyOS 签名下载与冷启动回退 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ed119fd`](https://github.com/songloft-org/songloft-player-lynx/commit/ed119fdb114fb7d75e6c990322b32ba6605e468b) - **updater**: 增加本通道客户端更新检查与关于页入口 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`930b5fe`](https://github.com/songloft-org/songloft-player-lynx/commit/930b5fe7f363f5a4ff653faca8ef453b7dc8e222) - **cache**: 增加缓存身份索引与 Android 串行下载取消 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`576a0b5`](https://github.com/songloft-org/songloft-player-lynx/commit/576a0b58aea8f61f80f7b7d54efd1baa70ed86d3) - **cache**: 接入 iOS 缓存索引与流式下载取消 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`512efda`](https://github.com/songloft-org/songloft-player-lynx/commit/512efda5cff0a3d1330b7f8150e92416c3cfcf66) - **cache**: 接入 HarmonyOS 流式缓存与本地文件音频源 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`7a582ac`](https://github.com/songloft-org/songloft-player-lynx/commit/7a582acd74b38ad39fd5df2ea80d41a29532dc0d) - **cache**: 增加歌单批量缓存与下载任务管理 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2bde03a`](https://github.com/songloft-org/songloft-player-lynx/commit/2bde03af36197c8f72622966f7606fc2d7391e5d) - **cache**: 增加本地缓存管理与离线播放 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9c378fa`](https://github.com/songloft-org/songloft-player-lynx/commit/9c378faf222872fbc537e2340f7f8f782c1a6f1c) - **web**: 补齐歌单 JSON 导入与导出 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`dd9335f`](https://github.com/songloft-org/songloft-player-lynx/commit/dd9335f586bf542f076d282c24c5ea42d192f614) - **web**: 增加播放键盘快捷键 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`102273d`](https://github.com/songloft-org/songloft-player-lynx/commit/102273da40a5d918305017653d043090e8a74b67) - **platform**: 补齐剪贴板写入与成功确认 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`50b8131`](https://github.com/songloft-org/songloft-player-lynx/commit/50b8131d2e8103f543128a1145069641353bfd72) - **audio**: 补齐 HarmonyOS 通知歌词与原生契约 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1f87211`](https://github.com/songloft-org/songloft-player-lynx/commit/1f872114edda25d36c95249478b0e3f4820db665) - **plugin**: 补齐前台恢复通知与 frame 生命周期 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4fa39ec`](https://github.com/songloft-org/songloft-player-lynx/commit/4fa39ec91e631256d5c48a8c105777958fd0a3bc) - **player**: 增加长歌名滚动开关 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`06702e8`](https://github.com/songloft-org/songloft-player-lynx/commit/06702e8cef545e311e03cbbf0e409169cfa2bd54) - **jsplugin**: 新增 GitHub 社区插件发现 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`491e85d`](https://github.com/songloft-org/songloft-player-lynx/commit/491e85d1b1614ffe70d28215aefbf2ec712dfd58) - **updater**: 增加默认关闭的自动热更新开关 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`be1ee84`](https://github.com/songloft-org/songloft-player-lynx/commit/be1ee8456cc0f216e3243c11b6b153e359143191) - **appearance**: 优化液态玻璃材质与辅助功能适配 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ee5e73d`](https://github.com/songloft-org/songloft-player-lynx/commit/ee5e73d5959d741d2893bfc88487e7a15a7f719d) - **cache**: 支持 Android 自定义歌曲缓存目录 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`086485f`](https://github.com/songloft-org/songloft-player-lynx/commit/086485faa26d24fa89d0b22067e408d5423bd6b2) - **player**: 支持下一首播放与随机历史导航 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4ca517b`](https://github.com/songloft-org/songloft-player-lynx/commit/4ca517b3fe097f6e9705c2edc16a0a86a99fe362) - **release**: 持久化中文变更日志并支持长发布记录 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1806ce1`](https://github.com/songloft-org/songloft-player-lynx/commit/1806ce18736133ab9266582c023971e36ab790bd) - **release**: 补充可直接执行的 Shell 发版入口 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :bug: 问题修复
+- [`06a4dd3`](https://github.com/songloft-org/songloft-player-lynx/commit/06a4dd3c2ebb263e5b9bacf3b73b847b8dd970db) - **runtime**: 真机修复 AbortController 缺失与 Lynx 裸全局 fetch *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`40f47e3`](https://github.com/songloft-org/songloft-player-lynx/commit/40f47e3dcf2ff86bdd9f70d4dd0c3db0a1d662fa) - **runtime**: 真机修复 clearTimeout 严格性与 Lynx 存储降级 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a2cf7cb`](https://github.com/songloft-org/songloft-player-lynx/commit/a2cf7cbae4611461e4b64509caa50fc8aed39fd9) - **ui**: emoji 图标改用 Lynx <svg> Icon 组件 + 进度条双线修复 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e3222ad`](https://github.com/songloft-org/songloft-player-lynx/commit/e3222ad0f9a1cc9cdeadbf834e6101568f0ace80) - **shell**: 底部导航图标与文字重叠（border-box 下安全区吃高度） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`281fdc2`](https://github.com/songloft-org/songloft-player-lynx/commit/281fdc2504e4464e5a81dc629062a20d7f73229a) - **playlist**: 歌单加载报错——zod 容错后端 null 字段 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`85c2ab2`](https://github.com/songloft-org/songloft-player-lynx/commit/85c2ab28cfa470d345678908265f090736e52604) - **library**: 歌单详情返回回到 Playlists 视图（?view= URL 驱动） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fce9a0b`](https://github.com/songloft-org/songloft-player-lynx/commit/fce9a0baeb98177b2bf1ce5aa764630925b9599a) - **library**: 分类歌曲返回保留当前 facet 字段（field 也 URL 驱动） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1be3f46`](https://github.com/songloft-org/songloft-player-lynx/commit/1be3f46e72a30597305135357ea90de6c04ab1a1) - **android**: B2 真机三修——持久化存储/通知权限/媒体通知 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`dff5690`](https://github.com/songloft-org/songloft-player-lynx/commit/dff569086a02c68a693c3efed93360bc3788ce5a) - **android**: 通知栏修复（MediaSession 改用 service context + 竞态处理） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`036e39d`](https://github.com/songloft-org/songloft-player-lynx/commit/036e39d0cb8bb718e5e0349105a635cbbe569be6) - **auth**: 修复真机登录页 Password 输入框/Login 按钮闪烁 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`bd16d51`](https://github.com/songloft-org/songloft-player-lynx/commit/bd16d511c938649a543dbfb763dafd9e3b783d96) - **tooling**: 修复 pnpm-workspace.yaml allowBuilds 占位符 bug *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4844fd0`](https://github.com/songloft-org/songloft-player-lynx/commit/4844fd0c484299fff10b0c6ce0817a7b29107765) - **settings**: 服务器地址切换后清空 Query 缓存 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5feede7`](https://github.com/songloft-org/songloft-player-lynx/commit/5feede79aa78e7913df5b90f694b4ee1cc97f705) - **docs**: 修复 PROGRESS.md 里被工具引入的 U+FFFD 乱码 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0e9febe`](https://github.com/songloft-org/songloft-player-lynx/commit/0e9febe5455983adc03ce1f5b4161fd8d32af400) - **ui**: 暗色输入框提示文字不可见 & 曲库子页签记忆 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`10dfda9`](https://github.com/songloft-org/songloft-player-lynx/commit/10dfda9b7fc6dc30d9b040a7599d2b664648296c) - **android**: 通知栏显示、正式图标与名称、CI签名 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`cf5e482`](https://github.com/songloft-org/songloft-player-lynx/commit/cf5e482992e6680039029a84266c3593477b3289) - **ui**: 开关开/关状态在真机不可见 —— 收敛为共享 AppSwitch *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`8cfefb5`](https://github.com/songloft-org/songloft-player-lynx/commit/8cfefb5a6829042f32e381ce3089dda73b68f020) - **css**: 清掉两条从未生效的样式声明（构建警告归零） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9504c81`](https://github.com/songloft-org/songloft-player-lynx/commit/9504c8174a09d25985ba686004db89ef286e3cdc) - **models**: 用真后端响应验证 /scan/directories 契约 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6f4fc4c`](https://github.com/songloft-org/songloft-player-lynx/commit/6f4fc4c86e4abe055426c57cb5c0422dce06a742) - **bug.md**: 清理第一轮 6 条 · 首页横滚/插件图标/播放器返回/统计/标题 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0ca9f68`](https://github.com/songloft-org/songloft-player-lynx/commit/0ca9f68a507c9063914948d2bc06ecb4cc1fefe2) - **ui**: 暗色输入框文字颜色 + 歌单/分类封面改为正方形 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e76529c`](https://github.com/songloft-org/songloft-player-lynx/commit/e76529c027a1d8e3e87a05e7b528ee1c1caf663c) - **ui**: 按钮/背景/文字在暗色模式下不可见 —— 替换未定义 token *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b7b7a6b`](https://github.com/songloft-org/songloft-player-lynx/commit/b7b7a6b51a63a1c8492ccb5a38e69a80b1a44672) - **ui**: 恢复歌单/分类封面为矩形（96px 高度） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e709d32`](https://github.com/songloft-org/songloft-player-lynx/commit/e709d327b373162e8477baa9df62fb98d64c6787) - **ui**: 歌单/分类封面改为正方形 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1eda194`](https://github.com/songloft-org/songloft-player-lynx/commit/1eda194c3f096b4b4be453b4e083a3fe94030921) - **playlist**: 歌单详情关闭后回到来源页面而非总是 Library *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`620cf63`](https://github.com/songloft-org/songloft-player-lynx/commit/620cf633777bf46db30c98f1400b0f98f48dd959) - 登录页面水平和垂直居中 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`cc32361`](https://github.com/songloft-org/songloft-player-lynx/commit/cc32361eda92fca48950425599843253eba78060) - 底部导航插件 tab 图标从插件列表补充 icon 信息 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`14de62d`](https://github.com/songloft-org/songloft-player-lynx/commit/14de62d5ae2d1ba1d265675de1600311a5f9eda0) - **android**: 升级 Lynx SDK 3.8.0 → 4.0.0 修复插件 WebView 空白 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2929802`](https://github.com/songloft-org/songloft-player-lynx/commit/29298021c437fe61877ff59878a126361d7861d1) - **home**: 添加手动刷新按钮替代下拉刷新手势 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`99be7cc`](https://github.com/songloft-org/songloft-player-lynx/commit/99be7cc0e9a1bcc61bc0b7b8fa096284e0cc36c5) - **home**: 首页歌单封面补上 width 确保正方形 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`76329e3`](https://github.com/songloft-org/songloft-player-lynx/commit/76329e34d75944f7ddad87c4c659b582f7b46170) - **home**: 删除刷新按钮，设置图标改为齿轮，移除 onStripTouch 握手修复 Android 歌单区下拉刷新 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3e1eba7`](https://github.com/songloft-org/songloft-player-lynx/commit/3e1eba78fe8c770c802031ed970e219a80c77e68) - **icon**: 设置图标改为 Material-style 齿轮形状 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9206fc7`](https://github.com/songloft-org/songloft-player-lynx/commit/9206fc7530e4f40e04779c1ced1088a4aab3d76a) - **icon**: 设置图标改用 Feather Icons 官方 settings 齿轮 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`37e0f4b`](https://github.com/songloft-org/songloft-player-lynx/commit/37e0f4bd4ca6d0b75ce80cc803aee910785b0dd2) - **android,runtime**: 修 3 个真机专属缺陷（viewpager2 / lazy-bundle / queueMicrotask） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2ab2b8e`](https://github.com/songloft-org/songloft-player-lynx/commit/2ab2b8e2a611d998d8f11654cef0a1841006f233) - **config**: 默认后端地址钉死 localhost:58091（去掉过期硬编码 LAN IP） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`24b82e4`](https://github.com/songloft-org/songloft-player-lynx/commit/24b82e4b9151973c8723403e51909e068345b1f9) - **library-ops**: 批29c 修复指纹 Computing 阶段卡死/跳过（双层根因） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`dce125f`](https://github.com/songloft-org/songloft-player-lynx/commit/dce125f69eb9d713c275ca70462a0ace5f70536d) - **ios**: 换正式 AppIcon 并修复 LiveActivityModule 可用性 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`52e2e16`](https://github.com/songloft-org/songloft-player-lynx/commit/52e2e1656c0c7c8621c96753b30c7ffb9eb96785) - **settings**: 迁移设置子页失效 token 并统一 Muse 控件 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b9642a8`](https://github.com/songloft-org/songloft-player-lynx/commit/b9642a8b861a3b4cf2268a935f80e4e244c39345) - **home,playlist,i18n**: 细节修复与默认语言 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0af0b76`](https://github.com/songloft-org/songloft-player-lynx/commit/0af0b76eadf7fccb70d677a3b16a8d9309266d9c) - **playlist**: 排序模式滑动自动加载分页 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2501bc7`](https://github.com/songloft-org/songloft-player-lynx/commit/2501bc7e2f0b5fd89fa63e9ce4ba06cfdd9b8d33) - **home**: web 端禁用下拉刷新，修复指示器永久显示的问题 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d4c4310`](https://github.com/songloft-org/songloft-player-lynx/commit/d4c4310f381668d216d2749460945ab99461cb5d) - **home,jsplugin**: web 端按 SystemInfo 判定平台，首页不再渲染 <refresh> *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`69593d0`](https://github.com/songloft-org/songloft-player-lynx/commit/69593d0cacfe0d860ef1dc732c1b574268afedd9) - **storage**: web 端会话改用 IndexedDB 持久化，刷新不再掉登录 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`983a97d`](https://github.com/songloft-org/songloft-player-lynx/commit/983a97d4b92071bd19c8ab46d018f083e0d29da6) - 批41 三条 P0 阻断（构建产物陈旧 / iOS 工程损坏 / web 产物黑屏） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a7114c1`](https://github.com/songloft-org/songloft-player-lynx/commit/a7114c1f000ffcd653ff630903bc544953d08b7b) - 批42 第一波 — 裸 i18n key / 收藏分页死循环 / 升级轮询失控 / 队列重排钉错 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9889b22`](https://github.com/songloft-org/songloft-player-lynx/commit/9889b2246b202d61b8af520aabf35f757ad2432d) - 批42 第二波 — 播放位置从不落盘 / 冷启动播放键无效 / Live Activity 泄漏 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e50dab4`](https://github.com/songloft-org/songloft-player-lynx/commit/e50dab4bb45d576d8a1afc3593a915917369a93f) - 批42 第三波 — 切服务器带着旧 token / HTTP 请求没有超时 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5bd94e7`](https://github.com/songloft-org/songloft-player-lynx/commit/5bd94e7b6c8a27f1c4d9189b9e9c1ad0b1e8b9fd) - 批42 第四波 — DLNA 页进去即崩 / 能力探测器接线（Web 上的死入口） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fbe5662`](https://github.com/songloft-org/songloft-player-lynx/commit/fbe566218c2eff3a0d55e45cd25cfd46b7b162c5) - 批42 第五波(P1-6) — 元数据「再次刷新」点了不轮询 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f8a060d`](https://github.com/songloft-org/songloft-player-lynx/commit/f8a060d533b5016e4f9793b9c7e3fe0ea7fe8d78) - **ios**: 批45 Swift 代码首次编译收口（导入名对齐 + LiveActivity 可用性守卫） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`8f446d1`](https://github.com/songloft-org/songloft-player-lynx/commit/8f446d17c255d9337f0df62af0131cc4c099379d) - **ios**: 批46 修完 iOS e2e 首跑的 6 个失败（110/110） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f849804`](https://github.com/songloft-org/songloft-player-lynx/commit/f849804ff6a8f7b91a2642533a63d446f0a221f0) - **ios**: 批47 自签名下媒体流可播 + 关开关立即生效 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3df1299`](https://github.com/songloft-org/songloft-player-lynx/commit/3df12996c599d4520ee6e4da162d201938fdde23) - **android**: 批48 悬浮歌词从未工作过（第四/五重死）+ AndroidManifest 闸门补位 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`90c9be5`](https://github.com/songloft-org/songloft-player-lynx/commit/90c9be5b22bda540fc3c7b86455e91e57a85c054) - **player**: 批49 Step 0-1 播放 URL 带上真实平台，视频不再被要求剥掉画面 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ae966dc`](https://github.com/songloft-org/songloft-player-lynx/commit/ae966dca0be6e1515c0d32dc8e5747432d97492c) - **settings**: 修复缓存配置字段贴边与中文标签被裁剪 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`8551e74`](https://github.com/songloft-org/songloft-player-lynx/commit/8551e74bc63602ee1eb3fa1a3fc970429e9fdf1d) - **player**: 播放历史改为按上下文的面板，并修通从未生效的打点 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`30632b5`](https://github.com/songloft-org/songloft-player-lynx/commit/30632b5cb2a987412ef685f2b52509a922c2772c) - **settings**: 记住设置页一级列表的滚动位置 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1fc2459`](https://github.com/songloft-org/songloft-player-lynx/commit/1fc24590b922335ac76bbf90f06904fd0c2bad40) - **ui**: 修正输入框贴边削角，并把 15 个文本字段的样式收敛到设计 token *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4700187`](https://github.com/songloft-org/songloft-player-lynx/commit/47001871a413ed82c76a85e050f2d16f999f82d1) - **player**: 删掉 Lynx 不支持的 font-variant-numeric，构建警告归零 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`57bd301`](https://github.com/songloft-org/songloft-player-lynx/commit/57bd30171fbb087a0abfb8f6cfc95405082f8496) - **ui**: 多行输入框改由 flex 定尺，修 Web 上超出容器右边缘 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`32767f5`](https://github.com/songloft-org/songloft-player-lynx/commit/32767f50da0e05784ed0514cb611e1e32125f03c) - **shell**: 二级页面保持所属 tab 高亮 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a2fbe81`](https://github.com/songloft-org/songloft-player-lynx/commit/a2fbe81140f87a846a8b80aa7b23635b3bbdd5ba) - **libops**: 维护入口改用统一的区块/行组件，重新扫描回到模式选择 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a8514e9`](https://github.com/songloft-org/songloft-player-lynx/commit/a8514e9746a5fa7032314cdbad3d15b0ad1323e4) - **jsplugin**: 卸载插件改用确认对话框，修从文件安装的 401 与静默失败 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`571eb08`](https://github.com/songloft-org/songloft-player-lynx/commit/571eb082931b9d36341ac163296830c07d923ba3) - **web**: 修复 Web 平台原生模块、剪贴板、音频、文件选择器整体失联 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0bdb194`](https://github.com/songloft-org/songloft-player-lynx/commit/0bdb19446cd7bc5124dd61e8d97657a6ff71e23e) - **settings**: 歌词设置标签对齐 Flutter 原版 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0537f26`](https://github.com/songloft-org/songloft-player-lynx/commit/0537f264f2559da296df1ed1231d6b87d0286a46) - **settings**: 分类内容拆分为多张小组卡片，避免挤在一起 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0542922`](https://github.com/songloft-org/songloft-player-lynx/commit/0542922094f72c2a1dea80512ce1492d5918933c) - **settings**: 悬浮歌词改为开关控制，子设置加标题 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2754f44`](https://github.com/songloft-org/songloft-player-lynx/commit/2754f449b46935cba2a5c716109ffea00c2522c4) - **eq**: 均衡器滑块改为纵向，旋转 Slider 90 度 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c1855c7`](https://github.com/songloft-org/songloft-player-lynx/commit/c1855c7a36bc16dd8873d6229971ebb916856ce5) - **eq**: 增加均衡器滑块纵向移动距离 140→260px *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e4ebf4f`](https://github.com/songloft-org/songloft-player-lynx/commit/e4ebf4f070e15ee6f77bfde0238687c16b77f9ed) - **eq**: 调整滑块高度 180px，轨道加粗到 6px *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`7cf3485`](https://github.com/songloft-org/songloft-player-lynx/commit/7cf34851d4a1ec126c4d4b920eb9fa2e7e4ef4ee) - **eq**: 滑块高度增加到 300px *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`efb4cb4`](https://github.com/songloft-org/songloft-player-lynx/commit/efb4cb4d57b05d75e5c2dcaeb6ca76444d806a3a) - **eq**: 滑动条轨道加粗 6→12px *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5606ac5`](https://github.com/songloft-org/songloft-player-lynx/commit/5606ac568c0b8bbd1e202c9660f4e7a8cd8fad42) - **eq**: 手写纵向滑块替代 Lynx Slider，用 bindtouchmove 实现 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`045a67f`](https://github.com/songloft-org/songloft-player-lynx/commit/045a67f2e6e8514853d26dafa0fc9cbcd73d4a6c) - **eq**: 修复滑块高度为0，bands 容器设固定高度 200px *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`97b6ace`](https://github.com/songloft-org/songloft-player-lynx/commit/97b6acea9bf4899c4866101d5feb0285f4e9103e) - **eq**: 改用 catchtouchmove + event.detail.y 实现纵向触摸 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3beb759`](https://github.com/songloft-org/songloft-player-lynx/commit/3beb7590c116977a2cfb60b36855b79ad5e7038f) - **settings**: web 版导出日志补上客户端日志（shareFile 浏览器下载 + 能力放开） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`53fb045`](https://github.com/songloft-org/songloft-player-lynx/commit/53fb04579b0e169bdf65c28fc820d8af741089bd) - **jsplugin**: 插件商店在宽屏设置双栏内就地切换，不再隐藏左侧设置菜单 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9d8e993`](https://github.com/songloft-org/songloft-player-lynx/commit/9d8e993c7fe1bf54553c47f55e2db77271c90fb3) - **eq**: 均衡器滑条可拖动（异步测量 + 手势声明 + Web 鼠标支持 + 坐标修正） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6826abe`](https://github.com/songloft-org/songloft-player-lynx/commit/6826abeac00cb85fcf3ee27efcfdbe2f17d99c2d) - **settings**: 宽屏右栏内缓存管理/均衡器/服务器页不再显示失效的返回箭头 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ec7f6a3`](https://github.com/songloft-org/songloft-player-lynx/commit/ec7f6a37b1e7a6919f256c4893ee6befae06c48f) - **settings**: 去掉两个二级页的根级 Fragment，收敛 web-core 元素借用冲突 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`55d7b10`](https://github.com/songloft-org/songloft-player-lynx/commit/55d7b10daad9b34633868805bf69287b158bb30e) - **playlist**: 歌单排序对齐 Flutter——「按拼音」改为排序菜单并修复无效点击 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`801e0df`](https://github.com/songloft-org/songloft-player-lynx/commit/801e0df22ed8e0cd73dc43178eaac0c78ce2bde8) - **web**: preload 反致 bundle 重复下载 1.9MB，并给宿主页加启动埋点 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ce92f44`](https://github.com/songloft-org/songloft-player-lynx/commit/ce92f4429301295d0e08e39ebfd5fbca464fd04d) - 统一曲库选择按钮样式，歌单页面从对勾图标改为"选择"文字 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`7249494`](https://github.com/songloft-org/songloft-player-lynx/commit/7249494a597cccb91b3afe2d5a02cef66fa60660) - **player**: replace incorrect volume icon with cast icon for DLNA button *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`84cedbe`](https://github.com/songloft-org/songloft-player-lynx/commit/84cedbe7bb168bed5789b4245d7a92d0194f0599) - 修复首页插件网格未居中的问题 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`aba9e90`](https://github.com/songloft-org/songloft-player-lynx/commit/aba9e90578130249be4f4cb95fc87edf0be6c6c3) - **lynx**: 补充歌单播放按钮 i18n 文案 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9363089`](https://github.com/songloft-org/songloft-player-lynx/commit/9363089e753890f77aeac32b79b5be40ff4b0205) - **lynx**: 播放按钮用 catchtap 阻止事件冒泡，避免触发导航 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2d6c263`](https://github.com/songloft-org/songloft-player-lynx/commit/2d6c263727280c69ebc06ba304c3e8dce3ca7342) - **lynx**: 统一曲库/歌单搜索框与按钮栏间距为 space-3 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`36655c9`](https://github.com/songloft-org/songloft-player-lynx/commit/36655c9ea5440ede707b5037978d7ec86f94beb9) - **lynx**: 分类列表视图添加横向条目布局 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ce2a74b`](https://github.com/songloft-org/songloft-player-lynx/commit/ce2a74bdb66b8d1ee37dcc126592828eb8d8a845) - **lynx**: 分类页列表模式改用共享 MediaListItem *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`70e4d50`](https://github.com/songloft-org/songloft-player-lynx/commit/70e4d505a4d414139d9045d818c4f3fb6f0f3dbd) - **lynx**: 排序按钮图标与文字恢复同行 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f727c70`](https://github.com/songloft-org/songloft-player-lynx/commit/f727c70c00b9f5845da8cac9925a6274e9e86547) - **web**: 修复 standalone 部署误判 embedded 与 dev server 陈旧缓存 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`78428cf`](https://github.com/songloft-org/songloft-player-lynx/commit/78428cfea9463869fb1f3bfe796cbfd056cde5ab) - **ui**: 弹出层定位改为自研，退役 lynx-ui-popover *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e7e88b5`](https://github.com/songloft-org/songloft-player-lynx/commit/e7e88b5649341c68d26dec5a08a1fd1a8f97a389) - **ui**: 歌曲菜单改为锚定弹出，去掉菜单表头 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`8439494`](https://github.com/songloft-org/songloft-player-lynx/commit/8439494639da31badd5978f036090848dcd0ea2c) - **playlist**: 取消确认弹窗时不再闪出多选文案 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6aac72d`](https://github.com/songloft-org/songloft-player-lynx/commit/6aac72dbe9e8954c3df58ac6773811d84fe3b875) - **ui**: 歌曲菜单锚定形态不再压暗背景 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fb85030`](https://github.com/songloft-org/songloft-player-lynx/commit/fb8503093c6516938a09d650a6b394847cd2a782) - **ui**: 弹窗盖住浮层、关闭即消失，菜单标签不再换行 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`38fa86f`](https://github.com/songloft-org/songloft-player-lynx/commit/38fa86fe087667509366c0d0545c3522a261bc03) - **playlist**: 创建歌单请求始终携带 type 字段 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b4f8142`](https://github.com/songloft-org/songloft-player-lynx/commit/b4f8142e80b592ee01d4ba85b3c9bec6aace6d88) - **library**: 从歌单进入的歌曲详情保持歌单分组高亮 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5969dd7`](https://github.com/songloft-org/songloft-player-lynx/commit/5969dd7b69bdb31c2f61ba158d36f16dfa103dfe) - **player**: 抽屉浮层不再被播放器压在下面 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4782e69`](https://github.com/songloft-org/songloft-player-lynx/commit/4782e69704884001f25f09f89117420cf1757304) - **web**: 补 web-core 事件分发守卫，修复弹层卸载后元素树被摧毁 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f9e741b`](https://github.com/songloft-org/songloft-player-lynx/commit/f9e741bca02c70bcda88dd0a47bf66e8f3d159be) - **player**: 播放历史界面对齐 Flutter 版 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3600e6b`](https://github.com/songloft-org/songloft-player-lynx/commit/3600e6b52372465462da65512de771350dc7a2a4) - **ui**: ConfirmDialog wrapper 补 z-index，修复 Web 上被覆盖层遮挡 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9eb72b1`](https://github.com/songloft-org/songloft-player-lynx/commit/9eb72b1c5a14ebd0da1a317f0e993fe76195ca1c) - **player**: 歌词触发链改为订阅 currentSong，修复恢复播放后显示暂无歌词 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d8f534d`](https://github.com/songloft-org/songloft-player-lynx/commit/d8f534da0d755eba9aa5cac59a3ccc4098414389) - **shell**: 宽屏侧栏选中行高度抖动修复 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d593f1d`](https://github.com/songloft-org/songloft-player-lynx/commit/d593f1d34c32e60c51e1f4793bc362fe20fbf65f) - **player**: mini播放条固定高度并单行省略，防止长文本撑破胶囊 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e350033`](https://github.com/songloft-org/songloft-player-lynx/commit/e350033ae9bed6118c035cf40641bd5c8296e0c0) - **auth**: 渲染层 splash 守卫消除启动时登录页闪现 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9f91c9e`](https://github.com/songloft-org/songloft-player-lynx/commit/9f91c9ebb57dd1fd4216039e36af44968f8d6922) - **web**: 主线程日志写入 IndexedDB 后关闭连接，避免阻塞 Worker 持久化 token *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e230e95`](https://github.com/songloft-org/songloft-player-lynx/commit/e230e95b6b9e018a19ec83ce627ba730456bd479) - **web**: 存储选择改为 IndexedDB 优先，修复刷新丢失登录态 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3fd4b8f`](https://github.com/songloft-org/songloft-player-lynx/commit/3fd4b8f02fd6975d57b8bde2d1a86d6565929fc5) - **web**: 初始路由改为 /，消除刷新时登录页旧节点闪现 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ac9c292`](https://github.com/songloft-org/songloft-player-lynx/commit/ac9c292b0de76e3f477ffc5378ac0691cf256da5) - **ui**: 统一歌曲对话框宽度，按视口钳制 max-height 防止标题行被裁 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c833f32`](https://github.com/songloft-org/songloft-player-lynx/commit/c833f3276e65e896b75ef3cd2c0055054389c55c) - **ui**: 歌曲弹窗固定 chrome 加 flex-shrink: 0，修标题被裁与按钮溢出 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`659f373`](https://github.com/songloft-org/songloft-player-lynx/commit/659f3739b6de77e0cc78ab96621763cad2bbdc95) - **player**: HLS 电台按后端路径判定，修从未生效过的直播播放 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9da2ca6`](https://github.com/songloft-org/songloft-player-lynx/commit/9da2ca6cee08d6f1d6c9ed733ae34825baff117b) - **ui**: 底部滑入面板给出高度来源，修 Android 只剩标题行的塌陷 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9c92ac0`](https://github.com/songloft-org/songloft-player-lynx/commit/9c92ac05a8a769e4c044f0b23e516b13bce44dfe) - **settings**: 转码设置补「最高」码率档并按格式联动，修空码率时全无选中态 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`dc1cc22`](https://github.com/songloft-org/songloft-player-lynx/commit/dc1cc224aaac9ae5ca7f915b673bdefd3ae145d3) - **player**: 修复安卓通知栏歌词/更新、蓝牙断开暂停、音量同步 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`abef131`](https://github.com/songloft-org/songloft-player-lynx/commit/abef131d726fe1801cb9d013c13022a3802c31ca) - **web**: placeholder 颜色跟随主题，修 Web 输入框恒为 grey *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`cb6fc7d`](https://github.com/songloft-org/songloft-player-lynx/commit/cb6fc7d376831c9528b4a6e4fb732cef9b228743) - enable CSS inline variables for native theme pack support *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`490ba10`](https://github.com/songloft-org/songloft-player-lynx/commit/490ba1027aa912a6eec6badf2aea5b2a589a1550) - **player**: 启动时恢复悬浮歌词overlay *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a2cebdb`](https://github.com/songloft-org/songloft-player-lynx/commit/a2cebdbbf2f853fbacf9705d5bd7235fe2213669) - **player**: 优化歌词界面滑动手势冲突 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2f4bb96`](https://github.com/songloft-org/songloft-player-lynx/commit/2f4bb969a50281df8c1e5bf20945756769c4da9c) - **ci**: use ErBWs/setup-ohos action for HarmonyOS SDK *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e090a66`](https://github.com/songloft-org/songloft-player-lynx/commit/e090a6649cdd8dac93e450ec94ccc44e111e3380) - **harmony**: correct package names and add Lynx SDK libs vendor setup *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c0e39c1`](https://github.com/songloft-org/songloft-player-lynx/commit/c0e39c16180f32efdc4d5c85cda3db0033e60814) - **harmony**: use @lynx/* packages from ohpm.openharmony.cn registry *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`41bb7e5`](https://github.com/songloft-org/songloft-player-lynx/commit/41bb7e5e92d3174c723908b9fa12ea5c2be8f9e0) - **ci**: drop private container image, use ErBWs/setup-ohos + ohpm registry *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`60cb4f7`](https://github.com/songloft-org/songloft-player-lynx/commit/60cb4f733ee3bf92495ce423911cf45231b10f90) - **harmony**: add missing hvigor/hvigor-config.json5 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`59ca742`](https://github.com/songloft-org/songloft-player-lynx/commit/59ca742c878cdd9dc9ba9517d22b0b3db4772502) - **harmony**: remove invalid ohos.permission.MULTICAST *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`59f9ae2`](https://github.com/songloft-org/songloft-player-lynx/commit/59f9ae2bd09d48ff9351f0be1a4a22342d189987) - **harmony**: bump compatibleSdkVersion to 13 for @lynx/lynx 4.0.1 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3f8fbe4`](https://github.com/songloft-org/songloft-player-lynx/commit/3f8fbe45a724a2cbfa0dc8a00ae258e195a6f22a) - **harmony**: add app icon resources copied from Android *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`685e56f`](https://github.com/songloft-org/songloft-player-lynx/commit/685e56fddf5b275ed8ebe0cda106e9c42ba1d96d) - resolve all ArkTS strict mode compiler errors *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`faceb5e`](https://github.com/songloft-org/songloft-player-lynx/commit/faceb5eda234678ed37a9e3443089539ccd21d71) - rewrite harmony modules to match actual @lynx/lynx 4.0.1 SDK API *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`566b0b2`](https://github.com/songloft-org/songloft-player-lynx/commit/566b0b22021e72915debf3d943c9d66a1b816cf4) - resolve remaining 3 ArkTS errors *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`7b074d9`](https://github.com/songloft-org/songloft-player-lynx/commit/7b074d97c16b45830046f656ea5262f692f05759) - **ci**: handle short signing passwords gracefully *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f9fed9a`](https://github.com/songloft-org/songloft-player-lynx/commit/f9fed9a3d2a4e5e044f842e31f044cd918360dca) - **ci**: extract cert from .p12 instead of requiring separate secret *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4d07520`](https://github.com/songloft-org/songloft-player-lynx/commit/4d07520bd648da3128f2bd31b33319ca2b317bc8) - **ci**: extract full cert chain from .p12 for signing *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ffa3da6`](https://github.com/songloft-org/songloft-player-lynx/commit/ffa3da6f45a1f5331bccb0014cae9df37c22ed14) - **ci**: use HARMONY_SIGNING_CERT_BASE64 secret for certificate chain *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`7baad52`](https://github.com/songloft-org/songloft-player-lynx/commit/7baad52f84326184ac9191332c6e5bd210381fa8) - **harmony**: 修复启动 LynxEventReporter TypeError *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5bfffbc`](https://github.com/songloft-org/songloft-player-lynx/commit/5bfffbc0fb07a6a4ca8b9ab234b905e0648ac128) - **harmony**: 修复所有原生模块与TS层的契约不匹配 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c1b6550`](https://github.com/songloft-org/songloft-player-lynx/commit/c1b6550cb426f5bfa94035db2411621bd4f51d37) - **harmony**: remove invalid ohos.permission.MULTICAST (again) *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5435790`](https://github.com/songloft-org/songloft-player-lynx/commit/54357905327a9eaff3d793d4e5e2b8996be7fde7) - **harmony**: remove LynxServiceType.Log which does not exist in SDK 4.0.1 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`08470a0`](https://github.com/songloft-org/songloft-player-lynx/commit/08470a0a18dfe7733c3d535fbccef059dadf5464) - **harmony**: import lynx_log_service before @lynx/lynx to fix EventReporter crash *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`655fbee`](https://github.com/songloft-org/songloft-player-lynx/commit/655fbeecce85a28e57c8a999c4210b29fc71e396) - **harmony**: patch LynxEventReporter to guard against undefined liblynx.so *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`66b66ed`](https://github.com/songloft-org/songloft-player-lynx/commit/66b66ed64e69a9176fe2eb33db3b0dec585d2d18) - **harmony**: add @lynx/primjs dependency for libquick.so and libnapi.so *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5bd6b23`](https://github.com/songloft-org/songloft-player-lynx/commit/5bd6b237a5eecf852d553eca0c40ea648233f165) - **harmony**: add LynxMediaResourceFetcher to prevent shouldRedirectUrl crash *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`7eb4f2c`](https://github.com/songloft-org/songloft-player-lynx/commit/7eb4f2c2b13a3ba2cc95af07a51a17bba44d63fc) - **android**: 悬浮歌词可拖动、通知栏歌词写入 artist、修复 FGS 启动超时 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`dcbda6a`](https://github.com/songloft-org/songloft-player-lynx/commit/dcbda6a65322a967e3fea69fc23bc94880be77d4) - **harmony**: 修正模块注册与 HTTP 服务闸门、补 MULTICAST 权限 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1d3c4a3`](https://github.com/songloft-org/songloft-player-lynx/commit/1d3c4a324e68394cef57517c393f66cec9f1adb3) - **lynx**: 修复 iOS 15 编译与 Android native 打包 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d146749`](https://github.com/songloft-org/songloft-player-lynx/commit/d146749b9db1f96e92fb3b5ba858d88d8b056ec3) - **android**: 修复 minSdk 21 下默认接口方法脱糖缺失导致的启动闪退 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2bd9a6b`](https://github.com/songloft-org/songloft-player-lynx/commit/2bd9a6b64d1c323dc81990af0c2f571b6704deb8) - **android**: 杀后台任务后桌面歌词残留 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6e79ea5`](https://github.com/songloft-org/songloft-player-lynx/commit/6e79ea5c9d53ade90cb8cc47595f030a10262972) - **player**: 播放队列和睡眠定时器面板改为固定高度 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`72e8d0f`](https://github.com/songloft-org/songloft-player-lynx/commit/72e8d0f5f393112b1b77121841f1178ffc798784) - **audio**: 补齐通知栏歌词链路诊断日志并修复歌词残留 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`81be80d`](https://github.com/songloft-org/songloft-player-lynx/commit/81be80d949b1f4e892c61ad1b7ec241d2770d9ca) - **logging**: 补齐 iOS/鸿蒙原生侧客户端日志并实现鸿蒙日志导出 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a78d023`](https://github.com/songloft-org/songloft-player-lynx/commit/a78d023f85a45002bf2f25018f940e7dc6df1179) - **auth**: 记住登录密码并在登出时停止播放 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e51801a`](https://github.com/songloft-org/songloft-player-lynx/commit/e51801a2e918fcc0ce1af442d557f0e35bc5b2f0) - **auth**: 老用户无记住密码时登录页密码框留空而非填 dev 默认 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`49a66de`](https://github.com/songloft-org/songloft-player-lynx/commit/49a66ded064e7976aad2857b0178eb970b6b0430) - **android**: 修复通知栏播放器被 FGS 占位通知顶掉 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`28c821e`](https://github.com/songloft-org/songloft-player-lynx/commit/28c821e22198a3f8fa15eb1f49aaf7a0997c0d31) - **auth**: 登录页密码框永不预填 dev 默认 admin *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`da889ec`](https://github.com/songloft-org/songloft-player-lynx/commit/da889ecc4f0ba6e470a5121785ffadf2f4907418) - **android**: 悬浮歌词首次授权返回后立即显示，无需再关再开 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a1665e0`](https://github.com/songloft-org/songloft-player-lynx/commit/a1665e0985989e2209752a345afe1e2fdb3d46ea) - **player**: 歌词自动滚动改用命令式 scrollIntoView API *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`06c9233`](https://github.com/songloft-org/songloft-player-lynx/commit/06c9233519d07984d979e1cb387f72ad3e3cb1dd) - **android**: auto-advance not playing after song completion *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`693ea24`](https://github.com/songloft-org/songloft-player-lynx/commit/693ea2452d3a5c99bbec26692c4ab80e01baef4f) - **android**: 修复诊断日志导致的编译错误并升级 media3 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6e67cb9`](https://github.com/songloft-org/songloft-player-lynx/commit/6e67cb9ec5491e535ac6d68678ad7605117f3f5d) - **player**: 修复安卓后台播放歌曲切换时被系统停止的问题 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ddc6339`](https://github.com/songloft-org/songloft-player-lynx/commit/ddc63394dfed13f9743664f2d0d301d2191335ed) - **harmony**: 修复 ArkTS 宿主编译错误 *(提交者 [@Dev-Wiki](https://github.com/Dev-Wiki))*
+- [`8fce004`](https://github.com/songloft-org/songloft-player-lynx/commit/8fce004620c86ea50dc1337b4134e0d68bf982ae) - **harmony**: 修复图片与 SVG 资源渲染 *(提交者 [@Dev-Wiki](https://github.com/Dev-Wiki))*
+- [`1edd44b`](https://github.com/songloft-org/songloft-player-lynx/commit/1edd44b1fca0f11495da860827b297b84d74f3c1) - **player**: 拦截自动连播期间系统 MEDIA_BUTTON stop intent *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5cd5687`](https://github.com/songloft-org/songloft-player-lynx/commit/5cd5687b7462e37e75de4d6af8a8752153c29cd6) - **android**: 点击通知栏打开播放器页面 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4ebc17e`](https://github.com/songloft-org/songloft-player-lynx/commit/4ebc17e1da8fe819d70a313d523ca0e07b6fccd9) - **player**: 修复安卓自动连播被通知删除事件停止 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`313b13b`](https://github.com/songloft-org/songloft-player-lynx/commit/313b13b362679c14ede048939f6d079d2417e1b7) - **android**: prevent background playback from being killed by system *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5c481c3`](https://github.com/songloft-org/songloft-player-lynx/commit/5c481c3688a5bc6e6d1c291add176098183211ca) - **library**: 文件夹根视图同时显示子文件夹和歌曲 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ca7a439`](https://github.com/songloft-org/songloft-player-lynx/commit/ca7a4393af808cf31fc733196e4784a8ec37f02d) - **player**: pass inTitle flag through notification lyric chain *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b58cee0`](https://github.com/songloft-org/songloft-player-lynx/commit/b58cee02651cc5c01cad14d21fe1c538c840be0d) - **hig**: migrate 5 missed tokens in shared/ CSS + update handoff.md *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`98587aa`](https://github.com/songloft-org/songloft-player-lynx/commit/98587aa0bbc06e47ac0d135e32f458c56b3fda6d) - **web**: blur-view 在 Web 上从未生效 — 宿主页给标签做别名 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`17a10f6`](https://github.com/songloft-org/songloft-player-lynx/commit/17a10f63a4cd25ebfa9bfad3512dc7915511b89f) - **glass**: 补齐 6 个漏挂真模糊的弹窗，并给无 scrim 的面板加面板模式模糊 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5e76ddb`](https://github.com/songloft-org/songloft-player-lynx/commit/5e76ddb6543aca3c92e7b379824b78ad6f14f027) - **glass**: 全局菜单是全应用最后一个没跟上的浮层 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5e5d0ac`](https://github.com/songloft-org/songloft-player-lynx/commit/5e5d0acf6df94c09247bc711fc2d07099c2d0317) - **ui**: 删掉 .song-row 的不透明填充，玻璃面板内新增有界对象闸门 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1cd6fc7`](https://github.com/songloft-org/songloft-player-lynx/commit/1cd6fc7f18d63559298025d96bd13d29780c0a8e) - **ui**: 玻璃上的行状态填充改用 accent wash，新增中性填充通道 --fill-faint *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`10526b9`](https://github.com/songloft-org/songloft-player-lynx/commit/10526b9b4eb5834348712c38ac880f4540cea3ed) - **i18n**: 两条中文文案被打碎成 U+FFFD，补字节层闸门；wash 上的徽标文字抬到 --content-2 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b08ae1a`](https://github.com/songloft-org/songloft-player-lynx/commit/b08ae1a6518c7d5a557788389eda7f23efb2cf77) - **harmony**: 修正播放器音量重复缩放 *(提交者 [@Dev-Wiki](https://github.com/Dev-Wiki))*
+- [`54233ac`](https://github.com/songloft-org/songloft-player-lynx/commit/54233ac47b4f63569e3c4060112aadc797420feb) - **harmony**: 修复 DLNA 发现与控制链路 *(提交者 [@Dev-Wiki](https://github.com/Dev-Wiki))*
+- [`40e7cf9`](https://github.com/songloft-org/songloft-player-lynx/commit/40e7cf94cc0e46bd29a3e4412a82e5544f05bac3) - **harmony**: 隐藏未实现的视频能力 *(提交者 [@Dev-Wiki](https://github.com/Dev-Wiki))*
+- [`fb62c83`](https://github.com/songloft-org/songloft-player-lynx/commit/fb62c83595247207583139cf5a2c843f2bb3d52f) - **a11y**: 11 个独立主操作按钮补 44pt 触控目标
+- [`50319c1`](https://github.com/songloft-org/songloft-player-lynx/commit/50319c1a37a511818559e0529f51827919cebc6a) - **ui**: ConfirmDialog 采用 Apple alert 几何（居中 + 等宽配对按钮）
+- [`222686d`](https://github.com/songloft-org/songloft-player-lynx/commit/222686df0a2cfa25af1aba52b490a292ee8c2919) - **auth**: 登录页改全屏白底无卡（Apple 登录式）
+- [`e08496c`](https://github.com/songloft-org/songloft-player-lynx/commit/e08496cffa1002990defa9ea393ded35814da2d9) - **settings**: iOS 勾选列表选中项只留对勾、去掉背景色填充
+- [`2750d36`](https://github.com/songloft-org/songloft-player-lynx/commit/2750d363fa991979a19b69fa004f5c847c53175d) - **ui**: Icon PALETTES 剩余值全部校到 Apple(完成迁移遗漏)
+- [`fc62677`](https://github.com/songloft-org/songloft-player-lynx/commit/fc6267759eb45da4bdc500e7f9e7437a1661a875) - **audio**: 通知栏被系统清掉后自动重发（HyperOS 后台播放） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1037760`](https://github.com/songloft-org/songloft-player-lynx/commit/10377602fdf80465fc5ae813d0cffcc73178a9e1) - **ui**: 多行截断改走 text-maxline，构建剥离警告归零 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`58a1fee`](https://github.com/songloft-org/songloft-player-lynx/commit/58a1fee8bf4ce0d176823ec3d1237c4e766c2e03) - **testing**: JSX 扫描器改注释感知，并订正上一批的影响判断 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fe58222`](https://github.com/songloft-org/songloft-player-lynx/commit/fe58222a37a22e5421607031e30513411743dd07) - **settings**: 修复设置页三处布局与交互问题 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e6ff630`](https://github.com/songloft-org/songloft-player-lynx/commit/e6ff630fdee96c9ff7291ef178ffb4690788cbf1) - **player**: 随机播放模式下"播放全部"随机选曲而非从第一首开始 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d3514db`](https://github.com/songloft-org/songloft-player-lynx/commit/d3514db9026e36fad2072615c5844da33ab533cc) - **player**: 冷启动按偏好自动进入歌词界面 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5c989f1`](https://github.com/songloft-org/songloft-player-lynx/commit/5c989f1f5c600f45b7b931fa3f35e593c71aa2b1) - **shell**: 从缓存宽度做种子消除全屏播放器往返闪帧 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f5e545a`](https://github.com/songloft-org/songloft-player-lynx/commit/f5e545acd2f3a00458667239ba999105127637f5) - **shell**: 提取 useShellSeededBreakpoint 共享 hook 消除各页面首帧闪帧 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`29e7043`](https://github.com/songloft-org/songloft-player-lynx/commit/29e7043c639017ca89c45fb02b935e592d55530d) - **library**: 曲库窄屏视图切换条记住横向滚动位置 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d72a42d`](https://github.com/songloft-org/songloft-player-lynx/commit/d72a42d2e083f65da9173e7279c7a758ab384c53) - **safe-area**: 修复 Android 底部 tab 与 mini 播放器跑位 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ec3cb97`](https://github.com/songloft-org/songloft-player-lynx/commit/ec3cb9739ad8ccffc08a86c3e966a14dda3d315a) - **jsplugin**: Web 端切 tab 不再销毁插件 frame，避免渲染进程崩溃 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e6c7bc9`](https://github.com/songloft-org/songloft-player-lynx/commit/e6c7bc91743d3e4588d847a875783fd86738495f) - **harmony**: 移除 SDK 未定义的 MULTICAST 权限，解除本地构建阻塞 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`befc718`](https://github.com/songloft-org/songloft-player-lynx/commit/befc71846a0b4831142c49671ec7f69da416fa6f) - **harmony**: patch 脚本改跨平台、选对文件、失败可见 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a95faf4`](https://github.com/songloft-org/songloft-player-lynx/commit/a95faf47dfdac8ba9f139dc6e31c5a76fa2a44a5) - **settings**: 宽屏三级页改在右栏内切换，不再覆盖设置左栏列表 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3096428`](https://github.com/songloft-org/songloft-player-lynx/commit/309642861ab9f68ffed92f0e73b3656165225e94) - **library**: 宽屏曲库视图栏与左侧导航栏统一视觉语言 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0d23dec`](https://github.com/songloft-org/songloft-player-lynx/commit/0d23decbef24bd15d74d4aaf7588ab93156f88d8) - **ui**: unify tab-root title sizes and fix iOS font-scale *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`bf17197`](https://github.com/songloft-org/songloft-player-lynx/commit/bf17197c75389e19ded9fadd14d48ae84d29b20c) - **player**: 播放全部后异步补全分页列表的完整播放队列 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6372f14`](https://github.com/songloft-org/songloft-player-lynx/commit/6372f1489c5ac17f5d1fa0179c809fa1f659c966) - **player**: 移除全屏播放器封面下拉关闭手势，恢复横滑切页 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a1ab8ca`](https://github.com/songloft-org/songloft-player-lynx/commit/a1ab8cae644da5d79ee52ecedfdc6a8404d7e428) - **harmony**: 修复插件认证问题 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`8fac620`](https://github.com/songloft-org/songloft-player-lynx/commit/8fac6206f0a721f6cce5f96abae1ccd962458907) - **harmony**: auto-apply webview patch in harmony:build *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6abbca4`](https://github.com/songloft-org/songloft-player-lynx/commit/6abbca4797640aa805b7741e7d1da3ff9dc2d4ff) - **audio**: 通知栏暂停保持可见 + 新增右侧退出按钮 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`7d153b9`](https://github.com/songloft-org/songloft-player-lynx/commit/7d153b9f5971e54b37a8b8f18517e3b1e2c5f486) - **audio**: 修复停止按钮的3个审查发现的问题 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e7e0852`](https://github.com/songloft-org/songloft-player-lynx/commit/e7e0852913ed79c644d8df14467e27d562d5c58b) - **audio**: 停止按钮改用 setCustomLayout 确保显示 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`80aafa5`](https://github.com/songloft-org/songloft-player-lynx/commit/80aafa5604fb24e44b0fc389af88bafadad6ba86) - **auth**: 为无 scheme 的服务器地址自动补全 http:// *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`908d073`](https://github.com/songloft-org/songloft-player-lynx/commit/908d073b83df077c54350da81051a7ec27870d2b) - **jsplugin**: 修复插件商店分页按钮在移动端被悬浮导航遮挡 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`55a3e72`](https://github.com/songloft-org/songloft-player-lynx/commit/55a3e722c553b6fab0aacd50ad657239eb2a0807) - **ui**: 修复封面图拉伸变形 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`8f90866`](https://github.com/songloft-org/songloft-player-lynx/commit/8f90866435de1ecfe5a3a202d5f9c64ff7a263bd) - **library**: 修正曲库与歌单格子布局的右侧留白与封面过大 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1b95661`](https://github.com/songloft-org/songloft-player-lynx/commit/1b956613106c30b561e4a76c24a053c138f0695f) - **nav**: MoreTabsSheet 改为弹簧入场+即时退场，修复 shell-fold 关闭断言 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`dc8555e`](https://github.com/songloft-org/songloft-player-lynx/commit/dc8555ef13d3cea70ad6b361abeaaa9e59e878c1) - **library**: 窄屏卡片网格余量居中，修复曲库/歌单格子右侧留白过宽 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`517796b`](https://github.com/songloft-org/songloft-player-lynx/commit/517796b1da5af72457237bc66783fa8140a5c922) - **ios**: 手动关闭全屏视频面后复位 presentedVC，不再谎报 isOpen *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`af5b1cf`](https://github.com/songloft-org/songloft-player-lynx/commit/af5b1cfa368355b2f368dc455984a2f0724aca32) - **player**: 视频 open 返回失败原因，区分加载失败与无视频轨 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`895aa97`](https://github.com/songloft-org/songloft-player-lynx/commit/895aa971d3d80ea3264edc6437f0f78f703b0c83) - **player**: 删 SongloftVideo.closed 死事件，Android 视频面加最小关闭按钮 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1bccdf8`](https://github.com/songloft-org/songloft-player-lynx/commit/1bccdf8b0233f8a2ea39de93febb41f7d0ed88a8) - **player**: Android 视频面置于窗口内容之上，MV 真正显示画面 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`36ae832`](https://github.com/songloft-org/songloft-player-lynx/commit/36ae832e96cf746d793906109a5d9dbfd90be95a) - **library**: song title collapsed to zero in wide-column layout on tablet *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fb993ca`](https://github.com/songloft-org/songloft-player-lynx/commit/fb993cab68d308a85bbb92519508e6239397ddd9) - **web**: 修复鼠标拖拽（离开手柄被掐断 / 松手后仍跟手） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c19a3c9`](https://github.com/songloft-org/songloft-player-lynx/commit/c19a3c9aa9b9f83bf5020b187bebedfa39039438) - **ci**: pnpm 版本对齐到 11.15.1，修复 dev build 冻结安装失败 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c4edc22`](https://github.com/songloft-org/songloft-player-lynx/commit/c4edc229a3756a51292f6a646ec26ca0e6051729) - **ci**: setup-android 升到 v4，修复 Android dev build SDK 步骤失败 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1504100`](https://github.com/songloft-org/songloft-player-lynx/commit/15041003f5b5cee56a7f80912565cecc6a335e57) - **ci**: setup-android 显式声明 packages，去掉 legacy tools *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`eaa4751`](https://github.com/songloft-org/songloft-player-lynx/commit/eaa475100a257cd302721cc7a78e644bb6b1ac2c) - **video/web**: 补齐 Web 六方法 + CSS 显式 display:flex *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b4bf3a2`](https://github.com/songloft-org/songloft-player-lynx/commit/b4bf3a25e0e441743acc71fda005a4d37c089ab0) - **player**: lynx MV 全屏页补齐播放/暂停按钮 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b5b3b8d`](https://github.com/songloft-org/songloft-player-lynx/commit/b5b3b8d4d57f9b5103301eb846e21892f1597990) - **player**: hotpath 修复五处 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ee8ebf5`](https://github.com/songloft-org/songloft-player-lynx/commit/ee8ebf5abd3ce2e81c55ee81d9643bd8ac0d7609) - **lynx**: 修 iOS 端 queueMicrotask 未定义 + safe-area e2e 稳定化 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`87bc810`](https://github.com/songloft-org/songloft-player-lynx/commit/87bc8109c40379937c155c05da0391a55e8a8777) - **lynx**: 修插件商店/播放统计 icon 在 Android 不显示 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`88b71bd`](https://github.com/songloft-org/songloft-player-lynx/commit/88b71bdcc3ab29810635a7285e799884c1a039b3) - **ui**: SegmentedControl 防御回退 + ErrorBoundary + 播放器加固 + E2E 浮层把手 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4fce5fc`](https://github.com/songloft-org/songloft-player-lynx/commit/4fce5fcbad38810899e2756b4a253aa10bd932c7) - **player**: SleepTimerSheet 内容区补水平 padding 对齐标题 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`16b511d`](https://github.com/songloft-org/songloft-player-lynx/commit/16b511dc8c008f2e2bff9f3b9ebdcb69ba55fc8c) - **jsplugin**: 修复首页插件拖动排序时整页跟着滚动 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c34dac8`](https://github.com/songloft-org/songloft-player-lynx/commit/c34dac8184597dc020bf15c3c6b389230e3b7c9c) - **lyric**: 按 song.updatedAt 让歌词缓存自动失效 (songloft-org/songloft[#477](https://github.com/songloft-org/songloft-player-lynx/pull/477)) *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9b8ae44`](https://github.com/songloft-org/songloft-player-lynx/commit/9b8ae445b1a4fc33a04cebc66cb3d1516f5915e8) - **ci**: 为 dev build artifact 设置 7 天保留期 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`87f383b`](https://github.com/songloft-org/songloft-player-lynx/commit/87f383bc7d756577ed131aa6b162cac86d84080b) - **audio**: 修复安卓通知栏歌词显示回归 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ce6f818`](https://github.com/songloft-org/songloft-player-lynx/commit/ce6f8181f5db107086eaea439915edf17541cc77) - **ui**: 统一弹窗布局并修复按钮文字换行 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2a1a444`](https://github.com/songloft-org/songloft-player-lynx/commit/2a1a4440a9e838e51aa675ddad4642b5afe9b31f) - **jsplugin**: 恢复前台时通知插件 WebView 刷新状态 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e57d025`](https://github.com/songloft-org/songloft-player-lynx/commit/e57d025db11f5a81536641984163cd0a7fce18f0) - **dlna**: 补齐投屏会话并对齐 Flutter 播放控制 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a1a6483`](https://github.com/songloft-org/songloft-player-lynx/commit/a1a6483beea58b90c474c648c1244eaeff361df2) - **jsplugin**: 同步插件请求超时并修复检查结果竞态 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a0a642b`](https://github.com/songloft-org/songloft-player-lynx/commit/a0a642b772e3a5492721aaeeec1d0a520610895c) - **ci**: 固定 CocoaPods 版本并补充 Lynx 官网链接 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1848c12`](https://github.com/songloft-org/songloft-player-lynx/commit/1848c1289541bfd2d0cac957f387d0396d1e38a9) - **dlna**: 将投屏错误和播放状态写入客户端日志 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e09592b`](https://github.com/songloft-org/songloft-player-lynx/commit/e09592b7b57e2c410ddf26032bb8c64a19f5c405) - **harmony**: 修复异常重抛并完成 HAP 真编译 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f91d861`](https://github.com/songloft-org/songloft-player-lynx/commit/f91d861a2e0d95b8b89ebe5431c57307f51fc6e5) - **plugin**: 接入 Android 原生 frame 的模板加载 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9bfd35c`](https://github.com/songloft-org/songloft-player-lynx/commit/9bfd35cb1f88efe469db804c136b1ef31d347874) - **plugin**: 补齐当前 Lynx 资源模式的动态模板入口 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3d76c3a`](https://github.com/songloft-org/songloft-player-lynx/commit/3d76c3a8e79aa2ef08c5ce7e284c3eae7919de6c) - **harmony**: 接入远程插件模板下载器 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`8068a15`](https://github.com/songloft-org/songloft-player-lynx/commit/8068a15d5211618adcb6565ad2ddb0ae956a9d4f) - **lynx**: 补 iOS 插件模板加载及原生能力声明 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f5d00c0`](https://github.com/songloft-org/songloft-player-lynx/commit/f5d00c0839f3f53d82916492448cfa62234e04a7) - **web**: 支持前端子路径部署与 embedded 会话恢复 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1cfe401`](https://github.com/songloft-org/songloft-player-lynx/commit/1cfe401fa6fb37c4f0f58e892d8c137f0574291a) - **android**: 暂停时同步系统定位后的歌词进度 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3bf291b`](https://github.com/songloft-org/songloft-player-lynx/commit/3bf291b4d4294419033e8c79addaaae3172f2115) - **ci**: 延长 iOS 测试夹具等待并补充失败诊断 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5900940`](https://github.com/songloft-org/songloft-player-lynx/commit/59009406473db511f3605ea7f3fe18e8812ee9b0) - **ci**: 移除 iOS 测试夹具 DNS 反查并增加启动栈诊断 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a6291a9`](https://github.com/songloft-org/songloft-player-lynx/commit/a6291a9ae6bca8c0e15a400ef9520ec7ec9f6cc8) - **cache**: 调整 iOS 冷恢复目录校验并补充回归 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`19c9a45`](https://github.com/songloft-org/songloft-player-lynx/commit/19c9a45effde60a44cab35ddeb74d7fcb4800d65) - **home**: 修复首页插件网格居中与末行对齐 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b3be249`](https://github.com/songloft-org/songloft-player-lynx/commit/b3be249e077a7c3bf796fcf2824f4b063d35dda4) - **jsplugin**: 修复原生 GitHub 发现校验与详情残影 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`32bd1f4`](https://github.com/songloft-org/songloft-player-lynx/commit/32bd1f427af00e44fe8681bb460a571a6b1cecb0) - **jsplugin**: 兼容发布标签与清单版本不同 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3efed0b`](https://github.com/songloft-org/songloft-player-lynx/commit/3efed0bb79c0b8a9e8b8fcd70a232bbed4b97989) - **jsplugin**: dev 服务端跳过最低版本检查 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9374dfa`](https://github.com/songloft-org/songloft-player-lynx/commit/9374dfa721fe92b59fbc8e2b0dad1e3812428bf4) - **jsplugin**: 允许 GitHub 发现使用跨仓库发布包 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5ec7665`](https://github.com/songloft-org/songloft-player-lynx/commit/5ec7665b931c821d9faf86dc61f30444857a67c3) - **jsplugin**: 允许 GitHub 发现根清单哈希为空 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`db0062b`](https://github.com/songloft-org/songloft-player-lynx/commit/db0062bfb544ac77ddcd60221c38436cdf375403) - **jsplugin**: 同步有效玻璃材质与辅助功能偏好 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`76a844f`](https://github.com/songloft-org/songloft-player-lynx/commit/76a844fd2c52a89e3e559e85b5fd080f9915ea45) - **ios**: resolve Lynx module import for explicit module build *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d2482e0`](https://github.com/songloft-org/songloft-player-lynx/commit/d2482e072ea25839aa21f5e0991e2b2484e5fab4) - **appearance**: 修复 Android 胶囊玻璃材质的页面差异 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`95ec1dc`](https://github.com/songloft-org/songloft-player-lynx/commit/95ec1dc04f1708ccaed82bb46ba51a0c8e5e9ff8) - **appearance**: 对齐 Flutter 胶囊玻璃效果与按压反馈 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d3665a4`](https://github.com/songloft-org/songloft-player-lynx/commit/d3665a47d7e12301b66f617a628ecdc2bbe49f10) - **navigation**: 对齐 Flutter 水滴切换与移动胶囊玻璃折射 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e2f119d`](https://github.com/songloft-org/songloft-player-lynx/commit/e2f119de00378a3c7f4360056e41363818c3cba9) - **appearance**: 校准跨平台液态玻璃显示与切换动画 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4e7757f`](https://github.com/songloft-org/songloft-player-lynx/commit/4e7757f36fd284323b05d52165007312511df9d6) - **appearance**: 修复弹窗与播放列表背景及滑入模糊采样 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`928435c`](https://github.com/songloft-org/songloft-player-lynx/commit/928435cdbe8298c7b3b98180654e231513e50726) - **library**: 补齐歌曲和歌单显隐入口 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b8cada4`](https://github.com/songloft-org/songloft-player-lynx/commit/b8cada49459ddd8e48ef2edb9f82c2f9dff6a8e7) - **android**: 同步 Tab 玻璃透镜与胶囊动画 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0bbf12c`](https://github.com/songloft-org/songloft-player-lynx/commit/0bbf12c10658584aa810084d5f26ffb64f24dc4c) - **sortable**: 修复列表拖动排序时页面跟随滚动 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`35b42fe`](https://github.com/songloft-org/songloft-player-lynx/commit/35b42febd19a1526c2e189a9c8474c4af68cc0f5) - **release**: 补充提交记录与中英双语安装说明 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :zap: 性能优化
+- [`1cf992f`](https://github.com/songloft-org/songloft-player-lynx/commit/1cf992fbf8d029251620b344680df64d6b7ea9e9) - **settings**: 日志导出打包整体下移原生，消掉分享面板前的长卡顿 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d74f256`](https://github.com/songloft-org/songloft-player-lynx/commit/d74f25622d4b245947af8a66c61643882ecc9cac) - **ios**: 缓存原生编译并精简发布依赖 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :recycle: 重构
+- [`af76281`](https://github.com/songloft-org/songloft-player-lynx/commit/af76281a17c6a5ac01694e340396e029de280424) - **theme**: 引入 Muse 设计语言基座（tokens/图标/外壳/播放器） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0395cc0`](https://github.com/songloft-org/songloft-player-lynx/commit/0395cc0e5b04d250ecb906d9cc50f00433149aa1) - **library,settings**: Muse 化 Library 视图切换/筛选与设置退出对话框 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fbeef91`](https://github.com/songloft-org/songloft-player-lynx/commit/fbeef91fdace00cd6628cde787fc3b47ea1a2858) - **player,library,playlist**: Muse 化播放器子页与歌单/曲库详情 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`14debb6`](https://github.com/songloft-org/songloft-player-lynx/commit/14debb66f30213da8b17617897e0f872237b2ddb) - **auth,library-ops**: Muse 化错误/警告横幅，收尾全应用 token 清理 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c7f6e00`](https://github.com/songloft-org/songloft-player-lynx/commit/c7f6e00bdf14f08f710591456d60f0ca4ed75757) - **ui**: 状态控件收敛为三种角色，并修一个不存在的颜色 token *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`dbdf3ca`](https://github.com/songloft-org/songloft-player-lynx/commit/dbdf3ca982a561f1d7e5d880a393c57b47954ed9) - **settings**: 重排设置页面区块顺序，按使用频率与逻辑分组 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a75b02b`](https://github.com/songloft-org/songloft-player-lynx/commit/a75b02b77bb33495fab7018025b3f36003cc26b3) - **settings**: 重构为 Flutter 风格 9 分类结构 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ea2f818`](https://github.com/songloft-org/songloft-player-lynx/commit/ea2f81884568284b62871e97541c2370080a16b8) - **settings**: 主页下沉为纯入口清单，新增 6 个二级页与共享子页骨架 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`7497275`](https://github.com/songloft-org/songloft-player-lynx/commit/749727589889066bf74059633e6cbf20c5724a54) - **settings**: B1 迁移 BrowseViews / ThemePacks / Upgrade / TabConfig 到 SubPageShell *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ecb5dd8`](https://github.com/songloft-org/songloft-player-lynx/commit/ecb5dd8b8dfcb652bbf5fac965150f54c30c9ab9) - **settings**: B2 迁移 ServerList / ServerEdit / CacheManage / LibraryOps / DuplicateCheck *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d8d723c`](https://github.com/songloft-org/songloft-player-lynx/commit/d8d723cbf0479be76b2d9cd31a09ff0df0257525) - **settings**: B3+B4 迁移插件两页与 Equalizer / ProxySettings 到 SubPageShell *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`cee5cbd`](https://github.com/songloft-org/songloft-player-lynx/commit/cee5cbdf7c0c026f5753068f8bb59784dc663aa4) - **library**: 曲库深度重构——对齐 Flutter 的单页 14 视图体系 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6d5029c`](https://github.com/songloft-org/songloft-player-lynx/commit/6d5029c796f5708db98c0a0adc9ea2efbc8bd898) - **lynx**: 曲库侧栏提升为路由布局，消除子页面打开时的闪烁 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`350ef07`](https://github.com/songloft-org/songloft-player-lynx/commit/350ef077b568d8eb3db0bde4e6e56699dbd4dd58) - **ui**: 歌曲菜单改用全局顶层弹出层，添加到歌单照 Flutter 重做 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`bcad933`](https://github.com/songloft-org/songloft-player-lynx/commit/bcad93312cc35bdc8e4e2c618f73ac72904fc552) - **ui**: 抽出共用竖向滑块，音量面板改为竖向 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ca5aa0b`](https://github.com/songloft-org/songloft-player-lynx/commit/ca5aa0b4e3bb85f2aad7368217e89d093fa00a9d) - **player**: ⋯ 菜单移除歌曲操作入口 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3872bb1`](https://github.com/songloft-org/songloft-player-lynx/commit/3872bb19c1df8b25f9a232ef942cc91de9b5fef7) - **player**: 均衡器迁至 /player/eq，设置页移除入口 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6d261b9`](https://github.com/songloft-org/songloft-player-lynx/commit/6d261b90d3af058c8a463f38d547237189e64e0d) - **settings**: 主题包并入外观设置页，主题商店独立成页 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ef42db2`](https://github.com/songloft-org/songloft-player-lynx/commit/ef42db2b1ef680cf5a02e51e33206fc1d2c149a6) - **player**: savePlaybackState 改对象参数，并定性两条上游/约定问题 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5745e73`](https://github.com/songloft-org/songloft-player-lynx/commit/5745e7342b19253fed83386749c7ad0257cf2ae3) - **ui**: .song-row 三份冲突副本收敛为共享 SongRow.css *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`92e5f7b`](https://github.com/songloft-org/songloft-player-lynx/commit/92e5f7ba2c327b6202e63f0d2533cab121ebe647) - **settings**: ProxySettingsPage 迁到 api+query 层，补上渲染测试 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`116bb60`](https://github.com/songloft-org/songloft-player-lynx/commit/116bb60610e731914261384ca58465ce0329dc95) - **tags**: 移除歌单转标签功能，迁移至 tagger 插件 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`af9ba54`](https://github.com/songloft-org/songloft-player-lynx/commit/af9ba542749c5d628a4d4ce1c293dc02ab85497e) - **theme**: motion 裸值收敛到 --duration/--ease token
+- [`72c414f`](https://github.com/songloft-org/songloft-player-lynx/commit/72c414f768c940b7d4fd631f60d2560797b185dd) - **library-ops**: DuplicateCheckPage 收尾硬编码字号/radius/padding
+- [`b6561a9`](https://github.com/songloft-org/songloft-player-lynx/commit/b6561a91d26d01a7e3b10860c73c74f4c8c489ea) - **layout**: 宽屏侧栏选中态改 iPad 式圆角矩形(去 pill)
+- [`9df96d9`](https://github.com/songloft-org/songloft-player-lynx/commit/9df96d9eac5fce9d44e2e001e9fa49242d8be723) - **layout**: 宽屏侧栏选中填充改 Apple 灰底圆角矩形+accent 文字
+- [`fcc8d08`](https://github.com/songloft-org/songloft-player-lynx/commit/fcc8d08b60ad5ebdfd10d3df7473b57ca946ac9b) - **theme**: 分组卡圆角 10→16 对齐 iOS 26，侧栏选中态解耦保持矩形
+- [`d13f5be`](https://github.com/songloft-org/songloft-player-lynx/commit/d13f5be5b181afd2ca9388ce496138babc2a5b24) - **jsplugin**: 插件图标收敛为共享 PluginIconTile，管理列表去状态环 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`07492f5`](https://github.com/songloft-org/songloft-player-lynx/commit/07492f5a165fd431e2a437f9282032b675153926) - **ui**: usePresence 在 reduce-motion 下同步卸载 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`cbf76b2`](https://github.com/songloft-org/songloft-player-lynx/commit/cbf76b21d55d32b204cab4644d7d4771c7ff2ad6) - **theme**: --glass-* 令牌重命名为 --material-*，修正 fill-strong 反直觉命名 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`dcbf7c3`](https://github.com/songloft-org/songloft-player-lynx/commit/dcbf7c397f6e6453e31fbe238a2747059717b9be) - **jsplugin**: 将插件导航设置集中到插件管理页 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2c5c37f`](https://github.com/songloft-org/songloft-player-lynx/commit/2c5c37fe736a10525f729e82614fca1949b24a6a) - **settings**: 合并导航与插件设置 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :white_check_mark: 测试
+- [`9ccdd88`](https://github.com/songloft-org/songloft-player-lynx/commit/9ccdd88b5e5ee6c78e63fe0e8372141f1bab7410) - **theme**: 对比度闸门补 --primary-2（批29 发现的覆盖缺口） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`aa932eb`](https://github.com/songloft-org/songloft-player-lynx/commit/aa932eb7f5ac450c2a34ff95afc8be1e1f66fdce) - **e2e**: 扩展行为测试覆盖全部页面并修复发现的问题 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`199575a`](https://github.com/songloft-org/songloft-player-lynx/commit/199575a7ff92a8bb3274e33ddb133cb01a92425f) - **settings**: 补 miniPlayer/nav 断言与 6 条二级页 e2e，订正 AGENTS 的 i18n 闸门陈述 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`899bded`](https://github.com/songloft-org/songloft-player-lynx/commit/899bded854149b4bab0d0cf312edf41cadfa300d) - **gates**: 契约闸门覆盖 SongloftWebview 三文件与 web 部署完整性 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6c8c46b`](https://github.com/songloft-org/songloft-player-lynx/commit/6c8c46b7312796b0ff2c3cb7f15e4185fab73ece) - **player**: mock LyricsView in responsive test to fix NodesRef.invoke crash *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`8af0e35`](https://github.com/songloft-org/songloft-player-lynx/commit/8af0e355a6cfb3de9103dc21ab155fceb2d90caa) - **glass**: 面板模式清单改为从表面反推，并拴住模糊层与面板的圆角 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6fa00af`](https://github.com/songloft-org/songloft-player-lynx/commit/6fa00af962bf325ca381fdf7eac9c47f6a0a14de) - **theme**: 对齐 font-scale 内联令牌与 MULTICAST 移除后的断言期望 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3ad3504`](https://github.com/songloft-org/songloft-player-lynx/commit/3ad3504e40c6351880bc1a255ed5305d6809a84a) - **android**: 修正 notification ownership 断言为 effectiveForeground *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`220b8fa`](https://github.com/songloft-org/songloft-player-lynx/commit/220b8fa6afcb311ab3750e7512bd14e7b4edf27b) - **e2e**: 订正全屏视频场景对已删除 Activity 的断言 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6e84e3e`](https://github.com/songloft-org/songloft-player-lynx/commit/6e84e3ee14b2a067ea83db7b1cb9e533dd8cf536) - **theme**: 补充四档材质模型闸门 material-model.test.ts *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1d86b77`](https://github.com/songloft-org/songloft-player-lynx/commit/1d86b77cd915c04ca960bb238311732716f5b3ad) - **updater**: 验证插件模板能力与新旧壳快照兼容性 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :construction_worker: 构建与 CI
+- [`2756157`](https://github.com/songloft-org/songloft-player-lynx/commit/275615748701505faf767d9ab9c3653e6503bfc5) - dev-build 改为仅手动触发（workflow_dispatch），去掉 push 自动运行 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1cee89e`](https://github.com/songloft-org/songloft-player-lynx/commit/1cee89e4eb87780eb8d8452b3fa0aa65057570d0) - **ios**: 新增未签名 IPA 打包工作流 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e9c6bda`](https://github.com/songloft-org/songloft-player-lynx/commit/e9c6bda2bb00bc47811f8f19f129d00b92c6a966) - **harmony**: add native lib verification steps to debug liblynx.so loading *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fb16437`](https://github.com/songloft-org/songloft-player-lynx/commit/fb16437ae62a19b8da8f18fa1ff60e3130254990) - **ios**: 部署下限从 16.0 降到 15.0 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :memo: 文档更新
+- [`69ec6f6`](https://github.com/songloft-org/songloft-player-lynx/commit/69ec6f6526cf7332fa3ef0770bb28791d547ef22) - **agents**: 添加 AGENTS.md 协作规则（目录边界/技术栈/无 DOM 铁律/验收/提交约定） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0805e38`](https://github.com/songloft-org/songloft-player-lynx/commit/0805e38500c8063029d6f8d63c093070b5d70f56) - **progress**: 新增 docs/PROGRESS 进展交接文档，AGENTS 要求每批更新 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`eb12a85`](https://github.com/songloft-org/songloft-player-lynx/commit/eb12a85eb038f05e4c610b8796aa8860348d2e6c) - **progress**: 批3 真机登录验收通过，批4 启动 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`39e39cd`](https://github.com/songloft-org/songloft-player-lynx/commit/39e39cde4e5d05de6a4fbd9bbe12414659352814) - **progress**: 批10 功能补全轮验收通过，更新进展与遗留清单 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1865c38`](https://github.com/songloft-org/songloft-player-lynx/commit/1865c38be4c282c5fa9470d4c059236e12148e4d) - **progress**: 批11 收藏/排序/歌词缓存/闪烁修复轮验收通过，更新进展与遗留清单 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d07b606`](https://github.com/songloft-org/songloft-player-lynx/commit/d07b60677a89e886c8c6119aa5d123d2eb4a16ce) - **progress**: 更新批12 · 小遗留项扫尾轮 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`14553a7`](https://github.com/songloft-org/songloft-player-lynx/commit/14553a7c07b6f38efa82d08ec0ee057f3ef7d0af) - **progress**: 更新批13 · 主题 light/system 切换 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a979e30`](https://github.com/songloft-org/songloft-player-lynx/commit/a979e309a3a1f69b7e0e74ae2fd7c51a4c2fc37c) - **progress**: 更新批14 · 零散 UI 补完排查轮 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d6d3ebc`](https://github.com/songloft-org/songloft-player-lynx/commit/d6d3ebc395f05318d639d53f90d77fa910f943c3) - **progress**: 更新批15 · 诊断类（日志级别 + 日志导出） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a53aa7b`](https://github.com/songloft-org/songloft-player-lynx/commit/a53aa7b037ee2c1852720594780197bc2ff8577b) - **progress**: 更新批16 · Playlist 补充端点 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f8e6c4d`](https://github.com/songloft-org/songloft-player-lynx/commit/f8e6c4d138a624d5b85fe8bc436b5f037e2fb9f0) - **progress**: 更新批17 · 插件模块 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`09bfb33`](https://github.com/songloft-org/songloft-player-lynx/commit/09bfb33db350c7e467994101c727ab1af21d2261) - **progress**: 补批16/17 表格行 + 注册表商店 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1462e23`](https://github.com/songloft-org/songloft-player-lynx/commit/1462e23e0f8f8214fd08ed8f9e6415dcd9060eec) - **progress**: 更新批18 · 插件 WebView + Tab *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`681a610`](https://github.com/songloft-org/songloft-player-lynx/commit/681a6100400c95db52664d1c24ed4b8cb56b96eb) - **progress**: 更新批18b · Tab 配置 + 横向滚动 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f885b7a`](https://github.com/songloft-org/songloft-player-lynx/commit/f885b7a19bc32bc3687f4d9bb47d396a198d84cb) - 更新 bug.md 和 PROGRESS.md *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`84d9ba5`](https://github.com/songloft-org/songloft-player-lynx/commit/84d9ba56a5135093fe893516cc7082c5d3b1527c) - PROGRESS 更新批28（重复检测/指纹 + 缓存管理） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`416d035`](https://github.com/songloft-org/songloft-player-lynx/commit/416d03531ec54420af56971a4e61454ca4da52d6) - **progress**: 补批29 全新安装验证与 chromaprint 止损结论 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ca3ec53`](https://github.com/songloft-org/songloft-player-lynx/commit/ca3ec5346d9ef2b50f6435de2db5a475040fc31a) - **progress**: 记录 B3a 交付、B3b 未开始、批29b 发现的 Computing 阶段 bug *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ea81dd1`](https://github.com/songloft-org/songloft-player-lynx/commit/ea81dd1e1a34a8e3f4e8f8136cc9208393bc5603) - **progress**: 顶部交接摘要与恢复命令补齐 B3a / B3b / 批29b *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`7392a01`](https://github.com/songloft-org/songloft-player-lynx/commit/7392a01f7c86442a37c336a15285946eb0fcb433) - **progress**: 批28 重复检测全路径真机验完（Results 有重复组 + 删除 Dialog） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fe59468`](https://github.com/songloft-org/songloft-player-lynx/commit/fe59468ca16f5de8f91fa7b5dec223a4cc2518ed) - **progress**: 批30 均衡器/多服务器/sortable 完成状态更新 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1a45969`](https://github.com/songloft-org/songloft-player-lynx/commit/1a45969c785b1eb2f63529ba0ac4f1b867dfd070) - 更新 PROGRESS.md 和 README.md（批33-34 记录） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3d3a5ab`](https://github.com/songloft-org/songloft-player-lynx/commit/3d3a5abbfd9970b4481ae2492b2fbd9409862bb4) - 更新 PROGRESS.md 和 README.md（批35 记录） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`45aa257`](https://github.com/songloft-org/songloft-player-lynx/commit/45aa25756aee4834b4512e16d256687fc0109571) - README 构建大小更新 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`125670c`](https://github.com/songloft-org/songloft-player-lynx/commit/125670c56353a530dac75a36d06a6af13a26ec75) - 重组文档目录并落地 API 设计规范 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`65aacf5`](https://github.com/songloft-org/songloft-player-lynx/commit/65aacf5e5373b9186cc1ad23ce79a77865c2c4f5) - 添加 Muse 设计语言文档 DESIGN.md *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e378f20`](https://github.com/songloft-org/songloft-player-lynx/commit/e378f2044834f56bacb7916e379e93278de7a6aa) - 清理 DESIGN.md 中已删除的 design-example 引用 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a0cf495`](https://github.com/songloft-org/songloft-player-lynx/commit/a0cf4950535b526ba9ef1f5eab63f55e79073d1a) - 更新 PROGRESS.md 批36 交付记录 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d83a05a`](https://github.com/songloft-org/songloft-player-lynx/commit/d83a05a783f203d2894dba7e3e2dfb35522611cd) - update PROGRESS.md for batch 37 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`7f543fc`](https://github.com/songloft-org/songloft-player-lynx/commit/7f543fc65412a0d6760e8557364aff29283c1921) - update PROGRESS.md for batch 38 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`abec0cf`](https://github.com/songloft-org/songloft-player-lynx/commit/abec0cfaca50f8f24768e89bdb8ed2c7b68db701) - update PROGRESS.md for batch 39 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5982ba3`](https://github.com/songloft-org/songloft-player-lynx/commit/5982ba343845b43b64a309ec43ef0248e806f58f) - 更新 PROGRESS.md 批40 交付记录 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`93de19e`](https://github.com/songloft-org/songloft-player-lynx/commit/93de19ea46c69992f8ca2346e805d3696524e96e) - 审计教训固化 + 修复计划 + docs 目录整理 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3ad04d7`](https://github.com/songloft-org/songloft-player-lynx/commit/3ad04d7c5cc8fbd2c9c6603dbeb6fa67e054a36b) - 批42 收尾 — 新增交接文档 + 同步 tracking/索引 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ba6f7e3`](https://github.com/songloft-org/songloft-player-lynx/commit/ba6f7e37293fc664255835c47da36f8de3e5d888) - **tracking**: HANDOFF 对齐批45 已提交状态 + 补 iOS 编译交接清单 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`36f2f99`](https://github.com/songloft-org/songloft-player-lynx/commit/36f2f993eb6d2c43e0e2842e6140220de6674248) - **tracking**: HANDOFF 订正推送状态（批45 两个 commit 均已在 origin） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0745418`](https://github.com/songloft-org/songloft-player-lynx/commit/07454180b94f20d389efe943af3aebd87c968d1d) - **tracking**: 记录 iOS 首次编译收口与 e2e 首跑结果（104/110） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4a8153d`](https://github.com/songloft-org/songloft-player-lynx/commit/4a8153d2b786739fca0468917ce8b9184d9e4c5e) - **tracking**: 补做自签名 TLS 实测，确认批45 生效并判定两条缺陷 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`73d1117`](https://github.com/songloft-org/songloft-player-lynx/commit/73d1117525fdb8dac8a661ef386003831b6e48e3) - 批49 交接收口（HANDOFF 可执行到 Step 4 + AGENTS 补视频约定） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`544e5bb`](https://github.com/songloft-org/songloft-player-lynx/commit/544e5bb16c39786c8b109b23a62202dc29a34d56) - **plans**: 更新上游 Issue 文档，标注已提交并添加跟踪信息 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`03f24eb`](https://github.com/songloft-org/songloft-player-lynx/commit/03f24eb42193ac57fe12960d6eca4c92ee34368f) - **progress**: 记录批50 与 iOS 模拟器验收（含「路由断言绿≠渲染出来」的坑） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`8986a8b`](https://github.com/songloft-org/songloft-player-lynx/commit/8986a8b3576655d707625da585b657e88dd109f0) - 记录批51（Popover/Presence 三条铁律）并订正桶入口相关的过期结论 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2fad393`](https://github.com/songloft-org/songloft-player-lynx/commit/2fad39358845693c1e46838d651323d33fa4ecc4) - **tracking**: 记录播放器重构真机验证发现的 bug *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5c67f3d`](https://github.com/songloft-org/songloft-player-lynx/commit/5c67f3d331d7895fbd095a16060dc204c630adf3) - **tracking**: 批52 全屏播放器重构验收记录 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`7f8e61a`](https://github.com/songloft-org/songloft-player-lynx/commit/7f8e61a880a42a70b5b0e8e8c35747f818ae4695) - 记录列表行内放不了弹出层的实测结论 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ae16a84`](https://github.com/songloft-org/songloft-player-lynx/commit/ae16a848651629830ee851af374fbd1fd831e44c) - 按 Diátaxis 重构 docs 目录，清理跨 18 个批次的过时内容 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`35a2ad2`](https://github.com/songloft-org/songloft-player-lynx/commit/35a2ad28acf3f077e4a5ba2c27999f66fd1346e8) - 回填 Android 实测结论，订正三处已成假话的断言 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`22f74a1`](https://github.com/songloft-org/songloft-player-lynx/commit/22f74a18d9e7e8c2ff89c22d257ced4ae1ef1195) - handoff 补记批62 提交哈希与在途工作树状态 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5097122`](https://github.com/songloft-org/songloft-player-lynx/commit/50971229e6d052fe9e0c59e31e145ce379139776) - AGENTS §4 补铁律——web-elements 的 part 样式改不动时走 patch 默认值，别在 host CSS 上试 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a2db9a6`](https://github.com/songloft-org/songloft-player-lynx/commit/a2db9a6cb5fd520ef681c8602d4a12ee37b695d6) - **project**: 文档库深度清理——乱码清零、踩坑实录独立成篇、交接文档精简 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`094672a`](https://github.com/songloft-org/songloft-player-lynx/commit/094672ad37ccd5579e7c3f112ec41c618dc8be83) - 补充 HarmonyOS 平台文档至各处指南与参考 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e503ae2`](https://github.com/songloft-org/songloft-player-lynx/commit/e503ae2d15fa7119ed0d7449a03b8a4e213fe008) - 新增支持平台与最低版本 reference *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1f02383`](https://github.com/songloft-org/songloft-player-lynx/commit/1f02383e69d96cd688f2967e3cea2d4ba9e565d4) - 文档全面更新至批63后续——统计/平台/交接/进展同步，修复中文乱码 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`92c67cb`](https://github.com/songloft-org/songloft-player-lynx/commit/92c67cbe9015ffa0d1b328c4392c7e7867bb7a79) - 整理 docs 目录，清理冗余与排版问题 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0b39092`](https://github.com/songloft-org/songloft-player-lynx/commit/0b39092ac8b383ded28e870790fce28d18dc2b5c) - 清理 handoff 过时内容,开放缺陷迁入 bugs.md *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b3dd1ff`](https://github.com/songloft-org/songloft-player-lynx/commit/b3dd1ff9d00083a8d3979ba2c9c811b7d43b6b5c) - **plan**: 新增 Liquid Glass 主题实现计划 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`83eb221`](https://github.com/songloft-org/songloft-player-lynx/commit/83eb221f2a95da1dc302647ca45fcde572457110) - **plan**: 新增 Liquid Glass 主题实现计划 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6c8392a`](https://github.com/songloft-org/songloft-player-lynx/commit/6c8392ae2503d5f8c00b14935133a75b02ce7f5e) - 更新文档反映文件夹浏览视图落地 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`967681a`](https://github.com/songloft-org/songloft-player-lynx/commit/967681abbb0abc3d1c3e6bf9c4a75ed0ed33bbd4) - **library**: 订正曲库视图白名单过时「14」注释为 16，对齐后端 tag *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`95eb6b2`](https://github.com/songloft-org/songloft-player-lynx/commit/95eb6b29c11d3a1494b577ec06aa59a22d49b379) - **plans**: Apple HIG UI 重构总计划与标准材质计划 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`aa29bb1`](https://github.com/songloft-org/songloft-player-lynx/commit/aa29bb13637cbe4b2b4be87b41752682ba1d6332) - **progress**: 修复 6 处 UTF-8 乱码（U+FFFD 替换符） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`832c00e`](https://github.com/songloft-org/songloft-player-lynx/commit/832c00ef56c06ec77115b97ef6f7448a04b7f3f5) - **design**: 重写为 Apple Human Interface Guidelines 总结 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`cd8c513`](https://github.com/songloft-org/songloft-player-lynx/commit/cd8c513d23c466083315f7d7150db3edfa74c64d) - **context**: 刷新项目上下文并记录代码审计 *(提交者 [@Dev-Wiki](https://github.com/Dev-Wiki))*
+- [`07c3844`](https://github.com/songloft-org/songloft-player-lynx/commit/07c38447f81222c3016e073342d71e69f08a12e2) - **arkts**: 整理鸿蒙开发参考与导航 *(提交者 [@Dev-Wiki](https://github.com/Dev-Wiki))*
+- [`9bd1806`](https://github.com/songloft-org/songloft-player-lynx/commit/9bd180618024e60838fbe988227ddb2e1c989ccd) - **harmony**: 同步宿主能力与验证状态 *(提交者 [@Dev-Wiki](https://github.com/Dev-Wiki))*
+- [`312899e`](https://github.com/songloft-org/songloft-player-lynx/commit/312899e7906a9b3a50ccb3bf27435eb80eb55759) - 记录 Docker Chrome 真机验证结果（令牌解析 + P10 删除 + 登录页 computed style） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3c543a9`](https://github.com/songloft-org/songloft-player-lynx/commit/3c543a9b4079a1aa70ebdacc0e7bb37854ae0de8) - 修复计划文档中文乱码（U+FFFD 替换符，2 行） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f1b3e90`](https://github.com/songloft-org/songloft-player-lynx/commit/f1b3e90ed60a082a03458b562bae6466d6c00c77) - **theme**: 6 tint 复核 iOS-26 精确值（确认无变化）
+- [`2b7a02d`](https://github.com/songloft-org/songloft-player-lynx/commit/2b7a02d5a67547f61fc4803912a83df8b6cb95d2) - 记录 P12 设置圆角 + 外观页全面 iOS 化
+- [`1cfd398`](https://github.com/songloft-org/songloft-player-lynx/commit/1cfd398e95e53d6c96dffbeca681cfd2307ff54a) - 记录 P13 勾选列表选中态去背景 + Icon accent 迁移遗漏修正
+- [`449d4b4`](https://github.com/songloft-org/songloft-player-lynx/commit/449d4b457f9571e9cded9181fc14bda3beff68d5) - Icon PALETTES 次要遗留已同轮校到 Apple(P13 收尾完整)
+- [`d27ecb9`](https://github.com/songloft-org/songloft-player-lynx/commit/d27ecb9f2ee411ba204a9d1f8e3bcdc9aecf6745) - **jsplugin**: 记录 Web 端插件 tab 切换崩溃调查与交接 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`00dde50`](https://github.com/songloft-org/songloft-player-lynx/commit/00dde50f9749c212f14036ac343a99edba5a1fb8) - **project**: D2 定案不做，评审清单收尾 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`0f73ac6`](https://github.com/songloft-org/songloft-player-lynx/commit/0f73ac6dc4bed93baafaeb583a0fdacfaba04431) - 归档失效文档并订正与代码脱节的事实 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f1abcc1`](https://github.com/songloft-org/songloft-player-lynx/commit/f1abcc10c73e5f9bd3b2c763f88fdd4c6e35f7fe) - **theme**: 同步 Liquid Glass --material-* 文档并归档旧方案 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`824c8fa`](https://github.com/songloft-org/songloft-player-lynx/commit/824c8fa299ed47eae4659f9d63030167599020bd) - **release**: 更新已验证的 dev 发布说明 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`eb9b83c`](https://github.com/songloft-org/songloft-player-lynx/commit/eb9b83c373a91f12634c4926325515b133534875) - **lynx**: 订正客户端现状并记录功能补齐计划 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`94f3ec7`](https://github.com/songloft-org/songloft-player-lynx/commit/94f3ec74d02232f93029075fa9af52e75cc2b8fb) - **web**: 补充 Firefox 数据传输验收与媒体环境边界 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`acca95d`](https://github.com/songloft-org/songloft-player-lynx/commit/acca95d4a9899db21f7103a4533645f4f2d749c3) - **web**: 记录 Firefox 输出端定位与快捷键回归 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`87cb2d6`](https://github.com/songloft-org/songloft-player-lynx/commit/87cb2d63deb838dd2211105fc86218c59b50e1d7) - **delivery**: 记录修复提交的 HAP 与本地交付包 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a9bef9e`](https://github.com/songloft-org/songloft-player-lynx/commit/a9bef9ebbbec8283252aa11ce18c668aa7c207ad) - **web**: 记录 WebKit 数据传输与快捷键回归 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5d919cd`](https://github.com/songloft-org/songloft-player-lynx/commit/5d919cd25ebd6f32bbb116347c27d990fda629cd) - **lynx**: 同步原生编译现状与剩余验收条件 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`224bb8b`](https://github.com/songloft-org/songloft-player-lynx/commit/224bb8bed3cc35b697473ce7d59160d24ed3f979) - **web**: 记录前端挂载与后端前缀实测边界 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`561739c`](https://github.com/songloft-org/songloft-player-lynx/commit/561739c5c195ef1998f2dd5e7be001eb0bfa73fc) - **plugin**: 记录真实标签页恢复与关闭重建验收 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f9c69a3`](https://github.com/songloft-org/songloft-player-lynx/commit/f9c69a30ea9b163a2a2233fb4956a93bfe8ce752) - **android**: 记录隔离 KVM 安装与模拟器崩溃复测 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d353361`](https://github.com/songloft-org/songloft-player-lynx/commit/d35336197c566dca3c393843762b91b82eb6c293) - **android**: 记录 Mesa 模拟器复制与恢复回归 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4806e9c`](https://github.com/songloft-org/songloft-player-lynx/commit/4806e9c2b5062582200bb1e90e629dd31f452594) - **lynx**: 记录 Android 原生插件加载与恢复验收 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b1ee20e`](https://github.com/songloft-org/songloft-player-lynx/commit/b1ee20e49206cb6aa38c2d0bcc0736b771c95de4) - **lynx**: 记录模板能力新包及 Android 设备复验 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`021c2ad`](https://github.com/songloft-org/songloft-player-lynx/commit/021c2adbcbaad16a2dbd62dc9aa4c09b6695074e) - **web**: 记录子路径新包与浏览器复验 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c50745f`](https://github.com/songloft-org/songloft-player-lynx/commit/c50745f8d6d355b680f47d5c6af453c33e672a4c) - **android**: 记录新包通知歌词与锁屏验收 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`42dcad0`](https://github.com/songloft-org/songloft-player-lynx/commit/42dcad0b1e8764d15a79f61ffd3f5e37c57c1335) - **lynx**: 记录 Android 封面回归与 Firefox 加载观察 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`39ec94b`](https://github.com/songloft-org/songloft-player-lynx/commit/39ec94b1548aa5cb883ecb992d2bc053cf91ece7) - **project**: 同步热更新签名与发布验证记录 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1825e34`](https://github.com/songloft-org/songloft-player-lynx/commit/1825e345d365e15cbbc9ee4800dc4d35fabcf04e) - **skills**: 更新 Lynx 4.0 液态玻璃与 CSS 兼容指引 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :art: 代码风格
+- [`9fa47f6`](https://github.com/songloft-org/songloft-player-lynx/commit/9fa47f6bb8f3845c392c370b0146ba617e621d40) - **theme**: Apple HIG 阶段1 — 设计令牌对齐 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3116bfc`](https://github.com/songloft-org/songloft-player-lynx/commit/3116bfc6e5737bdb89ad616b7fe4cc801923f319) - **nav**: Apple HIG 阶段3 — 导航系统对齐 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b15c53d`](https://github.com/songloft-org/songloft-player-lynx/commit/b15c53df24d289727674322d1d04310f657d7693) - **ui**: Apple HIG 阶段4 — 共享 UI 组件对齐 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ba30ea0`](https://github.com/songloft-org/songloft-player-lynx/commit/ba30ea0a4c7a18dd544a9d9c96905a8715433ac1) - **hig**: Apple HIG 阶段5–10 — 批量令牌迁移 + 动效体系 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`8502853`](https://github.com/songloft-org/songloft-player-lynx/commit/8502853e515d64f3506de76e7046fcd6c9779436) - **player**: 玻璃材质优化批B — dark veil 降 alpha + 封面保色 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fa419d4`](https://github.com/songloft-org/songloft-player-lynx/commit/fa419d49af9a53abcd3b7ca113606bb4cce6a699) - **theme**: 玻璃材质优化批C — 多层镜面边缘 + 明暗坡 + sheen 落地 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :wrench: 维护工作
+- [`7fd60f3`](https://github.com/songloft-org/songloft-player-lynx/commit/7fd60f3a48293a0b72ecba3b164cec49b9cc5293) - **git**: 跟踪 CLAUDE.md 与 .claude/skills 软链，忽略 .claude/projects 会话记忆 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a041b8f`](https://github.com/songloft-org/songloft-player-lynx/commit/a041b8fd5abac2bf3a15ff7fac3ff2eb8dac9f05) - **dev**: 登录表单预填 admin/admin + LAN 测试后端地址 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`1904a76`](https://github.com/songloft-org/songloft-player-lynx/commit/1904a765a63cd7997e142cf1695602edfad4ea46) - 删除 design-example 参考目录（已完成使命） *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6105ca7`](https://github.com/songloft-org/songloft-player-lynx/commit/6105ca7e3cbd34899b39eb81bb7c630a0c3caf74) - 移除 macOS Docker 编译环境 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`673e8db`](https://github.com/songloft-org/songloft-player-lynx/commit/673e8db8950db92179d60e37b498042856a4fbca) - **gitignore**: 忽略 .codegraph 本地索引并清掉一行噪音 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`91364b3`](https://github.com/songloft-org/songloft-player-lynx/commit/91364b3a46caacfdb2b22842f5fbc8f37c543102) - **android**: 将 minSdk 从 24 降至 21 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e0e0924`](https://github.com/songloft-org/songloft-player-lynx/commit/e0e0924353bd1c5d00746167320b69d118ab6864) - **skills**: dev-flow 增加写完代码同步文档步骤 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d4b0f27`](https://github.com/songloft-org/songloft-player-lynx/commit/d4b0f27d819568f57123d2669e75749cca1509be) - **theme**: ThemePackData 接口同步 navigationStyle 字段 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c18b66f`](https://github.com/songloft-org/songloft-player-lynx/commit/c18b66f95cb43e147c26475e71aac8c594ca5e18) - **harmony**: 补 .gitignore 漏掉的本地产物与 ohpm 依赖 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b0f09ec`](https://github.com/songloft-org/songloft-player-lynx/commit/b0f09ec1066e3c88dbd6c6687a4f2244a28c48b7) - **theme**: 删除零消费者的 --shadow-focus 与两个从未被 import 的样式表 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c6afad1`](https://github.com/songloft-org/songloft-player-lynx/commit/c6afad139b64cf2071c60e2bd189dbf8bfeb88a1) - **release**: 发布 0.1.1 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+
 ## 开发记录（截至 2026-10-10）
 
 以下列出近期变化，完整开发历史见 [Git 提交记录](https://github.com/songloft-org/songloft-player-lynx/commits/main/)。
@@ -22,3 +652,4 @@
 
 - [`2c5c37f`](https://github.com/songloft-org/songloft-player-lynx/commit/2c5c37fe736a10525f729e82614fca1949b24a6a) — 合并导航与插件设置。
 - [`dcbf7c3`](https://github.com/songloft-org/songloft-player-lynx/commit/dcbf7c397f6e6453e31fbe238a2747059717b9be) — 将插件导航设置集中到插件管理页。
+[v0.1.1]: https://github.com/songloft-org/songloft-player-lynx/compare/9b27ab201ff2ac9cf9c3389d6e8421287399eb72...v0.1.1
