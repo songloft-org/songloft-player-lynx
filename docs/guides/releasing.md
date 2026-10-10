@@ -68,6 +68,20 @@ bundle 热更新另使用独立 RSA 签名身份，配置 Repository Variable `L
 
 ## 手动发版脚本
 
+与 Flutter 客户端一样，可直接运行 `scripts/bump-version.sh`。此入口复用 `scripts/bump-version.mjs`，从任意工作目录调用都定位到脚本所在的仓库，参数及退出状态原样传递；需安装项目要求的 Node.js。原有 `pnpm run release` 入口继续可用。
+
+```bash
+./scripts/bump-version.sh --help
+./scripts/bump-version.sh patch --dry-run
+./scripts/bump-version.sh patch
+./scripts/bump-version.sh minor
+./scripts/bump-version.sh major
+./scripts/bump-version.sh 0.2.0-beta.1
+./scripts/bump-version.sh release       # 去掉当前版本的 prerelease 后缀
+```
+
+等价的 pnpm 调用：
+
 ```bash
 pnpm run release patch --dry-run
 pnpm run release patch

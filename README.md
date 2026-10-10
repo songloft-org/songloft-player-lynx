@@ -120,11 +120,11 @@ docs/             项目文档
 ## 发版与贡献
 
 ```bash
-pnpm run release patch --dry-run
-pnpm run release patch
+./scripts/bump-version.sh patch --dry-run
+./scripts/bump-version.sh patch
 ```
 
-发版脚本同步版本、提交到 `main`、创建 `v*` tag 并推送。详见[发版指南](docs/guides/releasing.md)。开发约定和验证要求见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+发版脚本同步版本、提交到 `main`、创建 `v*` tag 并推送。也可使用等价的 `pnpm run release patch`；Shell 入口复用现有 Node 发版逻辑，支持全部相同参数。详见[发版指南](docs/guides/releasing.md)。开发约定和验证要求见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 版本变更见根目录的中文 [CHANGELOG.md](CHANGELOG.md)；版本 Release 发布成功后自动更新，滚动 dev 的提交记录见对应 Release 页面。
 

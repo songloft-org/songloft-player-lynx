@@ -198,9 +198,9 @@ test('dev/stable/preview metadata share a monotonic Android-compatible build num
   }
 })
 
-function releaseRepo(t) {
+function releaseRepo(t, name = 'repo') {
   const directory = fixture(t)
-  const repo = join(directory, 'repo')
+  const repo = join(directory, name)
   const remote = join(directory, 'remote.git')
   mkdirSync(join(repo, 'scripts'), { recursive: true })
   for (const name of ['bump-version.mjs', 'release-lib.mjs'])
@@ -238,8 +238,72 @@ function releaseRepo(t) {
       cwd: repo,
       encoding: 'utf8',
     })
-  return { repo, remote, git, run }
+  const runShell = (args) =>
+    spawnSync(join(repo, 'scripts/bump-version.sh'), args, {
+      cwd: directory,
+      encoding: 'utf8',
+      timeout: 10000,
+    })
+  return { repo, remote, git, run, runShell }
 }
+
+test('shell release entry works outside a repository with spaces and preserves dry-run state', (t) => {
+  const { repo, remote, git, runShell } = releaseRepo(t, 'repo with spaces')
+  const shell = join(root, 'scripts/bump-version.sh')
+  cpSync(shell, join(repo, 'scripts/bump-version.sh'))
+  git(['add', 'scripts/bump-version.sh'])
+  git(['commit', '-m', 'test: shell entry'])
+  const before = git(['rev-parse', 'HEAD'])
+  const remoteBefore = execFileSync('git', ['--git-dir', remote, 'show-ref'], {
+    encoding: 'utf8',
+  })
+  const result = runShell(['0.2.0-beta.1', '--dry-run', '--no-push'])
+  assert.equal(result.status, 0, result.error?.message ?? result.stderr)
+  assert.match(result.stdout, /0\.1\.0 → 0\.2\.0-beta\.1/)
+  assert.match(result.stdout, /Push: disabled/)
+  assert.equal(git(['rev-parse', 'HEAD']), before)
+  assert.equal(git(['status', '--porcelain']), '')
+  assert.equal(git(['tag']), '')
+  assert.equal(
+    execFileSync('git', ['--git-dir', remote, 'show-ref'], { encoding: 'utf8' }),
+    remoteBefore,
+  )
+  assert.equal(runShell(['--help']).status, 0)
+  assert.equal(runShell(['--unknown']).status, 1)
+})
+
+test('shell release entry forwards confirmation and no-push flags to the existing CLI', (t) => {
+  const { repo, remote, git, runShell } = releaseRepo(t)
+  cpSync(
+    join(root, 'scripts/bump-version.sh'),
+    join(repo, 'scripts/bump-version.sh'),
+  )
+  git(['add', 'scripts/bump-version.sh'])
+  git(['commit', '-m', 'test: shell entry'])
+  const remoteBefore = execFileSync('git', ['--git-dir', remote, 'show-ref'], {
+    encoding: 'utf8',
+  })
+  const result = runShell(['minor', '--yes', '--no-push'])
+  assert.equal(result.status, 0, result.error?.message ?? result.stderr)
+  assert.equal(
+    JSON.parse(readFileSync(join(repo, 'package.json'))).version,
+    '0.2.0',
+  )
+  assert.equal(
+    JSON.parse(readFileSync(join(repo, 'harmony/AppScope/app.json5'))).app.versionName,
+    '0.2.0',
+  )
+  assert.equal(
+    readFileSync(join(repo, 'ios/SongloftLynx.xcodeproj/project.pbxproj'), 'utf8'),
+    'MARKETING_VERSION = 0.2.0;\nMARKETING_VERSION = 0.2.0;\n',
+  )
+  assert.equal(git(['rev-parse', 'v0.2.0^{}']), git(['rev-parse', 'HEAD']))
+  assert.equal(git(['status', '--porcelain']), '')
+  assert.equal(
+    execFileSync('git', ['--git-dir', remote, 'show-ref'], { encoding: 'utf8' }),
+    remoteBefore,
+  )
+})
 
 test('release dry-run changes neither files, tags, HEAD nor remote refs', (t) => {
   const { repo, remote, git, run } = releaseRepo(t)

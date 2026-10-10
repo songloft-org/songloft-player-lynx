@@ -68,6 +68,20 @@ Without a private key, the five full packages still publish without unsigned hot
 
 ## Manual release script
 
+As with the Flutter client, you can run `scripts/bump-version.sh` directly. This entry delegates to `scripts/bump-version.mjs`, locates its repository regardless of the working directory, and preserves arguments and exit status. It requires the project's supported Node.js version. The existing `pnpm run release` entry remains available.
+
+```bash
+./scripts/bump-version.sh --help
+./scripts/bump-version.sh patch --dry-run
+./scripts/bump-version.sh patch
+./scripts/bump-version.sh minor
+./scripts/bump-version.sh major
+./scripts/bump-version.sh 0.2.0-beta.1
+./scripts/bump-version.sh release       # Remove the current prerelease suffix
+```
+
+Equivalent pnpm commands:
+
 ```bash
 pnpm run release patch --dry-run
 pnpm run release patch

@@ -118,11 +118,11 @@ Current delivery status and outstanding validation are maintained in the [handof
 ## Releases and contributing
 
 ```bash
-pnpm run release patch --dry-run
-pnpm run release patch
+./scripts/bump-version.sh patch --dry-run
+./scripts/bump-version.sh patch
 ```
 
-The script synchronizes versions, commits to `main`, creates a `v*` tag, and pushes. See the [release guide](docs/en/guides/releasing.md) and [CONTRIBUTING.en.md](CONTRIBUTING.en.md).
+The script synchronizes versions, commits to `main`, creates a `v*` tag, and pushes. The equivalent `pnpm run release patch` remains available; the shell entry delegates to the existing Node release logic and supports the same arguments. See the [release guide](docs/en/guides/releasing.md) and [CONTRIBUTING.en.md](CONTRIBUTING.en.md).
 
 Version history is maintained in the Chinese-only root [CHANGELOG.md](CHANGELOG.md), updated after a versioned release succeeds. Rolling dev commit history remains on its release page.
 
