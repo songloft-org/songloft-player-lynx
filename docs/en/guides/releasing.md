@@ -20,6 +20,8 @@ Assets upload to a draft and become public only after every upload succeeds. Dev
 
 See [installation](installation.md) for filenames. Releases include `version.json` and `checksums.txt`. The new workflow replaces the separate `dev-harmony` entry point; historical releases are not automatically deleted.
 
+Dev, preview, and stable release bodies use the Chinese and English installation notes in `.github/release-notes.md`, covering installation/deployment of all five packages, server connection requirements, and SHA-256 verification. They also generate categorized Conventional Commits with commit links using the Flutter client's approach. The range compares the current commit with the most recent merged `v*` tag, skipping tags pointing to the current commit; without a previous version tag, it falls back to the first commit. Only commit types supported by the Flutter workflow are included. If there are no changes to list, the installation notes remain.
+
 ## iOS native build caching
 
 The iOS release job installs runtime dependencies from `ios/release/Podfile.lock`. It shares dependency declarations with local Debug builds through `ios/pods.rb`. `ios/Podfile` retains Devtool for local simulator and Inspector use; the separate Release installation graph excludes LynxDevtool, BaseDevtool, DebugRouter, SocketRocket, and the PrimJS debugging subspecs. CocoaPods cannot assign subspecs of the same pod to different build configurations, so the two entry points maintain separate lockfiles that must both be updated when changing dependencies.

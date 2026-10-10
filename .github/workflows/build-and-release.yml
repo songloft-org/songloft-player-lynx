@@ -370,6 +370,41 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Get previous version tag
+        id: previous_tag
+        run: |
+          set -euo pipefail
+          HEAD_SHA=$(git rev-parse HEAD)
+          PREVIOUS_TAG=""
+          while IFS= read -r tag; do
+            if [ "$(git rev-list -n 1 "$tag")" != "$HEAD_SHA" ]; then
+              PREVIOUS_TAG="$tag"
+              break
+            fi
+          done < <(git tag --list 'v*' --sort=-creatordate --merged HEAD)
+          if [ -z "$PREVIOUS_TAG" ]; then
+            PREVIOUS_TAG=$(git rev-list --max-parents=0 --first-parent HEAD)
+          fi
+          echo "previous_tag=$PREVIOUS_TAG" >> "$GITHUB_OUTPUT"
+          if [ "$(git rev-parse "$PREVIOUS_TAG^{commit}")" != "$HEAD_SHA" ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Generate changelog from Conventional Commits
+        id: changelog
+        if: steps.previous_tag.outputs.has_changes == 'true'
+        uses: requarks/changelog-action@v1
+        with:
+          token: ${{ github.token }}
+          fromTag: ${{ github.sha }}
+          toTag: ${{ steps.previous_tag.outputs.previous_tag }}
+          writeToFile: false
+          useGitmojis: true
+          includeInvalidCommits: false
+          restrictToTypes: feat,fix,docs,style,refactor,perf,test,build,ci,chore,revert
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -394,10 +429,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.prepare.outputs.release_tag }}
           CHANNEL: ${{ needs.prepare.outputs.channel }}
+          CHANGELOG_BODY: ${{ steps.changelog.outputs.changes }}
         run: |
           set -euo pipefail
           NOTES="$RUNNER_TEMP/release-notes.md"
-          printf 'Songloft Player (Lynx) %s\n\nCommit: %s\n\nAndroid APK and HarmonyOS HAP are release-signed. iOS IPA is unsigned and requires re-signing. Web packages include standalone and embedded modes.\n\nAll five packages share the metadata in version.json. Verify downloads with checksums.txt.\n' "$TAG" "$GITHUB_SHA" > "$NOTES"
+          printf 'Songloft Player (Lynx) %s\n\nCommit / 提交: `%s`\n\n' "$TAG" "$GITHUB_SHA" > "$NOTES"
+          cat .github/release-notes.md >> "$NOTES"
+          if [ -n "$CHANGELOG_BODY" ]; then
+            printf '\n## 更新记录 / Changelog\n\n%s\n' "$CHANGELOG_BODY" >> "$NOTES"
+          fi
           if [ "$CHANNEL" = dev ]; then
             # Move only the rolling dev tag. Never force-update a versioned tag.
             git tag --force dev "$GITHUB_SHA"
@@ -424,6 +464,6 @@ jobs:
             fi
             EXTRA=(--latest)
             if [ "$CHANNEL" = preview ]; then EXTRA=(--prerelease --latest=false); fi
-            gh release create "$TAG" release-files/* --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title "$TAG" --notes-file "$NOTES" --generate-notes "${EXTRA[@]}"
+            gh release create "$TAG" release-files/* --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title "$TAG" --notes-file "$NOTES" "${EXTRA[@]}"
             gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false "${EXTRA[@]}"
           fi
