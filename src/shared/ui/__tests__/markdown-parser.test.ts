@@ -6,7 +6,7 @@ import { parseMarkdown } from '../markdown-parser.js'
 test('parses release tables, emphasis and reference links without the APIs missing in Android PrimJS', () => {
   const content =
     readFileSync(
-      resolve(__dirname, '../../../../.github/release-notes.md'),
+      resolve(__dirname, 'fixtures/release-tables.md'),
       'utf8',
     ) +
     '\n\n[guide][docs]\n\n[docs]: https://example.com/guide\n\n- **fixed**\n  - nested\n\n> note\n'

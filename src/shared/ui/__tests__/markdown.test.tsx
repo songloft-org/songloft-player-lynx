@@ -60,9 +60,9 @@ test('renders headings, nested emphasis, lists, quotes, separators and literal c
   ).toContain('  echo "**literal**"')
 })
 
-test('renders actual bilingual release tables with inline formatting inside a horizontal scroller', async () => {
+test('renders bilingual release table fixtures with inline formatting inside a horizontal scroller', async () => {
   const content = readFileSync(
-    resolve(__dirname, '../../../../.github/release-notes.md'),
+    resolve(__dirname, 'fixtures/release-tables.md'),
     'utf8',
   )
   render(<Markdown content={content} />)
