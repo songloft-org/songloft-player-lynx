@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-10-28 · songloft-org/songloft#546
+
+Permanent token settings, generation/copy/revocation and the server implementation are complete. All 3724 tests, 89 release-tool checks, types, dual outputs, Web build and actual Chrome flow pass. Two stale Markdown tests now use independent fixtures with assertions preserved. Evidence and Not run: [#546](issue-546.md). Commit, push, parent gitlink synchronization and an Issue reply with screenshots are authorized; formal release and Issue closure are outside scope.
+
 ## 2026-10-27 · songloft-org/songloft-player#53
 
 Both clients now publish concise release bodies with one line of bilingual installation links and categorized changes; installation steps live in README. Twenty body scenarios, YAML/Bash/link checks and all 89 Lynx release-tool checks pass. Baselines, source identity and Not run: [bilingual progress](../../project/progress.md#2026-10-27--精简客户端-releasesongloft-orgsongloft-player53). No commit, push, publication or parent gitlink update; authorizations below belong to historical batches.

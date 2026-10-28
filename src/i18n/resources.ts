@@ -6,6 +6,31 @@ export const DEFAULT_LANGUAGE: SupportedLanguage = 'zh'
 export type TranslationTree = typeof en
 
 export const en = {
+  personalTokens: {
+    title: "Permanent access tokens",
+    subtitle: "Create and revoke tokens for Home Assistant and other devices",
+    create: "Create token",
+    help: "Valid until revoked. Grants administrator access to business APIs, excluding token management.",
+    name: "Name, e.g. Home Assistant",
+    nameRequired: "Enter a name.",
+    once: "This is the only time the full token is shown. Copy and save it before closing.",
+    copy: "Copy token",
+    copyHeader: "Copy Authorization header",
+    copied: "Copied",
+    copyFailed: "Copy failed. Select and copy the token manually.",
+    done: "Done",
+    permanent: "Never expires",
+    revoked: "Revoked",
+    revoke: "Revoke token",
+    revokeHelp: "Further requests from this device will be rejected immediately. Other devices are unaffected.",
+    created: "Created",
+    lastUsed: "Last used",
+    neverUsed: "Never used",
+    empty: "No permanent tokens",
+    failed: "Operation failed. Check that your server supports permanent tokens and retry.",
+    previous: "Previous page",
+    next: "Next page",
+  },
   githubDiscovery: {
     title: 'GitHub discovery',
     tokenTitle: "GitHub Token",
@@ -1250,6 +1275,31 @@ export const en = {
 }
 
 export const zh: TranslationTree = {
+  personalTokens: {
+    title: "永久访问 Token",
+    subtitle: "为 Home Assistant 等设备创建和撤销 Token",
+    create: "创建 Token",
+    help: "永久有效，直到手动撤销。拥有管理员业务 API 权限，不能管理 Token。",
+    name: "名称，例如 Home Assistant",
+    nameRequired: "请输入名称。",
+    once: "完整 Token 仅显示这一次。请复制保存，关闭后无法再次查看。",
+    copy: "复制 Token",
+    copyHeader: "复制 Authorization 请求头",
+    copied: "已复制",
+    copyFailed: "复制失败，请手动选择并复制 Token。",
+    done: "完成",
+    permanent: "永久有效",
+    revoked: "已撤销",
+    revoke: "撤销 Token",
+    revokeHelp: "撤销后此设备的后续请求将立即被拒绝，其他设备不受影响。",
+    created: "创建于",
+    lastUsed: "最近使用",
+    neverUsed: "尚未使用",
+    empty: "暂无永久 Token",
+    failed: "操作失败，请确认服务器支持永久 Token 后重试。",
+    previous: "上一页",
+    next: "下一页",
+  },
   githubDiscovery: {
     title: 'GitHub 发现',
     tokenTitle: "GitHub Token",

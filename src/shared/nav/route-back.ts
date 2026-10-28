@@ -73,6 +73,7 @@ export interface RouteBackContext {
  * `ServerEditPage`, `DuplicateCheckPage`, `PluginRegistryPage`.
  */
 const EXPLICIT_PARENTS: Record<string, string> = {
+  '/settings/personal-tokens': '/settings',
   '/device-cache': '/settings',
   '/settings/cache-tasks': '/settings',
   '/settings/licenses': '/settings/about',

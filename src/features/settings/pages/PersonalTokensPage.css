@@ -1,0 +1,20 @@
+.personal-tokens__input {
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--tertiary-system-fill);
+  color: var(--label);
+  font-size: var(--font-callout);
+  -x-placeholder-color: var(--secondary-label);
+}
+.personal-tokens__status {
+  padding: var(--space-3);
+  color: var(--secondary-label);
+  font-size: var(--font-footnote);
+}
+.personal-tokens__error {
+  padding: var(--space-3);
+  color: var(--system-red);
+  font-size: var(--font-footnote);
+}

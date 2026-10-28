@@ -168,6 +168,7 @@ const ENTRY_ROWS: Array<[string, string]> = [
   ['settings-cache', '/settings/cache'],
   ['settings-server', '/settings/servers'],
   ['settings-proxy', '/settings/proxy'],
+  ['settings-personal-tokens', '/settings/personal-tokens'],
   ['settings-diagnostics', '/settings/diagnostics'],
   ['settings-about', '/settings/about'],
 ]

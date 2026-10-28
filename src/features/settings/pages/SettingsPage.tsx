@@ -38,6 +38,7 @@ import { CacheManagePage } from './CacheManagePage.js'
 import { CacheTasksPage } from '../../player/pages/CacheTasksPage.js'
 import { indexedSongCacheAvailable } from '../../player/data/indexed-song-cache.js'
 import { DataPage } from './DataPage.js'
+import { PersonalTokensPage } from './PersonalTokensPage.js'
 import { DiagnosticsPage } from './DiagnosticsPage.js'
 import { LicensesPage } from './LicensesPage.js'
 import { PlaybackPage } from './PlaybackPage.js'
@@ -320,6 +321,9 @@ export function SettingsPage() {
                   />
                 )
                 : null}
+              <SettingsRow icon='link' title={t('personalTokens.title')} subtitle={t('personalTokens.subtitle')}
+                trailingIcon='chevron-right' selected={isActive('personal-tokens')}
+                onTap={() => goToSubPage('personal-tokens')} testId='settings-personal-tokens' />
               {showBackgroundKeepAlive
                 ? (
                   <SettingsRow
@@ -490,6 +494,8 @@ function SettingsDetailPane({
       return <ProxySettingsPage />
     case 'data':
       return <DataPage />
+    case 'personal-tokens':
+      return <PersonalTokensPage />
     case 'diagnostics':
       return <DiagnosticsPage />
     case 'about':

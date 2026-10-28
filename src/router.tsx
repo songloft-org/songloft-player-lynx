@@ -62,6 +62,7 @@ import { migrateLibrarySearch, type LibraryViewKey } from './features/library/do
 import { CreatePlaylistPage, EditPlaylistPage, PlaylistDetailPage } from './features/playlist/index.js'
 import { HomePage } from './features/home/index.js'
 import { AboutPage, AppearancePage, CacheManagePage, DataPage, DiagnosticsPage, LicensesPage, PlaybackPage, ProxySettingsPage, ServerEditPage, ServerListPage, SettingsPage, ThemeCatalogPage } from './features/settings/index.js'
+import { PersonalTokensPage } from './features/settings/pages/PersonalTokensPage.js'
 import { DuplicateCheckPage, LibraryOpsPage } from './features/library-ops/index.js'
 import { PluginManagerPage, PluginRegistryPage, GithubDiscoveryPage, PluginWebViewPage } from './features/jsplugin/index.js'
 import { DemoFramePage } from './features/jsplugin/pages/DemoFramePage.js'
@@ -292,6 +293,12 @@ const dataRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings/data',
   component: DataPage,
+})
+
+const personalTokensRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings/personal-tokens',
+  component: PersonalTokensPage,
 })
 
 /** `/settings/about` — versions, server, project, backend update and licenses, inside the shell. */
@@ -531,6 +538,7 @@ const routeTree = rootRoute.addChildren([
     appearanceRoute,
     playbackRoute,
     dataRoute,
+    personalTokensRoute,
     aboutRoute,
     diagnosticsRoute,
     serverListRoute,

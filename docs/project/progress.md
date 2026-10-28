@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-28 · 永久访问 Token（songloft-org/songloft#546）
+
+设置新增永久设备 Token 的创建、一次性复制、分页管理和确认撤销；服务端独立哈希持久化，重启有效、撤销立即生效。类型/双 bundle/Web、全量 3724 项测试、89 项发布工具检查与实际 Chrome 创建、复制、封面、撤销流程通过。两项旧 Markdown 测试改为读取独立双语表格夹具，保留全部断言。边界、源码身份和证据见 [#546](issue-546.md)。本批已获提交、推送、同步父指针及带截图回复 Issue 的授权；发布和关闭 Issue 不在授权内。
+
+English: Settings now creates permanent device tokens, copies credentials once, paginates metadata and confirms revocation. The server persists hashes across restart and checks revocation on each request. Types, dual bundles, Web build, all 3724 tests, 89 release-tool checks and actual Chrome create/copy/cover/revoke flows pass. Two stale Markdown tests now read independent bilingual table fixtures with all assertions preserved. Identities, evidence and boundaries: [#546](../en/project/issue-546.md). Commit, push, parent gitlink synchronization and an Issue reply with screenshots are authorized; formal release and Issue closure are outside scope.
+
 ## 2026-10-27 · 精简客户端 Release（songloft-org/songloft-player#53）
 
 Flutter 与 Lynx 的 Release 正文改为一行中英文安装/选包链接和分类变更记录；安装步骤并入各自中英文 README，发布指南同步。Lynx 基线 `274ab88f543ea373f77838c3c1bace0596cc0fbb`，本次六个功能/说明文件的 diff SHA-256 为 `37a5e952c89fafce09fdfe625f9dc65b71dd43ff47c32a15035bd8b934366730`（不含本节及交接记录）。Linux x86_64 / Python 3.12.11 / PyYAML 6.0.2：两端工作流 YAML、Bash 语法、README 链接与锚点、UTF-8、20 项实际正文生成场景通过，覆盖 dev/正式版/Lynx preview、空日志、特殊字符和超过 128 KiB 的日志；旧安装模板不满足精简断言。Lynx 89 项发布工具检查通过。日志与预览：`/tmp/songloft-issue53-20261027/`。Not run：远端 CI、实际 GitHub 发布及平台打包；本次仅改文档和正文拼接，未运行 App 测试。未提交、推送或写 Issue，父指针未更新。

@@ -1,5 +1,11 @@
 # 工作交接（2026-10-14）
 
+## 2026-10-28 · songloft-org/songloft#546
+
+永久访问 Token 的设置入口、生成/复制/撤销及配套后端已实现。全量 3724 项、89 项发布工具、类型/双产物/Web 与实际 Chrome 流程通过；两个旧 Markdown 断言改用独立夹具后通过，断言未放宽。验证与未跑项见 [#546](issue-546.md)。本批已获提交、推送、同步父 gitlink 及带截图回复 Issue 的授权，正式发布与关闭不在授权内。
+
+English: Permanent token settings, generation/copy/revocation and the server implementation are complete. All 3724 tests, 89 release-tool checks, types, dual outputs, Web build and actual Chrome flow pass. Two stale Markdown tests now use independent fixtures with assertions preserved. Evidence and Not run: [#546](../en/project/issue-546.md). Commit, push, parent gitlink synchronization and an Issue reply with screenshots are authorized; formal release and Issue closure are outside scope.
+
 ## 2026-10-27 · songloft-org/songloft-player#53
 
 两客户端已精简 Release 正文，保留一行中英文安装/选包链接与分类变更记录，安装步骤并入 README。20 项正文场景、YAML/Bash/链接检查与 Lynx 89 项发布工具检查通过；基线、源码指纹和 Not run 见 [进展记录](progress.md#2026-10-27--精简客户端-releasesongloft-orgsongloft-player53)。尚未提交、推送或发布，父指针未更新；下方授权属于历史批次。

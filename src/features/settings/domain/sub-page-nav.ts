@@ -37,6 +37,7 @@ export type SettingsSubPage =
   | 'server-form'
   | 'proxy'
   | 'data'
+  | 'personal-tokens'
   | 'diagnostics'
   | 'about'
   | 'licenses'
@@ -75,6 +76,7 @@ export const SUB_PAGE_ROUTES: Record<SettingsSubPage, string> = {
   'server-form': '/settings/servers/add',
   proxy: '/settings/proxy',
   data: '/settings/data',
+  'personal-tokens': '/settings/personal-tokens',
   diagnostics: '/settings/diagnostics',
   about: '/settings/about',
   licenses: '/settings/licenses',
