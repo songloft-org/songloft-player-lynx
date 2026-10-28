@@ -202,3 +202,10 @@
 - 失败证据：Docker 无头 Chrome 首次点击 mini player「更多」后截图落在 `/player` 页而非菜单；触发器经 `bindtap` 冒泡到胶囊根的导航。修完触发器后同一批次再报：歌曲信息点开先跳全屏播放器才出弹窗（全局弹窗留在根级），均衡器被 `/player` 的第二次导航覆盖而打不开，睡眠定时面板随 ShellLayout 卸载一起消失。单测里 `fireEvent.tap` 只触达 `bindtap`，必须直接调用 `eventMap['catchEvent:tap']`。
 - Done right：`PopoverSurface` 的 `stopTriggerPropagation` 同时切换 trigger / panel / backdrop（mini player 传 `true`，其它入口不受影响）；无头 Chrome 1024×768 实测歌曲信息在列表页原地打开、均衡器进入 EQ 页、睡眠定时面板弹出、遮罩点击关闭且不导航（`/home/hanxi/songloft-ui-verify/mini-menu-{song-info,equalizer,sleep-timer}.png`）。
 - Seen 1× (2026-10-23；同一批次的后续缺陷 2026-10-24 不重复计数)。状态：经验，未达到三日期升级阈值。
+
+### IOS-001：临时文件选择器的异步结果不能依赖弱引用 delegate
+
+- 范围：iOS 共用上传，songloft-org/songloft#545；基线 `ab96b325565241cc62850fba01e5efe63385754b`。
+- 规则：请求独立持有完成回调，成功、HTTP 和传输错误都必须回传 JS；不能依赖关闭后可能释放的 picker delegate。
+- 证据与 Done right：317 项原生契约检查与类型检查通过，隔离旧源码的新结构检查失败；ARC 时序与真机未验。详见 [本次记录](docs/project/progress.md)。
+- Seen 1× (2026-10-28)。状态：源码修复，原生编译及设备验收待完成。

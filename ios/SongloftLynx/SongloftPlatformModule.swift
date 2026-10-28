@@ -515,10 +515,14 @@ private class PickerDelegate: NSObject, UIDocumentPickerDelegate {
     // `InsecureTls.session` rather than `URLSession.shared`: the latter takes no
     // delegate, so it can never accept a self-signed certificate — and importing
     // a backup to a self-signed server is exactly this code path.
-    InsecureTls.shared.session.dataTask(with: request) { [weak self] responseData, response, error in
+    // The picker owns its delegate only while it is presented. Retain the
+    // completion independently until the request finishes, including the hop
+    // back to the main queue after the picker has been dismissed.
+    let completion = callback
+    InsecureTls.shared.session.dataTask(with: request) { responseData, response, error in
       DispatchQueue.main.async {
         if let error {
-          self?.callback([error.localizedDescription, NSNull()] as NSArray)
+          completion([error.localizedDescription, NSNull()] as NSArray)
           return
         }
         guard let httpResponse = response as? HTTPURLResponse,
@@ -527,11 +531,11 @@ private class PickerDelegate: NSObject, UIDocumentPickerDelegate {
         else {
           let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
           let errBody = responseData.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-          self?.callback(["HTTP \(statusCode): \(errBody)", NSNull()] as NSArray)
+          completion(["HTTP \(statusCode): \(errBody)", NSNull()] as NSArray)
           return
         }
         let resultBody = String(data: responseData, encoding: .utf8) ?? ""
-        self?.callback([NSNull(), resultBody] as NSArray)
+        completion([NSNull(), resultBody] as NSArray)
       }
     }.resume()
   }

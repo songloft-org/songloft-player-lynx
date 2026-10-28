@@ -42,6 +42,21 @@ const repoRoot = path.resolve(__dirname, '../..')
 const read = (relative: string): string =>
   readFileSync(path.join(repoRoot, relative), 'utf8')
 
+test('iOS uploads retain completion independently of the dismissed document picker', () => {
+  const platform = read('ios/SongloftLynx/SongloftPlatformModule.swift')
+  const upload = platform.slice(platform.indexOf('  private func upload(data: Data, fileName: String)'))
+    .split('// MARK:')[0]
+  const task = upload.slice(upload.indexOf('InsecureTls.shared.session.dataTask'), upload.indexOf('}.resume()'))
+  expect(upload).toContain('let completion = callback')
+  expect(task).not.toContain('[weak self]')
+  expect(task).not.toContain('self?.callback')
+  // Transport errors, HTTP failures and success must all reach JS after dismissal.
+  expect(task).toContain('completion([error.localizedDescription, NSNull()] as NSArray)')
+  expect(task).toContain('completion(["HTTP \\(statusCode): \\(errBody)", NSNull()] as NSArray)')
+  expect(task).toContain('completion([NSNull(), resultBody] as NSArray)')
+  expect(task).toContain('DispatchQueue.main.async')
+})
+
 test('iOS cold widget actions return a scalar callback matching the JS consumer', () => {
   const platform = read('ios/SongloftLynx/SongloftPlatformModule.swift')
   const signature = platform.match(/@objc func consumeWidgetAction\([^\n]+/)?.[0]

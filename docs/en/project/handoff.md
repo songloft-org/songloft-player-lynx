@@ -369,3 +369,7 @@ Download URLs and public update metadata may belong to other GitHub repositories
 ### GitHub discovery: empty root hashes (2026-10-08)
 
 Root plugin.json entryHash and zipHash may be omitted or empty; nonempty values still undergo format validation. Discovery does not require build hashes to be written back to the source root manifest. The server continues validating the actual installation package.
+
+## 2026-10-28 · songloft-org/songloft#545
+
+English: #545 source fix: upload requests now retain completion independently of the dismissed iOS picker delegate. All three outcomes return to JS on the main queue. Baseline ab96b325565241cc62850fba01e5efe63385754b plus uncommitted changes, Linux, 2026-10-28. Native contract checks: 317 pass; new structural check fails against isolated old Swift. TypeScript build passes. Logs: /tmp/songloft-545-{contract,negative,types}.log. Not run: Xcode build and iOS 18.6 device upload/cancel/error retry (no Apple SDK/device). Structural checks do not establish ARC timing or reproduce the reporter's device. Rebuilt native client required. No commit, push, release or Issue write.

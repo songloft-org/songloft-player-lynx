@@ -1737,3 +1737,11 @@ toast「再按一次返回退出应用」在首页真机截图确认（`/tmp/bac
 ## 如何恢复工作 / 交接
 
 完整交接（现状快照、闸门验证状态、剩余工作、常用命令）→ [`handoff.md`](handoff.md)；踩坑实录（按主题组织的根因案例）→ [`pitfalls.md`](pitfalls.md)；协作规则与铁律 → 根目录 [`../../AGENTS.md`](../../AGENTS.md)。
+
+## 2026-10-28 · songloft-org/songloft#545：iOS 文件上传完成回调
+
+基线 `ab96b325565241cc62850fba01e5efe63385754b` + 本次未提交工作树，Linux。`PickerDelegate` 仅由文件选择器关联持有，URLSession 闭包弱引用 delegate；选择器释放后上传可能完成但无法回调 JS，安装态一直为加载中。现改为请求独立捕获 completion，成功、HTTP 失败、传输失败均在主线程回传；同样覆盖备份等共用上传入口。此为源码确认的生命周期缺陷，尚未在报告人的 iOS 18.6 复现或验收。
+
+`pnpm exec vitest run src/__tests__/native-module-contract.test.ts`：317 项通过；隔离读取 HEAD 旧 Swift 的新增结构检查按预期失败。日志 `/tmp/songloft-545-contract.log`、`/tmp/songloft-545-negative.log`。结构检查不证明 ARC 实际时序。Not run：Xcode 编译、iOS 18.6 真机上传/取消/失败重试，当前无 Apple SDK/设备。需要重新构建原生客户端；后端升级或仅更新 JS bundle 不包含此修复。未提交、推送、发布或写 Issue。
+
+English: #545 source fix: upload requests now retain completion independently of the dismissed iOS picker delegate. All three outcomes return to JS on the main queue. Baseline ab96b325565241cc62850fba01e5efe63385754b plus uncommitted changes, Linux, 2026-10-28. Native contract checks: 317 pass; new structural check fails against isolated old Swift. TypeScript build passes. Logs: /tmp/songloft-545-{contract,negative,types}.log. Not run: Xcode build and iOS 18.6 device upload/cancel/error retry (no Apple SDK/device). Structural checks do not establish ARC timing or reproduce the reporter's device. Rebuilt native client required. No commit, push, release or Issue write.

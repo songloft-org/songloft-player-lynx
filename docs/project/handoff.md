@@ -405,3 +405,9 @@ pnpm run test:release
 ### GitHub 发现：根清单空哈希（2026-10-08）
 
 根目录 plugin.json 的 entryHash、zipHash 可省略或留空；非空值继续校验格式。发现页不要求构建产物哈希回写到源码根清单，实际安装包仍由服务器校验。
+
+## 2026-10-28 · songloft-org/songloft#545
+
+iOS 上传请求已独立持有完成回调，避免 picker delegate 释放后丢失回执。317 项原生契约检查、类型检查通过，隔离旧源码新检查失败。尚缺 Xcode 编译与 iOS 18.6 真机验收；需要重建原生包，未提交或发布。详见 progress。
+
+English: #545 source fix: upload requests now retain completion independently of the dismissed iOS picker delegate. All three outcomes return to JS on the main queue. Baseline ab96b325565241cc62850fba01e5efe63385754b plus uncommitted changes, Linux, 2026-10-28. Native contract checks: 317 pass; new structural check fails against isolated old Swift. TypeScript build passes. Logs: /tmp/songloft-545-{contract,negative,types}.log. Not run: Xcode build and iOS 18.6 device upload/cancel/error retry (no Apple SDK/device). Structural checks do not establish ARC timing or reproduce the reporter's device. Rebuilt native client required. No commit, push, release or Issue write.

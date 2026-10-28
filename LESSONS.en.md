@@ -202,3 +202,10 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 - Failure evidence: The first headless-Chrome run tapping the mini-player "more" button landed on `/player` instead of the menu; the trigger bubbled through `bindtap` to the capsule root's navigation. After that trigger fix, the same batch reported: song info navigated to the full player before its (root-mounted) dialog appeared, the equalizer was overridden by the second `/player` navigation and never opened, and the sleep-timer sheet disappeared with the unmounted shell. In tests `fireEvent.tap` only reaches `bindtap`; call `eventMap['catchEvent:tap']` directly.
 - Done right: `PopoverSurface`'s `stopTriggerPropagation` now switches trigger, panel and backdrop together (the mini player passes `true`; other call sites are unchanged). Headless Chrome at 1024×768 confirms song info opens in place over the list, the equalizer enters its page, the sleep-timer sheet opens, and a backdrop tap closes without navigating (`/home/hanxi/songloft-ui-verify/mini-menu-{song-info,equalizer,sleep-timer}.png`).
 - Seen 1× (2026-10-23; the follow-up defect on 2026-10-24 is the same batch and is not counted again). Status: lesson; below the three-date promotion threshold.
+
+### IOS-001: Async picker results must not depend on a weak delegate
+
+- Scope: shared iOS upload, songloft-org/songloft#545; baseline `ab96b325565241cc62850fba01e5efe63385754b`.
+- Rule: retain completion independently of the dismissible picker delegate. Success, HTTP errors and transport errors must all reach JS.
+- Evidence / Done right: 317 native contract checks and type checking pass; the new structural check fails against isolated old source. ARC timing and device behavior remain unverified. See [this batch](docs/project/progress.md).
+- Seen 1× (2026-10-28). Status: source fixed; native build and device acceptance pending.
