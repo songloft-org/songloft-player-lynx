@@ -10,6 +10,13 @@
 
 ## 条目
 
+### UI-007：Chromium 的稳定占位不证明 WebKit 滚动容器稳定
+
+- 范围：曲库、分类歌曲页与 Web 虚拟列表，songloft-org/songloft#540；基线 `645717f254481baffd13a21da1ff5ba0191d29d4`。
+- 证据：2026-10-29，补 64px 估算和稳定 footer 后 Chromium 通过，但 WebKit 18.4 在追加到 41 行时仍将 scrollHeight 压到 626px、偏移从 260 回到 0。默认 `content-visibility: auto` 在容器层跳过布局；只保持滚动容器布局后连续分页不再回顶。
+- 规则与 Done right：按实际浏览器检查容器及行的几何，保持容器布局，行仍可虚拟化。公开 `injectStyleRules` 也有升级时被类字段清除的问题，须先升级、设置钩子，再启动 url。回归模拟该升级时序，WebKit 最终偏移单调到 3120、歌曲 49 可见，容器 visible、行 auto。曲库及分类入口另补行型估算与稳定 footer。完整证据、早期环境失败和原机边界见 [#540](docs/project/issue-540.md)。
+- Seen 1× (2026-10-29)。状态：WebKit 已复现及验证；iOS 18.6 真机待复验，未提交或发布。
+
 ### WEB-002：文件选择的用户手势必须在主线程实际控件上取得
 
 - 范围：浏览器上传及 Worker RPC，songloft-org/songloft#545；基线 `645717f254481baffd13a21da1ff5ba0191d29d4`。

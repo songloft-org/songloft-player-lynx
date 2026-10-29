@@ -4,6 +4,10 @@
 
 Web uploads now use a visible main-thread file control with cancellation, error and timeout completion. Full-page checks also found and fixed the shared plugin multipart field from `plugin` to `file`. Results, retained failures and Safari device boundaries: [#545](issue-545.md). The user authorized this batch's commit, push, parent gitlink update and Issue reply; GitHub delivery records govern commits, CI and comments. No formal release or Issue closure is authorized. Concurrent #540 changes remain intact.
 
+## 2026-10-29 · songloft-org/songloft#540 library follow-up
+
+Reproduced and fixed WebKit container collapse and return-to-top on pagination while retaining row virtualization; flat/category lists also receive estimates and stable footers. Final WebKit reaches song 49, and Chromium touch plus initialization regressions pass. Final checks and earlier environment failures: [record](issue-540.md). Actual iOS 18.6 remains unverified. No commit, push or Issue write; concurrent upload/plugin-manager changes are preserved and historical authorizations do not apply.
+
 ## 2026-10-28 · songloft-org/songloft#546
 
 Permanent token settings, generation/copy/revocation and the server implementation are complete. All 3724 tests, 89 release-tool checks, types, dual outputs, Web build and actual Chrome flow pass. Two stale Markdown tests now use independent fixtures with assertions preserved. Evidence and Not run: [#546](issue-546.md). Commit, push, parent gitlink synchronization and an Issue reply with screenshots are authorized; formal release and Issue closure are outside scope.

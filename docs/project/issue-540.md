@@ -1,6 +1,22 @@
 # songloft-org/songloft#540：歌单滚动条定位
 
-[Issue](https://github.com/songloft-org/songloft/issues/540) 报告「歌单进度条下滑会闪回第一首」，没有设备、版本或评论。[English](../en/project/issue-540.md)。
+[Issue](https://github.com/songloft-org/songloft/issues/540) 最初报告「歌单进度条下滑会闪回第一首」，当时没有设备或版本信息。2026-10-29 的[补充评论](https://github.com/songloft-org/songloft/issues/540#issuecomment-6488463784)说明曲库普通上划仍会回顶，环境为 iOS 18.6 Safari、服务端 v2.13.7、客户端 0.1.7；录屏上传失败。[English](../en/project/issue-540.md)。
+
+## 2026-10-29 · 曲库分页高度稳定性
+
+- 基线：主仓库 `deaf6342e0bac964eb8db7ddcb9ff825575b85b7`（v2.13.7 tag 解引用），客户端 `645717f254481baffd13a21da1ff5ba0191d29d4`（0.1.7）；均包含 10-25 的歌单修复。本批为客户端未提交工作树，未更新父 gitlink。
+- Chromium 证据：曲库与分类歌曲页没传 `estimatedItemHeight`，web-elements 0.12.7 默认以 `100cqh` 估算离屏行；实际歌曲行为 64px。Chromium 121 / 390×844 / 241 首合成歌曲、20 首分页且后续页延迟 500ms 的夹具中，旧版 41 行的 `scrollHeight` 一度为 11658，随后为 2682；分页 footer 切换还造成 32px 的高度变化。
+- 进一步的 WebKit 证据：只补估算和 footer 后，Linux WebKit 18.4 仍在追加第 21–40 首时从偏移 260 回到 0，41 行的 scrollHeight 瞬间变为视口高度 626。将 `x-list::part(content)` 的 `content-visibility` 改为 visible 后，对照中连续滚动不再回顶。该证据覆盖 WebKit，但仍不等同于报告人的 iOS 18.6 真机。
+- 最终修正：两处歌曲列表显式传 64px 占位估算（不是固定行高，大字体仍可增长）；loading 放在同一个导航 inset 中。宿主页通过公开的 `injectStyleRules` 让列表容器保持布局，歌曲行继续 `content-visibility: auto`。该属性会被升级时的类字段清除，因此先移除初始 url，等待 `lynx-view` 升级后设置钩子再启动渲染。无需改依赖、强行恢复滚动位置或增加定位重试。
+- 新增两项组件回归：旧版 2 项失败、原有 20 项通过；新版最终 22 项通过。另在隔离副本仅补估算、保留旧 footer，两个 inset 身份断言仍失败，证明 footer 检查独立有效。第一次隔离执行因高负载发生 Vite fetch 超时，不作反向证据。
+- 最终类型检查通过；顺序执行 `RAYON_NUM_THREADS=1 pnpm run build --environment lynx` 与 `pnpm run build:web`，分别生成 Lynx/Web 并成功部署 Web 产物；保留既有 touch-action 警告。`pnpm test --maxWorkers=1`：353 文件 / 3733 项通过。早期共享 JS 快照另有 352 文件 / 3726 项及定向两文件 / 22 项通过，不能替代最终对象。
+- Chromium 实际触摸连续上划 16 次：新版分页高度按 20 首增长，没有旧版的大幅估算突变，最终偏移 5017、首个可见歌曲 78；无 pageerror。截图与逐次实际位置见 `/tmp/songloft-540-safari/chrome-{before,after}.{json,png}`。该结果不替代 Safari 或原生设备。
+- WebKit 最终宿主页验证：12 次鼠标拖动在真实滚动容器中从 0 单调到 3120，跨多次分页，首个可见歌曲 49；容器 computed content-visibility 为 visible，歌曲行为 auto，无 pageerror。`webkit-after.json` 保存初版的实际回顶，`webkit-final-product.{json,png}` 保存最终构建产物通过结果；最终 Chromium 触摸偏移 5106、第 79 首可见，见 `chrome-final.{json,png}`。根路径、子路径、嵌入模式的宿主页回归旧版 3 项失败、9 项通过，最终 12 项通过；夹具模拟自定义元素升级清除类字段，避免只验证属性存在。
+- 早期额外 `pnpm run test:release` 未通过：85 passed / 3 failed / 1 cancelled。证据包括 Python 夹具尚在导入时达到短超时、子进程超时，以及其他构建清理共享 dist 后打包测试找不到 bundle。隔离反向测试和早期 WebKit 也曾超时，最终构建重跑曾被系统以 137 终止；同期实测 load >100、swap 已满。保留原始失败，不修改断言或把这些尝试标为通过；最终重跑状态见验证 JSON。
+- 最终顺序构建后串行运行 `node --test --test-concurrency=1 scripts/__tests__/*.node-test.mjs`：89 passed / 0 failed / 0 cancelled，无跳过；未放宽原有断言。
+- 最终源码指纹、环境与日志清单见 `/tmp/songloft-540-safari/verification.json`。工作区并发出现的上传功能修改不属于本批；浏览器产物另存 `verified-dist/`，不依赖后续被替换的 dist。
+
+Not run：报告人的 Safari 18.6 与真实曲库、iOS/Android/HarmonyOS 真机及宿主构建（本批没有宿主改动）、远端 CI、发布。WebKit 回顶机制及修复已有浏览器证据，原机仍待复验。没有提交、推送、写 Issue 或关闭 Issue；下文授权属于历史批次，不适用于本批。
 
 ## 原因与修复
 

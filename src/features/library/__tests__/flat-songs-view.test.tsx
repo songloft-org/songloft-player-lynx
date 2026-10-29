@@ -19,6 +19,7 @@ const { songsHook, navigateSpy, filterInputs } = vi.hoisted(() => ({
   filterInputs: [] as Array<{ placeholder: string; onInput: (v: string) => void }>,
 }))
 const cache = vi.hoisted(() => ({ available: false, beginSongs: vi.fn() }))
+const listProps = vi.hoisted(() => ({ estimatedItemHeight: undefined as number | undefined }))
 vi.mock('../../player/data/indexed-song-cache.js', async () => ({
   ...await vi.importActual('../../player/data/indexed-song-cache.js'), indexedSongCacheAvailable: () => cache.available,
 }))
@@ -39,9 +40,15 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateSpy,
 }))
 
-vi.mock('../widgets/VirtualList.js', async () =>
-  (await import('../../../__tests__/_render-mocks.js')).mockVirtualList(),
-)
+vi.mock('../widgets/VirtualList.js', async () => {
+  const { VirtualList } = (await import('../../../__tests__/_render-mocks.js')).mockVirtualList()
+  return {
+    VirtualList: (props: Parameters<typeof VirtualList>[0] & { estimatedItemHeight?: number }) => {
+      listProps.estimatedItemHeight = props.estimatedItemHeight
+      return <VirtualList {...props} />
+    },
+  }
+})
 
 /*
  * The row is mocked down to the plain `SongRow`: this file tests the view's
@@ -128,6 +135,25 @@ beforeEach(() => {
 })
 
 afterEach(() => vi.clearAllMocks())
+
+test('paging keeps the same inset and uses a song-sized offscreen estimate', async () => {
+  const pages = [{ songs: [makeSong(1)], total: 40 }]
+  songsHook.mockReturnValue(songsResult(pages))
+  const props = { sortId: 'added_at' as const, sortOrder: 'desc' as const, onSortChange: () => {}, isWide: false }
+  const view = render(<FlatSongsView {...props} />)
+  await act(async () => { await Promise.resolve() })
+  expect(listProps.estimatedItemHeight).toBe(64)
+  const inset = view.container.querySelector('.library__nav-inset')
+  expect(inset).not.toBeNull()
+  songsHook.mockReturnValue(songsResult(pages, { isFetchingNextPage: true }))
+  await act(async () => { view.rerender(<FlatSongsView {...props} />) })
+  expect(view.container.querySelector('.library__nav-inset')).toBe(inset)
+  expect(view.container.querySelector('.library__footer')?.parentElement).toBe(inset)
+  songsHook.mockReturnValue(songsResult(pages))
+  await act(async () => { view.rerender(<FlatSongsView {...props} />) })
+  expect(view.container.querySelector('.library__nav-inset')).toBe(inset)
+  expect(view.container.querySelector('.library__footer')).toBeNull()
+})
 
 test('visibility changes discard the previous multi-selection and update the song query', async () => {
   songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1)], total: 1 }]))

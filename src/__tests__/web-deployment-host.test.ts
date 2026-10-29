@@ -35,7 +35,7 @@ test.each([
 })
 
 test.each(['/', '/songloft/', '/nested/音乐/index.html?preview=1#player'])(
-  'the host resolves resources and pre-upgrade global props at %s', path => {
+  'the host resolves resources and pre-upgrade global props at %s', async path => {
     const pageUrl = new URL(path, 'https://music.example')
     const base = new URL('.', pageUrl)
     for (const embedded of [false, true]) {
@@ -48,7 +48,16 @@ test.each(['/', '/songloft/', '/nested/音乐/index.html?preview=1#player'])(
         const bootstrap = document.querySelector('script[data-songloft-deployment]')
         expect(bootstrap, 'deployment props must arrive before web-core upgrades the view').not.toBeNull()
         dom.window.eval(bootstrap!.textContent!)
+        expect(document.getElementById('app')!.hasAttribute('url')).toBe(false)
+        // Model web-core's class field so setting the hook before upgrade fails.
+        const HTMLElement = dom.window.HTMLElement
+        dom.window.customElements.define('lynx-view', class extends HTMLElement {
+          injectStyleRules?: string[]
+        })
+        await Promise.resolve()
         const app = document.getElementById('app')!
+        const injectedRules = (app as HTMLElement & { injectStyleRules?: string[] }).injectStyleRules
+        expect(injectedRules).toContain('x-list::part(content) { content-visibility: visible !important; }')
         expect(app.getAttribute('url')).toBe(new URL('main.lynx.bundle', base).href)
         expect(JSON.parse(app.getAttribute('global-props')!)).toEqual({
           ...(embedded ? {} : { deployMode: 'standalone' }), webBaseUrl: base.href,

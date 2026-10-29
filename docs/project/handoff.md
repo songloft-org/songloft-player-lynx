@@ -6,6 +6,12 @@ Web 上传改为主线程可见文件控件，取消/失败/超时均恢复状�
 
 English: Web uploads now use a visible main-thread file control with cancellation, error and timeout completion. Full-page checks also found and fixed the shared plugin multipart field from `plugin` to `file`. Results, retained failures and Safari device boundaries: [#545](../en/project/issue-545.md). The user authorized this batch's commit, push, parent gitlink update and Issue reply; GitHub delivery records govern commits, CI and comments. No formal release or Issue closure is authorized. Concurrent #540 changes remain intact.
 
+## 2026-10-29 · songloft-org/songloft#540 曲库补充反馈
+
+已复现并修复 WebKit 列表容器在分页时塌缩并回顶，保留行虚拟化；曲库及分类歌曲页另补估算和稳定 footer。WebKit 最终连续滚动到第 49 首，Chromium 触摸及初始化回归通过；最终检查和早期环境失败见 [记录](issue-540.md)。iOS 18.6 原机未验。本批未提交、推送或写 Issue；并发上传及插件管理改动保留，历史授权不适用。
+
+English: Reproduced and fixed WebKit container collapse and return-to-top on pagination while retaining row virtualization; flat/category lists also receive estimates and stable footers. Final WebKit reaches song 49, and Chromium touch plus initialization regressions pass. Final checks and earlier environment failures: [record](../en/project/issue-540.md). Actual iOS 18.6 remains unverified. No commit, push or Issue write; concurrent upload/plugin-manager changes are preserved and historical authorizations do not apply.
+
 ## 2026-10-28 · songloft-org/songloft#546
 
 永久访问 Token 的设置入口、生成/复制/撤销及配套后端已实现。全量 3724 项、89 项发布工具、类型/双产物/Web 与实际 Chrome 流程通过；两个旧 Markdown 断言改用独立夹具后通过，断言未放宽。验证与未跑项见 [#546](issue-546.md)。本批已获提交、推送、同步父 gitlink 及带截图回复 Issue 的授权，正式发布与关闭不在授权内。

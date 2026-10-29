@@ -388,7 +388,17 @@
         && CSS.supports('backdrop-filter', 'url(#songloft-tab-lens)')
       props.webGlassSupported = props.webTabGlassSupported || props.webGlassSceneSupported
       app.setAttribute('global-props', JSON.stringify(props))
-      app.setAttribute('url', new URL('main.lynx.bundle', base).href)
+      // Class fields overwrite properties set before custom-element upgrade.
+      // Start rendering only after its shadow-root style hook is installed.
+      app.removeAttribute('url')
+      customElements.whenDefined('lynx-view').then(function () {
+        // WebKit can skip this slotted scroll container during page append and
+        // clamp scrollTop to 0. Keep the viewport laid out; rows still virtualize.
+        app.injectStyleRules = (app.injectStyleRules || []).concat(
+          'x-list::part(content) { content-visibility: visible !important; }'
+        )
+        app.setAttribute('url', new URL('main.lynx.bundle', base).href)
+      })
     })()
   </script>
 

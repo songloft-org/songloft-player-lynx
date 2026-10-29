@@ -23,6 +23,7 @@ const { songsHook, paramsHook, searchHook } = vi.hoisted(() => ({
   paramsHook: vi.fn(),
   searchHook: vi.fn(),
 }))
+const listProps = vi.hoisted(() => ({ estimatedItemHeight: undefined as number | undefined }))
 
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
@@ -39,9 +40,15 @@ vi.mock('../data/songs-query.js', () => ({
   libraryQueryKeys: { songs: () => [] },
 }))
 
-vi.mock('../widgets/VirtualList.js', async () =>
-  (await import('../../../__tests__/_render-mocks.js')).mockVirtualList(),
-)
+vi.mock('../widgets/VirtualList.js', async () => {
+  const { VirtualList } = (await import('../../../__tests__/_render-mocks.js')).mockVirtualList()
+  return {
+    VirtualList: (props: Parameters<typeof VirtualList>[0] & { estimatedItemHeight?: number }) => {
+      listProps.estimatedItemHeight = props.estimatedItemHeight
+      return <VirtualList {...props} />
+    },
+  }
+})
 
 /* Row mocked down to the plain `SongRow` — see flat-songs-view.test.tsx. */
 vi.mock('../widgets/SongListRow.js', async () => {
@@ -50,6 +57,24 @@ vi.mock('../widgets/SongListRow.js', async () => {
 })
 
 const { CategorySongsPage } = await import('../pages/CategorySongsPage.js')
+
+test('category paging preserves the inset and estimates song rows independently of viewport height', async () => {
+  const pages = [{ songs: [makeSong(1)], total: 40 }]
+  songsHook.mockReturnValue(songsResult(pages))
+  const view = render(<CategorySongsPage />)
+  await act(async () => { await Promise.resolve() })
+  expect(listProps.estimatedItemHeight).toBe(64)
+  const inset = view.container.querySelector('.category-songs__nav-inset')
+  expect(inset).not.toBeNull()
+  songsHook.mockReturnValue(songsResult(pages, { isFetchingNextPage: true }))
+  await act(async () => { view.rerender(<CategorySongsPage />) })
+  expect(view.container.querySelector('.category-songs__nav-inset')).toBe(inset)
+  expect(view.container.querySelector('.category-songs__footer')?.parentElement).toBe(inset)
+  songsHook.mockReturnValue(songsResult(pages))
+  await act(async () => { view.rerender(<CategorySongsPage />) })
+  expect(view.container.querySelector('.category-songs__nav-inset')).toBe(inset)
+  expect(view.container.querySelector('.category-songs__footer')).toBeNull()
+})
 
 function makeSong(id: number, over: Partial<Song> = {}): Song {
   return {

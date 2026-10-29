@@ -10,6 +10,13 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 ## Entries
 
+### UI-007: Stable Chromium placeholders do not establish WebKit scroll-container stability
+
+- Scope: flat/category song pages and Web virtual lists, songloft-org/songloft#540; baseline `645717f254481baffd13a21da1ff5ba0191d29d4`.
+- Evidence: on 2026-10-29, 64px estimates and stable footers pass Chromium, but WebKit 18.4 still collapses 41 rows to 626px and changes offset 260 to 0. Container-level `content-visibility: auto` skips layout; keeping only the scroller laid out prevents return-to-top during pagination.
+- Rule and Done right: verify container and row geometry in the actual engine. Keep the viewport laid out while rows virtualize. Public `injectStyleRules` is also cleared by an upgrade class field: upgrade, install the hook, then start the url. Regressions model that ordering; final WebKit offset increases monotonically to 3120, song 49 visible, container visible and rows auto. Flat/category callers also receive appropriate estimates and stable footers. Evidence, early environment failures and device boundaries: [#540](docs/en/project/issue-540.md).
+- Seen 1× (2026-10-29). Status: reproduced and verified in WebKit; actual iOS 18.6 remains unverified. No commit or release.
+
 ### WEB-002: Acquire the file-picker gesture on an actual main-thread control
 
 - Scope: browser uploads and Worker RPC, songloft-org/songloft#545; baseline `645717f254481baffd13a21da1ff5ba0191d29d4`.

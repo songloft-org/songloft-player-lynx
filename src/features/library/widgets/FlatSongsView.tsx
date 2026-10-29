@@ -278,6 +278,7 @@ export function FlatSongsView({
             : (
               <VirtualList<Song>
                 className='library__list'
+                estimatedItemHeight={64}
                 items={songs}
                 itemKey={(song) => String(song.id)}
                 onScroll={onScrollEdge}
@@ -296,13 +297,15 @@ export function FlatSongsView({
                   </view>
                 )}
                 onEndReached={onEndReached}
-                footer={query.isFetchingNextPage
-                  ? (
-                    <view className='library__footer'>
-                      <text className='library__footer-text'>{t('common.loadingMore')}</text>
-                    </view>
-                  )
-                  : <view className='library__nav-inset' />}
+                footer={
+                  <view className='library__nav-inset'>
+                    {query.isFetchingNextPage ? (
+                      <view className='library__footer'>
+                        <text className='library__footer-text'>{t('common.loadingMore')}</text>
+                      </view>
+                    ) : null}
+                  </view>
+                }
               />
             )}
 

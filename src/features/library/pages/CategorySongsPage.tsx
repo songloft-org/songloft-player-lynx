@@ -197,19 +197,22 @@ export function CategorySongsPage() {
               : (
                 <VirtualList<Song>
                   className='category-songs__list'
+                  estimatedItemHeight={64}
                   items={songs}
                   itemKey={(song) => String(song.id)}
                   renderItem={(song, index) => (
                     <SongListRow song={song} index={index} onTap={onTapSong} />
                   )}
                   onEndReached={onEndReached}
-                  footer={songsQuery.isFetchingNextPage
-                    ? (
-                      <view className='category-songs__footer'>
-                        <text className='category-songs__footer-text'>{t('common.loadingMore')}</text>
-                      </view>
-                    )
-                    : <view className='category-songs__nav-inset' />}
+                  footer={
+                    <view className='category-songs__nav-inset'>
+                      {songsQuery.isFetchingNextPage ? (
+                        <view className='category-songs__footer'>
+                          <text className='category-songs__footer-text'>{t('common.loadingMore')}</text>
+                        </view>
+                      ) : null}
+                    </view>
+                  }
                 />
               )}
       </view>

@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-29 · 曲库分页高度（songloft-org/songloft#540）
+
+为曲库和分类歌曲页补 64px 离屏估算、稳定分页 inset；进一步在 WebKit 18.4 复现追加时滚动范围塌缩并回顶。宿主页等待自定义元素升级后安装容器布局钩子，再启动 url；行继续虚拟化。最终 WebKit 连续分页从 0 单调到 3120，第 49 首可见；Chromium 触摸与根/子路径初始化回归通过。早期检查在并发负载下失败的日志保留，最终构建/测试/发布工具状态、源码身份与原机未跑项见 [#540](issue-540.md)。未提交、推送或写 Issue；并发上传及插件管理改动不属于本批。
+
+English: Flat/category lists supply 64px estimates and stable pagination insets. WebKit 18.4 additionally reproduces scroll-range collapse and return-to-top on append. The host awaits custom-element upgrade, installs a container layout hook, then starts the url; rows still virtualize. Final WebKit pagination progresses monotonically from 0 to 3120 with song 49 visible; Chromium touch and root/subpath initialization regressions pass. Earlier failures under concurrent load are retained; final builds/tests/release checks, source identity and device boundaries: [#540](../en/project/issue-540.md). No commit, push or Issue write; concurrent upload and plugin-manager changes are outside this batch.
+
 ## 2026-10-28 · 永久访问 Token（songloft-org/songloft#546）
 
 设置新增永久设备 Token 的创建、一次性复制、分页管理和确认撤销；服务端独立哈希持久化，重启有效、撤销立即生效。类型/双 bundle/Web、全量 3724 项测试、89 项发布工具检查与实际 Chrome 创建、复制、封面、撤销流程通过。两项旧 Markdown 测试改为读取独立双语表格夹具，保留全部断言。边界、源码身份和证据见 [#546](issue-546.md)。本批已获提交、推送、同步父指针及带截图回复 Issue 的授权；发布和关闭 Issue 不在授权内。
