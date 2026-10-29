@@ -219,7 +219,7 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
     setInstalling(true)
     try {
       const uploadUrl = getJSPluginApi().getUploadUrl()
-      const body = await pickAndUploadFile(uploadUrl, 'plugin', 'application/zip')
+      const body = await pickAndUploadFile(uploadUrl, 'file', 'application/zip')
       void refetch()
       // Same reason the install mutation invalidates it: an uploaded plugin
       // can bring a configured tab back to the nav bar.

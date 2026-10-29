@@ -519,6 +519,16 @@ test('force update asks first, then reinstalls with force', async () => {
   expect(h.forceUpdate).toHaveBeenCalledWith({ id: 7, force: true }, expect.anything())
 })
 
+test('local installation uses the server multipart file field', async () => {
+  const { getByTestId } = await renderPage()
+  await openOverflow(getByTestId)
+  await act(async () => {
+    fireEvent.tap(getByTestId('menu-item-install'))
+    for (let i = 0; i < 5; i++) await Promise.resolve()
+  })
+  expect(h.pickAndUpload).toHaveBeenCalledWith(expect.any(String), 'file', 'application/zip')
+})
+
 test('a failed install surfaces the reason instead of doing nothing', async () => {
   // The empty `catch` this replaces is why a guaranteed 401 looked like a dead
   // button. The message now lands in the global toast store (rendered by

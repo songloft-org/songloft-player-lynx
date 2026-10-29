@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-10-29 · songloft-org/songloft#545 Safari follow-up
+
+Web uploads now use a visible main-thread file control with cancellation, error and timeout completion. Full-page checks also found and fixed the shared plugin multipart field from `plugin` to `file`. Results, retained failures and Safari device boundaries: [#545](issue-545.md). The user authorized this batch's commit, push, parent gitlink update and Issue reply; GitHub delivery records govern commits, CI and comments. No formal release or Issue closure is authorized. Concurrent #540 changes remain intact.
+
 ## 2026-10-28 · songloft-org/songloft#546
 
 Permanent token settings, generation/copy/revocation and the server implementation are complete. All 3724 tests, 89 release-tool checks, types, dual outputs, Web build and actual Chrome flow pass. Two stale Markdown tests now use independent fixtures with assertions preserved. Evidence and Not run: [#546](issue-546.md). Commit, push, parent gitlink synchronization and an Issue reply with screenshots are authorized; formal release and Issue closure are outside scope.

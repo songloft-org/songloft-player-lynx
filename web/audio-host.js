@@ -889,36 +889,12 @@
     },
 
     pickAndUploadFile: function (uploadUrl, fieldName, mimeType, callback) {
-      var input = document.createElement('input')
-      input.type = 'file'
-      input.accept = mimeType || '*/*'
-      input.style.display = 'none'
-      document.body.appendChild(input)
-
-      input.addEventListener('change', function () {
-        var file = input.files && input.files[0]
-        input.remove()
-        if (!file) {
-          callback('cancelled', null)
-          return
-        }
-        var form = new FormData()
-        form.append(fieldName, file)
-        fetch(uploadUrl, { method: 'POST', body: form, credentials: 'same-origin' })
-          .then(function (resp) {
-            if (!resp.ok) throw new Error('HTTP ' + resp.status)
-            return resp.text()
-          })
-          .then(function (text) { callback(null, text) })
-          .catch(function (err) { callback(err.message || 'upload failed', null) })
-      })
-
-      input.addEventListener('cancel', function () {
-        input.remove()
-        callback('cancelled', null)
-      })
-
-      input.click()
+      var files = window.__SONGLOFT_TEXT_FILES__
+      if (!files || !files.pickAndUploadFile) { callback('file_transfer_unavailable', null); return }
+      files.pickAndUploadFile(uploadUrl, fieldName, mimeType).then(
+        function (result) { callback(result.error, result.body) },
+        function () { callback('upload failed', null) },
+      )
     },
 
     setClipboard: function (text) {

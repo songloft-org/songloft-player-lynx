@@ -10,6 +10,14 @@
 
 ## 条目
 
+### WEB-002：文件选择的用户手势必须在主线程实际控件上取得
+
+- 范围：浏览器上传及 Worker RPC，songloft-org/songloft#545；基线 `645717f254481baffd13a21da1ff5ba0191d29d4`。
+- 证据：2026-10-29，报告人补充 Safari 后，核对发现此前原生 delegate 修复不覆盖 Web。Docker Chrome 真实 Worker 夹具在无激活时复现隐藏 input 点击后一直 loading；新可见控件经真实点击、取消重试与 multipart/Cookie 实收验证通过。
+- 规则与 Done right：不能把原生选择器和浏览器路径视为同一修复；Worker 回调不能可靠携带文件选择手势。提供主线程可见控件与取消入口，超时从实际上传开始，完成仅结算一次。回归、构建和真机边界见 [#545](docs/project/issue-545.md)。
+- 同次完整页面验收又发现客户端传 `plugin`、后端要求 `file` 的 multipart 契约不匹配，真实请求返回 400；纯上传宿主夹具只证明字节送达，必须继续验收后端安装和刷新后的列表。修复共享调用点并增加页面回归，不增加 Seen。
+- Seen 1× (2026-10-29)。状态：经验；Safari 18.6 真机仍待复验。
+
 ### WEB-001：插件自身的 URL token 不能替代反向代理 Cookie
 
 - 范围：Web 插件 iframe、NAS 网关，songloft-org/songloft#543；基线 `e1572551b9b6fb584e6a2325ef62e9db103e1283`。

@@ -1751,3 +1751,9 @@ toast「再按一次返回退出应用」在首页真机截图确认（`/tmp/bac
 `pnpm exec vitest run src/__tests__/native-module-contract.test.ts`：317 项通过；隔离读取 HEAD 旧 Swift 的新增结构检查按预期失败。日志 `/tmp/songloft-545-contract.log`、`/tmp/songloft-545-negative.log`。结构检查不证明 ARC 实际时序。Not run：Xcode 编译、iOS 18.6 真机上传/取消/失败重试，当前无 Apple SDK/设备。需要重新构建原生客户端；后端升级或仅更新 JS bundle 不包含此修复。未提交、推送、发布或写 Issue。
 
 English: #545 source fix: upload requests now retain completion independently of the dismissed iOS picker delegate. All three outcomes return to JS on the main queue. Baseline ab96b325565241cc62850fba01e5efe63385754b plus uncommitted changes, Linux, 2026-10-28. Native contract checks: 317 pass; new structural check fails against isolated old Swift. TypeScript build passes. Logs: /tmp/songloft-545-{contract,negative,types}.log. Not run: Xcode build and iOS 18.6 device upload/cancel/error retry (no Apple SDK/device). Structural checks do not establish ARC timing or reproduce the reporter's device. Rebuilt native client required. No commit, push, release or Issue write.
+
+## 2026-10-29 · songloft-org/songloft#545：Safari 上传与 multipart 字段
+
+Web 上传由隐藏 input 改为可见主线程选择面板，支持取消、失败重试及上传超时。实际页面发现共享安装调用错误使用 `plugin` 字段，真实后端要求 `file` 并返回 400，现一并修正。两类回归对旧代码均按预期失败。最终工作树、构建/测试、实际浏览器安装与 Safari 真机边界见 [#545](issue-545.md) 及 `/tmp/songloft-545-verification.json`。未提交、推送、发布或写 Issue；并行 #540 改动保留。
+
+English: Web uploads use a visible main-thread picker panel with cancel, error/retry and upload timeout handling. Full-page checks exposed the shared installation call sending `plugin` instead of the server's required `file`, returning 400; this is also fixed. Both regressions fail on old code. Final source identity, build/test results, browser installation and Safari device boundaries: [#545](../en/project/issue-545.md) and `/tmp/songloft-545-verification.json`. No commit, push, release or Issue write; concurrent #540 changes remain intact.

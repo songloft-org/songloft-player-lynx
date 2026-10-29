@@ -1,14 +1,15 @@
-/* Main-thread text file bridge. No credentials or server URLs cross this bridge. */
+/* Main-thread file controls. Text methods never receive credentials or server URLs. */
 ;(function () {
   var active = null
   var MAX_BYTES = 20 * 1024 * 1024
 
-  function operation(run) {
+  function operation(run, kind) {
     if (active) return Promise.resolve({ error: 'file_transfer_busy' })
     return new Promise(function (resolve) {
       var cleanups = []
       var closed = false
       var op = {
+        kind: kind,
         alive: function () { return !closed },
         cleanup: function (fn) { cleanups.push(fn) },
         finish: function (error, body) {
@@ -68,6 +69,47 @@
   }
 
   window.__SONGLOFT_TEXT_FILES__ = {
+    pickAndUploadFile: function (uploadUrl, fieldName, mimeType) {
+      return operation(function (op) {
+        var chinese = /^zh\b/i.test(navigator.language || '')
+        var labels = chinese
+          ? { title: '上传文件', choose: '选择文件', cancel: '取消' }
+          : { title: 'Upload file', choose: 'Choose file', cancel: 'Cancel' }
+        var input = document.createElement('input')
+        input.type = 'file'
+        input.accept = mimeType === 'application/zip' ? '.zip,application/zip,application/x-zip-compressed' : (mimeType || '*/*')
+        input.setAttribute('aria-label', labels.choose)
+        var uploading = false
+        input.addEventListener('change', async function () {
+          if (uploading || !op.alive()) return
+          var file = input.files && input.files[0]
+          if (!file) return op.finish('cancelled')
+          uploading = true
+          input.disabled = true
+          var controller = new AbortController()
+          // Picking may take arbitrarily long. Bound only the HTTP upload, in
+          // line with the native plugin-install allowance, and keep Cancel usable.
+          var deadline = setTimeout(function () { op.finish('Upload timed out') }, 240000)
+          op.cleanup(function () { clearTimeout(deadline); controller.abort() })
+          try {
+            var form = new FormData()
+            form.append(fieldName, file)
+            var response = await fetch(uploadUrl, {
+              method: 'POST', body: form, credentials: 'same-origin', signal: controller.signal,
+            })
+            if (!response.ok) throw new Error('HTTP ' + response.status)
+            var body = await response.text()
+            op.finish(null, body)
+          } catch (error) { op.finish((error && error.message) || 'upload failed') }
+        })
+        input.addEventListener('cancel', function () { if (!uploading) op.finish('cancelled') })
+        op.cleanup(function () { input.remove() })
+        // Always use a real control here: the Worker round trip cannot carry
+        // Safari's file-picker gesture. A hidden input.click() may silently do
+        // nothing, leaving neither change nor cancel to settle the RPC.
+        panel(op, labels, input)
+      }, 'upload')
+    },
     pickTextFile: function (labels) {
       return operation(function (op) {
         var input = document.createElement('input')
@@ -123,6 +165,6 @@
         } else panel(op, options, anchor)
       })
     },
-    cancelTextFile: function () { if (active) active.finish('cancelled') },
+    cancelTextFile: function () { if (active && active.kind !== 'upload') active.finish('cancelled') },
   }
 })()

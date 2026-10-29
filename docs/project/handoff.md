@@ -1,5 +1,11 @@
 # 工作交接（2026-10-14）
 
+## 2026-10-29 · songloft-org/songloft#545 Safari 补充反馈
+
+Web 上传改为主线程可见文件控件，取消/失败/超时均恢复状态；完整页面测试还发现并修正共享插件安装字段 `plugin` → `file`。验证结果、历史失败与 Safari 真机缺口见 [#545](issue-545.md)。用户已授权本批提交、推送、同步父指针及回复 Issue，实际提交、CI 与评论以 GitHub 交付记录为准；正式发布和关闭 Issue 未授权。并行 #540 改动保留。
+
+English: Web uploads now use a visible main-thread file control with cancellation, error and timeout completion. Full-page checks also found and fixed the shared plugin multipart field from `plugin` to `file`. Results, retained failures and Safari device boundaries: [#545](../en/project/issue-545.md). The user authorized this batch's commit, push, parent gitlink update and Issue reply; GitHub delivery records govern commits, CI and comments. No formal release or Issue closure is authorized. Concurrent #540 changes remain intact.
+
 ## 2026-10-28 · songloft-org/songloft#546
 
 永久访问 Token 的设置入口、生成/复制/撤销及配套后端已实现。全量 3724 项、89 项发布工具、类型/双产物/Web 与实际 Chrome 流程通过；两个旧 Markdown 断言改用独立夹具后通过，断言未放宽。验证与未跑项见 [#546](issue-546.md)。本批已获提交、推送、同步父 gitlink 及带截图回复 Issue 的授权，正式发布与关闭不在授权内。

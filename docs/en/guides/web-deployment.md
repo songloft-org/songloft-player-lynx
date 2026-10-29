@@ -31,6 +31,12 @@ location / {
 
 Vitest checks local index.html references and a type=module entry. Those checks cannot prove rendering. Historical development and production engine-entry differences caused black screens; the paths are now aligned.
 
+## Browser file uploads
+
+Local plugin installation, cover uploads and backup uploads share a main-thread file control. After requesting an upload, use the visible file control in the panel to open the system picker; Cancel ends the operation. A hidden input clicked from a Worker RPC cannot reliably carry Safari's picker gesture. A blocked attempt may produce neither change nor cancel, leaving the page waiting. File selection has no deadline; the HTTP upload is limited to four minutes after selection and is aborted on timeout or cancellation. Failed uploads can be retried. Text JSON methods still receive no server URL or token.
+
+This fix is in the deployed Web host resources. The native iOS picker is a separate path. Evidence and Safari device boundaries: [#545](../project/issue-545.md).
+
 ## Subpath deployment
 
 The frontend supports both root hosting and directory subpaths such as `/songloft/`. Before web-core upgrades the element, the host supplies the document directory and resolves bundles, modules, scripts, styles, WASM and app icons there. Child plugin-frame bridge modules also load from the host directory. Standalone configures its server independently, allowing different frontend and backend directories; embedded uses the same-origin directory and ignores a stored standalone `server_url` during session restoration. Web Lynx main-thread realms without `location` read the same host directory using the platform identifier. Native resource paths retain their existing behavior.

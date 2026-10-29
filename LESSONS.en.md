@@ -10,6 +10,14 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 ## Entries
 
+### WEB-002: Acquire the file-picker gesture on an actual main-thread control
+
+- Scope: browser uploads and Worker RPC, songloft-org/songloft#545; baseline `645717f254481baffd13a21da1ff5ba0191d29d4`.
+- Evidence: on 2026-10-29 the Safari follow-up revealed that the earlier native delegate fix did not cover Web. A real Docker Chrome Worker fixture reproduced a hidden input remaining loading without activation. The visible control passed actual click, cancel/retry and server-observed multipart/cookie checks.
+- Rule and Done right: native and browser pickers require separate verification. Worker callbacks cannot reliably carry the picker gesture. Offer a visible main-thread control and cancellation; start the deadline only when uploading and settle once. Regressions, builds and device boundaries: [#545](docs/en/project/issue-545.md).
+- Full-page acceptance in the same incident found a second mismatch: the client sent `plugin`, but the server required `file`, returning 400. A host fixture proves byte delivery only; also verify installation and the refreshed list. Fixed the shared call and added a page regression; Seen is unchanged.
+- Seen 1× (2026-10-29). Status: lesson; iOS 18.6 Safari device recheck remains open.
+
 ### WEB-001: A plugin URL token cannot authenticate a reverse proxy's cookie session
 
 - Scope: Web plugin iframes and NAS gateways, songloft-org/songloft#543; baseline `e1572551b9b6fb584e6a2325ef62e9db103e1283`.

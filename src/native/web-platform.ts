@@ -67,50 +67,22 @@ export function webOpenURL(url: string): boolean {
  * @param fieldName - The form field name for the file.
  * @param mimeType - The accept MIME type for the file picker.
  */
-export function webPickAndUploadFile(
-  uploadUrl: string,
-  fieldName: string,
-  mimeType: string,
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = mimeType
-    input.style.display = 'none'
-    document.body.appendChild(input)
-
-    input.addEventListener('change', async () => {
-      const file = input.files?.[0]
-      input.remove()
-      if (!file) {
-        reject(new Error('No file selected'))
-        return
+export function webPickAndUploadFile(uploadUrl: string, fieldName: string, mimeType: string): Promise<string> {
+  // The DOM fallback must use the same visible control as the Worker RPC.
+  const host = (
+    window as unknown as {
+      __SONGLOFT_TEXT_FILES__?: {
+        pickAndUploadFile(
+          url: string,
+          field: string,
+          mime: string,
+        ): Promise<{ error: string | null; body: string | null }>
       }
-      try {
-        const form = new FormData()
-        form.append(fieldName, file)
-        const resp = await fetch(uploadUrl, {
-          method: 'POST',
-          body: form,
-          // Include credentials if same-origin
-          credentials: 'same-origin',
-        })
-        if (!resp.ok) {
-          reject(new Error(`Upload failed: ${resp.status} ${resp.statusText}`))
-          return
-        }
-        const text = await resp.text()
-        resolve(text)
-      } catch (err) {
-        reject(err instanceof Error ? err : new Error(String(err)))
-      }
-    })
-
-    input.addEventListener('cancel', () => {
-      input.remove()
-      reject(new Error('File picker cancelled'))
-    })
-
-    input.click()
+    }
+  ).__SONGLOFT_TEXT_FILES__
+  if (!host?.pickAndUploadFile) return Promise.reject(new Error('file_transfer_unavailable'))
+  return host.pickAndUploadFile(uploadUrl, fieldName, mimeType).then((result) => {
+    if (result.error) throw new Error(result.error)
+    return result.body ?? ''
   })
 }
