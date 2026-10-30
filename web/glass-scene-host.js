@@ -37,7 +37,7 @@ const songloftGlassScene = (() => {
     return copy
   }
 
-  function paint(source, bounds, background, pad, baseline) {
+  function paint(source, bounds, background, pad, baseline, skipped) {
     const prefix = `songloft-scene-paint-${++nextScene}-`
     const defs = element('defs'), scene = element('g')
     scene.append(element('rect', { x: -pad, y: -pad, width: bounds.width + pad * 2,
@@ -78,7 +78,7 @@ const songloftGlassScene = (() => {
       append(foreign, clips)
     }
     function visit(node, clipBounds, clips = [], opacity = 1) {
-      if (seen.has(node) || !valid) return
+      if (seen.has(node) || !valid || skipped.has(node)) return
       seen.add(node)
       if (++visited > 4000) { valid = false; return }
       if (node.nodeType === Node.TEXT_NODE) {
@@ -161,11 +161,20 @@ const songloftGlassScene = (() => {
       this.roots = new Map()
       this.listeners = new Set()
       this.baselines = new Map()
+      this.skipped = new WeakSet()
       this.frame = 0
       this.disposed = false
       this.valid = false
       this.schedule = () => {
         if (!this.disposed && !this.frame) this.frame = requestAnimationFrame(() => this.refresh())
+      }
+      // Read the browser's virtual-content state without forcing row layout.
+      // Capture on every source root: this event does not bubble or cross a
+      // shadow boundary. Becoming relevant again must repaint the glass too.
+      this.visibilityChanged = event => {
+        if (event.skipped) this.skipped.add(event.target)
+        else this.skipped.delete(event.target)
+        this.schedule()
       }
       const id = `songloft-scene-blur-${++nextScene}`
       this.svg = element('svg', { 'aria-hidden': true })
@@ -214,6 +223,7 @@ const songloftGlassScene = (() => {
         observer.disconnect()
         root.removeEventListener('scroll', this.schedule, true)
         root.removeEventListener('load', this.schedule, true)
+        root.removeEventListener('contentvisibilityautostatechange', this.visibilityChanged, true)
         this.roots.delete(root)
       }
       for (const root of active) {
@@ -222,6 +232,7 @@ const songloftGlassScene = (() => {
         observer.observe(root, { subtree: true, childList: true, characterData: true, attributes: true })
         root.addEventListener('scroll', this.schedule, true)
         root.addEventListener('load', this.schedule, true)
+        root.addEventListener('contentvisibilityautostatechange', this.visibilityChanged, true)
         this.roots.set(root, observer)
       }
     }
@@ -234,7 +245,7 @@ const songloftGlassScene = (() => {
       if (!bounds.width || !bounds.height) return
       const pad = Math.max(16, this.radius * 3)
       const background = this.theme ? getComputedStyle(this.theme).backgroundColor : 'transparent'
-      const result = paint(this.source, bounds, background, pad, style => this.baseline(style))
+      const result = paint(this.source, bounds, background, pad, style => this.baseline(style), this.skipped)
       this.valid = result.valid
       // A moving lens captures the fixed bar, but its viewport belongs to the
       // actual pill. An inverse background transform cancels the pill's pose.
@@ -288,6 +299,7 @@ const songloftGlassScene = (() => {
         observer.disconnect()
         root.removeEventListener('scroll', this.schedule, true)
         root.removeEventListener('load', this.schedule, true)
+        root.removeEventListener('contentvisibilityautostatechange', this.visibilityChanged, true)
       }
       this.roots.clear()
       this.listeners.clear()

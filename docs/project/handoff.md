@@ -1,5 +1,13 @@
 # 工作交接（2026-10-14）
 
+## 2026-10-30 · songloft-org/songloft#540 滚动性能
+
+本批复用曲库/分类旧行、提前分页并保留 Web 跳底兜底，玻璃镜像跟随浏览器虚拟化状态。等量 140 首 WebKit 对照的行测量 8883 → 744，位置同为 4900，效果有效；这不是 iOS 真机帧率结论。最终验证和失败记录见 [#540](issue-540.md)。未提交、推送、写 Issue 或同步父指针；本批不沿用下方历史授权。
+
+English: This batch reuses flat/category rows, prefetches pages with a Web jump-to-end fallback, and makes glass scenes follow browser virtualization. A matched 140-song WebKit comparison reduces row measurements 8883 → 744 at the same offset 4900 with valid effects; this is not an iOS device frame-rate result. Final validation and retained failures: [#540](../en/project/issue-540.md). No commit, push, Issue write or parent pointer update; historical permissions below do not apply.
+
+用户随后授权本批提交、推送、同步父指针并回复 #540；实际交付以 GitHub 记录为准。English: The user subsequently authorized this batch's commit, push, parent pointer update and reply to #540; GitHub records govern actual delivery.
+
 ## 2026-10-29 · songloft-org/songloft#545 Safari 补充反馈
 
 Web 上传改为主线程可见文件控件，取消/失败/超时均恢复状态；完整页面测试还发现并修正共享插件安装字段 `plugin` → `file`。验证结果、历史失败与 Safari 真机缺口见 [#545](issue-545.md)。用户已授权本批提交、推送、同步父指针及回复 Issue，实际提交、CI 与评论以 GitHub 交付记录为准；正式发布和关闭 Issue 未授权。并行 #540 改动保留。

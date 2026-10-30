@@ -106,3 +106,69 @@ test('idle does not capture continuously and disposal cancels pending work and s
     expect(f.frames.size).toBe(0)
   } finally { f.dom.window.close() }
 })
+
+test('browser-skipped virtual rows are not measured, and paint again when they become visible', () => {
+  const f = setup()
+  try {
+    const row = f.win.document.createElement('list-item')
+    row.setAttribute('data-box', '[0,830,375,64]')
+    row.textContent = 'Visible after scroll'
+    const bounds = vi.spyOn(row, 'getBoundingClientRect')
+    f.source.append(row)
+    const visibility = (skipped: boolean) => {
+      const event = new f.win.Event('contentvisibilityautostatechange')
+      Object.defineProperty(event, 'skipped', { value: skipped })
+      row.dispatchEvent(event)
+    }
+    visibility(true)
+    f.scene.refresh()
+    expect(bounds).not.toHaveBeenCalled()
+    expect(f.scene.svg.textContent).not.toContain('Visible after scroll')
+    visibility(false)
+    f.flush()
+    expect(f.scene.valid).toBe(true)
+    expect(f.scene.svg.textContent).toContain('Visible after scroll')
+  } finally { f.scene.dispose(); f.dom.window.close() }
+})
+
+test('browsers without virtual-content events still sample the actual visible content', () => {
+  const f = setup()
+  try {
+    const row = f.win.document.createElement('list-item')
+    row.setAttribute('data-box', '[0,830,375,64]')
+    row.textContent = 'Legacy browser row'
+    f.source.append(row)
+    f.scene.refresh()
+    expect(f.scene.valid).toBe(true)
+    expect(f.scene.svg.textContent).toContain('Legacy browser row')
+  } finally { f.scene.dispose(); f.dom.window.close() }
+})
+
+test('virtual-content changes inside a shadow root repaint and detach on disposal', () => {
+  const f = setup()
+  try {
+    const container = f.win.document.createElement('x-content')
+    const shadow = container.attachShadow({ mode: 'open' })
+    const row = f.win.document.createElement('list-item')
+    row.setAttribute('data-box', '[0,830,375,64]')
+    row.textContent = 'Shadow row'
+    shadow.append(row)
+    f.source.append(container)
+    f.scene.refresh()
+    const notify = (skipped: boolean) => {
+      const event = new f.win.Event('contentvisibilityautostatechange')
+      Object.defineProperty(event, 'skipped', { value: skipped })
+      row.dispatchEvent(event)
+    }
+    notify(true)
+    f.flush()
+    expect(f.scene.svg.textContent).not.toContain('Shadow row')
+    notify(false)
+    f.flush()
+    expect(f.scene.svg.textContent).toContain('Shadow row')
+    f.scene.dispose()
+    notify(true)
+    expect(f.scene.skipped.has(row)).toBe(false)
+    expect(f.frames.size).toBe(0)
+  } finally { f.scene.dispose(); f.dom.window.close() }
+})

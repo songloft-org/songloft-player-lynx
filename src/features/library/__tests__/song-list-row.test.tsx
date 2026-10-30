@@ -69,6 +69,25 @@ vi.mock('../../player/store/index.js', () => ({
 const { SongListRow } = await import('../widgets/SongListRow.js')
 const { LibraryViewportProvider } = await import('../pages/library-viewport.js')
 
+test('unchanged row props skip parent updates, while edited songs and selection still render', async () => {
+  const song = makeSong()
+  const viewport = { isWide: false, isSongListWide: false }
+  const renderTree = (rowSong = song, selectionMode = false) => (
+    <LibraryViewportProvider value={viewport}>
+      <SongListRow song={rowSong} index={0} selectionMode={selectionMode} />
+    </LibraryViewportProvider>
+  )
+  const view = render(renderTree())
+  await act(async () => { await Promise.resolve() })
+  favoriteToggleMock.mockClear()
+  await act(async () => { view.rerender(renderTree()) })
+  expect(favoriteToggleMock).not.toHaveBeenCalled()
+  await act(async () => { view.rerender(renderTree({ ...song, title: 'Edited title' })) })
+  expect(getQueriesForElement(elementTree.root!).getByText('Edited title')).toBeInTheDocument()
+  await act(async () => { view.rerender(renderTree(song, true)) })
+  expect(getQueriesForElement(elementTree.root!).queryByTestId('song-row-more')).not.toBeInTheDocument()
+})
+
 function makeSong(over: Partial<Song> = {}): Song {
   return {
     id: 1,

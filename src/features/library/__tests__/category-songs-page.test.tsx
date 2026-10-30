@@ -2,7 +2,7 @@ import '../../../shims/router-env.js'
 
 import '@testing-library/jest-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { act, getQueriesForElement, render } from '@lynx-js/react/testing-library'
+import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 
 import type { Song } from '../../../models/song.js'
 
@@ -23,7 +23,8 @@ const { songsHook, paramsHook, searchHook } = vi.hoisted(() => ({
   paramsHook: vi.fn(),
   searchHook: vi.fn(),
 }))
-const listProps = vi.hoisted(() => ({ estimatedItemHeight: undefined as number | undefined }))
+const listProps = vi.hoisted(() => ({ estimatedItemHeight: undefined as number | undefined, lowerThreshold: 0, onEndReached: undefined as (() => void) | undefined }))
+const rowRenders = vi.hoisted(() => vi.fn())
 
 vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
@@ -43,8 +44,10 @@ vi.mock('../data/songs-query.js', () => ({
 vi.mock('../widgets/VirtualList.js', async () => {
   const { VirtualList } = (await import('../../../__tests__/_render-mocks.js')).mockVirtualList()
   return {
-    VirtualList: (props: Parameters<typeof VirtualList>[0] & { estimatedItemHeight?: number }) => {
+    VirtualList: (props: Parameters<typeof VirtualList>[0] & { estimatedItemHeight?: number; lowerThreshold?: number; onEndReached?: () => void }) => {
       listProps.estimatedItemHeight = props.estimatedItemHeight
+      listProps.lowerThreshold = props.lowerThreshold ?? 200
+      listProps.onEndReached = props.onEndReached
       return <VirtualList {...props} />
     },
   }
@@ -53,10 +56,48 @@ vi.mock('../widgets/VirtualList.js', async () => {
 /* Row mocked down to the plain `SongRow` — see flat-songs-view.test.tsx. */
 vi.mock('../widgets/SongListRow.js', async () => {
   const { SongRow } = await import('../widgets/SongRow.js')
-  return { SongListRow: SongRow }
+  const { memo } = await import('@lynx-js/react')
+  return { SongListRow: memo((props: Parameters<typeof SongRow>[0]) => {
+    rowRenders(props.song.id)
+    return <SongRow {...props} />
+  }) }
 })
 
 const { CategorySongsPage } = await import('../pages/CategorySongsPage.js')
+const { usePlayerStore } = await import('../../player/store/index.js')
+
+test('paging reuses category rows while old rows play the newest loaded queue and context', async () => {
+  const first = [makeSong(1), makeSong(2)]
+  const pages = [{ songs: first, total: 3 }]
+  songsHook.mockReturnValue(songsResult(pages))
+  const view = render(<CategorySongsPage />)
+  await act(async () => { await Promise.resolve() })
+  rowRenders.mockClear()
+  songsHook.mockReturnValue(songsResult(pages, { isFetchingNextPage: true }))
+  await act(async () => { view.rerender(<CategorySongsPage />) })
+  expect(rowRenders).not.toHaveBeenCalled()
+  const last = makeSong(3)
+  songsHook.mockReturnValue(songsResult([...pages, { songs: [last], total: 3 }]))
+  await act(async () => { view.rerender(<CategorySongsPage />) })
+  expect(rowRenders.mock.calls).toEqual([[3]])
+  searchHook.mockReturnValue({ value: 'Updated Artist' })
+  await act(async () => { view.rerender(<CategorySongsPage />) })
+  const play = vi.spyOn(usePlayerStore.getState(), 'playPlaylist').mockResolvedValue()
+  try {
+    await act(async () => { fireEvent.tap(view.container.querySelector('.song-row')!) })
+    expect(play).toHaveBeenCalledExactlyOnceWith([...first, last], 0, { type: 'artist', key: 'Updated Artist' })
+  } finally { play.mockRestore() }
+})
+
+test('category preloads a screen ahead and reuses overlapping next-page requests', async () => {
+  const fetchNextPage = vi.fn()
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1)], total: 40 }], { hasNextPage: true, fetchNextPage }))
+  await renderPage()
+  expect(listProps.lowerThreshold).toBeGreaterThanOrEqual(640)
+  listProps.onEndReached!()
+  listProps.onEndReached!()
+  expect(fetchNextPage.mock.calls).toEqual([[{ cancelRefetch: false }], [{ cancelRefetch: false }]])
+})
 
 test('category paging preserves the inset and estimates song rows independently of viewport height', async () => {
   const pages = [{ songs: [makeSong(1)], total: 40 }]

@@ -10,6 +10,13 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 ## Entries
 
+### WEB-003: Glass background sampling must preserve browser row virtualization
+
+- Scope: WebKit/Firefox tab-bar scene mirrors and library scrolling, songloft-org/songloft#540; baseline `196adc500da5b700bfbf61ab99ffc4b2918922c4`.
+- Evidence: on 2026-10-30 the reporter confirmed the return-to-top fix but still reported Safari jank. Glass sampling measured offscreen rows. With 180 loaded songs in both diagnostic WebKit runs, observing skipped content reduced row measurements from 14,385 to 2,182. The initial `checkVisibility` attempt did not establish a reduction on this version and was discarded.
+- Rule and Done right: capture `contentvisibilityautostatechange`, retain skipped nodes, omit their subtrees, and repaint when relevant again. Events neither bubble nor cross shadow roots: subscribe on each source root and detach on disposal. Skip/resume and shadow-root regressions fail on the old implementation. Final tests, matched comparisons, failures and device boundaries: [#540](docs/en/project/issue-540.md).
+- Seen 1× (2026-10-30). Status: lesson; local browsers do not establish smoothness on the actual iOS 18.6 device.
+
 ### UI-007: Stable Chromium placeholders do not establish WebKit scroll-container stability
 
 - Scope: flat/category song pages and Web virtual lists, songloft-org/songloft#540; baseline `645717f254481baffd13a21da1ff5ba0191d29d4`.
@@ -38,7 +45,8 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 - Scope: Web playlist pagination and mouse scrolling, songloft-org/songloft#542; baseline `81c478c14d67de8a9a9dbbfcc9ab0857e4ee405a`.
 - Evidence: on 2026-10-27, scroll updates rebuilt 80 loaded rows and appending pages updated existing rows again. Replacing the inset with loading changed the end position by 32px. Corresponding regressions fail against the isolated old implementation; mouse scrolling was also confirmed missing in the Flutter-to-Lynx Web migration.
 - Done right: cache row trees and memo song rows, with stable callbacks reading current pages through a ref. Tests assert both reuse of old rows and clicks playing all newly loaded songs. Loading retains the same inset. Actual browser evidence and platform boundaries: [#542](docs/en/project/issue-542.md). Stop pagination timing when rows are appended; exclude subsequent forced layout from reading every row's bounds and timings collected during concurrent tests.
-- Seen 1× (2026-10-27). Status: lesson; the reporter's Chromium 150 and real library still need verification.
+- Second independent event: on 2026-10-30, `196adc5` still recreated arrays and callbacks in flat/category pages, updating existing rows on pagination-state changes. Stable props and memo regressions check old-row reuse, target-only selection updates, and old rows reading the latest queue/category context. Increasing prefetch also exposed Web's single threshold row being skipped by jump scrolling, requiring observation of the actual end; see [#540](docs/en/project/issue-540.md).
+- Seen 2× (2026-10-27, 2026-10-30). Status: lesson; the reporter's Chromium 150, iOS 18.6 and real library remain unverified.
 
 ### LIST-002: Preserve pending scrollbar targets and confirm native seeks with visible rows
 

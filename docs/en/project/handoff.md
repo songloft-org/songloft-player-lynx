@@ -1,5 +1,11 @@
 # Handoff (2026-10-14)
 
+## 2026-10-30 · songloft-org/songloft#540 scrolling performance
+
+This batch reuses flat/category rows, prefetches pages with a Web jump-to-end fallback, and makes glass scenes follow browser virtualization. A matched 140-song WebKit comparison reduces row measurements 8883 → 744 at the same offset 4900 with valid effects; this is not an iOS device frame-rate result. Final validation and retained failures: [#540](issue-540.md). No commit, push, Issue write or parent pointer update; historical permissions below do not apply.
+
+The user subsequently authorized this batch's commit, push, parent pointer update and reply to #540; GitHub records govern actual delivery.
+
 ## 2026-10-29 · songloft-org/songloft#545 Safari follow-up
 
 Web uploads now use a visible main-thread file control with cancellation, error and timeout completion. Full-page checks also found and fixed the shared plugin multipart field from `plugin` to `file`. Results, retained failures and Safari device boundaries: [#545](issue-545.md). The user authorized this batch's commit, push, parent gitlink update and Issue reply; GitHub delivery records govern commits, CI and comments. No formal release or Issue closure is authorized. Concurrent #540 changes remain intact.

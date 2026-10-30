@@ -1,3 +1,4 @@
+import { memo } from '@lynx-js/react'
 import type { Song } from '../../../models/song.js'
 import { useTranslation } from 'react-i18next'
 import { useTapAnchor } from '../../../shared/ui/anchored-overlay.js'
@@ -55,7 +56,7 @@ export interface SongListRowProps {
  * `useLibraryViewport`) additionally show the high-frequency "add to playlist"
  * shortcut — detail, delete, and other actions stay in the `⋯` menu.
  */
-export function SongListRow({
+export const SongListRow = memo(function SongListRow({
   song,
   index,
   showIndex,
@@ -117,4 +118,4 @@ export function SongListRow({
       moreAnchorId={anchorId}
     />
   )
-}
+})

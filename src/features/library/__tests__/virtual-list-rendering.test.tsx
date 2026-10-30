@@ -1,6 +1,21 @@
 import { expect, test, vi } from 'vitest'
-import { render } from '@lynx-js/react/testing-library'
+import { fireEvent, render } from '@lynx-js/react/testing-library'
 import { VirtualList } from '../widgets/VirtualList.js'
+
+const platform = vi.hoisted(() => ({ web: false }))
+vi.mock('../../../native/web-platform.js', () => ({ isWebPlatform: () => platform.web }))
+
+test('Web can load at the actual end after a fast jump skips the prefetch row', () => {
+  platform.web = true
+  try {
+    const onEndReached = vi.fn()
+    const view = render(<VirtualList items={[1, 2]} itemKey={String} renderItem={String}
+      lowerThreshold={768} onEndReached={onEndReached} />)
+    const list = view.container.querySelector('list')!
+    fireEvent.scrolltoloweredge(list, { detail: {} })
+    expect(onEndReached).toHaveBeenCalledTimes(1)
+  } finally { platform.web = false }
+})
 
 test('scroll callback changes reuse loaded rows; new pages and row callbacks invalidate them', () => {
   const items = Array.from({ length: 80 }, (_, id) => ({ id }))

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from '@lynx-js/react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -18,13 +18,34 @@ import { useCacheBatchSubmission } from '../../player/widgets/use-cache-batch.js
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { songRowOverlays } from '../../../shared/ui/song-row-overlays.js'
-import { SongRow } from './SongRow.js'
 import { SongListRow } from './SongListRow.js'
 import { VirtualList } from './VirtualList.js'
 import { LibraryToolbar } from './LibraryToolbar.js'
 import { LibraryStateMessage } from './LibraryStateMessage.js'
 
 const DEBOUNCE_MS = 350
+const songItemKey = (song: Song) => String(song.id)
+
+const SelectableSongRow = memo(function SelectableSongRow({ song, index, selectMode, selected, onTap }: {
+  song: Song
+  index: number
+  selectMode: boolean
+  selected: boolean
+  onTap: (song: Song, index: number) => void
+}) {
+  return (
+    <view className={selected ? 'library__select-row library__select-row--selected' : 'library__select-row'}>
+      {selectMode ? (
+        <view className='library__select-box' bindtap={() => onTap(song, index)}>
+          <AppCheckbox checked={selected} />
+        </view>
+      ) : null}
+      <view className='library__select-row-content'>
+        <SongListRow song={song} index={index} onTap={onTap} selectionMode={selectMode} isSelected={selected} />
+      </view>
+    </view>
+  )
+})
 
 export interface FlatSongsViewProps {
   /** Song source filter; `undefined` for the `all` view (no `type` param). */
@@ -87,7 +108,7 @@ export function FlatSongsView({
   }, [debouncedSearch, sortId, sortOrder, type, showHidden])
 
   const query = useSongsInfiniteQuery(filters)
-  const songs = flattenSongs(query.data?.pages)
+  const songs = useMemo(() => flattenSongs(query.data?.pages), [query.data?.pages])
   const total = query.data?.pages[0]?.total ?? 0
 
   /**
@@ -108,7 +129,7 @@ export function FlatSongsView({
 
   const onEndReached = () => {
     if (query.hasNextPage && !query.isFetchingNextPage) {
-      void query.fetchNextPage()
+      void query.fetchNextPage({ cancelRefetch: false })
     }
   }
 
@@ -125,6 +146,16 @@ export function FlatSongsView({
       fillRemainingQueue()
     }
   }
+
+  // Keep existing rows memoized on page append, while their actions see the
+  // current queue, filters and selection mode rather than the first page.
+  const songTap = useRef(onTapSong)
+  songTap.current = onTapSong
+  const handleSongTap = useCallback((song: Song, index: number) => songTap.current(song, index), [])
+  const renderSong = useCallback((song: Song, index: number) => (
+    <SelectableSongRow song={song} index={index} onTap={handleSongTap}
+      selectMode={selectMode} selected={selectMode && selected.has(song.id)} />
+  ), [handleSongTap, selectMode, selected])
 
   const playAll = () => {
     if (songs.length === 0) return
@@ -279,23 +310,11 @@ export function FlatSongsView({
               <VirtualList<Song>
                 className='library__list'
                 estimatedItemHeight={64}
+                lowerThreshold={768}
                 items={songs}
-                itemKey={(song) => String(song.id)}
+                itemKey={songItemKey}
                 onScroll={onScrollEdge}
-                renderItem={(song, index) => (
-                  <view className={selectMode && selected.has(song.id) ? 'library__select-row library__select-row--selected' : 'library__select-row'}>
-                    {selectMode
-                      ? (
-                        <view className='library__select-box' bindtap={() => onTapSong(song, index)}>
-                          <AppCheckbox checked={selected.has(song.id)} />
-                        </view>
-                      )
-                      : null}
-                    <view className='library__select-row-content'>
-                      <SongListRow song={song} index={index} onTap={onTapSong} selectionMode={selectMode} isSelected={selected.has(song.id)} />
-                    </view>
-                  </view>
-                )}
+                renderItem={renderSong}
                 onEndReached={onEndReached}
                 footer={
                   <view className='library__nav-inset'>

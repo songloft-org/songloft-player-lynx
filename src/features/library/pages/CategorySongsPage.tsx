@@ -1,4 +1,4 @@
-import { useMemo, useState } from '@lynx-js/react'
+import { useCallback, useMemo, useRef, useState } from '@lynx-js/react'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -46,6 +46,7 @@ type CategoryField =
 const VALID_FIELDS: ReadonlySet<string> = new Set([
   'artist', 'album', 'genre', 'year', 'decade', 'language', 'style',
 ])
+const songItemKey = (song: Song) => String(song.id)
 
 function normalizeField(field: string | undefined): CategoryField {
   if (field && VALID_FIELDS.has(field)) return field as CategoryField
@@ -83,11 +84,11 @@ export function CategorySongsPage() {
   )
 
   const songsQuery = useSongsInfiniteQuery(filters)
-  const songs = flattenSongs(songsQuery.data?.pages)
+  const songs = useMemo(() => flattenSongs(songsQuery.data?.pages), [songsQuery.data?.pages])
 
   const onEndReached = () => {
     if (songsQuery.hasNextPage && !songsQuery.isFetchingNextPage) {
-      void songsQuery.fetchNextPage()
+      void songsQuery.fetchNextPage({ cancelRefetch: false })
     }
   }
 
@@ -123,6 +124,13 @@ export function CategorySongsPage() {
     void usePlayerStore.getState().playPlaylist(songs, index, playbackCtx)
     fillRemainingQueue()
   }
+
+  const songTap = useRef(onTapSong)
+  songTap.current = onTapSong
+  const handleSongTap = useCallback((song: Song, index: number) => songTap.current(song, index), [])
+  const renderSong = useCallback((song: Song, index: number) => (
+    <SongListRow song={song} index={index} onTap={handleSongTap} />
+  ), [handleSongTap])
 
   const playAll = () => {
     if (songs.length === 0) return
@@ -198,11 +206,10 @@ export function CategorySongsPage() {
                 <VirtualList<Song>
                   className='category-songs__list'
                   estimatedItemHeight={64}
+                  lowerThreshold={768}
                   items={songs}
-                  itemKey={(song) => String(song.id)}
-                  renderItem={(song, index) => (
-                    <SongListRow song={song} index={index} onTap={onTapSong} />
-                  )}
+                  itemKey={songItemKey}
+                  renderItem={renderSong}
                   onEndReached={onEndReached}
                   footer={
                     <view className='category-songs__nav-inset'>

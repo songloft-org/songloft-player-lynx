@@ -70,8 +70,14 @@ export function VirtualList<T>({
     [items, itemKey, renderItem, id, estimatedItemHeight],
   )
 
+  // Web observes a single threshold row. A fast jump can pass that row when
+  // prefetching more than one viewport ahead; keep the actual end observable.
+  // This event is provided by web-elements, not the native list contract.
+  const webEndEdge = isWebPlatform() ? { bindscrolltoloweredge: onEndReached } : {}
+
   return (
     <list
+      {...webEndEdge}
       id={id}
       className={className}
       scroll-y

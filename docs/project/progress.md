@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+## 2026-10-30 · 曲库滚动性能（songloft-org/songloft#540）
+
+报告人确认 dev 已修复回顶，本批处理滑动顿挫与分页等待：曲库/分类页复用旧行并保留最新操作、提前预取并复用请求，Web 实际末端兜底快速跳转；底栏背景镜像按浏览器虚拟内容状态跳过离屏子树。全量快照 3740 项通过，后续最终受影响的 423 项通过；类型、构建、反向回归、实际 WebKit/Chromium、源码指纹与未跑项见 [#540](issue-540.md)。原机流畅度与 iwebplayer 同机对照未验收。未提交、推送或写 Issue，父指针未更新。
+
+English: The reporter confirms dev fixes return-to-top. This batch addresses jank and pagination waits: flat/category pages reuse existing rows with fresh actions, prefetch earlier with request reuse, and retain a Web actual-end fallback for jumps. The tab-bar scene skips offscreen subtrees using browser virtual-content state. The full-suite snapshot passes 3740 tests; final affected checks pass 423. Types, builds, negative regressions, actual WebKit/Chromium results, source identities and boundaries: [#540](../en/project/issue-540.md). Device smoothness and same-device iwebplayer comparison remain unverified. No commit, push, Issue write or parent pointer update.
+
+用户随后授权本批提交、推送、同步父指针并回复 #540；实际交付以 GitHub 记录为准。English: The user subsequently authorized this batch's commit, push, parent pointer update and reply to #540; GitHub records govern actual delivery.
+
 ## 2026-10-29 · 曲库分页高度（songloft-org/songloft#540）
 
 为曲库和分类歌曲页补 64px 离屏估算、稳定分页 inset；进一步在 WebKit 18.4 复现追加时滚动范围塌缩并回顶。宿主页等待自定义元素升级后安装容器布局钩子，再启动 url；行继续虚拟化。最终 WebKit 连续分页从 0 单调到 3120，第 49 首可见；Chromium 触摸与根/子路径初始化回归通过。早期检查在并发负载下失败的日志保留，最终构建/测试/发布工具状态、源码身份与原机未跑项见 [#540](issue-540.md)。未提交、推送或写 Issue；并发上传及插件管理改动不属于本批。

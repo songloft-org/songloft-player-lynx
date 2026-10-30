@@ -19,7 +19,8 @@ const { songsHook, navigateSpy, filterInputs } = vi.hoisted(() => ({
   filterInputs: [] as Array<{ placeholder: string; onInput: (v: string) => void }>,
 }))
 const cache = vi.hoisted(() => ({ available: false, beginSongs: vi.fn() }))
-const listProps = vi.hoisted(() => ({ estimatedItemHeight: undefined as number | undefined }))
+const listProps = vi.hoisted(() => ({ estimatedItemHeight: undefined as number | undefined, lowerThreshold: 0, onEndReached: undefined as (() => void) | undefined }))
+const rowRenders = vi.hoisted(() => vi.fn())
 vi.mock('../../player/data/indexed-song-cache.js', async () => ({
   ...await vi.importActual('../../player/data/indexed-song-cache.js'), indexedSongCacheAvailable: () => cache.available,
 }))
@@ -43,8 +44,10 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('../widgets/VirtualList.js', async () => {
   const { VirtualList } = (await import('../../../__tests__/_render-mocks.js')).mockVirtualList()
   return {
-    VirtualList: (props: Parameters<typeof VirtualList>[0] & { estimatedItemHeight?: number }) => {
+    VirtualList: (props: Parameters<typeof VirtualList>[0] & { estimatedItemHeight?: number; lowerThreshold?: number; onEndReached?: () => void }) => {
       listProps.estimatedItemHeight = props.estimatedItemHeight
+      listProps.lowerThreshold = props.lowerThreshold ?? 200
+      listProps.onEndReached = props.onEndReached
       return <VirtualList {...props} />
     },
   }
@@ -58,7 +61,10 @@ vi.mock('../widgets/VirtualList.js', async () => {
  */
 vi.mock('../widgets/SongListRow.js', async () => {
   const { SongRow } = await import('../widgets/SongRow.js')
-  return { SongListRow: SongRow }
+  return { SongListRow: (props: Parameters<typeof SongRow>[0]) => {
+    rowRenders(props.song.id)
+    return <SongRow {...props} />
+  } }
 })
 
 vi.mock('@lynx-js/lynx-ui-input', () => ({
@@ -83,6 +89,7 @@ vi.mock('../data/use-debounce.js', () => ({
 }))
 
 const { FlatSongsView } = await import('../widgets/FlatSongsView.js')
+const { usePlayerStore } = await import('../../player/store/index.js')
 
 function makeSong(id: number, over: Partial<Song> = {}): Song {
   return {
@@ -135,6 +142,45 @@ beforeEach(() => {
 })
 
 afterEach(() => vi.clearAllMocks())
+
+test('pagination reuses existing rows and their taps read the latest queue and selection mode', async () => {
+  const first = [makeSong(1), makeSong(2)]
+  const pages = [{ songs: first, total: 3 }]
+  songsHook.mockReturnValue(songsResult(pages))
+  const props = { sortId: 'added_at' as const, sortOrder: 'desc' as const, onSortChange: () => {}, isWide: false }
+  const view = render(<FlatSongsView {...props} />)
+  await act(async () => { await Promise.resolve() })
+  rowRenders.mockClear()
+  songsHook.mockReturnValue(songsResult(pages, { isFetchingNextPage: true }))
+  await act(async () => { view.rerender(<FlatSongsView {...props} />) })
+  expect(rowRenders).not.toHaveBeenCalled()
+  const last = makeSong(3)
+  songsHook.mockReturnValue(songsResult([...pages, { songs: [last], total: 3 }]))
+  await act(async () => { view.rerender(<FlatSongsView {...props} />) })
+  expect(rowRenders.mock.calls).toEqual([[3]])
+  const play = vi.spyOn(usePlayerStore.getState(), 'playPlaylist').mockResolvedValue()
+  try {
+    await act(async () => { fireEvent.tap(view.container.querySelector('.song-row')!) })
+    expect(play).toHaveBeenCalledExactlyOnceWith([...first, last], 0)
+    const { getByText } = getQueriesForElement(elementTree.root!)
+    await act(async () => { fireEvent.tap(getByText('Select')) })
+    rowRenders.mockClear()
+    await act(async () => { fireEvent.tap(getByText('Song 1')) })
+    expect(rowRenders.mock.calls).toEqual([[1]])
+    expect(play).toHaveBeenCalledTimes(1)
+    expect(getByText('1 selected')).toBeInTheDocument()
+  } finally { play.mockRestore() }
+})
+
+test('preloads a screen ahead and overlapping end signals do not cancel the active request', async () => {
+  const fetchNextPage = vi.fn()
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1)], total: 40 }], { hasNextPage: true, fetchNextPage }))
+  await renderView()
+  expect(listProps.lowerThreshold).toBeGreaterThanOrEqual(640)
+  listProps.onEndReached!()
+  listProps.onEndReached!()
+  expect(fetchNextPage.mock.calls).toEqual([[{ cancelRefetch: false }], [{ cancelRefetch: false }]])
+})
 
 test('paging keeps the same inset and uses a song-sized offscreen estimate', async () => {
   const pages = [{ songs: [makeSong(1)], total: 40 }]
