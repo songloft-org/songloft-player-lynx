@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
 import { apiPrefix } from '../../../core/config/app-config.js'
 import { createPublicClient } from '../../../core/network/api-client.js'
@@ -24,6 +24,15 @@ function capture(body: unknown): { transport: Transport; url: () => string } {
   }
   return { transport, url: () => seen }
 }
+
+test('batch delete sends all IDs and preserves files by default, with explicit opt-in', async () => {
+  const transport = vi.fn<Transport>().mockResolvedValue({ status: 200, headers: {}, body: '{"deleted":2}' })
+  const api = new SongsApi(client(transport))
+  expect(await api.batchDeleteSongs({ ids: [1, 2] })).toBe(2)
+  expect(transport.mock.calls[0][0]).toMatchObject({ url: `http://api.test${apiPrefix}/songs/batch-delete`, method: 'POST', body: JSON.stringify({ ids: [1, 2], delete_files: false }) })
+  await api.batchDeleteSongs({ ids: [1, 2], deleteFiles: true })
+  expect(JSON.parse(transport.mock.calls[1][0].body as string)).toEqual({ ids: [1, 2], delete_files: true })
+})
 
 describe('buildSongsQuery (pure)', () => {
   test('always carries limit/offset with defaults', () => {

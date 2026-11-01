@@ -14,6 +14,12 @@ export interface OpenAddToPlaylistParams {
   onAdded?: () => void
 }
 
+export interface BatchDeleteSongsTarget {
+  songIds: number[]
+  mayHaveLocalFiles: boolean
+  onDeleted?: () => void
+}
+
 /**
  * The opening row's viewport/shortcut state, snapshotted at openMenu time —
  * drives which menu items get pruned as duplicates of the row's own buttons.
@@ -54,6 +60,7 @@ export interface SongRowOverlayState {
   manageTagsSongIds: number[]
   /** The song awaiting delete confirmation; null while the dialog is closed. */
   deleteSong: Song | null
+  batchDeleteSongs: BatchDeleteSongsTarget | null
   /** The song whose read-only info dialog is open; null while closed. */
   infoSong: Song | null
   /** The song whose edit dialog is open; null while closed. */
@@ -71,6 +78,7 @@ export interface SongRowOverlayState {
   openManageTags: (songIds: number[]) => void
   closeManageTags: () => void
   requestDelete: (song: Song) => void
+  requestBatchDelete: (target: BatchDeleteSongsTarget) => void
   cancelDelete: () => void
   openInfo: (song: Song) => void
   closeInfo: () => void
@@ -142,6 +150,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
   addToPlaylistOnAdded: null,
   manageTagsSongIds: [],
   deleteSong: null,
+  batchDeleteSongs: null,
   infoSong: null,
   editSong: null,
   miniVolume: null,
@@ -154,6 +163,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       addToPlaylistOnAdded: null,
       manageTagsSongIds: [],
       deleteSong: null,
+      batchDeleteSongs: null,
       infoSong: null,
       editSong: null,
       miniVolume: null,
@@ -168,6 +178,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       menuRow: null,
       manageTagsSongIds: [],
       deleteSong: null,
+      batchDeleteSongs: null,
       infoSong: null,
       editSong: null,
       miniVolume: null,
@@ -182,6 +193,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       addToPlaylistSongIds: [],
       addToPlaylistOnAdded: null,
       deleteSong: null,
+      batchDeleteSongs: null,
       infoSong: null,
       editSong: null,
       miniVolume: null,
@@ -190,6 +202,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
   requestDelete: (song) =>
     set({
       deleteSong: song,
+      batchDeleteSongs: null,
       menuSong: null,
       menuAnchor: null,
       menuRow: null,
@@ -200,7 +213,21 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       editSong: null,
       miniVolume: null,
     }),
-  cancelDelete: () => set({ deleteSong: null }),
+  requestBatchDelete: (target) =>
+    set({
+      batchDeleteSongs: { ...target, songIds: [...target.songIds] },
+      deleteSong: null,
+      menuSong: null,
+      menuAnchor: null,
+      menuRow: null,
+      addToPlaylistSongIds: [],
+      addToPlaylistOnAdded: null,
+      manageTagsSongIds: [],
+      infoSong: null,
+      editSong: null,
+      miniVolume: null,
+    }),
+  cancelDelete: () => set({ deleteSong: null, batchDeleteSongs: null }),
   openInfo: (song) =>
     set({
       infoSong: song,
@@ -211,6 +238,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       addToPlaylistOnAdded: null,
       manageTagsSongIds: [],
       deleteSong: null,
+      batchDeleteSongs: null,
       editSong: null,
       miniVolume: null,
     }),
@@ -225,6 +253,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       addToPlaylistOnAdded: null,
       manageTagsSongIds: [],
       deleteSong: null,
+      batchDeleteSongs: null,
       infoSong: null,
       miniVolume: null,
     }),
@@ -239,6 +268,7 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
       addToPlaylistOnAdded: null,
       manageTagsSongIds: [],
       deleteSong: null,
+      batchDeleteSongs: null,
       infoSong: null,
       editSong: null,
     }),
@@ -250,6 +280,8 @@ export const useSongRowOverlays = create<SongRowOverlayState>((set) => ({
  * the player's overflow menu).
  */
 export const songRowOverlays = {
+  requestBatchDelete: (target: BatchDeleteSongsTarget) =>
+    useSongRowOverlays.getState().requestBatchDelete(target),
   openMenu: (params: OpenMenuParams) =>
     useSongRowOverlays.getState().openMenu(params),
   openAddToPlaylist: (params: OpenAddToPlaylistParams) =>

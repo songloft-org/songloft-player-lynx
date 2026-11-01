@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from '@lynx-js/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import type { Song } from '../../../models/song.js'
+import { getSongsApi, type SongsFilters } from '../../library/api/index.js'
+import { collectCacheSelection } from '../domain/cache-pagination.js'
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { cacheBatchController, captureCacheBatch, collectPlaylistForCache, initializeCacheBatch,
@@ -70,13 +72,30 @@ export function useCacheBatchSubmission() {
     } catch (error) { report(error) }
     finally { inFlight.current = false; if (alive.current) setBusy(false) }
   }
+  const beginSelection = async ({ ids, filters }: { ids: ReadonlySet<number>; filters: SongsFilters }) => {
+    if (inFlight.current || pending) return
+    if (!indexedSongCacheAvailable()) { toast.error(t('cacheTasks.updateRequired')); return }
+    inFlight.current = true; setBusy(true)
+    try {
+      const captured = captureCacheBatch()
+      const songs = await collectCacheSelection({
+        ids,
+        valid: () => alive.current && currentCacheNamespace() === captured.namespace,
+        fetch: (offset, limit) => getSongsApi().getSongs(filters, { offset, limit }),
+      })
+      if (!alive.current) return
+      inFlight.current = false
+      await confirm(songs, captured)
+    } catch (error) { report(error) }
+    finally { inFlight.current = false; if (alive.current) setBusy(false) }
+  }
   const confirmation = (
     <ConfirmDialog show={pending !== null} title={t('player.cacheVideoWarnTitle')}
       message={t('player.cacheVideoWarnContent')} confirmLabel={t('common.confirm')}
       onConfirm={() => { const batch = pending; setPending(null); if (batch) void enqueue(batch) }}
       onCancel={() => setPending(null)} />
   )
-  return { beginSongs, beginPlaylist, busy: busy || pending !== null, confirmation }
+  return { beginSongs, beginPlaylist, beginSelection, busy: busy || pending !== null, confirmation }
 }
 
 export function useCacheBatchState() {

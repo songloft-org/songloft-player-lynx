@@ -1,5 +1,13 @@
 # 工作交接（2026-10-14）
 
+## 2026-11-01 · songloft-org/songloft#549
+
+曲库全选和批量删除已在未提交工作树实现；全选按筛选获取完整 ID，删除须确认且默认保留文件。最终受影响 72 项、类型、双产物/Web、89 项发布工具及 Chrome/WebKit 实际操作通过；完整快照与真机边界见 [#549](issue-549.md)。主仓库和 Flutter 无源码修改；子模块 dirty，父 gitlink 未变。没有提交、推送、发布或 Issue 写操作授权，下方历史授权不适用。
+
+English: Library select-all and batch deletion are implemented in the uncommitted worktree. Selection fetches all filtered IDs; deletion requires confirmation and preserves files by default. Final affected 72 tests, types, dual/Web builds, 89 release-tool tests and real Chrome/WebKit interactions pass; the full snapshot and device boundaries are in [#549](../en/project/issue-549.md). Parent/Flutter source is unchanged; the submodule is dirty and the parent gitlink unchanged. No commit, push, release or Issue-write authorization; historical permissions below do not apply.
+
+用户随后明确授权本批提交、推送、同步父指针并回复 #549，正式发布与关闭 Issue 未授权；实际结果以 GitHub 记录为准。English: The user subsequently authorized this batch's commit, push, parent pointer synchronization and reply to #549, excluding formal release and Issue closure; GitHub records govern actual delivery.
+
 ## 2026-10-30 · songloft-org/songloft#540 滚动性能
 
 本批复用曲库/分类旧行、提前分页并保留 Web 跳底兜底，玻璃镜像跟随浏览器虚拟化状态。等量 140 首 WebKit 对照的行测量 8883 → 744，位置同为 4900，效果有效；这不是 iOS 真机帧率结论。最终验证和失败记录见 [#540](issue-540.md)。未提交、推送、写 Issue 或同步父指针；本批不沿用下方历史授权。

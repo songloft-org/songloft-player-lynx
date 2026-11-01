@@ -18,6 +18,7 @@ import { useCacheBatchSubmission } from '../../player/widgets/use-cache-batch.js
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { songRowOverlays } from '../../../shared/ui/song-row-overlays.js'
+import { toast } from '../../../shared/ui/toast-store.js'
 import { SongListRow } from './SongListRow.js'
 import { VirtualList } from './VirtualList.js'
 import { LibraryToolbar } from './LibraryToolbar.js'
@@ -78,6 +79,8 @@ export function FlatSongsView({
   const [searchText, setSearchText] = useState('')
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [selectingAll, setSelectingAll] = useState(false)
+  const selectionRequest = useRef(0)
 
   const debouncedSearch = useDebounce(searchText, DEBOUNCE_MS)
 
@@ -100,12 +103,18 @@ export function FlatSongsView({
     return f
   }, [sortId, sortOrder, debouncedSearch, type, showHidden])
 
+  const selectionContext = useRef({ filters, searchText, selectMode })
+  selectionContext.current = { filters, searchText, selectMode }
+  useEffect(() => () => { selectionRequest.current++ }, [])
+
   // Clear multi-select when the visible song list changes (search / sort /
   // source view / visibility). Otherwise selected IDs from the previous result set linger
   // and get added to playlists even though they are no longer visible.
   useEffect(() => {
     setSelected(new Set())
-  }, [debouncedSearch, sortId, sortOrder, type, showHidden])
+    selectionRequest.current++
+    setSelectingAll(false)
+  }, [searchText, sortId, sortOrder, type, showHidden])
 
   const query = useSongsInfiniteQuery(filters)
   const songs = useMemo(() => flattenSongs(query.data?.pages), [query.data?.pages])
@@ -135,6 +144,8 @@ export function FlatSongsView({
 
   const onTapSong = (song: Song, index: number) => {
     if (selectMode) {
+      if (selectingAll) return
+      selectionRequest.current++
       setSelected(prev => {
         const next = new Set(prev)
         if (next.has(song.id)) next.delete(song.id)
@@ -169,6 +180,8 @@ export function FlatSongsView({
   }
 
   const exitSelectMode = () => {
+    selectionRequest.current++
+    setSelectingAll(false)
     setSelectMode(false)
     setSelected(new Set())
   }
@@ -195,6 +208,47 @@ export function FlatSongsView({
     const songIds = Array.from(selected)
     if (songIds.length === 0) return
     songRowOverlays.openAddToPlaylist({ songIds, onAdded: exitSelectMode })
+  }
+
+  const allSelected = total > 0 && selected.size >= total
+  const toggleSelectAll = async () => {
+    if (selectingAll || total === 0 || searchText.trim() !== debouncedSearch.trim()) return
+    if (allSelected) { selectionRequest.current++; setSelected(new Set()); return }
+    const request = ++selectionRequest.current
+    const current = () => request === selectionRequest.current
+      && selectionContext.current.filters === filters
+      && selectionContext.current.searchText === searchText
+      && selectionContext.current.selectMode
+    setSelectingAll(true)
+    try {
+      const { ids } = await getSongsApi().getSongIds(filters)
+      if (current()) setSelected(new Set(ids))
+    } catch (error) {
+      if (current()) toast.error(error instanceof Error ? error.message : String(error))
+    } finally {
+      if (current()) setSelectingAll(false)
+    }
+  }
+
+  const deleteSelected = () => {
+    if (selectingAll || selected.size === 0) return
+    const request = selectionRequest.current
+    songRowOverlays.requestBatchDelete({
+      songIds: Array.from(selected),
+      mayHaveLocalFiles: type !== 'remote' && type !== 'radio'
+        && (songs.some(song => selected.has(song.id) && song.type === 'local')
+          || selected.size > songs.filter(song => selected.has(song.id)).length),
+      onDeleted: () => { if (request === selectionRequest.current) exitSelectMode() },
+    })
+  }
+
+  const cacheSelected = () => {
+    if (cacheBatch.busy || selectingAll) return
+    const loaded = songs.filter(song => selected.has(song.id))
+    if (loaded.length === selected.size) { cacheBatch.beginSongs(loaded); return }
+    // Freeze IDs and filters before loading metadata for offscreen selections.
+    const ids = new Set(selected)
+    cacheBatch.beginSelection({ ids, filters })
   }
 
   // Build a column-header click handler for a given sort field.
@@ -328,22 +382,42 @@ export function FlatSongsView({
               />
             )}
 
-      {selectMode && selected.size > 0
+      {selectMode
         ? (
-          <view className={canCacheBatch ? 'library__select-toolbar library__select-toolbar--cache' : 'library__select-toolbar'}>
+          <view className='library__select-toolbar'>
             <text className='library__select-toolbar-count'>
               {t('library.selectedCount', { count: selected.size })}
             </text>
             <view
-              className='library__select-toolbar-btn'
-              bindtap={addSelectedToPlaylist}
+              className={selectingAll || total === 0 ? 'library__select-toolbar-btn library__select-toolbar-btn--disabled' : 'library__select-toolbar-btn'}
+              bindtap={() => { void toggleSelectAll() }}
+              accessibility-element={true}
+              accessibility-traits='button'
+              accessibility-label={t(allSelected ? 'library.deselectAll' : 'library.selectAll')}
+              data-testid='library-select-all'
+            >
+              <text className='library__select-toolbar-btn-text'>{selectingAll ? t('common.loading') : t(allSelected ? 'library.deselectAll' : 'library.selectAll')}</text>
+            </view>
+            <view
+              className={selectingAll || selected.size === 0 ? 'library__select-toolbar-btn library__select-toolbar-btn--danger library__select-toolbar-btn--disabled' : 'library__select-toolbar-btn library__select-toolbar-btn--danger'}
+              bindtap={deleteSelected}
+              accessibility-element={true}
+              accessibility-traits='button'
+              accessibility-label={t('library.deleteSelected')}
+              data-testid='library-select-delete'
+            >
+              <text className='library__select-toolbar-btn-text'>{t('library.deleteSelected')}</text>
+            </view>
+            <view
+              className={selectingAll || selected.size === 0 ? 'library__select-toolbar-btn library__select-toolbar-btn--disabled' : 'library__select-toolbar-btn'}
+              bindtap={() => { if (!selectingAll) addSelectedToPlaylist() }}
               data-testid='library-select-add-to-playlist'
             >
               <text className='library__select-toolbar-btn-text'>{t('library.addToPlaylist')}</text>
             </view>
             {canCacheBatch && <view
-              className={cacheBatch.busy ? 'library__select-toolbar-btn library__select-toolbar-btn--disabled' : 'library__select-toolbar-btn'}
-              bindtap={() => { if (!cacheBatch.busy) cacheBatch.beginSongs(songs.filter(song => selected.has(song.id))) }}
+              className={cacheBatch.busy || selectingAll || selected.size === 0 ? 'library__select-toolbar-btn library__select-toolbar-btn--disabled' : 'library__select-toolbar-btn'}
+              bindtap={() => { if (selected.size > 0) cacheSelected() }}
               data-testid='library-select-cache'>
               <text className='library__select-toolbar-btn-text'>{cacheBatch.busy ? t('common.loading') : t('player.cacheToDevice')}</text>
             </view>}

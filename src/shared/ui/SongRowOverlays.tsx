@@ -48,6 +48,7 @@ export function SongRowOverlays() {
   const addToPlaylistOnAdded = useSongRowOverlays((s) => s.addToPlaylistOnAdded)
   const manageTagsSongIds = useSongRowOverlays((s) => s.manageTagsSongIds)
   const deleteSong = useSongRowOverlays((s) => s.deleteSong)
+  const batchDeleteSongs = useSongRowOverlays((s) => s.batchDeleteSongs)
   const infoSong = useSongRowOverlays((s) => s.infoSong)
   const editSong = useSongRowOverlays((s) => s.editSong)
   const closeMenu = useSongRowOverlays((s) => s.closeMenu)
@@ -137,12 +138,19 @@ export function SongRowOverlays() {
 
   const confirmDelete = (deleteFiles: boolean) => {
     const song = deleteSong
+    const batch = batchDeleteSongs
     cancelDelete()
-    if (!song) return
-    void (deleteFiles ? getSongsApi().deleteSong(song.id, { deleteFiles }) : getSongsApi().deleteSong(song.id))
+    if (!song && !batch) return
+    void (batch
+      ? getSongsApi().batchDeleteSongs({ ids: batch.songIds, deleteFiles })
+      : deleteFiles ? getSongsApi().deleteSong(song!.id, { deleteFiles }) : getSongsApi().deleteSong(song!.id))
       .then(() => {
         void queryClient.invalidateQueries({ queryKey: ['library'] })
         void queryClient.invalidateQueries({ queryKey: ['playlist'] })
+        if (batch) {
+          batch.onDeleted?.()
+          toast.success(t('library.songsDeleted'))
+        }
       })
       /*
        * Without this the failure path is completely mute: the dialog closes on
@@ -173,12 +181,12 @@ export function SongRowOverlays() {
         onClose={closeManageTags}
       />
       <DeleteConfirmDialog
-        option={deleteSong?.type === 'local' ? 'files' : undefined}
-        targetKey={deleteSong?.id}
-        show={deleteSong != null}
-        title={t('songMenu.deleteSong')}
-        message={t('songMenu.deleteMessage')}
-        confirmLabel={t('songMenu.deleteSong')}
+        option={deleteSong?.type === 'local' || batchDeleteSongs?.mayHaveLocalFiles ? 'files' : undefined}
+        targetKey={batchDeleteSongs ? batchDeleteSongs.songIds.join(',') : deleteSong?.id}
+        show={deleteSong != null || batchDeleteSongs != null}
+        title={batchDeleteSongs ? t('library.deleteSelected') : t('songMenu.deleteSong')}
+        message={batchDeleteSongs ? t('library.deleteSelectedMessage', { count: batchDeleteSongs.songIds.length }) : t('songMenu.deleteMessage')}
+        confirmLabel={batchDeleteSongs ? t('library.deleteSelected') : t('songMenu.deleteSong')}
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
         testId='song-delete-dialog'

@@ -1,5 +1,11 @@
 # Handoff (2026-10-14)
 
+## 2026-11-01 · songloft-org/songloft#549
+
+Library select-all and batch deletion are implemented in the uncommitted worktree. Selection fetches all filtered IDs; deletion requires confirmation and preserves files by default. Final affected 72 tests, types, dual/Web builds, 89 release-tool tests and real Chrome/WebKit interactions pass; the full snapshot and device boundaries are in [#549](issue-549.md). Parent/Flutter source is unchanged; the submodule is dirty and the parent gitlink unchanged. No commit, push, release or Issue-write authorization; historical permissions below do not apply.
+
+The user subsequently authorized this batch's commit, push, parent pointer synchronization and reply to #549, excluding formal release and Issue closure; GitHub records govern actual delivery.
+
 ## 2026-10-30 · songloft-org/songloft#540 scrolling performance
 
 This batch reuses flat/category rows, prefetches pages with a Web jump-to-end fallback, and makes glass scenes follow browser virtualization. A matched 140-song WebKit comparison reduces row measurements 8883 → 744 at the same offset 4900 with valid effects; this is not an iOS device frame-rate result. Final validation and retained failures: [#540](issue-540.md). No commit, push, Issue write or parent pointer update; historical permissions below do not apply.

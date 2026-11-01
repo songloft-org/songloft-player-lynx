@@ -1,6 +1,21 @@
 import { expect, test, vi } from 'vitest'
 import type { Song } from '../../../models/song.js'
-import { collectCachePlaylist } from '../domain/cache-pagination.js'
+import { collectCachePlaylist, collectCacheSelection } from '../domain/cache-pagination.js'
+
+test('selection caching crosses capped pages, includes offscreen IDs and excludes unrelated songs', async () => {
+  const songs = Array.from({ length: 60 }, (_, id) => ({ id: id + 1 } as Song))
+  const fetch = vi.fn(async (offset: number) => ({ songs: songs.slice(offset, offset + 20), total: 20000 }))
+  expect(await collectCacheSelection({ ids: new Set([41, 1]), fetch, valid: () => true })).toEqual([songs[40], songs[0]])
+  expect(fetch.mock.calls.map(call => call[0])).toEqual([0, 20, 40])
+})
+
+test('selection caching refuses missing IDs and late responses from a different session', async () => {
+  await expect(collectCacheSelection({ ids: new Set([2]), valid: () => true,
+    fetch: async () => ({ songs: [{ id: 1 } as Song], total: 1 }) })).rejects.toThrow('cache_playlist_changed')
+  let valid = true
+  await expect(collectCacheSelection({ ids: new Set([1]), valid: () => valid,
+    fetch: async () => { valid = false; return { songs: [{ id: 1 } as Song], total: 1 } } })).rejects.toThrow('cancelled')
+})
 
 test('whole-playlist caching reads beyond the visible page and respects the server page cap', async () => {
   const songs = Array.from({ length: 235 }, (_, id) => ({ id: id + 1 } as Song))

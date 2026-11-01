@@ -10,6 +10,15 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 ## Entries
 
+### LIST-004: Select-all operations must not stop at loaded pages
+
+- Scope: library select-all, batch deletion, add-to-playlist and device caching, songloft-org/songloft#549; baseline `ea55033d73456d9268d8e31069ced1e144511dce`.
+- Evidence: the old library only offered add-to-playlist, with no select-all/delete entry; all first three new regressions fail on the missing action. The cache button previously filtered only loaded `songs`, which would truncate offscreen selections after adding complete-ID selection.
+- Rule/fix: define selection using every ID under the same filters, and consume that set for subsequent actions. Device caching resolves additional paginated metadata where objects are needed. Scope changes, leaving and unmounting reject old responses; deletion completion must not clear a later selection. File deletion remains opt-in with preservation by default.
+- Done right: a temporary real backend selects/deletes all 45 remote songs with only 40 loaded, retaining selection on failure/cancel. Two local paths verify file preservation/removal while the unselected radio remains. Tests cover offscreen caching, filters and asynchronous lifecycle; final 72 tests and Chrome/WebKit evidence: [#549](docs/en/project/issue-549.md).
+- Not run: the reporter's iPhone, native device caching and host builds; browsers do not establish device acceptance.
+- Seen 1× (2026-11-01). Status: lesson; no commit, push or release in this batch.
+
 ### WEB-003: Glass background sampling must preserve browser row virtualization
 
 - Scope: WebKit/Firefox tab-bar scene mirrors and library scrolling, songloft-org/songloft#540; baseline `196adc500da5b700bfbf61ab99ffc4b2918922c4`.

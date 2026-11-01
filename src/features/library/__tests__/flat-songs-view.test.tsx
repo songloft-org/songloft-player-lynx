@@ -7,6 +7,8 @@ import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/tes
 import type { Song } from '../../../models/song.js'
 import type { LibrarySortId } from '../domain/library-sort.js'
 import { useSongRowOverlays } from '../../../shared/ui/song-row-overlays.js'
+import { SongsApi } from '../api/songs-api.js'
+import { toast } from '../../../shared/ui/toast-store.js'
 
 /**
  * FlatSongsView render tests — the flat song list content view. Carries the
@@ -18,14 +20,14 @@ const { songsHook, navigateSpy, filterInputs } = vi.hoisted(() => ({
   navigateSpy: vi.fn(),
   filterInputs: [] as Array<{ placeholder: string; onInput: (v: string) => void }>,
 }))
-const cache = vi.hoisted(() => ({ available: false, beginSongs: vi.fn() }))
+const cache = vi.hoisted(() => ({ available: false, beginSongs: vi.fn(), beginSelection: vi.fn() }))
 const listProps = vi.hoisted(() => ({ estimatedItemHeight: undefined as number | undefined, lowerThreshold: 0, onEndReached: undefined as (() => void) | undefined }))
 const rowRenders = vi.hoisted(() => vi.fn())
 vi.mock('../../player/data/indexed-song-cache.js', async () => ({
   ...await vi.importActual('../../player/data/indexed-song-cache.js'), indexedSongCacheAvailable: () => cache.available,
 }))
 vi.mock('../../player/widgets/use-cache-batch.js', () => ({
-  useCacheBatchSubmission: () => ({ beginSongs: cache.beginSongs, busy: false, confirmation: null }),
+  useCacheBatchSubmission: () => ({ beginSongs: cache.beginSongs, beginSelection: cache.beginSelection, busy: false, confirmation: null }),
 }))
 
 vi.mock('react-i18next', async () =>
@@ -138,10 +140,111 @@ beforeEach(() => {
   cache.available = false
   songsHook.mockReturnValue(songsResult([{ songs: [], total: 0 }]))
   useSongRowOverlays.getState().closeAddToPlaylist()
+  useSongRowOverlays.getState().cancelDelete()
   filterInputs.length = 0
 })
 
-afterEach(() => vi.clearAllMocks())
+afterEach(() => { vi.clearAllMocks(); vi.restoreAllMocks() })
+
+test('select all is available with no selection and includes unloaded matching IDs', async () => {
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1)], total: 3 }]))
+  const ids = vi.spyOn(SongsApi.prototype, 'getSongIds').mockResolvedValue({ ids: [1, 2, 3], total: 3 })
+  const { getByText, getByTestId } = await renderView('remote')
+  await act(async () => { fireEvent.tap(getByText('Select')) })
+  await act(async () => { fireEvent.tap(getByTestId('library-select-all')) })
+  expect(ids).toHaveBeenCalledExactlyOnceWith({ type: 'remote', sort: 'added_at', order: 'desc' })
+  expect(getByText('3 selected')).toBeInTheDocument()
+  await act(async () => { fireEvent.tap(getByTestId('library-select-add-to-playlist')) })
+  expect(useSongRowOverlays.getState().addToPlaylistSongIds).toEqual([1, 2, 3])
+  await act(async () => { fireEvent.tap(getByTestId('library-select-all')) })
+  expect(getByText('0 selected')).toBeInTheDocument()
+  expect(ids).toHaveBeenCalledTimes(1)
+})
+
+test('late select-all responses cannot restore a cancelled selection', async () => {
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1)], total: 3 }]))
+  let resolve!: (value: { ids: number[]; total: number }) => void
+  vi.spyOn(SongsApi.prototype, 'getSongIds').mockReturnValue(new Promise(r => { resolve = r }))
+  const { getByText, getByTestId, queryByText } = await renderView()
+  await act(async () => { fireEvent.tap(getByText('Select')) })
+  await act(async () => { fireEvent.tap(getByTestId('library-select-all')) })
+  await act(async () => { fireEvent.tap(getByText('Cancel')) })
+  await act(async () => { resolve({ ids: [1, 2, 3], total: 3 }) })
+  expect(queryByText('3 selected')).not.toBeInTheDocument()
+  await act(async () => { fireEvent.tap(getByText('Select')) })
+  expect(getByText('0 selected')).toBeInTheDocument()
+})
+
+test('failed select-all keeps the manual selection and reports the error', async () => {
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1)], total: 3 }]))
+  vi.spyOn(SongsApi.prototype, 'getSongIds').mockRejectedValue(new Error('offline'))
+  const error = vi.spyOn(toast, 'error')
+  const { getByText, getByTestId } = await renderView()
+  await act(async () => { fireEvent.tap(getByText('Select')) })
+  await act(async () => { fireEvent.tap(getByText('Song 1')) })
+  await act(async () => { fireEvent.tap(getByTestId('library-select-all')) })
+  expect(getByText('1 selected')).toBeInTheDocument()
+  expect(error).toHaveBeenCalledWith('offline')
+})
+
+test('search and visibility scope select-all, and an older response cannot select the next search', async () => {
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1)], total: 3 }]))
+  let resolve!: (value: { ids: number[]; total: number }) => void
+  const ids = vi.spyOn(SongsApi.prototype, 'getSongIds').mockReturnValue(new Promise(r => { resolve = r }))
+  render(<FlatSongsView type='local' showHidden sortId='title' sortOrder='asc' onSortChange={() => {}} isWide={false} />)
+  await act(async () => {})
+  const { getByText, getByTestId } = getQueriesForElement(elementTree.root!)
+  await act(async () => { filterInputs.at(-1)!.onInput('Jazz') })
+  await act(async () => { fireEvent.tap(getByText('Select')) })
+  await act(async () => { fireEvent.tap(getByTestId('library-select-all')) })
+  expect(ids).toHaveBeenCalledExactlyOnceWith({ type: 'local', keyword: 'Jazz', excludePlaylistLabels: 'none', sort: 'title', order: 'asc' })
+  await act(async () => { filterInputs.at(-1)!.onInput('Rock') })
+  await act(async () => { resolve({ ids: [1, 2, 3], total: 3 }) })
+  expect(getByText('0 selected')).toBeInTheDocument()
+})
+
+test('batch delete snapshots selected IDs, keeps them on cancel, and exits after success', async () => {
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1)], total: 2 }]))
+  vi.spyOn(SongsApi.prototype, 'getSongIds').mockResolvedValue({ ids: [1, 2], total: 2 })
+  const { getByText, getByTestId, queryByText } = await renderView()
+  await act(async () => { fireEvent.tap(getByText('Select')) })
+  await act(async () => { fireEvent.tap(getByTestId('library-select-delete')) })
+  expect(useSongRowOverlays.getState().batchDeleteSongs).toBeNull()
+  await act(async () => { fireEvent.tap(getByTestId('library-select-all')) })
+  await act(async () => { fireEvent.tap(getByTestId('library-select-delete')) })
+  expect(useSongRowOverlays.getState().batchDeleteSongs).toMatchObject({ songIds: [1, 2], mayHaveLocalFiles: true })
+  useSongRowOverlays.getState().cancelDelete()
+  expect(getByText('2 selected')).toBeInTheDocument()
+  await act(async () => { fireEvent.tap(getByTestId('library-select-delete')) })
+  await act(async () => { useSongRowOverlays.getState().batchDeleteSongs!.onDeleted!() })
+  expect(queryByText('Cancel')).not.toBeInTheDocument()
+})
+
+test('caching a select-all result resolves metadata for offscreen IDs instead of silently truncating', async () => {
+  cache.available = true
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1)], total: 2 }]))
+  vi.spyOn(SongsApi.prototype, 'getSongIds').mockResolvedValue({ ids: [1, 2], total: 2 })
+  const { getByText, getByTestId } = await renderView()
+  await act(async () => { fireEvent.tap(getByText('Select')) })
+  await act(async () => { fireEvent.tap(getByTestId('library-select-all')) })
+  await act(async () => { fireEvent.tap(getByTestId('library-select-cache')) })
+  expect(cache.beginSongs).not.toHaveBeenCalled()
+  expect(cache.beginSelection).toHaveBeenCalledExactlyOnceWith({ ids: new Set([1, 2]), filters: { sort: 'added_at', order: 'desc' } })
+})
+
+test('an earlier delete completion does not close a newer deselected state', async () => {
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1)], total: 1 }]))
+  vi.spyOn(SongsApi.prototype, 'getSongIds').mockResolvedValue({ ids: [1], total: 1 })
+  const { getByText, getByTestId } = await renderView()
+  await act(async () => { fireEvent.tap(getByText('Select')) })
+  await act(async () => { fireEvent.tap(getByTestId('library-select-all')) })
+  await act(async () => { fireEvent.tap(getByTestId('library-select-delete')) })
+  const completed = useSongRowOverlays.getState().batchDeleteSongs!.onDeleted!
+  useSongRowOverlays.getState().cancelDelete()
+  await act(async () => { fireEvent.tap(getByTestId('library-select-all')) })
+  await act(async () => { completed() })
+  expect(getByText('0 selected')).toBeInTheDocument()
+})
 
 test('pagination reuses existing rows and their taps read the latest queue and selection mode', async () => {
   const first = [makeSong(1), makeSong(2)]

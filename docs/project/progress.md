@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-01 · 曲库全选与删除（songloft-org/songloft#549）
+
+曲库四个歌曲视图补全选/取消全选与批量删除，零选中即显示工具栏；全选包含未加载分页，删除默认保留本地文件，取消/失败保留选择。设备缓存补齐离屏选择元数据。完整快照 3754 项、最终受影响 72 项、类型、双产物、Web 与 89 项发布工具检查通过；实际 Chromium/WebKit、真实临时后端及文件保留/删除证据见 [#549](issue-549.md)。未提交、推送、写 Issue 或更新父指针，iPhone 原机与原生宿主未验。
+
+English: All four song views gain select/deselect-all and batch deletion, with the toolbar visible at zero selection. Select-all includes unloaded pages; deletion preserves local files by default and keeps selection on cancel/failure. Device caching resolves offscreen selected metadata. The full snapshot passes 3754 tests; final affected checks pass 72, alongside types, dual outputs, Web and 89 release-tool tests. Actual Chromium/WebKit, temporary real-backend and file-preservation/deletion evidence: [#549](../en/project/issue-549.md). No commit, push, Issue write or parent pointer update; the reporter's iPhone and native hosts remain unverified.
+
+用户随后授权本批提交、推送、同步父指针并回复 #549；实际交付以 GitHub 记录为准。English: The user subsequently authorized this batch's commit, push, parent pointer update and reply to #549; GitHub records govern actual delivery.
+
 ## 2026-10-30 · 曲库滚动性能（songloft-org/songloft#540）
 
 报告人确认 dev 已修复回顶，本批处理滑动顿挫与分页等待：曲库/分类页复用旧行并保留最新操作、提前预取并复用请求，Web 实际末端兜底快速跳转；底栏背景镜像按浏览器虚拟内容状态跳过离屏子树。全量快照 3740 项通过，后续最终受影响的 423 项通过；类型、构建、反向回归、实际 WebKit/Chromium、源码指纹与未跑项见 [#540](issue-540.md)。原机流畅度与 iwebplayer 同机对照未验收。未提交、推送或写 Issue，父指针未更新。

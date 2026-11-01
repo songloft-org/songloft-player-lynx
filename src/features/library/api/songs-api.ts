@@ -293,6 +293,14 @@ export class SongsApi {
     })
   }
 
+  /** `POST /songs/batch-delete` — files are preserved unless explicitly opted in. */
+  async batchDeleteSongs({ ids, deleteFiles = false }: { ids: number[]; deleteFiles?: boolean }): Promise<number> {
+    const res = await this.client.post<{ deleted: number }>(`${apiPrefix}/songs/batch-delete`, {
+      ids, delete_files: deleteFiles,
+    })
+    return res.data.deleted
+  }
+
   /**
    * `PUT /songs/{id}/lyrics` — update a song's lyric content and source.
    *

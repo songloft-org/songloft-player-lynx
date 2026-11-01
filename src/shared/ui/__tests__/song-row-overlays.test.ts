@@ -53,6 +53,31 @@ beforeEach(() => {
   s.closeMiniVolume()
 })
 
+test('batch delete snapshots its IDs and is mutually exclusive with the other song overlays', () => {
+  const songIds = [1, 2]
+  const s = () => useSongRowOverlays.getState()
+  s().requestBatchDelete({ songIds, mayHaveLocalFiles: true })
+  songIds.push(3)
+  expect(s().batchDeleteSongs?.songIds).toEqual([1, 2])
+  const actions = [
+    () => s().openMenu({ song: makeSong(1) }),
+    () => s().openInfo(makeSong(1)),
+    () => s().openEdit(makeSong(1)),
+    () => s().requestDelete(makeSong(1)),
+    () => s().openAddToPlaylist({ songIds: [1] }),
+    () => s().openManageTags([1]),
+    () => s().openMiniVolume(),
+  ]
+  for (const open of actions) {
+    open()
+    expect(s().batchDeleteSongs).toBeNull()
+    s().requestBatchDelete({ songIds: [1, 2], mayHaveLocalFiles: true })
+    expect(s()).toMatchObject({ menuSong: null, deleteSong: null, infoSong: null, editSong: null, miniVolume: null, addToPlaylistSongIds: [], manageTagsSongIds: [] })
+  }
+  s().cancelDelete()
+  expect(s().batchDeleteSongs).toBeNull()
+})
+
 test('openMenu records the song and row context, clearing the other overlays', () => {
   const song = makeSong(1)
   useSongRowOverlays.getState().requestDelete(song)
