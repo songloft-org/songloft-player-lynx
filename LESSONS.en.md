@@ -10,6 +10,13 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 ## Entries
 
+### SORT-001: The first displaced row is not necessarily the dragged song
+
+- Scope: manual playlist ordering, songloft-org/songloft#550; baseline `a90cded03be18426de61c6df436d08a29e7a3077`.
+- Rule: when a sortable component returns the complete new order, a multi-row drag displaces intervening rows too. Identify the dragged item by maximum displacement, or verify that the inferred single move reconstructs the entire new order; do not choose the first changed position.
+- Evidence and Done right: the old callback interpreted `[1,2,3] → [2,3,1]` as moving song 2 to the front, failing the new real page-callback regression. Upward/downward multi-row tests, all 3761 tests, dual outputs and types pass after the fix. Real browser drags across three rows persist the intended order in both built-in playlists. Record and platform boundaries: [#550](docs/en/project/issue-550.md).
+- Seen 1× (2026-11-02). Status: uncommitted local changes; native gestures still require device acceptance.
+
 ### WEB-004: A component's boolean false does not prove the Web DOM received its disabling attribute
 
 - Scope: virtual-list footers, Web engine attributes and scroll geometry, songloft-org/songloft#540; baseline `07599c329f3b52247d48538bfbc7537fd8584148`.

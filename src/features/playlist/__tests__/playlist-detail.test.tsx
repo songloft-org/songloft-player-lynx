@@ -23,6 +23,7 @@ const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSon
 
 const navigateMock = vi.hoisted(() => vi.fn())
 const rowRenders = vi.hoisted(() => vi.fn())
+const sortable = vi.hoisted(() => ({ onSortEnd: undefined as ((items: Array<{ dataItem: Song; getSortingKey: () => string }>) => void) | undefined }))
 const listEvents = vi.hoisted(() => ({ onEndReached: undefined as (() => void) | undefined }))
 const cache = vi.hoisted(() => ({ available: false, beginSongs: vi.fn(), beginPlaylist: vi.fn() }))
 vi.mock('../../player/data/indexed-song-cache.js', async () => ({
@@ -52,9 +53,13 @@ vi.mock('@lynx-js/lynx-ui-input', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiInput(),
 )
 
-vi.mock('@lynx-js/lynx-ui-sortable', async () =>
-  (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSortable(),
-)
+vi.mock('@lynx-js/lynx-ui-sortable', async () => {
+  const mocks = (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSortable()
+  return { ...mocks, SortableRoot: (props: Parameters<typeof mocks.SortableRoot>[0] & { onSortEnd: typeof sortable.onSortEnd }) => {
+    sortable.onSortEnd = props.onSortEnd
+    return <mocks.SortableRoot {...props} />
+  } }
+})
 
 vi.mock('@lynx-js/lynx-ui-dialog', () => ({
   DialogRoot: ({ children, show }: { children: unknown; show: boolean }) => (show ? <view>{children as never}</view> : null),
@@ -392,21 +397,25 @@ test('more menu offers pin, edit and delete for non-built-in playlists', async (
   expect(queries.queryByTestId('popover-item-delete')).toBeInTheDocument()
 })
 
-test('more menu offers only pin for built-in playlists', async () => {
-  // Pinning used to be impossible here: the whole menu was inside the
-  // `!isBuiltIn` block. The backend deliberately skips its built-in guard for
-  // the pin endpoint, so Favorites/Radio favorites get a menu holding just
-  // that one item — edit/visibility/delete stay owner-playlists-only.
-  detailHook.mockReturnValue(detailResult(makePlaylist({ isBuiltIn: true })))
+test.each(['normal', 'radio'] as const)('built-in %s playlist offers manual sorting while retaining identity guards', async (type) => {
+  detailHook.mockReturnValue(detailResult(makePlaylist({ isBuiltIn: true, type })))
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1), makeSong(2)], total: 2 }]))
   const queries = await renderPage()
   await openMoreMenu(queries)
 
   expect(queries.queryByTestId('popover-item-pin')).toBeInTheDocument()
   // Adding songs is allowed for built-ins too — Favorites is a destination.
   expect(queries.queryByTestId('popover-item-addSongs')).toBeInTheDocument()
+  expect(queries.queryByTestId('popover-item-sort')).toBeInTheDocument()
   expect(queries.queryByTestId('popover-item-edit')).not.toBeInTheDocument()
   expect(queries.queryByTestId('popover-item-visibility')).not.toBeInTheDocument()
   expect(queries.queryByTestId('popover-item-delete')).not.toBeInTheDocument()
+  await act(async () => {
+    fireEvent.tap(queries.getByTestId('popover-item-sort')!, {})
+    await Promise.resolve()
+  })
+  expect(queries.queryByTestId('playlist-detail-drag-1')).toBeInTheDocument()
+  expect(queries.queryByTestId('playlist-detail-drag-2')).toBeInTheDocument()
 })
 
 test('the toolbar add entry opens the picker for this playlist', async () => {
@@ -572,6 +581,18 @@ test('more menu offers manual reorder even while more pages remain unloaded', as
   expect(queries.queryByTestId('popover-item-sort')).toBeInTheDocument()
 })
 
+test('entering manual sorting switches the saved view to custom ascending order', async () => {
+  detailHook.mockReturnValue(detailResult(makePlaylist({ sortBy: 'title', sortOrder: 'desc', isBuiltIn: true })))
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1), makeSong(2)], total: 2 }]))
+  const queries = await renderPage()
+  await openMoreMenu(queries)
+  await act(async () => { fireEvent.tap(queries.getByTestId('popover-item-sort')!, {}) })
+  expect(sortMutationHook.mock.results[0]!.value.mutate).toHaveBeenCalledWith(
+    { sortBy: 'position', sortOrder: 'asc' }, expect.objectContaining({ onSuccess: expect.any(Function) }),
+  )
+  expect(queries.queryByTestId('playlist-detail-drag-1')).not.toBeInTheDocument()
+})
+
 test('sort mode renders drag handles for each song', async () => {
   songsHook.mockReturnValue(
     songsResult([{ songs: [makeSong(1), makeSong(2)], total: 2 }], { hasNextPage: false }),
@@ -590,4 +611,18 @@ test('sort mode renders drag handles for each song', async () => {
   expect(elementTree.root!.querySelectorAll('[consume-slide-event]')).toHaveLength(2)
   expect(queries.queryByTestId('playlist-detail-drag-1')).toBeInTheDocument()
   expect(queries.queryByTestId('playlist-detail-drag-2')).toBeInTheDocument()
+})
+
+test.each([
+  { order: [2, 3, 1], move: { songId: 1, afterSongId: 3 } },
+  { order: [3, 1, 2], move: { songId: 3, afterSongId: null } },
+])('dragging across multiple rows persists the entire intended order $order', async ({ order, move }) => {
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1), makeSong(2), makeSong(3)], total: 3 }]))
+  const queries = await renderPage()
+  await openMoreMenu(queries)
+  await act(async () => { fireEvent.tap(queries.getByTestId('popover-item-sort')!, {}) })
+  await act(async () => {
+    sortable.onSortEnd!(order.map(id => ({ dataItem: makeSong(id), getSortingKey: () => String(id) })))
+  })
+  expect(moveSongMutationHook.mock.results[0]!.value.mutate).toHaveBeenCalledWith(move)
 })

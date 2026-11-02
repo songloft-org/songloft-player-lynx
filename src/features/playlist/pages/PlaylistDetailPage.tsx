@@ -168,7 +168,15 @@ export function PlaylistDetailPage() {
   const confirmContent = pendingConfirm ?? lastConfirmRef.current
 
   const enterSortMode = () => {
-    setSortMode(true)
+    if (currentSort === 'position' && currentOrder === 'asc') {
+      setSortMode(true)
+      return
+    }
+    // Member positions can only be edited against the custom ascending view.
+    sortMutation.mutate({ sortBy: 'position', sortOrder: 'asc' }, {
+      onSuccess: () => setSortMode(true),
+      onError: (error) => toast.error(String(error instanceof Error ? error.message : error)),
+    })
   }
   const exitSortMode = () => {
     setSortMode(false)
@@ -392,7 +400,7 @@ export function PlaylistDetailPage() {
                       ...(isBuiltIn
                         ? [{ key: 'editCover', label: t('playlist.editCoverPageTitle'), icon: 'brush' as const }]
                         : []),
-                      ...(!isBuiltIn && canSort
+                      ...(canSort
                         ? [{ key: 'sort', label: t('playlist.sortSongs'), icon: 'sort' as const }]
                         : []),
                       ...(!keyword && canSort && !permanentSortBusy
@@ -520,19 +528,22 @@ export function PlaylistDetailPage() {
               <SortableRoot
                 data={songs.map((s) => ({ getSortingKey: () => String(s.id), dataItem: s }))}
               onSortEnd={(sorted) => {
-                // Find the moved song by comparing the new order against the
-                // original. Only one item moves per drag gesture, so a simple
-                // position diff identifies it.
+                // A drag shifts every intervening row by one. The dragged row
+                // has the greatest displacement; choosing the first changed row
+                // would turn a downward drag across several rows into one swap.
                 const origPos = new Map(songs.map((s, i) => [s.id, i]))
-                const moved = sorted.find(
-                  (s, i) => origPos.get(s.dataItem.id) !== i,
-                )?.dataItem
-                if (!moved) return
-                const newIdx = sorted.findIndex(
-                  (s) => s.dataItem.id === moved.id,
-                )
+                let newIdx = -1
+                let maxDistance = 0
+                sorted.forEach((item, i) => {
+                  const distance = Math.abs((origPos.get(item.dataItem.id) ?? i) - i)
+                  if (distance > maxDistance) {
+                    maxDistance = distance
+                    newIdx = i
+                  }
+                })
+                if (newIdx < 0) return
                 moveSongMutation.mutate({
-                  songId: moved.id,
+                  songId: sorted[newIdx].dataItem.id,
                   afterSongId: newIdx > 0
                     ? sorted[newIdx - 1].dataItem.id
                     : null,

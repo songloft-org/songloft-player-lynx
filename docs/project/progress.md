@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-02 · songloft-org/songloft#550
+
+收藏和电台收藏开放手动排序；跨多行向下拖动按最大位移识别歌曲，进入手动模式保存自定义升序偏好。最终共享构建、embedded Web、类型与 3761 项测试通过；真实浏览器双内置歌单拖动、后端持久顺序和刷新读取通过。基线、反向回归、截图及原生 Not run 见 [本次记录](issue-550.md)。未提交、推送或发布。
+
+English: Enable manual sorting for both built-in favorites, identify the dragged song by maximum displacement and save custom ascending view order before entering manual mode. Final shared/embedded builds, types, all 3761 tests and real browser persistence checks for both built-ins pass. Baselines, negative regressions, screenshots and native Not run: [record](../en/project/issue-550.md). No commit, push or release.
+
 ## 2026-11-02 · 录屏复核与 Web 列表性能（songloft-org/songloft#540）
 
 23 秒录屏已分段拆帧，确认曲库反复大片留白，插件快速甩动也有短暂留白，未用录屏平均帧率代替应用帧率。本地修复 Web 丢失 `recyclable=false` 导致 footer 按整屏占位，以及玻璃每次采样重复发现全部 shadow root 的开销；歌曲行继续虚拟化。全量 3757 项、19 项定向（旧实现 4 失败）、类型、双产物/Web、89 项发布工具及 WebKit/Chrome 实际滚动通过。等量采样、初始几何、歌单/短视口、失败驱动记录及最终指纹见 [#540](issue-540.md)。未提交、推送、发布、更新父指针或写 Issue；原机版本未知，iPhone 待验。

@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-02 · songloft-org/songloft#550
+
+Built-in manual sorting and multi-row downward moves are fixed; requires the parent backend update permitting built-in member ordering. Dual bundles, types, 3761 tests and browser persistence for both built-ins passed. Native Windows/mobile devices not tested. Uncommitted working tree; see [record](issue-550.md).
+
 ## 2026-11-02 · songloft-org/songloft#540 recording and performance
 
 The Web footer keeps actual layout; glass observation roots are rediscovered only for element-structure changes. Recording frames, all 3757 tests, 19 focused checks with 4 old-code failures, types, dual/Web builds, 89 release-tool tests and real WebKit/Chrome scrolling are verified. Results and boundaries: [#540](issue-540.md), `/tmp/songloft-540-20261102/verification.json`. No commit, push, release, parent pointer update or Issue write in this batch; historical permissions do not apply. The reporter's device and installed version remain unverified.
