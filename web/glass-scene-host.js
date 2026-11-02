@@ -159,6 +159,7 @@ const songloftGlassScene = (() => {
       this.radius = radius
       this.reference = reference
       this.roots = new Map()
+      this.rootsDirty = true
       this.listeners = new Set()
       this.baselines = new Map()
       this.skipped = new WeakSet()
@@ -167,6 +168,10 @@ const songloftGlassScene = (() => {
       this.valid = false
       this.schedule = () => {
         if (!this.disposed && !this.frame) this.frame = requestAnimationFrame(() => this.refresh())
+      }
+      this.sourceChanged = records => {
+        this.trackStructure(records)
+        this.schedule()
       }
       // Read the browser's virtual-content state without forcing row layout.
       // Capture on every source root: this event does not bubble or cross a
@@ -209,7 +214,19 @@ const songloftGlassScene = (() => {
       this.refresh()
     }
 
+    trackStructure(records) {
+      // Scrolling, colors and marquee transforms do not change shadow roots.
+      // Only element insertion/removal can change the subscription topology.
+      if (records.some(record => record.type === 'childList'
+        && [...record.addedNodes, ...record.removedNodes].some(node => node.nodeType === Node.ELEMENT_NODE))) this.rootsDirty = true
+    }
+
     syncObservers() {
+      // Also consume queued records when refresh is invoked synchronously,
+      // before MutationObserver delivery (for example during initial layout).
+      for (const observer of this.roots.values()) this.trackStructure(observer.takeRecords())
+      if (!this.rootsDirty) return
+      this.rootsDirty = false
       const active = new Set()
       const walk = root => {
         active.add(root)
@@ -228,7 +245,7 @@ const songloftGlassScene = (() => {
       }
       for (const root of active) {
         if (this.roots.has(root)) continue
-        const observer = new MutationObserver(this.schedule)
+        const observer = new MutationObserver(this.sourceChanged)
         observer.observe(root, { subtree: true, childList: true, characterData: true, attributes: true })
         root.addEventListener('scroll', this.schedule, true)
         root.addEventListener('load', this.schedule, true)

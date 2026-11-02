@@ -10,6 +10,14 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 ## Entries
 
+### WEB-004: A component's boolean false does not prove the Web DOM received its disabling attribute
+
+- Scope: virtual-list footers, Web engine attributes and scroll geometry, songloft-org/songloft#540; baseline `07599c329f3b52247d48538bfbc7537fd8584148`.
+- Evidence: on 2026-11-02, recording frames show recurring large blank library regions. Actual local Web DOM drops `recyclable={false}`, leaving the footer at `content-visibility: auto`; a 40-song scroll range shrinks from 3228px to 2682px. JSX false and the earlier stable-footer component checks did not guarantee stable browser layout.
+- Rule: inspect actual DOM, computed style and scroll range. Auxiliary rows also need realistic placeholder sizing. Do not assume a native boolean disabling contract is implemented by the Web engine or disable virtualization for every song as a substitute.
+- Done right: keep only `__footer__` laid out in the host. New style regressions fail at three deployment paths against old code and pass after the fix; real WebKit checks row auto, footer visible and container stability. Glass-root discovery separately invalidates on structural changes. Matched browser evidence and validation identities: [#540](docs/en/project/issue-540.md).
+- Seen 1× (2026-11-02). Status: local repair evidence; the recording's version is unknown and iOS Safari smoothness still needs device acceptance.
+
 ### LIST-004: Select-all operations must not stop at loaded pages
 
 - Scope: library select-all, batch deletion, add-to-playlist and device caching, songloft-org/songloft#549; baseline `ea55033d73456d9268d8e31069ced1e144511dce`.

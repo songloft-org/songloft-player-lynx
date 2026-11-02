@@ -1,5 +1,11 @@
 # 工作交接（2026-10-14）
 
+## 2026-11-02 · songloft-org/songloft#540 录屏与性能
+
+Web footer 保持实际布局，玻璃观察根只随元素结构变化重新发现，已完成录屏拆帧、3757 项全量、19 项定向及旧实现 4 项失败验证、类型、双产物/Web、89 项发布工具及真实 WebKit/Chrome 滚动。结果与环境边界见 [#540](issue-540.md) 和 `/tmp/songloft-540-20261102/verification.json`。本批未提交、推送、发布、更新父指针或写 Issue，不沿用历史授权。报告人原机及安装版本尚未核实。
+
+English: The Web footer keeps actual layout; glass observation roots are rediscovered only for element-structure changes. Recording frames, all 3757 tests, 19 focused checks with 4 old-code failures, types, dual/Web builds, 89 release-tool tests and real WebKit/Chrome scrolling are verified. Results and boundaries: [#540](../en/project/issue-540.md), `/tmp/songloft-540-20261102/verification.json`. No commit, push, release, parent pointer update or Issue write in this batch; historical permissions do not apply. The reporter's device and installed version remain unverified.
+
 ## 2026-11-01 · songloft-org/songloft#549
 
 曲库全选和批量删除已在未提交工作树实现；全选按筛选获取完整 ID，删除须确认且默认保留文件。最终受影响 72 项、类型、双产物/Web、89 项发布工具及 Chrome/WebKit 实际操作通过；完整快照与真机边界见 [#549](issue-549.md)。主仓库和 Flutter 无源码修改；子模块 dirty，父 gitlink 未变。没有提交、推送、发布或 Issue 写操作授权，下方历史授权不适用。

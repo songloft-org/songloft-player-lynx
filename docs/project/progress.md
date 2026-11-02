@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-02 · 录屏复核与 Web 列表性能（songloft-org/songloft#540）
+
+23 秒录屏已分段拆帧，确认曲库反复大片留白，插件快速甩动也有短暂留白，未用录屏平均帧率代替应用帧率。本地修复 Web 丢失 `recyclable=false` 导致 footer 按整屏占位，以及玻璃每次采样重复发现全部 shadow root 的开销；歌曲行继续虚拟化。全量 3757 项、19 项定向（旧实现 4 失败）、类型、双产物/Web、89 项发布工具及 WebKit/Chrome 实际滚动通过。等量采样、初始几何、歌单/短视口、失败驱动记录及最终指纹见 [#540](issue-540.md)。未提交、推送、发布、更新父指针或写 Issue；原机版本未知，iPhone 待验。
+
+English: The 23-second recording was examined in frame sheets. Recurring large library blanks are visible; rapid plugin scrolling also briefly blanks. Recording averages are not application FPS. Fix Web dropping `recyclable=false` and reserving a viewport-sized footer, plus repeated glass shadow-root discovery per capture; song rows remain virtualized. All 3757 tests, 19 focused checks (4 failures against old code), types, dual/Web builds, 89 release-tool tests and real WebKit/Chrome scroll interactions pass. Matched sampling, geometry, playlist/short-view checks, retained driver failures and final identities: [#540](../en/project/issue-540.md). No commit, push, release, parent pointer update or Issue write; recorded version unknown and iPhone acceptance pending.
+
 ## 2026-11-01 · 曲库全选与删除（songloft-org/songloft#549）
 
 曲库四个歌曲视图补全选/取消全选与批量删除，零选中即显示工具栏；全选包含未加载分页，删除默认保留本地文件，取消/失败保留选择。设备缓存补齐离屏选择元数据。完整快照 3754 项、最终受影响 72 项、类型、双产物、Web 与 89 项发布工具检查通过；实际 Chromium/WebKit、真实临时后端及文件保留/删除证据见 [#549](issue-549.md)。未提交、推送、写 Issue 或更新父指针，iPhone 原机与原生宿主未验。

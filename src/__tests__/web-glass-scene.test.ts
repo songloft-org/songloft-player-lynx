@@ -107,6 +107,46 @@ test('idle does not capture continuously and disposal cancels pending work and s
   } finally { f.dom.window.close() }
 })
 
+test('scroll and attribute updates reuse shadow-root subscriptions; appended and removed roots are reconciled', async () => {
+  const f = setup()
+  try {
+    const container = f.win.document.createElement('x-content')
+    const shadow = container.attachShadow({ mode: 'open' })
+    shadow.innerHTML = '<span data-box="[20,840,100,20]">Before</span>'
+    f.source.append(container)
+    f.scene.refresh()
+    const scan = vi.spyOn(f.source, 'querySelectorAll')
+    const innerScan = vi.spyOn(shadow, 'querySelectorAll')
+    for (let i = 0; i < 5; i++) {
+      shadow.dispatchEvent(new f.win.Event('scroll'))
+      f.flush()
+    }
+    shadow.querySelector('span').setAttribute('style', 'color:red')
+    await Promise.resolve()
+    f.flush()
+    expect(scan).not.toHaveBeenCalled()
+    expect(innerScan).not.toHaveBeenCalled()
+    const nested = f.win.document.createElement('x-content')
+    const nestedRoot = nested.attachShadow({ mode: 'open' })
+    nestedRoot.innerHTML = '<span data-box="[20,840,100,20]">New root</span>'
+    shadow.append(nested)
+    await Promise.resolve()
+    f.flush()
+    expect(f.scene.roots.has(nestedRoot)).toBe(true)
+    nestedRoot.querySelector('span').textContent = 'Updated root'
+    await Promise.resolve()
+    f.flush()
+    expect(f.scene.svg.textContent).toContain('Updated root')
+    nested.remove()
+    await Promise.resolve()
+    f.flush()
+    expect(f.scene.roots.has(nestedRoot)).toBe(false)
+    f.scene.dispose()
+    nestedRoot.dispatchEvent(new f.win.Event('scroll'))
+    expect(f.frames.size).toBe(0)
+  } finally { f.scene.dispose(); f.dom.window.close() }
+})
+
 test('browser-skipped virtual rows are not measured, and paint again when they become visible', () => {
   const f = setup()
   try {

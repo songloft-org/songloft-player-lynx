@@ -58,6 +58,17 @@ test.each(['/', '/songloft/', '/nested/音乐/index.html?preview=1#player'])(
         const app = document.getElementById('app')!
         const injectedRules = (app as HTMLElement & { injectStyleRules?: string[] }).injectStyleRules
         expect(injectedRules).toContain('x-list::part(content) { content-visibility: visible !important; }')
+        // Web-core drops boolean false attributes, including recyclable=false.
+        // The real footer must stay laid out rather than use a viewport-sized
+        // placeholder. Ordinary song rows retain browser virtualization.
+        const style = document.createElement('style')
+        style.textContent = injectedRules?.join('\n') || ''
+        document.head.append(style)
+        const list = document.createElement('x-list')
+        list.innerHTML = '<list-item item-key="1"></list-item><list-item item-key="__footer__"></list-item>'
+        document.body.append(list)
+        expect(dom.window.getComputedStyle(list.lastElementChild!).contentVisibility).toBe('visible')
+        expect(dom.window.getComputedStyle(list.firstElementChild!).contentVisibility).not.toBe('visible')
         expect(app.getAttribute('url')).toBe(new URL('main.lynx.bundle', base).href)
         expect(JSON.parse(app.getAttribute('global-props')!)).toEqual({
           ...(embedded ? {} : { deployMode: 'standalone' }), webBaseUrl: base.href,

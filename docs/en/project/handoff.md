@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-02 · songloft-org/songloft#540 recording and performance
+
+The Web footer keeps actual layout; glass observation roots are rediscovered only for element-structure changes. Recording frames, all 3757 tests, 19 focused checks with 4 old-code failures, types, dual/Web builds, 89 release-tool tests and real WebKit/Chrome scrolling are verified. Results and boundaries: [#540](issue-540.md), `/tmp/songloft-540-20261102/verification.json`. No commit, push, release, parent pointer update or Issue write in this batch; historical permissions do not apply. The reporter's device and installed version remain unverified.
+
 ## 2026-11-01 · songloft-org/songloft#549
 
 Library select-all and batch deletion are implemented in the uncommitted worktree. Selection fetches all filtered IDs; deletion requires confirmation and preserves files by default. Final affected 72 tests, types, dual/Web builds, 89 release-tool tests and real Chrome/WebKit interactions pass; the full snapshot and device boundaries are in [#549](issue-549.md). Parent/Flutter source is unchanged; the submodule is dirty and the parent gitlink unchanged. No commit, push, release or Issue-write authorization; historical permissions below do not apply.

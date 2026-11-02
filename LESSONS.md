@@ -10,6 +10,14 @@
 
 ## 条目
 
+### WEB-004：组件的布尔 false 不证明 Web DOM 收到了关闭开关
+
+- 范围：虚拟列表 footer、Web 引擎属性传递与滚动高度，songloft-org/songloft#540；基线 `07599c329f3b52247d48538bfbc7537fd8584148`。
+- 证据：2026-11-02，录屏拆帧发现曲库反复出现大片留白；本地真实 Web DOM 丢失 `recyclable={false}`，footer 仍为 `content-visibility: auto`，40 首歌曲的滚动范围从 3228px 降到 2682px。JSX 有 false 和此前稳定 footer 的组件回归并未保证浏览器布局稳定。
+- 规则：核对实际 DOM、computed style 与滚动范围；辅助行也必须有符合真实尺寸的占位策略。不要把原生元素的布尔关闭语义直接当成 Web 引擎已支持，也不以关闭全部歌曲虚拟化代替修复。
+- Done right：宿主仅保持 `__footer__` 实际布局；三个部署路径的新样式回归在旧实现下失败，修复后通过；真实 WebKit 继续核对行 auto、footer visible 和容器稳定。玻璃观察根的重复发现另按结构变更失效，等量浏览器对照及验证对象见 [#540](docs/project/issue-540.md)。
+- Seen 1× (2026-11-02)。状态：本地修复经验；原机版本未知，iOS Safari 流畅度仍需真机验收。
+
 ### LIST-004：全选的操作对象不能限于可见分页
 
 - 范围：曲库全选、批量删除、添加到歌单与设备缓存，songloft-org/songloft#549；基线 `ea55033d73456d9268d8e31069ced1e144511dce`。

@@ -395,7 +395,11 @@
         // WebKit can skip this slotted scroll container during page append and
         // clamp scrollTop to 0. Keep the viewport laid out; rows still virtualize.
         app.injectStyleRules = (app.injectStyleRules || []).concat(
-          'x-list::part(content) { content-visibility: visible !important; }'
+          'x-list::part(content) { content-visibility: visible !important; }',
+          // web-core omits boolean false attributes, so recyclable=false never
+          // reaches the footer. Keep its real inset height through page append;
+          // the default skipped placeholder would reserve a whole viewport.
+          'x-list > list-item[item-key="__footer__"] { content-visibility: visible !important; contain: initial !important; }'
         )
         app.setAttribute('url', new URL('main.lynx.bundle', base).href)
       })

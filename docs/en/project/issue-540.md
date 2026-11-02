@@ -2,6 +2,45 @@
 
 The [Issue](https://github.com/songloft-org/songloft/issues/540) initially reported that dragging the playlist scrollbar jumps back to the first song, without platform/version details. The [2026-10-29 comment](https://github.com/songloft-org/songloft/issues/540#issuecomment-6488463784) reports ordinary library swipes returning to the top on iOS 18.6 Safari, server v2.13.7 and client 0.1.7; the recording upload failed. [简体中文](../../project/issue-540.md).
 
+## 2026-11-02 · Recording analysis and Web scrolling work
+
+Source: the reporter's [23.198-second recording](https://github.com/songloft-org/songloft/issues/540#issuecomment-6566677761). Baselines: client `07599c329f3b52247d48538bfbc7537fd8584148`, parent `60a237d4331247909ea15fabdbc1e45fb771c348`; changes are uncommitted and the parent gitlink is unchanged. No version screen identifies the installed SHA. iOS 18.6 Safari comes from the earlier report, not recording metadata.
+
+| Video position | Visible behavior | Evidence boundary |
+| --- | --- | --- |
+| 0–1.25s | Mostly empty initially; rows fill from about 0.5s | Content visibility is discontinuous; this alone does not prove slow networking |
+| Around 1.5–1.75s, 2.75s and 4.5s | The library repeatedly leaves a few upper rows or an empty content region, then recovers | Investigate pagination edges, placeholder sizing and main-thread work |
+| 6–11s | Largely the same songs remain, followed by switching plugins | Fingers are absent from the recording; dwelling is not proof of a freeze |
+| About 12–23s | iWebPlayer repeatedly scrolls across rows quickly; several partial or fully empty regions also occur around 17.5–19.5s | The comparison plugin also fills content later; it is not completely free of blank frames |
+
+The 592×1280 H.264 recording has 1219 frames and a variable frame rate. Recording averages do not measure application FPS. Original media, a one-second overview, and 4fps sheets for the first six seconds and 17–22 seconds are under `/tmp/songloft-540-20261102/`. Frames establish observations, not device FPS from interpolation or probe coordinates.
+
+Two independent local defects are confirmed:
+
+- Web-core drops boolean `false` attributes; the actual footer DOM has no `recyclable="false"`. Its `content-visibility: auto` can therefore estimate the roughly 80px navigation inset as an entire 626px viewport. The baseline's 40-song scroll range shrinks from 3228px to 2682px, a 546px change. The host now keeps only `__footer__` laid out at its actual size. Song rows retain browser virtualization and the previous container stability fix remains.
+- Every glass capture recursively rediscovers all shadow roots. The 100-song diagnostic has 552 observation roots and scans about 80,000 nodes during roughly five seconds of interaction. The previous row-measurement optimization did not remove this work. Root discovery now runs after element insertion/removal; scroll, color and text updates still repaint, and new/removed subtrees plus disposal maintain subscriptions.
+
+Against the old implementation, new regressions report 4 failures / 15 passes: footer layout fails at three deployment paths and the scroll/attribute test detects repeated scans. Both fixed files pass all 19 tests, including nested shadow-root addition, updates, removal and disposal.
+
+Environment: Linux x86_64 / Node 22.17.1 / pnpm 11.15.1 / WebKit 18.4 / Docker HeadlessChrome 121.0.6167.85. Browsers run actual deployment artifacts with 663 synthetic songs including covers and long Chinese/English titles, 20-song pages and a 500ms delay on subsequent pages. This is not the reporter's library.
+
+| Matched WebKit comparison | Before | After |
+| --- | --- | --- |
+| Loaded songs / scroll distance | 140 / 4900px | 140 / 4900px |
+| Additional song requests during interaction | 0 | 0 |
+| Total nodes traversed by `querySelectorAll('*')` | 691,136 | 13,394 |
+| Footer computed `content-visibility` | auto | visible |
+| Song rows / scroll container | auto / visible | auto / visible |
+
+About 98.1% fewer traversed nodes demonstrates removal of repeated discovery on stable structure, not a 98.1% FPS or iPhone performance gain. Both versions have valid glass scenes, covers, long titles and no page errors. Remaining after-version traversal includes bounded SVG mirror copying. The final `controlled-*` comparison uses identical bundles and other assets; only the two changed Web source files differ. Earlier samples using a cached bundle differing only in 28 bytes of build time/number remain as preliminary evidence. An independent initial-geometry comparison confirms 3228px before versus 2682px after with the same 40 songs, without measuring each row or the footer to resolve the old placeholder prematurely.
+
+- `pnpm test --maxWorkers=2`: 354 files / 3757 tests pass; types, Lynx/Web dual builds, Web deployment build and all 89 serial release-tool checks pass. Existing `touch-action` warnings remain.
+- WebKit at 390×844 paginates to 9800px with offsets 0..160 requested once each; the 390×420 viewport reaches 4200px with offsets 0..60 once each. Neither returns to the top or reports page errors. Repeated short-viewport end jumps preload 140 songs before dragging from 0 to 4200px. Entering a playlist through its actual home card reaches 7610px with playlist offsets 0..120 once each. All pass; see `final-{pagination,short,short-jump,playlist-verified}.json`.
+- Docker Chrome performs real touch swipes to 7033px, offsets 0..120 once each, with footer visible, rows auto and no page errors. Requests come from the fixture server's received records. An earlier Chrome Worker request listener yielded an empty array, which cannot prove non-duplication; it was replaced and rerun.
+- Other early driver failures are retained: direct URL loading did not enter the app's memory route, so playlist navigation uses an actual home card click. Library-specific 9000px and cross-endpoint offset expectations were unsuitable for playlists; subsequent checks use playlist geometry and endpoint identity separately. Product code and repository regressions were not weakened to pass these attempts.
+
+Source identity, commands and logs: `/tmp/songloft-540-20261102/verification.json`; screenshots, recording frames and position samples share that directory. Not run: the reporter's iPhone/iOS 18.6 Safari, real covers/network, same-device iWebPlayer profiling, native host builds/devices, backend Go checks, remote CI and release. Only Web host bootstrap/capture scripts change. The recording does not identify its installed SHA; device acceptance is not claimed. No commit, push, parent pointer update or Issue write.
+
 ## 2026-10-30 · Library scrolling and prefetch
 
 The [latest comment](https://github.com/songloft-org/songloft/issues/540#issuecomment-6501337810) confirms dev fixes return-to-top but reports Safari library jank and pagination waits. Baselines: client `196adc500da5b700bfbf61ab99ffc4b2918922c4`, parent `59bca2fbb455022669aec88337281c0b968ff782`. Changes remain uncommitted in the child worktree; the parent gitlink is unchanged.
