@@ -518,14 +518,16 @@ export function PlaylistDetailPage() {
       <view className='playlist-detail__body'>
         {sortMode
           ? (
-            <scroll-view
-              className='playlist-detail__sort-scroll'
-              scroll-y
-              lower-threshold={200}
-              bindscroll={onScrollEdge}
-              bindscrolltolower={onEndReached}
-            >
               <SortableRoot
+                as='ScrollView'
+                scrollableBoundaryId='playlist-detail-sort-scroll'
+                scrollableClassName='playlist-detail__sort-scroll'
+                scrollableProps={{
+                  'lower-threshold': 200,
+                  bindscroll: onScrollEdge,
+                  bindscrolltolower: onEndReached,
+                }}
+                scrollableFooter={<view className='playlist-detail__nav-inset' />}
                 data={songs.map((s) => ({ getSortingKey: () => String(s.id), dataItem: s }))}
               onSortEnd={(sorted) => {
                 // A drag shifts every intervening row by one. The dragged row
@@ -569,8 +571,6 @@ export function PlaylistDetailPage() {
                 </SortableItem>
               )}
             </SortableRoot>
-                          <view className='playlist-detail__nav-inset' />
-</scroll-view>
           )
           : songsQuery.isLoading
           ? <DetailState text={t('library.loadingSongs')} />

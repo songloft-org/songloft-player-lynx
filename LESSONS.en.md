@@ -10,6 +10,13 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 ## Entries
 
+### SORT-002: auto-scrolling needs host parameters and live pagination callbacks
+
+- Scope: playlist manual ordering, songloft-org/songloft#551 comment `6576318751`; baseline `8ed3c6484d6107a5f5fd0dc417b6d984578524fd`.
+- Rule: let the sortable own the real scroll boundary; native offset is not Web top. Refresh running timers to use paginated row callbacks, preserve the active overlay during append and stop on unmount.
+- Evidence / Done right: real browser checks exposed Web zero movement after enabling the feature, then drops limited by the old key array after pagination. Unpatched source/distribution controllers fail four cases while two native-parameter cases pass; all six and the page regression pass after the fix. Dual artifacts, types, all 3768 tests and real bidirectional cross-screen/pagination/persistence checks pass. See [record](docs/en/project/issue-551-scroll.md).
+- Seen 1× (2026-11-02). Status: local fix; native devices unverified. No commit, push or release.
+
 ### SORT-001: The first displaced row is not necessarily the dragged song
 
 - Scope: manual playlist ordering, songloft-org/songloft#550; baseline `a90cded03be18426de61c6df436d08a29e7a3077`.

@@ -1,0 +1,174 @@
+diff --git a/dist/Sortable.jsx b/dist/Sortable.jsx
+index 490785040c7ca67c751469dd93f0ecb3ae45293d..a89a3705e1ee1b3f6ffe33c1538a3272d7c00b89 100644
+--- a/dist/Sortable.jsx
++++ b/dist/Sortable.jsx
+@@ -28,6 +28,7 @@ function getSortableDragOverlayElementId(sortingKey) {
+     return `sortable-drag-overlay-${getNormalizedElementKey(sortingKey)}`;
+ }
+ function SortableRoot(props) {
++    const { scrollableProps, scrollableFooter } = props;
+     const { children, data, debugLog = false, boundaryId, scrollableBoundaryId, as, scrollableClassName, scrollableContentClassName, scrollableEnableScroll = true, scrollableStickyUpperOffset = 0, scrollableStickyLowerOffset = 0, onSortEnd, onSortStart, enableSorting = true } = props;
+     const scrollable = 'ScrollView' === as;
+     const [isDragging, setIsDragging] = useState(false);
+@@ -179,7 +180,7 @@ function SortableRoot(props) {
+         children
+     ]);
+     if (scrollable) return <>
+-        <scroll-view id={scrollableElementId} className={scrollableClassName} enable-scroll={scrollableEnableScroll && !isDragging} scroll-orientation='vertical' main-thread:bindscroll={handleScrollableBoundaryScroll}>
++        <scroll-view {...scrollableProps} id={scrollableElementId} className={scrollableClassName} enable-scroll={scrollableEnableScroll && !isDragging} scroll-orientation='vertical' main-thread:bindscroll={handleScrollableBoundaryScroll}>
+           <view id={scrollableContentId} className={scrollableContentClassName} style={{
+         zIndex: '0'
+     }}>
+@@ -187,6 +188,7 @@ function SortableRoot(props) {
+             <SortableContext.Provider value={sortableContextValue}>
+               {renderedChildren}
+             </SortableContext.Provider>
++            {scrollableFooter}
+             <view style='display: flex; flex-direction: column; overflow:hidden; height: 1ppx; width: 100%;' exposure-scene={scrollableElementId} exposure-id='lowerExposureView' id={`${scrollableElementId}-lowerExposureView`} main-thread:binduiappear={handleScrollableBoundaryLowerExposure} main-thread:binduidisappear={handleScrollableBoundaryLowerDisexposure}/>
+           </view>
+         </scroll-view>
+@@ -358,7 +360,9 @@ function SortableInteractiveItem(props) {
+         const element = lynx.querySelector(`#${scrollableBoundaryId}`);
+         if (!element) return void onScrolled?.();
+         element.invoke('scrollBy', {
+-            offset
++            offset,
++            top: offset,
++            behavior: 'instant'
+         }).then((res)=>{
+             'main thread';
+             syncScrollDeltaForItemTranslateY(res, offset);
+@@ -622,6 +626,16 @@ function SortableInteractiveItem(props) {
+         setChildrenMTSRef,
+         sortingKey
+     ]);
++    const refreshAutoScrollFrame = useCallback(()=>{
++        'main thread';
++        if (autoScrollingRef.current) autoScrollFrameRef.current = runAutoScrollFrame;
++    }, [autoScrollingRef, autoScrollFrameRef, runAutoScrollFrame]);
++    useEffect(()=>{
++        runOnMainThread(refreshAutoScrollFrame)();
++    }, [refreshAutoScrollFrame]);
++    useEffect(()=>()=>{
++        runOnMainThread(stopAutoScrollLoop)();
++    }, [stopAutoScrollLoop]);
+     const syncDisabledKey = useCallback((key, isDisabled)=>{
+         'main thread';
+         if (isDisabled) disabledKeysRef.current[key] = true;
+@@ -747,6 +761,7 @@ function SortableInteractiveItem(props) {
+     ]);
+     usePreCommit(()=>{
+         'main thread';
++        if (autoScrollingRef.current) return;
+         resetLocalDragVisuals();
+     }, [
+         dataKeyOrderSignature
+diff --git a/dist/types/index.docs.d.ts b/dist/types/index.docs.d.ts
+index 0735f30f9320c8d8e3e0d53ba9877a79a7088dfa..2a638d2faf6424a1cf7f65248aabbb83b7bffb49 100644
+--- a/dist/types/index.docs.d.ts
++++ b/dist/types/index.docs.d.ts
+@@ -1,4 +1,5 @@
+ import type { ReactNode } from '@lynx-js/react';
++import type { ScrollViewProps } from '@lynx-js/types';
+ /**
+  * The data structure for each item in the Sortable component.
+  * @zh Sortable 组件中每个项目的数据结构。
+@@ -22,6 +23,8 @@ export interface SortableData<T> {
+     dataItem: T;
+ }
+ export interface SortableRootProps<T> {
++    scrollableProps?: Pick<ScrollViewProps, 'bindscroll' | 'bindscrolltolower' | 'lower-threshold'>;
++    scrollableFooter?: ReactNode;
+     /**
+      * Specifies which container element SortableRoot should render and own as the scrollable boundary.
+      * - `'ScrollView'`: render an internal vertical `scroll-view`.
+diff --git a/src/Sortable.tsx b/src/Sortable.tsx
+index dea43479804ec66bac286b98a7e8b62dad4fddf3..9a2edbee314cd9f397769b4ae1f99f0fea4d94ae 100644
+--- a/src/Sortable.tsx
++++ b/src/Sortable.tsx
+@@ -102,6 +102,8 @@ export function SortableRoot<T>(props: SortableRootProps<T>) {
+     as,
+     scrollableClassName,
+     scrollableContentClassName,
++    scrollableProps,
++    scrollableFooter,
+     scrollableEnableScroll = true,
+     scrollableStickyUpperOffset = 0,
+     scrollableStickyLowerOffset = 0,
+@@ -291,6 +293,7 @@ export function SortableRoot<T>(props: SortableRootProps<T>) {
+     return (
+       <>
+         <scroll-view
++          {...scrollableProps}
+           id={scrollableElementId}
+           className={scrollableClassName}
+           enable-scroll={scrollableEnableScroll && !isDragging}
+@@ -315,6 +318,7 @@ export function SortableRoot<T>(props: SortableRootProps<T>) {
+             >
+               {renderedChildren}
+             </SortableContext.Provider>
++            {scrollableFooter}
+             <view
+               style='display: flex; flex-direction: column; overflow:hidden; height: 1ppx; width: 100%;'
+               exposure-scene={scrollableElementId}
+@@ -589,6 +593,9 @@ function SortableInteractiveItem(props: SortableItemProps) {
+ 
+     element.invoke('scrollBy', {
+       offset,
++      // Web invokes HTMLElement.scrollBy directly; native consumes offset.
++      top: offset,
++      behavior: 'instant',
+     }).then((res) => {
+       'main thread'
+       syncScrollDeltaForItemTranslateY(res as ScrollByResult, offset)
+@@ -928,6 +935,19 @@ function SortableInteractiveItem(props: SortableItemProps) {
+     sortingKey,
+   ])
+ 
++  // Pagination replaces handleDragMove's key array while an edge drag is held.
++  // The scheduled loop must use the new controller instead of its old closure.
++  const refreshAutoScrollFrame = useCallback(() => {
++    'main thread'
++    if (autoScrollingRef.current) autoScrollFrameRef.current = runAutoScrollFrame
++  }, [autoScrollingRef, autoScrollFrameRef, runAutoScrollFrame])
++  useEffect(() => {
++    runOnMainThread(refreshAutoScrollFrame)()
++  }, [refreshAutoScrollFrame])
++  useEffect(() => () => {
++    runOnMainThread(stopAutoScrollLoop)()
++  }, [stopAutoScrollLoop])
++
+   const syncDisabledKey = useCallback(
+     (key: string, isDisabled: boolean) => {
+       'main thread'
+@@ -1097,6 +1117,7 @@ function SortableInteractiveItem(props: SortableItemProps) {
+ 
+   usePreCommit(() => {
+     'main thread'
++    if (autoScrollingRef.current) return
+     resetLocalDragVisuals()
+   }, [dataKeyOrderSignature])
+ 
+diff --git a/src/types/index.docs.ts b/src/types/index.docs.ts
+index 6b52d7cf8f5e623aed254ccc43246065d428da65..d900cc61ae2b8506bbd8bf1fcf8f7ff5c458c7d8 100644
+--- a/src/types/index.docs.ts
++++ b/src/types/index.docs.ts
+@@ -3,6 +3,7 @@
+ // LICENSE file in the root directory of this source tree.
+ 
+ import type { ReactNode } from '@lynx-js/react'
++import type { ScrollViewProps } from '@lynx-js/types'
+ 
+ /**
+  * The data structure for each item in the Sortable component.
+@@ -28,6 +29,10 @@ export interface SortableData<T> {
+ }
+ 
+ export interface SortableRootProps<T> {
++  /** Additional scroll events/thresholds; internal drag bindings retain ownership. */
++  scrollableProps?: Pick<ScrollViewProps, 'bindscroll' | 'bindscrolltolower' | 'lower-threshold'>
++  /** Footer inside the scrollable content, after the sortable rows. */
++  scrollableFooter?: ReactNode
+   /**
+    * Specifies which container element SortableRoot should render and own as the scrollable boundary.
+    * - `'ScrollView'`: render an internal vertical `scroll-view`.

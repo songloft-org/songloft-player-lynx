@@ -7,6 +7,7 @@ settings:
 patchedDependencies:
   '@lynx-js/lynx-ui-input@3.135.4': c22fd3a470c4ae0154a60fd6dedc6e301df0d4470702c0978d6c387a46709d68
   '@lynx-js/lynx-ui-slider@3.135.4': 405ba057ff0bc8190338d89d2411cca98f8ad71621da9c9d855a284a3a3afce3
+  '@lynx-js/lynx-ui-sortable@3.135.4': 9ab9e70ee6451e5f7d2a50cfb762cd1ce2d16953d87addfe4341841c75bbd29e
   '@lynx-js/web-core@0.23.1': 5593203bd3d4d251d472b7fa22769c09a31116caeea82b44fbc68942354cb8a0
   '@tanstack/history@1.162.1': 207991a23f96615aa8aa31c012f762a26d948f384ff677fffea294b215ab156d
   '@tanstack/router-core@1.171.18': a6b43d78e19bceb901d2a9b9851c2b24c0aa71be5418a83deff3f2f56f0bcf35
@@ -38,7 +39,7 @@ importers:
         version: 3.135.4(patch_hash=405ba057ff0bc8190338d89d2411cca98f8ad71621da9c9d855a284a3a3afce3)(@lynx-js/react@0.123.2(@lynx-js/types@4.0.0)(@types/react@19.2.18))(@lynx-js/types@4.0.0)(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@lynx-js/lynx-ui-sortable':
         specifier: ^3.135.4
-        version: 3.135.4(@lynx-js/react@0.123.2(@lynx-js/types@4.0.0)(@types/react@19.2.18))(@lynx-js/types@4.0.0)(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 3.135.4(patch_hash=9ab9e70ee6451e5f7d2a50cfb762cd1ce2d16953d87addfe4341841c75bbd29e)(@lynx-js/react@0.123.2(@lynx-js/types@4.0.0)(@types/react@19.2.18))(@lynx-js/types@4.0.0)(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@lynx-js/lynx-ui-swiper':
         specifier: ^3.135.4
         version: 3.135.4(@lynx-js/react@0.123.2(@lynx-js/types@4.0.0)(@types/react@19.2.18))(@lynx-js/types@4.0.0)(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -3771,7 +3772,7 @@ snapshots:
       - react
       - react-dom
 
-  '@lynx-js/lynx-ui-sortable@3.135.4(@lynx-js/react@0.123.2(@lynx-js/types@4.0.0)(@types/react@19.2.18))(@lynx-js/types@4.0.0)(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@lynx-js/lynx-ui-sortable@3.135.4(patch_hash=9ab9e70ee6451e5f7d2a50cfb762cd1ce2d16953d87addfe4341841c75bbd29e)(@lynx-js/react@0.123.2(@lynx-js/types@4.0.0)(@types/react@19.2.18))(@lynx-js/types@4.0.0)(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
       '@lynx-js/lynx-ui-common': 3.135.4(@lynx-js/react@0.123.2(@lynx-js/types@4.0.0)(@types/react@19.2.18))(@lynx-js/types@4.0.0)(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@lynx-js/lynx-ui-draggable': 3.135.4(@lynx-js/react@0.123.2(@lynx-js/types@4.0.0)(@types/react@19.2.18))(@lynx-js/types@4.0.0)(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

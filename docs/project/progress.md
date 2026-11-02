@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-02 · songloft-org/songloft#551 跨屏拖动
+
+歌单排序接入组件自有滚动视口，补齐 Web scrollBy 参数、分页后活动回调更新与卸载清理，保留分页和 footer。双产物、类型、3768 项测试、真实浏览器连续向下/向上跨屏拖动、完整持久顺序及刷新通过；原生设备未验，未提交、推送、更新父指针、发布或评论。详情见 [记录](issue-551-scroll.md)。
+
+English: Playlist ordering now owns its scroll viewport, adapts Web scrollBy parameters, refreshes active callbacks after pagination and stops on unmount, preserving pagination/footer. Dual artifacts, types, all 3768 tests and real consecutive downward/upward cross-screen drags with persistence/reload pass. Native devices not run; no commit, push, parent pointer update, release or comment. See [record](../en/project/issue-551-scroll.md).
+
 ## 2026-11-02 · songloft-org/songloft#550
 
 收藏和电台收藏开放手动排序；跨多行向下拖动按最大位移识别歌曲，进入手动模式保存自定义升序偏好。最终共享构建、embedded Web、类型与 3761 项测试通过；真实浏览器双内置歌单拖动、后端持久顺序和刷新读取通过。基线、反向回归、截图及原生 Not run 见 [本次记录](issue-550.md)。未提交、推送或发布。

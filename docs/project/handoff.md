@@ -1,5 +1,11 @@
 # 工作交接（2026-10-14）
 
+## 2026-11-02 · songloft-org/songloft#551 跨屏拖动
+
+Flutter/Lynx 歌单拖动自动滚动本地修复完成；Lynx 另修正 Web 参数兼容和分页定时器旧回调。3768 项全量、类型、双产物及真实 Web 双向跨屏/持久化通过；Flutter 813 项与对应验收通过。原生设备未验。未提交、推送、更新父指针、发布或评论，详情见 [记录](issue-551-scroll.md)。
+
+English: Flutter/Lynx playlist drag auto-scrolling is fixed locally; Lynx also corrects Web parameter compatibility and stale paginated timer callbacks. All 3768 tests, types, dual artifacts and real bidirectional cross-screen/persistence checks pass; Flutter passes 813 tests and its acceptance checks. Native devices not run. No commit, push, pointer update, release or comment; [record](../en/project/issue-551-scroll.md).
+
 ## 2026-11-02 · songloft-org/songloft#550
 
 内置收藏手动排序及跨行向下移动已修复；需配套主仓库允许内置成员排序的后端更新。双产物、类型、3761 项测试和浏览器双内置歌单持久化通过；Windows/移动原生设备未验。当前未提交工作树，详情见 [记录](issue-550.md)。

@@ -4,6 +4,7 @@ allowBuilds:
 patchedDependencies:
   '@lynx-js/lynx-ui-input@3.135.4': patches/@lynx-js__lynx-ui-input@3.135.4.patch
   '@lynx-js/lynx-ui-slider@3.135.4': patches/@lynx-js__lynx-ui-slider@3.135.4.patch
+  '@lynx-js/lynx-ui-sortable@3.135.4': patches/@lynx-js__lynx-ui-sortable@3.135.4.patch
   '@lynx-js/web-core@0.23.1': patches/@lynx-js__web-core@0.23.1.patch
   '@tanstack/history@1.162.1': patches/@tanstack__history@1.162.1.patch
   '@tanstack/router-core@1.171.18': patches/@tanstack__router-core@1.171.18.patch

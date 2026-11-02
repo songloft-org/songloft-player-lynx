@@ -23,7 +23,7 @@ const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSon
 
 const navigateMock = vi.hoisted(() => vi.fn())
 const rowRenders = vi.hoisted(() => vi.fn())
-const sortable = vi.hoisted(() => ({ onSortEnd: undefined as ((items: Array<{ dataItem: Song; getSortingKey: () => string }>) => void) | undefined }))
+const sortable = vi.hoisted(() => ({ onSortEnd: undefined as ((items: Array<{ dataItem: Song; getSortingKey: () => string }>) => void) | undefined, props: {} as Record<string, unknown> }))
 const listEvents = vi.hoisted(() => ({ onEndReached: undefined as (() => void) | undefined }))
 const cache = vi.hoisted(() => ({ available: false, beginSongs: vi.fn(), beginPlaylist: vi.fn() }))
 vi.mock('../../player/data/indexed-song-cache.js', async () => ({
@@ -57,6 +57,7 @@ vi.mock('@lynx-js/lynx-ui-sortable', async () => {
   const mocks = (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSortable()
   return { ...mocks, SortableRoot: (props: Parameters<typeof mocks.SortableRoot>[0] & { onSortEnd: typeof sortable.onSortEnd }) => {
     sortable.onSortEnd = props.onSortEnd
+    sortable.props = props
     return <mocks.SortableRoot {...props} />
   } }
 })
@@ -591,6 +592,23 @@ test('entering manual sorting switches the saved view to custom ascending order'
     { sortBy: 'position', sortOrder: 'asc' }, expect.objectContaining({ onSuccess: expect.any(Function) }),
   )
   expect(queries.queryByTestId('playlist-detail-drag-1')).not.toBeInTheDocument()
+})
+
+test('sort mode owns its auto-scroll boundary and preserves pagination and footer', async () => {
+  const fetchNextPage = vi.fn()
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1), makeSong(2)], total: 80 }], { hasNextPage: true, fetchNextPage }))
+  const queries = await renderPage()
+  await openMoreMenu(queries)
+  await act(async () => { fireEvent.tap(queries.getByTestId('popover-item-sort')!, {}) })
+  expect(sortable.props.as).toBe('ScrollView')
+  expect(sortable.props.scrollableBoundaryId).toBe('playlist-detail-sort-scroll')
+  expect(sortable.props.scrollableClassName).toBe('playlist-detail__sort-scroll')
+  expect(sortable.props.scrollableFooter).toBeTruthy()
+  const scrollProps = sortable.props.scrollableProps as { bindscroll: unknown; bindscrolltolower: () => void; 'lower-threshold': number }
+  expect(scrollProps.bindscroll).toBeTypeOf('function')
+  expect(scrollProps['lower-threshold']).toBe(200)
+  await act(async () => { scrollProps.bindscrolltolower() })
+  expect(fetchNextPage).toHaveBeenCalledWith({ cancelRefetch: false })
 })
 
 test('sort mode renders drag handles for each song', async () => {
