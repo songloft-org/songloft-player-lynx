@@ -2,6 +2,7 @@ import { create } from 'zustand'
 
 import { logInfo, logWarn } from '../../../core/logging/client-logger.js'
 import { apiPrefix } from '../../../core/config/app-config.js'
+import { ApiError } from '../../../core/network/http-client.js'
 import type { Song } from '../../../models/song.js'
 import { getAudio } from '../../../native/audio-facade.js'
 import { getFloatingLyricModule } from '../../../native/floating-lyric.js'
@@ -18,6 +19,7 @@ import {
 import { defaultLyricFetcher, type LyricFetcher } from '../data/lyric-source.js'
 import { cacheLyric, getCachedLyric, removeCachedLyric } from '../data/lyric-cache.js'
 import { readNotificationLyricInTitle } from '../../settings/data/settings-prefs.js'
+import { cachedSongIdentity } from '../domain/offline-cache.js'
 
 export interface LyricState {
   lyrics: LyricLine[]
@@ -99,6 +101,12 @@ export const useLyricStore = create<LyricState>((set, get) => {
           .catch(() => {})
       }
       const token = ++loadToken
+      // A persisted queue can predate scraping. Re-fetch only supplied the URL
+      // to this store, leaving the queued Song unchanged across app restarts.
+      // Read the normal endpoint (not refresh=1) to recover the saved payload.
+      if (song && !song.lyricUrl && song.type === 'local' && song.id > 0 && !cachedSongIdentity(song)) {
+        song = { ...song, lyricUrl: `${apiPrefix}/songs/${song.id}/lyric` }
+      }
       if (!song || !song.lyricUrl) {
         // Distinguishing "never had a url" from "load failed" is the first
         // fork in the notification-lyric chain: no url here means the store
@@ -182,6 +190,10 @@ export const useLyricStore = create<LyricState>((set, get) => {
         )
       } catch (e) {
         if (token !== loadToken) return
+        if (e instanceof ApiError && e.status === 404) {
+          set({ ...EMPTY })
+          return
+        }
         // The failure was swallowed silently before: an exported log showed a
         // healthy app while the lyric store sat in loadFailed forever.
         logWarn('lyric', `load failed song=${song.id}: ${e instanceof Error ? e.message : String(e)}`)

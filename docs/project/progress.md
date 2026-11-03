@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-03 · songloft-org/songloft#555
+
+修复旧队列缺少歌词地址时在读取缓存前清空歌词的问题；正常请求恢复服务端已保存歌词，保留离线隔离和错误语义。旧实现两项回归失败；类型、双产物/Web、真实 Chrome 两次重载与播放通过。完整测试与未验范围见 [记录](issue-555.md)。未提交、推送、更新父指针、发布或评论。
+
+English: Fixed clearing lyrics before cache lookup when an old queue lacks a lyric URL. Normal requests recover saved server lyrics, preserving offline isolation and error semantics. Two regressions fail on old code; types, dual/Web outputs and actual Chrome reload/playback pass. Full tests and boundaries: [record](../en/project/issue-555.md). No commit, push, parent pointer update, release or comment.
+
 ## 2026-11-02 · songloft-org/songloft#551 跨屏拖动
 
 歌单排序接入组件自有滚动视口，补齐 Web scrollBy 参数、分页后活动回调更新与卸载清理，保留分页和 footer。双产物、类型、3768 项测试、真实浏览器连续向下/向上跨屏拖动、完整持久顺序及刷新通过；原生设备未验，未提交、推送、更新父指针、发布或评论。详情见 [记录](issue-551-scroll.md)。

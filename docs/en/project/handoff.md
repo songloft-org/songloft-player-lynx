@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-03 · songloft-org/songloft#555
+
+Old playback queues lacking a lyric URL now read cache and fall back to the ordinary lyric endpoint; offline snapshots make no server request. Types, dual/Web builds, two full Chrome page loads and actual playback pass; full tests and boundaries: [record](issue-555.md). The reporter's client and queue snapshot remain unconfirmed. No commit, push, parent pointer update, release or comment.
+
 ## 2026-11-02 · songloft-org/songloft#550
 
 Built-in manual sorting and multi-row downward moves are fixed; requires the parent backend update permitting built-in member ordering. Dual bundles, types, 3761 tests and browser persistence for both built-ins passed. Native Windows/mobile devices not tested. Uncommitted working tree; see [record](issue-550.md).

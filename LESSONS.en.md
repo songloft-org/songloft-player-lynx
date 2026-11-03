@@ -10,6 +10,13 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 ## Entries
 
+### LYRIC-002: A missing lyric URL in a queue snapshot does not prove the server has no lyrics
+
+- Scope: song restoration and lyric caching, songloft-org/songloft#555; baseline `07eb9b25c851b19eadb005f8345f2493aab72b2b`.
+- Rule: supplying an endpoint to the lyric store during re-fetch does not update the persisted queue. Normal restoration must not treat missing snapshot fields as authoritative before checking cache. Online local songs use the ordinary lyric endpoint; offline snapshots must not acquire server URLs.
+- Evidence and Done right: two regressions fail on the old implementation. A real temporary backend and browser verify database loading and persistent-cache restoration across two page loads, with one ordinary request, no forced scraping, playback at 00:01 and line highlighting. Objects, logs and boundaries: [record](docs/en/project/issue-555.md).
+- Seen 1× (2026-11-03). Status: local fix, no commit/push/release; the reporter's actual snapshot was not obtained.
+
 ### SORT-002: auto-scrolling needs host parameters and live pagination callbacks
 
 - Scope: playlist manual ordering, songloft-org/songloft#551 comment `6576318751`; baseline `8ed3c6484d6107a5f5fd0dc417b6d984578524fd`.

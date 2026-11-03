@@ -43,6 +43,10 @@ vi.mock('../data/lyric-source.js', async (importOriginal) => {
 import type { Song } from '../../../models/song.js'
 import type { LyricPayload } from '../../library/api/index.js'
 import { useLyricStore } from '../store/lyric-store.js'
+import { loadPlaybackState, savePlaybackState } from '../data/playback-persistence.js'
+import { ApiError } from '../../../core/network/http-client.js'
+import { cacheIdentity, cacheNamespace } from '../domain/cache-identity.js'
+import { snapshotCachedSong } from '../domain/offline-cache.js'
 
 function song(over: Partial<Song> = {}): Song {
   return {
@@ -86,6 +90,62 @@ beforeEach(() => {
 })
 
 describe('loadForSong', () => {
+  test('keeps missing lyrics distinct from an unavailable server', async () => {
+    await useLyricStore.getState().loadForSong(song({ lyricUrl: undefined }), async () => {
+      throw new ApiError(404, 'not found')
+    })
+    expect(useLyricStore.getState().loadFailed).toBe(false)
+    expect(useLyricStore.getState().lyrics).toHaveLength(0)
+    await useLyricStore.getState().loadForSong(song({ lyricUrl: undefined }), async () => {
+      throw new ApiError(502, 'upstream unavailable')
+    })
+    expect(useLyricStore.getState().loadFailed).toBe(true)
+  })
+
+  test('does not request server lyrics for offline snapshots, radio or invalid IDs', async () => {
+    const original = song({ lyricUrl: undefined })
+    const identity = cacheIdentity({
+      namespace: cacheNamespace({ profile: 'one', server: 'http://server', username: 'alice' }),
+      song: original,
+      variant: { track: null, quality: 'original', normalize: false },
+      format: 'mp3',
+    })
+    const fetcher = vi.fn(async () => PAYLOAD)
+    for (const value of [snapshotCachedSong(original, identity),
+      song({ type: 'radio', lyricUrl: undefined }),
+      song({ type: 'remote', lyricUrl: undefined }),
+      song({ id: 0, lyricUrl: undefined })]) {
+      await useLyricStore.getState().loadForSong(value, fetcher)
+      expect(useLyricStore.getState().lyrics).toHaveLength(0)
+    }
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
+  test('loads saved server lyrics after restoring a queue without a lyric URL', async () => {
+    const original = song({ lyricUrl: undefined })
+    await savePlaybackState({ playlist: [original], currentIndex: 0, positionMs: 1000 })
+    const restored = (await loadPlaybackState())!.playlist[0]!
+    const fetcher = vi.fn(async () => PAYLOAD)
+    await useLyricStore.getState().loadForSong(restored, fetcher)
+    expect(fetcher).toHaveBeenCalledWith(
+      expect.objectContaining({ lyricUrl: '/api/v1/songs/7/lyric' }),
+      { refresh: undefined },
+    )
+    expect(useLyricStore.getState().rawLyric).toBe(PAYLOAD.lyric)
+    expect(restored.lyricUrl).toBeUndefined()
+  })
+
+  test('restores the re-fetched cache even when the saved queue has no lyric URL', async () => {
+    const original = song({ lyricUrl: undefined })
+    defaultFetcherMock.mockResolvedValue(PAYLOAD)
+    await useLyricStore.getState().refetch(original)
+    useLyricStore.getState().clear()
+    const fetcher = vi.fn(async () => ({}))
+    await useLyricStore.getState().loadForSong(original, fetcher)
+    expect(fetcher).not.toHaveBeenCalled()
+    expect(useLyricStore.getState().rawLyric).toBe(PAYLOAD.lyric)
+  })
+
   test('keeps notification lyric placement across loading, missing lyrics and failures', async () => {
     useLyricStore.getState().setNotificationLyricInTitle(false)
     await useLyricStore.getState().loadForSong(song(), async () => PAYLOAD)

@@ -13,6 +13,11 @@ const favorite = vi.hoisted(() => ({
   toggle: vi.fn(async (_id: number) => true),
   read: vi.fn(async (_id: number) => false),
 }))
+// Widget commands are tested without a server session. A restored local song
+// now also loads saved lyrics, so keep that request out of the auth lifecycle.
+vi.mock('../data/lyric-source.js', () => ({
+  defaultLyricFetcher: vi.fn(async () => ({})),
+}))
 vi.mock('../../library/data/favorites.js', () => ({
   toggleFavoriteNonReact: favorite.toggle,
   getFavoriteState: favorite.read,

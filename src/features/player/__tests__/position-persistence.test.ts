@@ -10,6 +10,11 @@ import type { SavePlaybackStateParams } from '../data/playback-persistence.js'
  * subscriptions, hence a dedicated file.
  */
 
+// Position/live-activity fixtures do not supply a real authenticated session.
+vi.mock('../data/lyric-source.js', () => ({
+  defaultLyricFetcher: vi.fn(async () => ({})),
+}))
+
 // Typed to the real signature so `mock.calls` destructures (the params object is [0]).
 const savePlaybackState = vi.fn(async (_params: SavePlaybackStateParams) => {})
 vi.mock('../data/playback-persistence.js', async (importOriginal) => ({
