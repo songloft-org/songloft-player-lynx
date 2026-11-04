@@ -2,6 +2,25 @@
 
 此文件记录 Songloft Player（Lynx）的版本变更，仅提供中文版本。版本 tag 的 Release 发布成功后，由 CI 根据 Conventional Commits 分类追加记录并提交到 `main`；滚动 dev 记录见 [GitHub Releases](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev)。
 
+## [v0.1.8] - 2026-11-04
+### :sparkles: 新增功能
+- [`07599c3`](https://github.com/songloft-org/songloft-player-lynx/commit/07599c329f3b52247d48538bfbc7537fd8584148) - **library**: 补齐曲库全选与批量删除 (songloft-org/songloft[#549](https://github.com/songloft-org/songloft-player-lynx/pull/549)) *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :bug: 问题修复
+- [`24d0420`](https://github.com/songloft-org/songloft-player-lynx/commit/24d0420bad6154926aa42cbc506947def0bd7a27) - **jsplugin**: 修复浏览器文件选择等待和插件上传字段 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`196adc5`](https://github.com/songloft-org/songloft-player-lynx/commit/196adc500da5b700bfbf61ab99ffc4b2918922c4) - **web**: 修复 WebKit 曲库分页回顶 (Ref songloft-org/songloft[#540](https://github.com/songloft-org/songloft-player-lynx/pull/540)) *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a90cded`](https://github.com/songloft-org/songloft-player-lynx/commit/a90cded03be18426de61c6df436d08a29e7a3077) - **web**: 稳定曲库滚动和玻璃采样 songloft-org/songloft[#540](https://github.com/songloft-org/songloft-player-lynx/pull/540) *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`8ed3c64`](https://github.com/songloft-org/songloft-player-lynx/commit/8ed3c6484d6107a5f5fd0dc417b6d984578524fd) - **playlist**: 修复内置收藏手动排序与跨行拖动 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`07eb9b2`](https://github.com/songloft-org/songloft-player-lynx/commit/07eb9b25c851b19eadb005f8345f2493aab72b2b) - **playlist**: 修复拖动排序跨屏自动滚动 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ca9216d`](https://github.com/songloft-org/songloft-player-lynx/commit/ca9216d34071ca21c14c814cbc7fe9ca7dd0d2dd) - **lyrics**: 恢复旧播放队列中的已保存歌词 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :zap: 性能优化
+- [`ea55033`](https://github.com/songloft-org/songloft-player-lynx/commit/ea55033d73456d9268d8e31069ced1e144511dce) - **library**: 优化曲库分页与 Web 滚动 (Ref songloft-org/songloft[#540](https://github.com/songloft-org/songloft-player-lynx/pull/540)) *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :wrench: 维护工作
+- [`5e6fe23`](https://github.com/songloft-org/songloft-player-lynx/commit/5e6fe23055eb6512fe185e2fcb9b3acaf9e73497) - **release**: 发布 0.1.8 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+
 ## [v0.1.6] - 2026-10-23
 ### :sparkles: 新增功能
 - [`bc238b4`](https://github.com/songloft-org/songloft-player-lynx/commit/bc238b45ff0b566628fe8cddedb0c3b91f2f24ea) - **player**: 补齐偏好管理、MV 字幕及手机桌面小组件 *(提交者 [@hanxi](https://github.com/hanxi))*
@@ -728,3 +747,4 @@
 [v0.1.4]: https://github.com/songloft-org/songloft-player-lynx/compare/v0.1.3...v0.1.4
 [v0.1.5]: https://github.com/songloft-org/songloft-player-lynx/compare/v0.1.4...v0.1.5
 [v0.1.6]: https://github.com/songloft-org/songloft-player-lynx/compare/v0.1.5...v0.1.6
+[v0.1.8]: https://github.com/songloft-org/songloft-player-lynx/compare/v0.1.7...v0.1.8
