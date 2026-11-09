@@ -28,6 +28,8 @@ export interface BatchDeleteSongsTarget {
 export interface SongMenuRowContext {
   /** Wide viewport: the row tail already renders the "add-to-playlist" shortcut button. */
   isWide: boolean
+  /** Contextual playlist removal; distinct from deleting the song from the library. */
+  onRemoveFromPlaylist?: (song: Song) => void
 }
 
 export interface OpenMenuParams {

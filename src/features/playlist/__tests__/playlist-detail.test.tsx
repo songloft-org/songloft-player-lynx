@@ -6,6 +6,7 @@ import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/tes
 
 import type { Playlist } from '../../../models/playlist.js'
 import type { Song } from '../../../models/song.js'
+import { LibraryViewportProvider } from '../../library/pages/library-viewport.js'
 import { PlaylistApi } from '../api/index.js'
 import { usePlayerStore } from '../../player/store/index.js'
 
@@ -23,6 +24,7 @@ const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSon
 
 const navigateMock = vi.hoisted(() => vi.fn())
 const rowRenders = vi.hoisted(() => vi.fn())
+const rowRemoval = vi.hoisted(() => new Map<number, (song: Song) => void>())
 const sortable = vi.hoisted(() => ({ onSortEnd: undefined as ((items: Array<{ dataItem: Song; getSortingKey: () => string }>) => void) | undefined, props: {} as Record<string, unknown> }))
 const listEvents = vi.hoisted(() => ({ onEndReached: undefined as (() => void) | undefined }))
 const cache = vi.hoisted(() => ({ available: false, beginSongs: vi.fn(), beginPlaylist: vi.fn() }))
@@ -151,6 +153,8 @@ vi.mock('../../library/widgets/SongListRow.js', async () => {
   const { SongRow } = await import('../../library/widgets/SongRow.js')
   return { SongListRow: (props: Parameters<typeof SongRow>[0]) => {
     rowRenders(props.song.id)
+    const onRemove = (props as typeof props & { onRemoveFromPlaylist?: (song: Song) => void }).onRemoveFromPlaylist
+    if (onRemove) rowRemoval.set(props.song.id, onRemove)
     return <SongRow {...props} />
   } }
 })
@@ -243,6 +247,7 @@ function mutationResult(over = {}) {
 }
 
 beforeEach(() => {
+  rowRemoval.clear()
   listEvents.onEndReached = undefined
   cache.available = false
   detailHook.mockReturnValue(detailResult(makePlaylist()))
@@ -258,8 +263,8 @@ beforeEach(() => {
 
 afterEach(() => vi.clearAllMocks())
 
-async function renderPage() {
-  render(<PlaylistDetailPage />)
+async function renderPage(wide = false) {
+  render(<LibraryViewportProvider value={{ isWide: wide, isSongListWide: wide }}><PlaylistDetailPage /></LibraryViewportProvider>)
   await act(async () => {
     await Promise.resolve()
   })
@@ -504,15 +509,15 @@ test('permanent ordering waits for confirmation and submits a server action', as
   sort.mockRestore()
 })
 
-test('the row-tail remove button asks for confirmation before removing the song', async () => {
+test('the mobile row menu asks for confirmation before removing a song', async () => {
   songsHook.mockReturnValue(
     songsResult([{ songs: [makeSong(11), makeSong(12)], total: 2 }]),
   )
   const queries = await renderPage()
 
-  // The old row-tail × removed the song on the first tap.
-  fireEvent.tap(queries.getAllByTestId('playlist-detail-remove')[0]!, {})
-  await act(async () => { await Promise.resolve() })
+  expect(queries.queryByTestId('playlist-detail-remove')).not.toBeInTheDocument()
+  expect(rowRemoval.get(11)).toBeTypeOf('function')
+  await act(async () => { rowRemoval.get(11)!(makeSong(11)) })
   expect(removeSongMutationHook.mock.results[0]!.value.mutate).not.toHaveBeenCalled()
   expect(queries.queryByTestId('playlist-delete-dialog')).toBeInTheDocument()
 
@@ -520,6 +525,24 @@ test('the row-tail remove button asks for confirmation before removing the song'
   await act(async () => { await Promise.resolve() })
   expect(removeSongMutationHook.mock.results[0]!.value.mutate).toHaveBeenCalledWith(11)
   expect(queries.queryByTestId('playlist-delete-dialog')).not.toBeInTheDocument()
+})
+
+test('desktop rows retain the remove shortcut and its confirmation', async () => {
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(11)], total: 1 }]))
+  const q = await renderPage(true)
+  expect(rowRemoval.size).toBe(0)
+  fireEvent.tap(q.getByTestId('playlist-detail-remove'), {})
+  await act(async () => { await Promise.resolve() })
+  expect(removeSongMutationHook.mock.results[0]!.value.mutate).not.toHaveBeenCalled()
+  expect(q.queryByTestId('playlist-delete-dialog')).toBeInTheDocument()
+})
+
+test('built-in playlists do not gain the contextual remove action', async () => {
+  detailHook.mockReturnValue(detailResult(makePlaylist({ id: 1, labels: ['built_in'], isBuiltIn: true })))
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(11)], total: 1 }]))
+  const q = await renderPage()
+  expect(rowRemoval.size).toBe(0)
+  expect(q.queryByTestId('playlist-detail-remove')).not.toBeInTheDocument()
 })
 
 test('visibility menu item fires the visibility mutation', async () => {

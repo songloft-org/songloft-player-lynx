@@ -46,6 +46,9 @@ export function buildSongMenuItems(
     { key: 'edit', label: t('songMenu.edit'), icon: 'brush' },
     ...(wide ? [] : [{ key: 'add', label: t('songMenu.addToPlaylist'), icon: 'music' as const }]),
     { key: 'manageTags', label: t('songTag.manageTags'), icon: 'label' as const },
+    ...(row?.onRemoveFromPlaylist
+      ? [{ key: 'removeFromPlaylist', label: t('playlist.removeSong'), icon: 'x' as const }]
+      : []),
     { key: 'delete', label: t('songMenu.deleteSong'), icon: 'x' as const, danger: true },
   ]
 }

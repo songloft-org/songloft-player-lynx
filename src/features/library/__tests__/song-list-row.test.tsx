@@ -129,7 +129,7 @@ afterEach(() => vi.clearAllMocks())
 
 async function renderRow(
   opts: { isWide?: boolean, isSongListWide?: boolean },
-  props: { selectionMode?: boolean } = {},
+  props: { selectionMode?: boolean; onRemoveFromPlaylist?: (song: Song) => void } = {},
 ) {
   render(
     <LibraryViewportProvider value={{ isWide: opts.isWide ?? false, isSongListWide: opts.isSongListWide ?? false }}>
@@ -141,6 +141,30 @@ async function renderRow(
   })
   return getQueriesForElement(elementTree.root!)
 }
+
+test('playlist context reaches the global menu without changing the song target', async () => {
+  const onRemoveFromPlaylist = vi.fn()
+  const q = await renderRow({}, { onRemoveFromPlaylist })
+  fireEvent.longpress(q.getByText('Blue in Green'), {})
+  await act(async () => { await Promise.resolve() })
+  expect(openMenuMock).toHaveBeenCalledWith(expect.objectContaining({
+    song: expect.objectContaining({ id: 1 }),
+    row: { isWide: false, onRemoveFromPlaylist },
+  }))
+})
+
+test('narrow duration shares the subtitle line', async () => {
+  await renderRow({})
+  const root = elementTree.root!
+  expect(root.querySelector('.song-row__subtitle-row .song-row__duration')?.textContent).toBe('05:27')
+  expect(root.querySelectorAll('.song-row__duration')).toHaveLength(1)
+})
+
+test('wide duration remains a separate column', async () => {
+  await renderRow({ isWide: true, isSongListWide: true })
+  expect(elementTree.root!.querySelector('.song-row__subtitle-row')).toBeNull()
+  expect(elementTree.root!.querySelector('.song-row__content > .song-row__duration')?.textContent).toBe('05:27')
+})
 
 test('narrow rows show a more button but no flat shortcuts', async () => {
   const { queryByTestId } = await renderRow({})

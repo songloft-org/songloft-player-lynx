@@ -15,7 +15,9 @@ vi.mock('../../../features/library/widgets/SongInfoDialog.js', () => ({ SongInfo
 vi.mock('../../../features/library/widgets/ManageTagsSheet.js', () => ({ ManageTagsSheet: () => null }))
 vi.mock('../../../features/playlist/widgets/AddToPlaylistSheet.js', () => ({ AddToPlaylistSheet: () => null }))
 vi.mock('../../../features/player/widgets/MiniPlayerVolumePanel.js', () => ({ MiniPlayerVolumePanel: () => null }))
-vi.mock('../GlobalMenu.js', () => ({ GlobalMenu: () => null }))
+vi.mock('../GlobalMenu.js', () => ({ GlobalMenu: ({ show, items, onSelect, onClose }: {
+  show: boolean; items: Array<{ key: string }>; onSelect(key: string): void; onClose(): void
+}) => show ? <view>{items.map(item => <view key={item.key} data-testid={`song-action-${item.key}`} bindtap={() => { onSelect(item.key); onClose() }} />)}</view> : null }))
 vi.mock('../../../features/settings/widgets/SwitchRow.js', () => ({
   SwitchRow: (p: { checked: boolean; onChange(value: boolean): void; testId: string }) => (
     <view data-testid={p.testId} bindtap={() => p.onChange(!p.checked)}><text>{String(p.checked)}</text></view>
@@ -33,7 +35,21 @@ vi.mock('../song-row-overlays.js', async original => {
 const { SongRowOverlays } = await import('../SongRowOverlays.js')
 const { useSongRowOverlays } = await import('../song-row-overlays.js')
 
-afterEach(() => { useSongRowOverlays.getState().cancelDelete(); vi.restoreAllMocks(); vi.clearAllMocks() })
+afterEach(() => { useSongRowOverlays.getState().cancelDelete(); useSongRowOverlays.getState().closeMenu(); vi.restoreAllMocks(); vi.clearAllMocks() })
+
+test('playlist removal dispatches the row callback without deleting a library song', async () => {
+  const song = { id: 11, type: 'local' } as import('../../../models/song.js').Song
+  const onRemoveFromPlaylist = vi.fn()
+  const remove = vi.spyOn(SongsApi.prototype, 'deleteSong')
+  useSongRowOverlays.getState().openMenu({ song, row: { isWide: false, onRemoveFromPlaylist } })
+  render(<SongRowOverlays />)
+  const q = getQueriesForElement(elementTree.root!)
+  await act(async () => { fireEvent.tap(q.getByTestId('song-action-removeFromPlaylist')) })
+  expect(onRemoveFromPlaylist).toHaveBeenCalledExactlyOnceWith(song)
+  expect(remove).not.toHaveBeenCalled()
+  expect(useSongRowOverlays.getState().menuSong).toBeNull()
+  expect(useSongRowOverlays.getState().deleteSong).toBeNull()
+})
 
 test('batch confirmation preserves files by default, invalidates lists and reports success only after deletion', async () => {
   const onDeleted = vi.fn()

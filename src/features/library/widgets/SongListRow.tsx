@@ -38,6 +38,8 @@ export interface SongListRowProps {
    * can anchor its own menu the same way the global one does.
    */
   onOpenMenu?: (song: Song, anchor: AnchorMeasurement | null) => void
+  /** Optional playlist action, dispatched through the root-mounted song menu. */
+  onRemoveFromPlaylist?: (song: Song) => void
 }
 
 /**
@@ -66,6 +68,7 @@ export const SongListRow = memo(function SongListRow({
   isSelected = false,
   subtitleSuffix,
   onOpenMenu,
+  onRemoveFromPlaylist,
 }: SongListRowProps) {
   const { t } = useTranslation()
   const openMenu = useSongRowOverlays((s) => s.openMenu)
@@ -78,7 +81,7 @@ export const SongListRow = memo(function SongListRow({
   // Both entry points (the `⋯` button and long-press) anchor on the `⋯` button.
   const openMenuAnchored = (target: Song) => measure((rect) => {
     if (onOpenMenu) onOpenMenu(target, rect)
-    else openMenu({ song: target, anchor: rect, row: { isWide } })
+    else openMenu({ song: target, anchor: rect, row: { isWide, ...(onRemoveFromPlaylist ? { onRemoveFromPlaylist } : {}) } })
   })
 
   // Wide rows: one shortcut — "add to playlist" (the highest-frequency action).

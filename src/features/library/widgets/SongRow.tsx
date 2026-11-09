@@ -58,7 +58,7 @@ export function SongRow({ song, index, showIndex, titleInitial, onTap, onLongPre
   const subtitle = [song.artist, song.album, subtitleSuffix].filter(Boolean).join(' · ')
 
   return (
-    <view className={`song-row${isCurrentSong ? ' song-row--current' : ''}${isSelected ? ' song-row--selected' : ''}`} bindtap={() => onTap?.(song, index)} bindlongpress={() => onLongPress?.(song)}>
+    <view className={`song-row${!isWide ? ' song-row--narrow' : ''}${isCurrentSong ? ' song-row--current' : ''}${isSelected ? ' song-row--selected' : ''}`} bindtap={() => onTap?.(song, index)} bindlongpress={() => onLongPress?.(song)}>
       {showIndex ? <view className='song-row__index'>
         {titleInitial ? <text className='song-row__initial'>{titleInitial}</text> : null}
         <text className={titleInitial ? 'song-row__number song-row__number--small' : 'song-row__number'}>{String(index + 1)}</text>
@@ -74,7 +74,7 @@ export function SongRow({ song, index, showIndex, titleInitial, onTap, onLongPre
             <>
               <view className='song-row__meta song-row__meta--wide'>
                 <view className='song-row__title-row'>
-                  <ScrollingText textClassName='song-row__title' text={song.title} />
+                  <ScrollingText className='song-row__title-text' textClassName='song-row__title' text={song.title} />
                   {song.isVideo
                     ? <view className='song-row__video-badge'><Icon name='video' size={13} color={activeAccentIconColor()} /></view>
                     : null}
@@ -88,17 +88,18 @@ export function SongRow({ song, index, showIndex, titleInitial, onTap, onLongPre
             /* Narrow: stacked title + subtitle (artist · album). */
             <view className='song-row__meta'>
               <view className='song-row__title-row'>
-                <ScrollingText textClassName='song-row__title' text={song.title} />
+                <ScrollingText className='song-row__title-text' textClassName='song-row__title' text={song.title} />
                 {song.isVideo
                   ? <view className='song-row__video-badge'><Icon name='video' size={13} color={activeAccentIconColor()} /></view>
                   : null}
               </view>
-              {subtitle
-                ? <text className='song-row__subtitle'>{subtitle}</text>
-                : null}
+              <view className='song-row__subtitle-row'>
+                {subtitle ? <text className='song-row__subtitle'>{subtitle}</text> : null}
+                <text className='song-row__duration'>{formatDuration(song.duration)}</text>
+              </view>
             </view>
           )}
-        <text className='song-row__duration'>{formatDuration(song.duration)}</text>
+        {isWide ? <text className='song-row__duration'>{formatDuration(song.duration)}</text> : null}
         {onToggleFavorite != null
           ? <view
               className='song-row__fav'

@@ -133,6 +133,9 @@ export function SongRowOverlays() {
       case 'delete':
         requestDelete(song)
         return
+      case 'removeFromPlaylist':
+        menuRow?.onRemoveFromPlaylist?.(song)
+        return
     }
   }
 

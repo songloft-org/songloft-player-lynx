@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-09 · songloft-org/songloft#562
+
+窄屏歌曲行重排与普通歌单移除菜单已实现。旧源码 3 项新增回归失败；最终完整 3,779 项、84 项定向、类型、双产物与嵌入 Web 构建通过，真实浏览器动作见 [记录](issue-562.md)。原机未验，未提交、推送、发布、更新父指针或写 Issue。
+
+English: Narrow rows and the ordinary-playlist removal menu are implemented. Three new regressions fail on old source; all 3,779 tests, 84 focused checks, types, dual outputs and embedded Web build pass. Actual browser interactions: [record](../en/project/issue-562.md). Reporter device untested; no commit/push/release/gitlink update/Issue write.
+
+用户随后授权本批提交、推送、同步父指针并回复 #562；实际结果以 GitHub 记录为准，不包含正式发版与关闭 Issue。English: The user subsequently authorized this batch's commit, push, parent pointer update and reply to #562; GitHub records govern delivery, excluding formal release and Issue closure.
+
 ## 2026-11-03 · songloft-org/songloft#555
 
 修复旧队列缺少歌词地址时在读取缓存前清空歌词的问题；正常请求恢复服务端已保存歌词，保留离线隔离和错误语义。旧实现两项回归失败；类型、双产物/Web、真实 Chrome 两次重载与播放通过。完整测试与未验范围见 [记录](issue-555.md)。未提交、推送、更新父指针、发布或评论。

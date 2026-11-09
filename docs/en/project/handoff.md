@@ -1,5 +1,11 @@
 # Handoff (2026-10-14)
 
+## 2026-11-09 · songloft-org/songloft#562
+
+Mobile duration moves to the second line; favorite/more retain 44px targets. Ordinary playlist removal moves into the menu with confirmation, preserving desktop/built-in boundaries. Final checks, browser comparisons and platform gaps: [record](issue-562.md). Parent/Flutter unchanged; dirty submodule, no commit/push/gitlink update/release/Issue write.
+
+The user subsequently authorized this batch's commit, push, parent pointer update and reply to #562; GitHub records govern delivery, excluding formal release and Issue closure.
+
 ## 2026-11-03 · songloft-org/songloft#555
 
 Old playback queues lacking a lyric URL now read cache and fall back to the ordinary lyric endpoint; offline snapshots make no server request. Types, dual/Web builds, two full Chrome page loads and actual playback pass; full tests and boundaries: [record](issue-555.md). The reporter's client and queue snapshot remain unconfirmed. No commit, push, parent pointer update, release or comment.

@@ -240,6 +240,7 @@
 
 .playlist-detail__song-row-content {
   flex: 1;
+  min-width: 0;
 }
 
 .playlist-detail__select-box {

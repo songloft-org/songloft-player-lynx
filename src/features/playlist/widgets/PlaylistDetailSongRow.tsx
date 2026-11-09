@@ -4,6 +4,7 @@ import type { Song } from '../../../models/song.js'
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { SongListRow } from '../../library/widgets/SongListRow.js'
+import { useLibraryViewport } from '../../library/pages/library-viewport.js'
 
 interface Props {
   song: Song
@@ -28,6 +29,7 @@ export const PlaylistDetailSongRow = memo(function PlaylistDetailSongRow({
   onRemove,
 }: Props) {
   const { t } = useTranslation()
+  const { isWide } = useLibraryViewport()
   return (
     <view
       className={
@@ -53,9 +55,10 @@ export const PlaylistDetailSongRow = memo(function PlaylistDetailSongRow({
           onTap={onTap}
           selectionMode={selectMode}
           isSelected={selected}
+          onRemoveFromPlaylist={!isBuiltIn && !selectMode && !isWide ? onRemove : undefined}
         />
       </view>
-      {!isBuiltIn && !selectMode ? (
+      {!isBuiltIn && !selectMode && isWide ? (
         <view
           className='playlist-detail__remove-btn'
           bindtap={() => onRemove(song)}

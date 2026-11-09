@@ -314,3 +314,15 @@ test('only the delete item is danger-flagged', () => {
   const items = buildSongMenuItems((key) => key, null)
   expect(items.filter((item) => item.danger).map((item) => item.key)).toEqual(['delete'])
 })
+
+test('playlist removal is offered only with a playlist callback and remains distinct from library deletion', () => {
+  const onRemoveFromPlaylist = () => {}
+  const items = buildSongMenuItems(key => key, { isWide: false, onRemoveFromPlaylist })
+  expect(items.find(item => item.key === 'removeFromPlaylist')?.label).toBe('playlist.removeSong')
+  expect(items.find(item => item.key === 'delete')?.label).toBe('songMenu.deleteSong')
+  expect(buildSongMenuItems(key => key, { isWide: false }).map(item => item.key)).not.toContain('removeFromPlaylist')
+  useSongRowOverlays.getState().openMenu({ song: makeSong(1), row: { isWide: false, onRemoveFromPlaylist } })
+  useSongRowOverlays.getState().closeMenu()
+  useSongRowOverlays.getState().openMenu({ song: makeSong(2) })
+  expect(useSongRowOverlays.getState().menuRow).toBeNull()
+})

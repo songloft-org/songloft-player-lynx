@@ -10,6 +10,13 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 ## Entries
 
+### UI-006: Reallocate narrow-row information while preserving touch targets
+
+- Scope: shared rows and playlist context menus, songloft-org/songloft#562; baseline `5e6fe23055eb6512fe185e2fcb9b3acaf9e73497`.
+- Evidence: at 390px, duration, favorite, more and outer removal leave about 104px for the playlist title; favorite/more targets are only 26px. Shrinking glyphs alone cannot address both title space and touch area.
+- Rule and Done right: put duration on the second line and mobile removal in the root menu with confirmation, retaining 44px favorite/more targets. Verify layout, scrolling and actions separately through measurements, actual movement, membership and requests. The baseline already scrolls; do not assume the device symptom means a missing component. Three new regressions fail on old code; final object/boundaries: [record](docs/en/project/issue-562.md).
+- Seen 1× (2026-11-09). Status: local optimization, no commit/push/release; actual Honor/HarmonyOS device pending.
+
 ### LYRIC-002: A missing lyric URL in a queue snapshot does not prove the server has no lyrics
 
 - Scope: song restoration and lyric caching, songloft-org/songloft#555; baseline `07eb9b25c851b19eadb005f8345f2493aab72b2b`.

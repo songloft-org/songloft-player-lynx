@@ -1,5 +1,13 @@
 # 工作交接（2026-10-14）
 
+## 2026-11-09 · songloft-org/songloft#562
+
+手机歌曲行将时长移至第二行、收藏/更多保留 44px 点击区域，普通歌单移除进入更多菜单并保留确认；桌面和内置歌单边界不变。最终测试、浏览器宽度对比及未跑平台见 [记录](issue-562.md)。主仓库/Flutter 未改，子模块 dirty，未提交、推送、更新父指针、发布或写 Issue。
+
+English: Mobile duration moves to the second line; favorite/more retain 44px targets. Ordinary playlist removal moves into the menu with confirmation, preserving desktop/built-in boundaries. Final checks, browser comparisons and platform gaps: [record](../en/project/issue-562.md). Parent/Flutter unchanged; dirty submodule, no commit/push/gitlink update/release/Issue write.
+
+用户随后授权本批提交、推送、同步父指针并回复 #562；实际结果以 GitHub 记录为准，正式发版与关闭 Issue 不在授权内。English: The user subsequently authorized this batch's commit, push, parent pointer update and reply to #562; GitHub records govern delivery, excluding formal release and Issue closure.
+
 ## 2026-11-03 · songloft-org/songloft#555
 
 旧播放队列缺少歌词地址时，正常加载现已读取缓存并兜底普通歌词端点；离线快照不发服务端请求。类型、双产物/Web、Chrome 两次整页加载及真实播放通过，全量与边界见 [记录](issue-555.md)。报告人的具体客户端与队列快照未确认。未提交、推送、更新父指针、发布或评论。
