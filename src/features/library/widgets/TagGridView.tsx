@@ -55,7 +55,7 @@ export function TagGridView({ viewMode = 'grid' }: TagGridViewProps) {
     navigate({
       to: '/library/tags/$tagId',
       params: { tagId: String(tag.id) },
-      search: { name: tag.name, cover: tag.coverUrl || undefined },
+      search: { name: tag.name, cover: tag.coverUrl || undefined, view: tag.playlistCount > 0 ? 'playlists' : 'songs' },
     })
   }
 
@@ -98,7 +98,7 @@ export function TagGridView({ viewMode = 'grid' }: TagGridViewProps) {
                           subtitle={t(
                             tag.songCount === 1 ? 'common.songCountOne' : 'common.songCountOther',
                             { count: tag.songCount },
-                          )}
+                          ) + (tag.playlistCount > 0 ? ` · ${t('songTag.playlistCount', { count: tag.playlistCount })}` : '')}
                           coverUrl={tag.coverUrl ? buildCoverUrl(tag.coverUrl) : undefined}
                           onTap={() => navigateToTag(tag)}
                           onPlayAll={() => { void onPlayAll(tag) }}

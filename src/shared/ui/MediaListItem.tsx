@@ -1,16 +1,19 @@
 import { useTranslation } from 'react-i18next'
+import type { ReactNode } from '@lynx-js/react'
 
 import { Icon, ICON_COLORS } from './Icon.js'
 import { AppCheckbox } from './AppCheckbox.js'
 import { useTapAnchor } from './anchored-overlay.js'
 import type { AnchorMeasurement } from './anchored-overlay.js'
 import './MediaListItem.css'
+import { ScrollingText } from './ScrollingText.js'
 
 export interface MediaListItemProps {
   /** Main line — playlist name, artist/album value, … */
   name: string
   /** Secondary line under the name (usually a song count). */
   subtitle?: string
+  details?: ReactNode
   /** Small chip shown beside the subtitle (e.g. "Pinned"). */
   badge?: string
   /** Fully resolved cover URL (caller runs `buildCoverUrl`). */
@@ -40,6 +43,7 @@ export interface MediaListItemProps {
 export function MediaListItem({
   name,
   subtitle,
+  details,
   badge,
   coverUrl,
   isPlaying,
@@ -74,7 +78,8 @@ export function MediaListItem({
           )}
       </view>
       <view className='media-list-item__info'>
-        <text className='media-list-item__name'>{name}</text>
+        <ScrollingText text={name} textClassName='media-list-item__name' />
+        {details}
         {/*
           * The badge wraps the subtitle into a row; without a badge the subtitle
           * stays exactly where it was, so the rows that never pass one (artists,

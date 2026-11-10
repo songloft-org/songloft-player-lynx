@@ -10,6 +10,7 @@ export const songTagSchema = z
       name: z.string().catch(''),
       color: z.string().catch(''),
       song_count: z.number().catch(0),
+      playlist_count: z.number().catch(0),
       cover_url: z.string().catch(''),
       created_at: z.string().catch(''),
     }),
@@ -19,6 +20,7 @@ export const songTagSchema = z
     name: raw.name,
     color: raw.color,
     songCount: raw.song_count,
+    playlistCount: raw.playlist_count,
     coverUrl: raw.cover_url,
     createdAt: raw.created_at,
   }))

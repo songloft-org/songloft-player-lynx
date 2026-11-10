@@ -48,7 +48,7 @@ export function useTagListInfiniteQuery(keyword?: string) {
   })
 }
 
-export function useTagSongsInfiniteQuery(tagId: number) {
+export function useTagSongsInfiniteQuery(tagId: number, enabled = true) {
   return useInfiniteQuery({
     queryKey: songTagQueryKeys.songs(tagId),
     initialPageParam: 0,
@@ -59,7 +59,7 @@ export function useTagSongsInfiniteQuery(tagId: number) {
       )
     },
     getNextPageParam: songsNextPageParam,
-    enabled: tagId > 0,
+    enabled: tagId > 0 && enabled,
   })
 }
 
@@ -105,8 +105,13 @@ export function useDeleteTagMutation() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => getSongTagsApi().delete(id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: songTagQueryKeys.all })
+    onSuccess: async () => {
+      // Deletion also removes tag:<id> from playlist metadata. Refresh both
+      // catalogs and bindings so a reused tag ID cannot resolve stale labels.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: songTagQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ['playlist'] }),
+      ])
     },
   })
 }

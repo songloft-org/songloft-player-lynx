@@ -1,1 +1,5 @@
 /* TagSongsPage reuses CategorySongsPage styles (same layout pattern). */
+.tag-collections__tabs { display: flex; flex-direction: row; padding: var(--space-1) var(--space-3); flex-shrink: 0; }
+.tag-collections__tab { display: flex; align-items: center; justify-content: center; flex: 1; min-height: var(--tap-target); border-radius: var(--radius-sm); }
+.tag-collections__tab--active { background-color: var(--tertiary-system-fill); }
+.tag-collections__tab-text { color: var(--label); font-size: var(--font-subhead); }

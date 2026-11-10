@@ -17,39 +17,46 @@ import '../../../shared/ui/overlay-motion.css'
 import './ManageTagsSheet.css'
 
 export interface ManageTagsSheetProps {
-  songIds: number[]
+  songIds?: number[]
+  playlistIds?: number[]
   onClose: () => void
 }
 
-export function ManageTagsSheet({ songIds, onClose }: ManageTagsSheetProps) {
+export function ManageTagsSheet({ songIds = [], playlistIds, onClose }: ManageTagsSheetProps) {
+  const isPlaylist = playlistIds !== undefined
+  const targetIds = playlistIds ?? songIds
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [allTags, setAllTags] = useState<SongTag[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [initialIds, setInitialIds] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [newTagName, setNewTagName] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  useBackHandler(songIds.length > 0, () => {
+  useBackHandler(targetIds.length > 0, () => {
     onClose()
     return true
   })
 
-  const songIdsKey = songIds.join(',')
+  const targetIdsKey = `${isPlaylist ? 'playlists' : 'songs'}:${targetIds.join(',')}`
 
   useEffect(() => {
-    if (songIds.length === 0) return
+    if (targetIds.length === 0) return
+    let active = true
     const api = getSongTagsApi()
     setLoading(true)
+    setLoadError(false)
     setNewTagName('')
     const load = async () => {
       try {
-        const [tagsRes, ...perSongTags] = await Promise.all([
-          api.list({ limit: 200, sort: 'song_count', order: 'desc' }),
-          ...songIds.map((id) => api.getSongTags(id)),
+        const [tags, ...perSongTags] = await Promise.all([
+          api.all(),
+          ...targetIds.map((id) => isPlaylist ? api.getPlaylistTags(id) : api.getSongTags(id)),
         ])
-        setAllTags(tagsRes.tags)
+        if (!active) return
+        setAllTags(tags)
         let ids: Set<number>
         if (perSongTags.length === 1) {
           ids = new Set(perSongTags[0]!.map((t) => t.id))
@@ -69,15 +76,18 @@ export function ManageTagsSheet({ songIds, onClose }: ManageTagsSheetProps) {
         setSelectedIds(ids)
         setInitialIds(ids)
       } catch {
+        if (!active) return
+        setLoadError(true)
         toast.error(t('addToPlaylist.loadFailed'))
       } finally {
-        setLoading(false)
+        if (active) setLoading(false)
       }
     }
     void load()
-  }, [songIdsKey])
+    return () => { active = false }
+  }, [targetIdsKey])
 
-  const { mounted, leaving } = usePresence(songIds.length > 0)
+  const { mounted, leaving } = usePresence(targetIds.length > 0)
   if (!mounted) return null
 
   const toggle = (id: number) => {
@@ -104,23 +114,30 @@ export function ManageTagsSheet({ songIds, onClose }: ManageTagsSheetProps) {
   }
 
   const save = async () => {
-    if (submitting) return
+    if (submitting || loading || loadError) return
     setSubmitting(true)
     try {
       const api = getSongTagsApi()
-      if (songIds.length === 1) {
-        await api.setSongTags(songIds[0]!, [...selectedIds])
+      if (targetIds.length === 1) {
+        if (isPlaylist) await api.setPlaylistTags(targetIds[0]!, [...selectedIds])
+        else await api.setSongTags(targetIds[0]!, [...selectedIds])
       } else {
         const added = [...selectedIds].filter((id) => !initialIds.has(id))
         const removed = [...initialIds].filter((id) => !selectedIds.has(id))
-        for (const tagId of added) {
-          await api.bind(tagId, songIds)
-        }
-        for (const tagId of removed) {
-          await api.unbind(tagId, songIds)
+        if (isPlaylist) {
+          for (const id of targetIds) {
+            const tags = await api.getPlaylistTags(id)
+            const ids = new Set(tags.map(tag => tag.id).filter(id => !removed.includes(id)))
+            for (const tagId of added) ids.add(tagId)
+            await api.setPlaylistTags(id, [...ids])
+          }
+        } else {
+          for (const tagId of added) await api.bind(tagId, targetIds)
+          for (const tagId of removed) await api.unbind(tagId, targetIds)
         }
       }
       void queryClient.invalidateQueries({ queryKey: songTagQueryKeys.all })
+      if (isPlaylist) void queryClient.invalidateQueries({ queryKey: ['playlist'] })
       toast.show(t('songTag.saved'))
       onClose()
     } catch {
@@ -188,9 +205,7 @@ export function ManageTagsSheet({ songIds, onClose }: ManageTagsSheetProps) {
                       : <Icon name='label' size={16} color={ICON_COLORS.contentMuted} />}
                     <text className='manage-tags__name'>{tag.name}</text>
                     <text className='manage-tags__count'>
-                      {t(tag.songCount === 1 ? 'common.songCountOne' : 'common.songCountOther', {
-                        count: tag.songCount,
-                      })}
+                      {isPlaylist ? t('songTag.playlistCount', { count: tag.playlistCount }) : t(tag.songCount === 1 ? 'common.songCountOne' : 'common.songCountOther', { count: tag.songCount })}
                     </text>
                   </view>
                 ))}

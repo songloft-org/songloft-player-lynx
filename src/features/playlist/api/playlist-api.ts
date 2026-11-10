@@ -13,6 +13,7 @@ import {
 } from '../../../models/song.js'
 
 export interface PlaylistsFilters {
+  tagId?: number
   type?: string
   /**
    * Filter by the source of the songs the playlist holds: `'remote'` (network
@@ -78,6 +79,7 @@ export function buildPlaylistsQuery(
   putStr(query, 'song_source', filters.songSource)
   putStr(query, 'exclude_labels', filters.excludeLabels)
   putStr(query, 'keyword', filters.keyword)
+  if (filters.tagId != null && filters.tagId > 0) query.tag_id = filters.tagId
   return query
 }
 

@@ -46,6 +46,7 @@ export function TagCard({ tag, onTap, onPlayAll }: TagCardProps) {
         {t(tag.songCount === 1 ? 'common.songCountOne' : 'common.songCountOther', {
           count: tag.songCount,
         })}
+        {tag.playlistCount > 0 ? ` · ${t('songTag.playlistCount', { count: tag.playlistCount })}` : ''}
       </text>
     </view>
   )

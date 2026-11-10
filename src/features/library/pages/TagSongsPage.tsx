@@ -15,18 +15,20 @@ import { SongListRow } from '../widgets/SongListRow.js'
 import { VirtualList } from '../widgets/VirtualList.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
+import { PlaylistsView } from '../../playlist/widgets/PlaylistsView.js'
 import './TagSongsPage.css'
 
 export function TagSongsPage() {
   const { t } = useTranslation()
   const params = useParams({ strict: false }) as { tagId?: string }
-  const search = useSearch({ strict: false }) as { name?: string; cover?: string }
+  const search = useSearch({ strict: false }) as { name?: string; cover?: string; view?: 'playlists' | 'songs' }
 
   const tagId = Number(params.tagId) || 0
   const tagName = search.name ?? ''
   const cover = search.cover ? buildCoverUrl(search.cover) : ''
 
-  const songsQuery = useTagSongsInfiniteQuery(tagId)
+  const [tab, setTab] = useState<'playlists' | 'songs'>(search.view ?? 'songs')
+  const songsQuery = useTagSongsInfiniteQuery(tagId, tab === 'songs')
   const songs = flattenSongs(songsQuery.data?.pages)
   const total = songsQuery.data?.pages[0]?.total ?? 0
 
@@ -79,14 +81,14 @@ export function TagSongsPage() {
           <Icon name='chevron-down' size={22} color={ICON_COLORS.content} />
         </view>
         <view className='category-songs__topbar-right'>
-          {songs.length > 0
+          {tab === 'songs' && songs.length > 0
             ? (
               <view className='category-songs__play-all' bindtap={() => { void playAll() }}>
                 <text className='category-songs__play-all-text'>{t('playlist.playAll')}</text>
               </view>
             )
             : null}
-          <view
+          {tab === 'songs' ? <view
             className='category-songs__icon-btn'
             bindtap={() => setShowHistory(true)}
             accessibility-element={true}
@@ -94,7 +96,7 @@ export function TagSongsPage() {
             data-testid='tag-songs-history'
           >
             <Icon name='history' size={20} color={ICON_COLORS.content2} />
-          </view>
+          </view> : null}
         </view>
       </view>
       <view className='category-songs__hero'>
@@ -107,10 +109,17 @@ export function TagSongsPage() {
           )}
         <view className='category-songs__meta'>
           <text className='category-songs__label'>
-            {t('songTag.subtitle', { count: total })}
+            {tab === 'songs' ? t('songTag.subtitle', { count: total }) : t('songTag.tags')}
           </text>
           <text className='category-songs__name'>{tagName || t('common.unknown')}</text>
         </view>
+      </view>
+      <view className='tag-collections__tabs'>
+        {(['playlists', 'songs'] as const).map(value => (
+          <view key={value} className={`tag-collections__tab${tab === value ? ' tag-collections__tab--active' : ''}`} bindtap={() => setTab(value)} data-testid={`tag-tab-${value}`}>
+            <text className='tag-collections__tab-text'>{value === 'playlists' ? t('songTag.playlists') : t('songTag.songs')}</text>
+          </view>
+        ))}
       </view>
     </view>
   )
@@ -119,7 +128,7 @@ export function TagSongsPage() {
     <view className='category-songs'>
       {header}
       <view className='category-songs__body'>
-        {songsQuery.isLoading
+        {tab === 'playlists' ? <PlaylistsView tagId={tagId} /> : songsQuery.isLoading
           ? <TagState text={t('library.loadingSongs')} />
           : songsQuery.isError && songs.length === 0
             ? <TagState text={t('category.songsError')} tone='error' />

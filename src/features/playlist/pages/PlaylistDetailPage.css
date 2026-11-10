@@ -12,6 +12,7 @@
   flex-direction: column;
   width: 100%;
   border-bottom: 1px solid var(--separator);
+  flex-shrink: 0;
 }
 
 .playlist-detail__topbar {
@@ -104,20 +105,16 @@
 
 .playlist-detail__cover-wrapper {
   position: relative;
+  flex-shrink: 0;
 }
 
-/*
- * Cap the meta column at the cover height (160px). The title and song count are
- * stable, always-visible lines at the top; the description is clamped to two
- * lines below them (tapping it opens the full text in a bottom panel). This
- * keeps the count from being pushed off-screen by a long description (it is a
- * summary, not prose) while the header never grows past the cover.
- */
+/* Keep room for the cover, title, count and shared tags. Long descriptions
+ * remain clamped; compact viewports reduce the cover and minimum meta height. */
 .playlist-detail__meta {
   display: flex;
   flex-direction: column;
   flex: 1;
-  height: 160px;
+  min-height: 160px;
   margin-left: var(--space-4);
   min-width: 0;
 }
@@ -160,8 +157,23 @@
 
 .playlist-detail__count {
   color: var(--secondary-label);
-  font-size: var(--font-footnote);
+  font-size: var(--font-subhead);
   margin-top: var(--space-1);
+}
+
+.playlist-detail--compact .playlist-detail__topbar {
+  padding: var(--space-2) var(--space-3);
+}
+.playlist-detail--compact .playlist-detail__hero {
+  padding: 0 var(--space-3) var(--space-3);
+}
+.playlist-detail--compact .playlist-detail__cover {
+  width: 96px;
+  height: 96px;
+}
+.playlist-detail--compact .playlist-detail__meta {
+  min-height: 96px;
+  margin-left: var(--space-3);
 }
 
 .playlist-detail__body {

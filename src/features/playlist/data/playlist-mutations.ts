@@ -41,6 +41,7 @@ export function useDeletePlaylistMutation() {
       void queryClient.invalidateQueries({ queryKey: ['playlist', 'list'] })
       void queryClient.invalidateQueries({ queryKey: ['library'] })
       void queryClient.invalidateQueries({ queryKey: ['playlist', 'songs'] })
+      void queryClient.invalidateQueries({ queryKey: ['song-tags'] })
     },
   })
 }
@@ -143,6 +144,7 @@ export function useSetVisibilityMutation() {
     onSuccess: (_result, { id }) => {
       void queryClient.invalidateQueries({ queryKey: playlistQueryKeys.detail(id) })
       void queryClient.invalidateQueries({ queryKey: ['playlist', 'list'] })
+      void queryClient.invalidateQueries({ queryKey: ['song-tags'] })
     },
   })
 }

@@ -30,6 +30,11 @@ function capture(body: unknown): { transport: Transport; url: () => string; meth
 }
 
 describe('buildPlaylistsQuery (pure)', () => {
+  test('shared tag filtering composes with type, hidden filtering and pagination', () => {
+    expect(buildPlaylistsQuery({ tagId: 12, type: 'normal', excludeLabels: 'hidden' }, { limit: 30, offset: 30 })).toEqual({
+      tag_id: 12, type: 'normal', exclude_labels: 'hidden', limit: 30, offset: 30,
+    })
+  })
   test('always carries limit/offset with defaults', () => {
     expect(buildPlaylistsQuery()).toEqual({ limit: 20, offset: 0 })
   })

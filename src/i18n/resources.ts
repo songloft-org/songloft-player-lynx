@@ -983,6 +983,9 @@ export const en = {
   },
   songTag: {
     tags: 'Tags',
+    playlists: 'Playlists',
+    songs: 'Songs',
+    playlistCount: '{{count}} playlists',
     manageTags: 'Manage Tags',
     searchPlaceholder: 'Search tags…',
     createHint: 'Enter new tag name…',
@@ -993,7 +996,7 @@ export const en = {
     created: 'Tag created',
     rename: 'Rename Tag',
     deleteTitle: 'Delete Tag',
-    deleteConfirm: 'Delete tag "{{name}}"? Songs under this tag will not be deleted.',
+    deleteConfirm: 'Delete tag "{{name}}"? Songs and playlists will be kept.',
     deleteAction: 'Delete',
     subtitle: 'Tag · {{count}} songs',
 
@@ -2231,6 +2234,9 @@ export const zh: TranslationTree = {
   },
   songTag: {
     tags: '标签',
+    playlists: '歌单',
+    songs: '歌曲',
+    playlistCount: '{{count}} 个歌单',
     manageTags: '管理标签',
     searchPlaceholder: '搜索标签…',
     createHint: '输入新标签名…',
@@ -2241,7 +2247,7 @@ export const zh: TranslationTree = {
     created: '标签已创建',
     rename: '重命名标签',
     deleteTitle: '删除标签',
-    deleteConfirm: '确定删除标签「{{name}}」？该标签下的歌曲不会被删除。',
+    deleteConfirm: '确定删除标签「{{name}}」？歌曲和歌单都会保留。',
     deleteAction: '删除',
     subtitle: '标签 · {{count}} 首',
 

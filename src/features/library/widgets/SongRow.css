@@ -156,12 +156,17 @@
 /* Compact rows spend horizontal space on the title. Duration shares the
    subtitle line; actions keep full, adjacent 44px touch targets. */
 .song-row--narrow {
-  padding-left: var(--space-3);
-  padding-right: var(--space-2);
+  padding-left: var(--space-2);
+  padding-right: var(--space-1);
+}
+
+.song-row--narrow .song-row__index {
+  width: 24px;
+  margin-right: var(--space-half);
 }
 
 .song-row--narrow .song-row__content {
-  margin-left: var(--space-2);
+  margin-left: var(--space-1);
 }
 
 .song-row__subtitle-row {

@@ -105,5 +105,23 @@ export class SongTagsApi {
     await this.client.put(`${apiPrefix}/songs/${songId}/song-tags`, { tag_ids: tagIds })
   }
 
+  async getPlaylistTags(playlistId: number): Promise<SongTag[]> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/playlists/${playlistId}/tags`)
+    return parseSongTagArray(res.data)
+  }
+
+  async setPlaylistTags(playlistId: number, tagIds: number[]): Promise<void> {
+    await this.client.put(`${apiPrefix}/playlists/${playlistId}/tags`, { tag_ids: tagIds })
+  }
+
+  async all(): Promise<SongTag[]> {
+    const tags: SongTag[] = []
+    for (;;) {
+      const page = await this.list({ limit: 200, offset: tags.length, sort: 'id', order: 'asc' })
+      tags.push(...page.tags)
+      if (page.tags.length === 0 || tags.length >= page.total) return tags
+    }
+  }
+
 
 }

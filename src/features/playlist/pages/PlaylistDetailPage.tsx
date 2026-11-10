@@ -8,6 +8,11 @@ import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-s
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Song } from '../../../models/song.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { ScrollingText } from '../../../shared/ui/ScrollingText.js'
+import { useLibraryViewport } from '../../library/pages/library-viewport.js'
+import { ManageTagsSheet } from '../../library/widgets/ManageTagsSheet.js'
+import { PlaylistTagLine } from '../widgets/PlaylistTagLine.js'
+import { playlistDisplayDescription } from '../domain/playlist-description.js'
 import { DragHandle } from '../../../shared/ui/DragHandle.js'
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
@@ -47,6 +52,7 @@ import './PlaylistDetailPage.css'
 
 
 export function PlaylistDetailPage() {
+  const { isWide } = useLibraryViewport()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { onScroll: onScrollEdge } = useScrollNotifier()
@@ -63,6 +69,7 @@ export function PlaylistDetailPage() {
 
   const detail = usePlaylistQuery(id)
   const playlist = detail.data
+  const description = playlistDisplayDescription(playlist?.description)
   const currentSort = playlist?.sortBy ?? 'position'
   const currentOrder = playlist?.sortOrder ?? 'asc'
   const keyword = debouncedKeyword.trim() || undefined
@@ -129,6 +136,7 @@ export function PlaylistDetailPage() {
 
   const [showHistory, setShowHistory] = useState(false)
   const [showDesc, setShowDesc] = useState(false)
+  const [showTags, setShowTags] = useState(false)
   useEffect(() => {
     const g = globalThis as Record<string, unknown>
     const prev = g.__E2E_PLAYLIST_DETAIL__ as Record<string, unknown> | undefined
@@ -389,6 +397,7 @@ export function PlaylistDetailPage() {
                        * built-ins).
                        */
                       { key: 'addSongs', label: t('playlist.addSongs'), icon: 'plus' as const },
+                      { key: 'tags', label: t('songTag.manageTags'), icon: 'label' as const },
                       ...(canCacheBatch && playlist?.type !== 'radio'
                         ? [{ key: 'cache', label: cacheBatch.busy ? t('common.loading') : t('cacheTasks.wholePlaylist'), icon: 'download' as const }]
                         : []),
@@ -426,6 +435,7 @@ export function PlaylistDetailPage() {
                     ]}
                     onSelect={(key) => {
                       if (key === 'addSongs') setShowAddSongs(true)
+                      else if (key === 'tags') setShowTags(true)
                       else if (key === 'cache') { if (!cacheBatch.busy) void cacheBatch.beginPlaylist(id) }
                       else if (key === 'pin') togglePin()
                       else if (key === 'editCover') void navigate({ to: '/playlists/$id/edit', params: { id: String(id) }, search: { coverOnly: true } })
@@ -456,11 +466,10 @@ export function PlaylistDetailPage() {
             )}
         </view>
         <view className='playlist-detail__meta'>
-          <text className='playlist-detail__name'>
-            {playlist?.name ?? (detail.isLoading ? t('common.loading') : t('playlist.fallbackName'))}
-          </text>
+          <ScrollingText text={playlist?.name ?? (detail.isLoading ? t('common.loading') : t('playlist.fallbackName'))} textClassName='playlist-detail__name' />
           <text className='playlist-detail__count'>{countLabel}</text>
-          {playlist?.description
+          <PlaylistTagLine labels={playlist?.labels} />
+          {description
             ? (
               /* Clamped to two lines in CSS; tapping opens the full text in a
                * bottom panel (a ~35px nested scroll area is not a usable touch
@@ -472,7 +481,7 @@ export function PlaylistDetailPage() {
                 bindtap={() => setShowDesc(true)}
                 data-testid='playlist-detail-desc'
               >
-                {playlist.description}
+                {description}
               </text>
             )
             : null}
@@ -482,7 +491,7 @@ export function PlaylistDetailPage() {
   )
 
   return (
-    <view className='playlist-detail'>
+    <view className={`playlist-detail${isWide ? '' : ' playlist-detail--compact'}`}>
       {header}
       {!sortMode
         ? (
@@ -691,11 +700,12 @@ export function PlaylistDetailPage() {
           />
         )
         : null}
-      {showDesc && playlist?.description
+      <ManageTagsSheet playlistIds={showTags ? [id] : []} onClose={() => setShowTags(false)} />
+      {showDesc && description
         ? (
           <PlaylistDescPanel
             title={t('playlist.descriptionTitle')}
-            description={playlist.description}
+            description={description}
             onClose={() => setShowDesc(false)}
           />
         )

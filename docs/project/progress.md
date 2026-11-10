@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-11 · #562 后续优化 / follow-up
+
+来源共享标签、歌单筛选、封面与布局完成，审核后 3,786 项、类型与双产物通过，浏览器验证边界见 [记录](issue-562-followup.md)。原生设备未测；用户已授权本批提交、推送与回复，交付和 CI 以父仓库记录及 GitHub 为准。
+
+English: Shared source tags, playlist filtering, artwork and layout implemented. Post-review types, 3,786 tests and dual artifacts pass; see browser boundaries in the [record](../en/project/issue-562-followup.md). Native devices remain untested. The user authorized this batch's commit, push and reply; the parent record and GitHub track delivery/CI.
+
 ## 2026-11-09 · songloft-org/songloft#562
 
 窄屏歌曲行重排与普通歌单移除菜单已实现。旧源码 3 项新增回归失败；最终完整 3,779 项、84 项定向、类型、双产物与嵌入 Web 构建通过，真实浏览器动作见 [记录](issue-562.md)。原机未验，未提交、推送、发布、更新父指针或写 Issue。

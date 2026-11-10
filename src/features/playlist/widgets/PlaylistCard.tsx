@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { Playlist } from '../../../models/playlist.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
+import { ScrollingText } from '../../../shared/ui/ScrollingText.js'
+import { PlaylistTagLine } from './PlaylistTagLine.js'
 import { useTapAnchor } from '../../../shared/ui/anchored-overlay.js'
 import type { AnchorMeasurement } from '../../../shared/ui/anchored-overlay.js'
 
@@ -115,7 +117,8 @@ export function PlaylistCard({
           )
           : null}
       </view>
-      <text className='playlist-card__name'>{playlist.name || t('common.untitled')}</text>
+      <ScrollingText text={playlist.name || t('common.untitled')} textClassName='playlist-card__name' />
+      <PlaylistTagLine labels={playlist.labels} />
       {/*
         * Pinned and "network" are both chips in the same meta row, so unlike the
         * list mode's single `badge` slot they can coexist. The network chip marks

@@ -1,0 +1,9 @@
+.playlist-tag-line {
+  color: var(--secondary-label);
+  font-size: var(--font-footnote);
+  margin-top: var(--space-half);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}

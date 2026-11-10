@@ -472,10 +472,11 @@ const tagSongsRoute = createRoute({
   path: '/library/tags/$tagId',
   validateSearch: (
     search: Record<string, unknown>,
-  ): { name?: string; cover?: string } => {
+  ): { name?: string; cover?: string; view?: 'playlists' | 'songs' } => {
     const name = typeof search.name === 'string' ? search.name : ''
     const cover = typeof search.cover === 'string' ? search.cover : undefined
-    return cover ? { name, cover } : { name }
+    const view = search.view === 'playlists' ? 'playlists' : 'songs'
+    return { name, cover, view }
   },
   component: TagSongsPage,
 })

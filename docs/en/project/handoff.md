@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-11 · #562 follow-up
+
+Shared playlist/song tags, artwork and compact layouts implemented; post-review types, 3,786 tests and dual artifacts pass. Browser evidence and boundaries: [record](issue-562-followup.md). The user explicitly authorized this batch's commit, push, parent pointer update and reply to songloft-org/songloft#562. The parent verification record and GitHub track delivery/CI; the Issue remains open for device acceptance.
+
 ## 2026-11-09 · songloft-org/songloft#562
 
 Mobile duration moves to the second line; favorite/more retain 44px targets. Ordinary playlist removal moves into the menu with confirmation, preserving desktop/built-in boundaries. Final checks, browser comparisons and platform gaps: [record](issue-562.md). Parent/Flutter unchanged; dirty submodule, no commit/push/gitlink update/release/Issue write.

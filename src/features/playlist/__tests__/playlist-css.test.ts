@@ -23,7 +23,7 @@ function ruleFor(css: string, selector: string): string {
   return m![1]!
 }
 
-test('the detail cover is 160×160 with the small radius, and the meta caps at 160', () => {
+test('detail keeps the wide cover and uses a compact mobile cover with readable counts', () => {
   const cover = ruleFor(DETAIL, '.playlist-detail__cover')
   expect(cover).toMatch(/width:\s*160px/)
   expect(cover).toMatch(/height:\s*160px/)
@@ -32,7 +32,10 @@ test('the detail cover is 160×160 with the small radius, and the meta caps at 1
   // The name stepped up to title2 (22); the stat-style footnote for desc/count.
   expect(ruleFor(DETAIL, '.playlist-detail__name')).toMatch(/font-size:\s*var\(--font-title2\)/)
   expect(ruleFor(DETAIL, '.playlist-detail__desc')).toMatch(/font-size:\s*var\(--font-footnote\)/)
-  expect(ruleFor(DETAIL, '.playlist-detail__count')).toMatch(/font-size:\s*var\(--font-footnote\)/)
+  expect(ruleFor(DETAIL, '.playlist-detail__count')).toMatch(/font-size:\s*var\(--font-subhead\)/)
+  const compact = ruleFor(DETAIL, '.playlist-detail--compact .playlist-detail__cover')
+  expect(compact).toMatch(/width:\s*96px/)
+  expect(compact).toMatch(/height:\s*96px/)
 })
 
 test('the search fields are the Apple control height, filled, and borderless', () => {

@@ -35,10 +35,12 @@ import {
 
 import { useDebounce } from '../../library/data/use-debounce.js'
 import { PlaylistCard } from './PlaylistCard.js'
+import { PlaylistTagLine } from './PlaylistTagLine.js'
 import './PlaylistsView.css'
 
 export function PlaylistsView(
-  { type, songSource, viewMode = 'grid', showHidden = false }: {
+  { type, songSource, tagId, viewMode = 'grid', showHidden = false }: {
+    tagId?: number
     type?: string
     /** `'remote'` / `'local'` — filter by the source of the songs held. */
     songSource?: string
@@ -57,6 +59,7 @@ export function PlaylistsView(
   // present. Keys are omitted rather than set to `undefined` so the query key
   // stays identical to what the callers without filters produce.
   const query = usePlaylistsInfiniteQuery({
+    ...(tagId ? { tagId } : {}),
     ...(type ? { type } : {}),
     ...(songSource ? { songSource } : {}),
     ...(showHidden ? { excludeLabels: 'none' } : {}),
@@ -464,6 +467,7 @@ export function PlaylistsView(
                 <MediaListItem
                   key={String(playlist.id)}
                   name={playlist.name || t('common.untitled')}
+                  details={<PlaylistTagLine labels={playlist.labels} />}
                   subtitle={t(
                     playlist.songCount === 1 ? 'common.songCountOne' : 'common.songCountOther',
                     { count: playlist.songCount },
