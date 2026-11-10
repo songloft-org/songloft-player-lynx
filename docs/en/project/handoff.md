@@ -1,5 +1,10 @@
 # Handoff (2026-10-14)
 
+## 2026-11-11 · songloft-org/songloft#563
+
+App-level favorite invalidation long polling refreshes complete IDs, hearts and built-in playlist queries. Session changes reject old responses; resume reconciles. All 3793 tests, types, Lynx/Web builds and actual browser hearts after plugin writes passed; evidence and Not run: [record](issue-563.md). The user has now authorized commits, pushes, parent gitlinks and an Issue reply; SDK publication runs in the toolchain repository. GitHub and parent records govern delivery and CI.
+
+
 ## 2026-11-11 · #562 follow-up
 
 Shared playlist/song tags, artwork and compact layouts implemented; post-review types, 3,786 tests and dual artifacts pass. Browser evidence and boundaries: [record](issue-562-followup.md). The user explicitly authorized this batch's commit, push, parent pointer update and reply to songloft-org/songloft#562. The parent verification record and GitHub track delivery/CI; the Issue remains open for device acceptance.

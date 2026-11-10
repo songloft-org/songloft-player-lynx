@@ -10,6 +10,13 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 ## Entries
 
+### FAVORITE-001: Favorite invalidation subscriptions must bind server and account
+
+- Scope: app-level favorite long polling, Query caches and native notification hearts, songloft-org/songloft#563.
+- Rule: fix each request URL and verify its session before auth replay and cache writes. Advance the cursor only after successful reconciliation. Logout, backgrounding and session changes stop old subscriptions; resume must reconcile again.
+- Evidence and Done right: an old response arriving after a switch leaves the new `{99}` set intact; refresh failures do not acknowledge cursors. Real QuickJS writes through the backend switch the same Docker Chrome page from Add→Remove→Add without heart clicks or page reload. All 3793 tests and both build targets passed; [record](docs/en/project/issue-563.md).
+- Seen 1× (2026-11-11). Status: new-feature mechanism validation, pre-commit validation; delivery status is tracked in the batch record.
+
 ### UI-006: Reallocate narrow-row information while preserving touch targets
 
 - Scope: shared rows and playlist context menus, songloft-org/songloft#562; baseline `5e6fe23055eb6512fe185e2fcb9b3acaf9e73497`.

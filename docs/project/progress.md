@@ -1,5 +1,12 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-11 · songloft-org/songloft#563
+
+收藏失效长轮询已在应用级接入，完整 ID 更新同时刷新红心与内置歌单查询；后台／会话切换拒绝旧响应，恢复重新对账。3793 项测试、类型、Lynx/Web 构建及真实插件写入后的浏览器红心切换通过，证据与未跑项见 [记录](issue-563.md)。本批现已获提交、推送、同步父指针和回复 #563 的授权；SDK 版本升级在工具链仓库执行。实际交付与 CI 按 GitHub 和父仓库记录核对。
+
+English: App-level favorite long polling refreshes complete IDs, hearts and built-in playlist queries. Old session responses are rejected; resume reconciles. All 3793 tests, types, Lynx/Web builds and real plugin-write/browser checks passed; [record](../en/project/issue-563.md). The user has now authorized commits, pushes, parent gitlinks and an Issue reply; SDK publication runs in the toolchain repository. GitHub and parent records govern delivery and CI.
+
+
 ## 2026-11-11 · #562 后续优化 / follow-up
 
 来源共享标签、歌单筛选、封面与布局完成，审核后 3,786 项、类型与双产物通过，浏览器验证边界见 [记录](issue-562-followup.md)。原生设备未测；用户已授权本批提交、推送与回复，交付和 CI 以父仓库记录及 GitHub 为准。

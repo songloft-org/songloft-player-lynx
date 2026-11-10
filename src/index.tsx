@@ -29,6 +29,7 @@ import { initializeCacheContext, currentCacheScope } from './features/player/dat
 import { offlineIdentity, readOfflineAddress } from './features/player/data/offline-identity.js'
 import { initializeWebShortcuts } from './features/player/data/web-shortcuts.js'
 import { initializePreferenceSync } from './features/settings/data/preference-sync.js'
+import { initializeFavoriteChanges } from './features/library/data/favorite-changes.js'
 import { initializeHomeWidget } from './features/player/data/home-widget.js'
 import { appConfig } from './core/config/app-config.js'
 import { getSongloftStorage } from './core/storage/index.js'
@@ -150,6 +151,7 @@ void (async () => {
     void syncFloatingLyricOverlay().catch(() => { })
     await auth.checkAuth()
     initializePreferenceSync()
+    initializeFavoriteChanges()
     initializeHomeWidget(() => { void router.navigate({ to: '/player' }) })
     await initializeWebShortcuts()
     // Only once auth resolved: the pack lives behind the API's auth, and a
