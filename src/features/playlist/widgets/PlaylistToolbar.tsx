@@ -21,6 +21,7 @@ export interface PlaylistToolbarProps {
   sortOptions: ReadonlyArray<PlaylistSortOption>
   onSelectSort: (key: string) => void
   onPlayAll: () => void
+  searchActive?: boolean
   /** Opens the song picker. */
   onAddSongs: () => void
   selectMode: boolean
@@ -46,6 +47,7 @@ export function PlaylistToolbar({
   sortOptions,
   onSelectSort,
   onPlayAll,
+  searchActive = false,
   onAddSongs,
   selectMode,
   onToggleSelect,
@@ -66,7 +68,7 @@ export function PlaylistToolbar({
         data-testid='playlist-toolbar-play-all'
       >
         <Icon name='play' size={14} color={ICON_COLORS.content} />
-        <text className='playlist-toolbar__btn-text'>{t('playlist.playAll')}</text>
+        <text className='playlist-toolbar__btn-text'>{t(searchActive ? 'playlistPlayWhole' : 'playlist.playAll')}</text>
       </view>
 
       <view

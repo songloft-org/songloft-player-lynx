@@ -6,6 +6,14 @@ export const DEFAULT_LANGUAGE: SupportedLanguage = 'zh'
 export type TranslationTree = typeof en
 
 export const en = {
+  playlistAudiobook: 'Audiobook',
+  playlistContinue: 'Continue playing',
+  playlistContinueBook: 'Continue listening',
+  playlistFinished: 'Finished · Play from beginning',
+  playlistPlayWhole: 'Play entire playlist',
+  playlistProgressInvalid: 'The last track is no longer in this playlist',
+  playlistProgressConflict: 'Progress changed on another device',
+  playlistLocateResume: 'Locate last listened track',
   personalTokens: {
     title: "Permanent access tokens",
     subtitle: "Create and revoke tokens for Home Assistant and other devices",
@@ -1283,6 +1291,14 @@ export const en = {
 }
 
 export const zh: TranslationTree = {
+  playlistAudiobook: '有声书',
+  playlistContinue: '继续播放',
+  playlistContinueBook: '继续收听',
+  playlistFinished: '已听完 · 从头播放',
+  playlistPlayWhole: '播放整个歌单',
+  playlistProgressInvalid: '上次收听的歌曲已不在歌单中',
+  playlistProgressConflict: '进度已在其他设备更新',
+  playlistLocateResume: '定位上次收听',
   personalTokens: {
     title: "永久访问 Token",
     subtitle: "为 Home Assistant 等设备创建和撤销 Token",

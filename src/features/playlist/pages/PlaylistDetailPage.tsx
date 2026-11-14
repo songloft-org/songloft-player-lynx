@@ -35,6 +35,8 @@ import { usePlayerStore } from '../../player/store/index.js'
 import { indexedSongCacheAvailable } from '../../player/data/indexed-song-cache.js'
 import { useCacheBatchSubmission } from '../../player/widgets/use-cache-batch.js'
 import { PlayHistoryPanel } from '../../player/widgets/PlayHistoryPanel.js'
+import { playPlaylistTarget } from '../../player/data/playlist-resume.js'
+import { PlaylistResumeCard } from '../../player/widgets/PlaylistResumeCard.js'
 import {
   usePlaylistQuery,
   usePlaylistSongsInfiniteQuery,
@@ -55,6 +57,7 @@ export function PlaylistDetailPage() {
   const { isWide } = useLibraryViewport()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [locateSongId, setLocateSongId] = useState<number | undefined>()
   const { onScroll: onScrollEdge } = useScrollNotifier()
   const { t } = useTranslation()
   const cacheBatch = useCacheBatchSubmission()
@@ -299,8 +302,7 @@ export function PlaylistDetailPage() {
         return next
       })
     } else {
-      void usePlayerStore.getState().playPlaylist(songs, index, playlistCtx)
-      fillRemainingQueue()
+      void playPlaylistTarget({ id, song }).catch(e => toast.error(String(e)))
     }
   }
 
@@ -312,8 +314,7 @@ export function PlaylistDetailPage() {
 
   const playAll = () => {
     if (songs.length === 0) return
-    void usePlayerStore.getState().playAll(songs, playlistCtx)
-    fillRemainingQueue()
+    void playPlaylistTarget({ id }).catch(e => toast.error(String(e)))
   }
 
   const header = (
@@ -467,8 +468,10 @@ export function PlaylistDetailPage() {
         </view>
         <view className='playlist-detail__meta'>
           <ScrollingText text={playlist?.name ?? (detail.isLoading ? t('common.loading') : t('playlist.fallbackName'))} textClassName='playlist-detail__name' />
+          {playlist?.type === 'normal' && <PlaylistResumeCard id={id} audiobook={playlist.labels.includes('audiobook')} onLocate={songId => { setSearchText(''); setLocateSongId(songId) }} />}
           <text className='playlist-detail__count'>{countLabel}</text>
           <PlaylistTagLine labels={playlist?.labels} />
+          {playlist?.labels.includes('audiobook') && <text className='playlist-detail__count'>{t('playlistAudiobook')}</text>}
           {description
             ? (
               /* Clamped to two lines in CSS; tapping opens the full text in a
@@ -517,6 +520,7 @@ export function PlaylistDetailPage() {
             sortOptions={sortOptions}
             onSelectSort={onSelectSort}
             onPlayAll={playAll}
+            searchActive={!!keyword}
             onAddSongs={() => setShowAddSongs(true)}
             selectMode={selectMode}
             onToggleSelect={selectMode ? exitSelectMode : enterSelectMode}
@@ -589,6 +593,7 @@ export function PlaylistDetailPage() {
               ? <DetailState text={t('playlist.noSongs')} />
               : (
                 <PlaylistSongList<Song> key={`${id}:${currentSort}:${currentOrder}:${keyword ?? ''}`}
+                  locateSongId={locateSongId}
                   total={total}
                   enabled={!selectMode}
                   loadingMore={songsQuery.isFetchingNextPage}

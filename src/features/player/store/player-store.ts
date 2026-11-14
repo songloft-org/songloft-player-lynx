@@ -64,6 +64,11 @@ import { useAppSessionStore } from '../../../store/app-session.js'
  * to the pure functions in `../domain/*` so it is unit-tested without a render.
  */
 export interface PlayerState extends PlayerData {
+  confirmedSongId?: number
+  queueHydrating?: boolean
+  queueCompletionPending?: boolean
+  playlistCompleted?: boolean
+  hydratePlaylistQueue: (songs: Song[]) => void
   // ── playback ──
   playSong: (song: Song, queue?: Song[]) => Promise<void>
   /** Schedule once after current, without replacing its queue or context. */
@@ -74,6 +79,7 @@ export interface PlayerState extends PlayerData {
     songs: Song[],
     startIndex?: number,
     context?: PlaybackContext,
+    options?: { initialPositionMs?: number },
   ) => Promise<void>
   /**
    * "播放全部": play `songs` from a start index chosen by the current play mode
@@ -217,6 +223,7 @@ function syncNavigation(): void {
 }
 
 function markCurrentPlayed(): void {
+  usePlayerStore.setState({ confirmedSongId: usePlayerStore.getState().currentSong?.id })
   _navigation.markPlayed(usePlayerStore.getState().currentIndex)
   syncNavigation()
 }
@@ -718,10 +725,11 @@ function scheduleRetry(song: Song, { positionMs, autoplay }: { positionMs: numbe
 
 export const usePlayerStore = create<PlayerState>((set, get) => {
   /** Load + play the song at `index` (index/currentSong already computable). */
-  async function playAtIndex(index: number): Promise<void> {
+  async function playAtIndex(index: number, initialPositionMs = 0): Promise<void> {
     const song = get().playlist[index]
     if (!song) return
     const generation = invalidateSourceLoad()
+    set({ confirmedSongId: undefined, playlistCompleted: false })
     cancelRetry()
     _livePlayIntent = song.isLive
     try {
@@ -769,10 +777,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       // title/artwork — the "点下一曲偶尔不及时更新" symptom.
       await syncQueueWindow(get().playlist, get().currentIndex)
       if (generation !== _loadGeneration) return
-      await audio.load(source.url, {
-        durationMs: durationMsOf(song),
-        hls: source.hls,
-      })
+      if (initialPositionMs > 0) {
+        _awaitingPlayback = { song, generation }
+        await loadAudioSource(audio, { url: source.url, load: {
+          durationMs: durationMsOf(song), hls: source.hls, initialPositionMs, autoplay: true,
+        } })
+      } else {
+        await audio.load(source.url, { durationMs: durationMsOf(song), hls: source.hls })
+      }
       if (generation !== _loadGeneration) return
       if (song.isLive && _retryTimer != null) return
       _loadedSongId = song.id
@@ -827,6 +839,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       return
     }
 
+    if (s.queueHydrating) {
+      set({ queueCompletionPending: true })
+      return
+    }
     // afterSongs sleep timer: decrement first; pause if it expires.
     const step = sleepTimerOnSongCompleted(s.sleepTimer)
     if (step.status !== s.sleepTimer) set({ sleepTimer: step.status })
@@ -845,7 +861,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       // Tell the native engine the playback gap is terminal so it can release
       // its finite background execution window immediately.
       finishIOSPlaybackGap()
-      set({ isPlaying: false })
+      set({ isPlaying: false, playlistCompleted: s.playMode === 'order' })
       return
     }
     void playAtIndex(nextIdx).catch((e) => {
@@ -906,7 +922,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       await playAtIndex(index)
     },
 
-    playPlaylist: async (songs, startIndex = 0, context) => {
+    playPlaylist: async (songs, startIndex = 0, context, options) => {
       if (songs.length === 0) return
       // Re-base the background-load generation before any await: callers
       // snapshot it synchronously right after this call to start their own
@@ -917,6 +933,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       const index = Math.min(Math.max(0, startIndex), songs.length - 1)
       const playlistId = playlistIdOf(context)
       set({
+        queueHydrating: false,
+        confirmedSongId: undefined,
+        queueCompletionPending: false,
+        playlistCompleted: false,
         playlist: [...songs],
         currentIndex: index,
         currentSong: songs[index],
@@ -928,7 +948,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       if (playlistId != null) {
         void getPlaylistApi().touchPlaylist(playlistId).catch(() => {})
       }
-      await playAtIndex(index)
+      await playAtIndex(index, options?.initialPositionMs)
     },
 
     playAll: async (songs, context) => {
@@ -1089,6 +1109,20 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       _navigation.remap(new Map(current.map((_, index) => [index, index])))
       syncNavigation()
       void syncQueueWindow(list, get().currentIndex)
+    },
+
+    hydratePlaylistQueue: (songs) => {
+      const s = get()
+      const index = songs.findIndex(song => song.id === s.currentSong?.id)
+      if (index < 0) return
+      const positions = new Map(songs.map((song, i) => [song.id, i]))
+      _navigation.remap(new Map(s.playlist.map((song, i) => [i, positions.get(song.id) ?? i])))
+      const ordered = songs.slice()
+      ordered[index] = s.currentSong!
+      set({ playlist: ordered, currentIndex: index, queueHydrating: false, queueCompletionPending: false })
+      syncNavigation()
+      void syncQueueWindow(ordered, index)
+      if (s.queueCompletionPending) void Promise.resolve().then(() => get()._onCompleted())
     },
 
     loadRemainingSongsForCurrentPlaylist: ({ loadedCount, total, fetch }) => {

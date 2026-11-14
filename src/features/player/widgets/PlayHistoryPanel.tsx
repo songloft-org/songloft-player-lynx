@@ -16,6 +16,8 @@ import type { PlaybackContext } from '../domain/playback-context.js'
 import { formatPlayedAt } from '../domain/play-history-time.js'
 import { playHistoryQueryKeys, usePlayHistoryQuery } from '../data/play-history-query.js'
 import { usePlayerStore } from '../store/index.js'
+import { playPlaylistTarget } from '../data/playlist-resume.js'
+import { PlaylistResumeCard } from './PlaylistResumeCard.js'
 import { ModalMaterial } from '../../../shared/ui/ModalMaterial.js'
 import { ModalScrim } from '../../../shared/ui/ModalScrim.js'
 import '../../../shared/ui/overlay-motion.css'
@@ -116,6 +118,11 @@ export function PlayHistoryPanel({
   const play = (entryIndex: number) => {
     const entry = entries[entryIndex]
     if (!entry) return
+    if (context.type === 'playlist') {
+      void playPlaylistTarget({ id: Number(context.key), song: entry.song }).catch(e => toast.error(String(e)))
+      onClose()
+      return
+    }
     const loaded = queue ?? []
     const at = loaded.findIndex((s) => s.id === entry.song.id)
     if (at >= 0) {
@@ -200,6 +207,7 @@ export function PlayHistoryPanel({
             </view>
           </view>
 
+          {context.type === 'playlist' && <PlaylistResumeCard id={Number(context.key)} audiobook={false} />}
           {historyQuery.isLoading
             ? (
               <view className='play-history__state'>

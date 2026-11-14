@@ -102,6 +102,29 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
+test('playlist resume loads its position as part of native source preparation', async () => {
+  const target = song(128, 900)
+  await usePlayerStore.getState().playPlaylist([target], 0, { type: 'playlist', key: '3' }, { initialPositionMs: 754000 })
+  const audio = getAudio() as MockSongloftAudio
+  expect(audio.lastLoad?.opts).toMatchObject({ initialPositionMs: 754000, autoplay: true })
+  usePlayerStore.getState().hydratePlaylistQueue([song(127, 900), song(128, 900), song(129, 900)])
+  expect(usePlayerStore.getState().currentSong).toBe(target)
+  expect(usePlayerStore.getState().currentIndex).toBe(1)
+})
+
+test('completion deferred by queue hydration decrements the sleep timer only once', async () => {
+  const target = song(128, 900)
+  await usePlayerStore.getState().playPlaylist([target])
+  usePlayerStore.getState().setSleepTimerAfterSongs(2)
+  usePlayerStore.setState({ queueHydrating: true })
+  usePlayerStore.getState()._onCompleted()
+  expect(usePlayerStore.getState().sleepTimer?.remainingSongs).toBe(2)
+  usePlayerStore.getState().hydratePlaylistQueue([target, song(129, 900)])
+  await flush()
+  expect(usePlayerStore.getState().sleepTimer?.remainingSongs).toBe(1)
+  expect(usePlayerStore.getState().currentSong?.id).toBe(129)
+})
+
 test('clearing during auto-resume cannot revive old playback or history', async () => {
   setCachedAccessToken('restore-test-token')
   playback.saved = { playlist: [{ ...song(1, 60), url: '/api/v1/songs/1/play' }], currentIndex: 0, positionMs: 5000 }

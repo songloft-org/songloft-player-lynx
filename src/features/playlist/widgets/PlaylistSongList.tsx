@@ -10,6 +10,7 @@ import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import './PlaylistSongList.css'
 
 interface Props<T> extends VirtualListProps<T> {
+  locateSongId?: number
   total: number
   loadingMore: boolean
   hasMore: boolean
@@ -19,13 +20,19 @@ interface Props<T> extends VirtualListProps<T> {
 
 let listCounter = 0
 export function PlaylistSongList<T extends Song>({ total, loadingMore, hasMore,
-  loadFailed, enabled, ...listProps }: Props<T>) {
+  loadFailed, enabled, locateSongId, ...listProps }: Props<T>) {
   const songs = listProps.items
   const [listId] = useState(() => `playlist-song-list-${++listCounter}`)
   const { height, onLayoutChange } = useBreakpoint(0, '.playlist-song-list')
   const { height: navInset, onLayoutChange: onInsetLayout } = useBreakpoint(0, '.playlist-song-list__nav-inset')
   const [currentIndex, setCurrentIndex] = useState(0)
   const [requestedIndex, setRequestedIndex] = useState<number | null>(null)
+  useEffect(() => {
+    if (locateSongId == null) return
+    const index = songs.findIndex(song => song.id === locateSongId)
+    if (index >= 0) { latestRequest.current++; setRequestedIndex(index) }
+    else if (hasMore && !loadingMore && !loadFailed) listProps.onEndReached?.()
+  }, [locateSongId, songs, hasMore, loadingMore, loadFailed])
   const [showLabel, setShowLabel] = useState(false)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const alive = useRef(true)

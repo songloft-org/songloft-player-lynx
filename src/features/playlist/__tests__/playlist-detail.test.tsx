@@ -8,7 +8,7 @@ import type { Playlist } from '../../../models/playlist.js'
 import type { Song } from '../../../models/song.js'
 import { LibraryViewportProvider } from '../../library/pages/library-viewport.js'
 import { PlaylistApi } from '../api/index.js'
-import { usePlayerStore } from '../../player/store/index.js'
+import * as playlistResume from '../../player/data/playlist-resume.js'
 
 const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSongMutationHook, moveSongMutationHook, visibilityMutationHook, pinnedMutationHook, sortMutationHook } = vi.hoisted(() => ({
   detailHook: vi.fn(),
@@ -300,7 +300,7 @@ test('loading more keeps the bottom inset around the loading indicator', async (
   expect(view.container.querySelector('.playlist-detail__footer')).toBeNull()
 })
 
-test('appending a page reuses old rows while their clicks play the latest loaded songs', async () => {
+test('appending a page reuses old rows while clicks resolve playback from the complete playlist', async () => {
   const first = [makeSong(1), makeSong(2)]
   songsHook.mockReturnValue(songsResult([{ songs: first, total: 3 }]))
   const view = render(<PlaylistDetailPage />)
@@ -311,10 +311,10 @@ test('appending a page reuses old rows while their clicks play the latest loaded
   view.rerender(<PlaylistDetailPage />)
   await act(async () => { await Promise.resolve() })
   expect(rowRenders.mock.calls).toEqual([[3]])
-  const play = vi.spyOn(usePlayerStore.getState(), 'playPlaylist').mockResolvedValue()
+  const play = vi.spyOn(playlistResume, 'playPlaylistTarget').mockResolvedValue()
   try {
     await act(async () => { fireEvent.tap(view.container.querySelector('.song-row')!) })
-    expect(play).toHaveBeenCalledWith([...first, last], 0, { type: 'playlist', key: '7' })
+    expect(play).toHaveBeenCalledWith({ id: 7, song: first[0] })
   } finally { play.mockRestore() }
 })
 

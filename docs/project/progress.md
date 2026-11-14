@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-14 · 歌单续播 / Playlist resume
+
+已实现服务端进度与歌单模式、有声书 label、完整歌单搜索点播。两客户端实际媒体时间与服务端同步已核对；发现并修复提前 seek 被加载覆盖的问题。代码与验证见[记录](playlist-resume.md)；本批提交、推送与父指针同步已获授权，原生设备 Not run，不创建正式版本标签。
+
+Implemented server progress/mode persistence, the audiobook label and full-playlist search playback. Both clients' actual media time and server progress were checked; premature seek was repaired. See the [English record](../en/project/playlist-resume.md). Commits, pushes and parent gitlink updates are authorized; native devices Not run and no stable release tags are created.
+
 ## 2026-11-11 · songloft-org/songloft#563
 
 收藏失效长轮询已在应用级接入，完整 ID 更新同时刷新红心与内置歌单查询；后台／会话切换拒绝旧响应，恢复重新对账。3793 项测试、类型、Lynx/Web 构建及真实插件写入后的浏览器红心切换通过，证据与未跑项见 [记录](issue-563.md)。本批现已获提交、推送、同步父指针和回复 #563 的授权；SDK 版本升级在工具链仓库执行。实际交付与 CI 按 GitHub 和父仓库记录核对。

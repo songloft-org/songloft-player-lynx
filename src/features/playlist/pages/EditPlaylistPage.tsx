@@ -5,6 +5,7 @@ import { useParams, useSearch } from '@tanstack/react-router'
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { toast } from '../../../shared/ui/toast-store.js'
+import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 import { canUploadCover, uploadPlaylistCover } from '../domain/cover-upload.js'
 import { usePlaylistQuery } from '../data/playlist-query.js'
@@ -31,6 +32,7 @@ export function EditPlaylistPage() {
 
   const [name, setName] = useState('')
   const [desc, setDesc] = useState('')
+  const [audiobook, setAudiobook] = useState<boolean | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   useEffect(() => {
     const g = globalThis as Record<string, unknown>
@@ -54,7 +56,7 @@ export function EditPlaylistPage() {
     if (updateMutation.isPending) return
     if (selectedCover) {
       updateMutation.mutate(
-        { coverSongId: selectedCover.songId, ...(!coverOnly && { name: name.trim(), description: desc.trim() }) },
+        { coverSongId: selectedCover.songId, ...(!coverOnly && { name: name.trim(), description: desc.trim(), audiobook: audiobook ?? playlist?.labels.includes('audiobook') }) },
         {
           onSuccess: () => {
             toast.success(t('playlist.save'))
@@ -67,7 +69,7 @@ export function EditPlaylistPage() {
       const trimmed = name.trim()
       if (!trimmed) return
       updateMutation.mutate(
-        { name: trimmed, description: desc.trim() },
+        { name: trimmed, description: desc.trim(), audiobook: audiobook ?? playlist?.labels.includes('audiobook') },
         {
           onSuccess: () => {
             toast.success(t('playlist.save'))
@@ -114,6 +116,10 @@ export function EditPlaylistPage() {
             : playlist
               ? (
                 <view>
+                  {!coverOnly && playlist.type === 'normal' && <view className='edit-playlist__cover-row'>
+                    <text>{t('playlistAudiobook')}</text>
+                    <AppSwitch checked={audiobook ?? playlist.labels.includes('audiobook')} onChange={setAudiobook} />
+                  </view>}
                   <text className='playlist-form__label'>{t('playlist.coverLabel')}</text>
                   <view className='edit-playlist__cover-row'>
                     {displayCover

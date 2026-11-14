@@ -428,6 +428,7 @@ export function makeDlnaStoreMock<M extends { useDlnaStore: { getState: () => un
 /** Static, non-subscribing player state used by the mocked store. */
 function mockPlayerState(over: Partial<PlayerState> = {}): PlayerState {
   return {
+    hydratePlaylistQueue: () => {},
     currentSong: mockSong(),
     playlist: [mockSong()],
     currentIndex: 0,

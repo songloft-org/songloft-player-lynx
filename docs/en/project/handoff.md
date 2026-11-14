@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-14 · Playlist resume
+
+Local implementation and Web validation are complete; see the [record](playlist-resume.md). Commits, pushes and parent gitlink updates are authorized; matching parent/Flutter changes remain in the shared workspace and clients are committed first. Native background resume Not run; no stable release is performed.
+
 ## 2026-11-11 · songloft-org/songloft#563
 
 App-level favorite invalidation long polling refreshes complete IDs, hearts and built-in playlist queries. Session changes reject old responses; resume reconciles. All 3793 tests, types, Lynx/Web builds and actual browser hearts after plugin writes passed; evidence and Not run: [record](issue-563.md). The user has now authorized commits, pushes, parent gitlinks and an Issue reply; SDK publication runs in the toolchain repository. GitHub and parent records govern delivery and CI.

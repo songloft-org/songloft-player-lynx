@@ -10,6 +10,13 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 ## Entries
 
+### RESUME-001: Restore positions inside source preparation
+
+- Scope: playlist resume and Web/native source loading; baseline 84a1f56 plus this working tree.
+- Evidence: the initial browser run saved 754 seconds but seek after a command Promise only played about six seconds; after repair, actual audio reached about 760 and server state about 759. See the [verification record](docs/en/project/playlist-resume.md).
+- Rule and Done right: a command Promise does not prove preparation. Pass initialPositionMs through source-load and wait for sourceReady. Queue hydration must retain the loading Song object so identity-based confirmation callbacks still match. Mocks must preserve command/preparation timing; runtime acceptance checks actual media time.
+- Seen 1× (2026-11-14). Local implementation and Web passed; native devices Not run. Delivery records govern commits/pushes; no stable release is performed.
+
 ### FAVORITE-001: Favorite invalidation subscriptions must bind server and account
 
 - Scope: app-level favorite long polling, Query caches and native notification hearts, songloft-org/songloft#563.

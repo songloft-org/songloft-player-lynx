@@ -25,6 +25,16 @@ export interface PlaylistsFilters {
   keyword?: string
 }
 
+export interface PlaylistProgress {
+  song: Record<string, unknown> | null
+  position_ms: number
+  play_mode: string
+  completed: boolean
+  invalid: boolean
+  version: number
+  updated_at: string
+}
+
 export interface PlaylistSongsFilters {
   sort?: string
   order?: string
@@ -54,6 +64,7 @@ export interface CreatePlaylistParams {
 }
 
 export interface UpdatePlaylistParams {
+  audiobook?: boolean
   name?: string
   description?: string
   coverSongId?: number
@@ -121,8 +132,9 @@ export function buildCreatePlaylistBody(params: CreatePlaylistParams): Record<st
   return body
 }
 
-export function buildUpdatePlaylistBody(params: UpdatePlaylistParams): Record<string, string | number> {
-  const body: Record<string, string | number> = {}
+export function buildUpdatePlaylistBody(params: UpdatePlaylistParams): Record<string, string | number | boolean> {
+  const body: Record<string, string | number | boolean> = {}
+  if (params.audiobook != null) body.audiobook = params.audiobook
   if (params.coverSongId != null) {
     body.cover_song_id = params.coverSongId
   }
@@ -144,6 +156,12 @@ export function buildReorderSongsBody(songIds: number[]): { song_ids: number[] }
 }
 
 export class PlaylistApi {
+  async getProgress(id: number): Promise<PlaylistProgress> {
+    return (await this.client.get<PlaylistProgress>(`${apiPrefix}/playlists/${id}/playback-progress`)).data
+  }
+  async saveProgress(id: number, data: Record<string, unknown>): Promise<PlaylistProgress> {
+    return (await this.client.put<PlaylistProgress>(`${apiPrefix}/playlists/${id}/playback-progress`, data)).data
+  }
   constructor(private readonly client: HttpClient) {}
 
   async getPlaylists(
