@@ -10,6 +10,13 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 ## Entries
 
+### RESUME-002: Test intermediate queues under slow pagination
+
+- Scope: playlist resume; baseline c10e790 plus this working tree.
+- Evidence: delayed second-page and incomplete same-song resume regressions both failed on the old implementation. After repair, the browser showed 100 tracks first, played episode 129 before completion, and finished with 1000. See the [record](docs/en/project/playlist-resume-queue.md).
+- Rule and Done right: publish contiguous windows on every batch, prioritizing neighbours and later tracks. Audio reuse still checks queue completeness. Retain the current source object, remap prepended indices and allow loaded next tracks to play before prefix completion. Hold subsequent requests and assert playable items.
+- Seen 1× (2026-11-14). Full tests and Web passed; native devices Not run, delivery follows the batch record.
+
 ### RESUME-001: Restore positions inside source preparation
 
 - Scope: playlist resume and Web/native source loading; baseline 84a1f56 plus this working tree.

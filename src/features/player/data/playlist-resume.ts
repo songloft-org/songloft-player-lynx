@@ -8,6 +8,7 @@ import { i18n } from '../../../i18n/index.js'
 import { subscribeAppVisibility } from '../../../native/app-visibility.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import { appConfig } from '../../../core/config/app-config.js'
+import { loadPlaylistWindow } from '../domain/playlist-window-loader.js'
 
 let generation = 0
 let active: { id: number; version: number; blocked: boolean; ready: boolean } | undefined
@@ -89,51 +90,65 @@ export async function playPlaylistTarget(options: { id: number; song?: Song; res
   }
   if (run !== generation) return
   const state = usePlayerStore.getState()
-  if (options.resume && !progress?.completed && state.sourcePlaylistId === options.id && state.currentSong?.id === Number(progress?.song?.id)) {
+  const continuing = !!options.resume && !!progress?.song && !progress.invalid && !progress.completed
+  const reuseAudio = continuing && state.sourcePlaylistId === options.id && state.currentSong?.id === Number(progress?.song?.id)
+  const mode = progress?.play_mode || (playlist.labels.includes('audiobook') ? 'order' : state.playMode)
+  active = progress ? { id: options.id, version: progress.version, blocked: false, ready: reuseAudio && state.confirmedSongId === state.currentSong?.id } : undefined
+  state.setPlayMode(mode as PlayMode)
+  const sort = { sort: playlist.sortBy, order: playlist.sortOrder }
+  const ids = await api.getPlaylistSongIds(options.id, sort)
+  if (run !== generation || ids.length === 0) return
+  const target = reuseAudio ? state.currentSong : options.song ?? (continuing ? parseSong(progress!.song) : undefined)
+  const targetId = target?.id ?? ids[0]
+  const index = ids.indexOf(targetId)
+  if (index < 0) throw new Error(i18n.t('playlistProgressInvalid'))
+  if (reuseAudio && state.playlist.length === ids.length && state.playlist.every((song, i) => song.id === ids[i])) {
     if (!state.isPlaying) await state.togglePlay()
     return
   }
-  const mode = progress?.play_mode || (playlist.labels.includes('audiobook') ? 'order' : state.playMode)
-  active = progress ? { id: options.id, version: progress.version, blocked: false, ready: false } : undefined
-  state.setPlayMode(mode as PlayMode)
-  let song = options.song
-  if (options.resume && progress?.song && !progress.invalid && !progress.completed) song = parseSong(progress.song)
-  const first = await api.getPlaylistSongs(options.id, { sort: playlist.sortBy, order: playlist.sortOrder }, { limit: 100 })
-  if (run !== generation) return
-  song ??= first.songs[0]
-  if (!song) return
-  const target = song
-  const ids = await api.getPlaylistSongIds(options.id)
-  if (run !== generation) return
-  if (!ids.includes(target.id)) throw new Error(i18n.t('playlistProgressInvalid'))
-  restoring = !!options.resume
-  // Start audio before fetching the remaining pages.
-  const positionMs = options.resume && !options.song && progress?.song && !progress.completed && !progress.invalid ? progress.position_ms : 0
-  const playing = usePlayerStore.getState().playPlaylist([target], 0, playlistContext(options.id), { initialPositionMs: positionMs }).then(async () => {
-    if (run !== generation) return
-    restoring = false
-    if (active && usePlayerStore.getState().confirmedSongId === target.id) active.ready = true
-  })
-  void playing.catch(() => {})
-  usePlayerStore.setState({ queueHydrating: true })
-  const queue = [...first.songs]
+  const context = reuseAudio ? state.playbackContext : playlistContext(options.id)
+  let started = false
+  let playing: Promise<void> = Promise.resolve()
+  const isCurrent = () => run === generation && (!started || usePlayerStore.getState().playbackContext === context)
+  restoring = continuing && !reuseAudio
   try {
-    for (let offset = queue.length; offset < first.total; offset = queue.length) {
-      const page = await api.getPlaylistSongs(options.id, { sort: playlist.sortBy, order: playlist.sortOrder }, { limit: 100, offset })
-      if (run !== generation || usePlayerStore.getState().sourcePlaylistId !== options.id) return
-      if (!page.songs.length) throw new Error('Incomplete playlist')
-      queue.push(...page.songs)
-    }
-    const index = queue.findIndex(s => s.id === target.id)
-    if (index < 0) throw new Error('Song is no longer in this playlist')
-    if (run !== generation) return
-    usePlayerStore.getState().hydratePlaylistQueue(queue)
+    const complete = await loadPlaylistWindow({
+      targetIndex: index,
+      total: ids.length,
+      fetch: (offset, limit) => api.getPlaylistSongs(options.id, sort, { offset, limit }).then(page => page.songs),
+      isCurrent,
+      onWindow: (songs, window) => {
+        if (window.initial && !reuseAudio) {
+          const localIndex = songs.findIndex(song => song.id === targetId)
+          if (localIndex < 0) throw new Error(i18n.t('playlistProgressInvalid'))
+          playing = usePlayerStore.getState().playPlaylist(songs, localIndex, context, {
+            initialPositionMs: continuing && !options.song ? progress!.position_ms : 0,
+          })
+          usePlayerStore.setState({ queueHydrating: !window.complete })
+        } else {
+          usePlayerStore.getState().hydratePlaylistQueue(songs, window.complete)
+          if (window.initial && !state.isPlaying) playing = usePlayerStore.getState().togglePlay()
+        }
+        started = true
+        if (window.initial) {
+          playing = playing.then(() => {
+            if (!isCurrent()) return
+            restoring = false
+            if (active && usePlayerStore.getState().confirmedSongId === usePlayerStore.getState().currentSong?.id) active.ready = true
+          })
+          void playing.catch(() => {})
+        }
+      },
+    })
+    if (!complete || !isCurrent()) return
     await playing
-    if (run !== generation) return
-    flushPlaylistProgress()
-  } catch (e) {
-    if (run === generation) usePlayerStore.setState({ queueHydrating: false })
-    restoring = false
-    toast.error(String(e instanceof Error ? e.message : e))
+    if (isCurrent()) flushPlaylistProgress()
+  } catch (error) {
+    if (isCurrent()) toast.error(i18n.t('playlistQueueLoadFailed'))
+  } finally {
+    if (isCurrent()) {
+      usePlayerStore.setState({ queueHydrating: false })
+      restoring = false
+    }
   }
 }

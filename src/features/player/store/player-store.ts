@@ -68,7 +68,7 @@ export interface PlayerState extends PlayerData {
   queueHydrating?: boolean
   queueCompletionPending?: boolean
   playlistCompleted?: boolean
-  hydratePlaylistQueue: (songs: Song[]) => void
+  hydratePlaylistQueue: (songs: Song[], complete?: boolean) => void
   // ── playback ──
   playSong: (song: Song, queue?: Song[]) => Promise<void>
   /** Schedule once after current, without replacing its queue or context. */
@@ -839,7 +839,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       return
     }
 
-    if (s.queueHydrating) {
+    if (s.queueHydrating && s.currentIndex >= s.playlist.length - 1) {
       set({ queueCompletionPending: true })
       return
     }
@@ -1111,7 +1111,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       void syncQueueWindow(list, get().currentIndex)
     },
 
-    hydratePlaylistQueue: (songs) => {
+    hydratePlaylistQueue: (songs, complete = true) => {
       const s = get()
       const index = songs.findIndex(song => song.id === s.currentSong?.id)
       if (index < 0) return
@@ -1119,10 +1119,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       _navigation.remap(new Map(s.playlist.map((song, i) => [i, positions.get(song.id) ?? i])))
       const ordered = songs.slice()
       ordered[index] = s.currentSong!
-      set({ playlist: ordered, currentIndex: index, queueHydrating: false, queueCompletionPending: false })
+      const resumeCompletion = s.queueCompletionPending && (complete || index < ordered.length - 1)
+      set({ playlist: ordered, currentIndex: index, queueHydrating: !complete, queueCompletionPending: !!s.queueCompletionPending && !resumeCompletion })
       syncNavigation()
       void syncQueueWindow(ordered, index)
-      if (s.queueCompletionPending) void Promise.resolve().then(() => get()._onCompleted())
+      if (resumeCompletion) void Promise.resolve().then(() => {
+        if (get().playbackContext === s.playbackContext && get().currentSong === s.currentSong) get()._onCompleted()
+      })
     },
 
     loadRemainingSongsForCurrentPlaylist: ({ loadedCount, total, fetch }) => {

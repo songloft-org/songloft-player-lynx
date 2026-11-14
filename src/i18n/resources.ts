@@ -6,6 +6,7 @@ export const DEFAULT_LANGUAGE: SupportedLanguage = 'zh'
 export type TranslationTree = typeof en
 
 export const en = {
+  playlistQueueLoadFailed: 'Queue loading is incomplete. Loaded tracks are kept; tap Continue to retry.',
   playlistAudiobook: 'Audiobook',
   playlistContinue: 'Continue playing',
   playlistContinueBook: 'Continue listening',
@@ -1291,6 +1292,7 @@ export const en = {
 }
 
 export const zh: TranslationTree = {
+  playlistQueueLoadFailed: '播放队列加载未完成，已保留已加载的歌曲；请点继续播放重试。',
   playlistAudiobook: '有声书',
   playlistContinue: '继续播放',
   playlistContinueBook: '继续收听',

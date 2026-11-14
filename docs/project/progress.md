@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-14 · 千首歌单队列 / Thousand-track queue
+
+修复全量分页完成前队列只有一首，以及同曲续播跳过补齐。现在先加载目标附近 100 首并逐批扩展；两端延迟分页实测可在全量完成前播放下一集，最终 1000 首。Lynx 3802 项、Flutter 播放器 298 项、类型/分析与构建通过；见[记录](playlist-resume-queue.md)。沿用本轮提交推送授权，原生设备 Not run。
+
+Fixed the single-track queue during pagination and incomplete same-song resume. Both delayed-page browser runs advanced before all 1000 tracks loaded. Lynx 3802 tests, Flutter 298 player tests, types/analyze and builds passed; see the [English record](../en/project/playlist-resume-queue.md). Commit/push authorization carries over; native devices Not run.
+
 ## 2026-11-14 · 歌单续播 / Playlist resume
 
 已实现服务端进度与歌单模式、有声书 label、完整歌单搜索点播。两客户端实际媒体时间与服务端同步已核对；发现并修复提前 seek 被加载覆盖的问题。代码与验证见[记录](playlist-resume.md)；本批提交、推送与父指针同步已获授权，原生设备 Not run，不创建正式版本标签。

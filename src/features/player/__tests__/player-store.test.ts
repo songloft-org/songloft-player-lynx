@@ -125,6 +125,14 @@ test('completion deferred by queue hydration decrements the sleep timer only onc
   expect(usePlayerStore.getState().currentSong?.id).toBe(129)
 })
 
+test('a loaded next episode can advance while the rest of the playlist is still loading', async () => {
+  await usePlayerStore.getState().playPlaylist([song(128, 900), song(129, 900)])
+  usePlayerStore.setState({ queueHydrating: true })
+  usePlayerStore.getState()._onCompleted()
+  await flush()
+  expect(usePlayerStore.getState().currentSong?.id).toBe(129)
+})
+
 test('clearing during auto-resume cannot revive old playback or history', async () => {
   setCachedAccessToken('restore-test-token')
   playback.saved = { playlist: [{ ...song(1, 60), url: '/api/v1/songs/1/play' }], currentIndex: 0, positionMs: 5000 }

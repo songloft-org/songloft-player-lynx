@@ -261,8 +261,11 @@ export class PlaylistApi {
     )
   }
 
-  async getPlaylistSongIds(id: number): Promise<number[]> {
-    const res = await this.client.get<unknown>(`${apiPrefix}/playlists/${id}/song-ids`)
+  async getPlaylistSongIds(id: number, filters: Pick<PlaylistSongsFilters, 'sort' | 'order'> = {}): Promise<number[]> {
+    const query: Record<string, string | number> = {}
+    putStr(query, 'sort', filters.sort)
+    putStr(query, 'order', filters.order)
+    const res = await this.client.get<unknown>(`${apiPrefix}/playlists/${id}/song-ids`, { query })
     const data = res.data as Record<string, unknown> | undefined
     const ids = Array.isArray(data?.ids) ? data.ids : []
     return ids.map((v: unknown) => Number(v))

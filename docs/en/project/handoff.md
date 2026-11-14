@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-14 · Thousand-track queue follow-up
+
+Queue publication now happens on every contiguous batch; same-song resume repairs incomplete queues. Both delayed thousand-track browser runs passed. See the [record](playlist-resume-queue.md) for evidence and native boundaries; commit/push authorization carries over from this task.
+
 ## 2026-11-14 · Playlist resume
 
 Local implementation and Web validation are complete; see the [record](playlist-resume.md). Commits, pushes and parent gitlink updates are authorized; matching parent/Flutter changes remain in the shared workspace and clients are committed first. Native background resume Not run; no stable release is performed.
