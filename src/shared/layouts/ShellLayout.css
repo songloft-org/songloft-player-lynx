@@ -89,6 +89,7 @@
    the shell does not add padding here. */
 
 .shell__body {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;

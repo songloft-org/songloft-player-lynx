@@ -1,6 +1,9 @@
 import '../shims/router-env.js'
 
 import '@testing-library/jest-dom'
+vi.mock('../features/jsplugin/widgets/RetainedPluginTabs.js', () => ({
+  RetainedPluginTabs: ({ children }: { children: import('@lynx-js/react').ReactNode }) => children,
+}))
 // New player consumers use native stores/query observers; render stand-ins
 // keep this renderer from invoking Node's external React dispatcher.
 vi.mock('../features/player/data/audio-tracks-query.js', () => ({

@@ -1,5 +1,13 @@
 # Lynx Client Development Lessons
 
+### PLUGIN-001: Retained plugin pages do not imply a retained native frame
+
+- Scope: Android native main-navigation plugins, baseline `2447fade1affad9dda94f0bd68aff932680d91d8`.
+- Evidence: frames belonged to routed pages and were recreated on library round-trips. Retaining scroll-views inside the plugin cannot preserve search across this boundary. Native-branch tests preserve the exact frame/search; an isolated active-frame-only mutation fails because the old node disappears.
+- Rule: stable Shell owns main-tab frames, hidden pages pause UI polling, and package/update identity, disabling, server scope or Shell teardown dispose instances. Web retention does not prove native retention.
+- Same-batch Web input investigation: echoing input values cannot fix bindings lost before custom-element upgrade; queue in the host and replay after definition. Use real keyboard input and verify the runtime actually served over HTTP. Copying beside the database does not update executable-relative assets. Production-method checks fail 2/3 on the old bundle and pass 3/3 after the patch.
+- Done right: all 3820 tests, 89 release checks and dual/Web builds pass; native device acceptance Not run. See the [record](docs/en/project/bili-plugin-interaction.md). Seen 1× (2026-11-15). Uncommitted/unreleased.
+
 ## Scope and Sources
 
 Record dual-thread behavior, shared JS, and four platform hosts in songloft-org/songloft-player-lynx. See the [local AI workflow](docs/en/guides/ai-development.md) and parent host constraints. Existing AGENTS/business references remain authoritative; link evidence rather than duplicating incident histories.

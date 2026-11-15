@@ -165,3 +165,7 @@ describe('the narrow bar with overflow folds into 4 + More', () => {
     })
   })
 })
+// Frame retention is exercised separately; these tests isolate shell chrome.
+vi.mock('../../../features/jsplugin/widgets/RetainedPluginTabs.js', () => ({
+  RetainedPluginTabs: ({ children }: { children: import('@lynx-js/react').ReactNode }) => children,
+}))

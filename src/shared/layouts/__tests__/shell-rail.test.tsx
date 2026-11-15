@@ -147,3 +147,7 @@ describe('the wide rail groups destinations iPadOS-style', () => {
     expect(q.queryByTestId('more-tabs-sheet')).toBeNull()
   })
 })
+// Frame retention is exercised separately; these tests isolate shell chrome.
+vi.mock('../../../features/jsplugin/widgets/RetainedPluginTabs.js', () => ({
+  RetainedPluginTabs: ({ children }: { children: import('@lynx-js/react').ReactNode }) => children,
+}))

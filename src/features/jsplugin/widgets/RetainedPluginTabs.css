@@ -1,0 +1,12 @@
+.plugin-tab-retained {
+  position: absolute;
+  top: var(--safe-top);
+  bottom: 0;
+  left: 0;
+  right: 0;
+  flex-direction: column;
+}
+
+.shell--wide .plugin-tab-retained {
+  top: 0;
+}

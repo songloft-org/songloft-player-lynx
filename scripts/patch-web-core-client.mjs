@@ -29,6 +29,10 @@
  *    is destroyed. The patch makes a missing `currentTarget` drop the event
  *    instead — there is no handler left to deliver to.
  *
+ * Input/textarea event enables may also arrive before custom-element upgrade.
+ * Queue and replay those enables when the definition is ready, accounting for
+ * handlers removed before upgrade. Otherwise real keystrokes never reach Lynx.
+ *
  * Invoked by the `postinstall` script in package.json. Idempotent: each
  * replacement is skipped when its output marker is already present.
  */
@@ -60,6 +64,15 @@ if (!existsSync(join(webCoreDir, 'dist', 'client_prod'))) {
 
 /** A single minified-bundle replacement. `marker` is the patched form. */
 const REPLACEMENTS = [
+  {
+    // Input/textarea event bindings can arrive before their custom element is
+    // upgraded. The optional call silently lost those enables. Replay queued
+    // counts after upgrade, accounting for handlers removed in the meantime.
+    file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
+    marker: '__songloftPendingEvents',
+    oldText: 'enableElementEvent(e,n){let t=e.deref();t&&t.enableEvent?.(i.im[n]??n)}disableElementEvent(e,n){let t=e.deref();t&&t.disableEvent?.(i.im[n]??n)}',
+    newText: 'enableElementEvent(e,n){let t=e.deref();if(!t)return;let r=i.im[n]??n;if(typeof t.enableEvent==="function"){t.enableEvent(r);return}if(!t.localName?.includes("-"))return;let l=t.__songloftPendingEvents??=new Map;l.set(r,(l.get(r)??0)+1);customElements.whenDefined(t.localName).then(()=>{let t=e.deref(),n=l.get(r)??0;l.delete(r);if(t)for(let e=0;e<n;e++)t.enableEvent?.(r)})}disableElementEvent(e,n){let t=e.deref();if(!t)return;let r=i.im[n]??n,l=t.__songloftPendingEvents,a=l?.get(r)??0;if(a>0){a===1?l.delete(r):l.set(r,a-1)}else t.disableEvent?.(r)}',
+  },
   {
     // Fix 1, on client.js (wasm-bindgen glue):
     // `nativeModulesMap;` class field → getter/setter (lynx-stack#3559).

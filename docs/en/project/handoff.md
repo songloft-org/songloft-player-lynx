@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-15 · Bili main-navigation state
+
+Native plugin tabs now keep their frames in the Shell across library navigation; updates/disabling clean up instances and hidden pages pause UI polling. Bili also fixes titles, part collapse and large playlist selection. See the [record](bili-plugin-interaction.md) for verification and native limits. On 2026-11-16 the user authorized this batch's commits, pushes and parent pointer update. Code and verification targets are unchanged; Git/Actions determine actual commit and CI results.
+
 ## 2026-11-14 · Thousand-track queue follow-up
 
 Queue publication now happens on every contiguous batch; same-song resume repairs incomplete queues. Both delayed thousand-track browser runs passed. See the [record](playlist-resume-queue.md) for evidence and native boundaries; commit/push authorization carries over from this task.

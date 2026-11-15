@@ -83,3 +83,7 @@ describe('the shell seeds its breakpoint from the cached width', () => {
     expect(root.querySelector('.shell__bottombar')).toBeNull()
   })
 })
+// Frame retention is exercised separately; these tests isolate shell chrome.
+vi.mock('../../../features/jsplugin/widgets/RetainedPluginTabs.js', () => ({
+  RetainedPluginTabs: ({ children }: { children: import('@lynx-js/react').ReactNode }) => children,
+}))

@@ -42,6 +42,7 @@ import { subscribeAppResumed } from '../../../native/app-lifecycle.js'
 import { LynxPluginFrame } from '../widgets/LynxPluginFrame.js'
 import { createPluginBackBridge } from '../domain/plugin-back-bridge.js'
 import './PluginWebViewPage.css'
+import { useRetainedPluginTabs } from '../widgets/RetainedPluginTabs.js'
 
 async function getAccessToken(): Promise<string> {
   try {
@@ -112,6 +113,7 @@ function subscribePluginAppearance(push: () => void): () => void {
 }
 
 export function PluginWebViewPage() {
+  const retainedTabs = useRetainedPluginTabs()
   const navigate = useNavigate()
   const { t } = useTranslation()
   const params = useParams({ strict: false }) as { entryPath?: string }
@@ -490,6 +492,7 @@ export function PluginWebViewPage() {
    * Both platforms use the same component since <frame> maps to <lynx-view> on Web.
    */
   if (plugin?.renderEngine === 'lynx') {
+    if (retainedTabs && isTabEntry && plugin.isActive) return null
     return (
       <view className='plugin-webview'>
         {topbar}

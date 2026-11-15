@@ -12,6 +12,7 @@ import { MiniPlayer } from '../../features/player/widgets/MiniPlayer.js'
 // output.
 import { usePlayerStore } from '../../features/player/store/index.js'
 import { PluginTabIcon, useShellNavTabs } from '../../features/jsplugin/index.js'
+import { RetainedPluginTabs } from '../../features/jsplugin/widgets/RetainedPluginTabs.js'
 import { getLastLibrarySearch } from '../../features/library/index.js'
 import {
   buildNavDestinations,
@@ -293,7 +294,7 @@ export function ShellLayout() {
 
       <view className='shell__content'>
         <view className='shell__body' id='songloft-backdrop' flatten={false}>
-          <Outlet />
+          <RetainedPluginTabs><Outlet /></RetainedPluginTabs>
         </view>
 
         {/* Mini-player sits above the bottom bar (narrow) / at the foot of the

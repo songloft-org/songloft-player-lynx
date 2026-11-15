@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-15 · Bili 主导航状态与选择器 / Bili tab state and pickers
+
+2026-11-16：用户已授权本批提交推送及父指针同步；下文为提交前快照，代码与验证对象未变。 / Commits/pushes and parent pointer synchronization are now authorized; the pre-commit snapshot below and its verified code are unchanged.
+
+原生主导航插件 frame 移到 Shell 保留，曲库往返不再重建；隐藏时暂停界面轮询。bili 补齐长标题、分 P 收起及千歌单搜索分页；Web 宿主补齐升级前的输入事件绑定。3820 项客户端测试、89 项发布检查和双包/Web 构建通过，插件 59 项测试及浏览器场景见[验证记录](bili-plugin-interaction.md)。未提交、推送、发布或更新父指针；Android 实机未验。
+
+Native plugin-tab frames now belong to the Shell, retain state across library navigation, and pause hidden UI polling. Bili adds bounded titles, collapsible parts and searchable paged selectors; the Web host preserves input bindings arriving before upgrade. All 3820 client tests, 89 release checks and dual/Web builds pass; plugin tests/browser evidence and limits are in the [record](../en/project/bili-plugin-interaction.md). No commit, push, release or parent pointer update; Android device acceptance Not run.
+
 ## 2026-11-15 · Release emoji / Emoji in release notes
 
 用户确认 Android 显示 `:sparkles:` 原文；共用 Markdown 缺少短码展开。按正文节点接入 `gemoji`，同步许可证，保留代码、转义、未知名称和链接目标。三项旧实现回归失败，修复后 36 项定向、3811 项全量、89 项发布工具、类型及双产物通过。Web 新旧包对照和 Android 34 原生关于页已核对；Android 使用既有调试宿主加载新 JS，原生重编译取消于 Gradle 下载阶段。详见[记录](release-emoji.md)；未提交、推送或发布。

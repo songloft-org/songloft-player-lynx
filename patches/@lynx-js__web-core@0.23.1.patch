@@ -1,8 +1,7 @@
 diff --git a/dist/client/mainthread/LynxView.js b/dist/client/mainthread/LynxView.js
-index 037109820dc709e61424b6f5c4d02d6e8acbd807..8e0178e913452193ffb194ca9a2760322691178f 100644
 --- a/dist/client/mainthread/LynxView.js
 +++ b/dist/client/mainthread/LynxView.js
-@@ -71,7 +71,13 @@ export class LynxViewElement extends HTMLElement {
+@@ -71,7 +71,13 @@
       * @property nativeModulesMap
       * @default {}
       */
@@ -18,10 +17,9 @@ index 037109820dc709e61424b6f5c4d02d6e8acbd807..8e0178e913452193ffb194ca9a276032
       * @param
       * @property napiModulesMap
 diff --git a/dist/client/mainthread/elementAPIs/WASMJSBinding.js b/dist/client/mainthread/elementAPIs/WASMJSBinding.js
-index 2eca24df32b3449041d25b31d787a5987e9b014d..04d7ecb6b916a6cc5ff98bfa0e902dd39e1b5872 100644
 --- a/dist/client/mainthread/elementAPIs/WASMJSBinding.js
 +++ b/dist/client/mainthread/elementAPIs/WASMJSBinding.js
-@@ -54,7 +54,13 @@ export class WASMJSBinding {
+@@ -54,7 +54,13 @@
          const target = this.getElementByUniqueId(targetUniqueId);
          const currentTarget = this.getElementByUniqueId(currentTargetUniqueId);
          const resolvedTarget = (target ?? currentTarget);
@@ -36,7 +34,7 @@ index 2eca24df32b3449041d25b31d787a5987e9b014d..04d7ecb6b916a6cc5ff98bfa0e902dd3
              return;
          const resolvedTargetDataset = target ? targetDataset : currentTargetDataset;
          eventObject.target = this.generateTargetObject(resolvedTarget, resolvedTargetDataset);
-@@ -76,7 +82,10 @@ export class WASMJSBinding {
+@@ -76,7 +82,10 @@
          // originated outside the Lynx element tree, so fall back to currentTarget
          // (the element that registered the global handler).
          const resolvedTarget = (target ?? currentTarget);
@@ -48,3 +46,44 @@ index 2eca24df32b3449041d25b31d787a5987e9b014d..04d7ecb6b916a6cc5ff98bfa0e902dd3
              return;
          const resolvedTargetDataset = target ? targetDataset : currentTargetDataset;
          eventObject.target = this.generateTargetObject(resolvedTarget, resolvedTargetDataset);
+@@ -163,17 +172,32 @@
+     }
+     enableElementEvent(elementRef, eventName) {
+         const element = elementRef.deref();
+-        if (element) {
+-            // @ts-expect-error
+-            element.enableEvent?.(LynxEventNameToW3cCommon[eventName] ?? eventName);
+-        }
++        if (!element) return;
++        const name = LynxEventNameToW3cCommon[eventName] ?? eventName;
++        if (typeof element.enableEvent === 'function') {
++            element.enableEvent(name);
++            return;
++        }
++        if (!element.localName?.includes('-')) return;
++        const pending = element.__songloftPendingEvents ??= new Map();
++        pending.set(name, (pending.get(name) ?? 0) + 1);
++        customElements.whenDefined(element.localName).then(() => {
++            const current = elementRef.deref();
++            const count = pending.get(name) ?? 0;
++            pending.delete(name);
++            if (current) for (let i = 0; i < count; i++) current.enableEvent?.(name);
++        });
+     }
+     disableElementEvent(elementRef, eventName) {
+         const element = elementRef.deref();
+-        if (element) {
+-            // @ts-expect-error
+-            element.disableEvent?.(LynxEventNameToW3cCommon[eventName] ?? eventName);
+-        }
++        if (!element) return;
++        const name = LynxEventNameToW3cCommon[eventName] ?? eventName;
++        const pending = element.__songloftPendingEvents;
++        const count = pending?.get(name) ?? 0;
++        if (count > 0) {
++            if (count === 1) pending.delete(name);
++            else pending.set(name, count - 1);
++        } else element.disableEvent?.(name);
+     }
+     setAttribute(elementRef, name, value) {
+         const element = elementRef.deref();

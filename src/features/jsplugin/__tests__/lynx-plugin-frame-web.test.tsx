@@ -258,3 +258,37 @@ test('reusing the native page for another plugin replaces the scoped bridge and 
   result.unmount()
   expect(h.resumeSubs.size).toBe(0)
 })
+
+test('retained native frames pause offscreen and ignore app resume until selected', async () => {
+  nativeFrameLeaf()
+  h.isWeb = false
+  const result = render(<LynxPluginFrame entryPath='alpha' isTabEntry active />)
+  await act(async () => {
+    await Promise.resolve()
+  })
+  h.nativePush.mockClear()
+  await act(async () => {
+    result.rerender(
+      <LynxPluginFrame entryPath='alpha' isTabEntry active={false} />,
+    )
+  })
+  expect(h.nativePush).toHaveBeenCalledWith(
+    'lifecycle',
+    JSON.stringify({ state: 'paused' }),
+  )
+  h.nativePush.mockClear()
+  await act(async () => {
+    h.resumeSubs.forEach((fn) => fn())
+  })
+  expect(h.nativePush).not.toHaveBeenCalled()
+  await act(async () => {
+    result.rerender(<LynxPluginFrame entryPath='alpha' isTabEntry active />)
+  })
+  expect(h.nativePush).toHaveBeenCalledWith(
+    'lifecycle',
+    JSON.stringify({ state: 'resumed' }),
+  )
+  expect(h.nativeConnect).toHaveBeenCalledOnce()
+  expect(h.nativeDispose).not.toHaveBeenCalled()
+  result.unmount()
+})

@@ -36,6 +36,7 @@ function buildLynxBundleUrl(entryPath: string): string {
 interface Props {
   entryPath: string
   isTabEntry: boolean
+  active?: boolean
 }
 
 /**
@@ -49,7 +50,9 @@ interface Props {
  * the host-call dispatch path (because the Web nested <lynx-view> needs
  * explicit module configuration from the main thread).
  */
-export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
+export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
+  const activeRef = useRef(active !== false)
+  activeRef.current = active !== false
   const frameContext = useMemo(
     () => ({
       ...hostContext,
@@ -95,15 +98,24 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
     nativeHost.current = host
     host.push('playerState', JSON.stringify(playerStateToJson()))
     host.push('theme', JSON.stringify({ theme: resolveTheme(getAppTheme()) }))
-    const unsubscribe = subscribeAppResumed(() =>
-      host.push('lifecycle', JSON.stringify({ state: 'resumed' })),
-    )
+    const unsubscribe = subscribeAppResumed(() => {
+      if (activeRef.current)
+        host.push('lifecycle', JSON.stringify({ state: 'resumed' }))
+    })
     return () => {
       unsubscribe()
       host.dispose()
       if (nativeHost.current === host) nativeHost.current = null
     }
   }, [frameId, isWeb])
+
+  useEffect(() => {
+    if (!isWeb && active !== undefined)
+      nativeHost.current?.push(
+        'lifecycle',
+        JSON.stringify({ state: active ? 'resumed' : 'paused' }),
+      )
+  }, [active, isWeb])
 
   /*
    * `playerState` rides along with the initial props on purpose.
@@ -223,9 +235,9 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
   if (isWeb) {
     return (
       <view
-        id="plugin-lynx-frame"
-        className="plugin-webview__frame"
-        data-testid="plugin-lynx-frame"
+        id='plugin-lynx-frame'
+        className='plugin-webview__frame'
+        data-testid='plugin-lynx-frame'
       />
     )
   }
@@ -235,8 +247,8 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
     <frame
       src={bundleUrl}
       global-props={globalProps}
-      className="plugin-webview__frame"
-      data-testid="plugin-lynx-frame"
+      className='plugin-webview__frame'
+      data-testid='plugin-lynx-frame'
     />
   )
 }

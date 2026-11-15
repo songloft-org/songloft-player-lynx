@@ -8,7 +8,7 @@ patchedDependencies:
   '@lynx-js/lynx-ui-input@3.135.4': c22fd3a470c4ae0154a60fd6dedc6e301df0d4470702c0978d6c387a46709d68
   '@lynx-js/lynx-ui-slider@3.135.4': 405ba057ff0bc8190338d89d2411cca98f8ad71621da9c9d855a284a3a3afce3
   '@lynx-js/lynx-ui-sortable@3.135.4': 9ab9e70ee6451e5f7d2a50cfb762cd1ce2d16953d87addfe4341841c75bbd29e
-  '@lynx-js/web-core@0.23.1': 5593203bd3d4d251d472b7fa22769c09a31116caeea82b44fbc68942354cb8a0
+  '@lynx-js/web-core@0.23.1': 332c9d630e76e327aca74117fda42bb3722e0fadbae0155afd376f9c9acf70f3
   '@tanstack/history@1.162.1': 207991a23f96615aa8aa31c012f762a26d948f384ff677fffea294b215ab156d
   '@tanstack/router-core@1.171.18': a6b43d78e19bceb901d2a9b9851c2b24c0aa71be5418a83deff3f2f56f0bcf35
 
@@ -112,7 +112,7 @@ importers:
         version: 4.0.0
       '@lynx-js/web-core':
         specifier: 0.23.1
-        version: 0.23.1(patch_hash=5593203bd3d4d251d472b7fa22769c09a31116caeea82b44fbc68942354cb8a0)(@lynx-js/css-serializer@0.1.7)(tslib@2.8.1)
+        version: 0.23.1(patch_hash=332c9d630e76e327aca74117fda42bb3722e0fadbae0155afd376f9c9acf70f3)(@lynx-js/css-serializer@0.1.7)(tslib@2.8.1)
       '@rsbuild/plugin-type-check':
         specifier: 1.5.0
         version: 1.5.0(@rsbuild/core@2.1.7)(@rspack/core@2.1.8(@swc/helpers@0.5.23))(typescript@6.0.3)
@@ -3942,7 +3942,7 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.31
       '@lynx-js/css-serializer': 0.1.7
       '@lynx-js/tasm': 0.0.49
-      '@lynx-js/web-core': 0.23.1(patch_hash=5593203bd3d4d251d472b7fa22769c09a31116caeea82b44fbc68942354cb8a0)(@lynx-js/css-serializer@0.1.7)(tslib@2.8.1)
+      '@lynx-js/web-core': 0.23.1(patch_hash=332c9d630e76e327aca74117fda42bb3722e0fadbae0155afd376f9c9acf70f3)(@lynx-js/css-serializer@0.1.7)(tslib@2.8.1)
       '@lynx-js/webpack-runtime-globals': 0.0.7
       '@rspack/lite-tapable': 1.1.2
       css-tree: 3.2.1
@@ -3960,7 +3960,7 @@ snapshots:
     dependencies:
       '@lynx-js/react': 0.123.2(@lynx-js/types@4.0.0)(@types/react@19.2.18)
 
-  '@lynx-js/web-core@0.23.1(patch_hash=5593203bd3d4d251d472b7fa22769c09a31116caeea82b44fbc68942354cb8a0)(@lynx-js/css-serializer@0.1.7)(tslib@2.8.1)':
+  '@lynx-js/web-core@0.23.1(patch_hash=332c9d630e76e327aca74117fda42bb3722e0fadbae0155afd376f9c9acf70f3)(@lynx-js/css-serializer@0.1.7)(tslib@2.8.1)':
     dependencies:
       '@lynx-js/web-elements': 0.12.7(tslib@2.8.1)
       '@lynx-js/web-worker-rpc': 0.23.1
