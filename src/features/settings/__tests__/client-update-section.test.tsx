@@ -48,13 +48,13 @@ afterEach(async () => {
 })
 test('renders release Markdown after checking and opens its links through the host', async () => {
   const value = result()
-  value.candidate.release.body = '## 更新记录\n\n- **修复**显示\n\n[详情](https://example.com/notes)'
+  value.candidate.release.body = '## :sparkles: 更新记录\n\n- **:bug: 修复**显示\n\n[详情](https://example.com/notes)'
   mocks.check.mockResolvedValue(value)
   render(<ClientUpdateSection />); await settle()
   const queries = getQueriesForElement(elementTree.root!)
   await act(async () => { fireEvent.tap(queries.getByTestId('client-update-check')) }); await settle()
-  expect(queries.getByText('更新记录').closest('.markdown__heading--2')).toBeInTheDocument()
-  expect(queries.getByText('修复').closest('.markdown__strong')).toBeInTheDocument()
+  expect(queries.getByText('✨ 更新记录').closest('.markdown__heading--2')).toBeInTheDocument()
+  expect(queries.getByText('🐛 修复').closest('.markdown__strong')).toBeInTheDocument()
   await act(async () => { fireEvent.tap(queries.getByText('详情')) })
   expect(mocks.open).toHaveBeenCalledExactlyOnceWith('https://example.com/notes')
   expect(queries.getByTestId('client-update-download')).toBeInTheDocument()

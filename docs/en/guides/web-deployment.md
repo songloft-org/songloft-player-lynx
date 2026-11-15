@@ -68,9 +68,11 @@ Final acceptance uses the new standalone/embedded packages from source `f5d00c0`
 
 ## Playlist JSON import and export
 
-Settings → Data accepts a previously exported Songloft version 1 JSON backup or exports all server playlists. Web enables this entry only when the host supplies `pickTextFile/saveTextFile/cancelTextFile`; older hosts hide the entry and explain the limitation on the data page.
+Settings → Data accepts a previously exported Songloft v1 or v2 JSON backup or exports all server playlists. Web enables this entry only when the host supplies `pickTextFile/saveTextFile/cancelTextFile`; older hosts hide the entry and explain the limitation on the data page.
 
-File selection and Blob downloads run on the main thread; the business Worker receives file text only. Import files are limited to 20 MiB. If a cross-thread call or network delay loses transient user activation, the main thread displays an actual file/download control and a cancel button. Click that control to continue. Object URLs are revoked after downloads; cancellation or leaving the data page removes temporary file controls. Cancellation uploads nothing. Empty files, invalid JSON and backups other than version 1 are rejected locally.
+Import files and export responses share v1/v2 validation. Shared tag definitions and song/playlist `tag_ids` in v2 are transferred unchanged; the server remaps tag IDs by name during import. Do not change the version number or remove tag fields. Older clients with v1-only validation need updated Web deployment artifacts to receive this fix.
+
+File selection and Blob downloads run on the main thread; the business Worker receives file text only. Import files are limited to 20 MiB. If a cross-thread call or network delay loses transient user activation, the main thread displays an actual file/download control and a cancel button. Click that control to continue. Object URLs are revoked after downloads; cancellation or leaving the data page removes temporary file controls. Cancellation uploads nothing. Empty files, invalid JSON and backups other than v1/v2 are rejected locally.
 
 Web requests use the shared authenticated client: multipart `file` to `/playlists/import` and an authenticated GET to `/playlists/export`. Tokens appear only in Authorization headers. A 401 uses the existing refresh and request replay; failed refresh returns to login, and HTTP errors end the busy state. Both actions are disabled during transfer. Successful imports invalidate `['playlist']` and `['library']`, covering details, song lists and home statistics. Native clients retain their existing upload/browser-export flows.
 

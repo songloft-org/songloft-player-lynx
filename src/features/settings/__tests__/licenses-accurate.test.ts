@@ -60,6 +60,7 @@ function normalizeRepo(repository: unknown): string | undefined {
     ? repository
     : (repository as { url?: string } | undefined)?.url
   if (!raw) return undefined
+  if (/^[\w.-]+\/[\w.-]+$/.test(raw)) return `https://github.com/${raw}`
   return raw
     .replace(/^git\+/, '')
     .replace(/^git:\/\//, 'https://')

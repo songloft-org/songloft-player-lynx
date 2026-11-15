@@ -36,7 +36,7 @@ export function parseImportResult(value: unknown): ImportResult {
 function validateBackup(text: string): void {
   try {
     const json = JSON.parse(text) as { version?: unknown; playlists?: unknown } | null
-    if (!json || typeof json !== 'object' || json.version !== 1 || !Array.isArray(json.playlists)) {
+    if (!json || typeof json !== 'object' || (json.version !== 1 && json.version !== 2) || !Array.isArray(json.playlists)) {
       throw new Error('invalid_json')
     }
   } catch { throw new Error('invalid_json') }

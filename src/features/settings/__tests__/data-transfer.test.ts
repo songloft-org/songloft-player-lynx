@@ -9,6 +9,14 @@ import { appConfig } from '../../../core/config/app-config.js'
 import { importPlaylists, jsonMultipart, parseImportResult, PlaylistBackupApi } from '../domain/data-transfer.js'
 
 const backup = JSON.stringify({ version: 1, playlists: [{ name: '歌单🎵', songs: [] }] })
+const taggedBackup = JSON.stringify({
+  version: 2,
+  tags: [{ id: 17, name: '有声书🎵', color: '#123456' }],
+  playlists: [{
+    name: '故事集', type: 'normal', labels: ['audiobook'], tag_ids: [17],
+    songs: [{ type: 'remote', title: '第一集', url: 'https://music.example/1.mp3', tag_ids: [17] }],
+  }],
+}, null, 2)
 const counts = { playlists_created: 1, playlists_merged: 0, songs_created: 0, songs_matched: 0 }
 const labels = { title: 'Import', choose: 'Choose', save: 'Save', cancel: 'Cancel' }
 
@@ -18,11 +26,27 @@ afterEach(() => {
   setCachedAccessToken(null)
 })
 
-test.each(['', 'null', '{}', '[]', 'bad', '{"version":1,"playlists":{}}', '{"version":2,"playlists":[]}'])(
+test.each(['', 'null', '{}', '[]', 'bad', '{"version":1,"playlists":{}}',
+  '{"version":2,"playlists":null}', '{"version":3,"playlists":[]}', '{"version":"2","playlists":[]}'])(
   'rejects an empty or invalid backup before HTTP: %s', text => {
     expect(() => jsonMultipart(text)).toThrow('invalid_json')
   },
 )
+
+test.each([['v1', backup], ['v2', taggedBackup]])('imports %s backups without changing tags or text', async (_version, text) => {
+  const transport = vi.fn(async (_request: TransportRequest) => ({ status: 200, headers: {}, body: JSON.stringify(counts) }))
+  const api = new PlaylistBackupApi(new HttpClient({ transport }))
+  expect(await api.importBackup(text)).toEqual(counts)
+  expect(transport).toHaveBeenCalledTimes(1)
+  const request = transport.mock.calls[0]![0]
+  expect(request.url).toMatch(/\/api\/v1\/playlists\/import$/)
+  expect(request.body).toContain(`\r\n\r\n${text}\r\n--`)
+})
+
+test.each([['v1', backup], ['v2', taggedBackup]])('exports %s backups without changing tags or text', async (_version, text) => {
+  const client = new HttpClient({ transport: async () => ({ status: 200, headers: {}, body: text }) })
+  expect(await new PlaylistBackupApi(client).exportBackup()).toBe(text)
+})
 
 test.each([{}, null, { ...counts, songs_created: -1 }, { ...counts, songs_matched: '0' }, { ...counts, playlists_created: 1.5 }])(
   'rejects invalid server counts', value => { expect(() => parseImportResult(value)).toThrow('invalid_response') },
@@ -41,7 +65,7 @@ test('multipart preserves Unicode, supplies the file field and avoids boundary c
   vi.restoreAllMocks()
 })
 
-test('imports and exports use Authorization, refresh once and replay the same multipart at a subpath', async () => {
+test.each([['v1', backup], ['v2', taggedBackup]])('%s imports and exports use Authorization, refresh once and replay the same multipart at a subpath', async (_version, text) => {
   const tokens = new TokenStore(createMemoryStorage().secure)
   await tokens.saveTokens({ accessToken: 'old', refreshToken: 'refresh', expiresIn: 3600, tokenType: 'Bearer' })
   const requests: TransportRequest[] = []
@@ -53,12 +77,12 @@ test('imports and exports use Authorization, refresh once and replay the same mu
         status: 200, headers: {}, body: JSON.stringify({ access_token: 'new', refresh_token: 'next', expires_in: 3600, token_type: 'Bearer' }),
       }
       if (request.headers.Authorization !== 'Bearer new') return { status: 401, headers: {}, body: '{}' }
-      return { status: 200, headers: {}, body: request.method === 'POST' ? JSON.stringify(counts) : backup }
+      return { status: 200, headers: {}, body: request.method === 'POST' ? JSON.stringify(counts) : text }
     },
   })
   const api = new PlaylistBackupApi(client)
-  expect(await api.importBackup(backup)).toEqual(counts)
-  expect(await api.exportBackup()).toBe(backup)
+  expect(await api.importBackup(text)).toEqual(counts)
+  expect(await api.exportBackup()).toBe(text)
   expect(requests.filter(request => request.url.endsWith('/auth/refresh'))).toHaveLength(1)
   const posts = requests.filter(request => request.url.endsWith('/playlists/import'))
   expect(posts).toHaveLength(2)

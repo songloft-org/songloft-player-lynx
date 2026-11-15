@@ -10,6 +10,20 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 ## Entries
 
+### MARKDOWN-001: GFM does not automatically expand GitHub emoji shortcodes
+
+- Scope: shared Markdown for Android About/Updates, client Releases and backend changelogs; baseline `1de4735` plus this worktree.
+- Evidence: repository Release headings use `:sparkles:` and `:bug:`; the old renderer displays them literally. Three old-code component/page regressions fail. The fix passes 36 focused checks, 3811 full tests, 89 release-tool checks and dual artifacts. Old/new Web comparisons and Android 34 native UI were checked; see [verification](docs/en/project/release-emoji.md).
+- Rule and Done right: resolve names to Unicode in prose text nodes, not by replacing the entire Markdown source. Preserve code, escapes, autolinks and URLs; retain unknown names and use own-property dictionary lookups. Update attribution and lockfile for data dependencies without unrelated upgrades.
+- Seen 1× (2026-11-15). Status: local repair. Android reuses an existing debug host with the new bundle; the native rebuild was cancelled during Gradle download and is not counted as passed. Reporter device untested; no commit or release.
+
+### BACKUP-001: Cover import files and export responses when changing backup compatibility
+
+- Scope: Web data management, baseline `1de4735`; shared-contract lessons are also recorded in the parent repository.
+- Evidence: the old shared validator accepted only v1; three new v2 import/export/authentication-replay regressions fail. Accepting v1/v2 passes all 28 focused checks. A real download imported across two temporary backends remaps tag ID 1 → 2 with correct song/playlist references, retains v1 compatibility and blocks v3 before upload. See [verification](docs/en/project/backup-v2.md).
+- Rule and Done right: check both pre-upload and post-download validation. Transfer definitions/references unchanged and let the server map IDs. Keep rejecting unknown versions and invalid structures; update both translations. Native paths and other browsers were not tested.
+- Seen 1× (2026-11-15). Status: local repair and browser acceptance complete, uncommitted/unreleased.
+
 ### RESUME-002: Test intermediate queues under slow pagination
 
 - Scope: playlist resume; baseline c10e790 plus this working tree.

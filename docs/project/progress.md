@@ -1,5 +1,19 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-15 · Release emoji / Emoji in release notes
+
+用户确认 Android 显示 `:sparkles:` 原文；共用 Markdown 缺少短码展开。按正文节点接入 `gemoji`，同步许可证，保留代码、转义、未知名称和链接目标。三项旧实现回归失败，修复后 36 项定向、3811 项全量、89 项发布工具、类型及双产物通过。Web 新旧包对照和 Android 34 原生关于页已核对；Android 使用既有调试宿主加载新 JS，原生重编译取消于 Gradle 下载阶段。详见[记录](release-emoji.md)；未提交、推送或发布。
+
+The user confirmed literal `:sparkles:` on Android. Shared Markdown now resolves shortcodes in prose through `gemoji`, updates attribution, and preserves code, escapes, unknown names and link targets. Three regressions fail on old code; 36 focused checks, 3811 full tests, 89 release-tool checks, types and dual builds pass. Old/new Web comparison and Android 34 native About rendering pass; Android uses an existing debug host with new JS, while native rebuilding was cancelled during Gradle download. [Verification](../en/project/release-emoji.md). Uncommitted/unpushed/unreleased.
+
+## 2026-11-15 · 文档核对与备份修复 / Documentation audit and backup repair
+
+基线 `1de4735`：文档核对发现 Web 对导入 / 导出均只接受 v1；用户随后要求修复，现接受 v1 / v2，并同步无效文件提示和公共文档。旧代码三项新回归失败，修复后 28 项定向和真实浏览器跨实例下载 / 导入通过，标签 ID 正确重映射。完整验证与未跑项见[记录](backup-v2.md)。未提交、推送、更新父指针或发布，不沿用历史授权。
+
+Baseline `1de4735`: the documentation audit found v1-only import/export validation. At the user's request it now accepts v1/v2, with updated messages and public docs. Three new regressions fail on old code; all 28 focused checks and actual cross-instance browser download/import pass with correct tag ID mapping. Full verification and gaps: [record](../en/project/backup-v2.md). No commit, push, gitlink update or release; historical authorization does not apply.
+
+初始发现阶段的源码夹具 / initial discovery fixture: `/tmp/songloft-doc-sync-backup-probe.{cjs,json}`；后续真实验收 / subsequent actual acceptance: `/tmp/songloft-backup-v2/roundtrip.json`。
+
 ## 2026-11-14 · 千首歌单队列 / Thousand-track queue
 
 修复全量分页完成前队列只有一首，以及同曲续播跳过补齐。现在先加载目标附近 100 首并逐批扩展；两端延迟分页实测可在全量完成前播放下一集，最终 1000 首。Lynx 3802 项、Flutter 播放器 298 项、类型/分析与构建通过；见[记录](playlist-resume-queue.md)。沿用本轮提交推送授权，原生设备 Not run。

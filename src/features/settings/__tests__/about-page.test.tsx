@@ -207,10 +207,10 @@ test('rapid taps send one start request and polling waits until it is accepted',
 test('renders backend release Markdown inside About and keeps links and the upgrade action usable', async () => {
   checkResponse.has_update = true
   checkResponse.changelog =
-    '## 更新内容\n\n- **修复**说明显示\n\n[详情](https://example.com/release)\n\n| 平台 | 状态 |\n| --- | --- |\n| Android | 已修复 |'
+    '## :sparkles: 更新内容\n\n- **:bug: 修复**说明显示\n\n[详情](https://example.com/release)\n\n| 平台 | 状态 |\n| --- | --- |\n| Android | 已修复 |'
   const queries = await renderPage()
-  expect(queries.getByText('更新内容').closest('.markdown__heading--2')).toBeInTheDocument()
-  expect(queries.getByText('修复').closest('.markdown__strong')).toBeInTheDocument()
+  expect(queries.getByText('✨ 更新内容').closest('.markdown__heading--2')).toBeInTheDocument()
+  expect(queries.getByText('🐛 修复').closest('.markdown__strong')).toBeInTheDocument()
   const notes = elementTree.root!.querySelector('.upgrade-page__changelog')!
   expect(notes.querySelector('.markdown__table-scroll')).toHaveAttribute(
     'scroll-orientation',

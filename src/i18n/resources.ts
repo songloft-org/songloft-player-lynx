@@ -1127,7 +1127,7 @@ export const en = {
     chooseFile: 'Choose JSON file',
     saveFile: 'Download JSON file',
     errors: {
-      invalid_json: 'Choose a valid Songloft JSON backup (version 1)',
+      invalid_json: 'Choose a valid Songloft JSON backup (version 1 or 2)',
       invalid_response: 'The server returned an invalid import result',
       file_too_large: 'The JSON file must be at most 20 MiB',
       file_read_failed: 'Could not read the selected file',
@@ -2387,7 +2387,7 @@ export const zh: TranslationTree = {
     chooseFile: '选择 JSON 文件',
     saveFile: '下载 JSON 文件',
     errors: {
-      invalid_json: '请选择有效的 Songloft JSON 备份（版本 1）',
+      invalid_json: '请选择有效的 Songloft JSON 备份（版本 1 或 2）',
       invalid_response: '服务器返回的导入结果无效',
       file_too_large: 'JSON 文件不能超过 20 MiB',
       file_read_failed: '无法读取所选文件',

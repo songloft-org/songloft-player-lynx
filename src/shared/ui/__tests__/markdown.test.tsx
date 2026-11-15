@@ -24,6 +24,41 @@ const settle = async () => {
   })
 }
 
+test('renders GitHub emoji shortcodes in release headings, formatted text, tables and link labels', async () => {
+  render(<Markdown content={
+    '## :sparkles: New Features\n\n- **:bug: Fixed** :+1: 🎵\n\n'
+    + '| Changes |\n| --- |\n| :memo: Docs :recycle: |\n\n'
+    + '[:rocket: Details](https://example.com/:bug:?q=:memo:)\n\n'
+    + ':art: :boom: :construction_worker: :white_check_mark: :wrench: :zap:'
+  } />)
+  await settle()
+  const root = elementTree.root!
+  const queries = getQueriesForElement(root)
+  expect(queries.getByText('✨ New Features').closest('.markdown__heading--2')).toBeInTheDocument()
+  expect(root.querySelector('.markdown__strong')?.textContent).toBe('🐛 Fixed')
+  expect(root.querySelector('.markdown__table')?.textContent).toContain('📝 Docs ♻️')
+  expect(root.textContent).toContain('👍 🎵')
+  expect(root.textContent).toContain('🎨 💥 👷 ✅ 🔧 ⚡')
+  await act(async () => { fireEvent.tap(queries.getByText('🚀 Details')) })
+  expect(open).toHaveBeenCalledExactlyOnceWith('https://example.com/:bug:?q=:memo:')
+})
+
+test('keeps literal code, escaped colons, autolinks and unknown shortcode names unchanged', async () => {
+  render(<Markdown content={
+    '`code :bug:`\n\n```txt\n:sparkles:\n```\n\n'
+    + '\\:memo: :not_a_real_emoji: :constructor: :toString:\n\n'
+    + '<https://example.com/:rocket:>'
+  } />)
+  await settle()
+  const root = elementTree.root!
+  expect(root.querySelector('.markdown__code')?.textContent).toBe('code :bug:')
+  expect(root.querySelector('.markdown__code-block')?.textContent).toBe(':sparkles:')
+  expect(root.textContent).toContain(':memo: :not_a_real_emoji: :constructor: :toString:')
+  const label = 'https://example.com/:rocket:'
+  await act(async () => { fireEvent.tap(getQueriesForElement(root).getByText(label)) })
+  expect(open).toHaveBeenCalledExactlyOnceWith(label)
+})
+
 test('renders headings, nested emphasis, lists, quotes, separators and literal code', async () => {
   render(
     <Markdown

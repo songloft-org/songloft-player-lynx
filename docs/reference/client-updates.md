@@ -71,6 +71,8 @@ HarmonyOS 在 `filesDir/bundle_updates` 保存签名文件和相同指针，通�
 - Android/HarmonyOS 提供 APK/HAP，iOS 提醒 IPA 需要重签；Web 提供对应 standalone/embedded 部署包及部署后刷新说明，不能用原生 bundle 更新 Web 主线程宿主。
 - 客户端 Release 说明与后端更新 changelog 共用 GitHub Flavored Markdown 组件，显示标题、段落、列表（含任务列表）、引用、分隔线、粗体/斜体/删除线、代码和表格；表格可横向滚动。HTTP/HTTPS 链接通过宿主打开，其他链接保留文字；图片显示替代文字，HTML 按字面文本显示。客户端保持 16000 字符上限，后端说明完整显示，解析失败回退纯文本。解析仅在后台线程执行，避免 Markdown 正则进入 Lynx 主线程字节码编译；解析前按需补齐 Android PrimJS 缺失的 `Array.prototype.at` 和 `Object.hasOwn`，已有实现保持不变。
 
+Release 正文中的 GitHub emoji 短码（如 `:sparkles:`、`:bug:`）按 `gemoji` 名称表转换为 Unicode emoji，客户端和后端更新说明共用此行为。标题、正文、强调、表格与链接文字支持转换；行内 / 围栏代码、转义短码、自动链接和链接目标地址保留原文，未知名称保持可读。实际字形由宿主系统字体提供。
+
 ## 自动检查与下载
 
 跨平台说明（2026-10-13）：Markdown 兼容补齐没有平台分支；iOS 与鸿蒙发版复用同一原生 bundle，Web 也包含该解析器。iOS 默认后台运行时为 JavaScriptCore，项目最低版本为 iOS 15.0；`at` / `hasOwn` 在 [iOS 15.4 的 WebKit](https://webkit.org/blog/12445/new-webkit-features-in-safari-15-4/) 才加入，旧系统存在缺失风险。鸿蒙依赖 PrimJS 4.0.0，与本批 Android 验证的版本一致，因此需保留相同兼容处理。Chromium 121、Firefox 134、WebKit 18.2 的完整关于页与真实 Worker 缺失 API 场景已验证；客户端/后端 Markdown、双语表格与横向滚动正常。iOS 与鸿蒙原生设备未验证，Linux WebKit 结果不能替代 iOS 原生验收。

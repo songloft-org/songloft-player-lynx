@@ -23,6 +23,7 @@ const LICENSES: LicenseEntry[] = [
   { name: 'i18next', license: 'MIT', url: 'https://github.com/i18next/i18next' },
   { name: 'marked', license: 'MIT', url: 'https://github.com/markedjs/marked' },
   { name: 'entities', license: 'BSD-2-Clause', url: 'https://github.com/fb55/entities' },
+  { name: 'gemoji', license: 'MIT', url: 'https://github.com/wooorm/gemoji' },
   { name: 'pinyin-pro', license: 'MIT', url: 'https://github.com/zh-lx/pinyin-pro' },
   { name: 'react-i18next', license: 'MIT', url: 'https://github.com/i18next/react-i18next' },
   { name: 'zod', license: 'MIT', url: 'https://github.com/colinhacks/zod' },

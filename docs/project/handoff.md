@@ -1,5 +1,17 @@
 # 工作交接（2026-10-14）
 
+## 2026-11-15 · Release emoji
+
+共用 Markdown 正文已支持 GitHub emoji 短码，保留代码和 URL。36 项定向、3811 项全量、89 项发布工具、类型与双产物通过；Web 对照及 Android 34 原生关于页显示通过，Android 复用既有调试宿主而非完整原生重编译。证据和边界见[记录](release-emoji.md)。未提交、推送、更新父指针或发布。
+
+Shared Markdown prose now expands GitHub emoji shortcodes while preserving code and URLs. All 36 focused checks, 3811 full tests, 89 release-tool checks, types and dual builds pass. Web comparison and native Android 34 About rendering pass using an existing debug host, not a full native rebuild. [Verification](../en/project/release-emoji.md). No commit/push/gitlink update/release.
+
+## 2026-11-15 · Web v2 备份 / Web v2 backups
+
+已修复共用校验，Web 导入 / 导出支持 v1 / v2，中英文提示和文档已同步。28 项定向与真实跨实例下载 / 导入通过；完整检查见[记录](backup-v2.md)。尚未提交、推送、更新父指针或发布，不沿用历史授权。
+
+Shared validation now supports v1/v2 Web imports and exports; both translations and docs are updated. All 28 focused checks and actual cross-instance download/import pass; full checks: [record](../en/project/backup-v2.md). Uncommitted, unpushed, no gitlink update or release; historical authorization does not apply.
+
 ## 2026-11-14 · 千首歌单队列跟进
 
 全量分页末尾才更新队列的缺陷已改为连续窗口逐批公布；同曲续播可修复残缺队列。两端千首慢分页浏览器验收通过，验证及原生边界见[记录](playlist-resume-queue.md)，沿用本轮提交推送授权交付。

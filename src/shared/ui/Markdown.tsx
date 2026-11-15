@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from '@lynx-js/react'
 import { decodeHTML } from 'entities'
+import { nameToEmoji } from 'gemoji'
 import type { MarkedToken, Token, Tokens } from 'marked'
 
 import { openURL } from '../../native/native-platform.js'
@@ -9,6 +10,15 @@ import './Markdown.css'
 interface MarkdownProps {
   content: string
   className?: string
+}
+
+/** Resolve GitHub shortcodes only in prose; code and link destinations stay literal. */
+function emojiText(text: string): string {
+  return text.replace(/:([a-z0-9_+-]+):/g, (shortcode, name: string) =>
+    Object.prototype.hasOwnProperty.call(nameToEmoji, name)
+      ? nameToEmoji[name] ?? shortcode
+      : shortcode,
+  )
 }
 
 // Only web links are actionable in release notes; HTML is always literal text.
@@ -66,7 +76,7 @@ function inline(tokens: readonly Token[], depth = 0): ReactNode {
         return token.tokens ? (
           <text key={index}>{inline(token.tokens, depth + 1)}</text>
         ) : (
-          <text key={index}>{decodeHTML(token.raw).replace(/\n/g, ' ')}</text>
+          <text key={index}>{emojiText(decodeHTML(token.raw).replace(/\n/g, ' '))}</text>
         )
       case 'escape':
       case 'html':
@@ -133,7 +143,7 @@ function blocks(tokens: readonly Token[], depth = 0): ReactNode {
       case 'text':
         return (
           <text key={index} className='markdown__text'>
-            {token.tokens ? inline(token.tokens) : decodeHTML(token.text)}
+            {token.tokens ? inline(token.tokens) : emojiText(decodeHTML(token.text))}
           </text>
         )
       case 'blockquote':
