@@ -19,6 +19,7 @@ export interface HostCallResult {
 }
 
 export interface PluginHostContext {
+  pluginApiRequest?: (params: Record<string, unknown>) => Promise<unknown>
   platform: string
   version: string
   resolveSongs: (ids: number[]) => Promise<Song[]>
@@ -34,9 +35,7 @@ export function playerStateToJson(s = usePlayerStore.getState()) {
   return {
     queue: s.playlist.map(songToJson),
     current_index: s.currentIndex,
-    current_song: s.currentSong
-      ? songToJson(s.currentSong)
-      : null,
+    current_song: s.currentSong ? songToJson(s.currentSong) : null,
     is_playing: s.isPlaying,
     current_time: s.currentTime / 1000,
     duration: s.duration / 1000,
@@ -47,20 +46,38 @@ export function playerStateToJson(s = usePlayerStore.getState()) {
 }
 
 /** Ignore position ticks, but include queue edits and every SDK-visible control change. */
-export function pluginPlayerStateChanged(s: PlayerState, prev: PlayerState): boolean {
-  return s.playlist !== prev.playlist || s.currentIndex !== prev.currentIndex
-    || s.currentSong !== prev.currentSong || s.isPlaying !== prev.isPlaying
-    || s.playMode !== prev.playMode || s.volume !== prev.volume
-    || s.duration !== prev.duration || s.sourcePlaylistId !== prev.sourcePlaylistId
+export function pluginPlayerStateChanged(
+  s: PlayerState,
+  prev: PlayerState,
+): boolean {
+  return (
+    s.playlist !== prev.playlist ||
+    s.currentIndex !== prev.currentIndex ||
+    s.currentSong !== prev.currentSong ||
+    s.isPlaying !== prev.isPlaying ||
+    s.playMode !== prev.playMode ||
+    s.volume !== prev.volume ||
+    s.duration !== prev.duration ||
+    s.sourcePlaylistId !== prev.sourcePlaylistId
+  )
 }
 
-function numberParam(params: Record<string, unknown>, key: string, fallback?: number): number {
+function numberParam(
+  params: Record<string, unknown>,
+  key: string,
+  fallback?: number,
+): number {
   const value = params[key] ?? fallback
-  if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`${key} must be a finite number`)
+  if (typeof value !== 'number' || !Number.isFinite(value))
+    throw new Error(`${key} must be a finite number`)
   return value
 }
 
-function integerParam(params: Record<string, unknown>, key: string, fallback?: number): number {
+function integerParam(
+  params: Record<string, unknown>,
+  key: string,
+  fallback?: number,
+): number {
   const value = numberParam(params, key, fallback)
   if (!Number.isSafeInteger(value)) throw new Error(`${key} must be an integer`)
   return value
@@ -68,7 +85,10 @@ function integerParam(params: Record<string, unknown>, key: string, fallback?: n
 
 function songIds(params: Record<string, unknown>): number[] {
   return Array.isArray(params.ids)
-    ? params.ids.filter((id): id is number => typeof id === 'number' && Number.isSafeInteger(id))
+    ? params.ids.filter(
+        (id): id is number =>
+          typeof id === 'number' && Number.isSafeInteger(id),
+      )
     : []
 }
 
@@ -89,9 +109,10 @@ async function dispatchPlayer(
       const startIndex = integerParam(params, 'startIndex', 0)
       // Plugins only ever express a playlist source (the inbound key is
       // `sourcePlaylistId`), so facet contexts are not reachable from here.
-      const context = params.sourcePlaylistId != null
-        ? playlistContext(integerParam(params, 'sourcePlaylistId'))
-        : undefined
+      const context =
+        params.sourcePlaylistId != null
+          ? playlistContext(integerParam(params, 'sourcePlaylistId'))
+          : undefined
       await store.playPlaylist(songs, startIndex, context)
       return null
     }
@@ -113,7 +134,10 @@ async function dispatchPlayer(
       return null
 
     case 'reorderQueue':
-      store.reorderPlaylist(integerParam(params, 'oldIndex'), integerParam(params, 'newIndex'))
+      store.reorderPlaylist(
+        integerParam(params, 'oldIndex'),
+        integerParam(params, 'newIndex'),
+      )
       return null
 
     case 'clearQueue':
@@ -125,15 +149,23 @@ async function dispatchPlayer(
       try {
         const api = getPlaylistApi()
         const playlist = await api.getPlaylist(playlistId)
-        const filters = { sort: playlist.sortBy ?? 'position', order: playlist.sortOrder ?? 'asc' }
-        const first = await api.getPlaylistSongs(playlistId, filters, { offset: 0, limit: 10 })
+        const filters = {
+          sort: playlist.sortBy ?? 'position',
+          order: playlist.sortOrder ?? 'asc',
+        }
+        const first = await api.getPlaylistSongs(playlistId, filters, {
+          offset: 0,
+          limit: 10,
+        })
         if (first.songs.length === 0) return 0
         // Start immediately; the existing loader cancels fills after a queue replacement/clear.
         const playing = store.playAll(first.songs, playlistContext(playlistId))
         usePlayerStore.getState().loadRemainingSongsForCurrentPlaylist({
           loadedCount: first.songs.length,
           total: first.total,
-          fetch: async (offset, limit) => (await api.getPlaylistSongs(playlistId, filters, { offset, limit })).songs,
+          fetch: async (offset, limit) =>
+            (await api.getPlaylistSongs(playlistId, filters, { offset, limit }))
+              .songs,
         })
         await playing
         return first.total
@@ -179,7 +211,11 @@ async function dispatchPlayer(
       return null
 
     case 'setPlayMode':
-      store.setPlayMode(playModes.includes(params.mode as PlayMode) ? params.mode as PlayMode : 'order')
+      store.setPlayMode(
+        playModes.includes(params.mode as PlayMode)
+          ? (params.mode as PlayMode)
+          : 'order',
+      )
       return null
 
     default:
@@ -194,7 +230,15 @@ export async function handlePluginHostCall(
   try {
     if (!req || typeof req !== 'object') throw new Error('invalid request')
     const { ns, method } = req
-    const params = req.params && typeof req.params === 'object' && !Array.isArray(req.params) ? req.params : {}
+    const params =
+      req.params && typeof req.params === 'object' && !Array.isArray(req.params)
+        ? req.params
+        : {}
+
+    if (ns === 'plugin' && method === 'apiRequest') {
+      if (!ctx.pluginApiRequest) throw new Error('plugin API is unavailable')
+      return { ok: true, data: await ctx.pluginApiRequest(params) }
+    }
 
     if (ns === 'host') {
       if (method === 'getInfo') {
@@ -216,18 +260,23 @@ export async function handlePluginHostCall(
     }
 
     if (ns === 'favorite') {
-      if (method !== 'refresh') throw new Error(`unknown favorite method: ${method}`)
-      const songId = params.songId != null ? integerParam(params, 'songId') : undefined
-      const isFavorited = typeof params.isFavorited === 'boolean' ? params.isFavorited : undefined
+      if (method !== 'refresh')
+        throw new Error(`unknown favorite method: ${method}`)
+      const songId =
+        params.songId != null ? integerParam(params, 'songId') : undefined
+      const isFavorited =
+        typeof params.isFavorited === 'boolean' ? params.isFavorited : undefined
       await refreshFavoritesFromPlugin(songId, isFavorited)
       return { ok: true, data: null }
     }
 
     if (ns === 'cookies') {
       if (method !== 'get') throw new Error(`unknown cookies method: ${method}`)
-      if (!ctx.cookieProvider) throw new Error('getCookies is not available on this platform')
+      if (!ctx.cookieProvider)
+        throw new Error('getCookies is not available on this platform')
       const origin = params.origin
-      if (typeof origin !== 'string' || !origin) throw new Error('origin is required')
+      if (typeof origin !== 'string' || !origin)
+        throw new Error('origin is required')
       // URL is not a universal Lynx global; validate without browser APIs.
       if (!/^https?:\/\/[^\s/?#]+(?:[/?#]|$)/i.test(origin)) {
         throw new Error('invalid origin: must include scheme and host')

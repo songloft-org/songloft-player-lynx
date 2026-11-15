@@ -1850,3 +1850,5 @@ English: #545 source fix: upload requests now retain completion independently of
 Web 上传由隐藏 input 改为可见主线程选择面板，支持取消、失败重试及上传超时。实际页面发现共享安装调用错误使用 `plugin` 字段，真实后端要求 `file` 并返回 400，现一并修正。两类回归对旧代码均按预期失败。最终工作树、构建/测试、实际浏览器安装与 Safari 真机边界见 [#545](issue-545.md) 及 `/tmp/songloft-545-verification.json`。未提交、推送、发布或写 Issue；并行 #540 改动保留。
 
 English: Web uploads use a visible main-thread picker panel with cancel, error/retry and upload timeout handling. Full-page checks exposed the shared installation call sending `plugin` instead of the server's required `file`, returning 400; this is also fixed. Both regressions fail on old code. Final source identity, build/test results, browser installation and Safari device boundaries: [#545](../en/project/issue-545.md) and `/tmp/songloft-545-verification.json`. No commit, push, release or Issue write; concurrent #540 changes remain intact.
+
+2026-11-15：新增 Lynx 插件 API 请求宿主支持及验证，见 [记录](lynx-plugin-api.md) / [English](../en/project/lynx-plugin-api.md)。

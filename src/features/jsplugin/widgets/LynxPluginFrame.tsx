@@ -4,8 +4,15 @@ import { appConfig } from '../../../core/config/app-config.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
 import { subscribeAppResumed } from '../../../native/app-lifecycle.js'
-import { connectNativePluginHost, type NativePluginHost } from '../../../native/native-plugin-host.js'
-import { getAppTheme, resolveTheme, subscribeAppTheme } from '../../../shared/theme/theme-model.js'
+import {
+  connectNativePluginHost,
+  type NativePluginHost,
+} from '../../../native/native-plugin-host.js'
+import {
+  getAppTheme,
+  resolveTheme,
+  subscribeAppTheme,
+} from '../../../shared/theme/theme-model.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import {
   handlePluginHostCall,
@@ -13,6 +20,7 @@ import {
   pluginPlayerStateChanged,
 } from '../domain/plugin-host-dispatch.js'
 import { pluginHostContext as hostContext } from '../domain/plugin-host-context.js'
+import { pluginApiRequest } from '../domain/plugin-api-request.js'
 import {
   getLynxFrameModule,
   setLynxFrameBridgeHandlers,
@@ -42,6 +50,14 @@ interface Props {
  * explicit module configuration from the main thread).
  */
 export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
+  const frameContext = useMemo(
+    () => ({
+      ...hostContext,
+      pluginApiRequest: (params: Record<string, unknown>) =>
+        pluginApiRequest(entryPath, params),
+    }),
+    [entryPath],
+  )
   const frameId = useMemo(() => `frame-${entryPath}-${Date.now()}`, [entryPath])
   const bundleUrl = buildLynxBundleUrl(entryPath)
   const [theme, setTheme] = useState(() => resolveTheme(getAppTheme()))
@@ -56,23 +72,32 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
       try {
         const storage = getSongloftStorage()
         const token = (await storage.secure.get('access_token')) ?? ''
-        console.error('[LynxPluginFrame] Loaded token, length=' + (token ? token.length : 0))
+        console.error(
+          '[LynxPluginFrame] Loaded token, length=' +
+            (token ? token.length : 0),
+        )
         if (active) setAccessToken(token)
       } catch (e) {
         console.error('[LynxPluginFrame] Failed to load token: ' + e)
         if (active) setAccessToken('')
       }
     })()
-    return () => { active = false }
+    return () => {
+      active = false
+    }
   }, [])
 
   useEffect(() => {
     if (isWeb) return
-    const host = connectNativePluginHost(frameId, request => handlePluginHostCall(request, hostContext))
+    const host = connectNativePluginHost(frameId, (request) =>
+      handlePluginHostCall(request, frameContext),
+    )
     nativeHost.current = host
     host.push('playerState', JSON.stringify(playerStateToJson()))
     host.push('theme', JSON.stringify({ theme: resolveTheme(getAppTheme()) }))
-    const unsubscribe = subscribeAppResumed(() => host.push('lifecycle', JSON.stringify({ state: 'resumed' })))
+    const unsubscribe = subscribeAppResumed(() =>
+      host.push('lifecycle', JSON.stringify({ state: 'resumed' })),
+    )
     return () => {
       unsubscribe()
       host.dispose()
@@ -108,7 +133,12 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
     const mod = getLynxFrameModule()
     if (!mod.available) return
 
-    mod.open(bundleUrl, '#plugin-lynx-frame', JSON.stringify(globalProps), entryPath)
+    mod.open(
+      bundleUrl,
+      '#plugin-lynx-frame',
+      JSON.stringify(globalProps),
+      entryPath,
+    )
     let active = true
 
     // Handle host calls from the child frame
@@ -116,14 +146,27 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
       onMessage: (payload: LynxFrameHostCallPayload) => {
         if (!active || payload.frameId !== frameId) return
         try {
-          const req = { ns: payload.ns, method: payload.method, params: JSON.parse(payload.params || '{}') }
-          void handlePluginHostCall(req, hostContext).then((result) => {
-            if (active) mod.hostReply(payload.callId, JSON.stringify(result))
-          }).catch(() => {
-            if (active) mod.hostReply(payload.callId, JSON.stringify({ ok: false, error: 'host_call_failed' }))
-          })
+          const req = {
+            ns: payload.ns,
+            method: payload.method,
+            params: JSON.parse(payload.params || '{}'),
+          }
+          void handlePluginHostCall(req, frameContext)
+            .then((result) => {
+              if (active) mod.hostReply(payload.callId, JSON.stringify(result))
+            })
+            .catch(() => {
+              if (active)
+                mod.hostReply(
+                  payload.callId,
+                  JSON.stringify({ ok: false, error: 'host_call_failed' }),
+                )
+            })
         } catch {
-          mod.hostReply(payload.callId, JSON.stringify({ ok: false, error: 'invalid_params' }))
+          mod.hostReply(
+            payload.callId,
+            JSON.stringify({ ok: false, error: 'invalid_params' }),
+          )
         }
       },
     })
@@ -149,7 +192,8 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
       setTheme(newTheme)
       if (isWeb) {
         const mod = getLynxFrameModule()
-        if (mod.available) mod.updateGlobalProps(JSON.stringify({ theme: newTheme }))
+        if (mod.available)
+          mod.updateGlobalProps(JSON.stringify({ theme: newTheme }))
       } else {
         nativeHost.current?.push('theme', JSON.stringify({ theme: newTheme }))
       }
@@ -165,7 +209,11 @@ export function LynxPluginFrame({ entryPath, isTabEntry }: Props) {
       const stateJson = JSON.stringify(playerStateToJson())
       if (isWeb) {
         const mod = getLynxFrameModule()
-        if (mod.available) mod.sendEvent('SongloftPluginBridge.push', JSON.stringify({ event: 'playerState', data: stateJson }))
+        if (mod.available)
+          mod.sendEvent(
+            'SongloftPluginBridge.push',
+            JSON.stringify({ event: 'playerState', data: stateJson }),
+          )
       } else nativeHost.current?.push('playerState', stateJson)
     })
   }, [frameId, isWeb])
