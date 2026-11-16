@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-16 · MIoT Lynx 迁移 / MIoT Lynx migration
+
+父桥补齐 PUT/DELETE、按 frame 隔离的文本 WebSocket、外链、歌曲封面及逐层返回。三原生端接入；Web 同步回退 shim，修复长表单委托焦点跳转及凭据等待期间关闭的开连竞态。3833 项完整客户端测试、类型、双构建及 Android assembleDebug 通过；最终受影响检查、浏览器记录与平台限制见 miot 插件 `docs/lynx-migration.md`。基线 `88e00646a6c948c3497fbf32eaab3c80f04bdd82`；本轮用户明确授权主程序提交和推送，客户端先提交、父仓库再更新指针。
+
+English: the parent bridge adds PUT/DELETE, frame-scoped text sockets, links, covers and layered back navigation. All native hosts have implementations; Web synchronizes the fallback shim and prevents focus delegation from jumping long forms. Pending credential reads cannot revive closed sockets. All 3833 client tests, types, dual builds and Android assembleDebug pass. Final affected checks, browser evidence and limits: miot `docs/en/lynx-migration.md`. Baseline `88e00646a6c948c3497fbf32eaab3c80f04bdd82`; the user explicitly authorized host commits and pushes this round, with this client committed before the parent gitlink update.
+
 ## 2026-11-16 · 专辑轨号顺序 / Album track order
 
 处理 songloft-org/songloft#571：专辑页显式请求数字碟号/音轨号升序，与后台队列补齐共用过滤条件。类型、全套 3821 项、最终分类页 12 项、Lynx/Web 双构建通过，旧页面反向回归失败；Docker Chrome 实播及双碟六首列表/队列顺序通过。基线 `b406af75043d2c2d898b7f73b0f282248d293d33`，提交前快照 `/tmp/songloft-571-snapshot.json`，详细证据与 Not run 见 handoff。提交、推送和同 SHA CI 结果见 Issue 交付回复；未创建正式版本。

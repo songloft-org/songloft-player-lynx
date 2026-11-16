@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-16 · Host support for MIoT Lynx
+
+Baseline `88e00646a6c948c3497fbf32eaab3c80f04bdd82`: four HTTP verbs, parent-owned sockets, external URLs, authenticated covers and back navigation, with both Web shims synchronized. The user explicitly authorized host commits/pushes this round: commit this client first, then update the parent gitlink; leave uncommitted miot/toolchain changes separate. The older running Docker host lacks resourceUrl and leaves all 30 actual playlist rows without covers; update the host and retain direct image loading. Types, 3833 tests, both bundles, Web/release checks and platform boundaries are recorded in delivery and miot docs/lynx-migration.md. iOS/HarmonyOS compilation and physical devices remain Not run.
+
 ## 2026-11-16 · Album track order (songloft-org/songloft#571)
 
 Album pages request `sort=track&order=asc`, sharing filters between pagination and background queue completion. Other facets retain addition-time descending order. Companion backend changes implement numeric disc/track sorting, disc migration and tag read/write; existing albums need reimport to populate disc numbers.

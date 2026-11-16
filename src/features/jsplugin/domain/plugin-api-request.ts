@@ -7,7 +7,13 @@ export async function pluginApiRequest(
   params: Record<string, unknown>,
 ) {
   const { path, method, body } = params
-  if (typeof path !== 'string' || (method !== 'GET' && method !== 'POST'))
+  if (
+    typeof path !== 'string' ||
+    (method !== 'GET' &&
+      method !== 'POST' &&
+      method !== 'PUT' &&
+      method !== 'DELETE')
+  )
     throw new Error('invalid plugin API request')
   const route = path.split('?')[0]
   if (

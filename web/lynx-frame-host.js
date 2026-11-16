@@ -13,7 +13,7 @@
  * Loaded as a classic script in web/index.html, AFTER webview-host.js.
  */
 
-(function () {
+;(function () {
   'use strict'
 
   var lynxView = document.getElementById('app')
@@ -56,12 +56,45 @@
   var pushReady = Object.create(null)
   var pageVisible = document.visibilityState !== 'hidden'
 
+  var pluginSockets = Object.create(null)
+  function socketTarget(frameId) {
+    return Object.values(childViews).find(function (child) {
+      return child.globalProps && child.globalProps.frameId === frameId
+    })
+  }
+  function socketPush(frameId, id, type, data) {
+    var child = socketTarget(frameId)
+    if (child)
+      child.sendGlobalEvent('SongloftPluginBridge.push', [
+        {
+          event: 'pluginSocket',
+          data: JSON.stringify({ id: id, type: type, data: data || '' }),
+        },
+      ])
+  }
+  function closeFrameSockets(frameId) {
+    var sockets = pluginSockets[frameId] || {}
+    Object.keys(sockets).forEach(function (id) {
+      socketPush(frameId, id, 'close')
+    })
+    delete pluginSockets[frameId]
+    Object.values(sockets).forEach(function (socket) {
+      socket.close(1000, 'frame disposed')
+    })
+  }
   function resumeChild(key) {
-    if (key !== activeKey || !pushReady[key] || document.visibilityState === 'hidden') return
+    if (
+      key !== activeKey ||
+      !pushReady[key] ||
+      document.visibilityState === 'hidden'
+    )
+      return
     var child = childViews[key]
     if (!child) return
     try {
-      child.sendGlobalEvent('SongloftPluginBridge.push', [{ event: 'lifecycle', data: JSON.stringify({ state: 'resumed' }) }])
+      child.sendGlobalEvent('SongloftPluginBridge.push', [
+        { event: 'lifecycle', data: JSON.stringify({ state: 'resumed' }) },
+      ])
     } catch (_) {}
   }
 
@@ -126,8 +159,8 @@
     var hostRect = lynxView.getBoundingClientRect()
     var rect = placeholderEl.getBoundingClientRect()
     childView.style.position = 'fixed'
-    childView.style.left = (rect.left - hostRect.left) + 'px'
-    childView.style.top = (rect.top - hostRect.top) + 'px'
+    childView.style.left = rect.left - hostRect.left + 'px'
+    childView.style.top = rect.top - hostRect.top + 'px'
     childView.style.width = rect.width + 'px'
     childView.style.height = rect.height + 'px'
     childView.style.display = 'block'
@@ -144,7 +177,9 @@
           placeChild()
           startResizeObs()
         } else {
-          sendEvent('SongloftLynxFrame.openFailed', { reason: 'placeholder not found: ' + selector })
+          sendEvent('SongloftLynxFrame.openFailed', {
+            reason: 'placeholder not found: ' + selector,
+          })
         }
       }, 500)
       return
@@ -156,16 +191,22 @@
   function startResizeObs() {
     if (!placeholderEl) return
     if (resizeObs) resizeObs.disconnect()
-    resizeObs = new ResizeObserver(function () { placeChild() })
+    resizeObs = new ResizeObserver(function () {
+      placeChild()
+    })
     resizeObs.observe(placeholderEl)
   }
 
   /** Take a child off screen; its worker, realm and state all keep running. */
   function hideChild(key) {
+    if (childViews[key]) closeFrameSockets(childViews[key].globalProps?.frameId)
     var el = childViews[key]
     if (!el) return
     if (activeKey === key) {
-      if (resizeObs) { resizeObs.disconnect(); resizeObs = null }
+      if (resizeObs) {
+        resizeObs.disconnect()
+        resizeObs = null
+      }
       placeholderEl = null
       activeKey = null
     }
@@ -179,6 +220,7 @@
    * records the dispose so `open` cannot race it.
    */
   function releaseChild(key) {
+    if (childViews[key]) closeFrameSockets(childViews[key].globalProps?.frameId)
     var el = childViews[key]
     if (!el) return
     hideChild(key)
@@ -235,6 +277,57 @@
   // ── native module handlers (called by parent worker via call()) ──
 
   var frameHandlers = {
+    socketOpen: function (args) {
+      var frameId = args[0],
+        id = args[1],
+        url = args[2]
+      if (!socketTarget(frameId)) return
+      var sockets =
+        pluginSockets[frameId] || (pluginSockets[frameId] = Object.create(null))
+      if (Object.keys(sockets).length >= 8 || sockets[id]) {
+        socketPush(frameId, id, 'error')
+        return
+      }
+      var socket = new WebSocket(url)
+      sockets[id] = socket
+      var current = function () {
+        return pluginSockets[frameId] === sockets && sockets[id] === socket
+      }
+      socket.onopen = function () {
+        if (current()) socketPush(frameId, id, 'open')
+      }
+      socket.onmessage = function (event) {
+        if (current()) socketPush(frameId, id, 'message', String(event.data))
+      }
+      socket.onerror = function () {
+        if (current()) {
+          delete sockets[id]
+          socketPush(frameId, id, 'error')
+          socket.close()
+        }
+      }
+      socket.onclose = function () {
+        if (current()) {
+          delete sockets[id]
+          socketPush(frameId, id, 'close')
+        }
+      }
+    },
+    socketSend: function (args) {
+      pluginSockets[args[0]]?.[args[1]]?.send(args[2])
+    },
+    socketClose: function (args) {
+      var sockets = pluginSockets[args[0]],
+        socket = sockets?.[args[1]]
+      if (socket) {
+        delete sockets[args[1]]
+        socket.close(1000, 'client')
+      }
+    },
+    openUrl: function (args) {
+      if (/^https?:\/\//i.test(args[1]))
+        window.open(args[1], '_blank', 'noopener,noreferrer')
+    },
     /**
      * open(bundleUrl, selector, globalPropsJson)
      * Create nested <lynx-view>, set url + globalProps + bridge module.
@@ -257,10 +350,15 @@
         // (web-core awaits its own dispose in that path).
         if (globalPropsJson) {
           try {
-            existing.globalProps = Object.assign({}, existing.globalProps || {}, JSON.parse(globalPropsJson))
+            existing.globalProps = Object.assign(
+              {},
+              existing.globalProps || {},
+              JSON.parse(globalPropsJson),
+            )
           } catch (_) {}
         }
-        if (existing.getAttribute('url') !== bundleUrl) existing.setAttribute('url', bundleUrl)
+        if (existing.getAttribute('url') !== bundleUrl)
+          existing.setAttribute('url', bundleUrl)
         activeKey = key
         startFollowing(selector)
         resumeChild(key)
@@ -275,12 +373,33 @@
         // another one. Creating now would show a stale plugin over the live one.
         if (seq !== lifecycleSeq) return
         var childView = document.createElement('lynx-view')
+        // scroll-view delegates browser focus to its first input, even for a
+        // press on a heading. Keep that default from jumping a long form.
+        childView.addEventListener(
+          'mousedown',
+          function (event) {
+            if (
+              event.composedPath().some(function (node) {
+                return /^(INPUT|TEXTAREA|X-INPUT|X-TEXTAREA)$/.test(
+                  node.tagName || '',
+                )
+              })
+            )
+              return
+            event.preventDefault()
+            childView.shadowRoot?.activeElement?.blur?.()
+          },
+          true,
+        )
         childView.style.display = 'none' // hidden until placement resolves
 
         // Configure the bridge module — the child's SongloftPluginBridge calls
         // route through onNativeModulesCall below.
         childView.nativeModulesMap = {
-          SongloftPluginBridge: new URL('./songloft-lynx-bridge-module.js', document.baseURI).href,
+          SongloftPluginBridge: new URL(
+            './songloft-lynx-bridge-module.js',
+            document.baseURI,
+          ).href,
         }
         childView.onNativeModulesCall = function (name, data, moduleName) {
           if (childViews[key] !== childView) return undefined
@@ -293,7 +412,9 @@
 
         // Set globalProps before url so the child sees them on first render
         if (globalPropsJson) {
-          try { childView.globalProps = JSON.parse(globalPropsJson) } catch (_) {}
+          try {
+            childView.globalProps = JSON.parse(globalPropsJson)
+          } catch (_) {}
         }
 
         childView.setAttribute('url', bundleUrl)
@@ -327,7 +448,11 @@
       if (!childView) return
       try {
         var props = JSON.parse(args[0])
-        childView.globalProps = Object.assign({}, childView.globalProps || {}, props)
+        childView.globalProps = Object.assign(
+          {},
+          childView.globalProps || {},
+          props,
+        )
       } catch (_) {}
     },
 
@@ -354,7 +479,9 @@
       var callId = args[0]
       var resultJson = args[1]
       try {
-        childView.sendGlobalEvent('SongloftPluginBridge.hostReply', [{ callId: callId, result: resultJson }])
+        childView.sendGlobalEvent('SongloftPluginBridge.hostReply', [
+          { callId: callId, result: resultJson },
+        ])
       } catch (_) {}
     },
 
@@ -390,7 +517,10 @@
     {},
     lynxView.nativeModulesMap || {},
     {
-      SongloftLynxFrame: new URL('./songloft-lynx-frame-module.js', document.baseURI).href,
+      SongloftLynxFrame: new URL(
+        './songloft-lynx-frame-module.js',
+        document.baseURI,
+      ).href,
     },
   )
 

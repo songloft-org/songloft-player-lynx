@@ -1,5 +1,12 @@
 # Lynx Client Development Lessons
 
+### PLUGIN-002: closing must cancel socket opens still waiting for credentials
+
+- Scope: MIoT Lynx parent bridge, baseline `88e00646a6c948c3497fbf32eaab3c80f04bdd82` plus this worktree.
+- Evidence: socketClose completed before secure.get, but its late result still opened a native connection. The actual parent-bridge regression failed before the fix (1 failed/2 passed).
+- Rule and Done right: register frame/socket request identity before awaiting credentials and remove it on close. Check identity after await and in finally so closed connections cannot revive and replacements cannot be cleared. Native/Web share this adapter. Record: miot `docs/en/lynx-migration.md`.
+- Seen 1× (2026-11-16). Host commits explicitly authorized this round; physical devices and iOS/HarmonyOS compilation remain Not run.
+
 ### PLUGIN-001: Retained plugin pages do not imply a retained native frame
 
 - Scope: Android native main-navigation plugins, baseline `2447fade1affad9dda94f0bd68aff932680d91d8`.

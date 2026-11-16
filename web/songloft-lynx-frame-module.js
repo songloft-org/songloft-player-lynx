@@ -8,6 +8,18 @@
 
 export default function (_nativeModules, call) {
   return {
+    socketOpen(frame, id, url) {
+      void call('socketOpen', [frame, id, url])
+    },
+    socketSend(frame, id, data) {
+      void call('socketSend', [frame, id, data])
+    },
+    socketClose(frame, id) {
+      void call('socketClose', [frame, id])
+    },
+    openUrl(frame, url) {
+      void call('openUrl', [frame, url])
+    },
     /**
      * Create (or re-show) a nested <lynx-view> with the given bundle URL.
      * @param bundleUrl URL to the .web.bundle
@@ -18,7 +30,12 @@ export default function (_nativeModules, call) {
      *   booting a second one
      */
     open(bundleUrl, selector, globalPropsJson, key) {
-      void call('open', [bundleUrl, selector || '', globalPropsJson || '{}', typeof key === 'string' ? key : ''])
+      void call('open', [
+        bundleUrl,
+        selector || '',
+        globalPropsJson || '{}',
+        typeof key === 'string' ? key : '',
+      ])
     },
 
     /**

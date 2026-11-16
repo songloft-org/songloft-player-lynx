@@ -341,7 +341,13 @@ Android 目录迁移的新索引保留内部 `pending_cleanup`，直至原文件
 - 占位元素 id 两处一致：`src/features/jsplugin/pages/PluginWebViewPage.tsx` 同时含 `id='plugin-webview-frame'` 与 `'#plugin-webview-frame'`。
 - **iframe 必须挂进 `lynxView.shadowRoot`**（`lynx-view` 的 `contain: strict` 使其成为层叠上下文，body 级的 frame 会盖过所有 App 覆盖层），且 `z-index` 必须是 `'50'`（页面内容 auto < frame 50 < 导航胶囊 90 / mini-player 91 / sheet 100 / dialog 200-201）；`ToastHost.css` 的 `.toast-wrap` z-index 必须是三位数以越过 frame。
 
-### 2.11 `SongloftPluginBridge`（6 方法）
+### 2.11 `SongloftPluginBridge`（10 方法）
+
+新增父页方法：`socketOpen(frameId,id,url)`、`socketSend(frameId,id,text)`、`socketClose(frameId,id)`、`openUrl(frameId,url)`；三端均为位置参数、void。父页构造当前插件的认证 WS URL，子 frame 只传相对路径。原生按注册父上下文校验归属，每 frame 最多八条连接，unregister 关闭连接，迟到回调核对连接身份。推送 `pluginSocket`，JSON 为 `{id,type,data?}`，type 为 open/message/error/close。Web 对应 `SongloftLynxFrame` 同名方法。外链限 HTTP/HTTPS。miOT 的四方法 HTTP、socket、封面和逐层返回由 `LynxPluginFrame.tsx` 的父桥分发；配套服务端回退 shim 同步维护。
+
+2026-11-16：Android assembleDebug 通过；iOS/HarmonyOS 本轮仅源码契约检查，未编译/设备验收。详见 miot 插件仓库 `docs/lynx-migration.md`。
+
+English: added parent-owned socket open/send/close and HTTP/HTTPS external links. The parent derives plugin URLs/authentication, enforces eight sockets per frame and cleans up stale connections. `pluginSocket` carries `{id,type,data?}`. Web has matching `SongloftLynxFrame` methods. Android assembleDebug passed; iOS/HarmonyOS compilation and device acceptance are Not run. This reference remains bilingual in this file.
 
 WebView 插件的 `songloft-theme` 外观消息使用有效材质档位，并携带布尔值 `reduceTransparency` / `increaseContrast`；主题包、材质与辅助功能变化均重发完整消息，页面退出时释放订阅。WebView 使用 CSS themed blur，即使宿主启用 UIKit 原生 glass 也不下推 clear glass。服务端 `common.js` 将标志映射为 HTML `data-reduce-transparency` / `data-increase-contrast`，旧公共资源会忽略新字段；辅助功能标志不跨宿主会话缓存。这是 WebView 主题消息契约，不是下述原生 frame RPC 的新增方法。
 
@@ -366,7 +372,7 @@ WebView 插件的 `songloft-theme` 外观消息使用有效材质档位，并携
 
 **iOS frame 模板加载（源码已接，未编译/设备验证）**：控制器持有一个 `SongloftTemplateProvider`，同时传给 `LynxConfig(provider:)`、`builder.fetcher` 和 `builder.templateResourceFetcher`；保留 SDK 默认资源模式。前者继续处理内置根模板/已验签磁盘更新，HTTP/HTTPS 模板 URL 交给 `PluginTemplateTransfer`；动态入口返回 Data，新入口包装为 SDK `LynxTemplateResource`，SSR 明确不支持。[4.0.1 builder](https://github.com/lynx-family/lynx/blob/4.0.1/platform/darwin/ios/lynx/public/LynxViewBuilder.h)、[模板协议](https://github.com/lynx-family/lynx/blob/4.0.1/platform/darwin/common/lynx/public/resource/LynxTemplateResourceFetcher.h)。下载器使用独立 ephemeral URLSession，关闭 Cookie/credential/cache 存储，30 秒请求/总资源超时及 50 MiB 声明/流式限额，重定向最多五次并校验原 Location 与新 URL、重建无凭据请求。HTTP/空内容/超额失败，TLS challenge 走 `InsecureTls.handle`；新增变化监听取消独立会话，完成后移除监听/释放 session，回调一次。Apple CI 新增 `verify-ios-templates.swift`，直接编译实际 Foundation 下载器和 TLS 策略，覆盖二进制、凭据存储隔离、错误/限额、重定向、超时、TLS 开关/取消与并发；当前未编译执行。本地只通过 307 项结构契约及 HTTP/TLS 夹具 smoke，不能视作 Swift、SDK 或设备通过。此原生改动需新安装包；后续签名 bundle 必需能力增加 `pluginFrame.templates.v1`，旧快照会引导本通道安装包，不能仅靠 bundle 更新。
 
-### 2.12 `SongloftLynxFrame`（6 方法，仅 Web）
+### 2.12 `SongloftLynxFrame`（10 方法，仅 Web / 10 methods, Web only）
 
 Web 上渲染 Lynx 插件的宿主（native 构建用真实 `<frame>` 元素，不需要这个模块）。契约跑在三个文件之间：facade `src/native/web-lynx-frame.ts`、worker 侧 `web/songloft-lynx-frame-module.js`、主线程 `web/lynx-frame-host.js`。
 

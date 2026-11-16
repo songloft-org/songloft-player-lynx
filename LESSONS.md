@@ -1,5 +1,12 @@
 # Lynx 客户端开发经验
 
+### PLUGIN-002：关闭连接必须取消仍在等待凭据的开连请求
+
+- 范围：MIoT Lynx 父桥，基线 `88e00646a6c948c3497fbf32eaab3c80f04bdd82` 加本轮工作树。
+- 证据：异步 secure.get 尚未完成时，socketClose 已执行，随后仍创建原生连接；新增实际父桥测试在修复前 1 失败/2 通过。
+- 规则与 Done right：开连前记录 frame/socket 请求身份，关闭时删除；凭据 await 后及 finally 均核对同一身份，不能复活已关闭连接或清理替代请求。Web 与原生共用同一个适配器；记录见 miot 插件 `docs/lynx-migration.md`。
+- Seen 1× (2026-11-16)。本轮用户明确授权提交主程序；物理设备、iOS/HarmonyOS 编译 Not run。
+
 ### PLUGIN-001：插件内页签保留不等于原生 frame 保留
 
 - 范围：Android 原生主导航插件，基线 `2447fade1affad9dda94f0bd68aff932680d91d8`。

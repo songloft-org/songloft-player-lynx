@@ -1,3 +1,7 @@
+import { createPluginBackBridge } from '../domain/plugin-back-bridge.js'
+import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
+import { continueHostBack } from '../../../core/navigation/back-controller.js'
+import { readNativeModules } from '../../../native/native-modules.js'
 import { useEffect, useMemo, useRef, useState } from '@lynx-js/react'
 
 import { appConfig } from '../../../core/config/app-config.js'
@@ -20,6 +24,7 @@ import {
   pluginPlayerStateChanged,
 } from '../domain/plugin-host-dispatch.js'
 import { pluginHostContext as hostContext } from '../domain/plugin-host-context.js'
+import { pluginSocketRequest } from '../domain/plugin-socket.js'
 import { pluginApiRequest } from '../domain/plugin-api-request.js'
 import {
   getLynxFrameModule,
@@ -53,15 +58,67 @@ interface Props {
 export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
   const activeRef = useRef(active !== false)
   activeRef.current = active !== false
+  const frameId = useMemo(() => `frame-${entryPath}-${Date.now()}`, [entryPath])
+  const [canBack, setCanBack] = useState(false)
+  const backBridge = useMemo(
+    () =>
+      createPluginBackBridge({
+        send: (message) => {
+          if (isWebPlatform())
+            getLynxFrameModule().sendEvent(
+              'SongloftPluginBridge.push',
+              JSON.stringify({
+                event: 'navigationBack',
+                data: JSON.stringify(message),
+              }),
+            )
+          else
+            nativeHost.current?.push('navigationBack', JSON.stringify(message))
+        },
+        onCanBack: setCanBack,
+        onUnhandled: continueHostBack,
+      }),
+    [frameId],
+  )
+  useBackHandler(active !== false && canBack, () => backBridge.requestBack())
+  useEffect(() => () => backBridge.dispose(), [backBridge])
   const frameContext = useMemo(
     () => ({
       ...hostContext,
+      pluginNavigation: (method: string, params: Record<string, unknown>) => {
+        if (!params.session) {
+          backBridge.connect()
+          return
+        }
+        backBridge.receive({
+          ...params,
+          type:
+            method === 'navigationState'
+              ? 'songloft-back-state'
+              : 'songloft-back-result',
+        })
+      },
+      pluginOpenUrl: (url: string) => {
+        const mod = readNativeModules()?.[
+          isWebPlatform() ? 'SongloftLynxFrame' : 'SongloftPluginBridge'
+        ] as { openUrl?: (frame: string, url: string) => void } | undefined
+        if (!mod?.openUrl) throw new Error('opening URLs is unavailable')
+        mod.openUrl(frameId, url)
+      },
+      pluginResourceUrl: async (path: string) => {
+        if (!/^\/api\/v1\/songs\/\d+\/cover(?:\?|$)/.test(path))
+          throw new Error('invalid cover path')
+        const token =
+          (await getSongloftStorage().secure.get('access_token')) || ''
+        return `${appConfig.baseUrl}${appConfig.basePath}${path}${path.includes('?') ? '&' : '?'}access_token=${encodeURIComponent(token)}`
+      },
+      pluginSocketRequest: (method: string, params: Record<string, unknown>) =>
+        pluginSocketRequest(entryPath, frameId, method, params),
       pluginApiRequest: (params: Record<string, unknown>) =>
         pluginApiRequest(entryPath, params),
     }),
     [entryPath],
   )
-  const frameId = useMemo(() => `frame-${entryPath}-${Date.now()}`, [entryPath])
   const bundleUrl = buildLynxBundleUrl(entryPath)
   const [theme, setTheme] = useState(() => resolveTheme(getAppTheme()))
   const [accessToken, setAccessToken] = useState('')
@@ -132,6 +189,7 @@ export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
    */
   const globalProps = {
     frameId,
+    serverUrl: `${appConfig.baseUrl}${appConfig.basePath}`,
     theme,
     hostVersion: hostContext.version,
     embed: isTabEntry,
@@ -235,9 +293,9 @@ export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
   if (isWeb) {
     return (
       <view
-        id='plugin-lynx-frame'
-        className='plugin-webview__frame'
-        data-testid='plugin-lynx-frame'
+        id="plugin-lynx-frame"
+        className="plugin-webview__frame"
+        data-testid="plugin-lynx-frame"
       />
     )
   }
@@ -247,8 +305,8 @@ export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
     <frame
       src={bundleUrl}
       global-props={globalProps}
-      className='plugin-webview__frame'
-      data-testid='plugin-lynx-frame'
+      className="plugin-webview__frame"
+      data-testid="plugin-lynx-frame"
     />
   )
 }

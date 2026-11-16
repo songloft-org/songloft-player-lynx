@@ -34,3 +34,34 @@ test('rejects paths outside the plugin', async () => {
     ).rejects.toThrow('invalid')
   }
 })
+
+test.each(['GET', 'POST', 'PUT', 'DELETE'])(
+  'forwards %s using the frame identity',
+  async (method) => {
+    h.request.mockResolvedValue({ data: { saved: true } })
+    await expect(
+      pluginApiRequest('miot', {
+        method,
+        path: '/api/groups?id=a%2Fb',
+        body: { name: '卧室' },
+        entryPath: 'other',
+      }),
+    ).resolves.toEqual({ saved: true })
+    expect(h.request).toHaveBeenLastCalledWith(
+      '/api/v1/jsplugin/miot/api/groups?id=a%2Fb',
+      {
+        method,
+        body: { name: '卧室' },
+        receiveTimeoutMs: 60000,
+      },
+    )
+  },
+)
+
+test('rejects unsupported methods without a network request', async () => {
+  h.request.mockClear()
+  await expect(
+    pluginApiRequest('miot', { method: 'PATCH', path: '/api/config' }),
+  ).rejects.toThrow('invalid')
+  expect(h.request).not.toHaveBeenCalled()
+})

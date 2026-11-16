@@ -44,66 +44,114 @@ const read = (relative: string): string =>
 
 test('iOS uploads retain completion independently of the dismissed document picker', () => {
   const platform = read('ios/SongloftLynx/SongloftPlatformModule.swift')
-  const upload = platform.slice(platform.indexOf('  private func upload(data: Data, fileName: String)'))
+  const upload = platform
+    .slice(
+      platform.indexOf('  private func upload(data: Data, fileName: String)'),
+    )
     .split('// MARK:')[0]
-  const task = upload.slice(upload.indexOf('InsecureTls.shared.session.dataTask'), upload.indexOf('}.resume()'))
+  const task = upload.slice(
+    upload.indexOf('InsecureTls.shared.session.dataTask'),
+    upload.indexOf('}.resume()'),
+  )
   expect(upload).toContain('let completion = callback')
   expect(task).not.toContain('[weak self]')
   expect(task).not.toContain('self?.callback')
   // Transport errors, HTTP failures and success must all reach JS after dismissal.
-  expect(task).toContain('completion([error.localizedDescription, NSNull()] as NSArray)')
-  expect(task).toContain('completion(["HTTP \\(statusCode): \\(errBody)", NSNull()] as NSArray)')
+  expect(task).toContain(
+    'completion([error.localizedDescription, NSNull()] as NSArray)',
+  )
+  expect(task).toContain(
+    'completion(["HTTP \\(statusCode): \\(errBody)", NSNull()] as NSArray)',
+  )
   expect(task).toContain('completion([NSNull(), resultBody] as NSArray)')
   expect(task).toContain('DispatchQueue.main.async')
 })
 
 test('iOS cold widget actions return a scalar callback matching the JS consumer', () => {
   const platform = read('ios/SongloftLynx/SongloftPlatformModule.swift')
-  const signature = platform.match(/@objc func consumeWidgetAction\([^\n]+/)?.[0]
-  expect(signature).toBe('@objc func consumeWidgetAction(_ callback: @escaping (String) -> Void) {')
+  const signature = platform.match(
+    /@objc func consumeWidgetAction\([^\n]+/,
+  )?.[0]
+  expect(signature).toBe(
+    '@objc func consumeWidgetAction(_ callback: @escaping (String) -> Void) {',
+  )
   expect(platform).toContain('callback(HomeWidgetStore.consumeAction())')
 })
 
 test('Android widget actions attach to the page before JS loads and do not require an audio sink', () => {
-  const activity = read('android/app/src/main/java/org/songloft/lynx/MainActivity.kt')
-  const widget = read('android/app/src/main/java/org/songloft/lynx/widget/NowPlayingWidget.kt')
+  const activity = read(
+    'android/app/src/main/java/org/songloft/lynx/MainActivity.kt',
+  )
+  const widget = read(
+    'android/app/src/main/java/org/songloft/lynx/widget/NowPlayingWidget.kt',
+  )
   const attach = activity.indexOf('NowPlayingWidget.attach(view)')
   expect(attach).toBeGreaterThan(-1)
-  expect(attach).toBeLessThan(activity.indexOf('view.loadTemplate(meta.build())'))
+  expect(attach).toBeLessThan(
+    activity.indexOf('view.loadTemplate(meta.build())'),
+  )
   expect(activity.includes('NowPlayingWidget.detach(lynxView)')).toBe(true)
   expect(widget.includes('SongloftAudioEngine.sink')).toBe(false)
   expect(widget.includes('actionDelivery.dispatch(action)')).toBe(true)
 })
 
 test('Android onResume emits the lifecycle event consumed by plugin WebViews', () => {
-  const activity = read('android/app/src/main/java/org/songloft/lynx/MainActivity.kt')
+  const activity = read(
+    'android/app/src/main/java/org/songloft/lynx/MainActivity.kt',
+  )
   const event = activity.match(/const val EVENT_APP_RESUMED = "([^"]+)"/)
   expect(event?.[1]).toBe(APP_RESUMED_EVENT)
-  const onResume = activity.match(/override fun onResume\(\)\s*\{([\s\S]*?)\n    \}/)?.[1]
+  const onResume = activity.match(
+    /override fun onResume\(\)\s*\{([\s\S]*?)\n    \}/,
+  )?.[1]
   expect(onResume).toBeDefined()
   expect(onResume).toMatch(/super\.onResume\(\)/)
   expect(onResume).toMatch(/val params = JavaOnlyArray\(\)/)
-  expect(onResume).toMatch(/params\.pushMap\(JavaOnlyMap\.from\(emptyMap<String, Any>\(\)\)\)/)
-  expect(onResume).toMatch(/lynxView\?\.sendGlobalEvent\(EVENT_APP_RESUMED, params\)/)
+  expect(onResume).toMatch(
+    /params\.pushMap\(JavaOnlyMap\.from\(emptyMap<String, Any>\(\)\)\)/,
+  )
+  expect(onResume).toMatch(
+    /lynxView\?\.sendGlobalEvent\(EVENT_APP_RESUMED, params\)/,
+  )
 })
 
 test('iOS scene activity reaches the current root after first-screen readiness and disconnect releases its window', () => {
   const scene = read('ios/SongloftLynx/SceneDelegate.swift')
-  expect(scene).toMatch(/func sceneDidBecomeActive\(_ scene: UIScene\)\s*\{[\s\S]*?setSceneActive\(true\)/)
-  expect(scene).toMatch(/func sceneWillResignActive\(_ scene: UIScene\)\s*\{[\s\S]*?setSceneActive\(false\)/)
-  expect(scene).toMatch(/func sceneDidDisconnect\(_ scene: UIScene\)\s*\{[\s\S]*?window = nil/)
+  expect(scene).toMatch(
+    /func sceneDidBecomeActive\(_ scene: UIScene\)\s*\{[\s\S]*?setSceneActive\(true\)/,
+  )
+  expect(scene).toMatch(
+    /func sceneWillResignActive\(_ scene: UIScene\)\s*\{[\s\S]*?setSceneActive\(false\)/,
+  )
+  expect(scene).toMatch(
+    /func sceneDidDisconnect\(_ scene: UIScene\)\s*\{[\s\S]*?window = nil/,
+  )
   const controller = read('ios/SongloftLynx/ViewController.swift')
   expect(controller).toContain('guard sceneActive != active else { return }')
-  expect(controller).toContain('guard sceneActive, lifecycleReady, resumePending, let lynxView else { return }')
-  expect(controller).toContain('updateLifecycle.onFirstScreen = { [weak self] view in')
+  expect(controller).toContain(
+    'guard sceneActive, lifecycleReady, resumePending, let lynxView else { return }',
+  )
+  expect(controller).toContain(
+    'updateLifecycle.onFirstScreen = { [weak self] view in',
+  )
   expect(controller).toContain('self.lynxView === view')
-  expect(controller).toContain('lynxView.sendGlobalEvent("' + APP_RESUMED_EVENT + '", withParams: [["state": "resumed"]])')
+  expect(controller).toContain(
+    'lynxView.sendGlobalEvent("' +
+      APP_RESUMED_EVENT +
+      '", withParams: [["state": "resumed"]])',
+  )
 })
 
 test('HarmonyOS ability and current root attach/readiness/disposal are wired to the tested lifecycle controller', () => {
-  const ability = read('harmony/entry/src/main/ets/entryability/EntryAbility.ets')
-  const foreground = ability.match(/onForeground\(\): void \{([\s\S]*?)\n  \}/)?.[1]
-  const background = ability.match(/onBackground\(\): void \{([\s\S]*?)\n  \}/)?.[1]
+  const ability = read(
+    'harmony/entry/src/main/ets/entryability/EntryAbility.ets',
+  )
+  const foreground = ability.match(
+    /onForeground\(\): void \{([\s\S]*?)\n  \}/,
+  )?.[1]
+  const background = ability.match(
+    /onBackground\(\): void \{([\s\S]*?)\n  \}/,
+  )?.[1]
   const destroy = ability.match(/onDestroy\(\): void \{([\s\S]*?)\n  \}/)?.[1]
   expect(foreground).toContain('AppLifecycle.enterForeground()')
   expect(foreground).toContain('SongloftPlatformModule.setForeground(true)')
@@ -112,23 +160,81 @@ test('HarmonyOS ability and current root attach/readiness/disposal are wired to 
   expect(destroy).toContain('AppLifecycle.reset()')
   expect(destroy).toContain('SongloftPlatformModule.setHostWindow(null)')
   const index = read('harmony/entry/src/main/ets/pages/Index.ets')
-  expect(index).toContain('new SongloftUpdateLifecycle(this.context), this.lifecycleClient')
-  expect(index).toMatch(/onCreate: \(context: LynxContext\) => \{\s*this\.lifecycleClient\.attach\(context\)/)
-  expect(index).toMatch(/aboutToDisappear\(\): void \{\s*this\.lifecycleClient\.detach\(\)/)
-  const lifecycle = read('harmony/entry/src/main/ets/modules/system/AppLifecycle.ets')
-  expect(lifecycle).toContain("context.sendGlobalEvent('" + APP_RESUMED_EVENT + "', [payload])")
-  expect(lifecycle).toMatch(/public onFirstScreen\(\): void \{\s*if \(this\.context\) AppLifecycle\.markReady\(this\.context\)/)
+  expect(index).toContain(
+    'new SongloftUpdateLifecycle(this.context), this.lifecycleClient',
+  )
+  expect(index).toMatch(
+    /onCreate: \(context: LynxContext\) => \{\s*this\.lifecycleClient\.attach\(context\)/,
+  )
+  expect(index).toMatch(
+    /aboutToDisappear\(\): void \{\s*this\.lifecycleClient\.detach\(\)/,
+  )
+  const lifecycle = read(
+    'harmony/entry/src/main/ets/modules/system/AppLifecycle.ets',
+  )
+  expect(lifecycle).toContain(
+    "context.sendGlobalEvent('" + APP_RESUMED_EVENT + "', [payload])",
+  )
+  expect(lifecycle).toMatch(
+    /public onFirstScreen\(\): void \{\s*if \(this\.context\) AppLifecycle\.markReady\(this\.context\)/,
+  )
   expect(lifecycle).toContain('public onDestroy(): void { this.detach() }')
 })
 
 describe('native plugin parent methods are exposed on all three hosts', () => {
-  const methods = interfaceMethods(read('src/native/native-plugin-host.ts'), 'PluginBridgeNativeModule')
-  test('the parent interface is parsed', () => expect(methods).toEqual(['registerHost', 'unregisterHost', 'hostReply', 'pushToChild']))
-  test.each(methods)('%s', method => {
-    expectLynxMethod(read('android/app/src/main/java/org/songloft/lynx/plugin/SongloftPluginBridgeModule.kt'), method)
-    expectSwiftMethod(read('ios/SongloftLynx/SongloftPluginBridgeModule.swift'), method)
-    expectArkTsMethod(read('harmony/entry/src/main/ets/modules/plugin/SongloftPluginBridgeModule.ets'), method)
+  const methods = interfaceMethods(
+    read('src/native/native-plugin-host.ts'),
+    'PluginBridgeNativeModule',
+  )
+  test('the parent interface is parsed', () =>
+    expect(methods).toEqual([
+      'registerHost',
+      'unregisterHost',
+      'hostReply',
+      'pushToChild',
+    ]))
+  test.each(methods)('%s', (method) => {
+    expectLynxMethod(
+      read(
+        'android/app/src/main/java/org/songloft/lynx/plugin/SongloftPluginBridgeModule.kt',
+      ),
+      method,
+    )
+    expectSwiftMethod(
+      read('ios/SongloftLynx/SongloftPluginBridgeModule.swift'),
+      method,
+    )
+    expectArkTsMethod(
+      read(
+        'harmony/entry/src/main/ets/modules/plugin/SongloftPluginBridgeModule.ets',
+      ),
+      method,
+    )
   })
+})
+
+describe('plugin socket and external URL methods are exposed on all hosts', () => {
+  test.each(['socketOpen', 'socketSend', 'socketClose', 'openUrl'])(
+    '%s',
+    (method) => {
+      expectLynxMethod(
+        read(
+          'android/app/src/main/java/org/songloft/lynx/plugin/SongloftPluginBridgeModule.kt',
+        ),
+        method,
+      )
+      expectSwiftMethod(
+        read('ios/SongloftLynx/SongloftPluginBridgeModule.swift'),
+        method,
+      )
+      expectArkTsMethod(
+        read(
+          'harmony/entry/src/main/ets/modules/plugin/SongloftPluginBridgeModule.ets',
+        ),
+        method,
+      )
+    },
+  )
 })
 
 const ANDROID_AUDIO = 'android/app/src/main/java/org/songloft/lynx/audio'
@@ -167,7 +273,9 @@ const hosts = {
     android:
       read(`${ANDROID_SYSTEM}/SystemAppearance.kt`) +
       read('android/app/src/main/java/org/songloft/lynx/MainActivity.kt'),
-    ios: read(`${IOS_DIR}/SystemAppearance.swift`) + read(`${IOS_DIR}/ViewController.swift`),
+    ios:
+      read(`${IOS_DIR}/SystemAppearance.swift`) +
+      read(`${IOS_DIR}/ViewController.swift`),
   },
   // Batch 35+ modules (P2-3: contract gate expansion)
   platform: {
@@ -185,7 +293,9 @@ const hosts = {
   },
   video: {
     android: read(`${ANDROID_VIDEO}/SongloftVideoModule.kt`),
-    androidMain: read('android/app/src/main/java/org/songloft/lynx/MainActivity.kt'),
+    androidMain: read(
+      'android/app/src/main/java/org/songloft/lynx/MainActivity.kt',
+    ),
     ios: read(`${IOS_DIR}/SongloftVideoModule.swift`),
     harmony: read(`${HARMONY_MODULES}/video/SongloftVideoModule.ets`),
   },
@@ -193,9 +303,17 @@ const hosts = {
     ios: read(`${IOS_DIR}/LiveActivityModule.swift`),
   },
   songCache: {
-    android: read(`${ANDROID_CACHE}/SongloftSongCacheModule.kt`) + read(`${ANDROID_CACHE}/SongCacheStore.kt`),
-    ios: read(`${IOS_DIR}/SongloftSongCacheModule.swift`) + read(`${IOS_DIR}/SongCacheStore.swift`) + read(`${IOS_DIR}/SongCacheTransfer.swift`),
-    harmony: read(`${HARMONY_MODULES}/cache/SongloftSongCacheModule.ets`) + read(`${HARMONY_MODULES}/cache/SongCacheStore.ets`) + read(`${HARMONY_MODULES}/cache/SongCacheTransfer.ets`),
+    android:
+      read(`${ANDROID_CACHE}/SongloftSongCacheModule.kt`) +
+      read(`${ANDROID_CACHE}/SongCacheStore.kt`),
+    ios:
+      read(`${IOS_DIR}/SongloftSongCacheModule.swift`) +
+      read(`${IOS_DIR}/SongCacheStore.swift`) +
+      read(`${IOS_DIR}/SongCacheTransfer.swift`),
+    harmony:
+      read(`${HARMONY_MODULES}/cache/SongloftSongCacheModule.ets`) +
+      read(`${HARMONY_MODULES}/cache/SongCacheStore.ets`) +
+      read(`${HARMONY_MODULES}/cache/SongCacheTransfer.ets`),
   },
   /*
    * Back key. Split like `system` above: the module writes the flag, but the press
@@ -211,11 +329,15 @@ const hosts = {
     harmony: read(`${HARMONY_MODULES}/navigation/SongloftNavigationModule.ets`),
   },
   // Android module registration (SongloftApplication.kt)
-  androidApp: read('android/app/src/main/java/org/songloft/lynx/SongloftApplication.kt'),
+  androidApp: read(
+    'android/app/src/main/java/org/songloft/lynx/SongloftApplication.kt',
+  ),
   // iOS module registration (ViewController.swift buildConfig)
   iosViewController: read(`${IOS_DIR}/ViewController.swift`),
   // HarmonyOS module registration (EntryAbility.ets)
-  harmonyEntry: read('harmony/entry/src/main/ets/entryability/EntryAbility.ets'),
+  harmonyEntry: read(
+    'harmony/entry/src/main/ets/entryability/EntryAbility.ets',
+  ),
   // HarmonyOS registers per-view LynxModule classes on Index.ets (map into
   // LynxView()); EntryAbility only wires services. Registration site is not
   // the same as Android/iOS.
@@ -232,7 +354,9 @@ function interfaceMethods(source: string, interfaceName: string): string[] {
       : source.indexOf(`interface ${interfaceName} {`)
   expect(start, `interface ${interfaceName} not found`).toBeGreaterThan(-1)
   const body = source.slice(start, source.indexOf('\n}', start))
-  return [...body.matchAll(/^\s{2}(?:\/\*\*.*)?(\w+)\??\(/gm)].map((m) => m[1] as string)
+  return [...body.matchAll(/^\s{2}(?:\/\*\*.*)?(\w+)\??\(/gm)].map(
+    (m) => m[1] as string,
+  )
 }
 
 /**
@@ -258,7 +382,9 @@ function expectLynxMethod(source: string, method: string): void {
  */
 function expectSwiftMethod(source: string, method: string): void {
   expect(source, `Swift has no func ${method}`).toContain(`func ${method}(`)
-  expect(source, `methodLookup is missing "${method}"`).toContain(`"${method}":`)
+  expect(source, `methodLookup is missing "${method}"`).toContain(
+    `"${method}":`,
+  )
 }
 
 /** Assert a HarmonyOS LynxModule exposes a public ArkTS method to JS. */
@@ -271,77 +397,161 @@ function expectArkTsMethod(source: string, method: string): void {
   )
 }
 
-function expectImplementedArkTsAudioMethod(source: string, method: string): void {
+function expectImplementedArkTsAudioMethod(
+  source: string,
+  method: string,
+): void {
   expectArkTsMethod(source, method)
-  const withoutComments = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
-  expect(withoutComments, `${method} must not be an empty placeholder`).not.toMatch(
+  const withoutComments = source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '')
+  expect(
+    withoutComments,
+    `${method} must not be an empty placeholder`,
+  ).not.toMatch(
     new RegExp(`public\\s+${method}\\([^\\n]*\\)\\s*:\\s*void\\s*\\{\\s*\\}`),
   )
 }
 
 test('HarmonyOS audio implementation gate rejects a registered but empty method', () => {
-  expect(() => expectImplementedArkTsAudioMethod('public setQueue(items: Object[], startIndex: number): void { /* TODO */ }', 'setQueue')).toThrow()
+  expect(() =>
+    expectImplementedArkTsAudioMethod(
+      'public setQueue(items: Object[], startIndex: number): void { /* TODO */ }',
+      'setQueue',
+    ),
+  ).toThrow()
 })
 
 describe('Android updater callback/loader integration', () => {
-  const source = read('android/app/src/main/java/org/songloft/lynx/updater/SongloftUpdateModule.kt')
-  test.each(['getInfo', 'getState', 'inspectManifest', 'download', 'cancel', 'confirmStartup', 'reportStartupFailure', 'restoreBuiltin', 'fetchMetadata'])('%s is exposed by Lynx', method => {
+  const source = read(
+    'android/app/src/main/java/org/songloft/lynx/updater/SongloftUpdateModule.kt',
+  )
+  test.each([
+    'getInfo',
+    'getState',
+    'inspectManifest',
+    'download',
+    'cancel',
+    'confirmStartup',
+    'reportStartupFailure',
+    'restoreBuiltin',
+    'fetchMetadata',
+  ])('%s is exposed by Lynx', (method) => {
     expectLynxMethod(source, method)
   })
   test('download progress reaches the shared task-scoped subscriber', () => {
-    expect(source).toContain('sendGlobalEvent("SongloftUpdate.progress", params)')
-    expect(read('src/core/updater/native-updater.ts')).toContain("emitter.addListener('SongloftUpdate.progress', handler)")
+    expect(source).toContain(
+      'sendGlobalEvent("SongloftUpdate.progress", params)',
+    )
+    expect(read('src/core/updater/native-updater.ts')).toContain(
+      "emitter.addListener('SongloftUpdate.progress', handler)",
+    )
   })
   test('only the app root template uses the update loader', () => {
-    const provider = read('android/app/src/main/java/org/songloft/lynx/DemoTemplateProvider.kt')
-    expect(provider).toMatch(/if \(uri == "main\.lynx\.bundle"\)[\s\S]*update\?\.beginLaunch\(\)/)
-    expect(read('android/app/src/main/java/org/songloft/lynx/updater/BundleUpdates.kt')).toContain('app.assets.open("native-host.json")')
+    const provider = read(
+      'android/app/src/main/java/org/songloft/lynx/DemoTemplateProvider.kt',
+    )
+    expect(provider).toMatch(
+      /if \(uri == "main\.lynx\.bundle"\)[\s\S]*update\?\.beginLaunch\(\)/,
+    )
+    expect(
+      read(
+        'android/app/src/main/java/org/songloft/lynx/updater/BundleUpdates.kt',
+      ),
+    ).toContain('app.assets.open("native-host.json")')
   })
   test('startup confirmation mounts after the splash and inside the render error boundary', () => {
     const router = read('src/router.tsx')
     const start = router.indexOf('export function RootRouteView()')
     const body = router.slice(start, router.indexOf('const rootRoute', start))
-    expect(body).toMatch(/<RouteErrorBoundary>\s*<Outlet \/>\s*<UpdateStartup \/>\s*<\/RouteErrorBoundary>/)
-    expect(body.indexOf('<UpdateStartup />')).toBeGreaterThan(body.indexOf('<SplashScreen />'))
-    const boundary = router.slice(router.indexOf('componentDidCatch'), router.indexOf('\n  render()'))
+    expect(body).toMatch(
+      /<RouteErrorBoundary>\s*<Outlet \/>\s*<UpdateStartup \/>\s*<\/RouteErrorBoundary>/,
+    )
+    expect(body.indexOf('<UpdateStartup />')).toBeGreaterThan(
+      body.indexOf('<SplashScreen />'),
+    )
+    const boundary = router.slice(
+      router.indexOf('componentDidCatch'),
+      router.indexOf('\n  render()'),
+    )
     expect(boundary).toContain('reportUpdateStartupFailure()')
   })
 })
 
 describe('iOS updater callback, resource and root-loader integration', () => {
   const source = read('ios/SongloftLynx/SongloftUpdateModule.swift')
-  test.each(['getInfo', 'getState', 'inspectManifest', 'download', 'cancel', 'confirmStartup', 'reportStartupFailure', 'restoreBuiltin', 'fetchMetadata'])('%s is exposed by Lynx', method => {
+  test.each([
+    'getInfo',
+    'getState',
+    'inspectManifest',
+    'download',
+    'cancel',
+    'confirmStartup',
+    'reportStartupFailure',
+    'restoreBuiltin',
+    'fetchMetadata',
+  ])('%s is exposed by Lynx', (method) => {
     expectSwiftMethod(source, method)
   })
   test('only the app root template activates disk candidates', () => {
-    expect(read('ios/SongloftLynx/SongloftTemplateProvider.swift')).toMatch(/url == "main\.lynx"[\s\S]*updates\.beginLaunch\(\)/)
-    expect(read('ios/SongloftLynx/BundleUpdateStore.swift')).toContain('Bundle.main.url(forResource: "native-host", withExtension: "json")')
+    expect(read('ios/SongloftLynx/SongloftTemplateProvider.swift')).toMatch(
+      /url == "main\.lynx"[\s\S]*updates\.beginLaunch\(\)/,
+    )
+    expect(read('ios/SongloftLynx/BundleUpdateStore.swift')).toContain(
+      'Bundle.main.url(forResource: "native-host", withExtension: "json")',
+    )
     const project = read('ios/SongloftLynx.xcodeproj/project.pbxproj')
     expect(project).toContain('native-host.json in Resources')
-    for (const name of ['BundleUpdateStore.swift', 'BundleUpdateTransfer.swift', 'SongloftUpdateModule.swift']) {
+    for (const name of [
+      'BundleUpdateStore.swift',
+      'BundleUpdateTransfer.swift',
+      'SongloftUpdateModule.swift',
+    ]) {
       expect(project).toContain(`${name} in Sources`)
     }
   })
   test('fatal template errors report failure, and download events retain task identity', () => {
-    expect(read('ios/SongloftLynx/ViewController.swift')).toContain('lynxView.addLifecycleClient(updateLifecycle)')
-    expect(read('ios/SongloftLynx/ViewController.swift')).toContain('didRecieveError')
-    expect(source).toContain('sendGlobalEvent("SongloftUpdate.progress", withParams: [["task_id": request.task_id')
+    expect(read('ios/SongloftLynx/ViewController.swift')).toContain(
+      'lynxView.addLifecycleClient(updateLifecycle)',
+    )
+    expect(read('ios/SongloftLynx/ViewController.swift')).toContain(
+      'didRecieveError',
+    )
+    expect(source).toContain(
+      'sendGlobalEvent("SongloftUpdate.progress", withParams: [["task_id": request.task_id',
+    )
   })
 })
 
 describe('HarmonyOS updater callbacks and root-loader integration', () => {
-  const source = read('harmony/entry/src/main/ets/modules/updater/SongloftUpdateModule.ets')
-  test.each(['getInfo', 'getState', 'inspectManifest', 'download', 'cancel', 'confirmStartup', 'reportStartupFailure', 'restoreBuiltin', 'fetchMetadata'])('%s is exposed by Lynx', method => {
+  const source = read(
+    'harmony/entry/src/main/ets/modules/updater/SongloftUpdateModule.ets',
+  )
+  test.each([
+    'getInfo',
+    'getState',
+    'inspectManifest',
+    'download',
+    'cancel',
+    'confirmStartup',
+    'reportStartupFailure',
+    'restoreBuiltin',
+    'fetchMetadata',
+  ])('%s is exposed by Lynx', (method) => {
     expectArkTsMethod(source, method)
   })
   test('root loader preserves builtin fallback and receives fatal lifecycle errors', () => {
     const root = read('harmony/entry/src/main/ets/pages/Index.ets')
-    expect(root).toContain("this.modules.set('SongloftUpdate', { moduleClass: SongloftUpdateModule, param: this.context })")
+    expect(root).toContain(
+      "this.modules.set('SongloftUpdate', { moduleClass: SongloftUpdateModule, param: this.context })",
+    )
     expect(root).toContain('updates.beginLaunch()')
     expect(root).toContain('template.getErrorMessage().length === 0')
     expect(root).toContain('clients: this.clients')
     expect(source).toContain('error.isFatal()')
-    expect(source).toContain("sendGlobalEvent('SongloftUpdate.progress', [event])")
+    expect(source).toContain(
+      "sendGlobalEvent('SongloftUpdate.progress', [event])",
+    )
   })
 })
 
@@ -349,9 +559,17 @@ describe('audio global-event names reach both hosts verbatim', () => {
   const names = [...Object.values(NATIVE_EVENT)]
 
   test.each(names)('%s', (name) => {
-    expect(hosts.audio.android, `${name} missing from the Kotlin engine`).toContain(name)
-    expect(hosts.audio.ios, `${name} missing from the Swift engine`).toContain(name)
-    expect(hosts.audioModule.harmony, `${name} missing from the HarmonyOS module`).toContain(name)
+    expect(
+      hosts.audio.android,
+      `${name} missing from the Kotlin engine`,
+    ).toContain(name)
+    expect(hosts.audio.ios, `${name} missing from the Swift engine`).toContain(
+      name,
+    )
+    expect(
+      hosts.audioModule.harmony,
+      `${name} missing from the HarmonyOS module`,
+    ).toContain(name)
   })
 
   test.each(['next', 'previous', 'toggleFavorite', 'play', 'pause'])(
@@ -374,21 +592,34 @@ describe('audio global-event names reach both hosts verbatim', () => {
    * so a host emitting e.g. `"buffering"` produces a player that never leaves
    * its previous state.
    */
-  test.each(['idle', 'loading', 'ready', 'playing', 'paused', 'completed', 'error'])(
-    'stateChanged state %s',
-    (state) => {
-      expect(hosts.audio.android).toContain(`"${state}"`)
-      expect(hosts.audio.ios).toContain(`"${state}"`)
-      expect(hosts.audio.harmony).toContain(`'${state}'`)
-    },
-  )
+  test.each([
+    'idle',
+    'loading',
+    'ready',
+    'playing',
+    'paused',
+    'completed',
+    'error',
+  ])('stateChanged state %s', (state) => {
+    expect(hosts.audio.android).toContain(`"${state}"`)
+    expect(hosts.audio.ios).toContain(`"${state}"`)
+    expect(hosts.audio.harmony).toContain(`'${state}'`)
+  })
 })
 
 describe('system appearance keys reach both hosts verbatim', () => {
-  test.each([GLOBAL_PROP_THEME, GLOBAL_PROP_LOCALE, SYSTEM_APPEARANCE_EVENT])('%s', (key) => {
-    expect(hosts.system.android, `${key} missing from the Android host`).toContain(key)
-    expect(hosts.system.ios, `${key} missing from the iOS host`).toContain(key)
-  })
+  test.each([GLOBAL_PROP_THEME, GLOBAL_PROP_LOCALE, SYSTEM_APPEARANCE_EVENT])(
+    '%s',
+    (key) => {
+      expect(
+        hosts.system.android,
+        `${key} missing from the Android host`,
+      ).toContain(key)
+      expect(hosts.system.ios, `${key} missing from the iOS host`).toContain(
+        key,
+      )
+    },
+  )
 
   test.each(['light', 'dark'])('theme value %s', (value) => {
     expect(hosts.system.android).toContain(`"${value}"`)
@@ -437,17 +668,24 @@ describe('safe-area keys reach the iOS host verbatim', () => {
    */
   test('the iOS host observes inset changes with a real UIViewController override', () => {
     // The exact override signature: an `override func`, not any mention of the name.
-    expect(hosts.system.ios).toMatch(/override\s+func\s+viewSafeAreaInsetsDidChange\s*\(\s*\)/)
+    expect(hosts.system.ios).toMatch(
+      /override\s+func\s+viewSafeAreaInsetsDidChange\s*\(\s*\)/,
+    )
     // And it must actually route to the push. Extract the override's body rather
     // than trusting the file: a renamed/detached override would otherwise pass.
     const body = swiftFuncBody(hosts.system.ios, 'viewSafeAreaInsetsDidChange')
-    expect(body, 'viewSafeAreaInsetsDidChange must call pushSafeArea()').toContain('pushSafeArea()')
+    expect(
+      body,
+      'viewSafeAreaInsetsDidChange must call pushSafeArea()',
+    ).toContain('pushSafeArea()')
   })
 
   test('pushSafeArea snapshots the insets and sends both channels', () => {
     const body = swiftFuncBody(hosts.system.ios, 'pushSafeArea')
-    expect(body, 'pushSafeArea must build its payload from SafeAreaInsets.snapshot')
-      .toMatch(/SafeAreaInsets\.snapshot\s*\(\s*insets:/)
+    expect(
+      body,
+      'pushSafeArea must build its payload from SafeAreaInsets.snapshot',
+    ).toMatch(/SafeAreaInsets\.snapshot\s*\(\s*insets:/)
     // globalProps alone does not reach an already-rendered tree — the event is the
     // half that makes rotation work. Both, or the live page never hears a change.
     expect(body).toContain('updateGlobalProps')
@@ -505,25 +743,38 @@ describe('the back-press event name reaches every host verbatim', () => {
    */
   test('every Web sendGlobalEvent passes its payload as an array', () => {
     const offenders: string[] = []
-    for (const file of ['web/audio-host.js', 'web/webview-host.js', 'web/index.html']) {
-      read(file).split('\n').forEach((line, i) => {
-        const code = line.trim()
-        // Skip comments — the fix sites document the array contract in prose, and
-        // `web/index.html` explains it at length right above the call it applies to.
-        if (code.startsWith('//') || code.startsWith('*') || code.startsWith('/*')) return
-        const call = /sendGlobalEvent\(([^)]*)$|sendGlobalEvent\((.*)\)/.exec(line)
-        if (!call) return
-        const args = (call[1] ?? call[2] ?? '').trim()
-        const second = args.slice(args.indexOf(',') + 1).trim()
-        if (args.includes(',') && !second.startsWith('[')) {
-          offenders.push(`${file}:${i + 1}: ${line.trim()}`)
-        }
-      })
+    for (const file of [
+      'web/audio-host.js',
+      'web/webview-host.js',
+      'web/index.html',
+    ]) {
+      read(file)
+        .split('\n')
+        .forEach((line, i) => {
+          const code = line.trim()
+          // Skip comments — the fix sites document the array contract in prose, and
+          // `web/index.html` explains it at length right above the call it applies to.
+          if (
+            code.startsWith('//') ||
+            code.startsWith('*') ||
+            code.startsWith('/*')
+          )
+            return
+          const call = /sendGlobalEvent\(([^)]*)$|sendGlobalEvent\((.*)\)/.exec(
+            line,
+          )
+          if (!call) return
+          const args = (call[1] ?? call[2] ?? '').trim()
+          const second = args.slice(args.indexOf(',') + 1).trim()
+          if (args.includes(',') && !second.startsWith('[')) {
+            offenders.push(`${file}:${i + 1}: ${line.trim()}`)
+          }
+        })
     }
     expect(
       offenders,
-      'sendGlobalEvent\'s second argument must be an array of params — a bare object '
-      + `delivers nothing to the listener:\n${offenders.join('\n')}`,
+      "sendGlobalEvent's second argument must be an array of params — a bare object " +
+        `delivers nothing to the listener:\n${offenders.join('\n')}`,
     ).toEqual([])
   })
 })
@@ -533,16 +784,26 @@ describe('native module method names exist on both hosts', () => {
     expectLynxMethod(hosts.audioModule.android, 'getSourceLoadVersion')
     expectSwiftMethod(hosts.audioModule.ios, 'getSourceLoadVersion')
     expectArkTsMethod(hosts.audioModule.harmony, 'getSourceLoadVersion')
-    expect(hosts.audioModule.android).toMatch(/fun getSourceLoadVersion\(callback: Callback\)\s*\{\s*callback\.invoke\(1\)/)
-    expect(hosts.audioModule.ios).toMatch(/func getSourceLoadVersion\(_ callback: @escaping LynxCallbackBlock\)\s*\{\s*callback\(\[1\] as NSArray\)/)
-    expect(hosts.audioModule.harmony).toMatch(/getSourceLoadVersion\(callback: \(version: number\) => void\): void\s*\{\s*callback\(1\)/)
+    expect(hosts.audioModule.android).toMatch(
+      /fun getSourceLoadVersion\(callback: Callback\)\s*\{\s*callback\.invoke\(1\)/,
+    )
+    expect(hosts.audioModule.ios).toMatch(
+      /func getSourceLoadVersion\(_ callback: @escaping LynxCallbackBlock\)\s*\{\s*callback\(\[1\] as NSArray\)/,
+    )
+    expect(hosts.audioModule.harmony).toMatch(
+      /getSourceLoadVersion\(callback: \(version: number\) => void\): void\s*\{\s*callback\(1\)/,
+    )
     for (const platform of ['android', 'ios', 'harmony'] as const) {
       expect(hosts.audioModule[platform]).toContain('initialPositionMs')
       expect(hosts.audioModule[platform]).toContain('autoplay')
       expect(hosts.audio[platform]).toContain('sourceId')
     }
-    expect(read('web/songloft-audio-module.js')).toContain("call('getSourceLoadVersion', [])")
-    expect(read('web/audio-host.js')).toContain("sendEvent('SongloftAudio.sourceReady'")
+    expect(read('web/songloft-audio-module.js')).toContain(
+      "call('getSourceLoadVersion', [])",
+    )
+    expect(read('web/audio-host.js')).toContain(
+      "sendEvent('SongloftAudio.sourceReady'",
+    )
   })
   const audioMethods = interfaceMethods(
     read('src/native/native-audio.ts'),
@@ -556,7 +817,13 @@ describe('native module method names exist on both hosts', () => {
   test('the interfaces were parsed (guard against a silent empty list)', () => {
     expect(audioMethods).toContain('load')
     expect(audioMethods.length).toBeGreaterThanOrEqual(16)
-    expect(storageMethods).toEqual(['getItem', 'setItem', 'removeItem', 'getKeys', 'getPath'])
+    expect(storageMethods).toEqual([
+      'getItem',
+      'setItem',
+      'removeItem',
+      'getKeys',
+      'getPath',
+    ])
   })
 
   test.each(audioMethods)('SongloftAudio.%s', (method) => {
@@ -569,8 +836,12 @@ describe('native module method names exist on both hosts', () => {
   })
 
   test('iOS retains the legacy lyric selector and registers the separate two-argument layout selector', () => {
-    expect(hosts.audioModule.ios).toMatch(/"updateNotificationLyric":\s*NSStringFromSelector\(#selector\(SongloftAudioModule\.updateNotificationLyric\(_:\)\)\)/)
-    expect(hosts.audioModule.ios).toMatch(/"updateNotificationLyricWithLayout":\s*NSStringFromSelector\(#selector\(SongloftAudioModule\.updateNotificationLyricWithLayout\(_:inTitle:\)\)\)/)
+    expect(hosts.audioModule.ios).toMatch(
+      /"updateNotificationLyric":\s*NSStringFromSelector\(#selector\(SongloftAudioModule\.updateNotificationLyric\(_:\)\)\)/,
+    )
+    expect(hosts.audioModule.ios).toMatch(
+      /"updateNotificationLyricWithLayout":\s*NSStringFromSelector\(#selector\(SongloftAudioModule\.updateNotificationLyricWithLayout\(_:inTitle:\)\)\)/,
+    )
   })
 
   test('HarmonyOS forwards the facade-normalized 0–1 volume without scaling it again', () => {
@@ -598,7 +869,11 @@ describe('native module method names exist on both hosts', () => {
   )
 
   test('the navigation interface was parsed', () => {
-    expect(navigationMethods).toEqual(['setBackConsumable', 'notifyBackHandled', 'exitApp'])
+    expect(navigationMethods).toEqual([
+      'setBackConsumable',
+      'notifyBackHandled',
+      'exitApp',
+    ])
   })
 
   test.each(navigationMethods)('SongloftNavigation.%s', (method) => {
@@ -636,7 +911,9 @@ describe('native module method names exist on both hosts', () => {
  */
 describe('every iOS Swift source is registered in the hand-written pbxproj', () => {
   const pbxproj = read(`${IOS_DIR}.xcodeproj/project.pbxproj`)
-  const swiftFiles = readdirSync(path.join(repoRoot, IOS_DIR)).filter((f) => f.endsWith('.swift'))
+  const swiftFiles = readdirSync(path.join(repoRoot, IOS_DIR)).filter((f) =>
+    f.endsWith('.swift'),
+  )
 
   test('the host has Swift sources at all', () => {
     expect(swiftFiles.length).toBeGreaterThanOrEqual(8)
@@ -649,12 +926,20 @@ describe('every iOS Swift source is registered in the hand-written pbxproj', () 
       expect(start, `${name} section missing`).toBeGreaterThan(-1)
       return pbxproj.slice(start, end)
     }
-    expect(section('PBXFileReference'), 'no PBXFileReference').toContain(`path = ${file}`)
-    expect(section('PBXBuildFile'), 'no PBXBuildFile').toContain(`${file} in Sources`)
-    expect(section('PBXGroup'), 'not in the SongloftLynx group children').toContain(`/* ${file} */`)
-    expect(section('PBXSourcesBuildPhase'), 'not compiled — missing from Sources').toContain(
+    expect(section('PBXFileReference'), 'no PBXFileReference').toContain(
+      `path = ${file}`,
+    )
+    expect(section('PBXBuildFile'), 'no PBXBuildFile').toContain(
       `${file} in Sources`,
     )
+    expect(
+      section('PBXGroup'),
+      'not in the SongloftLynx group children',
+    ).toContain(`/* ${file} */`)
+    expect(
+      section('PBXSourcesBuildPhase'),
+      'not compiled — missing from Sources',
+    ).toContain(`${file} in Sources`)
   })
 })
 
@@ -714,7 +999,9 @@ describe('the hand-written pbxproj is structurally well-formed', () => {
 test('iOS declares the audio background mode and activates a playback session', () => {
   const plist = read(`${IOS_DIR}/Info.plist`)
   expect(plist).toContain('<key>UIBackgroundModes</key>')
-  expect(plist.slice(plist.indexOf('UIBackgroundModes'))).toContain('<string>audio</string>')
+  expect(plist.slice(plist.indexOf('UIBackgroundModes'))).toContain(
+    '<string>audio</string>',
+  )
   expect(hosts.audio.ios).toMatch(/setCategory\(\.playback/)
 })
 
@@ -796,14 +1083,22 @@ describe('SongloftWebview module surface (Web only)', () => {
    */
   test('leaving the Web plugin page hides the frame, never closes it', () => {
     const page = read('src/features/jsplugin/pages/PluginWebViewPage.tsx')
-    expect(page, 'the Web plugin page never calls hide()').toMatch(/webview\.hide\(/)
-    expect(page, 'the Web plugin page must not close() the frame on unmount')
-      .not.toMatch(/webview\.close\(/)
+    expect(page, 'the Web plugin page never calls hide()').toMatch(
+      /webview\.hide\(/,
+    )
+    expect(
+      page,
+      'the Web plugin page must not close() the frame on unmount',
+    ).not.toMatch(/webview\.close\(/)
 
     const lynxFrame = read('src/features/jsplugin/widgets/LynxPluginFrame.tsx')
-    expect(lynxFrame, 'the lynx plugin frame never calls hide()').toMatch(/mod\.hide\(/)
-    expect(lynxFrame, 'the lynx plugin frame must not close() on unmount')
-      .not.toMatch(/mod\.close\(/)
+    expect(lynxFrame, 'the lynx plugin frame never calls hide()').toMatch(
+      /mod\.hide\(/,
+    )
+    expect(
+      lynxFrame,
+      'the lynx plugin frame must not close() on unmount',
+    ).not.toMatch(/mod\.close\(/)
   })
 
   /**
@@ -818,7 +1113,12 @@ describe('SongloftWebview module surface (Web only)', () => {
       'LynxFrameNativeModule',
     )
     expect(methods).toEqual([
-      'open', 'updateGlobalProps', 'sendEvent', 'hostReply', 'hide', 'close',
+      'open',
+      'updateGlobalProps',
+      'sendEvent',
+      'hostReply',
+      'hide',
+      'close',
     ])
     for (const method of methods) {
       expect(
@@ -833,11 +1133,18 @@ describe('SongloftWebview module surface (Web only)', () => {
   })
 
   test('the lynx frame event names match between the facade and the main thread', () => {
-    for (const name of ['SongloftLynxFrame.message', 'SongloftLynxFrame.openFailed']) {
-      expect(read('src/native/web-lynx-frame.ts'), `the facade does not declare ${name}`)
-        .toContain(name)
-      expect(read('web/lynx-frame-host.js'), `the main thread does not emit ${name}`)
-        .toContain(name)
+    for (const name of [
+      'SongloftLynxFrame.message',
+      'SongloftLynxFrame.openFailed',
+    ]) {
+      expect(
+        read('src/native/web-lynx-frame.ts'),
+        `the facade does not declare ${name}`,
+      ).toContain(name)
+      expect(
+        read('web/lynx-frame-host.js'),
+        `the main thread does not emit ${name}`,
+      ).toContain(name)
     }
   })
 
@@ -856,8 +1163,12 @@ describe('SongloftWebview module surface (Web only)', () => {
    */
   test('the Web iframe host never detaches a plugin frame', () => {
     const host = read('web/webview-host.js')
-    expect(host, 'webview-host.js detaches a frame again').not.toMatch(/\.remove\(\)/)
-    expect(host, 'webview-host.js detaches a frame again').not.toMatch(/removeChild\(/)
+    expect(host, 'webview-host.js detaches a frame again').not.toMatch(
+      /\.remove\(\)/,
+    )
+    expect(host, 'webview-host.js detaches a frame again').not.toMatch(
+      /removeChild\(/,
+    )
   })
 
   test.each(methods)('SongloftWebview.%s reaches both Web halves', (method) => {
@@ -878,7 +1189,10 @@ describe('SongloftWebview module surface (Web only)', () => {
    * listens yet (diagnostics / future internal-history support).
    */
   test('the webview event names match between the facade and the main thread', () => {
-    for (const name of ['SongloftWebview.message', 'SongloftWebview.openFailed']) {
+    for (const name of [
+      'SongloftWebview.message',
+      'SongloftWebview.openFailed',
+    ]) {
       expect(
         read('src/native/web-webview.ts'),
         `the facade does not declare ${name}`,
@@ -902,9 +1216,10 @@ describe('SongloftWebview module surface (Web only)', () => {
     expect(page, 'the page must render the placeholder with that id').toContain(
       "id='plugin-webview-frame'",
     )
-    expect(page, 'the page must open the iframe with the same selector').toContain(
-      "'#plugin-webview-frame'",
-    )
+    expect(
+      page,
+      'the page must open the iframe with the same selector',
+    ).toContain("'#plugin-webview-frame'")
   })
 
   /**
@@ -1000,14 +1315,19 @@ describe('shareLogArchive keeps the bytes out of JS', () => {
   })
 
   test('each host zips natively instead of accepting a JS-built archive', () => {
-    expect(hosts.platform.android, 'Android must build the zip itself').toContain(
-      'ZipOutputStream(',
-    )
+    expect(
+      hosts.platform.android,
+      'Android must build the zip itself',
+    ).toContain('ZipOutputStream(')
     expect(hosts.platform.android).toContain('putNextEntry(')
     // Apple has no zip-entry API; `.forUploading` is the coordinated-read that
     // produces one, and it avoids a hand-rolled archive format.
-    expect(hosts.platform.ios, 'iOS must zip via NSFileCoordinator').toContain('.forUploading')
-    expect(hosts.platform.harmony, 'HarmonyOS must zip via zlib').toContain('zlib.compressFile(')
+    expect(hosts.platform.ios, 'iOS must zip via NSFileCoordinator').toContain(
+      '.forUploading',
+    )
+    expect(hosts.platform.harmony, 'HarmonyOS must zip via zlib').toContain(
+      'zlib.compressFile(',
+    )
   })
 
   test('the client log is copied on the log thread, never read into a string', () => {
@@ -1015,15 +1335,21 @@ describe('shareLogArchive keeps the bytes out of JS', () => {
     // archive path must use the file copy instead — and it must be the log
     // thread's copy, so lines queued while reproducing the bug are already on
     // disk.
-    expect(androidLog, 'Android ClientFileLog needs copyTo').toMatch(/fun copyTo\(/)
+    expect(androidLog, 'Android ClientFileLog needs copyTo').toMatch(
+      /fun copyTo\(/,
+    )
     expect(androidLog, 'copyTo must run on the log executor').toMatch(
       /fun copyTo\([\s\S]{0,400}?executor\.execute/,
     )
-    expect(hosts.platform.ios, 'iOS ClientFileLog needs copyTo').toMatch(/static func copyTo\(/)
+    expect(hosts.platform.ios, 'iOS ClientFileLog needs copyTo').toMatch(
+      /static func copyTo\(/,
+    )
     expect(hosts.platform.ios, 'copyTo must run on the log queue').toMatch(
       /static func copyTo\([\s\S]{0,200}?queue\.async/,
     )
-    expect(harmonyLog, 'HarmonyOS ClientFileLog needs copyTo').toMatch(/static copyTo\(/)
+    expect(harmonyLog, 'HarmonyOS ClientFileLog needs copyTo').toMatch(
+      /static copyTo\(/,
+    )
 
     for (const [platform, source] of [
       ['Android', hosts.platform.android],
@@ -1043,16 +1369,19 @@ describe('shareLogArchive keeps the bytes out of JS', () => {
       /conn\.inputStream\.use \{ input[\s\S]{0,160}?copyTo\(output\)/,
     )
     // `downloadTask` streams to a temp file; `dataTask` would hand back a Data.
-    expect(hosts.platform.ios, 'iOS must use downloadTask for the backend log').toContain(
-      'downloadTask(with: request)',
-    )
+    expect(
+      hosts.platform.ios,
+      'iOS must use downloadTask for the backend log',
+    ).toContain('downloadTask(with: request)')
   })
 
   test('the backend download honours the insecure-TLS switch on every host', () => {
     // A self-signed LAN server is the common setup, and an export has to work
     // exactly when things are broken.
     expect(hosts.platform.android).toContain('InsecureTls.configure(conn)')
-    expect(hosts.platform.ios).toContain('InsecureTls.shared.session.downloadTask')
+    expect(hosts.platform.ios).toContain(
+      'InsecureTls.shared.session.downloadTask',
+    )
     expect(hosts.platform.harmony).toContain('InsecureTls.isEnabled()')
   })
 
@@ -1070,10 +1399,19 @@ describe('shareLogArchive keeps the bytes out of JS', () => {
     // success toast to "backend logs unavailable" on a successful export.
     const facade = read('src/native/native-platform.ts')
     for (const key of ['hasBackend', 'hasFrontend']) {
-      expect(facade, `the TS facade does not read ${key}`).toContain(`parsed.${key} === true`)
-      expect(hosts.platform.android, `Android does not emit ${key}`).toContain(`\\"${key}\\"`)
-      expect(hosts.platform.ios, `iOS does not emit ${key}`).toContain(`\\"${key}\\"`)
-      expect(hosts.platform.harmony, `HarmonyOS does not emit ${key}`).toContain(`"${key}":`)
+      expect(facade, `the TS facade does not read ${key}`).toContain(
+        `parsed.${key} === true`,
+      )
+      expect(hosts.platform.android, `Android does not emit ${key}`).toContain(
+        `\\"${key}\\"`,
+      )
+      expect(hosts.platform.ios, `iOS does not emit ${key}`).toContain(
+        `\\"${key}\\"`,
+      )
+      expect(
+        hosts.platform.harmony,
+        `HarmonyOS does not emit ${key}`,
+      ).toContain(`"${key}":`)
     }
   })
 
@@ -1082,12 +1420,14 @@ describe('shareLogArchive keeps the bytes out of JS', () => {
     // produce an empty-looking failure toast — and the hosts build this argument
     // from a caught exception, whose message is allowed to be blank. Each one
     // needs a fallback that a null-check alone does not give.
-    expect(hosts.platform.android, 'Kotlin needs a blank-safe reason()').toMatch(
-      /fun reason\(e: Throwable[\s\S]{0,200}?isNotBlank\(\)/,
-    )
-    expect(hosts.platform.harmony, 'ArkTS needs a blank-safe errorText()').toMatch(
-      /static errorText\(err: Error\)[\s\S]{0,200}?length > 0/,
-    )
+    expect(
+      hosts.platform.android,
+      'Kotlin needs a blank-safe reason()',
+    ).toMatch(/fun reason\(e: Throwable[\s\S]{0,200}?isNotBlank\(\)/)
+    expect(
+      hosts.platform.harmony,
+      'ArkTS needs a blank-safe errorText()',
+    ).toMatch(/static errorText\(err: Error\)[\s\S]{0,200}?length > 0/)
     // iOS only ever passes fixed literals or `localizedDescription`, which is
     // documented non-empty — no helper needed, but the literals must be there.
     expect(hosts.platform.ios).toContain('"zip_failed"')
@@ -1098,9 +1438,10 @@ describe('shareLogArchive keeps the bytes out of JS', () => {
     // The coordinator owns that temp file and cleans it up itself; moving it out
     // from under it is a bet on an undocumented detail.
     expect(hosts.platform.ios).toMatch(/copyItem\(at: zipped, to: dest\)/)
-    expect(hosts.platform.ios, 'do not move the coordinator temp file').not.toMatch(
-      /moveItem\(at: zipped/,
-    )
+    expect(
+      hosts.platform.ios,
+      'do not move the coordinator temp file',
+    ).not.toMatch(/moveItem\(at: zipped/)
   })
 
   test('an empty archive fails with the same message on every path', () => {
@@ -1132,7 +1473,9 @@ describe('SongloftDlna module methods and state exist on every supported host', 
   })
 
   test('HarmonyOS persists discovery results for getDevices', () => {
-    expect(hosts.dlna.harmony).toMatch(/private devices:\s*DlnaDevice\[\]\s*=\s*\[\]/)
+    expect(hosts.dlna.harmony).toMatch(
+      /private devices:\s*DlnaDevice\[\]\s*=\s*\[\]/,
+    )
     expect(hosts.dlna.harmony).toMatch(
       /public getDevices[\s\S]*?callback\(JSON\.stringify\(this\.devices\)\)/,
     )
@@ -1148,22 +1491,36 @@ describe('SongloftDlna module methods and state exist on every supported host', 
 
 describe('SongloftFloatingLyric module methods exist on Android', () => {
   // The TS interface is in floating-lyric.ts (Promise-shaped, no native interface).
-  const methods = ['hasPermission', 'requestPermission', 'show', 'updateLyric', 'hide', 'isShowing', 'setFontSize', 'setLocked', 'setOpacity', 'setTwoLine']
+  const methods = [
+    'hasPermission',
+    'requestPermission',
+    'show',
+    'updateLyric',
+    'hide',
+    'isShowing',
+    'setFontSize',
+    'setLocked',
+    'setOpacity',
+    'setTwoLine',
+  ]
 
-  test.each(methods)('FloatingLyricModule.%s has @LynxMethod and uses Callback', (method) => {
-    const src = hosts.floatingLyric.android
-    // Each method must carry @LynxMethod so Lynx discovers it.
-    expect(
-      src,
-      `FloatingLyricModule.${method} is missing @LynxMethod — it is invisible to JS`,
-    ).toMatch(new RegExp(`@LynxMethod\\s+fun ${method}\\(`))
-    // The method signature must use com.lynx.react.bridge.Callback, not a Kotlin
-    // lambda. A lambda is not a registered Lynx type and silently fails.
-    expect(
-      src,
-      `FloatingLyricModule.${method} must use Callback, not a plain lambda`,
-    ).toMatch(new RegExp(`fun ${method}\\([^)]*callback:\\s*Callback`))
-  })
+  test.each(methods)(
+    'FloatingLyricModule.%s has @LynxMethod and uses Callback',
+    (method) => {
+      const src = hosts.floatingLyric.android
+      // Each method must carry @LynxMethod so Lynx discovers it.
+      expect(
+        src,
+        `FloatingLyricModule.${method} is missing @LynxMethod — it is invisible to JS`,
+      ).toMatch(new RegExp(`@LynxMethod\\s+fun ${method}\\(`))
+      // The method signature must use com.lynx.react.bridge.Callback, not a Kotlin
+      // lambda. A lambda is not a registered Lynx type and silently fails.
+      expect(
+        src,
+        `FloatingLyricModule.${method} must use Callback, not a plain lambda`,
+      ).toMatch(new RegExp(`fun ${method}\\([^)]*callback:\\s*Callback`))
+    },
+  )
 })
 
 /**
@@ -1181,7 +1538,9 @@ describe('SongloftFloatingLyric module methods exist on Android', () => {
 describe('the overlay grant is answered after the return trip, not before it', () => {
   const module = hosts.floatingLyric.android
   const gate = read(`${ANDROID_LYRIC}/OverlayPermission.kt`)
-  const activity = read('android/app/src/main/java/org/songloft/lynx/MainActivity.kt')
+  const activity = read(
+    'android/app/src/main/java/org/songloft/lynx/MainActivity.kt',
+  )
 
   test('requestPermission hands the wait to OverlayPermission', () => {
     expect(
@@ -1201,7 +1560,9 @@ describe('the overlay grant is answered after the return trip, not before it', (
       activity,
       'without this wire a parked grant request is never answered and the overlay ' +
         'never appears after the first grant',
-    ).toMatch(/override fun onResume\(\)[\s\S]{0,240}OverlayPermission\.onAppForegrounded\(/)
+    ).toMatch(
+      /override fun onResume\(\)[\s\S]{0,240}OverlayPermission\.onAppForegrounded\(/,
+    )
   })
 
   test('a request that cannot open the system screen is answered instead of parked', () => {
@@ -1241,22 +1602,32 @@ describe('the overlay grant is answered after the return trip, not before it', (
  * destroyed window and the *next* audio-only track dies inside the video renderer.
  */
 describe('SongloftVideo module surface (Android)', () => {
-  const methods = interfaceMethods(read('src/native/video.ts'), 'NativeVideoModule')
+  const methods = interfaceMethods(
+    read('src/native/video.ts'),
+    'NativeVideoModule',
+  )
 
   test('the interface was parsed (guard against a silent empty list)', () => {
     expect(methods).toEqual([
-      'open', 'close', 'isOpen',
-      'setSurfaceLayout', 'setOrientation', 'getVideoSize',
+      'open',
+      'close',
+      'isOpen',
+      'setSurfaceLayout',
+      'setOrientation',
+      'getVideoSize',
     ])
   })
 
-  test.each(methods)('SongloftVideoModule.%s has @LynxMethod and uses Callback', (method) => {
-    expectLynxMethod(hosts.video.android, method)
-    expect(
-      hosts.video.android,
-      `SongloftVideoModule.${method} must take a Callback, not a Kotlin lambda`,
-    ).toMatch(new RegExp(`fun ${method}\\([^)]*callback:\\s*Callback`))
-  })
+  test.each(methods)(
+    'SongloftVideoModule.%s has @LynxMethod and uses Callback',
+    (method) => {
+      expectLynxMethod(hosts.video.android, method)
+      expect(
+        hosts.video.android,
+        `SongloftVideoModule.${method} must take a Callback, not a Kotlin lambda`,
+      ).toMatch(new RegExp(`fun ${method}\\([^)]*callback:\\s*Callback`))
+    },
+  )
 
   test('Android does not push a closed event; the host draws pixels only, JS owns the controls', () => {
     // The framework back key already routes to the same `performRouteBack` the
@@ -1316,9 +1687,10 @@ describe('SongloftVideo module surface (Android)', () => {
     // forward both reason strings.
     expect(hosts.audio.android).toContain('fun videoTrackState')
     expect(hosts.audio.android).toContain('fun hasVideoTrack')
-    expect(hosts.audio.android, 'a failed stream must be caught before the track check').toContain(
-      'playerError',
-    )
+    expect(
+      hosts.audio.android,
+      'a failed stream must be caught before the track check',
+    ).toContain('playerError')
     expect(hosts.video.android).toContain('videoTrackState')
     expect(hosts.video.android).toContain('"noTrack"')
     expect(hosts.video.android).toContain('"failed"')
@@ -1329,11 +1701,17 @@ describe('SongloftVideo module surface (iOS)', () => {
   // The full set from `interfaceMethods(video.ts)` — commit 2 migrated the module
   // from AVPlayerViewController-modal to AVPlayerLayer-under-LynxView, so the JS
   // surface is the same as Android's.
-  const methods = interfaceMethods(read('src/native/video.ts'), 'NativeVideoModule')
+  const methods = interfaceMethods(
+    read('src/native/video.ts'),
+    'NativeVideoModule',
+  )
 
-  test.each(methods)('SongloftVideoModule.%s exists in Swift with methodLookup', (method) => {
-    expectSwiftMethod(hosts.video.ios, method)
-  })
+  test.each(methods)(
+    'SongloftVideoModule.%s exists in Swift with methodLookup',
+    (method) => {
+      expectSwiftMethod(hosts.video.ios, method)
+    },
+  )
 
   test('the dead AVPlayerViewController surface is gone', () => {
     // AVPlayerViewController put its own Done button in the modal chrome; the
@@ -1383,7 +1761,9 @@ describe('SongloftVideo module surface (iOS)', () => {
     // setHostController the orientation lock cannot ask UIKit to recompute the
     // supported set.
     expect(hosts.iosViewController).toContain('SongloftVideoModule.setHostView')
-    expect(hosts.iosViewController).toContain('SongloftVideoModule.setHostController')
+    expect(hosts.iosViewController).toContain(
+      'SongloftVideoModule.setHostController',
+    )
     expect(hosts.iosViewController).toContain('supportedInterfaceOrientations')
   })
 
@@ -1409,11 +1789,17 @@ describe('SongloftVideo module surface (iOS)', () => {
 })
 
 describe('SongloftVideo module surface (HarmonyOS)', () => {
-  const methods = interfaceMethods(read('src/native/video.ts'), 'NativeVideoModule')
+  const methods = interfaceMethods(
+    read('src/native/video.ts'),
+    'NativeVideoModule',
+  )
 
-  test.each(methods)('SongloftVideoModule.%s exists as a public ArkTS method', (method) => {
-    expectArkTsMethod(hosts.video.harmony, method)
-  })
+  test.each(methods)(
+    'SongloftVideoModule.%s exists as a public ArkTS method',
+    (method) => {
+      expectArkTsMethod(hosts.video.harmony, method)
+    },
+  )
 
   test('the dead closed event is gone; the host draws pixels only, JS owns the controls', () => {
     // The system back gesture routes to `performRouteBack` via
@@ -1432,8 +1818,10 @@ describe('SongloftVideo module surface (HarmonyOS)', () => {
     // Order matters: XComponent must appear before LynxView in the Stack body.
     const xcAt = hosts.harmonyIndex.indexOf('XComponent(')
     const lynxAt = hosts.harmonyIndex.indexOf('LynxView(')
-    expect(xcAt, 'XComponent must appear before LynxView so the LynxView paints on top')
-      .toBeLessThan(lynxAt)
+    expect(
+      xcAt,
+      'XComponent must appear before LynxView so the LynxView paints on top',
+    ).toBeLessThan(lynxAt)
     // `HitTestMode.None` lets `bindtap` on the page reach through to the JS
     // control layer instead of being swallowed by the XComponent.
     expect(hosts.harmonyIndex).toContain('HitTestMode.None')
@@ -1500,7 +1888,10 @@ describe('SongloftVideo module surface (HarmonyOS)', () => {
  * add it here **and** in `audio-host.js` in the same change.
  */
 describe('SongloftVideo module surface (Web)', () => {
-  const methods = interfaceMethods(read('src/native/video.ts'), 'NativeVideoModule')
+  const methods = interfaceMethods(
+    read('src/native/video.ts'),
+    'NativeVideoModule',
+  )
   const workerModule = read('web/songloft-video-module.js')
   const mainHost = read('web/audio-host.js')
 
@@ -1513,9 +1904,9 @@ describe('SongloftVideo module surface (Web)', () => {
       // this gate catches.
       expect(
         workerModule,
-        `songloft-video-module.js does not expose ${method}. `
-        + `readNativeVideo() would return null, the video facade would use its `
-        + `inert stub, and every open() call would resolve to 'failed'.`,
+        `songloft-video-module.js does not expose ${method}. ` +
+          `readNativeVideo() would return null, the video facade would use its ` +
+          `inert stub, and every open() call would resolve to 'failed'.`,
       ).toMatch(new RegExp(`${method}\\s*:`))
     },
   )
@@ -1539,7 +1930,9 @@ describe('SongloftVideo module surface (Web)', () => {
     // controls in sync. The <video>'s `loadedmetadata` is what carries the
     // decoded size, and `resize` catches a mid-play HLS variant change.
     expect(mainHost).toContain("'SongloftVideo.videoSizeChanged'")
-    expect(mainHost).toContain("addEventListener('loadedmetadata', emitVideoSize)")
+    expect(mainHost).toContain(
+      "addEventListener('loadedmetadata', emitVideoSize)",
+    )
     expect(mainHost).toContain("addEventListener('resize', emitVideoSize)")
   })
 
@@ -1547,7 +1940,9 @@ describe('SongloftVideo module surface (Web)', () => {
     // The URL string must appear inside the nativeModulesMap literal, not just
     // anywhere in the file — the earlier version had every module *mentioned*
     // in a doc comment while none were actually registered.
-    expect(mainHost).toMatch(/SongloftVideo:\s*new URL\('\.\/songloft-video-module\.js', document\.baseURI\)\.href/)
+    expect(mainHost).toMatch(
+      /SongloftVideo:\s*new URL\('\.\/songloft-video-module\.js', document\.baseURI\)\.href/,
+    )
   })
 })
 
@@ -1557,14 +1952,24 @@ describe('SongloftLiveActivity is a proper Lynx module on iOS', () => {
 
   test('LiveActivityModule is a class (not an enum) and conforms to LynxModule', () => {
     // An enum cannot be registered as a Lynx module; it must be a class.
-    expect(src, 'LiveActivityModule must be a class, not an enum').toContain('class LiveActivityModule')
-    expect(src, 'LiveActivityModule must conform to LynxModule').toContain('LynxModule')
+    expect(src, 'LiveActivityModule must be a class, not an enum').toContain(
+      'class LiveActivityModule',
+    )
+    expect(src, 'LiveActivityModule must conform to LynxModule').toContain(
+      'LynxModule',
+    )
   })
 
   test('LiveActivityModule has @objc, name, and methodLookup', () => {
     expect(src, 'LiveActivityModule must have @objc methods').toContain('@objc')
-    expect(src, 'static var name is required for Lynx module registration').toContain('static var name')
-    expect(src, 'methodLookup is required — JS methods are invisible without it').toContain('methodLookup')
+    expect(
+      src,
+      'static var name is required for Lynx module registration',
+    ).toContain('static var name')
+    expect(
+      src,
+      'methodLookup is required — JS methods are invisible without it',
+    ).toContain('methodLookup')
   })
 
   test.each(methods)('LiveActivityModule.%s is in methodLookup', (method) => {
@@ -1603,62 +2008,111 @@ describe('SongloftSongCache module methods exist on all three hosts', () => {
     expectArkTsMethod(hosts.songCache.harmony, method)
   })
 
-  test.each(methods)('%s takes a bridge Callback, not a Kotlin lambda', (method) => {
-    expect(hosts.songCache.android).toMatch(
-      new RegExp(`fun ${method}\\([^)]*callback:\\s*Callback`),
-    )
-  })
+  test.each(methods)(
+    '%s takes a bridge Callback, not a Kotlin lambda',
+    (method) => {
+      expect(hosts.songCache.android).toMatch(
+        new RegExp(`fun ${method}\\([^)]*callback:\\s*Callback`),
+      )
+    },
+  )
 })
 
 describe('SongloftSongCache keeps its on-device invariants', () => {
   test('Android directory extension is explicitly optional and exposes callback methods', () => {
-    const methods = interfaceMethods(read('src/features/player/data/cache-directory.ts'), 'CacheDirectoryModule')
-    expect(methods).toEqual(['getStorageContract', 'storageCommand', 'cancelTask'])
-    for (const method of methods) expectLynxMethod(hosts.songCache.android, method)
+    const methods = interfaceMethods(
+      read('src/features/player/data/cache-directory.ts'),
+      'CacheDirectoryModule',
+    )
+    expect(methods).toEqual([
+      'getStorageContract',
+      'storageCommand',
+      'cancelTask',
+    ])
+    for (const method of methods)
+      expectLynxMethod(hosts.songCache.android, method)
     expect(hosts.songCache.android).toContain('songCacheMigrationProgress')
     const manifest = read('android/app/src/main/AndroidManifest.xml')
-    const activity = manifest.match(/<activity\b[^>]*>/g)?.filter(tag => /android:name="\.cache\.CacheDirectoryPickerActivity"/.test(tag))
+    const activity = manifest
+      .match(/<activity\b[^>]*>/g)
+      ?.filter((tag) =>
+        /android:name="\.cache\.CacheDirectoryPickerActivity"/.test(tag),
+      )
     expect(activity).toHaveLength(1)
     expect(activity![0]).toMatch(/android:exported="false"/)
-    expect(activity![0]).toMatch(/android:theme="@android:style\/Theme.Translucent.NoTitleBar"/)
+    expect(activity![0]).toMatch(
+      /android:theme="@android:style\/Theme.Translucent.NoTitleBar"/,
+    )
   })
   test('HarmonyOS hands cached local files to AVPlayer via owned descriptors after reset', () => {
     const source = read(`${HARMONY_MODULES}/audio/LocalAudioSource.ets`)
-    expect(source).toContain('fileIo.openSync(address, fileIo.OpenMode.READ_ONLY)')
+    expect(source).toContain(
+      'fileIo.openSync(address, fileIo.OpenMode.READ_ONLY)',
+    )
     expect(source).toContain("player.url = 'fd://' + file.fd")
     expect(source).toContain('fileIo.closeSync(file.fd)')
-    expect(hosts.audio.harmony.match(/this\.localSource\.assign\(this\.avPlayer, url\)/g)).toHaveLength(3)
+    expect(
+      hosts.audio.harmony.match(
+        /this\.localSource\.assign\(this\.avPlayer, url\)/g,
+      ),
+    ).toHaveLength(3)
     expect(hosts.audio.harmony).not.toContain('this.avPlayer.url = url')
-    expect(hosts.audio.harmony).toContain('player.release().finally(() => this.localSource.close())')
+    expect(hosts.audio.harmony).toContain(
+      'player.release().finally(() => this.localSource.close())',
+    )
   })
   test('Android indexed cache exposes the complete optional callback contract and task event', () => {
-    const methods = interfaceMethods(read('src/features/player/data/indexed-song-cache.ts'), 'IndexedSongCacheModule')
+    const methods = interfaceMethods(
+      read('src/features/player/data/indexed-song-cache.ts'),
+      'IndexedSongCacheModule',
+    )
     expect(methods).toHaveLength(9)
-    for (const method of methods) expectLynxMethod(hosts.songCache.android, method)
-    expect(hosts.songCache.android).toContain('sendGlobalEvent("songCacheProgress", params)')
+    for (const method of methods)
+      expectLynxMethod(hosts.songCache.android, method)
+    expect(hosts.songCache.android).toContain(
+      'sendGlobalEvent("songCacheProgress", params)',
+    )
     expect(hosts.songCache.android).toContain('params.pushMap(event)')
   })
   test('iOS indexed cache registers the complete optional callback contract and task event', () => {
-    const methods = interfaceMethods(read('src/features/player/data/indexed-song-cache.ts'), 'IndexedSongCacheModule')
+    const methods = interfaceMethods(
+      read('src/features/player/data/indexed-song-cache.ts'),
+      'IndexedSongCacheModule',
+    )
     for (const method of methods) expectSwiftMethod(hosts.songCache.ios, method)
-    expect(hosts.songCache.ios).toContain('sendGlobalEvent("songCacheProgress", withParams: [value])')
+    expect(hosts.songCache.ios).toContain(
+      'sendGlobalEvent("songCacheProgress", withParams: [value])',
+    )
   })
   test('HarmonyOS indexed cache exposes callback methods and array task events', () => {
-    const methods = interfaceMethods(read('src/features/player/data/indexed-song-cache.ts'), 'IndexedSongCacheModule')
+    const methods = interfaceMethods(
+      read('src/features/player/data/indexed-song-cache.ts'),
+      'IndexedSongCacheModule',
+    )
     expect(methods).toHaveLength(9)
     for (const method of methods) {
       expectArkTsMethod(hosts.songCache.harmony, method)
       if (method !== 'cancelTask') {
-        expect(hosts.songCache.harmony).toMatch(new RegExp(`public ${method}\\([^\\n]*callback: \\(result: string\\) => void`))
+        expect(hosts.songCache.harmony).toMatch(
+          new RegExp(
+            `public ${method}\\([^\\n]*callback: \\(result: string\\) => void`,
+          ),
+        )
       }
     }
-    expect(hosts.songCache.harmony).toContain("sendGlobalEvent('songCacheProgress', [task])")
+    expect(hosts.songCache.harmony).toContain(
+      "sendGlobalEvent('songCacheProgress', [task])",
+    )
   })
   test('downloads honour the insecure-TLS switch on both hosts', () => {
     expect(hosts.songCache.android).toContain('clientFor(InsecureTls.enabled)')
     expect(hosts.songCache.ios).toContain('InsecureTls.shared.handle($0)')
-    expect(hosts.songCache.harmony).toContain("remoteValidation: InsecureTls.isEnabled() ? 'skip' : 'system'")
-    expect(hosts.songCache.harmony).toContain('InsecureTls.removeListener(onTlsChange)')
+    expect(hosts.songCache.harmony).toContain(
+      "remoteValidation: InsecureTls.isEnabled() ? 'skip' : 'system'",
+    )
+    expect(hosts.songCache.harmony).toContain(
+      'InsecureTls.removeListener(onTlsChange)',
+    )
   })
 
   test('cache lives in non-evictable storage, not the OS cache dir', () => {
@@ -1666,21 +2120,29 @@ describe('SongloftSongCache keeps its on-device invariants', () => {
     expect(hosts.songCache.android).not.toContain('ctx.cacheDir')
     expect(hosts.songCache.ios).toContain('.documentDirectory')
     expect(hosts.songCache.ios).not.toContain('.cachesDirectory')
-    expect(hosts.songCache.harmony).toContain("context.filesDir + '/song_cache'")
+    expect(hosts.songCache.harmony).toContain(
+      "context.filesDir + '/song_cache'",
+    )
   })
 
   test('callbacks hand back a playable file:// URL, never a hand-built one', () => {
-    expect(hosts.songCache.android).toContain('java.net.URI("file", "", file.absolutePath, null).toASCIIString()')
+    expect(hosts.songCache.android).toContain(
+      'java.net.URI("file", "", file.absolutePath, null).toASCIIString()',
+    )
     expect(hosts.songCache.ios).toContain('absoluteString')
     expect(hosts.songCache.android).not.toContain('"file://')
     expect(hosts.songCache.ios).not.toContain('"file://')
-    expect(hosts.songCache.harmony).toContain('fileUri.getUriFromPath(this.media(entry))')
+    expect(hosts.songCache.harmony).toContain(
+      'fileUri.getUriFromPath(this.media(entry))',
+    )
   })
 
   test('downloads commit atomically (no half-written playable file)', () => {
     expect(hosts.songCache.android).toContain('renameTo')
     expect(hosts.songCache.ios).toContain('moveItem')
-    expect(hosts.songCache.harmony).toContain('fileIo.renameSync(temporary, this.entryDirectory(request.namespace, actual))')
+    expect(hosts.songCache.harmony).toContain(
+      'fileIo.renameSync(temporary, this.entryDirectory(request.namespace, actual))',
+    )
   })
 
   test('the byte-cap sentinel is shared verbatim with the TS facade', () => {
@@ -1692,26 +2154,84 @@ describe('SongloftSongCache keeps its on-device invariants', () => {
 
 describe('every native module is registered in the host bootstrap', () => {
   const modules = [
-    { name: 'SongloftAudio', android: 'SongloftAudioModule', ios: 'SongloftAudioModule', harmony: 'SongloftAudioModule' },
-    { name: 'SongloftStorage', android: 'SongloftStorageModule', ios: 'SongloftStorageModule', harmony: 'SongloftStorageModule' },
-    { name: 'SongloftPlatform', android: 'SongloftPlatformModule', ios: 'SongloftPlatformModule', harmony: 'SongloftPlatformModule' },
-    { name: 'SongloftDlna', android: 'SongloftDlnaModule', ios: 'SongloftDlnaModule', harmony: 'SongloftDlnaModule' },
-    { name: 'SongloftFloatingLyric', android: 'FloatingLyricModule', ios: null, harmony: null },
-    { name: 'SongloftLiveActivity', android: null, ios: 'LiveActivityModule', harmony: null },
-    { name: 'SongloftVideo', android: 'SongloftVideoModule', ios: 'SongloftVideoModule', harmony: 'SongloftVideoModule' },
-    { name: 'SongloftNavigation', android: 'SongloftNavigationModule', ios: null, harmony: 'SongloftNavigationModule' },
-    { name: 'SongloftSongCache', android: 'SongloftSongCacheModule', ios: 'SongloftSongCacheModule', harmony: 'SongloftSongCacheModule' },
+    {
+      name: 'SongloftAudio',
+      android: 'SongloftAudioModule',
+      ios: 'SongloftAudioModule',
+      harmony: 'SongloftAudioModule',
+    },
+    {
+      name: 'SongloftStorage',
+      android: 'SongloftStorageModule',
+      ios: 'SongloftStorageModule',
+      harmony: 'SongloftStorageModule',
+    },
+    {
+      name: 'SongloftPlatform',
+      android: 'SongloftPlatformModule',
+      ios: 'SongloftPlatformModule',
+      harmony: 'SongloftPlatformModule',
+    },
+    {
+      name: 'SongloftDlna',
+      android: 'SongloftDlnaModule',
+      ios: 'SongloftDlnaModule',
+      harmony: 'SongloftDlnaModule',
+    },
+    {
+      name: 'SongloftFloatingLyric',
+      android: 'FloatingLyricModule',
+      ios: null,
+      harmony: null,
+    },
+    {
+      name: 'SongloftLiveActivity',
+      android: null,
+      ios: 'LiveActivityModule',
+      harmony: null,
+    },
+    {
+      name: 'SongloftVideo',
+      android: 'SongloftVideoModule',
+      ios: 'SongloftVideoModule',
+      harmony: 'SongloftVideoModule',
+    },
+    {
+      name: 'SongloftNavigation',
+      android: 'SongloftNavigationModule',
+      ios: null,
+      harmony: 'SongloftNavigationModule',
+    },
+    {
+      name: 'SongloftSongCache',
+      android: 'SongloftSongCacheModule',
+      ios: 'SongloftSongCacheModule',
+      harmony: 'SongloftSongCacheModule',
+    },
     // HarmonyOS registration follows with its P2b implementation.
-    { name: 'SongloftUpdate', android: 'SongloftUpdateModule', ios: 'SongloftUpdateModule', harmony: 'SongloftUpdateModule' },
-    { name: 'SongloftPluginBridge', android: 'SongloftPluginBridgeModule', ios: 'SongloftPluginBridgeModule', harmony: 'SongloftPluginBridgeModule' },
+    {
+      name: 'SongloftUpdate',
+      android: 'SongloftUpdateModule',
+      ios: 'SongloftUpdateModule',
+      harmony: 'SongloftUpdateModule',
+    },
+    {
+      name: 'SongloftPluginBridge',
+      android: 'SongloftPluginBridgeModule',
+      ios: 'SongloftPluginBridgeModule',
+      harmony: 'SongloftPluginBridgeModule',
+    },
   ]
 
-  test.each(modules.filter((m) => m.android))('%s is registered on Android', (mod) => {
-    expect(
-      hosts.androidApp,
-      `${mod.name} not registered in SongloftApplication.kt`,
-    ).toContain(`registerModule("${mod.name}", ${mod.android}::class.java)`)
-  })
+  test.each(modules.filter((m) => m.android))(
+    '%s is registered on Android',
+    (mod) => {
+      expect(
+        hosts.androidApp,
+        `${mod.name} not registered in SongloftApplication.kt`,
+      ).toContain(`registerModule("${mod.name}", ${mod.android}::class.java)`)
+    },
+  )
 
   /**
    * Narrowed three ways, each closing a hole the previous version had:
@@ -1724,8 +2244,13 @@ describe('every native module is registered in the host bootstrap', () => {
    *    same substring-vs-semantics trap as batch 39's pbxproj gate.
    */
   const buildConfigBody = ((): string => {
-    const start = hosts.iosViewController.indexOf('private static func buildConfig(')
-    expect(start, 'buildConfig declaration not found in ViewController.swift').toBeGreaterThan(-1)
+    const start = hosts.iosViewController.indexOf(
+      'private static func buildConfig(',
+    )
+    expect(
+      start,
+      'buildConfig declaration not found in ViewController.swift',
+    ).toBeGreaterThan(-1)
     return hosts.iosViewController
       .slice(start, hosts.iosViewController.indexOf('\n  }', start))
       .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -1739,14 +2264,16 @@ describe('every native module is registered in the host bootstrap', () => {
     ).toContain(`config.register(${mod.ios!}.self)`)
   })
 
-  test.each(modules.filter((m) => m.harmony))('%s is registered on HarmonyOS', (mod) => {
-    expect(
-      hosts.harmonyIndex,
-      `${mod.name} not registered in Index.ets (Harmony wires modules per-LynxView, ` +
-      `not through a global LynxEnv.registerModule the way Android/iOS do)`,
-    ).toContain(`.set('${mod.name}', { moduleClass: ${mod.harmony!}`)
-  })
-
+  test.each(modules.filter((m) => m.harmony))(
+    '%s is registered on HarmonyOS',
+    (mod) => {
+      expect(
+        hosts.harmonyIndex,
+        `${mod.name} not registered in Index.ets (Harmony wires modules per-LynxView, ` +
+          `not through a global LynxEnv.registerModule the way Android/iOS do)`,
+      ).toContain(`.set('${mod.name}', { moduleClass: ${mod.harmony!}`)
+    },
+  )
 })
 
 /**
@@ -1760,25 +2287,45 @@ describe('every native module is registered in the host bootstrap', () => {
  */
 describe('the host HTTP service is ours, on both hosts', () => {
   test('Android sends with the deadline-aware client and filtered headers; iOS consumes the same control header', () => {
-    const android = read('android/app/src/main/java/org/songloft/lynx/net/SongloftHttpService.kt')
-    const helper = read('android/app/src/main/java/org/songloft/lynx/net/RequestTimeout.kt')
-    expect(helper).toContain(`name.equals("${REQUEST_TIMEOUT_HEADER}", ignoreCase = true)`)
-    const client = android.match(/val (\w+) = clientWithRequestTimeout\(clientFor\(InsecureTls.enabled\), (\w+)\)/)
+    const android = read(
+      'android/app/src/main/java/org/songloft/lynx/net/SongloftHttpService.kt',
+    )
+    const helper = read(
+      'android/app/src/main/java/org/songloft/lynx/net/RequestTimeout.kt',
+    )
+    expect(helper).toContain(
+      `name.equals("${REQUEST_TIMEOUT_HEADER}", ignoreCase = true)`,
+    )
+    const client = android.match(
+      /val (\w+) = clientWithRequestTimeout\(clientFor\(InsecureTls.enabled\), (\w+)\)/,
+    )
     expect(client).not.toBeNull()
     expect(android).toContain(`.headers(${client![2]}.toHeaders())`)
     expect(android).toContain(`${client![1]}.newCall(okRequest)`)
 
     const ios = read(`${IOS_DIR}/SongloftHttpService.swift`)
-    const guard = ios.match(/if key\.caseInsensitiveCompare\("([^"]+)"\)[\s\S]*?continue/)
+    const guard = ios.match(
+      /if key\.caseInsensitiveCompare\("([^"]+)"\)[\s\S]*?continue/,
+    )
     expect(guard?.[1]).toBe(REQUEST_TIMEOUT_HEADER)
-    expect(guard?.[0]).toContain('nsRequest.timeoutInterval = Double(timeoutMs) / 1000')
-    expect(ios.indexOf(guard![0])).toBeLessThan(ios.indexOf('nsRequest.setValue(value, forHTTPHeaderField: key)'))
+    expect(guard?.[0]).toContain(
+      'nsRequest.timeoutInterval = Double(timeoutMs) / 1000',
+    )
+    expect(ios.indexOf(guard![0])).toBeLessThan(
+      ios.indexOf('nsRequest.setValue(value, forHTTPHeaderField: key)'),
+    )
   })
 
   test('plugin uploads allow four minutes on every native host without changing the method signature', () => {
-    expect(hosts.platform.android).toMatch(/if \(URL\(uploadUrl\)\.path\.endsWith\("\/api\/v1\/jsplugins\/upload"\)\) \{\s*conn\.connectTimeout = 15_000\s*conn\.readTimeout = 240_000/)
-    expect(hosts.platform.ios).toMatch(/if url\.path\.hasSuffix\("\/api\/v1\/jsplugins\/upload"\) \{\s*request\.timeoutInterval = 240/)
-    expect(hosts.platform.harmony).toMatch(/readTimeout: uploadUrl\.split\('\?'\)\[0\]\.endsWith\('\/api\/v1\/jsplugins\/upload'\) \? 240000 : 60000/)
+    expect(hosts.platform.android).toMatch(
+      /if \(URL\(uploadUrl\)\.path\.endsWith\("\/api\/v1\/jsplugins\/upload"\)\) \{\s*conn\.connectTimeout = 15_000\s*conn\.readTimeout = 240_000/,
+    )
+    expect(hosts.platform.ios).toMatch(
+      /if url\.path\.hasSuffix\("\/api\/v1\/jsplugins\/upload"\) \{\s*request\.timeoutInterval = 240/,
+    )
+    expect(hosts.platform.harmony).toMatch(
+      /readTimeout: uploadUrl\.split\('\?'\)\[0\]\.endsWith\('\/api\/v1\/jsplugins\/upload'\) \? 240000 : 60000/,
+    )
   })
 
   test('Android registers SongloftHttpService instead of the SDK one', () => {
@@ -1793,7 +2340,9 @@ describe('the host HTTP service is ours, on both hosts', () => {
     const appDelegate = read(`${IOS_DIR}/AppDelegate.swift`)
     expect(appDelegate).toContain('LynxServices.registerService(')
     expect(appDelegate).toContain('SongloftHttpService.self')
-    expect(appDelegate).toContain('NSProtocolFromString("LynxServiceHttpProtocol")')
+    expect(appDelegate).toContain(
+      'NSProtocolFromString("LynxServiceHttpProtocol")',
+    )
 
     // Registration has to follow the lazy-register flush that touching
     // `LynxEnv.sharedInstance()` performs, or the pods' self-registrations
@@ -1807,7 +2356,9 @@ describe('the host HTTP service is ours, on both hosts', () => {
       podfile.indexOf("pod 'LynxService'"),
       podfile.indexOf(']', podfile.indexOf("pod 'LynxService'")),
     )
-    expect(lynxService, 'Podfile still pulls LynxService/Http').not.toContain("'Http'")
+    expect(lynxService, 'Podfile still pulls LynxService/Http').not.toContain(
+      "'Http'",
+    )
   })
 
   test('HarmonyOS registers SongloftHttpService in EntryAbility', () => {
@@ -1821,7 +2372,9 @@ describe('HarmonyOS module.json5 declares required permissions and background mo
     (p: { name: string }) => p.name,
   )
   const abilities = moduleJson.module.abilities ?? []
-  const mainAbility = abilities.find((a: { name: string }) => a.name === 'EntryAbility')
+  const mainAbility = abilities.find(
+    (a: { name: string }) => a.name === 'EntryAbility',
+  )
 
   test('INTERNET permission is declared', () => {
     expect(permissions).toContain('ohos.permission.INTERNET')

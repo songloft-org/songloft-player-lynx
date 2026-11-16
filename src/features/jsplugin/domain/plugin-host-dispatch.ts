@@ -19,6 +19,13 @@ export interface HostCallResult {
 }
 
 export interface PluginHostContext {
+  pluginNavigation?: (method: string, params: Record<string, unknown>) => void
+  pluginOpenUrl?: (url: string) => void
+  pluginResourceUrl?: (path: string) => Promise<string>
+  pluginSocketRequest?: (
+    method: string,
+    params: Record<string, unknown>,
+  ) => Promise<unknown>
   pluginApiRequest?: (params: Record<string, unknown>) => Promise<unknown>
   platform: string
   version: string
@@ -234,6 +241,37 @@ export async function handlePluginHostCall(
       req.params && typeof req.params === 'object' && !Array.isArray(req.params)
         ? req.params
         : {}
+
+    if (
+      ns === 'plugin' &&
+      (method === 'navigationState' || method === 'navigationResult')
+    ) {
+      ctx.pluginNavigation?.(method, params)
+      return { ok: true, data: null }
+    }
+    if (ns === 'plugin' && method === 'openUrl') {
+      if (
+        typeof params.url !== 'string' ||
+        !/^https?:\/\//i.test(params.url) ||
+        !ctx.pluginOpenUrl
+      )
+        throw new Error('invalid external URL')
+      ctx.pluginOpenUrl(params.url)
+      return { ok: true, data: null }
+    }
+    if (ns === 'plugin' && method === 'resourceUrl') {
+      if (typeof params.path !== 'string' || !ctx.pluginResourceUrl)
+        throw new Error('resource URL unavailable')
+      return { ok: true, data: await ctx.pluginResourceUrl(params.path) }
+    }
+    if (
+      ns === 'plugin' &&
+      ['socketOpen', 'socketSend', 'socketClose'].includes(method || '')
+    ) {
+      if (!ctx.pluginSocketRequest)
+        throw new Error('plugin sockets are unavailable')
+      return { ok: true, data: await ctx.pluginSocketRequest(method!, params) }
+    }
 
     if (ns === 'plugin' && method === 'apiRequest') {
       if (!ctx.pluginApiRequest) throw new Error('plugin API is unavailable')

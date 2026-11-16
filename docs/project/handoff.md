@@ -1,5 +1,9 @@
 # 工作交接（2026-10-14）
 
+## 2026-11-16 · MIoT Lynx 配套宿主
+
+基线 `88e00646a6c948c3497fbf32eaab3c80f04bdd82`：HTTP 四方法、父上下文归属的 socket、外链、封面和返回桥，两份 Web shim 同步。本轮用户明确授权主程序提交与推送，客户端先提交，再由父仓库更新指针；miot 和 toolchain 的未提交改动不混入。旧 Docker 宿主未实现 resourceUrl，实际歌单 30 行均无封面，需更新主程序，保留直接图片请求。类型、3833 项测试、双 bundle、Web 与发布检查及平台边界见交付记录与 miot `docs/lynx-migration.md`；iOS/HarmonyOS 编译与物理设备 Not run。
+
 ## 2026-11-16 · 专辑轨号排序（songloft-org/songloft#571）
 
 专辑页改为请求 `sort=track&order=asc`，列表分页与后台队列补齐复用该过滤条件；其他分类继续使用添加时间倒序。配套后端实现数字碟号/轨号排序、disc 迁移和标签读写，既有专辑需重新导入以补齐碟号。
