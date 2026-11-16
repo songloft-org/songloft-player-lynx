@@ -1,5 +1,11 @@
 # 工作交接（2026-10-14）
 
+## 2026-11-16 · 专辑轨号排序（songloft-org/songloft#571）
+
+专辑页改为请求 `sort=track&order=asc`，列表分页与后台队列补齐复用该过滤条件；其他分类继续使用添加时间倒序。配套后端实现数字碟号/轨号排序、disc 迁移和标签读写，既有专辑需重新导入以补齐碟号。
+
+本地验证基于 `b406af75043d2c2d898b7f73b0f282248d293d33` 加本批工作树；提交前快照 `/tmp/songloft-571-snapshot.json`。类型检查、363 文件/3821 项测试、Lynx/Web 双构建通过，分类页最终 12 项通过；隔离旧页面的新回归因 added_at/desc 失败。Docker Chrome 实际导航专辑、播放全部和队列，六首双碟 MP3 顺序与音频进度通过，页面异常为零；证据 `/tmp/songloft-571-browser-queue.json` 及 PNG。原生设备、Flutter 界面 Not run。本批提交、推送与同 SHA CI 结果见 songloft-org/songloft#571 交付回复，未创建正式版本。
+
 ## 2026-11-15 · Bili 主导航状态保留
 
 原生导航插件改为 Shell 持有 frame，曲库往返保留状态；插件更新/停用清理实例，隐藏页暂停轮询。还修复 bili 标题、分 P 与大量歌单选择。验证及原生边界见[记录](bili-plugin-interaction.md)。2026-11-16 用户已授权本批提交推送及父指针同步；代码与验证对象未变，实际提交和 CI 结果以 Git/Actions 为准。

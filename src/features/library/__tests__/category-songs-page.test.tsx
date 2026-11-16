@@ -166,6 +166,15 @@ beforeEach(() => {
   songsHook.mockReturnValue(songsResult([{ songs: [], total: 0 }]))
 })
 
+test('album pages request numeric disc/track order', async () => {
+  paramsHook.mockReturnValue({ field: 'album' })
+  searchHook.mockReturnValue({ value: 'Multi Disc Album' })
+  await renderPage()
+  expect(songsHook).toHaveBeenCalledWith({
+    album: 'Multi Disc Album', sort: 'track', order: 'asc',
+  })
+})
+
 afterEach(() => vi.clearAllMocks())
 
 async function renderPage() {

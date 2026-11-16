@@ -1,5 +1,11 @@
 # Handoff (2026-10-14)
 
+## 2026-11-16 · Album track order (songloft-org/songloft#571)
+
+Album pages request `sort=track&order=asc`, sharing filters between pagination and background queue completion. Other facets retain addition-time descending order. Companion backend changes implement numeric disc/track sorting, disc migration and tag read/write; existing albums need reimport to populate disc numbers.
+
+Local checks used baseline `b406af75043d2c2d898b7f73b0f282248d293d33` plus this batch's worktree; pre-commit snapshot: `/tmp/songloft-571-snapshot.json`. Types, 363 files/3821 tests, both Lynx/Web builds and final 12 category checks pass. The isolated old page fails the new regression by requesting added_at/desc. Docker Chrome navigated to an album, played all and opened the queue; six double-disc MP3s had the expected order and advancing audio, with zero page errors. Evidence: `/tmp/songloft-571-browser-queue.json` and PNG. Native devices and Flutter UI Not run. Final commits, pushes and same-SHA CI are reported in the songloft-org/songloft#571 delivery reply; no stable release is created.
+
 ## 2026-11-15 · Bili main-navigation state
 
 Native plugin tabs now keep their frames in the Shell across library navigation; updates/disabling clean up instances and hidden pages pause UI polling. Bili also fixes titles, part collapse and large playlist selection. See the [record](bili-plugin-interaction.md) for verification and native limits. On 2026-11-16 the user authorized this batch's commits, pushes and parent pointer update. Code and verification targets are unchanged; Git/Actions determine actual commit and CI results.

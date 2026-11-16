@@ -58,7 +58,7 @@ function buildFiltersForField(field: CategoryField, value: string): SongsFilters
   const base: SongsFilters = { sort: 'added_at', order: 'desc' }
   switch (field) {
     case 'artist': return { ...base, artist: value }
-    case 'album': return { ...base, album: value }
+    case 'album': return { album: value, sort: 'track', order: 'asc' }
     case 'genre': return { ...base, genre: value }
     case 'year': return { ...base, year: Number(value) || undefined }
     case 'decade': return { ...base, decade: Number(value) || undefined }

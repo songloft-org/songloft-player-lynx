@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-16 · 专辑轨号顺序 / Album track order
+
+处理 songloft-org/songloft#571：专辑页显式请求数字碟号/音轨号升序，与后台队列补齐共用过滤条件。类型、全套 3821 项、最终分类页 12 项、Lynx/Web 双构建通过，旧页面反向回归失败；Docker Chrome 实播及双碟六首列表/队列顺序通过。基线 `b406af75043d2c2d898b7f73b0f282248d293d33`，提交前快照 `/tmp/songloft-571-snapshot.json`，详细证据与 Not run 见 handoff。提交、推送和同 SHA CI 结果见 Issue 交付回复；未创建正式版本。
+
+English: For songloft-org/songloft#571, albums explicitly request ascending numeric disc/track order, shared with background queue completion. Types, all 3821 tests, final 12 category checks and both Lynx/Web builds pass; the old-page regression fails. Docker Chrome verified playback and six-song double-disc list/queue order. Baseline `b406af75043d2c2d898b7f73b0f282248d293d33`; pre-commit snapshot `/tmp/songloft-571-snapshot.json`. Evidence and Not run are in handoff. Commits, pushes and same-SHA CI are in the Issue delivery reply; no stable release is created.
+
 ## 2026-11-15 · Bili 主导航状态与选择器 / Bili tab state and pickers
 
 2026-11-16：用户已授权本批提交推送及父指针同步；下文为提交前快照，代码与验证对象未变。 / Commits/pushes and parent pointer synchronization are now authorized; the pre-commit snapshot below and its verified code are unchanged.
