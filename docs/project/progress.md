@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-17 · #572 歌单与收藏下一首播放 / Playlist and favorites play next
+
+现有 Lynx 共享菜单已支持；新增四项入口回归，配合既有队列规则和真实浏览器确认不切换来源、不打断当前播放。3843 项全量、37 项定向、类型、双 bundle 与 embedded Web 构建通过，隔离移除分发时四项失败。证据及原生边界见[记录](issue-572.md)。本批获授权提交、推送、同步父指针和回复 #572；不创建正式版本，不处理并行桌面改动。提交及 CI 见 `/tmp/songloft-572/delivery.json`。
+
+English: existing Lynx shared menus already support this. Four new entry regressions, existing queue rules and actual browser checks cover source preservation and uninterrupted playback. All 3843 full tests, 37 focused checks, types, dual bundles and embedded Web build passed; removing dispatch in isolation fails four checks. Evidence and native gaps: [record](../en/project/issue-572.md). Commits, pushes, parent gitlink updates and a reply to #572 are authorized; no stable version is created. Concurrent desktop changes are outside this task. Commits and CI: `/tmp/songloft-572/delivery.json`.
+
 ## 2026-11-17 · 协议阅读与依赖署名 / Agreement reading and dependency attribution
 
 基线 `888f5b88c842ea932a1f1f0b810a7f82a876f6fc`：登录页可离线打开中文/英文协议，阅读不切换同意，关闭和系统返回保留原状态；协议使用 Apache-2.0 声明。许可证页补 motion、query-core、background-only、fflate，并从全部直接运行时依赖反查署名覆盖。隔离旧页面时两项新回归失败。最终测试、构建、浏览器和工作树证据见 `/tmp/songloft-license-fix-20261117/verification.json`；原生构建、Android/iOS/HarmonyOS 设备交互 Not run。未提交、推送或发布；保留工作区既有桌面预览改动。

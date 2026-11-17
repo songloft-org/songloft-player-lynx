@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-17 · #572 play next from playlists and favorites
+
+The existing shared song menu already supports this. Added four full entry regressions for ordinary/built-in playlists and narrow/wide layouts. Final 3843 tests, types, dual bundles and embedded Web build passed; all four checks fail when dispatch is removed in isolation. Actual browser queues, playback continuity and native gaps: [record](issue-572.md). Commits, pushes, parent gitlink updates and a reply to #572 are authorized; existing desktop candidate changes are preserved. No stable version is created. Final commits and CI: `/tmp/songloft-572/delivery.json`.
+
 ## 2026-11-17 · Login agreement and dependency credits
 
 Implemented offline Chinese/English Apache-2.0 terms, independent reading and consent actions, and four missing dependency credits. New consent/close/back and coverage checks catch two failures against the isolated old pages. Baseline `888f5b88c842ea932a1f1f0b810a7f82a876f6fc`; final worktree identities and results: `/tmp/songloft-license-fix-20261117/verification.json`. Native compilation and device interaction are Not run. Not committed, pushed, or released; existing desktop-preview changes are outside this batch.
