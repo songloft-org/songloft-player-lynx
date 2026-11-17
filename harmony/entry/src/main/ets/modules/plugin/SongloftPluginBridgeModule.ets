@@ -31,6 +31,12 @@ const hostRegistry = new Map<string, LynxContext>()
 const childRegistry = new Map<string, LynxContext>()
 
 export class SongloftPluginBridgeModule extends LynxModule {
+  static detachChild(context: LynxContext): void {
+    for (const entry of childRegistry.entries()) {
+      if (entry[1] === context) childRegistry.delete(entry[0])
+    }
+  }
+
   constructor(context: LynxContext, param?: Object) {
     super(context, param)
     this.abilityContext = param as common.UIAbilityContext

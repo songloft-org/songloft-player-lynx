@@ -15,6 +15,7 @@ import { SongloftPluginBridgeModule } from '../modules/plugin/SongloftPluginBrid
 import { SongloftVideoModule, SongloftVideoState } from '../modules/video/SongloftVideoModule'
 import { SystemAppearance } from '../modules/system/SystemAppearance'
 import { SongloftTabGlassUI } from '../ui/SongloftTabGlassUI'
+import { SongloftPluginFrameConfig, SongloftPluginFrameUI } from '../ui/SongloftPluginFrameUI'
 import { AppLifecycleClient } from '../modules/system/AppLifecycle'
 import { BundleUpdateStore } from '../modules/updater/BundleUpdateStore'
 import { SongloftUpdateModule, SongloftUpdateLifecycle } from '../modules/updater/SongloftUpdateModule'
@@ -56,6 +57,9 @@ struct Index {
     this.modules.set('SongloftPluginBridge', { moduleClass: SongloftPluginBridgeModule, param: this.context })
     this.modules.set('SongloftVideo', { moduleClass: SongloftVideoModule, param: this.context })
     this.modules.set('SongloftUpdate', { moduleClass: SongloftUpdateModule, param: this.context })
+    this.behaviors.set('songloft-plugin-frame', new Behavior(SongloftPluginFrameUI, undefined,
+      new SongloftPluginFrameConfig(this.context, this.behaviors,
+        this.genericResourceFetcher, this.mediaResourceFetcher, this.templateResourceFetcher)))
 
     const globalProps = SystemAppearance.getInitialProps(this.context)
     this.metaData = new MetaData(undefined, new TemplateData(JSON.stringify(globalProps)))

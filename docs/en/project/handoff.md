@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-17 · HarmonyOS miot blank page
+
+Harmony Lynx 4.0.1 lacks the native frame implementation; fetchers and bridge registration alone do not create a child view. A dedicated `songloft-plugin-frame` Behavior now supplies an independent LynxView with resources, bridge, prop updates and identity-safe cleanup/stale callback handling. Six ArkTS adapter checks, twelve focused component tests, 368 files/3848 shared tests, types, dual bundles and 95 release checks pass. Old-code checks fail with zero children and a missing Harmony element. All 34 clean HAP tasks and package content validation pass; device acceptance remains unverified. [Record](harmony-plugin-frame.md). Install a rebuilt native HAP; JS hot updates cannot repair older shells. The user authorized this batch's commit, push and parent gitlink update; actual commits and same-SHA CI are in `/tmp/songloft-harmony-miot/delivery.json`. No stable release; existing desktop work is preserved.
+
 ## 2026-11-17 · #572 play next from playlists and favorites
 
 The existing shared song menu already supports this. Added four full entry regressions for ordinary/built-in playlists and narrow/wide layouts. Final 3843 tests, types, dual bundles and embedded Web build passed; all four checks fail when dispatch is removed in isolation. Actual browser queues, playback continuity and native gaps: [record](issue-572.md). Commits, pushes, parent gitlink updates and a reply to #572 are authorized; existing desktop candidate changes are preserved. No stable version is created. Final commits and CI: `/tmp/songloft-572/delivery.json`.

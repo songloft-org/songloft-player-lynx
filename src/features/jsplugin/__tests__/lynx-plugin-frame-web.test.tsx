@@ -31,6 +31,7 @@ const h = vi.hoisted(() => ({
   close: vi.fn(),
   available: true,
   isWeb: true,
+  platform: 'android',
   nativePush: vi.fn(),
   nativeDispose: vi.fn(),
   nativeConnect: vi.fn(),
@@ -52,6 +53,9 @@ const h = vi.hoisted(() => ({
 
 vi.mock('../../../native/web-platform.js', () => ({
   isWebPlatform: () => h.isWeb,
+}))
+vi.mock('../../../native/platform-target.js', () => ({
+  getPlatformTarget: () => h.platform,
 }))
 
 vi.mock('../../../native/native-plugin-host.js', () => ({
@@ -108,6 +112,7 @@ const { LynxPluginFrame } = await import('../widgets/LynxPluginFrame.js')
 
 beforeEach(() => {
   h.isWeb = true
+  h.platform = 'android'
   h.resumeSubs.clear()
   h.available = true
   h.handlerCalls = []
@@ -221,6 +226,24 @@ function nativeFrameLeaf() {
     return create('frame', id)
   })
 }
+
+test('Harmony uses the registered custom child view with a native bundle and initial props', async () => {
+  nativeFrameLeaf()
+  h.isWeb = false
+  h.platform = 'harmony'
+  const result = await renderFrame()
+  const frame = result.container.querySelector('songloft-plugin-frame')
+  expect(frame).not.toBeNull()
+  expect(result.container.querySelector('frame')).toBeNull()
+  expect(frame?.getAttribute('src')).toContain('/alpha/static/main.lynx.bundle')
+  expect(JSON.parse(frame?.getAttribute('global-props') || '{}')).toMatchObject({
+    theme: 'dark', embed: true, frameId: expect.stringMatching(/^frame-alpha-/),
+    playerState: expect.objectContaining({ is_playing: true }),
+  })
+  expect(h.nativeConnect).toHaveBeenCalledOnce()
+  result.unmount()
+  expect(h.nativeDispose).toHaveBeenCalledOnce()
+})
 
 test('a native frame consumes foreground events once, supplies snapshots and unregisters on unmount', async () => {
   nativeFrameLeaf()

@@ -1,5 +1,12 @@
 # Lynx Client Development Lessons
 
+### PLUGIN-003: template fetchers and bridge registration do not supply a native child-view element
+
+- Scope: HarmonyOS HAP opening miot and other Lynx plugins; baseline `173fa140c70ba80998cb8f49960619306986ef86`.
+- Evidence: the locked Harmony Lynx 4.0.1 has no frame implementation and Index registered no corresponding Behavior. Isolated old-code checks create zero child instances and cannot find the Harmony element, failing as expected. Earlier HAP compilation and template downloader tests did not cover this gap.
+- Rule / done right: verify the actual SDK tag and its full loading pipeline. Harmony uses a dedicated element with an independent LynxView, explicit fetchers/behaviors/bridge/initial props, and checks for late tokens, RPC, retention/disposal and replacement identity. Child views must not attach root singletons. Record rendering/device evidence separately from compilation and adapters. [Record](docs/en/project/harmony-plugin-frame.md).
+- Seen 1× (2026-11-17). Status: local source fix, regressions and HAP compilation pass. The user authorized this batch's commit, push and parent gitlink update; the record tracks actual commits and same-SHA CI. No Harmony device acceptance or stable release. Older shells require a new HAP.
+
 ### LICENSE-001: Make agreements readable and check attribution completeness
 
 - Scope: login agreement, consent state, and licenses page; baseline `888f5b88c842ea932a1f1f0b810a7f82a876f6fc`.

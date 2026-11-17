@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from '@lynx-js/react'
 import { appConfig } from '../../../core/config/app-config.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
+import { getPlatformTarget } from '../../../native/platform-target.js'
 import { subscribeAppResumed } from '../../../native/app-lifecycle.js'
 import {
   connectNativePluginHost,
@@ -45,12 +46,12 @@ interface Props {
 }
 
 /**
- * Renders a plugin via Lynx's <frame> element (native: real frame, Web: nested
- * <lynx-view>). Communication flows through NativeModules.SongloftPluginBridge.
+ * Renders a plugin in a child Lynx view. Harmony uses the host's custom element;
+ * Android/iOS use <frame>, and Web uses a nested <lynx-view>.
+ * Communication flows through NativeModules.SongloftPluginBridge.
  *
- * On native: <frame> is a real Lynx frame, bridge via SongloftPluginBridgeModule.
+ * On native: each child uses SongloftPluginBridgeModule.
  * On Web: <frame> maps to nested <lynx-view>, bridge via lynx-frame-host.js.
- * Both platforms use the same component — the frame element is cross-platform.
  * On Web, we additionally drive the bridge through getLynxFrameModule() for
  * the host-call dispatch path (because the Web nested <lynx-view> needs
  * explicit module configuration from the main thread).
@@ -300,7 +301,20 @@ export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
     )
   }
 
-  // Native: <frame> directly loads the bundle
+  // Harmony 4.0.1 has no native frame. Use a custom tag so the core's
+  // unsupported FrameElement bundle/data pipeline does not run as well.
+  if (getPlatformTarget() === 'harmony') {
+    return (
+      <songloft-plugin-frame
+        src={bundleUrl}
+        global-props={globalProps}
+        className="plugin-webview__frame"
+        data-testid="plugin-lynx-frame"
+      />
+    )
+  }
+
+  // Android/iOS: the SDK's <frame> directly loads the bundle.
   return (
     <frame
       src={bundleUrl}

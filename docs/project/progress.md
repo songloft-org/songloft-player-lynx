@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-17 · 鸿蒙 miot 插件白屏 / HarmonyOS miot blank page
+
+确认 Harmony Lynx 4.0.1 缺少 frame 宿主，新增专用组件创建独立子 LynxView，传递资源、桥接和初始参数，处理 props 更新、前后台、替代/销毁及迟到回调。旧实现的隔离检查按预期失败；最终六项适配器、十二项组件定向、368 文件/3848 项共享测试、类型、双产物和 95 项发布检查通过。clean HAP 的 34 项任务及包内容校验通过；包内 bundle 字节与最终产物一致，编入本次原生组件和注册。工作树标识、未签名包与真机未验边界见[记录](harmony-plugin-frame.md)。用户已授权本批提交、推送及同步父指针，实际提交和同 SHA CI 见 `/tmp/songloft-harmony-miot/delivery.json`；不创建正式版本。旧壳必须安装新 HAP，既有桌面改动保留。
+
+English: Harmony Lynx 4.0.1 lacks the frame host. A dedicated element creates an independent child LynxView with explicit resources, bridge and initial props, handles updates/lifecycle/replacement/disposal and ignores stale callbacks. Isolated old implementations fail as expected. Six adapter checks, twelve component tests, 368 files/3848 shared tests, types, dual outputs and 95 release checks pass. All 34 clean HAP tasks and package validation pass; the package contains the actual element/registration and byte-identical final bundle. [Record](../en/project/harmony-plugin-frame.md) contains worktree identity, unsigned artifact and device gaps. The user authorized this batch's commit, push and parent gitlink update; actual commits and same-SHA CI are in `/tmp/songloft-harmony-miot/delivery.json`. No stable release. Older shells require a rebuilt HAP; existing desktop work is preserved.
+
 ## 2026-11-17 · #572 歌单与收藏下一首播放 / Playlist and favorites play next
 
 现有 Lynx 共享菜单已支持；新增四项入口回归，配合既有队列规则和真实浏览器确认不切换来源、不打断当前播放。3843 项全量、37 项定向、类型、双 bundle 与 embedded Web 构建通过，隔离移除分发时四项失败。证据及原生边界见[记录](issue-572.md)。本批获授权提交、推送、同步父指针和回复 #572；不创建正式版本，不处理并行桌面改动。提交及 CI 见 `/tmp/songloft-572/delivery.json`。
