@@ -1,6 +1,7 @@
 import '../../../shims/router-env.js'
 
 import '@testing-library/jest-dom'
+import type { ReactNode } from '@lynx-js/react'
 vi.mock('../../player/store/player-store.js', async (original) => {
   const actual = await original<Record<string, unknown>>()
   const { makePlayerStoreMock } = await import('../../../__tests__/_render-mocks.js')
@@ -19,6 +20,7 @@ vi.mock('../../player/store/dlna-store.js', async (original) => {
 import { afterEach, expect, test, vi } from 'vitest'
 import {
   act,
+  fireEvent,
   getQueriesForElement,
   render,
 } from '@lynx-js/react/testing-library'
@@ -32,6 +34,7 @@ import {
 } from '../../../core/storage/index.js'
 import { createAppRouter } from '../../../router.js'
 import { setMockAuthStatus } from '../../../__tests__/_render-mocks.js'
+import { dispatchBack } from '../../../shared/nav/back-stack.js'
 import { PREF_LAST_USERNAME, SECURE_LAST_PASSWORD } from '../store/index.js'
 
 // The login screen depends on three facilities the ReactLynx Vitest env cannot
@@ -76,6 +79,10 @@ vi.mock('@lynx-js/lynx-ui-input', () => ({
 vi.mock('@lynx-js/lynx-ui-switch', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockLynxUiSwitch(),
 )
+vi.mock('@lynx-js/lynx-ui-dialog', async () => ({
+  ...(await import('../../../__tests__/_render-mocks.js')).mockLynxUiDialog(),
+  DialogRoot: ({ children, show }: { children: ReactNode, show: boolean }) => show ? <view>{children}</view> : null,
+}))
 // Batch 5: the router now eagerly imports the /player route → FullPlayerPage,
 // which pulls in the lynx-ui gesture leaves (Slider/Sheet/Swiper) at module
 // load. Rendering the login screen *through the router* therefore evaluates
@@ -171,6 +178,35 @@ test('renders the login page with title, labels, agreement and login button', as
   expect(queryByText('Log in')).toBeInTheDocument()
   expect(queryByTestId('agreement-checkbox')).toBeInTheDocument()
   expect(queryByText('Terms of Service & Privacy Policy')).toBeInTheDocument()
+})
+
+test('reading and closing the agreement leaves consent unchecked', async () => {
+  const { getByTestId } = await renderLogin()
+  const link = getByTestId('login-terms-link') as HTMLElement & {
+    eventMap: Record<string, (event: { stopPropagation: () => void }) => void>
+  }
+  await act(async () => { link.eventMap['catchEvent:tap']?.({ stopPropagation: vi.fn() }) })
+  const queries = getQueriesForElement(elementTree.root!)
+  expect(queries.getByTestId('terms-dialog').textContent).toContain('Apache-2.0')
+  expect(queries.getByTestId('terms-dialog').textContent).toContain('Privacy Policy')
+  expect(queries.getByTestId('agreement-checkbox').className).not.toContain('app-checkbox--on')
+  await act(async () => { fireEvent.tap(queries.getByTestId('terms-close')) })
+  expect(getQueriesForElement(elementTree.root!).queryByTestId('terms-dialog')).toBeNull()
+  expect(getQueriesForElement(elementTree.root!).getByTestId('agreement-checkbox').className).not.toContain('app-checkbox--on')
+})
+
+test('back closes the agreement and preserves previously checked consent', async () => {
+  const { getByTestId } = await renderLogin()
+  await act(async () => { fireEvent.tap(getByTestId('login-agreement')) })
+  expect(getQueriesForElement(elementTree.root!).getByTestId('agreement-checkbox').className).toContain('app-checkbox--on')
+  const link = getQueriesForElement(elementTree.root!).getByTestId('login-terms-link') as HTMLElement & {
+    eventMap: Record<string, (event: { stopPropagation: () => void }) => void>
+  }
+  await act(async () => { link.eventMap['catchEvent:tap']?.({ stopPropagation: vi.fn() }) })
+  expect(getQueriesForElement(elementTree.root!).getByTestId('terms-dialog')).toBeInTheDocument()
+  await act(async () => { expect(dispatchBack()).toBe(true) })
+  expect(getQueriesForElement(elementTree.root!).queryByTestId('terms-dialog')).toBeNull()
+  expect(getQueriesForElement(elementTree.root!).getByTestId('agreement-checkbox').className).toContain('app-checkbox--on')
 })
 
 /**

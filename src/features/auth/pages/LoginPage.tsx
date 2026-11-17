@@ -20,6 +20,7 @@ import {
 import { useServerStore } from '../../settings/store/server-store.js'
 import { useOfflineOwner } from '../../player/widgets/use-offline-owner.js'
 import { indexedSongCacheAvailable } from '../../player/data/indexed-song-cache.js'
+import { TermsDialog } from '../widgets/TermsDialog.js'
 
 import './LoginPage.css'
 
@@ -65,6 +66,7 @@ export function LoginPage() {
   const [apiUrl, setApiUrl] = useState(showServerFields ? appConfig.baseUrl : '')
   const [insecureTls, setInsecureTls] = useState(appConfig.insecureTls)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
 
   // Best-effort prefill of the last username / remembered password / server
   // URL. Reads reject on the native storage stub (until the JSB binding
@@ -214,12 +216,17 @@ export function LoginPage() {
 
             <view
               className='login__agreement'
+              data-testid='login-agreement'
               bindtap={() => setAgreedToTerms(!agreedToTerms)}
             >
               <AppCheckbox checked={agreedToTerms} testId='agreement-checkbox' />
               <text className='login__agreement-text'>
                 {t('auth.agreePrefix')}
-                <text className='login__agreement-link'>
+                <text
+                  className='login__agreement-link'
+                  data-testid='login-terms-link'
+                  catchtap={() => setShowTerms(true)}
+                >
                   {t('auth.termsAndPrivacy')}
                 </text>
               </text>
@@ -245,6 +252,7 @@ export function LoginPage() {
           <view style={{ flex: 1 }} />
         </view>
       </scroll-view>
+      <TermsDialog show={showTerms} onClose={() => setShowTerms(false)} />
     </view>
   )
 }

@@ -1,5 +1,13 @@
 # Lynx Client Development Lessons
 
+### LICENSE-001: Make agreements readable and check attribution completeness
+
+- Scope: login agreement, consent state, and licenses page; baseline `888f5b88c842ea932a1f1f0b810a7f82a876f6fc`.
+- Evidence: agreement text only toggled consent; attribution tests checked existing entries but missed four direct dependencies. Restoring the old pages in isolation made the new checks fail for the missing agreement entry and four missing packages (2 failed, 8 passed).
+- Rule and Done right: use an independent `catchtap` reading action to open offline Chinese/English terms without changing consent. Reuse ConfirmDialog's scrolling, close, and back behavior. Derive attribution coverage from runtime dependencies as well as checking listed entries, retaining component-family wildcard credits.
+- Validation and limits: final targeted checks, types, dual builds, full tests, Docker Chrome interactions, and worktree identities are in `/tmp/songloft-license-fix-20261117/verification.json`. Native host compilation and device interaction are Not run; shared JS and Web results do not establish device acceptance.
+- Seen 1× (2026-11-17). Local repair, not committed or released.
+
 ### PLUGIN-002: closing must cancel socket opens still waiting for credentials
 
 - Scope: MIoT Lynx parent bridge, baseline `88e00646a6c948c3497fbf32eaab3c80f04bdd82` plus this worktree.

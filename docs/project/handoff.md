@@ -1,5 +1,9 @@
 # 工作交接（2026-10-14）
 
+## 2026-11-17 · 登录协议与许可证署名
+
+离线协议弹窗、中英 Apache-2.0 文案、同意状态隔离和四项依赖署名已实现；新增同意/关闭/返回与依赖完整性回归，隔离旧页面会触发两项失败。基线 `888f5b88c842ea932a1f1f0b810a7f82a876f6fc`，最终工作树及验证结果见 `/tmp/songloft-license-fix-20261117/verification.json`。原生编译/设备交互 Not run；未提交、推送或发布，既有桌面预览改动不属于本批。
+
 ## 2026-11-16 · MIoT Lynx 配套宿主
 
 基线 `88e00646a6c948c3497fbf32eaab3c80f04bdd82`：HTTP 四方法、父上下文归属的 socket、外链、封面和返回桥，两份 Web shim 同步。本轮用户明确授权主程序提交与推送，客户端先提交，再由父仓库更新指针；miot 和 toolchain 的未提交改动不混入。旧 Docker 宿主未实现 resourceUrl，实际歌单 30 行均无封面，需更新主程序，保留直接图片请求。类型、3833 项测试、双 bundle、Web 与发布检查及平台边界见交付记录与 miot `docs/lynx-migration.md`；iOS/HarmonyOS 编译与物理设备 Not run。

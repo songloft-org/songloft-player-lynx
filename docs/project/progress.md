@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-17 · 协议阅读与依赖署名 / Agreement reading and dependency attribution
+
+基线 `888f5b88c842ea932a1f1f0b810a7f82a876f6fc`：登录页可离线打开中文/英文协议，阅读不切换同意，关闭和系统返回保留原状态；协议使用 Apache-2.0 声明。许可证页补 motion、query-core、background-only、fflate，并从全部直接运行时依赖反查署名覆盖。隔离旧页面时两项新回归失败。最终测试、构建、浏览器和工作树证据见 `/tmp/songloft-license-fix-20261117/verification.json`；原生构建、Android/iOS/HarmonyOS 设备交互 Not run。未提交、推送或发布；保留工作区既有桌面预览改动。
+
+English: baseline `888f5b88c842ea932a1f1f0b810a7f82a876f6fc`. Login now opens offline Chinese/English Apache-2.0 terms; reading, closing, and system back preserve consent. Credits now include motion, query-core, background-only, and fflate, with coverage derived from all direct runtime dependencies. Two new checks fail against the isolated old pages. Final tests, builds, browser evidence, and worktree identities: `/tmp/songloft-license-fix-20261117/verification.json`. Native builds and Android/iOS/HarmonyOS device interactions are Not run. Not committed, pushed, or released; existing desktop-preview changes are preserved.
+
 ## 2026-11-16 · MIoT Lynx 迁移 / MIoT Lynx migration
 
 父桥补齐 PUT/DELETE、按 frame 隔离的文本 WebSocket、外链、歌曲封面及逐层返回。三原生端接入；Web 同步回退 shim，修复长表单委托焦点跳转及凭据等待期间关闭的开连竞态。3833 项完整客户端测试、类型、双构建及 Android assembleDebug 通过；最终受影响检查、浏览器记录与平台限制见 miot 插件 `docs/lynx-migration.md`。基线 `88e00646a6c948c3497fbf32eaab3c80f04bdd82`；本轮用户明确授权主程序提交和推送，客户端先提交、父仓库再更新指针。

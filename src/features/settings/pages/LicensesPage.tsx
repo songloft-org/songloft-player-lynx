@@ -18,9 +18,13 @@ interface LicenseEntry {
  */
 const LICENSES: LicenseEntry[] = [
   { name: '@lynx-js/react', license: 'Apache-2.0', url: 'https://github.com/lynx-family/lynx-stack' },
+  { name: '@lynx-js/motion', license: 'Apache-2.0', url: 'https://github.com/lynx-family/lynx-stack' },
+  { name: '@tanstack/query-core', license: 'MIT', url: 'https://github.com/TanStack/query' },
   { name: '@tanstack/react-query', license: 'MIT', url: 'https://github.com/TanStack/query' },
   { name: '@tanstack/react-router', license: 'MIT', url: 'https://github.com/TanStack/router' },
   { name: 'i18next', license: 'MIT', url: 'https://github.com/i18next/i18next' },
+  { name: 'background-only', license: 'MIT', url: 'https://www.npmjs.com/package/background-only' },
+  { name: 'fflate', license: 'MIT', url: 'https://github.com/101arrowz/fflate' },
   { name: 'marked', license: 'MIT', url: 'https://github.com/markedjs/marked' },
   { name: 'entities', license: 'BSD-2-Clause', url: 'https://github.com/fb55/entities' },
   { name: 'gemoji', license: 'MIT', url: 'https://github.com/wooorm/gemoji' },

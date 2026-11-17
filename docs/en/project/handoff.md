@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-17 · Login agreement and dependency credits
+
+Implemented offline Chinese/English Apache-2.0 terms, independent reading and consent actions, and four missing dependency credits. New consent/close/back and coverage checks catch two failures against the isolated old pages. Baseline `888f5b88c842ea932a1f1f0b810a7f82a876f6fc`; final worktree identities and results: `/tmp/songloft-license-fix-20261117/verification.json`. Native compilation and device interaction are Not run. Not committed, pushed, or released; existing desktop-preview changes are outside this batch.
+
 ## 2026-11-16 · Host support for MIoT Lynx
 
 Baseline `88e00646a6c948c3497fbf32eaab3c80f04bdd82`: four HTTP verbs, parent-owned sockets, external URLs, authenticated covers and back navigation, with both Web shims synchronized. The user explicitly authorized host commits/pushes this round: commit this client first, then update the parent gitlink; leave uncommitted miot/toolchain changes separate. The older running Docker host lacks resourceUrl and leaves all 30 actual playlist rows without covers; update the host and retain direct image loading. Types, 3833 tests, both bundles, Web/release checks and platform boundaries are recorded in delivery and miot docs/lynx-migration.md. iOS/HarmonyOS compilation and physical devices remain Not run.

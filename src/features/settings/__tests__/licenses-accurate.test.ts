@@ -75,6 +75,17 @@ test('every credited package is still a dependency', () => {
   expect(missing).toEqual([])
 })
 
+test('every direct runtime dependency is credited', () => {
+  const pkg = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as {
+    dependencies: Record<string, string>
+  }
+  const credits = entries()
+  const missing = Object.keys(pkg.dependencies).filter((name) => !credits.some((entry) =>
+    entry.name.endsWith('*') ? name.startsWith(entry.name.slice(0, -1)) : name === entry.name,
+  ))
+  expect(missing).toEqual([])
+})
+
 test('every credited URL is the package\'s real upstream repository', () => {
   const wrong = entries().flatMap((e) => {
     const pkg = resolveName(e.name)
