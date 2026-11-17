@@ -2,6 +2,14 @@
 
 此文件记录 Songloft Player（Lynx）的版本变更，仅提供中文版本。版本 tag 的 Release 发布成功后，由 CI 根据 Conventional Commits 分类追加记录并提交到 `main`；滚动 dev 记录见 [GitHub Releases](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev)。
 
+## [v2.13.12] - 2026-11-17
+### :memo: 文档更新
+- [`e4d4ac9`](https://github.com/songloft-org/songloft-player-lynx/commit/e4d4ac91b656e13ad9071bd18e3876a38b751ae6) - **changelog**: 更新 v2.13.11 变更记录 *(提交者 [@github-actions[bot]](https://github.com/apps/github-actions))*
+
+### :wrench: 维护工作
+- [`888f5b8`](https://github.com/songloft-org/songloft-player-lynx/commit/888f5b88c842ea932a1f1f0b810a7f82a876f6fc) - **release**: 发布 2.13.12 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+
 ## [v2.13.11] - 2026-11-16
 ### :sparkles: 新增功能
 - [`2447fad`](https://github.com/songloft-org/songloft-player-lynx/commit/2447fade1affad9dda94f0bd68aff932680d91d8) - **jsplugin**: 支持 Lynx 插件通过宿主请求业务接口 *(提交者 [@hanxi](https://github.com/hanxi))*
@@ -784,3 +792,4 @@
 [v0.1.8]: https://github.com/songloft-org/songloft-player-lynx/compare/v0.1.7...v0.1.8
 [v2.13.10]: https://github.com/songloft-org/songloft-player-lynx/compare/v0.1.8...v2.13.10
 [v2.13.11]: https://github.com/songloft-org/songloft-player-lynx/compare/v2.13.10...v2.13.11
+[v2.13.12]: https://github.com/songloft-org/songloft-player-lynx/compare/v2.13.11...v2.13.12
