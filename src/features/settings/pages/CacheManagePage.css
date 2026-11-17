@@ -11,7 +11,9 @@
 .cache-manage__content {
   display: flex;
   flex-direction: column;
-  padding: var(--space-2) 0 var(--space-6);
+  padding-top: var(--space-2);
+  padding-left: 0;
+  padding-right: 0;
   gap: var(--space-4);
 }
 
