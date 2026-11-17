@@ -464,6 +464,12 @@ export function PluginWebViewPage() {
   // no implementation for (blank area). See `isWebPlatform`.
   const isWeb = isWebPlatform()
 
+  // The routed page owns the pushed topbar; the shell owns the stable frame
+  // beneath it. Return before loading/error UI so no transient full-height page
+  // can cover or squeeze the retained instance during a home-grid round-trip.
+  if (retainedTabs && plugin?.renderEngine === 'lynx' && plugin.isActive)
+    return topbar
+
   if (loading) {
     return (
       <view className='plugin-webview'>
@@ -492,7 +498,6 @@ export function PluginWebViewPage() {
    * Both platforms use the same component since <frame> maps to <lynx-view> on Web.
    */
   if (plugin?.renderEngine === 'lynx') {
-    if (retainedTabs && isTabEntry && plugin.isActive) return null
     return (
       <view className='plugin-webview'>
         {topbar}

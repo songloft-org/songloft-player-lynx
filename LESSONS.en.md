@@ -1,5 +1,12 @@
 # Lynx Client Development Lessons
 
+### PLUGIN-004: entry presentation must not determine instance retention
+
+- Scope: native Lynx plugins entered from the home grid, navigation tabs or manager; baseline `b952231c253aad1938d3020ee74157b100a11291`.
+- Evidence: retention only matched `tab=true`, so returning home unmounted the child engine. New home regressions fail with the old implementation because the retained node is missing. The fix preserves one node/search across 20 visits with one mount. Separately, plugin resumed events forcibly reloaded healthy covers; cover flicker alone does not prove route remounting.
+- Rule / done right: all native Lynx entries share a Shell instance; embed/topbars affect presentation. Pause while hidden and dispose on identity/server changes, disabling or Shell teardown. Keep healthy covers on resume. Record compilation, component and browser evidence separately; repeated creation/image loading without a crash stack does not establish the Harmony crash cause. [Record](docs/en/project/miot-reentry.md).
+- Seen 1× (2026-11-17). Status: local fix, uncommitted/unreleased; Harmony crash logs and device acceptance remain open.
+
 ### PLUGIN-003: template fetchers and bridge registration do not supply a native child-view element
 
 - Scope: HarmonyOS HAP opening miot and other Lynx plugins; baseline `173fa140c70ba80998cb8f49960619306986ef86`.

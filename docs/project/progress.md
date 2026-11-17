@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-17 · miot 重入与封面恢复 / miot re-entry and cover recovery
+
+修复首页入口未保留原生 frame，首页/Tab 共用 Shell 实例并保留各自标题栏/embed。20 次首页往返只挂载一次，112 项相关、类型、双构建通过；完整 3858 项中 3857 通过、1 项既有桌面缺少 `clientUpdate.download`。miot 独立修复每次恢复无条件清空/重建健康图片，124 项前端、1499 项后端、双包/QuickJS/ZIP 及浏览器 390/1100 宽度的十次恢复断言通过。旧客户端的两项、旧封面的五项新回归失败符合预期，见[记录](miot-reentry.md)。无鸿蒙崩溃堆栈或设备证据，闪退根因未确认；未提交/推送/发布，既有桌面工作保留。
+
+English: home entries now retain native frames in the Shell and share one instance with tabs, preserving topbar/embed presentation. Twenty home round-trips mount once. All 112 related checks, types and dual builds pass; full tests have 3857 passes and one existing desktop `clientUpdate.download` key failure. The miot repository separately removes unconditional healthy-image clearing/remounting on resume. All 124 frontend/1499 backend tests, dual bundles/QuickJS/ZIP and ten browser resume cycles at widths 390/1100 pass. Two new client and five new cover checks fail against isolated old source as expected. [Record](../en/project/miot-reentry.md). No Harmony crash stack/device evidence establishes the crash cause. Uncommitted/unpushed/unreleased; existing desktop work preserved.
+
 ## 2026-11-17 · 鸿蒙 miot 插件白屏 / HarmonyOS miot blank page
 
 确认 Harmony Lynx 4.0.1 缺少 frame 宿主，新增专用组件创建独立子 LynxView，传递资源、桥接和初始参数，处理 props 更新、前后台、替代/销毁及迟到回调。旧实现的隔离检查按预期失败；最终六项适配器、十二项组件定向、368 文件/3848 项共享测试、类型、双产物和 95 项发布检查通过。clean HAP 的 34 项任务及包内容校验通过；包内 bundle 字节与最终产物一致，编入本次原生组件和注册。工作树标识、未签名包与真机未验边界见[记录](harmony-plugin-frame.md)。用户已授权本批提交、推送及同步父指针，实际提交和同 SHA CI 见 `/tmp/songloft-harmony-miot/delivery.json`；不创建正式版本。旧壳必须安装新 HAP，既有桌面改动保留。

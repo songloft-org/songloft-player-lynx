@@ -37,9 +37,11 @@ vi.mock('../widgets/LynxPluginFrame.js', () => ({
   LynxPluginFrame: function Frame({
     entryPath,
     active,
+    isTabEntry,
   }: {
     entryPath: string
     active: boolean
+    isTabEntry: boolean
   }) {
     const [query, setQuery] = useState('')
     useEffect(() => {
@@ -49,10 +51,14 @@ vi.mock('../widgets/LynxPluginFrame.js', () => ({
       }
     }, [])
     return (
-      <view data-testid={`frame-${entryPath}`} data-active={String(active)}>
+      <view
+        data-testid={`frame-${entryPath}`}
+        data-active={String(active)}
+        data-embed={String(isTabEntry)}
+      >
         <text>{query}</text>
         <view
-          data-testid='search'
+          data-testid="search"
           bindtap={() => setQuery('saved search and results')}
         >
           search
@@ -83,7 +89,7 @@ afterEach(() => result?.unmount())
 function page() {
   return (
     <RetainedPluginTabs>
-      <view data-testid='outlet' />
+      <view data-testid="outlet" />
     </RetainedPluginTabs>
   )
 }
@@ -123,11 +129,39 @@ test('plugin update or disable disposes the old frame', async () => {
   expect(queries().queryByTestId('frame-bili')).toBeNull()
   expect(h.disposed).toBe(2)
 })
-test('pushed pages and Web keep their existing rendering path', () => {
+test('home grid round-trips retain one native frame and preserve pushed presentation', async () => {
   h.location.search.tab = false
   result = render(page())
-  expect(queries().queryByTestId('frame-bili')).toBeNull()
-  result.unmount()
+  const original = queries().getByTestId('frame-bili')
+  await act(async () => {
+    fireEvent.tap(queries().getByTestId('search'))
+  })
+  for (let visit = 0; visit < 20; visit++) {
+    await go('/')
+    expect(original.getAttribute('data-active')).toBe('false')
+    await act(async () => {
+      h.location = { pathname: '/plugin/bili', search: { tab: false } }
+      result.rerender(page())
+    })
+    expect(queries().getByTestId('frame-bili')).toBe(original)
+    expect(original.textContent).toContain('saved search and results')
+  }
+  expect(h.mounted).toBe(1)
+  expect(h.disposed).toBe(0)
+})
+test('home and tab entries share a frame; unrelated pages preserve its last presentation', async () => {
+  h.location.search.tab = false
+  result = render(page())
+  const original = queries().getByTestId('frame-bili')
+  expect(original.getAttribute('data-embed')).toBe('false')
+  await go('/plugin/bili')
+  expect(queries().getByTestId('frame-bili')).toBe(original)
+  expect(original.getAttribute('data-embed')).toBe('true')
+  await go('/')
+  expect(original.getAttribute('data-embed')).toBe('true')
+  expect(h.mounted).toBe(1)
+})
+test('Web keeps its existing rendering path', () => {
   h.web = true
   h.location.search.tab = true
   result = render(page())

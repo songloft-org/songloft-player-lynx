@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-17 · miot home re-entry and tab cover flicker
+
+Native frames entered from home/manager now belong to the retained Shell as well. Routed pages keep pushed topbars, tabs stay chromeless, and both share one instance. The plugin's forced cover refresh on every resumed event is fixed in the miot repository. All 112 related checks, types and dual bundles pass. Full client tests: 3857 pass, one existing desktop translation key failure. Plugin 1499/124 tests, packaging and real-browser healthy-cover retention/failure recovery at two widths pass; [record](miot-reentry.md). No Harmony device/crash stack: crash cause and device acceptance remain open. No commit, push or release; existing desktop changes are preserved.
+
 ## 2026-11-17 · #573 scan exclusion notices
 
 Selection and pre-start checks share backend exclusion matching. All-excluded roots do not start; mixed roots and results explain paths/rules. Settings distinguish scan versus automatic-playlist exclusions, without a temporary bypass. All 230 focused tests, 3854 complete tests, types, dual bundles and embedded Web pass; two isolated defective UI regressions fail as expected. [Record](issue-573.md). Browser and native boundaries are tracked separately; existing desktop work is preserved. The user subsequently authorized commits, pushes, parent gitlinks and an Issue reply; results are in the evidence directory's `delivery.json`. No stable release is created.

@@ -15,8 +15,8 @@ import './RetainedPluginTabs.css'
 const ManagedTabs = createContext(false)
 export const useRetainedPluginTabs = () => useContext(ManagedTabs)
 
-/** Web already retains its child workers in lynx-frame-host. Native frames
- * must belong to the shell, not the routed page that disappears on navigation. */
+/** Web already retains its child workers in lynx-frame-host. All native Lynx
+ * entries belong to the shell, including pushed pages from the home grid. */
 export function RetainedPluginTabs({ children }: { children: ReactNode }) {
   if (isWebPlatform()) return children
   return (
@@ -29,45 +29,54 @@ export function RetainedPluginTabs({ children }: { children: ReactNode }) {
 function NativePluginTabs({ children }: { children: ReactNode }) {
   const location = useRouterState({ select: (s) => s.location })
   const { data } = usePluginsQuery()
-  const [visited, setVisited] = useState<string[]>([])
+  const [visited, setVisited] = useState<Array<{ path: string; tab: boolean }>>(
+    [],
+  )
   const match = /^\/plugin\/([^/]+)$/.exec(location.pathname)
-  const entry =
-    location.search?.tab === true && match ? decodeURIComponent(match[1]!) : ''
+  const entry = match ? decodeURIComponent(match[1]!) : ''
+  const isTabEntry = location.search?.tab === true
   const eligible =
     data?.plugins.filter(
       (p) => p.isActive && p.renderEngine === 'lynx' && p.entryPath,
     ) ?? []
   const current = eligible.find((p) => p.entryPath === entry)
   const eligiblePaths = eligible.map((p) => p.entryPath).join('\0')
-  const entries =
-    current && !visited.includes(entry) ? [...visited, entry] : visited
+  const entries = visited.filter((visit) =>
+    eligible.some((p) => p.entryPath === visit.path),
+  )
+  if (current) {
+    const visit = { path: entry, tab: isTabEntry }
+    const index = entries.findIndex((item) => item.path === entry)
+    if (index < 0) entries.push(visit)
+    else entries[index] = visit
+  }
   useEffect(() => {
-    setVisited((old) => {
-      const next = old.filter((path) =>
-        eligible.some((p) => p.entryPath === path),
+    setVisited((old) =>
+      entries.length === old.length &&
+      entries.every(
+        (visit, i) => visit.path === old[i]?.path && visit.tab === old[i]?.tab,
       )
-      if (current && !next.includes(entry)) next.push(entry)
-      return next.length === old.length &&
-        next.every((path, i) => path === old[i])
         ? old
-        : next
-    })
-  }, [eligiblePaths, entry])
+        : entries,
+    )
+  }, [eligiblePaths, entry, isTabEntry])
   return (
     <ManagedTabs.Provider value={true}>
       {children}
       {eligible
-        .filter((p) => entries.includes(p.entryPath!))
+        .filter((p) => entries.some((visit) => visit.path === p.entryPath))
         .map((plugin) => (
           <view
             key={`${plugin.id}:${plugin.entryPath}:${plugin.version}:${plugin.updatedAt}`}
-            className='plugin-tab-retained'
+            className="plugin-tab-retained"
             style={{ display: plugin.entryPath === entry ? 'flex' : 'none' }}
             data-testid={`retained-plugin-${plugin.entryPath}`}
           >
             <LynxPluginFrame
               entryPath={plugin.entryPath!}
-              isTabEntry
+              isTabEntry={
+                entries.find((visit) => visit.path === plugin.entryPath)!.tab
+              }
               active={plugin.entryPath === entry}
             />
           </view>

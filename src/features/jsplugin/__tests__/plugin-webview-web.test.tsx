@@ -32,6 +32,8 @@ const h = vi.hoisted(() => ({
   continueBack: vi.fn(),
   available: true,
   isWeb: true,
+  managed: false,
+  renderEngine: 'webview',
   // `?tab=true` in the search string for this test.
   tab: false,
   handlerCalls: [] as Array<{
@@ -140,6 +142,10 @@ vi.mock('../../../native/native-platform.js', () => ({
   openURL: h.openURL,
 }))
 
+vi.mock('../widgets/RetainedPluginTabs.js', () => ({
+  useRetainedPluginTabs: () => h.managed,
+}))
+
 vi.mock('../../../core/storage/index.js', () => ({
   getSongloftStorage: () => ({
     secure: { get: async () => 'token-123' },
@@ -148,7 +154,15 @@ vi.mock('../../../core/storage/index.js', () => ({
 
 vi.mock('../data/jsplugin-query.js', () => ({
   usePluginsQuery: () => ({
-    data: { plugins: [{ id: 1, entryPath: 'lx', displayName: 'LX Music' }] },
+    data: {
+      plugins: [{
+        id: 1,
+        entryPath: 'lx',
+        displayName: 'LX Music',
+        renderEngine: h.renderEngine,
+        isActive: true,
+      }],
+    },
     isLoading: false,
     isError: false,
     refetch: vi.fn(),
@@ -181,6 +195,8 @@ beforeEach(() => {
   h.tab = false
   h.available = true
   h.isWeb = true
+  h.managed = false
+  h.renderEngine = 'webview'
   h.handlerCalls = []
   h.playerSubs = []
   h.themeSubs = []
@@ -273,6 +289,35 @@ test('a pushed entry renders the topbar with the open-in-browser action', async 
   expect(q.getByTestId('plugin-webview-back')).toBeTruthy()
   expect(q.getByTestId('plugin-webview-open')).toBeTruthy()
   expect(q.getByTestId('plugin-webview-frame')).toBeTruthy()
+})
+
+test('a retained home entry renders only its topbar while the shell owns the frame', async () => {
+  h.isWeb = false
+  h.managed = true
+  h.renderEngine = 'lynx'
+  const { q, container } = await renderPage()
+  expect(q.getByTestId('plugin-webview-title').textContent).toBe('LX Music')
+  expect(q.getByTestId('plugin-webview-back')).toBeTruthy()
+  expect(q.getByTestId('plugin-webview-open')).toBeTruthy()
+  expect(q.queryByTestId('plugin-lynx-frame')).toBeNull()
+  expect(container.querySelector('.plugin-webview')).toBeNull()
+  fireEvent.tap(q.getByTestId('plugin-webview-open'))
+  expect(h.openURL).toHaveBeenCalledWith(
+    expect.stringContaining('/jsplugin/lx/'),
+  )
+  expect(h.open).not.toHaveBeenCalled()
+})
+
+test('a retained tab entry leaves all available body space to its existing frame', async () => {
+  h.isWeb = false
+  h.managed = true
+  h.renderEngine = 'lynx'
+  h.tab = true
+  const { q, container } = await renderPage()
+  expect(q.queryByTestId('plugin-webview-back')).toBeNull()
+  expect(q.queryByTestId('plugin-lynx-frame')).toBeNull()
+  expect(container.querySelector('.plugin-webview')).toBeNull()
+  expect(h.open).not.toHaveBeenCalled()
 })
 
 test('a pushed entry drops `embed` from the plugin URL (plugin keeps its toolbar)', async () => {
