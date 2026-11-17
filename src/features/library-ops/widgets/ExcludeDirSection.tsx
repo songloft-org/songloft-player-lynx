@@ -94,6 +94,7 @@ export function ExcludeDirSection({ onWriteError }: ExcludeDirSectionProps) {
 
   return (
     <SettingsSection title={t('libops.excludeSection')}>
+      <text className='libops__state-line'>{t('libops.excludeHelp')}</text>
       <view className='libops-exclude__tabs' data-testid='exclude-tabs'>
         {EXCLUDE_TABS.map((tab) => (
           <view

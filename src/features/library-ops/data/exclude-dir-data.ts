@@ -83,6 +83,7 @@ export function useUpdateExcludeConfig() {
     mutationFn: (draft: ExcludeConfigDraft) =>
       getScanSettingsApi().updateMusicPath(buildMusicPathUpdate(queryClient, key, draft)),
     onSuccess: (saved) => {
+      void queryClient.invalidateQueries({ queryKey: ['libops', 'scan-validation'] })
       queryClient.setQueryData<RemoteSetting<MusicPathSetting>>(key, {
         value: saved,
         readFailed: false,

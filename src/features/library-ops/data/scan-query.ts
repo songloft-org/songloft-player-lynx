@@ -71,6 +71,15 @@ export function useScanProgressQuery() {
   })
 }
 
+export function useScanValidationQuery(paths: readonly string[]) {
+  return useQuery({
+    queryKey: ['libops', 'scan-validation', ...paths],
+    queryFn: () => getScanApi().validateScan(paths),
+    staleTime: 0,
+    retry: 0,
+  })
+}
+
 /** Metadata-refresh progress, same contract via `metadataPollInterval`. */
 export function useMetadataProgressQuery() {
   return useQuery({

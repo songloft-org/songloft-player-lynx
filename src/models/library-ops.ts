@@ -89,6 +89,23 @@ export function parseEnabledFlag(data: unknown, fallback: boolean): boolean {
   return tolerantBoolean(fallback).parse(body.enabled)
 }
 
+export const excludedDirectorySchema = z.object({
+  path: z.string().catch(''),
+  rule_type: z.enum(['path', 'name']).catch('path'),
+  rule: z.string().catch(''),
+}).transform(d => ({ path: d.path, ruleType: d.rule_type, rule: d.rule }))
+
+export type ExcludedDirectory = z.output<typeof excludedDirectorySchema>
+
+// A validation response must be complete: a missing paths field is not proof
+// that every selected directory is excluded.
+export const scanValidationSchema = z.object({
+  paths: z.array(z.string()),
+  excluded_directories: z.array(excludedDirectorySchema),
+}).transform(v => ({ paths: v.paths, excludedDirectories: v.excluded_directories }))
+export type ScanValidation = z.output<typeof scanValidationSchema>
+export const parseScanValidation = (data: unknown): ScanValidation => scanValidationSchema.parse(data)
+
 export const scanProgressSchema = z
   .object({
     status: z.enum(SCAN_STATUSES).catch('idle'),
@@ -104,6 +121,7 @@ export const scanProgressSchema = z
     failed_files: z.coerce.number().catch(0),
     cue_split_sources: z.coerce.number().catch(0),
     local_song_count: z.coerce.number().catch(0),
+    excluded_directories: z.array(excludedDirectorySchema).catch([]),
   })
   .transform((s) => ({
     status: s.status,
@@ -117,6 +135,7 @@ export const scanProgressSchema = z
     failedFiles: s.failed_files,
     cueSplitSources: s.cue_split_sources,
     localSongCount: s.local_song_count,
+    excludedDirectories: s.excluded_directories,
     percent: percentOf(s.scanned_files, s.total_files),
     isScanning: ACTIVE_SCAN_STATUSES.includes(s.status),
     isCompleted: s.status === 'completed',

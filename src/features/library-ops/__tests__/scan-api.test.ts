@@ -33,6 +33,19 @@ function capture(status: number, body: string) {
  * empty array would scan nothing at all.
  */
 describe('buildScanBody', () => {
+  test('validation uses a separate read-only action and preserves the matching rule', async () => {
+    const req = capture(200, JSON.stringify({ paths: ['/m/allowed'], excluded_directories: [{ path: '/m/blocked/album', rule_type: 'path', rule: '/m/blocked' }] }))
+    const result = await new ScanApi(client(req.transport)).validateScan(['/m/blocked/album', '/m/allowed'])
+    expect(req.url()).toBe(`http://api.test${apiPrefix}/scan/validate`)
+    expect(req.method()).toBe('POST')
+    expect(JSON.parse(req.body()!)).toEqual({ paths: ['/m/blocked/album', '/m/allowed'] })
+    expect(result.excludedDirectories[0]).toEqual({ path: '/m/blocked/album', ruleType: 'path', rule: '/m/blocked' })
+  })
+
+  test('validation rejects malformed responses rather than inferring all excluded', async () => {
+    const req = capture(200, '{}')
+    await expect(new ScanApi(client(req.transport)).validateScan()).rejects.toThrow()
+  })
   test('omits paths entirely when none are selected', () => {
     expect('paths' in buildScanBody({ reimport: false })).toBe(false)
     expect(buildScanBody({ reimport: false })).toEqual({ reimport: false })

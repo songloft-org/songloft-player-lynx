@@ -1890,3 +1890,9 @@ Web 上传由隐藏 input 改为可见主线程选择面板，支持取消、失
 English: Web uploads use a visible main-thread picker panel with cancel, error/retry and upload timeout handling. Full-page checks exposed the shared installation call sending `plugin` instead of the server's required `file`, returning 400; this is also fixed. Both regressions fail on old code. Final source identity, build/test results, browser installation and Safari device boundaries: [#545](../en/project/issue-545.md) and `/tmp/songloft-545-verification.json`. No commit, push, release or Issue write; concurrent #540 changes remain intact.
 
 2026-11-15：新增 Lynx 插件 API 请求宿主支持及验证，见 [记录](lynx-plugin-api.md) / [English](../en/project/lynx-plugin-api.md)。
+
+## 2026-11-17 · #573 扫描排除诊断
+
+目录选择与启动前复用后端校验，全排除不启动，混合/终态说明目录与规则，设置解释扫描与自动歌单排除，无临时豁免。230 项相关、3854 项全量、类型、双构建及 embedded Web 通过；隔离缺陷 UI 两项回归失败。完整证据与平台边界见[记录](issue-573.md)。用户随后授权提交、推送、父指针同步与 Issue 回复，结果见证据目录 `delivery.json`；无正式发版，既有桌面工作保留。
+
+English: Backend-backed selection/pre-start validation refuses all-excluded roots and explains mixed/terminal exclusions. Settings distinguish scan and automatic-playlist exclusions, with no bypass. All 230 focused/3854 complete tests, types, dual builds and embedded Web pass; two isolated defective UI regressions fail. [Record](../en/project/issue-573.md). The user subsequently authorized commits, pushes, parent gitlinks and an Issue reply; results are in the evidence directory's `delivery.json`. No stable release; existing desktop work is preserved.

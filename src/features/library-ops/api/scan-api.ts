@@ -5,6 +5,8 @@ import {
   parseDirNames,
   parseMetadataProgress,
   parseScanProgress,
+  parseScanValidation,
+  type ScanValidation,
   type DirectoryList,
   type MetadataProgress,
   type ScanProgress,
@@ -57,6 +59,12 @@ export function buildDirectoriesQuery(path?: string): { path?: string } {
 
 export class ScanApi {
   constructor(private readonly client: HttpClient) {}
+
+  /** Checks only scan roots and exclusion rules; never walks the library. */
+  async validateScan(paths: readonly string[] = []): Promise<ScanValidation> {
+    const res = await this.client.post<unknown>(`${apiPrefix}/scan/validate`, { paths })
+    return parseScanValidation(res.data)
+  }
 
   /** `POST /scan` — fire-and-forget; progress is polled separately. */
   async startScan(params: StartScanParams = {}): Promise<void> {

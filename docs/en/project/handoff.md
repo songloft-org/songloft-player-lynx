@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-17 · #573 scan exclusion notices
+
+Selection and pre-start checks share backend exclusion matching. All-excluded roots do not start; mixed roots and results explain paths/rules. Settings distinguish scan versus automatic-playlist exclusions, without a temporary bypass. All 230 focused tests, 3854 complete tests, types, dual bundles and embedded Web pass; two isolated defective UI regressions fail as expected. [Record](issue-573.md). Browser and native boundaries are tracked separately; existing desktop work is preserved. The user subsequently authorized commits, pushes, parent gitlinks and an Issue reply; results are in the evidence directory's `delivery.json`. No stable release is created.
+
 ## 2026-11-17 · HarmonyOS miot blank page
 
 Harmony Lynx 4.0.1 lacks the native frame implementation; fetchers and bridge registration alone do not create a child view. A dedicated `songloft-plugin-frame` Behavior now supplies an independent LynxView with resources, bridge, prop updates and identity-safe cleanup/stale callback handling. Six ArkTS adapter checks, twelve focused component tests, 368 files/3848 shared tests, types, dual bundles and 95 release checks pass. Old-code checks fail with zero children and a missing Harmony element. All 34 clean HAP tasks and package content validation pass; device acceptance remains unverified. [Record](harmony-plugin-frame.md). Install a rebuilt native HAP; JS hot updates cannot repair older shells. The user authorized this batch's commit, push and parent gitlink update; actual commits and same-SHA CI are in `/tmp/songloft-harmony-miot/delivery.json`. No stable release; existing desktop work is preserved.

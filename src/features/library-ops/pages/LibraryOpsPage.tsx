@@ -11,6 +11,7 @@ import {
   useMetadataProgressQuery,
   useScanCompletionEffect,
   useScanProgressQuery,
+  useScanValidationQuery,
   useStartMetadataRefreshMutation,
   useStartScanMutation,
 } from '../data/index.js'
@@ -55,6 +56,8 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
   const [mode, setMode] = useState<ScanMode>('skip')
   const [selectedPaths, setSelectedPaths] = useState<string[]>([])
   const [startError, setStartError] = useState(false)
+  const [validating, setValidating] = useState(false)
+  const validationQuery = useScanValidationQuery(selectedPaths)
   /**
    * Shared write-failure notice. Scan-settings / exclude-dir / metadata writes
    * all report through here; the message is the same generic "save failed" the
@@ -145,7 +148,24 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
     if (metaProgress?.isDone && metaTerminalIsFresh) setMetaForced(false)
   }, [metaProgress?.isDone, metaTerminalIsFresh])
 
-  const onStartScan = () => {
+  const onStartScan = async () => {
+    if (validating || startScan.isPending) return
+    setValidating(true)
+    // Refresh immediately before starting: the exclude settings may have changed
+    // since the directory was selected. The POST /scan also enforces the rules.
+    const checked = await validationQuery.refetch()
+    setValidating(false)
+    if (checked.error || !checked.data) {
+      toast.error(t('libops.validationFailed'))
+      return
+    }
+    if (checked.data.paths.length === 0) {
+      toast.error(t('libops.allExcluded'))
+      return
+    }
+    if (checked.data.excludedDirectories.length > 0) {
+      toast.show(t('libops.excludedSummary', { count: checked.data.excludedDirectories.length }))
+    }
     setStartError(false)
     // A new run owns the area again; the previous summary is gone either way.
     setScanDismissed(false)
@@ -156,7 +176,9 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
           scanStartedAtRef.current = Date.now()
           setScanForced(true)
         },
-        onError: () => setStartError(true),
+        onError: (error) => {
+          toast.error(error instanceof Error ? error.message : t('libops.errorTitle'))
+        },
       },
     )
   }
@@ -230,7 +252,9 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
       <ScanSection
         progress={progress}
         startError={startError}
-        starting={startScan.isPending}
+        starting={startScan.isPending || validating}
+        validation={validationQuery.data}
+        validationFailed={validationQuery.isError}
         cancelling={cancelScan.isPending}
         mode={mode}
         onModeChange={setMode}
@@ -238,7 +262,7 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
         selectedPaths={selectedPaths}
         onTogglePath={(path) => setSelectedPaths((prev) => toggleSelected(prev, path))}
         onClearPaths={() => setSelectedPaths([])}
-        onStart={onStartScan}
+        onStart={() => { void onStartScan() }}
         onCancel={onCancelScan}
         onReset={onResetScan}
         tree={tree}

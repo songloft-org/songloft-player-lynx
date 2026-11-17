@@ -1,4 +1,4 @@
-export { libopsQueryKeys, useScanProgressQuery, useMetadataProgressQuery } from './scan-query.js'
+export { libopsQueryKeys, useScanProgressQuery, useScanValidationQuery, useMetadataProgressQuery } from './scan-query.js'
 export {
   invalidateAfterScan,
   useScanCompletionEffect,

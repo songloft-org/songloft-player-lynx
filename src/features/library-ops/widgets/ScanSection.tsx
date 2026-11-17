@@ -1,7 +1,7 @@
 import { useState } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 
-import type { ScanProgress } from '../../../models/library-ops.js'
+import type { ExcludedDirectory, ScanProgress, ScanValidation } from '../../../models/library-ops.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { SettingsSection } from '../../settings/widgets/SettingsSection.js'
 import { SettingsRow } from '../../settings/widgets/SettingsRow.js'
@@ -23,6 +23,8 @@ export interface ScanSectionProps {
   progress: ScanProgress | undefined
   startError: boolean
   starting: boolean
+  validation?: ScanValidation
+  validationFailed?: boolean
   cancelling: boolean
   mode: ScanMode
   onModeChange: (mode: ScanMode) => void
@@ -80,6 +82,8 @@ function IdleState({
   starting,
   tree,
   treeActions,
+  validation,
+  validationFailed,
 }: ScanSectionProps) {
   const { t } = useTranslation()
   const [showDirs, setShowDirs] = useState(false)
@@ -146,6 +150,10 @@ function IdleState({
           </view>
         )
         : null}
+
+      {validationFailed
+        ? <text className='libops__state-line' data-testid='scan-validation-error'>{t('libops.validationFailed')}</text>
+        : <ScanExclusions directories={validation?.excludedDirectories ?? []} />}
 
       <view className='libops__action-wrap'>
         <view
@@ -265,6 +273,8 @@ function TerminalState({
         )
         : null}
 
+      <ScanExclusions directories={progress?.excludedDirectories ?? []} />
+
       <view className='libops__action-wrap'>
         <view
           className='libops__action libops__action--ghost'
@@ -277,6 +287,22 @@ function TerminalState({
           </text>
         </view>
       </view>
+    </view>
+  )
+}
+
+function ScanExclusions({ directories }: { directories: readonly ExcludedDirectory[] }) {
+  const { t } = useTranslation()
+  if (directories.length === 0) return null
+  return (
+    <view className='libops__state' data-testid='scan-exclusions'>
+      <text className='libops__state-line'>{t('libops.excludedSummary', { count: directories.length })}</text>
+      {directories.map(dir => (
+        <text className='libops__state-line' key={dir.path}>
+          {t(dir.ruleType === 'name' ? 'libops.excludedByName' : 'libops.excludedByPath', { path: dir.path, rule: dir.rule })}
+        </text>
+      ))}
+      <text className='libops__state-line'>{t('libops.excludedHelp')}</text>
     </view>
   )
 }

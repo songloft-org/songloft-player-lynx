@@ -29,6 +29,9 @@ const h = vi.hoisted(() => ({
   metaData: undefined as unknown,
   tree: undefined as unknown,
   startScan: vi.fn(),
+  validation: { paths: ['/m'], excludedDirectories: [] as { path: string; ruleType: 'path' | 'name'; rule: string }[] },
+  validateScan: vi.fn(),
+  validationError: null as Error | null,
   cancelScan: vi.fn(),
   startMeta: vi.fn(),
   cancelMeta: vi.fn(),
@@ -86,6 +89,7 @@ const mutation = (fn: ReturnType<typeof vi.fn>) => ({ mutate: fn, isPending: fal
 
 vi.mock('../data/index.js', () => ({
   useScanProgressQuery: () => ({ data: h.scanData, refetch: h.refetch }),
+  useScanValidationQuery: () => ({ data: h.validation, refetch: h.validateScan, isError: !!h.validationError }),
   useMetadataProgressQuery: () => ({ data: h.metaData, refetch: h.refetchMeta }),
   useScanCompletionEffect: () => {},
   useStartScanMutation: () => mutation(h.startScan),
@@ -114,6 +118,9 @@ const { LibraryOpsPage } = await import('../pages/LibraryOpsPage.js')
 const { useToastStore, toast } = await import('../../../shared/ui/toast-store.js')
 
 beforeEach(() => {
+  h.validation = { paths: ['/m'], excludedDirectories: [] }
+  h.validationError = null
+  h.validateScan.mockImplementation(async () => ({ data: h.validation, error: h.validationError }))
   h.scanData = parseScanProgress({ status: 'idle' })
   h.metaData = parseMetadataProgress({ status: 'idle' })
   h.tree = withRootLoaded(
@@ -145,6 +152,41 @@ async function renderPage() {
 }
 
 /* ------------------------------------------------------------------ scan states */
+
+test('excluded selection shows the matching rule and cannot start a scan', async () => {
+  h.validation = { paths: [], excludedDirectories: [{ path: '/m/yt-dlp/album', ruleType: 'path', rule: '/m/yt-dlp' }] }
+  const { queryByTestId } = await renderPage()
+  expect(queryByTestId('scan-exclusions')?.textContent).toContain('/m/yt-dlp/album')
+  expect(queryByTestId('scan-exclusions')?.textContent).toContain('excluded by path: /m/yt-dlp')
+  await act(async () => { fireEvent.tap(queryByTestId('scan-start')!) })
+  expect(h.validateScan).toHaveBeenCalledOnce()
+  expect(h.startScan).not.toHaveBeenCalled()
+  expect(queryByTestId('scan-start')).toBeInTheDocument()
+  expect(useToastStore.getState().toast?.text).toContain('All scan directories are excluded')
+})
+
+test('mixed selection starts normally and explains which directories are skipped', async () => {
+  h.validation.excludedDirectories = [{ path: '/m/yt-dlp', ruleType: 'name', rule: 'yt-dlp' }]
+  const { queryByTestId } = await renderPage()
+  await act(async () => { fireEvent.tap(queryByTestId('scan-start')!) })
+  expect(h.startScan).toHaveBeenCalledOnce()
+  expect(queryByTestId('scan-exclusions')?.textContent).toContain('excluded by folder name: yt-dlp')
+})
+
+test('failed validation prevents starting with stale successful data', async () => {
+  h.validationError = new Error('network')
+  const { queryByTestId } = await renderPage()
+  await act(async () => { fireEvent.tap(queryByTestId('scan-start')!) })
+  expect(h.startScan).not.toHaveBeenCalled()
+  expect(queryByTestId('scan-validation-error')).toBeInTheDocument()
+})
+
+test('scan result reports excluded directories separately from skipped songs', async () => {
+  h.scanData = parseScanProgress({ status: 'completed', skipped_files: 3, excluded_directories: [{ path: '/m/cache', rule_type: 'name', rule: 'cache' }] })
+  const { queryByTestId } = await renderPage()
+  expect(queryByTestId('scan-exclusions')?.textContent).toContain('1 directories skipped')
+  expect(queryByTestId('scan-exclusions')?.textContent).toContain('/m/cache')
+})
 
 test('idle renders the mode picker and the start button', async () => {
   const { queryByTestId } = await renderPage()
@@ -267,13 +309,14 @@ test('starting a scan passes the selected mode', async () => {
  * matched and the scan area went blank. Here the failure must render the failed
  * state, not an empty section.
  */
-test('a failed start renders the failed state rather than a blank section', async () => {
+test('a rejected start keeps the directory controls and displays the server reason', async () => {
   h.startScan.mockImplementation((_params, opts) => opts?.onError?.(new Error('boom')))
   const { queryByTestId } = await renderPage()
   await act(async () => {
     fireEvent.tap(queryByTestId('scan-start')!)
   })
-  expect(queryByTestId('scan-phase-failed')).toBeInTheDocument()
+  expect(queryByTestId('scan-start')).toBeInTheDocument()
+  expect(useToastStore.getState().toast?.text).toBe('boom')
 })
 
 /* ------------------------------------------------------------- directory picker */
