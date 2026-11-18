@@ -2,7 +2,7 @@ import '../../../shims/router-env.js'
 
 import '@testing-library/jest-dom'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { act, render, screen } from '@lynx-js/react/testing-library'
+import { act, fireEvent, render, screen } from '@lynx-js/react/testing-library'
 
 import { ScrollingText } from '../ScrollingText.js'
 import { marqueeSchedule, MARQUEE_PAUSE_MS, MARQUEE_VELOCITY } from '../scrolling-text-schedule.js'
@@ -92,10 +92,10 @@ describe('ScrollingText', () => {
     expect(screen.getByText('完整的长歌名')).not.toHaveClass('scrolling-text__inner--static')
   })
 
-  test('关闭向主线程发送归零命令，再开启发送新的滚动计划', async () => {
+  test('only exposed titles measure and animate, including when a recycled row returns', async () => {
     const host = lynx as unknown as { createSelectorQuery: unknown }
     const saved = host.createSelectorQuery
-    host.createSelectorQuery = () => {
+    const createSelectorQuery = vi.fn(() => {
       let selector = ''
       const query = {
         select(value: string) { selector = value; return query },
@@ -106,15 +106,25 @@ describe('ScrollingText', () => {
         exec() {},
       }
       return query
-    }
+    })
+    host.createSelectorQuery = createSelectorQuery
     try {
       const storage = createMemoryStorage()
       await act(async () => { render(<ScrollingText text='已启动滚动的长歌名' />) })
-      expect(mainThreadCalls.at(-1)).toEqual([[0, 0, -200, -200, 0], expect.any(Array), expect.any(Number)])
+      const title = screen.getByText('已启动滚动的长歌名').parentElement!
+      const marquee = [[0, 0, -200, -200, 0], expect.any(Array), expect.any(Number)]
+      expect(createSelectorQuery).not.toHaveBeenCalled()
+      await act(async () => { fireEvent(title, new Event('bindEvent:uiappear')) })
+      expect(mainThreadCalls.at(-1)).toEqual(marquee)
       await act(async () => { await changeSongTitleScrolling(false, storage) })
       expect(mainThreadCalls.at(-1)).toEqual([])
       await act(async () => { await changeSongTitleScrolling(true, storage) })
-      expect(mainThreadCalls.at(-1)).toEqual([[0, 0, -200, -200, 0], expect.any(Array), expect.any(Number)])
+      expect(mainThreadCalls.at(-1)).toEqual(marquee)
+      await act(async () => { fireEvent(title, new Event('bindEvent:uidisappear')) })
+      expect(mainThreadCalls.at(-1)).toEqual([])
+      await act(async () => { fireEvent(title, new Event('bindEvent:uiappear')) })
+      expect(mainThreadCalls.at(-1)).toEqual(marquee)
+      expect(createSelectorQuery).toHaveBeenCalledTimes(3)
     } finally {
       host.createSelectorQuery = saved
     }

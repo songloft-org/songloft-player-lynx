@@ -25,48 +25,45 @@ let uidSeq = 0
  */
 export function ScrollingText({ text, textClassName, className }: ScrollingTextProps) {
   const innerRef = useMainThreadRef<MainThread.Element>(null)
+  const animationRef = useMainThreadRef<ReturnType<typeof animate> | null>(null)
   const [uid] = useState(() => ++uidSeq)
   const [reduceMotion, setReduceMotion] = useState(getReduceMotion)
+  const [visible, setVisible] = useState(false)
   const enabled = useSyncExternalStore(subscribeSongTitleScrolling, getSongTitleScrolling)
   const staticText = !enabled || reduceMotion
+  const shouldAnimate = visible && !staticText
   const outerId = `scrolling-text-outer-${uid}`
   const innerId = `scrolling-text-inner-${uid}`
 
   useEffect(() => subscribeReduceMotion(() => setReduceMotion(getReduceMotion())), [])
 
-  // Main-thread marquee entry points. Worklets must stay stateless — module-scope
-  // objects do not survive into the worklet realm — so cancellation leans on
-  // motion's own overwrite rule: a new animation on the same element replaces the
-  // running one. Restart = start a fresh loop; stop = overwrite with a zero-length
-  // settle at x 0; unmount needs nothing (the element takes its animation with it).
-  // Memoized once: runOnMainThread yields a fresh callable each call, so leaving
-  // these un-memoized would put new identities in the effect deps and re-run the
-  // marquee (resetting it to the start) on every parent re-render — e.g. each
-  // playback-progress tick. The worklets close over innerRef, which is stable.
+  // Motion wraps the element on each call, so stop the original animation
+  // through its own handle. Keep the worklets stable across parent renders.
   const { start: startMarquee, settle: settleMarquee } = useMemo(
     () => ({
       start: runOnMainThread((x: number[], times: number[], durationSec: number) => {
         'main thread'
         const el = innerRef.current
         if (!el || typeof animate !== 'function') return
-        animate(el, { x }, { duration: durationSec, times, repeat: Infinity, ease: 'linear' })
+        animationRef.current?.stop()
+        animationRef.current = animate(el, { x }, { duration: durationSec, times, repeat: Infinity, ease: 'linear' })
       }),
       settle: runOnMainThread(() => {
         'main thread'
-        const el = innerRef.current
-        if (!el || typeof animate !== 'function') return
-        animate(el, { x: 0 }, { duration: 0 })
+        animationRef.current?.stop()
+        animationRef.current = null
+        innerRef.current?.setStyleProperty('transform', 'translateX(0px)')
       }),
     }),
     [],
   )
 
   useEffect(() => {
-    if (staticText) {
-      settleMarquee()
-      return
-    }
+    // ReactLynx runs effects for offscreen list items too. Wait for the host's
+    // exposure event so recycled rows measure when their text is attached.
+    if (!shouldAnimate) return
     let cancelled = false
+    let running = false
 
     const overflow = (): Promise<number> =>
       new Promise((resolve) => {
@@ -112,17 +109,24 @@ export function ScrollingText({ text, textClassName, className }: ScrollingTextP
     void overflow().then((value) => {
       if (cancelled || value <= 0) return
       const schedule = marqueeSchedule(value)
+      running = true
       startMarquee(schedule.x, schedule.times, schedule.durationMs / 1000)
     })
 
     return () => {
       cancelled = true
-      settleMarquee()
+      if (running) settleMarquee()
     }
-  }, [text, staticText, outerId, innerId, startMarquee, settleMarquee])
+  }, [text, shouldAnimate, outerId, innerId, startMarquee, settleMarquee])
 
   return (
-    <view id={outerId} className={`scrolling-text${className ? ` ${className}` : ''}`}>
+    <view
+      id={outerId}
+      className={`scrolling-text${className ? ` ${className}` : ''}`}
+      enable-exposure-ui-clip={true}
+      binduiappear={() => setVisible(true)}
+      binduidisappear={() => setVisible(false)}
+    >
       <text
         id={innerId}
         main-thread:ref={innerRef}

@@ -61,8 +61,8 @@ export interface GithubProxyParams {
 export class JSPluginApi {
   constructor(private readonly client: HttpClient) {}
 
-  async getPlugins(): Promise<JSPluginListResponse> {
-    const res = await this.client.get<unknown>(`${apiPrefix}/jsplugins`)
+  async getPlugins(options?: Pick<RequestOptions, 'assertCurrent'>): Promise<JSPluginListResponse> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/jsplugins`, options)
     return parseJSPluginListResponse(res.data)
   }
 

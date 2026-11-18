@@ -215,6 +215,9 @@ class AppConfigState {
   /** Identity base URL (what the user configured / the entry origin). */
   baseUrl: string = DEFAULT_BASE_URL
 
+  /** Current transport address of the local Bundle backend. */
+  bundleBackendBaseUrl: string | null = null
+
   /** Path prefix for embedded sub-path deploys; empty for standalone. */
   basePath: string = ''
 
@@ -261,6 +264,7 @@ class AppConfigState {
   /** Reset to defaults (test hook). */
   reset(): void {
     this.baseUrl = DEFAULT_BASE_URL
+    this.bundleBackendBaseUrl = null
     this.basePath = ''
     this.deployMode = resolveDeployMode()
     this.insecureTls = false

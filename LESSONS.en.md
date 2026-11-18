@@ -362,3 +362,15 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 - Rule: retain completion independently of the dismissible picker delegate. Success, HTTP errors and transport errors must all reach JS.
 - Evidence / Done right: 317 native contract checks and type checking pass; the new structural check fails against isolated old source. ARC timing and device behavior remain unverified. See [this batch](docs/project/progress.md).
 - Seen 1× (2026-10-28). Status: source fixed; native build and device acceptance pending.
+
+### LIST-005 · Tie title marquees to row visibility
+
+- ReactLynx runs component effects for offscreen list items. Offscreen titles also requested measurements, and replacing the original animation with a zero-duration animation let the original keep writing styles.
+- Two touch gestures reached 482px in both versions of the 40-long-title Docker Chrome fixture. In the sample after scrolling, the number of titles writing transforms fell from 40 to 10. Measure and start on `uiappear`, then stop the original animation handle on `uidisappear`. The regression also covers re-entry and the title-scrolling preference.
+- Seen 1× (2026-11-18). Comparison uses `baef0f9` and this Lynx worktree. Evidence is in `/tmp/songloft-lynx-scroll-tabs.j14OKU/`.
+
+### NAV-001 · Start with the last confirmed tab layout
+
+- The capsule uses the local snapshot for the current server and account on its first frame. Revalidate both the tab configuration and enabled plugins in the background, then save the confirmed layout. Mobile Bundle reuses the snapshot for the same local library across listener port changes.
+- With both endpoints delayed in Docker Chrome, the baseline drew built-in tabs first and inserted the plugin later. The fixed version showed the saved plugin on the first frame, kept the layout on an identical response or a 503, and updated it once when the layout changed. The regression also covers mobile Bundle port changes and account isolation.
+- Seen 1× (2026-11-18). Comparison uses `baef0f9` and this Lynx worktree. Evidence is in `/tmp/songloft-lynx-scroll-tabs.j14OKU/`.

@@ -99,8 +99,8 @@ export class SettingsApi {
     return typeof res.data === 'string' ? res.data : ''
   }
 
-  async getTabConfig(): Promise<TabConfig> {
-    const res = await this.client.get<unknown>(`${apiPrefix}/settings/tab-config`)
+  async getTabConfig(options?: Pick<RequestOptions, 'assertCurrent'>): Promise<TabConfig> {
+    const res = await this.client.get<unknown>(`${apiPrefix}/settings/tab-config`, options)
     return parseTabConfig(res.data)
   }
 

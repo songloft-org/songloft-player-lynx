@@ -76,7 +76,7 @@ export const SongListRow = memo(function SongListRow({
   const { anchorId, measure } = useTapAnchor()
   const { isWide, isSongListWide } = useLibraryViewport()
   const { isFavorite, toggle } = useFavoriteToggle(song.id)
-  const currentSongId = usePlayerStore((s) => s.currentSong?.id)
+  const isCurrentSong = usePlayerStore((s) => s.currentSong?.id === song.id)
 
   // Both entry points (the `⋯` button and long-press) anchor on the `⋯` button.
   const openMenuAnchored = (target: Song) => measure((rect) => {
@@ -112,7 +112,7 @@ export const SongListRow = memo(function SongListRow({
       onLongPress={selectionMode ? undefined : openMenuAnchored}
       isFavorite={isFavorite}
       onToggleFavorite={selectionMode ? undefined : toggle}
-      isCurrentSong={currentSongId === song.id}
+      isCurrentSong={isCurrentSong}
       isSelected={isSelected}
       isWide={isSongListWide}
       trailing={wideActions}

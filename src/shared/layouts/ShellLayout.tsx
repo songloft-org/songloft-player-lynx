@@ -29,6 +29,7 @@ import { useBreakpoint } from '../responsive/useBreakpoint.js'
 import { BackdropBlur } from '../ui/BackdropBlur.js'
 import { useCapsuleMaterialStyle } from '../ui/capsule-material.js'
 import { Icon, activeAccentIconColor, ICON_COLORS } from '../ui/Icon.js'
+import { SplashScreen } from '../ui/SplashScreen.js'
 import { getBuiltInPalette, subscribeBuiltInPalette } from '../theme/built-in-palette-model.js'
 import { getActiveThemePack, subscribeActiveThemePack } from '../theme/theme-pack-model.js'
 import './ShellLayout.css'
@@ -80,12 +81,6 @@ export function ShellLayout() {
   // itself renders under (`showsMiniPlayer(pathname)` + a loaded song), kept
   // in sync here so the class and the widget never disagree.
   const hasSong = usePlayerStore((s) => s.currentSong != null)
-  // Until the config query lands, the built-ins render (Flutter's
-  // `TabConfig.defaultConfig()` fallback): all three, no plugins.
-  const destinations = buildNavDestinations(
-    shellTabs.data?.showLibrary ?? true,
-    shellTabs.data?.pluginTabs ?? [],
-  )
   const [showMoreTabs, setShowMoreTabs] = useState(false)
   useEffect(() => {
     const g = globalThis as Record<string, unknown>
@@ -95,6 +90,13 @@ export function ShellLayout() {
     g.__E2E_SHELL__ = obj
     return () => { delete obj.setShowMoreTabs }
   }, [])
+  // Hold the launch frame until local storage has supplied the previous tabs.
+  if (shellTabs.isRestoring) return <SplashScreen />
+
+  const destinations = buildNavDestinations(
+    shellTabs.data?.showLibrary ?? true,
+    shellTabs.data?.pluginTabs ?? [],
+  )
   // The `shell--with-mini` class: while the floating mini-player is up, the
   // pages' `--nav-inset` grows to clear it (see ShellLayout.css) — without
   // this, list tails scroll to a stop half-hidden behind the player.

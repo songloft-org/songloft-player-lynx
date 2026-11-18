@@ -1,10 +1,13 @@
 import type { ReactNode } from '@lynx-js/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, renderHook } from '@lynx-js/react/testing-library'
+import { act, renderHook, waitFor } from '@lynx-js/react/testing-library'
 import { expect, test, vi } from 'vitest'
 
 import type { JSPlugin } from '../../../models/jsplugin.js'
-import { filterActivePluginTabs, type PluginTabEntry } from '../data/tab-config.js'
+import { appConfig } from '../../../core/config/app-config.js'
+import { getSongloftStorage, setSongloftStorage, createMemoryStorage } from '../../../core/storage/index.js'
+import { useAppSessionStore } from '../../../store/app-session.js'
+import { filterActivePluginTabs, useShellNavTabs, type PluginTabEntry, type TabConfig } from '../data/tab-config.js'
 
 /**
  * A plugin tab renders on the nav bar only while its plugin is installed AND
@@ -76,6 +79,8 @@ test('plugins without an entryPath never match any tab', () => {
  * module mocked; the invalidation is asserted on the client itself.
  */
 const h = vi.hoisted(() => ({
+  getTabConfig: vi.fn<() => Promise<TabConfig>>(),
+  getPlugins: vi.fn(async () => ({ plugins: [makePlugin({ icon: 'icon.svg' })] })),
   enable: vi.fn(async () => makePlugin()),
   disable: vi.fn(async () => makePlugin({ status: 'inactive', isActive: false })),
   del: vi.fn(async () => {}),
@@ -84,11 +89,16 @@ const h = vi.hoisted(() => ({
 
 vi.mock('../api/index.js', () => ({
   getJSPluginApi: () => ({
+    getPlugins: h.getPlugins,
     enablePlugin: h.enable,
     disablePlugin: h.disable,
     deletePlugin: h.del,
     installFromRegistry: h.install,
   }),
+}))
+
+vi.mock('../../settings/api/index.js', () => ({
+  getSettingsApi: () => ({ getTabConfig: h.getTabConfig }),
 }))
 
 const { useTogglePluginMutation, useDeletePluginMutation, useInstallFromRegistryMutation } =
@@ -140,3 +150,78 @@ test('installing from the registry invalidates the shell-nav tab query', async (
 
   expect(spy).toHaveBeenCalledWith({ queryKey: ['settings', 'tab-config'] })
 })
+
+test.each(['remote', 'mobile bundle'])(
+  '%s restores the last tabs and applies successful changes only for the current account',
+  async (mode) => {
+    const storage = getSongloftStorage()
+    const baseUrl = appConfig.baseUrl
+    const bundleBackendBaseUrl = appConfig.bundleBackendBaseUrl
+    const username = useAppSessionStore.getState().username
+    const snapshot = createMemoryStorage()
+    const clients: QueryClient[] = []
+    const boot = () => {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      clients.push(client)
+      return { client, ...renderHook(() => useShellNavTabs(), { wrapper: withClient(client) }) }
+    }
+    const first: TabConfig = { showLibrary: false, pluginTabs: [makeTab('lx')] }
+    const changed: TabConfig = { showLibrary: true, pluginTabs: [] }
+    try {
+      setSongloftStorage(snapshot)
+      appConfig.baseUrl = mode === 'remote' ? 'https://nav.example.test/subpath' : 'http://127.0.0.1:59301'
+      appConfig.bundleBackendBaseUrl = mode === 'remote' ? null : appConfig.baseUrl
+      useAppSessionStore.getState().setUsername('first-user')
+      h.getTabConfig.mockResolvedValueOnce(first)
+      const original = boot()
+      await waitFor(() => expect(original.result.current.data?.pluginTabs[0]?.icon).toBe('icon.svg'))
+      original.unmount()
+
+      // The same in-process library can listen on a different port after restart.
+      if (mode === 'mobile bundle') {
+        appConfig.baseUrl = 'http://127.0.0.1:59302'
+        appConfig.bundleBackendBaseUrl = appConfig.baseUrl
+      }
+
+      let finish!: (value: TabConfig) => void
+      h.getTabConfig.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+      const restarted = boot()
+      await waitFor(() => {
+        expect(restarted.result.current.data).toEqual({ ...first, pluginTabs: [{ ...makeTab('lx'), icon: 'icon.svg' }] })
+        expect(restarted.result.current.isRestoring).toBe(false)
+        expect(finish).toBeTypeOf('function')
+      })
+      const cached = restarted.result.current.data
+      await act(async () => { finish(first) })
+      await waitFor(() => expect(restarted.client.isFetching()).toBe(0))
+      expect(restarted.result.current.data).toBe(cached)
+
+      h.getTabConfig.mockRejectedValueOnce(new Error('offline'))
+      await act(async () => { await restarted.client.invalidateQueries({ queryKey: ['settings', 'tab-config'] }) })
+      expect(restarted.result.current.data).toBe(cached)
+
+      h.getTabConfig.mockResolvedValueOnce(changed)
+      await act(async () => { await restarted.client.invalidateQueries({ queryKey: ['settings', 'tab-config'] }) })
+      await waitFor(() => expect(restarted.result.current.data).toEqual(changed))
+      restarted.unmount()
+
+      h.getTabConfig.mockRejectedValue(new Error('offline'))
+      const offline = boot()
+      await waitFor(() => expect(offline.result.current.data).toEqual(changed))
+      offline.unmount()
+
+      useAppSessionStore.getState().setUsername('other-user')
+      const another = boot()
+      await waitFor(() => expect(h.getTabConfig).toHaveBeenCalledTimes(6))
+      expect(another.result.current.data).toBeUndefined()
+      another.unmount()
+    } finally {
+      h.getTabConfig.mockReset()
+      for (const client of clients) client.clear()
+      appConfig.baseUrl = baseUrl
+      appConfig.bundleBackendBaseUrl = bundleBackendBaseUrl
+      useAppSessionStore.getState().setUsername(username)
+      setSongloftStorage(storage)
+    }
+  },
+)
