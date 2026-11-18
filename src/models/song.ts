@@ -2,6 +2,9 @@ import { z } from 'zod'
 
 import { makeParsers, nowIso } from './_shared.js'
 
+const radioModeSchema = z.enum(['', 'hls', 'audio_only'])
+export type RadioMode = z.output<typeof radioModeSchema>
+
 /**
  * Song model.
  *
@@ -37,6 +40,7 @@ export const songSchema = z
     source_cover_url: z.string().nullish(),
     is_live: z.boolean().default(false),
     is_video: z.boolean().default(false),
+    radio_mode: radioModeSchema.optional().catch(undefined),
     added_at: z.string().nullish(),
     updated_at: z.string().nullish(),
   })
@@ -64,6 +68,7 @@ export const songSchema = z
     sourceCoverUrl: s.source_cover_url ?? undefined,
     isLive: s.is_live,
     isVideo: s.is_video,
+    ...(s.radio_mode ? { radioMode: s.radio_mode } : {}),
     addedAt: s.added_at ?? nowIso(),
     updatedAt: s.updated_at ?? nowIso(),
   }))
@@ -95,6 +100,7 @@ export interface SongJson {
   source_cover_url: string | null
   is_live: boolean
   is_video: boolean
+  radio_mode?: RadioMode
   added_at: string
   updated_at: string
 }
@@ -124,6 +130,7 @@ export function songToJson(song: Song): SongJson {
     source_cover_url: song.sourceCoverUrl ?? null,
     is_live: song.isLive,
     is_video: song.isVideo,
+    ...(song.radioMode ? { radio_mode: song.radioMode } : {}),
     added_at: song.addedAt,
     updated_at: song.updatedAt,
   }

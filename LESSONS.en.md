@@ -54,6 +54,12 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 ## Entries
 
+### LIBRARY-ADD-001: Refresh library queries after creating a station
+
+- Scope: [songloft-org/songloft#578](https://github.com/songloft-org/songloft/issues/578), the add-radio form and shared library queries, baseline `ed953c20dcee85a19e9810e682a69b951eda89c5`.
+- Evidence: In Docker Chrome, saving an HLS station returned 201 and the library still displayed its cached empty list after navigating back. Invalidating `['library']` after a successful create made the station immediately visible and editable. After switching to audio-only, the player clock advanced past one second and the server returned `audio/mpeg`. See `/tmp/songloft-578.jCp7cj/lynx-ui-result-v6.json` and `/tmp/songloft-578.jCp7cj/lynx-ui-result-final-v2.json`.
+- Seen 1× (2026-11-18).
+
 ### MARKDOWN-001: GFM does not automatically expand GitHub emoji shortcodes
 
 - Scope: shared Markdown for Android About/Updates, client Releases and backend changelogs; baseline `1de4735` plus this worktree.

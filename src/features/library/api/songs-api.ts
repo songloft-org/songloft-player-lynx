@@ -17,6 +17,7 @@ import {
   parseSongListResponse,
   type PlayHistoryResponse,
   type Song,
+  type RadioMode,
   type SongFacetResponse,
   type SongListResponse,
 } from '../../../models/song.js'
@@ -243,6 +244,7 @@ export class SongsApi {
       coverUrl?: string
       duration?: number
       isVideo?: boolean
+      radioMode?: RadioMode
     },
   ): Promise<void> {
     const body: Record<string, unknown> = {}
@@ -253,6 +255,7 @@ export class SongsApi {
     if (data.coverUrl !== undefined) body.cover_url = data.coverUrl
     if (data.duration !== undefined) body.duration = data.duration
     if (data.isVideo !== undefined) body.is_video = data.isVideo
+    if (data.radioMode !== undefined) body.radio_mode = data.radioMode
     await this.client.put(`${apiPrefix}/songs/${id}`, body)
   }
 
@@ -349,7 +352,7 @@ export class SongsApi {
     await this.client.post(`${apiPrefix}/songs/remote`, songs)
   }
 
-  async addRadioStations(stations: { title: string; url: string; cover_url?: string; is_video?: boolean }[]): Promise<void> {
+  async addRadioStations(stations: { title: string; url: string; cover_url?: string; is_video?: boolean; radio_mode?: RadioMode }[]): Promise<void> {
     await this.client.post(`${apiPrefix}/songs/radio`, stations)
   }
 

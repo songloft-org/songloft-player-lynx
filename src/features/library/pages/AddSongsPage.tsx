@@ -1,4 +1,5 @@
 import { useState } from '@lynx-js/react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@lynx-js/lynx-ui-input'
 
@@ -6,6 +7,8 @@ import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { getSongsApi } from '../api/index.js'
+import type { RadioMode } from '../../../models/song.js'
+import { RadioModeControl } from '../widgets/RadioModeControl.js'
 import './AddSongsPage.css'
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 
@@ -21,6 +24,7 @@ type Mode = 'remote' | 'radio'
  */
 export function AddSongsPage() {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
 
   const [mode, setMode] = useState<Mode>('remote')
   const [url, setUrl] = useState('')
@@ -28,7 +32,9 @@ export function AddSongsPage() {
   const [artist, setArtist] = useState('')
   const [album, setAlbum] = useState('')
   const [isVideo, setIsVideo] = useState(false)
+  const [radioMode, setRadioMode] = useState<RadioMode>('')
   const [saving, setSaving] = useState(false)
+  const audioOnly = mode === 'radio' && radioMode === 'audio_only'
 
   const onAdd = () => {
     const trimUrl = url.trim()
@@ -46,17 +52,20 @@ export function AddSongsPage() {
       : getSongsApi().addRadioStations([{
           title: title.trim() || trimUrl,
           url: trimUrl,
-          is_video: isVideo || undefined,
+          is_video: audioOnly ? undefined : isVideo || undefined,
+          radio_mode: radioMode || undefined,
         }])
 
     void promise
       .then(() => {
+        void queryClient.invalidateQueries({ queryKey: ['library'] })
         toast.success(t('addSongs.success'))
         setUrl('')
         setTitle('')
         setArtist('')
         setAlbum('')
         setIsVideo(false)
+        setRadioMode('')
       })
       .catch(e => toast.error(String(e instanceof Error ? e.message : e)))
       .finally(() => setSaving(false))
@@ -101,13 +110,19 @@ export function AddSongsPage() {
           </view>
         ) : null}
 
-        <view className='add-songs__switch-row'>
-          <view className='add-songs__switch-body'>
-            <text className='add-songs__switch-title'>{t('addSongs.videoToggleTitle')}</text>
-            <text className='add-songs__switch-subtitle'>{t('addSongs.videoToggleSubtitle')}</text>
+        {mode === 'radio' ? (
+          <RadioModeControl value={radioMode} onChange={setRadioMode} labelClass='add-songs__label' />
+        ) : null}
+
+        {!audioOnly ? (
+          <view className='add-songs__switch-row'>
+            <view className='add-songs__switch-body'>
+              <text className='add-songs__switch-title'>{t('addSongs.videoToggleTitle')}</text>
+              <text className='add-songs__switch-subtitle'>{t('addSongs.videoToggleSubtitle')}</text>
+            </view>
+            <AppSwitch checked={isVideo} onChange={setIsVideo} />
           </view>
-          <AppSwitch checked={isVideo} onChange={setIsVideo} />
-        </view>
+        ) : null}
 
         <view className='add-songs__btn' bindtap={onAdd}>
           <text className='add-songs__btn-text'>{saving ? t('common.loading') : t('addSongs.add')}</text>

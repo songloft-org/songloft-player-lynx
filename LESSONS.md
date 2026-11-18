@@ -54,6 +54,12 @@
 
 ## 条目
 
+### LIBRARY-ADD-001：添加电台成功后刷新曲库查询
+
+- 范围：[songloft-org/songloft#578](https://github.com/songloft-org/songloft/issues/578)，添加电台页面和曲库的共享查询缓存，基线 `ed953c20dcee85a19e9810e682a69b951eda89c5`。
+- 证据：Docker Chrome 保存 HLS 电台收到 201，返回曲库后仍显示已缓存的空列表。添加成功后使 `['library']` 查询失效，浏览器返回曲库即可看到新电台，能立即打开编辑页并切换至仅音频。实测播放器时钟推进到 1 秒，服务端返回 `audio/mpeg`。对照和结果在 `/tmp/songloft-578.jCp7cj/lynx-ui-result-v6.json` 和 `/tmp/songloft-578.jCp7cj/lynx-ui-result-final-v2.json`。
+- Seen 1× (2026-11-18)。
+
 ### MARKDOWN-001：GFM 不会自动展开 GitHub emoji 短码
 
 - 范围：Android 关于／升级页、客户端 Release 与后端 changelog 共用的 Markdown；基线 `1de4735` 加本批工作树。

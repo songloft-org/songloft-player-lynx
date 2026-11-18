@@ -22,11 +22,12 @@ import {
 } from '../../../shared/ui/dialog-viewport.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { toast } from '../../../shared/ui/toast-store.js'
-import type { Song } from '../../../models/song.js'
+import type { RadioMode, Song } from '../../../models/song.js'
 import { ARTIST_ROLE_ARTIST, type ArtistInput } from '../../../models/artist.js'
 import { getSongsApi } from '../api/index.js'
 import { ModalMaterial } from '../../../shared/ui/ModalMaterial.js'
 import { ModalScrim } from '../../../shared/ui/ModalScrim.js'
+import { RadioModeControl } from './RadioModeControl.js'
 import './SongEditDialog.css'
 
 /** URL-with-scheme check — the Flutter form's `Uri.tryParse(value).hasScheme`. */
@@ -96,6 +97,7 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
   // as in Flutter). Network/radio: manually declare "this link carries video".
   const [renameFile, setRenameFile] = useState(true)
   const [isVideo, setIsVideo] = useState(false)
+  const [radioMode, setRadioMode] = useState<RadioMode>('')
   const [titleError, setTitleError] = useState('')
   const [urlError, setUrlError] = useState('')
 
@@ -127,6 +129,7 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
     setLyricUrl(song.lyricRemoteUrl ?? '')
     setRenameFile(true)
     setIsVideo(song.isVideo)
+    setRadioMode(song.radioMode ?? '')
     setTitleError('')
     setUrlError('')
   }, [show, song])
@@ -231,7 +234,8 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
         duration: isRadio || parsedDuration == null || !Number.isFinite(parsedDuration)
           ? undefined
           : parsedDuration,
-        isVideo,
+        isVideo: !isRadio || radioMode !== 'audio_only' ? isVideo : false,
+        radioMode: isRadio && radioMode !== (target.radioMode ?? '') ? radioMode : undefined,
       })
       .then(() => api.setSongArtists(target.id, artistInputs).then(() => {}))
       .then(() => {
@@ -514,7 +518,11 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
                     )
                     : null}
 
-                  {!isLocal
+                  {isRadio ? (
+                    <RadioModeControl value={radioMode} onChange={setRadioMode} labelClass='song-edit__label' />
+                  ) : null}
+
+                  {!isLocal && (!isRadio || radioMode !== 'audio_only')
                     ? (
                       <view className='song-edit__switch-row' data-testid='song-edit-video-row'>
                         <view className='song-edit__switch-body'>
