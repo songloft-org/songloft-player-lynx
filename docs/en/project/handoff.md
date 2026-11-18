@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-18 · #54 Word-timed lyrics
+
+Playback handles inline word timings and LX offsets. Chrome plays an actual track with sidecar lyrics and advancing word highlights. All 3,858 shared tests pass. Native phone apps await verification. Source identity and logs are recorded in `/tmp/songloft-54-karaoke-ZsCdTI/verification.json`. [#54](https://github.com/songloft-org/songloft-player/issues/54)
+
 ## 2026-11-17 · miot home re-entry and tab cover flicker
 
 Native frames entered from home/manager now belong to the retained Shell as well. Routed pages keep pushed topbars, tabs stay chromeless, and both share one instance. The plugin's forced cover refresh on every resumed event is fixed in the miot repository. All 112 related checks, types and dual bundles pass. Full client tests: 3857 pass, one existing desktop translation key failure. Plugin 1499/124 tests, packaging and real-browser healthy-cover retention/failure recovery at two widths pass; [record](miot-reentry.md). No Harmony device/crash stack: crash cause and device acceptance remain open. No commit, push or release; existing desktop changes are preserved.

@@ -1,5 +1,12 @@
 # Lynx Client Development Lessons
 
+### LYRIC-003 Verify word timing in the actual lyric fields and playback entry point
+
+- Validation covers the playback lyric store and word-timed LRC parsing at baseline `f624965610b21fab03d8aec33b08d34cb90a1cba`. [songloft-org/songloft-player#54](https://github.com/songloft-org/songloft-player/issues/54)
+- The existing angle-tag parser tests passed, but the store called that parser only for `lxlyric`. Four new regressions failed on the old implementation, covering inline single brackets, LX relative offsets, double brackets, and field selection.
+- Standard `.lrc` sidecars travel in `lyric`. Prefer `lxlyric` when it has usable word times. Exercise representative files through the store, cache, and player, including consecutive leading tags that repeat a standard LRC line.
+- Seen 1× (2026-11-18).
+
 ### PLUGIN-004: entry presentation must not determine instance retention
 
 - Scope: native Lynx plugins entered from the home grid, navigation tabs or manager; baseline `b952231c253aad1938d3020ee74157b100a11291`.

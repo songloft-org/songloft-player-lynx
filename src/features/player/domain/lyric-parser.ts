@@ -89,7 +89,10 @@ export function findCurrentLine(lines: readonly LyricLine[], positionMs: number)
   return result
 }
 
-const WORD_TAG = /<(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?>/g
+const LEADING_TIMES = /^\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\](?:[ \t]*\[\d{1,2}:\d{2}(?:\.\d{1,3})?\])*/
+const RELATIVE_WORD = /<(\d+),(\d+)>([^<]*)/g
+const DOUBLE_BRACKET_WORD = /\[\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]\]/g
+const ANGLE_WORD = /<(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?>/g
 
 export function parseEnhancedLrc(content: string): LyricLine[] {
   const out: LyricLine[] = []
@@ -97,78 +100,76 @@ export function parseEnhancedLrc(content: string): LyricLine[] {
     const line = raw.trim()
     if (line.length === 0) continue
 
-    TIME_TAG.lastIndex = 0
-    const lineMatches = [...line.matchAll(TIME_TAG)]
-    if (lineMatches.length === 0) continue
-
-    const lastLineTag = lineMatches[lineMatches.length - 1]
-    const lineTimeMs = toMs(lineMatches[0][1], lineMatches[0][2], lineMatches[0][3])
-    const afterLineTags = line.slice((lastLineTag.index ?? 0) + lastLineTag[0].length)
-
-    WORD_TAG.lastIndex = 0
-    const wordMatches = [...afterLineTags.matchAll(WORD_TAG)]
-
-    if (wordMatches.length === 0) {
-      const text = afterLineTags.trim()
-      for (const m of lineMatches) {
-        out.push({ timeMs: toMs(m[1], m[2], m[3]), text })
-      }
-      continue
-    }
-
-    const words: LyricWord[] = []
-    let fullText = ''
-
-    for (let i = 0; i < wordMatches.length; i++) {
-      const wm = wordMatches[i]
-      const startMs = toMs(wm[1], wm[2], wm[3])
-      const textStart = (wm.index ?? 0) + wm[0].length
-      let textEnd: number
-      if (i + 1 < wordMatches.length) {
-        textEnd = wordMatches[i + 1].index ?? textStart
-      } else {
-        textEnd = afterLineTags.length
-      }
-      const wordText = afterLineTags.slice(textStart, textEnd)
-
-      let endMs: number
-      if (i + 1 < wordMatches.length) {
-        endMs = toMs(
-          wordMatches[i + 1][1],
-          wordMatches[i + 1][2],
-          wordMatches[i + 1][3],
-        )
-      } else {
-        endMs = startMs + 1_000
-      }
-
-      if (wordText.length > 0) {
-        words.push({ text: wordText, startMs, endMs })
-        fullText += wordText
-      }
-    }
-
-    const textBeforeFirstWord = afterLineTags.slice(0, wordMatches[0].index ?? 0)
-    if (textBeforeFirstWord.trim().length > 0) {
-      words.unshift({
-        text: textBeforeFirstWord,
-        startMs: lineTimeMs,
-        endMs: words.length > 0 ? words[0].startMs : lineTimeMs + 500,
+    const lineTag = LEADING_TIMES.exec(line)
+    const lineTimeMs = lineTag ? toMs(lineTag[1], lineTag[2], lineTag[3]) : undefined
+    const body = line.slice(lineTag?.[0].length ?? 0)
+    const words = parseWords(line, body, lineTimeMs)
+    if (words.length > 0) {
+      out.push({
+        timeMs: lineTimeMs ?? words[0].startMs,
+        text: words.map((word) => word.text).join('').trim(),
+        words,
       })
-      fullText = textBeforeFirstWord + fullText
+    } else {
+      out.push(...parseLrc(line))
     }
-
-    if (words.length > 0 && words.length > 1) {
-      words[words.length - 1].endMs = Math.max(
-        words[words.length - 1].startMs + 100,
-        words[words.length - 1].endMs,
-      )
-    }
-
-    out.push({ timeMs: lineTimeMs, text: fullText.trim(), words })
   }
   out.sort((a, b) => a.timeMs - b.timeMs)
   return out
+}
+
+function parseWords(line: string, body: string, lineTimeMs?: number): LyricWord[] {
+  const relative = [...body.matchAll(RELATIVE_WORD)]
+  if (relative.length > 0) {
+    const words: LyricWord[] = []
+    for (const [, rawOffset, rawDuration, text] of relative) {
+      const offset = Number(rawOffset)
+      const duration = Number(rawDuration)
+      if (!text || !Number.isSafeInteger(offset) || !Number.isSafeInteger(duration)) continue
+      const startMs = (lineTimeMs ?? 0) + offset
+      words.push({ text, startMs, endMs: startMs + duration })
+    }
+    return words
+  }
+  const doubleBrackets = [...body.matchAll(DOUBLE_BRACKET_WORD)]
+  if (doubleBrackets.length > 0) return parseAbsoluteWords(body, doubleBrackets, lineTimeMs)
+  const angles = [...body.matchAll(ANGLE_WORD)]
+  if (angles.length > 0) return parseAbsoluteWords(body, angles, lineTimeMs)
+
+  if (lineTimeMs !== undefined) {
+    // Adjacent leading tags repeat a standard LRC line. Text between tags signals word timing.
+    const tags = [...line.matchAll(TIME_TAG)]
+    for (let i = 1; i < tags.length; i++) {
+      const previous = tags[i - 1]
+      if (line.slice(previous.index + previous[0].length, tags[i].index).trim()) {
+        return parseAbsoluteWords(line, tags)
+      }
+    }
+  }
+  return []
+}
+
+function parseAbsoluteWords(
+  body: string,
+  tags: RegExpExecArray[],
+  leadingTimeMs?: number,
+): LyricWord[] {
+  const words: LyricWord[] = []
+  let startMs = leadingTimeMs
+  let textStart = 0
+  for (const tag of tags) {
+    const timeMs = toMs(tag[1], tag[2], tag[3])
+    const text = body.slice(textStart, tag.index)
+    if (startMs !== undefined && text && (textStart > 0 || text.trim())) {
+      words.push({ text, startMs, endMs: Math.max(startMs, timeMs) })
+    }
+    startMs = timeMs
+    textStart = tag.index + tag[0].length
+  }
+  if (startMs !== undefined && textStart < body.length) {
+    words.push({ text: body.slice(textStart), startMs, endMs: startMs + 1_000 })
+  }
+  return words
 }
 
 export function parseTranslation(content: string): LyricLine[] {

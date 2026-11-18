@@ -172,6 +172,32 @@ describe('loadForSong', () => {
     expect(s.isLoading).toBe(false)
   })
 
+  test('restores inline word timing when lxlyric has no word timing', async () => {
+    await useLyricStore.getState().loadForSong(song(), async () => ({
+      lyric: '[00:00.000]今[00:00.250]天[00:00.750]\n[00:01.000]明天',
+      lxlyric: '[00:00.000]今天',
+      tlyric: '[00:00.000]Today',
+    }))
+    useLyricStore.getState().clear()
+    const fetcher = vi.fn(async () => ({}))
+    await useLyricStore.getState().loadForSong(song(), fetcher)
+    useLyricStore.getState().syncPosition(500)
+    const s = useLyricStore.getState()
+    expect(fetcher).not.toHaveBeenCalled()
+    expect(s.lyrics.map((line) => line.text)).toEqual(['今天', '明天'])
+    expect(s.lyrics[s.currentIndex].words?.[1]).toEqual({ text: '天', startMs: 250, endMs: 750 })
+    expect(s.translationMap.get(0)).toBe('Today')
+  })
+
+  test('plays a word-timed lxlyric payload without a main lyric', async () => {
+    await useLyricStore.getState().loadForSong(song(), async () => ({
+      lxlyric: '[00:01.000]<0,300>今<300,450>天',
+    }))
+    expect(useLyricStore.getState().lyrics[0].words?.[1]).toEqual({
+      text: '天', startMs: 1300, endMs: 1750,
+    })
+  })
+
   test('serves a cached payload without calling the fetcher', async () => {
     const fetcher = vi.fn(async () => PAYLOAD)
     await useLyricStore.getState().loadForSong(song(), fetcher)

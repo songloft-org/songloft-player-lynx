@@ -9,6 +9,37 @@ import {
 } from '../domain/lyric-parser.js'
 
 describe('parseEnhancedLrc', () => {
+  test('distinguishes inline square timestamps from repeated LRC lines', () => {
+    expect(parseEnhancedLrc(
+      '[00:01.000]今[00:01.250]天 [00:01.700]好[00:02.100]\n'
+      + '[00:03.000][00:06.000]副歌 [合唱]',
+    )).toEqual([
+      { timeMs: 1000, text: '今天 好', words: [
+        { text: '今', startMs: 1000, endMs: 1250 },
+        { text: '天 ', startMs: 1250, endMs: 1700 },
+        { text: '好', startMs: 1700, endMs: 2100 },
+      ] },
+      { timeMs: 3000, text: '副歌 [合唱]' },
+      { timeMs: 6000, text: '副歌 [合唱]' },
+    ])
+  })
+
+  test('parses absolute double brackets and relative offsets', () => {
+    expect(parseEnhancedLrc(
+      '[[00:01.000]]今[[00:01.250]]天[[00:01.750]]\n'
+      + '[00:03.000]<0,300>明<350,500>天',
+    )).toEqual([
+      { timeMs: 1000, text: '今天', words: [
+        { text: '今', startMs: 1000, endMs: 1250 },
+        { text: '天', startMs: 1250, endMs: 1750 },
+      ] },
+      { timeMs: 3000, text: '明天', words: [
+        { text: '明', startMs: 3000, endMs: 3300 },
+        { text: '天', startMs: 3350, endMs: 3850 },
+      ] },
+    ])
+  })
+
   test('parses word-level timestamps within a line', () => {
     const input = '[00:01.00]<00:01.00>Hello <00:01.50>World'
     const lines = parseEnhancedLrc(input)
@@ -19,6 +50,16 @@ describe('parseEnhancedLrc', () => {
     expect(lines[0].words![0]).toEqual({ text: 'Hello ', startMs: 1_000, endMs: 1_500 })
     expect(lines[0].words![1].text).toBe('World')
     expect(lines[0].words![1].startMs).toBe(1_500)
+  })
+
+  test('preserves text before the first angle tag and uses an explicit end', () => {
+    const input = '[00:01.000][00:01.125]Hello <00:01.500>world<00:02.000>'
+    expect(parseEnhancedLrc(input)).toEqual([{
+      timeMs: 1000, text: 'Hello world', words: [
+        { text: 'Hello ', startMs: 1000, endMs: 1500 },
+        { text: 'world', startMs: 1500, endMs: 2000 },
+      ],
+    }])
   })
 
   test('falls back to plain line if no word tags', () => {

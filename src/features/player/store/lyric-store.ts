@@ -11,7 +11,6 @@ import {
   findCurrentLine,
   mergeTranslations,
   parseEnhancedLrc,
-  parseLrc,
   parsePlain,
   parseTranslation,
   type LyricLine,
@@ -69,17 +68,15 @@ const EMPTY = {
 }
 
 function parseLyricText(text: string, enhanced?: string): { lyrics: LyricLine[]; synced: boolean } {
-  const trimmed = (enhanced ?? text).trim()
-  if (trimmed.length === 0) return { lyrics: [], synced: true }
-
-  if (enhanced && enhanced.trim().length > 0) {
-    const lyrics = parseEnhancedLrc(enhanced)
-    if (lyrics.length > 0) return { lyrics, synced: true }
+  const enhancedLines = parseEnhancedLrc(enhanced ?? '')
+  if (enhancedLines.some((line) => line.words?.length)) {
+    return { lyrics: enhancedLines, synced: true }
   }
-
-  const lyrics = parseLrc(text)
-  if (lyrics.length > 0) return { lyrics, synced: true }
-  return { lyrics: parsePlain(text), synced: false }
+  const hasMain = text.trim().length > 0
+  const main = hasMain ? text : enhanced ?? ''
+  const lyrics = hasMain ? parseEnhancedLrc(main) : enhancedLines
+  if (lyrics.length > 0 || !main.trim()) return { lyrics, synced: true }
+  return { lyrics: parsePlain(main), synced: false }
 }
 
 export const useLyricStore = create<LyricState>((set, get) => {

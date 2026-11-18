@@ -1,5 +1,12 @@
 # Lynx 客户端开发经验
 
+### LYRIC-003 在实际歌词字段与播放入口验证逐字解析
+
+- 播放歌词 Store 和逐字 LRC 解析使用基线 `f624965610b21fab03d8aec33b08d34cb90a1cba` 验证。[songloft-org/songloft-player#54](https://github.com/songloft-org/songloft-player/issues/54)
+- 原解析器的尖括号单测可通过，但 Store 只在 `lxlyric` 分支调用它。旧实现的四项新增回归分别暴露行内单方括号、洛雪相对偏移、双括号及歌词字段选择问题。
+- 普通 `.lrc` 旁挂歌词经 `lyric` 字段传输，专用 `lxlyric` 有可用逐字时间时优先。使用真实格式夹具走 Store、缓存和播放器，保留普通 LRC 连续行首标签的重复语义。
+- Seen 1× (2026-11-18)。
+
 ### PLUGIN-004：入口展示方式不能决定插件实例是否保留
 
 - 范围：首页网格、导航 Tab 与管理入口的原生 Lynx 插件；基线 `b952231c253aad1938d3020ee74157b100a11291`。

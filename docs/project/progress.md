@@ -1,5 +1,11 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-18 · #54 逐字歌词 / Word-timed lyrics
+
+播放入口支持 `lyric` 和 `lxlyric` 中的逐字时间，覆盖行内单方括号、双括号、尖括号及洛雪相对偏移。真实旁挂歌词经后端正常读取，420 px 播放器里的高亮随音频进度推进，普通 LRC 重复副歌仍在两个时间点显示。四项新增对照在旧实现下失败。源代码标识、测试和浏览器证据见 `/tmp/songloft-54-karaoke-ZsCdTI/verification.json`。手机原生验证为 Not run。
+
+English. Playback accepts word timing in `lyric` and `lxlyric`, including inline single brackets, double brackets, angle brackets, and LX relative offsets. The 420 px player reads an actual sidecar through the backend and advances word colors with playback. A standard LRC chorus still displays at both timestamps. Four new checks fail on the old implementation. See `/tmp/songloft-54-karaoke-ZsCdTI/verification.json` for the source identity, test and browser evidence. Native phone verification was not run.
+
 ## 2026-11-17 · miot 重入与封面恢复 / miot re-entry and cover recovery
 
 修复首页入口未保留原生 frame，首页/Tab 共用 Shell 实例并保留各自标题栏/embed。20 次首页往返只挂载一次，112 项相关、类型、双构建通过；完整 3858 项中 3857 通过、1 项既有桌面缺少 `clientUpdate.download`。miot 独立修复每次恢复无条件清空/重建健康图片，124 项前端、1499 项后端、双包/QuickJS/ZIP 及浏览器 390/1100 宽度的十次恢复断言通过。旧客户端的两项、旧封面的五项新回归失败符合预期，见[记录](miot-reentry.md)。无鸿蒙崩溃堆栈或设备证据，闪退根因未确认；未提交/推送/发布，既有桌面工作保留。
