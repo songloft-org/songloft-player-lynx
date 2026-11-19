@@ -60,7 +60,8 @@ if (
   )
 )
   throw new Error('Invalid SDK archive paths')
-const result = spawnSync('tar', [...tarPrefix, '-xf', path, '-C', directory], {
+const result = spawnSync('tar', [...tarPrefix, '-xf', path], {
+  cwd: directory,
   stdio: 'inherit',
 })
 if (result.status !== 0) throw new Error('SDK extraction failed')
