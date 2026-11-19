@@ -42,17 +42,19 @@ await mkdir(directory, { recursive: true })
 const path = join(directory, 'sdk.tar.gz')
 await writeFile(path, archive)
 const list = spawnSync('tar', ['-tf', path], { encoding: 'utf8' })
+const archivePaths =
+  process.platform === 'win32'
+    ? list.stdout
+        .split(/\r?\n/)
+        .map((name) => name.replaceAll('\\', '/'))
+    : list.stdout.split(/\r?\n/)
 if (
   list.status !== 0 ||
-  list.stdout
-    .split(/\r?\n/)
-    .some(
-      (name) =>
-        name &&
-        (/^(?:\/|[a-z]:)/i.test(name) ||
-          name.includes('\\') ||
-          name.split('/').includes('..')),
-    )
+  archivePaths.some(
+    (name) =>
+      name &&
+      (/^(?:\/|[a-z]:)/i.test(name) || name.split('/').includes('..')),
+  )
 )
   throw new Error('Invalid SDK archive paths')
 const result = spawnSync('tar', ['-xf', path, '-C', directory], {
