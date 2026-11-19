@@ -23,8 +23,8 @@ export async function buildCefHelper(root, target) {
   const build = join(root, '.build', `${target}-cef-helper`)
   const windows = target === 'win32-x64'
   const expected = cef.minimalSdkSha256[platform]
-  const run = (command, args) => {
-    const result = spawnSync(command, args, { cwd: root, stdio: 'inherit' })
+  const run = (command, args, cwd = root) => {
+    const result = spawnSync(command, args, { cwd, stdio: 'inherit' })
     if (result.error) throw result.error
     if (result.status !== 0)
       throw new Error(`${command} failed to build the CEF helper`)
@@ -72,7 +72,15 @@ export async function buildCefHelper(root, target) {
       throw new Error('CEF SDK digest mismatch')
     const extraction = await mkdtemp(join(directory, 'extract-'))
     try {
-      run('tar', ['-xf', archive, '-C', extraction])
+      run(
+        'tar',
+        [
+          ...(windows ? ['--force-local'] : []),
+          '-xf',
+          archive,
+        ],
+        extraction,
+      )
       await rename(join(extraction, name), sdk)
     } finally {
       await rm(extraction, { recursive: true, force: true })
