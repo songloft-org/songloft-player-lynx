@@ -109,6 +109,15 @@ describe('buildFacetsQuery (pure)', () => {
       order: 'desc',
     })
   })
+
+  test('passes the virtual music source to facet queries', () => {
+    expect(buildFacetsQuery('artist', { type: 'music' })).toEqual({
+      field: 'artist',
+      type: 'music',
+      limit: 20,
+      offset: 0,
+    })
+  })
 })
 
 describe('SongsApi endpoints', () => {

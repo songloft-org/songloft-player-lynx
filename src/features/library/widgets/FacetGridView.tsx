@@ -45,7 +45,7 @@ export function FacetGridView({ field, viewMode = 'grid' }: FacetGridViewProps) 
   const query = useFacetsInfiniteQuery(field, keyword)
 
   const onPlayAll = async (facet: SongFacet) => {
-    const filters: Record<string, string> = { [field]: facet.value }
+    const filters: Record<string, string> = { type: 'music', [field]: facet.value }
     try {
       const started = await playAllWithBackgroundFill(
         (offset, limit) => getSongsApi().getSongs(filters, { limit, offset }),

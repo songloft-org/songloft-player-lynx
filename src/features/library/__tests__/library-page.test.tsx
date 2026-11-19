@@ -208,9 +208,8 @@ test('all 18 views visible → 18 pills in 3 groups (2 dividers), defaulting to 
 
   expect(queryAllByTestId(/^library-view-pill-/)).toHaveLength(18)
   expect(queryAllByTestId('library-view-divider')).toHaveLength(2)
-  // Default selection is the first visible view (`all`) → flat songs query
-  // driven WITHOUT a `type` filter.
-  expect(songsHook).toHaveBeenCalledWith(expect.not.objectContaining({ type: expect.anything() }))
+  // Default selection is the first visible view (`all`) → ordinary music.
+  expect(songsHook).toHaveBeenCalledWith(expect.objectContaining({ type: 'music' }))
 })
 
 test('hiding 3 views removes exactly their pills', async () => {

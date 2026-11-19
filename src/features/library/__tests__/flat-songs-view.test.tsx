@@ -229,7 +229,7 @@ test('caching a select-all result resolves metadata for offscreen IDs instead of
   await act(async () => { fireEvent.tap(getByTestId('library-select-all')) })
   await act(async () => { fireEvent.tap(getByTestId('library-select-cache')) })
   expect(cache.beginSongs).not.toHaveBeenCalled()
-  expect(cache.beginSelection).toHaveBeenCalledExactlyOnceWith({ ids: new Set([1, 2]), filters: { sort: 'added_at', order: 'desc' } })
+  expect(cache.beginSelection).toHaveBeenCalledExactlyOnceWith({ ids: new Set([1, 2]), filters: { type: 'music', sort: 'added_at', order: 'desc' } })
 })
 
 test('an earlier delete completion does not close a newer deselected state', async () => {
@@ -382,9 +382,9 @@ test('renders the search input and the toolbar (play all / sort / add / select)'
   expect(queryByText('Recent')).toBeInTheDocument()
 })
 
-test('defaults to added_at/desc with no type for the all view', async () => {
+test('defaults to added_at/desc with the music type for the all view', async () => {
   await renderView()
-  expect(songsHook).toHaveBeenCalledWith({ sort: 'added_at', order: 'desc' })
+  expect(songsHook).toHaveBeenCalledWith({ sort: 'added_at', order: 'desc', type: 'music' })
 })
 
 test('passes the source type into the filters', async () => {
@@ -394,7 +394,7 @@ test('passes the source type into the filters', async () => {
 
 test('a lifted sort id drives the filters (title → asc)', async () => {
   await renderView(undefined, 'title', () => {}, 'asc')
-  expect(songsHook).toHaveBeenCalledWith({ sort: 'title', order: 'asc' })
+  expect(songsHook).toHaveBeenCalledWith({ sort: 'title', order: 'asc', type: 'music' })
 })
 
 test('opening the sort sheet lists all 7 options and picking one reports upward', async () => {

@@ -63,7 +63,7 @@ export function AddSongsToPlaylistSheet({
    */
   const filters = useMemo<SongsFilters>(() => ({
     keyword: keyword || undefined,
-    type: playlistType === 'radio' ? 'radio' : undefined,
+    type: playlistType === 'radio' ? 'radio' : 'music',
     excludePlaylistLabels: 'none',
   }), [keyword, playlistType])
 

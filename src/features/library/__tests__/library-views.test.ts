@@ -156,8 +156,8 @@ describe('setGroupOrder', () => {
 })
 
 describe('content dispatch', () => {
-  test('flatViewType: `all` sends no type', () => {
-    expect(flatViewType('all')).toBeUndefined()
+  test('flatViewType: `all` selects ordinary music', () => {
+    expect(flatViewType('all')).toBe('music')
     expect(flatViewType('local')).toBe('local')
     expect(flatViewType('remote')).toBe('remote')
     expect(flatViewType('radio')).toBe('radio')

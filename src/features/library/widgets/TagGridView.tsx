@@ -42,7 +42,7 @@ export function TagGridView({ viewMode = 'grid' }: TagGridViewProps) {
   const onPlayAll = async (tag: SongTag) => {
     try {
       const started = await playAllWithBackgroundFill(
-        (offset, limit) => getSongsApi().getSongs({ tagId: tag.id }, { limit, offset }),
+        (offset, limit) => getSongsApi().getSongs({ type: 'music', tagId: tag.id }, { limit, offset }),
         { type: 'tag' as const, key: String(tag.id) },
       )
       if (!started) toast.show(t('playlist.emptyPlaylist'))

@@ -49,8 +49,8 @@ const SelectableSongRow = memo(function SelectableSongRow({ song, index, selectM
 })
 
 export interface FlatSongsViewProps {
-  /** Song source filter; `undefined` for the `all` view (no `type` param). */
-  type?: 'local' | 'remote' | 'radio'
+  /** Song source filter; `music` is the all-music view without radio/audiobook entries. */
+  type?: 'music' | 'local' | 'remote' | 'radio'
   /** Sort choice, lifted to the page so it persists + survives view switches. */
   sortId: LibrarySortId
   /** Current sort direction. */
@@ -69,7 +69,7 @@ export interface FlatSongsViewProps {
  * this view only reports changes upward.
  */
 export function FlatSongsView({
-  type, sortId, sortOrder, onSortChange, isWide, showHidden = false,
+  type = 'music', sortId, sortOrder, onSortChange, isWide, showHidden = false,
 }: FlatSongsViewProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()

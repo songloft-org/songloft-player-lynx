@@ -54,7 +54,7 @@ export function useTagSongsInfiniteQuery(tagId: number, enabled = true) {
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
       return getSongsApi().getSongs(
-        { tagId },
+        { type: 'music', tagId },
         { limit: defaultPageSize, offset: pageParam },
       )
     },

@@ -54,6 +54,7 @@ export function useFacetsInfiniteQuery(field: string, keyword = '') {
     queryFn: ({ pageParam }) =>
       getSongsApi().getFacets(field, {
         keyword: keyword || undefined,
+        type: 'music',
         limit: defaultPageSize,
         offset: pageParam,
       }),

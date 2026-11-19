@@ -52,7 +52,7 @@ export function TagSongsPage() {
         loadedCount: songs.length,
         total,
         fetch: (offset, limit) =>
-          getSongsApi().getSongs({ tagId }, { limit, offset }).then((res) => res.songs),
+          getSongsApi().getSongs({ type: 'music', tagId }, { limit, offset }).then((res) => res.songs),
       })
     }
   }
@@ -60,7 +60,7 @@ export function TagSongsPage() {
   const playAll = async () => {
     try {
       const started = await playAllWithBackgroundFill(
-        (offset, limit) => getSongsApi().getSongs({ tagId }, { limit, offset }),
+        (offset, limit) => getSongsApi().getSongs({ type: 'music', tagId }, { limit, offset }),
         playbackCtx,
       )
       if (!started) toast.show(t('playlist.emptyPlaylist'))

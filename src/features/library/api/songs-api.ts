@@ -45,7 +45,7 @@ import {
 
 /** Shared filter set for the songs list + song-ids endpoints. */
 export interface SongsFilters {
-  /** Song source type: `local` / `remote` / `radio`. */
+  /** Song source type: `music` (local + remote, excluding audiobook playlists), `local` / `remote` / `radio`. */
   type?: string
   keyword?: string
   /** Filter by `file_path` prefix (e.g. `music/Pop`). */
@@ -76,6 +76,7 @@ export interface PageParams {
 }
 
 export interface FacetParams extends PageParams {
+  type?: string
   keyword?: string
   sort?: string
   order?: string
@@ -155,6 +156,7 @@ export function buildFacetsQuery(
     limit: params.limit ?? defaultPageSize,
     offset: params.offset ?? 0,
   }
+  putStr(query, 'type', params.type)
   putStr(query, 'keyword', params.keyword)
   putStr(query, 'sort', params.sort)
   putStr(query, 'order', params.order)
