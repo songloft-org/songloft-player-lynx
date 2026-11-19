@@ -5,6 +5,8 @@
   "type": "module",
   "packageManager": "pnpm@11.15.1",
   "scripts": {
+    "desktop:build": "node desktop/scripts/build.mjs",
+    "desktop:test": "node --test desktop/tests/*.node-test.mjs",
     "postinstall": "node scripts/patch-web-core-client.mjs",
     "build": "rspeedy build",
     "dev": "rspeedy dev",

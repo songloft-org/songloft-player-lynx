@@ -2,6 +2,7 @@ import '../../../shims/router-env.js'
 import '@testing-library/jest-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
+import { desktopConfig } from '../../../desktop/client.js'
 import { SettingsApi } from '../api/settings-api.js'
 
 const { navigateSpy, getVersionSpy, openURLSpy } = vi.hoisted(() => ({
@@ -15,6 +16,10 @@ vi.mock('react-i18next', async () =>
 )
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigateSpy }))
 vi.mock('../../../native/native-platform.js', () => ({ openURL: openURLSpy }))
+vi.mock('../../../desktop/client.js', async (original) => ({
+  ...(await original<typeof import('../../../desktop/client.js')>()),
+  desktopConfig: vi.fn(() => null),
+}))
 
 /**
  * Per-endpoint stubs so a test can make `/upgrade/progress` fail while
@@ -82,6 +87,28 @@ test('shows the client version and the backend version once it resolves', async 
   expect(queryByTestId('settings-version')).toBeInTheDocument()
   expect(queryByText(clientVersion)).toBeInTheDocument()
   expect(queryByText('2.9.1')).toBeInTheDocument()
+})
+
+test('shows the installed desktop version and provenance supplied by the host', async () => {
+  const build = {
+    version: '2.13.15',
+    clientSha: 'baef0f9bb30bc67527da3ce08c4ba6e3ec98d2b8',
+    builtAt: '2026-11-19T00:00:00.000Z',
+  }
+  vi.mocked(desktopConfig).mockReturnValue({
+    id: 'desktop-fixture',
+    token: 'test',
+    os: 'win32',
+    capabilities: {},
+    build,
+  })
+  try {
+    const { getByTestId } = await renderPage()
+    expect(getByTestId('settings-version')).toHaveTextContent(build.version)
+    expect(getByTestId('settings-version')).toHaveTextContent(`${build.clientSha} · ${build.builtAt}`)
+  } finally {
+    vi.mocked(desktopConfig).mockReset()
+  }
 })
 
 test('the licenses row routes when rendered as its own page', async () => {

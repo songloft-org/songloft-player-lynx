@@ -101,6 +101,7 @@ const buildMetadata = process.env.SONGLOFT_BUILD_METADATA
     )
   : createBuildMetadata({ packageVersion })
 const testBridgeEnabled = process.env.SONGLOFT_TEST_BRIDGE === 'true'
+const desktopProbe = process.env.SONGLOFT_DESKTOP_PROBE === 'true'
 writeBundleHost(fileURLToPath(new URL('.', import.meta.url)), buildMetadata)
 
 /**
@@ -142,6 +143,7 @@ class EnableCSSInlineVariablesPlugin {
 
 export default defineConfig({
   source: {
+    ...(desktopProbe ? { entry: { main: './src/desktop/probe.tsx' } } : {}),
     define: {
       __SONGLOFT_BUILD__: JSON.stringify(buildMetadata),
       __SONGLOFT_TEST_BRIDGE__: JSON.stringify(testBridgeEnabled),
@@ -211,7 +213,9 @@ export default defineConfig({
   // now catches a regression here, and a build must list BOTH bundles.
   environments: {
     // Native (Android / iOS): dist/main.lynx.bundle
-    lynx: {},
+    lynx: desktopProbe
+      ? { output: { distPath: { root: 'dist/desktop-probe' } } }
+      : {},
     // Web: a main-thread JS bundle for @lynx-js/web-core → dist/web/main.web.bundle
     web: {
       output: {

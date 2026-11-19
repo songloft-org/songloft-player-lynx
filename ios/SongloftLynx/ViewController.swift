@@ -290,6 +290,9 @@ class ViewController: UIViewController {
     let config = LynxConfig(provider: provider)
     config.register(SongloftAudioModule.self)
     config.register(SongloftStorageModule.self)
+#if HAS_SONGLOFT_BACKEND
+    config.register(SongloftBundleModule.self)
+#endif
     config.register(SongloftPlatformModule.self)
     config.register(SongloftDlnaModule.self)
     #if DEBUG

@@ -8,6 +8,7 @@
  * / deterministic set — the real per-device capability set is a later concern).
  */
 export type AudioPlatform = 'web' | 'ios' | 'android' | 'harmony' | 'native'
+import { desktopConfig } from '../../desktop/client.js'
 
 const WEB_FORMATS = new Set(['mp3', 'flac', 'ogg', 'm4a', 'aac', 'wav', 'opus'])
 const IOS_FORMATS = new Set(['mp3', 'flac', 'm4a', 'aac', 'wav', 'alac', 'aiff'])
@@ -51,6 +52,9 @@ export function normalizeFormat(fmt: string): string | null {
       return 'aiff'
     case 'mka':
       return 'mka'
+    case 'dsf':
+    case 'dff':
+      return fmt
     case 'mpg':
     case 'flv':
     case 'wmv':
@@ -124,6 +128,8 @@ export function getTranscodeFormat(
   if (!songFormat) return null
   const fmt = normalizeFormat(songFormat.toLowerCase())
   if (fmt == null) return null
+  const desktop = desktopConfig()
+  if (desktop && platform === 'native') return desktop.audioFormats?.includes(fmt) ? null : 'mp3'
   if (fmt === 'mka' || VIDEO_CONTAINERS.has(fmt)) {
     // Web stays exactly as it was: `<audio>` is the consumer there, and this
     // function is the only thing standing between it and a container it cannot

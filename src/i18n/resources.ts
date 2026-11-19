@@ -6,6 +6,35 @@ export const DEFAULT_LANGUAGE: SupportedLanguage = 'zh'
 export type TranslationTree = typeof en
 
 export const en = {
+  desktopLocal: {
+    title: 'Local music',
+    local: 'Use local music',
+    remote: 'Connect to a server',
+    starting: 'Starting local music…',
+    musicDirectory: 'Music folder',
+    retryLocal: 'Retry local music',
+    chooseMusicDirectory: 'Choose another music folder',
+    musicDirectoryUnavailable: 'The music folder is unavailable. Reconnect it and retry, or choose another folder.',
+    lan: 'LAN address',
+    username: 'Administrator',
+    showPassword: 'Show administrator password',
+    hidePassword: 'Hide administrator password',
+    copyPassword: 'Copy administrator password',
+    failed: 'Could not switch modes. Check the local backend and try again.',
+    copyFailed: 'Could not copy the value.',
+    keychainInteractionRequired:
+      'macOS could not access the login Keychain. Unlock it or allow Songloft to access credentials, then retry.',
+    keychainSigningRequired:
+      'This development build is not signed with an application identifier required for macOS Keychain access.',
+  },
+  desktopUpdate: {
+    unavailable: 'Desktop updates are unavailable in this development build.',
+    version: 'Desktop application version',
+    restartInstall: 'Restart and install',
+    download: 'Download application update',
+    restartHint:
+      'Stops playback and local tasks, backs up the library, and installs the complete application.',
+  },
   playlistQueueLoadFailed: 'Queue loading is incomplete. Loaded tracks are kept; tap Continue to retry.',
   playlistAudiobook: 'Audiobook',
   playlistContinue: 'Continue playing',
@@ -1302,6 +1331,33 @@ export const en = {
 }
 
 export const zh: TranslationTree = {
+  desktopLocal: {
+    title: '本地音乐',
+    local: '使用本地音乐',
+    remote: '连接服务器',
+    starting: '正在启动本地音乐…',
+    musicDirectory: '音乐目录',
+    retryLocal: '重试本地音乐',
+    chooseMusicDirectory: '选择其他音乐目录',
+    musicDirectoryUnavailable: '音乐目录暂时不可用。重新连接后重试，或选择其他目录。',
+    lan: '局域网地址',
+    username: '管理员账号',
+    showPassword: '显示管理员密码',
+    hidePassword: '隐藏管理员密码',
+    copyPassword: '复制管理员密码',
+    failed: '切换模式失败，请检查本地后端后重试。',
+    copyFailed: '复制失败。',
+    keychainInteractionRequired:
+      'macOS 无法访问“登录”钥匙串。请解锁钥匙串或允许 Songloft 访问凭据，然后重试。',
+    keychainSigningRequired: '此开发包没有 macOS 钥匙串所需的应用标识签名。',
+  },
+  desktopUpdate: {
+    unavailable: '此开发包尚未配置桌面更新。',
+    version: '桌面应用版本',
+    restartInstall: '重启安装',
+    download: '下载应用更新',
+    restartHint: '停止播放及本地任务，备份曲库后安装完整应用。',
+  },
   playlistQueueLoadFailed: '播放队列加载未完成，已保留已加载的歌曲；请点继续播放重试。',
   playlistAudiobook: '有声书',
   playlistContinue: '继续播放',

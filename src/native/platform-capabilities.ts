@@ -16,6 +16,7 @@
 import { readNativeModules } from './native-modules.js'
 import { isWebPlatform } from './web-platform.js'
 import { getPlatformTarget } from './platform-target.js'
+import { desktopConfig } from '../desktop/client.js'
 
 export interface PlatformCapabilities {
   /** HarmonyOS API 13 host has no implemented equalizer DSP. */
@@ -114,22 +115,35 @@ function hasNativeMethod(moduleName: string, methodName: string): boolean {
 export function getPlatformCapabilities(): PlatformCapabilities {
   const isWeb = isWebPlatform()
   const hasPlatform = hasNativeModule('SongloftPlatform')
+  const desktop = desktopConfig()
 
   return {
-    equalizer: getPlatformTarget() !== 'harmony',
+    equalizer: desktop
+      ? desktop.capabilities.equalizer === true
+      : getPlatformTarget() !== 'harmony',
     floatingLyric: hasNativeModule('SongloftFloatingLyric'),
     liveActivity: hasNativeModule('SongloftLiveActivity'),
     dlna: hasNativeModule('SongloftDlna'),
-    nativeFilePicker: hasPlatform,
-    bundleMode: hasPlatform,
-    dataTransfer: isWeb
-      ? hasNativeMethod('SongloftPlatform', 'pickTextFile')
-        && hasNativeMethod('SongloftPlatform', 'saveTextFile')
-        && hasNativeMethod('SongloftPlatform', 'cancelTextFile')
-      : hasNativeMethod('SongloftPlatform', 'openURL')
-        && hasNativeMethod('SongloftPlatform', 'pickAndUploadFile'),
-    systemTray: !isWeb && hasPlatform,
-    video: hasNativeModule('SongloftVideo'),
+    nativeFilePicker: desktop
+      ? desktop.capabilities.filePicker === true
+      : hasPlatform,
+    bundleMode: desktop
+      ? desktop.capabilities.bundle === true
+      : hasNativeMethod('SongloftBundle', 'start'),
+    dataTransfer: desktop
+      ? desktop.capabilities.filePicker === true
+      : isWeb
+        ? hasNativeMethod('SongloftPlatform', 'pickTextFile') &&
+          hasNativeMethod('SongloftPlatform', 'saveTextFile') &&
+          hasNativeMethod('SongloftPlatform', 'cancelTextFile')
+        : hasNativeMethod('SongloftPlatform', 'openURL') &&
+          hasNativeMethod('SongloftPlatform', 'pickAndUploadFile'),
+    systemTray: desktop
+      ? desktop.capabilities.tray === true
+      : hasNativeMethod('SongloftPlatform', 'setTrayEnabled'),
+    video: desktop
+      ? desktop.capabilities.video === true
+      : hasNativeModule('SongloftVideo'),
     // Method-level check, not module-level: `shareFile` postdates the module
     // itself, so an older shell may register `SongloftPlatform` without it. Not
     // gated on `isWeb` — Web implements `shareFile` as a browser download.
@@ -138,14 +152,19 @@ export function getPlatformCapabilities(): PlatformCapabilities {
     // `shareLogArchive` would otherwise report `false` here and get pushed to
     // the degraded "open the backend log URL" path — which carries no client
     // logs — despite having the better implementation of exactly this feature.
-    fileExport: hasNativeMethod('SongloftPlatform', 'shareFile')
-      || hasNativeMethod('SongloftPlatform', 'shareLogArchive'),
+    fileExport: desktop
+      ? desktop.capabilities.fileExport === true
+      : hasNativeMethod('SongloftPlatform', 'shareFile') ||
+        hasNativeMethod('SongloftPlatform', 'shareLogArchive'),
     // Additive on top: `fileExport` decides whether the export row is offered at
     // all, this only decides who does the zipping.
     fastLogExport: hasNativeMethod('SongloftPlatform', 'shareLogArchive'),
     // Method-level for the reason in the interface note: `getCacheInfo` stands in
     // for the whole reworked cache contract.
-    songCache: hasNativeMethod('SongloftSongCache', 'getCacheInfo'),
-    backgroundKeepAlive: hasNativeMethod('SongloftAudio', 'openManufacturerWhitelist'),
+    songCache: desktop ? desktop.capabilities.songCache === true : hasNativeMethod('SongloftSongCache', 'getCacheInfo'),
+    backgroundKeepAlive: hasNativeMethod(
+      'SongloftAudio',
+      'openManufacturerWhitelist',
+    ),
   }
 }

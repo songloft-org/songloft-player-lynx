@@ -8,8 +8,8 @@
 
 | 文件                                  | 用途                                     |
 | ------------------------------------- | ---------------------------------------- |
-| `songloft-lynx-android.apk`           | Android，release 签名                    |
-| `songloft-lynx-ios-nosign.ipa`        | iOS，未签名，需自行重签                  |
+| `songloft-lynx-android.apk`           | Android，release 签名，内嵌 Go 后端       |
+| `songloft-lynx-ios-nosign.ipa`        | iOS，未签名，需自行重签，内嵌 Go 后端     |
 | `songloft-lynx-harmony.hap`           | HarmonyOS，签名 HAP                      |
 | `songloft-lynx-web-standalone.tar.gz` | 独立静态站，用户填写 API 地址            |
 | `songloft-lynx-web-embedded.tar.gz`   | 同源服务器部署的静态资源                 |
@@ -21,7 +21,7 @@
 
 ## Android
 
-最低 Android 5.0（API 21）。允许安装来自所选浏览器/文件管理器的应用，打开 APK 安装。也可运行：
+含 Bundle 后端的 APK 最低需要 Android 6.0（API 23）。允许安装来自所选浏览器/文件管理器的应用，打开 APK 安装。也可运行：
 
 ```bash
 adb install -r songloft-lynx-android.apk
@@ -53,10 +53,14 @@ embedded 包隐藏 API 地址输入，使用同源后端。它是静态资源包
 
 embedded 同样需要以上响应头，不能仅替换 Go 内嵌资源就假设部署完成。具体部署方式见[Web 部署](web-deployment.md)。
 
-## 连接服务器
+## 本地模式与远程模式
 
-所有平台目前都需要独立运行的 [Songloft 后端](https://github.com/songloft-org/songloft)。本客户端尚无 Bundle 本地模式。
+Android 和 iOS 安装包都包含由本仓库 workflow 从 `mobile-backend.lock.json` 固定的主仓库 SHA 编译的 Go 后端。同一安装包可在本地模式和远程服务器间切换，入口位于登录页和设置页；首次启动没有额外的模式选择弹窗。
 
-填写完整服务器 URL、用户名和密码。后端默认端口为 `58091`；新安装后端的初始账号为 `admin/admin`。手机上的 `localhost` 指手机本身，连接开发机需用其可达地址；Android 开发调试可用 `adb reverse tcp:58091 tcp:58091`。
+- **Android**：首次启用本地模式时通过系统文件夹选择器选音乐目录并授予读取权限。后端启动后自动选择端口，客户端完成健康检查并使用本地生成的管理员凭据登录。
+- **iOS**：首次启用本地模式时使用应用 Documents 目录，不显示外部目录选择器；可通过系统“文件”应用把音乐放入该目录。
+- **HarmonyOS 与 Web**：安装包不含本地后端，需连接远程服务器。
 
-关于页的版本包含客户端构建信息和服务器版本。「后端更新」升级服务器；客户端更新目前通过重新下载安装包完成。
+远程模式填写完整服务器 URL、用户名和密码。后端默认端口为 `58091`；新安装后端的初始账号为 `admin/admin`。手机上的 `localhost` 指手机本身，连接开发机需用其可达地址；Android 开发调试可用 `adb reverse tcp:58091 tcp:58091`。
+
+切换到远程模式会停止本地后端但保留本地曲库数据。关于页的版本包含客户端构建信息和服务器版本。「后端更新」升级远程服务器；客户端更新目前通过重新下载安装包完成。

@@ -21,6 +21,8 @@ import { VideoSubtitleOverlay } from '../widgets/VideoSubtitleOverlay.js'
 import { changeVideoSubtitles, loadVideoSubtitles, videoSubtitles } from '../data/video-prefs.js'
 import { getWebVideoFullscreen, hasWebVideoFullscreen, setWebVideoFullscreen, subscribeWebVideoFullscreen } from '../../../native/web-video-fullscreen.js'
 import './FullVideoPage.css'
+import { desktopConfig } from '../../../desktop/client.js'
+import { DesktopVideoSurface } from '../../../desktop/VideoSurface.js'
 
 function formatPosition(positionMs: number): string {
   const total = Math.max(0, Math.floor(positionMs / 1000))
@@ -75,6 +77,7 @@ export function computeSurfaceRect(
  */
 export function FullVideoPage() {
   const { t } = useTranslation()
+  const desktop = desktopConfig() !== null
   const [note, setNote] = useState('')
   const [previewRatio, setPreviewRatio] = useState<number | null>(null)
   const [chromeVisible, setChromeVisible] = useState(true)
@@ -135,12 +138,11 @@ export function FullVideoPage() {
 
   const scheduleHide = useCallback(() => {
     clearHideTimer()
-    // Auto-hide only while playing — a paused / buffering user is deliberately
-    // looking at the controls, and yanking them away in that state is why so
-    // many players feel hostile.
-    if (!isPlaying || isBuffering) return
+    // Desktop keeps its controls at the edges because the native surface
+    // does not reliably deliver pointer events over the picture.
+    if (desktop || !isPlaying || isBuffering) return
     hideTimerRef.current = setTimeout(() => setChromeVisible(false), AUTO_HIDE_MS)
-  }, [clearHideTimer, isPlaying, isBuffering])
+  }, [clearHideTimer, desktop, isPlaying, isBuffering])
 
   useEffect(() => {
     setFullVideoActive(true)
@@ -149,16 +151,16 @@ export function FullVideoPage() {
 
   useEffect(() => {
     let cancelled = false
-    void openCurrentSongVideo().then((outcome) => {
+    void openCurrentSongVideo().then(async (outcome) => {
       if (cancelled) return
       if (outcome === 'noTrack') setNote(t('player.videoNoTrack'))
       else if (outcome === 'transcodeFailed') setNote(t('player.videoTranscodeFailed'))
+      else {
+        // Desktop prepares its current source before the picture can be sized.
+        const size = await getVideoModule().getVideoSize()
+        if (!cancelled && size) setVideoSize(size)
+      }
     }).catch(() => { if (!cancelled) setNote(t('player.videoUnavailable')) })
-    // Prime video size — if the picture is already decoded we skip the wait
-    // for the event and lay out on the first frame instead.
-    void getVideoModule().getVideoSize().then((size) => {
-      if (!cancelled && size) setVideoSize(size)
-    })
     const offSize = subscribeVideoSize((size) => setVideoSize(size))
     const offOrientation = subscribeVideoClosed(() => {
       performRouteBack()
@@ -269,6 +271,17 @@ export function FullVideoPage() {
     : isPlaying
       ? t('common.pause')
       : t('common.play')
+  const playbackButton = (
+    <view
+      className={desktop ? 'full-video__tool' : 'full-video__centre'}
+      catchtap={togglePlayback}
+      data-testid='video-centre-toggle'
+      accessibility-element={true}
+      accessibility-label={centreLabel}
+    >
+      <Icon name={centreIcon} size={desktop ? 22 : 40} color='#ffffff' />
+    </view>
+  )
 
   return (
     <view
@@ -276,10 +289,11 @@ export function FullVideoPage() {
       // `position: fixed` is dead when only declared in the class (the class
       // box collapses to 0×0); it must arrive inline — see ConfirmDialog.tsx.
       style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
-      bindtap={toggleChrome}
+      bindtap={desktop ? undefined : toggleChrome}
       bindlayoutchange={onSurfaceLayoutChange}
       data-testid='video-root'
     >
+      {desktop ? <DesktopVideoSurface /> : null}
       {note
         ? (
           <view className='full-video__note'>
@@ -292,15 +306,7 @@ export function FullVideoPage() {
       <view
         className={`full-video__chrome ${chromeVisible ? '' : 'full-video__chrome--hidden'}`}
       >
-        <view
-          className='full-video__centre'
-          catchtap={togglePlayback}
-          data-testid='video-centre-toggle'
-          accessibility-element={true}
-          accessibility-label={centreLabel}
-        >
-          <Icon name={centreIcon} size={40} color='#ffffff' />
-        </view>
+        {desktop ? null : playbackButton}
         <view className='full-video__header'>
           <view
             className='full-video__icon-btn'
@@ -336,15 +342,17 @@ export function FullVideoPage() {
           />
 
           <view className='full-video__tools'>
-            <view
-              className='full-video__tool'
-              catchtap={rotate}
-              data-testid='video-rotate'
-              accessibility-element={true}
-              accessibility-label={t('player.videoRotate')}
-            >
-              <Icon name='rotate' size={22} color='#ffffff' />
-            </view>
+            {desktop ? playbackButton : (
+              <view
+                className='full-video__tool'
+                catchtap={rotate}
+                data-testid='video-rotate'
+                accessibility-element={true}
+                accessibility-label={t('player.videoRotate')}
+              >
+                <Icon name='rotate' size={22} color='#ffffff' />
+              </view>
+            )}
             <view
               className='full-video__tool'
               catchtap={toggleScale}

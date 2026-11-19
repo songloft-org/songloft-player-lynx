@@ -32,6 +32,11 @@
 	</dict>
 	<key>UILaunchScreen</key>
 	<dict/>
+	<!-- Makes the fixed local-mode music directory reachable from Files.app. -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 
 	<!-- Background audio. Without this the system suspends the app (and its
 	     AVAudioSession) as soon as it leaves the foreground, so playback dies on

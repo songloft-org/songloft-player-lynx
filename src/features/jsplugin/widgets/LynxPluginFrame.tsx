@@ -1,7 +1,12 @@
 import { createPluginBackBridge } from '../domain/plugin-back-bridge.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { continueHostBack } from '../../../core/navigation/back-controller.js'
-import { readNativeModules } from '../../../native/native-modules.js'
+import {
+  readLynxGlobal,
+  readNativeModules,
+} from '../../../native/native-modules.js'
+import { desktopConfig } from '../../../desktop/client.js'
+import { openURL } from '../../../native/native-platform.js'
 import { useEffect, useMemo, useRef, useState } from '@lynx-js/react'
 
 import { appConfig } from '../../../core/config/app-config.js'
@@ -58,6 +63,7 @@ interface Props {
  */
 export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
   const activeRef = useRef(active !== false)
+  const desktopWindowVisible = useRef(desktopConfig()?.windowVisible !== false)
   activeRef.current = active !== false
   const frameId = useMemo(() => `frame-${entryPath}-${Date.now()}`, [entryPath])
   const [canBack, setCanBack] = useState(false)
@@ -100,6 +106,10 @@ export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
         })
       },
       pluginOpenUrl: (url: string) => {
+        if (desktopConfig()) {
+          openURL(url)
+          return
+        }
         const mod = readNativeModules()?.[
           isWebPlatform() ? 'SongloftLynxFrame' : 'SongloftPluginBridge'
         ] as { openUrl?: (frame: string, url: string) => void } | undefined
@@ -154,10 +164,20 @@ export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
       handlePluginHostCall(request, frameContext),
     )
     nativeHost.current = host
+    if (desktopConfig())
+      host.push(
+        'lifecycle',
+        JSON.stringify({
+          state:
+            activeRef.current && desktopWindowVisible.current
+              ? 'resumed'
+              : 'paused',
+        }),
+      )
     host.push('playerState', JSON.stringify(playerStateToJson()))
     host.push('theme', JSON.stringify({ theme: resolveTheme(getAppTheme()) }))
     const unsubscribe = subscribeAppResumed(() => {
-      if (activeRef.current)
+      if (activeRef.current && desktopWindowVisible.current)
         host.push('lifecycle', JSON.stringify({ state: 'resumed' }))
     })
     return () => {
@@ -171,9 +191,29 @@ export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
     if (!isWeb && active !== undefined)
       nativeHost.current?.push(
         'lifecycle',
-        JSON.stringify({ state: active ? 'resumed' : 'paused' }),
+        JSON.stringify({
+          state: active && desktopWindowVisible.current ? 'resumed' : 'paused',
+        }),
       )
   }, [active, isWeb])
+  useEffect(() => {
+    if (!desktopConfig()) return
+    const emitter = readLynxGlobal()?.getJSModule?.('GlobalEventEmitter')
+    const update = (event: { visible?: boolean }) => {
+      desktopWindowVisible.current = event.visible !== false
+      nativeHost.current?.push(
+        'lifecycle',
+        JSON.stringify({
+          state:
+            desktopWindowVisible.current && activeRef.current
+              ? 'resumed'
+              : 'paused',
+        }),
+      )
+    }
+    emitter?.addListener?.('SongloftDesktop.visibility', update)
+    return () => emitter?.removeListener?.('SongloftDesktop.visibility', update)
+  }, [frameId])
 
   /*
    * `playerState` rides along with the initial props on purpose.
@@ -189,6 +229,11 @@ export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
    * snapshots travel in props and the latest queued values flush on readiness.
    */
   const globalProps = {
+    // A child may inherit parent props in some frame implementations. Explicitly
+    // erase host credentials even there; plugins use only SongloftPluginBridge.
+    ...(desktopConfig()
+      ? { songloftDesktop: null, songloftDesktopProbe: false }
+      : {}),
     frameId,
     serverUrl: `${appConfig.baseUrl}${appConfig.basePath}`,
     theme,
@@ -315,6 +360,17 @@ export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
   }
 
   // Android/iOS: the SDK's <frame> directly loads the bundle.
+  if (desktopConfig())
+    return (
+      <songloft-desktop-plugin-frame
+        src={bundleUrl}
+        frame-id={frameId}
+        global-props-json={JSON.stringify(globalProps)}
+        visible={active !== false}
+        className="plugin-webview__frame"
+        data-testid="plugin-lynx-frame"
+      />
+    )
   return (
     <frame
       src={bundleUrl}

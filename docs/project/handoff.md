@@ -8,9 +8,59 @@
 
 Lynx Web 进度改由当前媒体元素更新。嵌入页的 Chrome 对照验证了播放推进、进度显示和实际切到下一曲。报告人的 Windows 封装与静音等待仍待定位。本地修复和测试记录见[进展](progress.md#issue-581)。
 
+## 2026-11-19 · Mac 自动重启保留中文数据路径
+
+两种架构的新开发包已产出。真实安装助手通过窗口系统重启签名夹具，升级和恢复均保留自定义数据目录。Mac 锁屏时 arm64 实际客户端仍等待系统授权，设置页升级未完成。[实施记录](desktop-implementation.md#macos-更新重启保留开发数据目录)
+
+## 2026-11-19 · Windows 曲库 MV 和全屏
+
+修复曲库“观看 MV”和播放器封面徽标只播音轨的问题，视频页等待当前片源就绪。Windows 测试签名宿主验证曲库视频、音画对照和全屏往返。新安装包和 Mac 视频操作还待补验。[实施记录](desktop-implementation.md#windows-21319-曲库-mv-与全屏)
+
+## 2026-11-19 · Mac 图形会话和 Windows 采样
+
+修复 Mac 开发自定义数据目录和默认开发版共用钥匙串服务的问题。arm64 经 Launch Services 和实际授权首次进入 Bundle，本地自动登录和同包重启通过。两种 Mac 架构均通过完整更新 ZIP 下载、取消、断开重试和验签。设置页点击安装仍待验。Windows 评估许可过期自动关机，约 37 分钟采样保留，一小时仍待完整重跑。[实施记录](desktop-implementation.md)
+
+## 2026-11-19 · 桌面断流恢复和设备缓存
+
+Mac arm64 和 Rosetta x64 的 2.13.19 开发包已补验电台重连、普通歌曲断开后的 Range 续传、V2 缓存原子发布和离线播放。Windows 一小时播放仍在采样，Windows 编解码与音画同步夹具已准备，尚未运行。[实施记录](desktop-implementation.md)
+
+## 2026-11-19 · 桌面 2.13.19 验收
+
+Windows 11 x64 在设置页自动下载测试签名的 2.13.19，点击重启后升级并恢复本地曲库、DPAPI 凭据与深色主题。macOS arm64 和 Rosetta x64 在打包应用内通过九项媒体检查，含 HLS 分段、Range、TLS、代理和 CEF HttpOnly Cookie。Rosetta 一次启动异常后重跑通过。Windows 一小时采样进行中。Mac 钥匙串、设置页升级和正式分发签名仍待验。[实施记录](desktop-implementation.md)
+
+## 2026-11-18 · 桌面更新包身份
+
+发布端、宿主和 Go 安装器已修复 dev 降级。Mac 安装器核对 ZIP 内的身份和实际 Mach-O 架构。Mac arm64 和 Rosetta x64 在测试签名的 2.13.12 → 2.13.13 升级中保留了原有管理员凭据、设置和曲目。测试用专用程序验证重启。锁屏会话无法验证 Keychain 登录态，Windows 只完成 Go helper 交叉构建。[实施记录](desktop-implementation.md#更新包身份和-mac-双架构升级)
+
+## 2026-11-18 · 桌面插件桥
+
+修复 Lynx 子帧就绪事件重入死锁，并在 CEF 主文档执行脚本前安装 HTML 插件桥。Mac arm64 和 Rosetta x64 在 Bundle 与反向代理子路径下均通过两类安装插件的收藏写入、实际播放和后端重启读回，HTML 另通过 Cookie 和二进制上传。Windows 原生扩展和 CEF helper 已交叉链接，设备运行待验。[实施记录](desktop-implementation.md#mac-两类插件读写与播放)
+
+## 2026-11-18 · Mac 视频缓冲与 CEF
+
+Mac 视频使用自有 IOSurface，由 Lynx 尝试提交，避免绘制线程等待共享缓冲。arm64 与 Rosetta x64 均验证持续变化的视频、暂停与恢复、窗口缩放及 CEF 脚本心跳。arm64 对照收到可信鼠标点击。人工听音、Windows 真机和一小时资源趋势待验。[实施记录](desktop-implementation.md#mac-视频缓冲与-cef-窗口测试)
+
+## 2026-11-18 · 桌面更新代理与 Windows 原生构建
+
+Mac arm64 和 x64 的真实业务 bundle 均通过反代子路径读取 GitHub 代理，宿主用它获取签名清单和测试资产。Windows SDK 暴露的 WinRT 命名空间与 C++ 标准问题已修复，12 个源文件交叉编译并生成 x64 PE 原生模块。Windows 设备验收仍开放。[实施记录](desktop-implementation.md#自动更新代理补验)
+
+## 2026-11-18 · 桌面真实包升级与本地库恢复
+
+Mac arm64 从同版本旧测试签名包升级，实际迁移曲库 schema 43→44，原凭据和歌曲 ID 通过 API 核对。隔离测试使 0044 失败后，恢复匹配旧包和旧库，并保留失败现场。升级确认校验客户端与后端 SHA，备份期间保持后端停止。图形入口、Keychain 跨更新和 macOS x64/Windows 升级为 Not run。[验证记录](desktop-implementation.md#mac-arm64-真实数据库迁移及恢复)
+
+## 2026-11-18 · 移动端 Bundle 由 Lynx 客户端仓库打包
+
+Android APK 与 iOS IPA 流水线从公开主仓库检出 `mobile-backend.lock.json` 固定的 SHA。Flutter 在自己的仓库构建 Bundle，主仓库发布服务端产物。三仓库的中英文 README 与文档站已更新下载入口。固定后端 `81204e2` 的 Android 四架构 AAR 和 iOS arm64 静态框架通过本地编译，Bundle APK 最低要求 API 23。登录页和设置页提供本地与远程切换。设备运行与升级仍待统一验收。桌面证据见[实施记录](desktop-implementation.md)。
+
+Android x86_64 后端补验：API 34 同一测试宿主内，Flutter 2.13.12 公开包与原 Lynx APK 提取的 Go 库均触发 `SIGSYS`。Android NDK SQLite 候选库返回健康检查 200。修复限定 x86_64，arm64、ARMv7 和 x86 继续使用原驱动。两套移动流水线都须更新到含修复的公开后端提交。Flutter/Lynx 完整界面复测受模拟器 System UI 无响应影响，仍待设备验收。
+
 ## 2026-11-18 · #54 逐字歌词
 
 播放器已接入行内逐字歌词和洛雪偏移，真实 Chrome 播放验证经过旁挂文件读取及逐词高亮。全部 3,858 项共享测试通过，手机原生应用待验证。源码标识和日志见 `/tmp/songloft-54-karaoke-ZsCdTI/verification.json`。[#54](https://github.com/songloft-org/songloft-player/issues/54)
+
+## 2026-11-17 · 桌面完整候选实现
+
+用户已将六批顺序调整为先全部实现、末尾统一验收。宿主、原生音视频、Bundle、两类插件、安装/签名更新及配套恢复已补源码。完整 Mac 登录页/RPC、两架构原生编译、实际后端扫描/Range/重启和签名应用夹具安装/恢复通过；arm64 开发 DMG/ZIP 已生成。完整设备矩阵、Keychain 会话、真实客户端升级与 Windows 新模块仍待验，不宣称发行就绪。共享检查、环境、失败修复和源码指纹见[最新记录](desktop-implementation.md)。本批未提交、推送、发布或更新父指针；下方第一批停点为历史记录。
 
 ## 2026-11-17 · miot 首页重入与 Tab 封面闪动
 
@@ -27,6 +77,16 @@ Lynx Web 进度改由当前媒体元素更新。嵌入页的 Chrome 对照验证
 ## 2026-11-17 · #572 歌单与收藏下一首播放
 
 Lynx 现有共享歌曲菜单已提供此能力，本批补充普通/内置歌单 × 窄/宽屏的四项完整入口回归。最终 3843 项测试、类型、双 bundle 与 embedded Web 构建通过；移除分发的隔离检查四项均失败。实际浏览器队列、播放连续性及原生未验边界见[记录](issue-572.md)。本批获授权提交、推送、同步父指针和回复 #572；既有桌面候选改动保留，不创建正式版本。实际提交及 CI 见 `/tmp/songloft-572/delivery.json`。
+
+## 2026-11-17 · 桌面第一批候选工程
+
+本轮新增 `current-ao` 异步观察和中英文[桌面契约](../reference/desktop-probe.md)。arm64/x64 真实解码均报告 CoreAudio，分别产生 30/33 软件帧和 28/31 种摘要，暂停稳定、恢复前进；x64 完整宿主现已取得真实 Callback、视频首帧和 CEF 加载事件。采集改为等待页面会话，原始时序失败保留。类型、5 项定向、6 项 Node、双构建/95.6 kB 探针与三份 Windows 对象编译通过；共享全量沿用上一轮记录。锁屏下表面仍只消费两帧，未推进后续批次；已请求 Mac 解锁和 Windows 既有测试连接。[最新记录](desktop-phase1.md)，工作树 `/tmp/songloft-desktop-ao-worktree.json`。
+
+新增真实 Mac 进展：macOS 26.6.2 上 arm64/x64 扩展及固定 libmpv 源码 SDK 均编译/链接通过；arm64 实际探针报告 Lynx 4.4，x64 真实 Lynxtron 在 Rosetta 中加载扩展。修复绘制完成回调和换源暂停状态；368 文件/3847 项、6 项桌面检查、类型及探针构建通过。Mac 当前锁屏，表面缓冲超时，连续画面与 CEF 交互未通过，人工听音、实体 Intel、最低系统及 Windows 实机待验。已请求解锁。源码、命令、失败和摘要见[最新记录](desktop-phase1.md)。
+
+后续在 `173fa14` 基线上修复绘制锁内同步 libmpv 调用，补齐 API double 正反向检查、三个 Windows x64 COFF 对象和真实运行库 70 个导出符号核对。Ubuntu 隔离环境已用 libmpv 0.41.0 真实解码合成视频，24 帧/22 种摘要，暂停稳定、恢复前进；音频为 null，没有目标 UI/GPU/发声验收。类型、367 文件/3843 项、桌面 3 项及双包/探针构建通过；[记录](desktop-phase1.md)包含新证据、环境与下一步边界。第一批仍未完成。
+
+`desktop/` 提供 Lynxtron 0.0.31 + CEF 0.0.31 + libmpv 0.41.0 的候选组合、原生扩展、视频表面和验证页面；默认入口加载现有登录/宽屏 UI。详情、命令和检查结果见[记录](desktop-phase1.md)与[指南](../../desktop/README.md)。首轮缺少目标系统，后续已连通 Mac 并构建两种架构；三架构验收尚未通过，不推进第二至六批。未提交或推送，子模块 dirty；并行登录/署名改动已由其他会话提交为 `6df678d`，不属于本批。
 
 ## 2026-11-17 · 登录协议与许可证署名
 
@@ -465,7 +525,7 @@ P3c 已接入当前身份设备缓存列表、本地搜索/空间/删除/清理�
 
 P3b 共享源码已接入整歌单/多选批量缓存和任务页，支持完整分页、变体冻结、缓存跳过、去重、容量暂停、真实宿主取消和失败/中断重试；历史按身份保存且不含 URL/token。最终 273 文件 / 2960 项 JS 回归、35 项发布工具、双产物与 Android APK 编译通过（2026-10-07 02:49）。Android arm64 ABI 实际 UI 验证 235 首入队、94 完成（36 缓存跳过）、取消剩余 141 项及暂存清理；x86_64 SVG 缺库/原生崩溃和模拟器环境问题见 bugs，不宣称该 ABI 已修复。HarmonyOS HAP 已编译；iOS 编译及两端设备验收仍继续，详细证据见 progress。
 
-定位为预览版。核心播放、曲库/歌单、歌词、插件、主题、多服务器和管理设置已有实现，四端都有宿主代码。关于页已分开提供客户端和服务器更新；客户端严格按壳通道检查 dev 或最新正式发布，三端更新器源码已接入，Android/Web 有本地流程证据。当前五平台 CI、Apple 验证与 IPA 构建通过，热更新签名已配置并完成真实 dev 资产验签；两端设备验收仍开放。**原生桌面客户端与 Bundle 本地后端不在本轮范围**。未消费的 `bundleMode/systemTray` 能力探测不代表功能完成。
+定位为预览版。核心播放、曲库/歌单、歌词、插件、主题、多服务器和管理设置已有实现，四端都有宿主代码。关于页已分开提供客户端和服务器更新；客户端严格按壳通道检查 dev 或最新正式发布，三端更新器源码已接入，Android/Web 有本地流程证据。当前五平台 CI、Apple 验证与 IPA 构建通过，热更新签名已配置并完成真实 dev 资产验签；设备验收仍开放。Android/iOS 发布包现包含固定 SHA 构建的 Bundle 后端，登录页和设置页消费 `bundleMode` 能力。Windows/macOS 桌面宿主另有候选实现，按用户要求先完成实现、最后统一验收；源码或能力探测不代表设备验收完成。
 
 Android、HarmonyOS 和 iOS 的当前源码已有 CI 编译及包检查证据，Android/HarmonyOS 发布签名检查与 dev 热更新资产验签通过；旧本地未签名包不能代替本次发布包。后台播放、投屏、通知与视频需要设备验证，不能从 JS 测试推断。
 
@@ -497,7 +557,7 @@ Linux 可验证 JS、脚本与 Android；iOS/HarmonyOS 需各自工具链。最�
 3. P6a 剪贴板、P6b 通知歌词与 P6c 插件恢复源码已补，原生编译通过；HarmonyOS 系统粘贴/媒体卡片及插件长后台/断网重连验收仍开放。Lynx 插件须使用本地更新的 SDK 重新构建，SDK 尚未发布，见 [bugs.md](bugs.md)。
 4. iOS 字体大小、HLS 自签名地址等开放问题仍以 bugs 为准。
 5. Web 前端子路径已修复，Chrome 两种模式的登录/插件与 Linux WebKit 两种模式的 P4/P5 通过；真实 Safari、Firefox 间歇 Blob 异常仍开放，见[部署指南](../guides/web-deployment.md)。插件排序需要支持 `/settings/plugin-order` 的新后端，旧后端返回 404。
-6. 桌面端、Bundle 本地后端和视频不在本轮交付范围；设备批量缓存、离线列表、Web 数据传输/快捷键及原生补齐已完成源码批次，按批准计划保留未完成的平台验收。
+6. Android/iOS Bundle 本地模式、Windows/macOS 桌面宿主和视频均已接入候选实现；Bundle 源码、构建、目录权限、扫描播放、退出与安装升级验收仍开放，详见[桌面实施记录](desktop-implementation.md)。
 
 ### 现状核查（2026-10-07）
 

@@ -8,6 +8,9 @@ import {
   type SongloftAudioNativeModule,
 } from './native-audio.js'
 import type { SongloftAudio } from './audio-types.js'
+import { createUnavailableAudio } from './unavailable-audio.js'
+import { desktopConfig } from '../desktop/client.js'
+import { createDesktopAudio } from '../desktop/audio.js'
 
 /**
  * SongloftAudio facade selector.
@@ -18,7 +21,9 @@ import type { SongloftAudio } from './audio-types.js'
  * events arrive as Lynx global events over the BTS `GlobalEventEmitter`. When a
  * complete native module is present we use {@link NativeSongloftAudio}; anywhere
  * it is missing (dev in a plain host, tests, unsupported platform) we fall back
- * to the timer-driven {@link MockSongloftAudio}. The player store consumes only
+ * to the timer-driven {@link MockSongloftAudio}. The desktop technology preview
+ * reports unavailable playback instead, so it cannot simulate native success.
+ * The player store consumes only
  * the `SongloftAudio` interface, so the swap is transparent.
  */
 
@@ -37,7 +42,9 @@ function readGlobalEventEmitter(): GlobalEventSubscriber | null {
   try {
     const l = readLynxGlobal()
     if (l && typeof l.getJSModule === 'function') {
-      return (l.getJSModule('GlobalEventEmitter') as GlobalEventSubscriber) ?? null
+      return (
+        (l.getJSModule('GlobalEventEmitter') as GlobalEventSubscriber) ?? null
+      )
     }
   } catch {
     // no runtime lynx (tests / non-Lynx host)
@@ -51,14 +58,30 @@ function readGlobalEventEmitter(): GlobalEventSubscriber | null {
  * memoized — {@link getAudio} caches; tests call this directly per scenario.
  */
 export function resolveAudio(): SongloftAudio {
+  if (desktopConfig()) {
+    try {
+      return createDesktopAudio()
+    } catch (error) {
+      return createUnavailableAudio(String(error))
+    }
+  }
+  if (readLynxGlobal()?.__globalProps?.songloftDesktop != null)
+    return createUnavailableAudio('Desktop host configuration is invalid; mock playback is disabled.')
   const nativeModules = readNativeModules()
   if (isNativeAudioAvailable(nativeModules)) {
     try {
-      const mod = (nativeModules as { SongloftAudio: SongloftAudioNativeModule }).SongloftAudio
+      const mod = (
+        nativeModules as { SongloftAudio: SongloftAudioNativeModule }
+      ).SongloftAudio
       return new NativeSongloftAudio(mod, readGlobalEventEmitter())
     } catch {
       // Any failure constructing the native binding → fall back to the mock.
     }
+  }
+  if (readLynxGlobal()?.__globalProps?.songloftDesktopProbe === true) {
+    return createUnavailableAudio(
+      'Desktop SongloftAudio is not integrated. Use the desktop native probe to verify libmpv; mock playback is disabled.',
+    )
   }
   // Web environment: use HTMLAudioElement-based playback
   if (isWebAudioEnvironment()) {
@@ -74,9 +97,12 @@ export function resolveAudio(): SongloftAudio {
 export function createNativeAudio(): SongloftAudio {
   const nativeModules = readNativeModules()
   if (!isNativeAudioAvailable(nativeModules)) {
-    throw new Error('createNativeAudio: NativeModules.SongloftAudio not available')
+    throw new Error(
+      'createNativeAudio: NativeModules.SongloftAudio not available',
+    )
   }
-  const mod = (nativeModules as { SongloftAudio: SongloftAudioNativeModule }).SongloftAudio
+  const mod = (nativeModules as { SongloftAudio: SongloftAudioNativeModule })
+    .SongloftAudio
   return new NativeSongloftAudio(mod, readGlobalEventEmitter())
 }
 

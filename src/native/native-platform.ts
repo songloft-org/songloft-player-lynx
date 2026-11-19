@@ -1,4 +1,5 @@
 import { readNativeModules } from './native-modules.js'
+import { desktopPlatformModule } from '../desktop/platform.js'
 import { isWebEnvironment, webOpenURL, webPickAndUploadFile } from './web-platform.js'
 
 interface SongloftPlatformNative {
@@ -66,6 +67,8 @@ export function getHostCookies(origin: string): Promise<Record<string, string>> 
 }
 
 function getModule(): SongloftPlatformNative | null {
+  const desktop = desktopPlatformModule()
+  if (desktop) return desktop as unknown as SongloftPlatformNative
   const mods = readNativeModules()
   if (!mods) return null
   const mod = mods.SongloftPlatform as Record<string, unknown> | undefined

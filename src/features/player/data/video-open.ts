@@ -4,6 +4,7 @@ import { getPlatformCapabilities } from '../../../native/platform-capabilities.j
 import { getPlatformTarget } from '../../../native/platform-target.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
 import { getVideoModule } from '../../../native/video.js'
+import { desktopConfig } from '../../../desktop/client.js'
 import { usePlayerStore } from '../store/index.js'
 
 /**
@@ -50,7 +51,9 @@ export type VideoOpenOutcome = 'opened' | 'noTrack' | 'transcodeFailed'
  * player. The two entry points agree through this predicate.
  */
 export function usesJsVideoSurface(): boolean {
-  return ['android', 'ios', 'harmony'].includes(getPlatformTarget()) || isWebPlatform()
+  return !!desktopConfig() ||
+    ['android', 'ios', 'harmony'].includes(getPlatformTarget()) ||
+    isWebPlatform()
 }
 
 /**

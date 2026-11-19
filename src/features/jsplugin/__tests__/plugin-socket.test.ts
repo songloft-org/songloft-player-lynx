@@ -15,6 +15,7 @@ vi.mock('../../../native/web-platform.js', () => ({
   isWebPlatform: () => false,
 }))
 vi.mock('../../../native/native-modules.js', () => ({
+  readLynxGlobal: () => null,
   readNativeModules: () => ({
     SongloftPluginBridge: {
       socketOpen: h.open,

@@ -4,16 +4,20 @@
 
 | 平台 | 最低版本 | 目标版本 | 声明处 |
 |---|---|---|---|
-| Android | **API 21**（Android 5.0 Lollipop） | API 34（Android 14） | [android/app/build.gradle.kts](../../android/app/build.gradle.kts) `minSdk` / `targetSdk` |
+| Android | Bundle APK **API 23**（Android 6.0），未嵌入后端的源码构建 **API 21** | API 34（Android 14） | [android/app/build.gradle.kts](../../android/app/build.gradle.kts) `minSdk` / `targetSdk` |
 | iOS | **iOS 15.0** | 系统当前版本 | [ios/Podfile](../../ios/Podfile) `platform :ios, '15.0'` · [ios/SongloftLynx.xcodeproj/project.pbxproj](../../ios/SongloftLynx.xcodeproj/project.pbxproj) `IPHONEOS_DEPLOYMENT_TARGET` |
 | HarmonyOS | HarmonyOS NEXT / **API 13**（`compatibleSdkVersion` = `5.0.1(13)`） | 同左 | [harmony/build-profile.json5](../../harmony/build-profile.json5) `compatibleSdkVersion` |
 | Web | 常青浏览器（Chrome/Edge/Firefox/Safari 近两版） | —— | 由 web-core / rspeedy targets 决定，无独立配置 |
 
 > Web 侧受 web-core 使用的 `import.meta`、`Worker`、`OffscreenCanvas`、`AudioContext` 等特性约束；未做低版本浏览器矩阵。
 
+## Windows/macOS 候选工程
+
+`desktop/` 已补宿主、Bundle、播放、插件、安装与更新候选源码，按用户要求末尾统一验收。候选下限为 Windows x64 的 Windows 10 22H2/Windows 11、macOS arm64/x64 的 macOS 13；Mac 实测 Lynx 4.4，不升级移动 SDK。Mac 完整登录/RPC、两架构编译、后端与更新夹具已有证据，正式设备矩阵仍开放。当前[完整平台/模块记录](../project/desktop-implementation.md) / [English](../en/project/desktop-implementation.md)，旧[探针契约](desktop-probe.md)继续描述独立诊断入口。
+
 ## Android
 
-**minSdk = 21** 的复合下限来自依赖：
+Bundle APK 的 gomobile AAR 要求 API 23；未嵌入后端的源码构建可保留 API 21，其下限来自以下依赖：
 
 | 依赖 | 自声明最低 API |
 |---|---|

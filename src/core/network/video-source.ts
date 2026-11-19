@@ -18,6 +18,8 @@
 
 import type { Song } from '../../models/song.js'
 import { isFlvRadioPath } from './url-helper.js'
+import type { AudioPlatform } from './audio-format.js'
+import { desktopConfig } from '../../desktop/client.js'
 
 export type VideoSourceKind = 'none' | 'direct' | 'hls'
 
@@ -73,7 +75,7 @@ const WEB_DIRECT = new Set(['m4a', 'mp4', 'm4v', 'mov', 'qt', '3gp', '3g2', 'web
  */
 export function resolveVideoSourceKind(
   song: Pick<Song, 'isVideo' | 'isLive' | 'type' | 'format'> & Partial<Pick<Song, 'url'>>,
-  platform: 'web' | 'ios' | 'android' | 'harmony',
+  platform: AudioPlatform,
 ): VideoSourceKind {
   if (!song.isVideo) return 'none'
   if (song.type === 'radio' && song.url && isFlvRadioPath(song.url)) return 'direct'
@@ -82,6 +84,7 @@ export function resolveVideoSourceKind(
   // format 为空（电台常态）落到下方 `if (!format) return 'direct'`。
   const format = (song.format ?? '').toLowerCase()
   if (!format) return 'direct'
+  if (platform === 'native') return desktopConfig()?.videoFormats?.includes(format) ? 'direct' : 'hls'
   if (platform === 'web') return WEB_DIRECT.has(format) ? 'direct' : 'hls'
   const direct = platform === 'ios' ? IOS_DIRECT : ANDROID_DIRECT
   return direct.has(format) ? 'direct' : 'hls'

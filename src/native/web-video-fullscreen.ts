@@ -1,6 +1,8 @@
 import { readLynxGlobal, readNativeModules } from './native-modules.js'
 import { isWebPlatform } from './web-platform.js'
 import { safeClearTimeout } from './safe-timers.js'
+import { desktopConfig } from '../desktop/client.js'
+import { desktopFullscreenModule } from '../desktop/video.js'
 
 interface FullscreenState {
   supported: boolean
@@ -13,6 +15,7 @@ interface FullscreenHost {
 }
 
 function host(): FullscreenHost | undefined {
+  if (desktopConfig()?.capabilities.video) return desktopFullscreenModule
   return isWebPlatform()
     ? (readNativeModules()?.SongloftVideo as FullscreenHost | undefined)
     : undefined

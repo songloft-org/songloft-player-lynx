@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Songloft CEF probe</title>
+<style>
+  body {
+    font: 24px sans-serif;
+    background: #eef4ff;
+    color: #132340;
+    padding: 24px;
+  }
+  button {
+    font-size: 24px;
+    padding: 12px;
+  }
+</style>
+<h1>CEF 原生页面</h1>
+<p id="counter">JavaScript starting</p>
+<button id="action">Click / 点击</button>
+<p id="clicks">Clicks: 0</p>
+<script>
+  let ticks = 0
+  let clicks = 0
+  setInterval(() => {
+    document.querySelector('#counter').textContent = `CEF ticks: ${++ticks}`
+  }, 250)
+  document.querySelector('#action').addEventListener('click', () => {
+    document.querySelector('#clicks').textContent = `Clicks: ${++clicks}`
+  })
+</script>

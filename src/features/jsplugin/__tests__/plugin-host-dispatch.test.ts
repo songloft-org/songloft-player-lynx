@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { parseSong } from '../../../models/song.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import { handlePluginHostCall, playerStateToJson, pluginPlayerStateChanged, type PluginHostContext } from '../domain/plugin-host-dispatch.js'
+import { pluginHostContext } from '../domain/plugin-host-context.js'
 
 const h = vi.hoisted(() => ({ playlist: vi.fn(), favorite: vi.fn() }))
 vi.mock('../../playlist/api/index.js', () => ({ getPlaylistApi: () => ({
@@ -24,6 +25,26 @@ const ids = () => usePlayerStore.getState().playlist.map(s => s.id)
 
 beforeEach(() => { vi.useFakeTimers(); usePlayerStore.getState().reset(); vi.clearAllMocks() })
 afterEach(() => { usePlayerStore.getState().reset(); vi.useRealTimers() })
+
+test.each([
+  ['win32', 'windows'],
+  ['darwin', 'macos'],
+] as const)('reports the packaged client version through the %s plugin bridge', async (os, platform) => {
+  vi.stubGlobal('lynx', {
+    __globalProps: { songloftDesktop: {
+      id: 'org.songloft.lynx.desktop.dev',
+      token: 'test',
+      os,
+      build: { version: '2.13.16' },
+    } },
+  })
+  try {
+    expect(await handlePluginHostCall({ ns: 'host', method: 'getInfo' }, pluginHostContext))
+      .toMatchObject({ ok: true, data: { platform, version: '2.13.16' } })
+  } finally {
+    vi.unstubAllGlobals()
+  }
+})
 
 test('all queue SDK operations preserve the playing occurrence and Flutter insertion indices', async () => {
   expect(await call('setQueue', { ids: [1, 404, 2, 3], startIndex: 1, sourcePlaylistId: 7 })).toEqual({ ok: true, data: null })

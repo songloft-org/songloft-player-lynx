@@ -21,6 +21,7 @@ import type { AuthStatus } from './guard.js'
 import { offlineIdentity, OfflineIdentityStore, readOfflineAddress } from '../../player/data/offline-identity.js'
 import { clearSavedPlaybackState } from '../../player/data/playback-persistence.js'
 import { cachedSongIdentity } from '../../player/domain/offline-cache.js'
+import { stableDesktopServerUrl } from '../../../desktop/client.js'
 
 /** prefs key for the last server URL (standalone mode). */
 export const PREF_SERVER_URL = 'server_url'
@@ -29,7 +30,7 @@ export const PREF_LAST_USERNAME = 'last_username'
 /** prefs key for the insecure-TLS opt-in. */
 export const PREF_INSECURE_TLS = 'insecure_tls'
 /**
- * secure-store key for the last password, written on every successful login so
+ * secure-store key for the last manually entered password, saved on successful login so
  * the login form can prefill it again after sign-out — the Flutter reference
  * does exactly this (`AppPreferences.setLastPassword`). Stored in the `secure`
  * namespace (Keystore / Keychain; plain same-origin storage on web), the same
@@ -41,6 +42,8 @@ export const SECURE_LAST_PASSWORD = 'last_password'
 export interface LoginArgs {
   username: string
   password: string
+  /** Automatic login to the local backend. Its account and port are separate from server preferences. */
+  bundle?: boolean
   /** standalone only: server base URL entered on the login page. */
   apiBaseUrl?: string
   /** standalone only: skip TLS cert validation (persisted; transport no-op). */
@@ -52,11 +55,11 @@ export interface AuthState {
   isLoading: boolean
   error?: string
   /** Read persisted server URL / insecure-TLS into `appConfig` (startup). */
-  hydrate: () => Promise<void>
+  hydrate: (options?: { resetServer?: boolean }) => Promise<void>
   /** Probe secure storage for tokens → authenticated / unauthenticated. */
   checkAuth: () => Promise<void>
   login: (args: LoginArgs) => Promise<void>
-  logout: () => Promise<void>
+  logout: (options?: { revokeServer?: boolean }) => Promise<void>
   expireSession: () => Promise<void>
   /** Test hook. */
   reset: () => void
@@ -159,17 +162,18 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
     isLoading: false,
     error: undefined,
 
-    hydrate: async () => {
+    hydrate: async (options) => {
       const [serverUrl, insecure] = await Promise.all([
         tryReadPref(storage, PREF_SERVER_URL),
         tryReadPref(storage, PREF_INSECURE_TLS),
       ])
-      if (!appConfig.isEmbedded && serverUrl && serverUrl.length > 0) {
-        appConfig.baseUrl = serverUrl
-        appConfig.resolvedBaseUrl = serverUrl
-        useAppSessionStore.getState().setBaseUrl(serverUrl)
+      if (!appConfig.isEmbedded && (serverUrl || options?.resetServer)) {
+        const address = serverUrl || appConfig.defaultBaseUrl
+        appConfig.baseUrl = address
+        appConfig.resolvedBaseUrl = address
+        useAppSessionStore.getState().setBaseUrl(address)
       }
-      if (insecure != null) {
+      if (insecure != null || options?.resetServer) {
         appConfig.insecureTls = insecure === 'true'
         applyInsecureTls(appConfig.insecureTls)
       }
@@ -192,7 +196,7 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
       }
     },
 
-    login: async ({ username, password, apiBaseUrl, insecureTls }) => {
+    login: async ({ username, password, apiBaseUrl, insecureTls, bundle = false }) => {
       const previousUsername = useAppSessionStore.getState().username
       const previousServer = appConfig.baseUrl
       set({ isLoading: true, error: undefined })
@@ -203,12 +207,12 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
           const normalized = normalizeServerUrl(apiBaseUrl)
           appConfig.baseUrl = normalized
           appConfig.resolvedBaseUrl = normalized
-          await tryPref(storage, PREF_SERVER_URL, normalized)
+          if (!bundle) await tryPref(storage, PREF_SERVER_URL, normalized)
           useAppSessionStore.getState().setBaseUrl(normalized)
         }
         if (insecureTls != null) {
           appConfig.insecureTls = insecureTls
-          await tryPref(storage, PREF_INSECURE_TLS, String(insecureTls))
+          if (!bundle) await tryPref(storage, PREF_INSECURE_TLS, String(insecureTls))
           applyInsecureTls(insecureTls)
         }
 
@@ -218,18 +222,19 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
         // Persist tokens to secure storage (also feeds the in-memory + sync
         // token cache via TokenStore.saveTokens).
         await tokenStore.saveTokens(tokens)
-        // Remember the last username (not a secret → prefs) and password
-        // (secret → secure store) so the login form prefills the real
-        // credentials after sign-out, mirroring the Flutter auth provider.
-        await tryPref(storage, PREF_LAST_USERNAME, username)
-        try {
-          await storage.secure.set(SECURE_LAST_PASSWORD, password)
-        } catch {
-          // ignore — forgetting the password only costs one retype next time.
-        }
-        if (previousUsername !== username || previousServer !== appConfig.baseUrl) {
-          usePlayerStore.getState().reset()
-          await clearSavedPlaybackState(storage)
+        // Mode changes clear playback before connecting. A local auto-login can
+        // also be a restart of the same library on a newly allocated port.
+        if (!bundle) {
+          await tryPref(storage, PREF_LAST_USERNAME, username)
+          try {
+            await storage.secure.set(SECURE_LAST_PASSWORD, password)
+          } catch {
+            // The user can reenter the password next time.
+          }
+          if (previousUsername !== username || stableDesktopServerUrl(previousServer) !== stableDesktopServerUrl(appConfig.baseUrl)) {
+            usePlayerStore.getState().reset()
+            await clearSavedPlaybackState(storage)
+          }
         }
         useAppSessionStore.getState().setUsername(username)
         await identity.activate(await sessionAddress(), username)
@@ -244,7 +249,7 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
       }
     },
 
-    logout: async () => {
+    logout: async (options) => {
       const address = await sessionAddress()
       // Revoke offline visibility before asynchronous token/server work. Files stay on device.
       const revoke = identity.revoke(address)
@@ -283,6 +288,7 @@ export function createAuthStore(deps: AuthStoreDeps = defaultAuthStoreDeps()) {
       }
 
       // Best-effort server revoke; failure never blocks the local sign-out.
+      if (options?.revokeServer === false) return
       try {
         const client = createLoginClient(appConfig.resolvedBaseUrl)
         await new AuthApi(client).logout(accessToken ?? undefined)

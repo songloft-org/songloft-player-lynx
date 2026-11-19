@@ -89,6 +89,8 @@ export interface SongloftAudio {
   load(url: string, opts?: AudioLoadOptions): Promise<void>
   /** Optional for old hosts. Version 1 confirms ready/seek/intent/source events. */
   getSourceLoadVersion?(): Promise<number>
+  /** The current source's readiness. Promise identity changes with the source. */
+  currentSourceReady?(): Promise<boolean> | null
   play(): Promise<void>
   pause(): Promise<void>
   stop(): Promise<void>

@@ -2,6 +2,7 @@ import { readLynxGlobal, readNativeModules } from '../../../native/native-module
 import type { CacheDownload, CacheIdentity, CacheSnapshot } from '../domain/cache-identity.js'
 import { parseCacheSnapshot, cachedEntrySong } from '../domain/offline-cache.js'
 import { storageAwareRequest } from './cache-directory.js'
+import { desktopCacheModule } from '../../../desktop/cache.js'
 
 type Callback = (json: string) => void
 interface IndexedSongCacheModule {
@@ -27,6 +28,8 @@ export interface CachePage { entries: CachedEntry[]; total: number; bytes: numbe
 export const SONG_CACHE_PROGRESS_EVENT = 'songCacheProgress'
 const methods = ['getCacheContract', 'cacheEntry', 'getEntry', 'listEntries', 'removeEntry', 'clearNamespace', 'clearLegacy', 'getTasks', 'cancelTask'] as const
 function module(): IndexedSongCacheModule | null {
+  const desktop = desktopCacheModule()
+  if (desktop) return desktop
   const value = readNativeModules()?.SongloftSongCache as Record<string, unknown> | undefined
   return value && methods.every(name => typeof value[name] === 'function') ? value as unknown as IndexedSongCacheModule : null
 }

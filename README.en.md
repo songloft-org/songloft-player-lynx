@@ -8,7 +8,7 @@ Settings → Playback → Keep screen on for lyrics is off by default and saved 
 
 ## Current status
 
-This is a **preview client**. Playback, library/playlists, lyrics, plugins, themes, multiple servers, and administrative settings are implemented. About now separates client checks from server upgrades: dev checks only dev, while stable checks only the latest stable release. All three native bundle updaters are integrated in source; Android has local UI download/cancel/cold-start evidence, while iOS/HarmonyOS compilation and device acceptance remain open. Production update signing is unconfigured. Older shells and incompatible updates provide same-channel installation links; see [Client updates](docs/en/reference/client-updates.md). Native desktop clients and a bundled local backend remain outside this work.
+This is a **preview client**. Playback, library/playlists, lyrics, plugins, themes, multiple servers, and administrative settings are implemented. About now separates client checks from server upgrades: dev checks only dev, while stable checks only the latest stable release. All three native bundle updaters are integrated in source; Android has local UI download/cancel/cold-start evidence, while iOS/HarmonyOS compilation and device acceptance remain open. Production update signing is unconfigured. Older shells and incompatible updates provide same-channel installation links; see [Client updates](docs/en/reference/client-updates.md). Windows/macOS desktop hosting, Bundle, playback, both plugin types and whole-app updates have a [candidate implementation](desktop/README.en.md). As requested, implementation precedes consolidated acceptance; device coverage and production distribution remain open. See the [implementation record](docs/en/project/desktop-implementation.md).
 
 Native device caching now has identity/track-variant indexes, whole-playlist/selection tasks and local management/offline playback. Authentication expiry preserves local-only access; explicit logout hides the previous identity. See [Device cache](docs/en/reference/device-cache.md). Android has real-file/UI evidence; iOS/HarmonyOS compilation and device acceptance remain open.
 
@@ -18,7 +18,7 @@ Web playback settings also provide a persisted keyboard-shortcut switch: Space t
 
 | Platform                 | Release artifact               | Limitations                                                                                        |
 | ------------------------ | ------------------------------ | -------------------------------------------------------------------------------------------------- |
-| Android 5.0+             | Release-signed APK             | Background playback, notifications, and DLNA still need ongoing device regression testing          |
+| Android 6.0+             | Release-signed APK with Bundle backend | Background playback, notifications, and DLNA still need ongoing device regression testing |
 | iOS 15+                  | Unsigned IPA                   | Re-sign before installation; Live Activity requires iOS 16.2+                                      |
 | HarmonyOS NEXT / API 13+ | Signed HAP                     | Experimental; video module and XComponent surface exist, but compilation and device behavior need verification |
 | Web                      | Standalone / embedded archives | No bundled backend, DLNA, or per-song offline cache; browser compatibility requires actual testing |
@@ -27,17 +27,18 @@ Web playback settings also provide a persisted keyboard-shortcut switch: Space t
 
 - [Stable releases](https://github.com/songloft-org/songloft-player-lynx/releases/latest): published from version tags.
 - [Development release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev): automatically built after code pushes to `main`; updated only when every platform succeeds.
+- [Windows/macOS desktop candidate builds](desktop/README.en.md): built by this repository's desktop workflow, with stable downloads pending consolidated acceptance.
 - [Installation guide](docs/en/guides/installation.md): package names, signing requirements, server connections, and checksums.
 - [简体中文](README.md)
 
 Download assets published in GitHub Releases; the four-platform CI updates dev only after all five packages build and pass verification. Maintainers of a fork must configure signing secrets; see the [release guide](docs/en/guides/releasing.md).
 
-This client connects to a running [Songloft server](https://github.com/songloft-org/songloft). Enter the server address and sign in after installation. The client does not include a local backend. Choose a package for your platform under **Assets** on the release page:
+The Android APK and iOS IPA embed the Go backend built by this repository's workflow from the SHA pinned in `mobile-backend.lock.json`; the same installation can also connect to a remote server. Switch modes from the login or settings screen. The first time local mode is enabled, choose a music directory; there is no separate mode chooser on first launch. Android uses the system directory picker and requests read access. iOS uses the app's Documents directory, where music can be added through the Files app. HarmonyOS and Web packages do not include the backend and need a running [Songloft server](https://github.com/songloft-org/songloft). Choose a package under **Assets** on the release page:
 
 | Platform | Download | Installation / deployment |
 | --- | --- | --- |
-| Android | `songloft-lynx-android.apk` | Download and open the APK, then allow installation when prompted. The package uses the maintainer's release signature. |
-| iOS | `songloft-lynx-ios-nosign.ipa` | Unsigned device build; re-sign with your developer certificate and a provisioning profile for your device before installing. |
+| Android | `songloft-lynx-android.apk` | Embeds the Go backend; download and open the APK, then allow installation when prompted. The package uses the maintainer's release signature. |
+| iOS | `songloft-lynx-ios-nosign.ipa` | Embeds the Go backend; unsigned device build. Re-sign with your developer certificate and a provisioning profile for your device before installing. |
 | HarmonyOS | `songloft-lynx-harmony.hap` | Install with DevEco Studio or `hdc install songloft-lynx-harmony.hap`. The signing profile must authorize your device. |
 | Web (standalone) | `songloft-lynx-web-standalone.tar.gz` | Extract to a static server, then open the site and enter the Songloft API address. |
 | Web (embedded) | `songloft-lynx-web-embedded.tar.gz` | Extract and configure same-origin static hosting with the same-origin backend; does not automatically replace the server's existing embedded frontend. |
@@ -46,7 +47,7 @@ See the [Web deployment guide](docs/en/guides/web-deployment.md) for response he
 
 **Verify downloads:** Keep your packages and `checksums.txt` in the same directory. On Linux, run `sha256sum -c checksums.txt --ignore-missing`. On macOS, use `shasum -a 256 <filename>`; on Windows, use PowerShell `Get-FileHash <filename> -Algorithm SHA256`. Compare the result with the listed SHA-256. `version.json` contains the version, commit, build time, and package information.
 
-Release bodies contain categorized changes and installation links to this section.
+See the root repository's [Bundle mode guide](https://github.com/songloft-org/songloft/blob/main/docs/bundle-mode.md) for backend startup, login, and mode switching. Release bodies contain categorized changes and installation links to this section.
 
 ## Technology stack
 

@@ -4,11 +4,12 @@ import { getHostCookies } from '../../../native/native-platform.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
 import { getSongsApi } from '../../library/api/index.js'
 import type { PluginHostContext } from './plugin-host-dispatch.js'
+import { desktopConfig } from '../../../desktop/client.js'
 
 /** Shared by HTML plugins and native Lynx frames; always use parsed domain Songs. */
 export const pluginHostContext: PluginHostContext = {
-  get platform() { return isWebPlatform() ? 'web' : getPlatformTarget() },
-  version: clientVersion,
+  get platform() { const desktop = desktopConfig(); return desktop ? desktop.os === 'darwin' ? 'macos' : 'windows' : isWebPlatform() ? 'web' : getPlatformTarget() },
+  get version() { return desktopConfig()?.build?.version ?? clientVersion },
   async resolveSongs(ids) {
     const api = getSongsApi()
     const songs = []

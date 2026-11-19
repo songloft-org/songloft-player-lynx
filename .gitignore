@@ -5,6 +5,9 @@ node_modules/
 dist/
 .rspeedy/
 .build/
+desktop/.build/
+/backend-source/
+/desktop-sdk/
 __pycache__/
 
 # Read-only Flutter reference snapshot (upstream repo songloft-org/songloft-player;

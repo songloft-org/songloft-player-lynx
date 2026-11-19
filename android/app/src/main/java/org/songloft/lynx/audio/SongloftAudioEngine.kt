@@ -869,7 +869,9 @@ object SongloftAudioEngine {
         audioManager = am
         val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val target = (volume * max).toInt().coerceIn(0, max)
+        ClientFileLog.write('I', "audio-volume", "setVolume requested=$volume stream=music before=${am.getStreamVolume(AudioManager.STREAM_MUSIC)} target=$target max=$max")
         am.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
+        ClientFileLog.write('I', "audio-volume", "setVolume complete current=${am.getStreamVolume(AudioManager.STREAM_MUSIC)}")
     }
 
     fun setSpeed(rate: Float) {

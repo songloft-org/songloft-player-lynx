@@ -1,5 +1,7 @@
 import { readLynxGlobal, readNativeModules } from './native-modules.js'
 import { isWebPlatform } from './web-platform.js'
+import { desktopConfig } from '../desktop/client.js'
+import { desktopPlatformModule } from '../desktop/platform.js'
 import { SHORTCUT_ACTIONS, parseShortcutBinding, type ShortcutAction, type ShortcutBinding, type ShortcutBindings } from '../features/player/domain/shortcut-bindings.js'
 
 export type PlaybackKeyAction = ShortcutAction
@@ -16,12 +18,12 @@ export interface PlaybackKeyState {
 interface KeyboardPlatform { setPlaybackShortcuts?: (state: PlaybackKeyState) => void }
 
 export function hasPlaybackKeys(): boolean {
-  const module = readNativeModules()?.SongloftPlatform as KeyboardPlatform | undefined
-  return isWebPlatform() && typeof module?.setPlaybackShortcuts === 'function'
+  const module = desktopPlatformModule() ?? readNativeModules()?.SongloftPlatform as KeyboardPlatform | undefined
+  return (isWebPlatform() || desktopConfig()?.capabilities.shortcuts === true) && typeof module?.setPlaybackShortcuts === 'function'
 }
 
 export function configurePlaybackKeys(state: PlaybackKeyState): void {
-  const module = readNativeModules()?.SongloftPlatform as KeyboardPlatform | undefined
+  const module = desktopPlatformModule() ?? readNativeModules()?.SongloftPlatform as KeyboardPlatform | undefined
   if (hasPlaybackKeys()) module!.setPlaybackShortcuts!(state)
 }
 

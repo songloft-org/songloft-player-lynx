@@ -7,12 +7,32 @@
 - 证据在 `/tmp/songloft-581.7JfaBL/`，四项新回归在旧宿主上失败，在修改后的宿主上通过。报告人的 Windows 网页封装与曲目仍待核对。见[进展记录](docs/project/progress.md)。
 - Seen 1× (2026-11-19)。
 
+### BUNDLE-001：用固定的绑定工具编译，按 AAR 声明选择 Android 下限
+
+- 2026-11-18，Lynx 基线 `baef0f9`，后端固定为 `81204e2`。`gomobile init` 拉取了新版 gobind，随后临时 Go 模块的 VCS 检测失败。改为从固定后端 Go 模块版本安装 gomobile 和 gobind，并关闭临时构建的 VCS stamping。二进制仍通过链接参数记录真实后端 SHA。
+- 三种 Android ABI 的原始 AAR 和 iOS arm64 静态框架均编译成功。Lynx 首次整包构建在 manifest 合并时明确报出 AAR 要求 API 23。根据 AAR 是否存在选择最低版本，Bundle APK 使用 API 23，无后端的源码构建使用 API 21。安装包检查读取每种已打包的 Go 库，核对实际 SHA。日志见 `/tmp/songloft-bundle-build.v9dPHY/`。
+- Seen 1× (2026-11-18)。
+
 ### LYRIC-003 在实际歌词字段与播放入口验证逐字解析
 
 - 播放歌词 Store 和逐字 LRC 解析使用基线 `f624965610b21fab03d8aec33b08d34cb90a1cba` 验证。[songloft-org/songloft-player#54](https://github.com/songloft-org/songloft-player/issues/54)
 - 原解析器的尖括号单测可通过，但 Store 只在 `lxlyric` 分支调用它。旧实现的四项新增回归分别暴露行内单方括号、洛雪相对偏移、双括号及歌词字段选择问题。
 - 普通 `.lrc` 旁挂歌词经 `lyric` 字段传输，专用 `lxlyric` 有可用逐字时间时优先。使用真实格式夹具走 Store、缓存和播放器，保留普通 LRC 连续行首标签的重复语义。
 - Seen 1× (2026-11-18)。
+
+### DESKTOP-002：隔离 Node 与 Lynx weak N-API 的 C++ 包装符号
+
+- 范围：同一个 `.node` 同时提供 Node 宿主功能和 Lynx 原生模块。
+- 证据：只分别构建两类源码可通过；完整业务页启动却在 Lynx_JS 线程跳到地址 0，报告 `lynx_napi_report_and_clear_exception`。普通 Node 与 weak N-API 包装拥有相同的 inline C++ 符号，链接器合并后会使用错误 ABI。分配 `NAPI_CPP_CUSTOM_NAMESPACE=SongloftNode/SongloftLynx` 后，真实 Mac 业务登录页及存储/网络/快捷键 RPC 运行通过。
+- 规则与正确示例：同时隔离 C API 选择和 C++ 包装命名空间；只为 BTS 源码启用 `USE_WEAK_SUFFIX_NAPI`。分别验证宿主导出和真实 Lynx Callback，不能以模块链接或 Node-only 播放测试代替两者合用。
+- Seen 1×（2026-11-17）。状态：未提交候选；详见[本轮记录](docs/project/desktop-implementation.md)，Windows 和设备验收分别记录。
+
+### PLUGIN-003：模板 fetcher 和桥接注册不能替代原生子页面组件
+
+- 范围：HarmonyOS HAP 打开 miot 等 Lynx 插件；基线 `173fa140c70ba80998cb8f49960619306986ef86`。
+- 证据：锁定的 Harmony Lynx 4.0.1 没有 frame 实现，原 Index 也没有对应 Behavior；隔离旧代码的子页面回归实际创建 0 个实例，组件回归找不到鸿蒙节点，均按预期失败。已有 HAP 编译与模板下载器测试未覆盖这个缺口。
+- 规则与 Done right：按实际 SDK 核对标签实现及其完整加载链路；鸿蒙使用专用标签创建独立 LynxView，明确传入 fetcher、组件、桥接和初始 props，验证令牌晚到、RPC、保留/销毁与替代身份。子页面不绑定根页面单例；模拟器/真机画面与编译、适配器测试分别记录。详见[记录](docs/project/harmony-plugin-frame.md)。
+- Seen 1× (2026-11-17)。状态：本地源码修复、回归和 HAP 编译通过；用户已授权本批提交、推送及同步父指针，实际提交和同 SHA CI 见记录。无鸿蒙设备验收，不创建正式版本；旧壳需要重装新 HAP。
 
 ### PLUGIN-004：入口展示方式不能决定插件实例是否保留
 
@@ -21,12 +41,41 @@
 - 规则与 Done right：所有原生 Lynx 入口共享 Shell 实例，embed/标题栏只决定展示；离开时暂停，身份/服务器/停用/退出时清理。健康封面不因恢复显示失效。编译、组件与浏览器分别记录；无堆栈不能将重复创建或图片重载定为鸿蒙闪退根因，详见[记录](docs/project/miot-reentry.md)。
 - Seen 1× (2026-11-17)。状态：本地修复；未提交/发布，鸿蒙崩溃待日志与设备验收。
 
-### PLUGIN-003：模板 fetcher 和桥接注册不能替代原生子页面组件
+### PLUGIN-005：Windows 插件验收要核对首次画面与恢复画面
 
-- 范围：HarmonyOS HAP 打开 miot 等 Lynx 插件；基线 `173fa140c70ba80998cb8f49960619306986ef86`。
-- 证据：锁定的 Harmony Lynx 4.0.1 没有 frame 实现，原 Index 也没有对应 Behavior；隔离旧代码的子页面回归实际创建 0 个实例，组件回归找不到鸿蒙节点，均按预期失败。已有 HAP 编译与模板下载器测试未覆盖这个缺口。
-- 规则与 Done right：按实际 SDK 核对标签实现及其完整加载链路；鸿蒙使用专用标签创建独立 LynxView，明确传入 fetcher、组件、桥接和初始 props，验证令牌晚到、RPC、保留/销毁与替代身份。子页面不绑定根页面单例；模拟器/真机画面与编译、适配器测试分别记录。详见[记录](docs/project/harmony-plugin-frame.md)。
-- Seen 1× (2026-11-17)。状态：本地源码修复、回归和 HAP 编译通过；用户已授权本批提交、推送及同步父指针，实际提交和同 SHA CI 见记录。无鸿蒙设备验收，不创建正式版本；旧壳需要重装新 HAP。
+- 范围：测试签名 Windows x64 2.13.16 安装上的 Lynx 与 HTML 插件。
+- 证据：两个插件写入了收藏和后端存储，并播放了测试音。CEF 离屏合成仍显示白屏。Lynx 子窗口修正位置后能正常首次打开，返回后再次打开仍白屏。Win32 枚举显示原 HWND 仍可见且位置正确，提升子窗口层级并请求重绘立即恢复原内容。
+- 规则：独立核对插件副作用、画面与原实例恢复。Windows CEF 插件使用原生子窗口。Lynx 在尺寸变更后校正 DPI 原点，等渲染器完成窗口尺寸变更再请求重绘。保留实例的回归应包含隐藏后恢复和窗口缩放。[验收记录](docs/project/desktop-implementation.md#windows-完整业务页插件验证)。
+- Seen 1× (2026-11-19)。状态：本地修复和 Windows 虚拟机复测，更新后的整包待验。
+
+### DESKTOP-004：调试宿主与页面会话分别等待就绪
+
+- 范围：2026-11-17 macOS x64/Rosetta 第一批探针采集；客户端 `173fa14` 加未提交工作树。
+- 证据：固定延迟后采集分别遇到 `No available clients` / `No available sessions`；轮询实际页面后，9.633 秒取得可用会话，真实 Callback、CoreAudio、CEF 加载和视频截图均可采集。另一次总进程预算没有覆盖初始化后才启动的退出计时，被控制器提前清理；20 秒探针重试正常退出。详见[记录](docs/project/desktop-phase1.md)。
+- 规则与 Done right：先核对目标进程仍活着，再等实际页面会话；宿主在线不是页面可用。应用计时与控制器计时必须使用一致起点或留出已观察的初始化时间，保留原始失败和清理原因，不把采集时序错误写成目标不兼容或应用退出失败。
+- Seen 1× (2026-11-17)。状态：采集修正；锁屏下连续画面与交互仍未验收。
+
+### DESKTOP-003：原生绘制完成应绑定 invoke 回调
+
+- 范围：2026-11-17 第一批 macOS 探针；基线 `173fa14` 加未提交工作树。
+- 证据：实际引擎时间前进但提交帧保持 1；`SelectorQuery.exec()` 的真实声明为 `exec(): void`，传入的回调未被执行，绘制门控一直占用。DevTool 日志与截图见[记录](docs/project/desktop-phase1.md)。
+- 规则与 Done right：SelectorQuery 保持类型；在 `invoke` success/fail 中释放单请求门控，处理同步异常，销毁后忽略回调。4 项回归通过。锁屏环境仍有表面缓冲超时，原因待解锁定位，不能把此单点修复当作连续视频验收。
+- 同轮状态修复：换源保留全局暂停观察值，避免未变化属性不重发时长期未知；隔离恢复旧重置后原生测试实际失败。
+- Seen 1× (2026-11-17)。状态：本地修复；macOS 连续画面、人工听音和三架构验收未通过。
+
+### DESKTOP-002：绘制所需锁内不能同步等待 libmpv 核心
+
+- 范围：第一批桌面音视频探针，`6df678d` 后未提交桌面源码；2026-11-17 核对固定 mpv 0.41.0 `render.h` Threading 约束，发现同步暂停与状态读取在绘制所需互斥锁内。
+- 规则与 Done right：活跃 render context 的共享锁内只使用 render-safe 异步控制、属性观察和零超时事件读取。初始化同步版本读取先于 render 创建；未知属性保持未知，异步命令排队不伪装为实际状态。
+- 证据：`test:native` 使用真实头文件声明及 API double 执行生产 `Engine`；隔离恢复同步暂停、同步读取后，两次测试都编译成功并以对应的 `synchronous ... holds the render lock` 失败。修复后的事件读取、未知态、异步错误、换源和释放顺序通过，日志 `/tmp/songloft-desktop-engine-test-final.log`；此测试复现的是 API 约束违反，不是目标平台实播死锁。
+- Seen 1× (2026-11-17)。状态：本地控制修复；目标系统真实音视频仍 Not run。
+
+### DESKTOP-001：可选运行时必须按全部目标架构检查锁文件
+
+- 范围：Windows/macOS 桌面第一批候选依赖；客户端基线 `888f5b88c842ea932a1f1f0b810a7f82a876f6fc`。
+- 证据：镜像对 `@lynx-js/lynxtron-runtime-darwin-arm64-devtool@0.0.31` 返回 404，官方 registry 返回版本及摘要；安装仍退出成功，但锁文件漏掉 arm64。新增完整矩阵测试实际失败，见 `/tmp/songloft-desktop-lock-before.log`。仅改 registry 并复用旧元数据仍未补齐。
+- 规则与 Done right：桌面独立配置官方作用域 registry，使用新 store 重新解析并锁定三架构元数据；检查每个目标包及摘要，不能用当前 Linux 安装成功代表 macOS/Windows 就绪。修复后三个 Node 检查通过，见 `/tmp/songloft-desktop-lock-fixed.log`。此检查不替代目标平台编译和运行。
+- Seen 1× (2026-11-17)。状态：候选依赖修复；三架构原生验收 Not run。
 
 ### LICENSE-001：协议入口要可阅读，依赖署名要验证覆盖完整性
 
@@ -319,6 +368,13 @@
 - Done right：构建完成后顺序执行，`/tmp/songloft-520-lynx-tests-final.log` 的 3494 项通过；随后增加歌词可见性用例的最终验证记录见 [#520](docs/project/issue-520.md)。
 - Seen 1× (2026-10-14)。状态：经验。
 
+### TEST-002：隔离回归要保留 pnpm 依赖目录结构
+
+- 范围：从已打包的源码快照运行 Lynx 共享测试。
+- 证据：2026-11-19，以 `debad6e80` 为基线的 2.13.24 打包快照中，隔离目录的依赖符号链接指向原工作树，Vitest 的 374 个套件都在加载 ReactLynx setup 时失败。保留 pnpm 的本地目录结构并为依赖文件建立硬链接后，Android manifest 与认证拦截的 19 项先导测试通过。
+- 做法：隔离依赖目录和构建产物，使 Vite 仍从测试根解析 setup。先构建 Lynx 与 Web，再按打包源码摘要记录测试结果。[验证记录](docs/project/desktop-implementation.md#21324-三架构同源开发包)
+- Seen 1× (2026-11-19)。状态：经验。
+
 ### UI-001：滚动提示要核对实际可见歌曲和各宿主的回调形态
 
 - 范围：虚拟列表定位、首字母和序号提示（songloft-org/songloft#518）。
@@ -370,6 +426,176 @@
 - 证据与 Done right：317 项原生契约检查与类型检查通过，隔离旧源码的新结构检查失败；ARC 时序与真机未验。详见 [本次记录](docs/project/progress.md)。
 - Seen 1× (2026-10-28)。状态：源码修复，原生编译及设备验收待完成。
 
+### DESKTOP-003：跨宿主就绪状态必须等到实际消费边界
+
+- 范围：桌面 Bundle 更新迁移确认、Lynx 原生子帧桥接及更新器下载收尾。
+- 证据：2026-11-18 源码审查发现三处时序差异：远程模式启动后本地数据库迁移尚未发生；子 Lynx runtime 可能在宿主绑定 frame identity 前报告 ready；更新目录创建失败发生在下载清理块之外。旧代码可能过早确认应用、永久拒绝插件调用或卡在 downloading 状态。
+- 规则与修复：确认与身份在对应实际消费边界读取：本地后端健康检查通过后确认迁移，插件首次子帧调用时解析绑定身份，下载准备步骤也位于同一错误/取消/finally 路径内。
+- Done right：相关 JS 通过 Prettier 和 `node --check`，原生扩展通过 clang-format；安装器将不可变清单与启动确认记录原子写入，若替换应用后确认记录写入失败，则恢复并重启旧应用。实现记录同步说明精确未验证项。Not run：更新器/插件运行时测试、原生构建、真实迁移失败恢复与安装升级。
+- 同次后续：dev 支持同版本升级，版本号单独不足以确认已安装的应用。升级确认同时核对客户端和后端 SHA，并等待本地健康检查。待确认期间禁止再次安装，备份时串行化模式切换并保持后端停止。隔离旧实现的两项回归因过早删除旧应用、过早停止会话而失败。Mac arm64 真实包完成 43→44 迁移，故意中止 0044 的隔离曲库恢复了同摘要旧库。证据见[桌面实施记录](docs/project/desktop-implementation.md#mac-arm64-真实数据库迁移及恢复)。
+- Seen 1× (2026-11-18)。状态：经验，待最终设备和升级验收。
+
+### DESKTOP-005：自动和手动更新共用镜像配置
+
+- 范围：Lynxtron 桌面更新。旧宿主只在手动检查时接收代理，新增用例中首次自动检查和下载均直连 GitHub。
+- 规则：每次检查从当前认证会话读取代理，并将配置与清单和资产绑定。等待时发生切服或退出，应放弃旧会话的响应。
+- 证据：Linux 隔离旧宿主对照失败。Mac arm64/x64 的真实业务 bundle 均通过反代子路径读取代理，再下载测试签名资产。[实施记录](docs/project/desktop-implementation.md#自动更新代理补验)
+- Seen 1× (2026-11-18)。状态：已修复，正式发布待验。
+
+### DESKTOP-006：Windows 媒体控制需要官方 SDK 编译验证
+
+- 范围：Windows x64 SMTC。MinGW 构建其它 COFF 对象时，媒体控制缺少 SDK 头文件。
+- 规则：用官方 Win32 头和 C++/WinRT 投影共同编译，显式限定 WinRT 类型，并启用 C++20。
+- 证据：Windows SDK 10.0.26100.4204 对旧稿报告命名空间冲突及实验性协程错误。修复后 12 个源文件交叉编译，并用 Lynxtron 导入库和 mpv 夹具链接。[实施记录](docs/project/desktop-implementation.md#windows-x64-原生交叉编译和链接)
+- Seen 1× (2026-11-18)。状态：已修复编译，Windows 真机待验。
+
+### DESKTOP-007：Mac 视频绘制避免等待共享缓冲
+
+- 范围：Lynxtron 0.0.31 的 Mac 视频元素。原双缓冲会短暂停顿，单缓冲借用表面后 Rosetta x64 仍复现超时。
+- 规则：用 `PresentSurface` 尝试提交自有 IOSurface。缓冲满时保留后续重绘机会，提交后由 Lynx 持有该表面。核对像素变化、引擎位置、尺寸与缓冲超时。
+- 证据：最终两架构各采样到第 560 帧，经历暂停、恢复和缩放，均未出现缓冲等待超时。[实施记录](docs/project/desktop-implementation.md#mac-视频缓冲与-cef-窗口测试)
+- Seen 1× (2026-11-18)。状态：已修复探针复现，完整客户端和长时播放待验。
+
+### DESKTOP-008 · 插件桥要覆盖首个调用和窗口退出
+
+- 涉及 Lynxtron 0.0.31 的 Lynx 子帧与 CEF HTML 插件。
+- Mac 的首次就绪推送触发 Lynx 同步回调，线程采样显示回调和销毁等待同一把路由锁。旧 CEF helper 中，页面 `load` 时既有插件 SDK 报告桥不可用。
+- 在 UI 线程投递子帧事件，发送前释放路由锁，销毁时丢弃待投递事件。在 CEF renderer 创建主文档上下文时安装桥。用已安装插件执行写入、播放及后端重启读回来检验。[实施记录](docs/project/desktop-implementation.md#mac-两类插件读写与播放)
+- Seen 1× (2026-11-18)。Mac arm64 和 Rosetta x64 隔离场景通过，Windows 运行待验。
+
+### DESKTOP-009 · 安装前核对包内版本和架构
+
+- 涉及桌面 dev 滚动发布和已签名更新包。
+- 主机、Go helper 和发布工具旧逻辑均接受较晚发布的低版本。测试签名和摘要可以同时通过，因为它们保护的是收到的清单和文件。
+- 同版本 dev 滚动先核对版本，再核对源码与时间。磁盘安装之前还要将目标包内的版本、通道、客户端和后端身份与清单对齐。在 Windows 上先让签名 NSIS 结束，再核对新应用并决定重启或恢复。[实施记录](docs/project/desktop-implementation.md#更新包身份和-mac-双架构升级)
+- Seen 1× (2026-11-18)。Mac 原生包和错架构对照通过，Windows 执行待验。
+
+### DESKTOP-010 · 回滚时同时核对应用与数据库
+
+- 同一版本可以打包不同后端。采用正确文件摘要、错误后端 SHA 的备份，上一版 arm64 辅助程序仍执行了回滚。
+- 备份需与旧应用版本及后端 SHA 匹配，所有文件先验证再移动。旧应用无法就位或数据库文件只恢复了一部分时，尝试撤回已完成的移动。Mac 真实 schema 迁移、回滚后曲库读取及失败现场摘要见[实施记录](docs/project/desktop-implementation.md#数据库回滚配对与中途失败)。
+- Seen 1× (2026-11-18)。Mac arm64、Rosetta x64 和故障注入通过，Windows 实际安装与恢复待验。
+
+### DESKTOP-011 · 核对构建器实际生成的资源目录
+
+- Lynxtron builder 0.0.30 生成的 Windows 文件树把 `extraResources` 放在安装根目录。旧配置的实际产物为 `songloft/build-info.json`，宿主和更新器都按 `resources/songloft/build-info.json` 读取。
+- Windows 使用从安装根开始的明确资源路径，上传前从实际安装目录核对元数据、本地工具和业务 bundle。用包内工具生成扫描夹具时要满足后端文件稳定性保护。[实施记录](docs/project/desktop-implementation.md#上传前验证实际安装产物)
+- Seen 1× (2026-11-18)。Windows 实际打包布局及两种 Mac 更新 ZIP 的后端验证通过。
+
+### DESKTOP-012 · 按共享纹理句柄类型导入与同步
+
+- Lynxtron 0.0.31 内置的 Clay 在 Windows x64 使用 NT 共享句柄和键控互斥锁。旧导入接口在 Windows 11 24H2 虚拟机返回 `E_INVALIDARG`，纯音频能播放但视频打不开。
+- 写入端用 `OpenSharedResource1` 导入 NT 句柄，保留旧句柄导入路径。按 Clay 的 key 0 同步，发现读端占用就重试当前绘制。实际画面采样、虚拟音轨和全屏往返后的播放位置均有对照证据。[实施记录](docs/project/desktop-implementation.md#windows-共享纹理与三架构装包播放)
+- Seen 1× (2026-11-19)。Windows 11 x64 虚拟机通过，实体 GPU 待验。
+
+### DESKTOP-013 · 安装辅助程序读取发行清单的平台名
+
+- 发布工具从 `win32-x64` 生成清单，宿主也用 Node 的 `win32` 标识。旧 Go 安装辅助程序比较的是 `GOOS` 的 `windows`。在 Windows 11 x64 虚拟机运行旧辅助程序，有效签名的发行格式清单被拒绝为 `invalid update target`。
+- 辅助程序按发行清单的平台名校验目标，并维持操作系统与架构校验。Windows 回归直接使用发布值 `win32`，补测拒绝 `windows`。同一回归用旧实现失败，修复后 Windows 和两种 Mac 架构的辅助程序测试通过。证据位于 `/tmp/songloft-windows-package.p7uZmv/vm/guest-serial-resumed.log` 和 `windows-update-lab/mac-helper-tests.log`。
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-014 · Windows 安装辅助程序使用应用目录之外的工作目录
+
+- 从 Windows 安装目录启动客户端后，界面触发“重启安装”并成功退出。辅助程序虽然已复制到应用数据目录，却继承了安装目录作为工作目录。重命名旧目录时 Windows 报文件仍被进程使用。
+- 辅助程序在读清单和等待退出之前切换到更新目录。在同一 Windows 虚拟机，从应用目录启动两版辅助程序，旧版重命名失败，修复版执行到了预期返回 17 的签名安装夹具并恢复原目录。证据见 `/tmp/songloft-windows-package.p7uZmv/vm/guest-serial-resumed.log`。
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-015 · 后端健康确认先于旧包的清理
+
+- Windows 实际测试签名升级已启动新版，后端健康检查返回 200。旧确认逻辑用 ASAR 虚拟文件系统清理旧包，对 Windows 下的 `resources/app.asar` 执行 `rmdir` 报 `EBUSY`，误显示恢复提示。曾用虚拟文件系统打开同一归档的进程退出前，原始文件系统也可能遇到归档占用。
+- 健康确认先写入启动记录，清理走 `original-fs`。临时清理失败保留记录并可由同一已确认版本重试。Windows 上原生 Lynxtron 对照、宿主回归和实际曲库读回见[实施记录](docs/project/desktop-implementation.md#windows-签名更新清单校验)。
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-016 · 登录表单跟随宿主已确认的模式
+
+- Windows 11 24H2 x64 测试签名客户端取消选目录后仍等待自动登录。切回远程时，登录页在宿主切换完成前显示，表单保留了本地模式按钮和内嵌后端的掩码凭据。
+- 目录取消直接结束切换。登录页订阅宿主确认的模式，本地自动登录仅使用当前会话。Windows 实际界面通过取消、选目录、从设置双向切换和恢复远程凭据。证据见[实施记录](docs/project/desktop-implementation.md#windows-业务界面切换本地和远程模式)。
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-017 · Windows 关窗要验证原生消息路径
+
+- Lynxtron 0.0.31 的 Windows 关窗路径不会发出可取消的关闭事件。实际测试签名客户端点击标题栏关闭后，托盘和进程都消失了。
+- 有托盘时拦截 Win32 关闭消息，通过原窗口的 hide 方法同步可见状态。显式退出撤销拦截，让应用和内置后端完成清理。Windows 对照验证了隐藏期间真实音轨连续输出、托盘回到原窗口和退出无残留进程。详见[实施记录](docs/project/desktop-implementation.md#windows-关窗后继续播放并从托盘恢复)。
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-018 · 关于页展示已安装的桌面包身份
+
+- 2.13.15 测试签名 NSIS 装包实际成功，默认业务 bundle 却在关于页显示 `dev` 和 `unknown`。共享组件编译时的版本常量无法代表宿主打包时选定的版本。
+- 桌面宿主把更新服务使用的包内版本、提交 SHA 和构建时间传给根页面。更新 ASAR 和业务 bundle 后，Windows 实际关于页显示与安装包一致的 2.13.15 和 SHA。见[验收记录](docs/project/desktop-implementation.md#windows-完整测试签名安装包-21315)。
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-019 · 在实际安装的 Windows 应用上验证 CEF 启动
+
+- Windows 11 24H2 虚拟机只有 Microsoft Basic Display Adapter。2.13.17 开发安装包默认启动时，CEF 的 GPU 子进程连续报 `0xc0000005`，宿主退出。给同一安装加上系统命令行开关 `--disable-gpu` 后能打开登录页。
+- DXGI 探测发现没有可用硬件适配器时，宿主在初始化 CEF 和获取单实例锁前以软件模式重新启动一次。用完整 2.13.18 NSIS 安装后，通过普通启动路径核对实际进程参数，重复启动应保持原窗口。再以包内 CEF 验证插件页面、后端写入和播放。[验收记录](docs/project/desktop-implementation.md#21318-完整开发包)
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-020 · 开发数据目录要隔离系统凭据
+
+- 2.13.19 的 macOS 开发版用 `SONGLOFT_DESKTOP_DATA_ROOT` 分开设置和曲库，但两个目录仍使用同一个 Keychain 服务名。控制台预检发现默认开发服务已有凭据。隔离回归恢复旧查找逻辑后，测试目录读到了默认目录的测试密码。
+- 自定义开发数据目录使用数据路径摘要作为 Keychain 服务名的一部分，同一目录重启后继续使用同一个服务。测试覆盖默认开发目录和两个自定义目录，27 项宿主检查通过。目录隔离说明见[桌面构建指南](desktop/README.md)。
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-021 · 从实际曲库验证 MV 入口
+
+- Windows 2.13.19 的打包宿主能用探针画视频，但“观看 MV”只播放了音轨。306 次实际曲库操作的屏幕采样均未出现视频。桌面入口需要导航到共享视频页，并等当前 `sourceId` 的 `sourceReady` 后再打开和测量画面。
+- 用同一安装中的后端扫描视频，通过普通菜单进入。合成视频的 16 段色块和音频全部匹配，进出全屏时位置继续推进。回归覆盖换源、提前关闭和准备失败。[验收记录](docs/project/desktop-implementation.md#windows-21319-曲库-mv-与全屏)
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-022 · Mac 更新重启显式传递开发数据目录
+
+- 在 macOS 26.6.2 上，安装辅助程序只调用 `open -a` 时，Launch Services 继承的目录值会将「隔离」转成乱码。安装和恢复后的新进程可能因此读取另一套偏好和钥匙串服务。
+- 宿主用本次运行解析出的绝对目录启动辅助程序。辅助程序在 dev 通道通过 `open --env` 传递该项。实际签名升级与恢复夹具都重新启动到同一含中文、空格和等号的目录，且保留失败文件。[实施记录](docs/project/desktop-implementation.md)
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-023 · 按 TLS 模式记录连接和媒体请求
+
+- 同一个自签名媒体夹具在 macOS 会留下 TLS 警报，在 Windows 2.13.19 则只留下严格模式的 TCP 连接。播放器报错且没有媒体 GET，原验证器仍因要求 macOS 的警报形态而失败。
+- 由客户端标记模式，服务分别保存连接和媒体请求。严格阶段断言播放器拒绝并无媒体 GET，启用测试设置后断言同一 URL 有 206 和实际解码。Windows 完整九项媒体检查通过。[验收记录](docs/project/desktop-implementation.md)
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-024 · 安装失败恢复目录后核对旧应用是否重启
+
+- Windows 2.13.21 的设置页使用有效签名清单下载了版本不符的 NSIS。辅助程序恢复了原应用目录和曲库，但原进程已退出，失败日志没有界面入口。
+- 在新应用启动前，确认原安装路径、旧应用身份和签名后重启。主进程读取失败标记并提供安装日志入口。实际设置页对照核验新 PID、四首歌及日志定位，两种 Mac 架构的签名夹具验证旧应用重启。[验收记录](docs/project/desktop-implementation.md#安装失败后重启已恢复的应用)
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-025 · Windows 测试光盘拷贝后检查只读属性
+
+- 从只读光盘恢复真实签名包的元数据后，PowerShell 的 `Copy-Item` 保留了只读属性。测试脚本在设置回环更新地址时被拒绝。
+- 只对隔离安装中的副本清除只读属性，核对恢复的字节后再设置测试地址。原包保持原签名，2.13.21 至 2.13.22 设置页升级通过。脚本和验证记录见 [Windows 2.13.22](docs/project/desktop-implementation.md#windows-21322-设置页升级与锁屏播放)。
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-026 · 本地后端未就绪时不按旧令牌进入主页
+
+- Windows 2.13.22 的已登录曲库目录暂时不可用时，关闭启动失败提示后，旧令牌把客户端带到无法加载的主页。
+- 本地会话启动失败也由宿主解析登录状态。登录页暴露重试和选目录，成功后才保存新的目录。实际移走和归还原目录的对照保留了四首歌曲和原凭据，重试恢复登录与发声。[验收记录](docs/project/desktop-implementation.md#音乐目录不可用时保留本地会话)
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-027 · 暂存 CEF 时重建 macOS 框架链接
+
+- macOS arm64 上，固定锁文件的离线安装把 CEF 的框架链接展开成文件和目录。打包复制了这些副本，`codesign` 拒绝签署结构不明确的框架。
+- 暂存时仅复制框架的 `Versions/A`，再创建标准的相对链接。宿主测试覆盖链接被展开的安装树，完整 macOS 包另做严格验签。[验收记录](docs/project/desktop-implementation.md#21323-完整开发包)
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-028 · 复制安装包前核对三个架构的源码摘要
+
+- 发布工具夹具只改了一个架构的 `clientSourceSha256`，保留相同的客户端 SHA、版本、后端和更新公钥。旧脚本仍成功暂存并为混合工件签署清单。
+- 发行任务固定 checkout 的换行策略。发布前同时读取三个架构的元数据，核对源码摘要及其它共同身份后再创建输出。回归覆盖同 SHA 不同源码的工件，并检查拒绝后没有输出目录。[验收记录](docs/project/desktop-implementation.md#桌面发行预检)
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-029 · 停播前复核已下载的安装包
+
+- 安装包校验通过后仍可能在磁盘上变动。测试用等长损坏文件覆盖后，旧宿主先停止会话，再由辅助程序发现错误。
+- 点击安装时重算摘要，失败回到可重新下载的状态。辅助程序在原进程退出后独立验包，交接后的失败只重启身份和签名均通过校验的旧版。Windows 与两个 Mac 架构均已验证辅助程序拒绝损坏包及重启旧版。[验收记录](docs/project/desktop-implementation.md#交接前后验证更新包)
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-030 · 升级包清理以启动确认记录为准
+
+- 回归显示已确认的更新仍保留整份安装包。提前删包会令待确认更新失去独立辅助程序所需的恢复资产。
+- 先持久化确认，再删除该记录对应的摘要文件和旧应用。Windows 的真实文件锁测试确认 `EBUSY` 不撤销确认，锁释放后可重试删除。数据库备份和失败记录继续保留。[验收记录](docs/project/desktop-implementation.md#确认升级后回收安装缓存)
+- Seen 1× (2026-11-19)。
+
 ### LIST-005 · 标题滚动跟随行的可见状态
 
 - ReactLynx 会为离屏列表项执行组件 effect。视口外的标题也会发起尺寸测量，后续用一次归零动画覆盖旧动画的做法还会让原动画继续写入样式。
@@ -387,3 +613,9 @@
 - 胶囊首帧使用当前服务器和账号的本地快照。后台同时校验 Tab 配置和已启用插件，成功后保存新的有效布局。移动 Bundle 用本地曲库身份跨监听端口重启复用快照。
 - Docker Chrome 延迟两个接口，旧版先画内置 Tab，再插入插件项。修复后首帧有已保存的插件项，配置相同没有重排，配置变化更新一次，503 时布局保留。回归另外覆盖移动 Bundle 端口变化与账号隔离。
 - Seen 1× (2026-11-18)。对照基于 `baef0f9` 和本次 Lynx 工作树，证据在 `/tmp/songloft-lynx-scroll-tabs.j14OKU/`。
+
+### DESKTOP-031 · 换源保留未变化的 libmpv 视频属性
+
+- 范围：桌面原生播放器的换源与视频轨判定。2.13.24 arm64 从 MP4 切到同尺寸 MKV 后，位置推进到 2,267 ms，宿主却报告 0×0。
+- 保留尺寸和时长的最后一次属性观测。遇到不可用通知清除对应值，当前源就绪才向宿主公开。旧实现的回归复现尺寸归零，修复后的独立签名副本在原生 arm64 与 Rosetta x64 连播四种容器。[记录](docs/project/desktop-implementation.md#macos-换源保留同尺寸视频)
+- Seen 1× (2026-11-19)。状态：经验。

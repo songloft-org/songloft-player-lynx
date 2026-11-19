@@ -80,6 +80,8 @@ function readHostWebBaseUrl(): string | null {
 
 /** Static app assets belong to the Web page, independently of the API server. */
 export function hostAssetUrl(name: string): string {
+  const desktop = readLynxGlobal()?.__globalProps?.songloftDesktop
+  if (typeof desktop?.assetBaseUrl === 'string') return `${desktop.assetBaseUrl.replace(/\/$/, '')}/${name}`
   const base = readHostWebBaseUrl() ?? readWorkerOrigin()
   return `${base ?? ''}/${name}`
 }
@@ -212,6 +214,8 @@ export function applyHostDeployMode(): void {
 }
 
 class AppConfigState {
+  readonly defaultBaseUrl = DEFAULT_BASE_URL
+
   /** Identity base URL (what the user configured / the entry origin). */
   baseUrl: string = DEFAULT_BASE_URL
 

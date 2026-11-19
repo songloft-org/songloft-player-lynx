@@ -8,6 +8,8 @@ import {
 import { createWebStorage } from './web-storage.js'
 import { createIndexedDBStorage, isIndexedDBAvailable } from './idb-storage.js'
 import type { SongloftStorage } from './types.js'
+import { desktopConfig } from '../../desktop/client.js'
+import { createDesktopStorage } from '../../desktop/storage.js'
 
 export type {
   SongloftStorage,
@@ -56,6 +58,7 @@ let warnedInterimStorage = false
  */
 export function createSongloftStorage(impl?: SongloftStorage): SongloftStorage {
   if (impl) return impl
+  if (desktopConfig()) return createDesktopStorage()
   const nativeModules = readNativeModules()
   if (isNativeStorageAvailable(nativeModules)) {
     try {

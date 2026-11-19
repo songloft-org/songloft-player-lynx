@@ -195,3 +195,23 @@
   font-size: var(--font-body);
   font-weight: var(--weight-semibold);
 }
+
+.login__bundle-mode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  margin-top: var(--space-2);
+  border-radius: var(--radius-pill);
+  background-color: var(--quaternary-system-fill);
+}
+
+.login__bundle-mode--disabled {
+  opacity: 0.5;
+}
+
+.login__bundle-mode-text {
+  color: var(--accent);
+  font-size: var(--font-body);
+  font-weight: var(--weight-semibold);
+}

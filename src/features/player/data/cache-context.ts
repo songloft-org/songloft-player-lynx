@@ -6,13 +6,14 @@ import type { Song } from '../../../models/song.js'
 import type { CacheVariant } from '../domain/cache-identity.js'
 import { cacheIdentity, cacheNamespace, type CacheScope } from '../domain/cache-identity.js'
 import { cancelCacheTask, indexedSongCacheAvailable, readCacheTasks, readIndexedSong, removeIndexedSong } from './indexed-song-cache.js'
+import { isDesktopLocalSession } from '../../../desktop/client.js'
 
 export function currentCacheScope(): CacheScope | null {
   const session = useAppSessionStore.getState()
   if (!session.username) return null
   const servers = useServerStore.getState()
   const active = servers.profiles.find(value => value.id === servers.activeProfileId && value.url === appConfig.baseUrl)
-  return { profile: active?.id ?? null, server: `${appConfig.baseUrl}${appConfig.basePath}`, username: session.username }
+  return { profile: isDesktopLocalSession() ? 'bundle-local' : active?.id ?? null, server: `${appConfig.baseUrl}${appConfig.basePath}`, username: session.username }
 }
 export function currentCacheNamespace(): string | null {
   const scope = currentCacheScope()

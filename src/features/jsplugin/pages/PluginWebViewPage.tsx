@@ -42,6 +42,8 @@ import { subscribeAppResumed } from '../../../native/app-lifecycle.js'
 import { LynxPluginFrame } from '../widgets/LynxPluginFrame.js'
 import { createPluginBackBridge } from '../domain/plugin-back-bridge.js'
 import './PluginWebViewPage.css'
+import { desktopConfig } from '../../../desktop/client.js'
+import { DESKTOP_CEF_BRIDGE } from '../../../desktop/cef.js'
 import { useRetainedPluginTabs } from '../widgets/RetainedPluginTabs.js'
 
 async function getAccessToken(): Promise<string> {
@@ -114,6 +116,7 @@ function subscribePluginAppearance(push: () => void): () => void {
 
 export function PluginWebViewPage() {
   const retainedTabs = useRetainedPluginTabs()
+  const desktop = desktopConfig()
   const navigate = useNavigate()
   const { t } = useTranslation()
   const params = useParams({ strict: false }) as { entryPath?: string }
@@ -467,7 +470,7 @@ export function PluginWebViewPage() {
   // The routed page owns the pushed topbar; the shell owns the stable frame
   // beneath it. Return before loading/error UI so no transient full-height page
   // can cover or squeeze the retained instance during a home-grid round-trip.
-  if (retainedTabs && plugin?.renderEngine === 'lynx' && plugin.isActive)
+  if (retainedTabs && plugin?.isActive && (plugin.renderEngine === 'lynx' || desktop))
     return topbar
 
   if (loading) {
@@ -540,6 +543,9 @@ export function PluginWebViewPage() {
         ref={webviewRef}
         className='plugin-webview__frame'
         src={src}
+        initjs={desktop ? DESKTOP_CEF_BRIDGE : undefined}
+        use-osr={desktop ? desktop.os === 'darwin' : undefined}
+        bindopenwindow={desktop ? event => { if (event.detail?.url) openURL(event.detail.url) } : undefined}
         bindload={onWebViewLoad}
         bindlocationchange={onLocationChange}
         bindmessage={onMessage}

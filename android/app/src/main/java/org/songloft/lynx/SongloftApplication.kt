@@ -11,6 +11,7 @@ import com.lynx.service.log.LynxLogService
 import com.lynx.tasm.LynxEnv
 import com.lynx.tasm.service.LynxServiceCenter
 import org.songloft.lynx.audio.SongloftAudioModule
+import org.songloft.lynx.bundle.SongloftBundleModule
 import org.songloft.lynx.cache.SongloftSongCacheModule
 import org.songloft.lynx.dlna.SongloftDlnaModule
 import org.songloft.lynx.lyric.FloatingLyricModule
@@ -84,6 +85,9 @@ class SongloftApplication : Application() {
         // survive app restart so the user is no longer bounced to /login after
         // backgrounding. Name + methods match `src/core/storage/native-storage.ts`.
         LynxEnv.inst().registerModule("SongloftStorage", SongloftStorageModule::class.java)
+        if (SongloftBundleModule.isBundleBackendAvailable()) {
+            LynxEnv.inst().registerModule("SongloftBundle", SongloftBundleModule::class.java)
+        }
         LynxEnv.inst().registerModule("SongloftPlatform", SongloftPlatformModule::class.java)
         LynxEnv.inst().registerModule("SongloftDlna", SongloftDlnaModule::class.java)
         LynxEnv.inst().registerModule("SongloftFloatingLyric", FloatingLyricModule::class.java)

@@ -2,6 +2,7 @@ import { getTranscodeFormat, normalizeFormat, type AudioPlatform } from '../../.
 import { buildSongUrl, type UrlContext } from '../../../core/network/url-helper.js'
 import type { AudioTrackInfo } from '../../../models/audio-track.js'
 import type { Song } from '../../../models/song.js'
+import { stableDesktopServerUrl } from '../../../desktop/client.js'
 
 export interface CacheScope { profile: string | null; server: string; username: string }
 export interface CacheVariant { track: number | null; quality: 'original' | '320' | '192' | '128'; normalize: boolean }
@@ -21,6 +22,7 @@ export interface CacheDownload extends CacheIdentity { task_id: string; url: str
 
 /** Preserve path case while normalizing the origin. No credentials, query, fragment or token can enter the index. */
 export function normalizeCacheServer(raw: string): string {
+  raw = stableDesktopServerUrl(raw)
   const match = /^(https?):\/\/([^/?#@\s\\]+)(\/[^?#\s\\]*)?$/i.exec(raw.trim())
   if (!match) throw new Error('invalid_cache_identity')
   const scheme = match[1].toLowerCase()

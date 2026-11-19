@@ -1,0 +1,416 @@
+diff --git a/out/codeSign/macCodeSign.js b/out/codeSign/macCodeSign.js
+--- a/out/codeSign/macCodeSign.js
++++ b/out/codeSign/macCodeSign.js
+@@ -255,7 +255,7 @@ async function parseIdentity(line) {
+     const firstQuoteIndex = line.indexOf('"');
+     const name = line.substring(firstQuoteIndex + 1, line.lastIndexOf('"'));
+     const hash = line.substring(0, firstQuoteIndex - 1);
+-    const { Identity: IdentityClass } = await (0, dynamicImport_1.dynamicImport)("@electron/osx-sign/dist/cjs/util-identities");
++    const { Identity: IdentityClass } = await (0, dynamicImport_1.dynamicImport)("@electron/osx-sign/dist/cjs/util-identities.js");
+     return new IdentityClass(name, hash);
+ }
+ function findIdentity(certType, qualifier, keychain) {
+diff --git a/out/mac/MacTargetHelper.js b/out/mac/MacTargetHelper.js
+--- a/out/mac/MacTargetHelper.js
++++ b/out/mac/MacTargetHelper.js
+@@ -38,12 +38,12 @@
+             }
+             const noIdentity = !config.sign && identity == null;
+             if (qualifier === "-") {
+-                const { Identity: IdentityClass } = await (0, dynamicImport_1.dynamicImport)("@electron/osx-sign/dist/cjs/util-identities");
++                const { Identity: IdentityClass } = await (0, dynamicImport_1.dynamicImport)("@electron/osx-sign/dist/cjs/util-identities.js");
+                 identity = new IdentityClass("-", undefined);
+             }
+             else if (noIdentity && fallBackToAdhoc) {
+                 builder_util_1.log.warn(null, "falling back to ad-hoc signature for macOS application code signing");
+-                const { Identity: IdentityClass } = await (0, dynamicImport_1.dynamicImport)("@electron/osx-sign/dist/cjs/util-identities");
++                const { Identity: IdentityClass } = await (0, dynamicImport_1.dynamicImport)("@electron/osx-sign/dist/cjs/util-identities.js");
+                 identity = new IdentityClass("-", undefined);
+             }
+             else if (noIdentity) {
+diff --git a/out/electron/ElectronFramework.js b/out/electron/ElectronFramework.js
+index e153bfd..a9b4248 100644
+--- a/out/electron/ElectronFramework.js
++++ b/out/electron/ElectronFramework.js
+@@ -17,8 +17,8 @@ const injectFFMPEG_1 = require("./injectFFMPEG");
+ function createBrandingOpts(opts) {
+     var _a, _b;
+     return {
+-        projectName: ((_a = opts.electronBranding) === null || _a === void 0 ? void 0 : _a.projectName) || "electron",
+-        productName: ((_b = opts.electronBranding) === null || _b === void 0 ? void 0 : _b.productName) || "Electron",
++        projectName: ((_a = opts.electronBranding) === null || _a === void 0 ? void 0 : _a.projectName) || "lynxtron",
++        productName: ((_b = opts.electronBranding) === null || _b === void 0 ? void 0 : _b.productName) || "Lynxtron",
+     };
+ }
+ function createDownloadOpts(opts, platform, arch, electronVersion) {
+@@ -107,7 +107,7 @@ class ElectronFramework {
+         // noinspection JSUnusedGlobalSymbols
+         this.macOsDefaultTargets = ["zip", "dmg"];
+         // noinspection JSUnusedGlobalSymbols
+-        this.defaultAppIdPrefix = "com.electron.";
++        this.defaultAppIdPrefix = "com.lynxtron.";
+         // noinspection JSUnusedGlobalSymbols
+         this.isCopyElevateHelper = true;
+         // noinspection JSUnusedGlobalSymbols
+@@ -216,8 +216,12 @@ async function unpack(prepareOptions, downloadOptions, distMacOsAppName) {
+     if (resolvedDist == null) {
+         // if no custom electronDist is provided, use the default unpack logic
+         builder_util_1.log.debug(null, "no custom electronDist provided, unpacking default Electron distribution");
++        // [PATCH] Lynxtron ships a custom electron artifact (lynxtron-v*.zip) via a mirror that does not publish a matching SHASUMS256.txt.
++        // Force isVerifyChecksum=false so @electron/get skips the checksum download (which would otherwise fetch garbage and fail with
++        // "Could not parse checksum file at line 1: PK ").
++        const patchedDownloadOptions = { ...downloadOptions, isVerifyChecksum: false };
+         const zipPath = await (0, electronGet_1.downloadElectronArtifactZip)({
+-            electronDownload: downloadOptions,
++            electronDownload: patchedDownloadOptions,
+             artifactName: "electron",
+             platformName: (_a = downloadOptions.platform) !== null && _a !== void 0 ? _a : prepareOptions.platformName,
+             arch: (_b = downloadOptions.arch) !== null && _b !== void 0 ? _b : prepareOptions.arch,
+diff --git a/out/electron/electronMac.js b/out/electron/electronMac.js
+index e5551f8..9f71dd5 100644
+--- a/out/electron/electronMac.js
++++ b/out/electron/electronMac.js
+@@ -13,30 +13,22 @@ function doRename(basePath, oldName, newName) {
+     return (0, promises_1.rename)(path.join(basePath, oldName), path.join(basePath, newName));
+ }
+ function moveHelpers(helperSuffixes, frameworksPath, appName, prefix) {
+-    return Promise.all(helperSuffixes.map(suffix => {
+-        const executableBasePath = path.join(frameworksPath, `${prefix}${suffix}.app`, "Contents", "MacOS");
+-        return doRename(executableBasePath, `${prefix}${suffix}`, appName + suffix).then(() => doRename(frameworksPath, `${prefix}${suffix}.app`, `${appName}${suffix}.app`));
++    return Promise.all(helperSuffixes.map(async (suffix) => {
++        const oldHelperAppName = `${prefix}${suffix}.app`;
++        const newHelperAppName = `${appName}${suffix}.app`;
++        const helperAppPath = path.join(frameworksPath, oldHelperAppName);
++        if (!fs.existsSync(helperAppPath)) {
++            return;
++        }
++        const executableBasePath = path.join(helperAppPath, "Contents", "MacOS");
++        const oldExecutableName = `${prefix}${suffix}`;
++        const newExecutableName = `${appName}${suffix}`;
++        if (fs.existsSync(path.join(executableBasePath, oldExecutableName))) {
++            await doRename(executableBasePath, oldExecutableName, newExecutableName);
++        }
++        await doRename(frameworksPath, oldHelperAppName, newHelperAppName);
+     }));
+ }
+-function getAvailableHelperSuffixes(helperEHPlist, helperNPPlist, helperRendererPlist, helperPluginPlist, helperGPUPlist) {
+-    const result = [" Helper"];
+-    if (helperEHPlist != null) {
+-        result.push(" Helper EH");
+-    }
+-    if (helperNPPlist != null) {
+-        result.push(" Helper NP");
+-    }
+-    if (helperRendererPlist != null) {
+-        result.push(" Helper (Renderer)");
+-    }
+-    if (helperPluginPlist != null) {
+-        result.push(" Helper (Plugin)");
+-    }
+-    if (helperGPUPlist != null) {
+-        result.push(" Helper (GPU)");
+-    }
+-    return result;
+-}
+ /** @internal */
+ async function createMacApp(packager, appOutDir, asarIntegrity, isMas) {
+     var _a, _b;
+@@ -48,15 +40,8 @@ async function createMacApp(packager, appOutDir, asarIntegrity, isMas) {
+     const electronBranding = (0, ElectronFramework_1.createBrandingOpts)(packager.config);
+     const contentsPath = path.join(appOutDir, packager.info.framework.distMacOsAppName, "Contents");
+     const frameworksPath = path.join(contentsPath, "Frameworks");
+-    const loginItemPath = path.join(contentsPath, "Library", "LoginItems");
+     const appPlistFilename = path.join(contentsPath, "Info.plist");
+     const helperPlistFilename = path.join(frameworksPath, `${electronBranding.productName} Helper.app`, "Contents", "Info.plist");
+-    const helperEHPlistFilename = path.join(frameworksPath, `${electronBranding.productName} Helper EH.app`, "Contents", "Info.plist");
+-    const helperNPPlistFilename = path.join(frameworksPath, `${electronBranding.productName} Helper NP.app`, "Contents", "Info.plist");
+-    const helperRendererPlistFilename = path.join(frameworksPath, `${electronBranding.productName} Helper (Renderer).app`, "Contents", "Info.plist");
+-    const helperPluginPlistFilename = path.join(frameworksPath, `${electronBranding.productName} Helper (Plugin).app`, "Contents", "Info.plist");
+-    const helperGPUPlistFilename = path.join(frameworksPath, `${electronBranding.productName} Helper (GPU).app`, "Contents", "Info.plist");
+-    const helperLoginPlistFilename = path.join(loginItemPath, `${electronBranding.productName} Login Helper.app`, "Contents", "Info.plist");
+     const safeParsePlistFile = async (filePath) => {
+         if (!fs.existsSync(filePath)) {
+             return null;
+@@ -67,14 +52,7 @@ async function createMacApp(packager, appOutDir, asarIntegrity, isMas) {
+     if (appPlist == null) {
+         throw new Error("corrupted Electron dist");
+     }
+-    // Replace the multiple parsePlistFile calls with:
+     const helperPlist = await safeParsePlistFile(helperPlistFilename);
+-    const helperEHPlist = await safeParsePlistFile(helperEHPlistFilename);
+-    const helperNPPlist = await safeParsePlistFile(helperNPPlistFilename);
+-    const helperRendererPlist = await safeParsePlistFile(helperRendererPlistFilename);
+-    const helperPluginPlist = await safeParsePlistFile(helperPluginPlistFilename);
+-    const helperGPUPlist = await safeParsePlistFile(helperGPUPlistFilename);
+-    const helperLoginPlist = await safeParsePlistFile(helperLoginPlistFilename);
+     const buildMetadata = packager.config;
+     /**
+      * Configure bundleIdentifier for the generic Electron Helper process
+@@ -102,44 +80,6 @@ async function createMacApp(packager, appOutDir, asarIntegrity, isMas) {
+         helperPlist.CFBundleIdentifier = helperBundleIdentifier;
+         helperPlist.CFBundleVersion = appPlist.CFBundleVersion;
+     }
+-    /**
+-     * Configure bundleIdentifier for Electron 5+ Helper processes
+-     *
+-     * In Electron 6, parts of the generic Electron Helper process were split into
+-     * individual helper processes. Allow users to configure the bundleIdentifiers
+-     * for continuity, specifically because macOS keychain access relies on
+-     * bundleIdentifiers not changing (i.e. across versions of Electron).
+-     */
+-    function configureHelper(helper, postfix, userProvidedBundleIdentifier) {
+-        helper.CFBundleExecutable = `${appFilename} Helper ${postfix}`;
+-        helper.CFBundleDisplayName = `${appInfo.productName} Helper ${postfix}`;
+-        helper.CFBundleIdentifier = userProvidedBundleIdentifier
+-            ? (0, appInfo_1.filterCFBundleIdentifier)(userProvidedBundleIdentifier)
+-            : (0, appInfo_1.filterCFBundleIdentifier)(`${helperBundleIdentifier}.${postfix}`);
+-        helper.CFBundleVersion = appPlist.CFBundleVersion;
+-    }
+-    if (helperRendererPlist != null) {
+-        configureHelper(helperRendererPlist, "(Renderer)", packager.platformSpecificBuildOptions.helperRendererBundleId);
+-    }
+-    if (helperPluginPlist != null) {
+-        configureHelper(helperPluginPlist, "(Plugin)", packager.platformSpecificBuildOptions.helperPluginBundleId);
+-    }
+-    if (helperGPUPlist != null) {
+-        configureHelper(helperGPUPlist, "(GPU)", packager.platformSpecificBuildOptions.helperGPUBundleId);
+-    }
+-    if (helperEHPlist != null) {
+-        configureHelper(helperEHPlist, "EH", packager.platformSpecificBuildOptions.helperEHBundleId);
+-    }
+-    if (helperNPPlist != null) {
+-        configureHelper(helperNPPlist, "NP", packager.platformSpecificBuildOptions.helperNPBundleId);
+-    }
+-    if (helperLoginPlist != null) {
+-        helperLoginPlist.CFBundleExecutable = `${appFilename} Login Helper`;
+-        helperLoginPlist.CFBundleDisplayName = `${appInfo.productName} Login Helper`;
+-        // noinspection SpellCheckingInspection
+-        helperLoginPlist.CFBundleIdentifier = `${cfBundleIdentifier}.loginhelper`;
+-        helperLoginPlist.CFBundleVersion = appPlist.CFBundleVersion;
+-    }
+     const protocols = (0, builder_util_1.asArray)(buildMetadata.protocols).concat((0, builder_util_1.asArray)(packager.platformSpecificBuildOptions.protocols));
+     if (protocols.length > 0) {
+         appPlist.CFBundleURLTypes = protocols.map(protocol => {
+@@ -192,24 +132,6 @@ async function createMacApp(packager, appOutDir, asarIntegrity, isMas) {
+     if (asarIntegrity != null) {
+         appPlist.ElectronAsarIntegrity = toPlistObject(asarIntegrity);
+     }
+-    if (helperEHPlist != null) {
+-        await (0, plist_1.savePlistFile)(helperEHPlistFilename, helperEHPlist);
+-    }
+-    if (helperNPPlist != null) {
+-        await (0, plist_1.savePlistFile)(helperNPPlistFilename, helperNPPlist);
+-    }
+-    if (helperRendererPlist != null) {
+-        await (0, plist_1.savePlistFile)(helperRendererPlistFilename, helperRendererPlist);
+-    }
+-    if (helperPluginPlist != null) {
+-        await (0, plist_1.savePlistFile)(helperPluginPlistFilename, helperPluginPlist);
+-    }
+-    if (helperGPUPlist != null) {
+-        await (0, plist_1.savePlistFile)(helperGPUPlistFilename, helperGPUPlist);
+-    }
+-    if (helperLoginPlist != null) {
+-        await (0, plist_1.savePlistFile)(helperLoginPlistFilename, helperLoginPlist);
+-    }
+     await (0, plist_1.savePlistFile)(appPlistFilename, appPlist);
+     if (helperPlist != null) {
+         await (0, plist_1.savePlistFile)(helperPlistFilename, helperPlist);
+@@ -219,13 +141,7 @@ async function createMacApp(packager, appOutDir, asarIntegrity, isMas) {
+         (0, builder_util_1.unlinkIfExists)(path.join(appOutDir, "LICENSE")),
+         (0, builder_util_1.unlinkIfExists)(path.join(appOutDir, "LICENSES.chromium.html")),
+     ]);
+-    await moveHelpers(getAvailableHelperSuffixes(helperEHPlist, helperNPPlist, helperRendererPlist, helperPluginPlist, helperGPUPlist), frameworksPath, appFilename, electronBranding.productName);
+-    if (helperLoginPlist != null) {
+-        const prefix = electronBranding.productName;
+-        const suffix = " Login Helper";
+-        const executableBasePath = path.join(loginItemPath, `${prefix}${suffix}.app`, "Contents", "MacOS");
+-        await doRename(executableBasePath, `${prefix}${suffix}`, appFilename + suffix).then(() => doRename(loginItemPath, `${prefix}${suffix}.app`, `${appFilename}${suffix}.app`));
+-    }
++    await moveHelpers([" Helper"], frameworksPath, appFilename, electronBranding.productName);
+     const appPath = path.join(appOutDir, `${appInfo.productFilename}.app`);
+     await (0, promises_1.rename)(path.dirname(contentsPath), appPath);
+     // https://github.com/electron-userland/electron-builder/issues/840
+diff --git a/out/electron/electronVersion.js b/out/electron/electronVersion.js
+index 9c50e70..80023c4 100644
+--- a/out/electron/electronVersion.js
++++ b/out/electron/electronVersion.js
+@@ -12,7 +12,7 @@ const semver = require("semver");
+ const config_1 = require("../util/config/config");
+ const load_1 = require("../util/config/load");
+ const search_module_1 = require("./search-module");
+-const electronPackages = ["electron", "electron-prebuilt", "electron-prebuilt-compile", "electron-nightly"];
++const electronPackages = ["lynxtron"];
+ async function getElectronVersion(projectDir, config) {
+     if (config == null) {
+         config = await (0, config_1.getConfig)(projectDir, null, null);
+diff --git a/out/node-module-collector/nodeModulesCollector.js b/out/node-module-collector/nodeModulesCollector.js
+index 2200d74..35a1825 100644
+--- a/out/node-module-collector/nodeModulesCollector.js
++++ b/out/node-module-collector/nodeModulesCollector.js
+@@ -108,6 +108,7 @@ class NodeModulesCollector {
+                     builder_util_1.log.debug(fields, "JSON parse error in dependency tree, retrying");
+                     return true;
+                 }
++                fields.errorStack = error.stack;
+                 builder_util_1.log.error(fields, "error parsing dependencies tree");
+                 return false;
+             },
+@@ -126,7 +127,8 @@ class NodeModulesCollector {
+             // Please for the love of all that is holy, this should cover 99% of cases where npm/pnpm/yarn output is clean JSON
+             return JSON.parse(consoleOutput);
+         }
+-        catch {
++        catch (e) {
++            builder_util_1.log.debug({ firstParseError: e.message, outputLength: consoleOutput.length }, "first JSON parse attempt failed");
+             // ignore
+         }
+         // DEDICATED FALLBACK FOR POLLUTED OUTPUT, non-trivial to implement correctly, not needed in most cases, and highly inefficient
+@@ -134,10 +136,13 @@ class NodeModulesCollector {
+         const bracketOpen = Math.max(consoleOutput.indexOf("{"), 0);
+         const bracketOpenSquare = Math.max(consoleOutput.indexOf("["), 0);
+         const start = Math.min(bracketOpen, bracketOpenSquare); // always non-negative due to Math.max above
++        builder_util_1.log.debug({ start, bracketOpen, bracketOpenSquare }, "trying fallback JSON extraction");
+         for (let i = start; i < consoleOutput.length; i++) {
+             const slice = consoleOutput.slice(start, i + 1);
+             try {
+-                return JSON.parse(slice);
++                const result = JSON.parse(slice);
++                builder_util_1.log.debug({ sliceLength: slice.length }, "successfully parsed JSON with fallback method");
++                return result;
+             }
+             catch {
+                 // ignore, try next
+diff --git a/out/util/electronGet.js b/out/util/electronGet.js
+--- a/out/util/electronGet.js
++++ b/out/util/electronGet.js
+@@ -186,7 +186,6 @@ async function downloadArtifactToFile(config, label) {
+     let lastLoggedMilestone = -1;
+     const state = { bar: undefined };
+     const downloadOptions = {
+-        timeout: { request: 10 * 60 * 1000 }, // prevent indefinite hang on stalled connections
+         ...config.downloadOptions,
+         agent: (_b = (_a = config.downloadOptions) === null || _a === void 0 ? void 0 : _a.agent) !== null && _b !== void 0 ? _b : (0, builder_util_1.buildGotProxyAgent)(),
+         getProgressCallback: info => {
+@@ -365,9 +364,15 @@ function buildElectronArtifactConfig(options) {
+             if (strictSSL === false) {
+                 builder_util_1.log.warn({ option: "electronDownload.strictSSL" }, "strictSSL is false — TLS certificate validation is DISABLED for Electron downloads. Only use this option in a trusted, isolated build environment.");
+             }
+             artifactConfig = {
+                 ...artifactConfig,
++                // @electron/get otherwise caches every custom Electron download as
++                // electron-v<version>-<platform>-<arch>.zip. Lynxtron publishes release
++                // and DevTool archives under the same version and directory, so that
++                // default key can return the other variant. Use the actual custom
++                // filename as the cache identity.
++                ...(customFilename ? { artifactName: customFilename, isGeneric: true } : {}),
+                 unsafelyDisableChecksums: isVerifyChecksum === false,
+                 cacheRoot: cache !== null && cache !== void 0 ? cache : cacheRoot,
+                 mirrorOptions: {
+                     mirror: mirror || undefined,
+diff --git a/out/platformPackager.js b/out/platformPackager.js
+index 4be3489..ccfa7dd 100644
+--- a/out/platformPackager.js
++++ b/out/platformPackager.js
+@@ -426,6 +426,7 @@ class PlatformPackager {
+         return Promise.resolve(null);
+     }
+     async computeAsarOptions(customBuildOptions) {
++        this.info.framework.name = "electron";
+         if (!(0, Framework_1.isElectronBased)(this.info.framework)) {
+             return null;
+         }
+diff --git a/out/util/appFileCopier.js b/out/util/appFileCopier.js
+index 37ccda8..1c52e8e 100644
+--- a/out/util/appFileCopier.js
++++ b/out/util/appFileCopier.js
+@@ -151,6 +151,23 @@ async function computeNodeModuleFileSets(platformPackager, mainMatcher) {
+     const result = new Array();
+     let index = 0;
+     const NODE_MODULES = "node_modules";
++    // [PATCH] Only pack top-level dependencies declared in project package.json#dependencies (and optionalDependencies)
++    // This prevents transitive dependencies (e.g. `is-shared-array-buffer`) from being included in app.asar
++    const packager = platformPackager.info;
++    let allowedTopLevelDeps = null;
++    try {
++        const projectPkgPath = path.join(packager.projectDir, "package.json");
++        // eslint-disable-next-line @typescript-eslint/no-var-requires
++        const projectPkg = require(projectPkgPath);
++        allowedTopLevelDeps = new Set([
++            ...Object.keys(projectPkg.dependencies || {}),
++            ...Object.keys(projectPkg.optionalDependencies || {}),
++        ]);
++        builder_util_1.log.info({ count: allowedTopLevelDeps.size, projectPkgPath }, "[patch] restricting node_modules to top-level dependencies declared in project package.json");
++    }
++    catch (e) {
++        builder_util_1.log.warn({ error: e.message }, "[patch] failed to read project package.json for top-level dependency filter, falling back to default behavior");
++    }
+     const collectNodeModules = async (dep, destination) => {
+         const source = dep.dir;
+         const matcher = new fileMatcher_1.FileMatcher(source, destination, mainMatcher.macroExpander, mainMatcher.patterns);
+@@ -158,13 +175,13 @@ async function computeNodeModuleFileSets(platformPackager, mainMatcher) {
+         const files = await copier.collectNodeModules(dep, nodeModuleExcludedExts, path.relative(mainMatcher.to, destination));
+         result[index++] = validateFileSet({ src: source, destination, files, metadata: copier.metadata });
+         builder_util_1.log.debug({ dep: dep.name, from: builder_util_1.log.filePath(source), to: builder_util_1.log.filePath(destination), filesCount: files.length }, "identified module");
+-        if (dep.dependencies) {
+-            for (const c of dep.dependencies) {
+-                await collectNodeModules(c, path.join(destination, NODE_MODULES, c.name));
+-            }
+-        }
++        // [PATCH] Do NOT recurse into dep.dependencies — only top-level deps from project package.json are packed
+     };
+     for (const dep of deps) {
++        if (allowedTopLevelDeps && !allowedTopLevelDeps.has(dep.name)) {
++            builder_util_1.log.debug({ dep: dep.name }, "[patch] skipping non-top-level dependency");
++            continue;
++        }
+         const destination = path.join(mainMatcher.to, NODE_MODULES, dep.name);
+         await collectNodeModules(dep, destination);
+     }
+@@ -175,13 +192,21 @@ async function collectNodeModulesWithLogging(platformPackager) {
+     const packager = platformPackager.info;
+     const { tempDirManager, appDir, projectDir } = packager;
+     let deps = undefined;
++    let lastError = undefined;
+     const searchDirectories = Array.from(new Set([appDir, projectDir, await packager.getWorkspaceRoot()])).filter((it) => (0, builder_util_1.isEmptyOrSpaces)(it) === false);
+-    const pmApproaches = [await packager.getPackageManager(), node_module_collector_1.PM.TRAVERSAL];
++    const pmApproaches = [node_module_collector_1.PM.TRAVERSAL];
+     for (const pm of pmApproaches) {
+         for (const dir of searchDirectories) {
+             builder_util_1.log.info({ pm, searchDir: dir }, "searching for node modules");
+             const collector = (0, node_module_collector_1.getCollectorByPackageManager)(pm, dir, tempDirManager);
+-            deps = await collector.getNodeModules({ packageName: packager.nodePackageName });
++            try {
++                deps = await collector.getNodeModules({ packageName: packager.nodePackageName });
++            }
++            catch (error) {
++                lastError = error;
++                builder_util_1.log.warn({ pm, searchDir: dir, error: error.message }, "node modules collection failed, trying next strategy");
++                continue;
++            }
+             if (deps.nodeModules.length > 0) {
+                 break;
+             }
+@@ -196,6 +221,9 @@ async function collectNodeModulesWithLogging(platformPackager) {
+         }
+     }
+     if (!((_b = deps === null || deps === void 0 ? void 0 : deps.nodeModules) === null || _b === void 0 ? void 0 : _b.length)) {
++        if (lastError != null) {
++            builder_util_1.log.warn({ error: lastError.message }, "node modules collection exhausted all strategies");
++        }
+         builder_util_1.log.warn({ searchDirectories: searchDirectories.map(it => builder_util_1.log.filePath(it)) }, "no node modules returned while searching directories");
+         return [];
+     }
+diff --git a/out/util/packageMetadata.js b/out/util/packageMetadata.js
+index c967753..82f1fa7 100644
+--- a/out/util/packageMetadata.js
++++ b/out/util/packageMetadata.js
+@@ -111,7 +111,7 @@ function checkDependencies(dependencies, errors) {
+     if (swVersion != null && !versionSatisfies(swVersion, ">=20.32.0")) {
+         errors.push(`At least electron-builder-squirrel-windows 20.32.0 is required by current electron-builder version. Please set electron-builder-squirrel-windows to "^20.32.0"`);
+     }
+-    const deps = ["electron", "electron-prebuilt", "electron-rebuild"];
++    const deps = [];
+     if (process.env.ALLOW_ELECTRON_BUILDER_AS_PRODUCTION_DEPENDENCY !== "true") {
+         deps.push("electron-builder");
+     }

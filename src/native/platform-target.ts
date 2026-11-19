@@ -25,6 +25,7 @@
 
 import type { AudioPlatform } from '../core/network/audio-format.js'
 import { readSystemInfo } from './native-modules.js'
+import { desktopConfig } from '../desktop/client.js'
 
 /**
  * The current platform, or `'web'` when the host does not say.
@@ -32,7 +33,8 @@ import { readSystemInfo } from './native-modules.js'
  * Returns the `AudioPlatform` subset the hosts can actually be — `'native'` is a
  * libmpv-class target from the Flutter port and no Lynx host reports it.
  */
-export function getPlatformTarget(): Exclude<AudioPlatform, 'native'> {
+export function getPlatformTarget(): AudioPlatform {
+  if (desktopConfig()?.audioFormats?.length) return 'native'
   const raw = readSystemInfo()?.['platform']
   if (typeof raw !== 'string') return 'web'
   const platform = raw.toLowerCase()

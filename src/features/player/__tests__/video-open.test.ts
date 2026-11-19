@@ -19,7 +19,7 @@ vi.mock('../store/index.js', () => ({
   usePlayerStore: { getState: () => store },
 }))
 
-const { canWatchVideo, openCurrentSongVideo } = await import('../data/video-open.js')
+const { canWatchVideo, openCurrentSongVideo, usesJsVideoSurface } = await import('../data/video-open.js')
 
 const g = globalThis as Record<string, unknown>
 
@@ -78,9 +78,25 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.unstubAllGlobals()
   delete g.NativeModules
   delete g.SystemInfo
   resetVideoModuleForTests()
+})
+
+test.each(['win32', 'darwin'])('uses the video route on desktop %s', (os) => {
+  vi.stubGlobal('lynx', {
+    __globalProps: { songloftDesktop: {
+      id: 'org.songloft.lynx.desktop.dev',
+      token: 'test',
+      os,
+      capabilities: { video: true },
+      audioFormats: ['aac'],
+    } },
+  })
+  g.SystemInfo = { platform: os }
+  expect(canWatchVideo(videoSong())).toBe(true)
+  expect(usesJsVideoSurface()).toBe(true)
 })
 
 describe('canWatchVideo', () => {

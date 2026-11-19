@@ -24,6 +24,7 @@ import {
 } from '../../../native/index.js'
 import { readNativeModules } from '../../../native/native-modules.js'
 import { getPlatformTarget } from '../../../native/platform-target.js'
+import { desktopConfig } from '../../../desktop/client.js'
 import { createRadioHlsSession, type RadioHlsSession } from '../data/radio-hls-api.js'
 import { getVideoModule, type ScaleMode } from '../../../native/video.js'
 import { cancelSourceLoad, loadAudioSource, SourceLoadCancelled } from '../../../native/source-load.js'
@@ -491,9 +492,11 @@ async function resolvePlaybackSource(song: Song): Promise<PlaybackSource> {
 async function resolveActivePlaybackSource(song: Song, generation: number): Promise<PlaybackSource> {
   const source = await resolvePlaybackSource(song)
   if (generation !== _loadGeneration || source.cached || song.type !== 'radio' || !isFlvRadioPath(song.url)) return source
+  const platform = getPlatformTarget()
+  const desktop = desktopConfig()
   const playback = _flvPlayback ??= {
     songId: song.id,
-    useHls: getPlatformTarget() === 'ios',
+    useHls: platform === 'ios' || (platform === 'native' && !!desktop?.videoFormats && !desktop.videoFormats.includes('flv')),
   }
   if (!playback.useHls || playback.session) return source
   if (!playback.request) {
@@ -1868,7 +1871,7 @@ export function resetVolumePersistenceForTests(): void {
   volumeRestored = false
 }
 
-export async function restorePlaybackState(): Promise<void> {
+export async function restorePlaybackState({ allowAutoResume = true } = {}): Promise<void> {
   const restoreGeneration = _loadGeneration
   const [saved, speed, autoResume, videoScaleMode] = await Promise.all([
     loadPlaybackState(), readPlaybackSpeed(), readAutoResume(), readVideoScaleMode(),
@@ -1910,7 +1913,7 @@ export async function restorePlaybackState(): Promise<void> {
   })
   _navigation.reset(usePlayerStore.getState().playMode)
   syncNavigation()
-  if (autoResume && (song.url || local)) {
+  if (allowAutoResume && autoResume && (song.url || local)) {
     if (song.type === 'radio' && isFlvRadioPath(song.url)) {
       await usePlayerStore.getState().playQueueIndex(saved.currentIndex)
       return

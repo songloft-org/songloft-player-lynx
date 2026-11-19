@@ -1,0 +1,10 @@
+allowBuilds:
+  '@lynx-js/lynxtron': true
+  '@lynx-js/cef-webview': true
+  '@lynx-js/lynxtron-builder': false
+  electron-winstaller: false
+patchedDependencies:
+  app-builder-lib@26.13.0: patches/app-builder-lib@26.13.0.patch
+  dmg-builder@26.13.0: patches/dmg-builder@26.13.0.patch
+overrides:
+  '@electron/get': 3.1.0

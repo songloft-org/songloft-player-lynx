@@ -1,0 +1,33 @@
+{
+  "name": "songloft-lynx-desktop",
+  "description": "Songloft Lynx desktop client with native playback and local server",
+  "author": "Songloft contributors",
+  "license": "Apache-2.0",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "main.mjs",
+  "engines": {
+    "node": "^22.18.0 || ^24.0.0 || ^26.0.0"
+  },
+  "scripts": {
+    "start": "lynxtron .",
+    "probe": "lynxtron . --probe",
+    "build:native": "node scripts/build-native.mjs",
+    "test:native": "node scripts/test-native.mjs",
+    "package": "node scripts/package.mjs",
+    "build:resources": "node scripts/build-resources.mjs",
+    "test": "node --test tests/*.node-test.mjs"
+  },
+  "dependencies": {
+    "@lynx-js/cef-webview": "0.0.31",
+    "@lynx-js/lynxtron": "0.0.31",
+    "undici": "7.30.2",
+    "semver": "7.8.6"
+  },
+  "devDependencies": {
+    "@lynx-js/lynx-library-headers": "0.0.31",
+    "js-yaml": "4.3.2",
+    "@lynx-js/lynxtron-builder": "0.0.30"
+  }
+}

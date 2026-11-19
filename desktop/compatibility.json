@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "status": "candidate-unverified",
+  "targets": ["win32-x64", "darwin-arm64", "darwin-x64"],
+  "minimumOS": { "win32": "10.0.19045", "darwin": "13.0" },
+  "lynxtron": {
+    "version": "0.0.31",
+    "sourceCommit": "f7b6d62c8e818c26baefb503007dfed81e03c49d",
+    "lynxCommit": "0264af38be0644ab4e6a62d5059b180b58f486e5",
+    "nodeVersion": "22.18.0"
+  },
+  "apiBaseline": "4.2",
+  "builder": "0.0.30",
+  "builderDownloader": "3.1.0",
+  "ffmpeg": "8.0.1",
+  "ffmpegCommit": "894da5ca7d742e4429ffb2af534fcda0103ef593",
+  "observedLynxSDK": { "darwin-arm64": "4.4", "darwin-x64": "4.4" },
+  "cef": {
+    "packageVersion": "0.0.31",
+    "sdkVersion": "142.0.17+g60aac24+chromium-142.0.7444.176",
+    "minimalSdkSha256": {
+      "macosarm64": "693e6d591e14bfb5df89e6fdd733630bec09cf3c4c1c03236a4742a50a35b84d",
+      "macosx64": "7441b3e9653652335dfd478f0b3c876082e59c85777969bbd77a910e133f276b",
+      "windows64": "16c072a44484fe521037c74d03a339a77573b1fc0146cf44cc71e79fd0cc0198"
+    }
+  },
+  "libmpv": {
+    "version": "0.41.0",
+    "sourceCommit": "41f6a645068483470267271e1d09966ca3b9f413",
+    "renderAPI": "sw/bgra"
+  },
+  "sharedBuild": {
+    "@lynx-js/react": "0.123.2",
+    "@lynx-js/react-rsbuild-plugin": "0.18.2",
+    "@lynx-js/rspeedy": "0.16.2"
+  }
+}

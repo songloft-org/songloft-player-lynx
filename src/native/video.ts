@@ -1,4 +1,5 @@
 import { readLynxGlobal, readNativeModules } from './native-modules.js'
+import { desktopVideoModule } from '../desktop/video.js'
 
 /**
  * Fullscreen native video playback for the song the audio engine already holds.
@@ -244,6 +245,8 @@ function createUnavailableStub(): VideoModule {
 let cached: VideoModule | null = null
 
 export function getVideoModule(): VideoModule {
+  const desktop = desktopVideoModule()
+  if (desktop) return desktop
   if (cached) return cached
   const native = readNativeVideo()
   cached = native ? createNativeAdapter(native) : createUnavailableStub()

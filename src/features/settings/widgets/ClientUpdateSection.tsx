@@ -14,6 +14,8 @@ import { SettingsRow } from './SettingsRow.js'
 import { SettingsSection } from './SettingsSection.js'
 import { SwitchRow } from './SwitchRow.js'
 import './ClientUpdateSection.css'
+import { desktopConfig } from '../../../desktop/client.js'
+import { DesktopUpdateSection } from '../../../desktop/UpdateSection.js'
 
 function errorKey(error: string): string {
   if (['release_rate_limited', 'release_unpublished', 'release_missing_asset', 'release_changed', 'invalid_update_proxy',
@@ -27,6 +29,9 @@ function reasonKey(reason: string): string {
 
 /** Shared manual/automatic update state; prepared bundles activate on the next cold launch. */
 export function ClientUpdateSection() {
+  return desktopConfig() ? <DesktopUpdateSection /> : <SharedClientUpdateSection />
+}
+function SharedClientUpdateSection() {
   const { t } = useTranslation()
   const [session, setSession] = useState(updateSession.getState())
   const [automatic, setAutomatic] = useState(automaticUpdatePolicy.store.getState())

@@ -27,14 +27,14 @@ Songloft Player 一套 ReactLynx 代码跑四个宿主：Android（Kotlin + ExoP
 | 数据导入/导出 `dataTransfer` | ✅ | ✅ | ✅ | ✅ P4 JSON 文本文件桥 | 原生要求 openURL/pickAndUploadFile，Web 要求 pickTextFile/saveTextFile/cancelTextFile |
 | 文件交付 `fileExport` | ✅ 系统分享面板 | ✅ 系统分享面板 | ✅ 系统分享面板 | ✅ **浏览器下载** | `SongloftPlatform.shareFile` **方法**存在 |
 | 原生文件选择 `nativeFilePicker` | ✅ | ✅ | ✅ | ✅ 但可能不弹框（见下） | `SongloftPlatform` 模块存在 |
-| Bundle 本地模式 `bundleMode` | ✅ | ✅ | ✅ | ✅（同上探测） | 同 `nativeFilePicker`，**全库暂无消费点** |
+| Bundle 本地模式 `bundleMode` | ✅（含 Bundle 后端的 APK） | ✅（含 Bundle 后端的 IPA） | ⛔ | ⛔ | Android/iOS 通过 `SongloftBundle.start` 方法探测；桌面单独依赖宿主能力标记 |
 | 系统托盘 `systemTray` | ✅（同探测） | ✅（同探测） | ✅（同探测） | ⛔ 显式 `isWeb` 关闭 | `!isWeb && SongloftPlatform`，**全库暂无消费点** |
 | 原生日志打包 `fastLogExport` | ✅ | ✅ | ✅ | ⛔ 走 JS 打包 + 浏览器下载 | `SongloftPlatform.shareLogArchive` **方法**存在；Web 有真 JIT，JS 路径本就合适 |
 | 后台保活引导 `backgroundKeepAlive` | ✅ | ⛔ 无此概念 | ⛔ 无此概念 | ⛔ 无此概念 | `SongloftAudio.openManufacturerWhitelist` **方法**存在（厂商自启动白名单） |
 
 四处刻意用**方法级**而非模块级探测（`fileExport` / `fastLogExport` / `songCache` / `backgroundKeepAlive`）：JS bundle 可以热更到旧原生壳上，那时模块在、方法不在，而「点了才报错的死按钮」正是这个模块存在的理由。`songCache` 键在 `getCacheInfo` 而非 `download` 上，因为后者改过 arity —— 旧壳仍有 `download`，会声称支持缓存然后被喂进绑不上的参数。
 
-`bundleMode` / `systemTray` 两位目前**没有任何消费点**。列在这里是为了说明它们的探测语义（尤其 `bundleMode` 在 Web 上报 true，因为 Web 经 `nativeModulesMap` 注册了 `SongloftPlatform`），别当成已验证过的能力用。
+`bundleMode` 已被登录页、设置页和会话恢复流程消费；原生模块存在只表示当前安装包暴露后端入口，完整设备行为仍按项目交接记录验收。`systemTray` 目前没有消费点。桌面宿主使用单独的逐项能力标记，不能从移动平台探测结果推断。
 
 ### B. 由原生模块存在性定义的能力（契约闸门 `modules` 表）
 

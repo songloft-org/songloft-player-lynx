@@ -56,7 +56,7 @@ def check_production_bundle(bundle):
         assert marker not in bundle, f"Production bundle contains {marker!r}"
 
 
-def verify_native(kind, package, metadata, expected_host):
+def verify_native(kind, package, metadata, expected_host, backend_sha=None):
     with zipfile.ZipFile(package) as archive:
         names = archive.namelist()
         hosts = [name for name in names if name.endswith("/native-host.json")]
@@ -77,10 +77,20 @@ def verify_native(kind, package, metadata, expected_host):
             assert f"versionName='{metadata['version']}'" in badging, "APK version mismatch"
             assert "application-debuggable" not in badging, "Published APK is debuggable"
             assert any(name.endswith("/liblynx.so") for name in names), "APK missing Lynx engine"
+            if backend_sha:
+                assert re.search(r"^(?:sdkVersion|minSdkVersion):'23'$", badging, re.MULTILINE), "Bundle APK must declare Android API 23"
+                for abi in ("arm64-v8a", "armeabi-v7a", "x86_64", "x86"):
+                    backend = f"lib/{abi}/libgojni.so"
+                    assert f"lib/{abi}/liblynx.so" in names, f"APK missing Lynx engine for {abi}"
+                    assert backend in names, f"APK missing {backend}"
+                    assert backend_sha.encode() in archive.read(backend), f"Wrong backend SHA in {backend}"
         elif kind == "ios":
             info = plistlib.loads(archive.read("Payload/SongloftLynx.app/Info.plist"))
             assert info["CFBundleShortVersionString"] == metadata["native_version"], "IPA version mismatch"
             assert str(info["CFBundleVersion"]) == str(metadata["build_number"]), "IPA build number mismatch"
+            if backend_sha:
+                executable = f"Payload/SongloftLynx.app/{info['CFBundleExecutable']}"
+                assert backend_sha.encode() in archive.read(executable), "Wrong or missing statically linked backend"
         elif kind == "harmony":
             documents = [json.loads(archive.read(name)) for name in names if name in ("module.json", "pack.info")]
             def matches_version(value):
@@ -101,11 +111,16 @@ if __name__ == "__main__":
     parser.add_argument("platform", choices=["android", "ios", "harmony", "web", "web-embedded"])
     parser.add_argument("package", type=Path)
     parser.add_argument("metadata", type=Path)
+    parser.add_argument("--backend-sha", help="Require this embedded Go backend on Android or iOS")
     args = parser.parse_args()
+    if args.backend_sha and (
+        args.platform not in ("android", "ios") or not re.fullmatch(r"[0-9a-f]{40}", args.backend_sha)
+    ):
+        parser.error("--backend-sha requires an Android/iOS package and a full SHA")
     build = json.loads(args.metadata.read_text())
     if args.platform.startswith("web"):
         verify_web(args.package, build, args.platform == "web-embedded")
     else:
         expected_host = json.loads(args.metadata.with_name("native-host.json").read_text())
-        verify_native(args.platform, args.package, build, expected_host)
+        verify_native(args.platform, args.package, build, expected_host, args.backend_sha)
     print(f"Verified {args.package}: version, payload and package contents")

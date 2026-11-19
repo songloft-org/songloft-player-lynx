@@ -2,7 +2,7 @@
 
 [简体中文](../../reference/client-updates.md) · [Releasing](../guides/releasing.md)
 
-**P2a publishing, P2b native updaters, and the P2c About entry are integrated in source.** A local signed fixture verifies Android UI download/cancel, uninterrupted playback, cold activation, and builtin restore; Web deployment links are also verified. HarmonyOS passes a clean release HAP build; production signing, iOS compilation and device acceptance on both hosts remain open. Desktop and bundled local backends remain outside this work.
+**P2a publishing, P2b native updaters, and the P2c About entry are integrated in source.** A local signed fixture verifies Android UI download/cancel, uninterrupted playback, cold activation, and builtin restore; Web deployment links are also verified. HarmonyOS passes a clean release HAP build; production signing, iOS compilation, and device acceptance remain open. Android/iOS Bundle local mode is provided by the client packages; see the [installation guide](../guides/installation.md) for switching and directory selection. Desktop candidate install and rollback acceptance is tracked in the [desktop implementation record](../project/desktop-implementation.md).
 
 ## Identity and release assets
 

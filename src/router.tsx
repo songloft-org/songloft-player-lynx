@@ -18,6 +18,8 @@ import { SplashScreen } from './shared/ui/SplashScreen.js'
 import { ToastHost } from './shared/ui/ToastHost.js'
 import { AudioTrackSheet } from './features/player/widgets/AudioTrackSheet.js'
 import { UpdateStartup } from './core/updater/UpdateStartup.js'
+import { desktopConfig } from './desktop/client.js'
+import { DesktopCookieHost } from './desktop/CookieHost.js'
 import { reportUpdateStartupFailure } from './core/updater/native-updater.js'
 
 /** Catches render errors in the route tree so the whole app does not go blank. */
@@ -138,6 +140,7 @@ export function RootRouteView() {
         */}
       <SongRowOverlays />
       <AudioTrackSheet />
+      {desktopConfig() ? <DesktopCookieHost /> : null}
     </ThemeProvider>
   )
 }

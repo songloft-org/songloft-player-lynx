@@ -1,5 +1,6 @@
 import { readLynxGlobal, readNativeModules } from './native-modules.js'
 import type { HostCallRequest, HostCallResult } from '../features/jsplugin/domain/plugin-host-dispatch.js'
+import { desktopPluginSockets } from '../desktop/plugin-sockets.js'
 
 export const PLUGIN_HOST_CALL_EVENT = 'SongloftPluginBridge.hostCall'
 
@@ -71,15 +72,21 @@ export function connectNativePluginHost(
       if (result) reply(callId, result)
     }).catch(() => reply(callId, { ok: false, error: 'host_call_failed' }))
   }
+  const socketEvent = (payload: { frameId?: string }) => {
+    if (active && payload?.frameId === frameId) push('pluginSocket', JSON.stringify(payload))
+  }
   const dispose = () => {
     if (!active) return
     active = false
+    desktopPluginSockets()?.closeFrame(frameId)
     queued.clear()
     try { emitter.removeListener(PLUGIN_HOST_CALL_EVENT, handler) } catch { /* Host teardown. */ }
+    try { emitter.removeListener('SongloftDesktop.pluginSocket', socketEvent) } catch { /* Host teardown. */ }
     try { mod.unregisterHost(frameId) } catch { /* Host teardown. */ }
   }
   try {
     emitter.addListener(PLUGIN_HOST_CALL_EVENT, handler)
+    if (desktopPluginSockets()) emitter.addListener('SongloftDesktop.pluginSocket', socketEvent)
     mod.registerHost(frameId)
   } catch { dispose() }
   return { push, dispose }

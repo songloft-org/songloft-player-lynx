@@ -2,6 +2,7 @@ import { appConfig } from '../../../core/config/app-config.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import { readNativeModules } from '../../../native/native-modules.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
+import { desktopPluginSockets } from '../../../desktop/plugin-sockets.js'
 
 const pendingOpens = new Map<string, object>()
 
@@ -12,9 +13,9 @@ export async function pluginSocketRequest(
   method: string,
   params: Record<string, unknown>,
 ) {
-  const module = readNativeModules()?.[
+  const module = (desktopPluginSockets() ?? readNativeModules()?.[
     isWebPlatform() ? 'SongloftLynxFrame' : 'SongloftPluginBridge'
-  ] as Record<string, (...args: unknown[]) => void> | undefined
+  ]) as Record<string, (...args: unknown[]) => void> | undefined
   if (!module || typeof module[method] !== 'function')
     throw new Error('plugin sockets are unavailable')
   const id = params.id

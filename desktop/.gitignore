@@ -1,0 +1,10 @@
+.build/
+.lynxtron/
+resources/
+release/
+electron-builder.yml
+config.json
+*.pem
+*.key
+*.p12
+*.pfx

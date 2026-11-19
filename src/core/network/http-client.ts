@@ -7,6 +7,8 @@ import { appConfig } from '../config/app-config.js'
 import { safeClearTimeout } from '../../native/safe-timers.js'
 import { readSystemInfo } from '../../native/native-modules.js'
 import { isWebPlatform } from '../../native/web-platform.js'
+import { desktopCall, desktopConfig } from '../../desktop/client.js'
+import { desktopCookies } from '../../desktop/cef.js'
 
 /** Native HTTP services consume and remove this header before sending. */
 export const REQUEST_TIMEOUT_HEADER = 'X-Songloft-Request-Timeout-Ms'
@@ -89,6 +91,18 @@ function newAbortController(): { signal?: unknown; abort?: () => void } | null {
  */
 export function createFetchTransport(fetchImpl?: FetchLike): Transport {
   return async (req) => {
+    if (!fetchImpl && desktopConfig()) {
+      const { signal, ...request } = req
+      if (signal?.aborted) throw new Error('Request cancelled')
+      const headers = { ...request.headers }
+      if (!Object.keys(headers).some(key => key.toLowerCase() === 'cookie')) {
+        const cookies = await desktopCookies(req.url).catch(() => ({}))
+        const value = Object.entries(cookies).map(([key, value]) => `${key}=${value}`).join('; ')
+        if (value) headers.Cookie = value
+      }
+      if (signal?.aborted) throw new Error('Request cancelled')
+      return desktopCall<TransportResponse>('network.request', { ...request, headers })
+    }
     // Lynx exposes `fetch` as a BARE global (host-provided HTTP service), NOT as
     // a `globalThis.fetch` property — same shape as `self`. Resolve the bare
     // binding first (guarded by `typeof` so it never throws when truly absent),

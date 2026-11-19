@@ -2,6 +2,7 @@ import type { SongloftStorage } from '../../../core/storage/types.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import { appConfig } from '../../../core/config/app-config.js'
 import { cacheNamespace, normalizeCacheServer, type CacheScope } from '../domain/cache-identity.js'
+import { isDesktopLocalSession } from '../../../desktop/client.js'
 
 export interface OfflineOwner extends CacheScope { namespace: string }
 export type OfflineAddress = Omit<CacheScope, 'username'>
@@ -77,6 +78,7 @@ export function currentOfflineOwner(): OfflineOwner | null {
 
 /** Resolve the active profile only when its stored address matches the actual session address. */
 export async function readOfflineAddress(storage: SongloftStorage, server: string): Promise<OfflineAddress> {
+  if (isDesktopLocalSession()) return { profile: 'bundle-local', server }
   const [active, profiles] = await Promise.all([
     storage.prefs.get('server_active_profile').catch(() => null),
     storage.prefs.get('server_profiles').catch(() => null),

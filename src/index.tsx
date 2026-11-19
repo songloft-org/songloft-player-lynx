@@ -52,11 +52,17 @@ import {
   setActiveThemePack,
 } from './shared/theme/theme-pack-model.js'
 import { router } from './router.js'
+import { initializeDesktopSession } from './desktop/session.js'
+import { isDesktopLocalSession } from './desktop/client.js'
+import { initializeDesktopUpdates, startDesktopUpdates } from './desktop/updates.js'
+import { restoreBundleSession } from './core/backend/local-mode.js'
 
 // Start client logging before the first render so startup/render issues are
 // captured (Lynx port of Flutter's `FileLogger.init` in `main.dart`). Module
 // imports are hoisted above, so this is as early as the app's own code gets.
 initClientLogger()
+initializeDesktopSession()
+initializeDesktopUpdates()
 
 // Before the first render, not in the async block below: the back key boots
 // going straight to "exit the app", and `initBackController` is what tells it
@@ -133,6 +139,7 @@ void (async () => {
     await auth.hydrate()
     // Restore identity without switching to another reachable server while the current server is offline.
     await useServerStore.getState().hydrate({ probe: false })
+    const bundleSessionResolved = await restoreBundleSession()
     const cacheScope = currentCacheScope()
     await offlineIdentity.activate(cacheScope ?? await readOfflineAddress(getSongloftStorage(), `${appConfig.baseUrl}${appConfig.basePath}`), cacheScope?.username ?? null)
     initializeCacheContext()
@@ -141,7 +148,10 @@ void (async () => {
     // Before playback restore: auto-resume may start playing immediately, and
     // the host otherwise applies its own default volume.
     await restoreVolume()
-    await restorePlaybackState()
+    await restorePlaybackState({
+      allowAutoResume:
+        !isDesktopLocalSession() || useAuthStore.getState().status === 'authenticated',
+    })
     // Restores the overlay the user left switched on. Deliberately grant-checking
     // only (never `requestPermission`): that opens a system screen, and one that
     // answers only once the app is foregrounded again — at this point in the
@@ -149,7 +159,7 @@ void (async () => {
     // Off the chain (`void`) for the same reason nothing below it may wait on an
     // overlay: auth must resolve even if the host's lyric module misbehaves.
     void syncFloatingLyricOverlay().catch(() => { })
-    await auth.checkAuth()
+    if (!bundleSessionResolved) await auth.checkAuth()
     initializePreferenceSync()
     initializeFavoriteChanges()
     initializeHomeWidget(() => { void router.navigate({ to: '/player' }) })
@@ -169,12 +179,18 @@ void (async () => {
       void navigateAutoEnterLyricsIfNeeded().catch(() => { })
     }
   } catch {
-    await useAuthStore
-      .getState()
-      .checkAuth()
-      .catch(() => {
+    const auth = useAuthStore.getState()
+    if (isDesktopLocalSession()) {
+      if (auth.status === 'unknown') {
+        useAuthStore.setState({ status: 'unauthenticated', isLoading: false })
+      }
+    } else {
+      await auth.checkAuth().catch(() => {
         useAuthStore.setState({ status: 'unauthenticated', isLoading: false })
       })
+    }
+  } finally {
+    startDesktopUpdates()
   }
 })()
 

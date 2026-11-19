@@ -7,16 +7,29 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@lynx-js/lynx-ui-button'
 import { Input } from '@lynx-js/lynx-ui-input'
 
-import { appConfig, devCredentials, hostAssetUrl } from '../../../core/config/app-config.js'
+import {
+  appConfig,
+  devCredentials,
+  hostAssetUrl,
+} from '../../../core/config/app-config.js'
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { AppSwitch } from '../../../shared/ui/AppSwitch.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
+import {
+  bundleModeAvailable,
+  readBundleMode,
+  switchBundleMode,
+  type BundleRunMode,
+} from '../../../core/backend/local-mode.js'
+import { readLynxGlobal } from '../../../native/native-modules.js'
+import { desktopConfig } from '../../../desktop/client.js'
 import {
   PREF_LAST_USERNAME,
   PREF_SERVER_URL,
   SECURE_LAST_PASSWORD,
   useAuthStore,
 } from '../store/index.js'
+import { normalizeServerUrl, PREF_INSECURE_TLS } from '../store/auth-store.js'
 import { useServerStore } from '../../settings/store/server-store.js'
 import { useOfflineOwner } from '../../player/widgets/use-offline-owner.js'
 import { indexedSongCacheAvailable } from '../../player/data/indexed-song-cache.js'
@@ -42,8 +55,8 @@ export function LoginPage() {
   const error = useAuthStore((s) => s.error)
   const login = useAuthStore((s) => s.login)
   const offlineOwner = useOfflineOwner()
-
   const showServerFields = !appConfig.isEmbedded
+  const localModeAvailable = bundleModeAvailable()
 
   // Username starts empty and is written **once**, at the tail of the async
   // prefill below (persisted value, else the dev default). Each distinct `value`
@@ -63,10 +76,53 @@ export function LoginPage() {
   // login on a misleading "invalid credentials". A secret must never be
   // prefilled with a value the user did not actually save.
   const [password, setPassword] = useState('')
-  const [apiUrl, setApiUrl] = useState(showServerFields ? appConfig.baseUrl : '')
-  const [insecureTls, setInsecureTls] = useState(appConfig.insecureTls)
+  const [apiUrl, setApiUrl] = useState(
+    showServerFields && !localModeAvailable ? appConfig.baseUrl : '',
+  )
+  const [insecureTls, setInsecureTls] = useState(!localModeAvailable && appConfig.insecureTls)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
+  const [localModeBusy, setLocalModeBusy] = useState(false)
+  const [localModeError, setLocalModeError] = useState(false)
+  const [runMode, setRunMode] = useState<BundleRunMode | null>(
+    localModeAvailable ? desktopConfig()?.sessionKind ?? null : 'remote',
+  )
+  const desktopLocalRecovery =
+    localModeAvailable && runMode === 'local' && !!desktopConfig()
+  const localModeDisabled =
+    !runMode || localModeBusy || isLoading || !agreedToTerms
+  const localModeClassName =
+    'login__bundle-mode' + (localModeDisabled ? ' login__bundle-mode--disabled' : '')
+  const missingMusicDirectory = error === 'bundle_music_directory_unavailable'
+  const displayedError = missingMusicDirectory
+    ? t('desktopLocal.musicDirectoryUnavailable')
+    : error === 'keychain_interaction_required'
+      ? t('desktopLocal.keychainInteractionRequired')
+      : error === 'keychain_signing_required'
+        ? t('desktopLocal.keychainSigningRequired')
+        : localModeError || error === 'desktop_host_failed'
+          ? t('desktopLocal.failed')
+          : error
+
+  useEffect(() => {
+    if (!localModeAvailable) return
+    let active = true
+    let receivedChange = false
+    const listener = ({ mode }: { mode: string }) => {
+      if (mode !== 'remote' && mode !== 'local') return
+      receivedChange = true
+      setRunMode(mode)
+    }
+    const emitter = readLynxGlobal()?.getJSModule?.('GlobalEventEmitter')
+    emitter?.addListener?.('SongloftDesktop.sessionChanged', listener)
+    void readBundleMode().then((mode) => {
+      if (active && !receivedChange) setRunMode(mode)
+    })
+    return () => {
+      active = false
+      emitter?.removeListener?.('SongloftDesktop.sessionChanged', listener)
+    }
+  }, [localModeAvailable])
 
   // Best-effort prefill of the last username / remembered password / server
   // URL. Reads reject on the native storage stub (until the JSB binding
@@ -79,6 +135,7 @@ export function LoginPage() {
   // `login_page.dart` semantics: switching servers prefills the credentials
   // the user last used *on that server*, not the global last.
   useEffect(() => {
+    if (runMode !== 'remote') return
     let cancelled = false
     const storage = getSongloftStorage()
     void (async () => {
@@ -89,35 +146,44 @@ export function LoginPage() {
           return null
         }
       }
-      const [savedName, savedPassword, savedUrl, profileCreds] = await Promise.all([
-        read('prefs', PREF_LAST_USERNAME),
-        read('secure', SECURE_LAST_PASSWORD),
-        showServerFields
-          ? read('prefs', PREF_SERVER_URL)
-          : Promise.resolve(null),
-        showServerFields
-          ? useServerStore.getState().loadCredentialsForUrl(appConfig.baseUrl)
-          : Promise.resolve(null),
-      ])
+      const [savedName, savedPassword, savedUrl, savedTls, currentProfile] =
+        await Promise.all([
+          read('prefs', PREF_LAST_USERNAME),
+          read('secure', SECURE_LAST_PASSWORD),
+          showServerFields
+            ? read('prefs', PREF_SERVER_URL)
+            : Promise.resolve(null),
+          localModeAvailable ? read('prefs', PREF_INSECURE_TLS) : Promise.resolve(null),
+          showServerFields && !localModeAvailable
+            ? useServerStore.getState().loadCredentialsForUrl(appConfig.baseUrl)
+            : Promise.resolve(null),
+        ])
+      const targetUrl = savedUrl || (localModeAvailable ? appConfig.defaultBaseUrl : appConfig.baseUrl)
+      const profileCreds = showServerFields && localModeAvailable
+        ? await useServerStore.getState().loadCredentialsForUrl(targetUrl)
+        : currentProfile
       if (cancelled) return
       // One write per field, whichever source wins — see the useState comments.
       // Per-profile credentials win over global last credentials.
-      const nextName = profileCreds?.username || savedName || devCredentials.username
+      const nextName =
+        profileCreds?.username || savedName || devCredentials.username
       if (nextName) setUsername(nextName)
       // Only ever fill the password from a genuinely remembered one. Never fall
       // back to a dev default here (see the useState comment) — an empty field
       // is the correct state when we have no saved password, on both a fresh
       // install and an upgraded one that has not re-logged-in yet.
-      const nextPassword = profileCreds?.password || savedPassword
-      if (nextPassword) setPassword(nextPassword)
-      if (savedUrl) setApiUrl(savedUrl)
+      setPassword(profileCreds?.password || savedPassword || '')
+      if (showServerFields) setApiUrl(targetUrl)
+      if (localModeAvailable) setInsecureTls(savedTls === 'true')
     })()
     return () => {
       cancelled = true
     }
-  }, [showServerFields])
+  }, [localModeAvailable, runMode, showServerFields])
 
   const canSubmit =
+    runMode === 'remote' &&
+    !localModeBusy &&
     !isLoading &&
     username.trim().length > 0 &&
     password.length > 0 &&
@@ -139,92 +205,134 @@ export function LoginPage() {
       if (showServerFields) {
         void useServerStore
           .getState()
-          .rememberCredentials(apiUrl.trim(), { username: username.trim(), password })
+          .rememberCredentials(apiUrl.trim(), {
+            username: username.trim(),
+            password,
+          })
       }
       navigate({ to: '/' })
     }
   }
 
+  const handleBundleMode = async (
+    target: BundleRunMode,
+    chooseMusicDirectory = false,
+  ) => {
+    if (!localModeAvailable || localModeDisabled) return
+    setLocalModeBusy(true)
+    setLocalModeError(false)
+    try {
+      if (!(await switchBundleMode(target, { chooseMusicDirectory }))) return
+      setRunMode(target)
+      if (target === 'local' && useAuthStore.getState().status === 'authenticated') {
+        navigate({ to: '/' })
+      }
+    } catch {
+      setLocalModeError(true)
+    } finally {
+      setLocalModeBusy(false)
+    }
+  }
+
   return (
-    <view className='login'>
-      {offlineOwner && indexedSongCacheAvailable() && <view className='login__offline' bindtap={() => { void navigate({ to: '/device-cache' }) }} data-testid='login-device-cache'>
-        <text className='login__offline-text'>{t('deviceCache.openOffline')}</text>
-      </view>}
-      <scroll-view className='login__scroll' scroll-y>
-        <view className='login__content'>
+    <view className="login">
+      {offlineOwner && indexedSongCacheAvailable() && (
+        <view
+          className="login__offline"
+          bindtap={() => {
+            void navigate({ to: '/device-cache' })
+          }}
+          data-testid="login-device-cache"
+        >
+          <text className="login__offline-text">
+            {t('deviceCache.openOffline')}
+          </text>
+        </view>
+      )}
+      <scroll-view className="login__scroll" scroll-y>
+        <view className="login__content">
           <view style={{ flex: 1 }} />
-          <view className='login__card'>
+          <view className="login__card">
             <image
-              className='login__logo'
+              className="login__logo"
               src={hostAssetUrl('app_icon.png')}
-              mode='aspectFit'
+              mode="aspectFit"
             />
-            <text className='login__title'>{t('auth.title')}</text>
-            <text className='login__subtitle'>{t('auth.subtitle')}</text>
+            <text className="login__title">{t('auth.title')}</text>
+            {!desktopLocalRecovery ? (
+              <>
+                <text className="login__subtitle">{t('auth.subtitle')}</text>
 
-            <view className='login__field'>
-              <text className='login__label'>{t('auth.username')}</text>
-              <Input
-                className='login__input'
-                placeholder={t('auth.usernamePlaceholder')}
-                value={username}
-                onInput={(value) => setUsername(value)}
-              />
-            </view>
-
-            <view className='login__field'>
-              <text className='login__label'>{t('auth.password')}</text>
-              <Input
-                className='login__input'
-                type='password'
-                placeholder={t('auth.passwordPlaceholder')}
-                value={password}
-                confirmType='done'
-                onInput={(value) => setPassword(value)}
-                onConfirm={() => void handleLogin()}
-              />
-            </view>
-
-            {showServerFields ? (
-              <view className='login__field'>
-                <text className='login__label'>{t('auth.apiBaseUrl')}</text>
-                <Input
-                  className='login__input'
-                  type='text'
-                  placeholder={t('auth.apiBaseUrlPlaceholder')}
-                  value={apiUrl}
-                  onInput={(value) => setApiUrl(value)}
-                />
-                <view className='login__toggle'>
-                  <AppSwitch
-                    checked={insecureTls}
-                    onChange={(checked) => setInsecureTls(checked)}
+                <view className="login__field">
+                  <text className="login__label">{t('auth.username')}</text>
+                  <Input
+                    className="login__input"
+                    placeholder={t('auth.usernamePlaceholder')}
+                    value={username}
+                    onInput={(value) => setUsername(value)}
                   />
-                  <view className='login__toggle-text'>
-                    <text className='login__toggle-title'>
-                      {t('auth.insecureTls')}
-                    </text>
-                    <text className='login__toggle-subtitle'>
-                      {t('auth.insecureTlsHint')}
-                    </text>
-                  </view>
                 </view>
-              </view>
+
+                <view className="login__field">
+                  <text className="login__label">{t('auth.password')}</text>
+                  <Input
+                    className="login__input"
+                    type="password"
+                    placeholder={t('auth.passwordPlaceholder')}
+                    value={password}
+                    confirmType="done"
+                    onInput={(value) => setPassword(value)}
+                    onConfirm={() => void handleLogin()}
+                  />
+                </view>
+
+                {showServerFields ? (
+                  <view className="login__field">
+                    <text className="login__label">{t('auth.apiBaseUrl')}</text>
+                    <Input
+                      className="login__input"
+                      type="text"
+                      placeholder={t('auth.apiBaseUrlPlaceholder')}
+                      value={apiUrl}
+                      onInput={(value) => setApiUrl(value)}
+                    />
+                    <view className="login__toggle">
+                      <AppSwitch
+                        checked={insecureTls}
+                        onChange={(checked) => setInsecureTls(checked)}
+                      />
+                      <view className="login__toggle-text">
+                        <text className="login__toggle-title">
+                          {t('auth.insecureTls')}
+                        </text>
+                        <text className="login__toggle-subtitle">
+                          {t('auth.insecureTlsHint')}
+                        </text>
+                      </view>
+                    </view>
+                  </view>
+                ) : null}
+              </>
             ) : null}
 
-            {error ? <text className='login__error'>{error}</text> : null}
+            {displayedError ? (
+              <text className="login__error">{displayedError}</text>
+            ) : null}
 
             <view
-              className='login__agreement'
-              data-testid='login-agreement'
+              className="login__agreement"
+              data-testid="login-agreement"
               bindtap={() => setAgreedToTerms(!agreedToTerms)}
             >
-              <AppCheckbox checked={agreedToTerms} testId='agreement-checkbox' />
-              <text className='login__agreement-text'>
+              <AppCheckbox
+                checked={agreedToTerms}
+                testId="agreement-checkbox"
+              />
+              <text className="login__agreement-text">
                 {t('auth.agreePrefix')}
                 <text
-                  className='login__agreement-link'
-                  data-testid='login-terms-link'
+                  className="login__agreement-link"
+                  data-testid="login-terms-link"
                   catchtap={() => setShowTerms(true)}
                 >
                   {t('auth.termsAndPrivacy')}
@@ -232,22 +340,59 @@ export function LoginPage() {
               </text>
             </view>
 
-            <Button disabled={!canSubmit} onClick={() => void handleLogin()}>
-              {({ active = false, disabled = false }) => (
+            {!desktopLocalRecovery ? (
+              <Button disabled={!canSubmit} onClick={() => void handleLogin()}>
+                {({ active = false, disabled = false }) => (
+                  <view
+                    className={
+                      'login__button' +
+                      (disabled ? ' login__button--disabled' : '') +
+                      (active ? ' login__button--active' : '')
+                    }
+                    data-testid="login-button"
+                  >
+                    <text className="login__button-text">
+                      {isLoading ? t('auth.signingIn') : t('auth.logIn')}
+                    </text>
+                  </view>
+                )}
+              </Button>
+            ) : null}
+            {desktopLocalRecovery ? (
+              <>
                 <view
-                  className={
-                    'login__button' +
-                    (disabled ? ' login__button--disabled' : '') +
-                    (active ? ' login__button--active' : '')
-                  }
-                  data-testid='login-button'
+                  className={localModeClassName}
+                  bindtap={() => void handleBundleMode('local')}
+                  data-testid="login-retry-local"
                 >
-                  <text className='login__button-text'>
-                    {isLoading ? t('auth.signingIn') : t('auth.logIn')}
+                  <text className="login__bundle-mode-text">
+                    {t(localModeBusy ? 'desktopLocal.starting' : 'desktopLocal.retryLocal')}
                   </text>
                 </view>
-              )}
-            </Button>
+                {missingMusicDirectory ? (
+                  <view
+                    className={localModeClassName}
+                    bindtap={() => void handleBundleMode('local', true)}
+                    data-testid="login-choose-music-directory"
+                  >
+                    <text className="login__bundle-mode-text">{t('desktopLocal.chooseMusicDirectory')}</text>
+                  </view>
+                ) : null}
+              </>
+            ) : null}
+            {localModeAvailable ? (
+              <view
+                className={localModeClassName}
+                bindtap={() => void handleBundleMode(runMode === 'local' ? 'remote' : 'local')}
+                data-testid="login-bundle-mode"
+              >
+                <text className="login__bundle-mode-text">
+                  {localModeBusy && !desktopLocalRecovery
+                    ? t('desktopLocal.starting')
+                    : t(runMode === 'local' ? 'desktopLocal.remote' : 'desktopLocal.local')}
+                </text>
+              </view>
+            ) : null}
           </view>
           <view style={{ flex: 1 }} />
         </view>

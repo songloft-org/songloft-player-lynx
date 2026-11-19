@@ -15,6 +15,7 @@ import { OfflineIdentityStore, offlineOwnerKey } from '../../player/data/offline
 import {
   createAuthStore,
   normalizeServerUrl,
+  PREF_INSECURE_TLS,
   PREF_LAST_USERNAME,
   PREF_SERVER_URL,
   SECURE_LAST_PASSWORD,
@@ -142,6 +143,56 @@ describe('auth store', () => {
     appConfig.reset()
     useAppSessionStore.getState().reset()
   })
+
+  test('local auto-login keeps the saved server and the local playback queue', async () => {
+    await storage.prefs.set(PREF_LAST_USERNAME, 'remote-user')
+    await storage.prefs.set(PREF_SERVER_URL, 'https://fixture.example/music')
+    await storage.prefs.set(PREF_INSECURE_TLS, 'true')
+    await storage.secure.set(SECURE_LAST_PASSWORD, 'remote-secret')
+    await storage.prefs.set('playback_queue', '[{"id":7}]')
+    const { transport, calls } = makeTransport()
+    const store = createAuthStore(makeDeps(storage, transport))
+    await store.getState().login({
+      username: 'admin',
+      password: 'generated-fixture-password',
+      apiBaseUrl: 'http://127.0.0.1:31415',
+      insecureTls: false,
+      bundle: true,
+    })
+    expect(store.getState().status).toBe('authenticated')
+    expect(calls[0].url).toBe('http://127.0.0.1:31415' + LOGIN)
+    expect(await storage.secure.get('access_token')).toBe('access-1')
+    expect(useAppSessionStore.getState().username).toBe('admin')
+    expect(appConfig.insecureTls).toBe(false)
+    expect(await storage.prefs.get(PREF_LAST_USERNAME)).toBe('remote-user')
+    expect(await storage.prefs.get(PREF_SERVER_URL)).toBe('https://fixture.example/music')
+    expect(await storage.prefs.get(PREF_INSECURE_TLS)).toBe('true')
+    expect(await storage.secure.get(SECURE_LAST_PASSWORD)).toBe('remote-secret')
+    expect(await storage.prefs.get('playback_queue')).toBe('[{"id":7}]')
+    await store.getState().logout({ revokeServer: false })
+    await store.getState().hydrate({ resetServer: true })
+    expect(appConfig.baseUrl).toBe('https://fixture.example/music')
+    expect(appConfig.insecureTls).toBe(true)
+    expect(await storage.secure.get('access_token')).toBeNull()
+  })
+
+  test('switching away from a fresh local session clears its transient address', async () => {
+    const { transport } = makeTransport()
+    const store = createAuthStore(makeDeps(storage, transport))
+    await store.getState().login({
+      username: 'admin',
+      password: 'generated-fixture-password',
+      apiBaseUrl: 'http://127.0.0.1:31415',
+      bundle: true,
+    })
+    await store.getState().logout({ revokeServer: false })
+    await store.getState().hydrate({ resetServer: true })
+    expect(appConfig.baseUrl).toBe(appConfig.defaultBaseUrl)
+    expect(appConfig.resolvedBaseUrl).toBe(appConfig.defaultBaseUrl)
+    expect(await storage.prefs.get(PREF_SERVER_URL)).toBeNull()
+    expect(await storage.secure.get(SECURE_LAST_PASSWORD)).toBeNull()
+  })
+
   afterEach(() => {
     appConfig.reset()
     useAppSessionStore.getState().reset()

@@ -28,6 +28,7 @@ import com.lynx.tasm.behavior.Behavior
 import com.lynx.tasm.behavior.LynxContext
 import com.lynx.xelement.XElementBehaviors
 import org.songloft.lynx.lyric.OverlayPermission
+import org.songloft.lynx.bundle.BundlePermission
 import org.songloft.lynx.navigation.BackKeyState
 import org.songloft.lynx.navigation.SongloftNavigationModule
 import org.songloft.lynx.system.SystemAppearance
@@ -55,6 +56,11 @@ class MainActivity : Activity() {
         override fun onChange(selfChange: Boolean) { pushAppearance() }
     }
     private var contrastListener: UiModeManager.ContrastChangeListener? = null
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        BundlePermission.onRequestPermissionsResult(requestCode, grantResults)
+    }
 
     private fun appearance(): Map<String, Any> {
         val props = SystemAppearance.from(resources.configuration, contentResolver).toMutableMap()

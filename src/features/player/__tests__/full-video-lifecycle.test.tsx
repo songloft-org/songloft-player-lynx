@@ -5,6 +5,13 @@ import { usePlayerStore } from '../store/player-store.js'
 import { FullVideoPage } from '../pages/FullVideoPage.js'
 
 const back = vi.hoisted(() => vi.fn())
+const desktop = vi.hoisted(() => ({ enabled: false }))
+vi.mock('../../../desktop/client.js', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../../desktop/client.js')>(),
+  desktopConfig: () => desktop.enabled
+    ? { id: 'test', token: 'test', os: 'win32', capabilities: {} }
+    : null,
+}))
 // ReactLynx's renderer cannot mount zustand's React hooks. Keep the real
 // store and its subscriptions, adapting only the hook to Lynx's renderer.
 vi.mock('../store/index.js', async (importOriginal) => {
@@ -42,6 +49,8 @@ const original = usePlayerStore.getState()
 afterEach(() => {
   usePlayerStore.setState(original, true)
   vi.clearAllMocks()
+  desktop.enabled = false
+  vi.useRealTimers()
 })
 
 test.each([false, true])(
@@ -66,3 +75,18 @@ test.each([false, true])(
     expect(back).toHaveBeenCalledOnce()
   },
 )
+
+test('desktop keeps transport controls at the edge after the mobile hide delay', async () => {
+  vi.useFakeTimers()
+  desktop.enabled = true
+  usePlayerStore.setState({ isPlaying: true, isBuffering: false })
+  const view = render(<FullVideoPage />)
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(5_000)
+  })
+  expect(view.queryByTestId('video-rotate')).toBeNull()
+  const playback = view.container.querySelector('[data-testid="video-centre-toggle"]')
+  expect(playback?.getAttribute('class')).toBe('full-video__tool')
+  expect(playback?.closest('.full-video__chrome--hidden')).toBeNull()
+  view.unmount()
+})

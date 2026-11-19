@@ -1,0 +1,18 @@
+diff --git a/out/dmgUtil.js b/out/dmgUtil.js
+index aed2166..473c96f 100644
+--- a/out/dmgUtil.js
++++ b/out/dmgUtil.js
+@@ -173,7 +173,12 @@ async function customizeDmg({ appPath, artifactPath, volumeName, specification,
+     }
+     if (!(0, builder_util_1.isEmptyOrSpaces)(settings.background)) {
+         const size = await getImageSizeUsingSips(settings.background);
+-        settings.window = { position: { x: 400, y: Math.round((1440 - size.height) / 2) }, size, ...settings.window };
++        // use image size as default size if user did not set window size
++        let windowSize = size;
++        if (specification.window && specification.window.width && specification.window.height) {
++            windowSize = { width: specification.window.width, height: specification.window.height };
++        }
++        settings.window = { position: { x: 400, y: Math.round((1440 - windowSize.height) / 2) }, size: windowSize, ...settings.window };
+     }
+     const workspaceRoot = await packager.info.getWorkspaceRoot();
+     for (const item of (_f = settings.contents) !== null && _f !== void 0 ? _f : []) {

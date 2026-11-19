@@ -22,9 +22,21 @@
 import { getLynxFrameModule } from '../../../native/web-lynx-frame.js'
 import { getWebviewModule } from '../../../native/web-webview.js'
 
+const releaseListeners = new Set<(entryPath: string) => void>()
+/** Native desktop elements must also be released before an update/logout. */
+export function subscribePluginFrameRelease(
+  listener: (entryPath: string) => void,
+): () => void {
+  releaseListeners.add(listener)
+  return () => {
+    releaseListeners.delete(listener)
+  }
+}
+
 /** Stop and release one plugin's frame. Safe when it was never opened. */
 export function releasePluginFrame(entryPath: string): void {
   if (!entryPath) return
+  for (const listener of releaseListeners) listener(entryPath)
   getWebviewModule().close(entryPath)
   getLynxFrameModule().close(entryPath)
 }
@@ -38,6 +50,7 @@ export function releasePluginFrame(entryPath: string): void {
  * plugins polling in the background.
  */
 export function releaseAllPluginFrames(): void {
+  for (const listener of releaseListeners) listener('')
   getWebviewModule().close('')
   getLynxFrameModule().close('')
 }

@@ -94,7 +94,7 @@ describe('on a device host', () => {
     const caps = getPlatformCapabilities()
     expect(caps.dlna).toBe(true)
     expect(caps.dataTransfer).toBe(true)
-    expect(caps.systemTray).toBe(true)
+    expect(caps.systemTray).toBe(false)
     // Not registered on any host yet — must not be advertised.
     expect(caps.floatingLyric).toBe(false)
     expect(caps.liveActivity).toBe(false)

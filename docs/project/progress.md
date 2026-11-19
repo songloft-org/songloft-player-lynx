@@ -15,6 +15,47 @@ The navigation snapshot restores loaded SVGs alongside the tab layout. First-tim
 In the 390 px Docker Chrome comparison, the old navigation bar showed a gear for approximately 2.2 seconds and the fixed bar displayed the plugin SVG in its first frame. HTTP 503 and HTML icon responses preserved the cached artwork. Type checking, Lynx and Web builds, and all 3,892 tests passed. Baseline `debad6e80f422c9ed092fa3a5e4af21d34426a83` on Linux x86_64 with Node 22.17.1. Worktree hashes, commands, logs, and screenshots are recorded in `/tmp/songloft-nav-icons.ndU7Ve/verification.md`.
 
 After a force-stop on the Android API 34 emulator, the cold-start screenshot already showed the plugin SVG before the request completed. The screenshot matched the one captured after the response. iOS, HarmonyOS, and physical devices remain unverified.
+## 2026-11-19 · 2.13.24 三架构同源开发包 / Development packages from one source snapshot
+
+Windows x64、Mac arm64 和 x64 的开发包使用相同的客户端、业务 bundle 和后端源码摘要。三份包验签通过，两个 Mac 包内后端通过扫描和重启恢复。Windows 设置页实际升级保留曲库与备份，确认后自动清理安装下载。同一打包快照的类型检查、Lynx/Web 双构建、3,890 项共享测试及 95 项发布工具测试通过。Mac 设置页升级为 Not run。[记录](desktop-implementation.md#21324-三架构同源开发包)
+
+Windows x64, Mac arm64, and Mac x64 development packages share the same client, application bundle, and backend source digests. All three passed signature verification, and both packaged Mac backends passed scanning and restart. The Windows Settings upgrade preserved the library and backup and reclaimed the installer download after confirmation. Type checking, Lynx and Web builds, 3,890 shared tests, and 95 release-tool tests passed for the same package snapshot. The Mac Settings upgrade was Not run. [Record](../en/project/desktop-implementation.md#21324-development-packages-from-one-source-snapshot)
+
+## 2026-11-19 · 清理更新下载 / Reclaiming update downloads
+
+启动确认后回收该次安装下载，保留数据库备份和失败记录。备份复制失败时清除本次未完成的副本。macOS 和 Windows 文件系统夹具通过，Windows 实测文件锁释放后可重试回收。[记录](desktop-implementation.md#确认升级后回收安装缓存)
+
+Startup confirmation reclaims the corresponding installer download and retains database backups and failure records. A failed backup copy removes the incomplete copy. macOS and Windows filesystem fixtures passed, including retry after release of a real Windows file lock. [Record](../en/project/desktop-implementation.md#reclaiming-installer-downloads-after-startup-confirmation)
+
+## 2026-11-19 · 更新交接前后验包 / Update verification across handoff
+
+点击安装先重新验证磁盘文件，损坏包提示重新下载，当前播放不受影响。Windows x64 实际安装与两种 Mac 架构的签名夹具均验证了交接后拒绝损坏包与旧版重启。[记录](desktop-implementation.md#交接前后验证更新包)
+
+Install rechecks the download on disk and offers another download if damaged while the active playback session continues. The installed Windows x64 app and signed fixtures for both Mac architectures verified rejection after handoff and relaunch of the previous app. [Record](../en/project/desktop-implementation.md#verifying-update-packages-before-and-after-handoff)
+
+## 2026-11-19 · 桌面发行预检 / Desktop release preflight
+
+三架构工件在复制和签名前核对源码摘要。Windows 和 macOS 签名配置分开，stable 校验公证票据。两种 Mac 架构通过资源目录移动、曲库扫描和重启测试。31 项宿主测试和 95 项发布测试通过。[记录](desktop-implementation.md#桌面发行预检)
+
+All three desktop artifacts now agree on the source digest before staging and signing. Windows and macOS use separate signing configuration. Stable verification checks the notarization ticket. Both Mac architectures passed the resource directory replacement, library scan, and restart checks. All 31 host and 95 release tests passed. [Record](../en/project/desktop-implementation.md#desktop-release-preflight)
+
+## 2026-11-19 · 2.13.23 完整开发包 / Complete development packages
+
+Windows x64 通过设置页安装 2.13.23。新版启动时曲库离线，重试前保留旧应用和数据库备份，恢复目录后完成自动登录和升级确认。macOS CEF 框架暂存修复后，arm64 和 x64 的 DMG 和 ZIP 校验通过，包内 Go 后端分别通过扫描、Range 和重启恢复。签名工件和元数据已校验转存，Mac 上的重复副本与展开目录已清理。[记录](desktop-implementation.md#21323-完整开发包)
+
+Windows x64 installed 2.13.23 through Settings. When the new app started with the music directory unavailable, it kept the previous app and database backup. Returning the folder let retry restore automatic sign-in and confirm the upgrade. After fixing macOS CEF framework staging, both Mac DMGs and ZIPs passed verification, and each packaged Go backend passed scanning, Range requests and recovery after restart. Verified packages and metadata were archived, and the duplicate copies and expanded staging trees on the Mac were cleaned up. [Record](../en/project/desktop-implementation.md#21323-complete-development-packages)
+
+## 2026-11-19 · 本地曲库目录恢复 / Recovering an unavailable local music folder
+
+Windows 实测移走曲库目录后停留在本地登录页。取消目录选择和重试失败都保留了原曲库。归还目录后，同一窗口自动登录并实际播放。macOS 原生 arm64 和 Rosetta x64 的包内后端均通过只读目录测试。[记录](desktop-implementation.md#音乐目录不可用时保留本地会话)
+
+Removing the Windows fixture directory kept the app on local sign-in. Cancelling the folder picker and retrying while the folder was unavailable retained the library. Returning the folder allowed automatic sign-in and real playback in the same window. Both native arm64 and Rosetta x64 packaged Mac backends passed the read-only directory test. [Record](../en/project/desktop-implementation.md#keeping-the-local-session-when-its-music-folder-is-unavailable)
+
+## 2026-11-19 · 2.13.22 设置页升级与后端恢复 / Settings upgrade and backend recovery
+
+Windows 11 x64 通过设置页从 2.13.21 升至 2.13.22，保留登录、设置、曲库和备份。实测锁屏音频及系统播放控件，强制结束包内后端后客户端自动恢复本地曲库。两个 Mac ZIP 中的实际签名辅助程序通过升级、错版拒绝和配套恢复夹具。[记录](desktop-implementation.md#windows-21322-设置页升级与锁屏播放)
+
+Windows 11 x64 upgraded from 2.13.21 to 2.13.22 through Settings and retained sign-in, settings, library and backup. The system lock screen controlled actual audio. Terminating the bundled backend returned the client to its local library after automatic recovery. The signed helpers from both Mac ZIPs passed the install, mismatched-version rejection and paired recovery fixtures. [Record](../en/project/desktop-implementation.md#windows-21322-settings-upgrade-and-locked-playback)
 
 <a id="issue-581"></a>
 
@@ -29,6 +70,72 @@ Lynx Web now gets playback position and duration from the active audio or video 
 - 完整嵌入页通过曲库点播两首真实合成 MP3。在仅延迟旧进度定时器的条件下，实际位置约 2.26 秒时，旧版进度为 0%，新版为 41%（媒体位置约为 45%）。两版均在浏览器 `ended` 后 0.3 秒内已播放下一曲，两首媒体请求均为 206。独立 Chrome 夹具验证真实 MP4 接管进度并关闭后由音频继续推进。
 - In the embedded library, two generated MP3s played from the actual UI. With the original progress timer delayed, the bar read 0% at about 2.26 seconds with the original host and 41% with the fix (about 45% on the media clock). The next track was already playing within 0.3 seconds of the browser's `ended` event in both builds. Both media requests returned 206. A separate Chrome fixture checked that a real MP4 took over progress and that audio advanced again after closing the video.
 - 证据 / evidence in `/tmp/songloft-581.7JfaBL/` (`ui-{before,after}.json`, `video.json`, `unit-{before,after}.log`, `full-test-final.log`)。另一个填充尾部的 MP3 让 Chrome 高估时长，仍在实际音频结束时触发 `ended` / a padded MP3 caused Chrome to overestimate duration but still fired `ended` when the media ran out. Not run：报告人的 Windows 封装、曲目及长时间播放，原生端与发布 CI / the reporter's Windows wrapper, track and extended session, native clients and release CI. 本地工作树修复 / local worktree fix.
+
+## 2026-11-19 · 安装失败后恢复窗口 / Relaunch after installation failure
+
+Windows 实际设置页复现包内版本与有效签名清单不符。修复后旧应用通过复核并自动启动，原曲库保留，错误提示可定位安装日志。macOS arm64 和 Rosetta x64 的签名夹具验证拒绝、重启与配套恢复。[记录](desktop-implementation.md#安装失败后重启已恢复的应用)
+
+A real Windows Settings install reproduced a mismatch between a valid signed manifest and the embedded version. The fix verified and relaunched the previous app, kept the library and provided a shortcut to the install log. Signed fixtures on macOS arm64 and Rosetta x64 verified rejection, relaunch and paired recovery. [Record](../en/project/desktop-implementation.md#relaunching-the-restored-app-after-installation-fails)
+
+## 2026-11-19 · Windows 2.13.21 升级与媒体 / Windows 2.13.21 update and media
+
+Windows 11 x64 通过设置页从 2.13.19 升至测试签名的 2.13.21。原有本地登录、设置、四首曲目及更新前备份通过核验，实际安装包可从曲库播放视频并进出全屏。已补验格式、均衡器、断流续传和离线缓存。Mac 的测试包使用随构建变化的临时签名，当前设置页升级仍等待图形会话授权。[记录](desktop-implementation.md#windows-21321-设置页整包升级)
+
+Windows 11 x64 updated from 2.13.19 to test-signed 2.13.21 through Settings. Local sign-in, settings, four tracks and the pre-update backup passed verification. The installed app played a video from the library and entered and exited fullscreen. Codec, equalizer, reconnection and offline cache cases also passed. The Mac test builds use ad hoc identities that vary by build, and the Settings update still awaits console authorization. [Record](../en/project/desktop-implementation.md#windows-21321-full-update-through-settings)
+
+## 2026-11-19 · Mac 更新重启路径 / Mac update relaunch path
+
+arm64 与 Rosetta x64 的签名升级和恢复夹具验证了含中文、空格和等号的数据目录。真实设置页升级还需图形会话授权。[记录](desktop-implementation.md#macos-更新重启保留开发数据目录)
+
+Signed upgrade and recovery fixtures on arm64 and Rosetta x64 retained a data directory containing Chinese characters, spaces and an equals sign. Settings-driven installation awaits console authorization. [Record](../en/project/desktop-implementation.md#macos-update-relaunch-retains-the-development-data-directory)
+
+## 2026-11-19 · Windows 曲库 MV 和全屏 / Windows library MV and fullscreen
+
+曲库与播放器徽标的桌面视频路由已修复。Windows 用合成片源实测 16 段音画切换，并通过全屏往返。[记录](desktop-implementation.md#windows-21319-曲库-mv-与全屏)
+
+Both desktop video entry points now navigate to the video page. The Windows fixture passed all 16 audio/video cues and a fullscreen round trip. [Record](../en/project/desktop-implementation.md#windows-21319-library-mv-and-fullscreen)
+
+## 2026-11-19 · Mac 钥匙串和更新下载 / Mac Keychain and update downloads
+
+Mac arm64 图形会话通过本地自动登录和同包重启。两个 Mac 架构均通过完整 ZIP 下载的取消、断开重试和验签。Windows 评估许可过期触发关机，保留约 37 分钟的播放与内存采样。[记录](desktop-implementation.md)
+
+The Mac arm64 graphical session passed automatic local sign-in and restart of the same package. Both Mac architectures passed cancellation, disconnect retries and signature checks for full ZIP downloads. The Windows evaluation license expired and triggered shutdown after approximately 37 minutes of playback and memory sampling. [Record](../en/project/desktop-implementation.md)
+
+## 2026-11-19 · 桌面断流恢复与单曲缓存 / Desktop stream recovery and song cache
+
+Mac arm64 和 Rosetta x64 实际验证电台断开后的重连、远程 MP3 的字节续传，以及单曲缓存容量限制、下载失败清理和重启离线播放。[记录](desktop-implementation.md)
+
+The packaged Mac arm64 and Rosetta x64 apps verified reconnecting a radio station, resuming byte ranges for a remote MP3, enforcing the aggregate song cache cap, cleaning up interrupted downloads and playing cached media offline after restart. [Record](../en/project/desktop-implementation.md)
+
+## 2026-11-19 · 桌面设置页升级与媒体验证 / Desktop update and media verification
+
+Windows 11 x64 通过设置页从测试签名 2.13.18 升至 2.13.19，保留本地登录、曲库、音乐目录和深色主题，并校验了升级前备份和实际音频输出。macOS arm64 和 Rosetta x64 的 2.13.19 打包应用完成格式、媒体请求与 CEF Cookie 检查。Windows 一小时播放仍在采样。Mac 钥匙串与设置页升级还需可交互会话。[记录](desktop-implementation.md)
+
+Windows 11 x64 upgraded from test-signed 2.13.18 to 2.13.19 through Settings. Local sign-in, the library, music directory and dark theme were retained. The pre-upgrade backup and actual audio output passed verification. Both packaged Mac architectures passed codec, media networking and CEF cookie checks. Windows hour-long playback sampling is in progress. Mac Keychain and Settings upgrades still require an interactive session. [Record](../en/project/desktop-implementation.md)
+
+## 2026-11-18 · Mac 视频缓冲 / Mac video buffering
+
+改用自有 IOSurface 的 `PresentSurface` 路径，两种 Mac 运行时各采样到第 560 帧，暂停稳定、恢复前进、缩放和 CEF 心跳均通过。arm64 对照另验证了系统鼠标点击。最新 Windows 模块重新交叉编译链接，Windows 实机及完整插件仍待验。[记录](desktop-implementation.md#mac-视频缓冲与-cef-窗口测试)
+
+The owned IOSurface path through `PresentSurface` sampled frame 560 on both Mac runtimes. Stable pause, resumed playback, resizing and CEF heartbeats passed. The arm64 comparison also received an OS mouse click. The latest Windows module cross-compiled and linked. Windows device runs and full plugin testing remain. [Record](../en/project/desktop-implementation.md#mac-video-buffering-and-cef-window-tests)
+
+## 2026-11-18 · 桌面更新代理与 Windows 构建 / Desktop update proxy and Windows build
+
+自动和手动更新共用当前会话的 GitHub 代理。Mac 两架构实际 Lynxtron 验证了认证设置请求、清单验签和测试资产下载。Windows x64 用官方 SDK 交叉编译并链接全部 12 个原生源文件，仍需验证加载、播放和安装。[记录](desktop-implementation.md#自动更新代理补验)
+
+Automatic and manual checks use the current session's GitHub proxy. Real Lynxtron on both Mac architectures verified the authenticated settings request, manifest signature and test asset download. The Windows x64 module cross-compiled and linked all 12 native sources against the official SDK. Loading, playback and installation remain open. [Record](../en/project/desktop-implementation.md#automatic-update-proxy-verification)
+
+## 2026-11-18 · 桌面升级迁移 / Desktop update and migration
+
+arm64 测试签名旧包升级后，实际 Goose 迁移将曲库从 schema 43 升到 44，原歌曲 ID 保留。隔离曲库故意阻断 0044 后，恢复了匹配旧包与旧库。启动确认校验客户端和后端 SHA，备份期间保持后端停止。图形入口、Keychain 跨更新、macOS x64 与 Windows 升级仍待验收。[记录](desktop-implementation.md#mac-arm64-真实数据库迁移及恢复)
+
+An upgrade between test-signed arm64 packages ran the actual Goose migration from schema 43 to 44 and preserved the song ID. Aborting 0044 in an isolated library restored the matching app and database. Confirmation checks the client and backend SHAs, and backup keeps the backend stopped. The GUI path, Keychain across an update, and macOS x64 and Windows upgrades remain open. [Record](../en/project/desktop-implementation.md#database-migration-and-recovery-on-macos-arm64)
+
+## 2026-11-18 · 分仓打包 Bundle / Independent Bundle builds
+
+Flutter 与 Lynx 各自固定公开后端 SHA 并构建 Bundle，README 和文档站链接指向各自 Release。固定后端的 Android AAR 和 iOS 静态框架已通过编译。Mac arm64 测试签名 DMG/ZIP 和包内后端扫描、Range、重启恢复通过。Mac x64 扩展交叉编译通过。设备统一验收仍开放，见[记录](desktop-implementation.md)。
+
+Flutter and Lynx each pin the public backend SHA and build their own Bundle packages. README and docs-site links point to each client's Releases. The pinned Android AAR and iOS static framework compiled. The arm64 Mac test-signed DMG/ZIP built, and the packaged backend passed scanning, Range and restart persistence checks. The Mac x64 module cross-compiled. Device acceptance remains open. [Record](../en/project/desktop-implementation.md).
 
 ## 2026-11-18 · #54 逐字歌词 / Word-timed lyrics
 
@@ -48,11 +155,39 @@ English: home entries now retain native frames in the Shell and share one instan
 
 English: Harmony Lynx 4.0.1 lacks the frame host. A dedicated element creates an independent child LynxView with explicit resources, bridge and initial props, handles updates/lifecycle/replacement/disposal and ignores stale callbacks. Isolated old implementations fail as expected. Six adapter checks, twelve component tests, 368 files/3848 shared tests, types, dual outputs and 95 release checks pass. All 34 clean HAP tasks and package validation pass; the package contains the actual element/registration and byte-identical final bundle. [Record](../en/project/harmony-plugin-frame.md) contains worktree identity, unsigned artifact and device gaps. The user authorized this batch's commit, push and parent gitlink update; actual commits and same-SHA CI are in `/tmp/songloft-harmony-miot/delivery.json`. No stable release. Older shells require a rebuilt HAP; existing desktop work is preserved.
 
+## 2026-11-17 · 系统音频后端与 x64 Callback / System audio and x64 callbacks
+
+新增实际音频后端观察，Mac 两架构真实解码均为 CoreAudio，30/33 软件帧、28/31 种摘要，暂停和恢复通过。x64 宿主已完成 BTS/原生 Callback 往返并取得视频首帧与 CEF 加载事件；采集等待真实页面就绪，保留早期时序失败。类型、5 项定向、6 项 Node、双构建/探针及三份 Windows 对象编译通过。中英文平台/模块契约已纳入索引。锁屏窗口仍停在两帧，第一批未完成；第二至六批未开始，未提交/推送。[记录](desktop-phase1.md)。
+
+English: real audio-output observations show CoreAudio on both Mac architectures, with 30/33 software frames, 28/31 hashes and passing pause/resume checks. x64 completes BTS/native callback round trips and supplies initial video/CEF load; capture waits for a real page and preserves earlier timing failures. Types, 5 focused checks, 6 Node checks, dual/probe builds and three Windows objects pass. Bilingual platform/module contracts are indexed. Locked window surfaces still stop at two frames. Phase one remains incomplete; phases two through six have not started. No commit/push. [Record](../en/project/desktop-phase1.md).
+
+## 2026-11-17 · macOS 原生构建与运行 / macOS native builds and execution
+
+已通过既有 SSH 连接 Mac：固定源码 libmpv SDK 与 arm64/x64 扩展均完成编译、链接、动态加载；x64 使用真实 Lynxtron 的内嵌 Node 在 Rosetta 执行。arm64 实际 SDK 为 Lynx 4.4。修复绘制回调和换源暂停属性，368 文件/3847 项、6 项桌面检查、类型、探针构建通过。锁屏下已取得实际视频帧与 CEF 加载事件，但缓冲消费超时，连续视频、CEF 交互和听音仍待解锁验收。三架构闸门未通过，第二至六批未开始。[记录](desktop-phase1.md)。未提交或推送。
+
+English: an existing SSH connection provides a Mac. Pinned-source libmpv SDKs and arm64/x64 extensions compile, link and load; actual x64 Lynxtron runs its embedded Node through Rosetta. The arm64 SDK reports Lynx 4.4. Drawing completion and load/pause state fixes pass 368 files/3847 tests, 6 desktop checks, types and the probe build. Locked-session evidence includes decoded video and a CEF load event, but buffer consumption times out. Continuous video, CEF interaction and listening await an unlocked session. Three-target acceptance remains incomplete; phases two through six have not started. [Record](../en/project/desktop-phase1.md). No commit or push.
+
+## 2026-11-17 · 桌面控制线程与 Windows 编译 / Desktop control threading and Windows compilation
+
+第一批修正 libmpv 共享绘制锁内同步调用，改用异步控制和属性观察；执行生产 Engine 的 API double 检查通过，同步暂停/读取的两项隔离恢复均实际失败。三个原生实现文件已用 MinGW 生成 x64 COFF 对象，尚未链接或实播。类型、367 文件/3843 项、3 项桌面 Node 检查和双包/探针构建通过。[记录](desktop-phase1.md)保留首轮历史与当前平台边界；目标实机闸门未通过，不推进后续批次。
+
+补验：真实 Windows 运行库 DLL 与导入库均包含所需 70 个符号；Ubuntu/libmpv 0.41.0 的真实解码检查产生 24 帧、22 种摘要，暂停稳定、恢复前进。音频输出为 null，未经过 Lynx/GPU/CEF，不代表目标实机或发声验收；临时测试容器已停止。
+
+English: phase one removes synchronous client calls under the render mutex in favor of async control/observations. Production Engine checks pass; both isolated synchronous restorations fail. MinGW emits x64 COFF objects for all three implementations, without linking or playback. Types, 367 files/3843 tests, 3 desktop Node checks and dual/probe builds pass. [Record](../en/project/desktop-phase1.md) preserves history and platform limits. Later phases remain gated on target execution.
+
+Follow-up evidence: all 70 required symbols exist in the actual Windows DLL and import library. Real Ubuntu/libmpv 0.41.0 decoding produces 24 frames/22 hashes with stable pause and resumed progress. Null audio and no Lynx/GPU/CEF mean target behavior and audible output remain unverified. Temporary test containers are stopped.
+
 ## 2026-11-17 · #572 歌单与收藏下一首播放 / Playlist and favorites play next
 
 现有 Lynx 共享菜单已支持；新增四项入口回归，配合既有队列规则和真实浏览器确认不切换来源、不打断当前播放。3843 项全量、37 项定向、类型、双 bundle 与 embedded Web 构建通过，隔离移除分发时四项失败。证据及原生边界见[记录](issue-572.md)。本批获授权提交、推送、同步父指针和回复 #572；不创建正式版本，不处理并行桌面改动。提交及 CI 见 `/tmp/songloft-572/delivery.json`。
 
 English: existing Lynx shared menus already support this. Four new entry regressions, existing queue rules and actual browser checks cover source preservation and uninterrupted playback. All 3843 full tests, 37 focused checks, types, dual bundles and embedded Web build passed; removing dispatch in isolation fails four checks. Evidence and native gaps: [record](../en/project/issue-572.md). Commits, pushes, parent gitlink updates and a reply to #572 are authorized; no stable version is created. Concurrent desktop changes are outside this task. Commits and CI: `/tmp/songloft-572/delivery.json`.
+
+## 2026-11-17 · Windows/macOS 第一批桌面探针 / Desktop phase-one probe
+
+新增独立 `desktop/` 候选宿主、锁定依赖、libmpv 原生扩展、两平台表面写入和 CEF 验证入口。业务页尚未接桌面音频，明确报错而不模拟播放。三架构实际编译、发声、视频和 CEF 验收仍为 Not run，按计划停留第一批，第二至六批未开始。[构建指南](../../desktop/README.md) · [验证记录](desktop-phase1.md)。本批未提交、推送或更新父指针。
+
+English: added an isolated candidate host, dependency pins, libmpv extension, platform surface writers and CEF probe. Business playback fails explicitly until desktop audio integration. Native builds, audible video and CEF on all three targets are Not run; phase one remains open and phases two through six have not started. [Build guide](../../desktop/README.en.md) · [verification](../en/project/desktop-phase1.md). No commit, push or parent gitlink update in this batch.
 
 ## 2026-11-17 · 协议阅读与依赖署名 / Agreement reading and dependency attribution
 

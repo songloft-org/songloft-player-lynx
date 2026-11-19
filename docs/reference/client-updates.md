@@ -2,7 +2,7 @@
 
 [English](../en/reference/client-updates.md) · [发版指南](../guides/releasing.md)
 
-**P2a 发布契约、P2b 三端原生更新器与 P2c 关于页入口已接入源码。** Android 已用本地签名发布夹具验证界面下载、取消、播放不中断、冷启动生效和恢复内置；Web 部署入口已验证。HarmonyOS 已通过 clean release HAP 编译，正式签名密钥、iOS 编译和两端设备验收仍开放。桌面和 Bundle 本地后端不在本轮范围。
+**P2a 发布契约、P2b 三端原生更新器与 P2c 关于页入口已接入源码。** Android 已用本地签名发布夹具验证界面下载、取消、播放不中断、冷启动生效和恢复内置；Web 部署入口已验证。HarmonyOS 已通过 clean release HAP 编译，正式签名密钥、iOS 编译和设备验收仍开放。Android/iOS Bundle 本地后端由客户端安装包提供，模式切换与目录选择见[安装指南](../guides/installation.md)；桌面候选更新的完整安装与回滚验收见[桌面实施记录](../project/desktop-implementation.md)。
 
 ## 身份与发布资产
 

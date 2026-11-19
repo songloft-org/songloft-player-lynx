@@ -7,12 +7,32 @@
 - Evidence is in `/tmp/songloft-581.7JfaBL/`. Four new regressions fail with the original host and pass with the fix. The reporter's Windows wrapper and track remain unverified. [Progress record](docs/project/progress.md).
 - Seen 1× (2026-11-19).
 
+### BUNDLE-001: Pin both binding tools and use the AAR's Android minimum
+
+- On 2026-11-18, with client baseline `baef0f9` and backend pin `81204e2`, `gomobile init` fetched a newer gobind and VCS detection then failed in the temporary Go module. Install both tools at the pinned backend module version and disable VCS stamping in temporary builds. Linker flags still embed the actual backend SHA.
+- The AAR built for three Android ABIs and the static iOS arm64 framework compiled. The first Lynx APK build failed manifest merging because the AAR requires API 23. Use API 23 when shipping the AAR and retain API 21 for source builds without it. Inspect the packaged Go libraries for the actual SHA. Logs are under `/tmp/songloft-bundle-build.v9dPHY/`.
+- Seen 1× (2026-11-18).
+
 ### LYRIC-003 Verify word timing in the actual lyric fields and playback entry point
 
 - Validation covers the playback lyric store and word-timed LRC parsing at baseline `f624965610b21fab03d8aec33b08d34cb90a1cba`. [songloft-org/songloft-player#54](https://github.com/songloft-org/songloft-player/issues/54)
 - The existing angle-tag parser tests passed, but the store called that parser only for `lxlyric`. Four new regressions failed on the old implementation, covering inline single brackets, LX relative offsets, double brackets, and field selection.
 - Standard `.lrc` sidecars travel in `lyric`. Prefer `lxlyric` when it has usable word times. Exercise representative files through the store, cache, and player, including consecutive leading tags that repeat a standard LRC line.
 - Seen 1× (2026-11-18).
+
+### DESKTOP-002: isolate Node and Lynx weak N-API C++ wrapper symbols
+
+- Scope: one `.node` supplies both Node host functions and Lynx native modules.
+- Evidence: separate compilation passed, but the complete app crashed at address zero on Lynx_JS while reporting `lynx_napi_report_and_clear_exception`. Identical inline wrapper symbols could be coalesced across incompatible ABIs. Separate `NAPI_CPP_CUSTOM_NAMESPACE=SongloftNode/SongloftLynx` restored the real Mac login page and storage/network/keyboard RPC.
+- Rule / done right: isolate both C API selection and C++ namespaces; enable `USE_WEAK_SUFFIX_NAPI` only for BTS sources. Exercise host exports together with real Lynx callbacks; linking or Node-only playback tests do not cover their combination.
+- Seen 1× (2026-11-17). Status: uncommitted candidate; [batch record](docs/en/project/desktop-implementation.md) separates Windows/device acceptance.
+
+### PLUGIN-003: template fetchers and bridge registration do not supply a native child-view element
+
+- Scope: HarmonyOS HAP opening miot and other Lynx plugins; baseline `173fa140c70ba80998cb8f49960619306986ef86`.
+- Evidence: the locked Harmony Lynx 4.0.1 has no frame implementation and Index registered no corresponding Behavior. Isolated old-code checks create zero child instances and cannot find the Harmony element, failing as expected. Earlier HAP compilation and template downloader tests did not cover this gap.
+- Rule / done right: verify the actual SDK tag and its full loading pipeline. Harmony uses a dedicated element with an independent LynxView, explicit fetchers/behaviors/bridge/initial props, and checks for late tokens, RPC, retention/disposal and replacement identity. Child views must not attach root singletons. Record rendering/device evidence separately from compilation and adapters. [Record](docs/en/project/harmony-plugin-frame.md).
+- Seen 1× (2026-11-17). Status: local source fix, regressions and HAP compilation pass. The user authorized this batch's commit, push and parent gitlink update; the record tracks actual commits and same-SHA CI. No Harmony device acceptance or stable release. Older shells require a new HAP.
 
 ### PLUGIN-004: entry presentation must not determine instance retention
 
@@ -21,12 +41,41 @@
 - Rule / done right: all native Lynx entries share a Shell instance; embed/topbars affect presentation. Pause while hidden and dispose on identity/server changes, disabling or Shell teardown. Keep healthy covers on resume. Record compilation, component and browser evidence separately; repeated creation/image loading without a crash stack does not establish the Harmony crash cause. [Record](docs/en/project/miot-reentry.md).
 - Seen 1× (2026-11-17). Status: local fix, uncommitted/unreleased; Harmony crash logs and device acceptance remain open.
 
-### PLUGIN-003: template fetchers and bridge registration do not supply a native child-view element
+### PLUGIN-005: verify the Windows plugin view on both first open and return
 
-- Scope: HarmonyOS HAP opening miot and other Lynx plugins; baseline `173fa140c70ba80998cb8f49960619306986ef86`.
-- Evidence: the locked Harmony Lynx 4.0.1 has no frame implementation and Index registered no corresponding Behavior. Isolated old-code checks create zero child instances and cannot find the Harmony element, failing as expected. Earlier HAP compilation and template downloader tests did not cover this gap.
-- Rule / done right: verify the actual SDK tag and its full loading pipeline. Harmony uses a dedicated element with an independent LynxView, explicit fetchers/behaviors/bridge/initial props, and checks for late tokens, RPC, retention/disposal and replacement identity. Child views must not attach root singletons. Record rendering/device evidence separately from compilation and adapters. [Record](docs/en/project/harmony-plugin-frame.md).
-- Seen 1× (2026-11-17). Status: local source fix, regressions and HAP compilation pass. The user authorized this batch's commit, push and parent gitlink update; the record tracks actual commits and same-SHA CI. No Harmony device acceptance or stable release. Older shells require a new HAP.
+- Scope: Lynx and HTML plugins in the test-signed Windows x64 2.13.16 installation.
+- Evidence: both plugins persisted Favorites and storage and played the fixture tone. CEF off-screen composition still produced a blank page. Correcting the Lynx child position fixed first entry, and returning to the same plugin still produced a blank page. Win32 enumeration showed the original HWND visible at the expected bounds. Raising it and requesting a repaint immediately restored its content.
+- Rule: verify plugin side effects, visible output and retained-instance restoration independently. Windows CEF plugins use native child windows. The Lynx child uses the measured DPI-scaled origin and repaints after the renderer finishes resizing. Regression coverage should include returning from a hidden state and resizing the window. [Acceptance record](docs/en/project/desktop-implementation.md#plugins-in-the-full-windows-app).
+- Seen 1× (2026-11-19). Status: local fix retested in the Windows VM. Updated installers remain to be verified.
+
+### DESKTOP-004: wait separately for the debug host and page session
+
+- Scope: macOS x64/Rosetta phase-one capture on 2026-11-17; client `173fa14` plus uncommitted worktree.
+- Evidence: fixed-delay capture returns `No available clients` / `No available sessions`. Polling the actual page obtains a session at 9.633 seconds and captures real callbacks, CoreAudio, CEF load and video. A total-process budget also misses an exit timer scheduled after initialization and cleans up early; a 20-second probe retry exits normally. [Record](docs/en/project/desktop-phase1.md).
+- Rule / done right: check that the target process remains live, then wait for a real page session. An online host does not establish page readiness. Align controller/application timer origins or include observed initialization time. Preserve failures/cleanup reasons instead of declaring target incompatibility or application exit failure from capture timing errors.
+- Seen 1× (2026-11-17). Status: capture corrected; continuous locked-session video and interaction remain unverified.
+
+### DESKTOP-003: native drawing completes through invoke callbacks
+
+- Scope: macOS phase-one probe on 2026-11-17; baseline `173fa14` plus uncommitted worktree.
+- Evidence: actual engine time advances while submitted frames stay at 1. The real SelectorQuery declaration is `exec(): void`; its ignored callback leaves the draw gate occupied. DevTool logs/screenshots: [record](docs/en/project/desktop-phase1.md).
+- Rule / done right: retain SelectorQuery types; release the one-request gate in `invoke` success/fail, handle synchronous errors and ignore callbacks after disposal. Four regressions pass. Surface-buffer timeouts persist in the locked session; diagnosing their cause needs an unlocked session, so this isolated fix is not continuous-video acceptance.
+- Related state fix: preserve global pause observations across loads because unchanged properties are not re-notified. Restoring the old reset in isolation makes the native test fail.
+- Seen 1× (2026-11-17). Status: local fixes; continuous macOS video, human listening and three-target acceptance remain incomplete.
+
+### DESKTOP-002: Never synchronously wait for the mpv core under a render lock
+
+- Scope: uncommitted desktop phase-one probe after `6df678d`. Reviewing the pinned mpv 0.41.0 `render.h` threading contract on 2026-11-17 found synchronous pause/status calls holding the mutex required by rendering.
+- Rule and Done right: while a render context is active, use only render-safe asynchronous control, observations and zero-timeout event reads under that mutex. Synchronous initialization version reads precede render creation. Unavailable properties remain unknown and queued commands do not imply applied state.
+- Evidence: `test:native` executes the production `Engine` using actual header declarations and an API double. Isolated restorations of synchronous pause and status both compile, then fail with the corresponding `synchronous ... holds the render lock` diagnostic. Event status, unknown values, asynchronous errors, source resets and release ordering pass in `/tmp/songloft-desktop-engine-test-final.log`. This reproduces API contract violations, not a target-platform playback deadlock.
+- Seen 1× (2026-11-17). Local control repair; actual target audiovisual behavior remains Not run.
+
+### DESKTOP-001: Check optional runtime locks for every target architecture
+
+- Scope: phase-one Windows/macOS desktop candidate dependencies; client baseline `888f5b88c842ea932a1f1f0b810a7f82a876f6fc`.
+- Evidence: the mirror returned 404 for `@lynx-js/lynxtron-runtime-darwin-arm64-devtool@0.0.31`, while the official registry returned its version and integrity. Installation still succeeded but omitted arm64 from the lock. The new full-matrix check failed in `/tmp/songloft-desktop-lock-before.log`. Changing the registry while reusing stale metadata did not restore it.
+- Rule and Done right: use a separate desktop scope registry and a fresh store to re-resolve all three architectures. Check each target package and integrity; successful Linux installation does not establish macOS/Windows readiness. All three Node checks pass after repair in `/tmp/songloft-desktop-lock-fixed.log`. This does not replace target compilation and execution.
+- Seen 1× (2026-11-17). Candidate dependency repair; native acceptance on all three architectures is Not run.
 
 ### LICENSE-001: Make agreements readable and check attribution completeness
 
@@ -319,6 +368,13 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 - Done right: sequential execution after building passed 3494 tests in `/tmp/songloft-520-lynx-tests-final.log`. Final verification after adding lyrics visibility cases is recorded in [#520](docs/en/project/issue-520.md).
 - Seen 1× (2026-10-14). Status: lesson.
 
+### TEST-002: Keep the pnpm directory layout in isolated regression runs
+
+- Scope: Run the shared Lynx suite against a previously packaged source snapshot.
+- Evidence: On 2026-11-19, dependency symlinks from the isolated 2.13.24 snapshot to the original worktree put ReactLynx setup outside the Vite root. All 374 suites failed during setup. Using local pnpm directories with hard links to the installed dependency files let all 19 Android manifest and auth-interceptor pilot tests pass. The snapshot was based on `debad6e80`.
+- Keep dependency directories and build artifacts local to the test root. Build Lynx and Web before running the tests, then record the result with the package source digest. [Verification record](docs/en/project/desktop-implementation.md#21324-development-packages-from-one-source-snapshot)
+- Seen 1× (2026-11-19). Status: lesson.
+
 ### UI-001: Verify scroll hints against visible songs and host callback shapes
 
 - Scope: virtual-list positioning, initials and numeric hints (songloft-org/songloft#518).
@@ -370,11 +426,187 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 - Evidence / Done right: 317 native contract checks and type checking pass; the new structural check fails against isolated old source. ARC timing and device behavior remain unverified. See [this batch](docs/project/progress.md).
 - Seen 1× (2026-10-28). Status: source fixed; native build and device acceptance pending.
 
+### DESKTOP-003: Wait for the consumer's real readiness boundary
+
+- Scope: desktop Bundle update migration confirmation, Lynx native child-frame bridge, and updater download cleanup.
+- Evidence: source review on 2026-11-18 found three timing gaps: a remote-mode launch had not yet migrated the local database; a child Lynx runtime could report ready before its host bound the frame identity; and update-directory creation happened outside the download cleanup block. The old code could confirm an app too early, reject plugin calls permanently, or remain stuck in `downloading`.
+- Rule and fix: resolve readiness at each actual consumer boundary. Confirm migration after the local backend health check, resolve a child identity on its first bridge call, and keep download setup within the same error/cancel/finally path.
+- Done right: JS sources pass Prettier and `node --check`; the native extension is clang-formatted. The installer atomically publishes its immutable manifest and startup confirmation record; if confirmation cannot be written after app replacement, it restores and restarts the previous app. The implementation record lists exact unverified paths. Not run: updater/plugin runtime checks, native build, real migration-failure recovery, or installer upgrade.
+- Same incident follow-up. Dev can upgrade within one version, so confirmation checks the client and backend SHAs and waits for local backend health. A pending update blocks another installation. Backup serializes mode switches and holds the backend stopped. The two regressions failed against old code on premature app removal and session shutdown. Actual macOS arm64 packages migrated schema 43 to 44. An isolated fixture that aborted migration 0044 recovered the old database with a matching checksum. [Desktop implementation record](docs/en/project/desktop-implementation.md#database-migration-and-recovery-on-macos-arm64).
+- Seen 1× (2026-11-18). Status: lesson; device and upgrade acceptance remain.
+
+### DESKTOP-005: Automatic and manual updates share the mirror setting
+
+- Scope: Lynxtron desktop updates. The previous host only received the proxy during manual checks. The new regression observed its first automatic check and download connecting directly to GitHub.
+- Rule: Fetch the proxy from the current authenticated session for each check. Use the same proxy for the manifest and its asset. Discard replies from sessions that ended during the request.
+- Evidence: The isolated prior host fails. The actual business bundle on both Mac architectures read the proxy under a reverse-proxy subpath and downloaded a test-signed asset. [Implementation record](docs/en/project/desktop-implementation.md#automatic-update-proxy-verification)
+- Seen 1× (2026-11-18). Status: fixed, release acceptance remains open.
+
+### DESKTOP-006: Build Windows media controls against the official SDK
+
+- Scope: Windows x64 SMTC. MinGW built other COFF objects while media controls were still uncompiled due to missing SDK headers.
+- Rule: Compile with the official Win32 and C++/WinRT headers together. Qualify projected types and enable C++20.
+- Evidence: Windows SDK 10.0.26100.4204 reported namespace ambiguity and experimental coroutine errors against the prior code. All 12 sources cross-compile and link with the Lynxtron import library and an mpv link fixture after the fix. [Implementation record](docs/en/project/desktop-implementation.md#windows-x64-native-cross-compilation-and-linking)
+- Seen 1× (2026-11-18). Status: build fixed, Windows device testing remains open.
+
+### DESKTOP-007: Avoid waiting for a Mac video buffer during draw
+
+- Scope: The Mac video element in Lynxtron 0.0.31. The original double-buffer path sometimes stalled. Rosetta x64 still timed out with a borrowed single buffer.
+- Rule: Try to submit an owned IOSurface through `PresentSurface`. Preserve redraw on a full buffer. Lynx retains accepted surfaces. Check pixel changes, engine position, dimensions and wait timeouts.
+- Evidence: Both final runs sampled frame 560, paused, resumed and resized with zero buffer wait timeouts. [Implementation record](docs/en/project/desktop-implementation.md#mac-video-buffering-and-cef-window-tests)
+- Seen 1× (2026-11-18). Status: probe reproduction fixed, full-client and endurance acceptance remain.
+
+### DESKTOP-008 · Exercise the first plugin call and window teardown
+
+- Covers Lynx child frames and CEF HTML plugins in Lynxtron 0.0.31.
+- The first readiness push synchronously reentered the Lynx bridge. Mac thread samples showed the callback and teardown waiting for the same routing mutex. With the original CEF helper, the existing plugin SDK reported the bridge unavailable during page load.
+- Deliver plugin frame events on the UI thread, release the routing mutex before sending, and discard queued events on teardown. Install the CEF bridge when the renderer creates the main document context. Verify with an installed plugin that writes, plays a song and reads back persisted data after a server restart. [Implementation record](docs/en/project/desktop-implementation.md#mac-plugin-writes-and-playback)
+- Seen 1× (2026-11-18). The isolated Mac arm64 and Rosetta x64 scenarios passed. Windows runtime verification is open.
+
+### DESKTOP-009 · Check the packaged version and architecture before replacement
+
+- Covers desktop dev rolling releases and signed update assets.
+- The old host, Go helper and publisher accepted a lower version published later. Signatures and digests can all pass because they authenticate the supplied manifest and file bytes.
+- Check semantic version before applying same-version dev source and time rules. Match embedded version, channel, client and backend identities to the signed manifest before activating an update. On Windows check the new application after signed NSIS exits and before deciding whether to restart or restore the previous app. [Implementation record](docs/en/project/desktop-implementation.md#update-package-identity-and-upgrades-on-both-mac-architectures)
+- Seen 1× (2026-11-18). The Mac packages and wrong-architecture comparisons passed. Windows execution remains open.
+
+### DESKTOP-010 · Match the app and database during rollback
+
+- Packages with the same version can carry different backends. The previous arm64 helper rolled back with a valid file digest and the wrong backup backend SHA.
+- Match the backup version and backend SHA to the previous app, and validate all files before moving them. If the old app cannot be activated or only part of the database has been restored, attempt to undo completed moves. The [implementation record](docs/en/project/desktop-implementation.md#matching-database-rollback-and-partial-recovery-failure) covers an actual Mac schema migration, library reads after recovery and the digest of the retained failed database.
+- Seen 1× (2026-11-18). Mac arm64, Rosetta x64 and fault injection passed. Windows installation and recovery await runtime testing.
+
+### DESKTOP-011 · Inspect the resource directory the builder actually creates
+
+- On Windows, Lynxtron builder 0.0.30 placed `extraResources` under the installation root. The old build produced `songloft/build-info.json`, while the host and updater read `resources/songloft/build-info.json`.
+- Set an explicit Windows path from the install root. Verify the installed metadata, local tools and business bundle before upload. A scan fixture generated by the bundled tools must satisfy the backend's file-stability guard. [Implementation record](docs/en/project/desktop-implementation.md#verify-the-actual-install-assets-before-uploading)
+- Seen 1× (2026-11-18). The rebuilt Windows layout and both Mac ZIP backend checks passed.
+
+### DESKTOP-012 · Import and synchronize shared textures by handle type
+
+- The Clay backend in Lynxtron 0.0.31 uses NT shared handles and keyed mutexes on Windows x64. The old import API returned `E_INVALIDARG` in a Windows 11 24H2 VM. Audio played but the video surface failed.
+- Use `OpenSharedResource1` for NT handles and retain legacy import. Synchronize writes with Clay on key 0 and retry the draw when the reader owns the texture. Compare rendered frames, virtual audio output, and playback position after fullscreen changes. [Implementation record](docs/en/project/desktop-implementation.md#windows-shared-textures-and-packaged-playback-on-three-architectures)
+- Seen 1× (2026-11-19). Windows 11 x64 VM passed. Physical GPUs remain open.
+
+### DESKTOP-013 · Validate the platform values in release manifests
+
+- The release signer derives the manifest from `win32-x64`, and the host uses Node's `win32`. The Go installer helper previously compared the manifest with Go's `windows`. The Windows 11 x64 VM rejected a correctly signed release-format manifest with `invalid update target`.
+- Validate the release platform name in the helper while retaining OS and architecture checks. The Windows regression uses the published `win32` value directly and checks that `windows` is rejected. It failed against the old implementation. The fixed helper tests passed on Windows and on both Mac architectures. See `/tmp/songloft-windows-package.p7uZmv/vm/guest-serial-resumed.log` and `windows-update-lab/mac-helper-tests.log`.
+- Seen 1× (2026-11-19).
+
+### DESKTOP-014 · Run the Windows installer helper outside the application directory
+
+- The Windows app started with its installation directory as the working directory. The restart-to-install action shut the app down. Although the helper executable was copied to application data, it inherited the installation directory as its working directory, and Windows refused to rename that directory.
+- The helper changes to the update directory before reading the manifest and waiting for exit. In the same VM both helpers started from the application directory. The old one failed to rename it. The fixed one reached the signed installer fixture, which returned the expected error 17, and restored the original directory. See `/tmp/songloft-windows-package.p7uZmv/vm/guest-serial-resumed.log`.
+- Seen 1× (2026-11-19).
+
+### DESKTOP-015 · Confirm backend health before removing the previous package
+
+- A real test-signed Windows upgrade relaunched the new app and the backend returned HTTP 200. The old confirmation used the ASAR-aware filesystem to clean the previous package. Windows returned `EBUSY` for `rmdir` on `resources/app.asar`, causing a recovery prompt. The raw filesystem can also find the archive busy until a process that opened it through the virtual filesystem exits.
+- Record healthy startup before cleanup and use `original-fs` to remove the previous package. Temporary cleanup failures retain the confirmation so the matching version can retry. See the [implementation record](docs/en/project/desktop-implementation.md#windows-signed-update-manifest-verification) for the Windows Lynxtron comparison, host regression and database readback.
+- Seen 1× (2026-11-19).
+
+### DESKTOP-016 · Render the login form from the mode confirmed by the host
+
+- The test-signed Windows 11 24H2 x64 client continued waiting for auto-login after cancelling the folder picker. Switching to remote displayed login before the host finished switching, leaving the local-mode action and masked embedded-backend credentials in the form.
+- Cancelling the picker ends the transition. Login observes the mode confirmed by the host, and local auto-login keeps the generated credentials within the local session. The actual Windows UI passed cancellation, directory selection, switching both ways in Settings and restoring the remote credentials. See the [verification record](docs/en/project/desktop-implementation.md#switching-between-local-and-remote-modes-in-the-windows-client).
+- Seen 1× (2026-11-19).
+
+### DESKTOP-017 · Verify which native messages close the Windows window
+
+- Windows window close in Lynxtron 0.0.31 bypasses the cancellable close event. Clicking the title bar’s close button on the installed test-signed client removed both its tray icon and process.
+- When a tray is available, intercept Win32 close messages and hide the existing window through its visibility API. Explicit quit removes the handler and allows the app and embedded backend to finish cleanup. The Windows comparison confirmed continuous audio output while hidden, restoring the same window from the tray and no processes remaining after quit. See the [verification record](docs/en/project/desktop-implementation.md#keeping-playback-active-when-closing-the-windows-window).
+- Seen 1× (2026-11-19).
+
+### DESKTOP-018 · Show the installed desktop package identity in About
+
+- The 2.13.15 test-signed NSIS installed successfully, while About showed `dev` and `unknown` from the shared bundle. Its compile-time metadata could differ from the version selected when packaging the host.
+- The desktop host supplies the package version, client SHA and build time used by the updater to the root page. Updating the ASAR and business bundle made Windows About show the actual 2.13.15 version and SHA. See the [verification record](docs/en/project/desktop-implementation.md#complete-test-signed-windows-installer-21315).
+- Seen 1× (2026-11-19).
+
+### DESKTOP-019 · Exercise CEF startup in the installed Windows app
+
+- A Windows 11 24H2 VM had only Microsoft Basic Display Adapter. The 2.13.17 development install exited after repeated `0xc0000005` failures in CEF GPU subprocesses. Launching the same installation with the OS command-line switch `--disable-gpu` opened sign-in.
+- If DXGI finds no usable hardware adapter, the host relaunches once in software mode before initializing CEF and acquiring the single-instance lock. Install the complete 2.13.18 NSIS, verify the actual process arguments from a normal launch, and check that a repeat launch keeps the original window. Exercise plugin rendering, backend writes and playback with the installed CEF. [Verification record](docs/en/project/desktop-implementation.md#complete-21318-development-packages)
+- Seen 1× (2026-11-19).
+
+### DESKTOP-020 · Isolate system credentials for custom development data roots
+
+- On the 2.13.19 Mac development build, `SONGLOFT_DESKTOP_DATA_ROOT` separated the settings and library but directories still shared a Keychain service. Console preflight found credentials in the default development service. Restoring the old lookup in isolation caused the regression to read the default directory's fixture password from the test directory.
+- Include a digest of the custom development data path in the Keychain service name. Restarting with the same directory continues using that service. The regression covers the default and two custom directories, and 27 host checks passed. See the [desktop build guide](desktop/README.en.md).
+- Seen 1× (2026-11-19).
+
+### DESKTOP-021 · Verify MV from the actual library
+
+- The packaged Windows 2.13.19 host drew video in its probe, but Watch MV played only the soundtrack. None of 306 screen samples from the library action contained video. Desktop entry points need the shared video route. Opening and sizing the picture must wait for `sourceReady` from the current `sourceId`.
+- Scan a video with the packaged backend and open it from the ordinary menu. All 16 color and audio cues matched during the fullscreen round trip. Regressions cover source replacement, early dismissal and preparation failure. [Verification record](docs/en/project/desktop-implementation.md#windows-21319-library-mv-and-fullscreen)
+- Seen 1× (2026-11-19).
+
+### DESKTOP-022 · Pass the Mac development data root explicitly on update relaunch
+
+- On macOS 26.6.2, Launch Services corrupted the non-ASCII portion of the data root inherited through plain `open -a`. The relaunched application could read a different preference directory and Keychain service after installation or recovery.
+- The host passes the absolute directory from the current session to the helper. For dev packages, the helper forwards that variable through `open --env`. Signed installation and recovery fixtures both relaunched into the same directory containing Chinese characters, spaces and an equals sign. Failed files remained available. [Implementation record](docs/en/project/desktop-implementation.md)
+- Seen 1× (2026-11-19).
+
+### DESKTOP-023 · Record TLS connections and media requests by mode
+
+- The self-signed media fixture received a TLS alert from macOS. Windows 2.13.19 recorded only the strict-mode TCP connection. The player reported an error and sent no media GET. The original verifier still failed because it required the Mac alert.
+- Mark the TLS mode from the client and record connections and media requests separately. Assert rejection and the absence of a media GET in strict mode. Then assert 206 and decoding for the same URL after enabling the fixture setting. All nine Windows media cases passed. [Verification record](docs/en/project/desktop-implementation.md)
+- Seen 1× (2026-11-19).
+
+### DESKTOP-024 · Verify relaunch after restoring an app on installation failure
+
+- Windows 2.13.21 downloaded an NSIS whose embedded version did not match a valid signed manifest. The helper restored the previous application directory and library, but the old process had exited and the failure log had no UI entry point.
+- Before the new app launches, verify the original install path, previous identity and signature, then relaunch it. The main process reads the failure marker and offers the installer log. The real Settings comparison checked the new PID, four songs and log reveal, and signed fixtures on both Mac architectures verified relaunch. [Record](docs/en/project/desktop-implementation.md#relaunching-the-restored-app-after-installation-fails)
+- Seen 1× (2026-11-19).
+
+### DESKTOP-025 · Check the read-only attribute on Windows test media copies
+
+- PowerShell `Copy-Item` retained the read-only attribute when restoring genuine signed package metadata from a CD. The test script could not set its loopback update URL.
+- Clear the attribute on the isolated copies, verify the restored bytes, then set the test URL. The original package retained its signature and the Settings upgrade from 2.13.21 to 2.13.22 passed. See [Windows 2.13.22](docs/en/project/desktop-implementation.md#windows-21322-settings-upgrade-and-locked-playback).
+- Seen 1× (2026-11-19).
+
+### DESKTOP-026 · Require local backend readiness before showing the home page
+
+- When the music directory of an authenticated Windows 2.13.22 profile became unavailable, a saved token opened an unusable home page after the launch error was dismissed.
+- Let local session startup resolve authentication even on failure. Sign-in offers retry and folder selection. A replacement folder is saved after the backend starts. Moving the directory out and back on the test VM retained four tracks and the administrator credential. Retry restored sign-in and audio output. [Record](docs/en/project/desktop-implementation.md#keeping-the-local-session-when-its-music-folder-is-unavailable)
+- Seen 1× (2026-11-19).
+
+### DESKTOP-027 · Recreate the macOS CEF framework links during staging
+
+- A frozen offline install on macOS arm64 materialized the CEF framework links as files and directories. Packaging copied those aliases, and `codesign` rejected the ambiguous framework structure.
+- Stage the framework only from `Versions/A` and recreate its standard relative links. The host test covers a flattened installation tree. Full macOS packages undergo strict signature verification. [Record](docs/en/project/desktop-implementation.md#21323-complete-development-packages)
+- Seen 1× (2026-11-19).
+
+### DESKTOP-028 · Compare source digests before staging desktop installers
+
+- The release-tool fixture changed one architecture's `clientSourceSha256` while retaining the same client SHA, version, backend, and update key. The previous script staged the mixed packages and signed their manifests.
+- Pin checkout line-ending behavior in the release workflow. Read all three architectures' metadata and compare their source digests and shared build identity before creating output. The regression rejects differing source digests with the same commit and checks that no output directory was created. [Record](docs/en/project/desktop-implementation.md#desktop-release-preflight)
+- Seen 1× (2026-11-19).
+
+### DESKTOP-029 · Recheck downloaded installers before stopping playback
+
+- The installer can change on disk after download verification. When the regression overwrote it with damaged bytes of the same length, the old host stopped its session before the helper discovered the failure.
+- Recompute the digest on Install and offer another download when verification fails. The helper rechecks the package after the old process exits. On failure after handoff, relaunch the old app only after verifying its identity and signature. Windows and both Mac architectures verified rejection of a damaged package and the previous app's relaunch. [Record](docs/en/project/desktop-implementation.md#verifying-update-packages-before-and-after-handoff)
+- Seen 1× (2026-11-19).
+
+### DESKTOP-030 · Use confirmed startup to reclaim updater downloads
+
+- The regression found a full installer left on disk after startup confirmation. Earlier removal would deprive the recovery helper of the pending update's asset.
+- Persist confirmation before deleting the recorded digest file and old app. A real Windows file lock produced `EBUSY` without undoing confirmation. A later check reclaimed the download after the lock was released. Database backups and failure records are retained. [Record](docs/en/project/desktop-implementation.md#reclaiming-installer-downloads-after-startup-confirmation)
+- Seen 1× (2026-11-19).
+
 ### LIST-005 · Tie title marquees to row visibility
 
 - ReactLynx runs component effects for offscreen list items. Offscreen titles also requested measurements, and replacing the original animation with a zero-duration animation let the original keep writing styles.
 - Two touch gestures reached 482px in both versions of the 40-long-title Docker Chrome fixture. In the sample after scrolling, the number of titles writing transforms fell from 40 to 10. Measure and start on `uiappear`, then stop the original animation handle on `uidisappear`. The regression also covers re-entry and the title-scrolling preference.
 - Seen 1× (2026-11-18). Comparison uses `baef0f9` and this Lynx worktree. Evidence is in `/tmp/songloft-lynx-scroll-tabs.j14OKU/`.
+
+### DESKTOP-031 · Retain unchanged libmpv video properties during source replacement
+
+- Scope covers desktop source replacement and video-track detection. On 2.13.24 arm64, replacing MP4 with an MKV of the same dimensions advanced to 2,267 ms while the host reported 0×0.
+- Keep the latest dimensions and duration observations. Clear each property when mpv reports it unavailable and publish it once the current source is ready. The original implementation failed the regression. With the fix, separately signed fixtures on native arm64 and Rosetta x64 played four containers in sequence. [Record](docs/en/project/desktop-implementation.md#preserve-video-dimensions-when-replacing-a-source-on-macos)
+- Seen 1× (2026-11-19). Status: lesson.
 
 ### NAV-002 · Save plugin SVG icons in the cold-start snapshot
 

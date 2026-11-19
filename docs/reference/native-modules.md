@@ -39,6 +39,8 @@ HarmonyOS 实现在 `harmony/entry/src/main/ets/modules/`，除 `SongloftFloatin
 
 另有 `SongloftTestBridge`（`test/SongloftTestBridgeModule.kt` / `SongloftTestBridgeModule.swift`，事件 `TestBridge.eval`），仅 E2E 用，**不在契约闸门的 `modules` 表内**。
 
+桌面业务通过 `src/desktop` 与有 token 的宿主 RPC 适配上述 facade；插件桥为独立 weak N-API 模块，音视频由宿主的唯一 libmpv 实例持有。方法级能力来自桌面配置，不凭 `SongloftPlatform` 的存在推断 Bundle/托盘/缓存。实现、线程/生命周期、更新契约与待验项目见[完整记录](../project/desktop-implementation.md) / [English](../en/project/desktop-implementation.md)。独立 `SongloftDesktopProbe` 继续用于诊断，其 Callback、单位及视频元素见[探针契约](desktop-probe.md) / [English](../en/reference/desktop-probe.md)，不属于移动/Web `modules` 表。
+
 ### Web 宿主注册了哪些模块
 
 Web 通过 `<lynx-view>` 的 `nativeModulesMap` 注册 **7 个**模块：`SongloftAudio` / `SongloftPlatform` / `SongloftNavigation` / **`SongloftVideo`**（`web/audio-host.js` 注册，worker 侧各自是 `web/songloft-*-module.js`）、`SongloftWebview`（`web/webview-host.js`）、`SongloftPluginBridge` 与 `SongloftLynxFrame`（`web/lynx-frame-host.js`，前者另有 `web/lynx-plugin-bridge-shim.js`）。其余模块在 Web 上不存在，facade 降级为惰性桩。`SongloftVideo` 的 Web 半边是主线程一个 `<video>`（由 `web/audio-host.js` 持有、镜像正在播的音频流），worker 侧只负责转发方法名。

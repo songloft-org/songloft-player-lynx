@@ -8,9 +8,59 @@ The first navigation frame shows cached plugin SVGs. Older snapshots reserve the
 
 Lynx Web now updates progress from the active media element. The embedded app's Chrome comparison verified playback, progress display and automatic queue advancement. The reporter's Windows wrapper and silent wait remain unverified. [Local fix and test record](../../project/progress.md#issue-581).
 
+## 2026-11-19 · Mac relaunch retains non-ASCII data paths
+
+New development packages are available for both architectures. The packaged helpers relaunched signed fixtures through Launch Services and retained the selected directory after both update and recovery. The arm64 client still awaits system authorization while the console is locked. The Settings upgrade is open. [Implementation record](desktop-implementation.md#macos-update-relaunch-retains-the-development-data-directory)
+
+## 2026-11-19 · Windows library MV and fullscreen
+
+The library Watch MV action and player cover badge now open the shared page and wait for the current source. The signed Windows test host passed library playback, audio/video cue matching and fullscreen round trips. New installers and operating the video page on Mac still need checks. [Implementation record](desktop-implementation.md#windows-21319-library-mv-and-fullscreen)
+
+## 2026-11-19 · Mac graphical session and Windows sampling
+
+Custom Mac development data roots now have separate Keychain services. The arm64 package passed local sign-in and restart of the same package after the user granted access in the Launch Services session. Both Mac packages passed full update ZIP download, cancellation, disconnected retry and signature checks. Installation by clicking in Settings remains open. The Windows evaluation license expired and shut down the VM. Approximately 37 minutes of samples were retained and a full hour still needs a rerun. [Implementation record](desktop-implementation.md)
+
+## 2026-11-19 · Desktop stream recovery and device cache
+
+The 2.13.19 Mac arm64 and Rosetta x64 development packages passed radio reconnection, HTTP Range recovery for a finite track, atomic V2 cache publication and offline playback. Windows hour-long playback sampling is still running. The Windows codec and A/V synchronization fixtures are staged and have yet to run. [Implementation record](desktop-implementation.md)
+
+## 2026-11-19 · Desktop 2.13.19 acceptance
+
+Windows 11 x64 downloaded test-signed 2.13.19 from Settings and upgraded after the restart click. The local library, DPAPI credential and dark theme were restored. The packaged macOS arm64 and Rosetta x64 apps passed nine media checks, including HLS segments, Range, TLS, proxying and CEF HttpOnly cookies. One Rosetta launch aborted and the retry passed. Windows hour-long sampling is in progress. Mac Keychain, Settings upgrades and production signing remain open. [Implementation record](desktop-implementation.md)
+
+## 2026-11-18 · Desktop update package identity
+
+The publisher, host and Go installer reject dev downgrades. The Mac helper validates embedded identity and the actual Mach-O architecture. Test-signed 2.13.12 → 2.13.13 upgrades preserved the administrator credentials, preferences and library on Mac arm64 and Rosetta x64. A dedicated executable verified restart. The locked session blocked Keychain sign-in checks. The Windows Go helper cross-built. [Implementation record](desktop-implementation.md#update-package-identity-and-upgrades-on-both-mac-architectures)
+
+## 2026-11-18 · Desktop plugin bridge
+
+Fixed a reentrant deadlock on Lynx child readiness and installed the CEF bridge before scripts in the main document. Both installed plugin fixtures passed favorite writes, real playback and persistence after backend restart on macOS arm64 and Rosetta x64, in Bundle and through a reverse-proxy subpath. HTML also passed cookie reads and binary uploads. The Windows extension and CEF helper cross-linked. Windows runtime acceptance is open. [Implementation record](desktop-implementation.md#mac-plugin-writes-and-playback)
+
+## 2026-11-18 · Mac video buffering and CEF
+
+Mac video provides owned IOSurfaces for Lynx to submit without waiting for a shared buffer during draw. arm64 and Rosetta x64 passed changing pixels, pause and resume, resize and CEF script heartbeats. The arm64 comparison received a trusted mouse click. Human listening, Windows devices and one-hour resource trends remain open. [Implementation record](desktop-implementation.md#mac-video-buffering-and-cef-window-tests)
+
+## 2026-11-18 · Desktop update proxy and Windows native build
+
+The actual business bundle on both Mac architectures read the GitHub proxy through a reverse-proxy subpath. The host used it for a signed manifest and test asset. Fixing the WinRT namespace and C++ standard errors exposed by the official Windows SDK let all 12 sources cross-compile and link into an x64 PE module. Windows device acceptance remains open. [Implementation record](desktop-implementation.md#automatic-update-proxy-verification)
+
+## 2026-11-18 · Desktop package upgrades and local database recovery
+
+An upgrade between test-signed macOS arm64 packages with the same version migrated the library from schema 43 to 44. The API verified the original credentials and song ID. When an isolated test failed migration 0044, recovery restored the matching app and database and retained the failed files. Confirmation checks the client and backend SHAs. Backup holds the backend stopped. The GUI path, Keychain across an update, and macOS x64/Windows upgrades were Not run. [Verification](desktop-implementation.md#database-migration-and-recovery-on-macos-arm64)
+
+## 2026-11-18 · Lynx repository packages mobile Bundle builds
+
+The Android APK and iOS IPA workflows check out the public backend SHA pinned in `mobile-backend.lock.json`. Flutter builds its own Bundle in the Flutter repository, and the root repository publishes server artifacts. Download links are updated in the three repositories' bilingual READMEs and on the docs site. The pinned backend `81204e2` compiled into a four-architecture Android AAR and an iOS arm64 static framework. The Android Bundle APK requires API 23. The login and settings screens offer local and remote modes. Device runs and upgrades still await consolidated acceptance. See the [desktop implementation record](desktop-implementation.md) for desktop evidence.
+
+Android x86_64 follow-up: in the same API 34 test app, the Go libraries extracted from the published Flutter 2.13.12 APK and the original Lynx APK both triggered `SIGSYS`. The Android NDK SQLite candidate returned health check HTTP 200. The fix applies to x86_64. Other Android architectures retain the existing driver. Both mobile workflows need a public backend commit with the fix. The emulator's system UI stopped responding during the full Flutter and Lynx UI retests, so device acceptance remains open.
+
 ## 2026-11-18 · #54 Word-timed lyrics
 
 Playback handles inline word timings and LX offsets. Chrome plays an actual track with sidecar lyrics and advancing word highlights. All 3,858 shared tests pass. Native phone apps await verification. Source identity and logs are recorded in `/tmp/songloft-54-karaoke-ZsCdTI/verification.json`. [#54](https://github.com/songloft-org/songloft-player/issues/54)
+
+## 2026-11-17 · Complete desktop candidate
+
+The user requested all six phases in source before consolidated acceptance. Host, native playback, Bundle, both plugin types, packages/signed updates and paired recovery are implemented. Actual Mac login/RPC, both native architectures, backend scan/Range/restart and signed fixture install/recovery pass; arm64 dev DMG/ZIP are generated. Full device coverage, the Keychain session, real client upgrades and new Windows modules remain open; this is not release-ready. Shared checks, failures, environments and source identities: [latest record](desktop-implementation.md). No desktop commit/push/release/parent gitlink update; phase-one stop conditions below are historical.
 
 ## 2026-11-17 · miot home re-entry and tab cover flicker
 
@@ -27,6 +77,16 @@ Harmony Lynx 4.0.1 lacks the native frame implementation; fetchers and bridge re
 ## 2026-11-17 · #572 play next from playlists and favorites
 
 The existing shared song menu already supports this. Added four full entry regressions for ordinary/built-in playlists and narrow/wide layouts. Final 3843 tests, types, dual bundles and embedded Web build passed; all four checks fail when dispatch is removed in isolation. Actual browser queues, playback continuity and native gaps: [record](issue-572.md). Commits, pushes, parent gitlink updates and a reply to #572 are authorized; existing desktop candidate changes are preserved. No stable version is created. Final commits and CI: `/tmp/songloft-572/delivery.json`.
+
+## 2026-11-17 · Desktop phase-one candidate
+
+This round adds asynchronous `current-ao` observations and bilingual [desktop contracts](../reference/desktop-probe.md). Actual arm64/x64 decoding reports CoreAudio, with 30/33 software frames and 28/31 hashes, stable pause and resumed progress. The full x64 host now supplies actual callbacks, initial video and CEF load. Capture waits for a page session and retains earlier timing failures. Types, 5 focused checks, 6 Node checks, dual/95.6 kB probe builds and three Windows objects pass; full shared results remain from the preceding run. Locked surfaces still consume only two frames and later phases remain gated. User asked to unlock Mac/provide an existing Windows connection. [Latest record](desktop-phase1.md), snapshot `/tmp/songloft-desktop-ao-worktree.json`.
+
+Actual Mac progress: arm64/x64 extensions and pinned-source libmpv SDKs compile/link on macOS 26.6.2. The arm64 probe reports Lynx 4.4; actual x64 Lynxtron loads the extension under Rosetta. Drawing completion and load/pause state are fixed. All 368 files/3847 tests, 6 desktop checks, types and probe build pass. The Mac is locked and surface buffers time out: continuous video/CEF interaction have not passed; listening, physical Intel, minimum systems and Windows execution remain unverified. User asked to unlock. Source, commands, failures and hashes: [latest record](desktop-phase1.md).
+
+The follow-up on `173fa14` removes synchronous libmpv calls under the render mutex and adds positive/negative API-double checks, three Windows x64 COFF objects and a 70-symbol comparison against the actual runtime DLL. An isolated Ubuntu/libmpv 0.41.0 run decodes generated video into 24 frames/22 hashes with stable pause and resumed progress. Audio is null; target UI/GPU/sound remain unverified. Types, 367 files/3843 tests, 3 desktop checks and dual/probe builds pass. Updated [record](desktop-phase1.md) includes evidence, environment and boundaries. Phase one remains incomplete.
+
+`desktop/` provides the Lynxtron 0.0.31 + CEF 0.0.31 + libmpv 0.41.0 candidate, native extension, video surfaces and probe screen. The default entry loads the existing login/wide UI. Commands and checks: [verification](desktop-phase1.md), [guide](../../../desktop/README.en.md). Initial target environments were unavailable; a Mac is now connected and both architectures build. Three-target acceptance remains incomplete and phases two through six do not proceed. No commit or push; the submodule is dirty. Another session committed concurrent login/credit changes as `6df678d`, outside this batch.
 
 ## 2026-11-17 · Login agreement and dependency credits
 
@@ -397,7 +457,7 @@ Actual UI cancellation against a slow proxy also passed: all 235 items were canc
 
 P3b shared source adds whole-playlist/selection caching and a task page, with full pagination, frozen variants, cached skips, deduplication, capacity pauses, native cancellation and failed/interrupted retry. Identity-scoped history omits URLs/tokens. Final JS regression passes 273 files / 2960 tests; all 35 publishing-tool tests, both bundles and the Android APK build pass (2026-10-07 02:49). Actual Android UI using the arm64 ABI queued 235 songs, completed 94 (36 cached skips), cancelled the remaining 141 and cleared staging. The missing x86_64 SVG library/native crash and emulator issues remain in bugs; that ABI is not declared fixed. HarmonyOS HAP compilation passes; iOS compilation and device acceptance on both platforms continue; evidence is in progress.
 
-This is a preview client. Playback, library/playlists, lyrics, plugins, themes, multiple servers, and administrative settings are implemented, with four host implementations. About separates client and server updates; the client checks dev or latest stable according to its immutable shell channel. All three updater sources are integrated, and Android/Web have local flow evidence. Current five-platform CI, Apple verification and IPA building pass; update signing is configured and actual dev assets pass signature verification. Device acceptance on both platforms remains open. **Native desktop clients and a bundled local backend remain outside this work.** Unused `bundleMode/systemTray` probes do not represent completed features.
+This is a preview client. Playback, library/playlists, lyrics, plugins, themes, multiple servers, and administrative settings are implemented, with four host implementations. About separates client and server updates; the client checks dev or latest stable according to its immutable shell channel. All three updater sources are integrated, and Android/Web have local flow evidence. Current five-platform CI, Apple verification and IPA building pass; update signing is configured and actual dev assets pass signature verification. Device acceptance remains open. Android/iOS release packages now embed the Bundle backend built from a pinned SHA, and the login/settings screens consume `bundleMode`. Windows/macOS desktop hosting has a separate candidate implementation; the user requested implementation before consolidated acceptance. Source or capability probes do not count as device acceptance.
 
 Current Android, HarmonyOS and iOS sources have CI compilation and package-inspection evidence. Android/HarmonyOS release-signature checks and dev update-asset signature verification pass; older local unsigned packages cannot replace this release's packages. Background playback, casting, notifications, and video require devices; JS tests cannot establish their behavior.
 

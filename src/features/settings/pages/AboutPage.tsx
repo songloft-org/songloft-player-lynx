@@ -11,6 +11,8 @@ import { SettingsSection } from '../widgets/SettingsSection.js'
 import { SubPageShell } from '../widgets/SubPageShell.js'
 import { UpgradeSection } from '../widgets/UpgradeSection.js'
 import { ClientUpdateSection } from '../widgets/ClientUpdateSection.js'
+import { DesktopLocalSection } from '../../../desktop/LocalSection.js'
+import { desktopConfig } from '../../../desktop/client.js'
 
 export interface AboutPageProps {
   /**
@@ -32,6 +34,7 @@ export interface AboutPageProps {
 export function AboutPage({ onOpenLicenses }: AboutPageProps = {}) {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const desktopBuild = desktopConfig()?.build
   const [backendVersion, setBackendVersion] = useState('')
 
   useEffect(() => {
@@ -71,8 +74,8 @@ export function AboutPage({ onOpenLicenses }: AboutPageProps = {}) {
         <SettingsRow
           icon="info"
           title={t('settings.appVersion')}
-          trailingText={clientVersion}
-          subtitle={`${clientBuild.git_commit} · ${clientBuild.build_time}`}
+          trailingText={desktopBuild?.version ?? clientVersion}
+          subtitle={`${desktopBuild?.clientSha ?? clientBuild.git_commit} · ${desktopBuild?.builtAt ?? clientBuild.build_time}`}
           testId="settings-version"
         />
         {backendVersion ? (
@@ -95,6 +98,7 @@ export function AboutPage({ onOpenLicenses }: AboutPageProps = {}) {
       </SettingsSection>
 
       <ClientUpdateSection />
+      <DesktopLocalSection />
 
       <SettingsSection title={t('upgrade.title')}>
         <UpgradeSection />
