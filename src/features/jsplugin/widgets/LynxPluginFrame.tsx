@@ -160,8 +160,13 @@ export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
 
   useEffect(() => {
     if (isWeb) return
+    let connected = true
     const host = connectNativePluginHost(frameId, (request) =>
-      handlePluginHostCall(request, frameContext),
+      handlePluginHostCall(request, {
+        ...frameContext,
+        pluginEntryPath: entryPath,
+        isPluginActive: () => connected && activeRef.current,
+      }),
     )
     nativeHost.current = host
     if (desktopConfig())
@@ -181,6 +186,7 @@ export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
         host.push('lifecycle', JSON.stringify({ state: 'resumed' }))
     })
     return () => {
+      connected = false
       unsubscribe()
       host.dispose()
       if (nativeHost.current === host) nativeHost.current = null

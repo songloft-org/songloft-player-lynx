@@ -185,6 +185,21 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
         SongloftAudioEngine.runOnMain { SongloftAudioEngine.setEqualizerBand(index.toInt(), gainDb.toFloat()) }
     }
 
+    @LynxMethod
+    fun getPluginEqualizerAvailable(callback: Callback) {
+        SongloftAudioEngine.runOnMain {
+            callback.invoke(SongloftAudioEngine.pluginEqualizerAvailable())
+        }
+    }
+
+    @LynxMethod
+    fun setPluginEqualizer(profile: String, callback: Callback) {
+        SongloftAudioEngine.runOnMain {
+            val parsed = runCatching { profile.takeIf { it.isNotEmpty() }?.let { PluginEqualizerProfile.parse(it) } }
+            callback.invoke(parsed.isSuccess && SongloftAudioEngine.setPluginEqualizer(parsed.getOrNull()))
+        }
+    }
+
     // -- background keep-alive --
 
     @LynxMethod

@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
+import android.media.audiofx.AudioEffect
 import android.media.audiofx.Equalizer
 import android.database.ContentObserver
 import android.os.Bundle
@@ -238,21 +239,63 @@ object SongloftAudioEngine {
     // -- equalizer -------------------------------------------------------------
 
     private var equalizer: Equalizer? = null
+    private var equalizerSessionId: Int? = null
+    private var pluginEqualizerProfile: PluginEqualizerProfile? = null
     private var eqEnabled = false
     private val eqPendingGains = HashMap<Int, Float>()
 
     private fun attachEqualizer(audioSessionId: Int) {
+        if (equalizerSessionId == audioSessionId && equalizer != null) return
+        releaseEqualizer()
+        if (audioSessionId <= 0) return
         try {
-            equalizer?.release()
             val eq = Equalizer(0, audioSessionId)
-            eq.enabled = eqEnabled
-            for ((index, gainDb) in eqPendingGains) {
-                applyBandGain(eq, index, gainDb)
-            }
             equalizer = eq
-        } catch (_: Throwable) {
-            // Some devices don't support Equalizer
+            equalizerSessionId = audioSessionId
+            eq.setControlStatusListener { effect, granted ->
+                runOnMain {
+                    if (granted && effect === equalizer)
+                        runCatching { applyEqualizerProfile(eq, pluginEqualizerProfile) }
+                }
+            }
+            if (eq.hasControl()) applyEqualizerProfile(eq, pluginEqualizerProfile)
+        } catch (error: RuntimeException) {
+            releaseEqualizer()
+            ClientFileLog.write('W', "audio", "equalizer unavailable: ${error.message}")
         }
+    }
+
+    fun pluginEqualizerAvailable(): Boolean = runCatching {
+        if (player == null)
+            AudioEffect.queryEffects().orEmpty().any { it.type == AudioEffect.EFFECT_TYPE_EQUALIZER }
+        else equalizer?.let { it.hasControl() && it.numberOfBands > 0 } == true
+    }.getOrDefault(false)
+
+    internal fun setPluginEqualizer(profile: PluginEqualizerProfile?): Boolean {
+        val eq = equalizer
+        if (eq == null || !pluginEqualizerAvailable()) {
+            if (profile != null) return false
+            pluginEqualizerProfile = null
+            return true
+        }
+        return try {
+            applyEqualizerProfile(eq, profile)
+            pluginEqualizerProfile = profile
+            true
+        } catch (error: RuntimeException) {
+            runCatching { applyEqualizerProfile(eq, pluginEqualizerProfile) }
+            ClientFileLog.write('W', "audio", "equalizer profile failed: ${error.message}")
+            false
+        }
+    }
+
+    private fun applyEqualizerProfile(eq: Equalizer, profile: PluginEqualizerProfile?) {
+        for (index in 0 until eq.numberOfBands.toInt()) {
+            val gain = if (profile == null) eqPendingGains[index] ?: 0f
+                else profile.gainAt(eq.getCenterFreq(index.toShort()) / 1000.0)
+            applyBandGain(eq, index, gain)
+        }
+        check(eq.setEnabled(profile != null || eqEnabled) == AudioEffect.SUCCESS)
     }
 
     private fun applyBandGain(eq: Equalizer, index: Int, gainDb: Float) {
@@ -266,18 +309,19 @@ object SongloftAudioEngine {
 
     fun setEqualizerEnabled(on: Boolean) {
         eqEnabled = on
-        equalizer?.enabled = on
+        if (pluginEqualizerProfile == null) equalizer?.enabled = on
     }
 
     fun setEqualizerBand(index: Int, gainDb: Float) {
         eqPendingGains[index] = gainDb
         val eq = equalizer ?: return
-        applyBandGain(eq, index, gainDb)
+        if (pluginEqualizerProfile == null) applyBandGain(eq, index, gainDb)
     }
 
     private fun releaseEqualizer() {
         equalizer?.release()
         equalizer = null
+        equalizerSessionId = null
     }
 
     private var progressActive = false
@@ -1143,6 +1187,7 @@ object SongloftAudioEngine {
         }
 
         override fun onAudioSessionIdChanged(audioSessionId: Int) {
+            attachEqualizer(audioSessionId)
             ClientFileLog.write(
                 'I', "audio",
                 "audio session id changed id=$audioSessionId snapshot=${diagnosticSnapshot()}",

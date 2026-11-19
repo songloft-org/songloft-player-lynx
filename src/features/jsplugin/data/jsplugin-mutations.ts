@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { getJSPluginApi, type GithubProxyParams, type InstallFromRegistryParams } from '../api/index.js'
+import type { JSPluginListResponse } from '../../../models/jsplugin.js'
+import { endPluginPlayback } from '../../player/store/plugin-audio-effects.js'
 import { pluginQueryKeys } from './jsplugin-query.js'
 
 /*
@@ -24,7 +26,8 @@ export function useTogglePluginMutation() {
   return useMutation({
     mutationFn: ({ id, enable }: { id: number; enable: boolean }) =>
       enable ? getJSPluginApi().enablePlugin(id) : getJSPluginApi().disablePlugin(id),
-    onSuccess: () => {
+    onSuccess: (plugin, { enable }) => {
+      if (!enable) endPluginPlayback(plugin.entryPath)
       void queryClient.invalidateQueries({ queryKey: pluginQueryKeys.list() })
       void queryClient.invalidateQueries({ queryKey: tabConfigKeys })
     },
@@ -36,7 +39,10 @@ export function useDeletePluginMutation() {
   return useMutation({
     mutationFn: ({ id, keepData }: { id: number; keepData?: boolean }) =>
       getJSPluginApi().deletePlugin(id, keepData === true),
-    onSuccess: () => {
+    onSuccess: (_, { id }) => {
+      const plugins = queryClient.getQueryData<JSPluginListResponse>(pluginQueryKeys.list())
+      const removed = plugins?.plugins.find((plugin) => plugin.id === id)
+      if (removed) endPluginPlayback(removed.entryPath)
       void queryClient.invalidateQueries({ queryKey: pluginQueryKeys.list() })
       void queryClient.invalidateQueries({ queryKey: tabConfigKeys })
       void queryClient.invalidateQueries({ queryKey: pluginOrderKeys })

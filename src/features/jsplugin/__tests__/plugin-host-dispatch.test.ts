@@ -146,3 +146,65 @@ test('favorite, cookies, host info, null params and explicit errors share one re
   expect(await call('missing')).toMatchObject({ ok: false, error: expect.stringContaining('unknown player') })
   expect(await handlePluginHostCall({ ns: 'missing' }, ctx)).toMatchObject({ ok: false })
 })
+
+test('Android effects follow the owning plugin queue, clear without stopping, and reject stale writes', async () => {
+  const setPluginEqualizer = vi.fn((_: string, reply: (ok: boolean) => void) => reply(true))
+  vi.stubGlobal('SystemInfo', { platform: 'Android' })
+  vi.stubGlobal('NativeModules', { SongloftAudio: {
+    getPluginEqualizerAvailable: (reply: (available: boolean) => void) => reply(true),
+    setPluginEqualizer,
+  } })
+  const ownedCall = (method: string, params?: Record<string, unknown>, owner = 'effects') =>
+    handlePluginHostCall({ ns: 'player', method, params }, {
+      ...ctx, pluginEntryPath: owner, isPluginActive: () => true,
+    })
+  try {
+    expect(await ownedCall('getAudioEffects')).toMatchObject({
+      ok: true, data: { playbackId: null, supported: { equalizer: { presets: expect.arrayContaining(['vocal']) } } },
+    })
+    await ownedCall('setQueue', { ids: [1, 2] })
+    const query = await ownedCall('getAudioEffects')
+    const { playbackId } = query.data as { playbackId: string }
+    expect(playbackId).toEqual(expect.any(String))
+
+    const effects = { equalizer: { preset: 'vocal' } }
+    expect(await ownedCall('applyAudioEffects', { playbackId, effects }, 'other')).toMatchObject({ ok: false })
+    expect(await ownedCall('applyAudioEffects', {
+      playbackId, effects: { ...effects, reverb: { preset: 'hall' } },
+    })).toMatchObject({ ok: false })
+    expect(setPluginEqualizer).not.toHaveBeenCalled()
+
+    const originalHasOwn = Object.hasOwn
+    let applyResult
+    try {
+      // Lynx Android's JS runtime does not implement the Node host's Object.hasOwn.
+      Reflect.deleteProperty(Object, 'hasOwn')
+      applyResult = await ownedCall('applyAudioEffects', { playbackId, effects })
+    } finally {
+      Object.defineProperty(Object, 'hasOwn', {
+        value: originalHasOwn, writable: true, configurable: true,
+      })
+    }
+    expect(applyResult).toEqual({ ok: true, data: effects })
+    const profile = JSON.parse(setPluginEqualizer.mock.calls[0][0])
+    expect(profile.frequencies).toHaveLength(10)
+    expect(profile.gains).toContain(4)
+    await ownedCall('play', { id: 2 })
+    expect(await ownedCall('getAudioEffects')).toMatchObject({ data: { playbackId, applied: effects } })
+
+    expect(await ownedCall('clearAudioEffects', { playbackId })).toEqual({ ok: true, data: null })
+    expect(await ownedCall('clearAudioEffects', { playbackId })).toEqual({ ok: true, data: null })
+    expect(usePlayerStore.getState().isPlaying).toBe(true)
+    await ownedCall('applyAudioEffects', { playbackId, effects })
+    await usePlayerStore.getState().playSong(song(3))
+    expect(setPluginEqualizer.mock.calls.at(-1)?.[0]).toBe('')
+    expect(await ownedCall('applyAudioEffects', { playbackId, effects })).toMatchObject({ ok: false })
+    expect(await ownedCall('getAudioEffects')).toMatchObject({ data: { playbackId: null, applied: null } })
+    await ownedCall('play', { id: 1 })
+    await ownedCall('setPlayMode', { mode: 'singlePlay' })
+    usePlayerStore.getState()._onCompleted()
+    expect(await ownedCall('getAudioEffects')).toMatchObject({ data: { playbackId: null } })
+  } finally {
+    vi.unstubAllGlobals()
+  }
+})

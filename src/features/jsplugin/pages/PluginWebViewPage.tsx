@@ -28,6 +28,7 @@ import {
   playerStateToJson,
   pluginPlayerStateChanged,
   type HostCallRequest,
+  type PluginHostContext,
 } from '../domain/plugin-host-dispatch.js'
 import { pluginHostContext as hostContext } from '../domain/plugin-host-context.js'
 import {
@@ -406,7 +407,11 @@ export function PluginWebViewPage() {
       if (!call) return
       const node = webviewRef.current
       const generation = nativePageGeneration.current
-      void handlePluginHostCall(call, hostContext).then(result => {
+      const callerContext = Object.create(hostContext) as PluginHostContext
+      callerContext.pluginEntryPath = entryPath
+      callerContext.isPluginActive = () =>
+        webviewRef.current === node && generation === nativePageGeneration.current
+      void handlePluginHostCall(call, callerContext).then(result => {
         if (!node || webviewRef.current !== node || generation !== nativePageGeneration.current) return
         const reply = JSON.stringify({ type: 'songloft-host-reply', id: call.id, ...result })
         node.invoke({ method: 'eval', params: { func: `window.dispatchEvent(new MessageEvent('message',{data:${reply}}))` } }).exec()
