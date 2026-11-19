@@ -31,7 +31,7 @@ pnpm --dir desktop start
 
 开发启动没有内置后端资源时，仅提供连接服务器。开发数据可用 `SONGLOFT_DESKTOP_DATA_ROOT=/absolute/isolated-parent` 隔离。macOS 为自定义目录使用独立的 Keychain 服务名，Windows 的 DPAPI 文件位于所选目录。安装更新或恢复旧版本后，自动重启继续使用安装前的数据目录，包括含中文或空格的路径。stable 使用默认应用数据目录与凭据身份。
 
-CEF 0.0.31 用 macOS bundle ID 或 Windows AppUserModelID 选择浏览器配置目录。隔离开发数据目录只影响 Songloft 宿主数据和凭据。并行运行有 HTML 插件的 macOS 夹具时，需要分别签名的测试应用标识。
+CEF 0.0.31 用 macOS bundle ID 或 Windows AppUserModelID 选择浏览器配置目录。Windows 的自定义开发数据目录使用独立的 AppUserModelID 以隔离 CEF 配置。并行运行有 HTML 插件的 macOS 夹具时，需要分别签名的测试应用标识。
 
 SDK 整理使用明确输入，递归收集动态库闭包、输出每文件摘要及独立的构建头文件/导入库：
 
@@ -55,6 +55,8 @@ Windows PowerShell 用 `$env:NAME = 'value'` 设置同名变量；多个 SDK 依
 打包输出为每通道/目标独立目录：Windows 按用户 NSIS；Mac 每架构 DMG 和用于更新的应用 ZIP。CEF 由官方 builder 的固定补丁收集、签嵌套组件后签外层；pnpm 原生 patch 固定官方补丁，不依赖上游不兼容 pnpm 隔离布局的 postinstall。不发布资产。
 
 `build:native` 和 `package` 会从 [compatibility.json](compatibility.json) 固定的 CEF SDK 构建配套 renderer helper。首次从 CEF 官方 CDN 下载对应架构的 minimal SDK，校验 SHA-256 后缓存在 `desktop/.build/cef-sdk/`。官方 CEF 扩展负责窗口、渲染和 cookie。配套 helper 在插件页面运行脚本前安装既有桥，远程服务器可以继续使用已有插件 SDK。macOS 在暂存时为改过的 helper 重新封签，随后按安装包配置签名。
+
+Windows 启动通过系统命令行传递 `--disable-gpu`，让 CEF 使用软件渲染。Iris Plus 655 实机上的 CEF GPU 子进程曾连续崩溃并终止宿主。libmpv 视频仍通过独立的 Lynx 原生表面输出。
 
 ## 宿主与模块契约
 

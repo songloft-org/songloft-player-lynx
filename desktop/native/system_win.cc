@@ -1,4 +1,3 @@
-#include <dxgi.h>
 #include <mutex>
 #include <node_api.h>
 #include <roapi.h>
@@ -187,30 +186,9 @@ Napi::Value System(const Napi::CallbackInfo &info) {
   return result;
 }
 
-Napi::Value HasHardwareGraphics(const Napi::CallbackInfo &info) {
-  winrt::com_ptr<IDXGIFactory1> factory;
-  if (SUCCEEDED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), factory.put_void()))) {
-    for (UINT index = 0;; ++index) {
-      winrt::com_ptr<IDXGIAdapter1> adapter;
-      if (FAILED(factory->EnumAdapters1(index, adapter.put())))
-        break;
-      DXGI_ADAPTER_DESC1 descriptor{};
-      if (FAILED(adapter->GetDesc1(&descriptor)))
-        continue;
-      // The Basic Display adapter with outputs can omit the software flag.
-      const bool basic =
-          descriptor.VendorId == 0x1414 && descriptor.DeviceId == 0x008c;
-      if (!basic && !(descriptor.Flags & DXGI_ADAPTER_FLAG_SOFTWARE))
-        return Napi::Boolean::New(info.Env(), true);
-    }
-  }
-  return Napi::Boolean::New(info.Env(), false);
-}
 } // namespace
 void RegisterSystem(napi_env env, napi_value exports) {
   Napi::Object(env, exports)
       .Set("systemAppearance", Napi::Function::New(env, System));
   Napi::Object(env, exports).Set("media", Napi::Function::New(env, Media));
-  Napi::Object(env, exports)
-      .Set("hasHardwareGraphics", Napi::Function::New(env, HasHardwareGraphics));
 }

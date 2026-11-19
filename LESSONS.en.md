@@ -528,6 +528,7 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 - A Windows 11 24H2 VM had only Microsoft Basic Display Adapter. The 2.13.17 development install exited after repeated `0xc0000005` failures in CEF GPU subprocesses. Launching the same installation with the OS command-line switch `--disable-gpu` opened sign-in.
 - If DXGI finds no usable hardware adapter, the host relaunches once in software mode before initializing CEF and acquiring the single-instance lock. Install the complete 2.13.18 NSIS, verify the actual process arguments from a normal launch, and check that a repeat launch keeps the original window. Exercise plugin rendering, backend writes and playback with the installed CEF. [Verification record](docs/en/project/desktop-implementation.md#complete-21318-development-packages)
+- On the same date, a physical Iris Plus 655 rendered libmpv video. Opening an HTML plugin caused repeated CEF GPU process failures that terminated the host. Windows now starts CEF rendering in software. The same physical device passed normal startup, plugin persistence and video fullscreen. Its custom dev directory received a separate CEF profile. [Physical device record](docs/en/project/desktop-implementation.md#physical-windows-cef-process-crash-and-fix)
 - Seen 1× (2026-11-19).
 
 ### DESKTOP-020 · Isolate system credentials for custom development data roots

@@ -234,13 +234,23 @@ async function start() {
     appData: developmentDataRoot
       ? resolve(developmentDataRoot)
       : app.getPath("appData"),
-    isolateKeychain: !!developmentDataRoot,
+    isolateProfile: !!developmentDataRoot,
   });
   app.setName("Songloft");
   host.devtool.setDevToolEnabled(channel === "dev");
   mkdirSync(identity.data, { recursive: true, mode: 0o700 });
   app.setPath("userData", identity.data);
-  if (process.platform === "win32") app.setAppUserModelId(identity.id);
+  if (process.platform === "win32") {
+    // The official CEF module scopes its cache by the Windows AppUserModelID.
+    app.setAppUserModelId(identity.appUserModelId);
+    // CEF reads the OS command line. Its GPU process can fail even when DXGI
+    // reports an adapter that the native video surface can use.
+    if (!process.argv.includes("--disable-gpu")) {
+      app.relaunch({ args: [...process.argv.slice(1), "--disable-gpu"] });
+      app.exit(0);
+      return;
+    }
+  }
   const require = createRequire(import.meta.url);
   if (process.platform === "win32")
     process.env.PATH = `${join(resources, "native")};${process.env.PATH ?? ""}`;
@@ -249,16 +259,6 @@ async function start() {
       ? join(resources, "native", "songloft_mpv.node")
       : join(root, ".build", target, "songloft_mpv.node"),
   );
-  if (
-    process.platform === "win32" &&
-    !process.argv.includes("--disable-gpu") &&
-    !native.hasHardwareGraphics()
-  ) {
-    // CEF on Windows reads switches from the OS command line before Chromium starts.
-    app.relaunch({ args: [...process.argv.slice(1), "--disable-gpu"] });
-    app.exit(0);
-    return;
-  }
   instance = await singleInstance(
     identity.id,
     () => {

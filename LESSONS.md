@@ -528,6 +528,7 @@
 
 - Windows 11 24H2 虚拟机只有 Microsoft Basic Display Adapter。2.13.17 开发安装包默认启动时，CEF 的 GPU 子进程连续报 `0xc0000005`，宿主退出。给同一安装加上系统命令行开关 `--disable-gpu` 后能打开登录页。
 - DXGI 探测发现没有可用硬件适配器时，宿主在初始化 CEF 和获取单实例锁前以软件模式重新启动一次。用完整 2.13.18 NSIS 安装后，通过普通启动路径核对实际进程参数，重复启动应保持原窗口。再以包内 CEF 验证插件页面、后端写入和播放。[验收记录](docs/project/desktop-implementation.md#21318-完整开发包)
+- 同日真机补验，Iris Plus 655 能渲染 libmpv 视频，但启动 HTML 插件时 CEF GPU 子进程连续失败并终止宿主。Windows 改为固定以 CEF 软件模式启动。对同一实体设备复测普通启动、插件持久化和视频全屏，并验证自定义开发目录的 CEF 配置与默认开发配置隔离。[真机记录](docs/project/desktop-implementation.md#windows-实体-cef-子进程崩溃与修复)
 - Seen 1× (2026-11-19)。
 
 ### DESKTOP-020 · 开发数据目录要隔离系统凭据

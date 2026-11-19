@@ -30,7 +30,7 @@ pnpm --dir desktop start
 
 Without staged backend resources, development offers remote mode. Isolate dev data with `SONGLOFT_DESKTOP_DATA_ROOT=/absolute/isolated-parent`. macOS uses a separate Keychain service for the custom directory. Windows places the DPAPI file in that directory. Automatic relaunch after installation or recovery retains the chosen data directory, including paths with spaces and non-ASCII characters. Stable uses its default application data and credential identity.
 
-CEF 0.0.31 selects the browser profile by macOS bundle ID or Windows AppUserModelID. The dev data override scopes Songloft host data and credentials. Concurrent macOS fixtures that use HTML plugins need individually signed test app identities.
+CEF 0.0.31 selects the browser profile by macOS bundle ID or Windows AppUserModelID. Windows derives a separate AppUserModelID for a custom development data directory to isolate the CEF profile. Concurrent macOS fixtures that use HTML plugins need individually signed test app identities.
 
 Prepare an inspectable SDK from explicit inputs, including recursive dynamic dependencies, per-file digests and separate build headers/import libraries:
 
@@ -53,6 +53,8 @@ PowerShell uses `$env:NAME = 'value'` and semicolon-separated dependency roots; 
 Outputs are channel/target isolated: per-user NSIS on Windows; per-architecture DMG and update ZIP on Mac. The official builder collects CEF and signs nested components before the app. Pinned native pnpm patches reproduce the official builder patches without its incompatible postinstall layout assumptions. Packaging does not publish assets.
 
 `build:native` and `package` compile the renderer helper against the CEF SDK pinned in [compatibility.json](compatibility.json). The first run downloads the architecture-specific minimal SDK from the CEF CDN, verifies its SHA-256, and caches it in `desktop/.build/cef-sdk/`. The official CEF extension owns windows, rendering, and cookies. The helper installs the existing bridge before plugin scripts run, allowing remote servers to keep their current plugin SDK. macOS staging re-seals the modified helper bundles before the installer signs them.
+
+Windows passes `--disable-gpu` in the OS command line so CEF uses software rendering. On an Iris Plus 655 device, repeated CEF GPU process crashes had terminated the app. libmpv video continues through its separate native Lynx surface.
 
 ## Host and module contracts
 

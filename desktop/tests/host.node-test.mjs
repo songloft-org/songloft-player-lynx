@@ -237,7 +237,7 @@ test('macOS credentials await Keychain operations without a local file fallback'
   await assert.rejects(readFile(join(identity.data, 'credentials.dpapi.json')))
 })
 
-test('development data roots isolate the macOS Keychain service', async () => {
+test('development data roots isolate Keychain and Windows CEF identities', async () => {
   const values = new Map()
   const native = {
     async secureGet(service, key) {
@@ -248,14 +248,25 @@ test('development data roots isolate the macOS Keychain service', async () => {
       values.get(service).set(key, value)
     },
   }
-  const credentials = (appData, isolateKeychain) =>
+  const profile = (appData, isolateProfile) =>
+    desktopIdentity({ channel: 'dev', appData, isolateProfile })
+  const credentials = (appData, isolateProfile) =>
     createDesktopStorage({
-      identity: desktopIdentity({ channel: 'dev', appData, isolateKeychain }),
+      identity: profile(appData, isolateProfile),
       native,
       platform: 'darwin',
     }).secure
   const standard = credentials('/default', false)
   const isolated = credentials('/diagnostic', true)
+  const standardIdentity = profile('/default', false)
+  const isolatedIdentity = profile('/diagnostic', true)
+  assert.equal(standardIdentity.appUserModelId, standardIdentity.id)
+  assert.notEqual(isolatedIdentity.appUserModelId, standardIdentity.appUserModelId)
+  assert.notEqual(
+    isolatedIdentity.appUserModelId,
+    profile('/another', true).appUserModelId,
+  )
+  assert.equal(isolatedIdentity.id, standardIdentity.id)
   await standard.set('bundle.adminPassword', 'normal')
   assert.equal(await isolated.get('bundle.adminPassword'), null)
   await isolated.set('bundle.adminPassword', 'diagnostic')

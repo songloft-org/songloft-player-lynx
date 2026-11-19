@@ -378,11 +378,18 @@
 - 曲库启动 FLAC 后 Windows 音频会话有 38 次连续非零峰值采样。界面暂停后两次读取均为 21.950 秒，36 次采样均为零。曲库「观看 MV」显示 H.264/AAC 画面，收集到该应用的非零音频输出。全屏播放时在 2560×1080 采样到两帧不同画面，退出全屏后恢复到 1280×820，画面仍随进度更新，保存位置读回为 22.000 秒。这一轮在原视频结束后进入全屏并开始播放。
 - 测试中分别结束内置后端和宿主。后端异常退出后宿主启动新后端，可以重新登录并读取原曲库。结束宿主后原后端随 stdin 管道关闭而退出。再打开同一配置后，业务页恢复，两首曲的 ID 和标题保留。真机安装、进入全屏时的同源连续性、音画同步精度、实体 CEF 插件、人工听音为 Not run。测试进程和目录已清理，证据位于 `/home/hanxi/work/songloft-review/lynx-desktop-20261119-windows-physical/`。
 
+### Windows 实体 CEF 子进程崩溃与修复
+
+- 重测使用精确的 `合成曲库 QA` 路径。Linux 机器通过局域网登录 Windows 包内 Go 后端并读回两首曲。通过业务界面播放 MV 时进入 2560×1080 全屏，再退出到 1280×820，连续采样取得不同画面，原曲的进度读回为 21.900 秒。
+- 原版 2.13.25 在同一 Iris Plus 655 上打开 HTML 插件两次均终止宿主，后端随即退出。第二次 CEF 日志记录六次 GPU 子进程退出，最后报 `GPU process isn't usable`。首次退出前 Cookie 桥、四字节上传和持久化写入已产生副作用。加系统命令行 `--disable-gpu` 后同包完成插件流程。
+- Windows 宿主固定使用 CEF 软件渲染。自定义开发数据目录派生独立 AppUserModelID，CEF 配置随之隔离。将这两项宿主改动写入签名测试包的隔离 ASAR 副本，保持业务 bundle、媒体库与其他二进制字节一致。无手动开关启动后，CEF 使用新的独立配置。原插件再次通过 Cookie、上传、收藏和播放桥，后台读回持久化记录，系统音频会话取得非零峰值。底层视频输出另外复测。
+- 33 项 Node 桌面宿主检查通过，Windows SDK 10.0.26100 与 LLVM 19 交叉编译改动后的系统模块成功。原安装包 SHA、修改后的 ASAR SHA 及证据见 `/home/hanxi/work/songloft-review/lynx-desktop-20261119-windows-physical/`。重新构建并正式签名的安装包、Mac 设置页升级、音画同步精度及人工听音为 Not run。
+
 ### 模块覆盖矩阵
 
 | 批次 | 主要实现 | 统一验收边界 |
 | --- | --- | --- |
-| 技术组合 | 独立桌面锁、兼容矩阵、C++ libmpv render API、IOSurface/D3D11、CEF、隔离探针 | Mac arm64、Rosetta x64 和 Windows 11 x64 虚拟机有原生运行及 CEF 证据。干净 Windows 10 22H2 x64 虚拟机通过安装和本地播放，实体 Intel Iris Plus 655 通过业务页视频渲染。实体 CEF、实体 Intel Mac 和 macOS 13 实机待验 |
+| 技术组合 | 独立桌面锁、兼容矩阵、C++ libmpv render API、IOSurface/D3D11、CEF、隔离探针 | Mac arm64、Rosetta x64 和 Windows 11 x64 虚拟机有原生运行及 CEF 证据。干净 Windows 10 22H2 x64 虚拟机通过安装和本地播放。实体 Intel Iris Plus 655 验证了业务页视频与 CEF 软件渲染。实体 Intel Mac 和 macOS 13 实机待验 |
 | 宿主 | 应用/通道隔离、系统 Keychain/DPAPI、原子偏好、OS 单实例锁、菜单/托盘、关窗保留、窗口快捷键、SMTC/Now Playing、系统偏好及日志 | Windows 虚拟机通过托盘、显式退出、锁屏系统媒体面板及 WinRT 媒体键输入事件。Mac arm64 图形会话通过隔离 Keychain 与本地自动登录。Mac Remote Command、实体媒体键、输入法和余下平台生命周期待验 |
 | 播放 | 一个 mpv、Callback/事件适配、sourceId/初始 seek/快速换源、实际格式探测、请求头/Cookie/TLS/代理、倍速/EQ、共享视频/全屏、V2 原子缓存 | Windows、Mac arm64、Rosetta x64 均有格式与媒体请求、断流恢复、断网后缓存播放证据。Windows 验证实际 EQ 输出、曲库 MV 和全屏 H.264/AAC 音画切换。两种 Mac 架构和 Windows 10 22H2 虚拟机均完成一小时采样。Mac 业务页同步、其它视频容器及人工听音待验 |
 | Bundle | 固定后端/Go gitlink、动态端口+健康检查、随机凭据、绝对分离路径、有限重启、换服清理、父 EOF 与宽限结束 | 两种 Mac 架构的包内后端通过只读目录扫描、206、重启保留和停止。Windows 完整包通过本地登录、扫描、播放、虚拟局域网验证、升级保留和后端异常恢复。修复后的 Windows 隔离安装通过音乐目录恢复。更多设备和实体局域网待验 |
