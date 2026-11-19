@@ -273,14 +273,7 @@ try {
   const updatePublicKey = await readFile(publicKeyPath, 'utf8')
   if (createPublicKey(updatePublicKey).asymmetricKeyType !== 'ed25519')
     throw new Error('Desktop update key must be Ed25519')
-  const team = process.env.SONGLOFT_APPLE_TEAM_ID ?? ''
-  if (
-    channel === 'stable' &&
-    process.platform === 'darwin' &&
-    !/^[A-Z0-9]{10}$/.test(team)
-  )
-    throw new Error('Apple Developer ID team is required')
-  const flags = `-s -w -X main.publicKeyBase64=${Buffer.from(updatePublicKey).toString('base64')} -X main.expectedTeamID=${team} -X main.testSigning=${channel === 'dev'} -X main.windowsExecutable=${channel === 'dev' ? 'SongloftDev.exe' : 'Songloft.exe'}`
+  const flags = `-s -w -X main.publicKeyBase64=${Buffer.from(updatePublicKey).toString('base64')} -X main.windowsExecutable=${channel === 'dev' ? 'SongloftDev.exe' : 'Songloft.exe'}`
   await mkdir(join(staging, 'updater'), { recursive: true })
   run(
     'go',

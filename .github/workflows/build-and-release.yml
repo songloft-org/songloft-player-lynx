@@ -501,7 +501,6 @@ jobs:
       SONGLOFT_MPV_ROOT: ${{ github.workspace }}/desktop-sdk/build
       SDK_INDEX_URL: ${{ vars.DESKTOP_SDK_INDEX_URL }}
       SDK_INDEX_SHA256: ${{ vars.DESKTOP_SDK_INDEX_SHA256 }}
-      RELEASE_DESKTOP: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
       DESKTOP_TARGET: ${{ matrix.target }}
       # Hash the same checked-out source bytes on all three runners.
       GIT_CONFIG_COUNT: '1'
@@ -518,7 +517,7 @@ jobs:
       - name: Configure update signing key
         env:
           UPDATE_PUBLIC_KEY: ${{ secrets.DESKTOP_UPDATE_PUBLIC_KEY }}
-          REQUIRE_UPDATE_KEY: ${{ env.RELEASE_DESKTOP }}
+          REQUIRE_UPDATE_KEY: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
         run: node desktop/scripts/ci-signing.mjs
       - uses: pnpm/action-setup@v4
         with:
@@ -565,33 +564,13 @@ jobs:
           clang++ -std=c++17 -fobjc-arc -framework AppKit desktop/tests/keyboard-focus-test.mm -o desktop/.build/${{ matrix.target }}/keyboard-focus-test
           desktop/.build/${{ matrix.target }}/keyboard-focus-test
       - name: Build complete resources and installers
-        env:
-          WIN_CSC_LINK: ${{ runner.os == 'Windows' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_WINDOWS_CSC_LINK || '' }}
-          WIN_CSC_KEY_PASSWORD: ${{ runner.os == 'Windows' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_WINDOWS_CSC_KEY_PASSWORD || '' }}
-          CSC_LINK: ${{ runner.os == 'macOS' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_MAC_CSC_LINK || '' }}
-          CSC_KEY_PASSWORD: ${{ runner.os == 'macOS' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_MAC_CSC_KEY_PASSWORD || '' }}
-          APPLE_ID: ${{ runner.os == 'macOS' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_APPLE_ID || '' }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ runner.os == 'macOS' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_APPLE_APP_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ runner.os == 'macOS' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_APPLE_TEAM_ID || '' }}
-          SONGLOFT_APPLE_TEAM_ID: ${{ runner.os == 'macOS' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_APPLE_TEAM_ID || '' }}
         run: |
           pnpm --dir desktop build:resources
           pnpm --dir desktop package
-      - name: Verify Windows installer signature
-        if: runner.os == 'Windows' && env.RELEASE_DESKTOP == 'true'
-        shell: pwsh
-        run: |
-          $installer = @(Get-ChildItem "desktop/release/$env:SONGLOFT_DESKTOP_CHANNEL/$env:DESKTOP_TARGET" -Filter *.exe -File)
-          if ($installer.Count -ne 1) { throw 'Expected one Windows installer' }
-          if ((Get-AuthenticodeSignature $installer[0].FullName).Status -ne 'Valid') {
-            throw 'Windows installer requires a trusted Authenticode signature'
-          }
       - name: Install and verify Windows Bundle
         if: runner.os == 'Windows'
         timeout-minutes: 7
         shell: pwsh
-        env:
-          REQUIRE_SIGNATURE: ${{ env.RELEASE_DESKTOP }}
         run: |
           $directory = "desktop/release/$env:SONGLOFT_DESKTOP_CHANNEL/$env:DESKTOP_TARGET"
           $installer = @(Get-ChildItem $directory -Filter *.exe -File)
@@ -601,10 +580,7 @@ jobs:
           $result = Start-Process -FilePath $installer[0].FullName -ArgumentList "/S /D=$installation" -PassThru -Wait
           if ($result.ExitCode -ne 0) { throw "NSIS exited with code $($result.ExitCode)" }
           $appName = if ($env:SONGLOFT_DESKTOP_CHANNEL -eq 'dev') { 'SongloftDev.exe' } else { 'Songloft.exe' }
-          $app = Get-Item -LiteralPath (Join-Path $installation $appName)
-          if ($env:REQUIRE_SIGNATURE -eq 'true' -and (Get-AuthenticodeSignature $app.FullName).Status -ne 'Valid') {
-            throw 'Installed application requires a trusted Authenticode signature'
-          }
+          Get-Item -LiteralPath (Join-Path $installation $appName) | Out-Null
           $resources = Join-Path $installation 'resources/songloft'
           foreach ($file in @('native/songloft_mpv.node', 'updater/songloft-update.exe')) {
             Get-Item -LiteralPath (Join-Path $resources $file) | Out-Null
@@ -646,10 +622,6 @@ jobs:
           app="${apps[0]}"
           test -d "$app"
           codesign --verify --deep --strict "$app"
-          if [ "$SONGLOFT_DESKTOP_CHANNEL" = stable ]; then
-            xcrun stapler validate "$app"
-            spctl --assess --type execute "$app"
-          fi
           resources="$app/Contents/Resources/songloft"
           cmp "$resources/build-info.json" "desktop/resources/$DESKTOP_TARGET/build-info.json"
           cmp "$resources/app/main.lynx.bundle" dist/main.lynx.bundle

@@ -397,6 +397,13 @@
 - 发布前校验三端源码和 bundle 摘要，核对后端 SHA 与目标 tag。dev 更新读取共享 `dev`，正式版从最新正式 Release 发现桌面清单，资产链接固定到该版本。
 - 本地动作语法、签名与发布流程夹具、桌面宿主和发布工具检查以及中英文文档站构建通过。测试签名夹具没有上传。真实 GitHub 三架构构建和共用 Release 发布为 Not run。
 
+### 无平台证书构建与更新
+
+- 参考 Flutter 桌面发布流程，dev 与正式版均移除 Windows Authenticode 和 macOS Developer ID／公证配置。macOS 应用采用 ad hoc 签名，包内验证仍使用严格的 codesign 检查。Windows 按用户安装验证与更新清单验签继续执行。
+- 在 Windows 真机用 Ed25519 签名的清单更新未签名 NSIS 夹具。修改一个字节后安装助手拒绝包并重启旧版。还原资产后完成 1.0.0 到 1.0.1 更新，迁移回滚恢复 1.0.0 和配套数据库。另在真机验证已核对的 Windows 安装器文件运行期间阻止写入和重命名。
+- macOS 原生 arm64 和 Rosetta x64 均通过 Go 安装辅助程序测试。ad hoc 签名应用解压后通过严格校验，修改 Info.plist 后被拒绝。
+- 三种架构的 SDK 候选归档通过 HTTPS 下载、索引摘要和逐文件校验。Windows SDK 新增由 libmpv DLL 的导出表生成的 MSVC 导入库及头文件，交叉链接现有扩展并在 Windows 真机初始化 libmpv 软件渲染。两种 macOS SDK 的媒体工具实际生成并检查 FLAC。候选归档与记录见 `/home/hanxi/work/songloft-review/lynx-desktop-20261119-sdk/`。SDK 的公开托管、GitHub 打包与完整业务客户端的新一轮升级为 Not run。
+
 ### 模块覆盖矩阵
 
 | 批次 | 主要实现 | 统一验收边界 |
@@ -451,7 +458,7 @@ Keychain 在当前 Mac 测试会话曾返回 `-25308`，完整本地模式自动
 
 2026-11-18 继续 Mac 启动排查：桌面凭据原生调用现改为 `Napi::AsyncWorker`，Mac arm64 原生扩展编译成功；当前源码的 Lynx/Web/探针 bundle 通过源码指纹校验，新的 arm64 dev DMG/ZIP 生成成功。隔离数据目录启动的新包仍停在 macOS `SecurityAgent` 授权提示。进程采样 `/tmp/songloft-lynx-desktop-20261117-173fa14/async-keychain-current.txt` 显示同步 `SecItemCopyMatching` 调用来自 CEF `CefInitialize`，发生在客户端窗口、Songloft 凭据异步读取及 Bundle 后端启动之前。因此本地模式凭据、自动登录和完整首次启动仍待最终设备验收；该等待不是异步凭据模块卡住的证据，也未记为通过。
 
-开发包体、安装体积及后续截图/源码摘要保留在证据目录；冷启动、空闲/播放内存和一小时趋势尚未建立，均为 Not run。Windows 实机、实体 Intel、最低系统、人工听音、视频同步、插件实际 API 写入、干净环境和真实升级矩阵统一在末尾验收。正式包要求公开主仓库 `main` 包含所需 Bundle 能力，以及匹配 SDK、独立更新签名密钥和平台签名凭据。
+开发包体、安装体积及后续截图/源码摘要保留在证据目录；冷启动、空闲/播放内存和一小时趋势尚未建立，均为 Not run。Windows 实机、实体 Intel、最低系统、人工听音、视频同步、插件实际 API 写入、干净环境和真实升级矩阵统一在末尾验收。正式包要求公开主仓库 `main` 包含所需 Bundle 能力，以及匹配 SDK 和独立桌面更新签名密钥。
 
 2026-11-18 源码复查后续：更新成功确认已移至本地后端健康检查之后；远程模式启动的更新会在稍后切换本地时完成确认，迁移失败可触发配套恢复提示。Bundle 父管道/HTTP Server 就绪竞态、Lynx 子帧桥接身份时序、下载目录创建失败收尾、安装后确认记录写入失败回滚和切服上传任务清理已修复。相关运行时测试、Go 测试、原生构建和新 SHA 构建均为 Not run，加入最终验收。
 

@@ -84,47 +84,21 @@ func waitForApplication(parent int, app string, timeout time.Duration) error {
 	return errors.New("application processes did not exit")
 }
 
-type guid struct {
-	Data1        uint32
-	Data2, Data3 uint16
-	Data4        [8]byte
-}
-type trustFile struct {
-	Size          uint32
-	Path          *uint16
-	File, Subject uintptr
-}
-type trustData struct {
-	Size                   uint32
-	Policy, SIP            uintptr
-	UI, Revocation, Choice uint32
-	File                   uintptr
-	StateAction            uint32
-	State, URL             uintptr
-	Flags, Context         uint32
-	Signature              uintptr
+// Keep the authenticated NSIS bytes readable by CreateProcess while denying
+// writes and rename/delete through other handles until installation completes.
+func openUpdateAsset(path string) (*os.File, error) {
+	name, err := syscall.UTF16PtrFromString(path)
+	if err != nil {
+		return nil, err
+	}
+	handle, err := syscall.CreateFile(name, syscall.GENERIC_READ, syscall.FILE_SHARE_READ, nil, syscall.OPEN_EXISTING, syscall.FILE_ATTRIBUTE_NORMAL, 0)
+	if err != nil {
+		return nil, &os.PathError{Op: "open", Path: path, Err: err}
+	}
+	return os.NewFile(uintptr(handle), path), nil
 }
 
-func verifyWindowsSignature(path string) error {
-	text, err := syscall.UTF16PtrFromString(path)
-	if err != nil {
-		return err
-	}
-	file := trustFile{Path: text}
-	file.Size = uint32(unsafe.Sizeof(file))
-	data := trustData{UI: 2, Choice: 1, File: uintptr(unsafe.Pointer(&file)), Flags: 0x1000}
-	data.Size = uint32(unsafe.Sizeof(data))
-	action := guid{0x00aac56b, 0xcd44, 0x11d0, [8]byte{0x8c, 0xc2, 0x00, 0xc0, 0x4f, 0xc2, 0x95, 0xee}}
-	status, _, _ := syscall.NewLazyDLL("wintrust.dll").NewProc("WinVerifyTrust").Call(0, uintptr(unsafe.Pointer(&action)), uintptr(unsafe.Pointer(&data)))
-	if int32(status) != 0 {
-		return errors.New("installer Authenticode signature rejected")
-	}
-	return nil
-}
 func install(asset, app string, signed manifest) error {
-	if err := verifyWindowsSignature(asset); err != nil {
-		return err
-	}
 	if strings.ContainsAny(app, "\"\r\n") {
 		return errors.New("invalid installation path")
 	}
@@ -158,7 +132,19 @@ func verifyWindowsCandidate(app string, signed manifest) error {
 	if err := verifyApplicationMetadata(filepath.Join(app, "resources", "songloft"), signed); err != nil {
 		return err
 	}
-	executable, err := pe.Open(filepath.Join(app, windowsExecutable))
+	return verifyApplication(app)
+}
+
+func verifyApplication(app string) error {
+	path := filepath.Join(app, windowsExecutable)
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() {
+		return errors.New("packaged executable is not a regular file")
+	}
+	executable, err := pe.Open(path)
 	if err != nil {
 		return fmt.Errorf("cannot inspect installed executable: %w", err)
 	}
@@ -166,10 +152,11 @@ func verifyWindowsCandidate(app string, signed manifest) error {
 	if executable.Machine != pe.IMAGE_FILE_MACHINE_AMD64 {
 		return errors.New("packaged executable has the wrong architecture")
 	}
+	if executable.Characteristics&pe.IMAGE_FILE_EXECUTABLE_IMAGE == 0 ||
+		executable.Characteristics&pe.IMAGE_FILE_DLL != 0 {
+		return errors.New("packaged file is not a Windows executable")
+	}
 	return nil
 }
 
 func restart(app, _ string) error { return exec.Command(filepath.Join(app, windowsExecutable)).Start() }
-func verifyApplication(app, channel string) error {
-	return verifyWindowsSignature(filepath.Join(app, windowsExecutable))
-}

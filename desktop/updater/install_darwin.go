@@ -42,6 +42,8 @@ func waitForApplication(parent int, app string, timeout time.Duration) error {
 	}
 	return errors.New("application processes did not exit")
 }
+func openUpdateAsset(path string) (*os.File, error) { return os.Open(path) }
+
 func install(asset, app string, signed manifest) error {
 	if !strings.HasSuffix(app, ".app") {
 		return errors.New("invalid app path")
@@ -55,7 +57,7 @@ func install(asset, app string, signed manifest) error {
 	if err != nil {
 		return err
 	}
-	if err := verifyApplication(next, signed.Channel); err != nil {
+	if err := verifyApplication(next); err != nil {
 		return err
 	}
 	if err := verifyDarwinCandidate(next, signed); err != nil {
@@ -120,17 +122,8 @@ func verifyDarwinCandidate(app string, signed manifest) error {
 	return errors.New("packaged executable has the wrong architecture")
 }
 
-func verifyApplication(path, channel string) error {
-	args := []string{"--verify", "--deep", "--strict"}
-	if expectedTeamID != "" {
-		if strings.ContainsAny(expectedTeamID, "\"\\") {
-			return errors.New("invalid signing team")
-		}
-		args = append(args, "-R=anchor apple generic and certificate leaf[subject.OU] = \""+expectedTeamID+"\"")
-	} else if testSigning != "true" || channel != "dev" {
-		return errors.New("release signing team is required")
-	}
-	if output, err := exec.Command("/usr/bin/codesign", append(args, path)...).CombinedOutput(); err != nil {
+func verifyApplication(path string) error {
+	if output, err := exec.Command("/usr/bin/codesign", "--verify", "--deep", "--strict", path).CombinedOutput(); err != nil {
 		return fmt.Errorf("signature rejected: %w: %s", err, output)
 	}
 	return nil

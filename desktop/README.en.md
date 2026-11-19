@@ -73,11 +73,11 @@ Windows passes `--disable-gpu` in the OS command line so CEF uses software rende
 
 Automatic check/download never stop playback; the user selects Restart and install. A separate Ed25519 envelope signs original JSON bytes binding version/channel/OS/architecture/client/backend SHA/asset size/hash. Both host and standalone Go helper verify; installation waits for all application processes.
 
-When the user selects Install, the host rechecks the downloaded package on disk. A missing or damaged file offers another download in Settings while playback and the local backend continue. After handoff, the helper waits for the host to exit and verifies the package again. On verification failure it logs the error and relaunches the previous app after confirming its identity and signature at the original path.
+When the user selects Install, the host rechecks the downloaded package on disk. A missing or damaged file offers another download in Settings while playback and the local backend continue. After handoff, the helper waits for the host to exit and verifies the package again. Windows keeps the installer read-only and prevents replacement during installation. On verification failure the helper logs the error and relaunches the previous app after confirming its identity and platform checks at the original path.
 
 On macOS, the helper compares the ZIP's embedded identity, version, channel, client and backend SHAs, and executable Mach-O architecture before replacing the app. On Windows it checks the corresponding metadata and PE architecture after NSIS exits and before restart. On failure it retains the failed install and restores the previous app.
 
-If installation fails before the candidate launches, the helper confirms that the previous app is back at its original path and its identity and signature are valid before relaunching it. On its next launch, the host offers to show `install.log` in the updates directory. If the new backend has started and may have modified the database, the user chooses whether to restore the matching backup.
+If installation fails before the candidate launches, the helper confirms that the previous app is back at its original path and its identity and platform checks pass before relaunching it. On its next launch, the host offers to show `install.log` in the updates directory. If the new backend has started and may have modified the database, the user chooses whether to restore the matching backup.
 
 Both channels reject lower semantic versions. A same-version dev update requires changed source and a publication later than the current build. Automatic and manual checks read the current session's GitHub proxy. The manifest and corresponding installer download use the proxy from that check. Before sign-in or when settings are temporarily unavailable, checks connect directly.
 
@@ -92,7 +92,7 @@ A pending installation retains its downloaded installer. Startup confirmation re
 
 During paired recovery, the helper checks the previous app's identity, the backup version and backend SHA, and each database file's checksum before moving any files. If a move fails, the helper attempts to restore the app and database to their pre-recovery state. Successful recovery retains the failed application, database, and any remaining WAL/SHM.
 
-Production needs separate update keys, Windows code signing and Apple Developer ID/notarization. Dev accepts isolated test keys and Mac ad-hoc signatures; Windows still requires trusted Authenticode test/release certificates. Keys stay outside git.
+Windows ships an NSIS installer. The macOS DMG and update ZIP contain an ad hoc signed application. Both dev and stable build without a Windows certificate, Apple Developer ID or notarization. The operating system may show a publisher or app-origin prompt on first manual installation. In-app updates still verify the separate Ed25519 manifest and full package SHA-256. macOS also verifies the application’s code signature.
 
 ## CI and acceptance
 
@@ -100,7 +100,7 @@ Production needs separate update keys, Windows code signing and Apple Developer 
 
 The Windows job runs the per-user NSIS installer and checks the installed business bundle, build metadata, mpv, CEF, and updater. The macOS jobs verify the DMG and the extracted update ZIP and check the included metadata and business bundle. Each target runs the installed backend with `-version` to verify its version, commit SHA, build time, and lite build type. Before upload, each target also generates a synthetic track with its packaged FFmpeg, checks it with ffprobe, and tests backend startup, scanning, Range requests, and persistence after restart.
 
-Windows Authenticode uses `DESKTOP_WINDOWS_CSC_LINK` and `DESKTOP_WINDOWS_CSC_KEY_PASSWORD`. Apple Developer ID uses `DESKTOP_MAC_CSC_LINK` and `DESKTOP_MAC_CSC_KEY_PASSWORD`. Notarization reads `DESKTOP_APPLE_ID`, `DESKTOP_APPLE_APP_PASSWORD`, and `DESKTOP_APPLE_TEAM_ID`. Stable package verification checks the app's stapled ticket and Gatekeeper assessment. Dev and stable publishing both require the `DESKTOP_UPDATE_PUBLIC_KEY` Actions secret.
+Dev and stable publishing require the `DESKTOP_UPDATE_PUBLIC_KEY` and `DESKTOP_UPDATE_PRIVATE_KEY` Actions secrets. Windows verifies the per-user installation’s version, business bundle, and media components. macOS runs `codesign --verify --deep --strict` on the application extracted from the update ZIP.
 
 With the SDK configured, `main` builds publish desktop assets to the shared `dev` Release. Stable `vX.Y.Z` builds publish desktop assets to the corresponding versioned Release. Desktop clients discover per-architecture signed manifests in `dev` or the latest stable Release. Stable manifests pin the installer URL to its version tag. Prereleases such as `vX.Y.Z-beta.N` continue to build the mobile and Web packages. The publish job checks the client source, business bundle, backend identity, client version, and update key across all three architectures, then signs each manifest with `DESKTOP_UPDATE_PRIVATE_KEY`. The Release stays in draft until all platform packages and manifests finish uploading. Earlier dev installers remain available to existing signed manifests.
 

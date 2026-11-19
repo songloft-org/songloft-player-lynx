@@ -14,13 +14,13 @@
 | Actions → Run workflow  | 选择 main 重建 dev，或选择 v\* tag 构建对应版本            |
 | Pull request            | 验证和打包，Android 用 debug 签名/HarmonyOS 不签名，不发布 |
 
-文档/许可证修改不自动触发构建。手动构建其他分支只生成 artifacts。正式和 dev 发布要求 Android、iOS、HarmonyOS 和 Web 两种模式全部成功。启用桌面后，还须通过 Windows x64、macOS arm64、macOS x64 三项打包与验签。失败时保留现有 artifacts。
+文档/许可证修改不自动触发构建。手动构建其他分支只生成 artifacts。正式和 dev 发布要求 Android、iOS、HarmonyOS 和 Web 两种模式全部成功。启用桌面后，还须通过 Windows x64、macOS arm64、macOS x64 三项打包与校验。失败时保留现有 artifacts。
 
 产物名见[安装指南](installation.md)。`version.json` 和 `checksums.txt` 随 Release 发布。新流程移除旧的独立 `dev-harmony` 入口；历史 Release 不自动删除。
 
 同一次运行在开始时解析公开主仓库 `main` 的最新提交和版本，Android、iOS 和桌面共用该 SHA 与其 `pkg/tag`。Android 与 iOS 使用后端提交指定的 gomobile 和 gobind。桌面三架构使用同一次构建生成的业务 bundle。所有 Bundle 包在发布前检查包内后端 SHA。
 
-配置 `DESKTOP_SDK_INDEX_URL`、`DESKTOP_SDK_INDEX_SHA256` 和[桌面签名凭据](../../desktop/README.md#ci-与验收)后，桌面安装包和按架构签名的更新清单随 `dev` 或正式 `vX.Y.Z` Release 发布。两个 SDK 变量均未设置时，流水线继续构建移动端和 Web。预发布标签沿用移动和 Web 构建。
+配置 `DESKTOP_SDK_INDEX_URL`、`DESKTOP_SDK_INDEX_SHA256` 和[桌面更新密钥](../../desktop/README.md#ci-与验收)后，桌面安装包和按架构签名的更新清单随 `dev` 或正式 `vX.Y.Z` Release 发布。两个 SDK 变量均未设置时，流水线继续构建移动端和 Web。预发布标签沿用移动和 Web 构建。
 
 dev、preview 和正式 Release 的正文展示 Conventional Commits 分类记录（含提交链接）；`.github/release-notes.md` 仅保留指向 [中文 README](../../README.md#安装与下载) 与 [英文 README](../../README.en.md#installation-and-downloads) 的安装说明链接。各平台包的安装/部署方式、服务器连接要求和 SHA-256 校验步骤统一维护在 README。比较范围为当前提交与已合并的最近一个 `v*` tag，跳过指向当前提交的 tag；没有历史版本 tag 时回退到首个提交。仅包含 Flutter 流程同样支持的提交类型；无可列出的变更时只保留安装说明链接。
 

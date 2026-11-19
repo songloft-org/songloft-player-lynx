@@ -2,7 +2,7 @@ package main
 
 import (
 	"os"
-	"os/exec"
+	"path/filepath"
 	"slices"
 	"testing"
 )
@@ -33,7 +33,14 @@ func TestSignedAppArchive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if output, err := exec.Command("/usr/bin/codesign", "--verify", "--deep", "--strict", "--verbose=4", app).CombinedOutput(); err != nil {
-		t.Fatalf("signature after extraction: %v: %s", err, output)
+	if err := verifyApplication(app); err != nil {
+		t.Fatalf("signature after extraction: %v", err)
+	}
+	info := filepath.Join(app, "Contents", "Info.plist")
+	if err := os.WriteFile(info, []byte("tampered Info.plist"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyApplication(app); err == nil {
+		t.Fatal("app with a modified signature seal was accepted")
 	}
 }

@@ -25,7 +25,7 @@ import (
 )
 
 // Public-only release configuration is embedded by the desktop resource build.
-var publicKeyPEM, publicKeyBase64, expectedTeamID, testSigning string
+var publicKeyPEM, publicKeyBase64 string
 var windowsExecutable = "Songloft.exe"
 
 type manifest struct {
@@ -204,12 +204,19 @@ func newerVersion(next, current string) bool {
 	}
 	return len(x) > len(y)
 }
-func verifyAsset(path string, signed manifest) error {
-	file, err := os.Open(path)
+func openVerifiedAsset(path string, signed manifest) (*os.File, error) {
+	file, err := openUpdateAsset(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer file.Close()
+	if err := verifyAssetFile(file, signed); err != nil {
+		_ = file.Close()
+		return nil, err
+	}
+	return file, nil
+}
+
+func verifyAssetFile(file *os.File, signed manifest) error {
 	info, err := file.Stat()
 	if err != nil || !info.Mode().IsRegular() || info.Size() != signed.Asset.Size {
 		return errors.New("asset size mismatch")
@@ -373,7 +380,7 @@ func reportUpdateFailure(stateDirectory string, failure error) {
 }
 
 // The installer has not launched the candidate, so the database still belongs
-// to the previous app. Only relaunch if its signature and identity still match.
+// to the previous app. Only relaunch if its platform checks and identity match.
 func restartAfterInstallFailure(app string, signed manifest, version, clientSHA string) error {
 	if _, err := os.Lstat(previousAppPath(app)); err == nil {
 		return errors.New("previous application has not been restored to its launch path")
@@ -442,13 +449,15 @@ func main() {
 		}
 		os.Exit(1)
 	}
-	if err := verifyAsset(*asset, signed); err != nil {
+	assetFile, err := openVerifiedAsset(*asset, signed)
+	if err != nil {
 		if *rollback {
 			fail(err)
 		}
 		failBeforeCandidateLaunch(err)
 	}
 	if *rollback {
+		_ = assetFile.Close()
 		if *backup == "" {
 			fail(errors.New("database backup is required for recovery"))
 		}
@@ -482,8 +491,10 @@ func main() {
 	} else if err := writeAtomic(immutablePath, raw, 0600); err != nil {
 		failBeforeCandidateLaunch(err)
 	}
-	if err := install(*asset, *app, signed); err != nil {
-		failBeforeCandidateLaunch(err)
+	installErr := install(*asset, *app, signed)
+	_ = assetFile.Close()
+	if installErr != nil {
+		failBeforeCandidateLaunch(installErr)
 	}
 	record := map[string]any{"version": signed.Version, "clientSha": signed.ClientSHA, "backendSha": signed.BackendSHA, "backup": *backup, "installedAt": time.Now().UTC(), "manifest": immutable, "asset": filepath.Base(*asset), "previousVersion": *version, "previousClientSha": *clientSHA, "previousBuiltAt": *builtAt, "previousApp": previousAppPath(*app)}
 	state, err := json.Marshal(record)

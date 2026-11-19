@@ -75,11 +75,11 @@ Windows 启动通过系统命令行传递 `--disable-gpu`，让 CEF 使用软件
 
 自动检查并下载，用户点击“重启安装”才停止业务。独立桌面清单使用 Ed25519 签原始 JSON 字节，绑定通道、OS、架构、客户端/后端 SHA、资产大小和 SHA-256。下载完成与独立 Go helper 都重新验证；helper 等全部应用进程退出后安装。
 
-点击安装时，宿主先重新核对磁盘上的安装包。文件缺失或损坏时，设置页提供重新下载，当前播放和本地后端继续运行。交接后辅助程序等待宿主退出并再次校验。校验失败时记录日志，核对原路径的旧版身份和签名后重新启动旧版。
+点击安装时，宿主先重新核对磁盘上的安装包。文件缺失或损坏时，设置页提供重新下载，当前播放和本地后端继续运行。交接后辅助程序等待宿主退出并再次校验。Windows 在安装期间保持安装包只读并禁止替换。校验失败时记录日志，核对原路径的旧版身份及平台校验结果后重新启动旧版。
 
 helper 在 macOS 替换应用前，核对 ZIP 内的应用身份、版本、通道、客户端/后端 SHA 和启动程序的 Mach-O 架构。Windows 在 NSIS 完成后、重启前核对同样的元数据和 PE 架构，失败时保留失败副本并恢复旧应用。
 
-候选应用启动前安装失败时，helper 在确认旧应用已回到原路径、身份和签名有效后重启旧版。宿主下次启动会提示查看更新目录中的 `install.log`。若新后端已经启动并可能修改了数据库，则由用户选择恢复对应备份。
+候选应用启动前安装失败时，helper 在确认旧应用已回到原路径并通过身份与平台校验后重启旧版。宿主下次启动会提示查看更新目录中的 `install.log`。若新后端已经启动并可能修改了数据库，则由用户选择恢复对应备份。
 
 两个通道均拒绝版本降级。dev 同版本滚动要求源码变化且发布日期晚于当前构建。自动和手动检查均从当前会话读取 GitHub 代理，清单与对应的安装包下载使用同一次读取的配置。登录前或设置暂时不可用时直连。签名清单可用以下命令生成。
 
@@ -94,7 +94,7 @@ node desktop/scripts/sign-update.mjs build-info.json application.zip https://hos
 
 需要配套恢复时，辅助程序先核对旧应用身份、备份版本、后端 SHA 和每个数据库文件的摘要，再移动应用和数据库。文件移动中途出错时会尝试恢复操作前的应用和数据库。恢复成功时保留失败版本的应用、数据库和残留 WAL/SHM。
 
-正式分发需要独立更新密钥、Windows 代码签名与 Apple Developer ID/公证。dev 可用独立测试密钥及 Mac ad-hoc 签名；Windows 安装验证仍要求可信 Authenticode 测试/发行证书。密钥不入库。
+Windows 发布 NSIS 安装包，macOS 的 DMG 和更新 ZIP 内含 ad hoc 签名的应用。dev 和正式版均可在没有 Windows 证书、Apple Developer ID 和公证的情况下构建。首次手动安装时，系统可能显示发布者或应用来源提示。应用内更新继续验证独立 Ed25519 清单和整包 SHA-256，macOS 额外校验 app 的代码签名。
 
 ## CI 与验收
 
@@ -102,7 +102,7 @@ node desktop/scripts/sign-update.mjs build-info.json application.zip https://hos
 
 Windows 构建先执行按用户 NSIS 安装，核对业务 bundle、构建元数据以及 mpv、CEF 和更新辅助程序。macOS 构建验证 DMG 和解出的更新 ZIP，并核对包内元数据及业务 bundle。每个目标执行包内后端的 `-version`，核对版本、提交 SHA、构建时间和 lite 构建类型。上传前还用包内 FFmpeg 生成合成音轨，用 ffprobe 核对，再测试 Bundle 后端的启动、扫描、Range 读取和重启持久化。
 
-Windows Authenticode 凭据使用 `DESKTOP_WINDOWS_CSC_LINK` 和 `DESKTOP_WINDOWS_CSC_KEY_PASSWORD`。Apple Developer ID 凭据使用 `DESKTOP_MAC_CSC_LINK` 和 `DESKTOP_MAC_CSC_KEY_PASSWORD`。macOS 公证读取 `DESKTOP_APPLE_ID`、`DESKTOP_APPLE_APP_PASSWORD` 和 `DESKTOP_APPLE_TEAM_ID`。stable 的安装包校验同时检查 app 的公证票据和 Gatekeeper 评估结果。dev 和正式发布都要求 Actions Secrets 中配置 `DESKTOP_UPDATE_PUBLIC_KEY`。
+dev 和正式发布都要求 Actions Secrets 中配置 `DESKTOP_UPDATE_PUBLIC_KEY` 与 `DESKTOP_UPDATE_PRIVATE_KEY`。Windows 验证按用户安装后包内的版本、业务 bundle 和媒体组件。macOS 对更新 ZIP 解出的应用运行 `codesign --verify --deep --strict`。
 
 配置 SDK 后，`main` 构建将桌面资产上传至同一个 `dev` Release，正式 `vX.Y.Z` 构建将资产上传至对应版本 Release。桌面更新分别从 `dev` 和最新正式 Release 获取独立的按架构清单。正式清单指向该版本的固定资产 URL。`vX.Y.Z-beta.N` 等预发布沿用移动与 Web 构建。发布作业核对三个架构的客户端源码、业务 bundle、后端身份、版本和更新公钥，用 `DESKTOP_UPDATE_PRIVATE_KEY` 签署清单。安装包、签名清单与其他平台资产均上传到同一个 draft，全部成功后公开。旧 dev 清单引用的安装资产仍可下载。
 

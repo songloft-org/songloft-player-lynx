@@ -108,7 +108,7 @@ func readBackup(metadata string, packaged applicationMetadata) (databaseBackup, 
 }
 
 func verifyInstalledApplication(app string, signed manifest, version, clientSHA string) (applicationMetadata, error) {
-	if err := verifyApplication(app, signed.Channel); err != nil {
+	if err := verifyApplication(app); err != nil {
 		return applicationMetadata{}, err
 	}
 	resources := filepath.Join(app, "resources", "songloft")
@@ -251,7 +251,7 @@ func recoverApplication(app, metadata string, signed manifest, version, clientSH
 	previous := previousAppPath(app)
 	var restore *databaseRestore
 	if metadata == "" {
-		if err := verifyApplication(previous, signed.Channel); err != nil {
+		if _, err := verifyInstalledApplication(previous, signed, version, clientSHA); err != nil {
 			return err
 		}
 	} else {

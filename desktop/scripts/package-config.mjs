@@ -33,10 +33,9 @@ export function packageConfig({ channel, version, target, root }) {
     ],
     artifactName: `songloft-lynx-desktop-${channel}-\${version}-\${os}-\${arch}.\${ext}`,
     publish: null,
-    forceCodeSigning: channel === 'stable',
+    forceCodeSigning: false,
     mac: {
-      // The builder only falls back to ad hoc signing automatically on arm64.
-      ...(channel === 'dev' && !process.env.CSC_LINK ? { identity: '-' } : {}),
+      identity: '-',
       icon: '.lynxtron/app/app_icon.png',
       target: [
         { target: 'dmg', arch: [arch] },
@@ -44,10 +43,10 @@ export function packageConfig({ channel, version, target, root }) {
       ],
       category: 'public.app-category.music',
       minimumSystemVersion: '13.0',
-      hardenedRuntime: channel === 'stable',
+      hardenedRuntime: false,
       entitlements: 'entitlements.mac.plist',
       entitlementsInherit: 'entitlements.mac.plist',
-      notarize: channel === 'stable',
+      notarize: false,
     },
     win: {
       icon: '.lynxtron/app/app_icon.png',

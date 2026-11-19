@@ -63,13 +63,18 @@ func TestSignedManifestAndAsset(t *testing.T) {
 	if err := os.WriteFile(path, asset, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyAsset(path, verified); err != nil {
+	file, err := openVerifiedAsset(path, verified)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(path, []byte("corrupt"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if verifyAsset(path, verified) == nil {
+	if file, err := openVerifiedAsset(path, verified); err == nil {
+		_ = file.Close()
 		t.Fatal("corrupt asset accepted")
 	}
 	if runtime.GOOS == "windows" {
