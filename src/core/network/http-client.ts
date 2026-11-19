@@ -33,6 +33,7 @@ export interface TransportRequest {
   body?: string
   /** Fail on redirects where the fetch implementation supports this policy. */
   redirect?: 'error'
+  signal?: AbortSignal
 }
 
 export interface TransportResponse {
@@ -101,6 +102,8 @@ export function createFetchTransport(fetchImpl?: FetchLike): Transport {
       )
     }
     const controller = req.timeoutMs && req.timeoutMs > 0 ? newAbortController() : null
+    if (req.signal?.aborted) throw new Error('Request cancelled')
+    const cancel = () => controller?.abort?.()
     const platform = readSystemInfo()?.['platform']
     const headers = { ...req.headers }
     if (req.timeoutMs && req.timeoutMs > 0 && typeof platform === 'string' && !isWebPlatform()) {
@@ -112,7 +115,7 @@ export function createFetchTransport(fetchImpl?: FetchLike): Transport {
         headers,
         body: req.body,
         ...(req.redirect ? { redirect: req.redirect } : {}),
-        ...(controller?.signal != null ? { signal: controller.signal } : {}),
+        signal: controller?.signal ?? req.signal,
       })
       const responseHeaders: Record<string, string> = {}
       res.headers?.forEach?.((value, key) => {
@@ -135,8 +138,10 @@ export function createFetchTransport(fetchImpl?: FetchLike): Transport {
         }, timeoutMs)
       })
       try {
+        req.signal?.addEventListener('abort', cancel, { once: true })
         return await Promise.race([send(), expiry])
       } finally {
+        req.signal?.removeEventListener('abort', cancel)
         safeClearTimeout(timer as unknown as number)
       }
     }
@@ -194,6 +199,7 @@ export interface RequestOptions {
   receiveTimeoutMs?: number
   /** Reject an obsolete operation before sending or entering auth recovery. */
   assertCurrent?: () => void
+  signal?: AbortSignal
 }
 
 export interface HttpResult<T> {
@@ -282,6 +288,7 @@ export class HttpClient {
         headers: h,
         body: bodyStr,
         timeoutMs: options.receiveTimeoutMs ?? this.receiveTimeoutMs,
+        ...(options.signal ? { signal: options.signal } : {}),
       })
     }
 

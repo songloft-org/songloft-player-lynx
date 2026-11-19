@@ -198,6 +198,10 @@ const server = createServer((req, res) => {
     return serveFile(res, BUNDLE_PATH, 'application/octet-stream')
   }
 
+  if (url === '/mpegts.js') {
+    return serveFile(res, resolve(repoRoot, 'node_modules/mpegts.js/dist/mpegts.js'), MIME['.js'])
+  }
+
   // Route: /demo-plugin.web.bundle → child frame demo bundle (Phase 0 验证)
   if (url === '/demo-plugin.web.bundle') {
     const demoBundle = resolve(repoRoot, 'demo-frame-plugin', 'dist', 'web', 'main.web.bundle')

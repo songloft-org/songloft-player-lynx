@@ -23,8 +23,13 @@ function fixture(t) {
   t.after(() => rmSync(dir, { recursive: true, force: true }))
   const repo = join(dir, 'client')
   const core = join(repo, 'node_modules/@lynx-js/web-core/dist/client_prod/static')
+  const mpegts = 'node_modules/mpegts.js'
   for (const folder of ['scripts', 'web', 'dist/web', 'node_modules/@lynx-js/web-core/dist/client_prod/static/css']) {
     mkdirSync(join(repo, folder), { recursive: true })
+  }
+  mkdirSync(join(repo, mpegts, 'dist'), { recursive: true })
+  for (const name of ['dist/mpegts.js', 'dist/mpegts.js.LICENSE.txt', 'LICENSE']) {
+    cpSync(join(root, mpegts, name), join(repo, mpegts, name))
   }
   cpSync(join(root, 'scripts/copy-bundle-web.mjs'), join(repo, 'scripts/copy-bundle-web.mjs'))
   for (const file of readdirSync(join(root, 'web'), { withFileTypes: true })) {
@@ -68,6 +73,9 @@ test('standalone retains the document directory and server-address control', t =
   const html = readFileSync(join(out, 'index.html'), 'utf8')
   assert.ok(!html.includes('<base href="/">'))
   assert.ok(html.includes('global-props=\'{"deployMode":"standalone"}\''))
+  for (const asset of ['mpegts.js', 'mpegts.js.LICENSE.txt', 'mpegts.LICENSE']) {
+    assert.ok(readFileSync(join(out, asset)).length > 0)
+  }
 })
 
 test('raw embedded archives retain static subdirectory hosting without a Go base rewrite', t => {

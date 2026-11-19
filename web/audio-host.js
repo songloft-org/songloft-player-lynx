@@ -118,6 +118,89 @@
   var videoOpen = false
   var videoPrimary = false
   var videoHls = null
+  var flvPlayer = null
+  var flvLibrary = null
+
+  function isFlvUrl(url) {
+    return url.split(/[?#]/, 1)[0].toLowerCase().endsWith('/play.flv')
+  }
+
+  function isRadioHlsSession(url) {
+    return /\/proxy\/transcode\/hls\/sessions\/[0-9a-f]+\/playlist\.m3u8(?:\?|$)/.test(url)
+  }
+
+  function loadFlvLibrary() {
+    if (window.mpegts) return Promise.resolve(window.mpegts)
+    if (!flvLibrary) {
+      flvLibrary = new Promise(function (resolve, reject) {
+        var script = document.createElement('script')
+        script.src = new URL('./mpegts.js', document.baseURI).href
+        script.onload = function () { resolve(window.mpegts) }
+        script.onerror = function () {
+          script.remove()
+          reject(new Error('Could not load the HTTP-FLV player'))
+        }
+        document.head.appendChild(script)
+      }).catch(function (error) {
+        flvLibrary = null
+        throw error
+      })
+    }
+    return flvLibrary
+  }
+
+  function failFlv(generation, code, message) {
+    if (generation !== sourceGeneration) return
+    pendingSourceLoad = null
+    releaseVideoSurface()
+    emitState(STATE_ERROR)
+    emitError(code, message)
+  }
+
+  function failFlvSupport(generation) {
+    var Hls = window.Hls
+    if ((Hls && Hls.isSupported()) || video.canPlayType('application/vnd.apple.mpegurl')) {
+      failFlv(generation, 'flv_needs_hls', 'HTTP-FLV playback is unavailable; trying HLS')
+    } else {
+      failFlv(generation, 'flv_playback_unsupported', 'This browser cannot play this live stream. Select Audio only to listen.')
+    }
+  }
+
+  function loadFlv(url) {
+    var generation = sourceGeneration
+    videoPrimary = true
+    video.muted = false
+    video.disableRemotePlayback = true
+    video.volume = volume
+    video.playbackRate = speed
+    loadFlvLibrary().then(function (mpegts) {
+      if (generation !== sourceGeneration) return
+      if (!mpegts || !mpegts.getFeatureList().mseLivePlayback) {
+        failFlvSupport(generation)
+        return
+      }
+      var player = mpegts.createPlayer({ type: 'flv', url: url, isLive: true }, {
+        autoCleanupSourceBuffer: true,
+        stashInitialSize: 128 * 1024,
+        lazyLoad: false,
+      })
+      flvPlayer = player
+      player.on(mpegts.Events.ERROR, function (_, detail) {
+        if (flvPlayer !== player || generation !== sourceGeneration) return
+        if (detail === mpegts.ErrorDetails.MEDIA_FORMAT_UNSUPPORTED) {
+          failFlvSupport(generation)
+        } else if (detail === mpegts.ErrorDetails.MEDIA_CODEC_UNSUPPORTED) {
+          failFlv(generation, 'flv_playback_unsupported', 'This browser cannot decode this live stream. Select Audio only to listen.')
+        } else {
+          failFlv(generation, 'flv_stream_error', 'HTTP-FLV stream failed: ' + detail)
+        }
+      })
+      player.attachMediaElement(video)
+      player.load()
+    }).catch(function (error) {
+      failFlv(generation, 'flv_stream_error', error.message)
+    })
+  }
 
   /** The element that currently produces sound + progress: video while MV is open. */
   function activeMedia() {
@@ -127,6 +210,12 @@
   function releaseVideoSurface() {
     videoOpen = false
     videoPrimary = false
+    if (flvPlayer) {
+      var player = flvPlayer
+      flvPlayer = null
+      try { player.destroy() } catch (_) {}
+    }
+    video.disableRemotePlayback = false
     if (videoHls) {
       try { videoHls.destroy() } catch (_) {}
       videoHls = null
@@ -161,6 +250,13 @@
   }
 
   function openVideoStream() {
+    if (videoPrimary && isFlvUrl(audioSrcUrl)) {
+      if (video.readyState >= 1 && !video.videoWidth) return Promise.resolve('{"result":"noTrack"}')
+      videoOpen = true
+      video.style.display = 'block'
+      emitVideoSize()
+      return Promise.resolve('{"result":"opened"}')
+    }
     return new Promise(function (resolve) {
       releaseVideoSurface()
       var url = audioSrcUrl || audio.currentSrc || audio.src
@@ -272,6 +368,11 @@
     open: openVideoStream,
     close: function () {
       if (browserFullscreen) void browserFullscreen.close().catch(function () {})
+      if (videoPrimary && isFlvUrl(audioSrcUrl)) {
+        videoOpen = false
+        video.style.display = 'none'
+        return Promise.resolve('{}')
+      }
       var primary = videoPrimary
       var url = audioSrcUrl
       var resumeAt = video.currentTime || audio.currentTime || 0
@@ -499,7 +600,8 @@
 
   function emitProgress(media) {
     var positionMs = media ? Math.round(media.currentTime * 1000) : 0
-    var durationMs = media && Number.isFinite(media.duration) ? Math.round(media.duration * 1000) : 0
+    var live = isFlvUrl(audioSrcUrl) || isRadioHlsSession(audioSrcUrl)
+    var durationMs = !live && media && Number.isFinite(media.duration) ? Math.round(media.duration * 1000) : 0
     sendEvent('SongloftAudio.progress', {
       positionMs: positionMs,
       bufferedMs: positionMs + 5000,
@@ -599,18 +701,19 @@
   }
   bindAudioEvents(audio)
 
-  function finishSourceLoad() {
+  function finishSourceLoad(media) {
     var pending = pendingSourceLoad
     if (!pending) return
     pendingSourceLoad = null
     var generation = sourceGeneration
+    media = media || audio
     emitState(STATE_READY)
-    emitProgress(audio)
-    var intent = pending.autoplay ? audio.play() : Promise.resolve()
+    emitProgress(media)
+    var intent = pending.autoplay ? media.play() : Promise.resolve()
     if (!pending.autoplay) emitState(STATE_PAUSED)
     intent.then(function () {
       if (generation !== sourceGeneration) return
-      sendEvent('SongloftAudio.sourceReady', { positionMs: Math.round(audio.currentTime * 1000) })
+      sendEvent('SongloftAudio.sourceReady', { positionMs: Math.round(media.currentTime * 1000) })
     }, function (error) {
       if (generation !== sourceGeneration) return
       emitState(STATE_ERROR)
@@ -622,12 +725,21 @@
 
   video.addEventListener('loadedmetadata', function () {
     if (!videoPrimary) return
+    if (pendingSourceLoad && isFlvUrl(audioSrcUrl)) {
+      finishSourceLoad(video)
+      return
+    }
     emitState(STATE_READY)
     emitProgress(video)
   })
 
   video.addEventListener('play', function () {
-    if (!videoPrimary) return
+    if (!videoPrimary || isFlvUrl(audioSrcUrl)) return
+    emitState(STATE_PLAYING)
+  })
+
+  video.addEventListener('playing', function () {
+    if (!videoPrimary || !isFlvUrl(audioSrcUrl)) return
     emitState(STATE_PLAYING)
   })
 
@@ -647,6 +759,14 @@
   video.addEventListener('error', function () {
     if (!videoPrimary) return
     var err = video.error
+    if (isFlvUrl(audioSrcUrl)) {
+      if (err && err.code === 4) {
+        failFlvSupport(sourceGeneration)
+      } else {
+        failFlv(sourceGeneration, 'flv_stream_error', (err && err.message) || 'HTTP-FLV playback error')
+      }
+      return
+    }
     emitState(STATE_ERROR)
     emitError(
       err ? 'MEDIA_ERR_' + err.code : 'unknown',
@@ -659,6 +779,8 @@
   var songloftAudio = {
     getSourceLoadVersion: function () { return 1 },
     load: function (url, opts) {
+      var keepFlvOpen = videoOpen && isFlvUrl(url || '') && url === audioSrcUrl
+      ++sourceGeneration
       if (videoPrimary) {
         releaseVideoSurface()
       }
@@ -681,18 +803,23 @@
         if (eqEnabled) connectEq()
         else disconnectEq()
       }
-      ++sourceGeneration
       sourceId = opts && opts.sourceId || null
-      pendingSourceLoad = sourceId ? {
-        positionMs: opts.initialPositionMs || 0,
-        autoplay: opts.autoplay === true,
+      pendingSourceLoad = sourceId || isFlvUrl(url || '') ? {
+        positionMs: (opts && opts.initialPositionMs) || 0,
+        autoplay: !!opts && opts.autoplay === true,
       } : null
       audio.currentTime = 0
       audio.src = ''
       audioSrcUrl = url || ''
       emitState(STATE_LOADING)
 
-      if (opts && opts.hls) {
+      if (isFlvUrl(audioSrcUrl)) {
+        loadFlv(audioSrcUrl)
+        if (keepFlvOpen) {
+          videoOpen = true
+          video.style.display = 'block'
+        }
+      } else if (opts && opts.hls) {
         loadHls(url)
       } else {
         audio.src = url
@@ -715,6 +842,19 @@
     },
 
     pause: function () {
+      if (isRadioHlsSession(audioSrcUrl)) {
+        songloftAudio.stop()
+        return
+      }
+      if (videoPrimary && isFlvUrl(audioSrcUrl)) {
+        var wasOpen = videoOpen
+        ++sourceGeneration
+        pendingSourceLoad = null
+        releaseVideoSurface()
+        videoOpen = wasOpen
+        emitState(STATE_PAUSED)
+        return
+      }
       if (pendingSourceLoad) pendingSourceLoad.autoplay = false
       if (videoPrimary) {
         video.pause()
@@ -805,6 +945,9 @@
     },
 
     dispose: function () {
+      ++sourceGeneration
+      pendingSourceLoad = null
+      if (videoPrimary) releaseVideoSurface()
       audioSrcUrl = ''
       cleanupHls()
       audio.pause()

@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 import { makeParsers, nowIso } from './_shared.js'
 
-const radioModeSchema = z.enum(['', 'hls', 'audio_only'])
+const radioModeSchema = z.enum(['', 'hls', 'flv', 'audio_only'])
 export type RadioMode = z.output<typeof radioModeSchema>
 
 /**

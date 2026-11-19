@@ -94,6 +94,10 @@ export function isHlsPlaylistPath(url: string): boolean {
   return path.toLowerCase().endsWith('.m3u8')
 }
 
+export function isFlvRadioPath(url?: string): boolean {
+  return url?.split(/[?#]/, 1)[0].toLowerCase().endsWith('/play.flv') ?? false
+}
+
 /** Append `media=video` (native player uses this to detect a video source). */
 export function appendMediaVideoParam(url: string): string {
   if (!url) return url

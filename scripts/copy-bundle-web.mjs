@@ -242,6 +242,12 @@ for (const name of HOST_SCRIPTS) {
   copyFileSync(src, resolve(DEST_BASE, name))
 }
 
+const mpegts = resolve(repoRoot, 'node_modules', 'mpegts.js')
+for (const name of ['mpegts.js', 'mpegts.js.LICENSE.txt']) {
+  copyFileSync(resolve(mpegts, 'dist', name), resolve(DEST_BASE, name))
+}
+copyFileSync(resolve(mpegts, 'LICENSE'), resolve(DEST_BASE, 'mpegts.LICENSE'))
+
 console.log(`[copy-bundle-web] Deployed to ${DEST_BASE}`)
 writeFileSync(
   resolve(DEST_BASE, '.songloft-web-output'),

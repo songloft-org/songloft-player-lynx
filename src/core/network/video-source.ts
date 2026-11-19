@@ -17,6 +17,7 @@
  */
 
 import type { Song } from '../../models/song.js'
+import { isFlvRadioPath } from './url-helper.js'
 
 export type VideoSourceKind = 'none' | 'direct' | 'hls'
 
@@ -71,10 +72,11 @@ const WEB_DIRECT = new Set(['m4a', 'mp4', 'm4v', 'mov', 'qt', '3gp', '3g2', 'web
  * 仅适用于本地文件，对直播流会返回 400（songloft-org/songloft#480）。
  */
 export function resolveVideoSourceKind(
-  song: Pick<Song, 'isVideo' | 'isLive' | 'type' | 'format'>,
+  song: Pick<Song, 'isVideo' | 'isLive' | 'type' | 'format'> & Partial<Pick<Song, 'url'>>,
   platform: 'web' | 'ios' | 'android' | 'harmony',
 ): VideoSourceKind {
   if (!song.isVideo) return 'none'
+  if (song.type === 'radio' && song.url && isFlvRadioPath(song.url)) return 'direct'
   // 视频电台/直播（HLS m3u8）由原生引擎直接解 HLS 视频轨，不走 /video-hls 转码
   // （该端点仅支持本地文件，对直播流会返回 400 — songloft-org/songloft#480）。
   // format 为空（电台常态）落到下方 `if (!format) return 'direct'`。

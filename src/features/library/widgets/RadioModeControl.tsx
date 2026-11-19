@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { RadioMode } from '../../../models/song.js'
 import { SegmentedControl } from '../../settings/widgets/SegmentedControl.js'
 
-const modes: readonly RadioMode[] = ['', 'hls', 'audio_only']
+const modes: readonly RadioMode[] = ['', 'hls', 'flv', 'audio_only']
 
 export function RadioModeControl({ value, onChange, labelClass }: {
   value: RadioMode
@@ -15,6 +15,7 @@ export function RadioModeControl({ value, onChange, labelClass }: {
     '': t('addSongs.radioModeAuto'),
     hls: 'HLS',
     audio_only: t('addSongs.radioModeAudioOnly'),
+    flv: 'HTTP-FLV',
   }
   return (
     <view>

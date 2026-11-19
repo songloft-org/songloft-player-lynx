@@ -84,6 +84,7 @@
     "@types/react": "^19.2.17",
     "@types/ws": "^8.18.1",
     "jsdom": "^27.4.0",
+    "mpegts.js": "1.8.2",
     "typescript": "~6.0.3",
     "vitest": "^3.2.4",
     "ws": "^8.21.2"

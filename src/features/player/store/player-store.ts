@@ -5,6 +5,7 @@ import {
   buildSongUrl,
   buildVideoHlsUrl,
   buildVideoUrl,
+  isFlvRadioPath,
   isHlsPlaylistPath,
 } from '../../../core/network/url-helper.js'
 import { getTranscodeFormat, normalizeFormat } from '../../../core/network/audio-format.js'
@@ -23,6 +24,7 @@ import {
 } from '../../../native/index.js'
 import { readNativeModules } from '../../../native/native-modules.js'
 import { getPlatformTarget } from '../../../native/platform-target.js'
+import { createRadioHlsSession, type RadioHlsSession } from '../data/radio-hls-api.js'
 import { getVideoModule, type ScaleMode } from '../../../native/video.js'
 import { cancelSourceLoad, loadAudioSource, SourceLoadCancelled } from '../../../native/source-load.js'
 import { getFavoriteState, toggleFavoriteNonReact } from '../../library/data/favorites.js'
@@ -193,9 +195,20 @@ let _awaitingPlayback: { song: Song; generation: number } | null = null
 // pending report across that reload, then consume it once playback starts.
 let _playEventPending = false
 let _trackPlayIntent: boolean | null = null
+let _flvPlayback: {
+  songId: number
+  useHls: boolean
+  controller?: AbortController
+  request?: Promise<RadioHlsSession>
+  session?: RadioHlsSession
+} | null = null
 
 function invalidateSourceLoad(): number {
   ++_loadGeneration
+  const flv = _flvPlayback
+  _flvPlayback = null
+  flv?.controller?.abort()
+  void flv?.session?.close().catch(() => {})
   _awaitingPlayback = null
   _playEventPending = false
   cancelSourceLoad(audio)
@@ -421,6 +434,10 @@ interface PlaybackSource {
  */
 function playbackSourceFor(song: Song): PlaybackSource {
   if (!song.url) return { url: '', hls: false, cached: false }
+  if (song.type === 'radio' && isFlvRadioPath(song.url)) {
+    const session = _flvPlayback?.songId === song.id ? _flvPlayback.session : undefined
+    return { url: session?.playbackUrl() ?? buildVideoUrl(song.url), hls: session != null, cached: false }
+  }
   const state = usePlayerStore.getState()
   const track = state.currentSong?.id === song.id
     ? state.audioTrackPending !== undefined ? state.audioTrackPending : state.audioTrack
@@ -459,6 +476,7 @@ async function resolvePlaybackSource(song: Song): Promise<PlaybackSource> {
     return { url: entry.url, hls: false, cached: true }
   }
   const state = usePlayerStore.getState()
+  if (song.type === 'radio' && isFlvRadioPath(song.url)) return playbackSourceFor(song)
   const indexed = indexedSongCacheAvailable()
   if (!indexed && state.currentSong?.id === song.id && (state.audioTrackPending !== undefined || state.audioTrack != null)) {
     return playbackSourceFor(song)
@@ -466,6 +484,45 @@ async function resolvePlaybackSource(song: Song): Promise<PlaybackSource> {
   const cached = await (indexed ? getIndexedCachedPath(song, currentCacheVariant(song)) : getCachedPath(song.id)).catch(() => null)
   if (cached) return { url: cached, hls: false, cached: true }
   return playbackSourceFor(song)
+}
+
+// Queue metadata can resolve URLs, but only the active playback request may
+// allocate a live HLS session.
+async function resolveActivePlaybackSource(song: Song, generation: number): Promise<PlaybackSource> {
+  const source = await resolvePlaybackSource(song)
+  if (generation !== _loadGeneration || source.cached || song.type !== 'radio' || !isFlvRadioPath(song.url)) return source
+  const playback = _flvPlayback ??= {
+    songId: song.id,
+    useHls: getPlatformTarget() === 'ios',
+  }
+  if (!playback.useHls || playback.session) return source
+  if (!playback.request) {
+    const controller = playback.controller = new AbortController()
+    playback.request = (async () => {
+      await audio.stop()
+      if (generation !== _loadGeneration) throw new SourceLoadCancelled()
+      const session = await createRadioHlsSession(song.id, controller.signal)
+      if (generation !== _loadGeneration) {
+        void session.close().catch(() => {})
+        throw new SourceLoadCancelled()
+      }
+      playback.session = session
+      return session
+    })()
+  }
+  const session = await playback.request
+  return { url: session.playbackUrl(), hls: true, cached: false }
+}
+
+function stopFailedFlvHls(error: unknown): void {
+  cancelRetry()
+  invalidateSourceLoad()
+  _loadedSongId = null
+  void audio.stop()
+  usePlayerStore.setState({
+    isPlaying: false, isBuffering: false,
+    errorMessage: error instanceof Error ? error.message : String(error),
+  })
 }
 
 /**
@@ -690,8 +747,12 @@ function scheduleRetry(song: Song, { positionMs, autoplay }: { positionMs: numbe
     if (song.isLive) { _liveRetryInFlight = true; _liveRetryNeeded = false }
     usePlayerStore.setState({ errorMessage: undefined, isBuffering: true })
     void (async () => {
-      const retrySource = await resolvePlaybackSource(song)
+      const retrySource = await resolveActivePlaybackSource(song, generation)
       if (generation !== _loadGeneration) return
+      if (retrySource.hls && _flvPlayback?.session) {
+        await syncQueueWindow(usePlayerStore.getState().playlist, usePlayerStore.getState().currentIndex)
+        if (generation !== _loadGeneration) return
+      }
       _loadedSongId = song.id
       _loadedSourceKind = retrySource.cached ? 'cache' : 'stream'
       const load = { durationMs: durationMsOf(song), hls: retrySource.hls }
@@ -710,6 +771,10 @@ function scheduleRetry(song: Song, { positionMs, autoplay }: { positionMs: numbe
       }
     })().catch((error: unknown) => {
       if (generation !== _loadGeneration || error instanceof SourceLoadCancelled) return
+      if (_flvPlayback?.useHls && !_flvPlayback.session) {
+        stopFailedFlvHls(error)
+        return
+      }
       if (song.isLive) { _liveRetryNeeded = true; return }
       usePlayerStore.setState({ isPlaying: false, isBuffering: false,
         errorMessage: error instanceof Error ? error.message : String(error) })
@@ -760,7 +825,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         return
       }
       let source: PlaybackSource
-      try { source = await resolvePlaybackSource(song) }
+      try { source = await resolveActivePlaybackSource(song, generation) }
       catch (error) {
         if (generation === _loadGeneration && cachedSongIdentity(song)) {
           await audio.stop()
@@ -795,6 +860,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       if (cachedSongIdentity(song)) void audio.setFavorite(false)
       else syncFavoriteToNative(song.id)
     } catch (error) {
+      if (generation !== _loadGeneration && song.type === 'radio' && isFlvRadioPath(song.url)) return
+      if (generation === _loadGeneration && _flvPlayback?.useHls && !_flvPlayback.session) {
+        stopFailedFlvHls(error)
+        return
+      }
       if (generation === _loadGeneration && song.isLive && _livePlayIntent) {
         scheduleRetry(song, { positionMs: 0, autoplay: true })
         return
@@ -1393,8 +1463,9 @@ audio.on('progress', (e) => {
   ) {
     _prefetchedForIndex = s.currentIndex
     const nextIdx = _navigation.peekNext(s.currentIndex, s.playlist.length)
-    if (nextIdx != null && s.playlist[nextIdx] && !cachedSongIdentity(s.playlist[nextIdx])) {
-      const url = songUrl(s.playlist[nextIdx])
+    const nextSong = nextIdx == null ? undefined : s.playlist[nextIdx]
+    if (nextSong && !isFlvRadioPath(nextSong.url) && !cachedSongIdentity(nextSong)) {
+      const url = songUrl(nextSong)
       if (url) {
         // Small Range GET rather than HEAD: HEAD/GET are keyed separately in
         // OkHttp's response cache, so the subsequent GET the audio engine
@@ -1464,6 +1535,17 @@ audio.on('error', (e) => {
   if (useDlnaStore.getState().activeDevice) return
   const { currentSong, currentTime, isPlaying } = usePlayerStore.getState()
   if (currentSong?.isLive) {
+    if (_livePlayIntent && _flvPlayback?.songId === currentSong.id) {
+      if (e.code === 'flv_playback_unsupported') {
+        stopFailedFlvHls(e.message)
+        return
+      }
+      if (!_flvPlayback.useHls && (e.code === 'flv_needs_hls' || e.code === 'ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED')) {
+        _flvPlayback.useHls = true
+        clearRetryTimer()
+        _retryCount = 0
+      }
+    }
     if (_livePlayIntent) scheduleRetry(currentSong, { positionMs: 0, autoplay: true })
     return
   }
@@ -1829,6 +1911,10 @@ export async function restorePlaybackState(): Promise<void> {
   _navigation.reset(usePlayerStore.getState().playMode)
   syncNavigation()
   if (autoResume && (song.url || local)) {
+    if (song.type === 'radio' && isFlvRadioPath(song.url)) {
+      await usePlayerStore.getState().playQueueIndex(saved.currentIndex)
+      return
+    }
     // Use the shared `toAudioItem`/`durationMsOf` rather than re-inlining the
     // mapping: this path used to carry its own copy, which silently omitted any
     // field added to the queue item (it missed `artworkUrl` on arrival).
