@@ -476,9 +476,12 @@
   var eqEnabled = false
   var eqGains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-  function ensureEqContext() {
+  var pluginEqGains = null
+  var pluginEqGeneration = 0
+
+  function ensureEqContext(context) {
     if (eqContext) return
-    var ctx = new AudioContext()
+    var ctx = context || new AudioContext()
     eqContext = ctx
     eqSource = ctx.createMediaElementSource(audio)
 
@@ -488,7 +491,7 @@
       filter.type = EQ_TYPES[i]
       filter.frequency.value = EQ_FREQS[i]
       filter.Q.value = 1
-      filter.gain.value = eqGains[i]
+      filter.gain.value = (pluginEqGains || eqGains)[i]
       eqFilters.push(filter)
     }
     // Start bypassed (direct to destination)
@@ -513,6 +516,49 @@
       try { eqFilters[i].disconnect() } catch (_) {}
     }
     eqSource.connect(eqContext.destination)
+  }
+
+  function renderEqualizer() {
+    var gains = pluginEqGains || eqGains
+    for (var i = 0; i < eqFilters.length; i++) eqFilters[i].gain.value = gains[i]
+    disconnectEq()
+    if (pluginEqGains || eqEnabled) connectEq()
+  }
+
+  async function setPluginEqualizer(profile) {
+    var generation = ++pluginEqGeneration
+    if (profile === '') {
+      pluginEqGains = null
+      renderEqualizer()
+      return true
+    }
+    if (typeof AudioContext !== 'function' || videoPrimary) return false
+    var context = eqContext
+    var timer
+    try {
+      var gains = JSON.parse(profile).gains
+      if (!Array.isArray(gains) || gains.length !== EQ_FREQS.length ||
+          gains.some(function (gain) { return !Number.isFinite(gain) || gain < -12 || gain > 12 })) return false
+      context = context || new AudioContext()
+      // Do not intercept the media element before the browser allows the graph
+      // to run. A blocked resume must leave the current output audible.
+      if (context.state !== 'running') {
+        await Promise.race([
+          context.resume(),
+          new Promise(function (resolve) { timer = setTimeout(resolve, 1500) }),
+        ])
+      }
+      if (context.state !== 'running' || generation !== pluginEqGeneration || videoPrimary) return false
+      ensureEqContext(context)
+      pluginEqGains = gains
+      renderEqualizer()
+      return true
+    } catch (_) {
+      return false
+    } finally {
+      clearTimeout(timer)
+      if (context && context !== eqContext) void context.close().catch(function () {})
+    }
   }
 
   // ── MediaSession ──
@@ -800,8 +846,7 @@
       if (eqContext) {
         try { eqSource.disconnect() } catch (_) {}
         eqSource = eqContext.createMediaElementSource(audio)
-        if (eqEnabled) connectEq()
-        else disconnectEq()
+        renderEqualizer()
       }
       sourceId = opts && opts.sourceId || null
       pendingSourceLoad = sourceId || isFlvUrl(url || '') ? {
@@ -921,21 +966,23 @@
 
     setEqualizerEnabled: function (on) {
       eqEnabled = on
-      ensureEqContext()
-      if (on) {
-        connectEq()
-      } else {
-        disconnectEq()
-      }
+      if (on) ensureEqContext()
+      renderEqualizer()
     },
 
     setEqualizerBand: function (index, gainDb) {
       if (index < 0 || index >= 10) return
       eqGains[index] = gainDb
-      if (eqFilters[index]) {
+      if (!pluginEqGains && eqFilters[index]) {
         eqFilters[index].gain.value = gainDb
       }
     },
+
+    getPluginEqualizerAvailable: function () {
+      return typeof AudioContext === 'function' && !videoPrimary
+    },
+
+    setPluginEqualizer: setPluginEqualizer,
 
     // Native platforms paint the now-playing lyric in the OS notification; Web has
     // no such surface. No-op to match the no-op Web facade in `web-audio.ts`.
@@ -1200,6 +1247,22 @@
     },
     openURL: function (args) {
       songloftPlatform.openURL(args[0])
+    },
+    openExternalURL: function (args) {
+      var popup
+      try {
+        var url = new URL(args[0])
+        if ((url.protocol !== 'http:' && url.protocol !== 'https:') || !url.hostname)
+          return { error: 'invalid external URL' }
+        popup = window.open('about:blank', '_blank')
+        if (!popup) return { error: 'external URL popup was blocked' }
+        popup.opener = null
+        popup.location.replace(url.href)
+        return { error: null }
+      } catch (_) {
+        if (popup) popup.close()
+        return { error: 'could not open external URL' }
+      }
     },
     setClipboard: function (args) {
       songloftPlatform.setClipboard(args[0])

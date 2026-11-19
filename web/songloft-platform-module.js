@@ -41,6 +41,13 @@ export default function (_nativeModules, call) {
       void call('openURL', [url])
     },
 
+    openExternalURL(url, callback) {
+      call('openExternalURL', [url]).then(
+        result => callback(result?.error === null ? null : result?.error || 'could not open external URL'),
+        () => callback('could not open external URL'),
+      )
+    },
+
     setClipboard(text) {
       void call('setClipboard', [text]).catch(() => {})
     },

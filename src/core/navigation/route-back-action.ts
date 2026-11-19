@@ -8,13 +8,14 @@
  * The router is **injected**: `router.tsx` imports every page, and pages reach this
  * module, so a static import would close that loop.
  */
+import type { HistoryState } from '@tanstack/react-router'
 import { getLastLibrarySearch } from '../../features/library/data/last-library-search.js'
 import { isLibraryViewKey } from '../../features/library/domain/library-views.js'
 import {
   getLastShellLocation,
   getNavPaths,
 } from '../../shared/nav/shell-navigation.js'
-import { resolveRouteBack, type BackAction } from '../../shared/nav/route-back.js'
+import { resolveRouteBack, type BackAction, type PluginRouteLocation } from '../../shared/nav/route-back.js'
 // `import type` of a *value* binding: erased at compile time, so the route tree is
 // not imported at runtime and the cycle above never forms. Deliberately not
 // `typeof import('…')` — `device-host-contract.test.ts` bans `import(` in `src/`,
@@ -34,6 +35,33 @@ export function getBackRouter(): AppRouter | null {
   return appRouter
 }
 
+interface VideoRouteState extends HistoryState {
+  videoReturnPlugin?: PluginRouteLocation
+}
+
+export function preparePluginVideoRoute(entryPath: string) {
+  const router = appRouter
+  const location = router?.state.location
+  if (!router || !location || !entryPath ||
+      decodeURIComponent(location.pathname) !== `/plugin/${entryPath}`) return undefined
+
+  const search = location.search as PluginRouteLocation['search']
+  const videoReturnPlugin: PluginRouteLocation = {
+    entryPath,
+    search: {
+      ...(search.tab === true ? { tab: true } : {}),
+      ...(search.from === 'manager' ? { from: 'manager' } : {}),
+    },
+  }
+  return {
+    isCurrent: () => router.state.location === location,
+    open: () => router.navigate({
+      to: '/player/video',
+      state: (): VideoRouteState => ({ videoReturnPlugin }),
+    }),
+  }
+}
+
 /** What back would do from where the router currently is. */
 export function currentBackAction(): BackAction | null {
   const router = appRouter
@@ -41,6 +69,7 @@ export function currentBackAction(): BackAction | null {
   const location = router.state.location
   return resolveRouteBack(location.pathname, {
     navPaths: getNavPaths(),
+    videoReturnPlugin: (location.state as VideoRouteState | undefined)?.videoReturnPlugin,
     // A plugin page entered through its nav tab (`?tab=true`) is a tab root;
     // the same pathname pushed from the grid / manager is a sub-page. See
     // `RouteBackContext.pluginTabEntry`.
@@ -66,6 +95,15 @@ function navigateTo(
   router: AppRouter,
   action: Extract<BackAction, { kind: 'navigate' | 'fallback' }>,
 ): void {
+  if (action.kind === 'navigate' && action.plugin) {
+    void router.navigate({
+      to: '/plugin/$entryPath',
+      params: { entryPath: action.plugin.entryPath },
+      search: action.plugin.search,
+      replace: true,
+    })
+    return
+  }
   if (action.to === '/library') {
     const view = 'librarySearch' in action ? action.librarySearch?.view : undefined
     void router.navigate({

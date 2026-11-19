@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { parseSong } from '../../../models/song.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import { handlePluginHostCall, playerStateToJson, pluginPlayerStateChanged, type PluginHostContext } from '../domain/plugin-host-dispatch.js'
+import { createPluginReplyGate } from '../domain/plugin-host-reply.js'
 import { pluginHostContext } from '../domain/plugin-host-context.js'
 
 const h = vi.hoisted(() => ({ playlist: vi.fn(), favorite: vi.fn() }))
@@ -204,6 +205,73 @@ test('Android effects follow the owning plugin queue, clear without stopping, an
     await ownedCall('setPlayMode', { mode: 'singlePlay' })
     usePlayerStore.getState()._onCompleted()
     expect(await ownedCall('getAudioEffects')).toMatchObject({ data: { playbackId: null } })
+  } finally {
+    vi.unstubAllGlobals()
+  }
+})
+
+test('the external URL call waits for the OS handoff and reports unsupported and invalid URLs', async () => {
+  const url = 'https://example.com/search?q=MV'
+  let complete!: () => void
+  const open = vi.fn(() => new Promise<void>((resolve) => { complete = resolve }))
+  const request = (value: string) => ({ ns: 'plugin', method: 'openUrl', params: { url: value } })
+  const android = { ...ctx, confirmedPluginOpenUrl: open, isPluginActive: () => true }
+  expect(await handlePluginHostCall(request('https:///bad'), android)).toMatchObject({ ok: false })
+  expect(await handlePluginHostCall(request('file:///video.mp4'), android)).toMatchObject({ ok: false })
+  expect(await handlePluginHostCall(request(url), ctx)).toMatchObject({ ok: false })
+  expect(open).not.toHaveBeenCalled()
+
+  const settled = vi.fn()
+  const result = handlePluginHostCall(request(url), android).then(settled)
+  expect(open).toHaveBeenCalledWith(url)
+  expect(settled).not.toHaveBeenCalled()
+  complete()
+  await result
+  expect(settled).toHaveBeenCalledWith({ ok: true, data: null })
+
+  open.mockRejectedValueOnce(new Error('could not open external URL'))
+  expect(await handlePluginHostCall(request(url), android))
+    .toEqual({ ok: false, error: 'could not open external URL' })
+})
+
+test('fullscreen waits for the correlated plugin receipt and preserves the current video position', async () => {
+  vi.stubGlobal('SystemInfo', { platform: 'Android' })
+  vi.stubGlobal('NativeModules', { SongloftVideo: {} })
+  const video = parseSong({
+    id: 5, type: 'remote', title: 'MV', is_video: true, format: 'mp4', duration: 60,
+    url: '/api/v1/songs/5/play',
+  })
+  const open = vi.fn(async () => {})
+  const resolveSongs = vi.fn(async () => [video])
+  const android = {
+    ...ctx, pluginEntryPath: 'mv', isPluginActive: () => true, resolveSongs,
+    preparePluginVideo: () => ({ isCurrent: () => true, open }),
+  }
+  const request = { ns: 'player', method: 'openVideo', params: { id: 5, __songloftReplyAck: true } }
+  try {
+    const store = usePlayerStore.getState()
+    await store.playSong(video)
+    await store.seek(12300)
+    const reply = await handlePluginHostCall(request, android)
+    const gate = createPluginReplyGate()
+    expect(gate.stage('open-1', reply)).toEqual({ ok: true, data: null, acknowledge: true })
+    gate.confirm('open-unknown')
+    await Promise.resolve()
+    expect(open).not.toHaveBeenCalled()
+    gate.confirm('open-1')
+    gate.confirm('open-1')
+    await Promise.resolve()
+    expect(open).toHaveBeenCalledExactlyOnceWith()
+    expect(usePlayerStore.getState().currentTime).toBe(12300)
+
+    const obsolete = await handlePluginHostCall(request, {
+      ...android, preparePluginVideo: () => ({ isCurrent: () => true, open }),
+    })
+    gate.stage('open-2', obsolete)
+    gate.clear()
+    gate.confirm('open-2')
+    await Promise.resolve()
+    expect(open).toHaveBeenCalledTimes(1)
   } finally {
     vi.unstubAllGlobals()
   }

@@ -1,6 +1,7 @@
 import AVFoundation
 import AudioToolbox
 import MediaToolbox
+import Foundation
 
 /**
  * 10-band parametric equalizer using `MTAudioProcessingTap` + Apple's built-in
@@ -16,6 +17,7 @@ final class AudioEqualizer {
   private(set) var audioUnit: AudioUnit?
   private var enabled = false
   private var pendingGains: [Int: Float] = [:]
+  private var pluginGains: [Float]?
 
   init() {
     createAudioUnit()
@@ -32,7 +34,7 @@ final class AudioEqualizer {
 
   func setEnabled(_ on: Bool) {
     enabled = on
-    guard let au = audioUnit else { return }
+    guard pluginGains == nil, let au = audioUnit else { return }
     if on {
       for (band, gain) in pendingGains {
         applyGain(au, band: band, gain: gain)
@@ -47,8 +49,39 @@ final class AudioEqualizer {
   func setBand(_ index: Int, gain: Float) {
     let clamped = min(max(gain, -12), 12)
     pendingGains[index] = clamped
-    guard enabled, let au = audioUnit else { return }
+    guard enabled, pluginGains == nil, let au = audioUnit else { return }
     applyGain(au, band: index, gain: clamped)
+  }
+
+  func setPluginProfile(_ raw: String) -> Bool {
+    let gains: [Float]?
+    if raw.isEmpty {
+      gains = nil
+    } else {
+      guard let data = raw.data(using: .utf8),
+        let profile = try? JSONDecoder().decode(PluginProfile.self, from: data),
+        profile.gains.count == Self.bandCount,
+        profile.gains.allSatisfy({ $0.isFinite && (-12...12).contains($0) })
+      else { return false }
+      gains = profile.gains
+    }
+    guard let au = audioUnit else { return gains == nil }
+    for i in 0..<Self.bandCount {
+      let gain = gains?[i] ?? (enabled ? pendingGains[i] ?? 0 : 0)
+      guard applyGain(au, band: i, gain: gain) else {
+        for index in 0..<Self.bandCount {
+          let previous = pluginGains?[index] ?? (enabled ? pendingGains[index] ?? 0 : 0)
+          applyGain(au, band: index, gain: previous)
+        }
+        return false
+      }
+    }
+    pluginGains = gains
+    return true
+  }
+
+  private struct PluginProfile: Decodable {
+    let gains: [Float]
   }
 
   /// The caller asynchronously loads this track before entering the main thread.
@@ -111,10 +144,11 @@ final class AudioEqualizer {
     audioUnit = au
   }
 
-  private func applyGain(_ au: AudioUnit, band: Int, gain: Float) {
-    guard band >= 0 && band < Self.bandCount else { return }
-    AudioUnitSetParameter(au, AudioUnitParameterID(kAUNBandEQParam_Gain + UInt32(band * 20)),
-                          kAudioUnitScope_Global, 0, gain, 0)
+  @discardableResult
+  private func applyGain(_ au: AudioUnit, band: Int, gain: Float) -> Bool {
+    guard band >= 0 && band < Self.bandCount else { return false }
+    return AudioUnitSetParameter(au, AudioUnitParameterID(kAUNBandEQParam_Gain + UInt32(band * 20)),
+                                 kAudioUnitScope_Global, 0, gain, 0) == noErr
   }
 
   /// Context passed through the tap's storage pointer.

@@ -51,6 +51,10 @@ final class SongloftAudioModule: NSObject, LynxContextModule {
         NSStringFromSelector(#selector(SongloftAudioModule.setEqualizerEnabled(_:))),
       "setEqualizerBand":
         NSStringFromSelector(#selector(SongloftAudioModule.setEqualizerBand(_:gainDb:))),
+      "getPluginEqualizerAvailable":
+        NSStringFromSelector(#selector(SongloftAudioModule.getPluginEqualizerAvailable(_:))),
+      "setPluginEqualizer":
+        NSStringFromSelector(#selector(SongloftAudioModule.setPluginEqualizer(_:callback:))),
       "updateNotificationLyric":
         NSStringFromSelector(#selector(SongloftAudioModule.updateNotificationLyric(_:))),
       "updateNotificationLyricWithLayout":
@@ -218,6 +222,20 @@ final class SongloftAudioModule: NSObject, LynxContextModule {
   @objc func setEqualizerBand(_ index: Double, gainDb: Double) {
     let engine = SongloftAudioEngine.shared
     engine.runOnMain { engine.equalizer.setBand(Int(index), gain: Float(gainDb)) }
+  }
+
+  @objc func getPluginEqualizerAvailable(_ callback: @escaping LynxCallbackBlock) {
+    let engine = SongloftAudioEngine.shared
+    engine.runOnMain { callback([engine.pluginEqualizerAvailable] as NSArray) }
+  }
+
+  @objc func setPluginEqualizer(_ profile: String, callback: @escaping LynxCallbackBlock) {
+    let engine = SongloftAudioEngine.shared
+    engine.runOnMain {
+      let applied = (profile.isEmpty || engine.pluginEqualizerAvailable) &&
+        engine.equalizer.setPluginProfile(profile)
+      callback([applied] as NSArray)
+    }
   }
 
   // MARK: - Lifecycle

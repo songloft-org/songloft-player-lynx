@@ -29,6 +29,7 @@ import {
   playerStateToJson,
   pluginPlayerStateChanged,
 } from '../domain/plugin-host-dispatch.js'
+import { createPluginReplyGate, HOST_REPLY_RECEIVED } from '../domain/plugin-host-reply.js'
 import { pluginHostContext as hostContext } from '../domain/plugin-host-context.js'
 import { pluginSocketRequest } from '../domain/plugin-socket.js'
 import { pluginApiRequest } from '../domain/plugin-api-request.js'
@@ -262,20 +263,30 @@ export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
       entryPath,
     )
     let active = true
+    const replies = createPluginReplyGate()
+    const callerContext = {
+      ...frameContext,
+      pluginEntryPath: entryPath,
+      isPluginActive: () => active && activeRef.current,
+    }
 
     // Handle host calls from the child frame
     setLynxFrameBridgeHandlers({
       onMessage: (payload: LynxFrameHostCallPayload) => {
         if (!active || payload.frameId !== frameId) return
+        if (payload.ns === 'lifecycle' && payload.method === HOST_REPLY_RECEIVED) {
+          replies.confirm(payload.callId)
+          return
+        }
         try {
           const req = {
             ns: payload.ns,
             method: payload.method,
             params: JSON.parse(payload.params || '{}'),
           }
-          void handlePluginHostCall(req, frameContext)
+          void handlePluginHostCall(req, callerContext)
             .then((result) => {
-              if (active) mod.hostReply(payload.callId, JSON.stringify(result))
+              if (active) mod.hostReply(payload.callId, JSON.stringify(replies.stage(payload.callId, result)))
             })
             .catch(() => {
               if (active)
@@ -295,6 +306,7 @@ export function LynxPluginFrame({ entryPath, isTabEntry, active }: Props) {
 
     return () => {
       active = false
+      replies.clear()
       setLynxFrameBridgeHandlers(null)
       /*
        * `hide`, not `close`. Detaching the child <lynx-view> on every tab switch

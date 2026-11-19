@@ -20,6 +20,7 @@ export class DesktopPlayer extends EventEmitter {
   #deadline = 0
   #eq = false
   #bands = frequencies.map(() => 0)
+  #pluginBands = null
   #metadata = {}
   constructor({ native, network, media = null }) {
     super()
@@ -141,6 +142,17 @@ export class DesktopPlayer extends EventEmitter {
         this.#metadata.speed = finite(value, 0.5, 3)
         this.native.player('set', 'speed', String(finite(value, 0.5, 3)))
         break
+      case 'pluginEqualizerAvailable':
+        return true
+      case 'pluginEqualizer': {
+        const gains = value === '' ? null : JSON.parse(value).gains
+        if (gains !== null && (!Array.isArray(gains) || gains.length !== frequencies.length ||
+          gains.some((gain) => typeof gain !== 'number' || !Number.isFinite(gain) || gain < -12 || gain > 12)))
+          throw new Error('Invalid plugin equalizer profile')
+        this.#applyEq(gains)
+        this.#pluginBands = gains
+        break
+      }
       case 'equalizerEnabled':
         this.#eq = value === true
         this.#applyEq()
@@ -174,12 +186,13 @@ export class DesktopPlayer extends EventEmitter {
     }
     return null
   }
-  #applyEq() {
-    const filters = this.#eq
+  #applyEq(pluginBands = this.#pluginBands) {
+    const bands = pluginBands ?? this.#bands
+    const filters = pluginBands !== null || this.#eq
       ? frequencies
           .map(
             (frequency, index) =>
-              `equalizer=f=${frequency}:t=o:w=1:g=${this.#bands[index]}`,
+              `equalizer=f=${frequency}:t=o:w=1:g=${bands[index]}`,
           )
           .join(',')
       : ''

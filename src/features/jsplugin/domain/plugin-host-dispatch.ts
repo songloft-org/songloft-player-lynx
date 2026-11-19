@@ -1,3 +1,6 @@
+import type { preparePluginVideoRoute } from '../../../core/navigation/route-back-action.js'
+import { canWatchVideo } from '../../player/data/video-open.js'
+import type { PluginHostReply } from './plugin-host-reply.js'
 import { songToJson, type Song } from '../../../models/song.js'
 import { playModes, type PlayMode } from '../../player/domain/play-mode.js'
 import { playlistContext } from '../../player/domain/playback-context.js'
@@ -22,13 +25,16 @@ export interface HostCallResult {
   ok: boolean
   data?: unknown
   error?: string
+  acknowledge?: true
 }
 
 export interface PluginHostContext {
   pluginEntryPath?: string
   isPluginActive?: () => boolean
   pluginNavigation?: (method: string, params: Record<string, unknown>) => void
-  pluginOpenUrl?: (url: string) => void
+  pluginOpenUrl?: (url: string) => void | Promise<void>
+  confirmedPluginOpenUrl?: (url: string) => Promise<void>
+  preparePluginVideo?: typeof preparePluginVideoRoute
   pluginResourceUrl?: (path: string) => Promise<string>
   pluginSocketRequest?: (
     method: string,
@@ -113,7 +119,7 @@ async function dispatchPlayer(
   ctx: PluginHostContext,
 ): Promise<unknown> {
   const store = usePlayerStore.getState()
-  const localAudio = () => ctx.platform === 'android' && !useDlnaStore.getState().activeDevice
+  const localAudio = () => !useDlnaStore.getState().activeDevice
   const canWriteEffects = () => localAudio() && ctx.isPluginActive?.() === true
   const pluginPlayback = () => {
     if (!localAudio() || !hasPluginAudioEffects() || !ctx.pluginEntryPath) return undefined
@@ -260,7 +266,7 @@ async function dispatchPlayer(
 export async function handlePluginHostCall(
   req: HostCallRequest,
   ctx: PluginHostContext,
-): Promise<HostCallResult> {
+): Promise<PluginHostReply> {
   try {
     if (!req || typeof req !== 'object') throw new Error('invalid request')
     const { ns, method } = req
@@ -277,13 +283,14 @@ export async function handlePluginHostCall(
       return { ok: true, data: null }
     }
     if (ns === 'plugin' && method === 'openUrl') {
-      if (
-        typeof params.url !== 'string' ||
-        !/^https?:\/\//i.test(params.url) ||
-        !ctx.pluginOpenUrl
-      )
+      const url = params.url
+      if (typeof url !== 'string' || !/^https?:\/\/[^\s\\/?#]+(?:[/?#]|$)/i.test(url) ||
+          /[\s\\\u0000-\u001f\u007f]/.test(url))
         throw new Error('invalid external URL')
-      ctx.pluginOpenUrl(params.url)
+      const open = ctx.confirmedPluginOpenUrl ?? ctx.pluginOpenUrl
+      if (!open) throw new Error('external URLs are unavailable')
+      if (ctx.isPluginActive?.() === false) throw new Error('plugin page is no longer active')
+      await open(url)
       return { ok: true, data: null }
     }
     if (ns === 'plugin' && method === 'resourceUrl') {
@@ -312,13 +319,48 @@ export async function handlePluginHostCall(
           data: {
             version: ctx.version,
             platform: ctx.platform,
-            capabilities: ctx.platform === 'android' && hasPluginAudioEffects()
-              ? ['player', 'player.audioEffects']
-              : ['player'],
+            capabilities: [
+              'player',
+              ...(hasPluginAudioEffects() ? ['player.audioEffects'] : []),
+              ...(ctx.confirmedPluginOpenUrl ? ['plugin.openUrl'] : []),
+              ...(ctx.preparePluginVideo ? ['player.openVideo'] : []),
+            ],
           },
         }
       }
       throw new Error(`unknown host method: ${method}`)
+    }
+
+    if (ns === 'player' && method === 'openVideo') {
+      const id = integerParam(params, 'id')
+      if (id <= 0) throw new Error('id must be a positive integer')
+      const route = ctx.preparePluginVideo?.(ctx.pluginEntryPath ?? '')
+      const isCurrent = () => route?.isCurrent() && ctx.isPluginActive?.() === true
+      if (!route || !isCurrent() || useDlnaStore.getState().activeDevice)
+        throw new Error('fullscreen video is unavailable')
+      if (params.__songloftReplyAck !== true)
+        throw new Error('fullscreen video requires an updated plugin SDK bridge')
+
+      const [song] = await ctx.resolveSongs([id])
+      if (!song) throw new Error('song not found')
+      if (!canWatchVideo(song)) throw new Error('video is unavailable for this song')
+      if (!isCurrent() || useDlnaStore.getState().activeDevice)
+        throw new Error('fullscreen video is unavailable')
+      return {
+        ok: true,
+        data: null,
+        afterReply: async () => {
+          if (!isCurrent() || useDlnaStore.getState().activeDevice) return
+          const player = usePlayerStore.getState()
+          if (player.currentSong?.id !== song.id) {
+            await player.playSong(song)
+          } else if (!player.isPlaying && !player.isBuffering) {
+            await player.togglePlay()
+          }
+          if (isCurrent() && usePlayerStore.getState().currentSong?.id === song.id &&
+              !useDlnaStore.getState().activeDevice) await route.open()
+        },
+      }
     }
 
     if (ns === 'player') {

@@ -6,7 +6,7 @@ HTML plugins use `@songloft/client-sdk` / `window.SongloftPlugin`; native Lynx p
 
 | Namespace | Method | Behavior / return value |
 |---|---|---|
-| `host` | `getInfo` | Actual client version, `android/ios/harmony/web` platform and capabilities |
+| `host` | `getInfo` | Actual client version, `android/ios/harmony/macos/windows/web` platform and capabilities |
 | `player` | `getState` | Complete songs in snake_case JSON; position/duration in seconds, volume 0–100 |
 | `player` | `setQueue` | Resolve `ids`, skip unavailable songs, start at `startIndex`, retain optional `sourcePlaylistId` |
 | `player` | `addToQueue` | Append with ID/type deduplication without changing playback |
@@ -25,9 +25,35 @@ HTML plugins use `@songloft/client-sdk` / `window.SongloftPlugin`; native Lynx p
 
 Incremental favorite notifications cancel older queries before updating the cache. Cold caches load the full set rather than treating one song's notification as the entire favorites collection.
 
+## Lynx platform support
+
+| Platform | External links | Fullscreen library video | Query, apply and clear EQ | Verification |
+|---|---|---|---|---|
+| Android | Supported | Supported | Supported via the system equalizer | Verified on an Android 14 emulator |
+| iOS | Supported | Supported | Supported for file-based media. HLS is unsupported. | Native package verification pending |
+| HarmonyOS | Supported | Supported | EQ is unsupported. Queries return `supported: {}`. | Native package verification pending |
+| macOS | Supported | Supported | Supported via libmpv | Shared desktop host EQ tests passed. Native package verification pending. |
+| Windows | Supported | Supported | Supported via libmpv | Shared desktop host EQ tests passed. Native package verification pending. |
+| Web | Supported from a user click | Supported in the host video page | Supported when the current output uses Web Audio | Verified in Chromium |
+
+Use `host.getInfo().capabilities` to check which APIs the current host provides and `getAudioEffects().supported` to check the presets available on the current audio output. Casting disables plugin EQ and fullscreen playback requests. Plugin reverb is pending on all platforms.
+
+## Plugin external links and fullscreen video
+
+Check `host.getInfo().capabilities` before displaying either control.
+
+| Capability | WebView SDK | Native Lynx SDK |
+|---|---|---|
+| `plugin.openUrl` | `host.openExternalUrl(url)` | `invokeHost('plugin', 'openUrl', { url })` |
+| `player.openVideo` | `player.openVideo({ id })` | `invokeHost('player', 'openVideo', { id })` |
+
+External links accept absolute HTTP and HTTPS URLs. Success means the system accepted the request. An unavailable handler or blocked browser popup returns an error. Trigger browser links from a user click. Fullscreen video accepts a library entry ID with a video track. An already loaded entry retains its position and resumes if paused. A different entry follows the host's Watch MV flow. Closing the video returns to the launching plugin page. The host delivers the acceptance reply before navigation. The video page displays transcoding and media errors. In the browser, the video page's fullscreen button enters browser fullscreen.
+
+For fullscreen video, WebView plugins require the updated server-provided `common.js`. Rebuild native Lynx plugins with an SDK that supports acknowledging the fullscreen reply.
+
 ## Plugin audio effects
 
-Check `host.getInfo().capabilities` for `player.audioEffects`. Lynx on Android initially supports host EQ presets through the system equalizer. `supported` is empty on devices without EQ and while casting. Reverb and other platforms are pending, so plugins should display controls based on the query result. Playback uses song IDs from the server library.
+Check `host.getInfo().capabilities` for `player.audioEffects`. Apply can fail if the browser blocks the AudioContext. Playback uses song IDs from the server library.
 
 | `player` method | Parameters and result |
 |---|---|
@@ -40,6 +66,8 @@ A plugin starts a session with `play(id)`, `setQueue`, or `playPlaylistById`. Ef
 WebView plugins can use `player` from `@songloft/client-sdk` or `window.SongloftPlugin.player`. Native Lynx plugins call methods such as `invokeHost('player', 'getAudioEffects')` and inspect `ok`, `data`, and `error`.
 
 A debug APK on an Android 14 emulator with WebView 113 verified starting playback from the plugin, applying EQ, retaining it across track changes, clearing it without stopping playback, and host EQ taking precedence. AudioFlinger reported the equalizer disabled, enabled, and disabled again in the same output session.
+
+The external URL and fullscreen APIs were verified on an Android 14 emulator and in Chromium. Android opened the system browser, entered fullscreen at 12 seconds, and returned to the plugin while playback continued. Chromium verified opening a browser tab from a plugin click, applying and clearing EQ, opening a library video, and returning to the plugin page. Desktop host tests covered applying a temporary preset and restoring the user's EQ settings.
 
 ## Transport and platforms
 

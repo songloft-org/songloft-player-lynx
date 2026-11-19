@@ -1,6 +1,8 @@
 import { clientVersion } from '../../../core/config/constants.js'
 import { getPlatformTarget } from '../../../native/platform-target.js'
-import { getHostCookies } from '../../../native/native-platform.js'
+import { preparePluginVideoRoute } from '../../../core/navigation/route-back-action.js'
+import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
+import { canOpenExternalURL, getHostCookies, openExternalURL } from '../../../native/native-platform.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
 import { getSongsApi } from '../../library/api/index.js'
 import type { PluginHostContext } from './plugin-host-dispatch.js'
@@ -20,4 +22,12 @@ export const pluginHostContext: PluginHostContext = {
     return songs
   },
   get cookieProvider() { return isWebPlatform() ? undefined : getHostCookies },
+  get confirmedPluginOpenUrl() {
+    return canOpenExternalURL() ? openExternalURL : undefined
+  },
+  get preparePluginVideo() {
+    const desktop = desktopConfig()
+    const available = desktop ? desktop.capabilities?.video : getPlatformCapabilities().video
+    return available ? preparePluginVideoRoute : undefined
+  },
 }

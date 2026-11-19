@@ -1,4 +1,4 @@
-import { desktopCall } from './client.js'
+import { desktopCall, desktopConfig } from './client.js'
 import {
   NativeSongloftAudio,
   NATIVE_EVENT,
@@ -8,6 +8,20 @@ import {
 import { readLynxGlobal } from '../native/native-modules.js'
 import type { AudioItem } from '../native/audio-types.js'
 import { desktopCookies } from './cef.js'
+
+export function desktopPluginEqualizer() {
+  if (!desktopConfig()?.capabilities?.equalizer) return undefined
+  return {
+    getPluginEqualizerAvailable(callback: (supported: boolean) => void) {
+      void desktopCall<boolean>('player.command', { method: 'pluginEqualizerAvailable' })
+        .then((supported) => callback(supported === true), () => callback(false))
+    },
+    setPluginEqualizer(profile: string, callback: (applied: boolean) => void) {
+      void desktopCall('player.command', { method: 'pluginEqualizer', value: profile })
+        .then(() => callback(true), () => callback(false))
+    },
+  }
+}
 
 export function createDesktopAudio() {
   const emitter = readLynxGlobal()?.getJSModule?.('GlobalEventEmitter') as

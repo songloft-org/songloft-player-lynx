@@ -24,7 +24,7 @@ import { activeNavPath } from './shell-navigation.js'
 /** Where a back press should go. `to` is a router path, never a history delta. */
 export type BackAction =
   /** Navigate. `librarySearch` is only meaningful when `to === '/library'`. */
-  | { kind: 'navigate'; to: string; librarySearch?: LibrarySearchLike }
+  | { kind: 'navigate'; to: string; librarySearch?: LibrarySearchLike; plugin?: PluginRouteLocation }
   /** At a tab root: show "press again to exit", or exit if already armed. */
   | { kind: 'exit-prompt' }
   /**
@@ -42,7 +42,14 @@ export interface LibrarySearchLike {
   view?: string
 }
 
+export interface PluginRouteLocation {
+  entryPath: string
+  search: { tab?: boolean; from?: 'manager' }
+}
+
 export interface RouteBackContext {
+  videoReturnPlugin?: PluginRouteLocation
+
   /**
    * Live tab roots — the three built-ins plus one per enabled plugin tab. Must
    * be the live list: a plugin tab's path is only known at runtime, and whether
@@ -144,6 +151,10 @@ export function resolveRouteBack(
 
   if (pathname.startsWith('/plugin/') && ctx.pluginManagerEntry) {
     return { kind: 'navigate', to: '/settings/plugins' }
+  }
+
+  if (pathname === '/player/video' && ctx.videoReturnPlugin) {
+    return { kind: 'navigate', to: '/plugin/$entryPath', plugin: ctx.videoReturnPlugin }
   }
 
   const explicit = explicitParentOf(pathname)

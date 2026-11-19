@@ -63,3 +63,42 @@ test('Web media play and pause send explicit user intent even when audio is alre
     dom.window.close()
   }
 })
+
+test('Web plugin EQ waits for an active context and clearing restores the user gains', async () => {
+  const dom = new JSDOM('<body><lynx-view id="app"></lynx-view></body>', { url: 'https://music.example/' })
+  const createMediaElementSource = vi.fn(() => ({ connect() {}, disconnect() {} }))
+  const filters: { gain: { value: number } }[] = []
+  let unlocked = false
+  class AudioContext {
+    get state() { return unlocked ? 'running' : 'suspended' }
+    readonly destination = {}
+    createMediaElementSource = createMediaElementSource
+    async resume() {}
+    async close() {}
+    createBiquadFilter() {
+      const filter = { frequency: {}, Q: {}, gain: { value: 0 }, connect() {}, disconnect() {} }
+      filters.push(filter)
+      return filter
+    }
+  }
+  try {
+    const app = dom.window.document.getElementById('app') as HTMLElement & {
+      onNativeModulesCall: (name: string, args: unknown[], namespace: string) => unknown
+    }
+    const context = vm.createContext({
+      window: dom.window, document: dom.window.document, navigator: dom.window.navigator,
+      Audio: dom.window.Audio, AudioContext, URL, setTimeout, clearTimeout, setInterval, clearInterval,
+    })
+    vm.runInContext(readFileSync(resolve(__dirname, '../../web/audio-host.js'), 'utf8'), context)
+    const audio = (method: string, args: unknown[] = []) => app.onNativeModulesCall(method, args, 'SongloftAudio')
+    const profile = JSON.stringify({ gains: Array(10).fill(-3) })
+    audio('setEqualizerBand', [0, 2])
+    expect(await audio('setPluginEqualizer', [profile])).toBe(false)
+    expect(createMediaElementSource).not.toHaveBeenCalled()
+    unlocked = true
+    expect(await audio('setPluginEqualizer', [profile])).toBe(true)
+    expect(filters[0].gain.value).toBe(-3)
+    expect(await audio('setPluginEqualizer', [''])).toBe(true)
+    expect(filters[0].gain.value).toBe(2)
+  } finally { dom.window.close() }
+})

@@ -59,3 +59,24 @@ test('audio facade reports volume in contract units and rejects stale source rea
     'pending pause must survive readiness',
   )
 })
+
+test('plugin EQ overrides the desktop output and clearing restores the user curve', async (t) => {
+  const calls = []
+  const player = new DesktopPlayer({
+    native: { player(...args) { calls.push(args); return null } },
+    network: { options: { insecureTls: false, proxy: null } },
+  })
+  t.after(() => player.close())
+  const command = (method, value, options) => player.command({ method, value, options })
+  await command('equalizerEnabled', true)
+  await command('equalizerBand', 2, { index: 0 })
+  assert.match(calls.at(-1)[2], /g=2,/)
+  assert.equal(await command('pluginEqualizerAvailable'), true)
+  await command('pluginEqualizer', JSON.stringify({ gains: Array(10).fill(-4) }))
+  assert.match(calls.at(-1)[2], /g=-4,/)
+  await command('equalizerBand', 3, { index: 0 })
+  assert.match(calls.at(-1)[2], /g=-4,/)
+  await command('pluginEqualizer', '')
+  assert.match(calls.at(-1)[2], /g=3,/)
+  await assert.rejects(command('pluginEqualizer', '{"gains":[99]}'), /Invalid plugin equalizer/)
+})
