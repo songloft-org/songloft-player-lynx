@@ -76,7 +76,8 @@ try {
     const tool = (name, args) =>
       execFileSync(join(toolsDirectory, name + extension), args, {
         encoding: 'utf8',
-        timeout: 30000,
+        // A freshly packaged FFmpeg can take over 30 seconds on its first launch.
+        timeout: 120_000,
         windowsHide: true,
         env: {
           ...process.env,
