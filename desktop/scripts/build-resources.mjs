@@ -84,25 +84,31 @@ if (
 )
   throw new Error('Incompatible desktop SDK')
 const run = (command, args, cwd, options = {}) => {
-  const result = spawnSync(command, args, { cwd, encoding: 'utf8', ...options })
+  const result = spawnSync(command, args, {
+    cwd,
+    encoding: 'utf8',
+    ...options,
+  })
   if (result.error) throw result.error
   if (result.status !== 0)
     throw new Error(`${command} failed: ${result.stderr ?? ''}`)
   return result.stdout
 }
-const lock = JSON.parse(await readFile(join(root, 'backend.lock.json'), 'utf8'))
-const pinned = lock.commit
-if (!/^[a-f0-9]{40}$/.test(pinned))
-  throw new Error('Backend must be pinned to a commit SHA')
+const backendSha = run('git', ['rev-parse', 'HEAD'], backend).trim()
+const selectedBackendSha = process.env.SONGLOFT_BACKEND_COMMIT ?? backendSha
+if (!/^[a-f0-9]{40}$/.test(backendSha) || backendSha !== selectedBackendSha)
+  throw new Error(
+    'Backend checkout does not match the commit selected for this build',
+  )
+const backendMain = run('git', ['show', `${backendSha}:main.go`], backend)
+const backendVersion = development
+  ? 'dev'
+  : /^\/\/ @version (\d+\.\d+\.\d+)$/m.exec(backendMain)?.[1]
 if (
-  typeof lock.version !== 'string' ||
-  semver.valid(lock.version) !== lock.version
+  !development &&
+  (!backendVersion || semver.valid(backendVersion) !== backendVersion)
 )
-  throw new Error('Backend pin must include its version')
-const backendSha = development
-  ? run('git', ['rev-parse', 'HEAD'], backend).trim()
-  : pinned
-const backendVersion = development ? 'dev' : lock.version
+  throw new Error(`Invalid version in backend commit ${backendSha}`)
 const builtAt = new Date().toISOString()
 const snapshot = await mkdtemp(join(tmpdir(), 'songloft-desktop-backend-'))
 const resources = join(root, 'resources')
@@ -136,7 +142,7 @@ try {
     maxBuffer: 128 * 1024 * 1024,
   })
   if (archive.status !== 0)
-    throw new Error('Pinned backend commit is unavailable')
+    throw new Error('Selected backend commit is unavailable')
   run('tar', ['-xf', '-', '-C', snapshot], root, { input: archive.stdout })
   const backendSubmodules = {}
   // git archive omits gitlinks. The Go replace directive requires this pinned
@@ -187,9 +193,7 @@ try {
       await readFile(join(snapshot, 'internal', 'app', 'app.go'), 'utf8')
     ).includes('parent-watch-stdin')
   )
-    throw new Error(
-      'Pinned backend lacks parent-watch-stdin. Advance backend.lock.json to its authorized commit before release.',
-    )
+    throw new Error('Selected backend commit lacks parent-watch-stdin.')
   const sourceDigest = await sourceFingerprint(snapshot)
   await mkdir(resources, { recursive: true })
   staging = await mkdtemp(join(resources, `.${target}-`))
@@ -373,7 +377,7 @@ try {
         bundleSha256,
         backendVersion,
         backendSha,
-        backendPinnedSha: pinned,
+        backendPinnedSha: selectedBackendSha,
         backendSubmodules,
         dirty: development,
         backendDirtySha256: development ? sourceDigest : null,

@@ -22,7 +22,11 @@ concurrency:
   group: desktop-package-${{ inputs.channel }}
   cancel-in-progress: false
 jobs:
+  backend:
+    uses: ./.github/workflows/resolve-backend.yml
+
   desktop:
+    needs: backend
     strategy:
       fail-fast: false
       matrix:
@@ -42,6 +46,7 @@ jobs:
         shell: bash
     env:
       SONGLOFT_DESKTOP_CHANNEL: ${{ inputs.channel }}
+      SONGLOFT_BACKEND_COMMIT: ${{ needs.backend.outputs.sha }}
       SONGLOFT_BACKEND_SOURCE: ${{ github.workspace }}/backend-source
       SONGLOFT_DESKTOP_SDK: ${{ github.workspace }}/desktop-sdk
       SONGLOFT_MPV_ROOT: ${{ github.workspace }}/desktop-sdk/build
@@ -70,21 +75,18 @@ jobs:
         with:
           go-version: '1.26.x'
           cache-dependency-path: desktop/updater/go.mod
-      - name: Read backend pin
-        id: backend
-        run: node -e 'console.log("sha="+JSON.parse(require("fs").readFileSync("desktop/backend.lock.json")).commit)' >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:
           repository: songloft-org/songloft
-          ref: ${{ steps.backend.outputs.sha }}
+          ref: ${{ needs.backend.outputs.sha }}
           path: backend-source
           persist-credentials: false
       - name: Initialize pinned Go dependency
         working-directory: backend-source
         run: |
-          test "$(git rev-parse HEAD)" = "${{ steps.backend.outputs.sha }}"
+          test "$(git rev-parse HEAD)" = "$SONGLOFT_BACKEND_COMMIT"
           if ! git grep -q 'parent-watch-stdin' HEAD -- internal/app/app.go; then
-            echo "::error::Advance desktop/backend.lock.json to the backend commit that supports parent-watch-stdin."
+            echo "::error::Songloft backend main does not support parent-watch-stdin."
             exit 1
           fi
           GIT_TERMINAL_PROMPT=0 git submodule update --init --depth 1 pkg/tag
