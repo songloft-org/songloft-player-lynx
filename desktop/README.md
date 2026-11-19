@@ -2,7 +2,7 @@
 
 [English](README.en.md) · [实施与验证记录](../docs/project/desktop-implementation.md) · [历史技术探针](../docs/project/desktop-phase1.md)
 
-桌面源码现覆盖宿主、共享音视频 facade、Bundle、两类插件、安装与完整应用更新。用户于 2026-11-17 明确调整为“先全部实现，最后统一验收”；早期第一批记录的阶段停点不再限制后续实现。当前为候选版本，设备验收与正式分发仍开放。
+桌面源码现覆盖宿主、共享音视频 facade、Bundle、两类插件、安装与完整应用更新。用户于 2026-11-17 明确调整为“先全部实现，最后统一验收”；早期第一批记录的阶段停点不再限制后续实现。实现已进入共享 `dev` Release，正式签名、公证和最终设备验收仍开放。
 
 目标为 Windows x64（Windows 10 22H2 / Windows 11）、macOS arm64/x64（macOS 13+）。Linux、Windows ARM、DLNA、悬浮歌词、系统外快捷键、JS 热更新和 Flutter 数据迁移不在本版范围。Flutter 与移动 SDK 保持原版本。
 

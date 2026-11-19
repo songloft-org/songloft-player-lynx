@@ -2,7 +2,7 @@
 
 [简体中文](README.md) · [Implementation and verification](../docs/en/project/desktop-implementation.md) · [Historical probe](../docs/en/project/desktop-phase1.md)
 
-Desktop source now covers the host, shared playback facade, Bundle, both plugin types, installers and whole-application updates. On 2026-11-17 the user explicitly changed the sequence to implement everything before consolidated acceptance. Earlier phase-one stop conditions no longer restrict implementation. This remains an candidate with device acceptance and production distribution open.
+Desktop source now covers the host, shared playback facade, Bundle, both plugin types, installers and whole-application updates. On 2026-11-17 the user explicitly changed the sequence to implement everything before consolidated acceptance. Earlier phase-one stop conditions no longer restrict implementation. The implementation is now published in the shared `dev` Release. Production signing/notarization and final device acceptance remain open.
 
 Targets: Windows x64 (Windows 10 22H2 / Windows 11), macOS arm64/x64 (macOS 13+). Linux, Windows ARM, DLNA, floating lyrics, shortcuts outside the app, JS hot updates and Flutter data migration are excluded. Flutter and mobile SDK versions are unchanged.
 
