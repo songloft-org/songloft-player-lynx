@@ -8,7 +8,7 @@ Settings → Playback → Keep screen on for lyrics is off by default and saved 
 
 ## Current status
 
-This is a **preview client**. Playback, library/playlists, lyrics, plugins, themes, multiple servers, and administrative settings are implemented. About now separates client checks from server upgrades: dev checks only dev, while stable checks only the latest stable release. All three native bundle updaters are integrated in source; Android has local UI download/cancel/cold-start evidence, while iOS/HarmonyOS compilation and device acceptance remain open. Production update signing is unconfigured. Older shells and incompatible updates provide same-channel installation links; see [Client updates](docs/en/reference/client-updates.md). Windows/macOS desktop hosting, Bundle, playback, both plugin types and whole-app updates have a [candidate implementation](desktop/README.en.md). As requested, implementation precedes consolidated acceptance; device coverage and production distribution remain open. See the [implementation record](docs/en/project/desktop-implementation.md).
+This is a **preview client**. Playback, library/playlists, lyrics, plugins, themes, multiple servers, and administrative settings are implemented. About now separates client checks from server upgrades: dev checks only dev, while stable checks only the latest stable release. All three native bundle updaters are integrated in source; Android has local UI download/cancel/cold-start evidence, while iOS/HarmonyOS compilation and device acceptance remain open. Windows/macOS desktop hosting, Bundle, playback, both plugin types, and whole-app updates are implemented and published through the shared Build and Release workflow. Production signing/notarization and final device coverage remain open. See [Client updates](docs/en/reference/client-updates.md) and the [implementation record](docs/en/project/desktop-implementation.md).
 
 Native device caching now has identity/track-variant indexes, whole-playlist/selection tasks and local management/offline playback. Authentication expiry preserves local-only access; explicit logout hides the previous identity. See [Device cache](docs/en/reference/device-cache.md). Android has real-file/UI evidence; iOS/HarmonyOS compilation and device acceptance remain open.
 
@@ -27,7 +27,7 @@ Web playback settings also provide a persisted keyboard-shortcut switch: Space t
 
 - [Stable releases](https://github.com/songloft-org/songloft-player-lynx/releases/latest): published from version tags.
 - [Development release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev): automatically built after code pushes to `main`; updated only when every platform succeeds.
-- [Windows/macOS desktop candidates](desktop/README.en.md) use the same Releases. When desktop assets are available, select `win32-x64`, `darwin-arm64`, or `darwin-x64` for your machine.
+- [Windows/macOS desktop builds](desktop/README.en.md) use the same Releases. Select `win32-x64`, `darwin-arm64`, or `darwin-x64` for your machine.
 - [Installation guide](docs/en/guides/installation.md): package names, signing requirements, server connections, and checksums.
 - [简体中文](README.md)
 

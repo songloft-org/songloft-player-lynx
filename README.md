@@ -8,7 +8,7 @@ Songloft Player 的 Lynx 客户端，从 Flutter 版整体重写为 ReactLynx + 
 
 ## 当前状态
 
-当前定位为**预览版**。核心播放、曲库/歌单、歌词、插件、主题、多服务器和管理设置已有实现。关于页已分开提供客户端检查更新和服务器更新：dev 仅检查 dev，正式版仅检查最新正式发布；三端原生 bundle 更新器已接入源码，Android 已完成本地界面下载/取消/冷启动验证，iOS/HarmonyOS 编译与设备验收仍开放。正式更新签名密钥尚未配置，旧壳或不兼容更新提供本通道安装包入口，详见[客户端更新协议](docs/reference/client-updates.md)。Windows/macOS 桌面宿主、Bundle、播放、两类插件和完整应用更新已有[候选实现](desktop/README.md)，按用户要求先完成实现、最后统一验收；当前设备矩阵和正式分发仍开放，详见[实施记录](docs/project/desktop-implementation.md)。
+当前定位为**预览版**。核心播放、曲库/歌单、歌词、插件、主题、多服务器和管理设置已有实现。关于页已分开提供客户端检查更新和服务器更新：dev 仅检查 dev，正式版仅检查最新正式发布；三端原生 bundle 更新器已接入源码，Android 已完成本地界面下载/取消/冷启动验证，iOS/HarmonyOS 编译与设备验收仍开放。Windows/macOS 桌面宿主、Bundle、播放、两类插件和完整应用更新已实现，并通过共享 Build and Release 发布桌面包；正式签名、公证和最终设备矩阵仍开放，详见[实施记录](docs/project/desktop-implementation.md)。
 
 原生设备缓存已有身份/音轨变体索引、整歌单/多选批量任务和本地管理/断网播放入口；过期登录保留仅本地访问，显式退出隐藏旧身份，详见[设备缓存](docs/reference/device-cache.md)。Android 有实际文件/界面验证，iOS/HarmonyOS 的编译与设备验收仍开放。
 
@@ -28,7 +28,7 @@ Web 播放设置另有可持久保存的键盘快捷键开关，支持空格播�
 - [正式版本](https://github.com/songloft-org/songloft-player-lynx/releases/latest)：版本 tag 发布。
 - [开发版本](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev)：`main` 代码推送后自动构建，所有平台成功才更新。
 - [安装指南](docs/guides/installation.md)：包名、签名限制、服务器连接和校验方法。
-- [Windows/macOS 桌面候选构建](desktop/README.md)与移动端共用上述 Release。桌面资产启用后按 `win32-x64`、`darwin-arm64`、`darwin-x64` 选择。
+- [Windows/macOS 桌面构建](desktop/README.md)与移动端共用上述 Release。桌面资产按 `win32-x64`、`darwin-arm64`、`darwin-x64` 选择。
 - [English](README.en.md)
 
 下载以 GitHub Releases 中实际发布的资产为准；四平台 CI 仅在五个包全部构建和校验成功后更新 dev。维护自己的 fork 时需配置签名 Secrets，详见[发版指南](docs/guides/releasing.md)。
