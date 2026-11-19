@@ -23,6 +23,8 @@ export async function buildCefHelper(root, target) {
   const build = join(root, '.build', `${target}-cef-helper`)
   const windows = target === 'win32-x64'
   const expected = cef.minimalSdkSha256[platform]
+  const cmakePath = (value) =>
+    process.platform === 'win32' ? value.replaceAll('\\', '/') : value
   const run = (command, args, cwd = root) => {
     const result = spawnSync(command, args, { cwd, stdio: 'inherit' })
     if (result.error) throw result.error
@@ -90,10 +92,10 @@ export async function buildCefHelper(root, target) {
   const machine = target === 'darwin-arm64' ? 'arm64' : 'x86_64'
   run('cmake', [
     '-S',
-    join(root, 'cef-helper'),
+    cmakePath(join(root, 'cef-helper')),
     '-B',
-    build,
-    `-DCEF_ROOT=${sdk}`,
+    cmakePath(build),
+    `-DCEF_ROOT=${cmakePath(sdk)}`,
     '-DCMAKE_BUILD_TYPE=Release',
     ...(windows
       ? ['-A', 'x64', '-DPROJECT_ARCH=x86_64']
