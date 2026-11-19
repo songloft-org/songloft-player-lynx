@@ -41,7 +41,10 @@ const directory = resolve(process.env.SONGLOFT_DESKTOP_SDK)
 await mkdir(directory, { recursive: true })
 const path = join(directory, 'sdk.tar.gz')
 await writeFile(path, archive)
-const list = spawnSync('tar', ['-tf', path], { encoding: 'utf8' })
+const tarPrefix = process.platform === 'win32' ? ['--force-local'] : []
+const list = spawnSync('tar', [...tarPrefix, '-tf', path], {
+  encoding: 'utf8',
+})
 const archivePaths =
   process.platform === 'win32'
     ? list.stdout
@@ -57,7 +60,7 @@ if (
   )
 )
   throw new Error('Invalid SDK archive paths')
-const result = spawnSync('tar', ['-xf', path, '-C', directory], {
+const result = spawnSync('tar', [...tarPrefix, '-xf', path, '-C', directory], {
   stdio: 'inherit',
 })
 if (result.status !== 0) throw new Error('SDK extraction failed')
