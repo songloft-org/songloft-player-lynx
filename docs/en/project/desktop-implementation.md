@@ -6,6 +6,14 @@
 
 On 2026-11-17 the user confirmed Mac was unlocked and explicitly requested all implementation before consolidated acceptance. Phases two through six therefore proceed; earlier phase-one stop conditions are historical. Source coverage is distinct from device acceptance; compatibility remains `candidate-unverified`.
 
+## 2026-11-19 · Shared release workflow verified
+
+- Lynx commit `12cd2483b81287e75cd72438263bcdf2519cdc94` is pushed, and the parent repository pointer was updated by `d6a354d`. The desktop fixes cover Windows SDK, CEF, and backend-resource archive paths. Other uncommitted Lynx feature work was not included.
+- GitHub Actions run `44524421456` completed successfully. Windows x64, macOS arm64, macOS x64, Android, iOS, HarmonyOS, and Web all built, and the publish job uploaded the shared `dev` Release.
+- The `dev` Release contains the Windows NSIS installer, macOS arm64/x64 DMGs and update ZIPs, three Ed25519 desktop manifests, and the other platform packages. SDK archives are hosted in the separate `desktop-sdk-0.0.31` prerelease, with the three-target index URL and digest variables configured in the Lynx repository.
+- This release uses no Windows Authenticode, Apple Developer ID, or notarization. macOS packages use ad hoc signatures. Update manifests and complete packages still receive Ed25519 and SHA-256 verification. Package backend integration, native builds, CEF helpers, installer checks, and shared publishing all passed in CI.
+- Shared publishing, clean-environment installation, human listening, precise audiovisual synchronization, physical Intel Mac, macOS Remote Command, production signing/notarization, and one-hour resource trends still require consolidated device acceptance. CI success does not replace those checks.
+
 Client work began on `b952231c253aad1938d3020ee74157b100a11291`; other sessions advanced main during this work. Final verification binds an uncommitted worktree digest. Backend began on `4e73b078d86472e0c3409d24a87a6aca2b82380a`; actual Mac dev builds use `2b3807f0f7098a67a56f1767d3aaa69051f0d78e` plus this batch. Concurrent work/commits are preserved. Desktop commits, pushes, releases and parent gitlink updates are not authorized.
 
 Build-time HEAD: `575c77e3f5ebf4dc204fbd28c7ff7f3b4f90a742` + dirty. Another session advanced final HEAD to `f624965610b21fab03d8aec33b08d34cb90a1cba`; actual source digest remains identical: `39e6f49c5b86321dac14719429688d9689bae0abd547d4ede544526c93eee0c4`. `/tmp/songloft-desktop-complete-worktree.json` records final state. The stamp/build-info bind bundle and source digests; the older SHA is not presented as a committed desktop implementation.

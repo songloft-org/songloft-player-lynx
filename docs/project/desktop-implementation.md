@@ -6,6 +6,14 @@
 
 2026-11-17 用户明确说明 Mac 已解锁，允许先完成全部实现，最后统一验收。本轮因此继续实现第二至六批；旧探针记录中“不推进后续批次”的停点是历史约定。源码覆盖不等于设备验收通过，兼容清单仍为 `candidate-unverified`。
 
+## 2026-11-19 · 共享发布流水线已验证
+
+- Lynx 提交 `12cd2483b81287e75cd72438263bcdf2519cdc94` 已推送，主仓库指针由 `d6a354d` 更新。桌面修复提交包含 Windows SDK、CEF 和后端资源归档的盘符路径兼容，未提交的其他 Lynx 功能改动没有混入。
+- GitHub Actions 运行 `44524421456` 已完整成功。Windows x64、macOS arm64、macOS x64、Android、iOS、HarmonyOS 和 Web 均完成构建，发布作业成功上传共享 `dev` Release。
+- `dev` Release 已包含 Windows NSIS、macOS arm64/x64 DMG 与更新 ZIP、三份 Ed25519 桌面清单以及其他平台产物。SDK 归档托管在独立的 `desktop-sdk-0.0.31` prerelease，三种目标的索引 URL 和摘要变量已配置到 Lynx 仓库。
+- 本轮实际发布使用无 Windows Authenticode、无 Apple Developer ID 和无公证构建。macOS 包采用 ad hoc 签名，更新清单和完整安装包仍执行 Ed25519/SHA-256 校验。CI 的包内后端集成、原生构建、CEF helper、安装器检查和共享发布均通过。
+- 共享发布、干净环境完整安装、人工听音、精确音画同步、实体 Intel Mac、Mac Remote Command、正式签名/公证及一小时资源趋势仍需统一实机验收，不能由 CI 构建成功替代。
+
 客户端以 `b952231c253aad1938d3020ee74157b100a11291` 开始，期间其他会话推进 main；最终对象用未提交工作树摘要绑定。后端以 `4e73b078d86472e0c3409d24a87a6aca2b82380a` 开始，实际 Mac 后端开发构建基于 `2b3807f0f7098a67a56f1767d3aaa69051f0d78e` 加本轮修改。其他任务的源码和提交保留，没有桌面提交、推送、发布或父指针更新授权。
 
 构建时客户端 HEAD `575c77e3f5ebf4dc204fbd28c7ff7f3b4f90a742` + dirty；收尾时其他会话推进到 `f624965610b21fab03d8aec33b08d34cb90a1cba`，实际源码摘要仍相同：`39e6f49c5b86321dac14719429688d9689bae0abd547d4ede544526c93eee0c4`。工作树清单 `/tmp/songloft-desktop-complete-worktree.json` 记录最终状态。业务 bundle 摘要与源码摘要见 `dist/desktop-build.json` 和安装包内 `build-info.json`，不是将旧 SHA 当作已提交桌面实现。
