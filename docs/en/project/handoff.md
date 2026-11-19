@@ -8,9 +8,9 @@ Android and iOS packages now build from the public backend `main` tip resolved a
 
 The first navigation frame shows cached plugin SVGs. Older snapshots reserve the icon slot on their first load and save the artwork once loaded. Chrome checks covered slow responses and HTTP 503. The Android API 34 emulator drew the restored icon before the SVG response returned. [Progress](../../project/progress.md#nav-tab-icons).
 
-## 2026-11-19 · #581 Web playback progress
+## 2026-11-19 · #581 Web playback progress and queue advancement
 
-Lynx Web now updates progress from the active media element. The embedded app's Chrome comparison verified playback, progress display and automatic queue advancement. The reporter's Windows wrapper and silent wait remain unverified. [Local fix and test record](../../project/progress.md#issue-581).
+Extended Windows WebView2 playback reproduced a progress backlog and delayed queue advancement. The patch discards expired periodic samples and lowers the reporting rate for the session. The longest transition in the original build was 78.8 seconds. All 39 automatic transitions during the patched build's 46-minute session were under 0.8 seconds. Fully quit the tray wrapper and reopen it after upgrading to load the new embedded scripts. [Verification record](../../project/progress.md#issue-581).
 
 ## 2026-11-19 · Mac relaunch retains non-ASCII data paths
 

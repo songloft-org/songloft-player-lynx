@@ -10,7 +10,9 @@
 
 - [songloft-org/songloft#581](https://github.com/songloft-org/songloft/issues/581), Lynx baseline `64692b84e5f36a6f2f3ceeede77904771c2904d6`. Docker Chrome played a real MP3 while the host's 250 ms interval was delayed to 60 seconds. The original progress stayed at zero while the browser's `currentTime` advanced.
 - Report the active element's position and duration on `timeupdate` and `durationchange`. Read the element again at the end of playback before notifying the queue. Report infinite live duration as unknown and ignore events from the previous element after a source change.
-- Evidence is in `/tmp/songloft-581.7JfaBL/`. Four new regressions fail with the original host and pass with the fix. The reporter's Windows wrapper and track remain unverified. [Progress record](docs/project/progress.md).
+- Evidence is in `/tmp/songloft-581.7JfaBL/`. Four new regressions fail with the original host and pass with the fix.
+- The Windows follow-up used the reporter's pywebview tray workflow. After the server update from `v2.13.9` to `f75be9e`, the open WebView2 still executed the old script and its heartbeat passed. Compare the running and served `audio-host.js` hashes. A normal reload made them match. Check which script the window executes when verifying an embedded frontend update. [Progress record](docs/project/progress.md#issue-581).
+- With the updated script confirmed, Windows long playback still accumulated progress messages and delayed completion. Measure the media clock, bridge samples, visible progress and start of the next track. Drop expired periodic Web samples and lower the sample rate for the session. Continue to report seeks, duration corrections and completion immediately. [Physical-device comparison](docs/project/progress.md#issue-581).
 - Seen 1× (2026-11-19).
 
 ### BUNDLE-001: Pin both binding tools and use the AAR's Android minimum

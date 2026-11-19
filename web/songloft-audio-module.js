@@ -20,6 +20,7 @@ var METHODS = [
   'pause',
   'stop',
   'seek',
+  'slowProgressUpdates',
   'setVolume',
   'getVolume',
   'setSpeed',

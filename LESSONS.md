@@ -10,7 +10,9 @@
 
 - [songloft-org/songloft#581](https://github.com/songloft-org/songloft/issues/581)，Lynx 基线 `64692b84e5f36a6f2f3ceeede77904771c2904d6`。Docker Chrome 播放真实 MP3 时，将 Web 音频宿主的 250ms 定时器延迟到 60 秒，旧进度一直停在零，浏览器的 `currentTime` 仍持续推进。
 - 用当前媒体元素的 `timeupdate` 和 `durationchange` 回报位置和时长。曲终重新读取媒体位置，再发送完成事件。直播的无穷时长按未知上报，切源后忽略旧元素事件。
-- 证据在 `/tmp/songloft-581.7JfaBL/`，四项新回归在旧宿主上失败，在修改后的宿主上通过。报告人的 Windows 网页封装与曲目仍待核对。见[进展记录](docs/project/progress.md)。
+- 证据在 `/tmp/songloft-581.7JfaBL/`，四项新回归在旧宿主上失败，在修改后的宿主上通过。
+- 同次 Windows 复验用报告人的 pywebview 托盘流程。服务端从 `v2.13.9` 更新到 `f75be9e` 后，已打开的 WebView2 仍执行旧脚本，页面心跳正常。对照运行中和 HTTP 响应的 `audio-host.js` 哈希，普通刷新后两者一致。验证嵌入前端升级时，应检查窗口实际执行的脚本版本。见[进展记录](docs/project/progress.md#issue-581)。
+- 确认加载新版后，Windows 长播仍出现进度消息积压，曲终事件也一起延迟。分别采集媒体时钟、桥接上报、可见进度和下一首开始时间。Web 定期进度超过有效期即丢弃，并在当前会话降低采样频率。定位、时长修正与曲终保留即时上报。见[真机对照](docs/project/progress.md#issue-581)。
 - Seen 1× (2026-11-19)。
 
 ### BUNDLE-001：用固定的绑定工具编译，按 AAR 声明选择 Android 下限

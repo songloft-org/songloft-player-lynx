@@ -270,6 +270,25 @@ describe('NativeSongloftAudio (delegation + event bridge)', () => {
     ])
   })
 
+  test('outdated Web samples do not delay the final position or completion', () => {
+    const emitter = makeEmitter()
+    const slowProgressUpdates = vi.fn()
+    const audio = new NativeSongloftAudio({ ...makeNativeModule(), slowProgressUpdates }, emitter)
+    const events: string[] = []
+    audio.on('progress', (event) => events.push(`progress:${event.positionMs}`))
+    audio.on('stateChanged', (event) => events.push(event.state))
+    const now = Date.now()
+
+    emitter.fire(NATIVE_EVENT.progress, { positionMs: 1500, sampledAtMs: now - 2000 })
+    emitter.fire(NATIVE_EVENT.progress, { positionMs: 2000, sampledAtMs: now - 1800 })
+    emitter.fire(NATIVE_EVENT.progress, { positionMs: 3500, sampledAtMs: now })
+    emitter.fire(NATIVE_EVENT.progress, { positionMs: 4000 })
+    emitter.fire(NATIVE_EVENT.stateChanged, { state: 'completed' })
+
+    expect(events).toEqual(['progress:3500', 'progress:4000', 'completed'])
+    expect(slowProgressUpdates).toHaveBeenCalledOnce()
+  })
+
   test('dispose removes global-event listeners and releases native', () => {
     const native = makeNativeModule()
     const emitter = makeEmitter()

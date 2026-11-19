@@ -24,6 +24,8 @@ function setup() {
     onNativeModulesCall: (name: string, data: unknown[], moduleName: string) => void
   }
   const events: { name: string; value: unknown }[] = []
+  let clock = 0
+  vi.spyOn(window.performance, 'now').mockImplementation(() => clock)
   app.sendGlobalEvent = (name, [value]) => { events.push({ name, value }) }
   vi.spyOn(window.HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
   vi.spyOn(window.HTMLMediaElement.prototype, 'load').mockImplementation(() => {})
@@ -39,7 +41,9 @@ function setup() {
   })
   const video = document.querySelector('video')!
   return {
+    advance(ms: number) { clock += ms },
     emit(element: HTMLMediaElement, name: string) { element.dispatchEvent(new window.Event(name)) },
+    slowProgress() { app.onNativeModulesCall('slowProgressUpdates', [], 'SongloftAudio') },
     load() {
       app.onNativeModulesCall('load', ['https://music.example/song.mp3', null], 'SongloftAudio')
       return elements.at(-1)!
@@ -66,7 +70,7 @@ test('Web progress follows media timeupdates and excludes inactive elements', ()
   setMediaState(active, 12, 3.5)
   host.emit(active, 'play')
   host.emit(active, 'timeupdate')
-  expect(host.progress()).toMatchObject({ positionMs: 3500, durationMs: 12000 })
+  expect(host.progress()).toMatchObject({ positionMs: 3500, durationMs: 12000, sampledAtMs: expect.any(Number) })
 
   host.events.length = 0
   setMediaState(outgoing, 60, 58)
@@ -85,6 +89,38 @@ test('Web publishes duration corrections even while playback is paused', () => {
   setMediaState(audio, 35, 0)
   host.emit(audio, 'durationchange')
   expect(host.progress()).toMatchObject({ positionMs: 0, durationMs: 35000 })
+})
+
+test('Web limits routine samples while reporting seeks and completion immediately', () => {
+  const host = setup()
+  const audio = host.load()
+  setMediaState(audio, 70, 1)
+  host.emit(audio, 'timeupdate')
+  host.slowProgress()
+
+  for (let step = 1; step <= 9; step++) {
+    host.advance(100)
+    audio.currentTime = 1 + step / 10
+    host.emit(audio, 'timeupdate')
+  }
+  expect(host.progress()).toMatchObject({ positionMs: 1000 })
+
+  host.advance(100)
+  audio.currentTime = 2
+  host.emit(audio, 'timeupdate')
+  expect(host.progress()).toMatchObject({ positionMs: 2000 })
+
+  audio.currentTime = 60
+  host.emit(audio, 'seeked')
+  expect(host.progress()).toMatchObject({ positionMs: 60000 })
+  expect(host.progress()).not.toHaveProperty('sampledAtMs')
+
+  setMediaState(audio, 70, 70, true)
+  host.emit(audio, 'ended')
+  expect(host.events.slice(-2)).toMatchObject([
+    { name: 'SongloftAudio.progress', value: { positionMs: 70000 } },
+    { name: 'SongloftAudio.stateChanged', value: { state: 'completed' } },
+  ])
 })
 
 test('Web completion publishes the current media clock before notifying the queue', () => {
