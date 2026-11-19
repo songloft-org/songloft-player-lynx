@@ -789,11 +789,12 @@ jobs:
             else
               gh release create dev release-files/* --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title 'Dev build' --notes-file "$NOTES" --prerelease --latest=false
             fi
-            # Old signed desktop manifests can still refer to content-addressed assets.
+            # Desktop installers use fixed names. Remove legacy version/hash names
+            # so the rolling dev release contains one package per target.
             gh release view dev --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' > "$RUNNER_TEMP/asset-names.txt"
             while IFS= read -r name; do
               case "$name" in
-                songloft-lynx-dev-*-win32-x64-*.exe|songloft-lynx-dev-*-darwin-arm64-*.zip|songloft-lynx-dev-*-darwin-x64-*.zip|songloft-lynx-dev-*-darwin-arm64-*.dmg|songloft-lynx-dev-*-darwin-x64-*.dmg)
+                songloft-lynx-dev-win32-x64.exe|songloft-lynx-dev-darwin-arm64.zip|songloft-lynx-dev-darwin-x64.zip|songloft-lynx-dev-darwin-arm64.dmg|songloft-lynx-dev-darwin-x64.dmg)
                   continue ;;
                 desktop-win32-x64.json|desktop-darwin-arm64.json|desktop-darwin-x64.json)
                   continue ;;

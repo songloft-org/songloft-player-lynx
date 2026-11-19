@@ -15,7 +15,7 @@
 | `songloft-lynx-web-embedded.tar.gz`   | 同源服务器部署的静态资源                 |
 | `version.json` / `checksums.txt`      | 构建版本、commit、时间、包清单与 SHA-256 |
 
-Windows 10 22H2 以上选文件名含 `win32-x64` 的 NSIS `.exe`。macOS 13 以上用 `.dmg` 安装，Apple 芯片选 `darwin-arm64`，Intel 芯片选 `darwin-x64`。macOS `.zip` 用于应用内更新。安装后在登录页或设置页选择连接服务器或本地音乐。
+Windows 10 22H2 以上选固定名 `songloft-lynx-{channel}-win32-x64.exe` 的 NSIS 安装包。macOS 13 以上用固定名 `songloft-lynx-{channel}-darwin-arm64.dmg` 或 `songloft-lynx-{channel}-darwin-x64.dmg` 安装，Apple 芯片选 arm64，Intel 芯片选 x64。macOS 对应的 `.zip` 用于应用内更新。安装后在登录页或设置页选择连接服务器或本地音乐。
 
 ## 校验下载
 

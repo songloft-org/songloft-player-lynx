@@ -15,7 +15,7 @@ Download a [stable release](https://github.com/songloft-org/songloft-player-lynx
 | `songloft-lynx-web-embedded.tar.gz`   | Static resources for a same-origin server                      |
 | `version.json` / `checksums.txt`      | Version, commit, build time, asset list, and SHA-256 checksums |
 
-For Windows 10 22H2 or later, choose the `win32-x64` NSIS `.exe`. For macOS 13 or later, choose the `darwin-arm64` DMG for Apple silicon or the `darwin-x64` DMG for Intel. The macOS ZIP is for in-app updates. Choose between a remote server and local music from the login screen or Settings.
+For Windows 10 22H2 or later, choose the fixed-name NSIS installer `songloft-lynx-{channel}-win32-x64.exe`. For macOS 13 or later, install `songloft-lynx-{channel}-darwin-arm64.dmg` on Apple silicon or `songloft-lynx-{channel}-darwin-x64.dmg` on Intel. The matching macOS `.zip` is used for in-app updates. Choose between a remote server and local music from the login screen or Settings.
 
 ## Verify downloads
 

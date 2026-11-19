@@ -31,7 +31,9 @@ export function packageConfig({ channel, version, target, root }) {
       { from: '.lynxtron/app', to: `${resources}/app`, filter: ['**/*'] },
       { from: '.lynxtron/licenses/CEF.txt', to: `${resources}/licenses/CEF.txt` },
     ],
-    artifactName: `songloft-lynx-desktop-${channel}-\${version}-\${os}-\${arch}.\${ext}`,
+    // Keep the Release asset name stable so rolling dev releases replace the
+    // previous installer instead of accumulating one asset per build.
+    artifactName: `songloft-lynx-${channel}-\${os}-\${arch}.\${ext}`,
     publish: null,
     forceCodeSigning: false,
     mac: {

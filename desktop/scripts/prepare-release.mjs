@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto'
-import { createReadStream } from 'node:fs'
 import { copyFile, mkdir, readFile, readdir, stat } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
 import { basename, extname, join } from 'node:path'
@@ -92,9 +90,7 @@ for (const { target, artifact, infoPath, info, manifestName } of packages) {
     const { size } = await stat(source)
     if (size < 1 || size >= 2 * 1024 ** 3)
       throw new Error('Invalid GitHub asset size')
-    const hash = createHash('sha256')
-    for await (const data of createReadStream(source)) hash.update(data)
-    const name = `songloft-lynx-${channel}-${info.version}-${target}-${hash.digest('hex').slice(0, 16)}${extension}`
+    const name = `songloft-lynx-${channel}-${target}${extension}`
     const staged = join(assets, name)
     await copyFile(source, staged)
     if (extension !== '.dmg') updateAsset = staged

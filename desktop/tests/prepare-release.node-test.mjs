@@ -43,6 +43,22 @@ test('desktop manifest discovery follows the shared dev and latest stable Releas
   assert.throws(() => desktopReleaseAsset('v2.1.0-beta.1', 'installer.exe'))
 })
 
+test('rolling desktop releases keep one fixed installer name per target', () => {
+  const workflow = readFileSync(
+    new URL('../../.github/workflows/build-and-release.yml', import.meta.url),
+    'utf8',
+  )
+  for (const name of [
+    'songloft-lynx-dev-win32-x64.exe',
+    'songloft-lynx-dev-darwin-arm64.zip',
+    'songloft-lynx-dev-darwin-x64.zip',
+    'songloft-lynx-dev-darwin-arm64.dmg',
+    'songloft-lynx-dev-darwin-x64.dmg',
+  ])
+    assert.ok(workflow.includes(name), `Missing fixed desktop asset ${name}`)
+  assert.doesNotMatch(workflow, /songloft-lynx-dev-\*-win32-x64-\*\.exe/)
+})
+
 test('desktop distribution requires the configured Ed25519 update key', (t) => {
   const root = mkdtempSync(join(tmpdir(), 'songloft-desktop-signing-'))
   t.after(() => rmSync(root, { recursive: true, force: true }))
@@ -188,10 +204,14 @@ test('desktop release stages all installers and signs their matching update asse
       { publicKey: trust, channel, os, arch, currentVersion: '2.0.0' },
     )
     const name = new URL(manifest.asset.url).pathname.split('/').at(-1)
+    const expectedPackage = target.startsWith('darwin')
+      ? `songloft-lynx-stable-${target}.zip`
+      : `songloft-lynx-stable-${target}.exe`
     assert.equal(
       manifest.asset.url,
-      `https://github.com/songloft-org/songloft-player-lynx/releases/download/v2.1.0/${name}`,
+      `https://github.com/songloft-org/songloft-player-lynx/releases/download/v2.1.0/${expectedPackage}`,
     )
+    assert.equal(name, expectedPackage)
     assert.equal(readFileSync(join(first, 'assets', name), 'utf8'), target)
     assert.equal(manifest.available, true)
   }
@@ -259,7 +279,10 @@ test('desktop release stages all installers and signs their matching update asse
     arch: 'x64',
     currentVersion: '2.0.0',
   })
-  assert.match(dev.asset.url, /\/releases\/download\/dev\/[^/]+\.exe$/)
+  assert.equal(
+    dev.asset.url,
+    'https://github.com/songloft-org/songloft-player-lynx/releases/download/dev/songloft-lynx-dev-win32-x64.exe',
+  )
   writeInput('2.0.0', 'dev', '2026-01-01T00:00:01Z')
   const devDowngrade = stage(
     join(root, 'dev-next'),

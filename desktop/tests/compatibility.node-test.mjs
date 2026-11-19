@@ -114,9 +114,17 @@ test('the bundle files go in the resource directory expected by each host', () =
 test('both desktop channels build without a platform certificate or notarization', () => {
   for (const channel of ['dev', 'stable']) {
     const windows = packageConfig({ channel, version: '2.13.12', target: 'win32-x64' })
+    assert.equal(
+      windows.artifactName,
+      `songloft-lynx-${channel}-\${os}-\${arch}.\${ext}`,
+    )
     assert.equal(windows.forceCodeSigning, false)
     for (const target of ['darwin-arm64', 'darwin-x64']) {
       const mac = packageConfig({ channel, version: '2.13.12', target })
+      assert.equal(
+        mac.artifactName,
+        `songloft-lynx-${channel}-\${os}-\${arch}.\${ext}`,
+      )
       assert.equal(mac.forceCodeSigning, false)
       assert.equal(mac.mac.identity, '-')
       assert.equal(mac.mac.notarize, false)
