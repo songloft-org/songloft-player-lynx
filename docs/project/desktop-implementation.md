@@ -355,13 +355,29 @@
 - Windows 11 24H2 x64 虚拟机从 2.13.24 的设置页下载测试签名更新，点击重启安装后进入新版。同一四首歌的 ID 与标题、模式、主题、DPAPI 凭据和升级前数据库备份均通过读回，包内 Go 版本与构建元数据一致。应用确认升级后回收下载安装包，托盘显式退出后无应用或 Go 后端残留。见 `windows-about.png`、`windows-result.png` 和 `windows-clean.png`。
 - 产物、校验和、命令与原始日志在 `/home/hanxi/work/songloft-review/lynx-desktop-20261119-desktop25/`。
 
+### 2.13.25 macOS 安装体积与签名更新
+
+- 在 macOS 26.6.2 上从两个已核对 SHA-256 的 DMG 各复制一份 app，用 `codesign --verify --deep --strict` 验签。arm64 安装体普通文件合计 574,219,385 字节，APFS 文件块 575,275,008 字节。x64 分别为 631,646,927 字节和 632,717,312 字节。两者均统计 359 个文件，排除符号链接并对硬链接去重。
+- 在原生 arm64 与 Rosetta x64 上使用 2.13.24 和 2.13.25 的原始 ZIP。旧包自带的 Go 辅助程序拒绝了签名有效但架构错误的清单。正确清单通过双重验签后替换 app，并保留旧包和由旧后端生成的曲库备份。直接启动新版包内后端后以原凭据登录，读回同一歌曲 ID 和标题，请求音频返回 Range 206。调用宿主确认模块后保留数据库备份并回收旧包与下载文件。
+- 新的后端选取流程用干净客户端 `6929fc8` 和本地后端 `35b1e33` 在 macOS arm64 验证。资源构建拒绝不匹配的 SHA，正确提交生成 `2.13.12` 和完整后端 SHA，包内二进制的 `-version` 与元数据完全一致。首轮 `ffmpeg -version` 超过 30 秒，后续进程采样停在 dyld 加载签名动态库。验收脚本给每次工具调用 120 秒，重建的 arm64 资源及 Rosetta x64 已验签 ZIP 均通过扫描、Range 206、重启读回和停止检查。x64 首次启动耗时 29.322 秒。GitHub Actions 为 Not run。
+- 本轮以测试脚本调用包内辅助程序和宿主确认模块。设置页点击、正式签名与公证、实体 Intel 和 macOS 13 设备为 Not run。证据见 `/home/hanxi/work/songloft-review/lynx-desktop-20261119-win10-baseline/` 下的 `macos-installed-size.jsonl`、`macos-helper-arm64.jsonl` 和 `macos-helper-x64.jsonl`。两组安装和升级临时副本已清理。
+
+### Windows 10 22H2 干净环境
+
+- 在隔离 KVM 虚拟机中从微软评估 ISO 全新安装 Windows 10 22H2 x64。ISO SHA-256 与微软公布的值一致，来宾报告 `10.0.19045`，系统 PATH 无 Go、Git、FFmpeg、Node.js。2.13.25 的按用户 NSIS 安装成功，安装器与主程序通过测试 Authenticode 验签，核对了 11 个包内资源摘要。安装目录 444 个文件合计 1,085,780,359 字节。[微软镜像校验值](https://download.microsoft.com/download/c/1/1/c11d2ca5-967c-45c0-bc7d-2d9ca3f1fe07/Windows10Enterprise22H2HashValues.pdf)
+- 默认启动在虚拟显卡上自动切到软件渲染，打开原版登录页。从登录页选择含中文和空格的目录，设置中的真实扫描导入 1 首 FLAC。虚拟 HDA 捕获的 286.25 秒音频中，有 282.75 秒检出 840 Hz 测试音。点击关闭后，同一进程继续播放，隐藏期间截取的 10.25 秒均检出测试音。托盘恢复原窗口。显式退出后核对桌面和后端进程均已停止，重新启动自动恢复曲库、播放队列与已保存的 283.611 秒位置。
+- 重新启动到第一个窗口用时 3.070 秒，包含软件渲染重启。应用进程树空闲／播放工作集中位数为 681.58／889.58 MiB，播放私有内存中位数 674.52 MiB。首次启动计时探针把软件渲染重启当成退出。后续采样跟踪实际接替的进程，并使用 UTF-8 读取中文曲库路径。上述数据来自首次会话的短时采样。干净系统首次冷启动时延为 Not run。命令、截图、串口和 PCM 分析见 `/home/hanxi/work/songloft-review/lynx-desktop-20261119-win10-baseline/` 的 `windows-offline-summary.json` 等。
+
+- 评估版经微软正常激活后重新断网，在同一系统重启后测到首个窗口用时 5.714 秒。随后从界面播放同一曲库 FLAC，跟踪同一宿主进程 3,604.492 秒，357 组播放样本的首尾位置相差 3,610.511 秒。显示器自动熄屏期间播放仍推进。虚拟 HDA 共捕获 3,624.25 秒，其中 3,593.25 秒落在 840 Hz 频率格，3,623.50 秒落在 840 ± 8 Hz 区间，未出现低电平采样窗。暂停后间隔 7 秒两次读回均为 3,622.002 秒。随后从托盘退出，读回确认宿主和包内 Go 后端均已停止。人工听音为 Not run。
+- 一小时采样的应用进程树工作集中位数为 642.92 MiB（空闲）、770.72 MiB（播放），前后五分钟分别为 762.45 和 775.20 MiB，峰值 848.92 MiB。播放私有内存中位数 636.60 MiB，前后五分钟为 587.35 和 648.34 MiB。原始位置与进程样本、PCM 分析及暂停截图见 `windows-long-samples.log`、`windows-resource-summary.json`、`windows-pause-stable.png`。
+
 ### 模块覆盖矩阵
 
 | 批次 | 主要实现 | 统一验收边界 |
 | --- | --- | --- |
-| 技术组合 | 独立桌面锁、兼容矩阵、C++ libmpv render API、IOSurface/D3D11、CEF、隔离探针 | Mac arm64、Rosetta x64 和 Windows 11 x64 虚拟机有原生运行及 CEF 证据，Windows 实体 GPU、实体 Intel Mac 与最低系统版本待验 |
+| 技术组合 | 独立桌面锁、兼容矩阵、C++ libmpv render API、IOSurface/D3D11、CEF、隔离探针 | Mac arm64、Rosetta x64 和 Windows 11 x64 虚拟机有原生运行及 CEF 证据，干净 Windows 10 22H2 x64 虚拟机已验证安装和本地播放，实体 Windows GPU、实体 Intel Mac 和 macOS 13 实机待验 |
 | 宿主 | 应用/通道隔离、系统 Keychain/DPAPI、原子偏好、OS 单实例锁、菜单/托盘、关窗保留、窗口快捷键、SMTC/Now Playing、系统偏好及日志 | Windows 虚拟机通过托盘、显式退出、锁屏系统媒体面板及 WinRT 媒体键输入事件。Mac arm64 图形会话通过隔离 Keychain 与本地自动登录。Mac Remote Command、实体媒体键、输入法和余下平台生命周期待验 |
-| 播放 | 一个 mpv、Callback/事件适配、sourceId/初始 seek/快速换源、实际格式探测、请求头/Cookie/TLS/代理、倍速/EQ、共享视频/全屏、V2 原子缓存 | Windows、Mac arm64、Rosetta x64 均有格式与媒体请求、断流恢复、断网后缓存播放证据。Windows 验证实际 EQ 输出、曲库 MV 和全屏 H.264/AAC 音画切换。两种 Mac 架构完成一小时采样。Windows 一小时、Mac 业务页同步、其它视频容器及人工听音待验 |
+| 播放 | 一个 mpv、Callback/事件适配、sourceId/初始 seek/快速换源、实际格式探测、请求头/Cookie/TLS/代理、倍速/EQ、共享视频/全屏、V2 原子缓存 | Windows、Mac arm64、Rosetta x64 均有格式与媒体请求、断流恢复、断网后缓存播放证据。Windows 验证实际 EQ 输出、曲库 MV 和全屏 H.264/AAC 音画切换。两种 Mac 架构和 Windows 10 22H2 虚拟机均完成一小时采样。Mac 业务页同步、其它视频容器及人工听音待验 |
 | Bundle | 固定后端/Go gitlink、动态端口+健康检查、随机凭据、绝对分离路径、有限重启、换服清理、父 EOF 与宽限结束 | 两种 Mac 架构的包内后端通过只读目录扫描、206、重启保留和停止。Windows 完整包通过本地登录、扫描、播放、虚拟局域网验证、升级保留和后端异常恢复。修复后的 Windows 隔离安装通过音乐目录恢复。更多设备和实体局域网待验 |
 | 插件 | 原生子 LynxView/资源加载/身份桥、CEF 既有宿主协议与 Cookie/外链/上传/返回、隐藏暂停及释放/socket 清理 | Mac 两架构的 Bundle 和反代子路径已验证安装后的插件读写、播放和后端重启读回。Windows 完整业务页在远程代理子路径通过两种插件的独立后端读写、播放、画面缩放及保留实例核对。第三方插件、其余设备和部署场景待验 |
 | 安装/更新 | 三架构 CI 源码、每用户 NSIS、Mac DMG/ZIP、嵌套签名、原始字节 Ed25519 清单、自动下载、用户安装、独立 Go 验签/等待/安装、备份配套恢复 | Windows 实际设置页签名升级通过。Mac arm64 迁移及恢复通过，两个 Mac 架构通过下载取消、断开重试和验签检查。Mac 设置页升级、最低系统和发行签名／公证待验 |

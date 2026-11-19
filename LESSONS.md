@@ -626,3 +626,15 @@
 - 证据：API 34 模拟器上的 WebView 发起宿主播放并查询到系统 EQ，首次应用预设却由宿主返回 `Object.hasOwn is not a function`。此前 Node/Vitest 的播放桥测试已通过。
 - 改用 `Object.keys` 校验音效配置的自有字段。回归在隐藏 `Object.hasOwn` 的环境跑真实分发器。SDK 传输的 WebView 与执行宿主逻辑的 Lynx JS 运行时都需要单独核对。
 - Seen 1× (2026-11-19)。
+
+### DESKTOP-032 · 验收包内工具时计入首次加载耗时
+
+- 范围为 Lynx 桌面 Bundle 原生资源，客户端 `6929fc8`，后端 `35b1e33`。macOS 26.6.2 原生 arm64 在 30 秒内未完成首次 `ffmpeg -version`。重跑期间采样显示进程在 dyld 加载签名动态库，旧版 Rosetta 记录也有 61 秒的首次加载。
+- 包内工具检查每条命令保留 120 秒上限，继续核对工具版本和扫描、Range、重启持久化。原生 arm64 新构建和 Rosetta x64 验签 ZIP 均通过，后者首次 `ffmpeg -version` 用时 29.322 秒。见[桌面实施记录](docs/project/desktop-implementation.md)。
+- Seen 1× (2026-11-19)。
+
+### DESKTOP-033 · 用实际接替进程验证 Windows 首次渲染
+
+- 范围为真实 2.13.25 NSIS，在干净 Windows 10 22H2 x64 虚拟机运行。虚拟显卡触发 `--disable-gpu` 的自动重启，首个 PID 按预期退出，最初计时器误报启动失败。替换后的宿主打开原版登录界面。
+- 从应用启动时开始计时，等待同一已验签路径的可见窗口，并跟踪该进程采集数据；原进程退出通过总时限和接替进程的实际窗口判定。见[桌面实施记录](docs/project/desktop-implementation.md)。
+- Seen 1× (2026-11-19)。

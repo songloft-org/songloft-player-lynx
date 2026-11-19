@@ -626,3 +626,15 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 - On an API 34 emulator the WebView started host playback and detected the system EQ. The first preset application then failed in the host with `Object.hasOwn is not a function`, despite the Node/Vitest bridge tests passing.
 - Validate the profile's own keys with `Object.keys` and exercise the real dispatcher in a regression with `Object.hasOwn` removed. Verify the plugin WebView transport and the separate Lynx host JS runtime.
 - Seen 1× (2026-11-19).
+
+### DESKTOP-032 · Allow for first-load latency when checking packaged tools
+
+- Lynx desktop Bundle resources used client `6929fc8` and backend `35b1e33`. On native arm64 macOS 26.6.2, the first `ffmpeg -version` exceeded 30 seconds. Sampling during a repeat showed dyld loading signed libraries. An earlier Rosetta run took 61 seconds on its first launch.
+- Give each packaged tool invocation a bounded 120 seconds and still verify tool versions, scanning, Range, and restart persistence. Newly built native arm64 resources and the verified Rosetta x64 ZIP passed. The x64 `ffmpeg -version` took 29.322 seconds. [Desktop implementation record](docs/en/project/desktop-implementation.md).
+- Seen 1× (2026-11-19).
+
+### DESKTOP-033 · Follow the replacement process when checking Windows startup
+
+- The actual 2.13.25 NSIS ran in a clean Windows 10 22H2 x64 VM. The virtual GPU triggered the automatic `--disable-gpu` relaunch. The initial PID exited as expected and the timer reported a false failure. The replacement host opened the stock login screen.
+- Measure from launch and wait for a visible window from the same verified executable path. Follow that process for sampling. Use the overall startup timeout and the replacement's actual window to decide whether startup succeeded. [Desktop implementation record](docs/en/project/desktop-implementation.md).
+- Seen 1× (2026-11-19).
