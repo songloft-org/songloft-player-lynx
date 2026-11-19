@@ -1,5 +1,11 @@
 # Lynx 客户端开发经验
 
+### BUNDLE-002：从公开分支选择后端构建源码
+
+- 2026-11-19，Lynx Android/iOS 与 Flutter Bundle 流水线请求只存在于本地的后端提交 `35b1e33`，GitHub 返回 `upload-pack: not our ref`。远端 `main` 当时也缺少 Android 构建需要的 SQLite 实现。[Lynx CI](https://github.com/songloft-org/songloft-player-lynx/actions/runs/44477893015) · [Flutter CI](https://github.com/songloft-org/songloft-player/actions/runs/44459675316)
+- 先将构建所需的后端代码合入主仓库，再改用公开 `main`。流水线每次运行读一次分支最新提交与版本，所有打包任务复用这次结果，并核对构建和产物记录的真实 SHA。
+- Seen 1× (2026-11-19)。
+
 ### WEB-AUDIO-001 Web 播放进度以当前媒体元素为准
 
 - [songloft-org/songloft#581](https://github.com/songloft-org/songloft/issues/581)，Lynx 基线 `64692b84e5f36a6f2f3ceeede77904771c2904d6`。Docker Chrome 播放真实 MP3 时，将 Web 音频宿主的 250ms 定时器延迟到 60 秒，旧进度一直停在零，浏览器的 `currentTime` 仍持续推进。

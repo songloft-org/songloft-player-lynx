@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-19 · Bundle backend source
+
+Android and iOS packages now build from the public backend `main` tip resolved at workflow startup. Build and package verification continue to use the actual backend SHA. [Progress](../../project/progress.md#bundle-backend-main)
+
 ## 2026-11-19 · Plugin navigation icons on cold start
 
 The first navigation frame shows cached plugin SVGs. Older snapshots reserve the icon slot on their first load and save the artwork once loaded. Chrome checks covered slow responses and HTTP 503. The Android API 34 emulator drew the restored icon before the SVG response returned. [Progress](../../project/progress.md#nav-tab-icons).

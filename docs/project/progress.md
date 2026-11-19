@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+<a id="bundle-backend-main"></a>
+
+## 2026-11-19 · Bundle 后端源码 / Bundle backend source
+
+Lynx Android/iOS 与 Flutter Bundle 的后端检出因旧锁文件引用了 GitHub 上不存在的提交而失败。客户端流水线改为在开始时读取公开后端 `main` 的最新 SHA 和版本，各打包任务复用该次结果，继续核对包内实际 SHA。[失败 CI](https://github.com/songloft-org/songloft-player-lynx/actions/runs/44477893015) · [发布指南](../guides/releasing.md)
+
+The Lynx Android and iOS jobs and the Flutter Bundle workflow failed to check out a backend commit stored in the old lockfiles and unavailable on GitHub. Each client workflow now resolves the public backend `main` tip and version at startup, shares them across packaging jobs, and continues checking the actual SHA in its packages. [Failed CI](https://github.com/songloft-org/songloft-player-lynx/actions/runs/44477893015) · [Release guide](../en/guides/releasing.md)
+
 <a id="nav-tab-icons"></a>
 
 ## 2026-11-19 · 冷启动插件导航图标 / Plugin navigation icons on cold start
