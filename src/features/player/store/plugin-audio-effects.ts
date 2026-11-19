@@ -1,5 +1,5 @@
 import { readNativeModules } from '../../../native/native-modules.js'
-import { getPlatformTarget } from '../../../native/platform-target.js'
+import { desktopPluginEqualizer } from '../../../desktop/audio.js'
 import { EQ_PRESET_NAMES, EQ_PRESETS, type EqPresetName } from '../domain/eq-presets.js'
 import { EQ_CENTER_FREQS } from '../../../native/audio-types.js'
 
@@ -24,9 +24,11 @@ let generation = 0
 let pendingWrite: Promise<void> = Promise.resolve()
 
 function nativeEqualizer() {
-  if (getPlatformTarget() !== 'android') return undefined
+  const desktop = desktopPluginEqualizer()
+  if (desktop) return desktop
   const audio = readNativeModules()?.SongloftAudio as NativePluginEqualizer | undefined
-  return audio?.getPluginEqualizerAvailable && audio.setPluginEqualizer ? audio : undefined
+  return typeof audio?.getPluginEqualizerAvailable === 'function' &&
+    typeof audio.setPluginEqualizer === 'function' ? audio : undefined
 }
 
 function nativeResult(invoke: (callback: (result: boolean) => void) => void) {

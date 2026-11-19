@@ -65,6 +65,18 @@ export class SongloftPlatformModule extends LynxModule {
     this.abilityContext.startAbility(want).catch(() => {})
   }
 
+  public openExternalURL(url: string, callback: (error: string | null) => void): void {
+    if (!/^https?:\/\/[^\s\\/?#]+(?:[/?#]|$)/i.test(url) || /[\s\\]/.test(url)) {
+      callback('invalid external URL')
+      return
+    }
+    const want: Want = { action: 'ohos.want.action.viewData', uri: url }
+    this.abilityContext.startAbility(want).then(
+      () => callback(null),
+      () => callback('could not open external URL'),
+    )
+  }
+
   public getCookies(origin: string, callback: (error: string | null, cookiesJson: string | null) => void): void {
     try {
       if (!/^https?:\/\/[^\s/?#]+(?:[/?#]|$)/i.test(origin)) {

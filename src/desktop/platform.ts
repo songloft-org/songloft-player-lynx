@@ -29,6 +29,12 @@ export function desktopPlatformModule() {
     openURL(url: string) {
       void desktopCall('platform.openURL', { url }).catch(() => {})
     },
+    openExternalURL(url: string, callback: (error: string | null) => void) {
+      void desktopCall('platform.openURL', { url }).then(
+        () => callback(null),
+        () => callback('could not open external URL'),
+      )
+    },
     setInsecureTls(enabled: boolean) {
       void desktopCall('platform.setInsecureTls', { enabled }).catch(() => {})
     },

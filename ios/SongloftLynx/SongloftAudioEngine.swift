@@ -114,6 +114,13 @@ final class SongloftAudioEngine {
 
   /// 10-band parametric EQ, attached to each AVPlayerItem via MTAudioProcessingTap.
   let equalizer = AudioEqualizer()
+  private var pluginEqualizerHls = false
+
+  var pluginEqualizerAvailable: Bool {
+    guard equalizer.audioUnit != nil, !pluginEqualizerHls else { return false }
+    guard let item = player?.currentItem else { return !isPreparingSource }
+    return item.audioMix != nil
+  }
   /// Set when the current item played to its end, so the `rate → 0` that follows
   /// does not emit a spurious `paused` after `completed` (same guard as Kotlin's
   /// `playbackState != STATE_ENDED` check).
@@ -177,6 +184,8 @@ final class SongloftAudioEngine {
     itemFailed = false
     currentURL = url
     currentLyricLine = nil
+    // AVPlayerItem only supports audioMix on file-based media.
+    pluginEqualizerHls = hls || URL(string: url)?.pathExtension.lowercased() == "m3u8"
     ClientFileLog.write("I", tag: "audio", "load \(Self.truncUrl(url)) hls=\(hls) queuedMetadata=\(metadataByURL[url] != nil)")
     emitState("loading")
 

@@ -21,6 +21,7 @@ import java.io.BufferedOutputStream
 import java.io.File
 import java.io.OutputStream
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
@@ -82,14 +83,28 @@ class SongloftPlatformModule(context: Context) : LynxModule(context) {
         }
     }
 
+    private fun launchExternalUrl(uri: Uri) {
+        val intent = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        mContext.startActivity(intent)
+    }
+
     @LynxMethod
     fun openURL(url: String) {
+        mainHandler.post { runCatching { launchExternalUrl(Uri.parse(url)) } }
+    }
+
+    @LynxMethod
+    fun openExternalURL(url: String, callback: Callback) {
+        val parsed = runCatching { URI(url) }.getOrNull()
+        val uri = Uri.parse(url)
+        if (parsed?.scheme?.lowercase() !in listOf("http", "https") ||
+            parsed?.rawAuthority.isNullOrEmpty() || uri.host.isNullOrBlank()) {
+            callback.invoke("invalid external URL")
+            return
+        }
         mainHandler.post {
-            try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                mContext.startActivity(intent)
-            } catch (_: Throwable) {}
+            val result = runCatching { launchExternalUrl(uri) }
+            callback.invoke(if (result.isSuccess) null else "could not open external URL")
         }
     }
 

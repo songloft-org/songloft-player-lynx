@@ -273,3 +273,10 @@ describe('the fallback branch', () => {
     expect(action.kind === 'fallback' && action.to).toBe('/library')
   })
 })
+
+test('fullscreen video returns to the plugin and preserves how it was opened', () => {
+  const origin = { entryPath: 'my-mv', search: { tab: true, from: 'manager' as const } }
+  expect(resolveRouteBack('/player/video', ctx({ videoReturnPlugin: origin })))
+    .toEqual({ kind: 'navigate', to: '/plugin/$entryPath', plugin: origin })
+  expect(resolveRouteBack('/player/video', ctx())).toEqual({ kind: 'navigate', to: '/player' })
+})

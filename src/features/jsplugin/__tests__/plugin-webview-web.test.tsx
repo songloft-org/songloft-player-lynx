@@ -138,7 +138,8 @@ vi.mock('../../../native/web-webview.js', async () => {
   }
 })
 
-vi.mock('../../../native/native-platform.js', () => ({
+vi.mock('../../../native/native-platform.js', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../../native/native-platform.js')>(),
   openURL: h.openURL,
 }))
 

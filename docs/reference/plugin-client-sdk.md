@@ -6,7 +6,7 @@ HTML 插件使用 `@songloft/client-sdk` / `window.SongloftPlugin`；原生 Lynx
 
 | namespace | method | 行为 / 返回值 |
 |---|---|---|
-| `host` | `getInfo` | 真实客户端版本、`android/ios/harmony/web` 平台和能力列表 |
+| `host` | `getInfo` | 真实客户端版本、`android/ios/harmony/macos/windows/web` 平台和能力列表 |
 | `player` | `getState` | 完整歌曲的 snake_case JSON；进度、时长以秒计，音量 0–100 |
 | `player` | `setQueue` | 解析 `ids`，跳过不存在歌曲，按 `startIndex` 开始，保留可选 `sourcePlaylistId` |
 | `player` | `addToQueue` | 按歌曲 ID 与类型去重追加，不切歌 |
@@ -25,9 +25,35 @@ HTML 插件使用 `@songloft/client-sdk` / `window.SongloftPlugin`；原生 Lynx
 
 收藏增量通知先取消旧查询，避免旧 GET 覆盖新状态；冷缓存先加载完整集合，不能把一首歌的通知当成完整收藏列表。
 
+## Lynx 平台支持
+
+| 平台 | 打开外链 | 全屏播放曲库 MV | 查询、应用和清除 EQ | 验收状态 |
+|---|---|---|---|---|
+| Android | 支持 | 支持 | 支持，使用系统均衡器 | Android 14 模拟器已验证 |
+| iOS | 支持 | 支持 | 支持文件媒体，HLS 不支持 | 原生包待验收 |
+| HarmonyOS | 支持 | 支持 | 不支持 EQ，查询返回 `supported: {}` | 原生包待验收 |
+| macOS | 支持 | 支持 | 支持，使用 libmpv | 共享桌面宿主的 EQ 测试已通过，原生包待验收 |
+| Windows | 支持 | 支持 | 支持，使用 libmpv | 共享桌面宿主的 EQ 测试已通过，原生包待验收 |
+| Web | 支持，从用户点击发起 | 支持，使用宿主视频页 | 支持，当前输出需经过 Web Audio | Chromium 已验证 |
+
+插件以 `host.getInfo().capabilities` 判断当前宿主是否提供接口，再以 `getAudioEffects().supported` 判断当前音频输出可用的预设。投屏期间无可用 EQ，也不能从插件打开宿主全屏视频。所有平台的插件混响都待接入。
+
+## 插件外链和全屏视频
+
+通过 `host.getInfo().capabilities` 检查宿主是否提供对应能力。
+
+| 能力 | WebView SDK | 原生 Lynx SDK |
+|---|---|---|
+| `plugin.openUrl` | `host.openExternalUrl(url)` | `invokeHost('plugin', 'openUrl', { url })` |
+| `player.openVideo` | `player.openVideo({ id })` | `invokeHost('player', 'openVideo', { id })` |
+
+外链只接收绝对 HTTP 或 HTTPS URL。系统接受打开请求后调用成功，浏览器拦截弹窗或系统无法打开时返回错误。浏览器插件应从用户点击发起。视频接收带视频轨的曲库条目 ID。当前条目已加载时保持进度并在暂停时继续播放。切换到另一条目使用宿主的「观看 MV」流程，关闭视频回到发起调用的插件页。宿主先交付受理回执再切换页面。视频页负责显示转码和媒体错误。浏览器系统全屏由视频页内的全屏按钮触发。
+
+WebView 全屏需要提供新版 `common.js` 的服务端，原生 Lynx 插件需用支持新回执的 SDK 重新构建。
+
 ## 插件播放音效
 
-检测 `host.getInfo().capabilities` 是否包含 `player.audioEffects`。Lynx Android 先支持系统均衡器上的宿主 EQ 预设。设备不支持 EQ 或正在投屏时，`supported` 为空。混响和其他平台待接入，插件按查询结果显示控件。调用参数使用服务端曲库歌曲 ID。
+检测 `host.getInfo().capabilities` 是否包含 `player.audioEffects`。浏览器禁止启动 AudioContext 时，应用预设会失败。调用参数使用服务端曲库歌曲 ID。
 
 | `player` 方法 | 参数及结果 |
 |---|---|
@@ -40,6 +66,8 @@ HTML 插件使用 `@songloft/client-sdk` / `window.SongloftPlugin`；原生 Lynx
 WebView 使用 `@songloft/client-sdk` 的 `player`，也可以使用 `window.SongloftPlugin.player`。Lynx 原生插件能通过 `invokeHost('player', 'getAudioEffects')` 等方法调用，检查返回的 `ok`、`data` 和 `error`。
 
 Android 14 模拟器和 WebView 113 的调试包验证了插件启动播放、应用 EQ、切歌保留、清除后继续播放以及宿主 EQ 接管。AudioFlinger 在同一输出会话中报告均衡器依次关闭、启用、关闭。
+
+外链和全屏接口在 Android 14 模拟器和 Chromium 中验证。Android 打开系统浏览器，从 12 秒处切入全屏并返回原插件，播放继续。Chromium 验证了插件点击打开浏览器标签页、应用与清除 EQ、打开曲库 MV 和返回插件页。桌面宿主测试覆盖了插件临时预设及恢复用户设置。
 
 ## 传输和平台
 

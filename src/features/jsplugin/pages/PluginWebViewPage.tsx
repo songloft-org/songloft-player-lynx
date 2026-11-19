@@ -30,6 +30,7 @@ import {
   type HostCallRequest,
   type PluginHostContext,
 } from '../domain/plugin-host-dispatch.js'
+import { createPluginReplyGate, HOST_REPLY_RECEIVED } from '../domain/plugin-host-reply.js'
 import { pluginHostContext as hostContext } from '../domain/plugin-host-context.js'
 import {
   pluginThemeAppearance,
@@ -151,10 +152,14 @@ export function PluginWebViewPage() {
   const [error, setError] = useState<string | null>(null)
   const webviewRef = useRef<NodesRef>(null)
   const nativePageGeneration = useRef(0)
+  const nativeReplies = useRef(createPluginReplyGate()).current
   useEffect(() => {
     nativePageGeneration.current++
-    return () => { nativePageGeneration.current++ }
-  }, [src])
+    return () => {
+      nativePageGeneration.current++
+      nativeReplies.clear()
+    }
+  }, [src, nativeReplies])
   const backBridgeRef = useRef<ReturnType<typeof createPluginBackBridge> | null>(null)
   const canPluginBackRef = useRef(false)
   const [canPluginBack, setCanPluginBack] = useState(false)
@@ -405,15 +410,23 @@ export function PluginWebViewPage() {
       if (backBridgeRef.current?.receive(req)) return
       const call = decodeHostCall(req)
       if (!call) return
+      if (call.ns === 'lifecycle' && call.method === HOST_REPLY_RECEIVED) {
+        if (typeof call.id === 'string') nativeReplies.confirm(call.id)
+        return
+      }
       const node = webviewRef.current
       const generation = nativePageGeneration.current
       const callerContext = Object.create(hostContext) as PluginHostContext
       callerContext.pluginEntryPath = entryPath
       callerContext.isPluginActive = () =>
-        webviewRef.current === node && generation === nativePageGeneration.current
+        !!node && webviewRef.current === node && generation === nativePageGeneration.current
       void handlePluginHostCall(call, callerContext).then(result => {
         if (!node || webviewRef.current !== node || generation !== nativePageGeneration.current) return
-        const reply = JSON.stringify({ type: 'songloft-host-reply', id: call.id, ...result })
+        const reply = JSON.stringify({
+          type: 'songloft-host-reply',
+          id: call.id,
+          ...(typeof call.id === 'string' ? nativeReplies.stage(call.id, result) : result),
+        })
         node.invoke({ method: 'eval', params: { func: `window.dispatchEvent(new MessageEvent('message',{data:${reply}}))` } }).exec()
       }).catch(() => {
         // The native view can disappear before eval executes. The requesting
@@ -600,6 +613,10 @@ function WebPluginFrame({ src, frameKey, onBackMessage, onConnectBack }: {
     }
 
     let closed = false
+    const replies = createPluginReplyGate()
+    const callerContext = Object.create(hostContext) as PluginHostContext
+    callerContext.pluginEntryPath = frameKey
+    callerContext.isPluginActive = () => !closed
     let unsubTheme: (() => void) | undefined
     let unsubPlayer: (() => void) | undefined
 
@@ -641,9 +658,14 @@ function WebPluginFrame({ src, frameKey, onBackMessage, onConnectBack }: {
         if (onBackMessage(payload)) return
         const req = decodeHostCall(payload)
         if (!req) return
-        void handlePluginHostCall(req, hostContext).then((result) => {
+        if (req.ns === 'lifecycle' && req.method === HOST_REPLY_RECEIVED) {
+          if (typeof req.id === 'string') replies.confirm(req.id)
+          return
+        }
+        void handlePluginHostCall(req, callerContext).then((result) => {
           if (closed) return
-          send({ type: 'songloft-host-reply', id: req.id, ...result })
+          const reply = typeof req.id === 'string' ? replies.stage(req.id, result) : result
+          send({ type: 'songloft-host-reply', id: req.id, ...reply })
         })
       },
       onOpenFailed: () => {
@@ -666,6 +688,7 @@ function WebPluginFrame({ src, frameKey, onBackMessage, onConnectBack }: {
 
     return () => {
       closed = true
+      replies.clear()
       unsubTheme?.()
       unsubPlayer?.()
       setWebviewBridgeHandlers(null)

@@ -6,6 +6,7 @@ interface SongloftPlatformNative {
   getCookies(origin: string, callback: (error: string | null, cookiesJson: string | null) => void): void
   setKeepScreenOn(enabled: boolean): void
   openURL(url: string): void
+  openExternalURL?(url: string, callback: (error: string | null) => void): void
   pickAndUploadFile(
     uploadUrl: string,
     fieldName: string,
@@ -88,6 +89,27 @@ export function openURL(url: string): void {
   } else if (isWebEnvironment()) {
     webOpenURL(url)
   }
+}
+
+export function canOpenExternalURL(): boolean {
+  return typeof getModule()?.openExternalURL === 'function'
+}
+
+/** Open a plugin link and receive the result of handing it to the OS. */
+export function openExternalURL(url: string): Promise<void> {
+  const mod = getModule()
+  const open = mod?.openExternalURL
+  if (!mod || typeof open !== 'function') return Promise.reject(new Error('external URLs are unavailable'))
+  return new Promise((resolve, reject) => {
+    const finish = (error: string | null) => {
+      clearTimeout(timer)
+      if (error === null) resolve()
+      else reject(new Error(error || 'could not open external URL'))
+    }
+    const timer = setTimeout(() => finish('external URL request timed out'), 5000)
+    try { open.call(mod, url, finish) }
+    catch (error) { finish(String(error)) }
+  })
 }
 
 /**

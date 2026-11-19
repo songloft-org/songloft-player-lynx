@@ -41,6 +41,18 @@ export default function (_nativeModules, call) {
   module.getSourceLoadVersion = function (callback) {
     call('getSourceLoadVersion', []).then(function (version) { callback(version) }, function () { callback(0) })
   }
+  module.getPluginEqualizerAvailable = function (callback) {
+    call('getPluginEqualizerAvailable', []).then(
+      function (available) { callback(available === true) },
+      function () { callback(false) },
+    )
+  }
+  module.setPluginEqualizer = function (profile, callback) {
+    call('setPluginEqualizer', [profile]).then(
+      function (applied) { callback(applied === true) },
+      function () { callback(false) },
+    )
+  }
   for (var i = 0; i < METHODS.length; i++) {
     (function (name) {
       module[name] = function () {

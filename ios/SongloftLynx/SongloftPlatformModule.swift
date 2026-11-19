@@ -21,6 +21,7 @@ final class SongloftPlatformModule: NSObject, LynxModule {
       "consumeWidgetAction": NSStringFromSelector(#selector(SongloftPlatformModule.consumeWidgetAction(_:))),
       "setKeepScreenOn": NSStringFromSelector(#selector(SongloftPlatformModule.setKeepScreenOn(_:))),
       "openURL": NSStringFromSelector(#selector(SongloftPlatformModule.openURL(_:))),
+      "openExternalURL": NSStringFromSelector(#selector(SongloftPlatformModule.openExternalURL(_:callback:))),
       "getCookies": NSStringFromSelector(#selector(SongloftPlatformModule.getCookies(_:callback:))),
       "pickAndUploadFile": NSStringFromSelector(
         #selector(SongloftPlatformModule.pickAndUploadFile(_:fieldName:mimeType:callback:))
@@ -151,6 +152,25 @@ final class SongloftPlatformModule: NSObject, LynxModule {
     guard let parsed = URL(string: url) else { return }
     DispatchQueue.main.async {
       UIApplication.shared.open(parsed)
+    }
+  }
+
+  @objc func openExternalURL(_ url: String, callback: @escaping LynxCallbackBlock) {
+    guard let parsed = URL(string: url),
+      let scheme = parsed.scheme?.lowercased(), ["http", "https"].contains(scheme),
+      let host = parsed.host, !host.isEmpty
+    else {
+      callback(["invalid external URL"] as NSArray)
+      return
+    }
+    DispatchQueue.main.async {
+      UIApplication.shared.open(parsed) { opened in
+        if opened {
+          callback([NSNull()] as NSArray)
+        } else {
+          callback(["could not open external URL"] as NSArray)
+        }
+      }
     }
   }
 

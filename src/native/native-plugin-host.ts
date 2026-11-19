@@ -1,5 +1,10 @@
 import { readLynxGlobal, readNativeModules } from './native-modules.js'
-import type { HostCallRequest, HostCallResult } from '../features/jsplugin/domain/plugin-host-dispatch.js'
+import type { HostCallRequest } from '../features/jsplugin/domain/plugin-host-dispatch.js'
+import {
+  createPluginReplyGate,
+  HOST_REPLY_RECEIVED,
+  type PluginHostReply,
+} from '../features/jsplugin/domain/plugin-host-reply.js'
 import { desktopPluginSockets } from '../desktop/plugin-sockets.js'
 
 export const PLUGIN_HOST_CALL_EVENT = 'SongloftPluginBridge.hostCall'
@@ -19,11 +24,12 @@ export interface NativePluginHost {
 /** Scope registration, readiness, replies and queued snapshots to one mounted frame. */
 export function connectNativePluginHost(
   frameId: string,
-  dispatch: (request: HostCallRequest) => Promise<HostCallResult>,
+  dispatch: (request: HostCallRequest) => Promise<PluginHostReply>,
 ): NativePluginHost {
   'background only'
   let active = true
   let ready = false
+  const replies = createPluginReplyGate()
   const queued = new Map<string, string>()
   queued.set('lifecycle', JSON.stringify({ state: 'resumed' }))
   const raw = readNativeModules()?.SongloftPluginBridge as Partial<PluginBridgeNativeModule> | undefined
@@ -41,15 +47,19 @@ export function connectNativePluginHost(
     if (!ready) { queued.set(event, data); return }
     try { mod.pushToChild(frameId, event, data) } catch { /* The child may already be disposed. */ }
   }
-  const reply = (callId: string, result: HostCallResult) => {
+  const reply = (callId: string, result: PluginHostReply) => {
     if (!active) return
-    try { mod.hostReply(frameId, callId, JSON.stringify(result)) } catch { /* Late/disposed child. */ }
+    try { mod.hostReply(frameId, callId, JSON.stringify(replies.stage(callId, result))) } catch { /* Late/disposed child. */ }
   }
   const handler = (payload: unknown) => {
     if (!active || !payload || typeof payload !== 'object') return
     const call = payload as Record<string, unknown>
     if (call.frameId !== frameId || typeof call.callId !== 'string'
       || typeof call.ns !== 'string' || typeof call.method !== 'string') return
+    if (call.ns === 'lifecycle' && call.method === HOST_REPLY_RECEIVED) {
+      replies.confirm(call.callId)
+      return
+    }
     if (call.ns === 'lifecycle' && call.method === 'ready') {
       if (!ready) {
         ready = true
@@ -80,6 +90,7 @@ export function connectNativePluginHost(
     active = false
     desktopPluginSockets()?.closeFrame(frameId)
     queued.clear()
+    replies.clear()
     try { emitter.removeListener(PLUGIN_HOST_CALL_EVENT, handler) } catch { /* Host teardown. */ }
     try { emitter.removeListener('SongloftDesktop.pluginSocket', socketEvent) } catch { /* Host teardown. */ }
     try { mod.unregisterHost(frameId) } catch { /* Host teardown. */ }
