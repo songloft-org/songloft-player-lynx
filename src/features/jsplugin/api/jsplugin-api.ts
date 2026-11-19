@@ -79,10 +79,14 @@ export class JSPluginApi {
    * Despite swagger declaring this endpoint auth-free, it answers 401 without a
    * token — so it goes through the authenticated client.
    */
-  async getStaticText(entryPath: string, path: string): Promise<string> {
+  async getStaticText(
+    entryPath: string,
+    path: string,
+    options?: Pick<RequestOptions, 'assertCurrent' | 'signal'>,
+  ): Promise<string> {
     const res = await this.client.get<string>(
       `${apiPrefix}/jsplugin/${entryPath}/static/${path}`,
-      { parseJson: false },
+      { ...options, parseJson: false },
     )
     return typeof res.data === 'string' ? res.data : ''
   }

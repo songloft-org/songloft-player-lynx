@@ -7,7 +7,7 @@
  * tab, and Settings last. `path` values map directly to the TanStack Router
  * routes mounted under the shell.
  */
-import type { PluginTabEntry } from '../../features/jsplugin/data/tab-config.js'
+import type { ShellPluginTabEntry } from '../../features/jsplugin/data/tab-config.js'
 import type { IconName } from '../ui/icons.js'
 
 export interface NavDestination {
@@ -20,7 +20,7 @@ export interface NavDestination {
    * render the plugin's literal (non-i18n) name and their own icon, so
    * `labelKey` and `icon` are placeholders for them.
    */
-  plugin?: PluginTabEntry
+  plugin?: ShellPluginTabEntry
 }
 
 const HOME: NavDestination = { path: '/', labelKey: 'nav.home', icon: 'home' }
@@ -48,7 +48,7 @@ export const NAV_REAL_SLOTS = 4
  */
 export function buildNavDestinations(
   showLibrary: boolean,
-  pluginTabs: readonly PluginTabEntry[],
+  pluginTabs: readonly ShellPluginTabEntry[],
 ): NavDestination[] {
   const destinations: NavDestination[] = [HOME]
   if (showLibrary) destinations.push(LIBRARY)

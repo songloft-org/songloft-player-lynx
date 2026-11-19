@@ -1,5 +1,5 @@
-import { useSyncExternalStore } from '@lynx-js/react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useMemo, useSyncExternalStore } from '@lynx-js/react'
+import { useQueries, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
 
 import { appConfig } from '../../../core/config/app-config.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
@@ -7,6 +7,8 @@ import { safeClearTimeout } from '../../../native/safe-timers.js'
 import { useAppSessionStore } from '../../../store/app-session.js'
 import { getSettingsApi } from '../../settings/api/index.js'
 import { getJSPluginApi } from '../api/index.js'
+import { isSvgIcon } from '../domain/plugin-icon.js'
+import { isSvgMarkup, loadPluginIcon } from './jsplugin-query.js'
 import type { JSPlugin } from '../../../models/jsplugin.js'
 
 export interface PluginTabEntry {
@@ -37,10 +39,15 @@ export function parseTabConfig(data: unknown): TabConfig {
   }
 }
 
-/** The shell's live tab configuration — everything it needs to build the nav bar. */
+export interface ShellPluginTabEntry extends PluginTabEntry {
+  /** SVG markup, or null after a failed load. Undefined while loading. */
+  svgMarkup?: string | null
+}
+
+/** The shell's live tab configuration with resolved plugin icons. */
 export interface ShellNavTabs {
   showLibrary: boolean
-  pluginTabs: PluginTabEntry[]
+  pluginTabs: ShellPluginTabEntry[]
 }
 
 function shellNavServer(): string {
@@ -49,6 +56,10 @@ function shellNavServer(): string {
 }
 
 const shellNavUsername = () => useAppSessionStore.getState().username
+
+function combineIconMarkup(results: UseQueryResult<string>[]) {
+  return results.map(({ data, isError }) => data ?? (isError ? null : undefined))
+}
 
 async function readSavedShellNavTabs(key: string): Promise<ShellNavTabs | null> {
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -89,9 +100,8 @@ export function filterActivePluginTabs(
  * Tab config for the navigation shell: `showLibrary` plus the plugin tabs, in
  * one query — the shell needs both together to build the bar/rail/More sheet.
  *
- * The `icon` field is merged from the plugin list cache: backend configs saved
- * before the field was added to the schema carry no icon, and the plugin list
- * does (same back-fill the old `usePluginTabsWithIcons` existed for).
+ * The plugin list supplies icon filenames when tab config omits them.
+ * A separate query per SVG lets the layout update as soon as it is ready.
  *
  * Shares the `['settings', 'tab-config']` key prefix with the config page, so
  * its save-triggered invalidation refetches this too and the bar follows a
@@ -105,6 +115,18 @@ export function useShellNavTabs() {
   const username = useSyncExternalStore(useAppSessionStore.subscribe, shellNavUsername)
   const queryKey = ['settings', 'tab-config', 'shell-nav', server, username] as const
   const storageKey = username ? `shell_nav_tabs_v1:${JSON.stringify([server, username])}` : null
+  const iconKey = (tab: PluginTabEntry) =>
+    ['shell-nav-icon', server, username, tab.entryPath, tab.icon] as const
+
+  const guardRequest = (signal: AbortSignal) => {
+    const requestBaseUrl = `${appConfig.resolvedBaseUrl}${appConfig.basePath}`
+    return () => {
+      if (signal.aborted || shellNavServer() !== server || shellNavUsername() !== username
+        || `${appConfig.resolvedBaseUrl}${appConfig.basePath}` !== requestBaseUrl) {
+        throw new Error('Navigation session changed')
+      }
+    }
+  }
 
   const restore = useQuery({
     queryKey: ['shell-nav-snapshot', server, username],
@@ -113,9 +135,14 @@ export function useShellNavTabs() {
     queryFn: async ({ signal }) => {
       const saved = storageKey && await readSavedShellNavTabs(storageKey)
       if (saved && !signal.aborted && client.getQueryData(queryKey) === undefined) {
-        // Seed as stale so the first shell frame can use it while a live GET
-        // revalidates it. Query data survives a failed background refresh.
-        client.setQueryData(queryKey, saved, { updatedAt: 0 })
+        const pluginTabs = saved.pluginTabs.map(({ svgMarkup, ...tab }) => {
+          if (isSvgIcon(tab.icon) && typeof svgMarkup === 'string' && isSvgMarkup(svgMarkup)) {
+            client.setQueryData(iconKey(tab), svgMarkup, { updatedAt: 0 })
+          }
+          return tab
+        })
+        // Seed icons before publishing the layout so both render in the first frame.
+        client.setQueryData(queryKey, { showLibrary: saved.showLibrary, pluginTabs }, { updatedAt: 0 })
       }
       return null
     },
@@ -125,38 +152,59 @@ export function useShellNavTabs() {
   const live = useQuery({
     queryKey,
     enabled: !isRestoring,
-    queryFn: async ({ signal }): Promise<ShellNavTabs> => {
-      const requestBaseUrl = `${appConfig.resolvedBaseUrl}${appConfig.basePath}`
-      const assertCurrent = () => {
-        if (signal.aborted || shellNavServer() !== server || shellNavUsername() !== username
-          || `${appConfig.resolvedBaseUrl}${appConfig.basePath}` !== requestBaseUrl) {
-          throw new Error('Navigation session changed')
-        }
-      }
+    queryFn: async ({ signal }): Promise<TabConfig> => {
+      const assertCurrent = guardRequest(signal)
       const [config, pluginRes] = await Promise.all([
         getSettingsApi().getTabConfig({ assertCurrent }),
         getJSPluginApi().getPlugins({ assertCurrent }),
       ])
       assertCurrent()
       const pluginMap = new Map(pluginRes.plugins.map((p) => [p.entryPath, p]))
-      const tabs: ShellNavTabs = {
+      return {
         showLibrary: config.showLibrary,
         pluginTabs: filterActivePluginTabs(config.pluginTabs, pluginRes.plugins).map((tab) => ({
           ...tab,
-          // The `icon` field is merged from the plugin list cache: backend
-          // configs saved before the field existed carry no icon.
           icon: tab.icon || pluginMap.get(tab.entryPath)?.icon || undefined,
         })),
       }
-      if (storageKey) {
-        const snapshot = JSON.stringify(tabs)
-        const previous = client.getQueryData<ShellNavTabs>(queryKey)
-        if (previous && snapshot === JSON.stringify(previous)) return previous
-        void getSongloftStorage().prefs.set(storageKey, snapshot).catch(() => {})
-      }
-      return tabs
     },
     staleTime: 60_000,
   })
-  return { data: live.data, isRestoring }
+
+  const layout = live.data
+  const iconMarkup = useQueries({
+    queries: layout?.pluginTabs.map(tab => ({
+      queryKey: iconKey(tab),
+      enabled: !isRestoring && isSvgIcon(tab.icon),
+      staleTime: 60_000,
+      retry: false,
+      queryFn: async ({ signal }): Promise<string> => {
+        const assertCurrent = guardRequest(signal)
+        const markup = await loadPluginIcon(tab.entryPath, tab.icon!, { assertCurrent, signal })
+        assertCurrent()
+        if (!markup) throw new Error('Invalid plugin SVG icon')
+        return markup
+      },
+    })) ?? [],
+    combine: combineIconMarkup,
+  })
+
+  const data = useMemo<ShellNavTabs | undefined>(() => layout && ({
+    showLibrary: layout.showLibrary,
+    pluginTabs: layout.pluginTabs.map((tab, index) => {
+      const svgMarkup = iconMarkup[index]
+      return svgMarkup === undefined ? tab : { ...tab, svgMarkup }
+    }),
+  }), [layout, iconMarkup])
+
+  const snapshot = useMemo(() => data && JSON.stringify(data, (key, value) =>
+    key === 'svgMarkup' && value === null ? undefined : value,
+  ), [data])
+  useEffect(() => {
+    if (storageKey && snapshot && !isRestoring) {
+      void getSongloftStorage().prefs.set(storageKey, snapshot).catch(() => {})
+    }
+  }, [storageKey, snapshot, isRestoring])
+
+  return { data, isRestoring }
 }

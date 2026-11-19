@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from 'vitest'
 
-import { isSvgIcon } from '../widgets/PluginGrid.js'
 import { normalizeSvgMarkup } from '../data/jsplugin-query.js'
+import { isSvgIcon } from '../domain/plugin-icon.js'
 
 /**
  * The home plugin grid rendered nothing where its icons should be. Two facts,

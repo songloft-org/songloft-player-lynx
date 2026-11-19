@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 
+import type { RequestOptions } from '../../../core/network/http-client.js'
 import { getJSPluginApi } from '../api/index.js'
 
 export const pluginQueryKeys = {
@@ -19,7 +20,7 @@ export function usePluginsQuery() {
 }
 
 /** Markup that is unmistakably an SVG document, not an SPA fallback page. */
-function isSvgMarkup(text: string): boolean {
+export function isSvgMarkup(text: string): boolean {
   const head = text.trimStart().slice(0, 300).toLowerCase()
   return head.startsWith('<svg') || (head.startsWith('<?xml') && head.includes('<svg'))
 }
@@ -50,6 +51,15 @@ export function normalizeSvgMarkup(text: string): string {
   return text.replace(openMatch[0], `<svg${attrs} viewBox="0 0 ${w} ${h}">`)
 }
 
+export async function loadPluginIcon(
+  entryPath: string,
+  icon: string,
+  options?: Pick<RequestOptions, 'assertCurrent' | 'signal'>,
+): Promise<string> {
+  const text = await getJSPluginApi().getStaticText(entryPath, icon, options)
+  return isSvgMarkup(text) ? normalizeSvgMarkup(text) : ''
+}
+
 /**
  * SVG markup for a plugin icon, for feeding `<svg content>`.
  *
@@ -69,10 +79,7 @@ export function usePluginIconQuery(entryPath: string, icon: string, enabled: boo
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: Number.POSITIVE_INFINITY,
     retry: false,
-    queryFn: async () => {
-      const text = await getJSPluginApi().getStaticText(entryPath, icon)
-      return isSvgMarkup(text) ? normalizeSvgMarkup(text) : ''
-    },
+    queryFn: () => loadPluginIcon(entryPath, icon),
   })
 }
 

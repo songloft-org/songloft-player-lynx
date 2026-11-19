@@ -376,6 +376,12 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 - Two touch gestures reached 482px in both versions of the 40-long-title Docker Chrome fixture. In the sample after scrolling, the number of titles writing transforms fell from 40 to 10. Measure and start on `uiappear`, then stop the original animation handle on `uidisappear`. The regression also covers re-entry and the title-scrolling preference.
 - Seen 1× (2026-11-18). Comparison uses `baef0f9` and this Lynx worktree. Evidence is in `/tmp/songloft-lynx-scroll-tabs.j14OKU/`.
 
+### NAV-002 · Save plugin SVG icons in the cold-start snapshot
+
+- Scope is plugin tabs in Lynx main navigation. Baseline `debad6e` restored the tab layout and icon filename and showed a settings gear while the SVG loaded.
+- Save loaded SVGs by server and account. Restore markup for the matching filename before publishing the layout. Reserve the icon slot while loading from an older snapshot or requesting a new icon. Keep usable cached artwork when revalidation fails.
+- Seen 1× (2026-11-19). The cold-start component regression saw a gear in the baseline's first frame. [Docker Chrome comparison and evidence](docs/project/progress.md#nav-tab-icons).
+
 ### NAV-001 · Start with the last confirmed tab layout
 
 - The capsule uses the local snapshot for the current server and account on its first frame. Revalidate both the tab configuration and enabled plugins in the background, then save the confirmed layout. Mobile Bundle reuses the snapshot for the same local library across listener port changes.

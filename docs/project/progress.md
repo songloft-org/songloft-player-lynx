@@ -1,5 +1,21 @@
 # 进展与交接（PROGRESS）
 
+<a id="nav-tab-icons"></a>
+
+## 2026-11-19 · 冷启动插件导航图标 / Plugin navigation icons on cold start
+
+导航快照一并恢复已加载的 SVG。首次请求或旧快照缺少 SVG 时保留图标位，后台校验失败时继续显示已缓存的图标。
+
+Docker Chrome 的 390 px 底栏对照中，旧版齿轮显示约 2.2 秒，新版首帧即显示插件图标。HTTP 503 和返回 HTML 的图标响应均保留缓存。类型检查、Lynx/Web 双构建及 3892 项测试通过。基线 `debad6e80f422c9ed092fa3a5e4af21d34426a83`，Linux x86_64 / Node 22.17.1。本次工作树指纹、命令、日志和截图见 `/tmp/songloft-nav-icons.ndU7Ve/verification.md`。
+
+Android API 34 模拟器强制结束进程后重新打开，SVG 请求返回前已拍到插件图标，截图与请求完成后的截图一致。iOS、鸿蒙和真机未验。
+
+The navigation snapshot restores loaded SVGs alongside the tab layout. First-time loads and older snapshots reserve the icon slot. The cached artwork stays visible when background revalidation fails.
+
+In the 390 px Docker Chrome comparison, the old navigation bar showed a gear for approximately 2.2 seconds and the fixed bar displayed the plugin SVG in its first frame. HTTP 503 and HTML icon responses preserved the cached artwork. Type checking, Lynx and Web builds, and all 3,892 tests passed. Baseline `debad6e80f422c9ed092fa3a5e4af21d34426a83` on Linux x86_64 with Node 22.17.1. Worktree hashes, commands, logs, and screenshots are recorded in `/tmp/songloft-nav-icons.ndU7Ve/verification.md`.
+
+After a force-stop on the Android API 34 emulator, the cold-start screenshot already showed the plugin SVG before the request completed. The screenshot matched the one captured after the response. iOS, HarmonyOS, and physical devices remain unverified.
+
 <a id="issue-581"></a>
 
 ## 2026-11-19 · Web 播放进度 / Web playback progress

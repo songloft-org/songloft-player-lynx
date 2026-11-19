@@ -1,7 +1,7 @@
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import type { RegistryPluginEntry } from '../../../models/jsplugin.js'
 import { useRegistryIconQuery } from '../data/jsplugin-query.js'
-import { isSvgIcon } from './PluginGrid.js'
+import { isSvgIcon } from '../domain/plugin-icon.js'
 import { PluginIconTile } from './PluginIconTile.js'
 
 /**
