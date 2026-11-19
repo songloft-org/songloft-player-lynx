@@ -413,8 +413,8 @@
 ### AUDIO-002：应用音量要自己持久化，系统音量语义按平台区分
 
 - 范围：四端音量恢复、iOS AVPlayer 倍率与 Web 宿主，songloft-org/songloft#536。
-- 规则：store 的 0–100 音量是应用级设置，写入 prefs `player_volume`（与偏好同步共用键），启动时先 `restoreVolume` 再恢复播放，避免自动续播按宿主默认音量出声。Android 的音量归系统媒体流，不能覆盖用户保存值；iOS 记录应用级倍率并在每次创建播放器后重新赋值，不能读取/监听 `AVAudioSession.outputVolume`（那是系统音量，与应用滑杆无关，还会把滑杆弹回）。宿主 `volumeChanged` 在恢复完成前不得覆盖本地偏好。
-- 证据：iOS 旧实现读系统音量且换播放器后丢倍率，Web `getVolume` 为空实现；新增 `volume-persistence` 回归覆盖防抖写入、启动恢复与事件门控。Docker 无头 Chrome 实测宽屏 mini player 面板由 50% 拖到 30%，整页刷新后仍为 30%。
+- 规则：store 的 0–100 音量是应用级设置，写入 prefs `player_volume`（与偏好同步共用键），启动时先 `restoreVolume` 再恢复播放，避免自动续播按宿主默认音量出声。Android 的音量归系统媒体流，不能覆盖用户保存值，登录后的远程应用音量也不能在启动时回放到系统媒体流；iOS 记录应用级倍率并在每次创建播放器后重新赋值，不能读取/监听 `AVAudioSession.outputVolume`（那是系统音量，与应用滑杆无关，还会把滑杆弹回）。宿主 `volumeChanged` 在恢复完成前不得覆盖本地偏好。
+- 证据：iOS 旧实现读系统音量且换播放器后丢倍率，Web `getVolume` 为空实现；新增 `volume-persistence` 回归覆盖防抖写入、启动恢复与事件门控。本次 Android 远程应用音量过滤回归与播放器相关 98 项测试、TypeScript 类型检查通过。Docker 无头 Chrome 实测宽屏 mini player 面板由 50% 拖到 30%，整页刷新后仍为 30%。
 - Done right：`volume-prefs.ts` 统一键与容错，400ms 防抖写入；mini player 入口为宽屏专用，面板挂根级 overlays 避免被胶囊裁剪。截图 `/home/hanxi/songloft-ui-verify/volume-*.png`。
 - Not run：iOS/Android/HarmonyOS 真机；硬件音量键、锁屏与蓝牙路径未验。
 - Seen 1× (2026-10-23)。状态：经验，未达到三日期升级阈值。

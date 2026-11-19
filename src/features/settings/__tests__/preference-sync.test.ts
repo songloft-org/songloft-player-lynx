@@ -5,6 +5,7 @@ import {
   PreferenceSync,
   parseUserPreferences,
 } from '../domain/preference-sync.js'
+import { filterRemotePreferencesForPlatform } from '../data/preference-sync.js'
 import type {
   PreferencePatch,
   UserPreferences,
@@ -161,4 +162,16 @@ test('failed or malformed initial reads never overwrite the server with guessed 
     sync.stop()
   }
   expect(() => parseUserPreferences({ ...defaults, volume: NaN })).toThrow()
+})
+
+test('Android ignores the remote app volume during startup', () => {
+  const globals = globalThis as Record<string, unknown>
+  globals.SystemInfo = { platform: 'Android' }
+  try {
+    expect(
+      filterRemotePreferencesForPlatform({ volume: 12, play_mode: 'order' }),
+    ).toEqual({ play_mode: 'order' })
+  } finally {
+    delete globals.SystemInfo
+  }
 })

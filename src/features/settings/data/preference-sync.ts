@@ -10,6 +10,7 @@ import {
 import { logWarn } from '../../../core/logging/client-logger.js'
 import { useAppSessionStore } from '../../../store/app-session.js'
 import { subscribeAppVisibility } from '../../../native/app-visibility.js'
+import { getPlatformTarget } from '../../../native/platform-target.js'
 import { applySyncedTheme, getAppTheme, PREF_THEME } from '../../../shared/theme/theme-model.js'
 import { useAuthStore } from '../../auth/store/index.js'
 import { readPlaylistViewMode } from '../../playlist/data/playlist-view-prefs.js'
@@ -30,6 +31,19 @@ const PREF_KEYS: Record<keyof UserPreferences, string> = {
   audio_quality: PREF_AUDIO_QUALITY,
   local_cache_max_size: PREF_LOCAL_CACHE_MAX_SIZE,
   volume: PREF_VOLUME,
+}
+
+/** Android's volume slider controls the system media stream. A server-side app
+ * preference must not be replayed during startup because that would overwrite
+ * the system volume the user configured outside Lynx. Local user changes still
+ * flow through `setVolume` and are uploaded normally.
+ */
+export function filterRemotePreferencesForPlatform(
+  patch: PreferencePatch,
+): PreferencePatch {
+  if (getPlatformTarget() !== 'android' || !('volume' in patch)) return patch
+  const { volume: _volume, ...rest } = patch
+  return rest
 }
 
 let dispose: (() => void) | undefined
@@ -98,24 +112,25 @@ export function initializePreferenceSync(): () => void {
         }),
       apply: async (patch, canApply) => {
         const storage = getSongloftStorage()
-        for (const key of Object.keys(patch) as (keyof UserPreferences)[]) {
+        const platformPatch = filterRemotePreferencesForPlatform(patch)
+        for (const key of Object.keys(platformPatch) as (keyof UserPreferences)[]) {
           if (!canApply(key)) continue
           assertScope()
-          await storage.prefs.set(PREF_KEYS[key], String(patch[key]))
+          await storage.prefs.set(PREF_KEYS[key], String(platformPatch[key]))
           if (!canApply(key)) continue
           assertScope()
           // These live updates synchronously notify the store. Suppress only
           // their echo, never user actions during an asynchronous storage write.
           applyingLive = true
           try {
-            if (key === 'theme_mode') applySyncedTheme(patch.theme_mode!)
+            if (key === 'theme_mode') applySyncedTheme(platformPatch.theme_mode!)
             if (key === 'audio_quality')
-              setAudioQualityCache(patch.audio_quality === 'original' ? null : patch.audio_quality!)
-            if (key === 'play_mode') usePlayerStore.getState().setPlayMode(patch.play_mode!)
+              setAudioQualityCache(platformPatch.audio_quality === 'original' ? null : platformPatch.audio_quality!)
+            if (key === 'play_mode') usePlayerStore.getState().setPlayMode(platformPatch.play_mode!)
             if (key === 'volume')
               void usePlayerStore
                 .getState()
-                .setVolume(patch.volume!)
+                .setVolume(platformPatch.volume!)
                 .catch(() => {})
           } finally {
             applyingLive = false
