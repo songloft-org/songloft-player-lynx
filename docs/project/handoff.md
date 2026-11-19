@@ -50,7 +50,7 @@ Mac arm64 从同版本旧测试签名包升级，实际迁移曲库 schema 43→
 
 ## 2026-11-18 · 移动端 Bundle 由 Lynx 客户端仓库打包
 
-Android APK 与 iOS IPA 流水线从公开主仓库检出 `mobile-backend.lock.json` 固定的 SHA。Flutter 在自己的仓库构建 Bundle，主仓库发布服务端产物。三仓库的中英文 README 与文档站已更新下载入口。固定后端 `81204e2` 的 Android 四架构 AAR 和 iOS arm64 静态框架通过本地编译，Bundle APK 最低要求 API 23。登录页和设置页提供本地与远程切换。设备运行与升级仍待统一验收。桌面证据见[实施记录](desktop-implementation.md)。
+本次历史验证使用了当时移动端流水线从锁文件选定的后端 SHA。现行规则见[发布指南](../guides/releasing.md)。Flutter 在自己的仓库构建 Bundle，主仓库发布服务端产物。三仓库的中英文 README 与文档站已更新下载入口。固定后端 `81204e2` 的 Android 四架构 AAR 和 iOS arm64 静态框架通过本地编译，Bundle APK 最低要求 API 23。登录页和设置页提供本地与远程切换。设备运行与升级仍待统一验收。桌面证据见[实施记录](desktop-implementation.md)。
 
 Android x86_64 后端补验：API 34 同一测试宿主内，Flutter 2.13.12 公开包与原 Lynx APK 提取的 Go 库均触发 `SIGSYS`。Android NDK SQLite 候选库返回健康检查 200。修复限定 x86_64，arm64、ARMv7 和 x86 继续使用原驱动。两套移动流水线都须更新到含修复的公开后端提交。Flutter/Lynx 完整界面复测受模拟器 System UI 无响应影响，仍待设备验收。
 

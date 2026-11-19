@@ -33,7 +33,7 @@ Web 播放设置另有可持久保存的键盘快捷键开关，支持空格播�
 
 下载以 GitHub Releases 中实际发布的资产为准；四平台 CI 仅在五个包全部构建和校验成功后更新 dev。维护自己的 fork 时需配置签名 Secrets，详见[发版指南](docs/guides/releasing.md)。
 
-Android APK 和 iOS IPA 内嵌了由本仓库流水线从 `mobile-backend.lock.json` 固定 SHA 构建的 Go 后端，同一安装包也可连接远程服务器。用户在登录页或设置页切换本地/远程模式；首次启用本地模式时选择音乐目录，不会在首次启动时额外弹出模式选择框。Android 使用系统文件夹选择器并授予读取权限；iOS 使用应用 Documents 目录，可通过“文件”应用放入音乐。HarmonyOS 与 Web 包不包含后端，需连接已运行的 [Songloft 服务器](https://github.com/songloft-org/songloft)。在 Release 页的 **Assets** 中按平台选包：
+Android APK 和 iOS IPA 内嵌了由本仓库流水线从打包启动时主仓库 `main` 的最新提交构建的 Go 后端，同一安装包也可连接远程服务器。用户在登录页或设置页切换本地/远程模式；首次启用本地模式时选择音乐目录，不会在首次启动时额外弹出模式选择框。Android 使用系统文件夹选择器并授予读取权限；iOS 使用应用 Documents 目录，可通过“文件”应用放入音乐。HarmonyOS 与 Web 包不包含后端，需连接已运行的 [Songloft 服务器](https://github.com/songloft-org/songloft)。在 Release 页的 **Assets** 中按平台选包：
 
 | 平台 | 下载文件 | 安装 / 部署方式 |
 | --- | --- | --- |

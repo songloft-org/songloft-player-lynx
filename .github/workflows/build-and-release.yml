@@ -22,6 +22,9 @@ env:
   SONGLOFT_TEST_BRIDGE: "false"
 
 jobs:
+  backend:
+    uses: ./.github/workflows/resolve-backend.yml
+
   prepare:
     name: JS validation and build metadata
     runs-on: ubuntu-latest
@@ -108,7 +111,7 @@ jobs:
 
   android:
     name: Android APK
-    needs: prepare
+    needs: [prepare, backend]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -126,13 +129,10 @@ jobs:
       - uses: android-actions/setup-android@v4
         with:
           packages: platform-tools platforms;android-34 build-tools;34.0.0 ndk;27.2.12479018
-      - name: Read pinned mobile backend source and version
-        id: mobile-backend
-        run: node -e 'const p=JSON.parse(require("fs").readFileSync("mobile-backend.lock.json"));if(p.repository!=="https://github.com/songloft-org/songloft.git"||p.package!=="mobile"||!/^[0-9a-f]{40}$/.test(p.commit)||!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(p.version))process.exit(1);console.log("sha="+p.commit);console.log("version="+p.version)' >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:
           repository: songloft-org/songloft
-          ref: ${{ steps.mobile-backend.outputs.sha }}
+          ref: ${{ needs.backend.outputs.sha }}
           path: backend-source
           persist-credentials: false
       - uses: actions/setup-go@v5
@@ -141,23 +141,23 @@ jobs:
           cache-dependency-path: backend-source/go.sum
       - name: Initialize backend tag dependency
         run: git -C backend-source submodule update --init --depth 1 pkg/tag
-      - name: Verify the pinned mobile API and gomobile version
+      - name: Verify the mobile API
         working-directory: backend-source
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "${{ steps.mobile-backend.outputs.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ needs.backend.outputs.sha }}"
           go doc ./mobile | sed -n '/^func /p' | sort > "$RUNNER_TEMP/mobile-export-surface.txt"
           sort mobile/export_surface.txt > "$RUNNER_TEMP/mobile-export-surface.expected"
           diff -u "$RUNNER_TEMP/mobile-export-surface.expected" "$RUNNER_TEMP/mobile-export-surface.txt"
-      - name: Build pinned Go backend for Lynx Android
+      - name: Build Go backend for Lynx Android
         working-directory: backend-source
         env:
-          BACKEND_VERSION: ${{ steps.mobile-backend.outputs.version }}
-          BACKEND_COMMIT: ${{ steps.mobile-backend.outputs.sha }}
+          BACKEND_VERSION: ${{ needs.backend.outputs.version }}
+          BACKEND_COMMIT: ${{ needs.backend.outputs.sha }}
           BACKEND_BUILD_TIME: ${{ needs.prepare.outputs.build_time }}
         run: |
           if [ ! -f internal/database/sqlite_android.go ]; then
-            echo "::error::Advance mobile-backend.lock.json to the backend commit with Android SQLite support."
+            echo "::error::Songloft backend main does not include the Android SQLite implementation."
             exit 1
           fi
           mkdir -p "$GITHUB_WORKSPACE/android/app/libs"
@@ -196,7 +196,7 @@ jobs:
           set -euo pipefail
           cp android/app/build/outputs/apk/release/app-release.apk songloft-lynx-android.apk
           python3 scripts/verify-package.py android songloft-lynx-android.apk .build/version.json \
-            --backend-sha "${{ steps.mobile-backend.outputs.sha }}"
+            --backend-sha "${{ needs.backend.outputs.sha }}"
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose songloft-lynx-android.apk
       - uses: actions/upload-artifact@v4
         with:
@@ -207,7 +207,7 @@ jobs:
 
   ios:
     name: iOS IPA (unsigned)
-    needs: prepare
+    needs: [prepare, backend]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -229,13 +229,10 @@ jobs:
           printf '%s\n' "$TOOLCHAIN" "iPhoneOS SDK build: $SDK" "macOS build: $OS_BUILD"
           CACHE_ID=$(printf '%s\n' "$TOOLCHAIN" "$SDK" "$OS_BUILD" | shasum -a 256 | cut -d ' ' -f1)
           echo "cache_id=$CACHE_ID" >> "$GITHUB_OUTPUT"
-      - name: Read pinned mobile backend source and version
-        id: mobile-backend
-        run: node -e 'const p=JSON.parse(require("fs").readFileSync("mobile-backend.lock.json"));if(p.repository!=="https://github.com/songloft-org/songloft.git"||p.package!=="mobile"||!/^[0-9a-f]{40}$/.test(p.commit)||!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(p.version))process.exit(1);console.log("sha="+p.commit);console.log("version="+p.version)' >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:
           repository: songloft-org/songloft
-          ref: ${{ steps.mobile-backend.outputs.sha }}
+          ref: ${{ needs.backend.outputs.sha }}
           path: backend-source
           persist-credentials: false
       - uses: actions/setup-go@v5
@@ -244,19 +241,19 @@ jobs:
           cache-dependency-path: backend-source/go.sum
       - name: Initialize backend tag dependency
         run: git -C backend-source submodule update --init --depth 1 pkg/tag
-      - name: Verify the pinned mobile API and gomobile version
+      - name: Verify the mobile API
         working-directory: backend-source
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "${{ steps.mobile-backend.outputs.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ needs.backend.outputs.sha }}"
           go doc ./mobile | sed -n '/^func /p' | sort > "$RUNNER_TEMP/mobile-export-surface.txt"
           sort mobile/export_surface.txt > "$RUNNER_TEMP/mobile-export-surface.expected"
           diff -u "$RUNNER_TEMP/mobile-export-surface.expected" "$RUNNER_TEMP/mobile-export-surface.txt"
-      - name: Build pinned Go backend for Lynx iOS
+      - name: Build Go backend for Lynx iOS
         working-directory: backend-source
         env:
-          BACKEND_VERSION: ${{ steps.mobile-backend.outputs.version }}
-          BACKEND_COMMIT: ${{ steps.mobile-backend.outputs.sha }}
+          BACKEND_VERSION: ${{ needs.backend.outputs.version }}
+          BACKEND_COMMIT: ${{ needs.backend.outputs.sha }}
           BACKEND_BUILD_TIME: ${{ needs.prepare.outputs.build_time }}
         run: |
           mkdir -p "$GITHUB_WORKSPACE/ios"
@@ -366,7 +363,7 @@ jobs:
           cp -R "$APP" Payload/
           zip -qry songloft-lynx-ios-nosign.ipa Payload
           python3 scripts/verify-package.py ios songloft-lynx-ios-nosign.ipa .build/version.json \
-            --backend-sha "${{ steps.mobile-backend.outputs.sha }}"
+            --backend-sha "${{ needs.backend.outputs.sha }}"
       - name: Save iOS compilation and CocoaPods caches
         if: github.event_name != 'pull_request'
         uses: actions/cache/save@v4

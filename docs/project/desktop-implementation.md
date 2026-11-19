@@ -347,6 +347,14 @@
 - 基于 2.13.24 ZIP 的隔离副本均通过严格验签。两个副本只替换补丁编译的原生扩展，使用独立临时 bundle ID 和诊断画面。macOS 26.6.2 的原生 arm64 与 Rosetta x64 实际连播 MP4（H.264/AAC）、MKV（HEVC/AAC）、WebM（VP9/Opus）和 FLV（H.264/AAC）。四段均报告 320×180、完成 Range 206 并收到绘制回执。Core Audio 确认每段均有输出流，暂停 450 ms 后位置保持不变。移除 FLV 画面后同源继续前进 600 ms。整包重建、人工听音、实际像素对比和音画同步为 Not run。
 - 同一 Mac 上运行两个开发版副本时，开发数据目录不同仍可能命中同一 CEF 单实例锁。2.13.24 原始副本复现该行为，CEF 目录的锁由正在运行的设置页夹具持有。诊断副本使用独立 bundle ID 后可同时启动。命令和证据见 `/home/hanxi/work/songloft-review/lynx-desktop-20261119-macos-video-formats/`。
 
+### 2.13.25 固定源码开发包
+
+- Windows x64、macOS arm64 和 macOS x64 以客户端 `5f2d856f664c6bac20a00a0754533cc6b4076554`、后端 `35b1e33d8a1f8466530973a2b7b5d1115f39a395` 构建。这次使用已提交的固定源码，三个包的后端版本均为 2.13.12，业务 bundle SHA-256 均为 `76cd90f620cd8e65031aa5fdad3a1bf8997898e6413be3f9148f6cd3721998eb`。客户端类型、双构建、374 个文件的 3,892 项共享测试、95 项发布工具测试和 Go 更新辅助程序测试通过。
+- Windows 按用户 NSIS 与解包应用通过测试 Authenticode 验签，两个 Mac DMG 通过 `hdiutil verify`，解出的 ZIP 均通过 `codesign --verify --deep --strict`。核对业务 bundle 和六个 ASAR 模块，Windows 另核对新编译的原生扩展。Mac 两个架构的包内后端均扫描并保留一首合成曲、返回 Range 206 并正常退出。
+- 两个 Mac 应用的最低系统声明为 13.0。各 ZIP 检查了 100 个 Mach-O 文件，目标架构正确，最低系统版本均不高于 13.0。macOS 13 实机、实体 Intel、正式签名和公证为 Not run。
+- Windows 11 24H2 x64 虚拟机从 2.13.24 的设置页下载测试签名更新，点击重启安装后进入新版。同一四首歌的 ID 与标题、模式、主题、DPAPI 凭据和升级前数据库备份均通过读回，包内 Go 版本与构建元数据一致。应用确认升级后回收下载安装包，托盘显式退出后无应用或 Go 后端残留。见 `windows-about.png`、`windows-result.png` 和 `windows-clean.png`。
+- 产物、校验和、命令与原始日志在 `/home/hanxi/work/songloft-review/lynx-desktop-20261119-desktop25/`。
+
 ### 模块覆盖矩阵
 
 | 批次 | 主要实现 | 统一验收边界 |
@@ -401,7 +409,7 @@ Keychain 在当前 Mac 测试会话曾返回 `-25308`，完整本地模式自动
 
 2026-11-18 继续 Mac 启动排查：桌面凭据原生调用现改为 `Napi::AsyncWorker`，Mac arm64 原生扩展编译成功；当前源码的 Lynx/Web/探针 bundle 通过源码指纹校验，新的 arm64 dev DMG/ZIP 生成成功。隔离数据目录启动的新包仍停在 macOS `SecurityAgent` 授权提示。进程采样 `/tmp/songloft-lynx-desktop-20261117-173fa14/async-keychain-current.txt` 显示同步 `SecItemCopyMatching` 调用来自 CEF `CefInitialize`，发生在客户端窗口、Songloft 凭据异步读取及 Bundle 后端启动之前。因此本地模式凭据、自动登录和完整首次启动仍待最终设备验收；该等待不是异步凭据模块卡住的证据，也未记为通过。
 
-开发包体、安装体积及后续截图/源码摘要保留在证据目录；冷启动、空闲/播放内存和一小时趋势尚未建立，均为 Not run。Windows 实机、实体 Intel、最低系统、人工听音、视频同步、插件实际 API 写入、干净环境和真实升级矩阵统一在末尾验收。正式包要求提交后推进后端固定 SHA、匹配 SDK、独立更新签名密钥及平台签名凭据；当前开发锁不能直接用于发行。
+开发包体、安装体积及后续截图/源码摘要保留在证据目录；冷启动、空闲/播放内存和一小时趋势尚未建立，均为 Not run。Windows 实机、实体 Intel、最低系统、人工听音、视频同步、插件实际 API 写入、干净环境和真实升级矩阵统一在末尾验收。正式包要求公开主仓库 `main` 包含所需 Bundle 能力，以及匹配 SDK、独立更新签名密钥和平台签名凭据。
 
 2026-11-18 源码复查后续：更新成功确认已移至本地后端健康检查之后；远程模式启动的更新会在稍后切换本地时完成确认，迁移失败可触发配套恢复提示。Bundle 父管道/HTTP Server 就绪竞态、Lynx 子帧桥接身份时序、下载目录创建失败收尾、安装后确认记录写入失败回滚和切服上传任务清理已修复。相关运行时测试、Go 测试、原生构建和新 SHA 构建均为 Not run，加入最终验收。
 
