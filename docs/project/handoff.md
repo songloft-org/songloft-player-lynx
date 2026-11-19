@@ -1,5 +1,9 @@
 # 工作交接（2026-10-14）
 
+## 2026-11-19 · #581 Web 播放进度
+
+Lynx Web 进度改由当前媒体元素更新。嵌入页的 Chrome 对照验证了播放推进、进度显示和实际切到下一曲。报告人的 Windows 封装与静音等待仍待定位。本地修复和测试记录见[进展](progress.md#issue-581)。
+
 ## 2026-11-18 · #54 逐字歌词
 
 播放器已接入行内逐字歌词和洛雪偏移，真实 Chrome 播放验证经过旁挂文件读取及逐词高亮。全部 3,858 项共享测试通过，手机原生应用待验证。源码标识和日志见 `/tmp/songloft-54-karaoke-ZsCdTI/verification.json`。[#54](https://github.com/songloft-org/songloft-player/issues/54)

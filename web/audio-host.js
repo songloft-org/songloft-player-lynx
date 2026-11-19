@@ -25,8 +25,6 @@
 
   // ── constants ──
 
-  var TICK_MS = 250
-
   var STATE_IDLE = 'idle'
   var STATE_LOADING = 'loading'
   var STATE_READY = 'ready'
@@ -50,11 +48,8 @@
   audio.crossOrigin = 'anonymous'
 
   var state = STATE_IDLE
-  var positionMs = 0
-  var durationMs = 0
   var volume = 1
   var speed = 1
-  var progressTimer = null
   // The URL the audio engine currently holds. `audio.currentSrc` stays '' while
   // hls.js drives the element through MSE, so the video surface cannot read its
   // source from the element; keep the last `load` URL ourselves.
@@ -182,6 +177,7 @@
         if (reason === 'opened') {
           videoOpen = true
           videoPrimary = true
+          syncMediaProgress(video)
           video.style.display = 'block'
           try { audio.pause() } catch (_) {}
           // Stop the audio engine's HLS pipeline so it doesn't keep fetching the
@@ -452,15 +448,13 @@
       var media = activeMedia()
       var sec = Math.max(0, media.currentTime - 10)
       media.currentTime = sec
-      positionMs = Math.round(sec * 1000)
-      emitProgress()
+      emitProgress(media)
     })
     navigator.mediaSession.setActionHandler('seekforward', function () {
       var media = activeMedia()
       var sec = Math.min(media.duration || 0, media.currentTime + 10)
       media.currentTime = sec
-      positionMs = Math.round(sec * 1000)
-      emitProgress()
+      emitProgress(media)
     })
   }
 
@@ -491,7 +485,9 @@
   }
 
   document.addEventListener('visibilitychange', function () {
-    sendEvent(document.visibilityState === 'visible' ? 'SongloftLifecycle.resumed' : 'SongloftLifecycle.paused', {})
+    var visible = document.visibilityState === 'visible'
+    if (visible) syncMediaProgress(activeMedia())
+    sendEvent(visible ? 'SongloftLifecycle.resumed' : 'SongloftLifecycle.paused', {})
   })
 
   function emitState(newState) {
@@ -501,7 +497,9 @@
     updateMediaSessionPlayback()
   }
 
-  function emitProgress() {
+  function emitProgress(media) {
+    var positionMs = media ? Math.round(media.currentTime * 1000) : 0
+    var durationMs = media && Number.isFinite(media.duration) ? Math.round(media.duration * 1000) : 0
     sendEvent('SongloftAudio.progress', {
       positionMs: positionMs,
       bufferedMs: positionMs + 5000,
@@ -513,25 +511,17 @@
     sendEvent('SongloftAudio.error', { code: code, message: message })
   }
 
-  // ── progress timer ──
-
-  function startProgress() {
-    stopProgress()
-    progressTimer = setInterval(function () {
-      var media = activeMedia()
-      if (media && !media.paused && !media.ended) {
-        positionMs = Math.round((media.currentTime || 0) * 1000)
-        durationMs = Math.round((media.duration || 0) * 1000)
-        emitProgress()
-      }
-    }, TICK_MS)
+  function syncMediaProgress(media) {
+    if (media !== activeMedia() || !audioSrcUrl || pendingSourceLoad ||
+        media.readyState < media.HAVE_METADATA || media.ended) return
+    emitProgress(media)
   }
 
-  function stopProgress() {
-    if (progressTimer != null) {
-      clearInterval(progressTimer)
-      progressTimer = null
-    }
+  function bindMediaProgress(media) {
+    // Media events still follow the playback clock when JS intervals are throttled.
+    var sync = function () { syncMediaProgress(media) }
+    media.addEventListener('timeupdate', sync)
+    media.addEventListener('durationchange', sync)
   }
 
   // ── media element event handlers ──
@@ -540,6 +530,8 @@
   // element is parked and its events (pause etc.) must not overwrite video state.
 
   function bindAudioEvents(element) {
+  bindMediaProgress(element)
+
   element.addEventListener('loadstart', function () {
     if (videoPrimary || audio !== element) return
     emitState(STATE_LOADING)
@@ -547,7 +539,6 @@
 
   element.addEventListener('loadedmetadata', function () {
     if (videoPrimary || audio !== element) return
-    durationMs = Math.round((audio.duration || 0) * 1000)
     if (pendingSourceLoad) {
       audio.currentTime = Math.max(0, Math.min(pendingSourceLoad.positionMs / 1000, audio.duration || Infinity))
       audio.playbackRate = speed
@@ -556,7 +547,7 @@
       return
     }
     emitState(STATE_READY)
-    emitProgress()
+    emitProgress(element)
   })
 
   element.addEventListener('seeked', function () {
@@ -567,7 +558,6 @@
   element.addEventListener('play', function () {
     if (videoPrimary || audio !== element) return
     emitState(STATE_PLAYING)
-    startProgress()
     // Resume AudioContext if suspended (autoplay policy)
     if (eqContext && eqContext.state === 'suspended') {
       eqContext.resume()
@@ -576,7 +566,6 @@
 
   element.addEventListener('pause', function () {
     if (videoPrimary || audio !== element) return
-    stopProgress()
     if (!audio.ended) {
       emitState(STATE_PAUSED)
     }
@@ -584,16 +573,13 @@
 
   element.addEventListener('ended', function () {
     if (videoPrimary || audio !== element) return
-    stopProgress()
-    positionMs = durationMs
-    emitProgress()
+    emitProgress(element)
     emitState(STATE_COMPLETED)
   })
 
   element.addEventListener('error', function () {
     if (videoPrimary || audio !== element) return
     pendingSourceLoad = null
-    stopProgress()
     var err = audio.error
     emitState(STATE_ERROR)
     emitError(
@@ -618,14 +604,13 @@
     if (!pending) return
     pendingSourceLoad = null
     var generation = sourceGeneration
-    positionMs = Math.round(audio.currentTime * 1000)
     emitState(STATE_READY)
-    emitProgress()
+    emitProgress(audio)
     var intent = pending.autoplay ? audio.play() : Promise.resolve()
     if (!pending.autoplay) emitState(STATE_PAUSED)
     intent.then(function () {
       if (generation !== sourceGeneration) return
-      sendEvent('SongloftAudio.sourceReady', { positionMs: positionMs })
+      sendEvent('SongloftAudio.sourceReady', { positionMs: Math.round(audio.currentTime * 1000) })
     }, function (error) {
       if (generation !== sourceGeneration) return
       emitState(STATE_ERROR)
@@ -633,22 +618,21 @@
     })
   }
 
+  bindMediaProgress(video)
+
   video.addEventListener('loadedmetadata', function () {
     if (!videoPrimary) return
-    durationMs = Math.round((video.duration || 0) * 1000)
     emitState(STATE_READY)
-    emitProgress()
+    emitProgress(video)
   })
 
   video.addEventListener('play', function () {
     if (!videoPrimary) return
     emitState(STATE_PLAYING)
-    startProgress()
   })
 
   video.addEventListener('pause', function () {
     if (!videoPrimary) return
-    stopProgress()
     if (!video.ended) {
       emitState(STATE_PAUSED)
     }
@@ -656,15 +640,12 @@
 
   video.addEventListener('ended', function () {
     if (!videoPrimary) return
-    stopProgress()
-    positionMs = durationMs
-    emitProgress()
+    emitProgress(video)
     emitState(STATE_COMPLETED)
   })
 
   video.addEventListener('error', function () {
     if (!videoPrimary) return
-    stopProgress()
     var err = video.error
     emitState(STATE_ERROR)
     emitError(
@@ -681,7 +662,6 @@
       if (videoPrimary) {
         releaseVideoSurface()
       }
-      stopProgress()
       cleanupHls()
       // Each source owns its element/listeners. Late events from the outgoing
       // element cannot be mislabeled as the newly requested source.
@@ -707,8 +687,6 @@
         positionMs: opts.initialPositionMs || 0,
         autoplay: opts.autoplay === true,
       } : null
-      positionMs = 0
-      durationMs = 0
       audio.currentTime = 0
       audio.src = ''
       audioSrcUrl = url || ''
@@ -754,24 +732,14 @@
       audio.src = ''
       audioSrcUrl = ''
       cleanupHls()
-      stopProgress()
-      positionMs = 0
       emitState(STATE_IDLE)
       emitProgress()
     },
 
     seek: function (ms) {
-      if (videoPrimary) {
-        var sec = Math.max(0, Math.min(ms / 1000, video.duration || 0))
-        video.currentTime = sec
-        positionMs = Math.round(sec * 1000)
-        emitProgress()
-        return
-      }
-      var sec = Math.max(0, Math.min(ms / 1000, audio.duration || 0))
-      audio.currentTime = sec
-      positionMs = Math.round(sec * 1000)
-      emitProgress()
+      var media = activeMedia()
+      media.currentTime = Math.max(0, Math.min(ms / 1000, media.duration || 0))
+      emitProgress(media)
     },
 
     getVolume: function () {
@@ -837,7 +805,7 @@
     },
 
     dispose: function () {
-      stopProgress()
+      audioSrcUrl = ''
       cleanupHls()
       audio.pause()
       audio.src = ''

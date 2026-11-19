@@ -1,5 +1,12 @@
 # Lynx 客户端开发经验
 
+### WEB-AUDIO-001 Web 播放进度以当前媒体元素为准
+
+- [songloft-org/songloft#581](https://github.com/songloft-org/songloft/issues/581)，Lynx 基线 `64692b84e5f36a6f2f3ceeede77904771c2904d6`。Docker Chrome 播放真实 MP3 时，将 Web 音频宿主的 250ms 定时器延迟到 60 秒，旧进度一直停在零，浏览器的 `currentTime` 仍持续推进。
+- 用当前媒体元素的 `timeupdate` 和 `durationchange` 回报位置和时长。曲终重新读取媒体位置，再发送完成事件。直播的无穷时长按未知上报，切源后忽略旧元素事件。
+- 证据在 `/tmp/songloft-581.7JfaBL/`，四项新回归在旧宿主上失败，在修改后的宿主上通过。报告人的 Windows 网页封装与曲目仍待核对。见[进展记录](docs/project/progress.md)。
+- Seen 1× (2026-11-19)。
+
 ### LYRIC-003 在实际歌词字段与播放入口验证逐字解析
 
 - 播放歌词 Store 和逐字 LRC 解析使用基线 `f624965610b21fab03d8aec33b08d34cb90a1cba` 验证。[songloft-org/songloft-player#54](https://github.com/songloft-org/songloft-player/issues/54)

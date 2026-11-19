@@ -1,5 +1,19 @@
 # 进展与交接（PROGRESS）
 
+<a id="issue-581"></a>
+
+## 2026-11-19 · Web 播放进度 / Web playback progress
+
+Lynx Web 从当前音频或视频元素接收位置与时长变化。曲终先回报最后一次媒体采样，再触发原有队列切歌；从后台回到页面时立即同步。直播的无穷时长按未知处理。[songloft-org/songloft#581](https://github.com/songloft-org/songloft/issues/581)
+
+Lynx Web now gets playback position and duration from the active audio or video element. It reports the final media sample before advancing the queue, refreshes the position when the page becomes visible and treats infinite live duration as unknown. [songloft-org/songloft#581](https://github.com/songloft-org/songloft/issues/581)
+
+- Lynx 基线 / baseline `64692b84e5f36a6f2f3ceeede77904771c2904d6`，后端 / backend `25a71974574848770912f99616c0d6242177a058`。Linux amd64，Node 22.17.1，pnpm 11.15.1，Go 1.26.0，Docker Chrome 121。未提交源码标识 / uncommitted source hashes in `/tmp/songloft-581.7JfaBL/changed-code.sha256`。
+- `pnpm exec tsc -b`、`pnpm test`（373 文件 / files，3886 项 / tests）、`pnpm run build`（Lynx + Web）、`pnpm run build:web`、嵌入 Go 构建 / Go build with embedded Web passed. 四项新回归在隔离的旧宿主上全部按预期失败 / all four new cases failed as expected with the isolated original host.
+- 完整嵌入页通过曲库点播两首真实合成 MP3。在仅延迟旧进度定时器的条件下，实际位置约 2.26 秒时，旧版进度为 0%，新版为 41%（媒体位置约为 45%）。两版均在浏览器 `ended` 后 0.3 秒内已播放下一曲，两首媒体请求均为 206。独立 Chrome 夹具验证真实 MP4 接管进度并关闭后由音频继续推进。
+- In the embedded library, two generated MP3s played from the actual UI. With the original progress timer delayed, the bar read 0% at about 2.26 seconds with the original host and 41% with the fix (about 45% on the media clock). The next track was already playing within 0.3 seconds of the browser's `ended` event in both builds. Both media requests returned 206. A separate Chrome fixture checked that a real MP4 took over progress and that audio advanced again after closing the video.
+- 证据 / evidence in `/tmp/songloft-581.7JfaBL/` (`ui-{before,after}.json`, `video.json`, `unit-{before,after}.log`, `full-test-final.log`)。另一个填充尾部的 MP3 让 Chrome 高估时长，仍在实际音频结束时触发 `ended` / a padded MP3 caused Chrome to overestimate duration but still fired `ended` when the media ran out. Not run：报告人的 Windows 封装、曲目及长时间播放，原生端与发布 CI / the reporter's Windows wrapper, track and extended session, native clients and release CI. 本地工作树修复 / local worktree fix.
+
 ## 2026-11-18 · #54 逐字歌词 / Word-timed lyrics
 
 播放入口支持 `lyric` 和 `lxlyric` 中的逐字时间，覆盖行内单方括号、双括号、尖括号及洛雪相对偏移。真实旁挂歌词经后端正常读取，420 px 播放器里的高亮随音频进度推进，普通 LRC 重复副歌仍在两个时间点显示。四项新增对照在旧实现下失败。源代码标识、测试和浏览器证据见 `/tmp/songloft-54-karaoke-ZsCdTI/verification.json`。手机原生验证为 Not run。

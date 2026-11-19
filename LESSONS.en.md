@@ -1,5 +1,12 @@
 # Lynx Client Development Lessons
 
+### WEB-AUDIO-001 Use the active media element as the Web playback clock
+
+- [songloft-org/songloft#581](https://github.com/songloft-org/songloft/issues/581), Lynx baseline `64692b84e5f36a6f2f3ceeede77904771c2904d6`. Docker Chrome played a real MP3 while the host's 250 ms interval was delayed to 60 seconds. The original progress stayed at zero while the browser's `currentTime` advanced.
+- Report the active element's position and duration on `timeupdate` and `durationchange`. Read the element again at the end of playback before notifying the queue. Report infinite live duration as unknown and ignore events from the previous element after a source change.
+- Evidence is in `/tmp/songloft-581.7JfaBL/`. Four new regressions fail with the original host and pass with the fix. The reporter's Windows wrapper and track remain unverified. [Progress record](docs/project/progress.md).
+- Seen 1× (2026-11-19).
+
 ### LYRIC-003 Verify word timing in the actual lyric fields and playback entry point
 
 - Validation covers the playback lyric store and word-timed LRC parsing at baseline `f624965610b21fab03d8aec33b08d34cb90a1cba`. [songloft-org/songloft-player#54](https://github.com/songloft-org/songloft-player/issues/54)

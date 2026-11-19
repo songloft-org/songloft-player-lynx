@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-19 · #581 Web playback progress
+
+Lynx Web now updates progress from the active media element. The embedded app's Chrome comparison verified playback, progress display and automatic queue advancement. The reporter's Windows wrapper and silent wait remain unverified. [Local fix and test record](../../project/progress.md#issue-581).
+
 ## 2026-11-18 · #54 Word-timed lyrics
 
 Playback handles inline word timings and LX offsets. Chrome plays an actual track with sidecar lyrics and advancing word highlights. All 3,858 shared tests pass. Native phone apps await verification. Source identity and logs are recorded in `/tmp/songloft-54-karaoke-ZsCdTI/verification.json`. [#54](https://github.com/songloft-org/songloft-player/issues/54)
