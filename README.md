@@ -28,7 +28,7 @@ Web 播放设置另有可持久保存的键盘快捷键开关，支持空格播�
 - [正式版本](https://github.com/songloft-org/songloft-player-lynx/releases/latest)：版本 tag 发布。
 - [开发版本](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev)：`main` 代码推送后自动构建，所有平台成功才更新。
 - [安装指南](docs/guides/installation.md)：包名、签名限制、服务器连接和校验方法。
-- [Windows/macOS 桌面候选构建](desktop/README.md)：由本仓库的桌面流水线构建，待统一验收后提供正式下载。
+- [Windows/macOS 桌面候选构建](desktop/README.md)与移动端共用上述 Release。桌面资产启用后按 `win32-x64`、`darwin-arm64`、`darwin-x64` 选择。
 - [English](README.en.md)
 
 下载以 GitHub Releases 中实际发布的资产为准；四平台 CI 仅在五个包全部构建和校验成功后更新 dev。维护自己的 fork 时需配置签名 Secrets，详见[发版指南](docs/guides/releasing.md)。

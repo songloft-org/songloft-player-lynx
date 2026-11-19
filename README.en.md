@@ -27,7 +27,7 @@ Web playback settings also provide a persisted keyboard-shortcut switch: Space t
 
 - [Stable releases](https://github.com/songloft-org/songloft-player-lynx/releases/latest): published from version tags.
 - [Development release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev): automatically built after code pushes to `main`; updated only when every platform succeeds.
-- [Windows/macOS desktop candidate builds](desktop/README.en.md): built by this repository's desktop workflow, with stable downloads pending consolidated acceptance.
+- [Windows/macOS desktop candidates](desktop/README.en.md) use the same Releases. When desktop assets are available, select `win32-x64`, `darwin-arm64`, or `darwin-x64` for your machine.
 - [Installation guide](docs/en/guides/installation.md): package names, signing requirements, server connections, and checksums.
 - [简体中文](README.md)
 

@@ -11,7 +11,8 @@ export async function clientSourceState(directory) {
     'package.json',
     'pnpm-lock.yaml',
     'lynx.config.ts',
-    '.github/workflows/desktop.yml',
+    '.github/workflows/build-and-release.yml',
+    '.github/workflows/resolve-backend.yml',
     '.gitignore',
   ]
   const git = (args) => {

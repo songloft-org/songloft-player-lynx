@@ -4,7 +4,7 @@
 
 ## Choose a release
 
-Download a [stable release](https://github.com/songloft-org/songloft-player-lynx/releases/latest) or the rolling [dev release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev). Code pushes to `main` automatically build dev packages; documentation-only changes do not. All five packages must succeed before downloads are updated. Until the new workflow succeeds for the first time, existing downloads may still come from the old workflows.
+Download a [stable release](https://github.com/songloft-org/songloft-player-lynx/releases/latest) or the rolling [dev release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev). Code pushes to `main` automatically build dev packages; documentation-only changes do not. When desktop publishing is enabled, the same releases include the Windows and macOS installers.
 
 | File                                  | Purpose                                                        |
 | ------------------------------------- | -------------------------------------------------------------- |
@@ -14,6 +14,8 @@ Download a [stable release](https://github.com/songloft-org/songloft-player-lynx
 | `songloft-lynx-web-standalone.tar.gz` | Independent static site with an API address field              |
 | `songloft-lynx-web-embedded.tar.gz`   | Static resources for a same-origin server                      |
 | `version.json` / `checksums.txt`      | Version, commit, build time, asset list, and SHA-256 checksums |
+
+For Windows 10 22H2 or later, choose the `win32-x64` NSIS `.exe`. For macOS 13 or later, choose the `darwin-arm64` DMG for Apple silicon or the `darwin-x64` DMG for Intel. The macOS ZIP is for in-app updates. Choose between a remote server and local music from the login screen or Settings.
 
 ## Verify downloads
 

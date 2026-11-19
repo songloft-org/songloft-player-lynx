@@ -4,7 +4,7 @@
 
 ## 选择版本
 
-从[正式 Release](https://github.com/songloft-org/songloft-player-lynx/releases/latest)或滚动 [dev Release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev)下载。dev 为预览构建，代码推送到 `main` 后自动打包；纯文档修改不触发构建。五个包齐全才更新下载入口。新工作流首次成功前可能仍显示旧流程的产物。
+从[正式 Release](https://github.com/songloft-org/songloft-player-lynx/releases/latest)或滚动 [dev Release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev)下载。dev 为预览构建，代码推送到 `main` 后自动打包；纯文档修改不触发构建。启用桌面发布后，Windows 和 macOS 安装包也会放在这两个下载入口。
 
 | 文件                                  | 用途                                     |
 | ------------------------------------- | ---------------------------------------- |
@@ -14,6 +14,8 @@
 | `songloft-lynx-web-standalone.tar.gz` | 独立静态站，用户填写 API 地址            |
 | `songloft-lynx-web-embedded.tar.gz`   | 同源服务器部署的静态资源                 |
 | `version.json` / `checksums.txt`      | 构建版本、commit、时间、包清单与 SHA-256 |
+
+Windows 10 22H2 以上选文件名含 `win32-x64` 的 NSIS `.exe`。macOS 13 以上用 `.dmg` 安装，Apple 芯片选 `darwin-arm64`，Intel 芯片选 `darwin-x64`。macOS `.zip` 用于应用内更新。安装后在登录页或设置页选择连接服务器或本地音乐。
 
 ## 校验下载
 

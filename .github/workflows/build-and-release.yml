@@ -51,7 +51,10 @@ jobs:
           SONGLOFT_UPDATE_PUBLIC_KEY: ${{ vars.LYNX_UPDATE_PUBLIC_KEY }}
         run: node scripts/prepare-build.mjs
       - run: pnpm run typecheck
-      - run: pnpm run build
+      - name: Build shared JS and desktop source metadata
+        run: |
+          pnpm run desktop:build --without-probe
+          mv dist/desktop-build.json .build/desktop-build.json
       - run: pnpm test
       - run: pnpm run test:release
       - name: Share the exact bundles and metadata with all platforms
@@ -63,6 +66,7 @@ jobs:
             .build/version.json
             .build/native-host.json
             .build/bundle-host.json
+            .build/desktop-build.json
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
@@ -467,11 +471,214 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  desktop:
+    name: Desktop (${{ matrix.target }})
+    needs: [prepare, backend]
+    # Repositories without the desktop SDK retain the existing release targets.
+    if: needs.prepare.outputs.channel != 'preview' && (vars.DESKTOP_SDK_INDEX_URL != '' || vars.DESKTOP_SDK_INDEX_SHA256 != '')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            target: win32-x64
+            arch: x64
+          - runner: macos-15
+            target: darwin-arm64
+            arch: arm64
+          - runner: macos-15-intel
+            target: darwin-x64
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      SONGLOFT_DESKTOP_CHANNEL: ${{ needs.prepare.outputs.channel }}
+      SONGLOFT_BACKEND_COMMIT: ${{ needs.backend.outputs.sha }}
+      SONGLOFT_BACKEND_SOURCE: ${{ github.workspace }}/backend-source
+      SONGLOFT_DESKTOP_SDK: ${{ github.workspace }}/desktop-sdk
+      SONGLOFT_MPV_ROOT: ${{ github.workspace }}/desktop-sdk/build
+      SDK_INDEX_URL: ${{ vars.DESKTOP_SDK_INDEX_URL }}
+      SDK_INDEX_SHA256: ${{ vars.DESKTOP_SDK_INDEX_SHA256 }}
+      RELEASE_DESKTOP: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
+      DESKTOP_TARGET: ${{ matrix.target }}
+      # Hash the same checked-out source bytes on all three runners.
+      GIT_CONFIG_COUNT: '1'
+      GIT_CONFIG_KEY_0: core.autocrlf
+      GIT_CONFIG_VALUE_0: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18.0'
+          architecture: ${{ matrix.arch }}
+      - name: Configure update signing key
+        env:
+          UPDATE_PUBLIC_KEY: ${{ secrets.DESKTOP_UPDATE_PUBLIC_KEY }}
+          REQUIRE_UPDATE_KEY: ${{ env.RELEASE_DESKTOP }}
+        run: node desktop/scripts/ci-signing.mjs
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.1
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache-dependency-path: desktop/updater/go.mod
+      - uses: actions/checkout@v4
+        with:
+          repository: songloft-org/songloft
+          ref: ${{ needs.backend.outputs.sha }}
+          path: backend-source
+          persist-credentials: false
+      - name: Initialize pinned Go dependency
+        working-directory: backend-source
+        run: |
+          test "$(git rev-parse HEAD)" = "$SONGLOFT_BACKEND_COMMIT"
+          if ! git grep -q 'parent-watch-stdin' HEAD -- internal/app/app.go; then
+            echo "::error::Songloft backend main does not support parent-watch-stdin."
+            exit 1
+          fi
+          GIT_TERMINAL_PROMPT=0 git submodule update --init --depth 1 pkg/tag
+      - name: Download and verify SDK
+        run: node desktop/scripts/fetch-sdk.mjs
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir desktop install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: js-bundles
+      - name: Restore shared desktop build metadata
+        run: cp .build/desktop-build.json dist/desktop-build.json
+      - run: pnpm desktop:test
+      - name: Native build and helper tests
+        run: |
+          pnpm --dir desktop build:native
+          cd desktop/updater
+          go test ./...
+      - name: macOS text input shortcut guard
+        if: runner.os == 'macOS'
+        run: |
+          clang++ -std=c++17 -fobjc-arc -framework AppKit desktop/tests/keyboard-focus-test.mm -o desktop/.build/${{ matrix.target }}/keyboard-focus-test
+          desktop/.build/${{ matrix.target }}/keyboard-focus-test
+      - name: Build complete resources and installers
+        env:
+          WIN_CSC_LINK: ${{ runner.os == 'Windows' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_WINDOWS_CSC_LINK || '' }}
+          WIN_CSC_KEY_PASSWORD: ${{ runner.os == 'Windows' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_WINDOWS_CSC_KEY_PASSWORD || '' }}
+          CSC_LINK: ${{ runner.os == 'macOS' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_MAC_CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ runner.os == 'macOS' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_MAC_CSC_KEY_PASSWORD || '' }}
+          APPLE_ID: ${{ runner.os == 'macOS' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ runner.os == 'macOS' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_APPLE_APP_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ runner.os == 'macOS' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_APPLE_TEAM_ID || '' }}
+          SONGLOFT_APPLE_TEAM_ID: ${{ runner.os == 'macOS' && env.RELEASE_DESKTOP == 'true' && secrets.DESKTOP_APPLE_TEAM_ID || '' }}
+        run: |
+          pnpm --dir desktop build:resources
+          pnpm --dir desktop package
+      - name: Verify Windows installer signature
+        if: runner.os == 'Windows' && env.RELEASE_DESKTOP == 'true'
+        shell: pwsh
+        run: |
+          $installer = @(Get-ChildItem "desktop/release/$env:SONGLOFT_DESKTOP_CHANNEL/$env:DESKTOP_TARGET" -Filter *.exe -File)
+          if ($installer.Count -ne 1) { throw 'Expected one Windows installer' }
+          if ((Get-AuthenticodeSignature $installer[0].FullName).Status -ne 'Valid') {
+            throw 'Windows installer requires a trusted Authenticode signature'
+          }
+      - name: Install and verify Windows Bundle
+        if: runner.os == 'Windows'
+        timeout-minutes: 7
+        shell: pwsh
+        env:
+          REQUIRE_SIGNATURE: ${{ env.RELEASE_DESKTOP }}
+        run: |
+          $directory = "desktop/release/$env:SONGLOFT_DESKTOP_CHANNEL/$env:DESKTOP_TARGET"
+          $installer = @(Get-ChildItem $directory -Filter *.exe -File)
+          if ($installer.Count -ne 1) { throw 'Expected one Windows installer' }
+          $installation = Join-Path $env:RUNNER_TEMP "Songloft package $([guid]::NewGuid())"
+          # NSIS expects /D last and unquoted, including paths that contain spaces.
+          $result = Start-Process -FilePath $installer[0].FullName -ArgumentList "/S /D=$installation" -PassThru -Wait
+          if ($result.ExitCode -ne 0) { throw "NSIS exited with code $($result.ExitCode)" }
+          $appName = if ($env:SONGLOFT_DESKTOP_CHANNEL -eq 'dev') { 'SongloftDev.exe' } else { 'Songloft.exe' }
+          $app = Get-Item -LiteralPath (Join-Path $installation $appName)
+          if ($env:REQUIRE_SIGNATURE -eq 'true' -and (Get-AuthenticodeSignature $app.FullName).Status -ne 'Valid') {
+            throw 'Installed application requires a trusted Authenticode signature'
+          }
+          $resources = Join-Path $installation 'resources/songloft'
+          foreach ($file in @('native/songloft_mpv.node', 'updater/songloft-update.exe')) {
+            Get-Item -LiteralPath (Join-Path $resources $file) | Out-Null
+          }
+          $mpv = @(Get-ChildItem -LiteralPath "$resources/native" -File | Where-Object Name -Match '^(lib)?mpv-2\.dll$')
+          if ($mpv.Count -ne 1) { throw 'Expected one installed libmpv runtime' }
+          foreach ($file in @('cef_extension.node', 'cef_subprocess.exe', 'libcef.dll')) {
+            if (!(Get-ChildItem -LiteralPath $installation -Recurse -File -Filter $file)) {
+              throw "Missing installed CEF resource $file"
+            }
+          }
+          if ((Get-FileHash "$resources/build-info.json").Hash -ne (Get-FileHash "desktop/resources/$env:DESKTOP_TARGET/build-info.json").Hash) {
+            throw 'Installed build metadata does not match packaged identity'
+          }
+          if ((Get-FileHash "$resources/app/main.lynx.bundle").Hash -ne (Get-FileHash "dist/main.lynx.bundle").Hash) {
+            throw 'Installed business bundle does not match the build'
+          }
+          $env:Path = "$resources/native;$env:Path"
+          node desktop/tests/backend-integration.mjs "$resources/backend/songloft.exe" "$resources/tools" --build-info "$resources/build-info.json"
+          if ($LASTEXITCODE -ne 0) { throw 'Installed Windows backend test failed' }
+      - name: Verify macOS installers and Bundle
+        if: runner.os == 'macOS'
+        timeout-minutes: 7
+        run: |
+          set -euo pipefail
+          directory="desktop/release/$SONGLOFT_DESKTOP_CHANNEL/$DESKTOP_TARGET"
+          dmgs=("$directory"/*.dmg)
+          zips=("$directory"/*.zip)
+          test "${#dmgs[@]}" -eq 1
+          test -f "${dmgs[0]}"
+          test "${#zips[@]}" -eq 1
+          test -f "${zips[0]}"
+          hdiutil verify "${dmgs[0]}"
+          stage=$(mktemp -d)
+          trap 'rm -rf "$stage"' EXIT
+          ditto -x -k "${zips[0]}" "$stage"
+          apps=("$stage"/*.app)
+          test "${#apps[@]}" -eq 1
+          app="${apps[0]}"
+          test -d "$app"
+          codesign --verify --deep --strict "$app"
+          if [ "$SONGLOFT_DESKTOP_CHANNEL" = stable ]; then
+            xcrun stapler validate "$app"
+            spctl --assess --type execute "$app"
+          fi
+          resources="$app/Contents/Resources/songloft"
+          cmp "$resources/build-info.json" "desktop/resources/$DESKTOP_TARGET/build-info.json"
+          cmp "$resources/app/main.lynx.bundle" dist/main.lynx.bundle
+          test -f "$resources/native/songloft_mpv.node"
+          test -f "$resources/native/lib/libmpv.2.dylib"
+          test -x "$resources/updater/songloft-update"
+          node desktop/tests/backend-integration.mjs "$resources/backend/songloft" "$resources/tools" --build-info "$resources/build-info.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ needs.prepare.outputs.channel }}-${{ matrix.target }}
+          path: |
+            desktop/release/${{ needs.prepare.outputs.channel }}/${{ matrix.target }}/*.exe
+            desktop/release/${{ needs.prepare.outputs.channel }}/${{ matrix.target }}/*.dmg
+            desktop/release/${{ needs.prepare.outputs.channel }}/${{ matrix.target }}/*.zip
+            desktop/resources/${{ matrix.target }}/build-info.json
+          if-no-files-found: error
+          retention-days: 7
+
   release:
     name: Publish complete release
-    needs: [prepare, web, android, ios, harmony]
+    needs: [prepare, backend, web, android, ios, harmony, desktop]
     # Manual dispatch can publish dev only from main, or rebuild a v* tag.
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    if: >-
+      !cancelled() && github.event_name != 'pull_request' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) &&
+      needs.prepare.result == 'success' && needs.backend.result == 'success' &&
+      needs.web.result == 'success' && needs.android.result == 'success' &&
+      needs.ios.result == 'success' && needs.harmony.result == 'success' &&
+      (needs.desktop.result == 'success' || needs.desktop.result == 'skipped')
     runs-on: ubuntu-latest
     outputs:
       previous_tag: ${{ steps.previous_tag.outputs.previous_tag }}
@@ -534,6 +741,50 @@ jobs:
         run: |
           cp shared-build/.build/version.json release-files/version.json
           node scripts/finalize-release.mjs release-files shared-build/dist/main.lynx.bundle shared-build/.build/native-host.json
+      - uses: actions/download-artifact@v4
+        if: needs.desktop.result == 'success'
+        with:
+          pattern: desktop-${{ needs.prepare.outputs.channel }}-*
+          path: desktop-builds
+      - uses: pnpm/action-setup@v4
+        if: needs.desktop.result == 'success'
+        with:
+          version: 11.15.1
+      - if: needs.desktop.result == 'success'
+        run: pnpm --dir desktop install --frozen-lockfile --ignore-scripts
+      - name: Verify and sign all desktop update manifests
+        if: needs.desktop.result == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.release_tag }}
+          CHANNEL: ${{ needs.prepare.outputs.channel }}
+          BACKEND_SHA: ${{ needs.backend.outputs.sha }}
+          UPDATE_PRIVATE_KEY: ${{ secrets.DESKTOP_UPDATE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir desktop-previous
+          if [ "$CHANNEL" = dev ]; then
+            previous=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName --jq '.[] | select(.tagName == "dev") | .tagName')
+          else
+            previous=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases --json tagName,isLatest --jq '.[] | select(.isLatest) | .tagName')
+          fi
+          if [ -n "$previous" ]; then
+            gh release view "$previous" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' > desktop-existing.txt
+            for target in win32-x64 darwin-arm64 darwin-x64; do
+              name="desktop-$target.json"
+              if grep -Fxq "$name" desktop-existing.txt; then
+                gh release download "$previous" --repo "$GITHUB_REPOSITORY" --pattern "$name" --dir desktop-previous
+              fi
+            done
+          fi
+          : "${UPDATE_PRIVATE_KEY:?Configure DESKTOP_UPDATE_PRIVATE_KEY to publish desktop updates}"
+          umask 077
+          export SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY="$RUNNER_TEMP/desktop-update-private.pem"
+          trap 'rm -f "$SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY"' EXIT
+          printf '%s\n' "$UPDATE_PRIVATE_KEY" > "$SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY"
+          node desktop/scripts/prepare-release.mjs "$CHANNEL" "$TAG" "$GITHUB_SHA" "$BACKEND_SHA" desktop-builds desktop-publish desktop-previous
+          mv desktop-publish/assets/* desktop-publish/manifests/* release-files/
+          (cd release-files && sha256sum -- desktop-*.json songloft-lynx-"$CHANNEL"-* >> checksums.txt)
       - name: Publish dev or versioned release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -553,6 +804,10 @@ jobs:
             printf '\n' >> "$NOTES"
           fi
           if [ "$CHANNEL" = dev ]; then
+            if [ "$(git ls-remote origin refs/heads/main | cut -f1)" != "$GITHUB_SHA" ]; then
+              echo "::notice::A newer main commit is available; skipping this dev release."
+              exit 0
+            fi
             # Move only the rolling dev tag. Never force-update a versioned tag.
             git tag --force dev "$GITHUB_SHA"
             git push --force origin refs/tags/dev
@@ -562,9 +817,15 @@ jobs:
             else
               gh release create dev release-files/* --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title 'Dev build' --notes-file "$NOTES" --prerelease --latest=false
             fi
-            # Remove legacy assets so downloads cannot mix old and new naming.
+            # Old signed desktop manifests can still refer to content-addressed assets.
             gh release view dev --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' > "$RUNNER_TEMP/asset-names.txt"
             while IFS= read -r name; do
+              case "$name" in
+                songloft-lynx-dev-*-win32-x64-*.exe|songloft-lynx-dev-*-darwin-arm64-*.zip|songloft-lynx-dev-*-darwin-x64-*.zip|songloft-lynx-dev-*-darwin-arm64-*.dmg|songloft-lynx-dev-*-darwin-x64-*.dmg)
+                  continue ;;
+                desktop-win32-x64.json|desktop-darwin-arm64.json|desktop-darwin-x64.json)
+                  continue ;;
+              esac
               if [ ! -f "release-files/$name" ]; then
                 gh release delete-asset dev "$name" --repo "$GITHUB_REPOSITORY" --yes
               fi

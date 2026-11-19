@@ -8,23 +8,25 @@
 
 | 触发                    | 行为                                                       |
 | ----------------------- | ---------------------------------------------------------- |
-| 代码 push 到 `main`     | 自动验证与四平台打包，成功后更新 `dev` prerelease          |
+| 代码 push 到 `main`     | 自动验证与打包，成功后更新 `dev` prerelease          |
 | push `vX.Y.Z`           | 校验 tag 与 package.json 一致，发布正式版本                |
 | push `vX.Y.Z-beta.N` 等 | 发布带版本号的 prerelease，不成为 latest                   |
 | Actions → Run workflow  | 选择 main 重建 dev，或选择 v\* tag 构建对应版本            |
 | Pull request            | 验证和打包，Android 用 debug 签名/HarmonyOS 不签名，不发布 |
 
-文档/许可证修改不自动触发构建。手动构建其他分支只生成 artifacts。正式和 dev 发布均要求 Android、iOS、HarmonyOS、Web 两种模式全部成功，失败时保留各自 artifacts，不更新 Release。
+文档/许可证修改不自动触发构建。手动构建其他分支只生成 artifacts。正式和 dev 发布要求 Android、iOS、HarmonyOS 和 Web 两种模式全部成功。启用桌面后，还须通过 Windows x64、macOS arm64、macOS x64 三项打包与验签。失败时保留现有 artifacts。
 
 产物名见[安装指南](installation.md)。`version.json` 和 `checksums.txt` 随 Release 发布。新流程移除旧的独立 `dev-harmony` 入口；历史 Release 不自动删除。
 
-移动与桌面流水线均在启动时解析公开主仓库 `main` 的最新提交和版本。一次运行的各平台和架构复用同一个 SHA 与该提交的 `pkg/tag`，无需额外的跨仓库令牌。Android 与 iOS 使用该提交指定的 gomobile 和 gobind 版本，发布前检查安装包内的实际后端 SHA。Windows/macOS 候选 Bundle 由本仓库的 `desktop.yml` 构建，产物在对应的 Actions 运行中查看，正式下载待验收。
+同一次运行在开始时解析公开主仓库 `main` 的最新提交和版本，Android、iOS 和桌面共用该 SHA 与其 `pkg/tag`。Android 与 iOS 使用后端提交指定的 gomobile 和 gobind。桌面三架构使用同一次构建生成的业务 bundle。所有 Bundle 包在发布前检查包内后端 SHA。
 
-dev、preview 和正式 Release 的正文展示 Conventional Commits 分类记录（含提交链接）；`.github/release-notes.md` 仅保留指向 [中文 README](../../README.md#安装与下载) 与 [英文 README](../../README.en.md#installation-and-downloads) 的安装说明链接。五种包的安装/部署方式、服务器连接要求和 SHA-256 校验步骤统一维护在 README。比较范围为当前提交与已合并的最近一个 `v*` tag，跳过指向当前提交的 tag；没有历史版本 tag 时回退到首个提交。仅包含 Flutter 流程同样支持的提交类型；无可列出的变更时只保留安装说明链接。
+配置 `DESKTOP_SDK_INDEX_URL`、`DESKTOP_SDK_INDEX_SHA256` 和[桌面签名凭据](../../desktop/README.md#ci-与验收)后，桌面安装包和按架构签名的更新清单随 `dev` 或正式 `vX.Y.Z` Release 发布。两个 SDK 变量均未设置时，流水线继续构建移动端和 Web。预发布标签沿用移动和 Web 构建。
+
+dev、preview 和正式 Release 的正文展示 Conventional Commits 分类记录（含提交链接）；`.github/release-notes.md` 仅保留指向 [中文 README](../../README.md#安装与下载) 与 [英文 README](../../README.en.md#installation-and-downloads) 的安装说明链接。各平台包的安装/部署方式、服务器连接要求和 SHA-256 校验步骤统一维护在 README。比较范围为当前提交与已合并的最近一个 `v*` tag，跳过指向当前提交的 tag；没有历史版本 tag 时回退到首个提交。仅包含 Flutter 流程同样支持的提交类型；无可列出的变更时只保留安装说明链接。
 
 版本 tag 的 Release 发布成功后，独立 job 从最新 `main` 更新根目录的中文 `CHANGELOG.md`，将生成器的分类标题和作者标记本地化并提交回仓库。不同版本的日志更新串行执行。dev 不写入该文件，日志提交也不会触发新的构建；按项目要求不另设英文 CHANGELOG。
 
-上传先写 draft，全部资产成功后才公开，避免下载到部分包。dev 替换期间暂时隐藏；上传失败会留 draft 供维护者检查和重跑。正式/preview 的已有 Release（包括 draft）仍拒绝覆盖；先人工确认失败 draft 的状态再决定删除或发布。dev 会清理同一 Release 内的旧资产名称。
+上传先写 draft，全部资产成功后才公开，避免下载到部分包。dev 替换期间暂时隐藏；上传失败会留 draft 供维护者检查和重跑。正式/preview 的已有 Release（包括 draft）仍拒绝覆盖；先人工确认失败 draft 的状态再决定删除或发布。dev 清理旧移动和 Web 资产名称，并保留已签名桌面清单可引用的历史安装包。
 
 ## iOS 原生构建缓存
 

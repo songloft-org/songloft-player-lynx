@@ -98,12 +98,12 @@ node desktop/scripts/sign-update.mjs build-info.json application.zip https://hos
 
 ## CI 与验收
 
-[desktop.yml](../.github/workflows/desktop.yml) 手动构建三个架构并上传工件。SDK index 是 HTTPS JSON，分别含 `win32-x64 / darwin-arm64 / darwin-x64`，每项为 `{url, sha256, manifestSha256}`；触发参数另绑定 index 自身摘要。归档根目录为 sdk.json/native/tools/build。
+[Build and Release](../.github/workflows/build-and-release.yml) 共用同一次客户端构建与后端检出，打包 Windows x64、macOS arm64 和 macOS x64。在仓库 Actions Variables 配置 `DESKTOP_SDK_INDEX_URL` 与 `DESKTOP_SDK_INDEX_SHA256` 以启用桌面构建。HTTPS SDK 索引包含三个目标，每项为 `{url, sha256, manifestSha256}`。归档根目录包含 sdk.json、native、tools 和 build。
 
 Windows 构建先执行按用户 NSIS 安装，核对业务 bundle、构建元数据以及 mpv、CEF 和更新辅助程序。macOS 构建验证 DMG 和解出的更新 ZIP，并核对包内元数据及业务 bundle。每个目标执行包内后端的 `-version`，核对版本、提交 SHA、构建时间和 lite 构建类型。上传前还用包内 FFmpeg 生成合成音轨，用 ffprobe 核对，再测试 Bundle 后端的启动、扫描、Range 读取和重启持久化。
 
-Windows Authenticode 凭据使用 `DESKTOP_WINDOWS_CSC_LINK` 和 `DESKTOP_WINDOWS_CSC_KEY_PASSWORD`。Apple Developer ID 凭据使用 `DESKTOP_MAC_CSC_LINK` 和 `DESKTOP_MAC_CSC_KEY_PASSWORD`。macOS 公证读取 `DESKTOP_APPLE_ID`、`DESKTOP_APPLE_APP_PASSWORD` 和 `DESKTOP_APPLE_TEAM_ID`。stable 的安装包校验同时检查 app 的公证票据和 Gatekeeper 评估结果。stable 构建以及选择 `publish` 的构建开始前均需要配置 `DESKTOP_UPDATE_PUBLIC_KEY`。
+Windows Authenticode 凭据使用 `DESKTOP_WINDOWS_CSC_LINK` 和 `DESKTOP_WINDOWS_CSC_KEY_PASSWORD`。Apple Developer ID 凭据使用 `DESKTOP_MAC_CSC_LINK` 和 `DESKTOP_MAC_CSC_KEY_PASSWORD`。macOS 公证读取 `DESKTOP_APPLE_ID`、`DESKTOP_APPLE_APP_PASSWORD` 和 `DESKTOP_APPLE_TEAM_ID`。stable 的安装包校验同时检查 app 的公证票据和 Gatekeeper 评估结果。dev 和正式发布都要求 Actions Secrets 中配置 `DESKTOP_UPDATE_PUBLIC_KEY`。
 
-默认只生成工件。正式签名与设备验收通过后，发布时显式勾选 `publish`。dev 使用最新的 `main`，stable 使用与版本一致的 `v*` 标签。桌面更新读取同一仓库中独立的 `desktop-dev` 与 `desktop-stable` Release。发布作业先核对三个架构的源码摘要、后端身份、客户端版本和更新公钥，再复制安装包并用 `DESKTOP_UPDATE_PRIVATE_KEY` 签署清单。先上传带内容摘要的安装包，再更新签名清单。此前已发布的安装包继续可供对应清单下载。
+配置 SDK 后，`main` 构建将桌面资产上传至同一个 `dev` Release，正式 `vX.Y.Z` 构建将资产上传至对应版本 Release。桌面更新分别从 `dev` 和最新正式 Release 获取独立的按架构清单。正式清单指向该版本的固定资产 URL。`vX.Y.Z-beta.N` 等预发布沿用移动与 Web 构建。发布作业核对三个架构的客户端源码、业务 bundle、后端身份、版本和更新公钥，用 `DESKTOP_UPDATE_PRIVATE_KEY` 签署清单。安装包、签名清单与其他平台资产均上传到同一个 draft，全部成功后公开。旧 dev 清单引用的安装资产仍可下载。
 
 验证源码、SHA/工作树、命令、环境、失败和 Not run 记录在[本轮记录](../docs/project/desktop-implementation.md)。人工听音、音画同步、设备生命周期、干净环境安装、旧包升级及一小时资源趋势需要统一实机验收；源码或编译成功不代替这些结果。

@@ -385,6 +385,18 @@ Build-time HEAD: `575c77e3f5ebf4dc204fbd28c7ff7f3b4f90a742` + dirty. Another ses
 - Windows now starts CEF using software rendering. Each custom development data root derives a distinct AppUserModelID for its CEF profile. An isolated test-signed package copy replaced the two host modules in its ASAR and retained the original business bundle, media and other binaries. A normal launch supplied the argument automatically and created the isolated CEF profile. The plugin repeated cookie, upload, favorite and playback calls, and the backend read back the persistent result. The app registered nonzero Windows audio session peaks. Video output was tested again separately.
 - All 33 Node desktop host checks passed. The changed Windows system module cross-compiled with SDK 10.0.26100 and LLVM 19. The original installer SHA, patched ASAR SHA and evidence are under `/home/hanxi/work/songloft-review/lynx-desktop-20261119-windows-physical/`. Not run: a rebuilt and production-signed installer, the Mac Settings upgrade, precision A/V sync, and human listening.
 
+### Physical Windows 2.13.26 installation
+
+- The current-user NSIS install and uninstall ran on Windows 10 IoT Enterprise LTSC 19044.5371 x64. The test-signed installer was 299,204,112 bytes and installed files totaled 1,085,792,190 bytes. It used client `f9a4177` and public backend `7a3718f`. The host executable and 12 resources matched the package.
+- A normal launch enabled CEF software rendering and created an isolated profile. Both plugin types completed real backend writes, readback, and favorite operations. HTML also completed a Cookie lookup and four-byte upload. The host recovered from backend failure. After host failure, the old backend exited. Both plugin records survived restart. The test installation and fixtures were removed.
+- The MV window entered and left fullscreen while its persisted playback position advanced from 1.767 to 11.967 seconds. The captures had a solid content area, and Windows Core Audio reported no default output endpoint. Rendered frames and audible output for this package were Not run. Evidence is in `/home/hanxi/work/songloft-review/lynx-desktop-20261119-desktop26/`.
+
+### Shared client release workflow
+
+- The three desktop targets run in Build and Release alongside mobile and Web. They use the same business bundle and public backend commit. Five desktop installer assets and three signed, per-architecture update manifests join the shared dev or stable Release. The independent desktop publishing workflow was removed.
+- Release preflight checks source and bundle digests, backend SHA, and the target tag. Dev checks the shared `dev` Release. Stable discovers manifests in the latest stable Release and uses version-specific installer URLs.
+- Local workflow lint, signed staging and publishing fixtures, desktop host and release tests, and the bilingual documentation site build passed. Three-architecture GitHub builds and actual shared Release publishing were Not run.
+
 ### Module verification matrix
 
 | Phase | Source implementation | Consolidated acceptance boundary |

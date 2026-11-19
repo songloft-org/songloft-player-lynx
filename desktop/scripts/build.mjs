@@ -9,7 +9,8 @@ const root = fileURLToPath(new URL('../..', import.meta.url))
 const before = await clientSourceState(root)
 // Build the existing app and the isolated native probe from the same pinned
 // shared toolchain. Each output directory is cleaned by Rspeedy independently.
-for (const probe of [false, true]) {
+const probes = process.argv.includes('--without-probe') ? [false] : [false, true]
+for (const probe of probes) {
   const result = spawnSync(
     process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
     ['exec', 'rspeedy', 'build', ...(probe ? ['--environment', 'lynx'] : [])],

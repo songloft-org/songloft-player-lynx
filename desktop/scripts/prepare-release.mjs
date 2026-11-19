@@ -9,14 +9,21 @@ import { verifyManifest } from '../host/update-manifest.mjs'
 import {
   compatibility,
   desktopReleaseAsset,
-  desktopReleaseTag,
+  desktopUpdateManifestUrl,
 } from '../target.mjs'
 
-const [channel, clientSha, artifacts, output, previous] = process.argv.slice(2)
-const tag = desktopReleaseTag(channel)
-if (!/^[a-f0-9]{40}$/.test(clientSha ?? '') || !artifacts || !output)
+const [channel, tag, clientSha, backendSha, artifacts, output, previous] =
+  process.argv.slice(2)
+if (
+  !['dev', 'stable'].includes(channel) ||
+  (channel === 'dev') !== (tag === 'dev') ||
+  !/^[a-f0-9]{40}$/.test(clientSha ?? '') ||
+  !/^[a-f0-9]{40}$/.test(backendSha ?? '') ||
+  !artifacts ||
+  !output
+)
   throw new Error(
-    'Expected channel, full client SHA, artifact directory and output',
+    'Expected channel, release tag, full client and backend SHAs, artifact directory and output',
   )
 
 const assets = join(output, 'assets')
@@ -26,7 +33,7 @@ const packages = []
 let identity
 
 for (const target of compatibility.targets) {
-  const artifact = join(artifacts, `${tag}-${target}`)
+  const artifact = join(artifacts, `desktop-${channel}-${target}`)
   const infoPath = join(artifact, 'resources', target, 'build-info.json')
   const info = JSON.parse(await readFile(infoPath, 'utf8'))
   const manifestName = `desktop-${target}.json`
@@ -37,18 +44,21 @@ for (const target of compatibility.targets) {
     info.dirty !== false ||
     info.clientSha !== clientSha ||
     !/^[a-f0-9]{64}$/.test(info.clientSourceSha256) ||
-    info.backendSha !== info.backendPinnedSha ||
-    !/^[a-f0-9]{40}$/.test(info.backendSha) ||
+    !/^[a-f0-9]{64}$/.test(info.bundleSha256) ||
+    info.backendSha !== backendSha ||
+    info.backendPinnedSha !== backendSha ||
     typeof info.backendVersion !== 'string' ||
     semver.valid(info.backendVersion) !== info.backendVersion ||
     semver.valid(info.version) !== info.version ||
-    (channel === 'stable' && semver.prerelease(info.version)) ||
-    info.updateManifest !== desktopReleaseAsset(channel, manifestName)
+    (channel === 'stable' &&
+      (semver.prerelease(info.version) || tag !== `v${info.version}`)) ||
+    info.updateManifest !== desktopUpdateManifestUrl(channel, target)
   )
     throw new Error(`Build metadata rejected for ${target}`)
 
   const current = JSON.stringify([
     info.clientSourceSha256,
+    info.bundleSha256,
     info.backendSha,
     info.backendVersion,
     info.version,
@@ -57,7 +67,7 @@ for (const target of compatibility.targets) {
   identity ??= current
   if (current !== identity)
     throw new Error(
-      'Desktop targets must use the same client source, client version, backend identity and update key',
+      'Desktop targets must use the same client source, bundle, client version, backend identity and update key',
     )
 
   packages.push({ target, artifact, infoPath, info, manifestName })
@@ -97,7 +107,7 @@ for (const { target, artifact, infoPath, info, manifestName } of packages) {
       signer,
       infoPath,
       updateAsset,
-      desktopReleaseAsset(channel, basename(updateAsset)),
+      desktopReleaseAsset(tag, basename(updateAsset)),
       manifest,
     ],
     { stdio: 'inherit' },

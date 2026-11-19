@@ -16,7 +16,11 @@ import { join, resolve, dirname, basename } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import semver from 'semver'
-import { assertTarget, compatibility, desktopReleaseAsset } from '../target.mjs'
+import {
+  assertTarget,
+  compatibility,
+  desktopUpdateManifestUrl,
+} from '../target.mjs'
 import { desktopIdentity } from '../host/identity.mjs'
 import { clientSourceState } from './source-state.mjs'
 
@@ -362,7 +366,7 @@ try {
       run('codesign', ['--force', '--sign', '-', path], root)
     }
   }
-  const manifest = desktopReleaseAsset(channel, `desktop-${target}.json`)
+  const manifest = desktopUpdateManifestUrl(channel, target)
   await writeFile(
     join(staging, 'build-info.json'),
     JSON.stringify(

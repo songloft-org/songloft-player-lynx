@@ -14,7 +14,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { compatibility, desktopReleaseAsset } from '../target.mjs'
+import {
+  compatibility,
+  desktopReleaseAsset,
+  desktopUpdateManifestUrl,
+} from '../target.mjs'
 import { verifyManifest } from '../host/update-manifest.mjs'
 
 const prepare = fileURLToPath(
@@ -23,6 +27,21 @@ const prepare = fileURLToPath(
 const configureSigning = fileURLToPath(
   new URL('../scripts/ci-signing.mjs', import.meta.url),
 )
+
+test('desktop manifest discovery follows the shared dev and latest stable Releases', () => {
+  const base = 'https://github.com/songloft-org/songloft-player-lynx/releases'
+  assert.equal(
+    desktopUpdateManifestUrl('dev', 'win32-x64'),
+    `${base}/download/dev/desktop-win32-x64.json`,
+  )
+  assert.equal(
+    desktopUpdateManifestUrl('stable', 'darwin-x64'),
+    `${base}/latest/download/desktop-darwin-x64.json`,
+  )
+  assert.throws(() => desktopUpdateManifestUrl('preview', 'win32-x64'))
+  assert.throws(() => desktopReleaseAsset('desktop-stable', 'installer.exe'))
+  assert.throws(() => desktopReleaseAsset('v2.1.0-beta.1', 'installer.exe'))
+})
 
 test('desktop distribution requires the configured Ed25519 update key', (t) => {
   const root = mkdtempSync(join(tmpdir(), 'songloft-desktop-signing-'))
@@ -91,6 +110,7 @@ test('desktop release stages all installers and signs their matching update asse
   const clientSha = 'a'.repeat(40)
   const clientSourceSha256 = 'c'.repeat(64)
   const backendSha = 'b'.repeat(40)
+  const bundleSha256 = 'e'.repeat(64)
   const channel = 'stable'
   const artifacts = join(root, 'artifacts')
   const first = join(root, 'first')
@@ -120,6 +140,7 @@ test('desktop release stages all installers and signs their matching update asse
           channel: buildChannel,
           clientSha,
           clientSourceSha256,
+          bundleSha256,
           backendSha,
           backendPinnedSha: backendSha,
           backendVersion: '2.0.0',
@@ -127,21 +148,20 @@ test('desktop release stages all installers and signs their matching update asse
           dirty: false,
           builtAt,
           updatePublicKey: trust,
-          updateManifest: desktopReleaseAsset(
-            buildChannel,
-            `desktop-${target}.json`,
-          ),
+          updateManifest: desktopUpdateManifestUrl(buildChannel, target),
         }),
       )
     }
   }
-  const stage = (out, previous, buildChannel = channel) =>
+  const stage = (out, previous, buildChannel = channel, tag = 'v2.1.0') =>
     spawnSync(
       process.execPath,
       [
         prepare,
         buildChannel,
+        buildChannel === 'dev' ? 'dev' : tag,
         clientSha,
+        backendSha,
         artifacts,
         out,
         ...(previous ? [previous] : []),
@@ -168,7 +188,10 @@ test('desktop release stages all installers and signs their matching update asse
       { publicKey: trust, channel, os, arch, currentVersion: '2.0.0' },
     )
     const name = new URL(manifest.asset.url).pathname.split('/').at(-1)
-    assert.equal(manifest.asset.url, desktopReleaseAsset(channel, name))
+    assert.equal(
+      manifest.asset.url,
+      `https://github.com/songloft-org/songloft-player-lynx/releases/download/v2.1.0/${name}`,
+    )
     assert.equal(readFileSync(join(first, 'assets', name), 'utf8'), target)
     assert.equal(manifest.available, true)
   }
@@ -196,8 +219,29 @@ test('desktop release stages all installers and signs their matching update asse
   assert.match(mixedSources.stderr, /same client source/)
   assert.equal(existsSync(mixedSourceOutput), false)
 
+  writeInput('2.1.0')
+  const differentBundle = JSON.parse(readFileSync(macMetadata, 'utf8'))
+  differentBundle.bundleSha256 = 'f'.repeat(64)
+  writeFileSync(macMetadata, JSON.stringify(differentBundle))
+  const mixedBundle = stage(join(root, 'bundle-mismatch'))
+  assert.notEqual(mixedBundle.status, 0)
+  assert.match(mixedBundle.stderr, /same client source, bundle/)
+
+  writeInput('2.1.0')
+  const wrongBackend = JSON.parse(readFileSync(macMetadata, 'utf8'))
+  wrongBackend.backendSha = wrongBackend.backendPinnedSha = 'f'.repeat(40)
+  writeFileSync(macMetadata, JSON.stringify(wrongBackend))
+  const otherCheckout = stage(join(root, 'unexpected-backend'))
+  assert.notEqual(otherCheckout.status, 0)
+  assert.match(otherCheckout.stderr, /Build metadata rejected/)
+
+  writeInput('2.1.0')
+  const wrongTag = stage(join(root, 'wrong-tag'), undefined, channel, 'v2.1.1')
+  assert.notEqual(wrongTag.status, 0)
+  assert.match(wrongTag.stderr, /Build metadata rejected/)
+
   writeInput('2.0.0')
-  const downgrade = stage(next, join(first, 'manifests'))
+  const downgrade = stage(next, join(first, 'manifests'), channel, 'v2.0.0')
   assert.notEqual(downgrade.status, 0)
   assert.match(downgrade.stderr, /Refusing to replace a newer or unchanged/)
 
@@ -205,6 +249,17 @@ test('desktop release stages all installers and signs their matching update asse
   writeInput('2.1.0', 'dev', '2026-01-01T00:00:00Z')
   const devStaged = stage(devFirst, undefined, 'dev')
   assert.equal(devStaged.status, 0, devStaged.stderr)
+  const devManifest = JSON.parse(
+    readFileSync(join(devFirst, 'manifests', 'desktop-win32-x64.json')),
+  )
+  const dev = verifyManifest(devManifest, {
+    publicKey: trust,
+    channel: 'dev',
+    os: 'win32',
+    arch: 'x64',
+    currentVersion: '2.0.0',
+  })
+  assert.match(dev.asset.url, /\/releases\/download\/dev\/[^/]+\.exe$/)
   writeInput('2.0.0', 'dev', '2026-01-01T00:00:01Z')
   const devDowngrade = stage(
     join(root, 'dev-next'),

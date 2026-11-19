@@ -6,14 +6,23 @@ export const compatibility = JSON.parse(
 
 export const desktopReleaseRepo = 'songloft-org/songloft-player-lynx'
 
-export function desktopReleaseTag(channel) {
-  if (!['dev', 'stable'].includes(channel))
-    throw new Error('Invalid desktop channel')
-  return `desktop-${channel}`
+export function desktopReleaseAsset(tag, name) {
+  if (
+    tag !== 'dev' &&
+    !/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(tag)
+  )
+    throw new Error('Invalid desktop release tag')
+  return `https://github.com/${desktopReleaseRepo}/releases/download/${tag}/${encodeURIComponent(name)}`
 }
 
-export function desktopReleaseAsset(channel, name) {
-  return `https://github.com/${desktopReleaseRepo}/releases/download/${desktopReleaseTag(channel)}/${encodeURIComponent(name)}`
+export function desktopUpdateManifestUrl(channel, target) {
+  if (!compatibility.targets.includes(target))
+    throw new Error('Invalid desktop update target')
+  const name = `desktop-${target}.json`
+  if (channel === 'dev') return desktopReleaseAsset('dev', name)
+  if (channel === 'stable')
+    return `https://github.com/${desktopReleaseRepo}/releases/latest/download/${name}`
+  throw new Error('Invalid desktop channel')
 }
 
 export function assertTarget(platform = process.platform, arch = process.arch) {

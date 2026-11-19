@@ -18,11 +18,11 @@ async function download(url, maximum) {
   }
   return Buffer.concat(chunks)
 }
-const index = await download(process.env.SDK_INDEX_URL, 65536)
-if (
-  !/^[a-f0-9]{64}$/.test(process.env.SDK_INDEX_SHA256 ?? '') ||
-  digest(index) !== process.env.SDK_INDEX_SHA256
-)
+const { SDK_INDEX_URL, SDK_INDEX_SHA256 } = process.env
+if (!SDK_INDEX_URL || !/^[a-f0-9]{64}$/.test(SDK_INDEX_SHA256 ?? ''))
+  throw new Error('Configure both the desktop SDK index URL and its SHA-256')
+const index = await download(SDK_INDEX_URL, 65536)
+if (digest(index) !== SDK_INDEX_SHA256)
   throw new Error('SDK index digest rejected')
 const target = assertTarget()
 if (process.env.DESKTOP_TARGET !== target)
