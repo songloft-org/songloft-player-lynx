@@ -98,6 +98,7 @@ const run = (command, args, cwd, options = {}) => {
     throw new Error(`${command} failed: ${result.stderr ?? ''}`)
   return result.stdout
 }
+const tarPrefix = process.platform === 'win32' ? ['--force-local'] : []
 const backendSha = run('git', ['rev-parse', 'HEAD'], backend).trim()
 const selectedBackendSha = process.env.SONGLOFT_BACKEND_COMMIT ?? backendSha
 if (!/^[a-f0-9]{40}$/.test(backendSha) || backendSha !== selectedBackendSha)
@@ -147,7 +148,9 @@ try {
   })
   if (archive.status !== 0)
     throw new Error('Selected backend commit is unavailable')
-  run('tar', ['-xf', '-', '-C', snapshot], root, { input: archive.stdout })
+  run('tar', [...tarPrefix, '-xf', '-'], snapshot, {
+    input: archive.stdout,
+  })
   const backendSubmodules = {}
   // git archive omits gitlinks. The Go replace directive requires this pinned
   // nested module, independently of optional client/plugin checkouts.
@@ -164,7 +167,7 @@ try {
         'Initialize pinned backend pkg/tag before building resources',
       )
     await mkdir(join(snapshot, path), { recursive: true })
-    run('tar', ['-xf', '-', '-C', join(snapshot, path)], root, {
+    run('tar', [...tarPrefix, '-xf', '-'], join(snapshot, path), {
       input: nested.stdout,
     })
     backendSubmodules[path] = sha
