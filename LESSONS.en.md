@@ -619,3 +619,10 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 - The capsule uses the local snapshot for the current server and account on its first frame. Revalidate both the tab configuration and enabled plugins in the background, then save the confirmed layout. Mobile Bundle reuses the snapshot for the same local library across listener port changes.
 - With both endpoints delayed in Docker Chrome, the baseline drew built-in tabs first and inserted the plugin later. The fixed version showed the saved plugin on the first frame, kept the layout on an identical response or a 503, and updated it once when the layout changed. The regression also covers mobile Bundle port changes and account isolation.
 - Seen 1× (2026-11-18). Comparison uses `baef0f9` and this Lynx worktree. Evidence is in `/tmp/songloft-lynx-scroll-tabs.j14OKU/`.
+
+### PLUGIN-006 · Check built-ins on the actual Android host JS runtime
+
+- Scope is the Lynx Android host's plugin EQ bridge, songloft-org/songloft-player-lynx#15.
+- On an API 34 emulator the WebView started host playback and detected the system EQ. The first preset application then failed in the host with `Object.hasOwn is not a function`, despite the Node/Vitest bridge tests passing.
+- Validate the profile's own keys with `Object.keys` and exercise the real dispatcher in a regression with `Object.hasOwn` removed. Verify the plugin WebView transport and the separate Lynx host JS runtime.
+- Seen 1× (2026-11-19).

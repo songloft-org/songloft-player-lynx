@@ -25,6 +25,22 @@ HTML 插件使用 `@songloft/client-sdk` / `window.SongloftPlugin`；原生 Lynx
 
 收藏增量通知先取消旧查询，避免旧 GET 覆盖新状态；冷缓存先加载完整集合，不能把一首歌的通知当成完整收藏列表。
 
+## 插件播放音效
+
+检测 `host.getInfo().capabilities` 是否包含 `player.audioEffects`。Lynx Android 先支持系统均衡器上的宿主 EQ 预设。设备不支持 EQ 或正在投屏时，`supported` 为空。混响和其他平台待接入，插件按查询结果显示控件。调用参数使用服务端曲库歌曲 ID。
+
+| `player` 方法 | 参数及结果 |
+|---|---|
+| `getAudioEffects` | 返回 `{ playbackId, supported, applied }`。`playbackId` 只对发起此会话的插件可见，其他情况为 `null`。预设列表位于 `supported.equalizer.presets`，未应用插件音效时 `applied` 为 `null`。 |
+| `applyAudioEffects` | 传 `{ playbackId, effects: { equalizer: { preset: "vocal" } } }`，一次替换插件音效，返回应用成功的配置。不支持的效果或预设使整个请求失败。 |
+| `clearAudioEffects` | 传 `{ playbackId }`，恢复用户原有音效并继续播放。同一有效会话内可以重复调用。 |
+
+插件通过 `play(id)`、`setQueue` 或 `playPlaylistById` 发起播放会话。同一会话内切歌、暂停、离开插件页或后台播放时保留音效。宿主另行播放、停止、队列结束、切换投屏或账号、禁用该插件或手动调宿主 EQ 时，临时音效会清除。修改请求需要当前有效的 `playbackId` 和处于活动状态的插件页面。临时音效不会保存到用户设置。
+
+WebView 使用 `@songloft/client-sdk` 的 `player`，也可以使用 `window.SongloftPlugin.player`。Lynx 原生插件能通过 `invokeHost('player', 'getAudioEffects')` 等方法调用，检查返回的 `ok`、`data` 和 `error`。
+
+Android 14 模拟器和 WebView 113 的调试包验证了插件启动播放、应用 EQ、切歌保留、清除后继续播放以及宿主 EQ 接管。AudioFlinger 在同一输出会话中报告均衡器依次关闭、启用、关闭。
+
 ## 传输和平台
 
 - Web HTML 插件使用 iframe `postMessage`；原生 WebView URL 携带 `songloft_host=lynx`，公共 `common.js` 选择 Android `LynxWebViewBridge`、iOS `webkit.messageHandlers.nativeApp` 或 HarmonyOS `LynxJSBridge`。外部浏览器 URL 不携带该参数。

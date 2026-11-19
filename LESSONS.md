@@ -619,3 +619,10 @@
 - 范围：桌面原生播放器的换源与视频轨判定。2.13.24 arm64 从 MP4 切到同尺寸 MKV 后，位置推进到 2,267 ms，宿主却报告 0×0。
 - 保留尺寸和时长的最后一次属性观测。遇到不可用通知清除对应值，当前源就绪才向宿主公开。旧实现的回归复现尺寸归零，修复后的独立签名副本在原生 arm64 与 Rosetta x64 连播四种容器。[记录](docs/project/desktop-implementation.md#macos-换源保留同尺寸视频)
 - Seen 1× (2026-11-19)。状态：经验。
+
+### PLUGIN-006：插件桥需核对 Android 实际 JS 运行时支持的内置方法
+
+- 范围：Android Lynx 宿主插件音效，songloft-org/songloft-player-lynx#15。
+- 证据：API 34 模拟器上的 WebView 发起宿主播放并查询到系统 EQ，首次应用预设却由宿主返回 `Object.hasOwn is not a function`。此前 Node/Vitest 的播放桥测试已通过。
+- 改用 `Object.keys` 校验音效配置的自有字段。回归在隐藏 `Object.hasOwn` 的环境跑真实分发器。SDK 传输的 WebView 与执行宿主逻辑的 Lynx JS 运行时都需要单独核对。
+- Seen 1× (2026-11-19)。

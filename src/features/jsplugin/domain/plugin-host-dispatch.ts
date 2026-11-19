@@ -4,6 +4,12 @@ import { playlistContext } from '../../player/domain/playback-context.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import type { PlayerState } from '../../player/store/player-store.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
+import { useDlnaStore } from '../../player/store/dlna-store.js'
+import {
+  getPluginAudioEffects,
+  hasPluginAudioEffects,
+  setPluginAudioEffects,
+} from '../../player/store/plugin-audio-effects.js'
 import { refreshFavoritesFromPlugin } from '../../library/data/favorites.js'
 
 export interface HostCallRequest {
@@ -19,6 +25,8 @@ export interface HostCallResult {
 }
 
 export interface PluginHostContext {
+  pluginEntryPath?: string
+  isPluginActive?: () => boolean
   pluginNavigation?: (method: string, params: Record<string, unknown>) => void
   pluginOpenUrl?: (url: string) => void
   pluginResourceUrl?: (path: string) => Promise<string>
@@ -105,10 +113,29 @@ async function dispatchPlayer(
   ctx: PluginHostContext,
 ): Promise<unknown> {
   const store = usePlayerStore.getState()
+  const localAudio = () => ctx.platform === 'android' && !useDlnaStore.getState().activeDevice
+  const canWriteEffects = () => localAudio() && ctx.isPluginActive?.() === true
+  const pluginPlayback = () => {
+    if (!localAudio() || !hasPluginAudioEffects() || !ctx.pluginEntryPath) return undefined
+    if (!canWriteEffects()) throw new Error('plugin page is no longer active')
+    return { pluginOwner: ctx.pluginEntryPath }
+  }
 
   switch (method) {
     case 'getState':
       return playerStateToJson()
+
+    case 'getAudioEffects':
+      return getPluginAudioEffects(ctx.pluginEntryPath, localAudio())
+
+    case 'applyAudioEffects':
+    case 'clearAudioEffects':
+      return setPluginAudioEffects(
+        ctx.pluginEntryPath,
+        params.playbackId,
+        method === 'applyAudioEffects' ? params.effects : {},
+        canWriteEffects,
+      )
 
     case 'setQueue': {
       const songs = await ctx.resolveSongs(songIds(params))
@@ -120,7 +147,7 @@ async function dispatchPlayer(
         params.sourcePlaylistId != null
           ? playlistContext(integerParam(params, 'sourcePlaylistId'))
           : undefined
-      await store.playPlaylist(songs, startIndex, context)
+      await store.playPlaylist(songs, startIndex, context, pluginPlayback())
       return null
     }
 
@@ -166,7 +193,7 @@ async function dispatchPlayer(
         })
         if (first.songs.length === 0) return 0
         // Start immediately; the existing loader cancels fills after a queue replacement/clear.
-        const playing = store.playAll(first.songs, playlistContext(playlistId))
+        const playing = store.playAll(first.songs, playlistContext(playlistId), pluginPlayback())
         usePlayerStore.getState().loadRemainingSongsForCurrentPlaylist({
           loadedCount: first.songs.length,
           total: first.total,
@@ -186,7 +213,7 @@ async function dispatchPlayer(
       if (id != null) {
         const songs = await ctx.resolveSongs([id])
         if (songs.length === 0) throw new Error('song not found')
-        await store.playSong(songs[0])
+        await store.playSong(songs[0], undefined, pluginPlayback())
       } else if (!store.isPlaying) {
         await store.togglePlay()
       }
@@ -285,7 +312,9 @@ export async function handlePluginHostCall(
           data: {
             version: ctx.version,
             platform: ctx.platform,
-            capabilities: ['player'],
+            capabilities: ctx.platform === 'android' && hasPluginAudioEffects()
+              ? ['player', 'player.audioEffects']
+              : ['player'],
           },
         }
       }

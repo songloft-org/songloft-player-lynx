@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 import { getAudio } from '../../../native/audio-facade.js'
+import { endPluginPlayback } from './plugin-audio-effects.js'
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import {
   clampGain,
@@ -53,6 +54,7 @@ export const useEqStore = create<EqState>((set, get) => ({
   activePreset: 'flat' as ActivePreset,
 
   toggle() {
+    endPluginPlayback()
     const next = !get().enabled
     set({ enabled: next })
     void getAudio().setEqualizerEnabled(next)
@@ -60,6 +62,7 @@ export const useEqStore = create<EqState>((set, get) => ({
   },
 
   selectPreset(name: EqPresetName) {
+    endPluginPlayback()
     const bands = [...EQ_PRESETS[name]]
     set({ bands, activePreset: name })
     syncAllBandsToAudio(bands, get().enabled)
@@ -67,6 +70,7 @@ export const useEqStore = create<EqState>((set, get) => ({
   },
 
   adjustBand(index: number, gainDb: number) {
+    endPluginPlayback()
     const bands = [...get().bands]
     bands[index] = clampGain(gainDb)
     set({ bands, activePreset: 'custom' })
@@ -77,6 +81,7 @@ export const useEqStore = create<EqState>((set, get) => ({
   },
 
   reset() {
+    endPluginPlayback()
     const bands = flatBands()
     set({ bands, activePreset: 'flat', enabled: false })
     syncAllBandsToAudio(bands, false)

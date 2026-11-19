@@ -25,6 +25,22 @@ HTML plugins use `@songloft/client-sdk` / `window.SongloftPlugin`; native Lynx p
 
 Incremental favorite notifications cancel older queries before updating the cache. Cold caches load the full set rather than treating one song's notification as the entire favorites collection.
 
+## Plugin audio effects
+
+Check `host.getInfo().capabilities` for `player.audioEffects`. Lynx on Android initially supports host EQ presets through the system equalizer. `supported` is empty on devices without EQ and while casting. Reverb and other platforms are pending, so plugins should display controls based on the query result. Playback uses song IDs from the server library.
+
+| `player` method | Parameters and result |
+|---|---|
+| `getAudioEffects` | Returns `{ playbackId, supported, applied }`. The ID is visible to the plugin that started this session and is `null` for other callers. EQ presets appear in `supported.equalizer.presets`. `applied` is `null` until a plugin effect takes effect. |
+| `applyAudioEffects` | Pass `{ playbackId, effects: { equalizer: { preset: "vocal" } } }` to replace the plugin effects and return the applied configuration. An unsupported effect or preset rejects the entire request. |
+| `clearAudioEffects` | Pass `{ playbackId }` to restore the user's effects while playback continues. Repeated clears are accepted within the same valid session. |
+
+A plugin starts a session with `play(id)`, `setQueue`, or `playPlaylistById`. Effects survive track changes within the session, pauses, leaving the plugin page, and background playback. Starting separate playback in the host, stopping, reaching the end of the queue, changing the cast target or account, disabling the plugin, and manual host EQ changes remove the temporary effects. Writes require a valid `playbackId` and an active plugin page. Temporary effects never persist to user preferences.
+
+WebView plugins can use `player` from `@songloft/client-sdk` or `window.SongloftPlugin.player`. Native Lynx plugins call methods such as `invokeHost('player', 'getAudioEffects')` and inspect `ok`, `data`, and `error`.
+
+A debug APK on an Android 14 emulator with WebView 113 verified starting playback from the plugin, applying EQ, retaining it across track changes, clearing it without stopping playback, and host EQ taking precedence. AudioFlinger reported the equalizer disabled, enabled, and disabled again in the same output session.
+
 ## Transport and platforms
 
 - Web HTML plugins use iframe `postMessage`. Native WebView URLs carry `songloft_host=lynx`; shared `common.js` selects Android `LynxWebViewBridge`, iOS `webkit.messageHandlers.nativeApp`, or HarmonyOS `LynxJSBridge`. External-browser URLs omit this parameter.
