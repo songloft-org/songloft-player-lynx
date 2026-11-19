@@ -41,6 +41,10 @@ const AUDIO_STATES: readonly AudioState[] = [
   'error',
 ]
 
+// Periodic Web samples may accrue in transit when the worker is busy. Drop
+// outdated samples before they trigger more renders and delay track completion.
+const MAX_PROGRESS_SAMPLE_AGE_MS = 1500
+
 /**
  * Global-event names the native module emits (via `sendGlobalEvent`). These
  * strings **must byte-for-byte match** the Kotlin/Swift constants
@@ -92,6 +96,10 @@ export interface SongloftAudioNativeModule {
   updateNotificationLyricWithLayout?(lyric: string | null, inTitle: boolean): void
   getVolume(): void
   dispose(): void
+}
+
+interface WebAudioProgressControl {
+  slowProgressUpdates?(): void
 }
 
 /** Minimal shape of the BTS `GlobalEventEmitter` we depend on. */
@@ -178,18 +186,30 @@ export class NativeSongloftAudio implements SongloftAudio {
   private sourceId: string | null = null
   private sourceVersion: Promise<number> | null = null
   private negotiatedVersion = 0
+  private progressUpdatesSlowed = false
   private readonly listeners = new Map<AudioEventType, Set<AudioEventListener>>()
   /** Bound global-event handlers kept for removal on dispose. */
   private readonly bridged: Array<[string, (...args: unknown[]) => void]> = []
 
   constructor(
-    private readonly native: SongloftAudioNativeModule,
+    private readonly native: SongloftAudioNativeModule & WebAudioProgressControl,
     private readonly emitter: GlobalEventSubscriber | null,
   ) {
     if (emitter) {
       for (const name of Object.values(NATIVE_EVENT)) {
         const handler = (...args: unknown[]) => {
-          const event = mapGlobalEvent(name, args[0])
+          const payload = args[0]
+          if (name === NATIVE_EVENT.progress) {
+            const sampledAtMs = (payload as { sampledAtMs?: unknown } | null)?.sampledAtMs
+            if (typeof sampledAtMs === 'number' && Date.now() - sampledAtMs > MAX_PROGRESS_SAMPLE_AGE_MS) {
+              if (!this.progressUpdatesSlowed && this.native.slowProgressUpdates) {
+                this.progressUpdatesSlowed = true
+                this.native.slowProgressUpdates()
+              }
+              return
+            }
+          }
+          const event = mapGlobalEvent(name, payload)
           if (event) {
             const sourceEvent = event.type === 'progress' || event.type === 'stateChanged' || event.type === 'error' || event.type === 'sourceReady'
             if (sourceEvent && this.sourceId !== null && event.sourceId !== this.sourceId) return

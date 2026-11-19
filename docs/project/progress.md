@@ -1,5 +1,13 @@
 # 进展与交接（PROGRESS）
 
+<a id="bundle-backend-main"></a>
+
+## 2026-11-19 · Bundle 后端源码 / Bundle backend source
+
+Lynx Android/iOS 与 Flutter Bundle 的后端检出因旧锁文件引用了 GitHub 上不存在的提交而失败。客户端流水线改为在开始时读取公开后端 `main` 的最新 SHA 和版本，各打包任务复用该次结果，继续核对包内实际 SHA。[失败 CI](https://github.com/songloft-org/songloft-player-lynx/actions/runs/44477893015) · [发布指南](../guides/releasing.md)
+
+The Lynx Android and iOS jobs and the Flutter Bundle workflow failed to check out a backend commit stored in the old lockfiles and unavailable on GitHub. Each client workflow now resolves the public backend `main` tip and version at startup, shares them across packaging jobs, and continues checking the actual SHA in its packages. [Failed CI](https://github.com/songloft-org/songloft-player-lynx/actions/runs/44477893015) · [Release guide](../en/guides/releasing.md)
+
 <a id="nav-tab-icons"></a>
 
 ## 2026-11-19 · 冷启动插件导航图标 / Plugin navigation icons on cold start
@@ -70,6 +78,26 @@ Lynx Web now gets playback position and duration from the active audio or video 
 - 完整嵌入页通过曲库点播两首真实合成 MP3。在仅延迟旧进度定时器的条件下，实际位置约 2.26 秒时，旧版进度为 0%，新版为 41%（媒体位置约为 45%）。两版均在浏览器 `ended` 后 0.3 秒内已播放下一曲，两首媒体请求均为 206。独立 Chrome 夹具验证真实 MP4 接管进度并关闭后由音频继续推进。
 - In the embedded library, two generated MP3s played from the actual UI. With the original progress timer delayed, the bar read 0% at about 2.26 seconds with the original host and 41% with the fix (about 45% on the media clock). The next track was already playing within 0.3 seconds of the browser's `ended` event in both builds. Both media requests returned 206. A separate Chrome fixture checked that a real MP4 took over progress and that audio advanced again after closing the video.
 - 证据 / evidence in `/tmp/songloft-581.7JfaBL/` (`ui-{before,after}.json`, `video.json`, `unit-{before,after}.log`, `full-test-final.log`)。另一个填充尾部的 MP3 让 Chrome 高估时长，仍在实际音频结束时触发 `ended` / a padded MP3 caused Chrome to overestimate duration but still fired `ended` when the media ran out. Not run：报告人的 Windows 封装、曲目及长时间播放，原生端与发布 CI / the reporter's Windows wrapper, track and extended session, native clients and release CI. 本地工作树修复 / local worktree fix.
+
+### Windows 真机复验 / Windows physical-device follow-up
+
+Windows 10 x64 `10.0.19044.5371`、Edge WebView2 `157.0.4341.60`、pywebview `6.2.1`。通过 `ssh win` 启动交互式计划任务运行 `windows-probe.py`，沿用附件的托盘关闭、恢复和心跳逻辑，使用隔离配置、合成 MP3 和临时曲库。实际版本由 `/api/v1/version`、Windows EXE 哈希及 `/audio-host.js` 哈希核对。报告中的 `f75be9e` 来自同提交的 [Windows CI 构建](https://github.com/songloft-org/songloft/actions/runs/44455699430)。
+
+Windows 10 x64 `10.0.19044.5371`, Edge WebView2 `157.0.4341.60`, and pywebview `6.2.1`. An interactive task launched via `ssh win` ran `windows-probe.py` with the attachment's close-to-tray, restore and heartbeat logic, an isolated profile, generated MP3s, and a temporary library. `/api/v1/version`, the Windows EXE hash and `/audio-host.js` hash identify the build. The reporter's `f75be9e` binary came from the [Windows CI build for that commit](https://github.com/songloft-org/songloft/actions/runs/44455699430).
+
+- 保持同一个窗口，服务端由 `v2.13.9`（`d34b8b8`）换成 `f75be9e`。一次正常心跳后，DevTools 读到运行中的前端宿主仍为旧哈希 `68cb8a1c`，HTTP 已提供 `0246d972`。普通刷新后运行中哈希变为 `0246d972`，复用原配置，可继续播放。报告人升级时的窗口状态待确认。
+- Replacing `v2.13.9` (`d34b8b8`) with `f75be9e` kept the existing window open. After a successful heartbeat, DevTools still read `68cb8a1c` from the running host while HTTP served `0246d972`. A normal reload started `0246d972` with the same profile and playback worked. The reporter's window state during the update is unconfirmed.
+- 从首页真实歌单点播，将 `audio-host.js` 的 250 毫秒定时器人为延迟到 60 秒。媒体播放约 15 秒时，`v2.13.9` 界面进度为 0%，`f75be9e` 为 22%，两者均有解码字节增长。该对照验证定时器导致的进度停滞。
+- The Home playlist play button started playback while the `audio-host.js` 250 ms timer was deliberately delayed to 60 seconds. At about 15 seconds of media playback, `v2.13.9` showed 0% and `f75be9e` showed 22%. Decoded bytes advanced in both. This comparison verifies the timer-induced progress stall.
+- `f75be9e` 从新配置点播 944 首的夹具队列并运行 46 分钟。前 5 分钟在托盘隐藏，随后恢复窗口并保留心跳。约 26 分钟开始积压，宿主位置与媒体时钟最大相差 0.279 秒，界面折算位置最大相差 36.936 秒。34 次媒体曲终到下一首实际 `playing` 的最长间隔是 78.820 秒。
+- A fresh `f75be9e` profile played a 944-entry fixture queue for 46 minutes. The window spent the first five minutes in the tray, then remained visible with the heartbeat active. The backlog appeared after about 26 minutes. The host clock differed from the media clock by at most 0.279 seconds and the displayed position differed by as much as 36.936 seconds. The largest gap across 34 transitions from media `ended` to the next actual `playing` was 78.820 seconds.
+- 对使用同一宿主脚本的 `5629c25` 会话，在积压中将定期上报降到每秒一次，进度恢复并重新连续切歌。调回每 500 毫秒一次后，46 分钟时界面又落后约 9 秒。补丁保持正常状态的媒体事件频率，Worker 丢弃超过 1.5 秒的常规采样，并一次性通知 Web 宿主降到每秒最多一个常规采样。定位、暂停、时长变化、页面恢复和曲终立即上报。
+- In the `5629c25` session with the same host script, limiting periodic reports to one per second while the backlog was present restored progress and reduced the transition gap. Returning to a 500 ms interval brought back roughly nine seconds of progress lag at minute 46. The patch retains normal media event cadence. The worker drops periodic samples older than 1.5 seconds and asks the Web host once to cap periodic samples at one per second. Seeks, pause, duration changes, visibility resume and completion report immediately.
+- Windows 压力对照将桥接事件串行限制为每 340 毫秒一条。旧包 `f75be9e` 曲终等待 22.608 秒，补丁版 0.591 秒。补丁版实际调用一次降频方法，后续进度从当前媒体重新采样。Docker Chrome 也在同源嵌入页面完成两首 MP3 的曲库点播和自动切换，两首响应均为 206。
+- The Windows pressure comparison limited bridge delivery to one event every 340 ms. The original `f75be9e` took 22.608 seconds to advance after the first track compared with 0.591 seconds in the patched build. The patched host handled one rate-reduction request and sampled subsequent progress from the active media. Docker Chrome also played and advanced between two MP3s via the embedded library with HTTP 206 responses for both.
+- 补丁版按相同曲库和托盘流程自然播放 46 分钟。约第 33 分钟自行降频一次，39 次自动切歌最长 0.798 秒。2705 个播放采样中界面与媒体时钟最大相差 1.874 秒，第 45 分钟后 60 个采样的中位差为 0.736 秒，无持续漂移。
+- The patched build played for 46 minutes under the same library and tray workflow. It reduced its rate once around minute 33. The longest of 39 automatic transitions was 0.798 seconds. Across 2,705 playback samples the display differed from the media clock by at most 1.874 seconds. The 60 samples after minute 45 had a median difference of 0.736 seconds and showed no sustained drift.
+- 验证基线 / validation base: Lynx `f7e5888fef95cc3df27a423068ec74a745e428e9` 加本地工作树 / plus local worktree, Go `67ae3bf9905bec68c4f1b6a77207b09d59606596`。`pnpm exec tsc -b`、`pnpm run build`（Lynx + Web）、`pnpm run build:web`、`pnpm test`（374 文件 / files，3900 项 / tests）及完整 Windows/Linux 嵌入构建通过 / passed. 三条新增断言在隔离旧实现上按预期失败 / three new assertions failed as expected against the isolated original implementation. 日志、脚本、截图和哈希 / logs, scripts, screenshots, and hashes: `/tmp/songloft-581.96HFYjw0/`. Not run：报告人的原始曲目和设备 / the reporter's original track and device.
 
 ## 2026-11-19 · 安装失败后恢复窗口 / Relaunch after installation failure
 

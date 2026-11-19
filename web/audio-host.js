@@ -32,6 +32,8 @@
   var STATE_PAUSED = 'paused'
   var STATE_COMPLETED = 'completed'
   var STATE_ERROR = 'error'
+  var PROGRESS_INTERVAL_MS = 250
+  var SLOW_PROGRESS_INTERVAL_MS = 1000
 
   var EQ_FREQS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
   var EQ_TYPES = [
@@ -57,6 +59,8 @@
   var sourceId = null
   var sourceGeneration = 0
   var pendingSourceLoad = null
+  var progressIntervalMs = PROGRESS_INTERVAL_MS
+  var lastProgressAt = -Infinity
 
   // ── HLS ──
 
@@ -644,32 +648,42 @@
     updateMediaSessionPlayback()
   }
 
-  function emitProgress(media) {
+  function emitProgress(media, periodic) {
     var positionMs = media ? Math.round(media.currentTime * 1000) : 0
     var live = isFlvUrl(audioSrcUrl) || isRadioHlsSession(audioSrcUrl)
     var durationMs = !live && media && Number.isFinite(media.duration) ? Math.round(media.duration * 1000) : 0
-    sendEvent('SongloftAudio.progress', {
+    var data = {
       positionMs: positionMs,
       bufferedMs: positionMs + 5000,
       durationMs: durationMs,
-    })
+    }
+    if (periodic) data.sampledAtMs = Date.now()
+    sendEvent('SongloftAudio.progress', data)
   }
 
   function emitError(code, message) {
     sendEvent('SongloftAudio.error', { code: code, message: message })
   }
 
-  function syncMediaProgress(media) {
+  function syncMediaProgress(media, periodic) {
     if (media !== activeMedia() || !audioSrcUrl || pendingSourceLoad ||
         media.readyState < media.HAVE_METADATA || media.ended) return
-    emitProgress(media)
+    if (periodic) {
+      // Limit routine updates so they cannot keep playback transitions waiting
+      // behind a stream of old positions on a slow Lynx worker.
+      var now = window.performance.now()
+      if (now - lastProgressAt < progressIntervalMs) return
+      lastProgressAt = now
+    }
+    emitProgress(media, periodic)
   }
 
   function bindMediaProgress(media) {
     // Media events still follow the playback clock when JS intervals are throttled.
     var sync = function () { syncMediaProgress(media) }
-    media.addEventListener('timeupdate', sync)
+    media.addEventListener('timeupdate', function () { syncMediaProgress(media, true) })
     media.addEventListener('durationchange', sync)
+    media.addEventListener('seeked', sync)
   }
 
   // ── media element event handlers ──
@@ -715,6 +729,7 @@
   element.addEventListener('pause', function () {
     if (videoPrimary || audio !== element) return
     if (!audio.ended) {
+      syncMediaProgress(element)
       emitState(STATE_PAUSED)
     }
   })
@@ -792,6 +807,7 @@
   video.addEventListener('pause', function () {
     if (!videoPrimary) return
     if (!video.ended) {
+      syncMediaProgress(video)
       emitState(STATE_PAUSED)
     }
   })
@@ -824,7 +840,9 @@
 
   var songloftAudio = {
     getSourceLoadVersion: function () { return 1 },
+    slowProgressUpdates: function () { progressIntervalMs = SLOW_PROGRESS_INTERVAL_MS },
     load: function (url, opts) {
+      lastProgressAt = -Infinity
       var keepFlvOpen = videoOpen && isFlvUrl(url || '') && url === audioSrcUrl
       ++sourceGeneration
       if (videoPrimary) {
@@ -992,6 +1010,7 @@
     },
 
     dispose: function () {
+      progressIntervalMs = PROGRESS_INTERVAL_MS
       ++sourceGeneration
       pendingSourceLoad = null
       if (videoPrimary) releaseVideoSurface()
