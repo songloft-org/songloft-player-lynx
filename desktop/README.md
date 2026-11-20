@@ -52,6 +52,8 @@ pnpm --dir desktop package
 
 Windows PowerShell 用 `$env:NAME = 'value'` 设置同名变量；多个 SDK 依赖目录用分号分隔。Mac 用冒号分隔。SDK 来源须保留构建元数据、依赖清单和对应许可证，正式交付前一并审核。
 
+Bundle 发布从 `hanxi/ffmpeg-builder` 的具体 `dev` 或稳定 Release 解析桌面 ABI 资产。把解析器输出的 `ffmpeg-resolution.json` 和对应压缩包通过 `SONGLOFT_FFMPEG_RESOLUTION`、`SONGLOFT_FFMPEG_ASSET` 传给 `desktop/scripts/fetch-sdk.mjs`，脚本会再次校验摘要并更新 SDK manifest。不要在桌面 job 中直接下载滚动 `latest` 文件。
+
 打包输出按通道、variant 和目标独立：standard 不含本地 Go 后端，bundled 内嵌本地 Go 后端；Windows 使用按用户 NSIS，Mac 每架构输出 DMG 和用于更新的应用 ZIP。CEF 由官方 builder 的固定补丁收集、签嵌套组件后签外层；pnpm 原生 patch 固定官方补丁，不依赖上游不兼容 pnpm 隔离布局的 postinstall。不发布资产。
 
 `build:native` 和 `package` 会从 [compatibility.json](compatibility.json) 固定的 CEF SDK 构建配套 renderer helper。首次从 CEF 官方 CDN 下载对应架构的 minimal SDK，校验 SHA-256 后缓存在 `desktop/.build/cef-sdk/`。官方 CEF 扩展负责窗口、渲染和 cookie。配套 helper 在插件页面运行脚本前安装既有桥，远程服务器可以继续使用已有插件 SDK。macOS 在暂存时为改过的 helper 重新封签，随后按安装包配置签名。

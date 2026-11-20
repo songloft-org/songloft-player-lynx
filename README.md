@@ -43,6 +43,8 @@ Android 和 iOS 的 Bundle 包内嵌了由后端 Release 流水线从固定主�
 | Web（独立部署） | `songloft-lynx-web-standalone.tar.gz` | 解压到静态服务器，打开站点后填写 Songloft API 地址。 |
 | Web（同源部署） | `songloft-lynx-web-embedded.tar.gz` | 解压并配置同源静态服务，使用同源后端；不会自动替换服务器现有的内嵌前端。 |
 
+Android Bundle 包含三个 ABI 的 FFmpeg 和 FFprobe。iOS Bundle 将 FFmpeg 静态链接进 Go 后端，探测与转码在应用进程内运行。Windows 和 macOS Bundle 同样使用主仓库发布流水线校验过的 FFmpeg 资产。
+
 Web 部署的响应头、MIME 和浏览器要求见 [Web 部署指南](docs/guides/web-deployment.md)。
 
 **下载校验：** 将安装包与 `checksums.txt` 放在同一目录，Linux 可运行 `sha256sum -c checksums.txt --ignore-missing`；macOS 使用 `shasum -a 256 <文件名>`，Windows 使用 PowerShell `Get-FileHash <文件名> -Algorithm SHA256`，对照清单中的 SHA-256。`version.json` 提供版本、提交、构建时间和包信息。

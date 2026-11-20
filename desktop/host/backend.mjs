@@ -109,6 +109,8 @@ export class DesktopBackend extends EventEmitter {
         cwd: this.dataDirectory,
         env: {
           ...process.env,
+          SONGLOFT_BUNDLE_FFMPEG: join(this.toolsDirectory, process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'),
+          SONGLOFT_BUNDLE_FFPROBE: join(this.toolsDirectory, process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe'),
           PATH: `${this.toolsDirectory}${delimiter}${process.env.PATH || ''}`,
           ADMIN_USERNAME: credentials.username,
           ADMIN_PASSWORD: credentials.password,

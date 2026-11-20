@@ -6,6 +6,12 @@
 - 先将构建所需的后端代码合入主仓库，再改用公开 `main`。流水线每次运行读一次分支最新提交与版本，所有打包任务复用这次结果，并核对构建和产物记录的真实 SHA。
 - Seen 1× (2026-11-19)。
 
+### BUNDLE-FFMPEG-001 · 桌面 Bundle 必须复用固定的 FFmpeg 资产
+
+- 范围：Lynx Android、iOS 与桌面 Bundle 构建。
+- 规则：桌面 SDK 在打包前校验解析记录和 ABI 资产摘要，再更新 SDK manifest；Android 通过 APK 原生文件目录安装工具，iOS 编译时链接静态库。不能使用无版本约束的 `latest` 下载。
+- Seen 1× (2026-11-20)。状态：本地实现；多平台工具链 CI 尚未通过。
+
 ### WEB-AUDIO-001 Web 播放进度以当前媒体元素为准
 
 - [songloft-org/songloft#581](https://github.com/songloft-org/songloft/issues/581)，Lynx 基线 `64692b84e5f36a6f2f3ceeede77904771c2904d6`。Docker Chrome 播放真实 MP3 时，将 Web 音频宿主的 250ms 定时器延迟到 60 秒，旧进度一直停在零，浏览器的 `currentTime` 仍持续推进。

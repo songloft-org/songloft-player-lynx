@@ -30,14 +30,20 @@ class SongloftBundleModule(context: Context) : LynxModule(context) {
         }
         thread(name = "songloft-bundle-start") {
             try {
-                val method = mobileClass!!.getMethod(
-                    "start",
-                    String::class.java,
-                    String::class.java,
-                    Long::class.javaPrimitiveType,
-                )
-                val actualPort = (method.invoke(null, dataDir, musicDir, port.toLong()) as Number).toInt()
-                main.post { callback.invoke(null, actualPort) }
+                val toolDir = File(appContext.applicationInfo.nativeLibraryDir)
+                val ffmpeg = File(toolDir, "libffmpeg.so")
+                val ffprobe = File(toolDir, "libffprobe.so")
+                val startTypes = arrayOf(String::class.java, String::class.java, Long::class.javaPrimitiveType!!)
+                val actualPort = if (ffmpeg.exists() || ffprobe.exists()) {
+                    val method = mobileClass!!.getMethod(
+                        "startWithMediaTools", *startTypes, String::class.java, String::class.java,
+                    )
+                    method.invoke(null, dataDir, musicDir, port.toLong(), ffmpeg.path, ffprobe.path)
+                } else {
+                    mobileClass!!.getMethod("start", *startTypes).invoke(null, dataDir, musicDir, port.toLong())
+                } as Number
+                val listenPort = actualPort.toInt()
+                main.post { callback.invoke(null, listenPort) }
             } catch (error: Exception) {
                 val cause = error.cause ?: error
                 main.post { callback.invoke(cause.message ?: "bundle_start_failed", null) }

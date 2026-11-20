@@ -99,6 +99,7 @@ android {
             // Keep the legacy mode explicit while minSdk remains below 23 so an
             // AGP upgrade cannot silently change the APK's native layout.
             useLegacyPackaging = true
+            keepDebugSymbols += setOf("**/libffmpeg.so", "**/libffprobe.so")
         }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

@@ -12,6 +12,8 @@ This is a **preview client**. Playback, library/playlists, lyrics, plugins, them
 
 Native device caching now has identity/track-variant indexes, whole-playlist/selection tasks and local management/offline playback. Authentication expiry preserves local-only access; explicit logout hides the previous identity. See [Device cache](docs/en/reference/device-cache.md). Android has real-file/UI evidence; iOS/HarmonyOS compilation and device acceptance remain open.
 
+The Android Bundle includes FFmpeg and FFprobe for three ABIs. The iOS Bundle links FFmpeg into the Go backend so probing and transcoding run inside the app. Windows and macOS Bundles use FFmpeg assets verified by the same backend release workflow.
+
 Web supports playlist JSON import/export with file selection, authenticated refresh, downloads and cancellation. Expired browser activation falls back to main-thread controls. Chrome standalone and root-path embedded flows were exercised; Firefox/Safari remain unverified. See [Web deployment](docs/en/guides/web-deployment.md#playlist-json-import-and-export).
 
 Web playback settings also provide a persisted keyboard-shortcut switch: Space toggles playback and Ctrl/⌘ + arrows change tracks or volume. See [Shortcuts](docs/en/guides/web-deployment.md#playback-keyboard-shortcuts) for input/overlay/plugin focus protection and the Chrome validation scope.

@@ -50,6 +50,8 @@ pnpm --dir desktop package
 
 PowerShell uses `$env:NAME = 'value'` and semicolon-separated dependency roots; Mac uses colons. Retain SDK build metadata, dependencies and corresponding licenses for release review.
 
+Bundle releases resolve the desktop ABI asset from a concrete `dev` or stable Release of `hanxi/ffmpeg-builder`. Pass the resolver's `ffmpeg-resolution.json` and archive to `desktop/scripts/fetch-sdk.mjs` through `SONGLOFT_FFMPEG_RESOLUTION` and `SONGLOFT_FFMPEG_ASSET`. The script verifies the digest again and updates the SDK manifest. Desktop jobs must not download a rolling `latest` file directly.
+
 Outputs are isolated by channel, variant, and target. The standard variant omits the local Go backend, while bundled embeds it. Windows uses per-user NSIS installers; macOS produces a DMG and update ZIP per architecture. The official builder collects CEF and signs nested components before the app. Pinned native pnpm patches reproduce the official builder patches without its incompatible postinstall layout assumptions. Packaging does not publish assets.
 
 `build:native` and `package` compile the renderer helper against the CEF SDK pinned in [compatibility.json](compatibility.json). The first run downloads the architecture-specific minimal SDK from the CEF CDN, verifies its SHA-256, and caches it in `desktop/.build/cef-sdk/`. The official CEF extension owns windows, rendering, and cookies. The helper installs the existing bridge before plugin scripts run, allowing remote servers to keep their current plugin SDK. macOS staging re-seals the modified helper bundles before the installer signs them.

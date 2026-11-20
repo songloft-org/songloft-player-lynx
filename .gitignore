@@ -95,3 +95,8 @@ e2e/screenshots/
 # which IS versioned. Durable plans belong in docs/plans/.
 .claude/plans/
 /plans/
+
+# FFmpeg files staged from verified Release assets
+/android/app/src/main/jniLibs/*/libffmpeg.so
+/android/app/src/main/jniLibs/*/libffprobe.so
+/ios/SongloftBackend.xcconfig
