@@ -68,6 +68,11 @@ const result = spawnSync('tar', [...tarPrefix, '-xf', path], {
 if (result.status !== 0) throw new Error('SDK extraction failed')
 await rm(path)
 
+const sdkPath = join(directory, 'sdk.json')
+const originalManifest = await readFile(sdkPath)
+if (digest(originalManifest) !== record.manifestSha256)
+  throw new Error('SDK manifest digest rejected')
+
 // Bundle release jobs may overlay the FFmpeg/ffprobe files resolved from the
 // ffmpeg-builder Release. The SDK index remains pinned for libmpv and CEF,
 // while the media tools are verified against the same immutable resolution
@@ -110,8 +115,7 @@ if (releaseAsset || resolutionPath) {
     if (!source) throw new Error(`FFmpeg release asset has no ${name}`)
     await cp(source, join(directory, 'tools', name))
   }
-  const sdkPath = join(directory, 'sdk.json')
-  const sdk = JSON.parse(await readFile(sdkPath, 'utf8'))
+  const sdk = JSON.parse(originalManifest)
   sdk.ffmpeg = { version: resolution.ffmpeg_version, commit: resolution.source_commit }
   const toolPaths = new Set([`tools/ffmpeg${extension}`, `tools/ffprobe${extension}`])
   sdk.files = (sdk.files ?? []).filter((file) => !toolPaths.has(file.path))
@@ -123,11 +127,12 @@ if (releaseAsset || resolutionPath) {
   await writeFile(sdkPath, `${JSON.stringify(sdk, null, 2)}\n`)
   await rm(staging, { recursive: true, force: true })
 }
-process.env.SONGLOFT_DESKTOP_SDK_SHA256 = digest(await readFile(join(directory, 'sdk.json')))
+const manifestSha256 = digest(await readFile(sdkPath))
+process.env.SONGLOFT_DESKTOP_SDK_SHA256 = manifestSha256
 await import('./verify-sdk.mjs')
 await import('node:fs/promises').then((fs) =>
   fs.appendFile(
     process.env.GITHUB_ENV,
-    `SONGLOFT_DESKTOP_SDK_SHA256=${record.manifestSha256}\n`,
+    `SONGLOFT_DESKTOP_SDK_SHA256=${manifestSha256}\n`,
   ),
 )
