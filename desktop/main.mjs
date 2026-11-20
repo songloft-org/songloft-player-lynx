@@ -495,6 +495,7 @@ async function start() {
       currentVersion: buildInfo.version,
       currentClientSha: buildInfo.clientSha,
       currentBuiltAt: buildInfo.builtAt,
+      variant: buildInfo.variant ?? "bundled",
       publicKey: buildInfo.updatePublicKey,
       manifestUrl: buildInfo.updateManifest,
       requestProxy: (request) =>

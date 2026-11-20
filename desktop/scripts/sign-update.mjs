@@ -20,6 +20,7 @@ assertTarget(os, arch)
 if (
   !semver.valid(metadata.version) ||
   !['dev', 'stable'].includes(metadata.channel) ||
+  !['standard', 'bundled'].includes(metadata.variant) ||
   !/^[a-f0-9]{40}$/.test(metadata.clientSha) ||
   !/^[a-f0-9]{40}$/.test(metadata.backendSha) ||
   (metadata.dirty && metadata.channel !== 'dev') ||
@@ -46,6 +47,7 @@ const payload = Buffer.from(
     schema: 1,
     version: metadata.version,
     channel: metadata.channel,
+    variant: metadata.variant,
     os,
     arch,
     clientSha: metadata.clientSha,

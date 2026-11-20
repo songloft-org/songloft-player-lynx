@@ -30,14 +30,15 @@ const signer = fileURLToPath(new URL('./sign-update.mjs', import.meta.url))
 const packages = []
 let identity
 
-for (const target of compatibility.targets) {
-  const artifact = join(artifacts, `desktop-${channel}-${target}`)
+for (const variant of ['standard', 'bundled']) for (const target of compatibility.targets) {
+  const artifact = join(artifacts, `desktop-${channel}-${variant}-${target}`)
   const infoPath = join(artifact, 'resources', target, 'build-info.json')
   const info = JSON.parse(await readFile(infoPath, 'utf8'))
-  const manifestName = `desktop-${target}.json`
+  const manifestName = `desktop-${variant}-${target}.json`
   if (
     info.schema !== 1 ||
     info.channel !== channel ||
+    info.variant !== variant ||
     info.target !== target ||
     info.dirty !== false ||
     info.clientSha !== clientSha ||
@@ -50,7 +51,7 @@ for (const target of compatibility.targets) {
     semver.valid(info.version) !== info.version ||
     (channel === 'stable' &&
       (semver.prerelease(info.version) || tag !== `v${info.version}`)) ||
-    info.updateManifest !== desktopUpdateManifestUrl(channel, target)
+    info.updateManifest !== desktopUpdateManifestUrl(channel, target, variant)
   )
     throw new Error(`Build metadata rejected for ${target}`)
 
@@ -68,13 +69,13 @@ for (const target of compatibility.targets) {
       'Desktop targets must use the same client source, bundle, client version, backend identity and update key',
     )
 
-  packages.push({ target, artifact, infoPath, info, manifestName })
+  packages.push({ variant, target, artifact, infoPath, info, manifestName })
 }
 
 await mkdir(assets, { recursive: true })
 await mkdir(manifests, { recursive: true })
 
-for (const { target, artifact, infoPath, info, manifestName } of packages) {
+for (const { variant, target, artifact, infoPath, info, manifestName } of packages) {
   const [os, arch] = target.split('-')
   const directory = join(artifact, 'release', channel, target)
   const files = await readdir(directory, { withFileTypes: true })
@@ -90,7 +91,7 @@ for (const { target, artifact, infoPath, info, manifestName } of packages) {
     const { size } = await stat(source)
     if (size < 1 || size >= 2 * 1024 ** 3)
       throw new Error('Invalid GitHub asset size')
-    const name = `songloft-lynx-${channel}-${target}${extension}`
+    const name = `songloft-lynx-${variant}-${channel}-${target}${extension}`
     const staged = join(assets, name)
     await copyFile(source, staged)
     if (extension !== '.dmg') updateAsset = staged
@@ -103,7 +104,7 @@ for (const { target, artifact, infoPath, info, manifestName } of packages) {
       signer,
       infoPath,
       updateAsset,
-      desktopReleaseAsset(tag, basename(updateAsset)),
+      desktopReleaseAsset(tag, basename(updateAsset), variant),
       manifest,
     ],
     { stdio: 'inherit' },
@@ -116,6 +117,7 @@ for (const { target, artifact, infoPath, info, manifestName } of packages) {
     channel,
     os,
     arch,
+    variant,
     currentVersion: '0.0.0',
   }
   const next = verifyManifest(

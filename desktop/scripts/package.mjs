@@ -63,6 +63,7 @@ try {
     yaml.dump(
       packageConfig({
         channel: metadata.channel,
+        variant: metadata.variant,
         version: metadata.version,
         target,
         root,

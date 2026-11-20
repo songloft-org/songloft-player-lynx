@@ -8,14 +8,16 @@
 
 | 文件                                  | 用途                                     |
 | ------------------------------------- | ---------------------------------------- |
-| `songloft-lynx-android.apk`           | Android，release 签名，内嵌 Go 后端       |
-| `songloft-lynx-ios-nosign.ipa`        | iOS，未签名，需自行重签，内嵌 Go 后端     |
-| `songloft-lynx-harmony.hap`           | HarmonyOS，签名 HAP                      |
+| `songloft-lynx-android.apk`            | Android 标准版，release 签名，不含本地 Go 后端 |
+| `songloft-lynx-bundled-android.apk`    | Android Bundle 版，release 签名，内嵌 Go 后端 |
+| `songloft-lynx-ios-nosign.ipa`         | iOS 标准版，未签名，需自行重签               |
+| `songloft-lynx-bundled-ios-nosign.ipa` | iOS Bundle 版，未签名，需自行重签，内嵌 Go 后端 |
+| `songloft-lynx-harmony.hap`            | HarmonyOS 标准版，签名 HAP，不含本地 Go 后端 |
 | `songloft-lynx-web-standalone.tar.gz` | 独立静态站，用户填写 API 地址            |
 | `songloft-lynx-web-embedded.tar.gz`   | 同源服务器部署的静态资源                 |
 | `version.json` / `checksums.txt`      | 构建版本、commit、时间、包清单与 SHA-256 |
 
-Windows 10 22H2 以上选固定名 `songloft-lynx-{channel}-win32-x64.exe` 的 NSIS 安装包。macOS 13 以上用固定名 `songloft-lynx-{channel}-darwin-arm64.dmg` 或 `songloft-lynx-{channel}-darwin-x64.dmg` 安装，Apple 芯片选 arm64，Intel 芯片选 x64。macOS 对应的 `.zip` 用于应用内更新。安装后在登录页或设置页选择连接服务器或本地音乐。
+Windows 10 22H2 以上可选标准版 `songloft-lynx-standard-{channel}-win32-x64.exe` 或 bundled 版 `songloft-lynx-bundled-{channel}-win32-x64.exe`。macOS 13 以上对应选择 `songloft-lynx-standard-{channel}-darwin-arm64.dmg`、`songloft-lynx-bundled-{channel}-darwin-arm64.dmg` 或 x64 文件，Apple 芯片选 arm64，Intel 芯片选 x64。macOS 对应的 `.zip` 用于应用内更新。Bundled 版可在登录页或设置页使用本地音乐，标准版连接服务器。
 
 ## 校验下载
 
@@ -23,7 +25,7 @@ Windows 10 22H2 以上选固定名 `songloft-lynx-{channel}-win32-x64.exe` 的 N
 
 ## Android
 
-含 Bundle 后端的 APK 最低需要 Android 6.0（API 23）。允许安装来自所选浏览器/文件管理器的应用，打开 APK 安装。也可运行：
+Bundle APK 最低需要 Android 6.0（API 23），标准 APK 支持 Android 5.0（API 21）。允许安装来自所选浏览器/文件管理器的应用，打开 APK 安装。也可运行：
 
 ```bash
 adb install -r songloft-lynx-android.apk
@@ -57,10 +59,10 @@ embedded 同样需要以上响应头，不能仅替换 Go 内嵌资源就假设�
 
 ## 本地模式与远程模式
 
-Android 和 iOS 安装包都包含由本仓库 CI 从打包启动时主仓库 `main` 的最新提交编译的 Go 后端。同一安装包可在本地模式和远程服务器间切换，入口位于登录页和设置页；首次启动没有额外的模式选择弹窗。
+Android 和 iOS 的 Bundle 安装包包含由本仓库 CI 从打包启动时主仓库 `main` 的最新提交编译的 Go 后端。同一 Bundle 安装包可在本地模式和远程服务器间切换，标准版只连接远程服务器；首次启动没有额外的模式选择弹窗。
 
-- **Android**：首次启用本地模式时通过系统文件夹选择器选音乐目录并授予读取权限。后端启动后自动选择端口，客户端完成健康检查并使用本地生成的管理员凭据登录。
-- **iOS**：首次启用本地模式时使用应用 Documents 目录，不显示外部目录选择器；可通过系统“文件”应用把音乐放入该目录。
+- **Android Bundle**：首次启用本地模式时通过系统文件夹选择器选音乐目录并授予读取权限。后端启动后自动选择端口，客户端完成健康检查并使用本地生成的管理员凭据登录。
+- **iOS Bundle**：首次启用本地模式时使用应用 Documents 目录，不显示外部目录选择器；可通过系统“文件”应用把音乐放入该目录。
 - **HarmonyOS 与 Web**：安装包不含本地后端，需连接远程服务器。
 
 远程模式填写完整服务器 URL、用户名和密码。后端默认端口为 `58091`；新安装后端的初始账号为 `admin/admin`。手机上的 `localhost` 指手机本身，连接开发机需用其可达地址；Android 开发调试可用 `adb reverse tcp:58091 tcp:58091`。

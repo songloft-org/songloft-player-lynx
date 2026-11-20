@@ -93,13 +93,14 @@ export function finalizeRelease({ directory, packageVersion, contract, bundleSou
   const original = JSON.parse(readFileSync(join(directory, 'version.json'), 'utf8'))
   const metadata = validateBuildMetadata(original, packageVersion)
   const expected = [
-    'songloft-lynx-android.apk', 'songloft-lynx-ios-nosign.ipa', 'songloft-lynx-harmony.hap',
+    'songloft-lynx-android.apk', 'songloft-lynx-bundled-android.apk',
+    'songloft-lynx-ios-nosign.ipa', 'songloft-lynx-bundled-ios-nosign.ipa', 'songloft-lynx-harmony.hap',
     'songloft-lynx-web-standalone.tar.gz', 'songloft-lynx-web-embedded.tar.gz',
   ]
   const allowed = new Set([...expected, 'version.json', 'checksums.txt', BUNDLE_ASSET, SIGNATURE_ASSET])
   if (readdirSync(directory).some((name) => !allowed.has(name)) ||
       expected.some((name) => !statSync(join(directory, name)).isFile() || statSync(join(directory, name)).size === 0))
-    throw new Error('Release must contain exactly the five platform packages and optional signed update assets')
+    throw new Error('Release must contain exactly the seven platform packages and optional signed update assets')
 
   let record = null
   let signingKey = null

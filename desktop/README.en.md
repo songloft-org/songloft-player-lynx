@@ -50,7 +50,7 @@ pnpm --dir desktop package
 
 PowerShell uses `$env:NAME = 'value'` and semicolon-separated dependency roots; Mac uses colons. Retain SDK build metadata, dependencies and corresponding licenses for release review.
 
-Outputs are channel/target isolated: per-user NSIS on Windows; per-architecture DMG and update ZIP on Mac. The official builder collects CEF and signs nested components before the app. Pinned native pnpm patches reproduce the official builder patches without its incompatible postinstall layout assumptions. Packaging does not publish assets.
+Outputs are isolated by channel, variant, and target. The standard variant omits the local Go backend, while bundled embeds it. Windows uses per-user NSIS installers; macOS produces a DMG and update ZIP per architecture. The official builder collects CEF and signs nested components before the app. Pinned native pnpm patches reproduce the official builder patches without its incompatible postinstall layout assumptions. Packaging does not publish assets.
 
 `build:native` and `package` compile the renderer helper against the CEF SDK pinned in [compatibility.json](compatibility.json). The first run downloads the architecture-specific minimal SDK from the CEF CDN, verifies its SHA-256, and caches it in `desktop/.build/cef-sdk/`. The official CEF extension owns windows, rendering, and cookies. The helper installs the existing bridge before plugin scripts run, allowing remote servers to keep their current plugin SDK. macOS staging re-seals the modified helper bundles before the installer signs them.
 
@@ -92,13 +92,13 @@ A pending installation retains its downloaded installer. Startup confirmation re
 
 During paired recovery, the helper checks the previous app's identity, the backup version and backend SHA, and each database file's checksum before moving any files. If a move fails, the helper attempts to restore the app and database to their pre-recovery state. Successful recovery retains the failed application, database, and any remaining WAL/SHM.
 
-Windows ships an NSIS installer. The macOS DMG and update ZIP contain an ad hoc signed application. Both dev and stable build without a Windows certificate, Apple Developer ID or notarization. The operating system may show a publisher or app-origin prompt on first manual installation. In-app updates still verify the separate Ed25519 manifest and full package SHA-256. macOS also verifies the application’s code signature.
+Both standard and bundled Windows variants ship an NSIS installer. Both macOS variants ship an ad hoc signed DMG and update ZIP. Dev and stable build without a Windows certificate, Apple Developer ID or notarization. The operating system may show a publisher or app-origin prompt on first manual installation. In-app updates select a variant-specific Ed25519 manifest and verify the full package SHA-256. macOS also verifies the application’s code signature.
 
 ## CI and acceptance
 
 [Build and Release](../.github/workflows/build-and-release.yml) builds Windows x64, macOS arm64, and macOS x64 using the same client bundle and backend revision. Set the repository Actions variables `DESKTOP_SDK_INDEX_URL` and `DESKTOP_SDK_INDEX_SHA256` to enable desktop builds. The HTTPS SDK index contains a `{url, sha256, manifestSha256}` entry for each target. SDK archives contain sdk.json, native, tools, and build at the root.
 
-The Windows job runs the per-user NSIS installer and checks the installed business bundle, build metadata, mpv, CEF, and updater. The macOS jobs verify the DMG and the extracted update ZIP and check the included metadata and business bundle. Each target runs the installed backend with `-version` to verify its version, commit SHA, build time, and lite build type. Before upload, each target also generates a synthetic track with its packaged FFmpeg, checks it with ffprobe, and tests backend startup, scanning, Range requests, and persistence after restart.
+The Windows jobs install both variants and check the installed business bundle, build metadata, mpv, CEF, and updater. The macOS jobs verify both variants' DMGs and extracted update ZIPs and check the included metadata and business bundle. Bundled targets run the installed backend with `-version` and test startup, scanning, Range requests, and persistence after restart. Standard targets confirm that the backend is absent. Each target still generates a synthetic track with its packaged FFmpeg and checks it with ffprobe.
 
 Dev and stable publishing require the `DESKTOP_UPDATE_PUBLIC_KEY` and `DESKTOP_UPDATE_PRIVATE_KEY` Actions secrets. Windows verifies the per-user installation’s version, business bundle, and media components. macOS runs `codesign --verify --deep --strict` on the application extracted from the update ZIP.
 

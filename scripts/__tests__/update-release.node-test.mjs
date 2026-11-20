@@ -23,7 +23,8 @@ function fixture(t) {
   const directory = join(base, 'release')
   const dist = join(base, 'dist')
   mkdirSync(directory); mkdirSync(dist)
-  for (const name of ['songloft-lynx-android.apk', 'songloft-lynx-ios-nosign.ipa',
+  for (const name of ['songloft-lynx-android.apk', 'songloft-lynx-bundled-android.apk',
+    'songloft-lynx-ios-nosign.ipa', 'songloft-lynx-bundled-ios-nosign.ipa',
     'songloft-lynx-harmony.hap', 'songloft-lynx-web-standalone.tar.gz', 'songloft-lynx-web-embedded.tar.gz'])
     writeFileSync(join(directory, name), `package ${name}`)
   writeFileSync(join(directory, 'version.json'), JSON.stringify(metadata))
@@ -34,14 +35,14 @@ function fixture(t) {
     publicKey: keys.publicKey, privateKey: keys.privateKey }
 }
 
-test('signed native bundle shares one manifest with the five full packages', (t) => {
+test('signed native bundle shares one manifest with the seven full packages', (t) => {
   const options = fixture(t)
-  assert.deepEqual(finalizeRelease(options), { assetCount: 6, signedUpdate: true })
+  assert.deepEqual(finalizeRelease(options), { assetCount: 8, signedUpdate: true })
   const raw = readFileSync(join(options.directory, 'version.json'))
   const envelope = JSON.parse(readFileSync(join(options.directory, SIGNATURE_ASSET), 'utf8'))
   const manifest = verifyUpdateSignature(raw, envelope, [publicKeyRecord(keys.publicKey)])
   assert.equal(manifest.channel, 'dev')
-  assert.equal(manifest.assets.length, 6)
+  assert.equal(manifest.assets.length, 8)
   assert.equal(manifest.bundle_update.asset, BUNDLE_ASSET)
   assert.deepEqual(manifest.bundle_update.targets.map(t => [t.platform, t.engine]),
     [['android', '4.0.0'], ['ios', '4.0.1'], ['harmony', '4.0.1']])
@@ -54,7 +55,7 @@ test('signed native bundle shares one manifest with the five full packages', (t)
   assert.ok(manifest.bundle_update.targets.every(t => t.required_capabilities.includes('audio.remoteIntent.v1')))
   assert.ok(options.nativeHost.capabilities.includes('audio.remoteIntent.v1'))
   const checksums = readFileSync(join(options.directory, 'checksums.txt'), 'utf8').trim().split('\n')
-  assert.equal(checksums.length, 8)
+  assert.equal(checksums.length, 10)
   for (const line of checksums) {
     const [hash, name] = line.split('  ')
     assert.equal(createHash('sha256').update(readFileSync(join(options.directory, name))).digest('hex'), hash)
@@ -104,7 +105,7 @@ test('contract preparation rejects SDK drift and invalid bridge/schema ranges', 
 test('unconfigured signing emits only full packages and removes stale hot-update assets', (t) => {
   const options = fixture(t); finalizeRelease(options)
   for (const publicKey of ['', keys.publicKey]) {
-    assert.deepEqual(finalizeRelease({ ...options, privateKey: '', publicKey }), { assetCount: 5, signedUpdate: false })
+    assert.deepEqual(finalizeRelease({ ...options, privateKey: '', publicKey }), { assetCount: 7, signedUpdate: false })
     assert.equal(existsSync(join(options.directory, BUNDLE_ASSET)), false)
     assert.equal(existsSync(join(options.directory, SIGNATURE_ASSET)), false)
     assert.equal(JSON.parse(readFileSync(join(options.directory, 'version.json'))).bundle_update, null)

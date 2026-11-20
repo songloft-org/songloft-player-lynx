@@ -13,6 +13,7 @@ export function verifyManifest(
     currentVersion,
     currentClientSha,
     currentBuiltAt,
+    variant = 'bundled',
     now = Date.now(),
   },
 ) {
@@ -40,6 +41,7 @@ export function verifyManifest(
   if (
     manifest.schema !== 1 ||
     manifest.channel !== channel ||
+    (manifest.variant ?? 'bundled') !== variant ||
     manifest.os !== os ||
     manifest.arch !== arch ||
     semver.valid(manifest.version) !== manifest.version ||

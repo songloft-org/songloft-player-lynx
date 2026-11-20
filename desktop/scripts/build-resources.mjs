@@ -36,6 +36,9 @@ const arch = process.argv.includes('--x64')
     : process.arch
 const target = assertTarget(process.platform, arch)
 const channel = process.env.SONGLOFT_DESKTOP_CHANNEL ?? 'dev'
+const variant = process.env.SONGLOFT_DESKTOP_VARIANT ?? 'bundled'
+if (!['standard', 'bundled'].includes(variant))
+  throw new Error('Invalid desktop package variant')
 const identity = desktopIdentity({ channel, appData: '/' })
 const development = process.env.SONGLOFT_DESKTOP_ALLOW_DIRTY === '1'
 if (development && channel !== 'dev')
@@ -362,13 +365,14 @@ try {
       run('codesign', ['--force', '--sign', '-', path], root)
     }
   }
-  const manifest = desktopUpdateManifestUrl(channel, target)
+  const manifest = desktopUpdateManifestUrl(channel, target, variant)
   await writeFile(
     join(staging, 'build-info.json'),
     JSON.stringify(
       {
         schema: 1,
         appId: identity.id,
+        variant,
         channel,
         target,
         version,

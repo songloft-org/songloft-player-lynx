@@ -32,11 +32,11 @@ test('desktop manifest discovery follows the shared dev and latest stable Releas
   const base = 'https://github.com/songloft-org/songloft-player-lynx/releases'
   assert.equal(
     desktopUpdateManifestUrl('dev', 'win32-x64'),
-    `${base}/download/dev/desktop-win32-x64.json`,
+    `${base}/download/dev/desktop-bundled-win32-x64.json`,
   )
   assert.equal(
     desktopUpdateManifestUrl('stable', 'darwin-x64'),
-    `${base}/latest/download/desktop-darwin-x64.json`,
+    `${base}/latest/download/desktop-bundled-darwin-x64.json`,
   )
   assert.throws(() => desktopUpdateManifestUrl('preview', 'win32-x64'))
   assert.throws(() => desktopReleaseAsset('desktop-stable', 'installer.exe'))
@@ -49,11 +49,16 @@ test('rolling desktop releases keep one fixed installer name per target', () => 
     'utf8',
   )
   for (const name of [
-    'songloft-lynx-dev-win32-x64.exe',
-    'songloft-lynx-dev-darwin-arm64.zip',
-    'songloft-lynx-dev-darwin-x64.zip',
-    'songloft-lynx-dev-darwin-arm64.dmg',
-    'songloft-lynx-dev-darwin-x64.dmg',
+    'songloft-lynx-standard-dev-win32-x64.exe',
+    'songloft-lynx-standard-dev-darwin-arm64.zip',
+    'songloft-lynx-standard-dev-darwin-x64.zip',
+    'songloft-lynx-standard-dev-darwin-arm64.dmg',
+    'songloft-lynx-standard-dev-darwin-x64.dmg',
+    'songloft-lynx-bundled-dev-win32-x64.exe',
+    'songloft-lynx-bundled-dev-darwin-arm64.zip',
+    'songloft-lynx-bundled-dev-darwin-x64.zip',
+    'songloft-lynx-bundled-dev-darwin-arm64.dmg',
+    'songloft-lynx-bundled-dev-darwin-x64.dmg',
   ])
     assert.ok(workflow.includes(name), `Missing fixed desktop asset ${name}`)
   assert.doesNotMatch(workflow, /songloft-lynx-dev-\*-win32-x64-\*\.exe/)
@@ -136,8 +141,8 @@ test('desktop release stages all installers and signs their matching update asse
     buildChannel = channel,
     builtAt = new Date().toISOString(),
   ) {
-    for (const target of compatibility.targets) {
-      const artifact = join(artifacts, `desktop-${buildChannel}-${target}`)
+    for (const variant of ['standard', 'bundled']) for (const target of compatibility.targets) {
+      const artifact = join(artifacts, `desktop-${buildChannel}-${variant}-${target}`)
       const metadata = join(artifact, 'resources', target)
       const release = join(artifact, 'release', buildChannel, target)
       mkdirSync(metadata, { recursive: true })
@@ -154,6 +159,7 @@ test('desktop release stages all installers and signs their matching update asse
           schema: 1,
           target,
           channel: buildChannel,
+          variant,
           clientSha,
           clientSourceSha256,
           bundleSha256,
@@ -164,7 +170,7 @@ test('desktop release stages all installers and signs their matching update asse
           dirty: false,
           builtAt,
           updatePublicKey: trust,
-          updateManifest: desktopUpdateManifestUrl(buildChannel, target),
+          updateManifest: desktopUpdateManifestUrl(buildChannel, target, variant),
         }),
       )
     }
@@ -194,19 +200,19 @@ test('desktop release stages all installers and signs their matching update asse
   writeInput('2.1.0')
   const staged = stage(first)
   assert.equal(staged.status, 0, staged.stderr)
-  assert.equal(readdirSync(join(first, 'assets')).length, 5)
-  for (const target of compatibility.targets) {
+  assert.equal(readdirSync(join(first, 'assets')).length, 10)
+  for (const variant of ['standard', 'bundled']) for (const target of compatibility.targets) {
     const [os, arch] = target.split('-')
     const manifest = verifyManifest(
       JSON.parse(
-        readFileSync(join(first, 'manifests', `desktop-${target}.json`)),
+        readFileSync(join(first, 'manifests', `desktop-${variant}-${target}.json`)),
       ),
-      { publicKey: trust, channel, os, arch, currentVersion: '2.0.0' },
+      { publicKey: trust, channel, os, arch, variant, currentVersion: '2.0.0' },
     )
     const name = new URL(manifest.asset.url).pathname.split('/').at(-1)
     const expectedPackage = target.startsWith('darwin')
-      ? `songloft-lynx-stable-${target}.zip`
-      : `songloft-lynx-stable-${target}.exe`
+      ? `songloft-lynx-${variant}-stable-${target}.zip`
+      : `songloft-lynx-${variant}-stable-${target}.exe`
     assert.equal(
       manifest.asset.url,
       `https://github.com/songloft-org/songloft-player-lynx/releases/download/v2.1.0/${expectedPackage}`,
@@ -217,7 +223,7 @@ test('desktop release stages all installers and signs their matching update asse
   }
   const macMetadata = join(
     artifacts,
-    'desktop-stable-darwin-x64',
+    'desktop-stable-bundled-darwin-x64',
     'resources',
     'darwin-x64',
     'build-info.json',
@@ -270,7 +276,7 @@ test('desktop release stages all installers and signs their matching update asse
   const devStaged = stage(devFirst, undefined, 'dev')
   assert.equal(devStaged.status, 0, devStaged.stderr)
   const devManifest = JSON.parse(
-    readFileSync(join(devFirst, 'manifests', 'desktop-win32-x64.json')),
+    readFileSync(join(devFirst, 'manifests', 'desktop-bundled-win32-x64.json')),
   )
   const dev = verifyManifest(devManifest, {
     publicKey: trust,
@@ -281,7 +287,7 @@ test('desktop release stages all installers and signs their matching update asse
   })
   assert.equal(
     dev.asset.url,
-    'https://github.com/songloft-org/songloft-player-lynx/releases/download/dev/songloft-lynx-dev-win32-x64.exe',
+    'https://github.com/songloft-org/songloft-player-lynx/releases/download/dev/songloft-lynx-bundled-dev-win32-x64.exe',
   )
   writeInput('2.0.0', 'dev', '2026-01-01T00:00:01Z')
   const devDowngrade = stage(

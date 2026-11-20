@@ -31,15 +31,15 @@ Web playback settings also provide a persisted keyboard-shortcut switch: Space t
 - [Installation guide](docs/en/guides/installation.md): package names, signing requirements, server connections, and checksums.
 - [简体中文](README.md)
 
-Download assets published in GitHub Releases; the four-platform CI updates dev only after all five packages build and pass verification. Maintainers of a fork must configure signing secrets; see the [release guide](docs/en/guides/releasing.md).
+Download assets published in GitHub Releases; the four-platform CI updates dev only after all seven mobile and Web packages build and pass verification. Desktop variants publish separately when configured. Maintainers of a fork must configure signing secrets; see the [release guide](docs/en/guides/releasing.md).
 
-The Android APK and iOS IPA embed the Go backend built by this repository’s workflow from the latest commit on the root repository’s `main` at startup; the same installation can also connect to a remote server. Switch modes from the login or settings screen. The first time local mode is enabled, choose a music directory; there is no separate mode chooser on first launch. Android uses the system directory picker and requests read access. iOS uses the app's Documents directory, where music can be added through the Files app. HarmonyOS and Web packages do not include the backend and need a running [Songloft server](https://github.com/songloft-org/songloft). Choose a package under **Assets** on the release page:
+The Android and iOS Bundle packages embed the Go backend built by this repository’s workflow from the latest commit on the root repository’s `main` at startup, and can also connect to a remote server. Standard packages connect to remote servers only. Switch modes from the login or settings screen in a Bundle package. The first time local mode is enabled, choose a music directory; there is no separate mode chooser on first launch. Android uses the system directory picker and requests read access. iOS uses the app's Documents directory, where music can be added through the Files app. HarmonyOS and Web packages do not include the backend and need a running [Songloft server](https://github.com/songloft-org/songloft). Choose a package under **Assets** on the release page:
 
 | Platform | Download | Installation / deployment |
 | --- | --- | --- |
-| Android | `songloft-lynx-android.apk` | Embeds the Go backend; download and open the APK, then allow installation when prompted. The package uses the maintainer's release signature. |
-| iOS | `songloft-lynx-ios-nosign.ipa` | Embeds the Go backend; unsigned device build. Re-sign with your developer certificate and a provisioning profile for your device before installing. |
-| HarmonyOS | `songloft-lynx-harmony.hap` | Install with DevEco Studio or `hdc install songloft-lynx-harmony.hap`. The signing profile must authorize your device. |
+| Android | `songloft-lynx-android.apk` / `songloft-lynx-bundled-android.apk` | The first is the standard build and the second embeds the Go backend. Download and open the APK, then allow installation when prompted. The package uses the maintainer's release signature. |
+| iOS | `songloft-lynx-ios-nosign.ipa` / `songloft-lynx-bundled-ios-nosign.ipa` | The first is the standard build and the second embeds the Go backend. Both are unsigned device builds. Re-sign with your developer certificate and a provisioning profile for your device before installing. |
+| HarmonyOS | `songloft-lynx-harmony.hap` | Standard build without the local Go backend. Install with DevEco Studio or `hdc install songloft-lynx-harmony.hap`. |
 | Web (standalone) | `songloft-lynx-web-standalone.tar.gz` | Extract to a static server, then open the site and enter the Songloft API address. |
 | Web (embedded) | `songloft-lynx-web-embedded.tar.gz` | Extract and configure same-origin static hosting with the same-origin backend; does not automatically replace the server's existing embedded frontend. |
 

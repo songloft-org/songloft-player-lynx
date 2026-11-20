@@ -458,7 +458,9 @@ test('finalizer rejects incomplete assets and writes reproducible SHA-256 eviden
   const meta = createBuildMetadata({ packageVersion: version, now })
   const names = [
     'songloft-lynx-android.apk',
+    'songloft-lynx-bundled-android.apk',
     'songloft-lynx-ios-nosign.ipa',
+    'songloft-lynx-bundled-ios-nosign.ipa',
     'songloft-lynx-harmony.hap',
     'songloft-lynx-web-standalone.tar.gz',
     'songloft-lynx-web-embedded.tar.gz',
@@ -483,7 +485,7 @@ test('finalizer rejects incomplete assets and writes reproducible SHA-256 eviden
     )
   }
   const checksums = readFileSync(join(directory, 'checksums.txt'), 'utf8')
-  assert.equal(checksums.trim().split('\n').length, 6)
+  assert.equal(checksums.trim().split('\n').length, 8)
   assert.equal(run().status, 0)
   assert.equal(
     readFileSync(join(directory, 'checksums.txt'), 'utf8'),

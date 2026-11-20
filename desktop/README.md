@@ -52,7 +52,7 @@ pnpm --dir desktop package
 
 Windows PowerShell 用 `$env:NAME = 'value'` 设置同名变量；多个 SDK 依赖目录用分号分隔。Mac 用冒号分隔。SDK 来源须保留构建元数据、依赖清单和对应许可证，正式交付前一并审核。
 
-打包输出为每通道/目标独立目录：Windows 按用户 NSIS；Mac 每架构 DMG 和用于更新的应用 ZIP。CEF 由官方 builder 的固定补丁收集、签嵌套组件后签外层；pnpm 原生 patch 固定官方补丁，不依赖上游不兼容 pnpm 隔离布局的 postinstall。不发布资产。
+打包输出按通道、variant 和目标独立：standard 不含本地 Go 后端，bundled 内嵌本地 Go 后端；Windows 使用按用户 NSIS，Mac 每架构输出 DMG 和用于更新的应用 ZIP。CEF 由官方 builder 的固定补丁收集、签嵌套组件后签外层；pnpm 原生 patch 固定官方补丁，不依赖上游不兼容 pnpm 隔离布局的 postinstall。不发布资产。
 
 `build:native` 和 `package` 会从 [compatibility.json](compatibility.json) 固定的 CEF SDK 构建配套 renderer helper。首次从 CEF 官方 CDN 下载对应架构的 minimal SDK，校验 SHA-256 后缓存在 `desktop/.build/cef-sdk/`。官方 CEF 扩展负责窗口、渲染和 cookie。配套 helper 在插件页面运行脚本前安装既有桥，远程服务器可以继续使用已有插件 SDK。macOS 在暂存时为改过的 helper 重新封签，随后按安装包配置签名。
 
@@ -94,13 +94,13 @@ node desktop/scripts/sign-update.mjs build-info.json application.zip https://hos
 
 需要配套恢复时，辅助程序先核对旧应用身份、备份版本、后端 SHA 和每个数据库文件的摘要，再移动应用和数据库。文件移动中途出错时会尝试恢复操作前的应用和数据库。恢复成功时保留失败版本的应用、数据库和残留 WAL/SHM。
 
-Windows 发布 NSIS 安装包，macOS 的 DMG 和更新 ZIP 内含 ad hoc 签名的应用。dev 和正式版均可在没有 Windows 证书、Apple Developer ID 和公证的情况下构建。首次手动安装时，系统可能显示发布者或应用来源提示。应用内更新继续验证独立 Ed25519 清单和整包 SHA-256，macOS 额外校验 app 的代码签名。
+Windows standard 和 bundled 都发布 NSIS 安装包，macOS 两个 variant 都发布 DMG 和更新 ZIP。dev 和正式版均可在没有 Windows 证书、Apple Developer ID 和公证的情况下构建。首次手动安装时，系统可能显示发布者或应用来源提示。应用内更新按 variant 使用独立 Ed25519 清单并验证整包 SHA-256，macOS 额外校验 app 的代码签名。
 
 ## CI 与验收
 
 [Build and Release](../.github/workflows/build-and-release.yml) 共用同一次客户端构建与后端检出，打包 Windows x64、macOS arm64 和 macOS x64。在仓库 Actions Variables 配置 `DESKTOP_SDK_INDEX_URL` 与 `DESKTOP_SDK_INDEX_SHA256` 以启用桌面构建。HTTPS SDK 索引包含三个目标，每项为 `{url, sha256, manifestSha256}`。归档根目录包含 sdk.json、native、tools 和 build。
 
-Windows 构建先执行按用户 NSIS 安装，核对业务 bundle、构建元数据以及 mpv、CEF 和更新辅助程序。macOS 构建验证 DMG 和解出的更新 ZIP，并核对包内元数据及业务 bundle。每个目标执行包内后端的 `-version`，核对版本、提交 SHA、构建时间和 lite 构建类型。上传前还用包内 FFmpeg 生成合成音轨，用 ffprobe 核对，再测试 Bundle 后端的启动、扫描、Range 读取和重启持久化。
+Windows 构建先执行两个 variant 的按用户 NSIS 安装，核对业务 bundle、构建元数据以及 mpv、CEF 和更新辅助程序。macOS 构建验证两个 variant 的 DMG 和解出的更新 ZIP，并核对包内元数据及业务 bundle。bundled 目标执行包内后端的 `-version`，核对版本、提交 SHA、构建时间和 lite 构建类型，并测试本地后端的启动、扫描、Range 读取和重启持久化；standard 目标确认包内没有后端。
 
 dev 和正式发布都要求 Actions Secrets 中配置 `DESKTOP_UPDATE_PUBLIC_KEY` 与 `DESKTOP_UPDATE_PRIVATE_KEY`。Windows 验证按用户安装后包内的版本、业务 bundle 和媒体组件。macOS 对更新 ZIP 解出的应用运行 `codesign --verify --deep --strict`。
 

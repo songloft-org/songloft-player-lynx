@@ -33,6 +33,7 @@ export class DesktopUpdater extends EventEmitter {
     currentVersion,
     currentClientSha,
     currentBuiltAt,
+    variant = 'bundled',
     publicKey,
     manifestUrl,
     helper,
@@ -50,6 +51,7 @@ export class DesktopUpdater extends EventEmitter {
       currentVersion,
       currentClientSha,
       currentBuiltAt,
+      variant,
       publicKey,
       manifestUrl,
       helper,
@@ -365,6 +367,7 @@ export class DesktopUpdater extends EventEmitter {
         currentVersion: pending.previousVersion,
         currentClientSha: pending.previousClientSha,
         currentBuiltAt: pending.previousBuiltAt,
+        variant: this.variant,
       })
       if (
         manifest.version !== pending.version ||

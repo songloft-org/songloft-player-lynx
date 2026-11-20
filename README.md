@@ -31,15 +31,15 @@ Web 播放设置另有可持久保存的键盘快捷键开关，支持空格播�
 - [Windows/macOS 桌面构建](desktop/README.md)与移动端共用上述 Release。桌面资产按 `win32-x64`、`darwin-arm64`、`darwin-x64` 选择。
 - [English](README.en.md)
 
-下载以 GitHub Releases 中实际发布的资产为准；四平台 CI 仅在五个包全部构建和校验成功后更新 dev。维护自己的 fork 时需配置签名 Secrets，详见[发版指南](docs/guides/releasing.md)。
+下载以 GitHub Releases 中实际发布的资产为准；四平台 CI 仅在七个移动、Web 包全部构建和校验成功后更新 dev，桌面 variant 另外按配置发布。维护自己的 fork 时需配置签名 Secrets，详见[发版指南](docs/guides/releasing.md)。
 
-Android APK 和 iOS IPA 内嵌了由本仓库流水线从打包启动时主仓库 `main` 的最新提交构建的 Go 后端，同一安装包也可连接远程服务器。用户在登录页或设置页切换本地/远程模式；首次启用本地模式时选择音乐目录，不会在首次启动时额外弹出模式选择框。Android 使用系统文件夹选择器并授予读取权限；iOS 使用应用 Documents 目录，可通过“文件”应用放入音乐。HarmonyOS 与 Web 包不包含后端，需连接已运行的 [Songloft 服务器](https://github.com/songloft-org/songloft)。在 Release 页的 **Assets** 中按平台选包：
+Android 和 iOS 的 Bundle 包内嵌了由本仓库流水线从打包启动时主仓库 `main` 的最新提交构建的 Go 后端，也可连接远程服务器。标准包只连接远程服务器。用户在 Bundle 包的登录页或设置页切换本地/远程模式；首次启用本地模式时选择音乐目录，不会在首次启动时额外弹出模式选择框。Android 使用系统文件夹选择器并授予读取权限；iOS 使用应用 Documents 目录，可通过“文件”应用放入音乐。HarmonyOS 与 Web 包不包含后端，需连接已运行的 [Songloft 服务器](https://github.com/songloft-org/songloft)。在 Release 页的 **Assets** 中按平台选包：
 
 | 平台 | 下载文件 | 安装 / 部署方式 |
 | --- | --- | --- |
-| Android | `songloft-lynx-android.apk` | 内嵌 Go 后端；下载并打开 APK，按系统提示允许安装。安装包使用维护者的发布签名。 |
-| iOS | `songloft-lynx-ios-nosign.ipa` | 内嵌 Go 后端；未签名设备包，需使用自己的开发者证书和适用于目标设备的 provisioning profile 重签后安装。 |
-| HarmonyOS | `songloft-lynx-harmony.hap` | 使用 DevEco Studio 或 `hdc install songloft-lynx-harmony.hap` 安装；签名 profile 须授权目标设备。 |
+| Android | `songloft-lynx-android.apk` / `songloft-lynx-bundled-android.apk` | 前者为标准版，后者内嵌 Go 后端；下载并打开 APK，按系统提示允许安装。安装包使用维护者的发布签名。 |
+| iOS | `songloft-lynx-ios-nosign.ipa` / `songloft-lynx-bundled-ios-nosign.ipa` | 前者为标准版，后者内嵌 Go 后端；均为未签名设备包，需使用自己的开发者证书和适用于目标设备的 provisioning profile 重签后安装。 |
+| HarmonyOS | `songloft-lynx-harmony.hap` | 标准版，不含本地 Go 后端；使用 DevEco Studio 或 `hdc install songloft-lynx-harmony.hap` 安装。 |
 | Web（独立部署） | `songloft-lynx-web-standalone.tar.gz` | 解压到静态服务器，打开站点后填写 Songloft API 地址。 |
 | Web（同源部署） | `songloft-lynx-web-embedded.tar.gz` | 解压并配置同源静态服务，使用同源后端；不会自动替换服务器现有的内嵌前端。 |
 

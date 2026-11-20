@@ -1,6 +1,7 @@
 import { desktopIdentity } from '../host/identity.mjs'
 
-export function packageConfig({ channel, version, target, root }) {
+export function packageConfig({ channel, variant = 'bundled', version, target, root }) {
+  if (!['standard', 'bundled'].includes(variant)) throw new Error('Invalid desktop package variant')
   const [os, arch] = target.split('-')
   const id = desktopIdentity({ channel, appData: '/' }).id
   // Lynxtron's Windows packager resolves extraResources against the app root.
@@ -27,13 +28,13 @@ export function packageConfig({ channel, version, target, root }) {
       '!**/node_modules/@lynx-js/lynxtron/dist/**',
     ],
     [resourceOption]: [
-      { from: `resources/${target}`, to: resources, filter: ['**/*'] },
+      { from: `resources/${target}`, to: resources, filter: variant === 'bundled' ? ['**/*'] : ['**/*', '!backend/**'] },
       { from: '.lynxtron/app', to: `${resources}/app`, filter: ['**/*'] },
       { from: '.lynxtron/licenses/CEF.txt', to: `${resources}/licenses/CEF.txt` },
     ],
     // Keep the Release asset name stable so rolling dev releases replace the
     // previous installer instead of accumulating one asset per build.
-    artifactName: `songloft-lynx-${channel}-\${os}-\${arch}.\${ext}`,
+    artifactName: `songloft-lynx-${variant}-${channel}-\${os}-\${arch}.\${ext}`,
     publish: null,
     forceCodeSigning: false,
     mac: {

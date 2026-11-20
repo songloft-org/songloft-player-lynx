@@ -132,10 +132,10 @@ SONGLOFT_BUILD_METADATA="$PWD/.build/version.json" pnpm run build
 
 ## 发布闸门
 
-prepare job 运行类型检查、生产双产物构建、完整 JS 测试与发版工具回归。平台 job 编译宿主，再检查实际包内 bundle、原生版本/构建号、Lynx 动态库、签名与 Web 静态引用。release job 要求五个非空包齐全，生成逐包 SHA-256 和包含包清单的 version.json。
+prepare job 运行类型检查、生产双产物构建、完整 JS 测试与发版工具回归。平台 job 编译宿主，再检查实际包内 bundle、原生版本/构建号、Lynx 动态库、签名与 Web 静态引用。release job 要求七个移动与 Web 非空包齐全，生成逐包 SHA-256 和包含包清单的 version.json；启用 desktop SDK 时另验 standard 与 bundled 两套桌面资产。
 
 配置更新密钥时，release job 同时验证 prepare 阶段壳信息、生产 bundle 和自包含资源约束，发布原生 bundle、`bundle_update` 兼容声明和 `version.json.sig`。签名覆盖原始清单字节，checksum 同时覆盖清单与签名。发布工具回归中的 Java 验签需要 JDK；无 JDK 时该项明确 skip，其余 Node 协议测试仍执行。
 
 正式 JS 构建默认替换掉 devtools/E2E 入口。原生测试桥只能在 Debug 注册/启动，监听 `127.0.0.1:9230`；dev 下载包同样为 Release，不能用于 TestBridge E2E。测试构建方法见[测试指南](testing.md)。
 
-CI 通过证明构建和包检查通过。后台播放、系统权限、DLNA、视频与 HarmonyOS 仍需要对应设备验收。首次切换新工作流后，要核对 Release 的五个包、版本信息、签名身份，并实际安装验证覆盖升级。
+CI 通过证明构建和包检查通过。后台播放、系统权限、DLNA、视频与 HarmonyOS 仍需要对应设备验收。首次切换新工作流后，要核对 Release 的七个移动与 Web 包、桌面两套 variant、版本信息、签名身份，并实际安装验证覆盖升级。

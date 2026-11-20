@@ -7,6 +7,7 @@ import { releaseAsset, releasePage, withGithubProxy } from '../../../core/update
 import { cancelClientBundle, checkClientRelease, downloadClientBundle, refreshUpdateSession, restoreClientBuiltin, updateSession } from '../../../core/updater/update-session.js'
 import { automaticUpdatePolicy } from '../../../core/updater/automatic-update-policy.js'
 import { getPlatformTarget } from '../../../native/platform-target.js'
+import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 import { openURL } from '../../../native/native-platform.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
 import { Markdown } from '../../../shared/ui/Markdown.js'
@@ -73,8 +74,9 @@ function SharedClientUpdateSection() {
   }
   const openPackage = () => {
     const platform = getPlatformTarget()
+    const bundled = getPlatformCapabilities().bundleMode
     const assetName = web ? `songloft-lynx-web-${appConfig.isEmbedded ? 'embedded' : 'standalone'}.tar.gz`
-      : platform === 'android' ? 'songloft-lynx-android.apk' : platform === 'ios' ? 'songloft-lynx-ios-nosign.ipa'
+      : platform === 'android' ? `songloft-lynx-${bundled ? 'bundled-' : ''}android.apk` : platform === 'ios' ? `songloft-lynx-${bundled ? 'bundled-' : ''}ios-nosign.ipa`
         : platform === 'harmony' ? 'songloft-lynx-harmony.hap' : null
     const asset = check?.comparison === 'newer' && assetName ? releaseAsset(check.candidate, assetName) : null
     const address = asset && check ? withGithubProxy(asset.browser_download_url, check.candidate.proxy) : page
