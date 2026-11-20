@@ -141,6 +141,7 @@ beforeEach(() => {
   songsHook.mockReturnValue(songsResult([{ songs: [], total: 0 }]))
   useSongRowOverlays.getState().closeAddToPlaylist()
   useSongRowOverlays.getState().cancelDelete()
+  useSongRowOverlays.getState().cancelBatchRadioMode()
   filterInputs.length = 0
 })
 
@@ -340,6 +341,19 @@ test('radio multi-selection has no device cache entry even on a capable shell', 
   await act(async () => { fireEvent.tap(getByText('Select')) })
   await act(async () => { fireEvent.tap(getByText('Radio')) })
   expect(queryByTestId('library-select-cache')).not.toBeInTheDocument()
+})
+
+test('radio multi-selection exposes batch mode and exits after the overlay succeeds', async () => {
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1, { title: 'Radio', type: 'radio', isLive: true })], total: 1 }]))
+  const { getByText, getByTestId, queryByText } = await renderView('radio')
+  await act(async () => { fireEvent.tap(getByText('Select')) })
+  await act(async () => { fireEvent.tap(getByText('Radio')) })
+  expect(getByTestId('library-select-radio-mode')).toBeInTheDocument()
+  await act(async () => { fireEvent.tap(getByTestId('library-select-radio-mode')) })
+  expect(useSongRowOverlays.getState().batchRadioMode?.songIds).toEqual([1])
+  await act(async () => { useSongRowOverlays.getState().batchRadioMode!.onUpdated!(1) })
+  expect(queryByText('0 selected')).not.toBeInTheDocument()
+  expect(getByText('Select')).toBeInTheDocument()
 })
 
 async function renderView(

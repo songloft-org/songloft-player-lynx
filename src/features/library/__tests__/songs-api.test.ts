@@ -34,6 +34,19 @@ test('batch delete sends all IDs and preserves files by default, with explicit o
   expect(JSON.parse(transport.mock.calls[1][0].body as string)).toEqual({ ids: [1, 2], delete_files: true })
 })
 
+test('batch radio mode sends the selected mode and optional video flag', async () => {
+  const transport = vi.fn<Transport>().mockResolvedValue({ status: 200, headers: {}, body: '{"updated":2}' })
+  const api = new SongsApi(client(transport))
+  expect(await api.batchUpdateRadioMode({ ids: [1, 2], radioMode: 'flv', isVideo: true })).toBe(2)
+  expect(transport.mock.calls[0][0]).toMatchObject({
+    url: `http://api.test${apiPrefix}/songs/batch-radio-mode`,
+    method: 'POST',
+    body: JSON.stringify({ ids: [1, 2], radio_mode: 'flv', is_video: true }),
+  })
+  await api.batchUpdateRadioMode({ ids: [1], radioMode: '' })
+  expect(JSON.parse(transport.mock.calls[1][0].body as string)).toEqual({ ids: [1], radio_mode: '' })
+})
+
 describe('buildSongsQuery (pure)', () => {
   test('always carries limit/offset with defaults', () => {
     expect(buildSongsQuery({})).toEqual({ limit: 20, offset: 0 })

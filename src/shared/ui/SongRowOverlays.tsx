@@ -6,6 +6,7 @@ import { resolveVideoSourceKind } from '../../core/network/video-source.js'
 import { getSongsApi } from '../../features/library/api/index.js'
 import { SongEditDialog } from '../../features/library/widgets/SongEditDialog.js'
 import { SongInfoDialog } from '../../features/library/widgets/SongInfoDialog.js'
+import { BatchRadioModeDialog } from '../../features/library/widgets/BatchRadioModeDialog.js'
 import { ManageTagsSheet } from '../../features/library/widgets/ManageTagsSheet.js'
 import { AddToPlaylistSheet } from '../../features/playlist/widgets/AddToPlaylistSheet.js'
 import { canWatchVideo, openCurrentSongVideo, usesJsVideoSurface } from '../../features/player/data/video-open.js'
@@ -49,6 +50,7 @@ export function SongRowOverlays() {
   const manageTagsSongIds = useSongRowOverlays((s) => s.manageTagsSongIds)
   const deleteSong = useSongRowOverlays((s) => s.deleteSong)
   const batchDeleteSongs = useSongRowOverlays((s) => s.batchDeleteSongs)
+  const batchRadioMode = useSongRowOverlays((s) => s.batchRadioMode)
   const infoSong = useSongRowOverlays((s) => s.infoSong)
   const editSong = useSongRowOverlays((s) => s.editSong)
   const closeMenu = useSongRowOverlays((s) => s.closeMenu)
@@ -59,6 +61,7 @@ export function SongRowOverlays() {
   const closeManageTags = useSongRowOverlays((s) => s.closeManageTags)
   const requestDelete = useSongRowOverlays((s) => s.requestDelete)
   const cancelDelete = useSongRowOverlays((s) => s.cancelDelete)
+  const cancelBatchRadioMode = useSongRowOverlays((s) => s.cancelBatchRadioMode)
   const closeInfo = useSongRowOverlays((s) => s.closeInfo)
   const openEdit = useSongRowOverlays((s) => s.openEdit)
   const closeEdit = useSongRowOverlays((s) => s.closeEdit)
@@ -195,6 +198,10 @@ export function SongRowOverlays() {
         testId='song-delete-dialog'
         confirmTestId='song-delete-confirm'
         cancelTestId='song-delete-cancel'
+      />
+      <BatchRadioModeDialog
+        target={batchRadioMode}
+        onClose={cancelBatchRadioMode}
       />
       {/**
         * The info dialog's edit action switches this same store's slot (info

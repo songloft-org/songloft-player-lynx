@@ -56,6 +56,13 @@ export function SongRow({ song, index, showIndex, titleInitial, onTap, onLongPre
   const { t } = useTranslation()
   const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
   const subtitle = [song.artist, song.album, subtitleSuffix].filter(Boolean).join(' · ')
+  const radioModeLabel = song.radioMode === 'hls'
+    ? 'HLS'
+    : song.radioMode === 'flv'
+      ? 'HTTP-FLV'
+      : song.radioMode === 'audio_only'
+        ? t('library.radioModeAudioOnly')
+        : t('library.radioModeAuto')
 
   return (
     <view className={`song-row${!isWide ? ' song-row--narrow' : ''}${isCurrentSong ? ' song-row--current' : ''}${isSelected ? ' song-row--selected' : ''}`} bindtap={() => onTap?.(song, index)} bindlongpress={() => onLongPress?.(song)}>
@@ -78,6 +85,9 @@ export function SongRow({ song, index, showIndex, titleInitial, onTap, onLongPre
                   {song.isVideo
                     ? <view className='song-row__video-badge'><Icon name='video' size={13} color={activeAccentIconColor()} /></view>
                     : null}
+                  {song.type === 'radio'
+                    ? <view className='song-row__radio-mode-badge'><text>{radioModeLabel}</text></view>
+                    : null}
                 </view>
               </view>
               <text className='song-row__col-artist'>{song.artist || ''}</text>
@@ -91,6 +101,9 @@ export function SongRow({ song, index, showIndex, titleInitial, onTap, onLongPre
                 <ScrollingText className='song-row__title-text' textClassName='song-row__title' text={song.title} />
                 {song.isVideo
                   ? <view className='song-row__video-badge'><Icon name='video' size={13} color={activeAccentIconColor()} /></view>
+                  : null}
+                {song.type === 'radio'
+                  ? <view className='song-row__radio-mode-badge'><text>{radioModeLabel}</text></view>
                   : null}
               </view>
               <view className='song-row__subtitle-row'>

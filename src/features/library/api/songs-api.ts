@@ -267,6 +267,25 @@ export class SongsApi {
     await this.client.put(`${apiPrefix}/songs/${id}`, body)
   }
 
+  /** `POST /songs/batch-radio-mode` — update radio playback mode for selected stations. */
+  async batchUpdateRadioMode({
+    ids,
+    radioMode,
+    isVideo,
+  }: {
+    ids: number[]
+    radioMode: RadioMode
+    isVideo?: boolean
+  }): Promise<number> {
+    const body: Record<string, unknown> = {
+      ids,
+      radio_mode: radioMode,
+    }
+    if (isVideo !== undefined) body.is_video = isVideo
+    const res = await this.client.post<{ updated?: number }>(`${apiPrefix}/songs/batch-radio-mode`, body)
+    return Number(res.data?.updated ?? 0)
+  }
+
   /**
    * `GET /songs/{id}/artists` → the song's structured participants
    * (`role` = `artist` | `album_artist`, `position` = order). The edit form

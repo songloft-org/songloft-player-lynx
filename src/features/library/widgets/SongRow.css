@@ -153,6 +153,20 @@
   flex-shrink: 0;
 }
 
+.song-row__radio-mode-badge {
+  flex-shrink: 0;
+  margin-left: var(--space-1);
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-xs);
+  background-color: var(--tertiary-system-fill);
+}
+
+.song-row__radio-mode-badge text {
+  color: var(--secondary-label);
+  font-size: var(--font-caption2);
+  white-space: nowrap;
+}
+
 /* Compact rows spend horizontal space on the title. Duration shares the
    subtitle line; actions keep full, adjacent 44px touch targets. */
 .song-row--narrow {

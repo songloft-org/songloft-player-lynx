@@ -81,6 +81,7 @@ export function FlatSongsView({
   const navigate = useNavigate()
   const cacheBatch = useCacheBatchSubmission()
   const canCacheBatch = indexedSongCacheAvailable() && type !== 'radio'
+  const canBatchRadioMode = type === 'radio'
   const { onScroll: onScrollEdge } = useScrollNotifier()
   const [searchText, setSearchText] = useState('')
   const [selectMode, setSelectMode] = useState(false)
@@ -260,6 +261,15 @@ export function FlatSongsView({
     })
   }
 
+  const batchRadioMode = () => {
+    if (!canBatchRadioMode || selectingAll || selected.size === 0) return
+    const request = selectionRequest.current
+    songRowOverlays.requestBatchRadioMode({
+      songIds: Array.from(selected),
+      onUpdated: () => { if (request === selectionRequest.current) exitSelectMode() },
+    })
+  }
+
   const cacheSelected = () => {
     if (cacheBatch.busy || selectingAll) return
     const loaded = songs.filter(song => selected.has(song.id))
@@ -433,6 +443,17 @@ export function FlatSongsView({
             >
               <text className='library__select-toolbar-btn-text'>{t('library.addToPlaylist')}</text>
             </view>
+            {canBatchRadioMode
+              ? (
+                <view
+                  className={selectingAll || selected.size === 0 ? 'library__select-toolbar-btn library__select-toolbar-btn--disabled' : 'library__select-toolbar-btn'}
+                  bindtap={batchRadioMode}
+                  data-testid='library-select-radio-mode'
+                >
+                  <text className='library__select-toolbar-btn-text'>{t('library.batchRadioMode')}</text>
+                </view>
+              )
+              : null}
             {canCacheBatch && <view
               className={cacheBatch.busy || selectingAll || selected.size === 0 ? 'library__select-toolbar-btn library__select-toolbar-btn--disabled' : 'library__select-toolbar-btn'}
               bindtap={() => { if (selected.size > 0) cacheSelected() }}

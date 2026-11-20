@@ -182,6 +182,11 @@ vi.mock('../shared/ui/song-row-overlays.js', () => ({
       requestDelete: vi.fn(),
       cancelDelete: vi.fn(),
     }),
+  songRowOverlays: {
+    closeMiniVolume: vi.fn(),
+    openMiniVolume: vi.fn(),
+    openInfo: vi.fn(),
+  },
 }))
 
 /**
