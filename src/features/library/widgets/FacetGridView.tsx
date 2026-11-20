@@ -10,7 +10,11 @@ import { flattenFacets } from '../data/pagination.js'
 import { useDebounce } from '../data/use-debounce.js'
 import { useFacetsInfiniteQuery } from '../data/songs-query.js'
 import type { LibraryViewKey } from '../domain/library-views.js'
-import { getSongsApi } from '../api/index.js'
+import {
+  ALL_MUSIC_TYPE,
+  MUSIC_EXCLUDE_PLAYLIST_LABELS,
+  getSongsApi,
+} from '../api/index.js'
 import { playAllWithBackgroundFill } from '../../player/data/play-all.js'
 import { facetContext } from '../../player/domain/playback-context.js'
 import { toast } from '../../../shared/ui/toast-store.js'
@@ -45,7 +49,11 @@ export function FacetGridView({ field, viewMode = 'grid' }: FacetGridViewProps) 
   const query = useFacetsInfiniteQuery(field, keyword)
 
   const onPlayAll = async (facet: SongFacet) => {
-    const filters: Record<string, string> = { type: 'music', [field]: facet.value }
+    const filters: Record<string, string> = {
+      type: ALL_MUSIC_TYPE,
+      exclude_playlist_labels: MUSIC_EXCLUDE_PLAYLIST_LABELS,
+      [field]: facet.value,
+    }
     try {
       const started = await playAllWithBackgroundFill(
         (offset, limit) => getSongsApi().getSongs(filters, { limit, offset }),

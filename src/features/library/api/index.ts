@@ -5,6 +5,9 @@ import { SongTagsApi } from './song-tags-api.js'
 
 export {
   SongsApi,
+  ALL_MUSIC_TYPE,
+  MUSIC_EXCLUDE_PLAYLIST_LABELS,
+  MUSIC_EXCLUDE_PLAYLIST_LABELS_WITH_HIDDEN,
   buildSongsQuery,
   buildSongIdsQuery,
   buildFacetsQuery,

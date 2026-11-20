@@ -10,7 +10,11 @@ import { playAllWithBackgroundFill } from '../../player/data/play-all.js'
 import { PlayHistoryPanel } from '../../player/widgets/PlayHistoryPanel.js'
 import { flattenSongs } from '../data/pagination.js'
 import { useTagSongsInfiniteQuery } from '../data/song-tags-query.js'
-import { getSongsApi } from '../api/index.js'
+import {
+  ALL_MUSIC_TYPE,
+  MUSIC_EXCLUDE_PLAYLIST_LABELS,
+  getSongsApi,
+} from '../api/index.js'
 import { SongListRow } from '../widgets/SongListRow.js'
 import { VirtualList } from '../widgets/VirtualList.js'
 import { toast } from '../../../shared/ui/toast-store.js'
@@ -52,7 +56,11 @@ export function TagSongsPage() {
         loadedCount: songs.length,
         total,
         fetch: (offset, limit) =>
-          getSongsApi().getSongs({ type: 'music', tagId }, { limit, offset }).then((res) => res.songs),
+          getSongsApi().getSongs({
+            type: ALL_MUSIC_TYPE,
+            excludePlaylistLabels: MUSIC_EXCLUDE_PLAYLIST_LABELS,
+            tagId,
+          }, { limit, offset }).then((res) => res.songs),
       })
     }
   }
@@ -60,7 +68,11 @@ export function TagSongsPage() {
   const playAll = async () => {
     try {
       const started = await playAllWithBackgroundFill(
-        (offset, limit) => getSongsApi().getSongs({ type: 'music', tagId }, { limit, offset }),
+        (offset, limit) => getSongsApi().getSongs({
+          type: ALL_MUSIC_TYPE,
+          excludePlaylistLabels: MUSIC_EXCLUDE_PLAYLIST_LABELS,
+          tagId,
+        }, { limit, offset }),
         playbackCtx,
       )
       if (!started) toast.show(t('playlist.emptyPlaylist'))

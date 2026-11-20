@@ -1,7 +1,12 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { defaultPageSize } from '../../../core/config/constants.js'
-import { getSongTagsApi, getSongsApi } from '../api/index.js'
+import {
+  ALL_MUSIC_TYPE,
+  MUSIC_EXCLUDE_PLAYLIST_LABELS,
+  getSongTagsApi,
+  getSongsApi,
+} from '../api/index.js'
 import { getSettingsApi } from '../../settings/api/index.js'
 import type { SongTag, SongTagListResponse } from '../../../models/song-tag.js'
 import type { SongListResponse } from '../../../models/song.js'
@@ -54,7 +59,11 @@ export function useTagSongsInfiniteQuery(tagId: number, enabled = true) {
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
       return getSongsApi().getSongs(
-        { type: 'music', tagId },
+        {
+          type: ALL_MUSIC_TYPE,
+          excludePlaylistLabels: MUSIC_EXCLUDE_PLAYLIST_LABELS,
+          tagId,
+        },
         { limit: defaultPageSize, offset: pageParam },
       )
     },

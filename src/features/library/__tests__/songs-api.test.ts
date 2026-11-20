@@ -110,10 +110,10 @@ describe('buildFacetsQuery (pure)', () => {
     })
   })
 
-  test('passes the virtual music source to facet queries', () => {
-    expect(buildFacetsQuery('artist', { type: 'music' })).toEqual({
+  test('passes the combined local and remote source to facet queries', () => {
+    expect(buildFacetsQuery('artist', { type: 'local,remote' })).toEqual({
       field: 'artist',
-      type: 'music',
+      type: 'local,remote',
       limit: 20,
       offset: 0,
     })

@@ -178,9 +178,9 @@ test.each(['artist', 'album', 'folder', 'tag'] as const)('%s omits the visibilit
 
 test('song and playlist visibility drive independent server filters and survive category switches', async () => {
   const { getByTestId, switchView } = await renderPage()
-  expect(songsHook.mock.lastCall?.[0].excludePlaylistLabels).toBeUndefined()
+  expect(songsHook.mock.lastCall?.[0].excludePlaylistLabels).toBe('hidden,audiobook')
   await act(async () => { fireEvent.tap(getByTestId('library-hidden-toggle')) })
-  expect(songsHook.mock.lastCall?.[0].excludePlaylistLabels).toBe('none')
+  expect(songsHook.mock.lastCall?.[0].excludePlaylistLabels).toBe('audiobook')
   expect(getByTestId('library-hidden-toggle')).toHaveAttribute('accessibility-label', 'Hide hidden songs')
   expect(getByTestId('icon-eye')).toBeInTheDocument()
 
@@ -198,9 +198,9 @@ test('song and playlist visibility drive independent server filters and survive 
   expect(playlistsHook.mock.lastCall?.[0].excludeLabels).toBeUndefined()
   await switchView('artist')
   await switchView('all')
-  expect(songsHook.mock.lastCall?.[0].excludePlaylistLabels).toBe('none')
+  expect(songsHook.mock.lastCall?.[0].excludePlaylistLabels).toBe('audiobook')
   await act(async () => { fireEvent.tap(getByTestId('library-hidden-toggle')) })
-  expect(songsHook.mock.lastCall?.[0].excludePlaylistLabels).toBeUndefined()
+  expect(songsHook.mock.lastCall?.[0].excludePlaylistLabels).toBe('hidden,audiobook')
 })
 
 test('all 18 views visible → 18 pills in 3 groups (2 dividers), defaulting to the flat "all" list', async () => {
@@ -209,7 +209,7 @@ test('all 18 views visible → 18 pills in 3 groups (2 dividers), defaulting to 
   expect(queryAllByTestId(/^library-view-pill-/)).toHaveLength(18)
   expect(queryAllByTestId('library-view-divider')).toHaveLength(2)
   // Default selection is the first visible view (`all`) → ordinary music.
-  expect(songsHook).toHaveBeenCalledWith(expect.objectContaining({ type: 'music' }))
+  expect(songsHook).toHaveBeenCalledWith(expect.objectContaining({ type: 'local,remote' }))
 })
 
 test('hiding 3 views removes exactly their pills', async () => {

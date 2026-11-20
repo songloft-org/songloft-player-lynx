@@ -171,7 +171,8 @@ test('album pages request numeric disc/track order', async () => {
   searchHook.mockReturnValue({ value: 'Multi Disc Album' })
   await renderPage()
   expect(songsHook).toHaveBeenCalledWith({
-    album: 'Multi Disc Album', sort: 'track', order: 'asc', type: 'music',
+    album: 'Multi Disc Album', sort: 'track', order: 'asc', type: 'local,remote',
+    excludePlaylistLabels: 'hidden,audiobook',
   })
 })
 

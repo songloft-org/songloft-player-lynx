@@ -44,7 +44,7 @@ export const LIBRARY_VIEW_GROUP: Record<LibraryViewKey, LibraryViewGroup> = {
 
 /** i18n keys, resolved through `t()` at render time (never store the text). */
 export const LIBRARY_VIEW_LABEL_KEY: Record<LibraryViewKey, string> = {
-  all: 'library.viewAll',
+  all: 'library.viewMusic',
   local: 'library.viewLocal',
   remote: 'library.viewRemote',
   radio: 'library.viewRadio',
@@ -241,13 +241,13 @@ export function setGroupOrder(
   return result
 }
 
-/** The `type` query param for a flat view; `all` means ordinary music. */
-export function flatViewType(key: LibraryViewKey): 'music' | 'local' | 'remote' | 'radio' | undefined {
+/** The `type` query param for a flat view; `all` means local + remote music. */
+export function flatViewType(key: LibraryViewKey): 'local,remote' | 'local' | 'remote' | 'radio' | undefined {
   switch (key) {
     case 'local': return 'local'
     case 'remote': return 'remote'
     case 'radio': return 'radio'
-    case 'all': return 'music'
+    case 'all': return 'local,remote'
     default: return undefined
   }
 }

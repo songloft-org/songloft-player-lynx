@@ -1,7 +1,12 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 
 import { defaultPageSize } from '../../../core/config/constants.js'
-import { getSongsApi, type SongsFilters } from '../api/index.js'
+import {
+  ALL_MUSIC_TYPE,
+  MUSIC_EXCLUDE_PLAYLIST_LABELS,
+  getSongsApi,
+  type SongsFilters,
+} from '../api/index.js'
 import {
   facetsNextPageParam,
   songsNextPageParam,
@@ -54,7 +59,8 @@ export function useFacetsInfiniteQuery(field: string, keyword = '') {
     queryFn: ({ pageParam }) =>
       getSongsApi().getFacets(field, {
         keyword: keyword || undefined,
-        type: 'music',
+        type: ALL_MUSIC_TYPE,
+        excludePlaylistLabels: MUSIC_EXCLUDE_PLAYLIST_LABELS,
         limit: defaultPageSize,
         offset: pageParam,
       }),

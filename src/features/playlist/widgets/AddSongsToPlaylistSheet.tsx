@@ -15,7 +15,7 @@ import { toast } from '../../../shared/ui/toast-store.js'
 import { useDebounce } from '../../library/data/use-debounce.js'
 import { flattenSongs } from '../../library/data/pagination.js'
 import { useSongsInfiniteQuery } from '../../library/data/songs-query.js'
-import type { SongsFilters } from '../../library/api/index.js'
+import { ALL_MUSIC_TYPE, type SongsFilters } from '../../library/api/index.js'
 import { getPlaylistApi } from '../api/index.js'
 import { useAddSongsMutation } from '../data/playlist-mutations.js'
 import { playlistQueryKeys } from '../data/playlist-query.js'
@@ -63,7 +63,7 @@ export function AddSongsToPlaylistSheet({
    */
   const filters = useMemo<SongsFilters>(() => ({
     keyword: keyword || undefined,
-    type: playlistType === 'radio' ? 'radio' : 'music',
+    type: playlistType === 'radio' ? 'radio' : ALL_MUSIC_TYPE,
     excludePlaylistLabels: 'none',
   }), [keyword, playlistType])
 

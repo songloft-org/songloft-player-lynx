@@ -8,7 +8,11 @@ import type { SongTag } from '../../../models/song-tag.js'
 import { useScrollNotifier } from '../../../shared/nav/scroll-visibility.js'
 import { useDebounce } from '../data/use-debounce.js'
 import { flattenTags, useTagListInfiniteQuery } from '../data/song-tags-query.js'
-import { getSongsApi } from '../api/index.js'
+import {
+  ALL_MUSIC_TYPE,
+  MUSIC_EXCLUDE_PLAYLIST_LABELS,
+  getSongsApi,
+} from '../api/index.js'
 import { playAllWithBackgroundFill } from '../../player/data/play-all.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { MediaListItem } from '../../../shared/ui/MediaListItem.js'
@@ -42,7 +46,11 @@ export function TagGridView({ viewMode = 'grid' }: TagGridViewProps) {
   const onPlayAll = async (tag: SongTag) => {
     try {
       const started = await playAllWithBackgroundFill(
-        (offset, limit) => getSongsApi().getSongs({ type: 'music', tagId: tag.id }, { limit, offset }),
+        (offset, limit) => getSongsApi().getSongs({
+          type: ALL_MUSIC_TYPE,
+          excludePlaylistLabels: MUSIC_EXCLUDE_PLAYLIST_LABELS,
+          tagId: tag.id,
+        }, { limit, offset }),
         { type: 'tag' as const, key: String(tag.id) },
       )
       if (!started) toast.show(t('playlist.emptyPlaylist'))
