@@ -1,4 +1,4 @@
-import { useState } from '@lynx-js/react'
+import { useEffect, useRef, useState } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-sortable'
 
@@ -49,6 +49,14 @@ export function LibraryViewEditor({ initialConfig, onCancel, onSaved }: LibraryV
   const mutation = useUpdateLibraryBrowseMutation()
   const [draft, setDraft] = useState<LibraryBrowseView[]>(initialConfig.views)
   const [showMinOneError, setShowMinOneError] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [scrollGeneration, setScrollGeneration] = useState(0)
+  const scrollRefreshScheduled = useRef(false)
+  const scrollRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (scrollRefreshTimer.current != null) clearTimeout(scrollRefreshTimer.current)
+  }, [])
 
   const buckets = groupLibraryViewKeys(draft.map((v) => v.key))
   const viewByKey = new Map(draft.map((v) => [v.key, v]))
@@ -109,7 +117,27 @@ export function LibraryViewEditor({ initialConfig, onCancel, onSaved }: LibraryV
         <text className='library-editor__error'>{t('library.viewsMinOne')}</text>
       ) : null}
 
-      <scroll-view className='library-editor__scroll' scroll-y>
+      <scroll-view
+        className='library-editor__scroll'
+        scroll-y
+        enable-scroll={!isDragging}
+        bindscroll={() => {
+          // SortableRoot measures item rectangles when it mounts. Remount the
+          // group roots after a completed page scroll so the next drag uses
+          // coordinates in the current scroll position.
+          if (!isDragging && !scrollRefreshScheduled.current) {
+            scrollRefreshScheduled.current = true
+            setScrollGeneration((value) => value + 1)
+          }
+          if (!isDragging) {
+            if (scrollRefreshTimer.current != null) clearTimeout(scrollRefreshTimer.current)
+            scrollRefreshTimer.current = setTimeout(() => {
+              scrollRefreshScheduled.current = false
+              scrollRefreshTimer.current = null
+            }, 100)
+          }
+        }}
+      >
         <view className='library-editor__content'>
           {buckets.map((bucket, i) => {
             const rows = bucket.keys.map((k) => viewByKey.get(k)!).filter(Boolean)
@@ -162,13 +190,16 @@ export function LibraryViewEditor({ initialConfig, onCancel, onSaved }: LibraryV
                 </view>
 
                 <SortableRoot<LibraryBrowseView>
+                  key={`${bucket.group}:${scrollGeneration}`}
                   data={rows.map((v) => ({ getSortingKey: () => v.key, dataItem: v }))}
-                  onSortEnd={(sorted) =>
+                  onSortStart={() => setIsDragging(true)}
+                  onSortEnd={(sorted) => {
+                    setIsDragging(false)
                     reorder(
                       bucket.group,
                       sorted.map((d) => d.dataItem.key),
                     )
-                  }
+                  }}
                 >
                   {(item) => (
                     <SortableItem
@@ -209,6 +240,7 @@ export function LibraryViewEditor({ initialConfig, onCancel, onSaved }: LibraryV
             )
           })}
         </view>
+        <view className='library-editor__nav-inset' />
       </scroll-view>
     </view>
   )

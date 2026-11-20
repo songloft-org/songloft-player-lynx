@@ -98,6 +98,7 @@ test('only drag handles consume native swipes; rows and the page remain scrollab
     'enable-scroll',
     'false',
   )
+  expect(elementTree.root!.querySelector('.library-editor__nav-inset')).toBeInTheDocument()
 })
 
 test.each([false, true])(

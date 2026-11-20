@@ -72,6 +72,12 @@
   padding: var(--space-2) var(--space-4) var(--space-6);
 }
 
+/* The editor owns a scroll-view instead of a VirtualList, so the capsule
+   clearance must be real content at the end of the scroll range. */
+.library-editor__nav-inset {
+  height: calc(var(--nav-inset, 80px) + var(--safe-bottom));
+}
+
 .library-editor__group {
   display: flex;
   flex-direction: column;

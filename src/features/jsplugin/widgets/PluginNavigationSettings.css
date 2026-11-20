@@ -50,6 +50,8 @@
   border-radius: var(--radius-sm);
   background-color: var(--secondary-system-background);
   margin-bottom: var(--space-1);
+  /* Animate the neighbouring rows as SortableRoot moves them between slots. */
+  transition: transform var(--duration-fast) var(--ease-default);
 }
 
 .tab-config__order-name {

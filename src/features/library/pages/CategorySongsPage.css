@@ -29,6 +29,12 @@
   padding: var(--space-3) var(--space-4);
 }
 
+/* Match the compact playlist detail chrome on phones. The back button keeps
+   its 44px touch target, so the narrow topbar is 60px tall instead of 68px. */
+.shell--narrow .category-songs__topbar {
+  padding: var(--space-2) var(--space-3);
+}
+
 .category-songs__back {
   display: flex;
   align-items: center;
