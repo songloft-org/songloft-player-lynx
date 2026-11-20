@@ -68,7 +68,7 @@ iOS builds a device Release app explicitly labeled `nosign`. Certificate import 
 
 Bundle updates use an independent RSA signing identity: repository variable `LYNX_UPDATE_PUBLIC_KEY` (SPKI PEM public key) and secret `LYNX_UPDATE_PRIVATE_KEY` (PKCS#8 PEM private key). Only the release job receives the private key; it never enters JS, packages, artifacts, or logs. Prepare embeds the public key into the immutable same-build shell snapshot. The key ID derives from its hash. See [client update protocol](../reference/client-updates.md).
 
-Without a private key, the seven full mobile and Web packages still publish without unsigned hot-update assets. A private key with a missing/mismatched public key, or a key change between prepare and release, fails publishing. Initial hot updates require installing the P2b updater shell with its trusted public key; P2a does not provide the client UI yet. Key rotation also requires a shell trusting the new key.
+Without a private key, the five full standard mobile and Web packages still publish without unsigned hot-update assets. A private key with a missing/mismatched public key, or a key change between prepare and release, fails publishing. Initial hot updates require installing the P2b updater shell with its trusted public key; P2a does not provide the client UI yet. Key rotation also requires a shell trusting the new key.
 
 ## Manual release script
 

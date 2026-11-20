@@ -4,15 +4,17 @@ import { basename } from 'node:path'
 import semver from 'semver'
 import { assertTarget } from '../target.mjs'
 const [metadataPath, assetPath, assetUrl, output] = process.argv.slice(2)
+const keyPath = process.env.SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY
+const keyPEM = process.env.SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY_PEM
 if (
   !metadataPath ||
   !assetPath ||
   !assetUrl ||
   !output ||
-  !process.env.SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY
+  (!keyPath && !keyPEM)
 )
   throw new Error(
-    'Usage: sign-update.mjs build-info.json asset https://asset-url output.json; private key path via SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY',
+    'Usage: sign-update.mjs build-info.json asset https://asset-url output.json; private key via SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY (path) or SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY_PEM',
   )
 const metadata = JSON.parse(await readFile(metadataPath, 'utf8'))
 const [os, arch] = metadata.target.split('-')
@@ -61,9 +63,7 @@ const payload = Buffer.from(
     },
   }),
 )
-const key = createPrivateKey(
-  await readFile(process.env.SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY),
-)
+const key = createPrivateKey(keyPEM || await readFile(keyPath))
 if (key.asymmetricKeyType !== 'ed25519')
   throw new Error('Desktop update key must be Ed25519')
 const trustedKey = createPublicKey(metadata.updatePublicKey)

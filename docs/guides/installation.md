@@ -19,6 +19,8 @@
 
 Windows 10 22H2 以上可选标准版 `songloft-lynx-standard-win32-x64.exe` 或 Bundle 版 `songloft-lynx-bundled-win32-x64.exe`。macOS 13 以上对应选择 `songloft-lynx-standard-darwin-arm64.dmg`、`songloft-lynx-bundled-darwin-arm64.dmg` 或 x64 文件，Apple 芯片选 arm64，Intel 芯片选 x64。macOS 对应的 `.zip` 用于应用内更新。Bundled 版可在登录页或设置页使用本地音乐，标准版连接服务器。
 
+[完整包名清单](https://github.com/songloft-org/songloft/blob/main/docs/release-packages.md)列出 Windows 及两种 macOS 架构的 DMG、ZIP 和其他发布资产。
+
 ## 校验下载
 
 将下载包与 `checksums.txt` 放在同一目录。Linux 使用 `sha256sum -c checksums.txt --ignore-missing`；macOS 可用 `shasum -a 256 <包名>`，Windows 可用 PowerShell `Get-FileHash <包名> -Algorithm SHA256` 对照校验值。

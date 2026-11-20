@@ -19,6 +19,8 @@ Download standard packages from the [Lynx stable Release](https://github.com/son
 
 For Windows 10 22H2 or later, choose the standard NSIS installer `songloft-lynx-standard-win32-x64.exe` or the bundled installer `songloft-lynx-bundled-win32-x64.exe`. For macOS 13 or later, choose the matching standard or bundled `songloft-lynx-standard-darwin-arm64.dmg`/`songloft-lynx-bundled-darwin-arm64.dmg` file. Apple silicon uses arm64 and Intel uses x64. The matching macOS `.zip` is used for in-app updates. Bundled builds support local music from the login screen or Settings. Standard builds connect to a remote server.
 
+The [package inventory](https://github.com/songloft-org/songloft/blob/main/docs/en/release-packages.md) lists Windows and both macOS DMG and ZIP filenames alongside the other packages.
+
 ## Verify downloads
 
 Keep packages and `checksums.txt` in the same directory. On Linux, use `sha256sum -c checksums.txt --ignore-missing`. On macOS, compare `shasum -a 256 <package>` with the listed hash. On Windows, use PowerShell `Get-FileHash <package> -Algorithm SHA256`.

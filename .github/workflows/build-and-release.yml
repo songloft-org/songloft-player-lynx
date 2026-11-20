@@ -786,7 +786,7 @@ jobs:
           TAG: ${{ needs.prepare.outputs.release_tag }}
           CHANNEL: ${{ needs.prepare.outputs.channel }}
           BACKEND_SHA: ${{ needs.backend.outputs.sha }}
-          UPDATE_PRIVATE_KEY: ${{ secrets.DESKTOP_UPDATE_PRIVATE_KEY }}
+          SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY_PEM: ${{ secrets.DESKTOP_UPDATE_PRIVATE_KEY }}
         run: |
           set -euo pipefail
           mkdir desktop-previous
@@ -806,14 +806,10 @@ jobs:
               done
             done
           fi
-          : "${UPDATE_PRIVATE_KEY:?Configure DESKTOP_UPDATE_PRIVATE_KEY to publish desktop updates}"
-          umask 077
-          export SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY="$RUNNER_TEMP/desktop-update-private.pem"
-          trap 'rm -f "$SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY"' EXIT
-          printf '%s\n' "$UPDATE_PRIVATE_KEY" > "$SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY"
+          : "${SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY_PEM:?Configure DESKTOP_UPDATE_PRIVATE_KEY to publish desktop updates}"
           node desktop/scripts/prepare-release.mjs "$CHANNEL" "$TAG" "$GITHUB_SHA" "$BACKEND_SHA" desktop-builds desktop-publish desktop-previous
           mv desktop-publish/assets/* desktop-publish/manifests/* release-files/
-          (cd release-files && sha256sum -- desktop-*.json songloft-lynx-"$CHANNEL"-* >> checksums.txt)
+          (cd release-files && sha256sum -- desktop-standard-*.json songloft-lynx-standard-* >> checksums.txt)
       - name: Publish dev or versioned release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -851,9 +847,9 @@ jobs:
             gh release view dev --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' > "$RUNNER_TEMP/asset-names.txt"
             while IFS= read -r name; do
               case "$name" in
-                songloft-lynx-standard-dev-win32-x64.exe|songloft-lynx-standard-dev-darwin-arm64.zip|songloft-lynx-standard-dev-darwin-x64.zip|songloft-lynx-standard-dev-darwin-arm64.dmg|songloft-lynx-standard-dev-darwin-x64.dmg)
+                songloft-lynx-standard-win32-x64.exe|songloft-lynx-standard-darwin-arm64.zip|songloft-lynx-standard-darwin-x64.zip|songloft-lynx-standard-darwin-arm64.dmg|songloft-lynx-standard-darwin-x64.dmg)
                   continue ;;
-                desktop-win32-x64.json|desktop-darwin-arm64.json|desktop-darwin-x64.json|desktop-standard-win32-x64.json|desktop-standard-darwin-arm64.json|desktop-standard-darwin-x64.json|desktop-bundled-win32-x64.json|desktop-bundled-darwin-arm64.json|desktop-bundled-darwin-x64.json)
+                desktop-standard-win32-x64.json|desktop-standard-darwin-arm64.json|desktop-standard-darwin-x64.json)
                   continue ;;
               esac
               if [ ! -f "release-files/$name" ]; then

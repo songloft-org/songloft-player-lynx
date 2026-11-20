@@ -170,7 +170,7 @@ test('desktop release stages all installers and signs their matching update asse
       )
     }
   }
-  const stage = (out, previous, buildChannel = channel, tag = 'v2.1.0') =>
+  const stage = (out, previous, buildChannel = channel, tag = 'v2.1.0', inline = false) =>
     spawnSync(
       process.execPath,
       [
@@ -187,13 +187,16 @@ test('desktop release stages all installers and signs their matching update asse
         encoding: 'utf8',
         env: {
           ...process.env,
-          SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY: privatePath,
+          SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY: inline ? '' : privatePath,
+          SONGLOFT_DESKTOP_UPDATE_PRIVATE_KEY_PEM: inline
+            ? privateKey.export({ type: 'pkcs8', format: 'pem' })
+            : '',
         },
       },
     )
 
   writeInput('2.1.0')
-  const staged = stage(first)
+  const staged = stage(first, undefined, channel, 'v2.1.0', true)
   assert.equal(staged.status, 0, staged.stderr)
   assert.equal(readdirSync(join(first, 'assets')).length, 10)
   for (const variant of ['standard', 'bundled']) for (const target of compatibility.targets) {
