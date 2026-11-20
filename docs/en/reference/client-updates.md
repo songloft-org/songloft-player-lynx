@@ -2,7 +2,7 @@
 
 [简体中文](../../reference/client-updates.md) · [Releasing](../guides/releasing.md)
 
-**P2a publishing, P2b native updaters, and the P2c About entry are integrated in source.** A local signed fixture verifies Android UI download/cancel, uninterrupted playback, cold activation, and builtin restore; Web deployment links are also verified. HarmonyOS passes a clean release HAP build; production signing, iOS compilation, and device acceptance remain open. Android/iOS Bundle local mode is provided by the client packages; see the [installation guide](../guides/installation.md) for switching and directory selection. Desktop candidate install and rollback acceptance is tracked in the [desktop implementation record](../project/desktop-implementation.md).
+Android, iOS, and HarmonyOS expose client updates in About. Hot updates require a native shell with a trusted public key. Downloads activate on the next cold start. Desktop uses separately signed installer manifests and Web links to its deployment packages. See [installation](../guides/installation.md) and the [desktop verification record](../project/desktop-implementation.md).
 
 ## Identity and release assets
 
@@ -14,7 +14,9 @@ Versions still originate from `package.json` and shared `.build/version.json`. `
 
 `pluginFrame.templates.v1` marks the native plugin-template download/wiring fixes on all three platforms without changing the method ABI or local schema. Older immutable shell snapshots lacking this marker reject subsequent bundles as capability-incompatible and offer installation packages from their own channel. A previous test APK's snapshot is not rewritten even if its loader code is present. Install a new shell carrying the marker before using compatible bundle updates. iOS source is integrated but compilation/device acceptance remains open; capability declarations and passing release tools do not establish success on every platform.
 
-The five full installation/deployment packages remain. With valid signing configuration, releases additionally provide:
+The Lynx repository publishes Standard. Standard mobile apps use `version.json` and `version.json.sig`. The backend repository publishes Bundle, whose mobile apps use `bundle-lynx-version.json` and `bundle-lynx-version.json.sig`. Signed mobile updates in both repositories use `songloft-lynx-main.lynx.bundle`. Desktop reads `desktop-standard-<target>.json` or `desktop-bundled-<target>.json` from the repository for its edition.
+
+The table lists Standard mobile release files:
 
 | File | Meaning |
 |---|---|
@@ -89,6 +91,6 @@ The switch defaults to OFF and uses the device-local `client_automatic_update` p
 
 ## Validation and outstanding work
 
-Regressions cover complete full packages, signing keys, byte tampering, size limits, missing external resources, debug payloads, unsigned fallback, immutable host snapshot consistency, and platform/engine/bridge/schema/capability mismatches. Production update signing is unconfigured; nothing was pushed or published.
+Regressions cover complete full packages, signing keys, byte tampering, size limits, missing external resources, debug payloads, unsigned fallback, immutable host snapshot consistency, and platform/engine/bridge/schema/capability mismatches. [Lynx dev CI](https://github.com/songloft-org/songloft-player-lynx/actions/runs/44829503122) published Standard. Backend Bundle builds and publishing are verified separately.
 
-iOS compilation, execution of the Apple verification harness, and device download/rollback remain open. Six HarmonyOS core regressions execute actual transpiled source using real Node RSA, HTTPS, and filesystem adapters, now including independent TLS metadata reads. Separately, SDK `26.0.0.105` passes ArkTS compilation and a clean release HAP build of `e09592b`, including package-content verification; the package remains unsigned and uninstalled. The API 13 minimum declaration is preserved, but device SDK, download/cold-start/rollback behavior remains unverified. Android evidence uses a Debug native shell, actual bundles without JS test-bridge markers, temporary public keys, and a local HTTPS release fixture; UI check/download/cancel/cold-start/restore evidence is not a production signing release. See [progress](../../project/progress.md). Native source integration does not establish acceptance on all three platforms.
+Lynx dev CI compiled and inspected the iOS IPA. Device download and rollback remain to be verified. Earlier verification is recorded below. Six HarmonyOS core regressions execute actual transpiled source using real Node RSA, HTTPS, and filesystem adapters, now including independent TLS metadata reads. Separately, SDK `26.0.0.105` passes ArkTS compilation and a clean release HAP build of `e09592b`, including package-content verification; the package remains unsigned and uninstalled. The API 13 minimum declaration is preserved, but device SDK, download/cold-start/rollback behavior remains unverified. Android evidence uses a Debug native shell, actual bundles without JS test-bridge markers, temporary public keys, and a local HTTPS release fixture; UI check/download/cancel/cold-start/restore evidence is not a production signing release. See [progress](../../project/progress.md). Native source integration does not establish acceptance on all three platforms.

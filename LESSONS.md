@@ -10,7 +10,7 @@
 
 - 范围：Lynx Android、iOS 与桌面 Bundle 构建。
 - 规则：桌面 SDK 在打包前校验解析记录和 ABI 资产摘要，再更新 SDK manifest；Android 通过 APK 原生文件目录安装工具，iOS 编译时链接静态库。不能使用无版本约束的 `latest` 下载。
-- Seen 1× (2026-11-20)。状态：本地实现；多平台工具链 CI 尚未通过。
+- Seen 1× (2026-11-20)。[后端 Bundle CI](https://github.com/songloft-org/songloft/actions/runs/44754365874)生成 Android、iOS、Windows 和两种 macOS 架构的 Lynx 测试包。设备安装与播放另行验收。
 
 ### WEB-AUDIO-001 Web 播放进度以当前媒体元素为准
 

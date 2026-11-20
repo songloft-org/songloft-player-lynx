@@ -1,6 +1,6 @@
 # Documentation index
 
-Current Windows/macOS candidate: [implementation and acceptance](project/desktop-implementation.md), [host build guide](../../desktop/README.en.md). The user replaced the early probe stop condition with consolidated acceptance after implementation.
+Windows/macOS desktop: [installation and downloads](guides/installation.md), [host build guide](../../desktop/README.en.md), and [device verification](project/desktop-implementation.md).
 
 Songloft Player (Lynx) documentation, organized by task using Diátaxis.
 

@@ -16,9 +16,13 @@
 
 文档/许可证修改不自动触发构建。手动构建其他分支只生成 artifacts。正式和 dev 发布要求 Android、iOS、HarmonyOS 和 Web 两种模式全部成功。启用桌面后，还须通过 Windows x64、macOS arm64、macOS x64 三项打包与校验。失败时保留现有 artifacts。
 
+发布 `dev` 前会再次核对 `main` 的最新 SHA。构建期间如果 `main` 有新提交，包括只改文档的提交，旧构建会成功退出、保留现有 `dev`。出现 `A newer main commit is available; skipping this dev release.` 时，在 **Actions → Build and Release → Run workflow** 选择最新 `main`。签名 Secrets 或 Variables 更新后也需要启动新一轮运行。验收时核对 `dev` 的 tag 指向和附件，不能只看工作流通过。
+
 产物名见[安装指南](installation.md)。`version.json` 和 `checksums.txt` 随 Release 发布。新流程移除旧的独立 `dev-harmony` 入口；历史 Release 不自动删除。
 
 本仓库发布标准版、HarmonyOS 和 Web。桌面标准版使用同次构建的业务 bundle。后端仓库另行发布 Android、iOS 和桌面 Bundle，并固定后端、Lynx 子模块与 FFmpeg 资产身份。见[后端发布包名清单](https://github.com/songloft-org/songloft/blob/main/docs/release-packages.md)。
+
+后端的 Lynx Android `LYNX_ANDROID_*` Secrets 使用本仓库 `ANDROID_*` 的值，保持覆盖升级兼容。桌面更新使用同一对 `DESKTOP_UPDATE_*` Secrets。两种发布各自在所在仓库触发，操作见[后端签名与发布说明](https://songloft.hanxi.cc/bundle-mode#发布触发与签名)。
 
 配置 `DESKTOP_SDK_INDEX_URL`、`DESKTOP_SDK_INDEX_SHA256` 和[桌面更新密钥](../../desktop/README.md#ci-与验收)后，桌面安装包和按架构签名的更新清单随 `dev` 或正式 `vX.Y.Z` Release 发布。两个 SDK 变量均未设置时，流水线继续构建移动端和 Web。预发布标签沿用移动和 Web 构建。
 
@@ -68,7 +72,7 @@ iOS 只构建设备 Release，明确标为 `nosign`。目前没有 iOS 分发证
 
 bundle 热更新另使用独立 RSA 签名身份，配置 Repository Variable `LYNX_UPDATE_PUBLIC_KEY`（SPKI PEM 公钥）与 Secret `LYNX_UPDATE_PRIVATE_KEY`（PKCS#8 PEM 私钥）。私钥只供 release job 签名，不进入 JS、安装包、artifact 或日志；prepare job 将公钥写入同次构建的不可变壳信息。keyId 由公钥摘要生成，无需另配。详细格式见 [客户端更新协议](../reference/client-updates.md)。
 
-缺少私钥时继续生成五种完整包，不发布未签名热更新资产；私钥存在而公钥缺失/不匹配，或 prepare/release 两阶段公钥变化，发布失败。首次热更新须安装 P2b 接入更新器和受信公钥的新壳；当前 P2a 尚未实现客户端更新入口。轮换公钥也须先安装信任新公钥的壳，不能仅替换远程清单。
+缺少私钥时继续发布完整包。私钥存在而公钥缺失、不匹配，或构建与发布阶段的公钥变化，发布会失败。移动热更新要求安装已内置更新器和受信公钥的原生壳。轮换公钥时先更新原生壳，再发布用新密钥签名的清单。
 
 ## 手动发版脚本
 

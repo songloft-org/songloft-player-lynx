@@ -2,7 +2,7 @@
 
 [English](README.en.md) · [实施与验证记录](../docs/project/desktop-implementation.md) · [历史技术探针](../docs/project/desktop-phase1.md)
 
-桌面源码现覆盖宿主、共享音视频 facade、Bundle、两类插件、安装与完整应用更新。用户于 2026-11-17 明确调整为“先全部实现，最后统一验收”；早期第一批记录的阶段停点不再限制后续实现。实现已进入共享 `dev` Release，正式签名、公证和最终设备验收仍开放。
+桌面支持共享音视频桥接、标准版与 Bundle、两类插件、安装及整包更新。标准版在 Lynx 仓库发布，Bundle 在后端仓库发布。平台签名、公证和最终设备验收见[实施与验证记录](../docs/project/desktop-implementation.md)。
 
 目标为 Windows x64（Windows 10 22H2 / Windows 11）、macOS arm64/x64（macOS 13+）。Linux、Windows ARM、DLNA、悬浮歌词、系统外快捷键、JS 热更新和 Flutter 数据迁移不在本版范围。Flutter 与移动 SDK 保持原版本。
 
@@ -10,7 +10,7 @@
 
 以 [compatibility.json](compatibility.json)、桌面独立 pnpm 锁和根锁文件为准：Lynxtron / CEF / headers 0.0.31，builder **0.0.30**，libmpv 0.41.0，FFmpeg/ffprobe 8.0.1。4.2 是 API 基准；两种 Mac 运行时实际报告 Lynx **4.4**，不将所有包版本改成 4.2。
 
-桌面 CI 启动时解析主仓库 `main` 的最新 SHA，三个目标使用同一提交并记录后端版本。手动构建使用 `SONGLOFT_BACKEND_SOURCE` 所指 checkout 的 HEAD，默认使用主仓库工作区。资源构建检查该提交是否支持 `parent-watch-stdin`。显式设定 `SONGLOFT_DESKTOP_ALLOW_DIRTY=1` 时，后端版本标为 `dev`，元数据记录实际 HEAD 与源码摘要。该选项只适用于开发通道。
+标准版 CI 单次解析后端 `main` 供兼容性检查。后端 Bundle CI 固定本轮发布的后端提交、Lynx 子模块提交及 FFmpeg 资产，三个桌面目标复用同一业务 bundle。手动构建使用 `SONGLOFT_BACKEND_SOURCE` 所指 checkout 的 HEAD，默认是主仓库工作区。资源构建检查该提交是否支持 `parent-watch-stdin`。开发通道设置 `SONGLOFT_DESKTOP_ALLOW_DIRTY=1` 时，记录实际 HEAD 与源码摘要，版本标为 `dev`。
 
 ## 构建与运行
 

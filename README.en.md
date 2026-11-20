@@ -18,12 +18,15 @@ Web supports playlist JSON import/export with file selection, authenticated refr
 
 Web playback settings also provide a persisted keyboard-shortcut switch: Space toggles playback and Ctrl/⌘ + arrows change tracks or volume. See [Shortcuts](docs/en/guides/web-deployment.md#playback-keyboard-shortcuts) for input/overlay/plugin focus protection and the Chrome validation scope.
 
+The library supports combined filters for local tracks, remote tracks, and radio. Select several stations to set Automatic, HLS, HTTP-FLV, or Audio only in one action. Library Play All excludes radio and tracks in hidden or audiobook playlists.
+
 | Platform                 | Release artifact               | Limitations                                                                                        |
 | ------------------------ | ------------------------------ | -------------------------------------------------------------------------------------------------- |
-| Android 6.0+             | Release-signed APK with Bundle backend | Background playback, notifications, and DLNA still need ongoing device regression testing |
+| Android                  | Signed Standard or Bundle APK | Standard requires Android 5.0+ and Bundle requires Android 6.0+ |
 | iOS 15+                  | Unsigned IPA                   | Re-sign before installation; Live Activity requires iOS 16.2+                                      |
 | HarmonyOS NEXT / API 13+ | Signed HAP                     | Experimental; video module and XComponent surface exist, but compilation and device behavior need verification |
 | Web                      | Standalone / embedded archives | No bundled backend, DLNA, or per-song offline cache; browser compatibility requires actual testing |
+| Windows / macOS           | Standard or Bundle desktops   | Windows 10 22H2+ x64 and macOS 13+ on Apple silicon or Intel |
 
 ## Installation and downloads
 

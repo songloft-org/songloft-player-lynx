@@ -1,6 +1,6 @@
 # 文档索引
 
-Windows/macOS 最新候选：[完整实现与验收记录](project/desktop-implementation.md) · [宿主构建指南](../desktop/README.md)。早期探针停点已由用户调整为末尾统一验收。
+Windows/macOS 桌面：[安装与下载](guides/installation.md) · [宿主构建指南](../desktop/README.md) · [设备验收记录](project/desktop-implementation.md)。
 
 Songloft Player Lynx 客户端项目文档。按 [Diátaxis](https://diataxis.fr/) 组织 —— **按你此刻的意图找，而不是按主题猜**。
 

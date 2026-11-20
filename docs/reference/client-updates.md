@@ -2,7 +2,7 @@
 
 [English](../en/reference/client-updates.md) · [发版指南](../guides/releasing.md)
 
-**P2a 发布契约、P2b 三端原生更新器与 P2c 关于页入口已接入源码。** Android 已用本地签名发布夹具验证界面下载、取消、播放不中断、冷启动生效和恢复内置；Web 部署入口已验证。HarmonyOS 已通过 clean release HAP 编译，正式签名密钥、iOS 编译和设备验收仍开放。Android/iOS Bundle 本地后端由客户端安装包提供，模式切换与目录选择见[安装指南](../guides/installation.md)；桌面候选更新的完整安装与回滚验收见[桌面实施记录](../project/desktop-implementation.md)。
+Android、iOS 和 HarmonyOS 的更新入口位于「关于」页。热更新需要安装带更新器和受信公钥的原生壳，下载的模板在下一次冷启动时生效。桌面使用单独签名的安装包清单，Web 提供部署包入口。平台安装和回退见[安装指南](../guides/installation.md)与[桌面验收记录](../project/desktop-implementation.md)。
 
 ## 身份与发布资产
 
@@ -14,7 +14,9 @@
 
 `pluginFrame.templates.v1` 标记三端原生插件模板下载/接线修复，不改变方法 ABI 或本地 schema。缺少此标记的旧不可变壳快照，检查后续 bundle 时返回 capability 不兼容并提供本通道安装包；即使某个旧测试 APK 已含加载器，也不改写它的快照来放行。先安装含该标记的新壳，再使用兼容的 bundle 热更新。iOS 源码已接入但编译/设备验收仍开放，能力声明与发布工具通过不代表全平台通过。
 
-完整安装/部署包仍为五种原有资产。配置有效签名密钥后，另提供：
+客户端仓库发布标准版，移动端使用 `version.json` 与 `version.json.sig`。后端仓库发布 Bundle，Bundle 移动端使用 `bundle-lynx-version.json` 与 `bundle-lynx-version.json.sig`。两处已签名的移动热更新均使用 `songloft-lynx-main.lynx.bundle`。桌面在各自仓库读取 `desktop-standard-<target>.json` 或 `desktop-bundled-<target>.json`。
+
+下表是标准版移动端使用的发布文件。
 
 | 文件 | 含义 |
 |---|---|
@@ -89,6 +91,6 @@ Release 正文中的 GitHub emoji 短码（如 `:sparkles:`、`:bug:`）按 `gem
 
 ## 当前验证与开放项
 
-协议回归覆盖五包齐全、签名/key 匹配、原始字节篡改、大小限制、外部文件遗漏、调试包拒绝、旧发布无签名降级、不可变壳信息一致性及平台/引擎/桥接/schema/能力不匹配。正式发布密钥尚未配置，未执行任何 push 或发布。
+协议回归覆盖五包齐全、签名/key 匹配、原始字节篡改、大小限制、外部文件遗漏、调试包拒绝、旧发布无签名降级、不可变壳信息一致性及平台/引擎/桥接/schema/能力不匹配。[Lynx dev CI](https://github.com/songloft-org/songloft-player-lynx/actions/runs/44829503122)已发布标准版。后端 Bundle 的构建和发布单独验收。
 
-iOS 编译、Apple 验签程序执行及设备下载/回退仍开放。HarmonyOS 的实际源码经 TypeScript 转译，在 Node 的真实 RSA、HTTPS 与文件系统适配器下运行六项核心回归，新增独立 TLS 元数据读取；另已使用 SDK `26.0.0.105` 对 `e09592b` 完成 ArkTS 和 clean release HAP 编译，包内容校验通过，仍未签名或安装。最低兼容声明保留 API 13，设备 SDK、下载/冷启动/回退行为仍待验。Android 使用 Debug 原生壳与不含 JS 测试桥的实际 bundle、临时公钥和本地 HTTPS 发布夹具完成界面检查/下载/取消/冷启动/恢复验证，不代表正式签名发版。详细证据见 [progress](../project/progress.md)。原生源码接入不表示三端已完成验收。
+Lynx dev CI 已通过 iOS 编译与 IPA 检查，设备下载与回退仍待验证。早期 HarmonyOS 验证用转译的宿主源码执行六项核心回归，并编译了未签名 HAP。Android 界面验证使用 Debug 壳、临时公钥与本地 HTTPS 发布夹具。验证环境和结果见[项目进展记录](../project/progress.md)。

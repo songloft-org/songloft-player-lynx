@@ -2,7 +2,7 @@
 
 [简体中文](README.md) · [Implementation and verification](../docs/en/project/desktop-implementation.md) · [Historical probe](../docs/en/project/desktop-phase1.md)
 
-Desktop source now covers the host, shared playback facade, Bundle, both plugin types, installers and whole-application updates. On 2026-11-17 the user explicitly changed the sequence to implement everything before consolidated acceptance. Earlier phase-one stop conditions no longer restrict implementation. The implementation is now published in the shared `dev` Release. Production signing/notarization and final device acceptance remain open.
+Desktop supports shared media bridges, Standard and Bundle editions, both plugin types, installers, and whole-app updates. The Lynx repository publishes Standard and the backend publishes Bundle. See the [implementation and verification record](../docs/en/project/desktop-implementation.md) for platform signing, notarization, and device checks.
 
 Targets: Windows x64 (Windows 10 22H2 / Windows 11), macOS arm64/x64 (macOS 13+). Linux, Windows ARM, DLNA, floating lyrics, shortcuts outside the app, JS hot updates and Flutter data migration are excluded. Flutter and mobile SDK versions are unchanged.
 
@@ -10,7 +10,7 @@ Targets: Windows x64 (Windows 10 22H2 / Windows 11), macOS arm64/x64 (macOS 13+)
 
 [compatibility.json](compatibility.json), the independent desktop pnpm lock and root lock pin Lynxtron/CEF/headers 0.0.31, builder **0.0.30**, libmpv 0.41.0 and FFmpeg/ffprobe 8.0.1. API baseline 4.2 is distinct from package versions; both Mac runtimes actually report Lynx **4.4**.
 
-Desktop CI resolves the latest root `main` SHA at startup. All three targets use that commit and record its backend version. Local builds use the HEAD of the checkout selected by `SONGLOFT_BACKEND_SOURCE`, which defaults to the root repository workspace. Desktop resource builds check that the selected commit supports `parent-watch-stdin`. Setting `SONGLOFT_DESKTOP_ALLOW_DIRTY=1` in the development channel labels the backend version `dev` and records its actual HEAD and source digest.
+Standard CI resolves backend `main` once for compatibility checks. Backend Bundle CI pins the backend release commit, Lynx submodule commit, and FFmpeg assets. All three desktop targets reuse the same application bundle. Local builds use the HEAD of the checkout selected by `SONGLOFT_BACKEND_SOURCE`, defaulting to the root workspace. Resource builds check that it supports `parent-watch-stdin`. Setting `SONGLOFT_DESKTOP_ALLOW_DIRTY=1` in the development channel labels the backend version `dev` and records its actual HEAD and source digest.
 
 ## Build and run
 

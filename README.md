@@ -16,12 +16,15 @@ Web 已提供歌单 JSON 导入/导出，支持选择文件、认证刷新、下
 
 Web 播放设置另有可持久保存的键盘快捷键开关，支持空格播放/暂停、Ctrl/⌘ + 方向键切歌及音量调整。输入/覆盖层/插件焦点保护和 Chrome 实测范围见 [快捷键说明](docs/guides/web-deployment.md#播放键盘快捷键)。
 
+曲库支持组合筛选本地歌曲、网络歌曲与电台。多选电台后可批量设置自动、HLS、HTTP-FLV 或仅音频播放模式。曲库的「播放全部」排除电台和隐藏、有声书歌单中的歌曲。
+
 | 平台                     | 发布产物                     | 使用边界                                                   |
 | ------------------------ | ---------------------------- | ---------------------------------------------------------- |
-| Android 6.0+             | 含 Bundle 后端的签名 APK      | 后台播放、通知与 DLNA 等需持续真机回归                     |
+| Android                  | 签名标准版或 Bundle APK      | 标准版需 Android 5.0+，Bundle 需 Android 6.0+            |
 | iOS 15+                  | 未签名 IPA                   | 安装前需自行重签；Live Activity 需 iOS 16.2+               |
 | HarmonyOS NEXT / API 13+ | 签名 HAP                     | 实验性；已有视频模块与 XComponent 表面，编译和设备行为待验证 |
 | Web                      | standalone / embedded 压缩包 | 无 Bundle、DLNA 与单曲离线缓存；兼容性以实际浏览器验证为准 |
+| Windows / macOS           | 标准版或 Bundle 桌面包        | Windows 10 22H2+ x64，macOS 13+ 支持 Apple 芯片和 Intel    |
 
 ## 安装与下载
 

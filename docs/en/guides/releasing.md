@@ -16,11 +16,15 @@
 
 Documentation/license changes do not automatically trigger builds. Manual builds on other branches produce artifacts only. Dev and stable publishing require Android, iOS, HarmonyOS, and both Web modes to succeed. When enabled, desktop publishing also requires verified packages for Windows x64, macOS arm64, and macOS x64. Failed runs retain available workflow artifacts.
 
+The publisher rechecks the tip of `main` before updating `dev`. If any commit lands during the build, including a docs-only commit, the older run exits successfully and leaves the existing `dev` release in place. If the log says `A newer main commit is available; skipping this dev release.`, select the latest `main` under **Actions → Build and Release → Run workflow**. Start a new run after changing signing secrets or variables as well. Verify the target commit of `dev` and its assets alongside the workflow result.
+
 Assets upload to a draft and become public only after every upload succeeds. Dev is temporarily hidden during replacement; a failed upload leaves a draft for inspection and rerun. Existing stable/preview releases, including drafts, cannot be overwritten: inspect any failed draft before manually deleting or publishing it. Desktop installers use fixed asset names in the form `songloft-lynx-{variant}-{target}.{ext}`, and dev replacement removes legacy assets whose names contain a version or content hash.
 
 See [installation](installation.md) for filenames. Releases include `version.json` and `checksums.txt`. The new workflow replaces the separate `dev-harmony` entry point; historical releases are not automatically deleted.
 
 This repository publishes Standard, HarmonyOS, and Web packages. All Desktop Standard targets use the same business bundle. The backend repository separately publishes Android, iOS, and desktop Bundles from pinned backend and Lynx commits and FFmpeg assets. See the [package inventory](https://github.com/songloft-org/songloft/blob/main/docs/en/release-packages.md).
+
+Use the values of this repository's `ANDROID_*` secrets for the backend's Lynx-specific `LYNX_ANDROID_*` secrets to preserve in-place upgrades. Desktop updates use the same `DESKTOP_UPDATE_*` key pair. Trigger each workflow in its own repository. See the [backend signing and release guide](https://songloft.hanxi.cc/en/bundle-mode#release-triggers-and-signing).
 
 Set `DESKTOP_SDK_INDEX_URL`, `DESKTOP_SDK_INDEX_SHA256`, and the [desktop update keys](../../../desktop/README.en.md#ci-and-acceptance) to publish installers and per-architecture signed manifests to the shared `dev` or stable `vX.Y.Z` Release. When both SDK variables are absent, the workflow builds the mobile and Web packages. Prerelease tags continue to build mobile and Web packages.
 
@@ -68,7 +72,7 @@ iOS builds a device Release app explicitly labeled `nosign`. Certificate import 
 
 Bundle updates use an independent RSA signing identity: repository variable `LYNX_UPDATE_PUBLIC_KEY` (SPKI PEM public key) and secret `LYNX_UPDATE_PRIVATE_KEY` (PKCS#8 PEM private key). Only the release job receives the private key; it never enters JS, packages, artifacts, or logs. Prepare embeds the public key into the immutable same-build shell snapshot. The key ID derives from its hash. See [client update protocol](../reference/client-updates.md).
 
-Without a private key, the five full standard mobile and Web packages still publish without unsigned hot-update assets. A private key with a missing/mismatched public key, or a key change between prepare and release, fails publishing. Initial hot updates require installing the P2b updater shell with its trusted public key; P2a does not provide the client UI yet. Key rotation also requires a shell trusting the new key.
+Full packages still publish when the private key is absent. Publishing fails if a configured private key lacks its matching public key or if the public key changes between build and publishing. Mobile hot updates require a native shell with the updater and trusted public key installed. During key rotation, update the native shell before publishing a manifest signed by the new key.
 
 ## Manual release script
 

@@ -10,7 +10,7 @@
 
 - Scope: Lynx Android, iOS, and desktop Bundle builds.
 - Rule: before packaging, the desktop SDK verifies the resolution record and ABI asset digest, then updates its SDK manifest. Android installs tools through the APK native library directory and iOS links the static library at build time. Do not use an unversioned `latest` download.
-- Seen 1× (2026-11-20). Status: local implementation; multi-platform toolchain CI is not passing yet.
+- Seen 1× (2026-11-20). [Backend Bundle CI](https://github.com/songloft-org/songloft/actions/runs/44754365874) produced Lynx test packages for Android, iOS, Windows, and both macOS architectures. Device installation and playback are checked separately.
 
 ### WEB-AUDIO-001 Use the active media element as the Web playback clock
 
