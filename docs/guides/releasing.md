@@ -18,7 +18,7 @@
 
 产物名见[安装指南](installation.md)。`version.json` 和 `checksums.txt` 随 Release 发布。新流程移除旧的独立 `dev-harmony` 入口；历史 Release 不自动删除。
 
-同一次运行在开始时解析公开主仓库 `main` 的最新提交和版本，Android、iOS 和桌面共用该 SHA 与其 `pkg/tag`。Android 与 iOS 使用后端提交指定的 gomobile 和 gobind。桌面三架构使用同一次构建生成的业务 bundle。所有 Bundle 包在发布前检查包内后端 SHA。
+本仓库发布标准版、HarmonyOS 和 Web。桌面标准版使用同次构建的业务 bundle。后端仓库另行发布 Android、iOS 和桌面 Bundle，并固定后端、Lynx 子模块与 FFmpeg 资产身份。见[后端发布包名清单](https://github.com/songloft-org/songloft/blob/main/docs/release-packages.md)。
 
 配置 `DESKTOP_SDK_INDEX_URL`、`DESKTOP_SDK_INDEX_SHA256` 和[桌面更新密钥](../../desktop/README.md#ci-与验收)后，桌面安装包和按架构签名的更新清单随 `dev` 或正式 `vX.Y.Z` Release 发布。两个 SDK 变量均未设置时，流水线继续构建移动端和 Web。预发布标签沿用移动和 Web 构建。
 

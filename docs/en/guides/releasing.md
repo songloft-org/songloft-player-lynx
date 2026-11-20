@@ -20,7 +20,7 @@ Assets upload to a draft and become public only after every upload succeeds. Dev
 
 See [installation](installation.md) for filenames. Releases include `version.json` and `checksums.txt`. The new workflow replaces the separate `dev-harmony` entry point; historical releases are not automatically deleted.
 
-Each run resolves the latest commit and version from the public backend’s `main` at startup. Android, iOS, and desktop use that SHA and its `pkg/tag` dependency. Android and iOS use the gomobile and gobind versions specified by that commit. All three desktop targets use the same business bundle. All Bundle packages verify their embedded backend SHA before publishing.
+This repository publishes Standard, HarmonyOS, and Web packages. All Desktop Standard targets use the same business bundle. The backend repository separately publishes Android, iOS, and desktop Bundles from pinned backend and Lynx commits and FFmpeg assets. See the [package inventory](https://github.com/songloft-org/songloft/blob/main/docs/en/release-packages.md).
 
 Set `DESKTOP_SDK_INDEX_URL`, `DESKTOP_SDK_INDEX_SHA256`, and the [desktop update keys](../../../desktop/README.en.md#ci-and-acceptance) to publish installers and per-architecture signed manifests to the shared `dev` or stable `vX.Y.Z` Release. When both SDK variables are absent, the workflow builds the mobile and Web packages. Prerelease tags continue to build mobile and Web packages.
 
