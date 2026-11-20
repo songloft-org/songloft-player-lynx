@@ -5,6 +5,7 @@ export const compatibility = JSON.parse(
 )
 
 export const desktopReleaseRepo = 'songloft-org/songloft-player-lynx'
+export const desktopBundleReleaseRepo = 'songloft-org/songloft'
 
 export function desktopReleaseAsset(tag, name, variant = 'bundled') {
   if (
@@ -13,7 +14,8 @@ export function desktopReleaseAsset(tag, name, variant = 'bundled') {
   )
     throw new Error('Invalid desktop release tag')
   if (!['standard', 'bundled'].includes(variant)) throw new Error('Invalid desktop package variant')
-  return `https://github.com/${desktopReleaseRepo}/releases/download/${tag}/${encodeURIComponent(name)}`
+  const repository = variant === 'bundled' ? desktopBundleReleaseRepo : desktopReleaseRepo
+  return `https://github.com/${repository}/releases/download/${tag}/${encodeURIComponent(name)}`
 }
 
 export function desktopUpdateManifestUrl(channel, target, variant = 'bundled') {
@@ -21,9 +23,11 @@ export function desktopUpdateManifestUrl(channel, target, variant = 'bundled') {
     throw new Error('Invalid desktop update target')
   if (!['standard', 'bundled'].includes(variant)) throw new Error('Invalid desktop package variant')
   const name = `desktop-${variant}-${target}.json`
-  if (channel === 'dev') return desktopReleaseAsset('dev', name)
-  if (channel === 'stable')
-    return `https://github.com/${desktopReleaseRepo}/releases/latest/download/${name}`
+  if (channel === 'dev') return desktopReleaseAsset('dev', name, variant)
+  if (channel === 'stable') {
+    const repository = variant === 'bundled' ? desktopBundleReleaseRepo : desktopReleaseRepo
+    return `https://github.com/${repository}/releases/latest/download/${name}`
+  }
   throw new Error('Invalid desktop channel')
 }
 

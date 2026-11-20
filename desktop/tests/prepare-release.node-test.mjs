@@ -29,7 +29,7 @@ const configureSigning = fileURLToPath(
 )
 
 test('desktop manifest discovery follows the shared dev and latest stable Releases', () => {
-  const base = 'https://github.com/songloft-org/songloft-player-lynx/releases'
+  const base = 'https://github.com/songloft-org/songloft/releases'
   assert.equal(
     desktopUpdateManifestUrl('dev', 'win32-x64'),
     `${base}/download/dev/desktop-bundled-win32-x64.json`,
@@ -49,16 +49,11 @@ test('rolling desktop releases keep one fixed installer name per target', () => 
     'utf8',
   )
   for (const name of [
-    'songloft-lynx-standard-dev-win32-x64.exe',
-    'songloft-lynx-standard-dev-darwin-arm64.zip',
-    'songloft-lynx-standard-dev-darwin-x64.zip',
-    'songloft-lynx-standard-dev-darwin-arm64.dmg',
-    'songloft-lynx-standard-dev-darwin-x64.dmg',
-    'songloft-lynx-bundled-dev-win32-x64.exe',
-    'songloft-lynx-bundled-dev-darwin-arm64.zip',
-    'songloft-lynx-bundled-dev-darwin-x64.zip',
-    'songloft-lynx-bundled-dev-darwin-arm64.dmg',
-    'songloft-lynx-bundled-dev-darwin-x64.dmg',
+    'songloft-lynx-standard-win32-x64.exe',
+    'songloft-lynx-standard-darwin-arm64.zip',
+    'songloft-lynx-standard-darwin-x64.zip',
+    'songloft-lynx-standard-darwin-arm64.dmg',
+    'songloft-lynx-standard-darwin-x64.dmg',
   ])
     assert.ok(workflow.includes(name), `Missing fixed desktop asset ${name}`)
   assert.doesNotMatch(workflow, /songloft-lynx-dev-\*-win32-x64-\*\.exe/)
@@ -211,11 +206,11 @@ test('desktop release stages all installers and signs their matching update asse
     )
     const name = new URL(manifest.asset.url).pathname.split('/').at(-1)
     const expectedPackage = target.startsWith('darwin')
-      ? `songloft-lynx-${variant}-stable-${target}.zip`
-      : `songloft-lynx-${variant}-stable-${target}.exe`
+      ? `songloft-lynx-${variant}-${target}.zip`
+      : `songloft-lynx-${variant}-${target}.exe`
     assert.equal(
       manifest.asset.url,
-      `https://github.com/songloft-org/songloft-player-lynx/releases/download/v2.1.0/${expectedPackage}`,
+      `https://github.com/${variant === 'bundled' ? 'songloft-org/songloft' : 'songloft-org/songloft-player-lynx'}/releases/download/v2.1.0/${expectedPackage}`,
     )
     assert.equal(name, expectedPackage)
     assert.equal(readFileSync(join(first, 'assets', name), 'utf8'), target)
@@ -287,7 +282,7 @@ test('desktop release stages all installers and signs their matching update asse
   })
   assert.equal(
     dev.asset.url,
-    'https://github.com/songloft-org/songloft-player-lynx/releases/download/dev/songloft-lynx-bundled-dev-win32-x64.exe',
+    'https://github.com/songloft-org/songloft/releases/download/dev/songloft-lynx-bundled-win32-x64.exe',
   )
   writeInput('2.0.0', 'dev', '2026-01-01T00:00:01Z')
   const devDowngrade = stage(

@@ -43,7 +43,7 @@ function SharedClientUpdateSection() {
   const { checking, check } = session
   const error = session.checkError ? errorKey(session.checkError) : null
   const identity = updateIdentity(session.native)
-  const page = releasePage(identity.channel)
+  const page = releasePage(identity.channel, getPlatformCapabilities().bundleMode ? 'bundled' : 'standard')
   const busy = checking || session.operation !== null || !!session.native?.download
 
   useEffect(() => {

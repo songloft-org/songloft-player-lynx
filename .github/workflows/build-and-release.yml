@@ -120,7 +120,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [standard, bundled]
+        variant: [standard]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -229,7 +229,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [standard, bundled]
+        variant: [standard]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -506,6 +506,11 @@ jobs:
 
   desktop:
     name: Desktop (${{ matrix.target }})
+    # Standard desktop assets use fixed names: songloft-lynx-standard-win32-x64.exe,
+    # songloft-lynx-standard-darwin-arm64.zip, songloft-lynx-standard-darwin-arm64.dmg,
+    # songloft-lynx-standard-darwin-x64.zip, and songloft-lynx-standard-darwin-x64.dmg.
+    # Bundle names are published by
+    # the backend repository release workflow.
     needs: [prepare, backend]
     # Repositories without the desktop SDK retain the existing release targets.
     if: needs.prepare.outputs.channel != 'preview' && (vars.DESKTOP_SDK_INDEX_URL != '' || vars.DESKTOP_SDK_INDEX_SHA256 != '')
@@ -517,26 +522,14 @@ jobs:
             target: win32-x64
             arch: x64
             variant: standard
-          - runner: windows-2022
-            target: win32-x64
-            arch: x64
-            variant: bundled
           - runner: macos-15
             target: darwin-arm64
             arch: arm64
             variant: standard
-          - runner: macos-15
-            target: darwin-arm64
-            arch: arm64
-            variant: bundled
           - runner: macos-15-intel
             target: darwin-x64
             arch: x64
             variant: standard
-          - runner: macos-15-intel
-            target: darwin-x64
-            arch: x64
-            variant: bundled
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
@@ -804,7 +797,7 @@ jobs:
           fi
           if [ -n "$previous" ]; then
             gh release view "$previous" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' > desktop-existing.txt
-            for variant in standard bundled; do
+            for variant in standard; do
               for target in win32-x64 darwin-arm64 darwin-x64; do
                 name="desktop-$variant-$target.json"
                 if grep -Fxq "$name" desktop-existing.txt; then
@@ -858,7 +851,7 @@ jobs:
             gh release view dev --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' > "$RUNNER_TEMP/asset-names.txt"
             while IFS= read -r name; do
               case "$name" in
-                songloft-lynx-standard-dev-win32-x64.exe|songloft-lynx-standard-dev-darwin-arm64.zip|songloft-lynx-standard-dev-darwin-x64.zip|songloft-lynx-standard-dev-darwin-arm64.dmg|songloft-lynx-standard-dev-darwin-x64.dmg|songloft-lynx-bundled-dev-win32-x64.exe|songloft-lynx-bundled-dev-darwin-arm64.zip|songloft-lynx-bundled-dev-darwin-x64.zip|songloft-lynx-bundled-dev-darwin-arm64.dmg|songloft-lynx-bundled-dev-darwin-x64.dmg)
+                songloft-lynx-standard-dev-win32-x64.exe|songloft-lynx-standard-dev-darwin-arm64.zip|songloft-lynx-standard-dev-darwin-x64.zip|songloft-lynx-standard-dev-darwin-arm64.dmg|songloft-lynx-standard-dev-darwin-x64.dmg)
                   continue ;;
                 desktop-win32-x64.json|desktop-darwin-arm64.json|desktop-darwin-x64.json|desktop-standard-win32-x64.json|desktop-standard-darwin-arm64.json|desktop-standard-darwin-x64.json|desktop-bundled-win32-x64.json|desktop-bundled-darwin-arm64.json|desktop-bundled-darwin-x64.json)
                   continue ;;

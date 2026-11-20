@@ -16,7 +16,7 @@
 
 Documentation/license changes do not automatically trigger builds. Manual builds on other branches produce artifacts only. Dev and stable publishing require Android, iOS, HarmonyOS, and both Web modes to succeed. When enabled, desktop publishing also requires verified packages for Windows x64, macOS arm64, and macOS x64. Failed runs retain available workflow artifacts.
 
-Assets upload to a draft and become public only after every upload succeeds. Dev is temporarily hidden during replacement; a failed upload leaves a draft for inspection and rerun. Existing stable/preview releases, including drafts, cannot be overwritten: inspect any failed draft before manually deleting or publishing it. Desktop installers use fixed asset names in the form `songloft-lynx-{channel}-{target}.{ext}`, and dev replacement removes legacy assets whose names contain a version or content hash.
+Assets upload to a draft and become public only after every upload succeeds. Dev is temporarily hidden during replacement; a failed upload leaves a draft for inspection and rerun. Existing stable/preview releases, including drafts, cannot be overwritten: inspect any failed draft before manually deleting or publishing it. Desktop installers use fixed asset names in the form `songloft-lynx-{variant}-{target}.{ext}`, and dev replacement removes legacy assets whose names contain a version or content hash.
 
 See [installation](installation.md) for filenames. Releases include `version.json` and `checksums.txt`. The new workflow replaces the separate `dev-harmony` entry point; historical releases are not automatically deleted.
 

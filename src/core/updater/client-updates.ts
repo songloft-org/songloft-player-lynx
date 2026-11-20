@@ -1,5 +1,6 @@
 import { clientBuild } from '../config/constants.js'
 import { isWebPlatform } from '../../native/web-platform.js'
+import { getPlatformCapabilities } from '../../native/platform-capabilities.js'
 import { bundleCompatibility, type BuildIdentity } from './update-contract.js'
 import { getUpdateState, inspectUpdateManifest, nativeUpdateMetadataAvailable, nativeUpdaterAvailable, type UpdateState } from './native-updater.js'
 import { compareRelease, releaseAsset, withGithubProxy, type ReleaseCandidate, type VersionComparison } from './release-resolver.js'
@@ -22,7 +23,9 @@ export async function checkClientUpdate(input: { proxy: string; force?: boolean 
   if (current.channel === 'preview') throw new Error('update_channel_unsupported')
   if (!isWebPlatform() && !nativeUpdateMetadataAvailable()) throw new Error('metadata_unavailable')
   for (let attempt = 0; attempt < 2; attempt++) {
-    const candidate = await clientReleaseResolver.resolve({ channel: current.channel, proxy, force: !!input.force || attempt > 0 })
+    const request = { channel: current.channel, proxy, force: !!input.force || attempt > 0,
+      ...(getPlatformCapabilities().bundleMode ? { edition: 'bundled' as const } : {}) }
+    const candidate = await clientReleaseResolver.resolve(request)
     const comparison = compareRelease(current, candidate.manifest)
     let bundleReason: string = state ? bundleCompatibility(candidate.manifest, state.host) : 'unavailable'
     if (comparison === 'newer' && state && bundleReason === 'compatible') {

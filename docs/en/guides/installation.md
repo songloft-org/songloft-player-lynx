@@ -4,7 +4,7 @@
 
 ## Choose a release
 
-Download a [stable release](https://github.com/songloft-org/songloft-player-lynx/releases/latest) or the rolling [dev release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev). Code pushes to `main` automatically build dev packages; documentation-only changes do not. When desktop publishing is enabled, the same releases include the Windows and macOS installers.
+Download standard packages from the [Lynx stable Release](https://github.com/songloft-org/songloft-player-lynx/releases/latest) or rolling [Lynx dev Release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev). Download Bundle packages from the backend [stable Release](https://github.com/songloft-org/songloft/releases/latest) or [dev Release](https://github.com/songloft-org/songloft/releases/tag/dev).
 
 | File                                  | Purpose                                                        |
 | ------------------------------------- | -------------------------------------------------------------- |
@@ -17,7 +17,7 @@ Download a [stable release](https://github.com/songloft-org/songloft-player-lynx
 | `songloft-lynx-web-embedded.tar.gz`   | Static resources for a same-origin server                      |
 | `version.json` / `checksums.txt`      | Version, commit, build time, asset list, and SHA-256 checksums |
 
-For Windows 10 22H2 or later, choose the standard NSIS installer `songloft-lynx-standard-{channel}-win32-x64.exe` or the bundled installer `songloft-lynx-bundled-{channel}-win32-x64.exe`. For macOS 13 or later, choose the matching standard or bundled `darwin-arm64.dmg`/`darwin-x64.dmg` file. Apple silicon uses arm64 and Intel uses x64. The matching macOS `.zip` is used for in-app updates. Bundled builds support local music from the login screen or Settings. Standard builds connect to a remote server.
+For Windows 10 22H2 or later, choose the standard NSIS installer `songloft-lynx-standard-win32-x64.exe` or the bundled installer `songloft-lynx-bundled-win32-x64.exe`. For macOS 13 or later, choose the matching standard or bundled `songloft-lynx-standard-darwin-arm64.dmg`/`songloft-lynx-bundled-darwin-arm64.dmg` file. Apple silicon uses arm64 and Intel uses x64. The matching macOS `.zip` is used for in-app updates. Bundled builds support local music from the login screen or Settings. Standard builds connect to a remote server.
 
 ## Verify downloads
 

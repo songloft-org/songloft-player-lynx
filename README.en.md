@@ -25,15 +25,15 @@ Web playback settings also provide a persisted keyboard-shortcut switch: Space t
 
 ## Installation and downloads
 
-- [Stable releases](https://github.com/songloft-org/songloft-player-lynx/releases/latest): published from version tags.
-- [Development release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev): automatically built after code pushes to `main`; updated only when every platform succeeds.
-- [Windows/macOS desktop builds](desktop/README.en.md) use the same Releases. Select `win32-x64`, `darwin-arm64`, or `darwin-x64` for your machine.
+- [Standard stable releases](https://github.com/songloft-org/songloft-player-lynx/releases/latest) and [standard development release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev).
+- [Bundle stable releases](https://github.com/songloft-org/songloft/releases/latest) and [Bundle development release](https://github.com/songloft-org/songloft/releases/tag/dev).
+- [Windows/macOS desktop builds](desktop/README.en.md): standard desktop assets stay in the Lynx Release, while Bundle desktop assets are in the backend Release. Filenames contain no dev or stable segment. Select `win32-x64`, `darwin-arm64`, or `darwin-x64` for your machine.
 - [Installation guide](docs/en/guides/installation.md): package names, signing requirements, server connections, and checksums.
 - [简体中文](README.md)
 
 Download assets published in GitHub Releases; the four-platform CI updates dev only after all seven mobile and Web packages build and pass verification. Desktop variants publish separately when configured. Maintainers of a fork must configure signing secrets; see the [release guide](docs/en/guides/releasing.md).
 
-The Android and iOS Bundle packages embed the Go backend built by this repository’s workflow from the latest commit on the root repository’s `main` at startup, and can also connect to a remote server. Standard packages connect to remote servers only. Switch modes from the login or settings screen in a Bundle package. The first time local mode is enabled, choose a music directory; there is no separate mode chooser on first launch. Android uses the system directory picker and requests read access. iOS uses the app's Documents directory, where music can be added through the Files app. HarmonyOS and Web packages do not include the backend and need a running [Songloft server](https://github.com/songloft-org/songloft). Choose a package under **Assets** on the release page:
+The Android and iOS Bundle packages embed the Go backend built by the backend Release workflow from the fixed root SHA, and can also connect to a remote server. Standard packages connect to remote servers only. Switch modes from the login or settings screen in a Bundle package. The first time local mode is enabled, choose a music directory; there is no separate mode chooser on first launch. Android uses the system directory picker and requests read access. iOS uses the app's Documents directory, where music can be added through the Files app. HarmonyOS and Web packages do not include the backend and need a running [Songloft server](https://github.com/songloft-org/songloft). Choose a package under **Assets** on the corresponding release page:
 
 | Platform | Download | Installation / deployment |
 | --- | --- | --- |

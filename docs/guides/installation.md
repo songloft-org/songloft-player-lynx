@@ -4,7 +4,7 @@
 
 ## 选择版本
 
-从[正式 Release](https://github.com/songloft-org/songloft-player-lynx/releases/latest)或滚动 [dev Release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev)下载。dev 为预览构建，代码推送到 `main` 后自动打包；纯文档修改不触发构建。启用桌面发布后，Windows 和 macOS 安装包也会放在这两个下载入口。
+标准版从 [Lynx 正式 Release](https://github.com/songloft-org/songloft-player-lynx/releases/latest) 或滚动 [Lynx dev Release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev) 下载，Bundle 版从后端的 [正式 Release](https://github.com/songloft-org/songloft/releases/latest) 或 [dev Release](https://github.com/songloft-org/songloft/releases/tag/dev) 下载。dev 为预览构建，代码推送到 `main` 后自动打包；纯文档修改不触发构建。启用桌面发布后，Windows 和 macOS 安装包也会放在这两个下载入口。
 
 | 文件                                  | 用途                                     |
 | ------------------------------------- | ---------------------------------------- |
@@ -17,7 +17,7 @@
 | `songloft-lynx-web-embedded.tar.gz`   | 同源服务器部署的静态资源                 |
 | `version.json` / `checksums.txt`      | 构建版本、commit、时间、包清单与 SHA-256 |
 
-Windows 10 22H2 以上可选标准版 `songloft-lynx-standard-{channel}-win32-x64.exe` 或 bundled 版 `songloft-lynx-bundled-{channel}-win32-x64.exe`。macOS 13 以上对应选择 `songloft-lynx-standard-{channel}-darwin-arm64.dmg`、`songloft-lynx-bundled-{channel}-darwin-arm64.dmg` 或 x64 文件，Apple 芯片选 arm64，Intel 芯片选 x64。macOS 对应的 `.zip` 用于应用内更新。Bundled 版可在登录页或设置页使用本地音乐，标准版连接服务器。
+Windows 10 22H2 以上可选标准版 `songloft-lynx-standard-win32-x64.exe` 或 Bundle 版 `songloft-lynx-bundled-win32-x64.exe`。macOS 13 以上对应选择 `songloft-lynx-standard-darwin-arm64.dmg`、`songloft-lynx-bundled-darwin-arm64.dmg` 或 x64 文件，Apple 芯片选 arm64，Intel 芯片选 x64。macOS 对应的 `.zip` 用于应用内更新。Bundled 版可在登录页或设置页使用本地音乐，标准版连接服务器。
 
 ## 校验下载
 
@@ -59,7 +59,7 @@ embedded 同样需要以上响应头，不能仅替换 Go 内嵌资源就假设�
 
 ## 本地模式与远程模式
 
-Android 和 iOS 的 Bundle 安装包包含由本仓库 CI 从打包启动时主仓库 `main` 的最新提交编译的 Go 后端。同一 Bundle 安装包可在本地模式和远程服务器间切换，标准版只连接远程服务器；首次启动没有额外的模式选择弹窗。
+Android 和 iOS 的 Bundle 安装包包含由后端仓库 Release CI 从打包启动时主仓库 `main` 的最新提交编译的 Go 后端。同一 Bundle 安装包可在本地模式和远程服务器间切换，标准版只连接远程服务器；首次启动没有额外的模式选择弹窗。
 
 - **Android Bundle**：首次启用本地模式时通过系统文件夹选择器选音乐目录并授予读取权限。后端启动后自动选择端口，客户端完成健康检查并使用本地生成的管理员凭据登录。
 - **iOS Bundle**：首次启用本地模式时使用应用 Documents 目录，不显示外部目录选择器；可通过系统“文件”应用把音乐放入该目录。

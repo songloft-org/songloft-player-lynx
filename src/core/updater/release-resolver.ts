@@ -1,8 +1,11 @@
 import { compareStableVersions, parseReleaseManifest, type BuildIdentity, type ReleaseManifest } from './update-contract.js'
 
 export const RELEASE_REPOSITORY = 'https://github.com/songloft-org/songloft-player-lynx'
+export const BUNDLE_RELEASE_REPOSITORY = 'https://github.com/songloft-org/songloft'
 const RELEASE_API = 'https://api.github.com/repos/songloft-org/songloft-player-lynx/releases'
+const BUNDLE_RELEASE_API = 'https://api.github.com/repos/songloft-org/songloft/releases'
 export type ReleaseChannel = 'dev' | 'stable'
+export type ReleaseEdition = 'standard' | 'bundled'
 export type VersionComparison = 'newer' | 'current' | 'unknown'
 export type MetadataFetch = (url: string, maxBytes: number) => Promise<{ status: number; body: string }>
 interface ReleaseAsset { id: number; name: string; size: number; browser_download_url: string; updated_at: string; digest?: string }
@@ -13,10 +16,12 @@ export interface ReleaseCandidate {
   signature: string | null
   release: Release
   proxy: string
+  repository?: string
 }
-export function releasePage(channel: BuildIdentity['channel']): string | null {
-  return channel === 'dev' ? `${RELEASE_REPOSITORY}/releases/tag/dev`
-    : channel === 'stable' ? `${RELEASE_REPOSITORY}/releases/latest` : null
+export function releasePage(channel: BuildIdentity['channel'], edition: ReleaseEdition = 'standard'): string | null {
+  const repository = edition === 'bundled' ? BUNDLE_RELEASE_REPOSITORY : RELEASE_REPOSITORY
+  return channel === 'dev' ? `${repository}/releases/tag/dev`
+    : channel === 'stable' ? `${repository}/releases/latest` : null
 }
 export function compareRelease(current: BuildIdentity, candidate: BuildIdentity): VersionComparison {
   if (current.channel !== candidate.channel || current.channel === 'preview') return 'unknown'
@@ -43,20 +48,20 @@ function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid_release')
   return value as Record<string, unknown>
 }
-function parseRelease(raw: string, channel: ReleaseChannel): Release {
+function parseRelease(raw: string, channel: ReleaseChannel, repository = RELEASE_REPOSITORY): Release {
   let data: Record<string, unknown>
   try { data = record(JSON.parse(raw)) } catch { throw new Error('invalid_release') }
   const tag = data.tag_name
   if (data.draft !== false || typeof tag !== 'string' ||
     (channel === 'dev' ? tag !== 'dev' : data.prerelease !== false || !/^v\d+\.\d+\.\d+$/.test(tag) || compareStableVersions(tag.slice(1), tag.slice(1)) == null) ||
     !Number.isSafeInteger(data.id) || typeof data.body !== 'string' && data.body !== null ||
-    typeof data.published_at !== 'string' || typeof data.updated_at !== 'string' || !Array.isArray(data.assets) || data.assets.length > 32)
+    typeof data.published_at !== 'string' || typeof data.updated_at !== 'string' || !Array.isArray(data.assets) || data.assets.length > 128)
     throw new Error('invalid_release')
   const assets = data.assets.map(value => {
     const asset = record(value)
     if (!Number.isSafeInteger(asset.id) || typeof asset.name !== 'string' || !/^[A-Za-z0-9._-]+$/.test(asset.name) ||
       !Number.isSafeInteger(asset.size) || Number(asset.size) <= 0 || typeof asset.updated_at !== 'string' ||
-      asset.browser_download_url !== `${RELEASE_REPOSITORY}/releases/download/${tag}/${asset.name}` ||
+      asset.browser_download_url !== `${repository}/releases/download/${tag}/${asset.name}` ||
       (asset.digest != null && (typeof asset.digest !== 'string' || !/^sha256:[a-f0-9]{64}$/.test(asset.digest)))) throw new Error('invalid_release')
     return asset as unknown as ReleaseAsset
   })
@@ -83,13 +88,14 @@ export class ReleaseResolver {
   private readonly cache = new Map<string, { value: ReleaseCandidate; until: number }>()
   private readonly inflight = new Map<string, Promise<ReleaseCandidate>>()
   constructor(private readonly fetchMetadata: MetadataFetch, private readonly now: () => number = Date.now) {}
-  resolve(input: { channel: ReleaseChannel; proxy?: string; force?: boolean }): Promise<ReleaseCandidate> {
-    const proxy = input.proxy ?? '', key = `${input.channel}|${proxy}`
+  resolve(input: { channel: ReleaseChannel; edition?: ReleaseEdition; proxy?: string; force?: boolean }): Promise<ReleaseCandidate> {
+    const edition = input.edition ?? 'standard'
+    const proxy = input.proxy ?? '', key = `${edition}|${input.channel}|${proxy}`
     const cached = this.cache.get(key)
     if (!input.force && cached && cached.until > this.now()) return Promise.resolve(cached.value)
     const existing = this.inflight.get(key)
     if (existing) return existing
-    const task = this.read(input.channel, proxy).then(value => {
+    const task = this.read(input.channel, edition, proxy).then(value => {
       this.cache.set(key, { value, until: this.now() + 60_000 }); return value
     }).finally(() => { this.inflight.delete(key) })
     this.inflight.set(key, task)
@@ -110,27 +116,31 @@ export class ReleaseResolver {
     if (response.body.length > maximum) throw new Error('metadata_too_large')
     return response.body
   }
-  private async read(channel: ReleaseChannel, proxy: string): Promise<ReleaseCandidate> {
+  private async read(channel: ReleaseChannel, edition: ReleaseEdition, proxy: string): Promise<ReleaseCandidate> {
+    const repository = edition === 'bundled' ? BUNDLE_RELEASE_REPOSITORY : RELEASE_REPOSITORY
+    const apiRoot = edition === 'bundled' ? BUNDLE_RELEASE_API : RELEASE_API
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const api = `${RELEASE_API}/${channel === 'dev' ? 'tags/dev' : 'latest'}?_cb=${this.now()}-${attempt}`
-        const release = parseRelease(await this.get(api, 524288, proxy), channel)
-        const metadata = release.assets.find(asset => asset.name === 'version.json')
+        const api = `${apiRoot}/${channel === 'dev' ? 'tags/dev' : 'latest'}?_cb=${this.now()}-${attempt}`
+        const release = parseRelease(await this.get(api, 524288, proxy), channel, repository)
+        const metadataName = edition === 'bundled' ? 'bundle-lynx-version.json' : 'version.json'
+        const signatureName = edition === 'bundled' ? 'bundle-lynx-version.json.sig' : 'version.json.sig'
+        const metadata = release.assets.find(asset => asset.name === metadataName)
         if (!metadata || metadata.size > 131072) throw new Error('release_missing_asset')
         const rawManifest = await this.file(`${metadata.browser_download_url}?_cb=${this.now()}-${attempt}`, 131072, proxy)
         let manifest: ReleaseManifest
         try { manifest = parseReleaseManifest(JSON.parse(rawManifest)) } catch { throw new Error('invalid_release') }
         if (manifest.channel !== channel || manifest.release_tag !== release.tag_name) throw new Error('invalid_release')
-        const signatureAsset = release.assets.find(asset => asset.name === 'version.json.sig')
+        const signatureAsset = release.assets.find(asset => asset.name === signatureName)
         const signature = manifest.bundle_update && signatureAsset && signatureAsset.size <= 8192
           ? await this.file(`${signatureAsset.browser_download_url}?_cb=${this.now()}-${attempt}`, 8192, proxy)
             .catch(error => { if ((error as Error).message === 'release_missing_asset') return null; throw error }) : null
-        const candidate = { manifest, rawManifest, signature, release, proxy }
+        const candidate = { manifest, rawManifest, signature, release, proxy, repository }
         for (const asset of manifest.assets) {
           if (!releaseAsset(candidate, asset.name)) throw new Error('release_changed')
         }
         if (channel === 'dev') {
-          const after = parseRelease(await this.get(`${api}&_verify=1`, 524288, proxy), channel)
+          const after = parseRelease(await this.get(`${api}&_verify=1`, 524288, proxy), channel, repository)
           if (revision(release) !== revision(after)) throw new Error('release_changed')
         }
         return candidate

@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readFile, readdir, stat } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, readdir, stat, access } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
 import { basename, extname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -32,6 +32,7 @@ let identity
 
 for (const variant of ['standard', 'bundled']) for (const target of compatibility.targets) {
   const artifact = join(artifacts, `desktop-${channel}-${variant}-${target}`)
+  try { await access(artifact) } catch { continue }
   const infoPath = join(artifact, 'resources', target, 'build-info.json')
   const info = JSON.parse(await readFile(infoPath, 'utf8'))
   const manifestName = `desktop-${variant}-${target}.json`
@@ -91,7 +92,7 @@ for (const { variant, target, artifact, infoPath, info, manifestName } of packag
     const { size } = await stat(source)
     if (size < 1 || size >= 2 * 1024 ** 3)
       throw new Error('Invalid GitHub asset size')
-    const name = `songloft-lynx-${variant}-${channel}-${target}${extension}`
+    const name = `songloft-lynx-${variant}-${target}${extension}`
     const staged = join(assets, name)
     await copyFile(source, staged)
     if (extension !== '.dmg') updateAsset = staged
