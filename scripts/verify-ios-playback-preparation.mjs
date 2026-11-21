@@ -48,7 +48,12 @@ final class AVPlayer {
     callbacks[index](finished)
   }
 }
+final class EqualizerProbe {
+  private(set) var resets = 0
+  func resetPluginSpatialHistory() { resets += 1 }
+}
 final class Harness {
+  let equalizer = EqualizerProbe()
   var player: AVPlayer? = AVPlayer()
   var isPreparingSource = true
   var pendingInitialPositionMs: Double? = 0
@@ -89,6 +94,13 @@ final class Harness {
     precondition(h.pendingInitialPositionMs == nil && h.plays == 1 && h.events == ["SongloftAudio.sourceReady"],
                  "only latest seek completes readiness")
 
+    precondition(h.equalizer.resets == 0, "initial positioning starts with a fresh tap")
+    h.seek(positionMs: 11000)
+    precondition(p.targets == [5600, 9000, 11000] && h.equalizer.resets == 1,
+                 "an active seek resets effect history before moving")
+    p.complete(2, true)
+    precondition(h.equalizer.resets == 2, "seek completion resets effect history again")
+
     let paused = Harness(), pp = paused.player!
     paused.isPreparingSource = false
     pp.currentItem!.status = .readyToPlay
@@ -123,6 +135,7 @@ try {
   for (const [name, before, after, message] of [
     ['not-ready', 'isPreparingSource || pendingInitialPositionMs != nil', 'isPreparingSource', 'not-ready seek is buffered'],
     ['stale-seek', 'self.initialSeekGeneration == expectedSeek,', '', 'cancelled old seek leaves latest preparation intact'],
+    ['effects-history', 'self?.equalizer.resetPluginSpatialHistory()', '', 'seek completion resets effect history again'],
   ]) {
     if (!source.includes(before)) throw new Error(`Missing mutation point: ${name}`)
     writeFileSync(join(directory, 'verify.swift'), source.replace(before, after))

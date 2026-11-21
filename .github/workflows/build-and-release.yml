@@ -326,6 +326,14 @@ jobs:
           swiftc -swift-version 5 ios/SongloftLynx/PlaybackBackgroundTask.swift scripts/verify-ios-playback-background.swift -o "$RUNNER_TEMP/verify-ios-playback-background"
           "$RUNNER_TEMP/verify-ios-playback-background"
           node scripts/verify-ios-playback-preparation.mjs
+      - name: Verify plugin effects in Apple PCM
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/plugin-audio-effects"
+          swiftc -parse-as-library -swift-version 5 \
+            ios/SongloftLynx/AudioEqualizer.swift ios/tests/plugin-audio-effects-smoke.swift \
+            -o "$RUNNER_TEMP/plugin-audio-effects/check"
+          "$RUNNER_TEMP/plugin-audio-effects/check" "$RUNNER_TEMP/plugin-audio-effects"
       - name: Verify device cache with Apple Foundation and real HTTP/files
         run: |
           set -euo pipefail
