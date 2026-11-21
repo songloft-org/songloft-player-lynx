@@ -2,6 +2,76 @@
 
 此文件记录 Songloft Player（Lynx）的版本变更，仅提供中文版本。版本 tag 的 Release 发布成功后，由 CI 根据 Conventional Commits 分类追加记录并提交到 `main`；滚动 dev 记录见 [GitHub Releases](https://github.com/songloft-org/songloft-player-lynx/releases/tag/dev)。
 
+## [v2.13.13] - 2026-11-21
+### :sparkles: 新增功能
+- [`baef0f9`](https://github.com/songloft-org/songloft-player-lynx/commit/baef0f9bb30bc67527da3ce08c4ba6e3ec98d2b8) - **library**: 添加 HLS 与纯音频电台播放模式 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6f00219`](https://github.com/songloft-org/songloft-player-lynx/commit/6f00219c3251422b95ead3ba01ebffb5f3ed22e1) - **radio**: 按播放能力选择 HTTP-FLV 或 HLS *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`5f2d856`](https://github.com/songloft-org/songloft-player-lynx/commit/5f2d856f664c6bac20a00a0754533cc6b4076554) - **desktop**: 增加 Lynx 桌面客户端和 Bundle 构建 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2f41e5e`](https://github.com/songloft-org/songloft-player-lynx/commit/2f41e5e1418f273484e7762957627d67f8054b85) - **plugin**: 支持安卓宿主播放会话均衡器 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9f267a5`](https://github.com/songloft-org/songloft-player-lynx/commit/9f267a591a7de8c7d2cf09fa18e6c7c886f03e0b) - **plugin**: 支持安卓宿主播放会话均衡器 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`759ddf9`](https://github.com/songloft-org/songloft-player-lynx/commit/759ddf9afffdd6e8d664d4ead8276aad3306bbcd) - **plugin**: 接入外链、全屏 MV 和跨平台音效 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d372381`](https://github.com/songloft-org/songloft-player-lynx/commit/d37238180248bc99e1bb2971233540885cb672de) - **plugin**: 接入外链、全屏 MV 和跨平台音效 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c845328`](https://github.com/songloft-org/songloft-player-lynx/commit/c845328c3e9a60e524893cef7aa5f0abe6fd28b1) - **library**: 使用组合歌曲类型筛选 songloft-org/songloft[#583](https://github.com/songloft-org/songloft-player-lynx/pull/583) *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2bb0fd6`](https://github.com/songloft-org/songloft-player-lynx/commit/2bb0fd653aff2690083a2ee5c46a628935856bc4) - **library**: 支持批量设置电台播放模式 *(PR [#585](https://github.com/songloft-org/songloft-player-lynx/pull/585) by [@hanxi](https://github.com/hanxi))*
+- [`d824a67`](https://github.com/songloft-org/songloft-player-lynx/commit/d824a6784ec15c0f6bbb1c21e699871b37cdc4c4) - **bundle**: 使用随包 FFmpeg 工具 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :bug: 问题修复
+- [`6df678d`](https://github.com/songloft-org/songloft-player-lynx/commit/6df678d10c078dcbe495ac47720ce86eab38825a) - **auth**: 补全协议阅读入口和依赖署名 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`034cf83`](https://github.com/songloft-org/songloft-player-lynx/commit/034cf838a46e59a26d1c24df91bf6326f0562e6b) - **harmony**: 修复 Lynx 插件页面白屏 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b952231`](https://github.com/songloft-org/songloft-player-lynx/commit/b952231c253aad1938d3020ee74157b100a11291) - **scan**: 提示排除目录并阻止无效扫描 (Ref songloft-org/songloft[#573](https://github.com/songloft-org/songloft-player-lynx/pull/573)) *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`575c77e`](https://github.com/songloft-org/songloft-player-lynx/commit/575c77e3f5ebf4dc204fbd28c7ff7f3b4f90a742) - **jsplugin**: 保留首页和导航入口的原生插件实例 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f624965`](https://github.com/songloft-org/songloft-player-lynx/commit/f624965610b21fab03d8aec33b08d34cb90a1cba) - **settings**: 修复缓存设置按钮被遮挡 songloft-org/songloft-player-lynx[#13](https://github.com/songloft-org/songloft-player-lynx/pull/13) *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ed953c2`](https://github.com/songloft-org/songloft-player-lynx/commit/ed953c20dcee85a19e9810e682a69b951eda89c5) - **lyrics**: 补齐逐字歌词解析与播放入口 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`64692b8`](https://github.com/songloft-org/songloft-player-lynx/commit/64692b84e5f36a6f2f3ceeede77904771c2904d6) - **ui**: 优化歌曲列表滚动并恢复上次导航布局 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`debad6e`](https://github.com/songloft-org/songloft-player-lynx/commit/debad6e80f422c9ed092fa3a5e4af21d34426a83) - **web**: 跟随媒体事件同步播放进度 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`15b39ae`](https://github.com/songloft-org/songloft-player-lynx/commit/15b39ae1d6268a5927c874c8400a9ba7f6b232fb) - **nav**: 恢复冷启动时的插件图标 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f9a4177`](https://github.com/songloft-org/songloft-player-lynx/commit/f9a4177be57e13fd5431ab1294d8699decc8fe77) - **desktop**: 避免 Windows CEF 图形进程崩溃 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c6e9b1b`](https://github.com/songloft-org/songloft-player-lynx/commit/c6e9b1b2361c8dc6a34fa0968475946caab72eae) - **web**: 防止长播进度积压与曲终等待 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`3f3f98c`](https://github.com/songloft-org/songloft-player-lynx/commit/3f3f98cd01d5d73bc4c6dc10d08b0dc5957da716) - **ci**: 兼容 Windows SDK 归档路径输出 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`fcdf019`](https://github.com/songloft-org/songloft-player-lynx/commit/fcdf01903500088cdb464b9cb5e4d3b92aa5639e) - **ci**: 强制 Windows tar 使用本地归档 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`d02d693`](https://github.com/songloft-org/songloft-player-lynx/commit/d02d693195a294c86370582d8150a2ac19f4cbcf) - **ci**: 避免 Windows tar 的盘符提取路径 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`73e40d0`](https://github.com/songloft-org/songloft-player-lynx/commit/73e40d011799ea27d6f757bfc67055e63daec623) - **ci**: 兼容 Windows CEF 归档解压 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`754767b`](https://github.com/songloft-org/songloft-player-lynx/commit/754767ba673bb993bf920768728550c9b0168828) - **ci**: 规范 Windows CEF 的 CMake 路径 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4b2e4da`](https://github.com/songloft-org/songloft-player-lynx/commit/4b2e4dac436c7fbac3e6bf96dd15f7185a10e3a5) - **lynx**: 阻止安卓启动同步远程音量 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`12cd248`](https://github.com/songloft-org/songloft-player-lynx/commit/12cd2483b81287e75cd72438263bcdf2519cdc94) - **ci**: 兼容 Windows 后端资源归档解压 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2101f6f`](https://github.com/songloft-org/songloft-player-lynx/commit/2101f6fd58093ec6a6d0206b483beaf18d458f39) - **library**: 排除全部播放中的电台和有声书 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`c403ea0`](https://github.com/songloft-org/songloft-player-lynx/commit/c403ea01a07f67b32e391f19c5a0871a123c7cbd) - **desktop**: 固定发布包文件名 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`84ac978`](https://github.com/songloft-org/songloft-player-lynx/commit/84ac97891e9638353d428eb4c0a37713f7f81cc2) - **lynx**: 修复曲库与插件导航拖动布局 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ff9aa9d`](https://github.com/songloft-org/songloft-player-lynx/commit/ff9aa9d92baec7cbf3e40b3dd62f192ce93bc03e) - **bundle**: 传递替换 FFmpeg 后的 SDK 清单摘要 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6b2b1e5`](https://github.com/songloft-org/songloft-player-lynx/commit/6b2b1e558fc70f999be478963ce3a24af121c1c3) - **release**: 校验固定桌面包名并对齐发布说明 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :white_check_mark: 测试
+- [`173fa14`](https://github.com/songloft-org/songloft-player-lynx/commit/173fa140c70ba80998cb8f49960619306986ef86) - **playlist**: 验证歌单与收藏下一首播放 songloft-org/songloft[#572](https://github.com/songloft-org/songloft-player-lynx/pull/572) *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`b0663e5`](https://github.com/songloft-org/songloft-player-lynx/commit/b0663e5a24d09bf3fa05c411c269fe9d42446aad) - **desktop**: 放宽包内媒体工具首次验收时限 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2d26836`](https://github.com/songloft-org/songloft-player-lynx/commit/2d26836dfe0a123bbca41dbd3892a1aaee438632) - **desktop**: 按版本类型验证桌面安装包命名 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :construction_worker: 构建与 CI
+- [`6929fc8`](https://github.com/songloft-org/songloft-player-lynx/commit/6929fc8bf6a7ae847595c1f0e038f31fb5d6d463) - **bundle**: 打包时自动选用主仓库最新后端 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6ea5c15`](https://github.com/songloft-org/songloft-player-lynx/commit/6ea5c156843d4358d4481d48ad42dca18f09f6ac) - **bundle**: 打包时自动选用主仓库最新后端 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`88db880`](https://github.com/songloft-org/songloft-player-lynx/commit/88db8805de671def9dca18ca5f291fcbe8452ee0) - **release**: 合并 Lynx 桌面和移动端发布流程 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`21458e1`](https://github.com/songloft-org/songloft-player-lynx/commit/21458e1050f11297198144689e9d87180c8dc71d) - **desktop**: 支持无平台证书的桌面发布 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`4d5063a`](https://github.com/songloft-org/songloft-player-lynx/commit/4d5063a3930a2cb075ca4d7b9b957f7cfb45b142) - **release**: 区分标准版与 bundled 产物 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9ff25d3`](https://github.com/songloft-org/songloft-player-lynx/commit/9ff25d3f59ef28228adbe63eebdf9fb8ab05dff0) - **release**: 将 Lynx Bundle 发布迁移到后端 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`a2119e3`](https://github.com/songloft-org/songloft-player-lynx/commit/a2119e3c2fc6d17c2add78cf5a893094e4a704de) - **signing**: 临时迁移 Lynx 签名配置 [skip ci] *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`9c66300`](https://github.com/songloft-org/songloft-player-lynx/commit/9c66300b8cd32cc34c02ab04f1f9458d9ef0c828) - **signing**: 清理 Lynx 签名迁移工作流 [skip ci] *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :memo: 文档更新
+- [`4b1e0ba`](https://github.com/songloft-org/songloft-player-lynx/commit/4b1e0baadb91ee0c439b71c34ffe112d725998bd) - **changelog**: 更新 v2.13.12 变更记录 *(提交者 [@github-actions[bot]](https://github.com/apps/github-actions))*
+- [`cbd93ea`](https://github.com/songloft-org/songloft-player-lynx/commit/cbd93ea172f735f2c94413376af47edfaf0dae77) - **desktop**: 记录 Windows 长播和 macOS 升级验收 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`119aa34`](https://github.com/songloft-org/songloft-player-lynx/commit/119aa340e9fab9f6b64e7e4ecbbf873d716294b6) - **bundle**: 记录 Android 和 iOS 后端检出故障 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`f7e5888`](https://github.com/songloft-org/songloft-player-lynx/commit/f7e5888fef95cc3df27a423068ec74a745e428e9) - **desktop**: 记录 Windows 真机曲库和视频验收 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`63f24cb`](https://github.com/songloft-org/songloft-player-lynx/commit/63f24cbd396f327da41804369ea74790a3a310e1) - **desktop**: 记录共享发布流水线验收 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`2d815e9`](https://github.com/songloft-org/songloft-player-lynx/commit/2d815e90c037a38bbf8a21ca967364a0ed308a0b) - **desktop**: 更新 Lynx 桌面发布说明 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`6313349`](https://github.com/songloft-org/songloft-player-lynx/commit/6313349938c4af2b7c7c3ed9b22289dfc1e6b655) - **desktop**: 标记共享 GitHub 发布已验证 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`416ad81`](https://github.com/songloft-org/songloft-player-lynx/commit/416ad818a0e259a17a8435653f1ecca5897485d3) - **desktop**: 标记开发版已发布 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`e40e31b`](https://github.com/songloft-org/songloft-player-lynx/commit/e40e31b423e91f80b9dff7cb00e2af9f8e3580a5) - **release**: 更新 Lynx 安装说明与发布源 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`ad80bc3`](https://github.com/songloft-org/songloft-player-lynx/commit/ad80bc37b248f00c4677e38881b24031685c46ef) - 同步 Lynx 平台、曲库与发布说明 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+### :wrench: 维护工作
+- [`6d879db`](https://github.com/songloft-org/songloft-player-lynx/commit/6d879db5c5e49bb4203ba93bdf887a4a9c8e5687) - **sync**: 合并远端 main 并保留本地桌面发布改动 *(提交者 [@hanxi](https://github.com/hanxi))*
+- [`44a89a5`](https://github.com/songloft-org/songloft-player-lynx/commit/44a89a52b65b790507e62d26376d981a4cae9d02) - **release**: 发布 2.13.13 *(提交者 [@hanxi](https://github.com/hanxi))*
+
+
 ## [v2.13.12] - 2026-11-17
 ### :memo: 文档更新
 - [`e4d4ac9`](https://github.com/songloft-org/songloft-player-lynx/commit/e4d4ac91b656e13ad9071bd18e3876a38b751ae6) - **changelog**: 更新 v2.13.11 变更记录 *(提交者 [@github-actions[bot]](https://github.com/apps/github-actions))*
@@ -793,3 +863,4 @@
 [v2.13.10]: https://github.com/songloft-org/songloft-player-lynx/compare/v0.1.8...v2.13.10
 [v2.13.11]: https://github.com/songloft-org/songloft-player-lynx/compare/v2.13.10...v2.13.11
 [v2.13.12]: https://github.com/songloft-org/songloft-player-lynx/compare/v2.13.11...v2.13.12
+[v2.13.13]: https://github.com/songloft-org/songloft-player-lynx/compare/v2.13.12...v2.13.13
