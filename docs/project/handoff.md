@@ -1,5 +1,9 @@
 # 工作交接（2026-10-14）
 
+## 2026-11-22 · #590 Web 切换插件后残影
+
+离开 WebView 插件后，iframe 退出渲染并保留插件文档。iPhone 原机待复验。[验证记录](progress.md#issue-590)
+
 ## 2026-11-21 · 插件混响和立体声展宽
 
 混响和展宽现已为生效的 EQ 预留输出余量。SSH Mac 通过了 libmpv PCM 和 Apple 音频链路验证。iOS 完整 App 与设备、Windows 客户端及蓝牙仍待验收。HarmonyOS 记入开放待办。 [验证记录](progress.md#plugin-spatial-effects)

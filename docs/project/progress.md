@@ -1,5 +1,20 @@
 # 进展与交接（PROGRESS）
 
+<a id="issue-590"></a>
+
+## 2026-11-22 · #590 Web 插件切换残影 / Web plugin stays visible after a tab switch
+
+- 报告截图显示切到首页或「更多」后，上方仍显示洛雪。旧宿主给固定定位 iframe 设置 `visibility: hidden`，仍保留布局盒。改用 `display: none`，等重新测得有效矩形后再显示。切换继续复用同一 iframe 文档。[Issue #590](https://github.com/songloft-org/songloft/issues/590) · [WebKit #272727](https://bugs.webkit.org/show_bug.cgi?id=272727)
+- The report shows the upper area still displaying LX Music after switching to Home or More. The old host used `visibility: hidden` on the fixed iframe and kept its layout box. The host now uses `display: none` and shows the same document once placement provides a usable rectangle. [Issue #590](https://github.com/songloft-org/songloft/issues/590) · [WebKit #272727](https://bugs.webkit.org/show_bug.cgi?id=272727)
+- 对照使用 Songloft v2.13.13 Linux amd64 发布包，Lynx 为 `44a89a52b65b790507e62d26376d981a4cae9d02`。候选为 Lynx `197b09687eb4266bf01b6c7af8f991d3f07e0682` 加未提交差异，代码 diff SHA-256 `b9322b919f38f66965012467f868d74b0f9b03b8f04db1fe7fcc29a9f50eada4`。隔离执行宿主回归，旧实现 6 项按预期失败，候选 26 项通过。
+- The baseline was the Songloft v2.13.13 Linux amd64 release with Lynx `44a89a52b65b790507e62d26376d981a4cae9d02`. The candidate used Lynx `197b09687eb4266bf01b6c7af8f991d3f07e0682` with uncommitted changes. Code diff SHA-256 `b9322b919f38f66965012467f868d74b0f9b03b8f04db1fe7fcc29a9f50eada4`. Six regression assertions failed on the old host as expected. All 26 focused tests passed on the candidate.
+- Linux WebKit 18.2 和 Docker Chromium 121 实际登录并切换洛雪、电台导入、首页和设置。发布版和替换宿主脚本的候选各完成 48 次切换，新建的嵌入 Web 产物另完成 20 次。离开后 iframe 从旧实现的 393×772 变为 0×0，中心命中当前页面，截图显示首页和设置。切回洛雪保留原文档、JavaScript 状态和测试滚动位置。Chromium 也打开了 standalone 产物并确认加载的脚本与源码一致。
+- Linux WebKit 18.2 and Docker Chromium 121 exercised sign-in and navigation between LX Music, Radio Import, Home, and Settings. Both browsers completed 48 switches on the release and on the candidate with the updated host script, plus 20 on the rebuilt embedded Web output. The inactive iframe went from 393×772 on the old host to 0×0 on the candidate. Hit testing and screenshots showed the current page. Re-entering LX Music preserved the document, JavaScript state, and test scroll position. Chromium also opened the standalone output and verified the loaded script against the source.
+- Linux x86_64、Node 22.17.1、pnpm 11.15.1 执行 `pnpm exec tsc -b`、`pnpm run build`、`pnpm run build:web`、嵌入打包、`pnpm test`（376 文件、3,927 项）和 `pnpm run test:release`（95 项）均通过。
+- On Linux x86_64 with Node 22.17.1 and pnpm 11.15.1, `pnpm exec tsc -b`, `pnpm run build`, `pnpm run build:web`, embedded packaging, `pnpm test` (3,927 tests in 376 files) and `pnpm run test:release` (95 checks) passed.
+- 本地旧版对照未出现报告中的可见残影。Not run 为报告人的 iPhone 和 iOS Safari 真机。
+- The local baseline showed no visible ghost image. Not run includes the reporter’s iPhone and physical-device iOS Safari.
+
 <a id="plugin-spatial-effects"></a>
 
 ## 2026-11-21 · 插件混响和立体声展宽 / Plugin reverb and stereo widening

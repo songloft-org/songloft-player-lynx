@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-22 · #590 Web plugin remains visible after tab switch
+
+Leaving a WebView plugin now hides its render box and retains its document. Testing on the reporter’s iPhone remains pending. [Verification](../../project/progress.md#issue-590)
+
 ## 2026-11-21 · Plugin reverb and stereo widening
 
 Reverb and widening now reserve output headroom for the active EQ. libmpv PCM and Apple audio processing passed on Mac over SSH. The full iOS app and device checks, Windows client, and Bluetooth remain pending. HarmonyOS is tracked in the backlog. [Verification](../../project/progress.md#plugin-spatial-effects)

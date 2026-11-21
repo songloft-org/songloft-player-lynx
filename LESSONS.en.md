@@ -1,5 +1,10 @@
 # Lynx Client Development Lessons
 
+### Hide plugin iframe rendering while keeping the document alive
+
+- The iOS Web screenshots in [songloft-org/songloft#590](https://github.com/songloft-org/songloft/issues/590) show a fixed plugin iframe still covering the upper part of the screen after the selected tab changed. [WebKit #272727](https://bugs.webkit.org/show_bug.cgi?id=272727) documents composited content still painting inside fixed iframes with `visibility: hidden`.
+- Set `display: none` when leaving a plugin and keep its node and document attached. Wait for a usable layout box before showing it again. Check rendering geometry, hit testing, screenshots, and retained document state in the browser. Seen 1× (2026-11-22). [Verification](docs/project/progress.md#issue-590)
+
 ### Refresh Web compatibility layout when styles arrive
 
 - Songloft v2.13.12 Docker with MIoT v2026.11.20.1 reproduced a stacked toolbar and blocked pagination in Firefox ESR 153.6.0. CSS already declared `flex`, while `lynx-computed-display` still held `linear`. The 100-song list had a 6,644 px viewport and the same content height. A wheel gesture left `scrollTop` at zero. [songloft-org/songloft#589](https://github.com/songloft-org/songloft/issues/589)

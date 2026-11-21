@@ -110,13 +110,8 @@
     iframe.style.top = (rect.top - base.top) + 'px'
     iframe.style.width = rect.width + 'px'
     iframe.style.height = rect.height + 'px'
-    /*
-     * Still the "first placement landed" marker, and now also what un-hides a
-     * kept-alive frame on re-entry: `hide` sets `visibility: hidden`, and a
-     * frame may only become visible once its rect is known good. Never show a
-     * frame anywhere else.
-     */
-    iframe.style.visibility = 'visible'
+    // Only render the frame after it has a usable rectangle.
+    iframe.style.display = 'block'
   }
 
   function stopFollowing() {
@@ -177,7 +172,7 @@
     el.style.position = 'fixed'
     el.style.border = 'none'
     el.style.background = 'transparent'
-    el.style.visibility = 'hidden'
+    el.style.display = 'none'
     /*
      * Keep the browser's normal credential context. Songloft's URL token
      * authenticates the backend, but NAS gateways such as FN Connect also
@@ -228,9 +223,10 @@
       stopFollowing()
       activeKey = null
     }
-    // `visibility: hidden` alone removes it from painting AND hit-testing, which
-    // is why nothing here has to fight z-index or pointer-events.
-    el.style.visibility = 'hidden'
+    // WebKit can still paint composited contents of a fixed iframe with
+    // visibility:hidden (webkit.org/b/272727). Remove its rendering box while
+    // keeping the element and its document attached.
+    el.style.display = 'none'
   }
 
   /**

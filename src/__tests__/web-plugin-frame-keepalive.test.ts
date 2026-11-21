@@ -207,9 +207,7 @@ describe('webview-host.js keeps plugin iframes alive', () => {
     expect(frames(h)).toHaveLength(1)
     const f = frames(h)[0]!
     expect(f.src).toBe(URL_A)
-    // Visibility is the "placement landed" marker — a frame must never be shown
-    // before its rect is known good.
-    expect(f.style['visibility']).toBe('visible')
+    expect(f.style['display']).toBe('block')
     expect(f.style['top']).toBe('60px')
     expect(f.style['height']).toBe('700px')
   })
@@ -232,12 +230,33 @@ describe('webview-host.js keeps plugin iframes alive', () => {
   })
 
   /** The crash invariant. Everything else here is a means to this end. */
-  test('leaving the page hides the frame and NEVER detaches it', () => {
+  test('leaving the page removes the frame from rendering without detaching it', () => {
     open(URL_A, 'alpha')
+    const frame = frames(h)[0]!
     h.call('SongloftWebview', 'hide', ['alpha'])
-    expect(frames(h), 'the frame must stay in the DOM').toHaveLength(1)
-    expect(frames(h)[0]!.style['visibility']).toBe('hidden')
+    expect(frame.style['display']).toBe('none')
+    expect(frame.parentNode).toBe(h.shadowRoot)
+    expect(frame.src).toBe(URL_A)
     expect(detachCount(h), 'no frame may ever be detached').toBe(0)
+  })
+
+  test('a kept-alive frame stays out of rendering until placement has a usable box', () => {
+    const placeholder = h.shadowRoot.querySelector('#plugin-webview-frame')!
+    const box = placeholder.rect
+    placeholder.rect = { ...box, height: 0 }
+    open(URL_A, 'alpha')
+    const frame = frames(h)[0]!
+    expect(frame.style['display']).toBe('none')
+
+    placeholder.rect = box
+    open(URL_A, 'alpha')
+    expect(frame.style['display']).toBe('block')
+    h.call('SongloftWebview', 'hide', ['alpha'])
+
+    placeholder.rect = { ...box, width: 0 }
+    open(URL_A, 'alpha')
+    expect(frames(h)).toEqual([frame])
+    expect(frame.style['display']).toBe('none')
   })
 
   test('re-entering reuses the same frame without reloading it', () => {
@@ -249,7 +268,7 @@ describe('webview-host.js keeps plugin iframes alive', () => {
     expect(frames(h)[0], 'a new element means the plugin reloaded').toBe(first)
     // One createElement for the whole trip: that is what preserves plugin state.
     expect(h.createdTags.filter((t) => t === 'iframe')).toHaveLength(1)
-    expect(first.style['visibility']).toBe('visible')
+    expect(first.style['display']).toBe('block')
   })
 
   test('switching plugins hides the old frame and keeps both attached', () => {
@@ -257,8 +276,8 @@ describe('webview-host.js keeps plugin iframes alive', () => {
     open(URL_B, 'beta')
     expect(frames(h)).toHaveLength(2)
     const [a, b] = frames(h) as [FakeEl, FakeEl]
-    expect(a.style['visibility']).toBe('hidden')
-    expect(b.style['visibility']).toBe('visible')
+    expect(a.style['display']).toBe('none')
+    expect(b.style['display']).toBe('block')
     expect(detachCount(h)).toBe(0)
   })
 
@@ -281,7 +300,7 @@ describe('webview-host.js keeps plugin iframes alive', () => {
     h.call('SongloftWebview', 'close', ['alpha'])
     expect(frames(h), 'close must not detach — that is the crash').toHaveLength(1)
     expect(frames(h)[0]!.src).toBe('about:blank')
-    expect(frames(h)[0]!.style['visibility']).toBe('hidden')
+    expect(frames(h)[0]!.style['display']).toBe('none')
     expect(detachCount(h)).toBe(0)
   })
 

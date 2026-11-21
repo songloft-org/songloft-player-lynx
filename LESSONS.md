@@ -1,5 +1,10 @@
 # Lynx 客户端开发经验
 
+### 隐藏插件 iframe 时关闭渲染盒并保留文档
+
+- [songloft-org/songloft#590](https://github.com/songloft-org/songloft/issues/590) 的 iOS Web 截图显示，底栏已经切换，固定定位的插件 iframe 仍占据上半屏。[WebKit #272727](https://bugs.webkit.org/show_bug.cgi?id=272727) 记录过 `visibility: hidden` 下固定定位 iframe 的合成内容仍被绘制的情况。
+- 离开插件时设为 `display: none`，保留 DOM 节点和文档。重新进入时获取有效布局尺寸再显示。浏览器回归同时检查隐藏后的布局盒、命中目标、页面截图和原文档的状态。Seen 1×（2026-11-22）。[验证记录](docs/project/progress.md#issue-590)
+
 ### Web 样式就绪后刷新兼容布局
 
 - Songloft v2.13.12 Docker 与智能音箱 v2026.11.20.1 在 Firefox ESR 153.6.0 复现了工具栏竖排和歌单无法续页。CSS 已声明 `flex`，但 `lynx-computed-display` 仍为 `linear`。100 首歌曲的列表视口和内容同为 6644 像素，滚轮后 `scrollTop` 仍为零。[songloft-org/songloft#589](https://github.com/songloft-org/songloft/issues/589)
