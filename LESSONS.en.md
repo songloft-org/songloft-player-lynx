@@ -1,5 +1,10 @@
 # Lynx Client Development Lessons
 
+### Reuse the shared settings row layout
+
+- On 2026-11-21, the reset metadata checkbox in `9150581` passed the focused library tests. The full suite's `grouped-list.test.ts` caught the scan page rendering `settings-row` directly. The shared row component owns the separator and tap area.
+- Render `AppCheckbox` as trailing content in `SettingsRow` and handle taps on the whole row. Run both the interaction tests and the grouped layout check after changing a settings row. Seen 1× (2026-11-21).
+
 ### BUNDLE-002: Resolve build sources from the public backend branch
 
 - On 2026-11-19, the Lynx Android and iOS jobs and the Flutter Bundle workflow requested backend commit `35b1e33`, which existed only locally, and GitHub returned `upload-pack: not our ref`. The public `main` also lacked the SQLite implementation required by the Android build. [Lynx CI](https://github.com/songloft-org/songloft-player-lynx/actions/runs/44477893015) · [Flutter CI](https://github.com/songloft-org/songloft-player/actions/runs/44459675316)

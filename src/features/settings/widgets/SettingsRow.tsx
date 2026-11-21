@@ -1,3 +1,5 @@
+import type { ReactNode } from '@lynx-js/react'
+
 import { Icon, ICON_COLORS, activeAccentIconColor } from '../../../shared/ui/Icon.js'
 import type { IconName } from '../../../shared/ui/icons.js'
 import './Settings.css'
@@ -11,6 +13,8 @@ export interface SettingsRowProps {
   trailingText?: string
   /** Right-aligned icon (e.g. a `chevron-right` affordance or a `check`). */
   trailingIcon?: IconName
+  /** Right-aligned content, such as a presentational checkbox. */
+  trailingContent?: ReactNode
   /** Tap handler; when set the row is interactive. */
   onTap?: () => void
   /** Dim + ignore taps (deferred/coming-later rows). */
@@ -36,6 +40,7 @@ export function SettingsRow({
   subtitle,
   trailingText,
   trailingIcon,
+  trailingContent,
   onTap,
   disabled = false,
   danger = false,
@@ -81,7 +86,7 @@ export function SettingsRow({
           </text>
           {subtitle ? <text className='settings-row__subtitle'>{subtitle}</text> : null}
         </view>
-        {(trailingText || trailingIcon)
+        {(trailingText || trailingIcon || trailingContent)
           ? (
             <view className='settings-row__trailing'>
               {trailingText
@@ -100,6 +105,7 @@ export function SettingsRow({
                   />
                 )
                 : null}
+              {trailingContent}
             </view>
           )
           : null}

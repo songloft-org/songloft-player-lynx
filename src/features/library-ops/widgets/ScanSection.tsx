@@ -110,24 +110,14 @@ function IdleState({
 
       {mode === 'reimport'
         ? (
-          <view
-            className='settings-row'
-            bindtap={() => onResetMetadataOverridesChange(!resetMetadataOverrides)}
-            data-testid='scan-reset-metadata-overrides'
-          >
-            <view className='settings-row__icon'>
-              <Icon name='refresh' size={20} color={ICON_COLORS.content2} />
-            </view>
-            <view className='settings-row__content'>
-              <view className='settings-row__body'>
-                <text className='settings-row__title'>{t('libops.resetMetadataOverrides')}</text>
-                <text className='settings-row__subtitle'>{t('libops.resetMetadataOverridesDesc')}</text>
-              </view>
-              <view className='settings-row__trailing'>
-                <AppCheckbox checked={resetMetadataOverrides} />
-              </view>
-            </view>
-          </view>
+          <SettingsRow
+            icon='refresh'
+            title={t('libops.resetMetadataOverrides')}
+            subtitle={t('libops.resetMetadataOverridesDesc')}
+            trailingContent={<AppCheckbox checked={resetMetadataOverrides} />}
+            onTap={() => onResetMetadataOverridesChange(!resetMetadataOverrides)}
+            testId='scan-reset-metadata-overrides'
+          />
         )
         : null}
 

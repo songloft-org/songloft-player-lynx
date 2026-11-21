@@ -1,5 +1,10 @@
 # Lynx 客户端开发经验
 
+### 设置页复用共享行布局
+
+- 2026-11-21，`9150581` 的重置元数据复选框通过了曲库定向测试，但全量测试中的 `grouped-list.test.ts` 发现扫描页直接渲染了 `settings-row`。共享行组件负责分隔线和点击区域。
+- 用 `SettingsRow` 的尾部内容承载 `AppCheckbox`，由整行处理点击。修改设置行后同时运行业务交互用例和分组布局检查。Seen 1×（2026-11-21）。
+
 ### BUNDLE-002：从公开分支选择后端构建源码
 
 - 2026-11-19，Lynx Android/iOS 与 Flutter Bundle 流水线请求只存在于本地的后端提交 `35b1e33`，GitHub 返回 `upload-pack: not our ref`。远端 `main` 当时也缺少 Android 构建需要的 SQLite 实现。[Lynx CI](https://github.com/songloft-org/songloft-player-lynx/actions/runs/44477893015) · [Flutter CI](https://github.com/songloft-org/songloft-player/actions/runs/44459675316)
