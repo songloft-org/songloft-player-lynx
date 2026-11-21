@@ -303,6 +303,26 @@ test('starting a scan passes the selected mode', async () => {
   )
 })
 
+test('reimport sends the reset option only after the user enables it', async () => {
+  const { queryByTestId } = await renderPage()
+  expect(queryByTestId('scan-reset-metadata-overrides')).toBeNull()
+  await act(async () => {
+    fireEvent.tap(queryByTestId('scan-mode-reimport')!)
+  })
+  const reset = queryByTestId('scan-reset-metadata-overrides')!
+  expect(reset.querySelector('.app-checkbox--on')).toBeNull()
+  await act(async () => {
+    fireEvent.tap(reset)
+  })
+  await act(async () => {
+    fireEvent.tap(queryByTestId('scan-start')!)
+  })
+  expect(h.startScan).toHaveBeenCalledWith(
+    { reimport: true, resetMetadataOverrides: true, paths: [] },
+    expect.anything(),
+  )
+})
+
 /**
  * Regression for the Flutter defect: it folded a failed start into the progress
  * object as `status: 'error'` while the UI tested for `'failed'`, so nothing

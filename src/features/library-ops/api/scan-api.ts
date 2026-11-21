@@ -25,14 +25,16 @@ import {
  */
 
 export interface StartScanParams {
-  /** `true` rescans and overwrites existing song info; `false` skips known files. */
+  /** `true` rescans existing files; `false` skips known files. */
   reimport?: boolean
+  resetMetadataOverrides?: boolean
   /** Restrict the scan to these absolute directories; empty means whole library. */
   paths?: string[]
 }
 
 export interface ScanBody {
   reimport: boolean
+  reset_metadata_overrides?: true
   paths?: string[]
 }
 
@@ -41,8 +43,9 @@ export interface ScanBody {
  * when no directories are selected — the backend treats presence of the key as
  * "restrict to these", so an empty array would scan nothing.
  */
-export function buildScanBody({ reimport = false, paths }: StartScanParams = {}): ScanBody {
+export function buildScanBody({ reimport = false, resetMetadataOverrides = false, paths }: StartScanParams = {}): ScanBody {
   const body: ScanBody = { reimport }
+  if (reimport && resetMetadataOverrides) body.reset_metadata_overrides = true
   if (paths && paths.length > 0) body.paths = paths
   return body
 }

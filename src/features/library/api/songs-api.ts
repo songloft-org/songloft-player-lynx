@@ -392,12 +392,13 @@ export class SongsApi {
    */
   async writeTags(
     id: number,
-    data: { title?: string; artist?: string; album?: string; renameFile?: boolean } = {},
+    data: { title?: string; artist?: string; album?: string; clearFields?: string[]; renameFile?: boolean } = {},
   ): Promise<void> {
     const body: Record<string, unknown> = {}
     if (data.title !== undefined) body.title = data.title
     if (data.artist !== undefined) body.artist = data.artist
     if (data.album !== undefined) body.album = data.album
+    if (data.clearFields?.length) body.clear_fields = data.clearFields
     if (data.renameFile !== undefined) body.rename_file = data.renameFile
     await this.client.put(`${apiPrefix}/songs/${id}/tags`, body)
   }

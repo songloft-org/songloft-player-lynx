@@ -209,13 +209,20 @@ export function SongEditDialog({ show, song, onClose }: SongEditDialogProps) {
   ): Promise<void> => {
     const api = getSongsApi()
     if (target.type === 'local') {
+      const artist = joinDisplayArtists(artistInputs)
+      const trimmedAlbum = album.trim()
+      const clearFields = [
+        ...(target.artist && !artist ? ['artist'] : []),
+        ...(target.album && !trimmedAlbum ? ['album'] : []),
+      ]
       // Local: write tags (DB + file) with the merged display string, then sync
       // the structured song_artists so each singer is independently searchable.
       return api
         .writeTags(target.id, {
           title: trimmedTitle,
-          artist: joinDisplayArtists(artistInputs),
-          album: album.trim(),
+          artist,
+          album: trimmedAlbum,
+          ...(clearFields.length ? { clearFields } : {}),
           renameFile,
         })
         .then(() => api.setSongArtists(target.id, artistInputs))

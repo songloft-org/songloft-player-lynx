@@ -2,6 +2,7 @@ import { useState } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 
 import type { ExcludedDirectory, ScanProgress, ScanValidation } from '../../../models/library-ops.js'
+import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { SettingsSection } from '../../settings/widgets/SettingsSection.js'
 import { SettingsRow } from '../../settings/widgets/SettingsRow.js'
@@ -28,6 +29,8 @@ export interface ScanSectionProps {
   cancelling: boolean
   mode: ScanMode
   onModeChange: (mode: ScanMode) => void
+  resetMetadataOverrides: boolean
+  onResetMetadataOverridesChange: (checked: boolean) => void
   /** Local "I have read this result" flag — see {@link deriveScanView}. */
   dismissed: boolean
   selectedPaths: readonly string[]
@@ -75,6 +78,8 @@ export function ScanSection(props: ScanSectionProps) {
 function IdleState({
   mode,
   onModeChange,
+  resetMetadataOverrides,
+  onResetMetadataOverridesChange,
   selectedPaths,
   onTogglePath,
   onClearPaths,
@@ -102,6 +107,29 @@ function IdleState({
           testId={`scan-mode-${option}`}
         />
       ))}
+
+      {mode === 'reimport'
+        ? (
+          <view
+            className='settings-row'
+            bindtap={() => onResetMetadataOverridesChange(!resetMetadataOverrides)}
+            data-testid='scan-reset-metadata-overrides'
+          >
+            <view className='settings-row__icon'>
+              <Icon name='refresh' size={20} color={ICON_COLORS.content2} />
+            </view>
+            <view className='settings-row__content'>
+              <view className='settings-row__body'>
+                <text className='settings-row__title'>{t('libops.resetMetadataOverrides')}</text>
+                <text className='settings-row__subtitle'>{t('libops.resetMetadataOverridesDesc')}</text>
+              </view>
+              <view className='settings-row__trailing'>
+                <AppCheckbox checked={resetMetadataOverrides} />
+              </view>
+            </view>
+          </view>
+        )
+        : null}
 
       <SettingsRow
         icon='folder'

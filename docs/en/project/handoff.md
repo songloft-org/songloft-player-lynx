@@ -1,5 +1,10 @@
 # Handoff (2026-10-14)
 
+## 2026-11-21 · Reset manual metadata
+
+Reimport offers an unchecked reset option. It restores file metadata within the selected scan scope. Ordinary scans preserve manual edits. [Progress](../../project/progress.md#scan-metadata-overrides)
+
+
 ## 2026-11-21 · GitHub discovery icons
 
 The discovery list and details show icons declared by plugin repositories. Failed proxy loads retry directly. Missing and corrupt images show a fixed-size placeholder. [Progress](../../project/progress.md#github-discovery-icons)

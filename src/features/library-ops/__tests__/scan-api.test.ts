@@ -67,6 +67,15 @@ describe('buildScanBody', () => {
   test('defaults reimport to false with no arguments', () => {
     expect(buildScanBody()).toEqual({ reimport: false })
   })
+
+  test('sends a metadata reset only for an explicitly selected reimport', () => {
+    expect(buildScanBody({ resetMetadataOverrides: true })).toEqual({ reimport: false })
+    expect(buildScanBody({ reimport: true, resetMetadataOverrides: true, paths: ['/m/album'] })).toEqual({
+      reimport: true,
+      reset_metadata_overrides: true,
+      paths: ['/m/album'],
+    })
+  })
 })
 
 describe('buildDirectoriesQuery', () => {

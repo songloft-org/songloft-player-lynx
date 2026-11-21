@@ -1,5 +1,17 @@
 # 进展与交接（PROGRESS）
 
+<a id="scan-metadata-overrides"></a>
+
+## 2026-11-21 · 重置手动元数据 / Reset manual metadata
+
+「重新导入」下的独立复选项默认关闭。启用后，扫描 API 会为本次目录范围发送 `reset_metadata_overrides: true`。本地歌曲编辑支持显式清空艺术家和专辑。浏览器验证发现切换控件只进入按压状态，未改变选项值。扫描选项改用与目录选择一致的整行复选交互。
+
+Reimport shows a separate checkbox that starts unchecked. Enabling it sends `reset_metadata_overrides: true` for the selected scan scope. The local song editor can explicitly clear the artist and album. Browser testing exposed a switch that entered its pressed state without changing the value. The option now uses the same row-wide checkbox interaction as directory selection.
+
+Linux amd64 上以 Lynx 基线 `b137f2f` 加本次工作树构建 Web 嵌入包。Docker Chrome 在真实曲库依次点击 ADTS、WavPack、DSD 和 DST，四条音频均返回 MP3 206 且播放进度增加。复选项从关闭切到开启后，真实重扫请求包含重置字段并完成。曲库和编辑的定向用例全部通过，原生设备待验收。
+
+The embedded Web build was verified on Linux amd64 against the working tree based on Lynx `b137f2f`. In Docker Chrome, selecting ADTS, WavPack, DSD, and DST from the live library returned MP3 206 responses and advanced each media element. The checked reset option produced the reset request and the scan completed. The targeted library and editor suites passed. Native device checks remain pending.
+
 <a id="github-discovery-icons"></a>
 
 ## 2026-11-21 · GitHub 发现图标 / GitHub discovery icons

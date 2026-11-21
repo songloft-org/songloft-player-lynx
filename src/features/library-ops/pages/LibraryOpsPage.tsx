@@ -54,6 +54,7 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
   const { t } = useTranslation()
 
   const [mode, setMode] = useState<ScanMode>('skip')
+  const [resetMetadataOverrides, setResetMetadataOverrides] = useState(false)
   const [selectedPaths, setSelectedPaths] = useState<string[]>([])
   const [startError, setStartError] = useState(false)
   const [validating, setValidating] = useState(false)
@@ -170,11 +171,16 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
     // A new run owns the area again; the previous summary is gone either way.
     setScanDismissed(false)
     startScan.mutate(
-      { reimport: mode === 'reimport', paths: selectedPaths },
+      {
+        reimport: mode === 'reimport',
+        paths: selectedPaths,
+        ...(mode === 'reimport' && resetMetadataOverrides ? { resetMetadataOverrides: true } : {}),
+      },
       {
         onSuccess: () => {
           scanStartedAtRef.current = Date.now()
           setScanForced(true)
+          setResetMetadataOverrides(false)
         },
         onError: (error) => {
           toast.error(error instanceof Error ? error.message : t('libops.errorTitle'))
@@ -257,7 +263,12 @@ export function LibraryOpsPage({ onOpenDuplicates }: LibraryOpsPageProps = {}) {
         validationFailed={validationQuery.isError}
         cancelling={cancelScan.isPending}
         mode={mode}
-        onModeChange={setMode}
+        onModeChange={(next) => {
+          if (next !== mode) setResetMetadataOverrides(false)
+          setMode(next)
+        }}
+        resetMetadataOverrides={resetMetadataOverrides}
+        onResetMetadataOverridesChange={setResetMetadataOverrides}
         dismissed={scanDismissed}
         selectedPaths={selectedPaths}
         onTogglePath={(path) => setSelectedPaths((prev) => toggleSelected(prev, path))}
