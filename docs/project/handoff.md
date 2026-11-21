@@ -1,5 +1,9 @@
 # 工作交接（2026-10-14）
 
+## 2026-11-21 · Firefox 智能音箱布局
+
+Web 运行时在样式就绪后刷新兼容布局。Firefox 中智能音箱工具栏恢复横排，歌曲滚动可触发续页。修复待随包含新版 Lynx Web 运行时的 Songloft 构建发布。[验证记录](progress.md#firefox-plugin-layout)
+
 ## 2026-11-21 · 重置手动元数据
 
 「重新导入」提供默认关闭的重置选项。它把文件中的元数据重新应用到本次扫描范围，普通扫描保留手动编辑。[变更记录](progress.md#scan-metadata-overrides)

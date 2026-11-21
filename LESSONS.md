@@ -1,5 +1,10 @@
 # Lynx 客户端开发经验
 
+### Web 样式就绪后刷新兼容布局
+
+- Songloft v2.13.12 Docker 与智能音箱 v2026.11.20.1 在 Firefox ESR 153.6.0 复现了工具栏竖排和歌单无法续页。CSS 已声明 `flex`，但 `lynx-computed-display` 仍为 `linear`。100 首歌曲的列表视口和内容同为 6644 像素，滚轮后 `scrollTop` 仍为零。[songloft-org/songloft#589](https://github.com/songloft-org/songloft/issues/589)
+- 兼容模式在运行时样式加载完成及应用样式插入后重新读取布局属性。使用同一个正式插件包检查独立页面和内嵌标签页的工具栏、搜索框与实际续页请求。Seen 1×（2026-11-21）。[验证记录](docs/project/progress.md#firefox-plugin-layout)
+
 ### 设置页复用共享行布局
 
 - 2026-11-21，`9150581` 的重置元数据复选框通过了曲库定向测试，但全量测试中的 `grouped-list.test.ts` 发现扫描页直接渲染了 `settings-row`。共享行组件负责分隔线和点击区域。

@@ -33,6 +33,10 @@
  * Queue and replay those enables when the definition is ready, accounting for
  * handlers removed before upgrade. Otherwise real keystrokes never reach Lynx.
  *
+ * 5. `web-core-main-chunk.js` — refresh compatibility layout attributes when
+ *    the runtime stylesheet loads or the app installs a stylesheet. Firefox
+ *    can connect elements before either stylesheet is ready.
+ *
  * Invoked by the `postinstall` script in package.json. Idempotent: each
  * replacement is skipped when its output marker is already present.
  */
@@ -61,6 +65,44 @@ if (!existsSync(join(webCoreDir, 'dist', 'client_prod'))) {
   console.log('[patch-web-core-client] Unexpected layout at', webCoreDir, '— skipping')
   process.exit(0)
 }
+
+// Match the feature check used by web-elements to enable its layout fallback.
+const WATCH_LAYOUT_STYLES = `
+function watchSongloftLayoutStyles(root, stylesheet) {
+  if (CSS.supports('content-visibility: auto') &&
+      CSS.supports('transition-behavior: allow-discrete') &&
+      CSS.supports('-webkit-box-reflect: above')) return;
+
+  const layoutProperties = [
+    ['lynx-computed-display', '--lynx-display'],
+    ['lynx-linear-orientation', '--lynx-linear-orientation'],
+  ];
+  function refresh() {
+    const changes = [];
+    for (const element of root.querySelectorAll('[lynx-computed-display], [lynx-linear-orientation]')) {
+      const style = getComputedStyle(element);
+      for (const [attribute, property] of layoutProperties) {
+        const previous = element.getAttribute(attribute);
+        if (previous === null) continue;
+        const value = style.getPropertyValue(property).trim();
+        if (value !== previous) changes.push([element, attribute, value]);
+      }
+    }
+    for (const [element, attribute, value] of changes) element.setAttribute(attribute, value);
+  }
+
+  const observer = new MutationObserver(records => {
+    if (records.some(({ addedNodes }) =>
+      Array.from(addedNodes).some(node => node.nodeName === 'STYLE'))) refresh();
+  });
+  observer.observe(root, { childList: true });
+  stylesheet?.addEventListener('load', refresh, { once: true });
+  return () => {
+    observer.disconnect();
+    stylesheet?.removeEventListener('load', refresh);
+  };
+}
+`
 
 /** A single minified-bundle replacement. `marker` is the patched form. */
 const REPLACEMENTS = [
@@ -134,6 +176,24 @@ const REPLACEMENTS = [
     marker: 'l=("scroll-left"===i||"initial-scroll-offset"===i)&&(""===o||"true"===o||"horizontal"===n||"both"===n)',
     oldText: 'l=("scroll-left"===i||"initial-scroll-offset"===i)&&(""===o||"true"===o||"vertical"===n||"both"===n)',
     newText: 'l=("scroll-left"===i||"initial-scroll-offset"===i)&&(""===o||"true"===o||"horizontal"===n||"both"===n)',
+  },
+  {
+    file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
+    marker: 'function watchSongloftLayoutStyles(',
+    oldText: 'C.blocking="render";let b=',
+    newText: `C.blocking="render";${WATCH_LAYOUT_STYLES}let b=`,
+  },
+  {
+    file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
+    marker: 'this.stopWatchingSongloftLayoutStyles=watchSongloftLayoutStyles',
+    oldText: ',x||this.rootDom.append(C.cloneNode(!1)),this.#F',
+    newText: ';const stylesheet=x?void 0:C.cloneNode(!1);this.stopWatchingSongloftLayoutStyles=watchSongloftLayoutStyles(this.rootDom,stylesheet),stylesheet&&this.rootDom.append(stylesheet),this.#F',
+  },
+  {
+    file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
+    marker: 'this.stopWatchingSongloftLayoutStyles?.(),',
+    oldText: 'this.boundingClientRectService.dispose(),await this.backgroundThread',
+    newText: 'this.stopWatchingSongloftLayoutStyles?.(),this.boundingClientRectService.dispose(),await this.backgroundThread',
   },
 ]
 

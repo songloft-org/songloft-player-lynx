@@ -1,5 +1,21 @@
 # 进展与交接（PROGRESS）
 
+<a id="firefox-plugin-layout"></a>
+
+## 2026-11-21 · Firefox 智能音箱布局 / MIoT layout in Firefox
+
+Firefox 的 Lynx 兼容逻辑在元素连接时读取布局模式。运行时的 Blob 样式链接与插件样式都可能在此之后就绪，工具栏与列表容器因此保留线性布局。兼容模式现在会在两种样式就绪时刷新布局属性，并在视图释放时清理观察器和监听器。已发布的智能音箱插件包可直接使用更新后的运行时。[songloft-org/songloft#589](https://github.com/songloft-org/songloft/issues/589)
+
+Firefox's Lynx compatibility code reads the layout mode as elements connect. The runtime Blob stylesheet and plugin styles can arrive later, leaving the toolbar and song list containers in the initial linear layout. The compatibility path now refreshes layout attributes when either stylesheet arrives and cleans up the observer and listener on disposal. The published MIoT plugin works with the updated runtime. [songloft-org/songloft#589](https://github.com/songloft-org/songloft/issues/589)
+
+验证对象为 Lynx 基线 `b8a05797461a603e9b4799c101f6ad268989ef81` 加工作树，运行时补丁与锁文件 diff SHA-256 为 `87dbf3505d56951a02f67e637db13a32ed636e798cf933c9cd963f1e06dc977b`。Linux x86_64，Node 22.17.1，pnpm 11.15.1，Songloft v2.13.12 Docker（`8c014b3`），正式智能音箱 v2026.11.20.1，夹具曲库 268 首。旧 Firefox 列表高 6644 像素，滚轮后停留在 100 首。Firefox ESR 153.6.0 的独立插件页和内嵌标签页均验证了 696 像素的桌面列表、滚动续页、键盘搜索第 268 首及打开设置页。原生设备与真实音箱发声待验收。
+
+Verification used the working tree at Lynx `b8a05797461a603e9b4799c101f6ad268989ef81`. The runtime and lockfile diff SHA-256 was `87dbf3505d56951a02f67e637db13a32ed636e798cf933c9cd963f1e06dc977b`. Linux x86_64, Node 22.17.1, pnpm 11.15.1, Songloft v2.13.12 Docker (`8c014b3`), published MIoT v2026.11.20.1, and 268 fixture tracks. The old Firefox list was 6,644 px high and stayed at 100 tracks after a wheel gesture. Firefox ESR 153.6.0 verified the 696 px desktop list, scroll pagination, keyboard search for track 268, and the settings page in both the direct plugin page and the embedded tab. Native devices and physical speaker playback remain untested.
+
+最终嵌入产物的 Firefox 标签页验证包含切回首页后再进入插件。Docker Chromium 121 通过独立插件页的同一套操作。两种浏览器均实际请求 `offset=100` 和 `offset=200`。冻结依赖安装、Lynx 和 Web 双包构建、独立与嵌入 Web 资源打包、`pnpm exec tsc -b`、`pnpm test` 的 3923 项测试与 `pnpm run test:release` 的 95 项发布检查通过。
+
+Firefox on the final embedded build also passed switching to Home and back to the plugin. Docker Chromium 121 passed the same interactions on the direct plugin page. Both browsers requested `offset=100` and `offset=200`. Frozen dependency installation, both Lynx and Web bundles, standalone and embedded Web asset packaging, `pnpm exec tsc -b`, all 3,923 tests in `pnpm test`, and all 95 checks in `pnpm run test:release` passed.
+
 <a id="scan-metadata-overrides"></a>
 
 ## 2026-11-21 · 重置手动元数据 / Reset manual metadata

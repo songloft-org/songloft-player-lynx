@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-21 · MIoT layout in Firefox
+
+The Web runtime refreshes compatibility layout attributes when styles arrive. The MIoT toolbar lays out horizontally and scrolling loads subsequent song pages in Firefox. The fix awaits a Songloft release with the updated Lynx Web runtime. [Verification](../../project/progress.md#firefox-plugin-layout)
+
 ## 2026-11-21 · Reset manual metadata
 
 Reimport offers an unchecked reset option. It restores file metadata within the selected scan scope. Ordinary scans preserve manual edits. [Progress](../../project/progress.md#scan-metadata-overrides)

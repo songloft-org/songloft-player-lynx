@@ -16,6 +16,81 @@ diff --git a/dist/client/mainthread/LynxView.js b/dist/client/mainthread/LynxVie
      /**
       * @param
       * @property napiModulesMap
+diff --git a/dist/client/mainthread/LynxViewInstance.js b/dist/client/mainthread/LynxViewInstance.js
+--- a/dist/client/mainthread/LynxViewInstance.js
++++ b/dist/client/mainthread/LynxViewInstance.js
+@@ -22,6 +22,42 @@
+ linkElement.type = 'text/css';
+ linkElement.fetchPriority = 'high';
+ linkElement.blocking = 'render';
++// The compatibility layout mode is sampled when an element connects.
++// Reconcile that mode when a stylesheet arrives after it connects.
++function watchLayoutStyles(root, stylesheet) {
++    if (CSS.supports("content-visibility: auto") &&
++            CSS.supports("transition-behavior: allow-discrete") &&
++            CSS.supports("-webkit-box-reflect: above")) return;
++
++    function refresh() {
++        const layoutProperties = [
++            ["lynx-computed-display", "--lynx-display"],
++            ["lynx-linear-orientation", "--lynx-linear-orientation"],
++        ];
++        const changes = [];
++        for (const element of root.querySelectorAll("[lynx-computed-display], [lynx-linear-orientation]")) {
++            const style = getComputedStyle(element);
++            for (const [attribute, property] of layoutProperties) {
++                const previous = element.getAttribute(attribute);
++                if (previous === null) continue;
++                const value = style.getPropertyValue(property).trim();
++                if (value !== previous) changes.push([element, attribute, value]);
++            }
++        }
++        for (const [element, attribute, value] of changes) element.setAttribute(attribute, value);
++    }
++
++    const observer = new MutationObserver(records => {
++        if (records.some(({ addedNodes }) =>
++            Array.from(addedNodes).some(node => node.nodeName === "STYLE"))) refresh();
++    });
++    observer.observe(root, { childList: true });
++    stylesheet?.addEventListener("load", refresh, { once: true });
++    return () => {
++        observer.disconnect();
++        stylesheet?.removeEventListener("load", refresh);
++    };
++}
+ const pixelRatio = window.devicePixelRatio;
+ const screenWidth = window.screen.availWidth * pixelRatio;
+ const screenHeight = window.screen.availHeight * pixelRatio;
+@@ -57,6 +93,7 @@
+     // both — so both share a single per-url promise cache.
+     #bundleLoadCache = new Map();
+     #pageConfig;
++    #stopWatchingLayoutStyles;
+     #nativeModulesMap;
+     #napiModulesMap;
+     boundingClientRectService;
+@@ -81,9 +118,9 @@
+         this.transformVH = transformVH;
+         this.transformREM = transformREM;
+         this.systemInfo = createSystemInfo(browserConfig);
+-        if (!isSSR) {
+-            this.rootDom.append(linkElement.cloneNode(false));
+-        }
++        const stylesheet = isSSR ? undefined : linkElement.cloneNode(false);
++        this.#stopWatchingLayoutStyles = watchLayoutStyles(rootDom, stylesheet);
++        if (stylesheet) this.rootDom.append(stylesheet);
+         this.#nativeModulesMap = nativeModulesMap;
+         this.#napiModulesMap = napiModulesMap;
+         this.mainThreadGlobalThis = mtsRealm.globalWindow;
+@@ -238,6 +275,7 @@
+         }));
+     }
+     async [Symbol.asyncDispose]() {
++        this.#stopWatchingLayoutStyles?.();
+         this.boundingClientRectService.dispose();
+         await this.backgroundThread[Symbol.asyncDispose]();
+         this.exposureServices.dispose();
 diff --git a/dist/client/mainthread/elementAPIs/WASMJSBinding.js b/dist/client/mainthread/elementAPIs/WASMJSBinding.js
 --- a/dist/client/mainthread/elementAPIs/WASMJSBinding.js
 +++ b/dist/client/mainthread/elementAPIs/WASMJSBinding.js

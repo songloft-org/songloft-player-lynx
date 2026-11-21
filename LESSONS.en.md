@@ -1,5 +1,10 @@
 # Lynx Client Development Lessons
 
+### Refresh Web compatibility layout when styles arrive
+
+- Songloft v2.13.12 Docker with MIoT v2026.11.20.1 reproduced a stacked toolbar and blocked pagination in Firefox ESR 153.6.0. CSS already declared `flex`, while `lynx-computed-display` still held `linear`. The 100-song list had a 6,644 px viewport and the same content height. A wheel gesture left `scrollTop` at zero. [songloft-org/songloft#589](https://github.com/songloft-org/songloft/issues/589)
+- Refresh compatibility layout attributes when the runtime stylesheet loads and when an app stylesheet is inserted. Use the same published plugin to verify toolbar and search geometry and real pagination requests in both the direct page and the embedded tab. Seen 1× (2026-11-21). [Verification](docs/project/progress.md#firefox-plugin-layout)
+
 ### Reuse the shared settings row layout
 
 - On 2026-11-21, the reset metadata checkbox in `9150581` passed the focused library tests. The full suite's `grouped-list.test.ts` caught the scan page rendering `settings-row` directly. The shared row component owns the separator and tap area.
