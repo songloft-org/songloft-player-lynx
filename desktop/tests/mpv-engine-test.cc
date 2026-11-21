@@ -115,8 +115,15 @@ int mpv_get_property_async(mpv_handle *, uint64_t, const char *name,
           "unexpected asynchronous property read");
   return 0;
 }
-int mpv_set_property_async(mpv_handle *, uint64_t, const char *name,
+int mpv_set_property_async(mpv_handle *, uint64_t request, const char *name,
                            mpv_format format, void *data) {
+  if (std::string(name) == "af") {
+    Require((request & Engine::kFilterRequest) != 0 &&
+                format == MPV_FORMAT_STRING &&
+                std::string(*static_cast<const char **>(data)) == "lavfi=[anull]",
+            "audio filters were not assigned an independent request");
+    return 0;
+  }
   Require(std::string(name) == "pause" && format == MPV_FORMAT_FLAG,
           "unexpected asynchronous property write");
   ++pause_requests;
@@ -202,6 +209,17 @@ int main() {
       Property(1, MPV_FORMAT_NONE, 0);
       Require(!engine.ReadStatus().position_seconds,
               "unavailable position became zero");
+      const auto filter_request = engine.SetAudioFilters("lavfi=[anull]");
+      Event filter_failure;
+      filter_failure.event.event_id = MPV_EVENT_SET_PROPERTY_REPLY;
+      filter_failure.event.reply_userdata = Engine::kFilterRequest | filter_request;
+      filter_failure.event.error = MPV_ERROR_PROPERTY_ERROR;
+      events.push_back(filter_failure);
+      engine.ReadStatus();
+      Require(engine.filter_reply == filter_request &&
+                  engine.filter_result == MPV_ERROR_PROPERTY_ERROR &&
+                  engine.error.empty(),
+              "filter rejection was treated as a playback failure");
       Event failure;
       failure.event.event_id = MPV_EVENT_SET_PROPERTY_REPLY;
       failure.event.error = MPV_ERROR_PROPERTY_ERROR;

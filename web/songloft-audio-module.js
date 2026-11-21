@@ -54,6 +54,15 @@ export default function (_nativeModules, call) {
       function () { callback(false) },
     )
   }
+  module.getPluginAudioEffects = function (callback) {
+    call('getPluginAudioEffects', []).then(callback, function () { callback(0) })
+  }
+  module.setPluginAudioEffects = function (profile, callback) {
+    call('setPluginAudioEffects', [profile]).then(
+      function (applied) { callback(applied === true) },
+      function () { callback(false) },
+    )
+  }
   for (var i = 0; i < METHODS.length; i++) {
     (function (name) {
       module[name] = function () {

@@ -29,6 +29,20 @@ The Swift script executes the actual task owner to verify single acquisition, no
 
 Issue #10 device acceptance covers locked-screen playback across local and plugin tracks, slow responses/network retries, queue end and sleep timers, pause/seek/rapid track changes during loading, EQ and video output. Export client logs and correlate `process started`, scene activity, `native page loaded`, source preparation time, track completion and background task acquisition/cleanup/expiration. Diagnose process restarts and plugin reloads separately instead of inferring them from a pause. Plugin keep-alive controls the server JS service and does not guarantee continued execution of an iOS plugin page.
 
+## Apple PCM verification for plugin effects
+
+Run from the Lynx repository root on macOS. The test reads synthetic WAV files through AVFoundation and verifies the rendered EQ gain, combined effect peak, and restoration of user EQ after clear. The full iOS app build and device verification run separately.
+
+```sh
+mkdir -p tmp
+audio_test_dir="$(mktemp -d "$PWD/tmp/agent-XXXXXX")"
+trap 'find "$audio_test_dir" -depth -delete' EXIT
+xcrun swiftc -parse-as-library -module-cache-path "$audio_test_dir/cache" \
+  ios/SongloftLynx/AudioEqualizer.swift ios/tests/plugin-audio-effects-smoke.swift \
+  -o "$audio_test_dir/check"
+"$audio_test_dir/check" "$audio_test_dir"
+```
+
 ## E2E behavior tests
 
 ```bash

@@ -9,9 +9,17 @@ import { readLynxGlobal } from '../native/native-modules.js'
 import type { AudioItem } from '../native/audio-types.js'
 import { desktopCookies } from './cef.js'
 
-export function desktopPluginEqualizer() {
+export function desktopPluginAudioEffects() {
   if (!desktopConfig()?.capabilities?.equalizer) return undefined
   return {
+    getPluginAudioEffects(callback: (mask: number) => void) {
+      void desktopCall<number>('player.command', { method: 'pluginAudioEffectsAvailable' })
+        .then(callback, () => callback(0))
+    },
+    setPluginAudioEffects(profile: string, callback: (applied: boolean) => void) {
+      void desktopCall('player.command', { method: 'pluginAudioEffects', value: profile })
+        .then(() => callback(true), () => callback(false))
+    },
     getPluginEqualizerAvailable(callback: (supported: boolean) => void) {
       void desktopCall<boolean>('player.command', { method: 'pluginEqualizerAvailable' })
         .then((supported) => callback(supported === true), () => callback(false))

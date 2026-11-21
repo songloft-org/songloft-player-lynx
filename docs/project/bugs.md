@@ -36,6 +36,10 @@
 
 ## 待修复（开放）
 
+<a id="harmony-plugin-audio-effects"></a>
+
+- [ ] **HarmonyOS 插件混响和立体声展宽 / HarmonyOS plugin reverb and widening**。HarmonyOS 26.0.0+ 的 PCM 后处理由 C SDK 提供。待把现有 ArkTS 播放器接到该路径，初始化成功后按输出媒体公布对应预设。验收包括应用、跳转、切歌、清除、后台与蓝牙。保留旧系统的普通播放路径。 / Connect the ArkTS host to the C SDK PCM processor on HarmonyOS 26.0.0+. Expose presets only after the processor is ready for the current output. Verify apply, seek, track changes, clear, background playback, and Bluetooth. Preserve normal playback on older systems. [Huawei PCM API](https://developer.huawei.com/consumer/en/doc/harmonyos-references/capi-avplayer-h/)
+
 - [ ] **iOS 插件音源后台停止并重载（songloft-org/songloft-player-lynx#10）** — 本批修正主线程同步音轨准备和后台切歌/缓冲/有限重试的执行窗口风险，增加加载代次、终止路径清理及诊断日志。自审另修复准备阶段新定位被初始 seek 覆盖及旧取消回调污染新位置的竞态，真实方法受控验证与两个缺陷变体检查通过。无设备日志，不能证明插件重载或进程重启的根因；iOS 宿主编译、本地曲/真实插件源长时间锁屏连续切歌、慢网络与中断场景仍待设备验收，保持开放。
 
 - [ ] **Android Tab 切换时图标中间出现蓝色横线（2026-10-09 用户反馈）** — 设备已确认 Redmi K40 / Android 13 / 最新 dev 完整 APK，用户录屏已逐帧检查。已修复确认的填色/透镜不同步：Android 几何和激活度直接跟随实际胶囊及边缘光，取消独立原生时钟，透明内部不再参与法线/采样计算。API 34 新包明暗、连续转向和减少动画录屏通过，完整 3372 项、62 项 JVM、70 项发布检查及 APK 构建通过；尚未证实蓝线单独的 GPU 根因，也未在 K40 复测，**不得凭模拟器未复现闭合**。需安装后续完整 APK，JS 热更新不足。证据与边界见 progress。

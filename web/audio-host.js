@@ -481,13 +481,15 @@
   var eqGains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
   var pluginEqGains = null
+  var pluginSpatial = null
+  var spatialNodes = []
   var pluginEqGeneration = 0
 
   function ensureEqContext(context) {
     if (eqContext) return
     var ctx = context || new AudioContext()
-    eqContext = ctx
     eqSource = ctx.createMediaElementSource(audio)
+    eqContext = ctx
 
     eqFilters = []
     for (var i = 0; i < EQ_FREQS.length; i++) {
@@ -502,37 +504,92 @@
     eqSource.connect(ctx.destination)
   }
 
-  function connectEq() {
-    if (!eqSource || !eqContext || eqFilters.length === 0) return
-    try { eqSource.disconnect() } catch (_) {}
-
-    eqSource.connect(eqFilters[0])
-    for (var i = 0; i < eqFilters.length - 1; i++) {
-      eqFilters[i].connect(eqFilters[i + 1])
+  function buildSpatialGraph(ctx, config) {
+    if (!config) return []
+    var nodes = []
+    var input = ctx.createGain()
+    var output = input
+    nodes.push(input)
+    if (config.side !== 1) {
+      input.channelCount = 2
+      input.channelCountMode = 'explicit'
+      var split = ctx.createChannelSplitter(2)
+      var merge = ctx.createChannelMerger(2)
+      input.connect(split)
+      nodes.push(split, merge)
+      for (var channel = 0; channel < 2; channel++) {
+        for (var target = 0; target < 2; target++) {
+          var gain = ctx.createGain()
+          gain.gain.value = (1 + (channel === target ? config.side : -config.side)) / 2
+          split.connect(gain, channel)
+          gain.connect(merge, 0, target)
+          nodes.push(gain)
+        }
+      }
+      output = merge
     }
-    eqFilters[eqFilters.length - 1].connect(eqContext.destination)
+    var effect
+    if (config.taps.length) {
+      var samples = config.taps.map(function (tap) {
+        return Math.round(tap.milliseconds * ctx.sampleRate / 1000)
+      })
+      var impulse = ctx.createBuffer(1, Math.max.apply(Math, samples) + 1, ctx.sampleRate)
+      var coefficients = impulse.getChannelData(0)
+      coefficients[0] = config.dry
+      for (var i = 0; i < samples.length; i++) coefficients[samples[i]] += config.taps[i].gain
+      effect = ctx.createConvolver()
+      effect.normalize = false
+      effect.buffer = impulse
+    } else {
+      effect = ctx.createGain()
+      effect.gain.value = config.dry
+    }
+    output.connect(effect)
+    nodes.push(effect)
+    return nodes
   }
 
-  function disconnectEq() {
+  function renderEqualizer(nextNodes) {
     if (!eqSource || !eqContext) return
-    try { eqSource.disconnect() } catch (_) {}
-    for (var i = 0; i < eqFilters.length; i++) {
-      try { eqFilters[i].disconnect() } catch (_) {}
-    }
-    eqSource.connect(eqContext.destination)
-  }
-
-  function renderEqualizer() {
+    var prepared = nextNodes || buildSpatialGraph(eqContext, pluginSpatial)
     var gains = pluginEqGains || eqGains
-    for (var i = 0; i < eqFilters.length; i++) eqFilters[i].gain.value = gains[i]
-    disconnectEq()
-    if (pluginEqGains || eqEnabled) connectEq()
+    eqSource.disconnect()
+    for (var i = 0; i < eqFilters.length; i++) {
+      eqFilters[i].disconnect()
+      eqFilters[i].gain.value = gains[i]
+    }
+    for (var node of spatialNodes) node.disconnect()
+    spatialNodes = prepared
+
+    var output = eqSource
+    if (pluginEqGains || eqEnabled) {
+      for (var filter of eqFilters) {
+        output.connect(filter)
+        output = filter
+      }
+    }
+    if (spatialNodes.length) {
+      output.connect(spatialNodes[0])
+      output = spatialNodes[spatialNodes.length - 1]
+    }
+    output.connect(eqContext.destination)
   }
 
-  async function setPluginEqualizer(profile) {
+  function validPluginSpatial(config) {
+    return config && Number.isFinite(config.side) && config.side >= 1 && config.side <= 1.5 &&
+      Number.isFinite(config.dry) && config.dry >= 0 && config.dry <= 1 &&
+      Array.isArray(config.taps) && config.taps.length <= 48 &&
+      config.taps.every(function (tap) {
+        return tap && Number.isFinite(tap.milliseconds) && tap.milliseconds >= 1 &&
+          tap.milliseconds <= 1000 && Number.isFinite(tap.gain) && Math.abs(tap.gain) <= 1
+      }) && (config.dry + config.taps.reduce(function (sum, tap) { return sum + Math.abs(tap.gain) }, 0)) * config.side <= 1.00001
+  }
+
+  async function setPluginAudioEffects(profile) {
     var generation = ++pluginEqGeneration
     if (profile === '') {
       pluginEqGains = null
+      pluginSpatial = null
       renderEqualizer()
       return true
     }
@@ -540,9 +597,12 @@
     var context = eqContext
     var timer
     try {
-      var gains = JSON.parse(profile).gains
-      if (!Array.isArray(gains) || gains.length !== EQ_FREQS.length ||
-          gains.some(function (gain) { return !Number.isFinite(gain) || gain < -12 || gain > 12 })) return false
+      var config = JSON.parse(profile)
+      var gains = config.gains
+      var spatial = config.spatial || null
+      if (gains !== null && (!Array.isArray(gains) || gains.length !== EQ_FREQS.length ||
+          gains.some(function (gain) { return !Number.isFinite(gain) || gain < -12 || gain > 12 }))) return false
+      if (spatial && !validPluginSpatial(spatial)) return false
       context = context || new AudioContext()
       // Do not intercept the media element before the browser allows the graph
       // to run. A blocked resume must leave the current output audible.
@@ -553,9 +613,11 @@
         ])
       }
       if (context.state !== 'running' || generation !== pluginEqGeneration || videoPrimary) return false
+      var nextNodes = buildSpatialGraph(context, spatial)
       ensureEqContext(context)
       pluginEqGains = gains
-      renderEqualizer()
+      pluginSpatial = spatial
+      renderEqualizer(nextNodes)
       return true
     } catch (_) {
       return false
@@ -732,6 +794,10 @@
       syncMediaProgress(element)
       emitState(STATE_PAUSED)
     }
+  })
+
+  element.addEventListener('seeking', function () {
+    if (!videoPrimary && audio === element && pluginSpatial) renderEqualizer()
   })
 
   element.addEventListener('ended', function () {
@@ -1000,7 +1066,11 @@
       return typeof AudioContext === 'function' && !videoPrimary
     },
 
-    setPluginEqualizer: setPluginEqualizer,
+    setPluginEqualizer: setPluginAudioEffects,
+    getPluginAudioEffects: function () {
+      return typeof AudioContext === 'function' && !videoPrimary ? 7 : 0
+    },
+    setPluginAudioEffects: setPluginAudioEffects,
 
     // Native platforms paint the now-playing lyric in the OS notification; Web has
     // no such surface. No-op to match the no-op Web facade in `web-audio.ts`.
@@ -1024,6 +1094,10 @@
         eqContext = null
         eqSource = null
         eqFilters = []
+        spatialNodes = []
+        pluginSpatial = null
+        pluginEqGains = null
+        ++pluginEqGeneration
       }
     },
   }

@@ -39,6 +39,9 @@ Napi::Value Invoke(const Napi::CallbackInfo &info) {
     std::lock_guard<std::mutex> lock(engine->mutex);
     if (!engine->player)
       throw std::runtime_error(engine->error);
+    if (method == "setAudioFilters") {
+      return Napi::Number::New(info.Env(), engine->SetAudioFilters(Text(info[1])));
+    }
     if (method == "load") {
       const auto options = info[3].As<Napi::Object>();
       const auto names = options.GetPropertyNames();
@@ -87,6 +90,9 @@ Napi::Value Invoke(const Napi::CallbackInfo &info) {
     result.Set("paused",
                Napi::Boolean::New(info.Env(), state.paused.value_or(true)));
     result.Set("volume", Napi::Number::New(info.Env(), state.volume / 100));
+    result.Set("filterReply", Napi::Number::New(info.Env(), engine->filter_reply));
+    result.Set("filterError", engine->filter_result < 0
+        ? mpv_error_string(engine->filter_result) : "");
     result.Set("error", Napi::String::New(info.Env(), engine->error));
     return result;
   } catch (const std::exception &e) {

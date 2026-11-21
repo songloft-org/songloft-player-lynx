@@ -116,10 +116,9 @@ final class SongloftAudioEngine {
   let equalizer = AudioEqualizer()
   private var pluginEqualizerHls = false
 
-  var pluginEqualizerAvailable: Bool {
-    guard equalizer.audioUnit != nil, !pluginEqualizerHls else { return false }
-    guard let item = player?.currentItem else { return !isPreparingSource }
-    return item.audioMix != nil
+  var pluginAudioEffectsCapabilities: Int {
+    guard !pluginEqualizerHls, player?.currentItem?.audioMix != nil else { return 0 }
+    return equalizer.pluginCapabilities
   }
   /// Set when the current item played to its end, so the `rate → 0` that follows
   /// does not emit a spurious `paused` after `completed` (same guard as Kotlin's
@@ -295,10 +294,12 @@ final class SongloftAudioEngine {
       return
     }
     guard let player else { return }
+    equalizer.resetPluginSpatialHistory()
     let target = CMTime(seconds: max(0, positionMs) / 1000, preferredTimescale: 600)
     // Zero tolerance: the seek bar must land where the user dropped it, not on
     // the nearest keyframe.
     player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+      self?.equalizer.resetPluginSpatialHistory()
       self?.emitProgress()
       self?.updateNowPlaying()
     }

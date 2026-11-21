@@ -32,6 +32,11 @@ public:
   mpv_render_context *render = nullptr;
   std::string error;
   uint64_t frames = 0;
+  uint64_t filter_request = 0;
+  uint64_t filter_reply = 0;
+  int filter_result = 0;
+  static constexpr uint64_t kFilterRequest = uint64_t{1} << 63;
+
   int video_views = 0;
   bool window_visible = true;
   PlaybackSnapshot snapshot;
@@ -173,6 +178,13 @@ public:
     Check(mpv_set_property_async(player, generation, property.c_str(),
                                  MPV_FORMAT_STRING, &text));
   }
+  uint64_t SetAudioFilters(const std::string &value) {
+    const char *text = value.c_str();
+    const auto request = ++filter_request;
+    Check(mpv_set_property_async(player, kFilterRequest | request, "af",
+                                 MPV_FORMAT_STRING, &text));
+    return request;
+  }
   PlaybackSnapshot ReadStatus() {
     DrainEvents();
     return snapshot;
@@ -195,6 +207,12 @@ public:
     while (auto *event = mpv_wait_event(player, 0)) {
       if (event->event_id == MPV_EVENT_NONE)
         break;
+      if (event->event_id == MPV_EVENT_SET_PROPERTY_REPLY &&
+          (event->reply_userdata & kFilterRequest)) {
+        filter_reply = event->reply_userdata & ~kFilterRequest;
+        filter_result = event->error;
+        continue;
+      }
       if (event->error < 0 && event->reply_userdata == generation)
         error = mpv_error_string(event->error);
       if (event->event_id == MPV_EVENT_START_FILE && event->data) {

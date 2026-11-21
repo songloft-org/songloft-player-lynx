@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-21 · Plugin reverb and stereo widening
+
+Reverb and widening now reserve output headroom for the active EQ. libmpv PCM and Apple audio processing passed on Mac over SSH. The full iOS app and device checks, Windows client, and Bluetooth remain pending. HarmonyOS is tracked in the backlog. [Verification](../../project/progress.md#plugin-spatial-effects)
+
 ## 2026-11-21 · MIoT layout in Firefox
 
 The Web runtime refreshes compatibility layout attributes when styles arrive. The MIoT toolbar lays out horizontally and scrolling loads subsequent song pages in Firefox. The fix awaits a Songloft release with the updated Lynx Web runtime. [Verification](../../project/progress.md#firefox-plugin-layout)

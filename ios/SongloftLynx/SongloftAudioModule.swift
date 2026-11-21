@@ -53,6 +53,10 @@ final class SongloftAudioModule: NSObject, LynxContextModule {
         NSStringFromSelector(#selector(SongloftAudioModule.setEqualizerBand(_:gainDb:))),
       "getPluginEqualizerAvailable":
         NSStringFromSelector(#selector(SongloftAudioModule.getPluginEqualizerAvailable(_:))),
+      "getPluginAudioEffects":
+        NSStringFromSelector(#selector(SongloftAudioModule.getPluginAudioEffects(_:))),
+      "setPluginAudioEffects":
+        NSStringFromSelector(#selector(SongloftAudioModule.setPluginAudioEffects(_:callback:))),
       "setPluginEqualizer":
         NSStringFromSelector(#selector(SongloftAudioModule.setPluginEqualizer(_:callback:))),
       "updateNotificationLyric":
@@ -226,15 +230,30 @@ final class SongloftAudioModule: NSObject, LynxContextModule {
 
   @objc func getPluginEqualizerAvailable(_ callback: @escaping LynxCallbackBlock) {
     let engine = SongloftAudioEngine.shared
-    engine.runOnMain { callback([engine.pluginEqualizerAvailable] as NSArray) }
+    engine.runOnMain { callback([(engine.pluginAudioEffectsCapabilities & 1) != 0] as NSArray) }
   }
 
   @objc func setPluginEqualizer(_ profile: String, callback: @escaping LynxCallbackBlock) {
     let engine = SongloftAudioEngine.shared
     engine.runOnMain {
-      let applied = (profile.isEmpty || engine.pluginEqualizerAvailable) &&
-        engine.equalizer.setPluginProfile(profile)
+      let applied = engine.equalizer.setPluginProfile(profile, available: engine.pluginAudioEffectsCapabilities)
       callback([applied] as NSArray)
+    }
+  }
+
+  @objc func getPluginAudioEffects(_ callback: @escaping LynxCallbackBlock) {
+    let engine = SongloftAudioEngine.shared
+    engine.runOnMain {
+      let available = engine.pluginAudioEffectsCapabilities
+      callback([available] as NSArray)
+    }
+  }
+
+  @objc func setPluginAudioEffects(_ profile: String, callback: @escaping LynxCallbackBlock) {
+    let engine = SongloftAudioEngine.shared
+    engine.runOnMain {
+      let available = engine.pluginAudioEffectsCapabilities
+      callback([engine.equalizer.setPluginAudioEffects(profile, available: available)] as NSArray)
     }
   }
 

@@ -1,5 +1,43 @@
 # 进展与交接（PROGRESS）
 
+<a id="plugin-spatial-effects"></a>
+
+## 2026-11-21 · 插件混响和立体声展宽 / Plugin reverb and stereo widening
+
+[songloft-org/songloft-player-lynx#15](https://github.com/songloft-org/songloft-player-lynx/issues/15)。Lynx 基线 `a3d571206efdc9444d6e5ec915073f1fbfad9c5f`、SDK 基线 `02db363597ec64fc358d17fa618b2421bd5c060c` 加本次未提交工作树。共享播放会话支持 `reverb` 和 `stereoWidth` 预设，通过现有 SDK 方法查询、组合应用和清除。Android Media3、iOS Tap、桌面 libmpv 和 Web Audio 使用相同的反射系数和展宽矩阵。HarmonyOS 的公开 PCM 后处理入口仅在 C SDK 提供，现有 ArkTS 播放器尚未接入。
+
+[songloft-org/songloft-player-lynx#15](https://github.com/songloft-org/songloft-player-lynx/issues/15). Verification covers the uncommitted working trees based on Lynx `a3d571206efdc9444d6e5ec915073f1fbfad9c5f` and SDK `02db363597ec64fc358d17fa618b2421bd5c060c`. The shared playback session handles `reverb` and `stereoWidth` presets through the existing query, apply, and clear methods. Android Media3, the iOS tap, desktop libmpv, and Web Audio use the same reflection coefficients and widening matrix. HarmonyOS publishes PCM post-processing through the C SDK only. The current ArkTS player still needs that integration.
+
+Linux x86_64 上完成 TypeScript 检查、Lynx/Web 构建、Web 打包、Android `assembleDebug` 与 `PluginSpatialProcessorTest`、桌面宿主与 libmpv 回执测试、两套 SDK 构建和 Lynx SDK 12 项测试。Vitest 376 文件 / 3924 项通过。Docker Chromium 在普通 HTTP 上验证卷积输出、AudioContext 拒绝、真实音频加载、应用、seek、切歌和清除。Linux libmpv 0.35.1 验证了滤镜解析和实际 PCM 输出，样本长度保持不变。iOS 编译和设备、HarmonyOS HAP、macOS/Windows 客户端及蓝牙试听均未验证。
+
+On Linux x86_64, TypeScript, Lynx/Web builds, Web packaging, Android `assembleDebug` and `PluginSpatialProcessorTest`, desktop host and libmpv reply tests, both SDK builds, and 12 Lynx SDK tests passed. Vitest passed 3,924 tests in 376 files. Docker Chromium verified convolution, denied AudioContext startup, real media load, apply, seek, track change, and clear over plain HTTP. Linux libmpv 0.35.1 verified graph parsing and actual PCM samples without extending the media timeline. iOS compilation and device tests, HarmonyOS HAP, macOS/Windows clients, and Bluetooth listening were not run.
+
+Android 14 API 34 模拟器用隔离调试包调用实际插件宿主分发器和 Media3，验证了查询预设、组合应用、跳转、换曲保留配置、清除后继续播放。首次运行在 Media3 传入共享空缓冲区时抛出异常，新增回归复现后修复，Android 两项 PCM 测试通过。95 项发布检查与后端公共桥 7 项测试也通过。
+
+An isolated Android 14 API 34 debug build exercised the actual plugin dispatcher and Media3. It verified preset discovery, applying both effects, seeking, retaining effects across tracks, clearing, and continued playback. The first run exposed an exception when Media3 passed its shared empty buffer. The regression reproduced it before the fix, and both Android PCM tests now pass. All 95 release checks and seven server bridge checks also passed.
+
+实现差异 SHA-256 / Implementation diff SHA-256: Lynx `de4cfc6575ee0fe71c508b6018f702e088d1329198dc618954b2965b28edc87a`, SDK `64c2c678f66228afd3db2f3c16b19e75be6129399119a95bfb7e0ebfb420add9`。
+
+自审补修 / Review follow-up
+
+- 桌面将宿主 EQ 和插件音效写入放进同一序列，避免宿主操作覆盖尚未确认的滤镜。插件写入超时时重新提交最后确认的滤镜。首次写入和恢复均未获确认时，明确清除仍向原生端重试。两项回归在旧行为下失败，修复后通过。
+- Desktop host EQ edits and plugin effect writes now share one queue so a host edit cannot replace a filter write awaiting confirmation. A timed-out desktop write requeues the last confirmed filter graph. Explicit clear retries the native reset if neither the first write nor its rollback was acknowledged. Both regressions failed before the fixes and passed afterward.
+- FFmpeg 的桌面滤镜对 62 Hz、双声道反相、峰值 0.99 的样本，单用 `room + wide` 输出峰值 0.699，叠加 `bassBoost` 后达 1.545（约 +3.8 dBFS）。当时空间音效的增益预算未计入 EQ。以下补修记录给出了修复后的结果。
+- The desktop FFmpeg graph produced a 0.699 peak with `room + wide`, and 1.545 (about +3.8 dBFS) with `bassBoost` added, using a 62 Hz stereo antiphase signal at 0.99 peak. The spatial gain budget at that point did not include EQ. The follow-up below records the fix.
+
+自审在 Linux x86_64 上通过播放分发与 EQ 的 26 项定向测试、38 项桌面测试、TypeScript 检查及 Lynx / Web 双产物构建。Review passed 26 focused dispatcher and EQ tests, 38 desktop tests, the TypeScript check, and Lynx and Web builds on Linux x86_64. Review implementation diff SHA-256 `a8ae5caf5619c55b217001800283d2c77a103addeb7eb3dc64a0e95252219084`。
+
+增益和 Apple 音频链路补修 / Gain and Apple audio follow-up
+
+- 混响或展宽启用时，依据当前生效的 EQ 估算正增益频段的叠加并预留余量。桌面 62 Hz 原始反例的 PCM 峰值由 1.545 降至 0.276。Linux FFmpeg 和 macOS arm64 包内 FFmpeg 各通过 72 组扫频/脉冲验证，含所有内置 EQ 和两组自定义曲线，峰值均低于 1.0。
+- Reverb or widening now reserves headroom for overlapping positive boosts in the active EQ. The original desktop 62 Hz fixture dropped from a peak of 1.545 to 0.276. Linux FFmpeg and the packaged arm64 macOS FFmpeg each passed 72 sweep and impulse combinations covering all built-in EQ presets and two custom curves, with every peak below 1.0.
+- SSH Mac 的 Xcode 27.1 / Apple 音频框架定位到旧 NBandEQ 写入 interleaved 格式失败且缺少输入回调。改用每个 tap 自己的 NBandEQ、planar 输入和真实渲染回调。实际 AVAudioMix 输出的 1 kHz 峰值从 0.200 升至 0.399（+6 dB），清除组合效果后恢复 0.399。持久回归见 [Apple PCM 测试指南](../guides/testing.md#插件音效的-apple-pcm-验证)。Xcode 生成了 iOS 15 目标的 arm64 音效对象。
+- Xcode 27.1 and Apple audio frameworks over SSH exposed failed interleaved format setup and a missing NBandEQ input callback. Each tap now owns a planar NBandEQ and supplies its input through a render callback. Actual AVAudioMix output measured a 1 kHz peak of 0.200 flat, 0.399 with +6 dB EQ, and 0.399 after clearing the combined plugin profile. The [Apple PCM regression](../en/guides/testing.md#apple-pcm-verification-for-plugin-effects) is repeatable on macOS. Xcode emitted an arm64 effects object for the iOS 15 deployment target.
+- Mac 上校验了桌面 SDK 0.0.31 归档摘要，使用 libmpv 0.41.0 确认异步滤镜回执并渲染 48,000 帧双声道 PCM。桌面 Node 回归和原生回执契约也在 Mac 通过。iOS 完整 App 构建及设备、Mac 图形客户端、蓝牙听音待验收。本轮远程只测 Mac。HarmonyOS 保留为[待办](bugs.md#harmony-plugin-audio-effects)。
+- The Mac verified the desktop SDK 0.0.31 archive digest and used libmpv 0.41.0 to confirm the asynchronous filter reply and render 48,000 stereo frames. Desktop Node regressions and native reply checks also passed on Mac. The full iOS app build and devices, the Mac graphical client, and Bluetooth listening remain pending. Remote testing was limited to Mac. HarmonyOS remains in the [backlog](bugs.md#harmony-plugin-audio-effects).
+
+本次共享 JS 检查 / Shared JS checks for this follow-up: `pnpm exec tsc -b`, `pnpm run build`, Web packaging, and 3,926 Vitest tests in 376 files. The final native source checks passed 343 focused tests and 95 release checks. Xcode also listed both app and widget targets. Implementation diff SHA-256 `00176b2e5e1108f3d3fef23aad3ddaa78291ed7acb710ed4802b75ecb0ae3457`.
+
 <a id="firefox-plugin-layout"></a>
 
 ## 2026-11-21 · Firefox 智能音箱布局 / MIoT layout in Firefox

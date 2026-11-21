@@ -652,6 +652,24 @@
 - 改用 `Object.keys` 校验音效配置的自有字段。回归在隐藏 `Object.hasOwn` 的环境跑真实分发器。SDK 传输的 WebView 与执行宿主逻辑的 Lynx JS 运行时都需要单独核对。
 - Seen 1× (2026-11-19)。
 
+### Media3 音频处理器需要处理共享空缓冲区
+
+- 范围为 Android 音效处理器。Android 14 模拟器首次播放 WAV 时，Media3 在出现音频帧前传入 `AudioProcessor.EMPTY_BUFFER`。初始化阶段的 `replaceOutputBuffer(0)` 返回同一个对象，复制触发 `IllegalArgumentException`。
+- 在申请输出缓冲前检测空输入。回归使用 Media3 的真实共享缓冲区，修复前失败。音频样本正确性和实际播放需分别验证。 [记录](docs/project/progress.md#plugin-spatial-effects)
+- Seen 1× (2026-11-21)。
+
+### 滤镜写入和清除需要等真实回执
+
+- 范围为 Lynx 插件音效与桌面 libmpv。2026-11-21 的自审用延迟回执复现宿主 EQ 抢写滤镜；首次回执与回滚均失败时，旧清除逻辑会直接返回成功。
+- 同一滤镜属性的所有写入走同一队列。清除时记录原生端是否可能已修改，直到恢复获得确认。两个回归在补修前均失败。 [验证记录](docs/project/progress.md#plugin-spatial-effects)
+- Seen 1× (2026-11-21)。
+
+### iOS 均衡器需要用 AVAudioMix PCM 验证
+
+- Apple 音频探针复现旧 NBandEQ 的格式设置返回 -10868、渲染返回 -50。设置参数成功只能证明配置写入，无法证明读取了 tap 音频。
+- 为每个 tap 配置 planar Float32 AudioUnit 及输入回调。用 AVAssetReader 读取实际混音，验证指定频率增益和清除后恢复的 PCM。 [验收记录](docs/project/progress.md#plugin-spatial-effects)
+- Seen 1× (2026-11-21)。
+
 ### DESKTOP-032 · 验收包内工具时计入首次加载耗时
 
 - 范围为 Lynx 桌面 Bundle 原生资源，客户端 `6929fc8`，后端 `35b1e33`。macOS 26.6.2 原生 arm64 在 30 秒内未完成首次 `ffmpeg -version`。重跑期间采样显示进程在 dyld 加载签名动态库，旧版 Rosetta 记录也有 61 秒的首次加载。

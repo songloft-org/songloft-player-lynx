@@ -1,5 +1,9 @@
 # 工作交接（2026-10-14）
 
+## 2026-11-21 · 插件混响和立体声展宽
+
+混响和展宽现已为生效的 EQ 预留输出余量。SSH Mac 通过了 libmpv PCM 和 Apple 音频链路验证。iOS 完整 App 与设备、Windows 客户端及蓝牙仍待验收。HarmonyOS 记入开放待办。 [验证记录](progress.md#plugin-spatial-effects)
+
 ## 2026-11-21 · Firefox 智能音箱布局
 
 Web 运行时在样式就绪后刷新兼容布局。Firefox 中智能音箱工具栏恢复横排，歌曲滚动可触发续页。修复待随包含新版 Lynx Web 运行时的 Songloft 构建发布。[验证记录](progress.md#firefox-plugin-layout)

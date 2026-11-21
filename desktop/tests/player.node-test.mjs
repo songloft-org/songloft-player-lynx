@@ -80,3 +80,60 @@ test('plugin EQ overrides the desktop output and clearing restores the user curv
   assert.match(calls.at(-1)[2], /g=3,/)
   await assert.rejects(command('pluginEqualizer', '{"gains":[99]}'), /Invalid plugin equalizer/)
 })
+
+test('plugin effects wait for the filter reply and failed writes preserve the previous profile', async (t) => {
+  let request = 0
+  let pending = ''
+  let filterError = ''
+  const calls = []
+  const player = new DesktopPlayer({
+    native: { player(method, ...args) {
+      if (method === 'setAudioFilters') {
+        pending = args[0]
+        return ++request
+      }
+      if (method === 'status') return { filterReply: request, filterError }
+      calls.push([method, ...args])
+    } },
+    network: { options: { insecureTls: false, proxy: null } },
+  })
+  t.after(() => player.close())
+  const spatial = { side: 1.5, dry: 0.4, taps: [{ milliseconds: 11, gain: -0.1 }] }
+  await player.command({ method: 'pluginAudioEffects', value: JSON.stringify({ gains: null, spatial }) })
+  assert.match(pending, /pan=stereo/)
+  assert.match(pending, /adelay=528S/)
+  filterError = 'filter rejected'
+  await assert.rejects(player.command({ method: 'pluginAudioEffects', value: '' }), /filter rejected/)
+  await player.command({ method: 'equalizerEnabled', value: true })
+  assert.match(calls.at(-1)[2], /equalizer=.*adelay=528S/)
+})
+
+test('host EQ edits wait for an in-flight plugin filter write', async (t) => {
+  let request = 0
+  let reply = 0
+  const writes = []
+  const player = new DesktopPlayer({
+    native: { player(method, ...args) {
+      if (method === 'status') return { filterReply: reply }
+      if (method === 'setAudioFilters') {
+        writes.push(args[0])
+        return ++request
+      }
+      if (method === 'set' && args[0] === 'af') writes.push(args[1])
+    } },
+    network: { options: { insecureTls: false, proxy: null } },
+  })
+  t.after(() => player.close())
+  const spatial = { side: 1.5, dry: 0.4, taps: [{ milliseconds: 11, gain: -0.1 }] }
+  const plugin = player.command({ method: 'pluginAudioEffects', value: JSON.stringify({ spatial }) })
+  await Promise.resolve()
+  const user = player.command({ method: 'equalizerEnabled', value: true })
+  try {
+    await Promise.resolve()
+    assert.equal(writes.length, 1)
+  } finally {
+    reply = 1
+    await Promise.all([plugin, user])
+  }
+  assert.match(writes.at(-1), /equalizer=.*adelay=528S/)
+})

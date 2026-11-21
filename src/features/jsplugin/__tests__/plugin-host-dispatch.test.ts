@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import { useEqStore } from '../../player/store/eq-store.js'
 import { parseSong } from '../../../models/song.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import { handlePluginHostCall, playerStateToJson, pluginPlayerStateChanged, type PluginHostContext } from '../domain/plugin-host-dispatch.js'
@@ -146,6 +147,115 @@ test('favorite, cookies, host info, null params and explicit errors share one re
   expect(await call('seek', { seconds: '1' })).toMatchObject({ ok: false })
   expect(await call('missing')).toMatchObject({ ok: false, error: expect.stringContaining('unknown player') })
   expect(await handlePluginHostCall({ ns: 'missing' }, ctx)).toMatchObject({ ok: false })
+})
+
+test('spatial presets use the same session as EQ and a failed update preserves the last profile', async () => {
+  let mask = 7
+  const write = vi.fn((_: string, reply: (ok: boolean) => void) => reply(true))
+  vi.stubGlobal('NativeModules', { SongloftAudio: {
+    getPluginAudioEffects: (reply: (mask: number) => void) => reply(mask),
+    setPluginAudioEffects: write,
+  } })
+  const ownedCall = (method: string, params?: Record<string, unknown>) =>
+    handlePluginHostCall({ ns: 'player', method, params }, {
+      ...ctx, pluginEntryPath: 'spatial', isPluginActive: () => true,
+    })
+  try {
+    await ownedCall('setQueue', { ids: [1, 2] })
+    const { data } = await ownedCall('getAudioEffects')
+    expect(data).toMatchObject({ supported: {
+      reverb: { presets: ['room', 'hall'] },
+      stereoWidth: { presets: ['subtle', 'wide'] },
+    } })
+    const { playbackId } = data as { playbackId: string }
+    const effects = {
+      equalizer: { preset: 'vocal' }, reverb: { preset: 'hall' }, stereoWidth: { preset: 'wide' },
+    }
+    expect(await ownedCall('applyAudioEffects', { playbackId, effects })).toEqual({ ok: true, data: effects })
+    const profile = JSON.parse(write.mock.calls[0][0])
+    expect(profile.gains).toHaveLength(10)
+    expect(profile.spatial.taps).toHaveLength(48)
+    expect(profile.spatial.side).toBe(1.5)
+    expect(await ownedCall('applyAudioEffects', { playbackId, effects: { reverb: { preset: 'invalid' } } }))
+      .toMatchObject({ ok: false })
+    write.mockImplementationOnce((_, reply) => reply(false))
+    expect(await ownedCall('applyAudioEffects', { playbackId, effects: { reverb: { preset: 'room' } } }))
+      .toMatchObject({ ok: false })
+    await ownedCall('play', { id: 2 })
+    expect(await ownedCall('getAudioEffects')).toMatchObject({ data: { playbackId, applied: effects } })
+    mask = 3
+    expect(await ownedCall('applyAudioEffects', { playbackId, effects })).toMatchObject({ ok: false })
+    expect(write).toHaveBeenCalledTimes(2)
+    expect(await ownedCall('clearAudioEffects', { playbackId })).toEqual({ ok: true, data: null })
+    expect(write.mock.calls.at(-1)?.[0]).toBe('')
+  } finally {
+    usePlayerStore.getState().clearPlaylist()
+    vi.unstubAllGlobals()
+  }
+})
+
+test('spatial effects reserve headroom for the EQ that stays active', async () => {
+  const write = vi.fn((_: string, reply: (ok: boolean) => void) => reply(true))
+  vi.stubGlobal('NativeModules', { SongloftAudio: {
+    getPluginAudioEffects: (reply: (mask: number) => void) => reply(7),
+    setPluginAudioEffects: write,
+  } })
+  const originalEq = useEqStore.getState()
+  const call = (method: string, params?: Record<string, unknown>) =>
+    handlePluginHostCall({ ns: 'player', method, params }, {
+      ...ctx, pluginEntryPath: 'headroom', isPluginActive: () => true,
+    })
+  try {
+    await call('setQueue', { ids: [1] })
+    const { data } = await call('getAudioEffects')
+    const { playbackId } = data as { playbackId: string }
+    const spatial = { reverb: { preset: 'room' }, stereoWidth: { preset: 'wide' } }
+    const apply = async (effects: Record<string, unknown>) => {
+      expect(await call('applyAudioEffects', { playbackId, effects })).toMatchObject({ ok: true })
+      return JSON.parse(write.mock.calls.at(-1)![0])
+    }
+    useEqStore.setState({ enabled: false })
+    const withoutEQ = await apply(spatial)
+    const bassEQ = await apply({ ...spatial, equalizer: { preset: 'bassBoost' } })
+    expect(bassEQ.spatial.dry).toBeLessThan(withoutEQ.spatial.dry * 0.6)
+    useEqStore.setState({ enabled: true, bands: bassEQ.gains })
+    expect(await apply(spatial)).toMatchObject({ gains: null, spatial: bassEQ.spatial })
+    expect(await apply({ ...spatial, equalizer: { preset: 'flat' } }))
+      .toMatchObject({ spatial: withoutEQ.spatial })
+  } finally {
+    usePlayerStore.getState().clearPlaylist()
+    useEqStore.setState(originalEq)
+    vi.unstubAllGlobals()
+  }
+})
+
+test('clear retries restoration after an unacknowledged first effect write', async () => {
+  const write = vi.fn((_: string, reply: (ok: boolean) => void) => reply(true))
+  vi.stubGlobal('NativeModules', { SongloftAudio: {
+    getPluginAudioEffects: (reply: (mask: number) => void) => reply(7),
+    setPluginAudioEffects: write,
+  } })
+  const call = (method: string, params?: Record<string, unknown>) =>
+    handlePluginHostCall({ ns: 'player', method, params }, {
+      ...ctx, pluginEntryPath: 'lost-reply', isPluginActive: () => true,
+    })
+  try {
+    await call('setQueue', { ids: [1] })
+    const { data } = await call('getAudioEffects')
+    const { playbackId } = data as { playbackId: string }
+    write
+      .mockImplementationOnce(() => { throw new Error('bridge disconnected after dispatch') })
+      .mockImplementationOnce((_, reply) => reply(false))
+    expect(await call('applyAudioEffects', {
+      playbackId, effects: { reverb: { preset: 'room' } },
+    })).toMatchObject({ ok: false })
+    expect(await call('clearAudioEffects', { playbackId })).toEqual({ ok: true, data: null })
+    expect(write).toHaveBeenCalledTimes(3)
+    expect(write.mock.calls[2][0]).toBe('')
+  } finally {
+    usePlayerStore.getState().clearPlaylist()
+    vi.unstubAllGlobals()
+  }
 })
 
 test('Android effects follow the owning plugin queue, clear without stopping, and reject stale writes', async () => {

@@ -23,6 +23,10 @@ import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
+import org.json.JSONObject
 import androidx.media3.exoplayer.ExoPlayer
 import android.view.SurfaceView
 import androidx.media3.exoplayer.hls.HlsMediaSource
@@ -240,6 +244,7 @@ object SongloftAudioEngine {
 
     private var equalizer: Equalizer? = null
     private var equalizerSessionId: Int? = null
+    private val spatialProcessor = PluginSpatialProcessor()
     private var pluginEqualizerProfile: PluginEqualizerProfile? = null
     private var eqEnabled = false
     private val eqPendingGains = HashMap<Int, Float>()
@@ -288,6 +293,28 @@ object SongloftAudioEngine {
             false
         }
     }
+
+    fun pluginAudioEffects(): Int {
+        val eq = if (pluginEqualizerAvailable()) 1 else 0
+        return eq or when (spatialProcessor.channels) {
+            1 -> 2
+            2 -> 6
+            else -> 0
+        }
+    }
+
+    fun setPluginAudioEffects(raw: String): Boolean = runCatching {
+        val config = if (raw.isEmpty()) JSONObject() else JSONObject(raw)
+        val equalizer = if (config.isNull("gains")) null else PluginEqualizerProfile.parse(raw)
+        val spatial = config.optJSONObject("spatial")?.let(PluginSpatialProfile::parse)
+        val channels = spatialProcessor.channels
+        if (spatial != null && (channels == 0 || spatial.side != 1f && channels != 2)) return false
+        if (equalizer != null || pluginEqualizerProfile != null) {
+            if (!setPluginEqualizer(equalizer)) return false
+        }
+        spatialProcessor.profile = spatial
+        true
+    }.getOrDefault(false)
 
     private fun applyEqualizerProfile(eq: Equalizer, profile: PluginEqualizerProfile?) {
         for (index in 0 until eq.numberOfBands.toInt()) {
@@ -515,7 +542,17 @@ object SongloftAudioEngine {
         .build()
 
     private fun buildPlayer(context: Context): ExoPlayer {
-        return ExoPlayer.Builder(context.applicationContext)
+        val app = context.applicationContext
+        val renderers = object : DefaultRenderersFactory(app) {
+            override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink {
+                return DefaultAudioSink.Builder(context)
+                    .setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                    .setAudioProcessors(arrayOf(spatialProcessor))
+                    .build()
+            }
+        }
+        return ExoPlayer.Builder(app, renderers)
             .setAudioAttributes(musicAudioAttributes, /* handleAudioFocus= */ true)
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_LOCAL)

@@ -7,6 +7,7 @@ import { playlistContext } from '../../player/domain/playback-context.js'
 import { usePlayerStore } from '../../player/store/index.js'
 import type { PlayerState } from '../../player/store/player-store.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
+import { useEqStore } from '../../player/store/eq-store.js'
 import { useDlnaStore } from '../../player/store/dlna-store.js'
 import {
   getPluginAudioEffects,
@@ -135,13 +136,16 @@ async function dispatchPlayer(
       return getPluginAudioEffects(ctx.pluginEntryPath, localAudio())
 
     case 'applyAudioEffects':
-    case 'clearAudioEffects':
+    case 'clearAudioEffects': {
+      const { enabled, bands } = useEqStore.getState()
       return setPluginAudioEffects(
         ctx.pluginEntryPath,
         params.playbackId,
         method === 'applyAudioEffects' ? params.effects : {},
         canWriteEffects,
+        enabled ? bands : undefined,
       )
+    }
 
     case 'setQueue': {
       const songs = await ctx.resolveSongs(songIds(params))

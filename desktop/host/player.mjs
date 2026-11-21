@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events'
+import { spatialFilters } from './spatial-effects.mjs'
 
 const frequencies = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
 const finite = (value, min, max) => {
@@ -21,6 +22,8 @@ export class DesktopPlayer extends EventEmitter {
   #eq = false
   #bands = frequencies.map(() => 0)
   #pluginBands = null
+  #pluginSpatial = ''
+  #pendingFilterWrite = Promise.resolve()
   #metadata = {}
   constructor({ native, network, media = null }) {
     super()
@@ -142,28 +145,15 @@ export class DesktopPlayer extends EventEmitter {
         this.#metadata.speed = finite(value, 0.5, 3)
         this.native.player('set', 'speed', String(finite(value, 0.5, 3)))
         break
+      case 'pluginAudioEffectsAvailable':
+        return 7
       case 'pluginEqualizerAvailable':
         return true
-      case 'pluginEqualizer': {
-        const gains = value === '' ? null : JSON.parse(value).gains
-        if (gains !== null && (!Array.isArray(gains) || gains.length !== frequencies.length ||
-          gains.some((gain) => typeof gain !== 'number' || !Number.isFinite(gain) || gain < -12 || gain > 12)))
-          throw new Error('Invalid plugin equalizer profile')
-        this.#applyEq(gains)
-        this.#pluginBands = gains
-        break
-      }
+      case 'pluginAudioEffects':
+      case 'pluginEqualizer':
       case 'equalizerEnabled':
-        this.#eq = value === true
-        this.#applyEq()
-        break
-      case 'equalizerBand': {
-        const index = finite(options.index, 0, 9)
-        if (!Number.isInteger(index)) throw new Error('Invalid EQ index')
-        this.#bands[index] = finite(value, -15, 15)
-        this.#applyEq()
-        break
-      }
+      case 'equalizerBand':
+        return this.#writeFilters(method, value, options)
       case 'metadata':
         this.#metadata = { speed: this.#metadata.speed ?? 1, ...options }
         break
@@ -186,9 +176,9 @@ export class DesktopPlayer extends EventEmitter {
     }
     return null
   }
-  #applyEq(pluginBands = this.#pluginBands) {
+  #equalizerFilters(pluginBands = this.#pluginBands, spatial = this.#pluginSpatial) {
     const bands = pluginBands ?? this.#bands
-    const filters = pluginBands !== null || this.#eq
+    const eq = pluginBands !== null || this.#eq
       ? frequencies
           .map(
             (frequency, index) =>
@@ -196,7 +186,54 @@ export class DesktopPlayer extends EventEmitter {
           )
           .join(',')
       : ''
-    this.native.player('set', 'af', filters ? `lavfi=[${filters}]` : '')
+    const filters = [eq, spatial].filter(Boolean).join(',')
+    return filters ? `lavfi=[${filters}]` : ''
+  }
+  #writeFilters(method, value, options) {
+    const write = this.#pendingFilterWrite.then(async () => {
+      // Serialize all writes to mpv's single audio filter property, including
+      // host EQ edits issued while a plugin write is waiting for its reply.
+      if (method === 'equalizerEnabled') {
+        this.#eq = value === true
+      } else if (method === 'equalizerBand') {
+        const index = finite(options.index, 0, 9)
+        if (!Number.isInteger(index)) throw new Error('Invalid EQ index')
+        this.#bands[index] = finite(value, -15, 15)
+      } else {
+        const profile = value === '' ? {} : JSON.parse(value)
+        const gains = profile.gains ?? null
+        if (gains !== null && (!Array.isArray(gains) || gains.length !== frequencies.length ||
+          gains.some((gain) => typeof gain !== 'number' || !Number.isFinite(gain) || gain < -12 || gain > 12)))
+          throw new Error('Invalid plugin equalizer profile')
+        const spatial = method === 'pluginAudioEffects' ? spatialFilters(profile.spatial) : ''
+        const filters = this.#equalizerFilters(gains, spatial)
+        if (method === 'pluginAudioEffects') await this.#setPluginFilters(filters)
+        else this.native.player('set', 'af', filters)
+        this.#pluginBands = gains
+        this.#pluginSpatial = spatial
+        return null
+      }
+      this.native.player('set', 'af', this.#equalizerFilters())
+      return null
+    })
+    this.#pendingFilterWrite = write.catch(() => {})
+    return write
+  }
+  async #setPluginFilters(filters) {
+    const request = this.native.player('setAudioFilters', filters)
+    const deadline = Date.now() + 1500
+    while (Date.now() < deadline) {
+      const { filterReply, filterError } = this.status()
+      if (filterReply === request) {
+        if (filterError) throw new Error(filterError)
+        return
+      }
+      await new Promise(resolve => setTimeout(resolve, 15))
+    }
+    // The request may still reach mpv after the host times out. Restore the
+    // last confirmed filter graph in the same command queue.
+    this.native.player('setAudioFilters', this.#equalizerFilters())
+    throw new Error('The player did not confirm audio filters')
   }
   remote(command) {
     if (
@@ -212,6 +249,7 @@ export class DesktopPlayer extends EventEmitter {
   async close() {
     clearInterval(this.#timer)
     await this.command({ method: 'stop' })
+    await this.#pendingFilterWrite
     this.media?.close()
     this.native.player('shutdown')
     this.removeAllListeners()

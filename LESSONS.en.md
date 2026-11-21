@@ -652,6 +652,24 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 - Validate the profile's own keys with `Object.keys` and exercise the real dispatcher in a regression with `Object.hasOwn` removed. Verify the plugin WebView transport and the separate Lynx host JS runtime.
 - Seen 1× (2026-11-19).
 
+### Handle Media3's shared empty audio buffer
+
+- Scope is the Android audio effects processor. On Android 14, Media3 passed `AudioProcessor.EMPTY_BUFFER` before the first WAV sample. Initially, `replaceOutputBuffer(0)` returns the same object and copying it raises `IllegalArgumentException`.
+- Check for empty input before requesting an output buffer. The regression uses Media3's actual shared buffer and failed before the fix. Verify PCM sample output and real playback separately. [Record](docs/project/progress.md#plugin-spatial-effects)
+- Seen 1× (2026-11-21).
+
+### Confirm audio filter writes and cleanup
+
+- Scope is Lynx plugin effects and desktop libmpv. The 2026-11-21 review reproduced a host EQ edit overwriting an in-flight filter write with a delayed reply. When both the first reply and rollback failed, the old clear path returned success without contacting the host.
+- Use one queue for all writes to the filter property. Track whether native state might have changed until restoration is confirmed. Both regressions failed before the fix. [Verification](docs/project/progress.md#plugin-spatial-effects)
+- Seen 1× (2026-11-21).
+
+### Verify iOS equalization through AVAudioMix PCM
+
+- The Apple probe reproduced status -10868 when configuring the old NBandEQ format and -50 when rendering. Successful parameter writes only confirm the configuration was accepted.
+- Give each tap a planar Float32 AudioUnit and an input callback. Read the mixed PCM through AVAssetReader to verify gain at the target frequency and restoration after clear. [Verification](docs/project/progress.md#plugin-spatial-effects)
+- Seen 1× (2026-11-21).
+
 ### DESKTOP-032 · Allow for first-load latency when checking packaged tools
 
 - Lynx desktop Bundle resources used client `6929fc8` and backend `35b1e33`. On native arm64 macOS 26.6.2, the first `ffmpeg -version` exceeded 30 seconds. Sampling during a repeat showed dyld loading signed libraries. An earlier Rosetta run took 61 seconds on its first launch.

@@ -27,16 +27,16 @@ Incremental favorite notifications cancel older queries before updating the cach
 
 ## Lynx platform support
 
-| Platform | External links | Fullscreen library video | Query, apply and clear EQ | Verification |
+| Platform | Open external URL | Play library MV fullscreen | EQ | Reverb / stereo width |
 |---|---|---|---|---|
-| Android | Supported | Supported | Supported via the system equalizer | Verified on an Android 14 emulator |
-| iOS | Supported | Supported | Supported for file-based media. HLS is unsupported. | Native package verification pending |
-| HarmonyOS | Supported | Supported | EQ is unsupported. Queries return `supported: {}`. | Native package verification pending |
-| macOS | Supported | Supported | Supported via libmpv | Shared desktop host EQ tests passed. Native package verification pending. |
-| Windows | Supported | Supported | Supported via libmpv | Shared desktop host EQ tests passed. Native package verification pending. |
-| Web | Supported from a user click | Supported in the host video page | Supported when the current output uses Web Audio | Verified in Chromium |
+| Android | Yes | Yes | System equalizer | Media3 PCM, stereo required for widening |
+| iOS | Yes | Yes | File-based media | File-based media with a PCM tap, stereo required for widening |
+| HarmonyOS | Yes | Yes | Pending | Pending |
+| macOS | Yes | Yes | libmpv | libmpv |
+| Windows | Yes | Yes | libmpv | libmpv |
+| Web | From a user click | Host video page | Web Audio | Web Audio |
 
-Use `host.getInfo().capabilities` to check which APIs the current host provides and `getAudioEffects().supported` to check the presets available on the current audio output. Casting disables plugin EQ and fullscreen playback requests. Plugin reverb is pending on all platforms.
+Use `host.getInfo().capabilities` to check which APIs the current host provides and `getAudioEffects().supported` to check the presets available on the current audio output. Casting disables plugin EQ and fullscreen playback requests. Reverb and widening apply to local output, including Bluetooth speakers. The table describes the current development source. The Android emulator and Chromium verified applying and clearing effects. Tests on arm64 macOS measured PCM from libmpv and Apple’s audio processing chain. The iOS app build and device tests, Windows client tests, and Bluetooth listening remain pending. HarmonyOS host effects are tracked in the [backlog](../../project/bugs.md#harmony-plugin-audio-effects).
 
 ## Plugin external links and fullscreen video
 
@@ -53,17 +53,32 @@ For fullscreen video, WebView plugins require the updated server-provided `commo
 
 ## Plugin audio effects
 
-Check `host.getInfo().capabilities` for `player.audioEffects`. Apply can fail if the browser blocks the AudioContext. Playback uses song IDs from the server library.
+Check `host.getInfo().capabilities` for `player.audioEffects`. Apply can fail if the browser blocks the AudioContext. Playback uses song IDs from the server library. Query the current output after playback starts. Some presets can be absent while the native output initializes.
 
 | `player` method | Parameters and result |
 |---|---|
-| `getAudioEffects` | Returns `{ playbackId, supported, applied }`. The ID is visible to the plugin that started this session and is `null` for other callers. EQ presets appear in `supported.equalizer.presets`. `applied` is `null` until a plugin effect takes effect. |
+| `getAudioEffects` | Returns `{ playbackId, supported, applied }`. The ID is visible to the plugin that started this session and is `null` for other callers. Presets appear in `supported.equalizer.presets`, `supported.reverb.presets`, and `supported.stereoWidth.presets`. `applied` is `null` until a plugin effect takes effect. |
 | `applyAudioEffects` | Pass `{ playbackId, effects: { equalizer: { preset: "vocal" } } }` to replace the plugin effects and return the applied configuration. An unsupported effect or preset rejects the entire request. |
 | `clearAudioEffects` | Pass `{ playbackId }` to restore the user's effects while playback continues. Repeated clears are accepted within the same valid session. |
 
+Choose `room` or `hall` for reverb and `subtle` or `wide` for stereo width. An `effects` object can combine these presets with EQ. Each successful call replaces the entire plugin profile. A rejected request preserves the previous profile. Use `supported` to display the available presets. Effects bypass incompatible sources and resume on a compatible source in the same session.
+
+Requests containing reverb or widening reserve output headroom for the active EQ and may sound quieter. With an explicit EQ preset, the host budgets for that preset. Spatial-only requests preserve and budget for the user EQ.
+
+```ts
+const { playbackId, supported } = await player.getAudioEffects()
+if (playbackId && supported.reverb?.presets.includes('hall') &&
+    supported.stereoWidth?.presets.includes('wide')) {
+  await player.applyAudioEffects({
+    playbackId,
+    effects: { reverb: { preset: 'hall' }, stereoWidth: { preset: 'wide' } },
+  })
+}
+```
+
 A plugin starts a session with `play(id)`, `setQueue`, or `playPlaylistById`. Effects survive track changes within the session, pauses, leaving the plugin page, and background playback. Starting separate playback in the host, stopping, reaching the end of the queue, changing the cast target or account, disabling the plugin, and manual host EQ changes remove the temporary effects. Writes require a valid `playbackId` and an active plugin page. Temporary effects never persist to user preferences.
 
-WebView plugins can use `player` from `@songloft/client-sdk` or `window.SongloftPlugin.player`. Native Lynx plugins call methods such as `invokeHost('player', 'getAudioEffects')` and inspect `ok`, `data`, and `error`.
+WebView plugins can use `player` from `@songloft/client-sdk` or `window.SongloftPlugin.player`. Both `@songloft/client-sdk@2.25.0` and `@songloft/lynx-plugin-sdk@2.25.0` include stereo-width types. The host implements the audio processing. Native Lynx plugins call methods such as `invokeHost('player', 'getAudioEffects')` and inspect `ok`, `data`, and `error`.
 
 A debug APK on an Android 14 emulator with WebView 113 verified starting playback from the plugin, applying EQ, retaining it across track changes, clearing it without stopping playback, and host EQ taking precedence. AudioFlinger reported the equalizer disabled, enabled, and disabled again in the same output session.
 

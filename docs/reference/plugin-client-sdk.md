@@ -27,16 +27,16 @@ HTML 插件使用 `@songloft/client-sdk` / `window.SongloftPlugin`；原生 Lynx
 
 ## Lynx 平台支持
 
-| 平台 | 打开外链 | 全屏播放曲库 MV | 查询、应用和清除 EQ | 验收状态 |
+| 平台 | 打开外链 | 全屏播放曲库 MV | EQ | 混响 / 立体声展宽 |
 |---|---|---|---|---|
-| Android | 支持 | 支持 | 支持，使用系统均衡器 | Android 14 模拟器已验证 |
-| iOS | 支持 | 支持 | 支持文件媒体，HLS 不支持 | 原生包待验收 |
-| HarmonyOS | 支持 | 支持 | 不支持 EQ，查询返回 `supported: {}` | 原生包待验收 |
-| macOS | 支持 | 支持 | 支持，使用 libmpv | 共享桌面宿主的 EQ 测试已通过，原生包待验收 |
-| Windows | 支持 | 支持 | 支持，使用 libmpv | 共享桌面宿主的 EQ 测试已通过，原生包待验收 |
-| Web | 支持，从用户点击发起 | 支持，使用宿主视频页 | 支持，当前输出需经过 Web Audio | Chromium 已验证 |
+| Android | 支持 | 支持 | 系统均衡器 | Media3 PCM，展宽需要双声道 |
+| iOS | 支持 | 支持 | 文件媒体 | 支持 PCM tap 的文件媒体，展宽需要双声道 |
+| HarmonyOS | 支持 | 支持 | 待接入 | 待接入 |
+| macOS | 支持 | 支持 | libmpv | libmpv |
+| Windows | 支持 | 支持 | libmpv | libmpv |
+| Web | 用户点击发起 | 宿主视频页 | Web Audio | Web Audio |
 
-插件以 `host.getInfo().capabilities` 判断当前宿主是否提供接口，再以 `getAudioEffects().supported` 判断当前音频输出可用的预设。投屏期间无可用 EQ，也不能从插件打开宿主全屏视频。所有平台的插件混响都待接入。
+插件以 `host.getInfo().capabilities` 判断当前宿主是否提供接口，再以 `getAudioEffects().supported` 判断当前音频输出可用的预设。投屏期间无可用 EQ，也不能从插件打开宿主全屏视频。混响和展宽只面向本机输出，包含蓝牙音箱。上表对应开发中的源码。Android 模拟器和 Chromium 已走通应用与清除。macOS arm64 的 libmpv 和 Apple 音频处理链已测量 PCM。iOS 安装包与设备、Windows 客户端和蓝牙听音待验收。HarmonyOS 当前尚无宿主音效，见[待办](../project/bugs.md#harmony-plugin-audio-effects)。
 
 ## 插件外链和全屏视频
 
@@ -53,17 +53,32 @@ WebView 全屏需要提供新版 `common.js` 的服务端，原生 Lynx 插件�
 
 ## 插件播放音效
 
-检测 `host.getInfo().capabilities` 是否包含 `player.audioEffects`。浏览器禁止启动 AudioContext 时，应用预设会失败。调用参数使用服务端曲库歌曲 ID。
+检测 `host.getInfo().capabilities` 是否包含 `player.audioEffects`。浏览器禁止启动 AudioContext 时，应用预设会失败。调用参数使用服务端曲库歌曲 ID。等媒体开始播放后再读取当前音频输出的能力。在原生输出初始化期间，部分预设可能尚未显示。
 
 | `player` 方法 | 参数及结果 |
 |---|---|
-| `getAudioEffects` | 返回 `{ playbackId, supported, applied }`。`playbackId` 只对发起此会话的插件可见，其他情况为 `null`。预设列表位于 `supported.equalizer.presets`，未应用插件音效时 `applied` 为 `null`。 |
+| `getAudioEffects` | 返回 `{ playbackId, supported, applied }`。`playbackId` 只对发起此会话的插件可见，其他情况为 `null`。预设列表位于 `supported.equalizer.presets`、`supported.reverb.presets` 和 `supported.stereoWidth.presets`，未应用插件音效时 `applied` 为 `null`。 |
 | `applyAudioEffects` | 传 `{ playbackId, effects: { equalizer: { preset: "vocal" } } }`，一次替换插件音效，返回应用成功的配置。不支持的效果或预设使整个请求失败。 |
 | `clearAudioEffects` | 传 `{ playbackId }`，恢复用户原有音效并继续播放。同一有效会话内可以重复调用。 |
 
+混响选 `room` 或 `hall`，立体声展宽选 `subtle` 或 `wide`。三种音效可以放在同一个 `effects` 对象中。每次成功调用替换整组插件音效，失败保留上一组配置。按 `supported` 展示选项。切换到不兼容媒体时暂时跳过该音效，回到兼容媒体后恢复。
+
+调用包含混响或展宽时，宿主会根据当前生效的 EQ 留出输出余量，音量可能降低。显式传入 EQ 预设时以该预设计算，只传混响或展宽时保留用户 EQ 并以它计算。
+
+```ts
+const { playbackId, supported } = await player.getAudioEffects()
+if (playbackId && supported.reverb?.presets.includes('hall') &&
+    supported.stereoWidth?.presets.includes('wide')) {
+  await player.applyAudioEffects({
+    playbackId,
+    effects: { reverb: { preset: 'hall' }, stereoWidth: { preset: 'wide' } },
+  })
+}
+```
+
 插件通过 `play(id)`、`setQueue` 或 `playPlaylistById` 发起播放会话。同一会话内切歌、暂停、离开插件页或后台播放时保留音效。宿主另行播放、停止、队列结束、切换投屏或账号、禁用该插件或手动调宿主 EQ 时，临时音效会清除。修改请求需要当前有效的 `playbackId` 和处于活动状态的插件页面。临时音效不会保存到用户设置。
 
-WebView 使用 `@songloft/client-sdk` 的 `player`，也可以使用 `window.SongloftPlugin.player`。Lynx 原生插件能通过 `invokeHost('player', 'getAudioEffects')` 等方法调用，检查返回的 `ok`、`data` 和 `error`。
+WebView 使用 `@songloft/client-sdk` 的 `player`，也可以使用 `window.SongloftPlugin.player`。`@songloft/client-sdk@2.25.0` 与 `@songloft/lynx-plugin-sdk@2.25.0` 均提供展宽的类型定义，实际音效由宿主实现。Lynx 原生插件能通过 `invokeHost('player', 'getAudioEffects')` 等方法调用，检查返回的 `ok`、`data` 和 `error`。
 
 Android 14 模拟器和 WebView 113 的调试包验证了插件启动播放、应用 EQ、切歌保留、清除后继续播放以及宿主 EQ 接管。AudioFlinger 在同一输出会话中报告均衡器依次关闭、启用、关闭。
 

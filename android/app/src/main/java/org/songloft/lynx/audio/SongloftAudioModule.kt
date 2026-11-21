@@ -200,6 +200,16 @@ class SongloftAudioModule(context: Context) : LynxModule(context), AudioEventSin
         }
     }
 
+    @LynxMethod
+    fun getPluginAudioEffects(callback: Callback) {
+        SongloftAudioEngine.runOnMain { callback.invoke(SongloftAudioEngine.pluginAudioEffects()) }
+    }
+
+    @LynxMethod
+    fun setPluginAudioEffects(profile: String, callback: Callback) {
+        SongloftAudioEngine.runOnMain { callback.invoke(SongloftAudioEngine.setPluginAudioEffects(profile)) }
+    }
+
     // -- background keep-alive --
 
     @LynxMethod

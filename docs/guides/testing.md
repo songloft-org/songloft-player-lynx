@@ -36,6 +36,20 @@ Swift 脚本执行真实任务管理代码，验证单次申请、到期不续�
 
 Issue #10 设备验收需覆盖：本地曲与插件音源锁屏连续跨曲播放、慢响应/断网重试、队列末尾和睡眠计时器、加载中暂停/定位/快速换曲、均衡器与视频输出。导出客户端日志对照 `process started`、scene 前后台、`native page loaded`、音源准备耗时、播放结束与后台窗口申请/释放/到期记录；重启或插件重载必须单独判断，不能仅从暂停推断。插件“常驻运行”控制服务器 JS 服务，不保证 iOS 插件页面持续执行。
 
+## 插件音效的 Apple PCM 验证
+
+在 macOS 的 Lynx 仓库根目录运行。测试通过 AVFoundation 读取合成 WAV，验证实际 PCM 的 EQ 增益、组合音效峰值及清除后恢复用户 EQ。完整 iOS App 构建和设备验收仍需单独进行。
+
+```sh
+mkdir -p tmp
+audio_test_dir="$(mktemp -d "$PWD/tmp/agent-XXXXXX")"
+trap 'find "$audio_test_dir" -depth -delete' EXIT
+xcrun swiftc -parse-as-library -module-cache-path "$audio_test_dir/cache" \
+  ios/SongloftLynx/AudioEqualizer.swift ios/tests/plugin-audio-effects-smoke.swift \
+  -o "$audio_test_dir/check"
+"$audio_test_dir/check" "$audio_test_dir"
+```
+
 ## E2E 行为测试
 
 ```bash
