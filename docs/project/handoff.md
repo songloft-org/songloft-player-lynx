@@ -1,5 +1,9 @@
 # 工作交接（2026-10-14）
 
+## 2026-11-21 · GitHub 发现图标
+
+GitHub 发现列表和详情显示仓库声明的图标。代理加载失败后直连，缺失和损坏图像显示固定尺寸的占位图。[变更记录](progress.md#github-discovery-icons)
+
 ## 2026-11-19 · Bundle 后端源码
 
 Android 和 iOS 打包自动使用该次流水线启动时公开主仓库 `main` 的最新源码。打包和包内验证继续使用实际构建的 SHA。[变更记录](progress.md#bundle-backend-main)

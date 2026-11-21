@@ -1,5 +1,17 @@
 # 进展与交接（PROGRESS）
 
+<a id="github-discovery-icons"></a>
+
+## 2026-11-21 · GitHub 发现图标 / GitHub discovery icons
+
+发现列表和详情共用商店的 40 像素图标组件。图标路径相对仓库默认分支解析，加载失败时保持图标位并显示名称首字。Web 将 SVG 作为图片加载，原生使用 SVG 组件。
+
+The discovery list and details use the store's 40 px icon tile. Icon paths resolve against the repository's default branch. Failed loads preserve the tile and show the plugin's initial. Web renders SVGs as images, and native uses the SVG element.
+
+基线 `44a89a52b65b790507e62d26376d981a4cae9d02` 上的未提交工作树，Linux x86_64 / Node 22.17.1。`pnpm exec tsc -b`、`pnpm test` 3921 项、`pnpm run test:release` 95 项、Lynx/Web 双包及 Android `assembleDebug` 通过。Docker Chromium 121 的 390 像素页面用夹具验证列表和详情的真实图标、代理失败后的直连，以及坏图和旧清单的占位。核对 APK 内的 bundle 与本地构建哈希一致。Android 画面未验，隔离模拟器未启动包服务。
+
+Verification used the working tree at baseline `44a89a52b65b790507e62d26376d981a4cae9d02` on Linux x86_64 with Node 22.17.1. Type checking, 3,921 Vitest tests, 95 release checks, both bundles, and Android `assembleDebug` passed. Fixture-driven Docker Chromium 121 at 390 px covered rendered list and detail icons, direct retry after proxy failure, and placeholders for corrupt images and legacy manifests. The APK contained the bundle with the same hash as the local build. Android rendering was unverified because the isolated emulator never started its package service.
+
 <a id="bundle-backend-main"></a>
 
 ## 2026-11-19 · Bundle 后端源码 / Bundle backend source

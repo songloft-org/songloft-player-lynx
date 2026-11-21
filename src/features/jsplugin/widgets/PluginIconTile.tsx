@@ -7,6 +7,8 @@ export interface PluginIconTileProps {
   markup?: string
   /** Resolved bitmap URL, used when there is no SVG markup. */
   imageSrc?: string
+  fallbackImageSrc?: string
+  showInitialWhileLoading?: boolean
   /** Display name; its first character is the fallback when no icon renders. */
   name: string
   testId?: string
@@ -34,18 +36,24 @@ export interface PluginIconTileProps {
  * installed plugins, `useRegistryIconQuery` for a store entry's external URL —
  * so they pass the result in and this owns only the rendering and the fallback.
  */
-export function PluginIconTile({ markup, imageSrc, name, testId }: PluginIconTileProps) {
+export function PluginIconTile({ markup, imageSrc, fallbackImageSrc, showInitialWhileLoading, name, testId }: PluginIconTileProps) {
   // A bitmap that 404s (or is not decodable) would otherwise leave an empty tile;
   // the initial is a better answer than a hole. Carried over from the store tile,
   // which was the only one of the three that handled this.
-  const [bitmapFailed, setBitmapFailed] = useState(false)
-  const initial = name.slice(0, 1).toUpperCase() || '?'
+  const [failedImages, setFailedImages] = useState<string[]>([])
+  const [loadedArtwork, setLoadedArtwork] = useState<string>()
+  const source = imageSrc && !failedImages.includes(imageSrc)
+    ? imageSrc
+    : fallbackImageSrc && !failedImages.includes(fallbackImageSrc) ? fallbackImageSrc : undefined
+  const artwork = markup || source
+  const showInitial = !artwork || showInitialWhileLoading && loadedArtwork !== artwork
+  const initial = (Array.from(name)[0] ?? '?').toUpperCase()
 
   return (
     <view className='plugin-icon-tile' data-testid={testId}>
       {markup
-        ? <svg className='plugin-icon-tile__img' content={markup} />
-        : imageSrc && !bitmapFailed
+        ? <svg className='plugin-icon-tile__img' content={markup} bindload={() => setLoadedArtwork(markup)} />
+        : source
           ? (
             <image
               className='plugin-icon-tile__img'
@@ -53,11 +61,18 @@ export function PluginIconTile({ markup, imageSrc, name, testId }: PluginIconTil
                  property. `aspectFit` (= contain) because cropping a
                  non-square logo cuts the mark. */
               mode='aspectFit'
-              src={imageSrc}
-              binderror={() => setBitmapFailed(true)}
+              key={source}
+              src={source}
+              bindload={() => setLoadedArtwork(source)}
+              binderror={() => setFailedImages(previous => [...previous, source])}
             />
           )
-          : <text className='plugin-icon-tile__initial'>{initial}</text>}
+          : null}
+      {showInitial ? (
+        <view className='plugin-icon-tile__placeholder'>
+          <text className='plugin-icon-tile__initial'>{initial}</text>
+        </view>
+      ) : null}
     </view>
   )
 }

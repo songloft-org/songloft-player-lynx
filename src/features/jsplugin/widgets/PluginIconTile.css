@@ -14,6 +14,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
+  flex-shrink: 0;
   border-radius: var(--radius-md);
   background-color: var(--secondary-system-background);
   overflow: hidden;
@@ -31,4 +32,15 @@
   font-size: var(--font-callout);
   font-weight: var(--weight-bold);
   color: var(--accent);
+}
+
+.plugin-icon-tile__placeholder {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

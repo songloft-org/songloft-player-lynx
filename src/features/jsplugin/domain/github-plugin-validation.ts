@@ -19,6 +19,7 @@ const manifestSchema = z.object({
   renderEngine: z.enum(['', 'webview', 'lynx']).optional().default(''),
   download_url: z.string().optional().default(''),
   updateUrl: z.string().optional().default(''),
+  icon: z.string().optional().catch(undefined),
 })
 
 /** TextEncoder is not available in every Lynx realm. */
@@ -55,6 +56,20 @@ export interface GithubPlugin {
   downloadUrl: string
   releaseUrl: string
   publishedAt: string
+}
+
+export function githubPluginIconUrl({ repository, manifest }: GithubPlugin): string | undefined {
+  const segments = manifest.icon?.trim().split('/')
+  if (!segments || segments.some(part => !part || part === '.' || part === '..' || /[\\:?#%\u0000-\u001f\u007f]/.test(part))) return undefined
+
+  try {
+    const path = segments.map(part => encodeURIComponent(part)).join('/')
+    const branch = encodeURIComponent(repository.defaultBranch)
+    const directory = segments.length === 1 ? 'static/' : ''
+    return `https://raw.githubusercontent.com/${repository.fullName}/${branch}/${directory}${path}`
+  } catch {
+    return undefined
+  }
 }
 
 /** PrimJS has no browser URL constructor. Parse only our narrow public URL grammar. */

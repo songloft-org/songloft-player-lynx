@@ -16,6 +16,7 @@ import { GithubDiscoveryError } from '../api/github-discovery-api.js'
 import { discoveryErrorKey, useDiscoveryHostVersion, useGithubDiscoveryQuery } from '../data/github-discovery-query.js'
 import { useGithubDiscoveryTokenQuery } from '../data/github-discovery-token-query.js'
 import { GithubDiscoveryTokenDialog } from '../widgets/GithubDiscoveryTokenDialog.js'
+import { GithubDiscoveryIcon } from '../widgets/GithubDiscoveryIcon.js'
 import { useGithubProxyQuery, usePluginsQuery } from '../data/jsplugin-query.js'
 import { useInstallFromRegistryMutation } from '../data/jsplugin-mutations.js'
 import { updateRegistryReturnState } from '../data/registry-return-state.js'
@@ -100,6 +101,7 @@ export function GithubDiscoveryPage({ onBack }: { onBack?: () => void }) {
   return (
     <SubPageShell
       title={detail ? detail.manifest.name : t('githubDiscovery.title')}
+      titleIcon={detail ? <GithubDiscoveryIcon plugin={detail} proxy={proxy ?? ''} /> : undefined}
       onBack={goBack}
       backTestId='github-discovery-back'
       scrollable={false}
@@ -174,12 +176,15 @@ export function GithubDiscoveryPage({ onBack }: { onBack?: () => void }) {
             ) : null}
             {plugins.map(plugin => (
               <view className='github-discovery__card' key={String(plugin.repository.id)} bindtap={() => setDetail(plugin)} data-testid={`github-plugin-${plugin.repository.id}`} accessibility-element={true} accessibility-traits='button' accessibility-label={plugin.manifest.name}>
-                <text className='plugin-registry__item-name'>{plugin.manifest.name}</text>
-                <text className='github-discovery__meta'>{plugin.repository.fullName}</text>
-                {plugin.manifest.description ? <text className='github-discovery__description github-discovery__description--clamped' text-maxline='2'>{plugin.manifest.description}</text> : null}
-                <text className='github-discovery__meta'>{`v${plugin.manifest.version} · ${plugin.manifest.renderEngine || 'webview'} · ★ ${plugin.repository.stars}`}</text>
-                {installedFromRepository(plugin, occupiedPlugin(plugin, installed.data?.plugins ?? [])) ? <text className='github-discovery__meta'>{discoveryHasUpdate(plugin, occupiedPlugin(plugin, installed.data?.plugins ?? [])) ? t('githubDiscovery.updateAvailable') : t('githubDiscovery.installed')}</text> : null}
-                <text className='plugin-registry__retry-text'>{t('githubDiscovery.details')}</text>
+                <GithubDiscoveryIcon plugin={plugin} proxy={proxy ?? ''} />
+                <view className='github-discovery__card-body'>
+                  <text className='plugin-registry__item-name github-discovery__clamped' text-maxline='2'>{plugin.manifest.name}</text>
+                  <text className='github-discovery__meta'>{plugin.repository.fullName}</text>
+                  {plugin.manifest.description ? <text className='github-discovery__description github-discovery__clamped' text-maxline='2'>{plugin.manifest.description}</text> : null}
+                  <text className='github-discovery__meta'>{`v${plugin.manifest.version} · ${plugin.manifest.renderEngine || 'webview'} · ★ ${plugin.repository.stars}`}</text>
+                  {installedFromRepository(plugin, occupiedPlugin(plugin, installed.data?.plugins ?? [])) ? <text className='github-discovery__meta'>{discoveryHasUpdate(plugin, occupiedPlugin(plugin, installed.data?.plugins ?? [])) ? t('githubDiscovery.updateAvailable') : t('githubDiscovery.installed')}</text> : null}
+                  <text className='plugin-registry__retry-text'>{t('githubDiscovery.details')}</text>
+                </view>
               </view>
             ))}
             {!query.isPending && !query.isError && plugins.length === 0 ? <text className='github-discovery__status'>{failed || rateLimited ? t('githubDiscovery.pending') : t('githubDiscovery.empty')}</text> : null}

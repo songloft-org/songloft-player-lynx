@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-21 · GitHub discovery icons
+
+The discovery list and details show icons declared by plugin repositories. Failed proxy loads retry directly. Missing and corrupt images show a fixed-size placeholder. [Progress](../../project/progress.md#github-discovery-icons)
+
 ## 2026-11-19 · Bundle backend source
 
 Android and iOS packages now build from the public backend `main` tip resolved at workflow startup. Build and package verification continue to use the actual backend SHA. [Progress](../../project/progress.md#bundle-backend-main)

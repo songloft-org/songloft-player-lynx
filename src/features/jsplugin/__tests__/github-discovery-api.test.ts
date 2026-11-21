@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from 'vitest'
 
 import type { Transport, TransportResponse } from '../../../core/network/http-client.js'
 import { GithubDiscoveryApi } from '../api/github-discovery-api.js'
-import { comparePluginVersions, discoveryHasUpdate, hostCompatibility, installedFromRepository, isRepositoryMetadataUrl, parseGithubPluginManifest, releaseDownload } from '../domain/github-plugin-validation.js'
+import { comparePluginVersions, discoveryHasUpdate, githubPluginIconUrl, hostCompatibility, installedFromRepository, isRepositoryMetadataUrl, parseGithubPluginManifest, releaseDownload } from '../domain/github-plugin-validation.js'
 import { parseJSPlugin } from '../../../models/jsplugin.js'
 
 const repo = {
@@ -118,6 +118,24 @@ test.each(['', 'ghp_valid'])('anonymous metadata 401 does not misreport the shar
 })
 
 describe('manifest contract', () => {
+  test.each([
+    ['icon.svg', 'static/icon.svg'],
+    ['frontend/public/my icon.png', 'frontend/public/my%20icon.png'],
+  ])('resolves %s relative to the discovery repository default branch', async (icon, path) => {
+    const { api, input } = fixture({ manifest: { ...manifest, icon } })
+    const [plugin] = (await api.discover(input)).plugins
+    expect(githubPluginIconUrl(plugin!)).toBe(`https://raw.githubusercontent.com/alice/music/develop/${path}`)
+  })
+
+  test.each([
+    undefined, null, 42, '', '/icon.svg', '../icon.svg', 'img/%2e%2e/icon.svg',
+    'img/./icon.svg', 'img\\icon.svg', 'https://example.com/icon.svg', 'icon.svg?token=value',
+  ])('ignores an optional icon value of %s without excluding the plugin', async icon => {
+    const { api, input } = fixture({ manifest: { ...manifest, icon } })
+    const [plugin] = (await api.discover(input)).plugins
+    expect(githubPluginIconUrl(plugin!)).toBeUndefined()
+  })
+
   test.each(['0.17.0', '2026.10.8'])('release tag does not constrain manifest version %s', async version => {
     const url = download.replace('/v2026.10.8/', '/v0.17/')
     const { api, input } = fixture({

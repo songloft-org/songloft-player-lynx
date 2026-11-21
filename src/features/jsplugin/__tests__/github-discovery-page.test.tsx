@@ -3,6 +3,7 @@ import '@testing-library/jest-dom'
 import type { ReactNode } from '@lynx-js/react'
 import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 import { beforeEach, expect, test, vi } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { parseJSPlugin } from '../../../models/jsplugin.js'
 import { en } from '../../../i18n/resources.js'
@@ -19,7 +20,8 @@ vi.mock('react-i18next', async () => (await import('../../../__tests__/_render-m
 vi.mock('@lynx-js/lynx-ui-input', () => ({ Input: ({ id, value, type, onInput }: { id?: string; value?: string; type?: string; onInput?: (v: string) => void }) =>
   <view data-testid={id} data-value={value} data-type={type} bindtap={() => onInput?.(h.tokenInput)} /> }))
 vi.mock('../../../native/native-platform.js', () => ({ openURL: h.openURL }))
-vi.mock('../data/jsplugin-query.js', () => ({
+vi.mock('../data/jsplugin-query.js', async importOriginal => ({
+  ...await importOriginal<typeof import('../data/jsplugin-query.js')>(),
   useGithubProxyQuery: () => ({ data: '', isPending: false }),
   usePluginsQuery: () => ({ data: { plugins: h.installed }, isSuccess: true, refetch: vi.fn() }),
 }))
@@ -44,6 +46,7 @@ vi.mock('@lynx-js/lynx-ui-dialog', () => ({
   DialogContent: ({ children }: { children: ReactNode }) => <view>{children}</view>,
 }))
 const { GithubDiscoveryPage } = await import('../pages/GithubDiscoveryPage.js')
+const { fetchDiscoverySvg } = await import('../widgets/GithubDiscoveryIcon.js')
 const plugin: GithubPlugin = {
   repository: { id: 1, fullName: 'alice/music', defaultBranch: 'main', stars: 12, updatedAt: '' },
   manifest: { name: '音乐插件', description: '听音乐', version: '1.0.0', author: 'Alice', homepage: '', minHostVersion: '2.9.5',
@@ -58,10 +61,40 @@ beforeEach(() => {
   h.saveToken.mockImplementation(async (token: string) => { h.token = token; h.revision++ })
 })
 async function page(props: { onBack?: () => void } = {}) {
-  render(<GithubDiscoveryPage {...props} />)
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <GithubDiscoveryPage {...props} />
+    </QueryClientProvider>,
+  )
   await act(async () => { for (let i = 0; i < 10; i++) await Promise.resolve() })
   return getQueriesForElement(elementTree.root!)
 }
+
+test('uses the same repository icon in the list and beside the detail title', async () => {
+  h.plugins = [{ ...plugin, manifest: { ...plugin.manifest, icon: 'assets/icon.png' } }]
+  const q = await page()
+  const icon = q.getByTestId('github-plugin-icon')
+  const image = icon.querySelector('.plugin-icon-tile__img')
+  expect(image).toHaveAttribute('src', 'https://raw.githubusercontent.com/alice/music/main/assets/icon.png')
+  expect(icon.textContent).toBe('音')
+  await tap('github-plugin-1')
+  expect(q.getAllByTestId('github-plugin-icon')).toHaveLength(2)
+  expect(q.getAllByTestId('github-plugin-icon').map(tile => tile.querySelector('.plugin-icon-tile__img')?.getAttribute('src')))
+    .toEqual([image?.getAttribute('src'), image?.getAttribute('src')])
+})
+
+test('native SVG loading retries a failed proxy anonymously and falls back after a non-image response', async () => {
+  const direct = 'https://raw.githubusercontent.com/alice/music/main/static/icon.svg'
+  const proxy = `https://proxy.example/${direct}`
+  const signal = new AbortController().signal
+  const transport = vi.fn()
+    .mockResolvedValueOnce({ status: 404, body: 'missing' })
+    .mockResolvedValueOnce({ status: 200, body: '<svg width="20" height="16"></svg>' })
+    .mockResolvedValueOnce({ status: 200, body: '<html>not an image</html>' })
+  expect(await fetchDiscoverySvg([proxy, direct], signal, transport)).toContain('viewBox="0 0 20 16"')
+  expect(transport.mock.calls.map(([request]) => [request.url, request.headers])).toEqual([[proxy, {}], [direct, {}]])
+  expect(await fetchDiscoverySvg([direct], signal, transport)).toBe('')
+})
 async function tap(id: string) {
   await act(async () => { fireEvent.tap(getQueriesForElement(elementTree.root!).getByTestId(id)) })
 }

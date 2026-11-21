@@ -33,11 +33,20 @@
 
 .github-discovery__card {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--space-3);
   margin: 0 var(--space-4);
   padding: var(--space-3) 0;
   border-bottom-width: 1px;
   border-bottom-color: var(--separator);
+}
+
+.github-discovery__card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
   gap: var(--space-1);
 }
 
@@ -51,7 +60,7 @@
   font-size: var(--font-subhead);
 }
 
-.github-discovery__description--clamped {
+.github-discovery__clamped {
   overflow: hidden;
   text-overflow: ellipsis;
 }

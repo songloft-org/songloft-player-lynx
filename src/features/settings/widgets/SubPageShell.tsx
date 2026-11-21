@@ -25,6 +25,7 @@ export const SubPageEmbedContext = createContext(false)
 export interface SubPageShellProps {
   /** Topbar title, already translated. */
   title: string
+  titleIcon?: ReactNode
   /**
    * Back override. Use it for an in-pane sibling swap — About → Licenses lives in
    * the same pane, so routing there would unmount the whole master–detail page.
@@ -89,6 +90,7 @@ export interface SubPageShellProps {
  */
 export function SubPageShell({
   title,
+  titleIcon,
   onBack,
   backTestId,
   actions,
@@ -144,7 +146,10 @@ export function SubPageShell({
             </view>
           )
           : null}
-        <text className='subpage__title'>{title}</text>
+        {titleIcon}
+        {titleIcon
+          ? <text className='subpage__title subpage__title--with-icon' text-maxline='1'>{title}</text>
+          : <text className='subpage__title'>{title}</text>}
         {actions ? <view className='subpage__actions'>{actions}</view> : null}
       </view>
 

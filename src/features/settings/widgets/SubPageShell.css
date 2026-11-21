@@ -65,6 +65,12 @@
   white-space: nowrap;
 }
 
+.subpage__title--with-icon {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .subpage__actions {
   display: flex;
   flex-direction: row;
