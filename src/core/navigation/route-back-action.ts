@@ -12,6 +12,7 @@ import type { HistoryState } from '@tanstack/react-router'
 import { getLastLibrarySearch } from '../../features/library/data/last-library-search.js'
 import { isLibraryViewKey } from '../../features/library/domain/library-views.js'
 import {
+  getLastContentLocation,
   getLastShellLocation,
   getNavPaths,
 } from '../../shared/nav/shell-navigation.js'
@@ -80,6 +81,7 @@ export function currentBackAction(): BackAction | null {
       location.pathname.startsWith('/plugin/')
       && (location.search as { from?: unknown }).from === 'manager',
     lastShellLocation: getLastShellLocation(),
+    lastContentLocation: getLastContentLocation() ?? undefined,
     lastLibrarySearch: getLastLibrarySearch(),
   })
 }
@@ -110,6 +112,14 @@ function navigateTo(
       to: '/library',
       search: typeof view === 'string' && isLibraryViewKey(view) ? { view } : {},
     })
+    return
+  }
+  // Returning the player to a source page with query params (a folder's ?path=,
+  // a category's ?value=). TanStack validates search per-route, so the dynamic
+  // object is cast at this single boundary; the values come straight from the
+  // router's own last location and are re-validated by that route on arrival.
+  if ('search' in action && action.search && Object.keys(action.search).length) {
+    void router.navigate({ to: action.to, search: action.search } as unknown as Parameters<AppRouter['navigate']>[0])
     return
   }
   void router.navigate({ to: action.to })
