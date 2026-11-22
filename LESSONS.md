@@ -1,5 +1,10 @@
 # Lynx 客户端开发经验
 
+### 曲库切换视图时测量原生标题栏
+
+- Android 14 原生 Lynx 中，电台视图的显隐按钮撑起了 72 的标题栏，歌手和文件夹视图的较小按钮使标题栏降至约 68.2。三种内容类型的路由冒烟均通过时，这个布局差异仍会发生。
+- 让可选操作使用同一个触摸尺寸，并在各类视图中测量标题栏、文字和内容区的位置。新增 Android 回归覆盖全部 18 个视图，旧包在文件夹视图失败。Seen 1×（2026-11-22）。[验证记录](docs/project/progress.md#android-library-header)
+
 ### 隐藏插件 iframe 时关闭渲染盒并保留文档
 
 - [songloft-org/songloft#590](https://github.com/songloft-org/songloft/issues/590) 的 iOS Web 截图显示，底栏已经切换，固定定位的插件 iframe 仍占据上半屏。[WebKit #272727](https://bugs.webkit.org/show_bug.cgi?id=272727) 记录过 `visibility: hidden` 下固定定位 iframe 的合成内容仍被绘制的情况。

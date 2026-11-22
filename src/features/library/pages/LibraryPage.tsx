@@ -152,7 +152,7 @@ export function LibraryPage() {
       {showViewToggle
         ? (
           <view
-            className='library__topbar-toggle'
+            className='library__topbar-action'
             bindtap={onToggleViewMode}
             accessibility-element={true}
             accessibility-label={viewMode === 'grid' ? t('playlist.switchToListView') : t('playlist.switchToGridView')}
@@ -166,8 +166,8 @@ export function LibraryPage() {
         ? (
           <view
             className={showHidden
-              ? 'library__topbar-visibility library__topbar-visibility--active'
-              : 'library__topbar-visibility'}
+              ? 'library__topbar-action library__topbar-action--active'
+              : 'library__topbar-action'}
             bindtap={() => {
               if (selectedGroup === 'playlists') setShowHiddenPlaylists(value => !value)
               else setShowHiddenSongs(value => !value)
@@ -186,7 +186,7 @@ export function LibraryPage() {
         )
         : null}
       <view
-        className='library__topbar-customize'
+        className='library__topbar-action'
         bindtap={() => setEditMode(true)}
         accessibility-element={true}
         accessibility-label={t('library.customizeViews')}

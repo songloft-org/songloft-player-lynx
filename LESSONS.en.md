@@ -1,5 +1,10 @@
 # Lynx Client Development Lessons
 
+### Measure the native header when switching library views
+
+- On Android 14, the radio visibility button sized the native Lynx header to 72 layout pixels. The smaller actions in Artist and Folders brought the header down to about 68.2. The route smoke tests passed for all three content types while the layout still shifted.
+- Give optional header actions the same touch target and measure the positions of the header, title, and content across views. The Android regression covers all 18 views and fails on Folders in the old APK. Seen 1× (2026-11-22). [Verification](docs/project/progress.md#android-library-header)
+
 ### Hide plugin iframe rendering while keeping the document alive
 
 - The iOS Web screenshots in [songloft-org/songloft#590](https://github.com/songloft-org/songloft/issues/590) show a fixed plugin iframe still covering the upper part of the screen after the selected tab changed. [WebKit #272727](https://bugs.webkit.org/show_bug.cgi?id=272727) documents composited content still painting inside fixed iframes with `visibility: hidden`.

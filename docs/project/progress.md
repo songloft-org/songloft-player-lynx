@@ -1,5 +1,25 @@
 # 进展与交接（PROGRESS）
 
+<a id="android-library-header"></a>
+
+## 2026-11-22 · Android 曲库标题栏 / Android library header
+
+Lynx 基线为 `2ee38bb48a37b32c10139d6402f3b328d856128d`，候选代码差异 SHA-256 为 `0f548298d896d96783ea8fe9cee28573bf95382cd7d6365b646f082c2f8bfb2c`。旧包在 Android 14 x86_64 模拟器上切换电台与歌手时，标题栏高从 72 变为约 68.2，标题文字和切换条随之上移。文件夹视图在同一回归中也出现约 3.8 的高度差。所有标题栏操作统一使用 44 的触摸尺寸，标题单行显示，标题栏由当前字号和共同按钮尺寸决定高度。
+
+The baseline is Lynx `2ee38bb48a37b32c10139d6402f3b328d856128d`. The candidate code diff SHA-256 is `0f548298d896d96783ea8fe9cee28573bf95382cd7d6365b646f082c2f8bfb2c`. In the old APK on an Android 14 x86_64 emulator, switching from Radio to Artist reduced the header from 72 to about 68.2 layout pixels and moved the title and switcher up. Folders showed the same gap of about 3.8. The header now derives its height from the current single-line title and the shared 44-pixel touch target for its actions.
+
+- 使用 Lynx 4.0.0 Debug APK 和同一个临时后端，核对设备上候选 APK 的 SHA-256。曲库 E2E 场景 5 项通过，测量覆盖全部 18 个视图。旧包同一场景的几何断言在文件夹失败，单独对照也测出歌手的差异。
+- 在原生界面完成两轮各 12 次触摸切换，覆盖电台、九个分类、歌单和返回歌曲。411 宽英文默认字号的标题栏高度统一为 72，320 宽中文最大字号统一为 80。歌手网格、列表、详情进入和返回均通过，检查了两轮的标题栏截图。
+- Linux x86_64、Node 22.17.1、pnpm 11.15.1 上的 `pnpm exec tsc -b`、Lynx/Web 构建和 Android `assembleDebug` 通过。Docker Chromium 在 390 宽的嵌入 Web 产物完成相同的 12 次切换，标题栏和内容位置保持一致。
+- Vitest 全量 3,927 项中，使用 Debug bundle 时仅正式包的测试桥检查失败。重新生成生产 bundle 后，该文件 3 项全部通过。`pnpm run test:release` 的 95 项检查通过。
+- Android 真机及其他原生平台未执行验证。
+
+- Both APKs used Lynx 4.0.0 and the same temporary backend. The candidate APK checksum matched the installed package. All five library E2E tests passed, including geometry across all 18 views. The same scenario failed its Folders geometry assertion with the old APK. Separate baseline measurements captured the Artist gap.
+- Two rounds of 12 native taps covered Radio, all nine categories, a playlist view, and the return to Songs. The header stayed at 72 with default English text at width 411 and at 80 with the largest Chinese text at width 320. Artist grid and list modes and the round trip to artist details passed. Screenshots from both layouts were reviewed.
+- On Linux x86_64 with Node 22.17.1 and pnpm 11.15.1, `pnpm exec tsc -b`, the Lynx and Web builds, and Android `assembleDebug` passed. Docker Chromium completed the same 12 switches in an embedded Web build at width 390 with stable title and content positions.
+- The Vitest run passed 3,926 of 3,927 checks with the debug bundle. The release-bundle guard flagged the test bridge. All three tests in that file passed when rerun against the production bundles. All 95 checks from `pnpm run test:release` passed.
+- Physical Android hardware and other native platforms were not tested.
+
 <a id="issue-590"></a>
 
 ## 2026-11-22 · #590 Web 插件切换残影 / Web plugin stays visible after a tab switch

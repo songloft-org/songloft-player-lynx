@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-22 · Android library header
+
+Songs, all nine category views, and playlists share header action dimensions. The Android 14 emulator covered all 18 views, with touch navigation at the default text size and at the largest Chinese text size in a 320-wide viewport. Testing on the reporter's phone remains pending. [Verification](../../project/progress.md#android-library-header)
+
 ## 2026-11-22 · #590 Web plugin remains visible after tab switch
 
 Leaving a WebView plugin now hides its render box and retains its document. Testing on the reporter’s iPhone remains pending. [Verification](../../project/progress.md#issue-590)
