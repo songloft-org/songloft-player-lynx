@@ -1,5 +1,10 @@
 # Lynx 客户端开发经验
 
+### 新增原生插件容器时按平台更新热更新契约
+
+- v0.1.6 HAP 的 ArkTS 字节码没有 `songloft-plugin-frame`。v2.13.13 已包含组件，但同版签名清单允许旧壳热更新。在 Node 中用实际 v0.1.6 壳信息执行旧壳的验签与兼容代码，确认它接受该清单。[songloft-org/songloft-player-lynx#18](https://github.com/songloft-org/songloft-player-lynx/issues/18)
+- 以首个包含组件的正式 HAP 确定 HarmonyOS 最低壳版本。用实际旧 HAP 的不可变壳信息验证签名清单，再核对完整安装后的壳能否接受后续更新。Seen 1×（2026-11-23）。[验证记录](docs/project/progress.md#harmony-shell-plugin-frame)
+
 ### 验证曲库补全时测量工具栏和列表
 
 - 390 宽 Chromium 中，旧版五条补全建议让搜索栏从 52 像素增高到 176 像素，工具栏和列表各下移 124 像素。

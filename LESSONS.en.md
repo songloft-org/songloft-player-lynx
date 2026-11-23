@@ -1,5 +1,10 @@
 # Lynx Client Development Lessons
 
+### Update the platform’s bundle contract when adding a native plugin container
+
+- The v0.1.6 HAP’s ArkTS bytecode lacked `songloft-plugin-frame`. The v2.13.13 HAP included it, but the old shell’s verification code accepted that release’s signed manifest when run in Node with the actual v0.1.6 shell metadata. [songloft-org/songloft-player-lynx#18](https://github.com/songloft-org/songloft-player-lynx/issues/18)
+- Set the HarmonyOS minimum shell version to the first stable HAP with the component. Test the signed manifest with the old HAP’s immutable shell metadata and confirm that the full replacement shell accepts later updates. Seen 1× (2026-11-23). [Verification](docs/project/progress.md#harmony-shell-plugin-frame)
+
 ### Measure the toolbar and list when testing library suggestions
 
 - At a 390-pixel viewport width in Chromium, five suggestions increased the old search bar height from 52 to 176 pixels and pushed the toolbar and list down by 124 pixels.

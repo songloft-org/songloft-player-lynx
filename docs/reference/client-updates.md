@@ -8,7 +8,9 @@ Android、iOS 和 HarmonyOS 的更新入口位于「关于」页。热更新需�
 
 版本源仍为 `package.json` 与共享 `.build/version.json`。`prepare-build.mjs` 另生成 `.build/native-host.json`，含安装壳身份、协议、桥接/本地 schema、三端引擎版本、必需能力与受信公钥；随同一次构建分发。编译器按同一 bundle 身份生成 `.build/bundle-host.json`，copy 脚本将其复制为壳资源 `native-host.json`；显式 release 构建拒绝与 prepare 不一致的快照。Android 从 APK assets、iOS 从 app Resources、HarmonyOS 从 rawfile 读取，热更新包不得覆盖该文件。CI 共享两份快照，安装包检查要求嵌入身份、公钥和能力与 prepare 完全一致。
 
-`updates/native-contract.json` 是兼容契约的源文件：Android 引擎 `4.0.0`，iOS/HarmonyOS `4.0.1`；当前桥接版本 `3`、本地 schema `2`、最低壳版本 `0.1.0`。完整安装壳必须提供 `audio.sourceLoad.v1`、`audio.remoteIntent.v1`、`updater.v1`、`updater.metadata.v1`、`songCache.v2` 和 `pluginFrame.templates.v1`。桥接版本 2 新增独立系统 TLS 的元数据读取；版本 3 / schema 2 增加带身份的缓存索引与任务接口，旧文件保留，新目录与旧 ABI 隔离。旧壳检查此 bundle 时引导安装同通道新壳。新增原生能力、SDK 变化或不兼容本地数据读写时，先调整契约并升级安装包。
+`updates/native-contract.json` 定义更新兼容契约。Android 使用引擎 `4.0.0`，iOS 和 HarmonyOS 使用 `4.0.1`。当前桥接版本为 `3`，本地 schema 为 `2`。签名清单按平台声明最低壳版本。Android 和 iOS 为 `0.1.0`，HarmonyOS 为 `2.13.13`，这是首个带原生 Lynx 插件容器的正式 HAP。低于对应版本的壳会引导用户安装同通道的完整安装包。
+
+完整安装壳必须提供 `audio.sourceLoad.v1`、`audio.remoteIntent.v1`、`updater.v1`、`updater.metadata.v1`、`songCache.v2` 和 `pluginFrame.templates.v1`。桥接版本 2 新增独立系统 TLS 的元数据读取。版本 3 / schema 2 增加带身份的缓存索引与任务接口，保留旧文件并将新目录与旧 ABI 隔离。新增原生能力、SDK 变化或本地数据读写不兼容时，先调整契约并升级安装包。
 
 `audio.remoteIntent.v1` 标记三端明确转发系统播放/暂停意图，以及 Android 系统 STOP 取消直播重连（songloft-org/songloft#531）。缺少此能力的旧壳拒绝新 JS bundle，须安装完整新客户端；不能只在文档要求升级，同时仍让自动更新把新 JS 装进旧壳。宿主快照与签名清单同源生成，桥接版本/本地 schema 无需改变。详见 [验证记录](../project/issue-531.md)。
 

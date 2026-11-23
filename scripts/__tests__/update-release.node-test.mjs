@@ -46,6 +46,8 @@ test('signed native bundle shares one manifest with the seven full packages', (t
   assert.equal(manifest.bundle_update.asset, BUNDLE_ASSET)
   assert.deepEqual(manifest.bundle_update.targets.map(t => [t.platform, t.engine]),
     [['android', '4.0.0'], ['ios', '4.0.1'], ['harmony', '4.0.1']])
+  assert.deepEqual(manifest.bundle_update.targets.map(t => [t.platform, t.minimum_host_version]),
+    [['android', '0.1.0'], ['ios', '0.1.0'], ['harmony', '2.13.13']])
   assert.ok(manifest.bundle_update.targets.every(t => t.minimum_bridge === 3 && t.maximum_bridge === 3))
   assert.equal(manifest.bundle_update.local_schema, 2)
   assert.ok(manifest.bundle_update.targets.every(t => t.required_capabilities.includes('songCache.v2')))
@@ -97,7 +99,8 @@ test('contract preparation rejects SDK drift and invalid bridge/schema ranges', 
   save(contract); assert.deepEqual(loadNativeContract(project), contract)
   for (const value of [{ ...contract, engines: { ...contract.engines, android: '4.0.2' } },
     { ...contract, bridge_version: 0 }, { ...contract, local_schema: -1 },
-    { ...contract, minimum_host_version: '0.1.0-rc.1' }]) {
+    { ...contract, minimum_host_version: { ...contract.minimum_host_version, harmony: '2.13.13-rc.1' } },
+    { ...contract, minimum_host_version: { android: '0.1.0', ios: '0.1.0' } }]) {
     save(value); assert.throws(() => loadNativeContract(project))
   }
 })
