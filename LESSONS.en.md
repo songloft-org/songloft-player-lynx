@@ -1,5 +1,11 @@
 # Lynx Client Development Lessons
 
+### Measure the toolbar and list when testing library suggestions
+
+- At a 390-pixel viewport width in Chromium, five suggestions increased the old search bar height from 52 to 176 pixels and pushed the toolbar and list down by 124 pixels.
+- Anchor the suggestions within the song view, outside the search bar, using the shared input height and spacing. Measure the search bar, toolbar, and list when opening suggestions, choosing a title, and confirming the search. Seen 1× (2026-11-23). [Verification](docs/project/progress.md#library-search-suggestions)
+- The Android input emits another input event after a title is filled in. Tie dismissal to that title and show suggestions again when the user changes the text. Selection checks should wait for the native input echo to settle.
+
 ### Measure the native header when switching library views
 
 - On Android 14, the radio visibility button sized the native Lynx header to 72 layout pixels. The smaller actions in Artist and Folders brought the header down to about 68.2. The route smoke tests passed for all three content types while the layout still shifted.

@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-23 · Library search suggestions
+
+Song title suggestions float below the search field and close when a title is selected or the search is confirmed. The Android 14 emulator and narrow Web checks confirmed that the toolbar and song list stay in place. [Verification](../../project/progress.md#library-search-suggestions)
+
 ## 2026-11-22 · Android library header
 
 Songs, all nine category views, and playlists share header action dimensions. The Android 14 emulator covered all 18 views, with touch navigation at the default text size and at the largest Chinese text size in a 320-wide viewport. Testing on the reporter's phone remains pending. [Verification](../../project/progress.md#android-library-header)

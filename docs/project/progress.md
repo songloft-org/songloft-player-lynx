@@ -1,5 +1,21 @@
 # 进展与交接（PROGRESS）
 
+<a id="library-search-suggestions"></a>
+
+## 2026-11-23 · 曲库搜索补全 / Library search suggestions
+
+Lynx 基线为 `27df490bb720061d774a03522d361d650a9efc36`，代码与回归测试的未提交 diff SHA-256 为 `aeed884751d20a795702eb85aa5a7585e67e951d5c4f021bdf411b0f8a6578d6`。补全列表从搜索栏移到歌曲视图的绝对定位层，点选候选或确认搜索后收起。Android 输入框回报已填入的标题时，浮层继续收起。
+
+The Lynx baseline is `27df490bb720061d774a03522d361d650a9efc36`. The uncommitted code and regression test diff has SHA-256 `aeed884751d20a795702eb85aa5a7585e67e951d5c4f021bdf411b0f8a6578d6`. Suggestions now occupy an absolutely positioned layer in the song view and close on selection or search confirmation. The layer stays closed when the Android input echoes the chosen title.
+
+- Docker Chromium 121 在 390×720 下访问临时后端并输入 `Aur`。旧版五条候选使工具栏顶部由 172 变为 296，列表顶部由 219 变为 343。候选版的工具栏和列表各保持在 172 和 219，浮层宽度与输入框同为 358。320×720 和 1280×720 下也保持布局稳定，点选候选后搜索结果收敛为一首，按 Enter 能收起候选。
+- Android 14 x86_64 模拟器在 Lynx 4.0.0 中使用 Gboard 输入，旧版的工具栏和列表下移 120 个布局像素。最终 APK 与设备上的 SHA-256 一致。弹出五条候选时输入框、工具栏和列表的位置与尺寸保持一致。点选后等待输入回显，浮层保持收起。再次输入并触摸 Gboard 搜索键也能收起。
+- 初版布局的 Vitest 全量 3,928 项通过。追加了原生回显断言后，移除回显保护的隔离副本在新增断言失败。最终曲库 268 项测试、Lynx 和 Web 构建、TypeScript 检查及 Android `assembleDebug` 通过。真机、iOS 和 HarmonyOS 未运行验证。
+
+- Docker Chromium 121 used the temporary backend at 390×720. Typing `Aur` in the old build moved the toolbar from y=172 to y=296 and the list from y=219 to y=343. The candidate kept them at y=172 and y=219 with the suggestion layer matching the 358-pixel input width. The layout was also stable at 320×720 and 1280×720. Selecting a suggestion narrowed the results to one song, and Enter dismissed the suggestions.
+- On the Android 14 x86_64 emulator with Lynx 4.0.0, typing with Gboard moved the old toolbar and list down by 120 layout pixels. The final APK checksum matched the installed package. The input, toolbar, and list kept their positions and sizes while five suggestions were visible. Selection stayed dismissed after the native input echoed the title. Reopening suggestions and tapping Gboard's search key also dismissed them.
+- All 3,928 Vitest checks passed on the layout revision. After adding the native echo assertion, an isolated copy with the echo guard removed failed at that assertion. All 268 library checks passed on the final revision, along with both bundle builds, the TypeScript check, and Android `assembleDebug`. Physical devices, iOS, and HarmonyOS were not tested.
+
 <a id="android-library-header"></a>
 
 ## 2026-11-22 · Android 曲库标题栏 / Android library header
