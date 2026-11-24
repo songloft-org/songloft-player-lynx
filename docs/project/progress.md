@@ -1,5 +1,15 @@
 # 进展与交接（PROGRESS）
 
+## 2026-11-24 · songloft-org/songloft#591 收藏长轮询生命周期
+
+基线为 `2f3010c5beff70b1e2263ff1ecdb47840201c3fb`，修改保留在未提交工作树。收藏变更 watcher 现在把 HTTP 请求纳入自身生命周期，停止或会话切换会立即 abort 在途请求，同一 watcher 重复启动只保留一个运行循环。每次会话固定服务器地址，避免旧订阅跟随全局配置漂移。35 秒接收超时、成功刷新后推进 cursor 和指数退避继续保留。详细记录见 [issue-591.md](issue-591.md)。
+
+`pnpm exec vitest run src/features/library/__tests__/favorite-change-watcher.test.ts src/features/library/__tests__/favorite-changes.test.ts` 通过 8 项；`pnpm exec tsc -b`、`pnpm test`（376 文件 / 3929 项）、`pnpm run build` 和 `pnpm run build:web` 通过。未运行报告人的 Docker 页面长时间复现、原生设备和桌面设备。
+
+The baseline is `2f3010c5beff70b1e2263ff1ecdb47840201c3fb`, with the change kept in the uncommitted working tree. The favorite-change watcher now owns its HTTP request lifetime. Stopping it or changing session state aborts the in-flight request immediately, and calling `run()` twice on one watcher keeps one loop. Each session captures its server address, while the 35-second receive deadline, post-refresh cursor advancement, and exponential backoff remain. See [issue-591.md](issue-591.md).
+
+The focused watcher tests passed 8 cases. `pnpm exec tsc -b`, `pnpm test` (376 files / 3929 tests), `pnpm run build`, and `pnpm run build:web` passed. The reporter's long-lived Docker page, native devices, and desktop devices were not run.
+
 <a id="harmony-shell-plugin-frame"></a>
 
 ## 2026-11-23 · 鸿蒙智能音箱热更新白屏 / HarmonyOS smart speaker page blank after bundle update

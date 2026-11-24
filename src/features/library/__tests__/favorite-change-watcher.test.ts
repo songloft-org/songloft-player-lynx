@@ -12,7 +12,13 @@ test('holds one request and refreshes only on changes before advancing the curso
   const first = deferred<FavoriteChange>()
   const next = deferred<FavoriteChange>()
   const refreshed = deferred<void>()
-  const poll = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(next.promise)
+  const poll = vi.fn().mockImplementationOnce((_cursor, _assertCurrent, signal: AbortSignal | undefined) => {
+    expect(signal?.aborted).toBe(false)
+    return first.promise
+  }).mockImplementationOnce((_cursor, _assertCurrent, signal: AbortSignal | undefined) => {
+    expect(signal?.aborted).toBe(false)
+    return next.promise
+  })
   const refresh = vi.fn(() => refreshed.promise)
   const watcher = new FavoriteChangeWatcher({ poll, refresh })
   const running = watcher.run()
@@ -30,12 +36,30 @@ test('holds one request and refreshes only on changes before advancing the curso
   expect(refresh).toHaveBeenCalledTimes(1)
 })
 
-test('stopping rejects a late notification from a former session', async () => {
+test('running the same watcher twice keeps one request in flight', async () => {
+  const first = deferred<FavoriteChange>()
+  const poll = vi.fn().mockReturnValue(first.promise)
+  const watcher = new FavoriteChangeWatcher({ poll, refresh: vi.fn() })
+  const firstRun = watcher.run()
+  const secondRun = watcher.run()
+  expect(secondRun).toBe(firstRun)
+  expect(poll).toHaveBeenCalledTimes(1)
+  watcher.stop()
+  first.resolve({ cursor: 'one', changed: false })
+  await firstRun
+})
+
+test('stopping aborts an in-flight request and rejects a late notification from a former session', async () => {
   const first = deferred<FavoriteChange>()
   const refresh = vi.fn()
-  const watcher = new FavoriteChangeWatcher({ poll: () => first.promise, refresh })
+  let signal: AbortSignal | undefined
+  const watcher = new FavoriteChangeWatcher({ poll: (_cursor, _assertCurrent, requestSignal) => {
+    signal = requestSignal
+    return first.promise
+  }, refresh })
   const running = watcher.run()
   watcher.stop()
+  expect(signal?.aborted).toBe(true)
   first.resolve({ cursor: 'old', changed: true })
   await running
   expect(refresh).not.toHaveBeenCalled()

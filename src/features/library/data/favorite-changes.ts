@@ -69,17 +69,17 @@ export function initializeFavoriteChanges(): () => void {
     watcher = undefined
     scope = next
     if (!next) return
-    const serverBaseUrl = () => `${appConfig.resolvedBaseUrl}${appConfig.basePath}`.replace(/\/$/, '')
+    const serverBaseUrl = `${useAppSessionStore.getState().baseUrl}${appConfig.basePath}`.replace(/\/$/, '')
     const assertScope = () => { if (currentScope() !== next) throw new Error('Favorite session changed') }
     watcher = new FavoriteChangeWatcher({
       assertCurrent: assertScope,
-      poll: async (cursor, assertCurrent) => {
-        const response = await getSharedClient().get(`${serverBaseUrl()}${apiPrefix}/playlists/favorites/changes`, {
-          query: { cursor }, receiveTimeoutMs: 35_000, assertCurrent,
+      poll: async (cursor, assertCurrent, signal) => {
+        const response = await getSharedClient().get(`${serverBaseUrl}${apiPrefix}/playlists/favorites/changes`, {
+          query: { cursor }, receiveTimeoutMs: 35_000, assertCurrent, signal,
         })
         return parseFavoriteChange(response.data)
       },
-      refresh: assertCurrent => refreshFavoritesFromServer({ serverBaseUrl: serverBaseUrl(), assertCurrent }),
+      refresh: assertCurrent => refreshFavoritesFromServer({ serverBaseUrl, assertCurrent }),
       unsupported: error => error instanceof ApiError && error.status === 404,
     })
     void watcher.run()
@@ -90,7 +90,13 @@ export function initializeFavoriteChanges(): () => void {
     subscribeAppVisibility(value => { visible = value; refreshSession() }),
   ]
   refreshSession()
-  const stop = () => { watcher?.stop(); stops.forEach(fn => fn()) }
+  const stop = () => {
+    watcher?.stop()
+    watcher = undefined
+    scope = null
+    stops.forEach(fn => fn())
+    if (dispose === stop) dispose = undefined
+  }
   dispose = stop
   return stop
 }

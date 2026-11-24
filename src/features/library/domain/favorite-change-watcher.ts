@@ -6,7 +6,7 @@ export interface FavoriteChange {
 }
 
 interface WatcherDeps {
-  poll: (cursor: string | undefined, assertCurrent: () => void) => Promise<FavoriteChange>
+  poll: (cursor: string | undefined, assertCurrent: () => void, signal: AbortSignal | undefined) => Promise<FavoriteChange>
   refresh: (assertCurrent: () => void) => Promise<void>
   assertCurrent?: () => void
   unsupported?: (error: unknown) => boolean
@@ -18,6 +18,8 @@ export class FavoriteChangeWatcher {
   private stopped = false
   private timer: ReturnType<typeof setTimeout> | undefined
   private wakeRetry: (() => void) | undefined
+  private activeRequest: AbortController | undefined
+  private running: Promise<void> | undefined
   constructor(private readonly deps: WatcherDeps) {}
 
   private assertCurrent = () => {
@@ -25,13 +27,26 @@ export class FavoriteChangeWatcher {
     this.deps.assertCurrent?.()
   }
 
-  async run(): Promise<void> {
+  run(): Promise<void> {
+    if (this.running) return this.running
+    this.running = this.runLoop()
+    return this.running
+  }
+
+  private async runLoop(): Promise<void> {
     let cursor: string | undefined
     let failures = 0
     while (!this.stopped) {
       try {
         this.assertCurrent()
-        const event = await this.deps.poll(cursor, this.assertCurrent)
+        const controller = typeof AbortController === 'function' ? new AbortController() : undefined
+        this.activeRequest = controller
+        let event: FavoriteChange
+        try {
+          event = await this.deps.poll(cursor, this.assertCurrent, controller?.signal)
+        } finally {
+          if (this.activeRequest === controller) this.activeRequest = undefined
+        }
         this.assertCurrent()
         if (event.changed) await this.deps.refresh(this.assertCurrent)
         this.assertCurrent()
@@ -54,6 +69,7 @@ export class FavoriteChangeWatcher {
 
   stop(): void {
     this.stopped = true
+    this.activeRequest?.abort()
     safeClearTimeout(this.timer as unknown as number | undefined)
     this.wakeRetry?.()
   }

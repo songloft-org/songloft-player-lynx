@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-24 · #591 Favorite long-poll cancellation
+
+Favorite-change subscriptions now abort in-flight HTTP requests when stopped or when the session changes, keep one running loop per watcher, and capture the current session server address. [Verification](../../project/issue-591.md)
+
 ## 2026-11-23 · HarmonyOS smart speaker page blank after bundle update
 
 The v0.1.6 HAP could load the v2.13.13 JS update while missing the native component used by the smart speaker page. Affected users can install the full v2.13.13 HAP. New signed manifests will require a HarmonyOS shell of at least 2.13.13. The release manifest and shell checks were verified. Retesting on the reporter’s device remains pending. [Verification](../../project/progress.md#harmony-shell-plugin-frame)

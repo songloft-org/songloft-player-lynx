@@ -192,9 +192,9 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 ### FAVORITE-001: Favorite invalidation subscriptions must bind server and account
 
 - Scope: app-level favorite long polling, Query caches and native notification hearts, songloft-org/songloft#563.
-- Rule: fix each request URL and verify its session before auth replay and cache writes. Advance the cursor only after successful reconciliation. Logout, backgrounding and session changes stop old subscriptions; resume must reconcile again.
-- Evidence and Done right: an old response arriving after a switch leaves the new `{99}` set intact; refresh failures do not acknowledge cursors. Real QuickJS writes through the backend switch the same Docker Chrome page from Add→Remove→Add without heart clicks or page reload. All 3793 tests and both build targets passed; [record](docs/en/project/issue-563.md).
-- Seen 1× (2026-11-11). Status: new-feature mechanism validation, pre-commit validation; delivery status is tracked in the batch record.
+- Rule: fix each request URL and verify its session before auth replay and cache writes. Advance the cursor only after successful reconciliation. Logout, backgrounding, and session changes stop old subscriptions and abort in-flight requests. Resume must reconcile again, and one watcher must have one running loop.
+- Evidence and Done right: an old response arriving after a switch leaves the new `{99}` set intact; refresh failures do not acknowledge cursors. This batch adds regressions for immediate abort on stop, late-response suppression, and single-flight startup. Real QuickJS writes through the backend switch the same Docker Chrome page from Add→Remove→Add without heart clicks or page reload. All 3929 tests and both build targets passed; [record](docs/en/project/issue-563.md) and [#591 record](docs/en/project/issue-591.md).
+- Seen 2× (2026-11-11, 2026-11-24). Status: long-poll lifecycle hardening, client Web validation passed; the reporter's Docker page and native devices remain pending.
 
 ### UI-006: Reallocate narrow-row information while preserving touch targets
 
