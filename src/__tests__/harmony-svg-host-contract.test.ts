@@ -9,10 +9,10 @@ const read = (relative: string): string =>
 
 describe('HarmonyOS SVG host integration', () => {
   const index = read('harmony/entry/src/main/ets/pages/Index.ets')
-  const ohPackage = read('harmony/entry/oh-package.json5')
-
   test('installs the Harmony SVG XElement matching the Lynx SDK', () => {
-    expect(ohPackage).toContain('"@lynx/xelement_svg": "4.0.1"')
+    const { dependencies } = JSON.parse(read('harmony/entry/oh-package.json5'))
+    expect(dependencies['@lynx/lynx']).toMatch(/^\d+\.\d+\.\d+$/)
+    expect(dependencies['@lynx/xelement_svg']).toBe(dependencies['@lynx/lynx'])
   })
 
   test('registers the svg behavior on the LynxView', () => {

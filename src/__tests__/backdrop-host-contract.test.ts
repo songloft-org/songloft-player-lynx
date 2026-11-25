@@ -31,7 +31,10 @@ test('player sheets capture opaque full-page content without capturing themselve
 })
 
 test('the iOS registered BlurView dependency and guarded OS capability remain paired', () => {
-  expect(read('ios/Podfile.lock')).toContain('XElement/BlurView (4.0.1)')
+  const iosVersion = JSON.parse(read('updates/native-contract.json')).engines.ios
+  for (const lockfile of ['ios/Podfile.lock', 'ios/release/Podfile.lock']) {
+    expect(read(lockfile)).toContain(`XElement/BlurView (${iosVersion})`)
+  }
   const system = read('ios/SongloftLynx/SystemAppearance.swift')
   expect(system).toMatch(/if #available\(iOS 26\.0, \*\) \{ return SongloftTabGlassUI\.supportsSystemGlass\(\) \}/)
   expect(system).toContain('LynxVersion.versionString()')
