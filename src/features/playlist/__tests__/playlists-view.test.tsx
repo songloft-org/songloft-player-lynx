@@ -13,6 +13,7 @@ const {
   deleteMutationHook,
   pinnedMutationHook,
   visibilityMutationHook,
+  getPlaylistsMock,
 } = vi.hoisted(() => ({
   listHook: vi.fn(),
   createMutationHook: vi.fn(),
@@ -20,6 +21,7 @@ const {
   deleteMutationHook: vi.fn(),
   pinnedMutationHook: vi.fn(),
   visibilityMutationHook: vi.fn(),
+  getPlaylistsMock: vi.fn(),
 }))
 
 vi.mock('react-i18next', async () =>
@@ -58,6 +60,13 @@ vi.mock('../data/playlist-mutations.js', () => ({
   useDeletePlaylistMutation: deleteMutationHook,
   useSetPinnedMutation: pinnedMutationHook,
   useSetVisibilityMutation: visibilityMutationHook,
+}))
+
+// Auto-sort loads the full set via the API with the keyword dropped, so it
+// stays correct even while the visible list is filtered.
+vi.mock('../api/index.js', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  getPlaylistApi: () => ({ getPlaylists: getPlaylistsMock }),
 }))
 
 
@@ -109,6 +118,8 @@ function mutationResult(over = {}) {
 }
 
 beforeEach(() => {
+  getPlaylistsMock.mockReset()
+  getPlaylistsMock.mockResolvedValue({ playlists: [], total: 0 })
   listHook.mockReturnValue(listResult([{ playlists: [], total: 0 }]))
   createMutationHook.mockReturnValue(mutationResult())
   reorderMutationHook.mockReturnValue(mutationResult())
@@ -304,17 +315,12 @@ test('sort menu opens when the sort button is tapped', async () => {
 test('name ascending sort calls reorder with sorted ids (case-insensitive)', async () => {
   const mutate = vi.fn()
   reorderMutationHook.mockReturnValue({ mutate, isPending: false })
+  const all = [makePlaylist(1, { name: 'banana' }), makePlaylist(2, { name: 'Apple' }), makePlaylist(3, { name: 'cherry' })]
+  getPlaylistsMock.mockResolvedValue({ playlists: all, total: all.length })
   listHook.mockReturnValue(
     listResult([
-      {
-        playlists: [
-          makePlaylist(1, { name: 'banana' }),
-          makePlaylist(2, { name: 'Apple' }),
-          makePlaylist(3, { name: 'cherry' }),
-        ],
-        total: 3,
-      },
-    ], { fetchNextPage: vi.fn().mockResolvedValue({ hasNextPage: false, data: { pages: [{ playlists: [makePlaylist(1, { name: 'banana' }), makePlaylist(2, { name: 'Apple' }), makePlaylist(3, { name: 'cherry' })], total: 3 }] } }) }),
+      { playlists: all, total: 3 },
+    ], { fetchNextPage: vi.fn().mockResolvedValue({ hasNextPage: false, data: { pages: [{ playlists: all, total: 3 }] } }) }),
   )
   const { queryByTestId, queryByText } = await renderView()
   await act(async () => {
@@ -331,16 +337,12 @@ test('name ascending sort calls reorder with sorted ids (case-insensitive)', asy
 test('already-sorted playlists shows the already-sorted banner', async () => {
   const mutate = vi.fn()
   reorderMutationHook.mockReturnValue({ mutate, isPending: false })
+  const all = [makePlaylist(1, { name: 'Apple' }), makePlaylist(2, { name: 'Banana' })]
+  getPlaylistsMock.mockResolvedValue({ playlists: all, total: all.length })
   listHook.mockReturnValue(
     listResult([
-      {
-        playlists: [
-          makePlaylist(1, { name: 'Apple' }),
-          makePlaylist(2, { name: 'Banana' }),
-        ],
-        total: 2,
-      },
-    ], { fetchNextPage: vi.fn().mockResolvedValue({ hasNextPage: false, data: { pages: [{ playlists: [makePlaylist(1, { name: 'Apple' }), makePlaylist(2, { name: 'Banana' })], total: 2 }] } }) }),
+      { playlists: all, total: 2 },
+    ], { fetchNextPage: vi.fn().mockResolvedValue({ hasNextPage: false, data: { pages: [{ playlists: all, total: 2 }] } }) }),
   )
   const { queryByTestId, queryByText } = await renderView()
   await act(async () => {

@@ -46,6 +46,32 @@ export type SettingsSubPage =
 export const DEFAULT_SUB_PAGE: SettingsSubPage = 'appearance'
 
 /**
+ * Pane selection remembered across a route away from `/settings`. Opening a
+ * plugin is a real route (`/plugin/…`), which unmounts SettingsPage and loses
+ * its local `activeSubPage`; on return the pane used to reset to Appearance and
+ * the user had to find Plugin Manager again. Remember the pane we left from so
+ * a fresh SettingsPage can restore it.
+ */
+let rememberedPane: SettingsSubPage | undefined
+export function rememberSettingsPane(page: SettingsSubPage): void { rememberedPane = page }
+/** Read and clear — a one-shot restore, so a later unrelated settings open starts fresh. */
+export function consumeRememberedPane(): SettingsSubPage | undefined {
+  const value = rememberedPane
+  rememberedPane = undefined
+  return value
+}
+
+/**
+ * Set when a plugin was opened from the dual-column settings pane, so back
+ * returns to `/settings` (where the remembered pane restores) rather than to
+ * the standalone `/settings/plugins` route.
+ */
+let pluginOpenedFromPane = false
+export function markPluginOpenedFromPane(): void { pluginOpenedFromPane = true }
+export function clearPluginOpenedFromPane(): void { pluginOpenedFromPane = false }
+export function wasPluginOpenedFromPane(): boolean { return pluginOpenedFromPane }
+
+/**
  * The route each sub-page *is*, when it is reached as a route rather than shown in
  * the pane. Single source for two things: the fallback `navigate({ to })` target in
  * single-column mode, and (via {@link parentSubPage}) the pane's parent relation.

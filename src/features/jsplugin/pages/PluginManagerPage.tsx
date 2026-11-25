@@ -28,6 +28,7 @@ import {
   useSetPluginAutoUpdateMutation,
 } from '../data/jsplugin-mutations.js'
 import { SubPageShell } from '../../settings/widgets/SubPageShell.js'
+import { clearPluginOpenedFromPane, markPluginOpenedFromPane } from '../../settings/domain/sub-page-nav.js'
 import { SwitchRow } from '../../settings/widgets/SwitchRow.js'
 import { PluginAvatar } from '../widgets/PluginAvatar.js'
 import { PluginUpdateDialog } from '../widgets/PluginUpdateDialog.js'
@@ -41,7 +42,7 @@ import {
 } from '../widgets/PluginNavigationSettings.js'
 import './PluginManagerPage.css'
 
-export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void }) {
+export function PluginManagerPage({ onOpenStore, onOpenPluginInPane }: { onOpenStore?: () => void; onOpenPluginInPane?: () => void }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -108,6 +109,12 @@ export function PluginManagerPage({ onOpenStore }: { onOpenStore?: () => void })
 
   const onOpenPlugin = (plugin: JSPlugin) => {
     if (!plugin.isActive || !plugin.entryPath || openingBlocked) return
+    // Leaving the dual-column settings pane for a real plugin route unmounts
+    // SettingsPage; remember the pane so returning restores it instead of the
+    // default Appearance page.
+    if (onOpenPluginInPane) markPluginOpenedFromPane()
+    else clearPluginOpenedFromPane()
+    onOpenPluginInPane?.()
     void navigate({
       to: '/plugin/$entryPath',
       params: { entryPath: plugin.entryPath },

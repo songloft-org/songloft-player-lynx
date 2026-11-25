@@ -27,11 +27,19 @@ export function PlaylistSongList<T extends Song>({ total, loadingMore, hasMore,
   const { height: navInset, onLayoutChange: onInsetLayout } = useBreakpoint(0, '.playlist-song-list__nav-inset')
   const [currentIndex, setCurrentIndex] = useState(0)
   const [requestedIndex, setRequestedIndex] = useState<number | null>(null)
+  // "Locate to resume position" is a one-shot request. Once the target row has
+  // been found and scrolled to, later page loads / refreshes must NOT yank the
+  // list back to it — the user may have scrolled away on purpose.
+  const locatedRef = useRef<number | null>(null)
   useEffect(() => {
-    if (locateSongId == null) return
+    if (locateSongId == null) { locatedRef.current = null; return }
+    if (locatedRef.current === locateSongId) return
     const index = songs.findIndex(song => song.id === locateSongId)
-    if (index >= 0) { latestRequest.current++; setRequestedIndex(index) }
-    else if (hasMore && !loadingMore && !loadFailed) listProps.onEndReached?.()
+    if (index >= 0) {
+      locatedRef.current = locateSongId
+      latestRequest.current++
+      setRequestedIndex(index)
+    } else if (hasMore && !loadingMore && !loadFailed) listProps.onEndReached?.()
   }, [locateSongId, songs, hasMore, loadingMore, loadFailed])
   const [showLabel, setShowLabel] = useState(false)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)

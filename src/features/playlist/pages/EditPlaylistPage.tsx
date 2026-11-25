@@ -54,6 +54,10 @@ export function EditPlaylistPage() {
 
   const onSave = () => {
     if (updateMutation.isPending) return
+    // Validate once for BOTH branches: with a picked cover the old code sent
+    // name: '' (API drops empty names), so the backend kept the old name while
+    // the UI showed "saved" — a successful save that changed nothing.
+    if (!coverOnly && !name.trim()) return
     if (selectedCover) {
       updateMutation.mutate(
         { coverSongId: selectedCover.songId, ...(!coverOnly && { name: name.trim(), description: desc.trim(), audiobook: audiobook ?? playlist?.labels.includes('audiobook') }) },

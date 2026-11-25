@@ -14,6 +14,7 @@ import { toast } from '../../../shared/ui/toast-store.js'
 import { getJSPluginApi } from '../api/index.js'
 import { useGithubProxyQuery } from '../data/jsplugin-query.js'
 import { useUpdatePluginMutation } from '../data/jsplugin-mutations.js'
+import { releasePluginFrame } from '../domain/plugin-frame-release.js'
 import type { JSPlugin, JSPluginUpdateCheck } from '../../../models/jsplugin.js'
 // The dialog chrome (card, scrim, buttons) is ConfirmDialog's — including the
 // z-index levels its overlay contract test pins. Only the body and the dynamic
@@ -89,6 +90,10 @@ export function PluginUpdateDialog({ show, plugin, onClose }: PluginUpdateDialog
     try {
       await updatePluginMutation.mutateAsync({ id: plugin.id, ...proxyParams })
       if (requestId !== requestIdRef.current) return
+      // The plugin's files were replaced. A kept-alive Web frame still runs the
+      // old document (URL has no version, so open() would reuse it) until a
+      // full page refresh — release it so the next open loads the new build.
+      if (plugin.entryPath) releasePluginFrame(plugin.entryPath)
       toast.success(t('jsplugin.updateSuccess'))
       onClose()
     } catch (e) {

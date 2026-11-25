@@ -8,10 +8,9 @@ import { toast } from '../../../shared/ui/toast-store.js'
 export interface TagRenameDialogProps {
   tag: SongTag
   onClose: () => void
-  onDelete?: () => void
 }
 
-export function TagRenameDialog({ tag, onClose, onDelete }: TagRenameDialogProps) {
+export function TagRenameDialog({ tag, onClose }: TagRenameDialogProps) {
   const { t } = useTranslation()
   const mutation = useUpdateTagMutation()
 

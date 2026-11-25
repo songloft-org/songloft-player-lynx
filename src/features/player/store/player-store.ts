@@ -936,7 +936,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       // Tell the native engine the playback gap is terminal so it can release
       // its finite background execution window immediately.
       finishIOSPlaybackGap()
-      set({ isPlaying: false, playlistCompleted: s.playMode === 'order' })
+      // Both `order` (queue exhausted) and `singlePlay` (one-shot track) stop
+      // at the end with currentTime at the final position. Mark both as
+      // completed so the next togglePlay replays from 0 instead of reloading
+      // at the end and completing instantly.
+      set({ isPlaying: false, playlistCompleted: s.playMode === 'order' || s.playMode === 'singlePlay' })
       return
     }
     void playAtIndex(nextIdx).catch((e) => {
@@ -1322,6 +1326,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         hasPriorityNext: false,
         hasHistoryPrevious: false,
         nextQueueIndex: null,
+        // Clearing the queue ends the session just like remote `stop`: drop
+        // the source context so Home stops showing "now playing" and plugins
+        // no longer read a stale source_playlist_id.
+        playbackContext: undefined,
+        sourcePlaylistId: undefined,
+        playlistCompleted: false,
         audioTrack: null,
         audioTrackPending: undefined,
         isAudioTrackSwitching: false,
@@ -1968,8 +1978,38 @@ export async function forgetCachedPlayback(identity: CacheIdentity | { namespace
     const value = cachedSongIdentity(song)
     return value?.namespace === identity.namespace && (!('key' in identity) || value.key === identity.key)
   }
-  if (state.currentSong && matches(state.currentSong)) state.reset()
-  else {
+  if (state.currentSong && matches(state.currentSong)) {
+    // Deleting the playing cache file is a stop, not a full reset: keep the
+    // user's volume/speed/playMode/sleepTimer/videoScale preferences intact.
+    // reset() would restore INITIAL (volume 50, speed 1, order mode, no timer)
+    // while native ExoPlayer keeps the real 2x/80% — UI then disagrees with
+    // the engine. Mirror the remote `stop` shape instead.
+    endPluginPlayback()
+    invalidateSourceLoad()
+    _queueLoader.invalidate()
+    _navigation.reset(usePlayerStore.getState().playMode)
+    cancelRetry()
+    void audio.stop()
+    _videoSourceSongId = null
+    _loadedSongId = null
+    _loadedSourceKind = null
+    usePlayerStore.setState({
+      currentSong: undefined,
+      isPlaying: false,
+      isBuffering: false,
+      currentTime: 0,
+      duration: 0,
+      playlist: [],
+      currentIndex: -1,
+      playbackContext: undefined,
+      sourcePlaylistId: undefined,
+      playlistCompleted: false,
+      audioTrack: null,
+      audioTrackPending: undefined,
+      isAudioTrackSwitching: false,
+      audioTrackError: undefined,
+    })
+  } else {
     const playlist = state.playlist.filter(song => !matches(song))
     if (playlist.length === state.playlist.length) return
     const indices = new Map<number, number>()

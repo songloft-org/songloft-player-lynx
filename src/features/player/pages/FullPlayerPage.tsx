@@ -10,6 +10,7 @@ import type { Song } from '../../../models/song.js'
 // feature (API client included) into the player's graph for one getter.
 import { performRouteBack } from '../../../core/navigation/route-back-action.js'
 import { cachedSongIdentity } from '../domain/offline-cache.js'
+import { consumeLyricsScreenReturn } from '../domain/lyrics-return-screen.js'
 import { setShellWidth } from '../../../shared/nav/shell-navigation.js'
 import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { readAutoEnterLyrics } from '../../settings/data/settings-prefs.js'
@@ -228,6 +229,15 @@ export function FullPlayerPage() {
   const swiperMounted = !isWide && layout.measured
   const [autoEntered, setAutoEntered] = useState(false)
   useEffect(() => {
+    // Returning from the lyrics-adjust route must restore the lyrics screen the
+    // user came from, not the cover. Consume once; a later rotate must not
+    // re-enter automatically.
+    if (consumeLyricsScreenReturn() && swiperMounted) {
+      setAutoEntered(true)
+      setSwiperIndex(1)
+      swiperRef.current?.swipeTo(1)
+      return
+    }
     if (!autoEnterLyrics || !swiperMounted || autoEntered) return
     // Once only: re-running on a later layout change would yank the user back to the
     // lyrics after they had swiped to the cover (a rotate is enough to trigger it).

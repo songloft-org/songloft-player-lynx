@@ -70,6 +70,8 @@ export interface RouteBackContext {
   pluginTabEntry?: boolean
   /** Plugin opened from the installed list returns there after its internal history. */
   pluginManagerEntry?: boolean
+  /** Plugin opened from the dual-column settings pane: back goes to `/settings`. */
+  pluginPaneEntry?: boolean
   /** Which tab the shell was last on, for the chrome-less pages that return to it. */
   lastShellLocation: string
   /**
@@ -80,6 +82,12 @@ export interface RouteBackContext {
   lastContentLocation?: { pathname: string; search: Record<string, unknown> }
   /** The library's last sub-view, so returning to it does not reset the view. */
   lastLibrarySearch: LibrarySearchLike
+  /**
+   * Query params of the *current* route. Only folder drill-down needs it: each
+   * level is the same `/library/folders` path with a deeper `?path=`, so back
+   * must derive the parent from this rather than from the pathname alone.
+   */
+  currentSearch?: Record<string, unknown>
 }
 
 /**
@@ -160,7 +168,10 @@ export function resolveRouteBack(
   if (pathname === '/login') return { kind: 'exit-prompt' }
 
   if (pathname.startsWith('/plugin/') && ctx.pluginManagerEntry) {
-    return { kind: 'navigate', to: '/settings/plugins' }
+    // From the wide-screen settings pane, `/settings` restores the remembered
+    // Plugin Manager pane; routing to the standalone `/settings/plugins` page
+    // skipped the master list and reset the pane to Appearance.
+    return { kind: 'navigate', to: ctx.pluginPaneEntry ? '/settings' : '/settings/plugins' }
   }
 
   if (pathname === '/player/video' && ctx.videoReturnPlugin) {
@@ -182,8 +193,17 @@ export function resolveRouteBack(
     return { kind: 'navigate', to: '/library', librarySearch: { view: 'tag' } }
   }
 
-  // Folder browse page returns to the folder view.
+  // Folder browse: every drill-down level shares this pathname and differs
+  // only by `?path=`. Back must step one level up (A/B/C → A/B), and only
+  // leave for the folder view when already at the top. Using the shell's
+  // "last content" page here would jump straight to the library root from
+  // any depth, skipping every parent folder.
   if (pathname === '/library/folders') {
+    const raw = typeof ctx.currentSearch?.path === 'string' ? ctx.currentSearch.path : ''
+    const parts = raw.split('/').filter(Boolean)
+    if (parts.length > 1) {
+      return { kind: 'navigate', to: '/library/folders', search: { path: parts.slice(0, -1).join('/') } }
+    }
     return { kind: 'navigate', to: '/library', librarySearch: { view: 'folder' } }
   }
 
@@ -192,12 +212,24 @@ export function resolveRouteBack(
     return { kind: 'navigate', to: '/library', librarySearch: ctx.lastLibrarySearch }
   }
 
-  // Editing a playlist returns to that playlist's detail page — NOT to the shell
-  // tab like every other `/playlists/…` path below. Must be matched before the
-  // prefix rule, or the edit form's back arrow would kick the user out of the
-  // playlist entirely.
+  // Editing a playlist returns to where the edit was opened from: the detail
+  // page when launched from there, or the library list when launched from the
+  // row menu. The old hardcoded detail target sent list-launched edits into
+  // the detail page, which is not where the user came from. Fall back to the
+  // detail page when no source was recorded (cold link / notification).
   const editMatch = /^\/playlists\/(\d+)\/edit$/.exec(pathname)
   if (editMatch) {
+    const src = ctx.lastContentLocation
+    if (src && src.pathname && src.pathname !== pathname &&
+        src.pathname !== `/playlists/${editMatch[1]}/edit` &&
+        !src.pathname.startsWith('/player')) {
+      const search = src.search && Object.keys(src.search).length ? src.search : undefined
+      if (src.pathname === '/library') {
+        const view = search?.view
+        return { kind: 'navigate', to: '/library', librarySearch: typeof view === 'string' ? { view } : undefined }
+      }
+      return { kind: 'navigate', to: src.pathname, ...(search ? { search } : {}) }
+    }
     return { kind: 'navigate', to: `/playlists/${editMatch[1]}` }
   }
 

@@ -12,6 +12,7 @@ import { useBackHandler } from '../../../shared/nav/use-back-handler.js'
 import { HttpTimeoutError } from '../../../core/network/http-client.js'
 import { getJSPluginApi } from '../api/index.js'
 import { useUpdateAllPluginsMutation } from '../data/jsplugin-mutations.js'
+import { releasePluginFrame } from '../domain/plugin-frame-release.js'
 import type { GithubProxyParams } from '../api/index.js'
 import type { JSPluginBatchUpdateResponse } from '../../../models/jsplugin.js'
 // Chrome (card/scrim/buttons + the z-index overlay contract) is ConfirmDialog's;
@@ -71,6 +72,11 @@ export function PluginBatchUpdateDialog({ show, onClose, githubProxy }: PluginBa
       // The API owns the batch deadline; a second timer can report failure
       // while the request is still within its allowed update time.
       const res = await updateAllMutation.mutateAsync(params)
+      // Every updated plugin had its files replaced; drop any kept-alive frame
+      // so reopening loads the new build instead of the cached old document.
+      for (const item of res.results) {
+        if (item.success && item.entryPath) releasePluginFrame(item.entryPath)
+      }
       setResult(res)
     } catch (e) {
       setError(e instanceof HttpTimeoutError

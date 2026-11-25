@@ -8,6 +8,7 @@ import { KaraokeLine } from './KaraokeLine.js'
 import { useLyricStore } from '../store/index.js'
 import { usePlayerStore } from '../store/index.js'
 import { cachedSongIdentity } from '../domain/offline-cache.js'
+import { markLyricsScreenBeforeAdjust } from '../domain/lyrics-return-screen.js'
 import './LyricsView.css'
 
 /**
@@ -113,6 +114,16 @@ export function LyricsView() {
     userScrolledRef.current = value
     setUserScrolled(value)
   }, [])
+
+  // A new song is a fresh reading context: clear the deliberate scroll-away so
+  // its lyrics follow the current line from the start and the "back to current"
+  // button disappears. The scroll-view's key remounts its position, but this
+  // component-level flag survives that remount without this reset.
+  const currentSongId = currentSong?.id
+  useEffect(() => {
+    markUserScrolled(false)
+    lastAutoScrollTopRef.current = 0
+  }, [currentSongId, markUserScrolled])
 
   useEffect(() => {
     // Respect a deliberate scroll-away: if the reader has moved off the current
@@ -225,7 +236,7 @@ export function LyricsView() {
               ? (
                 <view
                   className='player-lyrics__tool'
-                  bindtap={() => void navigate({ to: '/player/lyrics/adjust' })}
+                  bindtap={() => { markLyricsScreenBeforeAdjust(); void navigate({ to: '/player/lyrics/adjust' }) }}
                 >
                   <Icon name='tune' size={14} color={ICON_COLORS.contentMuted} />
                   <text className='player-lyrics__tool-text'>{t('lyricAdjust.title')}</text>

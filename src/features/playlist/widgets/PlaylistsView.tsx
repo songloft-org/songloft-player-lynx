@@ -6,6 +6,7 @@ import { SortableRoot, SortableItem, SortableItemArea } from '@lynx-js/lynx-ui-s
 
 import type { Playlist } from '../../../models/playlist.js'
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
+import { defaultPageSize } from '../../../core/config/constants.js'
 import { AppCheckbox } from '../../../shared/ui/AppCheckbox.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { DragHandle } from '../../../shared/ui/DragHandle.js'
@@ -80,6 +81,13 @@ export function PlaylistsView(
     setSelectMode(false)
     setSortMode(false)
   }, [showHidden])
+  // Multi-select must track the visible result set: searching while items are
+  // checked must not keep stale ids that a subsequent batch delete would act
+  // on even though those playlists are no longer on screen (FlatSongsView does
+  // the same for songs).
+  useEffect(() => {
+    setSelected(new Set())
+  }, [debouncedSearch])
   const [confirmDelete, setConfirmDelete] = useState(false)
   /*
    * The row menu's state lives here rather than in a store, and the menu renders
@@ -126,6 +134,10 @@ export function PlaylistsView(
 
   const onTap = (playlist: Playlist) => {
     if (selectMode) {
+      // Built-in playlists (e.g. Favorites) cannot be deleted; do not let them
+      // be checked in the first place so the count never includes an id that
+      // batch delete silently skips.
+      if (playlist.isBuiltIn) return
       setSelected((prev) => {
         const next = new Set(prev)
         if (next.has(playlist.id)) next.delete(playlist.id)
@@ -235,15 +247,24 @@ export function PlaylistsView(
   }
 
   /**
-   * Load all remaining pages so we sort the full playlist set, mirroring
-   * Flutter `PlaylistBrowseView.autoSortByName` → `loadAll()`.
+   * Load the full playlist set for auto-sort, mirroring Flutter
+   * `PlaylistBrowseView.autoSortByName` → `loadAll()`. A sort must cover every
+   * playlist, not just the current search result — sorting the filtered subset
+   * and submitting only those ids scrambles the unmatched playlists' order once
+   * the search is cleared. So fetch from the API with the keyword dropped,
+   * independent of what the list is currently showing.
    */
   async function loadAllPlaylists() {
-    let result = await query.fetchNextPage()
-    while (result.hasNextPage) {
-      result = await query.fetchNextPage()
+    const filters = { ...(tagId ? { tagId } : {}), ...(type ? { type } : {}), ...(songSource ? { songSource } : {}), ...(showHidden ? { excludeLabels: 'none' } : {}) }
+    const all: Playlist[] = []
+    let offset = 0
+    for (;;) {
+      const page = await getPlaylistApi().getPlaylists(filters, { limit: defaultPageSize, offset })
+      all.push(...page.playlists)
+      if (all.length >= page.total) break
+      offset += page.playlists.length
     }
-    return flattenPlaylists(result.data?.pages)
+    return all
   }
 
   const onSortNameAsc = async () => {

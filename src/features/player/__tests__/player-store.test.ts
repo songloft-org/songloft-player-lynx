@@ -1287,4 +1287,57 @@ describe('background queue fill (songloft-player-lynx#9)', () => {
 
     expect(usePlayerStore.getState().playlist).toEqual([])
   })
+
+  test('singlePlay stopped at end replays from 0 on next togglePlay', async () => {
+    const target = song(300, 10)
+    await usePlayerStore.getState().playPlaylist([target])
+    usePlayerStore.getState().setPlayMode('singlePlay')
+    usePlayerStore.setState({ currentTime: 10000 })
+    usePlayerStore.getState()._onCompleted()
+    expect(usePlayerStore.getState().isPlaying).toBe(false)
+    expect(usePlayerStore.getState().playlistCompleted).toBe(true)
+
+    await usePlayerStore.getState().togglePlay()
+    const audio = getAudio() as MockSongloftAudio
+    // resumeMs 0 takes the plain audio.load path (no initialPositionMs), i.e.
+    // the track restarts from the beginning instead of reloading at the end.
+    expect(audio.lastLoad?.opts?.initialPositionMs).toBeUndefined()
+    expect(usePlayerStore.getState().currentTime).toBe(0)
+  })
+
+  test('clearing the queue drops the source playlist context', async () => {
+    await usePlayerStore.getState().playPlaylist([song(301, 10)], 0, { type: 'playlist', key: '42' })
+    expect(usePlayerStore.getState().sourcePlaylistId).toBe(42)
+    usePlayerStore.getState().clearPlaylist()
+    expect(usePlayerStore.getState().playbackContext).toBeUndefined()
+    expect(usePlayerStore.getState().sourcePlaylistId).toBeUndefined()
+    expect(usePlayerStore.getState().playlistCompleted).toBe(false)
+  })
+
+  test('deleting the playing cache keeps volume/speed/mode/sleep-timer preferences', async () => {
+    const { cacheNamespace, cacheIdentity } = await import('../domain/cache-identity.js')
+    const target = song(302, 10)
+    const identity = cacheIdentity({
+      namespace: cacheNamespace({ profile: null, server: 'http://example.com', username: 'u' }),
+      song: target,
+      variant: { track: null, quality: 'original', normalize: false },
+      format: 'mp3',
+    })
+    const cached = { ...target, deviceCache: identity } as Song
+    usePlayerStore.setState({ currentSong: cached, playlist: [cached], currentIndex: 0, isPlaying: true })
+    usePlayerStore.getState().setPlayMode('random')
+    usePlayerStore.setState({ volume: 80, speed: 2 })
+    usePlayerStore.getState().setSleepTimerAfterSongs(5)
+
+    const { forgetCachedPlayback } = await import('../store/player-store.js')
+    await forgetCachedPlayback({ namespace: identity.namespace })
+
+    const state = usePlayerStore.getState()
+    expect(state.currentSong).toBeUndefined()
+    expect(state.isPlaying).toBe(false)
+    expect(state.volume).toBe(80)
+    expect(state.speed).toBe(2)
+    expect(state.playMode).toBe('random')
+    expect(state.sleepTimer?.remainingSongs).toBe(5)
+  })
 })

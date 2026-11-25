@@ -10,6 +10,7 @@
  */
 import type { HistoryState } from '@tanstack/react-router'
 import { getLastLibrarySearch } from '../../features/library/data/last-library-search.js'
+import { wasPluginOpenedFromPane } from '../../features/settings/domain/sub-page-nav.js'
 import { isLibraryViewKey } from '../../features/library/domain/library-views.js'
 import {
   getLastContentLocation,
@@ -83,6 +84,8 @@ export function currentBackAction(): BackAction | null {
     lastShellLocation: getLastShellLocation(),
     lastContentLocation: getLastContentLocation() ?? undefined,
     lastLibrarySearch: getLastLibrarySearch(),
+    currentSearch: location.search as Record<string, unknown>,
+    pluginPaneEntry: location.pathname.startsWith('/plugin/') && wasPluginOpenedFromPane(),
   })
 }
 

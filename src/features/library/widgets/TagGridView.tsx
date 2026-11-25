@@ -16,6 +16,9 @@ import {
 import { playAllWithBackgroundFill } from '../../player/data/play-all.js'
 import { toast } from '../../../shared/ui/toast-store.js'
 import { MediaListItem } from '../../../shared/ui/MediaListItem.js'
+import { GlobalMenu } from '../../../shared/ui/GlobalMenu.js'
+import type { MenuItemSpec } from '../../../shared/ui/MenuItem.js'
+import type { AnchorMeasurement } from '../../../shared/ui/anchored-overlay.js'
 import { GridSpacers } from '../../../shared/ui/GridSpacers.js'
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { TagCard } from './TagCard.js'
@@ -42,6 +45,25 @@ export function TagGridView({ viewMode = 'grid' }: TagGridViewProps) {
 
   const [renameTag, setRenameTag] = useState<SongTag | null>(null)
   const [deleteTag, setDeleteTag] = useState<SongTag | null>(null)
+  const [menuTag, setMenuTag] = useState<SongTag | null>(null)
+  const [menuAnchor, setMenuAnchor] = useState<AnchorMeasurement | null>(null)
+  const openTagMenu = (tag: SongTag, anchor: AnchorMeasurement | null) => {
+    setMenuTag(tag)
+    setMenuAnchor(anchor)
+  }
+  const tagMenuItems: MenuItemSpec[] = menuTag
+    ? [
+      { key: 'rename', label: t('songTag.rename'), icon: 'brush' },
+      { key: 'delete', label: t('songTag.deleteAction'), icon: 'x', danger: true },
+    ]
+    : []
+  const onTagMenuSelect = (key: string) => {
+    const tag = menuTag
+    setMenuTag(null)
+    if (!tag) return
+    if (key === 'rename') setRenameTag(tag)
+    else setDeleteTag(tag)
+  }
 
   const onPlayAll = async (tag: SongTag) => {
     try {
@@ -110,7 +132,7 @@ export function TagGridView({ viewMode = 'grid' }: TagGridViewProps) {
                           coverUrl={tag.coverUrl ? buildCoverUrl(tag.coverUrl) : undefined}
                           onTap={() => navigateToTag(tag)}
                           onPlayAll={() => { void onPlayAll(tag) }}
-                          onMore={() => setRenameTag(tag)}
+                          onMore={(anchor) => openTagMenu(tag, anchor)}
                         />
                       )
                       : (
@@ -119,6 +141,7 @@ export function TagGridView({ viewMode = 'grid' }: TagGridViewProps) {
                           tag={tag}
                           onTap={navigateToTag}
                           onPlayAll={onPlayAll}
+                          onMore={(tapped, anchor) => openTagMenu(tapped, anchor)}
                         />
                       ))}
                   {viewMode === 'list' ? null : <GridSpacers />}
@@ -132,7 +155,6 @@ export function TagGridView({ viewMode = 'grid' }: TagGridViewProps) {
           <TagRenameDialog
             tag={renameTag}
             onClose={() => setRenameTag(null)}
-            onDelete={() => { setDeleteTag(renameTag); setRenameTag(null) }}
           />
         )
         : null}
@@ -140,6 +162,15 @@ export function TagGridView({ viewMode = 'grid' }: TagGridViewProps) {
       {deleteTag
         ? <TagDeleteDialog tag={deleteTag} onClose={() => setDeleteTag(null)} />
         : null}
+
+      <GlobalMenu
+        show={menuTag != null}
+        onClose={() => setMenuTag(null)}
+        items={tagMenuItems}
+        onSelect={onTagMenuSelect}
+        anchor={menuAnchor ?? undefined}
+        testId='tags-row-menu'
+      />
     </view>
   )
 }

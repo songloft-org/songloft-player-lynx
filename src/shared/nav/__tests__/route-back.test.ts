@@ -365,3 +365,43 @@ test('fullscreen video returns to the plugin and preserves how it was opened', (
     .toEqual({ kind: 'navigate', to: '/plugin/$entryPath', plugin: origin })
   expect(resolveRouteBack('/player/video', ctx())).toEqual({ kind: 'navigate', to: '/player' })
 })
+
+describe('logic-bug fixes: back returns to where the user actually came from', () => {
+  test('folder drill-down steps one level up instead of jumping to the library root', () => {
+    const deep = resolveRouteBack('/library/folders', ctx({ currentSearch: { path: 'A/B/C' } }))
+    expect(deep.kind === 'navigate' && deep.to).toBe('/library/folders')
+    expect(deep.kind === 'navigate' && deep.search?.path).toBe('A/B')
+
+    const oneLevel = resolveRouteBack('/library/folders', ctx({ currentSearch: { path: 'A' } }))
+    expect(oneLevel.kind === 'navigate' && oneLevel.to).toBe('/library')
+    expect(oneLevel.kind === 'navigate' && oneLevel.librarySearch?.view).toBe('folder')
+  })
+
+  test('editing a playlist launched from the library returns to the library', () => {
+    const action = resolveRouteBack('/playlists/7/edit', ctx({
+      lastContentLocation: { pathname: '/library', search: { view: 'playlist' } },
+    }))
+    expect(action.kind === 'navigate' && action.to).toBe('/library')
+    expect(action.kind === 'navigate' && action.librarySearch?.view).toBe('playlist')
+  })
+
+  test('editing a playlist launched from its detail page still returns to the detail', () => {
+    const action = resolveRouteBack('/playlists/7/edit', ctx({
+      lastContentLocation: { pathname: '/playlists/7', search: {} },
+    }))
+    expect(action.kind === 'navigate' && action.to).toBe('/playlists/7')
+  })
+
+  test('a plugin opened from the wide settings pane returns to /settings', () => {
+    const action = resolveRouteBack('/plugin/foo', ctx({
+      pluginManagerEntry: true,
+      pluginPaneEntry: true,
+    }))
+    expect(action.kind === 'navigate' && action.to).toBe('/settings')
+  })
+
+  test('a plugin opened from the standalone manager still returns to its list', () => {
+    const action = resolveRouteBack('/plugin/foo', ctx({ pluginManagerEntry: true }))
+    expect(action.kind === 'navigate' && action.to).toBe('/settings/plugins')
+  })
+})

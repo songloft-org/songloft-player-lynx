@@ -16,6 +16,8 @@ import { serverDisplay } from '../domain/settings-model.js'
 import {
   DEFAULT_SUB_PAGE,
   SUB_PAGE_ROUTES,
+  consumeRememberedPane,
+  rememberSettingsPane,
   parentSubPage,
   type SettingsSubPage,
 } from '../domain/sub-page-nav.js'
@@ -93,7 +95,9 @@ export function SettingsPage() {
    * Active sub-page for the right pane in dual-column mode. Seeded with the
    * first row of the list so the pane is never blank on a wide screen.
    */
-  const [activeSubPage, setActiveSubPage] = useState<SettingsSubPage>(DEFAULT_SUB_PAGE)
+  const [activeSubPage, setActiveSubPage] = useState<SettingsSubPage>(
+    () => consumeRememberedPane() ?? DEFAULT_SUB_PAGE,
+  )
   /**
    * Profile the pane's server form is editing, or `undefined` for "add a server".
    * Held here rather than inside `ServerListPage` because the form is a pane page
@@ -467,7 +471,12 @@ function SettingsDetailPane({
     case 'duplicates':
       return <DuplicateCheckPage onBack={() => onOpenSubPage('library')} />
     case 'plugins':
-      return <PluginManagerPage onOpenStore={() => onOpenSubPage('registry')} />
+      return (
+        <PluginManagerPage
+          onOpenStore={() => onOpenSubPage('registry')}
+          onOpenPluginInPane={() => rememberSettingsPane('plugins')}
+        />
+      )
     case 'registry':
       return <PluginRegistryPage onBack={() => onOpenSubPage('plugins')} onOpenDiscovery={() => onOpenSubPage('github-discovery')} />
     case 'github-discovery':

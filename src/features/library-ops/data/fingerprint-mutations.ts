@@ -72,6 +72,11 @@ export function useBatchDeleteMutation() {
       getFingerprintApi().batchDelete(ids, deleteFiles),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: libopsQueryKeys.duplicates() })
+      // Deleted songs leave the library and every playlist. Without these the
+      // just-deleted duplicates stay visible until the 30s staleTime expires —
+      // a normal single-song delete invalidates both, so batch must too.
+      void queryClient.invalidateQueries({ queryKey: ['library'] })
+      void queryClient.invalidateQueries({ queryKey: ['playlist'] })
     },
   })
 }
