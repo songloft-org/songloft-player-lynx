@@ -53,6 +53,15 @@ export function LyricsView() {
   const romanizationMap = useLyricStore((s) => s.romanizationMap)
   const refetch = useLyricStore((s) => s.refetch)
   const currentSong = usePlayerStore((s) => s.currentSong)
+  const seek = usePlayerStore((s) => s.seek)
+
+  // Tapping a lyric line jumps playback to that timestamp — table stakes for
+  // a music player. Only meaningful for time-stamped lyrics; unsynced lines all
+  // report timeMs 0 and would just rewind to the start.
+  const seekToLine = useCallback((line: { timeMs: number }) => {
+    if (!synced) return
+    void seek(line.timeMs)
+  }, [synced, seek])
 
   // Local songs always allow a re-fetch (the endpoint can be assembled from the
   // id); remote/radio songs need an explicit lyric URL. Same gate as the
@@ -245,7 +254,14 @@ export function LyricsView() {
               ? 'player-lyrics__line player-lyrics__line--active player-lyrics__line--note'
               : 'player-lyrics__line player-lyrics__line--note'
             return (
-              <view key={`${index}:${line.timeMs}`} ref={active ? activeLineRef : null} className={cls}>
+              <view
+                key={`${index}:${line.timeMs}`}
+                ref={active ? activeLineRef : null}
+                className={cls}
+                bindtap={synced ? () => seekToLine(line) : undefined}
+                accessibility-element={true}
+                accessibility-label={t('player.lyricJumpLine')}
+              >
                 <Icon
                   name='music'
                   size={16}
@@ -261,14 +277,24 @@ export function LyricsView() {
               ? 'player-lyrics__line player-lyrics__line--active'
               : 'player-lyrics__line'
             return (
-              <view key={`${index}:${line.timeMs}`} ref={active ? activeLineRef : null} className={cls}>
+              <view
+                key={`${index}:${line.timeMs}`}
+                ref={active ? activeLineRef : null}
+                className={cls}
+                bindtap={synced ? () => seekToLine(line) : undefined}
+              >
                 <text className={cls}>{line.text}</text>
               </view>
             )
           }
 
           return (
-            <view key={`${index}:${line.timeMs}`} ref={active ? activeLineRef : null} className={active ? 'player-lyrics__line-group player-lyrics__line-group--active' : 'player-lyrics__line-group'}>
+            <view
+              key={`${index}:${line.timeMs}`}
+              ref={active ? activeLineRef : null}
+              className={active ? 'player-lyrics__line-group player-lyrics__line-group--active' : 'player-lyrics__line-group'}
+              bindtap={synced ? () => seekToLine(line) : undefined}
+            >
               {romanization
                 ? <text className='player-lyrics__romanization'>{romanization}</text>
                 : null}

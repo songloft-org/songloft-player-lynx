@@ -58,13 +58,50 @@ export function useFavoriteToggle(songId: number, enabled = true) {
   const isFavorite = useIsFavorite(songId, enabled)
   const playlistId = Number(favoritePlaylistId)
 
+  // Flip the cached set immediately so the heart/collection icon reacts on the
+  // same frame as the tap. Without this, every favorite control waits a full
+  // server round-trip (plus the 60s-stale query refetch) before changing color,
+  // which reads as "the button did nothing". Snapshot first so a failed write
+  // restores exactly what the user saw before.
+  const snapshot = useCallback(() => queryClient.getQueryData<Set<number>>(FAV_QUERY_KEY), [queryClient])
+
   const add = useMutation({
     mutationFn: () => getPlaylistApi().addSongsToPlaylist(playlistId, [songId]),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: FAV_QUERY_KEY })
+      const previous = snapshot()
+      if (previous) {
+        queryClient.setQueryData<Set<number>>(FAV_QUERY_KEY, ids => {
+          const next = new Set(ids)
+          next.add(songId)
+          return next
+        })
+      }
+      return { previous }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(FAV_QUERY_KEY, ctx.previous)
+    },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: FAV_QUERY_KEY }),
   })
 
   const remove = useMutation({
     mutationFn: () => getPlaylistApi().removeSongFromPlaylist(playlistId, songId),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: FAV_QUERY_KEY })
+      const previous = snapshot()
+      if (previous) {
+        queryClient.setQueryData<Set<number>>(FAV_QUERY_KEY, ids => {
+          const next = new Set(ids)
+          next.delete(songId)
+          return next
+        })
+      }
+      return { previous }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(FAV_QUERY_KEY, ctx.previous)
+    },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: FAV_QUERY_KEY }),
   })
 

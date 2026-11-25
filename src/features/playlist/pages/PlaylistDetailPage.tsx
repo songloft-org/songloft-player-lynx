@@ -255,7 +255,11 @@ export function PlaylistDetailPage() {
   const onDelete = (deleteSongs: boolean) => {
     deleteMutation.mutate(deleteSongs ? { id, deleteSongs } : id, {
       onSuccess: () => {
-        void navigate({ to: '/library', search: { view: 'playlist_normal' } })
+        // Return to wherever the detail page was opened from (Home / Library /
+        // plugin tab), matching the back arrow and hardware-back behaviour.
+        // A hard-coded Library jump dumped users from a Home-opened playlist
+        // straight into the library, losing their place.
+        void performRouteBack()
       },
     })
   }
