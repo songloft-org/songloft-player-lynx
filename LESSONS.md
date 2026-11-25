@@ -1,5 +1,11 @@
 # Lynx 客户端开发经验
 
+### Web 长时交互卡顿要采样插件 Worker 的计时条目
+
+- 原版音箱语音页在每秒一帧状态的测试里持续积累 User Timing mark，CPU 热点落在 `clearMarks()`。分别清除 mark 和 measure 复验其影响，并用相同帧序列比较临时关闭追踪后的 CPU 和实际点击延迟。Seen 1×（2026-11-25）。[songloft-org/songloft#591 验证记录](docs/project/issue-591.md#web-user-timing)
+- 升级 Web Core 时同时迁移源码和生产包补丁。用新编译的内嵌页面打开旧版已发布插件，实际验证插件桥、输入和 worker 计时缓冲。0.26.9 新增的标签别名还需核对是否绕过本地元素子类。[升级验证](docs/project/issue-591.md#lynx-upgrade)
+- Lynx 4.2.0 的 iOS Podspec 从官方 Lynx Specs 源解析，开发和发布分别校验锁文件。Lynxtron Builder 0.0.31 内置已打补丁的打包工具，升级时核对实际 npm 发布包里的补丁和下载 API，再移除本地重复补丁。Seen 1×（2026-11-25）。[升级验证](docs/project/issue-591.md#lynx-upgrade)
+
 ### 更换客户端实现时核对播放定位入口
 
 - Flutter 在首页和歌单详情消费播放上下文。Songloft v2.13.13 使用的 Lynx Web 及 Lynx Android 缺少这两个入口，导致用户需要重新翻找歌单或歌曲。[songloft-org/songloft#595](https://github.com/songloft-org/songloft/issues/595)

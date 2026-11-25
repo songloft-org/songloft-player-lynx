@@ -22,14 +22,17 @@ function fixture() {
     {
       i: { im: { input: 'lynxinput' } },
       Map,
-      customElements: { whenDefined: () => ready },
     },
   )
   const element: {
     localName: string
+    ownerDocument: { defaultView: { customElements: { whenDefined: () => Promise<void>; upgrade: () => void } } }
     enableEvent?: ReturnType<typeof vi.fn>
     disableEvent?: ReturnType<typeof vi.fn>
-  } = { localName: 'x-input' }
+  } = {
+    localName: 'x-input',
+    ownerDocument: { defaultView: { customElements: { whenDefined: () => ready, upgrade: () => {} } } },
+  }
   let current: typeof element | undefined = element
   return {
     binding: new Binding(),

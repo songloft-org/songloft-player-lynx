@@ -123,14 +123,14 @@ dependencies {
 
     // ---- Lynx SDK (coordinates + versions copied verbatim from the official
     // integrating-lynx-demo-projects KotlinEmptyProject @ 3.8.0) ----
-    // Upgraded to 4.0.0 to get `<webview>` element support (xelement-webview).
-    implementation("org.lynxsdk.lynx:lynx:4.0.0")
-    implementation("org.lynxsdk.lynx:lynx-jssdk:4.0.0")
-    implementation("org.lynxsdk.lynx:lynx-trace:4.0.0")
-    implementation("org.lynxsdk.lynx:primjs:4.0.0")
+    // Keep Lynx and XElement on the same release line. PrimJS follows the engine release notes.
+    implementation("org.lynxsdk.lynx:lynx:4.2.0")
+    implementation("org.lynxsdk.lynx:lynx-jssdk:4.2.0")
+    implementation("org.lynxsdk.lynx:lynx-trace:4.2.0")
+    implementation("org.lynxsdk.lynx:primjs:4.2.1")
 
     // image-service (backs `<image>` cover art)
-    implementation("org.lynxsdk.lynx:lynx-service-image:4.0.0")
+    implementation("org.lynxsdk.lynx:lynx-service-image:4.2.0")
     // Fresco backs the image-service; required for images to load.
     implementation("com.facebook.fresco:fresco:2.3.0")
     implementation("com.facebook.fresco:animated-gif:2.3.0")
@@ -139,29 +139,29 @@ dependencies {
     implementation("com.facebook.fresco:animated-base:2.3.0")
 
     // log-service
-    implementation("org.lynxsdk.lynx:lynx-service-log:4.0.0")
+    implementation("org.lynxsdk.lynx:lynx-service-log:4.2.0")
 
     // http-service (backs the bare global `fetch` the network layer uses)
-    implementation("org.lynxsdk.lynx:lynx-service-http:4.0.0")
+    implementation("org.lynxsdk.lynx:lynx-service-http:4.2.0")
     implementation("com.squareup.okhttp3:okhttp:4.9.0")
 
     // devtool-service (Lynx Inspector Protocol for e2e testing via WebSocket)
-    implementation("org.lynxsdk.lynx:lynx-service-devtool:4.0.0")
-    implementation("org.lynxsdk.lynx:debug-router:0.0.20")
+    implementation("org.lynxsdk.lynx:lynx-service-devtool:4.2.0")
+    implementation("org.lynxsdk.lynx:debug-router:0.0.22")
 
     // XElement family — needed by elements this app renders: `<svg>` (icons),
     // `<input>` (login / server settings), overlay (Sheet), refresh,
     // `<webview>` (plugin pages).
-    implementation("org.lynxsdk.lynx:xelement:4.0.0")
+    implementation("org.lynxsdk.lynx:xelement:4.2.0")
     // Compile against the existing runtime blur implementation for its lifecycle guard.
-    implementation("org.lynxsdk.lynx:xelement-blur-view:4.0.0")
-    implementation("org.lynxsdk.lynx:xelement-input:4.0.0")
-    implementation("org.lynxsdk.lynx:xelement-overlay:4.0.0")
-    implementation("org.lynxsdk.lynx:xelement-svg:4.0.0")
+    implementation("org.lynxsdk.lynx:xelement-blur-view:4.2.0")
+    implementation("org.lynxsdk.lynx:xelement-input:4.2.0")
+    implementation("org.lynxsdk.lynx:xelement-overlay:4.2.0")
+    implementation("org.lynxsdk.lynx:xelement-svg:4.2.0")
     // 0.1.1 omits x86_64: SVG elements stay blank on that ABI.
-    implementation("org.lynxsdk.lynx:servalsvg:0.2.4")
-    implementation("org.lynxsdk.lynx:xelement-refresh:4.0.0")
-    implementation("org.lynxsdk.lynx:xelement-webview:4.0.0")
+    implementation("org.lynxsdk.lynx:servalsvg:0.3.4")
+    implementation("org.lynxsdk.lynx:xelement-refresh:4.2.0")
+    implementation("org.lynxsdk.lynx:xelement-webview:4.2.0")
 
     // `<refresh>` hard requirement, NOT declared by xelement-refresh.
     // xelement-refresh embeds SmartRefreshLayout, whose SmartUtil.isContentView()

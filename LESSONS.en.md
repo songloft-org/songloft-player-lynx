@@ -1,5 +1,11 @@
 # Lynx Client Development Lessons
 
+### Sample plugin worker timing entries when Web controls slow over time
+
+- On the original smart speaker voice page, a status frame per second grew the User Timing mark buffer, and `clearMarks()` dominated the CPU profile. Clear marks and measures independently, then replay the same frames with tracing temporarily disabled and compare worker CPU and actual click delays. Seen 1× (2026-11-25). [songloft-org/songloft#591 verification](docs/en/project/issue-591.md#web-user-timing)
+- Port both source and production patches when upgrading Web Core. Open an existing released plugin with the newly built embedded client and verify its bridge, input, and worker timing buffers. Check whether new tag aliases in 0.26.9 bypass local element subclasses. [Upgrade verification](docs/en/project/issue-591.md#lynx-upgrade)
+- Resolve the Lynx 4.2.0 iOS podspecs from the official Lynx Specs source and verify both Podfile locks. Lynxtron Builder 0.0.31 bundles its patched toolchain. Check the patches and downloader API in the published npm package before removing the duplicate local patches. Seen 1× (2026-11-25). [Upgrade verification](docs/en/project/issue-591.md#lynx-upgrade)
+
 ### Check playback shortcuts when switching client implementations
 
 - Flutter uses the playback context on Home and on playlist details. The Lynx Web and Android clients used with Songloft v2.13.13 lacked both shortcuts, requiring users to find the playlist or track again. [songloft-org/songloft#595](https://github.com/songloft-org/songloft/issues/595)

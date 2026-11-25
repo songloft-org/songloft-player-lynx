@@ -21,13 +21,14 @@ Bundle APK 的 gomobile AAR 要求 API 23；未嵌入后端的源码构建可保
 
 | 依赖 | 自声明最低 API |
 |---|---|
-| Lynx SDK 4.0.0（`lynx` / `lynx-jssdk` / `primjs` / xelement 全家桶 / `lynx-service-*`） | 16 |
+| Lynx SDK 4.2.0（`lynx` / `lynx-jssdk` / `lynx-service-*`）和 PrimJS 4.2.1 | 16 |
+| XElement 4.2.0 | 核心组件 16，传递依赖 `xelement-animax` 21 |
 | androidx.core 1.13.1 / lifecycle 2.6.x | 19 |
 | androidx.media3 1.4.0（`exoplayer` / `exoplayer-hls` / `session`） | 19 |
 | OkHttp 4.9.0 | **21** |
 | Fresco 2.3.0 / androidx.viewpager2 1.0.0 | ≤ 14 |
 
-`OkHttp 4.9.0` + `androidx.core 1.13` 一起把复合下限钉在 21，就是当前 `minSdk` 的实际来源。继续下探需换掉这两个之一（OkHttp 3.x 支持到 API 21 之前，但要放弃 kotlin coroutines 与 TLS 1.3 特性）。
+OkHttp 4.9.0 和 `xelement-animax` 同时声明了 API 21 下限，构建后的标准版 APK 合并清单同样声明 API 21。
 
 代码侧全部 API 分级调用都有 `Build.VERSION.SDK_INT` 守卫，21–33 各段行为分支：
 

@@ -38,6 +38,14 @@ The baseline is `2f3010c5beff70b1e2263ff1ecdb47840201c3fb`, with the change kept
 
 The focused watcher tests passed 8 cases. `pnpm exec tsc -b`, `pnpm test` (376 files / 3929 tests), `pnpm run build`, and `pnpm run build:web` passed. The reporter's long-lived Docker page, native devices, and desktop devices were not run.
 
+2026-11-25，原版 CI 镜像的嵌套插件页在可控状态帧输入下重现卡片卡顿。对照只清 mark、只清 measure 和临时禁用 User Timing 追踪，将 worker CPU 上升定位到持续累积的 mark。[复查记录](issue-591.md#web-user-timing)
+
+On November 25, controlled status frames reproduced slow panel switches in the nested plugin on the original CI image. Clearing marks, clearing measures, and temporarily disabling User Timing tracing in separate runs traced the rise in worker CPU to accumulating marks. [Follow-up](../en/project/issue-591.md#web-user-timing)
+
+后续升级共享 Lynx npm 依赖并迁移兼容补丁。冻结锁文件安装、类型检查、Vitest 3,941 项、发布脚本 95 项以及 Lynx 和 Web 双产物构建通过。Docker Chrome 在重建后的内嵌 Web 实际登录，语音页持续收到状态帧时未积累 mark。同批 Android Lynx 4.2.0 标准版调试包构建通过，设备运行待验证。[升级验证](issue-591.md#lynx-upgrade)
+
+The shared Lynx npm dependencies and their compatibility patches were upgraded. The frozen lockfile install, type checking, 3,941 Vitest tests, 95 release script tests, and the Lynx and Web builds passed. Docker Chrome signed in on the rebuilt embedded Web client and confirmed that changing status frames did not accumulate marks in the voice page. The standard Android debug APK also built with Lynx 4.2.0. Device testing is pending. [Upgrade verification](../en/project/issue-591.md#lynx-upgrade)
+
 <a id="harmony-shell-plugin-frame"></a>
 
 ## 2026-11-23 · 鸿蒙智能音箱热更新白屏 / HarmonyOS smart speaker page blank after bundle update

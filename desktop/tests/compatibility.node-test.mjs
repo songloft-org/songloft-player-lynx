@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { cp, mkdir, mkdtemp, readlink, rm, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import yaml from 'js-yaml'
 import { assertTarget, compatibility } from '../target.mjs'
 import { packageConfig } from '../scripts/package-config.mjs'
@@ -49,6 +49,7 @@ test('candidate framework, CEF, headers and shared compiler pins match the actua
     desktop.devDependencies['@lynx-js/lynx-library-headers'],
     compatibility.lynxtron.version,
   )
+  assert.equal(desktop.devDependencies['@lynx-js/lynxtron-builder'], compatibility.builder)
   for (const [name, version] of Object.entries(compatibility.sharedBuild)) {
     assert.equal(
       shared.dependencies[name] ?? shared.devDependencies[name],
@@ -80,11 +81,17 @@ test('the frozen desktop lock includes every selected runtime, including Apple S
   }
 })
 
-test('the pinned builder downloader exposes the cache API needed by DMG and NSIS tools', () => {
+test('the bundled packager contains the Lynxtron and DMG patches and the downloader cache API', () => {
   const require = createRequire(new URL('../package.json', import.meta.url))
-  const builder = createRequire(require.resolve('@lynx-js/lynxtron-builder'))
-  const appBuilder = createRequire(
-    builder.resolve('app-builder-lib/package.json'),
+  const toolchain = join(dirname(require.resolve('@lynx-js/lynxtron-builder')), 'vendor', 'node_modules')
+  const appBuilder = createRequire(join(toolchain, 'app-builder-lib', 'package.json'))
+  assert.match(
+    readFileSync(join(toolchain, 'app-builder-lib', 'out', 'electron', 'electronVersion.js'), 'utf8'),
+    /const electronPackages = \["lynxtron"\];/,
+  )
+  assert.match(
+    readFileSync(join(toolchain, 'dmg-builder', 'out', 'dmgUtil.js'), 'utf8'),
+    /use image size as default size if user did not set window size/,
   )
   assert.equal(
     appBuilder('@electron/get/package.json').version,

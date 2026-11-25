@@ -1,5 +1,5 @@
 diff --git a/dist/Input.jsx b/dist/Input.jsx
-index 652879dcd85ece017d21323eaae39fdadb0810d3..61ffb3be213bf8e651dc51bdd0e451806b680bec 100644
+index 652879d..29d4590 100644
 --- a/dist/Input.jsx
 +++ b/dist/Input.jsx
 @@ -5,9 +5,18 @@ const Input = memo(forwardRef(InputImpl));
@@ -41,7 +41,7 @@ index 652879dcd85ece017d21323eaae39fdadb0810d3..61ffb3be213bf8e651dc51bdd0e45180
      useImperativeHandle(ref, ()=>({
              setValue,
 diff --git a/dist/TextArea.jsx b/dist/TextArea.jsx
-index 492fd95b7785e72426d8b1d2eb22a66fdfebc20c..b7caa6be61896fb3f23e99bf79f31ed38f5487ae 100644
+index 492fd95..4ce7a70 100644
 --- a/dist/TextArea.jsx
 +++ b/dist/TextArea.jsx
 @@ -5,9 +5,18 @@ const TextArea = memo(forwardRef(TextAreaImpl));
@@ -83,10 +83,10 @@ index 492fd95b7785e72426d8b1d2eb22a66fdfebc20c..b7caa6be61896fb3f23e99bf79f31ed3
      useImperativeHandle(ref, ()=>({
              setValue,
 diff --git a/src/Input.tsx b/src/Input.tsx
-index d9b77d9f37aa7e7cf195b70c5759a0eb6c141ecf..28ca19e820396ae73f6294c5ec37bafd8b065e20 100644
+index ae0e768..cefc850 100644
 --- a/src/Input.tsx
 +++ b/src/Input.tsx
-@@ -52,6 +52,11 @@ function InputImpl(props: InputProps, ref: ForwardedRef<InputRef>) {
+@@ -54,6 +54,11 @@ function InputImpl(props: InputProps, ref: ForwardedRef<InputRef>) {
    } = props
  
    const controlled = useRef<boolean>(value !== undefined)
@@ -98,7 +98,7 @@ index d9b77d9f37aa7e7cf195b70c5759a0eb6c141ecf..28ca19e820396ae73f6294c5ec37bafd
  
    const inputRef = useRef<NodesRef>(null)
    const { onInputBlurred, onInputFocused } = useContext(
-@@ -59,6 +64,15 @@ function InputImpl(props: InputProps, ref: ForwardedRef<InputRef>) {
+@@ -61,6 +66,15 @@ function InputImpl(props: InputProps, ref: ForwardedRef<InputRef>) {
    )
  
    useEffect(() => {
@@ -114,7 +114,7 @@ index d9b77d9f37aa7e7cf195b70c5759a0eb6c141ecf..28ca19e820396ae73f6294c5ec37bafd
      setValue(value ?? '')
    }, [value])
  
-@@ -188,6 +202,7 @@ function InputImpl(props: InputProps, ref: ForwardedRef<InputRef>) {
+@@ -190,6 +204,7 @@ function InputImpl(props: InputProps, ref: ForwardedRef<InputRef>) {
      isComposing: boolean,
      unlockInteraction = false,
    ) => {
@@ -122,7 +122,7 @@ index d9b77d9f37aa7e7cf195b70c5759a0eb6c141ecf..28ca19e820396ae73f6294c5ec37bafd
      onInput?.(value, selectionStart, selectionEnd, isComposing)
      if (unlockInteraction) {
        setNativePropsByRef(inputRef, { readonly: false })
-@@ -196,7 +211,7 @@ function InputImpl(props: InputProps, ref: ForwardedRef<InputRef>) {
+@@ -198,7 +213,7 @@ function InputImpl(props: InputProps, ref: ForwardedRef<InputRef>) {
  
    const onInputContentDidChanged = (res: { detail: InputInputEvent }) => {
      'main thread'
@@ -131,7 +131,7 @@ index d9b77d9f37aa7e7cf195b70c5759a0eb6c141ecf..28ca19e820396ae73f6294c5ec37bafd
        // @ts-expect-error TODO: fix the typings of MTS
        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
        res.currentTarget.setAttribute('readonly', true)
-@@ -206,7 +221,7 @@ function InputImpl(props: InputProps, ref: ForwardedRef<InputRef>) {
+@@ -208,7 +223,7 @@ function InputImpl(props: InputProps, ref: ForwardedRef<InputRef>) {
        res.detail.selectionStart,
        res.detail.selectionEnd,
        res.detail.isComposing,
@@ -141,10 +141,10 @@ index d9b77d9f37aa7e7cf195b70c5759a0eb6c141ecf..28ca19e820396ae73f6294c5ec37bafd
    }
  
 diff --git a/src/TextArea.tsx b/src/TextArea.tsx
-index 2a089fc9e3fef0181031a2ab91e38db54d5ac7a0..58dc3bdfe619b06e532f4756b042529f0f9eb0a2 100644
+index c927407..1e0cb15 100644
 --- a/src/TextArea.tsx
 +++ b/src/TextArea.tsx
-@@ -59,6 +59,11 @@ function TextAreaImpl(props: TextAreaProps, ref: ForwardedRef<TextAreaRef>) {
+@@ -57,6 +57,11 @@ function TextAreaImpl(props: TextAreaProps, ref: ForwardedRef<TextAreaRef>) {
    } = props
  
    const controlled = useRef<boolean>(value !== undefined)
@@ -156,7 +156,7 @@ index 2a089fc9e3fef0181031a2ab91e38db54d5ac7a0..58dc3bdfe619b06e532f4756b042529f
  
    const inputRef = useRef<NodesRef>(null)
    const { onInputBlurred, onInputFocused } = useContext(
-@@ -66,6 +71,15 @@ function TextAreaImpl(props: TextAreaProps, ref: ForwardedRef<TextAreaRef>) {
+@@ -64,6 +69,15 @@ function TextAreaImpl(props: TextAreaProps, ref: ForwardedRef<TextAreaRef>) {
    )
  
    useEffect(() => {
@@ -172,7 +172,7 @@ index 2a089fc9e3fef0181031a2ab91e38db54d5ac7a0..58dc3bdfe619b06e532f4756b042529f
      setValue(value ?? '')
    }, [value])
  
-@@ -195,6 +209,7 @@ function TextAreaImpl(props: TextAreaProps, ref: ForwardedRef<TextAreaRef>) {
+@@ -193,6 +207,7 @@ function TextAreaImpl(props: TextAreaProps, ref: ForwardedRef<TextAreaRef>) {
      isComposing: boolean,
      unlockInteraction = false,
    ) => {
@@ -180,7 +180,7 @@ index 2a089fc9e3fef0181031a2ab91e38db54d5ac7a0..58dc3bdfe619b06e532f4756b042529f
      onInput?.(value, selectionStart, selectionEnd, isComposing)
      if (unlockInteraction) {
        setNativePropsByRef(inputRef, { readonly: false })
-@@ -203,7 +218,7 @@ function TextAreaImpl(props: TextAreaProps, ref: ForwardedRef<TextAreaRef>) {
+@@ -201,7 +216,7 @@ function TextAreaImpl(props: TextAreaProps, ref: ForwardedRef<TextAreaRef>) {
  
    const onInputContentDidChanged = (res: { detail: InputInputEvent }) => {
      'main thread'
@@ -189,7 +189,7 @@ index 2a089fc9e3fef0181031a2ab91e38db54d5ac7a0..58dc3bdfe619b06e532f4756b042529f
        // @ts-expect-error TODO: fix the typings of MTS
        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
        res.currentTarget.setAttribute('readonly', true)
-@@ -213,6 +228,6 @@ function TextAreaImpl(props: TextAreaProps, ref: ForwardedRef<TextAreaRef>) {
+@@ -211,7 +226,7 @@ function TextAreaImpl(props: TextAreaProps, ref: ForwardedRef<TextAreaRef>) {
        res.detail.selectionStart,
        res.detail.selectionEnd,
        res.detail.isComposing,
@@ -197,3 +197,4 @@ index 2a089fc9e3fef0181031a2ab91e38db54d5ac7a0..58dc3bdfe619b06e532f4756b042529f
 +      lockInput.current,
      )
    }
+ 

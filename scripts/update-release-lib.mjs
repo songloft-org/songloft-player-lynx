@@ -26,10 +26,13 @@ export function loadNativeContract(root) {
     throw new Error('Invalid required native capabilities')
   const android = readFileSync(join(root, 'android/app/build.gradle.kts'), 'utf8')
     .match(/implementation\("org\.lynxsdk\.lynx:lynx:([^"\n]+)"\)/)?.[1]
-  const ios = readFileSync(join(root, 'ios/Podfile.lock'), 'utf8').match(/^  - Lynx \(([^)]+)\):/m)?.[1]
+  for (const lockfile of ['ios/Podfile.lock', 'ios/release/Podfile.lock']) {
+    const version = readFileSync(join(root, lockfile), 'utf8').match(/^  - Lynx \(([^)]+)\):/m)?.[1]
+    if (contract.engines.ios !== version) throw new Error(`Update contract engine differs from ${lockfile}`)
+  }
   const harmony = readFileSync(join(root, 'harmony/entry/oh-package.json5'), 'utf8')
     .match(/"@lynx\/lynx"\s*:\s*"([^"]+)"/)?.[1]
-  for (const [platform, version] of Object.entries({ android, ios, harmony })) {
+  for (const [platform, version] of Object.entries({ android, harmony })) {
     if (contract.engines[platform] !== version) throw new Error(`Update contract engine differs from ${platform} dependency`)
   }
   return contract

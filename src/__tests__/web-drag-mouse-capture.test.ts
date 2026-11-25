@@ -225,7 +225,7 @@ describe('the upstream cause is still the one we are compensating for', () => {
      * `mousemove` guard here too: asserting `not.toMatch` is meant to fail loudly
      * rather than let a workaround outlive its cause.
      */
-    const body = useDraggable.match(/const handleDragMove = \([\s\S]*?\n {2}\}/)
+    const body = useDraggable.match(/const handleDragMove = (?:useCallback\()?\([\s\S]*?\n {2}\}/)
     expect(body, 'handleDragMove moved in useDraggable.tsx').not.toBeNull()
     expect(body![0], 'the delta is still what drives the transform').toContain('getCurrentDelta')
     expect(

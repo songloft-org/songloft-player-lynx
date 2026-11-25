@@ -150,7 +150,8 @@ test('dragging past loaded rows requests pagination, then scrolls to the real it
     await act(async () => { visibleCallbacks[0]?.([{ itemKey: '14', top: 347, bottom: 411 }]); await Promise.resolve() })
     expect(view.container.querySelector('.playlist-song-list__hint-count')).toHaveTextContent('104 / 130')
     const queriesBeforeUnmount = querySpy.mock.calls.length
-    await act(async () => { view.unmount(); await vi.advanceTimersByTimeAsync(400) })
+    act(() => view.unmount())
+    await act(async () => { await vi.advanceTimersByTimeAsync(400) })
     expect(querySpy).toHaveBeenCalledTimes(queriesBeforeUnmount)
   } finally { host.createSelectorQuery = original; vi.useRealTimers() }
 })
@@ -230,7 +231,8 @@ test('Web waits for committed rows and reads actual row bounds even when the vis
     expect(view.container.querySelector('.playlist-song-list__hint-count')).toHaveTextContent('104 / 130')
     expect(listReads - previousReads).toBe(2)
     const beforeUnmount = querySpy.mock.calls.length
-    await act(async () => { view.unmount(); await vi.advanceTimersByTimeAsync(400) })
+    act(() => view.unmount())
+    await act(async () => { await vi.advanceTimersByTimeAsync(400) })
     expect(querySpy).toHaveBeenCalledTimes(beforeUnmount)
   } finally { host.createSelectorQuery = original; vi.useRealTimers() }
 })

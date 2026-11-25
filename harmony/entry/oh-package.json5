@@ -6,13 +6,13 @@
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
-    "@lynx/lynx": "4.0.1",
-    "@lynx/primjs": "4.0.0",
-    "@lynx/lynx_http_service": "4.0.1",
-    "@lynx/lynx_image_service": "4.0.1",
-    "@lynx/lynx_log_service": "4.0.1",
-    "@lynx/xelement_svg": "4.0.1",
-    "@lynx/xelement_webview": "4.0.1",
+    "@lynx/lynx": "4.2.0",
+    "@lynx/primjs": "4.2.1",
+    "@lynx/lynx_http_service": "4.2.0",
+    "@lynx/lynx_image_service": "4.2.0",
+    "@lynx/lynx_log_service": "4.2.0",
+    "@lynx/xelement_svg": "4.2.0",
+    "@lynx/xelement_webview": "4.2.0",
     "@ohos/imageknifepro": "1.0.9"
   }
 }
