@@ -78,6 +78,8 @@ if (playbackId && supported.reverb?.presets.includes('hall') &&
 
 插件通过 `play(id)`、`setQueue` 或 `playPlaylistById` 发起播放会话。同一会话内切歌、暂停、离开插件页或后台播放时保留音效。宿主另行播放、停止、队列结束、切换投屏或账号、禁用该插件或手动调宿主 EQ 时，临时音效会清除。修改请求需要当前有效的 `playbackId` 和处于活动状态的插件页面。临时音效不会保存到用户设置。
 
+**纯音效插件（不自带播放器）**：插件无需自己发起播放。当用户已经在本地播放一首歌、且插件页面处于活动状态时，`getAudioEffects` 会临时"借用"当前播放会话，返回一个新的 `playbackId`；插件用它调用 `applyAudioEffects` / `clearAudioEffects` 即可作用于用户正在听的歌。借用只在插件没有自有播放会话时发生，音效仅归调用插件所有（其他插件拿不到该 `playbackId`），宿主切歌时音效保留，宿主重新播放、停止或退出时自动清除。这样音效插件可以去掉"选歌单→播放"入口，只保留音效开关；不依赖调用插件的 SDK 升级，复用同一组方法与 `playbackId`。
+
 WebView 使用 `@songloft/client-sdk` 的 `player`，也可以使用 `window.SongloftPlugin.player`。`@songloft/client-sdk@2.25.0` 与 `@songloft/lynx-plugin-sdk@2.25.0` 均提供展宽的类型定义，实际音效由宿主实现。Lynx 原生插件能通过 `invokeHost('player', 'getAudioEffects')` 等方法调用，检查返回的 `ok`、`data` 和 `error`。
 
 Android 14 模拟器和 WebView 113 的调试包验证了插件启动播放、应用 EQ、切歌保留、清除后继续播放以及宿主 EQ 接管。AudioFlinger 在同一输出会话中报告均衡器依次关闭、启用、关闭。

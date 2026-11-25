@@ -84,6 +84,28 @@ export function endPluginPlayback(owner?: string) {
   }
 }
 
+/**
+ * Let a foreground plugin borrow the host's *current* playback so it can apply
+ * effects to the song the user is already listening to, without having to start
+ * its own playback first. This is what lets an effect-only plugin drop its
+ * "pick a playlist → play it" button.
+ *
+ * A session is created only when there is no plugin-owned session yet, the host
+ * is playing locally (not casting), the calling plugin is active, and a native
+ * effect adapter exists. Everything after this — capability checks, the owner /
+ * playbackId guard, serial writes, automatic restore on stop — reuses the exact
+ * same machinery as plugin-initiated playback. The next host play/queue reset
+ * clears the borrowed session just like any other.
+ */
+export function borrowHostPlayback(
+  owner: string | undefined,
+  hostPlaying: boolean,
+  canWrite: () => boolean,
+) {
+  if (session !== undefined || !owner || !hostPlaying || !canWrite() || !playbackAdapter()) return
+  session = { id: String(++generation), owner, applied: null, nativeTouched: false }
+}
+
 export function hasPluginAudioEffects() {
   return playbackAdapter() !== undefined
 }
