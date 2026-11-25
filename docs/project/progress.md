@@ -1,5 +1,21 @@
 # 进展与交接（PROGRESS）
 
+<a id="issue-595"></a>
+
+## 2026-11-25 · 播放定位快捷按钮 / Playback location shortcuts
+
+首页可以直接打开当前播放来源歌单，详情页可以清除搜索并定位当前歌曲。旧候选在搜索结果切回全量列表时显示了 20 首，但首次续页调用仍落在旧查询上。详情页现在在查询观察器切换后续页，并等待后台刷新结束。列表用既有滚动机制落位，重复点击同一首可以重新定位。[songloft-org/songloft#595](https://github.com/songloft-org/songloft/issues/595)
+
+Home opens the source playlist for current playback. Playlist details clear the search and locate the current track. The earlier candidate showed the first 20 songs after clearing the search, but sent the initial next-page call to the previous query. Playlist details now paginate after the query observer switches and after any background refresh. The list uses its existing scrolling behavior and accepts repeated requests for the same track. [songloft-org/songloft#595](https://github.com/songloft-org/songloft/issues/595)
+
+基线 `936146e8ce7ef79a37d596641b44d2dc14a5c97f`，源码与测试 diff SHA-256 `516628460ab122224e4796b5f46089592e5ecf49a7412e1a443ab7bfb581e52c`。Linux x86_64、Node 22.17.1 和 Go 1.26.0。旧源码上两条入口回归因按钮缺失而失败。恢复旧刷新判断时，续页回归因提前请求而失败。Docker Chrome 121 在 390px 和 1366px 用真实后端播放 65 首测试歌单的最后一首，验证了首页打开隐藏歌单、从单条搜索结果自动续页至第 65 首，以及滚离后再次定位。Android Debug APK 编译通过。
+
+Baseline `936146e8ce7ef79a37d596641b44d2dc14a5c97f`, with source and test diff SHA-256 `516628460ab122224e4796b5f46089592e5ecf49a7412e1a443ab7bfb581e52c`. Linux x86_64, Node 22.17.1, and Go 1.26.0. Two shortcut regressions failed on the baseline because the controls were absent. Restoring the previous refresh check made the pagination regression fail because it requested the next page early. Docker Chrome 121 at 390px and 1366px played the last track of a 65-track fixture on a real backend. It opened a hidden playlist from Home, loaded through track 65 from one filtered result, and located the same track again after scrolling away. The Android Debug APK built successfully.
+
+最终 `pnpm exec tsc -b`、`pnpm test`（376 文件、3,939 项）、`pnpm run build`（Lynx 与 Web）、`assembleDebug` 和 `git diff --check` 均通过。Android 14 模拟器安装包内的 Lynx bundle 与本次构建摘要一致。点击测试歌曲后，服务端播放流返回 200，播放记录返回 204。暂停后从首页打开隐藏歌单，详情初始显示第 1 首，点击定位触发三次续页并在视口显示高亮的第 65 首。Not run：报告人的 Android 真机和桌面安装包。
+
+The final `pnpm exec tsc -b`, `pnpm test` (3,939 tests across 376 files), `pnpm run build` (Lynx and Web), `assembleDebug`, and `git diff --check` passed. The APK installed on the Android 14 emulator contained the verified Lynx bundle. Tapping the fixture track returned HTTP 200 for the stream and 204 for the play record. After pausing, Home opened the hidden playlist. The details initially displayed track 1. Tapping locate loaded three more pages and brought the highlighted track 65 into the viewport. Not run: the reporter’s Android phone and packaged desktop apps.
+
 <a id="issue-593"></a>
 
 ## 2026-11-25 · 播放器快退和快进 10 秒 / 10-second playback jumps

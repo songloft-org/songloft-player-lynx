@@ -45,6 +45,7 @@ export type IconName =
   | 'check'
   | 'timer'
   | 'history'
+  | 'locate'
   | 'x'
   | 'plus'
   | 'heart'
@@ -249,6 +250,11 @@ const ICONS: Record<IconName, (color: string) => string> = {
   timer: (c) =>
     `<circle cx="12" cy="12" r="9" ${stroke(c)}/>` +
     `<path d="M12 7v5l3.5 3.5" ${stroke(c)}/>`,
+
+  locate: (c) =>
+    `<circle cx="12" cy="12" r="7" ${stroke(c)}/>` +
+    `<circle cx="12" cy="12" r="2.5" ${fill(c)}/>` +
+    `<path d="M12 2v3m0 14v3M2 12h3m14 0h3" ${stroke(c)}/>`,
 
   // History: a clock with a counter-clockwise arrow (the `timer` dial plus a
   // rewind arc), for "what was played here before".

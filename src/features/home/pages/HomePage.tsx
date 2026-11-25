@@ -14,6 +14,7 @@ import { playlistContext } from '../../player/domain/playback-context.js'
 import { playAllWithBackgroundFill } from '../../player/data/play-all.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
 import { toast } from '../../../shared/ui/toast-store.js'
+import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { PluginGrid } from '../../jsplugin/widgets/PluginGrid.js'
 import { currentGreetingKey } from '../domain/greeting.js'
 import { useHomePlaylists } from '../data/home-query.js'
@@ -97,8 +98,8 @@ export function HomePage() {
     return () => clearTimeout(timer)
   }, [isFirstLoad])
 
-  const openPlaylist = (playlist: Playlist) => {
-    void navigate({ to: '/playlists/$id', params: { id: String(playlist.id) } })
+  const openPlaylist = (id: number) => {
+    void navigate({ to: '/playlists/$id', params: { id: String(id) } })
   }
   const viewAllPlaylists = () => {
     void navigate({ to: '/library', search: { view: 'playlist_normal' } })
@@ -161,7 +162,7 @@ export function HomePage() {
                     loading={normal.isLoading && !normal.data}
                     onViewAll={viewAllPlaylists}
                     onRetry={() => void normal.refetch()}
-                    onTapPlaylist={openPlaylist}
+                    onTapPlaylist={playlist => openPlaylist(playlist.id)}
                     onPlayAll={onPlayAll}
                     playingPlaylistId={playingPlaylistId}
                     isWide={homeIsWide}
@@ -179,7 +180,7 @@ export function HomePage() {
                     loading={radio.isLoading && !radio.data}
                     onViewAll={viewAllRadios}
                     onRetry={() => void radio.refetch()}
-                    onTapPlaylist={openPlaylist}
+                    onTapPlaylist={playlist => openPlaylist(playlist.id)}
                     onPlayAll={onPlayAll}
                     playingPlaylistId={playingPlaylistId}
                     isWide={homeIsWide}
@@ -202,6 +203,14 @@ export function HomePage() {
         <text className='home__greeting' data-testid='home-greeting'>
           {t(currentGreetingKey())}
         </text>
+        {playingPlaylistId != null && (
+          <view className='home__locate-playlist' bindtap={() => openPlaylist(playingPlaylistId)}
+            accessibility-element={true} accessibility-role='button'
+            accessibility-label={t('home.locatePlayingPlaylist')}
+            data-testid='home-locate-playlist'>
+            <Icon name='locate' size={20} color={ICON_COLORS.content2} />
+          </view>
+        )}
       </view>
 
       {/*

@@ -1,5 +1,10 @@
 # Lynx 客户端开发经验
 
+### 更换客户端实现时核对播放定位入口
+
+- Flutter 在首页和歌单详情消费播放上下文。Songloft v2.13.13 使用的 Lynx Web 及 Lynx Android 缺少这两个入口，导致用户需要重新翻找歌单或歌曲。[songloft-org/songloft#595](https://github.com/songloft-org/songloft/issues/595)
+- 从播放来源取得歌单 ID，在对应详情页按当前歌曲 ID 定位。以首页未展示的歌单和未加载的歌曲验证入口和实际视口。分页请求要等待正在进行的查询刷新结束。Seen 1×（2026-11-25）。[验证记录](docs/project/progress.md#issue-595)
+
 ### 新增原生插件容器时按平台更新热更新契约
 
 - v0.1.6 HAP 的 ArkTS 字节码没有 `songloft-plugin-frame`。v2.13.13 已包含组件，但同版签名清单允许旧壳热更新。在 Node 中用实际 v0.1.6 壳信息执行旧壳的验签与兼容代码，确认它接受该清单。[songloft-org/songloft-player-lynx#18](https://github.com/songloft-org/songloft-player-lynx/issues/18)

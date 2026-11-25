@@ -10,7 +10,8 @@ import { useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import './PlaylistSongList.css'
 
 interface Props<T> extends VirtualListProps<T> {
-  locateSongId?: number
+  locateTarget?: { index: number }
+  onLocateApplied?: () => void
   total: number
   loadingMore: boolean
   hasMore: boolean
@@ -20,19 +21,14 @@ interface Props<T> extends VirtualListProps<T> {
 
 let listCounter = 0
 export function PlaylistSongList<T extends Song>({ total, loadingMore, hasMore,
-  loadFailed, enabled, locateSongId, ...listProps }: Props<T>) {
+  loadFailed, enabled, locateTarget, onLocateApplied, ...listProps }: Props<T>) {
   const songs = listProps.items
   const [listId] = useState(() => `playlist-song-list-${++listCounter}`)
   const { height, onLayoutChange } = useBreakpoint(0, '.playlist-song-list')
   const { height: navInset, onLayoutChange: onInsetLayout } = useBreakpoint(0, '.playlist-song-list__nav-inset')
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [requestedIndex, setRequestedIndex] = useState<number | null>(null)
-  useEffect(() => {
-    if (locateSongId == null) return
-    const index = songs.findIndex(song => song.id === locateSongId)
-    if (index >= 0) { latestRequest.current++; setRequestedIndex(index) }
-    else if (hasMore && !loadingMore && !loadFailed) listProps.onEndReached?.()
-  }, [locateSongId, songs, hasMore, loadingMore, loadFailed])
+  const [scrollRequest, setScrollRequest] = useState<{ index: number } | null>(null)
+  const requestedIndex = scrollRequest?.index ?? null
   const [showLabel, setShowLabel] = useState(false)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const alive = useRef(true)
@@ -54,6 +50,13 @@ export function PlaylistSongList<T extends Song>({ total, loadingMore, hasMore,
       clearTimeout(hideTimer.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (!locateTarget) return
+    latestRequest.current++
+    setScrollRequest(locateTarget)
+    onLocateApplied?.()
+  }, [locateTarget, onLocateApplied])
 
   const showHint = () => {
     setShowLabel(true)
@@ -79,12 +82,12 @@ export function PlaylistSongList<T extends Song>({ total, loadingMore, hasMore,
     if (requestedIndex === null) return
     if (requestedIndex < songs.length) scrollTo(requestedIndex, latestRequest.current)
     else if (!loadingMore && hasMore && !loadFailed) {
-      if (loadCursor.current === songs.length) { setRequestedIndex(null); return }
+      if (loadCursor.current === songs.length) { setScrollRequest(null); return }
       loadCursor.current = songs.length
       listProps.onEndReached?.()
     }
-    else if (!loadingMore && (!hasMore || loadFailed)) setRequestedIndex(null)
-  }, [requestedIndex, songs, loadingMore, hasMore, loadFailed])
+    else if (!loadingMore && (!hasMore || loadFailed)) setScrollRequest(null)
+  }, [scrollRequest, songs, loadingMore, hasMore, loadFailed])
 
   useEffect(() => {
     if (requestedIndex === null || requestedIndex >= songs.length) return
@@ -93,18 +96,19 @@ export function PlaylistSongList<T extends Song>({ total, loadingMore, hasMore,
     let attempts = 0
     const request = latestRequest.current
     const timer = setInterval(() => {
-      if (++attempts > 25) { setRequestedIndex(null); return }
+      if (latestRequest.current !== request) return
+      if (++attempts > 25) { setScrollRequest(null); return }
       scrollTo(requestedIndex, request)
     }, 200)
     return () => clearInterval(timer)
-  }, [requestedIndex, songs])
+  }, [scrollRequest, songs])
 
   const seek = (ratio: number) => {
     const target = playlistIndexFromRatio(1 - ratio, total)
     if (requestedIndex === target) { showHint(); return }
     latestRequest.current++
     loadCursor.current = -1
-    setRequestedIndex(target)
+    setScrollRequest({ index: target })
     showHint()
   }
   const readPosition = (event: ScrollEvent) => {
@@ -147,7 +151,7 @@ export function PlaylistSongList<T extends Song>({ total, loadingMore, hasMore,
           if (!valid()) return
           appliedRead.current = serial
           setCurrentIndex(index)
-          if (targetBounds && targetBounds.bottom > viewport.top && targetBounds.top < viewport.bottom) setRequestedIndex(null)
+          if (targetBounds && targetBounds.bottom > viewport.top && targetBounds.top < viewport.bottom) setScrollRequest(null)
         } finally {
           webReading.current = false
           if (webReadAgain.current && alive.current) {
@@ -170,7 +174,7 @@ export function PlaylistSongList<T extends Song>({ total, loadingMore, hasMore,
         setCurrentIndex(index)
         if (requestedIndex !== null && cells.some(cell =>
           cell.itemKey === String(songs[requestedIndex]?.id) && Number(cell.bottom) > 0 && Number(cell.top) < (height || 400))) {
-          setRequestedIndex(null)
+          setScrollRequest(null)
         }
       }
     }

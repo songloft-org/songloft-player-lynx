@@ -1,5 +1,10 @@
 # Lynx Client Development Lessons
 
+### Check playback shortcuts when switching client implementations
+
+- Flutter uses the playback context on Home and on playlist details. The Lynx Web and Android clients used with Songloft v2.13.13 lacked both shortcuts, requiring users to find the playlist or track again. [songloft-org/songloft#595](https://github.com/songloft-org/songloft/issues/595)
+- Open the playlist from the playback source and locate the current track by ID in that playlist. Test a playlist outside the Home preview and a track on an unloaded page, and check the actual list viewport. Wait for any in-flight query refresh before requesting the next page. Seen 1× (2026-11-25). [Verification](docs/project/progress.md#issue-595)
+
 ### Update the platform’s bundle contract when adding a native plugin container
 
 - The v0.1.6 HAP’s ArkTS bytecode lacked `songloft-plugin-frame`. The v2.13.13 HAP included it, but the old shell’s verification code accepted that release’s signed manifest when run in Node with the actual v0.1.6 shell metadata. [songloft-org/songloft-player-lynx#18](https://github.com/songloft-org/songloft-player-lynx/issues/18)

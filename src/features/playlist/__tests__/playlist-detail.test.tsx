@@ -23,11 +23,26 @@ const { detailHook, songsHook, deleteMutationHook, updateMutationHook, removeSon
 }))
 
 const navigateMock = vi.hoisted(() => vi.fn())
+const playback = vi.hoisted(() => ({
+  sourcePlaylistId: undefined as number | undefined,
+  currentSong: undefined as Song | undefined,
+}))
 const rowRenders = vi.hoisted(() => vi.fn())
 const rowRemoval = vi.hoisted(() => new Map<number, (song: Song) => void>())
 const sortable = vi.hoisted(() => ({ onSortEnd: undefined as ((items: Array<{ dataItem: Song; getSortingKey: () => string }>) => void) | undefined, props: {} as Record<string, unknown> }))
 const listEvents = vi.hoisted(() => ({ onEndReached: undefined as (() => void) | undefined }))
 const cache = vi.hoisted(() => ({ available: false, beginSongs: vi.fn(), beginPlaylist: vi.fn() }))
+vi.mock('../../player/store/index.js', async (importOriginal) => {
+  const { makePlayerStoreMock } = await import('../../../__tests__/_render-mocks.js')
+  const mock = makePlayerStoreMock(await importOriginal<typeof import('../../player/store/index.js')>())
+  return {
+    ...mock,
+    usePlayerStore: Object.assign(
+      (select: (state: typeof playback) => unknown) => select(playback),
+      { getState: mock.usePlayerStore.getState },
+    ),
+  }
+})
 vi.mock('../../player/data/indexed-song-cache.js', async () => ({
   ...await vi.importActual('../../player/data/indexed-song-cache.js'), indexedSongCacheAvailable: () => cache.available,
 }))
@@ -235,6 +250,7 @@ function songsResult(pages: { songs: Song[]; total: number }[], over = {}) {
     data: { pages },
     isLoading: false,
     isError: false,
+    isFetching: false,
     hasNextPage: false,
     isFetchingNextPage: false,
     fetchNextPage: vi.fn(),
@@ -247,6 +263,8 @@ function mutationResult(over = {}) {
 }
 
 beforeEach(() => {
+  playback.sourcePlaylistId = undefined
+  playback.currentSong = undefined
   rowRemoval.clear()
   listEvents.onEndReached = undefined
   cache.available = false
@@ -270,6 +288,41 @@ async function renderPage(wide = false) {
   })
   return getQueriesForElement(elementTree.root!)
 }
+
+test('locating the current track requests the next page when it has not been loaded', async () => {
+  playback.sourcePlaylistId = 7
+  playback.currentSong = makeSong(130)
+  const fetchNextPage = vi.fn()
+  songsHook.mockReturnValue(songsResult([{ songs: [makeSong(1)], total: 130 }], {
+    hasNextPage: true, fetchNextPage,
+  }))
+  const q = await renderPage()
+  await act(async () => { fireEvent.tap(q.getByTestId('playlist-detail-locate-song')) })
+  expect(fetchNextPage).toHaveBeenCalledExactlyOnceWith({ cancelRefetch: false })
+})
+
+test('locating a later track waits for a background refresh before requesting the next page', async () => {
+  playback.sourcePlaylistId = 7
+  playback.currentSong = makeSong(130)
+  const pages = [{ songs: [makeSong(1)], total: 130 }]
+  const fetchNextPage = vi.fn()
+  songsHook.mockReturnValue(songsResult(pages, { hasNextPage: true, isFetching: true, fetchNextPage }))
+  const view = render(<PlaylistDetailPage />)
+  const q = getQueriesForElement(elementTree.root!)
+  await act(async () => { fireEvent.tap(q.getByTestId('playlist-detail-locate-song')) })
+  expect(fetchNextPage).not.toHaveBeenCalled()
+
+  songsHook.mockReturnValue(songsResult(pages, { hasNextPage: true, fetchNextPage }))
+  await act(async () => { view.rerender(<PlaylistDetailPage />) })
+  expect(fetchNextPage).toHaveBeenCalledExactlyOnceWith({ cancelRefetch: false })
+})
+
+test('hides the track shortcut when another playlist is playing', async () => {
+  playback.sourcePlaylistId = 8
+  playback.currentSong = makeSong(1)
+  const q = await renderPage()
+  expect(q.queryByTestId('playlist-detail-locate-song')).toBeNull()
+})
 
 test('overlapping list-end and seek pagination signals reuse the active page request', async () => {
   const fetchNextPage = vi.fn()

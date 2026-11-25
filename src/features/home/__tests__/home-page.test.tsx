@@ -2,7 +2,7 @@ import '../../../shims/router-env.js'
 
 import '@testing-library/jest-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { act, getQueriesForElement, render } from '@lynx-js/react/testing-library'
+import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
 
 import { parseLibraryStats } from '../../../models/library-stats.js'
 import type { Playlist } from '../../../models/playlist.js'
@@ -32,11 +32,13 @@ vi.mock('react-i18next', async () =>
   (await import('../../../__tests__/_render-mocks.js')).mockReactI18next(),
 )
 
-vi.mock('@tanstack/react-router', () => ({ useNavigate: () => () => {} }))
+const navigate = vi.hoisted(() => vi.fn())
+const playback = vi.hoisted(() => ({ sourcePlaylistId: undefined as number | undefined }))
+vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate }))
 
-vi.mock('../../player/store/index.js', async () =>
-  (await import('../../../__tests__/_render-mocks.js')).makePlayerStoreMock({}),
-)
+vi.mock('../../player/store/index.js', () => ({
+  usePlayerStore: (select: (state: typeof playback) => unknown) => select(playback),
+}))
 
 vi.mock('../../jsplugin/widgets/PluginGrid.js', () => ({
   PluginGrid: () => null,
@@ -104,6 +106,7 @@ function stats(over: Record<string, number> = {}) {
 }
 
 beforeEach(async () => {
+  playback.sourcePlaylistId = undefined
   favoritesHook.mockReturnValue({ config: { showFavorites: true, showRadioFavorites: true } })
   await changeHomeConfig({ showRadios: true })
   breakpointHook.mockReturnValue({ width: 390, isWide: false, breakpoint: 'mobile', onLayoutChange: () => {} })
@@ -121,6 +124,19 @@ async function renderPage() {
   })
   return getQueriesForElement(elementTree.root!)
 }
+
+test('opens the playing playlist even when its card is outside the home preview', async () => {
+  playback.sourcePlaylistId = 88
+  const q = await renderPage()
+  expect(q.queryByText('Playlist 88')).toBeNull()
+  await act(async () => { fireEvent.tap(q.getByTestId('home-locate-playlist')) })
+  expect(navigate).toHaveBeenCalledWith({ to: '/playlists/$id', params: { id: '88' } })
+})
+
+test('hides the playing playlist shortcut without a playlist context', async () => {
+  const q = await renderPage()
+  expect(q.queryByTestId('home-locate-playlist')).toBeNull()
+})
 
 test('home-only favorites switches filter built-ins and refill the visible card budget', async () => {
   await changeHomeConfig({ layout: 'grid', columns: 2, rows: 1 })

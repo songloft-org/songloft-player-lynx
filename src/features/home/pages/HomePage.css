@@ -32,9 +32,22 @@
 }
 
 .home__greeting {
+  flex: 1;
   color: var(--label);
   font-size: var(--font-largeTitle);
   font-weight: var(--weight-bold);
+}
+
+.home__locate-playlist {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  margin-left: var(--space-2);
+  border-radius: var(--radius-pill);
+  background-color: var(--tertiary-system-fill);
 }
 
 /* Wide screens step down to title1 (28px): the greeting sits beside the shell's

@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-25 · #595 Playlist and track location
+
+Home opens the source playlist. Playlist details clear the search, load further pages, and locate the current track. Embedded Web and the Android 14 emulator opened a hidden playlist from Home and located track 65. Web also covered search and repeated location. [Verification](../../project/progress.md#issue-595)
+
 ## 2026-11-25 · #593 10-second playback jumps
 
 The full player and the mini player at wider sizes offer 10-second rewind and forward controls. Docker Chrome verified button placement, audio seeking, and resizing. Native device verification is pending. [Verification](../../project/progress.md#issue-593)

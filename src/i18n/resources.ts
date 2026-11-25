@@ -254,6 +254,7 @@ export const en = {
   },
   home: {
     greetingNight: 'Good night',
+    locatePlayingPlaylist: 'Locate playing playlist',
     showFavorites: 'Show Favorites on home',
     showFavoritesDesc: 'Only controls the home card. Library access, songs and favorites stay available. Saved on this device for this server and account.',
     showRadioFavorites: 'Show Radio favorites on home',
@@ -398,6 +399,8 @@ export const en = {
     permanent_number_prefix: 'Permanent: number prefix',
     permanent_shuffle: 'Permanent: shuffle songs',
     fallbackName: 'Playlist',
+    locatePlaying: 'Locate current track',
+    locateNotFound: 'The track is no longer in this playlist.',
     songsError: 'Could not load songs.',
     noSongs: 'No songs in this playlist',
     loadingPlaylists: 'Loading playlists…',
@@ -1586,6 +1589,7 @@ export const zh: TranslationTree = {
   },
   home: {
     greetingNight: '晚安',
+    locatePlayingPlaylist: '定位到正在播放的歌单',
     showFavorites: '在首页显示收藏',
     showFavoritesDesc: '仅控制首页卡片，曲库入口、歌曲和收藏功能照常可用。按服务器和账号保存在本机。',
     showRadioFavorites: '在首页显示电台收藏',
@@ -1730,6 +1734,8 @@ export const zh: TranslationTree = {
     permanent_number_prefix: '永久排序：数字前缀',
     permanent_shuffle: '永久排序：随机打乱',
     fallbackName: '播放列表',
+    locatePlaying: '定位到正在播放',
+    locateNotFound: '该歌曲已不在此歌单中。',
     songsError: '无法加载歌曲。',
     noSongs: '该歌单下暂无歌曲',
     loadingPlaylists: '加载歌单中…',
