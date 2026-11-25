@@ -1074,7 +1074,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         return
       }
       if (_loadedSongId !== s.currentSong.id) {
-        await playAtIndex(s.currentIndex >= 0 ? s.currentIndex : 0)
+        // Cold-start resume with auto-play off: the store shows the restored
+        // position but the engine has no media loaded yet. Without passing it
+        // through, playAtIndex resets currentTime to 0 and the first play jumps
+        // back to the start — the restored progress was cosmetic only.
+        // EXCEPT when the queue finished: its currentTime is the ended track's
+        // final position, and replay must start over (togglePlay is the replay
+        // gesture there). playlistCompleted distinguishes the two cases.
+        const resumeMs = s.playlistCompleted ? 0 : s.currentTime
+        await playAtIndex(s.currentIndex >= 0 ? s.currentIndex : 0, resumeMs)
         return
       }
       await audio.play()

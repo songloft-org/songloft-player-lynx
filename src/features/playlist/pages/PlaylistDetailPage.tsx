@@ -590,7 +590,10 @@ export function PlaylistDetailPage() {
           : songsQuery.isError && songs.length === 0
             ? <DetailState text={t('playlist.songsError')} tone='error' />
             : songs.length === 0
-              ? <DetailState text={t('playlist.noSongs')} />
+              // A non-empty search in a populated playlist is not "no songs" —
+              // saying so makes users think the playlist was wiped. Match the
+              // flat-songs view, which distinguishes filtered-empty from empty.
+              ? <DetailState text={keyword ? t('library.noSearchResults') : t('playlist.noSongs')} />
               : (
                 <PlaylistSongList<Song> key={`${id}:${currentSort}:${currentOrder}:${keyword ?? ''}`}
                   locateSongId={locateSongId}

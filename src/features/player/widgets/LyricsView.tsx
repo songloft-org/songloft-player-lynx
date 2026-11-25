@@ -97,8 +97,22 @@ export function LyricsView() {
   const activeLineRef = useRef<NodesRef>(null)
   const [userScrolled, setUserScrolled] = useState(false)
   const lastAutoScrollTopRef = useRef(0)
+  // Ref mirror so the current-line effect can read the latest value without
+  // listing it as a dependency (which would re-scroll on every drift change).
+  const userScrolledRef = useRef(false)
+  const markUserScrolled = useCallback((value: boolean) => {
+    userScrolledRef.current = value
+    setUserScrolled(value)
+  }, [])
 
   useEffect(() => {
+    // Respect a deliberate scroll-away: if the reader has moved off the current
+    // line, do not yank the view back on every line change. The "back to current"
+    // button is the explicit way to resume following. Previously this effect
+    // reset userScrolled unconditionally, so the button vanished within a line
+    // or two and reading ahead was impossible — the same feel-breaking class of
+    // bug as the player's back navigation.
+    if (userScrolledRef.current) return
     if (currentIndex >= 0 && activeLineRef.current) {
       try {
         activeLineRef.current
@@ -114,11 +128,9 @@ export function LyricsView() {
           .exec()
       } catch (_) { /* no-op in test env */ }
     }
-    // The auto-scroll is about to land; reset the drift anchor so the next
-    // scroll callback measures from the new position. A small delay would be
-    // more precise, but smooth scroll finishes within `--duration-normal` and
-    // the next scroll event will just re-anchor.
-    setUserScrolled(false)
+    // No reset of userScrolled here: staying in follow mode is the normal case
+    // (the flag is already false), and when the reader has scrolled away we
+    // returned above. handleScroll keeps the drift anchor fresh while following.
   }, [currentIndex])
 
   const handleScroll = useCallback((e: ScrollEvent) => {
@@ -130,9 +142,9 @@ export function LyricsView() {
       lastAutoScrollTopRef.current = top
     }
     const drift = Math.abs(top - lastAutoScrollTopRef.current)
-    if (drift > DRIFT_PX && !userScrolled) setUserScrolled(true)
-    else if (drift <= DRIFT_PX && userScrolled) setUserScrolled(false)
-  }, [userScrolled])
+    if (drift > DRIFT_PX && !userScrolled) markUserScrolled(true)
+    else if (drift <= DRIFT_PX && userScrolled) markUserScrolled(false)
+  }, [userScrolled, markUserScrolled])
 
   const scrollToCurrent = useCallback(() => {
     if (currentIndex >= 0 && activeLineRef.current) {
@@ -147,8 +159,12 @@ export function LyricsView() {
           .exec()
       } catch (_) { /* no-op in test env */ }
     }
-    setUserScrolled(false)
-  }, [currentIndex])
+    // Re-arm following: the explicit button is the only way back into auto mode
+    // after the reader scrolled away. Anchor from the current top so the smooth
+    // scroll landing is not mistaken for another deliberate drift.
+    lastAutoScrollTopRef.current = 0
+    markUserScrolled(false)
+  }, [currentIndex, markUserScrolled])
 
   if (isLoading) {
     return (

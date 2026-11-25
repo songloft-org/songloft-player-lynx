@@ -808,6 +808,10 @@ describe('togglePlay when the engine holds nothing (cold start, auto-resume off)
 
     expect(loadSpy).toHaveBeenCalledTimes(1)
     expect(usePlayerStore.getState().isPlaying).toBe(true)
+    // The restored progress must reach the engine, not just the UI. Without
+    // forwarding currentTime, playAtIndex resets to 0 and the first play jumps
+    // back to the start of a song the user had already listened into.
+    expect(audio.lastLoad?.opts).toMatchObject({ initialPositionMs: 42_000, autoplay: true })
     loadSpy.mockRestore()
   })
 
