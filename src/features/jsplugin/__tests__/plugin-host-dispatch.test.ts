@@ -194,6 +194,68 @@ test('spatial presets use the same session as EQ and a failed update preserves t
   }
 })
 
+test('a foreground plugin borrows the host playback to add effects without starting its own queue', async () => {
+  const write = vi.fn((_: string, reply: (ok: boolean) => void) => reply(true))
+  vi.stubGlobal('NativeModules', { SongloftAudio: {
+    getPluginAudioEffects: (reply: (mask: number) => void) => reply(7),
+    setPluginAudioEffects: write,
+  } })
+  let active = true
+  const ownedCall = (method: string, params?: Record<string, unknown>) =>
+    handlePluginHostCall({ ns: 'player', method, params }, {
+      ...ctx, pluginEntryPath: 'effect-only', isPluginActive: () => active,
+    })
+  try {
+    // Host starts ordinary playback — no pluginOwner, so no plugin session exists.
+    await call('setQueue', { ids: [1, 2] })
+    expect(usePlayerStore.getState().currentSong?.id).toBe(1)
+
+    // With no session of its own, an active effect-only plugin still gets a
+    // playbackId by borrowing the host's current playback.
+    const { data } = await ownedCall('getAudioEffects')
+    const { playbackId } = data as { playbackId: string | null }
+    expect(playbackId).toBeTruthy()
+    const effects = { reverb: { preset: 'hall' }, stereoWidth: { preset: 'wide' } }
+    expect(await ownedCall('applyAudioEffects', { playbackId, effects })).toEqual({ ok: true, data: effects })
+    expect(JSON.parse(write.mock.calls.at(-1)![0]).spatial).toBeTruthy()
+
+    // Clearing restores the host's audio without stopping playback.
+    expect(await ownedCall('clearAudioEffects', { playbackId })).toEqual({ ok: true, data: null })
+    expect(write.mock.calls.at(-1)?.[0]).toBe('')
+    expect(usePlayerStore.getState().currentSong?.id).toBe(1)
+
+    // A different plugin cannot write to the borrowed session (owner-bound).
+    const other = handlePluginHostCall(
+      { ns: 'player', method: 'getAudioEffects' },
+      { ...ctx, pluginEntryPath: 'other-plugin', isPluginActive: () => true },
+    )
+    const otherId = ((await other).data as { playbackId: string | null }).playbackId
+    expect(otherId).toBeNull()
+  } finally {
+    usePlayerStore.getState().clearPlaylist()
+    vi.unstubAllGlobals()
+  }
+})
+
+test('an inactive plugin cannot borrow the host playback', async () => {
+  vi.stubGlobal('NativeModules', { SongloftAudio: {
+    getPluginAudioEffects: (reply: (mask: number) => void) => reply(7),
+    setPluginAudioEffects: vi.fn((_: string, reply: (ok: boolean) => void) => reply(true)),
+  } })
+  const inactiveCall = (method: string, params?: Record<string, unknown>) =>
+    handlePluginHostCall({ ns: 'player', method, params }, {
+      ...ctx, pluginEntryPath: 'bg-plugin', isPluginActive: () => false,
+    })
+  try {
+    await call('setQueue', { ids: [1] })
+    const { data } = await inactiveCall('getAudioEffects')
+    expect((data as { playbackId: string | null }).playbackId).toBeNull()
+  } finally {
+    usePlayerStore.getState().clearPlaylist()
+    vi.unstubAllGlobals()
+  }
+})
+
 test('spatial effects reserve headroom for the EQ that stays active', async () => {
   const write = vi.fn((_: string, reply: (ok: boolean) => void) => reply(true))
   vi.stubGlobal('NativeModules', { SongloftAudio: {
@@ -310,11 +372,20 @@ test('Android effects follow the owning plugin queue, clear without stopping, an
     await usePlayerStore.getState().playSong(song(3))
     expect(setPluginEqualizer.mock.calls.at(-1)?.[0]).toBe('')
     expect(await ownedCall('applyAudioEffects', { playbackId, effects })).toMatchObject({ ok: false })
-    expect(await ownedCall('getAudioEffects')).toMatchObject({ data: { playbackId: null, applied: null } })
+    // The old playbackId is stale, but the host is still playing — an active
+    // effect plugin may borrow a fresh session for the new song.
+    const afterReselect = await ownedCall('getAudioEffects')
+    expect((afterReselect.data as { playbackId: string | null }).playbackId).toEqual(expect.any(String))
+    expect((afterReselect.data as { applied: unknown }).applied).toBeNull()
     await ownedCall('play', { id: 1 })
     await ownedCall('setPlayMode', { mode: 'singlePlay' })
     usePlayerStore.getState()._onCompleted()
-    expect(await ownedCall('getAudioEffects')).toMatchObject({ data: { playbackId: null } })
+    // currentSong is still loaded, so the effect plugin can still borrow it;
+    // only the stale playbackId from before the reselect is rejected.
+    expect((await ownedCall('getAudioEffects')).data).toMatchObject({
+      applied: null,
+      playbackId: expect.any(String),
+    })
   } finally {
     vi.unstubAllGlobals()
   }

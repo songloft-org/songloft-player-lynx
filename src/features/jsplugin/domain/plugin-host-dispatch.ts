@@ -10,6 +10,7 @@ import { getPlaylistApi } from '../../playlist/api/index.js'
 import { useEqStore } from '../../player/store/eq-store.js'
 import { useDlnaStore } from '../../player/store/dlna-store.js'
 import {
+  borrowHostPlayback,
   getPluginAudioEffects,
   hasPluginAudioEffects,
   setPluginAudioEffects,
@@ -132,8 +133,15 @@ async function dispatchPlayer(
     case 'getState':
       return playerStateToJson()
 
-    case 'getAudioEffects':
+    case 'getAudioEffects': {
+      // An effect-only plugin has no playback of its own. If the host is already
+      // playing locally and this plugin is active, borrow that session so the
+      // plugin gets a playbackId and can apply/clear effects to the current song.
+      // No-op when a plugin-owned session already exists, so existing plugins
+      // that start playback keep their current semantics.
+      borrowHostPlayback(ctx.pluginEntryPath, localAudio() && !!store.currentSong, canWriteEffects)
       return getPluginAudioEffects(ctx.pluginEntryPath, localAudio())
+    }
 
     case 'applyAudioEffects':
     case 'clearAudioEffects': {
