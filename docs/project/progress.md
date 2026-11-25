@@ -1,5 +1,17 @@
 # 进展与交接（PROGRESS）
 
+<a id="issue-593"></a>
+
+## 2026-11-25 · 播放器快退和快进 10 秒 / 10-second playback jumps
+
+全屏播放器在播放键两侧增加快退和快进，播放模式和收藏移到工具行。迷你播放栏按自身宽度显示这两个入口，并保留「仅播放」偏好。直播和未知时长的音源禁用相对跳转。[songloft-org/songloft#593](https://github.com/songloft-org/songloft/issues/593)
+
+在 Linux x86_64 和 Node 22.17.1 上，基线 `02def364483c15ade0a3aa4d2a972bc0b5454083` 的新增三条用例均因缺少按钮失败。候选源码和测试差异的 SHA-256 为 `a05eb8108e8046bd7fe879af9cf9a1b29f19ca87773f0d67e72d15b327a75703`。类型检查、Vitest 全量 3934 项、最终定向检查 28 项和 Lynx／Web 构建通过。Docker Chrome 用真实后端与测试音频验证 320、390、768、1366、1920 像素宽的全屏控件及 568×320、844×390、1024×420 横向布局，在桌面底栏实测跳转及缩窗后恢复显示。播放和暂停两态、首尾边界通过。原生设备未验证。
+
+The full player puts rewind and forward beside playback and moves play mode and favorites to the tool row. The mini player uses its own width to decide whether to show the new controls and respects the play-only preference. Relative seeking is disabled for live and unknown-duration media. [songloft-org/songloft#593](https://github.com/songloft-org/songloft/issues/593)
+
+On Linux x86_64 with Node 22.17.1, the three new cases failed on baseline `02def364483c15ade0a3aa4d2a972bc0b5454083` because the buttons were absent. The candidate source and test diff has SHA-256 `a05eb8108e8046bd7fe879af9cf9a1b29f19ca87773f0d67e72d15b327a75703`. Type checking, all 3934 Vitest tests, 28 final focused checks, and the Lynx and Web builds passed. Docker Chrome with a real backend and fixture audio covered full-player widths of 320, 390, 768, 1366, and 1920 pixels and landscape sizes of 568×320, 844×390, and 1024×420. It also verified desktop mini-player seeking and visibility after resizing. Playing, paused, start, and end positions were exercised. Native devices were not tested.
+
 ## 2026-11-24 · songloft-org/songloft#591 收藏长轮询生命周期
 
 基线为 `2f3010c5beff70b1e2263ff1ecdb47840201c3fb`，修改保留在未提交工作树。收藏变更 watcher 现在把 HTTP 请求纳入自身生命周期，停止或会话切换会立即 abort 在途请求，同一 watcher 重复启动只保留一个运行循环。每次会话固定服务器地址，避免旧订阅跟随全局配置漂移。35 秒接收超时、成功刷新后推进 cursor 和指数退避继续保留。详细记录见 [issue-591.md](issue-591.md)。

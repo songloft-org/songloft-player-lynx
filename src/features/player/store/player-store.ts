@@ -52,7 +52,7 @@ import { getCachedAccessToken } from '../../../core/network/token-cache.js'
 import { getIndexedCachedPath } from '../data/cache-context.js'
 import type { CacheVariant } from '../domain/cache-identity.js'
 import { useLyricStore } from './lyric-store.js'
-import type { PlayerData } from './derive.js'
+import { canSeekBy, type PlayerData } from './derive.js'
 import { configureDlnaPlayer, useDlnaStore } from './dlna-store.js'
 import { useAppSessionStore } from '../../../store/app-session.js'
 import { endPluginPlayback, startPluginPlayback } from './plugin-audio-effects.js'
@@ -1114,7 +1114,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     seekBy: async (deltaMs) => {
       const s = get()
-      if (s.duration <= 0) return
+      if (!canSeekBy(s)) return
       const target = Math.min(s.duration, Math.max(0, s.currentTime + deltaMs))
       await get().seek(target)
     },

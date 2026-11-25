@@ -1,13 +1,9 @@
-/* Secondary controls row: cast · volume · speed · queue.
-   Slot sizes come inline from `player-layout.ts`; Lynx has no `@media`. */
+/* Secondary controls. Slot sizes come from `player-layout.ts`. */
 
 .player-tools {
   display: flex;
   flex-direction: row;
   align-items: center;
-  /* `space-around` rather than `space-between`: the row has 3 or 4 members depending
-     on whether casting exists here, and the ends should not jam against the padding
-     when it is 3. */
   justify-content: space-around;
 }
 

@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-25 · #593 10-second playback jumps
+
+The full player and the mini player at wider sizes offer 10-second rewind and forward controls. Docker Chrome verified button placement, audio seeking, and resizing. Native device verification is pending. [Verification](../../project/progress.md#issue-593)
+
 ## 2026-11-24 · #591 Favorite long-poll cancellation
 
 Favorite-change subscriptions now abort in-flight HTTP requests when stopped or when the session changes, keep one running loop per watcher, and capture the current session server address. [Verification](../../project/issue-591.md)

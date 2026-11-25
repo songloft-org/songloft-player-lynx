@@ -11,6 +11,7 @@ export type { LyricState } from './lyric-store.js'
 export {
   type PlayerData,
   hasSong,
+  canSeekBy,
   hasNext,
   hasPrev,
   progressOf,

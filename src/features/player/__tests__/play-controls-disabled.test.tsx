@@ -118,3 +118,23 @@ test('an enabled skip control still fires', async () => {
   expect(playPrev).toHaveBeenCalledTimes(1)
   expect(playNext).toHaveBeenCalledTimes(1)
 })
+
+test.each([
+  { duration: 60_000, isLive: false, calls: [[-10_000], [10_000]] },
+  { duration: 0, isLive: false, calls: [] },
+  { duration: 60_000, isLive: true, calls: [] },
+])('fixed jumps respect seekability ($duration, live $isLive)', async ({ duration, isLive, calls }) => {
+  const seekBy = vi.fn()
+  const state = usePlayerStore.getState()
+  const saved = { currentSong: state.currentSong, duration: state.duration, seekBy: state.seekBy }
+  Object.assign(state, { currentSong: { ...mockSong(), isLive }, duration, seekBy })
+
+  try {
+    const { getByTestId } = await renderControls()
+    fireEvent.tap(getByTestId('seek-backward-btn'))
+    fireEvent.tap(getByTestId('seek-forward-btn'))
+    expect(seekBy.mock.calls).toEqual(calls)
+  } finally {
+    Object.assign(state, saved)
+  }
+})

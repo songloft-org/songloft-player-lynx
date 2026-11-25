@@ -22,6 +22,8 @@ export type IconName =
   | 'pause'
   | 'skip-prev'
   | 'skip-next'
+  | 'seek-backward-10'
+  | 'seek-forward-10'
   | 'shuffle'
   | 'repeat'
   | 'repeat-one'
@@ -96,6 +98,15 @@ function fill(color: string): string {
   return `fill="${color}"`
 }
 
+function seekTen(color: string, forward: boolean): string {
+  const arrow = forward
+    ? 'M12 4a8 8 0 1 0 7.7 5.8M12 4h6m0 0-3-3m3 3-3 3'
+    : 'M12 4a8 8 0 1 1-7.7 5.8M12 4H6m0 0 3-3M6 4l3 3'
+  return `<path d="${arrow}" ${stroke(color)}/>` +
+    `<path d="M8.4 10.5 10 9.4v6.2" ${stroke(color)}/>` +
+    `<rect x="12.7" y="9.4" width="3.5" height="6.2" rx="1.6" ${stroke(color)}/>`
+}
+
 /**
  * Registry: each entry returns the inner SVG markup (paths/shapes) with the
  * requested color already injected into every `fill`/`stroke`.
@@ -133,6 +144,9 @@ const ICONS: Record<IconName, (color: string) => string> = {
   'skip-next': (c) =>
     `<path d="M6 5v14l10-7z" ${fill(c)}/>` +
     `<rect x="15.9" y="5" width="2.6" height="14" rx="1" ${fill(c)}/>`,
+
+  'seek-backward-10': (c) => seekTen(c, false),
+  'seek-forward-10': (c) => seekTen(c, true),
 
   shuffle: (c) =>
     `<path d="M4 6h3.2l9.6 12H21" ${stroke(c)}/>` +

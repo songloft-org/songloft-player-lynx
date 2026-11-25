@@ -9,6 +9,7 @@ export const SHORTCUT_ACTIONS = [
   'mute',
 ] as const
 export type ShortcutAction = (typeof SHORTCUT_ACTIONS)[number]
+export const SEEK_STEP_MS = 10_000
 export interface ShortcutBinding {
   code: string
   ctrl: boolean

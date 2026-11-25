@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next'
 
 import { buildCoverUrl } from '../../../core/network/url-helper.js'
 import { getShellWidth, subscribeShellWidth } from '../../../shared/nav/shell-navigation.js'
+import { BREAKPOINTS, useBreakpoint } from '../../../shared/responsive/useBreakpoint.js'
 import { useTapAnchor } from '../../../shared/ui/anchored-overlay.js'
 import { BackdropBlur } from '../../../shared/ui/BackdropBlur.js'
 import { useCapsuleMaterialStyle } from '../../../shared/ui/capsule-material.js'
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
 import { songRowOverlays } from '../../../shared/ui/song-row-overlays.js'
+import type { Song } from '../../../models/song.js'
 import { useFavoriteToggle } from '../../library/data/favorites.js'
 import { cachedSongIdentity } from '../domain/offline-cache.js'
 import { loadMiniPlayerControls, miniPlayerControls } from '../data/mini-player-controls.js'
@@ -18,6 +20,7 @@ import type { PlayMode } from '../domain/play-mode.js'
 import { hasNext, hasPrev, isMuted, progressOf, usePlayerStore } from '../store/index.js'
 import { PlayerMoreMenu } from './PlayerMoreMenu.js'
 import { PlaylistDrawer } from './PlaylistDrawer.js'
+import { SeekStepButton } from './SeekStepButton.js'
 import { SleepTimerSheet } from './SleepTimerSheet.js'
 import '../../../shared/ui/overlay-motion.css'
 import './MiniPlayer.css'
@@ -28,6 +31,8 @@ import './MiniPlayer.css'
  * the preference survives, the fourth button just drops out on narrow phones.
  */
 const PLAY_MODE_MIN_WIDTH = 340
+// Leave room for the six transport slots, four outer actions, cover and title.
+const SEEK_CONTROLS_MIN_WIDTH = 616
 
 /**
  * Persistent mini-player, mounted in the shell above the bottom nav (narrow) /
@@ -54,10 +59,14 @@ function accessibilityTrait(enabled: boolean) {
 }
 
 export function MiniPlayer() {
+  const song = usePlayerStore((s) => s.currentSong)
+  return song ? <MiniPlayerBar song={song} /> : null
+}
+
+function MiniPlayerBar({ song }: { song: Song }) {
   const navigate = useNavigate()
   const capsuleMaterialStyle = useCapsuleMaterialStyle()
   const { t } = useTranslation()
-  const song = usePlayerStore((s) => s.currentSong)
   const isPlaying = usePlayerStore((s) => s.isPlaying)
   const progress = usePlayerStore(progressOf)
   const canNext = usePlayerStore(hasNext)
@@ -68,6 +77,10 @@ export function MiniPlayer() {
   const volumeAnchor = useTapAnchor()
   const controls = useSyncExternalStore(miniPlayerControls.subscribe, () => miniPlayerControls.getState().mode)
   const shellWidth = useSyncExternalStore(subscribeShellWidth, getShellWidth)
+  const { width: rowWidth, onLayoutChange } = useBreakpoint(0, '.mini-player__row')
+  const showSeek = controls !== 'playOnly'
+    && shellWidth >= BREAKPOINTS.tablet
+    && rowWidth >= SEEK_CONTROLS_MIN_WIDTH
   const [showSleepTimer, setShowSleepTimer] = useState(false)
   useEffect(() => { void loadMiniPlayerControls() }, [])
   // The volume panel is root-mounted and the queue drawer is store-driven;
@@ -78,9 +91,7 @@ export function MiniPlayer() {
     usePlayerStore.getState().closePlaylistDrawer()
   }, [])
   const { isFavorite, toggle: toggleFavorite, isPending: isFavPending } =
-    useFavoriteToggle(song?.id ?? 0, song != null && !cachedSongIdentity(song))
-
-  if (!song) return null
+    useFavoriteToggle(song.id, !cachedSongIdentity(song))
 
   const cover = song.coverUrl ? buildCoverUrl(song.coverUrl, song.updatedAt) : ''
   const subtitle = [song.artist, song.album].filter(Boolean).join(' · ')
@@ -97,7 +108,7 @@ export function MiniPlayer() {
       <view className='mini-player__progress'>
         <view className='mini-player__progress-fill' style={{ width: pct }} />
       </view>
-      <view className='mini-player__row'>
+      <view className='mini-player__row' bindlayoutchange={onLayoutChange}>
         {cover
           ? <image className='mini-player__cover' mode='aspectFill' src={cover} />
           : <view className='mini-player__cover mini-player__cover--empty' />}
@@ -117,6 +128,7 @@ export function MiniPlayer() {
           >
             <Icon name='skip-prev' size={22} color={ICON_COLORS.content} />
           </view>}
+          {showSeek && <SeekStepButton forward={false} />}
           <view
             className='mini-player__play-hit'
             catchtap={() => usePlayerStore.getState().togglePlay()}
@@ -127,6 +139,7 @@ export function MiniPlayer() {
               <Icon name={isPlaying ? 'pause' : 'play'} size={18} color={ICON_COLORS.primaryContent} />
             </view>
           </view>
+          {showSeek && <SeekStepButton forward={true} />}
           {controls !== 'playOnly' && <view
             className={canNext
               ? 'mini-player__btn'
