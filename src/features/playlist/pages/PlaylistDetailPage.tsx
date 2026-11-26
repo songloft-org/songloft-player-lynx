@@ -51,19 +51,24 @@ import {
 } from '../data/playlist-mutations.js'
 import './PlaylistDetailPage.css'
 
-
+interface LocateRequest {
+  playlistId: number
+  songId: number
+}
 
 export function PlaylistDetailPage() {
   const { isWide } = useLibraryViewport()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [locateSongId, setLocateSongId] = useState<number | undefined>()
+  const [locateRequest, setLocateRequest] = useState<LocateRequest>()
+  const locatePage = useRef<{ request: LocateRequest; count: number } | undefined>(undefined)
   const { onScroll: onScrollEdge } = useScrollNotifier()
   const { t } = useTranslation()
   const cacheBatch = useCacheBatchSubmission()
   const canCacheBatch = indexedSongCacheAvailable()
   const params = useParams({ strict: false }) as { id?: string }
   const id = Number(params.id ?? 0) || 0
+  const playingSongId = usePlayerStore(s => s.sourcePlaylistId === id ? s.currentSong?.id : undefined)
   /** Playback context for this playlist; `undefined` when the route param is missing. */
   const playlistCtx = playlistContext(id)
 
@@ -80,6 +85,18 @@ export function PlaylistDetailPage() {
   const songs = useMemo(() => flattenSongs(songsQuery.data?.pages), [songsQuery.data?.pages])
   const songTitles = songs.map(song => song.title)
   const total = songsQuery.data?.pages[0]?.total ?? 0
+  const activeLocateRequest = !keyword && locateRequest?.playlistId === id ? locateRequest : undefined
+  const locateTarget = useMemo(() => {
+    if (!activeLocateRequest) return undefined
+    const index = songs.findIndex(song => song.id === activeLocateRequest.songId)
+    return index >= 0 ? { index } : undefined
+  }, [activeLocateRequest, songs])
+
+  const locateSong = (songId: number) => {
+    setSearchText('')
+    setLocateRequest({ playlistId: id, songId })
+  }
+  const clearLocate = useCallback(() => setLocateRequest(undefined), [])
 
   /**
    * Background-fill the rest of the playlist (same pages the infinite query
@@ -179,6 +196,7 @@ export function PlaylistDetailPage() {
   const confirmContent = pendingConfirm ?? lastConfirmRef.current
 
   const enterSortMode = () => {
+    setLocateRequest(undefined)
     if (currentSort === 'position' && currentOrder === 'asc') {
       setSortMode(true)
       return
@@ -193,6 +211,7 @@ export function PlaylistDetailPage() {
     setSortMode(false)
   }
   const enterSelectMode = () => {
+    setLocateRequest(undefined)
     setSelectMode(true)
     setSelected(new Set())
   }
@@ -291,11 +310,29 @@ export function PlaylistDetailPage() {
     setPendingConfirm({ kind: 'remove-song', song })
   }
 
-  const onEndReached = () => {
-    if (songsQuery.hasNextPage && !songsQuery.isFetchingNextPage) {
-      void songsQuery.fetchNextPage({ cancelRefetch: false })
+  // With cancelRefetch disabled, fetchNextPage joins an in-flight refresh.
+  const { hasNextPage, isFetching, isError, isSuccess, fetchNextPage } = songsQuery
+  const onEndReached = useCallback(() => {
+    if (hasNextPage && !isFetching) {
+      void fetchNextPage({ cancelRefetch: false })
     }
-  }
+  }, [hasNextPage, isFetching, fetchNextPage])
+
+  useEffect(() => {
+    if (!activeLocateRequest || locateTarget || isFetching) return
+    const attemptedPage = locatePage.current?.request === activeLocateRequest && locatePage.current.count === songs.length
+    if (hasNextPage && !attemptedPage) {
+      // Run after this page's query observer switches to the cleared search.
+      locatePage.current = { request: activeLocateRequest, count: songs.length }
+      onEndReached()
+    } else if (isError) {
+      clearLocate()
+      toast.error(t('playlist.songsError'))
+    } else if (isSuccess && !hasNextPage) {
+      clearLocate()
+      toast.show(t('playlist.locateNotFound'))
+    }
+  }, [activeLocateRequest, locateTarget, songs.length, hasNextPage, isFetching, isError, isSuccess, onEndReached, clearLocate, t])
 
   const onTapSong = (song: Song, index: number) => {
     if (selectMode) {
@@ -342,6 +379,14 @@ export function PlaylistDetailPage() {
           split the free space instead of both sitting flush right.
         */}
         <view className='playlist-detail__topbar-right'>
+        {playlist && playingSongId != null && !sortMode && !selectMode && (
+          <view className='playlist-detail__icon-btn' bindtap={() => locateSong(playingSongId)}
+            accessibility-element={true} accessibility-role='button'
+            accessibility-label={t('playlist.locatePlaying')}
+            data-testid='playlist-detail-locate-song'>
+            <Icon name='locate' size={20} color={ICON_COLORS.content2} />
+          </view>
+        )}
         {/*
           Play history is available for **every** playlist, built-in ones
           included (the Flutter menu item is unconditional), so this sits outside
@@ -472,7 +517,7 @@ export function PlaylistDetailPage() {
         </view>
         <view className='playlist-detail__meta'>
           <ScrollingText text={playlist?.name ?? (detail.isLoading ? t('common.loading') : t('playlist.fallbackName'))} textClassName='playlist-detail__name' />
-          {playlist?.type === 'normal' && <PlaylistResumeCard id={id} audiobook={playlist.labels.includes('audiobook')} onLocate={songId => { setSearchText(''); setLocateSongId(songId) }} />}
+          {playlist?.type === 'normal' && <PlaylistResumeCard id={id} audiobook={playlist.labels.includes('audiobook')} onLocate={locateSong} />}
           <text className='playlist-detail__count'>{countLabel}</text>
           <PlaylistTagLine labels={playlist?.labels} />
           {playlist?.labels.includes('audiobook') && <text className='playlist-detail__count'>{t('playlistAudiobook')}</text>}
@@ -507,7 +552,10 @@ export function PlaylistDetailPage() {
               className='playlist-detail__search-input'
               placeholder={t('library.searchPlaceholder')}
               value={searchText}
-              onInput={(value: string) => setSearchText(value)}
+              onInput={(value: string) => {
+                setSearchText(value)
+                if (value.trim()) setLocateRequest(undefined)
+              }}
             />
           </view>
         )
@@ -600,10 +648,11 @@ export function PlaylistDetailPage() {
               ? <DetailState text={keyword ? t('library.noSearchResults') : t('playlist.noSongs')} />
               : (
                 <PlaylistSongList<Song> key={`${id}:${currentSort}:${currentOrder}:${keyword ?? ''}`}
-                  locateSongId={locateSongId}
+                  locateTarget={locateTarget}
+                  onLocateApplied={clearLocate}
                   total={total}
                   enabled={!selectMode}
-                  loadingMore={songsQuery.isFetchingNextPage}
+                  loadingMore={isFetching}
                   hasMore={!!songsQuery.hasNextPage}
                   loadFailed={songsQuery.isFetchNextPageError}
                   className='playlist-detail__list'

@@ -1,0 +1,149 @@
+diff --git a/dist/SliderRoot/index.jsx b/dist/SliderRoot/index.jsx
+index d66de07..67473e1 100644
+--- a/dist/SliderRoot/index.jsx
++++ b/dist/SliderRoot/index.jsx
+@@ -1,5 +1,5 @@
+ import { forwardRef, memo, useEffect, useImperativeHandle, useRef, useState } from "@lynx-js/react";
+-import { getRectByRef } from "@lynx-js/lynx-ui-common";
++import { invokeByRef } from "@lynx-js/lynx-ui-common";
+ import { clsx } from "clsx";
+ import { SliderContext } from "../context/index.jsx";
+ import { areSliderValuesEqual, clamp01, cloneSliderValue, getInitialSliderThumbIndex, getSliderIndicatorGeometry, getSliderThumbValue, getTouchX, getVisualRatio, getWebPointerX, isSliderValueCollapsed, normalizeSliderValue, resolveSliderDrag } from "../utils/index.jsx";
+@@ -28,6 +28,7 @@ function SliderRootImpl(props, ref) {
+     const isMeasuringBounds = useRef(false);
+     const pendingMoveX = useRef(null);
+     const pendingEnd = useRef(false);
++    const gestureGeneration = useRef(0);
+     const interaction = useRef({
+         pointerActive: false,
+         dragging: false,
+@@ -36,6 +37,12 @@ function SliderRootImpl(props, ref) {
+         lastActiveThumbIndex: null,
+         startedCollapsed: false
+     });
++    useEffect(()=>()=>{
++        gestureGeneration.current++;
++        interaction.current.pointerActive = false;
++        pendingEnd.current = false;
++        pendingMoveX.current = null;
++    }, []);
+     const currentValue = useRef(normalizeSliderValue(isControlled ? controlledValue : defaultValue, step));
+     const applyNativeValue = (next)=>{
+         const { offset, size } = getSliderIndicatorGeometry(next);
+@@ -162,13 +169,27 @@ function SliderRootImpl(props, ref) {
+         if (isMeasuringBounds.current) return;
+         if (!trackRef.current) return;
+         isMeasuringBounds.current = true;
+-        getRectByRef(trackRef).then((res)=>{
++        const generation = gestureGeneration.current;
++        const retryCurrentGesture = ()=>{
++            if (interaction.current.pointerActive || pendingEnd.current) measureBounds();
++        };
++        invokeByRef(trackRef, 'boundingClientRect', {
++            relativeTo: null,
++            androidEnableTransformProps: true,
++            iosEnableTransformProps: true,
++            harmonyEnableTransformProps: true
++        }).then((res)=>{
+             isMeasuringBounds.current = false;
++            if (generation !== gestureGeneration.current) {
++                retryCurrentGesture();
++                return;
++            }
+             if (updateBounds(res)) flushPendingMoveX();
+             else if (pendingEnd.current) finishInteraction();
+         }).catch(()=>{
+             isMeasuringBounds.current = false;
+-            if (pendingEnd.current) finishInteraction();
++            if (generation !== gestureGeneration.current) retryCurrentGesture();
++            else if (pendingEnd.current) finishInteraction();
+         });
+     };
+     const setDragging = (nextDragging, value)=>{
+@@ -194,6 +215,7 @@ function SliderRootImpl(props, ref) {
+     };
+     const handleInteractionStart = (x)=>{
+         const interactionState = interaction.current;
++        gestureGeneration.current++;
+         const requestedThumbIndex = interactionState.pendingThumbIndex;
+         interactionState.pendingThumbIndex = null;
+         if (disabled || !Number.isFinite(x)) return void resetInteraction();
+diff --git a/src/SliderRoot/index.tsx b/src/SliderRoot/index.tsx
+index 6430e62..d052b33 100644
+--- a/src/SliderRoot/index.tsx
++++ b/src/SliderRoot/index.tsx
+@@ -20,7 +20,7 @@ import type {
+   RefAttributes,
+ } from '@lynx-js/react'
+ 
+-import { getRectByRef } from '@lynx-js/lynx-ui-common'
++import { invokeByRef } from '@lynx-js/lynx-ui-common'
+ import type { NodesRef } from '@lynx-js/types'
+ import { clsx } from 'clsx'
+ 
+@@ -136,6 +136,7 @@ function SliderRootImpl(
+   const isMeasuringBounds = useRef<boolean>(false)
+   const pendingMoveX = useRef<number | null>(null)
+   const pendingEnd = useRef<boolean>(false)
++  const gestureGeneration = useRef(0)
+   const interaction = useRef<SliderInteractionState>({
+     pointerActive: false,
+     dragging: false,
+@@ -144,6 +145,13 @@ function SliderRootImpl(
+     lastActiveThumbIndex: null,
+     startedCollapsed: false,
+   })
++  useEffect(() => () => {
++    gestureGeneration.current++
++    interaction.current.pointerActive = false
++    pendingEnd.current = false
++    pendingMoveX.current = null
++  }, [])
++
+   const currentValue = useRef<SliderValue>(
+     normalizeSliderValue(
+       isControlled ? controlledValue : defaultValue,
+@@ -324,9 +332,24 @@ function SliderRootImpl(
+ 
+     isMeasuringBounds.current = true
+ 
+-    getRectByRef(trackRef)
++    const generation = gestureGeneration.current
++    const retryCurrentGesture = () => {
++      if (interaction.current.pointerActive || pendingEnd.current) measureBounds()
++    }
++
++    // Web Core and the native touch events both use the LynxView coordinate space.
++    invokeByRef(trackRef, 'boundingClientRect', {
++      relativeTo: null,
++      androidEnableTransformProps: true,
++      iosEnableTransformProps: true,
++      harmonyEnableTransformProps: true,
++    })
+       .then((res) => {
+         isMeasuringBounds.current = false
++        if (generation !== gestureGeneration.current) {
++          retryCurrentGesture()
++          return
++        }
+         if (updateBounds(res)) {
+           flushPendingMoveX()
+         } else if (pendingEnd.current) {
+@@ -335,7 +358,8 @@ function SliderRootImpl(
+       })
+       .catch(() => {
+         isMeasuringBounds.current = false
+-        if (pendingEnd.current) finishInteraction()
++        if (generation !== gestureGeneration.current) retryCurrentGesture()
++        else if (pendingEnd.current) finishInteraction()
+       })
+   }
+ 
+@@ -370,6 +394,7 @@ function SliderRootImpl(
+ 
+   const handleInteractionStart = (x: number): void => {
+     const interactionState = interaction.current
++    gestureGeneration.current++
+     const requestedThumbIndex = interactionState.pendingThumbIndex
+     interactionState.pendingThumbIndex = null
+ 

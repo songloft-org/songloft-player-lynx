@@ -28,6 +28,6 @@
   "devDependencies": {
     "@lynx-js/lynx-library-headers": "0.0.31",
     "js-yaml": "4.3.2",
-    "@lynx-js/lynxtron-builder": "0.0.30"
+    "@lynx-js/lynxtron-builder": "0.0.31"
   }
 }

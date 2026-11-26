@@ -16,19 +16,17 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { resolve, join } from 'node:path'
+import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = fileURLToPath(import.meta.url)
 const repoRoot = resolve(here, '..', '..')
 
-// The xelement_webview package is installed in harmony/oh_modules
+// OHPM links the selected dependency into the entry module.
 const webViewPath = resolve(
   repoRoot,
   'harmony',
-  'oh_modules',
-  '.ohpm',
-  '@lynx+xelement_webview@4.0.1',
+  'entry',
   'oh_modules',
   '@lynx',
   'xelement_webview',

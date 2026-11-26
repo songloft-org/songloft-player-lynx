@@ -1,12 +1,20 @@
 import { useCallback } from '@lynx-js/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { appConfig } from '../../../core/config/app-config.js'
+import { useAppSessionStore } from '../../../store/app-session.js'
 import { favoritePlaylistId } from '../../../core/config/constants.js'
 import { getQueryClient } from '../../../lib/query/index.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
 
 const FAV_QUERY_KEY = ['favorites', 'songIds'] as const
 const FAV_STALE_TIME_MS = 60_000
+
+interface FavoriteWrite {
+  songId: number
+  favorite: boolean
+  isCurrent: () => boolean
+}
 
 /** Hard cap on pages, so a bad `total` can never spin forever. 200 × 200 songs. */
 const FAV_MAX_PAGES = 200
@@ -56,62 +64,66 @@ export function useIsFavorite(songId: number, enabled = true): boolean {
 export function useFavoriteToggle(songId: number, enabled = true) {
   const queryClient = useQueryClient()
   const isFavorite = useIsFavorite(songId, enabled)
-  const playlistId = Number(favoritePlaylistId)
+  const cache = queryClient.getQueryCache()
+  const findFavorites = () => cache.find<Set<number>>({ queryKey: FAV_QUERY_KEY, exact: true })
 
-  // Flip the cached set immediately so the heart/collection icon reacts on the
-  // same frame as the tap. Without this, every favorite control waits a full
-  // server round-trip (plus the 60s-stale query refetch) before changing color,
-  // which reads as "the button did nothing". Snapshot first so a failed write
-  // restores exactly what the user saw before.
-  const snapshot = useCallback(() => queryClient.getQueryData<Set<number>>(FAV_QUERY_KEY), [queryClient])
-
-  const add = useMutation({
-    mutationFn: () => getPlaylistApi().addSongsToPlaylist(playlistId, [songId]),
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: FAV_QUERY_KEY })
-      const previous = snapshot()
-      if (previous) {
-        queryClient.setQueryData<Set<number>>(FAV_QUERY_KEY, ids => {
-          const next = new Set(ids)
-          next.add(songId)
-          return next
-        })
+  const mutation = useMutation({
+    mutationKey: FAV_QUERY_KEY,
+    mutationFn: async (change: FavoriteWrite) => {
+      const assertCurrent = () => {
+        if (!change.isCurrent()) throw new Error('Favorite session changed')
       }
-      return { previous }
+      assertCurrent()
+      const api = getPlaylistApi()
+      const playlistId = Number(favoritePlaylistId)
+      if (change.favorite) await api.addSongsToPlaylist(playlistId, [change.songId], { assertCurrent })
+      else await api.removeSongFromPlaylist(playlistId, change.songId, { assertCurrent })
     },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.previous) queryClient.setQueryData(FAV_QUERY_KEY, ctx.previous)
-    },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: FAV_QUERY_KEY }),
-  })
-
-  const remove = useMutation({
-    mutationFn: () => getPlaylistApi().removeSongFromPlaylist(playlistId, songId),
-    onMutate: async () => {
+    onMutate: async (change) => {
+      const query = findFavorites()
       await queryClient.cancelQueries({ queryKey: FAV_QUERY_KEY })
-      const previous = snapshot()
-      if (previous) {
-        queryClient.setQueryData<Set<number>>(FAV_QUERY_KEY, ids => {
-          const next = new Set(ids)
-          next.delete(songId)
-          return next
-        })
+      if (!change.isCurrent() || !query || query !== findFavorites()) return
+      const previous = query.state.data
+      if (!previous) return
+      const optimistic = new Set(previous)
+      if (change.favorite) optimistic.add(change.songId)
+      else optimistic.delete(change.songId)
+      queryClient.setQueryData(FAV_QUERY_KEY, optimistic)
+      return { query, previous, optimistic }
+    },
+    onError: (_error, change, context) => {
+      if (!change.isCurrent() || !context || context.query !== findFavorites()) return
+      if (context.query.state.data === context.optimistic) {
+        queryClient.setQueryData(FAV_QUERY_KEY, context.previous)
+      } else {
+        // A concurrent write or an authoritative refresh replaced our snapshot.
+        void queryClient.invalidateQueries({ queryKey: FAV_QUERY_KEY })
       }
-      return { previous }
     },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.previous) queryClient.setQueryData(FAV_QUERY_KEY, ctx.previous)
+    onSuccess: (_result, change) => {
+      if (change.isCurrent()) void queryClient.invalidateQueries({ queryKey: FAV_QUERY_KEY })
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: FAV_QUERY_KEY }),
   })
 
   const toggle = useCallback(() => {
-    if (!enabled) return
-    if (isFavorite) remove.mutate()
-    else add.mutate()
-  }, [enabled, isFavorite, add, remove])
+    if (!enabled || mutation.isPending) return
+    const matchingWrites = queryClient.isMutating({
+      mutationKey: FAV_QUERY_KEY,
+      predicate: (pending) => {
+        const change = pending.state.variables as FavoriteWrite | undefined
+        return change?.songId === songId && change.isCurrent()
+      },
+    })
+    if (matchingWrites) return
+    const session = useAppSessionStore.getState()
+    const address = appConfig.resolvedBaseUrl
+    const basePath = appConfig.basePath
+    const isCurrent = () => useAppSessionStore.getState() === session &&
+      appConfig.resolvedBaseUrl === address && appConfig.basePath === basePath
+    mutation.mutate({ songId, favorite: !isFavorite, isCurrent })
+  }, [enabled, isFavorite, mutation, queryClient, songId])
 
-  return { isFavorite, toggle, isPending: add.isPending || remove.isPending }
+  return { isFavorite, toggle, isPending: mutation.isPending }
 }
 
 /**

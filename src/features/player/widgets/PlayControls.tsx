@@ -9,6 +9,8 @@ import { useFavoriteToggle } from '../../library/data/favorites.js'
 import { writeDefaultPlayMode } from '../../settings/data/settings-prefs.js'
 import { hasNext, hasPrev, usePlayerStore } from '../store/index.js'
 import type { PlayMode } from '../domain/play-mode.js'
+import { PlayerToolBar } from './PlayerToolBar.js'
+import { SeekStepButton } from './SeekStepButton.js'
 import './PlayControls.css'
 
 /** Icon shown on the play-mode toggle for each mode. */
@@ -67,26 +69,12 @@ export interface PlayControlsProps {
   playBtn: number
   /** Play/pause corner radius. Half of `playBtn` renders a circle. */
   playRadius: number
-  /** Edge length of the secondary controls (mode, prev/next, favorite). */
+  /** Edge length of the secondary controls and tool buttons. */
   slot: number
   /** Current song id, for the favorite toggle. Omitted ⇒ no favorite button. */
   songId?: number
 }
 
-/**
- * `[play mode | prev · play/pause · next | favorite]`, mirroring Flutter's transport
- * row.
- *
- * The favorite button is new. The Lynx player had no way to favorite the song you were
- * listening to — the one screen where you most want it. It goes through
- * `useFavoriteToggle`, so it shares the query cache and invalidation with the library's
- * rows instead of tracking its own idea of the state.
- *
- * Sizes arrive as props rather than from CSS: they scale with the screen class, and
- * this repo has no `@media`. Reactive values come through selectors while actions fire
- * via `getState()` inside the handlers, so the buttons do not re-render on action
- * identity.
- */
 export function PlayControls({ playBtn, playRadius, slot, songId }: PlayControlsProps) {
   const { t } = useTranslation()
   const isPlaying = usePlayerStore((s) => s.isPlaying)
@@ -107,35 +95,7 @@ export function PlayControls({ playBtn, playRadius, slot, songId }: PlayControls
   ]
 
   return (
-    <view className='player-controls'>
-      <PopoverMenu
-        show={showModePopover}
-        onShowChange={setShowModePopover}
-        placement='top-start'
-        triggerClassName='player-controls__btn'
-        trigger={
-          <view className='player-controls__mode-hit' style={slotBox}>
-            <Icon
-              name={MODE_ICON[playMode]}
-              size={20}
-              color={playMode !== 'order' ? ICON_COLORS.primary : ICON_COLORS.content2}
-            />
-            {/* The label is what makes the current mode readable without opening the
-                menu; `full-player.test.tsx` asserts exactly one copy of it exists
-                while the menu is shut. */}
-            <text className='player-controls__mode-label'>{t(MODE_LABEL_KEY[playMode])}</text>
-          </view>
-        }
-        items={modeItems}
-        // Persist the picked mode as the default. Without this the pref
-        // `src/index.tsx` restores at startup would never be written and the
-        // mode would reset every launch.
-        onSelect={(key) => {
-          usePlayerStore.getState().setPlayMode(key as PlayMode)
-          void writeDefaultPlayMode(key as PlayMode)
-        }}
-      />
-
+    <>
       <view className='player-controls__transport'>
         <view
           className={canPrev
@@ -143,21 +103,15 @@ export function PlayControls({ playBtn, playRadius, slot, songId }: PlayControls
             : 'player-controls__btn player-controls__btn--disabled'}
           style={slotBox}
           data-testid='prev-btn'
-          // Same rule as FavoriteButton above: a disabled control must not fire.
-          // The `--disabled` class only dims it — Lynx has no working `:disabled`
-          // (lynx-api-docs/css/pseudo-classes.md), so removing the handler is
-          // what actually disables it.
           bindtap={canPrev ? () => usePlayerStore.getState().playPrev() : undefined}
           accessibility-element={true}
           accessibility-label={t('common.previous')}
-          // Same rule as the handler above, one layer in: a disabled control must
-          // not be announced as actionable. These two are the only controls here
-          // that can go disabled, which is why they are the only ones with a trait
-          // (`disabled` rather than `button,disabled` — see MiniPlayer).
           accessibility-traits={canPrev ? 'button' : 'disabled'}
         >
           <Icon name='skip-prev' size={26} color={ICON_COLORS.content} />
         </view>
+
+        <SeekStepButton forward={false} slot={slot} />
 
         <view
           className='player-controls__btn player-controls__btn--primary'
@@ -179,13 +133,13 @@ export function PlayControls({ playBtn, playRadius, slot, songId }: PlayControls
             : (
               <Icon
                 name={isPlaying ? 'pause' : 'play'}
-                // Flutter derives the glyph from the button (`size * 0.6`), so the
-                // proportions hold at 52px and at 76px alike.
                 size={Math.round(playBtn * 0.6)}
                 color={ICON_COLORS.primaryContent}
               />
             )}
         </view>
+
+        <SeekStepButton forward={true} slot={slot} />
 
         <view
           className={canNext
@@ -202,11 +156,33 @@ export function PlayControls({ playBtn, playRadius, slot, songId }: PlayControls
         </view>
       </view>
 
-      {/* Empty slot when there is no song, so the transport stays centred rather than
-          sliding right the moment the favorite button appears. */}
-      {songId != null
-        ? <FavoriteButton songId={songId} slot={slot} />
-        : <view className='player-controls__btn' style={slotBox} />}
-    </view>
+      <PlayerToolBar
+        slot={slot}
+        trailing={songId == null ? undefined : <FavoriteButton songId={songId} slot={slot} />}
+        leading={
+          <PopoverMenu
+            show={showModePopover}
+            onShowChange={setShowModePopover}
+            placement='top-start'
+            triggerClassName='player-controls__btn'
+            trigger={
+              <view className='player-controls__mode-hit' style={slotBox}>
+                <Icon
+                  name={MODE_ICON[playMode]}
+                  size={20}
+                  color={playMode !== 'order' ? ICON_COLORS.primary : ICON_COLORS.content2}
+                />
+                <text className='player-controls__mode-label'>{t(MODE_LABEL_KEY[playMode])}</text>
+              </view>
+            }
+            items={modeItems}
+            onSelect={(key) => {
+              usePlayerStore.getState().setPlayMode(key as PlayMode)
+              void writeDefaultPlayMode(key as PlayMode)
+            }}
+          />
+        }
+      />
+    </>
   )
 }

@@ -4,7 +4,7 @@
  * Several fixes, all applied the same way — a literal string replacement on the
  * minified bundle — because a unified diff over a single-line 100 KB file would
  * embed two whole lines in the patch. The non-minified twin of each fix lives
- * in `patches/@lynx-js__web-core@0.23.1.patch` (applied by pnpm), which covers
+ * in `patches/@lynx-js__web-core@0.26.9.patch` (applied by pnpm), which covers
  * the dev-middleware path; this script covers what serve.mjs and
  * copy-bundle-web.mjs actually ship.
  *
@@ -112,8 +112,8 @@ const REPLACEMENTS = [
     // counts after upgrade, accounting for handlers removed in the meantime.
     file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
     marker: '__songloftPendingEvents',
-    oldText: 'enableElementEvent(e,n){let t=e.deref();t&&t.enableEvent?.(i.im[n]??n)}disableElementEvent(e,n){let t=e.deref();t&&t.disableEvent?.(i.im[n]??n)}',
-    newText: 'enableElementEvent(e,n){let t=e.deref();if(!t)return;let r=i.im[n]??n;if(typeof t.enableEvent==="function"){t.enableEvent(r);return}if(!t.localName?.includes("-"))return;let l=t.__songloftPendingEvents??=new Map;l.set(r,(l.get(r)??0)+1);customElements.whenDefined(t.localName).then(()=>{let t=e.deref(),n=l.get(r)??0;l.delete(r);if(t)for(let e=0;e<n;e++)t.enableEvent?.(r)})}disableElementEvent(e,n){let t=e.deref();if(!t)return;let r=i.im[n]??n,l=t.__songloftPendingEvents,a=l?.get(r)??0;if(a>0){a===1?l.delete(r):l.set(r,a-1)}else t.disableEvent?.(r)}',
+    oldText: 'enableElementEvent(e,t){this.#ec(e,t,"enableEvent")}disableElementEvent(e,t){this.#ec(e,t,"disableEvent")}#ec(e,t,n){let r=e.deref();if(!r)return;let l=i.im[t]??t;if(r[n])return void r[n](l);let o=r.ownerDocument.defaultView?.customElements;o&&r.localName.includes("-")&&o.whenDefined(r.localName).then(()=>{let t=e.deref();t&&(o.upgrade(t),t[n]?.(l))})}',
+    newText: 'enableElementEvent(e,t){let r=e.deref();if(!r)return;let l=i.im[t]??t;if(typeof r.enableEvent==="function"){r.enableEvent(l);return}let o=r.ownerDocument.defaultView?.customElements;if(!o||!r.localName.includes("-"))return;let a=r.__songloftPendingEvents??=new Map;a.set(l,(a.get(l)??0)+1);o.whenDefined(r.localName).then(()=>{let t=e.deref(),n=a.get(l)??0;a.delete(l);if(!t||!n)return;o.upgrade(t);for(let e=0;e<n;e++)t.enableEvent?.(l)})}disableElementEvent(e,t){let r=e.deref();if(!r)return;let l=i.im[t]??t,o=r.__songloftPendingEvents,a=o?.get(l)??0;if(a>0){a===1?o.delete(l):o.set(l,a-1)}else r.disableEvent?.(l)}',
   },
   {
     // Fix 1, on client.js (wasm-bindgen glue):
@@ -124,20 +124,30 @@ const REPLACEMENTS = [
     newText: '#nm;get nativeModulesMap(){return this.#nm}set nativeModulesMap(e){this.#nm=e};',
   },
   {
-    // Fix 2a, on web-core-main-chunk.js: runWorklet — guard currentTarget (minified `o`).
-    // Unminified twin: WASMJSBinding.js runWorklet `if (!resolvedTarget || !currentTarget)`.
-    file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
-    marker: 'A=a??o;A&&o&&(',
-    oldText: 'A=a??o;A&&(',
-    newText: 'A=a??o;A&&o&&(',
+    // Songloft registers a blur-view subclass for the moving tab lens.
+    file: join('dist', 'client_prod', 'static', 'js', 'client.js'),
+    marker: '"refresh-header":"x-refresh-header","scroll-coordinator"',
+    oldText: '"refresh-header":"x-refresh-header","blur-view":"x-blur-view","scroll-coordinator"',
+    newText: '"refresh-header":"x-refresh-header","scroll-coordinator"',
   },
   {
-    // Fix 2b, on web-core-main-chunk.js: publishEvent — guard currentTarget (minified `A`).
-    // Unminified twin: WASMJSBinding.js publishEvent `if (!resolvedTarget || !currentTarget)`.
+    // Keep a stale handler's currentTarget from crossing the WASM boundary.
     file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
-    marker: 's=o??A;s&&A&&(',
-    oldText: 's=o??A;s&&(',
-    newText: 's=o??A;s&&A&&(',
+    marker: 's=o??a;s&&a&&(',
+    oldText: 's=o??a;s&&(',
+    newText: 's=o??a;s&&a&&(',
+  },
+  {
+    file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
+    marker: 's=o??a;if(!s||!a)return;',
+    oldText: 's=o??a;if(!s)return;',
+    newText: 's=o??a;if(!s||!a)return;',
+  },
+  {
+    file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
+    marker: 'A=a??s;A&&s&&(',
+    oldText: 'A=a??s;A&&(',
+    newText: 'A=a??s;A&&s&&(',
   },
   {
     // Fix 3a, on web-core-main-chunk.js: x-input placeholder colour.
@@ -180,20 +190,20 @@ const REPLACEMENTS = [
   {
     file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
     marker: 'function watchSongloftLayoutStyles(',
-    oldText: 'C.blocking="render";let b=',
-    newText: `C.blocking="render";${WATCH_LAYOUT_STYLES}let b=`,
+    oldText: 'B.blocking="render";let k=',
+    newText: `B.blocking="render";${WATCH_LAYOUT_STYLES}let k=`,
   },
   {
     file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
     marker: 'this.stopWatchingSongloftLayoutStyles=watchSongloftLayoutStyles',
-    oldText: ',x||this.rootDom.append(C.cloneNode(!1)),this.#F',
-    newText: ';const stylesheet=x?void 0:C.cloneNode(!1);this.stopWatchingSongloftLayoutStyles=watchSongloftLayoutStyles(this.rootDom,stylesheet),stylesheet&&this.rootDom.append(stylesheet),this.#F',
+    oldText: ',d||this.rootDom.append(B.cloneNode(!1)),this.#er',
+    newText: ';const stylesheet=d?void 0:B.cloneNode(!1);this.stopWatchingSongloftLayoutStyles=watchSongloftLayoutStyles(this.rootDom,stylesheet),stylesheet&&this.rootDom.append(stylesheet),this.#er',
   },
   {
     file: join('dist', 'client_prod', 'static', 'js', 'async', 'web-core-main-chunk.js'),
     marker: 'this.stopWatchingSongloftLayoutStyles?.(),',
-    oldText: 'this.boundingClientRectService.dispose(),await this.backgroundThread',
-    newText: 'this.stopWatchingSongloftLayoutStyles?.(),this.boundingClientRectService.dispose(),await this.backgroundThread',
+    oldText: 'this.boundingClientRectService.dispose(),this.intersectionObserverService.dispose(),await this.backgroundThread',
+    newText: 'this.stopWatchingSongloftLayoutStyles?.(),this.boundingClientRectService.dispose(),this.intersectionObserverService.dispose(),await this.backgroundThread',
   },
 ]
 

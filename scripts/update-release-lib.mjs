@@ -9,24 +9,30 @@ export const BUNDLE_ASSET = 'songloft-lynx-main.lynx.bundle'
 export const SIGNATURE_ASSET = 'version.json.sig'
 export const MAX_BUNDLE_BYTES = 32 * 1024 * 1024
 export const MAX_MANIFEST_BYTES = 128 * 1024
+const MOBILE_PLATFORMS = ['android', 'ios', 'harmony']
 
 export function loadNativeContract(root) {
   const contract = JSON.parse(readFileSync(join(root, 'updates/native-contract.json'), 'utf8'))
   if (contract.protocol !== 1 || [contract.bridge_version, contract.local_schema]
     .some((value) => !Number.isSafeInteger(value) || value < 1 || value > 65535))
     throw new Error('Unsupported native update contract')
-  validateVersion(contract.minimum_host_version)
-  if (contract.minimum_host_version.includes('-')) throw new Error('Minimum native version must be stable')
+  for (const platform of MOBILE_PLATFORMS) {
+    const minimum = validateVersion(contract.minimum_host_version?.[platform])
+    if (minimum.includes('-')) throw new Error(`Minimum native version for ${platform} must be stable`)
+    validateVersion(contract.engines?.[platform])
+  }
   if (!Array.isArray(contract.required_capabilities) || contract.required_capabilities.length === 0 ||
       contract.required_capabilities.some((value) => typeof value !== 'string' || !/^[a-zA-Z0-9.]+$/.test(value)))
     throw new Error('Invalid required native capabilities')
-  for (const platform of ['android', 'ios', 'harmony']) validateVersion(contract.engines?.[platform])
   const android = readFileSync(join(root, 'android/app/build.gradle.kts'), 'utf8')
     .match(/implementation\("org\.lynxsdk\.lynx:lynx:([^"\n]+)"\)/)?.[1]
-  const ios = readFileSync(join(root, 'ios/Podfile.lock'), 'utf8').match(/^  - Lynx \(([^)]+)\):/m)?.[1]
+  for (const lockfile of ['ios/Podfile.lock', 'ios/release/Podfile.lock']) {
+    const version = readFileSync(join(root, lockfile), 'utf8').match(/^  - Lynx \(([^)]+)\):/m)?.[1]
+    if (contract.engines.ios !== version) throw new Error(`Update contract engine differs from ${lockfile}`)
+  }
   const harmony = readFileSync(join(root, 'harmony/entry/oh-package.json5'), 'utf8')
     .match(/"@lynx\/lynx"\s*:\s*"([^"]+)"/)?.[1]
-  for (const [platform, version] of Object.entries({ android, ios, harmony })) {
+  for (const [platform, version] of Object.entries({ android, harmony })) {
     if (contract.engines[platform] !== version) throw new Error(`Update contract engine differs from ${platform} dependency`)
   }
   return contract
@@ -151,10 +157,10 @@ export function finalizeRelease({ directory, packageVersion, contract, bundleSou
       size,
       sha256: hashFile(bundleSource),
       local_schema: contract.local_schema,
-      targets: ['android', 'ios', 'harmony'].map((platform) => ({
+      targets: MOBILE_PLATFORMS.map((platform) => ({
         platform,
         engine: contract.engines[platform],
-        minimum_host_version: contract.minimum_host_version,
+        minimum_host_version: contract.minimum_host_version[platform],
         minimum_bridge: contract.bridge_version,
         maximum_bridge: contract.bridge_version,
         required_capabilities: [...contract.required_capabilities],

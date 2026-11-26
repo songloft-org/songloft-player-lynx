@@ -9,7 +9,7 @@ import {
   copyFile,
 } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import yaml from 'js-yaml'
 import { packageConfig } from './package-config.mjs'
 import { stageCef } from './stage-cef.mjs'
@@ -30,15 +30,14 @@ if (metadata.target !== target || !['dev', 'stable'].includes(metadata.channel))
 if (metadata.channel === 'stable' && metadata.dirty)
   throw new Error('Cannot release a dirty backend')
 const require = createRequire(join(root, 'package.json'))
-const builderRequire = createRequire(
-  require.resolve('@lynx-js/lynxtron-builder'),
-)
-// Verify pnpm applied our pinned copies of the official packaging patches.
-const collector = await readFile(
-  builderRequire.resolve('app-builder-lib/out/electron/ElectronFramework.js'),
+const builder = require.resolve('@lynx-js/lynxtron-builder')
+// Verify the published builder includes its patched toolchain.
+const toolchain = join(dirname(builder), 'vendor', 'node_modules')
+const frameworkVersion = await readFile(
+  join(toolchain, 'app-builder-lib', 'out', 'electron', 'electronVersion.js'),
   'utf8',
 )
-if (!collector.includes('lynxtron') && !collector.includes('Lynxtron'))
+if (!frameworkVersion.includes('const electronPackages = ["lynxtron"];'))
   throw new Error('Lynxtron builder patch is missing')
 await stageCef(root, target)
 await mkdir(join(root, '.lynxtron', 'app'), { recursive: true })
@@ -73,7 +72,7 @@ try {
   const result = spawnSync(
     process.execPath,
     [
-      require.resolve('@lynx-js/lynxtron-builder'),
+      builder,
       process.platform === 'darwin' ? '--mac' : '--win',
       `--${arch}`,
       '--publish',

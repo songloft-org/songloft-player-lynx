@@ -1,17 +1,17 @@
-import { afterAll, beforeAll, describe, expect, test } from 'vitest'
+import { afterAll, assert, beforeAll, describe, expect, test } from 'vitest'
 
+import { LIBRARY_VIEW_KEYS } from '../../src/models/library-browse.js'
 import { createDriver, type E2EDriver } from '../driver/index.js'
 import { resetStepCounter, stepScreenshot } from '../driver/step-screenshot.js'
 
 /**
- * 曲库 14 视图：三路分发的真机冒烟。
+ * 曲库视图的原生渲染与布局回归。
  *
  * 单测只能证明「调了哪个 hook」；这里经 `__E2E_ROUTER__` 依次落到三种内容
  * （扁平歌曲 / 分类网格 / 歌单卡片）各截一张图，证明它们在真机上真的渲染。
- * 断言刻意保守——只查路由落点（e2e bridge 不暴露 query cache，配置持久化走
- * 手动验收：改视图 → 杀进程 → 重进曲库）。
+ * 使用原生布局测量检查切换内容类型和标题栏操作时的垂直对齐。
  */
-describe('曲库：14 视图三路分发', () => {
+describe('曲库视图', () => {
   let driver: E2EDriver
 
   beforeAll(async () => {
@@ -49,6 +49,32 @@ describe('曲库：14 视图三路分发', () => {
     expect(await goTo('playlist_radio')).toBe('/library')
     await stepScreenshot(driver, 'library-view-playlist-radio')
   })
+
+  test('切换任意曲库视图时标题栏保持对齐', async () => {
+    const selectors = ['.library__topbar', '.library__topbar-title', '.library__content']
+    type Rect = { top: number; height: number }
+    const measure = () => driver.evaluateJS<(Rect | null)[]>(`
+      Promise.all(${JSON.stringify(selectors)}.map(globalThis.__E2E_MEASURE__))
+    `)
+
+    expect(await goTo('all')).toBe('/library')
+    await driver.waitFor(async () => (await measure()).every(rect => rect != null && rect.height > 0))
+    const initial = await measure()
+
+    for (const view of [...LIBRARY_VIEW_KEYS.slice(1), 'all']) {
+      expect(await goTo(view)).toBe('/library')
+      expect(await driver.evaluateJS('globalThis.__E2E_ROUTER__.state.location.search.view')).toBe(view)
+      const current = await measure()
+      for (const [index, selector] of selectors.entries()) {
+        const expected = initial[index]
+        const actual = current[index]
+        assert(expected && expected.height > 0, `all ${selector} has no layout`)
+        assert(actual && actual.height > 0, `${view} ${selector} has no layout`)
+        expect(Math.abs(actual.top - expected.top), `${view} ${selector} top`).toBeLessThan(1)
+        expect(Math.abs(actual.height - expected.height), `${view} ${selector} height`).toBeLessThan(1)
+      }
+    }
+  }, 90_000)
 
   test('旧 ?view=songs 深链接迁移到 all 而不报错', async () => {
     // Legacy four-tab values are migrated, not rejected — a stale deep link

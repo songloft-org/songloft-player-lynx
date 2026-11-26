@@ -25,6 +25,20 @@ import { describe, expect, test } from 'vitest'
 const repoRoot = path.resolve(__dirname, '..', '..')
 const read = (relative: string): string => readFileSync(path.join(repoRoot, relative), 'utf8')
 
+test.each([
+  ['background/background-apis/createPerformanceApis.js', 'createPerformanceApis'],
+  ['mainthread/createMainThreadLynxPerformance.js', 'createMainThreadLynxPerformance'],
+])('Web Core opts out of User Timing by default in %s', (file, factory) => {
+  const source = read(`node_modules/@lynx-js/web-core/dist/client/${file}`)
+  const recording = vm.runInNewContext(
+    `${source.replace('export function', 'function')}\n
+    [${factory}(null).isProfileRecording(), ${factory}(null, true).isProfileRecording()]`,
+    { performance: { mark() {}, measure() {} } },
+  )
+
+  expect(recording).toEqual([false, true])
+})
+
 test('mobile Web sizes its contained Lynx viewport below browser chrome and above the IME', () => {
   const html = read('web/index.html')
   const viewport = html.match(/<meta\s+name="viewport"\s+content="([^"]+)"/)?.[1]
@@ -275,7 +289,7 @@ describe('web/index.html references files the build actually ships', () => {
 /**
  * Gate for the event-dispatch crash chain fixed in two layers:
  *
- * 1. `patches/@lynx-js__web-core@0.23.1.patch` (applied by pnpm) — the
+ * 1. `patches/@lynx-js__web-core@0.26.9.patch` (applied by pnpm) — the
  *    unminified `WASMJSBinding.js` guards `currentTarget` in `runWorklet` /
  *    `publishEvent`.
  * 2. `scripts/patch-web-core-client.mjs` (postinstall) — the same guard
@@ -304,9 +318,9 @@ describe('web-core event-dispatch guards are applied on both code paths', () => 
     )
     expect(
       (src.match(/!resolvedTarget \|\| !currentTarget/g) ?? []).length,
-      'both runWorklet and publishEvent must early-return on a missing currentTarget '
-        + '— see patches/@lynx-js__web-core@0.23.1.patch',
-    ).toBe(2)
+      'worklets, element closures and published events must guard a missing currentTarget '
+        + '— see patches/@lynx-js__web-core@0.26.9.patch',
+    ).toBe(3)
   })
 
   test('the minified main-thread chunk carries the same guard (postinstall patch)', () => {
@@ -315,7 +329,7 @@ describe('web-core event-dispatch guards are applied on both code paths', () => 
       'utf8',
     )
     expect(
-      src.includes('A=a??o;A&&o&&(') && src.includes('s=o??A;s&&A&&('),
+      src.includes('s=o??a;s&&a&&(') && src.includes('s=o??a;if(!s||!a)return;') && src.includes('A=a??s;A&&s&&('),
       'runWorklet / publishEvent guard missing from web-core-main-chunk.js — '
         + 'run `node scripts/patch-web-core-client.mjs` and check for identifier renames',
     ).toBe(true)

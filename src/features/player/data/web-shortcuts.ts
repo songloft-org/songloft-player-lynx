@@ -2,7 +2,7 @@ import { createStore } from 'zustand/vanilla'
 
 import { getSongloftStorage } from '../../../core/storage/index.js'
 import { configurePlaybackKeys, hasPlaybackKeys, subscribePlaybackKeys, subscribeShortcutRecording, type PlaybackKeyAction, type PlaybackKeyState } from '../../../native/web-playback-keys.js'
-import { SHORTCUT_ACTIONS, bindingsOverlap, parseShortcutBindings, structuredDefaults, type ShortcutAction, type ShortcutBinding, type ShortcutBindings } from '../domain/shortcut-bindings.js'
+import { SEEK_STEP_MS, SHORTCUT_ACTIONS, bindingsOverlap, parseShortcutBindings, structuredDefaults, type ShortcutAction, type ShortcutBinding, type ShortcutBindings } from '../domain/shortcut-bindings.js'
 import { getBackStackDepth, subscribeBackStack } from '../../../shared/nav/back-stack.js'
 import { useAuthStore } from '../../auth/store/index.js'
 import { hasNext } from '../store/derive.js'
@@ -76,7 +76,7 @@ export async function performPlaybackKey(action: PlaybackKeyAction): Promise<voi
   if (action === 'toggle') await player.togglePlay()
   else if (action === 'next' && allowed.canNext) await player.playNext()
   else if (action === 'previous') await player.playPrev()
-  else if (action === 'seekForward' || action === 'seekBackward') await player.seekBy(action === 'seekForward' ? 10000 : -10000)
+  else if (action === 'seekForward' || action === 'seekBackward') await player.seekBy(action === 'seekForward' ? SEEK_STEP_MS : -SEEK_STEP_MS)
   else if (action === 'mute') await player.toggleMute()
   else if (action === 'volumeUp' || action === 'volumeDown') {
     if ((action === 'volumeUp' && player.volume >= 100) || (action === 'volumeDown' && player.volume <= 0)) return

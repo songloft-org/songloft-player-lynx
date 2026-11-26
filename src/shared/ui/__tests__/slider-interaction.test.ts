@@ -20,11 +20,12 @@ function controller(platform = 'Android', step = 0.2) {
   const commit = vi.fn()
   const change = vi.fn()
   const cleanups: (() => void)[] = []
-  const run = new Function('useRef', 'useEffect', 'useImperativeHandle', 'SystemInfo', 'invokeByRef', 'props', 'ref', 'getRectByRef',
+  const run = new Function('useRef', 'useEffect', 'useState', 'useImperativeHandle', 'SystemInfo', 'invokeByRef', 'props', 'ref', 'getRectByRef',
     utils + source.slice(begin, end) + '\ntrackRef.current = {}; return {handleTouchStart, handleMoveX, handleEnd, getValue};')
   const gestures = run(
     (current: unknown) => ({ current }),
     (effect: () => unknown) => { const cleanup = effect(); if (typeof cleanup === 'function') cleanups.push(cleanup as () => void) },
+    (value: unknown) => [value, () => {}],
     () => {}, { platform }, measure,
     { value: 0, step, onValueCommit: commit, onValueChange: change }, null, measure,
   ) as {
@@ -100,15 +101,15 @@ for (const platform of ['Android', 'iOS', 'Harmony', 'web']) {
     const c = controller(platform, 0.125)
     c.measure.mockImplementation((...args: unknown[]) => {
       const params = args[2] as { relativeTo: string | null } | undefined
-      const correct = params?.relativeTo === (platform === 'web' ? 'screen' : null)
+      const correct = params?.relativeTo === null
       // Native relativeTo:'' produces left=0 even when the rail is inset.
       return Promise.resolve({ left: correct ? 32 : 0, width: 328 })
     })
-    c.handleTouchStart(platform === 'web' ? { clientX: 196 } : { detail: { x: 196 } })
+    c.handleTouchStart(platform === 'web' ? { x: 196, clientX: 296 } : { detail: { x: 196 } })
     c.handleEnd()
     await flush()
     expect(c.measure).toHaveBeenCalledWith(expect.anything(), 'boundingClientRect', expect.objectContaining({
-      relativeTo: platform === 'web' ? 'screen' : null,
+      relativeTo: null,
     }))
     expect(c.commit).toHaveBeenCalledExactlyOnceWith(0.5)
   })

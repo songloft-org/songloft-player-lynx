@@ -21,7 +21,8 @@ test('copy snapshot matches compiled identity and carries only the matching prep
       if (value == null) delete process.env[name]; else process.env[name] = value
     }
   })
-  for (const path of ['updates/native-contract.json', 'android/app/build.gradle.kts', 'ios/Podfile.lock', 'harmony/entry/oh-package.json5']) {
+  for (const path of ['updates/native-contract.json', 'android/app/build.gradle.kts', 'ios/Podfile.lock',
+    'ios/release/Podfile.lock', 'harmony/entry/oh-package.json5']) {
     mkdirSync(dirname(join(root, path)), { recursive: true }); copyFileSync(join(repo, path), join(root, path))
   }
   const metadata = createBuildMetadata({ packageVersion: '0.1.0', sha: 'abcdef0' })

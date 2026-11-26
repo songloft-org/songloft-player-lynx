@@ -1,4 +1,4 @@
-import { useState } from '@lynx-js/react'
+import { useState, type ReactNode } from '@lynx-js/react'
 import { useTranslation } from 'react-i18next'
 
 import { Icon, ICON_COLORS } from '../../../shared/ui/Icon.js'
@@ -14,16 +14,11 @@ const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 export interface PlayerToolBarProps {
   /** Edge length of one control's hit box, from `player-layout.ts`. */
   slot: number
+  leading?: ReactNode
+  trailing?: ReactNode
 }
 
-/**
- * `[cast · volume · speed · queue]` — the player's secondary controls.
- *
- * These four all used to sit in the top bar, alongside the collapse button and the
- * album name. Flutter keeps that row down here, below the transport, which is both
- * less crowded and a better match for how often they are used.
- */
-export function PlayerToolBar({ slot }: PlayerToolBarProps) {
+export function PlayerToolBar({ slot, leading, trailing }: PlayerToolBarProps) {
   const { t } = useTranslation()
   const speed = usePlayerStore((s) => s.speed)
   const [showSpeed, setShowSpeed] = useState(false)
@@ -38,6 +33,7 @@ export function PlayerToolBar({ slot }: PlayerToolBarProps) {
 
   return (
     <view className='player-tools'>
+      {leading}
       <VolumePopover slot={slot} />
 
       <PopoverMenu
@@ -72,6 +68,7 @@ export function PlayerToolBar({ slot }: PlayerToolBarProps) {
       >
         <Icon name='queue' size={20} color={ICON_COLORS.content} />
       </view>
+      {trailing}
     </view>
   )
 }

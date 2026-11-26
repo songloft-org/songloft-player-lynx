@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from '@lynx-js/react'
-import type { NodesRef, ScrollEvent } from '@lynx-js/types'
+import type { NodesRef, TouchEvent, WheelEvent } from '@lynx-js/types'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 
@@ -9,6 +9,25 @@ import { useLyricStore } from '../store/index.js'
 import { usePlayerStore } from '../store/index.js'
 import { cachedSongIdentity } from '../domain/offline-cache.js'
 import './LyricsView.css'
+
+interface VerticalBounds {
+  top: number
+  height: number
+}
+
+function readVerticalBounds(node: NodesRef): Promise<VerticalBounds | undefined> {
+  return new Promise(resolve => {
+    try {
+      node.invoke({
+        method: 'boundingClientRect',
+        success: (result: VerticalBounds) => resolve(result),
+        fail: () => resolve(undefined),
+      }).exec()
+    } catch {
+      resolve(undefined)
+    }
+  })
+}
 
 /**
  * Placeholder for the loading / failed / empty states. Mirrors the Flutter
@@ -84,96 +103,71 @@ export function LyricsView() {
     void refetch(currentSong)
   }
 
-  /*
-   * All hooks must run on every render regardless of the placeholder branches
-   * below. React fibers require a stable hook call order; toggling between
-   * loading / failed / empty / loaded across song changes would otherwise
-   * shift the hook order and corrupt state.
-   *
-   * "Back to current line" button.
-   *
-   * Auto-scroll centres the active line when `currentIndex` changes, but a user
-   * scrolling ahead or behind loses it in the viewport. The button surfaces only
-   * when the scroll position has drifted more than `DRIFT_PX` from the last
-   * auto-scroll position — enough to have moved the current line off-screen,
-   * not so little that it flickers on every finger twitch.
-   *
-   * `lastAutoScrollTop` is a ref (not state): it is write-mostly and only read
-   * inside the scroll callback, so re-rendering on every write would be waste.
-   * `userScrolled` is state because it drives the button's visibility.
-   */
-  const DRIFT_PX = 150
   const activeLineRef = useRef<NodesRef>(null)
+  const viewportRef = useRef<NodesRef>(null)
   const [userScrolled, setUserScrolled] = useState(false)
-  const lastAutoScrollTopRef = useRef(0)
-  // Ref mirror so the current-line effect can read the latest value without
-  // listing it as a dependency (which would re-scroll on every drift change).
-  const userScrolledRef = useRef(false)
-  const markUserScrolled = useCallback((value: boolean) => {
-    userScrolledRef.current = value
-    setUserScrolled(value)
-  }, [])
-
-  useEffect(() => {
-    // Respect a deliberate scroll-away: if the reader has moved off the current
-    // line, do not yank the view back on every line change. The "back to current"
-    // button is the explicit way to resume following. Previously this effect
-    // reset userScrolled unconditionally, so the button vanished within a line
-    // or two and reading ahead was impossible — the same feel-breaking class of
-    // bug as the player's back navigation.
-    if (userScrolledRef.current) return
-    if (currentIndex >= 0 && activeLineRef.current) {
-      try {
-        activeLineRef.current
-          .invoke({
-            method: 'scrollIntoView',
-            params: {
-              scrollIntoViewOptions: {
-                block: 'center',
-                behavior: 'smooth',
-              },
-            },
-          })
-          .exec()
-      } catch (_) { /* no-op in test env */ }
-    }
-    // No reset of userScrolled here: staying in follow mode is the normal case
-    // (the flag is already false), and when the reader has scrolled away we
-    // returned above. handleScroll keeps the drift anchor fresh while following.
-  }, [currentIndex])
-
-  const handleScroll = useCallback((e: ScrollEvent) => {
-    const top = e.detail.scrollTop
-    // Anchor the first scroll after an auto-scroll: we don't know the final
-    // position until the smooth animation lands, so keep updating the anchor
-    // while the user hasn't drifted yet.
-    if (!userScrolled) {
-      lastAutoScrollTopRef.current = top
-    }
-    const drift = Math.abs(top - lastAutoScrollTopRef.current)
-    if (drift > DRIFT_PX && !userScrolled) markUserScrolled(true)
-    else if (drift <= DRIFT_PX && userScrolled) markUserScrolled(false)
-  }, [userScrolled, markUserScrolled])
+  const following = useRef(true)
+  const checkingBounds = useRef(false)
+  const followRevision = useRef(0)
+  const touchStart = useRef<{ x: number; y: number } | undefined>(undefined)
+  const songId = currentSong?.id
 
   const scrollToCurrent = useCallback(() => {
-    if (currentIndex >= 0 && activeLineRef.current) {
-      try {
-        activeLineRef.current
-          .invoke({
-            method: 'scrollIntoView',
-            params: {
-              scrollIntoViewOptions: { block: 'center', behavior: 'smooth' },
-            },
-          })
-          .exec()
-      } catch (_) { /* no-op in test env */ }
-    }
-    // Re-arm following: the explicit button is the only way back into auto mode
-    // after the reader scrolled away. Anchor from the current top so the smooth
-    // scroll landing is not mistaken for another deliberate drift.
-    lastAutoScrollTopRef.current = 0
-    markUserScrolled(false)
-  }, [currentIndex, markUserScrolled])
+    followRevision.current++
+    following.current = true
+    setUserScrolled(false)
+    if (currentIndex < 0 || !activeLineRef.current) return
+    try {
+      activeLineRef.current.invoke({
+        method: 'scrollIntoView',
+        params: { scrollIntoViewOptions: { block: 'center', behavior: 'none' } },
+      }).exec()
+    } catch (_) { /* no-op in test env */ }
+  }, [currentIndex])
+
+  useEffect(() => {
+    following.current = true
+    touchStart.current = undefined
+    setUserScrolled(false)
+  }, [songId])
+
+  useEffect(() => {
+    if (following.current) scrollToCurrent()
+  }, [songId, scrollToCurrent])
+
+  // Gesture events distinguish a user scroll from the scrollIntoView animation.
+  const pauseFollowing = () => {
+    if (!following.current) return
+    following.current = false
+    setUserScrolled(true)
+  }
+  const onTouchStart = (event: TouchEvent) => {
+    touchStart.current = event.detail
+  }
+  const onTouchMove = (event: TouchEvent) => {
+    const start = touchStart.current
+    if (!start || !following.current) return
+    const dx = Math.abs(event.detail.x - start.x)
+    const dy = Math.abs(event.detail.y - start.y)
+    if (dy >= 8 && dy > dx) pauseFollowing()
+  }
+  const onWheel = (event: WheelEvent) => {
+    if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) pauseFollowing()
+  }
+  const onScroll = () => {
+    const viewport = viewportRef.current
+    const active = activeLineRef.current
+    if (!following.current || checkingBounds.current || !viewport || !active) return
+    checkingBounds.current = true
+    const revision = followRevision.current
+    // Web can scroll without delivering a wheel gesture to Lynx. Measure after
+    // the scroll so an automatic jump and a user's scroll away are distinguishable.
+    void Promise.all([readVerticalBounds(viewport), readVerticalBounds(active)]).then(([box, row]) => {
+      checkingBounds.current = false
+      if (revision !== followRevision.current || activeLineRef.current !== active || !box || !row || box.height <= 0) return
+      if (row.top + row.height <= box.top || row.top >= box.top + box.height) pauseFollowing()
+    })
+  }
 
   if (isLoading) {
     return (
@@ -241,7 +235,13 @@ export function LyricsView() {
       * would see the previous song's tail scroll position for the split second
       * before `currentIndex` becomes valid and `scrollIntoView` re-centres.
       */}
-    <scroll-view key={currentSong?.id ?? 'nosong'} className='player-lyrics' scroll-y bindscroll={handleScroll}>
+    <scroll-view key={currentSong?.id ?? 'nosong'} className='player-lyrics'
+      ref={viewportRef}
+      scroll-y
+      bindscroll={onScroll}
+      bindtouchstart={onTouchStart}
+      bindtouchmove={onTouchMove}
+      bindwheel={onWheel}>
       <view className='player-lyrics__inner'>
         {lyrics.map((line, index) => {
           const active = index === currentIndex

@@ -29,13 +29,13 @@
   min-height: 0;
 }
 
-/* Topbar: section title + the "customize views" (tune) entry. Padding matches
-   the home and settings topbars (space-4 top/sides, space-3 bottom) so the
-   three tab-root titles sit at the same vertical position when switching. */
+/* Keep the header aligned when a view swaps its actions or scroll content. */
 .library__topbar {
   display: flex;
   flex-direction: row;
   align-items: center;
+  flex-shrink: 0;
+  column-gap: var(--space-1);
   padding: var(--space-4) var(--space-4) var(--space-3);
 }
 
@@ -51,41 +51,37 @@
    Apple Music makes for its sidebar-adjacent section headings on iPad. */
 .library__topbar-title {
   flex: 1;
+  min-width: 0;
   color: var(--label);
   font-size: var(--font-largeTitle);
   font-weight: var(--weight-bold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .shell--wide .library__topbar-title {
   font-size: var(--font-title1);
 }
 
-.library__topbar-toggle {
-  padding: var(--space-1);
-  margin-right: var(--space-1);
-}
-
-.library__topbar-customize {
-  padding: var(--space-1);
-}
-
-.library__topbar-visibility {
+.library__topbar-action {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   width: var(--tap-target);
   height: var(--tap-target);
-  margin-right: var(--space-1);
   border-radius: var(--radius-sm);
 }
 
-.library__topbar-visibility--active {
+.library__topbar-action--active {
   background-color: var(--tint-fill);
 }
 
 /* Songs view wrapper */
 .library__songs-view {
+  --library-search-height: 40px;
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -97,12 +93,13 @@
 .library__search-bar {
   display: flex;
   flex-direction: row;
+  flex-shrink: 0;
   padding: var(--space-3) var(--space-4) 0 var(--space-4);
 }
 
 .library__search-input {
   flex: 1;
-  height: 40px;
+  height: var(--library-search-height);
   border-radius: var(--radius-sm);
   background-color: var(--tertiary-system-fill);
   border: 1px solid var(--separator);
@@ -498,19 +495,33 @@
 }
 
 .library__suggestions {
-  margin-top: var(--space-1);
+  /* Keep the overlay in the songs view so the search bar cannot clip it. */
+  position: absolute;
+  top: calc(var(--space-3) + var(--library-search-height) + var(--space-1));
+  left: var(--space-4);
+  right: var(--space-4);
+  z-index: 2;
   background-color: var(--secondary-system-background);
   border-radius: var(--radius-md);
+  border: 1px solid var(--separator);
   overflow: hidden;
 }
 
 .library__suggestion-item {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap-target);
   padding: var(--space-2) var(--space-3);
 }
 
 .library__suggestion-text {
+  flex: 1;
+  min-width: 0;
   font-size: var(--font-footnote);
   color: var(--label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Floating-nav capsule inset (see ShellLayout.css): the fixed bottom bar lets

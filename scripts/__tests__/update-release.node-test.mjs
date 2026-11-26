@@ -45,7 +45,9 @@ test('signed native bundle shares one manifest with the seven full packages', (t
   assert.equal(manifest.assets.length, 8)
   assert.equal(manifest.bundle_update.asset, BUNDLE_ASSET)
   assert.deepEqual(manifest.bundle_update.targets.map(t => [t.platform, t.engine]),
-    [['android', '4.0.0'], ['ios', '4.0.1'], ['harmony', '4.0.1']])
+    [['android', '4.2.0'], ['ios', '4.2.0'], ['harmony', '4.2.0']])
+  assert.deepEqual(manifest.bundle_update.targets.map(t => [t.platform, t.minimum_host_version]),
+    [['android', '0.1.0'], ['ios', '0.1.0'], ['harmony', '2.13.13']])
   assert.ok(manifest.bundle_update.targets.every(t => t.minimum_bridge === 3 && t.maximum_bridge === 3))
   assert.equal(manifest.bundle_update.local_schema, 2)
   assert.ok(manifest.bundle_update.targets.every(t => t.required_capabilities.includes('songCache.v2')))
@@ -88,18 +90,23 @@ test('SPKI and PKCS#1 records carry the same RSA public key', () => {
 test('contract preparation rejects SDK drift and invalid bridge/schema ranges', (t) => {
   const options = fixture(t)
   const project = join(options.directory, 'project')
-  for (const folder of ['updates', 'android/app', 'ios', 'harmony/entry'])
+  for (const folder of ['updates', 'android/app', 'ios/release', 'harmony/entry'])
     mkdirSync(join(project, folder), { recursive: true })
-  writeFileSync(join(project, 'android/app/build.gradle.kts'), 'implementation("org.lynxsdk.lynx:lynx:4.0.0")')
-  writeFileSync(join(project, 'ios/Podfile.lock'), '  - Lynx (4.0.1):')
-  writeFileSync(join(project, 'harmony/entry/oh-package.json5'), '{"@lynx/lynx":"4.0.1"}')
+  writeFileSync(join(project, 'android/app/build.gradle.kts'), 'implementation("org.lynxsdk.lynx:lynx:4.2.0")')
+  writeFileSync(join(project, 'ios/Podfile.lock'), '  - Lynx (4.2.0):')
+  writeFileSync(join(project, 'ios/release/Podfile.lock'), '  - Lynx (4.2.0):')
+  writeFileSync(join(project, 'harmony/entry/oh-package.json5'), '{"@lynx/lynx":"4.2.0"}')
   const save = (value) => writeFileSync(join(project, 'updates/native-contract.json'), JSON.stringify(value))
   save(contract); assert.deepEqual(loadNativeContract(project), contract)
   for (const value of [{ ...contract, engines: { ...contract.engines, android: '4.0.2' } },
     { ...contract, bridge_version: 0 }, { ...contract, local_schema: -1 },
-    { ...contract, minimum_host_version: '0.1.0-rc.1' }]) {
+    { ...contract, minimum_host_version: { ...contract.minimum_host_version, harmony: '2.13.13-rc.1' } },
+    { ...contract, minimum_host_version: { android: '0.1.0', ios: '0.1.0' } }]) {
     save(value); assert.throws(() => loadNativeContract(project))
   }
+  save(contract)
+  writeFileSync(join(project, 'ios/release/Podfile.lock'), '  - Lynx (4.0.1):')
+  assert.throws(() => loadNativeContract(project), /ios\/release\/Podfile\.lock/)
 })
 
 test('unconfigured signing emits only full packages and removes stale hot-update assets', (t) => {

@@ -52,7 +52,7 @@ import { getCachedAccessToken } from '../../../core/network/token-cache.js'
 import { getIndexedCachedPath } from '../data/cache-context.js'
 import type { CacheVariant } from '../domain/cache-identity.js'
 import { useLyricStore } from './lyric-store.js'
-import type { PlayerData } from './derive.js'
+import { canSeekBy, type PlayerData } from './derive.js'
 import { configureDlnaPlayer, useDlnaStore } from './dlna-store.js'
 import { useAppSessionStore } from '../../../store/app-session.js'
 import { endPluginPlayback, startPluginPlayback } from './plugin-audio-effects.js'
@@ -637,6 +637,7 @@ const MAX_CONSECUTIVE_SKIPS = 3
  * is exactly the case `togglePlay` has to detect.
  */
 let _loadedSongId: number | null = null
+let _completedSongId: number | undefined
 
 /** How the loaded song reached the engine — see `playbackSourceKindOf`. */
 export type PlaybackSourceKind = 'cache' | 'stream'
@@ -663,6 +664,7 @@ export function playbackSourceKindOf(songId: number): PlaybackSourceKind | null 
 /** Test hook: forget what the engine holds (each scenario starts cold). */
 export function resetLoadedSongForTests(): void {
   _loadedSongId = null
+  _completedSongId = undefined
   _loadedSourceKind = null
   _videoSourceSongId = null
   invalidateSourceLoad()
@@ -797,6 +799,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   async function playAtIndex(index: number, initialPositionMs = 0): Promise<void> {
     const song = get().playlist[index]
     if (!song) return
+    _completedSongId = undefined
     const generation = invalidateSourceLoad()
     set({ confirmedSongId: undefined, playlistCompleted: false })
     cancelRetry()
@@ -933,6 +936,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       // The next user play must reload this song at the beginning.
       _loadedSongId = null
       _loadedSourceKind = null
+      _completedSongId = s.currentSong?.id
       // Tell the native engine the playback gap is terminal so it can release
       // its finite background execution window immediately.
       finishIOSPlaybackGap()
@@ -1078,10 +1082,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         // position but the engine has no media loaded yet. Without passing it
         // through, playAtIndex resets currentTime to 0 and the first play jumps
         // back to the start — the restored progress was cosmetic only.
-        // EXCEPT when the queue finished: its currentTime is the ended track's
-        // final position, and replay must start over (togglePlay is the replay
-        // gesture there). playlistCompleted distinguishes the two cases.
-        const resumeMs = s.playlistCompleted ? 0 : s.currentTime
+        // A completed track still displays its final position. Replay starts
+        // at zero, independently of whether the whole playlist completed.
+        const resumeMs = _completedSongId === s.currentSong.id ? 0 : s.currentTime
         await playAtIndex(s.currentIndex >= 0 ? s.currentIndex : 0, resumeMs)
         return
       }
@@ -1122,7 +1125,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     seekBy: async (deltaMs) => {
       const s = get()
-      if (s.duration <= 0) return
+      if (!canSeekBy(s)) return
       const target = Math.min(s.duration, Math.max(0, s.currentTime + deltaMs))
       await get().seek(target)
     },
@@ -1449,6 +1452,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       _videoSourceSongId = null
       _loadedSongId = null
       _loadedSourceKind = null
+      _completedSongId = undefined
       set({ ...INITIAL, showAudioTrackSheet: false })
     },
 
@@ -1922,6 +1926,7 @@ export async function restorePlaybackState({ allowAutoResume = true } = {}): Pro
   }
   if (restoreGeneration !== _loadGeneration) return
   const generation = invalidateSourceLoad()
+  _completedSongId = undefined
   _queueLoader.invalidate()
   usePlayerStore.setState({
     playlist: saved.playlist,

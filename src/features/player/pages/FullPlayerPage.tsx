@@ -24,7 +24,6 @@ import { useLyricsScreenAwake } from '../widgets/use-lyrics-screen-awake.js'
 import { PageDots } from '../widgets/PageDots.js'
 import { PlayControls } from '../widgets/PlayControls.js'
 import { PlayerBackdrop } from '../widgets/PlayerBackdrop.js'
-import { PlayerToolBar } from '../widgets/PlayerToolBar.js'
 import { PlayerTopBar } from '../widgets/PlayerTopBar.js'
 import { PlaylistDrawer } from '../widgets/PlaylistDrawer.js'
 import { ProgressBar } from '../widgets/ProgressBar.js'
@@ -394,7 +393,6 @@ export function FullPlayerPage() {
               slot={layout.toolSlot}
               songId={local ? undefined : song.id}
             />
-            <PlayerToolBar slot={layout.toolSlot} />
           </view>
         </view>
 

@@ -1,5 +1,32 @@
 # Lynx 客户端开发经验
 
+### Web 长时交互卡顿要采样插件 Worker 的计时条目
+
+- 原版音箱语音页在每秒一帧状态的测试里持续积累 User Timing mark，CPU 热点落在 `clearMarks()`。分别清除 mark 和 measure 复验其影响，并用相同帧序列比较临时关闭追踪后的 CPU 和实际点击延迟。Seen 1×（2026-11-25）。[songloft-org/songloft#591 验证记录](docs/project/issue-591.md#web-user-timing)
+- 升级 Web Core 时同时迁移源码和生产包补丁。用新编译的内嵌页面打开旧版已发布插件，实际验证插件桥、输入和 worker 计时缓冲。0.26.9 新增的标签别名还需核对是否绕过本地元素子类。[升级验证](docs/project/issue-591.md#lynx-upgrade)
+- Lynx 4.2.0 的 iOS Podspec 从官方 Lynx Specs 源解析，开发和发布分别校验锁文件。Lynxtron Builder 0.0.31 内置已打补丁的打包工具，升级时核对实际 npm 发布包里的补丁和下载 API，再移除本地重复补丁。Seen 1×（2026-11-25）。[升级验证](docs/project/issue-591.md#lynx-upgrade)
+
+### 更换客户端实现时核对播放定位入口
+
+- Flutter 在首页和歌单详情消费播放上下文。Songloft v2.13.13 使用的 Lynx Web 及 Lynx Android 缺少这两个入口，导致用户需要重新翻找歌单或歌曲。[songloft-org/songloft#595](https://github.com/songloft-org/songloft/issues/595)
+- 从播放来源取得歌单 ID，在对应详情页按当前歌曲 ID 定位。以首页未展示的歌单和未加载的歌曲验证入口和实际视口。分页请求要等待正在进行的查询刷新结束。Seen 1×（2026-11-25）。[验证记录](docs/project/progress.md#issue-595)
+
+### 新增原生插件容器时按平台更新热更新契约
+
+- v0.1.6 HAP 的 ArkTS 字节码没有 `songloft-plugin-frame`。v2.13.13 已包含组件，但同版签名清单允许旧壳热更新。在 Node 中用实际 v0.1.6 壳信息执行旧壳的验签与兼容代码，确认它接受该清单。[songloft-org/songloft-player-lynx#18](https://github.com/songloft-org/songloft-player-lynx/issues/18)
+- 以首个包含组件的正式 HAP 确定 HarmonyOS 最低壳版本。用实际旧 HAP 的不可变壳信息验证签名清单，再核对完整安装后的壳能否接受后续更新。Seen 1×（2026-11-23）。[验证记录](docs/project/progress.md#harmony-shell-plugin-frame)
+
+### 验证曲库补全时测量工具栏和列表
+
+- 390 宽 Chromium 中，旧版五条补全建议让搜索栏从 52 像素增高到 176 像素，工具栏和列表各下移 124 像素。
+- 补全浮层放在歌曲视图内、搜索栏外，使用同一输入框高度和间距定位。打开、点选和确认时测量搜索栏、工具栏与列表的位置。Seen 1×（2026-11-23）。[验证记录](docs/project/progress.md#library-search-suggestions)
+- Android 输入组件会在回填歌名后再次发出输入事件。把关闭状态与该歌名绑定，用户改动文字时重新显示候选。点选回归需要等原生输入回显处理完成。
+
+### 曲库切换视图时测量原生标题栏
+
+- Android 14 原生 Lynx 中，电台视图的显隐按钮撑起了 72 的标题栏，歌手和文件夹视图的较小按钮使标题栏降至约 68.2。三种内容类型的路由冒烟均通过时，这个布局差异仍会发生。
+- 让可选操作使用同一个触摸尺寸，并在各类视图中测量标题栏、文字和内容区的位置。新增 Android 回归覆盖全部 18 个视图，旧包在文件夹视图失败。Seen 1×（2026-11-22）。[验证记录](docs/project/progress.md#android-library-header)
+
 ### 隐藏插件 iframe 时关闭渲染盒并保留文档
 
 - [songloft-org/songloft#590](https://github.com/songloft-org/songloft/issues/590) 的 iOS Web 截图显示，底栏已经切换，固定定位的插件 iframe 仍占据上半屏。[WebKit #272727](https://bugs.webkit.org/show_bug.cgi?id=272727) 记录过 `visibility: hidden` 下固定定位 iframe 的合成内容仍被绘制的情况。
@@ -176,9 +203,15 @@
 ### FAVORITE-001：收藏失效订阅必须绑定服务器和账号
 
 - 范围：应用级收藏长轮询、Query 缓存与原生通知红心，songloft-org/songloft#563。
-- 规则：请求固定目标 URL，并在认证重试及缓存写入前验证会话；只有完整刷新成功后才推进游标。退出、后台及会话切换停止旧订阅，恢复必须重新对账。
-- 证据与 Done right：控制旧响应在切换后到达，新集合仍为 `{99}`；刷新失败后不确认游标；真实 QuickJS 插件经后端增删，Docker Chrome 的同一已打开页面红心依次 Add→Remove→Add，无心形按钮点击或页面刷新。完整 3793 项和两目标构建通过，见 [记录](docs/project/issue-563.md)。
-- Seen 1× (2026-11-11)。状态：新功能机制验证，提交前验证；交付状态见本批记录。
+- 规则：请求固定目标 URL，并在认证重试及缓存写入前验证会话；只有完整刷新成功后才推进游标。退出、后台及会话切换停止旧订阅并 abort 在途请求，恢复必须重新对账；同一 watcher 的启动必须单飞。
+- 证据与 Done right：控制旧响应在切换后到达，新集合仍为 `{99}`；刷新失败后不确认游标；本批新增停止即中止请求、迟到响应不刷新及重复启动单飞回归。真实 QuickJS 插件经后端增删，Docker Chrome 的同一已打开页面红心依次 Add→Remove→Add，无心形按钮点击或页面刷新。完整 3929 项和两目标构建通过，见 [记录](docs/project/issue-563.md) 与 [#591 记录](docs/project/issue-591.md)。
+- Seen 2× (2026-11-11, 2026-11-24)。状态：长轮询生命周期补强，客户端 Web 验证通过；报告人的 Docker 页面和原生设备待验。
+
+### 收藏乐观更新的回滚要核对会话和缓存快照
+
+- [songloft-org/songloft-player-lynx#20](https://github.com/songloft-org/songloft-player-lynx/pull/20) 的 `e654c998` 在旧收藏写请求失败后，把账号 A 的收藏集合写回了账号 B 的缓存。
+- 写入前及认证重试时核对发起时的服务器和账号。回滚还要核对原查询和乐观快照，避免覆盖新请求结果。用受控 Promise 在切换账号后释放旧请求，验证新缓存保留且等待中的旧写入不会发出。
+- Seen 1× (2026-11-26)。
 
 ### UI-006：窄屏歌曲行应重新分配信息层级并保留触摸面积
 

@@ -1,37 +1,17 @@
 module SongloftPods
   def songloft_pods(devtools:)
     # ---- Lynx SDK ----------------------------------------------------------
-    # Coordinates copied from the official `integrating-lynx-demo-projects`
-    # ios/HelloLynxSwift Podfile (which pins 3.8.0); versions bumped to the 4.0.x
-    # line so the iOS host matches the Android host's `org.lynxsdk.lynx:*:4.0.0`
-    # (batch 24).
-    #
-    # WHY 4.0.1 AND NOT EXACTLY 4.0.0 (cross-platform version skew — read this
-    # first when iOS and Android behave differently):
-    #   1. iOS resolves Lynx / LynxService / XElement in LOCKSTEP (each XElement
-    #      and LynxService subspec depends on `Lynx = <same version>`), so the
-    #      whole family has to move together — you cannot mix 4.0.0 and 4.0.1.
-    #   2. The 4.0.0 podspec could not be used on this machine at all: the
-    #      CocoaPods trunk CDN cache holds a TRUNCATED `Lynx/4.0.0/
-    #      Lynx.podspec.json` (21 kB against ~235 kB), and CocoaPods dies with
-    #      `JSON::ParserError` before it can resolve anything.
-    # 4.0.1 is the nearest usable release and is the same major/minor as Android's
-    # 4.0.0, i.e. the same engine line and bundle-format compatibility.
-    pod 'Lynx', '4.0.1', :subspecs => [
+    # Keep the engine, base, service API and elements on the same release.
+    # PrimJS uses the exact version required by Lynx/Framework.
+    lynx_version = '4.2.0'
+    pod 'Lynx', lynx_version, :subspecs => [
       'Framework',
     ]
 
-    # `Lynx/Framework` depends on `LynxBase/Framework` and `LynxServiceAPI`
-    # **without any version constraint**, so an unpinned resolve cheerfully pairs
-    # Lynx 4.0.1 with a 4.2.0-nightly LynxBase (newest wins). Pin both to Lynx's
-    # own release — nightlies of the base layer under a stable engine is exactly
-    # the kind of mismatch that produces unreproducible device-only breakage.
-    pod 'LynxBase', '4.0.1', :subspecs => ['Framework']
-    pod 'LynxServiceAPI', '4.0.1'
+    pod 'LynxBase', lynx_version, :subspecs => ['Framework']
+    pod 'LynxServiceAPI', lynx_version
 
-    # JS engine. Lynx 4.0.1's `Framework` subspec pins `PrimJS/quickjs = 4.0.0`,
-    # so PrimJS stays on 4.0.0 (mirrors Android's `org.lynxsdk.lynx:primjs:4.0.0`).
-    pod 'PrimJS', '4.0.0', :subspecs => ['quickjs', 'napi']
+    pod 'PrimJS', '4.2.1', :subspecs => ['quickjs', 'napi']
 
     # ---- Host services -----------------------------------------------------
     # Host services the Android host also registers in SongloftApplication:
@@ -49,7 +29,7 @@ module SongloftPods
     # self-signed certificate; that is why "allow insecure TLS" was a no-op on iOS.
     # Keeping this subspec would leave two implementations competing for the same
     # protocol binding with no documented winner.
-    pod 'LynxService', '4.0.1', :subspecs => [
+    pod 'LynxService', lynx_version, :subspecs => [
       'Image',
       'Log',
     ] + (devtools ? ['Devtool'] : [])
@@ -69,6 +49,6 @@ module SongloftPods
     # `XElement/Behavior` (also a default subspec) is what registers the element
     # behaviors with the engine — the iOS equivalent of the Android host's
     # `addBehaviors(XElementBehaviors().create())`, only it self-registers.
-    pod 'XElement', '4.0.1'
+    pod 'XElement', lynx_version
   end
 end

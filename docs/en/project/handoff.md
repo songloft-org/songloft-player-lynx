@@ -1,5 +1,33 @@
 # Handoff (2026-10-14)
 
+## 2026-11-25 · #595 Playlist and track location
+
+Home opens the source playlist. Playlist details clear the search, load further pages, and locate the current track. Embedded Web and the Android 14 emulator opened a hidden playlist from Home and located track 65. Web also covered search and repeated location. [Verification](../../project/progress.md#issue-595)
+
+## 2026-11-25 · #593 10-second playback jumps
+
+The full player and the mini player at wider sizes offer 10-second rewind and forward controls. Docker Chrome verified button placement, audio seeking, and resizing. Native device verification is pending. [Verification](../../project/progress.md#issue-593)
+
+## 2026-11-24 · #591 Favorite long-poll cancellation
+
+Favorite-change subscriptions now abort in-flight HTTP requests when stopped or when the session changes, keep one running loop per watcher, and capture the current session server address. [Verification](../../project/issue-591.md)
+
+The November 25 follow-up reproduced the remaining voice-page slowdown. Accumulating Web performance marks slowed the plugin worker. Disabling tracing in an isolated comparison restored panel switches. Retesting in the reporter’s Edge environment is pending. [Follow-up](issue-591.md#web-user-timing)
+
+After the shared Lynx npm upgrade, Docker Chrome verified keyboard sign-in and sustained interaction in the smart speaker voice page with the rebuilt embedded Web client. [Upgrade verification](issue-591.md#lynx-upgrade)
+
+## 2026-11-23 · HarmonyOS smart speaker page blank after bundle update
+
+The v0.1.6 HAP could load the v2.13.13 JS update while missing the native component used by the smart speaker page. Affected users can install the full v2.13.13 HAP. New signed manifests will require a HarmonyOS shell of at least 2.13.13. The release manifest and shell checks were verified. Retesting on the reporter’s device remains pending. [Verification](../../project/progress.md#harmony-shell-plugin-frame)
+
+## 2026-11-23 · Library search suggestions
+
+Song title suggestions float below the search field and close when a title is selected or the search is confirmed. The Android 14 emulator and narrow Web checks confirmed that the toolbar and song list stay in place. [Verification](../../project/progress.md#library-search-suggestions)
+
+## 2026-11-22 · Android library header
+
+Songs, all nine category views, and playlists share header action dimensions. The Android 14 emulator covered all 18 views, with touch navigation at the default text size and at the largest Chinese text size in a 320-wide viewport. Testing on the reporter's phone remains pending. [Verification](../../project/progress.md#android-library-header)
+
 ## 2026-11-22 · #590 Web plugin remains visible after tab switch
 
 Leaving a WebView plugin now hides its render box and retains its document. Testing on the reporter’s iPhone remains pending. [Verification](../../project/progress.md#issue-590)

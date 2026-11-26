@@ -1,3 +1,4 @@
+import { getLastContentLocation } from '../../../shared/nav/shell-navigation.js'
 import '../../../shims/router-env.js'
 import '@testing-library/jest-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
@@ -53,6 +54,7 @@ test('expired-session browsing searches local snapshots and plays only the filte
   expect(playlist.map(song => song.id)).toEqual([8])
   expect(playlist[0].deviceCache.namespace).toBe(fixture.owner!.namespace)
   expect(fixture.navigate).toHaveBeenCalledWith({ to: '/player' })
+  expect(getLastContentLocation()).toEqual({ pathname: '/device-cache', search: {} })
 })
 test('a single deletion requires confirmation and removes exactly the selected variant from playback and disk', async () => {
   const queries = await page()

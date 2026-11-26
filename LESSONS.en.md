@@ -1,5 +1,32 @@
 # Lynx Client Development Lessons
 
+### Sample plugin worker timing entries when Web controls slow over time
+
+- On the original smart speaker voice page, a status frame per second grew the User Timing mark buffer, and `clearMarks()` dominated the CPU profile. Clear marks and measures independently, then replay the same frames with tracing temporarily disabled and compare worker CPU and actual click delays. Seen 1× (2026-11-25). [songloft-org/songloft#591 verification](docs/en/project/issue-591.md#web-user-timing)
+- Port both source and production patches when upgrading Web Core. Open an existing released plugin with the newly built embedded client and verify its bridge, input, and worker timing buffers. Check whether new tag aliases in 0.26.9 bypass local element subclasses. [Upgrade verification](docs/en/project/issue-591.md#lynx-upgrade)
+- Resolve the Lynx 4.2.0 iOS podspecs from the official Lynx Specs source and verify both Podfile locks. Lynxtron Builder 0.0.31 bundles its patched toolchain. Check the patches and downloader API in the published npm package before removing the duplicate local patches. Seen 1× (2026-11-25). [Upgrade verification](docs/en/project/issue-591.md#lynx-upgrade)
+
+### Check playback shortcuts when switching client implementations
+
+- Flutter uses the playback context on Home and on playlist details. The Lynx Web and Android clients used with Songloft v2.13.13 lacked both shortcuts, requiring users to find the playlist or track again. [songloft-org/songloft#595](https://github.com/songloft-org/songloft/issues/595)
+- Open the playlist from the playback source and locate the current track by ID in that playlist. Test a playlist outside the Home preview and a track on an unloaded page, and check the actual list viewport. Wait for any in-flight query refresh before requesting the next page. Seen 1× (2026-11-25). [Verification](docs/project/progress.md#issue-595)
+
+### Update the platform’s bundle contract when adding a native plugin container
+
+- The v0.1.6 HAP’s ArkTS bytecode lacked `songloft-plugin-frame`. The v2.13.13 HAP included it, but the old shell’s verification code accepted that release’s signed manifest when run in Node with the actual v0.1.6 shell metadata. [songloft-org/songloft-player-lynx#18](https://github.com/songloft-org/songloft-player-lynx/issues/18)
+- Set the HarmonyOS minimum shell version to the first stable HAP with the component. Test the signed manifest with the old HAP’s immutable shell metadata and confirm that the full replacement shell accepts later updates. Seen 1× (2026-11-23). [Verification](docs/project/progress.md#harmony-shell-plugin-frame)
+
+### Measure the toolbar and list when testing library suggestions
+
+- At a 390-pixel viewport width in Chromium, five suggestions increased the old search bar height from 52 to 176 pixels and pushed the toolbar and list down by 124 pixels.
+- Anchor the suggestions within the song view, outside the search bar, using the shared input height and spacing. Measure the search bar, toolbar, and list when opening suggestions, choosing a title, and confirming the search. Seen 1× (2026-11-23). [Verification](docs/project/progress.md#library-search-suggestions)
+- The Android input emits another input event after a title is filled in. Tie dismissal to that title and show suggestions again when the user changes the text. Selection checks should wait for the native input echo to settle.
+
+### Measure the native header when switching library views
+
+- On Android 14, the radio visibility button sized the native Lynx header to 72 layout pixels. The smaller actions in Artist and Folders brought the header down to about 68.2. The route smoke tests passed for all three content types while the layout still shifted.
+- Give optional header actions the same touch target and measure the positions of the header, title, and content across views. The Android regression covers all 18 views and fails on Folders in the old APK. Seen 1× (2026-11-22). [Verification](docs/project/progress.md#android-library-header)
+
 ### Hide plugin iframe rendering while keeping the document alive
 
 - The iOS Web screenshots in [songloft-org/songloft#590](https://github.com/songloft-org/songloft/issues/590) show a fixed plugin iframe still covering the upper part of the screen after the selected tab changed. [WebKit #272727](https://bugs.webkit.org/show_bug.cgi?id=272727) documents composited content still painting inside fixed iframes with `visibility: hidden`.
@@ -176,9 +203,15 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 ### FAVORITE-001: Favorite invalidation subscriptions must bind server and account
 
 - Scope: app-level favorite long polling, Query caches and native notification hearts, songloft-org/songloft#563.
-- Rule: fix each request URL and verify its session before auth replay and cache writes. Advance the cursor only after successful reconciliation. Logout, backgrounding and session changes stop old subscriptions; resume must reconcile again.
-- Evidence and Done right: an old response arriving after a switch leaves the new `{99}` set intact; refresh failures do not acknowledge cursors. Real QuickJS writes through the backend switch the same Docker Chrome page from Add→Remove→Add without heart clicks or page reload. All 3793 tests and both build targets passed; [record](docs/en/project/issue-563.md).
-- Seen 1× (2026-11-11). Status: new-feature mechanism validation, pre-commit validation; delivery status is tracked in the batch record.
+- Rule: fix each request URL and verify its session before auth replay and cache writes. Advance the cursor only after successful reconciliation. Logout, backgrounding, and session changes stop old subscriptions and abort in-flight requests. Resume must reconcile again, and one watcher must have one running loop.
+- Evidence and Done right: an old response arriving after a switch leaves the new `{99}` set intact; refresh failures do not acknowledge cursors. This batch adds regressions for immediate abort on stop, late-response suppression, and single-flight startup. Real QuickJS writes through the backend switch the same Docker Chrome page from Add→Remove→Add without heart clicks or page reload. All 3929 tests and both build targets passed; [record](docs/en/project/issue-563.md) and [#591 record](docs/en/project/issue-591.md).
+- Seen 2× (2026-11-11, 2026-11-24). Status: long-poll lifecycle hardening, client Web validation passed; the reporter's Docker page and native devices remain pending.
+
+### Check the session and cache snapshot before rolling back an optimistic favorite
+
+- In [songloft-org/songloft-player-lynx#20](https://github.com/songloft-org/songloft-player-lynx/pull/20) at `e654c998`, a failed favorite write from account A restored its snapshot into account B's cache.
+- Check the original server and account before sending or retrying the write. During rollback, also compare the original query and optimistic snapshot to protect newer results. Release a delayed request after switching accounts to verify that the new cache stays intact and an old queued write never goes out.
+- Seen 1× (2026-11-26).
 
 ### UI-006: Reallocate narrow-row information while preserving touch targets
 

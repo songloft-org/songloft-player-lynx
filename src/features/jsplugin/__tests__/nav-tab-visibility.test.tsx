@@ -240,7 +240,7 @@ test('the first visible plugin tab frame restores SVG markup, including during f
   const config: TabConfig = { showLibrary: true, pluginTabs: [makeTab('lx')] }
   const markup = '<svg viewBox="0 0 24 24"><circle r="6"/></svg>'
   const clients: QueryClient[] = []
-  const views: ReturnType<typeof render>[] = []
+  const views: Array<{ unmount(): void }> = []
   const boot = () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     clients.push(client)

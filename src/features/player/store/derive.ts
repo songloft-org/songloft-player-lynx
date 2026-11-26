@@ -62,6 +62,10 @@ export function hasSong(s: PlayerData): boolean {
   return s.currentSong != null
 }
 
+export function canSeekBy(s: PlayerData): boolean {
+  return s.currentSong != null && !s.currentSong.isLive && s.duration > 0
+}
+
 export function hasNext(s: PlayerData): boolean {
   return s.hasPriorityNext === true || hasNextForMode(s.playMode, s.currentIndex, s.playlist.length)
 }

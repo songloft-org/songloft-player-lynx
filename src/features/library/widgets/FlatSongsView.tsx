@@ -84,6 +84,7 @@ export function FlatSongsView({
   const canBatchRadioMode = type === 'radio'
   const { onScroll: onScrollEdge } = useScrollNotifier()
   const [searchText, setSearchText] = useState('')
+  const [dismissedSearch, setDismissedSearch] = useState<string | null>(null)
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [selectingAll, setSelectingAll] = useState(false)
@@ -104,7 +105,7 @@ export function FlatSongsView({
       excludePlaylistLabels: nameExcludePlaylistLabels,
     }).then(setNamesCache).catch(() => {})
   }
-  const activeSuggestions = searchText.length >= 2
+  const activeSuggestions = searchText !== dismissedSearch && searchText.length >= 2
     ? namesCache.filter(n => n.toLowerCase().includes(searchText.toLowerCase())).slice(0, 5)
     : []
 
@@ -302,20 +303,36 @@ export function FlatSongsView({
           className='library__search-input'
           placeholder={searchPlaceholder}
           value={searchText}
-          onInput={(value: string) => setSearchText(value)}
+          confirmType='search'
+          onInput={(value) => {
+            setSearchText(value)
+            // A native input can echo the title after a suggestion fills it.
+            setDismissedSearch(dismissed => dismissed === value ? dismissed : null)
+          }}
+          onConfirm={setDismissedSearch}
         />
-        {activeSuggestions.length > 0
-          ? (
-            <view className='library__suggestions'>
-              {activeSuggestions.map(s => (
-                <view key={s} className='library__suggestion-item' bindtap={() => { setSearchText(s) }}>
-                  <text className='library__suggestion-text'>{s}</text>
-                </view>
-              ))}
-            </view>
-          )
-          : null}
       </view>
+      {activeSuggestions.length > 0
+        ? (
+          <view className='library__suggestions'>
+            {activeSuggestions.map(title => (
+              <view
+                key={title}
+                className='library__suggestion-item'
+                accessibility-element={true}
+                accessibility-traits='button'
+                accessibility-label={title}
+                bindtap={() => {
+                  setSearchText(title)
+                  setDismissedSearch(title)
+                }}
+              >
+                <text className='library__suggestion-text'>{title}</text>
+              </view>
+            ))}
+          </view>
+        )
+        : null}
 
       <LibraryToolbar
         sortId={sortId}

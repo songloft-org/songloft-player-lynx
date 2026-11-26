@@ -1,5 +1,103 @@
 # 进展与交接（PROGRESS）
 
+<a id="issue-595"></a>
+
+## 2026-11-25 · 播放定位快捷按钮 / Playback location shortcuts
+
+首页可以直接打开当前播放来源歌单，详情页可以清除搜索并定位当前歌曲。旧候选在搜索结果切回全量列表时显示了 20 首，但首次续页调用仍落在旧查询上。详情页现在在查询观察器切换后续页，并等待后台刷新结束。列表用既有滚动机制落位，重复点击同一首可以重新定位。[songloft-org/songloft#595](https://github.com/songloft-org/songloft/issues/595)
+
+Home opens the source playlist for current playback. Playlist details clear the search and locate the current track. The earlier candidate showed the first 20 songs after clearing the search, but sent the initial next-page call to the previous query. Playlist details now paginate after the query observer switches and after any background refresh. The list uses its existing scrolling behavior and accepts repeated requests for the same track. [songloft-org/songloft#595](https://github.com/songloft-org/songloft/issues/595)
+
+基线 `936146e8ce7ef79a37d596641b44d2dc14a5c97f`，源码与测试 diff SHA-256 `516628460ab122224e4796b5f46089592e5ecf49a7412e1a443ab7bfb581e52c`。Linux x86_64、Node 22.17.1 和 Go 1.26.0。旧源码上两条入口回归因按钮缺失而失败。恢复旧刷新判断时，续页回归因提前请求而失败。Docker Chrome 121 在 390px 和 1366px 用真实后端播放 65 首测试歌单的最后一首，验证了首页打开隐藏歌单、从单条搜索结果自动续页至第 65 首，以及滚离后再次定位。Android Debug APK 编译通过。
+
+Baseline `936146e8ce7ef79a37d596641b44d2dc14a5c97f`, with source and test diff SHA-256 `516628460ab122224e4796b5f46089592e5ecf49a7412e1a443ab7bfb581e52c`. Linux x86_64, Node 22.17.1, and Go 1.26.0. Two shortcut regressions failed on the baseline because the controls were absent. Restoring the previous refresh check made the pagination regression fail because it requested the next page early. Docker Chrome 121 at 390px and 1366px played the last track of a 65-track fixture on a real backend. It opened a hidden playlist from Home, loaded through track 65 from one filtered result, and located the same track again after scrolling away. The Android Debug APK built successfully.
+
+最终 `pnpm exec tsc -b`、`pnpm test`（376 文件、3,939 项）、`pnpm run build`（Lynx 与 Web）、`assembleDebug` 和 `git diff --check` 均通过。Android 14 模拟器安装包内的 Lynx bundle 与本次构建摘要一致。点击测试歌曲后，服务端播放流返回 200，播放记录返回 204。暂停后从首页打开隐藏歌单，详情初始显示第 1 首，点击定位触发三次续页并在视口显示高亮的第 65 首。Not run：报告人的 Android 真机和桌面安装包。
+
+The final `pnpm exec tsc -b`, `pnpm test` (3,939 tests across 376 files), `pnpm run build` (Lynx and Web), `assembleDebug`, and `git diff --check` passed. The APK installed on the Android 14 emulator contained the verified Lynx bundle. Tapping the fixture track returned HTTP 200 for the stream and 204 for the play record. After pausing, Home opened the hidden playlist. The details initially displayed track 1. Tapping locate loaded three more pages and brought the highlighted track 65 into the viewport. Not run: the reporter’s Android phone and packaged desktop apps.
+
+<a id="issue-593"></a>
+
+## 2026-11-25 · 播放器快退和快进 10 秒 / 10-second playback jumps
+
+全屏播放器在播放键两侧增加快退和快进，播放模式和收藏移到工具行。迷你播放栏按自身宽度显示这两个入口，并保留「仅播放」偏好。直播和未知时长的音源禁用相对跳转。[songloft-org/songloft#593](https://github.com/songloft-org/songloft/issues/593)
+
+在 Linux x86_64 和 Node 22.17.1 上，基线 `02def364483c15ade0a3aa4d2a972bc0b5454083` 的新增三条用例均因缺少按钮失败。候选源码和测试差异的 SHA-256 为 `a05eb8108e8046bd7fe879af9cf9a1b29f19ca87773f0d67e72d15b327a75703`。类型检查、Vitest 全量 3934 项、最终定向检查 28 项和 Lynx／Web 构建通过。Docker Chrome 用真实后端与测试音频验证 320、390、768、1366、1920 像素宽的全屏控件及 568×320、844×390、1024×420 横向布局，在桌面底栏实测跳转及缩窗后恢复显示。播放和暂停两态、首尾边界通过。原生设备未验证。
+
+The full player puts rewind and forward beside playback and moves play mode and favorites to the tool row. The mini player uses its own width to decide whether to show the new controls and respects the play-only preference. Relative seeking is disabled for live and unknown-duration media. [songloft-org/songloft#593](https://github.com/songloft-org/songloft/issues/593)
+
+On Linux x86_64 with Node 22.17.1, the three new cases failed on baseline `02def364483c15ade0a3aa4d2a972bc0b5454083` because the buttons were absent. The candidate source and test diff has SHA-256 `a05eb8108e8046bd7fe879af9cf9a1b29f19ca87773f0d67e72d15b327a75703`. Type checking, all 3934 Vitest tests, 28 final focused checks, and the Lynx and Web builds passed. Docker Chrome with a real backend and fixture audio covered full-player widths of 320, 390, 768, 1366, and 1920 pixels and landscape sizes of 568×320, 844×390, and 1024×420. It also verified desktop mini-player seeking and visibility after resizing. Playing, paused, start, and end positions were exercised. Native devices were not tested.
+
+## 2026-11-24 · songloft-org/songloft#591 收藏长轮询生命周期
+
+基线为 `2f3010c5beff70b1e2263ff1ecdb47840201c3fb`，修改保留在未提交工作树。收藏变更 watcher 现在把 HTTP 请求纳入自身生命周期，停止或会话切换会立即 abort 在途请求，同一 watcher 重复启动只保留一个运行循环。每次会话固定服务器地址，避免旧订阅跟随全局配置漂移。35 秒接收超时、成功刷新后推进 cursor 和指数退避继续保留。详细记录见 [issue-591.md](issue-591.md)。
+
+`pnpm exec vitest run src/features/library/__tests__/favorite-change-watcher.test.ts src/features/library/__tests__/favorite-changes.test.ts` 通过 8 项；`pnpm exec tsc -b`、`pnpm test`（376 文件 / 3929 项）、`pnpm run build` 和 `pnpm run build:web` 通过。未运行报告人的 Docker 页面长时间复现、原生设备和桌面设备。
+
+The baseline is `2f3010c5beff70b1e2263ff1ecdb47840201c3fb`, with the change kept in the uncommitted working tree. The favorite-change watcher now owns its HTTP request lifetime. Stopping it or changing session state aborts the in-flight request immediately, and calling `run()` twice on one watcher keeps one loop. Each session captures its server address, while the 35-second receive deadline, post-refresh cursor advancement, and exponential backoff remain. See [issue-591.md](issue-591.md).
+
+The focused watcher tests passed 8 cases. `pnpm exec tsc -b`, `pnpm test` (376 files / 3929 tests), `pnpm run build`, and `pnpm run build:web` passed. The reporter's long-lived Docker page, native devices, and desktop devices were not run.
+
+2026-11-25，原版 CI 镜像的嵌套插件页在可控状态帧输入下重现卡片卡顿。对照只清 mark、只清 measure 和临时禁用 User Timing 追踪，将 worker CPU 上升定位到持续累积的 mark。[复查记录](issue-591.md#web-user-timing)
+
+On November 25, controlled status frames reproduced slow panel switches in the nested plugin on the original CI image. Clearing marks, clearing measures, and temporarily disabling User Timing tracing in separate runs traced the rise in worker CPU to accumulating marks. [Follow-up](../en/project/issue-591.md#web-user-timing)
+
+后续升级共享 Lynx npm 依赖并迁移兼容补丁。冻结锁文件安装、类型检查、Vitest 3,941 项、发布脚本 95 项以及 Lynx 和 Web 双产物构建通过。Docker Chrome 在重建后的内嵌 Web 实际登录，语音页持续收到状态帧时未积累 mark。同批 Android Lynx 4.2.0 标准版调试包构建通过，设备运行待验证。[升级验证](issue-591.md#lynx-upgrade)
+
+The shared Lynx npm dependencies and their compatibility patches were upgraded. The frozen lockfile install, type checking, 3,941 Vitest tests, 95 release script tests, and the Lynx and Web builds passed. Docker Chrome signed in on the rebuilt embedded Web client and confirmed that changing status frames did not accumulate marks in the voice page. The standard Android debug APK also built with Lynx 4.2.0. Device testing is pending. [Upgrade verification](../en/project/issue-591.md#lynx-upgrade)
+
+<a id="harmony-shell-plugin-frame"></a>
+
+## 2026-11-23 · 鸿蒙智能音箱热更新白屏 / HarmonyOS smart speaker page blank after bundle update
+
+基线为 `c076d382e477e60797393da8d650319ba4cf3728`，发布脚本、契约及回归测试的未提交差异 SHA-256 为 `783a5452453fc509896063313cd8d84fdf90937efbc692ecdc27a3d919579ace`。将签名清单的最低壳版本按平台生成。HarmonyOS 要求 2.13.13，这一正式 HAP 已包含智能音箱使用的原生插件容器。已受影响的用户可安装该完整 HAP。[Issue #18](https://github.com/songloft-org/songloft-player-lynx/issues/18) · [v0.1.6 发布](https://github.com/songloft-org/songloft-player-lynx/releases/tag/v0.1.6) · [v2.13.13 发布](https://github.com/songloft-org/songloft-player-lynx/releases/tag/v2.13.13)
+
+The baseline is `c076d382e477e60797393da8d650319ba4cf3728`. The uncommitted release script, contract and regression test diff has SHA-256 `783a5452453fc509896063313cd8d84fdf90937efbc692ecdc27a3d919579ace`. The signed manifest now specifies the minimum shell version per platform. HarmonyOS requires 2.13.13, the first stable HAP with the native plugin container used by the smart speaker page. Affected users can install that full HAP. [Issue #18](https://github.com/songloft-org/songloft-player-lynx/issues/18) · [v0.1.6 release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/v0.1.6) · [v2.13.13 release](https://github.com/songloft-org/songloft-player-lynx/releases/tag/v2.13.13)
+
+- 从两个公开 HAP 读取 `ets/modules.abc` 和 `native-host.json`。组件和注册名只存在于 v2.13.13。Linux x86_64 / Node 22.17.1 中，用 Node 加密适配器执行 v0.1.6 的实际 ArkTS 验签代码。原签名清单通过，该壳允许从 0.1.6 更新到 2.13.13。用生产脚本生成并以临时测试密钥签名的候选清单，ArkTS 与客户端 JS 均拒绝 0.1.6 和 2.13.12 壳，接受 2.13.13 壳。
+- 在隔离旧源码上，新增签名清单回归因 HarmonyOS 目标的最低壳版本仍是 0.1.0 而失败。修改后发布工具 95 项、Vitest 376 个文件共 3,928 项、TypeScript 检查及 Lynx、Web 双产物构建通过。
+- Not run：候选 HAP 重编译、报告人设备的安装与智能音箱实测。本次修改涉及发布清单，尚未发布。
+
+- Read `ets/modules.abc` and `native-host.json` from both public HAPs. The component and registration name are present only in v2.13.13. On Linux x86_64 and Node 22.17.1, the v0.1.6 ArkTS verification code accepted the original signed manifest through a Node crypto adapter and allowed the update from 0.1.6 to 2.13.13. A manifest generated by the production release script and signed with a temporary test key was rejected for shells 0.1.6 and 2.13.12 and accepted for 2.13.13 by both ArkTS and client JS checks.
+- The new signed-manifest regression failed on the isolated old source because the HarmonyOS target still required only 0.1.0. All 95 release checks, 3,928 Vitest tests across 376 files, TypeScript checking and both Lynx and Web bundle builds passed with the change.
+- Not run: recompiling a candidate HAP, installing it on the reporter’s device, or exercising the smart speaker there. The manifest change has yet to ship.
+
+<a id="library-search-suggestions"></a>
+
+## 2026-11-23 · 曲库搜索补全 / Library search suggestions
+
+Lynx 基线为 `27df490bb720061d774a03522d361d650a9efc36`，代码与回归测试的未提交 diff SHA-256 为 `aeed884751d20a795702eb85aa5a7585e67e951d5c4f021bdf411b0f8a6578d6`。补全列表从搜索栏移到歌曲视图的绝对定位层，点选候选或确认搜索后收起。Android 输入框回报已填入的标题时，浮层继续收起。
+
+The Lynx baseline is `27df490bb720061d774a03522d361d650a9efc36`. The uncommitted code and regression test diff has SHA-256 `aeed884751d20a795702eb85aa5a7585e67e951d5c4f021bdf411b0f8a6578d6`. Suggestions now occupy an absolutely positioned layer in the song view and close on selection or search confirmation. The layer stays closed when the Android input echoes the chosen title.
+
+- Docker Chromium 121 在 390×720 下访问临时后端并输入 `Aur`。旧版五条候选使工具栏顶部由 172 变为 296，列表顶部由 219 变为 343。候选版的工具栏和列表各保持在 172 和 219，浮层宽度与输入框同为 358。320×720 和 1280×720 下也保持布局稳定，点选候选后搜索结果收敛为一首，按 Enter 能收起候选。
+- Android 14 x86_64 模拟器在 Lynx 4.0.0 中使用 Gboard 输入，旧版的工具栏和列表下移 120 个布局像素。最终 APK 与设备上的 SHA-256 一致。弹出五条候选时输入框、工具栏和列表的位置与尺寸保持一致。点选后等待输入回显，浮层保持收起。再次输入并触摸 Gboard 搜索键也能收起。
+- 初版布局的 Vitest 全量 3,928 项通过。追加了原生回显断言后，移除回显保护的隔离副本在新增断言失败。最终曲库 268 项测试、Lynx 和 Web 构建、TypeScript 检查及 Android `assembleDebug` 通过。真机、iOS 和 HarmonyOS 未运行验证。
+
+- Docker Chromium 121 used the temporary backend at 390×720. Typing `Aur` in the old build moved the toolbar from y=172 to y=296 and the list from y=219 to y=343. The candidate kept them at y=172 and y=219 with the suggestion layer matching the 358-pixel input width. The layout was also stable at 320×720 and 1280×720. Selecting a suggestion narrowed the results to one song, and Enter dismissed the suggestions.
+- On the Android 14 x86_64 emulator with Lynx 4.0.0, typing with Gboard moved the old toolbar and list down by 120 layout pixels. The final APK checksum matched the installed package. The input, toolbar, and list kept their positions and sizes while five suggestions were visible. Selection stayed dismissed after the native input echoed the title. Reopening suggestions and tapping Gboard's search key also dismissed them.
+- All 3,928 Vitest checks passed on the layout revision. After adding the native echo assertion, an isolated copy with the echo guard removed failed at that assertion. All 268 library checks passed on the final revision, along with both bundle builds, the TypeScript check, and Android `assembleDebug`. Physical devices, iOS, and HarmonyOS were not tested.
+
+<a id="android-library-header"></a>
+
+## 2026-11-22 · Android 曲库标题栏 / Android library header
+
+Lynx 基线为 `2ee38bb48a37b32c10139d6402f3b328d856128d`，候选代码差异 SHA-256 为 `0f548298d896d96783ea8fe9cee28573bf95382cd7d6365b646f082c2f8bfb2c`。旧包在 Android 14 x86_64 模拟器上切换电台与歌手时，标题栏高从 72 变为约 68.2，标题文字和切换条随之上移。文件夹视图在同一回归中也出现约 3.8 的高度差。所有标题栏操作统一使用 44 的触摸尺寸，标题单行显示，标题栏由当前字号和共同按钮尺寸决定高度。
+
+The baseline is Lynx `2ee38bb48a37b32c10139d6402f3b328d856128d`. The candidate code diff SHA-256 is `0f548298d896d96783ea8fe9cee28573bf95382cd7d6365b646f082c2f8bfb2c`. In the old APK on an Android 14 x86_64 emulator, switching from Radio to Artist reduced the header from 72 to about 68.2 layout pixels and moved the title and switcher up. Folders showed the same gap of about 3.8. The header now derives its height from the current single-line title and the shared 44-pixel touch target for its actions.
+
+- 使用 Lynx 4.0.0 Debug APK 和同一个临时后端，核对设备上候选 APK 的 SHA-256。曲库 E2E 场景 5 项通过，测量覆盖全部 18 个视图。旧包同一场景的几何断言在文件夹失败，单独对照也测出歌手的差异。
+- 在原生界面完成两轮各 12 次触摸切换，覆盖电台、九个分类、歌单和返回歌曲。411 宽英文默认字号的标题栏高度统一为 72，320 宽中文最大字号统一为 80。歌手网格、列表、详情进入和返回均通过，检查了两轮的标题栏截图。
+- Linux x86_64、Node 22.17.1、pnpm 11.15.1 上的 `pnpm exec tsc -b`、Lynx/Web 构建和 Android `assembleDebug` 通过。Docker Chromium 在 390 宽的嵌入 Web 产物完成相同的 12 次切换，标题栏和内容位置保持一致。
+- Vitest 全量 3,927 项中，使用 Debug bundle 时仅正式包的测试桥检查失败。重新生成生产 bundle 后，该文件 3 项全部通过。`pnpm run test:release` 的 95 项检查通过。
+- Android 真机及其他原生平台未执行验证。
+
+- Both APKs used Lynx 4.0.0 and the same temporary backend. The candidate APK checksum matched the installed package. All five library E2E tests passed, including geometry across all 18 views. The same scenario failed its Folders geometry assertion with the old APK. Separate baseline measurements captured the Artist gap.
+- Two rounds of 12 native taps covered Radio, all nine categories, a playlist view, and the return to Songs. The header stayed at 72 with default English text at width 411 and at 80 with the largest Chinese text at width 320. Artist grid and list modes and the round trip to artist details passed. Screenshots from both layouts were reviewed.
+- On Linux x86_64 with Node 22.17.1 and pnpm 11.15.1, `pnpm exec tsc -b`, the Lynx and Web builds, and Android `assembleDebug` passed. Docker Chromium completed the same 12 switches in an embedded Web build at width 390 with stable title and content positions.
+- The Vitest run passed 3,926 of 3,927 checks with the debug bundle. The release-bundle guard flagged the test bridge. All three tests in that file passed when rerun against the production bundles. All 95 checks from `pnpm run test:release` passed.
+- Physical Android hardware and other native platforms were not tested.
+
 <a id="issue-590"></a>
 
 ## 2026-11-22 · #590 Web 插件切换残影 / Web plugin stays visible after a tab switch

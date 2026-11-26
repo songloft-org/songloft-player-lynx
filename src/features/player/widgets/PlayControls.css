@@ -1,33 +1,21 @@
 /* Transport controls. Box sizes arrive inline from `player-layout.ts` (they scale
    with the screen class, and Lynx has no `@media`); everything else via Muse tokens. */
 
-.player-controls {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-4);
-}
-
-/*
- * prev · play/pause · next, kept together and centred.
- *
- * `flex: 1` with the mode and favorite slots pinned at either end is what centres the
- * play button on the screen rather than in the leftover space — the two flanking slots
- * are the same width, so the midpoint of this group is the midpoint of the row.
- */
 .player-controls__transport {
   display: flex;
   flex-direction: row;
-  flex: 1;
+  align-self: center;
+  width: 100%;
+  max-width: 360px;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
+  justify-content: space-evenly;
+  margin-bottom: var(--space-4);
 }
 
 .player-controls__btn {
   display: flex;
   flex-direction: column;
+  flex-shrink: 1;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-pill);
@@ -57,6 +45,7 @@
 }
 
 .player-controls__btn--primary {
+  flex-shrink: 0;
   background-color: var(--accent);
   /* Muse §3.5: the primary play button earns a floating shadow. */
   box-shadow: var(--shadow-md);

@@ -1,25 +1,27 @@
 diff --git a/dist/client/mainthread/LynxView.js b/dist/client/mainthread/LynxView.js
+index a4b2c93..f9a527c 100644
 --- a/dist/client/mainthread/LynxView.js
 +++ b/dist/client/mainthread/LynxView.js
-@@ -71,7 +71,13 @@
-      * @property nativeModulesMap
-      * @default {}
+@@ -100,7 +100,13 @@ export class LynxViewElement extends HTMLElement {
+      * A `LynxConsoleModule` whose factory returns a Console-like object provides
+      * the lexical `console` for this view's background bundles.
       */
 -    nativeModulesMap;
 +    #nativeModulesMap;
 +    get nativeModulesMap() {
 +        return this.#nativeModulesMap;
 +    }
-+    set nativeModulesMap(val) {
-+        this.#nativeModulesMap = val;
++    set nativeModulesMap(value) {
++        this.#nativeModulesMap = value;
 +    }
      /**
-      * @param
-      * @property napiModulesMap
+      * Host-provided modules exposed synchronously through main-thread `lynx.module(name)`.
+      *
 diff --git a/dist/client/mainthread/LynxViewInstance.js b/dist/client/mainthread/LynxViewInstance.js
+index 0988d52..bad9d13 100644
 --- a/dist/client/mainthread/LynxViewInstance.js
 +++ b/dist/client/mainthread/LynxViewInstance.js
-@@ -22,6 +22,42 @@
+@@ -24,6 +24,42 @@ linkElement.href = IN_SHADOW_CSS;
  linkElement.type = 'text/css';
  linkElement.fetchPriority = 'high';
  linkElement.blocking = 'render';
@@ -62,7 +64,7 @@ diff --git a/dist/client/mainthread/LynxViewInstance.js b/dist/client/mainthread
  const pixelRatio = window.devicePixelRatio;
  const screenWidth = window.screen.availWidth * pixelRatio;
  const screenHeight = window.screen.availHeight * pixelRatio;
-@@ -57,6 +93,7 @@
+@@ -68,6 +104,7 @@ export class LynxViewInstance {
      // both — so both share a single per-url promise cache.
      #bundleLoadCache = new Map();
      #pageConfig;
@@ -70,95 +72,130 @@ diff --git a/dist/client/mainthread/LynxViewInstance.js b/dist/client/mainthread
      #nativeModulesMap;
      #napiModulesMap;
      boundingClientRectService;
-@@ -81,9 +118,9 @@
-         this.transformVH = transformVH;
+@@ -93,9 +130,10 @@ export class LynxViewInstance {
          this.transformREM = transformREM;
+         this.isProfiling = parentDom.isProfiling;
          this.systemInfo = createSystemInfo(browserConfig);
 -        if (!isSSR) {
 -            this.rootDom.append(linkElement.cloneNode(false));
 -        }
 +        const stylesheet = isSSR ? undefined : linkElement.cloneNode(false);
 +        this.#stopWatchingLayoutStyles = watchLayoutStyles(rootDom, stylesheet);
-+        if (stylesheet) this.rootDom.append(stylesheet);
++        if (stylesheet)
++            this.rootDom.append(stylesheet);
          this.#nativeModulesMap = nativeModulesMap;
          this.#napiModulesMap = napiModulesMap;
          this.mainThreadGlobalThis = mtsRealm.globalWindow;
-@@ -238,6 +275,7 @@
-         }));
-     }
-     async [Symbol.asyncDispose]() {
+@@ -293,6 +331,7 @@ export class LynxViewInstance {
+             console.error('[lynx-web] error while dispatching __DestroyLifetime', e);
+         }
+         this.engineContext.dispose();
 +        this.#stopWatchingLayoutStyles?.();
          this.boundingClientRectService.dispose();
+         this.intersectionObserverService.dispose();
          await this.backgroundThread[Symbol.asyncDispose]();
-         this.exposureServices.dispose();
 diff --git a/dist/client/mainthread/elementAPIs/WASMJSBinding.js b/dist/client/mainthread/elementAPIs/WASMJSBinding.js
+index b02ef8d..f419a9a 100644
 --- a/dist/client/mainthread/elementAPIs/WASMJSBinding.js
 +++ b/dist/client/mainthread/elementAPIs/WASMJSBinding.js
-@@ -54,7 +54,13 @@
+@@ -54,7 +54,7 @@ export class WASMJSBinding {
          const target = this.getElementByUniqueId(targetUniqueId);
          const currentTarget = this.getElementByUniqueId(currentTargetUniqueId);
          const resolvedTarget = (target ?? currentTarget);
 -        if (!resolvedTarget)
-+        // `currentTarget` owns the handler. A missing one means the element was
-+        // unmounted while its EventInfo is still reachable (a stale global-bind
-+        // entry is only collected by the next flush's gc()). Generating its
-+        // target object would throw, and that TypeError crosses the wasm
-+        // boundary and poisons wasm-bindgen's borrows for every later flush
-+        // ("recursive use of an object ... unsafe aliasing in rust").
 +        if (!resolvedTarget || !currentTarget)
              return;
          const resolvedTargetDataset = target ? targetDataset : currentTargetDataset;
          eventObject.target = this.generateTargetObject(resolvedTarget, resolvedTargetDataset);
-@@ -76,7 +82,10 @@
+@@ -80,7 +80,7 @@ export class WASMJSBinding {
+         const target = this.getElementByUniqueId(targetUniqueId);
+         const currentTarget = this.getElementByUniqueId(currentTargetUniqueId);
+         const resolvedTarget = (target ?? currentTarget);
+-        if (!resolvedTarget)
++        if (!resolvedTarget || !currentTarget)
+             return;
+         const resolvedTargetDataset = target ? targetDataset : currentTargetDataset;
+         const eventTarget = this.generateTargetObject(resolvedTarget, resolvedTargetDataset);
+@@ -104,7 +104,7 @@ export class WASMJSBinding {
          // originated outside the Lynx element tree, so fall back to currentTarget
          // (the element that registered the global handler).
          const resolvedTarget = (target ?? currentTarget);
 -        if (!resolvedTarget)
-+        // Same guard as `runWorklet`: without `currentTarget` there is no
-+        // handler to deliver to — the registration is stale, so drop the event
-+        // instead of crashing (and poisoning the wasm borrows).
 +        if (!resolvedTarget || !currentTarget)
              return;
          const resolvedTargetDataset = target ? targetDataset : currentTargetDataset;
          eventObject.target = this.generateTargetObject(resolvedTarget, resolvedTargetDataset);
-@@ -163,17 +172,32 @@
+@@ -190,32 +190,47 @@ export class WASMJSBinding {
+         this.lynxViewInstance.exposureServices.updateExposureStatus(enabledExposureElements, disabledExposureElements);
      }
      enableElementEvent(elementRef, eventName) {
+-        this.#invokeElementEventMethod(elementRef, eventName, 'enableEvent');
+-    }
+-    disableElementEvent(elementRef, eventName) {
+-        this.#invokeElementEventMethod(elementRef, eventName, 'disableEvent');
+-    }
+-    #invokeElementEventMethod(elementRef, eventName, method) {
          const element = elementRef.deref();
--        if (element) {
--            // @ts-expect-error
--            element.enableEvent?.(LynxEventNameToW3cCommon[eventName] ?? eventName);
--        }
-+        if (!element) return;
+         if (!element)
+             return;
+-        const normalizedEventName = LynxEventNameToW3cCommon[eventName]
+-            ?? eventName;
+-        if (element[method]) {
+-            element[method](normalizedEventName);
 +        const name = LynxEventNameToW3cCommon[eventName] ?? eventName;
 +        if (typeof element.enableEvent === 'function') {
 +            element.enableEvent(name);
-+            return;
-+        }
-+        if (!element.localName?.includes('-')) return;
+             return;
+         }
+         const registry = element.ownerDocument.defaultView?.customElements;
+         if (!registry || !element.localName.includes('-'))
+             return;
 +        const pending = element.__songloftPendingEvents ??= new Map();
 +        pending.set(name, (pending.get(name) ?? 0) + 1);
-+        customElements.whenDefined(element.localName).then(() => {
+         void registry.whenDefined(element.localName).then(() => {
+-            const upgradedElement = elementRef.deref();
+-            if (!upgradedElement)
 +            const current = elementRef.deref();
 +            const count = pending.get(name) ?? 0;
 +            pending.delete(name);
-+            if (current) for (let i = 0; i < count; i++) current.enableEvent?.(name);
-+        });
++            if (!current || count === 0)
+                 return;
+-            registry.upgrade(upgradedElement);
+-            upgradedElement[method]?.(normalizedEventName);
++            registry.upgrade(current);
++            for (let i = 0; i < count; i++)
++                current.enableEvent?.(name);
+         });
      }
-     disableElementEvent(elementRef, eventName) {
-         const element = elementRef.deref();
--        if (element) {
--            // @ts-expect-error
--            element.disableEvent?.(LynxEventNameToW3cCommon[eventName] ?? eventName);
--        }
-+        if (!element) return;
++    disableElementEvent(elementRef, eventName) {
++        const element = elementRef.deref();
++        if (!element)
++            return;
 +        const name = LynxEventNameToW3cCommon[eventName] ?? eventName;
 +        const pending = element.__songloftPendingEvents;
 +        const count = pending?.get(name) ?? 0;
 +        if (count > 0) {
-+            if (count === 1) pending.delete(name);
-+            else pending.set(name, count - 1);
-+        } else element.disableEvent?.(name);
-     }
++            if (count === 1)
++                pending.delete(name);
++            else
++                pending.set(name, count - 1);
++        }
++        else {
++            element.disableEvent?.(name);
++        }
++    }
      setAttribute(elementRef, name, value) {
          const element = elementRef.deref();
+         if (element) {
+diff --git a/dist/constants.js b/dist/constants.js
+index 00f19f7..1b60642 100644
+--- a/dist/constants.js
++++ b/dist/constants.js
+@@ -87,7 +87,6 @@ export const LYNX_TAG_TO_HTML_TAG_MAP =
+     'overlay': 'x-overlay-ng',
+     'refresh': 'x-refresh-view',
+     'refresh-header': 'x-refresh-header',
+-    'blur-view': 'x-blur-view',
+     'scroll-coordinator': 'x-foldview-ng',
+     'scroll-coordinator-header': 'x-foldview-header-ng',
+     'scroll-coordinator-slot': 'x-foldview-slot-ng',

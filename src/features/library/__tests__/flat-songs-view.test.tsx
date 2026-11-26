@@ -18,7 +18,7 @@ import { toast } from '../../../shared/ui/toast-store.js'
 const { songsHook, navigateSpy, filterInputs } = vi.hoisted(() => ({
   songsHook: vi.fn(),
   navigateSpy: vi.fn(),
-  filterInputs: [] as Array<{ placeholder: string; onInput: (v: string) => void }>,
+  filterInputs: [] as Array<{ placeholder: string; onInput: (v: string) => void; onConfirm?: (v: string) => void }>,
 }))
 const cache = vi.hoisted(() => ({ available: false, beginSongs: vi.fn(), beginSelection: vi.fn() }))
 const listProps = vi.hoisted(() => ({ estimatedItemHeight: undefined as number | undefined, lowerThreshold: 0, onEndReached: undefined as (() => void) | undefined }))
@@ -75,6 +75,7 @@ vi.mock('@lynx-js/lynx-ui-input', () => ({
       filterInputs.push({
         placeholder: props.placeholder as string,
         onInput: props.onInput as (v: string) => void,
+        onConfirm: props.onConfirm as ((v: string) => void) | undefined,
       })
     }
     return (
@@ -399,6 +400,37 @@ test('renders the search input and the toolbar (play all / sort / add / select)'
   expect(queryByTestId('library-toolbar-select')).toBeInTheDocument()
   // The sort chip shows the CURRENT sort label (default: recently added).
   expect(queryByText('Recent')).toBeInTheDocument()
+})
+
+test('search suggestions sit beside the input bar and close on selection or keyboard confirmation', async () => {
+  let resolveNames!: (names: string[]) => void
+  const names = vi.spyOn(SongsApi.prototype, 'getSongNames').mockReturnValue(new Promise(resolve => { resolveNames = resolve }))
+  const { container } = render(
+    <FlatSongsView sortId='added_at' sortOrder='desc' onSortChange={() => {}} isWide={false} />,
+  )
+  const suggestions = () => container.querySelector('.library__suggestions')
+  const type = (value: string) => act(async () => { filterInputs.at(-1)!.onInput(value) })
+
+  await act(async () => { await Promise.resolve() })
+  await type('Blu')
+  expect(names).toHaveBeenCalledOnce()
+  await act(async () => { resolveNames(['Blue Sky', 'Blue Moon', 'Different Song']) })
+  expect(suggestions()?.closest('.library__songs-view')).toBe(container.querySelector('.library__songs-view'))
+  expect(suggestions()?.closest('.library__search-bar')).toBeNull()
+  expect([...suggestions()!.querySelectorAll('.library__suggestion-item')].map(item => item.textContent))
+    .toEqual(['Blue Sky', 'Blue Moon'])
+
+  await act(async () => { fireEvent.tap(suggestions()!.querySelector('.library__suggestion-item')!) })
+  expect(songsHook.mock.lastCall?.[0].keyword).toBe('Blue Sky')
+  expect(suggestions()).toBeNull()
+  await type('Blue Sky')
+  expect(suggestions()).toBeNull()
+
+  await type('Blue')
+  expect(suggestions()).not.toBeNull()
+  await act(async () => { filterInputs.at(-1)!.onConfirm?.('Blue') })
+  expect(songsHook.mock.lastCall?.[0].keyword).toBe('Blue')
+  expect(suggestions()).toBeNull()
 })
 
 test('defaults to added_at/desc with local and remote for the all view', async () => {

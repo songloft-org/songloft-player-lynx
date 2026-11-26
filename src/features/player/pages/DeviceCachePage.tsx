@@ -8,6 +8,7 @@ import { SubPageShell } from '../../settings/widgets/SubPageShell.js'
 import { useAuthStore } from '../../auth/store/auth-store.js'
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js'
 import { toast } from '../../../shared/ui/toast-store.js'
+import { setLastContentLocation } from '../../../shared/nav/shell-navigation.js'
 import { subscribeAppResumed } from '../../../native/app-lifecycle.js'
 import { clearIndexedNamespace, clearLegacySongs, indexedSongCacheAvailable, listIndexedSongs, removeIndexedSong, type CachedEntry } from '../data/indexed-song-cache.js'
 import { currentOfflineOwner } from '../data/offline-identity.js'
@@ -67,6 +68,10 @@ export function DeviceCachePage() {
   const needle = search.trim().toLocaleLowerCase()
   const filtered = entries.filter(entry => [entry.snapshot.title, entry.snapshot.artist, entry.snapshot.album].join(' ').toLocaleLowerCase().includes(needle))
   const localCurrent = current && cachedSongIdentity(current)?.namespace === namespace ? current : null
+  const openPlayer = () => {
+    setLastContentLocation({ pathname: '/device-cache', search: {} })
+    void navigate({ to: '/player' })
+  }
   const play = async (entry: CachedEntry) => {
     if (busy || storage.busy || !valid()) return
     if (entry.available === false) { toast.error(t('deviceCache.fileUnavailable')); return }
@@ -75,7 +80,7 @@ export function DeviceCachePage() {
     try {
       const queue = cachedEntryQueue(filtered, entry)
       await usePlayerStore.getState().playPlaylist(queue.playlist, queue.index)
-      if (valid()) void navigate({ to: '/player' })
+      if (valid()) openPlayer()
     } catch { toast.error(t('deviceCache.fileUnavailable')); void load() }
     finally { setBusy(false) }
   }
@@ -146,7 +151,7 @@ export function DeviceCachePage() {
               <text className='device-cache__note' text-maxline='1'>{localCurrent.title}</text>
               <view className='device-cache__actions'>
                 <view className='device-cache__button' bindtap={() => { void usePlayerStore.getState().togglePlay().catch(() => toast.error(t('deviceCache.fileUnavailable'))) }} data-testid='device-cache-toggle'><text>{playing ? t('common.pause') : t('common.play')}</text></view>
-                <view className='device-cache__button' bindtap={() => { void navigate({ to: '/player' }) }} data-testid='device-cache-open-player'><text>{t('deviceCache.openPlayer')}</text></view>
+                <view className='device-cache__button' bindtap={openPlayer} data-testid='device-cache-open-player'><text>{t('deviceCache.openPlayer')}</text></view>
               </view>
             </view>}
           </>

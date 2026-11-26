@@ -613,7 +613,8 @@ test('iframe declines or times out once; unmount cancels a pending fallback', as
     act(() => { dispatchBack(); vi.advanceTimersByTime(1000) })
     expect(h.continueBack).toHaveBeenCalledTimes(2)
     act(activate)
-    act(() => { dispatchBack(); unmount(); vi.advanceTimersByTime(1000) })
+    act(() => { dispatchBack(); unmount() })
+    act(() => { vi.advanceTimersByTime(1000) })
     expect(h.continueBack).toHaveBeenCalledTimes(2)
   } finally { vi.useRealTimers() }
 })

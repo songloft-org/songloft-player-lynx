@@ -10,7 +10,7 @@
     "nodeVersion": "22.18.0"
   },
   "apiBaseline": "4.2",
-  "builder": "0.0.30",
+  "builder": "0.0.31",
   "builderDownloader": "3.1.0",
   "ffmpeg": "8.0.1",
   "ffmpegCommit": "894da5ca7d742e4429ffb2af534fcda0103ef593",
@@ -30,8 +30,8 @@
     "renderAPI": "sw/bgra"
   },
   "sharedBuild": {
-    "@lynx-js/react": "0.123.2",
-    "@lynx-js/react-rsbuild-plugin": "0.18.2",
-    "@lynx-js/rspeedy": "0.16.2"
+    "@lynx-js/react": "0.129.4",
+    "@lynx-js/react-rsbuild-plugin": "0.22.4",
+    "@lynx-js/rspeedy": "0.19.0"
   }
 }

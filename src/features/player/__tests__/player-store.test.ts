@@ -1288,3 +1288,17 @@ describe('background queue fill (songloft-player-lynx#9)', () => {
     expect(usePlayerStore.getState().playlist).toEqual([])
   })
 })
+
+test('playing after singlePlay completion restarts the completed song from zero', async () => {
+  const audio = getAudio() as MockSongloftAudio
+  usePlayerStore.getState().setPlayMode('singlePlay')
+  await usePlayerStore.getState().playPlaylist([song(1, 5)], 0)
+  await flush()
+  await usePlayerStore.getState().seek(4_500)
+  usePlayerStore.getState()._onCompleted()
+  expect(usePlayerStore.getState().playlistCompleted).toBe(false)
+  await usePlayerStore.getState().togglePlay()
+  await flush()
+  expect(audio.lastLoad?.opts?.initialPositionMs ?? 0).toBe(0)
+  expect(usePlayerStore.getState().currentTime).toBe(0)
+})
