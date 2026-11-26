@@ -21,7 +21,7 @@ import {
   type NavDestination,
 } from '../nav/destinations.js'
 import { MoreTabsSheet } from '../nav/MoreTabsSheet.js'
-import { activeNavPath, getShellWidth, setLastShellLocation, setNavPaths, setShellWidth, showsMiniPlayer, subscribeShellWidth } from '../nav/shell-navigation.js'
+import { activeNavPath, getShellWidth, setLastContentLocation, setLastShellLocation, setNavPaths, setShellWidth, showsMiniPlayer, subscribeShellWidth } from '../nav/shell-navigation.js'
 import { getIsScrolled, subscribeIsScrolled } from '../nav/scroll-visibility.js'
 import { getRailCollapsed, subscribeRailCollapsed, toggleRailCollapsed } from './rail-collapse.js'
 import { LiquidTabIndicator } from './LiquidTabIndicator.js'
@@ -76,6 +76,7 @@ export function ShellLayout() {
   const railCollapsed = useSyncExternalStore(subscribeRailCollapsed, getRailCollapsed)
   const { width, breakpoint, isWide, onLayoutChange } = useBreakpoint(cachedWidth, '.shell')
   const pathname = useRouterState({ select: s => s.location.pathname })
+  const search = useRouterState({ select: s => s.location.search })
   const shellTabs = useShellNavTabs()
   // Song presence for the mini-player inset tier — same condition MiniPlayer
   // itself renders under (`showsMiniPlayer(pathname)` + a loaded song), kept
@@ -112,6 +113,9 @@ export function ShellLayout() {
   // Written during render, matching how `LibraryPage` records its search — the
   // shell re-renders on every navigation, so there is nothing an effect would add.
   setLastShellLocation(pathname)
+  // Chrome-less pages (/player) don't render this shell, so this stays at the
+  // last real content page — the place the player's back/close should return to.
+  setLastContentLocation({ pathname, search: search as Record<string, unknown> })
   setNavPaths(navPaths)
   setShellWidth(width)
 

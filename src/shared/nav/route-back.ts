@@ -23,8 +23,12 @@ import { activeNavPath } from './shell-navigation.js'
 
 /** Where a back press should go. `to` is a router path, never a history delta. */
 export type BackAction =
-  /** Navigate. `librarySearch` is only meaningful when `to === '/library'`. */
-  | { kind: 'navigate'; to: string; librarySearch?: LibrarySearchLike; plugin?: PluginRouteLocation }
+  /**
+   * Navigate. `librarySearch` is only meaningful when `to === '/library'`.
+   * `search` carries an arbitrary source page's query params (e.g. a folder's
+   * `?path=`) when returning the full-screen player to where it was opened.
+   */
+  | { kind: 'navigate'; to: string; librarySearch?: LibrarySearchLike; plugin?: PluginRouteLocation; search?: Record<string, unknown> }
   /** At a tab root: show "press again to exit", or exit if already armed. */
   | { kind: 'exit-prompt' }
   /**
@@ -68,6 +72,12 @@ export interface RouteBackContext {
   pluginManagerEntry?: boolean
   /** Which tab the shell was last on, for the chrome-less pages that return to it. */
   lastShellLocation: string
+  /**
+   * The last real content page the shell rendered (pathname + search). For the
+   * full-screen player this is where the user actually came from, so it wins over
+   * the tab root when returning from `/player`.
+   */
+  lastContentLocation?: { pathname: string; search: Record<string, unknown> }
   /** The library's last sub-view, so returning to it does not reset the view. */
   lastLibrarySearch: LibrarySearchLike
 }
@@ -197,12 +207,18 @@ export function resolveRouteBack(
     return { kind: 'navigate', to: '/settings' }
   }
 
-  // Chrome-less full player, playlist detail, and a plugin page that is not a tab
-  // all return to *the tab the user thinks they are in*, which history cannot
-  // tell us — the shell records it instead.
+  // The full-screen player returns to the exact content page it was opened from
+  // (a playlist detail, a folder browse, a category) when we know it. The shell
+  // recorded that page because /player itself is chrome-less and never renders it.
+  // Falling back to the tab root keeps cold starts / notification-bar entries sane.
+  if (pathname === '/player') {
+    return toPlayerSource(ctx)
+  }
+
+  // Playlist detail and a plugin page that is not a tab return to *the tab the
+  // user thinks they are in*, which history cannot tell us — the shell records it.
   if (
-    pathname === '/player'
-    || pathname.startsWith('/playlists/')
+    pathname.startsWith('/playlists/')
     || pathname.startsWith('/plugin/')
   ) {
     return toLastShell(ctx)
@@ -217,6 +233,30 @@ function toLastShell(ctx: RouteBackContext): BackAction {
     return { kind: 'navigate', to: '/library', librarySearch: ctx.lastLibrarySearch }
   }
   return { kind: 'navigate', to: ctx.lastShellLocation }
+}
+
+/**
+ * Where closing the full-screen player goes.
+ *
+ * Prefer the exact page the player was opened from — a playlist, a folder, a
+ * category — so the user lands back where they actually were. That page is the
+ * shell's last rendered content location, because /player renders no shell.
+ *
+ * Only accept a "real" content page: a tab root still goes through
+ * {@link toLastShell} so the library's restored sub-view is preserved, and
+ * chrome-less / auth routes are ignored as impossible sources.
+ */
+function toPlayerSource(ctx: RouteBackContext): BackAction {
+  const src = ctx.lastContentLocation
+  if (src && src.pathname && src.pathname !== '/player' && src.pathname !== '/login'
+      && !src.pathname.startsWith('/player/')
+      // Tab roots go through toLastShell so the library's sub-view is restored
+      // via the type-checked librarySearch path (not a raw search object).
+      && src.pathname !== '/' && src.pathname !== '/library') {
+    const search = src.search && Object.keys(src.search).length ? src.search : undefined
+    return { kind: 'navigate', to: src.pathname, ...(search ? { search } : {}) }
+  }
+  return toLastShell(ctx)
 }
 
 /**

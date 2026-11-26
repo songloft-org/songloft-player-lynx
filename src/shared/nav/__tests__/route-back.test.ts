@@ -2,7 +2,7 @@ import '../../../shims/router-env.js'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { resolveRouteBack, type RouteBackContext } from '../route-back.js'
-import { setLastShellLocation, setNavPaths } from '../shell-navigation.js'
+import { setLastContentLocation, setLastShellLocation, setNavPaths } from '../shell-navigation.js'
 import { router } from '../../../router.js'
 import { performRouteBack, resetBackRouterForTests, setBackRouter } from '../../../core/navigation/route-back-action.js'
 
@@ -69,6 +69,7 @@ function ctx(overrides: Partial<RouteBackContext> = {}): RouteBackContext {
 beforeEach(() => {
   setNavPaths(BUILT_IN_TABS)
   setLastShellLocation('/')
+  setLastContentLocation({ pathname: '/', search: {} })
 })
 
 afterEach(() => resetBackRouterForTests())
@@ -240,7 +241,7 @@ describe('returning to the library restores the sub-view', () => {
 })
 
 describe('chrome-less pages return to the tab the shell recorded', () => {
-  test.each(['/player', '/playlists/7'])('%s follows the last shell tab', (pathname) => {
+  test.each(['/playlists/7', '/plugin/foo'])('%s follows the last shell tab', (pathname) => {
     const onHome = resolveRouteBack(pathname, ctx({ lastShellLocation: '/' }))
     expect(onHome.kind === 'navigate' && onHome.to).toBe('/')
 
@@ -249,9 +250,93 @@ describe('chrome-less pages return to the tab the shell recorded', () => {
       ctx({ lastShellLocation: '/library', lastLibrarySearch: { view: 'radio' } }),
     )
     expect(onLibrary.kind === 'navigate' && onLibrary.to).toBe('/library')
-    // Restoring the search is what stops "play a song from the radio list, close the
-    // player" from dumping you back on the first view.
     expect(onLibrary.kind === 'navigate' && onLibrary.librarySearch?.view).toBe('radio')
+  })
+
+  // With no source page (cold start / notification entry), the player still
+  // falls back to the recorded tab root.
+  test('/player falls back to the last shell tab when no source page', () => {
+    const onHome = resolveRouteBack('/player', ctx({ lastShellLocation: '/' }))
+    expect(onHome.kind === 'navigate' && onHome.to).toBe('/')
+
+    const onLibrary = resolveRouteBack(
+      '/player',
+      ctx({ lastShellLocation: '/library', lastLibrarySearch: { view: 'radio' } }),
+    )
+    expect(onLibrary.kind === 'navigate' && onLibrary.to).toBe('/library')
+    expect(onLibrary.kind === 'navigate' && onLibrary.librarySearch?.view).toBe('radio')
+  })
+})
+
+describe('/player returns to the exact page it was opened from', () => {
+  test('returns to a playlist detail the song was played from', () => {
+    const action = resolveRouteBack('/player', ctx({
+      lastShellLocation: '/library',
+      lastContentLocation: { pathname: '/playlists/7', search: {} },
+    }))
+    expect(action.kind === 'navigate' && action.to).toBe('/playlists/7')
+  })
+
+  test('returns to a folder browse page, preserving its ?path=', () => {
+    const action = resolveRouteBack('/player', ctx({
+      lastShellLocation: '/library',
+      lastContentLocation: { pathname: '/library/folders', search: { path: '/music/rock' } },
+    }))
+    expect(action.kind === 'navigate' && action.to).toBe('/library/folders')
+    expect(action.kind === 'navigate' && action.search?.path).toBe('/music/rock')
+  })
+
+  test('returns to a category drill-down, preserving ?value and ?cover', () => {
+    const action = resolveRouteBack('/player', ctx({
+      lastContentLocation: {
+        pathname: '/library/category/artist',
+        search: { value: 'kors k', cover: 'http://x/c.jpg' },
+      },
+    }))
+    expect(action.kind === 'navigate' && action.to).toBe('/library/category/artist')
+    expect(action.kind === 'navigate' && action.search?.value).toBe('kors k')
+  })
+
+  test('a tab-root source keeps the library sub-view restore path', () => {
+    const action = resolveRouteBack('/player', ctx({
+      lastShellLocation: '/library',
+      lastLibrarySearch: { view: 'radio' },
+      lastContentLocation: { pathname: '/library', search: { view: 'radio' } },
+    }))
+    // Library is a tab root: route through toLastShell so the view is restored
+    // via the type-checked path rather than a raw search object.
+    expect(action.kind === 'navigate' && action.to).toBe('/library')
+  })
+
+  test('ignores impossible chrome-less / auth sources', () => {
+    const action = resolveRouteBack('/player', ctx({
+      lastShellLocation: '/',
+      lastContentLocation: { pathname: '/player/eq', search: {} },
+    }))
+    expect(action.kind === 'navigate' && action.to).toBe('/')
+  })
+
+  // Full chain: module-level source store -> currentBackAction ctx assembly ->
+  // resolveRouteBack -> navigateTo. This is what the back key / close button run.
+  test('performRouteBack navigates to the recorded source page with its params', () => {
+    setLastShellLocation('/library')
+    setLastContentLocation({ pathname: '/playlists/42', search: {} })
+    const navigate = vi.fn()
+    setBackRouter({
+      state: { location: { pathname: '/player', search: {} } },
+      navigate,
+    } as never)
+    expect(performRouteBack()).toBe(true)
+    expect(navigate).toHaveBeenCalledWith({ to: '/playlists/42' })
+
+    const navigate2 = vi.fn()
+    setBackRouter({
+      state: { location: { pathname: '/player', search: {} } },
+      navigate: navigate2,
+    } as never)
+    setLastContentLocation({ pathname: '/library/folders', search: { path: '/music/rock' } })
+    expect(performRouteBack()).toBe(true)
+    expect(navigate2).toHaveBeenCalledWith({ to: '/library/folders', search: { path: '/music/rock' } })
   })
 })
 

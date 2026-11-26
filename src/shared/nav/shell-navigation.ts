@@ -39,6 +39,34 @@ export function setLastShellLocation(pathname: string): void {
 }
 
 /**
+ * The last *content* page the shell actually rendered, including detail routes
+ * and their search params (e.g. `/playlists/7`, `/library/folders?path=/music/ rock`).
+ *
+ * This is separate from {@link lastShellLocation} on purpose. Chrome-less pages
+ * such as `/player` do not render the shell, so the shell's last rendered page is
+ * exactly where the user came from before opening the full-screen player. Routing
+ * the player's back/close there — instead of to a tab root — preserves the place
+ * they were actually in (a playlist, a folder), which is what users expect.
+ *
+ * Session-only and module-level, like `lastShellLocation`: a cold start has no
+ * meaningful "previous page", so the player falls back to the tab root instead.
+ */
+export interface ContentLocation {
+  pathname: string
+  search: Record<string, unknown>
+}
+
+let lastContentLocation: ContentLocation | null = null
+
+export function getLastContentLocation(): ContentLocation | null {
+  return lastContentLocation
+}
+
+export function setLastContentLocation(location: ContentLocation): void {
+  lastContentLocation = location
+}
+
+/**
  * The nav destinations currently rendered — the built-ins plus one per enabled
  * plugin tab. Written by `ShellLayout` during render, the same way
  * {@link setLastShellLocation} is, because the shell re-renders on every
