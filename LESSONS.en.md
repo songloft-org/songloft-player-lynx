@@ -207,6 +207,12 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 - Evidence and Done right: an old response arriving after a switch leaves the new `{99}` set intact; refresh failures do not acknowledge cursors. This batch adds regressions for immediate abort on stop, late-response suppression, and single-flight startup. Real QuickJS writes through the backend switch the same Docker Chrome page from Add→Remove→Add without heart clicks or page reload. All 3929 tests and both build targets passed; [record](docs/en/project/issue-563.md) and [#591 record](docs/en/project/issue-591.md).
 - Seen 2× (2026-11-11, 2026-11-24). Status: long-poll lifecycle hardening, client Web validation passed; the reporter's Docker page and native devices remain pending.
 
+### Check the session and cache snapshot before rolling back an optimistic favorite
+
+- In [songloft-org/songloft-player-lynx#20](https://github.com/songloft-org/songloft-player-lynx/pull/20) at `e654c998`, a failed favorite write from account A restored its snapshot into account B's cache.
+- Check the original server and account before sending or retrying the write. During rollback, also compare the original query and optimistic snapshot to protect newer results. Release a delayed request after switching accounts to verify that the new cache stays intact and an old queued write never goes out.
+- Seen 1× (2026-11-26).
+
 ### UI-006: Reallocate narrow-row information while preserving touch targets
 
 - Scope: shared rows and playlist context menus, songloft-org/songloft#562; baseline `5e6fe23055eb6512fe185e2fcb9b3acaf9e73497`.

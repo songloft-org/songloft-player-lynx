@@ -1,12 +1,20 @@
 import { useCallback } from '@lynx-js/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { appConfig } from '../../../core/config/app-config.js'
+import { useAppSessionStore } from '../../../store/app-session.js'
 import { favoritePlaylistId } from '../../../core/config/constants.js'
 import { getQueryClient } from '../../../lib/query/index.js'
 import { getPlaylistApi } from '../../playlist/api/index.js'
 
 const FAV_QUERY_KEY = ['favorites', 'songIds'] as const
 const FAV_STALE_TIME_MS = 60_000
+
+interface FavoriteWrite {
+  songId: number
+  favorite: boolean
+  isCurrent: () => boolean
+}
 
 /** Hard cap on pages, so a bad `total` can never spin forever. 200 × 200 songs. */
 const FAV_MAX_PAGES = 200
@@ -56,25 +64,66 @@ export function useIsFavorite(songId: number, enabled = true): boolean {
 export function useFavoriteToggle(songId: number, enabled = true) {
   const queryClient = useQueryClient()
   const isFavorite = useIsFavorite(songId, enabled)
-  const playlistId = Number(favoritePlaylistId)
+  const cache = queryClient.getQueryCache()
+  const findFavorites = () => cache.find<Set<number>>({ queryKey: FAV_QUERY_KEY, exact: true })
 
-  const add = useMutation({
-    mutationFn: () => getPlaylistApi().addSongsToPlaylist(playlistId, [songId]),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: FAV_QUERY_KEY }),
-  })
-
-  const remove = useMutation({
-    mutationFn: () => getPlaylistApi().removeSongFromPlaylist(playlistId, songId),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: FAV_QUERY_KEY }),
+  const mutation = useMutation({
+    mutationKey: FAV_QUERY_KEY,
+    mutationFn: async (change: FavoriteWrite) => {
+      const assertCurrent = () => {
+        if (!change.isCurrent()) throw new Error('Favorite session changed')
+      }
+      assertCurrent()
+      const api = getPlaylistApi()
+      const playlistId = Number(favoritePlaylistId)
+      if (change.favorite) await api.addSongsToPlaylist(playlistId, [change.songId], { assertCurrent })
+      else await api.removeSongFromPlaylist(playlistId, change.songId, { assertCurrent })
+    },
+    onMutate: async (change) => {
+      const query = findFavorites()
+      await queryClient.cancelQueries({ queryKey: FAV_QUERY_KEY })
+      if (!change.isCurrent() || !query || query !== findFavorites()) return
+      const previous = query.state.data
+      if (!previous) return
+      const optimistic = new Set(previous)
+      if (change.favorite) optimistic.add(change.songId)
+      else optimistic.delete(change.songId)
+      queryClient.setQueryData(FAV_QUERY_KEY, optimistic)
+      return { query, previous, optimistic }
+    },
+    onError: (_error, change, context) => {
+      if (!change.isCurrent() || !context || context.query !== findFavorites()) return
+      if (context.query.state.data === context.optimistic) {
+        queryClient.setQueryData(FAV_QUERY_KEY, context.previous)
+      } else {
+        // A concurrent write or an authoritative refresh replaced our snapshot.
+        void queryClient.invalidateQueries({ queryKey: FAV_QUERY_KEY })
+      }
+    },
+    onSuccess: (_result, change) => {
+      if (change.isCurrent()) void queryClient.invalidateQueries({ queryKey: FAV_QUERY_KEY })
+    },
   })
 
   const toggle = useCallback(() => {
-    if (!enabled) return
-    if (isFavorite) remove.mutate()
-    else add.mutate()
-  }, [enabled, isFavorite, add, remove])
+    if (!enabled || mutation.isPending) return
+    const matchingWrites = queryClient.isMutating({
+      mutationKey: FAV_QUERY_KEY,
+      predicate: (pending) => {
+        const change = pending.state.variables as FavoriteWrite | undefined
+        return change?.songId === songId && change.isCurrent()
+      },
+    })
+    if (matchingWrites) return
+    const session = useAppSessionStore.getState()
+    const address = appConfig.resolvedBaseUrl
+    const basePath = appConfig.basePath
+    const isCurrent = () => useAppSessionStore.getState() === session &&
+      appConfig.resolvedBaseUrl === address && appConfig.basePath === basePath
+    mutation.mutate({ songId, favorite: !isFavorite, isCurrent })
+  }, [enabled, isFavorite, mutation, queryClient, songId])
 
-  return { isFavorite, toggle, isPending: add.isPending || remove.isPending }
+  return { isFavorite, toggle, isPending: mutation.isPending }
 }
 
 /**

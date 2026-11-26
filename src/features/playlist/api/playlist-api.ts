@@ -1,6 +1,6 @@
 import { apiPrefix } from '../../../core/config/app-config.js'
 import { defaultPageSize } from '../../../core/config/constants.js'
-import type { HttpClient } from '../../../core/network/http-client.js'
+import type { HttpClient, RequestOptions } from '../../../core/network/http-client.js'
 import {
   parsePlaylist,
   parsePlaylistListResponse,
@@ -231,10 +231,15 @@ export class PlaylistApi {
    * Flutter client reads (`playlist_api.dart`), and both default to 0 so an
    * older/leaner response degrades to a plain success rather than `NaN`.
    */
-  async addSongsToPlaylist(id: number, songIds: number[]): Promise<AddSongsResult> {
+  async addSongsToPlaylist(
+    id: number,
+    songIds: number[],
+    options?: Pick<RequestOptions, 'assertCurrent'>,
+  ): Promise<AddSongsResult> {
     const res = await this.client.post<Record<string, unknown>>(
       `${apiPrefix}/playlists/${id}/songs`,
       buildAddSongsBody(songIds),
+      options,
     )
     const data = res.data ?? {}
     return {
@@ -243,8 +248,12 @@ export class PlaylistApi {
     }
   }
 
-  async removeSongFromPlaylist(playlistId: number, songId: number): Promise<void> {
-    await this.client.delete(`${apiPrefix}/playlists/${playlistId}/songs/${songId}`)
+  async removeSongFromPlaylist(
+    playlistId: number,
+    songId: number,
+    options?: Pick<RequestOptions, 'assertCurrent'>,
+  ): Promise<void> {
+    await this.client.delete(`${apiPrefix}/playlists/${playlistId}/songs/${songId}`, options)
   }
 
   async reorderPlaylists(playlistIds: number[]): Promise<void> {

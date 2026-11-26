@@ -138,7 +138,11 @@ export function FullPlayerPage() {
   const { t } = useTranslation()
   const song = usePlayerStore((s) => s.currentSong)
   const local = song ? cachedSongIdentity(song) !== null : false
-  useBackHandler(local, () => { void navigate({ to: '/device-cache' }); return true })
+  // Offline songs used to hardcode the back target to /device-cache. That was the
+  // same bug as the online "always returns to Home" one: a song played from a
+  // playlist or folder dumped you on the cache screen, losing your place. Route
+  // back through the shared resolver so online and offline behave identically.
+  useBackHandler(local, () => { performRouteBack(); return true })
   const sleepTimer = usePlayerStore((s) => s.sleepTimer)
   /*
    * The `'.full-player'` selector is load-bearing. `/player` mounts on navigation,
@@ -257,8 +261,7 @@ export function FullPlayerPage() {
    * hardware back key reads it too.
    */
   const closePlayer = () => {
-    if (local) void navigate({ to: '/device-cache' })
-    else performRouteBack()
+    performRouteBack()
   }
 
   if (!song) {

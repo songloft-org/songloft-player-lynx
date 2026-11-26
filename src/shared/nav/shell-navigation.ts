@@ -63,6 +63,9 @@ export function getLastContentLocation(): ContentLocation | null {
 }
 
 export function setLastContentLocation(location: ContentLocation): void {
+  const { pathname } = location
+  // The outgoing shell can render with the incoming location before it unmounts.
+  if (pathname === '/login' || pathname === '/player' || pathname.startsWith('/player/')) return
   lastContentLocation = location
 }
 

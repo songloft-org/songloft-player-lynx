@@ -207,6 +207,12 @@
 - 证据与 Done right：控制旧响应在切换后到达，新集合仍为 `{99}`；刷新失败后不确认游标；本批新增停止即中止请求、迟到响应不刷新及重复启动单飞回归。真实 QuickJS 插件经后端增删，Docker Chrome 的同一已打开页面红心依次 Add→Remove→Add，无心形按钮点击或页面刷新。完整 3929 项和两目标构建通过，见 [记录](docs/project/issue-563.md) 与 [#591 记录](docs/project/issue-591.md)。
 - Seen 2× (2026-11-11, 2026-11-24)。状态：长轮询生命周期补强，客户端 Web 验证通过；报告人的 Docker 页面和原生设备待验。
 
+### 收藏乐观更新的回滚要核对会话和缓存快照
+
+- [songloft-org/songloft-player-lynx#20](https://github.com/songloft-org/songloft-player-lynx/pull/20) 的 `e654c998` 在旧收藏写请求失败后，把账号 A 的收藏集合写回了账号 B 的缓存。
+- 写入前及认证重试时核对发起时的服务器和账号。回滚还要核对原查询和乐观快照，避免覆盖新请求结果。用受控 Promise 在切换账号后释放旧请求，验证新缓存保留且等待中的旧写入不会发出。
+- Seen 1× (2026-11-26)。
+
 ### UI-006：窄屏歌曲行应重新分配信息层级并保留触摸面积
 
 - 范围：共享歌曲行与歌单上下文菜单，songloft-org/songloft#562；基线 `5e6fe23055eb6512fe185e2fcb9b3acaf9e73497`。

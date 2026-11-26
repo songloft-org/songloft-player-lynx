@@ -321,6 +321,7 @@ describe('/player returns to the exact page it was opened from', () => {
   test('performRouteBack navigates to the recorded source page with its params', () => {
     setLastShellLocation('/library')
     setLastContentLocation({ pathname: '/playlists/42', search: {} })
+    setLastContentLocation({ pathname: '/player', search: {} })
     const navigate = vi.fn()
     setBackRouter({
       state: { location: { pathname: '/player', search: {} } },
