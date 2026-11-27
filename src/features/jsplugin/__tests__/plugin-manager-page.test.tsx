@@ -84,7 +84,7 @@ vi.mock('../api/index.js', () => ({
 }))
 
 vi.mock('../../settings/api/index.js', () => ({
-  getSettingsApi: () => ({ getTabConfig: async () => ({ showLibrary: true, pluginTabs: [] }) }),
+  getSettingsApi: () => ({ getTabConfig: async () => ({ showHome: true, showLibrary: true, pluginTabs: [] }) }),
 }))
 
 vi.mock('@lynx-js/lynx-ui-sortable', async () =>

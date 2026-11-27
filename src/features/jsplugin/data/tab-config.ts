@@ -19,6 +19,7 @@ export interface PluginTabEntry {
 }
 
 export interface TabConfig {
+  showHome: boolean
   showLibrary: boolean
   pluginTabs: PluginTabEntry[]
 }
@@ -34,6 +35,7 @@ export function parseTabConfig(data: unknown): TabConfig {
       }))
     : []
   return {
+    showHome: obj.show_home !== false,
     showLibrary: obj.show_library !== false,
     pluginTabs,
   }
@@ -46,6 +48,7 @@ export interface ShellPluginTabEntry extends PluginTabEntry {
 
 /** The shell's live tab configuration with resolved plugin icons. */
 export interface ShellNavTabs {
+  showHome: boolean
   showLibrary: boolean
   pluginTabs: ShellPluginTabEntry[]
 }
@@ -142,7 +145,11 @@ export function useShellNavTabs() {
           return tab
         })
         // Seed icons before publishing the layout so both render in the first frame.
-        client.setQueryData(queryKey, { showLibrary: saved.showLibrary, pluginTabs }, { updatedAt: 0 })
+        client.setQueryData(queryKey, {
+          showHome: saved.showHome !== false,
+          showLibrary: saved.showLibrary,
+          pluginTabs,
+        }, { updatedAt: 0 })
       }
       return null
     },
@@ -161,7 +168,7 @@ export function useShellNavTabs() {
       assertCurrent()
       const pluginMap = new Map(pluginRes.plugins.map((p) => [p.entryPath, p]))
       return {
-        showLibrary: config.showLibrary,
+        ...config,
         pluginTabs: filterActivePluginTabs(config.pluginTabs, pluginRes.plugins).map((tab) => ({
           ...tab,
           icon: tab.icon || pluginMap.get(tab.entryPath)?.icon || undefined,
@@ -190,7 +197,7 @@ export function useShellNavTabs() {
   })
 
   const data = useMemo<ShellNavTabs | undefined>(() => layout && ({
-    showLibrary: layout.showLibrary,
+    ...layout,
     pluginTabs: layout.pluginTabs.map((tab, index) => {
       const svgMarkup = iconMarkup[index]
       return svgMarkup === undefined ? tab : { ...tab, svgMarkup }
@@ -206,5 +213,7 @@ export function useShellNavTabs() {
     }
   }, [storageKey, snapshot, isRestoring])
 
-  return { data, isRestoring }
+  // Confirm the first destination before redirecting from a cached hidden Home.
+  const isResolvingStart = live.isLoading || (layout?.showHome === false && live.isFetching)
+  return { data, isRestoring, isResolvingStart }
 }

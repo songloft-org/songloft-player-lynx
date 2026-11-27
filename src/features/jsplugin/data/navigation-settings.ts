@@ -16,8 +16,13 @@ import type { JSPlugin } from '../../../models/jsplugin.js'
 
 export const MAX_NAVIGATION_TABS = 12
 
+export function maxVisibleNavTabs(config: TabConfig): number {
+  return MAX_NAVIGATION_TABS - Number(!config.showHome)
+}
+
 export function navigationTabCount(config: TabConfig, plugins: JSPlugin[]): number {
-  return 2 + Number(config.showLibrary) + filterActivePluginTabs(config.pluginTabs, plugins).length
+  return 1 + Number(config.showHome) + Number(config.showLibrary)
+    + filterActivePluginTabs(config.pluginTabs, plugins).length
 }
 
 /** Replace only active slots so disabling a plugin does not erase its preferred position. */

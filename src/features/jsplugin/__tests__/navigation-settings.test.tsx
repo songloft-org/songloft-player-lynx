@@ -69,6 +69,7 @@ function plugin(path: string, isActive = true): JSPlugin {
 }
 function config(paths: string[] = ['b'], showLibrary = true): TabConfig {
   return {
+    showHome: true,
     showLibrary,
     pluginTabs: paths.map((path) => ({
       pluginId: path.charCodeAt(0),

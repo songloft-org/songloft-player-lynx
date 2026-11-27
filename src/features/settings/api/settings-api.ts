@@ -115,6 +115,7 @@ export class SettingsApi {
     } = {},
   ): Promise<TabConfig> {
     const body = {
+      show_home: config.showHome,
       show_library: config.showLibrary,
       plugin_tabs: config.pluginTabs.map(t => ({
         plugin_id: t.pluginId,

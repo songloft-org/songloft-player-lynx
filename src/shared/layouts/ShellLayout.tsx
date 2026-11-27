@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore, useState } from '@lynx-js/react'
-import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
+import { Navigate, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { hostAssetUrl } from '../../core/config/app-config.js'
 
@@ -92,12 +92,20 @@ export function ShellLayout() {
     return () => { delete obj.setShowMoreTabs }
   }, [])
   // Hold the launch frame until local storage has supplied the previous tabs.
-  if (shellTabs.isRestoring) return <SplashScreen />
+  if (shellTabs.isRestoring || (pathname === '/' && shellTabs.isResolvingStart)) return <SplashScreen />
 
   const destinations = buildNavDestinations(
     shellTabs.data?.showLibrary ?? true,
     shellTabs.data?.pluginTabs ?? [],
+    shellTabs.data?.showHome,
   )
+  if (pathname === '/' && shellTabs.data?.showHome === false) {
+    const first = destinations[0]!
+    if (first.plugin) {
+      return <Navigate to='/plugin/$entryPath' params={{ entryPath: first.plugin.entryPath }} search={{ tab: true }} replace />
+    }
+    return <Navigate to={first.path === '/library' ? '/library' : '/settings'} replace />
+  }
   // The `shell--with-mini` class: while the floating mini-player is up, the
   // pages' `--nav-inset` grows to clear it (see ShellLayout.css) — without
   // this, list tails scroll to a stop half-hidden behind the player.

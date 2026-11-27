@@ -168,8 +168,8 @@ test.each(['remote', 'mobile bundle'])(
       clients.push(client)
       return { client, ...renderHook(() => useShellNavTabs(), { wrapper: withClient(client) }) }
     }
-    const first: TabConfig = { showLibrary: false, pluginTabs: [makeTab('lx')] }
-    const changed: TabConfig = { showLibrary: true, pluginTabs: [] }
+    const first: TabConfig = { showHome: false, showLibrary: false, pluginTabs: [makeTab('lx')] }
+    const changed: TabConfig = { showHome: true, showLibrary: true, pluginTabs: [] }
     try {
       setSongloftStorage(snapshot)
       appConfig.baseUrl = mode === 'remote' ? 'https://nav.example.test/subpath' : 'http://127.0.0.1:59301'
@@ -237,7 +237,7 @@ test('the first visible plugin tab frame restores SVG markup, including during f
   const previousStorage = getSongloftStorage()
   const previousUsername = useAppSessionStore.getState().username
   const storage = createMemoryStorage()
-  const config: TabConfig = { showLibrary: true, pluginTabs: [makeTab('lx')] }
+  const config: TabConfig = { showHome: true, showLibrary: true, pluginTabs: [makeTab('lx')] }
   const markup = '<svg viewBox="0 0 24 24"><circle r="6"/></svg>'
   const clients: QueryClient[] = []
   const views: Array<{ unmount(): void }> = []

@@ -2,8 +2,8 @@
  * Shell navigation destinations.
  *
  * Mirrors the intent of the Flutter app's
- * `songloft-player/lib/shared/layouts/active_destinations.dart`: Home is always
- * present, followed by Library (when enabled), one entry per enabled plugin
+ * `songloft-player/lib/shared/layouts/active_destinations.dart`: Home and Library
+ * when enabled, followed by one entry per enabled plugin
  * tab, and Settings last. `path` values map directly to the TanStack Router
  * routes mounted under the shell.
  */
@@ -40,7 +40,7 @@ export const NAV_MAX_VISIBLE = 5
 export const NAV_REAL_SLOTS = 4
 
 /**
- * The live destination list: Home, Library when `showLibrary`, one per enabled
+ * The live destination list: Home and Library when enabled, one per enabled
  * plugin tab, then Settings last — the Flutter `ActiveDestinations.compute`
  * order. Settings stays the tail anchor, so the overflow slice (everything past
  * {@link NAV_REAL_SLOTS}) is always plugin tabs plus, once they run out,
@@ -49,8 +49,10 @@ export const NAV_REAL_SLOTS = 4
 export function buildNavDestinations(
   showLibrary: boolean,
   pluginTabs: readonly ShellPluginTabEntry[],
+  showHome = true,
 ): NavDestination[] {
-  const destinations: NavDestination[] = [HOME]
+  const destinations: NavDestination[] = []
+  if (showHome) destinations.push(HOME)
   if (showLibrary) destinations.push(LIBRARY)
   for (const tab of pluginTabs) {
     destinations.push({

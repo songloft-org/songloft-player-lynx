@@ -14,7 +14,8 @@ import type { PluginTabEntry } from '../../../features/jsplugin/data/tab-config.
  */
 
 // The tab-config query — mocked to a static shape the tests vary per case.
-const shellTabs: { data?: { showLibrary: boolean, pluginTabs: PluginTabEntry[] } } = {}
+const shellTabs: { data?: { showHome?: boolean, showLibrary: boolean, pluginTabs: PluginTabEntry[] } } = {}
+let pathname = '/'
 vi.mock('../../../features/jsplugin/index.js', () => ({
   useShellNavTabs: () => shellTabs,
   PluginTabIcon: ({ tab }: { tab: PluginTabEntry }) => tab.name,
@@ -37,10 +38,14 @@ vi.mock('react-i18next', async () =>
 )
 
 vi.mock('@tanstack/react-router', () => ({
+  Navigate: (options: unknown) => {
+    navigate(options)
+    return null
+  },
   Outlet: () => <view data-testid='shell-outlet' />,
   useNavigate: () => navigate,
   useRouterState: ({ select }: { select: (s: unknown) => unknown }) =>
-    select({ location: { pathname: '/' } }),
+    select({ location: { pathname } }),
 }))
 
 const navigate = vi.fn()
@@ -61,6 +66,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   clearBackHandlersForTests()
   shellTabs.data = undefined
+  pathname = '/'
 })
 
 describe('the narrow bar without overflow', () => {
@@ -89,6 +95,24 @@ describe('the narrow bar without overflow', () => {
     const q = renderShell()
     expect(q.queryByTestId('nav-item-library')).toBeNull()
     expect(q.getByTestId('nav-item-settings')).toBeTruthy()
+  })
+
+  test('a hidden Home is absent from navigation and root opens the first visible tab', () => {
+    shellTabs.data = { showHome: false, showLibrary: false, pluginTabs: [tab('miot')] }
+    pathname = '/settings'
+    const q = renderShell()
+    expect(q.queryByTestId('nav-item-home')).toBeNull()
+    expect(q.getByTestId('nav-item-miot')).toBeTruthy()
+    expect(navigate).not.toHaveBeenCalled()
+
+    pathname = '/'
+    renderShell()
+    expect(navigate).toHaveBeenCalledWith({
+      to: '/plugin/$entryPath',
+      params: { entryPath: 'miot' },
+      search: { tab: true },
+      replace: true,
+    })
   })
 })
 

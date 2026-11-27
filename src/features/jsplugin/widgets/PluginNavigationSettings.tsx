@@ -5,7 +5,7 @@ import type { JSPlugin } from '../../../models/jsplugin.js'
 import type { PluginTabEntry, TabConfig } from '../data/tab-config.js'
 import { filterActivePluginTabs } from '../data/tab-config.js'
 import {
-  MAX_NAVIGATION_TABS,
+  maxVisibleNavTabs,
   navigationTabCount,
   reorderActivePluginTabs,
   type NavigationSettings,
@@ -36,7 +36,7 @@ export function PluginNavigationToggle({
   const { config } = settings
   const checked = config?.pluginTabs.some((tab) => tab.entryPath === plugin.entryPath) ?? false
   const atLimit = config
-    ? navigationTabCount(config, settings.plugins) >= MAX_NAVIGATION_TABS
+    ? navigationTabCount(config, settings.plugins) >= maxVisibleNavTabs(config)
     : false
   const disabled = !settings.ready || busy || !plugin.isActive || (!checked && atLimit)
   return (
@@ -161,13 +161,22 @@ export function BuiltInNavigationSettings({
   const { t } = useTranslation()
   const { config } = settings
   const atLimit = config
-    ? navigationTabCount(config, settings.plugins) >= MAX_NAVIGATION_TABS
+    ? navigationTabCount(config, settings.plugins) >= maxVisibleNavTabs(config)
     : false
   const disabled = !settings.ready || busy || (!config?.showLibrary && atLimit)
   return (
     <view className='tab-config__section' data-testid='built-in-navigation'>
       <text className='tab-config__section-title'>{t('jsplugin.tabBuiltIn')}</text>
       <NavigationReadState settings={settings} />
+      <SwitchRow
+        title={t('jsplugin.showHomeInNavigation')}
+        checked={config?.showHome ?? true}
+        disabled={!settings.ready || busy}
+        testId='tab-toggle-home'
+        onChange={(showHome) => {
+          if (settings.ready && !busy && config) saveNavigation(settings, { ...config, showHome })
+        }}
+      />
       <SwitchRow
         title={t('jsplugin.showLibraryInNavigation')}
         subtitle={t('jsplugin.libraryNavigationHint')}
@@ -187,16 +196,17 @@ export function NavigationSummary({ settings }: { settings: NavigationSettings }
   const { config } = settings
   if (!config) return null
   const count = navigationTabCount(config, settings.plugins)
+  const max = maxVisibleNavTabs(config)
   return (
     <view className='tab-config__section' data-testid='navigation-summary'>
       <text className='tab-config__count'>
-        {`${count}/${MAX_NAVIGATION_TABS}`}
+        {`${count}/${max}`}
       </text>
       <text className='tab-config__limit-hint'>{t('jsplugin.tabFixedHint')}</text>
       <text className='tab-config__limit-hint'>{t('jsplugin.tabCollapseHint')}</text>
-      {count >= MAX_NAVIGATION_TABS ? (
+      {count >= max ? (
         <text className='tab-config__limit-hint'>
-          {t('jsplugin.tabLimitReached', { max: MAX_NAVIGATION_TABS })}
+          {t('jsplugin.tabLimitReached', { max })}
         </text>
       ) : null}
     </view>

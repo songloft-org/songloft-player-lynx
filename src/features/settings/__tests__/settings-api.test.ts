@@ -104,12 +104,12 @@ test('navigation save pins its server and subpath while authentication is pendin
     }),
   )
   const pending = api.updateTabConfig(
-    { showLibrary: false, pluginTabs: [] },
+    { showHome: true, showLibrary: false, pluginTabs: [] },
     { serverBaseUrl: 'http://first.test/music' },
   )
   baseUrl = 'http://second.test'
   release()
-  await expect(pending).resolves.toEqual({ showLibrary: false, pluginTabs: [] })
+  await expect(pending).resolves.toEqual({ showHome: true, showLibrary: false, pluginTabs: [] })
   expect(cap.url()).toBe(`http://first.test/music${apiPrefix}/settings/tab-config`)
   expect(cap.method()).toBe('PUT')
 })
@@ -132,7 +132,7 @@ test('navigation save does not send after its session changes during authenticat
     }),
   )
   const pending = api.updateTabConfig(
-    { showLibrary: false, pluginTabs: [] },
+    { showHome: true, showLibrary: false, pluginTabs: [] },
     {
       serverBaseUrl: 'http://first.test',
       assertCurrent: () => {
@@ -165,7 +165,7 @@ test('late navigation 401 does not refresh or replay using a new session', async
   })
   const { client } = createApiClient({ transport, tokens })
   const pending = new SettingsApi(client).updateTabConfig(
-    { showLibrary: false, pluginTabs: [] },
+    { showHome: true, showLibrary: false, pluginTabs: [] },
     {
       serverBaseUrl: 'http://first.test',
       assertCurrent: () => {
@@ -204,7 +204,7 @@ test('navigation auth replay checks the session again after asynchronous recover
   })
   const api = new SettingsApi(new HttpClient({ transport, interceptor: { onError } }))
   const pending = api.updateTabConfig(
-    { showLibrary: false, pluginTabs: [] },
+    { showHome: true, showLibrary: false, pluginTabs: [] },
     {
       serverBaseUrl: 'http://first.test',
       assertCurrent: () => {
