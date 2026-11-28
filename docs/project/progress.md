@@ -1,5 +1,21 @@
 # 进展与交接（PROGRESS）
 
+<a id="issue-599"></a>
+
+## 2026-11-27 · 插件复用宿主播放器 / Host playback UI for plugins
+
+插件包可通过 `static/songloft-ui.json` 声明宿主播放栏。活动插件页可打开宿主队列或全屏播放页。打开全屏时记录插件入口和路由参数，关闭后按原入口返回。[songloft-org/songloft#599](https://github.com/songloft-org/songloft/issues/599) · [SDK 接口](../reference/plugin-client-sdk.md#宿主播放栏与播放页面)
+
+Plugins can opt into the host bar with `static/songloft-ui.json`. The active page can open the host queue or fullscreen player. Fullscreen navigation carries the plugin route and its original parameters for the return trip. [songloft-org/songloft#599](https://github.com/songloft-org/songloft/issues/599) · [SDK methods](../en/reference/plugin-client-sdk.md#host-player-bar-and-playback-screens)
+
+基线 `960fed9494ed316bb75860343fcd4f19d014e915`，源码和测试 diff SHA-256 `e3929c70a097c209d9be45d61d0e5dbcda615ccbd852879024c80fa2e709d87f`。Linux x86_64、Node 22.17.1、Go 1.26.0。新增返回测试的同一输入在基线上解析为首页。最终的 `pnpm exec tsc -b`、全量 `pnpm test`（3959 项）和 `pnpm run build` 均通过，生成 Lynx 与 Web bundle。
+
+Baseline `960fed9494ed316bb75860343fcd4f19d014e915` with source and test diff SHA-256 `e3929c70a097c209d9be45d61d0e5dbcda615ccbd852879024c80fa2e709d87f`. Linux x86_64, Node 22.17.1, and Go 1.26.0. The baseline resolver returned Home for the new return-route test input. The final `pnpm exec tsc -b`, full `pnpm test` run (3,959 tests), and `pnpm run build` passed. The build produced Lynx and Web bundles.
+
+Docker Chrome 121 在 390px 和 1100px 实测已安装的两个 HTML 插件和一首测试歌曲。播放后，声明插件的 iframe 分别让出 64px 和 65px，普通插件隐藏播放栏。两个插件都能打开队列，关闭全屏后返回原 Tab 并保留 iframe 文档。原生设备未运行。
+
+Docker Chrome 121 exercised two installed HTML plugins and a fixture song at 390px and 1100px. Playback reserved 64px and 65px of iframe space for the opt-in plugin. The default plugin kept the bar hidden. Both plugins opened the queue. Closing fullscreen returned to the original tab with the same iframe document. Native device checks were not run.
+
 <a id="issue-595"></a>
 
 ## 2026-11-25 · 播放定位快捷按钮 / Playback location shortcuts

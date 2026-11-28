@@ -20,7 +20,7 @@ export function createPluginReplyGate() {
       const { action, expires } = pending
       pending = undefined
       if (Date.now() <= expires)
-        void Promise.resolve().then(action).catch((error) => console.warn('Could not open plugin video', error))
+        void Promise.resolve().then(action).catch((error) => console.warn('Could not open plugin host UI', error))
     },
     clear() { pending = undefined },
   }

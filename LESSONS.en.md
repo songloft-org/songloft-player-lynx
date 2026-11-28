@@ -1,5 +1,9 @@
 # Lynx Client Development Lessons
 
+### Capture the plugin entry when opening fullscreen playback
+
+- The #599 return fixture opens fullscreen from a plugin tab with Home recorded as the shell’s latest page. The baseline resolver returned Home. Fullscreen navigation now carries the plugin identifier and its tab or manager parameters in route state and returns through the typed plugin route. Clicking Close in Docker Chrome 121 returned to the original tab at both viewport widths and preserved the iframe document. Seen 1× (2026-11-27). [songloft-org/songloft#599 verification](docs/project/progress.md#issue-599)
+
 ### Sample plugin worker timing entries when Web controls slow over time
 
 - On the original smart speaker voice page, a status frame per second grew the User Timing mark buffer, and `clearMarks()` dominated the CPU profile. Clear marks and measures independently, then replay the same frames with tracing temporarily disabled and compare worker CPU and actual click delays. Seen 1× (2026-11-25). [songloft-org/songloft#591 verification](docs/en/project/issue-591.md#web-user-timing)

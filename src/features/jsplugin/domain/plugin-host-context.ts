@@ -1,6 +1,6 @@
 import { clientVersion } from '../../../core/config/constants.js'
 import { getPlatformTarget } from '../../../native/platform-target.js'
-import { preparePluginVideoRoute } from '../../../core/navigation/route-back-action.js'
+import { preparePluginPlayerUi, preparePluginVideoRoute } from '../../../core/navigation/route-back-action.js'
 import { getPlatformCapabilities } from '../../../native/platform-capabilities.js'
 import { canOpenExternalURL, getHostCookies, openExternalURL } from '../../../native/native-platform.js'
 import { isWebPlatform } from '../../../native/web-platform.js'
@@ -10,6 +10,7 @@ import { desktopConfig } from '../../../desktop/client.js'
 
 /** Shared by HTML plugins and native Lynx frames; always use parsed domain Songs. */
 export const pluginHostContext: PluginHostContext = {
+  preparePluginPlayerUi,
   get platform() { const desktop = desktopConfig(); return desktop ? desktop.os === 'darwin' ? 'macos' : 'windows' : isWebPlatform() ? 'web' : getPlatformTarget() },
   get version() { return desktopConfig()?.build?.version ?? clientVersion },
   async resolveSongs(ids) {

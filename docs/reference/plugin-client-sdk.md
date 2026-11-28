@@ -51,6 +51,19 @@ HTML 插件使用 `@songloft/client-sdk` / `window.SongloftPlugin`；原生 Lynx
 
 WebView 全屏需要提供新版 `common.js` 的服务端，原生 Lynx 插件需用支持新回执的 SDK 重新构建。
 
+## 宿主播放栏与播放页面
+
+插件包可在 `static/songloft-ui.json` 中声明宿主播放栏。当前有歌曲时，插件 Tab 和从首页或管理页打开的插件页面会显示宿主播放栏，并为它预留空间。文件缺失或声明值不同的插件沿用原来的布局。
+
+```json
+{"ui":{"playerBar":"host"}}
+```
+
+通过 `host.getInfo` 的 `capabilities` 检查 `player.playerBar`、`player.openPlayer` 和 `player.openQueue`。活动插件页可调用后两个方法，队列入口独立于播放栏声明。全屏播放器需要当前歌曲，关闭后返回发起操作的插件页面。
+
+- HTML 插件可以通过 `@songloft/client-sdk` 或更新后的 `window.SongloftPlugin.player` 调用 `player.openPlayer()` 和 `player.openQueue()`。
+- Lynx 插件可从 `@songloft/lynx-plugin-sdk` 导入 `player`，调用同名方法。通用 `invokeHost` 也可执行这两个操作。使用支持宿主回复确认的 SDK 版本。
+
 ## 插件播放音效
 
 检测 `host.getInfo().capabilities` 是否包含 `player.audioEffects`。浏览器禁止启动 AudioContext 时，应用预设会失败。调用参数使用服务端曲库歌曲 ID。等媒体开始播放后再读取当前音频输出的能力。在原生输出初始化期间，部分预设可能尚未显示。

@@ -1,4 +1,4 @@
-import type { preparePluginVideoRoute } from '../../../core/navigation/route-back-action.js'
+import type { preparePluginPlayerUi, preparePluginVideoRoute } from '../../../core/navigation/route-back-action.js'
 import { canWatchVideo } from '../../player/data/video-open.js'
 import type { PluginHostReply } from './plugin-host-reply.js'
 import { songToJson, type Song } from '../../../models/song.js'
@@ -36,6 +36,7 @@ export interface PluginHostContext {
   pluginOpenUrl?: (url: string) => void | Promise<void>
   confirmedPluginOpenUrl?: (url: string) => Promise<void>
   preparePluginVideo?: typeof preparePluginVideoRoute
+  preparePluginPlayerUi?: typeof preparePluginPlayerUi
   pluginResourceUrl?: (path: string) => Promise<string>
   pluginSocketRequest?: (
     method: string,
@@ -328,11 +329,31 @@ export async function handlePluginHostCall(
               ...(hasPluginAudioEffects() ? ['player.audioEffects'] : []),
               ...(ctx.confirmedPluginOpenUrl ? ['plugin.openUrl'] : []),
               ...(ctx.preparePluginVideo ? ['player.openVideo'] : []),
+              ...(ctx.preparePluginPlayerUi
+                ? ['player.playerBar', 'player.openPlayer', 'player.openQueue'] : []),
             ],
           },
         }
       }
       throw new Error(`unknown host method: ${method}`)
+    }
+
+    if (ns === 'player' && (method === 'openPlayer' || method === 'openQueue')) {
+      const ui = ctx.preparePluginPlayerUi?.(ctx.pluginEntryPath ?? '')
+      const isCurrent = () => ui?.isCurrent() && ctx.isPluginActive?.() === true
+      if (!ui || !isCurrent()) throw new Error('plugin page is no longer active')
+      if (method === 'openPlayer' && !usePlayerStore.getState().currentSong)
+        throw new Error('no current song')
+      return {
+        ok: true,
+        data: null,
+        afterReply: () => {
+          if (!isCurrent()) return
+          const player = usePlayerStore.getState()
+          if (method === 'openPlayer') return player.currentSong ? ui.openPlayer() : undefined
+          if (!player.showPlaylistDrawer) player.togglePlaylistDrawer()
+        },
+      }
     }
 
     if (ns === 'player' && method === 'openVideo') {

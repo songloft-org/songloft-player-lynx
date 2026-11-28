@@ -1,4 +1,5 @@
 import '../../../shims/router-env.js'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { act, fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
@@ -58,7 +59,7 @@ function tab(entryPath: string, name = entryPath): PluginTabEntry {
 }
 
 function renderShell() {
-  const result = render(<ShellLayout />)
+  const result = render(<QueryClientProvider client={new QueryClient()}><ShellLayout /></QueryClientProvider>)
   return getQueriesForElement(result.container as unknown as HTMLElement)
 }
 

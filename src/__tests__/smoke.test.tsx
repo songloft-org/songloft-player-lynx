@@ -1,5 +1,6 @@
 import '../shims/router-env.js'
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@testing-library/jest-dom'
 vi.mock('../features/jsplugin/widgets/RetainedPluginTabs.js', () => ({
   RetainedPluginTabs: ({ children }: { children: import('@lynx-js/react').ReactNode }) => children,
@@ -210,7 +211,7 @@ async function renderRoute(entry: string) {
   await act(async () => {
     await appRouter.load()
   })
-  render(<RouterProvider router={appRouter as never} />)
+  render(<QueryClientProvider client={new QueryClient()}><RouterProvider router={appRouter as never} /></QueryClientProvider>)
   await act(async () => {
     await Promise.resolve()
   })
@@ -239,7 +240,7 @@ test('drives a real bindtap on the home screen into the library route', async ()
   await act(async () => {
     await appRouter.load()
   })
-  render(<RouterProvider router={appRouter as never} />)
+  render(<QueryClientProvider client={new QueryClient()}><RouterProvider router={appRouter as never} /></QueryClientProvider>)
   const { getAllByText } = getQueriesForElement(elementTree.root!)
 
   expect(appRouter.state.location.pathname).toBe('/')

@@ -1,4 +1,5 @@
 import '../../../shims/router-env.js'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { getQueriesForElement, render } from '@lynx-js/react/testing-library'
@@ -60,7 +61,7 @@ const { ShellLayout } = await import('../ShellLayout.js')
 const { setShellWidth } = await import('../../nav/shell-navigation.js')
 
 function renderShell() {
-  const result = render(<ShellLayout />)
+  const result = render(<QueryClientProvider client={new QueryClient()}><ShellLayout /></QueryClientProvider>)
   return getQueriesForElement(result.container as unknown as HTMLElement)
 }
 

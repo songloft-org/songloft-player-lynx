@@ -16,7 +16,7 @@ import {
   getLastShellLocation,
   getNavPaths,
 } from '../../shared/nav/shell-navigation.js'
-import { resolveRouteBack, type BackAction, type PluginRouteLocation } from '../../shared/nav/route-back.js'
+import { pluginRouteLocation, resolveRouteBack, type BackAction, type PluginRouteLocation } from '../../shared/nav/route-back.js'
 // `import type` of a *value* binding: erased at compile time, so the route tree is
 // not imported at runtime and the cycle above never forms. Deliberately not
 // `typeof import('…')` — `device-host-contract.test.ts` bans `import(` in `src/`,
@@ -36,29 +36,45 @@ export function getBackRouter(): AppRouter | null {
   return appRouter
 }
 
-interface VideoRouteState extends HistoryState {
+interface PlayerRouteState extends HistoryState {
+  playerReturnPlugin?: PluginRouteLocation
   videoReturnPlugin?: PluginRouteLocation
 }
 
-export function preparePluginVideoRoute(entryPath: string) {
+function preparePluginRoute(entryPath: string) {
   const router = appRouter
   const location = router?.state.location
-  if (!router || !location || !entryPath ||
-      decodeURIComponent(location.pathname) !== `/plugin/${entryPath}`) return undefined
+  if (!router || !location) return undefined
+  const origin = pluginRouteLocation(location.pathname, location.search)
+  if (!origin || origin.entryPath !== entryPath) return undefined
 
-  const search = location.search as PluginRouteLocation['search']
-  const videoReturnPlugin: PluginRouteLocation = {
-    entryPath,
-    search: {
-      ...(search.tab === true ? { tab: true } : {}),
-      ...(search.from === 'manager' ? { from: 'manager' } : {}),
-    },
-  }
   return {
+    router,
+    origin,
     isCurrent: () => router.state.location === location,
-    open: () => router.navigate({
+  }
+}
+
+export function preparePluginPlayerUi(entryPath: string) {
+  const route = preparePluginRoute(entryPath)
+  if (!route) return undefined
+  return {
+    isCurrent: route.isCurrent,
+    openPlayer: () => route.router.navigate({
+      to: '/player',
+      state: (): PlayerRouteState => ({ playerReturnPlugin: route.origin }),
+    }),
+  }
+}
+
+export function preparePluginVideoRoute(entryPath: string) {
+  const route = preparePluginRoute(entryPath)
+  if (!route) return undefined
+  return {
+    isCurrent: route.isCurrent,
+    open: () => route.router.navigate({
       to: '/player/video',
-      state: (): VideoRouteState => ({ videoReturnPlugin }),
+      state: (): PlayerRouteState => ({ videoReturnPlugin: route.origin }),
     }),
   }
 }
@@ -68,9 +84,11 @@ export function currentBackAction(): BackAction | null {
   const router = appRouter
   if (!router) return null
   const location = router.state.location
+  const state = location.state as PlayerRouteState | undefined
   return resolveRouteBack(location.pathname, {
     navPaths: getNavPaths(),
-    videoReturnPlugin: (location.state as VideoRouteState | undefined)?.videoReturnPlugin,
+    playerReturnPlugin: state?.playerReturnPlugin,
+    videoReturnPlugin: state?.videoReturnPlugin,
     // A plugin page entered through its nav tab (`?tab=true`) is a tab root;
     // the same pathname pushed from the grid / manager is a sub-page. See
     // `RouteBackContext.pluginTabEntry`.

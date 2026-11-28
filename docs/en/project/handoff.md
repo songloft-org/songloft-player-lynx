@@ -1,5 +1,9 @@
 # Handoff (2026-10-14)
 
+## 2026-11-27 · #599 Host playback UI for plugins
+
+Plugins can opt into the host bar and open the fullscreen player or queue from the active page. Docker Chrome verified narrow and wide layouts, queue access, and return to the originating plugin. Native device verification is pending. [Verification](../../project/progress.md#issue-599)
+
 ## 2026-11-25 · #595 Playlist and track location
 
 Home opens the source playlist. Playlist details clear the search, load further pages, and locate the current track. Embedded Web and the Android 14 emulator opened a hidden playlist from Home and located track 65. Web also covered search and repeated location. [Verification](../../project/progress.md#issue-595)

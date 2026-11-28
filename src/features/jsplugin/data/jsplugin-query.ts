@@ -12,11 +12,39 @@ export const pluginQueryKeys = {
   githubProxy: () => ['jsplugin', 'github-proxy'] as const,
 }
 
-export function usePluginsQuery() {
+export function usePluginsQuery(enabled = true) {
   return useQuery({
     queryKey: pluginQueryKeys.list(),
     queryFn: () => getJSPluginApi().getPlugins(),
+    enabled,
   })
+}
+
+function declaresHostPlayerBar(text: string): boolean {
+  try {
+    return JSON.parse(text)?.ui?.playerBar === 'host'
+  } catch {
+    // The static endpoint can return the plugin's HTML for a missing file.
+    return false
+  }
+}
+
+export function usePluginPlayerBar(pathname: string): boolean {
+  const entryPath = /^\/plugin\/([a-z][a-z0-9-]*)$/.exec(pathname)?.[1]
+  const { data } = usePluginsQuery(!!entryPath)
+  const plugin = entryPath
+    ? data?.plugins.find(p => p.entryPath === entryPath && p.isActive)
+    : undefined
+  const declaration = useQuery({
+    queryKey: ['jsplugin', 'player-bar', entryPath, plugin?.id, plugin?.version, plugin?.updatedAt],
+    enabled: !!plugin,
+    staleTime: Infinity,
+    retry: false,
+    queryFn: async ({ signal }) => declaresHostPlayerBar(await getJSPluginApi().getStaticText(
+      encodeURIComponent(entryPath!), 'songloft-ui.json', { signal },
+    )),
+  })
+  return !!plugin && declaration.data === true
 }
 
 /** Markup that is unmistakably an SVG document, not an SPA fallback page. */

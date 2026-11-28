@@ -51,8 +51,24 @@ export interface PluginRouteLocation {
   search: { tab?: boolean; from?: 'manager' }
 }
 
+export function pluginRouteLocation(
+  pathname: string,
+  search: Record<string, unknown>,
+): PluginRouteLocation | undefined {
+  const entryPath = /^\/plugin\/([a-z][a-z0-9-]*)$/.exec(pathname)?.[1]
+  if (!entryPath) return undefined
+  return {
+    entryPath,
+    search: {
+      ...(search.tab === true ? { tab: true } : {}),
+      ...(search.from === 'manager' ? { from: 'manager' } : {}),
+    },
+  }
+}
+
 export interface RouteBackContext {
   videoReturnPlugin?: PluginRouteLocation
+  playerReturnPlugin?: PluginRouteLocation
 
   /**
    * Live tab roots — the three built-ins plus one per enabled plugin tab. Must
@@ -248,6 +264,9 @@ function toLastShell(ctx: RouteBackContext): BackAction {
  */
 function toPlayerSource(ctx: RouteBackContext): BackAction {
   const src = ctx.lastContentLocation
+  const plugin = ctx.playerReturnPlugin ?? (src && pluginRouteLocation(src.pathname, src.search))
+  if (plugin) return { kind: 'navigate', to: '/plugin/$entryPath', plugin }
+
   if (src && src.pathname && src.pathname !== '/player' && src.pathname !== '/login'
       && !src.pathname.startsWith('/player/')
       // Tab roots go through toLastShell so the library's sub-view is restored

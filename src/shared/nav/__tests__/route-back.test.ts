@@ -366,3 +366,17 @@ test('fullscreen video returns to the plugin and preserves how it was opened', (
     .toEqual({ kind: 'navigate', to: '/plugin/$entryPath', plugin: origin })
   expect(resolveRouteBack('/player/video', ctx())).toEqual({ kind: 'navigate', to: '/player' })
 })
+
+test('fullscreen audio returns through the typed plugin route with its original entry mode', () => {
+  const tab = { entryPath: 'radio', search: { tab: true } }
+  expect(resolveRouteBack('/player', ctx({
+    playerReturnPlugin: tab,
+    lastContentLocation: { pathname: '/', search: {} },
+  }))).toEqual({ kind: 'navigate', to: '/plugin/$entryPath', plugin: tab })
+  expect(resolveRouteBack('/player', ctx({
+    lastContentLocation: { pathname: '/plugin/radio', search: { from: 'manager' } },
+  }))).toEqual({
+    kind: 'navigate', to: '/plugin/$entryPath',
+    plugin: { entryPath: 'radio', search: { from: 'manager' } },
+  })
+})

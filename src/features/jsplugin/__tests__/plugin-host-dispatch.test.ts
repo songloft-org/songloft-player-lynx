@@ -386,3 +386,38 @@ test('fullscreen waits for the correlated plugin receipt and preserves the curre
     vi.unstubAllGlobals()
   }
 })
+
+test('plugin playback UI opens after the reply, stays on the same queue and rejects an inactive page', async () => {
+  let active = true
+  const openPlayer = vi.fn(async () => {})
+  const host = {
+    ...ctx,
+    pluginEntryPath: 'music',
+    isPluginActive: () => active,
+    preparePluginPlayerUi: () => ({ isCurrent: () => active, openPlayer }),
+  }
+  const invoke = (method: string) => handlePluginHostCall({ ns: 'player', method }, host)
+  const gate = createPluginReplyGate()
+  expect(await handlePluginHostCall({ ns: 'host', method: 'getInfo' }, host))
+    .toMatchObject({ data: { capabilities: ['player', 'player.playerBar', 'player.openPlayer', 'player.openQueue'] } })
+  expect(await invoke('openPlayer')).toMatchObject({ ok: false, error: 'no current song' })
+
+  await call('setQueue', { ids: [1, 2] })
+  gate.stage('queue', await invoke('openQueue'))
+  expect(usePlayerStore.getState().showPlaylistDrawer).toBe(false)
+  gate.confirm('queue')
+  await Promise.resolve()
+  expect(usePlayerStore.getState().showPlaylistDrawer).toBe(true)
+  await (await invoke('openQueue')).afterReply?.()
+  expect(usePlayerStore.getState().showPlaylistDrawer).toBe(true)
+  expect(ids()).toEqual([1, 2])
+
+  const reply = await invoke('openPlayer')
+  expect(openPlayer).not.toHaveBeenCalled()
+  await reply.afterReply?.()
+  expect(openPlayer).toHaveBeenCalledOnce()
+  active = false
+  await reply.afterReply?.()
+  expect(openPlayer).toHaveBeenCalledOnce()
+  expect(await invoke('openQueue')).toMatchObject({ ok: false })
+})

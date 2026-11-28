@@ -1,4 +1,5 @@
 import '../../../shims/router-env.js'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { fireEvent, getQueriesForElement, render } from '@lynx-js/react/testing-library'
@@ -60,7 +61,7 @@ const { PREF_RAIL_COLLAPSED, resetRailCollapsedForTests } = await import('../rai
 const storage = createMemoryStorage()
 
 function renderShell() {
-  const result = render(<ShellLayout />)
+  const result = render(<QueryClientProvider client={new QueryClient()}><ShellLayout /></QueryClientProvider>)
   return getQueriesForElement(result.container as unknown as HTMLElement)
 }
 

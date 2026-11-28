@@ -22,6 +22,8 @@ import {
 } from '../nav/destinations.js'
 import { MoreTabsSheet } from '../nav/MoreTabsSheet.js'
 import { activeNavPath, getShellWidth, setLastContentLocation, setLastShellLocation, setNavPaths, setShellWidth, showsMiniPlayer, subscribeShellWidth } from '../nav/shell-navigation.js'
+import { usePluginPlayerBar } from '../../features/jsplugin/data/jsplugin-query.js'
+import { PlaylistDrawer } from '../../features/player/widgets/PlaylistDrawer.js'
 import { getIsScrolled, subscribeIsScrolled } from '../nav/scroll-visibility.js'
 import { getRailCollapsed, subscribeRailCollapsed, toggleRailCollapsed } from './rail-collapse.js'
 import { LiquidTabIndicator } from './LiquidTabIndicator.js'
@@ -78,10 +80,13 @@ export function ShellLayout() {
   const pathname = useRouterState({ select: s => s.location.pathname })
   const search = useRouterState({ select: s => s.location.search })
   const shellTabs = useShellNavTabs()
-  // Song presence for the mini-player inset tier — same condition MiniPlayer
-  // itself renders under (`showsMiniPlayer(pathname)` + a loaded song), kept
-  // in sync here so the class and the widget never disagree.
+  // The inset follows the same visibility rule as the mini-player.
   const hasSong = usePlayerStore((s) => s.currentSong != null)
+  const isPluginPage = pathname.startsWith('/plugin/')
+  const showMiniPlayer = usePluginPlayerBar(pathname) || showsMiniPlayer(pathname)
+  useEffect(() => {
+    if (isPluginPage) return () => usePlayerStore.getState().closePlaylistDrawer()
+  }, [isPluginPage, pathname])
   const [showMoreTabs, setShowMoreTabs] = useState(false)
   useEffect(() => {
     const g = globalThis as Record<string, unknown>
@@ -109,7 +114,7 @@ export function ShellLayout() {
   // The `shell--with-mini` class: while the floating mini-player is up, the
   // pages' `--nav-inset` grows to clear it (see ShellLayout.css) — without
   // this, list tails scroll to a stop half-hidden behind the player.
-  const withMini = showsMiniPlayer(pathname) && hasSong
+  const withMini = showMiniPlayer && hasSong
 
   // The live destination list: built-ins plus one per enabled plugin tab. Two
   // consumers — the lit-tab calculation below, and the back key, which needs to
@@ -311,11 +316,10 @@ export function ShellLayout() {
           <RetainedPluginTabs><Outlet /></RetainedPluginTabs>
         </view>
 
-        {/* Mini-player sits above the bottom bar (narrow) / at the foot of the
-            content column (wide). Renders only when a song is loaded AND the route
-            is a content-browsing one — the visibility rule lives here rather than
-            inside MiniPlayer so the widget stays unaware of routing. */}
-        {showsMiniPlayer(pathname) ? <MiniPlayer /> : null}
+        {/* The mini-player owns its queue drawer when mounted. A plugin can
+            also open the drawer without opting into the bar. */}
+        {showMiniPlayer ? <MiniPlayer /> : null}
+        {isPluginPage && !withMini ? <PlaylistDrawer /> : null}
 
         {isWide
           ? null

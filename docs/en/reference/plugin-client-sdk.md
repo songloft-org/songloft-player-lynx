@@ -51,6 +51,19 @@ External links accept absolute HTTP and HTTPS URLs. Success means the system acc
 
 For fullscreen video, WebView plugins require the updated server-provided `common.js`. Rebuild native Lynx plugins with an SDK that supports acknowledging the fullscreen reply.
 
+## Host player bar and playback screens
+
+A plugin package can opt into the host player bar in `static/songloft-ui.json`. When a song is loaded, the host reserves space for the bar on both plugin tabs and pages opened from Home or the plugin manager. Plugins with a missing file or a different value retain their existing layout.
+
+```json
+{"ui":{"playerBar":"host"}}
+```
+
+Check `host.getInfo` capabilities for `player.playerBar`, `player.openPlayer`, and `player.openQueue`. The active plugin page can invoke either method, and the queue is available independently of the bar declaration. The fullscreen player requires a current song and returns to the originating plugin page when dismissed.
+
+- HTML plugins call `player.openPlayer()` and `player.openQueue()` through `@songloft/client-sdk` or the updated `window.SongloftPlugin.player`.
+- Lynx plugins import `player` from `@songloft/lynx-plugin-sdk` and call the same methods. Both operations are also available through `invokeHost`. Use an SDK version that supports acknowledging host replies.
+
 ## Plugin audio effects
 
 Check `host.getInfo().capabilities` for `player.audioEffects`. Apply can fail if the browser blocks the AudioContext. Playback uses song IDs from the server library. Query the current output after playback starts. Some presets can be absent while the native output initializes.

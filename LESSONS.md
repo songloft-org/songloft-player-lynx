@@ -1,5 +1,9 @@
 # Lynx 客户端开发经验
 
+### 打开全屏播放器时记录插件入口
+
+- #599 的返回用例用插件 Tab 作为打开来源，并把 Shell 的最近页面设为首页。基线解析器返回首页。全屏导航现在随路由状态保存插件标识和 Tab 或管理页参数，返回时走类型化插件路由。Docker Chrome 121 在宽窄布局点击关闭后都回到原 Tab，保留了同一个 iframe 文档。Seen 1×（2026-11-27）。[songloft-org/songloft#599 验证记录](docs/project/progress.md#issue-599)
+
 ### Web 长时交互卡顿要采样插件 Worker 的计时条目
 
 - 原版音箱语音页在每秒一帧状态的测试里持续积累 User Timing mark，CPU 热点落在 `clearMarks()`。分别清除 mark 和 measure 复验其影响，并用相同帧序列比较临时关闭追踪后的 CPU 和实际点击延迟。Seen 1×（2026-11-25）。[songloft-org/songloft#591 验证记录](docs/project/issue-591.md#web-user-timing)

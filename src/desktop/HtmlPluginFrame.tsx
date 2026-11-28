@@ -15,6 +15,8 @@ import {
   type HostCallRequest,
 } from '../features/jsplugin/domain/plugin-host-dispatch.js'
 import { pluginHostContext } from '../features/jsplugin/domain/plugin-host-context.js'
+import { createPluginReplyGate, HOST_REPLY_RECEIVED } from '../features/jsplugin/domain/plugin-host-reply.js'
+import type { PluginHostContext } from '../features/jsplugin/domain/plugin-host-dispatch.js'
 import { createPluginBackBridge } from '../features/jsplugin/domain/plugin-back-bridge.js'
 import {
   buildThemeMessage,
@@ -41,6 +43,7 @@ export function DesktopHtmlPluginFrame({
   const [canBack, setCanBack] = useState(false)
   const [failed, setFailed] = useState(false)
   const generation = useRef(0)
+  const replies = useRef(createPluginReplyGate()).current
   const evaluate = (func: string) => {
     'background only'
     node.current?.invoke({ method: 'eval', params: { func } }).exec()
@@ -112,10 +115,11 @@ export function DesktopHtmlPluginFrame({
     return () => {
       alive = false
       ++generation.current
+      replies.clear()
       stops.forEach((stop) => stop())
       emitter?.removeListener?.('SongloftDesktop.visibility', onVisibility)
     }
-  }, [entryPath, isTabEntry])
+  }, [entryPath, isTabEntry, replies])
   useEffect(() => {
     visibility()
     if (active) snapshot()
@@ -137,11 +141,20 @@ export function DesktopHtmlPluginFrame({
       }
       if (back.receive(request)) return
       if (request.type !== 'songloft-host-call') return
+      if (request.ns === 'lifecycle' && request.method === HOST_REPLY_RECEIVED) {
+        if (typeof request.id === 'string') replies.confirm(request.id)
+        return
+      }
       const current = generation.current
-      void handlePluginHostCall(request, pluginHostContext)
+      const callerContext = Object.create(pluginHostContext) as PluginHostContext
+      callerContext.pluginEntryPath = entryPath
+      callerContext.isPluginActive = () =>
+        generation.current === current && activeRef.current && windowVisible.current
+      void handlePluginHostCall(request, callerContext)
         .then((result) => {
-          if (generation.current === current)
-            send({ type: 'songloft-host-reply', id: request.id, ...result })
+          if (generation.current !== current) return
+          const reply = typeof request.id === 'string' ? replies.stage(request.id, result) : result
+          send({ type: 'songloft-host-reply', id: request.id, ...reply })
         })
         .catch(() => {})
     } catch {
